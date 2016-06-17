@@ -1,5 +1,3 @@
-pg_regress
-results
 yml
 current_good_schedule
 libregress.so
@@ -12,4 +10,11 @@ regression.out
 config.ini
 pgbouncer.log
 pgbouncer.pid
-tmp_check
+
+# Local binaries
+/pg_regress
+
+# Generated subdirectories
+/tmp_check/
+/results/
+/log/

@@ -47,6 +47,7 @@
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
+#include "utils/pg_rusage.h"
 #include "utils/syscache.h"
 #include "utils/tuplesort.h"
 
@@ -75,9 +76,12 @@ typedef struct AnlIndexData
 /* Default statistics target (GUC parameter) */
 int			default_statistics_target = 10;
 
+/* A few variables that don't seem worth passing around as parameters */
 static int	elevel = -1;
 
 static MemoryContext anl_context = NULL;
+
+static BufferAccessStrategy vac_strategy;
 
 
 static void BlockSampler_Init(BlockSampler bs, BlockNumber nblocks,
@@ -110,7 +114,8 @@ static void analyzeEstimateIndexpages(Relation onerel, Relation indrel, BlockNum
  *	analyze_rel() -- analyze one relation
  */
 void
-analyze_rel(Oid relid, VacuumStmt *vacstmt)
+analyze_rel(Oid relid, VacuumStmt *vacstmt,
+			BufferAccessStrategy bstrategy)
 {
 	Relation	onerel;
 	int			attr_cnt,
@@ -129,11 +134,18 @@ analyze_rel(Oid relid, VacuumStmt *vacstmt)
 				totaldeadrows;
 	BlockNumber	totalpages;
 	HeapTuple  *rows;
+	PGRUsage	ru0;
+	TimestampTz starttime = 0;
+	Oid			save_userid;
+	int			save_sec_context;
+	int			save_nestlevel;
 
 	if (vacstmt->verbose)
 		elevel = INFO;
 	else
 		elevel = DEBUG2;
+
+	vac_strategy = bstrategy;
 
 	/*
 	 * Use the current context for storing analysis info.  vacuum.c ensures
@@ -214,6 +226,29 @@ analyze_rel(Oid relid, VacuumStmt *vacstmt)
 			(errmsg("analyzing \"%s.%s\"",
 					get_namespace_name(RelationGetNamespace(onerel)),
 					RelationGetRelationName(onerel))));
+
+	/*
+	 * Switch to the table owner's userid, so that any index functions are run
+	 * as that user.  Also lock down security-restricted operations and
+	 * arrange to make GUC variable changes local to this command.
+	 */
+	GetUserIdAndSecContext(&save_userid, &save_sec_context);
+	SetUserIdAndSecContext(onerel->rd_rel->relowner,
+						   save_sec_context | SECURITY_RESTRICTED_OPERATION);
+	save_nestlevel = NewGUCNestLevel();
+
+	/* let others know what I'm doing */
+	LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
+	MyProc->vacuumFlags |= PROC_IN_ANALYZE;
+	LWLockRelease(ProcArrayLock);
+
+	/* measure elapsed time iff autovacuum logging requires it */
+	if (IsAutoVacuumWorkerProcess() && Log_autovacuum_min_duration >= 0)
+	{
+		pg_rusage_init(&ru0);
+		if (Log_autovacuum_min_duration > 0)
+			starttime = GetCurrentTimestamp();
+	}
 
 	/*
 	 * Determine which columns to analyze
@@ -490,6 +525,20 @@ cleanup:
 	/* Done with indexes */
 	vac_close_indexes(nindexes, Irel, NoLock);
 
+	/* Log the action if appropriate */
+	if (IsAutoVacuumWorkerProcess() && Log_autovacuum_min_duration >= 0)
+	{
+		if (Log_autovacuum_min_duration == 0 ||
+			TimestampDifferenceExceeds(starttime, GetCurrentTimestamp(),
+									   Log_autovacuum_min_duration))
+			ereport(LOG,
+					(errmsg("automatic analyze of table \"%s.%s.%s\" system usage: %s",
+							get_database_name(MyDatabaseId),
+							get_namespace_name(RelationGetNamespace(onerel)),
+							RelationGetRelationName(onerel),
+							pg_rusage_show(&ru0))));
+	}
+
 	/*
 	 * Close source relation now, but keep lock so that no one deletes it
 	 * before we commit.  (If someone did, they'd fail to clean up the entries
@@ -497,6 +546,20 @@ cleanup:
 	 * expose us to concurrent-update failures in update_attstats.)
 	 */
 	relation_close(onerel, NoLock);
+
+	/*
+	 * Reset my PGPROC flag.  Note: we need this here, and not in vacuum_rel,
+	 * because the vacuum flag is cleared by the end-of-xact code.
+	 */
+	LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
+	MyProc->vacuumFlags &= ~PROC_IN_ANALYZE;
+	LWLockRelease(ProcArrayLock);
+
+	/* Roll back any GUC changes executed by index functions */
+	AtEOXact_GUC(false, save_nestlevel);
+
+	/* Restore userid and security context */
+	SetUserIdAndSecContext(save_userid, save_sec_context);
 }
 
 /*
@@ -854,12 +917,16 @@ acquire_sample_rows(Relation onerel, HeapTuple *rows, int targrows,
 	double		deadrows = 0;	/* # dead rows seen */
 	double		rowstoskip = -1;	/* -1 means not set yet */
 	BlockNumber totalblocks;
+	TransactionId OldestXmin;
 	BlockSamplerData bs;
 	double		rstate;
 
 	Assert(targrows > 1);
 
 	totalblocks = RelationGetNumberOfBlocks(onerel);
+
+	/* Need a cutoff xmin for HeapTupleSatisfiesVacuum */
+	OldestXmin = GetOldestXmin(onerel->rd_rel->relisshared, true);
 
 	/* Prepare for sampling block numbers */
 	BlockSampler_Init(&bs, totalblocks, targrows);
@@ -881,10 +948,12 @@ acquire_sample_rows(Relation onerel, HeapTuple *rows, int targrows,
 		 * We must maintain a pin on the target page's buffer to ensure that
 		 * the maxoffset value stays good (else concurrent VACUUM might delete
 		 * tuples out from under us).  Hence, pin the page until we are done
-		 * looking at it.  We don't maintain a lock on the page, so tuples
-		 * could get added to it, but we ignore such tuples.
+		 * looking at it.  We also choose to hold sharelock on the buffer
+		 * throughout --- we could release and re-acquire sharelock for
+		 * each tuple, but since we aren't doing much work per tuple, the
+		 * extra lock traffic is probably better avoided.
 		 */
-		targbuffer = ReadBuffer(onerel, targblock);
+		targbuffer = ReadBufferWithStrategy(onerel, targblock, vac_strategy);
 		LockBuffer(targbuffer, BUFFER_LOCK_SHARE);
 		targpage = BufferGetPage(targbuffer);
 		maxoffset = PageGetMaxOffsetNumber(targpage);
@@ -894,6 +963,22 @@ acquire_sample_rows(Relation onerel, HeapTuple *rows, int targrows,
 		{
 			ItemId		itemid;
 			HeapTupleData targtuple;
+			bool		sample_it = false;
+
+			itemid = PageGetItemId(targpage, targoffset);
+
+			/*
+			 * We ignore unused and redirect line pointers.  DEAD line
+			 * pointers should be counted as dead, because we need vacuum
+			 * to run to get rid of them.  Note that this rule agrees with
+			 * the way that heap_page_prune() counts things.
+			 */
+			if (!ItemIdIsNormal(itemid))
+			{
+				if (ItemIdIsDead(itemid))
+					deadrows += 1;
+				continue;
+			}
 
 			itemid = PageGetItemId(targpage, targoffset);
 
@@ -912,10 +997,76 @@ acquire_sample_rows(Relation onerel, HeapTuple *rows, int targrows,
 
 			ItemPointerSet(&targtuple.t_self, targblock, targoffset);
 
-			/* We use heap_release_fetch to avoid useless bufmgr traffic */
-			if (heap_release_fetch(onerel, SnapshotNow,
-								   &targtuple, &targbuffer,
-								   true, NULL))
+			targtuple.t_data = (HeapTupleHeader) PageGetItem(targpage, itemid);
+			targtuple.t_len = ItemIdGetLength(itemid);
+
+			switch (HeapTupleSatisfiesVacuum(onerel,
+											 targtuple.t_data,
+											 OldestXmin,
+											 targbuffer))
+			{
+				case HEAPTUPLE_LIVE:
+					sample_it = true;
+					liverows += 1;
+					break;
+
+				case HEAPTUPLE_DEAD:
+				case HEAPTUPLE_RECENTLY_DEAD:
+					/* Count dead and recently-dead rows */
+					deadrows += 1;
+					break;
+
+				case HEAPTUPLE_INSERT_IN_PROGRESS:
+					/*
+					 * Insert-in-progress rows are not counted.  We assume
+					 * that when the inserting transaction commits or aborts,
+					 * it will send a stats message to increment the proper
+					 * count.  This works right only if that transaction ends
+					 * after we finish analyzing the table; if things happen
+					 * in the other order, its stats update will be
+					 * overwritten by ours.  However, the error will be
+					 * large only if the other transaction runs long enough
+					 * to insert many tuples, so assuming it will finish
+					 * after us is the safer option.
+					 *
+					 * A special case is that the inserting transaction might
+					 * be our own.  In this case we should count and sample
+					 * the row, to accommodate users who load a table and
+					 * analyze it in one transaction.  (pgstat_report_analyze
+					 * has to adjust the numbers we send to the stats collector
+					 * to make this come out right.)
+					 */
+					if (TransactionIdIsCurrentTransactionId(HeapTupleHeaderGetXmin(targtuple.t_data)))
+					{
+						sample_it = true;
+						liverows += 1;
+					}
+					break;
+
+				case HEAPTUPLE_DELETE_IN_PROGRESS:
+					/*
+					 * We count delete-in-progress rows as still live, using
+					 * the same reasoning given above; but we don't bother to
+					 * include them in the sample.
+					 *
+					 * If the delete was done by our own transaction, however,
+					 * we must count the row as dead to make
+					 * pgstat_report_analyze's stats adjustments come out
+					 * right.  (Note: this works out properly when the row
+					 * was both inserted and deleted in our xact.)
+					 */
+					if (TransactionIdIsCurrentTransactionId(HeapTupleHeaderGetXmax(targtuple.t_data)))
+						deadrows += 1;
+					else
+						liverows += 1;
+					break;
+
+				default:
+					elog(ERROR, "unexpected HeapTupleSatisfiesVacuum result");
+					break;
+			}
+
+			if (sample_it)
 			{
 				/*
 				 * The first targrows sample rows are simply copied into the
@@ -1352,40 +1503,6 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 }
 
 
-/*
- * A convenience routine, to fetch two float4's from the current SPI result.
- *
- * The result set is expected to contain a single row, with a single
- * float4 array column, with two values in the array.
- */
-static void
-spi_getSingleResultRowArrayAsTwoFloat4(float4 *out1, float *out2)
-{
-	Datum		arrayDatum;
-	bool		isNull;
-	Datum	   *values = NULL;
-	int			valuesLength;
-
-    Assert(SPI_tuptable != NULL);
-    Assert(SPI_processed == 1);
-
-    arrayDatum = heap_getattr(SPI_tuptable->vals[0], 1, SPI_tuptable->tupdesc, &isNull);
-    Assert(!isNull);
-
-    deconstruct_array(DatumGetArrayTypeP(arrayDatum),
-            FLOAT4OID,
-            sizeof(float4),
-            true,
-            'i',
-            &values, NULL, &valuesLength);
-    Assert(valuesLength == 2);
-
-	*out1 = DatumGetFloat4(values[0]);
-	*out2 = DatumGetFloat4(values[1]);
-    pfree(values);
-}
-
-
 /**
  * This method estimates reltuples/relpages for a relation. To do this, it employs
  * the built-in function 'gp_statistics_estimate_reltuples_relpages'. If the table to be
@@ -1426,9 +1543,11 @@ analyzeEstimateReltuplesRelpages(Oid relationOid, float4 *relTuples, float4 *rel
 	{
 		Oid			singleOid = lfirst_oid(lc);
 		StringInfoData	sqlstmt;
-		float4      tuples;
-		float4      pages;
 		int			ret;
+		Datum		arrayDatum;
+		bool		isNull;
+		Datum	   *values = NULL;
+		int			valuesLength;
 
 		initStringInfo(&sqlstmt);
 
@@ -1455,9 +1574,20 @@ analyzeEstimateReltuplesRelpages(Oid relationOid, float4 *relTuples, float4 *rel
 		Assert(SPI_tuptable != NULL);
 		Assert(SPI_processed == 1);
 
-		spi_getSingleResultRowArrayAsTwoFloat4(&tuples, &pages);
-		*relTuples += tuples;
-		*relPages += pages;
+		arrayDatum = heap_getattr(SPI_tuptable->vals[0], 1, SPI_tuptable->tupdesc, &isNull);
+		if (isNull)
+			elog(ERROR, "could not get estimated number of tuples and pages for relation %u", singleOid);
+
+		deconstruct_array(DatumGetArrayTypeP(arrayDatum),
+						  FLOAT4OID,
+						  sizeof(float4),
+						  true,
+						  'i',
+						  &values, NULL, &valuesLength);
+		Assert(valuesLength == 2);
+
+		*relTuples += DatumGetFloat4(values[0]);
+		*relPages += DatumGetFloat4(values[1]);
 
 		SPI_finish();
 	}
@@ -1478,10 +1608,10 @@ analyzeEstimateIndexpages(Relation onerel, Relation indrel, BlockNumber *indexPa
 {
 	StringInfoData 	sqlstmt;
 	int			ret;
-	float4      tuples;
-	float4      pages;
-
-	*indexPages = 0;
+	Datum		arrayDatum;
+	bool		isNull;
+	Datum	   *values = NULL;
+	int			valuesLength;
 
 	initStringInfo(&sqlstmt);
 
@@ -1508,9 +1638,20 @@ analyzeEstimateIndexpages(Relation onerel, Relation indrel, BlockNumber *indexPa
 	if (SPI_processed != 1)
 		elog(ERROR, "unexpected number of rows returned for internal analyze query");
 
-	spi_getSingleResultRowArrayAsTwoFloat4(&tuples, &pages);
+    arrayDatum = heap_getattr(SPI_tuptable->vals[0], 1, SPI_tuptable->tupdesc, &isNull);
+	if (isNull)
+		elog(ERROR, "could not get estimated number of tuples and pages for index \"%s\"",
+			 RelationGetRelationName(indrel));
 
-	*indexPages = (BlockNumber) pages;
+    deconstruct_array(DatumGetArrayTypeP(arrayDatum),
+            FLOAT4OID,
+            sizeof(float4),
+            true,
+            'i',
+            &values, NULL, &valuesLength);
+    Assert(valuesLength == 2);
+
+	*indexPages = DatumGetFloat4(values[1]);
 
 	SPI_finish();
 

@@ -58,6 +58,11 @@ select * from basictest;
 select testtext || testvarchar as concat, testnumeric + 42 as sum
 from basictest;
 
+-- check that union/case/coalesce type resolution handles domains properly
+select coalesce(4::domainint4, 7) is of (int4) as t;
+select coalesce(4::domainint4, 7) is of (domainint4) as f;
+select coalesce(4::domainint4, 7::domainint4) is of (domainint4) as t;
+
 drop table basictest;
 drop domain domainvarchar restrict;
 drop domain domainnumeric restrict;
@@ -176,7 +181,13 @@ create table defaulttest
             , col7 ddef4 DEFAULT 8000
             , col8 ddef5
             );
-insert into defaulttest default values;
+insert into defaulttest(col4) values(0); -- fails, col5 defaults to null
+alter table defaulttest alter column col5 drop default;
+insert into defaulttest default values; -- succeeds, inserts domain default
+-- We used to treat SET DEFAULT NULL as equivalent to DROP DEFAULT; wrong
+alter table defaulttest alter column col5 set default null;
+insert into defaulttest(col4) values(0); -- fails
+alter table defaulttest alter column col5 drop default;
 insert into defaulttest default values;
 insert into defaulttest default values;
 
@@ -369,6 +380,11 @@ create domain posint as int4;
 create type ddtest1 as (f1 posint);
 create table ddtest2(f1 ddtest1);
 insert into ddtest2 values(row(-1));
+alter domain posint add constraint c1 check(value >= 0);
+drop table ddtest2;
+
+create table ddtest2(f1 ddtest1[], distkey int) distributed by (distkey);
+insert into ddtest2 values('{(-1)}');
 alter domain posint add constraint c1 check(value >= 0);
 drop table ddtest2;
 

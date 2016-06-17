@@ -333,7 +333,7 @@ LINE 1: SELECT '<>' IS NOT DOCUMENT;
                ^
 DETAIL:  This functionality requires the server to be built with libxml support.
 HINT:  You need to rebuild PostgreSQL using --with-libxml.
-SELECT xmlagg(data) FROM xmltest;
+SELECT xmlagg(data order by id) FROM xmltest;
  xmlagg 
 --------
  
@@ -345,7 +345,7 @@ SELECT xmlagg(data) FROM xmltest WHERE id > 10;
  
 (1 row)
 
-SELECT xmlelement(name employees, xmlagg(xmlelement(name name, name))) FROM emp;
+SELECT xmlelement(name employees, xmlagg(xmlelement(name name, name) order by name)) FROM emp;
 ERROR:  unsupported XML feature
 DETAIL:  This functionality requires the server to be built with libxml support.
 HINT:  You need to rebuild PostgreSQL using --with-libxml.

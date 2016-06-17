@@ -12,7 +12,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/resowner.h,v 1.10 2007/01/05 22:19:59 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/utils/resowner.h,v 1.15.2.1 2009/12/03 11:03:44 heikki Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -20,7 +20,9 @@
 #define RESOWNER_H
 
 #include "storage/buf.h"
+#include "storage/fd.h"
 #include "utils/catcache.h"
+#include "utils/plancache.h"
 
 
 /*
@@ -106,11 +108,25 @@ extern void ResourceOwnerRememberRelationRef(ResourceOwner owner,
 extern void ResourceOwnerForgetRelationRef(ResourceOwner owner,
 							   Relation rel);
 
+/* support for plancache refcount management */
+extern void ResourceOwnerEnlargePlanCacheRefs(ResourceOwner owner);
+extern void ResourceOwnerRememberPlanCacheRef(ResourceOwner owner,
+								  CachedPlan *plan);
+extern void ResourceOwnerForgetPlanCacheRef(ResourceOwner owner,
+								CachedPlan *plan);
+
 /* support for tupledesc refcount management */
 extern void ResourceOwnerEnlargeTupleDescs(ResourceOwner owner);
 extern void ResourceOwnerRememberTupleDesc(ResourceOwner owner,
 							   TupleDesc tupdesc);
 extern void ResourceOwnerForgetTupleDesc(ResourceOwner owner,
 							 TupleDesc tupdesc);
+
+/* support for temporary file management */
+extern void ResourceOwnerEnlargeFiles(ResourceOwner owner);
+extern void ResourceOwnerRememberFile(ResourceOwner owner,
+						  File file);
+extern void ResourceOwnerForgetFile(ResourceOwner owner,
+						File file);
 
 #endif   /* RESOWNER_H */

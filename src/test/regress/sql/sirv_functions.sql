@@ -5519,7 +5519,7 @@ BEGIN
   
   EXECUTE 'DROP TABLE countries_results';
 
-  RETURN lang_delta || area_delta || gnp_delta ;
+  RETURN lang_delta::text || area_delta::text || gnp_delta::text ;
 
 END;
 $$
@@ -5577,7 +5577,7 @@ BEGIN
   
   EXECUTE 'DROP TABLE countries_results';
 
-  RETURN lang_delta || area_delta || gnp_delta ;
+  RETURN lang_delta::text || area_delta::text || gnp_delta::text ;
 
 END;
 $$
@@ -5771,7 +5771,7 @@ BEGIN
   
   EXECUTE 'DROP TABLE countries_results';
 
-  RETURN lang_delta || area_delta || gnp_delta ;
+  RETURN lang_delta::text || area_delta::text || gnp_delta::text ;
 
 END;
 $$
@@ -5978,7 +5978,7 @@ BEGIN
   
   EXECUTE 'DROP TABLE countries_results';
 
-  RETURN lang_delta || area_delta || gnp_delta ;
+  RETURN lang_delta::text || area_delta::text || gnp_delta::text ;
 
 END;
 $$
@@ -6213,7 +6213,7 @@ BEGIN
   EXECUTE 'SELECT max(lang_count - ' || min_languages || '), max(area - ' || min_area || '), max(gnp - ' || min_gnp || ') FROM countries_results' into lang_delta,area_delta,gnp_delta;
   EXECUTE 'DROP TABLE countries_results';
 
-  RETURN lang_delta || area_delta || gnp_delta ;
+  RETURN lang_delta::text || area_delta::text || gnp_delta::text ;
 
 END;
 $$
@@ -6385,7 +6385,7 @@ BEGIN
   EXECUTE 'SELECT max(lang_count - ' || min_languages || '), max(area - ' || min_area || '), max(gnp - ' || min_gnp || ') FROM countries_results' into lang_delta,area_delta,gnp_delta;
   EXECUTE 'DROP TABLE countries_results';
 
-  RETURN lang_delta || area_delta || gnp_delta ;
+  RETURN lang_delta::text || area_delta::text || gnp_delta::text ;
 
 END;
 $$
@@ -6703,7 +6703,7 @@ BEGIN
   
   EXECUTE 'DROP TABLE countries_results';
 
-  RETURN lang_delta || area_delta || gnp_delta ;
+  RETURN lang_delta::text || area_delta::text || gnp_delta::text ;
 
 END;
 $$
@@ -6752,7 +6752,7 @@ BEGIN
   
   EXECUTE 'DROP TABLE countries_results';
 
-  RETURN lang_delta || area_delta || gnp_delta ;
+  RETURN lang_delta::text || area_delta::text || gnp_delta::text ;
 
 END;
 $$

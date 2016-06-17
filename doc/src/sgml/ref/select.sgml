@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/select.sgml,v 1.99 2007/02/01 19:10:25 momjian Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/select.sgml,v 1.102.2.1 2009/01/22 22:56:54 momjian Exp $
 PostgreSQL documentation
 -->
 
@@ -222,16 +222,12 @@ and <replaceable class="parameter">with_query</replaceable> can be:
       <term><replaceable class="parameter">table_name</replaceable></term>
       <listitem>
        <para>
-        The name (optionally schema-qualified) of an existing table or
-        view.  If <literal>ONLY</> is specified, only that table is
-        scanned.  If <literal>ONLY</> is not specified, the table and
-        all its descendant tables (if any) are scanned.  <literal>*</>
-        can be appended to the table name to indicate that descendant
-        tables are to be scanned, but in the current version, this is
-        the default behavior.  (In releases before 7.1,
-        <literal>ONLY</> was the default behavior.)  The default
-        behavior can be modified by changing the <xref
-        linkend="guc-sql-inheritance"> configuration option.
+        The name (optionally schema-qualified) of an existing table or view.
+        If <literal>ONLY</> is specified before the table name, only that
+        table is scanned.  If <literal>ONLY</> is not specified, the table
+        and all its descendant tables (if any) are scanned.  Optionally,
+        <literal>*</> can be specified after the table name to explicitly
+        indicate that descendant tables are included.
        </para>
       </listitem>
      </varlistentry>
@@ -392,7 +388,7 @@ and <replaceable class="parameter">with_query</replaceable> can be:
      </varlistentry>
      
      <varlistentry>
-      <term><literal>USING (<replaceable class="parameter">join_column</replaceable> [, ...])</literal></term>
+      <term><literal>USING ( <replaceable class="parameter">join_column</replaceable> [, ...] )</literal></term>
       <listitem>
        <para>
         A clause of the form <literal>USING ( a, b, ... )</literal> is
@@ -736,7 +732,7 @@ SELECT name FROM distributors ORDER BY code;
     assumed by default.  Alternatively, a specific ordering operator
     name can be specified in the <literal>USING</> clause.
     An ordering operator must be a less-than or greater-than
-    member of some btree operator family.
+    member of some B-tree operator family.
     <literal>ASC</> is usually equivalent to <literal>USING &lt;</> and
     <literal>DESC</> is usually equivalent to <literal>USING &gt;</>.
     (But the creator of a user-defined data type can define exactly what the
@@ -847,6 +843,14 @@ OFFSET <replaceable class="parameter">start</replaceable>
     is an inherent consequence of the fact that SQL does not promise
     to deliver the results of a query in any particular order unless
     <literal>ORDER BY</> is used to constrain the order.
+   </para>
+
+   <para>
+    It is even possible for repeated executions of the same <literal>LIMIT</>
+    query to return different subsets of the rows of a table, if there
+    is not an <literal>ORDER BY</> to enforce selection of a deterministic
+    subset.  Again, this is not a bug; determinism of the results is
+    simply not guaranteed in such a case.
    </para>
   </refsect2>
 
@@ -971,6 +975,22 @@ ROLLBACK TO s;
     anymore, in which case it will not be returned.
    </para>
   </caution>
+
+  <caution>
+   <para>
+    Similarly, it is possible for a <command>SELECT</> command
+    using <literal>ORDER BY</literal> and <literal>FOR
+    UPDATE/SHARE</literal> to return rows out of order.  This is
+    because <literal>ORDER BY</> is applied first.  The command
+    orders the result, but might then block trying to obtain a lock
+    on one or more of the rows.  Once the <literal>SELECT</>
+    unblocks, one of the ordered columns might have been modified
+    and be returned out of order.  A workaround is to perform
+    <command>SELECT ... FOR UPDATE/SHARE</> and then <command>SELECT
+    ... ORDER BY</>.
+   </para>
+  </caution>
+
   </refsect2>
  </refsect1>
 

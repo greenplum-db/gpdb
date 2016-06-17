@@ -101,21 +101,21 @@ WITH (appendonly=false) DISTRIBUTED BY (s_suppkey);
 
 
 
-\copy customer (C_CUSTKEY,C_NAME,C_ADDRESS,C_NATIONKEY,C_PHONE,C_ACCTBAL,C_MKTSEGMENT,C_COMMENT) from 'bugbuster/data/customer.csv' with delimiter '|';
+\copy customer (C_CUSTKEY,C_NAME,C_ADDRESS,C_NATIONKEY,C_PHONE,C_ACCTBAL,C_MKTSEGMENT,C_COMMENT) from 'data/customer.csv' with delimiter '|';
 
-\copy lineitem ( L_ORDERKEY, L_PARTKEY, L_SUPPKEY,L_LINENUMBER,L_QUANTITY, L_EXTENDEDPRICE,L_DISCOUNT,L_TAX,L_RETURNFLAG,L_LINESTATUS,L_SHIPDATE,L_COMMITDATE,L_RECEIPTDATE,L_SHIPINSTRUCT,L_SHIPMODE,L_COMMENT) from 'bugbuster/data/lineitem.csv' with delimiter '|'; 
+\copy lineitem ( L_ORDERKEY, L_PARTKEY, L_SUPPKEY,L_LINENUMBER,L_QUANTITY, L_EXTENDEDPRICE,L_DISCOUNT,L_TAX,L_RETURNFLAG,L_LINESTATUS,L_SHIPDATE,L_COMMITDATE,L_RECEIPTDATE,L_SHIPINSTRUCT,L_SHIPMODE,L_COMMENT) from 'data/lineitem.csv' with delimiter '|'; 
 
-\copy nation (N_NATIONKEY ,N_NAME, N_REGIONKEY,N_COMMENT) from 'bugbuster/data/nation.csv' with delimiter '|';
+\copy nation (N_NATIONKEY ,N_NAME, N_REGIONKEY,N_COMMENT) from 'data/nation.csv' with delimiter '|';
 
-\copy orders ( O_ORDERKEY,O_CUSTKEY,O_ORDERSTATUS,O_TOTALPRICE,O_ORDERDATE,O_ORDERPRIORITY,O_CLERK,O_SHIPPRIORITY,O_COMMENT) from 'bugbuster/data/order.csv' with delimiter '|'; 
+\copy orders ( O_ORDERKEY,O_CUSTKEY,O_ORDERSTATUS,O_TOTALPRICE,O_ORDERDATE,O_ORDERPRIORITY,O_CLERK,O_SHIPPRIORITY,O_COMMENT) from 'data/order.csv' with delimiter '|'; 
 
-\copy part (P_PARTKEY,P_NAME,P_MFGR,P_BRAND,P_TYPE,P_SIZE,P_CONTAINER,P_RETAILPRICE,P_COMMENT)from 'bugbuster/data/part.csv' with delimiter '|'; 
+\copy part (P_PARTKEY,P_NAME,P_MFGR,P_BRAND,P_TYPE,P_SIZE,P_CONTAINER,P_RETAILPRICE,P_COMMENT)from 'data/part.csv' with delimiter '|'; 
 
-\copy partsupp (PS_PARTKEY,PS_SUPPKEY,PS_AVAILQTY,PS_SUPPLYCOST,PS_COMMENT ) from 'bugbuster/data/partsupp.csv' with delimiter '|';
+\copy partsupp (PS_PARTKEY,PS_SUPPKEY,PS_AVAILQTY,PS_SUPPLYCOST,PS_COMMENT ) from 'data/partsupp.csv' with delimiter '|';
 
-\copy region ( R_REGIONKEY,R_NAME,R_COMMENT) from 'bugbuster/data/region.csv' with delimiter '|';
+\copy region ( R_REGIONKEY,R_NAME,R_COMMENT) from 'data/region.csv' with delimiter '|';
 
-\copy supplier (S_SUPPKEY,S_NAME,S_ADDRESS,S_NATIONKEY,S_PHONE,S_ACCTBAL,S_COMMENT) from 'bugbuster/data/supplier.csv' with delimiter '|';
+\copy supplier (S_SUPPKEY,S_NAME,S_ADDRESS,S_NATIONKEY,S_PHONE,S_ACCTBAL,S_COMMENT) from 'data/supplier.csv' with delimiter '|';
 
 drop database if exists tpch_ao;
 create database tpch_ao;
@@ -216,18 +216,18 @@ CREATE TABLE supplier (
 )
 WITH (appendonly=true) DISTRIBUTED BY (s_suppkey);
 
-\copy customer (C_CUSTKEY,C_NAME,C_ADDRESS,C_NATIONKEY,C_PHONE,C_ACCTBAL,C_MKTSEGMENT,C_COMMENT) from 'bugbuster/data/customer.csv' with delimiter '|';
+\copy customer (C_CUSTKEY,C_NAME,C_ADDRESS,C_NATIONKEY,C_PHONE,C_ACCTBAL,C_MKTSEGMENT,C_COMMENT) from 'data/customer.csv' with delimiter '|';
 
-\copy lineitem ( L_ORDERKEY, L_PARTKEY, L_SUPPKEY,L_LINENUMBER,L_QUANTITY, L_EXTENDEDPRICE,L_DISCOUNT,L_TAX,L_RETURNFLAG,L_LINESTATUS,L_SHIPDATE,L_COMMITDATE,L_RECEIPTDATE,L_SHIPINSTRUCT,L_SHIPMODE,L_COMMENT) from 'bugbuster/data/lineitem.csv' with delimiter '|';
+\copy lineitem ( L_ORDERKEY, L_PARTKEY, L_SUPPKEY,L_LINENUMBER,L_QUANTITY, L_EXTENDEDPRICE,L_DISCOUNT,L_TAX,L_RETURNFLAG,L_LINESTATUS,L_SHIPDATE,L_COMMITDATE,L_RECEIPTDATE,L_SHIPINSTRUCT,L_SHIPMODE,L_COMMENT) from 'data/lineitem.csv' with delimiter '|';
   
-\copy nation (N_NATIONKEY ,N_NAME, N_REGIONKEY,N_COMMENT) from 'bugbuster/data/nation.csv' with delimiter '|';
+\copy nation (N_NATIONKEY ,N_NAME, N_REGIONKEY,N_COMMENT) from 'data/nation.csv' with delimiter '|';
 
-\copy orders ( O_ORDERKEY,O_CUSTKEY,O_ORDERSTATUS,O_TOTALPRICE,O_ORDERDATE,O_ORDERPRIORITY,O_CLERK,O_SHIPPRIORITY,O_COMMENT) from 'bugbuster/data/order.csv' with delimiter '|';
+\copy orders ( O_ORDERKEY,O_CUSTKEY,O_ORDERSTATUS,O_TOTALPRICE,O_ORDERDATE,O_ORDERPRIORITY,O_CLERK,O_SHIPPRIORITY,O_COMMENT) from 'data/order.csv' with delimiter '|';
 
-\copy part (P_PARTKEY,P_NAME,P_MFGR,P_BRAND,P_TYPE,P_SIZE,P_CONTAINER,P_RETAILPRICE,P_COMMENT)from 'bugbuster/data/part.csv' with delimiter '|';
-     \copy partsupp (PS_PARTKEY,PS_SUPPKEY,PS_AVAILQTY,PS_SUPPLYCOST,PS_COMMENT ) from 'bugbuster/data/partsupp.csv' with delimiter '|';
-\copy region ( R_REGIONKEY,R_NAME,R_COMMENT) from 'bugbuster/data/region.csv' with delimiter '|';
-\copy supplier (S_SUPPKEY,S_NAME,S_ADDRESS,S_NATIONKEY,S_PHONE,S_ACCTBAL,S_COMMENT) from 'bugbuster/data/supplier.csv' with delimiter '|';
+\copy part (P_PARTKEY,P_NAME,P_MFGR,P_BRAND,P_TYPE,P_SIZE,P_CONTAINER,P_RETAILPRICE,P_COMMENT)from 'data/part.csv' with delimiter '|';
+     \copy partsupp (PS_PARTKEY,PS_SUPPKEY,PS_AVAILQTY,PS_SUPPLYCOST,PS_COMMENT ) from 'data/partsupp.csv' with delimiter '|';
+\copy region ( R_REGIONKEY,R_NAME,R_COMMENT) from 'data/region.csv' with delimiter '|';
+\copy supplier (S_SUPPKEY,S_NAME,S_ADDRESS,S_NATIONKEY,S_PHONE,S_ACCTBAL,S_COMMENT) from 'data/supplier.csv' with delimiter '|';
 drop database if exists tpch_co;
 create database tpch_co;
 \c tpch_co
@@ -329,19 +329,19 @@ WITH (appendonly=true, orientation=column) DISTRIBUTED BY (s_suppkey);
 
 
 
-\copy customer (C_CUSTKEY,C_NAME,C_ADDRESS,C_NATIONKEY,C_PHONE,C_ACCTBAL,C_MKTSEGMENT,C_COMMENT) from 'bugbuster/data/customer.csv' with delimiter '|';
+\copy customer (C_CUSTKEY,C_NAME,C_ADDRESS,C_NATIONKEY,C_PHONE,C_ACCTBAL,C_MKTSEGMENT,C_COMMENT) from 'data/customer.csv' with delimiter '|';
 
-\copy lineitem ( L_ORDERKEY, L_PARTKEY, L_SUPPKEY,L_LINENUMBER,L_QUANTITY, L_EXTENDEDPRICE,L_DISCOUNT,L_TAX,L_RETURNFLAG,L_LINESTATUS,L_SHIPDATE,L_COMMITDATE,L_RECEIPTDATE,L_SHIPINSTRUCT,L_SHIPMODE,L_COMMENT) from 'bugbuster/data/lineitem.csv' with delimiter '|'; 
+\copy lineitem ( L_ORDERKEY, L_PARTKEY, L_SUPPKEY,L_LINENUMBER,L_QUANTITY, L_EXTENDEDPRICE,L_DISCOUNT,L_TAX,L_RETURNFLAG,L_LINESTATUS,L_SHIPDATE,L_COMMITDATE,L_RECEIPTDATE,L_SHIPINSTRUCT,L_SHIPMODE,L_COMMENT) from 'data/lineitem.csv' with delimiter '|'; 
 
-\copy nation (N_NATIONKEY ,N_NAME, N_REGIONKEY,N_COMMENT) from 'bugbuster/data/nation.csv' with delimiter '|';
+\copy nation (N_NATIONKEY ,N_NAME, N_REGIONKEY,N_COMMENT) from 'data/nation.csv' with delimiter '|';
 
-\copy orders ( O_ORDERKEY,O_CUSTKEY,O_ORDERSTATUS,O_TOTALPRICE,O_ORDERDATE,O_ORDERPRIORITY,O_CLERK,O_SHIPPRIORITY,O_COMMENT) from 'bugbuster/data/order.csv' with delimiter '|'; 
+\copy orders ( O_ORDERKEY,O_CUSTKEY,O_ORDERSTATUS,O_TOTALPRICE,O_ORDERDATE,O_ORDERPRIORITY,O_CLERK,O_SHIPPRIORITY,O_COMMENT) from 'data/order.csv' with delimiter '|'; 
 
-\copy part (P_PARTKEY,P_NAME,P_MFGR,P_BRAND,P_TYPE,P_SIZE,P_CONTAINER,P_RETAILPRICE,P_COMMENT) from 'bugbuster/data/part.csv' with delimiter '|'; 
+\copy part (P_PARTKEY,P_NAME,P_MFGR,P_BRAND,P_TYPE,P_SIZE,P_CONTAINER,P_RETAILPRICE,P_COMMENT) from 'data/part.csv' with delimiter '|'; 
 
-\copy partsupp (PS_PARTKEY,PS_SUPPKEY,PS_AVAILQTY,PS_SUPPLYCOST,PS_COMMENT ) from 'bugbuster/data/partsupp.csv' with delimiter '|';
+\copy partsupp (PS_PARTKEY,PS_SUPPKEY,PS_AVAILQTY,PS_SUPPLYCOST,PS_COMMENT ) from 'data/partsupp.csv' with delimiter '|';
 
-\copy region ( R_REGIONKEY,R_NAME,R_COMMENT) from 'bugbuster/data/region.csv' with delimiter '|';
+\copy region ( R_REGIONKEY,R_NAME,R_COMMENT) from 'data/region.csv' with delimiter '|';
 
-\copy supplier (S_SUPPKEY,S_NAME,S_ADDRESS,S_NATIONKEY,S_PHONE,S_ACCTBAL,S_COMMENT) from 'bugbuster/data/supplier.csv' with delimiter '|';
+\copy supplier (S_SUPPKEY,S_NAME,S_ADDRESS,S_NATIONKEY,S_PHONE,S_ACCTBAL,S_COMMENT) from 'data/supplier.csv' with delimiter '|';
 

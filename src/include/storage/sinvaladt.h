@@ -35,4 +35,6 @@ extern void SIInsertDataEntries(const SharedInvalidationMessage *data, int n);
 extern int	SIGetDataEntries(SharedInvalidationMessage *data, int datasize);
 extern void SICleanupQueue(bool callerHasWriteLock, int minFree);
 
+extern LocalTransactionId GetNextLocalTransactionId(void);
+
 #endif   /* SINVALADT_H */

@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/commands/tablecmds.h,v 1.31.2.1 2007/05/11 20:18:17 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/commands/tablecmds.h,v 1.37 2008/01/30 19:46:48 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -40,17 +40,6 @@ typedef struct NewConstraint
 	List	   *qualstate;		/* Execution state for CHECK */
 } NewConstraint;
 
-/*
- * During attribute re-mapping for heterogeneous partitions, we use
- * this struct to identify which varno's attributes will be re-mapped.
- * Using this struct as a *context* during expression tree walking, we
- * can skip varattnos that do not belong to a given varno.
- */
-typedef struct AttrMapContext{
-	const AttrNumber *newattno; /* The mapping table to remap the varattno */
-	Index varno; /* Which rte's varattno to re-map */
-} AttrMapContext;
-
 extern const char *synthetic_sql;
 
 extern Oid	DefineRelation(CreateStmt *stmt, char relkind, char relstorage);
@@ -80,8 +69,6 @@ extern void AlterRelationNamespaceInternal(Relation classRel, Oid relOid,
 							   Oid oldNspOid, Oid newNspOid,
 							   bool hasDependEntry);
 
-extern void ATAddColumn(Relation rel, ColumnDef *colDef);
-
 extern void CheckTableNotInUse(Relation rel, const char *stmt);
 
 extern void ExecuteTruncate(TruncateStmt *stmt);
@@ -94,15 +81,16 @@ extern void renameatt(Oid myrelid,
 
 extern void renamerel(Oid myrelid,
 		  const char *newrelname,
+		  ObjectType reltype,
 		  RenameStmt *stmt /* MPP */);
 
 extern void find_composite_type_dependencies(Oid typeOid,
 											 const char *origTblName,
 											 const char *origTypeName);
 
-extern AttrNumber *varattnos_map(TupleDesc old, TupleDesc new);
-extern AttrNumber *varattnos_map_schema(TupleDesc old, List *schema);
-extern void change_varattnos_of_a_node(Node *node, const AttrNumber *newattno);
+extern void find_composite_type_dependencies(Oid typeOid,
+								 const char *origTblName,
+								 const char *origTypeName);
 
 extern void change_varattnos_of_a_varno(Node *node, const AttrNumber *newattno, Index varno);
 

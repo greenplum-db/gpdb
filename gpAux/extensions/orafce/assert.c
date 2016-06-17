@@ -252,11 +252,7 @@ dbms_assert_schema_name(PG_FUNCTION_ARGS)
 		INVALID_SCHEMA_NAME_EXCEPTION();
 
 	nspname = text_to_cstring(sname);
-#ifdef GP_VERSION_NUM
-	names = stringToQualifiedNameList(nspname, "dbms");
-#else
 	names = stringToQualifiedNameList(nspname);
-#endif
 	if (list_length(names) != 1)
 		INVALID_SCHEMA_NAME_EXCEPTION();
 
@@ -372,11 +368,7 @@ dbms_assert_object_name(PG_FUNCTION_ARGS)
 		INVALID_OBJECT_NAME_EXCEPTION();
 
 	object_name = text_to_cstring(str);
-#ifdef GP_VERSION_NUM
-	names = stringToQualifiedNameList(object_name, "dbms");
-#else
 	names = stringToQualifiedNameList(object_name);
-#endif
 
 	classId = RangeVarGetRelid(makeRangeVarFromNameList(names), true);
 	if (!OidIsValid(classId))

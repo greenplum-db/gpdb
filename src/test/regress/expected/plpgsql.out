@@ -2070,13 +2070,13 @@ end$$ language plpgsql;
 select test_variable_storage();
 NOTICE:  should see this
 CONTEXT:  SQL statement "SELECT  trap_zero_divide(-100)"
-PL/pgSQL function "test_variable_storage" line 7 at perform
+PL/pgSQL function "test_variable_storage" line 7 at PERFORM
 NOTICE:  should see this only if -100 <> 0
 CONTEXT:  SQL statement "SELECT  trap_zero_divide(-100)"
-PL/pgSQL function "test_variable_storage" line 7 at perform
+PL/pgSQL function "test_variable_storage" line 7 at PERFORM
 NOTICE:  should see this only if -100 fits in smallint
 CONTEXT:  SQL statement "SELECT  trap_zero_divide(-100)"
-PL/pgSQL function "test_variable_storage" line 7 at perform
+PL/pgSQL function "test_variable_storage" line 7 at PERFORM
  test_variable_storage 
 -----------------------
  123456789012
@@ -2242,10 +2242,32 @@ begin
 end
 $$ language plpgsql;
 begin;
---select refcursor_test1('test1');
---fetch next from test1;
---select refcursor_test1('test2');
---fetch all from test2;
+select refcursor_test1('test1');
+ refcursor_test1 
+-----------------
+ test1
+(1 row)
+
+fetch next in test1;
+ a 
+---
+ 5
+(1 row)
+
+select refcursor_test1('test2');
+ refcursor_test1 
+-----------------
+ test2
+(1 row)
+
+fetch all from test2;
+  a  
+-----
+   5
+  50
+ 500
+(3 rows)
+
 commit;
 -- should fail
 fetch next from test1;
@@ -2278,7 +2300,7 @@ end;
 $$ language plpgsql;
 select raise_test1(5);
 ERROR:  too many parameters specified for RAISE
-CONTEXT:  PL/pgSQL function "raise_test1" line 2 at raise
+CONTEXT:  PL/pgSQL function "raise_test1" line 2 at RAISE
 create function raise_test2(int) returns int as $$
 begin
     raise notice 'This message has too few parameters: %, %, %', $1, $1;
@@ -2287,7 +2309,7 @@ end;
 $$ language plpgsql;
 select raise_test2(10);
 ERROR:  too few parameters specified for RAISE
-CONTEXT:  PL/pgSQL function "raise_test2" line 2 at raise
+CONTEXT:  PL/pgSQL function "raise_test2" line 2 at RAISE
 --
 -- reject function definitions that contain malformed SQL queries at
 -- compile-time, where possible
@@ -2406,7 +2428,7 @@ ERROR:  column "sqlstate" does not exist
 LINE 1: SELECT  sqlstate
                 ^
 QUERY:  SELECT  sqlstate
-CONTEXT:  PL/pgSQL function "excpt_test1" line 2 at raise
+CONTEXT:  PL/pgSQL function "excpt_test1" line 2 at RAISE
 create function excpt_test2() returns void as $$
 begin
     begin
@@ -2421,7 +2443,7 @@ ERROR:  column "sqlstate" does not exist
 LINE 1: SELECT  sqlstate
                 ^
 QUERY:  SELECT  sqlstate
-CONTEXT:  PL/pgSQL function "excpt_test2" line 4 at raise
+CONTEXT:  PL/pgSQL function "excpt_test2" line 4 at RAISE
 create function excpt_test3() returns void as $$
 begin
     begin
@@ -2898,7 +2920,7 @@ begin
 end$$ language plpgsql;
 select footest();
 ERROR:  query returned no rows
-CONTEXT:  PL/pgSQL function "footest" line 4 at execute statement
+CONTEXT:  PL/pgSQL function "footest" line 4 at EXECUTE statement
 create or replace function footest() returns void as $$
 declare x record;
 begin
@@ -2908,8 +2930,292 @@ begin
 end$$ language plpgsql;
 select footest();
 ERROR:  query returned more than one row
-CONTEXT:  PL/pgSQL function "footest" line 4 at execute statement
+CONTEXT:  PL/pgSQL function "footest" line 4 at EXECUTE statement
 drop function footest();
+-- test scrollable cursor support
+create function sc_test() returns setof integer as $$
+declare 
+  c scroll cursor for select f1 from int4_tbl;
+  x integer;
+begin
+  open c;
+  fetch last from c into x;
+  while found loop
+    return next x;
+    fetch prior from c into x;
+  end loop;
+  close c;
+end;
+$$ language plpgsql;
+select * from sc_test();
+   sc_test   
+-------------
+ -2147483647
+  2147483647
+     -123456
+      123456
+           0
+(5 rows)
+
+create or replace function sc_test() returns setof integer as $$
+declare 
+  c no scroll cursor for select f1 from int4_tbl;
+  x integer;
+begin
+  open c;
+  fetch last from c into x;
+  while found loop
+    return next x;
+    fetch prior from c into x;
+  end loop;
+  close c;
+end;
+$$ language plpgsql;
+select * from sc_test();  -- fails because of NO SCROLL specification
+ERROR:  cursor can only scan forward
+HINT:  Declare it with SCROLL option to enable backward scan.
+CONTEXT:  PL/pgSQL function "sc_test" line 6 at FETCH
+create or replace function sc_test() returns setof integer as $$
+declare 
+  c refcursor;
+  x integer;
+begin
+  open c scroll for select f1 from int4_tbl;
+  fetch last from c into x;
+  while found loop
+    return next x;
+    fetch prior from c into x;
+  end loop;
+  close c;
+end;
+$$ language plpgsql;
+select * from sc_test();
+   sc_test   
+-------------
+ -2147483647
+  2147483647
+     -123456
+      123456
+           0
+(5 rows)
+
+create or replace function sc_test() returns setof integer as $$
+declare 
+  c refcursor;
+  x integer;
+begin
+  open c scroll for execute 'select f1 from int4_tbl';
+  fetch last from c into x;
+  while found loop
+    return next x;
+    fetch relative -2 from c into x;
+  end loop;
+  close c;
+end;
+$$ language plpgsql;
+select * from sc_test();
+   sc_test   
+-------------
+ -2147483647
+     -123456
+           0
+(3 rows)
+
+create or replace function sc_test() returns setof integer as $$
+declare
+  c cursor for select * from generate_series(1, 10);
+  x integer;
+begin
+  open c;
+  loop
+      move relative 2 in c;
+      if not found then
+          exit;
+      end if;
+      fetch next from c into x;
+      if found then
+          return next x;
+      end if;
+  end loop;
+  close c;
+end;
+$$ language plpgsql;
+select * from sc_test();
+ sc_test 
+---------
+       3
+       6
+       9
+(3 rows)
+
+drop function sc_test();
+-- test qualified variable names
+create function pl_qual_names (param1 int) returns void as $$
+<<outerblock>>
+declare
+  param1 int := 1;
+begin
+  <<innerblock>>
+  declare
+    param1 int := 2;
+  begin
+    raise notice 'param1 = %', param1;
+    raise notice 'pl_qual_names.param1 = %', pl_qual_names.param1;
+    raise notice 'outerblock.param1 = %', outerblock.param1;
+    raise notice 'innerblock.param1 = %', innerblock.param1;
+  end;
+end;
+$$ language plpgsql;
+select pl_qual_names(42);
+NOTICE:  param1 = 2
+NOTICE:  pl_qual_names.param1 = 42
+NOTICE:  outerblock.param1 = 1
+NOTICE:  innerblock.param1 = 2
+ pl_qual_names 
+---------------
+ 
+(1 row)
+
+drop function pl_qual_names(int);
+-- tests for RETURN QUERY
+create function ret_query1(out int, out int) returns setof record as $$
+begin
+    $1 := -1;
+    $2 := -2;
+    return next;
+    return query select x + 1, x * 10 from generate_series(0, 10) s (x);
+    return next;
+end;
+$$ language plpgsql;
+select * from ret_query1();
+ column1 | column2 
+---------+---------
+      -1 |      -2
+       1 |       0
+       2 |      10
+       3 |      20
+       4 |      30
+       5 |      40
+       6 |      50
+       7 |      60
+       8 |      70
+       9 |      80
+      10 |      90
+      11 |     100
+      -1 |      -2
+(13 rows)
+
+create type record_type as (x text, y int, z boolean);
+create or replace function ret_query2(lim int) returns setof record_type as $$
+begin
+    return query select md5(s.x::text), s.x, s.x > 0
+                 from generate_series(-8, lim) s (x) where s.x % 2 = 0;
+end;
+$$ language plpgsql;
+select * from ret_query2(8);
+                x                 | y  | z 
+----------------------------------+----+---
+ a8d2ec85eaf98407310b72eb73dda247 | -8 | f
+ 596a3d04481816330f07e4f97510c28f | -6 | f
+ 0267aaf632e87a63288a08331f22c7c3 | -4 | f
+ 5d7b9adcbe1c629ec722529dd12e5129 | -2 | f
+ cfcd208495d565ef66e7dff9f98764da |  0 | f
+ c81e728d9d4c2f636f067f89cc14862c |  2 | t
+ a87ff679a2f3e71d9181a67b7542122c |  4 | t
+ 1679091c5a880faf6fb5e6087eb1b2dc |  6 | t
+ c9f0f895fb98ab9159f51fd0297e236d |  8 | t
+(9 rows)
+
+-- Test for appropriate cleanup of non-simple expression evaluations
+-- (bug in all versions prior to August 2010)
+CREATE FUNCTION nonsimple_expr_test() RETURNS text[] AS $$
+DECLARE
+  arr text[];
+  lr text;
+  i integer;
+BEGIN
+  arr := array[array['foo','bar'], array['baz', 'quux']];
+  lr := 'fool';
+  i := 1;
+  -- use sub-SELECTs to make expressions non-simple
+  arr[(SELECT i)][(SELECT i+1)] := (SELECT lr);
+  RETURN arr;
+END;
+$$ LANGUAGE plpgsql;
+SELECT nonsimple_expr_test();
+   nonsimple_expr_test   
+-------------------------
+ {{foo,fool},{baz,quux}}
+(1 row)
+
+DROP FUNCTION nonsimple_expr_test();
+CREATE FUNCTION nonsimple_expr_test() RETURNS integer AS $$
+declare
+   i integer NOT NULL := 0;
+begin
+  begin
+    i := (SELECT NULL::integer);  -- should throw error
+  exception
+    WHEN OTHERS THEN
+      i := (SELECT 1::integer);
+  end;
+  return i;
+end;
+$$ LANGUAGE plpgsql;
+SELECT nonsimple_expr_test();
+ nonsimple_expr_test 
+---------------------
+                   1
+(1 row)
+
+DROP FUNCTION nonsimple_expr_test();
+--
+-- Test cases involving recursion and error recovery in simple expressions
+-- (bugs in all versions before October 2010).  The problems are most
+-- easily exposed by mutual recursion between plpgsql and sql functions.
+--
+create function recurse(float8) returns float8 as
+$$
+begin
+  if ($1 > 0) then
+    return sql_recurse($1 - 1);
+  else
+    return $1;
+  end if;
+end;
+$$ language plpgsql;
+-- "limit" is to prevent this from being inlined
+create function sql_recurse(float8) returns float8 as
+$$ select recurse($1) limit 1; $$ language sql;
+select recurse(5);
+ recurse 
+---------
+       0
+(1 row)
+
+create function error1(text) returns text language sql as
+$$ SELECT relname::text FROM pg_class c WHERE c.oid = $1::regclass $$;
+create function error2(p_name_table text) returns text language plpgsql as $$
+begin
+  return error1(p_name_table);
+end$$;
+BEGIN;
+create table public.stuffs (stuff text);
+SAVEPOINT a;
+select error2('nonexistent.stuffs');
+ERROR:  schema "nonexistent" does not exist
+CONTEXT:  SQL function "error1" statement 1
+PL/pgSQL function "error2" line 2 at RETURN
+ROLLBACK TO a;
+select error2('public.stuffs');
+ error2 
+--------
+ stuffs
+(1 row)
+
+rollback;
+drop function error2(p_name_table text);
+drop function error1(text);
 
 -- Test anonymous code blocks.
 DO $$

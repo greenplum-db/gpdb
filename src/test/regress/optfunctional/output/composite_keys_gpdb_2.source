@@ -1,0 +1,41 @@
+-- ----------------------------------------------------------------------
+-- Test: ddl/composite_keys_gpdb_2.sql
+-- ----------------------------------------------------------------------
+-- @author elhela 
+-- @created 2015-05-11 12:00:00
+-- @tags ORCA
+-- @db_name gptest
+-- @gpopt 1.577
+-- @product_version gpdb: [4.3.5.1-]
+-- @gucs optimizer_multilevel_partitioning=on
+-- @optimizer_mode on
+-- @description Testing composite keys
+-- start_ignore
+DROP TABLE IF EXISTS pt;
+NOTICE:  table "pt" does not exist, skipping
+CREATE TABLE pt (i int, j int, k int, l int, m int) DISTRIBUTED BY (i)
+PARTITION BY list(k)
+  SUBPARTITION BY list(j, m) SUBPARTITION TEMPLATE (subpartition p11 values ((1,1)), subpartition p12 values((2,2)))
+( partition p1 values(1), partition p2 values(2));
+NOTICE:  CREATE TABLE will create partition "pt_1_prt_p1" for table "pt"
+NOTICE:  CREATE TABLE will create partition "pt_1_prt_p2" for table "pt"
+NOTICE:  CREATE TABLE will create partition "pt_1_prt_p1_2_prt_p11" for table "pt_1_prt_p1"
+NOTICE:  CREATE TABLE will create partition "pt_1_prt_p1_2_prt_p12" for table "pt_1_prt_p1"
+NOTICE:  CREATE TABLE will create partition "pt_1_prt_p2_2_prt_p11" for table "pt_1_prt_p2"
+NOTICE:  CREATE TABLE will create partition "pt_1_prt_p2_2_prt_p12" for table "pt_1_prt_p2"
+ERROR:  duplicate key value violates unique constraint "pg_type_typname_nsp_index"
+DETAIL:  Key (typname, typnamespace)=(pt, 2200) already exists.
+set client_min_messages='log';
+SELECT * FROM pt;
+LOG:  statement: SELECT * FROM pt;
+LOG:  2016-05-19 21:52:27:660656 UTC,THD000,NOTICE,"Feature not supported by the Pivotal Query Optimizer: Composite part key",
+LOG:  Planner produced plan :0
+ i | j | k | l | m 
+---+---+---+---+---
+(0 rows)
+
+set client_min_messages='notice';
+LOG:  statement: set client_min_messages='notice';
+-- end_ignore
+\!grep Planner @abs_srcdir@/results/composite_keys_gpdb_2.out|wc -l
+2

@@ -1,4 +1,4 @@
-# $PostgreSQL: pgsql/contrib/Makefile,v 1.71 2007/02/08 15:09:47 momjian Exp $
+# $PostgreSQL: pgsql/contrib/Makefile,v 1.82.2.1 2008/05/08 16:49:47 tgl Exp $
 
 subdir = contrib
 top_builddir = ..
@@ -14,8 +14,12 @@ WANTED_DIRS = \
 		gp_distribution_policy \
 		gp_internal_tools \
 		gp_cancel_query \
-		indexscan
-
+		indexscan \
+		dict_int \
+		dict_xsyn \
+		intarray \
+		pageinspect \
+		test_parser
 
 ifeq ($(with_openssl),yes)
 WANTED_DIRS += sslinfo
@@ -31,7 +35,6 @@ endif
 
 # Missing:
 #		start-scripts	\ (does not have a makefile)
-#		xml2		\ (requires libxml installed)
 
 
 all install installdirs uninstall distprep clean distclean maintainer-clean:

@@ -1,0 +1,34 @@
+-- ----------------------------------------------------------------------
+-- Test: ddl/composite_keys_gpdb_1.sql
+-- ----------------------------------------------------------------------
+-- @author elhela 
+-- @created 2015-05-11 12:00:00
+-- @tags ORCA
+-- @db_name gptest
+-- @gpopt 1.577
+-- @product_version gpdb: [4.3.5.1-]
+-- @gucs optimizer_multilevel_partitioning=on
+-- @optimizer_mode on
+-- @description Testing composite keys
+-- start_ignore
+DROP TABLE IF EXISTS pt;
+NOTICE:  table "pt" does not exist, skipping
+CREATE TABLE pt (i int, j int, k int, l int, m int) DISTRIBUTED BY (i)
+PARTITION BY list(k, l)
+( partition p1 values((1,1)), partition p2 values((2,2)));
+NOTICE:  CREATE TABLE will create partition "pt_1_prt_p1" for table "pt"
+NOTICE:  CREATE TABLE will create partition "pt_1_prt_p2" for table "pt"
+set client_min_messages='log';
+SELECT * FROM pt;
+LOG:  statement: SELECT * FROM pt;
+LOG:  2016-05-19 21:52:27:656198 UTC,THD000,NOTICE,"Feature not supported by the Pivotal Query Optimizer: Composite part key",
+LOG:  Planner produced plan :0
+ i | j | k | l | m 
+---+---+---+---+---
+(0 rows)
+
+set client_min_messages='notice';
+LOG:  statement: set client_min_messages='notice';
+-- end_ignore
+\!grep Planner @abs_srcdir@/results/composite_keys_gpdb_1.out|wc -l
+2

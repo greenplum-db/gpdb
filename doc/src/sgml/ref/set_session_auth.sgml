@@ -1,4 +1,4 @@
-<!-- $PostgreSQL: pgsql/doc/src/sgml/ref/set_session_auth.sgml,v 1.16 2007/01/31 23:26:04 momjian Exp $ -->
+<!-- $PostgreSQL: pgsql/doc/src/sgml/ref/set_session_auth.sgml,v 1.17 2008/01/03 21:23:15 tgl Exp $ -->
 <refentry id="SQL-SET-SESSION-AUTHORIZATION">
  <refmeta>
   <refentrytitle id="sql-set-session-authorization-title">SET SESSION AUTHORIZATION</refentrytitle>

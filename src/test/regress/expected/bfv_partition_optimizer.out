@@ -1565,9 +1565,6 @@ select * from pp where b=2 and c=2;
 (0 rows)
 
 select count_operator('explain select * from pp where b=2 and c=2;','Partition Selector');
-WARNING:  bogus var: varno=65000 varattno=2 (ruleutils.c:3186)
-CONTEXT:  SQL statement "explain select * from pp where b=2 and c=2;"
-PL/Python function "count_operator"
  count_operator 
 ----------------
               1
@@ -1664,7 +1661,7 @@ select * from ds_4 a1,ds_4 a2 where a1.month_id = a2.month_id and a1.month_id > 
 select count_operator('explain select * from ds_4 a1,ds_4 a2 where a1.month_id = a2.month_id and a1.month_id > E''200800'';','Partition Selector');
  count_operator 
 ----------------
-              2
+              1
 (1 row)
 
 -- CLEANUP

@@ -28,7 +28,6 @@ STD_CFLAGS := $(filter-out -I%,$(CFLAGS))
 STD_LDFLAGS := $(filter-out -L%,$(LDFLAGS))
 STD_LIBS := $(filter-out -L%,$(LIBS))
 
-override CPPFLAGS += -DFRONTEND
 override CPPFLAGS += -DVAL_CONFIGURE="\"$(configure_args)\""
 override CPPFLAGS += -DVAL_CC="\"$(CC)\""
 override CPPFLAGS += -DVAL_CPPFLAGS="\"$(STD_CPPFLAGS)\""

@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/tupmacs.h,v 1.31 2007/01/05 22:19:51 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/access/tupmacs.h,v 1.35 2008/01/01 19:45:56 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -68,22 +68,6 @@
 )
 
 /*
- * att_align aligns the given offset as needed for a datum of alignment
- * requirement attalign.  The cases are tested in what is hopefully something
- * like their frequency of occurrence.
- */
-#define att_align(cur_offset, attalign) \
-( \
-	((attalign) == 'i') ? INTALIGN(cur_offset) : \
-	 (((attalign) == 'c') ? ((intptr_t)(cur_offset)) : \
-	  (((attalign) == 'd') ? DOUBLEALIGN(cur_offset) : \
-		( \
-			AssertMacro((attalign) == 's'), \
-			SHORTALIGN(cur_offset) \
-		))) \
-)
-
-/*
  * att_align_datum aligns the given offset as needed for a datum of alignment
  * requirement attalign and typlen attlen.	attdatum is the Datum variable
  * we intend to pack into a tuple (it's only accessed if we are dealing with
@@ -93,7 +77,7 @@
  */
 #define att_align_datum(cur_offset, attalign, attlen, attdatum) \
 ( \
-	((attlen) == -1 && VARATT_IS_SHORT(DatumGetPointer(attdatum))) ? (intptr_t) (cur_offset) : \
+	((attlen) == -1 && VARATT_IS_SHORT(DatumGetPointer(attdatum))) ? (long) (cur_offset) : \
 	att_align_nominal(cur_offset, attalign) \
 )
 
@@ -113,10 +97,9 @@
  */
 #define att_align_pointer(cur_offset, attalign, attlen, attptr) \
 ( \
-	((attlen) == -1 && VARATT_NOT_PAD_BYTE(attptr)) ? (intptr_t) (cur_offset) : \
+	((attlen) == -1 && VARATT_NOT_PAD_BYTE(attptr)) ? (long) (cur_offset) : \
 	att_align_nominal(cur_offset, attalign) \
 )
-
 
 /*
  * att_align_nominal aligns the given offset as needed for a datum of alignment
@@ -136,7 +119,7 @@
 #define att_align_nominal(cur_offset, attalign) \
 ( \
 	((attalign) == 'i') ? INTALIGN(cur_offset) : \
-	 (((attalign) == 'c') ? (intptr_t) (cur_offset) : \
+	 (((attalign) == 'c') ? ((intptr_t)(cur_offset)) : \
 	  (((attalign) == 'd') ? DOUBLEALIGN(cur_offset) : \
 	   ( \
 			AssertMacro((attalign) == 's'), \
@@ -178,23 +161,6 @@
 	)) \
 )
 
-#define att_addlength(cur_offset, attlen, attval) \
-( \
-	((attlen) > 0) ? \
-	( \
-		(cur_offset) + (attlen) \
-	) \
-	: (((attlen) == -1) ? \
-	( \
-		(cur_offset) + VARSIZE_ANY(DatumGetPointer(attval)) \
-	) \
-	: \
-	( \
-		AssertMacro((attlen) == -2), \
-		(cur_offset) + (strlen(DatumGetCString(attval)) + 1) \
-	)) \
-)
-
 /*
  * store_att_byval is a partial inverse of fetch_att: store a given Datum
  * value into a tuple data area at the specified address.  However, it only
@@ -228,7 +194,7 @@
 /* Proper align with zero padding */
 static inline char * att_align_zero(char *data, char alignchar)
 {
-    size_t  misalignment = (size_t)att_align(1, alignchar) - 1;
+    size_t  misalignment = (size_t)att_align_nominal(1, alignchar) - 1;
 
     while ((size_t)data & misalignment)
 		*(data++) = 0;
@@ -236,19 +202,18 @@ static inline char * att_align_zero(char *data, char alignchar)
 	return data;
 }
 
-#ifndef VARATT_COULD_SHORT
-#define VARATT_COULD_SHORT(PTR) (VARATT_IS_4B_U(PTR) && (VARSIZE(PTR)-VARHDRSZ+VARHDRSZ_SHORT <= VARATT_SHORT_MAX))
-#define VARATT_COULD_SHORT_D(D) VARATT_COULD_SHORT(DatumGetPointer(D))
-#endif
-
-/* Determin if a datum of type oid can be stored in short varlena format */
-static inline bool value_type_could_short(Datum d, Oid typid)
+/*
+ * Determine if a datum of type oid can be stored in short varlena format.
+ * The caller must've checked that it's a pass-by-reference type.
+ */
+static inline bool
+value_type_could_short(Pointer ptr, Oid typid)
 {
-        return	!VARATT_IS_EXTERNAL_D(d) &&
-                (VARATT_IS_SHORT_D(d) || 
-                 (VARATT_COULD_SHORT_D(d) &&
-                  typid != INT2VECTOROID &&
-                  typid != OIDVECTOROID &&
-                  typid < FirstNormalObjectId));
+	return !VARATT_IS_EXTERNAL(ptr) &&
+		(VARATT_IS_SHORT(ptr) ||
+		 (VARATT_CAN_MAKE_SHORT(ptr) &&
+		  typid != INT2VECTOROID &&
+		  typid != OIDVECTOROID &&
+		  typid < FirstNormalObjectId));
 }
 #endif

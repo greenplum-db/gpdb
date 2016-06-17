@@ -1,0 +1,1212 @@
+-- start_ignore
+create schema dml_functional_no_setup_2;
+set search_path to dml_functional_no_setup_2;
+-- end_ignore
+-- start_ignore
+DROP FUNCTION IF EXISTS insert_correct();
+NOTICE:  function insert_correct() does not exist, skipping
+DROP LANGUAGE IF EXISTS plpythonu; 
+NOTICE:  language "plpythonu" does not exist, skipping
+CREATE LANGUAGE plpythonu;
+-- end_ignore
+CREATE or REPLACE FUNCTION  insert_correct () RETURNS void as $$
+    plpy.execute('INSERT INTO  dml_plperl_t1 VALUES (1)');
+    plpy.execute('INSERT INTO  dml_plperl_t1 VALUES (2)');
+    plpy.execute('INSERT INTO  dml_plperl_t1 VALUES (4)');
+    return;
+$$ language plpythonu;
+DROP FUNCTION IF EXISTS dml_plperl_fn1 (int,int);
+NOTICE:  function dml_plperl_fn1(pg_catalog.int4,pg_catalog.int4) does not exist, skipping
+CREATE or REPLACE FUNCTION dml_plperl_fn1 (st int,en int) returns void as $$
+DECLARE
+i integer;
+begin
+  i=st;
+  while i <= en LOOP
+    perform insert_correct();
+    i = i + 1;
+  END LOOP;
+end;
+$$ LANGUAGE 'plpgsql';
+DROP TABLE IF EXISTS dml_plperl_t1;
+NOTICE:  table "dml_plperl_t1" does not exist, skipping
+CREATE TABLE dml_plperl_t1 ( i int) distributed by (i);
+SELECT dml_plperl_fn1(1,10);
+ dml_plperl_fn1 
+----------------
+ 
+(1 row)
+
+SELECT COUNT(*) FROM dml_plperl_t1;
+ count 
+-------
+    30
+(1 row)
+
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @description test2: UDF with Insert within transaction
+DROP FUNCTION IF EXISTS dml_insertdata(integer);
+NOTICE:  function dml_insertdata(pg_catalog.int4) does not exist, skipping
+CREATE OR REPLACE FUNCTION dml_insertdata (startvalue INTEGER) RETURNS VOID
+AS
+$$
+DECLARE
+   i INTEGER;
+BEGIN
+   i = startvalue;
+    EXECUTE 'INSERT INTO dml_plpgsql_t2(a) VALUES (' || i || ')';
+END;
+$$
+LANGUAGE PLPGSQL;
+DROP TABLE IF EXISTS dml_plpgsql_t2;
+NOTICE:  table "dml_plpgsql_t2" does not exist, skipping
+CREATE TABLE dml_plpgsql_t2( a int ) distributed by (a);
+BEGIN;
+select dml_insertdata(1);
+ dml_insertdata 
+----------------
+ 
+(1 row)
+
+select dml_insertdata(2);
+ dml_insertdata 
+----------------
+ 
+(1 row)
+
+select dml_insertdata(3);
+ dml_insertdata 
+----------------
+ 
+(1 row)
+
+select dml_insertdata(4);
+ dml_insertdata 
+----------------
+ 
+(1 row)
+
+select dml_insertdata(5);
+ dml_insertdata 
+----------------
+ 
+(1 row)
+
+select dml_insertdata(6);
+ dml_insertdata 
+----------------
+ 
+(1 row)
+
+select dml_insertdata(7);
+ dml_insertdata 
+----------------
+ 
+(1 row)
+
+select dml_insertdata(8);
+ dml_insertdata 
+----------------
+ 
+(1 row)
+
+select dml_insertdata(9);
+ dml_insertdata 
+----------------
+ 
+(1 row)
+
+select dml_insertdata(10);
+ dml_insertdata 
+----------------
+ 
+(1 row)
+
+COMMIT;
+SELECT COUNT(*) FROM dml_plpgsql_t2;
+ count 
+-------
+    10
+(1 row)
+
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @description test3: UDF with Insert within transaction
+DROP FUNCTION IF EXISTS dml_fn2(int);
+NOTICE:  function dml_fn2(pg_catalog.int4) does not exist, skipping
+CREATE OR REPLACE FUNCTION dml_fn2(x int) RETURNS INT as $$
+for i in range(0, x):
+  plpy.execute('INSERT INTO dml_plpython_t2 values(%d)' % i);
+return plpy.execute('SELECT COUNT(*) as a FROM dml_plpython_t2')[0]["a"]
+$$ language plpythonu;
+DROP TABLE IF EXISTS dml_plpython_t2;
+NOTICE:  table "dml_plpython_t2" does not exist, skipping
+CREATE TABLE dml_plpython_t2(a int) DISTRIBUTED randomly;
+BEGIN;
+SELECT dml_fn2(20);
+ dml_fn2 
+---------
+      20
+(1 row)
+
+ROLLBACK;
+BEGIN;
+SELECT dml_fn2(10);
+ dml_fn2 
+---------
+      10
+(1 row)
+
+COMMIT;
+SELECT COUNT(*) FROM dml_plpython_t2;
+ count 
+-------
+    10
+(1 row)
+
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @description test4: Negative test - UDF with Insert
+-- start_ignore
+DROP FUNCTION IF EXISTS insert_wrong();
+NOTICE:  function insert_wrong() does not exist, skipping
+-- end_ignore
+CREATE or REPLACE FUNCTION insert_wrong() RETURNS void as $$
+BEGIN
+INSERT INTO  errorhandlingtmpTABLE VALUES ('fjdk');
+END;
+$$ language plpgsql;
+DROP FUNCTION IF EXISTS dml_plperl_fn2 (int,int);
+NOTICE:  function dml_plperl_fn2(pg_catalog.int4,pg_catalog.int4) does not exist, skipping
+CREATE or REPLACE FUNCTION dml_plperl_fn2 (st int,en int) returns void as $$
+DECLARE
+i integer;
+begin
+  i=st;
+  while i <= en LOOP
+    perform insert_wrong();
+    i = i + 1;
+  END LOOP;
+end;
+$$ LANGUAGE 'plpgsql';
+DROP TABLE IF EXISTS dml_plperl_t2;
+NOTICE:  table "dml_plperl_t2" does not exist, skipping
+CREATE TABLE dml_plperl_t2(i int) distributed by (i);
+SELECT dml_plperl_fn2(1,10);
+ERROR:  relation "errorhandlingtmptable" does not exist
+LINE 1: INSERT INTO errorhandlingtmpTABLE VALUES ('fjdk')
+                    ^
+QUERY:  INSERT INTO errorhandlingtmpTABLE VALUES ('fjdk')
+CONTEXT:  PL/pgSQL function "insert_wrong" line 2 at SQL statement
+SQL statement "SELECT  insert_wrong()"
+PL/pgSQL function "dml_plperl_fn2" line 6 at perform
+SELECT COUNT(*) FROM dml_plperl_t2;
+ count 
+-------
+     0
+(1 row)
+
+-- @author prabhd 
+-- @created 2012-12-05 12:00:00 
+-- @modified 2012-12-05 12:00:00 
+-- @tags dml 
+-- @db_name dmldb
+-- @description test5: Negative test - UDF with Insert. Different data type
+DROP FUNCTION IF EXISTS dml_insertvalue(integer);
+NOTICE:  function dml_insertvalue(pg_catalog.int4) does not exist, skipping
+CREATE OR REPLACE FUNCTION dml_insertvalue (inp integer) RETURNS VOID
+AS
+$$
+DECLARE
+BEGIN
+     EXECUTE 'INSERT INTO dml_plpgsql_t1(a) VALUES (%)' , i;
+EXCEPTION
+    WHEN others THEN
+    RAISE NOTICE 'Error in data';
+END;
+$$
+LANGUAGE PLPGSQL;
+DROP FUNCTION IF EXISTS dml_indata(integer,integer);
+NOTICE:  function dml_indata(pg_catalog.int4,pg_catalog.int4) does not exist, skipping
+CREATE OR REPLACE FUNCTION dml_indata (startvalue integer, endvalue integer) RETURNS VOID
+AS
+$$
+DECLARE
+   i INTEGER;
+BEGIN
+   i = startvalue;
+   WHILE i <= endvalue LOOP
+       PERFORM dml_insertvalue(100);
+       i = i + 1;
+   END LOOP;
+END;
+$$
+LANGUAGE PLPGSQL;
+DROP TABLE IF EXISTS dml_plpgsql_t1;
+NOTICE:  table "dml_plpgsql_t1" does not exist, skipping
+CREATE TABLE dml_plpgsql_t1(a char) distributed by (a);
+SELECT dml_indata(1,10);
+NOTICE:  Error in data
+CONTEXT:  SQL statement "SELECT  dml_insertvalue(100)"
+PL/pgSQL function "dml_indata" line 6 at perform
+NOTICE:  Error in data
+CONTEXT:  SQL statement "SELECT  dml_insertvalue(100)"
+PL/pgSQL function "dml_indata" line 6 at perform
+NOTICE:  Error in data
+CONTEXT:  SQL statement "SELECT  dml_insertvalue(100)"
+PL/pgSQL function "dml_indata" line 6 at perform
+NOTICE:  Error in data
+CONTEXT:  SQL statement "SELECT  dml_insertvalue(100)"
+PL/pgSQL function "dml_indata" line 6 at perform
+NOTICE:  Error in data
+CONTEXT:  SQL statement "SELECT  dml_insertvalue(100)"
+PL/pgSQL function "dml_indata" line 6 at perform
+NOTICE:  Error in data
+CONTEXT:  SQL statement "SELECT  dml_insertvalue(100)"
+PL/pgSQL function "dml_indata" line 6 at perform
+NOTICE:  Error in data
+CONTEXT:  SQL statement "SELECT  dml_insertvalue(100)"
+PL/pgSQL function "dml_indata" line 6 at perform
+NOTICE:  Error in data
+CONTEXT:  SQL statement "SELECT  dml_insertvalue(100)"
+PL/pgSQL function "dml_indata" line 6 at perform
+NOTICE:  Error in data
+CONTEXT:  SQL statement "SELECT  dml_insertvalue(100)"
+PL/pgSQL function "dml_indata" line 6 at perform
+NOTICE:  Error in data
+CONTEXT:  SQL statement "SELECT  dml_insertvalue(100)"
+PL/pgSQL function "dml_indata" line 6 at perform
+ dml_indata 
+------------
+ 
+(1 row)
+
+SELECT COUNT(*) FROM dml_plpgsql_t1;
+ count 
+-------
+     0
+(1 row)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @product_version gpdb: [4.3-]
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+DROP TABLE IF EXISTS volatilefn_dml_char;
+NOTICE:  table "volatilefn_dml_char" does not exist, skipping
+CREATE TABLE volatilefn_dml_char
+(
+    col1 char DEFAULT 'a',
+    col2 char DEFAULT 'a',
+    col3 int,
+    col4 char DEFAULT 'a'
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def 
+);
+NOTICE:  CREATE TABLE will create partition "volatilefn_dml_char_1_prt_def" for table "volatilefn_dml_char"
+DROP TABLE IF EXISTS volatilefn_dml_char_candidate;
+NOTICE:  table "volatilefn_dml_char_candidate" does not exist, skipping
+CREATE TABLE volatilefn_dml_char_candidate
+(
+    col1 char DEFAULT 'a',
+    col2 char DEFAULT 'a',
+    col3 int,
+    col4 char 
+) 
+DISTRIBUTED by (col2);
+INSERT INTO volatilefn_dml_char_candidate(col3,col4) VALUES(10,'g');
+-- Create volatile UDF
+CREATE OR REPLACE FUNCTION func(x int) RETURNS int AS $$
+BEGIN
+
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo (a int, b int) distributed by (a);
+INSERT INTO foo select i, i+1 from generate_series(1,10) i;
+
+DROP TABLE IF EXISTS bar;
+CREATE TABLE bar (c int, d int) distributed by (c);
+INSERT INTO bar select i, i+1 from generate_series(1,10) i;
+
+UPDATE bar SET d = d+1 WHERE c = $1;
+RETURN $1 + 1;
+END
+$$ LANGUAGE plpgsql VOLATILE MODIFIES SQL DATA;
+INSERT INTO volatilefn_dml_char(col1,col3) SELECT col2,func(14) FROM volatilefn_dml_char_candidate;
+ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:135)  (seg2 127.0.0.1:25434 pid=55662)
+DETAIL:  
+SQL statement "DROP TABLE IF EXISTS foo"
+PL/pgSQL function "func" line 3 at SQL statement
+SELECT * FROM volatilefn_dml_char ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+UPDATE volatilefn_dml_char SET col3 = (SELECT func(1));
+NOTICE:  table "foo" does not exist, skipping
+CONTEXT:  SQL statement "DROP TABLE IF EXISTS foo"
+PL/pgSQL function "func" line 3 at SQL statement
+NOTICE:  table "bar" does not exist, skipping
+CONTEXT:  SQL statement "DROP TABLE IF EXISTS bar"
+PL/pgSQL function "func" line 7 at SQL statement
+SELECT * FROM volatilefn_dml_char ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+DELETE FROM volatilefn_dml_char WHERE col3 = (SELECT func(1));
+SELECT * FROM volatilefn_dml_char ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @product_version gpdb: [4.3-]
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+DROP TABLE IF EXISTS volatilefn_dml_date;
+NOTICE:  table "volatilefn_dml_date" does not exist, skipping
+CREATE TABLE volatilefn_dml_date
+(
+    col1 date DEFAULT '2014-01-01',
+    col2 date DEFAULT '2014-01-01',
+    col3 int,
+    col4 date DEFAULT '2014-01-01'
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def 
+);
+NOTICE:  CREATE TABLE will create partition "volatilefn_dml_date_1_prt_def" for table "volatilefn_dml_date"
+DROP TABLE IF EXISTS volatilefn_dml_date_candidate;
+NOTICE:  table "volatilefn_dml_date_candidate" does not exist, skipping
+CREATE TABLE volatilefn_dml_date_candidate
+(
+    col1 date DEFAULT '2014-01-01',
+    col2 date DEFAULT '2014-01-01',
+    col3 int,
+    col4 date 
+) 
+DISTRIBUTED by (col2);
+INSERT INTO volatilefn_dml_date_candidate(col3,col4) VALUES(10,'2013-12-30');
+-- Create volatile UDF
+CREATE OR REPLACE FUNCTION func(x int) RETURNS int AS $$
+BEGIN
+
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo (a int, b int) distributed by (a);
+INSERT INTO foo select i, i+1 from generate_series(1,10) i;
+
+DROP TABLE IF EXISTS bar;
+CREATE TABLE bar (c int, d int) distributed by (c);
+INSERT INTO bar select i, i+1 from generate_series(1,10) i;
+
+UPDATE bar SET d = d+1 WHERE c = $1;
+RETURN $1 + 1;
+END
+$$ LANGUAGE plpgsql VOLATILE MODIFIES SQL DATA;
+INSERT INTO volatilefn_dml_date(col1,col3) SELECT col2,func(14) FROM volatilefn_dml_date_candidate;
+ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:135)  (seg0 127.0.0.1:25432 pid=55660)
+DETAIL:  
+SQL statement "DROP TABLE IF EXISTS foo"
+PL/pgSQL function "func" line 3 at SQL statement
+SELECT * FROM volatilefn_dml_date ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+UPDATE volatilefn_dml_date SET col3 = (SELECT func(1));
+SELECT * FROM volatilefn_dml_date ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+DELETE FROM volatilefn_dml_date WHERE col3 = (SELECT func(1));
+SELECT * FROM volatilefn_dml_date ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @product_version gpdb: [4.3-]
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+DROP TABLE IF EXISTS volatilefn_dml_decimal;
+NOTICE:  table "volatilefn_dml_decimal" does not exist, skipping
+CREATE TABLE volatilefn_dml_decimal
+(
+    col1 decimal DEFAULT 1.00,
+    col2 decimal DEFAULT 1.00,
+    col3 int,
+    col4 decimal DEFAULT 1.00
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def 
+);
+NOTICE:  CREATE TABLE will create partition "volatilefn_dml_decimal_1_prt_def" for table "volatilefn_dml_decimal"
+DROP TABLE IF EXISTS volatilefn_dml_decimal_candidate;
+NOTICE:  table "volatilefn_dml_decimal_candidate" does not exist, skipping
+CREATE TABLE volatilefn_dml_decimal_candidate
+(
+    col1 decimal DEFAULT 1.00,
+    col2 decimal DEFAULT 1.00,
+    col3 int,
+    col4 decimal 
+) 
+DISTRIBUTED by (col2);
+INSERT INTO volatilefn_dml_decimal_candidate(col3,col4) VALUES(10,2.00);
+-- Create volatile UDF
+CREATE OR REPLACE FUNCTION func(x int) RETURNS int AS $$
+BEGIN
+
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo (a int, b int) distributed by (a);
+INSERT INTO foo select i, i+1 from generate_series(1,10) i;
+
+DROP TABLE IF EXISTS bar;
+CREATE TABLE bar (c int, d int) distributed by (c);
+INSERT INTO bar select i, i+1 from generate_series(1,10) i;
+
+UPDATE bar SET d = d+1 WHERE c = $1;
+RETURN $1 + 1;
+END
+$$ LANGUAGE plpgsql VOLATILE MODIFIES SQL DATA;
+INSERT INTO volatilefn_dml_decimal(col1,col3) SELECT col2,func(14) FROM volatilefn_dml_decimal_candidate;
+ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:135)  (seg0 127.0.0.1:25432 pid=55660)
+DETAIL:  
+SQL statement "DROP TABLE IF EXISTS foo"
+PL/pgSQL function "func" line 3 at SQL statement
+SELECT * FROM volatilefn_dml_decimal ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+UPDATE volatilefn_dml_decimal SET col3 = (SELECT func(1));
+SELECT * FROM volatilefn_dml_decimal ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+DELETE FROM volatilefn_dml_decimal WHERE col3 = (SELECT func(1));
+SELECT * FROM volatilefn_dml_decimal ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @product_version gpdb: [4.3-]
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+DROP TABLE IF EXISTS volatilefn_dml_float;
+NOTICE:  table "volatilefn_dml_float" does not exist, skipping
+CREATE TABLE volatilefn_dml_float
+(
+    col1 float DEFAULT 1.00,
+    col2 float DEFAULT 1.00,
+    col3 int,
+    col4 float DEFAULT 1.00
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def 
+);
+NOTICE:  CREATE TABLE will create partition "volatilefn_dml_float_1_prt_def" for table "volatilefn_dml_float"
+DROP TABLE IF EXISTS volatilefn_dml_float_candidate;
+NOTICE:  table "volatilefn_dml_float_candidate" does not exist, skipping
+CREATE TABLE volatilefn_dml_float_candidate
+(
+    col1 float DEFAULT 1.00,
+    col2 float DEFAULT 1.00,
+    col3 int,
+    col4 float 
+) 
+DISTRIBUTED by (col2);
+INSERT INTO volatilefn_dml_float_candidate(col3,col4) VALUES(10,2.00);
+-- Create volatile UDF
+CREATE OR REPLACE FUNCTION func(x int) RETURNS int AS $$
+BEGIN
+
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo (a int, b int) distributed by (a);
+INSERT INTO foo select i, i+1 from generate_series(1,10) i;
+
+DROP TABLE IF EXISTS bar;
+CREATE TABLE bar (c int, d int) distributed by (c);
+INSERT INTO bar select i, i+1 from generate_series(1,10) i;
+
+UPDATE bar SET d = d+1 WHERE c = $1;
+RETURN $1 + 1;
+END
+$$ LANGUAGE plpgsql VOLATILE MODIFIES SQL DATA;
+INSERT INTO volatilefn_dml_float(col1,col3) SELECT col2,func(14) FROM volatilefn_dml_float_candidate;
+ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:135)  (seg2 127.0.0.1:25434 pid=55662)
+DETAIL:  
+SQL statement "DROP TABLE IF EXISTS foo"
+PL/pgSQL function "func" line 3 at SQL statement
+SELECT * FROM volatilefn_dml_float ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+UPDATE volatilefn_dml_float SET col3 = (SELECT func(1));
+SELECT * FROM volatilefn_dml_float ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+DELETE FROM volatilefn_dml_float WHERE col3 = (SELECT func(1));
+SELECT * FROM volatilefn_dml_float ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @product_version gpdb: [4.3-]
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+DROP TABLE IF EXISTS volatilefn_dml_int;
+NOTICE:  table "volatilefn_dml_int" does not exist, skipping
+CREATE TABLE volatilefn_dml_int
+(
+    col1 int DEFAULT 20000,
+    col2 int DEFAULT 20000,
+    col3 int,
+    col4 int DEFAULT 20000
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def 
+);
+NOTICE:  CREATE TABLE will create partition "volatilefn_dml_int_1_prt_def" for table "volatilefn_dml_int"
+DROP TABLE IF EXISTS volatilefn_dml_int_candidate;
+NOTICE:  table "volatilefn_dml_int_candidate" does not exist, skipping
+CREATE TABLE volatilefn_dml_int_candidate
+(
+    col1 int DEFAULT 20000,
+    col2 int DEFAULT 20000,
+    col3 int,
+    col4 int 
+) 
+DISTRIBUTED by (col2);
+INSERT INTO volatilefn_dml_int_candidate(col3,col4) VALUES(10,10000);
+-- Create volatile UDF
+CREATE OR REPLACE FUNCTION func(x int) RETURNS int AS $$
+BEGIN
+
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo (a int, b int) distributed by (a);
+INSERT INTO foo select i, i+1 from generate_series(1,10) i;
+
+DROP TABLE IF EXISTS bar;
+CREATE TABLE bar (c int, d int) distributed by (c);
+INSERT INTO bar select i, i+1 from generate_series(1,10) i;
+
+UPDATE bar SET d = d+1 WHERE c = $1;
+RETURN $1 + 1;
+END
+$$ LANGUAGE plpgsql VOLATILE MODIFIES SQL DATA;
+INSERT INTO volatilefn_dml_int(col1,col3) SELECT col2,func(14) FROM volatilefn_dml_int_candidate;
+ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:135)  (seg0 127.0.0.1:25432 pid=55660)
+DETAIL:  
+SQL statement "DROP TABLE IF EXISTS foo"
+PL/pgSQL function "func" line 3 at SQL statement
+SELECT * FROM volatilefn_dml_int ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+UPDATE volatilefn_dml_int SET col3 = (SELECT func(1));
+SELECT * FROM volatilefn_dml_int ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+DELETE FROM volatilefn_dml_int WHERE col3 = (SELECT func(1));
+SELECT * FROM volatilefn_dml_int ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @product_version gpdb: [4.3-]
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+DROP TABLE IF EXISTS volatilefn_dml_int4;
+NOTICE:  table "volatilefn_dml_int4" does not exist, skipping
+CREATE TABLE volatilefn_dml_int4
+(
+    col1 int4 DEFAULT 10000000,
+    col2 int4 DEFAULT 10000000,
+    col3 int,
+    col4 int4 DEFAULT 10000000
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def 
+);
+NOTICE:  CREATE TABLE will create partition "volatilefn_dml_int4_1_prt_def" for table "volatilefn_dml_int4"
+DROP TABLE IF EXISTS volatilefn_dml_int4_candidate;
+NOTICE:  table "volatilefn_dml_int4_candidate" does not exist, skipping
+CREATE TABLE volatilefn_dml_int4_candidate
+(
+    col1 int4 DEFAULT 10000000,
+    col2 int4 DEFAULT 10000000,
+    col3 int,
+    col4 int4 
+) 
+DISTRIBUTED by (col2);
+INSERT INTO volatilefn_dml_int4_candidate(col3,col4) VALUES(10,20000000);
+-- Create volatile UDF
+CREATE OR REPLACE FUNCTION func(x int) RETURNS int AS $$
+BEGIN
+
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo (a int, b int) distributed by (a);
+INSERT INTO foo select i, i+1 from generate_series(1,10) i;
+
+DROP TABLE IF EXISTS bar;
+CREATE TABLE bar (c int, d int) distributed by (c);
+INSERT INTO bar select i, i+1 from generate_series(1,10) i;
+
+UPDATE bar SET d = d+1 WHERE c = $1;
+RETURN $1 + 1;
+END
+$$ LANGUAGE plpgsql VOLATILE MODIFIES SQL DATA;
+INSERT INTO volatilefn_dml_int4(col1,col3) SELECT col2,func(14) FROM volatilefn_dml_int4_candidate;
+ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:135)  (seg1 127.0.0.1:25433 pid=55661)
+DETAIL:  
+SQL statement "DROP TABLE IF EXISTS foo"
+PL/pgSQL function "func" line 3 at SQL statement
+SELECT * FROM volatilefn_dml_int4 ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+UPDATE volatilefn_dml_int4 SET col3 = (SELECT func(1));
+SELECT * FROM volatilefn_dml_int4 ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+DELETE FROM volatilefn_dml_int4 WHERE col3 = (SELECT func(1));
+SELECT * FROM volatilefn_dml_int4 ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @product_version gpdb: [4.3-]
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+DROP TABLE IF EXISTS volatilefn_dml_int8;
+NOTICE:  table "volatilefn_dml_int8" does not exist, skipping
+CREATE TABLE volatilefn_dml_int8
+(
+    col1 int8 DEFAULT 1000000000000000000,
+    col2 int8 DEFAULT 1000000000000000000,
+    col3 int,
+    col4 int8 DEFAULT 1000000000000000000
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def 
+);
+NOTICE:  CREATE TABLE will create partition "volatilefn_dml_int8_1_prt_def" for table "volatilefn_dml_int8"
+DROP TABLE IF EXISTS volatilefn_dml_int8_candidate;
+NOTICE:  table "volatilefn_dml_int8_candidate" does not exist, skipping
+CREATE TABLE volatilefn_dml_int8_candidate
+(
+    col1 int8 DEFAULT 1000000000000000000,
+    col2 int8 DEFAULT 1000000000000000000,
+    col3 int,
+    col4 int8 
+) 
+DISTRIBUTED by (col2);
+INSERT INTO volatilefn_dml_int8_candidate(col3,col4) VALUES(10,200000000000000000);
+-- Create volatile UDF
+CREATE OR REPLACE FUNCTION func(x int) RETURNS int AS $$
+BEGIN
+
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo (a int, b int) distributed by (a);
+INSERT INTO foo select i, i+1 from generate_series(1,10) i;
+
+DROP TABLE IF EXISTS bar;
+CREATE TABLE bar (c int, d int) distributed by (c);
+INSERT INTO bar select i, i+1 from generate_series(1,10) i;
+
+UPDATE bar SET d = d+1 WHERE c = $1;
+RETURN $1 + 1;
+END
+$$ LANGUAGE plpgsql VOLATILE MODIFIES SQL DATA;
+INSERT INTO volatilefn_dml_int8(col1,col3) SELECT col2,func(14) FROM volatilefn_dml_int8_candidate;
+ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:135)  (seg0 127.0.0.1:25432 pid=55660)
+DETAIL:  
+SQL statement "DROP TABLE IF EXISTS foo"
+PL/pgSQL function "func" line 3 at SQL statement
+SELECT * FROM volatilefn_dml_int8 ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+UPDATE volatilefn_dml_int8 SET col3 = (SELECT func(1));
+SELECT * FROM volatilefn_dml_int8 ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+DELETE FROM volatilefn_dml_int8 WHERE col3 = (SELECT func(1));
+SELECT * FROM volatilefn_dml_int8 ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @product_version gpdb: [4.3-]
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+DROP TABLE IF EXISTS volatilefn_dml_interval;
+NOTICE:  table "volatilefn_dml_interval" does not exist, skipping
+CREATE TABLE volatilefn_dml_interval
+(
+    col1 interval DEFAULT '11 hours',
+    col2 interval DEFAULT '11 hours',
+    col3 int,
+    col4 interval DEFAULT '11 hours'
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def 
+);
+NOTICE:  CREATE TABLE will create partition "volatilefn_dml_interval_1_prt_def" for table "volatilefn_dml_interval"
+DROP TABLE IF EXISTS volatilefn_dml_interval_candidate;
+NOTICE:  table "volatilefn_dml_interval_candidate" does not exist, skipping
+CREATE TABLE volatilefn_dml_interval_candidate
+(
+    col1 interval DEFAULT '11 hours',
+    col2 interval DEFAULT '11 hours',
+    col3 int,
+    col4 interval 
+) 
+DISTRIBUTED by (col2);
+INSERT INTO volatilefn_dml_interval_candidate(col3,col4) VALUES(10,'10 secs');
+-- Create volatile UDF
+CREATE OR REPLACE FUNCTION func(x int) RETURNS int AS $$
+BEGIN
+
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo (a int, b int) distributed by (a);
+INSERT INTO foo select i, i+1 from generate_series(1,10) i;
+
+DROP TABLE IF EXISTS bar;
+CREATE TABLE bar (c int, d int) distributed by (c);
+INSERT INTO bar select i, i+1 from generate_series(1,10) i;
+
+UPDATE bar SET d = d+1 WHERE c = $1;
+RETURN $1 + 1;
+END
+$$ LANGUAGE plpgsql VOLATILE MODIFIES SQL DATA;
+INSERT INTO volatilefn_dml_interval(col1,col3) SELECT col2,func(14) FROM volatilefn_dml_interval_candidate;
+ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:135)  (seg1 127.0.0.1:25433 pid=55661)
+DETAIL:  
+SQL statement "DROP TABLE IF EXISTS foo"
+PL/pgSQL function "func" line 3 at SQL statement
+SELECT * FROM volatilefn_dml_interval ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+UPDATE volatilefn_dml_interval SET col3 = (SELECT func(1));
+SELECT * FROM volatilefn_dml_interval ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+DELETE FROM volatilefn_dml_interval WHERE col3 = (SELECT func(1));
+SELECT * FROM volatilefn_dml_interval ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @product_version gpdb: [4.3-]
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+DROP TABLE IF EXISTS volatilefn_dml_numeric;
+NOTICE:  table "volatilefn_dml_numeric" does not exist, skipping
+CREATE TABLE volatilefn_dml_numeric
+(
+    col1 numeric DEFAULT 1.000000,
+    col2 numeric DEFAULT 1.000000,
+    col3 int,
+    col4 numeric DEFAULT 1.000000
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def 
+);
+NOTICE:  CREATE TABLE will create partition "volatilefn_dml_numeric_1_prt_def" for table "volatilefn_dml_numeric"
+DROP TABLE IF EXISTS volatilefn_dml_numeric_candidate;
+NOTICE:  table "volatilefn_dml_numeric_candidate" does not exist, skipping
+CREATE TABLE volatilefn_dml_numeric_candidate
+(
+    col1 numeric DEFAULT 1.000000,
+    col2 numeric DEFAULT 1.000000,
+    col3 int,
+    col4 numeric 
+) 
+DISTRIBUTED by (col2);
+INSERT INTO volatilefn_dml_numeric_candidate(col3,col4) VALUES(10,2.000000);
+-- Create volatile UDF
+CREATE OR REPLACE FUNCTION func(x int) RETURNS int AS $$
+BEGIN
+
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo (a int, b int) distributed by (a);
+INSERT INTO foo select i, i+1 from generate_series(1,10) i;
+
+DROP TABLE IF EXISTS bar;
+CREATE TABLE bar (c int, d int) distributed by (c);
+INSERT INTO bar select i, i+1 from generate_series(1,10) i;
+
+UPDATE bar SET d = d+1 WHERE c = $1;
+RETURN $1 + 1;
+END
+$$ LANGUAGE plpgsql VOLATILE MODIFIES SQL DATA;
+INSERT INTO volatilefn_dml_numeric(col1,col3) SELECT col2,func(14) FROM volatilefn_dml_numeric_candidate;
+ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:135)  (seg0 127.0.0.1:25432 pid=55660)
+DETAIL:  
+SQL statement "DROP TABLE IF EXISTS foo"
+PL/pgSQL function "func" line 3 at SQL statement
+SELECT * FROM volatilefn_dml_numeric ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+UPDATE volatilefn_dml_numeric SET col3 = (SELECT func(1));
+SELECT * FROM volatilefn_dml_numeric ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+DELETE FROM volatilefn_dml_numeric WHERE col3 = (SELECT func(1));
+SELECT * FROM volatilefn_dml_numeric ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @product_version gpdb: [4.3-]
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+DROP TABLE IF EXISTS volatilefn_dml_time;
+NOTICE:  table "volatilefn_dml_time" does not exist, skipping
+CREATE TABLE volatilefn_dml_time
+(
+    col1 time DEFAULT '1:00:00',
+    col2 time DEFAULT '1:00:00',
+    col3 int,
+    col4 time DEFAULT '1:00:00'
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def 
+);
+NOTICE:  CREATE TABLE will create partition "volatilefn_dml_time_1_prt_def" for table "volatilefn_dml_time"
+DROP TABLE IF EXISTS volatilefn_dml_time_candidate;
+NOTICE:  table "volatilefn_dml_time_candidate" does not exist, skipping
+CREATE TABLE volatilefn_dml_time_candidate
+(
+    col1 time DEFAULT '1:00:00',
+    col2 time DEFAULT '1:00:00',
+    col3 int,
+    col4 time 
+) 
+DISTRIBUTED by (col2);
+INSERT INTO volatilefn_dml_time_candidate(col3,col4) VALUES(10,'12:00:00');
+-- Create volatile UDF
+CREATE OR REPLACE FUNCTION func(x int) RETURNS int AS $$
+BEGIN
+
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo (a int, b int) distributed by (a);
+INSERT INTO foo select i, i+1 from generate_series(1,10) i;
+
+DROP TABLE IF EXISTS bar;
+CREATE TABLE bar (c int, d int) distributed by (c);
+INSERT INTO bar select i, i+1 from generate_series(1,10) i;
+
+UPDATE bar SET d = d+1 WHERE c = $1;
+RETURN $1 + 1;
+END
+$$ LANGUAGE plpgsql VOLATILE MODIFIES SQL DATA;
+INSERT INTO volatilefn_dml_time(col1,col3) SELECT col2,func(14) FROM volatilefn_dml_time_candidate;
+ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:135)  (seg0 127.0.0.1:25432 pid=55660)
+DETAIL:  
+SQL statement "DROP TABLE IF EXISTS foo"
+PL/pgSQL function "func" line 3 at SQL statement
+SELECT * FROM volatilefn_dml_time ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+UPDATE volatilefn_dml_time SET col3 = (SELECT func(1));
+SELECT * FROM volatilefn_dml_time ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+DELETE FROM volatilefn_dml_time WHERE col3 = (SELECT func(1));
+SELECT * FROM volatilefn_dml_time ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @product_version gpdb: [4.3-]
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+DROP TABLE IF EXISTS volatilefn_dml_timestamp;
+NOTICE:  table "volatilefn_dml_timestamp" does not exist, skipping
+CREATE TABLE volatilefn_dml_timestamp
+(
+    col1 timestamp DEFAULT '2014-01-01 12:00:00',
+    col2 timestamp DEFAULT '2014-01-01 12:00:00',
+    col3 int,
+    col4 timestamp DEFAULT '2014-01-01 12:00:00'
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def 
+);
+NOTICE:  CREATE TABLE will create partition "volatilefn_dml_timestamp_1_prt_def" for table "volatilefn_dml_timestamp"
+DROP TABLE IF EXISTS volatilefn_dml_timestamp_candidate;
+NOTICE:  table "volatilefn_dml_timestamp_candidate" does not exist, skipping
+CREATE TABLE volatilefn_dml_timestamp_candidate
+(
+    col1 timestamp DEFAULT '2014-01-01 12:00:00',
+    col2 timestamp DEFAULT '2014-01-01 12:00:00',
+    col3 int,
+    col4 timestamp 
+) 
+DISTRIBUTED by (col2);
+INSERT INTO volatilefn_dml_timestamp_candidate(col3,col4) VALUES(10,'2013-12-30 12:00:00');
+-- Create volatile UDF
+CREATE OR REPLACE FUNCTION func(x int) RETURNS int AS $$
+BEGIN
+
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo (a int, b int) distributed by (a);
+INSERT INTO foo select i, i+1 from generate_series(1,10) i;
+
+DROP TABLE IF EXISTS bar;
+CREATE TABLE bar (c int, d int) distributed by (c);
+INSERT INTO bar select i, i+1 from generate_series(1,10) i;
+
+UPDATE bar SET d = d+1 WHERE c = $1;
+RETURN $1 + 1;
+END
+$$ LANGUAGE plpgsql VOLATILE MODIFIES SQL DATA;
+INSERT INTO volatilefn_dml_timestamp(col1,col3) SELECT col2,func(14) FROM volatilefn_dml_timestamp_candidate;
+ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:135)  (seg2 127.0.0.1:25434 pid=55662)
+DETAIL:  
+SQL statement "DROP TABLE IF EXISTS foo"
+PL/pgSQL function "func" line 3 at SQL statement
+SELECT * FROM volatilefn_dml_timestamp ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+UPDATE volatilefn_dml_timestamp SET col3 = (SELECT func(1));
+SELECT * FROM volatilefn_dml_timestamp ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+DELETE FROM volatilefn_dml_timestamp WHERE col3 = (SELECT func(1));
+SELECT * FROM volatilefn_dml_timestamp ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+-- @author prabhd 
+-- @created 2014-04-01 12:00:00
+-- @modified 2012-04-01 12:00:00
+-- @tags dml MPP-21090 ORCA
+-- @product_version gpdb: [4.3-]
+-- @optimizer_mode on	
+-- @description Tests for MPP-21090
+DROP TABLE IF EXISTS volatilefn_dml_timestamptz;
+NOTICE:  table "volatilefn_dml_timestamptz" does not exist, skipping
+CREATE TABLE volatilefn_dml_timestamptz
+(
+    col1 timestamptz DEFAULT '2014-01-01 12:00:00 PST',
+    col2 timestamptz DEFAULT '2014-01-01 12:00:00 PST',
+    col3 int,
+    col4 timestamptz DEFAULT '2014-01-01 12:00:00 PST'
+) 
+DISTRIBUTED by (col1)
+PARTITION BY LIST(col2)
+(
+default partition def 
+);
+NOTICE:  CREATE TABLE will create partition "volatilefn_dml_timestamptz_1_prt_def" for table "volatilefn_dml_timestamptz"
+DROP TABLE IF EXISTS volatilefn_dml_timestamptz_candidate;
+NOTICE:  table "volatilefn_dml_timestamptz_candidate" does not exist, skipping
+CREATE TABLE volatilefn_dml_timestamptz_candidate
+(
+    col1 timestamptz DEFAULT '2014-01-01 12:00:00 PST',
+    col2 timestamptz DEFAULT '2014-01-01 12:00:00 PST',
+    col3 int,
+    col4 timestamptz 
+) 
+DISTRIBUTED by (col2);
+INSERT INTO volatilefn_dml_timestamptz_candidate(col3,col4) VALUES(10,'2013-12-30 12:00:00 PST');
+-- Create volatile UDF
+CREATE OR REPLACE FUNCTION func(x int) RETURNS int AS $$
+BEGIN
+
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo (a int, b int) distributed by (a);
+INSERT INTO foo select i, i+1 from generate_series(1,10) i;
+
+DROP TABLE IF EXISTS bar;
+CREATE TABLE bar (c int, d int) distributed by (c);
+INSERT INTO bar select i, i+1 from generate_series(1,10) i;
+
+UPDATE bar SET d = d+1 WHERE c = $1;
+RETURN $1 + 1;
+END
+$$ LANGUAGE plpgsql VOLATILE MODIFIES SQL DATA;
+INSERT INTO volatilefn_dml_timestamptz(col1,col3) SELECT col2,func(14) FROM volatilefn_dml_timestamptz_candidate;
+ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:135)  (seg0 127.0.0.1:25432 pid=55660)
+DETAIL:  
+SQL statement "DROP TABLE IF EXISTS foo"
+PL/pgSQL function "func" line 3 at SQL statement
+SELECT * FROM volatilefn_dml_timestamptz ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+UPDATE volatilefn_dml_timestamptz SET col3 = (SELECT func(1));
+SELECT * FROM volatilefn_dml_timestamptz ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+DELETE FROM volatilefn_dml_timestamptz WHERE col3 = (SELECT func(1));
+SELECT * FROM volatilefn_dml_timestamptz ORDER BY 1,2,3;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+(0 rows)
+
+-- start_ignore
+drop schema dml_functional_no_setup_2 cascade;
+NOTICE:  drop cascades to table bar
+NOTICE:  drop cascades to table foo
+NOTICE:  drop cascades to function func(integer)
+NOTICE:  drop cascades to table volatilefn_dml_timestamptz_candidate
+NOTICE:  drop cascades to table volatilefn_dml_timestamptz_1_prt_def
+NOTICE:  drop cascades to table volatilefn_dml_timestamptz
+NOTICE:  drop cascades to table volatilefn_dml_timestamp_candidate
+NOTICE:  drop cascades to table volatilefn_dml_timestamp_1_prt_def
+NOTICE:  drop cascades to table volatilefn_dml_timestamp
+NOTICE:  drop cascades to table volatilefn_dml_time_candidate
+NOTICE:  drop cascades to table volatilefn_dml_time_1_prt_def
+NOTICE:  drop cascades to table volatilefn_dml_time
+NOTICE:  drop cascades to table volatilefn_dml_numeric_candidate
+NOTICE:  drop cascades to table volatilefn_dml_numeric_1_prt_def
+NOTICE:  drop cascades to table volatilefn_dml_numeric
+NOTICE:  drop cascades to table volatilefn_dml_interval_candidate
+NOTICE:  drop cascades to table volatilefn_dml_interval_1_prt_def
+NOTICE:  drop cascades to table volatilefn_dml_interval
+NOTICE:  drop cascades to table volatilefn_dml_int8_candidate
+NOTICE:  drop cascades to table volatilefn_dml_int8_1_prt_def
+NOTICE:  drop cascades to table volatilefn_dml_int8
+NOTICE:  drop cascades to table volatilefn_dml_int4_candidate
+NOTICE:  drop cascades to table volatilefn_dml_int4_1_prt_def
+NOTICE:  drop cascades to table volatilefn_dml_int4
+NOTICE:  drop cascades to table volatilefn_dml_int_candidate
+NOTICE:  drop cascades to table volatilefn_dml_int_1_prt_def
+NOTICE:  drop cascades to table volatilefn_dml_int
+NOTICE:  drop cascades to table volatilefn_dml_float_candidate
+NOTICE:  drop cascades to table volatilefn_dml_float_1_prt_def
+NOTICE:  drop cascades to table volatilefn_dml_float
+NOTICE:  drop cascades to table volatilefn_dml_decimal_candidate
+NOTICE:  drop cascades to table volatilefn_dml_decimal_1_prt_def
+NOTICE:  drop cascades to table volatilefn_dml_decimal
+NOTICE:  drop cascades to table volatilefn_dml_date_candidate
+NOTICE:  drop cascades to table volatilefn_dml_date_1_prt_def
+NOTICE:  drop cascades to table volatilefn_dml_date
+NOTICE:  drop cascades to table volatilefn_dml_char_candidate
+NOTICE:  drop cascades to table volatilefn_dml_char_1_prt_def
+NOTICE:  drop cascades to table volatilefn_dml_char
+NOTICE:  drop cascades to table dml_plpgsql_t1
+NOTICE:  drop cascades to function dml_indata(integer,integer)
+NOTICE:  drop cascades to function dml_insertvalue(integer)
+NOTICE:  drop cascades to table dml_plperl_t2
+NOTICE:  drop cascades to function dml_plperl_fn2(integer,integer)
+NOTICE:  drop cascades to function insert_wrong()
+NOTICE:  drop cascades to table dml_plpython_t2
+NOTICE:  drop cascades to function dml_fn2(integer)
+NOTICE:  drop cascades to table dml_plpgsql_t2
+NOTICE:  drop cascades to function dml_insertdata(integer)
+NOTICE:  drop cascades to table dml_plperl_t1
+NOTICE:  drop cascades to function dml_plperl_fn1(integer,integer)
+NOTICE:  drop cascades to function insert_correct()
+-- end_ignore

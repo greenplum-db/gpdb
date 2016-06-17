@@ -5,7 +5,7 @@
  *
  *	Copyright (c) 2001-2009, PostgreSQL Global Development Group
  *
- *	$PostgreSQL: pgsql/src/include/pgstat.h,v 1.54 2007/02/09 16:12:19 tgl Exp $
+ *	$PostgreSQL: pgsql/src/include/pgstat.h,v 1.71.2.1 2008/04/03 16:27:32 tgl Exp $
  * ----------
  */
 #ifndef PGSTAT_H
@@ -310,7 +310,6 @@ typedef struct PgStat_MsgAnalyze
 
 
 /* ----------
- 
  * PgStat_MsgQueuestat			Sent by the backend to report resource queue
  *								activity statistics.
  * ----------  GPDB 
@@ -661,11 +660,8 @@ typedef struct PgStat_FunctionCallUsage
  * GUC parameters
  * ----------
  */
-extern bool pgstat_collect_startcollector;  // NOT USED
-
+extern bool pgstat_track_activities;
 extern bool pgstat_track_counts;
-extern bool pgstat_track_counts;	// NOT USED
-extern bool pgstat_track_activities;  // NOT USED
 
 extern bool pgstat_collect_queuelevel;
 
@@ -719,6 +715,7 @@ extern void pgstat_report_analyze(Relation rel,
 
 extern void pgstat_initialize(void);
 extern void pgstat_bestart(void);
+
 extern void pgstat_report_activity(const char *what);
 extern void pgstat_report_txn_timestamp(TimestampTz tstamp);
 extern void pgstat_report_waiting(char reason);
@@ -740,16 +737,10 @@ extern PgStat_StatPortalEntry *pgstat_getportalentry(uint32 portalid,
 		if (pgstat_track_counts && (rel)->pgstat_info != NULL)		\
 			(rel)->pgstat_info->t_counts.t_numscans++;				\
 	} while (0)
-/* kluge for bitmap scans: */
-#define pgstat_discount_heap_scan(rel)									\
-	do {																\
-		if (pgstat_track_counts && (rel)->pgstat_info != NULL)			\
-			(rel)->pgstat_info->t_counts.t_numscans--;		\
-	} while (0)
-#define pgstat_count_heap_getnext(rel)									\
-	do {																\
-		if (pgstat_track_counts && (rel)->pgstat_info != NULL)			\
-			(rel)->pgstat_info->t_counts.t_tuples_returned++; \
+#define pgstat_count_heap_getnext(rel)								\
+	do {															\
+		if (pgstat_track_counts && (rel)->pgstat_info != NULL)		\
+			(rel)->pgstat_info->t_counts.t_tuples_returned++;		\
 	} while (0)
 #define pgstat_count_heap_fetch(rel)								\
 	do {															\
@@ -795,7 +786,6 @@ extern PgStat_StatPortalEntry *pgstat_getportalentry(uint32 portalid,
 		if (pgstat_track_counts && (rel)->pgstat_info != NULL)		\
 			(rel)->pgstat_info->t_counts.t_blocks_hit++;			\
 	} while (0)
-
 /* Resource queue statistics: */
 #define pgstat_count_queue_exec(p, q) 									\
 	do {																\
@@ -883,12 +873,23 @@ extern void pgstat_twophase_postcommit(TransactionId xid, uint16 info,
 extern void pgstat_twophase_postabort(TransactionId xid, uint16 info,
 						  void *recdata, uint32 len);
 
-extern void pgstat_send_bgwriter(void);
+extern void pgstat_count_heap_insert(Relation rel);
+extern void pgstat_count_heap_update(Relation rel, bool hot);
+extern void pgstat_count_heap_delete(Relation rel);
+extern void pgstat_update_heap_dead_tuples(Relation rel, int delta);
 
-/* OLD?
-extern void pgstat_count_xact_commit(void);
-extern void pgstat_count_xact_rollback(void);
-*/
+extern void AtEOXact_PgStat(bool isCommit);
+extern void AtEOSubXact_PgStat(bool isCommit, int nestDepth);
+
+extern void AtPrepare_PgStat(void);
+extern void PostPrepare_PgStat(void);
+
+extern void pgstat_twophase_postcommit(TransactionId xid, uint16 info,
+						   void *recdata, uint32 len);
+extern void pgstat_twophase_postabort(TransactionId xid, uint16 info,
+						  void *recdata, uint32 len);
+
+extern void pgstat_send_bgwriter(void);
 
 /* ----------
  * Support functions for the SQL-callable functions to

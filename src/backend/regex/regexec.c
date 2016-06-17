@@ -27,7 +27,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $PostgreSQL: pgsql/src/backend/regex/regexec.c,v 1.27 2005/10/15 02:49:24 momjian Exp $
+ * $PostgreSQL: pgsql/src/backend/regex/regexec.c,v 1.27.6.1 2010/02/01 02:45:41 tgl Exp $
  *
  */
 
@@ -142,6 +142,7 @@ static int	dissect(struct vars *, struct subre *, chr *, chr *);
 static int	condissect(struct vars *, struct subre *, chr *, chr *);
 static int	altdissect(struct vars *, struct subre *, chr *, chr *);
 static int	cdissect(struct vars *, struct subre *, chr *, chr *);
+static int	ccaptdissect(struct vars *, struct subre *, chr *, chr *);
 static int	ccondissect(struct vars *, struct subre *, chr *, chr *);
 static int	crevdissect(struct vars *, struct subre *, chr *, chr *);
 static int	cbrdissect(struct vars *, struct subre *, chr *, chr *);
@@ -561,27 +562,21 @@ dissect(struct vars * v,
 		case '=':				/* terminal node */
 			assert(t->left == NULL && t->right == NULL);
 			return REG_OKAY;	/* no action, parent did the work */
-			break;
 		case '|':				/* alternation */
 			assert(t->left != NULL);
 			return altdissect(v, t, begin, end);
-			break;
 		case 'b':				/* back ref -- shouldn't be calling us! */
 			return REG_ASSERT;
-			break;
 		case '.':				/* concatenation */
 			assert(t->left != NULL && t->right != NULL);
 			return condissect(v, t, begin, end);
-			break;
 		case '(':				/* capturing */
 			assert(t->left != NULL && t->right == NULL);
 			assert(t->subno > 0);
 			subset(v, t, begin, end);
 			return dissect(v, t->left, begin, end);
-			break;
 		default:
 			return REG_ASSERT;
-			break;
 	}
 }
 
@@ -711,8 +706,6 @@ cdissect(struct vars * v,
 		 chr *begin,			/* beginning of relevant substring */
 		 chr *end)				/* end of same */
 {
-	int			er;
-
 	assert(t != NULL);
 	MDEBUG(("cdissect %ld-%ld %c\n", LOFF(begin), LOFF(end), t->op));
 
@@ -721,31 +714,40 @@ cdissect(struct vars * v,
 		case '=':				/* terminal node */
 			assert(t->left == NULL && t->right == NULL);
 			return REG_OKAY;	/* no action, parent did the work */
-			break;
 		case '|':				/* alternation */
 			assert(t->left != NULL);
 			return caltdissect(v, t, begin, end);
-			break;
-		case 'b':				/* back ref -- shouldn't be calling us! */
+		case 'b':				/* back reference */
 			assert(t->left == NULL && t->right == NULL);
 			return cbrdissect(v, t, begin, end);
-			break;
 		case '.':				/* concatenation */
 			assert(t->left != NULL && t->right != NULL);
 			return ccondissect(v, t, begin, end);
-			break;
 		case '(':				/* capturing */
 			assert(t->left != NULL && t->right == NULL);
-			assert(t->subno > 0);
-			er = cdissect(v, t->left, begin, end);
-			if (er == REG_OKAY)
-				subset(v, t, begin, end);
-			return er;
-			break;
+			return ccaptdissect(v, t, begin, end);
 		default:
 			return REG_ASSERT;
-			break;
 	}
+}
+
+/*
+ * ccaptdissect - capture subexpression matches (with complications)
+ */
+static int						/* regexec return code */
+ccaptdissect(struct vars * v,
+			 struct subre * t,
+			 chr *begin,		/* beginning of relevant substring */
+			 chr *end)			/* end of same */
+{
+	int			er;
+
+	assert(t->subno > 0);
+
+	er = cdissect(v, t->left, begin, end);
+	if (er == REG_OKAY)
+		subset(v, t, begin, end);
+	return er;
 }
 
 /*
@@ -805,17 +807,27 @@ ccondissect(struct vars * v,
 	for (;;)
 	{
 		/* try this midpoint on for size */
-		er = cdissect(v, t->left, begin, mid);
-		if (er == REG_OKAY &&
-			longest(v, d2, mid, end, (int *) NULL) == end &&
-			(er = cdissect(v, t->right, mid, end)) ==
-			REG_OKAY)
-			break;				/* NOTE BREAK OUT */
-		if (er != REG_OKAY && er != REG_NOMATCH)
+		if (longest(v, d2, mid, end, (int *) NULL) == end)
 		{
-			freedfa(d);
-			freedfa(d2);
-			return er;
+			er = cdissect(v, t->left, begin, mid);
+			if (er == REG_OKAY)
+			{
+				er = cdissect(v, t->right, mid, end);
+				if (er == REG_OKAY)
+				{
+					/* satisfaction */
+					MDEBUG(("successful\n"));
+					freedfa(d);
+					freedfa(d2);
+					return REG_OKAY;
+				}
+			}
+			if (er != REG_OKAY && er != REG_NOMATCH)
+			{
+				freedfa(d);
+				freedfa(d2);
+				return er;
+			}
 		}
 
 		/* that midpoint didn't work, find a new one */
@@ -842,11 +854,8 @@ ccondissect(struct vars * v,
 		zapmem(v, t->right);
 	}
 
-	/* satisfaction */
-	MDEBUG(("successful\n"));
-	freedfa(d);
-	freedfa(d2);
-	return REG_OKAY;
+	/* can't get here */
+	return REG_ASSERT;
 }
 
 /*
@@ -905,17 +914,27 @@ crevdissect(struct vars * v,
 	for (;;)
 	{
 		/* try this midpoint on for size */
-		er = cdissect(v, t->left, begin, mid);
-		if (er == REG_OKAY &&
-			longest(v, d2, mid, end, (int *) NULL) == end &&
-			(er = cdissect(v, t->right, mid, end)) ==
-			REG_OKAY)
-			break;				/* NOTE BREAK OUT */
-		if (er != REG_OKAY && er != REG_NOMATCH)
+		if (longest(v, d2, mid, end, (int *) NULL) == end)
 		{
-			freedfa(d);
-			freedfa(d2);
-			return er;
+			er = cdissect(v, t->left, begin, mid);
+			if (er == REG_OKAY)
+			{
+				er = cdissect(v, t->right, mid, end);
+				if (er == REG_OKAY)
+				{
+					/* satisfaction */
+					MDEBUG(("successful\n"));
+					freedfa(d);
+					freedfa(d2);
+					return REG_OKAY;
+				}
+			}
+			if (er != REG_OKAY && er != REG_NOMATCH)
+			{
+				freedfa(d);
+				freedfa(d2);
+				return er;
+			}
 		}
 
 		/* that midpoint didn't work, find a new one */
@@ -942,11 +961,8 @@ crevdissect(struct vars * v,
 		zapmem(v, t->right);
 	}
 
-	/* satisfaction */
-	MDEBUG(("successful\n"));
-	freedfa(d);
-	freedfa(d2);
-	return REG_OKAY;
+	/* can't get here */
+	return REG_ASSERT;
 }
 
 /*
@@ -958,12 +974,12 @@ cbrdissect(struct vars * v,
 		   chr *begin,			/* beginning of relevant substring */
 		   chr *end)			/* end of same */
 {
-	int			i;
 	int			n = t->subno;
-	size_t		len;
-	chr		   *paren;
+	size_t		numreps;
+	size_t		tlen;
+	size_t		brlen;
+	chr		   *brstring;
 	chr		   *p;
-	chr		   *stop;
 	int			min = t->min;
 	int			max = t->max;
 
@@ -974,46 +990,65 @@ cbrdissect(struct vars * v,
 
 	MDEBUG(("cbackref n%d %d{%d-%d}\n", t->retry, n, min, max));
 
+	/* get the backreferenced string */
 	if (v->pmatch[n].rm_so == -1)
 		return REG_NOMATCH;
-	paren = v->start + v->pmatch[n].rm_so;
-	len = v->pmatch[n].rm_eo - v->pmatch[n].rm_so;
+	brstring = v->start + v->pmatch[n].rm_so;
+	brlen = v->pmatch[n].rm_eo - v->pmatch[n].rm_so;
 
 	/* no room to maneuver -- retries are pointless */
 	if (v->mem[t->retry])
 		return REG_NOMATCH;
 	v->mem[t->retry] = 1;
 
-	/* special-case zero-length string */
-	if (len == 0)
+	/* special cases for zero-length strings */
+	if (brlen == 0)
 	{
-		if (begin == end)
+		/*
+		 * matches only if target is zero length, but any number of
+		 * repetitions can be considered to be present
+		 */
+		if (begin == end && min <= max)
+		{
+			MDEBUG(("cbackref matched trivially\n"));
 			return REG_OKAY;
+		}
 		return REG_NOMATCH;
 	}
-
-	/* and too-short string */
-	assert(end >= begin);
-	if ((size_t) (end - begin) < len)
-		return REG_NOMATCH;
-	stop = end - len;
-
-	/* count occurrences */
-	i = 0;
-	for (p = begin; p <= stop && (i < max || max == INFINITY); p += len)
+	if (begin == end)
 	{
-		if ((*v->g->compare) (paren, p, len) != 0)
-			break;
-		i++;
-	}
-	MDEBUG(("cbackref found %d\n", i));
-
-	/* and sort it out */
-	if (p != end)				/* didn't consume all of it */
+		/* matches only if zero repetitions are okay */
+		if (min == 0)
+		{
+			MDEBUG(("cbackref matched trivially\n"));
+			return REG_OKAY;
+		}
 		return REG_NOMATCH;
-	if (min <= i && (i <= max || max == INFINITY))
-		return REG_OKAY;
-	return REG_NOMATCH;			/* out of range */
+	}
+
+	/*
+	 * check target length to see if it could possibly be an allowed number of
+	 * repetitions of brstring
+	 */
+	assert(end > begin);
+	tlen = end - begin;
+	if (tlen % brlen != 0)
+		return REG_NOMATCH;
+	numreps = tlen / brlen;
+	if (numreps < min || (numreps > max && max != INFINITY))
+		return REG_NOMATCH;
+
+	/* okay, compare the actual string contents */
+	p = begin;
+	while (numreps-- > 0)
+	{
+		if ((*v->g->compare) (brstring, p, brlen) != 0)
+			return REG_NOMATCH;
+		p += brlen;
+	}
+
+	MDEBUG(("cbackref matched\n"));
+	return REG_OKAY;
 }
 
 /*

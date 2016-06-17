@@ -285,6 +285,9 @@ typedef struct MKContext {
 
     /* enforce Unique, for index build */
     bool enforceUnique;
+
+	/* Name of the index we're building, if any. Used for error messages. */
+	char	   *indexname;
 } MKContext;
 
 /**

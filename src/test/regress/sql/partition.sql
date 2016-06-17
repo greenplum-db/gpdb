@@ -2852,7 +2852,7 @@ create table child_r
  -- issue MPP-7898.
 insert into child_r values
     (0, 'from r', 0, 0);
-    
+
 drop table if exists parent_s cascade; --ignore
 drop table if exists child_r cascade; --ignore
 

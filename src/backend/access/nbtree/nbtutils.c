@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtutils.c,v 1.82 2007/01/09 02:14:10 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtutils.c,v 1.88.2.1 2008/04/16 23:59:51 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -206,7 +206,7 @@ _bt_freestack(BTStack stack)
  * that's the only one returned.  (So, we return either a single = key,
  * or one or two boundary-condition keys for each attr.)  However, if we
  * cannot compare two keys for lack of a suitable cross-type operator,
- * we cannot eliminate either.  If there are two such keys of the same
+ * we cannot eliminate either.	If there are two such keys of the same
  * operator strategy, the second one is just pushed into the output array
  * without further processing here.  We may also emit both >/>= or both
  * </<= keys if we can't compare them.  The logic about required keys still
@@ -265,12 +265,27 @@ _bt_preprocess_keys(IndexScanDesc scan)
 	if (numberOfKeys == 1)
 	{
 		/*
-		 * We don't use indices for 'A is null' and 'A is not null' currently
-		 * and 'A < = > <> NULL' will always fail - so qual is not OK if
-		 * comparison value is NULL.	  - vadim 03/21/97
+		 * We treat all btree operators as strict (even if they're not so
+		 * marked in pg_proc).	This means that it is impossible for an
+		 * operator condition with a NULL comparison constant to succeed, and
+		 * we can reject it right away.
+		 *
+		 * However, we now also support "x IS NULL" clauses as search
+		 * conditions, so in that case keep going.	The planner has not filled
+		 * in any particular strategy in this case, so set it to
+		 * BTEqualStrategyNumber --- we can treat IS NULL as an equality
+		 * operator for purposes of search strategy.
 		 */
 		if (cur->sk_flags & SK_ISNULL)
-			so->qual_ok = false;
+		{
+			if (cur->sk_flags & SK_SEARCHNULL)
+			{
+				cur->sk_strategy = BTEqualStrategyNumber;
+				cur->sk_subtype = InvalidOid;
+			}
+			else
+				so->qual_ok = false;
+		}
 		_bt_mark_scankey_with_indoption(cur, indoption);
 		memcpy(outkeys, cur, sizeof(ScanKeyData));
 		so->numberOfKeys = 1;
@@ -289,8 +304,8 @@ _bt_preprocess_keys(IndexScanDesc scan)
 	/*
 	 * Initialize for processing of keys for attr 1.
 	 *
-	 * xform[i] points to the currently best scan key of strategy type i+1;
-	 * it is NULL if we haven't yet found such a key for this attr.
+	 * xform[i] points to the currently best scan key of strategy type i+1; it
+	 * is NULL if we haven't yet found such a key for this attr.
 	 */
 	attno = 1;
 	memset(xform, 0, sizeof(xform));
@@ -304,17 +319,20 @@ _bt_preprocess_keys(IndexScanDesc scan)
 	{
 		if (i < numberOfKeys)
 		{
-			/* See comments above: any NULL implies cannot match qual */
+			/* See comments above about NULLs and IS NULL handling. */
 			/* Note: we assume SK_ISNULL is never set in a row header key */
 			if (cur->sk_flags & SK_ISNULL)
 			{
-				so->qual_ok = false;
-
-				/*
-				 * Quit processing so we don't try to invoke comparison
-				 * routines on NULLs.
-				 */
-				return;
+				if (cur->sk_flags & SK_SEARCHNULL)
+				{
+					cur->sk_strategy = BTEqualStrategyNumber;
+					cur->sk_subtype = InvalidOid;
+				}
+				else
+				{
+					so->qual_ok = false;
+					return;
+				}
 			}
 		}
 
@@ -345,6 +363,14 @@ _bt_preprocess_keys(IndexScanDesc scan)
 
 					if (!chk || j == (BTEqualStrategyNumber - 1))
 						continue;
+
+					/* IS NULL together with any other predicate must fail */
+					if (eq->sk_flags & SK_SEARCHNULL)
+					{
+						so->qual_ok = false;
+						return;
+					}
+
 					if (_bt_compare_scankey_args(scan, chk, eq, chk,
 												 &test_result))
 					{
@@ -439,6 +465,7 @@ _bt_preprocess_keys(IndexScanDesc scan)
 			memcpy(outkey, cur, sizeof(ScanKeyData));
 			if (numberOfEqualCols == attno - 1)
 				_bt_mark_scankey_required(outkey);
+
 			/*
 			 * We don't support RowCompare using equality; such a qual would
 			 * mess up the numberOfEqualCols tracking.
@@ -456,6 +483,23 @@ _bt_preprocess_keys(IndexScanDesc scan)
 		else
 		{
 			/* yup, keep only the more restrictive key */
+
+			/* if either arg is NULL, don't try to compare */
+			if ((cur->sk_flags | xform[j]->sk_flags) & SK_ISNULL)
+			{
+				/* at least one of them must be an IS NULL clause */
+				Assert(j == (BTEqualStrategyNumber - 1));
+				Assert((cur->sk_flags | xform[j]->sk_flags) & SK_SEARCHNULL);
+				/* if one is and one isn't, the search must fail */
+				if ((cur->sk_flags ^ xform[j]->sk_flags) & SK_SEARCHNULL)
+				{
+					so->qual_ok = false;
+					return;
+				}
+				/* we have duplicate IS NULL clauses, ignore the newer one */
+				continue;
+			}
+
 			if (_bt_compare_scankey_args(scan, cur, cur, xform[j],
 										 &test_result))
 			{
@@ -472,9 +516,9 @@ _bt_preprocess_keys(IndexScanDesc scan)
 			else
 			{
 				/*
-				 * We can't determine which key is more restrictive.  Keep
-				 * the previous one in xform[j] and push this one directly
-				 * to the output array.
+				 * We can't determine which key is more restrictive.  Keep the
+				 * previous one in xform[j] and push this one directly to the
+				 * output array.
 				 */
 				ScanKey		outkey = &outkeys[new_numberOfKeys++];
 
@@ -500,7 +544,7 @@ _bt_preprocess_keys(IndexScanDesc scan)
  * and amoplefttype/amoprighttype equal to the two argument datatypes.
  *
  * If the opfamily doesn't supply a complete set of cross-type operators we
- * may not be able to make the comparison.  If we can make the comparison
+ * may not be able to make the comparison.	If we can make the comparison
  * we store the operator result in *result and return TRUE.  We return FALSE
  * if the comparison could not be made.
  *
@@ -566,8 +610,8 @@ _bt_compare_scankey_args(IndexScanDesc scan, ScanKey op,
 	 * indexscan initiated by syscache lookup will use cross-data-type
 	 * operators.)
 	 *
-	 * If the sk_strategy was flipped by _bt_mark_scankey_with_indoption,
-	 * we have to un-flip it to get the correct opfamily member.
+	 * If the sk_strategy was flipped by _bt_mark_scankey_with_indoption, we
+	 * have to un-flip it to get the correct opfamily member.
 	 */
 	strat = op->sk_strategy;
 	if (op->sk_flags & SK_BT_DESC)
@@ -612,7 +656,7 @@ _bt_compare_scankey_args(IndexScanDesc scan, ScanKey op,
 static void
 _bt_mark_scankey_with_indoption(ScanKey skey, int16 *indoption)
 {
-	int		addflags;
+	int			addflags;
 
 	addflags = indoption[skey->sk_attno - 1] << SK_BT_INDOPTION_SHIFT;
 	if ((addflags & SK_BT_DESC) && !(skey->sk_flags & SK_BT_DESC))
@@ -747,7 +791,7 @@ _bt_checkkeys(IndexScanDesc scan,
 	 * However, if this is the last tuple on the page, we should check the
 	 * index keys to prevent uselessly advancing to the next page.
 	 */
-	if (scan->ignore_killed_tuples && ItemIdDeleted(iid))
+	if (scan->ignore_killed_tuples && ItemIdIsDead(iid))
 	{
 		/* return immediately if there are more tuples on the page */
 		if (ScanDirectionIsForward(dir))
@@ -799,11 +843,29 @@ _bt_checkkeys(IndexScanDesc scan,
 							  tupdesc,
 							  &isNull);
 
-		/* btree doesn't support 'A is null' clauses, yet */
 		if (key->sk_flags & SK_ISNULL)
 		{
-			/* we shouldn't get here, really; see _bt_preprocess_keys() */
-			*continuescan = false;
+			/* Handle IS NULL tests */
+			Assert(key->sk_flags & SK_SEARCHNULL);
+
+			if (isNull)
+				continue;		/* tuple satisfies this qual */
+
+			/*
+			 * Tuple fails this qual.  If it's a required qual for the current
+			 * scan direction, then we can conclude no further tuples will
+			 * pass, either.
+			 */
+			if ((key->sk_flags & SK_BT_REQFWD) &&
+				ScanDirectionIsForward(dir))
+				*continuescan = false;
+			else if ((key->sk_flags & SK_BT_REQBKWD) &&
+					 ScanDirectionIsBackward(dir))
+				*continuescan = false;
+
+			/*
+			 * In any case, this indextuple doesn't match the qual.
+			 */
 			return false;
 		}
 
@@ -814,8 +876,8 @@ _bt_checkkeys(IndexScanDesc scan,
 				/*
 				 * Since NULLs are sorted before non-NULLs, we know we have
 				 * reached the lower limit of the range of values for this
-				 * index attr.  On a backward scan, we can stop if this qual is
-				 * one of the "must match" subset.  On a forward scan,
+				 * index attr.	On a backward scan, we can stop if this qual
+				 * is one of the "must match" subset.  On a forward scan,
 				 * however, we should keep going.
 				 */
 				if ((key->sk_flags & SK_BT_REQBKWD) &&
@@ -827,8 +889,8 @@ _bt_checkkeys(IndexScanDesc scan,
 				/*
 				 * Since NULLs are sorted after non-NULLs, we know we have
 				 * reached the upper limit of the range of values for this
-				 * index attr.  On a forward scan, we can stop if this qual is
-				 * one of the "must match" subset.  On a backward scan,
+				 * index attr.	On a forward scan, we can stop if this qual is
+				 * one of the "must match" subset.	On a backward scan,
 				 * however, we should keep going.
 				 */
 				if ((key->sk_flags & SK_BT_REQFWD) &&
@@ -918,7 +980,7 @@ _bt_check_rowcompare(ScanKey skey, IndexTuple tuple, TupleDesc tupdesc,
 				 * Since NULLs are sorted before non-NULLs, we know we have
 				 * reached the lower limit of the range of values for this
 				 * index attr. On a backward scan, we can stop if this qual is
-				 * one of the "must match" subset.  On a forward scan,
+				 * one of the "must match" subset.	On a forward scan,
 				 * however, we should keep going.
 				 */
 				if ((subkey->sk_flags & SK_BT_REQBKWD) &&
@@ -931,7 +993,7 @@ _bt_check_rowcompare(ScanKey skey, IndexTuple tuple, TupleDesc tupdesc,
 				 * Since NULLs are sorted after non-NULLs, we know we have
 				 * reached the upper limit of the range of values for this
 				 * index attr. On a forward scan, we can stop if this qual is
-				 * one of the "must match" subset.  On a backward scan,
+				 * one of the "must match" subset.	On a backward scan,
 				 * however, we should keep going.
 				 */
 				if ((subkey->sk_flags & SK_BT_REQFWD) &&
@@ -1028,7 +1090,7 @@ _bt_check_rowcompare(ScanKey skey, IndexTuple tuple, TupleDesc tupdesc,
 }
 
 /*
- * _bt_killitems - set LP_DELETE bit for items an indexscan caller has
+ * _bt_killitems - set LP_DEAD state for items an indexscan caller has
  * told us were killed
  *
  * scan->so contains information about the current page and killed tuples
@@ -1036,7 +1098,7 @@ _bt_check_rowcompare(ScanKey skey, IndexTuple tuple, TupleDesc tupdesc,
  *
  * The caller must have pin on so->currPos.buf, but may or may not have
  * read-lock, as indicated by haveLock.  Note that we assume read-lock
- * is sufficient for setting LP_DELETE hint bits.
+ * is sufficient for setting LP_DEAD status (which is only a hint).
  *
  * We match items by heap TID before assuming they are the right ones to
  * delete.	We cope with cases where items have moved right due to insertions.
@@ -1100,7 +1162,7 @@ _bt_killitems(IndexScanDesc scan, bool haveLock)
 			if (ItemPointerEquals(&ituple->t_tid, &kitem->heapTid))
 			{
 				/* found the item */
-				iid->lp_flags |= LP_DELETE;
+				ItemIdMarkDead(iid);
 				killedsomething = true;
 				break;			/* out of inner search loop */
 			}
@@ -1113,7 +1175,7 @@ _bt_killitems(IndexScanDesc scan, bool haveLock)
 	 * commit-hint-bit status update for heap tuples: we mark the buffer dirty
 	 * but don't make a WAL log entry.
 	 *
-	 * Whenever we mark anything LP_DELETEd, we also set the page's
+	 * Whenever we mark anything LP_DEAD, we also set the page's
 	 * BTP_HAS_GARBAGE flag, which is likewise just a hint.
 	 */
 	if (killedsomething)
@@ -1223,11 +1285,13 @@ _bt_start_vacuum(Relation rel)
 
 	LWLockAcquire(BtreeVacuumLock, LW_EXCLUSIVE);
 
-	/* Assign the next cycle ID, being careful to avoid zero */
-	do
-	{
-		result = ++(btvacinfo->cycle_ctr);
-	} while (result == 0);
+	/*
+	 * Assign the next cycle ID, being careful to avoid zero as well as the
+	 * reserved high values.
+	 */
+	result = ++(btvacinfo->cycle_ctr);
+	if (result == 0 || result > MAX_BT_CYCLE_ID)
+		result = btvacinfo->cycle_ctr = 1;
 
 	/* Let's just make sure there's no entry already for this index */
 	for (i = 0; i < btvacinfo->num_vacuums; i++)

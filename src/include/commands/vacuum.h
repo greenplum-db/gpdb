@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/commands/vacuum.h,v 1.69 2007/01/05 22:19:54 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/commands/vacuum.h,v 1.75.2.2 2009/11/10 18:00:44 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -18,9 +18,11 @@
 #include "catalog/pg_statistic.h"
 #include "catalog/pg_type.h"
 #include "nodes/parsenodes.h"
+#include "storage/buf.h"
 #include "storage/lock.h"
 #include "utils/rel.h"
 #include "utils/tqual.h"
+
 
 /*----------
  * ANALYZE builds one of these structs for each attribute (column) that is
@@ -127,13 +129,15 @@ typedef struct VPgClassStats
 } VPgClassStats;
 
 /* GUC parameters */
-extern PGDLLIMPORT int default_statistics_target; /* PGDLLIMPORT for PostGIS */
+extern PGDLLIMPORT int default_statistics_target;		/* PGDLLIMPORT for
+														 * PostGIS */
 extern PGDLLIMPORT double analyze_relative_error;
 extern int	vacuum_freeze_min_age;
 
 
 /* in commands/vacuum.c */
-extern void vacuum(VacuumStmt *vacstmt, List *relids);
+extern void vacuum(VacuumStmt *vacstmt, List *relids,
+	   BufferAccessStrategy bstrategy, bool for_wraparound, bool isTopLevel);
 extern void vac_open_indexes(Relation relation, LOCKMODE lockmode,
 				 int *nindexes, Relation **Irel);
 extern void vac_close_indexes(int nindexes, Relation *Irel, LOCKMODE lockmode);
@@ -146,7 +150,7 @@ extern void vac_update_relstats_from_list(Relation rel,
 							  BlockNumber num_pages, double num_tuples,
 							  bool hasindex, TransactionId frozenxid,
 										  List *updated_stats);
-extern void vacuum_set_xid_limits(VacuumStmt *vacstmt, bool sharedRel,
+extern void vacuum_set_xid_limits(int freeze_min_age, bool sharedRel,
 					  TransactionId *oldestXmin,
 					  TransactionId *freezeLimit);
 extern void vac_update_datfrozenxid(void);
@@ -162,7 +166,8 @@ extern bool vacuumStatement_IsInAppendOnlyCompactionPhase(VacuumStmt* vacstmt);
 extern bool vacuumStatement_IsInAppendOnlyPseudoCompactionPhase(VacuumStmt* vacstmt);
 
 /* in commands/vacuumlazy.c */
-extern void lazy_vacuum_rel(Relation onerel, VacuumStmt *vacstmt, List *updated_stats);
+extern bool lazy_vacuum_rel(Relation onerel, VacuumStmt *vacstmt,
+				BufferAccessStrategy bstrategy, List *updated_stats);
 extern void vacuum_appendonly_rel(Relation aorel, VacuumStmt *vacstmt);
 extern void vacuum_appendonly_fill_stats(Relation aorel, Snapshot snapshot,
 										 BlockNumber *rel_pages, double *rel_tuples,
@@ -173,7 +178,9 @@ extern void gen_oids_for_bitmaps(VacuumStmt *vacstmt, Relation onerel);
 extern List *get_oids_for_bitmap(List *all_extra_oids, Relation Irel, Relation onerel, int occurrence);
 
 /* in commands/analyze.c */
-extern void analyze_rel(Oid relid, VacuumStmt *vacstmt);
-extern void analyzeStatement(VacuumStmt *vacstmt, List *relids);
+extern void analyze_rel(Oid relid, VacuumStmt *vacstmt,
+			BufferAccessStrategy bstrategy);
+extern void analyzeStatement(VacuumStmt *vacstmt, List *relids, BufferAccessStrategy start, bool isTopLevel);
 //extern void analyzeStmt(VacuumStmt *vacstmt, List *relids);
+
 #endif   /* VACUUM_H */

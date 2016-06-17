@@ -5,9 +5,7 @@ from gppylib.db import dbconn
 from gppylib.test.behave_utils.utils import run_gpcommand
 from gppylib.gparray import GpArray
 from gppylib.test.behave_utils.utils import get_all_hostnames_as_list
-from gppylib.operations.backup_utils import generate_report_filename, generate_global_filename, generate_cdatabase_filename, \
-                                            get_backup_directory, generate_master_config_filename, generate_segment_config_filename, \
-                                            generate_ao_state_filename, generate_co_state_filename, generate_pgstatlastoperation_filename
+from gppylib.operations.backup_utils import Context
 
 master_data_dir = os.environ.get('MASTER_DATA_DIRECTORY')
 
@@ -191,86 +189,46 @@ def impl(context, options):
 @when('verify that {filetype} file has been backed up using netbackup')
 @then('verify that {filetype} file has been backed up using netbackup')
 def impl(context, filetype):
+    backup_utils = Context()
     if hasattr(context, 'netbackup_service_host'):
-        netbackup_service_host = context.netbackup_service_host
+        backup_utils.netbackup_service_host = context.netbackup_service_host
     if hasattr(context, 'backup_timestamp'):
-        backup_timestamp = context.backup_timestamp
+        backup_utils.timestamp = context.backup_timestamp
     if hasattr(context, 'backup_dir'):
-        backup_dir = context.backup_dir
-        #dump_dir = os.path.join(backup_dir, 'db_dumps', '%s' % (backup_timestamp[0:8]))
-        dump_dir = os.path.join(backup_dir, 'db_dumps')
+        backup_utils.backup_dir = context.backup_dir
     else:
         backup_dir = None
-        #dump_dir = os.path.join(master_data_dir, 'db_dumps', '%s' % (backup_timestamp[0:8]))
-        dump_dir = os.path.join(master_data_dir, 'db_dumps')
 
-    if filetype == 'report':
-        filename = generate_report_filename(master_data_dir, backup_dir, 'db_dumps', '', backup_timestamp)
-        cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (netbackup_service_host, filename)
-        cmd = Command("Querying NetBackup server for report file", cmd_str)
+    if filetype not in ['config', 'state']:
+        filename = backup_utils.generate_filename(filetype)
+        cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (backup_utils.netbackup_service_host, filename)
+        cmd = Command("Querying NetBackup server for %s file" % filetype, cmd_str)
         cmd.run(validateAfter=True)
         if cmd.get_results().stdout.strip() != filename:
-            raise Exception('Report file %s was not backup up to NetBackup server %s successfully' % (filename, netbackup_service_host))
+            raise Exception('File %s was not backup up to NetBackup server %s successfully' % (filename, backup_utils.netbackup_service_host))
 
-    elif filetype == 'global':
-        filename = generate_global_filename(master_data_dir, backup_dir, 'db_dumps', '', backup_timestamp[0:8], backup_timestamp)
-        cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (netbackup_service_host, filename)
-        cmd = Command("Querying NetBackup server for global file", cmd_str)
-        cmd.run(validateAfter=True)
-        if cmd.get_results().stdout.strip() != filename:
-            raise Exception('Global file %s was not backup up to NetBackup server %s successfully' % (filename, netbackup_service_host))
-
-    elif filetype == 'config':
-        use_dir = get_backup_directory(master_data_dir, backup_dir, 'db_dumps', backup_timestamp)
-        master_config_filename = os.path.join(use_dir, "%s" % generate_master_config_filename('', backup_timestamp))
-        cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (netbackup_service_host, master_config_filename)
-        cmd = Command("Querying NetBackup server for master config file", cmd_str)
-        cmd.run(validateAfter=True)
-        if cmd.get_results().stdout.strip() != master_config_filename:
-            raise Exception('Master config file %s was not backup up to NetBackup server %s successfully' % (master_config_filename, netbackup_service_host))
-
+    if filetype == 'config':
         master_port = os.environ.get('PGPORT')
         gparray = GpArray.initFromCatalog(dbconn.DbURL(port = master_port), utility=True)
         segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary(current_role=True)]
         for seg in segs:
-            use_dir = get_backup_directory(seg.getSegmentDataDirectory(), backup_dir, 'db_dumps', backup_timestamp)
-            seg_config_filename = os.path.join(use_dir, "%s" % generate_segment_config_filename('', seg.getSegmentDbId(), backup_timestamp))
+            backup_utils.master_datadir = seg.getSegmentDataDirectory()
+            seg_config_filename = backup_utils.generate_filename('segment_config', dbid=seg.getSegmentDbId())
             seg_host = seg.getSegmentHostName()
-            cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (netbackup_service_host, seg_config_filename) 
+            cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (backup_utils.netbackup_service_host, seg_config_filename) 
             cmd = Command("Querying NetBackup server for segment config file", cmd_str, ctxt=REMOTE, remoteHost=seg_host)
             cmd.run(validateAfter=True)
             if cmd.get_results().stdout.strip() != seg_config_filename:
                 raise Exception('Segment config file %s was not backup up to NetBackup server %s successfully' % (seg_config_filename, netbackup_service_host))
 
     elif filetype == 'state':
-        filename = generate_ao_state_filename(master_data_dir, backup_dir, 'db_dumps', '', backup_timestamp)
-        cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (netbackup_service_host, filename)
-        cmd = Command("Querying NetBackup server for AO state file", cmd_str)
-        cmd.run(validateAfter=True)
-        if cmd.get_results().stdout.strip() != filename:
-            raise Exception('AO state file %s was not backup up to NetBackup server %s successfully' % (filename, netbackup_service_host))
-
-        filename = generate_co_state_filename(master_data_dir, backup_dir, 'db_dumps', '', backup_timestamp)
-        cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (netbackup_service_host, filename)
-        cmd = Command("Querying NetBackup server for CO state file", cmd_str)
-        cmd.run(validateAfter=True)
-        if cmd.get_results().stdout.strip() != filename:
-            raise Exception('CO state file %s was not backup up to NetBackup server %s successfully' % (filename, netbackup_service_host))
-
-        filename = generate_pgstatlastoperation_filename(master_data_dir, backup_dir, 'db_dumps', '', backup_timestamp)
-        cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (netbackup_service_host, filename)
-        cmd = Command("Querying NetBackup server for last operation state file", cmd_str)
-        cmd.run(validateAfter=True)
-        if cmd.get_results().stdout.strip() != filename:
-            raise Exception('Last operation state file %s was not backup up to NetBackup server %s successfully' % (filename, netbackup_service_host))
-
-    elif filetype == 'cdatabase':
-        filename = generate_cdatabase_filename(master_data_dir, backup_dir, 'db_dumps', '', backup_timestamp)
-        cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (netbackup_service_host, filename)
-        cmd = Command("Querying NetBackup server for cdatabase file", cmd_str)
-        cmd.run(validateAfter=True)
-        if cmd.get_results().stdout.strip() != filename:
-            raise Exception('Cdatabase file %s was not backup up to NetBackup server %s successfully' % (filename, netbackup_service_host))
+        for type in ['ao', 'co', 'last_operation']:
+            filename = backup_utils.generate_filename(type)
+            cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (backup_utils.netbackup_service_host, filename)
+            cmd = Command("Querying NetBackup server for %s file" % type, cmd_str)
+            cmd.run(validateAfter=True)
+            if cmd.get_results().stdout.strip() != filename:
+                raise Exception('The %s file %s was not backup up to NetBackup server %s successfully' % (type, filename, netbackup_service_host))
 
 @when('the user runs the "{cmd}" in a worker pool "{poolname}" using netbackup')
 def impl(context, cmd, poolname):

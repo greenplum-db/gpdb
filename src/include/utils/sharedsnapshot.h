@@ -49,4 +49,6 @@ extern void lookupSharedSnapshot(char *lookerDescription, char *creatorDescripti
 extern void dumpSharedLocalSnapshot_forCursor(void);
 extern void readSharedLocalSnapshot_forCursor(Snapshot snapshot);
 
+extern void AtEOXact_SharedSnapshot(void);
+
 #endif   /* SHAREDSNAPSHOT_H */

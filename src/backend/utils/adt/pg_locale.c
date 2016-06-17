@@ -218,38 +218,6 @@ check_locale(int category, const char *value)
 	return ret;
 }
 
-/*
- * check if the chosen encoding matches the encoding required by the locale
- *
- */
-bool check_locale_encoding(const char *locale, int user_enc)
-{
-	int			locale_enc;
-
-	/* get the encoding for the specified locale, or SQL_ASCII if locale is C/POSIX*/
-	locale_enc = pg_get_encoding_from_locale(locale);
-
-	/* We allow selection of SQL_ASCII encoding or C/POSIX locale */
-	if (!(locale_enc == user_enc ||
-		  locale_enc == PG_SQL_ASCII ||
-		  user_enc == PG_SQL_ASCII
-#ifdef WIN32
-
-	/*
-	 * On win32, if the encoding chosen is UTF8, all locales are OK (assuming
-	 * the actual locale name passed the checks above). This is because UTF8
-	 * is a pseudo-codepage, that we convert to UTF16 before doing any
-	 * operations on, and UTF16 supports all locales.
-	 */
-		  || user_enc == PG_UTF8
-#endif
-		  ))
-	{
-		return false;
-	}
-	return true;
-}
-
 /* GUC assign hooks */
 
 /*

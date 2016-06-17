@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_pltemplate.h,v 1.3 2007/01/05 22:19:53 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_pltemplate.h,v 1.5 2008/01/01 19:45:57 momjian Exp $
  *
  * NOTES
  *	  the genbki.sh script reads this file and generates .bki
@@ -33,6 +33,7 @@
    (
    tmplname       name, 
    tmpltrusted    boolean, 
+   tmpldbacreate  boolean, 
    tmplhandler    text, 
    tmplinline     text,
    tmplvalidator  text, 
@@ -56,6 +57,7 @@ CATALOG(pg_pltemplate,1136) BKI_SHARED_RELATION BKI_WITHOUT_OIDS
 {
 	NameData	tmplname;		/* name of PL */
 	bool		tmpltrusted;	/* PL is trusted? */
+	bool		tmpldbacreate;	/* PL is installable by db owner? */
 	text		tmplhandler;	/* name of call handler function */
 	text		tmplinline;		/* name of anonymous-block handler, or NULL */
 	text		tmplvalidator;	/* name of validator function, or NULL */
@@ -74,27 +76,30 @@ typedef FormData_pg_pltemplate *Form_pg_pltemplate;
  *		compiler constants for pg_pltemplate
  * ----------------
  */
-#define Natts_pg_pltemplate					7
+#define Natts_pg_pltemplate					8
 #define Anum_pg_pltemplate_tmplname			1
 #define Anum_pg_pltemplate_tmpltrusted		2
-#define Anum_pg_pltemplate_tmplhandler		3
-#define Anum_pg_pltemplate_tmplinline		4
-#define Anum_pg_pltemplate_tmplvalidator	5
-#define Anum_pg_pltemplate_tmpllibrary		6
-#define Anum_pg_pltemplate_tmplacl			7
+#define Anum_pg_pltemplate_tmpldbacreate	3
+#define Anum_pg_pltemplate_tmplhandler		4
+#define Anum_pg_pltemplate_tmplinline		5
+#define Anum_pg_pltemplate_tmplvalidator	6
+#define Anum_pg_pltemplate_tmpllibrary		7
+#define Anum_pg_pltemplate_tmplacl			8
 
 
 /* ----------------
  *		initial contents of pg_pltemplate
  * ----------------
  */
-DATA(insert ( "plpgsql"		t "plpgsql_call_handler" "plpgsql_inline_handler" "plpgsql_validator" "$libdir/plpgsql" _null_ ));
-DATA(insert ( "pltcl"		t "pltcl_call_handler" _null_ _null_ "$libdir/pltcl" _null_ ));
-DATA(insert ( "pltclu"		f "pltclu_call_handler" _null_ _null_ "$libdir/pltcl" _null_ ));
-DATA(insert ( "plperl"		t "plperl_call_handler" "plperl_inline_handler" "plperl_validator" "$libdir/plperl" _null_ ));
-DATA(insert ( "plperlu"		f "plperlu_call_handler" "plperlu_inline_handler" "plperlu_validator" "$libdir/plperl" _null_ ));
-DATA(insert ( "plpythonu"	f "plpython_call_handler" "plpython_inline_handler" _null_ "$libdir/plpython" _null_ ));
-DATA(insert ( "plr"         f "plr_call_handler" _null_ _null_ "$libdir/plr" _null_ ));
-DATA(insert ( "pljava"      t "pljava_call_handler" _null_ _null_ "$libdir/pljava" _null_ ));
-DATA(insert ( "pljavau"     f "pljavau_call_handler" _null_ _null_ "$libdir/pljava" _null_ ));
+DATA(insert ( "plpgsql"		t t "plpgsql_call_handler" "plpgsql_inline_handler" "plpgsql_validator" "$libdir/plpgsql" _null_ ));
+DATA(insert ( "pltcl"		t t "pltcl_call_handler" _null_ _null_ "$libdir/pltcl" _null_ ));
+DATA(insert ( "pltclu"		f f "pltclu_call_handler" _null_ _null_ "$libdir/pltcl" _null_ ));
+DATA(insert ( "plperl"		t t "plperl_call_handler" "plperl_inline_handler" "plperl_validator" "$libdir/plperl" _null_ ));
+DATA(insert ( "plperlu"		f f "plperlu_call_handler" "plperlu_inline_handler" "plperlu_validator" "$libdir/plperl" _null_ ));
+DATA(insert ( "plpythonu"	f f "plpython_call_handler" "plpython_inline_handler" _null_ "$libdir/plpython" _null_ ));
+
+/* Additional languages installed in GPDB */
+DATA(insert ( "plr"         f f "plr_call_handler" _null_ _null_ "$libdir/plr" _null_ ));
+DATA(insert ( "pljava"      t t "pljava_call_handler" _null_ _null_ "$libdir/pljava" _null_ ));
+DATA(insert ( "pljavau"     f f "pljavau_call_handler" _null_ _null_ "$libdir/pljava" _null_ ));
 #endif   /* PG_PLTEMPLATE_H */

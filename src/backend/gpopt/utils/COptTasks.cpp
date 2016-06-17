@@ -728,7 +728,7 @@ COptTasks::PoconfCreate
 	)
 {
 	// get chosen plan number, cost threshold
-	ULLONG ullPlanId =  (ULLONG) optimizer_plan_id;
+	ULLONG ullPlanId = (ULLONG) optimizer_plan_id;
 	ULLONG ullSamples = (ULLONG) optimizer_samples_number;
 	DOUBLE dCostThreshold = (DOUBLE) optimizer_cost_threshold;
 
@@ -736,8 +736,9 @@ COptTasks::PoconfCreate
 	DOUBLE dDampingFactorJoin = (DOUBLE) optimizer_damping_factor_join;
 	DOUBLE dDampingFactorGroupBy = (DOUBLE) optimizer_damping_factor_groupby;
 
-	ULONG ulCTEInliningCutoff =  (ULONG) optimizer_cte_inlining_bound;
-	ULONG ulJoinArityForAssociativityCommutativity =  (ULONG) optimizer_join_arity_for_associativity_commutativity;
+	ULONG ulCTEInliningCutoff = (ULONG) optimizer_cte_inlining_bound;
+	ULONG ulJoinArityForAssociativityCommutativity = (ULONG) optimizer_join_arity_for_associativity_commutativity;
+	ULONG ulArrayExpansionThreshold = (ULONG) optimizer_array_expansion_threshold;
 
 	return GPOS_NEW(pmp) COptimizerConfig
 						(
@@ -745,7 +746,9 @@ COptTasks::PoconfCreate
 						GPOS_NEW(pmp) CStatisticsConfig(pmp, dDampingFactorFilter, dDampingFactorJoin, dDampingFactorGroupBy),
 						GPOS_NEW(pmp) CCTEConfig(ulCTEInliningCutoff),
 						pcm,
-						GPOS_NEW(pmp) CHint(INT_MAX /* optimizer_parts_to_force_sort_on_insert */, ulJoinArityForAssociativityCommutativity)
+						GPOS_NEW(pmp) CHint(INT_MAX /* optimizer_parts_to_force_sort_on_insert */,
+								ulJoinArityForAssociativityCommutativity,
+								ulArrayExpansionThreshold)
 						);
 }
 

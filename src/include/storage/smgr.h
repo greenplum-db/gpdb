@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/smgr.h,v 1.58 2007/01/17 16:25:01 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/storage/smgr.h,v 1.62 2008/01/01 19:45:59 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -371,10 +371,9 @@ extern bool smgrgetappendonlyinfo(
 	MirrorDataLossTrackingState 	*mirrorDataLossTrackingState,
 
 	int64							*mirrorDataLossTrackingSessionNum);
-extern int	smgrGetPendingFileSysWork(
-	EndXactRecKind						endXactRecKind,
-
-	PersistentEndXactFileSysActionInfo	**ptr);
+extern int smgrGetPendingFileSysWork(EndXactRecKind endXactRecKind,
+						  PersistentEndXactFileSysActionInfo **ptr,
+						  bool *haveNonTemp);
 extern int	smgrGetAppendOnlyMirrorResyncEofs(
 	EndXactRecKind									endXactRecKind,
 
@@ -389,7 +388,9 @@ extern void AtEOXact_smgr(bool forCommit);
 extern void PostPrepare_smgr(void);
 extern void smgrcommit(void);
 extern void smgrabort(void);
+extern void smgrpreckpt(void);
 extern void smgrsync(void);
+extern void smgrpostckpt(void);
 
 extern void smgr_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record);
 extern void smgr_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record);
@@ -513,7 +514,9 @@ extern BlockNumber mdnblocks(SMgrRelation reln);
 extern void mdtruncate(SMgrRelation reln, BlockNumber nblocks,
 		   bool isTemp, bool allowedNotFound);
 extern void mdimmedsync(SMgrRelation reln);
+extern void mdpreckpt(void);
 extern void mdsync(void);
+extern void mdpostckpt(void);
 
 /*
  * MPP-18228 - to make addition to pending delete list atomic with adding

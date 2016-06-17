@@ -11,8 +11,9 @@
 #include <postgres.h>
 #include <unistd.h>
 #include <sys/stat.h>
-#include "utils/workfile_mgr.h"
 #include "cdb/cdbvars.h"
+#include "utils/faultinjector.h"
+#include "utils/workfile_mgr.h"
 
 static void retrieve_file_no(workfile_set *work_set, uint32 file_no, char *workfile_name, uint32 workfile_name_len);
 static void update_workset_size(workfile_set *work_set, bool delOnClose, bool created, int64 size);
@@ -52,6 +53,14 @@ workfile_mgr_create_fileno(workfile_set *work_set, uint32 file_no)
 			work_set->metadata.type,
 			true /* del_on_close */,
 			work_set->metadata.bfz_compress_type);
+
+#ifdef FAULT_INJECTOR
+  FaultInjector_InjectFaultIfSet(
+      WorkfileCreationFail,
+      DDLNotSpecified,
+      "",  // databaseName
+      ""); // tableName
+#endif
 
 	ExecWorkfile_SetWorkset(ewfile, work_set);
 

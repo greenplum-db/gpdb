@@ -15,7 +15,7 @@ export PATH=/usr/local/bin:$PATH
 
 rm -rf /usr/local/gpdb
 pushd ~/gpdb
-  ./configure --prefix=/usr/local/gpdb $1 
+  ./configure --prefix=/usr/local/gpdb $@
   make clean
   make -j4 -s && make install
 popd
@@ -23,9 +23,8 @@ popd
 # generate ssh key to avoid typing password all the time during gpdemo make
 rm -f ~/.ssh/id_rsa
 rm -f ~/.ssh/id_rsa.pub
-rm -f ~/.ssh/authorized_keys
 ssh-keygen -t rsa -N "" -f "$HOME/.ssh/id_rsa"
-cat ~/.ssh/id_rsa.pub > ~/.ssh/authorized_keys
+cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
 chmod 600 ~/.ssh/authorized_keys
 
 # BUG: fix the LD_LIBRARY_PATH to find installed GPOPT libraries

@@ -15,6 +15,8 @@
 #ifndef AUTOSTATS_H
 #define AUTOSTATS_H
 
+#include "executor/execdesc.h"
+
 /**
  * AutoStatsCmdType - an enumeration of type of statements known to auto-stats
  * module. 
@@ -37,7 +39,7 @@ typedef enum AutoStatsCmdType
 } AutoStatsCmdType;
 
 extern const char *autostats_cmdtype_to_string(AutoStatsCmdType cmdType);
-extern void autostats_get_cmdtype(PlannedStmt *stmt,
+extern void autostats_get_cmdtype(QueryDesc *queryDesc,
 					  AutoStatsCmdType *pcmdType, Oid *prelationOid);
 extern void auto_stats(AutoStatsCmdType cmdType, Oid relationOid,
 		   uint64 ntuples, bool inFunction);

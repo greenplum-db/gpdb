@@ -9,19 +9,11 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/lib/dllist.c,v 1.34 2007/01/05 22:19:29 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/lib/dllist.c,v 1.36 2008/01/01 19:45:49 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
-
-/* can be used in frontend or backend */
-#ifdef FRONTEND
-#include "postgres_fe.h"
-/* No assert checks in frontend ... */
-#define Assert(condition)
-#else
 #include "postgres.h"
-#endif
 
 #include "lib/dllist.h"
 

@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/bootstrap/bootstrap.c,v 1.232 2007/02/16 02:10:07 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/bootstrap/bootstrap.c,v 1.238 2008/01/01 19:45:48 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -20,8 +20,6 @@
 #ifdef HAVE_GETOPT_H
 #include <getopt.h>
 #endif
-
-#define BOOTSTRAP_INCLUDE		/* mask out stuff in tcop/tcopprot.h */
 
 #include "access/genam.h"
 #include "access/heapam.h"
@@ -36,8 +34,8 @@
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "postmaster/bgwriter.h"
-#include "postmaster/checkpoint.h"
 #include "postmaster/primary_mirror_mode.h"
+#include "postmaster/walwriter.h"
 #include "replication/walreceiver.h"
 #include "storage/freespace.h"
 #include "storage/ipc.h"
@@ -179,7 +177,6 @@ struct typmap
 static struct typmap **Typ = NULL;
 static struct typmap *Ap = NULL;
 
-static int	Warnings = 0;
 static bool Nulls[MAXATTR];
 
 Form_pg_attribute attrtypes[MAXATTR];	/* points to attribute info */
@@ -360,6 +357,9 @@ AuxiliaryProcessMain(int argc, char *argv[])
 			case BgWriterProcess:
 				statmsg = "writer process";
 				break;
+			case WalWriterProcess:
+				statmsg = "wal writer process";
+				break;
 			case CheckpointProcess:
 				statmsg = "checkpoint process";
 				break;
@@ -491,6 +491,12 @@ AuxiliaryProcessMain(int argc, char *argv[])
 			WalReceiverMain();
 			proc_exit(1);		/* should never return */
 
+		case WalWriterProcess:
+			/* don't set signals, walwriter has its own agenda */
+			InitXLOGAccess();
+			WalWriterMain();
+			proc_exit(1);		/* should never return */
+
 		case FilerepProcess:
 			FileRep_Main();
 			proc_exit(1); /* should never return */
@@ -548,7 +554,7 @@ BootstrapModeMain(void)
 	 * Do backend-like initialization for bootstrap mode
 	 */
 	InitProcess();
-	(void) InitPostgres(NULL, InvalidOid, NULL, NULL);
+	InitPostgres(NULL, InvalidOid, NULL, NULL);
 
 	/* Initialize stuff for bootstrap-file processing */
 	for (i = 0; i < MAXATTR; i++)
@@ -568,11 +574,9 @@ BootstrapModeMain(void)
 
 	/* Perform a checkpoint to ensure everything's down to disk */
 	SetProcessingMode(NormalProcessing);
-	CreateCheckPoint(true, true);
-	SetProcessingMode(BootstrapProcessing);
+	CreateCheckPoint(CHECKPOINT_IS_SHUTDOWN | CHECKPOINT_IMMEDIATE);
 
 	/* Clean up and exit */
-	StartTransactionCommand();
 	cleanup();
 	proc_exit(0);
 }
@@ -648,18 +652,6 @@ ShutdownAuxiliaryProcess(int code, Datum arg)
 {
 	LWLockReleaseAll();
 }
-
-/* ----------------
- *		error handling / abort routines
- * ----------------
- */
-void
-err_out(void)
-{
-	Warnings++;
-	cleanup();
-}
-
 
 /* ----------------------------------------------------------------
  *				MANUAL BACKEND INTERACTIVE INTERFACE COMMANDS
@@ -914,15 +906,7 @@ InsertOneValue(char *value, int i)
 
 	elog(DEBUG4, "inserting column %d value \"%s\"", i, value);
 
-	if (Typ != NULL)
-	{
-		typoid = boot_reldesc->rd_att->attrs[i]->atttypid;
-	}
-	else
-	{
-		/* XXX why is typoid determined differently in this case? */
-		typoid = attrtypes[i]->atttypid;
-	}
+	typoid = boot_reldesc->rd_att->attrs[i]->atttypid;
 
 	boot_get_type_io_data(typoid,
 						  &typlen, &typbyval, &typalign,
@@ -955,19 +939,8 @@ InsertOneNull(int i)
 static void
 cleanup(void)
 {
-	static int	beenhere = 0;
-
-	if (!beenhere)
-		beenhere = 1;
-	else
-	{
-		elog(FATAL, "cleanup called twice");
-		proc_exit(1);
-	}
 	if (boot_reldesc != NULL)
 		closerel(NULL);
-	CommitTransactionCommand();
-	proc_exit(Warnings ? 1 : 0);
 }
 
 /* ----------------
@@ -1033,7 +1006,6 @@ gettype(char *type)
 		return gettype(type);
 	}
 	elog(ERROR, "unrecognized type \"%s\"", type);
-	err_out();
 	/* not reached, here to make compiler happy */
 	return 0;
 }
@@ -1402,8 +1374,7 @@ build_indices(void)
 		heap = heap_open(ILHead->il_heap, NoLock);
 		ind = index_open(ILHead->il_ind, NoLock);
 
-		elog(DEBUG4, "building index %s on %s", NameStr(ind->rd_rel->relname), NameStr(heap->rd_rel->relname));
-		index_build(heap, ind, ILHead->il_info, false);
+		index_build(heap, ind, ILHead->il_info, false, false);
 
 		index_close(ind, NoLock);
 		heap_close(heap, NoLock);

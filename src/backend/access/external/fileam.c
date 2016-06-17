@@ -1661,12 +1661,6 @@ close_external_source(FILE *dataSource, bool failOnError, const char *relname)
 	{
 		url_fclose((URL_FILE*) f, failOnError, relname);
 	}
-
-	if (g_dataSourceCtx != NULL)
-	{
-		MemoryContextDelete(g_dataSourceCtx);
-		g_dataSourceCtx = NULL;
-	}
 }
 
 /*
@@ -1813,12 +1807,29 @@ void readHeaderLine(CopyState pstate)
 }
 
 /*
- * Free external resources on Abort.
+ * Free external resources on end of transaction.
  */
-void AtAbort_ExtTables(void)
+void AtEOXact_ExtTables(bool isCommit)
 {
-	close_external_source(g_dataSource, false, NULL);
-	g_dataSource = NULL;
+	if (g_dataSource)
+	{
+		if (isCommit)
+		{
+			/* There shouldn't be any external tables still open at commit*/
+			elog(WARNING, "external table reference leak");
+		}
+		close_external_source(g_dataSource, false, NULL);
+		g_dataSource = NULL;
+	}
+}
+
+/*
+ * Reset g_dataSourceCtx variable on EOX.
+ */
+void AtEOXact_ResetDataSourceCtx(void)
+{
+	/* g_dataSourceCtx is allocated in TopTransactionContext, so it's going away.*/
+	g_dataSourceCtx = NULL;
 }
 
 void
@@ -1851,7 +1862,7 @@ gfile_malloc(size_t size)
 {
 	if (g_dataSourceCtx == NULL)
 	{
-		g_dataSourceCtx = AllocSetContextCreate(TopMemoryContext,
+		g_dataSourceCtx = AllocSetContextCreate(TopTransactionContext,
 												"DataSourceContext",
 												ALLOCSET_SMALL_MINSIZE,
 												ALLOCSET_SMALL_INITSIZE,

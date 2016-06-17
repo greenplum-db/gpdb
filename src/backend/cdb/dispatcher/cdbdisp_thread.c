@@ -64,11 +64,6 @@ dispatchCommand(CdbDispatchResult * dispatchResult,
 /* returns true if command complete */
 static bool processResults(CdbDispatchResult * dispatchResult);
 
-static char *
-dupQueryTextAndSetSliceId(MemoryContext cxt,
-						  char *queryText,
-						  int len, int sliceId);
-
 static DispatchWaitMode
 cdbdisp_signalQE(SegmentDatabaseDescriptor * segdbDesc,
 				 DispatchWaitMode waitMode);
@@ -102,23 +97,12 @@ cdbdisp_dispatchToGang_internal(struct CdbDispatcherState *ds,
 		newThreads = 0;
 	int	gangSize = 0;
 	SegmentDatabaseDescriptor *db_descriptors;
-	char *newQueryText = NULL;
 	DispatchCommandParms *pParms = NULL;
 
 	gangSize = gp->size;
 	Assert(gangSize <= largestGangsize());
 	db_descriptors = gp->db_descriptors;
 
-	/*
-	 * The most threads we could have is segdb_count / gp_connections_per_thread, rounded up.
-	 * This is equivalent to 1 + (segdb_count-1) / gp_connections_per_thread.
-	 * We allocate enough memory for this many DispatchCommandParms structures,
-	 * even though we may not use them all.
-	 *
-	 * We can only use gp->size here if we're not dealing with a
-	 * singleton gang. It is safer to always use the max number of segments we are
-	 * controlling (largestGangsize).
-	 */
 	Assert(gp_connections_per_thread >= 0);
 	Assert(ds->dispatchThreads != NULL);
 	/*
@@ -138,10 +122,6 @@ cdbdisp_dispatchToGang_internal(struct CdbDispatcherState *ds,
 			 ds->dispatchThreads->threadCount + max_threads);
 	}
 
-	pParms = &ds->dispatchThreads->dispatchCommandParmsAr[0];
-	newQueryText =
-		dupQueryTextAndSetSliceId(ds->dispatchStateContext, pParms->query_text,
-								  pParms->query_text_len, sliceIndex);
 	/*
 	 * Create the thread parms structures based targetSet parameter.
 	 * This will add the segdbDesc pointers appropriate to the
@@ -187,12 +167,8 @@ cdbdisp_dispatchToGang_internal(struct CdbDispatcherState *ds,
 			cdbdisp_mergeConnectionErrors(qeResult, segdbDesc);
 
 		parmsIndex = gp_connections_per_thread == 0 ? 0 : segdbs_in_thread_pool / gp_connections_per_thread;
-		pParms =
-			ds->dispatchThreads->dispatchCommandParmsAr +
-			ds->dispatchThreads->threadCount + parmsIndex;
+		pParms = ds->dispatchThreads->dispatchCommandParmsAr + ds->dispatchThreads->threadCount + parmsIndex;
 		pParms->dispatchResultPtrArray[pParms->db_count++] = qeResult;
-		if (newQueryText != NULL)
-			pParms->query_text = newQueryText;
 
 		/*
 		 * This CdbDispatchResult/SegmentDatabaseDescriptor pair will be
@@ -216,17 +192,14 @@ cdbdisp_dispatchToGang_internal(struct CdbDispatcherState *ds,
 	else if (gp_connections_per_thread == 0)
 		newThreads = 1;
 	else
-		newThreads = 1
-			+ (segdbs_in_thread_pool - 1) / gp_connections_per_thread;
+		newThreads = 1 + (segdbs_in_thread_pool - 1) / gp_connections_per_thread;
 
 	/*
 	 * Create the threads. (which also starts the dispatching).
 	 */
 	for (i = 0; i < newThreads; i++)
 	{
-		DispatchCommandParms *pParms =
-			&(ds->dispatchThreads->dispatchCommandParmsAr +
-			  ds->dispatchThreads->threadCount)[i];
+		DispatchCommandParms *pParms = &(ds->dispatchThreads->dispatchCommandParmsAr + ds->dispatchThreads->threadCount)[i];
 
 		Assert(pParms != NULL);
 
@@ -240,9 +213,7 @@ cdbdisp_dispatchToGang_internal(struct CdbDispatcherState *ds,
 			int	pthread_err = 0;
 
 			pParms->thread_valid = true;
-			pthread_err =
-				gp_pthread_create(&pParms->thread, thread_DispatchCommand,
-								  pParms, "dispatchToGang");
+			pthread_err = gp_pthread_create(&pParms->thread, thread_DispatchCommand, pParms, "dispatchToGang");
 
 			if (pthread_err != 0)
 			{
@@ -590,7 +561,7 @@ thread_DispatchOut(DispatchCommandParms * pParms)
 
 			if (PQstatus(dispatchResult->segdbDesc->conn) == CONNECTION_BAD)
 			{
-				char	   *msg;
+				char *msg;
 
 				msg = PQerrorMessage(dispatchResult->segdbDesc->conn);
 
@@ -1161,7 +1132,7 @@ dispatchCommand(CdbDispatchResult * dispatchResult,
 	 */
 	if (PQsendGpQuery_shared(conn, (char *) query_text, query_text_len) == 0)
 	{
-		char	   *msg = PQerrorMessage(segdbDesc->conn);
+		char *msg = PQerrorMessage(segdbDesc->conn);
 
 		if (DEBUG3 >= log_min_messages)
 			write_log("PQsendMPPQuery_shared error %s %s",
@@ -1745,35 +1716,6 @@ CollectQEWriterTransactionInformation(SegmentDatabaseDescriptor * segdbDesc,
 			dispatchResult->QEWriter_Dirty = true;
 		}
 	}
-}
-
-/*
- * Set slice in query text
- *
- * Make a new copy of query text and set the slice id in the right place.
- *
- */
-static char *
-dupQueryTextAndSetSliceId(MemoryContext cxt, char *queryText,
-						  int len, int sliceId)
-{
-	/*
-	 * DTX command and RM command don't need slice id 
-	 */
-	if (sliceId < 0)
-		return NULL;
-
-	int	tmp = htonl(sliceId);
-	char *newQuery = MemoryContextAlloc(cxt, len);
-
-	memcpy(newQuery, queryText, len);
-
-	/*
-	 * the first byte is 'M' and followed by the length, which is an integer.
-	 * see function PQbuildGpQueryString.
-	 */
-	memcpy(newQuery + 1 + sizeof(int), &tmp, sizeof(tmp));
-	return newQuery;
 }
 
 /*

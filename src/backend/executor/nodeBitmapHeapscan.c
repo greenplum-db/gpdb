@@ -21,7 +21,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeBitmapHeapscan.c,v 1.16 2007/01/05 22:19:28 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeBitmapHeapscan.c,v 1.22.2.1 2008/09/11 14:01:35 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -51,7 +51,6 @@
 
 
 static TupleTableSlot *BitmapHeapNext(BitmapHeapScanState *node);
-static void bitgetpage(HeapScanDesc scan, TBMIterateResult *tbmres);
 
 /*
  * Initialize the heap scan descriptor if it is not initialized.
@@ -66,20 +65,12 @@ initScanDesc(BitmapHeapScanState *scanstate)
 	{
 		/*
 		 * Even though we aren't going to do a conventional seqscan, it is useful
-		 * to create a HeapScanDesc --- this checks the relation size and sets up
-		 * statistical infrastructure for us.
+		 * to create a HeapScanDesc --- most of the fields in it are usable.
 		 */
-		scanstate->ss_currentScanDesc = heap_beginscan(currentRelation,
-													   estate->es_snapshot,
-													   0,
-													   NULL);
-		
-		/*
-		 * One problem is that heap_beginscan counts a "sequential scan" start,
-		 * when we actually aren't doing any such thing.  Reverse out the added
-		 * scan count.	(Eventually we may want to count bitmap scans separately.)
-		 */
-		pgstat_discount_heap_scan(currentRelation);
+		scanstate->ss_currentScanDesc = heap_beginscan_bm(currentRelation,
+														  estate->es_snapshot,
+														  0,
+														  NULL);
 	}
 }
 
@@ -308,7 +299,7 @@ BitmapHeapNext(BitmapHeapScanState *node)
 		targoffset = scan->rs_vistuples[scan->rs_cindex];
 		dp = (Page) BufferGetPage(scan->rs_cbuf);
 		lp = PageGetItemId(dp, targoffset);
-		Assert(ItemIdIsUsed(lp));
+		Assert(ItemIdIsNormal(lp));
 
 		scan->rs_ctup.t_data = (HeapTupleHeader) PageGetItem((Page) dp, lp);
 		scan->rs_ctup.t_len = ItemIdGetLength(lp);
@@ -363,7 +354,7 @@ BitmapHeapNext(BitmapHeapScanState *node)
  * builds an array indicating which tuples on the page are both potentially
  * interesting according to the bitmap, and visible according to the snapshot.
  */
-static void
+void
 bitgetpage(HeapScanDesc scan, TBMIterateResult *tbmres)
 {
 	MIRROREDLOCK_BUFMGR_DECLARE;
@@ -371,12 +362,7 @@ bitgetpage(HeapScanDesc scan, TBMIterateResult *tbmres)
 	BlockNumber page = tbmres->blockno;
 	Buffer		buffer;
 	Snapshot	snapshot;
-	Page		dp;
 	int			ntup;
-	int			curslot;
-	int			minslot;
-	int			maxslot;
-	int			maxoff;
 
 	/*
 	 * Acquire pin on the target heap page, trading in any pin we held before.
@@ -393,6 +379,14 @@ bitgetpage(HeapScanDesc scan, TBMIterateResult *tbmres)
 	buffer = scan->rs_cbuf;
 	snapshot = scan->rs_snapshot;
 
+	ntup = 0;
+
+	/*
+	 * Prune and repair fragmentation for the whole page, if possible.
+	 */
+	Assert(TransactionIdIsValid(RecentGlobalXmin));
+	heap_page_prune_opt(scan->rs_rd, buffer, RecentGlobalXmin);
+
 	/*
 	 * We must hold share lock on the buffer content while examining tuple
 	 * visibility.	Afterwards, however, the tuples we have found to be
@@ -400,71 +394,51 @@ bitgetpage(HeapScanDesc scan, TBMIterateResult *tbmres)
 	 */
 	LockBuffer(buffer, BUFFER_LOCK_SHARE);
 
-	dp = (Page) BufferGetPage(buffer);
-	maxoff = PageGetMaxOffsetNumber(dp);
-
 	/*
-	 * Determine how many entries we need to look at on this page. If the
-	 * bitmap is lossy then we need to look at each physical item pointer;
-	 * otherwise we just look through the offsets listed in tbmres.
+	 * We need two separate strategies for lossy and non-lossy cases.
 	 */
 	if (tbmres->ntuples >= 0)
 	{
-		/* non-lossy case */
-		minslot = 0;
-		maxslot = tbmres->ntuples - 1;
+		/*
+		 * Bitmap is non-lossy, so we just look through the offsets listed in
+		 * tbmres; but we have to follow any HOT chain starting at each such
+		 * offset.
+		 */
+		int			curslot;
+
+		for (curslot = 0; curslot < tbmres->ntuples; curslot++)
+		{
+			OffsetNumber offnum = tbmres->offsets[curslot];
+			ItemPointerData tid;
+
+			ItemPointerSet(&tid, page, offnum);
+			if (heap_hot_search_buffer(scan->rs_rd, &tid, buffer, snapshot, NULL))
+				scan->rs_vistuples[ntup++] = ItemPointerGetOffsetNumber(&tid);
+		}
 	}
 	else
 	{
-		/* lossy case */
-		minslot = FirstOffsetNumber;
-		maxslot = maxoff;
-	}
+		/*
+		 * Bitmap is lossy, so we must examine each item pointer on the page.
+		 * But we can ignore HOT chains, since we'll check each tuple anyway.
+		 */
+		Page		dp = (Page) BufferGetPage(buffer);
+		OffsetNumber maxoff = PageGetMaxOffsetNumber(dp);
+		OffsetNumber offnum;
 
-	ntup = 0;
-	for (curslot = minslot; curslot <= maxslot; curslot++)
-	{
-		OffsetNumber targoffset;
-		ItemId		lp;
-		HeapTupleData loctup;
-		bool		valid;
-
-		if (tbmres->ntuples >= 0)
+		for (offnum = FirstOffsetNumber; offnum <= maxoff; offnum++)
 		{
-			/* non-lossy case */
-			targoffset = tbmres->offsets[curslot];
+			ItemId		lp;
+			HeapTupleData loctup;
+
+			lp = PageGetItemId(dp, offnum);
+			if (!ItemIdIsNormal(lp))
+				continue;
+			loctup.t_data = (HeapTupleHeader) PageGetItem((Page) dp, lp);
+			loctup.t_len = ItemIdGetLength(lp);
+			if (HeapTupleSatisfiesVisibility(scan->rs_rd, &loctup, snapshot, buffer))
+				scan->rs_vistuples[ntup++] = offnum;
 		}
-		else
-		{
-			/* lossy case */
-			targoffset = (OffsetNumber) curslot;
-		}
-
-		/*
-		 * We'd better check for out-of-range offnum in case of VACUUM since
-		 * the TID was obtained.
-		 */
-		if (targoffset < FirstOffsetNumber || targoffset > maxoff)
-			continue;
-
-		lp = PageGetItemId(dp, targoffset);
-
-		/*
-		 * Must check for deleted tuple.
-		 */
-		if (!ItemIdIsUsed(lp))
-			continue;
-
-		/*
-		 * check time qualification of tuple, remember it if valid
-		 */
-		loctup.t_data = (HeapTupleHeader) PageGetItem((Page) dp, lp);
-		loctup.t_len = ItemIdGetLength(lp);
-		ItemPointerSet(&(loctup.t_self), page, targoffset);
-
-		valid = HeapTupleSatisfiesVisibility(scan->rs_rd, &loctup, snapshot, buffer);
-		if (valid)
-			scan->rs_vistuples[ntup++] = targoffset;
 	}
 
 	LockBuffer(buffer, BUFFER_LOCK_UNLOCK);
@@ -527,9 +501,6 @@ ExecBitmapHeapReScan(BitmapHeapScanState *node, ExprContext *exprCtxt)
 
 	/* rescan to release any page pin */
 	heap_rescan(node->ss_currentScanDesc, NULL);
-
-	/* undo bogus "seq scan" count (see notes in ExecInitBitmapHeapScan) */
-	pgstat_discount_heap_scan(node->ss.ss_currentRelation);
 
 	freeBitmapState(node);
 

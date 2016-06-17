@@ -102,10 +102,6 @@ static ArrayType *create_array_envelope(int ndims, int *dimv, int *lbv, int nbyt
 static ArrayType *array_fill_internal(ArrayType *dims, ArrayType *lbs,
 					Datum value, bool isnull, Oid elmtype,
 					FunctionCallInfo fcinfo);
-static Datum array_type_length_coerce_internal(ArrayType *src,
-								  int32 desttypmod,
-								  bool isExplicit,
-								  FmgrInfo *fmgr_info);
 
 /*
  * array_in :
@@ -206,7 +202,7 @@ array_in(PG_FUNCTION_ARGS)
 			ereport(ERROR,
 					(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
 					 errmsg("number of array dimensions (%d) exceeds the maximum allowed (%d)",
-							ndim, MAXDIM)));
+							ndim + 1, MAXDIM)));
 
 		for (q = p; isdigit((unsigned char) *q) || (*q == '-') || (*q == '+'); q++);
 		if (q == p)				/* no digits? */
@@ -458,7 +454,7 @@ ArrayCount(const char *str, int *dim, char typdelim)
 							ereport(ERROR,
 									(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
 									 errmsg("number of array dimensions (%d) exceeds the maximum allowed (%d)",
-											nest_level, MAXDIM)));
+											nest_level + 1, MAXDIM)));
 						temp[nest_level] = 0;
 						nest_level++;
 						if (ndim < nest_level)
@@ -1278,7 +1274,7 @@ array_recv(PG_FUNCTION_ARGS)
 		dataoffset = 0;			/* marker for no null bitmap */
 		nbytes += ARR_OVERHEAD_NONULLS(ndim);
 	}
-	retval = (ArrayType *) palloc(nbytes);
+	retval = (ArrayType *) palloc0(nbytes);
 	SET_VARSIZE(retval, nbytes);
 	retval->ndim = ndim;
 	retval->dataoffset = dataoffset;
@@ -1916,7 +1912,7 @@ array_get_slice(ArrayType *array,
 		bytes += ARR_OVERHEAD_NONULLS(ndim);
 	}
 
-	newarray = (ArrayType *) palloc(bytes);
+	newarray = (ArrayType *) palloc0(bytes);
 	SET_VARSIZE(newarray, bytes);
 	newarray->ndim = ndim;
 	newarray->dataoffset = dataoffset;
@@ -2169,7 +2165,7 @@ array_set(ArrayType *array,
 	/*
 	 * OK, create the new array and fill in header/dimensions
 	 */
-	newarray = (ArrayType *) palloc(newsize);
+	newarray = (ArrayType *) palloc0(newsize);
 	SET_VARSIZE(newarray, newsize);
 	newarray->ndim = ndim;
 	newarray->dataoffset = newhasnulls ? overheadlen : 0;
@@ -2464,6 +2460,7 @@ array_set_slice(ArrayType *array,
 	{
 		/*
 		 * here we must allow for possibility of slice larger than orig array
+		 * and/or not adjacent to orig array subscripts
 		 */
 		int			oldlb = ARR_LBOUND(array)[0];
 		int			oldub = oldlb + ARR_DIMS(array)[0] - 1;
@@ -2472,10 +2469,12 @@ array_set_slice(ArrayType *array,
 		char	   *oldarraydata = ARR_DATA_PTR(array);
 		bits8	   *oldarraybitmap = ARR_NULLBITMAP(array);
 
+		/* count/size of old array entries that will go before the slice */
 		itemsbefore = Min(slicelb, oldub + 1) - oldlb;
 		lenbefore = array_nelems_size(oldarraydata, 0, oldarraybitmap,
 									  itemsbefore,
 									  elmlen, elmbyval, elmalign);
+		/* count/size of old array entries that will be replaced by slice */
 		if (slicelb > sliceub)
 		{
 			nolditems = 0;
@@ -2489,13 +2488,14 @@ array_set_slice(ArrayType *array,
 											nolditems,
 											elmlen, elmbyval, elmalign);
 		}
-		itemsafter = oldub - sliceub;
+		/* count/size of old array entries that will go after the slice */
+		itemsafter = oldub + 1 - Max(sliceub + 1, oldlb);
 		lenafter = olddatasize - lenbefore - olditemsize;
 	}
 
 	newsize = overheadlen + olddatasize - olditemsize + newitemsize;
 
-	newarray = (ArrayType *) palloc(newsize);
+	newarray = (ArrayType *) palloc0(newsize);
 	SET_VARSIZE(newarray, newsize);
 	newarray->ndim = ndim;
 	newarray->dataoffset = newhasnulls ? overheadlen : 0;
@@ -2754,7 +2754,7 @@ array_map(FunctionCallInfo fcinfo, Oid inpType, Oid retType,
 		dataoffset = 0;			/* marker for no null bitmap */
 		nbytes += ARR_OVERHEAD_NONULLS(ndim);
 	}
-	result = (ArrayType *) palloc(nbytes);
+	result = (ArrayType *) palloc0(nbytes);
 	SET_VARSIZE(result, nbytes);
 	result->ndim = ndim;
 	result->dataoffset = dataoffset;
@@ -2896,7 +2896,7 @@ construct_md_array(Datum *elems,
 			}
 		}
 
-		nbytes = att_align(nbytes, elmalign);
+		nbytes = att_align_nominal(nbytes, elmalign);
 	} 
 	else 
 	{
@@ -2963,7 +2963,7 @@ construct_empty_array(Oid elmtype)
 {
 	ArrayType  *result;
 
-	result = (ArrayType *) palloc(sizeof(ArrayType));
+	result = (ArrayType *) palloc0(sizeof(ArrayType));
 	SET_VARSIZE(result, sizeof(ArrayType));
 	result->ndim = 0;
 	result->dataoffset = 0;
@@ -3011,7 +3011,7 @@ deconstruct_array(ArrayType *array,
 	nelems = ArrayGetNItems(ARR_NDIM(array), ARR_DIMS(array));
 	*elemsp = elems = (Datum *) palloc(nelems * sizeof(Datum));
 	if (nullsp)
-		*nullsp = nulls = (bool *) palloc(nelems * sizeof(bool));
+		*nullsp = nulls = (bool *) palloc0(nelems * sizeof(bool));
 	else
 		nulls = NULL;
 	*nelemsp = nelems;
@@ -3036,8 +3036,6 @@ deconstruct_array(ArrayType *array,
 		else
 		{
 			elems[i] = fetch_att(p, elmbyval, elmlen);
-			if (nulls)
-				nulls[i] = false;
 			p = att_addlength_pointer(p, elmlen, p);
 			p = (char *) att_align_nominal(p, elmalign);
 		}
@@ -3053,6 +3051,49 @@ deconstruct_array(ArrayType *array,
 			}
 		}
 	}
+}
+
+/*
+ * array_contains_nulls --- detect whether an array has any null elements
+ *
+ * This gives an accurate answer, whereas testing ARR_HASNULL only tells
+ * if the array *might* contain a null.
+ */
+bool
+array_contains_nulls(ArrayType *array)
+{
+	int			nelems;
+	bits8	   *bitmap;
+	int			bitmask;
+
+	/* Easy answer if there's no null bitmap */
+	if (!ARR_HASNULL(array))
+		return false;
+
+	nelems = ArrayGetNItems(ARR_NDIM(array), ARR_DIMS(array));
+
+	bitmap = ARR_NULLBITMAP(array);
+
+	/* check whole bytes of the bitmap byte-at-a-time */
+	while (nelems >= 8)
+	{
+		if (*bitmap != 0xFF)
+			return true;
+		bitmap++;
+		nelems -= 8;
+	}
+
+	/* check last partial byte */
+	bitmask = 1;
+	while (nelems > 0)
+	{
+		if ((*bitmap & bitmask) == 0)
+			return true;
+		bitmask <<= 1;
+		nelems--;
+	}
+
+	return false;
 }
 
 
@@ -4178,222 +4219,6 @@ array_insert_slice(ArrayType *destArray,
 		array_bitmap_copy(destBitmap, dest_offset,
 						  origBitmap, orig_offset,
 						  orignitems - orig_offset);
-}
-
-/*
- * array_type_coerce -- allow explicit or assignment coercion from
- * one array type to another.
- *
- * array_type_length_coerce -- the same, for cases where both type and length
- * coercion are done by a single function on the element type.
- *
- * Caller should have already verified that the source element type can be
- * coerced into the target element type.
- */
-Datum
-array_type_coerce(PG_FUNCTION_ARGS)
-{
-	ArrayType  *src = PG_GETARG_ARRAYTYPE_P(0);
-	FmgrInfo   *fmgr_info = fcinfo->flinfo;
-
-	return array_type_length_coerce_internal(src, -1, false, fmgr_info);
-}
-
-Datum
-array_type_length_coerce(PG_FUNCTION_ARGS)
-{
-	ArrayType  *src = PG_GETARG_ARRAYTYPE_P(0);
-	int32		desttypmod = PG_GETARG_INT32(1);
-	bool		isExplicit = PG_GETARG_BOOL(2);
-	FmgrInfo   *fmgr_info = fcinfo->flinfo;
-
-	return array_type_length_coerce_internal(src, desttypmod,
-											 isExplicit, fmgr_info);
-}
-
-static Datum
-array_type_length_coerce_internal(ArrayType *src,
-								  int32 desttypmod,
-								  bool isExplicit,
-								  FmgrInfo *fmgr_info)
-{
-	Oid			src_elem_type = ARR_ELEMTYPE(src);
-	typedef struct
-	{
-		Oid			srctype;
-		Oid			desttype;
-		FmgrInfo	coerce_finfo;
-		ArrayMapState amstate;
-	} atc_extra;
-	atc_extra  *my_extra;
-	FunctionCallInfoData locfcinfo;
-
-	/*
-	 * We arrange to look up the coercion function only once per series of
-	 * calls, assuming the input data type doesn't change underneath us.
-	 * (Output type can't change.)
-	 */
-	my_extra = (atc_extra *) fmgr_info->fn_extra;
-	if (my_extra == NULL)
-	{
-		fmgr_info->fn_extra = MemoryContextAllocZero(fmgr_info->fn_mcxt,
-													 sizeof(atc_extra));
-		my_extra = (atc_extra *) fmgr_info->fn_extra;
-	}
-
-	if (my_extra->srctype != src_elem_type)
-	{
-		Oid			tgt_type = get_fn_expr_rettype(fmgr_info);
-		Oid			tgt_elem_type;
-		Oid			funcId;
-
-		if (tgt_type == InvalidOid)
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("could not determine target array type")));
-
-		tgt_elem_type = get_element_type(tgt_type);
-		if (tgt_elem_type == InvalidOid)
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("target type is not an array")));
-
-		/*
-		 * We don't deal with domain constraints yet, so bail out. This isn't
-		 * currently a problem, because we also don't support arrays of domain
-		 * type elements either. But in the future we might. At that point
-		 * consideration should be given to removing the check below and
-		 * adding a domain constraints check to the coercion.
-		 */
-		if (getBaseType(tgt_elem_type) != tgt_elem_type)
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("array coercion to domain type elements not "
-							"currently supported")));
-
-		if (COERCION_PATH_NONE == find_coercion_pathway(tgt_elem_type, src_elem_type,
-								   COERCION_EXPLICIT, &funcId))
-		{
-			/* should never happen, but check anyway */
-			elog(ERROR, "no conversion function from %s to %s",
-				 format_type_be(src_elem_type),
-				 format_type_be(tgt_elem_type));
-		}
-		if (OidIsValid(funcId))
-			fmgr_info_cxt(funcId, &my_extra->coerce_finfo, fmgr_info->fn_mcxt);
-		else
-			my_extra->coerce_finfo.fn_oid = InvalidOid;
-		my_extra->srctype = src_elem_type;
-		my_extra->desttype = tgt_elem_type;
-	}
-
-	/*
-	 * If it's binary-compatible, modify the element type in the array header,
-	 * but otherwise leave the array as we received it.
-	 */
-	if (my_extra->coerce_finfo.fn_oid == InvalidOid)
-	{
-		ArrayType  *result;
-
-		result = (ArrayType *) DatumGetPointer(datumCopy(PointerGetDatum(src),
-														 false, -1));
-		ARR_ELEMTYPE(result) = my_extra->desttype;
-		PG_RETURN_ARRAYTYPE_P(result);
-	}
-
-	/*
-	 * Use array_map to apply the function to each array element.
-	 *
-	 * We pass on the desttypmod and isExplicit flags whether or not the
-	 * function wants them.
-	 */
-	InitFunctionCallInfoData(locfcinfo, &my_extra->coerce_finfo, 3,
-							 NULL, NULL);
-	locfcinfo.arg[0] = PointerGetDatum(src);
-	locfcinfo.arg[1] = Int32GetDatum(desttypmod);
-	locfcinfo.arg[2] = BoolGetDatum(isExplicit);
-	locfcinfo.argnull[0] = false;
-	locfcinfo.argnull[1] = false;
-	locfcinfo.argnull[2] = false;
-
-	return array_map(&locfcinfo, my_extra->srctype, my_extra->desttype,
-					 &my_extra->amstate);
-}
-
-/*
- * array_length_coerce -- apply the element type's length-coercion routine
- *		to each element of the given array.
- */
-Datum
-array_length_coerce(PG_FUNCTION_ARGS)
-{
-	ArrayType  *v = PG_GETARG_ARRAYTYPE_P(0);
-	int32		desttypmod = PG_GETARG_INT32(1);
-	bool		isExplicit = PG_GETARG_BOOL(2);
-	FmgrInfo   *fmgr_info = fcinfo->flinfo;
-	typedef struct
-	{
-		Oid			elemtype;
-		FmgrInfo	coerce_finfo;
-		ArrayMapState amstate;
-	} alc_extra;
-	alc_extra  *my_extra;
-	FunctionCallInfoData locfcinfo;
-
-	/* If no typmod is provided, shortcircuit the whole thing */
-	if (desttypmod < 0)
-		PG_RETURN_ARRAYTYPE_P(v);
-
-	/*
-	 * We arrange to look up the element type's coercion function only once
-	 * per series of calls, assuming the element type doesn't change
-	 * underneath us.
-	 */
-	my_extra = (alc_extra *) fmgr_info->fn_extra;
-	if (my_extra == NULL)
-	{
-		fmgr_info->fn_extra = MemoryContextAllocZero(fmgr_info->fn_mcxt,
-													 sizeof(alc_extra));
-		my_extra = (alc_extra *) fmgr_info->fn_extra;
-	}
-
-	if (my_extra->elemtype != ARR_ELEMTYPE(v))
-	{
-		Oid			funcId;
-
-		find_typmod_coercion_function(ARR_ELEMTYPE(v), &funcId);
-
-		if (OidIsValid(funcId))
-			fmgr_info_cxt(funcId, &my_extra->coerce_finfo, fmgr_info->fn_mcxt);
-		else
-			my_extra->coerce_finfo.fn_oid = InvalidOid;
-		my_extra->elemtype = ARR_ELEMTYPE(v);
-	}
-
-	/*
-	 * If we didn't find a coercion function, return the array unmodified
-	 * (this should not happen in the normal course of things, but might
-	 * happen if this function is called manually).
-	 */
-	if (my_extra->coerce_finfo.fn_oid == InvalidOid)
-		PG_RETURN_ARRAYTYPE_P(v);
-
-	/*
-	 * Use array_map to apply the function to each array element.
-	 *
-	 * Note: we pass isExplicit whether or not the function wants it ...
-	 */
-	InitFunctionCallInfoData(locfcinfo, &my_extra->coerce_finfo, 3,
-							 NULL, NULL);
-	locfcinfo.arg[0] = PointerGetDatum(v);
-	locfcinfo.arg[1] = Int32GetDatum(desttypmod);
-	locfcinfo.arg[2] = BoolGetDatum(isExplicit);
-	locfcinfo.argnull[0] = false;
-	locfcinfo.argnull[1] = false;
-	locfcinfo.argnull[2] = false;
-
-	return array_map(&locfcinfo, ARR_ELEMTYPE(v), ARR_ELEMTYPE(v),
-					 &my_extra->amstate);
 }
 
 /*

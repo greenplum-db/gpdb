@@ -591,6 +591,8 @@ CTranslatorUtils::PdrgpmdidResolvePolymorphicTypes
 //		Check if the given mdid array contains any of the polymorphic
 //		types (ANYELEMENT, ANYARRAY)
 //
+// GPDB_83_MERGE_FIXME: What about ANYENUM?
+//
 //---------------------------------------------------------------------------
 BOOL
 CTranslatorUtils::FContainsPolymorphicTypes

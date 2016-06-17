@@ -1,9 +1,8 @@
-#ifndef _UTILFUNCTIONS_
-#define _UTILFUNCTIONS_
+#ifndef __S3_UTILFUNCTIONS__
+#define __S3_UTILFUNCTIONS__
 
 #include <cstdio>
 #include <cstdlib>
-// #include <cstdint>
 #include <stdint.h>
 #include <sys/types.h>
 #include <cstring>

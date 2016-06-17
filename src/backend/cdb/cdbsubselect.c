@@ -857,22 +857,16 @@ convert_EXISTS_to_join(PlannerInfo *root, List** rtrlist_inout, SubLink *sublink
     Assert(IsA(subselect, Query));
 
     if (subselect->jointree->fromlist == NULL)
-    {
     	return (Node *) sublink;
-    }
 
     if (has_correlation_in_funcexpr_rte(subselect->rtable))
-    {
     	return (Node *) sublink;
-    }
     
-	/**
+	/*
 	 * If deeply correlated, don't bother.
 	 */
 	if (IsSubqueryMultiLevelCorrelated(subselect))
-	{
     	return (Node *) sublink;
-	}
 
     /*
      * 'LIMIT n' makes EXISTS false when n <= 0, and doesn't affect the outcome
@@ -933,7 +927,8 @@ convert_EXISTS_to_join(PlannerInfo *root, List** rtrlist_inout, SubLink *sublink
     subselect->sortClause = NIL;
     subselect->distinctClause = NIL;
 
-    /* HAVING is the only place that could still contain aggregates.
+    /*
+	 * HAVING is the only place that could still contain aggregates.
 	 * We can delete targetlist if there is no havingQual.
 	 */
     if (subselect->havingQual == NULL)
@@ -967,34 +962,34 @@ convert_EXISTS_to_join(PlannerInfo *root, List** rtrlist_inout, SubLink *sublink
         return make_and_qual(limitqual, (Node *)sublink);
     }
 
-    /*
-     * Build subquery RTE, InClauseInfo, etc.
-     */
+	/*
+	 * Build subquery RTE, InClauseInfo, etc.
+	 */
 
-    /* Build an InClauseInfo struct. */
+	/* Build an InClauseInfo struct. */
 	ininfo = makeNode(InClauseInfo);
-    ininfo->sub_targetlist = NULL;
+	ininfo->sub_targetlist = NULL;
 
-    /* Determine the index of the subquery RTE that we'll create below. */
+	/* Determine the index of the subquery RTE that we'll create below. */
 	rtindex = list_length(root->parse->rtable) + 1;
 	ininfo->righthand = bms_make_singleton(rtindex);
 
-    /* Tell join planner to quell duplication of outer query result rows. */
+	/* Tell join planner to quell duplication of outer query result rows. */
 	root->in_info_list = lappend(root->in_info_list, ininfo);
 
-    /* Make a subquery RTE in the current query level. */
-    rte = addRangeTableEntryForSubquery(NULL,
+	/* Make a subquery RTE in the current query level. */
+	rte = addRangeTableEntryForSubquery(NULL,
 										subselect,
 										makeAlias("EXISTS_subquery", NIL),
 										false);
 	root->parse->rtable = lappend(root->parse->rtable, rte);
 
-    /* Tell caller to augment the jointree with a reference to the new RTE. */
-    rtr = makeNode(RangeTblRef);
+	/* Tell caller to augment the jointree with a reference to the new RTE. */
+	rtr = makeNode(RangeTblRef);
 	rtr->rtindex = rtindex;
-    *rtrlist_inout = lappend(*rtrlist_inout, rtr);
+	*rtrlist_inout = lappend(*rtrlist_inout, rtr);
 
-    return limitqual;
+	return limitqual;
 }                               /* convert_EXISTS_to_join */
 
 
@@ -1278,24 +1273,34 @@ make_join_expr(Node *larg, int r_rtindex, int join_type)
 static Node *
 make_lasj_quals(PlannerInfo *root, SubLink * sublink, int subquery_indx)
 {
+	Query	   *subselect = (Query *) sublink->subselect;
 	Expr	   *join_pred;
-	List	   *subtlist = NIL;
+	List	   *subquery_vars;
 
 	Assert(sublink->subLinkType == ALL_SUBLINK);
 
+	/*
+	 * Build a list of Vars representing the subselect outputs.
+	 */
+	subquery_vars = generate_subquery_vars(root,
+										   subselect->targetList,
+										   subquery_indx);
+
+	/*
+	 * Build the result qual expression, replacing Params with these Vars.
+	 */
 	join_pred = (Expr *) convert_testexpr(root,
-			sublink->testexpr,
-			subquery_indx,
-			&subtlist);
+										  sublink->testexpr,
+										  subquery_vars);
 
 	join_pred = canonicalize_qual(make_notclause(join_pred));
-	
+
 	Assert(join_pred != NULL);
 	return (Node *) join_pred;
 }
 
 /* add IS NOT FALSE clause on top of the clause */
-Node *
+static Node *
 add_null_match_clause(Node *clause)
 {
 	BooleanTest *btest;
@@ -1312,11 +1317,14 @@ add_null_match_clause(Node *clause)
  * Given an expression tree, extract all inner vars and construct a qual that eliminates NULLs.
  * E.g. For input (i1 = o1) and (i2 = o1 + 2), the function produces NOT NULL (i1) and NOT NULL (i2)
  */
-static Node* not_null_inner_vars(Node *clause)
+static Node *
+not_null_inner_vars(Node *clause)
 {
-	List *allVars = extract_nodes(NULL /* PlannerGlobal */, clause, T_Var);
-	List *notNullClauses = NULL;
-	ListCell *lc = NULL;
+	List	   *allVars;
+	List	   *notNullClauses = NIL;
+	ListCell   *lc;
+
+	allVars = extract_nodes(NULL /* PlannerGlobal */, clause, T_Var);
 	foreach (lc, allVars)
 	{
 		Assert(IsA(lfirst(lc), Var));
@@ -1331,13 +1339,9 @@ static Node* not_null_inner_vars(Node *clause)
 	}
 
 	if (notNullClauses)
-	{
 		return (Node *) make_andclause(notNullClauses);
-	}
 	else
-	{
 		return NULL;
-	}
 }
 
 
@@ -1816,7 +1820,8 @@ has_correlation_in_funcexpr_rte(List *rtable)
 {
 	/* check if correlation occurs in a func expr in the from clause of the
 	   subselect */
-	ListCell *lc_rte = NULL;
+	ListCell *lc_rte;
+
 	foreach(lc_rte, rtable)
 	{
 		RangeTblEntry *rte = (RangeTblEntry *) lfirst(lc_rte);

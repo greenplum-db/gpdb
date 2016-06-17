@@ -171,6 +171,11 @@ void
 slashUsage(unsigned short int pager)
 {
 	FILE	   *output;
+	char	   *currdb;
+
+	currdb = PQdb(pset.db);
+	if (currdb == NULL)
+		currdb = "";
 
 	output = PageOutput(90, pager);
 

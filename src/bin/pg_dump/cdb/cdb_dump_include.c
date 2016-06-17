@@ -66,8 +66,18 @@ bool		g_gp_supportsOpfamilies = true;
 /*
  * Indicates whether or not the GPDB cluster supports column attributes.
  */
-bool g_gp_supportsAttributeEncoding = false;
+bool		g_gp_supportsAttributeEncoding = false;
 
+/*
+ * Indicates whether or not the GPDB cluster supports full text search
+ */
+bool		g_gp_supportsFullText = false;
+
+/*
+ * Indicates whether or not the GPDB cluster supports languages owned by
+ * other than OID 10.
+ */
+bool		g_gp_supportsLanOwner = false;
 
 /*
  * When true, indicates that only the MPP schema is being dumped.
@@ -910,16 +920,6 @@ getTypes(int *numTypes)
 		tinfo[i].typrelkind = *PQgetvalue(res, i, i_typrelkind);
 		tinfo[i].typtype = *PQgetvalue(res, i, i_typtype);
 		tinfo[i].shellType = NULL;
-
-		/*
-		 * If it's a table's rowtype, use special type code to facilitate
-		 * sorting into the desired order.	(We don't want to consider it an
-		 * ordinary type because that would bring the table up into the
-		 * datatype part of the dump order.)
-		 */
-		if (OidIsValid(tinfo[i].typrelid) &&
-			tinfo[i].typrelkind != RELKIND_COMPOSITE_TYPE)
-			tinfo[i].dobj.objType = DO_TABLE_TYPE;
 
 		/*
 		 * check for user-defined array types, omit system generated ones
@@ -2442,13 +2442,28 @@ getProcLangs(int *numProcLangs)
 	/* Make sure we are in proper schema */
 	selectSourceSchema("pg_catalog");
 
-	/* Languages are owned by the bootstrap superuser, OID 10 */
-	appendPQExpBuffer(query, "SELECT tableoid, oid, *, "
-					  "(%s '10') as lanowner "
-					  "FROM pg_language "
-					  "WHERE lanispl "
-					  "ORDER BY oid",
-					  username_subquery);
+	if (g_gp_supportsLanOwner)
+	{
+		/* pg_language has a lanowner column */
+		appendPQExpBuffer(query, "SELECT tableoid, oid, "
+						  "lanname, lanpltrusted, lanplcallfoid, "
+						  "lanvalidator,  lanacl, "
+						  "(%s lanowner) as lanowner "
+						  "FROM pg_language "
+						  "WHERE lanispl "
+						  "ORDER BY oid",
+						  username_subquery);
+	}
+	else
+	{
+		/* Languages are owned by the bootstrap superuser, OID 10 */
+		appendPQExpBuffer(query, "SELECT tableoid, oid, *, "
+						  "(%s '10') as lanowner "
+						  "FROM pg_language "
+						  "WHERE lanispl "
+						  "ORDER BY oid",
+						  username_subquery);
+	}
 
 	res = PQexec(g_conn, query->data);
 	check_sql_result(res, g_conn, query->data, PGRES_TUPLES_OK);
@@ -2748,8 +2763,6 @@ getTableAttrs(TableInfo *tblinfo, int numTables)
 		tbinfo->attislocal = (bool *) malloc(ntups * sizeof(bool));
 		tbinfo->notnull = (bool *) malloc(ntups * sizeof(bool));
 		tbinfo->attrdefs = (AttrDefInfo **) malloc(ntups * sizeof(AttrDefInfo *));
-		tbinfo->inhAttrs = (bool *) malloc(ntups * sizeof(bool));
-		tbinfo->inhAttrDef = (bool *) malloc(ntups * sizeof(bool));
 		tbinfo->inhNotNull = (bool *) malloc(ntups * sizeof(bool));
 		tbinfo->attencoding = (char **)malloc(ntups * sizeof(char *));
 		hasdefaults = false;
@@ -2774,9 +2787,8 @@ getTableAttrs(TableInfo *tblinfo, int numTables)
 			tbinfo->attrdefs[j] = NULL; /* fix below */
 			if (PQgetvalue(res, j, i_atthasdef)[0] == 't')
 				hasdefaults = true;
+
 			/* these flags will be set in flagInhAttrs() */
-			tbinfo->inhAttrs[j] = false;
-			tbinfo->inhAttrDef[j] = false;
 			tbinfo->inhNotNull[j] = false;
 
 			/* column storage attributes */
@@ -2947,6 +2959,343 @@ getTableAttrs(TableInfo *tblinfo, int numTables)
 	cleanUpTable();
 
 	destroyPQExpBuffer(q);
+}
+
+/*
+ * Test whether a column should be printed as part of table's CREATE TABLE.
+ * Column number is zero-based.
+ *
+ * Normally this is always true, but it's false for dropped columns, as well
+ * as those that were inherited without any local definition.  (If we print
+ * such a column it will mistakenly get pg_attribute.attislocal set to true.)
+ *
+ * This function exists because there are scattered nonobvious places that
+ * must be kept in sync with this decision.
+ */
+bool
+shouldPrintColumn(TableInfo *tbinfo, int colno)
+{
+	return (tbinfo->attislocal[colno] && !tbinfo->attisdropped[colno]);
+}
+
+/*
+ * getTSParsers:
+ *	  read all text search parsers in the system catalogs and return them
+ *	  in the TSParserInfo* structure
+ *
+ *	numTSParsers is set to the number of parsers read in
+ */
+TSParserInfo *
+getTSParsers(int *numTSParsers)
+{
+	PGresult   *res;
+	int			ntups;
+	int			i;
+	PQExpBuffer query = createPQExpBuffer();
+	TSParserInfo *prsinfo;
+	int			i_tableoid;
+	int			i_oid;
+	int			i_prsname;
+	int			i_prsnamespace;
+	int			i_prsstart;
+	int			i_prstoken;
+	int			i_prsend;
+	int			i_prsheadline;
+	int			i_prslextype;
+
+	/* Before 8.3, there is no built-in text search support */
+	if (!g_gp_supportsFullText)
+	{
+		*numTSParsers = 0;
+		return NULL;
+	}
+
+	/*
+	 * find all text search objects, including builtin ones; we filter out
+	 * system-defined objects at dump-out time.
+	 */
+
+	/* Make sure we are in proper schema */
+	selectSourceSchema("pg_catalog");
+
+	appendPQExpBuffer(query, "SELECT tableoid, oid, prsname, prsnamespace, "
+					  "prsstart::oid, prstoken::oid, "
+					  "prsend::oid, prsheadline::oid, prslextype::oid "
+					  "FROM pg_ts_parser");
+
+	res = PQexec(g_conn, query->data);
+	check_sql_result(res, g_conn, query->data, PGRES_TUPLES_OK);
+
+	ntups = PQntuples(res);
+	*numTSParsers = ntups;
+
+	prsinfo = (TSParserInfo *) malloc(ntups * sizeof(TSParserInfo));
+
+	i_tableoid = PQfnumber(res, "tableoid");
+	i_oid = PQfnumber(res, "oid");
+	i_prsname = PQfnumber(res, "prsname");
+	i_prsnamespace = PQfnumber(res, "prsnamespace");
+	i_prsstart = PQfnumber(res, "prsstart");
+	i_prstoken = PQfnumber(res, "prstoken");
+	i_prsend = PQfnumber(res, "prsend");
+	i_prsheadline = PQfnumber(res, "prsheadline");
+	i_prslextype = PQfnumber(res, "prslextype");
+
+	for (i = 0; i < ntups; i++)
+	{
+		prsinfo[i].dobj.objType = DO_TSPARSER;
+		prsinfo[i].dobj.catId.tableoid = atooid(PQgetvalue(res, i, i_tableoid));
+		prsinfo[i].dobj.catId.oid = atooid(PQgetvalue(res, i, i_oid));
+		AssignDumpId(&prsinfo[i].dobj);
+		prsinfo[i].dobj.name = strdup(PQgetvalue(res, i, i_prsname));
+		prsinfo[i].dobj.namespace = findNamespace(atooid(PQgetvalue(res, i, i_prsnamespace)),
+												  prsinfo[i].dobj.catId.oid);
+		prsinfo[i].prsstart = atooid(PQgetvalue(res, i, i_prsstart));
+		prsinfo[i].prstoken = atooid(PQgetvalue(res, i, i_prstoken));
+		prsinfo[i].prsend = atooid(PQgetvalue(res, i, i_prsend));
+		prsinfo[i].prsheadline = atooid(PQgetvalue(res, i, i_prsheadline));
+		prsinfo[i].prslextype = atooid(PQgetvalue(res, i, i_prslextype));
+
+		/* Decide whether we want to dump it */
+		selectDumpableObject(&(prsinfo[i].dobj));
+	}
+
+	PQclear(res);
+
+	destroyPQExpBuffer(query);
+
+	return prsinfo;
+}
+
+/*
+ * getTSDictionaries:
+ *	  read all text search dictionaries in the system catalogs and return them
+ *	  in the TSDictInfo* structure
+ *
+ *	numTSDicts is set to the number of dictionaries read in
+ */
+TSDictInfo *
+getTSDictionaries(int *numTSDicts)
+{
+	PGresult   *res;
+	int			ntups;
+	int			i;
+	PQExpBuffer query = createPQExpBuffer();
+	TSDictInfo *dictinfo;
+	int			i_tableoid;
+	int			i_oid;
+	int			i_dictname;
+	int			i_dictnamespace;
+	int			i_rolname;
+	int			i_dicttemplate;
+	int			i_dictinitoption;
+
+	/* Before 8.3, there is no built-in text search support */
+	if (!g_gp_supportsFullText)
+	{
+		*numTSDicts = 0;
+		return NULL;
+	}
+
+	/* Make sure we are in proper schema */
+	selectSourceSchema("pg_catalog");
+
+	appendPQExpBuffer(query, "SELECT tableoid, oid, dictname, "
+					  "dictnamespace, (%s dictowner) as rolname, "
+					  "dicttemplate, dictinitoption "
+					  "FROM pg_ts_dict",
+					  username_subquery);
+
+	res = PQexec(g_conn, query->data);
+	check_sql_result(res, g_conn, query->data, PGRES_TUPLES_OK);
+
+	ntups = PQntuples(res);
+	*numTSDicts = ntups;
+
+	dictinfo = (TSDictInfo *) malloc(ntups * sizeof(TSDictInfo));
+
+	i_tableoid = PQfnumber(res, "tableoid");
+	i_oid = PQfnumber(res, "oid");
+	i_dictname = PQfnumber(res, "dictname");
+	i_dictnamespace = PQfnumber(res, "dictnamespace");
+	i_rolname = PQfnumber(res, "rolname");
+	i_dictinitoption = PQfnumber(res, "dictinitoption");
+	i_dicttemplate = PQfnumber(res, "dicttemplate");
+
+	for (i = 0; i < ntups; i++)
+	{
+		dictinfo[i].dobj.objType = DO_TSDICT;
+		dictinfo[i].dobj.catId.tableoid = atooid(PQgetvalue(res, i, i_tableoid));
+		dictinfo[i].dobj.catId.oid = atooid(PQgetvalue(res, i, i_oid));
+		AssignDumpId(&dictinfo[i].dobj);
+		dictinfo[i].dobj.name = strdup(PQgetvalue(res, i, i_dictname));
+		dictinfo[i].dobj.namespace = findNamespace(atooid(PQgetvalue(res, i, i_dictnamespace)),
+												 dictinfo[i].dobj.catId.oid);
+		dictinfo[i].rolname = strdup(PQgetvalue(res, i, i_rolname));
+		dictinfo[i].dicttemplate = atooid(PQgetvalue(res, i, i_dicttemplate));
+		if (PQgetisnull(res, i, i_dictinitoption))
+			dictinfo[i].dictinitoption = NULL;
+		else
+			dictinfo[i].dictinitoption = strdup(PQgetvalue(res, i, i_dictinitoption));
+
+		/* Decide whether we want to dump it */
+		selectDumpableObject(&(dictinfo[i].dobj));
+	}
+
+	PQclear(res);
+
+	destroyPQExpBuffer(query);
+
+	return dictinfo;
+}
+
+/*
+ * getTSTemplates:
+ *	  read all text search templates in the system catalogs and return them
+ *	  in the TSTemplateInfo* structure
+ *
+ *	numTSTemplates is set to the number of templates read in
+ */
+TSTemplateInfo *
+getTSTemplates(int *numTSTemplates)
+{
+	PGresult   *res;
+	int			ntups;
+	int			i;
+	PQExpBuffer query = createPQExpBuffer();
+	TSTemplateInfo *tmplinfo;
+	int			i_tableoid;
+	int			i_oid;
+	int			i_tmplname;
+	int			i_tmplnamespace;
+	int			i_tmplinit;
+	int			i_tmpllexize;
+
+	/* Before 8.3, there is no built-in text search support */
+	if (!g_gp_supportsFullText)
+	{
+		*numTSTemplates = 0;
+		return NULL;
+	}
+
+	/* Make sure we are in proper schema */
+	selectSourceSchema("pg_catalog");
+
+	appendPQExpBuffer(query, "SELECT tableoid, oid, tmplname, "
+					  "tmplnamespace, tmplinit::oid, tmpllexize::oid "
+					  "FROM pg_ts_template");
+
+	res = PQexec(g_conn, query->data);
+	check_sql_result(res, g_conn, query->data, PGRES_TUPLES_OK);
+
+	ntups = PQntuples(res);
+	*numTSTemplates = ntups;
+
+	tmplinfo = (TSTemplateInfo *) malloc(ntups * sizeof(TSTemplateInfo));
+
+	i_tableoid = PQfnumber(res, "tableoid");
+	i_oid = PQfnumber(res, "oid");
+	i_tmplname = PQfnumber(res, "tmplname");
+	i_tmplnamespace = PQfnumber(res, "tmplnamespace");
+	i_tmplinit = PQfnumber(res, "tmplinit");
+	i_tmpllexize = PQfnumber(res, "tmpllexize");
+
+	for (i = 0; i < ntups; i++)
+	{
+		tmplinfo[i].dobj.objType = DO_TSTEMPLATE;
+		tmplinfo[i].dobj.catId.tableoid = atooid(PQgetvalue(res, i, i_tableoid));
+		tmplinfo[i].dobj.catId.oid = atooid(PQgetvalue(res, i, i_oid));
+		AssignDumpId(&tmplinfo[i].dobj);
+		tmplinfo[i].dobj.name = strdup(PQgetvalue(res, i, i_tmplname));
+		tmplinfo[i].dobj.namespace = findNamespace(atooid(PQgetvalue(res, i, i_tmplnamespace)),
+												 tmplinfo[i].dobj.catId.oid);
+		tmplinfo[i].tmplinit = atooid(PQgetvalue(res, i, i_tmplinit));
+		tmplinfo[i].tmpllexize = atooid(PQgetvalue(res, i, i_tmpllexize));
+
+		/* Decide whether we want to dump it */
+		selectDumpableObject(&(tmplinfo[i].dobj));
+	}
+
+	PQclear(res);
+
+	destroyPQExpBuffer(query);
+
+	return tmplinfo;
+}
+
+/*
+ * getTSConfigurations:
+ *	  read all text search configurations in the system catalogs and return
+ *	  them in the TSConfigInfo* structure
+ *
+ *	numTSConfigs is set to the number of configurations read in
+ */
+TSConfigInfo *
+getTSConfigurations(int *numTSConfigs)
+{
+	PGresult   *res;
+	int			ntups;
+	int			i;
+	PQExpBuffer query = createPQExpBuffer();
+	TSConfigInfo *cfginfo;
+	int			i_tableoid;
+	int			i_oid;
+	int			i_cfgname;
+	int			i_cfgnamespace;
+	int			i_rolname;
+	int			i_cfgparser;
+
+	/* Before 8.3, there is no built-in text search support */
+	if (!g_gp_supportsFullText)
+	{
+		*numTSConfigs = 0;
+		return NULL;
+	}
+
+	/* Make sure we are in proper schema */
+	selectSourceSchema("pg_catalog");
+
+	appendPQExpBuffer(query, "SELECT tableoid, oid, cfgname, "
+					  "cfgnamespace, (%s cfgowner) as rolname, cfgparser "
+					  "FROM pg_ts_config",
+					  username_subquery);
+
+	res = PQexec(g_conn, query->data);
+	check_sql_result(res, g_conn, query->data, PGRES_TUPLES_OK);
+
+	ntups = PQntuples(res);
+	*numTSConfigs = ntups;
+
+	cfginfo = (TSConfigInfo *) malloc(ntups * sizeof(TSConfigInfo));
+
+	i_tableoid = PQfnumber(res, "tableoid");
+	i_oid = PQfnumber(res, "oid");
+	i_cfgname = PQfnumber(res, "cfgname");
+	i_cfgnamespace = PQfnumber(res, "cfgnamespace");
+	i_rolname = PQfnumber(res, "rolname");
+	i_cfgparser = PQfnumber(res, "cfgparser");
+
+	for (i = 0; i < ntups; i++)
+	{
+		cfginfo[i].dobj.objType = DO_TSCONFIG;
+		cfginfo[i].dobj.catId.tableoid = atooid(PQgetvalue(res, i, i_tableoid));
+		cfginfo[i].dobj.catId.oid = atooid(PQgetvalue(res, i, i_oid));
+		AssignDumpId(&cfginfo[i].dobj);
+		cfginfo[i].dobj.name = strdup(PQgetvalue(res, i, i_cfgname));
+		cfginfo[i].dobj.namespace = findNamespace(atooid(PQgetvalue(res, i, i_cfgnamespace)),
+												  cfginfo[i].dobj.catId.oid);
+		cfginfo[i].rolname = strdup(PQgetvalue(res, i, i_rolname));
+		cfginfo[i].cfgparser = atooid(PQgetvalue(res, i, i_cfgparser));
+
+		/* Decide whether we want to dump it */
+		selectDumpableObject(&(cfginfo[i].dobj));
+	}
+
+	PQclear(res);
+
+	destroyPQExpBuffer(query);
+
+	return cfginfo;
 }
 
 bool

@@ -32,11 +32,9 @@ try:
     from gppylib.gpversion import GpVersion
     from gppylib.db import dbconn
     from gppylib.operations.unix import CheckDir, CheckFile, MakeDir
-    from gppylib.operations.dump import get_partition_state_tuples, compare_metadata, \
-                                        compare_dict, get_pgstatlastoperations_dict, \
-                                        write_lines_to_file, verify_lines_in_file, ValidateIncludeTargets, \
-                                        ValidateSchemaExists
-    from gppylib.operations.backup_utils import execute_sql, get_lines_from_file
+    from gppylib.operations.dump import get_partition_state_tuples, compare_metadata, compare_dict, get_pgstatlastoperations_dict, \
+                                        write_lines_to_file, verify_lines_in_file, ValidateSchemaExists
+    from gppylib.operations.backup_utils import execute_sql, get_lines_from_file, Context
     from pygresql import pg
 
 except ImportError, e:
@@ -273,6 +271,11 @@ class AnalyzeDb(Operation):
             global CURR_TIME
             CURR_TIME = generate_timestamp()
 
+            # The below object is needed for some functions imported from dump.py
+            self.context = Context()
+            self.context.master_port = self.pg_port
+            self.context.dump_database = self.dbname
+
             # The input_col_dict keeps track of the requested columns to analyze.
             # key: table name (e.g. 'public.foo')
             # value: a set of requested column names (e.g. set(['col1','col2']), or '-1' indicating all columns
@@ -447,7 +450,7 @@ class AnalyzeDb(Operation):
             self._parse_column(col_dict, self.single_table, schema, table, self.include_cols, self.exclude_cols, True)
 
         elif self.schema: # all tables in a schema
-            ValidateSchemaExists(self.dbname, self.schema, self.pg_port).run()
+            ValidateSchemaExists(self.context, self.schema).run()
             logger.debug("getting all tables in the schema...")
             all_schema_tables = run_sql(self.conn, GET_ALL_DATA_TABLES_IN_SCHEMA_SQL % self.schema)
             # convert table name from ['public','foo'] to 'public.foo' and populate col_dict as all columns requested
@@ -547,7 +550,7 @@ class AnalyzeDb(Operation):
         logger.debug("getting ao state...")
         oid_str = get_oid_str(input_tables_set)
         ao_partition_info = run_sql(self.conn, GET_REQUESTED_AO_DATA_TABLE_INFO_SQL % oid_str)
-        return get_partition_state_tuples(self.pg_port, self.dbname, 'pg_aoseg', ao_partition_info)
+        return get_partition_state_tuples(self.context, 'pg_aoseg', ao_partition_info)
 
     def _get_lastop_state(self, input_tables_set):
         # oid, action, subtype, timestamp

@@ -18,7 +18,9 @@
 #include "access/genam.h"
 #include "access/heapam.h"
 #include "access/transam.h"
+#include "utils/faultinjector.h"
 #include "utils/guc.h"
+#include "utils/syscache.h"
 #include "storage/smgr.h"
 #include "storage/ipc.h"
 #include "cdb/cdbglobalsequence.h"
@@ -176,6 +178,13 @@ PersistentStore_FreeEntryHashTableInit(void)
 	freeEntryHashTable = hash_create("Persistent Free Entry", 10, &info, hash_flags);
 }
 
+static void
+PersistentStore_FreeEntryHashTableDestroy(void)
+{
+	hash_destroy(freeEntryHashTable);
+	freeEntryHashTable = NULL;
+}
+
 static void PersistentStore_DiagnoseDumpTable(
 	PersistentStoreData 		*storeData,
 	PersistentStoreSharedData 	*storeSharedData)
@@ -317,48 +326,64 @@ static void PersistentStore_InitScanAddFreeEntry(
 	entry->freeOrderNum = freeOrderNum;
 }
 
-static void PersistentStore_InitScanVerifyFreeEntries(
+/*
+ * Try to walk the free TID chain using free TIDs recorded in
+ * freeEntryHashTable.  Return true if the chain is valid, false
+ * otherwise.
+ *
+ * Note: we have already validated that number of free entries is
+ * equal to max free order number.
+ */
+static bool PersistentStore_InitScanVerifyFreeEntries(
 	PersistentStoreData 		*storeData,
 
 	PersistentStoreSharedData 	*storeSharedData)
 {
 	int64 freeOrderNum;
 	ItemPointerData freeTid;
+	PersistentFreeEntryKey key;
 	PersistentFreeEntry *entry;
-	HASH_SEQ_STATUS iterateStatus;
 
 	freeOrderNum = storeSharedData->maxFreeOrderNum;
 	freeTid = storeSharedData->freeTid;
 
+	elog(LOG, "beginning free list validation for %s, maxFreeOrderNum = "
+		 INT64_FORMAT, storeData->tableName, freeOrderNum);
 	if (freeOrderNum == 0)
 	{
 		if (!PersistentStore_IsZeroTid(&freeTid))
 		{
 			PersistentStore_DiagnoseDumpTable(storeData, storeSharedData);
-			elog(ERROR, "Expected free TID to be (0,0) when free order number is 0 in '%s'",
-				 storeData->tableName);
+			ereport(WARNING,
+					(errcode(ERRCODE_INTERNAL_ERROR),
+					 errmsg("free list validation failed"),
+					 errdetail("expected free TID to be (0,0) when "
+							   "free order number is 0 in '%s'",
+							   storeData->tableName)));
+			return false;
 		}
 	}
 	else
 	{
-		PersistentFreeEntryKey key;
-		PersistentFreeEntry *removeEntry;
-		
 		if (freeEntryHashTable == NULL)
 		{
 			PersistentStore_DiagnoseDumpTable(storeData, storeSharedData);
-			elog(ERROR, "Looking for free order number " INT64_FORMAT " and the free entry hash table is empty for '%s'",
-				 freeOrderNum,
-				 storeData->tableName);
+			ereport(WARNING,
+					(errcode(ERRCODE_INTERNAL_ERROR),
+					 errmsg("free list validation failed"),
+					 errdetail("looking for free order number " INT64_FORMAT
+							   " and the free entry hash table is empty for '%s'",
+							   freeOrderNum,
+							   storeData->tableName)));
+			return false;
 		}
-		
-		while (true)
+		while (freeOrderNum > 0)
 		{
 			MemSet(&key, 0, sizeof(key));
 			key.persistentTid = freeTid;
-			
-			entry = 
-				(PersistentFreeEntry*) 
+
+			entry =
+				(PersistentFreeEntry*)
 								hash_search(freeEntryHashTable,
 											(void *) &key,
 											HASH_FIND,
@@ -366,38 +391,58 @@ static void PersistentStore_InitScanVerifyFreeEntries(
 			if (entry == NULL)
 			{
 				PersistentStore_DiagnoseDumpTable(storeData, storeSharedData);
-				elog(ERROR, 
-					 "Did not find free entry for free TID %s (free order number " INT64_FORMAT ") for '%s'",
-					 ItemPointerToString(&freeTid),
-					 freeOrderNum,
-					 storeData->tableName);
+				ereport(WARNING,
+						(errcode(ERRCODE_INTERNAL_ERROR),
+						 errmsg("free list validation failed"),
+						 errdetail(
+								 "did not find free entry for free TID %s ("
+								 "free order number " INT64_FORMAT ") for '%s'",
+								 ItemPointerToString(&freeTid),
+								 freeOrderNum,
+								 storeData->tableName)));
+				return false;
 			}
 
 			if (PersistentStore_IsZeroTid(&entry->previousFreeTid))
 			{
 				PersistentStore_DiagnoseDumpTable(storeData, storeSharedData);
-				elog(ERROR, 
-					 "Previous free TID not expected to be (0,0) -- persistent Free Entry hashtable corrupted for '%s' "
-					 "(expected free order number " INT64_FORMAT ", entry free order number " INT64_FORMAT ")",
-				     storeData->tableName,
-				     freeOrderNum,
-				     entry->freeOrderNum);
+				ereport(WARNING,
+						(errcode(ERRCODE_INTERNAL_ERROR),
+						 errmsg("free list validation failed"),
+						 errdetail(
+								 "previous free TID not expected to be (0,0) -- "
+								 "persistent Free Entry hashtable corrupted for "
+								 "'%s' (expected free order number " INT64_FORMAT
+								 ", entry free order number "
+								 INT64_FORMAT ")",
+								 storeData->tableName,
+								 freeOrderNum,
+								 entry->freeOrderNum)));
+				return false;
 			}
 
 			if (freeOrderNum != entry->freeOrderNum)
 			{
 				PersistentStore_DiagnoseDumpTable(storeData, storeSharedData);
-				elog(ERROR, 
-					 "Free entry for free TID %s has wrong free order number (expected free order number " INT64_FORMAT ", found free order number " INT64_FORMAT ") for '%s'",
-					 ItemPointerToString(&freeTid),
-					 freeOrderNum,
-					 entry->freeOrderNum,
-					 storeData->tableName);
+				ereport(WARNING,
+						(errcode(ERRCODE_INTERNAL_ERROR),
+						 errmsg("free list validation failed"),
+						 errdetail(
+								 "free entry for free TID %s has wrong free "
+								 "order number (expected free order number "
+								 INT64_FORMAT ", found free order number "
+								 INT64_FORMAT ") for '%s'",
+								 ItemPointerToString(&freeTid),
+								 freeOrderNum,
+								 entry->freeOrderNum,
+								 storeData->tableName)));
+				return false;
 			}
-			
+
 			if (Debug_persistent_recovery_print)
-				elog(PersistentRecovery_DebugPrintLevel(), 
-					 "PersistentStore_InitScanVerifyFreeEntries ('%s'): Free order number " INT64_FORMAT ", free TID %s, previous free TID %s",
+				elog(PersistentRecovery_DebugPrintLevel(),
+					 "PersistentStore_InitScanVerifyFreeEntries ('%s'): Free order"
+					 " number " INT64_FORMAT ", free TID %s, previous free TID %s",
 					 storeData->tableName,
 					 freeOrderNum,
 					 ItemPointerToString(&freeTid),
@@ -415,63 +460,137 @@ static void PersistentStore_InitScanVerifyFreeEntries(
 									&freeTid) != 0)
 				{
 					PersistentStore_DiagnoseDumpTable(storeData, storeSharedData);
-					elog(ERROR, "Expected previous_free_tid %s to match the persistent TID %s for the last free entry (free order number 1) for '%s'",
-						 ItemPointerToString(&freeTid),
-						 ItemPointerToString2(&entry->key.persistentTid),
-						 storeData->tableName);
-						 
+					ereport(WARNING,
+							(errcode(ERRCODE_INTERNAL_ERROR),
+							 errmsg("free list validation failed"),
+							 errdetail(
+									 "expected previous_free_tid %s to match the"
+									 " persistent TID %s for the last free entry"
+									 " (free order number 1) for '%s'",
+									 ItemPointerToString(&freeTid),
+									 ItemPointerToString2(&entry->key.persistentTid),
+									 storeData->tableName)));
+					return false;
 				}
 			}
 
-			removeEntry = hash_search(
-								freeEntryHashTable, 
-								(void *) &entry->key, 
-								HASH_REMOVE, 
-								NULL);
-			if (removeEntry == NULL)
-			{
-				PersistentStore_DiagnoseDumpTable(storeData, storeSharedData);
-				elog(ERROR, "Persistent Free Entry hashtable corrupted for '%s'",
-				     storeData->tableName);
-			}
 			entry = NULL;
-
 			freeOrderNum--;
-
-			if (freeOrderNum == 0)
-				break;
-		
 		}
 	}
 
-	if (freeEntryHashTable != NULL)
-	{
-		hash_seq_init(
-				&iterateStatus, 
-				freeEntryHashTable);
-
-		/*
-		 * Verify the hash table has no free entries left.
-		 */
-		while ((entry = hash_seq_search(&iterateStatus)) != NULL)
-		{
-			PersistentStore_DiagnoseDumpTable(storeData, storeSharedData);
-			elog(ERROR, "Found at least one unaccounted for free entry for '%s'.  Example: free order number " INT64_FORMAT ", free TID %s, previous free TID %s",
-				storeData->tableName,
-				entry->freeOrderNum,
-				ItemPointerToString(&entry->key.persistentTid),
-				ItemPointerToString2(&entry->previousFreeTid));
-		}
-
-		hash_destroy(freeEntryHashTable);
-		freeEntryHashTable = NULL;
-	}
-	
 	if (Debug_persistent_recovery_print)
-		elog(PersistentRecovery_DebugPrintLevel(), 
-			 "PersistentStore_InitScanVerifyFreeEntries ('%s'): Successfully verified " INT64_FORMAT " free entries",
+		elog(PersistentRecovery_DebugPrintLevel(),
+			 "PersistentStore_InitScanVerifyFreeEntries ('%s'): successfully "
+			 "verified " INT64_FORMAT " free entries",
 			 storeData->tableName,
 			 storeSharedData->maxFreeOrderNum);
+	return true;
+}
+
+/*
+ * Rebuild free TID list based on freeEntryHashTable.  Returns number
+ * of free tuples in the rebuilt free list.
+ */
+uint64
+PersistentStore_RebuildFreeList(
+	PersistentStoreData 		*storeData,
+	PersistentStoreSharedData 	*storeSharedData)
+{
+	Datum				*values;
+	PersistentStoreScan storeScan;
+	ItemPointerData		persistentTid;
+	ItemPointerData		previousFreeTid;
+	ItemPointerData		previousTid;
+	uint64				persistentSerialNum;
+	uint64				freeOrderNum;
+
+
+	values = (Datum*)palloc(storeData->numAttributes * sizeof(Datum));
+
+	/*
+	 * PT shared data must be already initialized, even when we are
+	 * called during recovery.
+	 */
+	Assert(!PersistentStore_IsZeroTid(&storeSharedData->maxTid));
+
+	if (storeSharedData->maxFreeOrderNum < 1)
+	{
+		elog(LOG, "no free tuples in %s, not building any free list",
+			 storeData->tableName);
+		return 0;
+	}
+	elog(LOG, "rebuilding free list in %s with " INT64_FORMAT " free tuples",
+		 storeData->tableName, storeSharedData->maxFreeOrderNum);
+
+	/*
+	 * Scan PT for free entries (in TID order) and establish links
+	 * with previous free entry as we go on.
+	 */
+	previousTid.ip_posid = 0;
+	freeOrderNum = 0;
+	PersistentStore_BeginScan(storeData, storeSharedData, &storeScan);
+	while (PersistentStore_GetNext(
+				   &storeScan,
+				   values,
+				   &persistentTid,
+				   (int64 *)&persistentSerialNum))
+	{
+		/*
+		 * We are scanning from low to high TID.  All TIDs we
+		 * encounter should be smaller or equal to the known
+		 * maxTid.
+		 */
+		Assert(ItemPointerCompare(
+					   &storeSharedData->maxTid,
+					   &persistentTid) >= 0);
+
+		PersistentStore_ExtractOurTupleData(
+				storeData,
+				values,
+				(int64 *)&persistentSerialNum,
+				&previousFreeTid);
+
+		if (!PersistentStore_IsZeroTid(&previousFreeTid))
+		{
+			values[storeData->attNumPersistentSerialNum - 1] =
+					Int64GetDatum(++freeOrderNum);
+			values[storeData->attNumPreviousFreeTid - 1] =
+					ItemPointerIsValid(&previousTid) ?
+					PointerGetDatum(&previousTid) :
+					PointerGetDatum(&persistentTid);
+#ifdef FAULT_INJECTOR
+			/*
+			 * Inject fault after free list is partially built - a few
+			 * tuples are updated but at least one is yet to be
+			 * updated.
+			 */
+			if (freeOrderNum > 3)
+			{
+				FaultInjector_InjectFaultIfSet(
+						RebuildPTDB,
+						DDLNotSpecified,
+						"",	// databaseName
+						""); // tableName
+			}
+#endif
+			PersistentStore_UpdateTuple(
+					storeData, storeSharedData,	&persistentTid, values, true);
+			ItemPointerCopy(&persistentTid, &previousTid);
+		}
+	}
+	PersistentStore_EndScan(&storeScan);
+	pfree(values);
+	if (ItemPointerIsValid(&previousTid))
+	{
+		Assert(freeOrderNum > 0);
+		ItemPointerCopy(&previousTid, &storeSharedData->freeTid);
+		storeSharedData->maxFreeOrderNum = freeOrderNum;
+		elog(LOG, "rebuilt free list in %s:  maxFreeOrderNum = " INT64_FORMAT
+			 " freeTid = %s", storeData->tableName, freeOrderNum,
+			 ItemPointerToString(&persistentTid));
+	}
+	return freeOrderNum;
 }
 
 static void PersistentStore_DoInitScan(
@@ -510,7 +629,7 @@ static void PersistentStore_DoInitScan(
 			ItemPointerCompare(
 							&storeSharedData->maxTid,
 							&persistentTid) == -1);	// Less-Than.
-							
+
 		storeSharedData->maxTid = persistentTid;
 
 		PersistentStore_ExtractOurTupleData(
@@ -518,14 +637,14 @@ static void PersistentStore_DoInitScan(
 									values,
 									&persistentSerialNum,
 									&previousFreeTid);
-		
+
 		if (Debug_persistent_recovery_print)
 			(*storeData->printTupleCallback)(
 										PersistentRecovery_DebugPrintLevel(),
 										"SCAN",
 										&persistentTid,
 										values);
-		
+
 		if (!PersistentStore_IsZeroTid(&previousFreeTid))
 		{
 			/*
@@ -545,10 +664,11 @@ static void PersistentStore_DoInitScan(
 												storeSharedData,
 												&persistentTid,
 												&previousFreeTid,
-												/* freeOrderNum */ persistentSerialNum);
+												/* freeOrderNum */
+												persistentSerialNum);
 			}
 		}
-		else 
+		else
 		{
 			storeSharedData->inUseCount++;
 
@@ -579,30 +699,32 @@ static void PersistentStore_DoInitScan(
 	 * not consistent...
 	 */
 	Assert(!InRecovery);
-	
+
 	if (globalSequenceNum < storeSharedData->maxInUseSerialNum)
 	{
 		/*
 		 * We seem to have a corruption problem.
 		 *
-		 * Use the gp_persistent_repair_global_sequence GUC to get the system up.
+		 * Use the gp_persistent_repair_global_sequence GUC to get the
+		 * system up.
 		 */
 
 		if (gp_persistent_repair_global_sequence)
 		{
-			elog(LOG, "Need to Repair global sequence number " INT64_FORMAT " so use scanned maximum value " INT64_FORMAT " ('%s')",
+			elog(LOG, "need to repair global sequence number " INT64_FORMAT
+				 " so use scanned maximum value " INT64_FORMAT " ('%s')",
 				 globalSequenceNum,
 				 storeSharedData->maxInUseSerialNum,
 				 storeData->tableName);
 		}
 		else
 		{
-			elog(ERROR, "Global sequence number " INT64_FORMAT " less than maximum value " INT64_FORMAT " found in scan ('%s')",
+			elog(ERROR, "global sequence number " INT64_FORMAT " less than "
+				 "maximum value " INT64_FORMAT " found in scan ('%s')",
 				 globalSequenceNum,
 				 storeSharedData->maxInUseSerialNum,
 				 storeData->tableName);
 		}
-		
 	}
 	else
 	{
@@ -611,10 +733,12 @@ static void PersistentStore_DoInitScan(
 
 	if (Debug_persistent_recovery_print)
 		elog(PersistentRecovery_DebugPrintLevel(),
-			 "PersistentStore_DoInitScan ('%s'): maximum in-use serial number " INT64_FORMAT ", maximum free order number " INT64_FORMAT ", free TID %s, maximum known TID %s",
+			 "PersistentStore_DoInitScan ('%s'): maximum in-use serial number "
+			 INT64_FORMAT ", maximum free order number " INT64_FORMAT
+			 ", free TID %s, maximum known TID %s",
 			 storeData->tableName,
-			 storeSharedData->maxInUseSerialNum, 
-			 storeSharedData->maxFreeOrderNum, 
+			 storeSharedData->maxInUseSerialNum,
+			 storeSharedData->maxFreeOrderNum,
 			 ItemPointerToString(&storeSharedData->freeTid),
 			 ItemPointerToString2(&storeSharedData->maxTid));
 
@@ -623,22 +747,31 @@ static void PersistentStore_DoInitScan(
 		if (numFreeEntries != storeSharedData->maxFreeOrderNum)
 		{
 			PersistentStore_DiagnoseDumpTable(storeData, storeSharedData);
-			elog(ERROR, 
-					 "Number of freeTIDs " INT64_FORMAT ", do not match maximum free order number " INT64_FORMAT ", for '%s'",
-					 numFreeEntries,
-					 storeSharedData->maxFreeOrderNum,
-					 storeData->tableName);
+			ereport(WARNING,
+					(errcode(ERRCODE_INTERNAL_ERROR),
+					 errmsg("free list validation failed"),
+					 errdetail(
+							 "number of freeTIDs " INT64_FORMAT ", does not "
+							 "match maximum free order number " INT64_FORMAT
+							 ", for '%s'",
+							 numFreeEntries,
+							 storeSharedData->maxFreeOrderNum,
+							 storeData->tableName)));
+			PersistentStore_RebuildFreeList(storeData, storeSharedData);
 		}
-		
-		PersistentStore_InitScanVerifyFreeEntries(
-											storeData,
-											storeSharedData);
+		else if (!PersistentStore_InitScanVerifyFreeEntries(
+						 storeData, storeSharedData))
+		{
+			PersistentStore_RebuildFreeList(storeData, storeSharedData);
+		}
+		PersistentStore_FreeEntryHashTableDestroy();
 	}
 	else
 	{
 		if (Debug_persistent_recovery_print)
-			elog(PersistentRecovery_DebugPrintLevel(), 
-				 "PersistentStore_DoInitScan ('%s'): Skipping verification because gp_persistent_skip_free_list GUC is ON",
+			elog(PersistentRecovery_DebugPrintLevel(),
+				 "PersistentStore_DoInitScan ('%s'): skipping verification "
+				 "because gp_persistent_skip_free_list GUC is ON",
 				 storeData->tableName);
 	}
 }

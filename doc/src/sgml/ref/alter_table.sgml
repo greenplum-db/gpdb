@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/alter_table.sgml,v 1.94 2007/02/01 00:28:18 momjian Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/alter_table.sgml,v 1.98 2007/11/28 15:42:31 petere Exp $
 PostgreSQL documentation
 -->
 
@@ -261,10 +261,10 @@ Where column_reference_storage_directive is:
    </varlistentry>
 
    <varlistentry>
-    <term><literal>DISABLE</literal>/<literal>ENABLE TRIGGER</literal></term>
+    <term><literal>DISABLE</literal>/<literal>ENABLE [ REPLICA | ALWAYS ] TRIGGER</literal></term>
     <listitem>
      <para>
-      These forms disable or enable trigger(s) belonging to the table.
+      These forms configure the firing of trigger(s) belonging to the table.
       A disabled trigger is still known to the system, but is not executed
       when its triggering event occurs.  For a deferred trigger, the enable
       status is checked when the event occurs, not when the trigger function
@@ -275,6 +275,27 @@ Where column_reference_storage_directive is:
       requires superuser privileges; it should be done with caution since
       of course the integrity of the constraint cannot be guaranteed if the
       triggers are not executed.
+      The trigger firing mechanism is also affected by the configuration
+      variable <xref linkend="guc-session-replication-role">. Simply enabled
+      triggers will fire when the replication role is <quote>origin</>
+      (the default) or <quote>local</>. Triggers configured <literal>ENABLE REPLICA</literal>
+      will only fire if the session is in <quote>replica</> mode and triggers 
+      configured <literal>ENABLE ALWAYS</literal> will fire regardless of the current replication 
+      mode.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><literal>DISABLE</literal>/<literal>ENABLE [ REPLICA | ALWAYS ] RULE</literal></term>
+    <listitem>
+     <para>
+      These forms configure the firing of rewrite rules belonging to the table.
+      A disabled rule is still known to the system, but is not applied
+      during query rewriting. The semantics are as for disabled/enabled
+      triggers. This configuration is ignored for <literal>ON SELECT</literal> rules, which
+      are always applied in order to keep views working even if the current
+      session is in a non-default replication role.
      </para>
     </listitem>
    </varlistentry>
@@ -482,15 +503,12 @@ Where column_reference_storage_directive is:
       <term><replaceable class="PARAMETER">name</replaceable></term>
       <listitem>
        <para>
-        The name (possibly schema-qualified) of an existing table to
-        alter. If <literal>ONLY</> is specified, only that table is
-        altered. If <literal>ONLY</> is not specified, the table and all
-        its descendant tables (if any) are updated. <literal>*</> can be
-        appended to the table name to indicate that descendant tables are
-        to be altered, but in the current version, this is the default
-        behavior.  (In releases before 7.1, <literal>ONLY</> was the
-        default behavior.  The default can be altered by changing the
-        configuration parameter <xref linkend="guc-sql-inheritance">.)
+        The name (optionally schema-qualified) of an existing table to
+        alter. If <literal>ONLY</> is specified before the table name, only
+        that table is altered. If <literal>ONLY</> is not specified, the table
+        and all its descendant tables (if any) are altered.  Optionally,
+        <literal>*</> can be specified after the table name to explicitly
+        indicate that descendant tables are included.
        </para>
       </listitem>
      </varlistentry>

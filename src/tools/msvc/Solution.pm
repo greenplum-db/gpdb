@@ -100,6 +100,7 @@ sub DetermineToolVersions
     print "Detected hardware platform: $self->{platform}\n";
 }
 
+
 # Return 1 if $oldfile is newer than $newfile, or if $newfile doesn't exist.
 # Special case - if config.pl has changed, always return 1
 sub IsNewer

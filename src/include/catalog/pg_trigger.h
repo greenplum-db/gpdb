@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_trigger.h,v 1.27 2007/02/14 01:58:58 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_trigger.h,v 1.30 2008/01/01 19:45:57 momjian Exp $
  *
  * NOTES
  *	  the genbki.sh script reads this file and generates .bki
@@ -30,7 +30,7 @@
    tgname          name, 
    tgfoid          oid, 
    tgtype          smallint, 
-   tgenabled       boolean, 
+   tgenabled       "char", 
    tgisconstraint  boolean, 
    tgconstrname    name, 
    tgconstrrelid   oid, 
@@ -74,7 +74,8 @@ CATALOG(pg_trigger,2620)
 	Oid			tgfoid;			/* OID of function to be called */
 	int2		tgtype;			/* BEFORE/AFTER UPDATE/DELETE/INSERT
 								 * ROW/STATEMENT; see below */
-	bool		tgenabled;		/* trigger is enabled/disabled */
+	char		tgenabled;		/* trigger's firing configuration WRT
+								 * session_replication_role */
 	bool		tgisconstraint; /* trigger is a constraint trigger */
 	NameData	tgconstrname;	/* constraint name */
 	Oid			tgconstrrelid;	/* constraint's FROM table, if any */

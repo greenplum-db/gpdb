@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/namespace.h,v 1.44 2007/01/05 22:19:52 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/namespace.h,v 1.53 2008/01/01 19:45:56 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -33,6 +33,16 @@ typedef struct _FuncCandidateList
 	int         ndargs;         /* number of defaulted args */
 	Oid			args[1];		/* arg types --- VARIABLE LENGTH ARRAY */
 }	*FuncCandidateList;	/* VARIABLE LENGTH STRUCT */
+
+/*
+ *	Structure for xxxOverrideSearchPath functions
+ */
+typedef struct OverrideSearchPath
+{
+	List	   *schemas;		/* OIDs of explicitly named schemas */
+	bool		addCatalog;		/* implicitly prepend pg_catalog? */
+	bool		addTemp;		/* implicitly prepend temp schema? */
+} OverrideSearchPath;
 
 typedef void (*RangeVarGetRelidCallback) (const RangeVar *relation, Oid relId,
 										   Oid oldRelId, void *callback_arg);
@@ -65,15 +75,28 @@ extern bool OpfamilyIsVisible(Oid opfid);
 extern Oid	ConversionGetConid(const char *conname);
 extern bool ConversionIsVisible(Oid conid);
 
+extern Oid	TSParserGetPrsid(List *names, bool failOK);
+extern bool TSParserIsVisible(Oid prsId);
+
+extern Oid	TSDictionaryGetDictid(List *names, bool failOK);
+extern bool TSDictionaryIsVisible(Oid dictId);
+
+extern Oid	TSTemplateGetTmplid(List *names, bool failOK);
+extern bool TSTemplateIsVisible(Oid tmplId);
+
+extern Oid	TSConfigGetCfgid(List *names, bool failOK);
+extern bool TSConfigIsVisible(Oid cfgid);
+
 extern void DeconstructQualifiedName(List *names,
 						 char **nspname_p,
 						 char **objname_p);
 extern Oid	LookupExplicitNamespace(const char *nspname);
 
 extern void DropTempTableNamespaceForResetSession(Oid namespaceOid);
-extern void SetTempNamespace(Oid namespaceOid);
+extern void SetTempNamespace(Oid namespaceOid, Oid toastNamespaceOid);
 extern Oid  ResetTempNamespace(void);
 extern bool TempNamespaceOidIsValid(void);  /* GPDB only:  used by cdbgang.c */
+extern void InitTempTableNamespaceWithOids(Oid tempSchema, Oid tempToastSchema);
 
 extern Oid	LookupCreationNamespace(const char *nspname);
 extern Oid	QualifiedNameGetCreationNamespace(List *names, char **objname_p);
@@ -82,11 +105,16 @@ extern char *NameListToString(List *names);
 extern char *NameListToQuotedString(List *names);
 
 extern bool isTempNamespace(Oid namespaceId);
+extern bool isTempToastNamespace(Oid namespaceId);
+extern bool isTempOrToastNamespace(Oid namespaceId);
 extern bool isAnyTempNamespace(Oid namespaceId);
 extern bool isOtherTempNamespace(Oid namespaceId);
+extern Oid	GetTempToastNamespace(void);
+extern void ResetTempTableNamespace(void);
 
-extern void PushSpecialNamespace(Oid namespaceId);
-extern void PopSpecialNamespace(Oid namespaceId);
+extern OverrideSearchPath *GetOverrideSearchPath(MemoryContext context);
+extern void PushOverrideSearchPath(OverrideSearchPath *newpath);
+extern void PopOverrideSearchPath(void);
 
 extern Oid	FindConversionByName(List *conname);
 extern Oid	FindDefaultConversionProc(int4 for_encoding, int4 to_encoding);
@@ -101,5 +129,6 @@ extern void AtEOSubXact_Namespace(bool isCommit, SubTransactionId mySubid,
 extern char *namespace_search_path;
 
 extern List *fetch_search_path(bool includeImplicit);
+extern int	fetch_search_path_array(Oid *sarray, int sarray_len);
 
 #endif   /* NAMESPACE_H */

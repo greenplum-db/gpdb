@@ -620,7 +620,6 @@ SELECT * from FKTABLE ORDER BY 1,2;
 UPDATE PKTABLE set ptest2=5 where ptest2=2;
 ERROR:  insert or update on table "fktable" violates foreign key constraint "constrname3"
 DETAIL:  Key (ftest1,ftest2,ftest3)=(1,-1,3) is not present in table "pktable".
-CONTEXT:  SQL statement "UPDATE ONLY "public"."fktable" SET "ftest2" = DEFAULT WHERE $1 OPERATOR(pg_catalog.=) "ftest1" AND $2 OPERATOR(pg_catalog.=) "ftest2" AND $3 OPERATOR(pg_catalog.=) "ftest3""
 -- Try to update something that will set default
 UPDATE PKTABLE set ptest1=0, ptest2=5, ptest3=10 where ptest2=2;
 UPDATE PKTABLE set ptest2=10 where ptest2=4;
@@ -1097,11 +1096,12 @@ ALTER TABLE fktable ADD CONSTRAINT fk_3_1
 FOREIGN KEY (x3) REFERENCES pktable(id1);
 ERROR:  foreign key constraint "fk_3_1" cannot be implemented
 DETAIL:  Key columns "x3" and "id1" are of incompatible types: real and integer.
--- should succeed
--- int4 promotes to text, so this is allowed (though pretty durn debatable)
+-- int4 does not promote to text
 ALTER TABLE fktable ADD CONSTRAINT fk_1_2
 FOREIGN KEY (x1) REFERENCES pktable(id2);
-ERROR:  relation "fktable" does not exist
+ERROR:  foreign key constraint "fk_1_2" cannot be implemented
+DETAIL:  Key columns "x1" and "id2" are of incompatible types: integer and character varying.
+-- should succeed
 -- int4 promotes to real
 ALTER TABLE fktable ADD CONSTRAINT fk_1_3
 FOREIGN KEY (x1) REFERENCES pktable(id3);
@@ -1127,7 +1127,7 @@ FOREIGN KEY (x2,x5,x3) REFERENCES pktable(id2,id1,id3);
 ALTER TABLE fktable ADD CONSTRAINT fk_123_231
 FOREIGN KEY (x1,x2,x3) REFERENCES pktable(id2,id3,id1);
 ERROR:  foreign key constraint "fk_123_231" cannot be implemented
-DETAIL:  Key columns "x2" and "id3" are of incompatible types: character varying and real.
+DETAIL:  Key columns "x1" and "id2" are of incompatible types: integer and character varying.
 ALTER TABLE fktable ADD CONSTRAINT fk_241_132
 FOREIGN KEY (x2,x4,x1) REFERENCES pktable(id1,id3,id2);
 ERROR:  foreign key constraint "fk_241_132" cannot be implemented
@@ -1139,7 +1139,6 @@ NOTICE:  drop cascades to constraint fk_123_123 on table fktable
 NOTICE:  drop cascades to constraint fk_5_1 on table fktable
 NOTICE:  drop cascades to constraint fktable_x1_fkey on table fktable
 NOTICE:  drop cascades to constraint fk_4_2 on table fktable
-NOTICE:  drop cascades to constraint fk_1_2 on table fktable
 NOTICE:  drop cascades to constraint fktable_x2_fkey on table fktable
 NOTICE:  drop cascades to constraint fk_1_3 on table fktable
 NOTICE:  drop cascades to constraint fktable_x3_fkey on table fktable
@@ -1274,3 +1273,35 @@ SELECT * FROM tasks;
 (3 rows)
 
 COMMIT;
+--
+-- Test self-referential FK with CASCADE (bug #6268)
+--
+create temp table selfref (
+    a int primary key,
+    b int,
+    foreign key (b) references selfref (a)
+        on update cascade on delete cascade
+);
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "selfref_pkey" for table "selfref"
+insert into selfref (a, b)
+values
+    (0, 0),
+    (1, 1);
+begin;
+    update selfref set a = 123 where a = 0;
+    select a, b from selfref;
+  a  |  b  
+-----+-----
+   1 |   1
+ 123 | 123
+(2 rows)
+
+    update selfref set a = 456 where a = 123;
+    select a, b from selfref;
+  a  |  b  
+-----+-----
+   1 |   1
+ 456 | 456
+(2 rows)
+
+commit;

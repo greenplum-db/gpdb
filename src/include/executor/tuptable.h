@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/executor/tuptable.h,v 1.37 2007/01/05 22:19:55 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/executor/tuptable.h,v 1.38.2.1 2009/03/30 04:09:09 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -22,7 +22,7 @@
 #include "codegen/codegen_wrapper.h"
 
 /*----------
- * The executor stores tuples in a "tuple table" which is composed of
+ * The executor stores tuples in a "tuple table" which is a List of
  * independent TupleTableSlots.  There are several cases we need to handle:
  *		1. physical tuple in a disk buffer page
  *		2. physical tuple constructed in palloc'ed memory
@@ -51,6 +51,14 @@
  * tuples in the result slots of plan nodes --- tuples to be copied anywhere
  * else need to be "materialized" into physical tuples.  Note also that a
  * virtual tuple does not have any "system columns".
+ *
+ * It is also possible for a TupleTableSlot to hold both physical and minimal
+ * copies of a tuple.  This is done when the slot is requested to provide
+ * the format other than the one it currently holds.  (Originally we attempted
+ * to handle such requests by replacing one format with the other, but that
+ * had the fatal defect of invalidating any pass-by-reference Datums pointing
+ * into the existing slot contents.)  Both copies must contain identical data
+ * payloads when this is the case.
  *
  * The Datum/isnull arrays of a TupleTableSlot serve double duty.  When the
  * slot contains a virtual tuple, they are the authoritative data.	When the
@@ -94,12 +102,12 @@
  *
  * tts_mintuple must always be NULL if the slot does not hold a "minimal"
  * tuple.  When it does, tts_mintuple points to the actual MinimalTupleData
- * object (the thing to be pfree'd if tts_shouldFree is true).  In this case
- * tts_tuple points at tts_minhdr and the fields of that are set correctly
+ * object (the thing to be pfree'd if tts_shouldFreeMin is true).  If the slot
+ * has only a minimal and not also a regular physical tuple, then tts_tuple
+ * points at tts_minhdr and the fields of that struct are set correctly
  * for access to the minimal tuple; in particular, tts_minhdr.t_data points
- * MINIMAL_TUPLE_OFFSET bytes before tts_mintuple.	(tts_mintuple is therefore
- * redundant, but for code simplicity we store it explicitly anyway.)  This
- * case otherwise behaves identically to the regular-physical-tuple case.
+ * MINIMAL_TUPLE_OFFSET bytes before tts_mintuple.  This allows column
+ * extraction to treat the case identically to regular physical tuples.
  *
  * tts_slow/tts_off are saved state for slot_deform_tuple, and should not
  * be touched by any other code.
@@ -109,11 +117,12 @@
 /* tts_flags */
 #define         TTS_ISEMPTY     1
 #define         TTS_SHOULDFREE 	2
-#define         TTS_VIRTUAL     4
+#define         TTS_SHOULDFREE_MEM 	4	/* should pfree tts_memtuple? */
+#define         TTS_VIRTUAL     8
 
 typedef struct TupleTableSlot
 {
-	NodeTag		type;		/* vestigial ... allows IsA tests */
+	NodeTag		type;
 	int         PRIVATE_tts_flags;      /* TTS_xxx flags */
 
 	/* Heap tuple stuff */
@@ -256,8 +265,8 @@ static inline void slot_getsomeattrs(TupleTableSlot *slot, int attnum)
 	TupSetVirtualTuple(slot);
 }
 
-
-static inline void slot_getallattrs(TupleTableSlot *slot)
+static inline void
+slot_getallattrs(TupleTableSlot *slot)
 {
 	slot_getsomeattrs(slot, slot->tts_tupleDescriptor->natts);
 }
@@ -357,26 +366,19 @@ static inline bool slot_attisnull(TupleTableSlot *slot, int attnum)
 	return memtuple_attisnull(slot->PRIVATE_tts_memtuple, slot->tts_mt_bind, attnum);
 }
 
-/*
- * Tuple table data structure: an array of TupleTableSlots.
- */
-typedef struct TupleTableData
-{
-	int			size;			/* size of the table (number of slots) */
-	int			next;			/* next available slot number */
-	TupleTableSlot array[1];	/* VARIABLE LENGTH ARRAY - must be last */
-} TupleTableData;				/* VARIABLE LENGTH STRUCT */
-
-typedef TupleTableData *TupleTable;
+#ifdef GPDB_83MERGE_FIXME
+#define TTS_HAS_PHYSICAL_TUPLE(slot)  \
+	((slot)->tts_tuple != NULL && (slot)->tts_tuple != &((slot)->tts_minhdr))
+#endif
 
 /* in executor/execTuples.c */
 extern void init_slot(TupleTableSlot *slot, TupleDesc tupdesc);
 
-extern TupleTable ExecCreateTupleTable(int tableSize);
-extern void ExecDropTupleTable(TupleTable table, bool shouldFree);
+extern TupleTableSlot *MakeTupleTableSlot(void);
+extern TupleTableSlot *ExecAllocTableSlot(List **tupleTable);
+extern void ExecResetTupleTable(List *tupleTable, bool shouldFree);
 extern TupleTableSlot *MakeSingleTupleTableSlot(TupleDesc tupdesc);
 extern void ExecDropSingleTupleTableSlot(TupleTableSlot *slot);
-extern TupleTableSlot *ExecAllocTableSlot(TupleTable table);
 extern void ExecSetSlotDescriptor(TupleTableSlot *slot, TupleDesc tupdesc); 
 
 extern TupleTableSlot *ExecStoreHeapTuple(HeapTuple tuple,
@@ -428,4 +430,5 @@ static inline HeapTuple ExecCopyGenericTuple(TupleTableSlot *slot)
 extern TupleTableSlot *ExecCopySlot(TupleTableSlot *dstslot, TupleTableSlot *srcslot);
 
 extern void ExecModifyMemTuple(TupleTableSlot *slot, Datum *values, bool *isnull, bool *doRepl);
+
 #endif   /* TUPTABLE_H */

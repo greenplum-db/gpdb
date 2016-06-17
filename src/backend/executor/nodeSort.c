@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeSort.c,v 1.60 2007/01/09 02:14:11 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeSort.c,v 1.62 2008/01/01 19:45:49 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -167,10 +167,14 @@ ExecSort(SortState *node)
 
 		if(gp_enable_mk_sort)
 		{
+			if (node->bounded)
+				tuplesort_set_bound_mk(tuplesortstate_mk, node->bound);
 			node->tuplesortstate->sortstore_mk = tuplesortstate_mk;
 		}
 		else
 		{
+			if (node->bounded)
+				tuplesort_set_bound(tuplesortstate, node->bound);
 			node->tuplesortstate->sortstore = tuplesortstate;
 		}
 
@@ -310,6 +314,8 @@ ExecSort(SortState *node)
 		 * finally set the sorted flag to true
 		 */
 		node->sort_Done = true;
+		node->bounded_Done = node->bounded;
+		node->bound_Done = node->bound;
 		SO1_printf("ExecSort: %s\n", "sorting done");
 
 		/* for share input, do not need to return any tuple */
@@ -399,6 +405,7 @@ ExecInitSort(Sort *node, EState *estate, int eflags)
 	if(node->share_type != SHARE_NOTSHARED) 
 		sortstate->randomAccess = true;
 
+	sortstate->bounded = false;
 	sortstate->sort_Done = false;
 	sortstate->tuplesortstate = palloc0(sizeof(GenericTupStore));
 	sortstate->share_lk_ctxt = NULL;
@@ -612,11 +619,14 @@ ExecReScanSort(SortState *node, ExprContext *exprCtxt)
 
 	/*
 	 * If subnode is to be rescanned then we forget previous sort results; we
-	 * have to re-read the subplan and re-sort.
+	 * have to re-read the subplan and re-sort.  Also must re-sort if the
+	 * bounded-sort parameters changed or we didn't select randomAccess.
 	 *
 	 * Otherwise we can just rewind and rescan the sorted output.
 	 */
 	if (((PlanState *) node)->lefttree->chgParam != NULL ||
+		node->bounded != node->bounded_Done ||
+		node->bound != node->bound_Done ||
 		!node->randomAccess ||
 		(NULL == node->tuplesortstate->sortstore_mk && NULL == node->tuplesortstate->sortstore))
 	{

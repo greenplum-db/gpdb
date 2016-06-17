@@ -22,7 +22,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/palloc.h,v 1.36 2007/01/05 22:19:59 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/utils/palloc.h,v 1.38 2008/01/01 19:45:59 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -190,18 +190,5 @@ extern void UpdateTimeAtomically(volatile OOMTimeType* time_var);
 		MemoryContextStats(TopMemoryContext);\
 	}\
 }
-
-#ifdef USE_SYSV_SEMAPHORES
-extern void *gp_malloc(int64 sz); 
-extern void *gp_calloc(int64 nmemb, int64 sz); 
-extern void *gp_realloc(void *ptr, int64 sz, int64 newsz); 
-extern void gp_free2(void *ptr, int64 sz); 
-
-#else
-#define gp_malloc(sz) malloc(sz)
-#define gp_calloc(sz1, sz2) calloc((sz1), (sz2))
-#define gp_realloc(ptr, sz1, sz2) realloc((ptr), (sz2))
-#define gp_free2(ptr, sz) free(ptr)
-#endif
 
 #endif   /* PALLOC_H */

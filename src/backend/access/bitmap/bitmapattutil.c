@@ -104,13 +104,13 @@ _bitmap_create_lov_heapandindex(Relation rel,
 		lovIndex = index_open(idxid, AccessExclusiveLock);
 
 		if (OidIsValid(lovHeapRelfilenode))
-			setNewRelfilenodeToOid(lovHeap, lovHeapRelfilenode);
+			setNewRelfilenodeToOid(lovHeap, RecentXmin, lovHeapRelfilenode);
 		else
-			setNewRelfilenode(lovHeap);
+			setNewRelfilenode(lovHeap, RecentXmin);
 		if (OidIsValid(lovIndexRelfilenode))
-			setNewRelfilenodeToOid(lovIndex, lovIndexRelfilenode);
+			setNewRelfilenodeToOid(lovIndex, RecentXmin, lovIndexRelfilenode);
 		else
-			setNewRelfilenode(lovIndex);
+			setNewRelfilenode(lovIndex, RecentXmin);
 
 		/*
 		 * After creating the new relfilenode for a btee index, this is not
@@ -124,13 +124,12 @@ _bitmap_create_lov_heapandindex(Relation rel,
 		/* XLOG the metapage */
 		if (!XLog_UnconvertedCanBypassWal() && !lovIndex->rd_istemp)
 		{
-			
 			// Fetch gp_persistent_relation_node information that will be added to XLOG record.
 			RelationFetchGpRelationNodeForXLog(lovIndex);
 			
-			_bt_lognewpage(lovIndex,
-						   btree_metapage,
-						   BufferGetBlockNumber(btree_metabuf));
+			log_newpage(&lovIndex->rd_node,
+						BufferGetBlockNumber(btree_metabuf),
+						btree_metapage);
 		}
 		
 		/* This cache value is not valid anymore. */

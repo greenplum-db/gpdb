@@ -38,7 +38,14 @@ ExecInitSequence(Sequence *node, EState *estate, int eflags)
 	Assert(numSubplans >= 1);
 	sequenceState->subplans = (PlanState **)palloc0(numSubplans * sizeof(PlanState *));
 	sequenceState->numSubplans = numSubplans;
-	
+
+	/* Initialize static partition selector, if any */
+	if (node->static_selector)
+	{
+		sequenceState->static_selector =
+			(PartitionSelectorState *) ExecInitNode((Plan *) node->static_selector, estate, eflags);
+	}
+
 	/* Initialize subplans */
 	ListCell *lc;
 	int no = 0;
@@ -110,6 +117,16 @@ ExecSequence(SequenceState *node)
 	 */
 	if (node->initState)
 	{
+		/*
+		 * Run the static partition selector first (XXX: Didn't we do this
+		 * at plan time already?)
+		 */
+		if (node->static_selector)
+		{
+			completeSubplan((PlanState *) node->static_selector);
+			CHECK_FOR_INTERRUPTS();
+		}
+
 		for(int no = 0; no < node->numSubplans - 1; no++)
 		{
 			completeSubplan(node->subplans[no]);

@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/grant.sgml,v 1.64 2007/02/01 00:28:19 momjian Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/grant.sgml,v 1.67.2.1 2008/05/28 00:45:47 tgl Exp $
 PostgreSQL documentation
 -->
 
@@ -23,28 +23,28 @@ PostgreSQL documentation
 GRANT { { SELECT | INSERT | UPDATE | DELETE | REFERENCES | TRIGGER }
     [,...] | ALL [ PRIVILEGES ] }
     ON [ TABLE ] <replaceable class="PARAMETER">tablename</replaceable> [, ...]
-    TO { <replaceable class="PARAMETER">username</replaceable> | GROUP <replaceable class="PARAMETER">groupname</replaceable> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
+    TO { [ GROUP ] <replaceable class="PARAMETER">rolename</replaceable> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
 
 GRANT { { USAGE | SELECT | UPDATE }
     [,...] | ALL [ PRIVILEGES ] }
     ON SEQUENCE <replaceable class="PARAMETER">sequencename</replaceable> [, ...]
-    TO { <replaceable class="PARAMETER">username</replaceable> | GROUP <replaceable class="PARAMETER">groupname</replaceable> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
+    TO { [ GROUP ] <replaceable class="PARAMETER">rolename</replaceable> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
 
 GRANT { { CREATE | CONNECT | TEMPORARY | TEMP } [,...] | ALL [ PRIVILEGES ] }
     ON DATABASE <replaceable>dbname</replaceable> [, ...]
-    TO { <replaceable class="PARAMETER">username</replaceable> | GROUP <replaceable class="PARAMETER">groupname</replaceable> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
+    TO { [ GROUP ] <replaceable class="PARAMETER">rolename</replaceable> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
 
 GRANT { EXECUTE | ALL [ PRIVILEGES ] }
     ON FUNCTION <replaceable>funcname</replaceable> ( [ [ <replaceable class="parameter">argmode</replaceable> ] [ <replaceable class="parameter">argname</replaceable> ] <replaceable class="parameter">argtype</replaceable> [, ...] ] ) [, ...]
-    TO { <replaceable class="PARAMETER">username</replaceable> | GROUP <replaceable class="PARAMETER">groupname</replaceable> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
+    TO { [ GROUP ] <replaceable class="PARAMETER">rolename</replaceable> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
 
 GRANT { USAGE | ALL [ PRIVILEGES ] }
     ON LANGUAGE <replaceable>langname</replaceable> [, ...]
-    TO { <replaceable class="PARAMETER">username</replaceable> | GROUP <replaceable class="PARAMETER">groupname</replaceable> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
+    TO { [ GROUP ] <replaceable class="PARAMETER">rolename</replaceable> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
 
 GRANT { { CREATE | USAGE } [,...] | ALL [ PRIVILEGES ] }
     ON SCHEMA <replaceable>schemaname</replaceable> [, ...]
-    TO { <replaceable class="PARAMETER">username</replaceable> | GROUP <replaceable class="PARAMETER">groupname</replaceable> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
+    TO { [ GROUP ] <replaceable class="PARAMETER">rolename</replaceable> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
 
 GRANT { CREATE | ALL [ PRIVILEGES ] }
     ON TABLESPACE <replaceable>tablespacename</replaceable> [, ...]
@@ -230,10 +230,10 @@ GRANT { SELECT | INSERT | ALL [PRIVILEGES] }
        have this privilege for the containing schema.
       </para>
       <para>
-       For tablespaces, allows tables and indexes to be created within the
-       tablespace, and allows databases to be created that have the tablespace
-       as their default tablespace.  (Note that revoking this privilege
-       will not alter the placement of existing objects.)
+       For tablespaces, allows tables, indexes, and temporary files to be
+       created within the tablespace, and allows databases to be created that
+       have the tablespace as their default tablespace.  (Note that revoking
+       this privilege will not alter the placement of existing objects.)
       </para>
      </listitem>
     </varlistentry>
@@ -463,18 +463,16 @@ GRANT { SELECT | INSERT | ALL [PRIVILEGES] }
     to obtain information about existing privileges, for example:
 <programlisting>
 =&gt; \z mytable
-
-                        Access privileges for database "lusitania"
- Schema |  Name   | Type  |                     Access privileges
---------+---------+-------+-----------------------------------------------------------
- public | mytable | table | {miriam=arwdxt/miriam,=r/miriam,"group todos=arw/miriam"}
+                  Access privileges for database "lusitania"
+ Schema |  Name   | Type  |                 Access privileges                 
+--------+---------+-------+---------------------------------------------------
+ public | mytable | table | {miriam=arwdxt/miriam,=r/miriam,admin=arw/miriam}
 (1 row)
 </programlisting>
     The entries shown by <command>\z</command> are interpreted thus:
 <programlisting>
+      rolename=xxxx -- privileges granted to a role
               =xxxx -- privileges granted to PUBLIC
-         uname=xxxx -- privileges granted to a user
-   group gname=xxxx -- privileges granted to a group
 
                   r -- SELECT ("read")
                   w -- UPDATE ("write")
@@ -490,7 +488,7 @@ GRANT { SELECT | INSERT | ALL [PRIVILEGES] }
              arwdxt -- ALL PRIVILEGES (for tables)
                   * -- grant option for preceding privilege
 
-              /yyyy -- user who granted this privilege
+              /yyyy -- role that granted this privilege
 </programlisting>
 
     The above example display would be seen by user <literal>miriam</literal> after
@@ -498,7 +496,7 @@ GRANT { SELECT | INSERT | ALL [PRIVILEGES] }
 
 <programlisting>
 GRANT SELECT ON mytable TO PUBLIC;
-GRANT SELECT, UPDATE, INSERT ON mytable TO GROUP todos;
+GRANT SELECT, UPDATE, INSERT ON mytable TO admin;
 </programlisting>
    </para>
 
@@ -578,14 +576,8 @@ GRANT admins TO joe;
    </para>
 
    <para>
-    The SQL standard allows setting privileges for individual columns
-    within a table:
-
-<synopsis>
-GRANT <replaceable class="PARAMETER">privileges</replaceable>
-    ON <replaceable class="PARAMETER">table</replaceable> [ ( <replaceable class="PARAMETER">column</replaceable> [, ...] ) ] [, ...]
-    TO { PUBLIC | <replaceable class="PARAMETER">username</replaceable> [, ...] } [ WITH GRANT OPTION ]
-</synopsis>
+    <productname>PostgreSQL</productname> does not support the SQL-standard 
+    functionality of setting privileges for individual columns.
    </para>
 
    <para>

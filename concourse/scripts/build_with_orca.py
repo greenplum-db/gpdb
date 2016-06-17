@@ -15,6 +15,8 @@ def install(output_dir):
     subprocess.call("mkdir -p " + output_dir, shell=True)
     return subprocess.call("cp -r /usr/local/gpdb/* " + output_dir, shell=True)
 	
+def unittest():
+        return subprocess.call(["make", "-s", "unittest-check"], cwd="gpdb_src/src/backend")
 
 def main():
     parser = optparse.OptionParser()
@@ -35,6 +37,9 @@ def main():
     if status:
         return status
     status = make()
+    if status:
+        return status
+    status = unittest()
     if status:
         return status
     status = install(options.output_dir)

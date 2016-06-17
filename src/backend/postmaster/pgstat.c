@@ -13,7 +13,7 @@
  *
  *	Copyright (c) 2001-2009, PostgreSQL Global Development Group
  *
- *    $PostgreSQL: pgsql/src/backend/postmaster/pgstat.c,v 1.151 2007/03/28 22:17:12 alvherre Exp $ 
+ *	$PostgreSQL: pgsql/src/backend/postmaster/pgstat.c,v 1.169.2.2 2009/10/02 22:50:03 tgl Exp $
  * ----------
  */
 #include "postgres.h"
@@ -157,7 +157,7 @@ static bool pgStatRunningInCollector = false;
  * repeatedly opened during a transaction.
  */
 #define TABSTAT_QUANTUM		100 /* we alloc this many at a time */
- 
+
 typedef struct TabStatusArray
 {
 	struct TabStatusArray *tsa_next;	/* link to next array, if any */
@@ -548,9 +548,7 @@ startup_failed:
 	 * use PGC_S_OVERRIDE because there is no point in trying to turn it back
 	 * on from postgresql.conf without a restart.
 	 */
-
 	SetConfigOption("track_counts", "off", PGC_INTERNAL, PGC_S_OVERRIDE);
-	pgstat_track_counts = false;
 	pgstat_collect_queuelevel = false;
 }
 
@@ -700,8 +698,8 @@ pgstat_report_stat(bool force)
 	int			i;
 
 	/* Don't expend a clock check if nothing to do */
-	if ((pgStatTabList == NULL || pgStatTabList->tsa_used == 0)
-		&& !have_function_stats)
+	if ((pgStatTabList == NULL || pgStatTabList->tsa_used == 0) &&
+		!have_function_stats)
 		return;
 
 	/*
@@ -776,16 +774,16 @@ pgstat_report_stat(bool force)
 
 	/* Now, send function statistics */
 	pgstat_send_funcstats();
-	}
+}
 
-	/*
+/*
  * Subroutine for pgstat_report_stat: finish and send a tabstat message
-	 */
+ */
 static void
 pgstat_send_tabstat(PgStat_MsgTabstat *tsmsg)
-	{
-		int			n;
-		int			len;
+{
+	int			n;
+	int			len;
 
 	/* It's unlikely we'd get here with no socket, but maybe not impossible */
 	if (pgStatSock < 0)
@@ -808,13 +806,13 @@ pgstat_send_tabstat(PgStat_MsgTabstat *tsmsg)
 		tsmsg->m_xact_rollback = 0;
 	}
 
-		n = tsmsg->m_nentries;
-		len = offsetof(PgStat_MsgTabstat, m_entry[0]) +
-			n * sizeof(PgStat_TableEntry);
+	n = tsmsg->m_nentries;
+	len = offsetof(PgStat_MsgTabstat, m_entry[0]) +
+		n * sizeof(PgStat_TableEntry);
 
-		pgstat_setheader(&tsmsg->m_hdr, PGSTAT_MTYPE_TABSTAT);
-		pgstat_send(tsmsg, len);
-	}
+	pgstat_setheader(&tsmsg->m_hdr, PGSTAT_MTYPE_TABSTAT);
+	pgstat_send(tsmsg, len);
+}
 
 /*
  * Subroutine for pgstat_report_stat: populate and send a function stat message
@@ -1218,7 +1216,7 @@ pgstat_report_vacuum(Oid tableoid, bool shared, bool scanned_all,
 	msg.m_tableoid = tableoid;
 	msg.m_scanned_all = scanned_all;
 	msg.m_analyze = analyze;
-	msg.m_autovacuum = IsAutoVacuumWorkerProcess();	/* is this autovacuum? */
+	msg.m_autovacuum = IsAutoVacuumWorkerProcess();		/* is this autovacuum? */
 	msg.m_vacuumtime = GetCurrentTimestamp();
 	msg.m_tuples = tuples;
 	pgstat_send(&msg, sizeof(msg));
@@ -1240,14 +1238,14 @@ pgstat_report_analyze(Relation rel, PgStat_Counter livetuples,
 		return;
 
 	/*
-	 * Unlike VACUUM, ANALYZE might be running inside a transaction that has
-	 * already inserted and/or deleted rows in the target table. ANALYZE will
-	 * have counted such rows as live or dead respectively. Because we will
-	 * report our counts of such rows at transaction end, we should subtract
-	 * off these counts from what we send to the collector now, else they'll
-	 * be double-counted after commit.	(This approach also ensures that the
-	 * collector ends up with the right numbers if we abort instead of
-	 * committing.)
+	 * Unlike VACUUM, ANALYZE might be running inside a transaction that
+	 * has already inserted and/or deleted rows in the target table.
+	 * ANALYZE will have counted such rows as live or dead respectively.
+	 * Because we will report our counts of such rows at transaction end,
+	 * we should subtract off these counts from what we send to the collector
+	 * now, else they'll be double-counted after commit.  (This approach also
+	 * ensures that the collector ends up with the right numbers if we abort
+	 * instead of committing.)
 	 */
 	if (rel->pgstat_info != NULL)
 	{
@@ -1681,7 +1679,7 @@ AtEOXact_PgStat(bool isCommit)
 	 * in case the reporting message isn't sent right away.)
 	 */
 	if (isCommit)
-	pgStatXactCommit++;
+		pgStatXactCommit++;
 	else
 		pgStatXactRollback++;
 
@@ -1807,7 +1805,7 @@ AtEOSubXact_PgStat(bool isCommit, int nestDepth)
  *
  * In this phase we just generate 2PC records for all the pending
  * transaction-dependent stats work.
-	 */
+ */
 void
 AtPrepare_PgStat(void)
 {
@@ -2204,8 +2202,7 @@ pgstat_initialize(void)
  * pgstat_bestart() -
  *
  *	Initialize this backend's entry in the PgBackendStatus array.
- *	Called from InitPostgres.
- *	MyDatabaseId, session userid, and application_name must be set
+ *	Called from InitPostgres.  MyDatabaseId and session userid must be set
  *	(hence, this cannot be combined with pgstat_initialize).
  * ----------
  */
@@ -2275,13 +2272,6 @@ pgstat_bestart(void)
 	 */
 	pgstat_init_localportalhash();
 	
-
-	/*
-	 * GPDB: Set up a process-exit hook to clean up.
-	 */
-	on_shmem_exit(pgstat_beshutdown_hook, 0);
-	
-	
 	/* Update app name to current GUC setting */
 	if (application_name)
 		pgstat_report_appname(application_name);
@@ -2308,7 +2298,7 @@ pgstat_beshutdown_hook(int code, Datum arg)
 	 * during failed backend starts might never get counted.)
 	 */
 	if (OidIsValid(MyDatabaseId))
-	    pgstat_report_stat(true);
+		pgstat_report_stat(true);
 
 	/*
 	 * Clear my status entry, following the protocol of bumping st_changecount
@@ -2338,8 +2328,6 @@ pgstat_report_activity(const char *cmd_str)
 	volatile PgBackendStatus *beentry = MyBEEntry;
 	TimestampTz start_timestamp;
 	int			len;
-
-	// TRACE_POSTGRESQL_STATEMENT_STATUS(cmd_str);
 
 	if (!pgstat_track_activities || !beentry)
 		return;
@@ -2447,6 +2435,7 @@ pgstat_report_waiting(char waiting)
 	 */
 	beentry->st_waiting = waiting;
 }
+
 
 /* ----------
  * pgstat_read_current_status() -
@@ -2861,9 +2850,9 @@ PgstatCollectorMain(int argc, char *argv[])
 
 		got_data = FD_ISSET(pgStatSock, &rfds);
 #endif   /* HAVE_POLL */
-#else /* WIN32 */
+#else							/* WIN32 */
 		got_data = pgwin32_waitforsinglesocket(pgStatSock, FD_READ,
-											   PGSTAT_SELECT_TIMEOUT*1000);
+											   PGSTAT_SELECT_TIMEOUT * 1000);
 #endif
 
 		/*
@@ -3136,11 +3125,11 @@ pgstat_write_statsfile(bool permanent)
 		{
 			fputc('F', fpout);
 			fwrite(funcentry, sizeof(PgStat_StatFuncEntry), 1, fpout);
-	}
+		}
 
-	/*
+		/*
 		 * Mark the end of this DB
-	 */
+		 */
 		fputc('d', fpout);
 	}
 
@@ -3247,7 +3236,6 @@ pgstat_read_statsfile(Oid onlydb, bool permanent)
 	 * load an existing statsfile.
 	 */
 	memset(&globalStats, 0, sizeof(globalStats));
-
 
 	/**
 	 ** Create the Queue hashtable

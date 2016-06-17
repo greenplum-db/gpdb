@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/lmgr.h,v 1.57 2007/01/05 22:19:58 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/storage/lmgr.h,v 1.60.2.1 2008/03/04 19:54:13 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -69,6 +69,11 @@ extern void XactLockTableDelete(TransactionId xid);
 extern void XactLockTableWait(TransactionId xid);
 extern bool ConditionalXactLockTableWait(TransactionId xid);
 
+/* Lock a VXID (used to wait for a transaction to finish) */
+extern void VirtualXactLockTableInsert(VirtualTransactionId vxid);
+extern void VirtualXactLockTableWait(VirtualTransactionId vxid);
+extern bool ConditionalVirtualXactLockTableWait(VirtualTransactionId vxid);
+
 /* Lock a general object (other than a relation) of the current database */
 extern void LockDatabaseObject(Oid classid, Oid objid, uint16 objsubid,
 				   LOCKMODE lockmode);
@@ -80,7 +85,8 @@ extern void LockSharedObject(Oid classid, Oid objid, uint16 objsubid,
 				 LOCKMODE lockmode);
 extern void UnlockSharedObject(Oid classid, Oid objid, uint16 objsubid,
 				   LOCKMODE lockmode);
-/* Knowledge about which locktags describe temp objects */
-extern bool LockTagIsTemp(const LOCKTAG *tag);
+
+/* Describe a locktag for error messages */
+extern void DescribeLockTag(StringInfo buf, const LOCKTAG *tag);
 
 #endif   /* LMGR_H */

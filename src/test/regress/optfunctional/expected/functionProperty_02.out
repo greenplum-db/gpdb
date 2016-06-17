@@ -1,0 +1,2942 @@
+-- @description function_in_from_join_withfunc2_27.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_imm(func2_read_int_stb(5)), foo order by 1,2,3; 
+ func1_nosql_imm | a  | b  
+-----------------+----+----
+               7 |  1 |  2
+               7 |  2 |  3
+               7 |  3 |  4
+               7 |  4 |  5
+               7 |  5 |  6
+               7 |  6 |  7
+               7 |  7 |  8
+               7 |  8 |  9
+               7 |  9 | 10
+               7 | 10 | 11
+(10 rows)
+
+-- @description function_in_from_join_withfunc2_28.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_imm(func2_mod_int_vol(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_join_withfunc2_28.sql:7: ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:134)  (entry db rh55-qavm20:5432 pid=27832) (cdbdisp.c:1476)
+DETAIL:  
+	 SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
+PL/pgSQL function "func2_mod_int_vol" line 2 at SQL statement
+-- @description function_in_from_join_withfunc2_29.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_imm(func2_mod_int_stb(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_join_withfunc2_29.sql:7: ERROR:  UPDATE is not allowed in a non-volatile function
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
+PL/pgSQL function "func2_mod_int_stb" line 2 at SQL statement
+-- @description function_in_from_join_withfunc2_3.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_vol(func2_sql_int_vol(5)), foo order by 1,2,3; 
+ func1_nosql_vol | a  | b  
+-----------------+----+----
+               7 |  1 |  2
+               7 |  2 |  3
+               7 |  3 |  4
+               7 |  4 |  5
+               7 |  5 |  6
+               7 |  6 |  7
+               7 |  7 |  8
+               7 |  8 |  9
+               7 |  9 | 10
+               7 | 10 | 11
+(10 rows)
+
+-- @description function_in_from_join_withfunc2_30.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_vol(func2_nosql_vol(5)), foo order by 1,2,3; 
+ func1_sql_int_vol | a  | b  
+-------------------+----+----
+                 7 |  1 |  2
+                 7 |  2 |  3
+                 7 |  3 |  4
+                 7 |  4 |  5
+                 7 |  5 |  6
+                 7 |  6 |  7
+                 7 |  7 |  8
+                 7 |  8 |  9
+                 7 |  9 | 10
+                 7 | 10 | 11
+(10 rows)
+
+-- @description function_in_from_join_withfunc2_31.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_vol(func2_nosql_stb(5)), foo order by 1,2,3; 
+ func1_sql_int_vol | a  | b  
+-------------------+----+----
+                 7 |  1 |  2
+                 7 |  2 |  3
+                 7 |  3 |  4
+                 7 |  4 |  5
+                 7 |  5 |  6
+                 7 |  6 |  7
+                 7 |  7 |  8
+                 7 |  8 |  9
+                 7 |  9 | 10
+                 7 | 10 | 11
+(10 rows)
+
+-- @description function_in_from_join_withfunc2_32.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_vol(func2_nosql_imm(5)), foo order by 1,2,3; 
+ func1_sql_int_vol | a  | b  
+-------------------+----+----
+                 7 |  1 |  2
+                 7 |  2 |  3
+                 7 |  3 |  4
+                 7 |  4 |  5
+                 7 |  5 |  6
+                 7 |  6 |  7
+                 7 |  7 |  8
+                 7 |  8 |  9
+                 7 |  9 | 10
+                 7 | 10 | 11
+(10 rows)
+
+-- @description function_in_from_join_withfunc2_33.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_vol(func2_sql_int_vol(5)), foo order by 1,2,3; 
+ func1_sql_int_vol | a  | b  
+-------------------+----+----
+                 7 |  1 |  2
+                 7 |  2 |  3
+                 7 |  3 |  4
+                 7 |  4 |  5
+                 7 |  5 |  6
+                 7 |  6 |  7
+                 7 |  7 |  8
+                 7 |  8 |  9
+                 7 |  9 | 10
+                 7 | 10 | 11
+(10 rows)
+
+-- @description function_in_from_join_withfunc2_34.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_vol(func2_sql_int_stb(5)), foo order by 1,2,3; 
+ func1_sql_int_vol | a  | b  
+-------------------+----+----
+                 7 |  1 |  2
+                 7 |  2 |  3
+                 7 |  3 |  4
+                 7 |  4 |  5
+                 7 |  5 |  6
+                 7 |  6 |  7
+                 7 |  7 |  8
+                 7 |  8 |  9
+                 7 |  9 | 10
+                 7 | 10 | 11
+(10 rows)
+
+-- @description function_in_from_join_withfunc2_35.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_vol(func2_sql_int_imm(5)), foo order by 1,2,3; 
+ func1_sql_int_vol | a  | b  
+-------------------+----+----
+                 7 |  1 |  2
+                 7 |  2 |  3
+                 7 |  3 |  4
+                 7 |  4 |  5
+                 7 |  5 |  6
+                 7 |  6 |  7
+                 7 |  7 |  8
+                 7 |  8 |  9
+                 7 |  9 | 10
+                 7 | 10 | 11
+(10 rows)
+
+-- @description function_in_from_join_withfunc2_36.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_vol(func2_read_int_vol(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_join_withfunc2_36.sql:7: ERROR:  function cannot execute on segment because it accesses relation "public.bar" (functions.c:152)  (entry db rh55-qavm20:5432 pid=28465) (cdbdisp.c:1476)
+DETAIL:  
+	 SQL statement "SELECT d FROM bar WHERE c =  $1  LIMIT 1"
+PL/pgSQL function "func2_read_int_vol" line 4 at SQL statement
+-- @description function_in_from_join_withfunc2_37.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_vol(func2_read_int_stb(5)), foo order by 1,2,3; 
+ func1_sql_int_vol | a  | b  
+-------------------+----+----
+                 7 |  1 |  2
+                 7 |  2 |  3
+                 7 |  3 |  4
+                 7 |  4 |  5
+                 7 |  5 |  6
+                 7 |  6 |  7
+                 7 |  7 |  8
+                 7 |  8 |  9
+                 7 |  9 | 10
+                 7 | 10 | 11
+(10 rows)
+
+-- @description function_in_from_join_withfunc2_38.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_vol(func2_mod_int_vol(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_join_withfunc2_38.sql:7: ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:134)  (entry db rh55-qavm20:5432 pid=28628) (cdbdisp.c:1476)
+DETAIL:  
+	 SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
+PL/pgSQL function "func2_mod_int_vol" line 2 at SQL statement
+-- @description function_in_from_join_withfunc2_39.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_vol(func2_mod_int_stb(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_join_withfunc2_39.sql:7: ERROR:  UPDATE is not allowed in a non-volatile function
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
+PL/pgSQL function "func2_mod_int_stb" line 2 at SQL statement
+-- @description function_in_from_join_withfunc2_4.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_vol(func2_sql_int_stb(5)), foo order by 1,2,3; 
+ func1_nosql_vol | a  | b  
+-----------------+----+----
+               7 |  1 |  2
+               7 |  2 |  3
+               7 |  3 |  4
+               7 |  4 |  5
+               7 |  5 |  6
+               7 |  6 |  7
+               7 |  7 |  8
+               7 |  8 |  9
+               7 |  9 | 10
+               7 | 10 | 11
+(10 rows)
+
+-- @description function_in_from_join_withfunc2_40.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_stb(func2_nosql_vol(5)), foo order by 1,2,3; 
+ func1_sql_int_stb | a  | b  
+-------------------+----+----
+                 7 |  1 |  2
+                 7 |  2 |  3
+                 7 |  3 |  4
+                 7 |  4 |  5
+                 7 |  5 |  6
+                 7 |  6 |  7
+                 7 |  7 |  8
+                 7 |  8 |  9
+                 7 |  9 | 10
+                 7 | 10 | 11
+(10 rows)
+
+-- @description function_in_from_join_withfunc2_41.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_stb(func2_nosql_stb(5)), foo order by 1,2,3; 
+ func1_sql_int_stb | a  | b  
+-------------------+----+----
+                 7 |  1 |  2
+                 7 |  2 |  3
+                 7 |  3 |  4
+                 7 |  4 |  5
+                 7 |  5 |  6
+                 7 |  6 |  7
+                 7 |  7 |  8
+                 7 |  8 |  9
+                 7 |  9 | 10
+                 7 | 10 | 11
+(10 rows)
+
+-- @description function_in_from_join_withfunc2_42.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_stb(func2_nosql_imm(5)), foo order by 1,2,3; 
+ func1_sql_int_stb | a  | b  
+-------------------+----+----
+                 7 |  1 |  2
+                 7 |  2 |  3
+                 7 |  3 |  4
+                 7 |  4 |  5
+                 7 |  5 |  6
+                 7 |  6 |  7
+                 7 |  7 |  8
+                 7 |  8 |  9
+                 7 |  9 | 10
+                 7 | 10 | 11
+(10 rows)
+
+-- @description function_in_from_join_withfunc2_43.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_stb(func2_sql_int_vol(5)), foo order by 1,2,3; 
+ func1_sql_int_stb | a  | b  
+-------------------+----+----
+                 7 |  1 |  2
+                 7 |  2 |  3
+                 7 |  3 |  4
+                 7 |  4 |  5
+                 7 |  5 |  6
+                 7 |  6 |  7
+                 7 |  7 |  8
+                 7 |  8 |  9
+                 7 |  9 | 10
+                 7 | 10 | 11
+(10 rows)
+
+-- @description function_in_from_join_withfunc2_44.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_stb(func2_sql_int_stb(5)), foo order by 1,2,3; 
+ func1_sql_int_stb | a  | b  
+-------------------+----+----
+                 7 |  1 |  2
+                 7 |  2 |  3
+                 7 |  3 |  4
+                 7 |  4 |  5
+                 7 |  5 |  6
+                 7 |  6 |  7
+                 7 |  7 |  8
+                 7 |  8 |  9
+                 7 |  9 | 10
+                 7 | 10 | 11
+(10 rows)
+
+-- @description function_in_from_join_withfunc2_45.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_stb(func2_sql_int_imm(5)), foo order by 1,2,3; 
+ func1_sql_int_stb | a  | b  
+-------------------+----+----
+                 7 |  1 |  2
+                 7 |  2 |  3
+                 7 |  3 |  4
+                 7 |  4 |  5
+                 7 |  5 |  6
+                 7 |  6 |  7
+                 7 |  7 |  8
+                 7 |  8 |  9
+                 7 |  9 | 10
+                 7 | 10 | 11
+(10 rows)
+
+-- @description function_in_from_join_withfunc2_46.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_stb(func2_read_int_vol(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_join_withfunc2_46.sql:7: ERROR:  function cannot execute on segment because it accesses relation "public.bar" (functions.c:152)  (entry db rh55-qavm20:5432 pid=29238) (cdbdisp.c:1476)
+DETAIL:  
+	 SQL statement "SELECT d FROM bar WHERE c =  $1  LIMIT 1"
+PL/pgSQL function "func2_read_int_vol" line 4 at SQL statement
+-- @description function_in_from_join_withfunc2_47.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_stb(func2_read_int_stb(5)), foo order by 1,2,3; 
+ func1_sql_int_stb | a  | b  
+-------------------+----+----
+                 7 |  1 |  2
+                 7 |  2 |  3
+                 7 |  3 |  4
+                 7 |  4 |  5
+                 7 |  5 |  6
+                 7 |  6 |  7
+                 7 |  7 |  8
+                 7 |  8 |  9
+                 7 |  9 | 10
+                 7 | 10 | 11
+(10 rows)
+
+-- @description function_in_from_join_withfunc2_48.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_stb(func2_mod_int_vol(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_join_withfunc2_48.sql:7: ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:134)  (entry db rh55-qavm20:5432 pid=29419) (cdbdisp.c:1476)
+DETAIL:  
+	 SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
+PL/pgSQL function "func2_mod_int_vol" line 2 at SQL statement
+-- @description function_in_from_join_withfunc2_49.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_stb(func2_mod_int_stb(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_join_withfunc2_49.sql:7: ERROR:  UPDATE is not allowed in a non-volatile function
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
+PL/pgSQL function "func2_mod_int_stb" line 2 at SQL statement
+-- @description function_in_from_join_withfunc2_5.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_vol(func2_sql_int_imm(5)), foo order by 1,2,3; 
+ func1_nosql_vol | a  | b  
+-----------------+----+----
+               7 |  1 |  2
+               7 |  2 |  3
+               7 |  3 |  4
+               7 |  4 |  5
+               7 |  5 |  6
+               7 |  6 |  7
+               7 |  7 |  8
+               7 |  8 |  9
+               7 |  9 | 10
+               7 | 10 | 11
+(10 rows)
+
+-- @description function_in_from_join_withfunc2_50.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_imm(func2_nosql_vol(5)), foo order by 1,2,3; 
+ func1_sql_int_imm | a  | b  
+-------------------+----+----
+                 7 |  1 |  2
+                 7 |  2 |  3
+                 7 |  3 |  4
+                 7 |  4 |  5
+                 7 |  5 |  6
+                 7 |  6 |  7
+                 7 |  7 |  8
+                 7 |  8 |  9
+                 7 |  9 | 10
+                 7 | 10 | 11
+(10 rows)
+
+-- @description function_in_from_join_withfunc2_51.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_imm(func2_nosql_stb(5)), foo order by 1,2,3; 
+ func1_sql_int_imm | a  | b  
+-------------------+----+----
+                 7 |  1 |  2
+                 7 |  2 |  3
+                 7 |  3 |  4
+                 7 |  4 |  5
+                 7 |  5 |  6
+                 7 |  6 |  7
+                 7 |  7 |  8
+                 7 |  8 |  9
+                 7 |  9 | 10
+                 7 | 10 | 11
+(10 rows)
+
+-- @description function_in_from_join_withfunc2_52.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_imm(func2_nosql_imm(5)), foo order by 1,2,3; 
+ func1_sql_int_imm | a  | b  
+-------------------+----+----
+                 7 |  1 |  2
+                 7 |  2 |  3
+                 7 |  3 |  4
+                 7 |  4 |  5
+                 7 |  5 |  6
+                 7 |  6 |  7
+                 7 |  7 |  8
+                 7 |  8 |  9
+                 7 |  9 | 10
+                 7 | 10 | 11
+(10 rows)
+
+-- @description function_in_from_join_withfunc2_53.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_imm(func2_sql_int_vol(5)), foo order by 1,2,3; 
+ func1_sql_int_imm | a  | b  
+-------------------+----+----
+                 7 |  1 |  2
+                 7 |  2 |  3
+                 7 |  3 |  4
+                 7 |  4 |  5
+                 7 |  5 |  6
+                 7 |  6 |  7
+                 7 |  7 |  8
+                 7 |  8 |  9
+                 7 |  9 | 10
+                 7 | 10 | 11
+(10 rows)
+
+-- @description function_in_from_join_withfunc2_54.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_imm(func2_sql_int_stb(5)), foo order by 1,2,3; 
+ func1_sql_int_imm | a  | b  
+-------------------+----+----
+                 7 |  1 |  2
+                 7 |  2 |  3
+                 7 |  3 |  4
+                 7 |  4 |  5
+                 7 |  5 |  6
+                 7 |  6 |  7
+                 7 |  7 |  8
+                 7 |  8 |  9
+                 7 |  9 | 10
+                 7 | 10 | 11
+(10 rows)
+
+-- @description function_in_from_join_withfunc2_55.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_imm(func2_sql_int_imm(5)), foo order by 1,2,3; 
+ func1_sql_int_imm | a  | b  
+-------------------+----+----
+                 7 |  1 |  2
+                 7 |  2 |  3
+                 7 |  3 |  4
+                 7 |  4 |  5
+                 7 |  5 |  6
+                 7 |  6 |  7
+                 7 |  7 |  8
+                 7 |  8 |  9
+                 7 |  9 | 10
+                 7 | 10 | 11
+(10 rows)
+
+-- @description function_in_from_join_withfunc2_56.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_imm(func2_read_int_vol(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_join_withfunc2_56.sql:7: ERROR:  function cannot execute on segment because it accesses relation "public.bar" (functions.c:152)  (entry db rh55-qavm20:5432 pid=30030) (cdbdisp.c:1476)
+DETAIL:  
+	 SQL statement "SELECT d FROM bar WHERE c =  $1  LIMIT 1"
+PL/pgSQL function "func2_read_int_vol" line 4 at SQL statement
+-- @description function_in_from_join_withfunc2_57.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_imm(func2_read_int_stb(5)), foo order by 1,2,3; 
+ func1_sql_int_imm | a  | b  
+-------------------+----+----
+                 7 |  1 |  2
+                 7 |  2 |  3
+                 7 |  3 |  4
+                 7 |  4 |  5
+                 7 |  5 |  6
+                 7 |  6 |  7
+                 7 |  7 |  8
+                 7 |  8 |  9
+                 7 |  9 | 10
+                 7 | 10 | 11
+(10 rows)
+
+-- @description function_in_from_join_withfunc2_58.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_imm(func2_mod_int_vol(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_join_withfunc2_58.sql:7: ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:134)  (entry db rh55-qavm20:5432 pid=30189) (cdbdisp.c:1476)
+DETAIL:  
+	 SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
+PL/pgSQL function "func2_mod_int_vol" line 2 at SQL statement
+-- @description function_in_from_join_withfunc2_59.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_int_imm(func2_mod_int_stb(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_join_withfunc2_59.sql:7: ERROR:  UPDATE is not allowed in a non-volatile function
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
+PL/pgSQL function "func2_mod_int_stb" line 2 at SQL statement
+-- @description function_in_from_join_withfunc2_6.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_vol(func2_read_int_vol(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_join_withfunc2_6.sql:7: ERROR:  function cannot execute on segment because it accesses relation "public.bar" (functions.c:152)  (entry db rh55-qavm20:5432 pid=26095) (cdbdisp.c:1476)
+DETAIL:  
+	 SQL statement "SELECT d FROM bar WHERE c =  $1  LIMIT 1"
+PL/pgSQL function "func2_read_int_vol" line 4 at SQL statement
+-- @description function_in_from_join_withfunc2_60.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_vol(func2_nosql_vol(5)), foo order by 1,2,3; 
+ func1_sql_setint_vol | a  | b  
+----------------------+----+----
+                    6 |  1 |  2
+                    6 |  2 |  3
+                    6 |  3 |  4
+                    6 |  4 |  5
+                    6 |  5 |  6
+                    6 |  6 |  7
+                    6 |  7 |  8
+                    6 |  8 |  9
+                    6 |  9 | 10
+                    6 | 10 | 11
+                    7 |  1 |  2
+                    7 |  2 |  3
+                    7 |  3 |  4
+                    7 |  4 |  5
+                    7 |  5 |  6
+                    7 |  6 |  7
+                    7 |  7 |  8
+                    7 |  8 |  9
+                    7 |  9 | 10
+                    7 | 10 | 11
+                    8 |  1 |  2
+                    8 |  2 |  3
+                    8 |  3 |  4
+                    8 |  4 |  5
+                    8 |  5 |  6
+                    8 |  6 |  7
+                    8 |  7 |  8
+                    8 |  8 |  9
+                    8 |  9 | 10
+                    8 | 10 | 11
+                    9 |  1 |  2
+                    9 |  2 |  3
+                    9 |  3 |  4
+                    9 |  4 |  5
+                    9 |  5 |  6
+                    9 |  6 |  7
+                    9 |  7 |  8
+                    9 |  8 |  9
+                    9 |  9 | 10
+                    9 | 10 | 11
+                   10 |  1 |  2
+                   10 |  2 |  3
+                   10 |  3 |  4
+                   10 |  4 |  5
+                   10 |  5 |  6
+                   10 |  6 |  7
+                   10 |  7 |  8
+                   10 |  8 |  9
+                   10 |  9 | 10
+                   10 | 10 | 11
+                   11 |  1 |  2
+                   11 |  2 |  3
+                   11 |  3 |  4
+                   11 |  4 |  5
+                   11 |  5 |  6
+                   11 |  6 |  7
+                   11 |  7 |  8
+                   11 |  8 |  9
+                   11 |  9 | 10
+                   11 | 10 | 11
+(60 rows)
+
+-- @description function_in_from_join_withfunc2_61.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_vol(func2_nosql_stb(5)), foo order by 1,2,3; 
+ func1_sql_setint_vol | a  | b  
+----------------------+----+----
+                    6 |  1 |  2
+                    6 |  2 |  3
+                    6 |  3 |  4
+                    6 |  4 |  5
+                    6 |  5 |  6
+                    6 |  6 |  7
+                    6 |  7 |  8
+                    6 |  8 |  9
+                    6 |  9 | 10
+                    6 | 10 | 11
+                    7 |  1 |  2
+                    7 |  2 |  3
+                    7 |  3 |  4
+                    7 |  4 |  5
+                    7 |  5 |  6
+                    7 |  6 |  7
+                    7 |  7 |  8
+                    7 |  8 |  9
+                    7 |  9 | 10
+                    7 | 10 | 11
+                    8 |  1 |  2
+                    8 |  2 |  3
+                    8 |  3 |  4
+                    8 |  4 |  5
+                    8 |  5 |  6
+                    8 |  6 |  7
+                    8 |  7 |  8
+                    8 |  8 |  9
+                    8 |  9 | 10
+                    8 | 10 | 11
+                    9 |  1 |  2
+                    9 |  2 |  3
+                    9 |  3 |  4
+                    9 |  4 |  5
+                    9 |  5 |  6
+                    9 |  6 |  7
+                    9 |  7 |  8
+                    9 |  8 |  9
+                    9 |  9 | 10
+                    9 | 10 | 11
+                   10 |  1 |  2
+                   10 |  2 |  3
+                   10 |  3 |  4
+                   10 |  4 |  5
+                   10 |  5 |  6
+                   10 |  6 |  7
+                   10 |  7 |  8
+                   10 |  8 |  9
+                   10 |  9 | 10
+                   10 | 10 | 11
+                   11 |  1 |  2
+                   11 |  2 |  3
+                   11 |  3 |  4
+                   11 |  4 |  5
+                   11 |  5 |  6
+                   11 |  6 |  7
+                   11 |  7 |  8
+                   11 |  8 |  9
+                   11 |  9 | 10
+                   11 | 10 | 11
+(60 rows)
+
+-- @description function_in_from_join_withfunc2_62.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_vol(func2_nosql_imm(5)), foo order by 1,2,3; 
+ func1_sql_setint_vol | a  | b  
+----------------------+----+----
+                    6 |  1 |  2
+                    6 |  2 |  3
+                    6 |  3 |  4
+                    6 |  4 |  5
+                    6 |  5 |  6
+                    6 |  6 |  7
+                    6 |  7 |  8
+                    6 |  8 |  9
+                    6 |  9 | 10
+                    6 | 10 | 11
+                    7 |  1 |  2
+                    7 |  2 |  3
+                    7 |  3 |  4
+                    7 |  4 |  5
+                    7 |  5 |  6
+                    7 |  6 |  7
+                    7 |  7 |  8
+                    7 |  8 |  9
+                    7 |  9 | 10
+                    7 | 10 | 11
+                    8 |  1 |  2
+                    8 |  2 |  3
+                    8 |  3 |  4
+                    8 |  4 |  5
+                    8 |  5 |  6
+                    8 |  6 |  7
+                    8 |  7 |  8
+                    8 |  8 |  9
+                    8 |  9 | 10
+                    8 | 10 | 11
+                    9 |  1 |  2
+                    9 |  2 |  3
+                    9 |  3 |  4
+                    9 |  4 |  5
+                    9 |  5 |  6
+                    9 |  6 |  7
+                    9 |  7 |  8
+                    9 |  8 |  9
+                    9 |  9 | 10
+                    9 | 10 | 11
+                   10 |  1 |  2
+                   10 |  2 |  3
+                   10 |  3 |  4
+                   10 |  4 |  5
+                   10 |  5 |  6
+                   10 |  6 |  7
+                   10 |  7 |  8
+                   10 |  8 |  9
+                   10 |  9 | 10
+                   10 | 10 | 11
+                   11 |  1 |  2
+                   11 |  2 |  3
+                   11 |  3 |  4
+                   11 |  4 |  5
+                   11 |  5 |  6
+                   11 |  6 |  7
+                   11 |  7 |  8
+                   11 |  8 |  9
+                   11 |  9 | 10
+                   11 | 10 | 11
+(60 rows)
+
+-- @description function_in_from_join_withfunc2_63.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_vol(func2_sql_int_vol(5)), foo order by 1,2,3; 
+ func1_sql_setint_vol | a  | b  
+----------------------+----+----
+                    6 |  1 |  2
+                    6 |  2 |  3
+                    6 |  3 |  4
+                    6 |  4 |  5
+                    6 |  5 |  6
+                    6 |  6 |  7
+                    6 |  7 |  8
+                    6 |  8 |  9
+                    6 |  9 | 10
+                    6 | 10 | 11
+                    7 |  1 |  2
+                    7 |  2 |  3
+                    7 |  3 |  4
+                    7 |  4 |  5
+                    7 |  5 |  6
+                    7 |  6 |  7
+                    7 |  7 |  8
+                    7 |  8 |  9
+                    7 |  9 | 10
+                    7 | 10 | 11
+                    8 |  1 |  2
+                    8 |  2 |  3
+                    8 |  3 |  4
+                    8 |  4 |  5
+                    8 |  5 |  6
+                    8 |  6 |  7
+                    8 |  7 |  8
+                    8 |  8 |  9
+                    8 |  9 | 10
+                    8 | 10 | 11
+                    9 |  1 |  2
+                    9 |  2 |  3
+                    9 |  3 |  4
+                    9 |  4 |  5
+                    9 |  5 |  6
+                    9 |  6 |  7
+                    9 |  7 |  8
+                    9 |  8 |  9
+                    9 |  9 | 10
+                    9 | 10 | 11
+                   10 |  1 |  2
+                   10 |  2 |  3
+                   10 |  3 |  4
+                   10 |  4 |  5
+                   10 |  5 |  6
+                   10 |  6 |  7
+                   10 |  7 |  8
+                   10 |  8 |  9
+                   10 |  9 | 10
+                   10 | 10 | 11
+                   11 |  1 |  2
+                   11 |  2 |  3
+                   11 |  3 |  4
+                   11 |  4 |  5
+                   11 |  5 |  6
+                   11 |  6 |  7
+                   11 |  7 |  8
+                   11 |  8 |  9
+                   11 |  9 | 10
+                   11 | 10 | 11
+(60 rows)
+
+-- @description function_in_from_join_withfunc2_64.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_vol(func2_sql_int_stb(5)), foo order by 1,2,3; 
+ func1_sql_setint_vol | a  | b  
+----------------------+----+----
+                    6 |  1 |  2
+                    6 |  2 |  3
+                    6 |  3 |  4
+                    6 |  4 |  5
+                    6 |  5 |  6
+                    6 |  6 |  7
+                    6 |  7 |  8
+                    6 |  8 |  9
+                    6 |  9 | 10
+                    6 | 10 | 11
+                    7 |  1 |  2
+                    7 |  2 |  3
+                    7 |  3 |  4
+                    7 |  4 |  5
+                    7 |  5 |  6
+                    7 |  6 |  7
+                    7 |  7 |  8
+                    7 |  8 |  9
+                    7 |  9 | 10
+                    7 | 10 | 11
+                    8 |  1 |  2
+                    8 |  2 |  3
+                    8 |  3 |  4
+                    8 |  4 |  5
+                    8 |  5 |  6
+                    8 |  6 |  7
+                    8 |  7 |  8
+                    8 |  8 |  9
+                    8 |  9 | 10
+                    8 | 10 | 11
+                    9 |  1 |  2
+                    9 |  2 |  3
+                    9 |  3 |  4
+                    9 |  4 |  5
+                    9 |  5 |  6
+                    9 |  6 |  7
+                    9 |  7 |  8
+                    9 |  8 |  9
+                    9 |  9 | 10
+                    9 | 10 | 11
+                   10 |  1 |  2
+                   10 |  2 |  3
+                   10 |  3 |  4
+                   10 |  4 |  5
+                   10 |  5 |  6
+                   10 |  6 |  7
+                   10 |  7 |  8
+                   10 |  8 |  9
+                   10 |  9 | 10
+                   10 | 10 | 11
+                   11 |  1 |  2
+                   11 |  2 |  3
+                   11 |  3 |  4
+                   11 |  4 |  5
+                   11 |  5 |  6
+                   11 |  6 |  7
+                   11 |  7 |  8
+                   11 |  8 |  9
+                   11 |  9 | 10
+                   11 | 10 | 11
+(60 rows)
+
+-- @description function_in_from_join_withfunc2_65.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_vol(func2_sql_int_imm(5)), foo order by 1,2,3; 
+ func1_sql_setint_vol | a  | b  
+----------------------+----+----
+                    6 |  1 |  2
+                    6 |  2 |  3
+                    6 |  3 |  4
+                    6 |  4 |  5
+                    6 |  5 |  6
+                    6 |  6 |  7
+                    6 |  7 |  8
+                    6 |  8 |  9
+                    6 |  9 | 10
+                    6 | 10 | 11
+                    7 |  1 |  2
+                    7 |  2 |  3
+                    7 |  3 |  4
+                    7 |  4 |  5
+                    7 |  5 |  6
+                    7 |  6 |  7
+                    7 |  7 |  8
+                    7 |  8 |  9
+                    7 |  9 | 10
+                    7 | 10 | 11
+                    8 |  1 |  2
+                    8 |  2 |  3
+                    8 |  3 |  4
+                    8 |  4 |  5
+                    8 |  5 |  6
+                    8 |  6 |  7
+                    8 |  7 |  8
+                    8 |  8 |  9
+                    8 |  9 | 10
+                    8 | 10 | 11
+                    9 |  1 |  2
+                    9 |  2 |  3
+                    9 |  3 |  4
+                    9 |  4 |  5
+                    9 |  5 |  6
+                    9 |  6 |  7
+                    9 |  7 |  8
+                    9 |  8 |  9
+                    9 |  9 | 10
+                    9 | 10 | 11
+                   10 |  1 |  2
+                   10 |  2 |  3
+                   10 |  3 |  4
+                   10 |  4 |  5
+                   10 |  5 |  6
+                   10 |  6 |  7
+                   10 |  7 |  8
+                   10 |  8 |  9
+                   10 |  9 | 10
+                   10 | 10 | 11
+                   11 |  1 |  2
+                   11 |  2 |  3
+                   11 |  3 |  4
+                   11 |  4 |  5
+                   11 |  5 |  6
+                   11 |  6 |  7
+                   11 |  7 |  8
+                   11 |  8 |  9
+                   11 |  9 | 10
+                   11 | 10 | 11
+(60 rows)
+
+-- start_ignore
+-- end_ignore
+-- @description function_in_from_join_withfunc2_66.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties 
+SELECT * FROM func1_sql_setint_vol(func2_read_int_vol(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tincrepo/main/functions/functionProperty/output/function_in_from_join_withfunc2_66.sql:11: ERROR:  query plan with multiple segworker groups is not supported (cdbdisp.c:505)
+HINT:  likely caused by a function that reads or modifies data in a distributed table
+CONTEXT:  SQL statement "SELECT d FROM bar WHERE c =  $1  LIMIT 1"
+PL/pgSQL function "func2_read_int_vol" line 4 at SQL statement
+-- @description function_in_from_join_withfunc2_67.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_vol(func2_read_int_stb(5)), foo order by 1,2,3; 
+ func1_sql_setint_vol | a  | b  
+----------------------+----+----
+                    6 |  1 |  2
+                    6 |  2 |  3
+                    6 |  3 |  4
+                    6 |  4 |  5
+                    6 |  5 |  6
+                    6 |  6 |  7
+                    6 |  7 |  8
+                    6 |  8 |  9
+                    6 |  9 | 10
+                    6 | 10 | 11
+                    7 |  1 |  2
+                    7 |  2 |  3
+                    7 |  3 |  4
+                    7 |  4 |  5
+                    7 |  5 |  6
+                    7 |  6 |  7
+                    7 |  7 |  8
+                    7 |  8 |  9
+                    7 |  9 | 10
+                    7 | 10 | 11
+                    8 |  1 |  2
+                    8 |  2 |  3
+                    8 |  3 |  4
+                    8 |  4 |  5
+                    8 |  5 |  6
+                    8 |  6 |  7
+                    8 |  7 |  8
+                    8 |  8 |  9
+                    8 |  9 | 10
+                    8 | 10 | 11
+                    9 |  1 |  2
+                    9 |  2 |  3
+                    9 |  3 |  4
+                    9 |  4 |  5
+                    9 |  5 |  6
+                    9 |  6 |  7
+                    9 |  7 |  8
+                    9 |  8 |  9
+                    9 |  9 | 10
+                    9 | 10 | 11
+                   10 |  1 |  2
+                   10 |  2 |  3
+                   10 |  3 |  4
+                   10 |  4 |  5
+                   10 |  5 |  6
+                   10 |  6 |  7
+                   10 |  7 |  8
+                   10 |  8 |  9
+                   10 |  9 | 10
+                   10 | 10 | 11
+                   11 |  1 |  2
+                   11 |  2 |  3
+                   11 |  3 |  4
+                   11 |  4 |  5
+                   11 |  5 |  6
+                   11 |  6 |  7
+                   11 |  7 |  8
+                   11 |  8 |  9
+                   11 |  9 | 10
+                   11 | 10 | 11
+(60 rows)
+
+-- start_ignore
+-- end_ignore
+-- @description function_in_from_join_withfunc2_68.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties 
+SELECT * FROM func1_sql_setint_vol(func2_mod_int_vol(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tincrepo/main/functions/functionProperty/output/function_in_from_join_withfunc2_68.sql:11: ERROR:  query plan with multiple segworker groups is not supported (cdbdisp.c:505)
+HINT:  likely caused by a function that reads or modifies data in a distributed table
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
+PL/pgSQL function "func2_mod_int_vol" line 2 at SQL statement
+-- @description function_in_from_join_withfunc2_69.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_vol(func2_mod_int_stb(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_join_withfunc2_69.sql:7: ERROR:  UPDATE is not allowed in a non-volatile function
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
+PL/pgSQL function "func2_mod_int_stb" line 2 at SQL statement
+-- @description function_in_from_join_withfunc2_7.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_vol(func2_read_int_stb(5)), foo order by 1,2,3; 
+ func1_nosql_vol | a  | b  
+-----------------+----+----
+               7 |  1 |  2
+               7 |  2 |  3
+               7 |  3 |  4
+               7 |  4 |  5
+               7 |  5 |  6
+               7 |  6 |  7
+               7 |  7 |  8
+               7 |  8 |  9
+               7 |  9 | 10
+               7 | 10 | 11
+(10 rows)
+
+-- @description function_in_from_join_withfunc2_70.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_stb(func2_nosql_vol(5)), foo order by 1,2,3; 
+ func1_sql_setint_stb | a  | b  
+----------------------+----+----
+                    6 |  1 |  2
+                    6 |  2 |  3
+                    6 |  3 |  4
+                    6 |  4 |  5
+                    6 |  5 |  6
+                    6 |  6 |  7
+                    6 |  7 |  8
+                    6 |  8 |  9
+                    6 |  9 | 10
+                    6 | 10 | 11
+                    7 |  1 |  2
+                    7 |  2 |  3
+                    7 |  3 |  4
+                    7 |  4 |  5
+                    7 |  5 |  6
+                    7 |  6 |  7
+                    7 |  7 |  8
+                    7 |  8 |  9
+                    7 |  9 | 10
+                    7 | 10 | 11
+                    8 |  1 |  2
+                    8 |  2 |  3
+                    8 |  3 |  4
+                    8 |  4 |  5
+                    8 |  5 |  6
+                    8 |  6 |  7
+                    8 |  7 |  8
+                    8 |  8 |  9
+                    8 |  9 | 10
+                    8 | 10 | 11
+                    9 |  1 |  2
+                    9 |  2 |  3
+                    9 |  3 |  4
+                    9 |  4 |  5
+                    9 |  5 |  6
+                    9 |  6 |  7
+                    9 |  7 |  8
+                    9 |  8 |  9
+                    9 |  9 | 10
+                    9 | 10 | 11
+                   10 |  1 |  2
+                   10 |  2 |  3
+                   10 |  3 |  4
+                   10 |  4 |  5
+                   10 |  5 |  6
+                   10 |  6 |  7
+                   10 |  7 |  8
+                   10 |  8 |  9
+                   10 |  9 | 10
+                   10 | 10 | 11
+                   11 |  1 |  2
+                   11 |  2 |  3
+                   11 |  3 |  4
+                   11 |  4 |  5
+                   11 |  5 |  6
+                   11 |  6 |  7
+                   11 |  7 |  8
+                   11 |  8 |  9
+                   11 |  9 | 10
+                   11 | 10 | 11
+(60 rows)
+
+-- @description function_in_from_join_withfunc2_71.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_stb(func2_nosql_stb(5)), foo order by 1,2,3; 
+ func1_sql_setint_stb | a  | b  
+----------------------+----+----
+                    6 |  1 |  2
+                    6 |  2 |  3
+                    6 |  3 |  4
+                    6 |  4 |  5
+                    6 |  5 |  6
+                    6 |  6 |  7
+                    6 |  7 |  8
+                    6 |  8 |  9
+                    6 |  9 | 10
+                    6 | 10 | 11
+                    7 |  1 |  2
+                    7 |  2 |  3
+                    7 |  3 |  4
+                    7 |  4 |  5
+                    7 |  5 |  6
+                    7 |  6 |  7
+                    7 |  7 |  8
+                    7 |  8 |  9
+                    7 |  9 | 10
+                    7 | 10 | 11
+                    8 |  1 |  2
+                    8 |  2 |  3
+                    8 |  3 |  4
+                    8 |  4 |  5
+                    8 |  5 |  6
+                    8 |  6 |  7
+                    8 |  7 |  8
+                    8 |  8 |  9
+                    8 |  9 | 10
+                    8 | 10 | 11
+                    9 |  1 |  2
+                    9 |  2 |  3
+                    9 |  3 |  4
+                    9 |  4 |  5
+                    9 |  5 |  6
+                    9 |  6 |  7
+                    9 |  7 |  8
+                    9 |  8 |  9
+                    9 |  9 | 10
+                    9 | 10 | 11
+                   10 |  1 |  2
+                   10 |  2 |  3
+                   10 |  3 |  4
+                   10 |  4 |  5
+                   10 |  5 |  6
+                   10 |  6 |  7
+                   10 |  7 |  8
+                   10 |  8 |  9
+                   10 |  9 | 10
+                   10 | 10 | 11
+                   11 |  1 |  2
+                   11 |  2 |  3
+                   11 |  3 |  4
+                   11 |  4 |  5
+                   11 |  5 |  6
+                   11 |  6 |  7
+                   11 |  7 |  8
+                   11 |  8 |  9
+                   11 |  9 | 10
+                   11 | 10 | 11
+(60 rows)
+
+-- @description function_in_from_join_withfunc2_72.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_stb(func2_nosql_imm(5)), foo order by 1,2,3; 
+ func1_sql_setint_stb | a  | b  
+----------------------+----+----
+                    6 |  1 |  2
+                    6 |  2 |  3
+                    6 |  3 |  4
+                    6 |  4 |  5
+                    6 |  5 |  6
+                    6 |  6 |  7
+                    6 |  7 |  8
+                    6 |  8 |  9
+                    6 |  9 | 10
+                    6 | 10 | 11
+                    7 |  1 |  2
+                    7 |  2 |  3
+                    7 |  3 |  4
+                    7 |  4 |  5
+                    7 |  5 |  6
+                    7 |  6 |  7
+                    7 |  7 |  8
+                    7 |  8 |  9
+                    7 |  9 | 10
+                    7 | 10 | 11
+                    8 |  1 |  2
+                    8 |  2 |  3
+                    8 |  3 |  4
+                    8 |  4 |  5
+                    8 |  5 |  6
+                    8 |  6 |  7
+                    8 |  7 |  8
+                    8 |  8 |  9
+                    8 |  9 | 10
+                    8 | 10 | 11
+                    9 |  1 |  2
+                    9 |  2 |  3
+                    9 |  3 |  4
+                    9 |  4 |  5
+                    9 |  5 |  6
+                    9 |  6 |  7
+                    9 |  7 |  8
+                    9 |  8 |  9
+                    9 |  9 | 10
+                    9 | 10 | 11
+                   10 |  1 |  2
+                   10 |  2 |  3
+                   10 |  3 |  4
+                   10 |  4 |  5
+                   10 |  5 |  6
+                   10 |  6 |  7
+                   10 |  7 |  8
+                   10 |  8 |  9
+                   10 |  9 | 10
+                   10 | 10 | 11
+                   11 |  1 |  2
+                   11 |  2 |  3
+                   11 |  3 |  4
+                   11 |  4 |  5
+                   11 |  5 |  6
+                   11 |  6 |  7
+                   11 |  7 |  8
+                   11 |  8 |  9
+                   11 |  9 | 10
+                   11 | 10 | 11
+(60 rows)
+
+-- @description function_in_from_join_withfunc2_73.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_stb(func2_sql_int_vol(5)), foo order by 1,2,3; 
+ func1_sql_setint_stb | a  | b  
+----------------------+----+----
+                    6 |  1 |  2
+                    6 |  2 |  3
+                    6 |  3 |  4
+                    6 |  4 |  5
+                    6 |  5 |  6
+                    6 |  6 |  7
+                    6 |  7 |  8
+                    6 |  8 |  9
+                    6 |  9 | 10
+                    6 | 10 | 11
+                    7 |  1 |  2
+                    7 |  2 |  3
+                    7 |  3 |  4
+                    7 |  4 |  5
+                    7 |  5 |  6
+                    7 |  6 |  7
+                    7 |  7 |  8
+                    7 |  8 |  9
+                    7 |  9 | 10
+                    7 | 10 | 11
+                    8 |  1 |  2
+                    8 |  2 |  3
+                    8 |  3 |  4
+                    8 |  4 |  5
+                    8 |  5 |  6
+                    8 |  6 |  7
+                    8 |  7 |  8
+                    8 |  8 |  9
+                    8 |  9 | 10
+                    8 | 10 | 11
+                    9 |  1 |  2
+                    9 |  2 |  3
+                    9 |  3 |  4
+                    9 |  4 |  5
+                    9 |  5 |  6
+                    9 |  6 |  7
+                    9 |  7 |  8
+                    9 |  8 |  9
+                    9 |  9 | 10
+                    9 | 10 | 11
+                   10 |  1 |  2
+                   10 |  2 |  3
+                   10 |  3 |  4
+                   10 |  4 |  5
+                   10 |  5 |  6
+                   10 |  6 |  7
+                   10 |  7 |  8
+                   10 |  8 |  9
+                   10 |  9 | 10
+                   10 | 10 | 11
+                   11 |  1 |  2
+                   11 |  2 |  3
+                   11 |  3 |  4
+                   11 |  4 |  5
+                   11 |  5 |  6
+                   11 |  6 |  7
+                   11 |  7 |  8
+                   11 |  8 |  9
+                   11 |  9 | 10
+                   11 | 10 | 11
+(60 rows)
+
+-- @description function_in_from_join_withfunc2_74.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_stb(func2_sql_int_stb(5)), foo order by 1,2,3; 
+ func1_sql_setint_stb | a  | b  
+----------------------+----+----
+                    6 |  1 |  2
+                    6 |  2 |  3
+                    6 |  3 |  4
+                    6 |  4 |  5
+                    6 |  5 |  6
+                    6 |  6 |  7
+                    6 |  7 |  8
+                    6 |  8 |  9
+                    6 |  9 | 10
+                    6 | 10 | 11
+                    7 |  1 |  2
+                    7 |  2 |  3
+                    7 |  3 |  4
+                    7 |  4 |  5
+                    7 |  5 |  6
+                    7 |  6 |  7
+                    7 |  7 |  8
+                    7 |  8 |  9
+                    7 |  9 | 10
+                    7 | 10 | 11
+                    8 |  1 |  2
+                    8 |  2 |  3
+                    8 |  3 |  4
+                    8 |  4 |  5
+                    8 |  5 |  6
+                    8 |  6 |  7
+                    8 |  7 |  8
+                    8 |  8 |  9
+                    8 |  9 | 10
+                    8 | 10 | 11
+                    9 |  1 |  2
+                    9 |  2 |  3
+                    9 |  3 |  4
+                    9 |  4 |  5
+                    9 |  5 |  6
+                    9 |  6 |  7
+                    9 |  7 |  8
+                    9 |  8 |  9
+                    9 |  9 | 10
+                    9 | 10 | 11
+                   10 |  1 |  2
+                   10 |  2 |  3
+                   10 |  3 |  4
+                   10 |  4 |  5
+                   10 |  5 |  6
+                   10 |  6 |  7
+                   10 |  7 |  8
+                   10 |  8 |  9
+                   10 |  9 | 10
+                   10 | 10 | 11
+                   11 |  1 |  2
+                   11 |  2 |  3
+                   11 |  3 |  4
+                   11 |  4 |  5
+                   11 |  5 |  6
+                   11 |  6 |  7
+                   11 |  7 |  8
+                   11 |  8 |  9
+                   11 |  9 | 10
+                   11 | 10 | 11
+(60 rows)
+
+-- @description function_in_from_join_withfunc2_75.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_stb(func2_sql_int_imm(5)), foo order by 1,2,3; 
+ func1_sql_setint_stb | a  | b  
+----------------------+----+----
+                    6 |  1 |  2
+                    6 |  2 |  3
+                    6 |  3 |  4
+                    6 |  4 |  5
+                    6 |  5 |  6
+                    6 |  6 |  7
+                    6 |  7 |  8
+                    6 |  8 |  9
+                    6 |  9 | 10
+                    6 | 10 | 11
+                    7 |  1 |  2
+                    7 |  2 |  3
+                    7 |  3 |  4
+                    7 |  4 |  5
+                    7 |  5 |  6
+                    7 |  6 |  7
+                    7 |  7 |  8
+                    7 |  8 |  9
+                    7 |  9 | 10
+                    7 | 10 | 11
+                    8 |  1 |  2
+                    8 |  2 |  3
+                    8 |  3 |  4
+                    8 |  4 |  5
+                    8 |  5 |  6
+                    8 |  6 |  7
+                    8 |  7 |  8
+                    8 |  8 |  9
+                    8 |  9 | 10
+                    8 | 10 | 11
+                    9 |  1 |  2
+                    9 |  2 |  3
+                    9 |  3 |  4
+                    9 |  4 |  5
+                    9 |  5 |  6
+                    9 |  6 |  7
+                    9 |  7 |  8
+                    9 |  8 |  9
+                    9 |  9 | 10
+                    9 | 10 | 11
+                   10 |  1 |  2
+                   10 |  2 |  3
+                   10 |  3 |  4
+                   10 |  4 |  5
+                   10 |  5 |  6
+                   10 |  6 |  7
+                   10 |  7 |  8
+                   10 |  8 |  9
+                   10 |  9 | 10
+                   10 | 10 | 11
+                   11 |  1 |  2
+                   11 |  2 |  3
+                   11 |  3 |  4
+                   11 |  4 |  5
+                   11 |  5 |  6
+                   11 |  6 |  7
+                   11 |  7 |  8
+                   11 |  8 |  9
+                   11 |  9 | 10
+                   11 | 10 | 11
+(60 rows)
+
+-- start_ignore
+-- end_ignore
+-- @description function_in_from_join_withfunc2_76.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties 
+SELECT * FROM func1_sql_setint_stb(func2_read_int_vol(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tincrepo/main/functions/functionProperty/output/function_in_from_join_withfunc2_76.sql:11: ERROR:  query plan with multiple segworker groups is not supported (cdbdisp.c:505)
+HINT:  likely caused by a function that reads or modifies data in a distributed table
+CONTEXT:  SQL statement "SELECT d FROM bar WHERE c =  $1  LIMIT 1"
+PL/pgSQL function "func2_read_int_vol" line 4 at SQL statement
+-- @description function_in_from_join_withfunc2_77.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_stb(func2_read_int_stb(5)), foo order by 1,2,3; 
+ func1_sql_setint_stb | a  | b  
+----------------------+----+----
+                    6 |  1 |  2
+                    6 |  2 |  3
+                    6 |  3 |  4
+                    6 |  4 |  5
+                    6 |  5 |  6
+                    6 |  6 |  7
+                    6 |  7 |  8
+                    6 |  8 |  9
+                    6 |  9 | 10
+                    6 | 10 | 11
+                    7 |  1 |  2
+                    7 |  2 |  3
+                    7 |  3 |  4
+                    7 |  4 |  5
+                    7 |  5 |  6
+                    7 |  6 |  7
+                    7 |  7 |  8
+                    7 |  8 |  9
+                    7 |  9 | 10
+                    7 | 10 | 11
+                    8 |  1 |  2
+                    8 |  2 |  3
+                    8 |  3 |  4
+                    8 |  4 |  5
+                    8 |  5 |  6
+                    8 |  6 |  7
+                    8 |  7 |  8
+                    8 |  8 |  9
+                    8 |  9 | 10
+                    8 | 10 | 11
+                    9 |  1 |  2
+                    9 |  2 |  3
+                    9 |  3 |  4
+                    9 |  4 |  5
+                    9 |  5 |  6
+                    9 |  6 |  7
+                    9 |  7 |  8
+                    9 |  8 |  9
+                    9 |  9 | 10
+                    9 | 10 | 11
+                   10 |  1 |  2
+                   10 |  2 |  3
+                   10 |  3 |  4
+                   10 |  4 |  5
+                   10 |  5 |  6
+                   10 |  6 |  7
+                   10 |  7 |  8
+                   10 |  8 |  9
+                   10 |  9 | 10
+                   10 | 10 | 11
+                   11 |  1 |  2
+                   11 |  2 |  3
+                   11 |  3 |  4
+                   11 |  4 |  5
+                   11 |  5 |  6
+                   11 |  6 |  7
+                   11 |  7 |  8
+                   11 |  8 |  9
+                   11 |  9 | 10
+                   11 | 10 | 11
+(60 rows)
+
+-- start_ignore
+-- end_ignore
+-- @description function_in_from_join_withfunc2_78.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties 
+SELECT * FROM func1_sql_setint_stb(func2_mod_int_vol(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tincrepo/main/functions/functionProperty/output/function_in_from_join_withfunc2_78.sql:11: ERROR:  query plan with multiple segworker groups is not supported (cdbdisp.c:505)
+HINT:  likely caused by a function that reads or modifies data in a distributed table
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
+PL/pgSQL function "func2_mod_int_vol" line 2 at SQL statement
+-- @description function_in_from_join_withfunc2_79.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_stb(func2_mod_int_stb(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_join_withfunc2_79.sql:7: ERROR:  UPDATE is not allowed in a non-volatile function
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
+PL/pgSQL function "func2_mod_int_stb" line 2 at SQL statement
+-- @description function_in_from_join_withfunc2_8.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_vol(func2_mod_int_vol(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_join_withfunc2_8.sql:7: ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:134)  (entry db rh55-qavm20:5432 pid=26258) (cdbdisp.c:1476)
+DETAIL:  
+	 SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
+PL/pgSQL function "func2_mod_int_vol" line 2 at SQL statement
+-- @description function_in_from_join_withfunc2_80.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_imm(func2_nosql_vol(5)), foo order by 1,2,3; 
+ func1_sql_setint_imm | a  | b  
+----------------------+----+----
+                    6 |  1 |  2
+                    6 |  2 |  3
+                    6 |  3 |  4
+                    6 |  4 |  5
+                    6 |  5 |  6
+                    6 |  6 |  7
+                    6 |  7 |  8
+                    6 |  8 |  9
+                    6 |  9 | 10
+                    6 | 10 | 11
+                    7 |  1 |  2
+                    7 |  2 |  3
+                    7 |  3 |  4
+                    7 |  4 |  5
+                    7 |  5 |  6
+                    7 |  6 |  7
+                    7 |  7 |  8
+                    7 |  8 |  9
+                    7 |  9 | 10
+                    7 | 10 | 11
+                    8 |  1 |  2
+                    8 |  2 |  3
+                    8 |  3 |  4
+                    8 |  4 |  5
+                    8 |  5 |  6
+                    8 |  6 |  7
+                    8 |  7 |  8
+                    8 |  8 |  9
+                    8 |  9 | 10
+                    8 | 10 | 11
+                    9 |  1 |  2
+                    9 |  2 |  3
+                    9 |  3 |  4
+                    9 |  4 |  5
+                    9 |  5 |  6
+                    9 |  6 |  7
+                    9 |  7 |  8
+                    9 |  8 |  9
+                    9 |  9 | 10
+                    9 | 10 | 11
+                   10 |  1 |  2
+                   10 |  2 |  3
+                   10 |  3 |  4
+                   10 |  4 |  5
+                   10 |  5 |  6
+                   10 |  6 |  7
+                   10 |  7 |  8
+                   10 |  8 |  9
+                   10 |  9 | 10
+                   10 | 10 | 11
+                   11 |  1 |  2
+                   11 |  2 |  3
+                   11 |  3 |  4
+                   11 |  4 |  5
+                   11 |  5 |  6
+                   11 |  6 |  7
+                   11 |  7 |  8
+                   11 |  8 |  9
+                   11 |  9 | 10
+                   11 | 10 | 11
+(60 rows)
+
+-- @description function_in_from_join_withfunc2_81.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_imm(func2_nosql_stb(5)), foo order by 1,2,3; 
+ func1_sql_setint_imm | a  | b  
+----------------------+----+----
+                    6 |  1 |  2
+                    6 |  2 |  3
+                    6 |  3 |  4
+                    6 |  4 |  5
+                    6 |  5 |  6
+                    6 |  6 |  7
+                    6 |  7 |  8
+                    6 |  8 |  9
+                    6 |  9 | 10
+                    6 | 10 | 11
+                    7 |  1 |  2
+                    7 |  2 |  3
+                    7 |  3 |  4
+                    7 |  4 |  5
+                    7 |  5 |  6
+                    7 |  6 |  7
+                    7 |  7 |  8
+                    7 |  8 |  9
+                    7 |  9 | 10
+                    7 | 10 | 11
+                    8 |  1 |  2
+                    8 |  2 |  3
+                    8 |  3 |  4
+                    8 |  4 |  5
+                    8 |  5 |  6
+                    8 |  6 |  7
+                    8 |  7 |  8
+                    8 |  8 |  9
+                    8 |  9 | 10
+                    8 | 10 | 11
+                    9 |  1 |  2
+                    9 |  2 |  3
+                    9 |  3 |  4
+                    9 |  4 |  5
+                    9 |  5 |  6
+                    9 |  6 |  7
+                    9 |  7 |  8
+                    9 |  8 |  9
+                    9 |  9 | 10
+                    9 | 10 | 11
+                   10 |  1 |  2
+                   10 |  2 |  3
+                   10 |  3 |  4
+                   10 |  4 |  5
+                   10 |  5 |  6
+                   10 |  6 |  7
+                   10 |  7 |  8
+                   10 |  8 |  9
+                   10 |  9 | 10
+                   10 | 10 | 11
+                   11 |  1 |  2
+                   11 |  2 |  3
+                   11 |  3 |  4
+                   11 |  4 |  5
+                   11 |  5 |  6
+                   11 |  6 |  7
+                   11 |  7 |  8
+                   11 |  8 |  9
+                   11 |  9 | 10
+                   11 | 10 | 11
+(60 rows)
+
+-- @description function_in_from_join_withfunc2_82.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_imm(func2_nosql_imm(5)), foo order by 1,2,3; 
+ func1_sql_setint_imm | a  | b  
+----------------------+----+----
+                    6 |  1 |  2
+                    6 |  2 |  3
+                    6 |  3 |  4
+                    6 |  4 |  5
+                    6 |  5 |  6
+                    6 |  6 |  7
+                    6 |  7 |  8
+                    6 |  8 |  9
+                    6 |  9 | 10
+                    6 | 10 | 11
+                    7 |  1 |  2
+                    7 |  2 |  3
+                    7 |  3 |  4
+                    7 |  4 |  5
+                    7 |  5 |  6
+                    7 |  6 |  7
+                    7 |  7 |  8
+                    7 |  8 |  9
+                    7 |  9 | 10
+                    7 | 10 | 11
+                    8 |  1 |  2
+                    8 |  2 |  3
+                    8 |  3 |  4
+                    8 |  4 |  5
+                    8 |  5 |  6
+                    8 |  6 |  7
+                    8 |  7 |  8
+                    8 |  8 |  9
+                    8 |  9 | 10
+                    8 | 10 | 11
+                    9 |  1 |  2
+                    9 |  2 |  3
+                    9 |  3 |  4
+                    9 |  4 |  5
+                    9 |  5 |  6
+                    9 |  6 |  7
+                    9 |  7 |  8
+                    9 |  8 |  9
+                    9 |  9 | 10
+                    9 | 10 | 11
+                   10 |  1 |  2
+                   10 |  2 |  3
+                   10 |  3 |  4
+                   10 |  4 |  5
+                   10 |  5 |  6
+                   10 |  6 |  7
+                   10 |  7 |  8
+                   10 |  8 |  9
+                   10 |  9 | 10
+                   10 | 10 | 11
+                   11 |  1 |  2
+                   11 |  2 |  3
+                   11 |  3 |  4
+                   11 |  4 |  5
+                   11 |  5 |  6
+                   11 |  6 |  7
+                   11 |  7 |  8
+                   11 |  8 |  9
+                   11 |  9 | 10
+                   11 | 10 | 11
+(60 rows)
+
+-- @description function_in_from_join_withfunc2_83.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_imm(func2_sql_int_vol(5)), foo order by 1,2,3; 
+ func1_sql_setint_imm | a  | b  
+----------------------+----+----
+                    6 |  1 |  2
+                    6 |  2 |  3
+                    6 |  3 |  4
+                    6 |  4 |  5
+                    6 |  5 |  6
+                    6 |  6 |  7
+                    6 |  7 |  8
+                    6 |  8 |  9
+                    6 |  9 | 10
+                    6 | 10 | 11
+                    7 |  1 |  2
+                    7 |  2 |  3
+                    7 |  3 |  4
+                    7 |  4 |  5
+                    7 |  5 |  6
+                    7 |  6 |  7
+                    7 |  7 |  8
+                    7 |  8 |  9
+                    7 |  9 | 10
+                    7 | 10 | 11
+                    8 |  1 |  2
+                    8 |  2 |  3
+                    8 |  3 |  4
+                    8 |  4 |  5
+                    8 |  5 |  6
+                    8 |  6 |  7
+                    8 |  7 |  8
+                    8 |  8 |  9
+                    8 |  9 | 10
+                    8 | 10 | 11
+                    9 |  1 |  2
+                    9 |  2 |  3
+                    9 |  3 |  4
+                    9 |  4 |  5
+                    9 |  5 |  6
+                    9 |  6 |  7
+                    9 |  7 |  8
+                    9 |  8 |  9
+                    9 |  9 | 10
+                    9 | 10 | 11
+                   10 |  1 |  2
+                   10 |  2 |  3
+                   10 |  3 |  4
+                   10 |  4 |  5
+                   10 |  5 |  6
+                   10 |  6 |  7
+                   10 |  7 |  8
+                   10 |  8 |  9
+                   10 |  9 | 10
+                   10 | 10 | 11
+                   11 |  1 |  2
+                   11 |  2 |  3
+                   11 |  3 |  4
+                   11 |  4 |  5
+                   11 |  5 |  6
+                   11 |  6 |  7
+                   11 |  7 |  8
+                   11 |  8 |  9
+                   11 |  9 | 10
+                   11 | 10 | 11
+(60 rows)
+
+-- @description function_in_from_join_withfunc2_84.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_imm(func2_sql_int_stb(5)), foo order by 1,2,3; 
+ func1_sql_setint_imm | a  | b  
+----------------------+----+----
+                    6 |  1 |  2
+                    6 |  2 |  3
+                    6 |  3 |  4
+                    6 |  4 |  5
+                    6 |  5 |  6
+                    6 |  6 |  7
+                    6 |  7 |  8
+                    6 |  8 |  9
+                    6 |  9 | 10
+                    6 | 10 | 11
+                    7 |  1 |  2
+                    7 |  2 |  3
+                    7 |  3 |  4
+                    7 |  4 |  5
+                    7 |  5 |  6
+                    7 |  6 |  7
+                    7 |  7 |  8
+                    7 |  8 |  9
+                    7 |  9 | 10
+                    7 | 10 | 11
+                    8 |  1 |  2
+                    8 |  2 |  3
+                    8 |  3 |  4
+                    8 |  4 |  5
+                    8 |  5 |  6
+                    8 |  6 |  7
+                    8 |  7 |  8
+                    8 |  8 |  9
+                    8 |  9 | 10
+                    8 | 10 | 11
+                    9 |  1 |  2
+                    9 |  2 |  3
+                    9 |  3 |  4
+                    9 |  4 |  5
+                    9 |  5 |  6
+                    9 |  6 |  7
+                    9 |  7 |  8
+                    9 |  8 |  9
+                    9 |  9 | 10
+                    9 | 10 | 11
+                   10 |  1 |  2
+                   10 |  2 |  3
+                   10 |  3 |  4
+                   10 |  4 |  5
+                   10 |  5 |  6
+                   10 |  6 |  7
+                   10 |  7 |  8
+                   10 |  8 |  9
+                   10 |  9 | 10
+                   10 | 10 | 11
+                   11 |  1 |  2
+                   11 |  2 |  3
+                   11 |  3 |  4
+                   11 |  4 |  5
+                   11 |  5 |  6
+                   11 |  6 |  7
+                   11 |  7 |  8
+                   11 |  8 |  9
+                   11 |  9 | 10
+                   11 | 10 | 11
+(60 rows)
+
+-- @description function_in_from_join_withfunc2_85.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_imm(func2_sql_int_imm(5)), foo order by 1,2,3; 
+ func1_sql_setint_imm | a  | b  
+----------------------+----+----
+                    6 |  1 |  2
+                    6 |  2 |  3
+                    6 |  3 |  4
+                    6 |  4 |  5
+                    6 |  5 |  6
+                    6 |  6 |  7
+                    6 |  7 |  8
+                    6 |  8 |  9
+                    6 |  9 | 10
+                    6 | 10 | 11
+                    7 |  1 |  2
+                    7 |  2 |  3
+                    7 |  3 |  4
+                    7 |  4 |  5
+                    7 |  5 |  6
+                    7 |  6 |  7
+                    7 |  7 |  8
+                    7 |  8 |  9
+                    7 |  9 | 10
+                    7 | 10 | 11
+                    8 |  1 |  2
+                    8 |  2 |  3
+                    8 |  3 |  4
+                    8 |  4 |  5
+                    8 |  5 |  6
+                    8 |  6 |  7
+                    8 |  7 |  8
+                    8 |  8 |  9
+                    8 |  9 | 10
+                    8 | 10 | 11
+                    9 |  1 |  2
+                    9 |  2 |  3
+                    9 |  3 |  4
+                    9 |  4 |  5
+                    9 |  5 |  6
+                    9 |  6 |  7
+                    9 |  7 |  8
+                    9 |  8 |  9
+                    9 |  9 | 10
+                    9 | 10 | 11
+                   10 |  1 |  2
+                   10 |  2 |  3
+                   10 |  3 |  4
+                   10 |  4 |  5
+                   10 |  5 |  6
+                   10 |  6 |  7
+                   10 |  7 |  8
+                   10 |  8 |  9
+                   10 |  9 | 10
+                   10 | 10 | 11
+                   11 |  1 |  2
+                   11 |  2 |  3
+                   11 |  3 |  4
+                   11 |  4 |  5
+                   11 |  5 |  6
+                   11 |  6 |  7
+                   11 |  7 |  8
+                   11 |  8 |  9
+                   11 |  9 | 10
+                   11 | 10 | 11
+(60 rows)
+
+-- start_ignore
+-- end_ignore
+-- @description function_in_from_join_withfunc2_86.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties 
+SELECT * FROM func1_sql_setint_imm(func2_read_int_vol(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tincrepo/main/functions/functionProperty/output/function_in_from_join_withfunc2_86.sql:11: ERROR:  query plan with multiple segworker groups is not supported (cdbdisp.c:505)
+HINT:  likely caused by a function that reads or modifies data in a distributed table
+CONTEXT:  SQL statement "SELECT d FROM bar WHERE c =  $1  LIMIT 1"
+PL/pgSQL function "func2_read_int_vol" line 4 at SQL statement
+-- @description function_in_from_join_withfunc2_87.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_imm(func2_read_int_stb(5)), foo order by 1,2,3; 
+ func1_sql_setint_imm | a  | b  
+----------------------+----+----
+                    6 |  1 |  2
+                    6 |  2 |  3
+                    6 |  3 |  4
+                    6 |  4 |  5
+                    6 |  5 |  6
+                    6 |  6 |  7
+                    6 |  7 |  8
+                    6 |  8 |  9
+                    6 |  9 | 10
+                    6 | 10 | 11
+                    7 |  1 |  2
+                    7 |  2 |  3
+                    7 |  3 |  4
+                    7 |  4 |  5
+                    7 |  5 |  6
+                    7 |  6 |  7
+                    7 |  7 |  8
+                    7 |  8 |  9
+                    7 |  9 | 10
+                    7 | 10 | 11
+                    8 |  1 |  2
+                    8 |  2 |  3
+                    8 |  3 |  4
+                    8 |  4 |  5
+                    8 |  5 |  6
+                    8 |  6 |  7
+                    8 |  7 |  8
+                    8 |  8 |  9
+                    8 |  9 | 10
+                    8 | 10 | 11
+                    9 |  1 |  2
+                    9 |  2 |  3
+                    9 |  3 |  4
+                    9 |  4 |  5
+                    9 |  5 |  6
+                    9 |  6 |  7
+                    9 |  7 |  8
+                    9 |  8 |  9
+                    9 |  9 | 10
+                    9 | 10 | 11
+                   10 |  1 |  2
+                   10 |  2 |  3
+                   10 |  3 |  4
+                   10 |  4 |  5
+                   10 |  5 |  6
+                   10 |  6 |  7
+                   10 |  7 |  8
+                   10 |  8 |  9
+                   10 |  9 | 10
+                   10 | 10 | 11
+                   11 |  1 |  2
+                   11 |  2 |  3
+                   11 |  3 |  4
+                   11 |  4 |  5
+                   11 |  5 |  6
+                   11 |  6 |  7
+                   11 |  7 |  8
+                   11 |  8 |  9
+                   11 |  9 | 10
+                   11 | 10 | 11
+(60 rows)
+
+-- start_ignore
+-- end_ignore
+-- @description function_in_from_join_withfunc2_88.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties 
+SELECT * FROM func1_sql_setint_imm(func2_mod_int_vol(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tincrepo/main/functions/functionProperty/output/function_in_from_join_withfunc2_88.sql:11: ERROR:  query plan with multiple segworker groups is not supported (cdbdisp.c:505)
+HINT:  likely caused by a function that reads or modifies data in a distributed table
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
+PL/pgSQL function "func2_mod_int_vol" line 2 at SQL statement
+-- @description function_in_from_join_withfunc2_89.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_sql_setint_imm(func2_mod_int_stb(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_join_withfunc2_89.sql:7: ERROR:  UPDATE is not allowed in a non-volatile function
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
+PL/pgSQL function "func2_mod_int_stb" line 2 at SQL statement
+-- @description function_in_from_join_withfunc2_9.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_nosql_vol(func2_mod_int_stb(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_join_withfunc2_9.sql:7: ERROR:  UPDATE is not allowed in a non-volatile function
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
+PL/pgSQL function "func2_mod_int_stb" line 2 at SQL statement
+-- @description function_in_from_join_withfunc2_90.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_read_int_sql_vol(func2_nosql_vol(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_join_withfunc2_90.sql:7: ERROR:  function cannot execute on segment because it accesses relation "public.bar" (functions.c:152)  (entry db rh55-qavm20:5432 pid=32653) (cdbdisp.c:1476)
+DETAIL:  
+	 SQL statement "SELECT d FROM bar WHERE c =  $1  LIMIT 1"
+PL/pgSQL function "func1_read_int_sql_vol" line 4 at SQL statement
+-- @description function_in_from_join_withfunc2_91.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_read_int_sql_vol(func2_nosql_stb(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_join_withfunc2_91.sql:7: ERROR:  function cannot execute on segment because it accesses relation "public.bar" (functions.c:152)  (entry db rh55-qavm20:5432 pid=32736) (cdbdisp.c:1476)
+DETAIL:  
+	 SQL statement "SELECT d FROM bar WHERE c =  $1  LIMIT 1"
+PL/pgSQL function "func1_read_int_sql_vol" line 4 at SQL statement
+-- @description function_in_from_join_withfunc2_92.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_read_int_sql_vol(func2_nosql_imm(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_join_withfunc2_92.sql:7: ERROR:  function cannot execute on segment because it accesses relation "public.bar" (functions.c:152)  (entry db rh55-qavm20:5432 pid=373) (cdbdisp.c:1476)
+DETAIL:  
+	 SQL statement "SELECT d FROM bar WHERE c =  $1  LIMIT 1"
+PL/pgSQL function "func1_read_int_sql_vol" line 4 at SQL statement
+-- @description function_in_from_join_withfunc2_93.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_read_int_sql_vol(func2_sql_int_vol(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_join_withfunc2_93.sql:7: ERROR:  function cannot execute on segment because it accesses relation "public.bar" (functions.c:152)  (entry db rh55-qavm20:5432 pid=460) (cdbdisp.c:1476)
+DETAIL:  
+	 SQL statement "SELECT d FROM bar WHERE c =  $1  LIMIT 1"
+PL/pgSQL function "func1_read_int_sql_vol" line 4 at SQL statement
+-- @description function_in_from_join_withfunc2_94.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_read_int_sql_vol(func2_sql_int_stb(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_join_withfunc2_94.sql:7: ERROR:  function cannot execute on segment because it accesses relation "public.bar" (functions.c:152)  (entry db rh55-qavm20:5432 pid=543) (cdbdisp.c:1476)
+DETAIL:  
+	 SQL statement "SELECT d FROM bar WHERE c =  $1  LIMIT 1"
+PL/pgSQL function "func1_read_int_sql_vol" line 4 at SQL statement
+-- @description function_in_from_join_withfunc2_95.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_read_int_sql_vol(func2_sql_int_imm(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_join_withfunc2_95.sql:7: ERROR:  function cannot execute on segment because it accesses relation "public.bar" (functions.c:152)  (entry db rh55-qavm20:5432 pid=627) (cdbdisp.c:1476)
+DETAIL:  
+	 SQL statement "SELECT d FROM bar WHERE c =  $1  LIMIT 1"
+PL/pgSQL function "func1_read_int_sql_vol" line 4 at SQL statement
+-- @description function_in_from_join_withfunc2_96.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_read_int_sql_vol(func2_read_int_vol(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_join_withfunc2_96.sql:7: ERROR:  function cannot execute on segment because it accesses relation "public.bar" (functions.c:152)  (entry db rh55-qavm20:5432 pid=723) (cdbdisp.c:1476)
+DETAIL:  
+	 SQL statement "SELECT d FROM bar WHERE c =  $1  LIMIT 1"
+PL/pgSQL function "func2_read_int_vol" line 4 at SQL statement
+-- @description function_in_from_join_withfunc2_97.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_read_int_sql_vol(func2_read_int_stb(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_join_withfunc2_97.sql:7: ERROR:  function cannot execute on segment because it accesses relation "public.bar" (functions.c:152)  (entry db rh55-qavm20:5432 pid=808) (cdbdisp.c:1476)
+DETAIL:  
+	 SQL statement "SELECT d FROM bar WHERE c =  $1  LIMIT 1"
+PL/pgSQL function "func1_read_int_sql_vol" line 4 at SQL statement
+-- @description function_in_from_join_withfunc2_98.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_read_int_sql_vol(func2_mod_int_vol(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_join_withfunc2_98.sql:7: ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:134)  (entry db rh55-qavm20:5432 pid=891) (cdbdisp.c:1476)
+DETAIL:  
+	 SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
+PL/pgSQL function "func2_mod_int_vol" line 2 at SQL statement
+-- @description function_in_from_join_withfunc2_99.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM func1_read_int_sql_vol(func2_mod_int_stb(5)), foo order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_join_withfunc2_99.sql:7: ERROR:  UPDATE is not allowed in a non-volatile function
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
+PL/pgSQL function "func2_mod_int_stb" line 2 at SQL statement
+-- @description function_in_from_subqry_0.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM foo, (SELECT * FROM func1_nosql_vol(5)) r order by 1,2,3 ; 
+ a  | b  | func1_nosql_vol 
+----+----+-----------------
+  1 |  2 |               6
+  2 |  3 |               6
+  3 |  4 |               6
+  4 |  5 |               6
+  5 |  6 |               6
+  6 |  7 |               6
+  7 |  8 |               6
+  8 |  9 |               6
+  9 | 10 |               6
+ 10 | 11 |               6
+(10 rows)
+
+-- @description function_in_from_subqry_1.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM foo, (SELECT * FROM func1_nosql_stb(5)) r order by 1,2,3 ; 
+ a  | b  | func1_nosql_stb 
+----+----+-----------------
+  1 |  2 |               6
+  2 |  3 |               6
+  3 |  4 |               6
+  4 |  5 |               6
+  5 |  6 |               6
+  6 |  7 |               6
+  7 |  8 |               6
+  8 |  9 |               6
+  9 | 10 |               6
+ 10 | 11 |               6
+(10 rows)
+
+-- @description function_in_from_subqry_10.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM foo, (SELECT * FROM func1_read_int_sql_stb(5)) r order by 1,2,3 ; 
+ a  | b  | func1_read_int_sql_stb 
+----+----+------------------------
+  1 |  2 |                      6
+  2 |  3 |                      6
+  3 |  4 |                      6
+  4 |  5 |                      6
+  5 |  6 |                      6
+  6 |  7 |                      6
+  7 |  8 |                      6
+  8 |  9 |                      6
+  9 | 10 |                      6
+ 10 | 11 |                      6
+(10 rows)
+
+-- @description function_in_from_subqry_13.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM foo, (SELECT * FROM func1_mod_int_vol(5)) r order by 1,2,3 ; 
+ a  | b  | func1_mod_int_vol 
+----+----+-------------------
+  1 |  2 |                 6
+  2 |  3 |                 6
+  3 |  4 |                 6
+  4 |  5 |                 6
+  5 |  6 |                 6
+  6 |  7 |                 6
+  7 |  8 |                 6
+  8 |  9 |                 6
+  9 | 10 |                 6
+ 10 | 11 |                 6
+(10 rows)
+
+-- @description function_in_from_subqry_14.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM foo, (SELECT * FROM func1_mod_int_stb(5)) r order by 1,2,3 ; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_subqry_14.sql:7: ERROR:  UPDATE is not allowed in a non-volatile function
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
+PL/pgSQL function "func1_mod_int_stb" line 2 at SQL statement
+-- @description function_in_from_subqry_2.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM foo, (SELECT * FROM func1_nosql_imm(5)) r order by 1,2,3 ; 
+ a  | b  | func1_nosql_imm 
+----+----+-----------------
+  1 |  2 |               6
+  2 |  3 |               6
+  3 |  4 |               6
+  4 |  5 |               6
+  5 |  6 |               6
+  6 |  7 |               6
+  7 |  8 |               6
+  8 |  9 |               6
+  9 | 10 |               6
+ 10 | 11 |               6
+(10 rows)
+
+-- @description function_in_from_subqry_3.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM foo, (SELECT * FROM func1_sql_int_vol(5)) r order by 1,2,3 ; 
+ a  | b  | func1_sql_int_vol 
+----+----+-------------------
+  1 |  2 |                 6
+  2 |  3 |                 6
+  3 |  4 |                 6
+  4 |  5 |                 6
+  5 |  6 |                 6
+  6 |  7 |                 6
+  7 |  8 |                 6
+  8 |  9 |                 6
+  9 | 10 |                 6
+ 10 | 11 |                 6
+(10 rows)
+
+-- @description function_in_from_subqry_4.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM foo, (SELECT * FROM func1_sql_int_stb(5)) r order by 1,2,3 ; 
+ a  | b  | func1_sql_int_stb 
+----+----+-------------------
+  1 |  2 |                 6
+  2 |  3 |                 6
+  3 |  4 |                 6
+  4 |  5 |                 6
+  5 |  6 |                 6
+  6 |  7 |                 6
+  7 |  8 |                 6
+  8 |  9 |                 6
+  9 | 10 |                 6
+ 10 | 11 |                 6
+(10 rows)
+
+-- @description function_in_from_subqry_5.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM foo, (SELECT * FROM func1_sql_int_imm(5)) r order by 1,2,3 ; 
+ a  | b  | func1_sql_int_imm 
+----+----+-------------------
+  1 |  2 |                 6
+  2 |  3 |                 6
+  3 |  4 |                 6
+  4 |  5 |                 6
+  5 |  6 |                 6
+  6 |  7 |                 6
+  7 |  8 |                 6
+  8 |  9 |                 6
+  9 | 10 |                 6
+ 10 | 11 |                 6
+(10 rows)
+
+-- @description function_in_from_subqry_6.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM foo, (SELECT * FROM func1_sql_setint_vol(5)) r order by 1,2,3 ; 
+ a  | b  | func1_sql_setint_vol 
+----+----+----------------------
+  1 |  2 |                    5
+  1 |  2 |                    6
+  1 |  2 |                    7
+  1 |  2 |                    8
+  1 |  2 |                    9
+  1 |  2 |                   10
+  2 |  3 |                    5
+  2 |  3 |                    6
+  2 |  3 |                    7
+  2 |  3 |                    8
+  2 |  3 |                    9
+  2 |  3 |                   10
+  3 |  4 |                    5
+  3 |  4 |                    6
+  3 |  4 |                    7
+  3 |  4 |                    8
+  3 |  4 |                    9
+  3 |  4 |                   10
+  4 |  5 |                    5
+  4 |  5 |                    6
+  4 |  5 |                    7
+  4 |  5 |                    8
+  4 |  5 |                    9
+  4 |  5 |                   10
+  5 |  6 |                    5
+  5 |  6 |                    6
+  5 |  6 |                    7
+  5 |  6 |                    8
+  5 |  6 |                    9
+  5 |  6 |                   10
+  6 |  7 |                    5
+  6 |  7 |                    6
+  6 |  7 |                    7
+  6 |  7 |                    8
+  6 |  7 |                    9
+  6 |  7 |                   10
+  7 |  8 |                    5
+  7 |  8 |                    6
+  7 |  8 |                    7
+  7 |  8 |                    8
+  7 |  8 |                    9
+  7 |  8 |                   10
+  8 |  9 |                    5
+  8 |  9 |                    6
+  8 |  9 |                    7
+  8 |  9 |                    8
+  8 |  9 |                    9
+  8 |  9 |                   10
+  9 | 10 |                    5
+  9 | 10 |                    6
+  9 | 10 |                    7
+  9 | 10 |                    8
+  9 | 10 |                    9
+  9 | 10 |                   10
+ 10 | 11 |                    5
+ 10 | 11 |                    6
+ 10 | 11 |                    7
+ 10 | 11 |                    8
+ 10 | 11 |                    9
+ 10 | 11 |                   10
+(60 rows)
+
+-- @description function_in_from_subqry_7.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM foo, (SELECT * FROM func1_sql_setint_stb(5)) r order by 1,2,3 ; 
+ a  | b  | func1_sql_setint_stb 
+----+----+----------------------
+  1 |  2 |                    5
+  1 |  2 |                    6
+  1 |  2 |                    7
+  1 |  2 |                    8
+  1 |  2 |                    9
+  1 |  2 |                   10
+  2 |  3 |                    5
+  2 |  3 |                    6
+  2 |  3 |                    7
+  2 |  3 |                    8
+  2 |  3 |                    9
+  2 |  3 |                   10
+  3 |  4 |                    5
+  3 |  4 |                    6
+  3 |  4 |                    7
+  3 |  4 |                    8
+  3 |  4 |                    9
+  3 |  4 |                   10
+  4 |  5 |                    5
+  4 |  5 |                    6
+  4 |  5 |                    7
+  4 |  5 |                    8
+  4 |  5 |                    9
+  4 |  5 |                   10
+  5 |  6 |                    5
+  5 |  6 |                    6
+  5 |  6 |                    7
+  5 |  6 |                    8
+  5 |  6 |                    9
+  5 |  6 |                   10
+  6 |  7 |                    5
+  6 |  7 |                    6
+  6 |  7 |                    7
+  6 |  7 |                    8
+  6 |  7 |                    9
+  6 |  7 |                   10
+  7 |  8 |                    5
+  7 |  8 |                    6
+  7 |  8 |                    7
+  7 |  8 |                    8
+  7 |  8 |                    9
+  7 |  8 |                   10
+  8 |  9 |                    5
+  8 |  9 |                    6
+  8 |  9 |                    7
+  8 |  9 |                    8
+  8 |  9 |                    9
+  8 |  9 |                   10
+  9 | 10 |                    5
+  9 | 10 |                    6
+  9 | 10 |                    7
+  9 | 10 |                    8
+  9 | 10 |                    9
+  9 | 10 |                   10
+ 10 | 11 |                    5
+ 10 | 11 |                    6
+ 10 | 11 |                    7
+ 10 | 11 |                    8
+ 10 | 11 |                    9
+ 10 | 11 |                   10
+(60 rows)
+
+-- @description function_in_from_subqry_8.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM foo, (SELECT * FROM func1_sql_setint_imm(5)) r order by 1,2,3 ; 
+ a  | b  | func1_sql_setint_imm 
+----+----+----------------------
+  1 |  2 |                    5
+  1 |  2 |                    6
+  1 |  2 |                    7
+  1 |  2 |                    8
+  1 |  2 |                    9
+  1 |  2 |                   10
+  2 |  3 |                    5
+  2 |  3 |                    6
+  2 |  3 |                    7
+  2 |  3 |                    8
+  2 |  3 |                    9
+  2 |  3 |                   10
+  3 |  4 |                    5
+  3 |  4 |                    6
+  3 |  4 |                    7
+  3 |  4 |                    8
+  3 |  4 |                    9
+  3 |  4 |                   10
+  4 |  5 |                    5
+  4 |  5 |                    6
+  4 |  5 |                    7
+  4 |  5 |                    8
+  4 |  5 |                    9
+  4 |  5 |                   10
+  5 |  6 |                    5
+  5 |  6 |                    6
+  5 |  6 |                    7
+  5 |  6 |                    8
+  5 |  6 |                    9
+  5 |  6 |                   10
+  6 |  7 |                    5
+  6 |  7 |                    6
+  6 |  7 |                    7
+  6 |  7 |                    8
+  6 |  7 |                    9
+  6 |  7 |                   10
+  7 |  8 |                    5
+  7 |  8 |                    6
+  7 |  8 |                    7
+  7 |  8 |                    8
+  7 |  8 |                    9
+  7 |  8 |                   10
+  8 |  9 |                    5
+  8 |  9 |                    6
+  8 |  9 |                    7
+  8 |  9 |                    8
+  8 |  9 |                    9
+  8 |  9 |                   10
+  9 | 10 |                    5
+  9 | 10 |                    6
+  9 | 10 |                    7
+  9 | 10 |                    8
+  9 | 10 |                    9
+  9 | 10 |                   10
+ 10 | 11 |                    5
+ 10 | 11 |                    6
+ 10 | 11 |                    7
+ 10 | 11 |                    8
+ 10 | 11 |                    9
+ 10 | 11 |                   10
+(60 rows)
+
+-- @description function_in_from_subqry_9.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM foo, (SELECT * FROM func1_read_int_sql_vol(5)) r order by 1,2,3 ; 
+ a  | b  | func1_read_int_sql_vol 
+----+----+------------------------
+  1 |  2 |                      6
+  2 |  3 |                      6
+  3 |  4 |                      6
+  4 |  5 |                      6
+  5 |  6 |                      6
+  6 |  7 |                      6
+  7 |  8 |                      6
+  8 |  9 |                      6
+  9 | 10 |                      6
+ 10 | 11 |                      6
+(10 rows)
+
+-- @description function_in_from_subqry_withfunc2_0.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM foo, (SELECT * FROM func1_nosql_vol(func2_nosql_vol(5))) r order by 1,2,3; 
+ a  | b  | func1_nosql_vol 
+----+----+-----------------
+  1 |  2 |               7
+  2 |  3 |               7
+  3 |  4 |               7
+  4 |  5 |               7
+  5 |  6 |               7
+  6 |  7 |               7
+  7 |  8 |               7
+  8 |  9 |               7
+  9 | 10 |               7
+ 10 | 11 |               7
+(10 rows)
+
+-- @description function_in_from_subqry_withfunc2_1.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM foo, (SELECT * FROM func1_nosql_vol(func2_nosql_stb(5))) r order by 1,2,3; 
+ a  | b  | func1_nosql_vol 
+----+----+-----------------
+  1 |  2 |               7
+  2 |  3 |               7
+  3 |  4 |               7
+  4 |  5 |               7
+  5 |  6 |               7
+  6 |  7 |               7
+  7 |  8 |               7
+  8 |  9 |               7
+  9 | 10 |               7
+ 10 | 11 |               7
+(10 rows)
+
+-- @description function_in_from_subqry_withfunc2_10.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM foo, (SELECT * FROM func1_nosql_stb(func2_nosql_vol(5))) r order by 1,2,3; 
+ a  | b  | func1_nosql_stb 
+----+----+-----------------
+  1 |  2 |               7
+  2 |  3 |               7
+  3 |  4 |               7
+  4 |  5 |               7
+  5 |  6 |               7
+  6 |  7 |               7
+  7 |  8 |               7
+  8 |  9 |               7
+  9 | 10 |               7
+ 10 | 11 |               7
+(10 rows)
+
+-- @description function_in_from_subqry_withfunc2_100.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM foo, (SELECT * FROM func1_read_int_sql_stb(func2_nosql_vol(5))) r order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_subqry_withfunc2_100.sql:7: ERROR:  function cannot execute on segment because it accesses relation "public.bar" (functions.c:152)  (entry db rh55-qavm20:5432 pid=15425) (cdbdisp.c:1476)
+DETAIL:  
+	 SQL statement "SELECT d FROM bar WHERE c =  $1  LIMIT 1"
+PL/pgSQL function "func1_read_int_sql_stb" line 4 at SQL statement
+-- @description function_in_from_subqry_withfunc2_101.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM foo, (SELECT * FROM func1_read_int_sql_stb(func2_nosql_stb(5))) r order by 1,2,3; 
+ a  | b  | func1_read_int_sql_stb 
+----+----+------------------------
+  1 |  2 |                      7
+  2 |  3 |                      7
+  3 |  4 |                      7
+  4 |  5 |                      7
+  5 |  6 |                      7
+  6 |  7 |                      7
+  7 |  8 |                      7
+  8 |  9 |                      7
+  9 | 10 |                      7
+ 10 | 11 |                      7
+(10 rows)
+
+-- @description function_in_from_subqry_withfunc2_102.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM foo, (SELECT * FROM func1_read_int_sql_stb(func2_nosql_imm(5))) r order by 1,2,3; 
+ a  | b  | func1_read_int_sql_stb 
+----+----+------------------------
+  1 |  2 |                      7
+  2 |  3 |                      7
+  3 |  4 |                      7
+  4 |  5 |                      7
+  5 |  6 |                      7
+  6 |  7 |                      7
+  7 |  8 |                      7
+  8 |  9 |                      7
+  9 | 10 |                      7
+ 10 | 11 |                      7
+(10 rows)
+
+-- @description function_in_from_subqry_withfunc2_103.sql
+-- @db_name functionproperty
+-- @author tungs1
+-- @modified 2013-04-03 12:00:00
+-- @created 2013-04-03 12:00:00
+-- @tags functionProperties
+SELECT * FROM foo, (SELECT * FROM func1_read_int_sql_stb(func2_sql_int_vol(5))) r order by 1,2,3; 
+psql:/data/tungs1_cdbfast/tinc/private/balasr3/tincrepo/functionProperty/sql/function_in_from_subqry_withfunc2_103.sql:7: ERROR:  function cannot execute on segment because it accesses relation "public.bar" (functions.c:152)  (entry db rh55-qavm20:5432 pid=15660) (cdbdisp.c:1476)
+DETAIL:  
+	 SQL statement "SELECT d FROM bar WHERE c =  $1  LIMIT 1"
+PL/pgSQL function "func1_read_int_sql_stb" line 4 at SQL statement

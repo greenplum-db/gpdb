@@ -74,7 +74,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeAgg.c,v 1.150 2007/02/02 00:07:03 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeAgg.c,v 1.156.2.1 2008/10/16 19:25:58 neilc Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -944,7 +944,7 @@ find_unaggregated_cols_walker(Node *node, Bitmapset **colnos)
  * columns that haven't been explicitly grouped by.
  */
 List *
-get_agg_hash_collist(AggState *aggstate)
+find_hash_columns(AggState *aggstate)
 {
 	Agg		   *node = (Agg *) aggstate->ss.ps.plan;
 	Bitmapset  *colnos;
@@ -960,6 +960,8 @@ get_agg_hash_collist(AggState *aggstate)
 	collist = NIL;
 	while ((i = bms_first_member(colnos)) >= 0)
 		collist = lcons_int(i, collist);
+	bms_free(colnos);
+
 	return collist;
 }
 
@@ -1852,7 +1854,7 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 
 	if (node->aggstrategy == AGG_HASHED)
 	{
-		aggstate->hash_needed = get_agg_hash_collist(aggstate);
+		aggstate->hash_needed = find_hash_columns(aggstate);
 	}
 	else
 	{
@@ -1941,11 +1943,13 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 		Assert(!(aggref->aggdistinct && aggref->aggorder));
 		Assert(numArguments == 1 || !aggref->aggdistinct);
 
-		/* Get actual datatypes of the inputs.	These could be different from
-		 * the agg's declared input types, when the agg accepts ANY, ANYARRAY
-		 * or ANYELEMENT. The result will have argument types at 0 through 
-		 * numArguments-1 and sort key types mixed in or at numArguments through 
-		 * numInputs.
+		/*
+		 * Get actual datatypes of the inputs.	These could be different from
+		 * the agg's declared input types, when the agg accepts ANY or a
+		 * polymorphic type.
+		 *
+		 * The result will have argument types at 0 through numArguments-1 and
+		 * sort key types mixed in or at numArguments through numInputs.
 		 */
 		inputTypes = (Oid*)palloc0(sizeof(Oid)*(numInputs));
 		i = 0;
@@ -2642,7 +2646,7 @@ Oid
 resolve_polymorphic_transtype(Oid aggtranstype, Oid aggfnoid,
 							  Oid *inputTypes)
 {
-	if (aggtranstype == ANYARRAYOID || aggtranstype == ANYELEMENTOID)
+	if (IsPolymorphicType(aggtranstype))
 	{
 		/* have to fetch the agg's declared input types... */
 		Oid		   *declaredArgTypes;
@@ -2652,7 +2656,8 @@ resolve_polymorphic_transtype(Oid aggtranstype, Oid aggfnoid,
 		aggtranstype = enforce_generic_type_consistency(inputTypes,
 														declaredArgTypes,
 														agg_nargs,
-														aggtranstype);
+														aggtranstype,
+														false);
 		pfree(declaredArgTypes);
 	}
 	return aggtranstype;

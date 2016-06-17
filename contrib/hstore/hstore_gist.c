@@ -5,7 +5,6 @@
 
 #include "access/gist.h"
 #include "access/itup.h"
-#include "access/skey.h"
 #include "crc32.h"
 
 #include "hstore.h"

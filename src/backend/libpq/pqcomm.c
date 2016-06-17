@@ -431,7 +431,7 @@ StreamServerPort(int family, char *hostName, unsigned short portNumber,
 		}
 #endif
 
-#ifdef IPV6_V6ONLY
+#if defined(IPV6_V6ONLY) && defined(IPPROTO_IPV6)
 		if (addr->ai_family == AF_INET6)
 		{
 			if (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY,
@@ -524,6 +524,14 @@ static int
 Lock_AF_UNIX(unsigned short portNumber, char *unixSocketName)
 {
 	UNIXSOCK_PATH(sock_path, portNumber, unixSocketName);
+	if (strlen(sock_path) >= UNIXSOCK_PATH_BUFLEN)
+	{
+		ereport(LOG,
+				(errmsg("Unix-domain socket path \"%s\" is too long (maximum %d bytes)",
+						sock_path,
+						(int) (UNIXSOCK_PATH_BUFLEN - 1))));
+		return STATUS_ERROR;
+	}
 
 	/*
 	 * Grab an interlock file associated with the socket file.

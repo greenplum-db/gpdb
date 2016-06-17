@@ -26,8 +26,11 @@ typedef int64 Datum;
  */
 struct TupleTableSlot;
 struct ProjectionInfo;
+struct List;
+struct ExprContext;
 
 typedef void (*ExecVariableListFn) (struct ProjectionInfo *projInfo, Datum *values, bool *isnull);
+typedef bool (*ExecQualFn) (struct List *qual, struct ExprContext *econtext, bool resultForNull);
 
 #ifndef USE_CODEGEN
 
@@ -44,9 +47,12 @@ typedef void (*ExecVariableListFn) (struct ProjectionInfo *projInfo, Datum *valu
 #define END_CODE_GENERATOR_MANAGER()
 
 #define init_codegen()
+
 #define call_ExecVariableList(projInfo, values, isnull) ExecVariableList(projInfo, values, isnull)
 #define enroll_ExecVariableList_codegen(regular_func, ptr_to_chosen_func, proj_info, slot)
 
+#define call_ExecQual(planstate, qual, econtext, resultForNull) ExecQual(qual, econtext, resultForNull)
+#define enroll_ExecQual_codegen(regular_func, ptr_to_chosen_func, planstate)
 #else
 
 /*
@@ -76,7 +82,7 @@ extern "C" {
  * Forward extern declaration of code generated functions if code gen is enabled
  */
 extern void ExecVariableList(struct ProjectionInfo *projInfo, Datum *values, bool *isnull);
-
+extern bool ExecQual(struct List *qual, struct ExprContext *econtext, bool resultForNull);
 
 /*
  * Do one-time global initialization of LLVM library. Returns 1
@@ -137,6 +143,14 @@ ExecVariableListCodegenEnroll(ExecVariableListFn regular_func_ptr,
                               struct ProjectionInfo* proj_info,
                               struct TupleTableSlot* slot);
 
+/*
+ * returns the pointer to the ExecQual
+ */
+void*
+ExecQualCodegenEnroll(ExecQualFn regular_func_ptr,
+                              ExecQualFn* ptr_to_regular_func_ptr,
+                              struct PlanState *planstate);
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif
@@ -186,6 +200,14 @@ ExecVariableListCodegenEnroll(ExecVariableListFn regular_func_ptr,
  */
 #define call_ExecVariableList(projInfo, values, isnull) \
 		projInfo->ExecVariableList_gen_info.ExecVariableList_fn(projInfo, values, isnull)
+
+/*
+ * Call ExecQual using function pointer ExecQual_fn.
+ * Function pointer may point to regular version or generated function
+ */
+#define call_ExecQual(ps, qual, econtext, resultForNull) \
+     ps.ExecQual_gen_info.ExecQual_fn(qual, econtext, resultForNull)
+
 /*
  * Enrollment macros
  * The enrollment process also ensures that the generated function pointer
@@ -195,6 +217,11 @@ ExecVariableListCodegenEnroll(ExecVariableListFn regular_func_ptr,
 		proj_info->ExecVariableList_gen_info.code_generator = ExecVariableListCodegenEnroll( \
 				regular_func, ptr_to_regular_func_ptr, proj_info, slot); \
 		Assert(proj_info->ExecVariableList_gen_info.ExecVariableList_fn == regular_func); \
+
+#define enroll_ExecQual_codegen(regular_func, ptr_to_regular_func_ptr, planstate) \
+		planstate->ExecQual_gen_info.code_generator = ExecQualCodegenEnroll( \
+        regular_func, ptr_to_regular_func_ptr, planstate); \
+    Assert(planstate->ExecQual_gen_info.ExecQual_fn == regular_func); \
 
 #endif //USE_CODEGEN
 

@@ -50,7 +50,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/time/tqual.c,v 1.101 2007/01/05 22:19:47 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/time/tqual.c,v 1.109.2.1 2008/09/11 14:01:35 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -78,16 +78,20 @@
 
 #include "access/distributedlog.h"
 
+/* Static variables representing various special snapshot semantics */
+SnapshotData SnapshotNowData = {HeapTupleSatisfiesNow};
+SnapshotData SnapshotSelfData = {HeapTupleSatisfiesSelf};
+SnapshotData SnapshotAnyData = {HeapTupleSatisfiesAny};
+SnapshotData SnapshotToastData = {HeapTupleSatisfiesToast};
+
 /*
  * These SnapshotData structs are static to simplify memory allocation
  * (see the hack in GetSnapshotData to avoid repeated malloc/free).
  */
-static SnapshotData SnapshotDirtyData;
-static SnapshotData SerializableSnapshotData;
-static SnapshotData LatestSnapshotData;
+static SnapshotData SerializableSnapshotData = {HeapTupleSatisfiesMVCC};
+static SnapshotData LatestSnapshotData = {HeapTupleSatisfiesMVCC};
 
 /* Externally visible pointers to valid snapshots: */
-Snapshot	SnapshotDirty = &SnapshotDirtyData;
 Snapshot	SerializableSnapshot = NULL;
 Snapshot	LatestSnapshot = NULL;
 
@@ -98,26 +102,34 @@ Snapshot	LatestSnapshot = NULL;
  */
 Snapshot	ActiveSnapshot = NULL;
 
-/* These are updated by GetSnapshotData: */
-TransactionId TransactionXmin = InvalidTransactionId;
-TransactionId RecentXmin = InvalidTransactionId;
+/*
+ * These are updated by GetSnapshotData.  We initialize them this way
+ * for the convenience of TransactionIdIsInProgress: even in bootstrap
+ * mode, we don't want it to say that BootstrapTransactionId is in progress.
+ *
+ * RecentGlobalXmin is initialized to InvalidTransactionId, to ensure that no
+ * one tries to use a stale value.  Readers should ensure that it has been set
+ * to something else before using it.
+ */
+TransactionId TransactionXmin = FirstNormalTransactionId;
+TransactionId RecentXmin = FirstNormalTransactionId;
 TransactionId RecentGlobalXmin = InvalidTransactionId;
 
-/* local functions */
-static bool XidInSnapshot(TransactionId xid, Snapshot snapshot, bool isXmax,
-			  bool distributedSnapshotIgnore, bool *setDistributedSnapshotIgnore);
-static bool XidInSnapshot_Local(TransactionId xid, Snapshot snapshot, bool isXmax);
 
+/* local functions */
+static bool XidInMVCCSnapshot(TransactionId xid, Snapshot snapshot, bool isXmax,
+			  bool distributedSnapshotIgnore, bool *setDistributedSnapshotIgnore);
+static bool XidInMVCCSnapshot_Local(TransactionId xid, Snapshot snapshot, bool isXmax);
 
 /*
  * Set the buffer dirty after setting t_infomask
  */
 static inline void
-markDirty(Buffer buffer, bool disabled, Relation relation, HeapTupleHeader tuple, bool isXmin)
+markDirty(Buffer buffer, Relation relation, HeapTupleHeader tuple, bool isXmin)
 {
 	TransactionId xid;
 
-	if (!disabled)
+	if (!gp_disable_tuple_hints)
 	{
 		SetBufferCommitInfoNeedsSave(buffer);
 		return;
@@ -136,7 +148,6 @@ markDirty(Buffer buffer, bool disabled, Relation relation, HeapTupleHeader tuple
 	if (relation->rd_issyscat)
 	{
 		/* Assume we want to always mark the buffer dirty */
-
 		SetBufferCommitInfoNeedsSave(buffer);
 		return;
 	}
@@ -166,7 +177,80 @@ markDirty(Buffer buffer, bool disabled, Relation relation, HeapTupleHeader tuple
 }
 
 /*
- * HeapTupleSatisfiesItself
+ * SetHintBits()
+ *
+ * Set commit/abort hint bits on a tuple, if appropriate at this time.
+ *
+ * It is only safe to set a transaction-committed hint bit if we know the
+ * transaction's commit record has been flushed to disk.  We cannot change
+ * the LSN of the page here because we may hold only a share lock on the
+ * buffer, so we can't use the LSN to interlock this; we have to just refrain
+ * from setting the hint bit until some future re-examination of the tuple.
+ *
+ * We can always set hint bits when marking a transaction aborted.	(Some
+ * code in heapam.c relies on that!)
+ *
+ * Also, if we are cleaning up HEAP_MOVED_IN or HEAP_MOVED_OFF entries, then
+ * we can always set the hint bits, since VACUUM FULL always uses synchronous
+ * commits and doesn't move tuples that weren't previously hinted.	(This is
+ * not known by this subroutine, but is applied by its callers.)
+ *
+ * Normal commits may be asynchronous, so for those we need to get the LSN
+ * of the transaction and then check whether this is flushed.
+ *
+ * The caller should pass xid as the XID of the transaction to check, or
+ * InvalidTransactionId if no check is needed.
+ */
+static inline void
+SetHintBits(HeapTupleHeader tuple, Buffer buffer, Relation rel,
+			uint16 infomask, TransactionId xid)
+{
+	bool		isXmin;
+
+	if (TransactionIdIsValid(xid))
+	{
+		/* NB: xid must be known committed here! */
+		XLogRecPtr	commitLSN = TransactionIdGetCommitLSN(xid);
+
+		if (XLogNeedsFlush(commitLSN))
+			return;				/* not flushed yet, so don't set hint */
+	}
+
+	tuple->t_infomask |= infomask;
+
+	switch(infomask)
+	{
+		case HEAP_XMIN_INVALID:
+		case HEAP_XMIN_COMMITTED:
+			isXmin = true;
+			break;
+		case HEAP_XMAX_INVALID:
+		case HEAP_XMAX_COMMITTED:
+			isXmin = false;
+			break;
+		default:
+			elog(ERROR, "unexpected infomask while setting hint bits: %d", infomask);
+			isXmin = false; /* keep compiler quiet */
+	}
+
+	markDirty(buffer, rel, tuple, isXmin);
+}
+
+/*
+ * HeapTupleSetHintBits --- exported version of SetHintBits()
+ *
+ * This must be separate because of C99's brain-dead notions about how to
+ * implement inline functions.
+ */
+void
+HeapTupleSetHintBits(HeapTupleHeader tuple, Buffer buffer, Relation rel,
+					 uint16 infomask, TransactionId xid)
+{
+	SetHintBits(tuple, buffer, rel, infomask, xid);
+}
+
+/*
+ * HeapTupleSatisfiesSelf
  *		True iff heap tuple is valid "for itself".
  *
  *	Here, we consider the effects of:
@@ -190,10 +274,8 @@ markDirty(Buffer buffer, bool disabled, Relation relation, HeapTupleHeader tuple
  *			 Xmax is not committed)))			that has not been committed
  */
 bool
-HeapTupleSatisfiesItself(Relation relation, HeapTupleHeader tuple, Buffer buffer)
+HeapTupleSatisfiesSelf(Relation relation, HeapTupleHeader tuple, Snapshot snapshot, Buffer buffer)
 {
-	const bool disableTupleHints = gp_disable_tuple_hints;
-
 	if (!(tuple->t_infomask & HEAP_XMIN_COMMITTED))
 	{
 		if (tuple->t_infomask & HEAP_XMIN_INVALID)
@@ -209,12 +291,12 @@ HeapTupleSatisfiesItself(Relation relation, HeapTupleHeader tuple, Buffer buffer
 			{
 				if (TransactionIdDidCommit(xvac))
 				{
-					tuple->t_infomask |= HEAP_XMIN_INVALID;
-					markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
+					SetHintBits(tuple, buffer, relation, HEAP_XMIN_INVALID,
+								InvalidTransactionId);
 					return false;
 				}
-				tuple->t_infomask |= HEAP_XMIN_COMMITTED;
-				markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
+				SetHintBits(tuple, buffer, relation, HEAP_XMIN_COMMITTED,
+							InvalidTransactionId);
 			}
 		}
 		else if (tuple->t_infomask & HEAP_MOVED_IN)
@@ -226,14 +308,12 @@ HeapTupleSatisfiesItself(Relation relation, HeapTupleHeader tuple, Buffer buffer
 				if (TransactionIdIsInProgress(xvac))
 					return false;
 				if (TransactionIdDidCommit(xvac))
-				{
-					tuple->t_infomask |= HEAP_XMIN_COMMITTED;
-					markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
-				}
+					SetHintBits(tuple, buffer, relation, HEAP_XMIN_COMMITTED,
+								InvalidTransactionId);
 				else
 				{
-					tuple->t_infomask |= HEAP_XMIN_INVALID;
-					markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
+					SetHintBits(tuple, buffer, relation, HEAP_XMIN_INVALID,
+								InvalidTransactionId);
 					return false;
 				}
 			}
@@ -248,30 +328,26 @@ HeapTupleSatisfiesItself(Relation relation, HeapTupleHeader tuple, Buffer buffer
 
 			Assert(!(tuple->t_infomask & HEAP_XMAX_IS_MULTI));
 
-			/* deleting subtransaction aborted? */
-			if (TransactionIdDidAbort(HeapTupleHeaderGetXmax(tuple)))
+			if (!TransactionIdIsCurrentTransactionId(HeapTupleHeaderGetXmax(tuple)))
 			{
-				tuple->t_infomask |= HEAP_XMAX_INVALID;
-				markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ false);
+				/* deleting subtransaction must have aborted */
+				SetHintBits(tuple, buffer, relation, HEAP_XMAX_INVALID,
+							InvalidTransactionId);
 				return true;
 			}
-
-			Assert(TransactionIdIsCurrentTransactionId(HeapTupleHeaderGetXmax(tuple)));
 
 			return false;
 		}
 		else if (TransactionIdIsInProgress(HeapTupleHeaderGetXmin(tuple)))
 			return false;
 		else if (TransactionIdDidCommit(HeapTupleHeaderGetXmin(tuple)))
-		{
-			tuple->t_infomask |= HEAP_XMIN_COMMITTED;
-			markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
-		}
+			SetHintBits(tuple, buffer, relation, HEAP_XMIN_COMMITTED,
+						HeapTupleHeaderGetXmin(tuple));
 		else
 		{
 			/* it must have aborted or crashed */
-			tuple->t_infomask |= HEAP_XMIN_INVALID;
-			markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
+			SetHintBits(tuple, buffer, relation, HEAP_XMIN_INVALID,
+						InvalidTransactionId);
 			return false;
 		}
 	}
@@ -308,8 +384,8 @@ HeapTupleSatisfiesItself(Relation relation, HeapTupleHeader tuple, Buffer buffer
 	if (!TransactionIdDidCommit(HeapTupleHeaderGetXmax(tuple)))
 	{
 		/* it must have aborted or crashed */
-		tuple->t_infomask |= HEAP_XMAX_INVALID;
-		markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ false);
+		SetHintBits(tuple, buffer, relation, HEAP_XMAX_INVALID,
+					InvalidTransactionId);
 		return true;
 	}
 
@@ -317,13 +393,13 @@ HeapTupleSatisfiesItself(Relation relation, HeapTupleHeader tuple, Buffer buffer
 
 	if (tuple->t_infomask & HEAP_IS_LOCKED)
 	{
-		tuple->t_infomask |= HEAP_XMAX_INVALID;
-		markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ false);
+		SetHintBits(tuple, buffer, relation, HEAP_XMAX_INVALID,
+					InvalidTransactionId);
 		return true;
 	}
 
-	tuple->t_infomask |= HEAP_XMAX_COMMITTED;
-	markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ false);
+	SetHintBits(tuple, buffer, relation, HEAP_XMAX_COMMITTED,
+				HeapTupleHeaderGetXmax(tuple));
 	return false;
 }
 
@@ -369,10 +445,8 @@ HeapTupleSatisfiesItself(Relation relation, HeapTupleHeader tuple, Buffer buffer
  *		that do catalog accesses.  this is unfortunate, but not critical.
  */
 bool
-HeapTupleSatisfiesNow(Relation relation, HeapTupleHeader tuple, Buffer buffer)
+HeapTupleSatisfiesNow(Relation relation, HeapTupleHeader tuple, Snapshot snapshot, Buffer buffer)
 {
-	const bool disableTupleHints = gp_disable_tuple_hints;
-
 	if (!(tuple->t_infomask & HEAP_XMIN_COMMITTED))
 	{
 		if (tuple->t_infomask & HEAP_XMIN_INVALID)
@@ -388,13 +462,12 @@ HeapTupleSatisfiesNow(Relation relation, HeapTupleHeader tuple, Buffer buffer)
 			{
 				if (TransactionIdDidCommit(xvac))
 				{
-					tuple->t_infomask |= HEAP_XMIN_INVALID;
-					markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
-
+					SetHintBits(tuple, buffer, relation, HEAP_XMIN_INVALID,
+								InvalidTransactionId);
 					return false;
 				}
-				tuple->t_infomask |= HEAP_XMIN_COMMITTED;
-				markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
+				SetHintBits(tuple, buffer, relation, HEAP_XMIN_COMMITTED,
+							InvalidTransactionId);
 			}
 		}
 		else if (tuple->t_infomask & HEAP_MOVED_IN)
@@ -406,22 +479,19 @@ HeapTupleSatisfiesNow(Relation relation, HeapTupleHeader tuple, Buffer buffer)
 				if (TransactionIdIsInProgress(xvac))
 					return false;
 				if (TransactionIdDidCommit(xvac))
-				{
-					tuple->t_infomask |= HEAP_XMIN_COMMITTED;
-					markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
-				}
+					SetHintBits(tuple, buffer, relation, HEAP_XMIN_COMMITTED,
+								InvalidTransactionId);
 				else
 				{
-					tuple->t_infomask |= HEAP_XMIN_INVALID;
-					markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
-
+					SetHintBits(tuple, buffer, relation, HEAP_XMIN_INVALID,
+								InvalidTransactionId);
 					return false;
 				}
 			}
 		}
 		else if (TransactionIdIsCurrentTransactionId(HeapTupleHeaderGetXmin(tuple)))
 		{
-			if (HeapTupleHeaderGetCmin(tuple) >= GetCurrentCommandId())
+			if (HeapTupleHeaderGetCmin(tuple) >= GetCurrentCommandId(false))
 				return false;	/* inserted after scan started */
 
 			if (tuple->t_infomask & HEAP_XMAX_INVALID)	/* xid invalid */
@@ -432,44 +502,30 @@ HeapTupleSatisfiesNow(Relation relation, HeapTupleHeader tuple, Buffer buffer)
 
 			Assert(!(tuple->t_infomask & HEAP_XMAX_IS_MULTI));
 
-			/* deleting subtransaction aborted? */
-			if (TransactionIdDidAbort(HeapTupleHeaderGetXmax(tuple)))
+			if (!TransactionIdIsCurrentTransactionId(HeapTupleHeaderGetXmax(tuple)))
 			{
-				tuple->t_infomask |= HEAP_XMAX_INVALID;
-
-				/* If ComboCID format cid, roll it back to normal Cmin */
-				if (tuple->t_infomask & HEAP_COMBOCID)
-					HeapTupleHeaderSetCmin(tuple, HeapTupleHeaderGetCmin(tuple));
-
-				markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ false);
-
+				/* deleting subtransaction must have aborted */
+				SetHintBits(tuple, buffer, relation, HEAP_XMAX_INVALID,
+							InvalidTransactionId);
 				return true;
 			}
 
-			Assert(TransactionIdIsCurrentTransactionId(HeapTupleHeaderGetXmax(tuple)));
-
-			if (HeapTupleHeaderGetCmax(tuple) >= GetCurrentCommandId())
+			if (HeapTupleHeaderGetCmax(tuple) >= GetCurrentCommandId(false))
 				return true;	/* deleted after scan started */
 			else
 				return false;	/* deleted before scan started */
 		}
+		else if (TransactionIdIsInProgress(HeapTupleHeaderGetXmin(tuple)))
+			return false;
+		else if (TransactionIdDidCommit(HeapTupleHeaderGetXmin(tuple)))
+			SetHintBits(tuple, buffer, relation, HEAP_XMIN_COMMITTED,
+						HeapTupleHeaderGetXmin(tuple));
 		else
 		{
-			if (TransactionIdIsInProgress(HeapTupleHeaderGetXmin(tuple)))
-				return false;
-			else if (TransactionIdDidCommit(HeapTupleHeaderGetXmin(tuple)))
-			{
-				tuple->t_infomask |= HEAP_XMIN_COMMITTED;
-				markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
-			}
-			else
-			{
-				/* it must have aborted or crashed */
-				tuple->t_infomask |= HEAP_XMIN_INVALID;
-				markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
-
-				return false;
-			}
+			/* it must have aborted or crashed */
+			SetHintBits(tuple, buffer, relation, HEAP_XMIN_INVALID,
+						InvalidTransactionId);
+			return false;
 		}
 	}
 
@@ -496,10 +552,10 @@ HeapTupleSatisfiesNow(Relation relation, HeapTupleHeader tuple, Buffer buffer)
 	{
 		if (tuple->t_infomask & HEAP_IS_LOCKED)
 			return true;
-		if (HeapTupleHeaderGetCmax(tuple) >= GetCurrentCommandId())
-			return true;	/* deleted after scan started */
+		if (HeapTupleHeaderGetCmax(tuple) >= GetCurrentCommandId(false))
+			return true;		/* deleted after scan started */
 		else
-			return false;	/* deleted before scan started */
+			return false;		/* deleted before scan started */
 	}
 
 	if (TransactionIdIsInProgress(HeapTupleHeaderGetXmax(tuple)))
@@ -508,9 +564,8 @@ HeapTupleSatisfiesNow(Relation relation, HeapTupleHeader tuple, Buffer buffer)
 	if (!TransactionIdDidCommit(HeapTupleHeaderGetXmax(tuple)))
 	{
 		/* it must have aborted or crashed */
-		tuple->t_infomask |= HEAP_XMAX_INVALID;
-		markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ false);
-
+		SetHintBits(tuple, buffer, relation, HEAP_XMAX_INVALID,
+					InvalidTransactionId);
 		return true;
 	}
 
@@ -518,15 +573,24 @@ HeapTupleSatisfiesNow(Relation relation, HeapTupleHeader tuple, Buffer buffer)
 
 	if (tuple->t_infomask & HEAP_IS_LOCKED)
 	{
-		tuple->t_infomask |= HEAP_XMAX_INVALID;
-		markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ false);
+		SetHintBits(tuple, buffer, relation, HEAP_XMAX_INVALID,
+					InvalidTransactionId);
 		return true;
 	}
 
-	tuple->t_infomask |= HEAP_XMAX_COMMITTED;
-	markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ false);
-
+	SetHintBits(tuple, buffer, relation, HEAP_XMAX_COMMITTED,
+				HeapTupleHeaderGetXmax(tuple));
 	return false;
+}
+
+/*
+ * HeapTupleSatisfiesAny
+ *		Dummy "satisfies" routine: any tuple satisfies SnapshotAny.
+ */
+bool
+HeapTupleSatisfiesAny(Relation relation, HeapTupleHeader tuple, Snapshot snapshot, Buffer buffer)
+{
+	return true;
 }
 
 /*
@@ -544,10 +608,9 @@ HeapTupleSatisfiesNow(Relation relation, HeapTupleHeader tuple, Buffer buffer)
  * table.
  */
 bool
-HeapTupleSatisfiesToast(Relation relation, HeapTupleHeader tuple, Buffer buffer)
+HeapTupleSatisfiesToast(Relation relation, HeapTupleHeader tuple, Snapshot snapshot,
+						Buffer buffer)
 {
-	const bool disableTupleHints = gp_disable_tuple_hints;
-
 	if (!(tuple->t_infomask & HEAP_XMIN_COMMITTED))
 	{
 		if (tuple->t_infomask & HEAP_XMIN_INVALID)
@@ -563,12 +626,12 @@ HeapTupleSatisfiesToast(Relation relation, HeapTupleHeader tuple, Buffer buffer)
 			{
 				if (TransactionIdDidCommit(xvac))
 				{
-					tuple->t_infomask |= HEAP_XMIN_INVALID;
-					markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
+					SetHintBits(tuple, buffer, relation, HEAP_XMIN_INVALID,
+								InvalidTransactionId);
 					return false;
 				}
-				tuple->t_infomask |= HEAP_XMIN_COMMITTED;
-				markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
+				SetHintBits(tuple, buffer, relation, HEAP_XMIN_COMMITTED,
+							InvalidTransactionId);
 			}
 		}
 		else if (tuple->t_infomask & HEAP_MOVED_IN)
@@ -580,14 +643,12 @@ HeapTupleSatisfiesToast(Relation relation, HeapTupleHeader tuple, Buffer buffer)
 				if (TransactionIdIsInProgress(xvac))
 					return false;
 				if (TransactionIdDidCommit(xvac))
-				{
-					tuple->t_infomask |= HEAP_XMIN_COMMITTED;
-					markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
-				}
+					SetHintBits(tuple, buffer, relation, HEAP_XMIN_COMMITTED,
+								InvalidTransactionId);
 				else
 				{
-					tuple->t_infomask |= HEAP_XMIN_INVALID;
-					markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
+					SetHintBits(tuple, buffer, relation, HEAP_XMIN_INVALID,
+								InvalidTransactionId);
 					return false;
 				}
 			}
@@ -629,8 +690,6 @@ HTSU_Result
 HeapTupleSatisfiesUpdate(Relation relation, HeapTupleHeader tuple, CommandId curcid,
 						 Buffer buffer)
 {
-	const bool disableTupleHints = gp_disable_tuple_hints;
-
 	if (!(tuple->t_infomask & HEAP_XMIN_COMMITTED))
 	{
 		if (tuple->t_infomask & HEAP_XMIN_INVALID)
@@ -646,12 +705,12 @@ HeapTupleSatisfiesUpdate(Relation relation, HeapTupleHeader tuple, CommandId cur
 			{
 				if (TransactionIdDidCommit(xvac))
 				{
-					tuple->t_infomask |= HEAP_XMIN_INVALID;
-					markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
+					SetHintBits(tuple, buffer, relation, HEAP_XMIN_INVALID,
+								InvalidTransactionId);
 					return HeapTupleInvisible;
 				}
-				tuple->t_infomask |= HEAP_XMIN_COMMITTED;
-				markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
+				SetHintBits(tuple, buffer, relation, HEAP_XMIN_COMMITTED,
+							InvalidTransactionId);
 			}
 		}
 		else if (tuple->t_infomask & HEAP_MOVED_IN)
@@ -663,14 +722,12 @@ HeapTupleSatisfiesUpdate(Relation relation, HeapTupleHeader tuple, CommandId cur
 				if (TransactionIdIsInProgress(xvac))
 					return HeapTupleInvisible;
 				if (TransactionIdDidCommit(xvac))
-				{
-					tuple->t_infomask |= HEAP_XMIN_COMMITTED;
-					markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
-				}
+					SetHintBits(tuple, buffer, relation, HEAP_XMIN_COMMITTED,
+								InvalidTransactionId);
 				else
 				{
-					tuple->t_infomask |= HEAP_XMIN_INVALID;
-					markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
+					SetHintBits(tuple, buffer, relation, HEAP_XMIN_INVALID,
+								InvalidTransactionId);
 					return HeapTupleInvisible;
 				}
 			}
@@ -688,22 +745,13 @@ HeapTupleSatisfiesUpdate(Relation relation, HeapTupleHeader tuple, CommandId cur
 
 			Assert(!(tuple->t_infomask & HEAP_XMAX_IS_MULTI));
 
-			/* deleting subtransaction aborted? */
-			if (TransactionIdDidAbort(HeapTupleHeaderGetXmax(tuple)))
+			if (!TransactionIdIsCurrentTransactionId(HeapTupleHeaderGetXmax(tuple)))
 			{
-				tuple->t_infomask |= HEAP_XMAX_INVALID;
-
-				/* If ComboCID format cid, roll it back to normal Cmin */
-				if (tuple->t_infomask & HEAP_COMBOCID)
-				{
-					HeapTupleHeaderSetCmin(tuple, HeapTupleHeaderGetCmin(tuple));
-				}
-
-				markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ false);
+				/* deleting subtransaction must have aborted */
+				SetHintBits(tuple, buffer, relation, HEAP_XMAX_INVALID,
+							InvalidTransactionId);
 				return HeapTupleMayBeUpdated;
 			}
-
-			Assert(TransactionIdIsCurrentTransactionId(HeapTupleHeaderGetXmax(tuple)));
 
 			if (HeapTupleHeaderGetCmax(tuple) >= curcid)
 				return HeapTupleSelfUpdated;	/* updated after scan started */
@@ -713,15 +761,13 @@ HeapTupleSatisfiesUpdate(Relation relation, HeapTupleHeader tuple, CommandId cur
 		else if (TransactionIdIsInProgress(HeapTupleHeaderGetXmin(tuple)))
 			return HeapTupleInvisible;
 		else if (TransactionIdDidCommit(HeapTupleHeaderGetXmin(tuple)))
-		{
-			tuple->t_infomask |= HEAP_XMIN_COMMITTED;
-			markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
-		}
+			SetHintBits(tuple, buffer, relation, HEAP_XMIN_COMMITTED,
+						HeapTupleHeaderGetXmin(tuple));
 		else
 		{
 			/* it must have aborted or crashed */
-			tuple->t_infomask |= HEAP_XMIN_INVALID;
-			markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
+			SetHintBits(tuple, buffer, relation, HEAP_XMIN_INVALID,
+						InvalidTransactionId);
 			return HeapTupleInvisible;
 		}
 	}
@@ -745,8 +791,8 @@ HeapTupleSatisfiesUpdate(Relation relation, HeapTupleHeader tuple, CommandId cur
 
 		if (MultiXactIdIsRunning(HeapTupleHeaderGetXmax(tuple)))
 			return HeapTupleBeingUpdated;
-		tuple->t_infomask |= HEAP_XMAX_INVALID;
-		markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ false);
+		SetHintBits(tuple, buffer, relation, HEAP_XMAX_INVALID,
+					InvalidTransactionId);
 		return HeapTupleMayBeUpdated;
 	}
 
@@ -766,8 +812,8 @@ HeapTupleSatisfiesUpdate(Relation relation, HeapTupleHeader tuple, CommandId cur
 	if (!TransactionIdDidCommit(HeapTupleHeaderGetXmax(tuple)))
 	{
 		/* it must have aborted or crashed */
-		tuple->t_infomask |= HEAP_XMAX_INVALID;
-		markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ false);
+		SetHintBits(tuple, buffer, relation, HEAP_XMAX_INVALID,
+					InvalidTransactionId);
 		return HeapTupleMayBeUpdated;
 	}
 
@@ -775,13 +821,13 @@ HeapTupleSatisfiesUpdate(Relation relation, HeapTupleHeader tuple, CommandId cur
 
 	if (tuple->t_infomask & HEAP_IS_LOCKED)
 	{
-		tuple->t_infomask |= HEAP_XMAX_INVALID;
-		markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ false);
+		SetHintBits(tuple, buffer, relation, HEAP_XMAX_INVALID,
+					InvalidTransactionId);
 		return HeapTupleMayBeUpdated;
 	}
 
-	tuple->t_infomask |= HEAP_XMAX_COMMITTED;
-	markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ false);
+	SetHintBits(tuple, buffer, relation, HEAP_XMAX_COMMITTED,
+				HeapTupleHeaderGetXmax(tuple));
 	return HeapTupleUpdated;	/* updated by other */
 }
 
@@ -794,22 +840,22 @@ HeapTupleSatisfiesUpdate(Relation relation, HeapTupleHeader tuple, CommandId cur
  *		previous commands of this transaction
  *		changes made by the current command
  *
- * This is essentially like HeapTupleSatisfiesItself as far as effects of
+ * This is essentially like HeapTupleSatisfiesSelf as far as effects of
  * the current transaction and committed/aborted xacts are concerned.
  * However, we also include the effects of other xacts still in progress.
  *
- * Returns extra information in the global variable SnapshotDirty, namely
- * xids of concurrent xacts that affected the tuple.  SnapshotDirty->xmin
- * is set to InvalidTransactionId if xmin is either committed good or
- * committed dead; or to xmin if that transaction is still in progress.
- * Similarly for SnapshotDirty->xmax.
+ * A special hack is that the passed-in snapshot struct is used as an
+ * output argument to return the xids of concurrent xacts that affected the
+ * tuple.  snapshot->xmin is set to the tuple's xmin if that is another
+ * transaction that's still in progress; or to InvalidTransactionId if the
+ * tuple's xmin is committed good, committed dead, or my own xact.  Similarly
+ * for snapshot->xmax and the tuple's xmax.
  */
 bool
-HeapTupleSatisfiesDirty(Relation relation, HeapTupleHeader tuple, Buffer buffer)
+HeapTupleSatisfiesDirty(Relation relation, HeapTupleHeader tuple, Snapshot snapshot,
+						Buffer buffer)
 {
-	const bool disableTupleHints = gp_disable_tuple_hints;
-
-	SnapshotDirty->xmin = SnapshotDirty->xmax = InvalidTransactionId;
+	snapshot->xmin = snapshot->xmax = InvalidTransactionId;
 
 	if (!(tuple->t_infomask & HEAP_XMIN_COMMITTED))
 	{
@@ -826,12 +872,12 @@ HeapTupleSatisfiesDirty(Relation relation, HeapTupleHeader tuple, Buffer buffer)
 			{
 				if (TransactionIdDidCommit(xvac))
 				{
-					tuple->t_infomask |= HEAP_XMIN_INVALID;
-					markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
+					SetHintBits(tuple, buffer, relation, HEAP_XMIN_INVALID,
+								InvalidTransactionId);
 					return false;
 				}
-				tuple->t_infomask |= HEAP_XMIN_COMMITTED;
-				markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
+				SetHintBits(tuple, buffer, relation, HEAP_XMIN_COMMITTED,
+							InvalidTransactionId);
 			}
 		}
 		else if (tuple->t_infomask & HEAP_MOVED_IN)
@@ -843,14 +889,12 @@ HeapTupleSatisfiesDirty(Relation relation, HeapTupleHeader tuple, Buffer buffer)
 				if (TransactionIdIsInProgress(xvac))
 					return false;
 				if (TransactionIdDidCommit(xvac))
-				{
-					tuple->t_infomask |= HEAP_XMIN_COMMITTED;
-					markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
-				}
+					SetHintBits(tuple, buffer, relation, HEAP_XMIN_COMMITTED,
+								InvalidTransactionId);
 				else
 				{
-					tuple->t_infomask |= HEAP_XMIN_INVALID;
-					markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
+					SetHintBits(tuple, buffer, relation, HEAP_XMIN_INVALID,
+								InvalidTransactionId);
 					return false;
 				}
 			}
@@ -865,34 +909,30 @@ HeapTupleSatisfiesDirty(Relation relation, HeapTupleHeader tuple, Buffer buffer)
 
 			Assert(!(tuple->t_infomask & HEAP_XMAX_IS_MULTI));
 
-			/* deleting subtransaction aborted? */
-			if (TransactionIdDidAbort(HeapTupleHeaderGetXmax(tuple)))
+			if (!TransactionIdIsCurrentTransactionId(HeapTupleHeaderGetXmax(tuple)))
 			{
-				tuple->t_infomask |= HEAP_XMAX_INVALID;
-				markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ false);
+				/* deleting subtransaction must have aborted */
+				SetHintBits(tuple, buffer, relation, HEAP_XMAX_INVALID,
+							InvalidTransactionId);
 				return true;
 			}
-
-			Assert(TransactionIdIsCurrentTransactionId(HeapTupleHeaderGetXmax(tuple)));
 
 			return false;
 		}
 		else if (TransactionIdIsInProgress(HeapTupleHeaderGetXmin(tuple)))
 		{
-			SnapshotDirty->xmin = HeapTupleHeaderGetXmin(tuple);
+			snapshot->xmin = HeapTupleHeaderGetXmin(tuple);
 			/* XXX shouldn't we fall through to look at xmax? */
 			return true;		/* in insertion by other */
 		}
 		else if (TransactionIdDidCommit(HeapTupleHeaderGetXmin(tuple)))
-		{
-			tuple->t_infomask |= HEAP_XMIN_COMMITTED;
-			markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
-		}
+			SetHintBits(tuple, buffer, relation, HEAP_XMIN_COMMITTED,
+						HeapTupleHeaderGetXmin(tuple));
 		else
 		{
 			/* it must have aborted or crashed */
-			tuple->t_infomask |= HEAP_XMIN_INVALID;
-			markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
+			SetHintBits(tuple, buffer, relation, HEAP_XMIN_INVALID,
+						InvalidTransactionId);
 			return false;
 		}
 	}
@@ -925,15 +965,15 @@ HeapTupleSatisfiesDirty(Relation relation, HeapTupleHeader tuple, Buffer buffer)
 
 	if (TransactionIdIsInProgress(HeapTupleHeaderGetXmax(tuple)))
 	{
-		SnapshotDirty->xmax = HeapTupleHeaderGetXmax(tuple);
+		snapshot->xmax = HeapTupleHeaderGetXmax(tuple);
 		return true;
 	}
 
 	if (!TransactionIdDidCommit(HeapTupleHeaderGetXmax(tuple)))
 	{
 		/* it must have aborted or crashed */
-		tuple->t_infomask |= HEAP_XMAX_INVALID;
-		markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ false);
+		SetHintBits(tuple, buffer, relation, HEAP_XMAX_INVALID,
+					InvalidTransactionId);
 		return true;
 	}
 
@@ -941,19 +981,19 @@ HeapTupleSatisfiesDirty(Relation relation, HeapTupleHeader tuple, Buffer buffer)
 
 	if (tuple->t_infomask & HEAP_IS_LOCKED)
 	{
-		tuple->t_infomask |= HEAP_XMAX_INVALID;
-		markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ false);
+		SetHintBits(tuple, buffer, relation, HEAP_XMAX_INVALID,
+					InvalidTransactionId);
 		return true;
 	}
 
-	tuple->t_infomask |= HEAP_XMAX_COMMITTED;
-	markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ false);
+	SetHintBits(tuple, buffer, relation, HEAP_XMAX_COMMITTED,
+				HeapTupleHeaderGetXmax(tuple));
 	return false;				/* updated by other */
 }
 
 /*
- * HeapTupleSatisfiesSnapshot
- *		True iff heap tuple is valid for the given snapshot.
+ * HeapTupleSatisfiesMVCC
+ *		True iff heap tuple is valid for the given MVCC snapshot.
  *
  *	Here, we consider the effects of:
  *		all transactions committed as of the time of the given snapshot
@@ -973,10 +1013,9 @@ HeapTupleSatisfiesDirty(Relation relation, HeapTupleHeader tuple, Buffer buffer)
  * can't see it.)
  */
 bool
-HeapTupleSatisfiesSnapshot(Relation relation, HeapTupleHeader tuple, Snapshot snapshot,
-						   Buffer buffer)
+HeapTupleSatisfiesMVCC(Relation relation, HeapTupleHeader tuple, Snapshot snapshot,
+					   Buffer buffer)
 {
-	const bool disableTupleHints = gp_disable_tuple_hints;
 	bool inSnapshot = false;
 	bool setDistributedSnapshotIgnore = false;
 
@@ -995,13 +1034,12 @@ HeapTupleSatisfiesSnapshot(Relation relation, HeapTupleHeader tuple, Snapshot sn
 			{
 				if (TransactionIdDidCommit(xvac))
 				{
-					tuple->t_infomask |= HEAP_XMIN_INVALID;
-					markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
-
+					SetHintBits(tuple, buffer, relation, HEAP_XMIN_INVALID,
+								InvalidTransactionId);
 					return false;
 				}
-				tuple->t_infomask |= HEAP_XMIN_COMMITTED;
-				markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
+				SetHintBits(tuple, buffer, relation, HEAP_XMIN_COMMITTED,
+							InvalidTransactionId);
 			}
 		}
 		else if (tuple->t_infomask & HEAP_MOVED_IN)
@@ -1013,15 +1051,12 @@ HeapTupleSatisfiesSnapshot(Relation relation, HeapTupleHeader tuple, Snapshot sn
 				if (TransactionIdIsInProgress(xvac))
 					return false;
 				if (TransactionIdDidCommit(xvac))
-				{
-					tuple->t_infomask |= HEAP_XMIN_COMMITTED;
-					markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
-				}
+					SetHintBits(tuple, buffer, relation, HEAP_XMIN_COMMITTED,
+								InvalidTransactionId);
 				else
 				{
-					tuple->t_infomask |= HEAP_XMIN_INVALID;
-					markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
-
+					SetHintBits(tuple, buffer, relation, HEAP_XMIN_INVALID,
+								InvalidTransactionId);
 					return false;
 				}
 			}
@@ -1039,20 +1074,11 @@ HeapTupleSatisfiesSnapshot(Relation relation, HeapTupleHeader tuple, Snapshot sn
 
 			Assert(!(tuple->t_infomask & HEAP_XMAX_IS_MULTI));
 
-			/* deleting subtransaction aborted? */
-			/* FIXME -- is this correct w.r.t. the cmax of the tuple? */
-			if (TransactionIdDidAbort(HeapTupleHeaderGetXmax(tuple)))
+			if (!TransactionIdIsCurrentTransactionId(HeapTupleHeaderGetXmax(tuple)))
 			{
-				tuple->t_infomask |= HEAP_XMAX_INVALID;
-
-				/* If ComboCID format cid, roll it back to normal Cmin */
-				if (tuple->t_infomask & HEAP_COMBOCID)
-				{
-					HeapTupleHeaderSetCmin(tuple, HeapTupleHeaderGetCmin(tuple));
-				}
-
-				markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ false);
-
+				/* deleting subtransaction must have aborted */
+				SetHintBits(tuple, buffer, relation, HEAP_XMAX_INVALID,
+							InvalidTransactionId);
 				return true;
 			}
 
@@ -1066,23 +1092,17 @@ HeapTupleSatisfiesSnapshot(Relation relation, HeapTupleHeader tuple, Snapshot sn
 			else
 				return false;	/* deleted before scan started */
 		}
+		else if (TransactionIdIsInProgress(HeapTupleHeaderGetXmin(tuple)))
+			return false;
+		else if (TransactionIdDidCommit(HeapTupleHeaderGetXmin(tuple)))
+			SetHintBits(tuple, buffer, relation, HEAP_XMIN_COMMITTED,
+						HeapTupleHeaderGetXmin(tuple));
 		else
 		{
-			if (TransactionIdIsInProgress(HeapTupleHeaderGetXmin(tuple)))
-				return false;
-			else if (TransactionIdDidCommit(HeapTupleHeaderGetXmin(tuple)))
-			{
-				tuple->t_infomask |= HEAP_XMIN_COMMITTED;
-				markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
-			}
-			else
-			{
-				/* it must have aborted or crashed */
-				tuple->t_infomask |= HEAP_XMIN_INVALID;
-				markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
-
-				return false;
-			}
+			/* it must have aborted or crashed */
+			SetHintBits(tuple, buffer, relation, HEAP_XMIN_INVALID,
+						InvalidTransactionId);
+			return false;
 		}
 	}
 
@@ -1090,16 +1110,15 @@ HeapTupleSatisfiesSnapshot(Relation relation, HeapTupleHeader tuple, Snapshot sn
 	 * By here, the inserting transaction has committed - have to check
 	 * when...
 	 */
-	inSnapshot = XidInSnapshot(
-		HeapTupleHeaderGetXmin(tuple),
-		snapshot,
-		/* isXmax */ false,
-		((tuple->t_infomask2 & HEAP_XMIN_DISTRIBUTED_SNAPSHOT_IGNORE) != 0),
-		&setDistributedSnapshotIgnore);
+	inSnapshot =
+		XidInMVCCSnapshot(HeapTupleHeaderGetXmin(tuple), snapshot,
+						  /* isXmax */ false,
+						  ((tuple->t_infomask2 & HEAP_XMIN_DISTRIBUTED_SNAPSHOT_IGNORE) != 0),
+						  &setDistributedSnapshotIgnore);
 	if (setDistributedSnapshotIgnore)
 	{
 		tuple->t_infomask2 |= HEAP_XMIN_DISTRIBUTED_SNAPSHOT_IGNORE;
-		markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ true);
+		markDirty(buffer, relation, tuple, /* isXmin */ true);
 	}
 
 	if (inSnapshot)
@@ -1134,30 +1153,28 @@ HeapTupleSatisfiesSnapshot(Relation relation, HeapTupleHeader tuple, Snapshot sn
 		if (!TransactionIdDidCommit(HeapTupleHeaderGetXmax(tuple)))
 		{
 			/* it must have aborted or crashed */
-			tuple->t_infomask |= HEAP_XMAX_INVALID;
-			markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ false);
-
+			SetHintBits(tuple, buffer, relation, HEAP_XMAX_INVALID,
+						InvalidTransactionId);
 			return true;
 		}
 
 		/* xmax transaction committed */
-		tuple->t_infomask |= HEAP_XMAX_COMMITTED;
-		markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ false);
+		SetHintBits(tuple, buffer, relation, HEAP_XMAX_COMMITTED,
+					HeapTupleHeaderGetXmax(tuple));
 	}
 
 	/*
 	 * OK, the deleting transaction committed too ... but when?
 	 */
-	inSnapshot = XidInSnapshot(
-		HeapTupleHeaderGetXmax(tuple),
-		snapshot,
-		/* isXmax */ true,
-		((tuple->t_infomask2 & HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE) != 0),
-		&setDistributedSnapshotIgnore);
+	inSnapshot =
+			XidInMVCCSnapshot(HeapTupleHeaderGetXmax(tuple), snapshot,
+							  /* isXmax */ true,
+							  ((tuple->t_infomask2 & HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE) != 0),
+							  &setDistributedSnapshotIgnore);
 	if (setDistributedSnapshotIgnore)
 	{
 		tuple->t_infomask2 |= HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE;
-		markDirty(buffer, disableTupleHints, relation, tuple, /* isXmin */ false);
+		markDirty(buffer, relation, tuple, /* isXmin */ false);
 	}
 
 	if (inSnapshot)
@@ -1179,7 +1196,7 @@ HeapTupleSatisfiesSnapshot(Relation relation, HeapTupleHeader tuple, Snapshot sn
  * even if we see that the deleting transaction has committed.
  */
 HTSV_Result
-HeapTupleSatisfiesVacuum(HeapTupleHeader tuple, TransactionId OldestXmin,
+HeapTupleSatisfiesVacuum(Relation relation, HeapTupleHeader tuple, TransactionId OldestXmin,
 						 Buffer buffer)
 {
 	/*
@@ -1202,12 +1219,12 @@ HeapTupleSatisfiesVacuum(HeapTupleHeader tuple, TransactionId OldestXmin,
 				return HEAPTUPLE_DELETE_IN_PROGRESS;
 			if (TransactionIdDidCommit(xvac))
 			{
-				tuple->t_infomask |= HEAP_XMIN_INVALID;
-				SetBufferCommitInfoNeedsSave(buffer);
+				SetHintBits(tuple, buffer, relation, HEAP_XMIN_INVALID,
+							InvalidTransactionId);
 				return HEAPTUPLE_DEAD;
 			}
-			tuple->t_infomask |= HEAP_XMIN_COMMITTED;
-			SetBufferCommitInfoNeedsSave(buffer);
+			SetHintBits(tuple, buffer, relation, HEAP_XMIN_COMMITTED,
+						InvalidTransactionId);
 		}
 		else if (tuple->t_infomask & HEAP_MOVED_IN)
 		{
@@ -1218,14 +1235,12 @@ HeapTupleSatisfiesVacuum(HeapTupleHeader tuple, TransactionId OldestXmin,
 			if (TransactionIdIsInProgress(xvac))
 				return HEAPTUPLE_INSERT_IN_PROGRESS;
 			if (TransactionIdDidCommit(xvac))
-			{
-				tuple->t_infomask |= HEAP_XMIN_COMMITTED;
-				SetBufferCommitInfoNeedsSave(buffer);
-			}
+				SetHintBits(tuple, buffer, relation, HEAP_XMIN_COMMITTED,
+							InvalidTransactionId);
 			else
 			{
-				tuple->t_infomask |= HEAP_XMIN_INVALID;
-				SetBufferCommitInfoNeedsSave(buffer);
+				SetHintBits(tuple, buffer, relation, HEAP_XMIN_INVALID,
+							InvalidTransactionId);
 				return HEAPTUPLE_DEAD;
 			}
 		}
@@ -1239,21 +1254,23 @@ HeapTupleSatisfiesVacuum(HeapTupleHeader tuple, TransactionId OldestXmin,
 			return HEAPTUPLE_DELETE_IN_PROGRESS;
 		}
 		else if (TransactionIdDidCommit(HeapTupleHeaderGetXmin(tuple)))
-		{
-			tuple->t_infomask |= HEAP_XMIN_COMMITTED;
-			SetBufferCommitInfoNeedsSave(buffer);
-		}
+			SetHintBits(tuple, buffer, relation, HEAP_XMIN_COMMITTED,
+						HeapTupleHeaderGetXmin(tuple));
 		else
 		{
 			/*
 			 * Not in Progress, Not Committed, so either Aborted or crashed
 			 */
-			tuple->t_infomask |= HEAP_XMIN_INVALID;
-			SetBufferCommitInfoNeedsSave(buffer);
+			SetHintBits(tuple, buffer, relation, HEAP_XMIN_INVALID,
+						InvalidTransactionId);
 			return HEAPTUPLE_DEAD;
 		}
-		/* Should only get here if we set XMIN_COMMITTED */
-		Assert(tuple->t_infomask & HEAP_XMIN_COMMITTED);
+
+		/*
+		 * At this point the xmin is known committed, but we might not have
+		 * been able to set the hint bit yet; so we can no longer Assert that
+		 * it's set.
+		 */
 	}
 
 	/*
@@ -1268,8 +1285,8 @@ HeapTupleSatisfiesVacuum(HeapTupleHeader tuple, TransactionId OldestXmin,
 		/*
 		 * "Deleting" xact really only locked it, so the tuple is live in any
 		 * case.  However, we should make sure that either XMAX_COMMITTED or
-		 * XMAX_INVALID gets set once the xact is gone, to reduce the costs
-		 * of examining the tuple for future xacts.  Also, marking dead
+		 * XMAX_INVALID gets set once the xact is gone, to reduce the costs of
+		 * examining the tuple for future xacts.  Also, marking dead
 		 * MultiXacts as invalid here provides defense against MultiXactId
 		 * wraparound (see also comments in heap_freeze_tuple()).
 		 */
@@ -1291,8 +1308,8 @@ HeapTupleSatisfiesVacuum(HeapTupleHeader tuple, TransactionId OldestXmin,
 			 * We know that xmax did lock the tuple, but it did not and will
 			 * never actually update it.
 			 */
-			tuple->t_infomask |= HEAP_XMAX_INVALID;
-			SetBufferCommitInfoNeedsSave(buffer);
+			SetHintBits(tuple, buffer, relation, HEAP_XMAX_INVALID,
+						InvalidTransactionId);
 		}
 		return HEAPTUPLE_LIVE;
 	}
@@ -1309,45 +1326,31 @@ HeapTupleSatisfiesVacuum(HeapTupleHeader tuple, TransactionId OldestXmin,
 		if (TransactionIdIsInProgress(HeapTupleHeaderGetXmax(tuple)))
 			return HEAPTUPLE_DELETE_IN_PROGRESS;
 		else if (TransactionIdDidCommit(HeapTupleHeaderGetXmax(tuple)))
-		{
-			tuple->t_infomask |= HEAP_XMAX_COMMITTED;
-			SetBufferCommitInfoNeedsSave(buffer);
-		}
+			SetHintBits(tuple, buffer, relation, HEAP_XMAX_COMMITTED,
+						HeapTupleHeaderGetXmax(tuple));
 		else
 		{
 			/*
 			 * Not in Progress, Not Committed, so either Aborted or crashed
 			 */
-			tuple->t_infomask |= HEAP_XMAX_INVALID;
-			SetBufferCommitInfoNeedsSave(buffer);
+			SetHintBits(tuple, buffer, relation, HEAP_XMAX_INVALID,
+						InvalidTransactionId);
 			return HEAPTUPLE_LIVE;
 		}
-		/* Should only get here if we set XMAX_COMMITTED */
-		Assert(tuple->t_infomask & HEAP_XMAX_COMMITTED);
+
+		/*
+		 * At this point the xmax is known committed, but we might not have
+		 * been able to set the hint bit yet; so we can no longer Assert that
+		 * it's set.
+		 */
 	}
 
 	/*
-	 * Deleter committed, but check special cases.
+	 * Deleter committed, but perhaps it was recent enough that some open
+	 * transactions could still see the tuple.
 	 */
-
-	if (TransactionIdEquals(HeapTupleHeaderGetXmin(tuple),
-							HeapTupleHeaderGetXmax(tuple)))
-	{
-		/*
-		 * Inserter also deleted it, so it was never visible to anyone else.
-		 * However, we can only remove it early if it's not an updated tuple;
-		 * else its parent tuple is linking to it via t_ctid, and this tuple
-		 * mustn't go away before the parent does.
-		 */
-		if (!(tuple->t_infomask & HEAP_UPDATED))
-			return HEAPTUPLE_DEAD;
-	}
-
 	if (!TransactionIdPrecedes(HeapTupleHeaderGetXmax(tuple), OldestXmin))
-	{
-		/* deleting xact is too recent, tuple could still be visible */
 		return HEAPTUPLE_RECENTLY_DEAD;
-	}
 
 	/* Otherwise, it's dead and removable */
 	return HEAPTUPLE_DEAD;
@@ -1420,8 +1423,6 @@ GetLatestSnapshot(void)
  *		Copy the given snapshot.
  *
  * The copy is palloc'd in the current memory context.
- *
- * Note that this will not work on "special" snapshots.
  */
 Snapshot
 CopySnapshot(Snapshot snapshot)
@@ -1496,7 +1497,7 @@ CopySnapshot(Snapshot snapshot)
  * This is currently identical to pfree, but is provided for cleanliness.
  *
  * Do *not* apply this to the results of GetTransactionSnapshot or
- * GetLatestSnapshot.
+ * GetLatestSnapshot, since those are just static structs.
  */
 void
 FreeSnapshot(Snapshot snapshot)
@@ -1525,14 +1526,13 @@ FreeXactSnapshot(void)
 }
 
 /*
- * XidInSnapshot
+ * XidInMVCCSnapshot
  *		Is the given XID still-in-progress according to the distributed
  *      and local snapshots?
  */
 static bool
-XidInSnapshot(
-	TransactionId xid, Snapshot snapshot, bool isXmax,
-    bool distributedSnapshotIgnore, bool *setDistributedSnapshotIgnore)
+XidInMVCCSnapshot(TransactionId xid, Snapshot snapshot, bool isXmax,
+				  bool distributedSnapshotIgnore, bool *setDistributedSnapshotIgnore)
 {
 	Assert (setDistributedSnapshotIgnore != NULL);
 	*setDistributedSnapshotIgnore = false;
@@ -1581,11 +1581,11 @@ XidInSnapshot(
 		}
 	}
 
-	return XidInSnapshot_Local(xid, snapshot, isXmax);
+	return XidInMVCCSnapshot_Local(xid, snapshot, isXmax);
 }
 
 /*
- * XidInSnapshot_Local
+ * XidInMVCCSnapshot_Local
  *		Is the given XID still-in-progress according to the local snapshot?
  *
  * Note: GetSnapshotData never stores either top xid or subxids of our own
@@ -1594,7 +1594,7 @@ XidInSnapshot(
  * apply this for known-committed XIDs.
  */
 static bool
-XidInSnapshot_Local(TransactionId xid, Snapshot snapshot, bool isXmax)
+XidInMVCCSnapshot_Local(TransactionId xid, Snapshot snapshot, bool isXmax)
 {
 	uint32		i;
 
@@ -1689,8 +1689,9 @@ static char *TupleVisibilityStatus_Name(TupleVisibilityStatus status)
 static TupleTransactionStatus GetTupleVisibilityCLogStatus(TransactionId xid)
 {
 	XidStatus xidStatus;
+	XLogRecPtr lsn;
 
-	xidStatus = TransactionIdGetStatus(xid);
+	xidStatus = TransactionIdGetStatus(xid, &lsn);
 	switch (xidStatus)
 	{
 	case TRANSACTION_STATUS_IN_PROGRESS:	return TupleTransactionStatus_CLogInProgress;

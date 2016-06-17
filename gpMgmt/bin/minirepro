@@ -1,22 +1,77 @@
 #!/usr/bin/env python
-#
-# Dump minimal schema and statistics for a given query
-#
+'''
+minirepro utility
+
+USAGE
+
+minirepro <db-name> [-h <master-host>] [-U <username>] [-p <port>]
+  -q <SQL-file> -f <repo-data-file>
+
+minirepro -?
+
+
+DESCRIPTION
+
+For any SQL commands, the minirepro utility generates Greenplum Database
+information for the commands. The information can be analyzed by Pivotal
+support to perform root cause analysis.
+
+The minirepro utility reads the input SQL file, passes the input SQL
+command to gp_toolkit function gp_dump_query_oids() to get the dependent
+object ids. Then the utility uses pg_dump to dump the object DDLs, and
+queries the system catalog to collect statistics of these relations.
+The information is written to output file. The output includes a minimal
+sets of DDLs and statistics of relations and functions that are related
+to the input SQL commands.
+
+
+PARAMETERS
+
+<db-name>
+  Name of the Greenplum Database.
+
+-h <master-host>
+  Greenplum Database master host. Default is localhost.
+
+-U <username>
+  Greenplum Database user name to log into the database and run the
+  SQL command. Default is the OS user name running the utility.
+
+-p <port>
+  Port that is used to connect to Greenplum Database.
+  Default is the PGPORT environment variable. If PGPORT is not defined,
+  the default value is 5432.
+
+-q <SQL-file>
+  A text file that contains SQL commands. The commands can be on
+  multiple lines.
+
+-f <repo-data-file>
+  The output file that contains DDLs and statistics of relations
+  and functions that are related to the SQL commands.
+
+-? Show this help text and exit.
+
+
+EXAMPLE
+
+minirepro gptest -h locahost -U gpadmin -p 4444 -q ~/in.sql -f ~/out.sql
+'''
 
 import os, sys, re, json, platform, subprocess
 from optparse import OptionParser
 from pygresql import pgdb
 from datetime import datetime
 
-prog_version = '%prog 1.0'
+version = '1.10'
 PATH_PREFIX = '/tmp/'
 sysnslist = "('pg_toast', 'pg_bitmapindex', 'pg_catalog', 'information_schema', 'gp_toolkit')"
 pgoptions = '-c gp_session_role=utility'
 
 class MRQuery(object):
     def __init__(self):
-        self.relations = {}
-        self.funcs = {}
+        self.schemas = []
+        self.funcids = []
         self.relids = []
 
 def E(query_str):
@@ -35,7 +90,7 @@ def result_iter(cursor, arraysize=1000):
         for result in results:
             yield result
 
-def get_version(cursor):
+def get_server_version(cursor):
     query = "select version()"
     try:
         cursor.execute(query)
@@ -46,7 +101,7 @@ def get_version(cursor):
         sys.exit(1)
 
 def parse_cmd_line():
-    p = OptionParser(usage='Usage: %prog <database> [options]', version=prog_version, conflict_handler="resolve")
+    p = OptionParser(usage='Usage: %prog <database> [options]', version='%prog '+version, conflict_handler="resolve")
     p.add_option('-?', '--help', action='help', help='Show this help message and exit')
     p.add_option('-h', '--host', action='store',
                  dest='host', help='Specify a remote host')
@@ -60,58 +115,71 @@ def parse_cmd_line():
                  help='minirepro output file name')
     return p
 
-def dump_query(cursor, query_file):
+def dump_query(connectionInfo, query_file):
+    (host, port, user, db) = connectionInfo
     print "Extracting metadata from query file %s ..." % query_file
 
     with open(query_file, 'r') as query_f:
         sql_text = query_f.read()
     query = "select gp_toolkit.gp_dump_query_oids('%s')" % E(sql_text)
 
-    try:
-        cursor.execute(query)
-        vals = cursor.fetchone()
-        return vals[0]
-    except pgdb.DatabaseError as e:
-        sys.stderr.writelines('\nError while running gp_toolkit.gp_dump_query_oids(text).\nPlease make sure ' \
-            'the function is installed and the query file contains single valid query.\n\n' + str(e) + '\n\n')
-        sys.exit(1)
+    toolkit_sql = PATH_PREFIX + 'toolkit.sql'
+    with open(toolkit_sql, 'w') as toolkit_f:
+        toolkit_f.write(query)
 
-# relation oid will be extracted from the dump string
+    query_cmd = "psql %s --pset footer -Atq -h %s -p %s -U %s -f %s" % (db, host, port, user, toolkit_sql)
+    print query_cmd
+
+    p = subprocess.Popen(query_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=os.environ)
+
+    if p.wait() is not 0:
+        errormsg = p.communicate()[1]
+        sys.stderr.writelines('\nError when executing function gp_toolkit.gp_dump_query_oids.\n\n' + errormsg + '\n\n')
+        sys.exit(1)
+    return p.communicate()[0]
+
+# relation and function oids will be extracted from the dump string
 def parse_oids(cursor, json_oids):
     result = MRQuery()
-    oids = json.loads(json_oids)['relids']
-    result.relids = [str(x) for x in oids]
+    result.relids = json.loads(json_oids)['relids']
+    result.funcids = json.loads(json_oids)['funcids']
 
     if len(result.relids) == 0:
-        result.relids.append('0')
-    oid_str = ','.join(result.relids)
-    cat_query = "SELECT nspname, relname FROM pg_class, pg_namespace WHERE pg_class.relnamespace = pg_namespace.oid " \
-                "AND pg_class.oid IN (%s)" % oid_str
+        result.relids = '0'
+    if len(result.funcids) == 0:
+        result.funcids = '0'
+
+    cat_query = "SELECT distinct(nspname) FROM pg_class c, pg_namespace n WHERE " \
+                "c.relnamespace = n.oid AND c.oid IN (%s) " \
+                "AND n.nspname NOT IN %s" % (result.relids, sysnslist)
 
     cursor.execute(cat_query)
-
     for vals in result_iter(cursor):
-        schm, relname = vals[0], vals[1]
-        if schm not in result.relations:
-            result.relations[schm] = [relname]
-        else:
-            result.relations[schm].append(relname)
+        result.schemas.append(vals[0])
+
+    cat_query = "SELECT distinct(nspname) FROM pg_proc p, pg_namespace n WHERE " \
+                "p.pronamespace = n.oid AND p.oid IN (%s) " \
+                "AND n.nspname NOT IN %s" % (result.funcids, sysnslist)
+
+    cursor.execute(cat_query)
+    for vals in result_iter(cursor):
+        result.schemas.append(vals[0])
 
     return result
 
-def pg_dump_object(obj_dict, connectionInfo, envOpts):
-    for schema, table_list in obj_dict.iteritems():
-        out_file = PATH_PREFIX + schema + '.dp.sql'
-        dmp_cmd = 'pg_dump -h %s -p %s -U %s -sxO %s' % connectionInfo
-        dmp_cmd = "%s -t '%s.%s' -f %s" % (dmp_cmd, E(schema), E('|'.join(table_list)), E(out_file))
-        print dmp_cmd
-        p = subprocess.Popen(dmp_cmd, shell=True, stderr=subprocess.PIPE, env=envOpts)
-        if p.wait() is not 0:
-            sys.stderr.write('\nError while dumping schema.\n\n' + p.communicate()[1] + '\n\n')
-            sys.exit(1)
+def pg_dump_object(mr_query, connectionInfo, envOpts):
+    out_file = PATH_PREFIX + 'minirepro.dp.sql'
+    dmp_cmd = 'pg_dump -h %s -p %s -U %s -sxO %s' % connectionInfo
+    dmp_cmd = "%s --relation-oids %s --function-oids %s -f %s" % \
+        (dmp_cmd, mr_query.relids, mr_query.funcids, E(out_file))
+    print dmp_cmd
+    p = subprocess.Popen(dmp_cmd, shell=True, stderr=subprocess.PIPE, env=envOpts)
+    if p.wait() is not 0:
+        sys.stderr.write('\nError while dumping schema.\n\n' + p.communicate()[1] + '\n\n')
+        sys.exit(1)
 
 def print_obj_ddl(filename, f_out):
-    if filename.endswith('.dp.sql'):
+    if filename.endswith('minirepro.dp.sql'):
         f_path = os.path.join(PATH_PREFIX, filename)
         with open(f_path, 'r') as f_opened:
             line_no = 1
@@ -200,7 +268,7 @@ def main():
         parser.error("No database specified")
         exit(1)
 
-    # OK - now let's setup all the arguments & options
+    # setup all the arguments & options
     envOpts = os.environ
     db = args[0]
     host = options.host or platform.node()
@@ -223,7 +291,7 @@ def main():
     global PATH_PREFIX
     PATH_PREFIX = PATH_PREFIX + timestamp + '/'
 
-    # Create tmp dir if not already there
+    # create tmp dir if not already there
     try:
         os.stat(PATH_PREFIX)
     except:
@@ -237,28 +305,25 @@ def main():
     cursor = conn.cursor()
 
     # get server version, which is dumped to minirepro output file
-    version = get_version(cursor)
+    server_ver = get_server_version(cursor)
 
     """
     invoke gp_toolkit UDF, dump object oids as json text
     input: query file name
     output: json oids string
     """
-    json_str = dump_query(cursor, query_file)
+    json_str = dump_query(connectionInfo, query_file)
 
     """
     parse json oids string, collect all things that need to be dumped
     input: json oids string
-    output: MRQuery class (self.relations, self.funcs, self.relids)
+    output: MRQuery class (self.schemas, self.funcids, self.relids)
     """
     mr_query = parse_oids(cursor, json_str)
 
-    # dump tables and views
+    # dump relations and functions
     print "Invoking pg_dump to dump DDL ..."
-    pg_dump_object(mr_query.relations, connectionInfo, envOpts)
-
-    # dump functions
-    # TODO #108977046
+    pg_dump_object(mr_query, connectionInfo, envOpts)
 
     ### start writing out to stdout ###
     output_dir = os.path.dirname(output_file)
@@ -266,44 +331,40 @@ def main():
         os.makedirs(output_dir)
     f_out = open(output_file, 'w')
     ts = datetime.today()
-    f_out.writelines(['-- MiniRepro 1.0',
-                           '\n-- Copyright (C) 2007 - 2015 Pivotal'
+    f_out.writelines(['-- MiniRepro ' + version,
+                           '\n-- Copyright (C) 2007 - 2016 Pivotal'
                            '\n-- Database: ' + db,
                            '\n-- Date:     ' + ts.date().isoformat(),
                            '\n-- Time:     ' + ts.time().isoformat(),
                            '\n-- CmdLine:  ' + ' '.join(sys.argv),
-                           '\n-- Version:  ' + version + '\n\n'])
+                           '\n-- Version:  ' + server_ver + '\n\n'])
 
-    # Now be sure that when we load the rest we are doing it in the right
-    # database
+    # make sure we connect with the right database
     f_out.writelines('\\connect ' + db + '\n\n')
 
     # first create schema DDLs
     print "Writing schema DDLs ..."
-    table_schemas = ["CREATE SCHEMA %s;\n" % E(schema) for schema in mr_query.relations if schema != 'public']
+    table_schemas = ["CREATE SCHEMA %s;\n" % E(schema) for schema in mr_query.schemas if schema != 'public']
     f_out.writelines(table_schemas)
 
-    # write table & view DDLs
-    print "Writing table & view DDLs ..."
+    # write relation and function DDLs
+    print "Writing relation and function DDLs ..."
     for f in os.listdir(PATH_PREFIX):
         print_obj_ddl(f, f_out)
 
-    # Now we have to explicitly allow editing of these pg_class &
-    # pg_statistic tables
+    # explicitly allow editing of these pg_class & pg_statistic tables
     f_out.writelines(['\n-- ',
                            '\n-- Allow system table modifications',
                            '\n-- ',
                            '\nset allow_system_table_mods="DML";\n\n'])
 
-
     # dump table stats
     print "Writing table statistics ..."
-    oid_str = ','.join(mr_query.relids)
-    dump_tuple_count(cursor, oid_str, f_out)
+    dump_tuple_count(cursor, mr_query.relids, f_out)
 
     # dump column stats
     print "Writing column statistics ..."
-    dump_stats(cursor, oid_str, f_out)
+    dump_stats(cursor, mr_query.relids, f_out)
 
     cursor.close()
     conn.close()

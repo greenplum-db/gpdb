@@ -25,7 +25,7 @@ all : devel
 .PHONY : check installcheck installcheck-parallel
 
 # Targets for running regression tests
-.PHONY : installcheck-good installcheck-olaptest installcheck-bugbuster
+.PHONY : installcheck-good installcheck-optfunctional installcheck-olaptest installcheck-bugbuster
 
 # The pvk target builds a subset of the GPDB package that includes just the
 # tools used to verify the configuration of a set of GPDB servers.

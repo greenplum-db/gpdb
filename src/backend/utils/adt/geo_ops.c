@@ -1072,13 +1072,20 @@ line_construct_pm(Point *pt, double m)
 {
 	LINE	   *result = (LINE *) palloc(sizeof(LINE));
 
-	/* use "mx - y + yinter = 0" */
-	result->A = m;
-	result->B = -1.0;
 	if (m == DBL_MAX)
-		result->C = pt->y;
+	{
+		/* vertical - use "x = C" */
+		result->A = -1;
+		result->B = 0;
+		result->C = pt->x;
+	}
 	else
+	{
+		/* use "mx - y + yinter = 0" */
+		result->A = m;
+		result->B = -1.0;
 		result->C = pt->y - m * pt->x;
+	}
 
 #ifdef NOT_USED
 	result->m = m;
@@ -1480,6 +1487,8 @@ path_recv(PG_FUNCTION_ARGS)
 	SET_VARSIZE(path, size);
 	path->npts = npts;
 	path->closed = (closed ? 1 : 0);
+	/* prevent instability in unused pad bytes */
+	path->dummy = 0;
 
 	for (i = 0; i < npts; i++)
 	{
@@ -4103,6 +4112,8 @@ path_add(PG_FUNCTION_ARGS)
 	SET_VARSIZE(result, size);
 	result->npts = (p1->npts + p2->npts);
 	result->closed = p1->closed;
+	/* prevent instability in unused pad bytes */
+	result->dummy = 0;
 
 	for (i = 0; i < p1->npts; i++)
 	{
@@ -4344,6 +4355,8 @@ poly_path(PG_FUNCTION_ARGS)
 	SET_VARSIZE(path, size);
 	path->npts = poly->npts;
 	path->closed = TRUE;
+	/* prevent instability in unused pad bytes */
+	path->dummy = 0;
 
 	for (i = 0; i < poly->npts; i++)
 	{

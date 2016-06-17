@@ -15,7 +15,7 @@ QUICKLZ_COMPRESSION = quicklz_compression.o
 endif
 
 OBJS = catalog.o dependency.o heap.o index.o indexing.o namespace.o aclchk.o \
-       pg_aggregate.o pg_constraint.o pg_conversion.o pg_depend.o \
+       pg_aggregate.o pg_constraint.o pg_conversion.o pg_depend.o pg_enum.o \
        pg_largeobject.o pg_namespace.o pg_operator.o pg_proc.o pg_shdepend.o \
        pg_type.o toasting.o \
        pg_exttable.o pg_extprotocol.o \
@@ -62,9 +62,11 @@ POSTGRES_BKI_SRCS := $(addprefix $(top_srcdir)/src/include/catalog/, \
 	pg_opfamily.h pg_opclass.h pg_am.h pg_amop.h pg_amproc.h \
 	pg_language.h pg_largeobject.h pg_aggregate.h pg_statistic.h \
 	pg_rewrite.h pg_trigger.h pg_listener.h pg_description.h pg_cast.h \
-	pg_namespace.h pg_conversion.h pg_depend.h \
+	pg_enum.h pg_namespace.h pg_conversion.h pg_depend.h \
 	pg_database.h pg_tablespace.h pg_pltemplate.h \
 	pg_authid.h pg_auth_members.h pg_shdepend.h pg_shdescription.h pg_resqueue.h \
+	pg_ts_config.h pg_ts_config_map.h pg_ts_dict.h \
+	pg_ts_parser.h pg_ts_template.h \
 	gp_configuration.h gp_id.h gp_policy.h gp_version.h \
 	gp_segment_config.h gp_san_config.h \
 	pg_window.h \

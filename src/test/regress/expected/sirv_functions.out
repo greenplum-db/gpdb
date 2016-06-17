@@ -198,7 +198,7 @@ BEGIN
   
   EXECUTE 'DROP TABLE countries_results';
 
-  RETURN lang_delta || area_delta || gnp_delta ;
+  RETURN lang_delta::text || area_delta::text || gnp_delta::text ;
 
 END;
 $$
@@ -259,7 +259,7 @@ BEGIN
   
   EXECUTE 'DROP TABLE countries_results';
 
-  RETURN lang_delta || area_delta || gnp_delta ;
+  RETURN lang_delta::text || area_delta::text || gnp_delta::text ;
 
 END;
 $$
@@ -461,7 +461,7 @@ BEGIN
   
   EXECUTE 'DROP TABLE countries_results';
 
-  RETURN lang_delta || area_delta || gnp_delta ;
+  RETURN lang_delta::text || area_delta::text || gnp_delta::text ;
 
 END;
 $$
@@ -658,7 +658,7 @@ BEGIN
   
   EXECUTE 'DROP TABLE countries_results';
 
-  RETURN lang_delta || area_delta || gnp_delta ;
+  RETURN lang_delta::text || area_delta::text || gnp_delta::text ;
 
 END;
 $$
@@ -882,7 +882,7 @@ BEGIN
   EXECUTE 'SELECT max(lang_count - ' || min_languages || '), max(area - ' || min_area || '), max(gnp - ' || min_gnp || ') FROM countries_results' into lang_delta,area_delta,gnp_delta;
   EXECUTE 'DROP TABLE countries_results';
 
-  RETURN lang_delta || area_delta || gnp_delta ;
+  RETURN lang_delta::text || area_delta::text || gnp_delta::text ;
 
 END;
 $$
@@ -925,7 +925,7 @@ create table sirv_test7_result2 as select * from sirv_test7_fun3(sirv_test7_fun2
 ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:135)  (entry db pbld2:12010 pid=29278) (cdbdisp.c:1324)
 DETAIL:  
 SQL statement "CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by (country_code)"
-PL/pgSQL function "sirv_test7_fun3" line 7 at execute statement
+PL/pgSQL function "sirv_test7_fun3" line 7 at EXECUTE statement
 select * from sirv_test7_result2;
 ERROR:  relation "sirv_test7_result2" does not exist
 LINE 1: select * from sirv_test7_result2;
@@ -1053,7 +1053,7 @@ BEGIN
   EXECUTE 'SELECT max(lang_count - ' || min_languages || '), max(area - ' || min_area || '), max(gnp - ' || min_gnp || ') FROM countries_results' into lang_delta,area_delta,gnp_delta;
   EXECUTE 'DROP TABLE countries_results';
 
-  RETURN lang_delta || area_delta || gnp_delta ;
+  RETURN lang_delta::text || area_delta::text || gnp_delta::text ;
 
 END;
 $$
@@ -1097,7 +1097,7 @@ insert into sirv_test8_result2 select * from sirv_test8_fun3(sirv_test8_fun2(2,1
 ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:135)  (entry db pbld2:12010 pid=29278) (cdbdisp.c:1324)
 DETAIL:  
 SQL statement "CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by (country_code)"
-PL/pgSQL function "sirv_test8_fun3" line 7 at execute statement
+PL/pgSQL function "sirv_test8_fun3" line 7 at EXECUTE statement
 select * from sirv_test8_result2 order by field2;
  field1 | field2 
 --------+--------
@@ -1308,12 +1308,12 @@ insert into sirv_test10_result2 select sirv_test10_srf2('result',2,1000,1000);
 ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:135)  (seg0 slice1 pbld2:12011 pid=29759) (cdbdisp.c:1324)
 DETAIL:  
 SQL statement "CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by (country_code)"
-PL/pgSQL function "sirv_test10_srf2" line 8 at execute statement
+PL/pgSQL function "sirv_test10_srf2" line 8 at EXECUTE statement
 insert into sirv_test10_result2 select * from sirv_test10_srf2('result',2,1000,1000);
 ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:135)  (entry db pbld2:12010 pid=29278) (cdbdisp.c:1324)
 DETAIL:  
 SQL statement "CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by (country_code)"
-PL/pgSQL function "sirv_test10_srf2" line 8 at execute statement
+PL/pgSQL function "sirv_test10_srf2" line 8 at EXECUTE statement
 --end_ignore
 select * from sirv_test10_result2; --should return 0 rows
  res 
@@ -1356,7 +1356,7 @@ BEGIN
   
   EXECUTE 'DROP TABLE countries_results';
 
-  RETURN lang_delta || area_delta || gnp_delta ;
+  RETURN lang_delta::text || area_delta::text || gnp_delta::text ;
 
 END;
 $$
@@ -1401,7 +1401,7 @@ BEGIN
   
   EXECUTE 'DROP TABLE countries_results';
 
-  RETURN lang_delta || area_delta || gnp_delta ;
+  RETURN lang_delta::text || area_delta::text || gnp_delta::text ;
 
 END;
 $$
@@ -1416,12 +1416,12 @@ insert into sirv_test12_result1 select sirv_test12(lang_count::int,surfacearea::
 ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:135)  (seg1 slice1 pbld2:12012 pid=27128) (cdbdisp.c:1324)
 DETAIL:  
 SQL statement "CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by(country_code)"
-PL/pgSQL function "sirv_test12" line 7 at execute statement
+PL/pgSQL function "sirv_test12" line 7 at EXECUTE statement
 insert into sirv_test12_result1 select * from (select sirv_test12(lang_count::int,surfacearea::float,gnp::float) from sirv_test12_input) FOO;
 ERROR:  function cannot execute on segment because it issues a non-SELECT statement (functions.c:135)  (seg1 slice1 pbld2:12012 pid=27159) (cdbdisp.c:1324)
 DETAIL:  
 SQL statement "CREATE  TABLE countries_results (country_code text, country_name text, lang_count int, area float, gnp float) distributed by(country_code)"
-PL/pgSQL function "sirv_test12" line 7 at execute statement
+PL/pgSQL function "sirv_test12" line 7 at EXECUTE statement
 --end_ignore
 select * from sirv_test12_result1;
  res 

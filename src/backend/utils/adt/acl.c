@@ -99,7 +99,7 @@ static AclMode convert_tablespace_priv_string(text *priv_type_text);
 static AclMode convert_role_priv_string(text *priv_type_text);
 static AclResult pg_role_aclcheck(Oid role_oid, Oid roleid, AclMode mode);
 
-static void RoleMembershipCacheCallback(Datum arg, Oid relid);
+static void RoleMembershipCacheCallback(Datum arg, int cacheid, ItemPointer tuplePtr);
 
 
 /*
@@ -1002,11 +1002,11 @@ recursive_revoke(Acl *acl,
 	if (grantee == ownerId)
 		return acl;
 
-	/* The grantee might still have the privileges via another grantor */
+	/* The grantee might still have some grant options via another grantor */
 	still_has = aclmask(acl, grantee, ownerId,
 						ACL_GRANT_OPTION_FOR(revoke_privs),
 						ACLMASK_ALL);
-	revoke_privs &= ~still_has;
+	revoke_privs &= ~ACL_OPTION_TO_PRIVS(still_has);
 	if (revoke_privs == ACL_NO_RIGHTS)
 		return acl;
 
@@ -3054,7 +3054,7 @@ initialize_acl(void)
  *		Syscache inval callback function
  */
 static void
-RoleMembershipCacheCallback(Datum arg, Oid relid)
+RoleMembershipCacheCallback(Datum arg, int cacheid, ItemPointer tuplePtr)
 {
 	/* Force membership caches to be recomputed on next use */
 	cached_privs_role = InvalidOid;

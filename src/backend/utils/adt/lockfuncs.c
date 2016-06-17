@@ -6,7 +6,7 @@
  * Copyright (c) 2002-2009, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *		$PostgreSQL: pgsql/src/backend/utils/adt/lockfuncs.c,v 1.28 2007/01/05 22:19:41 momjian Exp $
+ *		$PostgreSQL: pgsql/src/backend/utils/adt/lockfuncs.c,v 1.32 2008/01/08 23:18:51 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -30,6 +30,7 @@ static const char *const LockTagTypeNames[] = {
 	"page",
 	"tuple",
 	"transactionid",
+	"virtualxid",
 	"resynchronize",
 	"append-only segment file",
 	"object",
@@ -48,6 +49,26 @@ typedef struct
 	struct pg_result **segresults;	/* pg_result for each segDB */
 
 } PG_Lock_Status;
+
+
+/*
+ * VXIDGetDatum - Construct a text representation of a VXID
+ *
+ * This is currently only used in pg_lock_status, so we put it here.
+ */
+static Datum
+VXIDGetDatum(BackendId bid, LocalTransactionId lxid)
+{
+	/*
+	 * The representation is "<bid>/<lxid>", decimal and unsigned decimal
+	 * respectively.  Note that elog.c also knows how to format a vxid.
+	 */
+	char		vxidstr[32];
+
+	snprintf(vxidstr, sizeof(vxidstr), "%d/%u", bid, lxid);
+
+	return DirectFunctionCall1(textin, CStringGetDatum(vxidstr));
+}
 
 
 /*
@@ -75,7 +96,7 @@ pg_lock_status(PG_FUNCTION_ARGS)
 
 		/* build tupdesc for result tuples */
 		/* this had better match pg_locks view in system_views.sql */
-		tupdesc = CreateTemplateTupleDesc(16, false);
+		tupdesc = CreateTemplateTupleDesc(17, false);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "locktype",
 						   TEXTOID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "database",
@@ -86,30 +107,32 @@ pg_lock_status(PG_FUNCTION_ARGS)
 						   INT4OID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 5, "tuple",
 						   INT2OID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 6, "transactionid",
-						   XIDOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 7, "classid",
-						   OIDOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 8, "objid",
-						   OIDOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 9, "objsubid",
-						   INT2OID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 10, "transaction",
-						   XIDOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 11, "pid",
-						   INT4OID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 12, "mode",
+		TupleDescInitEntry(tupdesc, (AttrNumber) 6, "virtualxid",
 						   TEXTOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 13, "granted",
+		TupleDescInitEntry(tupdesc, (AttrNumber) 7, "transactionid",
+						   XIDOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 8, "classid",
+						   OIDOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 9, "objid",
+						   OIDOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 10, "objsubid",
+						   INT2OID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 11, "virtualtransaction",
+						   TEXTOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 12, "pid",
+						   INT4OID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 13, "mode",
+						   TEXTOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 14, "granted",
 						   BOOLOID, -1, 0);
 		/*
 		 * These next columns are specific to GPDB
 		 */
-		TupleDescInitEntry(tupdesc, (AttrNumber) 14, "mppSessionId",
+		TupleDescInitEntry(tupdesc, (AttrNumber) 15, "mppSessionId",
 						   INT4OID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 15, "mppIsWriter",
+		TupleDescInitEntry(tupdesc, (AttrNumber) 16, "mppIsWriter",
 						   BOOLOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 16, "gp_segment_id",
+		TupleDescInitEntry(tupdesc, (AttrNumber) 17, "gp_segment_id",
 						   INT4OID, -1, 0);
 
 		funcctx->tuple_desc = BlessTupleDesc(tupdesc);
@@ -155,8 +178,8 @@ pg_lock_status(PG_FUNCTION_ARGS)
 			appendStringInfo(&buffer,
 					"SELECT * FROM  pg_lock_status() L "
 					 " (locktype text, database oid, relation oid, page int4, tuple int2,"
-					 " transactionid xid, classid oid, objid oid, objsubid int2,"
-					 " transaction xid, pid int4, mode text, granted boolean, "
+					 " virtualxid text, transactionid xid, classid oid, objid oid, objsubid int2,"
+					 " virtualtransaction text, pid int4, mode text, granted boolean, "
 					 " mppSessionId int4, mppIsWriter boolean, gp_segment_id int4) ");
 
 			initStringInfo(&errbuf);
@@ -242,9 +265,9 @@ pg_lock_status(PG_FUNCTION_ARGS)
 			 * will still exist on the subsequent calls.
 			 */
 			mystatus->segresults = results;
-
-			MemoryContextSwitchTo(oldcontext);
 		}
+
+		MemoryContextSwitchTo(oldcontext);
 	}
 
 	funcctx = SRF_PERCALL_SETUP();
@@ -264,8 +287,8 @@ pg_lock_status(PG_FUNCTION_ARGS)
 		LOCKMODE	mode = 0;
 		const char *locktypename;
 		char		tnbuf[32];
-		Datum		values[16];
-		bool		nulls[16];
+		Datum		values[17];
+		bool		nulls[17];
 		HeapTuple	tuple;
 		Datum		result;
 
@@ -326,7 +349,7 @@ pg_lock_status(PG_FUNCTION_ARGS)
 		MemSet(values, 0, sizeof(values));
 		MemSet(nulls, false, sizeof(nulls));
 
-		if (lock->tag.locktag_type <= LOCKTAG_ADVISORY)
+		if (lock->tag.locktag_type <= LOCKTAG_LAST_TYPE)
 			locktypename = LockTagTypeNames[lock->tag.locktag_type];
 		else
 		{
@@ -349,6 +372,7 @@ pg_lock_status(PG_FUNCTION_ARGS)
 				nulls[6] = true;
 				nulls[7] = true;
 				nulls[8] = true;
+				nulls[9] = true;
 				break;
 			case LOCKTAG_PAGE:
 				values[1] = ObjectIdGetDatum(lock->tag.locktag_field1);
@@ -359,6 +383,7 @@ pg_lock_status(PG_FUNCTION_ARGS)
 				nulls[6] = true;
 				nulls[7] = true;
 				nulls[8] = true;
+				nulls[9] = true;
 				break;
 			case LOCKTAG_TUPLE:
 				values[1] = ObjectIdGetDatum(lock->tag.locktag_field1);
@@ -369,9 +394,22 @@ pg_lock_status(PG_FUNCTION_ARGS)
 				nulls[6] = true;
 				nulls[7] = true;
 				nulls[8] = true;
+				nulls[9] = true;
 				break;
 			case LOCKTAG_TRANSACTION:
-				values[5] = TransactionIdGetDatum(lock->tag.locktag_field1);
+				values[6] = TransactionIdGetDatum(lock->tag.locktag_field1);
+				nulls[1] = true;
+				nulls[2] = true;
+				nulls[3] = true;
+				nulls[4] = true;
+				nulls[5] = true;
+				nulls[7] = true;
+				nulls[8] = true;
+				nulls[9] = true;
+				break;
+			case LOCKTAG_VIRTUALTRANSACTION:
+				values[5] = VXIDGetDatum(lock->tag.locktag_field1,
+										 lock->tag.locktag_field2);
 				nulls[1] = true;
 				nulls[2] = true;
 				nulls[3] = true;
@@ -379,7 +417,7 @@ pg_lock_status(PG_FUNCTION_ARGS)
 				nulls[6] = true;
 				nulls[7] = true;
 				nulls[8] = true;
-				break;
+				nulls[9] = true;
 			case LOCKTAG_RELATION_APPENDONLY_SEGMENT_FILE:
 				values[1] = ObjectIdGetDatum(lock->tag.locktag_field1);
 				values[2] = ObjectIdGetDatum(lock->tag.locktag_field2);
@@ -389,47 +427,50 @@ pg_lock_status(PG_FUNCTION_ARGS)
 				nulls[5] = true;
 				nulls[6] = true;
 				nulls[8] = true;
+				nulls[9] = true;
 				break;
 			case LOCKTAG_RESOURCE_QUEUE:
 				values[1] = ObjectIdGetDatum(proc->databaseId);
-				values[7] = ObjectIdGetDatum(lock->tag.locktag_field1);
+				values[8] = ObjectIdGetDatum(lock->tag.locktag_field1);
 				nulls[2] = true;
 				nulls[3] = true;
 				nulls[4] = true;
 				nulls[5] = true;
 				nulls[6] = true;
-				nulls[8] = true;
+				nulls[7] = true;
+				nulls[9] = true;
 				break;
 			case LOCKTAG_OBJECT:
 			case LOCKTAG_USERLOCK:
 			case LOCKTAG_ADVISORY:
 			default:			/* treat unknown locktags like OBJECT */
 				values[1] = ObjectIdGetDatum(lock->tag.locktag_field1);
-				values[6] = ObjectIdGetDatum(lock->tag.locktag_field2);
-				values[7] = ObjectIdGetDatum(lock->tag.locktag_field3);
-				values[8] = Int16GetDatum(lock->tag.locktag_field4);
+				values[7] = ObjectIdGetDatum(lock->tag.locktag_field2);
+				values[8] = ObjectIdGetDatum(lock->tag.locktag_field3);
+				values[9] = Int16GetDatum(lock->tag.locktag_field4);
 				nulls[2] = true;
 				nulls[3] = true;
 				nulls[4] = true;
 				nulls[5] = true;
+				nulls[6] = true;
 				break;
 		}
 
-		values[9] = TransactionIdGetDatum(proc->xid);
+		values[10] = VXIDGetDatum(proc->backendId, proc->lxid);
 		if (proc->pid != 0)
-			values[10] = Int32GetDatum(proc->pid);
+			values[11] = Int32GetDatum(proc->pid);
 		else
-			nulls[10] = true;
-		values[11] = DirectFunctionCall1(textin,
+			nulls[11] = true;
+		values[12] = DirectFunctionCall1(textin,
 					  CStringGetDatum((char *) GetLockmodeName(LOCK_LOCKMETHOD(*lock),
 													  mode)));
-		values[12] = BoolGetDatum(granted);
+		values[13] = BoolGetDatum(granted);
 		
-		values[13] = Int32GetDatum(proc->mppSessionId);
-		
-		values[14] = Int32GetDatum(proc->mppIsWriter);
+		values[14] = Int32GetDatum(proc->mppSessionId);
 
-		values[15] = Int32GetDatum(Gp_segment);
+		values[15] = BoolGetDatum(proc->mppIsWriter);
+
+		values[16] = Int32GetDatum(Gp_segment);
 
 		tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
 		result = HeapTupleGetDatum(tuple);
@@ -445,8 +486,8 @@ pg_lock_status(PG_FUNCTION_ARGS)
 	{
 		HeapTuple	tuple;
 		Datum		result;
-		Datum		values[16];
-		bool		nulls[16];
+		Datum		values[17];
+		bool		nulls[17];
 		int i;
 		int whichresultset = 0;
 		int whichelement = mystatus->currIdx - lockData->nelements;
@@ -503,23 +544,24 @@ pg_lock_status(PG_FUNCTION_ARGS)
 		values[3] = UInt32GetDatum(atoi(PQgetvalue(mystatus->segresults[whichresultset], whichrow, 3)));
 		values[4] = UInt16GetDatum(atoi(PQgetvalue(mystatus->segresults[whichresultset], whichrow, 4)));
 
-		values[5] = TransactionIdGetDatum(atoi(PQgetvalue(mystatus->segresults[whichresultset], whichrow, 5)));
-		values[6] = ObjectIdGetDatum(atoi(PQgetvalue(mystatus->segresults[whichresultset], whichrow, 6)));
+		values[5] = CStringGetTextDatum(PQgetvalue(mystatus->segresults[whichresultset], whichrow, 5));
+		values[6] = TransactionIdGetDatum(atoi(PQgetvalue(mystatus->segresults[whichresultset], whichrow, 6)));
 		values[7] = ObjectIdGetDatum(atoi(PQgetvalue(mystatus->segresults[whichresultset], whichrow, 7)));
-		values[8] = UInt16GetDatum(atoi(PQgetvalue(mystatus->segresults[whichresultset], whichrow, 8)));
+		values[8] = ObjectIdGetDatum(atoi(PQgetvalue(mystatus->segresults[whichresultset], whichrow, 8)));
+		values[9] = UInt16GetDatum(atoi(PQgetvalue(mystatus->segresults[whichresultset], whichrow, 9)));
 
-		values[9] = TransactionIdGetDatum(atoi(PQgetvalue(mystatus->segresults[whichresultset], whichrow, 9)));
-		values[10] = UInt32GetDatum(atoi(PQgetvalue(mystatus->segresults[whichresultset], whichrow,10)));
-		values[11] = CStringGetTextDatum(PQgetvalue(mystatus->segresults[whichresultset], whichrow,11));
-		values[12] = BoolGetDatum(strncmp(PQgetvalue(mystatus->segresults[whichresultset], whichrow,12),"t",1)==0);
-		values[13] = Int32GetDatum(atoi(PQgetvalue(mystatus->segresults[whichresultset], whichrow,13)));
-		values[14] = BoolGetDatum(strncmp(PQgetvalue(mystatus->segresults[whichresultset], whichrow,14),"t",1)==0);
-		values[15] = Int32GetDatum(atoi(PQgetvalue(mystatus->segresults[whichresultset], whichrow,15)));
+		values[10] = CStringGetTextDatum(PQgetvalue(mystatus->segresults[whichresultset], whichrow, 10));
+		values[11] = UInt32GetDatum(atoi(PQgetvalue(mystatus->segresults[whichresultset], whichrow, 11)));
+		values[12] = CStringGetTextDatum(PQgetvalue(mystatus->segresults[whichresultset], whichrow, 12));
+		values[13] = BoolGetDatum(strncmp(PQgetvalue(mystatus->segresults[whichresultset], whichrow,13),"t",1)==0);
+		values[14] = Int32GetDatum(atoi(PQgetvalue(mystatus->segresults[whichresultset], whichrow,14)));
+		values[15] = BoolGetDatum(strncmp(PQgetvalue(mystatus->segresults[whichresultset], whichrow,15),"t",1)==0);
+		values[16] = Int32GetDatum(atoi(PQgetvalue(mystatus->segresults[whichresultset], whichrow,16)));
 
 		/*
 		 * Copy the null info over.  It should all match properly.
 		 */
-		for (i=0; i<16; i++)
+		for (i=0; i<17; i++)
 		{
 			nulls[i] = PQgetisnull(mystatus->segresults[whichresultset], whichrow, i);
 		}

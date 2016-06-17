@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/typcache.h,v 1.14 2007/01/05 22:20:00 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/utils/typcache.h,v 1.16.2.1 2010/09/02 03:17:06 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -39,7 +39,7 @@ typedef struct TypeCacheEntry
 	 * information hasn't yet been requested.
 	 */
 	Oid			btree_opf;		/* the default btree opclass' family */
-	Oid			btree_opintype;	/* the default btree opclass' opcintype */
+	Oid			btree_opintype; /* the default btree opclass' opcintype */
 	Oid			hash_opf;		/* the default hash opclass' family */
 	Oid			hash_opintype;	/* the default hash opclass' opcintype */
 	Oid			eq_opr;			/* the equality operator */
@@ -86,7 +86,6 @@ extern TupleDesc lookup_rowtype_tupdesc_copy(Oid type_id, int32 typmod);
 
 extern void assign_record_type_typmod(TupleDesc tupDesc);
 
-extern void flush_rowtype_cache(Oid type_id);
-
 extern void build_tuple_node_list(List **transientTypeList);
+
 #endif   /* TYPCACHE_H */

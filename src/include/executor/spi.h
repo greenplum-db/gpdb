@@ -20,17 +20,19 @@
 #include "postgres.h"
 
 /*
- *	These are not needed by this file, but used by other programs
- *	using SPI
+ *	Most of these are not needed by this file, but may be used by
+ *	user-written code that uses SPI
  */
 #include "access/heapam.h"
 #include "access/xact.h"
 #include "catalog/pg_language.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_type.h"
+#include "executor/execdefs.h"
 #include "executor/executor.h"
 #include "nodes/execnodes.h"
 #include "nodes/params.h"
+#include "nodes/parsenodes.h"
 #include "nodes/plannodes.h"
 #include "nodes/primnodes.h"
 #include "nodes/relation.h"
@@ -43,7 +45,6 @@
 #include "utils/portal.h"
 #include "utils/relcache.h"
 #include "utils/syscache.h"
-#include "executor/execdefs.h"
 
 
 typedef struct SPITupleTable
@@ -114,12 +115,15 @@ extern int SPI_execute_with_args(const char *src,
 					  Datum *Values, const char *Nulls,
 					  bool read_only, long tcount);
 extern SPIPlanPtr SPI_prepare(const char *src, int nargs, Oid *argtypes);
+extern SPIPlanPtr SPI_prepare_cursor(const char *src, int nargs, Oid *argtypes,
+				   int cursorOptions);
 extern SPIPlanPtr SPI_saveplan(SPIPlanPtr plan);
 extern int	SPI_freeplan(SPIPlanPtr plan);
 
 extern Oid	SPI_getargtypeid(SPIPlanPtr plan, int argIndex);
 extern int	SPI_getargcount(SPIPlanPtr plan);
 extern bool SPI_is_cursor_plan(SPIPlanPtr plan);
+extern bool SPI_plan_is_valid(SPIPlanPtr plan);
 extern const char *SPI_result_code_string(int code);
 
 extern HeapTuple SPI_copytuple(HeapTuple tuple);
@@ -150,6 +154,8 @@ extern Portal SPI_cursor_open_with_args(const char *name,
 extern Portal SPI_cursor_find(const char *name);
 extern void SPI_cursor_fetch(Portal portal, bool forward, long count);
 extern void SPI_cursor_move(Portal portal, bool forward, long count);
+extern void SPI_scroll_cursor_fetch(Portal, FetchDirection direction, long count);
+extern void SPI_scroll_cursor_move(Portal, FetchDirection direction, long count);
 extern void SPI_cursor_close(Portal portal);
 
 extern void AtEOXact_SPI(bool isCommit);

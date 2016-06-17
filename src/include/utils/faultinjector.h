@@ -162,6 +162,7 @@ typedef enum FaultInjectorIdentifier_e {
 	
 	MallocFailure,
 	AbortTransactionFail,
+	WorkfileCreationFail,
 
 	UpdateCommittedEofInPersistentTable,
 
@@ -170,6 +171,7 @@ typedef enum FaultInjectorIdentifier_e {
 
 	ExecSortBeforeSorting,
 	ExecSortMKSortMergeRuns,
+	ExecShareInputNext,
 	BaseBackupPostCreateCheckpoint,
 
 	CompactionBeforeSegmentFileDropPhase,

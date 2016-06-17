@@ -222,7 +222,7 @@ _bitmap_xlog_insert_lovitem(XLogRecPtr lsn, XLogRecord *record)
 				 xlrec->bm_lov_blkno);
 		
 		if (PageAddItem(lovPage, (Item)&(xlrec->bm_lovItem), itemSize, 
-						newOffset, LP_USED) == InvalidOffsetNumber)
+						newOffset, false, false) == InvalidOffsetNumber)
 			ereport(ERROR,
 					(errcode(ERRCODE_INTERNAL_ERROR),
 					errmsg("_bitmap_xlog_insert_lovitem: failed to add LOV "

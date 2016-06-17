@@ -4,7 +4,7 @@
 TEST(Logger, simple) {
     InitConfig("test/data/s3test.conf", "default");
 
-    InitLog();
+    InitRemoteLog();
 
     s3ext_logtype = STDERR_LOG;
     S3DEBUG("Hello, STDERR DEBUG");

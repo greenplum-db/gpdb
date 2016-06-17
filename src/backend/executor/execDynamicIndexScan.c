@@ -10,6 +10,7 @@
 #include "postgres.h"
 
 #include "cdb/cdbpartition.h"
+#include "cdb/partitionselection.h"
 #include "executor/execDynamicIndexScan.h"
 #include "executor/execDynamicScan.h"
 #include "executor/nodeIndexscan.h"
@@ -728,7 +729,6 @@ IndexScan_EndIndexScan(IndexScanState *indexScanState)
 	Assert(NULL == indexScanState->iss_RelationDesc);
 	Assert(NULL == indexScanState->iss_ScanDesc);
 
-	Assert(NULL != indexScanState->iss_RuntimeContext);
 	FreeRuntimeKeysContext(indexScanState);
 	Assert(NULL == indexScanState->iss_RuntimeContext);
 

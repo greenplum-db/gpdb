@@ -6,6 +6,8 @@ INSERT INTO xmltest VALUES (1, '<value>one</value>');
 INSERT INTO xmltest VALUES (2, '<value>two</value>');
 INSERT INTO xmltest VALUES (3, '<wrong');
 ERROR:  invalid XML content
+LINE 1: INSERT INTO xmltest VALUES (3, '<wrong');
+                                       ^
 DETAIL:  Entity: line 1: parser error : Couldn't find end of Start Tag wrong line 1
 <wrong
       ^
@@ -460,7 +462,7 @@ SELECT table_name, view_definition FROM information_schema.views
  xmlview5   | SELECT XMLPARSE(CONTENT '<abc>x</abc>'::text STRIP WHITESPACE) AS "xmlparse";
  xmlview6   | SELECT XMLPI(NAME foo, 'bar'::text) AS "xmlpi";
  xmlview7   | SELECT XMLROOT('<foo/>'::xml, VERSION NO VALUE, STANDALONE YES) AS "xmlroot";
- xmlview8   | SELECT (XMLSERIALIZE(CONTENT 'good'::xml AS bpchar))::bpchar AS "xmlserialize";
+ xmlview8   | SELECT (XMLSERIALIZE(CONTENT 'good'::xml AS character(10)))::character(10) AS "xmlserialize";
  xmlview9   | SELECT XMLSERIALIZE(CONTENT 'good'::xml AS text) AS "xmlserialize";
 (9 rows)
 

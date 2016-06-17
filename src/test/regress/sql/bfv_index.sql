@@ -22,8 +22,7 @@ CREATE TABLE bfv_tab1 (
 
 create index bfv_tab1_idx1 on bfv_tab1 using btree(unique1);
 
-explain
-select * from bfv_tab1, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)
+explain select * from bfv_tab1, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)
     WHERE bfv_tab1.unique1 = v.i and bfv_tab1.stringu1 = v.j;
 
 --start_ignore

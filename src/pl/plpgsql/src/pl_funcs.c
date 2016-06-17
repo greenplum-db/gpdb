@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/pl_funcs.c,v 1.57 2007/01/28 17:58:13 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/pl_funcs.c,v 1.67.2.1 2010/02/17 01:48:58 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -154,15 +154,14 @@ plpgsql_ns_setlocal(bool flag)
  * ----------
  */
 void
-plpgsql_ns_push(char *label)
+plpgsql_ns_push(const char *label)
 {
 	PLpgSQL_ns *new;
 
 	if (label == NULL)
 		label = "";
 
-	new = palloc(sizeof(PLpgSQL_ns));
-	memset(new, 0, sizeof(PLpgSQL_ns));
+	new = palloc0(sizeof(PLpgSQL_ns));
 	new->upper = ns_current;
 	ns_current = new;
 
@@ -227,59 +226,98 @@ plpgsql_ns_additem(int itemtype, int itemno, const char *name)
 
 
 /* ----------
- * plpgsql_ns_lookup			Lookup for a word in the namestack
+ * plpgsql_ns_lookup			Lookup an identifier in the namestack
+ *
+ * Note that this only searches for variables, not labels.
+ *
+ * name1 must be non-NULL.  Pass NULL for name2 and/or name3 if parsing a name
+ * with fewer than three components.
+ *
+ * If names_used isn't NULL, *names_used receives the number of names
+ * matched: 0 if no match, 1 if name1 matched an unqualified variable name,
+ * 2 if name1 and name2 matched a block label + variable name.
+ *
+ * Note that name3 is never directly matched to anything.  However, if it
+ * isn't NULL, we will disregard qualified matches to scalar variables.
+ * Similarly, if name2 isn't NULL, we disregard unqualified matches to
+ * scalar variables.
  * ----------
  */
 PLpgSQL_nsitem *
-plpgsql_ns_lookup(char *name, char *label)
+plpgsql_ns_lookup(const char *name1, const char *name2, const char *name3,
+				  int *names_used)
 {
 	PLpgSQL_ns *ns;
 	int			i;
 
-	/*
-	 * If a label is specified, lookup only in that
-	 */
-	if (label != NULL)
-	{
-		for (ns = ns_current; ns != NULL; ns = ns->upper)
-		{
-			if (!strcmp(ns->items[0]->name, label))
-			{
-				for (i = 1; i < ns->items_used; i++)
-				{
-					if (!strcmp(ns->items[i]->name, name))
-						return ns->items[i];
-				}
-				return NULL;	/* name not found in specified label */
-			}
-		}
-		return NULL;			/* label not found */
-	}
-
-	/*
-	 * No label given, lookup for visible labels ignoring localmode
-	 */
+	/* Scan each level of the namestack */
 	for (ns = ns_current; ns != NULL; ns = ns->upper)
 	{
-		if (!strcmp(ns->items[0]->name, name))
+		/* Check for unqualified match to variable name */
+		for (i = 1; i < ns->items_used; i++)
+		{
+			PLpgSQL_nsitem *nsitem = ns->items[i];
+
+			if (strcmp(nsitem->name, name1) == 0)
+			{
+				if (name2 == NULL ||
+					nsitem->itemtype != PLPGSQL_NSTYPE_VAR)
+				{
+					if (names_used)
+						*names_used = 1;
+					return nsitem;
+				}
+			}
+		}
+
+		/* Check for qualified match to variable name */
+		if (name2 != NULL &&
+			strcmp(ns->items[0]->name, name1) == 0)
+		{
+			for (i = 1; i < ns->items_used; i++)
+			{
+				PLpgSQL_nsitem *nsitem = ns->items[i];
+
+				if (strcmp(nsitem->name, name2) == 0)
+				{
+					if (name3 == NULL ||
+						nsitem->itemtype != PLPGSQL_NSTYPE_VAR)
+					{
+						if (names_used)
+							*names_used = 2;
+						return nsitem;
+					}
+				}
+			}
+		}
+
+		if (ns_localmode)
+			break;				/* do not look into upper levels */
+	}
+
+	/* This is just to suppress possibly-uninitialized-variable warnings */
+	if (names_used)
+		*names_used = 0;
+	return NULL;				/* No match found */
+}
+
+
+/* ----------
+ * plpgsql_ns_lookup_label		Lookup a label in the namestack
+ * ----------
+ */
+PLpgSQL_nsitem *
+plpgsql_ns_lookup_label(const char *name)
+{
+	PLpgSQL_ns *ns;
+
+	for (ns = ns_current; ns != NULL; ns = ns->upper)
+	{
+		if (strcmp(ns->items[0]->name, name) == 0)
 			return ns->items[0];
 	}
 
-	/*
-	 * Finally lookup name in the namestack
-	 */
-	for (ns = ns_current; ns != NULL; ns = ns->upper)
-	{
-		for (i = 1; i < ns->items_used; i++)
-		{
-			if (!strcmp(ns->items[i]->name, name))
-				return ns->items[i];
-		}
-		if (ns_localmode)
-			return NULL;		/* name not found in current namespace */
-	}
-
-	return NULL;
+	return NULL;				/* label not found */
 }
 
 
@@ -295,14 +333,13 @@ plpgsql_ns_rename(char *oldname, char *newname)
 	int			i;
 
 	/*
-	 * Lookup name in the namestack; do the lookup in the current namespace
-	 * only.
+	 * Lookup name in the namestack
 	 */
 	for (ns = ns_current; ns != NULL; ns = ns->upper)
 	{
 		for (i = 1; i < ns->items_used; i++)
 		{
-			if (!strcmp(ns->items[i]->name, oldname))
+			if (strcmp(ns->items[i]->name, oldname) == 0)
 			{
 				newitem = palloc(sizeof(PLpgSQL_nsitem) + strlen(newname));
 				newitem->itemtype = ns->items[i]->itemtype;
@@ -437,41 +474,41 @@ plpgsql_stmt_typename(PLpgSQL_stmt *stmt)
 		case PLPGSQL_STMT_ASSIGN:
 			return _("assignment");
 		case PLPGSQL_STMT_IF:
-			return _("if");
+			return "IF";
 		case PLPGSQL_STMT_LOOP:
-			return _("loop");
+			return "LOOP";
 		case PLPGSQL_STMT_WHILE:
-			return _("while");
+			return "WHILE";
 		case PLPGSQL_STMT_FORI:
-			return _("for with integer loop variable");
+			return _("FOR with integer loop variable");
 		case PLPGSQL_STMT_FORS:
-			return _("for over select rows");
+			return _("FOR over SELECT rows");
 		case PLPGSQL_STMT_EXIT:
-			return _("exit");
+			return "EXIT";
 		case PLPGSQL_STMT_RETURN:
-			return _("return");
+			return "RETURN";
 		case PLPGSQL_STMT_RETURN_NEXT:
-			return _("return next");
+			return "RETURN NEXT";
 		case PLPGSQL_STMT_RETURN_QUERY:
 			return "RETURN QUERY";
 		case PLPGSQL_STMT_RAISE:
-			return _("raise");
+			return "RAISE";
 		case PLPGSQL_STMT_EXECSQL:
 			return _("SQL statement");
 		case PLPGSQL_STMT_DYNEXECUTE:
-			return _("execute statement");
+			return _("EXECUTE statement");
 		case PLPGSQL_STMT_DYNFORS:
-			return _("for over execute statement");
+			return _("FOR over EXECUTE statement");
 		case PLPGSQL_STMT_GETDIAG:
-			return _("get diagnostics");
+			return "GET DIAGNOSTICS";
 		case PLPGSQL_STMT_OPEN:
-			return _("open");
+			return "OPEN";
 		case PLPGSQL_STMT_FETCH:
-			return _("fetch");
+			return "FETCH";
 		case PLPGSQL_STMT_CLOSE:
-			return _("close");
+			return "CLOSE";
 		case PLPGSQL_STMT_PERFORM:
-			return _("perform");
+			return "PERFORM";
 	}
 
 	return "unknown";
@@ -641,7 +678,7 @@ free_fori(PLpgSQL_stmt_fori *stmt)
 {
 	free_expr(stmt->lower);
 	free_expr(stmt->upper);
-	free_expr(stmt->by);
+	free_expr(stmt->step);
 	free_stmts(stmt->body);
 }
 
@@ -804,7 +841,7 @@ plpgsql_free_function_memory(PLpgSQL_function *func)
  **********************************************************************/
 static int	dump_indent;
 
-static void dump_ind();
+static void dump_ind(void);
 static void dump_stmt(PLpgSQL_stmt *stmt);
 static void dump_block(PLpgSQL_stmt_block *block);
 static void dump_assign(PLpgSQL_stmt_assign *stmt);
@@ -824,6 +861,7 @@ static void dump_dynfors(PLpgSQL_stmt_dynfors *stmt);
 static void dump_getdiag(PLpgSQL_stmt_getdiag *stmt);
 static void dump_open(PLpgSQL_stmt_open *stmt);
 static void dump_fetch(PLpgSQL_stmt_fetch *stmt);
+static void dump_cursor_direction(PLpgSQL_stmt_fetch *stmt);
 static void dump_close(PLpgSQL_stmt_close *stmt);
 static void dump_perform(PLpgSQL_stmt_perform *stmt);
 static void dump_expr(PLpgSQL_expr *expr);
@@ -1033,10 +1071,13 @@ dump_fori(PLpgSQL_stmt_fori *stmt)
 	printf("    upper = ");
 	dump_expr(stmt->upper);
 	printf("\n");
-	dump_ind();
-	printf("    by = ");
-	dump_expr(stmt->by);
-	printf("\n");
+	if (stmt->step)
+	{
+		dump_ind();
+		printf("    step = ");
+		dump_expr(stmt->step);
+		printf("\n");
+	}
 	dump_indent -= 2;
 
 	dump_stmts(stmt->body);
@@ -1095,21 +1136,64 @@ static void
 dump_fetch(PLpgSQL_stmt_fetch *stmt)
 {
 	dump_ind();
-	printf("FETCH curvar=%d\n", stmt->curvar);
 
+	if (!stmt->is_move)
+	{
+		printf("FETCH curvar=%d\n", stmt->curvar);
+		dump_cursor_direction(stmt);
+
+		dump_indent += 2;
+		if (stmt->rec != NULL)
+		{
+			dump_ind();
+			printf("    target = %d %s\n", stmt->rec->recno, stmt->rec->refname);
+		}
+		if (stmt->row != NULL)
+		{
+			dump_ind();
+			printf("    target = %d %s\n", stmt->row->rowno, stmt->row->refname);
+		}
+		dump_indent -= 2;
+	}
+	else
+	{
+		printf("MOVE curvar=%d\n", stmt->curvar);
+		dump_cursor_direction(stmt);
+	}
+}
+
+static void
+dump_cursor_direction(PLpgSQL_stmt_fetch *stmt)
+{
 	dump_indent += 2;
-	if (stmt->rec != NULL)
+	dump_ind();
+	switch (stmt->direction)
 	{
-		dump_ind();
-		printf("    target = %d %s\n", stmt->rec->recno, stmt->rec->refname);
+		case FETCH_FORWARD:
+			printf("    FORWARD ");
+			break;
+		case FETCH_BACKWARD:
+			printf("    BACKWARD ");
+			break;
+		case FETCH_ABSOLUTE:
+			printf("    ABSOLUTE ");
+			break;
+		case FETCH_RELATIVE:
+			printf("    RELATIVE ");
+			break;
+		default:
+			printf("??? unknown cursor direction %d", stmt->direction);
 	}
-	if (stmt->row != NULL)
-	{
-		dump_ind();
-		printf("    target = %d %s\n", stmt->row->rowno, stmt->row->refname);
-	}
-	dump_indent -= 2;
 
+	if (stmt->expr)
+	{
+		dump_expr(stmt->expr);
+		printf("\n");
+	}
+	else
+		printf("%d\n", stmt->how_many);
+
+	dump_indent -= 2;
 }
 
 static void
@@ -1132,8 +1216,9 @@ static void
 dump_exit(PLpgSQL_stmt_exit *stmt)
 {
 	dump_ind();
-	printf("%s label='%s'",
-		   stmt->is_exit ? "EXIT" : "CONTINUE", stmt->label);
+	printf("%s", stmt->is_exit ? "EXIT" : "CONTINUE");
+	if (stmt->label != NULL)
+		printf(" label='%s'", stmt->label);
 	if (stmt->cond != NULL)
 	{
 		printf(" WHEN ");

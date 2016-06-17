@@ -449,3 +449,10 @@ def impl(context, filename, table_type, tablename, dbname):
         raise Exception("Table '%s' does not exist when it should" % tablename)
     validate_restore_data_in_file(context, tablename, dbname, filename)
 
+@then('verify that the owner of "{dbname}" is "{expected_owner}"')
+def impl(context, dbname, expected_owner):
+    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+        query = "SELECT pg_catalog.pg_get_userbyid(d.datdba) FROM pg_catalog.pg_database d WHERE d.datname = '%s';" % dbname
+        actual_owner = dbconn.execSQLForSingleton(conn, query)
+    if actual_owner != expected_owner:
+        raise Exception("Database %s has owner %s when it should have owner %s" % (dbname, actual_owner, expected_owner))

@@ -21,6 +21,7 @@
 #include "cdb/cdbvars.h"
 #include "cdb/cdbpartition.h"
 #include "commands/vacuum.h"
+#include "executor/execdesc.h"
 #include "nodes/makefuncs.h"
 #include "nodes/plannodes.h"
 #include "parser/parsetree.h"
@@ -70,7 +71,7 @@ autostats_issue_analyze(Oid relationOid)
 	analyzeStmt->rootonly = false;
 	analyzeStmt->relation = relation;	/* not used since we pass relids list */
 	analyzeStmt->va_cols = NIL;
-	vacuum(analyzeStmt, NIL);
+	vacuum(analyzeStmt, NIL, NULL, false, false);
 	pfree(analyzeStmt);
 }
 
@@ -188,8 +189,9 @@ autostats_cmdtype_to_string(AutoStatsCmdType cmdType)
  * a PlannedStmt. This is done in preparation to call auto_stats()
  */
 void
-autostats_get_cmdtype(PlannedStmt *stmt, AutoStatsCmdType * pcmdType, Oid *prelationOid)
+autostats_get_cmdtype(QueryDesc *queryDesc, AutoStatsCmdType * pcmdType, Oid *prelationOid)
 {
+	PlannedStmt *stmt = queryDesc->plannedstmt;
 	Oid			relationOid = InvalidOid;		/* relation that is modified */
 	AutoStatsCmdType cmdType = AUTOSTATS_CMDTYPE_SENTINEL;		/* command type */
 	RangeTblEntry *rte = NULL;
@@ -200,7 +202,7 @@ autostats_get_cmdtype(PlannedStmt *stmt, AutoStatsCmdType * pcmdType, Oid *prela
 			if (stmt->intoClause != NULL)
 			{
 				/* CTAS */
-				relationOid = stmt->intoClause->oidInfo.relOid;
+				relationOid = queryDesc->ddesc->intoOidInfo->relOid;
 				cmdType = AUTOSTATS_CMDTYPE_CTAS;
 			}
 			break;

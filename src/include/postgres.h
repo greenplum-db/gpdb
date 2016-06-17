@@ -10,7 +10,7 @@
  * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1995, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/postgres.h,v 1.76 2007/01/05 22:19:50 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/postgres.h,v 1.88 2008/01/01 19:45:56 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -110,7 +110,6 @@ typedef struct
 	char		va_data[1];		/* Data begins here */
 } varattrib_1b;
 
-
 /* NOT Like Postgres! ...In GPDB, We waste a few bytes of padding, and don't always set the va_len_1be to anything */
 typedef struct
 {
@@ -136,6 +135,8 @@ typedef struct
  * look big-endian in the tuple.   This is a bit ugly, but changing it would require
  * all our customers to initdb.
  *
+ * The "xxx" bits are the length field (which includes itself in all cases).
+ * In the big-endian case we mask to extract the length.
  * Note that in both cases the flag bits are in the physically
  * first byte.	Also, it is not possible for a 1-byte length word to be zero;
  * this lets us disambiguate alignment padding bytes from the start of an
@@ -169,11 +170,8 @@ typedef struct
 	(ntohl(((varattrib_4b *) (PTR))->va_4byte.va_header) & 0x3FFFFFFF)
 #define VARSIZE_1B(PTR) \
 	(((varattrib_1b *) (PTR))->va_header & 0x7F)
-
-
 /* In GPDB, VARSIZE_1B_E() is always the size of a toast pointer plus the 4 byte header */
 #define VARSIZE_1B_E(PTR) (VARHDRSZ_EXTERNAL + sizeof(struct varatt_external))
-
 
 #define SET_VARSIZE_4B(PTR,len) \
 	(((varattrib_4b *) (PTR))->va_4byte.va_header = htonl( (len) & 0x3FFFFFFF ))
@@ -181,6 +179,14 @@ typedef struct
 	(((varattrib_4b *) (PTR))->va_4byte.va_header = htonl( ((len) & 0x3FFFFFFF) | 0x40000000 ))
 #define SET_VARSIZE_1B(PTR,len) \
 	(((varattrib_1b *) (PTR))->va_header = (len) | 0x80)
+/*
+ * Although this macro sets var_len_1be, data stored in GPDB might
+ * not have anything set in this byte, so you can't count on it's value
+ * Not really a problem, since it is always based on TOAST_POINTER_LEN
+ */
+#define SET_VARSIZE_1B_E(PTR,len) \
+	(((varattrib_1b_e *) (PTR))->va_header = 0x80, \
+	 ((varattrib_1b_e *) (PTR))->va_len_1be = (len))
 
 #define VARHDRSZ_SHORT			1
 #define VARATT_SHORT_MAX		0x7F
@@ -198,6 +204,8 @@ typedef struct
 #define VARDATA_1B(PTR)		(((varattrib_1b *) (PTR))->va_data)
 #define VARDATA_1B_E(PTR)	(((varattrib_1b_e *) (PTR))->va_data)
 
+#define VARRAWSIZE_4B_C(PTR) \
+	(((varattrib_4b *) (PTR))->va_compressed.va_rawsize)
 
 /* Externally visible macros */
 
@@ -218,57 +226,23 @@ typedef struct
  * and just use things like memcpy on it anyways.
  */
 #define VARDATA(PTR)						VARDATA_4B(PTR)
-#define VARDATA_D(D)						VARDATA(DatumGetPointer(D))
 #define VARSIZE(PTR)						VARSIZE_4B(PTR)
-#define VARSIZE_D(D) 						VARSIZE(DatumGetPointer(D))
 
-/* these are used by tuptoaster.c */
-#define VARHDRSZ_SHORT 						1
 #define VARSIZE_SHORT(PTR)					VARSIZE_1B(PTR)
-#define VARSIZE_SHORT_D(D)					VARSIZE_SHORT(DatumGetPointer(D))
 #define VARDATA_SHORT(PTR)					VARDATA_1B(PTR)
-#define VARDATA_SHORT_D(D) 					VARDATA_SHORT(DatumGetPointer(D))
-#define SET_VARSIZE(PTR, len)				SET_VARSIZE_4B  ((varattrib_4b*)(PTR), (len))
-#define SET_VARSIZE_SHORT(PTR, len) 		SET_VARSIZE_1B  ((PTR), (len))
-#define SET_VARSIZE_COMPRESSED(PTR, len) 	SET_VARSIZE_4B_C((PTR), (len))
-
-
-/* Do we want to rename these? */
-#define VARATT_IS_COMPRESSED(PTR) 			VARATT_IS_4B_C(PTR)
-#define VARATT_IS_COMPRESSED_D(D) 			VARATT_IS_COMPRESSED(DatumGetPointer(D))
-#define VARATT_IS_EXTERNAL(PTR) 			VARATT_IS_1B_E(PTR)
-#define VARATT_IS_EXTERNAL_D(D) 			VARATT_IS_1B_E(DatumGetPointer(D))
-#define VARATT_IS_SHORT(PTR) 				VARATT_IS_1B(PTR)
-#define VARATT_IS_SHORT_D(D) 				VARATT_IS_1B(DatumGetPointer(D))
-#define VARATT_SET_COMPRESSED(PTR)			SET_VARSIZE_C(PTR)
-/* XXX */
-#define VARATT_IS_EXTENDED(PTR)				(!VARATT_IS_4B_U(PTR))
-#define VARATT_IS_EXTENDED_D(D)				VARATT_IS_EXTENDED(DatumGetPointer(D))
 
 #define VARSIZE_EXTERNAL(PTR)				VARSIZE_1B_E(PTR)
+#define VARDATA_EXTERNAL(PTR)				VARDATA_1B_E(PTR)
 
+#define VARATT_IS_COMPRESSED(PTR)			VARATT_IS_4B_C(PTR)
+#define VARATT_IS_EXTERNAL(PTR)				VARATT_IS_1B_E(PTR)
+#define VARATT_IS_SHORT(PTR)				VARATT_IS_1B(PTR)
+#define VARATT_IS_EXTENDED(PTR)				(!VARATT_IS_4B_U(PTR))
 
-/*
- * Bit patterns used to indicate sort varlena headers:
- *
- * 00xxxxxx	4-byte length word, aligned, uncompressed data (up to 1G)
- * 01xxxxxx	4-byte length word, aligned, *compressed* data (up to 1G)
- * 10000000	1-byte length word, unaligned, TOAST pointer
- * 1xxxxxxx 1-byte length word, unaligned, uncompressed data (up to 126b)
- *
- * Note: IS_1B is true for external toast records but VARSIZE_1B will return 0
- * for such records. As a consequence you must always check for for IS_EXTERNAL
- * before checking for IS_1B.
- */
-
-
-#define VARATT_COULD_SHORT(PTR)	(VARATT_IS_4B_U(PTR) && (VARSIZE(PTR)-VARHDRSZ+VARHDRSZ_SHORT <= VARATT_SHORT_MAX))
-#define VARATT_COULD_SHORT_D(D)	VARATT_COULD_SHORT(DatumGetPointer(D))
-#define VARSIZE_TO_SHORT(PTR)	((char)(VARSIZE(PTR)-VARHDRSZ+VARHDRSZ_SHORT) | 0x80)
-#define VARSIZE_TO_SHORT_D(D)	VARSIZE_TO_SHORT(DatumGetPointer(D))
-
-
-
+#define SET_VARSIZE(PTR, len)				SET_VARSIZE_4B(PTR, len)
+#define SET_VARSIZE_SHORT(PTR, len)			SET_VARSIZE_1B(PTR, len)
+#define SET_VARSIZE_COMPRESSED(PTR, len)	SET_VARSIZE_4B_C(PTR, len)
+#define SET_VARSIZE_EXTERNAL(PTR, len)		SET_VARSIZE_1B_E(PTR, len)
 
 #define VARSIZE_ANY(PTR) \
 	(VARATT_IS_1B_E(PTR) ? VARSIZE_1B_E(PTR) : \
@@ -285,12 +259,6 @@ typedef struct
 #define VARDATA_ANY(PTR) \
 	 (VARATT_IS_1B(PTR) ? VARDATA_1B(PTR) : VARDATA_4B(PTR))
 
-#define VARSIZE_ANY_D(D)					VARSIZE_ANY(DatumGetPointer(D))
-#define VARDATA_ANY_D(D)					VARDATA_ANY(DatumGetPointer(D))
-#define VARSIZE_ANY_EXHDR_D(D)			    VARSIZE_ANY_EXHDR(DatumGetPointer(D))
-
-
-#define VARDATA_COMPRESSED(PTR)	((PTR)->va_compressed.va_data)
 
 /* ----------------------------------------------------------------
  *				Section 2:	datum type + support macros
@@ -299,21 +267,21 @@ typedef struct
 
 /*
  * Port Notes:
- *	Postgres makes the following assumption about machines:
+ *     Postgres makes the following assumption about machines:
  *
- *	sizeof(Datum) == sizeof(long) >= sizeof(void *) >= 4
+ *     sizeof(Datum) == sizeof(long) >= sizeof(void *) >= 4
  *
- *  Greenplum CDB:
- * 	Datum is alway 8 bytes, regardless if it is 32bit or 64bit machine.
- *  so may be > sizeof(long).
- *
- *	Postgres also assumes that
+ *     Postgres also assumes that
  *
  *	sizeof(char) == 1
  *
  *	and that
  *
  *	sizeof(short) == 2
+ *
+ *  Greenplum CDB:
+ *     Datum is alway 8 bytes, regardless if it is 32bit or 64bit machine.
+ *  so may be > sizeof(long).
  *
  * When a type narrower than Datum is stored in a Datum, we place it in the
  * low-order bits and are careful that the DatumGetXXX macro for it discards
@@ -337,15 +305,6 @@ typedef union Datum_U
 #define SIZEOF_DATUM 8
 
 typedef Datum *DatumPtr;
-
-#define GET_1_BYTE(datum)	(((Datum) (datum)) & 0x000000ff)
-#define GET_2_BYTES(datum)	(((Datum) (datum)) & 0x0000ffff)
-#define GET_4_BYTES(datum)	(((Datum) (datum)) & 0xffffffff)
-#define GET_8_BYTES(datum)	((Datum) (datum))
-#define SET_1_BYTE(value)	(((Datum) (value)) & 0x000000ff)
-#define SET_2_BYTES(value)	(((Datum) (value)) & 0x0000ffff)
-#define SET_4_BYTES(value)	(((Datum) (value)) & 0xffffffff)
-#define SET_8_BYTES(value)	((Datum) (value))
 
 /* 
  * Conversion between Datum and type X.  Changed from Macro to static inline
@@ -495,6 +454,10 @@ extern PGDLLIMPORT bool assert_enabled;
 
 #define AssertImply(cond1, cond2) \
 		Trap(!(!(cond1) || (cond2)), "AssertImply failed")
+
+extern int ExceptionalCondition(const char *conditionName,
+					 const char *errorType,
+					 const char *fileName, int lineNumber);
 
 #define AssertEquivalent(cond1, cond2) \
 		Trap(!((bool)(cond1) == (bool)(cond2)), "AssertEquivalent failed")

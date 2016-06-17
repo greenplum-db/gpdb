@@ -48,7 +48,8 @@ core
 *.gcov
 *.gcda
 *.gcno
+
 s3test
-s3chkcfg
+gpcheckcloud
 
 s3.conf

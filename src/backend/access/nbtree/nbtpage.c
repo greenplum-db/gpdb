@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtpage.c,v 1.102 2007/01/05 22:19:23 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtpage.c,v 1.106.2.1 2010/08/29 19:33:36 tgl Exp $
  *
  *	NOTES
  *	   Postgres btree pages look like ordinary relation pages.	The opaque
@@ -60,43 +60,6 @@ _bt_initmetapage(Page page, BlockNumber rootbknum, uint32 level)
 	 */
 	((PageHeader) page)->pd_lower =
 		((char *) metad + sizeof(BTMetaPageData)) - (char *) page;
-}
-
-/*
- * _bt_lognewpage() -- create an XLOG entry for a new page of the btree.
- */
-void
-_bt_lognewpage(Relation index,
-			   Page newPage,
-			   BlockNumber blockNo)
-{
-	/* We use the heap NEWPAGE record type for this */
-	xl_heap_newpage xlrec;
-	XLogRecPtr	recptr;
-	XLogRecData rdata[2];
-	
-	/* NO ELOG(ERROR) from here till newpage op is logged */
-	START_CRIT_SECTION();
-	
-	xl_heapnode_set(&xlrec.heapnode, index);
-	xlrec.blkno = blockNo;
-	
-	rdata[0].data = (char *) &xlrec;
-	rdata[0].len = SizeOfHeapNewpage;
-	rdata[0].buffer = InvalidBuffer;
-	rdata[0].next = &(rdata[1]);
-	
-	rdata[1].data = (char *) newPage;
-	rdata[1].len = BLCKSZ;
-	rdata[1].buffer = InvalidBuffer;
-	rdata[1].next = NULL;
-	
-	recptr = XLogInsert(RM_HEAP_ID, XLOG_HEAP_NEWPAGE, rdata);
-	
-	PageSetLSN(newPage, recptr);
-	PageSetTLI(newPage, ThisTimeLineID);
-	
-	END_CRIT_SECTION();
 }
 
 /*
@@ -686,7 +649,7 @@ _bt_page_recyclable(Page page)
 	 */
 	opaque = (BTPageOpaque) PageGetSpecialPointer(page);
 	if (P_ISDELETED(opaque) &&
-		TransactionIdPrecedesOrEquals(opaque->btpo.xact, RecentXmin))
+		TransactionIdPrecedes(opaque->btpo.xact, RecentGlobalXmin))
 		return true;
 	return false;
 }
@@ -723,7 +686,7 @@ _bt_delitems(Relation rel, Buffer buf,
 	PageIndexMultiDelete(page, itemnos, nitems);
 
 	/*
-	 * If this is within VACUUM, we can clear the vacuum cycleID since this
+	 * If this is within VACUUM, we can clear the vacuum cycle ID since this
 	 * page has certainly been processed by the current vacuum scan.
 	 */
 	opaque = (BTPageOpaque) PageGetSpecialPointer(page);
@@ -731,7 +694,7 @@ _bt_delitems(Relation rel, Buffer buf,
 		opaque->btpo_cycleid = 0;
 
 	/*
-	 * Mark the page as not containing any LP_DELETE items.  This is not
+	 * Mark the page as not containing any LP_DEAD items.  This is not
 	 * certainly true (there might be some that have recently been marked, but
 	 * weren't included in our target-item list), but it will almost always be
 	 * true and it doesn't seem worth an additional page scan to check it.
@@ -815,8 +778,8 @@ _bt_parent_deletion_safe(Relation rel, BlockNumber target, BTStack stack)
 
 	/*
 	 * In recovery mode, assume the deletion being replayed is valid.  We
-	 * can't always check it because we won't have a full search stack,
-	 * and we should complain if there's a problem, anyway.
+	 * can't always check it because we won't have a full search stack, and we
+	 * should complain if there's a problem, anyway.
 	 */
 	if (InRecovery)
 		return true;
@@ -845,8 +808,8 @@ _bt_parent_deletion_safe(Relation rel, BlockNumber target, BTStack stack)
 		{
 			/*
 			 * It's only child, so safe if parent would itself be removable.
-			 * We have to check the parent itself, and then recurse to
-			 * test the conditions at the parent's parent.
+			 * We have to check the parent itself, and then recurse to test
+			 * the conditions at the parent's parent.
 			 */
 			if (P_RIGHTMOST(opaque) || P_ISROOT(opaque))
 			{
@@ -956,18 +919,18 @@ _bt_pagedel(Relation rel, Buffer buf, BTStack stack, bool vacuum_full)
 	targetkey = CopyIndexTuple((IndexTuple) PageGetItem(page, itemid));
 
 	/*
-	 * To avoid deadlocks, we'd better drop the target page lock before
-	 * going further.
+	 * To avoid deadlocks, we'd better drop the target page lock before going
+	 * further.
 	 */
 	_bt_relbuf(rel, buf);
 
 	/*
-	 * We need an approximate pointer to the page's parent page.  We use
-	 * the standard search mechanism to search for the page's high key; this
-	 * will give us a link to either the current parent or someplace to its
-	 * left (if there are multiple equal high keys).  In recursion cases,
-	 * the caller already generated a search stack and we can just re-use
-	 * that work.
+	 * We need an approximate pointer to the page's parent page.  We use the
+	 * standard search mechanism to search for the page's high key; this will
+	 * give us a link to either the current parent or someplace to its left
+	 * (if there are multiple equal high keys).  In recursion cases, the
+	 * caller already generated a search stack and we can just re-use that
+	 * work.
 	 */
 	if (stack == NULL)
 	{
@@ -1002,11 +965,11 @@ _bt_pagedel(Relation rel, Buffer buf, BTStack stack, bool vacuum_full)
 			/*
 			 * During WAL recovery, we can't use _bt_search (for one reason,
 			 * it might invoke user-defined comparison functions that expect
-			 * facilities not available in recovery mode).  Instead, just
-			 * set up a dummy stack pointing to the left end of the parent
-			 * tree level, from which _bt_getstackbuf will walk right to the
-			 * parent page.  Painful, but we don't care too much about
-			 * performance in this scenario.
+			 * facilities not available in recovery mode).	Instead, just set
+			 * up a dummy stack pointing to the left end of the parent tree
+			 * level, from which _bt_getstackbuf will walk right to the parent
+			 * page.  Painful, but we don't care too much about performance in
+			 * this scenario.
 			 */
 			pbuf = _bt_get_endpoint(rel, targetlevel + 1, false);
 			stack = (BTStack) palloc(sizeof(BTStackData));
@@ -1020,10 +983,10 @@ _bt_pagedel(Relation rel, Buffer buf, BTStack stack, bool vacuum_full)
 
 	/*
 	 * We cannot delete a page that is the rightmost child of its immediate
-	 * parent, unless it is the only child --- in which case the parent has
-	 * to be deleted too, and the same condition applies recursively to it.
-	 * We have to check this condition all the way up before trying to delete.
-	 * We don't need to re-test when deleting a non-leaf page, though.
+	 * parent, unless it is the only child --- in which case the parent has to
+	 * be deleted too, and the same condition applies recursively to it. We
+	 * have to check this condition all the way up before trying to delete. We
+	 * don't need to re-test when deleting a non-leaf page, though.
 	 */
 	if (targetlevel == 0 &&
 		!_bt_parent_deletion_safe(rel, target, stack))
@@ -1148,8 +1111,8 @@ _bt_pagedel(Relation rel, Buffer buf, BTStack stack, bool vacuum_full)
 	 * might be possible to push the fast root even further down, but the odds
 	 * of doing so are slim, and the locking considerations daunting.)
 	 *
-	 * We don't support handling this in the case where the parent is
-	 * becoming half-dead, even though it theoretically could occur.
+	 * We don't support handling this in the case where the parent is becoming
+	 * half-dead, even though it theoretically could occur.
 	 *
 	 * We can safely acquire a lock on the metapage here --- see comments for
 	 * _bt_newroot().
@@ -1386,10 +1349,10 @@ _bt_pagedel(Relation rel, Buffer buf, BTStack stack, bool vacuum_full)
 		_bt_relbuf(rel, lbuf);
 
 	/*
-	 * If parent became half dead, recurse to delete it. Otherwise, if
-	 * right sibling is empty and is now the last child of the parent, recurse
-	 * to try to delete it.  (These cases cannot apply at the same time,
-	 * though the second case might itself recurse to the first.)
+	 * If parent became half dead, recurse to delete it. Otherwise, if right
+	 * sibling is empty and is now the last child of the parent, recurse to
+	 * try to delete it.  (These cases cannot apply at the same time, though
+	 * the second case might itself recurse to the first.)
 	 *
 	 * When recursing to parent, we hold the lock on the target page until
 	 * done.  This delays any insertions into the keyspace that was just

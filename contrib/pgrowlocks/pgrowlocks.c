@@ -121,7 +121,7 @@ pgrowlocks(PG_FUNCTION_ARGS)
 		LockBuffer(scan->rs_cbuf, BUFFER_LOCK_SHARE);
 
 		if (HeapTupleSatisfiesUpdate(rel, tuple->t_data,
-									 GetCurrentCommandId(/*false*/),
+									 GetCurrentCommandId(false),
 									 scan->rs_cbuf) == HeapTupleBeingUpdated)
 		{
 

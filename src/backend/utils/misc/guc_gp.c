@@ -29,6 +29,7 @@
 #include "miscadmin.h"
 #include "libpq/password_hash.h"
 #include "optimizer/planmain.h"
+#include "optimizer/cost.h"
 #include "pgstat.h"
 #include "postmaster/syslogger.h"
 #include "replication/walsender.h"
@@ -255,7 +256,6 @@ bool		gp_persistent_repair_global_sequence = false;
 bool		Debug_print_xlog_relation_change_info = false;
 bool		Debug_print_xlog_relation_change_info_skip_issues_only = false;
 bool		Debug_print_xlog_relation_change_info_backtrace_skip_issues = false;
-bool		Debug_check_for_invalid_persistent_tid = false;
 
 bool		Debug_filerep_crc_on = true;
 bool		Debug_filerep_print = false;
@@ -456,21 +456,9 @@ char	   *gp_idf_deduplicate_str;
 bool		fts_diskio_check = false;
 
 /* Planner gucs */
-bool		enable_seqscan = true;
-bool		enable_indexscan = true;
-bool		enable_bitmapscan = true;
-bool		force_bitmap_table_scan = false;
-bool		enable_tidscan = true;
-bool		enable_sort = true;
-bool		enable_hashagg = true;
-bool		enable_groupagg = true;
-bool		enable_nestloop = false;
-bool		enable_mergejoin = false;
-bool		enable_hashjoin = true;
 bool		gp_enable_hashjoin_size_heuristic = false;
 bool		gp_enable_fallback_plan = true;
 bool		gp_enable_predicate_propagation = false;
-bool		constraint_exclusion = false;
 bool		gp_enable_multiphase_agg = true;
 bool		gp_enable_preunique = TRUE;
 bool		gp_eager_preunique = FALSE;
@@ -554,6 +542,7 @@ double		optimizer_damping_factor_join;
 double		optimizer_damping_factor_groupby;
 int			optimizer_segments;
 int			optimizer_join_arity_for_associativity_commutativity;
+int         optimizer_array_expansion_threshold;
 bool		optimizer_analyze_root_partition;
 bool		optimizer_analyze_midlevel_partition;
 bool		optimizer_enable_constant_expression_evaluation;
@@ -581,9 +570,6 @@ bool		codegen;
 
 /* Security */
 bool		gp_reject_internal_tcp_conn = true;
-
-/* plpgsql plancache GUC */
-bool		gp_plpgsql_clear_cache_always = false;
 
 /*
  * Default storage options GUC.  Value is comma-separated name=value
@@ -2053,16 +2039,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"debug_check_for_invalid_persistent_tid", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Check for invalid persistent TID"),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Debug_check_for_invalid_persistent_tid,
-		false, NULL, NULL
-	},
-
-	{
 		{"test_appendonly_override", PGC_SUSET, DEVELOPER_OPTIONS,
 			gettext_noop("For testing purposes, change the default of the appendonly create table option."),
 			NULL,
@@ -3359,16 +3335,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&gp_reject_internal_tcp_conn,
 		true, NULL, NULL
-	},
-
-	{
-		{"gp_plpgsql_clear_cache_always", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Controls caching of plpgsql plans in session"),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
-		},
-		&gp_plpgsql_clear_cache_always,
-		false, NULL, NULL
 	},
 
 	{
@@ -4734,6 +4700,16 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&optimizer_segments,
 		0, 0, INT_MAX, NULL, NULL
+	},
+
+	{
+		{"optimizer_array_expansion_threshold", PGC_USERSET, QUERY_TUNING_METHOD,
+			gettext_noop("Item limit for expansion of arrays in WHERE clause to disjunctive form."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_array_expansion_threshold,
+		25, 0, INT_MAX, NULL, NULL
 	},
 
 	{

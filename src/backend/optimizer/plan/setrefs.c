@@ -2,7 +2,7 @@
  *
  * setrefs.c
  *	  Post-processing of a completed plan tree: fix references to subplan
- *	  vars, and compute regproc values for operators
+ *	  vars, compute regproc values for operators, etc
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
@@ -10,12 +10,13 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/setrefs.c,v 1.130 2007/02/19 02:23:12 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/setrefs.c,v 1.141.2.1 2008/06/17 14:51:38 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
+#include "access/transam.h"
 #include "catalog/pg_type.h"
 #include "nodes/makefuncs.h"
 #include "optimizer/clauses.h"
@@ -70,6 +71,14 @@ typedef struct
 	int			rtoffset;
 } fix_upper_expr_context;
 
+typedef struct
+{
+	plan_tree_base_prefix base;
+
+	PlannerGlobal *glob;
+
+} cdb_extract_plan_dependencies_context;
+
 /*
  * Check if a Const node is a regclass value.  We accept plain OID too,
  * since a regclass Const will get folded to that type if it's an argument
@@ -123,28 +132,22 @@ static List *fix_child_hashclauses(PlannerGlobal *glob,
 					  indexed_tlist *inner_itlist,
 					  Index acceptable_rel, int rtoffset,
 					  Index child);
-
 static Node *fix_upper_expr(PlannerGlobal *glob,
 			   Node *node,
 			   indexed_tlist *subplan_itlist,
 			   int rtoffset);
 static Node *fix_upper_expr_mutator(Node *node,
-									fix_upper_expr_context *context);
+					   fix_upper_expr_context *context);
 static bool fix_opfuncids_walker(Node *node, void *context);
 static  bool cdb_expr_requires_full_eval(Node *node);
 static Plan *cdb_insert_result_node(PlannerGlobal *glob, 
 									Plan *plan, 
 									int rtoffset);
-static void record_plan_function_dependency(PlannerGlobal *glob, 
-											Oid funcid);
 
 static bool extract_query_dependencies_walker(Node *node,
 								  PlannerGlobal *context);
-/* fix the target lists of projection-incapable nodes to use the target list of the child node */
-static void fix_projection_incapable_nodes(Plan *plan);
-
-/* fix the target lists of  projection-incapable nodes in subplans to use the target list of the child node */
-static void fix_projection_incapable_nodes_in_subplans(PlannerGlobal *context, Plan *plan);
+static bool cdb_extract_plan_dependencies_walker(Node *node,
+									 cdb_extract_plan_dependencies_context *context);
 
 #ifdef USE_ASSERT_CHECKING
 #include "cdb/cdbplan.h"
@@ -154,14 +157,12 @@ static void fix_projection_incapable_nodes_in_subplans(PlannerGlobal *context, P
  */
 static void set_plan_references_input_asserts(PlannerGlobal *glob, Plan *plan, List *rtable)
 {
-	Assert(glob);
-	Assert(plan);
-
 	/* Note that rtable MAY be NULL */
 
 	/* Ensure that plan refers to vars that have varlevelsup = 0 AND varno is in the rtable */
 	List *allVars = extract_nodes(glob, (Node *) plan, T_Var);
 	ListCell *lc = NULL;
+	List *allParams;
 
 	foreach (lc, allVars)
 	{
@@ -191,7 +192,7 @@ static void set_plan_references_input_asserts(PlannerGlobal *glob, Plan *plan, L
 	}
 
 	/* Ensure that all params that the plan refers to has a corresponding subplan */
-	List *allParams = extract_nodes(glob, (Node *) plan, T_Param);
+	allParams = extract_nodes(glob, (Node *) plan, T_Param);
 
 	foreach (lc, allParams)
 	{
@@ -249,12 +250,10 @@ static void set_plan_references_output_asserts(PlannerGlobal *glob, Plan *plan)
 	foreach (lc, allVars)
 	{
 		Var *var = (Var *) lfirst(lc);
-
 		Assert((var->varno == INNER
 				|| var->varno == OUTER
 				|| (var->varno > 0 && var->varno <= list_length(glob->finalrtable)))
 				&& "Plan contains var that refer outside the rtable.");
-
 		Assert(var->varattno > FirstLowInvalidHeapAttributeNumber && "Invalid attribute number in plan");
 
 		if (var->varno > 0 && var->varno <= list_length(glob->finalrtable))
@@ -312,10 +311,6 @@ static void set_plan_references_output_asserts(PlannerGlobal *glob, Plan *plan)
  * that implements each op).
  *
  * 5. We create lists of specific objects that the plan depends on.
- *
- * NB In GPDB we only build the relation list, though the apparatus is in
- *    place to collect PlanInvalItems when that becomes interesting.
- *
  * This will be used by plancache.c to drive invalidation of cached plans.
  * Relation dependencies are represented by OIDs, and everything else by
  * PlanInvalItems (this distinction is motivated by the shared-inval APIs).
@@ -354,6 +349,9 @@ static void set_plan_references_output_asserts(PlannerGlobal *glob, Plan *plan)
 Plan *
 set_plan_references(PlannerGlobal *glob, Plan *plan, List *rtable)
 {
+	int			rtoffset = list_length(glob->finalrtable);
+	ListCell   *lc;
+
 #ifdef USE_ASSERT_CHECKING
 	/* 
 	 * This method formalizes our assumptions about the input to set_plan_references.
@@ -361,9 +359,6 @@ set_plan_references(PlannerGlobal *glob, Plan *plan, List *rtable)
 	 */
 	set_plan_references_input_asserts(glob, plan, rtable);
 #endif
-
-	int			rtoffset = list_length(glob->finalrtable);
-	ListCell   *lc;
 
 	/*
 	 * In the flat rangetable, we zero out substructure pointers that are not
@@ -405,9 +400,6 @@ set_plan_references(PlannerGlobal *glob, Plan *plan, List *rtable)
 	}
 
 	/* Now fix the Plan tree */
-	fix_projection_incapable_nodes(plan);
-	fix_projection_incapable_nodes_in_subplans(glob, plan);
-
 	Plan *retPlan = set_plan_refs(glob, plan, rtoffset);
 
 #ifdef USE_ASSERT_CHECKING
@@ -650,6 +642,8 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 					fix_scan_list(glob, splan->scan.plan.targetlist, rtoffset);
 				splan->scan.plan.qual =
 					fix_scan_list(glob, splan->scan.plan.qual, rtoffset);
+				splan->funcexpr =
+					fix_scan_expr(glob, splan->funcexpr, rtoffset);
 			}
 			break;
 		case T_ValuesScan:
@@ -664,8 +658,11 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 					fix_scan_list(glob, splan->scan.plan.targetlist, rtoffset);
 				splan->scan.plan.qual =
 					fix_scan_list(glob, splan->scan.plan.qual, rtoffset);
+				splan->values_lists =
+					fix_scan_list(glob, splan->values_lists, rtoffset);
 			}
 			break;
+
 		case T_NestLoop:
 		case T_MergeJoin:
 		case T_HashJoin:
@@ -777,6 +774,8 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 			break;
 		case T_Window:
 			set_upper_references(glob, plan, rtoffset);
+			if ( plan->targetlist == NIL )
+				set_dummy_tlist_references(plan, rtoffset);
 			{
 				indexed_tlist  *subplan_itlist =
 					build_tlist_index(plan->lefttree->targetlist);
@@ -1145,6 +1144,12 @@ fix_expr_common(PlannerGlobal *glob, Node *node)
 		record_plan_function_dependency(glob,
 										((ScalarArrayOpExpr *) node)->opfuncid);
 	}
+	else if (IsA(node, ArrayCoerceExpr))
+	{
+		if (OidIsValid(((ArrayCoerceExpr *) node)->elemfuncid))
+			record_plan_function_dependency(glob,
+											((ArrayCoerceExpr *) node)->elemfuncid);
+	}
 	else if (IsA(node, Const))
 	{
 		Const	   *con = (Const *) node;
@@ -1194,8 +1199,22 @@ fix_scan_expr(PlannerGlobal *glob, Node *node, int rtoffset)
 	context.glob = glob;
 	context.rtoffset = rtoffset;
 
-	node = fix_scan_expr_mutator(node, &context);
-	return node;
+	if (rtoffset != 0)
+	{
+		return fix_scan_expr_mutator(node, &context);
+	}
+	else
+	{
+		/*
+		 * If rtoffset == 0, we don't need to change any Vars, which makes
+		 * it OK to just scribble on the input node tree instead of copying
+		 * (since the only change, filling in any unset opfuncid fields,
+		 * is harmless).  This saves just enough cycles to be noticeable on
+		 * trivial queries.
+		 */
+		(void) fix_scan_expr_walker(node, &context);
+		return node;
+	}
 }
 
 static Node *
@@ -1211,15 +1230,13 @@ fix_scan_expr_mutator(Node *node, fix_scan_expr_context *context)
 
 		/*
 		 * We should not see any Vars marked INNER, but in a nestloop inner
-		 * scan there could be OUTER Vars.
+		 * scan there could be OUTER Vars.	Leave them alone.
 		 */
 		Assert(var->varno != INNER);
 		if (var->varno > 0 && var->varno != OUTER)
-		{
 			var->varno += context->rtoffset;
-			if (var->varnoold > 0)
-				var->varnoold += context->rtoffset;
-		}
+		if (var->varnoold > 0)
+			var->varnoold += context->rtoffset;
 
         /* Pseudo column reference? */
         if (var->varattno <= FirstLowInvalidHeapAttributeNumber)
@@ -1245,9 +1262,7 @@ fix_scan_expr_mutator(Node *node, fix_scan_expr_context *context)
 			return (Node *) var;
 		}
 	}
-
 	fix_expr_common(context->glob, node);
-
 	return expression_tree_mutator(node, fix_scan_expr_mutator,
 								   (void *) context);
 }
@@ -1257,6 +1272,12 @@ fix_scan_expr_walker(Node *node, fix_scan_expr_context *context)
 {
 	if (node == NULL)
 		return false;
+
+	/*
+	 * fix_expr_common will look up and set operator opcodes in the
+	 * nodes. That's not needed, as ORCA has set those already, but
+	 * shouldn't do any harm either.
+	 */
 	fix_expr_common(context->glob, node);
 	return expression_tree_walker(node, fix_scan_expr_walker,
 								  (void *) context);
@@ -1354,7 +1375,7 @@ set_join_references(PlannerGlobal *glob, Join *join, int rtoffset)
  * require recursing through Append nodes.	This is split out as a separate
  * function so that it can recurse.
  *
- * Note we do *not* apply any rtoffset for Vars of the inner relation; this is because
+ * Note we do *not* apply any rtoffset for non-join Vars; this is because
  * the quals will be processed again by fix_scan_expr when the set_plan_refs
  * recursion reaches the inner indexscan, and so we'd have done it twice.
  */
@@ -1795,7 +1816,6 @@ search_indexed_tlist_for_var(Var *var, indexed_tlist *itlist,
 
 			newvar->varno = newvarno;
 			newvar->varattno = vinfo->resno;
-
 			if (newvar->varnoold > 0)
 				newvar->varnoold += rtoffset;
 			return newvar;
@@ -2028,6 +2048,9 @@ fix_join_expr_mutator(Node *node, fix_join_expr_context *context)
 		/* If it's for an acceptable_rel (the inner relation in an index nested loop join), return it */
 		if (var->varno == context->acceptable_rel)
 		{
+			var = copyVar(var);
+			var->varno += context->rtoffset;
+			var->varnoold += context->rtoffset;
 			return (Node *) var;
 		}
 
@@ -2099,7 +2122,6 @@ fix_upper_expr(PlannerGlobal *glob,
 	context.glob = glob;
 	context.subplan_itlist = subplan_itlist;
 	context.rtoffset = rtoffset;
-
 	return fix_upper_expr_mutator(node, &context);
 }
 
@@ -2110,7 +2132,6 @@ fix_upper_expr_mutator(Node *node, fix_upper_expr_context *context)
 
 	if (node == NULL)
 		return NULL;
-
 	if (IsA(node, Var))
 	{
 		Var		   *var = (Var *) node;
@@ -2267,29 +2288,23 @@ set_sa_opfuncid(ScalarArrayOpExpr *opexpr)
  *					QUERY DEPENDENCY MANAGEMENT
  *****************************************************************************/
 
-/* GPDB doesn't take advantage of dependency tracking at the moment
- * so its contruction it is disabled.  However the infrastructure is
- * intact (and compiled) to make it easy to switch on in the future.
- */
-static bool disable_dependency_tracking = true;
-
 /*
  * record_plan_function_dependency
  *		Mark the current plan as depending on a particular function.
+ *
+ * This is exported so that the function-inlining code can record a
+ * dependency on a function that it's removed from the plan tree.
  */
 void
 record_plan_function_dependency(PlannerGlobal *glob, Oid funcid)
 {
-	Assert(funcid != InvalidOid && "Plan cannot depend on invalid function oid");
-
-	if ( disable_dependency_tracking ) return;
 	/*
 	 * For performance reasons, we don't bother to track built-in functions;
 	 * we just assume they'll never change (or at least not in ways that'd
 	 * invalidate plans using them).  For this purpose we can consider a
 	 * built-in function to be one with OID less than FirstBootstrapObjectId.
-	 * Note that the OID generator guarantees never to generate such an OID
-	 * after startup, even at OID wraparound.
+	 * Note that the OID generator guarantees never to generate such an
+	 * OID after startup, even at OID wraparound.
 	 */
 	if (funcid >= (Oid) FirstBootstrapObjectId)
 	{
@@ -2321,6 +2336,9 @@ record_plan_function_dependency(PlannerGlobal *glob, Oid funcid)
  * extract_query_dependencies
  *		Given a list of not-yet-planned queries (i.e. Query nodes),
  *		extract their dependencies just as set_plan_references would do.
+ *
+ * This is needed by plancache.c to handle invalidation of cached unplanned
+ * queries.
  */
 void
 extract_query_dependencies(List *queries,
@@ -2328,8 +2346,6 @@ extract_query_dependencies(List *queries,
 						   List **invalItems)
 {
 	PlannerGlobal glob;
-
-	if ( disable_dependency_tracking ) return;
 
 	/* Make up a dummy PlannerGlobal so we can use this module's machinery */
 	MemSet(&glob, 0, sizeof(glob));
@@ -2374,71 +2390,43 @@ extract_query_dependencies_walker(Node *node, PlannerGlobal *context)
 }
 
 /*
- * fix_projection_incapable_nodes
- * 		Fix the project list of projection incapable nodes by copying the project list
- * 		of the child node
+ * cdb_extract_plan_dependencies()
+ *		Given a fully built Plan tree, extract their dependencies just as
+ *		set_plan_references_ would have done.
+ *
+ * This is used to extract dependencies from a plan that has been created
+ * by ORCA (set_plan_references() does this usually, but ORCA doesn't use
+ * it). This adds the new entries directly to PlannerGlobal.relationOids
+ * and invalItems.
+ *
+ * Note: This recurses into SubPlans. You better still call this for
+ * every subplan in a overall plan, to make sure you capture dependencies
+ * from subplans that are not referenced from the main plan, because
+ * changes to the relations in eliminated subpland might require
+ * re-planning, too. (XXX: it would be better to not recurse into SubPlans
+ * here, as that's a waste of time.)
  */
-static void 
-fix_projection_incapable_nodes(Plan *plan) 
+void
+cdb_extract_plan_dependencies(PlannerGlobal *glob, Plan *plan)
 {
-	if (plan == NULL)
-	{
-		return;
-	}
+	cdb_extract_plan_dependencies_context context;
 
-	fix_projection_incapable_nodes(plan->lefttree);
-	fix_projection_incapable_nodes(plan->righttree);
+	context.base.node = (Node *) glob;
+	context.glob = glob;
 
-	if (IsA(plan, ShareInputScan) || IsA(plan, SetOp)) 
-	{
-		if (NULL != plan->lefttree)
-		{
-			insist_target_lists_aligned(plan->targetlist, plan->lefttree->targetlist);
-		}
-
-		if (NULL != plan->righttree)
-		{
-			insist_target_lists_aligned(plan->targetlist, plan->righttree->targetlist);
-		}
-	}
-	else if (!is_projection_capable_plan(plan) && !IsA(plan, Append) && NULL != plan->lefttree)
-	{
-		/*
-		 * while Append does not evaluate projections, we cannot always copy the child's target list,
-		 * as Append nodes are used for updating partitioned and inherited tables, in which
-		 * cases the target lists may be legally different, e.g. in the presence of dropped columns
-		 */
-		List *oldTargetList = plan->targetlist;
-		plan->targetlist = copyObject(plan->lefttree->targetlist);
-		if (NIL != oldTargetList)
-		{
-			list_free(oldTargetList);
-		}
-	}
+	(void) cdb_extract_plan_dependencies_walker((Node *) plan, &context);
 }
 
-/*
- * fix_projection_incapable_nodes_in_subplans
- * 		Fix the project list of projection incapable nodes in subplans by copying the project list
- * 		of the child node
- */
-static void 
-fix_projection_incapable_nodes_in_subplans(PlannerGlobal *context, Plan *plan) 
+static bool
+cdb_extract_plan_dependencies_walker(Node *node, cdb_extract_plan_dependencies_context *context)
 {
-	if (plan == NULL)
-	{
-		return;
-	}
+	if (node == NULL)
+		return false;
+	/* Extract function dependencies and check for regclass Consts */
+	fix_expr_common(context->glob, node);
 
-	List *subplans = extract_nodes(context, (Node*) plan, T_SubPlan);
-
-	ListCell *lcSubPlan = NULL;
-	foreach (lcSubPlan, subplans)
-	{
-		SubPlan *sp = lfirst(lcSubPlan);
-		Plan *spPlan = list_nth(context->subplans, sp->plan_id - 1);
-		fix_projection_incapable_nodes(spPlan);
-	}
+	return plan_tree_walker(node, cdb_extract_plan_dependencies_walker,
+								  (void *) context);
 }
 
 /*
@@ -2476,7 +2464,13 @@ cdb_insert_result_node(PlannerGlobal *glob, Plan *plan, int rtoffset)
 	plan->flow = NULL;
 
     /* Build a Result node to take over the targetlist from the given Plan. */
-    resultplan = (Plan *)make_result(plan->targetlist, NULL, plan);
+	/*
+	 * GPDB_83MERGE_FIXME: We don't have a PlannerInfo struct at hand here,
+	 * so we pass NULL and hope that make_result doesn't really need it.
+	 * It's really too late to insert Result nodes at this late stage in the
+	 * planner, we should eliminate the need for this
+	 */
+    resultplan = (Plan *) make_result(NULL, plan->targetlist, NULL, plan);
 
     /* Build a new targetlist for the given Plan, with Var nodes only. */
     plan->targetlist = flatten_tlist(plan->targetlist);

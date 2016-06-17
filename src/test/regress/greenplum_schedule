@@ -17,7 +17,7 @@
 
 ignore: leastsquares
 test: opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile naivebayes join_gp union_gp gpcopy gp_create_table
-test: filter gpctas gpdist matrix toast sublink sirv_functions table_functions olap_setup complex opclass_ddl
+test: filter gpctas gpdist matrix toast sublink sirv_functions table_functions olap_setup complex opclass_ddl bitmap_index
 
 test: dispatch
 
@@ -25,9 +25,9 @@ test: dispatch
 # so it needs to be in a group by itself
 test: segspace
 
-# 'sort_finish_pending' sets QueryFinishPending flag to true during sort using fault injectors
+# 'query_finish_pending' sets QueryFinishPending flag to true during query execution using fault injectors
 # so it needs to be in a group by itself
-test: sort_finish_pending
+test: query_finish_pending
 
 test: gpdiffcheck gptokencheck information_schema gp_hashagg sequence_gp tidscan
 
@@ -68,14 +68,14 @@ test: resource_queue
 # vacuum from removing dead tuples.
 test: gp_toolkit
 
-test: filespace trig auth_constraint role rle portals_updatable plpgsql_cache timeseries resource_queue_function pg_stat_last_operation gp_numeric_agg plan_size partindex_test direct_dispatch partition_pruning_with_fn dsp
+test: filespace trig auth_constraint role rle portals_updatable plpgsql_cache timeseries resource_queue_function pg_stat_last_operation gp_numeric_agg partindex_test direct_dispatch partition_pruning_with_fn dsp
 
 # direct dispatch tests
 test: bfv_dd bfv_dd_multicolumn bfv_dd_types
 
-test: catalog bfv_catalog bfv_index bfv_olap bfv_aggregate bfv_partition DML_over_joins
+test: catalog bfv_catalog bfv_index bfv_olap bfv_aggregate bfv_partition DML_over_joins gp_optimizer 
  
-test: aggregate_with_groupingsets gp_optimizer 
+test: aggregate_with_groupingsets 
 
 test: nested_case_null
 

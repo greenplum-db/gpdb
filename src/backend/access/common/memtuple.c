@@ -126,7 +126,7 @@ static inline bool add_null_save_aligned(MemTupleAttrBinding *bind, short *null_
 	Assert(null_save_aligned);
 	Assert(i >= 0);
 
-	bind->len_aligned = att_align(bind->len, next_attr_align);
+	bind->len_aligned = att_align_nominal(bind->len, next_attr_align);
 	add_null_save(null_save_aligned, i, bind->len_aligned);
 
 	return (bind->len == bind->len_aligned);
@@ -232,7 +232,7 @@ static void create_col_bind(MemTupleBindingCols *colbind, bool islarge, TupleDes
 
 			if(pass == 0 && attr->attlen > 0 && attr->attalign == 'd')
 			{
-				bind->offset = att_align(cur_offset, attr->attalign);
+				bind->offset = att_align_nominal(cur_offset, attr->attalign);
 				bind->len = attr->attlen;
 				add_null_save(colbind->null_saves, physical_col, attr->attlen);
 				if (physical_col)
@@ -261,7 +261,7 @@ static void create_col_bind(MemTupleBindingCols *colbind, bool islarge, TupleDes
 					      )
 				) 
 			{
-				bind->offset = att_align(cur_offset, 'i'); 
+				bind->offset = att_align_nominal(cur_offset, 'i'); 
 				bind->len = attr->attlen > 0 ? attr->attlen : 4; 
 				add_null_save(colbind->null_saves, physical_col, bind->len);
 				if (physical_col)
@@ -299,7 +299,7 @@ static void create_col_bind(MemTupleBindingCols *colbind, bool islarge, TupleDes
 						)
 				)
 			{
-				bind->offset = att_align(cur_offset, 's');
+				bind->offset = att_align_nominal(cur_offset, 's');
 				bind->len = attr->attlen > 0 ? attr->attlen : 2; 
 				add_null_save(colbind->null_saves, physical_col, bind->len);
 				if (physical_col)
@@ -338,7 +338,7 @@ static void create_col_bind(MemTupleBindingCols *colbind, bool islarge, TupleDes
 						)
 					)
 			{
-				bind->offset = att_align(cur_offset, 'c');
+				bind->offset = att_align_nominal(cur_offset, 'c');
 
 #ifdef MEMTUPLE_INLINE_CHARTYPE 
 				/* Inline CHAR(N) disabled.  See att_bind_as_varoffset */
@@ -486,14 +486,16 @@ static uint32 compute_memtuple_size_using_bind(
 
 		/* Varlen stuff */
 		/* We plan to convert to short varlena even if it is not currently */
-		if(bind->flag == MTB_ByRef && value_type_could_short(values[i], attr->atttypid)) 
+		if (bind->flag == MTB_ByRef &&
+			attr->attstorage != 'p' &&
+			value_type_could_short(DatumGetPointer(values[i]), attr->atttypid))
 		{
-			data_length += VARSIZE_ANY_EXHDR_D(values[i]) + VARHDRSZ_SHORT;
+			data_length += VARSIZE_ANY_EXHDR(DatumGetPointer(values[i])) + VARHDRSZ_SHORT;
 		}
 		else
 		{
-			data_length = att_align(data_length, attr->attalign); 
-			data_length = att_addlength(data_length, attr->attlen, values[i]);
+			data_length = att_align_nominal(data_length, attr->attalign); 
+			data_length = att_addlength_datum(data_length, attr->attlen, values[i]);
 		}
 	}
 
@@ -605,7 +607,7 @@ MemTuple memtuple_form_to_align(
 		if (attr->attlen == -1 &&
 				attr->attalign == 'd' &&
 				attr->attndims == 0 &&
-				!VARATT_IS_EXTENDED_D(values[i]))
+				!VARATT_IS_EXTENDED(DatumGetPointer(values[i])))
 		{
 			if (old_values == NULL)
 				old_values = (Datum *)palloc0(pbind->tupdesc->natts * sizeof(Datum));
@@ -615,7 +617,7 @@ MemTuple memtuple_form_to_align(
 				old_values[i] = 0;
 		}
 
-		if (attr->attlen == -1 && VARATT_IS_EXTERNAL_D(values[i]))
+		if (attr->attlen == -1 && VARATT_IS_EXTERNAL(DatumGetPointer(values[i])))
 		{
 			if(inline_toast)
 			{
@@ -778,39 +780,40 @@ MemTuple memtuple_form_to_align(
 					else
 					{
 						char *p = memtuple_get_attr_ptr(start, bind, null_saves, nullp);
-						Assert(VARATT_COULD_SHORT_D(values[i]));
-						attr_len = VARSIZE_D(values[i]) - VARHDRSZ + VARHDRSZ_SHORT;
+						Assert(VARATT_CAN_MAKE_SHORT(DatumGetPointer(values[i])));
+						attr_len = VARSIZE(DatumGetPointer(values[i])) - VARHDRSZ + VARHDRSZ_SHORT;
 						Assert(attr_len <= bind->len);
 						*p = VARSIZE_TO_SHORT_D(values[i]);
-						memcpy(p+1, VARDATA_D(values[i]), attr_len-1);
+						memcpy(p+1, VARDATA(DatumGetPointer(values[i])), attr_len-1);
 					}
 				}
 				break;
 			case MTB_ByRef:
-				if(VARATT_IS_EXTERNAL_D(values[i]))
+				if(VARATT_IS_EXTERNAL(DatumGetPointer(values[i])))
 				{
-					varlen_start = (char *) att_align((long) varlen_start, attr->attalign);
+					varlen_start = (char *) att_align_nominal((long) varlen_start, attr->attalign);
 					attr_len = VARSIZE_EXTERNAL(DatumGetPointer(values[i]));
 					Assert((varlen_start - (char *) mtup) + attr_len <= len);
 					memcpy(varlen_start, DatumGetPointer(values[i]), attr_len);
 				}
-				else if(VARATT_IS_SHORT_D(values[i]))
+				else if(VARATT_IS_SHORT(DatumGetPointer(values[i])))
 				{
 					attr_len = VARSIZE_SHORT(DatumGetPointer(values[i]));
 					Assert((varlen_start - (char *) mtup) + attr_len <= len);
 					memcpy(varlen_start, DatumGetPointer(values[i]), attr_len);
 				}
-				else if(value_type_could_short(values[i], attr->atttypid))
+				else if(attr->attstorage != 'p' &&
+						value_type_could_short(DatumGetPointer(values[i]), attr->atttypid))
 				{
-					attr_len = VARSIZE_D(values[i]) - VARHDRSZ + VARHDRSZ_SHORT;
+					attr_len = VARSIZE(DatumGetPointer(values[i])) - VARHDRSZ + VARHDRSZ_SHORT;
 					*varlen_start = VARSIZE_TO_SHORT_D(values[i]);
 					Assert((varlen_start - (char *) mtup) + attr_len <= len);
-					memcpy(varlen_start+1, VARDATA_D(values[i]), attr_len-1);
+					memcpy(varlen_start+1, VARDATA(DatumGetPointer(values[i])), attr_len-1);
 				}
 				else
 				{
 					/* Must be 4 byte header aligned varlena */
-					varlen_start = (char *) att_align((long) varlen_start, attr->attalign);
+					varlen_start = (char *) att_align_nominal((long) varlen_start, attr->attalign);
 					attr_len = VARSIZE(DatumGetPointer(values[i]));
 					Assert((varlen_start - (char *) mtup) + attr_len <= len);
 					memcpy(varlen_start, DatumGetPointer(values[i]), attr_len);
@@ -828,7 +831,7 @@ MemTuple memtuple_form_to_align(
 				break;
 
 			case MTB_ByRef_CStr:
-				varlen_start = (char *) att_align((long) varlen_start, attr->attalign);
+				varlen_start = (char *) att_align_nominal((long) varlen_start, attr->attalign);
 				attr_len = strlen(DatumGetCString(values[i])) + 1;
 				Assert((varlen_start - (char *) mtup) + attr_len <= len);
 				memcpy(varlen_start, DatumGetPointer(values[i]), attr_len);
@@ -1026,7 +1029,7 @@ bool MemTupleHasExternal(MemTuple mtup, MemTupleBinding *pbind)
 			Datum d = memtuple_getattr(mtup, pbind, i+1, &isnull);
 			if(!isnull)
 			{
-				if(VARATT_IS_EXTERNAL_D(d))
+				if(VARATT_IS_EXTERNAL(DatumGetPointer(d)))
 					return true;
 			}
 		}

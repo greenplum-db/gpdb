@@ -13,6 +13,7 @@
 #ifndef PARSE_PARTITION_H
 #define PARSE_PARTITION_H
 
+#include "parser/analyze.h"
 #include "parser/parse_node.h"
 
 extern void transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,

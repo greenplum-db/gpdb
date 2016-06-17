@@ -11,7 +11,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/ipc.h,v 1.73 2007/01/05 22:19:58 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/storage/ipc.h,v 1.74.2.1 2008/04/16 23:59:51 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */

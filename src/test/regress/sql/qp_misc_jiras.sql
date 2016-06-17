@@ -20,7 +20,7 @@ create table qp_misc_jiras.tbl1318(dummy integer, aa text not null);
 create index concurrently a_daa on qp_misc_jiras.tbl1318(dummy,aa);
 alter table qp_misc_jiras.tbl1318 alter column aa type integer using  bit_length(aa);
 drop index qp_misc_jiras.tbl1318_daa;
-alter table qp_misc_jiras.tbl1318 alter column aa type integer using  bit_length(aa);
+alter table qp_misc_jiras.tbl1318 alter column aa type integer using  bit_length(aa::text);
 drop table qp_misc_jiras.tbl1318;
 
 create table qp_misc_jiras.tbl1318(dummy integer, aa text not null);
@@ -847,8 +847,8 @@ END ('2009-06-30 00:00:00'::timestamp without time zone) EVERY ('1 day'::interva
 );
 
 insert into qp_misc_jiras.tbl6419_test values( 123, '2009-06-01', 12, '2009-06-01 01:01:01', 'aaaaaa');
-select * from qp_misc_jiras.tbl6419_test where icedt = (select partitionrangestart FROM pg_partitions where tablename='test1' and schemaname='public' and partitionrank=1);
-select * from qp_misc_jiras.tbl6419_test where '2009-12-12'::date = (select 'test'::text);
+select * from qp_misc_jiras.tbl6419_test where icedt::text = (select partitionrangestart FROM pg_partitions where tablename='test1' and schemaname='public' and partitionrank=1);
+select * from qp_misc_jiras.tbl6419_test where '2009-12-12'::date::text = (select 'test'::text);
 drop table qp_misc_jiras.tbl6419_test;
 
 -- start_matchsubs
@@ -1073,7 +1073,7 @@ WHERE T.SQ = 1
 
 drop table qp_misc_jiras.ins_cr_nds_dt, qp_misc_jiras.ins_cr_nds_mstr, qp_misc_jiras.m_ccr_cvr_nds_t99, qp_misc_jiras.m_ccr_mthy_cr_nds_t00;
 
-reset gp_select_invisible;
+set gp_select_invisible=false;
 
 create table qp_misc_jiras.tbl6448 (x "char");
 insert into qp_misc_jiras.tbl6448 values ('a');

@@ -6,7 +6,7 @@
  * Copyright (c) 2000-2008, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/transam/varsup.c,v 1.78 2007/02/15 23:23:22 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/transam/varsup.c,v 1.81 2008/01/01 19:45:48 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -52,7 +52,6 @@ GetNewTransactionId(bool isSubXact, bool setProcXid)
 	if (IsBootstrapProcessingMode())
 	{
 		Assert(!isSubXact);
-		//MyProc->xid = BootstrapTransactionId;
 		return BootstrapTransactionId;
 	}
 
@@ -130,19 +129,19 @@ GetNewTransactionId(bool isSubXact, bool setProcXid)
 	TransactionIdAdvance(ShmemVariableCache->nextXid);
 
 	/*
-	 * We must store the new XID into the shared PGPROC array before releasing
-	 * XidGenLock.	This ensures that when GetSnapshotData calls
-	 * ReadNewTransactionId, all active XIDs before the returned value of
-	 * nextXid are already present in PGPROC.  Else we have a race condition.
+	 * We must store the new XID into the shared ProcArray before releasing
+	 * XidGenLock.	This ensures that every active XID older than
+	 * latestCompletedXid is present in the ProcArray, which is essential for
+	 * correct OldestXmin tracking; see src/backend/access/transam/README.
 	 *
 	 * XXX by storing xid into MyProc without acquiring ProcArrayLock, we are
 	 * relying on fetch/store of an xid to be atomic, else other backends
 	 * might see a partially-set xid here.	But holding both locks at once
-	 * would be a nasty concurrency hit (and in fact could cause a deadlock
-	 * against GetSnapshotData).  So for now, assume atomicity. Note that
-	 * readers of PGPROC xid field should be careful to fetch the value only
-	 * once, rather than assume they can read it multiple times and get the
-	 * same answer each time.
+	 * would be a nasty concurrency hit.  So for now, assume atomicity.
+	 *
+	 * Note that readers of PGPROC xid fields should be careful to fetch the
+	 * value only once, rather than assume they can read a value multiple
+	 * times and get the same answer each time.
 	 *
 	 * The same comments apply to the subxact xid count and overflow fields.
 	 *

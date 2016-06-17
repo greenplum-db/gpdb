@@ -1,0 +1,1533 @@
+-- ----------------------------------------------------------------------
+-- Test: setup.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+create schema cte_queries;
+set optimizer_cte_inlining = off;
+set search_path to cte_queries;
+\i /workspace/tinc/gpdb/src/test/regress/optfunctional/data/world.sql;
+--
+-- PostgreSQL port of the MySQL "World" database.
+--
+-- The sample data used in the world database is Copyright Statistics 
+-- Finland, http://www.stat.fi/worldinfigures.
+--
+-- Modified to use it with GPDB
+DROP TABLE IF EXISTS city cascade;
+psql:/workspace/tinc/gpdb/src/test/regress/optfunctional/data/world.sql:10: NOTICE:  table "city" does not exist, skipping
+DROP TABLE IF EXISTS country cascade;
+psql:/workspace/tinc/gpdb/src/test/regress/optfunctional/data/world.sql:12: NOTICE:  table "country" does not exist, skipping
+DROP TABLE IF EXISTS countrylanguage cascade;
+psql:/workspace/tinc/gpdb/src/test/regress/optfunctional/data/world.sql:14: NOTICE:  table "countrylanguage" does not exist, skipping
+--SET client_encoding = 'LATIN1';
+CREATE TABLE city (
+    id integer NOT NULL,
+    name text NOT NULL,
+    countrycode character(3) NOT NULL,
+    district text NOT NULL,
+    population integer NOT NULL
+) distributed by(id);
+CREATE TABLE country (
+    code character(3) NOT NULL,
+    name text NOT NULL,
+    continent text NOT NULL,
+    region text NOT NULL,
+    surfacearea real NOT NULL,
+    indepyear smallint,
+    population integer NOT NULL,
+    lifeexpectancy real,
+    gnp numeric(10,2),
+    gnpold numeric(10,2),
+    localname text NOT NULL,
+    governmentform text NOT NULL,
+    headofstate text,
+    capital integer,
+    code2 character(2) NOT NULL
+) distributed by (code);
+CREATE TABLE countrylanguage (
+    countrycode character(3) NOT NULL,
+    "language" text NOT NULL,
+    isofficial boolean NOT NULL,
+    percentage real NOT NULL
+)distributed by (countrycode,language);
+COPY city (id, name, countrycode, district, population) FROM stdin;
+--
+-- Data for Name: country; Type: TABLE DATA; Schema: public; Owner: chriskl
+--
+COPY country (code, name, continent, region, surfacearea, indepyear, population, lifeexpectancy, gnp, gnpold, localname, governmentform, headofstate, capital, code2) FROM stdin WITH NULL AS '';
+--
+-- Data for Name: countrylanguage; Type: TABLE DATA; Schema: public; Owner: chriskl
+--
+COPY countrylanguage (countrycode, "language", isofficial, percentage) FROM stdin;
+ALTER TABLE ONLY city
+    ADD CONSTRAINT city_pkey PRIMARY KEY (id);
+psql:/workspace/tinc/gpdb/src/test/regress/optfunctional/data/world.sql:5379: NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "city_pkey" for table "city"
+ALTER TABLE ONLY country
+    ADD CONSTRAINT country_pkey PRIMARY KEY (code);
+psql:/workspace/tinc/gpdb/src/test/regress/optfunctional/data/world.sql:5382: NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "country_pkey" for table "country"
+ALTER TABLE ONLY countrylanguage
+    ADD CONSTRAINT countrylanguage_pkey PRIMARY KEY (countrycode, "language");
+psql:/workspace/tinc/gpdb/src/test/regress/optfunctional/data/world.sql:5385: NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "countrylanguage_pkey" for table "countrylanguage"
+ANALYZE city;
+ANALYZE country;
+ANALYZE countrylanguage;
+-- end_ignore
+-- ----------------------------------------------------------------------
+-- Test: sql/cte_queries11.sql
+-- ----------------------------------------------------------------------
+-- @author prabhd 
+-- @created 2012-02-01 12:00:00 
+-- @modified 2013-02-01 12:00:00 
+-- @tags cte HAWQ 
+-- @product_version gpdb: [4.3-],hawq: [1.1-]
+-- @db_name world_db
+-- @description cte tests from cdbfast 
+-- queries with name collision between CTEs and tables in the database
+-- query 1 using the same name for the CTE as a table. Main query should reference the CTE
+with country as 
+(select country.code,country.name COUNTRY, city.name CAPITAL, language, isofficial, percentage
+ FROM country,city,countrylanguage
+ WHERE country.code = countrylanguage.countrycode
+ and country.capital = city.id
+ and country.continent = 'Europe')
+select * from
+(select * from country where isofficial='True') e1,
+(select * from country where percentage > 50) e2
+where e1.code = e2.code order by e2.COUNTRY,e1.language LIMIT 20;
+ code |        country         |        capital         |    language    | isofficial | percentage | code |        country         |        capital         |    language    | isofficial | percentage 
+------+------------------------+------------------------+----------------+------------+------------+------+------------------------+------------------------+----------------+------------+------------
+ ALB  | Albania                | Tirana                 | Albaniana      | t          |       97.9 | ALB  | Albania                | Tirana                 | Albaniana      | t          |       97.9
+ AUT  | Austria                | Wien                   | German         | t          |         92 | AUT  | Austria                | Wien                   | German         | t          |         92
+ BLR  | Belarus                | Minsk                  | Belorussian    | t          |       65.6 | BLR  | Belarus                | Minsk                  | Belorussian    | t          |       65.6
+ BLR  | Belarus                | Minsk                  | Russian        | t          |         32 | BLR  | Belarus                | Minsk                  | Belorussian    | t          |       65.6
+ BEL  | Belgium                | Bruxelles [Brussel]    | Dutch          | t          |       59.2 | BEL  | Belgium                | Bruxelles [Brussel]    | Dutch          | t          |       59.2
+ BEL  | Belgium                | Bruxelles [Brussel]    | French         | t          |       32.6 | BEL  | Belgium                | Bruxelles [Brussel]    | Dutch          | t          |       59.2
+ BEL  | Belgium                | Bruxelles [Brussel]    | German         | t          |          1 | BEL  | Belgium                | Bruxelles [Brussel]    | Dutch          | t          |       59.2
+ BIH  | Bosnia and Herzegovina | Sarajevo               | Serbo-Croatian | t          |       99.2 | BIH  | Bosnia and Herzegovina | Sarajevo               | Serbo-Croatian | t          |       99.2
+ BGR  | Bulgaria               | Sofija                 | Bulgariana     | t          |       83.2 | BGR  | Bulgaria               | Sofija                 | Bulgariana     | t          |       83.2
+ HRV  | Croatia                | Zagreb                 | Serbo-Croatian | t          |       95.9 | HRV  | Croatia                | Zagreb                 | Serbo-Croatian | t          |       95.9
+ CZE  | Czech Republic         | Praha                  | Czech          | t          |       81.2 | CZE  | Czech Republic         | Praha                  | Czech          | t          |       81.2
+ DNK  | Denmark                | Kobenhavn              | Danish         | t          |       93.5 | DNK  | Denmark                | Kobenhavn              | Danish         | t          |       93.5
+ EST  | Estonia                | Tallinn                | Estonian       | t          |       65.3 | EST  | Estonia                | Tallinn                | Estonian       | t          |       65.3
+ FRO  | Faroe Islands          | Torshavn               | Danish         | t          |          0 | FRO  | Faroe Islands          | Torshavn               | Faroese        | t          |        100
+ FRO  | Faroe Islands          | Torshavn               | Faroese        | t          |        100 | FRO  | Faroe Islands          | Torshavn               | Faroese        | t          |        100
+ FIN  | Finland                | Helsinki [Helsingfors] | Finnish        | t          |       92.7 | FIN  | Finland                | Helsinki [Helsingfors] | Finnish        | t          |       92.7
+ FIN  | Finland                | Helsinki [Helsingfors] | Swedish        | t          |        5.7 | FIN  | Finland                | Helsinki [Helsingfors] | Finnish        | t          |       92.7
+ FRA  | France                 | Paris                  | French         | t          |       93.6 | FRA  | France                 | Paris                  | French         | t          |       93.6
+ DEU  | Germany                | Berlin                 | German         | t          |       91.3 | DEU  | Germany                | Berlin                 | German         | t          |       91.3
+ GIB  | Gibraltar              | Gibraltar              | English        | t          |       88.9 | GIB  | Gibraltar              | Gibraltar              | English        | t          |       88.9
+(20 rows)
+
+-- query 2 using multiple CTEs with same names as tables. 
+with country as 
+(select country.code,country.name COUNTRY, city.name CAPITAL, language, isofficial, percentage
+ FROM country,city,countrylanguage
+ WHERE country.code = countrylanguage.countrycode
+ and country.capital = city.id
+ and country.continent = 'Europe'),
+countrylanguage(code1,country1,capital1,language1,isofficial1,percentage1,code2,country2,capital2,language2,isofficial2,percentage2) as
+(
+select * from
+(select * from country where isofficial='True') e1,
+(select * from country where percentage > 50) e2
+where e1.code = e2.code order by e2.COUNTRY,e1.language
+)
+select code1,country1,capital1,language1,isofficial1,percentage1,country.COUNTRY from country,countrylanguage where country.code = countrylanguage.code1
+and country.percentage = countrylanguage.percentage1
+order by COUNTRY,percentage1 LIMIT 20;
+ code1 |        country1        |        capital1        |   language1    | isofficial1 | percentage1 |        country         
+-------+------------------------+------------------------+----------------+-------------+-------------+------------------------
+ ALB   | Albania                | Tirana                 | Albaniana      | t           |        97.9 | Albania
+ AUT   | Austria                | Wien                   | German         | t           |          92 | Austria
+ BLR   | Belarus                | Minsk                  | Russian        | t           |          32 | Belarus
+ BLR   | Belarus                | Minsk                  | Belorussian    | t           |        65.6 | Belarus
+ BEL   | Belgium                | Bruxelles [Brussel]    | German         | t           |           1 | Belgium
+ BEL   | Belgium                | Bruxelles [Brussel]    | French         | t           |        32.6 | Belgium
+ BEL   | Belgium                | Bruxelles [Brussel]    | Dutch          | t           |        59.2 | Belgium
+ BIH   | Bosnia and Herzegovina | Sarajevo               | Serbo-Croatian | t           |        99.2 | Bosnia and Herzegovina
+ BGR   | Bulgaria               | Sofija                 | Bulgariana     | t           |        83.2 | Bulgaria
+ HRV   | Croatia                | Zagreb                 | Serbo-Croatian | t           |        95.9 | Croatia
+ CZE   | Czech Republic         | Praha                  | Czech          | t           |        81.2 | Czech Republic
+ DNK   | Denmark                | Kobenhavn              | Danish         | t           |        93.5 | Denmark
+ EST   | Estonia                | Tallinn                | Estonian       | t           |        65.3 | Estonia
+ FRO   | Faroe Islands          | Torshavn               | Danish         | t           |           0 | Faroe Islands
+ FRO   | Faroe Islands          | Torshavn               | Faroese        | t           |         100 | Faroe Islands
+ FIN   | Finland                | Helsinki [Helsingfors] | Swedish        | t           |         5.7 | Finland
+ FIN   | Finland                | Helsinki [Helsingfors] | Finnish        | t           |        92.7 | Finland
+ FRA   | France                 | Paris                  | French         | t           |        93.6 | France
+ DEU   | Germany                | Berlin                 | German         | t           |        91.3 | Germany
+ GIB   | Gibraltar              | Gibraltar              | English        | t           |        88.9 | Gibraltar
+(20 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/cte_queries12.sql
+-- ----------------------------------------------------------------------
+-- @author prabhd 
+-- @created 2012-02-01 12:00:00 
+-- @modified 2013-02-01 12:00:00 
+-- @tags cte HAWQ 
+-- @product_version gpdb: [4.3-],hawq: [1.1-]
+-- @db_name world_db
+-- @description cte tests from cdbfast 
+-- queries using same name for CTEs and the subquery aliases in the main query
+-- query1
+with c1 as 
+(select country.code,country.name COUNTRY, city.name CAPITAL, language, isofficial, percentage
+ FROM country,city,countrylanguage
+ WHERE country.code = countrylanguage.countrycode
+ and country.capital = city.id
+ and country.continent = 'Europe'),
+c2 as
+(select country.code,country.name COUNTRY, city.name CAPITAL, language, isofficial, percentage
+ FROM country,city,countrylanguage
+ WHERE country.code = countrylanguage.countrycode
+ and country.capital = city.id
+ and country.continent = 'Asia')
+select * from
+(select * from c1 where isofficial='True') c1,
+(select * from c2 where percentage > 50) c2
+where c1.percentage = c2.percentage order by c2.COUNTRY,c1.language;
+ code |    country    |  capital   |    language    | isofficial | percentage | code |  country   | capital |    language    | isofficial | percentage 
+------+---------------+------------+----------------+------------+------------+------+------------+---------+----------------+------------+------------
+ LIE  | Liechtenstein | Vaduz      | German         | t          |         89 | AZE  | Azerbaijan | Baku    | Azerbaijani    | t          |         89
+ AUT  | Austria       | Wien       | German         | t          |         92 | CHN  | China      | Peking  | Chinese        | t          |         92
+ ALB  | Albania       | Tirana     | Albaniana      | t          |       97.9 | JOR  | Jordan     | Amman   | Arabic         | t          |       97.9
+ SVK  | Slovakia      | Bratislava | Slovak         | t          |       85.6 | MAC  | Macao      | Macao   | Canton Chinese | f          |       85.6
+ FRO  | Faroe Islands | Torshavn   | Faroese        | t          |        100 | MDV  | Maldives   | Male    | Dhivehi        | t          |        100
+ SMR  | San Marino    | San Marino | Italian        | t          |        100 | MDV  | Maldives   | Male    | Dhivehi        | t          |        100
+ HRV  | Croatia       | Zagreb     | Serbo-Croatian | t          |       95.9 | PSE  | Palestine  | Gaza    | Arabic         | f          |       95.9
+(7 rows)
+
+-- query2 using same names as tables 
+with country as 
+(select country.code,country.name COUNTRY, city.name CAPITAL, language, isofficial, percentage
+ FROM country,city,countrylanguage
+ WHERE country.code = countrylanguage.countrycode
+ and country.capital = city.id
+ and country.continent = 'Europe'),
+countrylanguage as
+(select country.code,country.COUNTRY,country.language,country.isofficial,country.percentage
+ FROM country,countrylanguage
+ WHERE country.code = countrylanguage.countrycode
+)
+select * from
+(select * from country where isofficial='True') country,
+(select * from countrylanguage where percentage > 50) countrylanguage
+where country.percentage = countrylanguage.percentage order by countrylanguage.COUNTRY,country.language LIMIT 40;
+ code |        country         |       capital       |    language    | isofficial | percentage | code |        country         |    language    | isofficial | percentage 
+------+------------------------+---------------------+----------------+------------+------------+------+------------------------+----------------+------------+------------
+ ALB  | Albania                | Tirana              | Albaniana      | t          |       97.9 | ALB  | Albania                | Albaniana      | t          |       97.9
+ ALB  | Albania                | Tirana              | Albaniana      | t          |       97.9 | ALB  | Albania                | Albaniana      | t          |       97.9
+ ALB  | Albania                | Tirana              | Albaniana      | t          |       97.9 | ALB  | Albania                | Albaniana      | t          |       97.9
+ AUT  | Austria                | Wien                | German         | t          |         92 | AUT  | Austria                | German         | t          |         92
+ AUT  | Austria                | Wien                | German         | t          |         92 | AUT  | Austria                | German         | t          |         92
+ AUT  | Austria                | Wien                | German         | t          |         92 | AUT  | Austria                | German         | t          |         92
+ AUT  | Austria                | Wien                | German         | t          |         92 | AUT  | Austria                | German         | t          |         92
+ AUT  | Austria                | Wien                | German         | t          |         92 | AUT  | Austria                | German         | t          |         92
+ AUT  | Austria                | Wien                | German         | t          |         92 | AUT  | Austria                | German         | t          |         92
+ AUT  | Austria                | Wien                | German         | t          |         92 | AUT  | Austria                | German         | t          |         92
+ AUT  | Austria                | Wien                | German         | t          |         92 | AUT  | Austria                | German         | t          |         92
+ BLR  | Belarus                | Minsk               | Belorussian    | t          |       65.6 | BLR  | Belarus                | Belorussian    | t          |       65.6
+ BLR  | Belarus                | Minsk               | Belorussian    | t          |       65.6 | BLR  | Belarus                | Belorussian    | t          |       65.6
+ BLR  | Belarus                | Minsk               | Belorussian    | t          |       65.6 | BLR  | Belarus                | Belorussian    | t          |       65.6
+ BLR  | Belarus                | Minsk               | Belorussian    | t          |       65.6 | BLR  | Belarus                | Belorussian    | t          |       65.6
+ BEL  | Belgium                | Bruxelles [Brussel] | Dutch          | t          |       59.2 | BEL  | Belgium                | Dutch          | t          |       59.2
+ BEL  | Belgium                | Bruxelles [Brussel] | Dutch          | t          |       59.2 | BEL  | Belgium                | Dutch          | t          |       59.2
+ BEL  | Belgium                | Bruxelles [Brussel] | Dutch          | t          |       59.2 | BEL  | Belgium                | Dutch          | t          |       59.2
+ BEL  | Belgium                | Bruxelles [Brussel] | Dutch          | t          |       59.2 | BEL  | Belgium                | Dutch          | t          |       59.2
+ BEL  | Belgium                | Bruxelles [Brussel] | Dutch          | t          |       59.2 | BEL  | Belgium                | Dutch          | t          |       59.2
+ BEL  | Belgium                | Bruxelles [Brussel] | Dutch          | t          |       59.2 | BEL  | Belgium                | Dutch          | t          |       59.2
+ BIH  | Bosnia and Herzegovina | Sarajevo            | Serbo-Croatian | t          |       99.2 | BIH  | Bosnia and Herzegovina | Serbo-Croatian | t          |       99.2
+ BGR  | Bulgaria               | Sofija              | Bulgariana     | t          |       83.2 | BGR  | Bulgaria               | Bulgariana     | t          |       83.2
+ BGR  | Bulgaria               | Sofija              | Bulgariana     | t          |       83.2 | BGR  | Bulgaria               | Bulgariana     | t          |       83.2
+ BGR  | Bulgaria               | Sofija              | Bulgariana     | t          |       83.2 | BGR  | Bulgaria               | Bulgariana     | t          |       83.2
+ BGR  | Bulgaria               | Sofija              | Bulgariana     | t          |       83.2 | BGR  | Bulgaria               | Bulgariana     | t          |       83.2
+ HRV  | Croatia                | Zagreb              | Serbo-Croatian | t          |       95.9 | HRV  | Croatia                | Serbo-Croatian | t          |       95.9
+ HRV  | Croatia                | Zagreb              | Serbo-Croatian | t          |       95.9 | HRV  | Croatia                | Serbo-Croatian | t          |       95.9
+ CZE  | Czech Republic         | Praha               | Czech          | t          |       81.2 | CZE  | Czech Republic         | Czech          | t          |       81.2
+ CZE  | Czech Republic         | Praha               | Czech          | t          |       81.2 | CZE  | Czech Republic         | Czech          | t          |       81.2
+ CZE  | Czech Republic         | Praha               | Czech          | t          |       81.2 | CZE  | Czech Republic         | Czech          | t          |       81.2
+ CZE  | Czech Republic         | Praha               | Czech          | t          |       81.2 | CZE  | Czech Republic         | Czech          | t          |       81.2
+ CZE  | Czech Republic         | Praha               | Czech          | t          |       81.2 | CZE  | Czech Republic         | Czech          | t          |       81.2
+ CZE  | Czech Republic         | Praha               | Czech          | t          |       81.2 | CZE  | Czech Republic         | Czech          | t          |       81.2
+ CZE  | Czech Republic         | Praha               | Czech          | t          |       81.2 | CZE  | Czech Republic         | Czech          | t          |       81.2
+ CZE  | Czech Republic         | Praha               | Czech          | t          |       81.2 | CZE  | Czech Republic         | Czech          | t          |       81.2
+ DNK  | Denmark                | Kobenhavn           | Danish         | t          |       93.5 | DNK  | Denmark                | Danish         | t          |       93.5
+ DNK  | Denmark                | Kobenhavn           | Danish         | t          |       93.5 | DNK  | Denmark                | Danish         | t          |       93.5
+ DNK  | Denmark                | Kobenhavn           | Danish         | t          |       93.5 | DNK  | Denmark                | Danish         | t          |       93.5
+ DNK  | Denmark                | Kobenhavn           | Danish         | t          |       93.5 | DNK  | Denmark                | Danish         | t          |       93.5
+(40 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/cte_queries13.sql
+-- ----------------------------------------------------------------------
+-- @author prabhd 
+-- @created 2012-02-01 12:00:00 
+-- @modified 2013-02-01 12:00:00 
+-- @tags cte HAWQ 
+-- @product_version gpdb: [4.3-],hawq: [1.1-]
+-- @db_name world_db
+-- @description cte tests from cdbfast 
+-- Using the same name for the CTE at every subquery-level 
+select avg(population12),CITY12
+from
+(
+with city(CITY1,POPULATION1) as (select city.name,city.population from city where city.population >= 100)
+select CITY12,POPULATION12 from 
+(
+  with city(CITY2,POPULATION2) as ( select city1,population1 from city where population1 >= 1000 )
+  select CITY12,POPULATION12 from 
+  (
+     with city(CITY3,POPULATION3) as (select city2,population2 from city where population2 >= 10000)
+     select CITY12,POPULATION12 from
+     (
+       with city(CITY4,POPULATION4) as (select city3,population3 from  city where population3 >= 20000)
+       select CITY12,POPULATION12 from
+       (
+        with city(CITY5,POPULATION5) as (select city4,population4 from  city where population4 >= 50000)
+        select CITY12,POPULATION12 from
+        (
+         with city(CITY6,POPULATION6) as (select city5,population5 from  city where population5 >= 80000)
+         select CITY12,POPULATION12 from
+         (
+          with city(CITY7,POPULATION7) as (select city6,population6 from  city where population6 >= 150000)
+          select CITY12,POPULATION12 from
+          (
+           with city(CITY8,POPULATION8) as (select city7,population7 from  city where population7 >= 200000)
+           select CITY12,POPULATION12 from
+           (
+            with city(CITY9,POPULATION9) as (select city8,population8 from city where population8 >= 250000)
+            select CITY12,POPULATION12 from
+            (
+             with city(CITY10,POPULATION10) as (select city9,population9 from  city where population9 >= 300000)
+             select city12,population12 from
+             (
+              with city(CITY11,POPULATION11) as (select city10,population10 from city where population10 >= 6500000)
+              select CITY12,POPULATION12 from
+              (
+               with city(CITY12,POPULATION12) as (select city11,population11 from city where population11 >= 7000000)
+               select s1.city12,s1.population12 from city s1,city s2
+              ) FOO11
+             ) FOO10
+            ) FOO9
+           ) FOO8
+          ) FOO7
+         ) FOO6
+        ) FOO5
+       ) FOO4
+     )FOO3
+  ) FOO2
+) FOO1
+) FOO0 group by city12 order by city12;
+   avg    |      city12      
+----------+------------------
+  8591309 | Ciudad de Mexico
+  7206704 | Delhi
+  8787958 | Istanbul
+  9604900 | Jakarta
+  9269265 | Karachi
+  7285000 | London
+  8389200 | Moscow
+ 10500000 | Mumbai (Bombay)
+  8008278 | New York
+  7472000 | Peking
+  9968485 | Sao Paulo
+  9981619 | Seoul
+  9696300 | Shanghai
+  7980230 | Tokyo
+(14 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/cte_queries14.sql
+-- ----------------------------------------------------------------------
+-- @author prabhd 
+-- @created 2012-02-01 12:00:00 
+-- @modified 2013-02-01 12:00:00 
+-- @tags cte HAWQ 
+-- @product_version gpdb: [4.3-],hawq: [1.1-]
+-- @db_name world_db
+-- @description cte tests from cdbfast 
+-- negative cases where queries have duplicate names in CTEs
+--query1 having duplicates without specifying a column list. Should error out. 
+with capitals as 
+(select country.code,id,city.name,city.countrycode as code from city,country 
+ where city.countrycode = country.code AND city.id = country.capital) 
+select * from capitals;
+ERROR:  WITH query "capitals" must not have duplicate column name: code
+HINT:  Specify a column list without duplicate names
+-- query2
+with allofficiallanguages as 
+(select countrylanguage.countrycode,city.countrycode,language from
+ city,countrylanguage where countrylanguage.countrycode = city.countrycode and isofficial = 'True')
+select * from allofficiallanguages;
+ERROR:  WITH query "allofficiallanguages" must not have duplicate column name: countrycode
+HINT:  Specify a column list without duplicate names
+-- query3 specifying duplicates explicitly in the column list
+with capitals(code,id,name,code) as 
+(select country.code,id,city.name,city.countrycode from city,country 
+ where city.countrycode = country.code AND city.id = country.capital) 
+select * from capitals;
+ERROR:  WITH query "capitals" must not have duplicate column name: code
+HINT:  Specify a column list without duplicate names
+-- ----------------------------------------------------------------------
+-- Test: sql/cte_queries15.sql
+-- ----------------------------------------------------------------------
+-- @author prabhd 
+-- @created 2012-02-01 12:00:00 
+-- @modified 2013-02-01 12:00:00 
+-- @tags cte HAWQ 
+-- @product_version gpdb: [4.3-],hawq: [1.1-]
+-- @db_name world_db
+-- @description cte tests from cdbfast 
+-- negative case. RECURSIVE WITH clause should fail 
+with recursive allofficiallanguages(language) as 
+(
+ select language from city,countrylanguage where countrylanguage.countrycode = city.countrycode and isofficial = 'True'
+ UNION 
+ select language from allofficiallanguages)
+select * from allofficiallanguages;
+ERROR:  RECURSIVE option in WITH clause is not supported
+-- ----------------------------------------------------------------------
+-- Test: sql/cte_queries16.sql
+-- ----------------------------------------------------------------------
+-- @author prabhd 
+-- @created 2012-02-01 12:00:00 
+-- @modified 2013-02-01 12:00:00 
+-- @tags cte HAWQ 
+-- @product_version gpdb: [4.3-],hawq: [1.1-]
+-- @db_name world_db
+-- @description cte tests from cdbfast 
+-- negative cases with queries forward referencing other CTEs
+-- query1 CTE referencing itself
+with lang_total as
+( select count(*) as lang_count,country.code,countrylanguage.countrycode
+  from country join countrylanguage on (country.code=countrylanguage.countrycode and governmentform='Federal Republic')
+  group by country.code,countrylanguage.countrycode 
+  HAVING count(*) > (select max(lang_count) from lang_total)
+)
+select count(*) from lang_total;
+ERROR:  relation "lang_total" does not exist
+LINE 5:   HAVING count(*) > (select max(lang_count) from lang_total)
+                                                         ^
+DETAIL:  There is a WITH item named "lang_total", but it cannot be referenced from this part of the query.
+HINT:  Re-order the WITH items to remove forward references.
+--query2 CTE forward referencing another CTE
+with capitals as 
+(select country.code,id,city.name from city,country 
+ where city.countrycode = country.code AND city.id = country.capital),
+lang_total as
+( select count(*) as lang_count,country.code,alleuropeanlanguages.code
+  from country join alleuropeanlanguages on (country.code=alleuropeanlanguages.code and governmentform='Federal Republic')
+  group by country.code,alleuropeanlanguages.code order by country.code),
+alleuropeanlanguages as 
+(select country.code,country.name COUNTRY, city.name CAPITAL, language, isofficial, percentage
+ FROM country,city,countrylanguage
+ WHERE country.code = countrylanguage.countrycode
+ and country.capital = city.id
+ and country.continent = 'Europe')
+select * from alleuropeanlanguages;
+ERROR:  relation "alleuropeanlanguages" does not exist
+LINE 6:   from country join alleuropeanlanguages on (country.code=al...
+                            ^
+DETAIL:  There is a WITH item named "alleuropeanlanguages", but it cannot be referenced from this part of the query.
+HINT:  Re-order the WITH items to remove forward references.
+-- ----------------------------------------------------------------------
+-- Test: sql/cte_queries17.sql
+-- ----------------------------------------------------------------------
+-- @author prabhd 
+-- @created 2012-02-01 12:00:00 
+-- @modified 2013-02-01 12:00:00 
+-- @tags cte HAWQ 
+-- @product_version gpdb: [4.3-],hawq: [1.1-]
+-- @db_name world_db
+-- @description cte tests from cdbfast 
+-- negative cases with mismatching column list provided for CTEs
+--query1
+with capitals(code,id) as 
+(select country.code,id,city.name from city,country 
+ where city.countrycode = country.code AND city.id = country.capital)
+select * from capitals;
+ERROR:  specified number of columns in WITH query "capitals" must not exceed the number of available columns
+LINE 1: with capitals(code,id) as 
+             ^
+--query 2
+with lang_total(lang_count,code,countrycode,name) as
+( select count(*) as lang_count,country.code,countrylanguage.countrycode
+  from country join countrylanguage on (country.code=countrylanguage.countrycode and governmentform='Federal Republic')
+  group by country.code,countrylanguage.countrycode order by country.code)
+select * from lang_total;
+ERROR:  specified number of columns in WITH query "lang_total" must not exceed the number of available columns
+LINE 1: with lang_total(lang_count,code,countrycode,name) as
+             ^
+-- ----------------------------------------------------------------------
+-- Test: sql/cte_queries3.sql
+-- ----------------------------------------------------------------------
+-- @author prabhd 
+-- @created 2012-02-01 12:00:00 
+-- @modified 2013-02-01 12:00:00 
+-- @tags cte
+-- @product_version gpdb: [4.3-],hawq: [1.1-]
+-- @db_name world_db
+-- @description cte tests from cdbfast 
+-- Queries using multiple CTEs
+-- query1 - all CTEs being used once in the main query
+with capitals as 
+(select country.code,id,city.name from city,country 
+ where city.countrycode = country.code AND city.id = country.capital),
+lang_total as
+( select count(*) as lang_count,country.code,countrylanguage.countrycode
+  from country join countrylanguage on (country.code=countrylanguage.countrycode and governmentform='Federal Republic')
+  group by country.code,countrylanguage.countrycode order by country.code),
+alleuropeanlanguages as 
+(select country.code,country.name COUNTRY, city.name CAPITAL, language, isofficial, percentage
+ FROM country,city,countrylanguage
+ WHERE country.code = countrylanguage.countrycode
+ and country.capital = city.id
+ and country.continent = 'Europe'),
+diversecountries as
+(select country.code,country.name,country.capital,d.CNT
+ from country,
+ (select countrylanguage.countrycode,count(*) as CNT from countrylanguage group by countrycode
+  HAVING count(*) > 6) d
+ where d.countrycode = country.code and country.gnp > 100000)
+select capitals.name CAPITAL,lang_total.lang_count COUNTRY_LANG_COUNT,capitals.code,country.name
+from capitals,lang_total,country
+where capitals.code = lang_total.countrycode
+and capitals.code = country.code
+and country.code NOT IN (select diversecountries.code from diversecountries,alleuropeanlanguages
+                         where diversecountries.code = alleuropeanlanguages.code)
+order by capitals.code;
+     capital      | country_lang_count | code |              name               
+------------------+--------------------+------+---------------------------------
+ Buenos Aires     |                  3 | ARG  | Argentina
+ Baku             |                  4 | AZE  | Azerbaijan
+ Sarajevo         |                  1 | BIH  | Bosnia and Herzegovina
+ Brasilia         |                  5 | BRA  | Brazil
+ Berlin           |                  6 | DEU  | Germany
+ Palikir          |                  6 | FSM  | Micronesia, Federated States of
+ New Delhi        |                 12 | IND  | India
+ Antananarivo     |                  2 | MDG  | Madagascar
+ Ciudad de Mexico |                  6 | MEX  | Mexico
+ Abuja            |                 10 | NGA  | Nigeria
+ Washington       |                 12 | USA  | United States
+ Caracas          |                  3 | VEN  | Venezuela
+ Beograd          |                  6 | YUG  | Yugoslavia
+(13 rows)
+
+-- query 2 multiple CTEs being used multiple times through joins
+with longlivingregions as 
+(
+select FOO.*,count(distinct language) as "lang_count"
+from(
+     select
+       sum(population) as "REGION_POP",
+       sum(gnp) as "REGION_GNP",
+       avg(lifeexpectancy) as "REGION_LIFETIME",region
+     from
+      country
+     group by region
+    ) FOO,countrylanguage,country
+where
+   country.code = countrylanguage.countrycode
+   and FOO.region = country.region
+group by
+FOO.region,foo."REGION_POP",foo."REGION_GNP",foo."REGION_LIFETIME"),
+denseregions as 
+(
+select FOO.*,count(distinct language) as "lang_count",
+       sum(surfacearea) as "REGION_SURFACE_AREA"
+from(
+     select
+       sum(population) as "REGION_POP",
+       sum(gnp) as "REGION_GNP",
+       region
+     from
+      country
+     group by region
+    ) FOO,countrylanguage,country
+where
+   country.code = countrylanguage.countrycode
+   and FOO.region = country.region
+   and FOO."REGION_POP" != 0
+group by
+FOO.region,foo."REGION_POP",foo."REGION_GNP"
+order by sum(surfacearea)/foo."REGION_POP" desc),
+allcountrystats as 
+( select country.code,country.name,count(distinct city.id) CITY_CNT,
+  count(distinct countrylanguage.language) LANG_CNT
+  from country,city,countrylanguage
+  where country.code = city.countrycode
+  and country.code = countrylanguage.countrycode
+  group by country.code,country.name
+)
+select allcountrystats.CITY_CNT,allcountrystats.LANG_CNT,allcountrystats.name,
+       "REGION_SURFACE_AREA","REGION_LIFETIME",longlivingregions."REGION_POP",longlivingregions.lang_count,longlivingregions."REGION_GNP",longlivingregions.region
+from longlivingregions,denseregions,allcountrystats,country
+where longlivingregions.region = denseregions.region and allcountrystats.code = country.code and country.region = longlivingregions.region
+and country.indepyear between 1800 and 1850
+UNION ALL
+select allcountrystats.CITY_CNT,allcountrystats.LANG_CNT,allcountrystats.name,
+       "REGION_SURFACE_AREA","REGION_LIFETIME",longlivingregions."REGION_POP",longlivingregions.lang_count,longlivingregions."REGION_GNP",longlivingregions.region
+from longlivingregions,denseregions,allcountrystats,country
+where longlivingregions.region = denseregions.region and allcountrystats.code = country.code and country.region = longlivingregions.region
+and country.indepyear between 1850 and 1900
+UNION ALL
+select allcountrystats.CITY_CNT,allcountrystats.LANG_CNT,allcountrystats.name,
+       "REGION_SURFACE_AREA","REGION_LIFETIME",longlivingregions."REGION_POP",longlivingregions.lang_count,longlivingregions."REGION_GNP",longlivingregions.region
+from longlivingregions,denseregions,allcountrystats,country
+where longlivingregions.region = denseregions.region and allcountrystats.code = country.code and country.region = longlivingregions.region
+and country.indepyear > 1900
+order by name
+LIMIT 50;
+ city_cnt | lang_cnt |                 name                  | REGION_SURFACE_AREA | REGION_LIFETIME  | REGION_POP | lang_count | REGION_GNP |          region           
+----------+----------+---------------------------------------+---------------------+------------------+------------+------------+------------+---------------------------
+        4 |        5 | Afghanistan                           |         9.07498e+07 | 61.3500003814697 | 1490776000 |         54 |  810604.00 | Southern and Central Asia
+        1 |        3 | Albania                               |          5.8452e+06 | 76.5285720825195 |  144674200 |         22 | 2012289.00 | Southern Europe
+       18 |        2 | Algeria                               |         3.69935e+07 | 65.3857127598354 |  173266000 |         14 |  243870.00 | Northern Africa
+        5 |        9 | Angola                                |          5.5663e+07 | 50.3111110263401 |   95652000 |         47 |   32938.00 | Central Africa
+        1 |        2 | Antigua and Barbuda                   |              363261 | 73.0583332379659 |   38140000 |         10 |  103586.20 | Caribbean
+       57 |        3 | Argentina                             |         7.43182e+07 | 70.9461532005897 |  345780000 |         21 | 1511874.00 | South America
+        3 |        2 | Armenia                               |         1.01537e+07 | 70.5666671329074 |  188380700 |         21 |  677260.00 | Middle East
+       14 |        8 | Australia                             |         6.24712e+07 | 78.8000030517578 |   22753100 |         11 |  405851.00 | Australia and New Zealand
+        6 |        8 | Austria                               |         6.64977e+06 | 78.2555567423503 |  183247600 |         21 | 4673272.00 | Western Europe
+        4 |        4 | Azerbaijan                            |         1.01537e+07 | 70.5666671329074 |  188380700 |         21 |  677260.00 | Middle East
+        1 |        2 | Bahamas                               |              363261 | 73.0583332379659 |   38140000 |         10 |  103586.20 | Caribbean
+        1 |        2 | Bahrain                               |         1.01537e+07 | 70.5666671329074 |  188380700 |         21 |  677260.00 | Middle East
+       24 |        7 | Bangladesh                            |         9.07498e+07 | 61.3500003814697 | 1490776000 |         54 |  810604.00 | Southern and Central Asia
+        1 |        2 | Barbados                              |              363261 | 73.0583332379659 |   38140000 |         10 |  103586.20 | Caribbean
+       16 |        4 | Belarus                               |         2.14732e+08 | 69.9299995422363 |  307026000 |         28 |  659980.00 | Eastern Europe
+        9 |        6 | Belgium                               |         6.64977e+06 | 78.2555567423503 |  183247600 |         21 | 4673272.00 | Western Europe
+        2 |        4 | Belize                                |         1.40524e+07 | 71.0249996185303 |  135221000 |         23 |  473151.00 | Central America
+        4 |        7 | Benin                                 |         3.97449e+07 | 52.7411768296186 |  221672000 |         65 |  106711.00 | Western Africa
+        1 |        3 | Bhutan                                |         9.07498e+07 | 61.3500003814697 | 1490776000 |         54 |  810604.00 | Southern and Central Asia
+        8 |        4 | Bolivia                               |         7.43182e+07 | 70.9461532005897 |  345780000 |         21 | 1511874.00 | South America
+        3 |        1 | Bosnia and Herzegovina                |          5.8452e+06 | 76.5285720825195 |  144674200 |         22 | 2012289.00 | Southern Europe
+        2 |        5 | Botswana                              |         2.30602e+07 | 44.8199996948242 |   46886000 |         21 |  126931.00 | Southern Africa
+      250 |        5 | Brazil                                |         7.43182e+07 | 70.9461532005897 |  345780000 |         21 | 1511874.00 | South America
+        1 |        4 | Brunei                                |         3.53222e+07 | 64.4000001387163 |  518541000 |         47 |  642643.00 | Southeast Asia
+       10 |        4 | Bulgaria                              |         2.14732e+08 | 69.9299995422363 |  307026000 |         28 |  659980.00 | Eastern Europe
+        3 |        6 | Burkina Faso                          |         3.97449e+07 | 52.7411768296186 |  221672000 |         65 |  106711.00 | Western Africa
+        1 |        3 | Burundi                               |         4.36313e+07 | 50.8105261953254 |  246999000 |         80 |   69925.00 | Eastern Africa
+        3 |        4 | Cambodia                              |         3.53222e+07 | 64.4000001387163 |  518541000 |         47 |  642643.00 | Southeast Asia
+        7 |        8 | Cameroon                              |          5.5663e+07 | 50.3111110263401 |   95652000 |         47 |   32938.00 | Central Africa
+       49 |       12 | Canada                                |         2.36342e+08 | 75.8199996948242 |  309632000 |         18 | 9111890.00 | North America
+        1 |        2 | Cape Verde                            |         3.97449e+07 | 52.7411768296186 |  221672000 |         65 |  106711.00 | Western Africa
+        1 |        6 | Central African Republic              |          5.5663e+07 | 50.3111110263401 |   95652000 |         47 |   32938.00 | Central Africa
+        2 |        8 | Chad                                  |          5.5663e+07 | 50.3111110263401 |   95652000 |         47 |   32938.00 | Central Africa
+       29 |        4 | Chile                                 |         7.43182e+07 | 70.9461532005897 |  345780000 |         21 | 1511874.00 | South America
+       38 |        5 | Colombia                              |         7.43182e+07 | 70.9461532005897 |  345780000 |         21 | 1511874.00 | South America
+        1 |        5 | Comoros                               |         4.36313e+07 | 50.8105261953254 |  246999000 |         80 |   69925.00 | Eastern Africa
+        2 |        6 | Congo                                 |          5.5663e+07 | 50.3111110263401 |   95652000 |         47 |   32938.00 | Central Africa
+       18 |       10 | Congo, The Democratic Republic of the |          5.5663e+07 | 50.3111110263401 |   95652000 |         47 |   32938.00 | Central Africa
+        1 |        4 | Costa Rica                            |         1.40524e+07 | 71.0249996185303 |  135221000 |         23 |  473151.00 | Central America
+        5 |        5 | Cote deIvoire                         |         3.97449e+07 | 52.7411768296186 |  221672000 |         65 |  106711.00 | Western Africa
+        4 |        2 | Croatia                               |          5.8452e+06 | 76.5285720825195 |  144674200 |         22 | 2012289.00 | Southern Europe
+       14 |        1 | Cuba                                  |              363261 | 73.0583332379659 |   38140000 |         10 |  103586.20 | Caribbean
+        2 |        2 | Cyprus                                |         1.01537e+07 | 70.5666671329074 |  188380700 |         21 |  677260.00 | Middle East
+       10 |        8 | Czech Republic                        |         2.14732e+08 | 69.9299995422363 |  307026000 |         28 |  659980.00 | Eastern Europe
+        1 |        3 | Djibouti                              |         4.36313e+07 | 50.8105261953254 |  246999000 |         80 |   69925.00 | Eastern Africa
+        1 |        2 | Dominica                              |              363261 | 73.0583332379659 |   38140000 |         10 |  103586.20 | Caribbean
+        6 |        2 | Dominican Republic                    |              363261 | 73.0583332379659 |   38140000 |         10 |  103586.20 | Caribbean
+       15 |        2 | Ecuador                               |         7.43182e+07 | 70.9461532005897 |  345780000 |         21 | 1511874.00 | South America
+       37 |        2 | Egypt                                 |         3.69935e+07 | 65.3857127598354 |  173266000 |         14 |  243870.00 | Northern Africa
+        7 |        2 | El Salvador                           |         1.40524e+07 | 71.0249996185303 |  135221000 |         23 |  473151.00 | Central America
+(50 rows)
+
+       
+-- ----------------------------------------------------------------------
+-- Test: sql/cte_queries5.sql
+-- ----------------------------------------------------------------------
+-- @author prabhd 
+-- @created 2012-02-01 12:00:00 
+-- @modified 2013-02-01 12:00:00 
+-- @tags cte HAWQ 
+-- @product_version gpdb: [4.3-],hawq: [1.1-]
+-- @db_name world_db
+-- @description cte tests from cdbfast 
+-- queries using column lists for CTEs
+-- query 1 use column list despite having no duplicate names
+with capitals("C","ID","CAP") as 
+(select country.code,id,city.name from city,country 
+ where city.countrycode = country.code AND city.id = country.capital),
+lang_total(LC,CC,CLC) as
+( select count(*) as lang_count,country.code,countrylanguage.countrycode
+  from country join countrylanguage on (country.code=countrylanguage.countrycode and governmentform='Federal Republic')
+  group by country.code,countrylanguage.countrycode order by country.code) 
+select country.name,"C","ID","CAP",lang_total.lc
+from capitals,lang_total,country
+where capitals."C" = country.code
+and country.code = lang_total.cc;
+              name               |  C  |  ID  |       CAP        | lc 
+---------------------------------+-----+------+------------------+----
+ Argentina                       | ARG |   69 | Buenos Aires     |  3
+ Azerbaijan                      | AZE |  144 | Baku             |  4
+ United States                   | USA | 3813 | Washington       | 12
+ Yugoslavia                      | YUG | 1792 | Beograd          |  6
+ Micronesia, Federated States of | FSM | 2689 | Palikir          |  6
+ Nigeria                         | NGA | 2754 | Abuja            | 10
+ India                           | IND | 1109 | New Delhi        | 12
+ Germany                         | DEU | 3068 | Berlin           |  6
+ Austria                         | AUT | 1523 | Wien             |  8
+ Venezuela                       | VEN | 3539 | Caracas          |  3
+ Russian Federation              | RUS | 3580 | Moscow           | 12
+ Bosnia and Herzegovina          | BIH |  201 | Sarajevo         |  1
+ Brazil                          | BRA |  211 | Brasilia         |  5
+ Madagascar                      | MDG | 2455 | Antananarivo     |  2
+ Mexico                          | MEX | 2515 | Ciudad de Mexico |  6
+(15 rows)
+
+-- query 2 Check case sensitivity for quoted names in column list. This should error out
+with "lang_total"("LC",CC,CLC) as
+( select count(*) as lang_count,country.code,countrylanguage.countrycode
+  from country join countrylanguage on (country.code=countrylanguage.countrycode and governmentform='Federal Republic')
+  group by country.code,countrylanguage.countrycode order by country.code) 
+select LC from lang_total;
+ERROR:  column "lc" does not exist
+LINE 5: select LC from lang_total;
+               ^
+-- query 3 use column list when there are duplicate names within the CTE
+with capitals("CO_C","C_ID","CAPITAL",country) as 
+(select country.code,id,city.name,country.name from city,country 
+ where city.countrycode = country.code AND city.id = country.capital)
+select "CO_C","C_ID","CAPITAL",COUNTRY from capitals where "CO_C"='SMR';
+ CO_C | C_ID |  CAPITAL   |  country   
+------+------+------------+------------
+ SMR  | 3171 | San Marino | San Marino
+(1 row)
+
+-- query4 use column list within another CTE
+with capitals("CO_C","C_ID","CAPITAL",country) as 
+(select country.code,id,city.name,country.name from city,country 
+ where city.countrycode = country.code AND city.id = country.capital),
+south_asian_capitals(A_CO_C,"C_ID",A_C_NAME,A_CO_NAME) as 
+(select "CO_C","C_ID","CAPITAL",country from capitals,country where capitals."CO_C"=country.code and country.region = 'Southern and Central Asia')
+select "a_co_c","C_ID",A_c_NaMe,"a_co_name" from south_asian_capitals order by A_CO_C;
+ a_co_c | C_ID | a_c_name  |  a_co_name   
+--------+------+-----------+--------------
+ AFG    |    1 | Kabul     | Afghanistan
+ BGD    |  150 | Dhaka     | Bangladesh
+ BTN    |  192 | Thimphu   | Bhutan
+ IND    | 1109 | New Delhi | India
+ IRN    | 1380 | Teheran   | Iran
+ KAZ    | 1864 | Astana    | Kazakstan
+ KGZ    | 2253 | Bishkek   | Kyrgyzstan
+ LKA    | 3217 | Colombo   | Sri Lanka
+ MDV    | 2463 | Male      | Maldives
+ NPL    | 2729 | Kathmandu | Nepal
+ PAK    | 2831 | Islamabad | Pakistan
+ TJK    | 3261 | Dushanbe  | Tajikistan
+ TKM    | 3419 | Ashgabat  | Turkmenistan
+ UZB    | 3503 | Toskent   | Uzbekistan
+(14 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/cte_queries8.sql
+-- ----------------------------------------------------------------------
+-- @author prabhd 
+-- @created 2012-02-01 12:00:00 
+-- @modified 2013-02-01 12:00:00 
+-- @tags cte
+-- @product_version gpdb: [4.3-],hawq: [1.1-]
+-- @db_name world_db
+-- @description cte tests from cdbfast 
+-- sanity tests with queries using CTEs in insert,update,delete and create
+-- query 1 CTAS using CTE
+create table bad_headofstates as 
+(
+with bad_headofstates as 
+(
+ select country.code,country.name,country.headofstate,countrylanguage.language
+ from
+ country,countrylanguage
+ where country.code = countrylanguage.countrycode and countrylanguage.isofficial=true
+ and (country.gnp < country.gnpold or country.gnp < 3000)
+)
+select OUTERMOST_FOO.*,bad_headofstates.headofstate from (
+select avg(population),region from
+(
+select FOO.*,bad_headofstates.headofstate,city.name
+from
+(select bad_headofstates.code,country.capital,country.region,country.population from
+bad_headofstates,country where bad_headofstates.code = country.code) FOO, bad_headofstates,city
+where FOO.code = bad_headofstates.code and FOO.capital = city.id) OUTER_FOO
+group by region ) OUTERMOST_FOO,bad_headofstates,country 
+where country.code = bad_headofstates.code and country.region = OUTERMOST_FOO.region
+order by OUTERMOST_FOO.region,bad_headofstates.headofstate LIMIT 40
+);
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+select * from bad_headofstates order by region,headofstate,avg;
+       avg        |          region           |           headofstate            
+------------------+---------------------------+----------------------------------
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+ 744388.888888889 | Caribbean                 | Beatrix
+ 744388.888888889 | Caribbean                 | Beatrix
+ 744388.888888889 | Caribbean                 | Beatrix
+ 744388.888888889 | Caribbean                 | Elisabeth II
+ 744388.888888889 | Caribbean                 | Elisabeth II
+ 744388.888888889 | Caribbean                 | Elisabeth II
+ 744388.888888889 | Caribbean                 | Elisabeth II
+ 744388.888888889 | Caribbean                 | Elisabeth II
+ 744388.888888889 | Caribbean                 | Elisabeth II
+ 744388.888888889 | Caribbean                 | Elisabeth II
+ 744388.888888889 | Caribbean                 | Elisabeth II
+ 744388.888888889 | Caribbean                 | Elisabeth II
+ 744388.888888889 | Caribbean                 | Elisabeth II
+ 744388.888888889 | Caribbean                 | Fidel Castro Ruz
+ 744388.888888889 | Caribbean                 | George W. Bush
+ 744388.888888889 | Caribbean                 | Jacques Chirac
+          7651000 | Central Africa            | Idriss Deby
+          2657500 | Central America           | Arnoldo Aleman Lacayo
+          2657500 | Central America           | Elisabeth II
+ 5982809.52380952 | Eastern Africa            | Abdiqassim Salad Hassan
+ 5982809.52380952 | Eastern Africa            | Abdiqassim Salad Hassan
+ 5982809.52380952 | Eastern Africa            | Bakili Muluzi
+ 5982809.52380952 | Eastern Africa            | France-Albert Rene
+ 5982809.52380952 | Eastern Africa            | France-Albert Rene
+ 5982809.52380952 | Eastern Africa            | Isayas Afewerki [Isaias Afwerki]
+ 5982809.52380952 | Eastern Africa            | Ismail Omar Guelleh
+ 5982809.52380952 | Eastern Africa            | Jacques Chirac
+ 5982809.52380952 | Eastern Africa            | Paul Kagame
+ 5982809.52380952 | Eastern Africa            | Paul Kagame
+ 5982809.52380952 | Eastern Africa            | Pierre Buyoya
+ 5982809.52380952 | Eastern Africa            | Pierre Buyoya
+ 5982809.52380952 | Eastern Africa            | Robert G. Mugabe
+         34288500 | Eastern Asia              | Akihito
+         34288500 | Eastern Asia              | Chen Shui-bian
+         34288500 | Eastern Asia              | Jiang Zemin
+(40 rows)
+
+--query 2 insert using CTE
+insert into bad_headofstates
+(
+with bad_headofstates as 
+(
+ select country.code,country.name,country.headofstate,countrylanguage.language
+ from
+ country,countrylanguage
+ where country.code = countrylanguage.countrycode and countrylanguage.isofficial=true
+ and (country.gnp < country.gnpold or country.gnp < 3000)
+)
+select OUTERMOST_FOO.*,bad_headofstates.headofstate from (
+select avg(population),region from
+(
+select FOO.*,bad_headofstates.headofstate,city.name
+from
+(select bad_headofstates.code,country.capital,country.region,country.population from
+bad_headofstates,country where bad_headofstates.code = country.code) FOO, bad_headofstates,city
+where FOO.code = bad_headofstates.code and FOO.capital = city.id) OUTER_FOO
+group by region ) OUTERMOST_FOO,bad_headofstates,country 
+where country.code = bad_headofstates.code and country.region = OUTERMOST_FOO.region
+order by OUTERMOST_FOO.region,bad_headofstates.headofstate LIMIT 40
+);
+select * from bad_headofstates order by region,headofstate,avg;
+       avg        |          region           |           headofstate            
+------------------+---------------------------+----------------------------------
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+ 744388.888888889 | Caribbean                 | Beatrix
+ 744388.888888889 | Caribbean                 | Beatrix
+ 744388.888888889 | Caribbean                 | Beatrix
+ 744388.888888889 | Caribbean                 | Beatrix
+ 744388.888888889 | Caribbean                 | Beatrix
+ 744388.888888889 | Caribbean                 | Beatrix
+ 744388.888888889 | Caribbean                 | Elisabeth II
+ 744388.888888889 | Caribbean                 | Elisabeth II
+ 744388.888888889 | Caribbean                 | Elisabeth II
+ 744388.888888889 | Caribbean                 | Elisabeth II
+ 744388.888888889 | Caribbean                 | Elisabeth II
+ 744388.888888889 | Caribbean                 | Elisabeth II
+ 744388.888888889 | Caribbean                 | Elisabeth II
+ 744388.888888889 | Caribbean                 | Elisabeth II
+ 744388.888888889 | Caribbean                 | Elisabeth II
+ 744388.888888889 | Caribbean                 | Elisabeth II
+ 744388.888888889 | Caribbean                 | Elisabeth II
+ 744388.888888889 | Caribbean                 | Elisabeth II
+ 744388.888888889 | Caribbean                 | Elisabeth II
+ 744388.888888889 | Caribbean                 | Elisabeth II
+ 744388.888888889 | Caribbean                 | Elisabeth II
+ 744388.888888889 | Caribbean                 | Elisabeth II
+ 744388.888888889 | Caribbean                 | Elisabeth II
+ 744388.888888889 | Caribbean                 | Elisabeth II
+ 744388.888888889 | Caribbean                 | Elisabeth II
+ 744388.888888889 | Caribbean                 | Elisabeth II
+ 744388.888888889 | Caribbean                 | Fidel Castro Ruz
+ 744388.888888889 | Caribbean                 | Fidel Castro Ruz
+ 744388.888888889 | Caribbean                 | George W. Bush
+ 744388.888888889 | Caribbean                 | George W. Bush
+ 744388.888888889 | Caribbean                 | Jacques Chirac
+ 744388.888888889 | Caribbean                 | Jacques Chirac
+          7651000 | Central Africa            | Idriss Deby
+          7651000 | Central Africa            | Idriss Deby
+          2657500 | Central America           | Arnoldo Aleman Lacayo
+          2657500 | Central America           | Arnoldo Aleman Lacayo
+          2657500 | Central America           | Elisabeth II
+          2657500 | Central America           | Elisabeth II
+ 5982809.52380952 | Eastern Africa            | Abdiqassim Salad Hassan
+ 5982809.52380952 | Eastern Africa            | Abdiqassim Salad Hassan
+ 5982809.52380952 | Eastern Africa            | Abdiqassim Salad Hassan
+ 5982809.52380952 | Eastern Africa            | Abdiqassim Salad Hassan
+ 5982809.52380952 | Eastern Africa            | Bakili Muluzi
+ 5982809.52380952 | Eastern Africa            | Bakili Muluzi
+ 5982809.52380952 | Eastern Africa            | France-Albert Rene
+ 5982809.52380952 | Eastern Africa            | France-Albert Rene
+ 5982809.52380952 | Eastern Africa            | France-Albert Rene
+ 5982809.52380952 | Eastern Africa            | France-Albert Rene
+ 5982809.52380952 | Eastern Africa            | Isayas Afewerki [Isaias Afwerki]
+ 5982809.52380952 | Eastern Africa            | Isayas Afewerki [Isaias Afwerki]
+ 5982809.52380952 | Eastern Africa            | Ismail Omar Guelleh
+ 5982809.52380952 | Eastern Africa            | Ismail Omar Guelleh
+ 5982809.52380952 | Eastern Africa            | Jacques Chirac
+ 5982809.52380952 | Eastern Africa            | Jacques Chirac
+ 5982809.52380952 | Eastern Africa            | Paul Kagame
+ 5982809.52380952 | Eastern Africa            | Paul Kagame
+ 5982809.52380952 | Eastern Africa            | Paul Kagame
+ 5982809.52380952 | Eastern Africa            | Paul Kagame
+ 5982809.52380952 | Eastern Africa            | Pierre Buyoya
+ 5982809.52380952 | Eastern Africa            | Pierre Buyoya
+ 5982809.52380952 | Eastern Africa            | Pierre Buyoya
+ 5982809.52380952 | Eastern Africa            | Pierre Buyoya
+ 5982809.52380952 | Eastern Africa            | Robert G. Mugabe
+ 5982809.52380952 | Eastern Africa            | Robert G. Mugabe
+         34288500 | Eastern Asia              | Akihito
+         34288500 | Eastern Asia              | Akihito
+         34288500 | Eastern Asia              | Chen Shui-bian
+         34288500 | Eastern Asia              | Chen Shui-bian
+         34288500 | Eastern Asia              | Jiang Zemin
+         34288500 | Eastern Asia              | Jiang Zemin
+(80 rows)
+
+--query3 update using CTE
+update bad_headofstates set region = cm.region FROM
+(
+with bad_headofstates as
+(
+ select country.code,country.name,country.headofstate,countrylanguage.language
+ from
+ country,countrylanguage
+ where country.code = countrylanguage.countrycode and countrylanguage.isofficial=true
+ and (country.gnp < country.gnpold or country.gnp < 3000)
+)
+select avg(OUTERMOST_FOO.AVG),OUTERMOST_FOO.region from (
+select avg(population) AVG,region from
+(
+select FOO.*,bad_headofstates.headofstate,city.name
+from
+(select bad_headofstates.code,country.capital,country.region,country.population from
+bad_headofstates,country where bad_headofstates.code = country.code) FOO, bad_headofstates,city
+where FOO.code = bad_headofstates.code and FOO.capital = city.id) OUTER_FOO
+group by region ) OUTERMOST_FOO,bad_headofstates,country
+where country.code = bad_headofstates.code and country.region = OUTERMOST_FOO.region
+and OUTERMOST_FOO.region = 'Central America'
+group by OUTERMOST_FOO.region
+order by OUTERMOST_FOO.region
+) cm
+where bad_headofstates.region = 'Caribbean';
+ 
+select * from bad_headofstates order by region,headofstate,avg;
+       avg        |          region           |           headofstate            
+------------------+---------------------------+----------------------------------
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+          7651000 | Central Africa            | Idriss Deby
+          7651000 | Central Africa            | Idriss Deby
+          2657500 | Central America           | Arnoldo Aleman Lacayo
+          2657500 | Central America           | Arnoldo Aleman Lacayo
+ 744388.888888889 | Central America           | Beatrix
+ 744388.888888889 | Central America           | Beatrix
+ 744388.888888889 | Central America           | Beatrix
+ 744388.888888889 | Central America           | Beatrix
+ 744388.888888889 | Central America           | Beatrix
+ 744388.888888889 | Central America           | Beatrix
+ 744388.888888889 | Central America           | Elisabeth II
+ 744388.888888889 | Central America           | Elisabeth II
+ 744388.888888889 | Central America           | Elisabeth II
+ 744388.888888889 | Central America           | Elisabeth II
+ 744388.888888889 | Central America           | Elisabeth II
+ 744388.888888889 | Central America           | Elisabeth II
+ 744388.888888889 | Central America           | Elisabeth II
+ 744388.888888889 | Central America           | Elisabeth II
+ 744388.888888889 | Central America           | Elisabeth II
+ 744388.888888889 | Central America           | Elisabeth II
+ 744388.888888889 | Central America           | Elisabeth II
+ 744388.888888889 | Central America           | Elisabeth II
+ 744388.888888889 | Central America           | Elisabeth II
+ 744388.888888889 | Central America           | Elisabeth II
+ 744388.888888889 | Central America           | Elisabeth II
+ 744388.888888889 | Central America           | Elisabeth II
+ 744388.888888889 | Central America           | Elisabeth II
+ 744388.888888889 | Central America           | Elisabeth II
+ 744388.888888889 | Central America           | Elisabeth II
+ 744388.888888889 | Central America           | Elisabeth II
+          2657500 | Central America           | Elisabeth II
+          2657500 | Central America           | Elisabeth II
+ 744388.888888889 | Central America           | Fidel Castro Ruz
+ 744388.888888889 | Central America           | Fidel Castro Ruz
+ 744388.888888889 | Central America           | George W. Bush
+ 744388.888888889 | Central America           | George W. Bush
+ 744388.888888889 | Central America           | Jacques Chirac
+ 744388.888888889 | Central America           | Jacques Chirac
+ 5982809.52380952 | Eastern Africa            | Abdiqassim Salad Hassan
+ 5982809.52380952 | Eastern Africa            | Abdiqassim Salad Hassan
+ 5982809.52380952 | Eastern Africa            | Abdiqassim Salad Hassan
+ 5982809.52380952 | Eastern Africa            | Abdiqassim Salad Hassan
+ 5982809.52380952 | Eastern Africa            | Bakili Muluzi
+ 5982809.52380952 | Eastern Africa            | Bakili Muluzi
+ 5982809.52380952 | Eastern Africa            | France-Albert Rene
+ 5982809.52380952 | Eastern Africa            | France-Albert Rene
+ 5982809.52380952 | Eastern Africa            | France-Albert Rene
+ 5982809.52380952 | Eastern Africa            | France-Albert Rene
+ 5982809.52380952 | Eastern Africa            | Isayas Afewerki [Isaias Afwerki]
+ 5982809.52380952 | Eastern Africa            | Isayas Afewerki [Isaias Afwerki]
+ 5982809.52380952 | Eastern Africa            | Ismail Omar Guelleh
+ 5982809.52380952 | Eastern Africa            | Ismail Omar Guelleh
+ 5982809.52380952 | Eastern Africa            | Jacques Chirac
+ 5982809.52380952 | Eastern Africa            | Jacques Chirac
+ 5982809.52380952 | Eastern Africa            | Paul Kagame
+ 5982809.52380952 | Eastern Africa            | Paul Kagame
+ 5982809.52380952 | Eastern Africa            | Paul Kagame
+ 5982809.52380952 | Eastern Africa            | Paul Kagame
+ 5982809.52380952 | Eastern Africa            | Pierre Buyoya
+ 5982809.52380952 | Eastern Africa            | Pierre Buyoya
+ 5982809.52380952 | Eastern Africa            | Pierre Buyoya
+ 5982809.52380952 | Eastern Africa            | Pierre Buyoya
+ 5982809.52380952 | Eastern Africa            | Robert G. Mugabe
+ 5982809.52380952 | Eastern Africa            | Robert G. Mugabe
+         34288500 | Eastern Asia              | Akihito
+         34288500 | Eastern Asia              | Akihito
+         34288500 | Eastern Asia              | Chen Shui-bian
+         34288500 | Eastern Asia              | Chen Shui-bian
+         34288500 | Eastern Asia              | Jiang Zemin
+         34288500 | Eastern Asia              | Jiang Zemin
+(80 rows)
+
+--query4 delete using CTE
+delete from bad_headofstates USING
+(
+with bad_headofstates as
+(
+ select country.code,country.name,country.headofstate,countrylanguage.language
+ from
+ country,countrylanguage
+ where country.code = countrylanguage.countrycode and countrylanguage.isofficial=true
+ and (country.gnp < country.gnpold or country.gnp < 3000)
+)
+select avg(OUTERMOST_FOO.AVG),OUTERMOST_FOO.region from (
+select avg(population) AVG,region from
+(
+select FOO.*,bad_headofstates.headofstate,city.name
+from
+(select bad_headofstates.code,country.capital,country.region,country.population from
+bad_headofstates,country where bad_headofstates.code = country.code) FOO, bad_headofstates,city
+where FOO.code = bad_headofstates.code and FOO.capital = city.id) OUTER_FOO
+group by region ) OUTERMOST_FOO,bad_headofstates,country
+where country.code = bad_headofstates.code and country.region = OUTERMOST_FOO.region
+and OUTERMOST_FOO.region = 'Central America'
+group by OUTERMOST_FOO.region
+order by OUTERMOST_FOO.region
+) as  cm
+where bad_headofstates.region = cm.region;
+select * from bad_headofstates order by region,headofstate,avg;
+       avg        |          region           |           headofstate            
+------------------+---------------------------+----------------------------------
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+          4550620 | Australia and New Zealand | Elisabeth II
+          7651000 | Central Africa            | Idriss Deby
+          7651000 | Central Africa            | Idriss Deby
+ 5982809.52380952 | Eastern Africa            | Abdiqassim Salad Hassan
+ 5982809.52380952 | Eastern Africa            | Abdiqassim Salad Hassan
+ 5982809.52380952 | Eastern Africa            | Abdiqassim Salad Hassan
+ 5982809.52380952 | Eastern Africa            | Abdiqassim Salad Hassan
+ 5982809.52380952 | Eastern Africa            | Bakili Muluzi
+ 5982809.52380952 | Eastern Africa            | Bakili Muluzi
+ 5982809.52380952 | Eastern Africa            | France-Albert Rene
+ 5982809.52380952 | Eastern Africa            | France-Albert Rene
+ 5982809.52380952 | Eastern Africa            | France-Albert Rene
+ 5982809.52380952 | Eastern Africa            | France-Albert Rene
+ 5982809.52380952 | Eastern Africa            | Isayas Afewerki [Isaias Afwerki]
+ 5982809.52380952 | Eastern Africa            | Isayas Afewerki [Isaias Afwerki]
+ 5982809.52380952 | Eastern Africa            | Ismail Omar Guelleh
+ 5982809.52380952 | Eastern Africa            | Ismail Omar Guelleh
+ 5982809.52380952 | Eastern Africa            | Jacques Chirac
+ 5982809.52380952 | Eastern Africa            | Jacques Chirac
+ 5982809.52380952 | Eastern Africa            | Paul Kagame
+ 5982809.52380952 | Eastern Africa            | Paul Kagame
+ 5982809.52380952 | Eastern Africa            | Paul Kagame
+ 5982809.52380952 | Eastern Africa            | Paul Kagame
+ 5982809.52380952 | Eastern Africa            | Pierre Buyoya
+ 5982809.52380952 | Eastern Africa            | Pierre Buyoya
+ 5982809.52380952 | Eastern Africa            | Pierre Buyoya
+ 5982809.52380952 | Eastern Africa            | Pierre Buyoya
+ 5982809.52380952 | Eastern Africa            | Robert G. Mugabe
+ 5982809.52380952 | Eastern Africa            | Robert G. Mugabe
+         34288500 | Eastern Asia              | Akihito
+         34288500 | Eastern Asia              | Akihito
+         34288500 | Eastern Asia              | Chen Shui-bian
+         34288500 | Eastern Asia              | Chen Shui-bian
+         34288500 | Eastern Asia              | Jiang Zemin
+         34288500 | Eastern Asia              | Jiang Zemin
+(44 rows)
+
+-- delete using CTE in its subplan
+delete from bad_headofstates where bad_headofstates.avg NOT IN
+(
+with bad_headofstates as
+(
+ select country.code,country.name,country.headofstate,countrylanguage.language
+ from
+ country,countrylanguage
+ where country.code = countrylanguage.countrycode and countrylanguage.isofficial=true
+ and (country.gnp < country.gnpold or country.gnp < 3000)
+)
+select OUTERMOST_FOO.AVG from (
+select avg(population) AVG,region from
+(
+select FOO.*,bad_headofstates.headofstate,city.name
+from
+(select bad_headofstates.code,country.capital,country.region,country.population from
+bad_headofstates,country where bad_headofstates.code = country.code) FOO, bad_headofstates,city
+where FOO.code = bad_headofstates.code and FOO.capital = city.id) OUTER_FOO
+group by region ) OUTERMOST_FOO,bad_headofstates,country
+where country.code = bad_headofstates.code and country.region = OUTERMOST_FOO.region
+and OUTERMOST_FOO.region = 'Australia and New Zealand' or OUTERMOST_FOO.region = 'Eastern Asia'
+order by OUTERMOST_FOO.region
+);
+select * from bad_headofstates order by region,headofstate,avg;
+   avg    |          region           |  headofstate   
+----------+---------------------------+----------------
+  4550620 | Australia and New Zealand | Elisabeth II
+  4550620 | Australia and New Zealand | Elisabeth II
+  4550620 | Australia and New Zealand | Elisabeth II
+  4550620 | Australia and New Zealand | Elisabeth II
+  4550620 | Australia and New Zealand | Elisabeth II
+  4550620 | Australia and New Zealand | Elisabeth II
+  4550620 | Australia and New Zealand | Elisabeth II
+  4550620 | Australia and New Zealand | Elisabeth II
+  4550620 | Australia and New Zealand | Elisabeth II
+  4550620 | Australia and New Zealand | Elisabeth II
+ 34288500 | Eastern Asia              | Akihito
+ 34288500 | Eastern Asia              | Akihito
+ 34288500 | Eastern Asia              | Chen Shui-bian
+ 34288500 | Eastern Asia              | Chen Shui-bian
+ 34288500 | Eastern Asia              | Jiang Zemin
+ 34288500 | Eastern Asia              | Jiang Zemin
+(16 rows)
+
+drop table bad_headofstates;
+-- ----------------------------------------------------------------------
+-- Test: sql/mpp15087.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+drop table if exists mpp15087_t;
+NOTICE:  table "mpp15087_t" does not exist, skipping
+create table mpp15087_t(code char(3), n numeric);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'code' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into mpp15087_t values ('abc',1);
+insert into mpp15087_t values ('xyz',2);
+insert into mpp15087_t values ('def',3);
+-- end_ignore
+-- @author prabhd
+-- @created 2012-02-01 12:00:00
+-- @modified 2013-02-01 12:00:00
+-- @tags cte
+-- @product_version gpdb: [4.2.0.0-]
+-- @db_name world_db
+-- @description MPP-15087: Executor: Nested loops in subquery scan for a CTE returns incorrect results
+with cte as 
+	(
+	select code, n, x 
+	from mpp15087_t 
+	, (select 100 as x) d
+	)
+select code from mpp15087_t t where 1= (select count(*) from cte where cte.code::text=t.code::text or cte.code::text = t.code::text);
+ code 
+------
+ def
+ abc
+ xyz
+(3 rows)
+
+with cte as
+        (
+        select count(*) from
+        (
+        select code, n, x
+        from mpp15087_t
+        , (select 100 as x) d
+        ) FOO
+        )
+select code from mpp15087_t t where 1= (select * from cte);
+ code 
+------
+(0 rows)
+
+with cte as
+        (
+        select count(*) from
+        (
+        select code, n, x
+        from mpp15087_t
+        , (select 100 as x) d
+        ) FOO
+        )
+select code from mpp15087_t t where 1= (select count(*) from cte);
+ code 
+------
+ abc
+ xyz
+ def
+(3 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/mpp19271.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+DROP TABLE IF EXISTS t;
+NOTICE:  table "t" does not exist, skipping
+CREATE TABLE t(code char(3), n numeric);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'code' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO t VALUES ('abc',1);
+INSERT INTO t VALUES ('xyz',2);  
+INSERT INTO t VALUES ('def',3); 
+-- end_ignore
+-- @author prabhd
+-- @created 2012-02-01 12:00:00
+-- @modified 2013-02-01 12:00:00
+-- @tags cte HAWQ
+-- @description MPP-19271: Unexpected internal error when we issue CTE with CSQ when we disable inlining of CTE
+WITH cte AS(
+    SELECT code, n, x from t , (SELECT 100 as x) d ) 
+SELECT code FROM t WHERE (
+    SELECT count(*) FROM cte WHERE cte.code::text=t.code::text
+) = 1 ORDER BY 1;
+ code 
+------
+ abc
+ def
+ xyz
+(3 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/mpp19436_1.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+NOTICE:  table "foo" does not exist, skipping
+CREATE TABLE foo AS SELECT i as a, i+1 as b from generate_series(1,10)i;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+DROP TABLE IF EXISTS bar;
+NOTICE:  table "bar" does not exist, skipping
+CREATE TABLE bar AS SELECT i as c, i+1 as d from generate_series(1,10)i;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+-- end_ignore
+-- @author prabhd
+-- @created 2012-02-01 12:00:00
+-- @modified 2013-02-01 12:00:00
+-- @tags cte bfv MPP-19436
+-- @db_name world_db
+-- @product_version gpdb: [4.2.6.1-],hawq: [1.1.0.2-]
+-- @description MPP-19436
+WITH t AS
+(
+ SELECT e.*,f.*
+ FROM
+    (
+      SELECT * FROM foo WHERE a < 10 
+    ) e
+ LEFT OUTER JOIN
+    (
+       SELECT * FROM bar WHERE c < 10 
+    ) f
+  ON e.a = f.d ) 
+SELECT t.a,t.d, count(*) over () AS window
+FROM t 
+GROUP BY t.a,t.d ORDER BY t.a,t.d LIMIT 2;
+ a | d | window 
+---+---+--------
+ 1 |   |      9
+ 2 | 2 |      9
+(2 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/mpp19436_2.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo AS SELECT i as a, i+1 as b from generate_series(1,10)i;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+DROP TABLE IF EXISTS bar;
+CREATE TABLE bar AS SELECT i as c, i+1 as d from generate_series(1,10)i;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+-- end_ignore
+-- @author prabhd
+-- @created 2012-02-01 12:00:00
+-- @modified 2013-02-01 12:00:00
+-- @tags cte bfv MPP-19436
+-- @db_name world_db
+-- @product_version gpdb: [4.2.6.1-],hawq: [1.1.0.2-]
+-- @description MPP-19436
+WITH t(a,b,d) AS
+(
+  SELECT foo.a,foo.b,bar.d FROM foo,bar WHERE foo.a = bar.d
+)
+SELECT t.b,avg(t.a), rank() OVER (PARTITION BY t.a ORDER BY t.a) FROM foo,t GROUP BY foo.a,foo.b,t.b,t.a ORDER BY 1,2,3 LIMIT 5;
+ b | avg | rank 
+---+-----+------
+ 3 |   2 |    1
+ 3 |   2 |    1
+ 3 |   2 |    1
+ 3 |   2 |    1
+ 3 |   2 |    1
+(5 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/mpp19436_3.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo AS SELECT i as a, i+1 as b from generate_series(1,10)i;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+DROP TABLE IF EXISTS bar;
+CREATE TABLE bar AS SELECT i as c, i+1 as d from generate_series(1,10)i;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+-- end_ignore
+-- @author prabhd
+-- @created 2012-02-01 12:00:00
+-- @modified 2013-02-01 12:00:00
+-- @tags cte bfv MPP-19436
+-- @db_name world_db
+-- @product_version gpdb: [4.2.6.1-],hawq: [1.1.0.2-]
+-- @description MPP-19436
+WITH t(a,b,d) AS
+(
+  SELECT foo.a,foo.b,bar.d FROM foo,bar WHERE foo.a = bar.d
+)
+SELECT cup.*, SUM(t.d) OVER(PARTITION BY t.b) FROM  
+  ( 
+    SELECT bar.*, AVG(t.b) OVER(PARTITION BY t.a ORDER BY t.b desc) AS e FROM t,bar
+  ) AS cup,
+t WHERE cup.e < 10
+GROUP BY cup.c,cup.d, cup.e ,t.d, t.b
+ORDER BY 1,2,3,4
+LIMIT 10;
+ c | d | e | sum 
+---+---+---+-----
+ 1 | 2 | 3 | 140
+ 1 | 2 | 3 | 210
+ 1 | 2 | 3 | 280
+ 1 | 2 | 3 | 350
+ 1 | 2 | 3 | 420
+ 1 | 2 | 3 | 490
+ 1 | 2 | 3 | 560
+ 1 | 2 | 3 | 630
+ 1 | 2 | 3 | 700
+ 1 | 2 | 4 | 140
+(10 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/mpp19436_4.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo AS SELECT i as a, i+1 as b from generate_series(1,10)i;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+DROP TABLE IF EXISTS bar;
+CREATE TABLE bar AS SELECT i as c, i+1 as d from generate_series(1,10)i;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+-- end_ignore
+-- @author prabhd
+-- @created 2012-02-01 12:00:00
+-- @modified 2013-02-01 12:00:00
+-- @tags cte bfv MPP-19436
+-- @db_name world_db
+-- @product_version gpdb: [4.2.6.1-],hawq: [1.1.0.2-]
+-- @description MPP-19436
+WITH t(a,b,d) AS
+(
+  SELECT foo.a,foo.b,bar.d FROM foo,bar WHERE foo.a = bar.d
+)
+SELECT cup.*, SUM(t.d) FROM  
+  ( 
+    SELECT bar.*, count(*) OVER() AS e FROM t,bar WHERE t.a = bar.c
+  ) AS cup,
+t GROUP BY cup.c,cup.d, cup.e,t.a
+HAVING AVG(t.d) < 10 ORDER BY 1,2,3,4 LIMIT 10;
+ c | d | e | sum 
+---+---+---+-----
+ 2 | 3 | 9 |   2
+ 2 | 3 | 9 |   3
+ 2 | 3 | 9 |   4
+ 2 | 3 | 9 |   5
+ 2 | 3 | 9 |   6
+ 2 | 3 | 9 |   7
+ 2 | 3 | 9 |   8
+ 2 | 3 | 9 |   9
+ 3 | 4 | 9 |   2
+ 3 | 4 | 9 |   3
+(10 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/mpp19436_5.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo AS SELECT i as a, i+1 as b from generate_series(1,10)i;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+DROP TABLE IF EXISTS bar;
+CREATE TABLE bar AS SELECT i as c, i+1 as d from generate_series(1,10)i;
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+-- end_ignore
+-- @author prabhd
+-- @created 2012-02-01 12:00:00
+-- @modified 2013-02-01 12:00:00
+-- @tags cte bfv MPP-19436
+-- @db_name world_db
+-- @product_version gpdb: [4.2.6.1-],hawq: [1.1.0.2-]
+-- @description MPP-19436
+WITH t(a,b,d) AS
+(
+  SELECT foo.a,foo.b,bar.d FROM foo,bar WHERE foo.a = bar.d
+)
+SELECT cup.*, SUM(t.d) OVER(PARTITION BY t.b) FROM  
+  ( 
+    SELECT bar.c as e,r.d FROM 
+		(
+			SELECT t.d, avg(t.a) over() FROM t
+		) r,bar
+  ) AS cup,
+t WHERE cup.e < 10
+GROUP BY cup.d, cup.e, t.d, t.b
+ORDER BY 1,2,3 
+LIMIT 10;
+ e | d | sum 
+---+---+-----
+ 1 | 2 | 162
+ 1 | 2 | 243
+ 1 | 2 | 324
+ 1 | 2 | 405
+ 1 | 2 | 486
+ 1 | 2 | 567
+ 1 | 2 | 648
+ 1 | 2 | 729
+ 1 | 2 | 810
+ 1 | 3 | 162
+(10 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/mpp19696.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+DROP TABLE IF EXISTS r;
+NOTICE:  table "r" does not exist, skipping
+CREATE TABLE r(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO r SELECT i,i FROM generate_series(1,5)i;
+-- end_ignore
+-- @author prabhd
+-- @created 2012-02-01 12:00:00
+-- @modified 2013-02-01 12:00:00
+-- @tags cte HAWQ
+-- @description MPP-19696
+WITH v1 AS (SELECT b FROM r), v2 as (SELECT b FROM v1) SELECT * FROM v2 WHERE b < 5 ORDER BY 1;
+ b 
+---
+ 1
+ 2
+ 3
+ 4
+(4 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/mpp19991.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+DROP TABLE IF EXISTS x;
+NOTICE:  table "x" does not exist, skipping
+DROP TABLE IF EXISTS y;
+NOTICE:  table "y" does not exist, skipping
+CREATE TABLE x AS SELECT generate_series(1,10);
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+CREATE TABLE y AS SELECT generate_series(1,10);
+NOTICE:  Table doesn't have 'distributed by' clause. Creating a NULL policy entry.
+-- end_ignore
+-- @author prabhd 
+-- @created 2013-02-01 12:00:00 
+-- @modified 2013-02-01 12:00:00 
+-- @tags cte HAWQ 
+-- @db_name world_db
+-- @description Mpp-19991
+with v1 as (select * from x), v2 as (select * from y) select * from v1;
+ generate_series 
+-----------------
+               1
+               4
+               5
+               6
+               9
+               2
+               7
+              10
+               3
+               8
+(10 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/icg_cte_with_values.sql
+-- ----------------------------------------------------------------------
+-- @author garcic12
+-- @created 2013-11-20 12:00:00
+-- @modified 2013-11-20 12:00:00
+-- @tags ci
+-- @description CTE test with values.
+with cte(foo) as ( values(42) ) values((select foo from cte));
+ column1 
+---------
+      42
+(1 row)
+
+-- ----------------------------------------------------------------------
+-- Test: teardown.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+drop schema cte_queries cascade;
+NOTICE:  drop cascades to table y
+NOTICE:  drop cascades to table x
+NOTICE:  drop cascades to table r
+NOTICE:  drop cascades to table bar
+NOTICE:  drop cascades to table foo
+NOTICE:  drop cascades to table t
+NOTICE:  drop cascades to table mpp15087_t
+NOTICE:  drop cascades to table countrylanguage
+NOTICE:  drop cascades to table country
+NOTICE:  drop cascades to table city
+-- end_ignore

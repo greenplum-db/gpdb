@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/path/clausesel.c,v 1.84 2007/02/19 07:03:28 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/path/clausesel.c,v 1.90.2.1 2008/12/01 21:06:20 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -129,6 +129,14 @@ clauselist_selectivity(PlannerInfo *root,
 
 	/* allocate array to hold all selectivity factors */
 	rgsel = (Selectivity *) palloc(sizeof(Selectivity) * list_length(clauses));
+
+	/*
+	 * If there's exactly one clause, then no use in trying to match up
+	 * pairs, so just go directly to clause_selectivity().
+	 */
+	if (list_length(clauses) == 1)
+		return clause_selectivity(root, (Node *) linitial(clauses),
+								  varRelid, jointype, use_damping);
 
 	/*
 	 * Initial scan over clauses.  Anything that doesn't look like a potential
@@ -483,7 +491,7 @@ clause_selectivity(PlannerInfo *root,
 				   JoinType jointype,
 				   bool use_damping)
 {
-	Selectivity s1 = 1.0;		/* default for any unhandled clause type */
+	Selectivity s1 = 0.5;		/* default for any unhandled clause type */
 	RestrictInfo *rinfo = NULL;
 	bool		cacheable = false;
 
@@ -505,8 +513,14 @@ clause_selectivity(PlannerInfo *root,
 		if (rinfo->pseudoconstant)
 		{
 			if (!IsA(rinfo->clause, Const))
-				return s1;
+				return (Selectivity) 1.0;
 		}
+
+		/*
+		 * If the clause is marked redundant, always return 1.0.
+		 */
+		if (rinfo->this_selec > 1)
+			return (Selectivity) 1.0;
 
 		/*
 		 * If possible, cache the result of the selectivity calculation for
@@ -565,15 +579,14 @@ clause_selectivity(PlannerInfo *root,
 		if (var->varlevelsup == 0 &&
 			(varRelid == 0 || varRelid == (int) var->varno))
 		{
-			RangeTblEntry *rte = rt_fetch(var->varno, root->parse->rtable);
+			RangeTblEntry *rte = planner_rt_fetch(var->varno, root);
 
 			if (rte->rtekind == RTE_SUBQUERY)
 			{
 				/*
 				 * XXX not smart about subquery references... any way to do
-				 * better?
+				 * better than default?
 				 */
-				s1 = 0.5;
 			}
 			else
 			{
@@ -614,8 +627,7 @@ clause_selectivity(PlannerInfo *root,
 		}
 		else
 		{
-			/* XXX any way to do better? */
-			s1 = (Selectivity) 0.5;
+			/* XXX any way to do better than default? */
 		}
 	}
 	else if (not_clause(clause))
@@ -658,7 +670,7 @@ clause_selectivity(PlannerInfo *root,
 			s1 = s1 + s2 - s1 * s2;
 		}
 	}
-	else if (is_opclause(clause))
+	else if (is_opclause(clause) || IsA(clause, DistinctExpr))
 	{
 		Oid			opno = ((OpExpr *) clause)->opno;
 		bool		is_join_clause;
@@ -699,6 +711,15 @@ clause_selectivity(PlannerInfo *root,
 										 ((OpExpr *) clause)->args,
 										 varRelid);
 		}
+
+		/*
+		 * DistinctExpr has the same representation as OpExpr, but the
+		 * contained operator is "=" not "<>", so we must negate the result.
+		 * This estimation method doesn't give the right behavior for nulls,
+		 * but it's better than doing nothing.
+		 */
+		if (IsA(clause, DistinctExpr))
+			s1 = 1.0 - s1;
 	}
 	else if (is_funcclause(clause))
 	{
@@ -709,6 +730,7 @@ clause_selectivity(PlannerInfo *root,
 		 */
 		s1 = (Selectivity) 0.3333333;
 	}
+#ifdef NOT_USED
 	else if (is_subplan(clause))
 	{
 		/*
@@ -716,11 +738,7 @@ clause_selectivity(PlannerInfo *root,
 		 */
 		s1 = (Selectivity) 0.5;
 	}
-	else if (IsA(clause, DistinctExpr))
-	{
-		/* can we do better? */
-		s1 = (Selectivity) 0.5;
-	}
+#endif
 	else if (IsA(clause, ScalarArrayOpExpr))
 	{
 		/* First, decide if it's a join clause, same as for OpExpr */

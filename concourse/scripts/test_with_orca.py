@@ -3,6 +3,7 @@
 import optparse
 import subprocess
 import sys
+import shutil
 from gporca import GporcaCommon
 
 def install_gpdb(dependency_name):
@@ -38,6 +39,10 @@ def icg():
         && source gpAux/gpdemo/gpdemo-env.sh && PGOPTIONS='-c optimizer=on' \
         make installcheck-good\""], cwd="gpdb_src", shell=True)
 
+def copy_output():
+    shutil.copyfile("gpdb_src/src/test/regress/regression.diffs", "icg_output/regression.diffs")
+    shutil.copyfile("gpdb_src/src/test/regress/regression.out", "icg_output/regression.out")
+
 def main():
     parser = optparse.OptionParser()
     parser.add_option("--build_type", dest="build_type", default="RELEASE")
@@ -64,6 +69,8 @@ def main():
     if status:
         return status
     status = icg()
+    if status:
+        copy_output()
     return status
 
 if __name__ == "__main__":

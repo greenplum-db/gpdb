@@ -347,11 +347,15 @@ nb_classify_final(PG_FUNCTION_ARGS)
 	 * beginning and walk adding the length of the current element until
 	 * you get to the index you are interested in.
 	 */
+	/*
+	 * GPDB_83_MERGE_FIXME: is it guaranteed that there are no short varlenas
+	 * in the array?
+	 */
 	class_data = (char*) ARR_DATA_PTR(state.classes);
 	for (i = 0; i < maxi; i++)
 	{
 		class_data += VARSIZE(class_data);
-		class_data = (char*) att_align(class_data, 'i');
+		class_data = (char*) att_align_nominal(class_data, 'i');
 	}
 	PG_RETURN_TEXT_P(class_data);
 }

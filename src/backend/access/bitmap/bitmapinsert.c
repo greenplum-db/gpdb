@@ -1635,7 +1635,7 @@ create_lovitem(Relation rel, Buffer metabuf, uint64 tidnum,
 	_bitmap_insert_lov(lovHeap, lovIndex, lovDatum, lovNulls, use_wal);
 
 	if (PageAddItem(currLovPage, (Item)lovitem, itemSize, *lovOffsetP,
-					LP_USED) == InvalidOffsetNumber)
+					false, false) == InvalidOffsetNumber)
 		ereport(ERROR,
 				(errcode(ERRCODE_INTERNAL_ERROR),
 				errmsg("failed to add LOV item to \"%s\"",

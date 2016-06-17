@@ -8,10 +8,12 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *			$PostgreSQL: pgsql/src/backend/access/gist/gistutil.c,v 1.21 2007/01/05 22:19:22 momjian Exp $
+ *			$PostgreSQL: pgsql/src/backend/access/gist/gistutil.c,v 1.25 2008/01/01 19:45:46 momjian Exp $
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
+
+#include <math.h>
 
 #include "access/gist_private.h"
 #include "access/heapam.h"
@@ -47,7 +49,7 @@ gistfillbuffer(Relation r, Page page, IndexTuple *itup,
 	for (i = 0; i < len; i++)
 	{
 		l = PageAddItem(page, (Item) itup[i], IndexTupleSize(itup[i]),
-						off, LP_USED);
+						off, false, false);
 		if (l == InvalidOffsetNumber)
 			elog(ERROR, "failed to add item to index page in \"%s\"",
 				 RelationGetRelationName(r));
@@ -373,36 +375,55 @@ gistgetadjusted(Relation r, IndexTuple oldtup, IndexTuple addtup, GISTSTATE *gis
 }
 
 /*
- * find entry with lowest penalty
+ * Search an upper index page for the entry with lowest penalty for insertion
+ * of the new index key contained in "it".
+ *
+ * Returns the index of the page entry to insert into.
  */
 OffsetNumber
 gistchoose(Relation r, Page p, IndexTuple it,	/* it has compressed entry */
 		   GISTSTATE *giststate)
 {
+	OffsetNumber result;
 	OffsetNumber maxoff;
 	OffsetNumber i;
-	OffsetNumber which;
-	float		sum_grow,
-				which_grow[INDEX_MAX_KEYS];
+	float		best_penalty[INDEX_MAX_KEYS];
 	GISTENTRY	entry,
 				identry[INDEX_MAX_KEYS];
 	bool		isnull[INDEX_MAX_KEYS];
 
-	maxoff = PageGetMaxOffsetNumber(p);
-	*which_grow = -1.0;
-	which = InvalidOffsetNumber;
-	sum_grow = 1;
+	Assert(!GistPageIsLeaf(p));
+
 	gistDeCompressAtt(giststate, r,
 					  it, NULL, (OffsetNumber) 0,
 					  identry, isnull);
 
-	Assert(maxoff >= FirstOffsetNumber);
-	Assert(!GistPageIsLeaf(p));
+	/* we'll return FirstOffsetNumber if page is empty (shouldn't happen) */
+	result = FirstOffsetNumber;
 
-	for (i = FirstOffsetNumber; i <= maxoff && sum_grow; i = OffsetNumberNext(i))
+	/*
+	 * The index may have multiple columns, and there's a penalty value for
+	 * each column.  The penalty associated with a column that appears earlier
+	 * in the index definition is strictly more important than the penalty of
+	 * a column that appears later in the index definition.
+	 *
+	 * best_penalty[j] is the best penalty we have seen so far for column j,
+	 * or -1 when we haven't yet examined column j.  Array entries to the
+	 * right of the first -1 are undefined.
+	 */
+	best_penalty[0] = -1;
+
+	/*
+	 * Loop over tuples on page.
+	 */
+	maxoff = PageGetMaxOffsetNumber(p);
+	Assert(maxoff >= FirstOffsetNumber);
+
+	for (i = FirstOffsetNumber; i <= maxoff; i = OffsetNumberNext(i))
 	{
-		int			j;
 		IndexTuple	itup = (IndexTuple) PageGetItem(p, PageGetItemId(p, i));
+		bool		zero_penalty;
+		int			j;
 
 		if (!GistPageIsLeaf(p) && GistTupleIsInvalid(itup))
 		{
@@ -412,41 +433,70 @@ gistchoose(Relation r, Page p, IndexTuple it,	/* it has compressed entry */
 			continue;
 		}
 
-		sum_grow = 0;
+		zero_penalty = true;
+
+		/* Loop over index attributes. */
 		for (j = 0; j < r->rd_att->natts; j++)
 		{
 			Datum		datum;
 			float		usize;
 			bool		IsNull;
 
+			/* Compute penalty for this column. */
 			datum = index_getattr(itup, j + 1, giststate->tupdesc, &IsNull);
 			gistdentryinit(giststate, j, &entry, datum, r, p, i,
 						   FALSE, IsNull);
 			usize = gistpenalty(giststate, j, &entry, IsNull,
 								&identry[j], isnull[j]);
+			if (usize > 0)
+				zero_penalty = false;
 
-			if (which_grow[j] < 0 || usize < which_grow[j])
+			if (best_penalty[j] < 0 || usize < best_penalty[j])
 			{
-				which = i;
-				which_grow[j] = usize;
-				if (j < r->rd_att->natts - 1 && i == FirstOffsetNumber)
-					which_grow[j + 1] = -1;
-				sum_grow += which_grow[j];
+				/*
+				 * New best penalty for column.  Tentatively select this tuple
+				 * as the target, and record the best penalty.	Then reset the
+				 * next column's penalty to "unknown" (and indirectly, the
+				 * same for all the ones to its right).  This will force us to
+				 * adopt this tuple's penalty values as the best for all the
+				 * remaining columns during subsequent loop iterations.
+				 */
+				result = i;
+				best_penalty[j] = usize;
+
+				if (j < r->rd_att->natts - 1)
+					best_penalty[j + 1] = -1;
 			}
-			else if (which_grow[j] == usize)
-				sum_grow += usize;
+			else if (best_penalty[j] == usize)
+			{
+				/*
+				 * The current tuple is exactly as good for this column as the
+				 * best tuple seen so far.	The next iteration of this loop
+				 * will compare the next column.
+				 */
+			}
 			else
 			{
-				sum_grow = 1;
+				/*
+				 * The current tuple is worse for this column than the best
+				 * tuple seen so far.  Skip the remaining columns and move on
+				 * to the next tuple, if any.
+				 */
+				zero_penalty = false;	/* so outer loop won't exit */
 				break;
 			}
 		}
+
+		/*
+		 * If we find a tuple with zero penalty for all columns, there's no
+		 * need to examine remaining tuples; just break out of the loop and
+		 * return it.
+		 */
+		if (zero_penalty)
+			break;
 	}
 
-	if (which == InvalidOffsetNumber)
-		which = FirstOffsetNumber;
-
-	return which;
+	return result;
 }
 
 /*
@@ -535,16 +585,22 @@ gistpenalty(GISTSTATE *giststate, int attno,
 {
 	float		penalty = 0.0;
 
-	if (giststate->penaltyFn[attno].fn_strict == FALSE || (isNullOrig == FALSE && isNullAdd == FALSE))
+	if (giststate->penaltyFn[attno].fn_strict == FALSE ||
+		(isNullOrig == FALSE && isNullAdd == FALSE))
+	{
 		FunctionCall3(&giststate->penaltyFn[attno],
 					  PointerGetDatum(orig),
 					  PointerGetDatum(add),
 					  PointerGetDatum(&penalty));
+		/* disallow negative or NaN penalty */
+		if (isnan(penalty) || penalty < 0.0)
+			penalty = 0.0;
+	}
 	else if (isNullOrig && isNullAdd)
 		penalty = 0.0;
 	else
-		penalty = 1e10;			/* try to prevent to mix null and non-null
-								 * value */
+		penalty = 1e10;			/* try to prevent mixing null and non-null
+								 * values */
 
 	return penalty;
 }
@@ -568,6 +624,7 @@ GISTInitBuffer(Buffer b, uint32 f)
 	/* memset(&(opaque->nsn), 0, sizeof(GistNSN)); */
 	opaque->rightlink = InvalidBlockNumber;
 	opaque->flags = f;
+	opaque->gist_page_id = GIST_PAGE_ID;
 }
 
 /*
@@ -685,4 +742,25 @@ gistoptions(PG_FUNCTION_ARGS)
 	if (result)
 		PG_RETURN_BYTEA_P(result);
 	PG_RETURN_NULL();
+}
+
+/*
+ * Temporary GiST indexes are not WAL-logged, but we need LSNs to detect
+ * concurrent page splits anyway. GetXLogRecPtrForTemp() provides a fake
+ * sequence of LSNs for that purpose. Each call generates an LSN that is
+ * greater than any previous value returned by this function in the same
+ * session.
+ */
+XLogRecPtr
+GetXLogRecPtrForTemp(void)
+{
+	static XLogRecPtr counter = {0, 1};
+
+	counter.xrecoff++;
+	if (counter.xrecoff == 0)
+	{
+		counter.xlogid++;
+		counter.xrecoff++;
+	}
+	return counter;
 }

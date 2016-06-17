@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/create_type.sgml,v 1.68 2007/02/01 00:28:18 momjian Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/create_type.sgml,v 1.73.2.1 2008/05/27 18:05:20 tgl Exp $
 PostgreSQL documentation
 -->
 
@@ -22,6 +22,9 @@ PostgreSQL documentation
 <synopsis>
 CREATE TYPE <replaceable class="parameter">name</replaceable> AS
     ( <replaceable class="PARAMETER">attribute_name</replaceable> <replaceable class="PARAMETER">data_type</replaceable> [, ... ] )
+
+CREATE TYPE <replaceable class="parameter">name</replaceable> AS ENUM
+    ( '<replaceable class="parameter">label</replaceable>' [, ... ] )
 
 CREATE TYPE <replaceable class="parameter">name</replaceable> (
     INPUT = <replaceable class="parameter">input_function</replaceable>,
@@ -81,10 +84,22 @@ CREATE TYPE <replaceable class="parameter">name</replaceable>
   </refsect2>
 
   <refsect2>
+   <title>Enumerated Types</title>
+
+   <para>
+    The second form of <command>CREATE TYPE</command> creates an enumerated
+    (enum) type, as described in <xref linkend="datatype-enum">.
+    Enum types take a list of one or more quoted labels, each of which
+    must be less than <symbol>NAMEDATALEN</symbol> bytes long (64 in a standard
+    <productname>PostgreSQL</productname> build).
+   </para>
+  </refsect2>
+
+  <refsect2>
    <title>Base Types</title>
 
   <para>
-   The second form of <command>CREATE TYPE</command> creates a new base type
+   The third form of <command>CREATE TYPE</command> creates a new base type
    (scalar type).  The parameters can appear in any order, not only that
    illustrated above, and most are optional.  You must register
    two or more functions (using <command>CREATE FUNCTION</command>) before
@@ -200,8 +215,8 @@ CREATE TYPE <replaceable class="parameter">name</replaceable>
    function might return <literal>(30,2)</>.
    It is allowed to omit the
    <replaceable class="parameter">type_modifier_output_function</replaceable>,
-   in which case the default display format is just the stored typmod value
-   enclosed in parentheses.
+   in which case the default display format is just the stored typmod integer
+   value enclosed in parentheses.
   </para>
 
   <para>
@@ -300,16 +315,16 @@ CREATE TYPE <replaceable class="parameter">name</replaceable>
    <title>Array Types</title>
 
    <para>
-    Whenever a user-defined base data type is created,
+    Whenever a user-defined type is created,
     <productname>PostgreSQL</productname> automatically creates an
     associated array type, whose name consists of the base type's
     name prepended with an underscore, and truncated if necessary to keep
-    it less than <symbol>NAMEDATALEN</symbol> bytes long. (If the name
+    it less than <symbol>NAMEDATALEN</symbol> bytes long.  (If the name
     so generated collides with an existing type name, the process is
     repeated until a non-colliding name is found.)
-    The implicitly-created array type is variable length and uses the
+    This implicitly-created array type is variable length and uses the
     built-in input and output functions <literal>array_in</> and
-    <literal>array_out</>. The array type tracks any changes in its
+    <literal>array_out</>.  The array type tracks any changes in its
     element type's owner or schema, and is dropped if the element type is.
    </para>
 
@@ -368,6 +383,16 @@ CREATE TYPE <replaceable class="parameter">name</replaceable>
    </varlistentry>
 
    <varlistentry>
+    <term><replaceable class="parameter">label</replaceable></term>
+    <listitem>
+     <para>
+      A string literal representing the textual label associated with
+      one value of an enum type.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
     <term><replaceable class="parameter">input_function</replaceable></term>
     <listitem>
      <para>
@@ -411,7 +436,7 @@ CREATE TYPE <replaceable class="parameter">name</replaceable>
     <term><replaceable class="parameter">type_modifier_input_function</replaceable></term>
     <listitem>
      <para>
-      The name of a function that converts numeric modifier(s) for the type
+      The name of a function that converts an array of modifier(s) for the type
       into internal form.
      </para>
     </listitem>
@@ -568,6 +593,27 @@ CREATE TYPE <replaceable class="parameter">name</replaceable>
   </para>
 
   <para>
+   Before <productname>PostgreSQL</productname> version 8.3, the name of
+   a generated array type was always exactly the element type's name with one
+   underscore character (<literal>_</literal>) prepended.  (Type names were
+   therefore restricted in length to one less character than other names.)
+   While this is still usually the case, the array type name may vary from
+   this in case of maximum-length names or collisions with user type names
+   that begin with underscore.  Writing code that depends on this convention
+   is therefore deprecated.  Instead, use
+   <structname>pg_type</>.<structfield>typarray</> to locate the array type
+   associated with a given type.
+  </para>
+
+  <para>
+   It may be advisable to avoid using type and table names that begin with
+   underscore.  While the server will change generated array type names to
+   avoid collisions with user-given names, there is still risk of confusion,
+   particularly with old client software that may assume that type names
+   beginning with underscores always represent arrays.
+  </para>
+
+  <para>
    Before <productname>PostgreSQL</productname> version 8.2, the syntax
    <literal>CREATE TYPE <replaceable>name</></literal> did not exist.
    The way to create a new base type was to create its input function first.
@@ -608,6 +654,20 @@ CREATE TYPE compfoo AS (f1 int, f2 text);
 CREATE FUNCTION getfoo() RETURNS SETOF compfoo AS $$
     SELECT fooid, fooname FROM foo
 $$ LANGUAGE SQL;
+</programlisting>
+  </para>
+
+  <para>
+   This example creates an enumerated type and uses it in
+   a table definition:
+<programlisting>
+CREATE TYPE bug_status AS ENUM ('new', 'open', 'closed');
+
+CREATE TABLE bug (
+    id serial,
+    description text,
+    status bug_status
+);
 </programlisting>
   </para>
 

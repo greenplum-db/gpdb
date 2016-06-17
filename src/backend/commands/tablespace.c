@@ -38,7 +38,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/tablespace.c,v 1.42 2007/02/01 19:10:26 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/tablespace.c,v 1.53 2008/01/01 19:45:49 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -66,12 +66,14 @@
 #include "commands/filespace.h"
 #include "commands/tablespace.h"
 #include "miscadmin.h"
+#include "postmaster/bgwriter.h"
 #include "storage/fd.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
+#include "utils/memutils.h"
 
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbsrlz.h"
@@ -82,13 +84,16 @@
 #include "cdb/cdbpersistentrelation.h"
 #include "cdb/cdbmirroredfilesysobj.h"
 
-
-/* GUC variable */
+/* GUC variables */
 char	   *default_tablespace = NULL;
+/* GPDB_83_MERGE_FIXME: this is NULL in upstream, but because I removed this from guc.c,
+ * the guc machinery isn't initializing it to "".
+ */
+char	   *temp_tablespaces = "";
 
 
-static bool remove_tablespace_directories(Oid tablespaceoid, bool redo,
-										  char *location);
+static bool remove_tablespace_directories(Oid tablespaceoid, bool redo, char *phys);
+
 /*
  * Create a table space
  *
@@ -112,8 +117,6 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
 	int64		persistentSerialNum;
 	cqContext	cqc;
 	cqContext  *pcqCtx;
-
-	/* validate */
 
 	/* Must be super user */
 	if (!superuser())
@@ -267,6 +270,14 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
 				);
 
 	}
+
+	/*
+	 * Force synchronous commit, to minimize the window between creating the
+	 * symlink on-disk and marking the transaction committed.  It's not great
+	 * that there is any window at all, but definitely we don't want to make
+	 * it larger than necessary.
+	 */
+	ForceSyncCommit();
 }
 
 /*
@@ -289,9 +300,6 @@ RemoveTableSpace(List *names, DropBehavior behavior, bool missing_ok)
 	PersistentFileSysState persistentState;
 	ItemPointerData persistentTid;
 	int64		persistentSerialNum;
-
-	/* don't call this in a transaction block */
-	// PreventTransactionChain((void *) stmt, "DROP TABLESPACE");
 
 	/*
 	 * General DROP (object) syntax allows fully qualified names, but
@@ -456,6 +464,14 @@ RemoveTableSpace(List *names, DropBehavior behavior, bool missing_ok)
 	 */
 
 	/*
+	 * Force synchronous commit, to minimize the window between removing the
+	 * files on-disk and marking the transaction committed.  It's not great
+	 * that there is any window at all, but definitely we don't want to make
+	 * it larger than necessary.
+	 */
+	ForceSyncCommit();
+
+	/*
 	 * Allow MirroredFileSysObj_JustInTimeDbDirCreate again.
 	 */
 	LWLockRelease(TablespaceCreateLock);
@@ -510,12 +526,25 @@ remove_tablespace_directories(Oid tablespaceoid, bool redo, char *phys)
 	 * fresh subdirectories in parallel. It is possible that new files are
 	 * being created within subdirectories, though, so the rmdir call could
 	 * fail.  Worst consequence is a less friendly error message.
+	 *
+	 * If redo is true then ENOENT is a likely outcome here, and we allow it
+	 * to pass without comment.  In normal operation we still allow it, but
+	 * with a warning.	This is because even though ProcessUtility disallows
+	 * DROP TABLESPACE in a transaction block, it's possible that a previous
+	 * DROP failed and rolled back after removing the tablespace directories
+	 * and symlink.  We want to allow a new DROP attempt to succeed at
+	 * removing the catalog entries, so we should not give a hard error here.
 	 */
 	dirdesc = AllocateDir(location);
 	if (dirdesc == NULL)
 	{
-		if (redo && errno == ENOENT)
+		if (errno == ENOENT)
 		{
+			if (!redo)
+				ereport(WARNING,
+						(errcode_for_file_access(),
+						 errmsg("could not open directory \"%s\": %m",
+								location)));
 			pfree(location);
 			return true;
 		}
@@ -933,12 +962,22 @@ assign_default_tablespace(const char *newval, bool doit, GucSource source)
 		if (newval[0] != '\0' &&
 			!OidIsValid(get_tablespace_oid(newval)))
 		{
-			if (source >= PGC_S_INTERACTIVE)
-				ereport(ERROR,
-						(errcode(ERRCODE_UNDEFINED_OBJECT),
-						 errmsg("tablespace \"%s\" does not exist",
-								newval)));
-			return NULL;
+			/*
+			 * When source == PGC_S_TEST, we are checking the argument of an
+			 * ALTER DATABASE SET or ALTER USER SET command.  pg_dumpall dumps
+			 * all roles before tablespaces, so if we're restoring a
+			 * pg_dumpall script the tablespace might not yet exist, but will
+			 * be created later.  Because of that, issue a NOTICE if source ==
+			 * PGC_S_TEST, but accept the value anyway.
+			 */
+			ereport((source == PGC_S_TEST) ? NOTICE : GUC_complaint_elevel(source),
+					(errcode(ERRCODE_UNDEFINED_OBJECT),
+					 errmsg("tablespace \"%s\" does not exist",
+							newval)));
+			if (source == PGC_S_TEST)
+				return newval;
+			else
+				return NULL;
 		}
 	}
 
@@ -948,15 +987,28 @@ assign_default_tablespace(const char *newval, bool doit, GucSource source)
 /*
  * GetDefaultTablespace -- get the OID of the current default tablespace
  *
- * May return InvalidOid to indicate "use the database's default tablespace"
+ * Regular objects and temporary objects have different default tablespaces,
+ * hence the forTemp parameter must be specified.
+ *
+ * May return InvalidOid to indicate "use the database's default tablespace".
+ *
+ * Note that caller is expected to check appropriate permissions for any
+ * result other than InvalidOid.
  *
  * This exists to hide (and possibly optimize the use of) the
  * default_tablespace GUC variable.
  */
 Oid
-GetDefaultTablespace(void)
+GetDefaultTablespace(bool forTemp)
 {
 	Oid			result;
+
+	/* The temp-table case is handled elsewhere */
+	if (forTemp)
+	{
+		PrepareTempTablespaces();
+		return GetNextTempTableSpace();
+	}
 
 	/* Fast path for default_tablespace == "" */
 	if (default_tablespace == NULL || default_tablespace[0] == '\0')
@@ -980,6 +1032,99 @@ GetDefaultTablespace(void)
 	return result;
 }
 
+/*
+ * PrepareTempTablespaces -- prepare to use temp tablespaces
+ *
+ * If we have not already done so in the current transaction, parse the
+ * temp_tablespaces GUC variable and tell fd.c which tablespace(s) to use
+ * for temp files.
+ */
+void
+PrepareTempTablespaces(void)
+{
+	char	   *rawname;
+	List	   *namelist;
+	Oid		   *tblSpcs;
+	int			numSpcs;
+	ListCell   *l;
+
+	/* No work if already done in current transaction */
+	if (TempTablespacesAreSet())
+		return;
+
+	/*
+	 * Can't do catalog access unless within a transaction.  This is just a
+	 * safety check in case this function is called by low-level code that
+	 * could conceivably execute outside a transaction.  Note that in such a
+	 * scenario, fd.c will fall back to using the current database's default
+	 * tablespace, which should always be OK.
+	 */
+	if (!IsTransactionState())
+		return;
+
+	/* Need a modifiable copy of string */
+	rawname = pstrdup(temp_tablespaces);
+
+	/* Parse string into list of identifiers */
+	if (!SplitIdentifierString(rawname, ',', &namelist))
+	{
+		/* syntax error in name list */
+		SetTempTablespaces(NULL, 0);
+		pfree(rawname);
+		list_free(namelist);
+		return;
+	}
+
+	/* Store tablespace OIDs in an array in TopTransactionContext */
+	tblSpcs = (Oid *) MemoryContextAlloc(TopTransactionContext,
+										 list_length(namelist) * sizeof(Oid));
+	numSpcs = 0;
+	foreach(l, namelist)
+	{
+		char	   *curname = (char *) lfirst(l);
+		Oid			curoid;
+		AclResult	aclresult;
+
+		/* Allow an empty string (signifying database default) */
+		if (curname[0] == '\0')
+		{
+			tblSpcs[numSpcs++] = InvalidOid;
+			continue;
+		}
+
+		/* Else verify that name is a valid tablespace name */
+		curoid = get_tablespace_oid(curname);
+		if (curoid == InvalidOid)
+		{
+			/* Silently ignore any bad list elements */
+			continue;
+		}
+
+		/*
+		 * Allow explicit specification of database's default tablespace in
+		 * temp_tablespaces without triggering permissions checks.
+		 */
+		if (curoid == MyDatabaseTableSpace)
+		{
+			tblSpcs[numSpcs++] = InvalidOid;
+			continue;
+		}
+
+		/* Check permissions similarly */
+		aclresult = pg_tablespace_aclcheck(curoid, GetUserId(),
+										   ACL_CREATE);
+		if (aclresult != ACLCHECK_OK)
+			continue;
+
+		tblSpcs[numSpcs++] = curoid;
+	}
+
+	SetTempTablespaces(tblSpcs, numSpcs);
+
+	pfree(rawname);
+	list_free(namelist);
+}
+
 
 /*
  * get_tablespace_oid - given a tablespace name, look up the OID
@@ -989,10 +1134,11 @@ GetDefaultTablespace(void)
 Oid
 get_tablespace_oid(const char *tablespacename)
 {
-	Oid			tsoid;
+	Oid			result;
 	Relation	rel;
+	HeapScanDesc scandesc;
 	HeapTuple	tuple;
-	cqContext	cqc;
+	ScanKeyData entry[1];
 
 	/*
 	 * Search pg_tablespace.  We use a heapscan here even though there is an
@@ -1001,24 +1147,25 @@ get_tablespace_oid(const char *tablespacename)
 	 */
 	rel = heap_open(TableSpaceRelationId, AccessShareLock);
 
-	tuple = caql_getfirst(
-			caql_addrel(cqclr(&cqc), rel),
-			cql("SELECT * FROM pg_tablespace "
-				" WHERE spcname = :1 ",
-				CStringGetDatum(tablespacename)));
+	ScanKeyInit(&entry[0],
+				Anum_pg_tablespace_spcname,
+				BTEqualStrategyNumber, F_NAMEEQ,
+				CStringGetDatum(tablespacename));
+	scandesc = heap_beginscan(rel, SnapshotNow, 1, entry);
+	tuple = heap_getnext(scandesc, ForwardScanDirection);
 
 	/* If nothing matches then the tablespace doesn't exist */
 	if (HeapTupleIsValid(tuple))
-		tsoid = HeapTupleGetOid(tuple);
+		result = HeapTupleGetOid(tuple);
 	else
-		tsoid = InvalidOid;
+		result = InvalidOid;
 
 	/*
 	 * Anything that needs to lookup a tablespace name must need a lock
 	 * on the tablespace for the duration of its transaction, otherwise
 	 * there is nothing preventing it from being dropped.
 	 */
-	if (OidIsValid(tsoid))
+	if (OidIsValid(result))
 	{
 		Buffer			buffer = InvalidBuffer;
 		HTSU_Result		lockTest;
@@ -1032,7 +1179,7 @@ get_tablespace_oid(const char *tablespacename)
 		 */
 		lockTest = heap_lock_tuple(rel, tuple, &buffer,
 								   &update_ctid, &update_xmax,
-								   GetCurrentCommandId(),
+								   GetCurrentCommandId(true),
 								   LockTupleShared, LockTupleWait);
 		ReleaseBuffer(buffer);
 		switch (lockTest)
@@ -1059,9 +1206,10 @@ get_tablespace_oid(const char *tablespacename)
 		}
 	}
 
+	heap_endscan(scandesc);
 	heap_close(rel, AccessShareLock);
 
-	return tsoid;
+	return result;
 }
 
 /*
@@ -1073,19 +1221,34 @@ char *
 get_tablespace_name(Oid spc_oid)
 {
 	char	   *result;
+	Relation	rel;
+	HeapScanDesc scandesc;
+	HeapTuple	tuple;
+	ScanKeyData entry[1];
 
 	/*
 	 * Search pg_tablespace.  We use a heapscan here even though there is an
 	 * index on oid, on the theory that pg_tablespace will usually have just a
 	 * few entries and so an indexed lookup is a waste of effort.
 	 */
-	result = caql_getcstring(
-			NULL,
-			cql("SELECT spcname FROM pg_tablespace "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(spc_oid)));
+	rel = heap_open(TableSpaceRelationId, AccessShareLock);
+
+	ScanKeyInit(&entry[0],
+				ObjectIdAttributeNumber,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(spc_oid));
+	scandesc = heap_beginscan(rel, SnapshotNow, 1, entry);
+	tuple = heap_getnext(scandesc, ForwardScanDirection);
 
 	/* We assume that there can be at most one matching tuple */
+	if (HeapTupleIsValid(tuple))
+		result = pstrdup(NameStr(((Form_pg_tablespace) GETSTRUCT(tuple))->spcname));
+	else
+		result = NULL;
+
+	heap_endscan(scandesc);
+	heap_close(rel, AccessShareLock);
+
 	return result;
 }
 

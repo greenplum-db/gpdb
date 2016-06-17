@@ -62,47 +62,6 @@ text *cstring_to_text_with_len(const char *c, int n);
 #endif
 #endif
 
-#ifdef GP_VERSION_NUM
-#define DatumGetTextPP(X)			((text *) PG_DETOAST_DATUM_PACKED(X))
-#define SET_VARSIZE(PTR, len)				SET_VARSIZE_4B  ((varattrib_4b*)(PTR), (len))
-#define PG_GETARG_TEXT_PP(n)		DatumGetTextPP(PG_GETARG_DATUM(n))
-#define VARDATA_ANY(PTR) \
-	 (VARATT_IS_1B(PTR) ? VARDATA_1B(PTR) : VARDATA_4B(PTR))
-#define VARSIZE_ANY_EXHDR(PTR) \
-	(VARATT_IS_1B_E(PTR) ? VARSIZE_1B_E(PTR)-VARHDRSZ_EXTERNAL : \
-	 (VARATT_IS_1B(PTR) ? VARSIZE_1B(PTR)-VARHDRSZ_SHORT : \
-	  VARSIZE_4B(PTR)-VARHDRSZ))
-#define att_align_nominal(cur_offset, attalign) \
-( \
-	((attalign) == 'i') ? INTALIGN(cur_offset) : \
-	 (((attalign) == 'c') ? (intptr_t) (cur_offset) : \
-	  (((attalign) == 'd') ? DOUBLEALIGN(cur_offset) : \
-	   ( \
-			AssertMacro((attalign) == 's'), \
-			SHORTALIGN(cur_offset) \
-	   ))) \
-)
-#define att_addlength_pointer(cur_offset, attlen, attptr) \
-( \
-	((attlen) > 0) ? \
-	( \
-		(cur_offset) + (attlen) \
-	) \
-	: (((attlen) == -1) ? \
-	( \
-		(cur_offset) + VARSIZE_ANY(attptr) \
-	) \
-	: \
-	( \
-		AssertMacro((attlen) == -2), \
-		(cur_offset) + (strlen((char *) (attptr)) + 1) \
-	)) \
-)
-
-List *
-stringToQualifiedNameList(const char *string, const char *caller);
-
-#else
 #if PG_VERSION_NUM < 80300
 #define PGDLLIMPORT				DLLIMPORT
 #define session_timezone		global_timezone
@@ -115,10 +74,7 @@ stringToQualifiedNameList(const char *string, const char *caller);
 	att_align((cur_offset), (attalign))
 #define att_addlength_pointer(cur_offset, attlen, attptr) \
 	att_addlength((cur_offset), (attlen), (attptr))
-#define stringToQualifiedNameList(string) \
-	stringToQualifiedNameList((string), "")
 typedef void *SPIPlanPtr;
-#endif
 #endif
 
 #if PG_VERSION_NUM < 80200

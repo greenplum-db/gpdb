@@ -370,8 +370,7 @@ CTranslatorDXLToPlStmt::SetInitPlanVariables(PlannedStmt* pplstmt)
 		pplstmt->planTree->nInitPlans = m_pctxdxltoplstmt->UlCurrentParamId();
 	}
 
-	pplstmt->planTree->nParamExec = m_pctxdxltoplstmt->UlCurrentParamId();
-	pplstmt->nCrossLevelParams = m_pctxdxltoplstmt->UlCurrentParamId();
+	pplstmt->nParamExec = m_pctxdxltoplstmt->UlCurrentParamId();
 
 	// Extract all subplans defined in the planTree
 	List *plSubPlans = gpdb::PlExtractNodesPlan(pplstmt->planTree, T_SubPlan, true);
@@ -3588,7 +3587,7 @@ CTranslatorDXLToPlStmt::PappendFromDXLAppend
 
 		TargetEntry *pte = MakeNode(TargetEntry);
 		pte->expr = (Expr *) pvar;
-		pte->resname = CTranslatorUtils::SzFromWsz(pdxlopScIdent->Pdxlcr()->Pmdname()->Pstr()->Wsz());
+		pte->resname = CTranslatorUtils::SzFromWsz(pdxlopPrel->PmdnameAlias()->Pstr()->Wsz());
 		pte->resno = attno;
 
 		// add column mapping to output translation context
@@ -3738,7 +3737,7 @@ CTranslatorDXLToPlStmt::PshscanFromDXLSharedScan
 
 	GPOS_ASSERT(SHARE_NOTSHARED != pshscan->share_type);
 
-	Plan *pplan = &(pshscan->plan);
+	Plan *pplan = &(pshscan->scan.plan);
 	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
 	pplan->plan_parent_node_id = IPlanId(pplanParent);
 
@@ -3827,7 +3826,7 @@ CTranslatorDXLToPlStmt::PshscanFromDXLCTEProducer
 	// create the shared input scan representing the CTE Producer
 	ShareInputScan *pshscanCTEProducer = MakeNode(ShareInputScan);
 	pshscanCTEProducer->share_id = ulCTEId;
-	Plan *pplan = &(pshscanCTEProducer->plan);
+	Plan *pplan = &(pshscanCTEProducer->scan.plan);
 	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
 	pplan->plan_parent_node_id = IPlanId(pplanParent);
 
@@ -3978,9 +3977,9 @@ CTranslatorDXLToPlStmt::InitializeSpoolingInfo
 		ShareInputScan *pshscanConsumer = (ShareInputScan *) lfirst(plcShscanCTEConsumer);
 		pshscanConsumer->share_type = share_type;
 		pshscanConsumer->driver_slice = -1; // default
-		if (NULL == (pshscanConsumer->plan).flow)
+		if (NULL == (pshscanConsumer->scan.plan).flow)
 		{
-			(pshscanConsumer->plan).flow = (Flow *) gpdb::PvCopyObject(pflow);
+			(pshscanConsumer->scan.plan).flow = (Flow *) gpdb::PvCopyObject(pflow);
 		}
 	}
 }
@@ -4006,7 +4005,7 @@ CTranslatorDXLToPlStmt::PflowCTEConsumer
 	ForEach (plcShscanCTEConsumer, plshscanCTEConsumer)
 	{
 		ShareInputScan *pshscanConsumer = (ShareInputScan *) lfirst(plcShscanCTEConsumer);
-		Flow *pflowCte = (pshscanConsumer->plan).flow;
+		Flow *pflowCte = (pshscanConsumer->scan.plan).flow;
 		if (NULL != pflowCte)
 		{
 			if (NULL == pflow)
@@ -4052,7 +4051,7 @@ CTranslatorDXLToPlStmt::PshscanFromDXLCTEConsumer
 	ShareInputScan *pshscanCTEConsumer = MakeNode(ShareInputScan);
 	pshscanCTEConsumer->share_id = ulCTEId;
 
-	Plan *pplan = &(pshscanCTEConsumer->plan);
+	Plan *pplan = &(pshscanCTEConsumer->scan.plan);
 	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
 	pplan->plan_parent_node_id = IPlanId(pplanParent);
 
@@ -4174,7 +4173,31 @@ CTranslatorDXLToPlStmt::PplanSequence
 
 		Plan *pplanChild = PplFromDXL(pdxlnChild, &dxltrctxChild, pplan, pdrgpdxltrctxPrevSiblings);
 
-		psequence->subplans = gpdb::PlAppendElement(psequence->subplans, pplanChild);
+		/*
+		 * When the plan comes out from ORCA, a "static" partition
+		 * selection is represented by a subplan that looks like this:
+		 *
+		 * Sequence
+		 *   -> Partition Selector
+		 *   -> Dynamic Table Scan
+		 *
+		 * The Partition Selector node is a bit special though, as it
+		 * modifies the behaviour of its sibling Dynamic Table Scan
+		 * node, and the printablePredicate can contain Vars that
+		 * refer to a child of the Sequence node, rather than
+		 * children of the PartititionSelector node itself. So in the
+		 * Plan tree, we want to put it in the dedicated
+		 * static_selector field, rather than having it as just
+		 * another child node of the Sequence.
+		 */
+		if (IsA(pplanChild, PartitionSelector))
+		{
+			psequence->static_selector = (PartitionSelector *) pplanChild;
+		}
+		else
+		{
+			psequence->subplans = gpdb::PlAppendElement(psequence->subplans, pplanChild);
+		}
 		pplan->nMotionNodes += pplanChild->nMotionNodes;
 	}
 

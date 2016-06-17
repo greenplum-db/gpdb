@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/analyze.sgml,v 1.21 2007/01/31 23:26:02 momjian Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/analyze.sgml,v 1.23 2007/10/07 01:16:42 alvherre Exp $
 PostgreSQL documentation
 -->
 
@@ -20,7 +20,7 @@ PostgreSQL documentation
 
  <refsynopsisdiv>
 <synopsis>
-ANALYZE [ VERBOSE ] [ <replaceable class="PARAMETER">table</replaceable> [ (<replaceable class="PARAMETER">column</replaceable> [, ...] ) ] ]
+ANALYZE [ VERBOSE ] [ <replaceable class="PARAMETER">table</replaceable> [ ( <replaceable class="PARAMETER">column</replaceable> [, ...] ) ] ]
 </synopsis>
  </refsynopsisdiv>
 
@@ -29,10 +29,11 @@ ANALYZE [ VERBOSE ] [ <replaceable class="PARAMETER">table</replaceable> [ (<rep
 
   <para>
    <command>ANALYZE</command> collects statistics about the contents
-   of tables in the database, and stores the results in the system
-   table <literal>pg_statistic</literal>.  Subsequently, the query
-   planner uses these statistics to help determine the most efficient
-   execution plans for queries.
+   of tables in the database, and stores the results in the <link
+   linkend="catalog-pg-statistic"><structname>pg_statistic</></>
+   system catalog.  Subsequently, the query planner uses these
+   statistics to help determine the most efficient execution plans for
+   queries.
   </para>
 
   <para>
@@ -91,7 +92,12 @@ ANALYZE [ VERBOSE ] [ <replaceable class="PARAMETER">table</replaceable> [ (<rep
   <title>Notes</title>
 
   <para>
-   It is a good idea to run <command>ANALYZE</command> periodically, or
+   In the default <productname>PostgreSQL</productname> configuration,
+   <xref linkend="autovacuum" endterm="autovacuum-title">
+   takes care of automatic analyzing of tables when they are first loaded
+   with data, and as they change throughout regular operation.
+   When autovacuum is disabled,
+   it is a good idea to run <command>ANALYZE</command> periodically, or
    just after making major changes in the contents of a table.  Accurate
    statistics will help the planner to choose the most appropriate query
    plan, and thereby improve the speed of query processing.  A common
@@ -100,7 +106,7 @@ ANALYZE [ VERBOSE ] [ <replaceable class="PARAMETER">table</replaceable> [ (<rep
   </para>
 
   <para>
-   Unlike <command>VACUUM FULL</command>, <command>ANALYZE</command>
+   <command>ANALYZE</command>
    requires only a read lock on the target table, so it can run in
    parallel with other activity on the table.
   </para>
@@ -125,7 +131,7 @@ ANALYZE [ VERBOSE ] [ <replaceable class="PARAMETER">table</replaceable> [ (<rep
    will change slightly each time <command>ANALYZE</command> is run,
    even if the actual table contents did not change.  This might result
    in small changes in the planner's estimated costs shown by
-   <command>EXPLAIN</command>. In rare situations, this
+   <xref linkend="sql-explain" endterm="sql-explain-title">. In rare situations, this
    non-determinism will cause the query optimizer to choose a
    different query plan between runs of <command>ANALYZE</command>. To
    avoid this, raise the amount of statistics collected by
@@ -166,5 +172,16 @@ ANALYZE [ VERBOSE ] [ <replaceable class="PARAMETER">table</replaceable> [ (<rep
   <para>
    There is no <command>ANALYZE</command> statement in the SQL standard.
   </para>
+ </refsect1>
+
+ <refsect1>
+  <title>See Also</title>
+
+  <simplelist type="inline">
+   <member><xref linkend="sql-vacuum" endterm="sql-vacuum-title"></member>
+   <member><xref linkend="app-vacuumdb" endterm="app-vacuumdb-title"></member>
+   <member><xref linkend="runtime-config-resource-vacuum-cost" endterm="runtime-config-resource-vacuum-cost-title"></member>
+   <member><xref linkend="autovacuum" endterm="autovacuum-title"></member>
+  </simplelist>
  </refsect1>
 </refentry>

@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/droplang.sgml,v 1.27.2.2 2007/03/26 17:23:44 tgl Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/droplang.sgml,v 1.31 2007/12/11 19:57:32 tgl Exp $
 PostgreSQL documentation
 -->
 
@@ -67,7 +67,7 @@ PostgreSQL documentation
       <term><replaceable class="parameter">langname</replaceable></term>
       <listitem>
        <para>
-	Specifies the name of the backend programming language to be removed.
+        Specifies the name of the backend programming language to be removed.
        </para>
       </listitem>
      </varlistentry>
@@ -77,7 +77,7 @@ PostgreSQL documentation
       <term><option><optional>--dbname</> <replaceable class="parameter">dbname</replaceable></></term>
       <listitem>
        <para>
-	Specifies from which database the language should be removed.
+        Specifies from which database the language should be removed.
         The default is to use the database with the same name as the
         current system user.
        </para>
@@ -117,10 +117,10 @@ PostgreSQL documentation
       <term><option>--host <replaceable class="parameter">host</replaceable></></term>
       <listitem>
        <para>
-	Specifies the host name of the machine on which the 
-	server
-	is running.  If host begins with a slash, it is used 
-	as the directory for the Unix domain socket.
+        Specifies the host name of the machine on which the 
+        server
+        is running.  If host begins with a slash, it is used 
+        as the directory for the Unix domain socket.
        </para>
       </listitem>
      </varlistentry>
@@ -130,9 +130,9 @@ PostgreSQL documentation
       <term><option>--port <replaceable class="parameter">port</replaceable></></term>
       <listitem>
        <para>
-	Specifies the Internet TCP/IP port or local Unix domain socket file 
-	extension on which the server
-	is listening for connections.
+        Specifies the Internet TCP/IP port or local Unix domain socket file 
+        extension on which the server
+        is listening for connections.
        </para>
       </listitem>
      </varlistentry>
@@ -142,7 +142,7 @@ PostgreSQL documentation
       <term><option>--username <replaceable class="parameter">username</replaceable></></term>
       <listitem>
        <para>
-        User name to connect as
+        User name to connect as.
        </para>
       </listitem>
      </varlistentry>
@@ -152,7 +152,18 @@ PostgreSQL documentation
       <term><option>--password</></term>
       <listitem>
        <para>
-        Force password prompt.
+        Force <application>droplang</application> to prompt for a
+        password before connecting to a database.  
+       </para>
+
+       <para>
+        This option is never essential, since
+        <application>droplang</application> will automatically prompt
+        for a password if the server demands password authentication.
+        However, <application>droplang</application> will waste a
+        connection attempt finding out that the server wants a password.
+        In some cases it is worth typing <option>-W</> to avoid the extra
+        connection attempt.
        </para>
       </listitem>
      </varlistentry>

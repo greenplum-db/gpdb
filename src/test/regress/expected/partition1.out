@@ -21,7 +21,6 @@ partition aa ,
 partition bb 
 );
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
 ERROR:  hash partition requires PARTITIONS clause or partition specification
 LINE 4: subpartition by hash (d) 
                         ^
@@ -47,7 +46,6 @@ partition aa (subpartition cc, subpartition dd (subpartition iii)),
 partition bb (subpartition cc, subpartition dd)
 );
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_cc" for table "ggg_1_prt_aa"
 ERROR:  missing SUBPARTITION BY clause for subpartition specification (at depth 2)
 LINE 6: partition aa (subpartition cc, subpartition dd (subpartition...
@@ -69,8 +67,6 @@ subpartition template (
 subpartition aa values(1)
 );
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_3" for table "ggg"
 ERROR:  column "alsodoesntexist" does not exist in relation "ggg_1_prt_1"
 LINE 5: subpartition by list(alsodoesntexist)
                         ^
@@ -84,9 +80,9 @@ partition aa (subpartition cc, subpartition dd),
 partition bb (subpartition cc, subpartition dd)
 );
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_cc" for table "ggg_1_prt_aa"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd" for table "ggg_1_prt_aa"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_cc" for table "ggg_1_prt_bb"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_dd" for table "ggg_1_prt_bb"
 drop table ggg cascade;
@@ -123,17 +119,17 @@ partition aa,
 partition bb
 );
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_cc" for table "ggg_1_prt_aa"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd" for table "ggg_1_prt_aa"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_cc_3_prt_ee" for table "ggg_1_prt_aa_2_prt_cc"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_cc_3_prt_ff" for table "ggg_1_prt_aa_2_prt_cc"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd" for table "ggg_1_prt_aa"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd_3_prt_ee" for table "ggg_1_prt_aa_2_prt_dd"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd_3_prt_ff" for table "ggg_1_prt_aa_2_prt_dd"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_cc" for table "ggg_1_prt_bb"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_dd" for table "ggg_1_prt_bb"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_cc_3_prt_ee" for table "ggg_1_prt_bb_2_prt_cc"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_cc_3_prt_ff" for table "ggg_1_prt_bb_2_prt_cc"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_dd" for table "ggg_1_prt_bb"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_dd_3_prt_ee" for table "ggg_1_prt_bb_2_prt_dd"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_dd_3_prt_ff" for table "ggg_1_prt_bb_2_prt_dd"
 drop table ggg cascade;
@@ -152,17 +148,17 @@ partition aa (subpartition cc, subpartition dd),
 partition bb (subpartition cc, subpartition dd)
 );
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_cc" for table "ggg_1_prt_aa"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd" for table "ggg_1_prt_aa"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_cc_3_prt_ee" for table "ggg_1_prt_aa_2_prt_cc"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_cc_3_prt_ff" for table "ggg_1_prt_aa_2_prt_cc"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd" for table "ggg_1_prt_aa"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd_3_prt_ee" for table "ggg_1_prt_aa_2_prt_dd"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd_3_prt_ff" for table "ggg_1_prt_aa_2_prt_dd"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_cc" for table "ggg_1_prt_bb"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_dd" for table "ggg_1_prt_bb"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_cc_3_prt_ee" for table "ggg_1_prt_bb_2_prt_cc"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_cc_3_prt_ff" for table "ggg_1_prt_bb_2_prt_cc"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_dd" for table "ggg_1_prt_bb"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_dd_3_prt_ee" for table "ggg_1_prt_bb_2_prt_dd"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_dd_3_prt_ff" for table "ggg_1_prt_bb_2_prt_dd"
 drop table ggg cascade;
@@ -210,13 +206,13 @@ subpartition template ( subpartition ee, subpartition ff ) (
 partition aa (subpartition cc, subpartition dd), partition bb
 (subpartition cc start ('a') , subpartition dd) );
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_cc" for table "ggg_1_prt_aa"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd" for table "ggg_1_prt_aa"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_cc_3_prt_ee" for table "ggg_1_prt_aa_2_prt_cc"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_cc_3_prt_ff" for table "ggg_1_prt_aa_2_prt_cc"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd" for table "ggg_1_prt_aa"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd_3_prt_ee" for table "ggg_1_prt_aa_2_prt_dd"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd_3_prt_ff" for table "ggg_1_prt_aa_2_prt_dd"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
 ERROR:  invalid use of RANGE boundary specification in partition "cc" of type HASH (at depth 2)
 LINE 6: (subpartition cc start ('a') , subpartition dd) );
                          ^
@@ -297,129 +293,129 @@ subpartition by hash(f) subpartitions 2,
 subpartition by hash(g) subpartitions 2,
 subpartition by hash(h) subpartitions 2;
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1" for table "ggg_1_prt_1"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2" for table "ggg_1_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_1" for table "ggg_1_prt_1_2_prt_1"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_2" for table "ggg_1_prt_1_2_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_1" for table "ggg_1_prt_1_2_prt_1_3_prt_1"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_2" for table "ggg_1_prt_1_2_prt_1_3_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1" for table "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_1"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_2" for table "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6_prt_1" for table "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6_prt_2" for table "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_1"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_2" for table "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_2_6_prt_1" for table "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_2_6_prt_2" for table "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_1_5_prt_2"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_2" for table "ggg_1_prt_1_2_prt_1_3_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_2_5_prt_1" for table "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_2"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_2_5_prt_2" for table "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_2_5_prt_1_6_prt_1" for table "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_2_5_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_2_5_prt_1_6_prt_2" for table "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_2_5_prt_1"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_2_5_prt_2" for table "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_2_5_prt_2_6_prt_1" for table "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_2_5_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_2_5_prt_2_6_prt_2" for table "ggg_1_prt_1_2_prt_1_3_prt_1_4_prt_2_5_prt_2"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_2" for table "ggg_1_prt_1_2_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_1" for table "ggg_1_prt_1_2_prt_1_3_prt_2"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_2" for table "ggg_1_prt_1_2_prt_1_3_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_1_5_prt_1" for table "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_1"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_1_5_prt_2" for table "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_1_5_prt_1_6_prt_1" for table "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_1_5_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_1_5_prt_1_6_prt_2" for table "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_1_5_prt_1"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_1_5_prt_2" for table "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_1_5_prt_2_6_prt_1" for table "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_1_5_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_1_5_prt_2_6_prt_2" for table "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_1_5_prt_2"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_2" for table "ggg_1_prt_1_2_prt_1_3_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_2_5_prt_1" for table "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_2"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_2_5_prt_2" for table "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_2_5_prt_1_6_prt_1" for table "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_2_5_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_2_5_prt_1_6_prt_2" for table "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_2_5_prt_1"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_2_5_prt_2" for table "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_2_5_prt_2_6_prt_1" for table "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_2_5_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_2_5_prt_2_6_prt_2" for table "ggg_1_prt_1_2_prt_1_3_prt_2_4_prt_2_5_prt_2"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2" for table "ggg_1_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_1" for table "ggg_1_prt_1_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_2" for table "ggg_1_prt_1_2_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_1" for table "ggg_1_prt_1_2_prt_2_3_prt_1"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_2" for table "ggg_1_prt_1_2_prt_2_3_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_1_5_prt_1" for table "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_1"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_1_5_prt_2" for table "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_1_5_prt_1_6_prt_1" for table "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_1_5_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_1_5_prt_1_6_prt_2" for table "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_1_5_prt_1"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_1_5_prt_2" for table "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_1_5_prt_2_6_prt_1" for table "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_1_5_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_1_5_prt_2_6_prt_2" for table "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_1_5_prt_2"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_2" for table "ggg_1_prt_1_2_prt_2_3_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_2_5_prt_1" for table "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_2"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_2_5_prt_2" for table "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_2_5_prt_1_6_prt_1" for table "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_2_5_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_2_5_prt_1_6_prt_2" for table "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_2_5_prt_1"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_2_5_prt_2" for table "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_2_5_prt_2_6_prt_1" for table "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_2_5_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_2_5_prt_2_6_prt_2" for table "ggg_1_prt_1_2_prt_2_3_prt_1_4_prt_2_5_prt_2"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_2" for table "ggg_1_prt_1_2_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_1" for table "ggg_1_prt_1_2_prt_2_3_prt_2"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_2" for table "ggg_1_prt_1_2_prt_2_3_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_1_5_prt_1" for table "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_1"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_1_5_prt_2" for table "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_1_5_prt_1_6_prt_1" for table "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_1_5_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_1_5_prt_1_6_prt_2" for table "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_1_5_prt_1"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_1_5_prt_2" for table "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_1_5_prt_2_6_prt_1" for table "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_1_5_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_1_5_prt_2_6_prt_2" for table "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_1_5_prt_2"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_2" for table "ggg_1_prt_1_2_prt_2_3_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_2_5_prt_1" for table "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_2"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_2_5_prt_2" for table "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_2_5_prt_1_6_prt_1" for table "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_2_5_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_2_5_prt_1_6_prt_2" for table "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_2_5_prt_1"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_2_5_prt_2" for table "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_2_5_prt_2_6_prt_1" for table "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_2_5_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_2_5_prt_2_6_prt_2" for table "ggg_1_prt_1_2_prt_2_3_prt_2_4_prt_2_5_prt_2"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1" for table "ggg_1_prt_2"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2" for table "ggg_1_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_1" for table "ggg_1_prt_2_2_prt_1"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_2" for table "ggg_1_prt_2_2_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_1" for table "ggg_1_prt_2_2_prt_1_3_prt_1"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_2" for table "ggg_1_prt_2_2_prt_1_3_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_1_5_prt_1" for table "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_1"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_1_5_prt_2" for table "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6_prt_1" for table "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_1_5_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_1_5_prt_1_6_prt_2" for table "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_1_5_prt_1"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_1_5_prt_2" for table "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_1_5_prt_2_6_prt_1" for table "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_1_5_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_1_5_prt_2_6_prt_2" for table "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_1_5_prt_2"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_2" for table "ggg_1_prt_2_2_prt_1_3_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_2_5_prt_1" for table "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_2"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_2_5_prt_2" for table "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_2_5_prt_1_6_prt_1" for table "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_2_5_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_2_5_prt_1_6_prt_2" for table "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_2_5_prt_1"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_2_5_prt_2" for table "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_2_5_prt_2_6_prt_1" for table "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_2_5_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_2_5_prt_2_6_prt_2" for table "ggg_1_prt_2_2_prt_1_3_prt_1_4_prt_2_5_prt_2"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_2" for table "ggg_1_prt_2_2_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_1" for table "ggg_1_prt_2_2_prt_1_3_prt_2"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_2" for table "ggg_1_prt_2_2_prt_1_3_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_1_5_prt_1" for table "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_1"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_1_5_prt_2" for table "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_1_5_prt_1_6_prt_1" for table "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_1_5_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_1_5_prt_1_6_prt_2" for table "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_1_5_prt_1"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_1_5_prt_2" for table "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_1_5_prt_2_6_prt_1" for table "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_1_5_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_1_5_prt_2_6_prt_2" for table "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_1_5_prt_2"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_2" for table "ggg_1_prt_2_2_prt_1_3_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_2_5_prt_1" for table "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_2"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_2_5_prt_2" for table "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_2_5_prt_1_6_prt_1" for table "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_2_5_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_2_5_prt_1_6_prt_2" for table "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_2_5_prt_1"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_2_5_prt_2" for table "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_2_5_prt_2_6_prt_1" for table "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_2_5_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_2_5_prt_2_6_prt_2" for table "ggg_1_prt_2_2_prt_1_3_prt_2_4_prt_2_5_prt_2"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2" for table "ggg_1_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_1" for table "ggg_1_prt_2_2_prt_2"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_2" for table "ggg_1_prt_2_2_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_1" for table "ggg_1_prt_2_2_prt_2_3_prt_1"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_2" for table "ggg_1_prt_2_2_prt_2_3_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_1_5_prt_1" for table "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_1"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_1_5_prt_2" for table "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_1_5_prt_1_6_prt_1" for table "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_1_5_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_1_5_prt_1_6_prt_2" for table "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_1_5_prt_1"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_1_5_prt_2" for table "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_1_5_prt_2_6_prt_1" for table "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_1_5_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_1_5_prt_2_6_prt_2" for table "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_1_5_prt_2"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_2" for table "ggg_1_prt_2_2_prt_2_3_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_2_5_prt_1" for table "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_2"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_2_5_prt_2" for table "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_2_5_prt_1_6_prt_1" for table "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_2_5_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_2_5_prt_1_6_prt_2" for table "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_2_5_prt_1"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_2_5_prt_2" for table "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_2_5_prt_2_6_prt_1" for table "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_2_5_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_2_5_prt_2_6_prt_2" for table "ggg_1_prt_2_2_prt_2_3_prt_1_4_prt_2_5_prt_2"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_2" for table "ggg_1_prt_2_2_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_1" for table "ggg_1_prt_2_2_prt_2_3_prt_2"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_2" for table "ggg_1_prt_2_2_prt_2_3_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_1_5_prt_1" for table "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_1"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_1_5_prt_2" for table "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_1_5_prt_1_6_prt_1" for table "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_1_5_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_1_5_prt_1_6_prt_2" for table "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_1_5_prt_1"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_1_5_prt_2" for table "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_1_5_prt_2_6_prt_1" for table "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_1_5_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_1_5_prt_2_6_prt_2" for table "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_1_5_prt_2"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_2" for table "ggg_1_prt_2_2_prt_2_3_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_2_5_prt_1" for table "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_2"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_2_5_prt_2" for table "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_2_5_prt_1_6_prt_1" for table "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_2_5_prt_1"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_2_5_prt_1_6_prt_2" for table "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_2_5_prt_1"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_2_5_prt_2" for table "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_2_5_prt_2_6_prt_1" for table "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_2_5_prt_2"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_2_5_prt_2_6_prt_2" for table "ggg_1_prt_2_2_prt_2_3_prt_2_4_prt_2_5_prt_2"
 drop table ggg cascade;
@@ -433,9 +429,9 @@ partition aa (subpartition cc, subpartition dd),
 partition bb (subpartition cc, subpartition dd)
 );
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_cc" for table "ggg_1_prt_aa"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd" for table "ggg_1_prt_aa"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_cc" for table "ggg_1_prt_bb"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_dd" for table "ggg_1_prt_bb"
 drop table ggg cascade;
@@ -458,17 +454,17 @@ partition aa,
 partition bb
 );
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_cc" for table "ggg_1_prt_aa"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd" for table "ggg_1_prt_aa"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_cc_3_prt_ee" for table "ggg_1_prt_aa_2_prt_cc"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_cc_3_prt_ff" for table "ggg_1_prt_aa_2_prt_cc"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd" for table "ggg_1_prt_aa"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd_3_prt_ee" for table "ggg_1_prt_aa_2_prt_dd"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd_3_prt_ff" for table "ggg_1_prt_aa_2_prt_dd"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_cc" for table "ggg_1_prt_bb"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_dd" for table "ggg_1_prt_bb"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_cc_3_prt_ee" for table "ggg_1_prt_bb_2_prt_cc"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_cc_3_prt_ff" for table "ggg_1_prt_bb_2_prt_cc"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_dd" for table "ggg_1_prt_bb"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_dd_3_prt_ee" for table "ggg_1_prt_bb_2_prt_dd"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_dd_3_prt_ff" for table "ggg_1_prt_bb_2_prt_dd"
 drop table ggg cascade;
@@ -487,17 +483,17 @@ partition aa (subpartition cc, subpartition dd),
 partition bb (subpartition cc, subpartition dd)
 );
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_cc" for table "ggg_1_prt_aa"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd" for table "ggg_1_prt_aa"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_cc_3_prt_ee" for table "ggg_1_prt_aa_2_prt_cc"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_cc_3_prt_ff" for table "ggg_1_prt_aa_2_prt_cc"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd" for table "ggg_1_prt_aa"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd_3_prt_ee" for table "ggg_1_prt_aa_2_prt_dd"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd_3_prt_ff" for table "ggg_1_prt_aa_2_prt_dd"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_cc" for table "ggg_1_prt_bb"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_dd" for table "ggg_1_prt_bb"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_cc_3_prt_ee" for table "ggg_1_prt_bb_2_prt_cc"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_cc_3_prt_ff" for table "ggg_1_prt_bb_2_prt_cc"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_dd" for table "ggg_1_prt_bb"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_dd_3_prt_ee" for table "ggg_1_prt_bb_2_prt_dd"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_dd_3_prt_ff" for table "ggg_1_prt_bb_2_prt_dd"
 drop table ggg cascade;
@@ -587,12 +583,12 @@ start (date '2005-01-01')
   partition girls values ('F')
 );
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls" for table "rank"
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_1" for table "rank_1_prt_boys"
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_2" for table "rank_1_prt_boys"
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_3" for table "rank_1_prt_boys"
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_4" for table "rank_1_prt_boys"
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_5" for table "rank_1_prt_boys"
+NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls" for table "rank"
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_1" for table "rank_1_prt_girls"
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_2" for table "rank_1_prt_girls"
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_3" for table "rank_1_prt_girls"
@@ -675,20 +671,20 @@ end (date '2009-01-01')
 	    subpartition ee values ('4', '5', '6'))
 );
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd" for table "ggg_1_prt_aa"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_ee" for table "ggg_1_prt_aa"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd_3_prt_1" for table "ggg_1_prt_aa_2_prt_dd"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd_3_prt_2" for table "ggg_1_prt_aa_2_prt_dd"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd_3_prt_3" for table "ggg_1_prt_aa_2_prt_dd"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_ee" for table "ggg_1_prt_aa"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_ee_3_prt_1" for table "ggg_1_prt_aa_2_prt_ee"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_ee_3_prt_2" for table "ggg_1_prt_aa_2_prt_ee"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_ee_3_prt_3" for table "ggg_1_prt_aa_2_prt_ee"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_dd" for table "ggg_1_prt_bb"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_ee" for table "ggg_1_prt_bb"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_dd_3_prt_1" for table "ggg_1_prt_bb_2_prt_dd"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_dd_3_prt_2" for table "ggg_1_prt_bb_2_prt_dd"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_dd_3_prt_3" for table "ggg_1_prt_bb_2_prt_dd"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_ee" for table "ggg_1_prt_bb"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_ee_3_prt_1" for table "ggg_1_prt_bb_2_prt_ee"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_ee_3_prt_2" for table "ggg_1_prt_bb_2_prt_ee"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_ee_3_prt_3" for table "ggg_1_prt_bb_2_prt_ee"
@@ -923,12 +919,12 @@ partition boys values ('M'),
 partition girls values ('F')
 );
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls" for table "rank"
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_1" for table "rank_1_prt_boys"
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_2" for table "rank_1_prt_boys"
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_3" for table "rank_1_prt_boys"
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_4" for table "rank_1_prt_boys"
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_5" for table "rank_1_prt_boys"
+NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls" for table "rank"
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_1" for table "rank_1_prt_girls"
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_2" for table "rank_1_prt_girls"
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_3" for table "rank_1_prt_girls"
@@ -1198,9 +1194,9 @@ partition aa (subpartition cc, subpartition dd),
 partition bb (subpartition cc, subpartition dd)
 );
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_cc" for table "ggg_1_prt_aa"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd" for table "ggg_1_prt_aa"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_cc" for table "ggg_1_prt_bb"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_dd" for table "ggg_1_prt_bb"
 drop table ggg cascade;
@@ -1236,20 +1232,20 @@ end (date '2009-01-01')
        (subpartition dd values (1,2,3), subpartition ee values (4,5,6))
 );
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa" for table "ggg"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd" for table "ggg_1_prt_aa"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_ee" for table "ggg_1_prt_aa"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd_3_prt_1" for table "ggg_1_prt_aa_2_prt_dd"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd_3_prt_2" for table "ggg_1_prt_aa_2_prt_dd"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_dd_3_prt_3" for table "ggg_1_prt_aa_2_prt_dd"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_ee" for table "ggg_1_prt_aa"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_ee_3_prt_1" for table "ggg_1_prt_aa_2_prt_ee"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_ee_3_prt_2" for table "ggg_1_prt_aa_2_prt_ee"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_aa_2_prt_ee_3_prt_3" for table "ggg_1_prt_aa_2_prt_ee"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb" for table "ggg"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_dd" for table "ggg_1_prt_bb"
-NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_ee" for table "ggg_1_prt_bb"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_dd_3_prt_1" for table "ggg_1_prt_bb_2_prt_dd"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_dd_3_prt_2" for table "ggg_1_prt_bb_2_prt_dd"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_dd_3_prt_3" for table "ggg_1_prt_bb_2_prt_dd"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_ee" for table "ggg_1_prt_bb"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_ee_3_prt_1" for table "ggg_1_prt_bb_2_prt_ee"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_ee_3_prt_2" for table "ggg_1_prt_bb_2_prt_ee"
 NOTICE:  CREATE TABLE will create partition "ggg_1_prt_bb_2_prt_ee_3_prt_3" for table "ggg_1_prt_bb_2_prt_ee"
@@ -1484,12 +1480,12 @@ partition boys values ('M'),
 partition girls values ('F')
 );
 NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys" for table "rank2"
-NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls" for table "rank2"
 NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_1" for table "rank2_1_prt_boys"
 NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_2" for table "rank2_1_prt_boys"
 NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_3" for table "rank2_1_prt_boys"
 NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_4" for table "rank2_1_prt_boys"
 NOTICE:  CREATE TABLE will create partition "rank2_1_prt_boys_2_prt_5" for table "rank2_1_prt_boys"
+NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls" for table "rank2"
 NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_1" for table "rank2_1_prt_girls"
 NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_2" for table "rank2_1_prt_girls"
 NOTICE:  CREATE TABLE will create partition "rank2_1_prt_girls_2_prt_3" for table "rank2_1_prt_girls"
@@ -1529,7 +1525,7 @@ alter table hhh add partition cc end ('2010-01-01');
 NOTICE:  CREATE TABLE will create partition "hhh_1_prt_cc" for table "hhh"
 -- works - anonymous partition MPP-3350
 alter table hhh add partition end ('2010-02-01');
-NOTICE:  CREATE TABLE will create partition "hhh_1_prt_r1923969170" for table "hhh"
+NOTICE:  CREATE TABLE will create partition "hhh_1_prt_r1244790963" for table "hhh"
 -- MPP-3607 - ADD PARTITION with open intervals
 create table no_end1 (aa int, bb int) partition by range (bb)
 (partition foo start(3));
@@ -1762,18 +1758,18 @@ partition girls values ('F'),
 default partition neuter
 );
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls" for table "rank"
-NOTICE:  CREATE TABLE will create partition "rank_1_prt_neuter" for table "rank"
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_1" for table "rank_1_prt_boys"
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_2" for table "rank_1_prt_boys"
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_3" for table "rank_1_prt_boys"
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_4" for table "rank_1_prt_boys"
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_boys_2_prt_5" for table "rank_1_prt_boys"
+NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls" for table "rank"
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_1" for table "rank_1_prt_girls"
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_2" for table "rank_1_prt_girls"
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_3" for table "rank_1_prt_girls"
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_4" for table "rank_1_prt_girls"
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_girls_2_prt_5" for table "rank_1_prt_girls"
+NOTICE:  CREATE TABLE will create partition "rank_1_prt_neuter" for table "rank"
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_neuter_2_prt_1" for table "rank_1_prt_neuter"
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_neuter_2_prt_2" for table "rank_1_prt_neuter"
 NOTICE:  CREATE TABLE will create partition "rank_1_prt_neuter_2_prt_3" for table "rank_1_prt_neuter"
@@ -2348,17 +2344,29 @@ LINE 2: partition by range (i, j)
 -- should work
 insert into b values(1, '2008-06-11');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(1, '2008-06-11');
+                    ^
 insert into b values(11, '2009-08-24');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(11, '2009-08-24');
+                    ^
 insert into b values(25, '2010-01-22');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(25, '2010-01-22');
+                    ^
 insert into b values(90, '2011-05-04');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(90, '2011-05-04');
+                    ^
 -- shouldn't work
 insert into b values(1, '2019-01-01');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(1, '2019-01-01');
+                    ^
 insert into b values(91, '2008-05-05');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(91, '2008-05-05');
+                    ^
  
 select * from b_1_prt_1;
 ERROR:  relation "b_1_prt_1" does not exist
@@ -2396,37 +2404,67 @@ LINE 3: partition by range(n, t, s)
 -- should work
 insert into b values(1, 2000.99, '2007-01-01 00:00:00', 'AAA');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(1, 2000.99, '2007-01-01 00:00:00', 'AAA...
+                    ^
 insert into b values(2, 2000.99, '2007-01-01 00:00:00', 'BBB');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(2, 2000.99, '2007-01-01 00:00:00', 'BBB...
+                    ^
 insert into b values(3, 4000.95, '2007-01-01 00:00:00', 'AAA');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(3, 4000.95, '2007-01-01 00:00:00', 'AAA...
+                    ^
 insert into b values(6, 3000, '2007-02-02 15:30:00', 'BBC');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(6, 3000, '2007-02-02 15:30:00', 'BBC');
+                    ^
 insert into b values(6, 3000, '2007-02-02 15:30:00', 'CC');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(6, 3000, '2007-02-02 15:30:00', 'CC');
+                    ^
 insert into b values(6, 3000, '2007-02-02 16:00:00'::timestamp - 
 					'1 second'::interval, 'BBZZZZZZZZZZ');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(6, 3000, '2007-02-02 16:00:00'::timesta...
+                    ^
 -- should fail
 insert into b values(6, 3000, '2007-02-02 15:30:00', 'CCCCCCC');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(6, 3000, '2007-02-02 15:30:00', 'CCCCCC...
+                    ^
 insert into b values(4, 5000, '2007-01-01 12:00:00', 'BCC');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(4, 5000, '2007-01-01 12:00:00', 'BCC');
+                    ^
 insert into b values(5, 8000, '2007-01-01 12:00:00', 'ZZZ');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(5, 8000, '2007-01-01 12:00:00', 'ZZZ');
+                    ^
 insert into b values(6, 3000, '2007-02-02 16:00:00', 'ABZZZZZZZZZZ');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(6, 3000, '2007-02-02 16:00:00', 'ABZZZZ...
+                    ^
 insert into b values(6, 1000, '2007-02-02 16:00:00', 'ABZZZZZZZZZZ');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(6, 1000, '2007-02-02 16:00:00', 'ABZZZZ...
+                    ^
 insert into b values(6, 3000, '2006-02-02 16:00:00', 'ABZZZZZZZZZZ');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(6, 3000, '2006-02-02 16:00:00', 'ABZZZZ...
+                    ^
 insert into b values(6, 3000, '2007-02-02 00:00:00', 'A');
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(6, 3000, '2007-02-02 00:00:00', 'A');
+                    ^
 -- NULL tests
 insert into b default values;
 ERROR:  relation "b" does not exist
+LINE 1: insert into b default values;
+                    ^
 insert into b values(6, 3000, '2007-01-01 12:00:00', NULL);
 ERROR:  relation "b" does not exist
+LINE 1: insert into b values(6, 3000, '2007-01-01 12:00:00', NULL);
+                    ^
 drop table b;
 ERROR:  table "b" does not exist
 -- check that we detect subpartitions partitioning a column that is already
@@ -2440,23 +2478,23 @@ subpartition by hash(b) subpartitions 2
  start(100) end(1000)
 );
 NOTICE:  CREATE TABLE will create partition "a_1_prt_1" for table "a"
-NOTICE:  CREATE TABLE will create partition "a_1_prt_2" for table "a"
 NOTICE:  CREATE TABLE will create partition "a_1_prt_1_2_prt_1" for table "a_1_prt_1"
-NOTICE:  CREATE TABLE will create partition "a_1_prt_1_2_prt_2" for table "a_1_prt_1"
-NOTICE:  CREATE TABLE will create partition "a_1_prt_1_2_prt_3" for table "a_1_prt_1"
 NOTICE:  CREATE TABLE will create partition "a_1_prt_1_2_prt_1_3_prt_1" for table "a_1_prt_1_2_prt_1"
 NOTICE:  CREATE TABLE will create partition "a_1_prt_1_2_prt_1_3_prt_2" for table "a_1_prt_1_2_prt_1"
+NOTICE:  CREATE TABLE will create partition "a_1_prt_1_2_prt_2" for table "a_1_prt_1"
 NOTICE:  CREATE TABLE will create partition "a_1_prt_1_2_prt_2_3_prt_1" for table "a_1_prt_1_2_prt_2"
 NOTICE:  CREATE TABLE will create partition "a_1_prt_1_2_prt_2_3_prt_2" for table "a_1_prt_1_2_prt_2"
+NOTICE:  CREATE TABLE will create partition "a_1_prt_1_2_prt_3" for table "a_1_prt_1"
 NOTICE:  CREATE TABLE will create partition "a_1_prt_1_2_prt_3_3_prt_1" for table "a_1_prt_1_2_prt_3"
 NOTICE:  CREATE TABLE will create partition "a_1_prt_1_2_prt_3_3_prt_2" for table "a_1_prt_1_2_prt_3"
+NOTICE:  CREATE TABLE will create partition "a_1_prt_2" for table "a"
 NOTICE:  CREATE TABLE will create partition "a_1_prt_2_2_prt_1" for table "a_1_prt_2"
-NOTICE:  CREATE TABLE will create partition "a_1_prt_2_2_prt_2" for table "a_1_prt_2"
-NOTICE:  CREATE TABLE will create partition "a_1_prt_2_2_prt_3" for table "a_1_prt_2"
 NOTICE:  CREATE TABLE will create partition "a_1_prt_2_2_prt_1_3_prt_1" for table "a_1_prt_2_2_prt_1"
 NOTICE:  CREATE TABLE will create partition "a_1_prt_2_2_prt_1_3_prt_2" for table "a_1_prt_2_2_prt_1"
+NOTICE:  CREATE TABLE will create partition "a_1_prt_2_2_prt_2" for table "a_1_prt_2"
 NOTICE:  CREATE TABLE will create partition "a_1_prt_2_2_prt_2_3_prt_1" for table "a_1_prt_2_2_prt_2"
 NOTICE:  CREATE TABLE will create partition "a_1_prt_2_2_prt_2_3_prt_2" for table "a_1_prt_2_2_prt_2"
+NOTICE:  CREATE TABLE will create partition "a_1_prt_2_2_prt_3" for table "a_1_prt_2"
 NOTICE:  CREATE TABLE will create partition "a_1_prt_2_2_prt_3_3_prt_1" for table "a_1_prt_2_2_prt_3"
 NOTICE:  CREATE TABLE will create partition "a_1_prt_2_2_prt_3_3_prt_2" for table "a_1_prt_2_2_prt_3"
 -- MPP-3988: allow same column in multiple partitioning keys at

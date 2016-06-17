@@ -15,7 +15,7 @@
  *
  *
  * IDENTIFICATION
- *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_backup_archiver.c,v 1.142 2007/02/19 15:05:06 mha Exp $
+ *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_backup_archiver.c,v 1.152.2.1 2009/01/13 11:45:03 mha Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -65,6 +65,7 @@ static TocEntry *getTocEntryByDumpId(ArchiveHandle *AH, DumpId id);
 static void _moveAfter(ArchiveHandle *AH __attribute__((unused)), TocEntry *pos, TocEntry *te);
 static int	_discoverArchiveFormat(ArchiveHandle *AH);
 
+static int	RestoringToDB(ArchiveHandle *AH);
 static void dump_lo_buf(ArchiveHandle *AH);
 static void _write_msg(const char *modulename, const char *fmt, va_list ap);
 static void _die_horribly(ArchiveHandle *AH, const char *modulename, const char *fmt, va_list ap);
@@ -153,6 +154,12 @@ RestoreArchive(Archive *AHX, RestoreOptions *ropt)
 	 */
 	if (ropt->createDB && ropt->dropSchema)
 		die_horribly(AH, modulename, "-C and -c are incompatible options\n");
+	/*
+	 * -1 is not compatible with -C, because we can't create a database
+	 *  inside a transaction block.
+	 */
+	if (ropt->createDB && ropt->single_txn)
+		die_horribly(AH, modulename, "-C and -1 are incompatible options\n");
 
 	/*
 	 * -C is not compatible with -1, because we can't create a database inside
@@ -284,7 +291,7 @@ RestoreArchive(Archive *AHX, RestoreOptions *ropt)
 		 */
 		if (AH->currSchema)
 			free(AH->currSchema);
-		AH->currSchema = NULL;
+		AH->currSchema = strdup("");
 	}
 
 	/*
@@ -397,24 +404,25 @@ RestoreArchive(Archive *AHX, RestoreOptions *ropt)
 							  te->tag);
 
 						/*
-						 * If we have a copy statement, use it. As of V1.3,
-						 * these are separate to allow easy import from
-						 * withing a database connection. Pre 1.3 archives can
-						 * not use DB connections and are sent to output only.
-						 *
-						 * For V1.3+, the table data MUST have a copy
-						 * statement so that we can go into appropriate mode
-						 * with libpq.
+						 * If we have a copy statement, use it.
 						 */
 						if (te->copyStmt && strlen(te->copyStmt) > 0)
 						{
 							ahprintf(AH, "%s", te->copyStmt);
-							AH->writingCopyData = true;
+							AH->outputKind = OUTPUT_COPYDATA;
 						}
+						else
+							AH->outputKind = OUTPUT_OTHERDATA;
 
 						(*AH->PrintTocDataPtr) (AH, te, ropt);
 
-						AH->writingCopyData = false;
+						/*
+						 * Terminate COPY if needed.
+						 */
+						if (AH->outputKind == OUTPUT_COPYDATA &&
+							RestoringToDB(AH))
+							EndDBCopyMode(AH, te);
+						AH->outputKind = OUTPUT_SQLCMDS;
 
 						_enableTriggersIfNecessary(AH, te, ropt);
 					}
@@ -777,7 +785,7 @@ StartRestoreBlob(ArchiveHandle *AH, Oid oid)
 	/* Initialize the LO Buffer */
 	AH->lo_buf_used = 0;
 
-	ahlog(AH, 2, "restoring large object with OID %u\n", oid);
+	ahlog(AH, 1, "restoring large object with OID %u\n", oid);
 
 	if (AH->connection)
 	{
@@ -829,11 +837,8 @@ SortTocFromFile(Archive *AHX, RestoreOptions *ropt)
 {
 	ArchiveHandle *AH = (ArchiveHandle *) AHX;
 	FILE	   *fh;
-	char		buf[1024];
-	char	   *cmnt;
-	char	   *endptr;
-	DumpId		id;
-	TocEntry   *te;
+	char		buf[100];
+	bool		incomplete_line;
 	TocEntry   *tePrev;
 
 	/* Allocate space for the 'wanted' array, and init it */
@@ -846,11 +851,33 @@ SortTocFromFile(Archive *AHX, RestoreOptions *ropt)
 	/* Setup the file */
 	fh = fopen(ropt->tocFile, PG_BINARY_R);
 	if (!fh)
-		die_horribly(AH, modulename, "could not open TOC file: %s\n",
-					 strerror(errno));
+		die_horribly(AH, modulename, "could not open TOC file \"%s\": %s\n",
+					 ropt->tocFile, strerror(errno));
 
+	incomplete_line = false;
 	while (fgets(buf, sizeof(buf), fh) != NULL)
 	{
+		bool		prev_incomplete_line = incomplete_line;
+		int			buflen;
+		char	   *cmnt;
+		char	   *endptr;
+		DumpId		id;
+		TocEntry   *te;
+
+		/*
+		 * Some lines in the file might be longer than sizeof(buf).  This is
+		 * no problem, since we only care about the leading numeric ID which
+		 * can be at most a few characters; but we have to skip continuation
+		 * bufferloads when processing a long line.
+		 */
+		buflen = strlen(buf);
+		if (buflen > 0 && buf[buflen - 1] == '\n')
+			incomplete_line = false;
+		else
+			incomplete_line = true;
+		if (prev_incomplete_line)
+			continue;
+
 		/* Truncate line at comment, if any */
 		cmnt = strchr(buf, ';');
 		if (cmnt != NULL)
@@ -1010,7 +1037,14 @@ SetOutput(ArchiveHandle *AH, char *filename, int compression)
 	}
 
 	if (!AH->OF)
-		die_horribly(AH, modulename, "could not open output file: %s\n", strerror(errno));
+	{
+		if (filename)
+			die_horribly(AH, modulename, "could not open output file \"%s\": %s\n",
+						 filename, strerror(errno));
+		else
+			die_horribly(AH, modulename, "could not open output file: %s\n",
+						 strerror(errno));
+	}
 
 	return sav;
 }
@@ -1043,17 +1077,13 @@ ahprintf(ArchiveHandle *AH, const char *fmt,...)
 {
 	char	   *p = NULL;
 	va_list		ap;
-	int			bSize = strlen(fmt) + 256;		/* Should be enough */
+	int			bSize = strlen(fmt) + 256;		/* Usually enough */
 	int			cnt = -1;
 
 	/*
 	 * This is paranoid: deal with the possibility that vsnprintf is willing
-	 * to ignore trailing null
-	 */
-
-	/*
-	 * or returns > 0 even if string does not fit. It may be the case that it
-	 * returns cnt = bufsize
+	 * to ignore trailing null or returns > 0 even if string does not fit.
+	 * It may be the case that it returns cnt = bufsize.
 	 */
 	while (cnt < 0 || cnt >= (bSize - 1))
 	{
@@ -1114,27 +1144,26 @@ dump_lo_buf(ArchiveHandle *AH)
 	}
 	else
 	{
-		unsigned char *str;
-		size_t		len;
+		PQExpBuffer buf = createPQExpBuffer();
 
-		str = PQescapeBytea((const unsigned char *) AH->lo_buf,
-							AH->lo_buf_used, &len);
-		if (!str)
-			die_horribly(AH, modulename, "out of memory\n");
+		appendByteaLiteralAHX(buf,
+							  (const unsigned char *) AH->lo_buf,
+							  AH->lo_buf_used,
+							  AH);
 
 		/* Hack: turn off writingBlob so ahwrite doesn't recurse to here */
 		AH->writingBlob = 0;
-		ahprintf(AH, "SELECT lowrite(0, '%s');\n", str);
+		ahprintf(AH, "SELECT pg_catalog.lowrite(0, %s);\n", buf->data);
 		AH->writingBlob = 1;
 
-		free(str);
+		destroyPQExpBuffer(buf);
 	}
 	AH->lo_buf_used = 0;
 }
 
 
 /*
- *	Write buffer to the output file (usually stdout). This is user for
+ *	Write buffer to the output file (usually stdout). This is used for
  *	outputting 'restore' scripts etc. It is even possible for an archive
  *	format to create a custom output routine to 'fake' a restore if it
  *	wants to generate a script (see TAR output).
@@ -1186,7 +1215,7 @@ ahwrite(const void *ptr, size_t size, size_t nmemb, ArchiveHandle *AH)
 		 * connected then send it to the DB.
 		 */
 		if (RestoringToDB(AH))
-			return ExecuteSqlCommandBuf(AH, (void *) ptr, size * nmemb);		/* Always 1, currently */
+			return ExecuteSqlCommandBuf(AH, (const char *) ptr, size * nmemb);
 		else
 		{
 			res = fwrite((void *) ptr, size, nmemb, AH->OF);
@@ -1384,7 +1413,7 @@ WriteOffset(ArchiveHandle *AH, pgoff_t o, int wasSet)
 }
 
 int
-ReadOffset(ArchiveHandle *AH, pgoff_t *o)
+ReadOffset(ArchiveHandle *AH, pgoff_t * o)
 {
 	int			i;
 	int			off;
@@ -1569,12 +1598,17 @@ _discoverArchiveFormat(ArchiveHandle *AH)
 	{
 		wantClose = 1;
 		fh = fopen(AH->fSpec, PG_BINARY_R);
+		if (!fh)
+			die_horribly(AH, modulename, "could not open input file \"%s\": %s\n",
+						 AH->fSpec, strerror(errno));
 	}
 	else
+	{
 		fh = stdin;
-
-	if (!fh)
-		die_horribly(AH, modulename, "could not open input file: %s\n", strerror(errno));
+		if (!fh)
+			die_horribly(AH, modulename, "could not open input file: %s\n",
+						 strerror(errno));
+	}
 
 	cnt = fread(sig, 1, 5, fh);
 
@@ -1732,8 +1766,7 @@ _allocAH(const char *FileSpec, const ArchiveFormat fmt,
 	AH->mode = mode;
 	AH->compression = compression;
 
-	AH->pgCopyBuf = createPQExpBuffer();
-	AH->sqlBuf = createPQExpBuffer();
+	memset(&(AH->sqlparse), 0, sizeof(AH->sqlparse));
 
 	/* Open stdout with no compression for AH output handle */
 	AH->gzOut = 0;
@@ -2479,7 +2512,9 @@ _getObjectDescription(PQExpBuffer buf, TocEntry *te, ArchiveHandle *AH)
 		strcmp(type, "TABLE") == 0 ||
 		strcmp(type, "EXTERNAL TABLE") == 0 ||
 		strcmp(type, "FOREIGN TABLE") == 0 ||
-		strcmp(type, "TYPE") == 0)
+		strcmp(type, "TYPE") == 0 ||
+		strcmp(type, "TEXT SEARCH DICTIONARY") == 0 ||
+		strcmp(type, "TEXT SEARCH CONFIGURATION") == 0)
 	{
 		appendPQExpBuffer(buf, "%s ", type);
 		if (te->namespace && te->namespace[0])	/* is null pre-7.3 */
@@ -2502,10 +2537,11 @@ _getObjectDescription(PQExpBuffer buf, TocEntry *te, ArchiveHandle *AH)
 
 	/* objects named by just a name */
 	if (strcmp(type, "DATABASE") == 0 ||
-		strcmp(type, "SCHEMA") == 0 ||
 		strcmp(type, "FOREIGN DATA WRAPPER") == 0 ||
 		strcmp(type, "SERVER") == 0 ||
-		strcmp(type, "USER MAPPING") == 0)
+		strcmp(type, "USER MAPPING") == 0 ||
+		strcmp(type, "PROCEDURAL LANGUAGE") == 0 ||
+		strcmp(type, "SCHEMA") == 0)
 	{
 		appendPQExpBuffer(buf, "%s %s", type, fmtId(te->tag));
 		return;
@@ -2562,11 +2598,17 @@ _printTocEntry(ArchiveHandle *AH, TocEntry *te, RestoreOptions *ropt, bool isDat
 	/*
 	 * Avoid dumping the public schema, as it will already be created ...
 	 * unless we are using --clean mode, in which case it's been deleted and
-	 * we'd better recreate it.
+	 * we'd better recreate it.  Likewise for its comment, if any.
 	 */
-	if (!ropt->dropSchema &&
-		strcmp(te->desc, "SCHEMA") == 0 && strcmp(te->tag, "public") == 0)
-		return;
+	if (!ropt->dropSchema)
+	{
+		if (strcmp(te->desc, "SCHEMA") == 0 &&
+			strcmp(te->tag, "public") == 0)
+			return;
+		if (strcmp(te->desc, "COMMENT") == 0 &&
+			strcmp(te->tag, "SCHEMA public") == 0)
+			return;
+	}
 
 #if 0
 	/*
@@ -2722,6 +2764,7 @@ _printTocEntry(ArchiveHandle *AH, TocEntry *te, RestoreOptions *ropt, bool isDat
 			strcmp(te->desc, "OPERATOR") == 0 ||
 			strcmp(te->desc, "OPERATOR CLASS") == 0 ||
 			strcmp(te->desc, "OPERATOR FAMILY") == 0 ||
+			strcmp(te->desc, "PROCEDURAL LANGUAGE") == 0 ||
 			strcmp(te->desc, "SCHEMA") == 0 ||
 			strcmp(te->desc, "TABLE") == 0 ||
 			strcmp(te->desc, "EXTERNAL TABLE") == 0 ||
@@ -2731,7 +2774,9 @@ _printTocEntry(ArchiveHandle *AH, TocEntry *te, RestoreOptions *ropt, bool isDat
 			strcmp(te->desc, "SEQUENCE") == 0 ||
 			strcmp(te->desc, "FOREIGN DATA WRAPPER") == 0 ||
 			strcmp(te->desc, "SERVER") == 0 ||
-			strcmp(te->desc, "PROTOCOL") == 0)
+			strcmp(te->desc, "PROTOCOL") == 0 ||
+			strcmp(te->desc, "TEXT SEARCH DICTIONARY") == 0 ||
+			strcmp(te->desc, "TEXT SEARCH CONFIGURATION") == 0)
 		{
 			PQExpBuffer temp = createPQExpBuffer();
 
@@ -2747,7 +2792,6 @@ _printTocEntry(ArchiveHandle *AH, TocEntry *te, RestoreOptions *ropt, bool isDat
 				 strcmp(te->desc, "DEFAULT") == 0 ||
 				 strcmp(te->desc, "FK CONSTRAINT") == 0 ||
 				 strcmp(te->desc, "INDEX") == 0 ||
-				 strcmp(te->desc, "PROCEDURAL LANGUAGE") == 0 ||
 				 strcmp(te->desc, "RULE") == 0 ||
 				 strcmp(te->desc, "TRIGGER") == 0 ||
 				 strcmp(te->desc, "USER MAPPING") == 0)

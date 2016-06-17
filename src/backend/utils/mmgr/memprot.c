@@ -38,13 +38,15 @@
 #include "utils/vmem_tracker.h"
 #include "utils/session_state.h"
 #include "utils/gp_atomic.h"
+#include "utils/gp_alloc.h"
 
 #define SHMEM_OOM_TIME "last vmem oom time"
+#define MAX_REQUESTABLE_SIZE 0x7fffffff
 
 /*
  * Last OOM time of a segment. Maintained in shared memory.
  */
-volatile OOMTimeType* segmentOOMTime = 0;
+volatile OOMTimeType *segmentOOMTime = 0;
 
 /*
  * We don't report memory usage of current process multiple times
@@ -317,53 +319,86 @@ static void gp_failed_to_alloc(MemoryAllocationStatus ec, int en, int sz)
 	}
 }
 
-/* Reserves vmem from vmem tracker and allocates memory by calling malloc/calloc */
-static void *gp_malloc_internal(int64 sz1, int64 sz2, bool ismalloc)
+/*
+ * malloc the requested "size" and additional memory for metadata and store header and/or
+ * footer metadata information. Caller is in charge to update Vmem counter accordingly.
+ */
+static void *malloc_and_store_metadata(size_t size)
 {
-	int64 sz = sz1;
-	void *ret = NULL;
+	size_t malloc_size = UserPtrSize_GetVmemPtrSize(size);
+	void *malloc_pointer = malloc(malloc_size);
+	if (NULL == malloc_pointer)
+	{
+		/*
+		 * A NULL pointer from the underlying allocator will be returned as-is
+		 * and the caller is supposed to convert it to error or other ways it
+		 * sees fit.
+		 */
+		return NULL;
+	}
+	VmemPtr_Initialize((VmemHeader*) malloc_pointer, size);
+	return VmemPtrToUserPtr((VmemHeader*) malloc_pointer);
+}
 
-	if(!ismalloc)
-		sz *= sz2;
+/*
+ * realloc the requested "size" and additional memory for metadata and store header and/or
+ * footer metadata information. Caller is in charge to update Vmem counter accordingly.
+ */
+static void *realloc_and_store_metadata(void *usable_pointer, size_t new_usable_size)
+{
+	Assert(UserPtr_GetVmemPtr(usable_pointer)->checksum == VMEM_HEADER_CHECKSUM);
+	Assert(*VmemPtr_GetPointerToFooterChecksum(UserPtr_GetVmemPtr(usable_pointer)) == VMEM_FOOTER_CHECKSUM);
 
-	Assert(sz >=0 && sz <= 0x7fffffff);
+	void *realloc_pointer = realloc(UserPtr_GetVmemPtr(usable_pointer), UserPtrSize_GetVmemPtrSize(new_usable_size));
 
-	MemoryAllocationStatus stat = VmemTracker_ReserveVmem(sz);
+	if (NULL == realloc_pointer)
+	{
+		return NULL;
+	}
+	VmemPtr_Initialize((VmemHeader*) realloc_pointer, new_usable_size);
+	return VmemPtrToUserPtr((VmemHeader*) realloc_pointer);
+}
+
+/* Reserves vmem from vmem tracker and allocates memory by calling malloc/calloc */
+static void *gp_malloc_internal(int64 requested_size)
+{
+	void *usable_pointer = NULL;
+
+	Assert(requested_size > 0);
+	size_t size_with_overhead = UserPtrSize_GetVmemPtrSize(requested_size);
+
+	Assert(size_with_overhead >= 0 && size_with_overhead <= MAX_REQUESTABLE_SIZE);
+
+	MemoryAllocationStatus stat = VmemTracker_ReserveVmem(size_with_overhead);
 	if (MemoryAllocation_Success == stat)
 	{
-		if(ismalloc)
-		{
-			ret = malloc(sz);
-		}
-		else
-		{
-			ret = calloc(sz1, sz2);
-		}
+		usable_pointer = malloc_and_store_metadata(requested_size);
+		Assert(VmemPtr_GetUserPtrSize(UserPtr_GetVmemPtr(usable_pointer)) == requested_size);
 
 #ifdef USE_TEST_UTILS
-		if (gp_simex_init && gp_simex_run && gp_simex_class == SimExESClass_OOM && ret)
+		if (gp_simex_init && gp_simex_run && gp_simex_class == SimExESClass_OOM && usable_pointer)
 		{
 			SimExESSubClass subclass = SimEx_CheckInject();
 			if (subclass == SimExESSubClass_OOM_ReturnNull)
 			{
-				free(ret);
-				ret = NULL;
+				free(UserPtr_GetVmemPtr(usable_pointer));
+				usable_pointer = NULL;
 			}
 		}
 #endif
 
-		if(!ret)
+		if(!usable_pointer)
 		{
-			VmemTracker_ReleaseVmem(sz);
-			gp_failed_to_alloc(MemoryFailure_SystemMemoryExhausted, 0, sz);
+			VmemTracker_ReleaseVmem(size_with_overhead);
+			gp_failed_to_alloc(MemoryFailure_SystemMemoryExhausted, 0, size_with_overhead);
 
 			return NULL;
 		}
 
-		return ret;
+		return usable_pointer;
 	}
 
-	gp_failed_to_alloc(stat, 0, sz);
+	gp_failed_to_alloc(stat, 0, size_with_overhead);
 
 	return NULL;
 }
@@ -380,45 +415,33 @@ void *gp_malloc(int64 sz)
 
 	if(gp_mp_inited)
 	{
-		return gp_malloc_internal(sz, 0, true);
+		return gp_malloc_internal(sz);
 	}
 
-	ret = malloc(sz);
-	return ret;
-}
-
-/* Allocates a (sz1 * sz2) bytes of memory */
-void *gp_calloc(int64 sz1, int64 sz2)
-{
-	void *ret;
-
-	if(gp_mp_inited)
-	{
-		return gp_malloc_internal(sz1, sz2, false);
-	}
-
-	ret = calloc(sz1, sz2);
+	ret = malloc_and_store_metadata(sz);
 	return ret;
 }
 
 /* Reallocates memory, respecting vmem protection, if enabled */
-void *gp_realloc(void *ptr, int64 sz, int64 newsz)
+void *gp_realloc(void *ptr, int64 new_size)
 {
 	Assert(!gp_mp_inited || MemoryProtection_IsOwnerThread());
+	Assert(NULL != ptr);
 
 	void *ret = NULL;
 
 	if(!gp_mp_inited)
 	{
-		ret = realloc(ptr, newsz);
+		ret = realloc_and_store_metadata(ptr, new_size);
 		return ret;
 	}
 
-	int64 size_diff = (newsz - sz);
+	size_t old_size = UserPtr_GetUserPtrSize(ptr);
+	int64 size_diff = (new_size - old_size);
 
-	if(newsz <= sz || MemoryAllocation_Success == VmemTracker_ReserveVmem(size_diff))
+	if(new_size <= old_size || MemoryAllocation_Success == VmemTracker_ReserveVmem(size_diff))
 	{
-		ret = realloc(ptr, newsz);
+		ret = realloc_and_store_metadata(ptr, new_size);
 
 #ifdef USE_TEST_UTILS
 		if (gp_simex_init && gp_simex_run && gp_simex_class == SimExESClass_OOM && ret)
@@ -426,7 +449,7 @@ void *gp_realloc(void *ptr, int64 sz, int64 newsz)
 			SimExESSubClass subclass = SimEx_CheckInject();
 			if (subclass == SimExESSubClass_OOM_ReturnNull)
 			{
-				free(ret);
+				free(UserPtr_GetVmemPtr(ret));
 				ret = NULL;
 			}
 		}
@@ -434,11 +457,27 @@ void *gp_realloc(void *ptr, int64 sz, int64 newsz)
 
 		if(!ret)
 		{
-			Assert(0 < size_diff);
-			VmemTracker_ReleaseVmem(size_diff);
+			/*
+			 * There is no guarantee that realloc would not fail during a shrinkage.
+			 * But, we haven't touched Vmem at all for a shrinkage. So, nothing to undo.
+			 */
+			if (size_diff > 0)
+			{
+				VmemTracker_ReleaseVmem(size_diff);
+			}
 
-			gp_failed_to_alloc(MemoryFailure_SystemMemoryExhausted, 0, sz);
+			gp_failed_to_alloc(MemoryFailure_SystemMemoryExhausted, 0, new_size);
 			return NULL;
+		}
+
+		if (size_diff < 0)
+		{
+			/*
+			 * As there is no guarantee that a shrinkage during realloc would not fail,
+			 * we follow a lazy approach of adjusting VMEM during shrinkage. Upon a
+			 * successful realloc, we finally release a VMEM, which should virtually never fail.
+			 */
+			VmemTracker_ReleaseVmem(-1 * size_diff);
 		}
 
 		return ret;
@@ -448,11 +487,15 @@ void *gp_realloc(void *ptr, int64 sz, int64 newsz)
 }
 
 /* Frees memory and releases vmem accordingly */
-void gp_free2(void *ptr, int64 sz)
+void gp_free(void *user_pointer)
 {
 	Assert(!gp_mp_inited || MemoryProtection_IsOwnerThread());
+	Assert(NULL != user_pointer);
 
-	Assert(sz);
-	free(ptr);
-	VmemTracker_ReleaseVmem(sz);
+	void *malloc_pointer = UserPtr_GetVmemPtr(user_pointer);
+	size_t usable_size = VmemPtr_GetUserPtrSize((VmemHeader*) malloc_pointer);
+	Assert(usable_size > 0);
+	UserPtr_VerifyChecksum(user_pointer);
+	free(malloc_pointer);
+	VmemTracker_ReleaseVmem(UserPtrSize_GetVmemPtrSize(usable_size));
 }

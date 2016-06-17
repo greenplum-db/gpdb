@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/plannodes.h,v 1.90 2007/02/19 02:23:12 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/plannodes.h,v 1.99 2008/01/01 19:45:58 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -20,6 +20,8 @@
 #include "nodes/bitmapset.h"
 #include "nodes/primnodes.h"
 #include "storage/itemptr.h"
+
+typedef struct PartitionSelector PartitionSelector;
 
 typedef struct DirectDispatchInfo
 {
@@ -137,7 +139,7 @@ typedef struct PlannedStmt
 
 	List	   *invalItems;		/* other dependencies, as PlanInvalItems */
 
-	int			nCrossLevelParams;		/* number of PARAM_EXEC Params used */
+	int			nParamExec;		/* number of PARAM_EXEC Params used */
 
 	int			nMotionNodes;	/* number of Motion nodes in plan */
 
@@ -149,30 +151,9 @@ typedef struct PlannedStmt
 	 */
 	struct GpPolicy  *intoPolicy;
 
-	/*
-	 * GPDB: This allows the slice table to accompany the plan as it
-	 * moves around the executor.
-	 *
-	 * Currently, the slice table should not be installed on the QD.
-	 * Rather is it shipped to QEs as a separate parameter to MPPEXEC.
-	 * The implementation of MPPEXEC, which runs on the QEs, installs
-	 * the slice table in the plan as required there.
-	 */
-	Node	   *sliceTable;
-
 	/* What is the memory reserved for this query's execution? */
 	uint64		query_mem;
-
-	/* The overall memory consumption account (i.e., outside of an operator) */
-	MemoryAccount *memoryAccount;
-
-	/*
-	 * List of TupleDescNodes, one for each transient record type, when a
-	 * PlannedStmt is transferred from QD to QEs
-	 */
-	List	   *transientTypeRecords;
 } PlannedStmt;
-
 
 /*
  * Fetch the Plan associated with a SubPlan node in a completed PlannedStmt.
@@ -249,8 +230,6 @@ typedef struct Plan
 	Bitmapset  *extParam;
 	Bitmapset  *allParam;
 
-	int			nParamExec;		/* Also in PlannedStmt */
-
 	/*
 	 * MPP needs to keep track of the characteristics of flow of output
 	 * tuple of Plan nodes.
@@ -303,9 +282,6 @@ typedef struct Plan
 	 * How much memory (in KB) should be used to execute this plan node?
 	 */
 	uint64 operatorMemKB;
-
-	/* MemoryAccount to use for recording the memory usage of different plan nodes. */
-	MemoryAccount* memoryAccount;
 } Plan;
 
 /* ----------------
@@ -403,6 +379,8 @@ typedef struct Sequence
 {
 	Plan plan;
 	List *subplans;
+
+	PartitionSelector *static_selector;
 } Sequence;
 
 /* ----------------
@@ -768,7 +746,7 @@ typedef struct NestLoop
  *
  * The expected ordering of each mergeable column is described by a btree
  * opfamily OID, a direction (BTLessStrategyNumber or BTGreaterStrategyNumber)
- * and a nulls-first flag.  Note that the two sides of each mergeclause may
+ * and a nulls-first flag.	Note that the two sides of each mergeclause may
  * be of different datatypes, but they are ordered the same way according to
  * the common opfamily.  The operator in each mergeclause must be an equality
  * operator of the indicated opfamily.
@@ -777,9 +755,9 @@ typedef struct NestLoop
 typedef struct MergeJoin
 {
 	Join		join;
-	List	   *mergeclauses;		/* mergeclauses as expression trees */
+	List	   *mergeclauses;	/* mergeclauses as expression trees */
 	/* these are arrays, but have the same length as the mergeclauses list: */
-	Oid		   *mergeFamilies;		/* per-clause OIDs of btree opfamilies */
+	Oid		   *mergeFamilies;	/* per-clause OIDs of btree opfamilies */
 	int		   *mergeStrategies;	/* per-clause ordering (ASC or DESC) */
 	bool	   *mergeNullsFirst;	/* per-clause nulls ordering */
 	bool		unique_outer; /*CDB-OLAP true => outer is unique in merge key */
@@ -834,11 +812,14 @@ extern bool isDynamicScan(const Scan *scan);
  */
 typedef struct ShareInputScan
 {
-	Plan 		plan; /* The ShareInput */
+	Scan 		scan; /* The ShareInput */
 
 	ShareType 	share_type;
 	int 		share_id;
 	int 		driver_slice;   	/* slice id that will execute the underlying material/sort */
+	List	   *colnames;	/* output column names (string Value nodes) */
+	List	   *coltypes;	/* OID list of column type OIDs */
+	List	   *coltypmods; /* integer list of column typmods */
 } ShareInputScan;
 
 /* ----------------
@@ -1182,8 +1163,9 @@ typedef struct RowTrigger
  *
  * We track the objects on which a PlannedStmt depends in two ways:
  * relations are recorded as a simple list of OIDs, and everything else
- * is represented as a list of PlanInvalItems.  A PlanInvalItem identifies
- * a system catalog entry by cache ID and tuple TID.
+ * is represented as a list of PlanInvalItems.  A PlanInvalItem is designed
+ * to be used with the syscache invalidation mechanism, so it identifies a
+ * system catalog entry by cache ID and tuple TID.
  */
 typedef struct PlanInvalItem
 {
@@ -1205,7 +1187,7 @@ typedef struct PlanInvalItem
  * in a plan.
  * ----------------
  */
-typedef struct PartitionSelector
+struct PartitionSelector
 {
 	Plan		plan;
 	Oid 		relid;  				/* OID of target relation */
@@ -1221,6 +1203,6 @@ typedef struct PartitionSelector
 	List		*staticPartOids;    	/* list of statically selected parts */
 	List		*staticScanIds;     	/* scan ids used to propagate statically selected part oids */
 
-} PartitionSelector;
+};
 
 #endif   /* PLANNODES_H */

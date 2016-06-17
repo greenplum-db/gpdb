@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/optimizer/planner.h,v 1.37 2007/02/19 07:03:34 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/optimizer/planner.h,v 1.44 2008/01/01 19:45:58 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -27,13 +27,10 @@ extern PGDLLIMPORT planner_hook_type planner_hook;
 
 extern ParamListInfo PlannerBoundParamList;	 /* current boundParams */
 
-extern PlannedStmt *planner(Query *parse,
-							int cursorOptions,
-							ParamListInfo boundParams);
-
-extern PlannedStmt *standard_planner(Query *parse,
-									 int cursorOptions,
-									 ParamListInfo boundParams);
+extern PlannedStmt *planner(Query *parse, int cursorOptions,
+		ParamListInfo boundParams);
+extern PlannedStmt *standard_planner(Query *parse, int cursorOptions,
+				 ParamListInfo boundParams);
 
 extern Plan *subquery_planner(PlannerGlobal *glob,
 							  Query *parse,
@@ -42,12 +39,12 @@ extern Plan *subquery_planner(PlannerGlobal *glob,
 							  PlannerInfo **subroot,
 							  PlannerConfig *config);
 
-extern bool choose_hashed_grouping(PlannerInfo *root, 
-								   double tuple_fraction,
-								   Path *cheapest_path, 
+extern bool choose_hashed_grouping(PlannerInfo *root,
+								   double tuple_fraction, double limit_tuples,
+								   Path *cheapest_path,
 								   Path *sorted_path,
 								   Oid *groupOperators, int numGroupOps,
-								   double dNumGroups, 
+								   double dNumGroups,
 								   AggClauseCounts *agg_counts);
 
 #endif   /* PLANNER_H */

@@ -18,6 +18,7 @@
 #include "catalog/pg_partition_encoding.h"
 #include "catalog/pg_partition_rule.h"
 #include "cdb/cdbpartition.h"
+#include "cdb/partitionselection.h"
 #include "cdb/cdbvars.h"
 #include "commands/tablecmds.h"
 #include "nodes/makefuncs.h"

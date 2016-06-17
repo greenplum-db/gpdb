@@ -2,7 +2,7 @@
 
 `make -B` to build the extension for GPDB.
 
-`make -B -f Makefile.chkcfg` to build `s3chkcfg`.
+`make -B -f Makefile.check` to build `gpcheckcloud`.
 
 ## Test
 

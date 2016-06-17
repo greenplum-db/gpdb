@@ -45,14 +45,13 @@ select 1 a, row_number() over (partition by 'a') union all (select 1 a , 2 b);
  1 |          2
 (2 rows)
 
--- This can preserve domain types, but we keep compatibility for now
--- See MPP-7509
+-- This should preserve domain types
 select pg_typeof(a) from (select 'a'::information_schema.sql_identifier a union all
 select 'b'::information_schema.sql_identifier)a;
-     pg_typeof     
--------------------
- character varying
- character varying
+             pg_typeof             
+-----------------------------------
+ information_schema.sql_identifier
+ information_schema.sql_identifier
 (2 rows)
 
 (select * from (

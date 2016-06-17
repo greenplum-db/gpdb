@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/elog.h,v 1.83 2007/01/05 22:19:59 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/utils/elog.h,v 1.90.2.2 2008/10/27 19:37:29 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -393,8 +393,8 @@ typedef struct ErrorData
 	bool		show_funcname;	/* true to force funcname inclusion */
     bool        omit_location;  /* GPDB: don't add filename:line# and stack trace */
     bool        fatal_return;   /* GPDB: true => return instead of proc_exit() */
-	bool		hide_stmt;		/* true to prevent STATEMENT: inclusion */
 	bool		send_alert;		/* GPDB: send e-mail alert and/or SNMP trap/inform */
+	bool		hide_stmt;		/* true to prevent STATEMENT: inclusion */
 	const char *filename;		/* __FILE__ of ereport() call */
 	int			lineno;			/* __LINE__ of ereport() call */
 	const char *funcname;		/* __func__ of ereport() call */

@@ -1,8 +1,14 @@
 # ----------
-# The first group of parallel test
-# $PostgreSQL: pgsql/src/test/regress/parallel_schedule,v 1.39 2007/02/09 03:35:35 tgl Exp $
+# $PostgreSQL: pgsql/src/test/regress/parallel_schedule,v 1.46 2007/11/24 19:49:23 darcy Exp $
+#
+# By convention, we put no more than twenty tests in any one parallel group;
+# this limits the number of connections needed to run the tests.
 # ----------
-test: boolean char name varchar text int2 int4 int8 oid float4 float8 bit numeric uuid
+
+# ----------
+# The first group of parallel tests
+# ----------
+test: boolean char name varchar text int2 int4 int8 oid float4 float8 bit numeric txid uuid enum money
 
 # Depends on things setup during char, varchar and text
 test: strings
@@ -10,14 +16,16 @@ test: strings
 test: numerology
 
 # ----------
-# The second group of parallel test
+# The second group of parallel tests
 # ----------
-test: point lseg box path polygon circle date time timetz timestamp timestamptz interval abstime reltime tinterval inet comments oidjoins type_sanity opr_sanity
+test: point lseg box path polygon circle date time timetz timestamp timestamptz interval abstime reltime tinterval inet tstypes comments
 
-# Depends on point, lseg, box, path, polygon and circle
-test: geometry
-# Depends on interval, timetz, timestamp, timestamptz, reltime and abstime
-test: horology
+# ----------
+# Another group of parallel tests
+# geometry depends on point, lseg, box, path, polygon and circle
+# horology depends on interval, timetz, timestamp, timestamptz, reltime and abstime
+# ----------
+test: geometry horology oidjoins type_sanity opr_sanity
 
 # ----------
 # These four each depend on the previous one
@@ -37,7 +45,7 @@ test: create_function_2
 test: copy copyselect
 
 # ----------
-# The third group of parallel test
+# Another group of parallel tests
 # ----------
 test: constraints create_misc create_aggregate create_operator vacuum drop_if_exists
 
@@ -70,7 +78,7 @@ test: select
 ignore: random
 
 # ----------
-# The fourth group of parallel test
+# Another group of parallel tests
 # ----------
 test: select_into select_distinct select_distinct_on select_implicit select_having subselect union case join aggregates random portals arrays btree_index hash_index update delete lock
 
@@ -91,9 +99,9 @@ test: privileges
 test: misc
 
 # ----------
-# The fifth group of parallel test
+# Another group of parallel tests
 # ----------
-test: select_views portals_p2 cluster dependency guc
+test: select_views portals_p2 cluster dependency guc tsearch tsdicts
 
 # 'rules' test is disabled in GPDB. Maintaining the list of views in it is
 # too painful, and there are also errors because of cross-segment UPDATEs
@@ -109,10 +117,10 @@ test: select_views portals_p2 cluster dependency guc
 #test: foreign_key
 
 # ----------
-# The sixth group of parallel test
+# Another group of parallel tests
 # ----------
 # "plpgsql" cannot run concurrently with "rules"
-test: limit copy2 temp domain rangefuncs prepare without_oid conversion truncate alter_table sequence polymorphism rowtypes xml
+test: plancache limit copy2 temp domain rangefuncs prepare without_oid conversion truncate alter_table sequence polymorphism rowtypes xml
 
 # 83MERGE_FIXME: the largeobject test is temporarily disabled due to test errors
 # test: largeobject
@@ -137,3 +145,7 @@ test: limit copy2 temp domain rangefuncs prepare without_oid conversion truncate
 #test: tablespace
 test: variadic_parameters
 test: default_parameters
+
+# test workfiles compressed using zlib
+# 'zlib' utilizes fault injectors so it needs to be in a group by itself
+test: zlib

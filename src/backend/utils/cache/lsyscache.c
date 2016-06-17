@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/cache/lsyscache.c,v 1.148 2007/02/14 01:58:57 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/cache/lsyscache.c,v 1.155.2.1 2010/07/09 22:58:01 tgl Exp $
  *
  * NOTES
  *	  Eventually, the index information should go through here, too.
@@ -170,13 +170,13 @@ get_opfamily_member(Oid opfamily, Oid lefttype, Oid righttype,
  * (This indicates that the operator is not a valid ordering operator.)
  *
  * Note: the operator could be registered in multiple families, for example
- * if someone were to build a "reverse sort" opfamily.  This would result in
+ * if someone were to build a "reverse sort" opfamily.	This would result in
  * uncertainty as to whether "ORDER BY USING op" would default to NULLS FIRST
  * or NULLS LAST, as well as inefficient planning due to failure to match up
  * pathkeys that should be the same.  So we want a determinate result here.
  * Because of the way the syscache search works, we'll use the interpretation
  * associated with the opfamily with smallest OID, which is probably
- * determinate enough.  Since there is no longer any particularly good reason
+ * determinate enough.	Since there is no longer any particularly good reason
  * to build reverse-sort opfamilies, it doesn't seem worth expending any
  * additional effort on ensuring consistency.
  */
@@ -259,7 +259,7 @@ get_compare_function_for_ordering_op(Oid opno, Oid *cmpfunc, bool *reverse)
 									 opcintype,
 									 opcintype,
 									 BTORDER_PROC);
-		if (!OidIsValid(*cmpfunc))				/* should not happen */
+		if (!OidIsValid(*cmpfunc))		/* should not happen */
 			elog(ERROR, "missing support function %d(%u,%u) in opfamily %u",
 				 BTORDER_PROC, opcintype, opcintype, opfamily);
 		*reverse = (strategy == BTGreaterStrategyNumber);
@@ -343,7 +343,7 @@ get_ordering_op_for_equality_op(Oid opno, bool use_lhs_type)
 		if (aform->amopstrategy == BTEqualStrategyNumber)
 		{
 			/* Found a suitable opfamily, get matching ordering operator */
-			Oid		typid;
+			Oid			typid;
 
 			typid = use_lhs_type ? aform->amoplefttype : aform->amoprighttype;
 			result = get_opfamily_member(aform->amopfamily,
@@ -371,7 +371,7 @@ get_ordering_op_for_equality_op(Oid opno, bool use_lhs_type)
  *
  * The planner currently uses simple equal() tests to compare the lists
  * returned by this function, which makes the list order relevant, though
- * strictly speaking it should not be.  Because of the way syscache list
+ * strictly speaking it should not be.	Because of the way syscache list
  * searches are handled, in normal operation the result will be sorted by OID
  * so everything works fine.  If running with system index usage disabled,
  * the result ordering is unspecified and hence the planner might fail to
@@ -466,6 +466,7 @@ get_compatible_hash_operators(Oid opno,
 				result = true;
 				break;
 			}
+
 			/*
 			 * Get the matching single-type operator(s).  Failure probably
 			 * shouldn't happen --- it implies a bogus opfamily --- but
@@ -1678,6 +1679,35 @@ bool agg_has_prelim_or_invprelim_func(Oid aggid)
 	return has_prelimfunc || has_invprelimfunc;
 }
 
+/*
+ * get_rel_tablespace
+ *
+ *		Returns the pg_tablespace OID associated with a given relation.
+ *
+ * Note: InvalidOid might mean either that we couldn't find the relation,
+ * or that it is in the database's default tablespace.
+ */
+Oid
+get_rel_tablespace(Oid relid)
+{
+	HeapTuple	tp;
+
+	tp = SearchSysCache(RELOID,
+						ObjectIdGetDatum(relid),
+						0, 0, 0);
+	if (HeapTupleIsValid(tp))
+	{
+		Form_pg_class reltup = (Form_pg_class) GETSTRUCT(tp);
+		Oid			result;
+
+		result = reltup->reltablespace;
+		ReleaseSysCache(tp);
+		return result;
+	}
+	else
+		return InvalidOid;
+}
+
 
 /*
  * get_func_nargs
@@ -2257,35 +2287,6 @@ get_rel_relstorage(Oid relid)
 	return result;
 }
 
-/*
- * get_rel_tablespace
- *
- *		Returns the pg_tablespace OID associated with a given relation.
- *
- * Note: InvalidOid might mean either that we couldn't find the relation,
- * or that it is in the database's default tablespace.
- */
-Oid
-get_rel_tablespace(Oid relid)
-{
-	Oid			result = InvalidOid;
-	int			fetchCount;
-
-	result = caql_getoid_plus(
-			NULL,
-			&fetchCount,
-			NULL,
-			cql("SELECT reltablespace FROM pg_class "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(relid)));
-
-	if (!fetchCount)
-		return InvalidOid;
-
-	return result;
-}
-
-
 /*				---------- TYPE CACHE ----------						 */
 
 /*
@@ -2685,7 +2686,8 @@ get_typdefault(Oid typid)
 			datum = OidInputFunctionCall(type->typinput, strDefaultVal,
 										 getTypeIOParam(typeTuple), -1);
 			/* Build a Const node containing the value */
-			expr = (Node *) makeConst(typid, -1,
+			expr = (Node *) makeConst(typid,
+									  -1,
 									  type->typlen,
 									  datum,
 									  false,
@@ -2736,23 +2738,17 @@ getBaseTypeAndTypmod(Oid typid, int32 *typmod)
 	{
 		HeapTuple	tup;
 		Form_pg_type typTup;
-		cqContext  *pcqCtx;
-		
-		pcqCtx = caql_beginscan(
-				NULL,
-				cql("SELECT * FROM pg_type "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(typid)));
 
-		tup = caql_getnext(pcqCtx);
-
+		tup = SearchSysCache(TYPEOID,
+							 ObjectIdGetDatum(typid),
+							 0, 0, 0);
 		if (!HeapTupleIsValid(tup))
 			elog(ERROR, "cache lookup failed for type %u", typid);
 		typTup = (Form_pg_type) GETSTRUCT(tup);
 		if (typTup->typtype != TYPTYPE_DOMAIN)
 		{
 			/* Not a domain, so done */
-			caql_endscan(pcqCtx);
+			ReleaseSysCache(tup);
 			break;
 		}
 
@@ -2760,7 +2756,7 @@ getBaseTypeAndTypmod(Oid typid, int32 *typmod)
 		typid = typTup->typbasetype;
 		*typmod = typTup->typtypmod;
 
-		caql_endscan(pcqCtx);
+		ReleaseSysCache(tup);
 	}
 
 	return typid;
@@ -2864,6 +2860,16 @@ type_is_rowtype(Oid typid)
 }
 
 /*
+ * type_is_enum
+ *	  Returns true if the given type is an enum type.
+ */
+bool
+type_is_enum(Oid typid)
+{
+	return (get_typtype(typid) == TYPTYPE_ENUM);
+}
+
+/*
  * get_typ_typrelid
  *
  *		Given the type OID, get the typrelid (InvalidOid if not a complex
@@ -2872,21 +2878,22 @@ type_is_rowtype(Oid typid)
 Oid
 get_typ_typrelid(Oid typid)
 {
-	Oid			result = InvalidOid;
-	int			fetchCount;
+	HeapTuple	tp;
 
-	result = caql_getoid_plus(
-			NULL,
-			&fetchCount,
-			NULL,
-			cql("SELECT typrelid FROM pg_type "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(typid)));
+	tp = SearchSysCache(TYPEOID,
+						ObjectIdGetDatum(typid),
+						0, 0, 0);
+	if (HeapTupleIsValid(tp))
+	{
+		Form_pg_type typtup = (Form_pg_type) GETSTRUCT(tp);
+		Oid			result;
 
-	if (!fetchCount)
+		result = typtup->typrelid;
+		ReleaseSysCache(tp);
+		return result;
+	}
+	else
 		return InvalidOid;
-
-	return result;
 }
 
 /*
@@ -2929,29 +2936,21 @@ get_element_type(Oid typid)
  *
  *		Given the type OID, get the corresponding "true" array type.
  *		Returns InvalidOid if no array type can be found.
- *
  */
 Oid
 get_array_type(Oid typid)
 {
 	HeapTuple	tp;
 	Oid			result = InvalidOid;
-	cqContext  *pcqCtx;
 
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_type "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(typid)));
-
-	tp = caql_getnext(pcqCtx);
-
+	tp = SearchSysCache(TYPEOID,
+						ObjectIdGetDatum(typid),
+						0, 0, 0);
 	if (HeapTupleIsValid(tp))
 	{
 		result = ((Form_pg_type) GETSTRUCT(tp))->typarray;
+		ReleaseSysCache(tp);
 	}
-
-	caql_endscan(pcqCtx);
 	return result;
 }
 
@@ -3322,6 +3321,10 @@ get_attdistinct(Oid relid, AttrNumber attnum)
  * If the attribute type is pass-by-reference, the values referenced by
  * the values array are themselves palloc'd.  The palloc'd stuff can be
  * freed by calling free_attstatsslot.
+ *
+ * Note: at present, atttype/atttypmod aren't actually used here at all.
+ * But the caller must have the correct (or at least binary-compatible)
+ * type ID to pass to free_attstatsslot later.
  */
 extern bool get_attstatsslot_desc(TupleDesc tupdesc, HeapTuple statstuple,
 				 Oid atttype, int32 atttypmod,
@@ -3380,6 +3383,7 @@ get_attstatsslot_desc(TupleDesc tupdesc, HeapTuple statstuple,
 	Datum		val;
 	bool		isnull;
 	ArrayType  *statarray;
+	Oid			arrayelemtype;
 	int			narrayelem;
 	HeapTuple	typeTuple;
 	Form_pg_type typeForm;
@@ -3413,24 +3417,24 @@ get_attstatsslot_desc(TupleDesc tupdesc, HeapTuple statstuple,
 		 */
 		if (ARR_NDIM(statarray) > 0)
 		{
-			cqContext  *typcqCtx;
-
-			/* Need to get info about the array element type */
-			typcqCtx = caql_beginscan(
-					NULL,
-					cql("SELECT * FROM pg_type "
-						" WHERE oid = :1 ",
-						ObjectIdGetDatum(atttype)));
-
-			typeTuple = caql_getnext(typcqCtx);
-
+			/*
+			 * Need to get info about the array element type.  We look at the
+			 * actual element type embedded in the array, which might be only
+			 * binary-compatible with the passed-in atttype.  The info we
+			 * extract here should be the same either way, but deconstruct_array
+			 * is picky about having an exact type OID match.
+			 */
+			arrayelemtype = ARR_ELEMTYPE(statarray);
+			typeTuple = SearchSysCache(TYPEOID,
+									   ObjectIdGetDatum(arrayelemtype),
+									   0, 0, 0);
 			if (!HeapTupleIsValid(typeTuple))
-				elog(ERROR, "cache lookup failed for type %u", atttype);
+				elog(ERROR, "cache lookup failed for type %u", arrayelemtype);
 			typeForm = (Form_pg_type) GETSTRUCT(typeTuple);
 
 			/* Deconstruct array into Datum elements; NULLs not expected */
 			deconstruct_array(statarray,
-					atttype,
+					arrayelemtype,
 					typeForm->typlen,
 					typeForm->typbyval,
 					typeForm->typalign,
@@ -3451,7 +3455,7 @@ get_attstatsslot_desc(TupleDesc tupdesc, HeapTuple statstuple,
 				}
 			}
 
-			caql_endscan(typcqCtx);
+			ReleaseSysCache(typeTuple);
 		}
 		/*
 		 * Free statarray if it's a detoasted copy.

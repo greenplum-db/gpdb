@@ -74,7 +74,8 @@ SELECT a,b,c,substring(d for 30), length(d) from clstr_tst ORDER BY 1;
 -- Verify that foreign key link still works
 INSERT INTO clstr_tst (b, c) VALUES (1111, 'this should fail');
 
-SELECT conname FROM pg_constraint WHERE conrelid = 'clstr_tst'::regclass;
+SELECT conname FROM pg_constraint WHERE conrelid = 'clstr_tst'::regclass
+ORDER BY 1;
 
 
 SELECT relname, relkind,
@@ -123,7 +124,7 @@ INSERT INTO clstr_3 VALUES (1);
 CLUSTER clstr_2;
 
 CLUSTER clstr_1_pkey ON clstr_1;
-CLUSTER clstr_2_pkey ON clstr_2;
+CLUSTER clstr_2 USING clstr_2_pkey;
 SELECT * FROM clstr_1 UNION ALL
   SELECT * FROM clstr_2 UNION ALL
   SELECT * FROM clstr_3 ORDER BY 1;
@@ -154,8 +155,43 @@ INSERT INTO clstr_1 VALUES (1);
 CLUSTER clstr_1;
 SELECT * FROM clstr_1 ORDER BY 1;
 
+-- Test MVCC-safety of cluster. There isn't much we can do to verify the
+-- results with a single backend...
+
+CREATE TABLE clustertest (key int, distkey int) DISTRIBUTED BY (distkey);
+CREATE INDEX clustertest_pkey ON clustertest (key);
+
+INSERT INTO clustertest VALUES (10, 1);
+INSERT INTO clustertest VALUES (20, 2);
+INSERT INTO clustertest VALUES (30, 1);
+INSERT INTO clustertest VALUES (40, 2);
+INSERT INTO clustertest VALUES (50, 3);
+
+-- Use a transaction so that updates are not committed when CLUSTER sees 'em
+BEGIN;
+
+-- Test update where the old row version is found first in the scan
+UPDATE clustertest SET key = 100 WHERE key = 10;
+
+-- Test update where the new row version is found first in the scan
+UPDATE clustertest SET key = 35 WHERE key = 40;
+
+-- Test longer update chain 
+UPDATE clustertest SET key = 60 WHERE key = 50;
+UPDATE clustertest SET key = 70 WHERE key = 60;
+UPDATE clustertest SET key = 80 WHERE key = 70;
+
+SELECT key FROM clustertest;
+CLUSTER clustertest_pkey ON clustertest;
+SELECT key FROM clustertest;
+
+COMMIT;
+
+SELECT key FROM clustertest;
+
 -- clean up
 \c -
+DROP TABLE clustertest;
 DROP TABLE clstr_1;
 DROP TABLE clstr_2;
 DROP TABLE clstr_3;

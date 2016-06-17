@@ -115,7 +115,7 @@ bmbuild(PG_FUNCTION_ARGS)
 	_bitmap_init_buildstate(index, &bmstate);
 
 	/* do the heap scan */
-	reltuples = IndexBuildScan(heap, index, indexInfo,
+	reltuples = IndexBuildScan(heap, index, indexInfo, false,
 							  bmbuildCallback, (void *)&bmstate);
 	/* clean up the build state */
 	_bitmap_cleanup_buildstate(index, &bmstate);

@@ -17,7 +17,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/prep/preptlist.c,v 1.86 2007/02/19 07:03:30 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/prep/preptlist.c,v 1.88 2008/01/01 19:45:50 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -39,11 +39,13 @@
 #include "parser/parse_relation.h"
 #include "utils/lsyscache.h"
 
+
 static List *expand_targetlist(List *tlist, int command_type,
 				  Index result_relation, List *range_table);
-static List * supplement_simply_updatable_targetlist(DeclareCursorStmt *stmt,
+static List *supplement_simply_updatable_targetlist(DeclareCursorStmt *stmt,
 													 List *range_table,
 													 List *tlist);
+
 
 /*
  * preprocess_targetlist
@@ -338,7 +340,7 @@ expand_targetlist(List *tlist, int command_type,
 					if (!att_tup->attisdropped)
 					{
 						new_expr = (Node *) makeConst(atttype,
-								                      -1,
+													  -1,
 													  att_tup->attlen,
 													  (Datum) 0,
 													  true,		/* isnull */
@@ -355,11 +357,11 @@ expand_targetlist(List *tlist, int command_type,
 					{
 						/* Insert NULL for dropped column */
 						new_expr = (Node *) makeConst(INT4OID,
-								                      -1,
+													  -1,
 													  sizeof(int32),
 													  (Datum) 0,
 													  true,		/* isnull */
-													  true /* byval */);
+													  true /* byval */ );
 					}
 					break;
 				case CMD_UPDATE:
@@ -375,11 +377,11 @@ expand_targetlist(List *tlist, int command_type,
 					{
 						/* Insert NULL for dropped column */
 						new_expr = (Node *) makeConst(INT4OID,
+													  -1,
 													  sizeof(int32),
 													  (Datum) 0,
 													  true,		/* isnull */
-													  true /* byval */,
-													  -1);
+													  true /* byval */ );
 					}
 					break;
 				default:
@@ -432,11 +434,12 @@ expand_targetlist(List *tlist, int command_type,
 /*
  * supplement_simply_updatable_targetlist
  * 
- * For a simply updatable cursor, we supplement the targetlist with junk metadata for
- * gp_segment_id, ctid, and tableoid. The handling of a CURRENT OF invocation will rely
- * on this junk information during its constant folding. Thus, in a nutshell, it is the 
- * responsibility of this routine to ensure whatever information needed to uniquely
- * identify the currently positioned tuple is available in the tuple itself.
+ * For a simply updatable cursor, we supplement the targetlist with junk
+ * metadata for gp_segment_id, ctid, and tableoid. The handling of a CURRENT OF
+ * invocation will rely on this junk information, in execCurrentOf(). Thus, in
+ * a nutshell, it is the responsibility of this routine to ensure whatever
+ * information needed to uniquely identify the currently positioned tuple is
+ * available in the tuple itself.
  */
 static List *
 supplement_simply_updatable_targetlist(DeclareCursorStmt *stmt, List *range_table, List *tlist) 

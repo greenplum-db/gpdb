@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/hash/hashsearch.c,v 1.48 2007/01/30 01:33:36 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/hash/hashsearch.c,v 1.51 2008/01/01 19:45:46 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -82,8 +82,7 @@ _hash_readnext(Relation rel,
 	CHECK_FOR_INTERRUPTS();
 	if (BlockNumberIsValid(blkno))
 	{
-		*bufp = _hash_getbuf(rel, blkno, HASH_READ);
-		_hash_checkpage(rel, *bufp, LH_OVERFLOW_PAGE);
+		*bufp = _hash_getbuf(rel, blkno, HASH_READ, LH_OVERFLOW_PAGE);
 		*pagep = BufferGetPage(*bufp);
 		*opaquep = (HashPageOpaque) PageGetSpecialPointer(*pagep);
 	}
@@ -107,8 +106,8 @@ _hash_readprev(Relation rel,
 	CHECK_FOR_INTERRUPTS();
 	if (BlockNumberIsValid(blkno))
 	{
-		*bufp = _hash_getbuf(rel, blkno, HASH_READ);
-		_hash_checkpage(rel, *bufp, LH_BUCKET_PAGE | LH_OVERFLOW_PAGE);
+		*bufp = _hash_getbuf(rel, blkno, HASH_READ,
+							 LH_BUCKET_PAGE | LH_OVERFLOW_PAGE);
 		*pagep = BufferGetPage(*bufp);
 		*opaquep = (HashPageOpaque) PageGetSpecialPointer(*pagep);
 	}
@@ -198,8 +197,7 @@ _hash_first(IndexScanDesc scan, ScanDirection dir)
 	_hash_getlock(rel, 0, HASH_SHARE);
 
 	/* Read the metapage */
-	metabuf = _hash_getbuf(rel, HASH_METAPAGE, HASH_READ);
-	_hash_checkpage(rel, metabuf, LH_META_PAGE);
+	metabuf = _hash_getbuf(rel, HASH_METAPAGE, HASH_READ, LH_META_PAGE);
 	metap = (HashMetaPage) BufferGetPage(metabuf);
 
 	/*
@@ -228,8 +226,7 @@ _hash_first(IndexScanDesc scan, ScanDirection dir)
 	so->hashso_bucket_blkno = blkno;
 
 	/* Fetch the primary bucket page for the bucket */
-	buf = _hash_getbuf(rel, blkno, HASH_READ);
-	_hash_checkpage(rel, buf, LH_BUCKET_PAGE);
+	buf = _hash_getbuf(rel, blkno, HASH_READ, LH_BUCKET_PAGE);
 	page = BufferGetPage(buf);
 	opaque = (HashPageOpaque) PageGetSpecialPointer(page);
 	Assert(opaque->hasho_bucket == bucket);

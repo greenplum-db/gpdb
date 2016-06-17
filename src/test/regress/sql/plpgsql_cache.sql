@@ -5,16 +5,18 @@
 -- Testing various scenarios where plans will not be cached. 
 -- MPP-16204
 
+set client_min_messages = 'warning';
+drop table if exists cache_tab cascade;
+drop function if exists cache_test();
+drop function if exists cache_test(int);
+reset client_min_messages;
+
 --
 -- ************************************************************
 -- * Repro with drop table inside a function
 -- *    - Multiple executions should not raise an error 
 -- ************************************************************
 --
-drop table if exists cache_tab cascade;
-
-drop function if exists cache_test();
-
 create function cache_test() returns void as
 $$
 begin
@@ -56,17 +58,20 @@ create function cache_test(id int) returns int as $$
 declare 
 	v_int int;
 begin 
-	select c1 from cache_tab where c2 = id INTO v_int; 
+	select c1 from cache_tab where c2 = id::text INTO v_int;
 	return v_int;
 end;
 $$ language plpgsql READS SQL DATA;
 
 select * from cache_test(1);
 
+-- ALTER TABLE prints a NOTICE with unpredictable temp table's name
+set client_min_messages='warning';
 alter table cache_tab split default partition 
 start (11) inclusive
 end (20) exclusive 
 into (partition part2, partition def);
+reset client_min_messages;
 
 -- following should not fail. 
 select * from cache_test(2);
@@ -96,7 +101,7 @@ create function cache_test(var int) returns varchar as $$
 declare 
 	v_name varchar(20) DEFAULT 'zzzz';
 begin 
-	select name from cache_tab into v_name where id = var; 
+	select name from cache_tab into v_name where id = var;
 	return v_name;
 end;
 $$ language plpgsql READS SQL DATA;
@@ -299,10 +304,13 @@ $$ language plpgsql READS SQL DATA;
 
 select cache_test(100); 
 
+-- ALTER TABLE prints a NOTICE with unpredictable temp table's name
+set client_min_messages='warning';
 alter table cache_tab split default partition 
 start (11) inclusive
 end (20) exclusive 
 into (partition part2, partition def);
+reset client_min_messages;
 
 select cache_test(100); 
 
@@ -458,14 +466,6 @@ drop table cache_temp;
 -- ************************************************************
 --
 
--- start_matchsubs
---
--- m|ERROR:\s+relation with OID \d+ does not exist|
--- s|ERROR:\s+relation with OID \d+ does not exist|ERROR: relation with OID DUMMY does not exist|
---
--- end_matchsubs
-
-
 create table cache_tab(c1 int, c2 int) distributed randomly; 
 
 drop function if exists cache_test(count int); 
@@ -481,12 +481,16 @@ end;
 $$ language plpgsql MODIFIES SQL DATA;
 
 select cache_test(5);
+-- should return 5 rows
+select * from cache_tab;
 
 drop table if exists cache_tab;
 
 create table cache_tab(c1 int, c2 int) distributed randomly; 
 
 select cache_test(5);
+-- should return 5 rows
+select * from cache_tab;
 
 drop function cache_test(count int); 
 
@@ -504,111 +508,183 @@ begin
 end; 
 $$ language plpgsql MODIFIES SQL DATA;
 
--- this will fail
 select cache_test(5);
-
-set gp_plpgsql_clear_cache_always = on;
-
--- this will pass
-select cache_test(5);
+-- should return 1 row
+select * from cache_tab;
 
 drop table if exists cache_tab;
 
 drop function cache_test(count int) cascade;
 
---
 -- ************************************************************
--- * testing guc
+-- * A function that queries a table that's dropped and recreated
 -- ************************************************************
 --
+-- This used to fail on GPDB 4.3, but works after the PostgreSQL 8.3 merge,
+-- thanks to upstream plan cache invalidation. (The old GPDB code didn't
+-- force plans to be recomputed in the same transaction, only across
+-- transactions. There was a GUC called gp_plpgsql_clear_cache_always that
+-- you could set, and made this work, though. But that's no longer needed).
 
-drop table if exists cache_tab cascade;
+create table cache_tab (t text);
+insert into cache_tab values ('b');
 
-drop function if exists cache_test();
-
-create function cache_test() returns void as
+create function cache_test(p text) returns integer as
 $$
 begin
-	drop table if exists cache_tab;
-	create table cache_tab (id int) distributed randomly;
-	insert into cache_tab values (1);
+  return (select count(*) from cache_tab where t = p);
 end;
-$$ language plpgsql MODIFIES SQL DATA;
-
+$$ language plpgsql;
 
 BEGIN;
 
-select cache_test();
+-- Run the function. This caches the plan for the select inside the
+-- function.
+select cache_test('b');
 
--- this will fail
-select cache_test();
+-- Drop and re-create the table
+drop table cache_tab;
+create table cache_tab (t text);
+insert into cache_tab values ('b');
 
-COMMIT; 
+-- Re-run the function.
+select cache_test('b');
 
-set gp_plpgsql_clear_cache_always = on;
-
-select cache_test();
-
+COMMIT;
 
 drop table cache_tab;
+drop function cache_test(text);
 
-drop function cache_test();
-
---
 -- ************************************************************
--- * testing guc
+-- * A function that calls another function, and the other function is
+-- * dropped and recreated.
 -- ************************************************************
 --
-drop table if exists cache_tab cascade;
+-- This depends on plan cache invalidation support added in PostgreSQL 8.4.
 
-drop function if exists cache_test(); 
-
-set gp_plpgsql_clear_cache_always = off;
-create function cache_test() returns void as
-$$
-declare count int; 
+-- Create a function, and another function that calls the first one.
+create or replace function get_dummy_string(t text) returns text as $$
 begin
-	count := 3;
-	while count > 0 
-	loop
-		drop table if exists cache_tab;
-		create table cache_tab (id int) distributed randomly;
-		insert into cache_tab values (1);
-		count := count - 1;
-	end loop;
+  return 'foo ' || t;
 end;
-$$ language plpgsql MODIFIES SQL DATA;
+$$ language plpgsql;
 
--- this will fail
-select cache_test();
-
-set gp_plpgsql_clear_cache_always = on;
-
--- this will pass
-select cache_test();
-
-set gp_plpgsql_clear_cache_always = off;
-
-drop function cache_test();
-
-create function cache_test() returns void as
+create or replace function cache_test(t text) returns text as
 $$
-declare count int; 
 begin
-	count := 3;
-	while count > 0 
-	loop
-		set gp_plpgsql_clear_cache_always = on;
-		drop table if exists cache_tab;
-		create table cache_tab (id int) distributed randomly;
-		insert into cache_tab values (1);
-		count := count - 1;
-	end loop;
+  return get_dummy_string(t);
 end;
-$$ language plpgsql MODIFIES SQL DATA;
+$$ language plpgsql;
 
-select cache_test();
+-- Run the function, to warm the plan cache with the function
+-- call to get_dummy_string().
+select cache_test('');
 
+-- Drop and re-create get_dummy_string() function.
+drop function get_dummy_string(text);
+create or replace function get_dummy_string(t text) returns text as $$
+begin
+  return 'bar ' || t;
+end;
+$$ language plpgsql;
+
+-- Re-run the function
+select cache_test('');
+
+drop function get_dummy_string(text);
+drop function cache_test(text);
+
+-- ************************************************************
+-- * A function that calls another function, and the other function is
+-- * dropped and recreated.
+-- ************************************************************
+
+-- Create a function, and another function that calls the first one.
+create or replace function get_dummy_string(t text) returns text as $$
+begin
+  return 'foo ' || t;
+end;
+$$ language plpgsql;
+
+create or replace function cache_test(t text) returns text as
+$$
+begin
+  return get_dummy_string(t);
+end;
+$$ language plpgsql;
+
+
+-- Run the function, to warm the plan cache with the function
+-- call to get_dummy_string().
+select cache_test('');
+
+-- Also run the function as part of a query so that the function
+-- is executed in segments rather than the master. (Without ORCA.
+-- With ORCA, the query is planned differently and runs on the
+-- master anyway).
+create temporary table cache_tab (t text);
+insert into cache_tab values ('b');
+
+select cache_test(t) from cache_tab;
+
+-- Drop and re-create get_dummy_string() function.
+drop function get_dummy_string(text);
+create or replace function get_dummy_string(t text) returns text as $$
+begin
+  return 'bar' || t;
+end;
+$$ language plpgsql;
+
+-- Re-run the function
+select cache_test('');
+select cache_test(t) from cache_tab;
+
+drop function get_dummy_string(text);
+drop function cache_test(text);
 drop table cache_tab;
 
-drop function cache_test();
+-- ************************************************************
+-- * A function that calls another function, and the other function
+-- * is dropped and recreated. Same as previous tests, but the
+-- * function is executed IMMUTABLE, to test that plan cache
+-- * invalidation also works when the function is inlined.
+-- ************************************************************
+--
+-- To make sure that plan invalidation works also when the function
+-- is inlined.
+
+-- Create a function, and another function that calls the first one.
+create or replace function get_dummy_string(t text) returns text as $$
+begin
+  return 'foo ' || t;
+end;
+$$ language plpgsql IMMUTABLE;
+
+create or replace function cache_test(t text) returns text as
+$$
+begin
+  return get_dummy_string(t);
+end;
+$$ language plpgsql IMMUTABLE;
+
+create temporary table cache_tab (t text);
+insert into cache_tab values ('b');
+
+-- Run the function, to warm the plan cache.
+select cache_test('');
+select cache_test(t) from cache_tab;
+
+-- Drop and re-create get_dummy_string() function.
+drop function get_dummy_string(text);
+create or replace function get_dummy_string(t text) returns text as $$
+begin
+  return 'bar' || t;
+end;
+$$ language plpgsql;
+
+-- Re-run the function
+select cache_test('');
+select cache_test(t) from cache_tab;
+
+drop function get_dummy_string(text);
+drop function cache_test(text);

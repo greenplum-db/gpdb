@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/common/reloptions.c,v 1.3 2007/01/05 22:19:21 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/common/reloptions.c,v 1.8 2008/01/01 19:45:46 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -287,7 +287,7 @@ transformRelOptions(Datum oldOptions, List *defList,
 		else
 		{
 			text	   *t;
-			char *value;
+			const char *value;
 			Size		len;
 
 			if (ignoreOids && pg_strcasecmp(def->defname, "oids") == 0)
@@ -297,7 +297,6 @@ transformRelOptions(Datum oldOptions, List *defList,
 			 * Flatten the DefElem into a text string like "name=arg". If we
 			 * have just "name", assume "name=true" is meant.
 			 */
-
 			if (def->arg != NULL)
 				value = defGetString(def);
 			else
@@ -879,8 +878,8 @@ parseRelOptions(Datum options, int numkeywords, const char *const * keywords,
 				if (values[j] && validate)
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-							 errmsg("duplicate parameter \"%s\"",
-									keywords[j])));
+						  errmsg("parameter \"%s\" specified more than once",
+								 keywords[j])));
 				value_len = text_len - kw_len - 1;
 				value = (char *) palloc(value_len + 1);
 				memcpy(value, text_str + kw_len + 1, value_len);
@@ -1228,42 +1227,6 @@ parse_validate_reloptions(StdRdOptions *result, Datum reloptions,
 			pfree(values[i]);
 		}
 	}
-}
-
-/**
- *  This function parses the tidycat option.
- *  In the tidycat definition, the WITH clause contains "shared",
- *  "reloid", etc. Those are the tidycat option.
- */
-TidycatOptions*
-tidycat_reloptions(Datum reloptions)
-{
-	static const char *const default_keywords[] = {
-		/* tidycat option for table */
-		"relid",
-		"reltype_oid",
-		"toast_oid",
-		"toast_index",
-		"toast_reltype",
-
-		/* tidycat option for index */
-		"indexid",
-	};
-
-	TidycatOptions *result;
-	char	       *values[ARRAY_SIZE(default_keywords)];
-
-	parseRelOptions(reloptions, ARRAY_SIZE(default_keywords), default_keywords, values, false);
-
-	result = (TidycatOptions *) palloc(sizeof(TidycatOptions));
-	result->relid         = (values[0] != NULL) ? pg_atoi(values[0], sizeof(int32), 0):InvalidOid;
-	result->reltype_oid   = (values[1] != NULL) ? pg_atoi(values[1], sizeof(int32), 0):InvalidOid;
-	result->toast_oid     = (values[2] != NULL) ? pg_atoi(values[2], sizeof(int32), 0):InvalidOid;
-	result->toast_index   = (values[3] != NULL) ? pg_atoi(values[3], sizeof(int32), 0):InvalidOid;
-	result->toast_reltype = (values[4] != NULL) ? pg_atoi(values[4], sizeof(int32), 0):InvalidOid;
-	result->indexid       = (values[5] != NULL) ? pg_atoi(values[5], sizeof(int32), 0):InvalidOid;
-
-	return result;
 }
 
 void

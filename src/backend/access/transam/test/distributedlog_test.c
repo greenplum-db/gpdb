@@ -64,6 +64,7 @@ static MPP_20426(void **state, TransactionId nextXid)
 	/* This test is only for the case xid is not on the boundary. */
 	expect_value(SimpleLruReadPage, ctl, DistributedLogCtl);
 	expect_any(SimpleLruReadPage, pageno);
+	expect_any(SimpleLruReadPage, write_ok);
 	expect_value(SimpleLruReadPage, xid, nextXid);
 	will_return(SimpleLruReadPage, 0);
 

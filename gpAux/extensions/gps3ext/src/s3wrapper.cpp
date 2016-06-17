@@ -96,7 +96,9 @@ bool S3Reader::Init(int segid, int segnum, int chunksize) {
             break;
         }
         S3INFO("Got %d files to download", this->keylist->contents.size());
-        this->getNextDownloader();
+        if (!this->getNextDownloader()) {
+            return false;
+        }
     } catch (...) {
         S3ERROR("Caught an exception, aborting");
         return false;
@@ -106,7 +108,7 @@ bool S3Reader::Init(int segid, int segnum, int chunksize) {
     return true;
 }
 
-void S3Reader::getNextDownloader() {
+bool S3Reader::getNextDownloader() {
     if (this->filedownloader) {  // reset old downloader
         filedownloader->destroy();
         delete this->filedownloader;
@@ -115,19 +117,19 @@ void S3Reader::getNextDownloader() {
 
     if (this->contentindex >= this->keylist->contents.size()) {
         S3DEBUG("No more files to download");
-        return;
+        return true;
     }
 
     if (this->concurrent_num > 0) {
         this->filedownloader = new Downloader(this->concurrent_num);
     } else {
         S3ERROR("Failed to create filedownloader due to threadnum");
-        return;
+        return false;
     }
 
     if (!this->filedownloader) {
         S3ERROR("Failed to create filedownloader");
-        return;
+        return false;
     }
     BucketContent *c = this->keylist->contents[this->contentindex];
     string keyurl = this->getKeyURL(c->Key());
@@ -137,12 +139,14 @@ void S3Reader::getNextDownloader() {
                               &this->cred)) {
         delete this->filedownloader;
         this->filedownloader = NULL;
+        return false;
     } else {  // move to next file
         // for now, every segment downloads its assigned files(mod)
         // better to build a workqueue in case not all segments are available
         this->contentindex += this->segnum;
     }
-    return;
+
+    return true;
 }
 
 string S3Reader::getKeyURL(const string &key) {
@@ -174,7 +178,10 @@ bool S3Reader::TransferData(char *data, uint64_t &len) {
         // S3DEBUG("getlen is %lld", buflen);
         if (buflen == 0) {
             // change to next downloader
-            this->getNextDownloader();
+            if (!this->getNextDownloader()) {
+                return false;
+            }
+
             if (this->filedownloader) {  // download next file
                 S3INFO("Time to download new file");
                 goto RETRY;
@@ -302,7 +309,7 @@ S3Reader *reader_init(const char *url_with_options) {
             free(config_path);
         }
 
-        InitLog();
+        InitRemoteLog();
 
         S3Reader *reader = (S3Reader *)CreateExtWrapper(url);
 

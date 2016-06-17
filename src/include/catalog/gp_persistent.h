@@ -263,7 +263,7 @@ typedef FormData_gp_relation_node *Form_gp_relation_node;
  * gp_relation_node_index Index values for FormData_pg_index.
  */
 #define Index_gp_relation_node_index \
-   GpRelationNodeOidIndexId, GpRelationNodeRelationId, Natts_gp_relation_node_index, true, false, false, true, {Init_int2vector}, {Init_oidvector}, {Init_oidvector}, {Init_text}, {Init_text}
+	GpRelationNodeOidIndexId, GpRelationNodeRelationId, Natts_gp_relation_node_index, true, false, false, true, false, true, {Init_int2vector}, {Init_oidvector}, {Init_oidvector}, {Init_text}, {Init_text}
 
 #define IndKey_gp_relation_node_index \
     1, 2

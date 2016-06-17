@@ -22,8 +22,7 @@
 #include "utils/memutils.h"
 #include "cdb/cdbpartition.h"
 #include "cdb/cdbvars.h"
-
-#define DYNAMIC_TABLE_SCAN_NSLOTS 2
+#include "cdb/partitionselection.h"
 
 static inline void
 CleanupOnePartition(ScanState *scanState);
@@ -106,10 +105,7 @@ initNextTableToScan(DynamicTableScanState *node)
 		 * to return correct partition oid, we need to update
 		 * our tuple table slot's oid to reflect the partition oid.
 		 */
-		for (int i = 0; i < DYNAMIC_TABLE_SCAN_NSLOTS; i++)
-		{
-			scanState->ss_ScanTupleSlot[i].tts_tableOid = *pid;
-		}
+		scanState->ss_ScanTupleSlot->tts_tableOid = *pid;
 
 		scanState->ss_currentRelation = OpenScanRelationByOid(*pid);
 		Relation lastScannedRel = OpenScanRelationByOid(node->lastRelOid);
@@ -120,7 +116,7 @@ initNextTableToScan(DynamicTableScanState *node)
 
 		ExecAssignScanType(scanState, partTupDesc);
 
-		AttrNumber	*attMap = NULL;
+		AttrNumber	*attMap;
 
 		attMap = varattnos_map(lastTupDesc, partTupDesc);
 
@@ -347,10 +343,14 @@ ExecDynamicTableRestrPos(DynamicTableScanState *node)
 	MarkRestrNotAllowed((ScanState *)node);
 }
 
+/*
+ * XXX: We have backported the PostgreSQL patch that made these functions
+ * obsolete. The returned value isn't used for anything, so just return 0.
+ */
 int
 ExecCountSlotsDynamicTableScan(DynamicTableScan *node)
 {
-	return DYNAMIC_TABLE_SCAN_NSLOTS;
+	return 0;
 }
 
 void

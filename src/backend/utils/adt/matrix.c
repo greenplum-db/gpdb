@@ -127,7 +127,7 @@ matrix_transpose(PG_FUNCTION_ARGS)
 	
 	/* Otherwise we have a more complicated data reshuffle */
 	get_typlenbyvalalign(eltype, &typlen, &typbyval, &typalign);
-	elsize = att_align(typlen, typalign);
+	elsize = att_align_nominal(typlen, typalign);
 	data_m = ARR_DATA_PTR(m);
 	data_r = ARR_DATA_PTR(result);
 	for (i = 0; i < ARR_DIMS(m)[1]; i++)
@@ -139,7 +139,7 @@ matrix_transpose(PG_FUNCTION_ARGS)
 			{
 				char *seek = data_m + (elsize * index_m);
 				memcpy(data_r, seek, elsize);
-				data_r = (char *) att_align(data_r+elsize, typalign);
+				data_r = (char *) att_align_nominal(data_r+elsize, typalign);
 			}
 			else 
 			{
@@ -148,10 +148,10 @@ matrix_transpose(PG_FUNCTION_ARGS)
 				for (k = 0; k < index_m; k++) 
 				{
 					seek += VARSIZE(seek);
-					seek = (char*) att_align(seek, typalign);
+					seek = (char*) att_align_nominal(seek, typalign);
 				}
 				memcpy(data_r, seek, VARSIZE(seek));
-				data_r = (char *) att_align(data_r+VARSIZE(seek), typalign);
+				data_r = (char *) att_align_nominal(data_r+VARSIZE(seek), typalign);
 			}
 		}
 	}
@@ -208,7 +208,7 @@ Datum matrix_multiply(PG_FUNCTION_ARGS)
 	
 	/* datatype and size of input matrix */
 	get_typlenbyvalalign(eltype, &typlen, &typbyval, &typalign);
-	elsize = att_align(typlen, typalign);
+	elsize = att_align_nominal(typlen, typalign);
 	
 	/* Output array is always either int8[] or float8[] */
 	size = ARR_OVERHEAD_NONULLS(2);  /* overhead for two dimensional array */

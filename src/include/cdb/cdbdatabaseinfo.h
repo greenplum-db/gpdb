@@ -212,6 +212,7 @@ typedef struct DatabaseInfo
 extern DatabaseInfo *DatabaseInfo_Collect(
 	Oid 		database,
 	Oid 		defaultTablespace,
+	Snapshot	snapshot,
 	bool        collectGpRelationNodeInfo,
 	bool		collectAppendOnlyCatalogSegmentInfo,
 	bool		scanFileSystem);

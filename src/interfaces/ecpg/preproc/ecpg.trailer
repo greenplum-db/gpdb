@@ -917,7 +917,7 @@ ECPGDisconnect: SQL_DISCONNECT dis_name { $$ = $2; }
 		;
 
 dis_name: connection_object			{ $$ = $1; }
-		| CURRENT			{ $$ = make_str("\"CURRENT\""); }
+		| CURRENT_P			{ $$ = make_str("\"CURRENT\""); }
 		| ALL				{ $$ = make_str("\"ALL\""); }
 		| /* EMPTY */			{ $$ = make_str("\"CURRENT\""); }
 		;

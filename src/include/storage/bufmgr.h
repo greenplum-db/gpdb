@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/bufmgr.h,v 1.102 2007/01/05 22:19:57 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/storage/bufmgr.h,v 1.111 2008/01/01 19:45:58 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -24,6 +24,15 @@
 
 typedef void *Block;
 
+/* Possible arguments for GetAccessStrategy() */
+typedef enum BufferAccessStrategyType
+{
+	BAS_NORMAL,					/* Normal random access */
+	BAS_BULKREAD,				/* Large read-only scan (hint bit updates are
+								 * ok) */
+	BAS_VACUUM					/* VACUUM */
+} BufferAccessStrategyType;
+
 /* in globals.c ... this duplicates miscadmin.h */
 extern PGDLLIMPORT int NBuffers;
 
@@ -33,10 +42,8 @@ extern PGDLLIMPORT int NBuffers;
 extern bool memory_protect_buffer_pool;
 extern bool flush_buffer_pages_when_evicted;
 extern bool zero_damaged_pages;
-extern double bgwriter_lru_percent;
-extern double bgwriter_all_percent;
 extern int	bgwriter_lru_maxpages;
-extern int	bgwriter_all_maxpages;
+extern double bgwriter_lru_multiplier;
 
 extern PGDLLIMPORT bool IsUnderPostmaster; /* from utils/init/globals.c */
 #define ShouldMemoryProtectBufferPool() (memory_protect_buffer_pool && IsUnderPostmaster)
@@ -284,6 +291,9 @@ typedef struct MirroredLockBufMgrLocalVars
  * prototypes for functions in bufmgr.c
  */
 extern Buffer ReadBuffer(Relation reln, BlockNumber blockNum);
+extern Buffer ReadBufferWithStrategy(Relation reln, BlockNumber blockNum,
+					   BufferAccessStrategy strategy);
+extern Buffer ReadOrZeroBuffer(Relation reln, BlockNumber blockNum);
 extern Buffer ReadBuffer_Resync(SMgrRelation reln, BlockNumber blockNum,
 				  const char *relidstr);
 
@@ -293,8 +303,6 @@ extern void MarkBufferDirty(Buffer buffer);
 extern void IncrBufferRefCount(Buffer buffer);
 extern Buffer ReleaseAndReadBuffer(Buffer buffer, Relation relation,
 					 BlockNumber blockNum);
-extern Buffer KillAndReadBuffer(Buffer buffer, Relation relation,
-					 BlockNumber blockNum);
 extern void InitBufferPool(void);
 extern void InitBufferPoolAccess(void);
 extern void InitBufferPoolBackend(void);
@@ -302,11 +310,12 @@ extern char *ShowBufferUsage(void);
 extern void ResetBufferUsage(void);
 extern void AtEOXact_Buffers(bool isCommit);
 extern void PrintBufferLeakWarning(Buffer buffer);
-extern void FlushBufferPool(void);
+extern void CheckPointBuffers(int flags);
 extern BlockNumber BufferGetBlockNumber(Buffer buffer);
 extern BlockNumber RelationGetNumberOfBlocks(Relation relation);
 extern void RelationTruncate(Relation rel, BlockNumber nblocks, bool markPersistentAsPhysicallyTruncated);
 extern void FlushRelationBuffers(Relation rel);
+extern void FlushDatabaseBuffers(Oid dbid);
 extern void DropRelFileNodeBuffers(RelFileNode rnode, bool istemp,
 					   BlockNumber firstDelBlock);
 extern void DropDatabaseBuffers(Oid tbpoid, Oid dbid);
@@ -323,16 +332,17 @@ extern void UnlockBuffers(void);
 extern void LockBuffer(Buffer buffer, int mode);
 extern bool ConditionalLockBuffer(Buffer buffer);
 extern void LockBufferForCleanup(Buffer buffer);
+extern bool ConditionalLockBufferForCleanup(Buffer buffer);
 
 extern void AbortBufferIO(void);
 
 extern void BufmgrCommit(void);
-extern void BufferSync(void);
 extern void BgBufferSync(void);
 
 extern void AtProcExit_LocalBuffers(void);
 
 /* in freelist.c */
-extern void StrategyHintVacuum(bool vacuum_active);
+extern BufferAccessStrategy GetAccessStrategy(BufferAccessStrategyType btype);
+extern void FreeAccessStrategy(BufferAccessStrategy strategy);
 
 #endif

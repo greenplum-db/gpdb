@@ -19,6 +19,7 @@
 #include <curl/curl.h>
 
 #include "s3common.h"
+#include "s3url_parser.h"
 
 using std::vector;
 

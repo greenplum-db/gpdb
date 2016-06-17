@@ -88,6 +88,13 @@ extern void initStringInfoOfSize(StringInfo str, int bufsize);
 extern void resetStringInfo(StringInfo str);
 
 /*------------------------
+ * resetStringInfo
+ * Clears the current content of the StringInfo, if any. The
+ * StringInfo remains valid.
+ */
+extern void resetStringInfo(StringInfo str);
+
+/*------------------------
  * appendStringInfo
  * Format text data under the control of fmt (an sprintf-style format string)
  * and append it to whatever is already in str.  More space is allocated

@@ -1,3 +1,7 @@
+/*
+ * GPDB_83MERGE_FIXME: PostgreSQL 8.3 added "bounded" sort support to
+ * tuplesort.c. It has not been ported to tuplesort_mk.c yet
+ */
 /*-------------------------------------------------------------------------
  *
  * tuplesort.c
@@ -377,9 +381,14 @@ static bool is_sortstate_rwfile(Tuplesortstate_mk *state)
     return state->tapeset_state_file != NULL;
 }
 #ifdef USE_ASSERT_CHECKING
-static bool is_under_sort_ctxt(Tuplesortstate_mk *state)
+static bool is_under_sort_or_exec_ctxt(Tuplesortstate_mk *state)
 {
-    return CurrentMemoryContext == state->sortcontext;
+	/*
+	 * Check if this is executed under sortcontext (most cases) or under
+	 * es_query_cxt (when under a SharedInputScan)
+	 */
+	return CurrentMemoryContext == state->sortcontext ||
+			CurrentMemoryContext == state->ss->ps.state->es_query_cxt;
 }
 #endif
 
@@ -902,6 +911,7 @@ tuplesort_begin_index_mk(Relation indexRel,
             tupdesc, 0, 0);
    
     state->mkctxt.enforceUnique = enforceUnique;
+	state->mkctxt.indexname = RelationGetRelationName(indexRel);
     state->mkctxt.indexRel = indexRel;
     MemoryContextSwitchTo(oldcontext);
 
@@ -951,6 +961,35 @@ tuplesort_begin_datum_mk(ScanState * ss,
     MemoryContextSwitchTo(oldcontext);
 
     return state;
+}
+
+/*
+ * tuplesort_set_bound
+ *
+ *	Advise tuplesort that at most the first N result tuples are required.
+ *
+ * Must be called before inserting any tuples.	(Actually, we could allow it
+ * as long as the sort hasn't spilled to disk, but there seems no need for
+ * delayed calls at the moment.)
+ *
+ * This is a hint only. The tuplesort may still return more tuples than
+ * requested.
+ */
+void
+tuplesort_set_bound_mk(Tuplesortstate_mk *state, int64 bound)
+{
+	/*
+	 * GPDB_83_MERGE_FIXME: bounded sort not implemented for tuplesort_mk.
+	 * The top-N feature was added to tuplesort.c in PostgreSQL 8.3, but it
+	 * hasn't been ported over to tuplesort_mk.c yet. Or perhaps we should just
+	 * pick the valuable parts of tuplesort_mk.c into tuplesort.c, and get
+	 * rid of the separate tuplesort_mk.c?
+	 *
+	 * Until we do something about this, everything's still going to work,
+	 * but the top-N optimization won't apply when tuplesort_mk is used.
+	 * Note that the planner doesn't know about that, so cost estimates
+	 * involving sorting with tuplesort_mk and LIMIT might be way off.
+	 */
 }
 
 /*
@@ -1198,7 +1237,7 @@ grow_unsorted_array(Tuplesortstate_mk *state)
 static void
 puttuple_common(Tuplesortstate_mk *state, MKEntry *e)
 {
-    Assert(is_under_sort_ctxt(state));
+    Assert(is_under_sort_or_exec_ctxt(state));
 	state->totalNumTuples++;
 
     if(state->gpmon_pkt)
@@ -1373,7 +1412,7 @@ tuplesort_gettuple_common_pos(Tuplesortstate_mk *state, TuplesortPos_mk *pos,
     LogicalTape *work_tape;
     bool fOK;
 
-    Assert(is_under_sort_ctxt(state));
+    Assert(is_under_sort_or_exec_ctxt(state));
 
 	/*
 	 * No output if we are told to finish execution.
@@ -1558,14 +1597,14 @@ tuplesort_gettuple_common_pos(Tuplesortstate_mk *state, TuplesortPos_mk *pos,
 tuplesort_gettupleslot_mk(Tuplesortstate_mk *state, bool forward,
         TupleTableSlot *slot)
 {
-    return tuplesort_gettupleslot_pos_mk(state, &state->pos, forward, slot);
+    return tuplesort_gettupleslot_pos_mk(state, &state->pos, forward, slot, state->sortcontext);
 }
 
     bool
 tuplesort_gettupleslot_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *pos,
-        bool forward, TupleTableSlot *slot)
+        bool forward, TupleTableSlot *slot, MemoryContext mcontext)
 {
-    MemoryContext oldcontext = MemoryContextSwitchTo(state->sortcontext);
+    MemoryContext oldcontext = MemoryContextSwitchTo(mcontext);
     MKEntry	e; 
 
     bool should_free = false;
@@ -1692,7 +1731,7 @@ inittapes_mk(Tuplesortstate_mk *state, const char* rwfile_prefix)
     int 		j;
     long		tapeSpace;
 
-    Assert(is_under_sort_ctxt(state));
+    Assert(is_under_sort_or_exec_ctxt(state));
 
     /* Compute number of tapes to use: merge order plus 1 */
     maxTapes = tuplesort_merge_order(state->memAllowed) + 1;
@@ -2296,7 +2335,7 @@ dumptuples_mk(Tuplesortstate_mk *state, bool alltuples)
     LogicalTape *lt = NULL;
     MKEntry e;
 
-    Assert(is_under_sort_ctxt(state));
+    Assert(is_under_sort_or_exec_ctxt(state));
 
     if(alltuples && !state->mkheap)
     {
@@ -2542,6 +2581,60 @@ tuplesort_restorepos_mk(Tuplesortstate_mk *state)
     tuplesort_restorepos_pos_mk(state, &state->pos);
 }
 
+
+/*
+ * tuplesort_explain - produce a line of information for EXPLAIN ANALYZE
+ *
+ * This can be called after tuplesort_performsort() finishes to obtain
+ * printable summary information about how the sort was performed.
+ *
+ * The result is a palloc'd string.
+ */
+char *
+tuplesort_explain_mk(Tuplesortstate_mk *state)
+{
+	char	   *result = (char *) palloc(100);
+	long		spaceUsed;
+
+	/*
+	 * Note: it might seem we should print both memory and disk usage for a
+	 * disk-based sort.  However, the current code doesn't track memory space
+	 * accurately once we have begun to return tuples to the caller (since we
+	 * don't account for pfree's the caller is expected to do), so we cannot
+	 * rely on availMem in a disk sort.  This does not seem worth the overhead
+	 * to fix.	Is it worth creating an API for the memory context code to
+	 * tell us how much is actually used in sortcontext?
+	 */
+	if (state->tapeset)
+		spaceUsed = LogicalTapeSetBlocks(state->tapeset);
+	else
+		spaceUsed = (MemoryContextGetCurrentSpace(state->sortcontext) + 1024) / 1024;
+
+	switch (state->status)
+	{
+		case TSS_SORTEDINMEM:
+			snprintf(result, 100,
+					 "Sort Method:  quicksort  Memory: %ldkB",
+					 spaceUsed);
+			break;
+		case TSS_SORTEDONTAPE:
+			snprintf(result, 100,
+					 "Sort Method:  external sort  Disk: %ldkB",
+					 spaceUsed);
+			break;
+		case TSS_FINALMERGE:
+			snprintf(result, 100,
+					 "Sort Method:  external merge  Disk: %ldkB",
+					 spaceUsed);
+			break;
+		default:
+			snprintf(result, 100, "sort still in progress");
+			break;
+	}
+
+	return result;
+}
+
 /*
  * Tape interface routines
  */
@@ -2706,7 +2799,7 @@ readtup_heap(Tuplesortstate_mk *state, TuplesortPos_mk *pos, MKEntry *e, Logical
     uint32 tuplen;
     size_t readSize;
 
-    Assert(is_under_sort_ctxt(state));
+    Assert(is_under_sort_or_exec_ctxt(state));
 
     MemSet(e, 0, sizeof(MKEntry));
     e->ptr = palloc(memtuple_size_from_uint32(len));
@@ -3392,7 +3485,7 @@ static void
 tuplesort_inmem_limit_insert(Tuplesortstate_mk *state, MKEntry *entry)
 {
     Assert(state->mkctxt.limit > 0);
-    Assert(is_under_sort_ctxt(state));
+    Assert(is_under_sort_or_exec_ctxt(state));
     Assert(!mke_is_empty(entry));
 
     Assert(state->status == TSS_INITIAL);
@@ -3451,7 +3544,7 @@ tuplesort_inmem_nolimit_insert(Tuplesortstate_mk *state, MKEntry *entry)
 {
 	Assert(state->status == TSS_INITIAL);
 	Assert(state->mkctxt.limit == 0);
-	Assert(is_under_sort_ctxt(state));
+	Assert(is_under_sort_or_exec_ctxt(state));
 	Assert(!mke_is_empty(entry));
 	Assert(state->entry_count < state->entry_allocsize);
 
@@ -3470,7 +3563,7 @@ static void tuplesort_heap_insert(Tuplesortstate_mk *state, MKEntry *e)
 {
     int ins;
     Assert(state->mkheap);
-    Assert(is_under_sort_ctxt(state));
+    Assert(is_under_sort_or_exec_ctxt(state));
 
     ins = mkheap_putAndGet_run(state->mkheap, e, state->currentRun);
     tupsort_cpfr(e, NULL, &state->mkctxt.lvctxt[mke_get_lv(e)]);
@@ -3497,7 +3590,7 @@ static void tuplesort_heap_insert(Tuplesortstate_mk *state, MKEntry *e)
 static void tuplesort_limit_sort(Tuplesortstate_mk *state)
 {
     Assert(state->mkctxt.limit > 0);
-    Assert(is_under_sort_ctxt(state));
+    Assert(is_under_sort_or_exec_ctxt(state));
 
     if(!state->mkheap)
     {

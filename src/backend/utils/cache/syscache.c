@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/cache/syscache.c,v 1.111 2007/02/14 01:58:57 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/cache/syscache.c,v 1.114 2008/01/01 19:45:53 momjian Exp $
  *
  * NOTES
  *	  These routines allow the parser/planner/executor to perform
@@ -35,6 +35,7 @@
 #include "catalog/pg_constraint.h"
 #include "catalog/pg_conversion.h"
 #include "catalog/pg_database.h"
+#include "catalog/pg_enum.h"
 #include "catalog/pg_language.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_opclass.h"
@@ -45,6 +46,11 @@
 #include "catalog/pg_proc.h"
 #include "catalog/pg_rewrite.h"
 #include "catalog/pg_statistic.h"
+#include "catalog/pg_ts_config.h"
+#include "catalog/pg_ts_config_map.h"
+#include "catalog/pg_ts_dict.h"
+#include "catalog/pg_ts_parser.h"
+#include "catalog/pg_ts_template.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_window.h"
 #include "catalog/pg_tidycat.h"
@@ -322,6 +328,28 @@ static const struct cachedesc cacheinfo[] = {
 		},
 		4
 	},
+	{EnumRelationId,			/* ENUMOID */
+		EnumOidIndexId,
+		1,
+		{
+			ObjectIdAttributeNumber,
+			0,
+			0,
+			0
+		},
+		256
+	},
+	{EnumRelationId,			/* ENUMTYPOIDNAME */
+		EnumTypIdLabelIndexId,
+		2,
+		{
+			Anum_pg_enum_enumtypid,
+			Anum_pg_enum_enumlabel,
+			0,
+			0
+		},
+		256
+	},
 	{IndexRelationId,					/* INDEXRELID */
 		IndexRelidIndexId,
 		1,
@@ -508,6 +536,105 @@ static const struct cachedesc cacheinfo[] = {
 			0
 		},
 		1024
+	},
+	{TSConfigMapRelationId,		/* TSCONFIGMAP */
+		TSConfigMapIndexId,
+		3,
+		{
+			Anum_pg_ts_config_map_mapcfg,
+			Anum_pg_ts_config_map_maptokentype,
+			Anum_pg_ts_config_map_mapseqno,
+			0
+		},
+		4
+	},
+	{TSConfigRelationId,		/* TSCONFIGNAMENSP */
+		TSConfigNameNspIndexId,
+		2,
+		{
+			Anum_pg_ts_config_cfgname,
+			Anum_pg_ts_config_cfgnamespace,
+			0,
+			0
+		},
+		16
+	},
+	{TSConfigRelationId,		/* TSCONFIGOID */
+		TSConfigOidIndexId,
+		1,
+		{
+			ObjectIdAttributeNumber,
+			0,
+			0,
+			0
+		},
+		16
+	},
+	{TSDictionaryRelationId,	/* TSDICTNAMENSP */
+		TSDictionaryNameNspIndexId,
+		2,
+		{
+			Anum_pg_ts_dict_dictname,
+			Anum_pg_ts_dict_dictnamespace,
+			0,
+			0
+		},
+		16
+	},
+	{TSDictionaryRelationId,	/* TSDICTOID */
+		TSDictionaryOidIndexId,
+		1,
+		{
+			ObjectIdAttributeNumber,
+			0,
+			0,
+			0
+		},
+		16
+	},
+	{TSParserRelationId,		/* TSPARSERNAMENSP */
+		TSParserNameNspIndexId,
+		2,
+		{
+			Anum_pg_ts_parser_prsname,
+			Anum_pg_ts_parser_prsnamespace,
+			0,
+			0
+		},
+		4
+	},
+	{TSParserRelationId,		/* TSPARSEROID */
+		TSParserOidIndexId,
+		1,
+		{
+			ObjectIdAttributeNumber,
+			0,
+			0,
+			0
+		},
+		4
+	},
+	{TSTemplateRelationId,		/* TSTEMPLATENAMENSP */
+		TSTemplateNameNspIndexId,
+		2,
+		{
+			Anum_pg_ts_template_tmplname,
+			Anum_pg_ts_template_tmplnamespace,
+			0,
+			0
+		},
+		16
+	},
+	{TSTemplateRelationId,		/* TSTEMPLATEOID */
+		TSTemplateOidIndexId,
+		1,
+		{
+			ObjectIdAttributeNumber,
+			0,
+			0,
+			0
+		},
+		16
 	},
 	{TypeRelationId,					/* TYPENAMENSP */
 		TypeNameNspIndexId,

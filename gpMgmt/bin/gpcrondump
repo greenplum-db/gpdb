@@ -29,37 +29,18 @@ try:
     from gppylib.gparray import GpArray
     from gppylib.gpparseopts import OptParser, OptChecker
     from gppylib.operations import Operation
-    from gppylib.operations.backup_utils import check_funny_chars_in_names, create_temp_file_from_list, expand_partitions_and_populate_filter_file, \
-                                                generate_files_filename, generate_pipes_filename, generate_schema_filename, get_backup_directory, \
-                                                get_latest_full_dump_timestamp, get_latest_full_ts_with_nbu, get_lines_from_file, remove_file_on_segments, \
-                                                validate_timestamp, verify_lines_in_file, write_lines_to_file, formatSQLString
-    from gppylib.operations.dump import CreateIncrementsFile, DeleteCurrentDump, DeleteOldestDumps, DumpConfig, DumpDatabase, DumpGlobal, DumpStats, \
-                                        MailDumpEvent, PostDumpDatabase, UpdateHistoryTable, VacuumDatabase, ValidateDatabaseExists, ValidateGpToolkit, \
-                                        ValidateSchemaExists, backup_cdatabase_file_with_nbu, backup_config_files_with_nbu, backup_dirty_file_with_nbu, \
-                                        backup_global_file_with_nbu, backup_statistics_file_with_nbu, backup_increments_file_with_ddboost, \
-                                        backup_increments_file_with_nbu, backup_partition_list_file_with_nbu, backup_report_file_with_ddboost, \
-                                        backup_report_file_with_nbu, backup_schema_file_with_ddboost, backup_schema_file_with_nbu, backup_state_files_with_nbu, \
-                                        filter_dirty_tables, generate_dump_timestamp, get_ao_partition_state, get_co_partition_state, get_dirty_heap_tables, \
-                                        get_dirty_tables, get_filter_file, get_include_schema_list_from_exclude_schema, get_last_operation_data, \
-                                        get_user_table_list_for_schema, update_filter_file, validate_current_timestamp, write_dirty_file, write_dirty_file_to_temp, \
-                                        write_last_operation_file, write_partition_list_file, write_state_file
+    from gppylib.operations.backup_utils import *
+    from gppylib.operations.dump import *
     from gppylib.operations.utils import DEFAULT_NUM_WORKERS
 except ImportError, e:
     sys.exit('Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 
 INJECT_ROLLBACK = False
 
+
 EXECNAME = 'gpcrondump'
 GPCRONDUMP_PID_FILE = 'gpcrondump.pid'
 FREE_SPACE_PERCENT = 10
-CATALOG_SCHEMA = [
-    'gp_toolkit',
-    'information_schema',
-    'pg_aoseg',
-    'pg_bitmapindex',
-    'pg_catalog',
-    'pg_toast'
-]
 
 logger = gplog.get_default_logger()
 conn = None
@@ -70,151 +51,92 @@ class GpCronDump(Operation):
     def __init__(self, options, args):
         if args:
             logger.warn("please note that some of the arguments (%s) aren't valid and will be ignored.", args)
-        if options.masterDataDirectory is None:
-            options.masterDataDirectory = gp.get_masterdatadir()
-        self.interactive = options.interactive
-        self.master_datadir = options.masterDataDirectory
-        self.master_port = self._get_master_port(self.master_datadir)
-        self.pgport = self._get_pgport()
+
+        self.context = Context(options)
         self.options_list = " ".join(sys.argv[1:])
+
+        self.interactive = options.interactive
         self.cur_host = socket.gethostname()
-
-        self.clear_dumps_only = options.clear_dumps_only
-        self.clear_dumps = options.clear_dumps
-        self.cleanup_date = options.cleanup_date
-        self.cleanup_total = options.cleanup_total
-        if not (self.clear_dumps_only or self.clear_dumps) and self.cleanup_date:
-            raise ExceptionNoStackTraceNeeded("Must supply -c or -o with --cleanup-date option")
-        elif not (self.clear_dumps_only or self.clear_dumps) and self.cleanup_total:
-            raise ExceptionNoStackTraceNeeded("Must supply -c or -o with --cleanup-total option")
-        elif (self.clear_dumps_only or self.clear_dumps) and not (self.cleanup_date or self.cleanup_total):
-            self.cleanup_total = '1'
-
-        self.post_script = options.post_script
-        self.dump_config = options.dump_config
-        self.history = options.history
         self.pre_vacuum = options.pre_vacuum
         self.post_vacuum = options.post_vacuum
         self.rollback = options.rollback
 
-        self.compress = options.compress
-        self.free_space_percent = options.free_space_percent
-        self.dump_schema = options.dump_schema
-        self.include_schema_file = options.include_schema_file
-        self.exclude_schema_file = options.exclude_schema_file
-        self.exclude_dump_schema = options.exclude_dump_schema
-        self.dump_databases = options.dump_databases
-        self.dump_global = options.dump_global
-        self.clear_catalog_dumps = options.clear_catalog_dumps
-        self.batch_default = options.batch_default
-        self.include_dump_tables = options.include_dump_tables
-        self.exclude_dump_tables = options.exclude_dump_tables
-        self.include_dump_tables_file = options.include_dump_tables_file
-        self.exclude_dump_tables_file = options.exclude_dump_tables_file
-        self.backup_dir = options.backup_dir
-        self.encoding = options.encoding
-        self.output_options = options.output_options
-        self.incremental = options.incremental
-        self.timestamp_key = options.timestamp_key
         self.list_backup_files = options.list_backup_files
-        self.ddboost_storage_unit = options.ddboost_storage_unit
         self.list_filter_tables = options.list_filter_tables
 
-        if options.local_dump_prefix:
-             self.dump_prefix = options.local_dump_prefix + "_"
-        else:
-            self.dump_prefix = options.local_dump_prefix
-
-        self.include_email_file = options.include_email_file
         self.email_details = None
-        self.dump_stats = options.dump_stats
-        self.ddboost_hosts = options.ddboost_hosts
-        self.ddboost_user = options.ddboost_user
-        self.ddboost_config_remove = options.ddboost_config_remove
-        self.ddboost_verify = options.ddboost_verify
-        self.ddboost_remote = options.ddboost_remote
-        self.ddboost_ping = options.ddboost_ping
-        self.ddboost_backupdir = options.ddboost_backupdir
-        self.ddboost_show_config = options.ddboost_show_config
         # This variable indicates whether we need to exit after verifying the DDBoost credentials
-        self.ddboost_verify_and_exit = False
-        # NetBackup params
-        self.netbackup_service_host = options.netbackup_service_host
-        self.netbackup_policy = options.netbackup_policy
-        self.netbackup_schedule = options.netbackup_schedule
-        self.netbackup_block_size = options.netbackup_block_size
-        self.netbackup_keyword = options.netbackup_keyword
-        if (self.netbackup_keyword is not None) and (len(self.netbackup_keyword) > 100):
-            raise Exception('NetBackup Keyword provided has more than max limit (100) characters. Cannot proceed with backup.')
+        self.context.ddboost_verify_and_exit = False
 
         # TODO: if action is 'append', wouldn't you expect a lack of input to result in [], as opposed to None?
-        if self.include_dump_tables is None: self.include_dump_tables = []
-        if self.exclude_dump_tables is None: self.exclude_dump_tables = []
-        if self.output_options is None: self.output_options = []
-        if self.ddboost_hosts is None: self.ddboost_hosts = []
-        if self.dump_schema is None: self.dump_schema = []
-        if self.exclude_dump_schema is None: self.exclude_dump_schema = []
+        if not self.context.ddboost_hosts: self.context.ddboost_hosts = []
 
+        if len(self.context.dump_databases) > 0:
+            self.context.dump_database = self.context.dump_databases[0]
+
+        self.include_email_file = options.include_email_file
         if options.report_dir:
             logger.warn("-y is a deprecacted option.  Report files are always generated with the backup set.")
 
-        if self.incremental and len(self.dump_databases) == 0:
+        if self.context.incremental and len(self.context.dump_databases) == 0:
             raise ExceptionNoStackTraceNeeded("Must supply -x <database name> with incremental option")
 
-        if len(self.dump_databases) > 0:
-            if self.incremental and len(self.dump_databases) > 1:
-                raise ExceptionNoStackTraceNeeded('multi-database backup is not supported with incremental backup: %s databases selected' % len(self.dump_databases))
-
-        if self.clear_dumps_only and self.incremental:
-            raise Exception('-o option cannot be selected with incremental backup')
-
-        if self.list_backup_files and not self.timestamp_key:
-            raise Exception('Must supply -K option when listing backup files')
-
-
-        if len(self.dump_databases) > 0:
-            if self.timestamp_key and len(self.dump_databases) > 1:
+        if len(self.context.dump_databases) > 1:
+            if self.context.incremental:
+                raise ExceptionNoStackTraceNeeded('multi-database backup is not supported with incremental backup: %s databases selected' % len(self.context.dump_databases))
+            if self.context.timestamp_key:
                 raise ExceptionNoStackTraceNeeded('multi-database backup is not supported with -K option')
 
-        if not (self.clear_dumps_only or bool(self.ddboost_hosts) or bool(self.ddboost_user) or
-                self.ddboost_config_remove or self.ddboost_show_config):
-            if len(self.dump_databases) == 0:
+        if self.context.clear_dumps_only and self.context.incremental:
+            raise Exception('-o option cannot be selected with incremental backup')
+
+        if not (self.context.clear_dumps_only or self.context.clear_dumps) and self.context.cleanup_date:
+            raise ExceptionNoStackTraceNeeded("Must supply -c or -o with --cleanup-date option")
+        elif not (self.context.clear_dumps_only or self.context.clear_dumps) and self.context.cleanup_total:
+            raise ExceptionNoStackTraceNeeded("Must supply -c or -o with --cleanup-total option")
+        elif (self.context.clear_dumps_only or self.context.clear_dumps) and not (self.context.cleanup_date or self.context.cleanup_total):
+            self.context.cleanup_total = '1'
+
+        if self.list_backup_files and not self.context.timestamp_key:
+            raise Exception('Must supply -K option when listing backup files')
+
+        if not (self.context.clear_dumps_only or bool(self.context.ddboost_hosts) or bool(self.context.ddboost_user) or 
+                self.context.ddboost_config_remove or self.context.ddboost_show_config):
+            if len(self.context.dump_databases) == 0:
                 if 'PGDATABASE' in os.environ:
-                    self.dump_databases = [os.environ['PGDATABASE']]
-                    logger.info("Setting dump database to value of $PGDATABASE which is %s" % self.dump_databases[0])
+                    self.context.dump_databases = [os.environ['PGDATABASE']]
+                    logger.info("Setting dump database to value of $PGDATABASE which is %s" % self.context.dump_databases[0])
                 else:
-                    if self.ddboost_verify is True:
+                    if self.context.ddboost_verify is True:
                         # We would expect to verify the credentials here and return some exit code,
                         # but __init__() should return None, not 'int' - hence we are forced to use
                         # some kind of flag
-                        self.ddboost_verify_and_exit = True
+                        self.context.ddboost_verify_and_exit = True
                     else:
                         raise ExceptionNoStackTraceNeeded("Must supply -x <database name> because $PGDATABASE is not set")
 
-        self.ddboost = options.ddboost
-
-        if self.ddboost_storage_unit and not self.ddboost and not self.only_ddboost_options():
+        if self.context.ddboost_storage_unit and not self.context.ddboost and not self.only_ddboost_options():
             raise Exception('Must specify --ddboost option together with the --ddboost-storage-unit')
 
-        if self.list_backup_files and (self.ddboost or bool(self.ddboost_verify) or bool(self.ddboost_hosts) or bool(self.ddboost_user) or bool(self.ddboost_config_remove)):
+        if self.list_backup_files and (self.context.ddboost or bool(self.context.ddboost_verify) or bool(self.context.ddboost_hosts) or bool(self.context.ddboost_user) or bool(self.context.ddboost_config_remove)):
             raise Exception('list backup files not supported with ddboost option')
 
-        if self.list_filter_tables and (not self.dump_prefix or not self.incremental):
+        if self.list_filter_tables and (not self.context.dump_prefix or not self.context.incremental):
             raise Exception('list filter tables option requires --prefix and --incremental')
 
         if self.include_email_file:
             self._validate_parse_email_File()
 
         # NetBackup params check
-        if self.netbackup_service_host or self.netbackup_policy or self.netbackup_schedule:
-            if self.netbackup_service_host is None:
+        if self.context.netbackup_service_host or self.context.netbackup_policy or self.context.netbackup_schedule:
+            if not self.context.netbackup_service_host:
                 raise Exception("NetBackup service hostname (--netbackup-service-host) param should be provided in order to use NetBackup")
-            if self.netbackup_policy is None:
+            if not self.context.netbackup_policy:
                 raise Exception("NetBackup policy name (--netbackup-policy) param should be provided in order to use NetBackup")
-            if self.netbackup_schedule is None:
+            if not self.context.netbackup_schedule:
                 raise Exception("NetBackup schedule name (--netbackup-schedule) param should be provided in order to use NetBackup")
 
-        if self.ddboost and self.netbackup_service_host:
+        if self.context.ddboost and self.context.netbackup_service_host:
             raise Exception('--ddboost is not supported with NetBackup')
 
         self.replicate = options.replicate
@@ -223,34 +145,34 @@ class GpCronDump(Operation):
         self.verbose = options.verbose
 
         # disk space checks
-        if self.free_space_percent and self.ddboost:
+        if self.context.free_space_percent and self.context.ddboost:
             raise Exception('-f option cannot be selected with ddboost')
 
-        if self.free_space_percent and self.incremental:
+        if self.context.free_space_percent and self.context.incremental:
             raise Exception('-f option cannot be selected with incremental backup')
 
-        if self.free_space_percent:
-            self.free_space_percent = int(self.free_space_percent)
+        if self.context.free_space_percent:
+            self.context.free_space_percent = int(self.context.free_space_percent)
         else:
-            self.free_space_percent = FREE_SPACE_PERCENT
+            self.context.free_space_percent = FREE_SPACE_PERCENT
 
-        if self.ddboost:
-            self.free_space_percent = None
+        if self.context.ddboost:
+            self.context.free_space_percent = None
             logger.info('Bypassing disk space checks due to DDBoost parameters')
-        elif self.incremental:
-            self.free_space_percent = None
+        elif self.context.incremental:
+            self.context.free_space_percent = None
             logger.info('Bypassing disk space checks for incremental backup')
         elif options.bypass_disk_check:
             logger.info("Bypassing disk space check as '-b' option is specified")
-            self.free_space_percent = None
+            self.context.free_space_percent = None
 
         #Check if backup_dir contains the absolute path
-        if self.backup_dir is not None:
-            if not os.path.isabs(self.backup_dir):
-                raise Exception("\"%s\" is not an absolute path. Please specify the absolute path where the backup files will be placed on each host." % self.backup_dir)
+        if self.context.backup_dir:
+            if not os.path.isabs(self.context.backup_dir):
+                raise Exception("\"%s\" is not an absolute path. Please specify the absolute path where the backup files will be placed on each host." % self.context.backup_dir)
 
-        if self.ddboost:
-            if (not self.replicate and self.max_streams is not None) or (self.replicate and self.max_streams is None):
+        if self.context.ddboost:
+            if (not self.replicate and self.max_streams) or (self.replicate and self.max_streams is None):
                 raise ExceptionNoStackTraceNeeded("--max-streams must be specified along with --replicate")
             if self.replicate:
                 try:
@@ -261,154 +183,148 @@ class GpCronDump(Operation):
                 # List of tuples (dbname, timestamp), to be replicated to remote
                 # Data Domain after they are backed up to local Data Domain.
                 self.dump_timestamps = []
-            if self.backup_dir is not None:
+            if self.context.backup_dir:
                 raise ExceptionNoStackTraceNeeded('-u cannot be used with DDBoost parameters.')
             dd = gpmfr.DDSystem("local")
-            self.dump_dir = dd.DDBackupDir
+            self.context.dump_dir = dd.DDBackupDir
         elif self.replicate or self.max_streams:
             raise ExceptionNoStackTraceNeeded("--replicate and --max-streams cannot be used without --ddboost")
         else:
-            self.dump_dir = 'db_dumps'
+            self.context.dump_dir = 'db_dumps'
 
         # Cannot combine include and exclude schema filters
-        if self.exclude_schema_file and self.dump_schema:
+        if self.context.exclude_schema_file and self.context.dump_schema:
             raise Exception('-s can not be selected with --exclude-schema-file option')
 
-        if self.include_schema_file and self.dump_schema:
+        if self.context.include_schema_file and self.context.dump_schema:
             raise Exception('-s can not be selected with --schema-file option')
 
-        if self.dump_schema and self.exclude_dump_schema:
+        if self.context.dump_schema and self.context.exclude_dump_schema:
             raise Exception('-s can not be selected with -S option')
 
-        if self.exclude_schema_file and self.exclude_dump_schema:
+        if self.context.exclude_schema_file and self.context.exclude_dump_schema:
             raise Exception('-S can not be selected with --exclude-schema-file option')
 
-        if self.include_schema_file and self.exclude_dump_schema:
+        if self.context.include_schema_file and self.context.exclude_dump_schema:
             raise Exception('-S can not be selected with --schema-file option')
 
-        if self.include_schema_file and self.exclude_schema_file:
+        if self.context.include_schema_file and self.context.exclude_schema_file:
             raise Exception('--exclude-schema-file can not be selected with --schema-file option')
 
 
         # Incremental selections not allowed with schema filters
-        if self.dump_schema and self.incremental:
+        if self.context.dump_schema and self.context.incremental:
             raise Exception('-s option can not be selected with incremental backup')
 
-        if self.exclude_dump_schema and self.incremental:
+        if self.context.exclude_dump_schema and self.context.incremental:
             raise Exception('-S option can not be selected with incremental backup')
 
-        if self.include_schema_file and self.incremental:
+        if self.context.include_schema_file and self.context.incremental:
             raise Exception('--schema-file option can not be selected with incremental backup')
 
-        if self.exclude_schema_file and self.incremental:
+        if self.context.exclude_schema_file and self.context.incremental:
             raise Exception('--exclude-schema-file option can not be selected with incremental backup')
 
 
         # Cannot combine table and schema filters
-        if self.exclude_schema_file and (self.include_dump_tables_file or self.exclude_dump_tables_file):
+        if self.context.exclude_schema_file and (self.context.include_dump_tables_file or self.context.exclude_dump_tables_file):
             raise Exception('--table-file and --exclude-table-file can not be selected with --exclude-schema-file option')
 
-        if self.include_schema_file and (self.include_dump_tables_file or self.exclude_dump_tables_file):
+        if self.context.include_schema_file and (self.context.include_dump_tables_file or self.context.exclude_dump_tables_file):
             raise Exception('--table-file and --exclude-table-file can not be selected with --schema-file option')
 
-        if self.dump_schema and (self.include_dump_tables_file or self.exclude_dump_tables_file):
+        if self.context.dump_schema and (self.context.include_dump_tables_file or self.context.exclude_dump_tables_file):
             raise Exception('--table-file and --exclude-table-file can not be selected with -s option')
 
-        if self.exclude_dump_schema and (self.include_dump_tables_file or self.exclude_dump_tables_file):
+        if self.context.exclude_dump_schema and (self.context.include_dump_tables_file or self.context.exclude_dump_tables_file):
             raise Exception('--table-file and --exclude-table-file can not be selected with -S option')
 
-        if self.exclude_schema_file and (self.include_dump_tables or self.exclude_dump_tables):
+        if self.context.exclude_schema_file and (self.context.include_dump_tables or self.context.exclude_dump_tables):
             raise Exception('-t and -T can not be selected with --exclude-schema-file option')
 
-        if self.include_schema_file and (self.include_dump_tables or self.exclude_dump_tables):
+        if self.context.include_schema_file and (self.context.include_dump_tables or self.context.exclude_dump_tables):
             raise Exception('-t and -T can not be selected with --schema-file option')
 
-        if self.dump_schema and (self.include_dump_tables or self.exclude_dump_tables):
+        if self.context.dump_schema and (self.context.include_dump_tables or self.context.exclude_dump_tables):
             raise Exception('-t and -T can not be selected with -s option')
 
-        if self.exclude_dump_schema and (self.include_dump_tables or self.exclude_dump_tables):
+        if self.context.exclude_dump_schema and (self.context.include_dump_tables or self.context.exclude_dump_tables):
             raise Exception('-t and -T can not be selected with -S option')
 
 
-        if self.include_dump_tables and self.incremental:
+        if self.context.include_dump_tables and self.context.incremental:
             raise Exception('include table list can not be selected with incremental backup')
 
-        if self.exclude_dump_tables and self.incremental:
+        if self.context.exclude_dump_tables and self.context.incremental:
             raise Exception('exclude table list can not be selected with incremental backup')
 
-        if self.include_dump_tables_file and self.incremental:
+        if self.context.include_dump_tables_file and self.context.incremental:
             raise Exception('include table file can not be selected with incremental backup')
 
-        if self.exclude_dump_tables_file and self.incremental:
+        if self.context.exclude_dump_tables_file and self.context.incremental:
             raise Exception('exclude table file can not be selected with incremental backup')
 
-        if self.clear_dumps and self.incremental:
+        if self.context.clear_dumps and self.context.incremental:
             raise Exception('-c option can not be selected with incremental backup')
 
-        if self.clear_catalog_dumps and self.incremental:
+        if self.context.clear_catalog_dumps and self.context.incremental:
             raise Exception('-C option can not be selected with incremental backup')
 
-        if self.include_schema_file and self.include_dump_tables:
+        if self.context.include_schema_file and self.context.include_dump_tables:
             raise Exception('-t can not be selected with --schema-file option')
 
-        if self.include_dump_tables and self.include_dump_tables_file:
+        if self.context.include_dump_tables and self.context.include_dump_tables_file:
             raise Exception('-t can not be selected with --table-file option')
 
-        if self.include_dump_tables and self.exclude_dump_tables_file:
+        if self.context.include_dump_tables and self.context.exclude_dump_tables_file:
             raise Exception('-t can not be selected with --exclude-table-file option')
 
-        if self.exclude_dump_tables and self.exclude_dump_tables_file:
+        if self.context.exclude_dump_tables and self.context.exclude_dump_tables_file:
             raise Exception('-T can not be selected with --exclude-table-file option')
 
-        if self.exclude_dump_tables and self.include_dump_tables_file:
+        if self.context.exclude_dump_tables and self.context.include_dump_tables_file:
             raise Exception('-T can not be selected with --table-file option')
 
-        if self.include_dump_tables and self.exclude_dump_tables:
+        if self.context.include_dump_tables and self.context.exclude_dump_tables:
             raise Exception('-t can not be selected with -T option')
 
-        if self.include_dump_tables_file and self.exclude_dump_tables_file:
+        if self.context.include_dump_tables_file and self.context.exclude_dump_tables_file:
             raise Exception('--table-file can not be selected with --exclude-table-file option')
 
-        if ('--inserts' in self.output_options or '--oids' in self.output_options or '--column-inserts' in self.output_options) and self.incremental:
+        if ('--inserts' in self.context.output_options or '--oids' in self.context.output_options or '--column-inserts' in self.context.output_options) and self.context.incremental:
             raise Exception('--inserts, --column-inserts, --oids cannot be selected with incremental backup')
 
-        if self.include_schema_file or self.dump_schema or self.exclude_schema_file or self.exclude_dump_schema:
+        if self.context.include_schema_file or self.context.dump_schema or self.context.exclude_schema_file or self.context.exclude_dump_schema:
             self.validate_dump_schema()
 
-        if self.incremental:
-            if self.netbackup_service_host is None:
-                self.full_dump_timestamp = get_latest_full_dump_timestamp(self.dump_databases[0], self.getBackupDirectoryRoot(), self.dump_dir, self.dump_prefix, self.ddboost, self.ddboost_storage_unit)
+        if self.context.incremental:
+            if not self.context.netbackup_service_host:
+                self.context.full_dump_timestamp = get_latest_full_dump_timestamp(self.context)
             else:
-                self.full_dump_timestamp = get_latest_full_ts_with_nbu(self.dump_databases[0], self.getBackupDirectoryRoot(), self.dump_prefix, self.netbackup_service_host, self.netbackup_block_size)
+                self.context.full_dump_timestamp = get_latest_full_ts_with_nbu(self.context)
 
     def validate_dump_schema(self):
-        if self.dump_schema:
-            for schema in self.dump_schema:
+        if self.context.dump_schema:
+            for schema in self.context.dump_schema:
                 if schema in CATALOG_SCHEMA:
                     raise Exception("can not specify catalog schema '%s' using -s option" % schema)
-        elif self.include_schema_file:
-            schema_list = get_lines_from_file(self.include_schema_file)
+        elif self.context.include_schema_file:
+            schema_list = get_lines_from_file(self.context.include_schema_file)
             for schema in schema_list:
                 if schema in CATALOG_SCHEMA:
-                    raise Exception("can not include catalog schema '%s' in schema file '%s'" % (schema, self.include_schema_file))
-        elif self.exclude_dump_schema:
-            for schema in self.exclude_dump_schema:
+                    raise Exception("can not include catalog schema '%s' in schema file '%s'" % (schema, self.context.include_schema_file))
+        elif self.context.exclude_dump_schema:
+            for schema in self.context.exclude_dump_schema:
                 if schema in CATALOG_SCHEMA:
                     raise Exception("can not specify catalog schema '%s' using -S option" % schema)
-        elif self.exclude_schema_file:
-            schema_list = get_lines_from_file(self.exclude_schema_file)
+        elif self.context.exclude_schema_file:
+            schema_list = get_lines_from_file(self.context.exclude_schema_file)
             for schema in schema_list:
                 if schema in CATALOG_SCHEMA:
-                    raise Exception("can not exclude catalog schema '%s' in schema file '%s'" % (schema, self.exclude_schema_file))
-
-    def getBackupDirectoryRoot(self):
-        if self.backup_dir:
-            return self.backup_dir
-        else:
-            return self.master_datadir
+                    raise Exception("can not exclude catalog schema '%s' in schema file '%s'" % (schema, self.context.exclude_schema_file))
 
     def getGpArray(self):
-        return GpArray.initFromCatalog(dbconn.DbURL(port=self.master_port), utility=True)
+        return GpArray.initFromCatalog(dbconn.DbURL(port=self.context.master_port), utility=True)
 
     def getHostSet(self, gparray):
         hostlist = gparray.get_hostlist(includeMaster=True)
@@ -417,25 +333,25 @@ class GpCronDump(Operation):
 
     # check if one of gpcrondump option was specified, except of ddboost options
     def only_ddboost_options(self):
-        return ((len(self.dump_databases) == 0) and (not self.dump_schema)
-                and (self.backup_dir is None)
-                and not (self.include_dump_tables or self.output_options or self.clear_dumps_only or self.pre_vacuum
-                         or self.clear_dumps_only or self.dump_global or self.rollback or self.exclude_dump_tables
-                         or self.dump_config or self.clear_dumps_only or self.clear_dumps or self.post_vacuum or self.history))
+        return (len(self.context.dump_databases) == 0 and (not self.context.dump_schema)
+                and (not self.context.backup_dir)
+                and not (self.context.include_dump_tables or self.context.output_options or self.context.clear_dumps_only or self.pre_vacuum
+                         or self.context.clear_dumps_only or self.context.dump_global or self.rollback or self.context.exclude_dump_tables
+                         or self.context.dump_config or self.context.clear_dumps_only or self.context.clear_dumps or self.post_vacuum or self.context.history))
 
     def validateUserName(self, userName):
         if not re.search(r'^[a-zA-Z0-9-_]{1,30}$', userName):
             legal_username_str = """
-			The username length must be between 1 to 30 characters.
+            The username length must be between 1 to 30 characters.
 
-			The following characters are allowed:
+            The following characters are allowed:
                 1) Lowercase letters (a-z)
                 2) Uppercase letters (A-Z)
                 3) Numbers (0-9)
                 4) Special characters (- and _)
 
-		    Note: whitespace characters are not allowed.
-			"""
+            Note: whitespace characters are not allowed.
+            """
             raise ExceptionNoStackTraceNeeded(legal_username_str)
 
     def validatePassword(self, password):
@@ -474,7 +390,7 @@ class GpCronDump(Operation):
                 return
         logger.debug("DD Boost config removed from all GPDB servers.")
 
-    def createDDBoostConfig(self, gpHostsSet, ddboostHostsSet, user, password, backupDir, ddboost_storage_unit):
+    def createDDBoostConfig(self, gpHostsSet, password):
         """
         Creates config file for local/remote Data Domain on master and all the
         segment servers.  A brief outline of this function is as follows.
@@ -513,10 +429,10 @@ class GpCronDump(Operation):
            succeed without error.  As of Q1, 2013, we leave this issue to future
            releases.
         """
-        logger.debug("DDboost host(s): %s" % ddboostHostsSet)
-        numberOfDdboostNics = len(ddboostHostsSet)
-        if self.ddboost_ping:
-            for dd in ddboostHostsSet:
+        logger.debug("DDboost host(s): %s" % self.context.ddboost_hosts)
+        numberOfDdboostNics = len(self.context.ddboost_hosts)
+        if self.context.ddboost_ping:
+            for dd in self.context.ddboost_hosts:
                 cmd = Command("Ping DD Host", "ping -c 5 %s" % dd)
                 cmd.run()
                 if not cmd.was_successful():
@@ -539,13 +455,13 @@ class GpCronDump(Operation):
                 "Found existing configuration for remote Data Domain.")
         except:
             pass
-        if self.ddboost_remote:
+        if self.context.ddboost_remote:
             pairDD = localDD
             selfDD = remoteDD
         else:
             pairDD = remoteDD
             selfDD = localDD
-        if pairDD and pairDD.hostname in ddboostHostsSet:
+        if pairDD and pairDD.hostname in self.context.ddboost_hosts:
             msg = "%s Data Domain is already configured with hostname %s." +\
                 " Local and remote Data Domains must be different."
             logger.error(msg % (pairDD.id, pairDD.hostname))
@@ -564,20 +480,20 @@ class GpCronDump(Operation):
         ddcmdTemplate = "source " + os.environ["GPHOME"] + \
             "/greenplum_path.sh; " + os.environ["GPHOME"] + \
             "/bin/gpddboost  --setCredential "+ \
-            "--hostname=%s --user=" + re.escape(user)
+            "--hostname=%s --user=" + re.escape(self.context.ddboost_user)
 
         # Backup directory and DDBoost storage unit will not be part of config file for remote DD server
-        if self.ddboost_remote:
+        if self.context.ddboost_remote:
             ddcmdTemplate += " --remote"
         else:
             ddcmdTemplate += " --defaultBackupDirectory=" + backupDir
 
-            if ddboost_storage_unit:
-                ddcmdTemplate += " --ddboost-storage-unit=" + ddboost_storage_unit
+            if self.context.ddboost_storage_unit:
+                ddcmdTemplate += " --ddboost-storage-unit=" + self.context.ddboost_storage_unit
 
         # Create a DD Boost config on master for each DD Boost host.  Try
         # logging into each DD Boost using the config.
-        for dd in ddboostHostsSet:
+        for dd in self.context.ddboost_hosts:
             ddcmd = ddcmdTemplate % dd
             logger.debug("Verifying configuration: "+ddcmd)
             ddcmd += " --password=" + re.escape(password)
@@ -587,10 +503,11 @@ class GpCronDump(Operation):
                 r = cmd.get_results()
                 raise Exception("gpddboost failed to run on localhost. %s" % \
                                     r.printResult())
-            if self.ddboost_remote:
-                selfDD = gpmfr.DDSystem("remote", backupDir, ddboost_storage_unit)
+
+            if self.context.ddboost_remote:
+                selfDD = gpmfr.DDSystem("remote", self.context.ddboost_backupdir, self.context.ddboost_storage_unit)
             else:
-                selfDD = gpmfr.DDSystem("local", backupDir, ddboost_storage_unit)
+                selfDD = gpmfr.DDSystem("local", self.context.ddboost_backupdir, self.context.ddboost_storage_unit)
 
             # This step creates storage unit specified by ddboost_storage_unit or read
             # from cluster's config file on the Data Domain if one doesn't exist.
@@ -608,7 +525,7 @@ class GpCronDump(Operation):
             # the case when a single Data Domain host has multiple IP addresses
             # for load balancing.  We distribute segment servers evenly across
             # the NICs.
-            currentDdboostHost = ddboostHostsSet[index % numberOfDdboostNics]
+            currentDdboostHost = self.context.ddboost_hosts[index % numberOfDdboostNics]
             ddcmd = ddcmdTemplate % currentDdboostHost
             logger.debug("Writing configuration on host %s: %s --password=*" %
                          (host, ddcmd))
@@ -624,49 +541,48 @@ class GpCronDump(Operation):
         logger.debug("DD Boost configured on all GPDB servers.")
 
     # Verify the DDBoost credentials using the credentials that stored on the Master
-    # TODO: verify also all the hosts in self.ddboost_hosts (ping to the hosts, I think there is some Python function for that)
+    # TODO: verify also all the hosts in self.context.ddboost_hosts (ping to the hosts, I think there is some Python function for that)
     def _ddboostVerify(self):
         verifyCmdLine = os.environ['GPHOME'] + '/bin/gpddboost --verify' 
-        if self.ddboost_storage_unit:
-            verifyCmdLine += ' --ddboost-storage-unit %s' % self.ddboost_storage_unit
+        if self.context.ddboost_storage_unit:
+            verifyCmdLine += ' --ddboost-storage-unit %s' % self.context.ddboost_storage_unit
         logger.debug("Executing gpddboost to verify DDBoost credentials: %s" % verifyCmdLine)
         if not os.system(verifyCmdLine):
             logger.info("The specified DDBoost credentials are OK")
         else:
             raise ExceptionNoStackTraceNeeded('Failed to connect to DD_host with DD_user and the DD_password')
 
-    # Creating a temp file from the schema list provided by user,
-    # if include_schema_file is not provided else returns include_schema_file
-    def get_schema_list_file(self, dbname):
+    # Creates a temp file from the schema list provided by user if include_schema_file is not provided,
+    # else sets schema_file to include_schema_file
+    def generate_schema_list_file(self):
         schema_file = None
-        if self.include_schema_file:
-            schema_list = get_lines_from_file(self.include_schema_file)
+        if self.context.include_schema_file:
+            schema_list = get_lines_from_file(self.context.include_schema_file)
             schema_file = create_temp_file_from_list(schema_list, 'schema_list')
-        elif self.dump_schema:
-            schema_file = create_temp_file_from_list(self.dump_schema, 'schema_list')
-            self.dump_schema = []
-        elif self.exclude_dump_schema:
-            schema_list = get_include_schema_list_from_exclude_schema(self.exclude_dump_schema, CATALOG_SCHEMA, self.master_port, dbname)
+        elif self.context.dump_schema:
+            schema_file = create_temp_file_from_list(self.context.dump_schema, 'schema_list')
+            self.context.dump_schema = []
+        elif self.context.exclude_dump_schema:
+            schema_list = get_include_schema_list_from_exclude_schema(self.context, self.context.exclude_dump_schema)
             schema_file = create_temp_file_from_list(schema_list, 'schema_list')
-            self.exclude_dump_schema = []
-        elif self.exclude_schema_file:
-            schema_list = get_include_schema_list_from_exclude_schema(get_lines_from_file(self.exclude_schema_file), CATALOG_SCHEMA, self.master_port, dbname)
+            self.context.exclude_dump_schema = []
+        elif self.context.exclude_schema_file:
+            schema_list = get_include_schema_list_from_exclude_schema(self.context, get_lines_from_file(self.context.exclude_schema_file))
             schema_file = create_temp_file_from_list(schema_list, 'schema_list')
-
-        return schema_file
+        self.context.schema_file = schema_file
 
     # This method is called only when prefix option is specified with schema filter,
     # for full backup.
     # Method updates the include_dump_tables_file based on the schema list provided,
     # i.e All the tables in the specified schema's are added to the include_dump_tables_file.
 
-    def generate_include_table_list_from_schema_file(self, dbname, schema_file):
-        dump_schemas = get_lines_from_file(schema_file)
+    def generate_include_table_list_from_schema_file(self):
+        dump_schemas = get_lines_from_file(self.context.schema_file)
         table_list = []
         for schema in dump_schemas:
-            tables = get_user_table_list_for_schema(self.master_port, dbname, schema)
+            tables = get_user_table_list_for_schema(self.context, schema)
             for table in tables:
-                table_name = table[0].strip() + "." + table[1].strip()
+                table_name = table[0] + "." + table[1]
                 table_list.append(table_name)
         return create_temp_file_from_list(table_list, 'include_dump_tables_file')
 
@@ -678,29 +594,23 @@ class GpCronDump(Operation):
         include_file = None
         exclude_file = None
 
-        if self.incremental:
+        if self.context.incremental:
             return (dirty_file, exclude_file)
 
-        if self.include_dump_tables:
-            include_file = expand_partitions_and_populate_filter_file(dbname,
-                                                                      self.include_dump_tables,
-                                                                      'include_dump_tables_file')
-            self.include_dump_tables = []
+        if self.context.include_dump_tables:
+            include_file = expand_partitions_and_populate_filter_file(dbname, self.context.include_dump_tables, 'include_dump_tables_file')
+            self.context.include_dump_tables = []
 
-        if self.exclude_dump_tables:
-            exclude_file = expand_partitions_and_populate_filter_file(dbname,
-                                                                      self.exclude_dump_tables,
-                                                                      'exclude_dump_tables_file')
-            self.exclude_dump_tables = []
+        if self.context.exclude_dump_tables:
+            exclude_file = expand_partitions_and_populate_filter_file(dbname, self.context.exclude_dump_tables, 'exclude_dump_tables_file')
+            self.context.exclude_dump_tables = []
 
-        if self.include_dump_tables_file:
-            include_tables = get_lines_from_file(self.include_dump_tables_file)
-            include_file = expand_partitions_and_populate_filter_file(dbname,
-                                                                      include_tables,
-                                                                      'include_dump_tables_file')
+        if self.context.include_dump_tables_file:
+            include_tables = get_lines_from_file(self.context.include_dump_tables_file)
+            include_file = expand_partitions_and_populate_filter_file(dbname, include_tables, 'include_dump_tables_file')
 
-        if self.exclude_dump_tables_file:
-            exclude_tables = get_lines_from_file(self.exclude_dump_tables_file)
+        if self.context.exclude_dump_tables_file:
+            exclude_tables = get_lines_from_file(self.context.exclude_dump_tables_file)
             exclude_file = expand_partitions_and_populate_filter_file(dbname,
                                                                       exclude_tables,
                                                                       'exclude_dump_tables_file')
@@ -709,7 +619,7 @@ class GpCronDump(Operation):
 
     # Thread to poll for existence of a signal file telling us that we can drop the pg_class lock
     def lock_handler(self, timestamp, thread_stop):
-        dump_dir = get_backup_directory(self.master_datadir, self.backup_dir, self.dump_dir, timestamp)
+        dump_dir = self.context.get_backup_dir(timestamp)
         global lock_file_name
         lock_file_name = "%s/gp_lockfile_%s" % (dump_dir, timestamp[8:])
         while not thread_stop.is_set():
@@ -734,28 +644,28 @@ class GpCronDump(Operation):
                 os.remove(lock_file_name)
         # This should only throw the Exception if "os.remove" fails which means there was a genuine failure.
         except Exception, e:
-            logger.warning("Could not remove signal file %s, backup will proceed without releasing pg_class lock." % lock_file_name)
+            logger.warn("Could not remove signal file %s, backup will proceed without releasing pg_class lock." % lock_file_name)
 
     def execute(self):
-        if bool(self.ddboost_hosts) or bool(self.ddboost_user):
+        if bool(self.context.ddboost_hosts) or bool(self.context.ddboost_user):
             # check that both options are specified
-            if not (bool(self.ddboost_hosts) and bool(self.ddboost_user)):
+            if not (bool(self.context.ddboost_hosts) and bool(self.context.ddboost_user)):
                 raise ExceptionNoStackTraceNeeded('For DDBoost config, both options are required --ddboost-host <ddboost_hostname> --ddboost-user <ddboost_user>.')
 
             # check that no other gpcrondump option was specified
-            if self.only_ddboost_options() and not self.ddboost_config_remove:
-                if not self.ddboost_remote and not self.ddboost_backupdir:
+            if self.only_ddboost_options() and not self.context.ddboost_config_remove:
+                if not self.context.ddboost_remote and not self.context.ddboost_backupdir:
                     raise ExceptionNoStackTraceNeeded("--ddboost-backupdir must be specified when configuring local Data Domain.")
-                self.validateUserName(userName=self.ddboost_user)
+                self.validateUserName(userName=self.context.ddboost_user)
                 hostset = self.getHostSet(self.getGpArray())
                 p = getpass()
                 self.validatePassword(password=p)
-                self.createDDBoostConfig(hostset, self.ddboost_hosts, self.ddboost_user, p, self.ddboost_backupdir, self.ddboost_storage_unit)
+                self.createDDBoostConfig(hostset, p)
                 return 0
             else:
                 raise ExceptionNoStackTraceNeeded('The options --ddboost-host and --ddboost-user are standalone. They are NOT used in conjunction with any other gocrondump options (only with --ddboost-verify).')
 
-        if self.ddboost_config_remove:
+        if self.context.ddboost_config_remove:
             if self.only_ddboost_options():
                 hostset = self.getHostSet(self.getGpArray())
                 # The username and the password must be at least 2 characters long, so we just use 2 spaces for each
@@ -764,21 +674,15 @@ class GpCronDump(Operation):
             else:
                 raise ExceptionNoStackTraceNeeded('The option --ddboost-config-remove is standalone. It is NOT used in conjunction with any other gocrondump options.')
 
-        if self.clear_dumps_only:
+        if self.context.clear_dumps_only:
             logger.info('Clearing dumps only...')
-            generate_dump_timestamp(self._get_timestamp_object(self.timestamp_key))
-            DeleteOldestDumps(master_datadir = self.master_datadir,
-                              master_port = self.master_port,
-                              dump_dir = self.dump_dir,
-                              cleanup_date = self.cleanup_date,
-                              cleanup_total = self.cleanup_total,
-                              ddboost = self.ddboost,
-                              ddboost_storage_unit=self.ddboost_storage_unit).run()
+            self.context.generate_dump_timestamp()
+            DeleteOldestDumps(self.context).run()
             return 0
 
         # If --ddboost-verify or --ddboost is specified, we check the credentials that stored on the Master
         # In case of --ddboost we force the verification (MPP-17510)
-        if bool(self.ddboost_verify) or bool(self.ddboost):
+        if bool(self.context.ddboost_verify) or bool(self.context.ddboost):
             # DDBoost verify will create storage unit on DDBoost Server if not exist, few scenairos which do not need:
             # --list-backup-file (already pre checked and not supported with --ddboost)
             # --ddboost-config-remove (a return issued ahead), clear dumps only( -o option handled ahead),
@@ -789,10 +693,10 @@ class GpCronDump(Operation):
                 self._ddboostVerify()
 
             # Check if we need to exit now
-            if self.ddboost_verify_and_exit is True:
+            if self.context.ddboost_verify_and_exit is True:
                 return 0
 
-        if self.post_script is not None:
+        if self.context.post_script:
             self._validate_run_program()
 
         self._validate_dump_target()
@@ -803,216 +707,137 @@ class GpCronDump(Operation):
         #                        in this loop over the -x arguments
         final_exit_status = current_exit_status = 0
 
-        if self.ddboost_show_config:
+        if self.context.ddboost_show_config:
             self.show_ddboost_config()
             return 0
 
-        for dump_database in self.dump_databases:
-            timestamp = self._get_timestamp_object(self.timestamp_key)
-            timestamp_str = timestamp.strftime('%Y%m%d%H%M%S')
-            generate_dump_timestamp(timestamp)
+        for dumpdb in self.context.dump_databases:
+            self.context.dump_database = dumpdb
+            self.context.generate_dump_timestamp()
             if self.list_backup_files:
-                self._list_backup_files(timestamp_str)
+                self._list_backup_files()
                 logger.info('Successfully listed the names of backup files and pipes')
                 return 0
             if self.list_filter_tables:
-                db = self.dump_databases[0]
-                self._list_filter_tables(db, get_filter_file(db, self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.ddboost, self.ddboost_storage_unit))
+                db = self.context.dump_database
+                self._list_filter_tables(db, get_filter_file(self.context))
                 return 0
 
-            validate_current_timestamp(self.getBackupDirectoryRoot(), self.dump_dir, self.dump_prefix)
+            validate_current_timestamp(self.context)
             if self.interactive:
-                self._prompt_continue(dump_database)
+                self._prompt_continue()
 
             if self.pre_vacuum:
                 logger.info('Commencing pre-dump vacuum')
-                VacuumDatabase(database=dump_database,
-                               master_port=self.master_port).run()
+                VacuumDatabase(self.context)
 
-            if self.free_space_percent is not None:
-                ValidateGpToolkit(database=dump_database,
-                                  master_port=self.master_port).run()
+            if self.context.free_space_percent:
+                ValidateGpToolkit(self.context)
 
             global conn
             conn = None
             try:
                 thread_stop = threading.Event()
-                lock_thread = threading.Thread(target=self.lock_handler, args=(timestamp_str, thread_stop))
+                lock_thread = threading.Thread(target=self.lock_handler, args=(self.context.timestamp, thread_stop))
                 lock_thread.start()
 
                 LOCK_TABLE_SQL = "LOCK TABLE pg_catalog.pg_class IN EXCLUSIVE MODE;"
-                conn = dbconn.connect(dbconn.DbURL(port=self.pgport, dbname=dump_database), utility=True)
+                conn = dbconn.connect(dbconn.DbURL(port=self.context.master_port, dbname=self.context.dump_database), utility=True)
                 dbconn.execSQL(conn, LOCK_TABLE_SQL)
 
-                ao_partition_list = get_ao_partition_state(self.master_port, dump_database)
-                co_partition_list = get_co_partition_state(self.master_port, dump_database)
-                heap_partitions = get_dirty_heap_tables(self.master_port, dump_database)
-                last_operation_list = get_last_operation_data(self.master_port, dump_database)
+                ao_partition_list = get_ao_partition_state(self.context)
+                co_partition_list = get_co_partition_state(self.context)
+                heap_partitions = get_dirty_heap_tables(self.context)
+                last_operation_list = get_last_operation_data(self.context)
 
                 self._verify_tablenames(ao_partition_list, co_partition_list, heap_partitions)
 
                 dirty_partitions = None
                 dirty_file = None
-                if self.incremental:
-                    dirty_partitions = get_dirty_tables(self.master_port, dump_database,
-                                                        self.master_datadir, self.backup_dir,
-                                                        self.dump_dir, self.dump_prefix,
-                                                        self.full_dump_timestamp, ao_partition_list,
-                                                        co_partition_list, last_operation_list,
-                                                        self.netbackup_service_host, self.netbackup_block_size)
-                    if self.dump_prefix and \
-                       get_filter_file(dump_database, self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix,
-                                       self.ddboost, self.ddboost_storage_unit, self.netbackup_service_host, self.netbackup_block_size):
-                        update_filter_file(dump_database, self.master_datadir, self.backup_dir, self.master_port, self.dump_dir, self.dump_prefix,
-                                           self.ddboost, self.ddboost_storage_unit, self.netbackup_service_host, self.netbackup_policy,
-                                           self.netbackup_schedule, self.netbackup_block_size, self.netbackup_keyword)
-                    dirty_partitions = filter_dirty_tables(dirty_partitions, dump_database, self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix,
-                                                           self.ddboost, self.ddboost_storage_unit, self.netbackup_service_host, self.netbackup_block_size)
-
+                if self.context.incremental:
+                    dirty_partitions = get_dirty_tables(self.context, ao_partition_list, co_partition_list, last_operation_list)
+                    if self.context.dump_prefix and get_filter_file(self.context):
+                        update_filter_file(self.context)
+                    dirty_partitions = filter_dirty_tables(self.context, dirty_partitions)
                     dirty_file = write_dirty_file_to_temp(dirty_partitions)
 
-                schema_file = self.get_schema_list_file(dump_database)
-                (include_file, exclude_file) = self.get_include_exclude_for_dump_database(dirty_file, dump_database)
+                self.generate_schema_list_file()
+                (include_file, exclude_file) = self.get_include_exclude_for_dump_database(dirty_file, self.context.dump_database)
+                self.context.include_dump_tables_file = include_file
+                self.context.exclude_dump_tables_file = exclude_file
 
-                if self.dump_prefix and schema_file and not self.incremental:
-                    include_file = self.generate_include_table_list_from_schema_file(dump_database, schema_file)
+                if self.context.schema_file and not self.context.incremental:
+                    self.context.include_dump_tables_file = self.generate_include_table_list_from_schema_file()
 
-                dump_outcome = DumpDatabase(dump_database = dump_database,
-                                            dump_schema = self.dump_schema,
-                                            include_dump_tables = self.include_dump_tables,
-                                            exclude_dump_tables = self.exclude_dump_tables,
-                                            include_dump_tables_file = include_file,
-                                            exclude_dump_tables_file = exclude_file,
-                                            backup_dir = self.backup_dir,
-                                            free_space_percent = self.free_space_percent,
-                                            compress = self.compress,
-                                            clear_catalog_dumps = self.clear_catalog_dumps,
-                                            encoding = self.encoding,
-                                            output_options = self.output_options,
-                                            batch_default = self.batch_default,
-                                            master_datadir = self.master_datadir,
-                                            master_port = self.master_port,
-                                            dump_dir = self.dump_dir,
-                                            dump_prefix = self.dump_prefix,
-                                            ddboost = self.ddboost,
-                                            netbackup_service_host = self.netbackup_service_host,
-                                            netbackup_policy = self.netbackup_policy,
-                                            netbackup_schedule = self.netbackup_schedule,
-                                            netbackup_block_size = self.netbackup_block_size,
-                                            netbackup_keyword = self.netbackup_keyword,
-                                            incremental = self.incremental,
-                                            include_schema_file = schema_file,
-                                            ddboost_storage_unit = self.ddboost_storage_unit).run()
+                dump_outcome = DumpDatabase(self.context).run()
 
-                post_dump_outcome = PostDumpDatabase(timestamp_start = dump_outcome['timestamp_start'],
-                                                     compress = self.compress,
-                                                     backup_dir = self.backup_dir,
-                                                     batch_default = self.batch_default,
-                                                     master_datadir = self.master_datadir,
-                                                     master_port = self.master_port,
-                                                     dump_dir = self.dump_dir,
-                                                     dump_prefix = self.dump_prefix,
-                                                     ddboost = self.ddboost,
-                                                     netbackup_service_host = self.netbackup_service_host,
-                                                     incremental = self.incremental).run()
+                post_dump_outcome = PostDumpDatabase(self.context, timestamp_start = dump_outcome['timestamp_start']).run()
 
-                if self.dump_stats:
+                if self.context.dump_stats:
                     if current_exit_status == 0:
-                        DumpStats(timestamp = post_dump_outcome['timestamp'],
-                                   master_datadir = self.master_datadir,
-                                   dump_database = dump_database,
-                                   master_port = self.master_port,
-                                   backup_dir = self.backup_dir,
-                                   dump_dir = self.dump_dir,
-                                   dump_prefix = self.dump_prefix,
-                                   include_table_file = include_file,
-                                   exclude_table_file = exclude_file,
-                                   include_schema_file = schema_file,
-                                   ddboost = self.ddboost,
-                                   ddboost_storage_unit = self.ddboost_storage_unit
-                                   ).run()
-                        if self.netbackup_service_host and self.netbackup_policy and self.netbackup_schedule:
-                            backup_statistics_file_with_nbu(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.netbackup_service_host,
-                                                            self.netbackup_policy, self.netbackup_schedule, self.netbackup_block_size, self.netbackup_keyword)
+                        self.context.timestamp = post_dump_outcome['timestamp']
+                        DumpStats(self.context).run()
+                        if self.context.netbackup_service_host and self.context.netbackup_policy and self.context.netbackup_schedule:
+                            backup_file_with_nbu(self.context, "stats")
                     else:
                         logger.info("Skipping statistics dump due to issues during post-dump checks.")
 
-                if self.netbackup_service_host and self.netbackup_policy and self.netbackup_schedule:
-                    backup_cdatabase_file_with_nbu(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.netbackup_service_host, self.netbackup_policy, self.netbackup_schedule, self.netbackup_block_size, self.netbackup_keyword)
-                    backup_report_file_with_nbu(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.netbackup_service_host, self.netbackup_policy, self.netbackup_schedule, self.netbackup_block_size, self.netbackup_keyword)
+                if self.context.netbackup_service_host and self.context.netbackup_policy and self.context.netbackup_schedule:
+                    backup_file_with_nbu(self.context, "cdatabase")
+                    backup_file_with_nbu(self.context, "report")
 
-                if self.incremental:
-                    if dirty_file is not None and os.path.isfile(dirty_file):
-                        if self.ddboost:
+                if self.context.incremental:
+                    if dirty_file and os.path.isfile(dirty_file):
+                        if self.context.ddboost:
                             time.sleep(5)
                         os.remove(dirty_file)
-                        remove_file_on_segments(self.master_port, dirty_file)
-                    write_dirty_file(self.master_datadir, dirty_partitions, self.backup_dir, self.dump_dir, self.dump_prefix, None, self.ddboost, self.ddboost_storage_unit)
-                    if self.netbackup_service_host:
-                        backup_dirty_file_with_nbu(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.netbackup_service_host, self.netbackup_policy, self.netbackup_schedule, self.netbackup_block_size, self.netbackup_keyword)
+                        remove_file_on_segments(self.context, dirty_file)
+                    write_dirty_file(self.context, dirty_partitions)
+                    if self.context.netbackup_service_host:
+                        backup_file_with_nbu(self.context, "dirty_table")
 
-                if include_file is not None and os.path.exists(include_file):
-                    os.remove(include_file)
-                    remove_file_on_segments(self.master_port, include_file)
-                if exclude_file is not None and os.path.exists(exclude_file):
-                    os.remove(exclude_file)
-                    remove_file_on_segments(self.master_port, exclude_file)
-                if schema_file:
-                    schema_filename = generate_schema_filename(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, timestamp_str, self.ddboost)
-                    shutil.copyfile(schema_file, schema_filename)
-                    remove_file_on_segments(self.master_port, schema_file)
-                if schema_file is not None and os.path.exists(schema_file):
-                    os.remove(schema_file)
+                if self.context.schema_file:
+                    schema_filename = self.context.generate_filename("schema")
+                    shutil.copyfile(self.context.schema_file, schema_filename)
+                    remove_file_on_segments(self.context, self.context.schema_file)
+                if self.context.schema_file and os.path.exists(self.context.schema_file):
+                    os.remove(self.context.schema_file)
+                self.cleanup_files_on_segments()
 
-                write_state_file('ao', self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, ao_partition_list, self.ddboost, self.ddboost_storage_unit)
-                write_state_file('co', self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, co_partition_list, self.ddboost, self.ddboost_storage_unit)
-                write_last_operation_file(self.master_datadir, self.backup_dir, last_operation_list, self.dump_dir, self.dump_prefix, timestamp_key=None, ddboost=self.ddboost)
+                write_state_file(self.context, "ao", ao_partition_list)
+                write_state_file(self.context, "co", co_partition_list)
+                write_last_operation_file(self.context, last_operation_list)
 
-                if self.netbackup_service_host and self.netbackup_policy and self.netbackup_schedule:
-                    backup_state_files_with_nbu(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.netbackup_service_host,
-                                                self.netbackup_policy, self.netbackup_schedule, self.netbackup_block_size, self.netbackup_keyword)
-                    schema_filename = generate_schema_filename(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, timestamp_str, self.ddboost)
-                    if os.path.exists(schema_filename) and not self.incremental:
-                        backup_schema_file_with_nbu(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.netbackup_service_host,
-                                                    self.netbackup_policy, self.netbackup_schedule, self.netbackup_block_size, self.netbackup_keyword)
+                if self.context.netbackup_service_host and self.context.netbackup_policy and self.context.netbackup_schedule:
+                    backup_state_files_with_nbu(self.context)
+                    schema_filename = self.context.generate_filename("schema")
+                    if os.path.exists(schema_filename) and not self.context.incremental:
+                        backup_file_with_nbu(self.context, "schema")
 
-                if self.ddboost:
-                    backup_report_file_with_ddboost(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, ddboost_storage_unit= self.ddboost_storage_unit)
-                    schema_filename = generate_schema_filename(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, timestamp_str, self.ddboost)
-                    if os.path.exists(schema_filename) and not self.incremental:
-                        backup_schema_file_with_ddboost(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.ddboost_storage_unit)
+                if self.context.ddboost:
+                    backup_file_with_ddboost(self.context, "report")
+                    schema_filename = self.context.generate_filename("schema")
+                    if os.path.exists(schema_filename) and not self.context.incremental:
+                        backup_file_with_ddboost(self.context, "schema")
 
                 current_exit_status = max(dump_outcome['exit_status'], post_dump_outcome['exit_status'])
                 if self.replicate and current_exit_status == 0:
-                    self.dump_timestamps.append((dump_database, post_dump_outcome["timestamp"]))
+                    self.dump_timestamps.append((self.context.dump_database, post_dump_outcome["timestamp"]))
                 final_exit_status = max(final_exit_status, current_exit_status)
 
-                if self.incremental:
+                if self.context.incremental:
                     if final_exit_status:
                         logger.info('non-zero exit status from gp_dump, skipping generation of increments file')
                     else:
                         # if this fails, it raises an exception and bombs out RC and to the screen
-                        CreateIncrementsFile(dump_database = dump_database,
-                                             full_timestamp = self.full_dump_timestamp,
-                                             timestamp = post_dump_outcome['timestamp'],
-                                             master_datadir = self.master_datadir,
-                                             backup_dir = self.backup_dir,
-                                             ddboost = self.ddboost,
-                                             dump_dir = self.dump_dir,
-                                             dump_prefix = self.dump_prefix,
-                                             netbackup_service_host = self.netbackup_service_host,
-                                             netbackup_block_size = self.netbackup_block_size,
-                                             ddboost_storage_unit = self.ddboost_storage_unit).run()
-                        if self.ddboost:
-                            backup_increments_file_with_ddboost(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, 
-                                                                self.full_dump_timestamp, self.ddboost_storage_unit)
+                        CreateIncrementsFile(self.context).run()
+                        if self.context.ddboost:
+                            backup_file_with_ddboost(self.context, "increments", self.context.full_dump_timestamp)
 
-                        write_partition_list_file(self.master_datadir, self.backup_dir, post_dump_outcome['timestamp'],
-                                                  self.master_port, dump_database, self.dump_dir, self.dump_prefix, 
-                                                  self.ddboost, self.netbackup_service_host, self.ddboost_storage_unit)
-                        if self.netbackup_service_host:
-                            backup_increments_file_with_nbu(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.full_dump_timestamp, self.netbackup_service_host, self.netbackup_policy, self.netbackup_schedule, self.netbackup_block_size, self.netbackup_keyword)
-                            backup_partition_list_file_with_nbu(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.netbackup_service_host, self.netbackup_policy, self.netbackup_schedule, self.netbackup_block_size, self.netbackup_keyword)
+                        write_partition_list_file(self.context, post_dump_outcome['timestamp'])
+                        if self.context.netbackup_service_host:
+                            backup_file_with_nbu(self.context, "increments")
+                            backup_file_with_nbu(self.context, "partition_list")
 
             finally:
                 thread_stop.set()
@@ -1026,30 +851,21 @@ class GpCronDump(Operation):
                 except Exception, e:
                     logger.debug("Failed to remove signal file or close connection, lock_handler thread probably already got to it.")
 
-            if self.history:
+            if self.context.history:
                 # This certainly does not belong under DumpDatabase, due to CLI assumptions. Note the use of options_list.
-                UpdateHistoryTable(dump_database = dump_database,
-                                   options_list = self.options_list,
+                UpdateHistoryTable(self.context,
+                                   self.options_list,
                                    time_start = dump_outcome['time_start'],
                                    time_end = dump_outcome['time_end'],
                                    dump_exit_status = dump_outcome['exit_status'],
                                    timestamp = post_dump_outcome['timestamp'],
-                                   pseudo_exit_status = current_exit_status,
-                                   master_port = self.master_port).run()
+                                   pseudo_exit_status = current_exit_status).run()
 
-            if self.dump_global:
+            if self.context.dump_global:
                 if current_exit_status == 0:
-                    DumpGlobal(timestamp = post_dump_outcome['timestamp'],
-                               master_datadir = self.master_datadir,
-                               master_port = self.master_port,
-                               backup_dir = self.backup_dir,
-                               dump_dir = self.dump_dir,
-                               dump_prefix = self.dump_prefix,
-                               ddboost = self.ddboost,
-                               ddboost_storage_unit = self.ddboost_storage_unit).run()
-                    if self.netbackup_service_host and self.netbackup_policy and self.netbackup_schedule:
-                        backup_global_file_with_nbu(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.netbackup_service_host,
-                                                    self.netbackup_policy, self.netbackup_schedule, self.netbackup_block_size, self.netbackup_keyword)
+                    DumpGlobal(self.context, timestamp = post_dump_outcome['timestamp']).run()
+                    if self.context.netbackup_service_host and self.context.netbackup_policy and self.context.netbackup_schedule:
+                        backup_file_with_nbu(self.context, "global")
                 else:
                     logger.info("Skipping global dump due to issues during post-dump checks.")
 
@@ -1061,53 +877,41 @@ class GpCronDump(Operation):
                     logger.warn("Dump request was incomplete, however cannot rollback since no timestamp was found.")
                     MailDumpEvent("Report from gpcrondump on host %s [FAILED]" % self.cur_host,
                                   "Failed for database %s with return code %d, dump files not rolled back, because no new timestamp was found. [Start=%s End=%s] Options passed [%s]"
-                                  % (dump_database, current_exit_status, dump_outcome['time_start'], dump_outcome['time_end'], self.options_list)).run()
+                                  % (self.context.dump_database, current_exit_status, dump_outcome['time_start'], dump_outcome['time_end'], self.options_list)).run()
                     raise ExceptionNoStackTraceNeeded("Dump incomplete, rollback not processed")
                 elif self.rollback:
                     logger.warn("Dump request was incomplete, rolling back dump")
-                    DeleteCurrentDump(timestamp = post_dump_outcome['timestamp'],
-                                      master_datadir = self.master_datadir,
-                                      master_port = self.master_port,
-                                      dump_dir = self.dump_dir,
-                                      ddboost = self.ddboost,
-                                      ddboost_storage_unit=self.ddboost_storage_unit).run()
+                    DeleteCurrentDump(self.context, timestamp = post_dump_outcome['timestamp']).run()
                     MailDumpEvent("Report from gpcrondump on host %s [FAILED]" % self.cur_host,
                                   "Failed for database %s with return code %d dump files rolled back. [Start=%s End=%s] Options passed [%s]"
-                                  % (dump_database, current_exit_status, dump_outcome['time_start'], dump_outcome['time_end'], self.options_list)).run()
+                                  % (self.context.dump_database, current_exit_status, dump_outcome['time_start'], dump_outcome['time_end'], self.options_list)).run()
                     raise ExceptionNoStackTraceNeeded("Dump incomplete, completed rollback")
                 else:
                     logger.warn("Dump request was incomplete, not rolling back because -r option was not supplied")
                     MailDumpEvent("Report from gpcrondump on host %s [FAILED]" % self.cur_host,
                                   "Failed for database %s with return code %s dump files not rolled back. [Start=%s End=%s] Options passed [%s]"
-                                  % (dump_database, current_exit_status, dump_outcome['time_start'], dump_outcome['time_end'], self.options_list)).run()
+                                  % (self.context.dump_database, current_exit_status, dump_outcome['time_start'], dump_outcome['time_end'], self.options_list)).run()
                     raise ExceptionNoStackTraceNeeded("Dump incomplete, rollback not processed")
             else:
-                if self.clear_dumps:
-                    deleted_dump_set = DeleteOldestDumps(master_datadir = self.master_datadir,
-                                                         master_port = self.master_port,
-                                                         dump_dir = self.dump_dir,
-                                                         cleanup_date = self.cleanup_date,
-                                                         cleanup_total = self.cleanup_total,
-                                                         ddboost = self.ddboost,
-                                                         ddboost_storage_unit=self.ddboost_storage_unit).run()
+                if self.context.clear_dumps:
+                    deleted_dump_set = DeleteOldestDumps(self.context).run()
 
             if self.post_vacuum:
                 logger.info('Commencing post-dump vacuum...')
-                VacuumDatabase(database = dump_database,
-                               master_port = self.master_port).run()
+                VacuumDatabase(database = self.context.dump_database,
+                               master_port = self.context.master_port).run()
 
-            dump_type = 'Incremental' if self.incremental else 'Full database'
-            self._status_report(dump_database,
-                                post_dump_outcome['timestamp'],
+            dump_type = 'Incremental' if self.context.incremental else 'Full database'
+            self._status_report(post_dump_outcome['timestamp'],
                                 dump_outcome,
                                 current_exit_status,
                                 deleted_dump_set,
                                 dump_type)
 
-            if self.dump_config:
+            if self.context.dump_config:
                 dump_info_dict = defaultdict(dict)
                 dump_info_dict['host'] = self.cur_host
-                dump_info_dict['dbname'] = dump_database
+                dump_info_dict['dbname'] = self.context.dump_database
                 dump_info_dict['exit_status'] = current_exit_status
                 dump_info_dict['start_time'] = dump_outcome['time_start']
                 dump_info_dict['end_time'] = dump_outcome['time_end']
@@ -1115,35 +919,28 @@ class GpCronDump(Operation):
 
                 dump_db_info_list.append(dump_info_dict)
             else:
-                self._send_email(dump_database, current_exit_status, dump_outcome['time_start'], dump_outcome['time_end'])
+                self._send_email(self.context.dump_database, current_exit_status, dump_outcome['time_start'], dump_outcome['time_end'])
 
-        if self.dump_config:
-            config_outcome = DumpConfig(backup_dir = self.backup_dir,
-                                        master_datadir = self.master_datadir,
-                                        master_port = self.master_port,
-                                        dump_dir = self.dump_dir,
-                                        dump_prefix = self.dump_prefix,
-                                        ddboost = self.ddboost,
-                                        ddboost_storage_unit=self.ddboost_storage_unit).run()
-            if self.netbackup_service_host and self.netbackup_policy and self.netbackup_schedule:
-                backup_config_files_with_nbu(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, self.master_port,
-                                             self.netbackup_service_host, self.netbackup_policy, self.netbackup_schedule, self.netbackup_block_size, self.netbackup_keyword)
+        if self.context.dump_config:
+            config_outcome = DumpConfig(self.context).run()
+            if self.context.netbackup_service_host and self.context.netbackup_policy and self.context.netbackup_schedule:
+                backup_config_files_with_nbu(self.context)
 
             for dump_db_info in dump_db_info_list:
                 self._send_email(dump_db_info['dbname'], dump_db_info['exit_status'], dump_db_info['start_time'], dump_outcome['time_end'])
 
-        if self.ddboost and self.replicate:
+        if self.context.ddboost and self.replicate:
             logger.info("Backup to local Data Domain successful.")
             for name, ts in self.dump_timestamps:
                 p = gpmfr.mfr_parser()
-                arglist = ["--replicate", ts, "--max-streams", self.max_streams, "--master-port", str(self.master_port)]
+                arglist = ["--replicate", ts, "--max-streams", self.max_streams, "--master-port", str(self.context.master_port)]
                 if self.quiet:
                     arglist.append("--quiet")
                 if self.verbose:
                     arglist.append("--verbose")
                 if not self.interactive:
                     arglist.append("-a")
-                if not self.ddboost_ping:
+                if not self.context.ddboost_ping:
                     arglist.append("--skip-ping")
                 if self.ddboost_storage_unit:
                     arglist.append('--ddboost-storage-unit')
@@ -1159,7 +956,7 @@ class GpCronDump(Operation):
                 finally:
                     mfr.restoreLogLevel()
 
-        if self.post_script is not None:
+        if self.context.post_script:
             self._run_program()
 
         if final_exit_status == 0:
@@ -1167,66 +964,55 @@ class GpCronDump(Operation):
 
         return final_exit_status
 
-    def _get_files_file_list(self, master, dump_dir, timestamp):
+    def cleanup_files_on_segments(self):
+        for tmp_file in [self.context.include_dump_tables_file, self.context.exclude_dump_tables_file, self.context.schema_file]:
+            if tmp_file and os.path.isfile(tmp_file):
+                os.remove(tmp_file)
+                remove_file_on_segments(self.context, tmp_file)
+
+    def _get_files_file_list(self, master):
         file_list = []
-        master_file_list = ['%sgp_cdatabase_1_1_%s', '%sgp_dump_%s_ao_state_file', '%sgp_dump_%s_co_state_file',
-                            '%sgp_dump_%s_last_operation', '%sgp_dump_%s.rpt', '%sgp_dump_status_1_1_%s']
+        master_file_list = ['cdatabase', 'ao', 'co', 'last_operation', 'report', 'status']
 
-        if self.dump_prefix and (self.include_dump_tables_file or self.exclude_dump_tables_file or \
-                                         self.include_dump_tables or self.exclude_dump_tables):
-            master_file_list.append('%sgp_dump_%s_filter')
+        if self.context.dump_prefix and (self.context.include_dump_tables_file or self.context.exclude_dump_tables_file or \
+                                         self.context.include_dump_tables or self.context.exclude_dump_tables):
+            master_file_list.append('filter')
 
-        for master_file in master_file_list:
-            file_list.append('%s:%s/%s' % (master.getSegmentHostName(), dump_dir,
-                                           master_file % (self.dump_prefix, timestamp)))
+        for filetype in master_file_list:
+            file_list.append('%s:%s' % (master.getSegmentHostName(), self.context.generate_filename(filetype)))
 
-        if self.incremental:
-            file_list.append('%s:%s/%sgp_dump_%s_increments' % (master.getSegmentHostName(), dump_dir,
-                                                                self.dump_prefix, self.full_dump_timestamp))
+        if self.context.incremental:
+            file_list.append('%s:%s' % (master.getSegmentHostName(), self.context.generate_filename("increments", timestamp=self.context.full_dump_timestamp)))
 
         return file_list
 
-    def _get_pipes_file_list(self, master, segdbs, dump_dir, timestamp):
+    def _get_pipes_file_list(self, master, segdbs):
         pipe_list = []
-        master_pipe_list = ['%sgp_dump_1_1_%s', '%sgp_dump_1_1_%s_post_data']
-        seg_pipe = '%sgp_dump_0_%s_%s'
-        config_pipe = '%sgp_master_config_files_%s.tar'
-        seg_config = '%sgp_segment_config_files_0_%s_%s.tar'
-        global_pipe = '%sgp_global_1_1_%s'
+        master_pipe_list = ['metadata', 'postdata']
 
+        mdd = self.context.master_datadir
         for segdb in segdbs:
-            seg_dump_dir = get_backup_directory(segdb.getSegmentDataDirectory(), self.backup_dir, self.dump_dir, str(timestamp))
-            pipe_list.append('%s:%s/%s' % (segdb.getSegmentHostName(),
-                                           seg_dump_dir,
-                                           seg_pipe % (self.dump_prefix, segdb.getSegmentDbId(), timestamp)))
-            if self.compress:
-                pipe_list[-1] += '.gz'
+            self.context.master_datadir = segdb.getSegmentDataDirectory()
+            pipe_list.append('%s:%s' % (segdb.getSegmentHostName(), self.context.generate_filename("dump", dbid=segdb.getSegmentDbId())))
+            if self.context.dump_config:
+                pipe_list.append('%s:%s' % (segdb.getSegmentHostName(), self.context.generate_filename("segment_config", dbid=segdb.getSegmentDbId())))
+        self.context.master_datadir = mdd
 
-        for pipe_file in master_pipe_list:
-            pipe_list.append('%s:%s/%s' % (master.getSegmentHostName(), dump_dir,
-                                           pipe_file % (self.dump_prefix, timestamp)))
-            if self.compress:
-                pipe_list[-1] += '.gz'
+        pipe_list.append('%s:%s' % (master.getSegmentHostName(), self.context.generate_filename("metadata")))
+        pipe_list.append('%s:%s' % (master.getSegmentHostName(), self.context.generate_filename("postdata")))
 
-        if self.dump_global:
-            pipe_list.append('%s:%s/%s' % (master.getSegmentHostName(), dump_dir,
-                                           global_pipe % (self.dump_prefix, timestamp)))
+        if self.context.dump_global:
+            pipe_list.append('%s:%s' % (master.getSegmentHostName(), self.context.generate_filename("global")))
 
-        if self.dump_config:
-            pipe_list.append('%s:%s/%s' % (master.getSegmentHostName(), dump_dir,
-                                           config_pipe % (self.dump_prefix, timestamp)))
-            for segdb in segdbs:
-                seg_dump_dir = get_backup_directory(segdb.getSegmentDataDirectory(), self.backup_dir, self.dump_dir, str(timestamp))
-                pipe_list.append('%s:%s/%s' % (segdb.getSegmentHostName(),
-                                               seg_dump_dir,
-                                               seg_config % (self.dump_prefix, segdb.getSegmentDbId(), timestamp)))
+        if self.context.dump_config:
+            pipe_list.append('%s:%s' % (master.getSegmentHostName(), self.context.generate_filename("master_config")))
 
         return pipe_list
 
 
     def show_ddboost_config(self):
         cmdStr = 'gpddboost --show-config'
-        if self.ddboost_remote:
+        if self.context.ddboost_remote:
             cmdStr += ' --remote'
         cmd = Command('Get the ddboost configuration information', cmdStr)
         cmd.run(validateAfter=True)
@@ -1239,57 +1025,36 @@ class GpCronDump(Operation):
         logger.info('-----------------------------------------------------')
 
 
-    def _list_backup_files(self, timestamp):
-        pipe_list = []
-        file_list = []
-
+    def _list_backup_files(self):
         gparray = self.getGpArray()
         segdbs = [segdb for segdb in gparray.getDbList() if segdb.isSegmentPrimary()]
 
-        dump_dir = get_backup_directory(self.master_datadir, self.backup_dir, self.dump_dir, timestamp)
-        pipe_list = self._get_pipes_file_list(gparray.master, segdbs, dump_dir, timestamp)
-        file_list = self._get_files_file_list(gparray.master, dump_dir, timestamp)
+        pipe_list = self._get_pipes_file_list(gparray.master, segdbs)
+        file_list = self._get_files_file_list(gparray.master)
 
-        pipes_list_fname = generate_pipes_filename(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, timestamp)
-        files_list_fname = generate_files_filename(self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix, timestamp)
+        pipes_list_fname = self.context.generate_filename("pipes")
+        files_list_fname = self.context.generate_filename("files")
 
         dirname = os.path.dirname(pipes_list_fname)
         if not os.path.isdir(dirname):
             os.makedirs(dirname)
 
         write_lines_to_file(pipes_list_fname, pipe_list)
-        verify_lines_in_file(pipes_list_fname, pipe_list)
         logger.info('Added the list of pipe names to the file: %s' % pipes_list_fname)
 
         write_lines_to_file(files_list_fname, file_list)
-        verify_lines_in_file(files_list_fname, file_list)
         logger.info('Added the list of file names to the file: %s' % files_list_fname)
 
     def _list_filter_tables(self, db, filter_filename):
         logger.info("---------------------------------------------------")
         if not filter_filename:
-            logger.info('No filter file found for database %s and prefix %s.' % (db, self.dump_prefix[:-1]))
+            logger.info('No filter file found for database %s and prefix %s.' % (db, self.context.dump_prefix[:-1]))
             logger.info('All tables in %s will be included in the dump.' % db)
             return
         tables = get_lines_from_file(filter_filename)
         logger.info('Filtering %s for the following tables:' % db)
         for table in tables:
             logger.info('%s' % table)
-
-    def _get_timestamp_object(self, timestamp_key):
-        if timestamp_key is None:
-            return datetime.now()
-
-        if not validate_timestamp(timestamp_key):
-            raise Exception('Invalid timestamp key')
-
-        year = int(self.timestamp_key[:4])
-        month = int(self.timestamp_key[4:6])
-        day = int(self.timestamp_key[6:8])
-        hours = int(self.timestamp_key[8:10])
-        minutes = int(self.timestamp_key[10:12])
-        seconds = int(self.timestamp_key[12:14])
-        return datetime(year, month, day, hours, minutes, seconds)
 
     def _get_table_names_from_partition_list(self, partition_list):
         tablenames = []
@@ -1312,54 +1077,53 @@ class GpCronDump(Operation):
 
         check_funny_chars_in_names(tablenames)
 
-    def _prompt_continue(self, dump_database):
+    def _prompt_continue(self):
         logger.info("---------------------------------------------------")
         logger.info("Master Greenplum Instance dump parameters")
         logger.info("---------------------------------------------------")
-        if len(self.include_dump_tables) > 0 or self.include_dump_tables_file is not None:
+        if len(self.context.include_dump_tables) > 0 or self.context.include_dump_tables_file:
             logger.info("Dump type                            = Single database, specific table")
             logger.info("---------------------------------------------------")
-            if len(self.include_dump_tables) > 0:
+            if len(self.context.include_dump_tables) > 0:
                 logger.info("Table inclusion list ")
                 logger.info("---------------------------------------------------")
-                for table in self.include_dump_tables:
+                for table in self.context.include_dump_tables:
                     logger.info("Table name                             = %s" % table)
                 logger.info("---------------------------------------------------")
-            if self.include_dump_tables_file is not None:
-                logger.info("Table file name                      = %s" % self.include_dump_tables_file)
+            if self.context.include_dump_tables_file:
+                logger.info("Table file name                      = %s" % self.context.include_dump_tables_file)
                 logger.info("---------------------------------------------------")
-        elif len(self.exclude_dump_tables) > 0 or self.exclude_dump_tables_file is not None:
+        elif len(self.context.exclude_dump_tables) > 0 or self.context.exclude_dump_tables_file:
             logger.info("Dump type                            = Single database, exclude table")
             logger.info("---------------------------------------------------")
-            if len(self.exclude_dump_tables) > 0:
+            if len(self.context.exclude_dump_tables) > 0:
                 logger.info("Table exclusion list ")
                 logger.info("---------------------------------------------------")
-                for table in self.exclude_dump_tables:
+                for table in self.context.exclude_dump_tables:
                     logger.info("Table name                               = %s" % table)
                 logger.info("---------------------------------------------------")
-            if self.exclude_dump_tables_file is not None:
-                logger.info("Table file name                      = %s" % self.exclude_dump_tables_file)
+            if self.context.exclude_dump_tables_file:
+                logger.info("Table file name                      = %s" % self.context.exclude_dump_tables_file)
                 logger.info("---------------------------------------------------")
-        elif self.incremental:
+        elif self.context.incremental:
             logger.info("Dump type                            = Incremental")
-            filter_name = get_filter_file(dump_database, self.master_datadir, self.backup_dir, self.dump_dir, self.dump_prefix,
-                                          self.ddboost, self.netbackup_service_host)
-            if filter_name is not None:
+            filter_name = get_filter_file(self.context)
+            if filter_name:
                 logger.info("Filtering tables using:")
-                logger.info("\t Prefix                        = %s" % (self.dump_prefix[:-1]))
-                logger.info("\t Full dump timestamp           = %s" % (self.full_dump_timestamp))
+                logger.info("\t Prefix                        = %s" % (self.context.dump_prefix[:-1]))
+                logger.info("\t Full dump timestamp           = %s" % (self.context.full_dump_timestamp))
                 logger.info("---------------------------------------------------")
         else:
             logger.info("Dump type                            = Full database")
-        logger.info("Database to be dumped                = %s" % dump_database)
-        if self.dump_schema:
-            logger.info("Schema to be dumped                  = %s" % self.dump_schema)
-        if self.backup_dir is not None:
-            logger.info("Dump directory                       = %s" % self.backup_dir)
-        logger.info("Master port                          = %s" % self.master_port)
-        logger.info("Master data directory                = %s" % self.master_datadir)
-        if self.post_script is not None:
-            logger.info("Run post dump program                = %s" % self.post_script)
+        logger.info("Database to be dumped                = %s" % self.context.dump_database)
+        if self.context.dump_schema:
+            logger.info("Schema to be dumped                  = %s" % self.context.dump_schema)
+        if self.context.backup_dir:
+            logger.info("Dump directory                       = %s" % self.context.backup_dir)
+        logger.info("Master port                          = %s" % self.context.master_port)
+        logger.info("Master data directory                = %s" % self.context.master_datadir)
+        if self.context.post_script:
+            logger.info("Run post dump program                = %s" % self.context.post_script)
         else:
             logger.info("Run post dump program                = Off")
                     # TODO: failed_primary_count. do we care though? the end user shouldn't be continuing if
@@ -1380,11 +1144,11 @@ class GpCronDump(Operation):
                     #fi
         on_or_off = {False: "Off", True: "On"}
         logger.info("Rollback dumps                       = %s" % on_or_off[self.rollback])
-        logger.info("Dump file compression                = %s" % on_or_off[self.compress])
-        logger.info("Clear old dump files                 = %s" % on_or_off[self.clear_dumps])
-        logger.info("Update history table                 = %s" % on_or_off[self.history])
-        logger.info("Secure config files                  = %s" % on_or_off[self.dump_config])
-        logger.info("Dump global objects                  = %s" % on_or_off[self.dump_global])
+        logger.info("Dump file compression                = %s" % on_or_off[self.context.compress])
+        logger.info("Clear old dump files                 = %s" % on_or_off[self.context.clear_dumps])
+        logger.info("Update history table                 = %s" % on_or_off[self.context.history])
+        logger.info("Secure config files                  = %s" % on_or_off[self.context.dump_config])
+        logger.info("Dump global objects                  = %s" % on_or_off[self.context.dump_global])
         if self.pre_vacuum and self.post_vacuum:
             logger.info("Vacuum mode type                     = pre-dump, post-dump")
         elif self.pre_vacuum:
@@ -1393,21 +1157,21 @@ class GpCronDump(Operation):
             logger.info("Vacuum mode type                     = post-dump")
         else:
             logger.info("Vacuum mode type                     = Off")
-        if self.clear_catalog_dumps:
+        if self.context.clear_catalog_dumps:
             logger.info("Additional options                   = -c")
-        if self.free_space_percent is not None:
-            logger.info("Ensuring remaining free disk         > %d" % self.free_space_percent)
+        if self.context.free_space_percent:
+            logger.info("Ensuring remaining free disk         > %d" % self.context.free_space_percent)
 
         if not userinput.ask_yesno(None, "\nContinue with Greenplum dump", 'N'):
             raise UserAbortedException()
 
-    def _status_report(self, dump_database, timestamp, dump_outcome, exit_status, deleted_dump_set, dump_type):
+    def _status_report(self, timestamp, dump_outcome, exit_status, deleted_dump_set, dump_type):
         logger.info("Dump status report")
         logger.info("---------------------------------------------------")
-        logger.info("Target database                          = %s" % dump_database)
+        logger.info("Target database                          = %s" % self.context.dump_database)
         logger.info("Dump subdirectory                        = %s" % timestamp[0:8])
         logger.info("Dump type                                = %s" % dump_type)
-        if self.clear_dumps:
+        if self.context.clear_dumps:
             logger.info("Clear old dump directories               = On")
             logger.info("Backup set deleted                       = %s" % deleted_dump_set)
         else:
@@ -1425,7 +1189,7 @@ class GpCronDump(Operation):
         else:
             logger.info("Status                                   = COMPLETED")
             logger.info("Dump key                                 = %s" % timestamp)
-        if self.compress:
+        if self.context.compress:
             logger.info("Dump file compression                    = On")
         else:
             logger.info("Dump file compression                    = Off")
@@ -1444,55 +1208,46 @@ class GpCronDump(Operation):
         logger.info("---------------------------------------------------")
 
     def _validate_dump_target(self):
-        if len(self.dump_databases) > 1:
-            if self.dump_schema or self.include_schema_file is not None:
+        if len(self.context.dump_databases) > 1:
+            if self.context.dump_schema or self.context.include_schema_file:
                 raise ExceptionNoStackTraceNeeded("Cannot include specific schema if multiple database dumps are requested")
-            if self.exclude_dump_schema or self.exclude_schema_file is not None:
+            if self.context.exclude_dump_schema or self.context.exclude_schema_file:
                 raise ExceptionNoStackTraceNeeded("Cannot exclude specific schema if multiple database dumps are requested")
-            if len(self.include_dump_tables) > 0 or self.include_dump_tables_file is not None:
+            if len(self.context.include_dump_tables) > 0 or self.context.include_dump_tables_file:
                 raise ExceptionNoStackTraceNeeded("Cannot supply a table dump list if multiple database dumps are requested")
-            if len(self.exclude_dump_tables) > 0 or self.exclude_dump_tables_file is not None:
+            if len(self.context.exclude_dump_tables) > 0 or self.context.exclude_dump_tables_file:
                 raise ExceptionNoStackTraceNeeded("Cannot exclude specific tables if multiple database dumps are requested")
             logger.info("Configuring for multiple database dump")
 
-        for dump_database in self.dump_databases:
-            ValidateDatabaseExists(database=dump_database, master_port=self.master_port).run()
+        for dumpdb in self.context.dump_databases:
+            self.context.dump_database = dumpdb
+            ValidateDatabaseExists(self.context).run()
 
-        if self.dump_schema:
-            for schema in self.dump_schema:
-                ValidateSchemaExists(database = self.dump_databases[0],
-                                     schema = schema,
-                                     master_port = self.master_port).run()
+        if self.context.dump_schema:
+            for schema in self.context.dump_schema:
+                ValidateSchemaExists(self.context, schema).run()
 
     def _validate_run_program(self):
         #Check to see if the file exists
-        cmd = Command('Seeking post script', "which %s" % self.post_script)
+        cmd = Command('Seeking post script', "which %s" % self.context.post_script)
         cmd.run()
         if cmd.get_results().rc != 0:
-            cmd = Command('Seeking post script file', '[ -f %s ]' % self.post_script)
+            cmd = Command('Seeking post script file', '[ -f %s ]' % self.context.post_script)
             cmd.run()
             if cmd.get_results().rc != 0:
-                logger.warn("Could not locate %s" % self.post_script)
-                self.post_script = None
+                logger.warn("Could not locate %s" % self.context.post_script)
+                self.context.post_script = None
                 return
-        logger.info("Located %s, will call after dump completed" % self.post_script)
+        logger.info("Located %s, will call after dump completed" % self.context.post_script)
 
     def _run_program(self):
-        Command('Invoking post script', self.post_script).run()
+        Command('Invoking post script', self.context.post_script).run()
 
     def _get_pgport(self):
         env_pgport = os.getenv('PGPORT')
         if not env_pgport:
-            return self.master_port
+            return self.context.master_port
         return env_pgport
-
-    def _get_master_port(self, datadir):
-        """ TODO: This function will be widely used. Move it elsewhere?
-            Its necessity is a direct consequence of allowing the -d <master_data_directory> option. From this,
-            we need to deduce the proper port so that the GpArrays can be generated properly. """
-        logger.debug("Obtaining master's port from master data directory")
-        pgconf_dict = pgconf.readfile(datadir + "/postgresql.conf")
-        return pgconf_dict.int('port')
 
     def _validate_parse_email_File(self):
         if os.path.isfile(self.include_email_file) is False:
@@ -1509,7 +1264,7 @@ class GpCronDump(Operation):
             for email in self.email_details:
                 if not all(keys in email for keys in email_key_list):
                     raise Exception("File not formatted")
-                if email['DBNAME'] is None:
+                if not email['DBNAME']:
                     raise Exception("Database name is not provided")
         except Exception as e:
             raise Exception("\'%s\' file is not formatted properly:" % self.include_email_file)
@@ -1522,9 +1277,9 @@ class GpCronDump(Operation):
             for email in self.email_details:
                 if dump_database in email['DBNAME']:
                     default_email = False
-                    if email['FROM'] is None:
+                    if not email['FROM']:
                         MailDumpEvent(email['SUBJECT'], default_msg).run()
-                    elif email['SUBJECT'] is None:
+                    elif not email['SUBJECT']:
                         MailDumpEvent(default_subject, default_msg, email['FROM']).run()
                     else:
                         MailDumpEvent(email['SUBJECT'], default_msg, email['FROM']).run()

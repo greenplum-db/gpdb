@@ -23,6 +23,7 @@
 #include "commands/trigger.h"
 #include "executor/spi.h"
 #include "funcapi.h"
+#include "libpq/pqsignal.h"
 #include "mb/pg_wchar.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
@@ -58,14 +59,15 @@ PG_MODULE_MAGIC;
 
 
 /**********************************************************************
- * Information associated with a Perl interpreter.	We have one interpreter
- * that is used for all plperlu (untrusted) functions.	For plperl (trusted)
+ * Information associated with a Perl interpreter.  We have one interpreter
+ * that is used for all plperlu (untrusted) functions.  For plperl (trusted)
  * functions, there is a separate interpreter for each effective SQL userid.
  * (This is needed to ensure that an unprivileged user can't inject Perl code
  * that'll be executed with the privileges of some other SQL user.)
  *
  * The plperl_interp_desc structs are kept in a Postgres hash table indexed
  * by userid OID, with OID 0 used for the single untrusted interpreter.
+ * Once created, an interpreter is kept for the life of the process.
  *
  * We start out by creating a "held" interpreter, which we initialize
  * only as far as we can do without deciding if it will be trusted or
@@ -91,27 +93,43 @@ typedef struct plperl_interp_desc
 
 /**********************************************************************
  * The information we cache about loaded procedures
+ *
+ * The refcount field counts the struct's reference from the hash table shown
+ * below, plus one reference for each function call level that is using the
+ * struct.  We can release the struct, and the associated Perl sub, when the
+ * refcount goes to zero.
  **********************************************************************/
 typedef struct plperl_proc_desc
 {
 	char	   *proname;		/* name of the sql function */
 	TransactionId fn_xmin;
 	ItemPointerData fn_tid;
+	int			refcount;		/* reference count of this struct */
+	SV		   *reference;		/* CODE reference for Perl sub */
 	plperl_interp_desc *interp; /* interpreter it's created in */
 	bool		fn_readonly;
 	bool		lanpltrusted;
 	bool		fn_retistuple;	/* true, if function returns tuple */
 	bool		fn_retisset;	/* true, if function returns set */
 	bool		fn_retisarray;	/* true if function returns array */
+	/* Conversion info for function's result type: */
 	Oid			result_oid;		/* Oid of result type */
 	FmgrInfo	result_in_func; /* I/O function and arg for result type */
 	Oid			result_typioparam;
+	/* Conversion info for function's argument types: */
 	int			nargs;
 	FmgrInfo	arg_out_func[FUNC_MAX_ARGS];
 	bool		arg_is_rowtype[FUNC_MAX_ARGS];
 	Oid			arg_arraytype[FUNC_MAX_ARGS];	/* InvalidOid if not an array */
-	SV		   *reference;
 } plperl_proc_desc;
+
+#define increment_prodesc_refcount(prodesc)  \
+	((prodesc)->refcount++)
+#define decrement_prodesc_refcount(prodesc)  \
+	do { \
+		if (--((prodesc)->refcount) <= 0) \
+			free_plperl_function(prodesc); \
+	} while(0)
 
 /**********************************************************************
  * For speedy lookup, we maintain a hash table mapping from
@@ -128,19 +146,18 @@ typedef struct plperl_proc_desc
  **********************************************************************/
 typedef struct plperl_proc_key
 {
-	Oid			proc_id;		/* Function OID */
-
+	Oid			proc_id;				/* Function OID */
 	/*
 	 * is_trigger is really a bool, but declare as Oid to ensure this struct
 	 * contains no padding
 	 */
-	Oid			is_trigger;		/* is it a trigger function? */
-	Oid			user_id;		/* User calling the function, or 0 */
+	Oid			is_trigger;				/* is it a trigger function? */
+	Oid			user_id;				/* User calling the function, or 0 */
 } plperl_proc_key;
 
 typedef struct plperl_proc_ptr
 {
-	plperl_proc_key proc_key;	/* Hash key (must be first!) */
+	plperl_proc_key proc_key;			/* Hash key (must be first!) */
 	plperl_proc_desc *proc_ptr;
 } plperl_proc_ptr;
 
@@ -238,6 +255,8 @@ static void set_interp_require(bool trusted);
 
 static Datum plperl_func_handler(PG_FUNCTION_ARGS);
 static Datum plperl_trigger_handler(PG_FUNCTION_ARGS);
+
+static void free_plperl_function(plperl_proc_desc *prodesc);
 
 static plperl_proc_desc *compile_plperl_function(Oid fn_oid, bool is_trigger);
 
@@ -1153,6 +1172,9 @@ plperl_array_to_datum(SV *src, Oid typid)
 	return makeMdArrayResult(astate, ndims, dims, lbs, CurrentMemoryContext, true);
 }
 
+/*
+ * Initialize the current Perl interpreter as a trusted interp
+ */
 static void
 _sv_to_datum_finfo(FmgrInfo *fcinfo, Oid typid, Oid *typioparam)
 {
@@ -1576,9 +1598,15 @@ plperl_call_handler(PG_FUNCTION_ARGS)
 	Datum		retval;
 	plperl_call_data *save_call_data = current_call_data;
 	plperl_interp_desc *oldinterp = plperl_active_interp;
+	plperl_call_data this_call_data;
+
+	/* Initialize current-call status record */
+	MemSet(&this_call_data, 0, sizeof(this_call_data));
+	this_call_data.fcinfo = fcinfo;
 
 	PG_TRY();
 	{
+		current_call_data = &this_call_data;
 		if (CALLED_AS_TRIGGER(fcinfo))
 			retval = plperl_trigger_handler(fcinfo);
 		else
@@ -2055,6 +2083,7 @@ plperl_func_handler(PG_FUNCTION_ARGS)
 
 	prodesc = compile_plperl_function(fcinfo->flinfo->fn_oid, false);
 	current_call_data->prodesc = prodesc;
+	increment_prodesc_refcount(prodesc);
 
 	/* Set a callback for error reporting */
 	pl_error_context.callback = plperl_exec_callback;
@@ -2227,6 +2256,7 @@ plperl_trigger_handler(PG_FUNCTION_ARGS)
 	/* Find or compile the function */
 	prodesc = compile_plperl_function(fcinfo->flinfo->fn_oid, true);
 	current_call_data->prodesc = prodesc;
+	increment_prodesc_refcount(prodesc);
 
 	/* Set a callback for error reporting */
 	pl_error_context.callback = plperl_exec_callback;
@@ -2353,6 +2383,27 @@ validate_plperl_function(plperl_proc_ptr *proc_ptr, HeapTuple procTup)
 }
 
 
+static void
+free_plperl_function(plperl_proc_desc *prodesc)
+{
+	Assert(prodesc->refcount <= 0);
+	/* Release CODE reference, if we have one, from the appropriate interp */
+	if (prodesc->reference)
+	{
+		plperl_interp_desc *oldinterp = plperl_active_interp;
+
+		activate_interpreter(prodesc->interp);
+		SvREFCNT_dec(prodesc->reference);
+		activate_interpreter(oldinterp);
+	}
+	/* Get rid of what we conveniently can of our own structs */
+	/* (FmgrInfo subsidiary info will get leaked ...) */
+	if (prodesc->proname)
+		free(prodesc->proname);
+	free(prodesc);
+}
+
+
 static plperl_proc_desc *
 compile_plperl_function(Oid fn_oid, bool is_trigger)
 {
@@ -2423,6 +2474,7 @@ compile_plperl_function(Oid fn_oid, bool is_trigger)
 			ereport(ERROR,
 					(errcode(ERRCODE_OUT_OF_MEMORY),
 					 errmsg("out of memory")));
+		/* Initialize all fields to 0 so free_plperl_function is safe */
 		MemSet(prodesc, 0, sizeof(plperl_proc_desc));
 		prodesc->proname = strdup(NameStr(procStruct->proname));
 		if (prodesc->proname == NULL)
@@ -2443,8 +2495,7 @@ compile_plperl_function(Oid fn_oid, bool is_trigger)
 								  ObjectIdGetDatum(procStruct->prolang));
 		if (!HeapTupleIsValid(langTup))
 		{
-			free(prodesc->proname);
-			free(prodesc);
+			free_plperl_function(prodesc);
 			elog(ERROR, "cache lookup failed for language %u",
 				 procStruct->prolang);
 		}
@@ -2463,8 +2514,7 @@ compile_plperl_function(Oid fn_oid, bool is_trigger)
 								ObjectIdGetDatum(procStruct->prorettype));
 			if (!HeapTupleIsValid(typeTup))
 			{
-				free(prodesc->proname);
-				free(prodesc);
+				free_plperl_function(prodesc);
 				elog(ERROR, "cache lookup failed for type %u",
 					 procStruct->prorettype);
 			}
@@ -2478,8 +2528,7 @@ compile_plperl_function(Oid fn_oid, bool is_trigger)
 					 /* okay */ ;
 				else if (procStruct->prorettype == TRIGGEROID)
 				{
-					free(prodesc->proname);
-					free(prodesc);
+					free_plperl_function(prodesc);
 					ereport(ERROR,
 							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 							 errmsg("trigger functions can only be called "
@@ -2487,8 +2536,7 @@ compile_plperl_function(Oid fn_oid, bool is_trigger)
 				}
 				else
 				{
-					free(prodesc->proname);
-					free(prodesc);
+					free_plperl_function(prodesc);
 					ereport(ERROR,
 							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 							 errmsg("PL/Perl functions cannot return type %s",
@@ -2523,8 +2571,7 @@ compile_plperl_function(Oid fn_oid, bool is_trigger)
 						ObjectIdGetDatum(procStruct->proargtypes.values[i]));
 				if (!HeapTupleIsValid(typeTup))
 				{
-					free(prodesc->proname);
-					free(prodesc);
+					free_plperl_function(prodesc);
 					elog(ERROR, "cache lookup failed for type %u",
 						 procStruct->proargtypes.values[i]);
 				}
@@ -2534,8 +2581,7 @@ compile_plperl_function(Oid fn_oid, bool is_trigger)
 				if (typeStruct->typtype == TYPTYPE_PSEUDO &&
 					procStruct->proargtypes.values[i] != RECORDOID)
 				{
-					free(prodesc->proname);
-					free(prodesc);
+					free_plperl_function(prodesc);
 					ereport(ERROR,
 							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 							 errmsg("PL/Perl functions cannot accept type %s",

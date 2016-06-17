@@ -31,7 +31,6 @@ typedef enum
 	PMSIGNAL_START_AUTOVAC_LAUNCHER,	/* start an autovacuum launcher */
 	PMSIGNAL_START_AUTOVAC_WORKER,		/* start an autovacuum worker */
 
-	PMSIGNAL_START_AUTOVAC,
 	PMSIGNAL_START_WALRECEIVER, /* start a walreceiver */
 
 	PMSIGNAL_FILEREP_STATE_CHANGE,	      /* filerep is reporting state change */ 

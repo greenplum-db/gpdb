@@ -578,9 +578,7 @@ select fun_array(25,50) as intarray, fun_array('abc'::text, 'bcf') AS textarray;
 (1 row)
 
 select fun_array(25,50) as intarray, fun_array('abc', 'bcf') AS textarray;
-ERROR:  could not determine anyarray/anyelement type because input has type "unknown"
-LINE 1: select fun_array(25,50) as intarray, fun_array('abc', 'bcf')...
-                                             ^
+ERROR:  could not determine polymorphic type because input has type "unknown"
 -- start_ignore
 create or replace function fun_is_greater(anyelement,anyelement) returns boolean AS $$ select $1 > $2 $$ language sql;
 -- end_ignore
@@ -705,11 +703,10 @@ SELECT substr(CAST (varchar '1234' AS text), 3);
 (1 row)
 
 SELECT substr(1234, 3);
- substr 
---------
- 34
-(1 row)
-
+ERROR:  function substr(integer, integer) does not exist
+LINE 1: SELECT substr(1234, 3);
+               ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 SELECT substr(CAST (1234 AS text), 3);
  substr 
 --------
@@ -1152,6 +1149,10 @@ PL/pgSQL function "bad_ddl" line 2 at SQL statement
 (1 row)
 
 select bad_ddl();
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CONTEXT:  SQL statement "create table junk_table(a int)"
+PL/pgSQL function "bad_ddl" line 2 at SQL statement
  bad_ddl 
 ---------
  
@@ -1171,7 +1172,7 @@ select bad_ddl();
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 CONTEXT:  SQL statement "create table junk_table(a int)"
-PL/pgSQL function "bad_ddl" line 2 at execute statement
+PL/pgSQL function "bad_ddl" line 2 at EXECUTE statement
  bad_ddl 
 ---------
  

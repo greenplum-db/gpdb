@@ -7,93 +7,31 @@
 import sys
 import unittest2 as unittest
 import tempfile, os, shutil
-from gppylib.commands.base import CommandResult
-from gppylib.operations.restore import RestoreDatabase, create_restore_plan, get_plan_file_contents, \
-        get_restore_tables_from_table_file, write_to_plan_file, check_table_name_format_and_duplicate, \
-        create_plan_file_contents, GetDbName, get_dirty_table_file_contents, \
-        get_incremental_restore_timestamps, get_partition_list, get_restore_dir, is_begin_incremental_run, \
-        is_incremental_restore, get_restore_table_list, validate_restore_tables_list, \
-        update_ao_stat_func, update_ao_statistics, _build_gpdbrestore_cmd_line, ValidateTimestamp, \
-        is_full_restore, restore_state_files_with_nbu, restore_report_file_with_nbu, restore_cdatabase_file_with_nbu, \
-        restore_global_file_with_nbu, restore_config_files_with_nbu, config_files_dumped, global_file_dumped, generate_restored_tables, \
-        restore_partition_list_file_with_nbu, restore_increments_file_with_nbu, GetDumpTables, validate_tablenames_exist_in_dump_file
-
-from gppylib.commands.base import ExecutionError
+from gppylib.commands.base import CommandResult, Command, ExecutionError
+from gppylib.operations.backup_utils import * 
+from gppylib.operations.restore import *
+from gppylib.operations.restore import _build_gpdbrestore_cmd_line
 from gppylib.mainUtils import ExceptionNoStackTraceNeeded
-from mock import mock_open, patch, MagicMock, Mock
-import __builtin__
+from mock import patch, MagicMock, Mock, mock_open, call
 
-class ValidateTimestampMock():
-    def __init__(self, compressed=None):
-        self.compress = compressed
-
-    def run(self):
-        restore_timestamp = "20121212121212"
-        return (restore_timestamp, None, self.compress)
-
-class OpenFileMock():
-    def __init__(self, lines):
-        self.lines = lines
-        self.max = len(lines)
-        self.counter = 0
-
-    def readlines(self):
-        return self.lines
-
-    def close(self):
-        pass
-
-    def open(self):
-        return self
-
-class restoreTestCase(unittest.TestCase):
+class RestoreTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.restore = RestoreDatabase(restore_timestamp = '20121212121212',
-                                       no_analyze = True,
-                                       drop_db = True,
-                                       restore_global = False,
-                                       master_datadir = 'foo',
-                                       backup_dir = None,
-                                       master_port = 1234,
-                                       dump_dir = "db_dumps",
-                                       dump_prefix = "",
-                                       no_plan = False,
-                                       restore_tables = None,
-                                       batch_default=64,
-                                       no_ao_stats = False,
-                                       redirected_restore_db = None,
-                                       report_status_dir = None,
-                                       restore_stats = None,
-                                       metadata_only = None,
-                                       ddboost = False,
-                                       netbackup_service_host = None,
-                                       netbackup_block_size = None,
-                                       change_schema = None,
-                                       schema_level_restore_list=None)
+        context = Context()
+        context.restore_db='testdb'
+        context.include_dump_tables_file='/tmp/table_list.txt'
+        context.master_datadir='/data/master/p1'
+        context.batch_default=None
+        context.timestamp = '20160101010101'
+        context.no_analyze = True
+        context.drop_db = True
+        context.master_port = 5432
+        
+        self.context = context
+        self.restore = RestoreDatabase(self.context)
+        self.validate_timestamp = ValidateTimestamp(self.context)
 
-    def create_backup_dirs(self, top_dir=os.getcwd(), dump_dirs=[]):
-        if dump_dirs is None:
-            return
-
-        for dump_dir in dump_dirs:
-            backup_dir = os.path.join(top_dir, 'db_dumps', dump_dir)
-            if not os.path.isdir(backup_dir):
-                os.makedirs(backup_dir)
-                if not os.path.isdir(backup_dir):
-                    raise Exception('Failed to create directory %s' % backup_dir)
-
-    def remove_backup_dirs(self, top_dir=os.getcwd(), dump_dirs=[]):
-        if dump_dirs is None:
-            return
-
-        for dump_dir in dump_dirs:
-            backup_dir = os.path.join(top_dir, 'db_dumps', dump_dir)
-            shutil.rmtree(backup_dir)
-            if os.path.isdir(backup_dir):
-                raise Exception('Failed to remove directory %s' % backup_dir)
-
-    def test_GetDbName_1(self):
+    def test_GetDbName_default(self):
         """ Basic test """
         with tempfile.NamedTemporaryFile() as f:
             f.write("""
@@ -106,7 +44,7 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
             f.flush()
             self.assertTrue(GetDbName(f.name).run() == "monkey")
 
-    def test_GetDbName_2(self):
+    def test_GetDbName_line_check(self):
         """ Verify that GetDbName looks no further than 50 lines. """
         with tempfile.NamedTemporaryFile() as f:
             for i in range(0, 50):
@@ -119,7 +57,7 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
                 return
             self.fail("DbNameGiveUp should have been raised.")
 
-    def test_GetDbName_3(self):
+    def test_GetDbName_no_name(self):
         """ Verify that GetDbName fails  when cdatabase file ends prematurely. """
         with tempfile.NamedTemporaryFile() as f:
             f.write("this is the whole file")
@@ -132,234 +70,145 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
 
     @patch('gppylib.operations.restore.RestoreDatabase._process_createdb', side_effect=ExceptionNoStackTraceNeeded('Failed to create database'))
     @patch('time.sleep')
-    def test_multitry_createdb_1(self, mock1, mock2):
-        self.assertRaises(ExceptionNoStackTraceNeeded, self.restore._multitry_createdb, '20121212121212', 'fullbkdb', None, 'foo', None, 1234)
+    def test_multitry_createdb_create_fails(self, mock1, mock2):
+        self.assertRaises(ExceptionNoStackTraceNeeded, self.restore._multitry_createdb)
 
     @patch('gppylib.operations.restore.RestoreDatabase._process_createdb')
-    def test_multitry_createdb_2(self, mock):
-        self.restore._multitry_createdb('20121212121212', 'fullbkdb', None, 'foo', None, 1234)
+    def test_multitry_createdb_default(self, mock):
+        self.restore._multitry_createdb()
 
     @patch('gppylib.operations.restore.get_partition_list', return_value=[('public', 't1'), ('public', 't2'), ('public', 't3')])
-    @patch('gppylib.operations.restore.get_full_timestamp_for_incremental', return_value='123456789')
-    @patch('gppylib.operations.restore.get_incremental_restore_timestamps', return_value=['20121212121212', '20121212121211'])
+    @patch('gppylib.operations.restore.get_full_timestamp_for_incremental', return_value='20160101000000')
+    @patch('gppylib.operations.restore.get_incremental_restore_timestamps', return_value=['20160101010101', '20160101010111'])
     @patch('gppylib.operations.restore.get_dirty_table_file_contents', return_value=['public.t1', 'public.t2'])
-    def test_restore_plan_file_00(self, mock1, mock2, mock3, mock4):
-        master_datadir = 'foo'
-        db_timestamp = '01234567891234'
-        dbname = 'bkdb'
-        ddboost = False
-        backup_dir = None
-        netbackup_service_host = None
-        netbackup_block_size = None
-        self.create_backup_dirs(master_datadir, [db_timestamp[0:8]])
-        plan_file = create_restore_plan(master_datadir, backup_dir, self.restore.dump_dir, self.restore.dump_prefix, db_timestamp, ddboost, netbackup_service_host, netbackup_block_size)
-        self.assertTrue(os.path.isfile(plan_file))
-        self.remove_backup_dirs(master_datadir, [db_timestamp[0:8]])
+    def test_create_restore_plan_default(self, mock1, mock2, mock3, mock4):
+        expected = ["20160101010111:", "20160101010101:public.t1,public.t2", "20160101000000:public.t3"]
+        m = mock_open()
+        with patch('__builtin__.open', m, create=True):
+            plan_file = create_restore_plan(self.context)
+            result = m()
+            self.assertEqual(len(expected), len(result.write.call_args_list))
+            for i in range(len(expected)):
+                self.assertEqual(call(expected[i]+'\n'), result.write.call_args_list[i])
+
+    @patch('gppylib.operations.restore.get_full_timestamp_for_incremental', return_value='20160101000000')
+    @patch('gppylib.operations.restore.get_incremental_restore_timestamps', return_value=['20160101010101', '20160101010111'])
+    @patch('gppylib.operations.restore.get_dirty_table_file_contents', return_value=['public.t1', 'public.t2'])
+    def test_create_restore_plan_empty_list(self, mock1, mock2, mock3):
+        expected = ["20160101010111:", "20160101010101:", "20160101000000:"]
+        m = mock_open()
+        with patch('__builtin__.open', m, create=True):
+            plan_file = create_restore_plan(self.context)
+            result = m()
+            self.assertEqual(len(expected), len(result.write.call_args_list))
+            for i in range(len(expected)):
+                self.assertEqual(call(expected[i]+'\n'), result.write.call_args_list[i])
 
     @patch('gppylib.operations.restore.get_partition_list', return_value=[])
-    @patch('gppylib.operations.restore.get_full_timestamp_for_incremental', return_value='123456789')
-    @patch('gppylib.operations.restore.get_incremental_restore_timestamps', return_value=['20121212121212', '20121212121211'])
-    @patch('gppylib.operations.restore.get_dirty_table_file_contents', return_value=['public.t1', 'public.t2'])
-    def test_restore_plan_file_01(self, mock1, mock2, mock3, mock4):
-        master_datadir = 'foo'
-        db_timestamp = '01234567891234'
-        dbname = 'bkdb'
-        ddboost = False
-        backup_dir = None
-        netbackup_service_host = None
-        netbackup_block_size = None
-        self.create_backup_dirs(master_datadir, [db_timestamp[0:8]])
-        plan_file = create_restore_plan(master_datadir, backup_dir, self.restore.dump_dir, self.restore.dump_prefix, db_timestamp, ddboost, netbackup_service_host, netbackup_block_size)
-        self.assertTrue(os.path.isfile(plan_file))
-        self.remove_backup_dirs(master_datadir, [db_timestamp[0:8]])
-
-
-    @patch('gppylib.operations.restore.get_partition_list', return_value=[])
-    @patch('gppylib.operations.restore.get_full_timestamp_for_incremental', return_value=None)
-    def test_restore_plan_file_02(self, mock1, mock2):
-        master_datadir = 'foo'
-        db_timestamp = '01234567891234'
-        dbname = 'bkdb'
-        ddboost = False
-        backup_dir = None
-        netbackup_service_host = None
-        netbackup_block_size = None
-
-        self.create_backup_dirs(master_datadir, [db_timestamp[0:8]])
-        with self.assertRaisesRegexp(Exception, 'Can not locate backup directory without timestamp'):
-            create_restore_plan(master_datadir, backup_dir, self.restore.dump_dir, self.restore.dump_prefix, db_timestamp, ddboost, netbackup_service_host, netbackup_block_size)
-        self.remove_backup_dirs(master_datadir, [db_timestamp[0:8]])
+    @patch('gppylib.operations.restore.get_timestamp_from_increments_filename', return_value=None)
+    def test_create_restore_plan_no_full_dump(self, mock1, mock2):
+        with patch('__builtin__.open', mock_open(), create=True):
+            with self.assertRaisesRegexp(Exception, 'Could not locate full backup associated with timestamp'):
+                create_restore_plan(self.context)
 
     @patch('gppylib.operations.restore.get_partition_list', return_value=[])
     @patch('gppylib.operations.restore.get_full_timestamp_for_incremental', return_value='20120101000000')
-    @patch('gppylib.operations.restore.get_incremental_restore_timestamps', return_value=['20121212121212', '20121212121211'])
+    @patch('gppylib.operations.restore.get_incremental_restore_timestamps', return_value=['20160101010101', '20160101010111'])
     @patch('gppylib.operations.restore.get_dirty_table_file_contents', return_value=['public.t1', 'public.t2'])
     @patch('gppylib.operations.restore.create_plan_file_contents')
-    def test_restore_plan_file_03(self, mock1, mock2, mock3, mock4, mock5):
-        master_datadir = 'foo'
-        db_timestamp = '20140101000000'
-        dbname = 'bkdb'
-        ddboost = False
-        backup_dir = None
-        netbackup_service_host = 'mdw'
-        netbackup_block_size = '1024'
-        self.create_backup_dirs(master_datadir, [db_timestamp[0:8]])
-        plan_file = create_restore_plan(master_datadir, backup_dir, self.restore.dump_dir, self.restore.dump_prefix, db_timestamp, ddboost, netbackup_service_host, netbackup_block_size)
-        self.assertTrue(os.path.isfile(plan_file))
-        self.remove_backup_dirs(master_datadir, [db_timestamp[0:8]])
+    def test_create_restore_plan_empty_list_with_nbu(self, mock1, mock2, mock3, mock4, mock5):
+        self.context.netbackup_service_host = 'mdw'
+        self.context.netbackup_block_size = '1024'
+        m = mock_open()
+        with patch('__builtin__.open', m, create=True):
+            plan_file = create_restore_plan(self.context)
+            result = m()
+            self.assertEqual(len(result.write.call_args_list), 0)
 
     @patch('gppylib.operations.restore.get_partition_list', return_value=[])
-    @patch('gppylib.operations.restore.get_full_timestamp_for_incremental', return_value=None)
-    def test_restore_plan_file_04(self, mock1, mock2):
-        master_datadir = 'foo'
-        db_timestamp = '01234567891234'
-        dbname = 'bkdb'
-        ddboost = False
-        backup_dir = None
-        netbackup_service_host = 'mdw'
-        netbackup_block_size = '1024'
-        self.create_backup_dirs(master_datadir, [db_timestamp[0:8]])
-        with self.assertRaisesRegexp(Exception, 'Can not locate backup directory without timestamp'):
-            create_restore_plan(master_datadir, backup_dir, self.restore.dump_dir, self.restore.dump_prefix, db_timestamp, ddboost, netbackup_service_host, netbackup_block_size)
-        self.remove_backup_dirs(master_datadir, [db_timestamp[0:8]])
+    @patch('gppylib.operations.backup_utils.get_full_timestamp_for_incremental_with_nbu', return_value=None)
+    def test_create_restore_plan_no_full_dump_with_nbu(self, mock1, mock2):
+        self.context.netbackup_service_host = 'mdw'
+        self.context.netbackup_block_size = '1024'
+        with patch('__builtin__.open', mock_open(), create=True):
+            with self.assertRaisesRegexp(Exception, 'Could not locate full backup associated with timestamp'):
+                create_restore_plan(self.context)
 
-    @patch('gppylib.operations.restore.get_lines_from_file', return_value=['20121212121210', '20121212121209', '20121212121208', '20121212121207', '20121212121206', '20121212121205', '20121212121204', '20121212121203', '20121212121202', '20121212121201'])
-    def test_get_incremental_restore_timestamps_00(self, mock):
-        master_data_dir = 'foo'
-        latest_full_timestamp = '20121212121201'
-        restore_timestamp = '20121212121205'
-        backup_dir = None
-        increments = get_incremental_restore_timestamps(master_data_dir, backup_dir, self.restore.dump_dir, self.restore.dump_prefix, latest_full_timestamp, restore_timestamp)
-        self.assertEqual(increments, ['20121212121205', '20121212121204', '20121212121203', '20121212121202', '20121212121201'])
+    @patch('gppylib.operations.restore.get_lines_from_file', return_value=['20160101010110', '20160101010109', '20160101010108', '20160101010107', '20160101010106', '20160101010105', '20160101010104', '20160101010103', '20160101010102', '20160101010101'])
+    def test_get_incremental_restore_timestamps_midway(self, mock):
+        latest_full_timestamp = '20160101010101'
+        self.context.timestamp = '20160101010105'
+        increments = get_incremental_restore_timestamps(self.context, latest_full_timestamp)
+        self.assertEqual(increments, ['20160101010105', '20160101010104', '20160101010103', '20160101010102', '20160101010101'])
 
-    @patch('gppylib.operations.restore.get_lines_from_file', return_value=['20121212121210', '20121212121209', '20121212121208', '20121212121207', '20121212121206', '20121212121205', '20121212121204', '20121212121203', '20121212121202', '20121212121201'])
-    def test_get_incremental_restore_timestamps_01(self, mock):
-        master_data_dir = 'foo'
-        latest_full_timestamp = '20121212121201'
-        restore_timestamp = '20121212121210'
-        backup_dir = None
-        increments = get_incremental_restore_timestamps(master_data_dir, backup_dir, self.restore.dump_dir, self.restore.dump_prefix, latest_full_timestamp, restore_timestamp)
-        self.assertEqual(increments, ['20121212121210', '20121212121209', '20121212121208', '20121212121207', '20121212121206', '20121212121205', '20121212121204', '20121212121203', '20121212121202', '20121212121201'])
+    @patch('gppylib.operations.restore.get_lines_from_file', return_value=['20160101010110', '20160101010109', '20160101010108', '20160101010107', '20160101010106', '20160101010105', '20160101010104', '20160101010103', '20160101010102', '20160101010101'])
+    def test_get_incremental_restore_timestamps_latest(self, mock):
+        latest_full_timestamp = '20160101010101'
+        self.context.timestamp = '20160101010110'
+        increments = get_incremental_restore_timestamps(self.context, latest_full_timestamp)
+        self.assertEqual(increments, ['20160101010110', '20160101010109', '20160101010108', '20160101010107', '20160101010106', '20160101010105', '20160101010104', '20160101010103', '20160101010102', '20160101010101'])
 
     @patch('gppylib.operations.restore.get_lines_from_file', return_value=[])
-    def test_get_incremental_restore_timestamps_03(self, mock):
-        master_data_dir = 'foo'
-        latest_full_timestamp = '20121212121201'
-        restore_timestamp = '20121212121200'
-        backup_dir = None
-        increments = get_incremental_restore_timestamps(master_data_dir, backup_dir, self.restore.dump_dir, self.restore.dump_prefix, latest_full_timestamp, restore_timestamp)
+    def test_get_incremental_restore_timestamps_earliest(self, mock):
+        latest_full_timestamp = '20160101010101'
+        self.context.timestamp = '20160101010100'
+        increments = get_incremental_restore_timestamps(self.context, latest_full_timestamp)
         self.assertEqual(increments, [])
 
-    @patch('gppylib.operations.restore.get_lines_from_file', return_value=['public.t1', 'public.t2', 'public.t3'])
-    def test_get_dirty_table_file_contents_00(self, mock):
-        master_datadir = 'foo'
-        backup_dir = None
-        timestamp_key = '20121212121212'
-        dirty_tables = get_dirty_table_file_contents(master_datadir, backup_dir, self.restore.dump_dir, self.restore.dump_prefix, timestamp_key)
-        self.assertEqual(dirty_tables, ['public.t1', 'public.t2', 'public.t3'])
-
     @patch('gppylib.operations.restore.get_lines_from_file', side_effect=[['public.t1'], ['public.t1', 'public.t2', 'public.t3'], ['public.t2', 'public.t4']])
-    def test_create_plan_file_contents_00(self, mock):
-        master_datadir = 'foo'
+    def test_create_plan_file_contents_with_file(self, mock):
         table_set_from_metadata_file = ['public.t1', 'public.t2', 'public.t3', 'public.t4']
-        incremental_restore_timestamps = ['20121212121213', '20121212121212', '20121212121211']
-        latest_full_timestamp = '20121212121210'
-        backup_dir = None
-        netbackup_service_host = None
-        netbackup_block_size = None
-        expected_output = {'20121212121213': ['public.t1'], '20121212121212': ['public.t2', 'public.t3'], '20121212121211': ['public.t4'], '20121212121210': []}
-        file_contents = create_plan_file_contents(master_datadir,
-                                                  backup_dir,
-                                                  self.restore.dump_dir,
-                                                  self.restore.dump_prefix,
-                                                  table_set_from_metadata_file,
-                                                  incremental_restore_timestamps,
-                                                  latest_full_timestamp,
-                                                  netbackup_service_host,
-                                                  netbackup_block_size)
+        incremental_restore_timestamps = ['20160101010113', '20160101010101', '20160101010111']
+        latest_full_timestamp = '20160101010110'
+        expected_output = {'20160101010113': ['public.t1'], '20160101010101': ['public.t2', 'public.t3'], '20160101010111': ['public.t4'], '20160101010110': []}
+        file_contents = create_plan_file_contents(self.context, table_set_from_metadata_file, incremental_restore_timestamps, latest_full_timestamp)
         self.assertEqual(file_contents, expected_output)
 
-    def test_create_plan_file_contents_01(self):
-        master_datadir = 'foo'
+    def test_create_plan_file_contents_no_file(self):
         table_set_from_metadata_file = ['public.t1', 'public.t2', 'public.t3', 'public.t4']
         incremental_restore_timestamps = []
-        latest_full_timestamp = '20121212121210'
-        backup_dir = None
-        netbackup_service_host = None
-        netbackup_block_size = None
-        expected_output = {'20121212121210': ['public.t1', 'public.t2', 'public.t3', 'public.t4']}
-        file_contents = create_plan_file_contents(master_datadir,
-                                                  backup_dir,
-                                                  self.restore.dump_dir,
-                                                  self.restore.dump_prefix,
-                                                  table_set_from_metadata_file,
-                                                  incremental_restore_timestamps,
-                                                  latest_full_timestamp,
-                                                  netbackup_service_host,
-                                                  netbackup_block_size)
+        latest_full_timestamp = '20160101010110'
+        expected_output = {'20160101010110': ['public.t1', 'public.t2', 'public.t3', 'public.t4']}
+        file_contents = create_plan_file_contents(self.context, table_set_from_metadata_file, incremental_restore_timestamps, latest_full_timestamp)
         self.assertEqual(file_contents, expected_output)
 
     @patch('gppylib.operations.restore.get_lines_from_file', side_effect=[['public.t1'], ['public.t1', 'public.t2', 'public.t3'], ['public.t2', 'public.t4']])
-    def test_create_plan_file_contents_02(self, mock):
-        master_datadir = 'foo'
+    def test_create_plan_file_contents_no_metadata(self, mock):
         table_set_from_metadata_file = []
-        incremental_restore_timestamps = ['20121212121213', '20121212121212', '20121212121211']
-        latest_full_timestamp = '20121212121210'
-        backup_dir = None
-        netbackup_service_host = None
-        netbackup_block_size = None
-        expected_output = {'20121212121212': [], '20121212121213': [], '20121212121211': [], '20121212121210': []}
-        file_contents = create_plan_file_contents(master_datadir,
-                                                  backup_dir,
-                                                  self.restore.dump_dir,
-                                                  self.restore.dump_prefix,
-                                                  table_set_from_metadata_file,
-                                                  incremental_restore_timestamps,
-                                                  latest_full_timestamp,
-                                                  netbackup_service_host,
-                                                  netbackup_block_size)
+        incremental_restore_timestamps = ['20160101010113', '20160101010101', '20160101010111']
+        latest_full_timestamp = '20160101010110'
+        expected_output = {'20160101010101': [], '20160101010113': [], '20160101010111': [], '20160101010110': []}
+        file_contents = create_plan_file_contents(self.context, table_set_from_metadata_file, incremental_restore_timestamps, latest_full_timestamp)
         self.assertEqual(file_contents, expected_output)
 
     @patch('gppylib.operations.restore.get_lines_from_file', side_effect=[['public.t1'], ['public.t1', 'public.t2', 'public.t3'], ['public.t2', 'public.t4']])
     @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_create_plan_file_contents_03(self, mock1, mock2):
-        master_datadir = 'foo'
+    def test_create_plan_file_contents_with_nbu(self, mock1, mock2):
+        self.context.netbackup_service_host = 'mdw'
+        self.context.netbackup_block_size = '1024'
         table_set_from_metadata_file = []
-        incremental_restore_timestamps = ['20121212121213', '20121212121212', '20121212121211']
-        latest_full_timestamp = '20121212121210'
-        backup_dir = None
-        netbackup_service_host = 'mdw'
-        netbackup_block_size = '1024'
-        expected_output = {'20121212121212': [], '20121212121213': [], '20121212121211': [], '20121212121210': []}
-        file_contents = create_plan_file_contents(master_datadir,
-                                                  backup_dir,
-                                                  self.restore.dump_dir,
-                                                  self.restore.dump_prefix,
-                                                  table_set_from_metadata_file,
-                                                  incremental_restore_timestamps,
-                                                  latest_full_timestamp,
-                                                  netbackup_service_host,
-                                                  netbackup_block_size)
+        incremental_restore_timestamps = ['20160101010113', '20160101010101', '20160101010111']
+        latest_full_timestamp = '20160101010110'
+        expected_output = {'20160101010101': [], '20160101010113': [], '20160101010111': [], '20160101010110': []}
+        file_contents = create_plan_file_contents(self.context, table_set_from_metadata_file, incremental_restore_timestamps, latest_full_timestamp)
         self.assertEqual(file_contents, expected_output)
 
     @patch('gppylib.operations.restore.write_lines_to_file')
-    @patch('gppylib.operations.restore.verify_lines_in_file')
-    def test_write_to_plan_file_00(self, mock1, mock2):
+    def test_write_to_plan_file_default(self, mock1):
         plan_file = 'blah'
-        plan_file_contents = {'20121212121213': ['public.t1'],
-                              '20121212121212': ['public.t2', 'public.t3'],
-                              '20121212121211': ['public.t4']}
+        plan_file_contents = {'20160101010113': ['public.t1'],
+                              '20160101010101': ['public.t2', 'public.t3'],
+                              '20160101010111': ['public.t4']}
 
-        expected_output = ['20121212121213:public.t1',
-                           '20121212121212:public.t2,public.t3',
-                           '20121212121211:public.t4']
+        expected_output = ['20160101010113:public.t1',
+                           '20160101010111:public.t4',
+                           '20160101010101:public.t2,public.t3']
 
         file_contents = write_to_plan_file(plan_file_contents, plan_file)
         self.assertEqual(expected_output, file_contents)
 
     @patch('gppylib.operations.restore.write_lines_to_file')
-    @patch('gppylib.operations.restore.verify_lines_in_file')
-    def test_write_to_plan_file_01(self, mock1, mock2):
+    def test_write_to_plan_file_empty_list(self, mock1):
         plan_file = 'blah'
         plan_file_contents = {}
         expected_output = []
@@ -367,1141 +216,671 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
         self.assertEqual(expected_output, file_contents)
 
     @patch('gppylib.operations.restore.write_lines_to_file')
-    @patch('gppylib.operations.restore.verify_lines_in_file')
-    def test_write_to_plan_file_02(self, mock1, mock2):
+    def test_write_to_plan_file_no_plan_file(self, mock1):
         plan_file = None
         plan_file_contents = {}
         with self.assertRaisesRegexp(Exception, 'Invalid plan file .*'):
             write_to_plan_file(plan_file_contents, plan_file)
 
     @patch('gppylib.operations.restore.get_lines_from_file', return_value=['public.t1', 'public.t2'])
-    def test_get_partition_list_00(self, mock):
-        master_datadir = 'foo'
-        backup_dir = None
-        timestamp = '20121212121212'
-        partition_list = get_partition_list(master_datadir, backup_dir, self.restore.dump_dir, self.restore.dump_prefix, timestamp)
+    def test_get_partition_list_default(self, mock):
+        partition_list = get_partition_list(self.context)
         self.assertEqual(partition_list, [('public', 't1'), ('public', 't2')])
 
     @patch('gppylib.operations.restore.get_lines_from_file', return_value=[])
-    def test_get_partition_list_01(self, mock):
-        master_datadir = 'foo'
-        backup_dir = None
-        timestamp = '20121212121212'
-        partition_list = get_partition_list(master_datadir, backup_dir, self.restore.dump_dir, self.restore.dump_prefix, timestamp)
+    def test_get_partition_list_no_partitions(self, mock):
+        partition_list = get_partition_list(self.context)
         self.assertEqual(partition_list, [])
 
     @patch('gppylib.operations.restore.get_lines_from_file', return_value=['Backup Type: Incremental'])
     @patch('os.path.isfile', return_value=True)
-    def test_is_incremental_restore_00(self, mock1, mock2):
-        master_datadir = 'foo'
-        timestamp = '20121212121212'
-        backup_dir = None
-        self.assertTrue(is_incremental_restore(master_datadir, backup_dir, self.restore.dump_dir, self.restore.dump_prefix, timestamp))
+    def test_is_incremental_restore_default(self, mock1, mock2):
+        self.assertTrue(is_incremental_restore(self.context))
 
     @patch('gppylib.operations.restore.get_lines_from_file')
     @patch('gppylib.operations.restore.check_backup_type', return_value=True)
     @patch('os.path.isfile', return_value=True)
-    def test_is_incremental_restore_01(self, mock1, mock2, mock3):
-        master_datadir = 'foo'
-        timestamp = '20121212121212'
-        backup_dir = '/foo'
-        self.assertTrue(is_incremental_restore(master_datadir, backup_dir, self.restore.dump_dir, self.restore.dump_prefix, timestamp))
+    def test_is_incremental_restore_bypass_file_incremental(self, mock1, mock2, mock3):
+        self.assertTrue(is_incremental_restore(self.context))
 
     @patch('os.path.isfile', return_value=True)
     @patch('gppylib.operations.restore.get_lines_from_file', return_value=['Backup Type: Full'])
-    def test_is_incremental_restore_02(self, mock1, mock2):
-        master_datadir = 'foo'
-        timestamp = '20121212121212'
-        backup_dir = None
-        self.assertFalse(is_incremental_restore(master_datadir, backup_dir, self.restore.dump_dir, self.restore.dump_prefix, timestamp))
+    def test_is_incremental_restore_full_backup(self, mock1, mock2):
+        self.assertFalse(is_incremental_restore(self.context))
 
     @patch('os.path.isfile', return_value=True)
     @patch('gppylib.operations.restore.get_lines_from_file')
     @patch('gppylib.operations.restore.check_backup_type', return_value=False)
-    def test_is_incremental_restore_03(self, mock1, mock2, mock3):
-        master_datadir = 'foo'
-        timestamp = '20121212121212'
-        backup_dir = None
-        self.assertFalse(is_incremental_restore(master_datadir, backup_dir, self.restore.dump_dir, self.restore.dump_prefix, timestamp))
+    def test_is_incremental_restore_bypass_file_full(self, mock1, mock2, mock3):
+        self.assertFalse(is_incremental_restore(self.context))
 
-    @patch('gppylib.operations.restore.generate_report_filename', return_value='foo')
     @patch('os.path.isfile', return_value=False)
-    def test_is_incremental_restore_04(self, mock1, mock2):
-        master_datadir = 'foo'
-        timestamp = '20121212121212'
-        backup_dir = None
-        self.assertFalse(is_incremental_restore(master_datadir, backup_dir, self.restore.dump_dir, self.restore.dump_prefix, timestamp))
+    def test_is_incremental_restore_no_file(self, mock1):
+        self.assertFalse(is_incremental_restore(self.context))
 
-    @patch('gppylib.operations.restore.generate_report_filename', return_value='foo')
     @patch('os.path.isfile', return_value=True)
     @patch('gppylib.operations.restore.get_lines_from_file', return_value=['Backup Type: Full'])
     @patch('os.path.isfile', return_value=True)
-    def test_is_full_restore_00(self, mock1, mock2, mock3, mock4):
-        master_datadir = 'foo'
-        timestamp = '20121212121212'
-        backup_dir = None
-        self.assertTrue(is_full_restore(master_datadir, backup_dir, self.restore.dump_dir, self.restore.dump_prefix, timestamp))
+    def test_is_full_restore_default(self, mock1, mock2, mock3):
+        self.assertTrue(is_full_restore(self.context))
 
-    @patch('gppylib.operations.restore.generate_report_filename', return_value='foo')
     @patch('gppylib.operations.restore.get_lines_from_file')
     @patch('gppylib.operations.restore.check_backup_type', return_value=True)
     @patch('os.path.isfile', return_value=True)
-    def test_is_full_restore_01(self, mock1, mock2, mock3, mock4):
-        master_datadir = 'foo'
-        timestamp = '20121212121212'
-        backup_dir = '/foo'
-        self.assertTrue(is_full_restore(master_datadir, backup_dir, self.restore.dump_dir, self.restore.dump_prefix, timestamp))
+    def test_is_full_restore_bypass_file_full(self, mock1, mock2, mock3):
+        self.assertTrue(is_full_restore(self.context))
 
-    @patch('gppylib.operations.restore.generate_report_filename', return_value='foo')
     @patch('os.path.isfile', return_value=True)
     @patch('gppylib.operations.restore.get_lines_from_file', return_value=['Backup Type: Incremental'])
-    def test_is_full_restore_02(self, mock1, mock2, mock3):
-        master_datadir = 'foo'
-        timestamp = '20121212121212'
-        backup_dir = None
-        self.assertFalse(is_full_restore(master_datadir, backup_dir, self.restore.dump_dir, self.restore.dump_prefix, timestamp))
+    def test_is_full_restore_incremental(self, mock1, mock2):
+        self.assertFalse(is_full_restore(self.context))
 
-    @patch('gppylib.operations.restore.generate_report_filename', return_value='foo')
     @patch('os.path.isfile', return_value=True)
     @patch('gppylib.operations.restore.get_lines_from_file')
     @patch('gppylib.operations.restore.check_backup_type', return_value=False)
-    def test_is_full_restore_03(self, mock1, mock2, mock3, mock4):
-        master_datadir = 'foo'
-        timestamp = '20121212121212'
-        backup_dir = None
-        self.assertFalse(is_full_restore(master_datadir, backup_dir, self.restore.dump_dir, self.restore.dump_prefix, timestamp))
+    def test_is_full_restore_bypass_file_incremental(self, mock1, mock2, mock3):
+        self.assertFalse(is_full_restore(self.context))
 
-    @patch('gppylib.operations.restore.generate_report_filename', return_value='foo')
     @patch('os.path.isfile', return_value=False)
-    def test_is_full_restore_04(self, mock1, mock2):
-        master_datadir = 'foo'
-        timestamp = '20121212121212'
-        backup_dir = None
-        with self.assertRaisesRegexp(Exception, 'Report file foo does not exist'):
-            is_full_restore(master_datadir, backup_dir, self.restore.dump_dir, self.restore.dump_prefix, timestamp)
+    def test_is_full_restore_no_file(self, mock1):
+        filename = self.context.generate_filename("report")
+        with self.assertRaisesRegexp(Exception, 'Report file %s does not exist' % filename):
+            is_full_restore(self.context)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_schema_only_restore_line_00(self, mock1, mock2):
-        master_datadir = 'foo'
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = False
-        master_port = '5432'
+    def test_create_schema_only_restore_string_default(self, mock1, mock2):
+        self.context.backup_dir = None
         table_filter_file = None
         full_restore_with_filter = False
-        metadata_file = os.path.join(master_datadir, 'db_dumps', restore_timestamp[0:8], 'gp_dump_1_1_%s.gz' % restore_timestamp)
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20121212121212 --gp-l=p -s %s --gp-d=db_dumps/20121212 -d "bkdb"' % metadata_file
-
-        restore_line = self.restore._build_schema_only_restore_line(restore_timestamp, restore_db, compress, master_port, metadata_file, table_filter_file, full_restore_with_filter)
+        metadata_file = self.context.generate_filename("metadata")
+        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20160101010101 --gp-l=p -s %s --gp-d=db_dumps/20160101 --gp-c -d "testdb"' % metadata_file
+        
+        restore_line = self.restore.create_schema_only_restore_string(table_filter_file, full_restore_with_filter)
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_schema_only_restore_line_01(self, mock1, mock2):
-        master_datadir = 'foo'
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
+    def test_create_schema_only_restore_string_no_compression(self, mock1, mock2):
+        self.context.backup_dir = None
+        self.context.compress = False
         table_filter_file = None
-        metadata_file = os.path.join(master_datadir, 'db_dumps', restore_timestamp[0:8], 'gp_dump_1_1_%s.gz' % restore_timestamp)
         full_restore_with_filter = False
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20121212121212 --gp-l=p -s %s --gp-d=db_dumps/20121212 --gp-c -d "bkdb"' % metadata_file
+        metadata_file = self.context.generate_filename("metadata")
+        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20160101010101 --gp-l=p -s %s --gp-d=db_dumps/20160101 -d "testdb"' % metadata_file
 
-        restore_line = self.restore._build_schema_only_restore_line(restore_timestamp, restore_db, compress, master_port, metadata_file, table_filter_file, full_restore_with_filter)
+        restore_line = self.restore.create_schema_only_restore_string(table_filter_file, full_restore_with_filter)
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    @patch('gppylib.operations.restore.RestoreDatabase.backup_dir_is_writable', return_value=True)
-    def test_build_schema_only_restore_line_02(self, mock1, mock2, mock3):
-        master_datadir = 'foo'
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        self.restore.backup_dir = '/foo'
+    @patch('gppylib.operations.backup_utils.Context.backup_dir_is_writable', return_value=True)
+    def test_create_schema_only_restore_string_backup_dir(self, mock1, mock2, mock3):
         table_filter_file = None
-        metadata_file = os.path.join(master_datadir, 'db_dumps', restore_timestamp[0:8], 'gp_dump_1_1_%s.gz' % restore_timestamp)
         full_restore_with_filter = False
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20121212121212 --gp-l=p -s %s --gp-r=/foo/db_dumps/20121212 --status=/foo/db_dumps/20121212 --gp-d=/foo/db_dumps/20121212 --gp-c -d "bkdb"' % metadata_file
+        self.context.report_status_dir = "/data/master/p1/db_dumps/20160101"
+        metadata_file = self.context.generate_filename("metadata")
+        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20160101010101 --gp-l=p -s %s --gp-r=/data/master/p1/db_dumps/20160101 --status=/data/master/p1/db_dumps/20160101 --gp-d=db_dumps/20160101 --gp-c -d "testdb"' % metadata_file
 
-        restore_line = self.restore._build_schema_only_restore_line(restore_timestamp, restore_db, compress, master_port, metadata_file, table_filter_file, full_restore_with_filter)
+        restore_line = self.restore.create_schema_only_restore_string(table_filter_file, full_restore_with_filter)
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    @patch('gppylib.operations.restore.RestoreDatabase.backup_dir_is_writable', return_value=False)
-    def test_build_schema_only_restore_line_03(self, mock1, mock2, mock3):
-        master_datadir = 'foo'
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        self.restore.backup_dir = '/foo'
-        self.restore.dump_prefix = 'bar_'
-        table_filter_file = None
-        metadata_file = os.path.join(master_datadir, 'db_dumps', restore_timestamp[0:8], 'gp_dump_1_1_%s.gz' % restore_timestamp)
-        full_restore_with_filter = False
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20121212121212 --gp-l=p -s %s --gp-d=/foo/db_dumps/20121212 --prefix=bar_ --gp-c -d "bkdb"' % metadata_file
-
-        restore_line = self.restore._build_schema_only_restore_line(restore_timestamp, restore_db, compress, master_port, metadata_file, table_filter_file, full_restore_with_filter)
-        self.assertEqual(restore_line, expected_output)
-
-
-    @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
-    @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    @patch('gppylib.operations.restore.RestoreDatabase.backup_dir_is_writable', return_value=False)
-    def test_build_schema_only_restore_line_04(self, mock1, mock2, mock3):
-        master_datadir = 'foo'
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        self.restore.backup_dir = '/foo'
-        self.restore.dump_prefix = 'bar_'
+    @patch('gppylib.operations.backup_utils.Context.backup_dir_is_writable', return_value=False)
+    def test_create_schema_only_restore_string_prefix(self, mock1, mock2, mock3):
+        self.context.dump_prefix = 'bar_'
         table_filter_file = 'filter_file1'
-        metadata_file = os.path.join(master_datadir, 'db_dumps', restore_timestamp[0:8], 'gp_dump_1_1_%s.gz' % restore_timestamp)
+        metadata_file = self.context.generate_filename("metadata")
         full_restore_with_filter = False
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20121212121212 --gp-l=p -s %s --gp-d=/foo/db_dumps/20121212 --prefix=bar_ --gp-f=%s --gp-c -d "bkdb"' % (metadata_file, table_filter_file)
+        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20160101010101 --gp-l=p -s %s --gp-d=db_dumps/20160101 --prefix=bar_ --gp-f=%s --gp-c -d "testdb"' % (metadata_file, table_filter_file)
 
-        restore_line = self.restore._build_schema_only_restore_line(restore_timestamp, restore_db, compress, master_port, metadata_file, table_filter_file, full_restore_with_filter)
+        restore_line = self.restore.create_schema_only_restore_string(table_filter_file, full_restore_with_filter)
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    @patch('gppylib.operations.restore.RestoreDatabase.backup_dir_is_writable', return_value=False)
-    def test_build_schema_only_restore_line_05(self, mock1, mock2, mock3):
-        master_datadir = 'foo'
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        self.restore.backup_dir = '/foo'
+    @patch('gppylib.operations.backup_utils.Context.backup_dir_is_writable', return_value=False)
+    def test_create_schema_only_restore_string_no_filter_file(self, mock1, mock2, mock3):
         table_filter_file = None
-        metadata_file = os.path.join(master_datadir, 'db_dumps', restore_timestamp[0:8], 'gp_dump_1_1_%s.gz' % restore_timestamp)
+        metadata_file = self.context.generate_filename("metadata")
         full_restore_with_filter = False
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20121212121212 --gp-l=p -s %s --gp-d=/foo/db_dumps/20121212 --gp-c -d "bkdb"' % metadata_file
+        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20160101010101 --gp-l=p -s %s --gp-d=db_dumps/20160101 --gp-c -d "testdb"' % metadata_file
 
-        restore_line = self.restore._build_schema_only_restore_line(restore_timestamp, restore_db, compress, master_port, metadata_file, table_filter_file, full_restore_with_filter)
+        restore_line = self.restore.create_schema_only_restore_string(table_filter_file, full_restore_with_filter)
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_schema_only_restore_line_06(self, mock1, mock2):
-        master_datadir = 'foo'
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        self.restore.report_status_dir = '/tmp'
-        self.restore.backup_dir = '/foo'
+    def test_create_schema_only_restore_string_different_status_dir(self, mock1, mock2):
+        self.context.report_status_dir = '/tmp'
         table_filter_file = None
         full_restore_with_filter = False
-        metadata_file = os.path.join(master_datadir, 'db_dumps', restore_timestamp[0:8], 'gp_dump_1_1_%s.gz' % restore_timestamp)
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20121212121212 --gp-l=p -s %s --gp-r=/tmp --status=/tmp --gp-d=/foo/db_dumps/20121212 --gp-c -d "bkdb"' % metadata_file
+        metadata_file = self.context.generate_filename("metadata")
+        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20160101010101 --gp-l=p -s %s --gp-r=/tmp --status=/tmp --gp-d=db_dumps/20160101 --gp-c -d "testdb"' % metadata_file
 
-        restore_line = self.restore._build_schema_only_restore_line(restore_timestamp, restore_db, compress, master_port, metadata_file, table_filter_file, full_restore_with_filter)
+        restore_line = self.restore.create_schema_only_restore_string(table_filter_file, full_restore_with_filter)
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_schema_only_restore_line_07(self, mock1, mock2):
-        master_datadir = 'foo'
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        self.restore.report_status_dir = '/tmp'
-        self.restore.backup_dir = '/foo'
+    def test_create_schema_only_restore_string_status_dir_with_filter(self, mock1, mock2):
+        self.context.report_status_dir = '/tmp'
         table_filter_file = None
         full_restore_with_filter = True
-        metadata_file = os.path.join(master_datadir, 'db_dumps', restore_timestamp[0:8], 'gp_dump_1_1_%s.gz' % restore_timestamp)
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20121212121212 --gp-l=p -s %s -P --gp-r=/tmp --status=/tmp --gp-d=/foo/db_dumps/20121212 --gp-c -d "bkdb"' % metadata_file
+        metadata_file = self.context.generate_filename("metadata")
+        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20160101010101 --gp-l=p -s %s -P --gp-r=/tmp --status=/tmp --gp-d=db_dumps/20160101 --gp-c -d "testdb"' % metadata_file
 
-        restore_line = self.restore._build_schema_only_restore_line(restore_timestamp, restore_db, compress, master_port, metadata_file, table_filter_file, full_restore_with_filter)
+        restore_line = self.restore.create_schema_only_restore_string(table_filter_file, full_restore_with_filter)
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_schema_only_restore_line_08(self, mock1, mock2):
-        master_datadir = 'foo'
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = False
-        master_port = '5432'
+    def test_create_schema_only_restore_string_with_nbu(self, mock1, mock2):
         table_filter_file = None
         full_restore_with_filter = False
-        self.restore.netbackup_service_host = "mdw"
-        self.restore.netbackup_block_size = None
-        metadata_file = os.path.join(master_datadir, 'db_dumps', restore_timestamp[0:8], 'gp_dump_1_1_%s.gz' % restore_timestamp)
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20121212121212 --gp-l=p -s %s --gp-d=db_dumps/20121212 -d "bkdb" --netbackup-service-host=mdw' % metadata_file
+        self.context.netbackup_service_host = "mdw"
+        metadata_file = self.context.generate_filename("metadata")
+        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20160101010101 --gp-l=p -s %s --gp-d=db_dumps/20160101 --gp-c -d "testdb" --netbackup-service-host=mdw' % metadata_file
 
-        restore_line = self.restore._build_schema_only_restore_line(restore_timestamp, restore_db, compress, master_port, metadata_file, table_filter_file, full_restore_with_filter)
+        restore_line = self.restore.create_schema_only_restore_string(table_filter_file, full_restore_with_filter)
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_schema_only_restore_line_09(self, mock1, mock2):
-        master_datadir = 'foo'
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = False
-        master_port = '5432'
-        table_filter_file = None
-        full_restore_with_filter = False
-        self.restore.netbackup_service_host = "mdw"
-        self.restore.netbackup_block_size = 1024
-        metadata_file = os.path.join(master_datadir, 'db_dumps', restore_timestamp[0:8], 'gp_dump_1_1_%s.gz' % restore_timestamp)
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20121212121212 --gp-l=p -s %s --gp-d=db_dumps/20121212 -d "bkdb" --netbackup-service-host=mdw --netbackup-block-size=1024' % metadata_file
-
-        restore_line = self.restore._build_schema_only_restore_line(restore_timestamp, restore_db, compress, master_port, metadata_file, table_filter_file, full_restore_with_filter)
-        self.assertEqual(restore_line, expected_output)
-
-    @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
-    @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_schema_only_restore_line_10(self, mock1, mock2):
-        master_datadir = 'foo'
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        self.restore.report_status_dir = '/tmp'
-        self.restore.backup_dir = '/foo'
+    def test_create_schema_only_restore_string_with_ddboost(self, mock1, mock2):
+        self.context.report_status_dir = '/tmp'
         table_filter_file = None
         full_restore_with_filter = True
-        self.restore.ddboost = True
-        self.restore.dump_dir = '/backup/DCA-35'
-        metadata_file = os.path.join(master_datadir, 'db_dumps', restore_timestamp[0:8], 'gp_dump_1_1_%s.gz' % restore_timestamp)
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20121212121212 --gp-l=p -s %s -P --gp-r=/tmp --status=/tmp --gp-d=/backup/DCA-35/20121212 --gp-c -d "bkdb" --ddboost' % metadata_file
+        self.context.ddboost = True
+        self.context.dump_dir = '/backup/DCA-35'
+        metadata_file = self.context.generate_filename("metadata")
+        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20160101010101 --gp-l=p -s %s -P --gp-r=/tmp --status=/tmp --gp-d=/backup/DCA-35/20160101 --gp-c -d "testdb" --ddboost' % metadata_file
 
-        restore_line = self.restore._build_schema_only_restore_line(restore_timestamp, restore_db, compress, master_port, metadata_file, table_filter_file, full_restore_with_filter)
+        restore_line = self.restore.create_schema_only_restore_string(table_filter_file, full_restore_with_filter)
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_post_data_schema_only_restore_line_00(self, mock1, mock2):
-        master_datadir = 'foo'
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = False
-        master_port = '5432'
+    def test_create_post_data_schema_only_restore_string_default(self, mock1, mock2):
         table_filter_file = None
         full_restore_with_filter = True
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-d=db_dumps/20121212 --gp-i --gp-k=20121212121212 --gp-l=p -P -d "bkdb"'
+        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-d=db_dumps/20160101 --gp-i --gp-k=20160101010101 --gp-l=p -P --gp-c -d "testdb"'
 
-        restore_line = self.restore._build_post_data_schema_only_restore_line(restore_timestamp, restore_db, compress, master_port, table_filter_file, full_restore_with_filter)
+        restore_line = self.restore.create_post_data_schema_only_restore_string(table_filter_file, full_restore_with_filter)
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_post_data_schema_only_restore_line_01(self, mock1, mock2):
-        master_datadir = 'foo'
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
+    @patch('gppylib.operations.backup_utils.Context.backup_dir_is_writable', return_value=True)
+    def test_create_post_data_schema_only_restore_string_no_filter(self, mock1, mock2, mock3):
         table_filter_file = None
         full_restore_with_filter = False
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-d=db_dumps/20121212 --gp-i --gp-k=20121212121212 --gp-l=p --gp-c -d "bkdb"'
+        self.context.report_status_dir="/data/master/p1/db_dumps/20160101"
+        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-d=db_dumps/20160101 --gp-i --gp-k=20160101010101 --gp-l=p --gp-r=/data/master/p1/db_dumps/20160101 --status=/data/master/p1/db_dumps/20160101 --gp-c -d "testdb"'
 
-        restore_line = self.restore._build_post_data_schema_only_restore_line(restore_timestamp, restore_db, compress, master_port, table_filter_file, full_restore_with_filter)
+        restore_line = self.restore.create_post_data_schema_only_restore_string(table_filter_file, full_restore_with_filter)
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    @patch('gppylib.operations.restore.RestoreDatabase.backup_dir_is_writable', return_value=True)
-    def test_build_post_data_schema_only_restore_line_02(self, mock1, mock2, mock3):
-        master_datadir = 'foo'
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        self.restore.backup_dir = '/foo'
+    @patch('gppylib.operations.backup_utils.Context.backup_dir_is_writable', return_value=False)
+    def test_create_post_data_schema_only_restore_string_with_prefix(self, mock1, mock2, mock3):
+        self.context.dump_prefix = 'bar_'
         table_filter_file = None
         full_restore_with_filter = False
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-d=/foo/db_dumps/20121212 --gp-i --gp-k=20121212121212 --gp-l=p --gp-r=/foo/db_dumps/20121212 --status=/foo/db_dumps/20121212 --gp-c -d "bkdb"'
+        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-d=db_dumps/20160101 --gp-i --gp-k=20160101010101 --gp-l=p --prefix=bar_ --gp-c -d "testdb"'
 
-        restore_line = self.restore._build_post_data_schema_only_restore_line(restore_timestamp, restore_db, compress, master_port, table_filter_file, full_restore_with_filter)
-        self.assertEqual(restore_line, expected_output)
-
-    @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
-    @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    @patch('gppylib.operations.restore.RestoreDatabase.backup_dir_is_writable', return_value=False)
-    def test_build_post_data_schema_only_restore_line_03(self, mock1, mock2, mock3):
-        master_datadir = 'foo'
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        self.restore.backup_dir = '/foo'
-        self.restore.dump_prefix = 'bar_'
-        table_filter_file = None
-        full_restore_with_filter = False
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-d=/foo/db_dumps/20121212 --gp-i --gp-k=20121212121212 --gp-l=p --prefix=bar_ --gp-c -d "bkdb"'
-
-        restore_line = self.restore._build_post_data_schema_only_restore_line(restore_timestamp, restore_db, compress, master_port, table_filter_file, full_restore_with_filter)
+        restore_line = self.restore.create_post_data_schema_only_restore_string(table_filter_file, full_restore_with_filter)
         self.assertEqual(restore_line, expected_output)
 
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    @patch('gppylib.operations.restore.RestoreDatabase.backup_dir_is_writable', return_value=False)
-    def test_build_post_data_schema_only_restore_line_04(self, mock1, mock2, mock3):
-        master_datadir = 'foo'
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        self.restore.backup_dir = '/foo'
-        self.restore.dump_prefix = 'bar_'
+    @patch('gppylib.operations.backup_utils.Context.backup_dir_is_writable', return_value=False)
+    def test_create_post_data_schema_only_restore_string_with_prefix_and_filter(self, mock1, mock2, mock3):
+        self.context.dump_prefix = 'bar_'
         table_filter_file = 'filter_file1'
         full_restore_with_filter = False
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-d=/foo/db_dumps/20121212 --gp-i --gp-k=20121212121212 --gp-l=p --prefix=bar_ --gp-f=%s --gp-c -d "bkdb"' % (table_filter_file)
+        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-d=db_dumps/20160101 --gp-i --gp-k=20160101010101 --gp-l=p --prefix=bar_ --gp-f=%s --gp-c -d "testdb"' % (table_filter_file)
 
-        restore_line = self.restore._build_post_data_schema_only_restore_line(restore_timestamp, restore_db, compress, master_port, table_filter_file, full_restore_with_filter)
+        restore_line = self.restore.create_post_data_schema_only_restore_string(table_filter_file, full_restore_with_filter)
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    @patch('gppylib.operations.restore.RestoreDatabase.backup_dir_is_writable', return_value=False)
-    def test_build_post_data_schema_only_restore_line_05(self, mock1, mock2, mock3):
-        master_datadir = 'foo'
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        self.restore.backup_dir = '/foo'
+    @patch('gppylib.operations.backup_utils.Context.backup_dir_is_writable', return_value=False)
+    def test_create_post_data_schema_only_restore_string_no_backup_dir(self, mock1, mock2, mock3):
         table_filter_file = None
         full_restore_with_filter = False
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-d=/foo/db_dumps/20121212 --gp-i --gp-k=20121212121212 --gp-l=p --gp-c -d "bkdb"'
+        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-d=db_dumps/20160101 --gp-i --gp-k=20160101010101 --gp-l=p --gp-c -d "testdb"'
 
-        restore_line = self.restore._build_post_data_schema_only_restore_line(restore_timestamp, restore_db, compress, master_port, table_filter_file, full_restore_with_filter)
+        restore_line = self.restore.create_post_data_schema_only_restore_string(table_filter_file, full_restore_with_filter)
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_post_data_schema_only_restore_line_06(self, mock1, mock2):
-        master_datadir = 'foo'
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        self.restore.report_status_dir = '/tmp'
-        self.restore.backup_dir = '/foo'
+    def test_create_post_data_schema_only_restore_string_different_status_dir(self, mock1, mock2):
+        self.context.report_status_dir = '/tmp'
         table_filter_file = None
         full_restore_with_filter = False
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-d=/foo/db_dumps/20121212 --gp-i --gp-k=20121212121212 --gp-l=p --gp-r=/tmp --status=/tmp --gp-c -d "bkdb"'
+        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-d=db_dumps/20160101 --gp-i --gp-k=20160101010101 --gp-l=p --gp-r=/tmp --status=/tmp --gp-c -d "testdb"'
 
-        restore_line = self.restore._build_post_data_schema_only_restore_line(restore_timestamp, restore_db, compress, master_port, table_filter_file, full_restore_with_filter)
+        restore_line = self.restore.create_post_data_schema_only_restore_string(table_filter_file, full_restore_with_filter)
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_post_data_schema_only_restore_line_07(self, mock1, mock2):
-        master_datadir = 'foo'
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        self.restore.report_status_dir = '/tmp'
-        self.restore.backup_dir = '/foo'
+    def test_create_post_data_schema_only_restore_string_status_dir_and_filter(self, mock1, mock2):
+        self.context.report_status_dir = '/tmp'
         table_filter_file = None
         full_restore_with_filter = True
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-d=/foo/db_dumps/20121212 --gp-i --gp-k=20121212121212 --gp-l=p -P --gp-r=/tmp --status=/tmp --gp-c -d "bkdb"'
+        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-d=db_dumps/20160101 --gp-i --gp-k=20160101010101 --gp-l=p -P --gp-r=/tmp --status=/tmp --gp-c -d "testdb"'
 
-        restore_line = self.restore._build_post_data_schema_only_restore_line(restore_timestamp, restore_db, compress, master_port, table_filter_file, full_restore_with_filter)
+        restore_line = self.restore.create_post_data_schema_only_restore_string(table_filter_file, full_restore_with_filter)
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_post_data_schema_only_restore_line_08(self, mock1, mock2):
-        master_datadir = 'foo'
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        self.restore.report_status_dir = '/tmp'
-        self.restore.backup_dir = '/foo'
+    def test_create_post_data_schema_only_restore_string_with_ddboost(self, mock1, mock2):
+        self.context.report_status_dir = '/tmp'
         table_filter_file = None
         full_restore_with_filter = True
-        self.restore.ddboost = True
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-d=/foo/db_dumps/20121212 --gp-i --gp-k=20121212121212 --gp-l=p -P --gp-r=/tmp --status=/tmp --gp-c -d "bkdb" --ddboost'
+        self.context.ddboost = True
+        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-d=db_dumps/20160101 --gp-i --gp-k=20160101010101 --gp-l=p -P --gp-r=/tmp --status=/tmp --gp-c -d "testdb" --ddboost'
 
-        restore_line = self.restore._build_post_data_schema_only_restore_line(restore_timestamp, restore_db, compress, master_port, table_filter_file, full_restore_with_filter)
+        restore_line = self.restore.create_post_data_schema_only_restore_string(table_filter_file, full_restore_with_filter)
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_post_data_schema_only_restore_line_09(self, mock1, mock2):
-        master_datadir = 'foo'
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
+    def test_create_post_data_schema_only_restore_string_with_nbu(self, mock1, mock2):
         table_filter_file = None
         full_restore_with_filter = True
-        self.restore.netbackup_service_host = "mdw"
-        self.restore.netbackup_block_size = None
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-d=db_dumps/20121212 --gp-i --gp-k=20121212121212 --gp-l=p -P --gp-c -d "bkdb" --netbackup-service-host=mdw'
+        self.context.backup_dir = None
+        self.context.netbackup_service_host = "mdw"
+        self.context.netbackup_block_size = 1024
+        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-d=db_dumps/20160101 --gp-i --gp-k=20160101010101 --gp-l=p -P --gp-c -d "testdb" --netbackup-service-host=mdw --netbackup-block-size=1024'
 
-        restore_line = self.restore._build_post_data_schema_only_restore_line(restore_timestamp, restore_db, compress, master_port, table_filter_file, full_restore_with_filter)
+        restore_line = self.restore.create_post_data_schema_only_restore_string(table_filter_file, full_restore_with_filter)
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_post_data_schema_only_restore_line_10(self, mock1, mock2):
-        master_datadir = 'foo'
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        table_filter_file = None
-        full_restore_with_filter = True
-        self.restore.netbackup_service_host = "mdw"
-        self.restore.netbackup_block_size = 1024
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-d=db_dumps/20121212 --gp-i --gp-k=20121212121212 --gp-l=p -P --gp-c -d "bkdb" --netbackup-service-host=mdw --netbackup-block-size=1024'
-
-        restore_line = self.restore._build_post_data_schema_only_restore_line(restore_timestamp, restore_db, compress, master_port, table_filter_file, full_restore_with_filter)
+    def test_build_gpdbrestore_cmd_line_default(self, mock1, mock2):
+        ts = '20160101010101'
+        self.context.backup_dir = None
+        expected_output = 'gpdbrestore -t 20160101010101 --table-file foo -a -v --noplan --noanalyze --noaostats --no-validate-table-name'
+        restore_line = _build_gpdbrestore_cmd_line(self.context, ts, 'foo')
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_gpdbrestore_cmd_line_00(self, mock1, mock2):
-        ts = '20121212121212'
-        dump_prefix = 'bar_'
-        expected_output = 'gpdbrestore -t 20121212121212 --table-file foo -a -v --noplan --noanalyze --noaostats --no-validate-table-name --prefix=bar'
-        restore_line = _build_gpdbrestore_cmd_line(ts, 'foo', None, None, None, dump_prefix)
+    def test_build_gpdbrestore_cmd_line_backup_dir(self, mock1, mock2):
+        ts = '20160101010101'
+        self.context.backup_dir = '/tmp' 
+        expected_output = 'gpdbrestore -t 20160101010101 --table-file foo -a -v --noplan --noanalyze --noaostats --no-validate-table-name -u /tmp'
+        restore_line = _build_gpdbrestore_cmd_line(self.context, ts, 'foo')
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_redirected_restore_build_gpdbrestore_cmd_line_00(self, mock1, mock2):
-        ts = '20121212121212'
-        dump_prefix = 'bar_'
-        expected_output = 'gpdbrestore -t 20121212121212 --table-file foo -a -v --noplan --noanalyze --noaostats --no-validate-table-name --prefix=bar --redirect="redb"'
-        restore_line = _build_gpdbrestore_cmd_line(ts, 'foo', None, 'redb', None, dump_prefix)
+    def test_build_gpdbrestore_cmd_line_report_status_dir(self, mock1, mock2):
+        ts = '20160101010101'
+        self.context.backup_dir = None
+        self.context.report_status_dir = '/tmp'
+        expected_output = 'gpdbrestore -t 20160101010101 --table-file foo -a -v --noplan --noanalyze --noaostats --no-validate-table-name --report-status-dir=/tmp'
+        restore_line = _build_gpdbrestore_cmd_line(self.context, ts, 'foo')
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_gpdbrestore_cmd_line_01(self, mock1, mock2):
-        ts = '20121212121212'
-        dump_prefix = 'bar_'
-        expected_output = 'gpdbrestore -t 20121212121212 --table-file foo -a -v --noplan --noanalyze --noaostats --no-validate-table-name -u /tmp --prefix=bar'
-        restore_line = _build_gpdbrestore_cmd_line(ts, 'foo', '/tmp', None, None, dump_prefix)
+    def test_build_gpdbrestore_cmd_line_redirected_restore(self, mock1, mock2):
+        ts = '20160101010101'
+        self.context.backup_dir = None
+        self.context.redirected_restore_db = "redb"
+        expected_output = 'gpdbrestore -t 20160101010101 --table-file foo -a -v --noplan --noanalyze --noaostats --no-validate-table-name --redirect=redb'
+        restore_line = _build_gpdbrestore_cmd_line(self.context, ts, 'foo')
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_gpdbrestore_cmd_line_02(self, mock1, mock2):
-        ts = '20121212121212'
-        dump_prefix = 'bar_'
-        report_status_dir = '/tmp'
-        expected_output = 'gpdbrestore -t 20121212121212 --table-file foo -a -v --noplan --noanalyze --noaostats --no-validate-table-name --prefix=bar --report-status-dir=/tmp'
-        restore_line = _build_gpdbrestore_cmd_line(ts, 'foo', None, None, '/tmp', dump_prefix)
-        self.assertEqual(restore_line, expected_output)
-
-    @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
-    @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_gpdbrestore_cmd_line_03(self, mock1, mock2):
-        ts = '20121212121212'
-        dump_prefix = 'bar_'
-        expected_output = 'gpdbrestore -t 20121212121212 --table-file foo -a -v --noplan --noanalyze --noaostats --no-validate-table-name --prefix=bar --report-status-dir=/tmp --ddboost'
+    def test_build_gpdbrestore_cmd_line_with_ddboost(self, mock1, mock2):
+        ts = '20160101010101'
+        self.context.backup_dir = None
+        self.context.ddboost = True
+        self.context.report_status_dir = '/tmp'
+        expected_output = 'gpdbrestore -t 20160101010101 --table-file foo -a -v --noplan --noanalyze --noaostats --no-validate-table-name --report-status-dir=/tmp --ddboost'
         ddboost = True
-        restore_line = _build_gpdbrestore_cmd_line(ts, 'foo', None, None, '/tmp', dump_prefix, ddboost)
+        restore_line = _build_gpdbrestore_cmd_line(self.context, ts, 'foo')
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_redirected_restore_build_gpdbrestore_cmd_line_01(self, mock1, mock2):
-        ts = '20121212121212'
-        dump_prefix = 'bar_'
-        expected_output = 'gpdbrestore -t 20121212121212 --table-file foo -a -v --noplan --noanalyze --noaostats --no-validate-table-name -u /tmp --prefix=bar --redirect="redb"'
-        restore_line = _build_gpdbrestore_cmd_line(ts, 'foo', '/tmp', 'redb', None, dump_prefix)
-        self.assertEqual(restore_line, expected_output)
-
-    @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
-    @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_restore_line_00(self, mock1, mock2):
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        no_plan = True
-        no_ao_stats = False
+    def test_create_restore_string_no_filter_file(self, mock1, mock2):
+        self.context.no_plan = True
         table_filter_file = None
         full_restore_with_filter = False
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20121212121212 --gp-l=p --gp-d=db_dumps/20121212 --gp-c -d "bkdb" -a'
+        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20160101010101 --gp-l=p --gp-d=db_dumps/20160101 --gp-c -d "testdb" -a'
 
-        restore_line = self.restore._build_restore_line(restore_timestamp, restore_db, compress, master_port, no_plan, table_filter_file, no_ao_stats,
-                                                        full_restore_with_filter, None)
+        restore_line = self.restore.create_restore_string(table_filter_file, full_restore_with_filter)
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_restore_line_01(self, mock1, mock2):
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        no_plan = False
-        no_ao_stats = False
+    def test_create_restore_string_default(self, mock1, mock2):
+        self.context.no_plan = True
         table_filter_file = '/tmp/foo'
         full_restore_with_filter = False
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20121212121212 --gp-l=p --gp-d=db_dumps/20121212 --gp-f=/tmp/foo --gp-c -d "bkdb"'
+        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20160101010101 --gp-l=p --gp-d=db_dumps/20160101 --gp-f=/tmp/foo --gp-c -d "testdb" -a'
 
-        restore_line = self.restore._build_restore_line(restore_timestamp, restore_db, compress, master_port, no_plan, table_filter_file, no_ao_stats,
-                                                        full_restore_with_filter, None)
+        restore_line = self.restore.create_restore_string(table_filter_file, full_restore_with_filter)
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_restore_line_02(self, mock1, mock2):
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        no_plan = True
-        no_ao_stats = False
+    def test_create_restore_string_with_ddboost(self, mock1, mock2):
+        self.context.no_plan = True
         table_filter_file = None
         full_restore_with_filter = False
-        self.restore.ddboost = True
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20121212121212 --gp-l=p --gp-d=db_dumps/20121212 --gp-c -d "bkdb" -a --ddboost'
+        self.context.ddboost = True
+        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20160101010101 --gp-l=p --gp-d=db_dumps/20160101 --gp-c -d "testdb" -a --ddboost'
 
-        restore_line = self.restore._build_restore_line(restore_timestamp, restore_db, compress, master_port, no_plan, table_filter_file, no_ao_stats,
-                                                        full_restore_with_filter, None)
+        restore_line = self.restore.create_restore_string(table_filter_file, full_restore_with_filter)
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_restore_line_03(self, mock1, mock2):
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        no_plan = True
-        no_ao_stats = True
-        table_filter_file = None
-        self.restore.report_status_dir = '/tmp'
-        full_restore_with_filter = False
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20121212121212 --gp-l=p --gp-d=db_dumps/20121212 --gp-r=/tmp --status=/tmp --gp-c -d "bkdb" -a --gp-nostats'
-
-        restore_line = self.restore._build_restore_line(restore_timestamp, restore_db, compress, master_port, no_plan, table_filter_file, no_ao_stats,
-                                                        full_restore_with_filter, None)
-        self.assertEqual(restore_line, expected_output)
-
-    @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
-    @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_restore_line_04(self, mock1, mock2):
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        no_plan = True
-        no_ao_stats = True
+    def test_create_restore_string_different_status_dir(self, mock1, mock2):
+        self.context.no_plan = True
+        self.context.report_status_dir = '/tmp'
         table_filter_file = None
         full_restore_with_filter = False
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20121212121212 --gp-l=p --gp-d=db_dumps/20121212 --gp-c -d "bkdb" -a --gp-nostats'
+        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20160101010101 --gp-l=p --gp-d=db_dumps/20160101 --gp-r=/tmp --status=/tmp --gp-c -d "testdb" -a'
 
-        restore_line = self.restore._build_restore_line(restore_timestamp, restore_db, compress, master_port, no_plan, table_filter_file, no_ao_stats,
-                                                        full_restore_with_filter, None)
+        restore_line = self.restore.create_restore_string(table_filter_file, full_restore_with_filter)
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_restore_line_05(self, mock1, mock2):
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        no_plan = False
-        no_ao_stats = True
+    def test_create_restore_string_no_filter(self, mock1, mock2):
+        self.context.no_plan = True
+        table_filter_file = None
+        full_restore_with_filter = False
+        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20160101010101 --gp-l=p --gp-d=db_dumps/20160101 --gp-c -d "testdb" -a'
+
+        restore_line = self.restore.create_restore_string(table_filter_file, full_restore_with_filter)
+        self.assertEqual(restore_line, expected_output)
+
+    @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
+    @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
+    def test_create_restore_string_no_filter_file(self, mock1, mock2):
+        self.context.no_plan = True
         table_filter_file = '/tmp/foo'
         full_restore_with_filter = False
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20121212121212 --gp-l=p --gp-d=db_dumps/20121212 --gp-f=/tmp/foo --gp-c -d "bkdb" --gp-nostats'
+        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20160101010101 --gp-l=p --gp-d=db_dumps/20160101 --gp-f=/tmp/foo --gp-c -d "testdb" -a'
 
-        restore_line = self.restore._build_restore_line(restore_timestamp, restore_db, compress, master_port, no_plan, table_filter_file, no_ao_stats,
-                                                        full_restore_with_filter, None)
+        restore_line = self.restore.create_restore_string(table_filter_file, full_restore_with_filter)
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_restore_line_06(self, mock1, mock2):
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        no_plan = True
-        no_ao_stats = True
+    def test_create_restore_string_ddboost_and_prefix(self, mock1, mock2):
+        self.context.no_plan = True
         table_filter_file = None
+        self.context.dump_prefix = 'bar_'
         full_restore_with_filter = False
-        self.restore.ddboost = True
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20121212121212 --gp-l=p --gp-d=db_dumps/20121212 --gp-c -d "bkdb" -a --gp-nostats --ddboost'
+        self.context.ddboost = True
+        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --prefix=bar_ --gp-k=20160101010101 --gp-l=p --gp-d=db_dumps/20160101 --gp-c -d "testdb" -a --ddboost'
 
-        restore_line = self.restore._build_restore_line(restore_timestamp, restore_db, compress, master_port, no_plan, table_filter_file, no_ao_stats,
-                                                        full_restore_with_filter, None)
+        restore_line = self.restore.create_restore_string(table_filter_file, full_restore_with_filter)
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_restore_line_07(self, mock1, mock2):
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        no_plan = True
-        no_ao_stats = True
+    @patch('gppylib.operations.backup_utils.Context.backup_dir_is_writable', return_value=True)
+    def test_create_restore_string_backup_dir(self, mock1, mock2, mock3):
+        self.context.no_plan = True
         table_filter_file = None
-        self.restore.dump_prefix = 'bar_'
+        self.context.backup_dir = '/tmp'
         full_restore_with_filter = False
-        self.restore.ddboost = True
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --prefix=bar_ --gp-k=20121212121212 --gp-l=p --gp-d=db_dumps/20121212 --gp-c -d "bkdb" -a --gp-nostats --ddboost'
+        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20160101010101 --gp-l=p --gp-d=/tmp/db_dumps/20160101 --gp-r=/tmp/db_dumps/20160101 --status=/tmp/db_dumps/20160101 --gp-c -d "testdb" -a'
 
-        restore_line = self.restore._build_restore_line(restore_timestamp, restore_db, compress, master_port, no_plan, table_filter_file, no_ao_stats,
-                                                        full_restore_with_filter, None)
+        restore_line = self.restore.create_restore_string(table_filter_file, full_restore_with_filter)
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    @patch('gppylib.operations.restore.RestoreDatabase.backup_dir_is_writable', return_value=True)
-    def test_build_restore_line_08(self, mock1, mock2, mock3):
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        no_plan = True
-        no_ao_stats = True
+    def test_create_restore_string_no_ao_stats(self, mock1, mock2):
+        self.context.no_plan = True
+        self.context.no_ao_stats = True
         table_filter_file = None
-        self.restore.backup_dir = '/tmp'
+        self.context.report_status_dir = '/tmp'
+        self.context.backup_dir = '/foo'
         full_restore_with_filter = False
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20121212121212 --gp-l=p --gp-d=/tmp/db_dumps/20121212 --gp-r=/tmp/db_dumps/20121212 --status=/tmp/db_dumps/20121212 --gp-c -d "bkdb" -a --gp-nostats'
+        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20160101010101 --gp-l=p --gp-d=/foo/db_dumps/20160101 --gp-r=/tmp --status=/tmp --gp-c -d "testdb" -a --gp-nostats'
 
-        restore_line = self.restore._build_restore_line(restore_timestamp, restore_db, compress, master_port, no_plan, table_filter_file, no_ao_stats,
-                                                        full_restore_with_filter, None)
+        restore_line = self.restore.create_restore_string(table_filter_file, full_restore_with_filter)
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    @patch('gppylib.operations.restore.RestoreDatabase.backup_dir_is_writable', return_value=False)
-    def test_build_restore_line_09(self, mock1, mock2, mock3):
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        no_plan = True
-        no_ao_stats = True
+    def test_create_restore_string_with_plan(self, mock1, mock2):
         table_filter_file = None
-        self.restore.backup_dir = '/tmp'
-        full_restore_with_filter = False
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20121212121212 --gp-l=p --gp-d=/tmp/db_dumps/20121212 --gp-c -d "bkdb" -a --gp-nostats'
-
-        restore_line = self.restore._build_restore_line(restore_timestamp, restore_db, compress, master_port, no_plan, table_filter_file, no_ao_stats,
-                                                        full_restore_with_filter, None)
-        self.assertEqual(restore_line, expected_output)
-
-    @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
-    @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_restore_line_10(self, mock1, mock2):
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        no_plan = True
-        no_ao_stats = True
-        table_filter_file = None
-        self.restore.report_status_dir = '/tmp'
-        self.restore.backup_dir = '/foo'
-        full_restore_with_filter = False
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20121212121212 --gp-l=p --gp-d=/foo/db_dumps/20121212 --gp-r=/tmp --status=/tmp --gp-c -d bkdb -a --gp-nostats'
-
-    @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
-    @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_restore_line_11(self, mock1, mock2):
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        no_plan = True
-        no_ao_stats = True
-        table_filter_file = None
-        self.restore.report_status_dir = '/tmp'
-        self.restore.backup_dir = '/foo'
-        full_restore_with_filter = False
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20121212121212 --gp-l=p --gp-d=/foo/db_dumps/20121212 --gp-r=/tmp --status=/tmp --gp-c -d "bkdb" -a --gp-nostats'
-
-        restore_line = self.restore._build_restore_line(restore_timestamp, restore_db, compress, master_port, no_plan, table_filter_file, no_ao_stats,
-                                                        full_restore_with_filter, None)
-        self.assertEqual(restore_line, expected_output)
-
-    @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
-    @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_restore_line_12(self, mock1, mock2):
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        no_plan = False
-        no_ao_stats = True
-        table_filter_file = None
-        self.restore.report_status_dir = '/tmp'
-        self.restore.backup_dir = '/foo'
+        self.context.report_status_dir = '/tmp'
+        self.context.backup_dir = '/foo'
         full_restore_with_filter = True
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20121212121212 --gp-l=p --gp-d=/foo/db_dumps/20121212 --gp-r=/tmp --status=/tmp --gp-c -d "bkdb" -a --gp-nostats'
+        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20160101010101 --gp-l=p --gp-d=/foo/db_dumps/20160101 --gp-r=/tmp --status=/tmp --gp-c -d "testdb" -a'
 
-        restore_line = self.restore._build_restore_line(restore_timestamp, restore_db, compress, master_port, no_plan, table_filter_file, no_ao_stats,
-                                                        full_restore_with_filter, None)
+        restore_line = self.restore.create_restore_string(table_filter_file, full_restore_with_filter)
         self.assertEqual(restore_line, expected_output)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_restore_line_13(self, mock1, mock2):
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        no_plan = True
-        no_ao_stats = True
+    def test_create_restore_string_with_nbu(self, mock1, mock2):
+        self.context.no_plan = True
         table_filter_file = None
-        self.restore.report_status_dir = '/tmp'
-        self.restore.backup_dir = '/foo'
-        self.restore.netbackup_service_host = "mdw"
+        self.context.report_status_dir = '/tmp'
+        self.context.backup_dir = '/foo'
+        self.context.netbackup_service_host = "mdw"
         full_restore_with_filter = False
-        self.restore.ddboost = False
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20121212121212 --gp-l=p --gp-d=/foo/db_dumps/20121212 --gp-r=/tmp --status=/tmp --gp-c -d "bkdb" -a --gp-nostats --netbackup-service-host=mdw'
+        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20160101010101 --gp-l=p --gp-d=/foo/db_dumps/20160101 --gp-r=/tmp --status=/tmp --gp-c -d "testdb" -a --netbackup-service-host=mdw'
 
-        restore_line = self.restore._build_restore_line(restore_timestamp, restore_db, compress, master_port, no_plan, table_filter_file, no_ao_stats,
-                                                        full_restore_with_filter, None)
-        self.assertEqual(restore_line, expected_output)
-
-    @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
-    @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_restore_line_14(self, mock1, mock2):
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        no_plan = True
-        no_ao_stats = True
-        table_filter_file = None
-        self.restore.ddboost = True
-        self.restore.report_status_dir = '/tmp'
-        self.restore.netbackup_service_host = "mdw"
-        full_restore_with_filter = False
-        self.restore.dump_dir = 'backup/DCA-35'
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20121212121212 --gp-l=p --gp-d=backup/DCA-35/20121212 --gp-r=/tmp --status=/tmp --gp-c -d "bkdb" -a --gp-nostats --ddboost --netbackup-service-host=mdw'
-
-        restore_line = self.restore._build_restore_line(restore_timestamp, restore_db, compress, master_port, no_plan, table_filter_file, no_ao_stats,
-                                                        full_restore_with_filter, None)
+        restore_line = self.restore.create_restore_string(table_filter_file, full_restore_with_filter)
         self.assertEqual(restore_line, expected_output)
 
     # Test to verify the command line for gp_restore
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
-    def test_build_restore_line_15(self, mock1, mock2):
-        restore_timestamp = '20121212121212'
-        restore_db = 'bkdb'
-        compress = True
-        master_port = '5432'
-        ddboost = False
-        no_plan = True
-        no_ao_stats = False
+    def test_create_restore_string_change_schema(self, mock1, mock2):
+        self.context.no_plan = True
         table_filter_file = None
         full_restore_with_filter = False
-        change_schema = 'newschema'
-        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20121212121212 --gp-l=p --gp-d=db_dumps/20121212 --gp-c -d "bkdb" -a --change-schema-file=newschema'
-        restore_line = self.restore._build_restore_line(restore_timestamp, restore_db, compress, master_port, no_plan, table_filter_file, no_ao_stats,
-                                                        full_restore_with_filter, change_schema)
+        change_schema_file = 'newschema'
+        expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20160101010101 --gp-l=p --gp-d=db_dumps/20160101 --gp-c -d "testdb" -a --change-schema-file=newschema'
+        restore_line = self.restore.create_restore_string(table_filter_file, full_restore_with_filter, change_schema_file)
         self.assertEqual(restore_line, expected_output)
 
-    @patch('gppylib.operations.restore.generate_plan_filename', return_value='foo')
-    def test_get_plan_file_contents_00(self, mock1):
-        master_datadir = 'foo'
-        timestamp = '20121212121212'
-        backup_dir = None
+    @patch('gppylib.operations.backup_utils.Context.generate_filename', return_value='foo')
+    def test_get_plan_file_contents_no_file(self, mock1):
         with self.assertRaisesRegexp(Exception, 'Plan file foo does not exist'):
-            get_plan_file_contents(master_datadir, backup_dir, timestamp, self.restore.dump_dir, self.restore.dump_prefix)
+            get_plan_file_contents(self.context)
 
-    @patch('gppylib.operations.restore.generate_plan_filename', return_value='foo')
+    @patch('gppylib.operations.backup_utils.Context.generate_filename', return_value='foo')
     @patch('gppylib.operations.restore.get_lines_from_file', return_value=[])
     @patch('os.path.isfile', return_value=True)
-    def test_get_plan_file_contents_01(self, mock1, mock2, mock3):
-        master_datadir = 'foo'
-        timestamp = '20121212121212'
-        backup_dir = None
+    def test_get_plan_file_contents_empty_file(self, mock1, mock2, mock3):
         with self.assertRaisesRegexp(Exception, 'Plan file foo has no contents'):
-            get_plan_file_contents(master_datadir, backup_dir, timestamp, self.restore.dump_dir, self.restore.dump_prefix)
+            get_plan_file_contents(self.context)
 
-    @patch('gppylib.operations.restore.generate_plan_filename', return_value='foo')
-    @patch('gppylib.operations.restore.get_lines_from_file', return_value=['20121212121212:t1,t2', '20121212121211:t3,t4', '20121212121210:t5,t6,t7'])
+    @patch('gppylib.operations.backup_utils.Context.generate_filename', return_value='foo')
+    @patch('gppylib.operations.restore.get_lines_from_file', return_value=['20160101010101:t1,t2', '20160101010111:t3,t4', '20160101121210:t5,t6,t7'])
     @patch('os.path.isfile', return_value=True)
-    def test_get_plan_file_contents_02(self, mock1, mock2, mock3):
-        master_datadir = 'foo'
-        timestamp = '20121212121212'
-        backup_dir = None
-        expected_output = [('20121212121212','t1,t2'), ('20121212121211','t3,t4'), ('20121212121210','t5,t6,t7')]
-        output = get_plan_file_contents(master_datadir, backup_dir, timestamp, self.restore.dump_dir, self.restore.dump_prefix)
+    def test_get_plan_file_contents_default(self, mock1, mock2, mock3):
+        expected_output = [('20160101010101','t1,t2'), ('20160101010111','t3,t4'), ('20160101121210','t5,t6,t7')]
+        output = get_plan_file_contents(self.context)
         self.assertEqual(output, expected_output)
 
-    @patch('gppylib.operations.restore.generate_plan_filename', return_value='foo')
-    @patch('gppylib.operations.restore.get_lines_from_file', return_value=['20121212121212:', '20121212121211', '20121212121210:'])
+    @patch('gppylib.operations.backup_utils.Context.generate_filename', return_value='foo')
+    @patch('gppylib.operations.restore.get_lines_from_file', return_value=['20160101010101:', '20160101010111', '20160101121210:'])
     @patch('os.path.isfile', return_value=True)
-    def test_get_plan_file_contents_03(self, mock1, mock2, mock3):
-        master_datadir = 'foo'
-        timestamp = '20121212121212'
-        backup_dir = None
+    def test_get_plan_file_contents_invalid_format(self, mock1, mock2, mock3):
         with self.assertRaisesRegexp(Exception, 'Invalid plan file format'):
-            get_plan_file_contents(master_datadir, backup_dir, timestamp, self.restore.dump_dir, self.restore.dump_prefix)
+            get_plan_file_contents(self.context)
 
-    @patch('gppylib.operations.restore.get_plan_file_contents', return_value=[('20121212121212', 't1,t2'), ('20121212121211', 't3,t4'), ('20121212121210', 't5,t6,t7')])
+    @patch('gppylib.operations.restore.get_plan_file_contents', return_value=[('20160101010101', 't1,t2'), ('20160101010111', 't3,t4'), ('20160101121210', 't5,t6,t7')])
     @patch('gppylib.operations.restore.Command.run')
     @patch('gppylib.operations.restore.update_ao_statistics')
-    def test_restore_incremental_data_only_00(self, mock1, mock2, mock3):
-        restore_db = None
-        results = self.restore.restore_incremental_data_only(restore_db)
+    def test_restore_incremental_data_only_default(self, mock1, mock2, mock3):
+        results = self.restore.restore_incremental_data_only()
         self.assertTrue(results)
 
-    @patch('gppylib.operations.restore.get_plan_file_contents', return_value=[('20121212121212', 't1,t2'), ('20121212121211', 't3,t4'), ('20121212121210', 't5,t6,t7')])
-    @patch('gppylib.operations.restore.Command.run')
-    @patch('gppylib.operations.restore.update_ao_statistics')
-    def redirected_restore_test_restore_incremental_data_only_00(self, mock1, mock2, mock3):
-        restore_db = None
-        results = self.restore.restore_incremental_data_only(restore_db)
-        self.assertTrue(results)
-
-    @patch('gppylib.operations.restore.get_plan_file_contents', return_value=[('20121212121212', ''), ('20121212121211', ''), ('20121212121210', '')])
+    @patch('gppylib.operations.restore.get_plan_file_contents', return_value=[('20160101010101', ''), ('20160101010111', ''), ('20160101121210', '')])
     @patch('os.path.isfile', return_value=True)
     @patch('gppylib.operations.restore.update_ao_statistics')
-    def test_restore_incremental_data_only_01(self, mock1, mock2, mock3):
-        restore_db = None
-        with self.assertRaisesRegexp(Exception, 'There were no tables to restore. Check the plan file contents for restore timestamp 20121212121212'):
-            self.restore.restore_incremental_data_only(restore_db)
+    def test_restore_incremental_data_only_no_tables(self, mock1, mock2, mock3):
+        with self.assertRaisesRegexp(Exception, 'There were no tables to restore. Check the plan file contents for restore timestamp 20160101010101'):
+            self.restore.restore_incremental_data_only()
 
-    @patch('gppylib.operations.restore.get_plan_file_contents', return_value=[('20121212121212', 't1,t2'), ('20121212121211', 't3,t4'), ('20121212121210', 't5,t6,t7')])
-    @patch('gppylib.operations.restore.Command.run')
-    @patch('gppylib.operations.restore.update_ao_statistics')
-    def test_restore_incremental_data_only_02(self, mock1, mock2, mock3):
-        restore_db = None
-        self.assertTrue(self.restore.restore_incremental_data_only(restore_db))
-
-    @patch('gppylib.operations.restore.get_plan_file_contents', return_value=[('20121212121212', 't1,t2'), ('20121212121211', 't3,t4'), ('20121212121210', 't5,t6,t7')])
+    @patch('gppylib.operations.restore.get_plan_file_contents', return_value=[('20160101010101', 't1,t2'), ('20160101010111', 't3,t4'), ('20160101121210', 't5,t6,t7')])
     @patch('gppylib.operations.restore.Command.run', side_effect=Exception('Error executing gpdbrestore'))
     @patch('gppylib.operations.restore.update_ao_statistics')
-    def test_restore_incremental_data_only_04(self, mock1, mock2, mock3):
-        restore_db = None
+    def test_restore_incremental_data_only_error(self, mock1, mock2, mock3):
         with self.assertRaisesRegexp(Exception, 'Error executing gpdbrestore'):
-            self.restore.restore_incremental_data_only(restore_db)
+            self.restore.restore_incremental_data_only()
 
-    def test_get_restore_dir_00(self):
-        master_datadir = '/foo'
-        backup_dir = None
-        self.assertEqual(get_restore_dir(master_datadir, backup_dir), '/foo')
-
-    def test_get_restore_dir_01(self):
-        master_datadir = None
-        backup_dir = '/foo'
-        self.assertEqual(get_restore_dir(master_datadir, backup_dir), '/foo')
-
-    def test_get_restore_dir_02(self):
-        master_datadir = None
-        backup_dir = None
-        self.assertEqual(get_restore_dir(master_datadir, backup_dir), None)
-
-    @patch('gppylib.operations.restore.is_incremental_restore', return_value=True)
-    def test_is_begin_incremental_run_00(self, m):
-        mdd = '/foo'
-        backup_dir = '/tmp'
-        timestamp = '20130204135500'
-        noplan = True
-        result = is_begin_incremental_run(mdd, backup_dir, self.restore.dump_dir, self.restore.dump_prefix, timestamp, noplan)
-        self.assertFalse(result)
-
-    @patch('gppylib.operations.restore.is_incremental_restore', return_value=True)
-    def test_is_begin_incremental_run_01(self, m):
-        mdd = '/foo'
-        backup_dir = '/tmp'
-        timestamp = '20130204135500'
-        noplan = False
-        result = is_begin_incremental_run(mdd, backup_dir, self.restore.dump_dir, self.restore.dump_prefix, timestamp, noplan)
-        self.assertTrue(result)
-
-    @patch('gppylib.operations.restore.is_incremental_restore', return_value=False)
-    def test_is_begin_incremental_run_02(self, m):
-        mdd = '/foo'
-        backup_dir = '/tmp'
-        timestamp = '20130204135500'
-        noplan = True
-        result = is_begin_incremental_run(mdd, backup_dir, self.restore.dump_dir, self.restore.dump_prefix, timestamp, noplan)
-        self.assertFalse(result)
-
-    @patch('gppylib.operations.restore.is_incremental_restore', return_value=False)
-    def test_is_begin_incremental_run_03(self, m):
-        mdd = '/foo'
-        backup_dir = '/tmp'
-        timestamp = '20130204135500'
-        noplan = False
-        result = is_begin_incremental_run(mdd, backup_dir, self.restore.dump_dir, self.restore.dump_prefix, timestamp, noplan)
-        self.assertFalse(result)
-
-    def test_create_filter_file_00(self):
-        self.restore.restore_tables = None
-        fname = self.restore.create_filter_file()
-        self.assertEquals(fname, None)
+    def test_create_filter_file_no_tables(self):
+        self.context.restore_tables = None
+        self.assertEquals(self.restore.create_filter_file(), None)
 
     @patch('gppylib.operations.restore.get_all_segment_addresses', return_value=['host1'])
     @patch('gppylib.operations.restore.scp_file_to_hosts')
-    def test_create_filter_file_01(self, m1, m2):
-        self.restore.restore_tables = ['public.ao1', 'pepper.heap1']
-        fname = self.restore.create_filter_file()
-        tables = None
-        with open(fname) as fd:
-            contents = fd.read()
-            tables = contents.splitlines()
-        self.assertEquals(tables,self.restore.restore_tables)
-        os.remove(fname)
+    def test_create_filter_file_default(self, m1, m2):
+        self.context.restore_tables = ['public.ao1', 'testschema.heap1']
+        m = mock_open()
+        with patch('tempfile.NamedTemporaryFile', m, create=True):
+            fname = self.restore.create_filter_file()
+            result = m()
+            self.assertEqual(len(self.context.restore_tables), len(result.write.call_args_list))
+            for i in range(len(self.context.restore_tables)):
+                self.assertEqual(call(self.context.restore_tables[i]+'\n'), result.write.call_args_list[i])
 
     @patch('gppylib.operations.restore.get_lines_from_file', return_value = ['public.t1', 'public.t2', 'public.t3'])
     @patch('os.path.isfile', return_value = True)
-    def test_get_restore_tables_from_table_file_00(self, mock1, mock2):
+    def test_get_restore_tables_from_table_file_default(self, mock1, mock2):
         table_file = '/foo'
         expected_result = ['public.t1', 'public.t2', 'public.t3']
         result = get_restore_tables_from_table_file(table_file)
         self.assertEqual(expected_result, result)
 
     @patch('os.path.isfile', return_value = False)
-    def test_get_restore_tables_from_table_file_01(self, mock):
+    def test_get_restore_tables_from_table_file_no_file(self, mock):
         table_file = '/foo'
         expected_result = ['public.t1', 'public.t2', 'public.t3']
         with self.assertRaisesRegexp(Exception, 'Table file does not exist'):
             result = get_restore_tables_from_table_file(table_file)
 
-    def test_check_table_name_format_and_duplicate_00(self):
+    def test_check_table_name_format_and_duplicate_missing_schema(self):
         table_list = ['publicao1', 'public.ao2']
         with self.assertRaisesRegexp(Exception, 'No schema name supplied'):
             check_table_name_format_and_duplicate(table_list, None)
 
-    def test_check_table_name_format_and_duplicate_01(self):
+    def test_check_table_name_format_and_duplicate_default(self):
         table_list = ['public.ao1', 'public.ao2']
         check_table_name_format_and_duplicate(table_list, [])
 
-    def test_check_table_name_format_and_duplicate_02(self):
+    def test_check_table_name_format_and_duplicate_no_tables(self):
         table_list = []
         schema_list = []
         check_table_name_format_and_duplicate(table_list, schema_list)
 
-    def test_check_table_name_format_and_duplicate_03(self):
+    def test_check_table_name_format_and_duplicate_duplicate_tables(self):
         table_list = ['public.ao1', 'public.ao1']
         resolved_list, _ = check_table_name_format_and_duplicate(table_list, [])
         self.assertEqual(resolved_list, ['public.ao1'])
 
-    def test_check_table_name_format_and_duplicate_04(self):
+    def test_check_table_name_format_and_duplicate_funny_chars(self):
         table_list = [' `"@#$%^&( )_|:;<>?/-+={}[]*1Aa . `"@#$%^&( )_|:;<>?/-+={}[]*1Aa ', 'schema.ao1']
         schema_list = ['schema']
         resolved_table_list, resolved_schema_list = check_table_name_format_and_duplicate(table_list, schema_list)
         self.assertEqual(resolved_table_list, [' `"@#$%^&( )_|:;<>?/-+={}[]*1Aa . `"@#$%^&( )_|:;<>?/-+={}[]*1Aa '])
         self.assertEqual(resolved_schema_list, ['schema'])
 
-    def test_validate_tablenames_exist_in_dump_file_00(self):
+    def test_validate_tablenames_exist_in_dump_file_no_tables(self):
         dumped_tables = []
         table_list = ['schema.ao']
         with self.assertRaisesRegexp(Exception, 'No dumped tables to restore.'):
             validate_tablenames_exist_in_dump_file(table_list, dumped_tables)
 
-    def test_validate_tablenames_exist_in_dump_file_01(self):
+    def test_validate_tablenames_exist_in_dump_file_one_table(self):
         dumped_tables = [('schema', 'ao', 'gpadmin')]
         table_list = ['schema.ao']
         validate_tablenames_exist_in_dump_file(table_list, dumped_tables)
 
-    def test_validate_tablenames_exist_in_dump_file_02(self):
+    def test_validate_tablenames_exist_in_dump_file_nonexistent_table(self):
         dumped_tables = [('schema', 'ao', 'gpadmin')]
         table_list = ['schema.ao', 'schema.co']
         with self.assertRaisesRegexp(Exception, "Tables \['schema.co'\] not found in backup"):
             validate_tablenames_exist_in_dump_file(table_list, dumped_tables)
 
-    def test_get_restore_table_list_00(self):
+    def test_get_restore_table_list_default(self):
         table_list = ['public.ao_table', 'public.ao_table2', 'public.co_table', 'public.heap_table']
         restore_tables = ['public.ao_table2', 'public.co_table']
-        result = get_restore_table_list(table_list, restore_tables)
-        with open(result) as fd:
-            for line in fd:
-                self.assertTrue(line.strip() in restore_tables)
+        m = mock_open()
+        with patch('tempfile.NamedTemporaryFile', m, create=True):
+            result = get_restore_table_list(table_list, restore_tables)
+            result = m()
+            self.assertEqual(len(restore_tables), len(result.write.call_args_list))
+            for i in range(len(restore_tables)):
+                self.assertEqual(call(restore_tables[i]+'\n'), result.write.call_args_list[i])
 
-    def test_get_restore_table_list_01(self):
+    def test_get_restore_table_list_no_restore_tables(self):
         table_list = ['public.ao_table', 'public.ao_table2', 'public.co_table', 'public.heap_table']
-        restore_tables = []
-        result = get_restore_table_list(table_list, restore_tables)
-        with open(result) as fd:
-            for line in fd:
-                self.assertTrue(line.strip() in table_list)
+        restore_tables = None
+        m = mock_open()
+        with patch('tempfile.NamedTemporaryFile', m, create=True):
+            result = get_restore_table_list(table_list, restore_tables)
+            result = m()
+            self.assertEqual(len(table_list), len(result.write.call_args_list))
+            for i in range(len(table_list)):
+                self.assertEqual(call(table_list[i]+'\n'), result.write.call_args_list[i])
 
-    def test_get_restore_table_list_02(self):
+    def test_get_restore_table_list_extra_restore_tables(self):
         table_list = ['public.ao_table', 'public.ao_table2', 'public.co_table', 'public.heap_table']
         restore_tables = ['public.ao_table2', 'public.co_table', 'public.ao_table3']
-        result = get_restore_table_list(table_list, restore_tables)
-        with open(result) as fd:
-            for line in fd:
-                self.assertTrue(line.strip() in restore_tables)
+        expected = ['public.ao_table2', 'public.co_table']
+        m = mock_open()
+        with patch('tempfile.NamedTemporaryFile', m, create=True):
+            result = get_restore_table_list(table_list, restore_tables)
+            result = m()
+            self.assertEqual(len(expected), len(result.write.call_args_list))
+            for i in range(len(expected)):
+                self.assertEqual(call(expected[i]+'\n'), result.write.call_args_list[i])
 
-    def test_validate_restore_tables_list_00(self):
-        plan_file_contents = [('20121212121213', 'public.t1'), ('20121212121212', 'public.t2,public.t3'), ('20121212121212', 'public.t4')]
+    def test_validate_restore_tables_list_default(self):
+        plan_file_contents = [('20160101121213', 'public.t1'), ('20160101010101', 'public.t2,public.t3'), ('20160101010101', 'public.t4')]
         restore_tables = ['public.t1', 'public.t2']
         validate_restore_tables_list(plan_file_contents, restore_tables)
 
-    def test_validate_restore_tables_list_01(self):
-        plan_file_contents = [('20121212121213', 'public.t1'), ('20121212121212', 'public.t2,public.t3'), ('20121212121212', 'public.t4')]
+    def test_validate_restore_tables_list_invalid_tables(self):
+        plan_file_contents = [('20160101121213', 'public.t1'), ('20160101010101', 'public.t2,public.t3'), ('20160101010101', 'public.t4')]
         restore_tables = ['public.t5', 'public.t2']
         with self.assertRaisesRegexp(Exception, 'Invalid tables for -T option: The following tables were not found in plan file'):
             validate_restore_tables_list(plan_file_contents, restore_tables)
 
-    def test_validate_restore_tables_list_02(self):
-        plan_file_contents = [('20121212121213', 'public.t1'), ('20121212121212', 'public.t2,public.t3'), ('20121212121212', 'public.Ž')]
-        restore_tables = ['public.t1', 'public.Áá']
-        with self.assertRaisesRegexp(Exception, 'Invalid tables for -T option: The following tables were not found in plan file'):
-            validate_restore_tables_list(plan_file_contents, restore_tables)
-
-    def test_validate_restore_tables_list_03(self):
-        plan_file_contents = [('20121212121213', 'public.t1'), ('20121212121212', 'public.t2,public.t3'), ('20121212121212', 'public.测试')]
-        restore_tables = ['public.t1', 'public.测试']
-        validate_restore_tables_list(plan_file_contents, restore_tables)
-
-    def test_validate_restore_tables_list_04(self):
-        plan_file_contents = [('20121212121213', 'public.t1'), ('20121212121212', 'public.t2,public.t3'), ('20121212121212', 'public.Ž')]
-        restore_tables = ['public.t1', 'public.Ž']
-        validate_restore_tables_list(plan_file_contents, restore_tables)
-
-    def test_validate_restore_tables_list_05(self):
-        plan_file_contents = [('20121212121213', 'public.t1'), ('20121212121212', 'public.t2,schema.t3'), ('20121212121212', 'public.Áá')]
-        restore_tables = ['public.t1', 'public.Áá']
-        restore_schemas = ['schema']
-        validate_restore_tables_list(plan_file_contents, restore_tables)
-
-    def test_validate_restore_tables_list_06(self):
-        plan_file_contents = [('20121212121213', ' `\'"@#$%^&( )_|\\:;<>?/-+={}[]*1Aa . `\'"@#$%^&( )_|\\:;<>?/-+={}[]*1Aa ')]
-        restore_tables = [' `\'"@#$%^&( )_|\\:;<>?/-+={}[]*1Aa . `\'"@#$%^&( )_|\\:;<>?/-+={}[]*1Aa ']
-        validate_restore_tables_list(plan_file_contents, restore_tables)
-
-    @patch('gppylib.operations.unix.CheckFile.run', return_value=False)
-    def test_restore_global_00(self, mock):
-        restore_timestamp = '20121212121212'
-        master_datadir = 'foo'
-        backup_dir = None
-
-        with self.assertRaisesRegexp(Exception, 'Unable to locate global file gp_global_1_1_20121212121212 in dump set'):
-            self.restore._restore_global(restore_timestamp, master_datadir, backup_dir)
+    @patch('os.path.exists', return_value=False)
+    def test_restore_global_no_file(self, mock):
+        with self.assertRaisesRegexp(Exception, 'Unable to locate global file /data/master/p1/db_dumps/20160101/gp_global_1_1_20160101010101 in dump set'):
+            self.restore._restore_global(self.context)
 
     @patch('os.path.exists', return_value=True)
     @patch('gppylib.commands.gp.Psql.run')
-    def test_restore_global_01(self, mock1, mock2):
-        restore_timestamp = '20121212121212'
-        master_datadir = 'foo'
-        backup_dir = None
-
-        self.restore._restore_global(restore_timestamp, master_datadir, backup_dir) # should not error out
+    def test_restore_global_default(self, mock1, mock2):
+        self.restore._restore_global(self.context) # should not error out
 
     @patch('gppylib.operations.restore.execSQLForSingleton')
     @patch('pygresql.pgdb.pgdbCnx.commit')
-    def test_update_ao_stat_func_00(self, m1, m2):
+    def test_update_ao_stat_func_default(self, m1, m2):
         conn = None
         ao_schema = 'schema'
         ao_table = 'table'
@@ -1511,7 +890,7 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
 
     @patch('pygresql.pgdb.pgdbCnx.commit')
     @patch('gppylib.operations.restore.execSQLForSingleton')
-    def test_update_ao_stat_func_01(self, m1, m2):
+    def test_update_ao_stat_func_near_batch_size(self, m1, m2):
         conn = None
         ao_table = 'table'
         ao_schema = 'schema'
@@ -1521,7 +900,7 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
 
     @patch('gppylib.operations.restore.execSQLForSingleton')
     @patch('pygresql.pgdb.pgdbCnx.commit')
-    def test_update_ao_stat_func_02(self, m1, m2):
+    def test_update_ao_stat_func_equal_batch_size(self, m1, m2):
         conn = None
         ao_table = 'table'
         ao_schema = 'schema'
@@ -1532,7 +911,7 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
 
     @patch('gppylib.operations.restore.execSQLForSingleton')
     @patch('pygresql.pgdb.pgdbCnx.commit')
-    def test_update_ao_stat_func_03(self, m1, m2):
+    def test_update_ao_stat_func_over_batch_size(self, m1, m2):
         conn = None
         ao_table = 'table'
         ao_schema = 'schema'
@@ -1542,7 +921,7 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
 
     @patch('gppylib.operations.restore.execSQLForSingleton')
     @patch('pygresql.pgdb.pgdbCnx.commit')
-    def test_update_ao_stat_func_04(self, m1, m2):
+    def test_update_ao_stat_func_double_batch_size(self, m1, m2):
         conn = None
         ao_table = 'table'
         ao_schema = 'schema'
@@ -1554,15 +933,13 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
     @patch('gppylib.operations.restore.execute_sql', return_value=[['t1', 'public']])
     @patch('gppylib.operations.restore.dbconn.connect')
     @patch('gppylib.operations.restore.update_ao_stat_func')
-    def test_update_ao_statistics_00(self, m1, m2, m3):
-        port = 28888
-        db = 'testdb'
+    def test_update_ao_statistics_default(self, m1, m2, m3):
         restored_tables = []
-        update_ao_statistics(port, db, restored_tables)
+        update_ao_statistics(self.context, restored_tables)
 
-        update_ao_statistics(port, db, restored_tables=['public.t1'], restored_schema=[], restore_all=False)
-        update_ao_statistics(port, db, restored_tables=[], restored_schema=['public'], restore_all=False)
-        update_ao_statistics(port, db, restored_tables=[], restored_schema=[], restore_all=True)
+        update_ao_statistics(self.context, restored_tables=['public.t1'], restored_schema=[], restore_all=False)
+        update_ao_statistics(self.context, restored_tables=[], restored_schema=['public'], restore_all=False)
+        update_ao_statistics(self.context, restored_tables=[], restored_schema=[], restore_all=True)
 
     def test_generate_restored_tables_no_table(self):
         results = [['t1','public'], ['t2', 'public'], ['foo', 'bar']]
@@ -1591,1228 +968,213 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
     @patch('gppylib.operations.restore.dbconn.connect')
     @patch('gppylib.db.dbconn.execSQLForSingleton', return_value=5)
     def test_check_gp_toolkit_true(self, m1, m2):
-        restore_db = 'testdb'
-        self.assertTrue(self.restore.check_gp_toolkit(restore_db))
+        self.assertTrue(self.restore.check_gp_toolkit())
 
     @patch('gppylib.operations.restore.dbconn.connect')
     @patch('gppylib.db.dbconn.execSQLForSingleton', return_value=0)
     def test_check_gp_toolkit_false(self, m1, m2):
-        restore_db = 'testdb'
-        self.assertFalse(self.restore.check_gp_toolkit(restore_db))
+        self.assertFalse(self.restore.check_gp_toolkit())
 
     @patch('gppylib.operations.backup_utils.dbconn.DbURL')
     @patch('gppylib.operations.backup_utils.dbconn.connect')
     @patch('gppylib.operations.restore.execSQL')
-    def test_analyze_restore_tables_00(self, mock1, mock2, mock3):
-        db_name = 'FOO'
-        port = 1234
-        restore_tables = ['public.t1', 'public.t2']
-        self.restore._analyze_restore_tables(db_name, restore_tables, None)
+    def test_analyze_restore_tables_default(self, mock1, mock2, mock3):
+        self.context.restore_tables = ['public.t1', 'public.t2']
+        self.restore._analyze_restore_tables()
 
     @patch('gppylib.operations.restore.execSQL', side_effect=Exception('analyze failed'))
     @patch('gppylib.operations.backup_utils.dbconn.DbURL')
     @patch('gppylib.operations.backup_utils.dbconn.connect')
-    def test_analyze_restore_tables_01(self, mock1, mock2, mock3):
-        db_name = 'FOO'
-        port = 1234
-        restore_tables = ['public.t1', 'public.t2']
-        self.assertRaises(Exception, self.restore._analyze_restore_tables, db_name, restore_tables, None)
+    def test_analyze_restore_tables_analyze_failed(self, mock1, mock2, mock3):
+        self.context.restore_tables = ['public.t1', 'public.t2']
+        self.assertRaises(Exception, self.restore._analyze_restore_tables)
 
     @patch('gppylib.operations.backup_utils.execSQL')
     @patch('gppylib.operations.backup_utils.dbconn.DbURL', side_effect=Exception('Failed'))
     @patch('gppylib.operations.backup_utils.dbconn.connect')
-    def test_analyze_restore_tables_02(self, mock1, mock2, mock3):
-        db_name = 'FOO'
-        port = 1234
-        restore_tables = ['public.t1', 'public.t2']
-        self.assertRaises(Exception, self.restore._analyze_restore_tables, db_name, restore_tables, None)
-
-    @patch('gppylib.operations.backup_utils.execSQL')
-    @patch('gppylib.operations.backup_utils.dbconn.DbURL')
-    @patch('gppylib.operations.backup_utils.dbconn.connect', side_effect=Exception('Failed'))
-    def test_analyze_restore_tables_03(self, mock1, mock2, mock3):
-        db_name = 'FOO'
-        port = 1234
-        restore_tables = ['public.t1', 'public.t2']
-        self.assertRaises(Exception, self.restore._analyze_restore_tables, db_name, restore_tables, None)
+    def test_analyze_restore_tables_connection_failed(self, mock1, mock2, mock3):
+        self.context.restore_tables = ['public.t1', 'public.t2']
+        self.assertRaises(Exception, self.restore._analyze_restore_tables)
 
     @patch('gppylib.operations.backup_utils.dbconn.DbURL')
     @patch('gppylib.operations.backup_utils.dbconn.connect')
     @patch('gppylib.operations.restore.execSQL')
-    def test_analyze_restore_tables_04(self, mock1, mock2, mock3):
-        db_name = 'FOO'
-        port = 1234
-        restore_tables = ['public.t%d' % i for i in range(3002)]
+    def test_analyze_restore_tables_three_batches(self, mock1, mock2, mock3):
+        self.context.restore_tables = ['public.t%d' % i for i in range(3002)]
         expected_batch_count = 3
-        batch_count = self.restore._analyze_restore_tables(db_name, restore_tables, None)
+        batch_count = self.restore._analyze_restore_tables()
         self.assertEqual(batch_count, expected_batch_count)
 
     @patch('gppylib.operations.backup_utils.dbconn.DbURL')
     @patch('gppylib.operations.backup_utils.dbconn.connect')
     @patch('gppylib.operations.backup_utils.dbconn.execSQL')
-    def test_analyze_restore_tables_05(self, mock1, mock2, mock3):
-        db_name = 'FOO'
-        port = 1234
-        restore_tables = ['public.t1', 'public.t2']
-        change_schema = 'newschema'
-        self.restore._analyze_restore_tables(db_name, restore_tables, change_schema)
-
-    @patch('gppylib.operations.backup_utils.dbconn.DbURL')
-    @patch('gppylib.operations.backup_utils.dbconn.connect')
-    @patch('gppylib.operations.backup_utils.dbconn.execSQL')
-    def test_analyze_restore_tables_06(self, mock1, mock2, mock3):
-        db_name = 'FOO'
-        port = 1234
-        restore_tables = ['public.t1', 'public.t2']
-        change_schema = 'newschema'
-        self.restore._analyze_restore_tables(db_name, restore_tables, change_schema)
-
-    @patch('gppylib.operations.restore.ValidateTimestamp', return_value=ValidateTimestampMock())
-    @patch('os.path.join', return_value="")
-    @patch('__builtin__.open', return_value=OpenFileMock(["""-- Name:  ao_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 ; Type: TABLE; Schema:  S`~@#$%^&*()-+[{]}|\;: \'"/?><1 ; Owner: gpadmin"""]))
-    def test_getdumptables_execute_when_no_tablespace_should_give_table_names_without_quotes(self, m1, m2, m3):
-        get = GetDumpTables(None, None, None, None, None, None, None, None)
-        result = get.get_dump_tables()
-        self.assertEqual(result, [(' S`~@#$%^&*()-+[{]}|\\;: \'"/?><1 ', ' ao_T`~@#$%^&*()-+[{]}|\\;: \'"/?><1 ', 'gpadmin')])
-
-    @patch('gppylib.operations.restore.ValidateTimestamp', return_value=ValidateTimestampMock())
-    @patch('os.path.join', return_value="")
-    @patch('__builtin__.open', return_value=OpenFileMock(["""-- Name:  ao_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 ; Type: TABLE; Schema:  S`~@#$%^&*()-+[{]}|\;: \'"/?><1 ; Owner: gpadmin; Tablespace: """]))
-    def test_getdumptables_execute_should_give_table_names_without_quotes(self, m1, m2, m3):
-        get = GetDumpTables(None, None, None, None, None, None, None, None)
-        result = get.get_dump_tables()
-        self.assertEqual(result, [(' S`~@#$%^&*()-+[{]}|\\;: \'"/?><1 ', ' ao_T`~@#$%^&*()-+[{]}|\\;: \'"/?><1 ', 'gpadmin')])
-
-    @patch('gppylib.operations.restore.ValidateTimestamp', return_value=ValidateTimestampMock())
-    @patch('os.path.join', return_value="")
-    @patch('__builtin__.open', return_value=OpenFileMock(["""-- Name:  ao_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 ; Type: COMMENT; Schema:  S`~@#$%^&*()-+[{]}|\;: \'"/?><1 ; Owner: gpadmin"""]))
-    def test_getdumptables_execute_when_not_table_should_return_none(self, m1, m2, m3):
-        get = GetDumpTables(None, None, None, None, None, None, None, None)
-        result = get.get_dump_tables()
-        self.assertEqual(result, [])
-
-    @patch('gppylib.operations.restore.ValidateTimestamp', return_value=ValidateTimestampMock())
-    @patch('os.path.join', return_value="")
-    @patch('__builtin__.open', return_value=OpenFileMock(["""-- Name: sales; Type: TABLE; Schema: public; Owner: gpadmin""", """START ('2011-01-01'::date) END ('2011-02-01'::date) EVERY ('1 mon'::interval) WITH (tablename='sales_1_prt_2', appendonly=false )"""]))
-    def test_getdumptables_execute_when_subpartition_table_exist(self, m1, m2, m3):
-        get = GetDumpTables(None, None, None, None, None, None, None, None)
-        result = get.get_dump_tables()
-        self.assertEqual(result, [('public', 'sales', 'gpadmin'), ('public', 'sales_1_prt_2', 'gpadmin')])
-
-    @patch('gppylib.operations.restore.ValidateTimestamp', return_value=ValidateTimestampMock())
-    @patch('os.path.join', return_value="")
-    @patch('__builtin__.open', return_value=OpenFileMock(["""-- Name:  ao_T`~@#$%^&*()-+[{]}|\;: \'"/?><1 ; Type: TABLE; Schema:  S`~@#$%^&*()-+[{]}|\;: \'"/?><1 ; Owner: gpadmin""", """START ('2011-01-01'::date) END ('2011-02-01'::date) EVERY ('1 mon'::interval) WITH (tablename=E' ao_T`~@#$%^&*()-+[{]}|\;: ''"/?><1 _1_prt_2', appendonly=false )"""]))
-    def test_getdumptables_execute_when_special_char_subpartition_table_exist(self, m1, m2, m3):
-        get = GetDumpTables(None, None, None, None, None, None, None, None)
-        result = get.get_dump_tables()
-        self.assertEqual(result, [(' S`~@#$%^&*()-+[{]}|\\;: \'"/?><1 ', ' ao_T`~@#$%^&*()-+[{]}|\\;: \'"/?><1 ', 'gpadmin'), (' S`~@#$%^&*()-+[{]}|\\;: \'"/?><1 ', ' ao_T`~@#$%^&*()-+[{]}|\\;: \'"/?><1 _1_prt_2', 'gpadmin')])
-
-    @patch('__builtin__.open', return_value=OpenFileMock(["""-- Name: sales; Type: TABLE; Schema: public; Owner: gpadmin""", """SUBPARTITION usa VALUES('usa') WITH (tablename='sales_1_prt_1', appendonly=false ),"""]))
-    def test_getdumptables_execute_when_multi_subpartition_table_exist(self, m1):
-        get = GetDumpTables(None, None, None, None, None, None, None, None)
-        result = get.get_dump_tables()
-        self.assertEqual(result, [('public', 'sales', 'gpadmin'), ('public', 'sales_1_prt_1', 'gpadmin')])
-
-    @patch('__builtin__.open', return_value=OpenFileMock(["""-- Name: sales; Type: TABLE; Schema: public; Owner: gpadmin""", """DEFAULT PARTITION outlying_dates  WITH (tablename='sales_1_prt_default', appendonly=false )"""]))
-    def test_getdumptables_execute_when_default_partition_table_exist(self, m1):
-        get = GetDumpTables(None, None, None, None, None, None, None, None)
-        result = get.get_dump_tables()
-        self.assertEqual(result, [('public', 'sales', 'gpadmin'), ('public', 'sales_1_prt_default', 'gpadmin')])
-
-    @patch('__builtin__.open', return_value=OpenFileMock(["""-- Name: sales; Type: TABLE; Schema: public; Owner: gpadmin""", """DEFAULT SUBPARTITION other_regions  WITH (tablename='sales_1_prt_13_2_prt_other_regions', appendonly=false )"""]))
-    def test_getdumptables_execute_when_default_subpartition_table_exist(self, m1):
-        get = GetDumpTables(None, None, None, None, None, None, None, None)
-        result = get.get_dump_tables()
-        self.assertEqual(result, [('public', 'sales', 'gpadmin'), ('public', 'sales_1_prt_13_2_prt_other_regions', 'gpadmin')])
-
-    @patch('gppylib.commands.base.Command.__init__', return_value=None)
-    @patch('gppylib.commands.base.Command.run', return_value=None)
-    @patch('gppylib.commands.base.Command.get_results')
-    def test_getdumptables_from_ddboost(self, m1, m2, mockCommand_init):
-            m1.stdout = ['my return']
-            get = GetDumpTables(None, None, None, None, None, None, 'ddboost', None, None, 'myfile')
-            result = get.get_dump_tables()
-            mockCommand_init.assert_called_once_with('DDBoost copy of master dump file', 'gpddboost --readFile --from-file=myfile | grep -e "-- Name: " -e "^\\W*START (" -e "^\\W*PARTITION " -e "^\\W*DEFAULT PARTITION " -e "^\\W*SUBPARTITION " -e "^\\W*DEFAULT SUBPARTITION "')
-
-
-    @patch('gppylib.commands.base.Command.__init__', return_value=None)
-    @patch('gppylib.commands.base.Command.run', return_value="myfile")
-    @patch('gppylib.commands.base.Command.get_results')
-    def test_getdumptables_from_ddboost_compressed_file(self, m1, m2, mockCommand_init):
-            m1.stdout = ['my return']
-            get = GetDumpTables(None, None, None, None, None, True, 'ddboost', None, None, 'myfile.gz')
-            result = get.get_dump_tables()
-            mockCommand_init.assert_called_once_with('DDBoost copy of master dump file', 'gpddboost --readFile --from-file=myfile.gz | gunzip | grep -e "-- Name: " -e "^\\W*START (" -e "^\\W*PARTITION " -e "^\\W*DEFAULT PARTITION " -e "^\\W*SUBPARTITION " -e "^\\W*DEFAULT SUBPARTITION "')
-
-
-    @patch('gppylib.commands.base.Command.__init__', return_value=None)
-    @patch('gppylib.commands.base.Command.run', return_value="myfile")
-    @patch('gppylib.commands.base.Command.get_results')
-    def test_getdumptables_from_netbackup(self, m1, m2, mockCommand_init):
-            m1.stdout = ['my return']
-            get = GetDumpTables(None, None, None, None, None, False, None, 'netbackup-host', None, 'myfile')
-            result = get.get_dump_tables()
-            mockCommand_init.assert_called_once_with('NetBackup copy of master dump file', 'gp_bsa_restore_agent --netbackup-service-host netbackup-host --netbackup-filename myfile | grep -e "-- Name: " -e "^\\W*START (" -e "^\\W*PARTITION " -e "^\\W*DEFAULT PARTITION " -e "^\\W*SUBPARTITION " -e "^\\W*DEFAULT SUBPARTITION "')
-
-
-    @patch('gppylib.commands.base.Command.__init__', return_value=None)
-    @patch('gppylib.commands.base.Command.run', return_value="myfile")
-    @patch('gppylib.commands.base.Command.get_results')
-    def test_getdumptables_from_netbackup_compressed_file(self, m1, m2, mockCommand_init):
-            m1.stdout = ['my return']
-            get = GetDumpTables(None, None, None, None, None, True, None, 'netbackup-host', None, 'myfile.gz')
-            result = get.get_dump_tables()
-            mockCommand_init.assert_called_once_with('NetBackup copy of master dump file', 'gp_bsa_restore_agent --netbackup-service-host netbackup-host --netbackup-filename myfile.gz | gunzip | grep -e "-- Name: " -e "^\\W*START (" -e "^\\W*PARTITION " -e "^\\W*DEFAULT PARTITION " -e "^\\W*SUBPARTITION " -e "^\\W*DEFAULT SUBPARTITION "')
-
-    @patch('gppylib.commands.base.Command.__init__', return_value=None)
-    @patch('gppylib.commands.base.Command.run', return_value="myfile")
-    @patch('gppylib.commands.base.Command.get_results')
-    def test_getdumptables_from_remote_host(self, m1, m2, mockCommand_init):
-            m1.stdout = ['my return']
-            get = GetDumpTables(None, None, None, None, None, False, None, None, 'remote_host', 'myfile')
-            result = get.get_dump_tables()
-            mockCommand_init.assert_called_once_with('Get remote copy of dumped tables', 'ssh remote_host cat myfile | grep -e "-- Name: " -e "^\\W*START (" -e "^\\W*PARTITION " -e "^\\W*DEFAULT PARTITION " -e "^\\W*SUBPARTITION " -e "^\\W*DEFAULT SUBPARTITION "')
-
-
-    @patch('gppylib.commands.base.Command.__init__', return_value=None)
-    @patch('gppylib.commands.base.Command.run', return_value="myfile")
-    @patch('gppylib.commands.base.Command.get_results')
-    def test_getdumptables_from_remote_host_compressed_file(self, m1, m2, mockCommand_init):
-            m1.stdout = ['my return']
-            get = GetDumpTables(None, None, None, None, None, True, None, None, 'remote_host', 'myfile.gz')
-            result = get.get_dump_tables()
-            mockCommand_init.assert_called_once_with('Get remote copy of dumped tables', 'ssh remote_host cat myfile.gz | gunzip | grep -e "-- Name: " -e "^\\W*START (" -e "^\\W*PARTITION " -e "^\\W*DEFAULT PARTITION " -e "^\\W*SUBPARTITION " -e "^\\W*DEFAULT SUBPARTITION "')
-
-class ValidateTimestampTestCase(unittest.TestCase):
-
-    def setUp(self):
-        self.validate_timestamp = ValidateTimestamp(candidate_timestamp='20140211111111',
-                                                    master_datadir='/mdd',
-                                                    backup_dir='/backup_dir',
-                                                    dump_dir='/db_dumps',
-                                                    dump_prefix='',
-                                                    netbackup_service_host=None,
-                                                    ddboost=False)
+    def test_analyze_restore_tables_change_schema(self, mock1, mock2, mock3):
+        self.context.restore_tables = ['public.t1', 'public.t2']
+        self.context.change_schema = 'newschema'
+        self.restore._analyze_restore_tables()
 
     @patch('os.path.exists', side_effect=[True, False])
-    def test_validate_compressed_file_with_compression_exists(self, mock):
+    def test_validate_metadata_file_with_compression_exists(self, mock):
         compressed_file = 'compressed_file.gz'
-        self.assertTrue(self.validate_timestamp.validate_compressed_file(compressed_file))
+        self.assertTrue(self.validate_timestamp.validate_metadata_file(compressed_file))
 
     @patch('os.path.exists', side_effect=[False, False])
-    def test_validate_compressed_file_with_compression_doesnt_exists(self, mock):
+    def test_validate_metadata_file_with_compression_doesnt_exists(self, mock):
         compressed_file = 'compressed_file.gz'
         with self.assertRaisesRegexp(ExceptionNoStackTraceNeeded, 'Unable to find compressed_file or compressed_file.gz'):
-            self.validate_timestamp.validate_compressed_file(compressed_file)
+            self.validate_timestamp.validate_metadata_file(compressed_file)
 
     @patch('os.path.exists', side_effect=[False, True])
-    def test_validate_compressed_file_without_compression_exists(self, mock):
+    def test_validate_metadata_file_without_compression_exists(self, mock):
         compressed_file = 'compressed_file.gz'
-        self.assertFalse(self.validate_timestamp.validate_compressed_file(compressed_file))
+        self.assertFalse(self.validate_timestamp.validate_metadata_file(compressed_file))
 
     @patch('os.path.exists', side_effect=[False, False])
-    def test_validate_compressed_file_without_compression_doesnt_exist(self, mock):
+    def test_validate_metadata_file_without_compression_doesnt_exist(self, mock):
         compressed_file = 'compressed_file.gz'
         with self.assertRaisesRegexp(ExceptionNoStackTraceNeeded, 'Unable to find compressed_file or compressed_file.gz'):
-            self.validate_timestamp.validate_compressed_file(compressed_file)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_state_files_with_nbu_00(self, mock1):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-
-        restore_state_files_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_state_files_with_nbu_01(self, mock1):
-        master_datadir = "/data"
-        backup_dir = None
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-
-        restore_state_files_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_state_files_with_nbu_02(self, mock1):
-        master_datadir = None
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-
-        restore_state_files_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_state_files_with_nbu_03(self, mock1):
-        master_datadir = None
-        backup_dir = None
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-
-        with self.assertRaisesRegexp(Exception, 'Master data directory and backup directory are both none.'):
-            restore_state_files_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_state_files_with_nbu_04(self, mock1):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = None
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-
-        with self.assertRaisesRegexp(Exception, 'Restore timestamp is None.'):
-            restore_state_files_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_state_files_with_nbu_05(self, mock1):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = None
-        netbackup_block_size = None
-
-        with self.assertRaisesRegexp(Exception, 'Netbackup service hostname is None.'):
-            restore_state_files_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_state_files_with_nbu_06(self, mock1):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = 2048
-
-        restore_state_files_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_state_files_with_nbu_07(self, mock1):
-        master_datadir = "/data"
-        backup_dir = None
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = 1024
-
-        restore_state_files_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_state_files_with_nbu_08(self, mock1):
-        master_datadir = None
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = 4096
-
-        restore_state_files_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_report_file_with_nbu_00(self, mock1):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-
-        restore_report_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_report_file_with_nbu_01(self, mock1):
-        master_datadir = "/data"
-        backup_dir = None
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-
-        restore_report_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_report_file_with_nbu_02(self, mock1):
-        master_datadir = None
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-
-        restore_report_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_report_file_with_nbu_03(self, mock1):
-        master_datadir = None
-        backup_dir = None
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-
-        with self.assertRaisesRegexp(Exception, 'Master data directory and backup directory are both none.'):
-            restore_report_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_report_file_with_nbu_04(self, mock1):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = None
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-
-        with self.assertRaisesRegexp(Exception, 'Restore timestamp is None.'):
-            restore_report_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_report_file_with_nbu_05(self, mock1):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = None
-        netbackup_block_size = None
-
-        with self.assertRaisesRegexp(Exception, 'Netbackup service hostname is None.'):
-            restore_report_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_report_file_with_nbu_06(self, mock1):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = 1024
-
-        restore_report_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_report_file_with_nbu_07(self, mock1):
-        master_datadir = "/data"
-        backup_dir = None
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = 2048
-
-        restore_report_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_report_file_with_nbu_08(self, mock1):
-        master_datadir = None
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = 4096
-
-        restore_report_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_cdatabase_file_with_nbu_00(self, mock1):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-
-        restore_cdatabase_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_cdatabase_file_with_nbu_01(self, mock1):
-        master_datadir = "/data"
-        backup_dir = None
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-
-        restore_cdatabase_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_cdatabase_file_with_nbu_02(self, mock1):
-        master_datadir = None
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-
-        restore_cdatabase_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_cdatabase_file_with_nbu_03(self, mock1):
-        master_datadir = None
-        backup_dir = None
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-
-        with self.assertRaisesRegexp(Exception, 'Master data directory and backup directory are both none.'):
-            restore_cdatabase_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_cdatabase_file_with_nbu_04(self, mock1):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = None
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-
-        with self.assertRaisesRegexp(Exception, 'Restore timestamp is None.'):
-            restore_cdatabase_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_cdatabase_file_with_nbu_05(self, mock1):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = None
-        netbackup_block_size = None
-
-        with self.assertRaisesRegexp(Exception, 'Netbackup service hostname is None.'):
-            restore_cdatabase_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_cdatabase_file_with_nbu_06(self, mock1):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = 1024
-
-        restore_cdatabase_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_cdatabase_file_with_nbu_07(self, mock1):
-        master_datadir = "/data"
-        backup_dir = None
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = 2048
-
-        restore_cdatabase_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_cdatabase_file_with_nbu_08(self, mock1):
-        master_datadir = None
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = 4096
-
-        restore_cdatabase_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_global_file_with_nbu_00(self, mock1):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-
-        restore_global_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_global_file_with_nbu_01(self, mock1):
-        master_datadir = "/data"
-        backup_dir = None
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-
-        restore_global_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_global_file_with_nbu_02(self, mock1):
-        master_datadir = None
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-
-        restore_global_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_global_file_with_nbu_03(self, mock1):
-        master_datadir = None
-        backup_dir = None
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-
-        with self.assertRaisesRegexp(Exception, 'Master data directory and backup directory are both none.'):
-            restore_global_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_global_file_with_nbu_04(self, mock1):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = None
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-
-        with self.assertRaisesRegexp(Exception, 'Restore timestamp is None.'):
-            restore_global_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_global_file_with_nbu_05(self, mock1):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = None
-        netbackup_block_size = None
-
-        with self.assertRaisesRegexp(Exception, 'Netbackup service hostname is None.'):
-            restore_global_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_global_file_with_nbu_06(self, mock1):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = 1024
-
-        restore_global_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_global_file_with_nbu_07(self, mock1):
-        master_datadir = "/data"
-        backup_dir = None
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = 2048
-
-        restore_global_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_global_file_with_nbu_08(self, mock1):
-        master_datadir = None
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = 4096
-
-        restore_global_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.get_backup_directory')
-    @patch('gppylib.operations.restore.generate_master_config_filename')
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    @patch('gppylib.operations.restore.GpArray.initFromCatalog')
-    @patch('gppylib.operations.dump.GpArray.getDbList')
-    @patch('gppylib.operations.restore.generate_segment_config_filename')
-    def test_restore_config_files_with_nbu_00(self, mock1, mock2, mock3, mock4, mock5, mock6):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141400002014"
-        master_port = "5432"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-        mock_segs = [Mock(), Mock()]
-        for id, seg in enumerate(mock_segs):
-            seg.isSegmentPrimary.return_value = True
-            seg.getSegmentDbId.return_value = id + 1
-            seg.getSegmentDataDirectory.return_value = "/data"
-            seg.getSegmentHostName.return_value = "sdw"
-
-        restore_config_files_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, master_port, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.get_backup_directory')
-    @patch('gppylib.operations.restore.generate_master_config_filename')
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    @patch('gppylib.operations.restore.GpArray.initFromCatalog')
-    @patch('gppylib.operations.dump.GpArray.getDbList')
-    @patch('gppylib.operations.restore.generate_segment_config_filename')
-    def test_restore_config_files_with_nbu_01(self, mock1, mock2, mock3, mock4, mock5, mock6):
-        master_datadir = "/data"
-        backup_dir = None
-        restore_timestamp = "20141400002014"
-        master_port = "5432"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-        mock_segs = [Mock(), Mock()]
-        for id, seg in enumerate(mock_segs):
-            seg.isSegmentPrimary.return_value = True
-            seg.getSegmentDbId.return_value = id + 1
-            seg.getSegmentDataDirectory.return_value = "/data"
-            seg.getSegmentHostName.return_value = "sdw"
-
-        restore_config_files_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, master_port, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.get_backup_directory')
-    @patch('gppylib.operations.restore.generate_master_config_filename')
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    @patch('gppylib.operations.restore.GpArray.initFromCatalog')
-    @patch('gppylib.operations.dump.GpArray.getDbList')
-    @patch('gppylib.operations.restore.generate_segment_config_filename')
-    def test_restore_config_files_with_nbu_02(self, mock1, mock2, mock3, mock4, mock5, mock6):
-        master_datadir = None
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141400002014"
-        master_port = "5432"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-        mock_segs = [Mock(), Mock()]
-        for id, seg in enumerate(mock_segs):
-            seg.isSegmentPrimary.return_value = True
-            seg.getSegmentDbId.return_value = id + 1
-            seg.getSegmentDataDirectory.return_value = "/data"
-            seg.getSegmentHostName.return_value = "sdw"
-
-        restore_config_files_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, master_port, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.get_backup_directory')
-    @patch('gppylib.operations.restore.generate_master_config_filename')
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    @patch('gppylib.operations.restore.GpArray.initFromCatalog')
-    @patch('gppylib.operations.dump.GpArray.getDbList')
-    @patch('gppylib.operations.restore.generate_segment_config_filename')
-    def test_restore_config_files_with_nbu_03(self, mock1, mock2, mock3, mock4, mock5, mock6):
-        master_datadir = None
-        backup_dir = None
-        restore_timestamp = "20141400002014"
-        master_port = "5432"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-        mock_segs = [Mock(), Mock()]
-        for id, seg in enumerate(mock_segs):
-            seg.isSegmentPrimary.return_value = True
-            seg.getSegmentDbId.return_value = id + 1
-            seg.getSegmentDataDirectory.return_value = "/data"
-            seg.getSegmentHostName.return_value = "sdw"
-
-        with self.assertRaisesRegexp(Exception, 'Master data directory and backup directory are both none.'):
-            restore_config_files_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, master_port, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.get_backup_directory')
-    @patch('gppylib.operations.restore.generate_master_config_filename')
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    @patch('gppylib.operations.restore.GpArray.initFromCatalog')
-    @patch('gppylib.operations.dump.GpArray.getDbList')
-    @patch('gppylib.operations.restore.generate_segment_config_filename')
-    def test_restore_config_files_with_nbu_04(self, mock1, mock2, mock3, mock4, mock5, mock6):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = None
-        master_port = "5432"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-        mock_segs = [Mock(), Mock()]
-        for id, seg in enumerate(mock_segs):
-            seg.isSegmentPrimary.return_value = True
-            seg.getSegmentDbId.return_value = id + 1
-            seg.getSegmentDataDirectory.return_value = "/data"
-            seg.getSegmentHostName.return_value = "sdw"
-
-        with self.assertRaisesRegexp(Exception, 'Restore timestamp is None.'):
-            restore_config_files_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, master_port, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.get_backup_directory')
-    @patch('gppylib.operations.restore.generate_master_config_filename')
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    @patch('gppylib.operations.restore.GpArray.initFromCatalog')
-    @patch('gppylib.operations.dump.GpArray.getDbList')
-    @patch('gppylib.operations.restore.generate_segment_config_filename')
-    def test_restore_config_files_with_nbu_05(self, mock1, mock2, mock3, mock4, mock5, mock6):
-        master_datadir = "/data"
-        backup_dir = None
-        restore_timestamp = "20141400002014"
-        master_port = "5432"
-        netbackup_service_host = None
-        netbackup_block_size = None
-        mock_segs = [Mock(), Mock()]
-        for id, seg in enumerate(mock_segs):
-            seg.isSegmentPrimary.return_value = True
-            seg.getSegmentDbId.return_value = id + 1
-            seg.getSegmentDataDirectory.return_value = "/data"
-            seg.getSegmentHostName.return_value = "sdw"
-
-        with self.assertRaisesRegexp(Exception, 'Netbackup service hostname is None.'):
-            restore_config_files_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, master_port, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.get_backup_directory')
-    @patch('gppylib.operations.restore.generate_master_config_filename')
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    @patch('gppylib.operations.restore.GpArray.initFromCatalog')
-    @patch('gppylib.operations.dump.GpArray.getDbList')
-    @patch('gppylib.operations.restore.generate_segment_config_filename')
-    def test_restore_config_files_with_nbu_06(self, mock1, mock2, mock3, mock4, mock5, mock6):
-        master_datadir = "/data"
-        backup_dir = None
-        restore_timestamp = "20141400002014"
-        master_port = None
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-        mock_segs = [Mock(), Mock()]
-        for id, seg in enumerate(mock_segs):
-            seg.isSegmentPrimary.return_value = True
-            seg.getSegmentDbId.return_value = id + 1
-            seg.getSegmentDataDirectory.return_value = "/data"
-            seg.getSegmentHostName.return_value = "sdw"
-
-        with self.assertRaisesRegexp(Exception, 'Master port is None.'):
-            restore_config_files_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, master_port, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.get_backup_directory')
-    @patch('gppylib.operations.restore.generate_master_config_filename')
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    @patch('gppylib.operations.restore.GpArray.initFromCatalog')
-    @patch('gppylib.operations.dump.GpArray.getDbList')
-    @patch('gppylib.operations.restore.generate_segment_config_filename')
-    def test_restore_config_files_with_nbu_07(self, mock1, mock2, mock3, mock4, mock5, mock6):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141400002014"
-        master_port = "5432"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = 1024
-        mock_segs = [Mock(), Mock()]
-        for id, seg in enumerate(mock_segs):
-            seg.isSegmentPrimary.return_value = True
-            seg.getSegmentDbId.return_value = id + 1
-            seg.getSegmentDataDirectory.return_value = "/data"
-            seg.getSegmentHostName.return_value = "sdw"
-
-        restore_config_files_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, master_port, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.get_backup_directory')
-    @patch('gppylib.operations.restore.generate_master_config_filename')
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    @patch('gppylib.operations.restore.GpArray.initFromCatalog')
-    @patch('gppylib.operations.dump.GpArray.getDbList')
-    @patch('gppylib.operations.restore.generate_segment_config_filename')
-    def test_restore_config_files_with_nbu_08(self, mock1, mock2, mock3, mock4, mock5, mock6):
-        master_datadir = "/data"
-        backup_dir = None
-        restore_timestamp = "20141400002014"
-        master_port = "5432"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = 2048
-        mock_segs = [Mock(), Mock()]
-        for id, seg in enumerate(mock_segs):
-            seg.isSegmentPrimary.return_value = True
-            seg.getSegmentDbId.return_value = id + 1
-            seg.getSegmentDataDirectory.return_value = "/data"
-            seg.getSegmentHostName.return_value = "sdw"
-
-        restore_config_files_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, master_port, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.get_backup_directory')
-    @patch('gppylib.operations.restore.generate_master_config_filename')
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    @patch('gppylib.operations.restore.GpArray.initFromCatalog')
-    @patch('gppylib.operations.dump.GpArray.getDbList')
-    @patch('gppylib.operations.restore.generate_segment_config_filename')
-    def test_restore_config_files_with_nbu_09(self, mock1, mock2, mock3, mock4, mock5, mock6):
-        master_datadir = None
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141400002014"
-        master_port = "5432"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = 4096
-        mock_segs = [Mock(), Mock()]
-        for id, seg in enumerate(mock_segs):
-            seg.isSegmentPrimary.return_value = True
-            seg.getSegmentDbId.return_value = id + 1
-            seg.getSegmentDataDirectory.return_value = "/data"
-            seg.getSegmentHostName.return_value = "sdw"
-
-        restore_config_files_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, master_port, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_partition_list_file_with_nbu_00(self, mock1):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-
-        restore_partition_list_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_partition_list_file_with_nbu_01(self, mock1):
-        master_datadir = "/data"
-        backup_dir = None
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-
-        restore_partition_list_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_partition_list_file_with_nbu_02(self, mock1):
-        master_datadir = None
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-
-        restore_partition_list_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_partition_list_file_with_nbu_03(self, mock1):
-        master_datadir = None
-        backup_dir = None
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-
-        with self.assertRaisesRegexp(Exception, 'Master data directory and backup directory are both none.'):
-            restore_partition_list_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_partition_list_file_with_nbu_04(self, mock1):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = None
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-
-        with self.assertRaisesRegexp(Exception, 'Restore timestamp is None.'):
-            restore_partition_list_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_partition_list_file_with_nbu_05(self, mock1):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = None
-        netbackup_block_size = None
-
-        with self.assertRaisesRegexp(Exception, 'Netbackup service hostname is None.'):
-            restore_partition_list_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_partition_list_file_with_nbu_06(self, mock1):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = 1024
-
-        restore_partition_list_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_partition_list_file_with_nbu_07(self, mock1):
-        master_datadir = "/data"
-        backup_dir = None
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = 2048
-
-        restore_partition_list_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    def test_restore_partition_list_file_with_nbu_08(self, mock1):
-        master_datadir = None
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141400002014"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = 4096
-
-        restore_partition_list_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    @patch('gppylib.operations.restore.get_full_timestamp_for_incremental_with_nbu', return_value='20140707000000')
-    def test_restore_increments_file_with_nbu_00(self, mock1, mock2):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = "20140808000000"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-
-        restore_increments_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    @patch('gppylib.operations.restore.get_full_timestamp_for_incremental_with_nbu', return_value='20140707000000')
-    def test_restore_increments_file_with_nbu_01(self, mock1, mock2):
-        master_datadir = "/data"
-        backup_dir = None
-        restore_timestamp = "20140808000000"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-
-        restore_increments_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    @patch('gppylib.operations.restore.get_full_timestamp_for_incremental_with_nbu', return_value='20140707000000')
-    def test_restore_increments_file_with_nbu_02(self, mock1, mock2):
-        master_datadir = None
-        backup_dir = "/datadomain"
-        restore_timestamp = "20140808000000"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-
-        restore_increments_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    @patch('gppylib.operations.restore.get_full_timestamp_for_incremental_with_nbu', return_value='20140707000000')
-    def test_restore_increments_file_with_nbu_03(self, mock1, mock2):
-        master_datadir = None
-        backup_dir = None
-        restore_timestamp = "20140808000000"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-
-        with self.assertRaisesRegexp(Exception, 'Master data directory and backup directory are both none.'):
-            restore_increments_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    @patch('gppylib.operations.restore.get_full_timestamp_for_incremental_with_nbu', return_value='20140707000000')
-    def test_restore_increments_file_with_nbu_04(self, mock1, mock2):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = None
-        netbackup_service_host = "mdw"
-        netbackup_block_size = None
-
-        with self.assertRaisesRegexp(Exception, 'Restore timestamp is None.'):
-            restore_increments_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    @patch('gppylib.operations.restore.get_full_timestamp_for_incremental_with_nbu', return_value='20140707000000')
-    def test_restore_increments_file_with_nbu_05(self, mock1, mock2):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = "20140808000000"
-        netbackup_service_host = None
-        netbackup_block_size = None
-
-        with self.assertRaisesRegexp(Exception, 'Netbackup service hostname is None.'):
-            restore_increments_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    @patch('gppylib.operations.restore.get_full_timestamp_for_incremental_with_nbu', return_value='20140707000000')
-    def test_restore_increments_file_with_nbu_06(self, mock1, mock2):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = "20140808000000"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = 1024
-
-        restore_increments_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    @patch('gppylib.operations.restore.get_full_timestamp_for_incremental_with_nbu', return_value='20140707000000')
-    def test_restore_increments_file_with_nbu_07(self, mock1, mock2):
-        master_datadir = "/data"
-        backup_dir = None
-        restore_timestamp = "20140808000000"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = 2048
-
-        restore_increments_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    @patch('gppylib.operations.restore.get_full_timestamp_for_incremental_with_nbu', return_value='20140707000000')
-    def test_restore_increments_file_with_nbu_08(self, mock1, mock2):
-        master_datadir = None
-        backup_dir = "/datadomain"
-        restore_timestamp = "20140808000000"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = 4096
-
-        restore_increments_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.restore_file_with_nbu')
-    @patch('gppylib.operations.restore.get_full_timestamp_for_incremental_with_nbu', return_value=None)
-    def test_restore_increments_file_with_nbu_09(self, mock1, mock2):
-        master_datadir = None
-        backup_dir = "/datadomain"
-        restore_timestamp = "20140808000000"
-        netbackup_service_host = "mdw"
-        netbackup_block_size = 4096
-
-        with self.assertRaisesRegexp(Exception, 'Unable to locate full timestamp for given incremental timestamp "20140808000000" using NetBackup'):
-            restore_increments_file_with_nbu(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host, netbackup_block_size)
-
-    @patch('gppylib.operations.restore.get_backup_directory', return_value="/data")
-    @patch('gppylib.operations.restore.generate_master_config_filename', return_value="gp_master_config_20141200002014.tar")
-    @patch('gppylib.operations.restore.check_file_dumped_with_nbu', return_value=True)
-    def test_config_files_dumped_00(self, mock1, mock2, mock3):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141200002014"
-        netbackup_service_host = "mdw"
-
-        self.assertTrue(config_files_dumped(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host))
-
-    @patch('gppylib.operations.restore.get_backup_directory', return_value="/data")
-    @patch('gppylib.operations.restore.generate_master_config_filename', return_value="gp_master_config_20141200002014.tar")
-    @patch('gppylib.operations.restore.check_file_dumped_with_nbu', return_value=True)
-    def test_config_files_dumped_01(self, mock1, mock2, mock3):
-        master_datadir = "/data"
-        backup_dir = None
-        restore_timestamp = "20141200002014"
-        netbackup_service_host = "mdw"
-
-        self.assertTrue(config_files_dumped(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host))
-
-    @patch('gppylib.operations.restore.get_backup_directory', return_value="/datadomain")
-    @patch('gppylib.operations.restore.generate_master_config_filename', return_value="gp_master_config_20141200002014.tar")
-    @patch('gppylib.operations.restore.check_file_dumped_with_nbu', return_value=True)
-    def test_config_files_dumped_02(self, mock1, mock2, mock3):
-        master_datadir = None
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141200002014"
-        netbackup_service_host = "mdw"
-
-        self.assertTrue(config_files_dumped(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host))
-
-    @patch('gppylib.operations.restore.get_backup_directory')
-    @patch('gppylib.operations.restore.generate_master_config_filename')
-    @patch('gppylib.operations.restore.check_file_dumped_with_nbu')
-    def test_config_files_dumped_03(self, mock1, mock2, mock3):
-        master_datadir = None
-        backup_dir = None
-        restore_timestamp = "20141200002014"
-        netbackup_service_host = "mdw"
-
-        with self.assertRaisesRegexp(Exception, 'Master data directory and backup directory are both none.'):
-            config_files_dumped(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host)
-
-    @patch('gppylib.operations.restore.get_backup_directory')
-    @patch('gppylib.operations.restore.generate_master_config_filename')
-    @patch('gppylib.operations.restore.check_file_dumped_with_nbu')
-    def test_config_files_dumped_04(self, mock1, mock2, mock3):
-        master_datadir = "/data"
-        backup_dir = None
-        restore_timestamp = None
-        netbackup_service_host = "mdw"
-
-        with self.assertRaisesRegexp(Exception, 'Restore timestamp is None.'):
-            config_files_dumped(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host)
-
-    @patch('gppylib.operations.restore.get_backup_directory')
-    @patch('gppylib.operations.restore.generate_master_config_filename')
-    @patch('gppylib.operations.restore.check_file_dumped_with_nbu')
-    def test_config_files_dumped_05(self, mock1, mock2, mock3):
-        master_datadir = "/data"
-        backup_dir = None
-        restore_timestamp = "20141200002014"
-        netbackup_service_host = None
-
-        with self.assertRaisesRegexp(Exception, 'Netbackup service hostname is None.'):
-            config_files_dumped(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host)
-
-    @patch('gppylib.operations.restore.get_backup_directory', return_value="/datadomain")
-    @patch('gppylib.operations.restore.generate_master_config_filename', return_value="gp_master_config_20141200002014.tar")
-    @patch('gppylib.operations.restore.check_file_dumped_with_nbu', return_value=False)
-    def test_config_files_dumped_06(self, mock1, mock2, mock3):
-        master_datadir = "/data"
-        backup_dir = None
-        restore_timestamp = "20141200002014"
-        netbackup_service_host = "mdw"
-
-        self.assertFalse(config_files_dumped(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host))
-
-    @patch('gppylib.operations.restore.get_backup_directory', return_value="/datadomain")
-    @patch('gppylib.operations.restore.generate_master_config_filename', return_value="gp_master_config_20141200002014.tar")
-    @patch('gppylib.operations.restore.check_file_dumped_with_nbu', return_value=False)
-    def test_config_files_dumped_07(self, mock1, mock2, mock3):
-        master_datadir = None
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141200002014"
-        netbackup_service_host = "mdw"
-
-        self.assertFalse(config_files_dumped(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host))
-
-    @patch('gppylib.operations.restore.get_backup_directory', return_value="/data")
-    @patch('gppylib.operations.restore.generate_master_config_filename', return_value="gp_master_config_20141200002014.tar")
-    @patch('gppylib.operations.restore.check_file_dumped_with_nbu', return_value=False)
-    def test_config_files_dumped_08(self, mock1, mock2, mock3):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141200002014"
-        netbackup_service_host = "mdw"
-
-        self.assertFalse(config_files_dumped(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host))
-
-    @patch('gppylib.operations.restore.generate_global_filename', return_value="/data/gp_global_1_1_20141200002014")
-    @patch('gppylib.operations.restore.check_file_dumped_with_nbu', return_value=True)
-    def test_global_file_dumped_00(self, mock1, mock2):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141200002014"
-        netbackup_service_host = "mdw"
-
-        self.assertTrue(global_file_dumped(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host))
-
-    @patch('gppylib.operations.restore.generate_global_filename', return_value="/data/gp_global_1_1_20141200002014")
-    @patch('gppylib.operations.restore.check_file_dumped_with_nbu', return_value=True)
-    def test_global_file_dumped_01(self, mock1, mock2):
-        master_datadir = "/data"
-        backup_dir = None
-        restore_timestamp = "20141200002014"
-        netbackup_service_host = "mdw"
-
-        self.assertTrue(global_file_dumped(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host))
-
-    @patch('gppylib.operations.restore.generate_global_filename', return_value="/datadomain/gp_global_1_1_20141200002014")
-    @patch('gppylib.operations.restore.check_file_dumped_with_nbu', return_value=True)
-    def test_global_file_dumped_02(self, mock1, mock2):
-        master_datadir = None
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141200002014"
-        netbackup_service_host = "mdw"
-
-        self.assertTrue(global_file_dumped(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host))
-
-    @patch('gppylib.operations.restore.generate_global_filename')
-    @patch('gppylib.operations.restore.check_file_dumped_with_nbu')
-    def test_global_file_dumped_03(self, mock1, mock2):
-        master_datadir = None
-        backup_dir = None
-        restore_timestamp = "20141200002014"
-        netbackup_service_host = "mdw"
-
-        with self.assertRaisesRegexp(Exception, 'Master data directory and backup directory are both none.'):
-            global_file_dumped(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host)
-
-    @patch('gppylib.operations.restore.generate_global_filename')
-    @patch('gppylib.operations.restore.check_file_dumped_with_nbu')
-    def test_global_file_dumped_04(self, mock1, mock2):
-        master_datadir = "/data"
-        backup_dir = None
-        restore_timestamp = None
-        netbackup_service_host = "mdw"
-
-        with self.assertRaisesRegexp(Exception, 'Restore timestamp is None.'):
-            global_file_dumped(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host)
-
-    @patch('gppylib.operations.restore.generate_global_filename')
-    @patch('gppylib.operations.restore.check_file_dumped_with_nbu')
-    def test_global_file_dumped_05(self, mock1, mock2):
-        master_datadir = "/data"
-        backup_dir = None
-        restore_timestamp = "20141200002014"
-        netbackup_service_host = None
-
-        with self.assertRaisesRegexp(Exception, 'Netbackup service hostname is None.'):
-            global_file_dumped(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host)
-
-    @patch('gppylib.operations.restore.generate_global_filename', return_value="/datadomain/gp_global_1_1_20141200002014")
-    @patch('gppylib.operations.restore.check_file_dumped_with_nbu', return_value=False)
-    def test_global_file_dumped_06(self, mock1, mock2):
-        master_datadir = "/data"
-        backup_dir = None
-        restore_timestamp = "20141200002014"
-        netbackup_service_host = "mdw"
-
-        self.assertFalse(global_file_dumped(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host))
-
-    @patch('gppylib.operations.restore.generate_global_filename', return_value="/datadomain/gp_global_1_1_20141200002014")
-    @patch('gppylib.operations.restore.check_file_dumped_with_nbu', return_value=False)
-    def test_global_file_dumped_07(self, mock1, mock2):
-        master_datadir = None
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141200002014"
-        netbackup_service_host = "mdw"
-
-        self.assertFalse(global_file_dumped(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host))
-
-    @patch('gppylib.operations.restore.generate_global_filename', return_value="/data/gp_global_1_1_20141200002014")
-    @patch('gppylib.operations.restore.check_file_dumped_with_nbu', return_value=False)
-    def test_global_file_dumped_08(self, mock1, mock2):
-        master_datadir = "/data"
-        backup_dir = "/datadomain"
-        restore_timestamp = "20141200002014"
-        netbackup_service_host = "mdw"
-
-        self.assertFalse(global_file_dumped(master_datadir, backup_dir, self.validate_timestamp.dump_dir, self.validate_timestamp.dump_prefix, restore_timestamp, netbackup_service_host))
+            self.validate_timestamp.validate_metadata_file(compressed_file)
+
+    @patch('gppylib.operations.restore.restore_file_with_nbu')
+    def test_restore_state_files_with_nbu_default(self, mock1):
+        self.context.netbackup_service_host = "mdw"
+
+        restore_state_files_with_nbu(self.context)
+        self.assertEqual(mock1.call_count, 3)
+        calls = ["ao", "co", "last_operation"]
+        for i in range(len(mock1.call_args_list)):
+            self.assertEqual(mock1.call_args_list[i], call(self.context, calls[i]))
+
+    @patch('gppylib.operations.backup_utils.Context.generate_filename', return_value='/tmp/foo_schema')
+    @patch('gppylib.commands.base.Command.run')
+    def test_restore_file_with_nbu_default(self, mock1, mock2):
+        self.context.netbackup_service_host = "mdw"
+        cmdStr = "gp_bsa_restore_agent --netbackup-service-host mdw --netbackup-filename /tmp/foo_schema > /tmp/foo_schema"
+        with patch.object(Command, '__init__', return_value=None) as cmd:
+            restore_file_with_nbu(self.context, "schema")
+            cmd.assert_called_with("restoring metadata files to master", cmdStr)
+            self.assertEqual(mock2.call_count, 1)
+
+    @patch('gppylib.operations.backup_utils.Context.generate_filename', return_value='')
+    @patch('gppylib.commands.base.Command.run')
+    def test_restore_file_with_nbu_no_filetype(self, mock1, mock2):
+        self.context.netbackup_service_host = "mdw"
+        self.context.netbackup_block_size = 100
+        cmdStr = "gp_bsa_restore_agent --netbackup-service-host mdw --netbackup-block-size 100 --netbackup-filename /tmp/foo_schema > /tmp/foo_schema"
+        with patch.object(Command, '__init__', return_value=None) as cmd:
+            restore_file_with_nbu(self.context, path="/tmp/foo_schema")
+            cmd.assert_called_with("restoring metadata files to master", cmdStr)
+
+    @patch('gppylib.operations.backup_utils.Context.generate_filename', return_value='/tmp/foo_schema')
+    @patch('gppylib.commands.base.Command.run')
+    def test_restore_file_with_nbu_no_path(self, mock1, mock2):
+        self.context.netbackup_service_host = "mdw"
+        self.context.netbackup_block_size = 100
+        cmdStr = "gp_bsa_restore_agent --netbackup-service-host mdw --netbackup-block-size 100 --netbackup-filename /tmp/foo_schema > /tmp/foo_schema"
+        with patch.object(Command, '__init__', return_value=None) as cmd:
+            restore_file_with_nbu(self.context, "schema")
+            cmd.assert_called_with("restoring metadata files to master", cmdStr)
+
+    @patch('gppylib.operations.backup_utils.Context.generate_filename', return_value='foo_schema')
+    @patch('gppylib.commands.base.Command.run')
+    def test_restore_file_with_nbu_both_args(self, mock1, mock2):
+        with self.assertRaisesRegexp(Exception, 'Cannot supply both a file type and a file path to restore_file_with_nbu'):
+            restore_file_with_nbu(self.context, "schema", "/tmp/foo_schema")
+
+    @patch('gppylib.operations.backup_utils.Context.generate_filename', return_value='foo_schema')
+    @patch('gppylib.commands.base.Command.run')
+    def test_restore_file_with_nbu_neither_arg(self, mock1, mock2):
+        with self.assertRaisesRegexp(Exception, 'Cannot call restore_file_with_nbu with no type or path argument'):
+            restore_file_with_nbu(self.context)
+
+    @patch('gppylib.operations.backup_utils.Context.generate_filename', return_value='/tmp/foo_schema')
+    @patch('gppylib.commands.base.Command.run')
+    def test_restore_file_with_nbu_block_size(self, mock1, mock2):
+        self.context.netbackup_service_host = "mdw"
+        self.context.netbackup_block_size = 1024
+        cmdStr = "gp_bsa_restore_agent --netbackup-service-host mdw --netbackup-block-size 1024 --netbackup-filename /tmp/foo_schema > /tmp/foo_schema"
+        with patch.object(Command, '__init__', return_value=None) as cmd:
+            restore_file_with_nbu(self.context, "schema")
+            cmd.assert_called_with("restoring metadata files to master", cmdStr)
+
+    @patch('gppylib.operations.backup_utils.Context.generate_filename', return_value='/tmp/foo_schema')
+    @patch('gppylib.commands.base.Command.run')
+    def test_restore_file_with_nbu_keyword(self, mock1, mock2):
+        self.context.netbackup_service_host = "mdw"
+        self.context.netbackup_keyword = "foo"
+        cmdStr = "gp_bsa_restore_agent --netbackup-service-host mdw --netbackup-filename /tmp/foo_schema > /tmp/foo_schema"
+        with patch.object(Command, '__init__', return_value=None) as cmd:
+            restore_file_with_nbu(self.context, "schema")
+            cmd.assert_called_with("restoring metadata files to master", cmdStr)
+
+    @patch('gppylib.operations.backup_utils.Context.generate_filename', return_value='/tmp/foo_schema')
+    @patch('gppylib.commands.base.Command.run')
+    def test_restore_file_with_nbu_segment(self, mock1, mock2):
+        self.context.netbackup_service_host = "mdw"
+        cmdStr = "gp_bsa_restore_agent --netbackup-service-host mdw --netbackup-filename /tmp/foo_schema > /tmp/foo_schema"
+        with patch.object(Command, '__init__', return_value=None) as cmd:
+            restore_file_with_nbu(self.context, "schema", hostname="sdw")
+            from gppylib.commands.base import REMOTE
+            cmd.assert_called_with("restoring metadata files to segment", cmdStr, ctxt=REMOTE, remoteHost="sdw")
+
+    class MyMock(MagicMock):
+        def __init__(self, num_segs):
+            super(MagicMock, self).__init__()
+            self.mock_segs = []
+            for i in range(num_segs):
+                self.mock_segs.append(Mock())
+
+        def getSegmentList(self):
+            for id, seg in enumerate(self.mock_segs):
+                seg.get_active_primary.getSegmentHostName.return_value = Mock()
+                seg.get_primary_dbid.return_value = id + 2
+            return self.mock_segs
+
+    @patch('gppylib.operations.dump.GpArray.initFromCatalog', return_value=MyMock(1))
+    @patch('gppylib.gparray.GpDB.getSegmentHostName', return_value='sdw')
+    def test_restore_config_files_with_nbu_single_segment(self, mock1, mock2):
+        with patch('gppylib.operations.restore.restore_file_with_nbu', side_effect=my_counter) as nbu_mock:
+            global i
+            i = 0
+            self.context.netbackup_service_host = "mdw"
+            self.context.netbackup_policy = "test_policy"
+            self.context.netbackup_schedule = "test_schedule"
+
+            restore_config_files_with_nbu(self.context)
+            args, _ = nbu_mock.call_args_list[0]
+            self.assertEqual(args[1], "master_config")
+            for id, seg in enumerate(mock2.mock_segs):
+                self.assertEqual(seg.get_active_primary.call_count, 1)
+                self.assertEqual(seg.get_primary_dbid.call_count, 1)
+                args, _ = nbu_mock.call_args_list[id]
+                self.assertEqual(args, ("segment_config", id+2, "sdw"))
+            self.assertEqual(i, 2)
+
+    @patch('gppylib.operations.dump.GpArray.initFromCatalog', return_value=MyMock(3))
+    @patch('gppylib.gparray.GpDB.getSegmentHostName', return_value='sdw')
+    def test_restore_config_files_with_nbu_multiple_segments(self, mock1, mock2):
+        with patch('gppylib.operations.restore.restore_file_with_nbu', side_effect=my_counter) as nbu_mock:
+            global i
+            i = 0
+            self.context.netbackup_service_host = "mdw"
+            self.context.netbackup_policy = "test_policy"
+            self.context.netbackup_schedule = "test_schedule"
+
+            restore_config_files_with_nbu(self.context)
+            args, _ = nbu_mock.call_args_list[0]
+            self.assertEqual(args[1], "master_config")
+            for id, seg in enumerate(mock2.mock_segs):
+                self.assertEqual(seg.get_active_primary.call_count, 1)
+                self.assertEqual(seg.get_primary_dbid.call_count, 1)
+                args, _ = nbu_mock.call_args_list[id]
+            self.assertEqual(i, 4)
 
 if __name__ == '__main__':
     unittest.main()
+
+i=0
+def my_counter(*args, **kwargs):
+    global i
+    i += 1
+    return Mock()
+

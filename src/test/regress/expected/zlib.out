@@ -1,0 +1,57 @@
+DROP TABLE IF EXISTS test_zlib_hashjoin;
+NOTICE:  table "test_zlib_hashjoin" does not exist, skipping
+CREATE TABLE test_zlib_hashjoin (i1 int, i2 int, i3 int, i4 int, i5 int, i6 int, i7 int, i8 int) WITH (APPENDONLY=true) DISTRIBUTED BY (i1) ; 
+INSERT INTO test_zlib_hashjoin SELECT i,i,i,i,i,i,i,i FROM 
+	(select generate_series(1, nsegments * 333333) as i from 
+	(select count(*) as nsegments from gp_segment_configuration where role='p' and content >= 0) foo) bar;
+SET gp_workfile_type_hashjoin=bfz;
+SET gp_workfile_compress_algorithm=zlib;
+SET statement_mem=5000;
+--Fail after workfile creation and before add it to workfile set
+--start_ignore
+\! gpfaultinjector -f workfile_creation_failure -y reset --seg_dbid 2
+20160527:09:53:03:034973 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f workfile_creation_failure -y reset --seg_dbid 2
+20160527:09:53:03:034973 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
+20160527:09:53:03:034973 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Obtaining Segment details from master...
+20160527:09:53:03:034973 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on 1 segment(s)
+20160527:09:53:03:034973 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on nikos-mac:/Users/narmenatzoglou/gitdev/gpdb/github_updated/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0:content=0:dbid=2:mode=s:status=u
+20160527:09:53:03:034973 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+\! gpfaultinjector -f workfile_creation_failure -y error --seg_dbid 2
+20160527:09:53:03:034985 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f workfile_creation_failure -y error --seg_dbid 2
+20160527:09:53:03:034985 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
+20160527:09:53:03:034985 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Obtaining Segment details from master...
+20160527:09:53:04:034985 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on 1 segment(s)
+20160527:09:53:04:034985 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on nikos-mac:/Users/narmenatzoglou/gitdev/gpdb/github_updated/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0:content=0:dbid=2:mode=s:status=u
+20160527:09:53:04:034985 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+--end_ignore
+SELECT COUNT(t1.*) FROM test_zlib_hashjoin AS t1, test_zlib_hashjoin AS t2 WHERE t1.i1=t2.i2;
+ERROR:  fault triggered, fault name:'workfile_creation_failure' fault type:'error' (faultinjector.c:673)  (seg0 slice2 127.0.0.1:25432 pid=34971)
+RESET statement_mem;
+DROP TABLE IF EXISTS test_zlib_hagg; 
+NOTICE:  table "test_zlib_hagg" does not exist, skipping
+CREATE TABLE test_zlib_hagg (i1 int, i2 int, i3 int, i4 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO test_zlib_hagg SELECT i,i,i,i FROM 
+	(select generate_series(1, nsegments * 300000) as i from 
+	(select count(*) as nsegments from gp_segment_configuration where role='p' and content >= 0) foo) bar;
+SET statement_mem=2000;
+--Fail after workfile creation and before add it to workfile set
+--start_ignore
+\! gpfaultinjector -f workfile_creation_failure -y reset --seg_dbid 2
+20160527:09:53:04:035000 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f workfile_creation_failure -y reset --seg_dbid 2
+20160527:09:53:05:035000 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
+20160527:09:53:05:035000 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Obtaining Segment details from master...
+20160527:09:53:05:035000 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on 1 segment(s)
+20160527:09:53:05:035000 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on nikos-mac:/Users/narmenatzoglou/gitdev/gpdb/github_updated/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0:content=0:dbid=2:mode=s:status=u
+20160527:09:53:05:035000 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+\! gpfaultinjector -f workfile_creation_failure -y error --seg_dbid 2
+20160527:09:53:05:035012 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f workfile_creation_failure -y error --seg_dbid 2
+20160527:09:53:05:035012 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
+20160527:09:53:05:035012 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Obtaining Segment details from master...
+20160527:09:53:05:035012 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on 1 segment(s)
+20160527:09:53:05:035012 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on nikos-mac:/Users/narmenatzoglou/gitdev/gpdb/github_updated/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0:content=0:dbid=2:mode=s:status=u
+20160527:09:53:05:035012 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+--end_ignore
+SELECT MAX(i1) FROM test_zlib_hagg GROUP BY i2;
+ERROR:  fault triggered, fault name:'workfile_creation_failure' fault type:'error' (faultinjector.c:673)  (seg0 slice2 127.0.0.1:25432 pid=34971)

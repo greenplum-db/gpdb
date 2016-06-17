@@ -287,10 +287,10 @@ select sosdnsp,
 from gp_toolkit.gp_size_of_schema_disk where sosdnsp='tktest' order by 1;
 
 -- gp_size_of_database
--- We assume the regression database is between 30 MB and 1GB in size
+-- We assume the regression database is between 30 MB and 5GB in size
 select sodddatname,
        sodddatsize > 30000000 as "db size over 30MB",
-       sodddatsize < 1000000000 as "db size below 1 GB"
+       sodddatsize < 5000000000 as "db size below 5 GB"
 from gp_toolkit.gp_size_of_database where sodddatname='regression';
 
 -- gp_size_of_partition_and_indexes_disk

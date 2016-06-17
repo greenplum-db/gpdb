@@ -7,7 +7,7 @@
  * Copyright (c) 1996-2008, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/comment.c,v 1.96 2007/02/01 19:10:25 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/comment.c,v 1.100 2008/01/01 19:45:48 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -37,6 +37,10 @@
 #include "catalog/pg_shdescription.h"
 #include "catalog/pg_tablespace.h"
 #include "catalog/pg_trigger.h"
+#include "catalog/pg_ts_config.h"
+#include "catalog/pg_ts_dict.h"
+#include "catalog/pg_ts_parser.h"
+#include "catalog/pg_ts_template.h"
 #include "catalog/pg_type.h"
 #include "commands/comment.h"
 #include "commands/dbcommands.h"
@@ -87,6 +91,11 @@ static void CommentTablespace(List *qualname, char *comment);
 static void CommentFilespace(List *qualname, char *comment);
 static void CommentRole(List *qualname, char *comment);
 static void CommentResourceQueue(List *qualname, char *comment);
+static void CommentTSParser(List *qualname, char *comment);
+static void CommentTSDictionary(List *qualname, char *comment);
+static void CommentTSTemplate(List *qualname, char *comment);
+static void CommentTSConfiguration(List *qualname, char *comment);
+
 
 /*
  * CommentObject --
@@ -159,11 +168,23 @@ CommentObject(CommentStmt *stmt)
 		case OBJECT_FILESPACE:
 			CommentFilespace(stmt->objname, stmt->comment);
 			break;
+		case OBJECT_RESQUEUE:
+			CommentResourceQueue(stmt->objname, stmt->comment);
+			break;
 		case OBJECT_ROLE:
 			CommentRole(stmt->objname, stmt->comment);
 			break;
-		case OBJECT_RESQUEUE:
-			CommentResourceQueue(stmt->objname, stmt->comment);
+		case OBJECT_TSPARSER:
+			CommentTSParser(stmt->objname, stmt->comment);
+			break;
+		case OBJECT_TSDICTIONARY:
+			CommentTSDictionary(stmt->objname, stmt->comment);
+			break;
+		case OBJECT_TSTEMPLATE:
+			CommentTSTemplate(stmt->objname, stmt->comment);
+			break;
+		case OBJECT_TSCONFIGURATION:
+			CommentTSConfiguration(stmt->objname, stmt->comment);
 			break;
 		default:
 			elog(ERROR, "unrecognized object type: %d",
@@ -883,7 +904,7 @@ CommentType(List *typename, char *comment)
 
 	/* Find the type's oid */
 
-	oid = typenameTypeId(NULL, tname);
+	oid = typenameTypeId(NULL, tname, NULL);
 
 	/* Check object security */
 
@@ -1470,8 +1491,8 @@ CommentCast(List *qualname, List *arguments, char *comment)
 	targettype = (TypeName *) linitial(arguments);
 	Assert(IsA(targettype, TypeName));
 
-	sourcetypeid = typenameTypeId(NULL, sourcetype);
-	targettypeid = typenameTypeId(NULL, targettype);
+	sourcetypeid = typenameTypeId(NULL, sourcetype, NULL);
+	targettypeid = typenameTypeId(NULL, targettype, NULL);
 
 	castOid = caql_getoid_plus(
 			NULL,
@@ -1552,4 +1573,63 @@ CommentResourceQueue(List *qualname, char *comment)
 
 	/* Call CreateSharedComments() to create/drop the comments */
 	CreateSharedComments(oid, ResQueueRelationId, comment);
+}
+
+static void
+CommentTSParser(List *qualname, char *comment)
+{
+	Oid			prsId;
+
+	prsId = TSParserGetPrsid(qualname, false);
+
+	if (!superuser())
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+			  errmsg("must be superuser to comment on text search parser")));
+
+	CreateComments(prsId, TSParserRelationId, 0, comment);
+}
+
+static void
+CommentTSDictionary(List *qualname, char *comment)
+{
+	Oid			dictId;
+
+	dictId = TSDictionaryGetDictid(qualname, false);
+
+	if (!pg_ts_dict_ownercheck(dictId, GetUserId()))
+		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_TSDICTIONARY,
+					   NameListToString(qualname));
+
+	CreateComments(dictId, TSDictionaryRelationId, 0, comment);
+}
+
+static void
+CommentTSTemplate(List *qualname, char *comment)
+{
+	Oid			tmplId;
+
+	tmplId = TSTemplateGetTmplid(qualname, false);
+
+	if (!superuser())
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+			errmsg("must be superuser to comment on text search template")));
+
+	CreateComments(tmplId, TSTemplateRelationId, 0, comment);
+}
+
+static void
+CommentTSConfiguration(List *qualname, char *comment)
+{
+	Oid			cfgId;
+
+	cfgId = TSConfigGetCfgid(qualname, false);
+
+	if (!pg_ts_config_ownercheck(cfgId, GetUserId()))
+		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_TSCONFIGURATION,
+					   NameListToString(qualname));
+
+	CreateComments(cfgId, TSConfigRelationId, 0, comment);
+
 }

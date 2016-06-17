@@ -6,7 +6,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994-5, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/commands/cluster.h,v 1.31 2007/01/05 22:19:53 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/commands/cluster.h,v 1.34 2008/01/01 19:45:57 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -17,7 +17,7 @@
 #include "utils/rel.h"
 
 
-extern void cluster(ClusterStmt *stmt);
+extern void cluster(ClusterStmt *stmt, bool isTopLevel);
 
 extern void check_index_is_clusterable(Relation OldHeap, Oid indexOid,
 						   bool recheck);
@@ -25,7 +25,7 @@ extern void mark_index_clustered(Relation rel, Oid indexOid);
 extern Oid make_new_heap(Oid OIDOldHeap, const char *NewName, Oid NewTableSpace, 
 		TableOidInfo * oidInfo,
         bool createAoBlockDirectory);
-extern void swap_relation_files(Oid r1, Oid r2, bool swap_stats);
+extern void swap_relation_files(Oid r1, Oid r2, TransactionId frozenXid, bool swap_stats);
 
 extern void populate_oidInfo(TableOidInfo *oidInfo, Oid TableSpace, 
 							 bool relisshared, bool withTypes);

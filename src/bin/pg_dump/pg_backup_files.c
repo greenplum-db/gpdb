@@ -20,7 +20,7 @@
  *
  *
  * IDENTIFICATION
- *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_backup_files.c,v 1.31 2007/02/19 15:05:06 mha Exp $
+ *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_backup_files.c,v 1.34 2007/10/28 21:55:52 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -121,12 +121,17 @@ InitArchiveFmt_Files(ArchiveHandle *AH)
 		if (AH->fSpec && strcmp(AH->fSpec, "") != 0)
 		{
 			AH->FH = fopen(AH->fSpec, PG_BINARY_W);
+			if (AH->FH == NULL)
+				die_horribly(NULL, modulename, "could not open output file \"%s\": %s\n",
+							 AH->fSpec, strerror(errno));
 		}
 		else
+		{
 			AH->FH = stdout;
-
-		if (AH->FH == NULL)
-			die_horribly(NULL, modulename, "could not open output file: %s\n", strerror(errno));
+			if (AH->FH == NULL)
+				die_horribly(NULL, modulename, "could not open output file: %s\n",
+							 strerror(errno));
+		}
 
 		ctx->hasSeek = checkSeek(AH->FH);
 
@@ -139,12 +144,19 @@ InitArchiveFmt_Files(ArchiveHandle *AH)
 	{							/* Read Mode */
 
 		if (AH->fSpec && strcmp(AH->fSpec, "") != 0)
+		{
 			AH->FH = fopen(AH->fSpec, PG_BINARY_R);
+			if (AH->FH == NULL)
+				die_horribly(NULL, modulename, "could not open input file \"%s\": %s\n",
+							 AH->fSpec, strerror(errno));
+		}
 		else
+		{
 			AH->FH = stdin;
-
-		if (AH->FH == NULL)
-			die_horribly(NULL, modulename, "could not open input file: %s\n", strerror(errno));
+			if (AH->FH == NULL)
+				die_horribly(NULL, modulename, "could not open input file: %s\n",
+							 strerror(errno));
+		}
 
 		ctx->hasSeek = checkSeek(AH->FH);
 
@@ -242,7 +254,8 @@ _StartData(ArchiveHandle *AH, TocEntry *te)
 #endif
 
 	if (tctx->FH == NULL)
-		die_horribly(AH, modulename, "could not open output file: %s\n", strerror(errno));
+		die_horribly(AH, modulename, "could not open output file \"%s\": %s\n",
+					 tctx->filename, strerror(errno));
 }
 
 static size_t
@@ -286,8 +299,9 @@ _PrintFileData(ArchiveHandle *AH, char *filename, RestoreOptions *ropt)
 	FILE *FH = fopen(filename, PG_BINARY_R);
 #endif
 
-	if (FH == NULL)
-		die_horribly(AH, modulename, "could not open input file: %s\n", strerror(errno));
+	if (AH->FH == NULL)
+		die_horribly(AH, modulename, "could not open input file \"%s\": %s\n",
+					 filename, strerror(errno));
 
 	while ((cnt = GZREAD(buf, 1, 4095, FH)) > 0)
 	{

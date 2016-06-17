@@ -741,6 +741,7 @@ select * from bm_test where a in (1,3,5);
  5 | 5
 (3 rows)
 
+drop table if exists bm_test;
 -- Create a heap table.
 CREATE TABLE card_heap_table_w_bitmap (id INTEGER, v VARCHAR) DISTRIBUTED BY (id);
 -- Insert a few rows.
@@ -1003,3 +1004,4 @@ SELECT COUNT(DISTINCT(highCardinalityHighDomain)) AS distinct_hchd FROM card_hea
          50004
 (1 row)
 
+drop table if exists bm_test;

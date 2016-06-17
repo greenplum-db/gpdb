@@ -11,7 +11,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/reloptions.h,v 1.3 2007/01/05 22:19:51 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/access/reloptions.h,v 1.5 2008/01/01 19:45:56 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -52,8 +52,6 @@ extern bytea *heap_reloptions(char relkind, Datum reloptions, bool validate);
 
 extern bytea *index_reloptions(RegProcedure amoptions, Datum reloptions,
 				 bool validate);
-
-extern TidycatOptions *tidycat_reloptions(Datum reloptions);
 
 extern void validateAppendOnlyRelOptions(bool ao, int blocksize, int writesize,
 										 int complevel, char* comptype, 

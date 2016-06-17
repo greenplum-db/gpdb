@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/file/buffile.c,v 1.24.2.1 2007/06/01 23:43:17 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/file/buffile.c,v 1.29 2008/01/01 19:45:51 momjian Exp $
  *
  * NOTES:
  *
@@ -64,7 +64,7 @@ static void BufFileUpdateSize(BufFile *buffile);
 
 /*
  * Create a BufFile given the first underlying physical file.
- * NOTE: caller must set isTemp true if appropriate.
+ * NOTE: caller must set isTemp if appropriate.
  */
 static BufFile *
 makeBufFile(File firstfile)
@@ -123,6 +123,11 @@ BufFileCreateTemp(const char *filePrefix, bool interXact)
  *
  * Does not add the pgsql_tmp/ prefix to the file path before creating.
  *
+ * If interXact is true, the temp file will not be automatically deleted
+ * at end of transaction.
+ *
+ * Note: if interXact is true, the caller had better be calling us in a
+ * memory context that will survive across transaction boundaries.
  */
 BufFile *
 BufFileCreateFile(const char *fileName, bool delOnClose, bool interXact)

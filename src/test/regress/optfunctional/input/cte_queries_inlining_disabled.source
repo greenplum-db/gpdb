@@ -1,0 +1,924 @@
+
+-- ----------------------------------------------------------------------
+-- Test: setup.sql
+-- ----------------------------------------------------------------------
+
+-- start_ignore
+create schema cte_queries;
+set optimizer_cte_inlining = off;
+set search_path to cte_queries;
+\i @abs_srcdir@/data/world.sql;
+-- end_ignore
+
+-- ----------------------------------------------------------------------
+-- Test: sql/cte_queries11.sql
+-- ----------------------------------------------------------------------
+
+-- @author prabhd 
+-- @created 2012-02-01 12:00:00 
+-- @modified 2013-02-01 12:00:00 
+-- @tags cte HAWQ 
+-- @product_version gpdb: [4.3-],hawq: [1.1-]
+-- @db_name world_db
+-- @description cte tests from cdbfast 
+
+-- queries with name collision between CTEs and tables in the database
+
+-- query 1 using the same name for the CTE as a table. Main query should reference the CTE
+with country as 
+(select country.code,country.name COUNTRY, city.name CAPITAL, language, isofficial, percentage
+ FROM country,city,countrylanguage
+ WHERE country.code = countrylanguage.countrycode
+ and country.capital = city.id
+ and country.continent = 'Europe')
+
+select * from
+(select * from country where isofficial='True') e1,
+(select * from country where percentage > 50) e2
+where e1.code = e2.code order by e2.COUNTRY,e1.language LIMIT 20;
+
+-- query 2 using multiple CTEs with same names as tables. 
+with country as 
+(select country.code,country.name COUNTRY, city.name CAPITAL, language, isofficial, percentage
+ FROM country,city,countrylanguage
+ WHERE country.code = countrylanguage.countrycode
+ and country.capital = city.id
+ and country.continent = 'Europe'),
+countrylanguage(code1,country1,capital1,language1,isofficial1,percentage1,code2,country2,capital2,language2,isofficial2,percentage2) as
+(
+select * from
+(select * from country where isofficial='True') e1,
+(select * from country where percentage > 50) e2
+where e1.code = e2.code order by e2.COUNTRY,e1.language
+)
+select code1,country1,capital1,language1,isofficial1,percentage1,country.COUNTRY from country,countrylanguage where country.code = countrylanguage.code1
+and country.percentage = countrylanguage.percentage1
+order by COUNTRY,percentage1 LIMIT 20;
+-- ----------------------------------------------------------------------
+-- Test: sql/cte_queries12.sql
+-- ----------------------------------------------------------------------
+
+-- @author prabhd 
+-- @created 2012-02-01 12:00:00 
+-- @modified 2013-02-01 12:00:00 
+-- @tags cte HAWQ 
+-- @product_version gpdb: [4.3-],hawq: [1.1-]
+-- @db_name world_db
+-- @description cte tests from cdbfast 
+
+-- queries using same name for CTEs and the subquery aliases in the main query
+
+-- query1
+with c1 as 
+(select country.code,country.name COUNTRY, city.name CAPITAL, language, isofficial, percentage
+ FROM country,city,countrylanguage
+ WHERE country.code = countrylanguage.countrycode
+ and country.capital = city.id
+ and country.continent = 'Europe'),
+c2 as
+(select country.code,country.name COUNTRY, city.name CAPITAL, language, isofficial, percentage
+ FROM country,city,countrylanguage
+ WHERE country.code = countrylanguage.countrycode
+ and country.capital = city.id
+ and country.continent = 'Asia')
+
+select * from
+(select * from c1 where isofficial='True') c1,
+(select * from c2 where percentage > 50) c2
+where c1.percentage = c2.percentage order by c2.COUNTRY,c1.language;
+
+-- query2 using same names as tables 
+with country as 
+(select country.code,country.name COUNTRY, city.name CAPITAL, language, isofficial, percentage
+ FROM country,city,countrylanguage
+ WHERE country.code = countrylanguage.countrycode
+ and country.capital = city.id
+ and country.continent = 'Europe'),
+countrylanguage as
+(select country.code,country.COUNTRY,country.language,country.isofficial,country.percentage
+ FROM country,countrylanguage
+ WHERE country.code = countrylanguage.countrycode
+)
+
+select * from
+(select * from country where isofficial='True') country,
+(select * from countrylanguage where percentage > 50) countrylanguage
+where country.percentage = countrylanguage.percentage order by countrylanguage.COUNTRY,country.language LIMIT 40;
+
+-- ----------------------------------------------------------------------
+-- Test: sql/cte_queries13.sql
+-- ----------------------------------------------------------------------
+
+-- @author prabhd 
+-- @created 2012-02-01 12:00:00 
+-- @modified 2013-02-01 12:00:00 
+-- @tags cte HAWQ 
+-- @product_version gpdb: [4.3-],hawq: [1.1-]
+-- @db_name world_db
+-- @description cte tests from cdbfast 
+
+-- Using the same name for the CTE at every subquery-level 
+select avg(population12),CITY12
+from
+(
+with city(CITY1,POPULATION1) as (select city.name,city.population from city where city.population >= 100)
+
+select CITY12,POPULATION12 from 
+(
+  with city(CITY2,POPULATION2) as ( select city1,population1 from city where population1 >= 1000 )
+  select CITY12,POPULATION12 from 
+  (
+     with city(CITY3,POPULATION3) as (select city2,population2 from city where population2 >= 10000)
+     select CITY12,POPULATION12 from
+     (
+       with city(CITY4,POPULATION4) as (select city3,population3 from  city where population3 >= 20000)
+       select CITY12,POPULATION12 from
+       (
+        with city(CITY5,POPULATION5) as (select city4,population4 from  city where population4 >= 50000)
+        select CITY12,POPULATION12 from
+        (
+         with city(CITY6,POPULATION6) as (select city5,population5 from  city where population5 >= 80000)
+         select CITY12,POPULATION12 from
+         (
+          with city(CITY7,POPULATION7) as (select city6,population6 from  city where population6 >= 150000)
+          select CITY12,POPULATION12 from
+          (
+           with city(CITY8,POPULATION8) as (select city7,population7 from  city where population7 >= 200000)
+           select CITY12,POPULATION12 from
+           (
+            with city(CITY9,POPULATION9) as (select city8,population8 from city where population8 >= 250000)
+            select CITY12,POPULATION12 from
+            (
+             with city(CITY10,POPULATION10) as (select city9,population9 from  city where population9 >= 300000)
+             select city12,population12 from
+             (
+              with city(CITY11,POPULATION11) as (select city10,population10 from city where population10 >= 6500000)
+              select CITY12,POPULATION12 from
+              (
+               with city(CITY12,POPULATION12) as (select city11,population11 from city where population11 >= 7000000)
+               select s1.city12,s1.population12 from city s1,city s2
+              ) FOO11
+             ) FOO10
+            ) FOO9
+           ) FOO8
+          ) FOO7
+         ) FOO6
+        ) FOO5
+       ) FOO4
+     )FOO3
+  ) FOO2
+) FOO1
+) FOO0 group by city12 order by city12;
+-- ----------------------------------------------------------------------
+-- Test: sql/cte_queries14.sql
+-- ----------------------------------------------------------------------
+
+-- @author prabhd 
+-- @created 2012-02-01 12:00:00 
+-- @modified 2013-02-01 12:00:00 
+-- @tags cte HAWQ 
+-- @product_version gpdb: [4.3-],hawq: [1.1-]
+-- @db_name world_db
+-- @description cte tests from cdbfast 
+
+-- negative cases where queries have duplicate names in CTEs
+
+--query1 having duplicates without specifying a column list. Should error out. 
+with capitals as 
+(select country.code,id,city.name,city.countrycode as code from city,country 
+ where city.countrycode = country.code AND city.id = country.capital) 
+
+select * from capitals;
+
+-- query2
+with allofficiallanguages as 
+(select countrylanguage.countrycode,city.countrycode,language from
+ city,countrylanguage where countrylanguage.countrycode = city.countrycode and isofficial = 'True')
+select * from allofficiallanguages;
+
+-- query3 specifying duplicates explicitly in the column list
+with capitals(code,id,name,code) as 
+(select country.code,id,city.name,city.countrycode from city,country 
+ where city.countrycode = country.code AND city.id = country.capital) 
+
+select * from capitals;
+
+
+
+-- ----------------------------------------------------------------------
+-- Test: sql/cte_queries15.sql
+-- ----------------------------------------------------------------------
+
+-- @author prabhd 
+-- @created 2012-02-01 12:00:00 
+-- @modified 2013-02-01 12:00:00 
+-- @tags cte HAWQ 
+-- @product_version gpdb: [4.3-],hawq: [1.1-]
+-- @db_name world_db
+-- @description cte tests from cdbfast 
+
+-- negative case. RECURSIVE WITH clause should fail 
+
+with recursive allofficiallanguages(language) as 
+(
+ select language from city,countrylanguage where countrylanguage.countrycode = city.countrycode and isofficial = 'True'
+ UNION 
+ select language from allofficiallanguages)
+select * from allofficiallanguages;
+-- ----------------------------------------------------------------------
+-- Test: sql/cte_queries16.sql
+-- ----------------------------------------------------------------------
+
+-- @author prabhd 
+-- @created 2012-02-01 12:00:00 
+-- @modified 2013-02-01 12:00:00 
+-- @tags cte HAWQ 
+-- @product_version gpdb: [4.3-],hawq: [1.1-]
+-- @db_name world_db
+-- @description cte tests from cdbfast 
+
+-- negative cases with queries forward referencing other CTEs
+
+-- query1 CTE referencing itself
+with lang_total as
+( select count(*) as lang_count,country.code,countrylanguage.countrycode
+  from country join countrylanguage on (country.code=countrylanguage.countrycode and governmentform='Federal Republic')
+  group by country.code,countrylanguage.countrycode 
+  HAVING count(*) > (select max(lang_count) from lang_total)
+)
+
+select count(*) from lang_total;
+
+--query2 CTE forward referencing another CTE
+with capitals as 
+(select country.code,id,city.name from city,country 
+ where city.countrycode = country.code AND city.id = country.capital),
+
+lang_total as
+( select count(*) as lang_count,country.code,alleuropeanlanguages.code
+  from country join alleuropeanlanguages on (country.code=alleuropeanlanguages.code and governmentform='Federal Republic')
+  group by country.code,alleuropeanlanguages.code order by country.code),
+
+alleuropeanlanguages as 
+(select country.code,country.name COUNTRY, city.name CAPITAL, language, isofficial, percentage
+ FROM country,city,countrylanguage
+ WHERE country.code = countrylanguage.countrycode
+ and country.capital = city.id
+ and country.continent = 'Europe')
+
+select * from alleuropeanlanguages;
+-- ----------------------------------------------------------------------
+-- Test: sql/cte_queries17.sql
+-- ----------------------------------------------------------------------
+
+-- @author prabhd 
+-- @created 2012-02-01 12:00:00 
+-- @modified 2013-02-01 12:00:00 
+-- @tags cte HAWQ 
+-- @product_version gpdb: [4.3-],hawq: [1.1-]
+-- @db_name world_db
+-- @description cte tests from cdbfast 
+
+-- negative cases with mismatching column list provided for CTEs
+
+--query1
+with capitals(code,id) as 
+(select country.code,id,city.name from city,country 
+ where city.countrycode = country.code AND city.id = country.capital)
+
+select * from capitals;
+
+--query 2
+with lang_total(lang_count,code,countrycode,name) as
+( select count(*) as lang_count,country.code,countrylanguage.countrycode
+  from country join countrylanguage on (country.code=countrylanguage.countrycode and governmentform='Federal Republic')
+  group by country.code,countrylanguage.countrycode order by country.code)
+select * from lang_total;
+
+-- ----------------------------------------------------------------------
+-- Test: sql/cte_queries3.sql
+-- ----------------------------------------------------------------------
+
+-- @author prabhd 
+-- @created 2012-02-01 12:00:00 
+-- @modified 2013-02-01 12:00:00 
+-- @tags cte
+-- @product_version gpdb: [4.3-],hawq: [1.1-]
+-- @db_name world_db
+-- @description cte tests from cdbfast 
+
+-- Queries using multiple CTEs
+
+-- query1 - all CTEs being used once in the main query
+with capitals as 
+(select country.code,id,city.name from city,country 
+ where city.countrycode = country.code AND city.id = country.capital),
+lang_total as
+( select count(*) as lang_count,country.code,countrylanguage.countrycode
+  from country join countrylanguage on (country.code=countrylanguage.countrycode and governmentform='Federal Republic')
+  group by country.code,countrylanguage.countrycode order by country.code),
+alleuropeanlanguages as 
+(select country.code,country.name COUNTRY, city.name CAPITAL, language, isofficial, percentage
+ FROM country,city,countrylanguage
+ WHERE country.code = countrylanguage.countrycode
+ and country.capital = city.id
+ and country.continent = 'Europe'),
+diversecountries as
+(select country.code,country.name,country.capital,d.CNT
+ from country,
+ (select countrylanguage.countrycode,count(*) as CNT from countrylanguage group by countrycode
+  HAVING count(*) > 6) d
+ where d.countrycode = country.code and country.gnp > 100000)
+
+select capitals.name CAPITAL,lang_total.lang_count COUNTRY_LANG_COUNT,capitals.code,country.name
+from capitals,lang_total,country
+where capitals.code = lang_total.countrycode
+and capitals.code = country.code
+and country.code NOT IN (select diversecountries.code from diversecountries,alleuropeanlanguages
+                         where diversecountries.code = alleuropeanlanguages.code)
+order by capitals.code;
+
+-- query 2 multiple CTEs being used multiple times through joins
+with longlivingregions as 
+(
+select FOO.*,count(distinct language) as "lang_count"
+from(
+     select
+       sum(population) as "REGION_POP",
+       sum(gnp) as "REGION_GNP",
+       avg(lifeexpectancy) as "REGION_LIFETIME",region
+     from
+      country
+     group by region
+    ) FOO,countrylanguage,country
+where
+   country.code = countrylanguage.countrycode
+   and FOO.region = country.region
+group by
+FOO.region,foo."REGION_POP",foo."REGION_GNP",foo."REGION_LIFETIME"),
+
+denseregions as 
+(
+select FOO.*,count(distinct language) as "lang_count",
+       sum(surfacearea) as "REGION_SURFACE_AREA"
+from(
+     select
+       sum(population) as "REGION_POP",
+       sum(gnp) as "REGION_GNP",
+       region
+     from
+      country
+     group by region
+    ) FOO,countrylanguage,country
+where
+   country.code = countrylanguage.countrycode
+   and FOO.region = country.region
+   and FOO."REGION_POP" != 0
+group by
+FOO.region,foo."REGION_POP",foo."REGION_GNP"
+order by sum(surfacearea)/foo."REGION_POP" desc),
+
+allcountrystats as 
+( select country.code,country.name,count(distinct city.id) CITY_CNT,
+  count(distinct countrylanguage.language) LANG_CNT
+  from country,city,countrylanguage
+  where country.code = city.countrycode
+  and country.code = countrylanguage.countrycode
+  group by country.code,country.name
+)
+
+select allcountrystats.CITY_CNT,allcountrystats.LANG_CNT,allcountrystats.name,
+       "REGION_SURFACE_AREA","REGION_LIFETIME",longlivingregions."REGION_POP",longlivingregions.lang_count,longlivingregions."REGION_GNP",longlivingregions.region
+from longlivingregions,denseregions,allcountrystats,country
+where longlivingregions.region = denseregions.region and allcountrystats.code = country.code and country.region = longlivingregions.region
+and country.indepyear between 1800 and 1850
+
+UNION ALL
+
+select allcountrystats.CITY_CNT,allcountrystats.LANG_CNT,allcountrystats.name,
+       "REGION_SURFACE_AREA","REGION_LIFETIME",longlivingregions."REGION_POP",longlivingregions.lang_count,longlivingregions."REGION_GNP",longlivingregions.region
+from longlivingregions,denseregions,allcountrystats,country
+where longlivingregions.region = denseregions.region and allcountrystats.code = country.code and country.region = longlivingregions.region
+and country.indepyear between 1850 and 1900
+
+UNION ALL
+
+select allcountrystats.CITY_CNT,allcountrystats.LANG_CNT,allcountrystats.name,
+       "REGION_SURFACE_AREA","REGION_LIFETIME",longlivingregions."REGION_POP",longlivingregions.lang_count,longlivingregions."REGION_GNP",longlivingregions.region
+from longlivingregions,denseregions,allcountrystats,country
+where longlivingregions.region = denseregions.region and allcountrystats.code = country.code and country.region = longlivingregions.region
+and country.indepyear > 1900
+order by name
+LIMIT 50;
+
+       
+
+
+
+-- ----------------------------------------------------------------------
+-- Test: sql/cte_queries5.sql
+-- ----------------------------------------------------------------------
+
+-- @author prabhd 
+-- @created 2012-02-01 12:00:00 
+-- @modified 2013-02-01 12:00:00 
+-- @tags cte HAWQ 
+-- @product_version gpdb: [4.3-],hawq: [1.1-]
+-- @db_name world_db
+-- @description cte tests from cdbfast 
+
+-- queries using column lists for CTEs
+
+-- query 1 use column list despite having no duplicate names
+with capitals("C","ID","CAP") as 
+(select country.code,id,city.name from city,country 
+ where city.countrycode = country.code AND city.id = country.capital),
+
+lang_total(LC,CC,CLC) as
+( select count(*) as lang_count,country.code,countrylanguage.countrycode
+  from country join countrylanguage on (country.code=countrylanguage.countrycode and governmentform='Federal Republic')
+  group by country.code,countrylanguage.countrycode order by country.code) 
+
+select country.name,"C","ID","CAP",lang_total.lc
+from capitals,lang_total,country
+where capitals."C" = country.code
+and country.code = lang_total.cc;
+
+
+-- query 2 Check case sensitivity for quoted names in column list. This should error out
+with "lang_total"("LC",CC,CLC) as
+( select count(*) as lang_count,country.code,countrylanguage.countrycode
+  from country join countrylanguage on (country.code=countrylanguage.countrycode and governmentform='Federal Republic')
+  group by country.code,countrylanguage.countrycode order by country.code) 
+select LC from lang_total;
+
+-- query 3 use column list when there are duplicate names within the CTE
+with capitals("CO_C","C_ID","CAPITAL",country) as 
+(select country.code,id,city.name,country.name from city,country 
+ where city.countrycode = country.code AND city.id = country.capital)
+
+select "CO_C","C_ID","CAPITAL",COUNTRY from capitals where "CO_C"='SMR';
+
+
+-- query4 use column list within another CTE
+with capitals("CO_C","C_ID","CAPITAL",country) as 
+(select country.code,id,city.name,country.name from city,country 
+ where city.countrycode = country.code AND city.id = country.capital),
+south_asian_capitals(A_CO_C,"C_ID",A_C_NAME,A_CO_NAME) as 
+(select "CO_C","C_ID","CAPITAL",country from capitals,country where capitals."CO_C"=country.code and country.region = 'Southern and Central Asia')
+select "a_co_c","C_ID",A_c_NaMe,"a_co_name" from south_asian_capitals order by A_CO_C;
+-- ----------------------------------------------------------------------
+-- Test: sql/cte_queries8.sql
+-- ----------------------------------------------------------------------
+
+-- @author prabhd 
+-- @created 2012-02-01 12:00:00 
+-- @modified 2013-02-01 12:00:00 
+-- @tags cte
+-- @product_version gpdb: [4.3-],hawq: [1.1-]
+-- @db_name world_db
+-- @description cte tests from cdbfast 
+
+-- sanity tests with queries using CTEs in insert,update,delete and create
+
+-- query 1 CTAS using CTE
+create table bad_headofstates as 
+(
+with bad_headofstates as 
+(
+ select country.code,country.name,country.headofstate,countrylanguage.language
+ from
+ country,countrylanguage
+ where country.code = countrylanguage.countrycode and countrylanguage.isofficial=true
+ and (country.gnp < country.gnpold or country.gnp < 3000)
+)
+select OUTERMOST_FOO.*,bad_headofstates.headofstate from (
+select avg(population),region from
+(
+select FOO.*,bad_headofstates.headofstate,city.name
+from
+(select bad_headofstates.code,country.capital,country.region,country.population from
+bad_headofstates,country where bad_headofstates.code = country.code) FOO, bad_headofstates,city
+where FOO.code = bad_headofstates.code and FOO.capital = city.id) OUTER_FOO
+group by region ) OUTERMOST_FOO,bad_headofstates,country 
+where country.code = bad_headofstates.code and country.region = OUTERMOST_FOO.region
+order by OUTERMOST_FOO.region,bad_headofstates.headofstate LIMIT 40
+);
+
+select * from bad_headofstates order by region,headofstate,avg;
+
+--query 2 insert using CTE
+insert into bad_headofstates
+(
+with bad_headofstates as 
+(
+ select country.code,country.name,country.headofstate,countrylanguage.language
+ from
+ country,countrylanguage
+ where country.code = countrylanguage.countrycode and countrylanguage.isofficial=true
+ and (country.gnp < country.gnpold or country.gnp < 3000)
+)
+select OUTERMOST_FOO.*,bad_headofstates.headofstate from (
+select avg(population),region from
+(
+select FOO.*,bad_headofstates.headofstate,city.name
+from
+(select bad_headofstates.code,country.capital,country.region,country.population from
+bad_headofstates,country where bad_headofstates.code = country.code) FOO, bad_headofstates,city
+where FOO.code = bad_headofstates.code and FOO.capital = city.id) OUTER_FOO
+group by region ) OUTERMOST_FOO,bad_headofstates,country 
+where country.code = bad_headofstates.code and country.region = OUTERMOST_FOO.region
+order by OUTERMOST_FOO.region,bad_headofstates.headofstate LIMIT 40
+);
+
+select * from bad_headofstates order by region,headofstate,avg;
+
+--query3 update using CTE
+update bad_headofstates set region = cm.region FROM
+(
+
+with bad_headofstates as
+(
+ select country.code,country.name,country.headofstate,countrylanguage.language
+ from
+ country,countrylanguage
+ where country.code = countrylanguage.countrycode and countrylanguage.isofficial=true
+ and (country.gnp < country.gnpold or country.gnp < 3000)
+)
+
+select avg(OUTERMOST_FOO.AVG),OUTERMOST_FOO.region from (
+select avg(population) AVG,region from
+(
+select FOO.*,bad_headofstates.headofstate,city.name
+from
+(select bad_headofstates.code,country.capital,country.region,country.population from
+bad_headofstates,country where bad_headofstates.code = country.code) FOO, bad_headofstates,city
+where FOO.code = bad_headofstates.code and FOO.capital = city.id) OUTER_FOO
+group by region ) OUTERMOST_FOO,bad_headofstates,country
+where country.code = bad_headofstates.code and country.region = OUTERMOST_FOO.region
+and OUTERMOST_FOO.region = 'Central America'
+group by OUTERMOST_FOO.region
+order by OUTERMOST_FOO.region
+) cm
+where bad_headofstates.region = 'Caribbean';
+ 
+select * from bad_headofstates order by region,headofstate,avg;
+
+--query4 delete using CTE
+delete from bad_headofstates USING
+(
+with bad_headofstates as
+(
+ select country.code,country.name,country.headofstate,countrylanguage.language
+ from
+ country,countrylanguage
+ where country.code = countrylanguage.countrycode and countrylanguage.isofficial=true
+ and (country.gnp < country.gnpold or country.gnp < 3000)
+)
+
+select avg(OUTERMOST_FOO.AVG),OUTERMOST_FOO.region from (
+select avg(population) AVG,region from
+(
+select FOO.*,bad_headofstates.headofstate,city.name
+from
+(select bad_headofstates.code,country.capital,country.region,country.population from
+bad_headofstates,country where bad_headofstates.code = country.code) FOO, bad_headofstates,city
+where FOO.code = bad_headofstates.code and FOO.capital = city.id) OUTER_FOO
+group by region ) OUTERMOST_FOO,bad_headofstates,country
+where country.code = bad_headofstates.code and country.region = OUTERMOST_FOO.region
+and OUTERMOST_FOO.region = 'Central America'
+group by OUTERMOST_FOO.region
+order by OUTERMOST_FOO.region
+) as  cm
+where bad_headofstates.region = cm.region;
+
+select * from bad_headofstates order by region,headofstate,avg;
+
+-- delete using CTE in its subplan
+delete from bad_headofstates where bad_headofstates.avg NOT IN
+(
+with bad_headofstates as
+(
+ select country.code,country.name,country.headofstate,countrylanguage.language
+ from
+ country,countrylanguage
+ where country.code = countrylanguage.countrycode and countrylanguage.isofficial=true
+ and (country.gnp < country.gnpold or country.gnp < 3000)
+)
+
+select OUTERMOST_FOO.AVG from (
+select avg(population) AVG,region from
+(
+select FOO.*,bad_headofstates.headofstate,city.name
+from
+(select bad_headofstates.code,country.capital,country.region,country.population from
+bad_headofstates,country where bad_headofstates.code = country.code) FOO, bad_headofstates,city
+where FOO.code = bad_headofstates.code and FOO.capital = city.id) OUTER_FOO
+group by region ) OUTERMOST_FOO,bad_headofstates,country
+where country.code = bad_headofstates.code and country.region = OUTERMOST_FOO.region
+and OUTERMOST_FOO.region = 'Australia and New Zealand' or OUTERMOST_FOO.region = 'Eastern Asia'
+order by OUTERMOST_FOO.region
+);
+
+select * from bad_headofstates order by region,headofstate,avg;
+
+drop table bad_headofstates;
+
+-- ----------------------------------------------------------------------
+-- Test: sql/mpp15087.sql
+-- ----------------------------------------------------------------------
+
+-- start_ignore
+drop table if exists mpp15087_t;
+
+create table mpp15087_t(code char(3), n numeric);
+insert into mpp15087_t values ('abc',1);
+insert into mpp15087_t values ('xyz',2);
+insert into mpp15087_t values ('def',3);
+-- end_ignore
+
+-- @author prabhd
+-- @created 2012-02-01 12:00:00
+-- @modified 2013-02-01 12:00:00
+-- @tags cte
+-- @product_version gpdb: [4.2.0.0-]
+-- @db_name world_db
+-- @description MPP-15087: Executor: Nested loops in subquery scan for a CTE returns incorrect results
+with cte as 
+	(
+	select code, n, x 
+	from mpp15087_t 
+	, (select 100 as x) d
+	)
+select code from mpp15087_t t where 1= (select count(*) from cte where cte.code::text=t.code::text or cte.code::text = t.code::text);
+
+
+with cte as
+        (
+        select count(*) from
+        (
+        select code, n, x
+        from mpp15087_t
+        , (select 100 as x) d
+        ) FOO
+        )
+select code from mpp15087_t t where 1= (select * from cte);
+
+with cte as
+        (
+        select count(*) from
+        (
+        select code, n, x
+        from mpp15087_t
+        , (select 100 as x) d
+        ) FOO
+        )
+select code from mpp15087_t t where 1= (select count(*) from cte);
+
+-- ----------------------------------------------------------------------
+-- Test: sql/mpp19271.sql
+-- ----------------------------------------------------------------------
+
+-- start_ignore
+DROP TABLE IF EXISTS t;
+CREATE TABLE t(code char(3), n numeric);
+INSERT INTO t VALUES ('abc',1);
+INSERT INTO t VALUES ('xyz',2);  
+INSERT INTO t VALUES ('def',3); 
+-- end_ignore
+
+-- @author prabhd
+-- @created 2012-02-01 12:00:00
+-- @modified 2013-02-01 12:00:00
+-- @tags cte HAWQ
+-- @description MPP-19271: Unexpected internal error when we issue CTE with CSQ when we disable inlining of CTE
+
+WITH cte AS(
+    SELECT code, n, x from t , (SELECT 100 as x) d ) 
+SELECT code FROM t WHERE (
+    SELECT count(*) FROM cte WHERE cte.code::text=t.code::text
+) = 1 ORDER BY 1;
+
+-- ----------------------------------------------------------------------
+-- Test: sql/mpp19436_1.sql
+-- ----------------------------------------------------------------------
+
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo AS SELECT i as a, i+1 as b from generate_series(1,10)i;
+
+DROP TABLE IF EXISTS bar;
+CREATE TABLE bar AS SELECT i as c, i+1 as d from generate_series(1,10)i;
+
+-- end_ignore
+
+-- @author prabhd
+-- @created 2012-02-01 12:00:00
+-- @modified 2013-02-01 12:00:00
+-- @tags cte bfv MPP-19436
+-- @db_name world_db
+-- @product_version gpdb: [4.2.6.1-],hawq: [1.1.0.2-]
+-- @description MPP-19436
+
+WITH t AS
+(
+ SELECT e.*,f.*
+ FROM
+    (
+      SELECT * FROM foo WHERE a < 10 
+    ) e
+ LEFT OUTER JOIN
+    (
+       SELECT * FROM bar WHERE c < 10 
+    ) f
+
+  ON e.a = f.d ) 
+SELECT t.a,t.d, count(*) over () AS window
+FROM t 
+GROUP BY t.a,t.d ORDER BY t.a,t.d LIMIT 2;
+
+-- ----------------------------------------------------------------------
+-- Test: sql/mpp19436_2.sql
+-- ----------------------------------------------------------------------
+
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo AS SELECT i as a, i+1 as b from generate_series(1,10)i;
+
+DROP TABLE IF EXISTS bar;
+CREATE TABLE bar AS SELECT i as c, i+1 as d from generate_series(1,10)i;
+
+-- end_ignore
+
+-- @author prabhd
+-- @created 2012-02-01 12:00:00
+-- @modified 2013-02-01 12:00:00
+-- @tags cte bfv MPP-19436
+-- @db_name world_db
+-- @product_version gpdb: [4.2.6.1-],hawq: [1.1.0.2-]
+-- @description MPP-19436
+WITH t(a,b,d) AS
+(
+  SELECT foo.a,foo.b,bar.d FROM foo,bar WHERE foo.a = bar.d
+)
+SELECT t.b,avg(t.a), rank() OVER (PARTITION BY t.a ORDER BY t.a) FROM foo,t GROUP BY foo.a,foo.b,t.b,t.a ORDER BY 1,2,3 LIMIT 5;
+
+
+-- ----------------------------------------------------------------------
+-- Test: sql/mpp19436_3.sql
+-- ----------------------------------------------------------------------
+
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo AS SELECT i as a, i+1 as b from generate_series(1,10)i;
+
+DROP TABLE IF EXISTS bar;
+CREATE TABLE bar AS SELECT i as c, i+1 as d from generate_series(1,10)i;
+
+-- end_ignore
+
+-- @author prabhd
+-- @created 2012-02-01 12:00:00
+-- @modified 2013-02-01 12:00:00
+-- @tags cte bfv MPP-19436
+-- @db_name world_db
+-- @product_version gpdb: [4.2.6.1-],hawq: [1.1.0.2-]
+-- @description MPP-19436
+
+WITH t(a,b,d) AS
+(
+  SELECT foo.a,foo.b,bar.d FROM foo,bar WHERE foo.a = bar.d
+)
+SELECT cup.*, SUM(t.d) OVER(PARTITION BY t.b) FROM  
+  ( 
+    SELECT bar.*, AVG(t.b) OVER(PARTITION BY t.a ORDER BY t.b desc) AS e FROM t,bar
+  ) AS cup,
+t WHERE cup.e < 10
+GROUP BY cup.c,cup.d, cup.e ,t.d, t.b
+ORDER BY 1,2,3,4
+LIMIT 10;
+
+-- ----------------------------------------------------------------------
+-- Test: sql/mpp19436_4.sql
+-- ----------------------------------------------------------------------
+
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo AS SELECT i as a, i+1 as b from generate_series(1,10)i;
+
+DROP TABLE IF EXISTS bar;
+CREATE TABLE bar AS SELECT i as c, i+1 as d from generate_series(1,10)i;
+
+-- end_ignore
+
+-- @author prabhd
+-- @created 2012-02-01 12:00:00
+-- @modified 2013-02-01 12:00:00
+-- @tags cte bfv MPP-19436
+-- @db_name world_db
+-- @product_version gpdb: [4.2.6.1-],hawq: [1.1.0.2-]
+-- @description MPP-19436
+
+WITH t(a,b,d) AS
+(
+  SELECT foo.a,foo.b,bar.d FROM foo,bar WHERE foo.a = bar.d
+)
+SELECT cup.*, SUM(t.d) FROM  
+  ( 
+    SELECT bar.*, count(*) OVER() AS e FROM t,bar WHERE t.a = bar.c
+  ) AS cup,
+t GROUP BY cup.c,cup.d, cup.e,t.a
+HAVING AVG(t.d) < 10 ORDER BY 1,2,3,4 LIMIT 10;
+
+-- ----------------------------------------------------------------------
+-- Test: sql/mpp19436_5.sql
+-- ----------------------------------------------------------------------
+
+-- start_ignore
+DROP TABLE IF EXISTS foo;
+CREATE TABLE foo AS SELECT i as a, i+1 as b from generate_series(1,10)i;
+
+DROP TABLE IF EXISTS bar;
+CREATE TABLE bar AS SELECT i as c, i+1 as d from generate_series(1,10)i;
+-- end_ignore
+
+-- @author prabhd
+-- @created 2012-02-01 12:00:00
+-- @modified 2013-02-01 12:00:00
+-- @tags cte bfv MPP-19436
+-- @db_name world_db
+-- @product_version gpdb: [4.2.6.1-],hawq: [1.1.0.2-]
+-- @description MPP-19436
+WITH t(a,b,d) AS
+(
+  SELECT foo.a,foo.b,bar.d FROM foo,bar WHERE foo.a = bar.d
+)
+SELECT cup.*, SUM(t.d) OVER(PARTITION BY t.b) FROM  
+  ( 
+    SELECT bar.c as e,r.d FROM 
+		(
+			SELECT t.d, avg(t.a) over() FROM t
+		) r,bar
+  ) AS cup,
+t WHERE cup.e < 10
+GROUP BY cup.d, cup.e, t.d, t.b
+ORDER BY 1,2,3 
+LIMIT 10;
+
+-- ----------------------------------------------------------------------
+-- Test: sql/mpp19696.sql
+-- ----------------------------------------------------------------------
+
+-- start_ignore
+DROP TABLE IF EXISTS r;
+CREATE TABLE r(a int, b int);
+INSERT INTO r SELECT i,i FROM generate_series(1,5)i;
+-- end_ignore
+
+-- @author prabhd
+-- @created 2012-02-01 12:00:00
+-- @modified 2013-02-01 12:00:00
+-- @tags cte HAWQ
+-- @description MPP-19696
+
+WITH v1 AS (SELECT b FROM r), v2 as (SELECT b FROM v1) SELECT * FROM v2 WHERE b < 5 ORDER BY 1;
+
+-- ----------------------------------------------------------------------
+-- Test: sql/mpp19991.sql
+-- ----------------------------------------------------------------------
+
+-- start_ignore
+DROP TABLE IF EXISTS x;
+DROP TABLE IF EXISTS y;
+CREATE TABLE x AS SELECT generate_series(1,10);
+CREATE TABLE y AS SELECT generate_series(1,10);
+
+-- end_ignore
+
+-- @author prabhd 
+-- @created 2013-02-01 12:00:00 
+-- @modified 2013-02-01 12:00:00 
+-- @tags cte HAWQ 
+-- @db_name world_db
+-- @description Mpp-19991
+
+with v1 as (select * from x), v2 as (select * from y) select * from v1;
+
+-- ----------------------------------------------------------------------
+-- Test: sql/icg_cte_with_values.sql
+-- ----------------------------------------------------------------------
+
+-- @author garcic12
+-- @created 2013-11-20 12:00:00
+-- @modified 2013-11-20 12:00:00
+-- @tags ci
+-- @description CTE test with values.
+with cte(foo) as ( values(42) ) values((select foo from cte));
+
+-- ----------------------------------------------------------------------
+-- Test: teardown.sql
+-- ----------------------------------------------------------------------
+
+-- start_ignore
+drop schema cte_queries cascade;
+-- end_ignore

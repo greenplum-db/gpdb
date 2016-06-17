@@ -92,7 +92,7 @@ typedef struct
 	gss_ctx_id_t ctx;			/* GSSAPI connection context */
 	gss_name_t	name;			/* GSSAPI client name */
 #endif
-} pg_gssinfo;
+}	pg_gssinfo;
 #endif
 
 /*

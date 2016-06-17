@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/util/joininfo.c,v 1.48 2007/02/16 00:14:01 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/util/joininfo.c,v 1.50 2008/01/01 19:45:50 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -56,8 +56,8 @@ have_relevant_joinclause(PlannerInfo *root,
 	}
 
 	/*
-	 * We also need to check the EquivalenceClass data structure, which
-	 * might contain relationships not emitted into the joininfo lists.
+	 * We also need to check the EquivalenceClass data structure, which might
+	 * contain relationships not emitted into the joininfo lists.
 	 */
 	if (!result && rel1->has_eclass_joins && rel2->has_eclass_joins)
 		result = have_relevant_eclass_joinclause(root, rel1, rel2);

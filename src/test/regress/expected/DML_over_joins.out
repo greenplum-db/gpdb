@@ -486,7 +486,7 @@ delete from s where b = (select min(a) from r where b = s.b);
 -- end_ignore
 update p set c = c + 1;
 ERROR:  moving tuple from partition "p_1_prt_extra" to partition "p_1_prt_2" not supported  (seg2 rhel62-vm1:25434 pid=19030)
-update p set c = c + 1 where b in (select b from s);
+update p set c = c + 1 where b in (select b from s where b = 36);
 ERROR:  moving tuple from partition "p_1_prt_extra" to partition "p_1_prt_2" not supported  (seg2 rhel62-vm1:25434 pid=19030)
 -- ----------------------------------------------------------------------
 -- Test: unsupported_cases3.sql

@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/createdb.sgml,v 1.42.2.2 2007/03/26 17:23:44 tgl Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/createdb.sgml,v 1.47 2007/12/11 19:57:32 tgl Exp $
 PostgreSQL documentation
 -->
 
@@ -130,16 +130,6 @@ PostgreSQL documentation
      </varlistentry>
 
      <varlistentry>
-      <term><option>-q</></term>
-      <term><option>--quiet</></term>
-      <listitem>
-       <para>
-        Do not display a response.
-       </para>
-      </listitem>
-     </varlistentry>
-
-     <varlistentry>
       <term><option>-T <replaceable class="parameter">template</replaceable></></term>
       <term><option>--template <replaceable class="parameter">template</replaceable></></term>
       <listitem>
@@ -193,7 +183,7 @@ PostgreSQL documentation
       <term><option>--username <replaceable class="parameter">username</replaceable></></term>
       <listitem>
        <para>
-        User name to connect as
+        User name to connect as.
        </para>
       </listitem>
      </varlistentry>
@@ -203,7 +193,18 @@ PostgreSQL documentation
       <term><option>--password</></term>
       <listitem>
        <para>
-        Force password prompt.
+        Force <application>createdb</application> to prompt for a
+        password before connecting to a database.  
+       </para>
+
+       <para>
+        This option is never essential, since
+        <application>createdb</application> will automatically prompt
+        for a password if the server demands password authentication.
+        However, <application>createdb</application> will waste a
+        connection attempt finding out that the server wants a password.
+        In some cases it is worth typing <option>-W</> to avoid the extra
+        connection attempt.
        </para>
       </listitem>
      </varlistentry>
@@ -275,10 +276,7 @@ PostgreSQL documentation
     database server:
 <screen>
 <prompt>$ </prompt><userinput>createdb demo</userinput>
-<computeroutput>CREATE DATABASE</computeroutput>
 </screen>
-    The response is the same as you would have gotten from running the
-    <command>CREATE DATABASE</command> <acronym>SQL</acronym> command.
    </para>
 
    <para>
@@ -288,8 +286,7 @@ PostgreSQL documentation
     underlying command:
 <screen>
 <prompt>$ </prompt><userinput>createdb -p 5000 -h eden -E LATIN1 -e demo</userinput>
-<computeroutput>CREATE DATABASE "demo" WITH ENCODING = 'LATIN1'</computeroutput>
-<computeroutput>CREATE DATABASE</computeroutput>
+<computeroutput>CREATE DATABASE demo ENCODING 'LATIN1';</computeroutput>
 </screen>
    </para>
  </refsect1>

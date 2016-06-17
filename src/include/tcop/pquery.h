@@ -7,13 +7,14 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/tcop/pquery.h,v 1.40 2007/01/05 22:19:58 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/tcop/pquery.h,v 1.44 2008/01/01 19:45:59 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
 #ifndef PQUERY_H
 #define PQUERY_H
 
+#include "nodes/parsenodes.h"
 #include "utils/portal.h"
 
 
@@ -28,7 +29,8 @@ extern List *FetchStatementTargetList(Node *stmt);
 
 extern void PortalStart(Portal portal, ParamListInfo params,
 						Snapshot snapshot,
-						const char *seqServerHost, int seqServerPort);
+						const char *seqServerHost, int seqServerPort,
+						QueryDispatchDesc *ddesc);
 
 extern void PortalSetResultFormat(Portal portal, int nFormats,
 					  int16 *formats);

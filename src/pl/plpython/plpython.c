@@ -2166,7 +2166,6 @@ PLy_input_tuple_funcs(PLyTypeInfo *arg, TupleDesc desc)
 
 	if (arg->is_rowtype == 0)
 		elog(ERROR, "PLyTypeInfo struct is initialized for a Datum");
-
 	arg->is_rowtype = 1;
 
 	if (arg->in.r.natts != desc->natts)

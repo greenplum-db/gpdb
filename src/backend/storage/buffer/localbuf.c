@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/buffer/localbuf.c,v 1.76 2007/01/05 22:19:37 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/buffer/localbuf.c,v 1.79 2008/01/01 19:45:51 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -57,7 +57,8 @@ static Block GetLocalBufferStorage(void);
  *
  * API is similar to bufmgr.c's BufferAlloc, except that we do not need
  * to do any locking since this is all local.	Also, IO_IN_PROGRESS
- * does not get set.
+ * does not get set.  Lastly, we support only default access strategy
+ * (hence, usage_count is always advanced).
  */
 BufferDesc *
 LocalBufferAlloc(SMgrRelation smgr, BlockNumber blockNum, bool *foundPtr)
@@ -90,7 +91,12 @@ LocalBufferAlloc(SMgrRelation smgr, BlockNumber blockNum, bool *foundPtr)
 		fprintf(stderr, "LB ALLOC (%u,%d) %d\n",
 				RelationGetRelid(reln), blockNum, -b - 1);
 #endif
-
+		/* this part is equivalent to PinBuffer for a shared buffer */
+		if (LocalRefCount[b] == 0)
+		{
+			if (bufHdr->usage_count < BM_MAX_USAGE_COUNT)
+				bufHdr->usage_count++;
+		}
 		LocalRefCount[b]++;
 		ResourceOwnerRememberBuffer(CurrentResourceOwner,
 									BufferDescriptorGetBuffer(bufHdr));
@@ -123,18 +129,21 @@ LocalBufferAlloc(SMgrRelation smgr, BlockNumber blockNum, bool *foundPtr)
 
 		bufHdr = &LocalBufferDescriptors[b];
 
-		if (LocalRefCount[b] == 0 && bufHdr->usage_count == 0)
+		if (LocalRefCount[b] == 0)
 		{
-			LocalRefCount[b]++;
-			ResourceOwnerRememberBuffer(CurrentResourceOwner,
-										BufferDescriptorGetBuffer(bufHdr));
-			break;
-		}
-
-		if (bufHdr->usage_count > 0)
-		{
-			bufHdr->usage_count--;
-			trycounter = NLocBuffer;
+			if (bufHdr->usage_count > 0)
+			{
+				bufHdr->usage_count--;
+				trycounter = NLocBuffer;
+			}
+			else
+			{
+				/* Found a usable buffer */
+				LocalRefCount[b]++;
+				ResourceOwnerRememberBuffer(CurrentResourceOwner,
+										  BufferDescriptorGetBuffer(bufHdr));
+				break;
+			}
 		}
 		else if (--trycounter == 0)
 			ereport(ERROR,
@@ -206,7 +215,7 @@ LocalBufferAlloc(SMgrRelation smgr, BlockNumber blockNum, bool *foundPtr)
 	bufHdr->tag = newTag;
 	bufHdr->flags &= ~(BM_VALID | BM_DIRTY | BM_JUST_DIRTIED | BM_IO_ERROR);
 	bufHdr->flags |= BM_TAG_VALID;
-	bufHdr->usage_count = 0;
+	bufHdr->usage_count = 1;
 
 	*foundPtr = FALSE;
 	return bufHdr;
@@ -360,7 +369,7 @@ GetLocalBufferStorage(void)
 	if (next_buf_in_block >= num_bufs_in_block)
 	{
 		/* Need to make a new request to memmgr */
-		int		num_bufs;
+		int			num_bufs;
 
 		/* Start with a 16-buffer request; subsequent ones double each time */
 		num_bufs = Max(num_bufs_in_block * 2, 16);

@@ -2,8 +2,9 @@
  * gin.h
  *	  header file for postgres inverted index access method implementation.
  *
- *	Copyright (c) 2006, PostgreSQL Global Development Group
- *	$PostgreSQL: pgsql/src/include/access/gin.h,v 1.10 2007/01/31 15:09:45 teodor Exp $
+ *	Copyright (c) 2006-2008, PostgreSQL Global Development Group
+ *
+ *	$PostgreSQL: pgsql/src/include/access/gin.h,v 1.16.2.3 2009/06/05 18:50:52 tgl Exp $
  *--------------------------------------------------------------------------
  */
 
@@ -31,41 +32,35 @@
 #define GIN_CONSISTENT_PROC			   4
 #define GINNProcs					   4
 
-typedef XLogRecPtr GinNSN;
+/*
+ * Max depth allowed in search tree during bulk inserts.  This is to keep from
+ * degenerating to O(N^2) behavior when the tree is unbalanced due to sorted
+ * or nearly-sorted input.  (Perhaps it would be better to use a balanced-tree
+ * algorithm, but in common cases that would only add useless overhead.)
+ */
+#define GIN_MAX_TREE_DEPTH 100
 
 /*
  * Page opaque data in a inverted index page.
+ *
+ * Note: GIN does not include a page ID word as do the other index types.
+ * This is OK because the opaque data is only 8 bytes and so can be reliably
+ * distinguished by size.  Revisit this if the size ever increases.
  */
 typedef struct GinPageOpaqueData
 {
-	uint16		flags;
+	BlockNumber rightlink;		/* next page if any */
 	OffsetNumber maxoff;		/* number entries on GIN_DATA page: number of
 								 * heap ItemPointer on GIN_DATA|GIN_LEAF page
 								 * and number of records on GIN_DATA &
 								 * ~GIN_LEAF page */
-	BlockNumber rightlink;
+	uint16		flags;			/* see bit definitions below */
 } GinPageOpaqueData;
 
 typedef GinPageOpaqueData *GinPageOpaque;
 
 #define GIN_ROOT_BLKNO	(0)
 
-typedef struct
-{
-	BlockIdData child_blkno;	/* use it instead of BlockNumber to save space
-								 * on page */
-	ItemPointerData key;
-} PostingItem;
-
-#define PostingItemGetBlockNumber(pointer) \
-	BlockIdGetBlockNumber(&(pointer)->child_blkno)
-
-#define PostingItemSetBlockNumber(pointer, blockNumber) \
-	BlockIdSet(&((pointer)->child_blkno), (blockNumber))
-
-/*
- * Page opaque data in a inverted index page.
- */
 #define GIN_DATA		  (1 << 0)
 #define GIN_LEAF		  (1 << 1)
 #define GIN_DELETED		  (1 << 2)
@@ -98,8 +93,21 @@ typedef struct
 #define GinItemPointerGetOffsetNumber(pointer) \
 	((pointer)->ip_posid)
 
+typedef struct
+{
+	BlockIdData child_blkno;	/* use it instead of BlockNumber to save space
+								 * on page */
+	ItemPointerData key;
+} PostingItem;
+
+#define PostingItemGetBlockNumber(pointer) \
+	BlockIdGetBlockNumber(&(pointer)->child_blkno)
+
+#define PostingItemSetBlockNumber(pointer, blockNumber) \
+	BlockIdSet(&((pointer)->child_blkno), (blockNumber))
+
 /*
- * Support work on IndexTuuple on leaf pages
+ * Support work on IndexTuple on leaf pages
  */
 #define GinGetNPosting(itup)	GinItemPointerGetOffsetNumber(&(itup)->t_tid)
 #define GinSetNPosting(itup,n)	ItemPointerSetOffsetNumber(&(itup)->t_tid,(n))
@@ -233,7 +241,7 @@ extern void GinInitBuffer(Buffer b, uint32 f);
 extern void GinInitPage(Page page, uint32 f, Size pageSize);
 extern int	compareEntries(GinState *ginstate, Datum a, Datum b);
 extern Datum *extractEntriesS(GinState *ginstate, Datum value,
-							  int32 *nentries, bool *needUnique);
+				int32 *nentries, bool *needUnique);
 extern Datum *extractEntriesSU(GinState *ginstate, Datum value, int32 *nentries);
 extern Page GinPageGetCopyPage(Page page);
 
@@ -314,12 +322,9 @@ extern IndexTuple ginPageGetLinkItup(Buffer buf);
 
 /* gindatapage.c */
 extern int	compareItemPointers(ItemPointer a, ItemPointer b);
-extern void
-MergeItemPointers(
-				  ItemPointerData *dst,
+extern void MergeItemPointers(ItemPointerData *dst,
 				  ItemPointerData *a, uint32 na,
-				  ItemPointerData *b, uint32 nb
-);
+				  ItemPointerData *b, uint32 nb);
 
 extern void GinDataPageAddItem(Page page, void *data, OffsetNumber offset);
 extern void PageDeletePostingItem(Page page, OffsetNumber offset);
@@ -401,8 +406,8 @@ typedef struct GinScanOpaqueData
 
 	GinScanKey	keys;
 	uint32		nkeys;
-	bool		isVoidRes; /* true if ginstate.extractQueryFn 
-							  guarantees that nothing will be found */
+	bool		isVoidRes;		/* true if ginstate.extractQueryFn guarantees
+								 * that nothing will be found */
 
 	GinScanKey	markPos;
 } GinScanOpaqueData;
@@ -420,9 +425,9 @@ extern void newScanKey(IndexScanDesc scan);
 extern PGDLLIMPORT int GinFuzzySearchLimit;
 
 #define ItemPointerSetMax(p)	ItemPointerSet( (p), (BlockNumber)0xffffffff, (OffsetNumber)0xffff )
-#define ItemPointerIsMax(p) ( ItemPointerGetBlockNumber(p) == (BlockNumber)0xffffffff && ItemPointerGetOffsetNumber(p) == (OffsetNumber)0xffff )
+#define ItemPointerIsMax(p) ( GinItemPointerGetBlockNumber(p) == (BlockNumber)0xffffffff && GinItemPointerGetOffsetNumber(p) == (OffsetNumber)0xffff )
 #define ItemPointerSetMin(p)	ItemPointerSet( (p), (BlockNumber)0, (OffsetNumber)0)
-#define ItemPointerIsMin(p) ( ItemPointerGetBlockNumber(p) == (BlockNumber)0 && ItemPointerGetOffsetNumber(p) == (OffsetNumber)0 )
+#define ItemPointerIsMin(p) ( GinItemPointerGetBlockNumber(p) == (BlockNumber)0 && GinItemPointerGetOffsetNumber(p) == (OffsetNumber)0 )
 
 extern Datum gingetmulti(PG_FUNCTION_ARGS);
 extern Datum gingettuple(PG_FUNCTION_ARGS);
@@ -433,6 +438,7 @@ extern Datum ginvacuumcleanup(PG_FUNCTION_ARGS);
 
 /* ginarrayproc.c */
 extern Datum ginarrayextract(PG_FUNCTION_ARGS);
+extern Datum ginqueryarrayextract(PG_FUNCTION_ARGS);
 extern Datum ginarrayconsistent(PG_FUNCTION_ARGS);
 
 /* ginbulk.c */

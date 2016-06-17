@@ -6,7 +6,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/executor/spi_priv.h,v 1.26 2007/01/05 22:19:55 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/executor/spi_priv.h,v 1.31 2008/01/01 19:45:57 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -31,29 +31,43 @@ typedef struct
 	SubTransactionId connectSubid;		/* ID of connecting subtransaction */
 } _SPI_connection;
 
+/*
+ * SPI plans have two states: saved or unsaved.
+ *
+ * For an unsaved plan, the _SPI_plan struct and all its subsidiary data are in
+ * a dedicated memory context identified by plancxt.  An unsaved plan is good
+ * at most for the current transaction, since the locks that protect it from
+ * schema changes will be lost at end of transaction.  Hence the plancxt is
+ * always a transient one.
+ *
+ * For a saved plan, the _SPI_plan struct and the argument type array are in
+ * the plancxt (which can be really small).  All the other subsidiary state
+ * is in plancache entries identified by plancache_list (note: the list cells
+ * themselves are in plancxt).	We rely on plancache.c to keep the cache
+ * entries up-to-date as needed.  The plancxt is a child of CacheMemoryContext
+ * since it should persist until explicitly destroyed.
+ *
+ * To avoid redundant coding, the representation of unsaved plans matches
+ * that of saved plans, ie, plancache_list is a list of CachedPlanSource
+ * structs which in turn point to CachedPlan structs.  However, in an unsaved
+ * plan all these structs are just created by spi.c and are not known to
+ * plancache.c.  We don't try very hard to make all their fields valid,
+ * only the ones spi.c actually uses.
+ *
+ * Note: if the original query string contained only whitespace and comments,
+ * the plancache_list will be NIL and so there is no place to store the
+ * query string.  We don't care about that, but we do care about the
+ * argument type array, which is why it's seemingly-redundantly stored.
+ */
 typedef struct _SPI_plan
 {
 	int			magic;			/* should equal _SPI_PLAN_MAGIC */
 	bool		saved;			/* saved or unsaved plan? */
-	/* Context containing _SPI_plan itself as well as subsidiary data */
-	MemoryContext plancxt;
+	List	   *plancache_list; /* one CachedPlanSource per parsetree */
+	MemoryContext plancxt;		/* Context containing _SPI_plan and data */
 	int			cursor_options; /* Cursor options used for planning */
-	/* Original query string (used for error reporting) */
-	const char *query;
-	/* List of List of querytrees; one sublist per original parsetree */
-	List	   *qtlist;
-	/* List of PlannedStmt* --- length == # of querytrees, but flat list */
-	List	   *ptlist;
-	/* Argument types, if a prepared plan */
 	int			nargs;			/* number of plan arguments */
 	Oid		   *argtypes;		/* Argument types (NULL if nargs is 0) */
-
-	unsigned long	use_count;
 } _SPI_plan;
-
-
-#define _SPI_CPLAN_CURCXT	0
-#define _SPI_CPLAN_PROCXT	1
-#define _SPI_CPLAN_TOPCXT	2
 
 #endif   /* SPI_PRIV_H */

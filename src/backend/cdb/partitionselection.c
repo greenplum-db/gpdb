@@ -17,6 +17,20 @@
 #include "parser/parse_expr.h"
 #include "utils/memutils.h"
 
+/*
+ * During attribute re-mapping for heterogeneous partitions, we use
+ * this struct to identify which varno's attributes will be re-mapped.
+ * Using this struct as a *context* during expression tree walking, we
+ * can skip varattnos that do not belong to a given varno.
+ */
+typedef struct AttrMapContext
+{
+	const AttrNumber *newattno; /* The mapping table to remap the varattno */
+	Index varno; /* Which rte's varattno to re-map */
+} AttrMapContext;
+
+static bool change_varattnos_varno_walker(Node *node, const AttrMapContext *attrMapCxt);
+
 /* ----------------------------------------------------------------
  *		eval_propagation_expression
  *
@@ -712,4 +726,124 @@ static_part_selection(PartitionSelector *ps)
 	return selparts;
 }
 
-/* EOF */
+/*
+ * Generate a map for change_varattnos_of_a_node from old and new TupleDesc's,
+ * matching according to column name. This function returns a NULL pointer (i.e.
+ * null map) if no mapping is necessary (i.e., old and new TupleDesc are already
+ * aligned).
+ *
+ * This function, and change_varattnos_of_a_varno below, used to be in
+ * tablecmds.c, but were removed in upstream commit 188a0a00. But we still need
+ * this for dynamic partition selection in GDPB, so copied them here.
+ */
+AttrNumber *
+varattnos_map(TupleDesc old, TupleDesc new)
+{
+	AttrNumber *attmap;
+	int			i,
+				j;
+
+	bool mapRequired = false;
+
+	attmap = (AttrNumber *) palloc0(sizeof(AttrNumber) * old->natts);
+	for (i = 1; i <= old->natts; i++)
+	{
+		if (old->attrs[i - 1]->attisdropped)
+			continue;			/* leave the entry as zero */
+
+		for (j = 1; j <= new->natts; j++)
+		{
+			if (strcmp(NameStr(old->attrs[i - 1]->attname),
+					   NameStr(new->attrs[j - 1]->attname)) == 0)
+			{
+				attmap[i - 1] = j;
+
+				if (i != j)
+				{
+					mapRequired = true;
+				}
+				break;
+			}
+		}
+	}
+
+	if (!mapRequired)
+	{
+		pfree(attmap);
+
+		/* No mapping required, so return NULL */
+		attmap = NULL;
+	}
+
+	return attmap;
+}
+
+/*
+ * Replace varattno values in an expression tree according to the given
+ * map array, that is, varattno N is replaced by newattno[N-1].  It is
+ * caller's responsibility to ensure that the array is long enough to
+ * define values for all user varattnos present in the tree.  System column
+ * attnos remain unchanged. For historical reason, we only map varattno of the first
+ * range table entry from this method. So, we call the more general
+ * change_varattnos_of_a_varno() with varno set to 1
+ *
+ * Note that the passed node tree is modified in-place!
+ */
+void
+change_varattnos_of_a_node(Node *node, const AttrNumber *newattno)
+{
+	/* Only attempt re-mapping if re-mapping is necessary (i.e., non-null newattno map) */
+	if (newattno)
+	{
+		change_varattnos_of_a_varno(node, newattno, 1 /* varno is hard-coded to 1 (i.e., only first RTE) */);
+	}
+}
+
+/*
+ * Replace varattno values for a given varno RTE index in an expression
+ * tree according to the given map array, that is, varattno N is replaced
+ * by newattno[N-1].  It is caller's responsibility to ensure that the array
+ * is long enough to define values for all user varattnos present in the tree.
+ * System column attnos remain unchanged.
+ *
+ * Note that the passed node tree is modified in-place!
+ */
+void
+change_varattnos_of_a_varno(Node *node, const AttrNumber *newattno, Index varno)
+{
+	AttrMapContext attrMapCxt;
+
+	attrMapCxt.newattno = newattno;
+	attrMapCxt.varno = varno;
+
+	(void) change_varattnos_varno_walker(node, &attrMapCxt);
+}
+
+/*
+ * Remaps the varattno of a varattno in a Var node using an attribute map.
+ */
+static bool
+change_varattnos_varno_walker(Node *node, const AttrMapContext *attrMapCxt)
+{
+	if (node == NULL)
+		return false;
+	if (IsA(node, Var))
+	{
+		Var		   *var = (Var *) node;
+
+		if (var->varlevelsup == 0 && (var->varno == attrMapCxt->varno) &&
+			var->varattno > 0)
+		{
+			/*
+			 * ??? the following may be a problem when the node is multiply
+			 * referenced though stringToNode() doesn't create such a node
+			 * currently.
+			 */
+			Assert(attrMapCxt->newattno[var->varattno - 1] > 0);
+			var->varattno = var->varoattno = attrMapCxt->newattno[var->varattno - 1];
+		}
+		return false;
+	}
+	return expression_tree_walker(node, change_varattnos_varno_walker,
+								  (void *) attrMapCxt);
+}

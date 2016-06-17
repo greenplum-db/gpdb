@@ -105,11 +105,8 @@ extern BOOL AddUserToTokenDacl(HANDLE hToken);
 
 #if defined(WIN32) && !defined(__CYGWIN__)
 #define DEVNULL "nul"
-/* "con" does not work from the Msys 1.0.10 console (part of MinGW). */
-#define DEVTTY	"con"
 #else
 #define DEVNULL "/dev/null"
-#define DEVTTY "/dev/tty"
 #endif
 
 /*
@@ -218,6 +215,16 @@ __attribute__((format(printf, 1, 2)));
 #define printf			pg_printf
 #endif
 #endif   /* USE_REPL_SNPRINTF */
+
+/*
+ * Versions of libintl >= 0.18? try to replace setlocale() with a macro
+ * to their own versions.  Remove the macro, if it exists, because it
+ * ends up calling the wrong version when the backend and libintl use
+ * different versions of msvcrt.
+ */
+#if defined(setlocale) && defined(WIN32)
+#undef setlocale
+#endif
 
 /* Portable prompt handling */
 extern char *simple_prompt(const char *prompt, int maxlen, bool echo);

@@ -5,7 +5,7 @@
  * to contain some useful information. Mechanism differs wildly across
  * platforms.
  *
- * $PostgreSQL: pgsql/src/backend/utils/misc/ps_status.c,v 1.35 2007/02/16 21:34:04 momjian Exp $
+ * $PostgreSQL: pgsql/src/backend/utils/misc/ps_status.c,v 1.38.2.1 2010/05/27 19:19:50 tgl Exp $
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
  * Copyright (c) 2000-2009, PostgreSQL Global Development Group
@@ -54,7 +54,7 @@ bool		update_process_title = true;
  *	   (some other BSD systems)
  * PS_USE_CLOBBER_ARGV
  *	   write over the argv and environment area
- *	   (most SysV-like systems)
+ *	   (Linux and most SysV-like systems)
  * PS_USE_WIN32
  *	   push the string out as the name of a Windows event
  * PS_USE_NONE
@@ -86,7 +86,7 @@ bool		update_process_title = true;
 #endif
 
 #ifndef PS_USE_CLOBBER_ARGV
-/* all but one options need a buffer to write their ps line in */
+/* all but one option need a buffer to write their ps line in */
 #define PS_BUFFER_SIZE 256
 static char ps_buffer[PS_BUFFER_SIZE];
 static const size_t ps_buffer_size = PS_BUFFER_SIZE;
@@ -95,6 +95,8 @@ static char *ps_buffer;			/* will point to argv area */
 static size_t ps_buffer_size;	/* space determined at run time */
 static size_t last_status_len;  /* use to minimize length of clobber */
 #endif   /* PS_USE_CLOBBER_ARGV */
+
+static size_t ps_buffer_cur_len;		/* nominal strlen(ps_buffer) */
 
 static size_t ps_buffer_fixed_size;		/* size of the constant prefix */
 #if (defined(sun) && !defined(BSD))
@@ -262,9 +264,10 @@ init_ps_display(const char *username, const char *dbname,
     if (!IsUnderPostmaster)
         return;
 
-    /* no ps display if you didn't call save_ps_display_args() */
-    if (!save_argv)
-        return;
+	/* no ps display if you didn't call save_ps_display_args() */
+	if (!save_argv)
+		return;
+
 #ifdef PS_USE_CLOBBER_ARGV
     /* If ps_buffer is a pointer, it might still be null */
     if (!ps_buffer)
@@ -344,8 +347,10 @@ init_ps_display(const char *username, const char *dbname,
 	ps_buffer[ps_buffer_fixed_size + ps_host_info_size] = PS_PADDING;
 #endif
 
-    ps_buffer_fixed_size += ps_host_info_size;
+	ps_buffer_cur_len = ps_buffer_fixed_size = strlen(ps_buffer);
 	real_act_prefix_size = ps_buffer_fixed_size;
+
+	set_ps_display(initial_str, true);
 #endif   /* not PS_USE_NONE */
 }
 
@@ -358,13 +363,14 @@ init_ps_display(const char *username, const char *dbname,
 void
 set_ps_display(const char *activity, bool force)
 {
+#ifndef PS_USE_NONE
+	/* update_process_title=off disables updates, unless force = true */
     char   *cp = ps_buffer + ps_buffer_fixed_size;
     char   *ep = ps_buffer + ps_buffer_size;
 
     if (!force && !update_process_title)
         return;
 
-#ifndef PS_USE_NONE
     /* no ps display for stand-alone backend */
     if (!IsUnderPostmaster)
         return;
@@ -413,6 +419,7 @@ set_ps_display(const char *activity, bool force)
 	 * effectively becomes ps_buffer_size.
 	 */
 	real_act_prefix_size = Min(cp, ep) - ps_buffer;
+	ps_buffer_cur_len = real_act_prefix_size;
 
 	/* Append caller's activity string. */
 	if (ep - cp > 0)
@@ -427,9 +434,9 @@ set_ps_display(const char *activity, bool force)
     {
         union pstun pst;
 
-        pst.pst_command = ps_buffer;
-        pstat(PSTAT_SETCMD, pst, strlen(ps_buffer), 0, 0);
-    }
+		pst.pst_command = ps_buffer;
+		pstat(PSTAT_SETCMD, pst, ps_buffer_cur_len, 0, 0);
+	}
 #endif   /* PS_USE_PSTAT */
 
 #ifdef PS_USE_PS_STRINGS
@@ -438,37 +445,11 @@ set_ps_display(const char *activity, bool force)
 #endif   /* PS_USE_PS_STRINGS */
 
 #ifdef PS_USE_CLOBBER_ARGV
-    {
-        int         buflen;
-#if (defined(sun) && !defined(BSD))
-		int         request_buflen = 2 * ps_argument_size + 1;
-#endif
-
-        /* pad unused memory */
-        buflen = strlen(ps_buffer);
-
-#if (defined(sun) && !defined(BSD))
-		/*
-		 * In Solaris, to properly show the ps status display, it requires the length of
-		 * the status at least twice of the original arguments. We pad the '.'s
-		 * if buflen is not big enough. Note that using spaces to pad does not work, 
-		 * and I don't know why.
-		 */
-		if (buflen < request_buflen)
-		{
-			int pad_len = request_buflen - buflen;
-			if (ps_buffer_size < request_buflen)
-				pad_len = ps_buffer_size - buflen;
-			MemSet(ps_buffer + buflen, '.', pad_len);
-			buflen += pad_len;
-		}
-#endif
-
-		/* clobber remainder of old status string */
-		if (last_status_len > buflen)
-			MemSet(ps_buffer + buflen, PS_PADDING, last_status_len - buflen);
-		last_status_len = buflen;
-    }
+	/* pad unused memory; need only clobber remainder of old status string */
+	if (last_status_len > ps_buffer_cur_len)
+		MemSet(ps_buffer + ps_buffer_cur_len, PS_PADDING,
+			   last_status_len - ps_buffer_cur_len);
+	last_status_len = ps_buffer_cur_len;
 #endif   /* PS_USE_CLOBBER_ARGV */
 
 #ifdef PS_USE_WIN32
@@ -501,25 +482,15 @@ static inline const char *
 get_ps_display_from_position(size_t pos, int *displen)
 {
 #ifdef PS_USE_CLOBBER_ARGV
-	size_t		offset;
-
 	/* If ps_buffer is a pointer, it might still be null */
 	if (!ps_buffer)
 	{
 		*displen = 0;
 		return "";
 	}
-
-	/* Remove any trailing spaces to offset the effect of PS_PADDING */
-	offset = ps_buffer_size;
-	while (offset > pos && ps_buffer[offset-1] == PS_PADDING)
-		offset--;
-
-	*displen = offset - pos;
-#else
-	*displen = strlen(ps_buffer + pos);
 #endif
-	Assert(*displen >= 0);
+
+	*displen = (int) (ps_buffer_cur_len - ps_buffer_fixed_size);
 
 	return ps_buffer + pos;
 }

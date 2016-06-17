@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/functioncmds.c,v 1.82 2007/01/22 01:35:20 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/functioncmds.c,v 1.88.2.1 2009/02/24 01:38:49 tgl Exp $
  *
  *
  * DESCRIPTION
@@ -55,14 +55,15 @@
 #include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
+#include "utils/guc.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbdisp_query.h"
 
 static void AlterFunctionOwner_internal(cqContext *pcqCtx,
-										Relation rel, HeapTuple tup, 
-										Oid newOwnerId);
+							Relation rel, HeapTuple tup, 
+							Oid newOwnerId);
 static void CheckForModifySystemFunc(Oid funcOid, List *funcName);
 
 /*
@@ -82,12 +83,13 @@ compute_return_type(TypeName *returnType, Oid languageOid,
 					Oid *prorettype_p, bool *returnsSet_p, Oid shelltypeOid)
 {
 	Oid			rettype;
+	Type		typtup;
 
-	rettype = LookupTypeName(NULL, returnType);
+	typtup = LookupTypeName(NULL, returnType, NULL);
 
-	if (OidIsValid(rettype))
+	if (typtup)
 	{
-		if (!get_typisdefined(rettype))
+		if (!((Form_pg_type) GETSTRUCT(typtup))->typisdefined)
 		{
 			if (languageOid == SQLlanguageId)
 				ereport(ERROR,
@@ -100,6 +102,8 @@ compute_return_type(TypeName *returnType, Oid languageOid,
 						 errmsg("return type %s is only a shell",
 								TypeNameToString(returnType))));
 		}
+		rettype = typeTypeId(typtup);
+		ReleaseSysCache(typtup);
 	}
 	else
 	{
@@ -119,6 +123,13 @@ compute_return_type(TypeName *returnType, Oid languageOid,
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
 					 errmsg("type \"%s\" does not exist", typnam)));
+
+		/* Reject if there's typmod decoration, too */
+		if (returnType->typmods != NIL)
+			ereport(ERROR,
+					(errcode(ERRCODE_SYNTAX_ERROR),
+			errmsg("type modifier cannot be specified for shell type \"%s\"",
+				   typnam)));
 
 		/* Otherwise, go ahead and make a shell type */
 		if (Gp_role == GP_ROLE_EXECUTE)
@@ -142,7 +153,7 @@ compute_return_type(TypeName *returnType, Oid languageOid,
 		if (aclresult != ACLCHECK_OK)
 			aclcheck_error(aclresult, ACL_KIND_NAMESPACE,
 						   get_namespace_name(namespaceId));
-		rettype = TypeShellMakeWithOid(typname, namespaceId, GetUserId(), shelltypeOid);
+		rettype = TypeShellMake(typname, namespaceId, GetUserId(), shelltypeOid);
 		Assert(OidIsValid(rettype));
 	}
 
@@ -208,11 +219,12 @@ examine_parameter_list(List *parameters, Oid languageOid,
 		TypeName   *t = fp->argType;
 		bool		isinput = false;
 		Oid			toid;
+		Type		typtup;
 
-		toid = LookupTypeName(NULL, t);
-		if (OidIsValid(toid))
+		typtup = LookupTypeName(NULL, t, NULL);
+		if (typtup)
 		{
-			if (!get_typisdefined(toid))
+			if (!((Form_pg_type) GETSTRUCT(typtup))->typisdefined)
 			{
 				/* As above, hard error if language is SQL */
 				if (languageOid == SQLlanguageId)
@@ -226,6 +238,8 @@ examine_parameter_list(List *parameters, Oid languageOid,
 							 errmsg("argument type %s is only a shell",
 									TypeNameToString(t))));
 			}
+			toid = typeTypeId(typtup);
+			ReleaseSysCache(typtup);
 		}
 		else
 		{
@@ -233,6 +247,7 @@ examine_parameter_list(List *parameters, Oid languageOid,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
 					 errmsg("type %s does not exist",
 							TypeNameToString(t))));
+			toid = InvalidOid;	/* keep compiler quiet */
 		}
 
 		if (t->setof)
@@ -422,13 +437,15 @@ examine_parameter_list(List *parameters, Oid languageOid,
  * FUNCTION and ALTER FUNCTION and return it via one of the out
  * parameters. Returns true if the passed option was recognized. If
  * the out parameter we were going to assign to points to non-NULL,
- * raise a duplicate error.
+ * raise a duplicate-clause error.	(We don't try to detect duplicate
+ * SET parameters though --- if you're redundant, the last one wins.)
  */
 static bool
 compute_common_attribute(DefElem *defel,
 						 DefElem **volatility_item,
 						 DefElem **strict_item,
 						 DefElem **security_item,
+						 List **set_items,
 						 DefElem **cost_item,
 						 DefElem **rows_item,
 						 DefElem **data_access_item)
@@ -453,6 +470,10 @@ compute_common_attribute(DefElem *defel,
 			goto duplicate_error;
 
 		*security_item = defel;
+	}
+	else if (strcmp(defel->defname, "set") == 0)
+	{
+		*set_items = lappend(*set_items, defel->arg);
 	}
 	else if (strcmp(defel->defname, "cost") == 0)
 	{
@@ -563,6 +584,38 @@ validate_sql_data_access(char data_access, char volatility, Oid languageOid)
 }
 
 /*
+ * Update a proconfig value according to a list of VariableSetStmt items.
+ *
+ * The input and result may be NULL to signify a null entry.
+ */
+static ArrayType *
+update_proconfig_value(ArrayType *a, List *set_items)
+{
+	ListCell   *l;
+
+	foreach(l, set_items)
+	{
+		VariableSetStmt *sstmt = (VariableSetStmt *) lfirst(l);
+
+		Assert(IsA(sstmt, VariableSetStmt));
+		if (sstmt->kind == VAR_RESET_ALL)
+			a = NULL;
+		else
+		{
+			char	   *valuestr = ExtractSetVariableArgs(sstmt);
+
+			if (valuestr)
+				a = GUCArrayAdd(a, sstmt->name, valuestr);
+			else	/* RESET */
+				a = GUCArrayDelete(a, sstmt->name);
+		}
+	}
+
+	return a;
+}
+
+
+/*
  * Dissect the list of options assembled in gram.y into function
  * attributes.
  */
@@ -574,6 +627,7 @@ compute_attributes_sql_style(List *options,
 							 char *volatility_p,
 							 bool *strict_p,
 							 bool *security_definer,
+							 ArrayType **proconfig,
 							 float4 *procost,
 							 float4 *prorows,
 							 char *data_access)
@@ -584,6 +638,7 @@ compute_attributes_sql_style(List *options,
 	DefElem    *volatility_item = NULL;
 	DefElem    *strict_item = NULL;
 	DefElem    *security_item = NULL;
+	List	   *set_items = NIL;
 	DefElem    *cost_item = NULL;
 	DefElem    *rows_item = NULL;
 	DefElem    *data_access_item = NULL;
@@ -614,6 +669,7 @@ compute_attributes_sql_style(List *options,
 										  &volatility_item,
 										  &strict_item,
 										  &security_item,
+										  &set_items,
 										  &cost_item,
 										  &rows_item,
 										  &data_access_item))
@@ -670,6 +726,8 @@ compute_attributes_sql_style(List *options,
 		*strict_p = intVal(strict_item->arg);
 	if (security_item)
 		*security_definer = intVal(security_item->arg);
+	if (set_items)
+		*proconfig = update_proconfig_value(NULL, set_items);
 	if (cost_item)
 	{
 		*procost = defGetNumeric(cost_item);
@@ -960,6 +1018,7 @@ CreateFunction(CreateFunctionStmt *stmt, const char *queryString)
 	bool		isStrict,
 				security;
 	char		volatility;
+	ArrayType  *proconfig;
 	float4		procost;
 	float4		prorows;
 	HeapTuple	languageTuple;
@@ -983,6 +1042,7 @@ CreateFunction(CreateFunctionStmt *stmt, const char *queryString)
 	isStrict = false;
 	security = false;
 	volatility = PROVOLATILE_VOLATILE;
+	proconfig = NULL;
 	procost = -1;				/* indicates not set */
 	prorows = -1;				/* indicates not set */
 	dataAccess = PRODATAACCESS_NONE;
@@ -991,7 +1051,7 @@ CreateFunction(CreateFunctionStmt *stmt, const char *queryString)
 	compute_attributes_sql_style(stmt->options,
 								 &as_clause, &languageOid, &languageName,
 								 &volatility, &isStrict, &security,
-								 &procost, &prorows,
+								 &proconfig, &procost, &prorows,
 								 &dataAccess);
 
 	languageTuple = caql_getfirst(NULL,
@@ -1136,6 +1196,7 @@ CreateFunction(CreateFunctionStmt *stmt, const char *queryString)
 					PointerGetDatum(parameterModes),
 					PointerGetDatum(parameterNames),
 					parameterDefaults,
+					PointerGetDatum(proconfig),
 					procost,
 					prorows,
 					dataAccess,
@@ -1541,6 +1602,7 @@ AlterFunction(AlterFunctionStmt *stmt)
 	DefElem    *volatility_item = NULL;
 	DefElem    *strict_item = NULL;
 	DefElem    *security_def_item = NULL;
+	List	   *set_items = NIL;
 	DefElem    *cost_item = NULL;
 	DefElem    *rows_item = NULL;
 	DefElem    *data_access_item = NULL;
@@ -1592,6 +1654,7 @@ AlterFunction(AlterFunctionStmt *stmt)
 									 &volatility_item,
 									 &strict_item,
 									 &security_def_item,
+									 &set_items,
 									 &cost_item,
 									 &rows_item,
 									 &data_access_item) == false)
@@ -1623,6 +1686,40 @@ AlterFunction(AlterFunctionStmt *stmt)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("ROWS is not applicable when function does not return a set")));
+	}
+	if (set_items)
+	{
+		Datum		datum;
+		bool		isnull;
+		ArrayType  *a;
+		Datum		repl_val[Natts_pg_proc];
+		bool		repl_null[Natts_pg_proc];
+		bool		repl_repl[Natts_pg_proc];
+
+		/* extract existing proconfig setting */
+		datum = SysCacheGetAttr(PROCOID, tup, Anum_pg_proc_proconfig, &isnull);
+		a = isnull ? NULL : DatumGetArrayTypeP(datum);
+
+		/* update according to each SET or RESET item, left to right */
+		a = update_proconfig_value(a, set_items);
+
+		/* update the tuple */
+		memset(repl_repl, false, sizeof(repl_repl));
+		repl_repl[Anum_pg_proc_proconfig - 1] = true;
+
+		if (a == NULL)
+		{
+			repl_val[Anum_pg_proc_proconfig - 1] = (Datum) 0;
+			repl_null[Anum_pg_proc_proconfig - 1] = true;
+		}
+		else
+		{
+			repl_val[Anum_pg_proc_proconfig - 1] = PointerGetDatum(a);
+			repl_null[Anum_pg_proc_proconfig - 1] = false;
+		}
+
+		tup = heap_modify_tuple(tup, RelationGetDescr(rel),
+								repl_val, repl_null, repl_repl);
 	}
 	if (data_access_item)
 	{
@@ -1771,17 +1868,17 @@ CreateCast(CreateCastStmt *stmt)
 	cqContext	cqc2;
 	cqContext  *pcqCtx;
 
-	sourcetypeid = typenameTypeId(NULL, stmt->sourcetype);
-	targettypeid = typenameTypeId(NULL, stmt->targettype);
+	sourcetypeid = typenameTypeId(NULL, stmt->sourcetype, NULL);
+	targettypeid = typenameTypeId(NULL, stmt->targettype, NULL);
 
 	/* No pseudo-types allowed */
-	if (get_typtype(sourcetypeid) == 'p')
+	if (get_typtype(sourcetypeid) == TYPTYPE_PSEUDO)
 		ereport(ERROR,
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 				 errmsg("source data type %s is a pseudo-type",
 						TypeNameToString(stmt->sourcetype))));
 
-	if (get_typtype(targettypeid) == 'p')
+	if (get_typtype(targettypeid) == TYPTYPE_PSEUDO)
 		ereport(ERROR,
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 				 errmsg("target data type %s is a pseudo-type",
@@ -2021,8 +2118,8 @@ DropCast(DropCastStmt *stmt)
 	Oid			castOid;
 
 	/* when dropping a cast, the types must exist even if you use IF EXISTS */
-	sourcetypeid = typenameTypeId(NULL, stmt->sourcetype);
-	targettypeid = typenameTypeId(NULL, stmt->targettype);
+	sourcetypeid = typenameTypeId(NULL, stmt->sourcetype, NULL);
+	targettypeid = typenameTypeId(NULL, stmt->targettype, NULL);
 
 	castOid = caql_getoid_plus(
 			NULL,
@@ -2044,9 +2141,9 @@ DropCast(DropCastStmt *stmt)
 							TypeNameToString(stmt->targettype))));
 		else
 			ereport(NOTICE,
-					(errmsg("cast from type %s to type %s does not exist, skipping",
-							TypeNameToString(stmt->sourcetype),
-							TypeNameToString(stmt->targettype))));
+			 (errmsg("cast from type %s to type %s does not exist, skipping",
+					 TypeNameToString(stmt->sourcetype),
+					 TypeNameToString(stmt->targettype))));
 
 		return;
 	}

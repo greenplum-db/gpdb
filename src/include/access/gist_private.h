@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/gist_private.h,v 1.26 2007/01/20 18:43:35 neilc Exp $
+ * $PostgreSQL: pgsql/src/include/access/gist_private.h,v 1.28.2.3 2008/10/22 12:54:25 teodor Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -62,8 +62,8 @@ typedef struct GISTSTATE
 
 typedef struct MatchedItemPtr 
 {
-        ItemPointerData         heapPtr;
-        OffsetNumber            pageOffset; /* offset in index page */
+	ItemPointerData		heapPtr;
+	OffsetNumber		pageOffset; /* offset in index page */
 } MatchedItemPtr;
 
 /*
@@ -75,6 +75,7 @@ typedef struct GISTScanOpaqueData
 	GISTSearchStack *stack;
 	GISTSearchStack *markstk;
 	uint16		flags;
+	bool        qual_ok;        /* false if qual can never be satisfied */
 	GISTSTATE  *giststate;
 	MemoryContext tempCxt;
 	Buffer		curbuf;
@@ -82,18 +83,17 @@ typedef struct GISTScanOpaqueData
 	Buffer		markbuf;
 	ItemPointerData markpos;
 
-	MatchedItemPtr 	pageData[BLCKSZ/sizeof(IndexTupleData)];
-	OffsetNumber    nPageData;
-	OffsetNumber    curPageData;
-	MatchedItemPtr 	markPageData[BLCKSZ/sizeof(IndexTupleData)];
-	OffsetNumber    markNPageData;
-	OffsetNumber    markCurPageData;
+	MatchedItemPtr	pageData[BLCKSZ/sizeof(IndexTupleData)];
+	OffsetNumber	nPageData;
+	OffsetNumber	curPageData;
+	MatchedItemPtr	markPageData[BLCKSZ/sizeof(IndexTupleData)];
+	OffsetNumber	markNPageData;
+	OffsetNumber	markCurPageData;
 } GISTScanOpaqueData;
 
 typedef GISTScanOpaqueData *GISTScanOpaque;
 
 /* XLog stuff */
-extern const XLogRecPtr XLogRecPtrForTemp;
 
 #define XLOG_GIST_PAGE_UPDATE		0x00
 #define XLOG_GIST_NEW_ROOT			0x20
@@ -357,6 +357,8 @@ extern void gistMakeUnionKey(GISTSTATE *giststate, int attno,
 				 GISTENTRY *entry1, bool isnull1,
 				 GISTENTRY *entry2, bool isnull2,
 				 Datum *dst, bool *dstisnull);
+
+extern XLogRecPtr GetXLogRecPtrForTemp(void);
 
 /* gistvacuum.c */
 extern Datum gistbulkdelete(PG_FUNCTION_ARGS);

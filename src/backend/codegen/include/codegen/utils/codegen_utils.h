@@ -323,7 +323,7 @@ class CodegenUtils {
       ReturnType (*external_function)(ArgumentTypes..., ...),
       const std::string& name = "") {
     return RegisterExternalFunction(
-        reinterpret_cast<ReturnType (*) (ArgumentTypes...)>(external_function),
+        reinterpret_cast<ReturnType (*)(ArgumentTypes...)>(external_function),
         name,
         true);
   }
@@ -745,11 +745,12 @@ class TypeMaker<ReferentType&> {
 // corresponding llvm array types
 template <typename ArrayElementType, size_t N>
 class TypeMaker<ArrayElementType[N]> {
-  public:
-    static llvm::Type* Get(llvm::LLVMContext* context) {
-      llvm::Type* unit_type = codegen_utils_detail::TypeMaker<ArrayElementType>::Get(context);
-      return llvm::ArrayType::get(unit_type, N);
-    }
+ public:
+  static llvm::Type* Get(llvm::LLVMContext* context) {
+    llvm::Type* unit_type =
+      codegen_utils_detail::TypeMaker<ArrayElementType>::Get(context);
+    return llvm::ArrayType::get(unit_type, N);
+  }
 };
 
 }  // namespace codegen_utils_detail
@@ -828,7 +829,9 @@ llvm::FunctionType* CodegenUtils::GetFunctionType(const bool is_var_arg) {
   codegen_utils_detail::TypeVectorBuilder<ArgumentTypes...>::AppendTypes(
       this,
       &argument_types);
-  return llvm::FunctionType::get(GetType<ReturnType>(), argument_types, is_var_arg);
+  return llvm::FunctionType::get(GetType<ReturnType>(),
+                                 argument_types,
+                                 is_var_arg);
 }
 
 // ----------------------------------------------------------------------------
@@ -1088,7 +1091,6 @@ auto CodegenUtils::GetFunctionPointerImpl(const std::string& function_name)
 template <typename FunctionType>
 void CodegenUtils::CreateFallback(llvm::Function* regular_function,
                                   llvm::Function* generated_function) {
-
   assert(regular_function != nullptr);
   assert(generated_function != nullptr);
 
@@ -1100,7 +1102,9 @@ void CodegenUtils::CreateFallback(llvm::Function* regular_function,
   llvm::CallInst* call_fallback_func = ir_builder()->CreateCall(
       regular_function, forwarded_args);
   /* Return the result of the call, or void if the function returns void. */
-  if (std::is_same<typename codegen_utils_detail::FunctionTypeUnpacker<FunctionType>::R, void>::value) {
+  if (std::is_same<typename
+      codegen_utils_detail::FunctionTypeUnpacker<FunctionType>::R,
+                                                 void>::value) {
     ir_builder()->CreateRetVoid();
   } else {
     ir_builder()->CreateRet(call_fallback_func);

@@ -202,10 +202,14 @@ select cn,
   count(*) over (order by cn range between '-11' preceding and '-2' following)
   from customer; -- error, negative values not permitted
 ERROR:  RANGE parameter cannot be negative
+LINE 2:   count(*) over (order by cn range between '-11' preceding a...
+                                                   ^
 select cn,
   sum(cn) over (order by cn range NULL preceding)
   from customer; -- we don't permit NULL
 ERROR:  RANGE parameter cannot be NULL
+LINE 2:   sum(cn) over (order by cn range NULL preceding)
+                                          ^
 select cn,
   sum(cn) over (order by cn range '1'::float8 preceding)
   from customer; -- this, however, should work
@@ -1231,6 +1235,8 @@ FROM sale;
 -- Reject DISTINCT qualified aggs when an ORDER BY is present
 SELECT count(distinct sale.pn) OVER (order by sale.pn) from sale;
 ERROR:  DISTINCT cannot be used with window specification containing an ORDER BY clause
+LINE 1: SELECT count(distinct sale.pn) OVER (order by sale.pn) from ...
+               ^
 -- Aggregate nesting --
 create table olap_tmp_for_window_seq(g integer, h integer, i integer, x integer);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'g' as the Greenplum Database data distribution key for this table.
@@ -8022,7 +8028,7 @@ group by
     2*b.g,
     lower(f);
 ERROR:  unresolved grouping key in window query
-HINT:  You may need to use explicit aliases and/or to refer to grouping keys in the same way throughout the query.
+HINT:  You might need to use explicit aliases and/or to refer to grouping keys in the same way throughout the query.
 -- End MPP-12082
 -- MPP-12913
 select count(*) over (partition by 1 order by cn rows between 1 preceding and 1 preceding) from sale;

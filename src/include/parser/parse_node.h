@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/parser/parse_node.h,v 1.51 2007/01/05 22:19:57 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/parser/parse_node.h,v 1.53 2008/01/01 19:45:58 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -19,15 +19,6 @@
 #include "utils/rel.h"
 
 struct HTAB;  /* utils/hsearch.h */
-
-/*
- * CDB: Parse analysis location stack for error reporting
- */
-typedef struct ParseStateBreadCrumb 
-{
-	Node						   *node;
-	struct ParseStateBreadCrumb	   *pop; 
-} ParseStateBreadCrumb;
 
 /*
  * State information used during parse analysis
@@ -74,7 +65,6 @@ typedef struct ParseStateBreadCrumb
 typedef struct ParseState
 {
 	struct ParseState *parentParseState;		/* stack link */
-	ParseStateBreadCrumb    p_breadcrumb;       /* top of err location stack */
 	const char *p_sourcetext;	/* source text, or NULL if not available */
 	List	   *p_rtable;		/* range table so far */
 	List	   *p_joinlist;		/* join items so far (will become FromExpr
@@ -107,10 +97,23 @@ typedef struct ParseState
 	bool        p_propagateSetopTypes;      /* if possible to propagate types on Setop */
 } ParseState;
 
+/* Support for parser_errposition_callback function */
+typedef struct ParseCallbackState
+{
+	ParseState *pstate;
+	int			location;
+	ErrorContextCallback errcontext;
+} ParseCallbackState;
+
+
 extern ParseState *make_parsestate(ParseState *parentParseState);
 extern void free_parsestate(ParseState *pstate);
 extern struct HTAB *parser_get_namecache(ParseState *pstate);
 extern int	parser_errposition(ParseState *pstate, int location);
+
+extern void setup_parser_errposition_callback(ParseCallbackState *pcbstate,
+								  ParseState *pstate, int location);
+extern void cancel_parser_errposition_callback(ParseCallbackState *pcbstate);
 
 extern Var *make_var(ParseState *pstate, RangeTblEntry *rte, int attrno,
 		 int location);

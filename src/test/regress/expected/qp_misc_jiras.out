@@ -33,7 +33,7 @@ ERROR:  CREATE INDEX CONCURRENTLY is not supported
 alter table qp_misc_jiras.tbl1318 alter column aa type integer using  bit_length(aa);
 drop index qp_misc_jiras.tbl1318_daa;
 ERROR:  index "tbl1318_daa" does not exist
-alter table qp_misc_jiras.tbl1318 alter column aa type integer using  bit_length(aa);
+alter table qp_misc_jiras.tbl1318 alter column aa type integer using  bit_length(aa::text);
 drop table qp_misc_jiras.tbl1318;
 create table qp_misc_jiras.tbl1318(dummy integer, aa text not null);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'dummy' as the Greenplum Database data distribution key for this table.
@@ -1499,12 +1499,12 @@ NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_33" for table "t
 NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_34" for table "tbl6419_test"
 NOTICE:  CREATE TABLE will create partition "tbl6419_test_1_prt_35" for table "tbl6419_test"
 insert into qp_misc_jiras.tbl6419_test values( 123, '2009-06-01', 12, '2009-06-01 01:01:01', 'aaaaaa');
-select * from qp_misc_jiras.tbl6419_test where icedt = (select partitionrangestart FROM pg_partitions where tablename='test1' and schemaname='public' and partitionrank=1);
+select * from qp_misc_jiras.tbl6419_test where icedt::text = (select partitionrangestart FROM pg_partitions where tablename='test1' and schemaname='public' and partitionrank=1);
  lstg_id | icedt | icehr | cre_time | lstg_desc_txt 
 ---------+-------+-------+----------+---------------
 (0 rows)
 
-select * from qp_misc_jiras.tbl6419_test where '2009-12-12'::date = (select 'test'::text);
+select * from qp_misc_jiras.tbl6419_test where '2009-12-12'::date::text = (select 'test'::text);
  lstg_id | icedt | icehr | cre_time | lstg_desc_txt 
 ---------+-------+-------+----------+---------------
 (0 rows)
@@ -1742,7 +1742,7 @@ WHERE T.SQ = 1
 (0 rows)
 
 drop table qp_misc_jiras.ins_cr_nds_dt, qp_misc_jiras.ins_cr_nds_mstr, qp_misc_jiras.m_ccr_cvr_nds_t99, qp_misc_jiras.m_ccr_mthy_cr_nds_t00;
-reset gp_select_invisible;
+set gp_select_invisible=false;
 create table qp_misc_jiras.tbl6448 (x "char");
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'x' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -2725,10 +2725,10 @@ end;
 $$
 language plpgsql;
 select gp_segment_id, a, func2(a) from qp_misc_jiras.fim1; -- we should disallow this
-ERROR:  function cannot execute on segment because it accesses relation "qp_misc_jiras.pg_foo" (functions.c:155)  (seg2 slice1 nikos-mac:25434 pid=94008)
+ERROR:  function cannot execute on segment because it accesses relation "qp_misc_jiras.pg_foo" (functions.c:156)  (seg2 slice1 nikos-mac:25434 pid=94008)
 DETAIL:  
 SQL statement "select count(*) from qp_misc_jiras.pg_foo"
-PL/pgSQL function "func2" line 4 at execute statement
+PL/pgSQL function "func2" line 4 at EXECUTE statement
 create or replace function func3(int) returns int as $$
 declare
 	t1 int;
@@ -3416,10 +3416,6 @@ PL/pgSQL function "tbl5032_func" line 2 at SQL statement
 (1 row)
 
 SELECT qp_misc_jiras.tbl5032_func();
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'text' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-CONTEXT:  SQL statement "CREATE TEMP TABLE tbl5032_tt AS SELECT 'hello world!'::text"
-PL/pgSQL function "tbl5032_func" line 2 at SQL statement
  tbl5032_func 
 --------------
  
@@ -3451,10 +3447,6 @@ PL/pgSQL function "tbl5032_func" line 2 at SQL statement
 (1 row)
 
 SELECT qp_misc_jiras.tbl5032_func();
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'text' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-CONTEXT:  SQL statement "CREATE TEMP TABLE tbl5032_tt AS SELECT 'hello world!'::text"
-PL/pgSQL function "tbl5032_func" line 2 at SQL statement
  tbl5032_func 
 --------------
  

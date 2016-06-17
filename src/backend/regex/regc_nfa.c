@@ -93,7 +93,7 @@ newnfa(struct vars * v,
  * TooManyStates - checks if the max states exceeds the compile-time value
  */
 static int
-TooManyStates(struct nfa * nfa)
+TooManyStates(struct nfa *nfa)
 {
 	struct nfa *parent = nfa->parent;
 	size_t		sz = nfa->size;
@@ -112,7 +112,7 @@ TooManyStates(struct nfa * nfa)
  * IncrementSize - increases the tracked size of the NFA and its parents.
  */
 static void
-IncrementSize(struct nfa * nfa)
+IncrementSize(struct nfa *nfa)
 {
 	struct nfa *parent = nfa->parent;
 
@@ -128,7 +128,7 @@ IncrementSize(struct nfa * nfa)
  * DecrementSize - decreases the tracked size of the NFA and its parents.
  */
 static void
-DecrementSize(struct nfa * nfa)
+DecrementSize(struct nfa *nfa)
 {
 	struct nfa *parent = nfa->parent;
 
@@ -856,8 +856,7 @@ pull(struct nfa * nfa,
 
 	/*
 	 * DGP 2007-11-15: Cloning a state with a circular constraint on its list
-	 * of outs can lead to trouble [Tcl Bug 1810038], so get rid of them
-	 * first.
+	 * of outs can lead to trouble [Tcl Bug 1810038], so get rid of them first.
 	 */
 	for (a = from->outs; a != NULL; a = nexta)
 	{
@@ -999,12 +998,12 @@ push(struct nfa * nfa,
 	}
 
 	/*
-	 * DGP 2007-11-15: Here we duplicate the same protections as appear in
-	 * pull() above to avoid troubles with cloning a state with a circular
-	 * constraint on its list of ins.  It is not clear whether this is
-	 * necessary, or is protecting against a "can't happen". Any test case
-	 * that actually leads to a freearc() call here would be a welcome
-	 * addition to the test suite.
+	 * DGP 2007-11-15: Here we duplicate the same protections as appear
+	 * in pull() above to avoid troubles with cloning a state with a
+	 * circular constraint on its list of ins.  It is not clear whether
+	 * this is necessary, or is protecting against a "can't happen".
+	 * Any test case that actually leads to a freearc() call here would
+	 * be a welcome addition to the test suite.
 	 */
 	for (a = to->ins; a != NULL; a = nexta)
 	{
@@ -1330,14 +1329,16 @@ compact(struct nfa * nfa,
 	for (s = nfa->states; s != NULL; s = s->next)
 	{
 		nstates++;
-		narcs += 1 + s->nouts + 1;
-		/* 1 as a fake for flags, nouts for arcs, 1 as endmarker */
+		narcs += s->nouts + 1;		/* need one extra for endmarker */
 	}
 
+	cnfa->stflags = (char *) MALLOC(nstates * sizeof(char));
 	cnfa->states = (struct carc **) MALLOC(nstates * sizeof(struct carc *));
 	cnfa->arcs = (struct carc *) MALLOC(narcs * sizeof(struct carc));
-	if (cnfa->states == NULL || cnfa->arcs == NULL)
+	if (cnfa->stflags == NULL || cnfa->states == NULL || cnfa->arcs == NULL)
 	{
+		if (cnfa->stflags != NULL)
+			FREE(cnfa->stflags);
 		if (cnfa->states != NULL)
 			FREE(cnfa->states);
 		if (cnfa->arcs != NULL)
@@ -1359,9 +1360,8 @@ compact(struct nfa * nfa,
 	for (s = nfa->states; s != NULL; s = s->next)
 	{
 		assert((size_t) s->no < nstates);
+		cnfa->stflags[s->no] = 0;
 		cnfa->states[s->no] = ca;
-		ca->co = 0;				/* clear and skip flags "arc" */
-		ca++;
 		first = ca;
 		for (a = s->outs; a != NULL; a = a->outchain)
 			switch (a->type)
@@ -1392,8 +1392,8 @@ compact(struct nfa * nfa,
 
 	/* mark no-progress states */
 	for (a = nfa->pre->outs; a != NULL; a = a->outchain)
-		cnfa->states[a->to->no]->co = 1;
-	cnfa->states[nfa->pre->no]->co = 1;
+		cnfa->stflags[a->to->no] = CNFA_NOPROGRESS;
+	cnfa->stflags[nfa->pre->no] = CNFA_NOPROGRESS;
 }
 
 /*
@@ -1433,6 +1433,7 @@ freecnfa(struct cnfa * cnfa)
 {
 	assert(cnfa->nstates != 0); /* not empty already */
 	cnfa->nstates = 0;
+	FREE(cnfa->stflags);
 	FREE(cnfa->states);
 	FREE(cnfa->arcs);
 }
@@ -1617,7 +1618,7 @@ dumpcnfa(struct cnfa * cnfa,
 		fprintf(f, ", haslacons");
 	fprintf(f, "\n");
 	for (st = 0; st < cnfa->nstates; st++)
-		dumpcstate(st, cnfa->states[st], cnfa, f);
+		dumpcstate(st, cnfa, f);
 	fflush(f);
 }
 #endif
@@ -1629,22 +1630,20 @@ dumpcnfa(struct cnfa * cnfa,
  */
 static void
 dumpcstate(int st,
-		   struct carc * ca,
 		   struct cnfa * cnfa,
 		   FILE *f)
 {
-	int			i;
+	struct carc * ca;
 	int			pos;
 
-	fprintf(f, "%d%s", st, (ca[0].co) ? ":" : ".");
+	fprintf(f, "%d%s", st, (cnfa->stflags[st] & CNFA_NOPROGRESS) ? ":" : ".");
 	pos = 1;
-	for (i = 1; ca[i].co != COLORLESS; i++)
+	for (ca = cnfa->states[st]; ca->co != COLORLESS; ca++)
 	{
-		if (ca[i].co < cnfa->ncolors)
-			fprintf(f, "\t[%ld]->%d", (long) ca[i].co, ca[i].to);
+		if (ca->co < cnfa->ncolors)
+			fprintf(f, "\t[%ld]->%d", (long) ca->co, ca->to);
 		else
-			fprintf(f, "\t:%ld:->%d", (long) ca[i].co - cnfa->ncolors,
-					ca[i].to);
+			fprintf(f, "\t:%ld:->%d", (long) (ca->co - cnfa->ncolors), ca->to);
 		if (pos == 5)
 		{
 			fprintf(f, "\n");
@@ -1653,7 +1652,7 @@ dumpcstate(int st,
 		else
 			pos++;
 	}
-	if (i == 1 || pos != 1)
+	if (ca == cnfa->states[st] || pos != 1)
 		fprintf(f, "\n");
 	fflush(f);
 }

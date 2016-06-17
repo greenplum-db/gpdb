@@ -11,7 +11,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/memutils.h,v 1.61 2007/01/05 22:19:59 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/utils/memutils.h,v 1.64 2008/01/01 19:45:59 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -77,8 +77,6 @@ typedef struct SharedChunkHeader
  * used by pfree() and repalloc() to find the context to call.	The allocated
  * size is not absolutely essential, but it's expected to be needed by any
  * reasonable implementation.
- *
- * NB: Chunks allocated from an AsetDirectContext have no StandardChunkHeader.
  */
 typedef struct StandardChunkHeader
 {
@@ -191,9 +189,9 @@ extern PGDLLIMPORT MemoryContext TopTransactionContext;
 extern PGDLLIMPORT MemoryContext CurTransactionContext;
 extern PGDLLIMPORT MemoryContext MemoryAccountMemoryContext;
 
-/* These two are transient links to contexts owned by other objects: */
-extern PGDLLIMPORT MemoryContext QueryContext;
+/* This is a transient link to the active portal's memory context: */
 extern PGDLLIMPORT MemoryContext PortalContext;
+
 
 /*
  * Memory-context-type-independent functions in mcxt.c
@@ -334,28 +332,6 @@ DeleteAndRestoreSwitchedMemoryContext(SwitchedMemoryContext context)
 	MemoryContextSwitchTo(context.oldContext);
 	MemoryContextDelete(context.newContext);
 }
-
-/* asetdirect.c */
-
-/*
- * AsetDirectContextCreate
- *
- * Create a context which allocates directly from malloc().
- *
- * Limited functionality.  Space can be freed only by resetting
- * or deleting the MemoryContext.
- *
- * Allocations from this context are not preceded by a StandardChunkHeader.
- * Therefore the caller must make certain never to pass an allocation obtained
- * from an AsetDirectContext to any of the following functions:
- *      pfree()
- *      repalloc()
- *      GetMemoryChunkSpace()
- *      GetMemoryChunkContext()
- *      MemoryContextContains()
- */
-extern MemoryContext AsetDirectContextCreate(MemoryContext parent, const char *name);
-
 
 /*
  * floor_log2_Size

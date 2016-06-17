@@ -3,12 +3,12 @@
  * plpgsql.h		- Definitions for the PL/pgSQL
  *			  procedural language
  *
- * Portions Copyright (c) 1996-2007, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/plpgsql.h,v 1.85 2007/02/09 03:35:34 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/plpgsql.h,v 1.95.2.2 2009/12/29 17:41:18 heikki Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -174,20 +174,22 @@ typedef struct PLpgSQL_expr
 	int			dtype;
 	int			exprno;
 	char	   *query;
-	void	   *plan;
-	bool			cachable;			/* true if plan can be cached */
+	SPIPlanPtr	plan;
+	bool		cachable;			/* true if plan can be cached */
 	Oid		   *plan_argtypes;
 	/* fields for "simple expression" fast-path execution: */
 	Expr	   *expr_simple_expr;		/* NULL means not a simple expr */
 	Oid			expr_simple_type;
 	TransactionId	transaction_id;	/* used for clearing cached plan */
+	int			expr_simple_generation; /* plancache generation we checked */
 
 	/*
 	 * if expr is simple AND prepared in current eval_estate,
-	 * expr_simple_state is valid.  Test validity by seeing if expr_simple_id
-	 * matches eval_estate_simple_id.
+	 * expr_simple_state and expr_simple_in_use are valid. Test validity by
+	 * seeing if expr_simple_id matches eval_estate_simple_id.
 	 */
-	ExprState  *expr_simple_state;
+	ExprState  *expr_simple_state;		/* eval tree for expr_simple_expr */
+	bool		expr_simple_in_use;		/* true if eval tree is active */
 	long int	expr_simple_id;
 
 	/* params to pass to expr */
@@ -209,6 +211,7 @@ typedef struct
 	PLpgSQL_expr *default_val;
 	PLpgSQL_expr *cursor_explicit_expr;
 	int			cursor_explicit_argrow;
+	int			cursor_options;
 
 	Datum		value;
 	bool		isnull;
@@ -403,7 +406,7 @@ typedef struct
 	PLpgSQL_var *var;
 	PLpgSQL_expr *lower;
 	PLpgSQL_expr *upper;
-	PLpgSQL_expr *by;
+	PLpgSQL_expr *step;			/* NULL means default (ie, BY 1) */
 	int			reverse;
 	List	   *body;			/* List of statements */
 } PLpgSQL_stmt_fori;
@@ -438,6 +441,7 @@ typedef struct
 	int			cmd_type;
 	int			lineno;
 	int			curvar;
+	int			cursor_options;
 	PLpgSQL_row *returntype;
 	PLpgSQL_expr *argquery;
 	PLpgSQL_expr *query;
@@ -446,12 +450,16 @@ typedef struct
 
 
 typedef struct
-{								/* FETCH curvar INTO statement		*/
+{								/* FETCH or MOVE statement */
 	int			cmd_type;
 	int			lineno;
-	PLpgSQL_rec *rec;
+	PLpgSQL_rec *rec;			/* target, as record or row */
 	PLpgSQL_row *row;
-	int			curvar;
+	int			curvar;			/* cursor variable to fetch from */
+	FetchDirection direction;	/* fetch direction */
+	int			how_many;		/* count, if constant (expr is NULL) */
+	PLpgSQL_expr *expr;			/* count, if expression */
+	bool		is_move;		/* is this a fetch or move? */
 } PLpgSQL_stmt_fetch;
 
 
@@ -468,7 +476,7 @@ typedef struct
 	int			cmd_type;
 	int			lineno;
 	bool		is_exit;		/* Is this an exit or a continue? */
-	char	   *label;
+	char	   *label;			/* NULL if it's an unlabelled EXIT/CONTINUE */
 	PLpgSQL_expr *cond;
 } PLpgSQL_stmt_exit;
 
@@ -617,6 +625,7 @@ typedef struct
 
 	Tuplestorestate *tuple_store;		/* SRFs accumulate results here */
 	MemoryContext tuple_store_cxt;
+	ResourceOwner tuple_store_owner;
 	ReturnSetInfo *rsi;
 
 	int			trig_nargs;
@@ -630,9 +639,9 @@ typedef struct
 	SPITupleTable *eval_tuptable;
 	uint64		eval_processed;
 	Oid			eval_lastoid;
-	ExprContext *eval_econtext;	/* for executing simple expressions */
+	ExprContext *eval_econtext; /* for executing simple expressions */
 	EState	   *eval_estate;	/* EState containing eval_econtext */
-	long int	eval_estate_simple_id;		/* ID for eval_estate */
+	long int	eval_estate_simple_id;	/* ID for eval_estate */
 
 	/* status information for error context reporting */
 	PLpgSQL_function *err_func; /* current func */
@@ -724,9 +733,9 @@ extern PLpgSQL_function *plpgsql_compile(FunctionCallInfo fcinfo,
 				bool forValidator);
 extern PLpgSQL_function *plpgsql_compile_inline(FunctionCallInfo fcinfo, 
 				char *proc_source);
-extern int	plpgsql_parse_word(char *word);
-extern int	plpgsql_parse_dblword(char *word);
-extern int	plpgsql_parse_tripword(char *word);
+extern int	plpgsql_parse_word(const char *word);
+extern int	plpgsql_parse_dblword(const char *word);
+extern int	plpgsql_parse_tripword(const char *word);
 extern int	plpgsql_parse_wordtype(char *word);
 extern int	plpgsql_parse_dblwordtype(char *word);
 extern int	plpgsql_parse_tripwordtype(char *word);
@@ -762,7 +771,7 @@ extern HeapTuple plpgsql_exec_trigger(PLpgSQL_function *func,
 					 TriggerData *trigdata);
 extern void plpgsql_xact_cb(XactEvent event, void *arg);
 extern void plpgsql_subxact_cb(SubXactEvent event, SubTransactionId mySubid,
-							   SubTransactionId parentSubid, void *arg);
+				   SubTransactionId parentSubid, void *arg);
 
 /* ----------
  * Functions for the dynamic string handling in pl_funcs.c
@@ -775,15 +784,17 @@ extern void plpgsql_dstring_append_char(PLpgSQL_dstring *ds, char c);
 extern char *plpgsql_dstring_get(PLpgSQL_dstring *ds);
 
 /* ----------
- * Functions for the namestack handling in pl_funcs.c
+ * Functions for namestack handling in pl_funcs.c
  * ----------
  */
 extern void plpgsql_ns_init(void);
 extern bool plpgsql_ns_setlocal(bool flag);
-extern void plpgsql_ns_push(char *label);
+extern void plpgsql_ns_push(const char *label);
 extern void plpgsql_ns_pop(void);
 extern void plpgsql_ns_additem(int itemtype, int itemno, const char *name);
-extern PLpgSQL_nsitem *plpgsql_ns_lookup(char *name, char *nsname);
+extern PLpgSQL_nsitem *plpgsql_ns_lookup(const char *name1, const char *name2,
+										 const char *name3, int *names_used);
+extern PLpgSQL_nsitem *plpgsql_ns_lookup_label(const char *name);
 extern void plpgsql_ns_rename(char *oldname, char *newname);
 
 /* ----------

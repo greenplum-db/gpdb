@@ -2,7 +2,7 @@
  *
  * bgwriter.c
  *
- * The background writer (bgwriter) is new as of Postgres 8.0.  It attempts
+ * The background writer (bgwriter) is new as of Postgres 8.0.	It attempts
  * to keep regular backends from having to write out dirty shared buffers
  * (which they would only do when needing to free a shared buffer to read in
  * another page).  In the best scenario all writes from shared buffers will
@@ -33,19 +33,21 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/postmaster/bgwriter.c,v 1.36 2007/01/17 16:25:01 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/postmaster/bgwriter.c,v 1.48 2008/01/01 19:45:51 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
 #include <signal.h>
+#include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
 
 #include "access/xlog_internal.h"
 #include "libpq/pqsignal.h"
 #include "miscadmin.h"
+#include "pgstat.h"
 #include "postmaster/bgwriter.h"
 #include "storage/fd.h"
 #include "storage/freespace.h"
@@ -54,6 +56,7 @@
 #include "storage/pmsignal.h"
 #include "storage/shmem.h"
 #include "storage/smgr.h"
+#include "storage/spin.h"
 #include "tcop/tcopprot.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
@@ -65,8 +68,14 @@
 /*----------
  * Shared memory area for communication between bgwriter and backends
  *
+ * num_backend_writes is used to count the number of buffer writes performed
+ * by non-bgwriter processes.  This counter should be wide enough that it
+ * can't overflow during a single bgwriter cycle.
+ *
  * The requests array holds fsync requests sent by backends and not yet
- * absorbed by the bgwriter.  Unlike the checkpoint fields, the requests
+ * absorbed by the bgwriter.
+ *
+ * Unlike the checkpoint fields, num_backend_writes and the requests
  * fields are protected by BgWriterCommLock.
  *----------
  */
@@ -80,6 +89,8 @@ typedef struct
 typedef struct
 {
 	pid_t		bgwriter_pid;	/* PID of bgwriter (0 if not started) */
+
+	uint32		num_backend_writes;		/* counts non-bgwriter buffer writes */
 
 	int			num_requests;	/* current # of requests */
 	int			max_requests;	/* allocated array size */
@@ -106,6 +117,14 @@ static volatile sig_atomic_t shutdown_requested = false;
 static bool am_bg_writer = false;
 static time_t last_xlog_switch_time;
 
+/* Prototypes for private functions */
+
+static void BgWriterNap(void);
+static void CheckArchiveTimeout(void);
+static bool CompactBgwriterRequestQueue(void);
+
+/* Signal handlers */
+
 static void BgSigHupHandler(SIGNAL_ARGS);
 static void ReqCheckpointSmgrCloseHandler(SIGNAL_ARGS);
 static void ReqShutdownHandler(SIGNAL_ARGS);
@@ -122,15 +141,14 @@ BackgroundWriterMain(void)
 	sigjmp_buf	local_sigjmp_buf;
 	MemoryContext bgwriter_context;
 
-	Assert(BgWriterShmem != NULL);
 	BgWriterShmem->bgwriter_pid = MyProcPid;
 	am_bg_writer = true;
 
 	/*
 	 * If possible, make this process a group leader, so that the postmaster
-	 * can signal any child processes too.  (bgwriter probably never has
-	 * any child processes, but for consistency we make all postmaster
-	 * child processes do this.)
+	 * can signal any child processes too.	(bgwriter probably never has any
+	 * child processes, but for consistency we make all postmaster child
+	 * processes do this.)
 	 */
 #ifdef HAVE_SETSID
 	if (setsid() < 0)
@@ -272,8 +290,6 @@ BackgroundWriterMain(void)
 	for (;;)
 	{
 		bool		do_checkpoint_smgrcloseall = false;
-		time_t		now = time(NULL);
-		long		udelay;
 
 		/*
 		 * Emergency bailout if postmaster has died.  This is to avoid the
@@ -343,83 +359,109 @@ BackgroundWriterMain(void)
 		else
 			BgBufferSync();
 
-		/*
-		 * Check for archive_timeout, if so, switch xlog files.  First we do a
-		 * quick check using possibly-stale local state.
-		 */
-		if (XLogArchiveTimeout > 0 &&
-			(int) (now - last_xlog_switch_time) >= XLogArchiveTimeout)
-		{
-			/*
-			 * Update local state ... note that last_xlog_switch_time is the
-			 * last time a switch was performed *or requested*.
-			 */
-			time_t		last_time = GetLastSegSwitchTime();
+		/* Check for archive_timeout and switch xlog files if necessary. */
+		CheckArchiveTimeout();
 
-			last_xlog_switch_time = Max(last_xlog_switch_time, last_time);
-
-			/* if we did a checkpoint, 'now' might be stale too */
-			if (do_checkpoint_smgrcloseall)
-				now = time(NULL);
-
-			/* Now we can do the real check */
-			if ((int) (now - last_xlog_switch_time) >= XLogArchiveTimeout)
-			{
-				XLogRecPtr	switchpoint;
-
-				/* OK, it's time to switch */
-				switchpoint = RequestXLogSwitch();
-
-				/*
-				 * If the returned pointer points exactly to a segment
-				 * boundary, assume nothing happened.
-				 */
-				if ((switchpoint.xrecoff % XLogSegSize) != 0)
-					ereport(DEBUG1,
-							(errmsg("transaction log switch forced (archive_timeout=%d)",
-									XLogArchiveTimeout)));
-
-				/*
-				 * Update state in any case, so we don't retry constantly when
-				 * the system is idle.
-				 */
-				last_xlog_switch_time = now;
-			}
-		}
-
-		/*
-		 * Nap for the configured time, or sleep for 10 seconds if there is no
-		 * bgwriter activity configured.
-		 *
-		 * On some platforms, signals won't interrupt the sleep.  To ensure we
-		 * respond reasonably promptly when someone signals us, break down the
-		 * sleep into 1-second increments, and check for interrupts after each
-		 * nap.
-		 *
-		 * We absorb pending requests after each short sleep.
-		 */
-		if ((bgwriter_all_percent > 0.0 && bgwriter_all_maxpages > 0) ||
-			(bgwriter_lru_percent > 0.0 && bgwriter_lru_maxpages > 0))
-			udelay = BgWriterDelay * 1000L;
-		else if (XLogArchiveTimeout > 0)
-			udelay = 1000000L;	/* One second */
-		else
-			udelay = 10000000L; /* Ten seconds */
-
-		while (udelay > 999999L)
-		{
-			if (got_SIGHUP || checkpoint_smgrcloseall_requested || shutdown_requested)
-				break;
-			pg_usleep(1000000L);
-			AbsorbFsyncRequests();
-			udelay -= 1000000L;
-		}
-
-		if (!(got_SIGHUP || checkpoint_smgrcloseall_requested || shutdown_requested))
-			pg_usleep(udelay);
+		/* Nap for the configured time. */
+		BgWriterNap();
 	}
 }
 
+/*
+ * CheckArchiveTimeout -- check for archive_timeout and switch xlog files
+ *		if needed
+ */
+static void
+CheckArchiveTimeout(void)
+{
+	time_t		now;
+	time_t		last_time;
+
+	if (XLogArchiveTimeout <= 0)
+		return;
+
+	now = time(NULL);
+
+	/* First we do a quick check using possibly-stale local state. */
+	if ((int) (now - last_xlog_switch_time) < XLogArchiveTimeout)
+		return;
+
+	/*
+	 * Update local state ... note that last_xlog_switch_time is the last time
+	 * a switch was performed *or requested*.
+	 */
+	last_time = GetLastSegSwitchTime();
+
+	last_xlog_switch_time = Max(last_xlog_switch_time, last_time);
+
+	/* Now we can do the real check */
+	if ((int) (now - last_xlog_switch_time) >= XLogArchiveTimeout)
+	{
+		XLogRecPtr	switchpoint;
+
+		/* OK, it's time to switch */
+		switchpoint = RequestXLogSwitch();
+
+		/*
+		 * If the returned pointer points exactly to a segment boundary,
+		 * assume nothing happened.
+		 */
+		if ((switchpoint.xrecoff % XLogSegSize) != 0)
+			ereport(DEBUG1,
+				(errmsg("transaction log switch forced (archive_timeout=%d)",
+						XLogArchiveTimeout)));
+
+		/*
+		 * Update state in any case, so we don't retry constantly when the
+		 * system is idle.
+		 */
+		last_xlog_switch_time = now;
+	}
+}
+
+/*
+ * BgWriterNap -- Nap for the configured time or until a signal is received.
+ */
+void
+BgWriterNap(void)
+{
+	long		udelay;
+
+	/*
+	 * Send off activity statistics to the stats collector
+	 */
+	pgstat_send_bgwriter();
+
+	/*
+	 * Nap for the configured time, or sleep for 10 seconds if there is no
+	 * bgwriter activity configured.
+	 *
+	 * On some platforms, signals won't interrupt the sleep.  To ensure we
+	 * respond reasonably promptly when someone signals us, break down the
+	 * sleep into 1-second increments, and check for interrupts after each
+	 * nap.
+	 *
+	 * We absorb pending requests after each short sleep.
+	 */
+	if (bgwriter_lru_maxpages > 0)
+		udelay = BgWriterDelay * 1000L;
+	else if (XLogArchiveTimeout > 0)
+		udelay = 1000000L;		/* One second */
+	else
+		udelay = 10000000L;		/* Ten seconds */
+
+	while (udelay > 999999L)
+	{
+		if (got_SIGHUP || shutdown_requested)
+			break;
+		pg_usleep(1000000L);
+		AbsorbFsyncRequests();
+		udelay -= 1000000L;
+	}
+
+	if (!(got_SIGHUP || shutdown_requested))
+		pg_usleep(udelay);
+}
 
 /* --------------------------------
  *		signal handler routines
@@ -479,21 +521,28 @@ BgWriterShmemSize(void)
 void
 BgWriterShmemInit(void)
 {
+	Size		size = BgWriterShmemSize();
 	bool		found;
 
 	BgWriterShmem = (BgWriterShmemStruct *)
 		ShmemInitStruct("Background Writer Data",
-						BgWriterShmemSize(),
+						size,
 						&found);
 	if (BgWriterShmem == NULL)
 		ereport(FATAL,
 				(errcode(ERRCODE_OUT_OF_MEMORY),
 				 errmsg("not enough shared memory for background writer")));
-	if (found)
-		return;					/* already initialized */
 
-	MemSet(BgWriterShmem, 0, sizeof(BgWriterShmemStruct));
-	BgWriterShmem->max_requests = NBuffers;
+	if (!found)
+	{
+		/*
+		 * First time through, so initialize.  Note that we zero the whole
+		 * requests array; this is so that CompactBgwriterRequestQueue
+		 * can assume that any pad bytes in the request structs are zeroes.
+		 */
+		MemSet(BgWriterShmem, 0, size);
+		BgWriterShmem->max_requests = NBuffers;
+	}
 }
 
 /*
@@ -504,8 +553,8 @@ void
 RequestCheckpointSmgrCloseAll(void)
 {
 	/*
-	 * Send signal to request checkpoint.  When waitforit is false, we
-	 * consider failure to send the signal to be nonfatal.
+	 * Send signal to request checkpoint.  When not waiting, we consider
+	 * failure to send the signal to be nonfatal.
 	 */
 	if (BgWriterShmem->bgwriter_pid == 0)
 		elog(LOG,
@@ -522,21 +571,23 @@ RequestCheckpointSmgrCloseAll(void)
  * Whenever a backend is compelled to write directly to a relation
  * (which should be seldom, if the bgwriter is getting its job done),
  * the backend calls this routine to pass over knowledge that the relation
- * is dirty and must be fsync'd before next checkpoint.
+ * is dirty and must be fsync'd before next checkpoint.  We also use this
+ * opportunity to count such writes for statistical purposes.
  *
  * segno specifies which segment (not block!) of the relation needs to be
  * fsync'd.  (Since the valid range is much less than BlockNumber, we can
  * use high values for special flags; that's all internal to md.c, which
  * see for details.)
  *
- * If we are unable to pass over the request (at present, this can happen
- * if the shared memory queue is full), we return false.  That forces
- * the backend to do its own fsync.  We hope that will be even more seldom.
- *
- * Note: we presently make no attempt to eliminate duplicate requests
- * in the requests[] queue.  The bgwriter will have to eliminate dups
- * internally anyway, so we may as well avoid holding the lock longer
- * than we have to here.
+ * To avoid holding the lock for longer than necessary, we normally write
+ * to the requests[] queue without checking for duplicates.  The bgwriter
+ * will have to eliminate dups internally anyway.  However, if we discover
+ * that the queue is full, we make a pass over the entire queue to compact
+ * it.  This is somewhat expensive, but the alternative is for the backend
+ * to perform its own fsync, which is far more expensive in practice.  It
+ * is theoretically possible a backend fsync might still be necessary, if
+ * the queue is full and contains no duplicate entries.  In that case, we
+ * let the backend know by returning false.
  */
 bool
 ForwardFsyncRequest(RelFileNode rnode, BlockNumber segno)
@@ -545,11 +596,24 @@ ForwardFsyncRequest(RelFileNode rnode, BlockNumber segno)
 
 	if (!IsUnderPostmaster)
 		return false;			/* probably shouldn't even get here */
-	Assert(BgWriterShmem != NULL);
+
+	if (am_bg_writer)
+		elog(ERROR, "ForwardFsyncRequest must not be called in bgwriter");
 
 	LWLockAcquire(BgWriterCommLock, LW_EXCLUSIVE);
+
+	/* we count non-bgwriter writes even when the request queue overflows */
+	BgWriterShmem->num_backend_writes++;
+
+	/*
+	 * If the background writer isn't running or the request queue is full,
+	 * the backend will have to perform its own fsync request.  But before
+	 * forcing that to happen, we can try to compact the background writer
+	 * request queue.
+	 */
 	if (BgWriterShmem->bgwriter_pid == 0 ||
-		BgWriterShmem->num_requests >= BgWriterShmem->max_requests)
+		(BgWriterShmem->num_requests >= BgWriterShmem->max_requests
+		&& !CompactBgwriterRequestQueue()))
 	{
 		LWLockRelease(BgWriterCommLock);
 		return false;
@@ -562,13 +626,129 @@ ForwardFsyncRequest(RelFileNode rnode, BlockNumber segno)
 }
 
 /*
+ * CompactBgwriterRequestQueue
+ *		Remove duplicates from the request queue to avoid backend fsyncs.
+ *		Returns "true" if any entries were removed.
+ *
+ * Although a full fsync request queue is not common, it can lead to severe
+ * performance problems when it does happen.  So far, this situation has
+ * only been observed to occur when the system is under heavy write load,
+ * and especially during the "sync" phase of a checkpoint.	Without this
+ * logic, each backend begins doing an fsync for every block written, which
+ * gets very expensive and can slow down the whole system.
+ *
+ * Trying to do this every time the queue is full could lose if there
+ * aren't any removable entries.  But that should be vanishingly rare in
+ * practice: there's one queue entry per shared buffer.
+ */
+bool
+CompactBgwriterRequestQueue(void)
+{
+	struct BgWriterSlotMapping
+	{
+		BgWriterRequest request;
+		int			slot;
+	};
+
+	int			n,
+				preserve_count;
+	int			num_skipped = 0;
+	HASHCTL		ctl;
+	HTAB	   *htab;
+	bool	   *skip_slot;
+
+	/* must hold BgWriterCommLock in exclusive mode */
+	Assert(LWLockHeldByMe(BgWriterCommLock));
+
+	/* Initialize skip_slot array */
+	skip_slot = palloc0(sizeof(bool) * BgWriterShmem->num_requests);
+
+	/* Initialize temporary hash table */
+	MemSet(&ctl, 0, sizeof(ctl));
+	ctl.keysize = sizeof(BgWriterRequest);
+	ctl.entrysize = sizeof(struct BgWriterSlotMapping);
+	ctl.hash = tag_hash;
+	ctl.hcxt = CurrentMemoryContext;
+
+	htab = hash_create("CompactBgwriterRequestQueue",
+					   BgWriterShmem->num_requests,
+					   &ctl,
+					   HASH_ELEM | HASH_FUNCTION | HASH_CONTEXT);
+
+	/*
+	 * The basic idea here is that a request can be skipped if it's followed
+	 * by a later, identical request.  It might seem more sensible to work
+	 * backwards from the end of the queue and check whether a request is
+	 * *preceded* by an earlier, identical request, in the hopes of doing less
+	 * copying.  But that might change the semantics, if there's an
+	 * intervening FORGET_RELATION_FSYNC or FORGET_DATABASE_FSYNC request, so
+	 * we do it this way.  It would be possible to be even smarter if we made
+	 * the code below understand the specific semantics of such requests (it
+	 * could blow away preceding entries that would end up being canceled
+	 * anyhow), but it's not clear that the extra complexity would buy us
+	 * anything.
+	 */
+	for (n = 0; n < BgWriterShmem->num_requests; n++)
+	{
+		BgWriterRequest *request;
+		struct BgWriterSlotMapping *slotmap;
+		bool		found;
+
+		/*
+		 * We use the request struct directly as a hashtable key.  This
+		 * assumes that any padding bytes in the structs are consistently the
+		 * same, which should be okay because we zeroed them in
+		 * BgWriterShmemInit.  Note also that RelFileNode had better
+		 * contain no pad bytes.
+		 */
+		request = &BgWriterShmem->requests[n];
+		slotmap = hash_search(htab, request, HASH_ENTER, &found);
+		if (found)
+		{
+			/* Duplicate, so mark the previous occurrence as skippable */
+			skip_slot[slotmap->slot] = true;
+			num_skipped++;
+		}
+		/* Remember slot containing latest occurrence of this request value */
+		slotmap->slot = n;
+	}
+
+	/* Done with the hash table. */
+	hash_destroy(htab);
+
+	/* If no duplicates, we're out of luck. */
+	if (!num_skipped)
+	{
+		pfree(skip_slot);
+		return false;
+	}
+
+	/* We found some duplicates; remove them. */
+	preserve_count = 0;
+	for (n = 0; n < BgWriterShmem->num_requests; n++)
+	{
+		if (skip_slot[n])
+			continue;
+		BgWriterShmem->requests[preserve_count++] = BgWriterShmem->requests[n];
+	}
+	ereport(DEBUG1,
+	   (errmsg("compacted fsync request queue from %d entries to %d entries",
+			   BgWriterShmem->num_requests, preserve_count)));
+	BgWriterShmem->num_requests = preserve_count;
+
+	/* Cleanup. */
+	pfree(skip_slot);
+	return true;
+}
+
+/*
  * AbsorbFsyncRequests
  *		Retrieve queued fsync requests and pass them to local smgr.
  *
  * This is exported because it must be called during CreateCheckPoint;
- * we have to be sure we have accepted all pending requests *after* we
- * establish the checkpoint REDO pointer.  Since CreateCheckPoint
- * sometimes runs in non-bgwriter processes, do nothing if not bgwriter.
+ * we have to be sure we have accepted all pending requests just before
+ * we start fsync'ing.  Since CreateCheckPoint sometimes runs in
+ * non-bgwriter processes, do nothing if not bgwriter.
  */
 void
 AbsorbFsyncRequests(void)
@@ -594,6 +774,10 @@ AbsorbFsyncRequests(void)
 	 * array.
 	 */
 	LWLockAcquire(BgWriterCommLock, LW_EXCLUSIVE);
+
+	/* Transfer write count into pending pgstats message */
+	BgWriterStats.m_buf_written_backend += BgWriterShmem->num_backend_writes;
+	BgWriterShmem->num_backend_writes = 0;
 
 	n = BgWriterShmem->num_requests;
 	if (n > 0)

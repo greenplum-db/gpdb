@@ -169,17 +169,13 @@ ERROR:  unsupported ON COMMIT and foreign key combination
 DETAIL:  Table "temptest4" references "temptest3", but they do not have the same ON COMMIT setting.
 -- Test manipulation of temp schema's placement in search path
 create table public.whereami (f1 text);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into public.whereami values ('public');
 create temp table whereami (f1 text);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into whereami values ('temp');
 create function public.whoami() returns text
-  as $$select 'public'::text$$ language sql CONTAINS SQL;
+  as $$select 'public'::text$$ language sql;
 create function pg_temp.whoami() returns text
-  as $$select 'temp'::text$$ language sql CONTAINS SQL;
+  as $$select 'temp'::text$$ language sql;
 -- default should have pg_temp implicitly first, but only for tables
 select * from whereami;
   f1  

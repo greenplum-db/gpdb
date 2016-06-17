@@ -37,7 +37,7 @@
 #endif
 
 /* keep this in same order as ExecStatusType in libpq-fe.h */
-char	   *const pgresStatus[] = {
+char *const pgresStatus[] = {
 	"PGRES_EMPTY_QUERY",
 	"PGRES_COMMAND_OK",
 	"PGRES_TUPLES_OK",
@@ -1053,7 +1053,6 @@ fail:
 	return 0;
 }
 
-
 int
 PQsendGpQuery_shared(PGconn *conn, char *shared_query, int query_len)
 {
@@ -1660,7 +1659,7 @@ PQisBusy(PGconn *conn)
 PGresult *
 PQgetResult(PGconn *conn)
 {
-	PGresult   *res;
+	PGresult *res;
 
 	if (!conn)
 		return NULL;
@@ -1671,7 +1670,7 @@ PQgetResult(PGconn *conn)
 	/* If not ready to return something, block until we are. */
 	while (conn->asyncStatus == PGASYNC_BUSY)
 	{
-		int			flushResult;
+		int	flushResult;
 
 		/*
 		 * If data remains unsent, send it.  Else we might be waiting for the

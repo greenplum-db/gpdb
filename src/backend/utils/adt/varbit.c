@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/varbit.c,v 1.52 2007/01/05 22:19:42 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/varbit.c,v 1.57.2.2 2010/01/07 19:53:22 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -28,9 +28,9 @@
 static int32
 anybit_typmodin(ArrayType *ta, const char *typename)
 {
-	int32    typmod;
-	int32	*tl;
-	int		n;
+	int32		typmod;
+	int32	   *tl;
+	int			n;
 
 	tl = ArrayGetIntegerTypmods(ta, &n);
 
@@ -63,7 +63,7 @@ anybit_typmodin(ArrayType *ta, const char *typename)
 static char *
 anybit_typmodout(int32 typmod)
 {
-	char    *res = (char *) palloc(64);
+	char	   *res = (char *) palloc(64);
 
 	if (typmod >= 0)
 		snprintf(res, 64, "(%d)", typmod);
@@ -390,7 +390,7 @@ bit(PG_FUNCTION_ARGS)
 Datum
 bittypmodin(PG_FUNCTION_ARGS)
 {
-	ArrayType    *ta = PG_GETARG_ARRAYTYPE_P(0);
+	ArrayType  *ta = PG_GETARG_ARRAYTYPE_P(0);
 
 	PG_RETURN_INT32(anybit_typmodin(ta, "bit"));
 }
@@ -398,7 +398,7 @@ bittypmodin(PG_FUNCTION_ARGS)
 Datum
 bittypmodout(PG_FUNCTION_ARGS)
 {
-	int32 typmod = PG_GETARG_INT32(0);
+	int32		typmod = PG_GETARG_INT32(0);
 
 	PG_RETURN_CSTRING(anybit_typmodout(typmod));
 }
@@ -703,7 +703,7 @@ varbit(PG_FUNCTION_ARGS)
 Datum
 varbittypmodin(PG_FUNCTION_ARGS)
 {
-	ArrayType    *ta = PG_GETARG_ARRAYTYPE_P(0);
+	ArrayType  *ta = PG_GETARG_ARRAYTYPE_P(0);
 
 	PG_RETURN_INT32(anybit_typmodin(ta, "varbit"));
 }
@@ -711,7 +711,7 @@ varbittypmodin(PG_FUNCTION_ARGS)
 Datum
 varbittypmodout(PG_FUNCTION_ARGS)
 {
-	int32 typmod = PG_GETARG_INT32(0);
+	int32		typmod = PG_GETARG_INT32(0);
 
 	PG_RETURN_CSTRING(anybit_typmodout(typmod));
 }
@@ -973,13 +973,23 @@ bitsubstr(PG_FUNCTION_ARGS)
 			   *ps;
 
 	bitlen = VARBITLEN(arg);
-	/* If we do not have an upper bound, set bitlen */
-	if (l == -1)
-		l = bitlen;
-	e = s + l;
 	s1 = Max(s, 1);
-	e1 = Min(e, bitlen + 1);
-	if (s1 > bitlen || e1 < 1)
+	/* If we do not have an upper bound, use end of string */
+	if (l < 0)
+	{
+		e1 = bitlen + 1;
+	}
+	else
+	{
+		e = s + l;
+		/* guard against overflow, even though we don't allow L<0 here */
+		if (e < s)
+			ereport(ERROR,
+					(errcode(ERRCODE_SUBSTRING_ERROR),
+					 errmsg("negative substring length not allowed")));
+		e1 = Min(e, bitlen + 1);
+	}
+	if (s1 > bitlen || e1 <= s1)
 	{
 		/* Need to return a zero-length bitstring */
 		len = VARBITTOTALLEN(0);
@@ -1374,7 +1384,12 @@ bitfromint4(PG_FUNCTION_ARGS)
 	/* store first fractional byte */
 	if (destbitsleft > srcbitsleft)
 	{
-		*r++ = (bits8) ((a >> (srcbitsleft - 8)) & BITMASK);
+		int		val = (int) (a >> (destbitsleft - 8));
+
+		/* Force sign-fill in case the compiler implements >> as zero-fill */
+		if (a < 0)
+			val |= (-1) << (srcbitsleft + 8 - destbitsleft);
+		*r++ = (bits8) (val & BITMASK);
 		destbitsleft -= 8;
 	}
 	/* Now srcbitsleft and destbitsleft are the same, need not track both */
@@ -1453,7 +1468,12 @@ bitfromint8(PG_FUNCTION_ARGS)
 	/* store first fractional byte */
 	if (destbitsleft > srcbitsleft)
 	{
-		*r++ = (bits8) ((a >> (srcbitsleft - 8)) & BITMASK);
+		int		val = (int) (a >> (destbitsleft - 8));
+
+		/* Force sign-fill in case the compiler implements >> as zero-fill */
+		if (a < 0)
+			val |= (-1) << (srcbitsleft + 8 - destbitsleft);
+		*r++ = (bits8) (val & BITMASK);
 		destbitsleft -= 8;
 	}
 	/* Now srcbitsleft and destbitsleft are the same, need not track both */

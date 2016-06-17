@@ -1,3 +1,29 @@
+===========================
+Persistent tables utilities
+===========================
+
+ Function to rebuild free TID list
+
+ The function gp_persistent_freelist_rebuild(OID) may be used to
+ reconstruct free TID list in a persistent table.  Persistent table's
+ OID is the input parameter.  The function must be invoked in utility
+ mode on the affected segment.  To create the function:
+
+   create function gp_persistent_freelist_rebuild(oid) returns int as
+      '$libdir/gp_persistent_util', 'gp_persistent_freelist_rebuild'
+      language C strict;
+
+ To rebuild the free TID list in gp_persistent_relation_node, connect
+ in utility mode to the affected segment and run:
+
+   select gp_persistent_freelist_rebuild(
+      'gp_persistent_relation_node'::regclass);
+
+ The number of free tuples is returned.
+
+================================================
+Diagnostic functions for Append-optimized tables
+================================================
 
  The procedure described in this utility will allow a user to retrieve 
  internal information about an AO or CO table.

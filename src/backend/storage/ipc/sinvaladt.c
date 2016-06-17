@@ -20,7 +20,9 @@
 #include "miscadmin.h"
 #include "storage/backendid.h"
 #include "storage/ipc.h"
+#include "storage/lock.h"
 #include "storage/lwlock.h"
+#include "storage/proc.h"
 #include "storage/procsignal.h"
 #include "storage/shmem.h"
 #include "storage/sinvaladt.h"
@@ -152,6 +154,14 @@ typedef struct ProcState
 	 * schema changes.
 	 */
 	bool		sendOnly;		/* backend only sends, never receives */
+
+	/*
+	 * Next LocalTransactionId to use for each idle backend slot.  We keep
+	 * this here because it is indexed by BackendId and it is convenient to
+	 * copy the value to and from local memory when MyBackendId is set. It's
+	 * meaningless in an active ProcState entry.
+	 */
+	LocalTransactionId nextLXID;
 } ProcState;
 
 /* Shared cache invalidation memory segment */
@@ -184,6 +194,8 @@ typedef struct SISeg
 
 static SISeg *shmInvalBuffer;	/* pointer to the shared inval buffer */
 
+
+static LocalTransactionId nextLocalTransactionId;
 
 static void CleanupInvalidationState(int status, Datum arg);
 
@@ -232,7 +244,7 @@ CreateSharedInvalidationState(void)
 
 	/* The buffer[] array is initially all unused, so we need not fill it */
 
-	/* Mark all backends inactive */
+	/* Mark all backends inactive, and initialize nextLXID */
 	for (i = 0; i < shmInvalBuffer->maxBackends; i++)
 	{
 		shmInvalBuffer->procState[i].procPid = 0;		/* inactive */
@@ -240,6 +252,7 @@ CreateSharedInvalidationState(void)
 		shmInvalBuffer->procState[i].resetState = false;
 		shmInvalBuffer->procState[i].signaled = false;
 		shmInvalBuffer->procState[i].hasMessages = false;
+		shmInvalBuffer->procState[i].nextLXID = InvalidLocalTransactionId;
 	}
 }
 
@@ -294,6 +307,12 @@ SharedInvalBackendInit(bool sendOnly)
 
 	MyBackendId = (stateP - &segP->procState[0]) + 1;
 
+	/* Advertise assigned backend ID in MyProc */
+	MyProc->backendId = MyBackendId;
+
+	/* Fetch next local transaction ID into local memory */
+	nextLocalTransactionId = stateP->nextLXID;
+
 	/* mark myself active, with all extant messages already read */
 	stateP->procPid = MyProcPid;
 	stateP->nextMsgNum = segP->maxMsgNum;
@@ -330,6 +349,9 @@ CleanupInvalidationState(int status, Datum arg)
 	LWLockAcquire(SInvalWriteLock, LW_EXCLUSIVE);
 
 	stateP = &segP->procState[MyBackendId - 1];
+
+	/* Update next local transaction ID for next holder of this backendID */
+	nextLocalTransactionId = stateP->nextLXID;
 
 	/* Mark myself inactive */
 	stateP->procPid = 0;
@@ -679,4 +701,32 @@ SICleanupQueue(bool callerHasWriteLock, int minFree)
 		if (!callerHasWriteLock)
 			LWLockRelease(SInvalWriteLock);
 	}
+}
+
+
+/*
+ * GetNextLocalTransactionId --- allocate a new LocalTransactionId
+ *
+ * We split VirtualTransactionIds into two parts so that it is possible
+ * to allocate a new one without any contention for shared memory, except
+ * for a bit of additional overhead during backend startup/shutdown.
+ * The high-order part of a VirtualTransactionId is a BackendId, and the
+ * low-order part is a LocalTransactionId, which we assign from a local
+ * counter.  To avoid the risk of a VirtualTransactionId being reused
+ * within a short interval, successive procs occupying the same backend ID
+ * slot should use a consecutive sequence of local IDs, which is implemented
+ * by copying nextLocalTransactionId as seen above.
+ */
+LocalTransactionId
+GetNextLocalTransactionId(void)
+{
+	LocalTransactionId result;
+
+	/* loop to avoid returning InvalidLocalTransactionId at wraparound */
+	do
+	{
+		result = nextLocalTransactionId++;
+	} while (!LocalTransactionIdIsValid(result));
+
+	return result;
 }

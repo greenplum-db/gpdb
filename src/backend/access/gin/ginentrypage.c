@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *			$PostgreSQL: pgsql/src/backend/access/gin/ginentrypage.c,v 1.5.2.1 2007/06/04 15:59:19 teodor Exp $
+ *			$PostgreSQL: pgsql/src/backend/access/gin/ginentrypage.c,v 1.12 2008/01/01 19:45:46 momjian Exp $
  *-------------------------------------------------------------------------
  */
 
@@ -354,12 +354,12 @@ entryPlaceToPage(GinBtree btree, Buffer buf, OffsetNumber off, XLogRecData **prd
 	static XLogRecData rdata[3];
 	OffsetNumber placed;
 	static ginxlogInsert data;
-	int 	cnt=0;
+	int			cnt = 0;
 
 	*prdata = rdata;
 	data.updateBlkno = entryPreparePage(btree, page, off);
 
-	placed = PageAddItem(page, (Item) btree->entry, IndexTupleSize(btree->entry), off, LP_USED);
+	placed = PageAddItem(page, (Item) btree->entry, IndexTupleSize(btree->entry), off, false, false);
 	if (placed != off)
 		elog(ERROR, "failed to add item to index page in \"%s\"",
 			 RelationGetRelationName(btree->index));
@@ -372,14 +372,14 @@ entryPlaceToPage(GinBtree btree, Buffer buf, OffsetNumber off, XLogRecData **prd
 	data.isData = false;
 	data.isLeaf = GinPageIsLeaf(page) ? TRUE : FALSE;
 
-    /*
-	 * Prevent full page write if child's split occurs. That is needed
-	 * to remove incomplete splits while replaying WAL
+	/*
+	 * Prevent full page write if child's split occurs. That is needed to
+	 * remove incomplete splits while replaying WAL
 	 *
-	 * data.updateBlkno contains new block number (of newly created right page)
-	 * for recently splited page.
+	 * data.updateBlkno contains new block number (of newly created right
+	 * page) for recently splited page.
 	 */
-	if ( data.updateBlkno == InvalidBlockNumber ) 
+	if (data.updateBlkno == InvalidBlockNumber)
 	{
 		rdata[0].buffer = buf;
 		rdata[0].buffer_std = TRUE;
@@ -392,7 +392,7 @@ entryPlaceToPage(GinBtree btree, Buffer buf, OffsetNumber off, XLogRecData **prd
 	rdata[cnt].buffer = InvalidBuffer;
 	rdata[cnt].data = (char *) &data;
 	rdata[cnt].len = sizeof(ginxlogInsert);
-	rdata[cnt].next = &rdata[cnt+1];
+	rdata[cnt].next = &rdata[cnt + 1];
 	cnt++;
 
 	rdata[cnt].buffer = InvalidBuffer;
@@ -511,7 +511,7 @@ entrySplitPage(GinBtree btree, Buffer lbuf, Buffer rbuf, OffsetNumber off, XLogR
 			lsize += MAXALIGN(IndexTupleSize(itup)) + sizeof(ItemIdData);
 		}
 
-		if (PageAddItem(page, (Item) itup, IndexTupleSize(itup), InvalidOffsetNumber, LP_USED) == InvalidOffsetNumber)
+		if (PageAddItem(page, (Item) itup, IndexTupleSize(itup), InvalidOffsetNumber, false, false) == InvalidOffsetNumber)
 			elog(ERROR, "failed to add item to index page in \"%s\"",
 				 RelationGetRelationName(btree->index));
 		ptr += MAXALIGN(IndexTupleSize(itup));
@@ -575,11 +575,11 @@ entryFillRoot(GinBtree btree __attribute__((unused)), Buffer root, Buffer lbuf, 
 	page = BufferGetPage(root);
 
 	itup = ginPageGetLinkItup(lbuf);
-	if (PageAddItem(page, (Item) itup, IndexTupleSize(itup), InvalidOffsetNumber, LP_USED) == InvalidOffsetNumber)
+	if (PageAddItem(page, (Item) itup, IndexTupleSize(itup), InvalidOffsetNumber, false, false) == InvalidOffsetNumber)
 		elog(ERROR, "failed to add item to index root page");
 
 	itup = ginPageGetLinkItup(rbuf);
-	if (PageAddItem(page, (Item) itup, IndexTupleSize(itup), InvalidOffsetNumber, LP_USED) == InvalidOffsetNumber)
+	if (PageAddItem(page, (Item) itup, IndexTupleSize(itup), InvalidOffsetNumber, false, false) == InvalidOffsetNumber)
 		elog(ERROR, "failed to add item to index root page");
 }
 

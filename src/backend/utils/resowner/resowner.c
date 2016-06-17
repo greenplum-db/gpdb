@@ -14,7 +14,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/resowner/resowner.c,v 1.23 2007/01/05 22:19:47 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/resowner/resowner.c,v 1.27.2.1 2009/12/03 11:03:44 heikki Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -59,10 +59,20 @@ typedef struct ResourceOwnerData
 	Relation   *relrefs;		/* dynamically allocated array */
 	int			maxrelrefs;		/* currently allocated array size */
 
+	/* We have built-in support for remembering plancache references */
+	int			nplanrefs;		/* number of owned plancache pins */
+	CachedPlan **planrefs;		/* dynamically allocated array */
+	int			maxplanrefs;	/* currently allocated array size */
+
 	/* We have built-in support for remembering tupdesc references */
 	int			ntupdescs;		/* number of owned tupdesc references */
 	TupleDesc  *tupdescs;		/* dynamically allocated array */
 	int			maxtupdescs;	/* currently allocated array size */
+
+	/* We have built-in support for remembering open temporary files */
+	int			nfiles;			/* number of owned temporary files */
+	File	   *files;			/* dynamically allocated array */
+	int			maxfiles;		/* currently allocated array size */
 } ResourceOwnerData;
 
 
@@ -93,7 +103,9 @@ static void ResourceOwnerReleaseInternal(ResourceOwner owner,
 							 bool isCommit,
 							 bool isTopLevel);
 static void PrintRelCacheLeakWarning(Relation rel);
+static void PrintPlanCacheLeakWarning(CachedPlan *plan);
 static void PrintTupleDescLeakWarning(TupleDesc tupdesc);
+static void PrintFileLeakWarning(File file);
 
 
 /*****************************************************************************
@@ -299,12 +311,27 @@ ResourceOwnerReleaseInternal(ResourceOwner owner,
                                              owner->name);
 			ReleaseCatCacheList(owner->catlistrefs[owner->ncatlistrefs - 1]);
 		}
+		/* Ditto for plancache references */
+		while (owner->nplanrefs > 0)
+		{
+			if (isCommit)
+				PrintPlanCacheLeakWarning(owner->planrefs[owner->nplanrefs - 1]);
+			ReleaseCachedPlan(owner->planrefs[owner->nplanrefs - 1], true);
+		}
 		/* Ditto for tupdesc references */
 		while (owner->ntupdescs > 0)
 		{
 			if (isCommit)
 				PrintTupleDescLeakWarning(owner->tupdescs[owner->ntupdescs - 1]);
 			DecrTupleDescRefCount(owner->tupdescs[owner->ntupdescs - 1]);
+		}
+
+		/* Ditto for temporary files */
+		while (owner->nfiles > 0)
+		{
+			if (isCommit)
+				PrintFileLeakWarning(owner->files[owner->nfiles - 1]);
+			FileClose(owner->files[owner->nfiles - 1]);
 		}
 
 		/* Clean up index scans too */
@@ -335,7 +362,9 @@ ResourceOwnerDelete(ResourceOwner owner)
 	Assert(owner->ncatrefs == 0);
 	Assert(owner->ncatlistrefs == 0);
 	Assert(owner->nrelrefs == 0);
+	Assert(owner->nplanrefs == 0);
 	Assert(owner->ntupdescs == 0);
+	Assert(owner->nfiles == 0);
 
 	/*
 	 * Delete children.  The recursive call will delink the child from me, so
@@ -360,8 +389,12 @@ ResourceOwnerDelete(ResourceOwner owner)
 		pfree(owner->catlistrefs);
 	if (owner->relrefs)
 		pfree(owner->relrefs);
+	if (owner->planrefs)
+		pfree(owner->planrefs);
 	if (owner->tupdescs)
 		pfree(owner->tupdescs);
+	if (owner->files)
+		pfree(owner->files);
 
 	pfree(owner);
 }
@@ -779,6 +812,86 @@ PrintRelCacheLeakWarning(Relation rel)
 
 /*
  * Make sure there is room for at least one more entry in a ResourceOwner's
+ * plancache reference array.
+ *
+ * This is separate from actually inserting an entry because if we run out
+ * of memory, it's critical to do so *before* acquiring the resource.
+ */
+void
+ResourceOwnerEnlargePlanCacheRefs(ResourceOwner owner)
+{
+	int			newmax;
+
+	if (owner->nplanrefs < owner->maxplanrefs)
+		return;					/* nothing to do */
+
+	if (owner->planrefs == NULL)
+	{
+		newmax = 16;
+		owner->planrefs = (CachedPlan **)
+			MemoryContextAlloc(TopMemoryContext, newmax * sizeof(CachedPlan *));
+		owner->maxplanrefs = newmax;
+	}
+	else
+	{
+		newmax = owner->maxplanrefs * 2;
+		owner->planrefs = (CachedPlan **)
+			repalloc(owner->planrefs, newmax * sizeof(CachedPlan *));
+		owner->maxplanrefs = newmax;
+	}
+}
+
+/*
+ * Remember that a plancache reference is owned by a ResourceOwner
+ *
+ * Caller must have previously done ResourceOwnerEnlargePlanCacheRefs()
+ */
+void
+ResourceOwnerRememberPlanCacheRef(ResourceOwner owner, CachedPlan *plan)
+{
+	Assert(owner->nplanrefs < owner->maxplanrefs);
+	owner->planrefs[owner->nplanrefs] = plan;
+	owner->nplanrefs++;
+}
+
+/*
+ * Forget that a plancache reference is owned by a ResourceOwner
+ */
+void
+ResourceOwnerForgetPlanCacheRef(ResourceOwner owner, CachedPlan *plan)
+{
+	CachedPlan **planrefs = owner->planrefs;
+	int			np1 = owner->nplanrefs - 1;
+	int			i;
+
+	for (i = np1; i >= 0; i--)
+	{
+		if (planrefs[i] == plan)
+		{
+			while (i < np1)
+			{
+				planrefs[i] = planrefs[i + 1];
+				i++;
+			}
+			owner->nplanrefs = np1;
+			return;
+		}
+	}
+	elog(ERROR, "plancache reference %p is not owned by resource owner %s",
+		 plan, owner->name);
+}
+
+/*
+ * Debugging subroutine
+ */
+static void
+PrintPlanCacheLeakWarning(CachedPlan *plan)
+{
+	elog(WARNING, "plancache reference leak: plan %p not closed", plan);
+}
+
+/*
+ * Make sure there is room for at least one more entry in a ResourceOwner's
  * tupdesc reference array.
  *
  * This is separate from actually inserting an entry because if we run out
@@ -857,4 +970,88 @@ PrintTupleDescLeakWarning(TupleDesc tupdesc)
 	elog(WARNING,
 		 "TupleDesc reference leak: TupleDesc %p (%u,%d) still referenced",
 		 tupdesc, tupdesc->tdtypeid, tupdesc->tdtypmod);
+}
+
+
+/*
+ * Make sure there is room for at least one more entry in a ResourceOwner's
+ * files reference array.
+ *
+ * This is separate from actually inserting an entry because if we run out
+ * of memory, it's critical to do so *before* acquiring the resource.
+ */
+void
+ResourceOwnerEnlargeFiles(ResourceOwner owner)
+{
+	int			newmax;
+
+	if (owner->nfiles < owner->maxfiles)
+		return;					/* nothing to do */
+
+	if (owner->files == NULL)
+	{
+		newmax = 16;
+		owner->files = (File *)
+			MemoryContextAlloc(TopMemoryContext, newmax * sizeof(File));
+		owner->maxfiles = newmax;
+	}
+	else
+	{
+		newmax = owner->maxfiles * 2;
+		owner->files = (File *)
+			repalloc(owner->files, newmax * sizeof(File));
+		owner->maxfiles = newmax;
+	}
+}
+
+/*
+ * Remember that a temporary file is owned by a ResourceOwner
+ *
+ * Caller must have previously done ResourceOwnerEnlargeFiles()
+ */
+void
+ResourceOwnerRememberFile(ResourceOwner owner, File file)
+{
+	Assert(owner->nfiles < owner->maxfiles);
+	owner->files[owner->nfiles] = file;
+	owner->nfiles++;
+}
+
+/*
+ * Forget that a temporary file is owned by a ResourceOwner
+ */
+void
+ResourceOwnerForgetFile(ResourceOwner owner, File file)
+{
+	File	   *files = owner->files;
+	int			ns1 = owner->nfiles - 1;
+	int			i;
+
+	for (i = ns1; i >= 0; i--)
+	{
+		if (files[i] == file)
+		{
+			while (i < ns1)
+			{
+				files[i] = files[i + 1];
+				i++;
+			}
+			owner->nfiles = ns1;
+			return;
+		}
+	}
+	elog(ERROR, "temporery file %d is not owned by resource owner %s",
+		 file, owner->name);
+}
+
+
+/*
+ * Debugging subroutine
+ */
+static void
+PrintFileLeakWarning(File file)
+{
+	elog(WARNING,
+		 "temporary file leak: File %d still referenced",
+		 file);
 }

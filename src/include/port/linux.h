@@ -1,4 +1,4 @@
-/* $PostgreSQL: pgsql/src/include/port/linux.h,v 1.42.2.1 2007/07/02 20:12:00 tgl Exp $ */
+/* $PostgreSQL: pgsql/src/include/port/linux.h,v 1.44 2007/11/15 21:14:44 momjian Exp $ */
 
 /*
  * As of July 2007, all known versions of the Linux kernel will sometimes
@@ -12,3 +12,13 @@
  * to have a kernel version test here.
  */
 #define HAVE_LINUX_EIDRM_BUG
+
+/*
+ * Set the default wal_sync_method to fdatasync.  With recent Linux versions,
+ * xlogdefs.h's normal rules will prefer open_datasync, which (a) doesn't
+ * perform better and (b) causes outright failures on ext4 data=journal
+ * filesystems, because those don't support O_DIRECT.
+ */
+#define PLATFORM_DEFAULT_SYNC_METHOD_STR "fdatasync"
+#define PLATFORM_DEFAULT_SYNC_METHOD	SYNC_METHOD_FDATASYNC
+#define PLATFORM_DEFAULT_SYNC_FLAGBIT	0

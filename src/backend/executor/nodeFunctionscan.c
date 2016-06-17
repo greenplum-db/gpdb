@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeFunctionscan.c,v 1.43 2007/02/19 02:23:11 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeFunctionscan.c,v 1.45.2.1 2008/02/29 02:49:43 neilc Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -84,7 +84,6 @@ FunctionNext(FunctionScanState *node)
 			/* Request a callback at end of query. */
 			node->ss.ps.cdbexplainfun = ExecFunctionScanExplainEnd;
 		}
-
 	}
 
 	/*
@@ -337,7 +336,7 @@ ExecFunctionMarkPos(FunctionScanState *node)
 
     node->cdb_mark_ctid = node->cdb_fake_ctid;
 
-	tuplestore_markpos(node->tuplestorestate); 
+	tuplestore_markpos(node->tuplestorestate);
 }
 
 /* ----------------------------------------------------------------

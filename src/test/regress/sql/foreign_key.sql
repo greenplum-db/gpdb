@@ -760,11 +760,11 @@ FOREIGN KEY (x2) REFERENCES pktable(id1);
 ALTER TABLE fktable ADD CONSTRAINT fk_3_1
 FOREIGN KEY (x3) REFERENCES pktable(id1);
 
--- should succeed
-
--- int4 promotes to text, so this is allowed (though pretty durn debatable)
+-- int4 does not promote to text
 ALTER TABLE fktable ADD CONSTRAINT fk_1_2
 FOREIGN KEY (x1) REFERENCES pktable(id2);
+
+-- should succeed
 
 -- int4 promotes to real
 ALTER TABLE fktable ADD CONSTRAINT fk_1_3
@@ -921,3 +921,25 @@ SELECT * FROM tasks;
 DELETE FROM users WHERE id = 2;
 SELECT * FROM tasks;
 COMMIT;
+
+--
+-- Test self-referential FK with CASCADE (bug #6268)
+--
+create temp table selfref (
+    a int primary key,
+    b int,
+    foreign key (b) references selfref (a)
+        on update cascade on delete cascade
+);
+
+insert into selfref (a, b)
+values
+    (0, 0),
+    (1, 1);
+
+begin;
+    update selfref set a = 123 where a = 0;
+    select a, b from selfref;
+    update selfref set a = 456 where a = 123;
+    select a, b from selfref;
+commit;

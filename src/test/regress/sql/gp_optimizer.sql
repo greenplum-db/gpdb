@@ -475,6 +475,9 @@ insert into orca.t values('201208',2,'tag1','tag2');
 -- test projections
 select * from orca.t order by 1,2;
 
+-- test EXPLAIN support of partition selection nodes, while we're at it.
+explain select * from orca.t order by 1,2;
+
 select tag2, tag1 from orca.t order by 1, 2;;
 
 select tag1, user_id from orca.t order by 1, 2;
@@ -1276,6 +1279,9 @@ explain select * from orca.index_test where c = 5;
 
 -- force_explain
 explain select * from orca.index_test where a = 5 and c = 5;
+
+-- renaming columns
+select * from (values (2),(null)) v(k);
 
 -- clean up
 drop schema orca cascade;

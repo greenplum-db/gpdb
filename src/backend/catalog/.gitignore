@@ -3,3 +3,4 @@
 /postgres.shdescription
 /cdb_init.sql
 /postgres_bki_srcs
+/schemapg.h

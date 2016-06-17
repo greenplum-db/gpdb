@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/nodeFuncs.c,v 1.28 2007/01/05 22:19:30 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/nodeFuncs.c,v 1.29 2008/01/01 19:45:50 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -193,6 +193,10 @@ exprLocation(Node *expr)
 		case T_RowExpr:
 			/* the location points at ROW or (, which must be leftmost */
 			loc = ((RowExpr *) expr)->location;
+			break;
+		case T_TableValueExpr:
+			/* the location points at TABLE, which must be leftmost */
+			loc = ((TableValueExpr *) expr)->location;
 			break;
 		case T_RowCompareExpr:
 			/* just use leftmost argument's location */

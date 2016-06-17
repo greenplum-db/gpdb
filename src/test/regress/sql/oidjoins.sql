@@ -205,6 +205,10 @@ SELECT	ctid, indrelid
 FROM	pg_catalog.pg_index fk 
 WHERE	indrelid != 0 AND 
 	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_class pk WHERE pk.oid = fk.indrelid);
+SELECT	ctid, lanowner 
+FROM	pg_catalog.pg_language fk 
+WHERE	lanowner != 0 AND 
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_authid pk WHERE pk.oid = fk.lanowner);
 SELECT	ctid, lanvalidator 
 FROM	pg_catalog.pg_language fk 
 WHERE	lanvalidator != 0 AND 
@@ -345,6 +349,74 @@ SELECT	ctid, tgfoid
 FROM	pg_catalog.pg_trigger fk 
 WHERE	tgfoid != 0 AND 
 	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_proc pk WHERE pk.oid = fk.tgfoid);
+SELECT	ctid, cfgnamespace 
+FROM	pg_catalog.pg_ts_config fk 
+WHERE	cfgnamespace != 0 AND 
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_namespace pk WHERE pk.oid = fk.cfgnamespace);
+SELECT	ctid, cfgowner 
+FROM	pg_catalog.pg_ts_config fk 
+WHERE	cfgowner != 0 AND 
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_authid pk WHERE pk.oid = fk.cfgowner);
+SELECT	ctid, cfgparser 
+FROM	pg_catalog.pg_ts_config fk 
+WHERE	cfgparser != 0 AND 
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_ts_parser pk WHERE pk.oid = fk.cfgparser);
+SELECT	ctid, mapcfg 
+FROM	pg_catalog.pg_ts_config_map fk 
+WHERE	mapcfg != 0 AND 
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_ts_config pk WHERE pk.oid = fk.mapcfg);
+SELECT	ctid, mapdict 
+FROM	pg_catalog.pg_ts_config_map fk 
+WHERE	mapdict != 0 AND 
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_ts_dict pk WHERE pk.oid = fk.mapdict);
+SELECT	ctid, dictnamespace 
+FROM	pg_catalog.pg_ts_dict fk 
+WHERE	dictnamespace != 0 AND 
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_namespace pk WHERE pk.oid = fk.dictnamespace);
+SELECT	ctid, dictowner 
+FROM	pg_catalog.pg_ts_dict fk 
+WHERE	dictowner != 0 AND 
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_authid pk WHERE pk.oid = fk.dictowner);
+SELECT	ctid, dicttemplate 
+FROM	pg_catalog.pg_ts_dict fk 
+WHERE	dicttemplate != 0 AND 
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_ts_template pk WHERE pk.oid = fk.dicttemplate);
+SELECT	ctid, prsnamespace 
+FROM	pg_catalog.pg_ts_parser fk 
+WHERE	prsnamespace != 0 AND 
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_namespace pk WHERE pk.oid = fk.prsnamespace);
+SELECT	ctid, prsstart 
+FROM	pg_catalog.pg_ts_parser fk 
+WHERE	prsstart != 0 AND 
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_proc pk WHERE pk.oid = fk.prsstart);
+SELECT	ctid, prstoken 
+FROM	pg_catalog.pg_ts_parser fk 
+WHERE	prstoken != 0 AND 
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_proc pk WHERE pk.oid = fk.prstoken);
+SELECT	ctid, prsend 
+FROM	pg_catalog.pg_ts_parser fk 
+WHERE	prsend != 0 AND 
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_proc pk WHERE pk.oid = fk.prsend);
+SELECT	ctid, prsheadline 
+FROM	pg_catalog.pg_ts_parser fk 
+WHERE	prsheadline != 0 AND 
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_proc pk WHERE pk.oid = fk.prsheadline);
+SELECT	ctid, prslextype 
+FROM	pg_catalog.pg_ts_parser fk 
+WHERE	prslextype != 0 AND 
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_proc pk WHERE pk.oid = fk.prslextype);
+SELECT	ctid, tmplnamespace 
+FROM	pg_catalog.pg_ts_template fk 
+WHERE	tmplnamespace != 0 AND 
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_namespace pk WHERE pk.oid = fk.tmplnamespace);
+SELECT	ctid, tmplinit 
+FROM	pg_catalog.pg_ts_template fk 
+WHERE	tmplinit != 0 AND 
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_proc pk WHERE pk.oid = fk.tmplinit);
+SELECT	ctid, tmpllexize 
+FROM	pg_catalog.pg_ts_template fk 
+WHERE	tmpllexize != 0 AND 
+	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_proc pk WHERE pk.oid = fk.tmpllexize);
 SELECT	ctid, typnamespace 
 FROM	pg_catalog.pg_type fk 
 WHERE	typnamespace != 0 AND 
@@ -361,9 +433,9 @@ SELECT	ctid, typelem
 FROM	pg_catalog.pg_type fk 
 WHERE	typelem != 0 AND 
 	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_type pk WHERE pk.oid = fk.typelem);
-SELECT  ctid, typarray 
-FROM    pg_catalog.pg_type fk 
-WHERE   typarray != 0 AND 
+SELECT	ctid, typarray 
+FROM	pg_catalog.pg_type fk 
+WHERE	typarray != 0 AND 
 	NOT EXISTS(SELECT 1 FROM pg_catalog.pg_type pk WHERE pk.oid = fk.typarray);
 SELECT	ctid, typinput 
 FROM	pg_catalog.pg_type fk 

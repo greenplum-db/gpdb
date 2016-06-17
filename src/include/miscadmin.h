@@ -13,7 +13,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/miscadmin.h,v 1.194 2007/04/16 18:29:56 alvherre Exp $
+ * $PostgreSQL: pgsql/src/include/miscadmin.h,v 1.199.2.1 2009/12/09 21:58:17 tgl Exp $
  *
  * NOTES
  *	  some of the information in this file should be moved to other files.
@@ -24,6 +24,7 @@
 #define MISCADMIN_H
 
 #include "pgtime.h"				/* for pg_time_t */
+
 
 #define PG_VERSIONSTR "postgres (Greenplum Database) " PG_VERSION "\n"
 #define PG_BACKEND_VERSIONSTR "postgres (Greenplum Database) " PG_VERSION "\n"
@@ -238,7 +239,6 @@ extern PGDLLIMPORT Oid MyDatabaseId;
 
 extern PGDLLIMPORT Oid MyDatabaseTableSpace;
 
-
 /*
  * Date/Time Configuration
  *
@@ -325,6 +325,19 @@ extern int gp_vmem_protect_limit;
 extern int gp_vmem_protect_gang_cache_limit;
 
 /* in tcop/postgres.c */
+
+#if defined(__ia64__) || defined(__ia64)
+typedef struct
+{
+	char	   *stack_base_ptr;
+	char	   *register_stack_base_ptr;
+} pg_stack_base_t;
+#else
+typedef char *pg_stack_base_t;
+#endif
+
+extern pg_stack_base_t set_stack_base(void);
+extern void restore_stack_base(pg_stack_base_t base);
 extern void check_stack_depth(void);
 
 

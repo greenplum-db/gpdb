@@ -7,6 +7,7 @@ inputs:
   - name: bin_xerces_centos6
   - name: bin_gpdb_with_orca_centos6
 outputs:
+  - name: icg_output
 run:
   path: gpdb_src/concourse/scripts/test_with_orca.py
   args:

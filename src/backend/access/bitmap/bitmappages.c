@@ -433,7 +433,7 @@ _bitmap_init(Relation rel, Oid comptypeOid,
 	 * after all, we have fixed size data
 	 */
 	o = PageAddItem(currLovPage, (Item)lovItem, sizeof(BMLOVItemData),
-                    newOffset, LP_USED);
+                    newOffset, false, false);
 
 	if (o == InvalidOffsetNumber)
 		ereport(ERROR,

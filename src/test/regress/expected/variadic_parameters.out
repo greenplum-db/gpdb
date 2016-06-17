@@ -31,7 +31,7 @@ select myleast(); -- fail
 ERROR:  function myleast() does not exist
 LINE 1: select myleast();
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 -- test with variadic call parameter
 select myleast(variadic array[1,2,3,4,-1]);
  myleast 
@@ -92,7 +92,7 @@ create view print_name as select concat(' ',id, fname, lname) from people; -- fa
 ERROR:  function concat(unknown, integer, character varying, character varying) does not exist
 LINE 1: create view print_name as select concat(' ',id, fname, lname...
                                          ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 create view print_name as select concat(' ', fname, lname) from people where id < 790;
 select * from print_name;
   concat   
@@ -138,17 +138,17 @@ select formarray(1.1, array[1.2,55.5]); -- fail without variadic
 ERROR:  function formarray(numeric, numeric[]) does not exist
 LINE 1: select formarray(1.1, array[1.2,55.5]);
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 select formarray(1, 'x'::text); -- fail, type mismatch
 ERROR:  function formarray(integer, text) does not exist
 LINE 1: select formarray(1, 'x'::text);
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 select formarray(1, variadic array['x'::text]); -- fail, type mismatch
 ERROR:  function formarray(integer, text[]) does not exist
 LINE 1: select formarray(1, variadic array['x'::text]);
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 drop function formarray(anyelement, variadic anyarray);
 -- PLPGSQL
 -- test variadic functions

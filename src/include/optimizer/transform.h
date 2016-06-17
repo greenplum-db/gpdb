@@ -17,5 +17,5 @@
 extern Query *normalize_query(Query *query);
 
 /* preprocess the query for the optimizer */
-extern Query *preprocess_query_optimizer(Query *query, ParamListInfo boundParams);
+extern Query *preprocess_query_optimizer(PlannerGlobal *glob, Query *query, ParamListInfo boundParams);
 #endif /* TRANSFORM_H */

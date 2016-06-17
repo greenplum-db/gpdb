@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/util/predtest.c,v 1.13 2007/01/05 22:19:33 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/util/predtest.c,v 1.19.2.3 2010/02/25 21:00:10 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -49,6 +49,15 @@
 #define INT32MIN (-2147483648)
 
 static const bool kUseFnEvaluationForPredicates = true;
+
+/*
+ * Proof attempts involving large arrays in ScalarArrayOpExpr nodes are
+ * likely to require O(N^2) time, and more often than not fail anyway.
+ * So we set an arbitrary limit on the number of array elements that
+ * we will allow to be treated as an AND or OR clause.
+ * XXX is it worth exposing this as a GUC knob?
+ */
+#define MAX_SAOP_ARRAY_SIZE		100
 
 /*
  * To avoid redundant coding in predicate_implied_by_recurse and
@@ -106,6 +115,7 @@ static void arrayexpr_cleanup_fn(PredIterInfo info);
 static bool predicate_implied_by_simple_clause(Expr *predicate, Node *clause);
 static bool predicate_refuted_by_simple_clause(Expr *predicate, Node *clause);
 static Node *extract_not_arg(Node *clause);
+static Node *extract_strong_not_arg(Node *clause);
 static bool list_member_strip(List *list, Expr *datum);
 static bool btree_predicate_proof(Expr *predicate, Node *clause,
 					  bool refute_it);
@@ -462,6 +472,8 @@ predicate_implied_by_recurse(Node *clause, Node *predicate)
  * Unfortunately we *cannot* use
  *	NOT A R=> B if:					B => A
  * because this type of reasoning fails to prove that B doesn't yield NULL.
+ * We can however make the more limited deduction that
+ *	NOT A R=> A
  *
  * Other comments are as for predicate_implied_by_recurse().
  *----------
@@ -647,20 +659,18 @@ predicate_refuted_by_recurse(Node *clause, Node *predicate)
 
 		case CLASS_ATOM:
 
-#ifdef NOT_USED
 			/*
-			 * If A is a NOT-clause, A R=> B if B => A's arg
+			 * If A is a strong NOT-clause, A R=> B if B equals A's arg
 			 *
-			 * Unfortunately not: this would only prove that B is not-TRUE,
-			 * not that it's not NULL either.  Keep this code as a comment
-			 * because it would be useful if we ever had a need for the
-			 * weak form of refutation.
+			 * We cannot make the stronger conclusion that B is refuted if
+			 * B implies A's arg; that would only prove that B is not-TRUE,
+			 * not that it's not NULL either.  Hence use equal() rather than
+			 * predicate_implied_by_recurse().  We could do the latter if we
+			 * ever had a need for the weak form of refutation.
 			 */
-			not_arg = extract_not_arg(clause);
-			if (not_arg &&
-				predicate_implied_by_recurse(predicate, not_arg))
+			not_arg = extract_strong_not_arg(clause);
+			if (not_arg && equal(predicate, not_arg))
 				return true;
-#endif
 
 			switch (pclass)
 			{
@@ -731,12 +741,12 @@ predicate_refuted_by_recurse(Node *clause, Node *predicate)
  * If the expression is classified as AND- or OR-type, then *info is filled
  * in with the functions needed to iterate over its components.
  *
- * This function also implements enforcement of MAX_BRANCHES_TO_TEST: if an
- * AND/OR expression has too many branches, we just classify it as an atom.
- * (This will result in its being passed as-is to the simple_clause functions,
- * which will fail to prove anything about it.)  Note that we cannot just stop
- * after considering MAX_BRANCHES_TO_TEST branches; in general that would
- * result in wrong proofs rather than failing to prove anything.
+ * This function also implements enforcement of MAX_SAOP_ARRAY_SIZE: if a
+ * ScalarArrayOpExpr's array has too many elements, we just classify it as an
+ * atom.  (This will result in its being passed as-is to the simple_clause
+ * functions, which will fail to prove anything about it.)  Note that we
+ * cannot just stop after considering MAX_SAOP_ARRAY_SIZE elements; in general
+ * that would result in wrong proofs, rather than failing to prove anything.
  */
 static PredClass
 predicate_classify(Node *clause, PredIterInfo info)
@@ -788,13 +798,22 @@ predicate_classify(Node *clause, PredIterInfo info)
 		if (arraynode && IsA(arraynode, Const) &&
 			!((Const *) arraynode)->constisnull)
 		{
-			info->startup_fn = arrayconst_startup_fn;
-			info->next_fn = arrayconst_next_fn;
-			info->cleanup_fn = arrayconst_cleanup_fn;
-			return saop->useOr ? CLASS_OR : CLASS_AND;
+			ArrayType  *arrayval;
+			int			nelems;
+
+			arrayval = DatumGetArrayTypeP(((Const *) arraynode)->constvalue);
+			nelems = ArrayGetNItems(ARR_NDIM(arrayval), ARR_DIMS(arrayval));
+			if (nelems <= MAX_SAOP_ARRAY_SIZE)
+			{
+				info->startup_fn = arrayconst_startup_fn;
+				info->next_fn = arrayconst_next_fn;
+				info->cleanup_fn = arrayconst_cleanup_fn;
+				return saop->useOr ? CLASS_OR : CLASS_AND;
+			}
 		}
-		if (arraynode && IsA(arraynode, ArrayExpr) &&
-			!((ArrayExpr *) arraynode)->multidims)
+		else if (arraynode && IsA(arraynode, ArrayExpr) &&
+				 !((ArrayExpr *) arraynode)->multidims &&
+				 list_length(((ArrayExpr *) arraynode)->elements) <= MAX_SAOP_ARRAY_SIZE)
 		{
 			info->startup_fn = arrayexpr_startup_fn;
 			info->next_fn = arrayexpr_next_fn;
@@ -897,6 +916,7 @@ arrayconst_startup_fn(Node *clause, PredIterInfo info)
 	/* Set up a dummy Const node to hold the per-element values */
 	state->constexpr.xpr.type = T_Const;
 	state->constexpr.consttype = ARR_ELEMTYPE(arrayval);
+	state->constexpr.consttypmod = -1;
 	state->constexpr.constlen = elmlen;
 	state->constexpr.constbyval = elmbyval;
 	lsecond(state->opexpr.args) = &state->constexpr;
@@ -1014,6 +1034,9 @@ arrayexpr_cleanup_fn(PredIterInfo info)
 static bool
 predicate_implied_by_simple_clause(Expr *predicate, Node *clause)
 {
+	/* Allow interrupting long proof attempts */
+	CHECK_FOR_INTERRUPTS();
+
 	/* First try the equal() test */
 	if (equal((Node *) predicate, clause))
 		return true;
@@ -1069,6 +1092,9 @@ predicate_implied_by_simple_clause(Expr *predicate, Node *clause)
 static bool
 predicate_refuted_by_simple_clause(Expr *predicate, Node *clause)
 {
+	/* Allow interrupting long proof attempts */
+	CHECK_FOR_INTERRUPTS();
+
 	/* A simple clause can't refute itself */
 	/* Worth checking because of relation_excluded_by_constraints() */
 	if ((Node *) predicate == clause)
@@ -1311,6 +1337,32 @@ extract_not_arg(Node *clause)
 	return NULL;
 }
 
+/*
+ * If clause asserts the falsity of a subclause, return that subclause;
+ * otherwise return NULL.
+ */
+static Node *
+extract_strong_not_arg(Node *clause)
+{
+	if (clause == NULL)
+		return NULL;
+	if (IsA(clause, BoolExpr))
+	{
+		BoolExpr   *bexpr = (BoolExpr *) clause;
+
+		if (bexpr->boolop == NOT_EXPR)
+			return (Node *) linitial(bexpr->args);
+	}
+	else if (IsA(clause, BooleanTest))
+	{
+		BooleanTest *btest = (BooleanTest *) clause;
+
+		if (btest->booltesttype == IS_FALSE)
+			return (Node *) btest->arg;
+	}
+	return NULL;
+}
+
 
 /*
  * Check whether an Expr is equal() to any member of a list, ignoring
@@ -1329,7 +1381,7 @@ list_member_strip(List *list, Expr *datum)
 
 	foreach(cell, list)
 	{
-		Expr *elem = (Expr *) lfirst(cell);
+		Expr	   *elem = (Expr *) lfirst(cell);
 
 		if (elem && IsA(elem, RelabelType))
 			elem = ((RelabelType *) elem)->arg;
@@ -1562,7 +1614,8 @@ btree_predicate_proof(Expr *predicate, Node *clause, bool refute_it)
 	 *
 	 * We must find a btree opfamily that contains both operators, else the
 	 * implication can't be determined.  Also, the opfamily must contain a
-	 * suitable test operator taking the pred_const and clause_const datatypes.
+	 * suitable test operator taking the pred_const and clause_const
+	 * datatypes.
 	 *
 	 * If there are multiple matching opfamilies, assume we can use any one to
 	 * determine the logical relationship of the two operators and the correct
@@ -1574,8 +1627,8 @@ btree_predicate_proof(Expr *predicate, Node *clause, bool refute_it)
 								 0, 0, 0);
 
 	/*
-	 * If we couldn't find any opfamily containing the pred_op, perhaps it is a
-	 * <> operator.  See if it has a negator that is in an opfamily.
+	 * If we couldn't find any opfamily containing the pred_op, perhaps it is
+	 * a <> operator.  See if it has a negator that is in an opfamily.
 	 */
 	pred_op_negated = false;
 	if (catlist->n_members == 0)

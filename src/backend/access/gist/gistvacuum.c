@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/gist/gistvacuum.c,v 1.29 2007/01/05 22:19:22 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/gist/gistvacuum.c,v 1.34 2008/01/01 19:45:46 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -36,6 +36,7 @@ typedef struct
 	Relation	index;
 	MemoryContext opCtx;
 	GistBulkDeleteResult *result;
+	BufferAccessStrategy strategy;
 } GistVacuum;
 
 typedef struct
@@ -86,7 +87,7 @@ gistDeleteSubtree(GistVacuum *gv, BlockNumber blkno)
 
 	MIRROREDLOCK_BUFMGR_MUST_ALREADY_BE_HELD;
 
-	buffer = ReadBuffer(gv->index, blkno);
+	buffer = ReadBufferWithStrategy(gv->index, blkno, gv->strategy);
 	LockBuffer(buffer, GIST_EXCLUSIVE);
 	page = (Page) BufferGetPage(buffer);
 
@@ -141,7 +142,7 @@ gistDeleteSubtree(GistVacuum *gv, BlockNumber blkno)
 		PageSetTLI(page, ThisTimeLineID);
 	}
 	else
-		PageSetLSN(page, XLogRecPtrForTemp);
+		PageSetLSN(page, GetXLogRecPtrForTemp());
 
 	END_CRIT_SECTION();
 
@@ -213,7 +214,7 @@ vacuumSplitPage(GistVacuum *gv, Page tempPage, Buffer buffer, IndexTuple *addon,
 		data = (char *) (ptr->list);
 		for (i = 0; i < ptr->block.num; i++)
 		{
-			if (PageAddItem(ptr->page, (Item) data, IndexTupleSize((IndexTuple) data), i + FirstOffsetNumber, LP_USED) == InvalidOffsetNumber)
+			if (PageAddItem(ptr->page, (Item) data, IndexTupleSize((IndexTuple) data), i + FirstOffsetNumber, false, false) == InvalidOffsetNumber)
 				elog(ERROR, "failed to add item to index page in \"%s\"", RelationGetRelationName(gv->index));
 			data += IndexTupleSize((IndexTuple) data);
 		}
@@ -265,7 +266,7 @@ vacuumSplitPage(GistVacuum *gv, Page tempPage, Buffer buffer, IndexTuple *addon,
 	else
 	{
 		for (ptr = dist; ptr; ptr = ptr->next)
-			PageSetLSN(BufferGetPage(ptr->buffer), XLogRecPtrForTemp);
+			PageSetLSN(BufferGetPage(ptr->buffer), GetXLogRecPtrForTemp());
 	}
 
 	for (ptr = dist; ptr; ptr = ptr->next)
@@ -321,7 +322,7 @@ gistVacuumUpdate(GistVacuum *gv, BlockNumber blkno, bool needunion)
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
 
-	buffer = ReadBuffer(gv->index, blkno);
+	buffer = ReadBufferWithStrategy(gv->index, blkno, gv->strategy);
 	LockBuffer(buffer, GIST_EXCLUSIVE);
 	gistcheckpage(gv->index, buffer);
 	page = (Page) BufferGetPage(buffer);
@@ -484,7 +485,7 @@ gistVacuumUpdate(GistVacuum *gv, BlockNumber blkno, bool needunion)
 				pfree(rdata);
 			}
 			else
-				PageSetLSN(page, XLogRecPtrForTemp);
+				PageSetLSN(page, GetXLogRecPtrForTemp());
 		}
 
 		END_CRIT_SECTION();
@@ -572,6 +573,7 @@ gistvacuumcleanup(PG_FUNCTION_ARGS)
 		initGISTstate(&(gv.giststate), rel);
 		gv.opCtx = createTempGistContext();
 		gv.result = stats;
+		gv.strategy = info->strategy;
 
 		/* walk through the entire index for update tuples */
 		res = gistVacuumUpdate(&gv, GIST_ROOT_BLKNO, false);
@@ -625,7 +627,7 @@ gistvacuumcleanup(PG_FUNCTION_ARGS)
 		// -------- MirroredLock ----------
 		MIRROREDLOCK_BUFMGR_LOCK;
 
-		buffer = ReadBuffer(rel, blkno);
+		buffer = ReadBufferWithStrategy(rel, blkno, info->strategy);
 		LockBuffer(buffer, GIST_SHARE);
 		page = (Page) BufferGetPage(buffer);
 
@@ -745,7 +747,7 @@ gistbulkdelete(PG_FUNCTION_ARGS)
 		// -------- MirroredLock ----------
 		MIRROREDLOCK_BUFMGR_LOCK;
 
-		buffer = ReadBuffer(rel, stack->blkno);
+		buffer = ReadBufferWithStrategy(rel, stack->blkno, info->strategy);
 		
 		LockBuffer(buffer, GIST_SHARE);
 		gistcheckpage(rel, buffer);
@@ -829,7 +831,7 @@ gistbulkdelete(PG_FUNCTION_ARGS)
 					pfree(rdata);
 				}
 				else
-					PageSetLSN(page, XLogRecPtrForTemp);
+					PageSetLSN(page, GetXLogRecPtrForTemp());
 
 				END_CRIT_SECTION();
 			}

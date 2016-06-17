@@ -252,12 +252,32 @@ tas(volatile slock_t *lock)
 #endif	 /* __ia64__ || __ia64 */
 
 
+/*
+ * On ARM, we use __sync_lock_test_and_set(int *, int) if available, and if
+ * not fall back on the SWPB instruction.  SWPB does not work on ARMv6 or
+ * later, so the compiler builtin is preferred if available.  Note also that
+ * the int-width variant of the builtin works on more chips than other widths.
+ */
 #if defined(__arm__) || defined(__arm)
 #define HAS_TEST_AND_SET
 
-typedef unsigned char slock_t;
-
 #define TAS(lock) tas(lock)
+
+#ifdef HAVE_GCC_INT_ATOMICS
+
+typedef int slock_t;
+
+static __inline__ int
+tas(volatile slock_t *lock)
+{
+	return __sync_lock_test_and_set(lock, 1);
+}
+
+#define S_UNLOCK(lock) __sync_lock_release(lock)
+
+#else /* !HAVE_GCC_INT_ATOMICS */
+
+typedef unsigned char slock_t;
 
 static __inline__ int
 tas(volatile slock_t *lock)
@@ -272,6 +292,7 @@ tas(volatile slock_t *lock)
 	return (int) _res;
 }
 
+#endif	 /* HAVE_GCC_INT_ATOMICS */
 #endif	 /* __arm__ */
 
 
@@ -568,36 +589,6 @@ typedef int slock_t;
 #endif /* __m32r__ */
 
 
-#if defined(__sh__)				/* Renesas' SuperH */
-#define HAS_TEST_AND_SET
-
-typedef unsigned char slock_t;
-
-#define TAS(lock) tas(lock)
-
-static __inline__ int
-tas(volatile slock_t *lock)
-{
-	register int _res;
-
-	/*
-	 * This asm is coded as if %0 could be any register, but actually SuperH
-	 * restricts the target of xor-immediate to be R0.  That's handled by
-	 * the "z" constraint on _res.
-	 */
-	__asm__ __volatile__(
-		"	tas.b @%2    \n"
-		"	movt  %0     \n"
-		"	xor   #1,%0  \n"
-:		"=z"(_res), "+m"(*lock)
-:		"r"(lock)
-:		"memory", "t");
-	return _res;
-}
-
-#endif	 /* __sh__ */
-
-
 /* These live in s_lock.c, but only for gcc */
 
 
@@ -608,7 +599,7 @@ typedef unsigned char slock_t;
 #endif
 
 
-#endif	/* defined(__GNUC__) || defined(__INTEL_COMPILER) */
+#endif	/* __GNUC__ */
 
 
 
@@ -812,7 +803,7 @@ typedef unsigned char slock_t;
 #endif
 
 
-#if defined(__SUNPRO_C) && (defined(__i386) || defined(__x86_64__) || defined(__sparc__) || defined(__sparc))
+#if defined(__sun) && (defined(__i386) || defined(__x86_64__) || defined(__sparc__) || defined(__sparc))
 #define HAS_TEST_AND_SET
 
 #if defined(__i386) || defined(__x86_64__) || defined(__sparcv9) || defined(__sparcv8plus)

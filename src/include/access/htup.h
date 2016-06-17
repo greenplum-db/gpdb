@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/htup.h,v 1.91 2007/02/09 03:35:34 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/access/htup.h,v 1.98 2008/01/01 19:45:56 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -165,9 +165,8 @@ typedef HeapTupleHeaderData *HeapTupleHeader;
 #define HEAP_HASNULL			0x0001	/* has null attribute(s) */
 #define HEAP_HASVARWIDTH		0x0002	/* has variable-width attribute(s) */
 #define HEAP_HASEXTERNAL		0x0004	/* has external stored attribute(s) */
-#define HEAP_HASCOMPRESSED		0x0008	/* has compressed stored attribute(s) */
-#define HEAP_HASEXTENDED		0x000C	/* the two above combined */
-#define HEAP_HASOID				0x0010	/* has an object-id field */
+#define HEAP_HASOID				0x0008	/* has an object-id field */
+/* bit 0x0010 is available */
 #define HEAP_COMBOCID			0x0020	/* t_cid is a combo cid */
 #define HEAP_XMAX_EXCL_LOCK		0x0040	/* xmax is exclusive locker */
 #define HEAP_XMAX_SHARED_LOCK	0x0080	/* xmax is shared locker */
@@ -190,8 +189,7 @@ typedef HeapTupleHeaderData *HeapTupleHeader;
 /*
  * information stored in t_infomask2:
  */
-#define HEAP_NATTS_MASK			0x7FF	/* 11 bits for number of attributes */
-
+#define HEAP_NATTS_MASK			0x07FF	/* 11 bits for number of attributes */
 #define HEAP_XMIN_DISTRIBUTED_SNAPSHOT_IGNORE		0x0800	
 										/* t_xmin is either an old committed 
 										 * distributed transaction or local.
@@ -200,7 +198,10 @@ typedef HeapTupleHeaderData *HeapTupleHeader;
 										 */
 #define HEAP_XMAX_DISTRIBUTED_SNAPSHOT_IGNORE		0x1000
 										/* t_xmax same as above. */
-/* bits 0xE000 are currently unused */
+#define HEAP_HOT_UPDATED		0x4000	/* tuple was HOT-updated */
+#define HEAP_ONLY_TUPLE			0x8000	/* this is heap-only tuple */
+
+#define HEAP2_XACT_MASK			0xC000	/* visibility-related bits */
 
 /*
  * HeapTupleHeader accessor macros
@@ -216,7 +217,7 @@ typedef HeapTupleHeaderData *HeapTupleHeader;
 
 #define HeapTupleHeaderSetXmin(tup, xid) \
 ( \
-	TransactionIdStore((xid), &(tup)->t_choice.t_heap.t_xmin) \
+	(tup)->t_choice.t_heap.t_xmin = (xid) \
 )
 
 #define HeapTupleHeaderGetXmax(tup) \
@@ -226,7 +227,7 @@ typedef HeapTupleHeaderData *HeapTupleHeader;
 
 #define HeapTupleHeaderSetXmax(tup, xid) \
 ( \
-	TransactionIdStore((xid), &(tup)->t_choice.t_heap.t_xmax) \
+	(tup)->t_choice.t_heap.t_xmax = (xid) \
 )
 
 /*
@@ -270,7 +271,7 @@ do { \
 #define HeapTupleHeaderSetXvac(tup, xid) \
 do { \
 	Assert((tup)->t_infomask & HEAP_MOVED); \
-	TransactionIdStore((xid), &(tup)->t_choice.t_heap.t_field3.t_xvac); \
+	(tup)->t_choice.t_heap.t_field3.t_xvac = (xid); \
 } while (0)
 
 #define HeapTupleHeaderGetDatumLength(tup) \
@@ -313,6 +314,43 @@ do { \
 	*((Oid *) ((char *)(tup) + (tup)->t_hoff - sizeof(Oid))) = (oid); \
 } while (0)
 
+/*
+ * Note that we stop considering a tuple HOT-updated as soon as it is known
+ * aborted or the would-be updating transaction is known aborted.  For best
+ * efficiency, check tuple visibility before using this macro, so that the
+ * INVALID bits will be as up to date as possible.
+ */
+#define HeapTupleHeaderIsHotUpdated(tup) \
+( \
+	((tup)->t_infomask2 & HEAP_HOT_UPDATED) != 0 && \
+	((tup)->t_infomask & (HEAP_XMIN_INVALID | HEAP_XMAX_INVALID)) == 0 \
+)
+
+#define HeapTupleHeaderSetHotUpdated(tup) \
+( \
+	(tup)->t_infomask2 |= HEAP_HOT_UPDATED \
+)
+
+#define HeapTupleHeaderClearHotUpdated(tup) \
+( \
+	(tup)->t_infomask2 &= ~HEAP_HOT_UPDATED \
+)
+
+#define HeapTupleHeaderIsHeapOnly(tup) \
+( \
+  (tup)->t_infomask2 & HEAP_ONLY_TUPLE \
+)
+
+#define HeapTupleHeaderSetHeapOnly(tup) \
+( \
+  (tup)->t_infomask2 |= HEAP_ONLY_TUPLE \
+)
+
+#define HeapTupleHeaderClearHeapOnly(tup) \
+( \
+  (tup)->t_infomask2 &= ~HEAP_ONLY_TUPLE \
+)
+
 #define HeapTupleHeaderGetNatts(tup) \
 	((tup)->t_infomask2 & HEAP_NATTS_MASK)
 
@@ -320,6 +358,7 @@ do { \
 ( \
 	(tup)->t_infomask2 = ((tup)->t_infomask2 & ~HEAP_NATTS_MASK) | (natts) \
 )
+
 
 /*
  * BITMAPLEN(NATTS) -
@@ -345,6 +384,11 @@ do { \
  * fit on one heap page.  (Note that indexes could have more, because they
  * use a smaller tuple header.)  We arrive at the divisor because each tuple
  * must be maxaligned, and it must have an associated item pointer.
+ *
+ * Note: with HOT, there could theoretically be more line pointers (not actual
+ * tuples) than this on a heap page.  However we constrain the number of line
+ * pointers to this anyway, to avoid excessive line-pointer bloat and not
+ * require increases in the size of work arrays.
  */
 #define MaxHeapTuplesPerPage	\
 	((int) ((BLCKSZ - offsetof(PageHeaderData, pd_linp)) / \
@@ -358,6 +402,61 @@ do { \
  * at 10Mb which seems like a reasonable number --- tgl 8/6/00.
  */
 #define MaxAttrSize		(10 * 1024 * 1024)
+
+/*
+ * MinimalTuple is an alternative representation that is used for transient
+ * tuples inside the executor, in places where transaction status information
+ * is not required, the tuple rowtype is known, and shaving off a few bytes
+ * is worthwhile because we need to store many tuples.	The representation
+ * is chosen so that tuple access routines can work with either full or
+ * minimal tuples via a HeapTupleData pointer structure.  The access routines
+ * see no difference, except that they must not access the transaction status
+ * or t_ctid fields because those aren't there.
+ *
+ * For the most part, MinimalTuples should be accessed via TupleTableSlot
+ * routines.  These routines will prevent access to the "system columns"
+ * and thereby prevent accidental use of the nonexistent fields.
+ *
+ * MinimalTupleData contains a length word, some padding, and fields matching
+ * HeapTupleHeaderData beginning with t_infomask2. The padding is chosen so
+ * that offsetof(t_infomask2) is the same modulo MAXIMUM_ALIGNOF in both
+ * structs.   This makes data alignment rules equivalent in both cases.
+ *
+ * When a minimal tuple is accessed via a HeapTupleData pointer, t_data is
+ * set to point MINIMAL_TUPLE_OFFSET bytes before the actual start of the
+ * minimal tuple --- that is, where a full tuple matching the minimal tuple's
+ * data would start.  This trick is what makes the structs seem equivalent.
+ *
+ * Note that t_hoff is computed the same as in a full tuple, hence it includes
+ * the MINIMAL_TUPLE_OFFSET distance.  t_len does not include that, however.
+ */
+#define MINIMAL_TUPLE_OFFSET \
+	((offsetof(HeapTupleHeaderData, t_infomask2) - sizeof(uint32)) / MAXIMUM_ALIGNOF * MAXIMUM_ALIGNOF)
+#define MINIMAL_TUPLE_PADDING \
+	((offsetof(HeapTupleHeaderData, t_infomask2) - sizeof(uint32)) % MAXIMUM_ALIGNOF)
+
+typedef struct MinimalTupleData
+{
+	uint32		t_len;			/* actual length of minimal tuple */
+
+	char		mt_padding[MINIMAL_TUPLE_PADDING];
+
+	/* Fields below here must match HeapTupleHeaderData! */
+
+	uint16		t_infomask2;	/* number of attributes + various flags */
+
+	uint16		t_infomask;		/* various flag bits, see below */
+
+	uint8		t_hoff;			/* sizeof header incl. bitmap, padding */
+
+	/* ^ - 23 bytes - ^ */
+
+	bits8		t_bits[1];		/* bitmap of NULLs -- VARIABLE LENGTH */
+
+	/* MORE DATA FOLLOWS AT END OF STRUCT */
+} MinimalTupleData;
+
+typedef MinimalTupleData *MinimalTuple;
 
 
 /*
@@ -447,11 +546,23 @@ static inline uint32 heaptuple_get_size(HeapTuple htup)
 #define HeapTupleHasExternal(tuple) \
 		(((tuple)->t_data->t_infomask & HEAP_HASEXTERNAL) != 0)
 
-#define HeapTupleHasCompressed(tuple) \
-		(((tuple)->t_data->t_infomask & HEAP_HASCOMPRESSED) != 0)
+#define HeapTupleIsHotUpdated(tuple) \
+		HeapTupleHeaderIsHotUpdated((tuple)->t_data)
 
-#define HeapTupleHasExtended(tuple) \
-		(((tuple)->t_data->t_infomask & HEAP_HASEXTENDED) != 0)
+#define HeapTupleSetHotUpdated(tuple) \
+		HeapTupleHeaderSetHotUpdated((tuple)->t_data)
+
+#define HeapTupleClearHotUpdated(tuple) \
+		HeapTupleHeaderClearHotUpdated((tuple)->t_data)
+
+#define HeapTupleIsHeapOnly(tuple) \
+		HeapTupleHeaderIsHeapOnly((tuple)->t_data)
+
+#define HeapTupleSetHeapOnly(tuple) \
+		HeapTupleHeaderSetHeapOnly((tuple)->t_data)
+
+#define HeapTupleClearHeapOnly(tuple) \
+		HeapTupleHeaderClearHeapOnly((tuple)->t_data)
 
 #define HeapTupleGetOid(tuple) \
 		HeapTupleHeaderGetOid((tuple)->t_data)
@@ -466,27 +577,30 @@ static inline uint32 heaptuple_get_size(HeapTuple htup)
  * XLOG allows to store some information in high 4 bits of log
  * record xl_info field.  We use 3 for opcode and one for init bit.
  */
-#define XLOG_HEAP_INSERT	0x00
-#define XLOG_HEAP_DELETE	0x10
-#define XLOG_HEAP_UPDATE	0x20
-#define XLOG_HEAP_MOVE		0x30
-#define XLOG_HEAP_CLEAN		0x40
-#define XLOG_HEAP_NEWPAGE	0x50
-#define XLOG_HEAP_LOCK		0x60
-#define XLOG_HEAP_INPLACE	0x70
-#define XLOG_HEAP_OPMASK	0x70
+#define XLOG_HEAP_INSERT		0x00
+#define XLOG_HEAP_DELETE		0x10
+#define XLOG_HEAP_UPDATE		0x20
+#define XLOG_HEAP_MOVE			0x30
+#define XLOG_HEAP_HOT_UPDATE	0x40
+#define XLOG_HEAP_NEWPAGE		0x50
+#define XLOG_HEAP_LOCK			0x60
+#define XLOG_HEAP_INPLACE		0x70
+
+#define XLOG_HEAP_OPMASK		0x70
 /*
  * When we insert 1st item on new page in INSERT/UPDATE
  * we can (and we do) restore entire page in redo
  */
-#define XLOG_HEAP_INIT_PAGE 0x80
+#define XLOG_HEAP_INIT_PAGE		0x80
 /*
- * We ran out of opcodes, so heapam.c now has a second RmgrId.  These opcodes
+ * We ran out of opcodes, so heapam.c now has a second RmgrId.	These opcodes
  * are associated with RM_HEAP2_ID, but are not logically different from
  * the ones above associated with RM_HEAP_ID.  We apply XLOG_HEAP_OPMASK,
  * although currently XLOG_HEAP_INIT_PAGE is not used for any of these.
  */
-#define XLOG_HEAP2_FREEZE	0x00
+#define XLOG_HEAP2_FREEZE		0x00
+#define XLOG_HEAP2_CLEAN		0x10
+#define XLOG_HEAP2_CLEAN_MOVE	0x20
 
 /*
  * All what we need to find changed tuple
@@ -547,7 +661,7 @@ typedef struct xl_heap_insert
 
 #define SizeOfHeapInsert	(offsetof(xl_heap_insert, target) + SizeOfHeapTid)
 
-/* This is what we need to know about update|move */
+/* This is what we need to know about update|move|hot_update */
 typedef struct xl_heap_update
 {
 	xl_heaptid	target;			/* deleted tuple id */
@@ -558,15 +672,34 @@ typedef struct xl_heap_update
 
 #define SizeOfHeapUpdate	(offsetof(xl_heap_update, newtid) + SizeOfIptrData)
 
-/* This is what we need to know about vacuum page cleanup */
+/*
+ * This is what we need to know about vacuum page cleanup/redirect
+ *
+ * The array of OffsetNumbers following the fixed part of the record contains:
+ *	* for each redirected item: the item offset, then the offset redirected to
+ *	* for each now-dead item: the item offset
+ *	* for each now-unused item: the item offset
+ * The total number of OffsetNumbers is therefore 2*nredirected+ndead+nunused.
+ * Note that nunused is not explicitly stored, but may be found by reference
+ * to the total record length.
+ *
+ * If the opcode is CLEAN_MOVE instead of CLEAN, then each redirection pair
+ * should be interpreted as physically moving the "to" item pointer to the
+ * "from" slot, rather than placing a redirection item in the "from" slot.
+ * The moved pointers should be replaced by LP_UNUSED items (there will not
+ * be explicit entries in the "now-unused" list for this).	Also, the
+ * HEAP_ONLY bit in the moved tuples must be turned off.
+ */
 typedef struct xl_heap_clean
 {
 	xl_heapnode heapnode;
 	BlockNumber block;
-	/* UNUSED OFFSET NUMBERS FOLLOW AT THE END */
+	uint16		nredirected;
+	uint16		ndead;
+	/* OFFSET NUMBERS FOLLOW */
 } xl_heap_clean;
 
-#define SizeOfHeapClean (offsetof(xl_heap_clean, block) + sizeof(BlockNumber))
+#define SizeOfHeapClean (offsetof(xl_heap_clean, ndead) + sizeof(uint16))
 
 /* This is for replacing a page's contents in toto */
 /* NB: this is used for indexes as well as heaps */
@@ -614,7 +747,7 @@ typedef struct xl_heap_freeze
 extern CommandId HeapTupleHeaderGetCmin(HeapTupleHeader tup);
 extern CommandId HeapTupleHeaderGetCmax(HeapTupleHeader tup);
 extern void HeapTupleHeaderAdjustCmax(HeapTupleHeader tup,
-									  CommandId *cmax,
-									  bool *iscombo);
+						  CommandId *cmax,
+						  bool *iscombo);
 
 #endif   /* HTUP_H */

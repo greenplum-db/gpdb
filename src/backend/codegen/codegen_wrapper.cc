@@ -12,13 +12,15 @@
 
 #include "codegen/codegen_wrapper.h"
 #include "codegen/codegen_manager.h"
-#include "codegen/ExecVariableList_codegen.h"
+#include "codegen/exec_variable_list_codegen.h"
+#include "codegen/exec_qual_codegen.h"
 
 #include "codegen/utils/codegen_utils.h"
 
 using gpcodegen::CodegenManager;
 using gpcodegen::BaseCodegen;
 using gpcodegen::ExecVariableListCodegen;
+using gpcodegen::ExecQualCodegen;
 
 // Current code generator manager that oversees all code generators
 static void* ActiveCodeGeneratorManager = nullptr;
@@ -111,8 +113,18 @@ void* ExecVariableListCodegenEnroll(
     ExecVariableListFn regular_func_ptr,
     ExecVariableListFn* ptr_to_chosen_func_ptr,
     ProjectionInfo* proj_info,
-	  TupleTableSlot* slot) {
+    TupleTableSlot* slot) {
   ExecVariableListCodegen* generator = CodegenEnroll<ExecVariableListCodegen>(
       regular_func_ptr, ptr_to_chosen_func_ptr, proj_info, slot);
   return generator;
 }
+
+void* ExecQualCodegenEnroll(
+    ExecQualFn regular_func_ptr,
+    ExecQualFn* ptr_to_chosen_func_ptr,
+    PlanState *planstate) {
+  ExecQualCodegen* generator = CodegenEnroll<ExecQualCodegen>(
+      regular_func_ptr, ptr_to_chosen_func_ptr, planstate);
+  return generator;
+}
+

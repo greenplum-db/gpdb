@@ -140,7 +140,7 @@ bool array_next(array_iter *iter, Datum *value, bool *isna)
 		*value = PointerGetDatum(iter->ptr);
 		iter->ptr += VARSIZE(iter->ptr);
 	}
-	iter->ptr = (char*) att_align(iter->ptr, iter->typalign);
+	iter->ptr = (char*) att_align_nominal(iter->ptr, iter->typalign);
 	iter->index++;
 	return true;
 }
@@ -187,7 +187,7 @@ static int pivot_find(ArrayType *labels, text *attr)
 		if (asize == lsize && !memcmp(attr, labelsp, lsize))
 			return i;  /* Found */
 		labelsp  = labelsp + lsize;
-		labelsp  = (char*) att_align(labelsp, typalign); 
+		labelsp  = (char*) att_align_nominal(labelsp, typalign);
 	}
 	return -1;  /* Not found */
 }

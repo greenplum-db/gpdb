@@ -15,7 +15,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/planmain.c,v 1.99 2007/01/20 20:45:39 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/planmain.c,v 1.106 2008/01/11 04:02:18 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -52,6 +52,8 @@ static Bitmapset *distcols_in_groupclause(List *gc, Bitmapset *bms);
  * tlist is the target list the query should produce
  *		(this is NOT necessarily root->parse->targetList!)
  * tuple_fraction is the fraction of tuples we expect will be retrieved
+ * limit_tuples is a hard limit on number of tuples to retrieve,
+ *		or -1 if no limit
  *
  * Output parameters:
  * *cheapest_path receives the overall-cheapest path for the query
@@ -79,9 +81,13 @@ static Bitmapset *distcols_in_groupclause(List *gc, Bitmapset *bms);
  *		from the plan to be retrieved
  *	  tuple_fraction >= 1: tuple_fraction is the absolute number of tuples
  *		expected to be retrieved (ie, a LIMIT specification)
+ * Note that a nonzero tuple_fraction could come from outer context; it is
+ * therefore not redundant with limit_tuples.  We use limit_tuples to determine
+ * whether a bounded sort can be used at runtime.
  */
 void
-query_planner(PlannerInfo *root, List *tlist, double tuple_fraction,
+query_planner(PlannerInfo *root, List *tlist,
+			  double tuple_fraction, double limit_tuples,
 			  Path **cheapest_path, Path **sorted_path,
 			  double *num_groups)
 {
@@ -91,8 +97,8 @@ query_planner(PlannerInfo *root, List *tlist, double tuple_fraction,
 	Path	   *cheapestpath;
 	Path	   *sortedpath;
 	Index		rti;
-	double		total_pages;
 	ListCell   *lc;
+	double		total_pages;
 
 	/* Make tuple_fraction accessible to lower-level routines */
 	root->tuple_fraction = tuple_fraction;
@@ -109,9 +115,10 @@ query_planner(PlannerInfo *root, List *tlist, double tuple_fraction,
 		*cheapest_path = (Path *)
 			create_result_path((List *) parse->jointree->quals);
 		*sorted_path = NULL;
+
 		/*
-		 * We still are required to canonicalize any pathkeys, in case
-		 * it's something like "SELECT 2+2 ORDER BY 1".
+		 * We still are required to canonicalize any pathkeys, in case it's
+		 * something like "SELECT 2+2 ORDER BY 1".
 		 */
 		root->canon_pathkeys = NIL;
 		root->query_pathkeys = canonicalize_pathkeys(root,
@@ -147,7 +154,7 @@ query_planner(PlannerInfo *root, List *tlist, double tuple_fraction,
 	 * OK because the rangetable won't change any more).
 	 */
 	root->simple_rte_array = (RangeTblEntry **)
-	palloc0(root->simple_rel_array_size * sizeof(RangeTblEntry *));
+		palloc0(root->simple_rel_array_size * sizeof(RangeTblEntry *));
 	rti = 1;
 	foreach(lc, parse->rtable)
 	{
@@ -198,8 +205,8 @@ query_planner(PlannerInfo *root, List *tlist, double tuple_fraction,
 	 * Examine the targetlist and qualifications, adding entries to baserel
 	 * targetlists for all referenced Vars.  Restrict and join clauses are
 	 * added to appropriate lists belonging to the mentioned relations.  We
-	 * also build EquivalenceClasses for provably equivalent expressions,
-	 * and form a target joinlist for make_one_rel() to work from.
+	 * also build EquivalenceClasses for provably equivalent expressions, and
+	 * form a target joinlist for make_one_rel() to work from.
 	 *
 	 * Note: all subplan nodes will have "flat" (var-only) tlists. This
 	 * implies that all expression evaluations are done at the root of the
@@ -233,14 +240,14 @@ query_planner(PlannerInfo *root, List *tlist, double tuple_fraction,
 
 	/*
 	 * If we formed any equivalence classes, generate additional restriction
-	 * clauses as appropriate.  (Implied join clauses are formed on-the-fly
+	 * clauses as appropriate.	(Implied join clauses are formed on-the-fly
 	 * later.)
 	 */
 	generate_base_implied_equalities(root);
 
 	/*
 	 * We have completed merging equivalence sets, so it's now possible to
-	 * convert the requested query_pathkeys to canonical form.  Also
+	 * convert the requested query_pathkeys to canonical form.	Also
 	 * canonicalize the groupClause and sortClause pathkeys for use later.
 	 */
 	root->query_pathkeys = canonicalize_pathkeys(root, root->query_pathkeys);
@@ -400,7 +407,8 @@ query_planner(PlannerInfo *root, List *tlist, double tuple_fraction,
 			/* Figure cost for sorting */
 			cost_sort(&sort_path, root, root->query_pathkeys,
 					  cheapestpath->total_cost,
-					  cdbpath_rows(root, cheapestpath), final_rel->width);
+					  cdbpath_rows(root, cheapestpath), final_rel->width,
+					  limit_tuples);
 		}
 
 		if (compare_fractional_path_costs(sortedpath, &sort_path,
@@ -530,13 +538,14 @@ PlannerConfig *DefaultPlannerConfig(void)
 	return c1;
 }
 
-/**
+/*
  * Copy configuration information
  */
-PlannerConfig *CopyPlannerConfig(const PlannerConfig *c1)
+PlannerConfig *
+CopyPlannerConfig(const PlannerConfig *c1)
 {
-	Assert(c1);
 	PlannerConfig *c2 = (PlannerConfig *) palloc(sizeof(PlannerConfig));
+
 	memcpy(c2, c1, sizeof(PlannerConfig));
 	return c2;
 }

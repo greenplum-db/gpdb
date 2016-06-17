@@ -1,0 +1,605 @@
+--
+-- SUBSELECT
+--
+SELECT 1 AS one WHERE 1 IN (SELECT 1);
+ one 
+-----
+   1
+(1 row)
+
+SELECT 1 AS zero WHERE 1 NOT IN (SELECT 1);
+ zero 
+------
+(0 rows)
+
+SELECT 1 AS zero WHERE 1 IN (SELECT 2);
+ zero 
+------
+(0 rows)
+
+-- Check grammar's handling of extra parens in assorted contexts
+SELECT * FROM (SELECT 1 AS x) ss;
+ x 
+---
+ 1
+(1 row)
+
+SELECT * FROM ((SELECT 1 AS x)) ss;
+ x 
+---
+ 1
+(1 row)
+
+(SELECT 2) UNION SELECT 2;
+ ?column? 
+----------
+        2
+(1 row)
+
+((SELECT 2)) UNION SELECT 2;
+ ?column? 
+----------
+        2
+(1 row)
+
+SELECT ((SELECT 2) UNION SELECT 2);
+ ?column? 
+----------
+        2
+(1 row)
+
+SELECT (((SELECT 2)) UNION SELECT 2);
+ ?column? 
+----------
+        2
+(1 row)
+
+SELECT (SELECT ARRAY[1,2,3])[1];
+ ?column? 
+----------
+        1
+(1 row)
+
+SELECT ((SELECT ARRAY[1,2,3]))[2];
+ ?column? 
+----------
+        2
+(1 row)
+
+SELECT (((SELECT ARRAY[1,2,3])))[3];
+ ?column? 
+----------
+        3
+(1 row)
+
+-- Set up some simple test tables
+CREATE TABLE SUBSELECT_TBL (
+  f1 integer,
+  f2 integer,
+  f3 float
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO SUBSELECT_TBL VALUES (1, 2, 3);
+INSERT INTO SUBSELECT_TBL VALUES (2, 3, 4);
+INSERT INTO SUBSELECT_TBL VALUES (3, 4, 5);
+INSERT INTO SUBSELECT_TBL VALUES (1, 1, 1);
+INSERT INTO SUBSELECT_TBL VALUES (2, 2, 2);
+INSERT INTO SUBSELECT_TBL VALUES (3, 3, 3);
+INSERT INTO SUBSELECT_TBL VALUES (6, 7, 8);
+INSERT INTO SUBSELECT_TBL VALUES (8, 9, NULL);
+SELECT '' AS eight, * FROM SUBSELECT_TBL ORDER BY 2,3,4;
+ eight | f1 | f2 | f3 
+-------+----+----+----
+       |  1 |  1 |  1
+       |  1 |  2 |  3
+       |  2 |  2 |  2
+       |  2 |  3 |  4
+       |  3 |  3 |  3
+       |  3 |  4 |  5
+       |  6 |  7 |  8
+       |  8 |  9 |   
+(8 rows)
+
+-- Uncorrelated subselects
+SELECT '' AS two, f1 AS "Constant Select" FROM SUBSELECT_TBL
+  WHERE f1 IN (SELECT 1) ORDER BY 2;
+ two | Constant Select 
+-----+-----------------
+     |               1
+     |               1
+(2 rows)
+
+SELECT '' AS six, f1 AS "Uncorrelated Field" FROM SUBSELECT_TBL
+  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL) ORDER BY 2;
+ six | Uncorrelated Field 
+-----+--------------------
+     |                  1
+     |                  1
+     |                  2
+     |                  2
+     |                  3
+     |                  3
+(6 rows)
+
+SELECT '' AS six, f1 AS "Uncorrelated Field" FROM SUBSELECT_TBL
+  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL WHERE
+    f2 IN (SELECT f1 FROM SUBSELECT_TBL)) ORDER BY 2;
+ six | Uncorrelated Field 
+-----+--------------------
+     |                  1
+     |                  1
+     |                  2
+     |                  2
+     |                  3
+     |                  3
+(6 rows)
+
+SELECT '' AS three, f1, f2
+  FROM SUBSELECT_TBL
+  WHERE (f1, f2) NOT IN (SELECT f2, CAST(f3 AS int4) FROM SUBSELECT_TBL
+                         WHERE f3 IS NOT NULL) ORDER BY 2,3;
+ three | f1 | f2 
+-------+----+----
+       |  1 |  2
+       |  6 |  7
+       |  8 |  9
+(3 rows)
+
+-- Correlated subselects
+SELECT '' AS six, f1 AS "Correlated Field", f2 AS "Second Field"
+  FROM SUBSELECT_TBL upper
+  WHERE f1 IN (SELECT f2 FROM SUBSELECT_TBL WHERE f1 = upper.f1) ORDER BY 2,3;
+ six | Correlated Field | Second Field 
+-----+------------------+--------------
+     |                1 |            1
+     |                1 |            2
+     |                2 |            2
+     |                2 |            3
+     |                3 |            3
+     |                3 |            4
+(6 rows)
+
+SELECT '' AS six, f1 AS "Correlated Field", f3 AS "Second Field"
+  FROM SUBSELECT_TBL upper
+  WHERE f1 IN
+    (SELECT f2 FROM SUBSELECT_TBL WHERE CAST(upper.f2 AS float) = f3) ORDER BY 2,3;
+ six | Correlated Field | Second Field 
+-----+------------------+--------------
+     |                1 |            1
+     |                2 |            2
+     |                2 |            4
+     |                3 |            3
+     |                3 |            5
+(5 rows)
+
+SELECT '' AS six, f1 AS "Correlated Field", f3 AS "Second Field"
+  FROM SUBSELECT_TBL upper
+  WHERE f3 IN (SELECT upper.f1 + f2 FROM SUBSELECT_TBL
+               WHERE f2 = CAST(f3 AS integer)) ORDER BY 2,3;
+ six | Correlated Field | Second Field 
+-----+------------------+--------------
+     |                1 |            3
+     |                2 |            4
+     |                3 |            5
+     |                6 |            8
+(4 rows)
+
+SELECT '' AS five, f1 AS "Correlated Field"
+  FROM SUBSELECT_TBL
+  WHERE (f1, f2) IN (SELECT f2, CAST(f3 AS int4) FROM SUBSELECT_TBL
+                     WHERE f3 IS NOT NULL) ORDER BY 2;
+ five | Correlated Field 
+------+------------------
+      |                1
+      |                2
+      |                2
+      |                3
+      |                3
+(5 rows)
+
+--
+-- Use some existing tables in the regression test
+--
+SELECT '' AS eight, ss.f1 AS "Correlated Field", ss.f3 AS "Second Field"
+  FROM SUBSELECT_TBL ss
+  WHERE f1 NOT IN (SELECT f1+1 FROM INT4_TBL
+                   WHERE f1 != ss.f1 AND f1 < 2147483647) ORDER BY 2,3;
+ eight | Correlated Field | Second Field 
+-------+------------------+--------------
+       |                2 |            2
+       |                2 |            4
+       |                3 |            3
+       |                3 |            5
+       |                6 |            8
+       |                8 |             
+(6 rows)
+
+select q1, float8(count(*)) / (select count(*) from int8_tbl)
+from int8_tbl group by q1 order by q1;
+        q1        | ?column? 
+------------------+----------
+              123 |      0.4
+ 4567890123456789 |      0.6
+(2 rows)
+
+--
+-- Test cases to catch unpleasant interactions between IN-join processing
+-- and subquery pullup.
+--
+select count(*) from
+  (select 1 from tenk1 a
+   where unique1 IN (select hundred from tenk1 b)) ss;
+ count 
+-------
+   100
+(1 row)
+
+select count(distinct ss.ten) from
+  (select ten from tenk1 a
+   where unique1 IN (select hundred from tenk1 b)) ss;
+ count 
+-------
+    10
+(1 row)
+
+select count(*) from
+  (select 1 from tenk1 a
+   where unique1 IN (select distinct hundred from tenk1 b)) ss;
+ count 
+-------
+   100
+(1 row)
+
+select count(distinct ss.ten) from
+  (select ten from tenk1 a
+   where unique1 IN (select distinct hundred from tenk1 b)) ss;
+ count 
+-------
+    10
+(1 row)
+
+--
+-- Test cases to check for overenthusiastic optimization of
+-- "IN (SELECT DISTINCT ...)" and related cases.  Per example from
+-- Luca Pireddu and Michael Fuhr.
+--
+CREATE TEMP TABLE foo (id integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TEMP TABLE bar (id1 integer, id2 integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO foo VALUES (1);
+INSERT INTO bar VALUES (1, 1);
+INSERT INTO bar VALUES (2, 2);
+INSERT INTO bar VALUES (3, 1);
+-- These cases require an extra level of distinct-ing above subquery s
+SELECT * FROM foo WHERE id IN
+    (SELECT id2 FROM (SELECT DISTINCT id1, id2 FROM bar) AS s) ORDER BY 1;
+ id 
+----
+  1
+(1 row)
+
+SELECT * FROM foo WHERE id IN
+    (SELECT id2 FROM (SELECT id1,id2 FROM bar GROUP BY id1,id2) AS s) ORDER BY 1;
+ id 
+----
+  1
+(1 row)
+
+SELECT * FROM foo WHERE id IN
+    (SELECT id2 FROM (SELECT id1, id2 FROM bar UNION
+                      SELECT id1, id2 FROM bar) AS s) ORDER BY 1;
+ id 
+----
+  1
+(1 row)
+
+-- These cases do not
+SELECT * FROM foo WHERE id IN
+    (SELECT id2 FROM (SELECT DISTINCT ON (id2) id1, id2 FROM bar) AS s) ORDER BY 1;
+ id 
+----
+  1
+(1 row)
+
+SELECT * FROM foo WHERE id IN
+    (SELECT id2 FROM (SELECT id2 FROM bar GROUP BY id2) AS s) ORDER BY 1;
+ id 
+----
+  1
+(1 row)
+
+SELECT * FROM foo WHERE id IN
+    (SELECT id2 FROM (SELECT id2 FROM bar UNION
+                      SELECT id2 FROM bar) AS s) ORDER BY 1;
+ id 
+----
+  1
+(1 row)
+
+--
+-- Test case to catch problems with multiply nested sub-SELECTs not getting
+-- recalculated properly.  Per bug report from Didier Moens.
+--
+CREATE TABLE orderstest (
+    approver_ref integer,
+    po_ref integer,
+    ordercancelled boolean
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'approver_ref' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO orderstest VALUES (1, 1, false);
+INSERT INTO orderstest VALUES (66, 5, false);
+INSERT INTO orderstest VALUES (66, 6, false);
+INSERT INTO orderstest VALUES (66, 7, false);
+INSERT INTO orderstest VALUES (66, 1, true);
+INSERT INTO orderstest VALUES (66, 8, false);
+INSERT INTO orderstest VALUES (66, 1, false);
+INSERT INTO orderstest VALUES (77, 1, false);
+INSERT INTO orderstest VALUES (1, 1, false);
+INSERT INTO orderstest VALUES (66, 1, false);
+INSERT INTO orderstest VALUES (1, 1, false);
+CREATE VIEW orders_view AS
+SELECT *,
+(SELECT CASE
+   WHEN ord.approver_ref=1 THEN '---' ELSE 'Approved'
+ END) AS "Approved",
+(SELECT CASE
+ WHEN ord.ordercancelled
+ THEN 'Cancelled'
+ ELSE
+  (SELECT CASE
+		WHEN ord.po_ref=1
+		THEN
+		 (SELECT CASE
+				WHEN ord.approver_ref=1
+				THEN '---'
+				ELSE 'Approved'
+			END)
+		ELSE 'PO'
+	END) 
+END) AS "Status",
+(CASE
+ WHEN ord.ordercancelled
+ THEN 'Cancelled'
+ ELSE
+  (CASE
+		WHEN ord.po_ref=1
+		THEN
+		 (CASE
+				WHEN ord.approver_ref=1
+				THEN '---'
+				ELSE 'Approved'
+			END)
+		ELSE 'PO'
+	END) 
+END) AS "Status_OK"
+FROM orderstest ord;
+SELECT * FROM orders_view ORDER BY 1,2,5;
+ approver_ref | po_ref | ordercancelled | Approved |  Status   | Status_OK 
+--------------+--------+----------------+----------+-----------+-----------
+            1 |      1 | f              | ---      | ---       | ---
+            1 |      1 | f              | ---      | ---       | ---
+            1 |      1 | f              | ---      | ---       | ---
+           66 |      1 | f              | Approved | Approved  | Approved
+           66 |      1 | f              | Approved | Approved  | Approved
+           66 |      1 | t              | Approved | Cancelled | Cancelled
+           66 |      5 | f              | Approved | PO        | PO
+           66 |      6 | f              | Approved | PO        | PO
+           66 |      7 | f              | Approved | PO        | PO
+           66 |      8 | f              | Approved | PO        | PO
+           77 |      1 | f              | Approved | Approved  | Approved
+(11 rows)
+
+DROP TABLE orderstest cascade;
+NOTICE:  drop cascades to rule _RETURN on view orders_view
+NOTICE:  drop cascades to view orders_view
+--
+-- Test cases to catch situations where rule rewriter fails to propagate
+-- hasSubLinks flag correctly.  Per example from Kyle Bateman.
+--
+create temp table parts (
+    partnum     text,
+    cost        float8
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'partnum' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create temp table shipped (
+    ttype       char(2),
+    ordnum      int4,
+    partnum     text,
+    value       float8
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'ttype' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create temp view shipped_view as
+    select * from shipped where ttype = 'wt';
+create rule shipped_view_insert as on insert to shipped_view do instead
+    insert into shipped values('wt', new.ordnum, new.partnum, new.value);
+insert into parts (partnum, cost) values (1, 1234.56);
+insert into shipped_view (ordnum, partnum, value)
+    values (0, 1, (select cost from parts where partnum = '1'));
+select * from shipped_view;
+ ttype | ordnum | partnum |  value  
+-------+--------+---------+---------
+ wt    |      0 | 1       | 1234.56
+(1 row)
+
+create rule shipped_view_update as on update to shipped_view do instead
+    update shipped set partnum = new.partnum, value = new.value
+        where ttype = new.ttype and ordnum = new.ordnum;
+select * from shipped_view ORDER BY 1,2;
+ ttype | ordnum | partnum |  value  
+-------+--------+---------+---------
+ wt    |      0 | 1       | 1234.56
+(1 row)
+
+select f1, ss1 as relabel from
+    (select *, (select sum(f1) from int4_tbl b where f1 >= a.f1) as ss1
+     from int4_tbl a) ss;
+     f1      |  relabel   
+-------------+------------
+  2147483647 | 2147483647
+           0 | 2147607103
+      123456 | 2147607103
+     -123456 | 2147483647
+ -2147483647 |          0
+(5 rows)
+
+--
+-- Test cases involving PARAM_EXEC parameters and min/max index optimizations.
+-- Per bug report from David Sanchez i Gregori.
+--
+select * from (
+  select max(unique1) from tenk1 as a
+  where exists (select 1 from tenk1 as b where b.thousand = a.unique2)
+) ss;
+ max  
+------
+ 9997
+(1 row)
+
+select * from (
+  select min(unique1) from tenk1 as a
+  where not exists (select 1 from tenk1 as b where b.unique2 = 10000)
+) ss;
+ min 
+-----
+   0
+(1 row)
+
+--
+-- Test that an IN implemented using a UniquePath does unique-ification
+-- with the right semantics, as per bug #4113.  (Unfortunately we have
+-- no simple way to ensure that this test case actually chooses that type
+-- of plan, but it does in releases 7.4-8.3.  Note that an ordering difference
+-- here might mean that some other plan type is being used, rendering the test
+-- pointless.)
+--
+create temp table numeric_table (num_col numeric);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'num_col' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into numeric_table values (1), (1.000000000000000000001), (2), (3);
+create temp table float_table (float_col float8);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'float_col' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into float_table values (1), (2), (3);
+select * from float_table
+  where float_col in (select num_col from numeric_table);
+ float_col 
+-----------
+         1
+         2
+         3
+(3 rows)
+
+select * from numeric_table
+  where num_col in (select float_col from float_table);
+         num_col         
+-------------------------
+                       1
+                       2
+ 1.000000000000000000001
+                       3
+(4 rows)
+
+--
+-- Test case for bug #4290: bogus calculation of subplan param sets
+--
+create temp table ta (id int primary key, val int);
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "ta_pkey" for table "ta"
+insert into ta values(1,1);
+insert into ta values(2,2);
+create temp table tb (id int primary key, aval int);
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "tb_pkey" for table "tb"
+insert into tb values(1,1);
+insert into tb values(2,1);
+insert into tb values(3,2);
+insert into tb values(4,2);
+create temp table tc (id int primary key, aid int);
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "tc_pkey" for table "tc"
+insert into tc values(1,1);
+insert into tc values(2,2);
+select
+  ( select min(tb.id) from tb
+    where tb.aval = (select ta.val from ta where ta.id = tc.aid) ) as min_tb_id
+from tc;
+ min_tb_id 
+-----------
+         1
+         3
+(2 rows)
+
+--
+-- Test case for 8.3 "failed to locate grouping columns" bug
+--
+create temp table t1 (f1 numeric(14,0), f2 varchar(30));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+select * from
+  (select distinct f1, f2, (select f2 from t1 x where x.f1 = up.f1) as fs
+   from t1 up) ss
+group by f1,f2,fs;
+ f1 | f2 | fs 
+----+----+----
+(0 rows)
+
+--
+-- Check that whole-row Vars reading the result of a subselect don't include
+-- any junk columns therein
+--
+-- This test works in upstream PostgreSQL but triggers a problem in GPDB; in
+-- Greenplum the typmods must be the same between all segments and the master
+-- but PostgreSQL executor defers typmod assignment to ExecEvalWholeRowVar()
+-- which is too late for Greenplum since the plan has already been dispatched.
+-- This should be fixed but requires new infrastructure.
+--
+select q from (select max(f1) from int4_tbl group by f1 order by f1) q;
+ERROR:  record type has not been registered
+--
+-- Test case for sublinks pushed down into subselects via join alias expansion
+--
+select
+  (select sq1) as qq1
+from
+  (select exists(select 1 from int4_tbl where f1 = q2) as sq1, 42 as dummy
+   from int8_tbl) sq0
+  join
+  int4_tbl i4 on dummy = i4.f1;
+ qq1 
+-----
+(0 rows)
+
+--
+-- Test case for cross-type partial matching in hashed subplan (bug #7597)
+--
+create temp table outer_7597 (f1 int4, f2 int4);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into outer_7597 values (0, 0);
+insert into outer_7597 values (1, 0);
+insert into outer_7597 values (0, null);
+insert into outer_7597 values (1, null);
+create temp table inner_7597(c1 int8, c2 int8);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into inner_7597 values(0, null);
+select * from outer_7597 where (f1, f2) not in (select * from inner_7597);
+ f1 | f2 
+----+----
+  1 |  0
+  1 |   
+(2 rows)
+
+--
+-- Test case for premature memory release during hashing of subplan output
+--
+select '1'::text in (select '1'::name union all select '1'::name);
+ ?column? 
+----------
+ t
+(1 row)
+

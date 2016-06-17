@@ -5,6 +5,15 @@
 #define __HSTORE_H__
 
 #include "fmgr.h"
+#include "postgres.h"
+
+#include "funcapi.h"
+#include "access/gist.h"
+#include "access/itup.h"
+#include "utils/elog.h"
+#include "utils/palloc.h"
+#include "utils/builtins.h"
+#include "storage/bufpage.h"
 
 
 typedef struct
@@ -15,6 +24,11 @@ typedef struct
 				valisnull:1,
 				pos:31;
 } HEntry;
+
+/* these are determined by the sizes of the keylen and vallen fields */
+/* in struct HEntry and struct Pairs */
+#define HSTORE_MAX_KEY_LEN 65535
+#define HSTORE_MAX_VALUE_LEN 65535
 
 /* these are determined by the sizes of the keylen and vallen fields */
 /* in struct HEntry and struct Pairs */

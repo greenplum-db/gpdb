@@ -34,7 +34,7 @@
  *
  *
  * IDENTIFICATION
- *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_restore.c,v 1.84 2006/10/14 23:07:22 tgl Exp $
+ *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_restore.c,v 1.85 2007/12/11 19:01:06 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */

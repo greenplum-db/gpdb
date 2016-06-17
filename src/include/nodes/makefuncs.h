@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/makefuncs.h,v 1.57 2007/01/05 22:19:55 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/makefuncs.h,v 1.61 2008/01/01 19:45:58 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -36,7 +36,7 @@ extern TargetEntry *makeTargetEntry(Expr *expr,
 
 extern TargetEntry *flatCopyTargetEntry(TargetEntry *src_tle);
 
-/* extern FromExpr *makeFromExpr(List *fromlist, Node *quals); * moved to analyze.c */
+extern FromExpr *makeFromExpr(List *fromlist, Node *quals);
 
 extern Const *makeConst(Oid consttype,
 		  int32 consttypmod,

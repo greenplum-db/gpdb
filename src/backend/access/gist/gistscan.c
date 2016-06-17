@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/gist/gistscan.c,v 1.67 2007/01/20 18:43:35 neilc Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/gist/gistscan.c,v 1.68.2.4 2008/12/04 11:10:06 teodor Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -84,6 +84,9 @@ gistrescan(PG_FUNCTION_ARGS)
 	 */
 	ItemPointerSetInvalid(&so->curpos);
 	ItemPointerSetInvalid(&so->markpos);
+	so->nPageData = so->curPageData = 0;
+
+	so->qual_ok = true;
 
 	/* Update scan key, if a new one is given */
 	if (key && scan->numberOfKeys > 0)
@@ -97,9 +100,18 @@ gistrescan(PG_FUNCTION_ARGS)
 		 * function in the form of its strategy number, which is available
 		 * from the sk_strategy field, and its subtype from the sk_subtype
 		 * field.
+		 *
+		 * Next, if any of keys is a NULL and that key is not marked with
+		 * SK_SEARCHNULL then nothing can be found.
 		 */
-		for (i = 0; i < scan->numberOfKeys; i++)
+		for (i = 0; i < scan->numberOfKeys; i++) {
 			scan->keyData[i].sk_func = so->giststate->consistentFn[scan->keyData[i].sk_attno - 1];
+
+			if ( scan->keyData[i].sk_flags & SK_ISNULL ) {
+				if ( (scan->keyData[i].sk_flags & SK_SEARCHNULL) == 0 )
+					so->qual_ok = false;
+			}
+		}
 	}
 
 	PG_RETURN_VOID();
@@ -226,14 +238,17 @@ gistendscan(PG_FUNCTION_ARGS)
 		gistfreestack(so->stack);
 		gistfreestack(so->markstk);
 		if (so->giststate != NULL)
+		{
 			freeGISTstate(so->giststate);
+			pfree(so->giststate);
+		}
 		/* drop pins on buffers -- we aren't holding any locks */
 		if (BufferIsValid(so->curbuf))
 			ReleaseBuffer(so->curbuf);
 		if (BufferIsValid(so->markbuf))
 			ReleaseBuffer(so->markbuf);
 		MemoryContextDelete(so->tempCxt);
-		pfree(scan->opaque);
+		pfree(so);
 	}
 
 	PG_RETURN_VOID();

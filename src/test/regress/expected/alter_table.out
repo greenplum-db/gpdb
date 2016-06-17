@@ -152,8 +152,8 @@ CREATE TABLE cor (a int, b float, c text);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 UPDATE pg_type SET typname='newcor' WHERE typrelid='cor'::regclass;
-ALTER TABLE cor RENAME TO newcor;
-ALTER TABLE newcor RENAME TO cor;
+ALTER TABLE cor RENAME TO newcor2;
+ALTER TABLE newcor2 RENAME TO cor;
 DROP TABLE cor;
 -- relname is out of sync
 CREATE TABLE cor (a int, b int);
@@ -428,7 +428,7 @@ alter table atacc3 add constraint foo check (test2>0);
 alter table atacc3 inherit atacc2;
 -- fail due to duplicates and circular inheritance
 alter table atacc3 inherit atacc2;
-ERROR:  inherited relation "atacc2" duplicated
+ERROR:  relation "atacc2" would be inherited from more than once
 alter table atacc2 inherit atacc3;
 ERROR:  circular inheritance not allowed
 DETAIL:  "atacc3" is already a child of "atacc2".
@@ -601,7 +601,7 @@ ERROR:  column "test1" named in key does not exist
 drop table atacc1;
 -- adding a new column as primary key to a non-empty table.
 -- should fail unless the column has a non-null default value.
-create table atacc1 ( test int ) distributed by (test);
+create table atacc1 ( test int );
 insert into atacc1 (test) values (0);
 -- add a primary key column without a default (fails).
 alter table atacc1 add column test2 int primary key;
@@ -1569,6 +1569,18 @@ select * from another order by 1,2;
 (3 rows)
 
 drop table another;
+-- disallow recursive containment of row types
+create temp table recur1 (f1 int);
+alter table recur1 add column f2 recur1; -- fails
+ERROR:  composite type recur1 cannot be made a member of itself
+alter table recur1 add column f2 recur1[]; -- fails
+ERROR:  composite type recur1 cannot be made a member of itself
+create temp table recur2 (f1 int, f2 recur1);
+alter table recur1 add column f2 recur2; -- fails
+ERROR:  composite type recur1 cannot be made a member of itself
+alter table recur1 add column f2 int;
+alter table recur1 alter column f2 type recur2; -- fails
+ERROR:  composite type recur1 cannot be made a member of itself
 --
 -- alter function
 --
@@ -1789,11 +1801,13 @@ select  pg_class.relname, attname, typname from pg_attribute, pg_class, pg_type 
  ao1     | col3    | bpchar
 (1 row)
 
--- no explicit entry in pg_attrdef for NULL default
+-- There's an explicit entry in pg_attrdef for the NULL default (although it has
+-- the same effect as no entry).
 select relname, attname, adsrc from pg_class, pg_attribute, pg_attrdef where attrelid = pg_class.oid and adrelid = pg_class.oid and adnum = pg_attribute.attnum and pg_class.relname = 'ao1';
- relname | attname | adsrc 
----------+---------+-------
-(0 rows)
+ relname | attname |    adsrc     
+---------+---------+--------------
+ ao1     | col3    | NULL::bpchar
+(1 row)
 
 --- 
 --- check with IS NOT NULL constraint
@@ -1821,14 +1835,13 @@ insert into ao1 values('1');
 insert into ao1 values('1');
 insert into ao1 values('1');
 alter table ao1 add column col2 char(1);
-ERROR:  ADD COLUMN with no default value in append-only tables is not yet supported.
 select * from ao1;
- col1 
-------
- 1
- 1
- 1
- 1
+ col1 | col2 
+------+------
+ 1    | 
+ 1    | 
+ 1    | 
+ 1    | 
 (4 rows)
 
 --
@@ -1911,11 +1924,13 @@ select  pg_class.relname, attname, typname from pg_attribute, pg_class, pg_type 
  aoco1   | col3    | bpchar
 (1 row)
 
--- no explicit entry in pg_attrdef for NULL default
+-- There's an explicit entry in pg_attrdef for the NULL default (although it has
+-- the same effect as no entry).
 select relname, attname, adsrc from pg_class, pg_attribute, pg_attrdef where attrelid = pg_class.oid and adrelid = pg_class.oid and adnum = pg_attribute.attnum and pg_class.relname = 'aoco1';
- relname | attname | adsrc 
----------+---------+-------
-(0 rows)
+ relname | attname |    adsrc     
+---------+---------+--------------
+ aoco1   | col3    | NULL::bpchar
+(1 row)
 
 --- 
 --- check with IS NOT NULL constraint
@@ -1976,14 +1991,13 @@ insert into aoco1 values('1');
 insert into aoco1 values('1');
 insert into aoco1 values('1');
 alter table aoco1 add column col2 char(1);
-ERROR:  ADD COLUMN with no default value in append-only tables is not yet supported.
 select * from aoco1;
- col1 
-------
- 1
- 1
- 1
- 1
+ col1 | col2 
+------+------
+ 1    | 
+ 1    | 
+ 1    | 
+ 1    | 
 (4 rows)
 
 drop table aoco1;
@@ -1999,9 +2013,9 @@ create domain zipcode as text
 constraint c1 not null;
 -- following should fail
 alter table ao1 add column col2 zipcode;
-ERROR:  ADD COLUMN with no default value in append-only tables is not yet supported.
+ERROR:  domain zipcode does not allow null values  (seg1 localhost:40001 pid=17627)
 alter table ao1 add column col2 zipcode default NULL;
-ERROR:  domain zipcode does not allow null values  (seg1 rh55-qavm63:18507 pid=26647)
+ERROR:  domain zipcode does not allow null values  (seg1 localhost:40001 pid=17627)
 select * from ao1;
  col1  
 -------

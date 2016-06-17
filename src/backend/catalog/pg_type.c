@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/pg_type.c,v 1.110 2007/01/05 22:19:25 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/pg_type.c,v 1.115.2.2 2009/08/16 18:14:46 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -16,6 +16,7 @@
 
 #include "access/heapam.h"
 #include "catalog/catquery.h"
+#include "access/xact.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_namespace.h"
@@ -28,6 +29,7 @@
 #include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
+#include "utils/lsyscache.h"
 #include "utils/syscache.h"
 
 #include "cdb/cdbvars.h"
@@ -78,13 +80,6 @@ Oid
 TypeShellMake(const char *typeName, Oid typeNamespace, Oid ownerId,
 			  Oid shelloid)
 {
-	return TypeShellMakeWithOid(typeName,typeNamespace,ownerId, shelloid);
-}
-
-Oid
-TypeShellMakeWithOid(const char *typeName, Oid typeNamespace, Oid ownerId,
-					 Oid shelltypeOid)
-{
 	int			i;
 	HeapTuple	tup;
 	Datum		values[Natts_pg_type];
@@ -117,17 +112,17 @@ TypeShellMakeWithOid(const char *typeName, Oid typeNamespace, Oid ownerId,
 	 *
 	 * The representational details are the same as int4 ... it doesn't really
 	 * matter what they are so long as they are consistent.  Also note that we
-	 * give it typtype = 'p' (pseudotype) as extra insurance that it won't be
+	 * give it typtype = TYPTYPE_PSEUDO as extra insurance that it won't be
 	 * mistaken for a usable type.
 	 */
 	i = 0;
 	namestrcpy(&name, typeName);
 	values[i++] = NameGetDatum(&name);	/* typname */
 	values[i++] = ObjectIdGetDatum(typeNamespace);		/* typnamespace */
-	values[i++] = ObjectIdGetDatum(ownerId);		/* typowner */
+	values[i++] = ObjectIdGetDatum(ownerId);	/* typowner */
 	values[i++] = Int16GetDatum(sizeof(int4));	/* typlen */
 	values[i++] = BoolGetDatum(true);	/* typbyval */
-	values[i++] = CharGetDatum('p');	/* typtype */
+	values[i++] = CharGetDatum(TYPTYPE_PSEUDO); /* typtype */
 	values[i++] = BoolGetDatum(false);	/* typisdefined */
 	values[i++] = CharGetDatum(DEFAULT_TYPDELIM);		/* typdelim */
 	values[i++] = ObjectIdGetDatum(InvalidOid); /* typrelid */
@@ -157,8 +152,8 @@ TypeShellMakeWithOid(const char *typeName, Oid typeNamespace, Oid ownerId,
 	/*
 	 * MPP: If we are on the QEs, we need to use the same Oid as the QD used
 	 */
-	if (shelltypeOid != InvalidOid)
-		HeapTupleSetOid(tup, shelltypeOid);
+	if (shelloid != InvalidOid)
+		HeapTupleSetOid(tup, shelloid);
 	/*
 	 * insert the tuple in the relation and get the tuple's oid.
 	 */
@@ -200,13 +195,16 @@ TypeShellMakeWithOid(const char *typeName, Oid typeNamespace, Oid ownerId,
  *
  *		This does all the necessary work needed to define a new type.
  *
- *		Returns the OID assigned to the new type.
+ *		Returns the OID assigned to the new type.  If newTypeOid is
+ *		zero (the normal case), a new OID is created; otherwise we
+ *		use exactly that OID.
  * ----------------------------------------------------------------
  */
 Oid
-TypeCreateWithOid(const char *typeName,
+TypeCreateWithOptions(Oid newTypeOid,
+		   const char *typeName,
 		   Oid typeNamespace,
-		   Oid relationOid,		/* only for 'c'atalog types */
+		   Oid relationOid,		/* only for relation rowtypes */
 		   char relationKind,	/* ditto */
 		   Oid ownerId,
 		   int16 internalSize,
@@ -231,7 +229,6 @@ TypeCreateWithOid(const char *typeName,
 		   int32 typeMod,
 		   int32 typNDims,		/* Array dimensions for baseType */
 		   bool typeNotNull,
-		   Oid newtypeOid,
 		   Datum typoptions)
 {
 	Relation	pg_type_desc;
@@ -243,8 +240,6 @@ TypeCreateWithOid(const char *typeName,
 	Datum		values[Natts_pg_type];
 	NameData	name;
 	int			i;
-	cqContext	*pcqCtx;
-	cqContext	 cqc;
 
 	/*
 	 * We assume that the caller validated the arguments individually, but did
@@ -291,7 +286,7 @@ TypeCreateWithOid(const char *typeName,
 	namestrcpy(&name, typeName);
 	values[i++] = NameGetDatum(&name);	/* typname */
 	values[i++] = ObjectIdGetDatum(typeNamespace);		/* typnamespace */
-	values[i++] = ObjectIdGetDatum(ownerId);		/* typowner */
+	values[i++] = ObjectIdGetDatum(ownerId);	/* typowner */
 	values[i++] = Int16GetDatum(internalSize);	/* typlen */
 	values[i++] = BoolGetDatum(passedByValue);	/* typbyval */
 	values[i++] = CharGetDatum(typeType);		/* typtype */
@@ -305,7 +300,7 @@ TypeCreateWithOid(const char *typeName,
 	values[i++] = ObjectIdGetDatum(receiveProcedure);	/* typreceive */
 	values[i++] = ObjectIdGetDatum(sendProcedure);		/* typsend */
 	values[i++] = ObjectIdGetDatum(typmodinProcedure);	/* typmodin */
-	values[i++] = ObjectIdGetDatum(typmodoutProcedure);	/* typmodout */
+	values[i++] = ObjectIdGetDatum(typmodoutProcedure); /* typmodout */
 	values[i++] = ObjectIdGetDatum(analyzeProcedure);	/* typanalyze */
 	values[i++] = CharGetDatum(alignment);		/* typalign */
 	values[i++] = CharGetDatum(storage);		/* typstorage */
@@ -341,17 +336,10 @@ TypeCreateWithOid(const char *typeName,
 	 */
 	pg_type_desc = heap_open(TypeRelationId, RowExclusiveLock);
 
-	pcqCtx = caql_addrel(cqclr(&cqc), pg_type_desc);
-
-	tup = caql_getfirst(
-			pcqCtx,
-			cql("SELECT * FROM pg_type "
-				" WHERE typname = :1 "
-				" AND typnamespace = :2 "
-				" FOR UPDATE ",
-				CStringGetDatum((char *) typeName),
-				ObjectIdGetDatum(typeNamespace)));
-
+	tup = SearchSysCacheCopy(TYPENAMENSP,
+							 CStringGetDatum(typeName),
+							 ObjectIdGetDatum(typeNamespace),
+							 0, 0);
 	if (HeapTupleIsValid(tup))
 	{
 		/*
@@ -369,21 +357,20 @@ TypeCreateWithOid(const char *typeName,
 		if (((Form_pg_type) GETSTRUCT(tup))->typowner != ownerId)
 			aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_TYPE, typeName);
 
-		/*  trouble if caller wanted to force the OID */
-		if (OidIsValid(newtypeOid) &&
-			newtypeOid != HeapTupleHeaderGetOid((tup)->t_data))
-			elog(ERROR, "cannot assign new OID to existing shell type");
+		/* trouble if caller wanted to force the OID */
+		if (OidIsValid(newTypeOid) &&
+			newTypeOid != HeapTupleHeaderGetOid((tup)->t_data))
+			elog(ERROR, "cannot assign new OID to existing shell type %u", HeapTupleHeaderGetOid((tup)->t_data));
 
 		/*
 		 * Okay to update existing shell type tuple
 		 */
-		tup = caql_modify_current(pcqCtx,
-								  values,
-								  nulls,
-								  replaces);
-
-		caql_update_current(pcqCtx, tup);
-		/* and Update indexes (implicit) */
+		tup = heap_modify_tuple(tup,
+							   RelationGetDescr(pg_type_desc),
+							   values,
+							   nulls,
+							   replaces);
+		simple_heap_update(pg_type_desc, &tup->t_self, tup);
 
 		typeObjectId = HeapTupleGetOid(tup);
 
@@ -391,19 +378,20 @@ TypeCreateWithOid(const char *typeName,
 	}
 	else
 	{
-		tup = caql_form_tuple(pcqCtx, values, nulls);
-						 
-		if (newtypeOid != InvalidOid)
-		{
-			elog(DEBUG5," Setting Oid in new pg_type tuple");
-			HeapTupleSetOid(tup, newtypeOid);
-		}
+		tup = heap_form_tuple(RelationGetDescr(pg_type_desc),
+							 values,
+							 nulls);
+
+		/* Force the OID if requested by caller, else heap_insert does it */
+		if (OidIsValid(newTypeOid))
+			HeapTupleSetOid(tup, newTypeOid);
 		else if (Gp_role == GP_ROLE_EXECUTE) elog(ERROR," newtypeOid NULL");
 
-		/* Insert tuple into the relation */
-		typeObjectId = caql_insert(pcqCtx, tup);
-		/* and Update indexes (implicit) */
+		typeObjectId = simple_heap_insert(pg_type_desc, tup);
 	}
+
+	/* Update indexes */
+	CatalogUpdateIndexes(pg_type_desc, tup);
 
 	/*
 	 * Create dependencies.  We can/must skip this in bootstrap mode.
@@ -441,7 +429,9 @@ TypeCreateWithOid(const char *typeName,
 	return typeObjectId;
 }
 
-Oid TypeCreate(const char *typeName,
+Oid
+TypeCreate(Oid newTypeOid,
+		   const char *typeName,
 		   Oid typeNamespace,
 		   Oid relationOid,
 		   char relationKind,
@@ -469,36 +459,35 @@ Oid TypeCreate(const char *typeName,
 		   int32 typNDims,
 		   bool typeNotNull)
 {
-	return TypeCreateWithOid(
-							typeName,
-							typeNamespace,
-							relationOid,
-							relationKind,
-							ownerId,
-							internalSize,
-							typeType,
-							typDelim,
-							inputProcedure,
-							outputProcedure,
-							receiveProcedure,
-							sendProcedure,
-							typmodinProcedure,
-							typmodoutProcedure,
-							analyzeProcedure,
-							elementType,
-							isImplicitArray,
-							arrayType,
-							baseType,
-							defaultTypeValue,
-							defaultTypeBin,
-							passedByValue,
-							alignment,
-							storage,
-							typeMod,
-							typNDims,
-							typeNotNull,
-							InvalidOid,
-							0);
+	return TypeCreateWithOptions(newTypeOid,
+		   typeName,
+		   typeNamespace,
+		   relationOid,
+		   relationKind,
+		   ownerId,
+		   internalSize,
+		   typeType,
+		   typDelim,
+		   inputProcedure,
+		   outputProcedure,
+		   receiveProcedure,
+		   sendProcedure,
+		   typmodinProcedure,
+		   typmodoutProcedure,
+		   analyzeProcedure,
+		   elementType,
+		   isImplicitArray,
+		   arrayType,
+		   baseType,
+		   defaultTypeValue,
+		   defaultTypeBin,
+		   passedByValue,
+		   alignment,
+		   storage,
+		   typeMod,
+		   typNDims,
+		   typeNotNull,
+		   (Datum) 0);
 }
 
 /*
@@ -511,7 +500,7 @@ Oid TypeCreate(const char *typeName,
 void
 GenerateTypeDependencies(Oid typeNamespace,
 						 Oid typeObjectId,
-						 Oid relationOid,		/* only for 'c'atalog types */
+						 Oid relationOid,		/* only for relation rowtypes */
 						 char relationKind,		/* ditto */
 						 Oid owner,
 						 Oid inputProcedure,
@@ -648,7 +637,7 @@ GenerateTypeDependencies(Oid typeNamespace,
 		referenced.objectId = elementType;
 		referenced.objectSubId = 0;
 		recordDependencyOn(&myself, &referenced,
-								isImplicitArray ? DEPENDENCY_INTERNAL : DEPENDENCY_NORMAL);
+				  isImplicitArray ? DEPENDENCY_INTERNAL : DEPENDENCY_NORMAL);
 	}
 
 	/* Normal dependency from a domain to its base type. */
@@ -667,65 +656,67 @@ GenerateTypeDependencies(Oid typeNamespace,
 
 /*
  * TypeRename
- *		This renames a type
+ *		This renames a type, as well as any associated array type.
  *
- * Note: any associated array type is *not* renamed; caller must make
- * another call to handle that case.  Currently this is only used for
- * renaming types associated with tables, for which there are no arrays.
+ * Note: this isn't intended to be a user-exposed function; it doesn't check
+ * permissions etc.  (Perhaps TypeRenameInternal would be a better name.)
+ * Currently this is only used for renaming table rowtypes.
  */
 void
-TypeRename(Oid typeOid, const char *newTypeName)
+TypeRename(Oid typeOid, const char *newTypeName, Oid typeNamespace)
 {
-	Relation		pg_type_desc;
-	HeapTuple		tuple;
-	Form_pg_type	form;
-	cqContext	   *pcqCtx;
-	cqContext		cqc, cqc2;
+	Relation	pg_type_desc;
+	HeapTuple	tuple;
+	Form_pg_type typ;
+	Oid			arrayOid;
 
 	pg_type_desc = heap_open(TypeRelationId, RowExclusiveLock);
 
-	pcqCtx = caql_addrel(cqclr(&cqc), pg_type_desc);
-
-	tuple = caql_getfirst(
-			pcqCtx,
-			cql("SELECT * FROM pg_type "
-				" WHERE oid = :1 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(typeOid)));
-
+	tuple = SearchSysCacheCopy(TYPEOID,
+							   ObjectIdGetDatum(typeOid),
+							   0, 0, 0);
 	if (!HeapTupleIsValid(tuple))
+		elog(ERROR, "cache lookup failed for type %u", typeOid);
+	typ = (Form_pg_type) GETSTRUCT(tuple);
+
+	/* We are not supposed to be changing schemas here */
+	Assert(typeNamespace == typ->typnamespace);
+
+	arrayOid = typ->typarray;
+
+	/* Just to give a more friendly error than unique-index violation */
+	if (SearchSysCacheExists(TYPENAMENSP,
+							 CStringGetDatum(newTypeName),
+							 ObjectIdGetDatum(typeNamespace),
+							 0, 0))
 		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("type with OID \"%d\" does not exist", typeOid)));
+				(errcode(ERRCODE_DUPLICATE_OBJECT),
+				 errmsg("type \"%s\" already exists", newTypeName)));
 
-	form = (Form_pg_type) GETSTRUCT(tuple);
-	if (namestrcmp(&(form->typname), newTypeName))
-	{
-		if (caql_getcount(
-					caql_addrel(cqclr(&cqc2), pg_type_desc),
-					cql("SELECT COUNT(*) FROM pg_type "
-						" WHERE typname = :1 "
-						" AND typnamespace = :2 ",
-						CStringGetDatum((char *) newTypeName),
-						ObjectIdGetDatum(form->typnamespace))))
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_DUPLICATE_OBJECT),
-					 errmsg("type \"%s\" already exists", newTypeName)));
-		}
+	/* OK, do the rename --- tuple is a copy, so OK to scribble on it */
+	namestrcpy(&(typ->typname), newTypeName);
 
-		namestrcpy(&(form->typname), newTypeName);
+	simple_heap_update(pg_type_desc, &tuple->t_self, tuple);
 
-		caql_update_current(pcqCtx, tuple);
-		/* update the system catalog indexes (implicit) */
-	}
+	/* update the system catalog indexes */
+	CatalogUpdateIndexes(pg_type_desc, tuple);
 
 	heap_freetuple(tuple);
 	heap_close(pg_type_desc, RowExclusiveLock);
+
+	/* If the type has an array type, recurse to handle that */
+	if (OidIsValid(arrayOid))
+	{
+		char	   *arrname = makeArrayTypeName(newTypeName, typeNamespace);
+
+		TypeRename(arrayOid, arrname, typeNamespace);
+		pfree(arrname);
+	}
 }
 
+
 /*
- * makeArrayTypeName(typeName);
+ * makeArrayTypeName
  *	  - given a base type name, make an array type name for it
  *
  * the caller is responsible for pfreeing the result
@@ -733,23 +724,27 @@ TypeRename(Oid typeOid, const char *newTypeName)
 char *
 makeArrayTypeName(const char *typeName, Oid typeNamespace)
 {
-	char		*arr;
-	int			i;
+	char	   *arr = (char *) palloc(NAMEDATALEN);
+	int			namelen = strlen(typeName);
 	Relation	pg_type_desc;
+	int			i;
 
 	/*
 	 * The idea is to prepend underscores as needed until we make a name that
 	 * doesn't collide with anything...
 	 */
-	arr = (char*)palloc(NAMEDATALEN);
-
 	pg_type_desc = heap_open(TypeRelationId, AccessShareLock);
 
 	for (i = 1; i < NAMEDATALEN - 1; i++)
 	{
 		arr[i - 1] = '_';
-		strlcpy(arr + i, typeName, NAMEDATALEN - i);
-		truncate_identifier(arr, strlen(arr), false);
+		if (i + namelen < NAMEDATALEN)
+			strcpy(arr + i, typeName);
+		else
+		{
+			memcpy(arr + i, typeName, NAMEDATALEN - i);
+			truncate_identifier(arr, NAMEDATALEN, false);
+		}
 		if (!SearchSysCacheExists(TYPENAMENSP,
 								  CStringGetDatum(arr),
 								  ObjectIdGetDatum(typeNamespace),
@@ -759,11 +754,74 @@ makeArrayTypeName(const char *typeName, Oid typeNamespace)
 
 	heap_close(pg_type_desc, AccessShareLock);
 
-	if (i >= NAMEDATALEN-1)
+	if (i >= NAMEDATALEN - 1)
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_OBJECT),
 				 errmsg("could not form array type name for type \"%s\"",
 						typeName)));
 
 	return arr;
+}
+
+
+/*
+ * moveArrayTypeName
+ *	  - try to reassign an array type name that the user wants to use.
+ *
+ * The given type name has been discovered to already exist (with the given
+ * OID).  If it is an autogenerated array type, change the array type's name
+ * to not conflict.  This allows the user to create type "foo" followed by
+ * type "_foo" without problems.  (Of course, there are race conditions if
+ * two backends try to create similarly-named types concurrently, but the
+ * worst that can happen is an unnecessary failure --- anything we do here
+ * will be rolled back if the type creation fails due to conflicting names.)
+ *
+ * Note that this must be called *before* calling makeArrayTypeName to
+ * determine the new type's own array type name; else the latter will
+ * certainly pick the same name.
+ *
+ * Returns TRUE if successfully moved the type, FALSE if not.
+ *
+ * We also return TRUE if the given type is a shell type.  In this case
+ * the type has not been renamed out of the way, but nonetheless it can
+ * be expected that TypeCreate will succeed.  This behavior is convenient
+ * for most callers --- those that need to distinguish the shell-type case
+ * must do their own typisdefined test.
+ */
+bool
+moveArrayTypeName(Oid typeOid, const char *typeName, Oid typeNamespace)
+{
+	Oid			elemOid;
+	char	   *newname;
+
+	/* We need do nothing if it's a shell type. */
+	if (!get_typisdefined(typeOid))
+		return true;
+
+	/* Can't change it if it's not an autogenerated array type. */
+	elemOid = get_element_type(typeOid);
+	if (!OidIsValid(elemOid) ||
+		get_array_type(elemOid) != typeOid)
+		return false;
+
+	/*
+	 * OK, use makeArrayTypeName to pick an unused modification of the name.
+	 * Note that since makeArrayTypeName is an iterative process, this will
+	 * produce a name that it might have produced the first time, had the
+	 * conflicting type we are about to create already existed.
+	 */
+	newname = makeArrayTypeName(typeName, typeNamespace);
+
+	/* Apply the rename */
+	TypeRename(typeOid, newname, typeNamespace);
+
+	/*
+	 * We must bump the command counter so that any subsequent use of
+	 * makeArrayTypeName sees what we just did and doesn't pick the same name.
+	 */
+	CommandCounterIncrement();
+
+	pfree(newname);
+
+	return true;
 }

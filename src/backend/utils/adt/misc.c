@@ -222,10 +222,10 @@ pg_rotate_logfile(PG_FUNCTION_ARGS)
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 (errmsg("must be superuser to rotate log files"))));
 
-	if (!Redirect_stderr)
+	if (!Logging_collector)
 	{
 		ereport(WARNING,
-		(errmsg("rotation not possible because log redirection not active")));
+		(errmsg("rotation not possible because log collection not active")));
 		PG_RETURN_BOOL(false);
 	}
 

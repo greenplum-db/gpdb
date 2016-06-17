@@ -8162,7 +8162,7 @@ group by
     2*b.g,
     lower(f);
 ERROR:  unresolved grouping key in window query
-HINT:  You may need to use explicit aliases and/or to refer to grouping keys in the same way throughout the query.
+HINT:  You might need to use explicit aliases and/or to refer to grouping keys in the same way throughout the query.
 -- End MPP-12082
 -- MPP-13802
 select lag(x) over (w)

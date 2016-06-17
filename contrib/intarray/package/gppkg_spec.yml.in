@@ -1,0 +1,8 @@
+Pkgname: intarray
+Architecture: #arch
+Version: ossv1.1_pv1.2_gpdb4.3orca
+OS: #os
+GPDBVersion: 4.3
+Description: Intarray provides functionality and GiST indexing capabilities for integer arrays in the Greenplum Database. 
+PostInstall:
+- Master:  "echo 'Please run psql -d mydatabase -f $GPHOME/share/postgresql/contrib/_int.sql to enable the package.'"

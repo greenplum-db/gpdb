@@ -840,7 +840,7 @@ make_list_aggs_for_rollup(PlannerInfo *root,
 		dummy_path.startup_cost = agg_node->startup_cost;
 		dummy_path.total_cost = agg_node->total_cost;
 		dummy_path.pathkeys = NIL;
-		if (choose_hashed_grouping(root, context->tuple_fraction, &dummy_path,
+		if (choose_hashed_grouping(root, context->tuple_fraction, -1.0, &dummy_path,
 								   NULL, NULL, 0, *context->p_dNumGroups,
 								   context->agg_counts))
 			context->aggstrategy = AGG_HASHED;
@@ -1084,7 +1084,7 @@ add_distinct_cost(Plan *agg_plan, GroupExtContext *context)
 		Node *dqa_expr = (Node *)lfirst(dqa_lc);
 		
 		cost_sort(&path_dummy, NULL, NIL, 0.0, avgsize,
-				  get_typavgwidth(exprType(dqa_expr), exprTypmod(dqa_expr)));
+				  get_typavgwidth(exprType(dqa_expr), exprTypmod(dqa_expr)), -1.0);
 		agg_plan->total_cost += path_dummy.total_cost;
 	}
 }
@@ -2128,7 +2128,7 @@ plan_list_rollup_plans(PlannerInfo *root,
 	{
 		if (!is_projection_capable_plan(lefttree))
 		{
-			Plan *plan = (Plan *)make_result(lefttree->targetlist, NULL, lefttree);
+			Plan *plan = (Plan *) make_result(root, lefttree->targetlist, NULL, lefttree);
 			if (lefttree->flow)
 				plan->flow = pull_up_Flow(plan, lefttree, true);
 			lefttree = plan;

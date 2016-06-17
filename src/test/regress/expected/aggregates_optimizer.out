@@ -293,6 +293,18 @@ group by ten
 having exists (select 1 from onek b
                where sum(distinct a.four + b.four) = b.four);
 ERROR:  aggregates not allowed in WHERE clause
+LINE 4:                where sum(distinct a.four + b.four) = b.four)...
+                             ^
+-- Test handling of sublinks within outer-level aggregates.
+-- Per bug report from Daniel Grace.
+select
+  (select max((select i.unique2 from tenk1 i where i.unique1 = o.unique1)))
+from tenk1 o;
+ ?column? 
+----------
+     9999
+(1 row)
+
 --
 -- test for bitwise integer aggregates
 --
@@ -714,25 +726,25 @@ select array_agg(distinct a,b,c order by i)
 ERROR:  function array_agg(integer, integer, text) does not exist
 LINE 1: select array_agg(distinct a,b,c order by i)
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 select array_agg(distinct a,b,c order by a,b+1)
   from (values (1,1,'foo')) v(a,b,c), generate_series(1,2) i;
 ERROR:  function array_agg(integer, integer, text) does not exist
 LINE 1: select array_agg(distinct a,b,c order by a,b+1)
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 select array_agg(distinct a,b,c order by a,b,i,c)
   from (values (1,1,'foo')) v(a,b,c), generate_series(1,2) i;
 ERROR:  function array_agg(integer, integer, text) does not exist
 LINE 1: select array_agg(distinct a,b,c order by a,b,i,c)
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 select array_agg(distinct a,a,c order by a,b)
   from (values (1,1,'foo')) v(a,b,c), generate_series(1,2) i;
 ERROR:  function array_agg(integer, integer, text) does not exist
 LINE 1: select array_agg(distinct a,a,c order by a,b)
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 -- string_agg tests
 select string_agg(a) from (values('aaaa'),('bbbb'),('cccc')) g(a);
   string_agg  
@@ -804,12 +816,12 @@ SELECT a(aggtest order by a) from aggtest;   -- function-like column reference
 ERROR:  function a(aggtest) does not exist
 LINE 1: SELECT a(aggtest order by a) from aggtest;
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 SELECT nosuchagg(a order by a) FROM aggtest; -- no such function
 ERROR:  function nosuchagg(smallint) does not exist
 LINE 1: SELECT nosuchagg(a order by a) FROM aggtest;
                ^
-HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 SELECT lag(a order by a) from aggtest;       -- window function (no window clause)
 ERROR:  ORDER BY specified, but lag is not an ordered aggregate function
 LINE 1: SELECT lag(a order by a) from aggtest;

@@ -1,3 +1,13 @@
+/*
+ * GPDB_83_MERGE_FIXME: I left out gpmon counter stuff like this:
+ *
+ * Gpmon_M_Incr(GpmonPktFromMergeJoinState(node), GPMON_MERGEJOIN_OUTERTUPLE);
+ * Gpmon_M_Incr(GpmonPktFromMergeJoinState(node), GPMON_QEXEC_M_ROWSIN);
+ *
+ * Do we really need that stuff? There are counters in the inner and outer nodes themselves.
+ */
+
+
 /*-------------------------------------------------------------------------
  *
  * nodeMergejoin.c
@@ -9,7 +19,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeMergejoin.c,v 1.87 2007/02/02 00:07:03 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeMergejoin.c,v 1.90.2.1 2010/05/28 01:14:16 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -42,7 +52,7 @@
  *
  *		Therefore, rather than directly executing the merge join clauses,
  *		we evaluate the left and right key expressions separately and then
- *		compare the columns one at a time (see MJCompare).  The planner
+ *		compare the columns one at a time (see MJCompare).	The planner
  *		passes us enough information about the sort ordering of the inputs
  *		to allow us to determine how to make the comparison.  We may use the
  *		appropriate btree comparison function, since Postgres' only notion
@@ -140,6 +150,14 @@ typedef struct MergeJoinClauseData
 	FmgrInfo	cmpfinfo;
 } MergeJoinClauseData;
 
+/* Result type for MJEvalOuterValues and MJEvalInnerValues */
+typedef enum
+{
+	MJEVAL_MATCHABLE,			/* normal, potentially matchable tuple */
+	MJEVAL_NONMATCHABLE,		/* tuple cannot join because it has a null */
+	MJEVAL_ENDOFJOIN			/* end of input (physical or effective) */
+} MJEvalResult;
+
 
 #define MarkInnerTuple(innerTupleSlot, mergestate) \
 	ExecCopySlot((mergestate)->mj_MarkedTupleSlot, (innerTupleSlot))
@@ -161,7 +179,7 @@ typedef struct MergeJoinClauseData
  * sort ordering for each merge key.  The mergejoinable operator is an
  * equality operator in this opfamily, and the two inputs are guaranteed to be
  * ordered in either increasing or decreasing (respectively) order according
- * to this opfamily, with nulls at the indicated end of the range.  This
+ * to this opfamily, with nulls at the indicated end of the range.	This
  * allows us to obtain the needed comparison function from the opfamily.
  *
  * CDB: We also recognize the "is not distinct from" predicate which is
@@ -228,7 +246,7 @@ MJExamineQuals(List *mergeclauses,
 								   &op_lefttype,
 								   &op_righttype,
 								   &op_recheck);
-		if (op_strategy != BTEqualStrategyNumber)	/* should not happen */
+		if (op_strategy != BTEqualStrategyNumber)		/* should not happen */
 			elog(ERROR, "cannot merge using non-equality operator %u",
 				 qual->opno);
 		Assert(!op_recheck);	/* never true for btree */
@@ -238,7 +256,7 @@ MJExamineQuals(List *mergeclauses,
 									op_lefttype,
 									op_righttype,
 									BTORDER_PROC);
-		if (!RegProcedureIsValid(cmpproc))			/* should not happen */
+		if (!RegProcedureIsValid(cmpproc))		/* should not happen */
 			elog(ERROR, "missing support function %d(%u,%u) in opfamily %u",
 				 BTORDER_PROC, op_lefttype, op_righttype, opfamily);
 
@@ -256,7 +274,7 @@ MJExamineQuals(List *mergeclauses,
 			clause->reverse = false;
 		else if (opstrategy == BTGreaterStrategyNumber)
 			clause->reverse = true;
-		else					/* planner screwed up */
+		else	/* planner screwed up */
 			elog(ERROR, "unsupported mergejoin strategy %d", opstrategy);
 
 		clause->nulls_first = nulls_first;
@@ -273,18 +291,33 @@ MJExamineQuals(List *mergeclauses,
  * Compute the values of the mergejoined expressions for the current
  * outer tuple.  We also detect whether it's impossible for the current
  * outer tuple to match anything --- this is true if it yields a NULL
- * input, since we assume mergejoin operators are strict.
+ * input, since we assume mergejoin operators are strict.  If the NULL
+ * is in the first join column, and that column sorts nulls last, then
+ * we can further conclude that no following tuple can match anything
+ * either, since they must all have nulls in the first column.  However,
+ * that case is only interesting if we're not in FillOuter mode, else
+ * we have to visit all the tuples anyway.
+ *
+ * For the convenience of callers, we also make this routine responsible
+ * for testing for end-of-input (null outer tuple), and returning
+ * MJEVAL_ENDOFJOIN when that's seen.  This allows the same code to be used
+ * for both real end-of-input and the effective end-of-input represented by
+ * a first-column NULL.
  *
  * We evaluate the values in OuterEContext, which can be reset each
  * time we move to a new tuple.
  */
-static bool
+static MJEvalResult
 MJEvalOuterValues(MergeJoinState *mergestate)
 {
 	ExprContext *econtext = mergestate->mj_OuterEContext;
-	bool		canmatch = true;
+	MJEvalResult result = MJEVAL_MATCHABLE;
 	int			i;
 	MemoryContext oldContext;
+
+	/* Check for end of outer subplan */
+	if (TupIsNull(mergestate->mj_OuterTupleSlot))
+		return MJEVAL_ENDOFJOIN;
 
 	ResetExprContext(econtext);
 
@@ -298,13 +331,19 @@ MJEvalOuterValues(MergeJoinState *mergestate)
 
 		clause->ldatum = ExecEvalExpr(clause->lexpr, econtext,
 									  &clause->lisnull, NULL);
-		if (clause->lisnull)
-			canmatch = clause->notdistinct;
+		if (clause->lisnull && !clause->notdistinct)
+		{
+			/* match is impossible; can we end the join early? */
+			if (i == 0 && !clause->nulls_first && !mergestate->mj_FillOuter)
+				result = MJEVAL_ENDOFJOIN;
+			else if (result == MJEVAL_MATCHABLE)
+				result = MJEVAL_NONMATCHABLE;
+		}
 	}
 
 	MemoryContextSwitchTo(oldContext);
 
-	return canmatch;
+	return result;
 }
 
 /*
@@ -314,13 +353,17 @@ MJEvalOuterValues(MergeJoinState *mergestate)
  * to load data from either the true current inner, or the marked inner,
  * so caller must tell us which slot to load from.
  */
-static bool
+static MJEvalResult
 MJEvalInnerValues(MergeJoinState *mergestate, TupleTableSlot *innerslot)
 {
 	ExprContext *econtext = mergestate->mj_InnerEContext;
-	bool		canmatch = true;
+	MJEvalResult result = MJEVAL_MATCHABLE;
 	int			i;
 	MemoryContext oldContext;
+
+	/* Check for end of inner subplan */
+	if (TupIsNull(innerslot))
+		return MJEVAL_ENDOFJOIN;
 
 	ResetExprContext(econtext);
 
@@ -334,13 +377,19 @@ MJEvalInnerValues(MergeJoinState *mergestate, TupleTableSlot *innerslot)
 
 		clause->rdatum = ExecEvalExpr(clause->rexpr, econtext,
 									  &clause->risnull, NULL);
-		if (clause->risnull)
-			canmatch = clause->notdistinct;
+		if (clause->risnull && !clause->notdistinct)
+		{
+			/* match is impossible; can we end the join early? */
+			if (i == 0 && !clause->nulls_first && !mergestate->mj_FillInner)
+				result = MJEVAL_ENDOFJOIN;
+			else if (result == MJEVAL_MATCHABLE)
+				result = MJEVAL_NONMATCHABLE;
+		}
 	}
 
 	MemoryContextSwitchTo(oldContext);
 
-	return canmatch;
+	return result;
 }
 
 /*
@@ -387,17 +436,17 @@ MJCompare(MergeJoinState *mergestate)
 				continue;
 			}
 			if (clause->nulls_first)
-				result = -1;					/* NULL "<" NOT_NULL */
+				result = -1;	/* NULL "<" NOT_NULL */
 			else
-				result = 1;						/* NULL ">" NOT_NULL */
+				result = 1;		/* NULL ">" NOT_NULL */
 			break;
 		}
 		if (clause->risnull)
 		{
 			if (clause->nulls_first)
-				result = 1;						/* NOT_NULL ">" NULL */
+				result = 1;		/* NOT_NULL ">" NULL */
 			else
-				result = -1;					/* NOT_NULL "<" NULL */
+				result = -1;	/* NOT_NULL "<" NULL */
 			break;
 		}
 
@@ -413,7 +462,7 @@ MJCompare(MergeJoinState *mergestate)
 		fresult = FunctionCallInvoke(&fcinfo);
 		if (fcinfo.isnull)
 		{
-			nulleqnull = true;					/* treat like NULL = NULL */
+			nulleqnull = true;	/* treat like NULL = NULL */
 			continue;
 		}
 		result = DatumGetInt32(fresult);
@@ -655,72 +704,63 @@ ExecMergeJoin(MergeJoinState *node)
 
 				outerTupleSlot = ExecProcNode(outerPlan);
 				node->mj_OuterTupleSlot = outerTupleSlot;
-				if (TupIsNull(outerTupleSlot))
-				{
-					MJ_printf("ExecMergeJoin: nothing in outer subplan\n");
-					if (doFillInner)
-					{
-						/*
-						 * Need to emit right-join tuples for remaining inner
-						 * tuples.	We set MatchedInner = true to force the
-						 * ENDOUTER state to advance inner.
-						 */
-						node->mj_JoinState = EXEC_MJ_ENDOUTER;
-						node->mj_MatchedInner = true;
-						break;
-					}
-
-					/*
-					 * CDB: We'll read no more from inner subtree. To keep our
-					 * sibling QEs from being starved, tell source QEs not to
-					 * clog up the pipeline with our never-to-be-consumed
-					 * data.
-					 */
-					if (node->mj_squelchInner)
-						ExecSquelchNode(innerPlan);
-
-					/*
-					 * The memory used by child nodes might not be freed because
-					 * they are not eager free safe. However, when the merge join
-					 * is done, we can free the memory used by the child nodes.
-					 */
-					ExecEagerFreeMergeJoin(node);
-
-					/* Otherwise we're done. */
-					return NULL;
-				}
-				else
-				{
-					Gpmon_M_Incr(GpmonPktFromMergeJoinState(node), GPMON_MERGEJOIN_OUTERTUPLE);
-					Gpmon_M_Incr(GpmonPktFromMergeJoinState(node), GPMON_QEXEC_M_ROWSIN); 
-				}
 
 				/* Compute join values and check for unmatchability */
-				if (MJEvalOuterValues(node))
+				switch (MJEvalOuterValues(node))
 				{
-					/* OK to go get the first inner tuple */
-					node->mj_JoinState = EXEC_MJ_INITIALIZE_INNER;
-				}
-				else
-				{
-					/* Stay in same state to fetch next outer tuple */
-					if (doFillOuter)
-					{
-						/*
-						 * Generate a fake join tuple with nulls for the inner
-						 * tuple, and return it if it passes the non-join
-						 * quals.
-						 */
-						TupleTableSlot *result;
-
-						result = MJFillOuter(node);
-						if (result)
+					case MJEVAL_MATCHABLE:
+						/* OK to go get the first inner tuple */
+						node->mj_JoinState = EXEC_MJ_INITIALIZE_INNER;
+						break;
+					case MJEVAL_NONMATCHABLE:
+						/* Stay in same state to fetch next outer tuple */
+						if (doFillOuter)
 						{
-							Gpmon_M_Incr_Rows_Out(GpmonPktFromMergeJoinState(node));
-                                     	CheckSendPlanStateGpmonPkt(&node->js.ps);
-							return result;
+							/*
+							 * Generate a fake join tuple with nulls for the
+							 * inner tuple, and return it if it passes the
+							 * non-join quals.
+							 */
+							TupleTableSlot *result;
+
+							result = MJFillOuter(node);
+							if (result)
+								return result;
 						}
-					}
+						break;
+					case MJEVAL_ENDOFJOIN:
+						/* No more outer tuples */
+						MJ_printf("ExecMergeJoin: nothing in outer subplan\n");
+						if (doFillInner)
+						{
+							/*
+							 * Need to emit right-join tuples for remaining
+							 * inner tuples. We set MatchedInner = true to
+							 * force the ENDOUTER state to advance inner.
+							 */
+							node->mj_JoinState = EXEC_MJ_ENDOUTER;
+							node->mj_MatchedInner = true;
+							break;
+						}
+
+						/*
+						 * CDB: We'll read no more from inner subtree. To keep our
+						 * sibling QEs from being starved, tell source QEs not to
+						 * clog up the pipeline with our never-to-be-consumed
+						 * data.
+						 */
+						if (node->mj_squelchInner)
+							ExecSquelchNode(innerPlan);
+
+						/*
+						 * The memory used by child nodes might not be freed because
+						 * they are not eager free safe. However, when the merge join
+						 * is done, we can free the memory used by the child nodes.
+						 */
+						ExecEagerFreeMergeJoin(node);
+
+						/* Otherwise we're done. */
+						return NULL;
 				}
 				break;
 
@@ -729,70 +769,65 @@ ExecMergeJoin(MergeJoinState *node)
 
 				innerTupleSlot = ExecProcNode(innerPlan);
 				node->mj_InnerTupleSlot = innerTupleSlot;
-				if (TupIsNull(innerTupleSlot))
-				{
-					MJ_printf("ExecMergeJoin: nothing in inner subplan\n");
-					if (doFillOuter)
-					{
-						/*
-						 * Need to emit left-join tuples for all outer tuples,
-						 * including the one we just fetched.  We set
-						 * MatchedOuter = false to force the ENDINNER state to
-						 * emit first tuple before advancing outer.
-						 */
-						node->mj_JoinState = EXEC_MJ_ENDINNER;
-						node->mj_MatchedOuter = false;
-						break;
-					}
-
-					/*
-					 * CDB: We'll read no more from outer subtree. To keep our
-					 * sibling QEs from being starved, tell source QEs not to
-					 * clog up the pipeline with our never-to-be-consumed
-					 * data.
-					 */
-					ExecSquelchNode(outerPlan);
-
-					ExecEagerFreeMergeJoin(node);
-
-					/* Otherwise we're done. */
-					return NULL;
-				}
-				else
-				{
-					Gpmon_M_Incr(GpmonPktFromMergeJoinState(node), GPMON_MERGEJOIN_INNERTUPLE);
-					Gpmon_M_Incr(GpmonPktFromMergeJoinState(node), GPMON_QEXEC_M_ROWSIN); 
-				}
 
 				/* Compute join values and check for unmatchability */
-				if (MJEvalInnerValues(node, innerTupleSlot))
+				switch (MJEvalInnerValues(node, innerTupleSlot))
 				{
-					/*
-					 * OK, we have the initial tuples.	Begin by skipping
-					 * non-matching tuples.
-					 */
-					node->mj_JoinState = EXEC_MJ_SKIP_TEST;
-				}
-				else
-				{
-					/* Stay in same state to fetch next inner tuple */
-					if (doFillInner)
-					{
+					case MJEVAL_MATCHABLE:
 						/*
-						 * Generate a fake join tuple with nulls for the outer
-						 * tuple, and return it if it passes the non-join
-						 * quals.
+						 * OK, we have the initial tuples.	Begin by skipping
+						 * non-matching tuples.
 						 */
-						TupleTableSlot *result;
-
-						result = MJFillInner(node);
-						if (result)
+						node->mj_JoinState = EXEC_MJ_SKIP_TEST;
+						break;
+					case MJEVAL_NONMATCHABLE:
+						/* Mark before advancing, if wanted */
+						if (node->mj_ExtraMarks)
+							ExecMarkPos(innerPlan);
+						/* Stay in same state to fetch next inner tuple */
+						if (doFillInner)
 						{
-							Gpmon_M_Incr_Rows_Out(GpmonPktFromMergeJoinState(node));
-                                     	CheckSendPlanStateGpmonPkt(&node->js.ps);
-							return result;
+							/*
+							 * Generate a fake join tuple with nulls for the
+							 * outer tuple, and return it if it passes the
+							 * non-join quals.
+							 */
+							TupleTableSlot *result;
+
+							result = MJFillInner(node);
+							if (result)
+								return result;
 						}
-					}
+						break;
+					case MJEVAL_ENDOFJOIN:
+						/* No more inner tuples */
+						MJ_printf("ExecMergeJoin: nothing in inner subplan\n");
+						if (doFillOuter)
+						{
+							/*
+							 * Need to emit left-join tuples for all outer
+							 * tuples, including the one we just fetched.  We
+							 * set MatchedOuter = false to force the ENDINNER
+							 * state to emit first tuple before advancing
+							 * outer.
+							 */
+							node->mj_JoinState = EXEC_MJ_ENDINNER;
+							node->mj_MatchedOuter = false;
+							break;
+						}
+
+						/*
+						 * CDB: We'll read no more from outer subtree. To keep our
+						 * sibling QEs from being starved, tell source QEs not to
+						 * clog up the pipeline with our never-to-be-consumed
+						 * data.
+						 */
+						ExecSquelchNode(outerPlan);
+
+						ExecEagerFreeMergeJoin(node);
+
+						/* Otherwise we're done. */
+						return NULL;
 				}
 				break;
 
@@ -863,8 +898,6 @@ ExecMergeJoin(MergeJoinState *node)
 						 */
 						MJ_printf("ExecMergeJoin: returning tuple\n");
 
-						Gpmon_M_Incr_Rows_Out(GpmonPktFromMergeJoinState(node));
-                                CheckSendPlanStateGpmonPkt(&node->js.ps);
 						return ExecProject(node->js.ps.ps_ProjInfo, NULL);
 					}
 				}
@@ -893,72 +926,75 @@ ExecMergeJoin(MergeJoinState *node)
 
 					result = MJFillInner(node);
 					if (result)
-					{
-						Gpmon_M_Incr_Rows_Out(GpmonPktFromMergeJoinState(node)); 
-                                CheckSendPlanStateGpmonPkt(&node->js.ps);
 						return result;
-					}
 				}
 
 				/*
 				 * now we get the next inner tuple, if any.  If there's none,
 				 * advance to next outer tuple (which may be able to join to
 				 * previously marked tuples).
+				 *
+				 * NB: must NOT do "extraMarks" here, since we may need to
+				 * return to previously marked tuples.
 				 */
 				innerTupleSlot = ExecProcNode(innerPlan);
 				node->mj_InnerTupleSlot = innerTupleSlot;
 				MJ_DEBUG_PROC_NODE(innerTupleSlot);
 				node->mj_MatchedInner = false;
 
-				if (TupIsNull(innerTupleSlot))
+				/* Compute join values and check for unmatchability */
+				switch (MJEvalInnerValues(node, innerTupleSlot))
 				{
-					node->mj_JoinState = EXEC_MJ_NEXTOUTER;
+					case MJEVAL_MATCHABLE:
+						/*
+						 * Test the new inner tuple to see if it matches
+						 * outer.
+						 *
+						 * If they do match, then we join them and move on to
+						 * the next inner tuple (EXEC_MJ_JOINTUPLES).
+						 *
+						 * If they do not match then advance to next outer
+						 * tuple.
+						 */
+						compareResult = MJCompare(node);
+						MJ_DEBUG_COMPARE(compareResult);
 
-					if (((MergeJoin*)node->js.ps.plan)->unique_outer)
-					{
-						ExecEagerFreeMergeJoin(node);
-						
-						/* we are done */
-						return NULL;
-					}
-					
-					break;
-				}
-				else
-				{
-					Gpmon_M_Incr(GpmonPktFromMergeJoinState(node), GPMON_MERGEJOIN_INNERTUPLE);
-					Gpmon_M_Incr(GpmonPktFromMergeJoinState(node), GPMON_QEXEC_M_ROWSIN); 
-				}
-				
-				/*
-				 * Load up the new inner tuple's comparison values.  If we see
-				 * that it contains a NULL and hence can't match any outer
-				 * tuple, we can skip the comparison and assume the new tuple
-				 * is greater than current outer.
-				 */
-				if (!MJEvalInnerValues(node, innerTupleSlot))
-				{
-					node->mj_JoinState = EXEC_MJ_NEXTOUTER;
-					break;
-				}
+						if (compareResult == 0)
+							node->mj_JoinState = EXEC_MJ_JOINTUPLES;
+						else
+						{
+							Assert(compareResult < 0);
+							node->mj_JoinState = EXEC_MJ_NEXTOUTER;
+						}
+						break;
+					case MJEVAL_NONMATCHABLE:
+						/*
+						 * It contains a NULL and hence can't match any outer
+						 * tuple, so we can skip the comparison and assume the
+						 * new tuple is greater than current outer.
+						 */
+						node->mj_JoinState = EXEC_MJ_NEXTOUTER;
+						break;
+					case MJEVAL_ENDOFJOIN:
+						/*
+						 * No more inner tuples.  However, this might be
+						 * only effective and not physical end of inner plan,
+						 * so force mj_InnerTupleSlot to null to make sure we
+						 * don't fetch more inner tuples.  (We need this hack
+						 * because we are not transiting to a state where the
+						 * inner plan is assumed to be exhausted.)
+						 */
+						node->mj_InnerTupleSlot = NULL;
+						node->mj_JoinState = EXEC_MJ_NEXTOUTER;
 
-				/*
-				 * Test the new inner tuple to see if it matches outer.
-				 *
-				 * If they do match, then we join them and move on to the next
-				 * inner tuple (EXEC_MJ_JOINTUPLES).
-				 *
-				 * If they do not match then advance to next outer tuple.
-				 */
-				compareResult = MJCompare(node);
-				MJ_DEBUG_COMPARE(compareResult);
+						if (((MergeJoin*)node->js.ps.plan)->unique_outer)
+						{
+							ExecEagerFreeMergeJoin(node);
 
-				if (compareResult == 0)
-					node->mj_JoinState = EXEC_MJ_JOINTUPLES;
-				else
-				{
-					Assert(compareResult < 0 || ((MergeJoin*)node->js.ps.plan)->unique_outer);
-					node->mj_JoinState = EXEC_MJ_NEXTOUTER;
+							/* we are done */
+							return NULL;
+						}
+						break;
 				}
 				break;
 
@@ -1008,58 +1044,36 @@ ExecMergeJoin(MergeJoinState *node)
 				MJ_DEBUG_PROC_NODE(outerTupleSlot);
 				node->mj_MatchedOuter = false;
 
-				/*
-				 * if the outer tuple is null then we are done with the join,
-				 * unless we have inner tuples we need to null-fill.
-				 */
-				if (TupIsNull(outerTupleSlot))
-				{
-					MJ_printf("ExecMergeJoin: end of outer subplan\n");
-					innerTupleSlot = node->mj_InnerTupleSlot;
-					if (doFillInner && !TupIsNull(innerTupleSlot))
-					{
-						/*
-						 * Need to emit right-join tuples for remaining inner
-						 * tuples.
-						 */
-						node->mj_JoinState = EXEC_MJ_ENDOUTER;
-						break;
-					}
-
-					/*
-					 * CDB: We'll read no more from inner subtree. To keep our
-					 * sibling QEs from being starved, tell source QEs not to
-					 * clog up the pipeline with our never-to-be-consumed
-					 * data.
-					 */
-					if (!TupIsNull(innerTupleSlot) && node->mj_squelchInner)
-						ExecSquelchNode(innerPlan);
-
-					ExecEagerFreeMergeJoin(node);
-
-					/* Otherwise we're done. */
-					return NULL;
-				}
-				else
-				{
-					Gpmon_M_Incr(GpmonPktFromMergeJoinState(node), GPMON_MERGEJOIN_OUTERTUPLE);
-					Gpmon_M_Incr(GpmonPktFromMergeJoinState(node), GPMON_QEXEC_M_ROWSIN); 
-				}
-
 				/* Compute join values and check for unmatchability */
-				if (MJEvalOuterValues(node))
+				switch (MJEvalOuterValues(node))
 				{
-					if (((MergeJoin*)node->js.ps.plan)->unique_outer)
-						/* The current innerTuple will match with this outerTuple.*/
-						node->mj_JoinState = EXEC_MJ_JOINTUPLES;
-					else
-						/* Go test the new tuple against the marked tuple */
-						node->mj_JoinState = EXEC_MJ_TESTOUTER;
-				}
-				else
-				{
-					/* Can't match, so fetch next outer tuple */
-					node->mj_JoinState = EXEC_MJ_NEXTOUTER;
+					case MJEVAL_MATCHABLE:
+						if (((MergeJoin*)node->js.ps.plan)->unique_outer)
+							/* The current innerTuple will match with this outerTuple.*/
+							node->mj_JoinState = EXEC_MJ_JOINTUPLES;
+						else
+							/* Go test the new tuple against the marked tuple */
+							node->mj_JoinState = EXEC_MJ_TESTOUTER;
+						break;
+					case MJEVAL_NONMATCHABLE:
+						/* Can't match, so fetch next outer tuple */
+						node->mj_JoinState = EXEC_MJ_NEXTOUTER;
+						break;
+					case MJEVAL_ENDOFJOIN:
+						/* No more outer tuples */
+						MJ_printf("ExecMergeJoin: end of outer subplan\n");
+						innerTupleSlot = node->mj_InnerTupleSlot;
+						if (doFillInner && !TupIsNull(innerTupleSlot))
+						{
+							/*
+							 * Need to emit right-join tuples for remaining
+							 * inner tuples.
+							 */
+							node->mj_JoinState = EXEC_MJ_ENDOUTER;
+							break;
+						}
+						/* Otherwise we're done. */
+						return NULL;
 				}
 				break;
 
@@ -1156,51 +1170,51 @@ ExecMergeJoin(MergeJoinState *node)
 					 *	larger than our marked inner tuples.  So we need not
 					 *	revisit any of the marked tuples but can proceed to
 					 *	look for a match to the current inner.	If there's
-					 *	no more inners, we are done.
+					 *	no more inners, no more matches are possible.
 					 * ----------------
 					 */
 					if (compareResult <= 0 && !((MergeJoin*)node->js.ps.plan)->unique_outer)
 						insist_log(false, "Mergejoin: compareResult > 0, bad plan ?");
 					innerTupleSlot = node->mj_InnerTupleSlot;
-					if (TupIsNull(innerTupleSlot))
-					{
-						if (doFillOuter)
-						{
-							/*
-							 * Need to emit left-join tuples for remaining
-							 * outer tuples.
-							 */
-							node->mj_JoinState = EXEC_MJ_ENDINNER;
-							break;
-						}
-
-						/*
-						 * CDB: We'll read no more from outer subtree. To keep
-						 * our sibling QEs from being starved, tell source QEs
-						 * not to clog up the pipeline with our
-						 * never-to-be-consumed data.
-						 */
-						ExecSquelchNode(outerPlan);
-
-						ExecEagerFreeMergeJoin(node);
-
-						/* Otherwise we're done. */
-						return NULL;
-					}
 
 					/* reload comparison data for current inner */
-					if (MJEvalInnerValues(node, innerTupleSlot))
+					switch (MJEvalInnerValues(node, innerTupleSlot))
 					{
-						/* proceed to compare it to the current outer */
-						node->mj_JoinState = EXEC_MJ_SKIP_TEST;
-					}
-					else
-					{
-						/*
-						 * current inner can't possibly match any outer;
-						 * better to advance the inner scan than the outer.
-						 */
-						node->mj_JoinState = EXEC_MJ_SKIPINNER_ADVANCE;
+						case MJEVAL_MATCHABLE:
+							/* proceed to compare it to the current outer */
+							node->mj_JoinState = EXEC_MJ_SKIP_TEST;
+							break;
+						case MJEVAL_NONMATCHABLE:
+							/*
+							 * current inner can't possibly match any outer;
+							 * better to advance the inner scan than the outer.
+							 */
+							node->mj_JoinState = EXEC_MJ_SKIPINNER_ADVANCE;
+							break;
+						case MJEVAL_ENDOFJOIN:
+							/* No more inner tuples */
+							if (doFillOuter)
+							{
+								/*
+								 * Need to emit left-join tuples for remaining
+								 * outer tuples.
+								 */
+								node->mj_JoinState = EXEC_MJ_ENDINNER;
+								break;
+							}
+
+							/*
+							 * CDB: We'll read no more from outer subtree. To keep
+							 * our sibling QEs from being starved, tell source QEs
+							 * not to clog up the pipeline with our
+							 * never-to-be-consumed data.
+							 */
+							ExecSquelchNode(outerPlan);
+
+							ExecEagerFreeMergeJoin(node);
+
+							/* Otherwise we're done. */
+							return NULL;
 					}
 				}
 				break;
@@ -1264,6 +1278,9 @@ ExecMergeJoin(MergeJoinState *node)
 				break;
 
 				/*
+				 * SKIPOUTER_ADVANCE: advance over an outer tuple that is
+				 * known not to join to any inner tuple.
+				 *
 				 * Before advancing, we check to see if we must emit an
 				 * outer-join fill tuple for this outer tuple.
 				 */
@@ -1282,11 +1299,7 @@ ExecMergeJoin(MergeJoinState *node)
 
 					result = MJFillOuter(node);
 					if (result)
-					{
-						Gpmon_M_Incr_Rows_Out(GpmonPktFromMergeJoinState(node)); 
-                               	CheckSendPlanStateGpmonPkt(&node->js.ps);
 						return result;
-					}
 				}
 
 				/*
@@ -1297,58 +1310,50 @@ ExecMergeJoin(MergeJoinState *node)
 				MJ_DEBUG_PROC_NODE(outerTupleSlot);
 				node->mj_MatchedOuter = false;
 
-				/*
-				 * if the outer tuple is null then we are done with the join,
-				 * unless we have inner tuples we need to null-fill.
-				 */
-				if (TupIsNull(outerTupleSlot))
-				{
-					MJ_printf("ExecMergeJoin: end of outer subplan\n");
-					innerTupleSlot = node->mj_InnerTupleSlot;
-					if (doFillInner && !TupIsNull(innerTupleSlot))
-					{
-						/*
-						 * Need to emit right-join tuples for remaining inner
-						 * tuples.
-						 */
-						node->mj_JoinState = EXEC_MJ_ENDOUTER;
-						break;
-					}
-
-					/*
-					 * CDB: We'll read no more from inner subtree. To keep our
-					 * sibling QEs from being starved, tell source QEs not to
-					 * clog up the pipeline with our never-to-be-consumed
-					 * data.
-					 */
-					if (!TupIsNull(innerTupleSlot) && node->mj_squelchInner)
-						ExecSquelchNode(innerPlan);
-
-					ExecEagerFreeMergeJoin(node);
-
-					/* Otherwise we're done. */
-					return NULL;
-				}
-				else
-				{
-					Gpmon_M_Incr(GpmonPktFromMergeJoinState(node), GPMON_MERGEJOIN_OUTERTUPLE);
-					Gpmon_M_Incr(GpmonPktFromMergeJoinState(node), GPMON_QEXEC_M_ROWSIN); 
-				}
-				
 				/* Compute join values and check for unmatchability */
-				if (MJEvalOuterValues(node))
+				switch (MJEvalOuterValues(node))
 				{
-					/* Go test the new tuple against the current inner */
-					node->mj_JoinState = EXEC_MJ_SKIP_TEST;
-				}
-				else
-				{
-					/* Can't match, so fetch next outer tuple */
-					node->mj_JoinState = EXEC_MJ_SKIPOUTER_ADVANCE;
+					case MJEVAL_MATCHABLE:
+						/* Go test the new tuple against the current inner */
+						node->mj_JoinState = EXEC_MJ_SKIP_TEST;
+						break;
+					case MJEVAL_NONMATCHABLE:
+						/* Can't match, so fetch next outer tuple */
+						node->mj_JoinState = EXEC_MJ_SKIPOUTER_ADVANCE;
+						break;
+					case MJEVAL_ENDOFJOIN:
+						/* No more outer tuples */
+						MJ_printf("ExecMergeJoin: end of outer subplan\n");
+						innerTupleSlot = node->mj_InnerTupleSlot;
+						if (doFillInner && !TupIsNull(innerTupleSlot))
+						{
+							/*
+							 * Need to emit right-join tuples for remaining
+							 * inner tuples.
+							 */
+							node->mj_JoinState = EXEC_MJ_ENDOUTER;
+							break;
+						}
+						/*
+						 * CDB: We'll read no more from inner subtree. To keep our
+						 * sibling QEs from being starved, tell source QEs not to
+						 * clog up the pipeline with our never-to-be-consumed
+						 * data.
+						 */
+						if (!TupIsNull(innerTupleSlot) && node->mj_squelchInner)
+							ExecSquelchNode(innerPlan);
+
+						ExecEagerFreeMergeJoin(node);
+
+						/* Otherwise we're done. */
+						return NULL;
 				}
 				break;
 
 				/*
+				 * SKIPINNER_ADVANCE: advance over an inner tuple that is
+				 * known not to join to any outer tuple.
+				 *
 				 * Before advancing, we check to see if we must emit an
 				 * outer-join fill tuple for this inner tuple.
 				 */
@@ -1367,12 +1372,12 @@ ExecMergeJoin(MergeJoinState *node)
 
 					result = MJFillInner(node);
 					if (result)
-					{
-						Gpmon_M_Incr_Rows_Out(GpmonPktFromMergeJoinState(node));
-                              	CheckSendPlanStateGpmonPkt(&node->js.ps);
 						return result;
-					}
 				}
+
+				/* Mark before advancing, if wanted */
+				if (node->mj_ExtraMarks)
+					ExecMarkPos(innerPlan);
 
 				/*
 				 * now we get the next inner tuple, if any
@@ -1382,57 +1387,35 @@ ExecMergeJoin(MergeJoinState *node)
 				MJ_DEBUG_PROC_NODE(innerTupleSlot);
 				node->mj_MatchedInner = false;
 
-				/*
-				 * if the inner tuple is null then we are done with the join,
-				 * unless we have outer tuples we need to null-fill.
-				 */
-				if (TupIsNull(innerTupleSlot))
-				{
-					MJ_printf("ExecMergeJoin: end of inner subplan\n");
-					outerTupleSlot = node->mj_OuterTupleSlot;
-					if (doFillOuter && !TupIsNull(outerTupleSlot))
-					{
-						/*
-						 * Need to emit left-join tuples for remaining outer
-						 * tuples.
-						 */
-						node->mj_JoinState = EXEC_MJ_ENDINNER;
-						break;
-					}
-
-					/*
-					 * CDB: We'll read no more from outer subtree. To keep our
-					 * sibling QEs from being starved, tell source QEs not to
-					 * clog up the pipeline with our never-to-be-consumed
-					 * data.
-					 */
-					if (!TupIsNull(outerTupleSlot))
-						ExecSquelchNode(outerPlan);
-
-					ExecEagerFreeMergeJoin(node);
-
-					/* Otherwise we're done. */
-					return NULL;
-				}
-				else
-				{
-					Gpmon_M_Incr(GpmonPktFromMergeJoinState(node), GPMON_MERGEJOIN_INNERTUPLE);
-					Gpmon_M_Incr(GpmonPktFromMergeJoinState(node), GPMON_QEXEC_M_ROWSIN); 
-				}
-
 				/* Compute join values and check for unmatchability */
-				if (MJEvalInnerValues(node, innerTupleSlot))
+				switch (MJEvalInnerValues(node, innerTupleSlot))
 				{
-					/* proceed to compare it to the current outer */
-					node->mj_JoinState = EXEC_MJ_SKIP_TEST;
-				}
-				else
-				{
-					/*
-					 * current inner can't possibly match any outer; better to
-					 * advance the inner scan than the outer.
-					 */
-					node->mj_JoinState = EXEC_MJ_SKIPINNER_ADVANCE;
+					case MJEVAL_MATCHABLE:
+						/* proceed to compare it to the current outer */
+						node->mj_JoinState = EXEC_MJ_SKIP_TEST;
+						break;
+					case MJEVAL_NONMATCHABLE:
+						/*
+						 * current inner can't possibly match any outer;
+						 * better to advance the inner scan than the outer.
+						 */
+						node->mj_JoinState = EXEC_MJ_SKIPINNER_ADVANCE;
+						break;
+					case MJEVAL_ENDOFJOIN:
+						/* No more inner tuples */
+						MJ_printf("ExecMergeJoin: end of inner subplan\n");
+						outerTupleSlot = node->mj_OuterTupleSlot;
+						if (doFillOuter && !TupIsNull(outerTupleSlot))
+						{
+							/*
+							 * Need to emit left-join tuples for remaining
+							 * outer tuples.
+							 */
+							node->mj_JoinState = EXEC_MJ_ENDINNER;
+							break;
+						}
+						/* Otherwise we're done. */
+						return NULL;
 				}
 				break;
 
@@ -1458,12 +1441,12 @@ ExecMergeJoin(MergeJoinState *node)
 
 					result = MJFillInner(node);
 					if (result)
-					{
-						Gpmon_M_Incr_Rows_Out(GpmonPktFromMergeJoinState(node));
-                                CheckSendPlanStateGpmonPkt(&node->js.ps);
 						return result;
-					}
 				}
+
+				/* Mark before advancing, if wanted */
+				if (node->mj_ExtraMarks)
+					ExecMarkPos(innerPlan);
 
 				/*
 				 * now we get the next inner tuple, if any
@@ -1533,11 +1516,6 @@ ExecMergeJoin(MergeJoinState *node)
 					ExecEagerFreeMergeJoin(node);
 
 					return NULL;
-				}
-				else
-				{
-					Gpmon_M_Incr(GpmonPktFromMergeJoinState(node), GPMON_MERGEJOIN_OUTERTUPLE);
-					Gpmon_M_Incr(GpmonPktFromMergeJoinState(node), GPMON_QEXEC_M_ROWSIN); 
 				}
 
 				/* Else remain in ENDINNER state and process next tuple. */
@@ -1620,6 +1598,22 @@ ExecInitMergeJoin(MergeJoin *node, EState *estate, int eflags)
 	outerPlanState(mergestate) = ExecInitNode(outerPlan(node), estate, eflags);
 	innerPlanState(mergestate) = ExecInitNode(innerPlan(node), estate,
 											  eflags | markflag);
+
+	/*
+	 * For certain types of inner child nodes, it is advantageous to issue
+	 * MARK every time we advance past an inner tuple we will never return to.
+	 * For other types, MARK on a tuple we cannot return to is a waste of
+	 * cycles.	Detect which case applies and set mj_ExtraMarks if we want to
+	 * issue "unnecessary" MARK calls.
+	 *
+	 * Currently, only Material wants the extra MARKs, and it will be helpful
+	 * only if eflags doesn't specify REWIND.
+	 */
+	if (IsA(innerPlan(node), Material) &&
+		(eflags & EXEC_FLAG_REWIND) == 0)
+		mergestate->mj_ExtraMarks = true;
+	else
+		mergestate->mj_ExtraMarks = false;
 
 #define MERGEJOIN_NSLOTS 4
 

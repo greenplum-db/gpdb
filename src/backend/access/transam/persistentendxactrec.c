@@ -366,7 +366,8 @@ int32 PersistentEndXactRec_FetchObjectsFromSmgr(
 		case PersistentEndXactObjKind_FileSysAction:
 			count = smgrGetPendingFileSysWork(
 									endXactRecKind,
-									(PersistentEndXactFileSysActionInfo**)&data);
+									(PersistentEndXactFileSysActionInfo**)&data,
+									NULL);
 			len = count * sizeof(PersistentEndXactFileSysActionInfo);
 
 			PersistentEndXactRec_VerifyFileSysActionInfos(

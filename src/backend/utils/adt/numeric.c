@@ -14,7 +14,7 @@
  * Copyright (c) 1998-2008, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/numeric.c,v 1.100 2007/02/17 00:55:57 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/numeric.c,v 1.108 2008/01/01 19:45:52 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -517,7 +517,7 @@ numeric_send(PG_FUNCTION_ARGS)
  *	scale of the attribute have to be applied on the value.
  */
 Datum
-numeric(PG_FUNCTION_ARGS)
+numeric		(PG_FUNCTION_ARGS)
 {
 	Numeric		num = PG_GETARG_NUMERIC(0);
 	int32		typmod = PG_GETARG_INT32(1);
@@ -564,7 +564,7 @@ numeric(PG_FUNCTION_ARGS)
 	{
 		new = (Numeric) palloc(VARSIZE(num));
 		memcpy(new, num, VARSIZE(num));
-		NUMERIC_SIGN_DSCALE(new) = NUMERIC_SIGN(new) |
+		new->n_sign_dscale = NUMERIC_SIGN(new) |
 			((uint16) scale & NUMERIC_DSCALE_MASK);
 		PG_RETURN_NUMERIC(new);
 	}
@@ -584,8 +584,8 @@ numeric(PG_FUNCTION_ARGS)
 Datum
 numerictypmodin(PG_FUNCTION_ARGS)
 {
-	ArrayType   *ta = PG_GETARG_ARRAYTYPE_P(0);
-	int32    	*tl;
+	ArrayType  *ta = PG_GETARG_ARRAYTYPE_P(0);
+	int32	   *tl;
 	int			n;
 	int32		typmod;
 
@@ -601,8 +601,8 @@ numerictypmodin(PG_FUNCTION_ARGS)
 		if (tl[1] < 0 || tl[1] > tl[0])
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("NUMERIC scale %d must be between 0 and precision %d",
-							tl[1], tl[0])));
+				errmsg("NUMERIC scale %d must be between 0 and precision %d",
+					   tl[1], tl[0])));
 		typmod = ((tl[0] << 16) | tl[1]) + VARHDRSZ;
 	}
 	else if (n == 1)
@@ -619,7 +619,7 @@ numerictypmodin(PG_FUNCTION_ARGS)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						errmsg("invalid NUMERIC type modifier")));
+				 errmsg("invalid NUMERIC type modifier")));
 		typmod = 0;				/* keep compiler quiet */
 	}
 
@@ -629,8 +629,8 @@ numerictypmodin(PG_FUNCTION_ARGS)
 Datum
 numerictypmodout(PG_FUNCTION_ARGS)
 {
-	int32	typmod = PG_GETARG_INT32(0);
-	char   *res = (char *) palloc(64);
+	int32		typmod = PG_GETARG_INT32(0);
+	char	   *res = (char *) palloc(64);
 
 	if (typmod >= 0)
 		snprintf(res, 64, "(%d,%d)",
@@ -938,7 +938,7 @@ width_bucket_numeric(PG_FUNCTION_ARGS)
 		NUMERIC_IS_NAN(bound2))
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_ARGUMENT_FOR_WIDTH_BUCKET_FUNCTION),
-				 errmsg("operand, lower bound and upper bound cannot be NaN")));
+			  errmsg("operand, lower bound and upper bound cannot be NaN")));
 
 	quick_init_var(&result_var);
 	quick_init_var(&count_var);
@@ -1179,29 +1179,28 @@ cmp_numerics(Numeric num1, Numeric num2)
 Datum
 hash_numeric(PG_FUNCTION_ARGS)
 {
-	Numeric 	key = PG_GETARG_NUMERIC(0);
-	Datum 		digit_hash;
-	Datum 		result;
-	int 		weight;
-	int 		start_offset;
-	int 		end_offset;
-	int 		i;
-	int 		hash_len;
+	Numeric		key = PG_GETARG_NUMERIC(0);
+	Datum		digit_hash;
+	Datum		result;
+	int			weight;
+	int			start_offset;
+	int			end_offset;
+	int			i;
+	int			hash_len;
 
 	/* If it's NaN, don't try to hash the rest of the fields */
 	if (NUMERIC_IS_NAN(key))
 		PG_RETURN_UINT32(0);
 
-	weight 		 = key->n_weight;
+	weight = key->n_weight;
 	start_offset = 0;
-	end_offset 	 = 0;
+	end_offset = 0;
 
 	/*
-	 * Omit any leading or trailing zeros from the input to the
-	 * hash. The numeric implementation *should* guarantee that
-	 * leading and trailing zeros are suppressed, but we're
-	 * paranoid. Note that we measure the starting and ending offsets
-	 * in units of NumericDigits, not bytes.
+	 * Omit any leading or trailing zeros from the input to the hash. The
+	 * numeric implementation *should* guarantee that leading and trailing
+	 * zeros are suppressed, but we're paranoid. Note that we measure the
+	 * starting and ending offsets in units of NumericDigits, not bytes.
 	 */
 	for (i = 0; i < NUMERIC_NDIGITS(key); i++)
 	{
@@ -1209,17 +1208,17 @@ hash_numeric(PG_FUNCTION_ARGS)
 			break;
 
 		start_offset++;
+
 		/*
-		 * The weight is effectively the # of digits before the
-		 * decimal point, so decrement it for each leading zero we
-		 * skip.
+		 * The weight is effectively the # of digits before the decimal point,
+		 * so decrement it for each leading zero we skip.
 		 */
 		weight--;
 	}
 
 	/*
-	 * If there are no non-zero digits, then the value of the number
-	 * is zero, regardless of any other fields.
+	 * If there are no non-zero digits, then the value of the number is zero,
+	 * regardless of any other fields.
 	 */
 	if (NUMERIC_NDIGITS(key) == start_offset)
 		PG_RETURN_UINT32(-1);
@@ -1236,14 +1235,14 @@ hash_numeric(PG_FUNCTION_ARGS)
 	Assert(start_offset + end_offset < NUMERIC_NDIGITS(key));
 
 	/*
-	 * Note that we don't hash on the Numeric's scale, since two
-	 * numerics can compare equal but have different scales. We also
-	 * don't hash on the sign, although we could: since a sign
-	 * difference implies inequality, this shouldn't affect correctness.
+	 * Note that we don't hash on the Numeric's scale, since two numerics can
+	 * compare equal but have different scales. We also don't hash on the
+	 * sign, although we could: since a sign difference implies inequality,
+	 * this shouldn't affect correctness.
 	 */
 	hash_len = NUMERIC_NDIGITS(key) - start_offset - end_offset;
 	digit_hash = hash_any((unsigned char *) (NUMERIC_DIGITS(key) + start_offset),
-                          hash_len * sizeof(NumericDigit));
+						  hash_len * sizeof(NumericDigit));
 
 	/* Mix in the weight, via XOR */
 	result = digit_hash ^ weight;
@@ -1592,6 +1591,11 @@ numeric_fac(PG_FUNCTION_ARGS)
 		res = make_result(&const_one);
 		PG_RETURN_NUMERIC(res);
 	}
+	/* Fail immediately if the result would overflow */
+	if (num > 32177)
+		ereport(ERROR,
+				(errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
+				 errmsg("value overflows numeric format")));
 
 	/* Fail immediately if the result will overflow */
 	if (num > 32177)
@@ -1606,7 +1610,7 @@ numeric_fac(PG_FUNCTION_ARGS)
 
 	for (num = num - 1; num > 1; num--)
 	{
-		/* This loop can take a while so allow it to be interrupted */
+		/* this loop can take awhile, so allow it to be interrupted */
 		CHECK_FOR_INTERRUPTS();
 
 		int8_to_numericvar(num, &fact);
@@ -2387,56 +2391,6 @@ numeric_float4(PG_FUNCTION_ARGS)
 }
 
 
-Datum
-text_numeric(PG_FUNCTION_ARGS)
-{
-	text	   *str = PG_GETARG_TEXT_P(0);
-	int			len;
-	char	   *s;
-	Datum		result;
-	char		ts[NUMERIC_LOCAL_DTXT];
-
-	len = (VARSIZE(str) - VARHDRSZ);
-	if (len > NUMERIC_LOCAL_DMAX)
-		s = palloc(len + 1);
-	else
-		s = ts;
-
-	memcpy(s, VARDATA(str), len);
-	*(s + len) = '\0';
-
-	result = DirectFunctionCall3(numeric_in, CStringGetDatum(s),
-								 ObjectIdGetDatum(0), Int32GetDatum(-1));
-
-	if (s != ts)
-		pfree(s);
-
-	return result;
-}
-
-Datum
-numeric_text(PG_FUNCTION_ARGS)
-{
-	/* val is numeric, but easier to leave it as Datum */
-	Datum		val = PG_GETARG_DATUM(0);
-	char	   *s;
-	int			len;
-	text	   *result;
-
-	s = DatumGetCString(DirectFunctionCall1(numeric_out, val));
-	len = strlen(s);
-
-	result = (text *) palloc(VARHDRSZ + len);
-
-	SET_VARSIZE(result, VARHDRSZ + len);
-	memcpy(VARDATA(result), s, len);
-
-	pfree(s);
-
-	PG_RETURN_TEXT_P(result);
-}
-
-
 /* ----------------------------------------------------------------------
  *
  * Aggregate functions
@@ -2688,9 +2642,9 @@ numeric_stddev_internal(ArrayType *transarray,
 	else
 	{
 		if (sample)
-			mul_var(&vN, &vNminus1, &vNminus1, 0);	/* N * (N - 1) */
+			mul_var(&vN, &vNminus1, &vNminus1, 0);		/* N * (N - 1) */
 		else
-			mul_var(&vN, &vN, &vNminus1, 0);		/* N * N */
+			mul_var(&vN, &vN, &vNminus1, 0);	/* N * N */
 		rscale = select_div_scale(&vsumX2, &vNminus1);
 		div_var(&vsumX2, &vNminus1, &vsumX, rscale, true);		/* variance */
 		if (!variance)
@@ -4016,8 +3970,8 @@ make_result(NumericVar *var)
 		result = (Numeric) palloc(NUMERIC_HDRSZ);
 
 		SET_VARSIZE(result, NUMERIC_HDRSZ);
-		NUMERIC_WEIGHT(result) = 0;
-		NUMERIC_SIGN_DSCALE(result) = NUMERIC_NAN;
+		result->n_weight = 0;
+		result->n_sign_dscale = NUMERIC_NAN;
 
 		dump_numeric("make_result()", result);
 		return result;
@@ -4047,8 +4001,8 @@ make_result(NumericVar *var)
 	len = NUMERIC_HDRSZ + n * sizeof(NumericDigit);
 	result = (Numeric) palloc(len);
 	SET_VARSIZE(result, len);
-	NUMERIC_WEIGHT(result) = weight;
-	NUMERIC_SIGN_DSCALE(result) = sign | (var->dscale & NUMERIC_DSCALE_MASK);
+	result->n_weight = weight;
+	result->n_sign_dscale = sign | (var->dscale & NUMERIC_DSCALE_MASK);
 
 	memcpy(NUMERIC_DIGITS(result), digits, n * sizeof(NumericDigit));
 

@@ -50,6 +50,12 @@
 #define MAX_CACHED_1_GANGS 1
 
 /*
+ * Which gang this QE belongs to; this would be used in PostgresMain to find out
+ * the slice this QE should execute
+ */
+int qe_gang_id = 0;
+
+/*
  * Points to the result of getCdbComponentDatabases()
  */
 static CdbComponentDatabases *cdb_component_dbs = NULL;
@@ -68,8 +74,7 @@ static List *availableReaderGangs1 = NIL;
 static Gang *primaryWriterGang = NULL;
 
 /*
- * Every gang created must have a unique identifier, so the QD and Dispatch Agents can agree
- * about what they are talking about.
+ * Every gang created must have a unique identifier
  */
 #define PRIMARY_WRITER_GANG_ID 1
 static int gang_id_counter = 2;
@@ -95,6 +100,8 @@ typedef struct DoConnectParms
 	/* type of gang. */
 	GangType type;
 
+	int gangId;
+
 	/* connect options. GUC etc. */
 	StringInfo connectOptions;
 
@@ -104,14 +111,15 @@ typedef struct DoConnectParms
 
 static Gang *buildGangDefinition(GangType type, int gang_id, int size,
 		int content);
-static DoConnectParms* makeConnectParms(int parmsCount, GangType type);
+static DoConnectParms* makeConnectParms(int parmsCount, GangType type, int gangId);
 static void destroyConnectParms(DoConnectParms *doConnectParmsAr, int count);
 static void checkConnectionStatus(Gang* gp, int* countInRecovery,
 		int* countSuccessful);
 static bool isPrimaryWriterGangAlive(void);
 static void *thread_DoConnect(void *arg);
-static void build_gpqeid_param(char *buf, int bufsz, int segIndex,
-		bool is_writer);
+static void
+build_gpqeid_param(char *buf, int bufsz, int segIndex,
+				   bool is_writer, int gangId);
 static Gang *createGang(GangType type, int gang_id, int size, int content);
 static void disconnectAndDestroyGang(Gang *gp);
 static void disconnectAndDestroyAllReaderGangs(bool destroyAllocated);
@@ -365,7 +373,7 @@ create_gang_retry:
 	Assert(threadCount > 0);
 
 	/* initialize connect parameters */
-	doConnectParmsAr = makeConnectParms(threadCount, type);
+	doConnectParmsAr = makeConnectParms(threadCount, type, gang_id);
 	for (i = 0; i < size; i++)
 	{
 		parmIndex = i / gp_connections_per_thread;
@@ -538,14 +546,17 @@ thread_DoConnect(void *arg)
 		 * early enough now some locks are taken before command line options
 		 * are recognized.
 		 */
-		build_gpqeid_param(gpqeid, sizeof(gpqeid), segdbDesc->segindex, pParms->type == GANGTYPE_PRIMARY_WRITER);
+		build_gpqeid_param(gpqeid, sizeof(gpqeid),
+						   segdbDesc->segindex,
+						   pParms->type == GANGTYPE_PRIMARY_WRITER,
+						   pParms->gangId);
 
 		/* check the result in createGang */
 		cdbconn_doConnect(segdbDesc, gpqeid, pParms->connectOptions->data);
 	}
 
 	return (NULL);
-} /* thread_DoConnect */
+}
 
 /*
  * Test if the connections of the primary writer gang are alive.
@@ -976,7 +987,7 @@ static void addOptions(StringInfo string, bool iswriter)
  *
  * Including initialize the connect option string.
  */
-static DoConnectParms* makeConnectParms(int parmsCount, GangType type)
+static DoConnectParms* makeConnectParms(int parmsCount, GangType type, int gangId)
 {
 	DoConnectParms *doConnectParmsAr = (DoConnectParms*) palloc0(
 			parmsCount * sizeof(DoConnectParms));
@@ -996,6 +1007,7 @@ static DoConnectParms* makeConnectParms(int parmsCount, GangType type)
 		pParms->db_count = 0;
 		pParms->type = type;
 		pParms->connectOptions = pOptions;
+		pParms->gangId = gangId;
 	}
 	return doConnectParmsAr;
 }
@@ -1028,14 +1040,15 @@ static void destroyConnectParms(DoConnectParms *doConnectParmsAr, int count)
 }
 
 /*
- * build_gpqeid_params
+ * build_gpqeid_param
  *
  * Called from the qDisp process to create the "gpqeid" parameter string
  * to be passed to a qExec that is being started.  NB: Can be called in a
  * thread, so mustn't use palloc/elog/ereport/etc.
  */
-static void build_gpqeid_param(char *buf, int bufsz, int segIndex,
-		bool is_writer)
+static void
+build_gpqeid_param(char *buf, int bufsz, int segIndex,
+				   bool is_writer, int gangId)
 {
 #ifdef HAVE_INT64_TIMESTAMP
 #define TIMESTAMP_FORMAT INT64_FORMAT
@@ -1047,9 +1060,10 @@ static void build_gpqeid_param(char *buf, int bufsz, int segIndex,
 #endif
 #endif
 
-	snprintf(buf, bufsz, "%d;%d;" TIMESTAMP_FORMAT ";%s", gp_session_id,
-			segIndex, PgStartTime, (is_writer ? "true" : "false"));
-} /* build_gpqeid_params */
+	snprintf(buf, bufsz, "%d;%d;" TIMESTAMP_FORMAT ";%s;%d",
+			 gp_session_id, segIndex, PgStartTime,
+			 (is_writer ? "true" : "false"), gangId);
+}
 
 static bool gpqeid_next_param(char **cpp, char **npp)
 {
@@ -1076,8 +1090,9 @@ static bool gpqeid_next_param(char **cpp, char **npp)
  * command line options have not been processed; GUCs have the settings
  * inherited from the postmaster; etc; so don't try to do too much in here.
  */
-void cdbgang_parse_gpqeid_params(struct Port * port __attribute__((unused)),
-		const char *gpqeid_value)
+void
+cdbgang_parse_gpqeid_params(struct Port * port __attribute__((unused)),
+							const char *gpqeid_value)
 {
 	char *gpqeid = pstrdup(gpqeid_value);
 	char *cp;
@@ -1109,11 +1124,16 @@ void cdbgang_parse_gpqeid_params(struct Port * port __attribute__((unused)),
 	if (gpqeid_next_param(&cp, &np))
 		SetConfigOption("gp_is_writer", cp, PGC_POSTMASTER, PGC_S_OVERRIDE);
 
+	if (gpqeid_next_param(&cp, &np))
+	{
+		qe_gang_id = (int) strtol(cp, NULL, 10);
+	}
+
 	/* Too few items, or too many? */
 	if (!cp || np)
 		goto bad;
 
-	if (gp_session_id <= 0 || PgStartTime <= 0)
+	if (gp_session_id <= 0 || PgStartTime <= 0 || qe_gang_id <=0)
 		goto bad;
 
 	pfree(gpqeid);
@@ -1121,7 +1141,7 @@ void cdbgang_parse_gpqeid_params(struct Port * port __attribute__((unused)),
 
 bad:
 	elog(FATAL, "Segment dispatched with invalid option: 'gpqeid=%s'", gpqeid_value);
-} /* cdbgang_parse_gpqeid_params */
+}
 
 /*
  * TODO: Dead code: remove it.
@@ -1199,7 +1219,7 @@ getAllIdleReaderGangs()
 }
 
 List *
-getAllBusyReaderGangs()
+getAllAllocatedReaderGangs()
 {
 	List *res = NIL;
 	ListCell *le;
@@ -1895,6 +1915,7 @@ void freeGangsForPortal(char *portal_name)
 	while (cur_item != NULL)
 	{
 		Gang *gp = (Gang *) lfirst(cur_item);
+		ListCell *next_item = lnext(cur_item);
 
 		if (isTargetPortal(gp->portal_name, portal_name))
 		{
@@ -1910,10 +1931,7 @@ void freeGangsForPortal(char *portal_name)
 			else
 				disconnectAndDestroyGang(gp);
 
-			if (prev_item)
-				cur_item = lnext(prev_item);
-			else
-				cur_item = list_head(allocatedReaderGangsN);
+			cur_item = next_item;
 		}
 		else
 		{
@@ -1921,14 +1939,16 @@ void freeGangsForPortal(char *portal_name)
 
 			/* cur_item must be preserved */
 			prev_item = cur_item;
-			cur_item = lnext(prev_item);
+			cur_item = next_item;
 		}
 	}
 
+	prev_item = NULL;
 	cur_item = list_head(allocatedReaderGangs1);
 	while (cur_item != NULL)
 	{
 		Gang *gp = (Gang *) lfirst(cur_item);
+		ListCell *next_item = lnext(cur_item);
 
 		if (isTargetPortal(gp->portal_name, portal_name))
 		{
@@ -1944,10 +1964,7 @@ void freeGangsForPortal(char *portal_name)
 			else
 				disconnectAndDestroyGang(gp);
 
-			if (prev_item)
-				cur_item = lnext(prev_item);
-			else
-				cur_item = list_head(allocatedReaderGangs1);
+			cur_item = next_item;
 		}
 		else
 		{
@@ -1955,7 +1972,7 @@ void freeGangsForPortal(char *portal_name)
 
 			/* cur_item must be preserved */
 			prev_item = cur_item;
-			cur_item = lnext(prev_item);
+			cur_item = next_item;
 		}
 	}
 

@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/variable.c,v 1.119.2.2 2009/09/03 22:08:29 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/variable.c,v 1.125.2.1 2009/09/03 22:08:22 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -19,7 +19,6 @@
 #include <ctype.h>
 
 #include "access/xact.h"
-#include "catalog/catquery.h"
 #include "catalog/pg_authid.h"
 #include "commands/variable.h"
 #include "miscadmin.h"
@@ -28,8 +27,6 @@
 #include "utils/syscache.h"
 #include "utils/tqual.h"
 #include "mb/pg_wchar.h"
-
-#include "cdb/cdbvars.h"
 
 /*
  * DATESTYLE
@@ -60,9 +57,8 @@ assign_datestyle(const char *value, bool doit, GucSource source)
 		/* syntax error in list */
 		pfree(rawstring);
 		list_free(elemlist);
-		if (source >= PGC_S_INTERACTIVE)
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+		ereport(GUC_complaint_elevel(source),
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("invalid list syntax for parameter \"datestyle\"")));
 		return NULL;
 	}
@@ -160,11 +156,10 @@ assign_datestyle(const char *value, bool doit, GucSource source)
 		}
 		else
 		{
-			if (source >= PGC_S_INTERACTIVE)
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("unrecognized \"datestyle\" key word: \"%s\"",
-								tok)));
+			ereport(GUC_complaint_elevel(source),
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("unrecognized \"datestyle\" key word: \"%s\"",
+							tok)));
 			ok = false;
 			break;
 		}
@@ -175,10 +170,9 @@ assign_datestyle(const char *value, bool doit, GucSource source)
 
 	if (!ok)
 	{
-		if (source >= PGC_S_INTERACTIVE)
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("conflicting \"datestyle\" specifications")));
+		ereport(GUC_complaint_elevel(source),
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("conflicting \"datestyle\" specifications")));
 		return NULL;
 	}
 
@@ -286,19 +280,17 @@ assign_timezone(const char *value, bool doit, GucSource source)
 		pfree(val);
 		if (interval->month != 0)
 		{
-			if (source >= PGC_S_INTERACTIVE)
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("invalid interval value for time zone: month not allowed")));
+			ereport(GUC_complaint_elevel(source),
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("invalid interval value for time zone: month not allowed")));
 			pfree(interval);
 			return NULL;
 		}
 		if (interval->day != 0)
 		{
-			if (source >= PGC_S_INTERACTIVE)
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("invalid interval value for time zone: day not allowed")));
+			ereport(GUC_complaint_elevel(source),
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("invalid interval value for time zone: day not allowed")));
 			pfree(interval);
 			return NULL;
 		}
@@ -364,7 +356,7 @@ assign_timezone(const char *value, bool doit, GucSource source)
 
 			if (!new_tz)
 			{
-				ereport((source >= PGC_S_INTERACTIVE) ? ERROR : LOG,
+				ereport(GUC_complaint_elevel(source),
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 						 errmsg("unrecognized time zone name: \"%s\"",
 								value)));
@@ -373,7 +365,7 @@ assign_timezone(const char *value, bool doit, GucSource source)
 
 			if (!tz_acceptable(new_tz))
 			{
-				ereport((source >= PGC_S_INTERACTIVE) ? ERROR : LOG,
+				ereport(GUC_complaint_elevel(source),
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					   errmsg("time zone \"%s\" appears to use leap seconds",
 							  value),
@@ -496,7 +488,7 @@ assign_log_timezone(const char *value, bool doit, GucSource source)
 
 		if (!new_tz)
 		{
-			ereport((source >= PGC_S_INTERACTIVE) ? ERROR : LOG,
+			ereport(GUC_complaint_elevel(source),
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("unrecognized time zone name: \"%s\"",
 							value)));
@@ -505,7 +497,7 @@ assign_log_timezone(const char *value, bool doit, GucSource source)
 
 		if (!tz_acceptable(new_tz))
 		{
-			ereport((source >= PGC_S_INTERACTIVE) ? ERROR : LOG,
+			ereport(GUC_complaint_elevel(source),
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("time zone \"%s\" appears to use leap seconds",
 							value),
@@ -673,11 +665,10 @@ assign_client_encoding(const char *value, bool doit, GucSource source)
 	 */
 	if (SetClientEncoding(encoding, doit) < 0)
 	{
-		if (source >= PGC_S_INTERACTIVE)
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("conversion between %s and %s is not supported",
-							value, GetDatabaseEncodingName())));
+		ereport(GUC_complaint_elevel(source),
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("conversion between %s and %s is not supported",
+						value, GetDatabaseEncodingName())));
 		return NULL;
 	}
 	return value;
@@ -730,7 +721,6 @@ assign_session_authorization(const char *value, bool doit, GucSource source)
 	{
 		/* not a saved ID, so look it up */
 		HeapTuple	roleTup;
-		cqContext  *pcqCtx;
 
 		if (!IsTransactionState())
 		{
@@ -742,19 +732,14 @@ assign_session_authorization(const char *value, bool doit, GucSource source)
 			return NULL;
 		}
 
-		pcqCtx = caql_beginscan(
-				NULL,
-				cql("SELECT * FROM pg_authid "
-					" WHERE rolname = :1 ",
-					CStringGetDatum((char *) value)));
-
-		roleTup = caql_getnext(pcqCtx);
+		roleTup = SearchSysCache(AUTHNAME,
+								 PointerGetDatum(value),
+								 0, 0, 0);
 		if (!HeapTupleIsValid(roleTup))
 		{
-			if (source >= PGC_S_INTERACTIVE)
-				ereport(ERROR,
-						(errcode(ERRCODE_UNDEFINED_OBJECT),
-						 errmsg("role \"%s\" does not exist", value)));
+			ereport(GUC_complaint_elevel(source),
+					(errcode(ERRCODE_UNDEFINED_OBJECT),
+					 errmsg("role \"%s\" does not exist", value)));
 			return NULL;
 		}
 
@@ -762,7 +747,7 @@ assign_session_authorization(const char *value, bool doit, GucSource source)
 		is_superuser = ((Form_pg_authid) GETSTRUCT(roleTup))->rolsuper;
 		actual_rolename = value;
 
-		caql_endscan(pcqCtx);
+		ReleaseSysCache(roleTup);
 	}
 
 	if (doit)
@@ -793,8 +778,9 @@ show_session_authorization(void)
 	Oid			savedoid;
 	char	   *endptr;
 
-	if(!value)
-		return NULL;
+	/* If session_authorization hasn't been set in this process, return "" */
+	if (value == NULL || value[0] == '\0')
+		return "";
 
 	Assert(strspn(value, "x") == NAMEDATALEN &&
 		   (value[NAMEDATALEN] == 'T' || value[NAMEDATALEN] == 'F'));
@@ -851,7 +837,6 @@ assign_role(const char *value, bool doit, GucSource source)
 	{
 		/* not a saved ID, so look it up */
 		HeapTuple	roleTup;
-		cqContext  *pcqCtx;
 
 		if (!IsTransactionState())
 		{
@@ -863,37 +848,31 @@ assign_role(const char *value, bool doit, GucSource source)
 			return NULL;
 		}
 
-		pcqCtx = caql_beginscan(
-				NULL,
-				cql("SELECT * FROM pg_authid "
-					" WHERE rolname = :1 ",
-					CStringGetDatum((char *) value)));
-
-		roleTup = caql_getnext(pcqCtx);
+		roleTup = SearchSysCache(AUTHNAME,
+								 PointerGetDatum(value),
+								 0, 0, 0);
 		if (!HeapTupleIsValid(roleTup))
 		{
-			if (source >= PGC_S_INTERACTIVE)
-				ereport(ERROR,
-						(errcode(ERRCODE_UNDEFINED_OBJECT),
-						 errmsg("role \"%s\" does not exist", value)));
+			ereport(GUC_complaint_elevel(source),
+					(errcode(ERRCODE_UNDEFINED_OBJECT),
+					 errmsg("role \"%s\" does not exist", value)));
 			return NULL;
 		}
 
 		roleid = HeapTupleGetOid(roleTup);
 		is_superuser = ((Form_pg_authid) GETSTRUCT(roleTup))->rolsuper;
 
-		caql_endscan(pcqCtx);
+		ReleaseSysCache(roleTup);
 
 		/*
 		 * Verify that session user is allowed to become this role
 		 */
 		if (!is_member_of_role(GetSessionUserId(), roleid))
 		{
-			if (source >= PGC_S_INTERACTIVE)
-				ereport(ERROR,
-						(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-						 errmsg("permission denied to set role \"%s\"",
-								value)));
+			ereport(GUC_complaint_elevel(source),
+					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+					 errmsg("permission denied to set role \"%s\"",
+							value)));
 			return NULL;
 		}
 	}

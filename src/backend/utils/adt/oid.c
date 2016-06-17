@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/oid.c,v 1.70 2007/01/05 22:19:41 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/oid.c,v 1.73 2008/01/01 19:45:52 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -414,46 +414,4 @@ oidvectorgt(PG_FUNCTION_ARGS)
 	int32		cmp = DatumGetInt32(btoidvectorcmp(fcinfo));
 
 	PG_RETURN_BOOL(cmp > 0);
-}
-
-Datum
-oid_text(PG_FUNCTION_ARGS)
-{
-	Oid			oid = PG_GETARG_OID(0);
-	text	   *result;
-	int			len;
-	char	   *str;
-
-	str = DatumGetCString(DirectFunctionCall1(oidout,
-											  ObjectIdGetDatum(oid)));
-	len = strlen(str) + VARHDRSZ;
-
-	result = (text *) palloc(len);
-
-	SET_VARSIZE(result, len);
-	memcpy(VARDATA(result), str, (len - VARHDRSZ));
-	pfree(str);
-
-	PG_RETURN_TEXT_P(result);
-}
-
-Datum
-text_oid(PG_FUNCTION_ARGS)
-{
-	text	   *string = PG_GETARG_TEXT_P(0);
-	Oid			result;
-	int			len;
-	char	   *str;
-
-	len = (VARSIZE(string) - VARHDRSZ);
-
-	str = palloc(len + 1);
-	memcpy(str, VARDATA(string), len);
-	*(str + len) = '\0';
-
-	result = oidin_subr(str, NULL);
-
-	pfree(str);
-
-	PG_RETURN_OID(result);
 }

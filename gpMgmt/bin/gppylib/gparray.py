@@ -761,6 +761,18 @@ class Segment:
             if (prim_status, prim_mode, mirror_status, mirror_role) not in VALID_SEGMENT_STATES:
                 return False
         return True
+
+    def get_active_primary(self):
+        if self.primaryDB.isSegmentPrimary(current_role=True):
+            return self.primaryDB
+        else:
+            for mirror in mirrorDBs:
+                if mirror.isSegmentPrimary(current_role=True):
+                    return mirror
+
+    def get_primary_dbid(self):
+        return self.primaryDB.getSegmentDbId()
+
 # --------------------------------------------------------------------
 # --------------------------------------------------------------------
 class SegmentRow():
@@ -1723,6 +1735,14 @@ class GpArray:
                 dbs.extend(seg.get_dbs()) 
         return dbs
 
+    # --------------------------------------------------------------------
+    def getSegmentList(self, includeExpansionSegs=False):
+        """Return a list of all GpDb objects for all segments in the array"""
+        dbs=[]
+        dbs.extend(self.segments)
+        if includeExpansionSegs:
+            dbs.extend(self.expansionSegments)
+        return dbs
 
     # --------------------------------------------------------------------
     def getSegDbMap(self):

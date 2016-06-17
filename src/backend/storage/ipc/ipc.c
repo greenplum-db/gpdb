@@ -24,12 +24,13 @@
 #include <sys/stat.h>
 
 #include "cdb/cdbdisp_thread.h"
+#include "libpq/pqsignal.h"
 #include "miscadmin.h"
 #ifdef PROFILE_PID_DIR
 #include "postmaster/autovacuum.h"
 #endif
 #include "storage/ipc.h"
-#include "libpq/pqsignal.h"
+#include "tcop/tcopprot.h"
 
 
 /*
@@ -184,6 +185,8 @@ proc_exit_prepare(int code)
 	 * case of elog(FATAL) for example.)
 	 */
 	error_context_stack = NULL;
+	/* For the same reason, reset debug_query_string before it's clobbered */
+	debug_query_string = NULL;
 
 	/*
 	 * Make sure threads get cleaned up: there might be still ongoing
@@ -211,6 +214,8 @@ proc_exit_prepare(int code)
 	* necessary to receive more motion data.
 	*/
 	WaitInterconnectQuit();
+
+	elog(DEBUG3, "proc_exit(%d)", code);
 
 	/* do our shared memory exits first */
 	shmem_exit(code);

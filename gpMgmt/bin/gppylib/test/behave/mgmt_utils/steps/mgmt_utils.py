@@ -13,6 +13,7 @@ import yaml
 
 from gppylib.commands.gp import SegmentStart, GpStandbyStart
 from gppylib.commands.unix import findCmdInPath
+from gppylib.operations.backup_utils import Context
 from gppylib.operations.dump import get_partition_state
 from gppylib.operations.startSegments import MIRROR_MODE_MIRRORLESS
 from gppylib.operations.unix import ListRemoteFilesByPattern, CheckRemoteFile
@@ -1065,6 +1066,8 @@ def verify_file_contents(context, file_type, file_dir, text_find, should_contain
         fn = '%sgp_statistics_1_1_%s' % (context.dump_prefix, context.backup_timestamp)
     elif file_type == 'schema':
         fn = '%sgp_dump_%s_schema' % (context.dump_prefix, context.backup_timestamp)
+    elif file_type == 'cdatabase':
+        fn = '%sgp_cdatabase_1_1_%s' % (context.dump_prefix, context.backup_timestamp)
 
     subdirectory = context.backup_timestamp[0:8]
     
@@ -1498,10 +1501,12 @@ def impl(context, table, dbname, ao_table):
     ao_sch, ao_tbl = ao_table.split('.') 
     part_info = [(1, ao_sch, ao_tbl, tbl)]
     try:
+        backup_utils = Context()
+        backup_utils.master_port = os.environ.get('PGPORT')
+        backup_utils.dump_database = dbname
         context.exception = None
         context.partition_list_res = None
-        context.partition_list_res = get_partition_state(master_port=os.environ.get('PGPORT'),
-                        dbname=dbname, catalog_schema=sch, partition_info=part_info)
+        context.partition_list_res = get_partition_state(backup_utils, sch, part_info)
     except Exception as e:
         context.exception = e
 
@@ -3817,3 +3822,13 @@ def impl(context, path, num):
     result = validate_local_path(path)
     if result != int(num):
         raise Exception("expected %s items but found %s items in path %s" % (num, result, path) )
+
+
+@when('the entry for the table "{user_table}" is removed from "{catalog_table}" in the database "{db_name}"')
+def impl(context, user_table, catalog_table, db_name):
+    delete_qry = "delete from %s where relname='%s';" % (catalog_table, user_table)
+
+    with dbconn.connect(dbconn.DbURL(dbname=db_name)) as conn:
+        for qry in ["set allow_system_table_mods='dml';", "set allow_segment_dml=true;", delete_qry]:
+            dbconn.execSQL(conn, qry)
+            conn.commit()

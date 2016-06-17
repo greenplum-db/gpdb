@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_agg.c,v 1.77 2007/02/01 19:10:27 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/parse_agg.c,v 1.79 2008/01/01 19:45:50 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -48,7 +48,8 @@ static void check_ungrouped_columns(Node *node, ParseState *pstate,
 						List *groupClauses, bool have_non_var_grouping);
 static bool check_ungrouped_columns_walker(Node *node,
 							   check_ungrouped_columns_context *context);
-static List* check_aggregate_ingroup(Node *grpcl, List *targetList, List *groupClauses);
+static List *check_aggregate_ingroup(Node *grpcl, ParseState *pstate,
+						List *targetList, List *groupClauses);
 static List* get_groupclause_exprs(Node *grpcl, List *targetList);
 
 /*
@@ -83,18 +84,19 @@ check_call(ParseState *pstate, Node *call)
 	 */
 	if (min_varlevel == 0 && is_agg)
 	{
-		if (checkExprHasAggs((Node *)((Aggref *)call)->args))
+		Aggref *agg = (Aggref *) call;
+
+		if (checkExprHasAggs((Node *) agg->args))
 			ereport(ERROR,
 					(errcode(ERRCODE_GROUPING_ERROR),
-					 errmsg("aggregate function calls cannot be nested")));
-		
-		if (checkExprHasWindFuncs((Node *)((Aggref *)call)->args))
-		{
+					 errmsg("aggregate function calls cannot be nested"),
+					 parser_errposition(pstate,
+							   locate_agg_of_level((Node *) agg->args, 0))));
+
+		if (checkExprHasWindFuncs((Node *) agg->args))
 			ereport(ERROR,
 					(errcode(ERRCODE_GROUPING_ERROR),
-					 errmsg("window functions may not be used as arguments to "
-							"aggregates")));
-		}
+					 errmsg("window functions may not be used as arguments to aggregates")));
 	}
 
 	/*
@@ -107,8 +109,7 @@ check_call(ParseState *pstate, Node *call)
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_GROUPING_ERROR),
-					 errmsg("cannot use window function as an argument "
-							"to another window function")));
+					 errmsg("cannot use window function as an argument to another window function")));
 		}
 	}
 
@@ -226,11 +227,15 @@ parseCheckAggregates(ParseState *pstate, Query *qry)
 	if (checkExprHasAggs(qry->jointree->quals))
 		ereport(ERROR,
 				(errcode(ERRCODE_GROUPING_ERROR),
-				 errmsg("aggregates not allowed in WHERE clause")));
+				 errmsg("aggregates not allowed in WHERE clause"),
+				 parser_errposition(pstate,
+							 locate_agg_of_level(qry->jointree->quals, 0))));
 	if (checkExprHasAggs((Node *) qry->jointree->fromlist))
 		ereport(ERROR,
 				(errcode(ERRCODE_GROUPING_ERROR),
-				 errmsg("aggregates not allowed in JOIN conditions")));
+				 errmsg("aggregates not allowed in JOIN conditions"),
+				 parser_errposition(pstate,
+				 locate_agg_of_level((Node *) qry->jointree->fromlist, 0))));
 
 	if (checkExprHasWindFuncs(qry->jointree->quals))
 		ereport(ERROR,
@@ -253,7 +258,7 @@ parseCheckAggregates(ParseState *pstate, Query *qry)
 	foreach(l, qry->groupClause)
 	{
 		groupClauses =
-			check_aggregate_ingroup((Node*)lfirst(l), qry->targetList, groupClauses);
+			check_aggregate_ingroup((Node*)lfirst(l), pstate, qry->targetList, groupClauses);
 	}
 
 	/*
@@ -462,12 +467,14 @@ check_ungrouped_columns_walker(Node *node,
 			ereport(ERROR,
 					(errcode(ERRCODE_GROUPING_ERROR),
 					 errmsg("column \"%s.%s\" must appear in the GROUP BY clause or be used in an aggregate function",
-							rte->eref->aliasname, attname)));
+							rte->eref->aliasname, attname),
+					 parser_errposition(context->pstate, var->location)));
 		else
 			ereport(ERROR,
 					(errcode(ERRCODE_GROUPING_ERROR),
 					 errmsg("subquery uses ungrouped column \"%s.%s\" from outer query",
-							rte->eref->aliasname, attname)));
+							rte->eref->aliasname, attname),
+					 parser_errposition(context->pstate, var->location)));
 
 	}
 
@@ -498,7 +505,7 @@ check_ungrouped_columns_walker(Node *node,
  *
  * agg_input_types, agg_state_type, agg_result_type identify the input,
  * transition, and result types of the aggregate.  These should all be
- * resolved to actual types (ie, none should ever be ANYARRAY or ANYELEMENT).
+ * resolved to actual types (ie, none should ever be ANYELEMENT etc).
  *
  * transfn_oid and finalfn_oid identify the funcs to be called; the latter
  * may be InvalidOid.
@@ -691,8 +698,8 @@ get_groupclause_exprs(Node *grpcl, List *targetList)
  * All relevant expressions defined in the given GroupClause or
  * GroupingClause are returned as a list.
  */
-List*
-check_aggregate_ingroup(Node *grpcl, List *targetList, List *groupClauses)
+static List *
+check_aggregate_ingroup(Node *grpcl, ParseState *pstate, List *targetList, List *groupClauses)
 {
 	List *exprs;
 	ListCell *l;
@@ -714,7 +721,9 @@ check_aggregate_ingroup(Node *grpcl, List *targetList, List *groupClauses)
 		if (checkExprHasAggs(expr))
 			ereport(ERROR,
 					(errcode(ERRCODE_GROUPING_ERROR),
-					 errmsg("aggregates not allowed in GROUP BY clause")));
+					 errmsg("aggregates not allowed in GROUP BY clause"),
+					 parser_errposition(pstate,
+										locate_agg_of_level(expr, 0))));
 
 		if (checkExprHasGroupExtFuncs(expr))
 			ereport(ERROR,

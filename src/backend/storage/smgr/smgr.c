@@ -12,7 +12,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/smgr/smgr.c,v 1.103 2007/01/05 22:19:39 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/smgr/smgr.c,v 1.109 2008/01/01 19:45:52 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -122,6 +122,9 @@ static PendingDelete *PendingDelete_AddEntry(
 	bool					dropForCommit)
 {
 	PendingDelete *pending;
+
+	if (!ItemPointerIsValid(persistentTid))
+		elog(ERROR, "tried to delete a relation with invalid persistent TID");
 
 	/* Add the filespace to the list of stuff to delete at abort */
 	pending = (PendingDelete *)
@@ -1376,10 +1379,7 @@ smgrtruncate(SMgrRelation reln, BlockNumber nblocks, bool isTemp, bool isLocalBu
 	if (!isTemp)
 	{
 		/*
-		 * Make a non-transactional XLOG entry showing the file truncation.
-		 * It's non-transactional because we should replay it whether the
-		 * transaction commits or not; the underlying file change is certainly
-		 * not reversible.
+		 * Make an XLOG entry showing the file truncation.
 		 */
 		XLogRecPtr	lsn;
 		XLogRecData rdata;
@@ -1395,8 +1395,7 @@ smgrtruncate(SMgrRelation reln, BlockNumber nblocks, bool isTemp, bool isLocalBu
 		rdata.buffer = InvalidBuffer;
 		rdata.next = NULL;
 
-		lsn = XLogInsert(RM_SMGR_ID, XLOG_SMGR_TRUNCATE | XLOG_NO_TRAN,
-						 &rdata);
+		lsn = XLogInsert(RM_SMGR_ID, XLOG_SMGR_TRUNCATE, &rdata);
 	}
 }
 
@@ -1763,8 +1762,6 @@ smgrDoDeleteActions(
 {
 	MIRRORED_LOCK_DECLARE;
 
-	CHECKPOINT_START_LOCK_DECLARE;
-
 	PendingDelete *current;
 	int entryIndex;
 
@@ -1801,15 +1798,6 @@ smgrDoDeleteActions(
 	 * we could race with resynchronize's ReDrop.
 	 */
 	MIRRORED_LOCK;
-
-	/*
-	 * The logic will eventually obtain a CheckpointStartLock in PersistentRelation_Dropped(),
-	 * but functions called from this function my obtain Exclusive locks before the
-	 * CheckpointStartLock is obtained. This could cause a potential deadlock in the future.
-	 * We need to take a CheckpointStartLock here to maintain proper lock ordering
-	 * (i.e. MirrorLock -> CheckpointStartLock ).
-	 */
-	CHECKPOINT_START_LOCK;
 
 	/*
 	 * First pass does the initial State-Changes.
@@ -2070,8 +2058,6 @@ smgrDoDeleteActions(
 	Assert(*list == NULL);
 
 	PersistentFileSysObj_FlushXLog();
-
-	CHECKPOINT_START_UNLOCK;
 
 	MIRRORED_UNLOCK;
 
@@ -2565,14 +2551,16 @@ smgrSubTransAbort(void)
  * *ptr is set to point to a freshly-palloc'd array of RelFileNodes.
  * If there are no relations to be deleted, *ptr is set to NULL.
  *
+ * If haveNonTemp isn't NULL, the bool it points to gets set to true if
+ * there is any non-temp table pending to be deleted; false if not.
+ *
  * Note that the list does not include anything scheduled for termination
  * by upper-level transactions.
  */
 int
-smgrGetPendingFileSysWork(
-	EndXactRecKind						endXactRecKind,
-
-	PersistentEndXactFileSysActionInfo 	**ptr)
+smgrGetPendingFileSysWork(EndXactRecKind endXactRecKind,
+						  PersistentEndXactFileSysActionInfo **ptr,
+						  bool *haveNonTemp)
 {
 	int			nestLevel = GetCurrentTransactionNestLevel();
 	int			nrels;
@@ -2583,6 +2571,9 @@ smgrGetPendingFileSysWork(
 	int			entryIndex;
 
 	PersistentEndXactFileSysAction action;
+
+	if (haveNonTemp)
+		*haveNonTemp = false;
 
 	Assert(endXactRecKind == EndXactRecKind_Commit ||
 		   endXactRecKind == EndXactRecKind_Abort ||
@@ -2603,6 +2594,8 @@ smgrGetPendingFileSysWork(
 	}
 
 	nrels = 0;
+	if (haveNonTemp)
+		*haveNonTemp = false;
 	for (pending = pendingDeletes; pending != NULL; pending = pending->next)
 	{
 		action = PendingDelete_Action(pending);
@@ -2647,6 +2640,9 @@ smgrGetPendingFileSysWork(
 
 			rptr++;
 			returned = true;
+
+			if (haveNonTemp && !pending->isLocalBuf)
+				*haveNonTemp = true;
 		}
 
 		if (Debug_persistent_print)
@@ -3093,12 +3089,30 @@ smgrabort(void)
 }
 
 /*
- *	smgrsync() -- Sync files to disk at checkpoint time.
+ *     smgrpreckpt() -- Prepare for checkpoint.
+ */
+void
+smgrpreckpt(void)
+{
+	mdpreckpt();
+}
+
+/*
+ *     smgrsync() -- Sync files to disk during checkpoint.
  */
 void
 smgrsync(void)
 {
 	mdsync();
+}
+
+/*
+ *	smgrpostckpt() -- Post-checkpoint cleanup.
+ */
+void
+smgrpostckpt(void)
+{
+	mdpostckpt();
 }
 
 
@@ -3132,10 +3146,31 @@ smgr_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 	}
 	else if (info == XLOG_SMGR_TRUNCATE)
 	{
+		MirrorDataLossTrackingState mirrorDataLossTrackingState;
+		int64 mirrorDataLossTrackingSessionNum;
+
 		xl_smgr_truncate *xlrec = (xl_smgr_truncate *) XLogRecGetData(record);
 		SMgrRelation reln;
 
 		reln = smgropen(xlrec->rnode);
+
+		/*
+		 * Forcibly create relation if it doesn't exist (which suggests that
+		 * it was dropped somewhere later in the WAL sequence).  As in
+		 * XLogOpenRelation, we prefer to recreate the rel and replay the log
+		 * as best we can until the drop is seen.
+		 */
+		mirrorDataLossTrackingState =
+					FileRepPrimary_GetMirrorDataLossTrackingSessionNum(
+													&mirrorDataLossTrackingSessionNum);
+		smgrcreate(
+				reln,
+				/* isLocalBuf */ false,
+				/* relationName */ NULL,		// Ok to be NULL -- we don't know the name here.
+				mirrorDataLossTrackingState,
+				mirrorDataLossTrackingSessionNum,
+				/* ignoreAlreadyExists */ true,
+				&mirrorDataLossOccurred);
 
 		/* Can't use smgrtruncate because it would try to xlog */
 

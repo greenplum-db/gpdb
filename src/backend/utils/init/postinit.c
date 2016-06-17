@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/init/postinit.c,v 1.174 2007/02/15 23:23:23 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/init/postinit.c,v 1.180.2.1 2008/09/11 14:01:35 alvherre Exp $
  *
  *
  *-------------------------------------------------------------------------
@@ -50,6 +50,7 @@
 #include "utils/flatfiles.h"
 #include "utils/fmgroids.h"
 #include "utils/guc.h"
+#include "utils/plancache.h"
 #include "utils/portal.h"
 #include "utils/ps_status.h"
 #include "utils/relcache.h"
@@ -314,7 +315,12 @@ ProcessRoleGUC(void)
 	{
 		ArrayType  *a = DatumGetArrayTypeP(datum);
 
-		ProcessGUCArray(a, PGC_S_USER);
+		/*
+		 * We process all the options at SUSET level.  We assume that the
+		 * right to insert an option into pg_authid was checked when it was
+		 * inserted.
+		 */
+		ProcessGUCArray(a, PGC_SUSET, PGC_S_USER, GUC_ACTION_SET);
 	}
 
 	caql_endscan(pcqCtx);
@@ -429,7 +435,12 @@ CheckMyDatabase(const char *name, bool am_superuser)
 		{
 			ArrayType  *a = DatumGetArrayTypeP(datum);
 
-			ProcessGUCArray(a, PGC_S_DATABASE);
+			/*
+			 * We process all the options at SUSET level.  We assume that the
+			 * right to insert an option into pg_database was checked when it
+			 * was inserted.
+			 */
+			ProcessGUCArray(a, PGC_SUSET, PGC_S_DATABASE, GUC_ACTION_SET);
 		}
 	}
 
@@ -633,6 +644,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	 */
 	RelationCacheInitialize();
 	InitCatalogCache();
+	InitPlanCache();
 
 	/* Initialize portal manager */
 	EnablePortalManager();

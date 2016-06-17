@@ -4,8 +4,6 @@
  
 CREATE TABLE serialTest (f1 text, f2 serial);
 NOTICE:  CREATE TABLE will create implicit sequence "serialtest_f2_seq" for serial column "serialtest.f2"
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
  
 INSERT INTO serialTest VALUES ('foo');
 INSERT INTO serialTest VALUES ('bar');
@@ -94,7 +92,7 @@ ALTER TABLE foo_seq RENAME TO foo_seq_new;
 SELECT * FROM foo_seq_new;
  sequence_name | last_value | increment_by |      max_value      | min_value | cache_value | log_cnt | is_cycled | is_called 
 ---------------+------------+--------------+---------------------+-----------+-------------+---------+-----------+-----------
- foo_seq       |          1 |            1 | 9223372036854775807 |         1 |           1 |       1 | f         | f
+ foo_seq       |          1 |            1 | 9223372036854775807 |         1 |           1 |       0 | f         | f
 (1 row)
 
 DROP SEQUENCE foo_seq_new;
@@ -121,8 +119,6 @@ CREATE TEMP TABLE t1 (
   f3 int DEFAULT nextval('myseq3'::text)
 );
 NOTICE:  CREATE TABLE will create implicit sequence "t1_f1_seq" for serial column "t1.f1"
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 -- Both drops should fail, but with different error messages:
 DROP SEQUENCE t1_f1_seq;
 NOTICE:  default for table t1 column f1 depends on sequence t1_f1_seq
@@ -203,7 +199,6 @@ DROP SEQUENCE seq2;
 -- should fail
 --SELECT lastval();
 CREATE USER seq_user;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
 BEGIN;
 SET LOCAL SESSION AUTHORIZATION seq_user;
 CREATE SEQUENCE seq3;

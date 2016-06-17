@@ -957,10 +957,10 @@ SELECT func_multiline3_plpythonu();
 -- Test: 29
 -- ----------------------------------------------------------------------
 SELECT * FROM pg_pltemplate WHERE tmplname LIKE '%pljava%' ORDER BY tmplname;
- tmplname | tmpltrusted |     tmplhandler      | tmplinline | tmplvalidator |  tmpllibrary   | tmplacl 
-----------+-------------+----------------------+------------+---------------+----------------+---------
- pljava   | t           | pljava_call_handler  |            |               | $libdir/pljava | 
- pljavau  | f           | pljavau_call_handler |            |               | $libdir/pljava | 
+ tmplname | tmpltrusted | tmpldbacreate |     tmplhandler      | tmplinline | tmplvalidator |  tmpllibrary   | tmplacl 
+----------+-------------+---------------+----------------------+------------+---------------+----------------+---------
+ pljava   | t           | t             | pljava_call_handler  |            |               | $libdir/pljava | 
+ pljavau  | f           | f             | pljavau_call_handler |            |               | $libdir/pljava | 
 (2 rows)
 
 -- ----------------------------------------------------------------------

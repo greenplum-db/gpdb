@@ -415,12 +415,12 @@ RestoreArchive(Archive *AHX, RestoreOptions *ropt)
 						if (te->copyStmt && strlen(te->copyStmt) > 0)
 						{
 							ahprintf(AH, "%s", te->copyStmt);
-							AH->writingCopyData = true;
+							AH->outputKind = OUTPUT_COPYDATA;
 						}
 
 						(*AH->PrintTocDataPtr) (AH, te, ropt);
 
-						AH->writingCopyData = false;
+						AH->outputKind = OUTPUT_OTHERDATA;
 
 						_enableTriggersIfNecessary(AH, te, ropt);
 					}
@@ -1770,8 +1770,7 @@ _allocAH(const char *FileSpec, const ArchiveFormat fmt,
 	AH->mode = mode;
 	AH->compression = compression;
 
-	AH->pgCopyBuf = createPQExpBuffer();
-	AH->sqlBuf = createPQExpBuffer();
+	memset(&(AH->sqlparse), 0, sizeof(AH->sqlparse));
 
 	/* Open stdout with no compression for AH output handle */
 	AH->gzOut = 0;

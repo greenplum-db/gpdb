@@ -4,7 +4,7 @@
 #    Makefile for utils/resscheduler
 #
 # IDENTIFICATION
-#    $PostgreSQL$
+#    src/backend/utils/resscheduler/Makefile
 #
 #-------------------------------------------------------------------------
 

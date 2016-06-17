@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_type.h,v 1.180 2007/01/28 16:16:54 neilc Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_type.h,v 1.191.2.1 2009/02/24 01:38:49 tgl Exp $
  *
  * NOTES
  *	  the genbki.sh script reads this file and generates .bki
@@ -123,7 +123,7 @@ CATALOG(pg_type,1247) BKI_BOOTSTRAP
 
 	/*
 	 * typtype is 'b' for a base type, 'c' for a composite type (e.g., a
-	 * table's rowtype), 'd' for a domain type, or 'p'
+	 * table's rowtype), 'd' for a domain type, 'e' for an enum type, or 'p'
 	 * for a pseudo-type.  (Use the TYPTYPE macros below.)
 	 *
 	 * If typtype is 'c', typrelid is the OID of the class' entry in pg_class.
@@ -155,7 +155,7 @@ CATALOG(pg_type,1247) BKI_BOOTSTRAP
 
 	/*
 	 * If there is a "true" array type having this type as element type,
-	 *  typarray links to it.  Zero if no associated "true" array type.
+	 * typarray links to it.  Zero if no associated "true" array type.
 	 */
 	Oid			typarray;
 
@@ -170,8 +170,8 @@ CATALOG(pg_type,1247) BKI_BOOTSTRAP
 	/*
 	 * I/O functions for optional type modifiers.
 	 */
-	 regproc	typmodin;
-	 regproc	typmodout;
+	regproc		typmodin;
+	regproc		typmodout;
 
 	/*
 	 * Custom ANALYZE procedure for the datatype (0 selects the default).
@@ -320,7 +320,7 @@ typedef FormData_pg_type *Form_pg_type;
  * TypInfo[] in bootstrap.c.
  */
 
-/* OIDS 1 - 99  */
+/* OIDS 1 - 99 */
 DATA(insert OID = 16 (	bool	   PGNSP PGUID	1 t b t \054 0	 0 1000 boolin boolout boolrecv boolsend - - - c p f 0 -1 0 _null_ _null_ ));
 DESCR("boolean, 'true'/'false'");
 #define BOOLOID			16
@@ -329,19 +329,19 @@ DATA(insert OID = 17 (	bytea	   PGNSP PGUID -1 f b t \054 0	0 1001 byteain bytea
 DESCR("variable-length string, binary values escaped");
 #define BYTEAOID		17
 
-DATA(insert OID = 18 (	char	   PGNSP PGUID	1 t b t \054 0	0 1002 charin charout charrecv charsend - - - c p f 0 -1 0 _null_ _null_ ));
+DATA(insert OID = 18 (	char	   PGNSP PGUID	1 t b t \054 0	 0 1002 charin charout charrecv charsend - - - c p f 0 -1 0 _null_ _null_ ));
 DESCR("single character");
 #define CHAROID			18
 
-DATA(insert OID = 19 (	name	   PGNSP PGUID NAMEDATALEN f b t \054 0	18 1003 namein nameout namerecv namesend - - - i p f 0 -1 0 _null_ _null_ ));
+DATA(insert OID = 19 (	name	   PGNSP PGUID NAMEDATALEN f b t \054 0 18 1003 namein nameout namerecv namesend - - - i p f 0 -1 0 _null_ _null_ ));
 DESCR("63-character type for storing system identifiers");
 #define NAMEOID			19
 
-DATA(insert OID = 20 (	int8	   PGNSP PGUID	8 t b t \054 0	0 1016 int8in int8out int8recv int8send - - - d p f 0 -1 0 _null_ _null_ ));
+DATA(insert OID = 20 (	int8	   PGNSP PGUID	8 t b t \054 0	 0 1016 int8in int8out int8recv int8send - - - d p f 0 -1 0 _null_ _null_ ));
 DESCR("~18 digit integer, 8-byte storage");
 #define INT8OID			20
 
-DATA(insert OID = 21 (	int2	   PGNSP PGUID	2 t b t \054 0	0 1005 int2in int2out int2recv int2send - - - s p f 0 -1 0 _null_ _null_ ));
+DATA(insert OID = 21 (	int2	   PGNSP PGUID	2 t b t \054 0	 0 1005 int2in int2out int2recv int2send - - - s p f 0 -1 0 _null_ _null_ ));
 DESCR("-32 thousand to 32 thousand, 2-byte storage");
 #define INT2OID			21
 
@@ -349,11 +349,11 @@ DATA(insert OID = 22 (	int2vector PGNSP PGUID -1 f b t \054 0	21 1006 int2vector
 DESCR("array of int2, used in system tables");
 #define INT2VECTOROID	22
 
-DATA(insert OID = 23 (	int4	   PGNSP PGUID	4 t b t \054 0	0 1007 int4in int4out int4recv int4send - - - i p f 0 -1 0 _null_ _null_ ));
+DATA(insert OID = 23 (	int4	   PGNSP PGUID	4 t b t \054 0	 0 1007 int4in int4out int4recv int4send - - - i p f 0 -1 0 _null_ _null_ ));
 DESCR("-2 billion to 2 billion integer, 4-byte storage");
 #define INT4OID			23
 
-DATA(insert OID = 24 (	regproc    PGNSP PGUID	4 t b t \054 0	0 1008 regprocin regprocout regprocrecv regprocsend - - - i p f 0 -1 0 _null_ _null_ ));
+DATA(insert OID = 24 (	regproc    PGNSP PGUID	4 t b t \054 0	 0 1008 regprocin regprocout regprocrecv regprocsend - - - i p f 0 -1 0 _null_ _null_ ));
 DESCR("registered procedure");
 #define REGPROCOID		24
 
@@ -361,19 +361,19 @@ DATA(insert OID = 25 (	text	   PGNSP PGUID -1 f b t \054 0	0 1009 textin textout
 DESCR("variable-length string, no limit specified");
 #define TEXTOID			25
 
-DATA(insert OID = 26 (	oid		   PGNSP PGUID	4 t b t \054 0	0 1028 oidin oidout oidrecv oidsend - - - i p f 0 -1 0 _null_ _null_ ));
+DATA(insert OID = 26 (	oid		   PGNSP PGUID	4 t b t \054 0	 0 1028 oidin oidout oidrecv oidsend - - - i p f 0 -1 0 _null_ _null_ ));
 DESCR("object identifier(oid), maximum 4 billion");
 #define OIDOID			26
 
-DATA(insert OID = 27 (	tid		   PGNSP PGUID	6 f b t \054 0	0 1010 tidin tidout tidrecv tidsend - - - s p f 0 -1 0 _null_ _null_ ));
-DESCR("(Block, offset), physical location of tuple");
+DATA(insert OID = 27 (	tid		   PGNSP PGUID	6 f b t \054 0	 0 1010 tidin tidout tidrecv tidsend - - - s p f 0 -1 0 _null_ _null_ ));
+DESCR("(block, offset), physical location of tuple");
 #define TIDOID		27
 
-DATA(insert OID = 28 (	xid		   PGNSP PGUID	4 t b t \054 0	0 1011 xidin xidout xidrecv xidsend - - - i p f 0 -1 0 _null_ _null_ ));
+DATA(insert OID = 28 (	xid		   PGNSP PGUID	4 t b t \054 0	 0 1011 xidin xidout xidrecv xidsend - - - i p f 0 -1 0 _null_ _null_ ));
 DESCR("transaction id");
 #define XIDOID 28
 
-DATA(insert OID = 29 (	cid		   PGNSP PGUID	4 t b t \054 0	0 1012 cidin cidout cidrecv cidsend - - - i p f 0 -1 0 _null_ _null_ ));
+DATA(insert OID = 29 (	cid		   PGNSP PGUID	4 t b t \054 0	 0 1012 cidin cidout cidrecv cidsend - - - i p f 0 -1 0 _null_ _null_ ));
 DESCR("command identifier type, sequence in transaction id");
 #define CIDOID 29
 
@@ -392,19 +392,19 @@ DATA(insert OID = 81 (	pg_proc			PGNSP PGUID -1 f c t \054 1255 0 0 record_in re
 DATA(insert OID = 83 (	pg_class		PGNSP PGUID -1 f c t \054 1259 0 0 record_in record_out record_recv record_send - - - d x f 0 -1 0 _null_ _null_ ));
 #define PG_CLASS_RELTYPE_OID 83
 
-DATA(insert OID = 2967 (	pg_authid	   PGNSP PGUID -1 f c t \054 1260	0 0 record_in record_out record_recv record_send - - - d x f 0 -1 0 _null_ _null_ ));
+DATA(insert OID = 2967 (	pg_authid	   PGNSP PGUID -1 f c t \054 1260 0 0 record_in record_out record_recv record_send - - - d x f 0 -1 0 _null_ _null_ ));
 #define PG_AUTHID_RELTYPE_OID 2967
 
-DATA(insert OID = 2966 (	pg_auth_members	   PGNSP PGUID -1 f c t \054 1261	0 0 record_in record_out record_recv record_send - - - d x f 0 -1 0 _null_ _null_ ));
+DATA(insert OID = 2966 (	pg_auth_members	   PGNSP PGUID -1 f c t \054 1261 0 0 record_in record_out record_recv record_send - - - d x f 0 -1 0 _null_ _null_ ));
 #define PG_AUTH_MEMBERS_RELTYPE_OID 2966
 
-DATA(insert OID = 2970 (	pg_database	   PGNSP PGUID -1 f c t \054 1262	0 0 record_in record_out record_recv record_send - - - d x f 0 -1 0 _null_ _null_ ));
-#define PG_DATABASE_RELTYPE_OID 2970
+DATA(insert OID = 6996 (	pg_database	   PGNSP PGUID -1 f c t \054 1262 0 0 record_in record_out record_recv record_send - - - d x f 0 -1 0 _null_ _null_ ));
+#define PG_DATABASE_RELTYPE_OID 6996
 
-DATA(insert OID = 6995 (	gp_global_sequence	   PGNSP PGUID -1 f c t \054 5096	0 0 record_in record_out record_recv record_send - - - d x f 0 -1 0 _null_ _null_ ));
+DATA(insert OID = 6995 (	gp_global_sequence	   PGNSP PGUID -1 f c t \054 5096 0 0 record_in record_out record_recv record_send - - - d x f 0 -1 0 _null_ _null_ ));
 #define GP_GLOBAL_SEQUENCE_RELTYPE_OID 6995
 
-/*  OIDS 100 - 199 */
+/* OIDS 100 - 199 */
 DATA(insert OID = 142 ( xml		   PGNSP PGUID -1 f b t \054 0 0 143 xml_in xml_out xml_recv xml_send - - - i x f 0 -1 0 _null_ _null_ ));
 DESCR("XML content");
 #define XMLOID 142
@@ -465,7 +465,7 @@ DESCR("relative, limited-range time interval (Unix delta time)");
 DATA(insert OID = 704 (  tinterval PGNSP PGUID 12 f b t \054 0	 0 1025 tintervalin tintervalout tintervalrecv tintervalsend - - - i p f 0 -1 0 _null_ _null_ ));
 DESCR("(abstime,abstime), time interval");
 #define TINTERVALOID	704
-DATA(insert OID = 705 (  unknown   PGNSP PGUID -2 f b t \054 0	0 0 unknownin unknownout unknownrecv unknownsend - - - c p f 0 -1 0 _null_ _null_ ));
+DATA(insert OID = 705 (  unknown   PGNSP PGUID -2 f b t \054 0	 0 0 unknownin unknownout unknownrecv unknownsend - - - c p f 0 -1 0 _null_ _null_ ));
 DESCR("");
 #define UNKNOWNOID		705
 
@@ -482,10 +482,10 @@ DATA(insert OID = 791 (  _money    PGNSP PGUID	-1 f b t \054 0  790 0 array_in a
 DATA(insert OID = 829 ( macaddr    PGNSP PGUID	6 f b t \054 0 0 1040 macaddr_in macaddr_out macaddr_recv macaddr_send - - - i p f 0 -1 0 _null_ _null_ ));
 DESCR("XX:XX:XX:XX:XX:XX, MAC address");
 #define MACADDROID 829
-DATA(insert OID = 869 ( inet	   PGNSP PGUID	-1 f b t \054 0 0 1041 inet_in inet_out inet_recv inet_send - - - i p f 0 -1 0 _null_ _null_ ));
+DATA(insert OID = 869 ( inet	   PGNSP PGUID	-1 f b t \054 0 0 1041 inet_in inet_out inet_recv inet_send - - - i m f 0 -1 0 _null_ _null_ ));
 DESCR("IP address/netmask, host address, netmask optional");
 #define INETOID 869
-DATA(insert OID = 650 ( cidr	   PGNSP PGUID	-1 f b t \054 0 0 651 cidr_in cidr_out cidr_recv cidr_send - - - i p f 0 -1 0 _null_ _null_ ));
+DATA(insert OID = 650 ( cidr	   PGNSP PGUID	-1 f b t \054 0 0 651 cidr_in cidr_out cidr_recv cidr_send - - - i m f 0 -1 0 _null_ _null_ ));
 DESCR("network IP address/netmask, network address");
 #define CIDROID 650
 
@@ -509,7 +509,6 @@ DATA(insert OID = 1028 (  _oid		 PGNSP PGUID -1 f b t \054 0	26 0 array_in array
 DATA(insert OID = 1010 (  _tid		 PGNSP PGUID -1 f b t \054 0	27 0 array_in array_out array_recv array_send - - - i x f 0 -1 0 _null_ _null_ ));
 DATA(insert OID = 1011 (  _xid		 PGNSP PGUID -1 f b t \054 0	28 0 array_in array_out array_recv array_send - - - i x f 0 -1 0 _null_ _null_ ));
 DATA(insert OID = 1012 (  _cid		 PGNSP PGUID -1 f b t \054 0	29 0 array_in array_out array_recv array_send - - - i x f 0 -1 0 _null_ _null_ ));
-DATA(insert OID = 1263 (	_cstring	   PGNSP PGUID -1 f b t \054 0	2275 0 array_in array_out array_recv array_send - - - i x f 0 -1 0 _null_ _null_ ));
 DATA(insert OID = 1013 (  _oidvector PGNSP PGUID -1 f b t \054 0	30 0 array_in array_out array_recv array_send - - - i x f 0 -1 0 _null_ _null_ ));
 DATA(insert OID = 1014 (  _bpchar	 PGNSP PGUID -1 f b t \054 0 1042 0 array_in array_out array_recv array_send bpchartypmodin bpchartypmodout - i x f 0 -1 0 _null_ _null_ ));
 DATA(insert OID = 1015 (  _varchar	 PGNSP PGUID -1 f b t \054 0 1043 0 array_in array_out array_recv array_send varchartypmodin varchartypmodout - i x f 0 -1 0 _null_ _null_ ));
@@ -532,8 +531,10 @@ DESCR("access control list");
 #define ACLITEMOID		1033
 DATA(insert OID = 1034 (  _aclitem	 PGNSP PGUID -1 f b t \054 0 1033 0 array_in array_out array_recv array_send - - - i x f 0 -1 0 _null_ _null_ ));
 DATA(insert OID = 1040 (  _macaddr	 PGNSP PGUID -1 f b t \054 0  829 0 array_in array_out array_recv array_send - - - i x f 0 -1 0 _null_ _null_ ));
-DATA(insert OID = 1041 (  _inet    PGNSP PGUID -1 f b t \054 0	869 0 array_in array_out array_recv array_send - - - i x f 0 -1 0 _null_ _null_ ));
-DATA(insert OID = 651  (  _cidr    PGNSP PGUID -1 f b t \054 0	650 0 array_in array_out array_recv array_send - - - i x f 0 -1 0 _null_ _null_ ));
+DATA(insert OID = 1041 (  _inet		 PGNSP PGUID -1 f b t \054 0  869 0 array_in array_out array_recv array_send - - - i x f 0 -1 0 _null_ _null_ ));
+DATA(insert OID = 651  (  _cidr		 PGNSP PGUID -1 f b t \054 0  650 0 array_in array_out array_recv array_send - - - i x f 0 -1 0 _null_ _null_ ));
+DATA(insert OID = 1263 (  _cstring	 PGNSP PGUID -1 f b t \054 0 2275 0 array_in array_out array_recv array_send - - - i x f 0 -1 0 _null_ _null_ ));
+#define CSTRINGARRAYOID		1263
 DATA(insert OID = 1042 ( bpchar		 PGNSP PGUID -1 f b t \054 0	0 1014 bpcharin bpcharout bpcharrecv bpcharsend bpchartypmodin bpchartypmodout - i x f 0 -1 0 _null_ _null_ ));
 DESCR("char(length), blank-padded string, fixed storage length");
 #define BPCHAROID		1042
@@ -623,10 +624,37 @@ DATA(insert OID = 2211 ( _regtype	   PGNSP PGUID -1 f b t \054 0 2206 0 array_in
 #define REGTYPEARRAYOID 2211
 
 /* uuid */
-DATA(insert OID = 2950 (	uuid	   PGNSP PGUID 16 f b t \054 0	0 2951 uuid_in uuid_out uuid_recv uuid_send - - - c p f 0 -1 0 _null_ _null_ ));
+DATA(insert OID = 2950 ( uuid			PGNSP PGUID 16 f b t \054 0 0 2951 uuid_in uuid_out uuid_recv uuid_send - - - c p f 0 -1 0 _null_ _null_ ));
 DESCR("UUID datatype");
 #define UUIDOID		2950
-DATA(insert OID = 2951 (	_uuid	   PGNSP PGUID -1 f b t \054 0	2950 0 array_in array_out array_recv array_send - - - i x f 0 -1 0 _null_ _null_ ));
+DATA(insert OID = 2951 ( _uuid			PGNSP PGUID -1 f b t \054 0 2950 0 array_in array_out array_recv array_send - - - i x f 0 -1 0 _null_ _null_ ));
+
+/* text search */
+DATA(insert OID = 3614 ( tsvector		PGNSP PGUID -1 f b t \054 0 0 3643 tsvectorin tsvectorout tsvectorrecv tsvectorsend - - - i x f 0 -1 0 _null_ _null_ ));
+DESCR("text representation for text search");
+#define TSVECTOROID		3614
+DATA(insert OID = 3642 ( gtsvector		PGNSP PGUID -1 f b t \054 0 0 3644 gtsvectorin gtsvectorout - - - - - i p f 0 -1 0 _null_ _null_ ));
+DESCR("GiST index internal text representation for text search");
+#define GTSVECTOROID	3642
+DATA(insert OID = 3615 ( tsquery		PGNSP PGUID -1 f b t \054 0 0 3645 tsqueryin tsqueryout tsqueryrecv tsquerysend - - - i p f 0 -1 0 _null_ _null_ ));
+DESCR("query representation for text search");
+#define TSQUERYOID		3615
+DATA(insert OID = 3734 ( regconfig		PGNSP PGUID 4 t b t \054 0 0 3735 regconfigin regconfigout regconfigrecv regconfigsend - - - i p f 0 -1 0 _null_ _null_ ));
+DESCR("registered text search configuration");
+#define REGCONFIGOID	3734
+DATA(insert OID = 3769 ( regdictionary	PGNSP PGUID 4 t b t \054 0 0 3770 regdictionaryin regdictionaryout regdictionaryrecv regdictionarysend - - - i p f 0 -1 0 _null_ _null_ ));
+DESCR("registered text search dictionary");
+#define REGDICTIONARYOID	3769
+
+DATA(insert OID = 3643 ( _tsvector		PGNSP PGUID -1 f b t \054 0 3614 0 array_in array_out array_recv array_send - - - i x f 0 -1 0 _null_ _null_ ));
+DATA(insert OID = 3644 ( _gtsvector		PGNSP PGUID -1 f b t \054 0 3642 0 array_in array_out array_recv array_send - - - i x f 0 -1 0 _null_ _null_ ));
+DATA(insert OID = 3645 ( _tsquery		PGNSP PGUID -1 f b t \054 0 3615 0 array_in array_out array_recv array_send - - - i x f 0 -1 0 _null_ _null_ ));
+DATA(insert OID = 3735 ( _regconfig		PGNSP PGUID -1 f b t \054 0 3734 0 array_in array_out array_recv array_send - - - i x f 0 -1 0 _null_ _null_ ));
+DATA(insert OID = 3770 ( _regdictionary PGNSP PGUID -1 f b t \054 0 3769 0 array_in array_out array_recv array_send - - - i x f 0 -1 0 _null_ _null_ ));
+
+DATA(insert OID = 2970 ( txid_snapshot	PGNSP PGUID -1 f b t \054 0 0 2949 txid_snapshot_in txid_snapshot_out txid_snapshot_recv txid_snapshot_send - - - d x f 0 -1 0 _null_ _null_ ));
+DESCR("txid snapshot");
+DATA(insert OID = 2949 ( _txid_snapshot PGNSP PGUID -1 f b t \054 0 2970 0 array_in array_out array_recv array_send - - - d x f 0 -1 0 _null_ _null_ ));
 
 DATA(insert OID = 3251 (	nb_classification	   PGNSP PGUID -1 f c t \054 3250	0 0 record_in record_out record_recv record_send - - - d x f 0 -1 0 _null_ _null_ ));
 
@@ -657,7 +685,6 @@ DATA(insert OID = 2249 ( record			PGNSP PGUID -1 f p t \054 0 0 0 record_in reco
 #define RECORDOID		2249
 DATA(insert OID = 2275 ( cstring		PGNSP PGUID -2 f p t \054 0 0 1263 cstring_in cstring_out cstring_recv cstring_send - - - c p f 0 -1 0 _null_ _null_ ));
 #define CSTRINGOID		2275
-#define CSTRINGARRAYOID	1263
 DATA(insert OID = 2276 ( any			PGNSP PGUID  4 t p t \054 0 0 0 any_in any_out - - - - - i p f 0 -1 0 _null_ _null_ ));
 #define ANYOID			2276
 DATA(insert OID = 2277 ( anyarray		PGNSP PGUID -1 f p t \054 0 0 0 anyarray_in anyarray_out anyarray_recv anyarray_send - - - d x f 0 -1 0 _null_ _null_ ));
@@ -674,6 +701,11 @@ DATA(insert OID = 2282 ( opaque			PGNSP PGUID  4 t p t \054 0 0 0 opaque_in opaq
 #define OPAQUEOID		2282
 DATA(insert OID = 2283 ( anyelement		PGNSP PGUID  4 t p t \054 0 0 0 anyelement_in anyelement_out - - - - - i p f 0 -1 0 _null_ _null_ ));
 #define ANYELEMENTOID	2283
+DATA(insert OID = 2776 ( anynonarray	PGNSP PGUID  4 t p t \054 0 0 0 anynonarray_in anynonarray_out - - - - - i p f 0 -1 0 _null_ _null_ ));
+#define ANYNONARRAYOID	2776
+DATA(insert OID = 3500 ( anyenum		PGNSP PGUID  4 t p t \054 0 0 0 anyenum_in anyenum_out - - - - - i p f 0 -1 0 _null_ _null_ ));
+#define ANYENUMOID		3500
+
 DATA(insert OID = 3053 (	anytable	   PGNSP PGUID -1 f p t \054 0	0 0 anytable_in anytable_out - - - - - d x f 0 -1 0 _null_ _null_ ));
 DESCR("Represents a generic TABLE value expression");
 #define ANYTABLEOID     3053
@@ -731,9 +763,9 @@ DATA(insert OID = 6994 (gp_relation_node PGNSP PGUID -1 f c t \054 5094 0 0 reco
 /* Is a type OID a polymorphic pseudotype?	(Beware of multiple evaluation) */
 #define IsPolymorphicType(typid)  \
 	((typid) == ANYELEMENTOID || \
-	 (typid) == ANYARRAYOID)
-	 //(typid) == ANYNONARRAYOID || \   /// added in pg 8.4
-	// (typid) == ANYENUMOID)
+	 (typid) == ANYARRAYOID || \
+	 (typid) == ANYNONARRAYOID || \
+	 (typid) == ANYENUMOID)
 
 /* Is a type OID suitable for describe callback functions? */
 #define TypeSupportsDescribe(typid)  \
@@ -746,10 +778,9 @@ DATA(insert OID = 6994 (gp_relation_node PGNSP PGUID -1 f c t \054 5094 0 0 reco
  */
 extern Oid TypeShellMake(const char *typeName, Oid typeNamespace, Oid ownerId,
 						 Oid shelloid);
-extern Oid TypeShellMakeWithOid(const char *typeName, Oid typeNamespace,
-								Oid ownerId, Oid shelltypeOid);
 
-extern Oid TypeCreate(const char *typeName,
+extern Oid TypeCreate(Oid newTypeOid,
+		   const char *typeName,
 		   Oid typeNamespace,
 		   Oid relationOid,
 		   char relationKind,
@@ -776,8 +807,9 @@ extern Oid TypeCreate(const char *typeName,
 		   int32 typeMod,
 		   int32 typNDims,
 		   bool typeNotNull);
-		   
-extern Oid TypeCreateWithOid(const char *typeName,
+
+extern Oid TypeCreateWithOptions(Oid newtypeOid,
+		   const char *typeName,
 		   Oid typeNamespace,
 		   Oid relationOid,
 		   char relationKind,
@@ -804,7 +836,6 @@ extern Oid TypeCreateWithOid(const char *typeName,
 		   int32 typeMod,
 		   int32 typNDims,
 		   bool typeNotNull,
-		   Oid newtypeOid,
 		   Datum typoptions);
 
 extern void GenerateTypeDependencies(Oid typeNamespace,
@@ -825,7 +856,11 @@ extern void GenerateTypeDependencies(Oid typeNamespace,
 						 Node *defaultExpr,
 						 bool rebuild);
 
-extern void TypeRename(Oid typeOid, const char *newTypeName);
+extern void TypeRename(Oid typeOid, const char *newTypeName,
+		   Oid typeNamespace);
+
+extern bool moveArrayTypeName(Oid typeOid, const char *typeName,
+				  Oid typeNamespace);
 
 extern char *makeArrayTypeName(const char *typeName, Oid typeNamespace);
 extern void add_type_encoding(Oid typid, Datum typoptions);

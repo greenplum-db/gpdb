@@ -13,7 +13,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/portalcmds.c,v 1.60 2007/02/06 22:49:24 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/portalcmds.c,v 1.69.2.2 2008/12/01 17:06:27 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -29,7 +29,6 @@
 #include "optimizer/planner.h"
 #include "rewrite/rewriteHandler.h"
 #include "tcop/pquery.h"
-#include "tcop/tcopprot.h"
 #include "utils/memutils.h"
 #include "utils/resscheduler.h"
 
@@ -45,6 +44,10 @@ static void PortalCleanupHelper(Portal portal, volatile int *cleanupstate);
 /*
  * PerformCursorOpen
  *		Execute SQL DECLARE CURSOR command.
+ *
+ * The query has already been through parse analysis, rewriting, and planning.
+ * When it gets here, it looks like a SELECT PlannedStmt, except that the
+ * utilityStmt field is set.
  */
 void
 PerformCursorOpen(PlannedStmt *stmt, ParamListInfo params,
@@ -72,7 +75,7 @@ PerformCursorOpen(PlannedStmt *stmt, ParamListInfo params,
 	 * user-visible effect).
 	 */
 	if (!(cstmt->options & CURSOR_OPT_HOLD))
-		RequireTransactionChain((void *) cstmt, "DECLARE CURSOR");
+		RequireTransactionChain(isTopLevel, "DECLARE CURSOR");
 
 	/*
 	 * Allow using the SCROLL keyword even though we don't support its
@@ -95,7 +98,7 @@ PerformCursorOpen(PlannedStmt *stmt, ParamListInfo params,
 	Assert(!(cstmt->options & CURSOR_OPT_SCROLL && cstmt->options & CURSOR_OPT_NO_SCROLL));
 
 	/*
-	 * Create a portal and copy the plan and queryString into its memory.
+	 * Create a portal and copy the plan into its memory context.
 	 */
 	portal = CreatePortal(cstmt->portalname, false, false);
 
@@ -104,9 +107,8 @@ PerformCursorOpen(PlannedStmt *stmt, ParamListInfo params,
 	stmt = copyObject(stmt);
 	stmt->utilityStmt = NULL;	/* make it look like plain SELECT */
 
-	stmt->qdContext = PortalGetHeapMemory(portal); /* Temporary! See comment in PlannedStmt. */
-
-	queryString = pstrdup(queryString);
+	if (queryString)			/* copy the source text too for safety */
+		queryString = pstrdup(queryString);
 
 	PortalDefineQuery(portal,
 					  NULL,
@@ -114,7 +116,7 @@ PerformCursorOpen(PlannedStmt *stmt, ParamListInfo params,
 					  T_DeclareCursorStmt,
 					  "SELECT", /* cursor's query is always a SELECT */
 					  list_make1(stmt),
-					  PortalGetHeapMemory(portal));
+					  NULL);
 
 	portal->is_extended_query = true; /* cursors run in extended query mode */
 
@@ -126,12 +128,15 @@ PerformCursorOpen(PlannedStmt *stmt, ParamListInfo params,
 	 */
 	portal->is_simply_updatable = cstmt->is_simply_updatable;
 
-	/*
+	/*----------
 	 * Also copy the outer portal's parameter list into the inner portal's
 	 * memory context.	We want to pass down the parameter values in case we
-	 * had a command like DECLARE c CURSOR FOR SELECT ... WHERE foo = $1 This
-	 * will have been parsed using the outer parameter set and the parameter
-	 * value needs to be preserved for use when the cursor is executed.
+	 * had a command like
+	 *		DECLARE c CURSOR FOR SELECT ... WHERE foo = $1
+	 * This will have been parsed using the outer parameter set and the
+	 * parameter value needs to be preserved for use when the cursor is
+	 * executed.
+	 *----------
 	 */
 	params = copyParamList(params);
 
@@ -144,27 +149,29 @@ PerformCursorOpen(PlannedStmt *stmt, ParamListInfo params,
 	 *
 	 * If the user didn't specify a SCROLL type, allow or disallow scrolling
 	 * based on whether it would require any additional runtime overhead to do
-	 * so.
+	 * so.	Also, we disallow scrolling for FOR UPDATE cursors.
 	 *
 	 * GPDB: we do not allow backward scans at the moment regardless
 	 * of any additional runtime overhead. We forced CURSOR_OPT_NO_SCROLL
 	 * above. Comment out this logic.
 	 */
-	/*
+#if 0
+	portal->cursorOptions = cstmt->options;
 	if (!(portal->cursorOptions & (CURSOR_OPT_SCROLL | CURSOR_OPT_NO_SCROLL)))
 	{
-		if (ExecSupportsBackwardScan(plan))
+		if (stmt->rowMarks == NIL &&
+			ExecSupportsBackwardScan(stmt->planTree))
 			portal->cursorOptions |= CURSOR_OPT_SCROLL;
 		else
 			portal->cursorOptions |= CURSOR_OPT_NO_SCROLL;
 	}
-	*/
+#endif
 
 	/*
 	 * Start execution, inserting parameters if any.
 	 */
 	PortalStart(portal, params, ActiveSnapshot,
-				savedSeqServerHost, savedSeqServerPort);
+				savedSeqServerHost, savedSeqServerPort, NULL);
 
 	Assert(portal->strategy == PORTAL_ONE_SELECT);
 
@@ -238,11 +245,18 @@ PerformPortalClose(const char *name)
 {
 	Portal		portal;
 
+	/* NULL means CLOSE ALL */
+	if (name == NULL)
+	{
+		PortalHashTableDeleteAll();
+		return;
+	}
+
 	/*
 	 * Disallow empty-string cursor name (conflicts with protocol-level
 	 * unnamed portal).
 	 */
-	if (!name || name[0] == '\0')
+	if (name[0] == '\0')
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_CURSOR_NAME),
 				 errmsg("invalid cursor name: must not be empty")));
@@ -403,7 +417,6 @@ PersistHoldablePortal(Portal portal)
 	Snapshot	saveActiveSnapshot;
 	ResourceOwner saveResourceOwner;
 	MemoryContext savePortalContext;
-	MemoryContext saveQueryContext;
 	MemoryContext oldcxt;
 
 	/*
@@ -446,7 +459,6 @@ PersistHoldablePortal(Portal portal)
 	saveActiveSnapshot = ActiveSnapshot;
 	saveResourceOwner = CurrentResourceOwner;
 	savePortalContext = PortalContext;
-	saveQueryContext = QueryContext;
 	PG_TRY();
 	{
 		ActivePortal = portal;
@@ -454,7 +466,6 @@ PersistHoldablePortal(Portal portal)
 		if (portal->resowner)
 			CurrentResourceOwner = portal->resowner;
 		PortalContext = PortalGetHeapMemory(portal);
-		QueryContext = portal->queryContext;
 
 		MemoryContextSwitchTo(PortalContext);
 
@@ -495,8 +506,8 @@ PersistHoldablePortal(Portal portal)
 		 * to be at, but the tuplestore API doesn't support that. So we start
 		 * at the beginning of the tuplestore and iterate through it until we
 		 * reach where we need to be.  FIXME someday?  (Fortunately, the
-		 * typical case is that we're supposed to be at or near the start
-		 * of the result set, so this isn't as bad as it sounds.)
+		 * typical case is that we're supposed to be at or near the start of
+		 * the result set, so this isn't as bad as it sounds.)
 		 */
 		MemoryContextSwitchTo(portal->holdContext);
 
@@ -543,7 +554,6 @@ PersistHoldablePortal(Portal portal)
 		ActiveSnapshot = saveActiveSnapshot;
 		CurrentResourceOwner = saveResourceOwner;
 		PortalContext = savePortalContext;
-		QueryContext = saveQueryContext;
 
 		PG_RE_THROW();
 	}
@@ -558,7 +568,6 @@ PersistHoldablePortal(Portal portal)
 	ActiveSnapshot = saveActiveSnapshot;
 	CurrentResourceOwner = saveResourceOwner;
 	PortalContext = savePortalContext;
-	QueryContext = saveQueryContext;
 
 	/*
 	 * We can now release any subsidiary memory of the portal's heap context;

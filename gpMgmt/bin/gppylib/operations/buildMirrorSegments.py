@@ -21,7 +21,7 @@ from gppylib.operations.utils import ParallelOperation, RemoteOperation
 from gppylib.operations.unix import CleanSharedMem 
 from gppylib.operations.filespace import PG_SYSTEM_FILESPACE, GP_TRANSACTION_FILES_FILESPACE, GP_TEMPORARY_FILES_FILESPACE, GetMoveOperationList, GetFilespaceEntriesDict, GetFilespaceEntries, GetCurrentFilespaceEntries, RollBackFilespaceChanges, UpdateFlatFiles, FileType, MoveFilespaceError
 from gppylib.commands.gp import is_pid_postmaster, get_pid_from_remotehost
-from gppylib.commands.unix import check_pid_on_remotehost
+from gppylib.commands.unix import check_pid_on_remotehost, Scp
     
 logger = get_default_logger()
 
@@ -535,10 +535,11 @@ class GpMirrorListToBuild:
         #
         for toCopyFromRemote in ["postgresql.conf", "pg_hba.conf"]:
             cmd = gp.RemoteCopy('copying %s from a segment' % toCopyFromRemote,
-                               sampleSegment.getSegmentDataDirectory() + '/' + toCopyFromRemote,
+                               os.path.join(sampleSegment.getSegmentDataDirectory(), toCopyFromRemote),
                                masterSegment.getSegmentHostName(), schemaDir, ctxt=base.REMOTE,
                                remoteHost=sampleSegment.getSegmentAddress())
             cmd.run(validateAfter=True)
+
         appendNewEntriesToHbaFile( schemaDir + "/pg_hba.conf", newSegments)
 
         #
@@ -631,6 +632,25 @@ class GpMirrorListToBuild:
         for hostName in destSegmentByHost.keys():
             cmds.append(createConfigureNewSegmentCommand(hostName, 'configure blank segments', False))
         self.__runWaitAndCheckWorkerPoolForErrorsAndClear(cmds, "unpacking basic segment directory")
+
+        #
+        # copy dump files from old segment to new segment
+        #
+        for srcSeg in srcSegments:
+            for destSeg in destSegments:
+                if srcSeg.content == destSeg.content:
+                    src_dump_dir = os.path.join(srcSeg.getSegmentDataDirectory(), 'db_dumps')
+                    cmd = base.Command('check existence of db_dumps directory', 'ls %s' % (src_dump_dir), ctxt=base.REMOTE, remoteHost=destSeg.getSegmentAddress())
+                    cmd.run()
+                    if cmd.results.rc == 0: # Only try to copy directory if it exists
+                        cmd = Scp('copy db_dumps from old segment to new segment',
+                                   os.path.join(srcSeg.getSegmentDataDirectory(), 'db_dumps*', '*'),
+                                   os.path.join(destSeg.getSegmentDataDirectory(), 'db_dumps'),
+                                   srcSeg.getSegmentAddress(),
+                                   destSeg.getSegmentAddress(),
+                                   recursive=True)
+                        cmd.run(validateAfter=True)
+                        break
 
         #
         # Clean up copied tar from each remote host

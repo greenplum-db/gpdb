@@ -13,7 +13,9 @@
 
 #include "gps3ext.h"
 #include "s3downloader.h"
+#include "s3http_headers.h"
 #include "s3log.h"
+#include "s3url_parser.h"
 #include "s3utils.h"
 
 using std::stringstream;
@@ -108,9 +110,9 @@ uint64_t BlockingBuffer::Read(char *buf, uint64_t len) {
     uint64_t length_to_read = std::min(len, left_data_length);
 
     memcpy(buf, this->bufferdata + this->readpos, length_to_read);
-    if (left_data_length >= len) { // [1]
-        this->readpos += len;  // not empty
-    } else {                   // empty, reset everything
+    if (left_data_length >= len) {  // [1]
+        this->readpos += len;       // not empty
+    } else {                        // empty, reset everything
         this->readpos = 0;
 
         if (this->status == BlockingBuffer::STATUS_READY) {
@@ -340,7 +342,8 @@ RETRY:
 
             // whether we need to buf->Read()
             if (this->magic_bytes_num < filelen) {
-                tmplen += buf->Read(data + rest_magic_num, len - rest_magic_num);
+                tmplen +=
+                    buf->Read(data + rest_magic_num, len - rest_magic_num);
             }
         }
     } else {
@@ -464,13 +467,15 @@ RETRY:
         if (!zinfo->have_out) {
             if (this->readlen < this->magic_bytes_num) {
                 uint64_t rest_magic_num = this->magic_bytes_num - this->readlen;
-                memcpy(zinfo->in, this->magic_bytes + this->readlen, rest_magic_num);
+                memcpy(zinfo->in, this->magic_bytes + this->readlen,
+                       rest_magic_num);
                 strm->avail_in = rest_magic_num;
 
                 // whether we need to buf->Read()
                 if (this->magic_bytes_num < filelen) {
-                    strm->avail_in += buf->Read((char *)zinfo->in + rest_magic_num,
-                                                S3_ZIP_CHUNKSIZE - rest_magic_num);
+                    strm->avail_in +=
+                        buf->Read((char *)zinfo->in + rest_magic_num,
+                                  S3_ZIP_CHUNKSIZE - rest_magic_num);
                 }
             } else {
                 strm->avail_in = buf->Read((char *)zinfo->in, S3_ZIP_CHUNKSIZE);
@@ -606,7 +611,7 @@ uint64_t HTTPFetcher::fetchdata(uint64_t offset, char *data, uint64_t len) {
     Bufinfo bi;
     CURL *curl_handle = this->curl;
     struct curl_slist *chunk = NULL;
-    char rangebuf[128] = { 0 };
+    char rangebuf[128] = {0};
     long respcode;
 
     snprintf(rangebuf, 128, "bytes=%" PRIu64 "-%" PRIu64, offset,
@@ -745,9 +750,9 @@ xmlParserCtxtPtr DoGetXML(const string &region, const string &url,
     xml.ctxt = NULL;
 
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&xml);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, ParserCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, XMLParserCallback);
 
-    HeaderContent *header = new HeaderContent();
+    HTTPHeaders *header = new HTTPHeaders();
     if (!header) {
         S3ERROR("Can allocate memory for header");
         return NULL;
@@ -895,6 +900,7 @@ static bool extractContent(ListBucketResult *result, xmlNode *root_element,
     return true;
 }
 
+// It is caller's responsibility to free returned memory.
 ListBucketResult *ListBucket(const string &schema, const string &region,
                              const string &bucket, const string &prefix,
                              const S3Credential &cred) {
@@ -990,69 +996,4 @@ ListBucketResult::~ListBucketResult() {
     for (i = this->contents.begin(); i != this->contents.end(); i++) {
         delete *i;
     }
-}
-
-ListBucketResult *ListBucket_FakeHTTP(const string &host,
-                                      const string &bucket) {
-    std::stringstream sstr;
-    sstr << "http://" << host << "/" << bucket;
-
-    CURL *curl = curl_easy_init();
-
-    if (curl) {
-        curl_easy_setopt(curl, CURLOPT_URL, sstr.str().c_str());
-#if DEBUG_S3_CURL
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-#endif
-        // curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1L);
-    } else {
-        return NULL;
-    }
-
-    XMLInfo xml;
-    xml.ctxt = NULL;
-
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&xml);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, ParserCallback);
-
-    CURLcode res = curl_easy_perform(curl);
-    curl_easy_cleanup(curl);
-
-    if (res != CURLE_OK) {
-        S3ERROR("curl_easy_perform() failed: %s", curl_easy_strerror(res));
-        return NULL;
-    }
-    xmlParseChunk(xml.ctxt, "", 0, 1);
-    if (!xml.ctxt) {
-        S3ERROR("xmlParseChunk() failed");
-        return NULL;
-    }
-
-    xmlDocPtr doc = xml.ctxt->myDoc;
-    xmlNode *root_element = xmlDocGetRootElement(xml.ctxt->myDoc);
-    if (!root_element) {
-        S3ERROR("Failed to create xml node");
-        return NULL;
-    }
-
-    ListBucketResult *result = new ListBucketResult();
-
-    if (!result) {
-        xmlFreeParserCtxt(xml.ctxt);
-        xmlFreeDoc(doc);
-        return NULL;
-    }
-
-    string marker = "";
-    if (!extractContent(result, root_element, marker)) {
-        delete result;
-        xmlFreeParserCtxt(xml.ctxt);
-        xmlFreeDoc(doc);
-        return NULL;
-    }
-
-    /* always cleanup */
-    xmlFreeParserCtxt(xml.ctxt);
-    xmlFreeDoc(doc);
-    return result;
 }

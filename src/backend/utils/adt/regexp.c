@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/regexp.c,v 1.79 2008/03/19 02:40:37 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/regexp.c,v 1.78.2.1 2008/03/19 02:40:43 tgl Exp $
  *
  *		Alistair Crooks added the code for the regex caching
  *		agc - cached the regular expressions used - there's a good chance
@@ -35,12 +35,12 @@
 #include "utils/builtins.h"
 #include "utils/guc.h"
 
-#define PG_GETARG_TEXT_P_IF_EXISTS(_n) \
-	(PG_NARGS() > (_n) ? PG_GETARG_TEXT_P(_n) : NULL)
+#define PG_GETARG_TEXT_PP_IF_EXISTS(_n) \
+	(PG_NARGS() > (_n) ? PG_GETARG_TEXT_PP(_n) : NULL)
 
 
 /* GUC-settable flavor parameter */
-int	regex_flavor = REG_ADVANCED;
+static int	regex_flavor = REG_ADVANCED;
 
 
 /* all the options of interest for regex functions */
@@ -186,9 +186,8 @@ RE_compile_and_cache(text *text_re, int cflags)
 
 	if (regcomp_result != REG_OKAY)
 	{
-		/* re didn't compile */
+		/* re didn't compile (no need for pg_regfree, if so) */
 		pg_regerror(regcomp_result, &re_temp.cre_re, errMsg, sizeof(errMsg));
-		/* XXX should we pg_regfree here? */
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_REGULAR_EXPRESSION),
 				 errmsg("invalid regular expression: %s", errMsg)));
@@ -334,32 +333,6 @@ RE_compile_and_execute(text *text_re, char *dat, int dat_len,
 	return RE_execute(re, dat, dat_len, nmatch, pmatch);
 }
 
-/*
- * assign_regex_flavor - GUC hook to validate and set REGEX_FLAVOR
- */
-const char *
-assign_regex_flavor(const char *value,
-					bool doit, GucSource source)
-{
-	if (pg_strcasecmp(value, "advanced") == 0)
-	{
-		if (doit)
-			regex_flavor = REG_ADVANCED;
-	}
-	else if (pg_strcasecmp(value, "extended") == 0)
-	{
-		if (doit)
-			regex_flavor = REG_EXTENDED;
-	}
-	else if (pg_strcasecmp(value, "basic") == 0)
-	{
-		if (doit)
-			regex_flavor = REG_BASIC;
-	}
-	else
-		return NULL;			/* fail */
-	return value;			   /* OK */
-}
 
 /*
  * parse_re_flags - parse the options argument of regexp_matches and friends
@@ -441,6 +414,33 @@ parse_re_flags(pg_re_flags *flags, text *opts)
 
 
 /*
+ * assign_regex_flavor - GUC hook to validate and set REGEX_FLAVOR
+ */
+const char *
+assign_regex_flavor(const char *value, bool doit, GucSource source)
+{
+	if (pg_strcasecmp(value, "advanced") == 0)
+	{
+		if (doit)
+			regex_flavor = REG_ADVANCED;
+	}
+	else if (pg_strcasecmp(value, "extended") == 0)
+	{
+		if (doit)
+			regex_flavor = REG_EXTENDED;
+	}
+	else if (pg_strcasecmp(value, "basic") == 0)
+	{
+		if (doit)
+			regex_flavor = REG_BASIC;
+	}
+	else
+		return NULL;			/* fail */
+	return value;			   /* OK */
+}
+
+
+/*
  * report whether regex_flavor is currently BASIC
  */
 bool
@@ -458,7 +458,7 @@ Datum
 nameregexeq(PG_FUNCTION_ARGS)
 {
 	Name		n = PG_GETARG_NAME(0);
-	text	   *p = PG_GETARG_TEXT_P(1);
+	text	   *p = PG_GETARG_TEXT_PP(1);
 
 	PG_RETURN_BOOL(RE_compile_and_execute(p,
 										  NameStr(*n),
@@ -471,7 +471,7 @@ Datum
 nameregexne(PG_FUNCTION_ARGS)
 {
 	Name		n = PG_GETARG_NAME(0);
-	text	   *p = PG_GETARG_TEXT_P(1);
+	text	   *p = PG_GETARG_TEXT_PP(1);
 
 	PG_RETURN_BOOL(!RE_compile_and_execute(p,
 										   NameStr(*n),
@@ -483,8 +483,8 @@ nameregexne(PG_FUNCTION_ARGS)
 Datum
 textregexeq(PG_FUNCTION_ARGS)
 {
-	text	   *s = PG_GETARG_TEXT_P(0);
-	text	   *p = PG_GETARG_TEXT_P(1);
+	text	   *s = PG_GETARG_TEXT_PP(0);
+	text	   *p = PG_GETARG_TEXT_PP(1);
 
 	PG_RETURN_BOOL(RE_compile_and_execute(p,
 										  VARDATA_ANY(s),
@@ -496,8 +496,8 @@ textregexeq(PG_FUNCTION_ARGS)
 Datum
 textregexne(PG_FUNCTION_ARGS)
 {
-	text	   *s = PG_GETARG_TEXT_P(0);
-	text	   *p = PG_GETARG_TEXT_P(1);
+	text	   *s = PG_GETARG_TEXT_PP(0);
+	text	   *p = PG_GETARG_TEXT_PP(1);
 
 	PG_RETURN_BOOL(!RE_compile_and_execute(p,
 										   VARDATA_ANY(s),
@@ -517,7 +517,7 @@ Datum
 nameicregexeq(PG_FUNCTION_ARGS)
 {
 	Name		n = PG_GETARG_NAME(0);
-	text	   *p = PG_GETARG_TEXT_P(1);
+	text	   *p = PG_GETARG_TEXT_PP(1);
 
 	PG_RETURN_BOOL(RE_compile_and_execute(p,
 										  NameStr(*n),
@@ -530,7 +530,7 @@ Datum
 nameicregexne(PG_FUNCTION_ARGS)
 {
 	Name		n = PG_GETARG_NAME(0);
-	text	   *p = PG_GETARG_TEXT_P(1);
+	text	   *p = PG_GETARG_TEXT_PP(1);
 
 	PG_RETURN_BOOL(!RE_compile_and_execute(p,
 										   NameStr(*n),
@@ -542,8 +542,8 @@ nameicregexne(PG_FUNCTION_ARGS)
 Datum
 texticregexeq(PG_FUNCTION_ARGS)
 {
-	text	   *s = PG_GETARG_TEXT_P(0);
-	text	   *p = PG_GETARG_TEXT_P(1);
+	text	   *s = PG_GETARG_TEXT_PP(0);
+	text	   *p = PG_GETARG_TEXT_PP(1);
 
 	PG_RETURN_BOOL(RE_compile_and_execute(p,
 										  VARDATA_ANY(s),
@@ -555,8 +555,8 @@ texticregexeq(PG_FUNCTION_ARGS)
 Datum
 texticregexne(PG_FUNCTION_ARGS)
 {
-	text	   *s = PG_GETARG_TEXT_P(0);
-	text	   *p = PG_GETARG_TEXT_P(1);
+	text	   *s = PG_GETARG_TEXT_PP(0);
+	text	   *p = PG_GETARG_TEXT_PP(1);
 
 	PG_RETURN_BOOL(!RE_compile_and_execute(p,
 										   VARDATA_ANY(s),
@@ -573,8 +573,8 @@ texticregexne(PG_FUNCTION_ARGS)
 Datum
 textregexsubstr(PG_FUNCTION_ARGS)
 {
-	text	   *s = PG_GETARG_TEXT_P(0);
-	text	   *p = PG_GETARG_TEXT_P(1);
+	text	   *s = PG_GETARG_TEXT_PP(0);
+	text	   *p = PG_GETARG_TEXT_PP(1);
 	regex_t    *re;
 	regmatch_t	pmatch[2];
 	int			so,
@@ -632,9 +632,9 @@ textregexsubstr(PG_FUNCTION_ARGS)
 Datum
 textregexreplace_noopt(PG_FUNCTION_ARGS)
 {
-	text	   *s = PG_GETARG_TEXT_P(0);
-	text	   *p = PG_GETARG_TEXT_P(1);
-	text	   *r = PG_GETARG_TEXT_P(2);
+	text	   *s = PG_GETARG_TEXT_PP(0);
+	text	   *p = PG_GETARG_TEXT_PP(1);
+	text	   *r = PG_GETARG_TEXT_PP(2);
 	regex_t    *re;
 
 	re = RE_compile_and_cache(p, regex_flavor);
@@ -649,10 +649,10 @@ textregexreplace_noopt(PG_FUNCTION_ARGS)
 Datum
 textregexreplace(PG_FUNCTION_ARGS)
 {
-	text	   *s = PG_GETARG_TEXT_P(0);
-	text	   *p = PG_GETARG_TEXT_P(1);
-	text	   *r = PG_GETARG_TEXT_P(2);
-	text	   *opt = PG_GETARG_TEXT_P(3);
+	text	   *s = PG_GETARG_TEXT_PP(0);
+	text	   *p = PG_GETARG_TEXT_PP(1);
+	text	   *r = PG_GETARG_TEXT_PP(2);
+	text	   *opt = PG_GETARG_TEXT_PP(3);
 	regex_t    *re;
 	pg_re_flags flags;
 
@@ -685,7 +685,7 @@ similar_escape(PG_FUNCTION_ARGS)
 	/* This function is not strict, so must test explicitly */
 	if (PG_ARGISNULL(0))
 		PG_RETURN_NULL();
-	pat_text = PG_GETARG_TEXT_P(0);
+	pat_text = PG_GETARG_TEXT_PP(0);
 	p = VARDATA_ANY(pat_text);
 	plen = VARSIZE_ANY_EXHDR(pat_text);
 	if (PG_ARGISNULL(1))
@@ -696,7 +696,7 @@ similar_escape(PG_FUNCTION_ARGS)
 	}
 	else
 	{
-		esc_text = PG_GETARG_TEXT_P(1);
+		esc_text = PG_GETARG_TEXT_PP(1);
 		e = VARDATA_ANY(esc_text);
 		elen = VARSIZE_ANY_EXHDR(esc_text);
 		if (elen == 0)
@@ -797,8 +797,8 @@ regexp_matches(PG_FUNCTION_ARGS)
 
 	if (SRF_IS_FIRSTCALL())
 	{
-		text	   *pattern = PG_GETARG_TEXT_P(1);
-		text	   *flags = PG_GETARG_TEXT_P_IF_EXISTS(2);
+		text	   *pattern = PG_GETARG_TEXT_PP(1);
+		text	   *flags = PG_GETARG_TEXT_PP_IF_EXISTS(2);
 		MemoryContext oldcontext;
 
 		funcctx = SRF_FIRSTCALL_INIT();
@@ -1055,8 +1055,8 @@ regexp_split_to_table(PG_FUNCTION_ARGS)
 
 	if (SRF_IS_FIRSTCALL())
 	{
-		text	   *pattern = PG_GETARG_TEXT_P(1);
-		text	   *flags = PG_GETARG_TEXT_P_IF_EXISTS(2);
+		text	   *pattern = PG_GETARG_TEXT_PP(1);
+		text	   *flags = PG_GETARG_TEXT_PP_IF_EXISTS(2);
 		MemoryContext oldcontext;
 
 		funcctx = SRF_FIRSTCALL_INIT();
@@ -1105,9 +1105,9 @@ regexp_split_to_array(PG_FUNCTION_ARGS)
 	ArrayBuildState *astate = NULL;
 	regexp_matches_ctx *splitctx;
 
-	splitctx = setup_regexp_matches(PG_GETARG_TEXT_P(0),
-									PG_GETARG_TEXT_P(1),
-									PG_GETARG_TEXT_P_IF_EXISTS(2),
+	splitctx = setup_regexp_matches(PG_GETARG_TEXT_PP(0),
+									PG_GETARG_TEXT_PP(1),
+									PG_GETARG_TEXT_PP_IF_EXISTS(2),
 									true, false, true);
 
 	while (splitctx->next_match <= splitctx->nmatches)
@@ -1172,4 +1172,69 @@ build_regexp_split_result(regexp_matches_ctx *splitctx)
 								   PointerGetDatum(splitctx->orig_str),
 								   Int32GetDatum(startpos + 1));
 	}
+}
+
+/*
+ * regexp_fixed_prefix - extract fixed prefix, if any, for a regexp
+ *
+ * The result is NULL if there is no fixed prefix, else a palloc'd string.
+ * If it is an exact match, not just a prefix, *exact is returned as TRUE.
+ */
+char *
+regexp_fixed_prefix(text *text_re, bool case_insensitive,
+					bool *exact)
+{
+	char	   *result;
+	regex_t    *re;
+	int			cflags;
+	int			re_result;
+	pg_wchar   *str;
+	size_t		slen;
+	size_t		maxlen;
+	char		errMsg[100];
+
+	*exact = false;				/* default result */
+
+	/* Compile RE */
+	cflags = REG_ADVANCED;
+	if (case_insensitive)
+		cflags |= REG_ICASE;
+
+	re = RE_compile_and_cache(text_re, cflags);
+
+	/* Examine it to see if there's a fixed prefix */
+	re_result = pg_regprefix(re, &str, &slen);
+
+	switch (re_result)
+	{
+		case REG_NOMATCH:
+			return NULL;
+
+		case REG_PREFIX:
+			/* continue with wchar conversion */
+			break;
+
+		case REG_EXACT:
+			*exact = true;
+			/* continue with wchar conversion */
+			break;
+
+		default:
+			/* re failed??? */
+			pg_regerror(re_result, re, errMsg, sizeof(errMsg));
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_REGULAR_EXPRESSION),
+					 errmsg("regular expression failed: %s", errMsg)));
+			break;
+	}
+
+	/* Convert pg_wchar result back to database encoding */
+	maxlen = pg_database_encoding_max_length() * slen + 1;
+	result = (char *) palloc(maxlen);
+	slen = pg_wchar2mb_with_len(str, result, slen);
+	Assert(slen < maxlen);
+
+	free(str);
+
+	return result;
 }

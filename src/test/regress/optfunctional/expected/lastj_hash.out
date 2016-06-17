@@ -1,0 +1,547 @@
+-- ----------------------------------------------------------------------
+-- Test: setup.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+create schema lastj_hash;
+set search_path to lastj_hash;
+drop table if exists foo;
+NOTICE:  table "foo" does not exist, skipping
+drop table if exists bar;
+NOTICE:  table "bar" does not exist, skipping
+create table foo (a text, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table bar (x int, y int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'x' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into foo values (1, 2);
+insert into foo values (12, 20);
+insert into foo values (NULL, 2);
+insert into foo values (15, 2);
+insert into foo values (NULL, NULL);
+insert into foo values (1, 12);
+insert into foo values (1, 102);
+insert into bar select i/10, i from generate_series(1, 100)i;
+insert into bar values (NULL, 101);
+insert into bar values (NULL, 102);
+insert into bar values (NULL, NULL);
+-- end_ignore
+-- ----------------------------------------------------------------------
+-- Test: sql/lasj_hash_all_1.sql
+-- ----------------------------------------------------------------------
+-- @author ramans2
+-- @created 2013-07-05 12:00:00 
+-- @modified 2013-07-05 12:00:00
+-- @tags lasj HAWQ
+-- @db_name lasjdb
+-- @product_version gpdb: [4.3.0.0-9.9.99.99] , hawq: [1.1.4.0-9.9.99.99]
+-- @description OPT-3351: Add test cases for LASJ
+-- enable hash join
+SELECT enable_xform('CXformLeftAntiSemiJoin2HashJoin');
+                enable_xform                
+--------------------------------------------
+ CXformLeftAntiSemiJoin2HashJoin is enabled
+(1 row)
+
+-- empty outer, non-empty inner
+SELECT * FROM foo WHERE b = -1 AND a = ALL (SELECT x FROM bar WHERE y <= 100);
+ a | b 
+---+---
+(0 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/lasj_hash_all_2.sql
+-- ----------------------------------------------------------------------
+-- @author ramans2
+-- @created 2013-07-05 12:00:00 
+-- @modified 2013-07-05 12:00:00
+-- @tags lasj HAWQ
+-- @db_name lasjdb
+-- @product_version gpdb: [4.3.0.0-9.9.99.99] , hawq: [1.1.4.0-9.9.99.99]
+-- @description OPT-3351: Add test cases for LASJ
+-- enable hash join
+SELECT enable_xform('CXformLeftAntiSemiJoin2HashJoin');
+                enable_xform                
+--------------------------------------------
+ CXformLeftAntiSemiJoin2HashJoin is enabled
+(1 row)
+
+-- outer with nulls, non-empty inner
+SELECT * FROM foo WHERE b = 2 AND a = ALL (SELECT x FROM bar WHERE y >=10 AND y < 20);
+ a | b 
+---+---
+ 1 | 2
+(1 row)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/lasj_hash_all_3.sql
+-- ----------------------------------------------------------------------
+-- @author ramans2
+-- @created 2013-07-05 12:00:00 
+-- @modified 2013-07-05 12:00:00
+-- @tags lasj HAWQ
+-- @db_name lasjdb
+-- @product_version gpdb: [4.3.0.0-9.9.99.99] , hawq: [1.1.4.0-9.9.99.99]
+-- @description OPT-3351: Add test cases for LASJ
+-- enable hash join
+SELECT enable_xform('CXformLeftAntiSemiJoin2HashJoin');
+                enable_xform                
+--------------------------------------------
+ CXformLeftAntiSemiJoin2HashJoin is enabled
+(1 row)
+
+-- outer with nulls, empty inner
+SELECT * FROM foo WHERE b = 2 AND a = ALL (SELECT x FROM bar WHERE y = -1) order by 1, 2;
+ a  | b 
+----+---
+ 1  | 2
+ 15 | 2
+    | 2
+(3 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/lasj_hash_all_4.sql
+-- ----------------------------------------------------------------------
+-- @author ramans2
+-- @created 2013-07-05 12:00:00 
+-- @modified 2013-07-05 12:00:00
+-- @tags lasj HAWQ
+-- @db_name lasjdb
+-- @product_version gpdb: [4.3.0.0-9.9.99.99] , hawq: [1.1.4.0-9.9.99.99]
+-- @description OPT-3351: Add test cases for LASJ
+-- enable hash join
+SELECT enable_xform('CXformLeftAntiSemiJoin2HashJoin');
+                enable_xform                
+--------------------------------------------
+ CXformLeftAntiSemiJoin2HashJoin is enabled
+(1 row)
+
+-- outer with nulls, inner with nulls
+SELECT * FROM foo WHERE a = ALL (SELECT x FROM bar WHERE x = 1 OR x IS NULL);
+ a | b 
+---+---
+(0 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/lasj_hash_full_1.sql
+-- ----------------------------------------------------------------------
+-- @author ramans2
+-- @created 2013-07-05 12:00:00 
+-- @modified 2013-07-05 12:00:00
+-- @tags lasj HAWQ
+-- @db_name lasjdb
+-- @product_version gpdb: [4.3.0.0-9.9.99.99] , hawq: [1.1.4.0-9.9.99.99]
+-- @description OPT-3351: Add test cases for LASJ
+-- enable hash join
+SELECT enable_xform('CXformLeftAntiSemiJoin2HashJoin');
+                enable_xform                
+--------------------------------------------
+ CXformLeftAntiSemiJoin2HashJoin is enabled
+(1 row)
+
+-- empty outer, non-empty inner
+SELECT * FROM (SELECT * FROM foo WHERE b = -1) foo2 FULL OUTER JOIN bar ON (a = x);
+ a | b | x  |  y  
+---+---+----+-----
+   |   |  8 |  80
+   |   |  8 |  81
+   |   |  8 |  82
+   |   |  8 |  83
+   |   |  8 |  84
+   |   |  8 |  85
+   |   |  8 |  86
+   |   |  8 |  87
+   |   |  8 |  88
+   |   |  8 |  89
+   |   |  9 |  90
+   |   |  9 |  91
+   |   |  9 |  92
+   |   |  9 |  93
+   |   |  9 |  94
+   |   |  9 |  95
+   |   |  9 |  96
+   |   |  9 |  97
+   |   |  9 |  98
+   |   |  9 |  99
+   |   | 10 | 100
+   |   |  0 |   1
+   |   |  0 |   2
+   |   |  0 |   3
+   |   |  0 |   4
+   |   |  0 |   5
+   |   |  0 |   6
+   |   |  0 |   7
+   |   |  0 |   8
+   |   |  0 |   9
+   |   |  1 |  10
+   |   |  1 |  11
+   |   |  1 |  12
+   |   |  1 |  13
+   |   |  1 |  14
+   |   |  1 |  15
+   |   |  1 |  16
+   |   |  1 |  17
+   |   |  1 |  18
+   |   |  1 |  19
+   |   |  2 |  20
+   |   |  2 |  21
+   |   |  2 |  22
+   |   |  2 |  23
+   |   |  2 |  24
+   |   |  2 |  25
+   |   |  2 |  26
+   |   |  2 |  27
+   |   |  2 |  28
+   |   |  2 |  29
+   |   |  3 |  30
+   |   |  3 |  31
+   |   |  3 |  32
+   |   |  3 |  33
+   |   |  3 |  34
+   |   |  3 |  35
+   |   |  3 |  36
+   |   |  3 |  37
+   |   |  3 |  38
+   |   |  3 |  39
+   |   |  4 |  40
+   |   |  4 |  41
+   |   |  4 |  42
+   |   |  4 |  43
+   |   |  4 |  44
+   |   |  4 |  45
+   |   |  4 |  46
+   |   |  4 |  47
+   |   |  4 |  48
+   |   |  4 |  49
+   |   |  5 |  50
+   |   |  5 |  51
+   |   |  5 |  52
+   |   |  5 |  53
+   |   |  5 |  54
+   |   |  5 |  55
+   |   |  5 |  56
+   |   |  5 |  57
+   |   |  5 |  58
+   |   |  5 |  59
+   |   |  6 |  60
+   |   |  6 |  61
+   |   |  6 |  62
+   |   |  6 |  63
+   |   |  6 |  64
+   |   |  6 |  65
+   |   |  6 |  66
+   |   |  6 |  67
+   |   |  6 |  68
+   |   |  6 |  69
+   |   |  7 |  70
+   |   |  7 |  71
+   |   |  7 |  72
+   |   |  7 |  73
+   |   |  7 |  74
+   |   |  7 |  75
+   |   |  7 |  76
+   |   |  7 |  77
+   |   |  7 |  78
+   |   |  7 |  79
+   |   |    | 101
+   |   |    | 102
+   |   |    |    
+(103 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/lasj_hash_full_2.sql
+-- ----------------------------------------------------------------------
+-- @author ramans2
+-- @created 2013-07-05 12:00:00 
+-- @modified 2013-07-05 12:00:00
+-- @tags lasj HAWQ
+-- @db_name lasjdb
+-- @product_version gpdb: [4.3.0.0-9.9.99.99] , hawq: [1.1.4.0-9.9.99.99]
+-- @description OPT-3351: Add test cases for LASJ
+-- enable hash join
+SELECT enable_xform('CXformLeftAntiSemiJoin2HashJoin');
+                enable_xform                
+--------------------------------------------
+ CXformLeftAntiSemiJoin2HashJoin is enabled
+(1 row)
+
+-- non-empty outer, empty inner
+SELECT * FROM foo FULL OUTER JOIN (SELECT * FROM bar WHERE y = -1) bar2 ON (a = x);
+ a  |  b  | x | y 
+----+-----+---+---
+ 15 |   2 |   |  
+ 1  |  12 |   |  
+ 1  |   2 |   |  
+ 1  | 102 |   |  
+    |   2 |   |  
+    |     |   |  
+ 12 |  20 |   |  
+(7 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/lasj_hash_full_3.sql
+-- ----------------------------------------------------------------------
+-- @author ramans2
+-- @created 2013-07-05 12:00:00 
+-- @modified 2013-07-05 12:00:00
+-- @tags lasj HAWQ
+-- @db_name lasjdb
+-- @product_version gpdb: [4.3.0.0-9.9.99.99] , hawq: [1.1.4.0-9.9.99.99]
+-- @description OPT-3351: Add test cases for LASJ
+-- enable hash join
+SELECT enable_xform('CXformLeftAntiSemiJoin2HashJoin');
+                enable_xform                
+--------------------------------------------
+ CXformLeftAntiSemiJoin2HashJoin is enabled
+(1 row)
+
+-- non-empty outer, non-empty inner
+SELECT * FROM (SELECT * FROM foo WHERE b = 2) foo2 FULL OUTER JOIN (SELECT * FROM bar WHERE y BETWEEN 16 AND 22 OR x IS NULL) bar2 ON (a = x);
+ a  | b | x |  y  
+----+---+---+-----
+ 15 | 2 |   |    
+ 1  | 2 | 1 |  19
+ 1  | 2 | 1 |  18
+ 1  | 2 | 1 |  17
+ 1  | 2 | 1 |  16
+    |   | 2 |  20
+    |   | 2 |  21
+    |   | 2 |  22
+    | 2 |   |    
+    |   |   | 101
+    |   |   | 102
+    |   |   |    
+(12 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/lasj_hash_notin_multiple_1.sql
+-- ----------------------------------------------------------------------
+-- @author ramans2
+-- @created 2013-07-05 12:00:00 
+-- @modified 2013-07-05 12:00:00
+-- @tags lasj HAWQ
+-- @db_name lasjdb
+-- @product_version gpdb: [4.3.0.0-9.9.99.99] , hawq: [1.1.4.0-9.9.99.99]
+-- @description OPT-3351: Add test cases for LASJ
+-- enable hash join
+SELECT enable_xform('CXformLeftAntiSemiJoin2HashJoin');
+                enable_xform                
+--------------------------------------------
+ CXformLeftAntiSemiJoin2HashJoin is enabled
+(1 row)
+
+-- empty outer, non-empty inner
+SELECT * FROM foo WHERE b = -1 AND (a, b) NOT IN (SELECT x, y FROM bar WHERE y <= 100);
+ a | b 
+---+---
+(0 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/lasj_hash_notin_multiple_2.sql
+-- ----------------------------------------------------------------------
+-- @author ramans2
+-- @created 2013-07-05 12:00:00 
+-- @modified 2013-07-05 12:00:00
+-- @tags lasj HAWQ
+-- @db_name lasjdb
+-- @product_version gpdb: [4.3.0.0-9.9.99.99] , hawq: [1.1.4.0-9.9.99.99]
+-- @description OPT-3351: Add test cases for LASJ
+-- enable hash join
+SELECT enable_xform('CXformLeftAntiSemiJoin2HashJoin');
+                enable_xform                
+--------------------------------------------
+ CXformLeftAntiSemiJoin2HashJoin is enabled
+(1 row)
+
+-- outer with nulls, non-empty inner
+SELECT * FROM foo WHERE (a, b) NOT IN (SELECT x, y FROM bar WHERE y <= 100);
+ a  |  b  
+----+-----
+ 12 |  20
+ 1  |   2
+ 15 |   2
+ 1  | 102
+(4 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/lasj_hash_notin_multiple_3.sql
+-- ----------------------------------------------------------------------
+-- @author ramans2
+-- @created 2013-07-05 12:00:00 
+-- @modified 2013-07-05 12:00:00
+-- @tags lasj HAWQ
+-- @db_name lasjdb
+-- @product_version gpdb: [4.3.0.0-9.9.99.99] , hawq: [1.1.4.0-9.9.99.99]
+-- @description OPT-3351: Add test cases for LASJ
+-- enable hash join
+SELECT enable_xform('CXformLeftAntiSemiJoin2HashJoin');
+                enable_xform                
+--------------------------------------------
+ CXformLeftAntiSemiJoin2HashJoin is enabled
+(1 row)
+
+-- outer with nulls, empty inner
+SELECT * FROM foo WHERE (a, b) NOT IN (SELECT x, y FROM bar WHERE y = -1);
+ a  |  b  
+----+-----
+ 12 |  20
+    |   2
+ 1  |   2
+ 15 |   2
+ 1  |  12
+ 1  | 102
+(6 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/lasj_hash_notin_multiple_4.sql
+-- ----------------------------------------------------------------------
+-- @author ramans2
+-- @created 2013-07-05 12:00:00 
+-- @modified 2013-07-05 12:00:00
+-- @tags lasj HAWQ
+-- @db_name lasjdb
+-- @product_version gpdb: [4.3.0.0-9.9.99.99] , hawq: [1.1.4.0-9.9.99.99]
+-- @description OPT-3351: Add test cases for LASJ
+-- enable hash join
+SELECT enable_xform('CXformLeftAntiSemiJoin2HashJoin');
+                enable_xform                
+--------------------------------------------
+ CXformLeftAntiSemiJoin2HashJoin is enabled
+(1 row)
+
+-- outer with nulls, inner with partial nulls
+SELECT * FROM foo WHERE (a, b) NOT IN (SELECT x, y FROM bar WHERE y IS NOT NULL);
+ a  | b  
+----+----
+ 12 | 20
+ 1  |  2
+ 15 |  2
+(3 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/lasj_hash_notin_multiple_5.sql
+-- ----------------------------------------------------------------------
+-- @author ramans2
+-- @created 2013-07-05 12:00:00 
+-- @modified 2013-07-05 12:00:00
+-- @tags lasj HAWQ
+-- @db_name lasjdb
+-- @product_version gpdb: [4.3.0.0-9.9.99.99] , hawq: [1.1.4.0-9.9.99.99]
+-- @description OPT-3351: Add test cases for LASJ
+-- enable hash join
+SELECT enable_xform('CXformLeftAntiSemiJoin2HashJoin');
+                enable_xform                
+--------------------------------------------
+ CXformLeftAntiSemiJoin2HashJoin is enabled
+(1 row)
+
+-- outer with nulls, inner with null tuples
+SELECT * FROM foo WHERE (a, b) NOT IN (SELECT x, y FROM bar);
+ a | b 
+---+---
+(0 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/lasj_hash_notin_single_1.sql
+-- ----------------------------------------------------------------------
+-- @author ramans2
+-- @created 2013-07-05 12:00:00 
+-- @modified 2013-07-05 12:00:00
+-- @tags lasj HAWQ
+-- @db_name lasjdb
+-- @product_version gpdb: [4.3.0.0-9.9.99.99] , hawq: [1.1.4.0-9.9.99.99]
+-- @description OPT-3351: Add test cases for LASJ
+-- enable hash join
+SELECT enable_xform('CXformLeftAntiSemiJoin2HashJoin');
+                enable_xform                
+--------------------------------------------
+ CXformLeftAntiSemiJoin2HashJoin is enabled
+(1 row)
+
+-- empty outer, non-empty inner
+SELECT * FROM foo WHERE b = -1 AND a NOT IN (SELECT x FROM bar WHERE y <= 100);
+ a | b 
+---+---
+(0 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/lasj_hash_notin_single_2.sql
+-- ----------------------------------------------------------------------
+-- @author ramans2
+-- @created 2013-07-05 12:00:00 
+-- @modified 2013-07-05 12:00:00
+-- @tags lasj HAWQ
+-- @db_name lasjdb
+-- @product_version gpdb: [4.3.0.0-9.9.99.99] , hawq: [1.1.4.0-9.9.99.99]
+-- @description OPT-3351: Add test cases for LASJ
+-- enable hash join
+SELECT enable_xform('CXformLeftAntiSemiJoin2HashJoin');
+                enable_xform                
+--------------------------------------------
+ CXformLeftAntiSemiJoin2HashJoin is enabled
+(1 row)
+
+-- outer with nulls, non-empty inner
+SELECT * FROM foo WHERE b = 2 AND a NOT IN (SELECT x FROM bar WHERE y <= 100);
+ a  | b 
+----+---
+ 15 | 2
+(1 row)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/lasj_hash_notin_single_3.sql
+-- ----------------------------------------------------------------------
+-- @author ramans2
+-- @created 2013-07-05 12:00:00 
+-- @modified 2013-07-05 12:00:00
+-- @tags lasj HAWQ
+-- @db_name lasjdb
+-- @product_version gpdb: [4.3.0.0-9.9.99.99] , hawq: [1.1.4.0-9.9.99.99]
+-- @description OPT-3351: Add test cases for LASJ
+-- enable hash join
+SELECT enable_xform('CXformLeftAntiSemiJoin2HashJoin');
+                enable_xform                
+--------------------------------------------
+ CXformLeftAntiSemiJoin2HashJoin is enabled
+(1 row)
+
+-- outer with nulls, empty inner
+SELECT * FROM foo WHERE b = 2 AND a NOT IN (SELECT x FROM bar WHERE y = -1) order by 1, 2;
+ a  | b 
+----+---
+ 1  | 2
+ 15 | 2
+    | 2
+(3 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: sql/lasj_hash_notin_single_4.sql
+-- ----------------------------------------------------------------------
+-- @author ramans2
+-- @created 2013-07-05 12:00:00 
+-- @modified 2013-07-05 12:00:00
+-- @tags lasj HAWQ
+-- @db_name lasjdb
+-- @product_version gpdb: [4.3.0.0-9.9.99.99] , hawq: [1.1.4.0-9.9.99.99]
+-- @description OPT-3351: Add test cases for LASJ
+-- enable hash join
+SELECT enable_xform('CXformLeftAntiSemiJoin2HashJoin');
+                enable_xform                
+--------------------------------------------
+ CXformLeftAntiSemiJoin2HashJoin is enabled
+(1 row)
+
+-- outer with nulls, inner with nulls
+SELECT * FROM foo WHERE a NOT IN (SELECT x FROM bar);
+ a | b 
+---+---
+(0 rows)
+
+-- ----------------------------------------------------------------------
+-- Test: teardown.sql
+-- ----------------------------------------------------------------------
+-- start_ignore
+drop schema lastj_hash cascade;
+NOTICE:  drop cascades to table bar
+NOTICE:  drop cascades to table foo
+-- end_ignore

@@ -238,6 +238,9 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 
 	void *tofree = NULL;
 
+	if (typeIsEnumType(type))
+		type = ANYENUMOID;
+
 	/*
 	 * Select the hash to be performed according to the field type we are adding to the
 	 * hash.
@@ -371,6 +374,7 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 		case REGOPERATOROID:		/* operator with argument types */
 		case REGCLASSOID:			/* relation name */
 		case REGTYPEOID:			/* data type name */
+		case ANYENUMOID:			/* enum type name */
 			intbuf = (int64) DatumGetUInt32(datum);	/* cast to 8 byte before hashing */
 			buf = &intbuf;
 			len = sizeof(intbuf);
@@ -708,18 +712,36 @@ typeIsArrayType(Oid typeoid)
 	return res;
 }
 
+bool
+typeIsEnumType(Oid typeoid)
+{
+	Type tup = typeidType(typeoid);
+	Form_pg_type typeform;
+	bool res = false;
+
+	typeform = (Form_pg_type) GETSTRUCT(tup);
+
+	if (typeform->typtype == 'e' && typeform->typinput == F_ENUM_IN)
+		res = true;
+
+	ReleaseType(tup);
+	return res;
+}
 
 bool isGreenplumDbHashable(Oid typid)
 {
 	/* we can hash all arrays */
 	if (typeIsArrayType(typid))
 		return true;
-	/*
-	 * if this type is a domain type, get its base type.
-	 */
+
+	/* if this type is a domain type, get its base type */
 	if (get_typtype(typid) == 'd')
 		typid = getBaseType(typid);
 	
+	/* we can hash all enums */
+	if (typeIsEnumType(typid))
+		return true;
+
 	/*
 	 * NB: Every GPDB-hashable datatype must also be mergejoinable, i.e.
 	 * must have a B-tree operator family. There is a sanity check for
@@ -916,6 +938,5 @@ ignoreblanks(char *data, int len)
 static int
 ispowof2(int numsegs)
 {
-
 	return !(numsegs & (numsegs - 1));
 }

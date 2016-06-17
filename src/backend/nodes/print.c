@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/print.c,v 1.84 2007/02/10 14:58:54 petere Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/print.c,v 1.87 2008/01/01 19:45:50 momjian Exp $
  *
  * HISTORY
  *	  AUTHOR			DATE			MAJOR EVENT
@@ -426,7 +426,7 @@ print_pathkeys(List *pathkeys, List *rtable)
 	printf("(");
 	foreach(i, pathkeys)
 	{
-		PathKey	   *pathkey = (PathKey *) lfirst(i);
+		PathKey    *pathkey = (PathKey *) lfirst(i);
 		EquivalenceClass *eclass;
 		ListCell   *k;
 		bool		first = true;
@@ -580,7 +580,7 @@ plannode_type(Plan *p)
 /*
  * Recursively prints a simple text description of the plan tree
  */
-void
+static void
 print_plan_recursive(Plan *p, Query *parsetree, int indentLevel, char *label)
 {
 	int			i;

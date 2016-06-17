@@ -79,7 +79,10 @@ fileset = {
     'ws2tcpip.h':            [],
     'atomic.h':              [],
     'mbarrier.h':            [],
-    'machine/sys/inline.h':  []
+    'machine/sys/inline.h':  [],
+    # snowball/libstemmer/header.h includes "api.h", without specifying
+    # a path. Don't be alarmed by that.
+    'api.h': []
 }
 
 

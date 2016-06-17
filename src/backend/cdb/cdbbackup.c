@@ -1507,7 +1507,7 @@ gp_read_backup_file__(PG_FUNCTION_ARGS)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
-				 errmsg("Backup File %s Type %d could not be be found", pszFileName, fileType)));
+				 errmsg("Backup File %s Type %d could not be found", pszFileName, fileType)));
 	}
 
 	/* Read file */

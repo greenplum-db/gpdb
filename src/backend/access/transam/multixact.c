@@ -42,7 +42,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/backend/access/transam/multixact.c,v 1.23 2007/01/05 22:19:23 momjian Exp $
+ * $PostgreSQL: pgsql/src/backend/access/transam/multixact.c,v 1.27.2.1 2009/11/23 09:59:00 heikki Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -51,6 +51,8 @@
 #include "access/multixact.h"
 #include "access/slru.h"
 #include "access/transam.h"
+#include "access/twophase.h"
+#include "access/twophase_rmgr.h"
 #include "access/xact.h"
 #include "miscadmin.h"
 #include "storage/backendid.h"
@@ -118,8 +120,11 @@ typedef struct MultiXactStateData
 	/*
 	 * Per-backend data starts here.  We have two arrays stored in the area
 	 * immediately following the MultiXactStateData struct. Each is indexed by
-	 * BackendId.  (Note: valid BackendIds run from 1 to MaxBackends; element
-	 * zero of each array is never used.)
+	 * BackendId.
+	 *
+	 * In both arrays, there's a slot for all normal backends (1..MaxBackends)
+	 * followed by a slot for max_prepared_xacts prepared transactions. Valid
+	 * BackendIds start from 1; element zero of each array is never used.
 	 *
 	 * OldestMemberMXactId[k] is the oldest MultiXactId each backend's current
 	 * transaction(s) could possibly be a member of, or InvalidMultiXactId
@@ -151,6 +156,12 @@ typedef struct MultiXactStateData
 	 */
 	MultiXactId perBackendXactIds[1];	/* VARIABLE LENGTH ARRAY */
 } MultiXactStateData;
+
+/*
+ * Last element of OldestMemberMXactID and OldestVisibleMXactId arrays.
+ * Valid elements are (1..MaxOldestSlot); element 0 is never used.
+ */
+#define MaxOldestSlot	(MaxBackends + max_prepared_xacts)
 
 /* Pointers to the state data in shared memory */
 static MultiXactStateData *MultiXactState;
@@ -381,9 +392,9 @@ MultiXactIdIsRunning(MultiXactId multi)
 	}
 
 	/*
-	 * Checking for myself is cheap compared to looking in shared memory,
-	 * so first do the equivalent of MultiXactIdIsCurrent().  This is not
-	 * needed for correctness, it's just a fast path.
+	 * Checking for myself is cheap compared to looking in shared memory, so
+	 * first do the equivalent of MultiXactIdIsCurrent().  This is not needed
+	 * for correctness, it's just a fast path.
 	 */
 	for (i = 0; i < nmembers; i++)
 	{
@@ -539,7 +550,7 @@ MultiXactIdSetOldestVisible(void)
 		if (oldestMXact < FirstMultiXactId)
 			oldestMXact = FirstMultiXactId;
 
-		for (i = 1; i <= MaxBackends; i++)
+		for (i = 1; i <= MaxOldestSlot; i++)
 		{
 			MultiXactId thisoldest = OldestMemberMXactId[i];
 
@@ -760,7 +771,7 @@ RecordNewMultiXact(MultiXactId multi, MultiXactOffset offset,
 	 * enough that a MultiXactId is really involved.  Perhaps someday we'll
 	 * take the trouble to generalize the slru.c error reporting code.
 	 */
-	slotno = SimpleLruReadPage(MultiXactOffsetCtl, pageno, multi);
+	slotno = SimpleLruReadPage(MultiXactOffsetCtl, pageno, true, multi);
 	offptr = (MultiXactOffset *) MultiXactOffsetCtl->shared->page_buffer[slotno];
 	offptr += entryno;
 
@@ -784,7 +795,7 @@ RecordNewMultiXact(MultiXactId multi, MultiXactOffset offset,
 
 		if (pageno != prev_pageno)
 		{
-			slotno = SimpleLruReadPage(MultiXactMemberCtl, pageno, multi);
+			slotno = SimpleLruReadPage(MultiXactMemberCtl, pageno, true, multi);
 			prev_pageno = pageno;
 		}
 
@@ -1016,7 +1027,7 @@ retry:
 	pageno = MultiXactIdToOffsetPage(multi);
 	entryno = MultiXactIdToOffsetEntry(multi);
 
-	slotno = SimpleLruReadPage(MultiXactOffsetCtl, pageno, multi);
+	slotno = SimpleLruReadPage(MultiXactOffsetCtl, pageno, true, multi);
 	offptr = (MultiXactOffset *) MultiXactOffsetCtl->shared->page_buffer[slotno];
 	offptr += entryno;
 	offset = *offptr;
@@ -1048,7 +1059,7 @@ retry:
 		entryno = MultiXactIdToOffsetEntry(tmpMXact);
 
 		if (pageno != prev_pageno)
-			slotno = SimpleLruReadPage(MultiXactOffsetCtl, pageno, tmpMXact);
+			slotno = SimpleLruReadPage(MultiXactOffsetCtl, pageno, true, tmpMXact);
 
 		offptr = (MultiXactOffset *) MultiXactOffsetCtl->shared->page_buffer[slotno];
 		offptr += entryno;
@@ -1084,7 +1095,7 @@ retry:
 
 		if (pageno != prev_pageno)
 		{
-			slotno = SimpleLruReadPage(MultiXactMemberCtl, pageno, multi);
+			slotno = SimpleLruReadPage(MultiXactMemberCtl, pageno, true, multi);
 			prev_pageno = pageno;
 		}
 
@@ -1300,6 +1311,119 @@ AtEOXact_MultiXact(void)
 }
 
 /*
+ * AtPrepare_MultiXact
+ *		Save multixact state at 2PC tranasction prepare
+ *
+ * In this phase, we only store our OldestMemberMXactId value in the two-phase
+ * state file.
+ */
+void
+AtPrepare_MultiXact(void)
+{
+	MultiXactId myOldestMember = OldestMemberMXactId[MyBackendId];
+
+	if (MultiXactIdIsValid(myOldestMember))
+		RegisterTwoPhaseRecord(TWOPHASE_RM_MULTIXACT_ID, 0,
+							   &myOldestMember, sizeof(MultiXactId));
+}
+
+/*
+ * PostPrepare_MultiXact
+ *		Clean up after successful PREPARE TRANSACTION
+ */
+void
+PostPrepare_MultiXact(TransactionId xid)
+{
+	MultiXactId myOldestMember;
+
+	/*
+	 * Transfer our OldestMemberMXactId value to the slot reserved for the
+	 * prepared transaction.
+	 */
+	myOldestMember = OldestMemberMXactId[MyBackendId];
+	if (MultiXactIdIsValid(myOldestMember))
+	{
+		BackendId dummyBackendId = TwoPhaseGetDummyBackendId(xid);
+
+		/*
+		 * Even though storing MultiXactId is atomic, acquire lock to make sure
+		 * others see both changes, not just the reset of the slot of the
+		 * current backend. Using a volatile pointer might suffice, but this
+		 * isn't a hot spot.
+		 */
+		LWLockAcquire(MultiXactGenLock, LW_EXCLUSIVE);
+
+		OldestMemberMXactId[dummyBackendId] = myOldestMember;
+		OldestMemberMXactId[MyBackendId] = InvalidMultiXactId;
+
+		LWLockRelease(MultiXactGenLock);
+	}
+
+	/*
+	 * We don't need to transfer OldestVisibleMXactId value, because the
+	 * transaction is not going to be looking at any more multixacts once
+	 * it's prepared.
+	 *
+	 * We assume that storing a MultiXactId is atomic and so we need not take
+	 * MultiXactGenLock to do this.
+	 */
+	OldestVisibleMXactId[MyBackendId] = InvalidMultiXactId;
+
+	/*
+	 * Discard the local MultiXactId cache like in AtEOX_MultiXact
+	 */
+	MXactContext = NULL;
+	MXactCache = NULL;
+}
+
+/*
+ * multixact_twophase_recover
+ *		Recover the state of a prepared transaction at startup
+ */
+void
+multixact_twophase_recover(TransactionId xid, uint16 info,
+						   void *recdata, uint32 len)
+{
+	BackendId	dummyBackendId = TwoPhaseGetDummyBackendId(xid);
+	MultiXactId	oldestMember;
+
+	/*
+	 * Get the oldest member XID from the state file record, and set it in
+	 * the OldestMemberMXactId slot reserved for this prepared transaction.
+	 */
+	Assert(len == sizeof(MultiXactId));
+	oldestMember = *((MultiXactId *)recdata);
+
+	OldestMemberMXactId[dummyBackendId] = oldestMember;
+}
+
+/*
+ * multixact_twophase_postcommit
+ *		Similar to AtEOX_MultiXact but for COMMIT PREPARED
+ */
+void
+multixact_twophase_postcommit(TransactionId xid, uint16 info,
+							  void *recdata, uint32 len)
+{
+	BackendId	dummyBackendId = TwoPhaseGetDummyBackendId(xid);
+
+	Assert(len == sizeof(MultiXactId));
+
+	OldestMemberMXactId[dummyBackendId] = InvalidMultiXactId;
+}
+
+/*
+ * multixact_twophase_postabort
+ *		This is actually just the same as the COMMIT case.
+ */
+void
+multixact_twophase_postabort(TransactionId xid, uint16 info,
+						void *recdata, uint32 len)
+{
+	multixact_twophase_postcommit(xid, info, recdata, len);
+}
+
+/*
  * Initialization of shared memory for MultiXact.  We use two SLRU areas,
  * thus double memory.	Also, reserve space for the shared MultiXactState
  * struct and the per-backend MultiXactId arrays (two of those, too).
@@ -1311,11 +1435,11 @@ MultiXactShmemSize(void)
 
 #define SHARED_MULTIXACT_STATE_SIZE \
 	add_size(sizeof(MultiXactStateData), \
-			 mul_size(sizeof(MultiXactId) * 2, MaxBackends))
+			 mul_size(sizeof(MultiXactId) * 2, MaxOldestSlot))
 
 	size = SHARED_MULTIXACT_STATE_SIZE;
-	size = add_size(size, SimpleLruShmemSize(NUM_MXACTOFFSET_BUFFERS));
-	size = add_size(size, SimpleLruShmemSize(NUM_MXACTMEMBER_BUFFERS));
+	size = add_size(size, SimpleLruShmemSize(NUM_MXACTOFFSET_BUFFERS, 0));
+	size = add_size(size, SimpleLruShmemSize(NUM_MXACTMEMBER_BUFFERS, 0));
 
 	return size;
 }
@@ -1331,10 +1455,10 @@ MultiXactShmemInit(void)
 	MultiXactMemberCtl->PagePrecedes = MultiXactMemberPagePrecedes;
 
 	SimpleLruInit(MultiXactOffsetCtl,
-				  "MultiXactOffset Ctl", NUM_MXACTOFFSET_BUFFERS,
+				  "MultiXactOffset Ctl", NUM_MXACTOFFSET_BUFFERS, 0,
 				  MultiXactOffsetControlLock, MULTIXACT_OFFSETS_DIR);
 	SimpleLruInit(MultiXactMemberCtl,
-				  "MultiXactMember Ctl", NUM_MXACTMEMBER_BUFFERS,
+				  "MultiXactMember Ctl", NUM_MXACTMEMBER_BUFFERS, 0,
 				  MultiXactMemberControlLock, MULTIXACT_MEMBERS_DIR);
 
 	/* Initialize our shared state struct */
@@ -1353,10 +1477,10 @@ MultiXactShmemInit(void)
 
 	/*
 	 * Set up array pointers.  Note that perBackendXactIds[0] is wasted space
-	 * since we only use indexes 1..MaxBackends in each array.
+	 * since we only use indexes 1..MaxOldestSlot in each array.
 	 */
 	OldestMemberMXactId = MultiXactState->perBackendXactIds;
-	OldestVisibleMXactId = OldestMemberMXactId + MaxBackends;
+	OldestVisibleMXactId = OldestMemberMXactId + MaxOldestSlot;
 }
 
 /*
@@ -1489,7 +1613,7 @@ StartupMultiXact(void)
 		int			slotno;
 		MultiXactOffset *offptr;
 
-		slotno = SimpleLruReadPage(MultiXactOffsetCtl, pageno, multi);
+		slotno = SimpleLruReadPage(MultiXactOffsetCtl, pageno, true, multi);
 		offptr = (MultiXactOffset *) MultiXactOffsetCtl->shared->page_buffer[slotno];
 		offptr += entryno;
 
@@ -1519,7 +1643,7 @@ StartupMultiXact(void)
 		int			slotno;
 		TransactionId *xidptr;
 
-		slotno = SimpleLruReadPage(MultiXactMemberCtl, pageno, offset);
+		slotno = SimpleLruReadPage(MultiXactMemberCtl, pageno, true, offset);
 		xidptr = (TransactionId *) MultiXactMemberCtl->shared->page_buffer[slotno];
 		xidptr += entryno;
 
@@ -1779,7 +1903,7 @@ TruncateMultiXact(void)
 		nextMXact = FirstMultiXactId;
 
 	oldestMXact = nextMXact;
-	for (i = 1; i <= MaxBackends; i++)
+	for (i = 1; i <= MaxOldestSlot; i++)
 	{
 		MultiXactId thisoldest;
 
@@ -1931,9 +2055,6 @@ MultiXactOffsetPrecedes(MultiXactOffset offset1, MultiXactOffset offset2)
 /*
  * Write an xlog record reflecting the zeroing of either a MEMBERs or
  * OFFSETs page (info shows which)
- *
- * Note: xlog record is marked as outside transaction control, since we
- * want it to be redone whether the invoking transaction commits or not.
  */
 static void
 WriteMZeroPageXlogRec(int pageno, uint8 info)
@@ -1944,7 +2065,7 @@ WriteMZeroPageXlogRec(int pageno, uint8 info)
 	rdata.len = sizeof(int);
 	rdata.buffer = InvalidBuffer;
 	rdata.next = NULL;
-	(void) XLogInsert(RM_MULTIXACT_ID, info | XLOG_NO_TRAN, &rdata);
+	(void) XLogInsert(RM_MULTIXACT_ID, info, &rdata);
 }
 
 /*

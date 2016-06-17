@@ -27,7 +27,7 @@ endif
 POSTGRES_IMP= postgres.imp
 
 ifdef PGXS
-BE_DLLLIBS= -Wl,-bI:$(bindir)/postgres/$(POSTGRES_IMP)
+BE_DLLLIBS= -Wl,-bI:$(pkglibdir)/$(POSTGRES_IMP)
 else
 BE_DLLLIBS= -Wl,-bI:$(top_builddir)/src/backend/$(POSTGRES_IMP)
 endif

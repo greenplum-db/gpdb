@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/rewrite/rewriteManip.c,v 1.103 2007/01/05 22:19:36 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/rewrite/rewriteManip.c,v 1.107.2.1 2008/08/14 20:31:59 heikki Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -28,8 +28,16 @@ typedef struct
 	int			sublevels_up;
 } checkExprHasAggs_context;
 
+typedef struct
+{
+	int			agg_location;
+	int			sublevels_up;
+} locate_agg_of_level_context;
+
 static bool checkExprHasAggs_walker(Node *node,
 						checkExprHasAggs_context *context);
+static bool locate_agg_of_level_walker(Node *node,
+						   locate_agg_of_level_context *context);
 static bool checkExprHasSubLink_walker(Node *node, void *context);
 static Relids offset_relid_set(Relids relids, int offset);
 static Relids adjust_relid_set(Relids relids, int oldrelid, int newrelid);
@@ -98,6 +106,81 @@ checkExprHasAggs_walker(Node *node, checkExprHasAggs_context *context)
 }
 
 /*
+ * locate_agg_of_level -
+ *	  Find the parse location of any aggregate of the specified query level.
+ *
+ * Returns -1 if no such agg is in the querytree, or if they all have
+ * unknown parse location.  (The former case is probably caller error,
+ * but we don't bother to distinguish it from the latter case.)
+ *
+ * Note: it might seem appropriate to merge this functionality into
+ * contain_aggs_of_level, but that would complicate that function's API.
+ * Currently, the only uses of this function are for error reporting,
+ * and so shaving cycles probably isn't very important.
+ */
+int
+locate_agg_of_level(Node *node, int levelsup)
+{
+	locate_agg_of_level_context context;
+
+	context.agg_location = -1;	/* in case we find nothing */
+	context.sublevels_up = levelsup;
+
+	/*
+	 * Must be prepared to start with a Query or a bare expression tree; if
+	 * it's a Query, we don't want to increment sublevels_up.
+	 */
+	(void) query_or_expression_tree_walker(node,
+										   locate_agg_of_level_walker,
+										   (void *) &context,
+										   0);
+
+	return context.agg_location;
+}
+
+static bool
+locate_agg_of_level_walker(Node *node,
+						   locate_agg_of_level_context *context)
+{
+	if (node == NULL)
+		return false;
+	if (IsA(node, Aggref))
+	{
+		if (((Aggref *) node)->agglevelsup == context->sublevels_up &&
+			((Aggref *) node)->location >= 0)
+		{
+			context->agg_location = ((Aggref *) node)->location;
+			return true;		/* abort the tree traversal and return true */
+		}
+		/* else fall through to examine argument */
+	}
+	if (IsA(node, PercentileExpr))
+	{
+		/* PercentileExpr is always levelsup == 0 */
+		if (context->sublevels_up == 0 &&
+			((PercentileExpr *) node)->location >= 0)
+		{
+			context->agg_location = ((PercentileExpr *) node)->location;
+			return true;
+		}
+	}
+	if (IsA(node, Query))
+	{
+		/* Recurse into subselects */
+		bool		result;
+
+		context->sublevels_up++;
+		result = query_tree_walker((Query *) node,
+								   locate_agg_of_level_walker,
+								   (void *) context, 0);
+		context->sublevels_up--;
+		return result;
+	}
+	return expression_tree_walker(node, locate_agg_of_level_walker,
+								  (void *) context);
+}
+
+/*
  * checkExprHasSubLink -
  *	Check if an expression contains a SubLink.
  */
@@ -158,6 +241,14 @@ OffsetVarNodes_walker(Node *node, OffsetVarNodes_context *context)
 			var->varno += context->offset;
 			var->varnoold += context->offset;
 		}
+		return false;
+	}
+	if (IsA(node, CurrentOfExpr))
+	{
+		CurrentOfExpr *cexpr = (CurrentOfExpr *) node;
+
+		if (context->sublevels_up == 0)
+			cexpr->cvarno += context->offset;
 		return false;
 	}
 	if (IsA(node, RangeTblRef))
@@ -305,6 +396,15 @@ ChangeVarNodes_walker(Node *node, ChangeVarNodes_context *context)
 			var->varno = context->new_index;
 			var->varnoold = context->new_index;
 		}
+		return false;
+	}
+	if (IsA(node, CurrentOfExpr))
+	{
+		CurrentOfExpr *cexpr = (CurrentOfExpr *) node;
+
+		if (context->sublevels_up == 0 &&
+			cexpr->cvarno == context->rt_index)
+			cexpr->cvarno = context->new_index;
 		return false;
 	}
 	if (IsA(node, RangeTblRef))
@@ -481,6 +581,13 @@ IncrementVarSublevelsUp_walker(Node *node,
 			var->varlevelsup += context->delta_sublevels_up;
 		return false;			/* done here */
 	}
+	if (IsA(node, CurrentOfExpr))
+	{
+		/* this should not happen */
+		if (context->min_sublevels_up == 0)
+			elog(ERROR, "cannot push down CurrentOfExpr");
+		return false;
+	}
 	if (IsA(node, Aggref))
 	{
 		Aggref	   *agg = (Aggref *) node;
@@ -573,6 +680,25 @@ IncrementVarSublevelsUpInTransformGroupedWindows(Node *node,
 									QTW_EXAMINE_RTES);
 }
 
+/*
+ * IncrementVarSublevelsUp_rtable -
+ *	Same as IncrementVarSublevelsUp, but to be invoked on a range table.
+ */
+void
+IncrementVarSublevelsUp_rtable(List *rtable, int delta_sublevels_up,
+							   int min_sublevels_up)
+{
+	IncrementVarSublevelsUp_context context;
+
+	context.delta_sublevels_up = delta_sublevels_up;
+	context.min_sublevels_up = min_sublevels_up;
+
+	range_table_walker(rtable,
+					   IncrementVarSublevelsUp_walker,
+					   (void *) &context,
+					   0);
+}
+
 
 /*
  * rangeTableEntry_used - detect whether an RTE is referenced somewhere
@@ -597,6 +723,15 @@ rangeTableEntry_used_walker(Node *node,
 
 		if (var->varlevelsup == context->sublevels_up &&
 			var->varno == context->rt_index)
+			return true;
+		return false;
+	}
+	if (IsA(node, CurrentOfExpr))
+	{
+		CurrentOfExpr *cexpr = (CurrentOfExpr *) node;
+
+		if (context->sublevels_up == 0 &&
+			cexpr->cvarno == context->rt_index)
 			return true;
 		return false;
 	}
@@ -876,6 +1011,119 @@ AddInvertedQual(Query *parsetree, Node *qual)
 
 
 /*
+ * map_variable_attnos() finds all user-column Vars in an expression tree
+ * that reference a particular RTE, and adjusts their varattnos according
+ * to the given mapping array (varattno n is replaced by attno_map[n-1]).
+ * Vars for system columns are not modified.
+ *
+ * A zero in the mapping array represents a dropped column, which should not
+ * appear in the expression.
+ *
+ * If the expression tree contains a whole-row Var for the target RTE,
+ * the Var is not changed but *found_whole_row is returned as TRUE.
+ * For most callers this is an error condition, but we leave it to the caller
+ * to report the error so that useful context can be provided.  (In some
+ * usages it would be appropriate to modify the Var's vartype and insert a
+ * ConvertRowtypeExpr node to map back to the original vartype.  We might
+ * someday extend this function's API to support that.  For now, the only
+ * concession to that future need is that this function is a tree mutator
+ * not just a walker.)
+ *
+ * This could be built using replace_rte_variables and a callback function,
+ * but since we don't ever need to insert sublinks, replace_rte_variables is
+ * overly complicated.
+ */
+
+typedef struct
+{
+	int			target_varno;		/* RTE index to search for */
+	int			sublevels_up;		/* (current) nesting depth */
+	const AttrNumber *attno_map;	/* map array for user attnos */
+	int			map_length;			/* number of entries in attno_map[] */
+	bool	   *found_whole_row;	/* output flag */
+} map_variable_attnos_context;
+
+static Node *
+map_variable_attnos_mutator(Node *node,
+							map_variable_attnos_context *context)
+{
+	if (node == NULL)
+		return NULL;
+	if (IsA(node, Var))
+	{
+		Var		   *var = (Var *) node;
+
+		if (var->varno == context->target_varno &&
+			var->varlevelsup == context->sublevels_up)
+		{
+			/* Found a matching variable, make the substitution */
+			Var	   *newvar = (Var *) palloc(sizeof(Var));
+			int		attno = var->varattno;
+
+			*newvar = *var;
+			if (attno > 0)
+			{
+				/* user-defined column, replace attno */
+				if (attno > context->map_length ||
+					context->attno_map[attno - 1] == 0)
+					elog(ERROR, "unexpected varattno %d in expression to be mapped",
+						 attno);
+				newvar->varattno = newvar->varoattno = context->attno_map[attno - 1];
+			}
+			else if (attno == 0)
+			{
+				/* whole-row variable, warn caller */
+				*(context->found_whole_row) = true;
+			}
+			return (Node *) newvar;
+		}
+		/* otherwise fall through to copy the var normally */
+	}
+	else if (IsA(node, Query))
+	{
+		/* Recurse into RTE subquery or not-yet-planned sublink subquery */
+		Query	   *newnode;
+
+		context->sublevels_up++;
+		newnode = query_tree_mutator((Query *) node,
+									 map_variable_attnos_mutator,
+									 (void *) context,
+									 0);
+		context->sublevels_up--;
+		return (Node *) newnode;
+	}
+	return expression_tree_mutator(node, map_variable_attnos_mutator,
+								   (void *) context);
+}
+
+Node *
+map_variable_attnos(Node *node,
+					int target_varno, int sublevels_up,
+					const AttrNumber *attno_map, int map_length,
+					bool *found_whole_row)
+{
+	map_variable_attnos_context context;
+
+	context.target_varno = target_varno;
+	context.sublevels_up = sublevels_up;
+	context.attno_map = attno_map;
+	context.map_length = map_length;
+	context.found_whole_row = found_whole_row;
+
+	*found_whole_row = false;
+
+	/*
+	 * Must be prepared to start with a Query or a bare expression tree; if
+	 * it's a Query, we don't want to increment sublevels_up.
+	 */
+	return query_or_expression_tree_mutator(node,
+											map_variable_attnos_mutator,
+											(void *) &context,
+											0);
+}
+
+
+/*
  * ResolveNew - replace Vars with corresponding items from a targetlist
  *
  * Vars matching target_varno and sublevels_up are replaced by the
@@ -927,7 +1175,8 @@ resolve_one_var(Var *var, ResolveNew_context *context)
 		{
 			/* Otherwise replace unmatched var with a null */
 			/* need coerce_to_domain in case of NOT NULL domain constraint */
-			return coerce_to_domain((Node *) makeNullConst(var->vartype, -1),
+			return coerce_to_domain((Node *) makeNullConst(var->vartype,
+														   var->vartypmod),
 									InvalidOid, -1,
 									var->vartype,
 									COERCE_IMPLICIT_CAST,
@@ -978,7 +1227,7 @@ ResolveNew_mutator(Node *node, ResolveNew_context *context)
 				 * this is a JOIN), then omit dropped columns.
 				 */
 				expandRTE(context->target_rte,
-						  this_varno, this_varlevelsup, -1,
+						  this_varno, this_varlevelsup, var->location,
 						  (var->vartype != RECORDOID),
 						  NULL, &fields);
 				/* Adjust the generated per-field Vars... */
@@ -997,8 +1246,27 @@ ResolveNew_mutator(Node *node, ResolveNew_context *context)
 		}
 		/* otherwise fall through to copy the var normally */
 	}
+	else if (IsA(node, CurrentOfExpr))
+	{
+		CurrentOfExpr *cexpr = (CurrentOfExpr *) node;
+		int			this_varno = (int) cexpr->cvarno;
 
-	if (IsA(node, Query))
+		if (this_varno == context->target_varno &&
+			context->sublevels_up == 0)
+		{
+			/*
+			 * We get here if a WHERE CURRENT OF expression turns out to apply
+			 * to a view.  Someday we might be able to translate the
+			 * expression to apply to an underlying table of the view, but
+			 * right now it's not implemented.
+			 */
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				   errmsg("WHERE CURRENT OF on a view is not implemented")));
+		}
+		/* otherwise fall through to copy the expr normally */
+	}
+	else if (IsA(node, Query))
 	{
 		/* Recurse into RTE subquery or not-yet-planned sublink subquery */
 		Query	   *newnode;

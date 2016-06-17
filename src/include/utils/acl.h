@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/acl.h,v 1.100 2007/01/23 05:07:18 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/utils/acl.h,v 1.103 2008/01/01 19:45:59 momjian Exp $
  *
  * NOTES
  *	  An ACL array is simply an array of AclItems, representing the union
@@ -183,6 +183,8 @@ typedef enum AclObjectKind
 	ACL_KIND_OPFAMILY,			/* pg_opfamily */
 	ACL_KIND_CONVERSION,		/* pg_conversion */
 	ACL_KIND_TABLESPACE,		/* pg_tablespace */
+	ACL_KIND_TSDICTIONARY,		/* pg_ts_dict */
+	ACL_KIND_TSCONFIGURATION,	/* pg_ts_config */
 	ACL_KIND_FILESPACE,         /* pg_filespace */
 	ACL_KIND_EXTPROTOCOL,		/* pg_extprotocol */
 	MAX_ACL_KIND				/* MUST BE LAST */
@@ -282,6 +284,7 @@ extern bool pg_class_ownercheck(Oid class_oid, Oid roleid);
 extern bool pg_type_ownercheck(Oid type_oid, Oid roleid);
 extern bool pg_oper_ownercheck(Oid oper_oid, Oid roleid);
 extern bool pg_proc_ownercheck(Oid proc_oid, Oid roleid);
+extern bool pg_language_ownercheck(Oid lan_oid, Oid roleid);
 extern bool pg_namespace_ownercheck(Oid nsp_oid, Oid roleid);
 extern bool pg_tablespace_ownercheck(Oid spc_oid, Oid roleid);
 extern bool pg_filespace_ownercheck(Oid fs_oid, Oid roleid);
@@ -289,7 +292,8 @@ extern bool pg_opclass_ownercheck(Oid opc_oid, Oid roleid);
 extern bool pg_opfamily_ownercheck(Oid opf_oid, Oid roleid);
 extern bool pg_database_ownercheck(Oid db_oid, Oid roleid);
 extern bool pg_conversion_ownercheck(Oid conv_oid, Oid roleid);
-extern bool pg_foreign_server_ownercheck(Oid srv_oid, Oid roleid);
+extern bool pg_ts_dict_ownercheck(Oid dict_oid, Oid roleid);
+extern bool pg_ts_config_ownercheck(Oid cfg_oid, Oid roleid);
 extern bool pg_extprotocol_ownercheck(Oid ptc_oid, Oid roleid);
 
 #endif   /* ACL_H */

@@ -81,8 +81,12 @@ INSERT INTO TIMESTAMPTZ_TBL VALUES ('epoch');
 -- Obsolete special values
 INSERT INTO TIMESTAMPTZ_TBL VALUES ('invalid');
 ERROR:  date/time value "invalid" is no longer supported
+LINE 1: INSERT INTO TIMESTAMPTZ_TBL VALUES ('invalid');
+                                            ^
 INSERT INTO TIMESTAMPTZ_TBL VALUES ('current');
 ERROR:  date/time value "current" is no longer supported
+LINE 1: INSERT INTO TIMESTAMPTZ_TBL VALUES ('current');
+                                            ^
 -- Postgres v6.0 standard output format
 INSERT INTO TIMESTAMPTZ_TBL VALUES ('Mon Feb 10 17:32:01 1997 PST');
 -- Variations on Postgres v6.1 standard output format
@@ -137,6 +141,8 @@ SELECT '19970710 173201' AT TIME ZONE 'America/New_York';
 
 INSERT INTO TIMESTAMPTZ_TBL VALUES ('19970710 173201 America/Does_not_exist');
 ERROR:  time zone "america/does_not_exist" not recognized
+LINE 1: INSERT INTO TIMESTAMPTZ_TBL VALUES ('19970710 173201 America...
+                                            ^
 SELECT '19970710 173201' AT TIME ZONE 'America/Does_not_exist';
 ERROR:  time zone "America/Does_not_exist" not recognized
 -- Check date conversion and date arithmetic
@@ -166,6 +172,8 @@ INSERT INTO TIMESTAMPTZ_TBL VALUES ('Jan 01 17:32:01 1997');
 INSERT INTO TIMESTAMPTZ_TBL VALUES ('Feb 28 17:32:01 1997');
 INSERT INTO TIMESTAMPTZ_TBL VALUES ('Feb 29 17:32:01 1997');
 ERROR:  date/time field value out of range: "Feb 29 17:32:01 1997"
+LINE 1: INSERT INTO TIMESTAMPTZ_TBL VALUES ('Feb 29 17:32:01 1997');
+                                            ^
 INSERT INTO TIMESTAMPTZ_TBL VALUES ('Mar 01 17:32:01 1997');
 INSERT INTO TIMESTAMPTZ_TBL VALUES ('Dec 30 17:32:01 1997');
 INSERT INTO TIMESTAMPTZ_TBL VALUES ('Dec 31 17:32:01 1997');
@@ -176,9 +184,13 @@ INSERT INTO TIMESTAMPTZ_TBL VALUES ('Jan 01 17:32:01 2001');
 -- Currently unsupported syntax and ranges
 INSERT INTO TIMESTAMPTZ_TBL VALUES ('Feb 16 17:32:01 -0097');
 ERROR:  time zone displacement out of range: "Feb 16 17:32:01 -0097"
+LINE 1: INSERT INTO TIMESTAMPTZ_TBL VALUES ('Feb 16 17:32:01 -0097')...
+                                            ^
 INSERT INTO TIMESTAMPTZ_TBL VALUES ('Feb 16 17:32:01 5097 BC');
 ERROR:  timestamp out of range: "Feb 16 17:32:01 5097 BC"
--- Alternate field order that we've historically supported (sort of)
+LINE 1: INSERT INTO TIMESTAMPTZ_TBL VALUES ('Feb 16 17:32:01 5097 BC...
+                                            ^
+-- Alternative field order that we've historically supported (sort of)
 -- with regular and POSIXy timezone specs
 SELECT 'Wed Jul 11 10:51:14 America/New_York 2001'::timestamptz;
          timestamptz          
