@@ -2752,6 +2752,8 @@ DATA(insert OID = 1778 ( to_timestamp		PGNSP PGUID 12 1 0 f f t f s 2	1184 "25 2
 DESCR("convert text to timestamp with time zone");
 DATA(insert OID = 1780 ( to_date			PGNSP PGUID 12 1 0 f f t f s 2	1082 "25 25" _null_ _null_ _null_  to_date - _null_ _null_ ));
 DESCR("convert text to date");
+DATA(insert OID = 3399 ( to_date_valid			PGNSP PGUID 12 1 0 f f t f s 2	1082 "25 25" _null_ _null_ _null_  to_date_valid - _null_ _null_ ));
+DESCR("convert text to date");
 DATA(insert OID = 1768 ( to_char			PGNSP PGUID 12 1 0 f f t f s 2	25 "1186 25" _null_ _null_ _null_  interval_to_char - _null_ _null_ ));
 DESCR("format interval to text");
 
