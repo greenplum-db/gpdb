@@ -322,15 +322,6 @@ DefineType(List *names, List *parameters, Oid newOid, Oid newArrayOid)
 				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
 				 errmsg("type output function must be specified")));
 
-	if (receiveName == NIL)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
-				 errmsg("type receive function must be specified")));
-	if (sendName == NIL)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
-				 errmsg("type send function must be specified")));
-
 	if (typmodinName == NIL && typmodoutName != NIL)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
@@ -341,8 +332,10 @@ DefineType(List *names, List *parameters, Oid newOid, Oid newArrayOid)
 	 */
 	inputOid = findTypeInputFunction(inputName, typoid);
 	outputOid = findTypeOutputFunction(outputName, typoid);
-	receiveOid = findTypeReceiveFunction(receiveName, typoid);
-	sendOid = findTypeSendFunction(sendName, typoid);
+	if (receiveName)
+		receiveOid = findTypeReceiveFunction(receiveName, typoid);
+	if (sendName)
+		sendOid = findTypeSendFunction(sendName, typoid);
 
 	/*
 	 * Verify that I/O procs return the expected thing.  If we see OPAQUE,

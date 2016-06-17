@@ -196,19 +196,12 @@ InitSerTupInfo(TupleDesc tupdesc, SerTupInfo * pSerInfo)
 								format_type_be(attrInfo->atttypid))));
 								
 			/* If we don't have both binary routines */
-			if (!OidIsValid(pt->typsend) || !OidIsValid(pt->typreceive))
+			if (!OidIsValid(pt->typsend))
 			{
-				/* Use the normal text routines (slower) */
-				if (!OidIsValid(pt->typoutput))
-					ereport(ERROR,
-						(errcode(ERRCODE_UNDEFINED_FUNCTION),
-						 errmsg("no output function available for type %s",
-								format_type_be(attrInfo->atttypid))));
-				if (!OidIsValid(pt->typinput))
-					ereport(ERROR,
-						(errcode(ERRCODE_UNDEFINED_FUNCTION),
-						 errmsg("no input function available for type %s",
-								format_type_be(attrInfo->atttypid))));
+				ereport(ERROR,
+					(errcode(ERRCODE_UNDEFINED_FUNCTION),
+					 errmsg("No send function available for type %s. Motion requires send function",
+							format_type_be(attrInfo->atttypid))));
 		
 				attrInfo->typsend = pt->typoutput;
 				attrInfo->send_typio_param = getTypeIOParam(typeTuple);
@@ -216,16 +209,19 @@ InitSerTupInfo(TupleDesc tupdesc, SerTupInfo * pSerInfo)
 				attrInfo->typrecv = pt->typinput;
 				attrInfo->recv_typio_param = getTypeIOParam(typeTuple);
 			}
-			else
+
+			if (!OidIsValid(pt->typreceive))
 			{
-				/* Use binary routines */
-		
-				attrInfo->typsend = pt->typsend;
-				attrInfo->send_typio_param = getTypeIOParam(typeTuple);
-				attrInfo->typisvarlena = (!pt->typbyval) && (pt->typlen == -1);
-				attrInfo->typrecv  = pt->typreceive;
-				attrInfo->recv_typio_param = getTypeIOParam(typeTuple);
+				ereport(ERROR,
+					(errcode(ERRCODE_UNDEFINED_FUNCTION),
+					 errmsg("No receive function available for type %s. Motion requires receive function",
+							format_type_be(attrInfo->atttypid))));
 			}
+			attrInfo->typsend = pt->typsend;
+			attrInfo->send_typio_param = getTypeIOParam(typeTuple);
+			attrInfo->typisvarlena = (!pt->typbyval) && (pt->typlen == -1);
+			attrInfo->typrecv  = pt->typreceive;
+			attrInfo->recv_typio_param = getTypeIOParam(typeTuple);
 			
 			caql_endscan(pcqCtx);
 		}
