@@ -3845,6 +3845,11 @@ pg_ts_parser_is_visible(PG_FUNCTION_ARGS)
 {
 	Oid			oid = PG_GETARG_OID(0);
 
+	if (!SearchSysCacheExists(TSPARSEROID,
+							  ObjectIdGetDatum(oid),
+							  0, 0, 0))
+		PG_RETURN_NULL();
+
 	PG_RETURN_BOOL(TSParserIsVisible(oid));
 }
 
@@ -3852,6 +3857,11 @@ Datum
 pg_ts_dict_is_visible(PG_FUNCTION_ARGS)
 {
 	Oid			oid = PG_GETARG_OID(0);
+
+	if (!SearchSysCacheExists(TSDICTOID,
+							  ObjectIdGetDatum(oid),
+							  0, 0, 0))
+		PG_RETURN_NULL();
 
 	PG_RETURN_BOOL(TSDictionaryIsVisible(oid));
 }
@@ -3861,6 +3871,11 @@ pg_ts_template_is_visible(PG_FUNCTION_ARGS)
 {
 	Oid			oid = PG_GETARG_OID(0);
 
+	if (!SearchSysCacheExists(TSTEMPLATEOID,
+							  ObjectIdGetDatum(oid),
+							  0, 0, 0))
+		PG_RETURN_NULL();
+
 	PG_RETURN_BOOL(TSTemplateIsVisible(oid));
 }
 
@@ -3868,6 +3883,11 @@ Datum
 pg_ts_config_is_visible(PG_FUNCTION_ARGS)
 {
 	Oid			oid = PG_GETARG_OID(0);
+
+	if (!SearchSysCacheExists(TSCONFIGOID,
+							  ObjectIdGetDatum(oid),
+							  0, 0, 0))
+		PG_RETURN_NULL();
 
 	PG_RETURN_BOOL(TSConfigIsVisible(oid));
 }
