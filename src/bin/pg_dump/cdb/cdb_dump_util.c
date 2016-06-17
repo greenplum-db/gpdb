@@ -28,7 +28,9 @@
 
 static char predump_errmsg[1024];
 
-bool shouldDumpSchemaOnly(int g_role, bool incrementalBackup, void *list) {
+bool
+shouldDumpSchemaOnly(int g_role, bool incrementalBackup, void *list)
+{
     if (g_role != ROLE_SEGDB || !incrementalBackup)
         return false;
 
@@ -1680,7 +1682,8 @@ parseDDBoostCredential(char *hostname, char *user, char *password, const char *p
 }
 
 /* if the file too long this will rotate the files_name to file_name_0 - .._10 . the last file is deleted*/
-void rotate_dd_logs(const char *file_name, unsigned int num_of_files, unsigned int log_size)
+void
+rotate_dd_logs(const char *file_name, unsigned int num_of_files, unsigned int log_size)
 {
     struct stat st;
 
@@ -1713,6 +1716,7 @@ void rotate_dd_logs(const char *file_name, unsigned int num_of_files, unsigned i
     else
         mpp_err_msg("INFO","rotate_dd_logs","failed to find size");
 }
+
 /* Initialize the file for logging DDboost related information */
 void
 _ddp_test_log(const void *session_ptr, const ddp_char_t *log_msg, ddp_severity_t severity)
@@ -1935,12 +1939,14 @@ insertIntoHashTable(Oid o, char t)
     return 0;
 }
 
-int hashFunc(Oid k)
+int
+hashFunc(Oid k)
 {
     return k % HASH_TABLE_SIZE;
 }
 
-char getTypstorage(Oid o)
+char
+getTypstorage(Oid o)
 {
     int index  = hashFunc(o);
     Node *temp = hash_table[index];
@@ -1955,7 +1961,8 @@ char getTypstorage(Oid o)
     return EMPTY_TYPSTORAGE;
 }
 
-int removeNode(Oid o)
+int
+removeNode(Oid o)
 {
     int index = hashFunc(o);
 
@@ -1987,7 +1994,8 @@ int removeNode(Oid o)
     return -1;
 }
 
-void cleanUpTable()
+void
+cleanUpTable()
 {
 
     int i = 0;
