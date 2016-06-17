@@ -83,11 +83,6 @@ extern void LocalDistribXact_GetDistributedXid(
 extern char* LocalDistribXact_DisplayString(
 	LocalDistribXactRef		*localDistribXactRef);
 
-extern bool LocalDistribXact_LocalXidKnown(
-	TransactionId						localXid,
-	DistributedTransactionTimeStamp		distribTimeStamp,
-	DistributedTransactionId 			*distribXid);
-
 extern bool LocalDistribXactCache_CommittedFind(
 	TransactionId						localXid,
 	DistributedTransactionTimeStamp		distribTransactionTimeStamp,

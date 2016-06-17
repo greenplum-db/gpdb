@@ -328,37 +328,6 @@ LocalDistribXact_GetMaxDistributedXid(void)
 
 }
 
-static LocalDistribXact
-LocalDistribXact_FindByLocalXid(
-	DistributedTransactionId 	searchLocalXid)
-{
-	LocalDistribXact 	ele;
-
-	Assert(LocalDistribXactShared != NULL);
-
-	ele = (LocalDistribXact)
-					SharedDoublyLinkedHead_First(
-									&LocalDistribXactShared->sortedLocalBase,
-									&LocalDistribXactShared->sortedLocalList);
-	while (ele != NULL)
-	{
-		if (ele->localXid == searchLocalXid)
-		{
-			return ele;
-		}
-		else if (ele->localXid > searchLocalXid)
-			break;
-
-		ele = (LocalDistribXact)
-					SharedDoubleLinks_Next(
-									&LocalDistribXactShared->sortedLocalBase,
-									&LocalDistribXactShared->sortedLocalList,
-									ele);
-	}
-
-	return NULL;
-}
-
 static void
 LocalDistribXact_SetLocalPgProc(
 	LocalDistribXact	ele)
@@ -708,32 +677,6 @@ LocalDistribXact_DisplayString(
 	Assert(snprintfResult < MAX_LOCAL_DISTRIB_DISPLAY_BUFFER);
 
 	return LocalDistribDisplayBuffer;
-}
-
-bool
-LocalDistribXact_LocalXidKnown(
-	TransactionId						localXid,
-	DistributedTransactionTimeStamp		distribTimeStamp,
-	DistributedTransactionId 			*distribXid)
-{
-	LocalDistribXact 	ele;
-
-	LWLockAcquire(ProcArrayLock, LW_SHARED);
-
-	ele = LocalDistribXact_FindByLocalXid(localXid);
-	if (ele == NULL || ele->distribTimeStamp != distribTimeStamp)
-	{
-		LWLockRelease(ProcArrayLock);
-
-		*distribXid = InvalidDistributedTransactionId;
-		return false;
-	}
-
-	*distribXid = ele->distribXid;
-
-	LWLockRelease(ProcArrayLock);
-
-	return true;
 }
 
 // *****************************************************************************

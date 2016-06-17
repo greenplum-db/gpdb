@@ -16,10 +16,13 @@
 #include "utils/tqual.h"
 
 /*
- * DistributedSnapshotWithLocalXids_CommittedTest
+ * DistributedSnapshotWithLocalMapping_CommittedTest
  *		Is the given XID still-in-progress according to the
  *      distributed snapshot?  Or, is the transaction strictly local
  *      and needs to be tested with the local snapshot?
+ *
+ * The caller should've checked that the XID is committed (in clog),
+ * otherwise the result of this function is undefined.
  */
 DistributedSnapshotCommitted 
 DistributedSnapshotWithLocalMapping_CommittedTest(
@@ -29,7 +32,6 @@ DistributedSnapshotWithLocalMapping_CommittedTest(
 {
 	DistributedSnapshotHeader *header = &dslm->header;
 	DistributedSnapshotMapEntry *inProgressEntryArray = dslm->inProgressEntryArray;
-	
 	int32							count;
 	uint32							i;
 	bool							found;
@@ -51,10 +53,9 @@ DistributedSnapshotWithLocalMapping_CommittedTest(
 	/*
 	 * Is this local xid in a process-local cache we maintain?
 	 */
-	found = LocalDistribXactCache_CommittedFind(
-											localXid, 
-											dslm->header.distribTransactionTimeStamp,
-											&distribXid);
+	found = LocalDistribXactCache_CommittedFind(localXid,
+												dslm->header.distribTransactionTimeStamp,
+												&distribXid);
 
 	if (found)
 	{
@@ -70,54 +71,40 @@ DistributedSnapshotWithLocalMapping_CommittedTest(
 	}
 	else
 	{
+		DistributedTransactionTimeStamp checkDistribTimeStamp;
+
 		/*
-		 * Small window -- but check if our LocalDistribXact element says
-		 * we are preparing this transaction.  If so, the CLOG knows the
-		 * commit and had the visibility routine call us before we've finished
-		 * updating our data structures.
+		 * Ok, now we must consult the distributed log.
 		 */
-		if (!LocalDistribXact_LocalXidKnown(
-										localXid,
-										dslm->header.distribTransactionTimeStamp,
-										&distribXid))
+		if (DistributedLog_CommittedCheck(localXid,
+										  &checkDistribTimeStamp,
+										  &distribXid))
 		{
-			DistributedTransactionTimeStamp checkDistribTimeStamp;
+			/*
+			 * We found it in the distributed log.
+			 */
+			Assert(checkDistribTimeStamp != 0);
+			Assert(distribXid != InvalidDistributedTransactionId);
 
 			/*
-			 * Ok, now we must consult the distributed log.
+			 * Committed distributed transactions from other DTM starts are
+			 * weeded out.
 			 */
-			if (DistributedLog_CommittedCheck(
-									localXid,
-									&checkDistribTimeStamp,
-									&distribXid))
-			{
-				/*
-				 * We found it in the distributed log.
-				 */
-				Assert(checkDistribTimeStamp != 0);
-				Assert(distribXid != InvalidDistributedTransactionId);
-
-				/*
-				 * Committed distributed transactions from other DTM starts are
-				 * weeded out.
-				 */
-				if (checkDistribTimeStamp != header->distribTransactionTimeStamp)
-					return DISTRIBUTEDSNAPSHOT_COMMITTED_IGNORE;
-			}
-			else
-			{
-				/*
-				 * Since the local xid is committed (as determined by the
-				 * visibility routine) and all of our data structures do not
-				 * know of the transaction, it must be local-only.
-				 */
-				LocalDistribXactCache_AddCommitted(
-												localXid, 
-												dslm->header.distribTransactionTimeStamp,
-												/* distribXid */ InvalidDistributedTransactionId);
-
+			if (checkDistribTimeStamp != header->distribTransactionTimeStamp)
 				return DISTRIBUTEDSNAPSHOT_COMMITTED_IGNORE;
-			}
+		}
+		else
+		{
+			/*
+			 * Since the local xid is committed (as determined by the
+			 * visibility routine) and distributedlog doesn't know of the
+			 * transaction, it must be local-only.
+			 */
+			LocalDistribXactCache_AddCommitted(localXid,
+											   dslm->header.distribTransactionTimeStamp,
+											   /* distribXid */ InvalidDistributedTransactionId);
+
+			return DISTRIBUTEDSNAPSHOT_COMMITTED_IGNORE;
 		}
 	}
 	

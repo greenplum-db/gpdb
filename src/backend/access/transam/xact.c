@@ -1323,16 +1323,19 @@ RecordTransactionCommit(void)
 		 */
 		if (markXidCommitted)
 		{
+			/*
+			 * Mark the distributed transaction committed. Note that this
+			 * is done *before* updating the clog. As soon as an XID is
+			 * marked as comitted in the clog, other backends might try
+			 * to look it up in the DistributedLog.
+			 */
+			/* UNDONE: What are the locking issues here? */
 			if (isDtxPrepared)
-			{
-				/* Mark the distributed transaction committed. */
-				/* UNDONE: What are the locking issues here? */
 				DistributedLog_SetCommitted(
 										xid,
 										getDtxStartTime(),
 										getDistributedTransactionId(),
 										/* isRedo */ false);
-			}
 
 			TransactionIdCommit(xid);
 			/* to avoid race conditions, the parent must commit first */
