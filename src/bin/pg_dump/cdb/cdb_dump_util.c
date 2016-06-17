@@ -619,6 +619,7 @@ mpp_err_msg_cache(const char *loglevel, const char *prog, const char *fmt,...)
 {
 	va_list		ap;
 	char		szTimeNow[18];
+	int			len;
 
 	va_start(ap, fmt);
 	fprintf(stderr, "%s|%s-[%s]:-", GetTimeNow(szTimeNow), prog, loglevel);
@@ -627,8 +628,19 @@ mpp_err_msg_cache(const char *loglevel, const char *prog, const char *fmt,...)
 
 	/* cache a copy of the message - we may need it for a report */
 	va_start(ap, fmt);
-	vsprintf(predump_errmsg, gettext(fmt), ap);
+	len = vsnprintf(predump_errmsg, sizeof(predump_errmsg), gettext(fmt), ap);
 	va_end(ap);
+
+	/*
+	 * If the passed error string exceeds the size of the buffer, indicate that
+	 * by suffixing the string with ".."
+	 */
+	if (len > sizeof(predump_errmsg))
+	{
+		int		i;
+		for (i = sizeof(predump_errmsg) - 3; predump_errmsg[i]; i++)
+			predump_errmsg[i] = '.';
+	}
 }
 
 /* Simple error logging to stdout  */
