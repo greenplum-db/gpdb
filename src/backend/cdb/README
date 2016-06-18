@@ -1,9 +1,0 @@
-
-
-CDB2 Additions to PostgreSQL
-----------------------------
-
-OVERVIEW
-
-Directory cdb-pg/src/backend/cdb/ contains CDB2 additions to PostgreSQL.  Corresponding external declarations are in cdb-pg/src/include/cdb/.  
-
