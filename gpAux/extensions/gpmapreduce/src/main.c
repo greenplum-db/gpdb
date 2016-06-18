@@ -13,10 +13,10 @@
 
 ALLOW_EXCEPTIONS;
 
-static char  VERSION[] = 
+static char  VERSION[] =
 	"Greenplum Map/Reduce Driver 1.00b2";
 
-static char *wordchars = 
+static char *wordchars =
 	"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
 
 /* Initialize global variables */
@@ -121,7 +121,7 @@ int main (int argc, char *argv[])
 	while (1)
 	{
 		int option_index = 0;
-		c = getopt_long(argc, argv, short_options, long_options, 
+		c = getopt_long(argc, argv, short_options, long_options,
 						&option_index);
 		if (c == -1)
 			break; /* done processing options */
@@ -130,7 +130,7 @@ int main (int argc, char *argv[])
 			case '?':  /* --help */
 				
 				/* Actual help option given */
-				if (strcmp(argv[optind - 1], "-?") == 0 || 
+				if (strcmp(argv[optind - 1], "-?") == 0 ||
 					strcmp(argv[optind - 1], "--help") == 0)
 				{
 					usage(procname, true);
@@ -171,15 +171,15 @@ int main (int argc, char *argv[])
 			case 'W':  /* --password */
 				forceprompt = true;
 				break;
-     
+
 			case 'U':  /* --username */
 				username = optarg;
 				break;
-     
+
 			case 'h':  /* --host */
 				hostname = optarg;
 				break;
-     
+
 			case 'p':  /* --port */
 				port = optarg;
 				break;
@@ -187,7 +187,7 @@ int main (int argc, char *argv[])
 			case 'f':  /* --file */
 				filename = optarg;
 				break;
-     
+
 			case 'k':  /* --key */
 			{
 				mapred_plist_t *newitem;
@@ -195,7 +195,7 @@ int main (int argc, char *argv[])
 				char *value = NULL;
 				char *eq = strchr(name, '=');
 
-				/* 
+				/*
 				 * either --key value      : sets parameter named "key"
 				 * or     --key name=value : sets parameter named "name"
 				 */
@@ -240,7 +240,7 @@ int main (int argc, char *argv[])
 	}
 
 	file = fopen(filename, "rb");
-	if (!file) 
+	if (!file)
 	{
 		fprintf(stderr, "Error: Could not open file '%s'\n", filename);
 		exit(1);
@@ -267,7 +267,7 @@ int main (int argc, char *argv[])
 		mapred_plist_t *param = global_plist;
 		while (param)
 		{
-			fprintf(stderr, "- Parameter: %s=%s\n", 
+			fprintf(stderr, "- Parameter: %s=%s\n",
 					param->name, param->type);
 			param = param->next;
 		}
@@ -291,7 +291,7 @@ int main (int argc, char *argv[])
 		if (xframe.exception)
 			fprintf(stderr, "Error: %s\n", (char *) xframe.exception);
 		else
-			fprintf(stderr, "Unknown Error (%d) at %s:%d\n", 
+			fprintf(stderr, "Unknown Error (%d) at %s:%d\n",
 					xframe.errcode, xframe.file, xframe.lineno);
 		exit(1);
 	}
@@ -374,7 +374,7 @@ int main (int argc, char *argv[])
 				if (global_verbose_flag)
 				{
 					fprintf(stderr, "  - Connected Established:\n");
-					fprintf(stderr, "    HOST: %s\n", 
+					fprintf(stderr, "    HOST: %s\n",
 							PQhost(conn) ? PQhost(conn) : "localhost");
 					fprintf(stderr, "    PORT: %s\n", PQport(conn));
 					fprintf(stderr, "    USER: %s/%s\n", PQuser(conn), PQdb(conn));
@@ -415,7 +415,7 @@ int main (int argc, char *argv[])
 			if (xframe.exception)
 				fprintf(stderr, "Error: %s\n", (char *) xframe.exception);
 			else
-				fprintf(stderr, "Unknown Error (%d) at %s:%d\n", 
+				fprintf(stderr, "Unknown Error (%d) at %s:%d\n",
 						xframe.errcode, xframe.file, xframe.lineno);
 			errcode = 1;
 		}
@@ -450,7 +450,7 @@ void read_password(char *p, size_t len)
 
     termin  = fopen("/dev/tty", "r");
     termout = fopen("/dev/tty", "w");
-    if (!termin || !termout) 
+    if (!termin || !termout)
     {
         if (termin)
 			fclose(termin);
@@ -470,7 +470,7 @@ void read_password(char *p, size_t len)
 
     if (fgets(p, len, termin) == NULL)
         p[0] = '\0';
-    
+
     /* If that didn't get the whole input suck the rest off */
     len = strlen(p);
     if (len > 0)
@@ -524,7 +524,7 @@ void check_version(PGconn *conn)
 			if (major < 3 || (major == 3 && minor < 2))
 			{
 				char buf[100];
-				snprintf(buf, sizeof(buf), 
+				snprintf(buf, sizeof(buf),
 						 "Unsupported backend version: %s", version);
 				XRAISE(VERSION_ERROR, strdup(buf));
 			}
@@ -540,8 +540,8 @@ void check_version(PGconn *conn)
 }
 
 
-/* 
- * sigint_handler() -  Interupt handler to cancel active queries 
+/*
+ * sigint_handler() -  Interupt handler to cancel active queries
  */
 static void sigint_handler(SIGNAL_ARGS)
 {

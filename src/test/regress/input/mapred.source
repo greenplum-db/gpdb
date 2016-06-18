@@ -203,9 +203,10 @@ SELECT mapreduce('@abs_srcdir@/yml/grep.yml', 'key=an') ORDER BY 1;
 SELECT mapreduce('@abs_srcdir@/yml/grep2.yml', 'key=an') ORDER BY 1;
 
 --
--- Test 5) Tests a basic reduce function
+-- Test 5) Tests a basic reduce function and the builtin counterpart
 --
 SELECT mapreduce('@abs_srcdir@/yml/agebracket.yml') ORDER BY 1;
+SELECT mapreduce('@abs_srcdir@/yml/agebracket_builtin.yml') ORDER BY 1;
 
 --
 -- Test 6) File Output tests

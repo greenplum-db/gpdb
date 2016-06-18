@@ -52,7 +52,7 @@ mapred_olist_t* mapred_parse_string(unsigned char *yaml)
 	
 	XASSERT(yaml);
 	if (!yaml_parser_initialize(&parser))
-		XRAISE(MAPRED_PARSE_INTERNAL, 
+		XRAISE(MAPRED_PARSE_INTERNAL,
 			   "YAML parser initialization failed");
 
 	yaml_parser_set_input_string(&parser, yaml, strlen((char*) yaml));
@@ -68,7 +68,7 @@ mapred_olist_t* mapred_parse_file(FILE *file)
 
 	XASSERT(file);
 	if (!yaml_parser_initialize(&parser))
-		XRAISE(MAPRED_PARSE_INTERNAL, 
+		XRAISE(MAPRED_PARSE_INTERNAL,
 			   "YAML parser initialization failed");
 
 	yaml_parser_set_input_file(&parser, file);
@@ -109,8 +109,8 @@ mapred_olist_t* mapred_parse_yaml(yaml_parser_t *yparser)
 #endif
 
 	/* Check for errors within documents */
-	for (doc_item = parser.doclist; 
-		 doc_item && !error; 
+	for (doc_item = parser.doclist;
+		 doc_item && !error;
 		 doc_item = doc_item->next)
 	{
 		if (doc_item->object->u.document.flags & mapred_document_error)
@@ -180,7 +180,7 @@ void parser_begin_define(mapred_parser_t *parser)
 {
 	XASSERT(parser->current_doc);
 
-	/* 
+	/*
 	 * The only thing we have to do is ensure that this isn't a duplicate
 	 * define list.
 	 */
@@ -189,7 +189,7 @@ void parser_begin_define(mapred_parser_t *parser)
 		mapred_parse_error(parser, "Duplicate DEFINE list in DOCUMENT");
 		return;
 	}
-			   
+
 	parser->current_doc->u.document.flags |= mapred_document_defines;
 }
 
@@ -197,7 +197,7 @@ void parser_begin_execute(mapred_parser_t *parser)
 {
 	XASSERT(parser->current_doc);
 
-	/* 
+	/*
 	 * The only thing we have to do is ensure that this isn't a duplicate
 	 * execution list.
 	 */
@@ -220,7 +220,7 @@ void parser_set_version(mapred_parser_t *parser, char *value)
 		return;
 	}
 
-	/* 
+	/*
 	 * We have already assured that the value matches a good regex,
 	 * but we must still validate that the version itself is supported.
 	 */
@@ -274,9 +274,9 @@ void parser_set_port(mapred_parser_t *parser, char *value)
 		return;
 	}
 
-	/* 
+	/*
 	 * The parse has already assured that the value consists of a sequence
-	 * of digits, so strtol should convert successfully. 
+	 * of digits, so strtol should convert successfully.
 	 */
 	parser->current_doc->u.document.port = (int) strtol(value, NULL, 10);
 }
@@ -291,9 +291,9 @@ void parser_add_object(mapred_parser_t *parser, mapred_kind_t kind)
 
 	XASSERT(parser->current_doc);
 
-	/* 
+	/*
 	 * If we have a current object then verify it and add it into the
-	 * document's object list. 
+	 * document's object list.
 	 */
 	if (parser->current_obj)
 	{
@@ -305,7 +305,7 @@ void parser_add_object(mapred_parser_t *parser, mapred_kind_t kind)
 		if (error != NO_ERROR)
 		{
 			mapred_destroy_object(&parser->current_obj);
-			parser->current_doc->u.document.flags |= 
+			parser->current_doc->u.document.flags |=
 				mapred_document_error;
 		}
 		else
@@ -328,12 +328,12 @@ void parser_add_object(mapred_parser_t *parser, mapred_kind_t kind)
 			if (global_verbose_flag)
 			{
 				const char *type, *name;
-				XASSERT (newitem->object->kind > 0 && 
+				XASSERT (newitem->object->kind > 0 &&
 						 newitem->object->kind <= MAPRED_MAXKIND);
 
 
 				type = mapred_kind_name[newitem->object->kind];
-				name = newitem->object->name; 
+				name = newitem->object->name;
 				if (name)
 					fprintf(stderr, "    - %s: %s\n", type, name);
 				else
@@ -342,7 +342,7 @@ void parser_add_object(mapred_parser_t *parser, mapred_kind_t kind)
 		}
 	}
 
-	/* 
+	/*
 	 * If 'kind' is 'NO_KIND' then we just add in the current object
 	 * (above) and do not create a new one.  We call it this way once
 	 * at the end to add the last object into the current document.
@@ -434,23 +434,23 @@ void parser_set_table(mapred_parser_t *parser, char *value)
 			switch (parser->current_obj->u.input.type)
 			{
 				case MAPRED_INPUT_TABLE:
-					mapred_parse_error(parser, 
+					mapred_parse_error(parser,
 									   "Duplicate TABLE");
 					return;
 				case MAPRED_INPUT_FILE:
-					mapred_parse_error(parser, 
+					mapred_parse_error(parser,
 									   "FILE is incompatible with TABLE");
 					return;
 				case MAPRED_INPUT_GPFDIST:
-					mapred_parse_error(parser, 
+					mapred_parse_error(parser,
 									   "GPFDIST is incompatible with TABLE");
 					return;
 				case MAPRED_INPUT_QUERY:
-					mapred_parse_error(parser, 
+					mapred_parse_error(parser,
 									   "QUERY is incompatible with TABLE");
 					return;
 				case MAPRED_INPUT_EXEC:
-					mapred_parse_error(parser, 
+					mapred_parse_error(parser,
 									   "GPFDIST is incompatible with TABLE");
 					return;
 				default:
@@ -475,11 +475,11 @@ void parser_set_table(mapred_parser_t *parser, char *value)
 			switch (parser->current_obj->u.output.type)
 			{
 				case MAPRED_OUTPUT_TABLE:
-					mapred_parse_error(parser, 
+					mapred_parse_error(parser,
 									   "Duplicate TABLE");
 					return;
 				case MAPRED_OUTPUT_FILE:
-					mapred_parse_error(parser, 
+					mapred_parse_error(parser,
 									   "FILE is incompatible with TABLE");
 					return;
 				default:
@@ -728,9 +728,9 @@ void parser_set_error_limit(mapred_parser_t *parser, char *value)
 		return;
 	}
 
-	/* 
+	/*
 	 * The parse has already assured that the value consists of a sequence
-	 * of digits, so strtol should convert successfully. 
+	 * of digits, so strtol should convert successfully.
 	 */
 	parser->current_obj->u.input.error_limit = (int) strtol(value, NULL, 10);
 }
@@ -817,7 +817,7 @@ void parser_set_mode(mapred_parser_t *parser, char *value)
 
 void parser_set_file(mapred_parser_t *parser, char *value)
 {
-	/* 
+	/*
 	 * Only applies to OUTPUTS which have a single file.
 	 * INPUTS use parser_begin_files, parser_add_file ...
 	 */
@@ -955,8 +955,8 @@ void parser_set_function(mapred_parser_t *parser, char *value)
 	parser->current_obj->u.function.body = copyscalar(value);
 
 
-	/* 
-	 * The "start_mark" of function body has a line number, but what that line 
+	/*
+	 * The "start_mark" of function body has a line number, but what that line
 	 * number refers to is a bit finicky depending on the nature of the YAML.
 	 * So we take it and adjust it accordingly.
 	 */
@@ -979,8 +979,8 @@ void parser_set_function(mapred_parser_t *parser, char *value)
 }
 
 /*
- * parser_set_library was added to support the "LIBRARY" option in mapreduce 
- * yaml schema version 1.0.0.2.  This is used by C language functions to 
+ * parser_set_library was added to support the "LIBRARY" option in mapreduce
+ * yaml schema version 1.0.0.2.  This is used by C language functions to
  * specify which code library the C function is defined in.
  *
  * - MAP:
@@ -1009,7 +1009,7 @@ void parser_set_library(mapred_parser_t *parser, char *value)
 	}
 	parser->current_obj->u.function.library = copyscalar(value);
 
-	/* 
+	/*
 	 * We will validate that the document version is >= 1.0.0.2
 	 * durring object verification.
 	 */
@@ -1131,7 +1131,7 @@ void parser_begin_ordering(mapred_parser_t *parser)
 	XASSERT(parser->current_obj);
 	XASSERT(parser->current_obj->kind == MAPRED_REDUCER);
 
-	/* 
+	/*
 	 * We will validate that the document version is >= 1.0.0.3
 	 * durring object verification.
 	 */
@@ -1151,7 +1151,7 @@ void parser_add_ordering(mapred_parser_t *parser, char *value)
 	XASSERT(parser->current_obj);
 	XASSERT(parser->current_obj->kind == MAPRED_REDUCER);
 
-	/* 
+	/*
 	 * Validate ordering:
 	 *   In general ordering can be an arbitrary expression so it is
 	 *   difficult to verify easily.  If we need more verification it
@@ -1393,7 +1393,7 @@ void parser_add_column(mapred_parser_t *parser, char *value)
 	XASSERT(parser->current_obj);
 	XASSERT(parser->current_obj->kind == MAPRED_INPUT);
 
-	/* 
+	/*
 	 * Verify the new column
 	 * It should be in one of two forms:
 	 *    1)   <name>
@@ -1445,7 +1445,7 @@ void parser_add_parameter(mapred_parser_t *parser, char *value)
 			parser->current_obj->kind == MAPRED_COMBINER   ||
 			parser->current_obj->kind == MAPRED_FINALIZER);
 
-	/* 
+	/*
 	 * Verify the new parameter
 	 * It should be in one of two forms:
 	 *    1)   <name>
@@ -1497,7 +1497,7 @@ void parser_add_return(mapred_parser_t *parser, char *value)
 			parser->current_obj->kind == MAPRED_COMBINER   ||
 			parser->current_obj->kind == MAPRED_FINALIZER);
 
-	/* 
+	/*
 	 * Verify the new return
 	 * It should be in one of two forms:
 	 *    1)   <name>
@@ -1730,7 +1730,7 @@ void mapred_dump_yaml(mapred_object_t *obj)
 			{
 				mapred_plist_t *plist;
 				printf("      PARAMETERS:\n");
-				for (plist = obj->u.function.parameters; plist; 
+				for (plist = obj->u.function.parameters; plist;
 					 plist = plist->next)
 					printf("        - %s %s\n", plist->name, plist->type);
 			}
@@ -1738,7 +1738,7 @@ void mapred_dump_yaml(mapred_object_t *obj)
 			{
 				mapred_plist_t *plist;
 				printf("      RETURNS:\n");
-				for (plist = obj->u.function.returns; plist; 
+				for (plist = obj->u.function.returns; plist;
 					 plist = plist->next)
 					printf("        - %s %s\n", plist->name, plist->type);
 			}
@@ -1787,16 +1787,16 @@ void mapred_dump_yaml(mapred_object_t *obj)
 			if (obj->name)
 				printf("      NAME:       %s\n", obj->name);
 			if (obj->u.reducer.transition.name)
-				printf("      TRANSITION: %s\n", 
+				printf("      TRANSITION: %s\n",
 					   obj->u.reducer.transition.name);
 			if (obj->u.reducer.combiner.name)
-				printf("      CONSOLIDATE:   %s\n", 
+				printf("      CONSOLIDATE:   %s\n",
 					   obj->u.reducer.combiner.name);
 			if (obj->u.reducer.finalizer.name)
-				printf("      FINALIZE:  %s\n", 
+				printf("      FINALIZE:  %s\n",
 					   obj->u.reducer.finalizer.name);
 			if (obj->u.reducer.initialize)
-				printf("      INITIALIZE: %s\n", 
+				printf("      INITIALIZE: %s\n",
 					   obj->u.reducer.initialize);
 			if (obj->u.reducer.keys)
 			{
@@ -1834,7 +1834,7 @@ void mapred_dump_yaml(mapred_object_t *obj)
 
 		case MAPRED_NO_KIND:
 		default:
-			XRAISE(MAPRED_PARSE_INTERNAL, 
+			XRAISE(MAPRED_PARSE_INTERNAL,
 				   "Unknown object type");
 	}
 }
@@ -1854,13 +1854,13 @@ int mapred_verify_object(mapred_parser_t *parser, mapred_object_t *obj)
 	{
 		case MAPRED_DOCUMENT:
 			
-			/* 
+			/*
 			 * If there is a version on the document then it should have
 			 * been validated by parser_set_version()
 			 */
 			if (!obj->u.document.version)
 			{
-				error = mapred_obj_error(obj, "Missing VERSION", 
+				error = mapred_obj_error(obj, "Missing VERSION",
 										 parser->doc_number);
 			}
 
@@ -1872,13 +1872,13 @@ int mapred_verify_object(mapred_parser_t *parser, mapred_object_t *obj)
 			if (!obj->name)
 				error = mapred_obj_error(obj, "Missing NAME");
 			if (obj->u.input.type == MAPRED_INPUT_NONE)
-				error = mapred_obj_error(obj, 
+				error = mapred_obj_error(obj,
 						  "Missing FILE, GPFDIST, TABLE, QUERY, or EXEC");
 
 			/* set default values */
 			if (error == NO_ERROR)
 			{
-				if (!obj->u.input.columns) 
+				if (!obj->u.input.columns)
 				{
 					obj->u.input.columns = malloc(sizeof(mapred_plist_t));
 					obj->u.input.columns->name = copyscalar("value");
@@ -1921,7 +1921,7 @@ int mapred_verify_object(mapred_parser_t *parser, mapred_object_t *obj)
 			if (obj->u.function.language && !obj->u.function.body)
 				error = mapred_obj_error(obj, "Missing FUNCTION");
 
-			/* 
+			/*
 			 * LIBRARY is required for "C" language functions.
 			 * LIBRARY is invalid for any other language.
 			 *
@@ -1932,20 +1932,20 @@ int mapred_verify_object(mapred_parser_t *parser, mapred_object_t *obj)
 			if (obj->u.function.language)
 			{
 				if (obj->u.function.library)
-				{ 
+				{
 					if (strcasecmp("C", obj->u.function.language))
 					{
 						error = mapred_obj_error(obj, "LIBRARY is invalid for "
 												 "%s LANGUAGE functions",
 												 obj->u.function.language);
 					}
-				} 
+				}
 				else if (!strcasecmp("C", obj->u.function.language))
 				{
 					error = mapred_obj_error(obj, "Missing LIBRARY");
 				}
 
-				/* 
+				/*
 				 * Don't bother filling in default arguments if we already have
 				 * an error.
 				 */
@@ -1983,7 +1983,7 @@ int mapred_verify_object(mapred_parser_t *parser, mapred_object_t *obj)
 							if (!obj->u.function.parameters->next)
 							{
 								error = mapred_obj_error(
-									obj, 
+									obj,
 									"requires at least 2 input parameters [state, arg1, ...]"
 									);
 							}
@@ -1994,7 +1994,7 @@ int mapred_verify_object(mapred_parser_t *parser, mapred_object_t *obj)
 								obj->u.function.parameters->next->next)
 							{
 								error = mapred_obj_error(
-									obj, 
+									obj,
 									"requires exactly 2 input parameters [state1, state2]"
 									);
 							}
@@ -2004,7 +2004,7 @@ int mapred_verify_object(mapred_parser_t *parser, mapred_object_t *obj)
 							if (obj->u.function.parameters->next)
 							{
 								error = mapred_obj_error(
-									obj, 
+									obj,
 									"requires exactly 1 input parameter [state]"
 									);
 							}
@@ -2048,7 +2048,7 @@ int mapred_verify_object(mapred_parser_t *parser, mapred_object_t *obj)
 				/* Set default mode: depends on type of function */
 				if (obj->u.function.mode == MAPRED_MODE_NONE)
 				{
-					if (obj->kind == MAPRED_TRANSITION || 
+					if (obj->kind == MAPRED_TRANSITION ||
 						obj->kind == MAPRED_COMBINER)
 					{
 						obj->u.function.mode = MAPRED_MODE_SINGLE;
@@ -2067,7 +2067,7 @@ int mapred_verify_object(mapred_parser_t *parser, mapred_object_t *obj)
 				error = mapred_obj_error(obj, "Missing NAME");
 			if (!obj->u.reducer.transition.name)
 				error = mapred_obj_error(obj, "Missing TRANSITION");
-			/* 
+			/*
 			 * Will verify that functions are valid for reducer input after we
 			 * have resolved the pointers.
 			 */
@@ -2079,12 +2079,12 @@ int mapred_verify_object(mapred_parser_t *parser, mapred_object_t *obj)
 			 */
 
 			/*
-			 * ORDERING and COMBINER are incompatible 
+			 * ORDERING and COMBINER are incompatible
 			 */
 			if (obj->u.reducer.ordering != NULL &&
 				obj->u.reducer.combiner.name)
 			{
-				error = mapred_obj_error(obj, 
+				error = mapred_obj_error(obj,
 										 "REDUCERS cannot specify both a COMBINER "
 										 "function and an ORDERING specification");
 			}
@@ -2113,13 +2113,13 @@ int mapred_verify_object(mapred_parser_t *parser, mapred_object_t *obj)
 				error = mapred_obj_error(obj, "Missing SOURCE");
 			
 			/* IDENTITY Mappers and Reducers */
-			if (obj->u.task.mapper.name && 
+			if (obj->u.task.mapper.name &&
 				!strcasecmp("IDENTITY", obj->u.task.mapper.name))
 			{
 				free(obj->u.task.mapper.name);
 				obj->u.task.mapper.name = NULL;
 			}
-			if (obj->u.task.reducer.name && 
+			if (obj->u.task.reducer.name &&
 				!strcasecmp("IDENTITY", obj->u.task.reducer.name))
 			{
 				free(obj->u.task.reducer.name);
@@ -2127,7 +2127,7 @@ int mapred_verify_object(mapred_parser_t *parser, mapred_object_t *obj)
 			}
 
 			/* STDOUT Output */
-			if (obj->u.task.output.name && 
+			if (obj->u.task.output.name &&
 				!strcasecmp("STDOUT", obj->u.task.output.name))
 			{
 				free(obj->u.task.output.name);
