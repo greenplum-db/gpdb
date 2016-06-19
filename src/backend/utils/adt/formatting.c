@@ -90,6 +90,7 @@
 #include "utils/numeric.h"
 #include "utils/pg_locale.h"
 #include "mb/pg_wchar.h"
+#include "fmgr.h"
 
 #ifndef _
 #define _(x)	gettext(x)
@@ -3301,38 +3302,46 @@ to_date(PG_FUNCTION_ARGS)
  * TO_DATE_VALID
  *	Make Date from date_str which is formated at argument 'fmt'
  *	Validate the input date afterwards
+ *
+ *	The resulting date is made a string again, and compared to
+ *	the input - only if both dates match, it was a valid date
+ *	in the beginning
  * ----------
  */
 Datum
 to_date_valid(PG_FUNCTION_ARGS)
 {
 	text		*date_txt = PG_GETARG_TEXT_P(0);
-	DateADT		result;
+	Datum		result;
 	Datum		validate;
-	char		*result_out;
-	Timestamp	validate_in;
+	Datum		result_out;
+	Datum		validate_in;
+	FunctionCallInfoData fcinfo2;
 
 	/* call the original to_date() function and receive the result */
-	result = DirectFunctionCall2(to_date, PG_GETARG_POINTER(0), PG_GETARG_POINTER(1));
-	if ((Pointer *)result == NULL)
-	{
-		/* if NULL, is this an invalid date? */
-		PG_RETURN_NULL();
-	}
+	result = DirectFunctionCall2(to_date, PG_GETARG_DATUM(0), PG_GETARG_DATUM(1));
 
-	/* transform the date back using the original format */
+	/* transform the date back to a timestamp, and then a string, using the original format */
 	result_out = DirectFunctionCall1(date_out, result);
 	validate_in = DirectFunctionCall3(timestamp_in, result_out, ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
 
 	/* compare the two dates */
-	validate = DirectFunctionCall2(timestamp_to_char, TimestampGetDatum(validate_in), PG_GETARG_POINTER(1));
+	/* DirectFunctionCallX will throw an error if the result is NULL */
+	InitFunctionCallInfoData(fcinfo2, NULL, 2, NULL, NULL);
+
+	fcinfo2.arg[0] = validate_in;
+	fcinfo2.arg[1] = PG_GETARG_DATUM(1);
+	fcinfo2.argnull[0] = false;
+	fcinfo2.argnull[1] = false;
+
+	validate = timestamp_to_char(&fcinfo2);
 	if ((Pointer *)validate == NULL)
 	{
 		PG_RETURN_NULL();
 	}
 	else
 	{
-		if (strcmp(text_to_cstring(DatumGetCString(validate)), text_to_cstring(date_txt)) != 0)
+		if (strcmp(text_to_cstring((text *)validate), text_to_cstring(date_txt)) != 0)
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),

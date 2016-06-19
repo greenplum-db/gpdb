@@ -57,6 +57,30 @@ select to_date('2016/02/29', 'YYYY/MM/DD');
  02-29-2016
 (1 row)
 
+select to_date('2016/02/27', NULL);
+ to_date 
+---------
+ 
+(1 row)
+
+select to_date('2016/02/31', NULL);
+ to_date 
+---------
+ 
+(1 row)
+
+select to_date(NULL, 'YYYY/MM/DD');
+ to_date 
+---------
+ 
+(1 row)
+
+select to_date(NULL, NULL);
+ to_date 
+---------
+ 
+(1 row)
+
 -- test to_date_valid()
 select to_date_valid('2016/01/15', 'YYYY/MM/DD');
  to_date_valid 
@@ -92,5 +116,29 @@ select to_date_valid('2016/02/29', 'YYYY/MM/DD');
  to_date_valid 
 ---------------
  02-29-2016
+(1 row)
+
+select to_date_valid('2016/02/27', NULL);
+ to_date_valid 
+---------------
+ 
+(1 row)
+
+select to_date_valid('2016/02/31', NULL);
+ to_date_valid 
+---------------
+ 
+(1 row)
+
+select to_date_valid(NULL, 'YYYY/MM/DD');
+ to_date_valid 
+---------------
+ 
+(1 row)
+
+select to_date_valid(NULL, NULL);
+ to_date_valid 
+---------------
+ 
 (1 row)
 

@@ -12,6 +12,10 @@ select to_date('2016-02-31', 'YYYY-MM-DD');
 select to_date('15-01-2016', 'DD-MM-YYYY');
 select to_date('31-02-2016', 'DD-MM-YYYY');
 select to_date('2016/02/29', 'YYYY/MM/DD');
+select to_date('2016/02/27', NULL);
+select to_date('2016/02/31', NULL);
+select to_date(NULL, 'YYYY/MM/DD');
+select to_date(NULL, NULL);
 
 -- test to_date_valid()
 select to_date_valid('2016/01/15', 'YYYY/MM/DD');
@@ -22,3 +26,7 @@ select to_date_valid('2016-02-31', 'YYYY-MM-DD');
 select to_date_valid('15-01-2016', 'DD-MM-YYYY');
 select to_date_valid('31-02-2016', 'DD-MM-YYYY');
 select to_date_valid('2016/02/29', 'YYYY/MM/DD');
+select to_date_valid('2016/02/27', NULL);
+select to_date_valid('2016/02/31', NULL);
+select to_date_valid(NULL, 'YYYY/MM/DD');
+select to_date_valid(NULL, NULL);

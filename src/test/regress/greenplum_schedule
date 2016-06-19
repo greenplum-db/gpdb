@@ -131,4 +131,8 @@ test: uaocs_compaction/threshold
 test: uaocs_compaction/index_stats
 test: uaocs_compaction/index
 test: uaocs_compaction/drop_column
+
+# test to_date() and to_date_valid()
+test: to_date
+
 # end of tests
