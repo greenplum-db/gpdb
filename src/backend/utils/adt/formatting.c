@@ -3312,6 +3312,7 @@ Datum
 to_date_valid(PG_FUNCTION_ARGS)
 {
 	text		*date_txt = PG_GETARG_TEXT_P(0);
+	text		*fmt = PG_GETARG_TEXT_P(1);
 	Datum		result;
 	Datum		validate;
 	Datum		result_out;
@@ -3319,7 +3320,7 @@ to_date_valid(PG_FUNCTION_ARGS)
 	FunctionCallInfoData fcinfo2;
 
 	/* call the original to_date() function and receive the result */
-	result = DirectFunctionCall2(to_date, PG_GETARG_DATUM(0), PG_GETARG_DATUM(1));
+	result = DirectFunctionCall2(to_date, PointerGetDatum(date_txt), PointerGetDatum(fmt));
 
 	/* transform the date back to a timestamp, and then a string, using the original format */
 	result_out = DirectFunctionCall1(date_out, result);
@@ -3335,13 +3336,13 @@ to_date_valid(PG_FUNCTION_ARGS)
 	fcinfo2.argnull[1] = false;
 
 	validate = timestamp_to_char(&fcinfo2);
-	if ((Pointer *)validate == NULL)
+	if (fcinfo2.isnull)
 	{
 		PG_RETURN_NULL();
 	}
 	else
 	{
-		if (strcmp(text_to_cstring((text *)validate), text_to_cstring(date_txt)) != 0)
+		if (DatumGetBool(DirectFunctionCall2(textne, PointerGetDatum((text *)validate), PointerGetDatum(date_txt))))
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
