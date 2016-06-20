@@ -606,6 +606,9 @@ TEST_F(S3KeyReaderTest, MTReadWithGPDBCancel) {
     // QueryCancelPending in ChunkBuffer::read will always be hit and throw.
 
     EXPECT_THROW(keyReader->read(buffer, 127), std::runtime_error);
+
+    // be careful to reset it, otherwise following tests will suck.
+    QueryCancelPending = false;
 }
 
 TEST_F(S3KeyReaderTest, MTReadWithHundredsOfThreadsAndSignalCancel) {
@@ -630,4 +633,7 @@ TEST_F(S3KeyReaderTest, MTReadWithHundredsOfThreadsAndSignalCancel) {
     QueryCancelPending = true;
 
     EXPECT_THROW(keyReader->read(buffer, 31), std::runtime_error);
+
+    // be careful to reset it, otherwise following tests will suck.
+    QueryCancelPending = false;
 }

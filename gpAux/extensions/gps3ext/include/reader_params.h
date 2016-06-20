@@ -90,9 +90,9 @@ class ReaderParams {
     string urlToLoad;  // original url to read/write.
     string keyUrl;     // key url in s3 bucket.
     string region;
-    uint64_t keySize;     // key/file size.
-    uint64_t chunkSize;   // chunk size
-    uint8_t numOfChunks;  // number of chunks(threads).
+    uint64_t keySize;      // key/file size.
+    uint64_t chunkSize;    // chunk size
+    uint64_t numOfChunks;  // number of chunks(threads).
     S3Credential cred;
     int segId;
     int segNum;

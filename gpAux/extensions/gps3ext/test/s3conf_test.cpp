@@ -23,7 +23,7 @@ TEST(Config, Basic) {
     EXPECT_EQ(6, s3ext_threadnum);
     EXPECT_EQ(64 * 1024 * 1024 + 1, s3ext_chunksize);
 
-    EXPECT_EQ(EXT_DEBUG, s3ext_loglevel);
+    EXPECT_EQ(EXT_INFO, s3ext_loglevel);
     EXPECT_EQ(STDERR_LOG, s3ext_logtype);
 
     EXPECT_EQ(1111, s3ext_logserverport);

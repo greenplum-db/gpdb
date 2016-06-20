@@ -149,6 +149,17 @@ TEST(Common, UrlOptions) {
                  std::runtime_error);
 }
 
+TEST(Common, UrlOptionsCPP) {
+    EXPECT_EQ("secret_test",
+              get_opt_s3(string("s3://neverland.amazonaws.com secret=secret_test "
+                                "accessid=\".\\!@#$%^&*()DFGHJK\" chunksize=3456789"),
+                         "secret"));
+
+    EXPECT_EQ("", get_opt_s3(string("s3://neverland.amazonaws.com secret=secret_test "
+                                    "accessid=\".\\!@#$%^&*()DFGHJK\" chunksize=3456789"),
+                             "secret1"));
+}
+
 TEST(Common, TruncateOptions) {
     char *truncated = NULL;
 
@@ -184,6 +195,24 @@ TEST(Common, TruncateOptions) {
         free(truncated);
         truncated = NULL;
     }
+}
+
+TEST(Common, TruncateOptionsCPP) {
+    string url = "s3://neverland.amazonaws.com secret=secret_test";
+    EXPECT_EQ("s3://neverland.amazonaws.com", truncate_options(url));
+
+    EXPECT_EQ(
+        "s3://neverland.amazonaws.com",
+        truncate_options(string("s3://neverland.amazonaws.com accessid=\".\\!@#$%^&*()DFGHJK\"")));
+
+    EXPECT_EQ("s3://neverland.amazonaws.com",
+              truncate_options(string("s3://neverland.amazonaws.com secret=secret_test "
+                                      "accessid=\".\\!@#$%^&*()DFGHJK\" chunksize=3456789")));
+
+    EXPECT_EQ("s3://neverland.amazonaws.com",
+              truncate_options(string("s3://neverland.amazonaws.com secret=secret_test "
+                                      "blah= accessid=\".\\!@#$%^&*()DFGHJK\" "
+                                      "chunksize=3456789 KingOfTheWorld=sanpang")));
 }
 
 TEST(Common, EncodeQuery) {

@@ -53,33 +53,34 @@ void check_essential_config() {
  * invoked by GPDB, be careful with C++ exceptions.
  */
 Datum s3_import(PG_FUNCTION_ARGS) {
-    S3Reader *s3reader = NULL;
-
     /* Must be called via the external table format manager */
     if (!CALLED_AS_EXTPROTOCOL(fcinfo))
         elog(ERROR, "extprotocol_import: not called by external protocol manager");
 
     /* Get our internal description of the protocol */
-    s3reader = (S3Reader *)EXTPROTOCOL_GET_USER_CTX(fcinfo);
+    GPReader *gpreader = (GPReader *)EXTPROTOCOL_GET_USER_CTX(fcinfo);
 
     /* last call. destroy reader */
     if (EXTPROTOCOL_IS_LAST_CALL(fcinfo)) {
         thread_cleanup();
 
-        if (!reader_cleanup(&s3reader)) {
+        if (!reader_cleanup(&gpreader)) {
             ereport(ERROR, (0, errmsg("Failed to cleanup S3 extention")));
         }
+
+        EXTPROTOCOL_SET_USER_CTX(fcinfo, NULL);
+
         PG_RETURN_INT32(0);
     }
 
     /* first call. do any desired init */
-    if (s3reader == NULL) {
+    if (gpreader == NULL) {
         const char *url_with_options = EXTPROTOCOL_GET_URL(fcinfo);
 
         thread_setup();
 
-        s3reader = reader_init(url_with_options);
-        if (!s3reader) {
+        gpreader = reader_init(url_with_options);
+        if (!gpreader) {
             ereport(ERROR, (0, errmsg("Failed to init S3 extension, segid = %d, "
                                       "segnum = %d, please check your "
                                       "configurations and net connection",
@@ -88,15 +89,15 @@ Datum s3_import(PG_FUNCTION_ARGS) {
 
         check_essential_config();
 
-        EXTPROTOCOL_SET_USER_CTX(fcinfo, s3reader);
+        EXTPROTOCOL_SET_USER_CTX(fcinfo, gpreader);
     }
 
     char *data_buf = EXTPROTOCOL_GET_DATABUF(fcinfo);
-    int data_len = EXTPROTOCOL_GET_DATALEN(fcinfo);
-    if (!reader_transfer_data(s3reader, data_buf, data_len)) {
+    int32 data_len = EXTPROTOCOL_GET_DATALEN(fcinfo);
+
+    if (!reader_transfer_data(gpreader, data_buf, data_len)) {
         ereport(ERROR, (0, errmsg("s3_import: could not read data")));
     }
-
     PG_RETURN_INT32(data_len);
 }
 

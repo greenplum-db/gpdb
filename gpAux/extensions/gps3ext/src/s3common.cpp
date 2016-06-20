@@ -94,7 +94,7 @@ void SignRequestV4(const string &method, HTTPHeaders *h, const string &orig_regi
                    SHA256_DIGEST_LENGTH);
 
     stringstream signature_header;
-    signature_header << "AWS4-HMAC-SHA256 Credential=" << cred.keyid << "/" << date_str << "/"
+    signature_header << "AWS4-HMAC-SHA256 Credential=" << cred.accessID << "/" << date_str << "/"
                      << region << "/"
                      << "s3"
                      << "/aws4_request,SignedHeaders=" << signed_headers
@@ -151,6 +151,27 @@ char *get_opt_s3(const char *url, const char *key) {
     return value;
 }
 
+// a C++ version of above function
+string get_opt_s3(const string &options, const string &key) {
+    string keyStr = " ";
+    keyStr += key;
+    keyStr += "=";
+
+    size_t beginIndex = options.find(keyStr);
+    if (beginIndex == options.npos) {
+        return "";
+    } else {
+        beginIndex += keyStr.length();
+        size_t endIndex = options.find(" ", beginIndex);
+
+        if (endIndex == options.npos) {
+            return options.substr(beginIndex);
+        } else {
+            return options.substr(beginIndex, endIndex - beginIndex);
+        }
+    }
+}
+
 // truncate_options truncates substring after first whitespace.
 // It is caller's responsibility to free returned memory.
 char *truncate_options(const char *url_with_options) {
@@ -162,4 +183,14 @@ char *truncate_options(const char *url_with_options) {
     CHECK_OR_DIE_MSG(url != NULL, "Can not allocate %d bytes memory for value string", url_len);
 
     return url;
+}
+
+// a C++ version of above function
+string truncate_options(const string &urlWithOptions) {
+    size_t firstSpace = urlWithOptions.find(" ");
+    if (firstSpace == urlWithOptions.npos) {
+        return urlWithOptions;
+    } else {
+        return urlWithOptions.substr(0, firstSpace);
+    }
 }

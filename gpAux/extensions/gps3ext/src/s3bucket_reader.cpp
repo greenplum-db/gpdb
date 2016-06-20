@@ -22,6 +22,8 @@ S3BucketReader::S3BucketReader() : Reader() {
 
     this->s3interface = NULL;
     this->upstreamReader = NULL;
+
+    this->numOfChunks = 0;
     this->chunkSize = -1;
 
     this->segId = -1;
@@ -39,6 +41,8 @@ void S3BucketReader::open(const ReaderParams &params) {
     this->segId = params.getSegId();
     this->segNum = params.getSegNum();
     this->cred = params.getCred();
+    this->chunkSize = params.getChunkSize();
+    this->numOfChunks = params.getNumOfChunks();
 
     this->validateURL();
     this->keyList = this->listBucketWithRetry(3);
@@ -62,6 +66,8 @@ ReaderParams S3BucketReader::getReaderParams(BucketContent *key) {
     params.setRegion(this->region);
     params.setKeySize(key->getSize());
     params.setChunkSize(this->chunkSize);
+    params.setNumOfChunks(this->numOfChunks);
+
     S3DEBUG("key: %s, size: %" PRIu64, params.getKeyUrl().c_str(), params.getKeySize());
     return params;
 }
@@ -125,7 +131,7 @@ ListBucketResult *S3BucketReader::listBucketWithRetry(int retries) {
             return result;
         }
 
-        S3INFO("Can't get keylist from bucket %s, retrying ...", this->bucket.c_str());
+        S3INFO("Can't get keylist from bucket '%s', retrying ...", this->bucket.c_str());
     }
 
     S3ERROR("Failed to list bucket for URL: %s", this->url.c_str());

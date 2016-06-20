@@ -1,6 +1,9 @@
 #ifndef INCLUDE_S3INTERFACE_H_
 #define INCLUDE_S3INTERFACE_H_
 
+#include <libxml/parser.h>
+#include <libxml/tree.h>
+
 #include "restful_service.h"
 
 #define S3_MAGIC_BYTES_NUM 4

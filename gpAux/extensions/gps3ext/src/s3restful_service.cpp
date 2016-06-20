@@ -14,6 +14,7 @@
 using namespace std;
 
 S3RESTfulService::S3RESTfulService() {
+    curl_global_init(CURL_GLOBAL_ALL);
 }
 
 S3RESTfulService::~S3RESTfulService() {

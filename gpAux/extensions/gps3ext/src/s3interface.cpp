@@ -35,9 +35,12 @@ class XMLContextHolder {
 };
 
 S3Service::S3Service() : service(NULL) {
+    xmlInitParser();
 }
 
 S3Service::~S3Service() {
+    // Cleanup function for the XML library.
+    xmlCleanupParser();
 }
 
 // S3 requires query parameters specified alphabetically.
@@ -286,7 +289,6 @@ uint64_t S3Service::fetchData(uint64_t offset, char *data, uint64_t len, const s
 
     char rangeBuf[128] = {0};
     snprintf(rangeBuf, 128, "bytes=%" PRIu64 "-%" PRIu64, offset, offset + len - 1);
-
     headers.Add(HOST, parser.Host());
     headers.Add(RANGE, rangeBuf);
     headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
@@ -305,7 +307,10 @@ uint64_t S3Service::fetchData(uint64_t offset, char *data, uint64_t len, const s
         return responseData.size();
     } else if (resp.getStatus() == RESPONSE_ERROR) {
         xmlParserCtxtPtr xmlptr = getXMLContext(resp);
-        CHECK_OR_DIE(checkXMLMessage(xmlptr));
+        if (!checkXMLMessage(xmlptr)) {
+            S3ERROR("Failed to check XML error message.");
+        }
+        return 0;
     } else {
         S3ERROR("Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
                 resp.getMessage().c_str());

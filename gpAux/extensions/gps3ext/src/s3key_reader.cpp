@@ -138,7 +138,9 @@ uint64_t ChunkBuffer::fill() {
         } else {
             S3DEBUG("Got %" PRIu64 " bytes from S3", readLen);
         }
-    } else {
+    }
+
+    if (offset + leftLen >= offsetMgr.getKeySize()) {
         readLen = 0;  // Nothing to read, EOF
         S3DEBUG("Reached the end of file");
         this->eof = true;

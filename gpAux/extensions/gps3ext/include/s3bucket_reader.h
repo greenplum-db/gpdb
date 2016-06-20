@@ -28,7 +28,27 @@ class S3BucketReader : public Reader {
     }
 
     void validateURL();
+    void validateURL(const string &url) {
+        this->url = url;
+        validateURL();
+    };
+
     ListBucketResult *listBucketWithRetry(int retries);
+
+    // for test only
+    ListBucketResult *getKeyList() {
+        return keyList;
+    }
+
+    const string &getRegion() {
+        return region;
+    }
+    const string &getBucket() {
+        return bucket;
+    }
+    const string &getPrefix() {
+        return prefix;
+    }
 
    protected:
     // Get URL for a S3 object/file.
@@ -38,6 +58,7 @@ class S3BucketReader : public Reader {
     int segId;   // segment id
     int segNum;  // total number of segments
     int chunkSize;
+    int numOfChunks;
 
     string url;
     string schema;
