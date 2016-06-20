@@ -88,7 +88,31 @@ class FilerepE2EScenarioTestCase(ScenarioTestCase, MPPTestCase):
 
     def test_full_primary(self):
         self.do_test('full', 'primary')
-    
+
+    def test_flat_file_resync(self):
+
+        # This should cause the md5 check to fail and trigger a resync of the flat files
+        test_case1 = []
+        test_case1.append(("mpp.gpdb.tests.storage.filerep_end_to_end.FilerepTestCase.create_file_in_mirr_datadir", [0, 'pg_distributedlog/FFFF']))
+        self.test_case_scenario.append(test_case1)
+
+        test_case1 = []
+        test_case1.append("mpp.gpdb.tests.storage.filerep_end_to_end.FilerepTestCase.sleep")
+        self.test_case_scenario.append(test_case1)
+
+        test_case1 = []
+        test_case1.append("mpp.gpdb.tests.storage.filerep_end_to_end.FilerepTestCase.stop_start_validate")
+        self.test_case_scenario.append(test_case1)
+
+        test_case1 = []
+        test_case1.append(("mpp.gpdb.tests.storage.filerep_end_to_end.FilerepTestCase.verify_timestamp_newer", [0, 'pg_distributedlog/0000', 'pg_distributedlog/FFFF']))
+        self.test_case_scenario.append(test_case1)
+
+        test_case1 = []
+        test_case1.append(("mpp.gpdb.tests.storage.filerep_end_to_end.FilerepTestCase.remove_file_in_mirr_datadir", [0, 'pg_distributedlog/FFFF']))
+        self.test_case_scenario.append(test_case1)
+
+
     def do_test(self,rec_mode,fail_type):
         '''
         @rec_mode: recovery mode, can be full or incremental

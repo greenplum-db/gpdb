@@ -1105,6 +1105,34 @@ FileRepAckPrimary_RunConsumer(void)
 								FileRepStatusToString[mirrorStatus])));	
 
 				break;
+
+			case FileRepOperationStartSlruChecksum:
+				mirrorStatus =
+					fileRepMessageHeader->fileRepOperationDescription.startChecksum.mirrorStatus;
+
+				if (Debug_filerep_print)
+				{
+					ereport(LOG,
+						(errmsg("ack start SLRU checksum: status = '%s', directory = '%s' ",
+								FileRepStatusToString[mirrorStatus],
+								fileRepMessageHeader->fileRepIdentifier.fileRepFlatFileIdentifier.directorySimpleName)));
+				}
+
+				break;
+
+			case FileRepOperationVerifySlruDirectoryChecksum:
+				mirrorStatus =
+					fileRepMessageHeader->fileRepOperationDescription.verifyDirectoryChecksum.mirrorStatus;
+
+				if (Debug_filerep_print)
+				{
+					ereport(LOG,
+						(errmsg("ack verify SLRU directory checksum: status = '%s', directory = '%s' ",
+								FileRepStatusToString[mirrorStatus],
+								fileRepMessageHeader->fileRepIdentifier.fileRepFlatFileIdentifier.directorySimpleName)));
+				}
+
+				break;
 				
 			default:
 				break;

@@ -15,13 +15,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import datetime
 import fileinput
 import re
+import time
 import unittest2 as unittest
 import socket
 import os, string, sys
 
 import tinctest
+from gppylib.commands.base import Command, REMOTE
 from tinctest.lib import local_path, Gpdiff, run_shell_command
 from mpp.models import MPPTestCase
 from mpp.lib.PSQL import PSQL
@@ -50,6 +53,41 @@ class FilerepTestCase(MPPTestCase):
         self.gpstart = GpStart()
         self.gpstop = GpStop()
         super(FilerepTestCase,self).__init__(methodName)
+
+    def sleep(self, seconds=60):
+        time.sleep(seconds)
+
+    def create_file_in_mirr_datadir(self, content, filename):
+        dbid = self.config.get_dbid(content=content, seg_role='m')
+        host, datadir = self.config.get_host_and_datadir_of_segment(dbid=dbid)
+        file_path = os.path.join(datadir, filename)
+        cmd = Command('create a file', 'touch %s' % file_path, ctxt=REMOTE, remoteHost=host)
+        cmd.run(validateAfter=True)
+
+    def remove_file_in_mirr_datadir(self, content, filename):
+        dbid = self.config.get_dbid(content=content, seg_role='m')
+        host, datadir = self.config.get_host_and_datadir_of_segment(dbid=dbid)
+        file_path = os.path.join(datadir, filename)
+        cmd = Command('remove a file', 'rm %s' % file_path, ctxt=REMOTE, remoteHost=host)
+        cmd.run(validateAfter=True)
+
+    def get_timestamp_of_file_in_mirr_datadir(self, content, filename):
+        dbid = self.config.get_dbid(content=content, seg_role='m')
+        host, datadir = self.config.get_host_and_datadir_of_segment(dbid=dbid)
+        file_path = os.path.join(datadir, filename)
+        cmd = Command('check timestamp', "ls -l %s" %
+                      file_path, ctxt=REMOTE, remoteHost=host)
+        cmd.run(validateAfter=True)
+        res = cmd.get_results().stdout.strip()
+        return ''.join(res.split()[5:8])
+
+    def verify_timestamp_newer(self, content, filename1, filename2):
+        ts1 = datetime.datetime.strptime(
+              self.get_timestamp_of_file_in_mirr_datadir(content, filename1), '%b%d%H:%M')
+        ts2 = datetime.datetime.strptime(
+              self.get_timestamp_of_file_in_mirr_datadir(content, filename2), '%b%d%H:%M')
+        if ts1 <= ts2:
+            raise Exception('Timestamp of %s not newer than %s' % (filename1, filename2))
 
     def handle_ext_cases(self,file):
         """

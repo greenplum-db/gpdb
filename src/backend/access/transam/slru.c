@@ -57,8 +57,10 @@
 #include "storage/fd.h"
 #include "storage/shmem.h"
 #include "miscadmin.h"
+#include "cdb/cdbfilerepprimary.h"
 #include "cdb/cdbmirroredflatfile.h"
 #include "postmaster/primary_mirror_mode.h"
+#include "libpq/md5.h"
 
 /*
  * Define segment size.  A page is the same BLCKSZ as is used everywhere
@@ -162,6 +164,11 @@ static bool SlruPhysicalWritePage(SlruCtl ctl, int pageno, int slotno,
 					  SlruFlush fdata);
 static void SlruReportIOError(SlruCtl ctl, int pageno, TransactionId xid);
 static int	SlruSelectLRUPage(SlruCtl ctl, int pageno);
+static int SlruRecoverMirrorDir(char *dirName);
+static int SlruVerifyDirectoryChecksum(char *fullDirName);
+static bool isSlruFileName(const char *fileName);
+static int SlruComputeChecksum(char *filePath, char *md5);
+static int SlruCopyDirectory(char *dirName, char *fullDirName);
 
 
 /*
@@ -1290,8 +1297,7 @@ SlruScanDirectory(SlruCtl ctl, int cutoffPage, bool doDeletions)
 	cldir = AllocateDir(dir);
 	while ((clde = ReadDir(cldir, dir)) != NULL)
 	{
-		if (strlen(clde->d_name) == 4 &&
-			strspn(clde->d_name, "0123456789ABCDEF") == 4)
+		if (isSlruFileName(clde->d_name))
 		{
 			segno = (int) strtol(clde->d_name, NULL, 16);
 			segpage = segno * SLRU_PAGES_PER_SEGMENT;
@@ -1399,57 +1405,10 @@ SimpleLruPageExists(SlruCtl ctl, int pageno)
 	return false;	// Should not reach here.
 }
 
-static int
-SlruRecoverMirrorDir(char *slru_dir)
-{
-	DIR				*cldir;
-	struct dirent	*clde;
-	int				retval = 0;
-	
-	char		*dir = NULL;
-	char		*mirrorDir = NULL;
-
-	int 		counter = 0;
-
-	if (isTxnDir(slru_dir))
-        {
-                dir = makeRelativeToTxnFilespace(slru_dir);
-                mirrorDir = makeRelativeToPeerTxnFilespace(slru_dir);
-        }
-        else
-        {
-                dir = (char*)palloc(MAXPGPATH);
-                strncpy(dir, slru_dir, MAXPGPATH);
-                mirrorDir = (char*)palloc(MAXPGPATH);
-                strncpy(mirrorDir, slru_dir, MAXPGPATH);
-        }
-	
-	cldir = AllocateDir(dir);
-	while ((clde = ReadDir(cldir, dir)) != NULL) {
-		if (strlen(clde->d_name) == 4 &&
-			strspn(clde->d_name, "0123456789ABCDEF") == 4) {
-			
-			retval = MirrorFlatFile(slru_dir, clde->d_name);
-			
-			if (retval != 0)
-				break;
-			
-		}
-		counter++;
-
-		if (counter % log_count_recovered_files_batch == 0)
-		{
-			elog(LOG, "completed recovering %d files", counter);
-		}
-	}
-	elog(LOG, "completed recovering %d files", counter);
-	FreeDir(cldir);
-
-	pfree(dir);
-	pfree(mirrorDir);	
-	return retval;
-}
-
+/*
+ * This externally visible function will copy several directories from the
+ * primary segment to the mirror segment, if needed.
+ */
 int
 SlruRecoverMirror(void)
 {
@@ -1459,34 +1418,301 @@ SlruRecoverMirror(void)
 	retval = SlruRecoverMirrorDir(CLOG_DIR);
 
 	if (retval != 0)
-		return retval;	
-	
+		return retval;
+
 	elog(LOG, "recovering %s", DISTRIBUTEDLOG_DIR);
 	retval = SlruRecoverMirrorDir(DISTRIBUTEDLOG_DIR);
 
 	if (retval != 0)
-		return retval;	
-	
+		return retval;
+
 	elog(LOG, "recovering %s", DISTRIBUTEDXIDMAP_DIR);
 	retval = SlruRecoverMirrorDir(DISTRIBUTEDXIDMAP_DIR);
 
 	if (retval != 0)
-		return retval;	
-	
+		return retval;
+
 	elog(LOG, "recovering %s", MULTIXACT_MEMBERS_DIR);
 	retval = SlruRecoverMirrorDir(MULTIXACT_MEMBERS_DIR);
 
 	if (retval != 0)
-		return retval;	
-	
+		return retval;
+
 	elog(LOG, "recovering %s", MULTIXACT_OFFSETS_DIR);
 	retval = SlruRecoverMirrorDir(MULTIXACT_OFFSETS_DIR);
 
 	if (retval != 0)
-		return retval;	
-	
+		return retval;
+
 	elog(LOG, "recovering %s", SUBTRANS_DIR);
 	retval = SlruRecoverMirrorDir(SUBTRANS_DIR);
 
+	return retval;
+}
+
+/*
+ * This function will check if the checksum of all the files in 'dirName' match
+ * with those on the mirror and transfer the files if the checksums don't match.
+ */
+static int
+SlruRecoverMirrorDir(char *dirName)
+{
+	char *fullDirName = NULL;
+	int	 retval = STATUS_OK;
+
+	if (isTxnDir(dirName))
+	{
+		fullDirName = makeRelativeToTxnFilespace(dirName);
+	}
+	else
+	{
+		fullDirName = (char*)palloc(MAXPGPATH);
+		strncpy(fullDirName, dirName, MAXPGPATH);
+	}
+
+	retval = SlruVerifyDirectoryChecksum(fullDirName);
+
+	/*
+	 * If any of the checksums mismatched, we will copy all files in the
+	 * directory from the primary to the mirror
+	 */
+	if (retval != STATUS_OK)
+		retval = SlruCopyDirectory(dirName, fullDirName);
+
+	pfree(fullDirName);
+
+	return retval;
+}
+
+/*
+ * Verify checksum of a primary directory wrt. to the corresponding mirror
+ * directory.
+ */
+static int
+SlruVerifyDirectoryChecksum(char *fullDirName)
+{
+	char checksumFilePath[MAXPGPATH];
+	char md5[SLRU_MD5_BUFLEN] = {0};
+
+	snprintf(checksumFilePath, sizeof(checksumFilePath), "%s/%s", fullDirName,
+			 SLRU_CHECKSUM_FILENAME);
+
+	/*
+	 * We generate the checksum file and then compute its checksum in an
+	 * SlruComputeChecksum() call.  We keep the checksum file so that if needed
+	 * support can diff the checksum files at the primary and the mirror to see
+	 * which file(s) were not in sync.
+	 */
+	return 	FileRepPrimary_MirrorStartChecksum(
+				FileRep_GetFlatFileIdentifier(fullDirName, SLRU_CHECKSUM_FILENAME)) ||
+			SlruCreateChecksumFile(fullDirName) ||
+			SlruComputeChecksum(checksumFilePath, md5) ||
+			FileRepPrimary_MirrorVerifyDirectoryChecksum(
+				FileRep_GetFlatFileIdentifier(fullDirName, SLRU_CHECKSUM_FILENAME), md5);
+}
+
+/*
+ * Create a checksum file called 'slru_checksum_file' in the directory
+ * specified by 'fullDirName'.
+ */
+int
+SlruCreateChecksumFile(const char *fullDirName)
+{
+	DIR			  *slruDir = NULL;
+	struct dirent *dirEntry;
+	char 		  *fileName;
+	char		   filePath[MAXPGPATH];
+	char		   checksumFilePath[MAXPGPATH];
+	File		   checksumFileHandle = 0;
+	int			   retval = 0;
+	char		   buf[SLRU_CKSUM_LINE_LEN];
+
+	snprintf(checksumFilePath, sizeof(checksumFilePath), "%s/%s", fullDirName,
+			 SLRU_CHECKSUM_FILENAME);
+
+	checksumFileHandle = PathNameOpenFile(checksumFilePath, O_CREAT | O_TRUNC | O_WRONLY,
+										  S_IRUSR | S_IWUSR);
+	if (checksumFileHandle < 0)
+	{
+		ereport(WARNING,
+				(errcode_for_file_access(),
+				 errmsg("could not open file \"%s\": %m", checksumFilePath)));
+		retval = STATUS_ERROR;
+		goto cleanup;
+	}
+
+	slruDir = AllocateDir(fullDirName);
+	if (!slruDir)
+	{
+		retval = STATUS_ERROR;
+		goto cleanup;
+	}
+
+	while ((dirEntry = ReadDir(slruDir, fullDirName)) != NULL)
+	{
+		char  md5[SLRU_MD5_BUFLEN] = {0};
+
+		fileName = dirEntry->d_name;
+
+		if (isSlruFileName(fileName))
+		{
+			snprintf(filePath, sizeof(filePath), "%s/%s", fullDirName, fileName);
+
+			if (SlruComputeChecksum(filePath, md5) < 0)
+			{
+				ereport(LOG,
+						(errmsg("could not compute checksum for file %s: %m",
+								filePath)));
+				retval = STATUS_ERROR;
+				goto cleanup;
+			}
+
+			snprintf(buf, sizeof(buf), "%s: %s\n", fileName, md5);
+
+			if (FileWrite(checksumFileHandle, buf, strlen(buf)) < 0)
+			{
+				ereport(LOG,
+						(errmsg("could not write to checksum file %s: %m",
+								checksumFilePath)));
+				retval = STATUS_ERROR;
+				goto cleanup;
+			}
+		}
+	}
+
+cleanup:
+	if (slruDir)
+		FreeDir(slruDir);
+
+	if (checksumFileHandle > 0)
+		FileClose(checksumFileHandle);
+
+	return retval;
+}
+
+/*
+ * Given a filename, this function will return true if and only if it is a valid
+ * SLRU filename. Filenames with 4 hex characters are valid.
+ */
+static bool
+isSlruFileName(const char *fileName)
+{
+	return (strlen(fileName) == SLRU_FILENAME_LEN &&
+			strspn(fileName, "0123456789ABCDEF") == SLRU_FILENAME_LEN);
+}
+
+/*
+ * Compute the md5 hash of the file specified by 'filePath'.
+ */
+static int
+SlruComputeChecksum(char *filePath, char *md5)
+{
+	File fileHandle = 0;
+	int  retval = 0;
+	char buf[BLCKSZ * SLRU_PAGES_PER_SEGMENT];
+	int  bytesRead;
+
+	fileHandle = PathNameOpenFile(filePath, O_RDONLY | PG_BINARY, S_IRUSR);
+	if (fileHandle < 0)
+	{
+		ereport(LOG,
+				(errcode_for_file_access(),
+				 errmsg("could not open file %s: %m", filePath)));
+		retval = STATUS_ERROR;
+	}
+	else
+	{
+		bytesRead = FileRead(fileHandle, buf, sizeof(buf));
+		if (bytesRead >= 0)
+			pg_md5_hash(buf, bytesRead, md5);
+		else
+		{
+			ereport(LOG,
+					(errcode_for_file_access(),
+					 errmsg("could not read file %s: %m", filePath)));
+			retval = STATUS_ERROR;
+		}
+	}
+
+	if (fileHandle > 0)
+		FileClose(fileHandle);
+
+	return retval;
+}
+
+/*
+ * Copy all the files from the fullDirName to the corresponding directory at the
+ * mirror.
+ */
+static int
+SlruCopyDirectory(char *dirName, char *fullDirName)
+{
+	DIR			  *slruDir = NULL;
+	struct dirent *dirEntry;
+	int			   retval = STATUS_OK;
+	int			   counter = 0;
+
+	slruDir = AllocateDir(fullDirName);
+	if (!slruDir)
+		return STATUS_ERROR;
+
+	while ((dirEntry = ReadDir(slruDir, fullDirName)) != NULL)
+	{
+		if (isSlruFileName(dirEntry->d_name))
+		{
+			retval = MirrorFlatFile(dirName, dirEntry->d_name);
+
+			if (retval != 0)
+				break;
+
+			counter++;
+
+			if (counter % log_count_recovered_files_batch == 0)
+			{
+				elog(LOG, "completed recovering %d files for directory %s",
+					 counter, dirName);
+			}
+		}
+	}
+
+	elog(LOG, "completed recovering %d files for directory %s", counter,
+		 dirName);
+
+	FreeDir(slruDir);
+
+	return retval;
+}
+
+/*
+ * This function is called from the mirror to compute the checksum of the
+ * mirror's checksum file and compare the mirror's checksum with that of the
+ * primary (variable 'md5').
+ */
+int
+SlruMirrorVerifyDirectoryChecksum(char *dirName, char *checksumFile, char *md5)
+{
+	int  retval = STATUS_OK;
+	char mirrorMd5[SLRU_MD5_BUFLEN] = {0};
+	char filePath[MAXPGPATH];
+
+	snprintf(filePath, sizeof(filePath), "%s/%s", dirName, checksumFile);
+
+	if (SlruComputeChecksum(filePath, mirrorMd5) < 0)
+	{
+		ereport(LOG,
+				(errmsg("could not compute checksum for file %s/%s: %m",
+						dirName, filePath)));
+		retval = STATUS_ERROR;
+	}
+	else
+	{
+		if (memcmp(md5, mirrorMd5, sizeof(mirrorMd5)))
+		{
+			ereport(LOG,
+					(errmsg("checksum mismatch for file: %s/%s",
+							dirName, checksumFile)));
+			retval = STATUS_ERROR;
+		}
+	}
 	return retval;
 }

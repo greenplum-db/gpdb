@@ -274,6 +274,13 @@ extern int FileRepPrimary_MirrorVerify(
 									   uint32							*responseDataLength, 
 									   FileRepOperationDescription_u	*responseDesc);
 
+
+extern int FileRepPrimary_MirrorStartChecksum(FileRepIdentifier_u fileRepIdentifier);
+
+extern int FileRepPrimary_MirrorVerifyDirectoryChecksum(
+	FileRepIdentifier_u fileRepIdentifier,
+	char *md);
+
 // -----------------------------------------------------------------------------
 // SENDER THREAD
 // -----------------------------------------------------------------------------

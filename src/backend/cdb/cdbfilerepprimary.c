@@ -467,6 +467,8 @@ FileRepPrimary_ConstructAndInsertMessage(
 		case FileRepOperationCreateAndOpen:
 		case FileRepOperationCreate:
 		case FileRepOperationValidation:
+		case FileRepOperationStartSlruChecksum:
+		case FileRepOperationVerifySlruDirectoryChecksum:
 			fileRepMessageHeader->fileRepOperationDescription = fileRepOperationDescription;
 			break;
 			
@@ -1799,3 +1801,79 @@ FileRepPrimary_RunSender(void)
 }
 
 
+/*
+ * Send the message to the mirror to start computation of the checksum file.
+ */
+int
+FileRepPrimary_MirrorStartChecksum(FileRepIdentifier_u fileRepIdentifier)
+{
+	int status = STATUS_OK;
+
+	FileRepOperationDescription_u descr;
+
+	if (FileRepPrimary_IsMirroringRequired(FileRepRelationTypeFlatFile,
+										   FileRepOperationStartSlruChecksum))
+	{
+
+		status = FileRepPrimary_ConstructAndInsertMessage(fileRepIdentifier,
+														  FileRepRelationTypeFlatFile,
+														  FileRepOperationStartSlruChecksum,
+														  descr,
+														  NULL, /* data */
+														  0);	/* data length */
+		if (status)
+			return status;
+
+	}
+	else
+		ereport(LOG, (errmsg("SLRU checksum start bypassed as mirroring is not required")));
+
+	return status;
+}
+
+/*
+ * Send a message to the mirror to compare the primary's directory checksum with
+ * the mirror's.
+ */
+int
+FileRepPrimary_MirrorVerifyDirectoryChecksum(
+	FileRepIdentifier_u fileRepIdentifier, char *md5)
+{
+	int status = STATUS_OK;
+	int mirrorStatus = FileRepStatusSuccess;
+
+	FileRepOperationDescription_u descr;
+
+	if (FileRepPrimary_IsMirroringRequired(FileRepRelationTypeFlatFile,
+										   FileRepOperationVerifySlruDirectoryChecksum))
+	{
+		memcpy(descr.verifyDirectoryChecksum.md5, md5, SLRU_MD5_BUFLEN);
+		descr.verifyDirectoryChecksum.mirrorStatus = FileRepStatusSuccess;
+
+		status = FileRepPrimary_ConstructAndInsertMessage(fileRepIdentifier,
+														  FileRepRelationTypeFlatFile,
+														  FileRepOperationVerifySlruDirectoryChecksum,
+														  descr,
+														  NULL, /* data */
+														  0);	/* data length */
+		if (status)
+			return status;
+
+		FileRepAckPrimary_IsOperationCompleted(fileRepIdentifier, FileRepRelationTypeFlatFile);
+
+		mirrorStatus = FileRepAckPrimary_GetMirrorErrno();
+
+		if (FileRepStatusSuccess != mirrorStatus)
+		{
+			ereport(WARNING,
+					(errmsg("SLRU checksums did not match, mirrorStatus = '%s', directory = '%s'",
+							FileRepStatusToString[mirrorStatus],
+							fileRepIdentifier.fileRepFlatFileIdentifier.directorySimpleName)));
+			return STATUS_ERROR;
+		}
+	}
+	else
+		ereport(LOG, (errmsg("SLRU checksum validation bypassed as mirroring is not required")));
+
+	return status;
+}

@@ -498,6 +498,7 @@ sub ignore_list
 		db_dumps
 		gp_temporary_files_filespace
 		gp_transaction_files_filespace
+		slru_checksum_file
 		);
 
 	# add any other expressions (eg user-supplied)
