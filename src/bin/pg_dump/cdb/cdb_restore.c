@@ -60,6 +60,7 @@ static bool schemaOnly = false;
 static bool bForcePassword = false;
 static bool bIgnoreVersion = false;
 static bool bAoStats = true;
+static bool g_is_old_format = false;
 static const char *pszAgent = "gp_restore_agent";
 
 static const char *logInfo = "INFO";
@@ -355,6 +356,7 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 		{"netbackup-block-size", required_argument, NULL, 16},
 		{"change-schema-file", required_argument, NULL, 17},
 		{"schema-level-file", required_argument, NULL, 18},
+		{"old-format", no_argument, NULL, 20},
 		{NULL, 0, NULL, 0}
 	};
 
@@ -600,7 +602,10 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 				if (schema_level_file != NULL)
 					free(schema_level_file);
 				break;
-
+			case 20:
+				g_is_old_format = true;
+				pInputOpts->pszPassThroughParms = addPassThroughLongParm("old-format", NULL, pInputOpts->pszPassThroughParms);
+				break;
 			default:
 				mpp_err_msg_cache(logError, progname, "Try \"%s --help\" for more information.\n", progname);
 				return false;

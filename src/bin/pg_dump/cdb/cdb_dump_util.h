@@ -123,7 +123,7 @@ extern PGconn *MakeDBConnection(const SegmentDatabase *pSegDB, bool bDispatch);
 extern char *MakeString(const char *fmt,...);
 
 /* breaks the input parameter associated with --cdb-k into its components for cdb_dump and cdb_restore*/
-extern bool ParseCDBDumpInfo(const char *progName, char *pszCDBDumpInfo, char **ppCDBDumpKey, int *pCDBInstID, int *pCDBSegID, char **ppCDBPassThroughCredentials);
+extern bool ParseCDBDumpInfo(const char *progName, char *pszCDBDumpInfo, char **ppCDBDumpKey, int *pRole, int *pContentID, int *pDbID, char **ppCDBPassThroughCredentials);
 
 /* reads the contents for "ERROR:" and "[ERROR]" out of the appropriate file on the database server */
 extern int ReadBackendBackupFileError(PGconn *pConn, const char *pszBackupDirectory, const char *pszKey,

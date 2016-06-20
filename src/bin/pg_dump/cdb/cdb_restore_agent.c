@@ -129,6 +129,7 @@ static volatile sig_atomic_t bKillPsql = false;
 static char *g_compPg = NULL;	/* de-compression program with full path */
 static char *g_gpdumpInfo = NULL;
 static char *g_gpdumpKey = NULL;
+static int	g_sourceContentID= 0;
 static int	g_sourceDBID = 0;
 static int	g_targetDBID = 0;
 static char *g_targetHost = NULL;
@@ -139,6 +140,7 @@ static PGconn *g_conn_status = NULL;
 static pthread_t g_main_tid = (pthread_t) 0;
 static pthread_t g_monitor_tid = (pthread_t) 0;
 static bool g_bOnErrorStop = false;
+static bool g_is_old_format = false;
 PGconn	   *g_conn = NULL;
 pthread_mutex_t g_threadSyncPoint = PTHREAD_MUTEX_INITIALIZER;
 
@@ -254,6 +256,7 @@ main(int argc, char **argv)
 		{"change-schema-file", required_argument, NULL, 17},
 		{"schema-level-file", required_argument, NULL, 18},
 		{"ddboost-storage-unit",required_argument, NULL, 19},
+		{"old-format",no_argument, NULL, 20},
 		{NULL, 0, NULL, 0}
 	};
 
@@ -417,7 +420,7 @@ main(int argc, char **argv)
 			case 3:				/* --gp-k MPP Dump Info Format is
 								 * Key_s-dbid_s-role_t-dbid */
 				g_gpdumpInfo = strdup(optarg);
-				if (!ParseCDBDumpInfo(progname, g_gpdumpInfo, &g_gpdumpKey, &g_role, &g_sourceDBID, &g_MPPPassThroughCredentials))
+				if (!ParseCDBDumpInfo(progname, g_gpdumpInfo, &g_gpdumpKey, &g_role, &g_sourceContentID, &g_sourceDBID, &g_MPPPassThroughCredentials))
 				{
 					exit(1);
 				}
@@ -472,6 +475,9 @@ main(int argc, char **argv)
 				ddboost_storage_unit = strdup(optarg);
 				break;
 #endif
+            case 20:
+                g_is_old_format = true;
+                break;
 			default:
 				fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
 				exit(1);
@@ -737,10 +743,18 @@ main(int argc, char **argv)
 			{
 				if (strstr(inputFileSpec,"_post_data") == NULL)
 				{
-					fprintf(stderr,"Adding _post_data to the end of the file name?\n");
 					char * newFS = malloc(strlen(inputFileSpec) + strlen("_post_data") + 1);
-					strcpy(newFS, inputFileSpec);
-					strcat(newFS, "_post_data");
+					if (strstr(inputFileSpec, ".gz") != NULL)
+					{
+            snprintf(newFS, (strlen(inputFileSpec) - 3) + 1 , "%s" ,inputFileSpec);
+						strcat(newFS, "_post_data");
+						strcat(newFS, ".gz");
+					}
+					else
+					{
+						strcpy(newFS, inputFileSpec);
+						strcat(newFS, "_post_data");
+					}
 					inputFileSpec = newFS;
 				}
 			}
@@ -1145,14 +1159,14 @@ monitorThreadProc(void *arg __attribute__((unused)))
 		if(pollResult < 0)
 		{
 			mpp_err_msg(logError, progname, "poll failed for backup key %s, instid %d, segid %d failed\n",
-						g_gpdumpKey, g_role, g_sourceDBID);
+						g_gpdumpKey, g_sourceContentID, g_sourceDBID);
 			bGotCancelRequest = true;
 		}
 
 		if (PQstatus(g_conn_status) == CONNECTION_BAD)
 		{
 			mpp_err_msg(logError, progname, "Status Connection went down for backup key %s, instid %d, segid %d\n",
-						g_gpdumpKey, g_role, g_sourceDBID);
+						g_gpdumpKey, g_sourceContentID, g_sourceDBID);
 			bGotCancelRequest = true;
 		}
 
@@ -1180,7 +1194,7 @@ monitorThreadProc(void *arg __attribute__((unused)))
 		if (bGotCancelRequest)
 		{
 			mpp_err_msg(logInfo, progname, "Notification received that we need to cancel for backup key %s, instid %d, segid %d failed\n",
-						g_gpdumpKey, g_role, g_sourceDBID);
+						g_gpdumpKey, g_sourceContentID, g_sourceDBID);
 
 			pthread_kill(g_main_tid, SIGINT);
 		}
@@ -1413,16 +1427,18 @@ formDDBoostPsqlCommandLine(PQExpBuffer buf, const char *argv0,
 
 static char *formDDBoostFileName(char *pszBackupKey, bool isPostData, char *dd_boost_dir)
 {
-        /* First form the prefix */
-        char	szFileNamePrefix[1 + MAXPGPATH];
-        int     instid;                 	/* dispatch node */
-        int     segid;
-        int     len = 0;
-        char    *pszBackupFileName;
-	char 	*dir_name = "db_dumps";		/* default directory */
+	/* First form the prefix */
+	char	szFileNamePrefix[1 + MAXPGPATH];
+	int	 instid; /* dispatch node */
+	int	 segid;
+	int	 len = 0;
+	char	*pszBackupFileName;
+	char 	*dir_name = "db_dumps"; /* default directory */
 
-        instid = g_role;           		/* dispatch node */
-        segid = g_sourceDBID;
+	instid = g_sourceContentID;
+	segid = g_sourceDBID;
+	if (g_is_old_format)
+		instid = (instid == -1) ? 1 : 0;
 
 	memset(szFileNamePrefix, 0, (1 + MAXPGPATH));
 	if (dd_boost_dir)
@@ -1430,34 +1446,34 @@ static char *formDDBoostFileName(char *pszBackupKey, bool isPostData, char *dd_b
 	else
 		snprintf(szFileNamePrefix, 1 + MAXPGPATH, "%s/%sgp_dump_%d_%d_", dir_name, DUMP_PREFIX, instid, segid);
 
-        /* Now add up the length of the pieces */
-        len += strlen(szFileNamePrefix);
-        len += strlen(pszBackupKey);
+		/* Now add up the length of the pieces */
+		len += strlen(szFileNamePrefix);
+		len += strlen(pszBackupKey);
 
 	if (isPostData)
 		len += strlen("_post_data");
-        if (len > MAXPGPATH)
-        {
-               mpp_err_msg(logInfo, progname, "Length > MAX for filename\n");
-               return NULL;
-        }
+		if (len > MAXPGPATH)
+		{
+			   mpp_err_msg(logInfo, progname, "Length > MAX for filename\n");
+			   return NULL;
+		}
 
-        pszBackupFileName = (char *) malloc(sizeof(char) * (1 + len));
-        if (pszBackupFileName == NULL)
-        {
-              mpp_err_msg(logInfo, progname, "Error out of memory\n");
-              return NULL;
-        }
+		pszBackupFileName = (char *) malloc(sizeof(char) * (1 + len));
+		if (pszBackupFileName == NULL)
+		{
+			  mpp_err_msg(logInfo, progname, "Error out of memory\n");
+			  return NULL;
+		}
 
-       	memset(pszBackupFileName, 0, len + 1 );
+	   	memset(pszBackupFileName, 0, len + 1 );
 
-        strcat(pszBackupFileName, szFileNamePrefix);
-        strcat(pszBackupFileName, pszBackupKey);
+		strcat(pszBackupFileName, szFileNamePrefix);
+		strcat(pszBackupFileName, pszBackupKey);
 
-        if (isPostData)
-                strcat(pszBackupFileName, "_post_data");
+		if (isPostData)
+				strcat(pszBackupFileName, "_post_data");
 
-        return pszBackupFileName;
+		return pszBackupFileName;
 }
 
 int

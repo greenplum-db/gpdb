@@ -109,9 +109,11 @@ def run_command_remote(context,command, host, source_file, export_mdd):
     context.stdout_message = result.stdout
     context.error_message = result.stderr
 
-def run_gpcommand(context, command):
+def run_gpcommand(context, command,cmd_prefix=''):
     context.exception = None
-    cmd = Command(name='run %s' % command, cmdStr='$GPHOME/bin/%s' % command)
+    cmd = Command(name='run %s' % command, cmdStr='$GPHOME/bin/%s' % (command))
+    if cmd_prefix:
+        cmd = Command(name='run %s' % command, cmdStr='%s;$GPHOME/bin/%s' % (cmd_prefix, command))
     try:
         cmd.run(validateAfter=True)
     except ExecutionError, e:
@@ -269,10 +271,10 @@ def get_table_data_to_file(filename, tablename, dbname):
         # check if tablename is fully qualified <schema_name>.<table_name>
         if '.' in tablename:
             schema_name, table_name = tablename.split('.')
-            data_sql = '''COPY (select gp_segment_id, * from "%s"."%s" order by %s) TO '%s' ''' % (escapeDoubleQuoteInSQLString(schema_name, False),
-                                                                                                   escapeDoubleQuoteInSQLString(table_name, False), res, filename)
+            data_sql = '''COPY (select gp_segment_id, * from "%s"."%s" order by %s) TO E'%s' ''' % (escapeDoubleQuoteInSQLString(schema_name, False),
+                                                                                                   escapeDoubleQuoteInSQLString(table_name, False), res, pg.escape_string(filename))
         else:
-            data_sql = '''COPY (select gp_segment_id, * from "%s" order by %s) TO '%s' ''' %(escapeDoubleQuoteInSQLString(tablename, False), res, filename)
+            data_sql = '''COPY (select gp_segment_id, * from "%s" order by %s) TO E'%s' ''' %(escapeDoubleQuoteInSQLString(tablename, False), res, pg.escape_string(filename))
         query = data_sql
         dbconn.execSQL(conn, query)
         conn.commit()
@@ -285,37 +287,48 @@ def diff_backup_restore_data(context, backup_file, restore_file):
     if not filecmp.cmp(backup_file, restore_file):
         raise Exception('%s and %s do not match' % (backup_file, restore_file))
 
-def validate_restore_data(context, tablename, dbname, backedup_table=None):
-    if tablename == "public.gpcrondump_history":
+def validate_restore_data(context, new_table, dbname, backedup_table=None, backedup_dbname=None):
+    if new_table == "public.gpcrondump_history":
         return
-    filename = tablename.strip() + "_restore"
-    get_table_data_to_file(filename, tablename, dbname)
+    table_filename = dbname + "_" + new_table.strip() + "_restore"
+    get_table_data_to_file(table_filename, new_table, dbname)
+
     current_dir = os.getcwd()
+
     if backedup_table != None:
-        backup_file = os.path.join(current_dir, './test/data', backedup_table.strip() + "_backup")
+        tablename = backedup_table
     else:
-        backup_file = os.path.join(current_dir, './test/data', tablename.strip() + "_backup")
-    restore_file = os.path.join(current_dir, './test/data', tablename.strip() + "_restore")
-    diff_backup_restore_data(context, backup_file, restore_file)
+        tablename = new_table
+
+    if backedup_dbname == None:
+        backedup_dbname = dbname
+
+    backup_filename = backedup_dbname + '_' + tablename.strip()
+    backup_path = os.path.join(current_dir, './test/data', backup_filename + "_backup")
+
+    restore_filename = dbname + '_' + new_table.strip()
+    restore_path = os.path.join(current_dir, './test/data', restore_filename + "_restore")
+
+    diff_backup_restore_data(context, backup_path, restore_path)
 
 def validate_restore_data_in_file(context, tablename, dbname, file_name, backedup_table=None):
     filename = file_name + "_restore"
     get_table_data_to_file(filename, tablename, dbname)
     current_dir = os.getcwd()
     if backedup_table != None:
-        backup_file = os.path.join(current_dir, './test/data', backedup_table.strip() + "_backup")
+        backup_file = os.path.join(current_dir, './test/data', backedup_table.strip() + "_" + backedup_table.strip() + "_backup")
     else:
         backup_file = os.path.join(current_dir, './test/data', file_name + "_backup")
     restore_file = os.path.join(current_dir, './test/data', file_name + "_restore")
     diff_backup_restore_data(context, backup_file, restore_file)
 
-def validate_db_data(context, dbname, expected_table_count):
+def validate_db_data(context, dbname, expected_table_count, backedup_dbname=None):
     tbls = get_table_names(dbname)
     if len(tbls) != expected_table_count:
         raise Exception("db %s does not have expected number of tables %d != %d" % (dbname, expected_table_count, len(tbls)))
     for t in tbls:
         name = "%s.%s" % (t[0], t[1])
-        validate_restore_data(context, name, dbname)
+        validate_restore_data(context, name, dbname, backedup_table=None, backedup_dbname=backedup_dbname)
 
 def get_segment_hostnames(context, dbname):
     sql = "select distinct(hostname) from gp_segment_configuration where content != -1;"
@@ -328,7 +341,7 @@ def backup_db_data(context, dbname):
         backup_data(context, nm, dbname)
 
 def backup_data(context, tablename, dbname):
-    filename = tablename + "_backup"
+    filename = dbname + "_" + tablename + "_backup"
     get_table_data_to_file(filename, tablename, dbname)
 
 def backup_data_to_file(context, tablename, dbname, filename):
@@ -808,7 +821,7 @@ def get_dist_policy_to_file(filename, dbname):
 
     current_dir = os.getcwd()
     filename = os.path.join(current_dir, './test/data', filename)
-    data_sql = "COPY (%s) TO '%s'" %(dist_policy_sql, filename)
+    data_sql = "COPY (%s) TO E'%s'" %(dist_policy_sql, pg.escape_string(filename))
 
     with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
         dbconn.execSQL(conn, data_sql)
@@ -1013,7 +1026,7 @@ def create_large_num_partitions(table_type, table_name, db_name, num_partitions=
     if num_rows != 1:
         raise Exception('Creation of table "%s:%s" failed. Num rows in pg_class = %s' % (db_name, table_name, num_rows))
 
-def validate_num_restored_tables(context, num_tables, dbname):
+def validate_num_restored_tables(context, num_tables, dbname, backedup_dbname=None):
     tbls = get_table_names(dbname)
 
     count_query = """select count(*) from %s"""
@@ -1024,7 +1037,7 @@ def validate_num_restored_tables(context, num_tables, dbname):
         if count == 0:
             continue
         else:
-            validate_restore_data(context, name, dbname)
+            validate_restore_data(context, name, dbname, backedup_dbname=backedup_dbname)
             num_validate_tables += 1
 
     if num_validate_tables != int(num_tables.strip()):

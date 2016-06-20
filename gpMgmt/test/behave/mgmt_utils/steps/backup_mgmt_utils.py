@@ -219,7 +219,7 @@ def impl(context, target):
             fd.close()
 
 def __get_dump_metadata_path(context, dump_dir):
-    filename = "gp_dump_1_1_%s.gz" % context.backup_timestamp
+    filename = "gp_dump_-1_1_%s.gz" % context.backup_timestamp
     metadata_path = os.path.join(dump_dir, "db_dumps", context.backup_timestamp[0:8], filename)
     return metadata_path
 
@@ -433,9 +433,9 @@ def impl(context, role_name, dbname):
     except:
         raise Exception("Role %s does not exist in database %s." % (role_name, dbname))
 
-@given('there is a list of files "{filenames}" of tables "{table_list}" in "{dbname}" exists for validation')
-@when('there is a list of files "{filenames}" of tables "{table_list}" in "{dbname}" exists for validation')
-@then('there is a list of files "{filenames}" of tables "{table_list}" in "{dbname}" exists for validation')
+@given('a list of files "{filenames}" of tables "{table_list}" in "{dbname}" exists for validation')
+@when('a list of files "{filenames}" of tables "{table_list}" in "{dbname}" exists for validation')
+@then('a list of files "{filenames}" of tables "{table_list}" in "{dbname}" exists for validation')
 def impl(context, filenames, table_list, dbname):
     files = [f for f in filenames.split(',')]
     tables = [t for t in table_list.split(',')]

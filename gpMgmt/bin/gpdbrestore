@@ -119,6 +119,10 @@ class GpdbRestore(Operation):
         if self.context.list_tables and self.context.netbackup_service_host:
             raise Exception('-L is not supported with NetBackup.')
 
+        if (self.context.netbackup_block_size or self.context.netbackup_keyword or self.context.netbackup_policy or self.context.netbackup_schedule) \
+                and not self.context.netbackup_service_host:
+            raise Exception('The --netbackup-service-host option must be supplied to use NetBackup.')
+
         if self.context.netbackup_service_host:
             validate_netbackup_params({'Service Hostname':self.context.netbackup_service_host})
 
@@ -132,8 +136,6 @@ class GpdbRestore(Operation):
             self.interactive = False
         else:
             self.interactive = options.interactive
-
-        self.gparray = None
 
         try:
             if self.context.report_status_dir:
@@ -166,12 +168,11 @@ class GpdbRestore(Operation):
             cmd = Command('DDBoost sync', cmdline)
             cmd.run(validateAfter=True)
 
-        self.gparray = GpArray.initFromCatalog(dbconn.DbURL(port=self.context.master_port, dbname='template1'), utility=True)
+        self._gather_dump_info()
 
         if self.context.netbackup_service_host:
             logger.info("Restoring metadata files with NetBackup")
             restore_state_files_with_nbu(self.context)
-            restore_file_with_nbu(self.context, "report")
             restore_file_with_nbu(self.context, "cdatabase")
             if check_file_dumped_with_nbu(self.context, "master_config"):
                 restore_config_files_with_nbu(self.context)
@@ -179,8 +180,6 @@ class GpdbRestore(Operation):
                 restore_file_with_nbu(self.context, "global")
             if check_file_dumped_with_nbu(self.context, "stats"):
                 restore_file_with_nbu(self.context, "stats")
-
-        self._gather_dump_info()
 
         if self.context.list_tables and self.context.timestamp:
             return self._list_dump_tables()
@@ -335,8 +334,8 @@ class GpdbRestore(Operation):
         """
         Checking cluster status, no primary should be down.
         """
-        fault_action = self.gparray.getFaultStrategy()
-        primaries = [seg for seg in self.gparray.getDbList() if seg.isSegmentPrimary(current_role=True)]
+        fault_action = self.context.gparray.getFaultStrategy()
+        primaries = self.context.get_current_primaries()
         fail_count = len([seg for seg in primaries if seg.isSegmentDown()])
 
         if fault_action == 'readonly' and fail_count != 0:
@@ -352,18 +351,15 @@ class GpdbRestore(Operation):
         """
         Validate the restore timestamp, collect information of the dump path and location.
         """
-
         if self.context.timestamp:
-            (restore_timestamp, restore_db, compress) = ValidateTimestamp(self.context).run()
-            self.context.timestamp = restore_timestamp
-            self.context.target_db = restore_db
-            self.context.compress = compress
-        elif self.context.db_date_dir:
-            self._validate_db_date_dir()
-        elif self.context.db_host_path:
-            self._validate_db_host_path()
-        elif self.search_for_dbname:
-            self._search_for_latest()
+            self.context.target_db = ValidateTimestamp(self.context).run()
+        else:
+            if self.context.db_date_dir:
+                self._validate_db_date_dir()
+            elif self.context.db_host_path:
+                self._validate_db_host_path()
+            elif self.search_for_dbname:
+                self._search_for_latest()
 
         if not self.context.drop_db and not self.context.redirected_restore_db:
             dburl = dbconn.DbURL(port=self.context.master_port)
@@ -408,88 +404,90 @@ class GpdbRestore(Operation):
         root = self.context.get_date_dir()
         if not os.path.isdir(root):
             raise ExceptionNoStackTraceNeeded("Directory %s does not exist" % root)
-        prefix = self.context.generate_prefix("cdatabase")
-        matching = ListFilesByPattern(root, "%s*" % prefix).run()
-        if len(matching) == 0:
-            raise ExceptionNoStackTraceNeeded("Could not locate Master database dump files under %s" % root)
-        matching = sorted(matching, key=lambda x: int(x[len(prefix):].strip()))
-        if len(matching) > 1:
-            dates_and_times = []
-            for match in matching:
-                temp = match[len(prefix):]
-                date, time = temp[0:8], temp[8:14]
-                dates_and_times.append((date, time))
-            self.context.timestamp = self._select_multi_file(dates_and_times)
-        else:
-            match = matching[0]
-            temp = match[len(prefix):]
-            self.context.timestamp = temp[0:14]
-        self.context.target_db = GetDbName(self.context.generate_filename("cdatabase")).run()
-        compressed_file = self.context.generate_filename("postdata")
-        self.context.compress = CheckFile(compressed_file).run()
+
+        self._get_timestamp_for_validation(root)
+
+        self.context.get_compress_and_dbname_from_report_file(self.context.generate_filename("report"))
 
     def _validate_db_host_path(self):
         # The format of the -R option should be 'hostname:path_to_dumpset', hence the length should be 2 (hostname, path_to_dumpset)
         if len(self.context.db_host_path) != 2:
             raise ProgramArgumentValidationException("The arguments of the -R flag are incorrect. The correct form should be as "
-                                                     "follows:\nIPv4_address:path_to_dumpset\n-OR-\n[IPv6_address]:path_to_dumpset\n", False)
+                                                     "follows:\nIPv4_address:path_to_dumpset\n-OR-\n[IPv6_address]:path_to_dumpset\n")
 
         host, path = self.context.db_host_path
+        if self.context.dump_dir not in path:
+            raise Exception('Path %s does not contain expected "db_dumps" directory' % path)
+
         logger.debug("The host is %s" % host)
         logger.debug("The path is %s" % path)
-        self.context.backup_dir = path[0:path.index(self.context.dump_dir)]
+        self.context.backup_dir = path[0:path.index(self.context.dump_dir) - 1]
 
         Ping.local('Pinging %s' % host, host)
-        prefix = self.context.generate_prefix("cdatabase")
-        matching = ListRemoteFilesByPattern(path, "%s*" % prefix, host).run()
+
+        try:
+            CheckRemotePath(path, host).run()
+        except:
+            raise Exception("Could not find path %s on host %s" % (path, host))
+        if path[-1] == '/':
+            self.context.db_date_dir = path[-9:-1]
+        else:
+            self.context.db_date_dir = path[-8:]
+        report_pattern = "%s*.rpt" % self.context.generate_prefix("report")
+        remote_files = ListRemoteFilesByPattern(path, report_pattern, host).run()
+        for file in remote_files:
+            Scp('Copying report file', srcHost=host, srcFile="%s/%s" % (path, file), dstFile="/tmp").run(validateAfter=True)
+
+        self._get_timestamp_for_validation("/tmp")
+        self.context.get_compress_and_dbname_from_report_file(self.context.generate_filename("report", directory="/tmp"))
+
+        local_files = ListFilesByPattern("/tmp", report_pattern).run()
+        for file in local_files:
+            os.remove("/tmp/%s" % file)
+
+    def _get_timestamp_for_validation(self, root):
+        report_prefix = self.context.generate_prefix("report", use_old_format=False)
+        matching = ListFilesByPattern(root, "%s*.rpt" % report_prefix).run()
+        matching = sorted(matching, key=lambda x: int(x[-18:-4].strip()))
         if len(matching) == 0:
-            raise ExceptionNoStackTraceNeeded("Could not locate Master database dump files at %s:%s" % (host, path))
-        matching = sorted(matching, key=lambda x: int(x[len(prefix):].strip()))
+            raise ExceptionNoStackTraceNeeded("Could not locate Master database dump files in %s" % root)
         if len(matching) > 1:
             dates_and_times = []
             for match in matching:
-                temp = match[len(prefix):]
+                temp = match[-18:-4]
                 date, time = temp[0:8], temp[8:14]
                 dates_and_times.append((date, time))
             self.context.timestamp = self._select_multi_file(dates_and_times)
         else:
             match = matching[0]
-            temp = match[len(prefix):]
-            self.context.timestamp = temp[0:14]
-
-        handle, filename = mkstemp()
-        srcFile = self.context.generate_filename("cdatabase", directory=path)
-        Scp('Copying cdatabase file', srcHost=host, srcFile=srcFile, dstFile=filename).run(validateAfter=True)
-        self.context.target_db = GetDbName(filename).run()
-        os.remove(filename)
-
-        self.context.compress = CheckRemoteFile(srcFile, host).run()
+            self.context.timestamp = match[-18:-4]
+        self.context.use_old_filename_format = self.context.is_timestamp_in_old_format()
 
     def _search_for_latest(self):
         logger.info("Scanning Master host for latest dump file set for database %s" % self.search_for_dbname)
         root = os.path.join(self.context.get_backup_root(), self.context.dump_dir)
         candidates, timestamps = [], []
-        prefix = self.context.generate_prefix("cdatabase")
+        prefix = "%s*.rpt" % self.context.generate_prefix("report")
         for path, dirs, files in os.walk(root):
             matching = fnmatch.filter(files, "%s*" % prefix)
-            candidates.extend([(path, filename) for filename in matching])
+            candidates.extend([(path, report_file) for report_file in matching])
         if len(candidates) == 0:
-            raise ExceptionNoStackTraceNeeded("No %s* files located" % prefix)
-        for path, filename in candidates:
-            db_name = GetDbName(os.path.join(path, filename)).run()
-            logger.info("Looking for %s, found %s" % (self.search_for_dbname, db_name))
+            raise ExceptionNoStackTraceNeeded("No report files located")
+        for path, report_file in candidates:
+            self.context.get_compress_and_dbname_from_report_file(os.path.join(path, report_file))
+            db_name = self.context.target_db
+            logger.debug("Looking for %s, found %s" % (self.search_for_dbname, db_name))
             if self.search_for_dbname == db_name:
-                logger.info('Located dump file %s for database %s, adding to list' % (filename, self.search_for_dbname))
-                timestamps.append(int(filename[len(prefix):]))
+                logger.info('Located dump file %s for database %s, adding to list' % (report_file, self.search_for_dbname))
+                timestamps.append(int(report_file[-18:-4]))
             else:
-                logger.info("Dump file has incorrect database name of %s, skipping..." % db_name)
+                logger.debug("Dump file has incorrect database name of %s, skipping..." % db_name)
         if len(timestamps) == 0:
-            raise ExceptionNoStackTraceNeeded("No %s* files located with database %s" % (prefix, self.search_for_dbname))
+            raise ExceptionNoStackTraceNeeded("No report files located with database %s" % self.search_for_dbname)
         self.context.timestamp = str(max(timestamps))
         logger.info("Identified latest dump timestamp for %s as %s" %  (self.search_for_dbname, self.context.timestamp))
-        self.context.target_db = self.search_for_dbname
-        compressed_file = self.context.generate_filename("postdata")
-        self.context.compress = CheckFile(compressed_file).run()
+        self.context.use_old_filename_format = self.context.is_timestamp_in_old_format()
+        self.context.get_compress_and_dbname_from_report_file(self.context.generate_filename("report", directory=path))
 
     def _select_multi_file(self, dates_and_times):
         spc = "        "

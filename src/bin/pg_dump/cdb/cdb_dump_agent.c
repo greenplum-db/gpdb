@@ -168,6 +168,7 @@ static int	plainText = 0;
 static int	g_role = 0;
 static char *g_CDBDumpInfo = NULL;
 static char *g_CDBDumpKey = NULL;
+static int	g_contentID = 0;
 static int	g_dbID = 0;
 static char *g_CDBPassThroughCredentials = NULL;
 static pthread_t g_main_tid = (pthread_t) 0;
@@ -178,6 +179,7 @@ static StatusOpList *g_pStatusOpList = NULL;
 static char tableFileName[300];
 static char schemaFileName[300];
 static char *dump_prefix = NULL;
+static bool g_is_old_format = false;
 
 static const char *logInfo = "INFO";
 static const char *logWarn = "WARN";
@@ -530,6 +532,7 @@ main(int argc, char **argv)
 		{"netbackup-keyword", required_argument, NULL, 15},
 		{"no-lock", no_argument, NULL, 16},
 		{"schema-file", required_argument, NULL, 17},
+		{"old-format", no_argument, NULL, 19},
 		{NULL, 0, NULL, 0}
 	};
 	int			optindex;
@@ -725,7 +728,7 @@ main(int argc, char **argv)
 
 			case 1:				/* MPP Dump Info Format is Key_role_dbid */
 				g_CDBDumpInfo = pg_strdup(optarg);
-				if (!ParseCDBDumpInfo((char *) progname, g_CDBDumpInfo, &g_CDBDumpKey, &g_role, &g_dbID, &g_CDBPassThroughCredentials))
+				if (!ParseCDBDumpInfo((char *) progname, g_CDBDumpInfo, &g_CDBDumpKey, &g_role, &g_contentID, &g_dbID, &g_CDBPassThroughCredentials))
 					exit(1);
 				break;
 
@@ -807,6 +810,9 @@ main(int argc, char **argv)
 				}
 				include_everything = false;
 				strncpy(schemaFileName, optarg, sizeof(optarg)+1);
+				break;
+			case 19:
+				g_is_old_format = true;
 				break;
 
 			default:
@@ -1356,7 +1362,7 @@ skipalldata:
 
 		fileFormat = 'f';	/*dump post schema data into local file first*/
 
-		char *postDumpFileName = formPostDumpFilePathName(g_pszCDBOutputDirectory, g_CDBDumpKey, g_role, g_dbID);
+		char *postDumpFileName = formPostDumpFilePathName(g_pszCDBOutputDirectory, g_CDBDumpKey, g_contentID, g_dbID);
 
 		g_fout = makeArchive(postDumpFileName);
 
@@ -8276,6 +8282,8 @@ formGenericFilePathName(char *keyword, char *pszBackupDirectory, char *pszBackup
 	int			len;
 	char	   *pszBackupFileName;
 
+	if (g_is_old_format)
+		pszInstID = (pszInstID == 1) ? 1 : 0;
 	snprintf(szFileNamePrefix, 1 + PATH_MAX, "%sgp_%s_%d_%d_", DUMP_PREFIX, keyword, pszInstID, pszSegID);
 
 	/* Now add up the length of the pieces */
@@ -8351,7 +8359,7 @@ dumpDatabaseDefinition()
 	/* MPP addition end */
 
 	pszBackupFileName = formCDatabaseFilePathName(g_pszCDBOutputDirectory,
-											   g_CDBDumpKey, g_role, g_dbID);
+											   g_CDBDumpKey, g_contentID, g_dbID);
 
 	/*
 	 * Make sure we can create this file before we spin off sh cause we don't
@@ -8471,7 +8479,7 @@ dumpDatabaseDefinitionToDDBoost()
 	/* MPP addition end */
 
 	pszBackupFileName = formCDatabaseFilePathName(g_pszDDBoostDir,
-								   g_CDBDumpKey, g_role, g_dbID);
+								   g_CDBDumpKey, g_contentID, g_dbID);
 
 	/*
 	 * Make sure we can create this file before we spin off sh cause we don't

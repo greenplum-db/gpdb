@@ -47,7 +47,7 @@
 
 /* static helper functions */
 static bool createBackupDirectory(char *pszPathName);
-static char *findAcceptableBackupFilePathName(char *pszBackupDirectory, char *pszBackupKey, int segid);
+static char *findAcceptableBackupFilePathName(char *pszBackupDirectory, char *pszBackupKey, int instid, int segid);
 static char *formBackupFilePathName(char *pszBackupDirectory, char *pszBackupKey, bool is_compress, bool isPostData, const char *suffix);
 static char *formStatusFilePathName(char *pszBackupDirectory, char *pszBackupKey, bool bIsBackup);
 static char *formThrottleCmd(char *pszBackupFileName, int directIO_read_chunk_mb, bool bIsThrottlingEnabled);
@@ -93,6 +93,7 @@ static char *netbackup_service_host = NULL,
 static int netbackup_enabled = 0;
 static char *gpNBUDumpPg = NULL;
 static char *gpNBUQueryPg = NULL;
+static bool is_old_format = 0;
 
 typedef enum backup_file_type
 {
@@ -199,15 +200,16 @@ gp_backup_launch__(PG_FUNCTION_ARGS)
 
 #ifdef USE_DDBOOST
 	char       	*pszDDBoostFileName = NULL;
-	char	   	*pszDDBoostDirName = "db_dumps";		/* Default directory */	
+	char	   	*pszDDBoostDirName = "db_dumps";		/* Default directory */
 	char	   	*pszDDBoostStorageUnitName = NULL;
 	char 	   	*dd_boost_buffer_size = NULL;
 	char		*gpDDBoostCmdLine = NULL;
 	char 		*temp = NULL, *pch = NULL, *pchs = NULL, *pStu = NULL, *pStus = NULL;
 #endif
 
+       /* TODO: refactor this piece of code, can easily make bugs with this */
 	verifyGpIdentityIsSet();
-	instid = (GpIdentity.segindex == -1) ? 1 : 0;	/* dispatch node */
+	instid = GpIdentity.segindex;
 	segid = GpIdentity.dbid;
 
 	if (!PG_ARGISNULL(0))
@@ -236,6 +238,9 @@ gp_backup_launch__(PG_FUNCTION_ARGS)
 	netbackup_schedule = parse_option_from_params(pszPassThroughParameters, "--netbackup-schedule");
 	netbackup_block_size = parse_option_from_params(pszPassThroughParameters, "--netbackup-block-size");
 	netbackup_keyword = parse_option_from_params(pszPassThroughParameters, "--netbackup-keyword");
+
+	if (strstr(pszPassThroughParameters,"--old-format") != NULL)
+		is_old_format = 1;
 
 	/*
 	 * if BackupDirectory is relative, make it absolute based on the directory
@@ -275,12 +280,12 @@ gp_backup_launch__(PG_FUNCTION_ARGS)
 	{
 		dd_boost_enabled = 1;
 	}
-	
+
 	if (dd_boost_enabled)
 	{
 		pszDDBoostFileName = formDDBoostFileName(pszBackupKey, false, is_compress);
-	
-		gpDDBoostPg = testProgramExists("gpddboost"); 
+
+		gpDDBoostPg = testProgramExists("gpddboost");
         	if (gpDDBoostPg == NULL)
         	{
                 	ereport(ERROR,
@@ -289,7 +294,7 @@ gp_backup_launch__(PG_FUNCTION_ARGS)
                                                 "gpddboost", getenv("PGPATH"), getenv("PATH")),
                                  errhint("Restart the server and try again")));
         	}
-	
+
 	}
 #endif
 
@@ -493,9 +498,12 @@ gp_backup_launch__(PG_FUNCTION_ARGS)
 	 * to update the sequence tables (last values). As for actual data -
 	 * there isn't any, so we will just dump empty COPY statements...
 	 */
-	pszDataOption = (instid == 1) ? "--pre-and-post-data-schema-only" : "-a";
+	pszDataOption = (instid == MASTER_CONTENT_ID) ? "--pre-and-post-data-schema-only" : "-a";
 
-	sprintf(pszKeyParm, "%s_%d_%d_%s", pszBackupKey, instid, segid, pszPassThroughCredentials);
+    if (is_old_format)
+		sprintf(pszKeyParm, "%s_%d_%d_%s", pszBackupKey, (instid == -1) ? 1 : 0, segid, pszPassThroughCredentials);
+	else
+		sprintf(pszKeyParm, "%s_%d_%d_%s", pszBackupKey, instid, segid, pszPassThroughCredentials);
 
 	/*
 	 * In the following calc for the number of characters in the
@@ -631,7 +639,7 @@ gp_backup_launch__(PG_FUNCTION_ARGS)
 				}
 		}
 	}
-	else 
+	else
 	{
 		/* if user selected a compression program */
 		if (pszCompressionProgram[0] != '\0')
@@ -744,7 +752,7 @@ gp_backup_launch__(PG_FUNCTION_ARGS)
 	/*
 	 * If we are the master, we do both the pre and post data schema dump
 	 */
-	if (instid == 1)
+	if (instid == MASTER_CONTENT_ID)
 	{
 		int stat;
 
@@ -811,7 +819,7 @@ gp_backup_launch__(PG_FUNCTION_ARGS)
 #ifdef USE_DDBOOST
 		if(dd_boost_enabled)
 		{
-		
+
 			pszDDBoostFileName = formDDBoostFileName(pszBackupKey, true, is_compress);
 
 			memset(gpDDBoostCmdLine, 0, strlen(gpDDBoostCmdLine));
@@ -1030,12 +1038,14 @@ gp_restore_launch__(PG_FUNCTION_ARGS)
 	char       *dd_boost_buffer_size = NULL;
 	char       *mkdirStr = NULL;
 	int        err = 0;
-	
-#endif	
+
+#endif
 
 	postDataSchemaOnly = false;
+
+   /* TODO: refactor this piece of code, can easily make bugs with this */
 	verifyGpIdentityIsSet();
-	instid = (GpIdentity.segindex == -1) ? 1 : 0;		/* dispatch node */
+	instid = GpIdentity.segindex;
 	segid = GpIdentity.dbid;
 
 	if (!PG_ARGISNULL(0))
@@ -1074,12 +1084,15 @@ gp_restore_launch__(PG_FUNCTION_ARGS)
 	netbackup_service_host = parse_option_from_params(pszPassThroughParameters, "--netbackup-service-host");
 	netbackup_block_size = parse_option_from_params(pszPassThroughParameters, "--netbackup-block-size");
 
+	if (strstr(pszPassThroughParameters,"--old-format") != NULL)
+		is_old_format = 1;
+
 	/*
 	 * if BackupDirectory is relative, make it absolute based on the directory
 	 * where the database resides
 	 */
 	pszBackupDirectory = relativeToAbsolute(pszBackupDirectory);
-    /* if statusDirectory is NULL, it defaults to SEGMENT DATA DIRECTORY */ 
+    /* if statusDirectory is NULL, it defaults to SEGMENT DATA DIRECTORY */
 	statusDirectory    = relativeToAbsolute(statusDirectory);
 
 	/* Validate existence of compression program and gp_restore_agent program */
@@ -1118,7 +1131,7 @@ gp_restore_launch__(PG_FUNCTION_ARGS)
         if (strstr(pszPassThroughParameters,"--dd_boost_enabled") != NULL)
         {
                 dd_boost_enabled = 1;
-                 
+
                 /* When restoring from DDBoost to a fresh cluster, we will not have the *
                 * db_dumps/<date> directory. This is required to store the status file *
                 * Fix is to create the specified backup directory for every ddboost    *
@@ -1131,7 +1144,7 @@ gp_restore_launch__(PG_FUNCTION_ARGS)
                      (errcode(ERRCODE_OUT_OF_MEMORY),
                      errmsg("out of memory")));
                 }
- 
+
                 memset(mkdirStr, 0, MAX_MKDIR_STRING_LEN);
                 sprintf(mkdirStr, "mkdir -p %s", pszBackupDirectory);
                 err = system(mkdirStr);
@@ -1152,7 +1165,7 @@ gp_restore_launch__(PG_FUNCTION_ARGS)
 		if (0 != stat(pszBackupFileName, &info))
 		{
 			if (netbackup_enabled)
-			{		
+			{
 				char *queriedNBUBackupFilePathName = queryNBUBackupFilePathName(netbackup_service_host, pszBackupFileName);
 
 				elog(LOG, "Verify backup file path on netbackup server: %s\n", pszBackupFileName);
@@ -1169,7 +1182,7 @@ gp_restore_launch__(PG_FUNCTION_ARGS)
 			}
 			else
 			{
-				pszBackupFileName = findAcceptableBackupFilePathName(pszBackupDirectory, pszBackupKey, segid);
+				pszBackupFileName = findAcceptableBackupFilePathName(pszBackupDirectory, pszBackupKey, instid, segid);
 				if (pszBackupFileName == NULL)
 					ereport(ERROR,
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
@@ -1381,7 +1394,7 @@ gp_restore_launch__(PG_FUNCTION_ARGS)
 		/* Format gp_restore_agent with options, and Redirect both stdout and stderr into the status file */
 #ifdef USE_DDBOOST
 		if (dd_boost_enabled)
-		{	
+		{
 			sprintf(pszCmdLine, "%s --gp-k %s --dd_boost_buf_size %s --gp-d %s %s -p %d -U %s %s %s -d %s %s %s %s 2>&2",
 				bkPg, pszKeyParm, dd_boost_buffer_size, pszBackupDirectory, pszOnErrorStop, port, pszUserName, pszPassThroughParameters,
 				pszPassThroughTargetInfo, pszDBName, pszBackupFileName,
@@ -1406,7 +1419,7 @@ gp_restore_launch__(PG_FUNCTION_ARGS)
 				pszPassThroughTargetInfo, pszDBName, pszBackupFileName,
 				postDataSchemaOnly ? "2>>" : "2>", pszStatusFileName);
 		}
-			
+
 #else
 		if(netbackup_enabled)
 		{
@@ -1553,7 +1566,7 @@ gp_read_backup_file__(PG_FUNCTION_ARGS)
 	fclose(f);
 	f = NULL;
 	pszFullStatus[info.st_size] = '\0';
-	
+
 	return DirectFunctionCall1(textin, CStringGetDatum(positionToError(pszFullStatus)));
 }
 
@@ -1756,23 +1769,25 @@ createBackupDirectory(char *pszPathName)
 	return true;
 }
 
-/* findAcceptableBackupFilePathName( char* pszBackupDirectory, char* pszBackupKey ) returns char*
+/* findAcceptableBackupFilePathName( char* pszBackupDirectory, char* pszBackupKey, int instid, int segid ) returns char*
  *
  * This function takes the directory and timestamp key and finds an existing file that matches
- * the naming convention for a backup file with the proper key and segid, but any instid.
+ * the naming convention for a backup file with the proper key and either the proper instid with
+ * any segid, or the proper segid with any instid, to accommodate both filename formats in use.
  * In case it was backed up from a redundant instance of the same segment.
  */
 char *
-findAcceptableBackupFilePathName(char *pszBackupDirectory, char *pszBackupKey, int segid)
+findAcceptableBackupFilePathName(char *pszBackupDirectory, char *pszBackupKey, int instid, int segid)
 {
 	/* Make sure that pszBackupDirectory exists and is in fact a directory. */
 	struct stat buf;
 	struct dirent *dirp = NULL;
 	DIR		   *dp = NULL;
 	char	   *pszBackupFilePathName = NULL;
-	static regex_t rFindFileName;
+	// "Old" and "New" refer  to old and new dump file name formats
+	static regex_t rFindFileNameNew, rFindFileNameOld, rFindFileNameMaster;
 	static bool bFirstTime = true;
-	char	   *pszRegex = NULL;
+	char	   *pszRegexNew = NULL, *pszRegexOld = NULL, *pszRegexMaster = NULL;
 	char	   *pszFileName;
 	char	   *pszSep;
 	struct stat info;
@@ -1780,26 +1795,60 @@ findAcceptableBackupFilePathName(char *pszBackupDirectory, char *pszBackupKey, i
 	if (bFirstTime)
 	{
 		int base_len = 64;
-		int	wmasklen,
-			masklen,
+		int	wmasklenNew, wmasklenOld, wmasklenMaster,
+			masklenNew, masklenOld, masklenMaster,
 			regex_len = base_len + strlen(DUMP_PREFIX) + strlen(pszBackupKey);
-			pg_wchar   *mask;
-		pszRegex = (char *) palloc(regex_len);
+		pg_wchar   *maskNew, *maskOld, *maskMaster;
 
-		/* dump file can start with gp_ and also mpp_ for 2.3 backward compatibility */
-		snprintf(pszRegex, regex_len, "^%s(gp|mpp)_dump_[0-9]+_%d_%s(.gz)?$", DUMP_PREFIX, segid, pszBackupKey);
+		pszRegexNew = (char *) palloc(regex_len + 2);
+		pszRegexOld = (char *) palloc(regex_len);
+		pszRegexMaster = (char *) palloc(regex_len + 2);
 
-		masklen = strlen(pszRegex);
-		mask = (pg_wchar *) palloc((masklen + 1) * sizeof(pg_wchar));
-		wmasklen = pg_mb2wchar_with_len(pszRegex, mask, masklen);
+	if (segid == 1)
+	{
+		// Matches all master filenames. These are in the format gp_dump_1_1 or gp_dump_-1_1
+		snprintf(pszRegexMaster, regex_len, "^%sgp_dump_-?1_1_%s(.gz)?$", DUMP_PREFIX, pszBackupKey);
 
-		if (0 != pg_regcomp(&rFindFileName, mask, wmasklen, REG_EXTENDED))
+		masklenMaster = strlen(pszRegexMaster);
+		maskMaster = (pg_wchar *) palloc((masklenMaster+ 1) * sizeof(pg_wchar));
+		wmasklenMaster= pg_mb2wchar_with_len(pszRegexMaster, maskMaster, masklenMaster);
+
+		if (0 != pg_regcomp(&rFindFileNameMaster, maskMaster, wmasklenMaster, REG_EXTENDED))
 		{
-			ereport(ERROR,
-					(errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
-					 errmsg("Could not compile regular expression for backup filename matching")));
+		  ereport(ERROR,
+			  (errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
+			   errmsg("Could not compile regular expression for backup filename matching Master")));
+		}
+	}
+	else
+	{
+		// Matches segment filenames. These are in the format gp_dump_0_<dbid> or gp_dump_<contentid>_<dbid>
+		// This regex matches dump files with dbid of any number except 1 to avoid matching master dumps
+		snprintf(pszRegexNew, regex_len, "^%sgp_dump_%d_([02-9][0-9]*|1[0-9]+)_%s(.gz)?$", DUMP_PREFIX, instid, pszBackupKey);
+		snprintf(pszRegexOld, regex_len, "^%sgp_dump_0_%d_%s(.gz)?$", DUMP_PREFIX, segid, pszBackupKey);
+
+		masklenNew = strlen(pszRegexNew);
+		maskNew = (pg_wchar *) palloc((masklenNew + 1) * sizeof(pg_wchar));
+		wmasklenNew = pg_mb2wchar_with_len(pszRegexNew, maskNew, masklenNew);
+
+		masklenOld = strlen(pszRegexOld);
+		maskOld = (pg_wchar *) palloc((masklenOld + 1) * sizeof(pg_wchar));
+		wmasklenOld = pg_mb2wchar_with_len(pszRegexOld, maskOld, masklenOld);
+
+		if (0 != pg_regcomp(&rFindFileNameNew, maskNew, wmasklenNew, REG_EXTENDED))
+		{
+		  ereport(ERROR,
+			  (errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
+			   errmsg("Could not compile regular expression for backup filename matching New")));
 		}
 
+		if (0 != pg_regcomp(&rFindFileNameOld, maskOld, wmasklenOld, REG_EXTENDED))
+		{
+		  ereport(ERROR,
+			  (errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
+			   errmsg("Could not compile regular expression for backup filename matching Old")));
+		}
+	}
 		bFirstTime = false;
 	}
 
@@ -1830,7 +1879,7 @@ findAcceptableBackupFilePathName(char *pszBackupDirectory, char *pszBackupKey, i
 		pg_wchar   *data;
 		size_t		data_len;
 		int			newfile_len;
-		int         backup_file_path_len;
+		int			backup_file_path_len;
 		pszFileName = dirp->d_name;
 
 		/* Convert data string to wide characters */
@@ -1838,15 +1887,17 @@ findAcceptableBackupFilePathName(char *pszBackupDirectory, char *pszBackupKey, i
 		data = (pg_wchar *) palloc((newfile_len + 1) * sizeof(pg_wchar));
 		data_len = pg_mb2wchar_with_len(pszFileName, data, newfile_len);
 
-		if (0 == pg_regexec(&rFindFileName, data, data_len, 0, NULL, 0, NULL, 0))
+		if (0 == pg_regexec(&rFindFileNameNew, data, data_len, 0, NULL, 0, NULL, 0) ||
+			0 == pg_regexec(&rFindFileNameOld, data, data_len, 0, NULL, 0, NULL, 0) ||
+			0 == pg_regexec(&rFindFileNameMaster, data, data_len, 0, NULL, 0, NULL, 0))
 		{
 			pszSep = "/";
 			if (strlen(pszBackupDirectory) >= 1 && pszBackupDirectory[strlen(pszBackupDirectory) - 1] == '/')
 				pszSep = "";
 
-			backup_file_path_len = strlen(pszBackupDirectory) + strlen(DUMP_PREFIX) + strlen(pszFileName) + strlen(pszSep) + 1;
+			backup_file_path_len = strlen(pszBackupDirectory) + strlen(pszFileName) + strlen(pszSep) + 1;
 			pszBackupFilePathName = (char *) palloc(backup_file_path_len);
-			snprintf(pszBackupFilePathName, backup_file_path_len, "%s%s%s%s", pszBackupDirectory, pszSep, DUMP_PREFIX, pszFileName);
+			snprintf(pszBackupFilePathName, backup_file_path_len, "%s%s%s", pszBackupDirectory, pszSep, pszFileName);
 
 			/* Make sure that this is a regular file */
 			if (0 == stat(pszBackupFilePathName, &info) && S_ISREG(info.st_mode))
@@ -1855,7 +1906,9 @@ findAcceptableBackupFilePathName(char *pszBackupDirectory, char *pszBackupKey, i
 			}
 		}
 	}
-	pfree(pszRegex);
+	pfree(pszRegexNew);
+	pfree(pszRegexOld);
+	pfree(pszRegexMaster);
 	closedir(dp);
 
 	return pszBackupFilePathName;
@@ -1877,9 +1930,13 @@ formBackupFilePathName(char *pszBackupDirectory, char *pszBackupKey, bool is_com
 	int			len;
 	char	   *pszBackupFileName;
 
+	/* TODO: refactor this piece of code, can easily make bugs with this */
 	verifyGpIdentityIsSet();
-	instid = (GpIdentity.segindex == -1) ? 1 : 0;		/* dispatch node */
+	instid = GpIdentity.segindex;
 	segid = GpIdentity.dbid;
+
+	if (is_old_format)
+		instid = (instid == -1) ? 1 : 0;   /* dispatch node */
 
 	snprintf(szFileNamePrefix, 1 + PATH_MAX, "%sgp_dump_%d_%d_", DUMP_PREFIX, instid, segid);
 
@@ -1926,7 +1983,7 @@ formBackupFilePathName(char *pszBackupDirectory, char *pszBackupKey, bool is_com
 
 	strcat(pszBackupFileName, szFileNamePrefix);
 	strcat(pszBackupFileName, pszBackupKey);
-	
+
 	if (isPostData)
 	{
 		strcat(pszBackupFileName, "_post_data");
@@ -1962,12 +2019,16 @@ formStatusFilePathName(char *pszBackupDirectory, char *pszBackupKey, bool bIsBac
 	int			len;
 	char	   *pszFileName;
 
+	/* TODO: refactor this piece of code, can easily make bugs with this */
 	verifyGpIdentityIsSet();
-	instid = (GpIdentity.segindex == -1) ? 1 : 0;		/* dispatch node */
+	instid = GpIdentity.segindex;
 	segid = GpIdentity.dbid;
 
+	if (is_old_format)
+		instid = (instid == -1) ? 1 : 0;
+
 	snprintf(szFileNamePrefix, 1 + PATH_MAX, "%sgp_%s_status_%d_%d_", DUMP_PREFIX, (bIsBackup ? "dump" : "restore"),
-		    	instid, segid);
+				instid, segid);
 
 	/* Now add up the length of the pieces */
 	len = strlen(pszBackupDirectory);
@@ -2018,23 +2079,23 @@ queryNBUBackupFilePathName(char *netbackupServiceHost, char *netbackupRestoreFil
 
    fp = popen(cmd, "r");
    if (fp == NULL){
-       ereport(ERROR, (errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
-                       errmsg("Error querying restore filename to NetBackup server"),
-                       errhint("NetBackup server not running or restore file: %s has not been backed up to the NetBackup server", netbackupRestoreFileName)));
-       return NULL;
+	   ereport(ERROR, (errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
+					   errmsg("Error querying restore filename to NetBackup server"),
+					   errhint("NetBackup server not running or restore file: %s has not been backed up to the NetBackup server", netbackupRestoreFileName)));
+	   return NULL;
    }
 
    while(fgets(resBuff, strlen(netbackupRestoreFileName), fp) != NULL)
    {
-       strncat(queryResultFileName, resBuff, (1 + strlen(netbackupRestoreFileName)));
+	   strncat(queryResultFileName, resBuff, (1 + strlen(netbackupRestoreFileName)));
    }
 
    if (pclose(fp) != 0)
    {
-       ereport(ERROR, (errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
-                       errmsg("Error querying restore filename to NetBackup server"),
-                       errhint("NetBackup server not running or restore file: %s has not been backed up to the NetBackup server", netbackupRestoreFileName)));
-       return NULL;
+	   ereport(ERROR, (errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
+					   errmsg("Error querying restore filename to NetBackup server"),
+					   errhint("NetBackup server not running or restore file: %s has not been backed up to the NetBackup server", netbackupRestoreFileName)));
+	   return NULL;
    }
 
    return queryResultFileName;
@@ -2285,9 +2346,9 @@ validateBackupDirectory(char *pszBackupDirectory)
 	}
 }
 
-/* 
+/*
  * positionToError - given a char buffer, position to the first error msg in it.
- * 
+ *
  * we are only interested in ERRORs. therefore, search for the first ERROR
  * and return the rest of the status file starting from that point. if no error
  * found, return a "no error found" string. We are only interested in occurrences
@@ -2303,7 +2364,7 @@ static char *positionToError(char *source)
 	while(true)
 	{
 		firstErr = strstr((const char*)sourceCopy, "ERROR");
-		
+
 		if (!firstErr)
 		{
 			break;
@@ -2322,7 +2383,7 @@ static char *positionToError(char *source)
 			}
 		}
 	}
-	
+
 	if (!firstErr)
 	{
 		/* no [ERROR] found */
@@ -2332,7 +2393,7 @@ static char *positionToError(char *source)
 	{
 		/* found [ERROR]. go back to beginning of the line */
 		char *p;
-		
+
 		for (p = firstErr ; p > source ; p--)
 		{
 			if (*p == '\n')
@@ -2341,33 +2402,37 @@ static char *positionToError(char *source)
 				break;
 			}
 		}
-		
+
 		firstErr = p;
 	}
-	
+
 	return firstErr;
 }
 
 #ifdef USE_DDBOOST
 static char *formDDBoostFileName(char *pszBackupKey, bool isPostData, bool isCompress)
 {
-       /* First form the prefix */
-       char            szFileNamePrefix[1 + MAX_PATH_NAME];
-       int                     instid;                 /* dispatch node */
-       int                     segid;
-       int                     len = 0;
-       char       *pszBackupFileName;
+	/* First form the prefix */
+	char	szFileNamePrefix[1 + MAX_PATH_NAME];
+	int		instid; /* dispatch node */
+	int		segid;
+	int		len = 0;
+	char	*pszBackupFileName;
 
-       verifyGpIdentityIsSet();
-       instid = (GpIdentity.segindex == -1) ? 1 : 0;           /* dispatch node */
-       segid = GpIdentity.dbid;
+	/* TODO: refactor this piece of code, can easily make bugs with this */
+	verifyGpIdentityIsSet();
+	instid = GpIdentity.segindex;
+	segid = GpIdentity.dbid;
+
+	if (is_old_format)
+	   instid = (instid == -1) ? 1 : 0;   /* dispatch node */	 
 
 	memset(szFileNamePrefix, 0, sizeof(szFileNamePrefix));
-       snprintf(szFileNamePrefix, 1 + MAX_PATH_NAME, "%sgp_dump_%d_%d_", DUMP_PREFIX, instid, segid);
+	   snprintf(szFileNamePrefix, 1 + MAX_PATH_NAME, "%sgp_dump_%d_%d_", DUMP_PREFIX, instid, segid);
 
-      /* Now add up the length of the pieces */
-       len += strlen(szFileNamePrefix);
-       len += strlen(pszBackupKey);
+	  /* Now add up the length of the pieces */
+	   len += strlen(szFileNamePrefix);
+	   len += strlen(pszBackupKey);
 
 	if (isPostData)
 		len += strlen("_post_data");
@@ -2375,26 +2440,26 @@ static char *formDDBoostFileName(char *pszBackupKey, bool isPostData, bool isCom
 	if (isCompress)
 		len += strlen(".gz");
 
-       if (len > PATH_MAX)
-       {
-               ereport(ERROR,
-                               (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-                                errmsg("Backup FileName based on key %s too long", pszBackupKey)));
-       }
+	   if (len > PATH_MAX)
+	   {
+			   ereport(ERROR,
+							   (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+								errmsg("Backup FileName based on key %s too long", pszBackupKey)));
+	   }
 
-       pszBackupFileName = (char *) palloc(sizeof(char) * (1 + len));
+	   pszBackupFileName = (char *) palloc(sizeof(char) * (1 + len));
 
-       memset(pszBackupFileName, 0, (1+len));
-       strcat(pszBackupFileName, szFileNamePrefix);
-       strcat(pszBackupFileName, pszBackupKey);
+	   memset(pszBackupFileName, 0, (1+len));
+	   strcat(pszBackupFileName, szFileNamePrefix);
+	   strcat(pszBackupFileName, pszBackupKey);
 
 	if (isPostData)
 		strcat(pszBackupFileName, "_post_data");
 
 	if (isCompress)
-		strcat(pszBackupFileName, ".gz"); 
+		strcat(pszBackupFileName, ".gz");
 
-       return pszBackupFileName;
+	   return pszBackupFileName;
 }
 #endif
 

@@ -256,13 +256,9 @@ def restore_state_files_with_nbu(context):
 def restore_config_files_with_nbu(context):
     restore_file_with_nbu(context, "master_config")
 
-    gparray = GpArray.initFromCatalog(dbconn.DbURL(port=context.master_port), utility=True)
-    segments = gparray.getSegmentList()
-    for segment in segments:
-        seg = segment.get_active_primary()
-        seg_dump_dir = context.get_backup_dir(directory=seg.getSegmentDataDirectory())
-        seg_config_filename = context.generate_filename("segment_config", dbid=segment.get_primary_dbid(),
-                                                        directory=seg_dump_dir)
+    primaries = context.get_current_primaries()
+    for seg in primaries:
+        seg_config_filename = context.generate_filename("segment_config", dbid=seg.getSegmentDbId())
         seg_host = seg.getSegmentHostName()
         restore_file_with_nbu(context, path=seg_config_filename, hostname=seg_host)
 
@@ -352,7 +348,7 @@ class RestoreDatabase(Operation):
         else:
             table_filter_file = self.create_filter_file()
             if not self.context.metadata_only:
-                restore_line = self.create_restore_string(table_filter_file, full_restore_with_filter, change_schema_file, schema_level_restore_file)
+                restore_line = self.create_standard_restore_string(table_filter_file, full_restore_with_filter, change_schema_file, schema_level_restore_file)
                 logger.info('gp_restore commandline: %s: ' % restore_line)
                 cmd = Command('Invoking gp_restore', restore_line)
                 cmd.run(validateAfter=False)
@@ -480,7 +476,7 @@ class RestoreDatabase(Operation):
 
         schema_level_restore_file = create_temp_file_with_schemas(list(self.context.restore_schemas))
 
-        addresses = get_all_segment_addresses(self.context.master_port)
+        addresses = get_all_segment_addresses(self.context)
 
         scp_file_to_hosts(addresses, schema_level_restore_file, self.context.batch_default)
 
@@ -494,7 +490,7 @@ class RestoreDatabase(Operation):
 
         change_schema_file = create_temp_file_with_schemas(schema_list)
 
-        addresses = get_all_segment_addresses(self.context.master_port)
+        addresses = get_all_segment_addresses(self.context)
 
         scp_file_to_hosts(addresses, change_schema_file, self.context.batch_default)
 
@@ -506,7 +502,7 @@ class RestoreDatabase(Operation):
 
         table_filter_file = create_temp_file_with_tables(self.context.restore_tables)
 
-        addresses = get_all_segment_addresses(self.context.master_port)
+        addresses = get_all_segment_addresses(self.context)
 
         scp_file_to_hosts(addresses, table_filter_file, self.context.batch_default)
 
@@ -704,135 +700,65 @@ class RestoreDatabase(Operation):
 
     def create_restore_string(self, table_filter_file, full_restore_with_filter, change_schema_file=None, schema_level_restore_file=None):
         user = getpass.getuser()
-        hostname = socket.gethostname()    # TODO: can this just be localhost? bash was using `hostname`
-        path = self.context.get_gpd_path()
-        restore_line = "gp_restore -i -h %s -p %s -U %s --gp-i" % (hostname, self.context.master_port, user)
+        hostname = socket.gethostname()
+        (gpr_path, status_path, gpd_path) = self.get_restore_line_paths()
+
+        restore_line = "gp_restore -i -h %s -p %s -U %s --gp-d=%s --gp-i" % (hostname, self.context.master_port, user, gpd_path)
+        restore_line += " --gp-k=%s --gp-l=p" % (self.context.timestamp)
+
+        if gpr_path and status_path:
+            restore_line += " --gp-r=%s" % gpr_path
+            restore_line += " --status=%s" % status_path
+
+        if self.context.use_old_filename_format:
+            restore_line += " --old-format "
+
         if self.context.dump_prefix:
             logger.info("Adding --prefix")
             restore_line += " --prefix=%s" % self.context.dump_prefix
-        restore_line += " --gp-k=%s --gp-l=p" % (self.context.timestamp)
-        restore_line += " --gp-d=%s" % path
-
-        if self.context.report_status_dir:
-            restore_line += " --gp-r=%s" % self.context.report_status_dir
-            restore_line += " --status=%s" % self.context.report_status_dir
-        elif self.context.backup_dir and self.context.backup_dir_is_writable():
-            restore_line += " --gp-r=%s" % path
-            restore_line += " --status=%s" % path
-        # else
-        # gp-r is not set, restore.c sets it to MASTER_DATA_DIRECTORY if not specified.
-        # status file is not set, cdbbackup.c sets it to SEGMENT_DATA_DIRECTORY if not specified.
-
         if table_filter_file:
             restore_line += " --gp-f=%s" % table_filter_file
         if self.context.compress:
             restore_line += " --gp-c"
         restore_line += " -d %s" % checkAndAddEnclosingDoubleQuote(shellEscape(self.context.target_db))
 
-        # Restore only data if no_plan or full_restore_with_filter is True
+        if self.context.ddboost:
+            restore_line += " --ddboost"
+        if self.context.ddboost_storage_unit:
+            restore_line += " --ddboost-storage-unit=%s" % self.context.ddboost_storage_unit
+        if self.context.netbackup_service_host:
+            restore_line += " --netbackup-service-host=%s" % self.context.netbackup_service_host
+        if self.context.netbackup_block_size:
+            restore_line += " --netbackup-block-size=%s" % self.context.netbackup_block_size
+        if change_schema_file:
+            restore_line += " --change-schema-file=%s" % change_schema_file
+        if schema_level_restore_file:
+            restore_line += " --schema-level-file=%s" % schema_level_restore_file
+
+        return restore_line
+
+    def create_standard_restore_string(self, table_filter_file, full_restore_with_filter, change_schema_file=None, schema_level_restore_file=None):
+        restore_line = self.create_restore_string(table_filter_file, full_restore_with_filter, change_schema_file, schema_level_restore_file)
         if self.context.no_plan or full_restore_with_filter:
             restore_line += " -a"
         if self.context.no_ao_stats:
             restore_line += " --gp-nostats"
-        if self.context.ddboost:
-            restore_line += " --ddboost"
-        if self.context.ddboost_storage_unit:
-            restore_line += " --ddboost-storage-unit=%s" % self.context.ddboost_storage_unit
-        if self.context.netbackup_service_host:
-            restore_line += " --netbackup-service-host=%s" % self.context.netbackup_service_host
-        if self.context.netbackup_block_size:
-            restore_line += " --netbackup-block-size=%s" % self.context.netbackup_block_size
-        if change_schema_file:
-            restore_line += " --change-schema-file=%s" % change_schema_file
-        if schema_level_restore_file:
-            restore_line += " --schema-level-file=%s" % schema_level_restore_file
 
         return restore_line
 
     def create_post_data_schema_only_restore_string(self, table_filter_file, full_restore_with_filter, change_schema_file=None, schema_level_restore_file=None):
-        user = getpass.getuser()
-        hostname = socket.gethostname()    # TODO: can this just be localhost? bash was using `hostname`
-        path = self.context.get_gpd_path()
-        restore_line = "gp_restore -i -h %s -p %s -U %s --gp-d=%s --gp-i" % (hostname, self.context.master_port, user, path)
-        restore_line += " --gp-k=%s --gp-l=p" % (self.context.timestamp)
-
+        restore_line = self.create_restore_string(table_filter_file, full_restore_with_filter, change_schema_file, schema_level_restore_file)
         if full_restore_with_filter:
             restore_line += " -P"
-        if self.context.report_status_dir:
-            restore_line += " --gp-r=%s" % self.context.report_status_dir
-            restore_line += " --status=%s" % self.context.report_status_dir
-        elif self.context.backup_dir and self.context.backup_dir_is_writable():
-            restore_line += " --gp-r=%s" % path
-            restore_line += " --status=%s" % path
-        # else
-        # gp-r is not set, restore.c sets it to MASTER_DATA_DIRECTORY if not specified.
-        # status file is not set, cdbbackup.c sets it to SEGMENT_DATA_DIRECTORY if not specified.
-
-        if self.context.dump_prefix:
-            logger.info("Adding --prefix")
-            restore_line += " --prefix=%s" % self.context.dump_prefix
-        if table_filter_file:
-            restore_line += " --gp-f=%s" % table_filter_file
-        if change_schema_file:
-            restore_line += " --change-schema-file=%s" % change_schema_file
-        if schema_level_restore_file:
-            restore_line += " --schema-level-file=%s" % schema_level_restore_file
-        if self.context.compress:
-            restore_line += " --gp-c"
-        restore_line += " -d %s" % checkAndAddEnclosingDoubleQuote(shellEscape(self.context.target_db))
-
-        if self.context.ddboost:
-            restore_line += " --ddboost"
-        if self.context.ddboost_storage_unit:
-            restore_line += " --ddboost-storage-unit=%s" % self.context.ddboost_storage_unit
-        if self.context.netbackup_service_host:
-            restore_line += " --netbackup-service-host=%s" % self.context.netbackup_service_host
-        if self.context.netbackup_block_size:
-            restore_line += " --netbackup-block-size=%s" % self.context.netbackup_block_size
 
         return restore_line
 
     def create_schema_only_restore_string(self, table_filter_file, full_restore_with_filter, change_schema_file=None, schema_level_restore_file=None):
+        restore_line = self.create_restore_string(table_filter_file, full_restore_with_filter, change_schema_file, schema_level_restore_file)
         metadata_filename = self.context.generate_filename("metadata")
-        user = getpass.getuser()
-        hostname = socket.gethostname()    # TODO: can this just be localhost? bash was using `hostname`
-        (gpr_path, status_path, gpd_path) = self.get_restore_line_paths()
-
-        restore_line = "gp_restore -i -h %s -p %s -U %s --gp-i" % (hostname, self.context.master_port, user)
-        restore_line += " --gp-k=%s --gp-l=p -s %s" % (self.context.timestamp, metadata_filename)
-
+        restore_line += " -s %s" % metadata_filename
         if full_restore_with_filter:
             restore_line += " -P"
-        if gpr_path and status_path:
-            restore_line += " --gp-r=%s" % gpr_path
-            restore_line += " --status=%s" % status_path
-        # else
-        # gp-r is not set, restore.c sets it to MASTER_DATA_DIRECTORY if not specified.
-        # status file is not set, cdbbackup.c sets it to SEGMENT_DATA_DIRECTORY if not specified.
-
-        restore_line += " --gp-d=%s" % gpd_path
-
-        if self.context.dump_prefix:
-            logger.info("Adding --prefix")
-            restore_line += " --prefix=%s" % self.context.dump_prefix
-        if table_filter_file:
-            restore_line += " --gp-f=%s" % table_filter_file
-        if self.context.compress:
-            restore_line += " --gp-c"
-        restore_line += " -d %s" % checkAndAddEnclosingDoubleQuote(shellEscape(self.context.target_db))
-
-        if self.context.ddboost:
-            restore_line += " --ddboost"
-        if self.context.ddboost_storage_unit:
-            restore_line += " --ddboost-storage-unit=%s" % self.context.ddboost_storage_unit
-        if self.context.netbackup_service_host:
-            restore_line += " --netbackup-service-host=%s" % self.context.netbackup_service_host
-        if self.context.netbackup_block_size:
-            restore_line += " --netbackup-block-size=%s" % self.context.netbackup_block_size
-        if change_schema_file:
-            restore_line += " --change-schema-file=%s" % change_schema_file
-        if schema_level_restore_file:
-            restore_line += " --schema-level-file=%s" % schema_level_restore_file
 
         return restore_line
 
@@ -903,17 +829,26 @@ class ValidateTimestamp(Operation):
     def __init__(self, context):
         self.context = context
 
-    def validate_metadata_file(self, compressed_file):
-        if self.context.netbackup_service_host:
-            logger.info('Backup for given timestamp was performed using NetBackup. Querying NetBackup server to check for the dump file.')
-            compress = check_file_dumped_with_nbu(self.context, path=compressed_file)
+    def validate_metadata_file(self):
+        report_file = self.context.generate_filename("report")
+        self.context.use_old_filename_format = self.context.is_timestamp_in_old_format()
+        self.context.get_compress_and_dbname_from_report_file(report_file)
+
+        if self.context.ddboost:
+            # We pass in segment_dir='' because we don't want it included in our path for ddboost
+            ddboost_parent_dir = self.context.get_backup_dir(segment_dir='')
+            expected_metadata_file = self.context.generate_filename("metadata", directory=ddboost_parent_dir)
+            try:
+                metadata_contents = get_lines_from_dd_file(expected_metadata_file, self.context.ddboost_storage_unit)
+            except:
+                raise ExceptionNoStackTraceNeeded('Unable to find %s. Skipping restore.' % expected_metadata_file)
         else:
-            compress = os.path.exists(compressed_file)
-            if not compress:
-                uncompressed_file = compressed_file[:compressed_file.index('.gz')]
-                if not os.path.exists(uncompressed_file):
-                    raise ExceptionNoStackTraceNeeded('Unable to find {ucfile} or {ucfile}.gz. Skipping restore.'.format(ucfile=uncompressed_file))
-        return compress
+            expected_metadata_file = self.context.generate_filename("metadata")
+            if self.context.netbackup_service_host:
+                logger.info('Backup for given timestamp was performed using NetBackup. Querying NetBackup server to check for the dump file.')
+                restore_file_with_nbu(self.context, "metadata")
+            if not os.path.exists(expected_metadata_file):
+                 raise ExceptionNoStackTraceNeeded('Unable to find %s. Skipping restore.' % expected_metadata_file)
 
     def validate_timestamp_format(self):
         if not self.context.timestamp:
@@ -926,17 +861,8 @@ class ValidateTimestamp(Operation):
 
     def execute(self):
         self.validate_timestamp_format()
-        createdb_file = self.context.generate_filename("cdatabase")
-        if not CheckFile(createdb_file).run():
-            raise ExceptionNoStackTraceNeeded("Dump file '%s' does not exist on Master" % createdb_file)
-        restore_db = GetDbName(createdb_file).run()
-        if not self.context.ddboost:
-            compressed_file = self.context.generate_filename("metadata")
-            compress = self.validate_metadata_file(compressed_file)
-        else:
-            compressed_file = self.context.generate_filename("postdata")
-            compress = CheckFile(compressed_file).run()
-        return (self.context.timestamp, restore_db, compress)
+        self.validate_metadata_file()
+        return self.context.target_db
 
 class ValidateSegments(Operation):
     def __init__(self, context):
@@ -944,22 +870,18 @@ class ValidateSegments(Operation):
 
     def execute(self):
         """ TODO: Improve with grouping by host and ParallelOperation dispatch. """
-        gparray = GpArray.initFromCatalog(dbconn.DbURL(port=self.context.master_port, dbname='template1'), utility=True)
-        primaries = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary(current_role=True)]
-        mdd = self.context.master_datadir
+        self.context.use_old_filename_format = self.context.is_timestamp_in_old_format()
+        primaries = self.context.get_current_primaries()
         for seg in primaries:
             if seg.isSegmentDown():
                 """ Why must every Segment function have the word Segment in it ?! """
                 raise ExceptionNoStackTraceNeeded("Host %s dir %s dbid %d marked as invalid" % (seg.getSegmentHostName(), seg.getSegmentDataDirectory(), seg.getSegmentDbId()))
 
-            self.context.master_datadir = seg.getSegmentDataDirectory()
             if self.context.netbackup_service_host is None:
-                host = seg.getSegmentHostName()
-                path = self.context.generate_filename("dump", dbid=seg.getSegmentDbId())
-                exists = CheckRemotePath(path, host).run()
-                if not exists:
-                    raise ExceptionNoStackTraceNeeded("No dump file on %s at %s" % (seg.getSegmentHostName(), path))
-        self.context.master_datadir = mdd
+                remote_file = get_filename_for_content(self.context, "dump", seg.getSegmentContentId(),
+                                                       self.context.get_backup_dir(segment_dir=seg.getSegmentDataDirectory()), seg.getSegmentHostName())
+                if not remote_file:
+                    raise ExceptionNoStackTraceNeeded("No dump file on %s in %s" % (seg.getSegmentHostName(), seg.getSegmentDataDirectory()))
 
 def check_table_name_format_and_duplicate(table_list, restore_schemas=None):
     """
@@ -1012,7 +934,7 @@ class CopyPostData(Operation):
     def execute(self):
          # Build master _post_data file:
         real_post_data = self.context.generate_filename("postdata")
-        fake_post_data = self.context.generate_filename("postdata", self.fake_timestamp)
+        fake_post_data = self.context.generate_filename("postdata", timestamp=self.fake_timestamp)
         shutil.copy(real_post_data, fake_post_data)
 
 class GetDbName(Operation):
@@ -1045,14 +967,13 @@ class RecoverRemoteDumps(Operation):
         self.context = context
 
     def execute(self):
-        gparray = GpArray.initFromCatalog(dbconn.DbURL(port=self.context.master_port), utility=True)
         from_host, from_path = self.host, self.path
         logger.info("Commencing remote database dump file recovery process, please wait...")
-        segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary(current_role=True) or seg.isSegmentMaster()]
+        segs = [seg for seg in self.context.gparray.getDbList() if seg.isSegmentPrimary(current_role=True) or seg.isSegmentMaster()]
         self.pool = WorkerPool(numWorkers=min(len(segs), self.context.batch_default))
         for seg in segs:
             to_host = seg.getSegmentHostName()
-            to_path = os.path.join(seg.getSegmentDataDirectory(), self.context.dump_dir, self.context.timestamp[0:8])
+            to_path = self.context.get_backup_dir(segment_dir=seg.getSegmentDataDirectory())
 
             if seg.isSegmentMaster():
                 from_file = self.context.generate_filename("metadata")
@@ -1144,7 +1065,7 @@ class GetDDboostDumpTablesOperation(GetDumpTablesOperation):
     def execute(self):
         # We want to make sure that directory is empty so that we can grab the ddboost directory value
         # with the timestamp
-        ddboost_parent_dir = self.context.get_backup_dir(directory='')
+        ddboost_parent_dir = self.context.get_backup_dir(segment_dir='')
         ddboost_cmdStr = 'gpddboost --readFile --from-file=%s' % self.context.generate_filename("dump", directory=ddboost_parent_dir)
 
         if self.context.ddboost_storage_unit:

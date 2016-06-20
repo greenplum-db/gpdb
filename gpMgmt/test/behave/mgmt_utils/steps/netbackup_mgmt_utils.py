@@ -6,23 +6,46 @@ from test.behave_utils.utils import run_gpcommand
 from gppylib.gparray import GpArray
 from test.behave_utils.utils import get_all_hostnames_as_list
 from gppylib.operations.backup_utils import Context
+from datetime import datetime
+import json
 
 master_data_dir = os.environ.get('MASTER_DATA_DIRECTORY')
+old_format_indicator = '/tmp/is_old.file'
 
-@given('the NetBackup "{ver}" libraries are loaded')
-def impl(context, ver):
-    hosts = set(get_all_hostnames_as_list(context, 'template1'))
-    gphome = os.environ.get('GPHOME')
+def _read_timestamp_from_json(context):
+    scenario_name = context._stack[0]['scenario'].name
+    with open(timestamp_json, 'r') as infile:
+        return json.load(infile)[scenario_name]
+
+@given('the netbackup params have been parsed')
+def impl(context):
+    NETBACKUPDICT = defaultdict(dict)
+    NETBACKUPDICT['NETBACKUPINFO'] = parse_netbackup_params()
+    context.netbackup_service_host = NETBACKUPDICT['NETBACKUPINFO']['NETBACKUP_PARAMS']['NETBACKUP_SERVICE_HOST']
+    context.netbackup_policy = NETBACKUPDICT['NETBACKUPINFO']['NETBACKUP_PARAMS']['NETBACKUP_POLICY']
+    context.netbackup_schedule = NETBACKUPDICT['NETBACKUPINFO']['NETBACKUP_PARAMS']['NETBACKUP_SCHEDULE']
+
+
+def _copy_nbu_lib_files(context, ver, gphome):
     ver = ver.replace('.', '')
+    hosts = set(get_all_hostnames_as_list(context, 'template1'))
     cpCmd = 'cp -f {gphome}/lib/nbu{ver}/lib/* {gphome}/lib/'.format(gphome=gphome,
                                                                      ver=ver)
-
     for host in hosts:
         cmd = Command(name='Copy NBU lib files',
                 cmdStr=cpCmd,
                 ctxt=REMOTE,
                 remoteHost=host)
         cmd.run(validateAfter=True)
+
+@given('the NetBackup "{ver}" libraries are loaded')
+def impl(context, ver):
+    gphome = os.environ.get('GPHOME')
+    _copy_nbu_lib_files(context=context, ver=ver, gphome=gphome)
+
+@given('the NetBackup "{ver}" libraries are loaded for GPHOME "{gphome}"')
+def impl(context, ver, gphome):
+    _copy_nbu_lib_files(context=context, ver=ver, gphome=gphome)
 
 @when('the user runs "{cmd_str}" using netbackup with long params')
 def impl(context, cmd_str):
@@ -44,7 +67,19 @@ def impl(context, cmd_str):
         command_str = cmd_str + netbackup_service_host + netbackup_policy + netbackup_schedule
     elif bnr_tool == 'gp_restore':
         command_str = cmd_str + netbackup_service_host
+    run_gpcommand(context, command_str)
 
+@when('the user runs gpcrondump with -k option on database "{dbname}" using netbackup')
+def impl(context, dbname):
+    datetime_fmt = datetime.now().strftime("%Y%m%d%H%M%S")
+    cmd_str = "gpcrondump -a -x %s -k %s --netbackup-block-size 2048" % (dbname, datetime_fmt)
+    if hasattr(context, 'netbackup_service_host'):
+        netbackup_service_host = context.netbackup_service_host
+    if hasattr(context, 'netbackup_policy'):
+        netbackup_policy = context.netbackup_policy
+    if hasattr(context, 'netbackup_schedule'):
+        netbackup_schedule = context.netbackup_schedule
+    command_str = cmd_str + " --netbackup-service-host " + netbackup_service_host + " --netbackup-policy " + netbackup_policy + " --netbackup-schedule " + netbackup_schedule
     run_gpcommand(context, command_str)
 
 @when('the user runs "{cmd_str}" using netbackup')
@@ -55,14 +90,13 @@ def impl(context, cmd_str):
         netbackup_policy = context.netbackup_policy
     if hasattr(context, 'netbackup_schedule'):
         netbackup_schedule = context.netbackup_schedule
-    bnr_tool = cmd_str.split()[0].strip()
-    if bnr_tool == 'gpcrondump':
+    if 'gpcrondump' in cmd_str:
         command_str = cmd_str + " --netbackup-service-host " + netbackup_service_host + " --netbackup-policy " + netbackup_policy + " --netbackup-schedule " + netbackup_schedule
-    elif bnr_tool == 'gpdbrestore':
+    elif 'gpdbrestore' in cmd_str:
         command_str = cmd_str + " --netbackup-service-host " + netbackup_service_host
-    elif bnr_tool == 'gp_dump':
+    elif 'gp_dump' in cmd_str:
         command_str = cmd_str + " --netbackup-service-host " + netbackup_service_host + " --netbackup-policy " + netbackup_policy + " --netbackup-schedule " + netbackup_schedule
-    elif bnr_tool == 'gp_restore':
+    elif 'gp_restore' in cmd_str:
         command_str = cmd_str + " --netbackup-service-host " + netbackup_service_host
 
     run_gpcommand(context, command_str)
@@ -86,6 +120,38 @@ def impl(context, cmd):
 
     command_str = cmd + " --netbackup-service-host " + netbackup_service_host
     run_command(context, command_str)
+@when('the user runs gpdbrestore with the stored json timestamp using netbackup')
+@then('the user runs gpdbrestore with the stored json timestamp using netbackup')
+def impl(context):
+    if hasattr(context, 'backup_timestamp'):
+        ts = context.backup_timestamp
+    #context.backup_timestamp = _read_timestamp_from_json(context)[-1]
+    if hasattr(context, 'netbackup_service_host'):
+        netbackup_service_host = context.netbackup_service_host
+    command = 'gpdbrestore -e -t %s -a --netbackup-service-host %s' % (context.backup_timestamp, netbackup_service_host)
+    run_gpcommand(context, command)
+
+@when('the user runs gpdbrestore with the stored json timestamp and options "{options}" using netbackup')
+@then('the user runs gpdbrestore with the stored json timestamp and options "{options}" using netbackup')
+def impl(context, options):
+    if hasattr(context, 'backup_timestamp'):
+        ts = context.backup_timestamp
+    #context.backup_timestamp = _read_timestamp_from_json(context)[-1]
+    if hasattr(context, 'netbackup_service_host'):
+        netbackup_service_host = context.netbackup_service_host
+    command = 'gpdbrestore -e -t %s -a %s --netbackup-service-host %s' % (context.backup_timestamp, options, netbackup_service_host)
+    run_gpcommand(context, command)
+
+@when('the user runs gpdbrestore with the stored json timestamp and options "{options}" without -e option using netbackup')
+@then('the user runs gpdbrestore with the stored json timestamp and options "{options}" without -e option using netbackup')
+def impl(context, options):
+    if hasattr(context, 'backup_timestamp'):
+        ts = context.backup_timestamp
+    #context.backup_timestamp = _read_timestamp_from_json(context)[-1]
+    if hasattr(context, 'netbackup_service_host'):
+        netbackup_service_host = context.netbackup_service_host
+    command = 'gpdbrestore -t %s -a %s --netbackup-service-host %s' % (context.backup_timestamp, options, netbackup_service_host)
+    run_gpcommand(context, command)
 
 @when('the user runs gpdbrestore with the stored timestamp using netbackup')
 def impl(context):
@@ -135,7 +201,7 @@ def impl(context, dbname):
     run_gpcommand(context, command)
 
 @then('verify that the config files are backed up with the stored timestamp using netbackup')
-def impl(context):
+def impl(context, use_old_format = False):
     if hasattr(context, 'backup_timestamp'):
         ts = context.backup_timestamp
     if hasattr(context, 'netbackup_service_host'):
@@ -157,8 +223,9 @@ def impl(context):
     primary_segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary(current_role=True)]
 
     for seg in primary_segs:
+        first_digit = 0 if use_old_format else seg.getSegmentContentId()
         segment_config_filename = os.path.join(seg.getSegmentDataDirectory(), 'db_dumps', context.backup_timestamp[0:8],
-                                           '%sgp_segment_config_files_0_%s_%s.tar' % (context.dump_prefix, seg.getSegmentDbId(), context.backup_timestamp))
+                                           '%sgp_segment_config_files_%d_%s_%s.tar' % (context.dump_prefix, first_digit, seg.getSegmentDbId(), context.backup_timestamp))
         command_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (netbackup_service_host, segment_config_filename)
         cmd = Command('Validate segment config file', command_str, ctxt=REMOTE, remoteHost = seg.getSegmentHostName())
         cmd.run(validateAfter=True)
@@ -186,12 +253,17 @@ def impl(context, dbname):
 
 @when('the user runs gp_restore with the the stored timestamp and subdir for metadata only in "{dbname}" using netbackup')
 def impl(context, dbname):
+    # only the old-to-new-format netbackup test creates the indicator file
+    use_old_format = os.path.isfile(old_format_indicator)
     if hasattr(context, 'backup_timestamp'):
         ts = context.backup_timestamp
     if hasattr(context, 'netbackup_service_host'):
         netbackup_service_host = context.netbackup_service_host
-    command = 'gp_restore -i --gp-k %s --gp-d db_dumps/%s --gp-i --gp-r db_dumps/%s --gp-l=p -d %s --gp-c -s db_dumps/%s/gp_dump_1_1_%s.gz --netbackup-service-host %s' % \
-                            (ts, context.backup_subdir, context.backup_subdir, dbname, context.backup_subdir, ts, netbackup_service_host)
+    basename = "gp_dump_%s_1_" % ("1" if use_old_format else "-1")
+    command = 'gp_restore -i --gp-k %s --gp-d db_dumps/%s --gp-i --gp-r db_dumps/%s --gp-l=p -d %s --gp-c -s db_dumps/%s/%s%s.gz --netbackup-service-host %s' % \
+                            (ts, context.backup_subdir, context.backup_subdir, dbname, context.backup_subdir, basename, ts, netbackup_service_host)
+    if use_old_format:
+        command += ' --old-format'
     run_gpcommand(context, command)
 
 @when('the user runs gpdbrestore with the backup list stored timestamp and options "{options}" using netbackup')
@@ -261,7 +333,7 @@ def impl(context, cmd, poolname):
     if hasattr(context, 'netbackup_schedule'):
         netbackup_schedule = context.netbackup_schedule
     cmd = cmd + " --netbackup-service-host " + netbackup_service_host + " --netbackup-policy " + netbackup_policy + " --netbackup-schedule " + netbackup_schedule
-    command = Command(name='run gpcrondump in a separate thread', cmdStr=cmd)
+    command = Command(name='run command in a separate thread', cmdStr=cmd)
     pool = WorkerPool(numWorkers=1)
     pool.addCommand(command)
     if not hasattr(context, 'pool'):
@@ -304,6 +376,8 @@ def impl(context, dbname):
 @when('verify that {filetype} file with prefix "{prefix}" under subdir "{subdir}" has been backed up using netbackup')
 @then('verify that {filetype} file with prefix "{prefix}" under subdir "{subdir}" has been backed up using netbackup')
 def impl(context, filetype, prefix, subdir):
+    # only the old-to-new-format netbackup test creates the indicator file
+    use_old_format = os.path.isfile(old_format_indicator)
     if hasattr(context, 'netbackup_service_host'):
         netbackup_service_host = context.netbackup_service_host
     if hasattr(context, 'backup_timestamp'):
@@ -327,7 +401,8 @@ def impl(context, filetype, prefix, subdir):
             raise Exception('Report file %s was not backup up to NetBackup server %s successfully' % (filename, netbackup_service_host))
 
     elif filetype == 'global':
-        filename = os.path.join(dump_dir, "%sgp_global_1_1_%s" % (prefix, backup_timestamp))
+        basename = "gp_global_%s_1_" % ("1" if use_old_format else "-1")
+        filename = os.path.join(dump_dir, "%s%s%s" % (prefix, basename, backup_timestamp))
         cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (netbackup_service_host, filename)
         cmd = Command("Querying NetBackup server for global file", cmd_str)
         cmd.run(validateAfter=True)
@@ -348,7 +423,8 @@ def impl(context, filetype, prefix, subdir):
         for seg in segs:
             seg_dir = seg.getSegmentDataDirectory()
             dump_dir = os.path.join(seg_dir, 'db_dumps', '%s' % (backup_timestamp[0:8]))
-            seg_config_filename = os.path.join(dump_dir, "%sgp_segment_config_files_0_%d_%s.tar" % (prefix, seg.getSegmentDbId(), backup_timestamp))
+            first_digit = 0 if use_old_format else seg.getSegmentContentId()
+            seg_config_filename = os.path.join(dump_dir, "%sgp_segment_config_files_%d_%d_%s.tar" % (prefix, first_digit, seg.getSegmentDbId(), backup_timestamp))
             seg_host = seg.getSegmentHostName()
             cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (netbackup_service_host, seg_config_filename)
             cmd = Command("Querying NetBackup server for segment config file", cmd_str, ctxt=REMOTE, remoteHost=seg_host)
@@ -379,7 +455,8 @@ def impl(context, filetype, prefix, subdir):
             raise Exception('Last operation state file %s was not backup up to NetBackup server %s successfully' % (filename, netbackup_service_host))
 
     elif filetype == 'cdatabase':
-        filename = "%s/%sgp_cdatabase_1_1_%s" % (dump_dir, prefix, backup_timestamp)
+        basename = "gp_cdatabase_%s_1_" % ("1" if use_old_format else "-1")
+        filename = "%s/%s%s%s" % (dump_dir, prefix, basename, backup_timestamp)
         cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (netbackup_service_host, filename)
         cmd = Command("Querying NetBackup server for cdatabase file", cmd_str)
         cmd.run(validateAfter=True)
@@ -447,3 +524,53 @@ def impl(context, substr):
     del_cmd_str = "gp_bsa_delete_agent --netbackup-service-host=%s --netbackup-delete-objects=*%s*" % (netbackup_service_host, substr)
     cmd = Command('Delete the list of objects matching regex on NetBackup server', del_cmd_str)
     cmd.run(validateAfter=True)
+
+@given('read old timestamp from json')
+def impl(context):
+    context.backup_timestamp = _read_timestamp_from_json(context)[-1]
+    context.inc_backup_timestamps = _read_timestamp_from_json(context)[1:]
+    context.backup_subdir = _read_timestamp_from_json(context)[-1][:8]
+
+@given('the old database is started')
+def impl(context):
+    command = 'gpstop -a -M fast'
+    run_gpcommand(context, command)
+
+    fo = open("is_old.file", "wb")
+    fo.close()
+
+    command = 'gpstart -a'
+    run_gpcommand(context, command)
+
+    # Wait for database to come up, to prevent race conditions in later tests
+    cmd = Command(name="check if database is up", cmdStr="psql -l")
+    for i in range (30):
+        sleep(10)
+        cmd.run()
+        results = cmd.get_results()
+        if results.rc == 0:
+            return
+    raise Exception("Database did not start up within 5 minutes`")
+
+@given('the new database is started')
+def impl(context):
+    command = 'gpstop -a -M fast'
+    run_gpcommand(context, command)
+
+    try:
+        os.remove('/tmp/is_old.file')
+    except OSError:
+        pass
+
+    command = 'gpstart -a'
+    run_gpcommand(context, command)
+
+    # Wait for database to come up, to prevent race conditions in later tests
+    cmd = Command(name="check if database is up", cmdStr="psql -l")
+    for i in range (30):
+        sleep(10)
+        cmd.run()
+        results = cmd.get_results()
+        if results.rc == 0:
+            return
+    raise Exception("Database did not start up within 5 minutes`")
