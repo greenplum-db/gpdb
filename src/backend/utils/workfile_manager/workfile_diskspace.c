@@ -9,12 +9,11 @@
  *-------------------------------------------------------------------------
  */
 
-#include <postgres.h>
+#include "postgres.h"
+
 #include "storage/shmem.h"
-#include "utils/gp_atomic.h"
 #include "cdb/cdbvars.h"
 #include "utils/workfile_mgr.h"
-#include "miscadmin.h"
 
 /*
  * This is set when a backend fails to write to a workfile,

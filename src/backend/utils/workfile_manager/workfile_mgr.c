@@ -8,9 +8,11 @@
  *-------------------------------------------------------------------------
  */
 
-#include <postgres.h>
+#include "postgres.h"
+
 #include <unistd.h>
 #include <sys/stat.h>
+
 #include "utils/workfile_mgr.h"
 #include "miscadmin.h"
 #include "cdb/cdbvars.h"

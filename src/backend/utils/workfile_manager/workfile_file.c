@@ -8,9 +8,8 @@
  *-------------------------------------------------------------------------
  */
 
-#include <postgres.h>
-#include <unistd.h>
-#include <sys/stat.h>
+#include "postgres.h"
+
 #include "cdb/cdbvars.h"
 #include "utils/faultinjector.h"
 #include "utils/workfile_mgr.h"
