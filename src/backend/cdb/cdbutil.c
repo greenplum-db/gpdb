@@ -1331,3 +1331,59 @@ bool isSockAlive(int sock)
 
 	return true;
 }
+
+/*
+ * Helper functions
+ */
+int gp_pthread_create(pthread_t * thread, void *(*start_routine)(void *),
+		void *arg, const char *caller)
+{
+	int pthread_err = 0;
+	pthread_attr_t t_atts;
+
+	/*
+	 * Call some init function. Before any thread is created, we need to init
+	 * some static stuff. The main purpose is to guarantee the non-thread safe
+	 * stuff are called in main thread, before any child thread get running.
+	 * Note these staic data structure should be read only after init.	Thread
+	 * creation is a barrier, so there is no need to get lock before we use
+	 * these data structures.
+	 *
+	 * So far, we know we need to do this for getpwuid_r (See MPP-1971, glibc
+	 * getpwuid_r is not thread safe).
+	 */
+#ifndef WIN32
+	get_gp_passwdptr();
+#endif
+
+	/*
+	 * save ourselves some memory: the defaults for thread stack size are
+	 * large (1M+)
+	 */
+	pthread_err = pthread_attr_init(&t_atts);
+	if (pthread_err != 0)
+	{
+		elog(LOG, "%s: pthread_attr_init failed.  Error %d", caller, pthread_err);
+		return pthread_err;
+	}
+
+#ifdef pg_on_solaris
+	/* Solaris doesn't have PTHREAD_STACK_MIN ? */
+	pthread_err = pthread_attr_setstacksize(&t_atts, (256 * 1024));
+#else
+	pthread_err = pthread_attr_setstacksize(&t_atts,
+			Max(PTHREAD_STACK_MIN, (256 * 1024)));
+#endif
+	if (pthread_err != 0)
+	{
+		elog(LOG, "%s: pthread_attr_setstacksize failed.  Error %d", caller, pthread_err);
+		pthread_attr_destroy(&t_atts);
+		return pthread_err;
+	}
+
+	pthread_err = pthread_create(thread, &t_atts, start_routine, arg);
+
+	pthread_attr_destroy(&t_atts);
+
+	return pthread_err;
+}

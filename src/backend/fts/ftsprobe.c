@@ -18,7 +18,7 @@
 
 #include "gp-libpq-fe.h"
 #include "gp-libpq-int.h"
-#include "cdb/cdbgang.h"		/* gp_pthread_create */
+#include "cdb/cdbutil.h"		/* gp_pthread_create */
 #include "libpq/ip.h"
 #include "postmaster/fts.h"
 

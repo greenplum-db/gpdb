@@ -11,16 +11,17 @@
  */
 
 #include "postgres.h"
-#include <limits.h>
 
 #include "storage/ipc.h"		/* For proc_exit_inprogress */
 #include "tcop/tcopprot.h"
 #include "cdb/cdbdisp.h"
 #include "cdb/cdbdisp_thread.h"
+#include "cdb/cdbdisp_non_thread.h"
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbfts.h"
 #include "cdb/cdbgang.h"
 #include "cdb/cdbsreh.h"
+#include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
 
 /*
@@ -30,6 +31,7 @@ CdbDispatchDirectDesc default_dispatch_direct_desc = { false, 0, {0}};
 
 static void cdbdisp_clearGangActiveFlag(CdbDispatcherState * ds);
 
+static DispatcherInternalFuncs *pDispatchFuncs = NULL;
 /*
  * cdbdisp_dispatchToGang:
  * Send the strCommand SQL statement to the subset of all segdbs in the cluster
@@ -94,7 +96,7 @@ cdbdisp_dispatchToGang(struct CdbDispatcherState *ds,
 	 * WIP: will use a function pointer for implementation later, currently just use an internal function to move dispatch
 	 * thread related code into a separate file.
 	 */
-	cdbdisp_dispatchToGang_internal(ds, gp, sliceIndex, disp_direct);
+	(pDispatchFuncs->dispatchToGang)(ds, gp, sliceIndex, disp_direct);
 }
 
 /*
@@ -111,7 +113,7 @@ CdbCheckDispatchResult(struct CdbDispatcherState *ds,
 {
 	PG_TRY();
 	{
-		CdbCheckDispatchResult_internal(ds, waitMode);
+		(pDispatchFuncs->checkResults)(ds, waitMode);
 	}
 	PG_CATCH();
 	{
@@ -322,27 +324,28 @@ cdbdisp_handleError(struct CdbDispatcherState *ds)
  *	 maxSlices: max number of slices of the query/command.
  */
 void
-cdbdisp_makeDispatcherState(CdbDispatcherState * ds, int maxResults,
-							int maxSlices, bool cancelOnError)
+cdbdisp_makeDispatcherState(CdbDispatcherState * ds,
+							int maxSlices,
+							bool cancelOnError,
+							char *queryText,
+							int queryTextLen)
 {
 	MemoryContext oldContext = NULL;
 
 	Assert(ds != NULL);
-	Assert(ds->dispatchStateContext == NULL);
-	Assert(ds->dispatchThreads == NULL);
+	Assert(ds->dispatchParams == NULL);
 	Assert(ds->primaryResults == NULL);
 
-	ds->dispatchStateContext = AllocSetContextCreate(TopMemoryContext,
-													 "Dispatch Context",
-													 ALLOCSET_DEFAULT_MINSIZE,
-													 ALLOCSET_DEFAULT_INITSIZE,
-													 ALLOCSET_DEFAULT_MAXSIZE);
+	if (ds->dispatchStateContext == NULL)
+		ds->dispatchStateContext = AllocSetContextCreate(TopMemoryContext,
+														 "Dispatch Context",
+														 ALLOCSET_DEFAULT_MINSIZE,
+														 ALLOCSET_DEFAULT_INITSIZE,
+														 ALLOCSET_DEFAULT_MAXSIZE);
 
 	oldContext = MemoryContextSwitchTo(ds->dispatchStateContext);
-	ds->primaryResults = cdbdisp_makeDispatchResults(maxResults,
-													 maxSlices,
-													 cancelOnError);
-	ds->dispatchThreads = cdbdisp_makeDispatchThreads(maxSlices);
+	ds->primaryResults = cdbdisp_makeDispatchResults(maxSlices, cancelOnError);
+	ds->dispatchParams = (pDispatchFuncs->makeDispatchParams)(maxSlices, queryText, queryTextLen);
 	MemoryContextSwitchTo(oldContext);
 }
 
@@ -375,7 +378,7 @@ cdbdisp_destroyDispatcherState(CdbDispatcherState * ds)
 	}
 
 	ds->dispatchStateContext = NULL;
-	ds->dispatchThreads = NULL;
+	ds->dispatchParams = NULL;
 	ds->primaryResults = NULL;
 }
 
@@ -390,4 +393,44 @@ cdbdisp_clearGangActiveFlag(CdbDispatcherState * ds)
 	{
 		ds->primaryResults->writer_gang->dispatcherActive = false;
 	}
+}
+
+void
+CollectQEWriterTransactionInformation(SegmentDatabaseDescriptor * segdbDesc,
+									  CdbDispatchResult * dispatchResult)
+{
+	PGconn *conn = segdbDesc->conn;
+
+	if (conn && conn->QEWriter_HaveInfo)
+	{
+		dispatchResult->QEIsPrimary = true;
+		dispatchResult->QEWriter_HaveInfo = true;
+		dispatchResult->QEWriter_DistributedTransactionId = conn->QEWriter_DistributedTransactionId;
+		dispatchResult->QEWriter_CommandId = conn->QEWriter_CommandId;
+		if (conn && conn->QEWriter_Dirty)
+		{
+			dispatchResult->QEWriter_Dirty = true;
+		}
+	}
+}
+
+void cdbdisp_useThread(bool useThread)
+{
+	if (useThread)
+		pDispatchFuncs = &ThreadedFuncs;
+	else
+		pDispatchFuncs = &NonThreadedFuncs;
+}
+
+bool cdbdisp_checkForCancel(CdbDispatcherState * ds)
+{
+	if (pDispatchFuncs == NULL || pDispatchFuncs->checkForCancel == NULL)
+		return false;
+	return (pDispatchFuncs->checkForCancel)(ds);
+}
+
+void cdbdisp_onProcExit(void)
+{
+	if(pDispatchFuncs != NULL && pDispatchFuncs->procExitCallBack != NULL)
+		(pDispatchFuncs->procExitCallBack)();
 }

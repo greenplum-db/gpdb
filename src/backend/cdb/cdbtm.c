@@ -25,6 +25,7 @@
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdisp_dtx.h"
 #include "cdb/cdbdtxcontextinfo.h"
+#include "cdb/cdbgang.h"
 
 #include "cdb/cdbvars.h"
 #include "gp-libpq-fe.h"

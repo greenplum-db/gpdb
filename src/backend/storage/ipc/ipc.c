@@ -23,7 +23,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
-#include "cdb/cdbdisp_thread.h"
+#include "cdb/cdbdisp.h"
 #include "libpq/pqsignal.h"
 #include "miscadmin.h"
 #ifdef PROFILE_PID_DIR
@@ -200,7 +200,7 @@ proc_exit_prepare(int code)
 	 * something.  Actually, I cannot find any better option to do the
 	 * correct work.
 	 */
-	cdbdisp_waitThreads();
+	cdbdisp_onProcExit();
 
 	/*
 	* Make sure interconnect thread quit before shmem_exit() in FATAL case.

@@ -9,14 +9,10 @@
 #ifndef _CDBGANG_H_
 #define _CDBGANG_H_
 
-#include "cdb/cdbutil.h"
 #include "executor/execdesc.h"
-#include <pthread.h>
 
 struct Port;
-struct QueryDesc;
-struct DirectDispatchInfo;
-struct EState;
+struct CdbComponentDatabases;
 
 /*
  * A gang represents a single group of workers on each connected segDB
@@ -74,7 +70,7 @@ extern List *getAllIdleReaderGangs(void);
 
 extern List *getAllAllocatedReaderGangs(void);
 
-extern CdbComponentDatabases *getComponentDatabases(void);
+extern struct CdbComponentDatabases *getComponentDatabases(void);
 
 extern bool gangsExist(void);
 
@@ -107,8 +103,6 @@ extern void disconnectAndDestroyIdleReaderGangs(void);
 extern void cleanupPortalGangs(Portal portal);
 
 extern int largestGangsize(void);
-
-extern int gp_pthread_create(pthread_t *thread, void *(*start_routine)(void *), void *arg, const char *caller);
 
 /*
  * cdbgang_parse_gpqeid_params
@@ -153,20 +147,6 @@ typedef struct CdbProcess
 	int contentid;
 } CdbProcess;
 
-extern void InitSliceTable(struct EState *estate, int nMotions, int nSubplans);
-extern Slice *getCurrentSlice(struct EState *estate, int sliceIndex);
-extern bool sliceRunsOnQD(Slice *slice);
-extern bool sliceRunsOnQE(Slice *slice);
-extern int sliceCalculateNumSendingProcesses(Slice *slice);
-
-extern void InitRootSlices(QueryDesc *queryDesc);
-extern void AssignGangs(QueryDesc *queryDesc);
-extern void ReleaseGangs(QueryDesc *queryDesc);
-
-#ifdef USE_ASSERT_CHECKING
-struct PlannedStmt;
-
-extern void AssertSliceTableIsValid(SliceTable *st, struct PlannedStmt *pstmt);
-#endif
+#define DISPATCH_WAIT_TIMEOUT_SEC 2
 
 #endif   /* _CDBGANG_H_ */

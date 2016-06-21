@@ -14,7 +14,6 @@
 #include "gp-libpq-fe.h"               /* prerequisite for libpq-int.h */
 #include "gp-libpq-int.h"              /* PQExpBufferData */
 
-
 /* --------------------------------------------------------------------------------------------------
  * Structure for segment database definition and working values
  */
@@ -41,6 +40,9 @@ typedef struct SegmentDatabaseDescriptor
 	 */
 	PGconn				   *conn;		
 	
+	/* Used for non-threaded gang creation */
+	PostgresPollingStatusType pollStatus;
+
 	/*
 	 * Error info saved when connection cannot be established.
 	 * ERRCODE_xxx (sqlstate encoded as an int) of first error, or 0.
@@ -77,8 +79,13 @@ cdbconn_termSegmentDescriptor(SegmentDatabaseDescriptor *segdbDesc);
 /* Connect to a QE as a client via libpq. */
 void
 cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc,
-		  const char *gpqeid,
-		  const char *options);
+				  const char *gpqeid,
+				  const char *options,
+				  bool wait);
+
+void
+cdbconn_doConnectComplete(SegmentDatabaseDescriptor *segdbDesc);
+
 
 /* Disconnect from QE */
 void cdbconn_disconnect(SegmentDatabaseDescriptor *segdbDesc);
@@ -101,4 +108,10 @@ void cdbconn_resetQEErrorMessage(SegmentDatabaseDescriptor *segdbDesc);
 
 /* Set the slice index for error messages related to this QE. */
 void setQEIdentifier(SegmentDatabaseDescriptor *segdbDesc, int sliceIndex, MemoryContext mcxt);
+
+/* Send cancel/finish request to QE */
+bool
+cdbconn_signalQE(SegmentDatabaseDescriptor *segdbDesc,
+				 char *errbuf,
+				 bool isCancel);
 #endif   /* CDBCONN_H */

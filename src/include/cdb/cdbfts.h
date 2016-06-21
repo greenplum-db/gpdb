@@ -10,7 +10,7 @@
 #include "storage/lwlock.h"
 #include "cdb/cdbconn.h"
 #include "utils/guc.h"
-#include "cdb/cdbgang.h"
+#include "cdb/cdbutil.h"
 
 struct FtsSegDBState
 {

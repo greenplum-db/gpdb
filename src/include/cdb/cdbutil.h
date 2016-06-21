@@ -17,6 +17,7 @@
  */
 
 #include <math.h>
+#include <pthread.h>
 
 /* cdb_rand returns a random float value between 0 and 1 inclusive */
 #define cdb_rand() ((double) random() / (double) MAX_RANDOM_VALUE)
@@ -174,5 +175,19 @@ extern int16 my_mirror_dbid(void);
 extern int	getgpsegmentCount(void);
 
 extern bool isSockAlive(int sock);
+
+extern int
+gp_pthread_create(pthread_t * thread,
+				  void *(*start_routine)(void *),
+				  void *arg, const char *caller);
+
+#define ELOG_GANG_DEBUG(...) do { \
+	if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG) elog(LOG, __VA_ARGS__); \
+    } while(false);
+
+#define WRITE_LOG_GANG_DEBUG(...) do { \
+	if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG) write_log(__VA_ARGS__); \
+    } while(false);
+
 
 #endif   /* CDBUTIL_H */

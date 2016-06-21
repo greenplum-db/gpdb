@@ -9,19 +9,18 @@
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
+#include "miscadmin.h"
 
 #include "gp-libpq-fe.h"
 #include "gp-libpq-int.h"
-#include "miscadmin.h"
-#include "utils/memutils.h"
 #include "libpq/libpq-be.h"
+#include "cdb/cdbconn.h"            /* me */
+#include "cdb/cdbutil.h"            /* CdbComponentDatabaseInfo */
+#include "cdb/cdbvars.h"
 
 extern int	pq_flush(void);
 extern int	pq_putmessage(char msgtype, const char *s, size_t len);
 
-#include "cdb/cdbconn.h"            /* me */
-#include "cdb/cdbutil.h"            /* CdbComponentDatabaseInfo */
-#include "cdb/cdbvars.h"
 
 int		gp_segment_connect_timeout = 180;
 
@@ -287,8 +286,10 @@ void cdbconn_termSegmentDescriptor(SegmentDatabaseDescriptor *segdbDesc)
  * Connect to a QE as a client via libpq.
  * returns true if connected.
  */
-void cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc, const char *gpqeid,
-		const char *options)
+void cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc,
+					   const char *gpqeid,
+					   const char *options,
+					   bool wait)
 {
 #define MAX_KEYWORDS 10
 #define MAX_INT_STRING_LEN 20
@@ -366,6 +367,12 @@ void cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc, const char *gpqeid,
 
 	Assert(nkeywords < MAX_KEYWORDS);
 
+	if (!wait)
+	{
+		segdbDesc->conn = PQconnectStartParams(keywords, values, false);
+		return;
+	}
+
 	/*
 	 * Call libpq to connect
 	 */
@@ -374,7 +381,7 @@ void cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc, const char *gpqeid,
 	/*
 	 * Check for connection failure.
 	 */
-	if (PQstatus(segdbDesc->conn) == CONNECTION_BAD)
+	if (cdbconn_isBadConnection(segdbDesc))
 	{
 		if (!segdbDesc->errcode)
 			segdbDesc->errcode = ERRCODE_GP_INTERCONNECTION_ERROR;
@@ -383,8 +390,7 @@ void cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc, const char *gpqeid,
 				segdbDesc->whoami, options, PQerrorMessage(segdbDesc->conn));
 
 		/* Don't use elog, it's not thread-safe */
-		if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
-			write_log("%s\n", segdbDesc->error_message.data);
+		WRITE_LOG_GANG_DEBUG("%s\n", segdbDesc->error_message.data);
 
 		PQfinish(segdbDesc->conn);
 		segdbDesc->conn = NULL;
@@ -408,30 +414,48 @@ void cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc, const char *gpqeid,
 					"Internal error: No motion listener port for %s\n",
 					segdbDesc->whoami);
 
-			if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
-				write_log("%s\n", segdbDesc->error_message.data);
+			WRITE_LOG_GANG_DEBUG("%s\n", segdbDesc->error_message.data);
 
 			PQfinish(segdbDesc->conn);
 			segdbDesc->conn = NULL;
 		}
 		else
-		{
-			if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
-				write_log("Connected to %s motionListener=%d with options: %s\n",
+			WRITE_LOG_GANG_DEBUG("Connected to %s motionListener=%d with options: %s\n",
 						segdbDesc->whoami, segdbDesc->motionListener, options);
-		}
 	}
+}
+
+void
+cdbconn_doConnectComplete(SegmentDatabaseDescriptor *segdbDesc)
+{
+	PQsetNoticeReceiver(segdbDesc->conn, &MPPnoticeReceiver, segdbDesc);
+	/* Command the QE to initialize its motion layer.
+	 * Wait for it to respond giving us the TCP port number
+	 * where it listens for connections from the gang below.
+	 */
+	segdbDesc->motionListener = PQgetQEdetail(segdbDesc->conn);
+	segdbDesc->backendPid = PQbackendPID(segdbDesc->conn);
+	if (segdbDesc->motionListener == -1)
+		ereport(ERROR,
+				(errcode(ERRCODE_GP_INTERNAL_ERROR),
+				 errmsg("Internal error: No motion listener port for %s\n",
+						segdbDesc->whoami)));
+	else
+		ELOG_GANG_DEBUG("Connected to %s motionListenerPorts=%d/%d with options %s",
+			 segdbDesc->whoami,
+			 (segdbDesc->motionListener & 0x0ffff),
+			 ((segdbDesc->motionListener >> 16) & 0x0ffff),
+			 PQoptions(segdbDesc->conn));
 }
 
 /* Disconnect from QE */
 void cdbconn_disconnect(SegmentDatabaseDescriptor *segdbDesc)
 {
-	if (PQstatus(segdbDesc->conn) != CONNECTION_BAD)
+	if (!cdbconn_isBadConnection(segdbDesc))
 	{
 		PGTransactionStatusType status = PQtransactionStatus(segdbDesc->conn);
 
-		if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
-			elog(LOG, "Finishing connection with %s; %s", segdbDesc->whoami, transStatusToString(status));
+		ELOG_GANG_DEBUG("Finishing connection with %s; %s", segdbDesc->whoami, transStatusToString(status));
 
 		elog((Debug_print_full_dtm ? LOG : (gp_log_gang >= GPVARS_VERBOSITY_DEBUG ? LOG : DEBUG5)),
 			"disconnectAndDestroyGang: got QEDistributedTransactionId = %u, QECommandId = %u, and QEDirty = %s",
@@ -442,15 +466,10 @@ void cdbconn_disconnect(SegmentDatabaseDescriptor *segdbDesc)
 		if (status == PQTRANS_ACTIVE)
 		{
 			char errbuf[256];
-			PGcancel *cn = PQgetCancel(segdbDesc->conn);
-
-			if (Debug_cancel_print || gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
+			if (!cdbconn_signalQE(segdbDesc, errbuf, true))
+				elog(LOG, "Unable to cancel: %s", strlen(errbuf) == 0 ? "cannot allocate PGCancel" : errbuf);
+			else if (Debug_cancel_print || gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
 				elog(LOG, "Calling PQcancel for %s", segdbDesc->whoami);
-
-			if (PQcancel(cn, errbuf, 256) == 0)
-				elog(LOG, "Unable to cancel %s: %s", segdbDesc->whoami, errbuf);
-
-			PQfreeCancel(cn);
 		}
 
 		PQfinish(segdbDesc->conn);
@@ -495,7 +514,8 @@ bool cdbconn_discardResults(SegmentDatabaseDescriptor *segdbDesc,
 /* Return if it's a bad connection */
 bool cdbconn_isBadConnection(SegmentDatabaseDescriptor *segdbDesc)
 {
-	return PQstatus(segdbDesc->conn) == CONNECTION_BAD;
+	return (PQsocket(segdbDesc->conn) < 0 ||
+		    PQstatus(segdbDesc->conn) == CONNECTION_BAD);
 }
 
 /* Reset error message buffer */
@@ -541,3 +561,32 @@ void setQEIdentifier(SegmentDatabaseDescriptor *segdbDesc,
 	MemoryContextSwitchTo(oldContext);
 }
 
+/*
+ * Send cancel/finish signal to still-running QE through libpq.
+ * waitMode is either CANCEL or FINISH.  Returns true if we successfully
+ * sent a signal (not necessarily received by the target process).
+ */
+bool
+cdbconn_signalQE(SegmentDatabaseDescriptor *segdbDesc,
+				 char *errbuf,
+				 bool isCancel)
+{
+	bool ret;
+	PGcancel *cn = NULL;
+
+	cn = PQgetCancel(segdbDesc->conn);
+	if (cn == NULL)
+		return false;
+
+	/*
+	 * Send query-finish, unless the client really wants to cancel the
+	 * query.  This could happen if cancel comes after we sent finish.
+	 */
+	if (isCancel)
+		ret = PQcancel(cn, errbuf, 256);
+	else
+		ret = PQrequestFinish(cn, errbuf, 256);
+
+	PQfreeCancel(cn);
+	return ret;
+}

@@ -47,6 +47,7 @@
 #include "cdb/cdbpathtoplan.h"  /* cdbpathtoplan_create_flow() etc. */
 #include "cdb/cdbpullup.h"      /* cdbpullup_targetlist() */
 #include "cdb/cdbsreh.h"
+#include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
 
 

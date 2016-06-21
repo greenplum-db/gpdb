@@ -11,14 +11,12 @@
 #ifndef CDBDISP_H
 #define CDBDISP_H
 
-#include "lib/stringinfo.h" /* StringInfo */
-
-#include "cdb/cdbtm.h"
-
 #define CDB_MOTION_LOST_CONTACT_STRING "Interconnect error master lost contact with segment."
 
 struct CdbDispatchResults; /* #include "cdb/cdbdispatchresult.h" */
+struct CdbDispatchResult; /* #include "cdb/cdbdispatchresult.h" */
 struct Gang; /* #include "cdb/cdbgang.h" */
+struct SegmentDatabaseDescriptor; /* #include "cdb/cdbconn.h" */
 
 /*
  * Types of message to QE when we wait for it.
@@ -43,10 +41,19 @@ extern CdbDispatchDirectDesc default_dispatch_direct_desc;
 typedef struct CdbDispatcherState
 {
 	struct CdbDispatchResults *primaryResults;
-	struct CdbDispatchCmdThreads *dispatchThreads;
+	void *dispatchParams;
 	MemoryContext dispatchStateContext;
 } CdbDispatcherState;
 
+typedef struct DispatcherInternalFuncs
+{
+	void (*procExitCallBack)(void);
+	bool (*checkForCancel)(struct CdbDispatcherState *ds);
+	void* (*makeDispatchParams)(int maxSlices, char *queryText, int queryTextLen);
+	void (*checkResults)(struct CdbDispatcherState *ds, DispatchWaitMode waitMode);
+	void (*dispatchToGang)(struct CdbDispatcherState *ds, struct Gang *gp,
+			int sliceIndex, CdbDispatchDirectDesc *direct);
+}DispatcherInternalFuncs;
 /*--------------------------------------------------------------------*/
 /*
  * cdbdisp_dispatchToGang:
@@ -134,9 +141,10 @@ cdbdisp_handleError(struct CdbDispatcherState *ds);
  */
 void
 cdbdisp_makeDispatcherState(CdbDispatcherState *ds,
-							int maxResults,
 							int maxSlices,
-							bool cancelOnError);
+							bool cancelOnError,
+							char *queryText,
+							int queryTextLen);
 
 /*
  * Free memory in CdbDispatcherState
@@ -145,5 +153,13 @@ cdbdisp_makeDispatcherState(CdbDispatcherState *ds,
  * Free dispatcher memory context.
  */
 void cdbdisp_destroyDispatcherState(CdbDispatcherState *ds);
+
+void
+CollectQEWriterTransactionInformation(struct SegmentDatabaseDescriptor *segdbDesc,
+									  struct CdbDispatchResult *dispatchResult);
+
+void cdbdisp_useThread(bool useThread);
+bool cdbdisp_checkForCancel(CdbDispatcherState * ds);
+void cdbdisp_onProcExit(void);
 
 #endif   /* CDBDISP_H */

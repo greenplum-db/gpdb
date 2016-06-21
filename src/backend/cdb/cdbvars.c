@@ -20,6 +20,7 @@
 #include "cdb/cdbvars.h"
 #include "cdb/cdbfts.h"
 #include "cdb/cdbutil.h"
+#include "cdb/cdbdisp.h"
 #include "lib/stringinfo.h"
 #include "libpq/libpq-be.h"
 #include "utils/memutils.h"
@@ -649,8 +650,10 @@ assign_gp_connections_per_thread(int newval, bool doit, GucSource source __attri
 
 	if (doit)
 	{
-		if (newval <= 0)
+		if (newval < 0)
 			return false;
+
+		cdbdisp_useThread(newval > 0);
 
 		gp_connections_per_thread = newval;
 	}

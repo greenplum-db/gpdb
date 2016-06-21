@@ -20,6 +20,7 @@
 #include "commands/explain.h"
 #include "commands/prepare.h"
 #include "commands/trigger.h"
+#include "executor/execUtils.h"
 #include "executor/instrument.h"
 #include "nodes/pg_list.h"
 #include "nodes/print.h"
@@ -44,7 +45,6 @@
 #include "cdb/cdbpathlocus.h"
 #include "cdb/memquota.h"
 #include "miscadmin.h"
-#include "cdb/cdbgang.h"
 
 #ifdef USE_ORCA
 extern char *SzDXLPlan(Query *parse);

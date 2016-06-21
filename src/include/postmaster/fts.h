@@ -13,7 +13,6 @@
 #ifndef FTS_H
 #define FTS_H
 
-
 /*
  * ENUMS
  */
@@ -66,9 +65,8 @@ enum probe_transition_e
 /*
  * STRUCTURES
  */
-
-/* prototype */
-struct CdbComponentDatabaseInfo;
+struct CdbComponentDatabases;
+struct CdbComponentDatabaseInfo; 
 
 typedef struct
 {
@@ -80,8 +78,8 @@ typedef struct
 
 typedef struct
 {
-	CdbComponentDatabaseInfo *primary;
-	CdbComponentDatabaseInfo *mirror;
+	struct CdbComponentDatabaseInfo *primary;
+	struct CdbComponentDatabaseInfo *mirror;
 	uint32 stateNew;
 	uint32 statePrimary;
 	uint32 stateMirror;
@@ -98,14 +96,14 @@ extern char *FtsFindSuperuser(bool try_bootstrap);
 /*
  * Interface for probing segments
  */
-extern void FtsProbeSegments(CdbComponentDatabases *dbs, uint8 *scan_status);
+extern void FtsProbeSegments(struct CdbComponentDatabases *dbs, uint8 *scan_status);
 
 /*
  * Interface for segment state checking
  */
-extern bool FtsIsSegmentAlive(CdbComponentDatabaseInfo *segInfo);
-extern CdbComponentDatabaseInfo *FtsGetPeerSegment(int content, int dbid);
-extern void FtsMarkSegmentsInSync(CdbComponentDatabaseInfo *primary, CdbComponentDatabaseInfo *mirror);
+extern bool FtsIsSegmentAlive(struct CdbComponentDatabaseInfo *segInfo);
+extern struct CdbComponentDatabaseInfo *FtsGetPeerSegment(int content, int dbid);
+extern void FtsMarkSegmentsInSync(struct CdbComponentDatabaseInfo *primary, struct CdbComponentDatabaseInfo *mirror);
 extern void FtsDumpChanges(FtsSegmentStatusChange *changes, int changeEntries);
 
 /*
@@ -117,18 +115,18 @@ extern bool FtsIsActive(void);
 /*
  * Interface for FireRep-specific segment state machine and transitions
  */
-extern uint32 FtsGetPairStateFilerep(CdbComponentDatabaseInfo *primary, CdbComponentDatabaseInfo *mirror);
+extern uint32 FtsGetPairStateFilerep(struct CdbComponentDatabaseInfo *primary, struct CdbComponentDatabaseInfo *mirror);
 extern uint32 FtsTransitionFilerep(uint32 stateOld, uint32 trans);
 extern void FtsResolveStateFilerep(FtsSegmentPairState *pairState);
 
-extern void FtsPreprocessProbeResultsFilerep(CdbComponentDatabases *dbs, uint8 *probe_results);
+extern void FtsPreprocessProbeResultsFilerep(struct CdbComponentDatabases *dbs, uint8 *probe_results);
 extern void FtsFailoverFilerep(FtsSegmentStatusChange *changes, int changeCount);
 
 
 /*
  * Interface for SAN-specific segment state machine and transitions
  */
-extern uint32 FtsGetPairStateSAN(CdbComponentDatabaseInfo *primary, CdbComponentDatabaseInfo *mirror);
+extern uint32 FtsGetPairStateSAN(struct CdbComponentDatabaseInfo *primary, struct CdbComponentDatabaseInfo *mirror);
 extern uint32 FtsTransitionSAN(uint32 stateOld, uint32 trans);
 extern void FtsResolveStateSAN(FtsSegmentPairState *pairState);
 extern void FtsFailoverSAN(FtsSegmentStatusChange *changes, int changeCount, char *time_str);
@@ -137,7 +135,7 @@ extern void FtsFailoverSAN(FtsSegmentStatusChange *changes, int changeCount, cha
 /*
  * Interface for requesting master to shut down
  */
-extern void FtsRequestPostmasterShutdown(CdbComponentDatabaseInfo *primary, CdbComponentDatabaseInfo *mirror);
+extern void FtsRequestPostmasterShutdown(struct CdbComponentDatabaseInfo *primary, struct CdbComponentDatabaseInfo *mirror);
 extern bool FtsMasterShutdownRequested(void);
 extern void FtsRequestMasterShutdown(void);
 

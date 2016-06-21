@@ -17,6 +17,7 @@
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbhash.h"
+#include "executor/execUtils.h"
 #include "executor/executor.h"
 #include "executor/execdebug.h"
 #include "executor/nodeMotion.h"

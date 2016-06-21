@@ -47,6 +47,7 @@
 #include "access/heapam.h"
 #include "access/appendonlywriter.h"
 #include "catalog/index.h"
+#include "executor/execUtils.h"
 #include "executor/execdebug.h"
 #include "parser/parsetree.h"
 #include "utils/memutils.h"
@@ -2448,3 +2449,83 @@ int RootSliceIndex(EState *estate)
 
 	return result;
 }
+
+
+#ifdef USE_ASSERT_CHECKING
+/**
+ * Assert that slicetable is valid. Must be called after ExecInitMotion, which sets up the slice table
+ */
+void AssertSliceTableIsValid(SliceTable *st, struct PlannedStmt *pstmt)
+{
+	if (!st)
+		return;
+
+	Assert(pstmt);
+
+	Assert(pstmt->nMotionNodes == st->nMotions);
+	Assert(pstmt->nInitPlans == st->nInitPlans);
+
+	ListCell *lc = NULL;
+	int i = 0;
+
+	int maxIndex = st->nMotions + st->nInitPlans + 1;
+
+	Assert(maxIndex == list_length(st->slices));
+
+	foreach (lc, st->slices)
+	{
+		Slice *s = (Slice *) lfirst(lc);
+
+		/* The n-th slice entry has sliceIndex of n */
+		Assert(s->sliceIndex == i++ && "slice index incorrect");
+
+		/* The root index of a slice is either 0 or is a slice corresponding to an init plan */
+		Assert((s->rootIndex == 0) || (s->rootIndex > st->nMotions && s->rootIndex < maxIndex));
+
+		/* Parent slice index */
+		if (s->sliceIndex == s->rootIndex)
+		{
+			/* Current slice is a root slice. It will have parent index -1.*/
+			Assert(s->parentIndex == -1 && "expecting parent index of -1");
+		}
+		else
+		{
+			/* All other slices must have a valid parent index */
+			Assert(s->parentIndex >= 0 && s->parentIndex < maxIndex && "slice's parent index out of range");
+		}
+
+		/* Current slice's children must consider it the parent */
+		ListCell *lc1 = NULL;
+		foreach (lc1, s->children)
+		{
+			int childIndex = lfirst_int(lc1);
+			Assert(childIndex >= 0 && childIndex < maxIndex && "invalid child slice");
+			Slice *sc = (Slice *) list_nth(st->slices, childIndex);
+			Assert(sc->parentIndex == s->sliceIndex && "slice's child does not consider it the parent");
+		}
+
+		/* Current slice must be in its parent's children list */
+		if (s->parentIndex >= 0)
+		{
+			Slice *sp = (Slice *) list_nth(st->slices, s->parentIndex);
+
+			bool found = false;
+			foreach (lc1, sp->children)
+			{
+				int childIndex = lfirst_int(lc1);
+				Assert(childIndex >= 0 && childIndex < maxIndex && "invalid child slice");
+				Slice *sc = (Slice *) list_nth(st->slices, childIndex);
+
+				if (sc->sliceIndex == s->sliceIndex)
+				{
+					found = true;
+					break;
+				}
+			}
+
+			Assert(found && "slice's parent does not consider it a child");
+		}
+	}
+}
+
+#endif

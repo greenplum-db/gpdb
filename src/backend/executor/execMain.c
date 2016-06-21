@@ -57,6 +57,7 @@
 #include "commands/trigger.h"
 #include "executor/execDML.h"
 #include "executor/execdebug.h"
+#include "executor/execUtils.h"
 #include "executor/instrument.h"
 #include "executor/nodeSubplan.h"
 #include "libpq/pqformat.h"
@@ -93,7 +94,6 @@
 #include "cdb/ml_ipc.h"
 #include "cdb/cdbmotion.h"
 #include "cdb/cdbtm.h"
-#include "cdb/cdbgang.h"
 #include "cdb/cdboidsync.h"
 #include "cdb/cdbmirroredbufferpool.h"
 #include "cdb/cdbpersistentstore.h"
@@ -103,7 +103,6 @@
 #include "cdb/cdbtargeteddispatch.h"
 
 extern bool cdbpathlocus_querysegmentcatalogs;
-
 
 typedef struct evalPlanQual
 {
