@@ -1776,7 +1776,7 @@ inittapes_mk(Tuplesortstate_mk *state, const char* rwfile_prefix)
      */
     if(!rwfile_prefix)
     {
-        state->work_set = workfile_mgr_create_set(BUFFILE, false /* can_be_reused */, NULL /* ps */, NULL_SNAPSHOT);
+        state->work_set = workfile_mgr_create_set(BUFFILE, false /* can_be_reused */, NULL /* ps */);
         state->tapeset_state_file = workfile_mgr_create_fileno(state->work_set, WORKFILE_NUM_MKSORT_METADATA);
 
         ExecWorkFile *tape_file = workfile_mgr_create_fileno(state->work_set, WORKFILE_NUM_MKSORT_TAPESET);

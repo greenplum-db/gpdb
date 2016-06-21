@@ -35,7 +35,6 @@
 typedef struct workset_info
 {
 	ExecWorkFileType file_type;
-	workfile_set_snapshot snapshot;
 	NodeTag nodeType;
 	TimestampTz session_start_time;
 	uint64 operator_work_mem;
@@ -172,7 +171,7 @@ get_name_from_nodeType(const NodeTag node_type)
  *
  */
 workfile_set *
-workfile_mgr_create_set(enum ExecWorkFileType type, bool can_be_reused, PlanState *ps, workfile_set_snapshot snapshot)
+workfile_mgr_create_set(enum ExecWorkFileType type, bool can_be_reused, PlanState *ps)
 {
 	Assert(NULL != workfile_mgr_cache);
 
@@ -194,7 +193,6 @@ workfile_mgr_create_set(enum ExecWorkFileType type, bool can_be_reused, PlanStat
 	/* Create parameter info for the populate function */
 	workset_info set_info;
 	set_info.file_type = type;
-	set_info.snapshot = snapshot;
 	set_info.nodeType = node_type;
 	set_info.can_be_reused = can_be_reused && workfile_mgr_is_reusable(ps);
 	set_info.dir_path = dir_path;
@@ -333,7 +331,6 @@ workfile_mgr_populate_set(const void *resource, const void *param)
 	work_set->node_type = set_info->nodeType;
 	work_set->metadata.type = set_info->file_type;
 	work_set->metadata.bfz_compress_type = gp_workfile_compress_algorithm;
-	work_set->metadata.snapshot = set_info->snapshot;
 	work_set->metadata.num_leaf_files = 0;
 	work_set->slice_id = currentSliceId;
 	work_set->session_id = gp_session_id;

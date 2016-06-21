@@ -1007,8 +1007,7 @@ ExecHashJoinSaveTuple(PlanState *ps, MemTuple tuple, uint32 hashvalue,
 
 		hashtable->work_set = workfile_mgr_create_set(gp_workfile_type_hashjoin,
 				true, /* can_be_reused */
-				&hashtable->hjstate->js.ps,
-				NULL_SNAPSHOT);
+				&hashtable->hjstate->js.ps);
 
 		/* First time spilling. Before creating any spill files, create a metadata file */
 		hashtable->state_file = workfile_mgr_create_fileno(hashtable->work_set, WORKFILE_NUM_HASHJOIN_METADATA);

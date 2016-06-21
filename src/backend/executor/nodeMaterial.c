@@ -101,7 +101,7 @@ ExecMaterial(MaterialState *node)
 		else
 		{
 			/* Non-shared Materialize node */
-			workfile_set *work_set =  workfile_mgr_create_set(BUFFILE, false /* can_reuse */, &node->ss.ps, NULL_SNAPSHOT);
+			workfile_set *work_set =  workfile_mgr_create_set(BUFFILE, false /* can_reuse */, &node->ss.ps);
 
 			ts = ntuplestore_create_workset(work_set, PlanStateOperatorMemKB((PlanState *) node) * 1024);
 			tsa = ntuplestore_create_accessor(ts, true /* isWriter */);

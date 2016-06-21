@@ -36,13 +36,6 @@
 #define WORKFILE_NUM_TUPLESTORE_DATA 1
 #define WORKFILE_NUM_TUPLESTORE_LOB 2
 
-
-/* Placeholder snapshot type */
-typedef uint32 workfile_set_snapshot;
-
-/* placeholder snapshot information */
-#define NULL_SNAPSHOT 0
-
 typedef struct workfile_set_plan
 {
 	/* serialized representation of the subplan */
@@ -67,9 +60,6 @@ typedef struct
 
 	/* compression level used by bfz if applicable */
 	int bfz_compress_type;
-
-	/* Snapshot information associated with this spill file set */
-	workfile_set_snapshot snapshot;
 
 	/* work_mem for this operator at the time of the spill */
 	uint64 operator_work_mem;
@@ -151,7 +141,7 @@ typedef struct QueryspaceDesc
 
 /* Workfile Set operations */
 workfile_set *workfile_mgr_create_set(enum ExecWorkFileType type, bool can_be_reused,
-		PlanState *ps, workfile_set_snapshot snapshot);
+		PlanState *ps);
 workfile_set *workfile_mgr_find_set(PlanState *ps);
 void workfile_mgr_close_set(workfile_set *work_set);
 void workfile_mgr_cleanup(void);

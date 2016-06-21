@@ -2176,7 +2176,7 @@ workfile_fill_sharedcache(void)
 	for (crt_entry = 0; crt_entry < n_entries; crt_entry++)
 	{
 		workfile_set *work_set = workfile_mgr_create_set(BUFFILE,
-				false /* can_be_reused */, NULL /* PlanState */, NULL_SNAPSHOT);
+				false /* can_be_reused */, NULL /* PlanState */);
 		if (NULL == work_set)
 		{
 			success = false;
@@ -2211,7 +2211,7 @@ workfile_create_and_set_cleanup(void)
 	elog(LOG, "Running sub-test: Create Workset");
 
 	workfile_set *work_set = workfile_mgr_create_set(BUFFILE,
-			false /* can_be_reused */, NULL /* PlanState */, NULL_SNAPSHOT);
+			false /* can_be_reused */, NULL /* PlanState */);
 
 	unit_test_result(NULL != work_set);
 
@@ -2259,7 +2259,7 @@ workfile_create_and_individual_cleanup(void)
 	elog(LOG, "Running sub-test: Create Workset");
 
 	workfile_set *work_set = workfile_mgr_create_set(BUFFILE,
-			false /* can_be_reused */, NULL /* PlanState */, NULL_SNAPSHOT);
+			false /* can_be_reused */, NULL /* PlanState */);
 
 	unit_test_result(NULL != work_set);
 

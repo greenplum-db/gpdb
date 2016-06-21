@@ -1198,7 +1198,7 @@ spill_hash_table(AggState *aggstate)
 	/* Spill set does not have a workfile_set. Use existing or create new one as needed */
 	if (hashtable->work_set == NULL)
 	{
-		hashtable->work_set = workfile_mgr_create_set(BFZ, true /* can_be_reused */, &aggstate->ss.ps, NULL_SNAPSHOT);
+		hashtable->work_set = workfile_mgr_create_set(BFZ, true /* can_be_reused */, &aggstate->ss.ps);
 		hashtable->work_set->metadata.buckets = hashtable->nbuckets;
 		//aggstate->workfiles_created = true;
 	}
