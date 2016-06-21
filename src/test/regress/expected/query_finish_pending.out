@@ -103,3 +103,20 @@ LIMIT 2;
 (2 rows)
 
 reset gp_enable_mk_sort;
+-- Disable faultinjectors
+--start_ignore
+\! gpfaultinjector -f execsort_mksort_mergeruns -y reset --seg_dbid 2
+20160621:08:58:20:039567 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f execsort_mksort_mergeruns -y reset --seg_dbid 2
+20160621:08:58:20:039567 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
+20160621:08:58:20:039567 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Obtaining Segment details from master...
+20160621:08:58:20:039567 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on 1 segment(s)
+20160621:08:58:20:039567 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on nikos-mac:/Users/narmenatzoglou/gitdev/gpdb/github_updated/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0:content=0:dbid=2:mode=s:status=u
+20160621:08:58:20:039567 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+\! gpfaultinjector -f execshare_input_next -y reset --seg_dbid 2
+20160621:08:58:20:039579 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f execshare_input_next -y reset --seg_dbid 2
+20160621:08:58:20:039579 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
+20160621:08:58:20:039579 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Obtaining Segment details from master...
+20160621:08:58:20:039579 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on 1 segment(s)
+20160621:08:58:20:039579 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on nikos-mac:/Users/narmenatzoglou/gitdev/gpdb/github_updated/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0:content=0:dbid=2:mode=s:status=u
+20160621:08:58:20:039579 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+--end_ignore

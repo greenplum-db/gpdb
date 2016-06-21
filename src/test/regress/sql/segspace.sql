@@ -148,3 +148,8 @@ rollback;
 -- check used segspace after test
 reset statement_mem;
 select max(size) from segspace_view_gp_workfile_segspace;
+
+-- Disable faultinjectors
+--start_ignore
+\! gpfaultinjector -f exec_hashjoin_new_batch -y reset --seg_dbid 2
+--end_ignore

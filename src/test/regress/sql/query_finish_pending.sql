@@ -58,4 +58,8 @@ from testsisc
 LIMIT 2;
 
 reset gp_enable_mk_sort;
-
+-- Disable faultinjectors
+--start_ignore
+\! gpfaultinjector -f execsort_mksort_mergeruns -y reset --seg_dbid 2
+\! gpfaultinjector -f execshare_input_next -y reset --seg_dbid 2
+--end_ignore

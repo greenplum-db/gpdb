@@ -32,3 +32,8 @@ SET statement_mem=2000;
 --end_ignore
 
 SELECT MAX(i1) FROM test_zlib_hagg GROUP BY i2;
+
+-- Reset faultinjectors
+--start_ignore
+\! gpfaultinjector -f workfile_creation_failure -y reset --seg_dbid 2
+--end_ignore

@@ -55,3 +55,13 @@ SET statement_mem=2000;
 --end_ignore
 SELECT MAX(i1) FROM test_zlib_hagg GROUP BY i2;
 ERROR:  fault triggered, fault name:'workfile_creation_failure' fault type:'error' (faultinjector.c:673)  (seg0 slice2 127.0.0.1:25432 pid=34971)
+-- Reset faultinjectors
+--start_ignore
+\! gpfaultinjector -f workfile_creation_failure -y reset --seg_dbid 2
+20160621:09:07:09:042201 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f workfile_creation_failure -y reset --seg_dbid 2
+20160621:09:07:09:042201 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
+20160621:09:07:09:042201 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Obtaining Segment details from master...
+20160621:09:07:09:042201 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on 1 segment(s)
+20160621:09:07:09:042201 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on nikos-mac:/Users/narmenatzoglou/gitdev/gpdb/github_updated/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0:content=0:dbid=2:mode=s:status=u
+20160621:09:07:09:042201 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+--end_ignore
