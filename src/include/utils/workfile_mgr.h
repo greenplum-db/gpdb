@@ -107,9 +107,6 @@ typedef struct workfile_set
 	/* For non-physical workfile sets, pointer to the serialized plan */
 	workfile_set_plan *set_plan;
 
-	/* Set to true during operator execution once set is complete */
-	bool complete;
-
 } workfile_set;
 
 /* The key for an entry stored in the Queryspace Hashtable */

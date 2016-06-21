@@ -326,7 +326,6 @@ workfile_mgr_populate_set(const void *resource, const void *param)
 	work_set->metadata.operator_work_mem = set_info->operator_work_mem;
 	work_set->set_plan = NULL;
 
-	work_set->complete = false;
 	work_set->no_files = 0;
 	work_set->size = 0L;
 	work_set->in_progress_size = 0L;
@@ -730,30 +729,13 @@ workfile_mgr_close_set(workfile_set *work_set)
 {
 	Assert(work_set!=NULL);
 
-	elog(gp_workfile_caching_loglevel, "closing workfile set: complete=%d location: %s, size=" INT64_FORMAT
+	elog(gp_workfile_caching_loglevel, "closing workfile set: location: %s, size=" INT64_FORMAT
 			" in_progress_size=" INT64_FORMAT,
-		 work_set->complete, work_set->path,
+		 work_set->path,
 		 work_set->size, work_set->in_progress_size);
 
 	CacheEntry *cache_entry = CACHE_ENTRY_HEADER(work_set);
 	Cache_Release(workfile_mgr_cache, cache_entry);
-}
-
-/*
- * Mark a workfile_set as complete. This means it should be cached upon closing,
- * as it can be re-used.
- * If the operator is canceled or fails after this, the workfile set can
- * still be re-used.
- * This should be done after all the data has been flushed to disk.
- * After this point, assume anyone can read and re-use this set.
- */
-
-void workfile_mgr_mark_complete(workfile_set *work_set)
-{
-	Assert(work_set != NULL);
-	Assert(!work_set->complete);
-
-	work_set->complete = true;
 }
 
 /*

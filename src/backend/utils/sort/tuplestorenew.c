@@ -1534,22 +1534,4 @@ ntuplestore_create_spill_files(NTupleStore *nts)
 	MemoryContextSwitchTo(oldcxt);
 }
 
-/*
- * Mark the associated workfile set as complete
- */
-void
-ntuplestore_mark_workset_complete(NTupleStore *nts)
-{
-	Assert(nts != NULL);
-	if (nts->work_set == NULL)
-	{
-		return;
-	}
-	if (nts->workfiles_created)
-	{
-		elog(gp_workfile_caching_loglevel, "Tuplestore: Marking workset as complete");
-		workfile_mgr_mark_complete(nts->work_set);
-	}
-}
-
 /* EOF */

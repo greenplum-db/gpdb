@@ -1994,19 +1994,4 @@ void destroy_agg_hash_table(AggState *aggstate)
 	}
 }
 
-/*
- * Marks workfile set as complete
- */
-void
-agg_hash_mark_spillset_complete(AggState *aggstate)
-{
-
-	Assert(aggstate != NULL);
-	Assert(aggstate->hhashtable != NULL);
-	Assert(aggstate->hhashtable->work_set != NULL);
-
-	workfile_set *work_set = aggstate->hhashtable->work_set;
-	workfile_mgr_mark_complete(work_set);
-}
-
 /* EOF */

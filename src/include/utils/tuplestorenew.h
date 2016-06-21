@@ -74,7 +74,5 @@ extern void ntuplestore_acc_seek_eof(NTupleStoreAccessor *tsa);
 extern int ntuplestore_count_slot_acc(NTupleStore *nts, NTupleStoreAccessor* tsa1, NTupleStoreAccessor *tsa2);
 extern void  ntuplestore_acc_set_invalid(NTupleStoreAccessor *tsa);
 extern bool ntuplestore_acc_is_before(NTupleStoreAccessor *tsa1, NTupleStoreAccessor *tsa2);
-/* workfile set functions */
-extern void ntuplestore_mark_workset_complete(NTupleStore *nts);
-extern bool ntuplestore_created_reusable_workfiles(NTupleStore *nts);
+
 #endif /* TUPSTORE_NEW_H */
