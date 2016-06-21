@@ -86,6 +86,8 @@ s/^NOTICE:.*Table has no attributes to distribute on.//
 m/^NOTICE:.*ANALYZE detected all empty sample pages for table .*, please run VACUUM FULL for accurate estimation/
 s/^NOTICE:.*ANALYZE detected all empty sample pages for table .*, please run VACUUM FULL for accurate estimation//
 
+m/^WARNING:  could not close temporary file .*: No such file or directory/
+s/^WARNING:  could not close temporary file .*: No such file or directory//
 -- end_matchignore
 
 -- start_matchsubs

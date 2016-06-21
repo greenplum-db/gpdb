@@ -76,7 +76,7 @@ extern bfz_t *bfz_create(const char *filePrefix, bool delOnClose, int compress);
 extern bfz_t *bfz_open(const char *fileName, bool delOnClose, int compress);
 extern int64 bfz_append_end(bfz_t * thiz);
 extern void bfz_scan_begin(bfz_t * thiz);
-extern void bfz_close(bfz_t * thiz, bool unreg);
+extern void bfz_close(bfz_t * thiz, bool unreg, bool error_on_unlink);
 extern ssize_t readAndRetry(int fd, void *buffer, size_t size);
 extern ssize_t writeAndRetry(int fd, const void *buffer, size_t size);
 
