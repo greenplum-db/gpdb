@@ -169,8 +169,7 @@ struct NTupleStore
 };
 
 bool ntuplestore_is_readerwriter_reader(NTupleStore *nts) { return nts->rwflag == NTS_IS_READER; }
-bool ntuplestore_is_readerwriter_writer(NTupleStore *nts) { return nts->rwflag == NTS_IS_WRITER; }
-bool ntuplestore_is_readerwriter(NTupleStore *nts) { return nts->rwflag != NTS_NOT_READERWRITER; }
+
 /* Accessor to the tuplestore.
  * 
  * About the pos of an Accessor. 
@@ -1447,30 +1446,6 @@ void ntuplestore_acc_seek_eof(NTupleStoreAccessor *tsa)
 	tsa->pos.blockn = nts_page_blockn(tsa->page);
 	tsa->pos.slotn = nts_page_slot_cnt(tsa->page);
 }
-
-int ntuplestore_count_slot(NTupleStore *nts, NTupleStorePos *pos1, NTupleStorePos *pos2)
-{
-	NTupleStoreAccessor *tsa1 = ntuplestore_create_accessor(nts, false); 
-	NTupleStoreAccessor *tsa2 = ntuplestore_create_accessor(nts, false);
-
-	bool fOK;
-	int ret;
-	
-	fOK = ntuplestore_acc_seek(tsa1, pos1);
-	if(!fOK)
-		return -1;
-	fOK = ntuplestore_acc_seek(tsa2, pos2);
-	if(!fOK)
-		return -1;
-	
-	ret = ntuplestore_count_slot_acc(nts, tsa1, tsa2);
-	
-	ntuplestore_destroy_accessor(tsa1);
-	ntuplestore_destroy_accessor(tsa2);
-
-	return ret;
-}
-
 
 int ntuplestore_count_slot_acc(NTupleStore *nts, NTupleStoreAccessor *tsa1, NTupleStoreAccessor *tsa2)
 {
