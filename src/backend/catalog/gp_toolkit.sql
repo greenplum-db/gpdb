@@ -2011,7 +2011,6 @@ $$ LANGUAGE plpgsql;
 --        text - path to workfile set,
 --        int - hash value of the spilling operator,
 --        bigint - size in bytes,
---        int - utility,
 --        int - state,
 --        int - workmem in kilobytes,
 --        int - type of the spilling operator,
@@ -2050,7 +2049,6 @@ WITH all_entries AS (
             path text,
             hash int,
             size bigint,
-            utility int,
             state int,
             workmem int,
             optype text,
@@ -2067,7 +2065,6 @@ WITH all_entries AS (
             path text,
             hash int,
             size bigint,
-            utility int,
             state int,
             workmem int,
             optype text,
@@ -2090,8 +2087,7 @@ SELECT S.datname,
        C.size,
        C.numfiles,
        C.path as directory,
-       (CASE WHEN (C.state = 1) THEN 'RUNNING' WHEN (C.state = 2) THEN 'CACHED' WHEN (C.state = 3) THEN 'DELETING' ELSE 'UNKNOWN' END) as state,
-       C.utility
+       (CASE WHEN (C.state = 1) THEN 'RUNNING' WHEN (C.state = 2) THEN 'CACHED' WHEN (C.state = 3) THEN 'DELETING' ELSE 'UNKNOWN' END) as state
 FROM all_entries C LEFT OUTER JOIN
 pg_stat_activity as S
 ON C.sessionid = S.sess_id;

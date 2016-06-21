@@ -130,7 +130,6 @@ Cache_InitCacheEntry(Cache *cache, CacheEntry *entry)
 	entry->state = CACHE_ENTRY_FREE;
 	entry->pinCount = 0;
 	entry->size = 0L;
-	entry->utility = 0;
 
 #ifdef USE_ASSERT_CHECKING
 			Cache_MemsetPayload(cache, entry);
@@ -177,7 +176,6 @@ Cache_InitSharedMem(CacheCtl *cacheCtl, Cache *cache)
 		cache->cacheHdr->keyOffset = cacheCtl->keyOffset;
 		cache->cacheHdr->entrySize = cacheCtl->entrySize;
 		SpinLockInit(&cache->cacheHdr->spinlock);
-		Cache_InitReplacementPolicy(cache);
 
 		Cache_ResetStats(&cache->cacheHdr->cacheStats);
 		cache->cacheHdr->cacheStats.noFreeEntries = cacheCtl->maxSize;
@@ -344,7 +342,6 @@ Cache_Create(CacheCtl *cacheCtl)
 	cache->keyCopy = cacheCtl->keyCopy;
 	cache->hash = cacheCtl->hash;
 	cache->match = cacheCtl->match;
-	cache->equivalentEntries = cacheCtl->equivalentEntries;
 	cache->cleanupEntry = cacheCtl->cleanupEntry;
 	cache->populateEntry = cacheCtl->populateEntry;
 	/* Create new linked lists in top memory context for cleanup */
@@ -637,94 +634,6 @@ Cache_Insert(Cache *cache, CacheEntry *entry)
 
 	Cache_TimedOperationRecord(&cacheStats->timeInserts,
 			&cacheStats->maxTimeInsert);
-}
-
-/*
- * Look up an exact match for a cache entry
- *
- * Returns the matching cache entry if found, NULL otherwise
- */
-CacheEntry *
-Cache_Lookup(Cache *cache, CacheEntry *entry)
-{
-	Assert(NULL != cache);
-	Assert(NULL != entry);
-
-	Cache_TimedOperationStart();
-	Cache_AddPerfCounter(&cache->cacheHdr->cacheStats.noLookups, 1 /* delta */);
-
-	/* Advance the clock for the replacement policy */
-	Cache_AdvanceClock(cache);
-
-	Cache_ComputeEntryHashcode(cache, entry);
-
-	volatile CacheAnchor *anchor = SyncHTLookup(cache->syncHashtable, &entry->hashvalue);
-	if (NULL == anchor)
-	{
-		/* No matching anchor found, there can't be a matching element in the cache */
-		Cache_TimedOperationRecord(&cache->cacheHdr->cacheStats.timeLookups,
-				&cache->cacheHdr->cacheStats.maxTimeLookup);
-		return NULL;
-	}
-
-	/* Acquire anchor lock to touch the chain */
-	SpinLockAcquire(&anchor->spinlock);
-
-	CacheEntry *crtEntry = anchor->firstEntry;
-
-	while (true)
-	{
-
-		while (NULL != crtEntry && crtEntry->state == CACHE_ENTRY_DELETED)
-		{
-			/* Skip over deleted entries */
-			crtEntry = crtEntry->nextEntry;
-		}
-
-		if (NULL == crtEntry)
-		{
-			/* No valid entries found in the chain */
-			SpinLockRelease(&anchor->spinlock);
-			Cache_TimedOperationRecord(&cache->cacheHdr->cacheStats.timeLookups,
-					&cache->cacheHdr->cacheStats.maxTimeLookup);
-			return NULL;
-		}
-
-		/* Found a valid entry. AddRef it and test to see if it matches */
-		Cache_EntryAddRef(cache, crtEntry);
-
-		SpinLockRelease(&anchor->spinlock);
-
-		/* Register it for cleanup in case we get an error while testing for equality */
-		Cache_RegisterCleanup(cache, crtEntry, true /* isCachedEntry */);
-
-		Cache_AddPerfCounter(&cache->cacheHdr->cacheStats.noCompares, 1 /* delta */);
-
-		if(cache->equivalentEntries(CACHE_ENTRY_PAYLOAD(entry),
-				CACHE_ENTRY_PAYLOAD(crtEntry)))
-		{
-			/* Found the match, we're done */
-			Cache_TouchEntry(cache, crtEntry);
-			Cache_AddPerfCounter(&cache->cacheHdr->cacheStats.noCacheHits, 1 /* delta */);
-			break;
-		}
-
-		/* Unregister it from cleanup since it wasn't the one */
-		Cache_UnregisterCleanup(cache, crtEntry);
-
-		SpinLockAcquire(&anchor->spinlock);
-
-		Cache_EntryDecRef(cache, crtEntry);
-
-		crtEntry = crtEntry->nextEntry;
-	}
-
-	/* ignoring return value, both values are valid */
-	SyncHTRelease(cache->syncHashtable, (void *) anchor);
-
-	Cache_TimedOperationRecord(&cache->cacheHdr->cacheStats.timeLookups,
-			&cache->cacheHdr->cacheStats.maxTimeLookup);
-	return crtEntry;
 }
 
 /*

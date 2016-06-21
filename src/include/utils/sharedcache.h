@@ -46,36 +46,12 @@ typedef enum Cache_EntryState
 	CACHE_ENTRY_RESERVED  /* Entry is in the process of being acquired, but it is not populated yet */
 } Cache_EntryState;
 
-/* Signature for function to test if two cache entries are equivalent */
-typedef bool (*Cache_EquivalenceFunc) (const void *resource1, const void *resource2);
-
 /* Signature for function to clean up a resource before removing from cache */
 typedef void (*Cache_ClientCleanupFunc) (const void *resource);
 
 /* Signature for a function to populate a new entry after acquiring */
 typedef void (*Cache_ClientPopulateFunc) (const void *resource, const void *param);
 
-/*
- * Context for the cache replacement policy. Lives in shared memory.
- */
-typedef struct Cache_PolicyContext
-{
-	/* Current index in the entry list. Used for evictions */
-	volatile int32 clockPointer;
-
-	/* Number of clock loops before giving up on finding a victim */
-	uint32 maxClockLoops;
-
-	/* Amount to decrement utility of an entry at clock advance */
-	uint32 utilityDecrement;
-
-	/* Number of entries to advance clock on look-up */
-	long entriesAdvance;
-
-	/* Amount to increment utility of an entry when used */
-	uint32 utilityIncrement;
-
-} Cache_PolicyContext;
 
 /*
  * An entry in the Cache. The caller's data
@@ -106,9 +82,6 @@ typedef struct CacheEntry
 
 	/* Abstract size of this cache entry */
 	int64 size;
-
-	/* Utility of this entry (in replacement policy terms) */
-	uint32 utility;
 
 } CacheEntry;
 
@@ -152,9 +125,6 @@ typedef struct CacheCtl
 	/* Key copying function */
 	HashCopyFunc keyCopy;
 
-	/* Resource matching function */
-	Cache_EquivalenceFunc equivalentEntries;
-
 	/* Client cleanup function */
 	Cache_ClientCleanupFunc cleanupEntry;
 
@@ -188,19 +158,9 @@ typedef struct Cache_StatsRec
 	/* Total size of entries in the cache */
 	int64 totalEntrySize;
 
-	/* Eviction policy accounting */
-	uint32 noEntriesScanned;
-	uint32 maxEntriesScanned;
-	uint32 noWraparound;
-	uint32 maxWraparound;
-
 	/* Timing statistics */
 	instr_time timeInserts;
-	instr_time timeLookups;
-	instr_time timeEvictions;
 	instr_time maxTimeInsert;
-	instr_time maxTimeLookup;
-	instr_time maxTimeEvict;
 
 }	Cache_Stats;
 
@@ -235,9 +195,6 @@ typedef struct CacheHdr
 	/* number of entries in the freelist*/
 	long		nFreeEntries;
 
-	/* Context of cache replacement policy */
-	Cache_PolicyContext policyContext;
-
 	/* Statistics about the cache */
 	Cache_Stats cacheStats;
 
@@ -265,9 +222,6 @@ typedef struct Cache
 
 	/* Key copying function */
 	HashCopyFunc keyCopy;
-
-	/* Resource matching function */
-	Cache_EquivalenceFunc equivalentEntries;
 
 	/* Client cleanup function */
 	Cache_ClientCleanupFunc cleanupEntry;
@@ -303,7 +257,6 @@ Cache *Cache_Create(CacheCtl *cacheCtl);
 Size Cache_SharedMemSize(uint32 nEntries, uint32 cacheEntrySize);
 void Cache_Free(Cache *cache);
 void Cache_Insert(Cache *cache, CacheEntry *entry);
-CacheEntry *Cache_Lookup(Cache *cache, CacheEntry *entry);
 void Cache_Remove(Cache *cache, CacheEntry *entry);
 void Cache_Release(Cache *cache, CacheEntry *entry);
 CacheEntry *Cache_AcquireEntry(Cache *cache, void *populate_param);
@@ -322,11 +275,6 @@ void Cache_UnlockEntry(Cache *cache, CacheEntry *entry);
 void Cache_MemsetPayload(Cache *cache, CacheEntry *entry);
 #endif
 
-/* Cache replacement policy */
-int64 Cache_Evict(Cache *cache, int64 evictSize);
-void Cache_AdvanceClock(Cache *cache);
-void Cache_InitReplacementPolicy(Cache *cache);
-void Cache_TouchEntry(Cache *cache, CacheEntry *entry);
 
 /* Statistics related functions */
 void Cache_AddPerfCounter(uint32 *counter, int delta);

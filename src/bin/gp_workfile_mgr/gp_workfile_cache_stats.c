@@ -28,10 +28,10 @@
 #include "miscadmin.h"
 
 /* The number of columns as defined in gp_workfile_mgr_cache_stats view */
-#define NUM_CACHE_STATS_ELEM 23
+#define NUM_CACHE_STATS_ELEM 15
 
 /* The number of columns as defined in gp_workfile_mgr_cache_entries view */
-#define NUM_CACHE_ENTRIES_ELEM 13
+#define NUM_CACHE_ENTRIES_ELEM 12
 
 /* The number of columns as defined in gp_workfile_mgr_diskspace view */
 #define NUM_USED_DISKSPACE_ELEM 2
@@ -86,19 +86,11 @@ gp_workfile_mgr_cache_stats(PG_FUNCTION_ARGS)
 	values[10] = UInt32GetDatum(cacheStats->noAcquiredEntries);
 	values[11] = UInt32GetDatum(cacheStats->noFreeEntries);
 	values[12] = Int64GetDatum(cacheStats->totalEntrySize);
-	values[13] = UInt32GetDatum(cacheStats->noEntriesScanned);
-	values[14] = UInt32GetDatum(cacheStats->maxEntriesScanned);
-	values[15] = UInt32GetDatum(cacheStats->noWraparound);
-	values[16] = UInt32GetDatum(cacheStats->maxWraparound);
 
-	values[17] = UInt64GetDatum(INSTR_TIME_GET_MICROSEC(cacheStats->timeInserts));
-	values[18] = UInt64GetDatum(INSTR_TIME_GET_MICROSEC(cacheStats->timeLookups));
-	values[19] = UInt64GetDatum(INSTR_TIME_GET_MICROSEC(cacheStats->timeEvictions));
-	values[20] = UInt64GetDatum(INSTR_TIME_GET_MICROSEC(cacheStats->maxTimeInsert));
-	values[21] = UInt64GetDatum(INSTR_TIME_GET_MICROSEC(cacheStats->maxTimeLookup));
-	values[22] = UInt64GetDatum(INSTR_TIME_GET_MICROSEC(cacheStats->maxTimeEvict));
+	values[13] = UInt64GetDatum(INSTR_TIME_GET_MICROSEC(cacheStats->timeInserts));
+	values[14] = UInt64GetDatum(INSTR_TIME_GET_MICROSEC(cacheStats->maxTimeInsert));
 
-	Assert(NUM_CACHE_STATS_ELEM == 23);
+	Assert(NUM_CACHE_STATS_ELEM == 15);
 
 	HeapTuple tuple = heap_form_tuple(tupledesc, values, nulls);
 
@@ -143,26 +135,24 @@ gp_workfile_mgr_cache_entries(PG_FUNCTION_ARGS)
 				INT4OID, -1 /* typmod */, 0 /* attdim */);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 4, "size",
 				INT8OID, -1 /* typmod */, 0 /* attdim */);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 5, "utility",
+		TupleDescInitEntry(tupdesc, (AttrNumber) 5, "state",
 				INT4OID, -1 /* typmod */, 0 /* attdim */);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 6, "state",
+		TupleDescInitEntry(tupdesc, (AttrNumber) 6, "workmem",
 				INT4OID, -1 /* typmod */, 0 /* attdim */);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 7, "workmem",
-				INT4OID, -1 /* typmod */, 0 /* attdim */);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 8, "optype",
+		TupleDescInitEntry(tupdesc, (AttrNumber) 7, "optype",
 				TEXTOID, -1 /* typmod */, 0 /* attdim */);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 9, "slice",
+		TupleDescInitEntry(tupdesc, (AttrNumber) 8, "slice",
 				INT4OID, -1 /* typmod */, 0 /* attdim */);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 10, "sessionid",
+		TupleDescInitEntry(tupdesc, (AttrNumber) 9, "sessionid",
 				INT4OID, -1 /* typmod */, 0 /* attdim */);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 11, "commandid",
+		TupleDescInitEntry(tupdesc, (AttrNumber) 10, "commandid",
 				INT4OID, -1 /* typmod */, 0 /* attdim */);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 12, "query_start",
+		TupleDescInitEntry(tupdesc, (AttrNumber) 11, "query_start",
 				TIMESTAMPTZOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 13, "numfiles",
+		TupleDescInitEntry(tupdesc, (AttrNumber) 12, "numfiles",
 				INT4OID, -1 /* typmod */, 0 /* attdim */);
 
-		Assert(NUM_CACHE_ENTRIES_ELEM == 13);
+		Assert(NUM_CACHE_ENTRIES_ELEM == 12);
 
 		funcctx->tuple_desc = BlessTupleDesc(tupdesc);
 
@@ -226,7 +216,6 @@ gp_workfile_mgr_cache_entries(PG_FUNCTION_ARGS)
 		}
 
 		values[3] = Int64GetDatum(work_set_size);
-		values[4] = UInt32GetDatum(crtEntry->utility);
 		values[5] = UInt32GetDatum(crtEntry->state);
 		values[6] = UInt32GetDatum(work_set->metadata.operator_work_mem);
 

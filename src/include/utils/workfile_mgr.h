@@ -36,16 +36,6 @@
 #define WORKFILE_NUM_TUPLESTORE_DATA 1
 #define WORKFILE_NUM_TUPLESTORE_LOB 2
 
-typedef struct workfile_set_plan
-{
-	/* serialized representation of the subplan */
-	void *serialized_plan;
-
-	/* length of serialized subplan */
-	int serialized_plan_len;
-
-} workfile_set_plan;
-
 typedef struct
 {
 
@@ -104,9 +94,6 @@ typedef struct workfile_set
 	/* Operator-specific metadata */
 	workfile_set_op_metadata metadata;
 
-	/* For non-physical workfile sets, pointer to the serialized plan */
-	workfile_set_plan *set_plan;
-
 } workfile_set;
 
 /* The key for an entry stored in the Queryspace Hashtable */
@@ -139,7 +126,6 @@ typedef struct QueryspaceDesc
 /* Workfile Set operations */
 workfile_set *workfile_mgr_create_set(enum ExecWorkFileType type, bool can_be_reused,
 		PlanState *ps);
-workfile_set *workfile_mgr_find_set(PlanState *ps);
 void workfile_mgr_close_set(workfile_set *work_set);
 void workfile_mgr_cleanup(void);
 bool workfile_mgr_can_reuse(workfile_set *work_set, PlanState *ps);
@@ -182,10 +168,6 @@ QueryspaceDesc *WorkfileQueryspace_InitEntry(int session_id, int command_count);
 void WorkfileQueryspace_ReleaseEntry(void);
 bool WorkfileQueryspace_AddWorkfile(void);
 void WorkfileQueryspace_SubtractWorkfile(int32 nFiles);
-
-/* Serialization functions */
-void outfast_workfile_mgr_init(List *rtable);
-void outfast_workfile_mgr_end(void);
 
 /* Workfile error reporting */
 typedef enum WorkfileError
