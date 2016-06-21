@@ -1432,11 +1432,11 @@ getCdbProcessList(Gang *gang, int sliceIndex, DirectDispatchInfo *directDispatch
 	List *list = NULL;
 	int i = 0;
 
+	Assert(gang != NULL);
 	LOG_GANG_DEBUG(LOG, "getCdbProcessList slice%d gangtype=%d gangsize=%d",
 			sliceIndex, gang->type, gang->size);
 
 	Assert(Gp_role == GP_ROLE_DISPATCH);
-	Assert(gang != NULL);
 	Assert( (gang->type == GANGTYPE_PRIMARY_WRITER && gang->size == getgpsegmentCount()) ||
 			(gang->type == GANGTYPE_PRIMARY_READER && gang->size == getgpsegmentCount()) ||
 			(gang->type == GANGTYPE_ENTRYDB_READER && gang->size == 1) ||
@@ -1540,13 +1540,14 @@ static disconnectAndDestroyGang(Gang *gp)
 {
 	int i = 0;
 
-	LOG_GANG_DEBUG(LOG, "disconnectAndDestroyGang entered: id = %d", gp->gang_id);
-
 	if (gp == NULL)
 		return;
 
+	LOG_GANG_DEBUG(LOG, "disconnectAndDestroyGang entered: id = %d", gp->gang_id);
+
 	if (gp->allocated)
 		LOG_GANG_DEBUG(LOG, "Warning: disconnectAndDestroyGang called on an allocated gang");
+
 	/*
 	 * Loop through the segment_database_descriptors array and, for each
 	 * SegmentDatabaseDescriptor:
@@ -1672,13 +1673,13 @@ static bool cleanupGang(Gang *gp)
 {
 	int i = 0;
 
+	if (gp == NULL)
+		return true;
+
 	LOG_GANG_DEBUG(LOG,
 			"cleanupGang: cleaning gang id %d type %d size %d, was used for portal: %s",
 			gp->gang_id, gp->type, gp->size,
 			(gp->portal_name ? gp->portal_name : "(unnamed)"));
-
-	if (gp == NULL)
-		return true;
 
 	if (gp->noReuse)
 		return false;
