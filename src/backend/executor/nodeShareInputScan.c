@@ -494,7 +494,7 @@ void ExecShareInputScanReScan(ShareInputScanState *node, ExprContext *exprCtxt)
 
 /*************************************************************************
  * XXX 
- * we need some IPC mechanism for shareinptu_read_wait/writer_notify.  Semaphore is
+ * we need some IPC mechanism for shareinput_read_wait/writer_notify.  Semaphore is
  * the first thing come to mind but it turns out postgres is very picky about
  * how to use semaphore and we do not want to mess up with it.
  *
@@ -825,8 +825,8 @@ shareinput_writer_notifyready(int share_id, int xslice, PlanGenerator planGen)
 	pctxt->del_ready = true;
 	pctxt->readyfd = open(pctxt->lkname_ready, O_RDWR, 0600); 
 	if(pctxt->readyfd < 0)
-	
 		elog(ERROR, "could not open fifo \"%s\": %m", pctxt->lkname_ready);
+
 	sisc_lockname(pctxt->lkname_done, MAXPGPATH, share_id, "done");
 	create_tmp_fifo(pctxt->lkname_done);
 	pctxt->del_done = true;
