@@ -160,8 +160,6 @@ pathnode_walk_kids(Path            *path,
     {
             case T_SeqScan:
             case T_ExternalScan:
-            case T_AppendOnlyScan:
-            case T_AOCSScan:
             case T_IndexScan:
             case T_TidScan:
             case T_SubqueryScan:
@@ -1039,8 +1037,8 @@ add_path(PlannerInfo *root, RelOptInfo *parent_rel, Path *new_path)
  *	  Creates a path corresponding to a sequential scan, returning the
  *	  pathnode.
  */
-Path *
-create_seqscan_path(PlannerInfo *root, RelOptInfo *rel)
+static Path *
+create_seqscan_path_common(PlannerInfo *root, RelOptInfo *rel)
 {
 	Path	   *pathnode = makeNode(Path);
 
@@ -1052,6 +1050,14 @@ create_seqscan_path(PlannerInfo *root, RelOptInfo *rel)
     pathnode->motionHazard = false;
 	pathnode->rescannable = true;
 
+	return pathnode;
+}
+
+Path *
+create_seqscan_path(PlannerInfo *root, RelOptInfo *rel)
+{
+	Path	   *pathnode = create_seqscan_path_common(root, rel);
+
 	cost_seqscan(pathnode, root, rel);
 
 	return pathnode;
@@ -1060,18 +1066,10 @@ create_seqscan_path(PlannerInfo *root, RelOptInfo *rel)
 /* 
  * Create a path for scanning an append-only table
  */
-AppendOnlyPath *
+Path *
 create_appendonly_path(PlannerInfo *root, RelOptInfo *rel)
 {
-	AppendOnlyPath	   *pathnode = makeNode(AppendOnlyPath);
-
-	pathnode->path.pathtype = T_AppendOnlyScan;
-	pathnode->path.parent = rel;
-	pathnode->path.pathkeys = NIL;	/* seqscan has unordered result */
-
-    pathnode->path.locus = cdbpathlocus_from_baserel(root, rel);
-    pathnode->path.motionHazard = false;
-	pathnode->path.rescannable = true;
+	Path	   *pathnode = create_seqscan_path_common(root, rel);
 
 	cost_appendonlyscan(pathnode, root, rel);
 
@@ -1081,20 +1079,13 @@ create_appendonly_path(PlannerInfo *root, RelOptInfo *rel)
 /* 
  * Create a path for scanning an append-only table
  */
-AOCSPath *
+Path *
 create_aocs_path(PlannerInfo *root, RelOptInfo *rel)
 {
-	AOCSPath	   *pathnode = makeNode(AOCSPath);
-	
-	pathnode->path.pathtype = T_AOCSScan;
-	pathnode->path.parent = rel;
-	pathnode->path.pathkeys = NIL;	/* seqscan has unordered result */
-	
-        pathnode->path.locus = cdbpathlocus_from_baserel(root, rel);
-        pathnode->path.motionHazard = false;
-	pathnode->path.rescannable = true;
+	Path	   *pathnode = create_seqscan_path_common(root, rel);
 	
 	cost_aocsscan(pathnode, root, rel);
+
 	return pathnode;
 }
 /* 

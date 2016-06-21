@@ -326,10 +326,8 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 			 * scan nodes
 			 */
 		case T_SeqScan:
-		case T_AppendOnlyScan:
-		case T_AOCSScan:
 		case T_TableScan:
-			/* SeqScan, AppendOnlyScan and AOCSScan are defunct */
+			/* SeqScan is defunct */
 			curMemoryAccount = CREATE_EXECUTOR_MEMORY_ACCOUNT(isAlienPlanNode, node, TableScan);
 
 			START_MEMORY_ACCOUNT(curMemoryAccount);
@@ -810,8 +808,6 @@ ExecProcNode(PlanState *node)
 		&&Exec_Jmp_BitmapOr,
 		&&Exec_Jmp_TableScan,
 		&&Exec_Jmp_TableScan,
-		&&Exec_Jmp_TableScan,
-		&&Exec_Jmp_TableScan,
 		&&Exec_Jmp_DynamicTableScan,
 		&&Exec_Jmp_ExternalScan,
 		&&Exec_Jmp_IndexScan,
@@ -1070,9 +1066,7 @@ Exec_Jmp_Done:
 			 * scan nodes
 			 */
 		case T_SeqScanState:
-		case T_AppendOnlyScanState:
-		case T_AOCSScanState:
-			insist_log(false, "SeqScan/AppendOnlyScan/AOCSScan are defunct");
+			insist_log(false, "SeqScan is defunct");
 			break;
 
 		case T_IndexScanState:
@@ -1323,8 +1317,6 @@ ExecCountSlotsNode(Plan *node)
 			 * scan nodes
 			 */
 		case T_SeqScan:
-		case T_AppendOnlyScan:
-		case T_AOCSScan:
 		case T_TableScan:
 			return ExecCountSlotsTableScan((TableScan *) node);
 
@@ -1579,9 +1571,7 @@ ExecEndNode(PlanState *node)
 			 * scan nodes
 			 */
 		case T_SeqScanState:
-		case T_AppendOnlyScanState:
-		case T_AOCSScanState:
-			insist_log(false, "SeqScan/AppendOnlyScan/AOCSScan are defunct");
+			insist_log(false, "SeqScan is defunct");
 			break;
 			
 		case T_TableScanState:

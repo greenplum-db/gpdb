@@ -144,9 +144,7 @@ ExecReScan(PlanState *node, ExprContext *exprCtxt)
 			break;
 
 		case T_SeqScanState:
-		case T_AppendOnlyScanState:
-		case T_AOCSScanState:
-			insist_log(false, "SeqScan/AppendOnlyScan/AOCSScan are defunct");
+			insist_log(false, "SeqScan is defunct");
 			break;
 
 		case T_IndexScanState:
@@ -295,9 +293,7 @@ ExecMarkPos(PlanState *node)
 			break;
 
 		case T_SeqScanState:
-		case T_AppendOnlyScanState:
-		case T_AOCSScanState:
-			insist_log(false, "SeqScan/AppendOnlyScan/AOCSScan are defunct");
+			insist_log(false, "SeqScan is defunct");
 			break;			
 			
 		case T_IndexScanState:
@@ -373,9 +369,7 @@ ExecRestrPos(PlanState *node)
 			break;
 
 		case T_SeqScanState:
-		case T_AppendOnlyScanState:
-		case T_AOCSScanState:
-			insist_log(false, "SeqScan/AppendOnlyScan/AOCSScan are defunct");
+			insist_log(false, "SeqScan is defunct");
 			break;			
 
 		case T_IndexScanState:
@@ -639,9 +633,7 @@ ExecEagerFree(PlanState *node)
 			break;
 			
 		case T_SeqScanState:
-		case T_AppendOnlyScanState:
-		case T_AOCSScanState:
-			insist_log(false, "SeqScan/AppendOnlyScan/AOCSScan are defunct");
+			insist_log(false, "SeqScan is defunct");
 			break;
 			
 		case T_ExternalScanState:
@@ -815,9 +807,7 @@ ExecEagerFreeChildNodes(PlanState *node, bool subplanDone)
 		}
 
 		case T_SeqScanState:
-		case T_AppendOnlyScanState:
-		case T_AOCSScanState:
-			insist_log(false, "SeqScan/AppendOnlyScan/AOCSScan are defunct");
+			insist_log(false, "SeqScan is defunct");
 			break;
 
 		case T_NestLoopState:

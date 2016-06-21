@@ -790,27 +790,6 @@ typedef struct Path
 	/* pathkeys is a List of PathKey nodes; see above */
 } Path;
 
-/* 
- * AppendOnlyPath is used for append-only table scans. 
- */
-typedef struct AppendOnlyPath
-{
-	Path		path;
-
-	/* for now it's pretty plain.. */
-} AppendOnlyPath;
-
-/*
- * AOCSPath is used for append-only column store table scans.
- */
-typedef struct AOCSPath
-{
-	Path		path;
-
-	/* for now it's pretty plain.. */
-} AOCSPath;
-
-
 /*
  * ExternalPath is used for external table scans.
  */

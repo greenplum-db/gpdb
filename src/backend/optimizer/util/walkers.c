@@ -927,8 +927,6 @@ plan_tree_walker(Node *node,
 
 		case T_SeqScan:
 		case T_ExternalScan:
-		case T_AppendOnlyScan:
-		case T_AOCSScan:
 		case T_TableScan:
 		case T_DynamicTableScan:
 		case T_BitmapHeapScan:

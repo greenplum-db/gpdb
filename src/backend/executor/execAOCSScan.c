@@ -11,21 +11,20 @@
 #include "cdb/cdbaocsam.h"
 
 static void
-InitAOCSScanOpaque(ScanState *scanState)
+InitAOCSScanOpaque(TableScanState *state)
 {
-	AOCSScanState *state = (AOCSScanState *)scanState;
 	Assert(state->opaque == NULL);
-	state->opaque = palloc(sizeof(AOCSScanOpaqueData));
+	state->opaque.aocs = palloc(sizeof(AOCSScanOpaqueData));
 
 	/* Initialize AOCS projection info */
-	AOCSScanOpaqueData *opaque = (AOCSScanOpaqueData *)state->opaque;
-	Relation currentRelation = scanState->ss_currentRelation;
+	AOCSScanOpaqueData *opaque = state->opaque.aocs;
+	Relation currentRelation = state->ss.ss_currentRelation;
 	Assert(currentRelation != NULL);
 
 	opaque->ncol = currentRelation->rd_att->natts;
 	opaque->proj = palloc0(sizeof(bool) * opaque->ncol);
-	GetNeededColumnsForScan((Node *)scanState->ps.plan->targetlist, opaque->proj, opaque->ncol);
-	GetNeededColumnsForScan((Node *)scanState->ps.plan->qual, opaque->proj, opaque->ncol);
+	GetNeededColumnsForScan((Node *) state->ss.ps.plan->targetlist, opaque->proj, opaque->ncol);
+	GetNeededColumnsForScan((Node *) state->ss.ps.plan->qual, opaque->proj, opaque->ncol);
 	
 	int i = 0;
 	for (i = 0; i < opaque->ncol; i++)
@@ -47,16 +46,14 @@ InitAOCSScanOpaque(ScanState *scanState)
 }
 
 static void
-FreeAOCSScanOpaque(ScanState *scanState)
+FreeAOCSScanOpaque(TableScanState *state)
 {
-	AOCSScanState *state = (AOCSScanState *)scanState;
-	Assert(state->opaque != NULL);
+	Assert(state->opaque.aocs != NULL);
 
-	AOCSScanOpaqueData *opaque = (AOCSScanOpaqueData *)state->opaque;
-	Assert(opaque->proj != NULL);
-	pfree(opaque->proj);
-	pfree(state->opaque);
-	state->opaque = NULL;
+	Assert(state->opaque.aocs->proj != NULL);
+	pfree(state->opaque.aocs->proj);
+	pfree(state->opaque.aocs);
+	state->opaque.aocs = NULL;
 }
 
 TupleTableSlot *
@@ -64,11 +61,11 @@ AOCSScanNext(ScanState *scanState)
 {
 	Assert(IsA(scanState, TableScanState) ||
 		   IsA(scanState, DynamicTableScanState));
-	AOCSScanState *node = (AOCSScanState *)scanState;
-	Assert(node->opaque != NULL &&
-		   node->opaque->scandesc != NULL);
+	TableScanState *node = (TableScanState *)scanState;
+	Assert(node->opaque.aocs != NULL &&
+		   node->opaque.aocs->scandesc != NULL);
 
-	aocs_getnext(node->opaque->scandesc, node->ss.ps.state->es_direction, node->ss.ss_ScanTupleSlot);
+	aocs_getnext(node->opaque.aocs->scandesc, node->ss.ps.state->es_direction, node->ss.ss_ScanTupleSlot);
 	return node->ss.ss_ScanTupleSlot;
 }
 
@@ -79,12 +76,12 @@ BeginScanAOCSRelation(ScanState *scanState)
 
 	Assert(IsA(scanState, TableScanState) ||
 		   IsA(scanState, DynamicTableScanState));
-	AOCSScanState *node = (AOCSScanState *)scanState;
+	TableScanState *node = (TableScanState *)scanState;
 
 	Assert(node->ss.scan_state == SCAN_INIT || node->ss.scan_state == SCAN_DONE);
 
-	InitAOCSScanOpaque(scanState);
-	   
+	InitAOCSScanOpaque(node);
+
 	appendOnlyMetaDataSnapshot = node->ss.ps.state->es_snapshot;
 	if (appendOnlyMetaDataSnapshot == SnapshotAny)
 	{
@@ -95,12 +92,12 @@ BeginScanAOCSRelation(ScanState *scanState)
 		appendOnlyMetaDataSnapshot = GetTransactionSnapshot();
 	}
 
-	node->opaque->scandesc =
+	node->opaque.aocs->scandesc =
 		aocs_beginscan(node->ss.ss_currentRelation, 
 					   node->ss.ps.state->es_snapshot,
 					   appendOnlyMetaDataSnapshot,
 					   NULL /* relationTupleDesc */,
-					   node->opaque->proj);
+					   node->opaque.aocs->proj);
 
 	node->ss.scan_state = SCAN_SCAN;
 }
@@ -110,15 +107,15 @@ EndScanAOCSRelation(ScanState *scanState)
 {
 	Assert(IsA(scanState, TableScanState) ||
 		   IsA(scanState, DynamicTableScanState));
-	AOCSScanState *node = (AOCSScanState *)scanState;
+	TableScanState *node = (TableScanState *)scanState;
 
 	Assert((node->ss.scan_state & SCAN_SCAN) != 0);
-	Assert(node->opaque != NULL &&
-		   node->opaque->scandesc != NULL);
+	Assert(node->opaque.aocs != NULL &&
+		   node->opaque.aocs->scandesc != NULL);
 
-	aocs_endscan(node->opaque->scandesc);
+	aocs_endscan(node->opaque.aocs->scandesc);
         
-	FreeAOCSScanOpaque(scanState);
+	FreeAOCSScanOpaque(node);
 	
 	node->ss.scan_state = SCAN_INIT;
 }
@@ -128,9 +125,10 @@ ReScanAOCSRelation(ScanState *scanState)
 {
 	Assert(IsA(scanState, TableScanState) ||
 		   IsA(scanState, DynamicTableScanState));
-	AOCSScanState *node = (AOCSScanState *)scanState;
-	Assert(node->opaque != NULL &&
-		   node->opaque->scandesc != NULL);
+	TableScanState *node = (TableScanState *)scanState;
 
-	aocs_rescan(node->opaque->scandesc); 
+	Assert(node->opaque.aocs != NULL &&
+		   node->opaque.aocs->scandesc != NULL);
+
+	aocs_rescan(node->opaque.aocs->scandesc);
 }

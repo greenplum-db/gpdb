@@ -995,12 +995,6 @@ explain_outNode(StringInfo str,
 		case T_SeqScan:
 			pname = "Seq Scan";
 			break;
-		case T_AppendOnlyScan:
-			pname = "Append-only Scan";
-			break;
-		case T_AOCSScan:
-			pname = "Append-only Columnar Scan";
-			break;
 		case T_TableScan:
 			pname = "Table Scan";
 			break;
@@ -1204,8 +1198,6 @@ explain_outNode(StringInfo str,
 			/* FALL THRU */
 		case T_SeqScan:
 		case T_ExternalScan:
-		case T_AppendOnlyScan:
-		case T_AOCSScan:
 		case T_TableScan:
 		case T_DynamicTableScan:
 		case T_DynamicIndexScan:
@@ -1421,8 +1413,6 @@ explain_outNode(StringInfo str,
 			/* FALL THRU */
 		case T_SeqScan:
 		case T_ExternalScan:
-		case T_AppendOnlyScan:
-		case T_AOCSScan:
 		case T_TableScan:
 		case T_DynamicTableScan:
 		case T_FunctionScan:

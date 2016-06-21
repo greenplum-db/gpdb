@@ -395,38 +395,6 @@ _copySeqScan(SeqScan *from)
 	return newnode;
 }
 
-/*
- * _copyAppendOnlyScan
- */
-static AppendOnlyScan *
-_copyAppendOnlyScan(AppendOnlyScan *from)
-{
-	AppendOnlyScan    *newnode = makeNode(AppendOnlyScan);
-
-	/*
-	 * copy node superclass fields
-	 */
-	CopyScanFields((Scan *) from, (Scan *) newnode);
-
-	return newnode;
-}
-
-/*
- * _copyAppendOnlyScan
- */
-static AOCSScan *
-_copyAOCSScan(AOCSScan *from)
-{
-	AOCSScan    *newnode = makeNode(AOCSScan);
-
-	/*
-	 * copy node superclass fields
-	 */
-	CopyScanFields((Scan *) from, (Scan *) newnode);
-
-	return newnode;
-}
-
 static TableScan *
 _copyTableScan(TableScan *from)
 {
@@ -4578,12 +4546,6 @@ copyObject(void *from)
 			break;
 		case T_SeqScan:
 			retval = _copySeqScan(from);
-			break;
-		case T_AppendOnlyScan:
-			retval = _copyAppendOnlyScan(from);
-			break;
-		case T_AOCSScan:
-			retval = _copyAOCSScan(from);
 			break;
 		case T_TableScan:
 			retval = _copyTableScan(from);

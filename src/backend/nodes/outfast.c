@@ -1229,12 +1229,6 @@ _outNode(StringInfo str, void *obj)
 			case T_SeqScan:
 				_outSeqScan(str, obj);
 				break;
-			case T_AppendOnlyScan:
-				_outAppendOnlyScan(str, obj);
-				break;
-			case T_AOCSScan:
-				_outAOCSScan(str, obj);
-				break;
 			case T_TableScan:
 				_outTableScan(str, obj);
 				break;
@@ -1496,12 +1490,6 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_AppendPath:
 				_outAppendPath(str, obj);
-				break;
-			case T_AppendOnlyPath:
-				_outAppendOnlyPath(str, obj);
-				break;
-			case T_AOCSPath:
-				_outAOCSPath(str, obj);
 				break;
 			case T_ResultPath:
 				_outResultPath(str, obj);

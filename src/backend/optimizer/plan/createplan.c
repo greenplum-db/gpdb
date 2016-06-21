@@ -66,10 +66,6 @@ static SeqScan *create_seqscan_plan(PlannerInfo *root, Path *best_path,
 					List *tlist, List *scan_clauses);
 static ExternalScan *create_externalscan_plan(PlannerInfo *root, Path *best_path,
         List *tlist, List *scan_clauses);
-static AppendOnlyScan *create_appendonlyscan_plan(PlannerInfo *root, Path *best_path,
-        List *tlist, List *scan_clauses);
-static AOCSScan *create_aocsscan_plan(PlannerInfo *root, Path *best_path,
-        List *tlist, List *scan_clauses);
 static IndexScan *create_indexscan_plan(PlannerInfo *root, IndexPath *best_path,
 					  List *tlist, List *scan_clauses,
 					  List **nonlossy_clauses);
@@ -113,8 +109,6 @@ static List *order_qual_clauses(PlannerInfo *root, List *clauses);
 static void copy_path_costsize(PlannerInfo *root, Plan *dest, Path *src);
 static void copy_plan_costsize(Plan *dest, Plan *src);
 static SeqScan *make_seqscan(List *qptlist, List *qpqual, Index scanrelid);
-static AppendOnlyScan *make_appendonlyscan(List *qptlist, List *qpqual, Index scanrelid);
-static AOCSScan *make_aocsscan(List *qptlist, List *qpqual, Index scanrelid);
 static ExternalScan *make_externalscan(List *qptlist,
 									   List *qpqual,
 									   Index scanrelid,
@@ -217,8 +211,6 @@ create_subplan(PlannerInfo *root, Path *best_path)
 		case T_SeqScan:
 		case T_IndexScan:
 		case T_ExternalScan:
-		case T_AppendOnlyScan:
-		case T_AOCSScan:
 		case T_BitmapHeapScan:
 		case T_BitmapAppendOnlyScan:
 		case T_BitmapTableScan:
@@ -315,19 +307,6 @@ create_scan_plan(PlannerInfo *root, Path *best_path)
 												best_path,
 												tlist,
 												scan_clauses);
-			break;
-
-		case T_AppendOnlyScan:
-			plan = (Plan *) create_appendonlyscan_plan(root,
-													   best_path,
-													   tlist,
-													   scan_clauses);
-			break;
-		case T_AOCSScan:
-			plan = (Plan *) create_aocsscan_plan(root,
-													   best_path,
-													   tlist,
-													   scan_clauses);
 			break;
 
 		case T_ExternalScan:
@@ -528,8 +507,6 @@ disuse_physical_tlist(Plan *plan, Path *path)
 	switch (path->pathtype)
 	{
 		case T_SeqScan:
-		case T_AppendOnlyScan:
-		case T_AOCSScan:
 		case T_ExternalScan:
 		case T_IndexScan:
 		case T_BitmapHeapScan:
@@ -1071,69 +1048,6 @@ create_seqscan_plan(PlannerInfo *root, Path *best_path,
 
 	return scan_plan;
 }
-
-/*
- * create_appendonlyscan_plan
- *	 Returns a appendonlyscan plan for the base relation scanned by 'best_path'
- *	 with restriction clauses 'scan_clauses' and targetlist 'tlist'.
- */
-static AppendOnlyScan *
-create_appendonlyscan_plan(PlannerInfo *root, Path *best_path,
-						   List *tlist, List *scan_clauses)
-{
-	AppendOnlyScan		*scan_plan;
-	Index				scan_relid = best_path->parent->relid;
-
-	/* it should be a base rel... */
-	Assert(scan_relid > 0);
-	Assert(best_path->parent->rtekind == RTE_RELATION);
-
-	/* Sort clauses into best execution order */
-	scan_clauses = order_qual_clauses(root, scan_clauses);
-
-	/* Reduce RestrictInfo list to bare expressions; ignore pseudoconstants */
-	scan_clauses = extract_actual_clauses(scan_clauses, false);
-
-	scan_plan = make_appendonlyscan(tlist,
-									scan_clauses,
-									scan_relid);
-
-	copy_path_costsize(root, &scan_plan->scan.plan, best_path);
-
-	return scan_plan;
-}
-
-/*
- * create_aocsscan_plan
- *	 Returns a appendonlyscan plan for the base relation scanned by 'best_path'
- *	 with restriction clauses 'scan_clauses' and targetlist 'tlist'.
- */
-static AOCSScan *
-create_aocsscan_plan(PlannerInfo *root, Path *best_path,
-						   List *tlist, List *scan_clauses)
-{
-	AOCSScan		*scan_plan;
-	Index				scan_relid = best_path->parent->relid;
-
-	/* it should be a base rel... */
-	Assert(scan_relid > 0);
-	Assert(best_path->parent->rtekind == RTE_RELATION);
-
-	/* Sort clauses into best execution order */
-	scan_clauses = order_qual_clauses(root, scan_clauses);
-
-	/* Reduce RestrictInfo list to bare expressions; ignore pseudoconstants */
-	scan_clauses = extract_actual_clauses(scan_clauses, false);
-
-	scan_plan = make_aocsscan(tlist,
-									scan_clauses,
-									scan_relid);
-
-	copy_path_costsize(root, &scan_plan->scan.plan, best_path);
-
-	return scan_plan;
-}
-
 
 /*
  * create_externalscan_plan
@@ -3765,44 +3679,6 @@ make_seqscan(List *qptlist,
 	plan->lefttree = NULL;
 	plan->righttree = NULL;
 	node->scanrelid = scanrelid;
-
-	return node;
-}
-
-static AppendOnlyScan *
-make_appendonlyscan(List *qptlist,
-					List *qpqual,
-					Index scanrelid)
-{
-	AppendOnlyScan    *node = makeNode(AppendOnlyScan);
-	Plan			  *plan = &node->scan.plan;
-
-	/* cost should be inserted by caller */
-	plan->targetlist = qptlist;
-	plan->qual = qpqual;
-	plan->lefttree = NULL;
-	plan->righttree = NULL;
-
-	node->scan.scanrelid = scanrelid;
-
-	return node;
-}
-
-static AOCSScan *
-make_aocsscan(List *qptlist,
-					List *qpqual,
-					Index scanrelid)
-{
-	AOCSScan    *node = makeNode(AOCSScan);
-	Plan			  *plan = &node->scan.plan;
-
-	/* cost should be inserted by caller */
-	plan->targetlist = qptlist;
-	plan->qual = qpqual;
-	plan->lefttree = NULL;
-	plan->righttree = NULL;
-
-	node->scan.scanrelid = scanrelid;
 
 	return node;
 }

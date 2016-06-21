@@ -475,8 +475,6 @@ ParallelizeCorrelatedSubPlanMutator(Node *node, ParallelizeCorrelatedPlanWalkerC
 	}
 	
 	if (IsA(node, SeqScan)
-		|| IsA(node, AppendOnlyScan)
-		|| IsA(node, AOCSScan)
 		|| IsA(node, ShareInputScan)
 		|| IsA(node, ExternalScan))
 	{
@@ -1403,8 +1401,6 @@ motion_sanity_walker(Node *node, sanity_result_t *result)
 		case T_Append:
 		case T_SeqScan:
 		case T_ExternalScan:
-		case T_AppendOnlyScan:
-		case T_AOCSScan:
 		case T_IndexScan:
 		case T_BitmapIndexScan:
 		case T_BitmapHeapScan:

@@ -741,8 +741,6 @@ AdjustVarnoWalker(Node *node, AdjustVarnoContext *ctx)
 			return AdjustVarnoWalker((Node *) flow->hashExpr, ctx);
 		}
 		case T_SeqScan:
-		case T_AppendOnlyScan:
-		case T_AOCSScan:
 		case T_ExternalScan:
 		case T_IndexScan:
 		case T_BitmapIndexScan:

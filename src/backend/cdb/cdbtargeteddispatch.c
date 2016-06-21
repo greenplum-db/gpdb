@@ -462,8 +462,6 @@ AssignContentIdsToPlanData_Walker(Node *node, void *context)
 				/* no change to dispatchInfo --> just iterate children */
 				break;
 			case T_SeqScan:
-			case T_AppendOnlyScan:
-			case T_AOCSScan:
 				/* we can determine the dispatch data to merge by looking at the relation begin scanned */
 				dispatchInfo = GetContentIdsFromPlanForSingleRelation(data->rtable, (Plan *)node, ((Scan*)node)->scanrelid,
 						(Node*) ((Plan*)node)->qual);

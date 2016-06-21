@@ -487,22 +487,6 @@ _outSeqScan(StringInfo str, SeqScan *node)
 }
 
 static void
-_outAppendOnlyScan(StringInfo str, AppendOnlyScan *node)
-{
-	WRITE_NODE_TYPE("APPENDONLYSCAN");
-
-	_outScanInfo(str, (Scan *) node);
-}
-
-static void
-_outAOCSScan(StringInfo str, AOCSScan *node)
-{
-	WRITE_NODE_TYPE("AOCSSCAN");
-
-	_outScanInfo(str, (Scan *) node);
-}
-
-static void
 _outTableScan(StringInfo str, TableScan *node)
 {
 	WRITE_NODE_TYPE("TABLESCAN");
@@ -1859,22 +1843,6 @@ _outAppendPath(StringInfo str, AppendPath *node)
 	_outPathInfo(str, (Path *) node);
 
 	WRITE_NODE_FIELD(subpaths);
-}
-
-static void
-_outAppendOnlyPath(StringInfo str, AppendOnlyPath *node)
-{
-	WRITE_NODE_TYPE("APPENDONLYPATH");
-
-	_outPathInfo(str, (Path *) node);
-}
-
-static void
-_outAOCSPath(StringInfo str, AOCSPath *node)
-{
-	WRITE_NODE_TYPE("APPENDONLYPATH");
-
-	_outPathInfo(str, (Path *) node);
 }
 
 static void
@@ -4381,12 +4349,6 @@ _outNode(StringInfo str, void *obj)
 			case T_SeqScan:
 				_outSeqScan(str, obj);
 				break;
-			case T_AppendOnlyScan:
-				_outAppendOnlyScan(str, obj);
-				break;
-			case T_AOCSScan:
-				_outAOCSScan(str, obj);
-				break;
 			case T_TableScan:
 				_outTableScan(str, obj);
 				break;
@@ -4651,12 +4613,6 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_AppendPath:
 				_outAppendPath(str, obj);
-				break;
-			case T_AppendOnlyPath:
-				_outAppendOnlyPath(str, obj);
-				break;
-			case T_AOCSPath:
-				_outAOCSPath(str, obj);
 				break;
 			case T_ResultPath:
 				_outResultPath(str, obj);

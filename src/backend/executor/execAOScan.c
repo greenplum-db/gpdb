@@ -15,8 +15,7 @@ AppendOnlyScanNext(ScanState *scanState)
 {
 	Assert(IsA(scanState, TableScanState) ||
 		   IsA(scanState, DynamicTableScanState));
-	AppendOnlyScanState *node = (AppendOnlyScanState *)scanState;
-	
+	TableScanState *node = (TableScanState *) scanState;
 	AppendOnlyScanDesc scandesc;
 	EState	   *estate;
 	ScanDirection direction;
@@ -27,7 +26,7 @@ AppendOnlyScanNext(ScanState *scanState)
 	 * get information from the estate and scan state
 	 */
 	estate = node->ss.ps.state;
-	scandesc = node->aos_ScanDesc;
+	scandesc = node->opaque.appendonly;
 	direction = estate->es_direction;
 	slot = node->ss.ss_ScanTupleSlot;
 
@@ -46,13 +45,12 @@ BeginScanAppendOnlyRelation(ScanState *scanState)
 
 	Assert(IsA(scanState, TableScanState) ||
 		   IsA(scanState, DynamicTableScanState));
-	AppendOnlyScanState *node = (AppendOnlyScanState *)scanState;
-	
-	Assert(node->ss.scan_state == SCAN_INIT ||
-		   node->ss.scan_state == SCAN_DONE);
-	Assert(node->aos_ScanDesc == NULL);
+	TableScanState *node = (TableScanState *) scanState;
+	Assert(scanState->scan_state == SCAN_INIT ||
+		   scanState->scan_state == SCAN_DONE);
+	Assert(((TableScanState *) node)->opaque == NULL);
 
-	appendOnlyMetaDataSnapshot = node->ss.ps.state->es_snapshot;
+	appendOnlyMetaDataSnapshot = scanState->ps.state->es_snapshot;
 	if (appendOnlyMetaDataSnapshot == SnapshotAny)
 	{
 		/* 
@@ -62,9 +60,9 @@ BeginScanAppendOnlyRelation(ScanState *scanState)
 		appendOnlyMetaDataSnapshot = GetTransactionSnapshot();
 	}
 
-	node->aos_ScanDesc = appendonly_beginscan(
-			node->ss.ss_currentRelation, 
-			node->ss.ps.state->es_snapshot, 
+	node->opaque.appendonly = appendonly_beginscan(
+			scanState->ss_currentRelation, 
+			scanState->ps.state->es_snapshot, 
 			appendOnlyMetaDataSnapshot,
 			0, NULL);
 	node->ss.scan_state = SCAN_SCAN;
@@ -75,13 +73,13 @@ EndScanAppendOnlyRelation(ScanState *scanState)
 {
 	Assert(IsA(scanState, TableScanState) ||
 		   IsA(scanState, DynamicTableScanState));
-	AppendOnlyScanState *node = (AppendOnlyScanState *)scanState;
+	TableScanState *node = (TableScanState *) scanState;
 	Assert(node->aos_ScanDesc != NULL);
 
 	Assert((node->ss.scan_state & SCAN_SCAN) != 0);
-	appendonly_endscan(node->aos_ScanDesc);
+	appendonly_endscan(node->opaque.appendonly);
 
-	node->aos_ScanDesc = NULL;
+	node->opaque.appendonly = NULL;
 	
 	node->ss.scan_state = SCAN_INIT;
 }
@@ -91,8 +89,8 @@ ReScanAppendOnlyRelation(ScanState *scanState)
 {
 	Assert(IsA(scanState, TableScanState) ||
 		   IsA(scanState, DynamicTableScanState));
-	AppendOnlyScanState *node = (AppendOnlyScanState *)scanState;
-	Assert(node->aos_ScanDesc != NULL);
+	TableScanState *node = (TableScanState *) scanState;
+	Assert(node->opaque != NULL);
 
-	appendonly_rescan(node->aos_ScanDesc, NULL /* new scan keys */);
+	appendonly_rescan(node->opaque.appendonly, NULL /* new scan keys */);
 }
