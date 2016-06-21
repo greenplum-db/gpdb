@@ -1,6 +1,9 @@
 #ifndef INCLUDE_S3INTERFACE_H_
 #define INCLUDE_S3INTERFACE_H_
 
+// need to include stdexcept to use std::runtime_error
+#include <stdexcept>
+
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 

@@ -46,6 +46,17 @@ ChunkBuffer::~ChunkBuffer() {
     this->destroy();
 }
 
+ChunkBuffer& ChunkBuffer::operator=(const ChunkBuffer& other) {
+    this->sourceUrl = other.sourceUrl;
+    this->eof = other.eof;
+    this->status = other.status;
+    this->curFileOffset = other.curFileOffset;
+    this->curChunkOffset = other.curChunkOffset;
+    this->chunkDataSize = other.chunkDataSize;
+
+    return *this;
+}
+
 // Copy constructor will copy members, but chunkData must not be initialized before copy.
 // otherwise when worked with vector it will be freed twice.
 void ChunkBuffer::init() {

@@ -67,6 +67,10 @@ class ChunkBuffer {
 
     ~ChunkBuffer();
 
+    // In C++98, if a class has reference member,
+    // then it can't be copy assigned by default, we need to implement operator= explicitly.
+    ChunkBuffer& operator=(const ChunkBuffer& other);
+
     bool isEOF() {
         return this->eof;
     }

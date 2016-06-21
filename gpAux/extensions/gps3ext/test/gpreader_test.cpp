@@ -154,9 +154,19 @@ class MockS3RESTfulServiceForMultiThreads : public MockS3RESTfulService {
         string rangeNumber = range.substr(index + 1);
         index = rangeNumber.find("-");
 
-        int begin = std::stoi(rangeNumber.substr(0, index));
-        int end =
-            index == rangeNumber.length() ? data.size() : std::stoi(rangeNumber.substr(index + 1));
+        // stoi is not available in C++98, use sscanf as workaround.
+        int begin, end;
+        if (index > 0) {
+            sscanf(rangeNumber.substr(0, index).c_str(), "%d", &begin);
+        } else {
+            begin = 0;
+        }
+
+        if (rangeNumber.empty()) {
+            end = data.size();
+        } else {
+            sscanf(rangeNumber.substr(index + 1).c_str(), "%d", &end);
+        }
 
         vector<uint8_t> responseData(data.begin() + begin, data.begin() + end + 1);
 

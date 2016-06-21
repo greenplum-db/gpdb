@@ -57,7 +57,9 @@ class Response {
 
     void clearBuffer() {
         buffer.clear();
-        buffer.shrink_to_fit();
+
+        // shrink to fit is added in C++11
+        // buffer.shrink_to_fit();
     }
 
    private:
