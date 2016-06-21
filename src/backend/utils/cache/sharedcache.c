@@ -920,59 +920,6 @@ Cache_Remove(Cache *cache, CacheEntry *entry)
 }
 
 /*
- * Sweeps through the cache and marks all entries as deleted
- *
- * Returns the number of elements it found and marked deleted.
- */
-int32
-Cache_Clear(Cache *cache)
-{
-	Assert(NULL != cache);
-
-	int32 startIdx = cdb_randint(cache->cacheHdr->nEntries - 1, 0);
-	int32 entryIdx = startIdx;
-	int32 numClearedEntries = 0;
-
-	while (true)
-	{
-		entryIdx = (entryIdx + 1) % cache->cacheHdr->nEntries;
-		if (entryIdx == startIdx)
-		{
-			/* Completed one loop through the list of all entries. We're done */
-			break;
-		}
-
-		CacheEntry *crtEntry = Cache_GetEntryByIndex(cache->cacheHdr, entryIdx);
-		if (crtEntry->state != CACHE_ENTRY_CACHED)
-		{
-			/* Not interested in free/acquired/deleted entries. Go back and look at next entry */
-			continue;
-		}
-
-		/* Found cached entry */
-		Cache_EntryAddRef(cache, crtEntry);
-
-		if (crtEntry->state == CACHE_ENTRY_FREE || crtEntry->state == CACHE_ENTRY_ACQUIRED)
-		{
-			/* Someone freed up the entry before we had a chance to Add-Ref it. Skip it. */
-			Cache_EntryDecRef(cache, crtEntry);
-			continue;
-		}
-
-		Cache_RegisterCleanup(cache, crtEntry, true /* isCachedEntry */);
-
-		Cache_Remove(cache, crtEntry);
-
-		Cache_Release(cache, crtEntry);
-
-		numClearedEntries++;
-
-	}
-
-	return numClearedEntries;
-}
-
-/*
  * Returns true if the entry is in the cache.
  *
  * The state of the entry can be DELETED if the entry is in use but marked for

@@ -616,27 +616,6 @@ workfile_mgr_can_reuse(workfile_set *work_set, PlanState *ps)
 }
 
 /*
- * Clears entire contents of workfile cache
- *
- *  If seg_id == UNDEF_SEGMENT run on all segments, otherwise run only
- *  on segment seg_id.
- *
- *  Returns the number of entries removed
- */
-int32
-workfile_mgr_clear_cache(int seg_id)
-{
-	int no_cleared = 0;
-	if (seg_id == UNDEF_SEGMENT || Gp_segment == seg_id)
-	{
-		Cache *cache = workfile_mgr_get_cache();
-		no_cleared = Cache_Clear(cache);
-	}
-
-	return no_cleared;
-}
-
-/*
  * Physically delete a spill set. Path must not include database prefix.
  */
 static void

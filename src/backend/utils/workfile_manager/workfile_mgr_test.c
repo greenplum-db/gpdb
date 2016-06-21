@@ -68,7 +68,6 @@ static bool cache_test_remove(void);
 static bool cache_test_concurrency(void);
 static bool cache_test_evict(void);
 static bool cache_test_evict_stress(void);
-static bool cache_test_clear(void);
 
 static bool bfz_test_reopen(void);
 static bool execworkfile_buffile_test(void);
@@ -118,7 +117,6 @@ static test_def test_defns[] = {
 		{"cache_test_concurrency", cache_test_concurrency},
 		{"cache_test_evict", cache_test_evict},
 		{"cache_test_evict_stress", cache_test_evict_stress},
-		{"cache_test_clear", cache_test_clear},
 		{"bfz_test_reopen", bfz_test_reopen},
 		{"execworkfile_buffile_test", execworkfile_buffile_test},
 		{"execworkfile_bfz_zlib_test", execworkfile_bfz_zlib_test},
@@ -723,109 +721,6 @@ cache_test_evict_stress(void)
 	unit_test_result(!testFailed);
 	return unit_test_summary();
 }
-
-static bool
-cache_test_clear(void)
-{
-	int32 noDeleted = 0;
-
-	unit_test_reset();
-
-	elog(LOG, "Running test: cache_test_evict_clear");
-
-	elog(LOG, "Running sub-test: CacheCreate");
-	Cache *cache = cache_test_create();
-	unit_test_result(cache != NULL);
-
-	elog(LOG, "Running sub-test: Cache_Clear on empty");
-	noDeleted = Cache_Clear(cache);
-	unit_test_result(noDeleted == 0);
-
-	/* Number of elements in the array to hold test entries */
-	const int noTestEntries = 20;
-	const int entryWeight = 3;
-	CacheEntry *entries[noTestEntries];
-	char key[TEST_NAME_LENGTH];
-	TestPopParam param;
-
-
-	/* Inserting noTestEntries entries */
-	elog(LOG, "Running sub-test: Cache_Clear with %d inserted elements", noTestEntries);
-	int i;
-	for (i=0; i < noTestEntries; i++)
-	{
-		strncpy(param.key, key, TEST_NAME_LENGTH);
-		param.data = MyProcPid;
-
-		snprintf(key, TEST_NAME_LENGTH, "PID=%d cache key no. %d", MyProcPid, i);
-		entries[i] = Cache_AcquireEntry(cache, &param);
-		Assert(NULL != entries[i]);
-
-		entries[i]->size = entryWeight;
-		entries[i]->utility = random() % 100;
-
-		Cache_Insert(cache, entries[i]);
-		Cache_Release(cache, entries[i]);
-	}
-
-	/* Clear should clear all of them */
-	noDeleted = Cache_Clear(cache);
-	unit_test_result(noDeleted == noTestEntries);
-
-
-	elog(LOG, "Running sub-test: Looking up %d elements after they got cleared", noTestEntries);
-
-	bool testFailed = false;
-	CacheEntry *localEntry = Cache_AcquireEntry(cache, NULL);
-	TestCacheElt *localElt = CACHE_ENTRY_PAYLOAD(localEntry);
-	localElt->data = MyProcPid;
-	for (i=0; i < noTestEntries; i++)
-	{
-		snprintf(localElt->key, TEST_NAME_LENGTH, "PID=%d cache key no. %d", MyProcPid, i);
-		CacheEntry *foundEntry = Cache_Lookup(cache, localEntry);
-		if (foundEntry != NULL)
-		{
-			/* Found an entry that was supposed to be cleared out, error out! */
-			testFailed = true;
-			Cache_Release(cache, foundEntry);
-			break;
-		}
-	}
-
-	Cache_Release(cache, localEntry);
-	unit_test_result(!testFailed);
-
-	/* Acquiring but not inserting noTestEntries entries */
-	elog(LOG, "Running sub-test: Cache_Clear with %d acquired elements", noTestEntries);
-	for (i=0; i < noTestEntries; i++)
-	{
-		/* Put some payload in the entry */
-		snprintf(key, TEST_NAME_LENGTH, "PID=%d cache key no. %d", MyProcPid, i);
-		strncpy(param.key, key, TEST_NAME_LENGTH);
-		param.data = MyProcPid;
-
-		entries[i] = Cache_AcquireEntry(cache, &param);
-		Assert(NULL != entries[i]);
-	}
-
-	/* Clear should clear none of them */
-	noDeleted = Cache_Clear(cache);
-	unit_test_result(noDeleted == 0);
-
-	elog(LOG, "Running sub-test: Cache_Clear after releasing all acquired elements");
-	for (i=0; i < noTestEntries; i++)
-	{
-		Cache_Release(cache, entries[i]);
-	}
-
-	/* Clear should clear none of them */
-	noDeleted = Cache_Clear(cache);
-	unit_test_result(noDeleted == 0);
-
-
-	return unit_test_summary();
-}
-
 
 /*
  * Callback function to test if an entry in the hashtable is "empty"

@@ -309,7 +309,6 @@ void Cache_Release(Cache *cache, CacheEntry *entry);
 CacheEntry *Cache_AcquireEntry(Cache *cache, void *populate_param);
 bool Cache_IsCached(CacheEntry *entry);
 void Cache_SurrenderClientEntries(Cache *cache);
-int32 Cache_Clear(Cache *cache);
 
 /* Internal cache utility functions */
 void Cache_UnlinkEntry(Cache *cache, CacheAnchor *anchor, CacheEntry *entry);
