@@ -15248,6 +15248,10 @@ split_rows(Relation intoa, Relation intob, Relation temprel)
 	rrib->ri_partSlot = MakeSingleTupleTableSlot(RelationGetDescr(intob));
 	map_part_attrs(temprel, intoa, &rria->ri_partInsertMap, true);
 	map_part_attrs(temprel, intob, &rrib->ri_partInsertMap, true);
+	Assert(NULL != rria->ri_RelationDesc);
+	rria->ri_resultSlot = MakeSingleTupleTableSlot(rria->ri_RelationDesc->rd_att);
+	Assert(NULL != rrib->ri_RelationDesc);
+	rrib->ri_resultSlot = MakeSingleTupleTableSlot(rrib->ri_RelationDesc->rd_att);
 
 	/* constr might not be defined if this is a default partition */
 	if (intoa->rd_att->constr && intoa->rd_att->constr->num_check)
@@ -15445,21 +15449,18 @@ split_rows(Relation intoa, Relation intob, Relation temprel)
 	ExecDropSingleTupleTableSlot(rrib->ri_partSlot);
 
 	/*
-	 * We may have created "cached" version of our target result tuple table slot
-	 * inside reconstructMatchingTupleSlot. Drop any such slots.
+	 * We created our target result tuple table slots upfront.
+	 * We can drop them now.
 	 */
-	if (NULL != rria->ri_resultSlot)
-	{
-		Assert(NULL != rria->ri_resultSlot->tts_tupleDescriptor);
-		ExecDropSingleTupleTableSlot(rria->ri_resultSlot);
-		rria->ri_resultSlot = NULL;
-	}
-	if (NULL != rrib->ri_resultSlot)
-	{
-		Assert(NULL != rrib->ri_resultSlot->tts_tupleDescriptor);
-		ExecDropSingleTupleTableSlot(rrib->ri_resultSlot);
-		rrib->ri_resultSlot = NULL;
-	}
+	Assert(NULL != rria->ri_resultSlot);
+	Assert(NULL != rria->ri_resultSlot->tts_tupleDescriptor);
+	ExecDropSingleTupleTableSlot(rria->ri_resultSlot);
+	rria->ri_resultSlot = NULL;
+
+	Assert(NULL != rrib->ri_resultSlot);
+	Assert(NULL != rrib->ri_resultSlot->tts_tupleDescriptor);
+	ExecDropSingleTupleTableSlot(rrib->ri_resultSlot);
+	rrib->ri_resultSlot = NULL;
 
 	if (rria->ri_partInsertMap)
 		pfree(rria->ri_partInsertMap);
