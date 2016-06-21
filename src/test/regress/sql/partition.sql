@@ -3730,3 +3730,20 @@ select * from pt_td_leak where col1 = 5;
 
 drop table pt_td_leak;
 drop table pt_td_leak_exchange;
+
+-- Test split default partition while per tuple memory context is reset
+drop table if exists test_split_part cascade;
+
+CREATE TABLE test_split_part ( log_id int NOT NULL, f_array int[] NOT NULL)
+DISTRIBUTED BY (log_id)
+PARTITION BY RANGE(log_id)
+(
+	START (1::int) END (100::int) EVERY (5) WITH (appendonly=false),
+	PARTITION "Old" START (101::int) END (201::int) WITH (appendonly=false),
+	DEFAULT PARTITION other_log_ids  WITH (appendonly=false)
+);
+
+insert into test_split_part (log_id , f_array) select id, '{10}' from generate_series(1,1000) id;
+
+ALTER TABLE test_split_part SPLIT DEFAULT PARTITION START (201) INCLUSIVE END (301) EXCLUSIVE INTO (PARTITION "New", DEFAULT PARTITION);
+

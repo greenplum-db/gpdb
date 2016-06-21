@@ -7830,3 +7830,42 @@ select * from pt_td_leak where col1 = 5;
 
 drop table pt_td_leak;
 drop table pt_td_leak_exchange;
+-- Test split default partition while per tuple memory context is reset
+drop table if exists test_split_part cascade;
+NOTICE:  table "test_split_part" does not exist, skipping
+CREATE TABLE test_split_part ( log_id int NOT NULL, f_array int[] NOT NULL)
+DISTRIBUTED BY (log_id)
+PARTITION BY RANGE(log_id)
+(
+        START (1::int) END (100::int) EVERY (5) WITH (appendonly=false),
+        PARTITION "Old" START (101::int) END (201::int) WITH (appendonly=false),
+        DEFAULT PARTITION other_log_ids  WITH (appendonly=false)
+);
+NOTICE:  CREATE TABLE will create partition "test_split_part_1_prt_other_log_ids" for table "test_split_part"
+NOTICE:  CREATE TABLE will create partition "test_split_part_1_prt_2" for table "test_split_part"
+NOTICE:  CREATE TABLE will create partition "test_split_part_1_prt_3" for table "test_split_part"
+NOTICE:  CREATE TABLE will create partition "test_split_part_1_prt_4" for table "test_split_part"
+NOTICE:  CREATE TABLE will create partition "test_split_part_1_prt_5" for table "test_split_part"
+NOTICE:  CREATE TABLE will create partition "test_split_part_1_prt_6" for table "test_split_part"
+NOTICE:  CREATE TABLE will create partition "test_split_part_1_prt_7" for table "test_split_part"
+NOTICE:  CREATE TABLE will create partition "test_split_part_1_prt_8" for table "test_split_part"
+NOTICE:  CREATE TABLE will create partition "test_split_part_1_prt_9" for table "test_split_part"
+NOTICE:  CREATE TABLE will create partition "test_split_part_1_prt_10" for table "test_split_part"
+NOTICE:  CREATE TABLE will create partition "test_split_part_1_prt_11" for table "test_split_part"
+NOTICE:  CREATE TABLE will create partition "test_split_part_1_prt_12" for table "test_split_part"
+NOTICE:  CREATE TABLE will create partition "test_split_part_1_prt_13" for table "test_split_part"
+NOTICE:  CREATE TABLE will create partition "test_split_part_1_prt_14" for table "test_split_part"
+NOTICE:  CREATE TABLE will create partition "test_split_part_1_prt_15" for table "test_split_part"
+NOTICE:  CREATE TABLE will create partition "test_split_part_1_prt_16" for table "test_split_part"
+NOTICE:  CREATE TABLE will create partition "test_split_part_1_prt_17" for table "test_split_part"
+NOTICE:  CREATE TABLE will create partition "test_split_part_1_prt_18" for table "test_split_part"
+NOTICE:  CREATE TABLE will create partition "test_split_part_1_prt_19" for table "test_split_part"
+NOTICE:  CREATE TABLE will create partition "test_split_part_1_prt_20" for table "test_split_part"
+NOTICE:  CREATE TABLE will create partition "test_split_part_1_prt_21" for table "test_split_part"
+NOTICE:  CREATE TABLE will create partition "test_split_part_1_prt_Old" for table "test_split_part"
+insert into test_split_part (log_id , f_array) select id, '{10}' from generate_series(1,1000) id;
+ALTER TABLE test_split_part SPLIT DEFAULT PARTITION START (201) INCLUSIVE END (301) EXCLUSIVE INTO (PARTITION "New", DEFAULT PARTITION);
+NOTICE:  exchanged partition "other_log_ids" of relation "test_split_part" with relation "pg_temp_325194"
+NOTICE:  dropped partition "other_log_ids" for relation "test_split_part"
+NOTICE:  CREATE TABLE will create partition "test_split_part_1_prt_New" for table "test_split_part"
+NOTICE:  CREATE TABLE will create partition "test_split_part_1_prt_other_log_ids" for table "test_split_part"
