@@ -91,18 +91,6 @@ workfile_mgr_open_fileno(workfile_set *work_set, uint32 file_no)
 }
 
 /*
- * Opens a given workfile of a given set
- *
- *  The exact file_name given is used to open the file
- */
-ExecWorkFile *
-workfile_mgr_open_filename(workfile_set *work_set, const char *file_name)
-{
-	Assert(false);
-	return NULL;
-}
-
-/*
  * Closes a given workfile and updates the diskspace accordingly
  *
  *  work_set can be NULL for workfile that were created outside of the workfile manager,
