@@ -1053,7 +1053,7 @@ ExecInitMotion(Motion * node, EState *estate, int eflags)
 		/*
 		 * Create hash API reference
 		 */
-		motionstate->cdbhash = makeCdbHash(node->numOutputSegs, HASH_FNV_1);
+		motionstate->cdbhash = makeCdbHash(node->numOutputSegs);
     }
 
 	/* Merge Receive: Set up the key comparator and priority queue. */

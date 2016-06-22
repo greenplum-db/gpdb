@@ -28,8 +28,6 @@ typedef enum
 	REDUCE_BITMASK
 } CdbHashReduce;
 
-typedef uint32 CdbHashFn (void *, size_t, uint32);
-
 /*
  * Structure that holds Greenplum Database hashing information.
  */
@@ -38,9 +36,6 @@ typedef struct CdbHash
 	uint32		hash;			/* The result hash value							*/
 	int			numsegs;		/* number of segments in Greenplum Database used for
 								 * partitioning  */
-	CdbHashAlg	hashalg;		/* the hashing algorithm							*/
-	CdbHashFn  *hashfn;			/* hashing function for the selected hash
-								 * algorithm */
 	CdbHashReduce reducealg;	/* the algorithm used for reducing to buckets		*/
 	uint32		rrindex;		/* round robin index for empty policy tables		*/
 
@@ -55,9 +50,8 @@ extern void hashNullDatum(datumHashFunction hashFn, void *clientData);
 /*
  * Create and initialize a CdbHash in the current memory context.
  * Parameter numsegs - number of segments in Greenplum Database.
- * Parameter algorithm - the hash algorithm, either HASH_FNV_1 or HASH_FNV_1A
  */
-extern CdbHash *makeCdbHash(int numsegs, CdbHashAlg algorithm);
+extern CdbHash *makeCdbHash(int numsegs);
 
 /*
  * Initialize CdbHash for hashing the next tuple values.

@@ -36,14 +36,10 @@
 #include "cdb/cdbhash.h"
 #include "cdb/cdbutil.h"
 
-/*
- * 32 bit FNV-1 and FNV-1a non-zero initial basis
- * NOTE: The FNV-1a initial basis is the same value as FNV-1 by definition.
- */
+/* 32 bit FNV-1  non-zero initial basis */
 #define FNV1_32_INIT ((uint32)0x811c9dc5)
-#define FNV1_32A_INIT FNV1_32_INIT
 
-/* Constant prime value used for an FNV1/FNV1A hash */
+/* Constant prime value used for an FNV1 hash */
 #define FNV_32_PRIME ((uint32)0x01000193)
 
 /* Constant used for hashing a NULL value */
@@ -63,7 +59,6 @@
 
 /* local function declarations */
 static uint32 fnv1_32_buf(void *buf, size_t len, uint32 hashval);
-static uint32 fnv1a_32_buf(void *buf, size_t len, uint32 hashval);
 static int	inet_getkey(inet *addr, unsigned char *inet_key, int key_size);
 static int	ignoreblanks(char *data, int len);
 static int	ispowof2(int numsegs);
@@ -84,18 +79,16 @@ static int	ispowof2(int numsegs);
  * CdbHash, these are:
  *
  * 1 - number of segments in Greenplum Database.
- * 2 - hashingalgorithm used.
- * 3 - reduction method.
+ * 2 - reduction method.
  *
  * The hash value itself will be initialized for every tuple in cdbhashinit()
  */
 CdbHash *
-makeCdbHash(int numsegs, CdbHashAlg algorithm)
+makeCdbHash(int numsegs)
 {
 	CdbHash    *h;
 
 	assert(numsegs > 0);		/* verify number of segments is legal. */
-	assert(algorithm == HASH_FNV_1); /* make sure everybody uses same algorithm */
 
 	/* Create a pointer to a CdbHash that includes the hash properties */
 	h = palloc(sizeof(CdbHash));
@@ -105,12 +98,6 @@ makeCdbHash(int numsegs, CdbHashAlg algorithm)
 	 */
 	h->hash = 0;
 	h->numsegs = numsegs;
-	h->hashalg = algorithm;
-
-	if (h->hashalg == HASH_FNV_1)
-		h->hashfn = &fnv1_32_buf;
-	else if (h->hashalg == HASH_FNV_1A)
-		h->hashfn = &fnv1a_32_buf;
 
 	/*
 	 * set the reduction algorithm: If num_segs is power of 2 use bit mask,
@@ -137,9 +124,7 @@ makeCdbHash(int numsegs, CdbHashAlg algorithm)
 	h->rrindex = cdb_randint(0, UPPER_VAL);
 		
 	ereport(DEBUG4,
-	  (errmsg("CDBHASH started using algorithm %d into %d segment databases",
-			  h->hashalg,
-			  h->numsegs)));
+		(errmsg("CDBHASH hashing into %d segment databases", h->numsegs)));
 
 	return h;
 }
@@ -155,14 +140,14 @@ cdbhashinit(CdbHash *h)
 	h->hash = FNV1_32_INIT;
 }
 
-/**
+/*
  * Implements datumHashFunction
  */
 static void
 addToCdbHash(void *cdbHash, void *buf, size_t len)
 {
 	CdbHash *h = (CdbHash*)cdbHash;
-	h->hash = (h->hashfn) (buf, len, h->hash);
+	h->hash = fnv1_32_buf(buf, len, h->hash);
 }
 
 /*
@@ -653,8 +638,8 @@ cdbhashnokey(CdbHash *h)
 	void	   *buf = &rrbuf;
 	size_t		len = sizeof(rrbuf);
 	
-	/* do the hash using the selected algorithm */
-	h->hash = (h->hashfn) (buf, len, h->hash);
+	/* compute the hash */
+	h->hash = fnv1_32_buf(buf, len, h->hash);
 	
 	h->rrindex++; /* increment for next time around */
 }
@@ -828,44 +813,6 @@ fnv1_32_buf(void *buf, size_t len, uint32 hval)
 
 		/* xor the bottom with the current octet */
 		hval ^= (uint32) *bp++;
-	}
-
-	/* return our new hash value */
-	return hval;
-}
-
-/*
- * fnv1a_32_buf - perform a 32 bit FNV 1A hash on a buffer
- *
- * input:
- *	buf - start of buffer to hash
- *	len - length of buffer in octets (bytes)
- *	hval	- previous hash value or FNV1_32_INIT if first call.
- *
- * returns:
- *	32 bit hash as a static hash type
- */
-static uint32
-fnv1a_32_buf(void *buf, size_t len, uint32 hval)
-{
-	unsigned char *bp = (unsigned char *) buf;	/* start of buffer */
-	unsigned char *be = bp + len;		/* beyond end of buffer */
-
-	/*
-	 * FNV-1 hash each octet in the buffer
-	 */
-	while (bp < be)
-	{
-
-		/* xor the bottom with the current octet */
-		hval ^= (uint32) *bp++;
-
-		/* multiply by the 32 bit FNV magic prime mod 2^32 */
-#if defined(NO_FNV_GCC_OPTIMIZATION)
-		hval *= FNV_32_PRIME;
-#else
-		hval += (hval << 1) + (hval << 4) + (hval << 7) + (hval << 8) + (hval << 24);
-#endif
 	}
 
 	/* return our new hash value */

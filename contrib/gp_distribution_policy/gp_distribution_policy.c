@@ -181,7 +181,7 @@ gp_distribution_policy_heap_table_check(PG_FUNCTION_ARGS)
 		CHECK_FOR_INTERRUPTS();
 
 		/* Initialize hash function and structure */
-		CdbHash *hash = makeCdbHash(GpIdentity.numsegments, HASH_FNV_1);
+		CdbHash *hash = makeCdbHash(GpIdentity.numsegments);
 		cdbhashinit(hash);
 		
 		for(int i = 0; i < policy->nattrs; i++)

@@ -268,7 +268,7 @@ static bool TupleMatchesHashFilter(Result *resultNode, TupleTableSlot *resultSlo
 
 		Assert(list_length(resultNode->hashList) <= resultSlot->tts_tupleDescriptor->natts);
 
-		CdbHash *hash = makeCdbHash(GpIdentity.numsegments, HASH_FNV_1);
+		CdbHash *hash = makeCdbHash(GpIdentity.numsegments);
 		cdbhashinit(hash);
 		foreach(cell, resultNode->hashList)
 		{

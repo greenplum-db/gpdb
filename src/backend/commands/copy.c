@@ -2788,7 +2788,7 @@ CopyFromDispatch(CopyState cstate)
 		else
 			p_nattrs = 0;
 		/* Create hash API reference */
-		cdbHash = makeCdbHash(cdbCopy->total_segs, HASH_FNV_1);
+		cdbHash = makeCdbHash(cdbCopy->total_segs);
 	}
 
 
@@ -3343,7 +3343,7 @@ CopyFromDispatch(CopyState cstate)
 								save_cxt = MemoryContextSwitchTo(oldcontext);
 								d->relid = relid;
 								part_hash = d->cdbHash =
-									makeCdbHash(cdbCopy->total_segs, HASH_FNV_1);
+									makeCdbHash(cdbCopy->total_segs);
 								part_policy = d->policy =
 									GpPolicyCopy(oldcontext,
 												 rel->rd_cdbpolicy);

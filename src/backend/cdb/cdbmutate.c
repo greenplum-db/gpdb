@@ -165,7 +165,7 @@ directDispatchCalculateHash(Plan *plan, GpPolicy *targetPolicy)
 	ListCell *cell=NULL;
 	bool directDispatch;
 
-	h = makeCdbHash(GpIdentity.numsegments, HASH_FNV_1);
+	h = makeCdbHash(GpIdentity.numsegments);
 	cdbhashinit(h);
 
 	/*
@@ -2593,7 +2593,7 @@ Plan *zap_trivial_result(PlannerInfo *root, Plan *plan)
 int32 
 cdbhash_const(Const *pconst, int iSegments)
 {
-	CdbHash *pcdbhash = makeCdbHash(iSegments, HASH_FNV_1);
+	CdbHash *pcdbhash = makeCdbHash(iSegments);
 	cdbhashinit(pcdbhash);
 			
 	if (pconst->constisnull)
@@ -2622,7 +2622,7 @@ cdbhash_const_list(List *plConsts, int iSegments)
 {
 	Assert(0 < list_length(plConsts));
 	
-	CdbHash *pcdbhash = makeCdbHash(iSegments, HASH_FNV_1);
+	CdbHash *pcdbhash = makeCdbHash(iSegments);
 	cdbhashinit(pcdbhash);
 
 	ListCell   *lc = NULL;
