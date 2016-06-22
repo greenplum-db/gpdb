@@ -216,7 +216,7 @@ CHK_PARAMS () {
 		    unset PORT_BASE SEG_PREFIX DATA_DIRECTORY REPLICATION_PORT_BASE
 
 		    # Make sure it is not a dos file with CTRL M at end of each line
-		    $CAT $CLUSTER_CONFIG|$SED -e 's/^M$//g' > $TMP_FILE
+		    $CAT $CLUSTER_CONFIG|$SED -e 's/$//g' > $TMP_FILE
 		    $MV $TMP_FILE $CLUSTER_CONFIG
 		    LOG_MSG "[INFO]:-Dumping $CLUSTER_CONFIG to logfile for reference"
 		    $CAT $CLUSTER_CONFIG|$GREP -v "^#" >> $LOG_FILE
@@ -1702,7 +1702,7 @@ READ_INPUT_CONFIG () {
     fi
 
     # Make sure it is not a dos file with CTRL M at end of each line
-    $CAT $INPUT_CONFIG|$SED -e 's/^M$//g' > $TMP_FILE
+    $CAT $INPUT_CONFIG|$SED -e 's/$//g' > $TMP_FILE
     $MV $TMP_FILE $INPUT_CONFIG
     LOG_MSG "[INFO]:-Dumping $INPUT_CONFIG to logfile for reference"
     $CAT $INPUT_CONFIG|$GREP -v "^#" >> $LOG_FILE
