@@ -2150,7 +2150,8 @@ GROUP BY nspname, relname;''' % (self._table_pair.source.schema,
                    self._table_pair.dest.table,
                    self._ext_name)
             if self._dest_is_hawq:
-                query = "SET hawq_rm_stmt_nvseg=%s ;" % len(self._source_config.getSegDbList()) + query
+                # Instruct HAWQ to match vsegs to the number of source primary segments
+                query = "SET hawq_rm_stmt_nvseg=%s ;" % self._source_config.numPrimarySegments + query
             if self._exclusive_lock:
                 lock_query = "LOCK TABLE \"%s\".\"%s\" IN EXCLUSIVE MODE" % \
                     (self._table_pair.dest.schema, self._table_pair.dest.table)
@@ -3150,6 +3151,7 @@ class GpTransfer(object):
                     'Database...')
         url = DbURL(self._options.dest_host, self._options.dest_port,
                     'template1', self._options.dest_user)
+        # For HAWQ destinations, one vseg per GPDB primary will be employed
         if self._options.dest_is_hawq:
             self._dest_config = self._src_config
         else:
