@@ -3317,7 +3317,6 @@ to_date_valid(PG_FUNCTION_ARGS)
 	Datum		validate;
 	Datum		result_out;
 	Datum		validate_in;
-	//FunctionCallInfoData fcinfo2;
 
 	/* call the original to_date() function and receive the result */
 	result = DirectFunctionCall2(to_date, PointerGetDatum(date_txt), PointerGetDatum(fmt));
@@ -3327,26 +3326,13 @@ to_date_valid(PG_FUNCTION_ARGS)
 	validate_in = DirectFunctionCall3(timestamp_in, result_out, ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
 
 	/* compare the two dates */
-	/* DirectFunctionCallX will throw an error if the result is NULL */
-	//InitFunctionCallInfoData(fcinfo2, NULL, 2, NULL, NULL);
 
-
-
-	// same check as in timestamp_to_char(), except that DirectFunctionCall2() will raise an error if NULL
+	/* same check as in timestamp_to_char(), except that DirectFunctionCall2() will raise an error if NULL */
 	if ((VARSIZE(fmt) - VARHDRSZ) <= 0 || TIMESTAMP_NOT_FINITE(DatumGetTimestamp(validate_in)))
 		PG_RETURN_NULL();
 
-
-
-
-	//fcinfo2.arg[0] = validate_in;
-	//fcinfo2.arg[1] = PG_GETARG_DATUM(1);
-	//fcinfo2.argnull[0] = false;
-	//fcinfo2.argnull[1] = false;
-
-	//validate = timestamp_to_char(&fcinfo2);
 	validate = DirectFunctionCall2(timestamp_to_char, validate_in, PointerGetDatum(fmt));
-	// DirectFunctionCall2() will raise an error if the result is NULL, no need to handle it here
+	/* DirectFunctionCall2() will raise an error if the result is NULL, no need to handle it here */
 	if (DatumGetBool(DirectFunctionCall2(textne, PointerGetDatum((text *)validate), PointerGetDatum(date_txt))))
 	{
 		ereport(ERROR,
