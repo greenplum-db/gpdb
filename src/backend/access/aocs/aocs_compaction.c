@@ -1,6 +1,6 @@
 /*------------------------------------------------------------------------------
  *
- * Code dealing with the compaction of append-only tabes.
+ * Code dealing with the compaction of append-only tables.
  *
  * Copyright (c) 2013, Pivotal.
  *

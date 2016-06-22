@@ -1,6 +1,6 @@
 /*------------------------------------------------------------------------------
  *
- * Code dealing with the compaction of append-only tabes.
+ * Code dealing with the compaction of append-only tables.
  *
  * Compaction is the part of updatable append-only tables that
  * is responsible to freeing the space occupied by tuples that have
