@@ -2505,8 +2505,9 @@ ServerLoop(void)
 						 (long)BgWriterPID);
 			}
 
-			if (CheckpointPID == 0 && pmState > PM_STARTUP_PASS4 &&
-				Shutdown == NoShutdown)
+			if (CheckpointPID == 0 &&
+			    pmState > PM_STARTUP_PASS4 &&
+			    pmState < PM_CHILD_STOP_BEGIN)
 			{
 				CheckpointPID = StartCheckpointServer();
 				if (Debug_print_server_processes)
@@ -2535,9 +2536,11 @@ ServerLoop(void)
 				if (AutoVacPID != 0)
 					start_autovac_launcher = false; /* signal processed */
 			}
-			
+
 			/* If we have lost the stats collector, try to start a new one */
-			if (PgStatPID == 0 && pmState > PM_STARTUP_PASS4)
+			if (PgStatPID == 0 &&
+			    pmState > PM_STARTUP_PASS4 &&
+			    pmState < PM_CHILD_STOP_BEGIN)
 			{
 				PgStatPID = pgstat_start();
 				if (Debug_print_server_processes)
