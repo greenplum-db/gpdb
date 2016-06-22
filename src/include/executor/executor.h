@@ -432,8 +432,6 @@ extern ExprContext *CreateStandaloneExprContext(void);
 extern void FreeExprContext(ExprContext *econtext);
 extern void ReScanExprContext(ExprContext *econtext);
 extern void ResetExprContext(ExprContext *econtext);
-extern List *GetPartitionTargetlist(TupleDesc partDescr, List *targetlist);
-extern void UpdateGenericExprState(List *teTargetlist, List *geTargetlist);
 
 extern ExprContext *MakePerTupleExprContext(EState *estate);
 
