@@ -1,7 +1,8 @@
 /*--------------------------------------------------------------------------
  *
  * cdbhash.c
- *	  Provides hashing routines to support consistant data distribution/location within Greenplum Database.
+ *	  Provides hashing routines to support consistant data distribution/location
+ *    within Greenplum Database.
  *
  * Copyright (c) 2005-2008, Greenplum inc
  *
@@ -470,7 +471,7 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 			 * nabstime.c. We use the actual value instead
 			 * of defining it again here.
 			 */
-			if(tinterval->status == 0 ||
+			if (tinterval->status == 0 ||
 			   tinterval->data[0] == INVALID_ABSTIME ||
 			   tinterval->data[1] == INVALID_ABSTIME)
 			{
@@ -610,7 +611,7 @@ cdbhashnull(CdbHash *h)
 	hashNullDatum(addToCdbHash, (void*)h);
 }
 
-/**
+/*
  * Update the hash value for a null Datum
  *
  * @param hashFn called to update the hash value.
@@ -643,7 +644,6 @@ cdbhashnokey(CdbHash *h)
 	
 	h->rrindex++; /* increment for next time around */
 }
-
 
 
 /*
@@ -713,7 +713,8 @@ typeIsEnumType(Oid typeoid)
 	return res;
 }
 
-bool isGreenplumDbHashable(Oid typid)
+bool
+isGreenplumDbHashable(Oid typid)
 {
 	/* we can hash all arrays */
 	if (typeIsArrayType(typid))
@@ -803,7 +804,6 @@ fnv1_32_buf(void *buf, size_t len, uint32 hval)
 	 */
 	while (bp < be)
 	{
-
 		/* multiply by the 32 bit FNV magic prime mod 2^32 */
 #if defined(NO_FNV_GCC_OPTIMIZATION)
 		hval *= FNV_32_PRIME;
@@ -860,27 +860,28 @@ inet_getkey(inet *addr, unsigned char *inet_key, int key_size)
 /*
  * Given the original length of the data array this function is
  * recalculating the length after ignoring any trailing blanks. The
- * actual data is remained unmodified.
+ * actual data remains unmodified.
  */
 static int
 ignoreblanks(char *data, int len)
 {
-
 	/* look for trailing blanks and skip them in the hash calculation */
 	while (data[len - 1] == ' ')
 	{
 		len--;
-		if (len == 1)			/* if only 1 char is left, leave it alone!
-								 * (the string is either empty or has 1 char) */
+		/*
+		 * If only 1 char is left, leave it alone! The string is either empty
+		 * or has 1 char
+		 */
+		if (len == 1)
 			break;
 	}
 
 	return len;
-
 }
 
 /*
- * returns 1 is the input int is a power of 2 and 0 otherwize.
+ * returns 1 is the input int is a power of 2 and 0 otherwise.
  */
 static int
 ispowof2(int numsegs)
