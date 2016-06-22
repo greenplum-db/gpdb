@@ -81,8 +81,8 @@ void GPReader::constructReaderParam(const string& url) {
 void GPReader::open(const ReaderParams& params) {
     this->s3service.setRESTfulService(this->restfulServicePtr);
     this->bucketReader.setS3interface(&this->s3service);
-    this->keyReader.setS3interface(&this->s3service);
-    this->bucketReader.setUpstreamReader(&this->keyReader);
+    this->bucketReader.setUpstreamReader(&this->commonReader);
+    this->commonReader.setS3service(&this->s3service);
     this->bucketReader.open(this->params);
 }
 

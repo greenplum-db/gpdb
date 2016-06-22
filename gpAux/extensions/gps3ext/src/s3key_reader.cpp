@@ -209,6 +209,8 @@ void S3KeyReader::open(const ReaderParams& params) {
     this->offsetMgr.setKeySize(params.getKeySize());
     this->offsetMgr.setChunkSize(params.getChunkSize());
 
+    CHECK_OR_DIE_MSG(params.getChunkSize() > 0, "%s", "chunk size must be greater than zero");
+
     for (uint64_t i = 0; i < this->numOfChunks; i++) {
         // when vector reallocate memory, it will copy object.
         // chunkData must be initialized after all copy.

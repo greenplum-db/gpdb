@@ -1,25 +1,27 @@
 #include <algorithm>
 
+#include "decompress_reader.h"
 #include "s3log.h"
 #include "s3macros.h"
-#include "uncompress_reader.h"
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
-UncompressReader::UncompressReader() {
+unsigned int S3_ZIP_CHUNKSIZE = 1024 * 1024 * 2;
+
+DecompressReader::DecompressReader() {
     this->reader = NULL;
     this->in = new char[S3_ZIP_CHUNKSIZE];
     this->out = new char[S3_ZIP_CHUNKSIZE];
     this->outOffset = 0;
 }
 
-UncompressReader::~UncompressReader() {
+DecompressReader::~DecompressReader() {
     delete this->in;
     delete this->out;
 }
 
 // Used for unit test to adjust buf size
-void UncompressReader::resizeUncompressReaderBuffer(int size) {
+void DecompressReader::resizeDecompressReaderBuffer(int size) {
     delete this->in;
     delete this->out;
     this->in = new char[size];
@@ -28,11 +30,11 @@ void UncompressReader::resizeUncompressReaderBuffer(int size) {
     this->zstream.avail_out = size;
 }
 
-void UncompressReader::setReader(Reader *reader) {
+void DecompressReader::setReader(Reader *reader) {
     this->reader = reader;
 }
 
-void UncompressReader::open(const ReaderParams &params) {
+void DecompressReader::open(const ReaderParams &params) {
     // allocate inflate state
     zstream.zalloc = Z_NULL;
     zstream.zfree = Z_NULL;
@@ -47,22 +49,25 @@ void UncompressReader::open(const ReaderParams &params) {
     // 47 is the number of windows bits, to make sure zlib could recognize and decode gzip stream.
     int ret = inflateInit2(&zstream, 47);
     CHECK_OR_DIE_MSG(ret == Z_OK, "%s", "failed to initialize zlib library");
+
+    this->reader->open(params);
 }
 
-uint64_t UncompressReader::read(char *buf, uint64_t bufSize) {
+uint64_t DecompressReader::read(char *buf, uint64_t bufSize) {
     uint64_t ret = 0;
     uint64_t remainingBufLen = bufSize;
     uint64_t remainingOutLen = S3_ZIP_CHUNKSIZE - this->zstream.avail_out - this->outOffset;
     bool readFinished = false;
 
     do {
-        S3DEBUG("has = %" PRIu64 ", offset = %d, chunksize = %u, avail_out = %u, count = %" PRIu64,
-                remainingOutLen, outOffset, S3_ZIP_CHUNKSIZE, this->zstream.avail_out, bufSize);
+        // S3DEBUG("has = %" PRIu64 ", offset = %d, chunksize = %u, avail_out = %u, count = %"
+        // PRIu64,
+        //     remainingOutLen, outOffset, S3_ZIP_CHUNKSIZE, this->zstream.avail_out, bufSize);
 
         if (this->outOffset < (S3_ZIP_CHUNKSIZE - this->zstream.avail_out)) {
-            // Read remaining data in out buffer uncompressed last time.
+            // Read remaining data in out buffer decompressed last time.
         } else {
-            this->uncompress();
+            this->decompress();
             this->outOffset = 0;  // reset cursor for out buffer to read from beginning.
             remainingOutLen = S3_ZIP_CHUNKSIZE - this->zstream.avail_out;
         }
@@ -89,9 +94,9 @@ uint64_t UncompressReader::read(char *buf, uint64_t bufSize) {
     return ret;
 }
 
-// Read compressed data from underlying reader and uncompress to this->out buffer.
+// Read compressed data from underlying reader and decompress to this->out buffer.
 // If no more data to consume, this->zstream.avail_out == S3_ZIP_CHUNKSIZE;
-void UncompressReader::uncompress() {
+void DecompressReader::decompress() {
     if (this->zstream.avail_in == 0) {
         this->zstream.avail_out = S3_ZIP_CHUNKSIZE;
         this->zstream.next_out = (Byte *)this->out;
@@ -100,7 +105,7 @@ void UncompressReader::uncompress() {
         uint64_t hasRead = this->reader->read(this->in, S3_ZIP_CHUNKSIZE);
         if (hasRead == 0) {
             S3DEBUG(
-                "No more data to uncompress: avail_in = %u, avail_out = %u, total_in = %u, "
+                "No more data to decompress: avail_in = %u, avail_out = %u, total_in = %u, "
                 "total_out = %u",
                 zstream.avail_in, zstream.avail_out, zstream.total_in, zstream.total_out);
             return;  // EOF
@@ -114,8 +119,8 @@ void UncompressReader::uncompress() {
         this->zstream.next_out = (Byte *)this->out;
     }
 
-    S3DEBUG("Before decompress: avail_in = %u, avail_out = %u, total_in = %u, total_out = %u",
-            zstream.avail_in, zstream.avail_out, zstream.total_in, zstream.total_out);
+    // S3DEBUG("Before decompress: avail_in = %u, avail_out = %u, total_in = %u, total_out = %u",
+    //      zstream.avail_in, zstream.avail_out, zstream.total_in, zstream.total_out);
 
     int status = inflate(&this->zstream, Z_NO_FLUSH);
     if (status == Z_STREAM_END) {
@@ -125,12 +130,13 @@ void UncompressReader::uncompress() {
         CHECK_OR_DIE_MSG(false, "failed to decompress data: %d", status);
     }
 
-    S3DEBUG("After decompress: avail_in = %u, avail_out = %u, total_in = %u, total_out = %u",
-            zstream.avail_in, zstream.avail_out, zstream.total_in, zstream.total_out);
+    // S3DEBUG("After decompress: avail_in = %u, avail_out = %u, total_in = %u, total_out = %u",
+    //     zstream.avail_in, zstream.avail_out, zstream.total_in, zstream.total_out);
 
     return;
 }
 
-void UncompressReader::close() {
+void DecompressReader::close() {
     inflateEnd(&zstream);
+    this->reader->close();
 }

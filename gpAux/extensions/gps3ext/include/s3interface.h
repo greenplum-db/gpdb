@@ -64,6 +64,11 @@ class S3Interface {
                                const string& region, const S3Credential& cred) {
         throw std::runtime_error("Default implementation must not be called.");
     }
+
+    virtual S3CompressionType checkCompressionType(const string& keyUrl, const string& region,
+                                                   const S3Credential& cred) {
+        throw std::runtime_error("Default implementation must not be called.");
+    }
 };
 
 class S3Service : public S3Interface {

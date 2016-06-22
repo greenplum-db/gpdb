@@ -120,6 +120,9 @@ TEST_F(GPReaderTest, ReadSmallData) {
 
     EXPECT_CALL(mockRestfulService, get(_, _, _))
         .WillOnce(Return(listBucketResponse))
+        // first 4 bytes is retrieved once for format detection.
+        .WillOnce(Return(keyReaderResponse))
+        // whole file content
         .WillOnce(Return(keyReaderResponse));
 
     ReaderParams params;

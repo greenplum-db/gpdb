@@ -271,6 +271,19 @@ TEST_F(S3ServiceTest, fetchDataPartialResponse) {
                                    region, cred));
 }
 
+TEST_F(S3ServiceTest, checkSmallFile) {
+    vector<uint8_t> raw;
+    raw.resize(2);
+    raw[0] = 0x1f;
+    raw[1] = 0x8b;
+    Response response(RESPONSE_OK, raw);
+    EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
+
+    EXPECT_EQ(S3_COMPRESSION_PLAIN,
+              s3service->checkCompressionType(
+                  "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region, cred));
+}
+
 TEST_F(S3ServiceTest, checkItsGzipCompressed) {
     vector<uint8_t> raw;
     raw.resize(4);

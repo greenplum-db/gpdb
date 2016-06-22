@@ -336,6 +336,10 @@ S3CompressionType S3Service::checkCompressionType(const string &keyUrl, const st
     Response resp = service->get(keyUrl, headers, params);
     if (resp.getStatus() == RESPONSE_OK) {
         vector<uint8_t> &responseData = resp.getRawData();
+        if (responseData.size() < S3_MAGIC_BYTES_NUM) {
+            return S3_COMPRESSION_PLAIN;
+        }
+
         CHECK_OR_DIE_MSG(responseData.size() == S3_MAGIC_BYTES_NUM, "%s",
                          "Response is not fully received.");
 

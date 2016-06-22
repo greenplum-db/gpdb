@@ -4,6 +4,7 @@
 #include <string>
 
 #include "s3bucket_reader.h"
+#include "s3common_reader.h"
 #include "s3interface.h"
 #include "s3key_reader.h"
 
@@ -28,7 +29,8 @@ class GPReader : public Reader {
 
    protected:
     S3BucketReader bucketReader;
-    S3KeyReader keyReader;
+    S3CommonReader commonReader;
+    DecompressReader uncomressReader;
     S3RESTfulService restfulService;
 
     S3Service s3service;
