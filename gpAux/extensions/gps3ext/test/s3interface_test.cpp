@@ -252,10 +252,10 @@ TEST_F(S3ServiceTest, fetchDataFailedResponse) {
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
     char buffer[100];
 
-    EXPECT_EQ(0,
-              s3service->fetchData(0, buffer, 100,
-                                   "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
-                                   region, cred));
+    EXPECT_THROW(s3service->fetchData(
+                     0, buffer, 100,
+                     "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region, cred),
+                 std::runtime_error);
 }
 
 TEST_F(S3ServiceTest, fetchDataPartialResponse) {
@@ -352,7 +352,8 @@ TEST_F(S3ServiceTest, fetchDataWithResponseError) {
 
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
 
-    EXPECT_EQ(0, s3service->fetchData(
+    EXPECT_THROW(s3service->fetchData(
                      0, buf, 128, "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
-                     region, cred));
+                     region, cred),
+                 std::runtime_error);
 }

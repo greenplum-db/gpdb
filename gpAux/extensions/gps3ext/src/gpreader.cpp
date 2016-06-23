@@ -61,6 +61,8 @@ int thread_cleanup(void) {
     return 1;
 }
 
+string gpReaderErrorMessage;
+
 GPReader::GPReader(const string& url) {
     constructReaderParam(url);
     restfulServicePtr = &restfulService;
@@ -101,7 +103,7 @@ void GPReader::close() {
 // invoked by s3_import(), need to be exception safe
 GPReader* reader_init(const char* url_with_options) {
     GPReader* reader = NULL;
-
+    gpReaderErrorMessage.clear();
     try {
         if (!url_with_options) {
             return NULL;
@@ -139,6 +141,7 @@ GPReader* reader_init(const char* url_with_options) {
             delete reader;
         }
         S3ERROR("reader_init caught an exception: %s, aborting", e.what());
+        gpReaderErrorMessage = e.what();
         return NULL;
     }
 }
@@ -160,6 +163,7 @@ bool reader_transfer_data(GPReader* reader, char* data_buf, int& data_len) {
         data_len = (int)read_len;
     } catch (std::exception& e) {
         S3ERROR("reader_transfer_data caught an exception: %s, aborting", e.what());
+        gpReaderErrorMessage = e.what();
         return false;
     }
 
@@ -179,6 +183,7 @@ bool reader_cleanup(GPReader** reader) {
         }
     } catch (std::exception& e) {
         S3ERROR("reader_cleanup caught an exception: %s, aborting", e.what());
+        gpReaderErrorMessage = e.what();
         result = false;
     }
 

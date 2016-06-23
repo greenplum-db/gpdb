@@ -15,10 +15,15 @@
 using namespace std;
 
 S3RESTfulService::S3RESTfulService() {
+    // This function is not thread safe, must NOT call it when any other
+    // threads are running, that is, do NOT put it in threads.
     curl_global_init(CURL_GLOBAL_ALL);
 }
 
 S3RESTfulService::~S3RESTfulService() {
+    // This function is not thread safe, must NOT call it when any other
+    // threads are running, that is, do NOT put it in threads.
+    curl_global_cleanup();
 }
 
 // curl's write function callback.

@@ -8,6 +8,8 @@
 #include "s3interface.h"
 #include "s3key_reader.h"
 
+extern string gpReaderErrorMessage;
+
 class GPReader : public Reader {
    public:
     GPReader(const string &url);

@@ -25,16 +25,11 @@ Range OffsetMgr::getNextOffset() {
     return ret;
 }
 
-ChunkBuffer::ChunkBuffer(const string& url, OffsetMgr& mgr, bool& sharedError,
-                         const S3Credential& cred, const string& region)
-    : sourceUrl(url),
-      sharedError(sharedError),
-      chunkData(NULL),
-      offsetMgr(mgr),
-      credential(cred),
-      region(region),
-      s3interface(NULL) {
-    Range range = mgr.getNextOffset();
+ChunkBuffer::ChunkBuffer(const string& url, S3KeyReader& reader)
+    : sourceUrl(url), offsetMgr(reader.getOffsetMgr()), sharedKeyReader(reader) {
+    s3interface = NULL;
+    chunkData = NULL;
+    Range range = offsetMgr.getNextOffset();
     curFileOffset = range.offset;
     chunkDataSize = range.length;
     status = ReadyToFill;
@@ -65,8 +60,8 @@ void ChunkBuffer::init() {
     chunkData = new char[offsetMgr.getChunkSize()];
     CHECK_OR_DIE_MSG(chunkData != NULL, "%s", "Failed to allocate Buffer, no enough memory?");
 
-    pthread_mutex_init(&this->stat_mutex, NULL);
-    pthread_cond_init(&this->stat_cond, NULL);
+    pthread_mutex_init(&this->statusMutex, NULL);
+    pthread_cond_init(&this->statusCondVar, NULL);
 }
 
 void ChunkBuffer::destroy() {
@@ -74,8 +69,8 @@ void ChunkBuffer::destroy() {
         delete this->chunkData;
         this->chunkData = NULL;
 
-        pthread_mutex_destroy(&this->stat_mutex);
-        pthread_cond_destroy(&this->stat_cond);
+        pthread_mutex_destroy(&this->statusMutex);
+        pthread_cond_destroy(&this->statusCondVar);
     }
 }
 
@@ -89,15 +84,17 @@ uint64_t ChunkBuffer::read(char* buf, uint64_t len) {
     // ReadyToFill, second call hangs.
     CHECK_OR_DIE_MSG(!QueryCancelPending, "%s", "ChunkBuffer reading is interrupted by GPDB");
 
-    pthread_mutex_lock(&this->stat_mutex);
+    pthread_mutex_lock(&this->statusMutex);
     while (this->status != ReadyToRead) {
-        pthread_cond_wait(&this->stat_cond, &this->stat_mutex);
+        pthread_cond_wait(&this->statusCondVar, &this->statusMutex);
     }
 
     // Error is shared between all chunks.
     if (this->isError()) {
-        pthread_mutex_unlock(&this->stat_mutex);
-        CHECK_OR_DIE_MSG(false, "%s", "ChunkBuffers encounter a downloading error.");
+        pthread_mutex_unlock(&this->statusMutex);
+        // Don't throw here. Other chunks will set the shared error message,
+        // it will be handled by S3KeyReader.
+        return 0;
     }
 
     uint64_t leftLen = this->chunkDataSize - this->curChunkOffset;
@@ -119,20 +116,20 @@ uint64_t ChunkBuffer::read(char* buf, uint64_t len) {
             this->curFileOffset = range.offset;
             this->chunkDataSize = range.length;
 
-            pthread_cond_signal(&this->stat_cond);
+            pthread_cond_signal(&this->statusCondVar);
         }
     }
 
-    pthread_mutex_unlock(&this->stat_mutex);
+    pthread_mutex_unlock(&this->statusMutex);
 
     return lenToRead;
 }
 
 // returning -1 means error
 uint64_t ChunkBuffer::fill() {
-    pthread_mutex_lock(&this->stat_mutex);
+    pthread_mutex_lock(&this->statusMutex);
     while (this->status != ReadyToFill) {
-        pthread_cond_wait(&this->stat_cond, &this->stat_mutex);
+        pthread_cond_wait(&this->statusCondVar, &this->statusMutex);
     }
 
     uint64_t offset = this->curFileOffset;
@@ -141,11 +138,18 @@ uint64_t ChunkBuffer::fill() {
     uint64_t readLen = 0;
 
     if (leftLen != 0) {
-        readLen = this->s3interface->fetchData(offset, this->chunkData, leftLen, this->sourceUrl,
-                                               this->region, this->credential);
+        try {
+            readLen = this->s3interface->fetchData(
+                offset, this->chunkData, leftLen, this->sourceUrl,
+                this->sharedKeyReader.getRegion(), this->sharedKeyReader.getCredential());
+        } catch (std::exception& e) {
+            S3DEBUG("Failed to fetch expected data from S3");
+            this->setSharedError(true, e.what());
+        }
+
         if (readLen != leftLen) {
             S3DEBUG("Failed to fetch expected data from S3");
-            this->sharedError = true;
+            this->setSharedError(true, "Failed to fetch expected data from S3");
         } else {
             S3DEBUG("Got %" PRIu64 " bytes from S3", readLen);
         }
@@ -158,10 +162,10 @@ uint64_t ChunkBuffer::fill() {
     }
 
     this->status = ReadyToRead;
-    pthread_cond_signal(&this->stat_cond);
-    pthread_mutex_unlock(&this->stat_mutex);
+    pthread_cond_signal(&this->statusCondVar);
+    pthread_mutex_unlock(&this->statusMutex);
 
-    return (this->sharedError) ? -1 : readLen;
+    return (this->isError()) ? -1 : readLen;
 }
 
 void* DownloadThreadFunc(void* data) {
@@ -174,12 +178,12 @@ void* DownloadThreadFunc(void* data) {
             S3INFO("Downloading thread is interrupted by GPDB");
 
             // error is shared between all chunks, so all chunks will stop.
-            buffer->setError();
+            buffer->setSharedError(true, "Downloading thread is interrupted by GPDB");
 
             // have to unlock ChunkBuffer::read in some certain conditions, for instance, status is
             // not ReadyToRead, and read() is waiting for signal stat_cond.
             buffer->setStatus(ReadyToRead);
-            pthread_cond_signal(const_cast<pthread_cond_t*>(buffer->getStatCond()));
+            pthread_cond_signal(buffer->getStatCond());
 
             return NULL;
         }
@@ -200,6 +204,9 @@ void* DownloadThreadFunc(void* data) {
 }
 
 void S3KeyReader::open(const ReaderParams& params) {
+    this->sharedError = false;
+    this->sharedErrorMessage.clear();
+
     this->numOfChunks = params.getNumOfChunks();
     CHECK_OR_DIE_MSG(this->numOfChunks > 0, "%s", "numOfChunks must not be zero");
 
@@ -214,9 +221,7 @@ void S3KeyReader::open(const ReaderParams& params) {
     for (uint64_t i = 0; i < this->numOfChunks; i++) {
         // when vector reallocate memory, it will copy object.
         // chunkData must be initialized after all copy.
-        this->chunkBuffers.push_back(ChunkBuffer(params.getKeyUrl(), this->offsetMgr,
-                                                 this->sharedError, this->credential,
-                                                 this->region));
+        this->chunkBuffers.push_back(ChunkBuffer(params.getKeyUrl(), *this));
     }
 
     for (uint64_t i = 0; i < this->numOfChunks; i++) {
@@ -244,6 +249,8 @@ uint64_t S3KeyReader::read(char* buf, uint64_t count) {
         ChunkBuffer& buffer = chunkBuffers[this->curReadingChunk % this->numOfChunks];
 
         readLen = buffer.read(buf, count);
+
+        CHECK_OR_DIE_MSG(!this->sharedError, "%s", this->sharedErrorMessage.c_str());
 
         this->transferredKeyLen += readLen;
 

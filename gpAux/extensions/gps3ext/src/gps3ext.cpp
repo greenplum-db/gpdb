@@ -65,7 +65,8 @@ Datum s3_import(PG_FUNCTION_ARGS) {
         thread_cleanup();
 
         if (!reader_cleanup(&gpreader)) {
-            ereport(ERROR, (0, errmsg("Failed to cleanup S3 extention")));
+            ereport(ERROR, (0, errmsg("Failed to cleanup S3 extension: %s",
+                                      gpReaderErrorMessage.c_str())));
         }
 
         EXTPROTOCOL_SET_USER_CTX(fcinfo, NULL);
@@ -83,8 +84,8 @@ Datum s3_import(PG_FUNCTION_ARGS) {
         if (!gpreader) {
             ereport(ERROR, (0, errmsg("Failed to init S3 extension, segid = %d, "
                                       "segnum = %d, please check your "
-                                      "configurations and net connection",
-                                      s3ext_segid, s3ext_segnum)));
+                                      "configurations and net connection: %s",
+                                      s3ext_segid, s3ext_segnum, gpReaderErrorMessage.c_str())));
         }
 
         check_essential_config();
@@ -96,7 +97,8 @@ Datum s3_import(PG_FUNCTION_ARGS) {
     int32 data_len = EXTPROTOCOL_GET_DATALEN(fcinfo);
 
     if (!reader_transfer_data(gpreader, data_buf, data_len)) {
-        ereport(ERROR, (0, errmsg("s3_import: could not read data")));
+        ereport(ERROR,
+                (0, errmsg("s3_import: could not read data: %s", gpReaderErrorMessage.c_str())));
     }
     PG_RETURN_INT32(data_len);
 }

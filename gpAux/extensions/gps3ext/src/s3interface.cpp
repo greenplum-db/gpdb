@@ -259,18 +259,17 @@ ListBucketResult *S3Service::listBucket(const string &schema, const string &regi
         // S3 requires query parameters specified alphabetically.
         string url = this->getUrl(prefix, schema, host.str(), bucket, marker);
 
-        xmlParserCtxtPtr xmlcontext = NULL;
-        XMLContextHolder holder(xmlcontext);
-
         Response response = getBucketResponse(region, url, prefix, cred, marker);
-        xmlcontext = getXMLContext(response);
+
+        xmlParserCtxtPtr xmlContext = getXMLContext(response);
+        XMLContextHolder holder(xmlContext);
 
         if (response.isSuccess()) {
-            if (parseBucketXML(result, xmlcontext, marker)) {
+            if (parseBucketXML(result, xmlContext, marker)) {
                 continue;
             }
         } else {
-            parseXMLMessage(xmlcontext);
+            parseXMLMessage(xmlContext);
         }
 
         delete result;
@@ -307,14 +306,23 @@ uint64_t S3Service::fetchData(uint64_t offset, char *data, uint64_t len, const s
         std::copy(responseData.begin(), responseData.end(), data);
         return responseData.size();
     } else if (resp.getStatus() == RESPONSE_ERROR) {
-        xmlParserCtxtPtr xmlptr = getXMLContext(resp);
-        parseXMLMessage(xmlptr);
+        xmlParserCtxtPtr xmlContext = getXMLContext(resp);
+        if (xmlContext != NULL) {
+            XMLContextHolder holder(xmlContext);
+            parseXMLMessage(xmlContext);
+        }
+
         S3ERROR("Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
                 resp.getMessage().c_str());
+        CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
+                         resp.getMessage().c_str());
+
         return 0;
     } else {
         S3ERROR("Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
                 resp.getMessage().c_str());
+        CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
+                         resp.getMessage().c_str());
         return 0;
     }
 }
@@ -349,8 +357,11 @@ S3CompressionType S3Service::checkCompressionType(const string &keyUrl, const st
         }
     } else {
         if (resp.getStatus() == RESPONSE_ERROR) {
-            xmlParserCtxtPtr xmlptr = getXMLContext(resp);
-            parseXMLMessage(xmlptr);
+            xmlParserCtxtPtr xmlContext = getXMLContext(resp);
+            if (xmlContext != NULL) {
+                XMLContextHolder holder(xmlContext);
+                parseXMLMessage(xmlContext);
+            }
         }
         CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", keyUrl.c_str(),
                          resp.getMessage().c_str());
