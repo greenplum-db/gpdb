@@ -81,16 +81,17 @@ class S3Service : public S3Interface {
     string getUrl(const string& prefix, const string& schema, const string& host,
                   const string& bucket, const string& marker);
 
-    void parseBucketXML(ListBucketResult* result, xmlNode* root_element, string& marker);
+    void parseBucketXML(ListBucketResult* result, xmlParserCtxtPtr xmlcontext, string& marker);
 
     xmlParserCtxtPtr getBucketXML(const string& region, const string& url, const string& prefix,
                                   const S3Credential& cred, const string& marker);
 
-    bool checkAndParseBucketXML(ListBucketResult* result, xmlParserCtxtPtr xmlcontext,
-                                string& marker);
+    bool checkXMLMessage(xmlParserCtxtPtr xmlcontext);
 
     HTTPHeaders composeHTTPHeaders(const string& url, const string& marker, const string& prefix,
                                    const string& region, const S3Credential& cred);
+
+    xmlParserCtxtPtr getXMLContext(Response response);
 
     RESTfulService* service;
 };

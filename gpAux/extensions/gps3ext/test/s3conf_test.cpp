@@ -32,8 +32,8 @@ TEST(Config, Basic) {
     EXPECT_EQ(1024, s3ext_low_speed_limit);
     EXPECT_EQ(600, s3ext_low_speed_time);
 
-    EXPECT_FALSE(s3ext_encryption);
-    EXPECT_TRUE(s3ext_debug_curl);
+    EXPECT_TRUE(s3ext_encryption);
+    EXPECT_FALSE(s3ext_debug_curl);
 }
 
 TEST(Config, SpecialSectionValues) {
@@ -60,4 +60,11 @@ TEST(Config, SpecialSectionWrongKeyName) {
 
     EXPECT_EQ(4, s3ext_threadnum);
     EXPECT_EQ(64 * 1024 * 1024, s3ext_chunksize);
+}
+
+TEST(Config, SpecialSwitches) {
+    InitConfig("test/data/s3test.conf", "special_switches");
+
+    EXPECT_FALSE(s3ext_encryption);
+    EXPECT_TRUE(s3ext_debug_curl);
 }

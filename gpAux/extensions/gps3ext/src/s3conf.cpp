@@ -40,8 +40,8 @@ string s3ext_accessid;
 string s3ext_secret;
 string s3ext_token;
 
-bool s3ext_encryption;
-bool s3ext_debug_curl;
+bool s3ext_encryption = true;
+bool s3ext_debug_curl = false;
 
 // global variables
 int32_t s3ext_segid = -1;

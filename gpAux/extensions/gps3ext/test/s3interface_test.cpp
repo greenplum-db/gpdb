@@ -104,7 +104,7 @@ class S3ServiceTest : public testing::Test {
             gen->pushBuckentContent(BucketContent(buffer, 0));
         }
 
-        return Response(OK, gen->toXML());
+        return Response(RESPONSE_OK, gen->toXML());
     }
 
     S3Service *s3service;
@@ -142,7 +142,7 @@ TEST_F(S3ServiceTest, ListBucketWithWrongBucketName) {
         "hXUzV1VnFbbwNjUQsqWeFiDANkV4EVkh8Kpq5NNAi27P7XDhoA9M9Xhg0=</HostId>"
         "</Error>";
     vector<uint8_t> raw(xml, xml + sizeof(xml) - 1);
-    Response response(OK, raw);
+    Response response(RESPONSE_OK, raw);
 
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
 
@@ -158,7 +158,7 @@ TEST_F(S3ServiceTest, ListBucketWithNormalBucket) {
         ->pushBuckentContent(BucketContent("threebytes/", 0))
         ->pushBuckentContent(BucketContent("threebytes/threebytes", 3));
 
-    Response response(OK, gen->toXML());
+    Response response(RESPONSE_OK, gen->toXML());
 
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
 
@@ -259,7 +259,7 @@ TEST_F(S3ServiceTest, ListBucketWithErrorResponse) {
 TEST_F(S3ServiceTest, ListBucketWithErrorReturnedXML) {
     uint8_t xml[] = "whatever";
     vector<uint8_t> raw(xml, xml + sizeof(xml) - 1);
-    Response response(OK, raw);
+    Response response(RESPONSE_OK, raw);
 
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
 
@@ -270,7 +270,7 @@ TEST_F(S3ServiceTest, ListBucketWithErrorReturnedXML) {
 TEST_F(S3ServiceTest, ListBucketWithNonRootXML) {
     uint8_t xml[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>";
     vector<uint8_t> raw(xml, xml + sizeof(xml) - 1);
-    Response response(OK, raw);
+    Response response(RESPONSE_OK, raw);
 
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
 
@@ -287,7 +287,7 @@ TEST_F(S3ServiceTest, fetchDataRoutine) {
         raw.push_back(rand() & 0xFF);
     }
 
-    Response response(OK, raw);
+    Response response(RESPONSE_OK, raw);
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
     char buffer[100];
     uint64_t len = s3service->fetchData(
@@ -308,7 +308,7 @@ TEST_F(S3ServiceTest, fetchDataNULLBuffer) {
 TEST_F(S3ServiceTest, fetchDataFailedResponse) {
     vector<uint8_t> raw;
     raw.resize(100);
-    Response response(FAIL, raw);
+    Response response(RESPONSE_FAIL, raw);
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
     char buffer[100];
 
@@ -321,7 +321,7 @@ TEST_F(S3ServiceTest, fetchDataFailedResponse) {
 TEST_F(S3ServiceTest, fetchDataPartialResponse) {
     vector<uint8_t> raw;
     raw.resize(80);
-    Response response(OK, raw);
+    Response response(RESPONSE_OK, raw);
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
     char buffer[100];
 
@@ -336,7 +336,7 @@ TEST_F(S3ServiceTest, checkItsGzipCompressed) {
     raw.resize(4);
     raw[0] = 0x1f;
     raw[1] = 0x8b;
-    Response response(OK, raw);
+    Response response(RESPONSE_OK, raw);
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
 
     EXPECT_EQ(S3_COMPRESSION_GZIP,
@@ -349,10 +349,58 @@ TEST_F(S3ServiceTest, checkItsNotCompressed) {
     raw.resize(4);
     raw[0] = 0x1f;
     raw[1] = 0x88;
-    Response response(OK, raw);
+    Response response(RESPONSE_OK, raw);
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
 
     EXPECT_EQ(S3_COMPRESSION_PLAIN,
               s3service->checkCompressionType(
                   "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region, cred));
+}
+
+TEST_F(S3ServiceTest, checkCompreesionTypeWithResponseError) {
+    uint8_t xml[] =
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+        "<Error>"
+        "<Code>PermanentRedirect</Code>"
+        "<Message>The bucket you are attempting to access must be addressed "
+        "using the specified endpoint. "
+        "Please send all future requests to this endpoint.</Message>"
+        "<Bucket>foo</Bucket><Endpoint>s3.amazonaws.com</Endpoint>"
+        "<RequestId>27DD9B7004AF83E3</RequestId>"
+        "<HostId>NL3pyGvn+FajhQLKz/"
+        "hXUzV1VnFbbwNjUQsqWeFiDANkV4EVkh8Kpq5NNAi27P7XDhoA9M9Xhg0=</HostId>"
+        "</Error>";
+    vector<uint8_t> raw(xml, xml + sizeof(xml) - 1);
+    Response response(RESPONSE_ERROR, raw);
+
+    EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
+
+    EXPECT_THROW(s3service->checkCompressionType(
+                     "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region, cred),
+                 std::runtime_error);
+}
+
+TEST_F(S3ServiceTest, fetchDataWithResponseError) {
+    uint8_t xml[] =
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+        "<Error>"
+        "<Code>PermanentRedirect</Code>"
+        "<Message>The bucket you are attempting to access must be addressed "
+        "using the specified endpoint. "
+        "Please send all future requests to this endpoint.</Message>"
+        "<Bucket>foo</Bucket><Endpoint>s3.amazonaws.com</Endpoint>"
+        "<RequestId>27DD9B7004AF83E3</RequestId>"
+        "<HostId>NL3pyGvn+FajhQLKz/"
+        "hXUzV1VnFbbwNjUQsqWeFiDANkV4EVkh8Kpq5NNAi27P7XDhoA9M9Xhg0=</HostId>"
+        "</Error>";
+    vector<uint8_t> raw(xml, xml + sizeof(xml) - 1);
+    Response response(RESPONSE_ERROR, raw);
+    char buf[128] = {0};
+
+    EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
+
+    EXPECT_THROW(s3service->fetchData(
+                     0, buf, 128, "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
+                     region, cred),
+                 std::runtime_error);
 }

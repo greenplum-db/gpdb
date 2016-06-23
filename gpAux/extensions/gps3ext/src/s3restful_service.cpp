@@ -67,12 +67,25 @@ Response S3RESTfulService::get(const string &url, HTTPHeaders &headers,
         S3ERROR("curl_easy_perform() failed: %s", curl_easy_strerror(res));
 
         response.clearBuffer();
-        response.setStatus(FAIL);
+        response.setStatus(RESPONSE_FAIL);
         response.setMessage(
             string("Failed to talk to s3 service ").append(curl_easy_strerror(res)));
+
     } else {
-        response.setStatus(OK);
-        response.setMessage("Success");
+        long responseCode;
+        // Get the HTTP response status code from HTTP header
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
+
+        if (responseCode != 200) {  // Server error, set status to RESPONSE_ERROR
+            stringstream sstr;
+
+            sstr << "S3 server returned error, error code is " << responseCode;
+            response.setStatus(RESPONSE_ERROR);
+            response.setMessage(sstr.str());
+        } else {
+            response.setStatus(RESPONSE_OK);
+            response.setMessage("Success");
+        }
     }
 
     curl_easy_cleanup(curl);

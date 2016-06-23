@@ -1,29 +1,33 @@
 #ifndef INCLUDE_RESTFUL_SERVICE_H_
 #define INCLUDE_RESTFUL_SERVICE_H_
 
-#include <stdint.h>
 #include <map>
 #include <string>
 #include <vector>
+
+#include <stdint.h>
+
 #include "s3http_headers.h"
+
 using std::string;
 using std::vector;
 using std::map;
 
 enum ResponseStatus {
-    OK,
-    FAIL,
+    RESPONSE_OK,     // everything is ok
+    RESPONSE_FAIL,   // curl failed (i.e., the status is not CURLE_OK)
+    RESPONSE_ERROR,  // server error (server return code is not 200)
 };
 
 class Response {
    public:
-    Response() : status(FAIL) {
+    Response() : status(RESPONSE_FAIL) {
     }
     Response(ResponseStatus status, const vector<uint8_t>& buf) : status(status), buffer(buf) {
     }
 
     bool isSuccess() {
-        return status == OK;
+        return status == RESPONSE_OK;
     }
 
     vector<uint8_t>& getRawData() {

@@ -83,6 +83,18 @@ HTTPHeaders S3Service::composeHTTPHeaders(const string &url, const string &marke
     return header;
 }
 
+xmlParserCtxtPtr S3Service::getXMLContext(Response response) {
+    xmlParserCtxtPtr xmlptr =
+        xmlCreatePushParserCtxt(NULL, NULL, (const char *)(response.getRawData().data()),
+                                response.getRawData().size(), "resp.xml");
+    if (xmlptr != NULL) {
+        xmlParseChunk(xmlptr, "", 0, 1);
+    } else {
+        S3ERROR("Failed to create XML parser context");
+    }
+    return xmlptr;
+}
+
 // require curl 7.17 higher
 // http://docs.aws.amazon.com/AmazonS3/latest/API/RESTBucketGET.html
 xmlParserCtxtPtr S3Service::getBucketXML(const string &region, const string &url,
@@ -97,22 +109,11 @@ xmlParserCtxtPtr S3Service::getBucketXML(const string &region, const string &url
         return NULL;
     }
 
-    xmlParserCtxtPtr xmlptr =
-        xmlCreatePushParserCtxt(NULL, NULL, (const char *)response.getRawData().data(),
-                                response.getRawData().size(), "resp.xml");
-    if (xmlptr != NULL) {
-        xmlParseChunk(xmlptr, "", 0, 1);
-    } else {
-        S3ERROR("Failed to create XML parser context");
-    }
-
+    xmlParserCtxtPtr xmlptr = getXMLContext(response);
     return xmlptr;
 }
 
-bool S3Service::checkAndParseBucketXML(ListBucketResult *result, xmlParserCtxtPtr xmlcontext,
-                                       string &marker) {
-    XMLContextHolder holder(xmlcontext);
-
+bool S3Service::checkXMLMessage(xmlParserCtxtPtr xmlcontext) {
     xmlNode *rootElement = xmlDocGetRootElement(xmlcontext->myDoc);
     if (rootElement == NULL) {
         S3ERROR("Failed to parse returned xml of bucket list");
@@ -133,14 +134,15 @@ bool S3Service::checkAndParseBucketXML(ListBucketResult *result, xmlParserCtxtPt
         curNode = curNode->next;
     }
 
-    // parseBucketXML will set marker for next round.
-    this->parseBucketXML(result, rootElement, marker);
-
     return true;
 }
 
-void S3Service::parseBucketXML(ListBucketResult *result, xmlNode *root_element, string &marker) {
-    CHECK_OR_DIE((result != NULL && root_element != NULL));
+void S3Service::parseBucketXML(ListBucketResult *result, xmlParserCtxtPtr xmlcontext,
+                               string &marker) {
+    CHECK_OR_DIE((result != NULL && xmlcontext != NULL));
+
+    xmlNode *rootElement = xmlDocGetRootElement(xmlcontext->myDoc);
+    CHECK_OR_DIE_MSG(rootElement != NULL, "%s", "Failed to parse returned xml of bucket list");
 
     xmlNodePtr cur;
     bool is_truncated = false;
@@ -148,7 +150,7 @@ void S3Service::parseBucketXML(ListBucketResult *result, xmlNode *root_element, 
     char *key = NULL;
     char *key_size = NULL;
 
-    cur = root_element->xmlChildrenNode;
+    cur = rootElement->xmlChildrenNode;
     while (cur != NULL) {
         if (key) {
             xmlFree(key);
@@ -260,11 +262,15 @@ ListBucketResult *S3Service::listBucket(const string &schema, const string &regi
             return NULL;
         }
 
+        XMLContextHolder holder(xmlcontext);
+
         // parseBucketXML must not throw exception, otherwise result is leaked.
-        if (!checkAndParseBucketXML(result, xmlcontext, marker)) {
+        if (!checkXMLMessage(xmlcontext)) {
             delete result;
             return NULL;
         }
+
+        parseBucketXML(result, xmlcontext, marker);
     } while (!marker.empty());
 
     return result;
@@ -288,12 +294,15 @@ uint64_t S3Service::fetchData(uint64_t offset, char *data, uint64_t len, const s
     SignRequestV4("GET", &headers, region, parser.Path(), "", cred);
 
     Response resp = service->get(sourceUrl, headers, params);
-    if (resp.getStatus() == OK) {
+    if (resp.getStatus() == RESPONSE_OK) {
         vector<uint8_t> &responseData = resp.getRawData();
         CHECK_OR_DIE_MSG(responseData.size() == len, "%s", "Response is not fully received.");
 
         std::copy(responseData.begin(), responseData.end(), data);
         return responseData.size();
+    } else if (resp.getStatus() == RESPONSE_ERROR) {
+        xmlParserCtxtPtr xmlptr = getXMLContext(resp);
+        CHECK_OR_DIE(checkXMLMessage(xmlptr));
     } else {
         CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
                          resp.getMessage().c_str());
@@ -318,7 +327,7 @@ S3CompressionType S3Service::checkCompressionType(const string &keyUrl, const st
     SignRequestV4("GET", &headers, region, parser.Path(), "", cred);
 
     Response resp = service->get(keyUrl, headers, params);
-    if (resp.getStatus() == OK) {
+    if (resp.getStatus() == RESPONSE_OK) {
         vector<uint8_t> &responseData = resp.getRawData();
         CHECK_OR_DIE_MSG(responseData.size() == S3_MAGIC_BYTES_NUM, "%s",
                          "Response is not fully received.");
@@ -326,6 +335,9 @@ S3CompressionType S3Service::checkCompressionType(const string &keyUrl, const st
         if ((responseData[0] == 0x1f) && (responseData[1] == 0x8b)) {
             return S3_COMPRESSION_GZIP;
         }
+    } else if (resp.getStatus() == RESPONSE_ERROR) {
+        xmlParserCtxtPtr xmlptr = getXMLContext(resp);
+        CHECK_OR_DIE(checkXMLMessage(xmlptr));
     } else {
         CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", keyUrl.c_str(),
                          resp.getMessage().c_str());

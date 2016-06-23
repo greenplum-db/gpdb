@@ -20,10 +20,7 @@ TEST(S3RESTfulService, GetWithWrongHeader) {
 
     Response resp = service.get(url, headers, params);
 
-    EXPECT_EQ(OK, resp.getStatus());
-    EXPECT_EQ("Success", resp.getMessage());
-    // 302 returned from bing.com
-    EXPECT_EQ(true, resp.getRawData().size() < 500);
+    EXPECT_EQ(RESPONSE_ERROR, resp.getStatus());
 }
 
 TEST(S3RESTfulService, DISABLED_GetWithEmptyHeader) {
@@ -36,7 +33,7 @@ TEST(S3RESTfulService, DISABLED_GetWithEmptyHeader) {
 
     Response resp = service.get(url, headers, params);
 
-    EXPECT_EQ(OK, resp.getStatus());
+    EXPECT_EQ(RESPONSE_OK, resp.getStatus());
     EXPECT_EQ("Success", resp.getMessage());
     EXPECT_EQ(true, resp.getRawData().size() > 10000);
 }
@@ -49,7 +46,7 @@ TEST(S3RESTfulService, GetWithoutURL) {
 
     Response resp = service.get(url, headers, params);
 
-    EXPECT_EQ(FAIL, resp.getStatus());
+    EXPECT_EQ(RESPONSE_FAIL, resp.getStatus());
     EXPECT_EQ("Failed to talk to s3 service URL using bad/illegal format or missing URL",
               resp.getMessage());
 }
@@ -64,9 +61,5 @@ TEST(S3RESTfulService, GetWithWrongURL) {
 
     Response resp = service.get(url, headers, params);
 
-    EXPECT_EQ(OK, resp.getStatus());
-    EXPECT_EQ("Success", resp.getMessage());
-
-    // 404 returned from bing.com
-    EXPECT_EQ(0, resp.getRawData().size());
+    EXPECT_EQ(RESPONSE_ERROR, resp.getStatus());
 }
