@@ -9,7 +9,7 @@ TEST(Config, NonExistFile) {
 }
 
 TEST(Config, Basic) {
-    InitConfig("test/data/s3test.conf", "default");
+    InitConfig("data/s3test.conf", "default");
 
     EXPECT_STREQ("secret_test", s3ext_secret.c_str());
     EXPECT_STREQ("accessid_test", s3ext_accessid.c_str());
@@ -37,7 +37,7 @@ TEST(Config, Basic) {
 }
 
 TEST(Config, SpecialSectionValues) {
-    InitConfig("test/data/s3test.conf", "special_over");
+    InitConfig("data/s3test.conf", "special_over");
 
     EXPECT_EQ(8, s3ext_threadnum);
     EXPECT_EQ(128 * 1024 * 1024, s3ext_chunksize);
@@ -49,21 +49,21 @@ TEST(Config, SpecialSectionValues) {
 }
 
 TEST(Config, SpecialSectionLowValues) {
-    InitConfig("test/data/s3test.conf", "special_low");
+    InitConfig("data/s3test.conf", "special_low");
 
     EXPECT_EQ(1, s3ext_threadnum);
     EXPECT_EQ(2 * 1024 * 1024, s3ext_chunksize);
 }
 
 TEST(Config, SpecialSectionWrongKeyName) {
-    InitConfig("test/data/s3test.conf", "special_wrongkeyname");
+    InitConfig("data/s3test.conf", "special_wrongkeyname");
 
     EXPECT_EQ(4, s3ext_threadnum);
     EXPECT_EQ(64 * 1024 * 1024, s3ext_chunksize);
 }
 
 TEST(Config, SpecialSwitches) {
-    InitConfig("test/data/s3test.conf", "special_switches");
+    InitConfig("data/s3test.conf", "special_switches");
 
     EXPECT_FALSE(s3ext_encryption);
     EXPECT_TRUE(s3ext_debug_curl);

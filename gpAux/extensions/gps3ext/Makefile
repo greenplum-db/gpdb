@@ -1,9 +1,12 @@
+# Include
+include ./include/makefile.inc
+
 # Options
 DEBUG_S3_SYMBOL = y
 
 # Flags
-SHLIB_LINK += -lstdc++ -lxml2 -lpthread -lcrypto -lcurl -lz
-PG_CPPFLAGS += -O2 -std=c++98 -Wall -fPIC -Iinclude -Ilib -I/usr/include/libxml2 -I$(libpq_srcdir) -I$(libpq_srcdir)/postgresql/server/utils
+SHLIB_LINK += $(COMMON_LINK_OPTIONS)
+PG_CPPFLAGS += $(COMMON_CPP_FLAGS) -Iinclude -Ilib -I$(libpq_srcdir) -I$(libpq_srcdir)/postgresql/server/utils
 
 ifeq ($(DEBUG_S3_SYMBOL),y)
 	PG_CPPFLAGS += -g
@@ -11,25 +14,37 @@ endif
 
 # Targets
 MODULE_big = gps3ext
-OBJS = lib/http_parser.o lib/ini.o src/gps3ext.o src/s3conf.o src/s3common.o src/gpreader.o src/s3utils.o src/s3log.o src/s3url_parser.o src/s3http_headers.o src/s3extbase.o src/s3interface.o src/s3restful_service.o src/uncompress_reader.o src/s3key_reader.o
+OBJS = src/gps3ext.o lib/http_parser.o lib/ini.o $(addprefix src/,$(COMMON_OBJS))
 
 # Launch
 PGXS := $(shell pg_config --pgxs)
 include $(PGXS)
 
-format:
-	@make -f Makefile.others format
-
-lint:
-	@make -f Makefile.others lint
-
-tags:
-	@make -f Makefile.others tags
+gpcheckcloud:
+	@make -C bin/gpcheckcloud
 
 test: format
-	@make -f Makefile.others test
+	@make -C test test
 
 coverage: format
-	@make -f Makefile.others coverage
+	@make -C test coverage
 
-.PHONY: format lint tags test coverage
+tags:
+	ctags --c++-kinds=+p --fields=+iaS --extra=+q src/*.cpp test/*.cpp include/*.h lib/*.cpp lib/*.h
+	cscope -bq src/*.cpp test/*.cpp include/*.h lib/*.cpp lib/*.h
+
+lint:
+	cppcheck -v --enable=warning src/*.cpp test/*.cpp include/*.h
+
+format:
+	clang-format -style="{BasedOnStyle: Google, IndentWidth: 4, ColumnLimit: 100, AllowShortFunctionsOnASingleLine: None}" -i src/*.cpp test/*.cpp include/*.h
+
+cleanall:
+	@-make clean # incase PGXS not included
+	@-make -C bin/gpcheckcloud clean
+	@make -C test clean
+	rm -f *.o *.so *.a
+	rm -f *.gcov src/*.gcov src/*.gcda src/*.gcno
+	rm -f src/*.o src/*.d test/*.o test/*.d test/*.a lib/*.o lib/*.d
+
+.PHONY: format lint tags test coverage cleanall

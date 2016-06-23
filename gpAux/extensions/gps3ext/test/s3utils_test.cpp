@@ -66,7 +66,7 @@ TEST(Utils, sha256hmac) {
 }
 
 TEST(Utils, Config) {
-    Config c("test/data/s3test.conf");
+    Config c("data/s3test.conf");
     EXPECT_STREQ(c.Get("configtest", "config1", "aaaaaa").c_str(), "abcdefg");
     EXPECT_STREQ(c.Get("configtest", "config2", "tttt").c_str(), "12345");
     EXPECT_STREQ(c.Get("configtest", "config3", "tttt").c_str(), "aaaaa");
