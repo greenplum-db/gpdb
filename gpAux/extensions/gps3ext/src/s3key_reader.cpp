@@ -166,6 +166,7 @@ uint64_t ChunkBuffer::fill() {
 
 void* DownloadThreadFunc(void* data) {
     ChunkBuffer* buffer = static_cast<ChunkBuffer*>(data);
+
     uint64_t filledSize = 0;
     S3DEBUG("Downloading thread starts");
     do {
@@ -203,6 +204,7 @@ void S3KeyReader::open(const ReaderParams& params) {
     CHECK_OR_DIE_MSG(this->numOfChunks > 0, "%s", "numOfChunks must not be zero");
 
     this->region = params.getRegion();
+    this->credential = params.getCred();
 
     this->offsetMgr.setKeySize(params.getKeySize());
     this->offsetMgr.setChunkSize(params.getChunkSize());
@@ -211,7 +213,7 @@ void S3KeyReader::open(const ReaderParams& params) {
         // when vector reallocate memory, it will copy object.
         // chunkData must be initialized after all copy.
         this->chunkBuffers.push_back(ChunkBuffer(params.getKeyUrl(), this->offsetMgr,
-                                                 this->sharedError, params.getCred(),
+                                                 this->sharedError, this->credential,
                                                  this->region));
     }
 
@@ -255,12 +257,24 @@ uint64_t S3KeyReader::read(char* buf, uint64_t count) {
     return readLen;
 }
 
+void S3KeyReader::reset() {
+    this->sharedError = false;
+    this->curReadingChunk = 0;
+    this->transferredKeyLen = 0;
+
+    this->offsetMgr.reset();
+
+    this->chunkBuffers.clear();
+    this->threads.clear();
+}
+
 void S3KeyReader::close() {
     for (uint64_t i = 0; i < this->threads.size(); i++) {
         pthread_cancel(this->threads[i]);
         pthread_join(this->threads[i], NULL);
     }
 
-    threads.clear();
+    this->reset();
+
     return;
 }

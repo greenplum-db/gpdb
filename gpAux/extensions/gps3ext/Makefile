@@ -30,8 +30,9 @@ coverage: format
 	@make -C test coverage
 
 tags:
-	ctags --c++-kinds=+p --fields=+iaS --extra=+q src/*.cpp test/*.cpp include/*.h lib/*.cpp lib/*.h
-	cscope -bq src/*.cpp test/*.cpp include/*.h lib/*.cpp lib/*.h
+	-ctags -R --c++-kinds=+p --fields=+ialS --extra=+q
+	-cscope -Rbq
+	-gtags -i
 
 lint:
 	cppcheck -v --enable=warning src/*.cpp test/*.cpp include/*.h

@@ -48,6 +48,20 @@ class OffsetMgr {
         this->keySize = keySize;
     }
 
+    void setCurPos(uint64_t curPos) {
+        this->curPos = curPos;
+    }
+
+    void reset() {
+        this->setCurPos(0);
+        this->setChunkSize(0);
+        this->setKeySize(0);
+    }
+
+    uint64_t getCurPos() const {
+        return curPos;
+    }
+
    private:
     pthread_mutex_t offsetLock;
     uint64_t keySize;  // size of S3 key(file)
@@ -144,6 +158,26 @@ class S3KeyReader : public Reader {
         this->s3interface = s3;
     }
 
+    const vector<ChunkBuffer>& getChunkBuffers() const {
+        return chunkBuffers;
+    }
+
+    uint64_t getCurReadingChunk() const {
+        return curReadingChunk;
+    }
+
+    bool isSharedError() const {
+        return sharedError;
+    }
+
+    const vector<pthread_t>& getThreads() const {
+        return threads;
+    }
+
+    uint64_t getTransferredKeyLen() const {
+        return transferredKeyLen;
+    }
+
    private:
     bool sharedError;
     uint64_t numOfChunks;
@@ -151,11 +185,14 @@ class S3KeyReader : public Reader {
     uint64_t transferredKeyLen;
     string region;
     OffsetMgr offsetMgr;
+    S3Credential credential;
 
     vector<ChunkBuffer> chunkBuffers;
     vector<pthread_t> threads;
 
     S3Interface* s3interface;
+
+    void reset();
 };
 
 #endif /* INCLUDE_S3KEYREADER_H_ */

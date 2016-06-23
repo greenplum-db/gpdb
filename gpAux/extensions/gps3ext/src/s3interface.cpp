@@ -307,9 +307,9 @@ uint64_t S3Service::fetchData(uint64_t offset, char *data, uint64_t len, const s
         return responseData.size();
     } else if (resp.getStatus() == RESPONSE_ERROR) {
         xmlParserCtxtPtr xmlptr = getXMLContext(resp);
-        if (!checkXMLMessage(xmlptr)) {
-            S3ERROR("Failed to check XML error message.");
-        }
+        checkXMLMessage(xmlptr);
+        S3ERROR("Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
+                resp.getMessage().c_str());
         return 0;
     } else {
         S3ERROR("Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),

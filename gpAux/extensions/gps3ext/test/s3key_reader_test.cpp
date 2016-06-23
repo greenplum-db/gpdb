@@ -168,6 +168,29 @@ TEST(OffsetMgr, KeySizeIsZero) {
     EXPECT_EQ(r.length, 0);
 }
 
+TEST(OffsetMgr, reset) {
+    OffsetMgr o;
+    o.setKeySize(4096);
+    o.setChunkSize(1000);
+
+    EXPECT_EQ(1000, o.getChunkSize());
+    EXPECT_EQ(4096, o.getKeySize());
+
+    Range r = o.getNextOffset();
+    EXPECT_EQ(r.offset, 0);
+    EXPECT_EQ(r.length, 1000);
+
+    r = o.getNextOffset();
+    EXPECT_EQ(r.offset, 1000);
+    EXPECT_EQ(r.length, 1000);
+
+    o.reset();
+
+    EXPECT_EQ(0, o.getChunkSize());
+    EXPECT_EQ(0, o.getKeySize());
+    EXPECT_EQ(0, o.getCurPos());
+}
+
 TEST_F(S3KeyReaderTest, OpenWithZeroChunk) {
     params.setNumOfChunks(0);
 
@@ -227,6 +250,46 @@ TEST_F(S3KeyReaderTest, ReadWithSmallBuffer) {
     EXPECT_EQ(64, keyReader->read(buffer, 64));
     EXPECT_EQ(63, keyReader->read(buffer, 64));
     EXPECT_EQ(0, keyReader->read(buffer, 64));
+}
+
+TEST_F(S3KeyReaderTest, CloseWithoutFinishReading) {
+    params.setNumOfChunks(1);
+    params.setRegion("us-west-2");
+    params.setKeySize(255);
+    params.setChunkSize(8192);
+
+    EXPECT_CALL(s3interface, fetchData(_, _, _, _, _, _)).WillOnce(Return(255));
+
+    // expect data fetched in 64,64,64,63,0 bulks
+    //   when close it before finish, should have no problem
+    keyReader->open(params);
+    EXPECT_EQ(64, keyReader->read(buffer, 64));
+    EXPECT_EQ(64, keyReader->read(buffer, 64));
+}
+
+TEST_F(S3KeyReaderTest, ResetByInvokingClose) {
+    params.setNumOfChunks(1);
+    params.setRegion("us-west-2");
+    params.setKeySize(255);
+    params.setChunkSize(8192);
+
+    EXPECT_CALL(s3interface, fetchData(_, _, _, _, _, _)).WillOnce(Return(255));
+
+    keyReader->open(params);
+    EXPECT_EQ(64, keyReader->read(buffer, 64));
+    EXPECT_EQ(64, keyReader->read(buffer, 64));
+    EXPECT_EQ(64, keyReader->read(buffer, 64));
+    EXPECT_EQ(63, keyReader->read(buffer, 64));
+    EXPECT_EQ(0, keyReader->read(buffer, 64));
+
+    keyReader->close();
+
+    EXPECT_TRUE(keyReader->getThreads().empty());
+    EXPECT_TRUE(keyReader->getChunkBuffers().empty());
+
+    EXPECT_EQ(0, keyReader->getCurReadingChunk());
+    EXPECT_EQ(0, keyReader->getTransferredKeyLen());
+    EXPECT_FALSE(keyReader->isSharedError());
 }
 
 TEST_F(S3KeyReaderTest, ReadWithSmallKeySize) {

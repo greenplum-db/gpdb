@@ -12,6 +12,7 @@
 #include <sstream>
 #include <string>
 
+#include "gpcommon.h"
 #include "s3conf.h"
 #include "s3log.h"
 #include "s3utils.h"

@@ -67,6 +67,7 @@ ReaderParams S3BucketReader::getReaderParams(BucketContent *key) {
     params.setKeySize(key->getSize());
     params.setChunkSize(this->chunkSize);
     params.setNumOfChunks(this->numOfChunks);
+    params.setCred(this->cred);
 
     S3DEBUG("key: %s, size: %" PRIu64, params.getKeyUrl().c_str(), params.getKeySize());
     return params;

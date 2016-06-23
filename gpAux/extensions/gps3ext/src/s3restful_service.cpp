@@ -6,6 +6,7 @@
 #include <map>
 #include <string>
 
+#include "gpcommon.h"
 #include "s3http_headers.h"
 #include "s3log.h"
 #include "s3macros.h"
@@ -22,6 +23,10 @@ S3RESTfulService::~S3RESTfulService() {
 
 // curl's write function callback.
 size_t RESTfulServiceCallback(char *ptr, size_t size, size_t nmemb, void *userp) {
+    if (QueryCancelPending) {
+        return -1;
+    }
+
     size_t realsize = size * nmemb;
     Response *resp = (Response *)userp;
     resp->appendBuffer(ptr, realsize);
@@ -77,15 +82,17 @@ Response S3RESTfulService::get(const string &url, HTTPHeaders &headers,
         // Get the HTTP response status code from HTTP header
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
 
-        if (responseCode != 200) {  // Server error, set status to RESPONSE_ERROR
+        // 2XX are successful response. Here we deal with 200 (OK) and 206 (partial content)
+        // firstly.
+        if ((responseCode == 200) || (responseCode == 206)) {
+            response.setStatus(RESPONSE_OK);
+            response.setMessage("Success");
+        } else {  // Server error, set status to RESPONSE_ERROR
             stringstream sstr;
 
             sstr << "S3 server returned error, error code is " << responseCode;
             response.setStatus(RESPONSE_ERROR);
             response.setMessage(sstr.str());
-        } else {
-            response.setStatus(RESPONSE_OK);
-            response.setMessage("Success");
         }
     }
 
