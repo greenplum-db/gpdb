@@ -35,7 +35,6 @@ class S3BucketReader : public Reader {
 
     ListBucketResult *listBucketWithRetry(int retries);
 
-    // for test only
     ListBucketResult *getKeyList() {
         return keyList;
     }

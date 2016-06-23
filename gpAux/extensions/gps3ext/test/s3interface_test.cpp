@@ -82,7 +82,7 @@ TEST_F(S3ServiceTest, ListBucketWithWrongBucketName) {
         "hXUzV1VnFbbwNjUQsqWeFiDANkV4EVkh8Kpq5NNAi27P7XDhoA9M9Xhg0=</HostId>"
         "</Error>";
     vector<uint8_t> raw(xml, xml + sizeof(xml) - 1);
-    Response response(RESPONSE_OK, raw);
+    Response response(RESPONSE_ERROR, raw);
 
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
 
@@ -199,7 +199,7 @@ TEST_F(S3ServiceTest, ListBucketWithErrorResponse) {
 TEST_F(S3ServiceTest, ListBucketWithErrorReturnedXML) {
     uint8_t xml[] = "whatever";
     vector<uint8_t> raw(xml, xml + sizeof(xml) - 1);
-    Response response(RESPONSE_OK, raw);
+    Response response(RESPONSE_ERROR, raw);
 
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
 
@@ -210,7 +210,7 @@ TEST_F(S3ServiceTest, ListBucketWithErrorReturnedXML) {
 TEST_F(S3ServiceTest, ListBucketWithNonRootXML) {
     uint8_t xml[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>";
     vector<uint8_t> raw(xml, xml + sizeof(xml) - 1);
-    Response response(RESPONSE_OK, raw);
+    Response response(RESPONSE_ERROR, raw);
 
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
 

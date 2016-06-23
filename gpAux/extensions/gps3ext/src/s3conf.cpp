@@ -80,6 +80,9 @@ bool InitConfig(const string& conf_path, const string section = "default") {
 #ifndef S3_CHK_CFG
     content = s3cfg->Get(section.c_str(), "logtype", "INTERNAL");
     s3ext_logtype = getLogType(content.c_str());
+
+    content = s3cfg->Get(section.c_str(), "debug_curl", "false");
+    s3ext_debug_curl = to_bool(content);
 #endif
 
     s3ext_accessid = s3cfg->Get(section.c_str(), "accessid", "");
@@ -135,9 +138,6 @@ bool InitConfig(const string& conf_path, const string section = "default") {
 
     content = s3cfg->Get(section.c_str(), "encryption", "true");
     s3ext_encryption = to_bool(content);
-
-    content = s3cfg->Get(section.c_str(), "debug_curl", "false");
-    s3ext_debug_curl = to_bool(content);
 
 #ifdef S3_STANDALONE
     s3ext_segid = 0;

@@ -100,27 +100,24 @@ xmlParserCtxtPtr S3Service::getXMLContext(Response response) {
 
 // require curl 7.17 higher
 // http://docs.aws.amazon.com/AmazonS3/latest/API/RESTBucketGET.html
-xmlParserCtxtPtr S3Service::getBucketXML(const string &region, const string &url,
-                                         const string &prefix, const S3Credential &cred,
-                                         const string &marker) {
+Response S3Service::getBucketResponse(const string &region, const string &url, const string &prefix,
+                                      const S3Credential &cred, const string &marker) {
     HTTPHeaders header = composeHTTPHeaders(url, marker, prefix, region, cred);
     std::map<string, string> empty;
 
-    Response response = service->get(url, header, empty);
-    if (!response.isSuccess()) {
-        S3ERROR("Failed to GET bucket list of '%s'", url.c_str());
-        return NULL;
-    }
-
-    xmlParserCtxtPtr xmlptr = getXMLContext(response);
-    return xmlptr;
+    return service->get(url, header, empty);
 }
 
-bool S3Service::checkXMLMessage(xmlParserCtxtPtr xmlcontext) {
+// parseXMLMessage must not throw exception, otherwise result is leaked.
+void S3Service::parseXMLMessage(xmlParserCtxtPtr xmlcontext) {
+    if (xmlcontext == NULL) {
+        return;
+    }
+
     xmlNode *rootElement = xmlDocGetRootElement(xmlcontext->myDoc);
     if (rootElement == NULL) {
         S3ERROR("Failed to parse returned xml of bucket list");
-        return false;
+        return;
     }
 
     xmlNodePtr curNode = rootElement->xmlChildrenNode;
@@ -131,21 +128,25 @@ bool S3Service::checkXMLMessage(xmlParserCtxtPtr xmlcontext) {
                 S3ERROR("Amazon S3 returns error \"%s\"", content);
                 xmlFree(content);
             }
-            return false;
+            return;
         }
 
         curNode = curNode->next;
     }
-
-    return true;
 }
 
-void S3Service::parseBucketXML(ListBucketResult *result, xmlParserCtxtPtr xmlcontext,
+// parseBucketXML must not throw exception, otherwise result is leaked.
+bool S3Service::parseBucketXML(ListBucketResult *result, xmlParserCtxtPtr xmlcontext,
                                string &marker) {
-    CHECK_OR_DIE((result != NULL && xmlcontext != NULL));
+    if ((result == NULL) || (xmlcontext == NULL)) {
+        return false;
+    }
 
     xmlNode *rootElement = xmlDocGetRootElement(xmlcontext->myDoc);
-    CHECK_OR_DIE_MSG(rootElement != NULL, "%s", "Failed to parse returned xml of bucket list");
+    if (rootElement == NULL) {
+        S3WARN("Failed to parse returned xml of bucket list");
+        return false;
+    }
 
     xmlNodePtr cur;
     bool is_truncated = false;
@@ -233,7 +234,7 @@ void S3Service::parseBucketXML(ListBucketResult *result, xmlParserCtxtPtr xmlcon
         xmlFree(key);
     }
 
-    return;
+    return true;
 }
 
 // ListBucket list all keys in given bucket with given prefix.
@@ -249,7 +250,7 @@ ListBucketResult *S3Service::listBucket(const string &schema, const string &regi
     host << "s3-" << region << ".amazonaws.com";
     S3DEBUG("Host url is %s", host.str().c_str());
 
-    // TODO: here we have memory leak.
+    // NOTE: here we might have memory leak.
     ListBucketResult *result = new ListBucketResult();
     CHECK_OR_DIE_MSG(result != NULL, "%s", "Failed to allocate bucket list result");
 
@@ -258,22 +259,22 @@ ListBucketResult *S3Service::listBucket(const string &schema, const string &regi
         // S3 requires query parameters specified alphabetically.
         string url = this->getUrl(prefix, schema, host.str(), bucket, marker);
 
-        xmlParserCtxtPtr xmlcontext = getBucketXML(region, url, prefix, cred, marker);
-        if (xmlcontext == NULL) {
-            S3ERROR("Failed to list bucket for '%s'", url.c_str());
-            delete result;
-            return NULL;
-        }
-
+        xmlParserCtxtPtr xmlcontext = NULL;
         XMLContextHolder holder(xmlcontext);
 
-        // parseBucketXML must not throw exception, otherwise result is leaked.
-        if (!checkXMLMessage(xmlcontext)) {
-            delete result;
-            return NULL;
+        Response response = getBucketResponse(region, url, prefix, cred, marker);
+        xmlcontext = getXMLContext(response);
+
+        if (response.isSuccess()) {
+            if (parseBucketXML(result, xmlcontext, marker)) {
+                continue;
+            }
+        } else {
+            parseXMLMessage(xmlcontext);
         }
 
-        parseBucketXML(result, xmlcontext, marker);
+        delete result;
+        return NULL;
     } while (!marker.empty());
 
     return result;
@@ -307,7 +308,7 @@ uint64_t S3Service::fetchData(uint64_t offset, char *data, uint64_t len, const s
         return responseData.size();
     } else if (resp.getStatus() == RESPONSE_ERROR) {
         xmlParserCtxtPtr xmlptr = getXMLContext(resp);
-        checkXMLMessage(xmlptr);
+        parseXMLMessage(xmlptr);
         S3ERROR("Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
                 resp.getMessage().c_str());
         return 0;
@@ -346,10 +347,11 @@ S3CompressionType S3Service::checkCompressionType(const string &keyUrl, const st
         if ((responseData[0] == 0x1f) && (responseData[1] == 0x8b)) {
             return S3_COMPRESSION_GZIP;
         }
-    } else if (resp.getStatus() == RESPONSE_ERROR) {
-        xmlParserCtxtPtr xmlptr = getXMLContext(resp);
-        CHECK_OR_DIE(checkXMLMessage(xmlptr));
     } else {
+        if (resp.getStatus() == RESPONSE_ERROR) {
+            xmlParserCtxtPtr xmlptr = getXMLContext(resp);
+            parseXMLMessage(xmlptr);
+        }
         CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", keyUrl.c_str(),
                          resp.getMessage().c_str());
     }

@@ -24,6 +24,10 @@ class GPReader : public Reader {
     // This should be reentrant, has no side effects when called multiple times.
     virtual void close();
 
+    ListBucketResult *getKeyList() {
+        return bucketReader.getKeyList();
+    }
+
    private:
     void constructReaderParam(const string &url);
 

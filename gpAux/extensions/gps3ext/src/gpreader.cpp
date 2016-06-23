@@ -137,7 +137,6 @@ GPReader* reader_init(const char* url_with_options) {
     } catch (std::exception& e) {
         if (reader != NULL) {
             delete reader;
-            return NULL;
         }
         S3ERROR("reader_init caught an exception: %s, aborting", e.what());
         return NULL;

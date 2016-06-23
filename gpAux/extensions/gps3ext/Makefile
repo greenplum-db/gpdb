@@ -35,10 +35,10 @@ tags:
 	-gtags -i
 
 lint:
-	cppcheck -v --enable=warning src/*.cpp test/*.cpp include/*.h
+	cppcheck -v --enable=warning src/*.cpp bin/gpcheckcloud/*.cpp test/*.cpp include/*.h
 
 format:
-	clang-format -style="{BasedOnStyle: Google, IndentWidth: 4, ColumnLimit: 100, AllowShortFunctionsOnASingleLine: None}" -i src/*.cpp test/*.cpp include/*.h
+	clang-format -style="{BasedOnStyle: Google, IndentWidth: 4, ColumnLimit: 100, AllowShortFunctionsOnASingleLine: None}" -i src/*.cpp bin/gpcheckcloud/*.cpp test/*.cpp include/*.h
 
 cleanall:
 	@-make clean # incase PGXS not included
@@ -46,6 +46,6 @@ cleanall:
 	@make -C test clean
 	rm -f *.o *.so *.a
 	rm -f *.gcov src/*.gcov src/*.gcda src/*.gcno
-	rm -f src/*.o src/*.d test/*.o test/*.d test/*.a lib/*.o lib/*.d
+	rm -f src/*.o src/*.d bin/gpcheckcloud/*.o bin/gpcheckcloud/*.d test/*.o test/*.d test/*.a lib/*.o lib/*.d
 
 .PHONY: format lint tags test coverage cleanall
