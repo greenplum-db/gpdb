@@ -1727,7 +1727,9 @@ ExecARInsertTriggers(EState *estate, ResultRelInfo *relinfo,
 {
 	TriggerDesc *trigdesc = relinfo->ri_TrigDesc;
 
-	if (trigdesc && trigdesc->n_after_row[TRIGGER_EVENT_INSERT] > 0)
+	if (trigdesc &&
+		trigdesc->n_after_row[TRIGGER_EVENT_INSERT] > 0 &&
+		RI_FKey_trigger_type(trigdesc->triggers->tgfoid) == RI_TRIGGER_NONE)
 	{
 		if(RelationIsAoCols(relinfo->ri_RelationDesc))
 			elog(ERROR, "Trigger is not supported on AOCS yet");
@@ -1874,7 +1876,9 @@ ExecARDeleteTriggers(EState *estate, ResultRelInfo *relinfo,
 {
 	TriggerDesc *trigdesc = relinfo->ri_TrigDesc;
 
-	if (trigdesc && trigdesc->n_after_row[TRIGGER_EVENT_DELETE] > 0)
+	if (trigdesc &&
+		trigdesc->n_after_row[TRIGGER_EVENT_DELETE] > 0 &&
+		RI_FKey_trigger_type(trigdesc->triggers->tgfoid) == RI_TRIGGER_NONE)
 	{
 		HeapTuple	trigtuple = GetTupleForTrigger(estate, relinfo,
 												   tupleid, NULL);
@@ -2057,7 +2061,9 @@ ExecARUpdateTriggers(EState *estate, ResultRelInfo *relinfo,
 {
 	TriggerDesc *trigdesc = relinfo->ri_TrigDesc;
 
-	if (trigdesc && trigdesc->n_after_row[TRIGGER_EVENT_UPDATE] > 0)
+	if (trigdesc &&
+		trigdesc->n_after_row[TRIGGER_EVENT_UPDATE] > 0 &&
+		RI_FKey_trigger_type(trigdesc->triggers->tgfoid) == RI_TRIGGER_NONE)
 	{
 		HeapTuple	trigtuple = GetTupleForTrigger(estate, relinfo,
 												   tupleid, NULL);
