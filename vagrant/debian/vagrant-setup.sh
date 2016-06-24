@@ -6,7 +6,8 @@ sudo apt-get update
 sudo apt-get install wget
 sudo apt-get -y install docker-engine build-essential libreadline6 \
 libreadline6-dev zlib1g-dev bison flex git-core libcurl4-openssl-dev \
-python-dev libxml2-dev pkg-config vim libbz2-dev  python-pip
+python-dev libxml2-dev pkg-config vim libbz2-dev  python-pip \
+libapr1-dev libevent-dev
 
 su vagrant -c "ssh-keygen -t rsa -f .ssh/id_rsa -q -N ''"
 
