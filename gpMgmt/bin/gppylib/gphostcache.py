@@ -167,7 +167,7 @@ class GpHostCache:
             skipmap[db.getSegmentDbId()]=db
 
         # Go through the gparray and build list of interface and hostname that
-        #  will be used to biuld the GpInterfaceToHostNameCache
+        #  will be used to build the GpInterfaceToHostNameCache
         #
         # As Greeenplum 4.0 we have both interface and hostname information in
         # the catalog, so the gparray should be able to supply all of the
