@@ -18,8 +18,9 @@ dpkg-reconfigure locales -f noninteractive
 su vagrant -c "ssh-keygen -t rsa -f .ssh/id_rsa -q -N ''"
 
 pip install --upgrade pip
+pip install cffi --upgrade
 pip install lockfile
-pip install paramiko
+pip install paramiko --upgrade
 pip install setuptools --upgrade
 pip install epydoc
 pip install --pre psutil
