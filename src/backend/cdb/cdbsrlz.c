@@ -23,7 +23,7 @@
 #include "utils/zlib_wrapper.h"
 
 static char *compress_string(const char *src, int uncompressed_size, int *size);
-static char *uncompress_string(const char *src, int size, int * uncompressed_len);
+static char *uncompress_string(const char *src, int size, int *uncompressed_len);
 
 /*
  * serializeNode -

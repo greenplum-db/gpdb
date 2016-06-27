@@ -28,14 +28,14 @@
  */
 CdbDispatchDirectDesc default_dispatch_direct_desc = { false, 0, {0}};
 
-static void cdbdisp_clearGangActiveFlag(CdbDispatcherState * ds);
+static void cdbdisp_clearGangActiveFlag(CdbDispatcherState *ds);
 
 /*
  * cdbdisp_dispatchToGang:
  * Send the strCommand SQL statement to the subset of all segdbs in the cluster
- * specified by the gang parameter.  cancelOnError indicates whether an error
+ * specified by the gang parameter. cancelOnError indicates whether an error
  * occurring on one of the qExec segdbs should cause all still-executing commands to cancel
- * on other qExecs. Normally this would be true.  The commands are sent over the libpq
+ * on other qExecs. Normally this would be true. The commands are sent over the libpq
  * connections that were established during cdblink_setup.	They are run inside of threads.
  * The number of segdbs handled by any one thread is determined by the
  * guc variable gp_connections_per_thread.
@@ -44,7 +44,7 @@ static void cdbdisp_clearGangActiveFlag(CdbDispatcherState * ds);
  * resultArray slots sufficient for the number of QEs to be dispatched:
  * i.e., resultCapacity - resultCount >= gp->size.	This function will
  * assign one resultArray slot per QE of the Gang, paralleling the Gang's
- * db_descriptors array.  Success or failure of each QE will be noted in
+ * db_descriptors array. Success or failure of each QE will be noted in
  * the QE's CdbDispatchResult entry; but before examining the results, the
  * caller must wait for execution to end by calling CdbCheckDispatchResult().
  *
@@ -63,7 +63,7 @@ void
 cdbdisp_dispatchToGang(struct CdbDispatcherState *ds,
 					   struct Gang *gp,
 					   int sliceIndex,
-					   CdbDispatchDirectDesc * disp_direct)
+					   CdbDispatchDirectDesc *disp_direct)
 {
 	struct CdbDispatchResults *dispatchResults = ds->primaryResults;
 
@@ -142,9 +142,9 @@ CdbCheckDispatchResult(struct CdbDispatcherState *ds,
 
 /*
  * Wait for all QEs to finish, then report any errors from the given
- * CdbDispatchResults objects and free them.  If not all QEs in the
+ * CdbDispatchResults objects and free them. If not all QEs in the
  * associated gang(s) executed the command successfully, throws an
- * error and does not return.  No-op if both CdbDispatchResults ptrs are NULL.
+ * error and does not return. No-op if both CdbDispatchResults ptrs are NULL.
  * This is a convenience function; callers with unusual requirements may
  * instead call CdbCheckDispatchResult(), etc., directly.
  */
@@ -169,14 +169,14 @@ cdbdisp_finishCommand(struct CdbDispatcherState *ds,
 	 * to clean up shared memory as this is from AbortTransaction.
 	 * QE may stay a bit longer, but since we can consider QD as libpq
 	 * client to QE, they will notice that we as a client do not
-	 * appear anymore and will finish soon.  Also ERROR report doesn't
+	 * appear anymore and will finish soon. Also ERROR report doesn't
 	 * go to the client anyway since we are in proc_exit.
 	 */
 	if (proc_exit_inprogress)
 		return;
 
 	/*
-	 * Wait for all QEs to finish. Don't cancel them. 
+	 * Wait for all QEs to finish. Don't cancel them.
 	 */
 	CdbCheckDispatchResult(ds, DISPATCH_WAIT_NONE);
 
@@ -252,7 +252,7 @@ cdbdisp_handleError(struct CdbDispatcherState *ds)
 
 	/*
 	 * Request any remaining commands executing on qExecs to stop.
-	 * We need to wait for the threads to finish.  This allows for proper
+	 * We need to wait for the threads to finish. This allows for proper
 	 * cleanup of the results from the async command executions.
 	 * Cancel any QEs still running.
 	 */
@@ -262,7 +262,7 @@ cdbdisp_handleError(struct CdbDispatcherState *ds)
 	 * When a QE stops executing a command due to an error, as a
 	 * consequence there can be a cascade of interconnect errors
 	 * (usually "sender closed connection prematurely") thrown in
-	 * downstream processes (QEs and QD).  So if we are handling
+	 * downstream processes (QEs and QD). So if we are handling
 	 * an interconnect error, and a QE hit a more interesting error,
 	 * we'll let the QE's error report take precedence.
 	 */
@@ -289,7 +289,7 @@ cdbdisp_handleError(struct CdbDispatcherState *ds)
 	{
 		/*
 		 * Throw the QE's error, catch it, and fall thru to return
-		 * normally so caller can finish cleaning up.  Afterwards
+		 * normally so caller can finish cleaning up. Afterwards
 		 * caller must exit via PG_RE_THROW().
 		 */
 		PG_TRY();
@@ -305,7 +305,7 @@ cdbdisp_handleError(struct CdbDispatcherState *ds)
 	{
 		/*
 		 * Discard any remaining results from QEs; don't confuse matters by
-		 * throwing a new error.  Any results of interest presumably should
+		 * throwing a new error. Any results of interest presumably should
 		 * have been examined before raising the error that the caller is
 		 * currently handling.
 		 */
@@ -321,7 +321,7 @@ cdbdisp_handleError(struct CdbDispatcherState *ds)
  *	 maxSlices: max number of slices of the query/command.
  */
 void
-cdbdisp_makeDispatcherState(CdbDispatcherState * ds,
+cdbdisp_makeDispatcherState(CdbDispatcherState *ds,
 							int maxSlices,
 							bool cancelOnError)
 {
@@ -352,7 +352,7 @@ cdbdisp_makeDispatcherState(CdbDispatcherState * ds,
  * Free dispatcher memory context.
  */
 void
-cdbdisp_destroyDispatcherState(CdbDispatcherState * ds)
+cdbdisp_destroyDispatcherState(CdbDispatcherState *ds)
 {
 	CdbDispatchResults *results = ds->primaryResults;
 
@@ -383,7 +383,7 @@ cdbdisp_destroyDispatcherState(CdbDispatcherState * ds)
  * internal dispatcher structures.
  */
 static void
-cdbdisp_clearGangActiveFlag(CdbDispatcherState * ds)
+cdbdisp_clearGangActiveFlag(CdbDispatcherState *ds)
 {
 	if (ds && ds->primaryResults && ds->primaryResults->writer_gang)
 	{

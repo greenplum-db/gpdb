@@ -974,9 +974,7 @@ FillInDistributedSnapshot(Snapshot snapshot)
 		 * Create distributed snapshot since we are the master (QD).
 		 */
 		Assert(snapshot->distribSnapshotWithLocalMapping.inProgressEntryArray != NULL);
-		snapshot->haveDistribSnapshot = 
-						createDtxSnapshot(
-									&snapshot->distribSnapshotWithLocalMapping);
+		snapshot->haveDistribSnapshot = createDtxSnapshot(&snapshot->distribSnapshotWithLocalMapping);
 		
 		elog((Debug_print_full_dtm ? LOG : DEBUG5),
 			 "Got distributed snapshot from DistributedSnapshotWithLocalXids_Create = %s",
@@ -1017,12 +1015,10 @@ FillInDistributedSnapshot(Snapshot snapshot)
 				
 				for (i = 0; i < count; i++)
 				{
-					dslm->inProgressEntryArray[i].distribXid =
-											ds->inProgressXidArray[i];
+					dslm->inProgressEntryArray[i].distribXid = ds->inProgressXidArray[i];
 
 					/* UNDONE: Lookup in distributed cache. */
-					dslm->inProgressEntryArray[i].localXid =
-											InvalidTransactionId;
+					dslm->inProgressEntryArray[i].localXid = InvalidTransactionId;
 				}
 			}
 			else
@@ -1181,7 +1177,7 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 	}
 
 	/*
-	 * MPP Addition.  if we are in EXECUTE mode and not the writer... then we
+	 * MPP Addition. if we are in EXECUTE mode and not the writer... then we
 	 * want to just get the shared snapshot and make it our own.
 	 *
 	 * code for the writer is at the bottom of this function.
@@ -1308,10 +1304,10 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 			else
 			{
 				/*
-				 * didn't find it.  we'll sleep for a small amount of time and
+				 * didn't find it. we'll sleep for a small amount of time and
 				 * then try again.
 				 *
-				 * TODO: is there a semaphore or something better we can do ehre.
+				 * TODO: is there a semaphore or something better we can do here.
 				 */
 				pg_usleep(sleep_per_check_us);
 
@@ -1413,8 +1409,8 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 	 *      the snapshot structure separately from any local in-progress xact.
 	 *
 	 *      The MVCC function XidInSnapshot is used to evaluate whether
-	 *      a tuple is visible through a snapshot.  Only committed xids are
-	 *      given to XidInSnapshot for evaluation.  XidInSnapshot will first
+	 *      a tuple is visible through a snapshot. Only committed xids are
+	 *      given to XidInSnapshot for evaluation. XidInSnapshot will first
 	 *      determine if the committed tuple is for a distributed transaction.  
 	 *      If the xact is distributed it will be evaluated only against the
 	 *      distributed snapshot and not the local snapshot.
@@ -1434,7 +1430,7 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 	 *
 	 * In summary: This 2 snapshot scheme (optional distributed, required local)
 	 * handles late arriving distributed transactions properly since that work
-	 * is only evaluated against the distributed snapshot.  And, the scheme
+	 * is only evaluated against the distributed snapshot. And, the scheme
 	 * handles local transaction work seeing distributed work properly by
 	 * including distributed transactions in the local snapshot via their
 	 * local xids.
@@ -1553,8 +1549,8 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 	snapshot->curcid = GetCurrentCommandId(false);
 
 	/*
-	 * MPP Addition.  If we are the chief then we'll save our local snapshot
-	 * into the shared snapshot.  Note: we need to use the shared local
+	 * MPP Addition. If we are the chief then we'll save our local snapshot
+	 * into the shared snapshot. Note: we need to use the shared local
 	 * snapshot for the "Local Implicit using Distributed Snapshot" case, too.
 	 */
 	

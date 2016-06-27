@@ -35,20 +35,18 @@ typedef struct DtxContextInfo
 extern DtxContextInfo QEDtxContextInfo;	
 
 extern void DtxContextInfo_Reset(DtxContextInfo *dtxContextInfo);
-extern void DtxContextInfo_CreateOnMaster(
-	DtxContextInfo 						*dtxContextInfo, 
-	DistributedSnapshotWithLocalMapping *dslm, 
-	CommandId							curcid,
-	int 								txnOptions);
+extern void DtxContextInfo_CreateOnMaster(DtxContextInfo *dtxContextInfo,
+										  DistributedSnapshotWithLocalMapping *dslm,
+										  CommandId curcid,
+										  int txnOptions);
 extern int DtxContextInfo_SerializeSize(DtxContextInfo *dtxContextInfo);
 
 extern void DtxContextInfo_Serialize(char *buffer, DtxContextInfo *dtxContextInfo);
-extern void DtxContextInfo_Deserialize(const char *serializedSnapshot, int serializedSnapshotlen,
-							 DtxContextInfo *dtxContextInfo);
+extern void DtxContextInfo_Deserialize(const char *serializedDtxContextInfo,
+									   int serializedDtxContextInfolen,
+									   DtxContextInfo *dtxContextInfo);
 
-extern void DtxContextInfo_Copy(
-	DtxContextInfo *target, 
-	DtxContextInfo *source);
+extern void DtxContextInfo_Copy(DtxContextInfo *target, DtxContextInfo *source);
 
 extern void DtxContextInfo_RewindSegmateSync(void);
 

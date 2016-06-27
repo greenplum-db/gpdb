@@ -9065,27 +9065,27 @@ static void
 ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 					  const char *colName, TypeName *typename)
 {
-	HeapTuple	heapTup;
+	HeapTuple heapTup;
 	Form_pg_attribute attTup;
-	AttrNumber	attnum;
-	HeapTuple	typeTuple;
+	AttrNumber attnum;
+	HeapTuple typeTuple;
 	Form_pg_type tform;
-	Oid			targettype;
-	int32		targettypmod;
-	Node	   *defaultexpr;
-	Relation	attrelation;
-	Relation	depRel;
-	HeapTuple	depTup;
-	GpPolicy * policy = NULL;
-	bool		sourceIsInt = false;
-	bool		targetIsInt = false;
-	bool		sourceIsVarlenA = false;
-	bool		targetIsVarlenA = false;
-	bool		hashCompatible = false;
-	cqContext	cqc;
-	cqContext	cqc2;
-	cqContext  *pcqCtx;
-	cqContext  *patCtx;
+	Oid targettype;
+	int32 targettypmod;
+	Node *defaultexpr;
+	Relation attrelation;
+	Relation depRel;
+	HeapTuple depTup;
+	GpPolicy *policy = NULL;
+	bool sourceIsInt = false;
+	bool targetIsInt = false;
+	bool sourceIsVarlenA = false;
+	bool targetIsVarlenA = false;
+	bool hashCompatible = false;
+	cqContext cqc;
+	cqContext cqc2;
+	cqContext *pcqCtx;
+	cqContext *patCtx;
 
 	attrelation = heap_open(AttributeRelationId, RowExclusiveLock);
 
@@ -9094,7 +9094,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	/* Look up the target column */
 	heapTup = caql_getattname(patCtx, RelationGetRelid(rel), colName);
 
-	if (!HeapTupleIsValid(heapTup))		/* shouldn't happen */
+	if (!HeapTupleIsValid(heapTup)) /* shouldn't happen */
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_COLUMN),
 				 errmsg("column \"%s\" of relation \"%s\" does not exist",
@@ -9102,7 +9102,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	attTup = (Form_pg_attribute) GETSTRUCT(heapTup);
 	attnum = attTup->attnum;
 
-	/* Check for multiple ALTER TYPE on same column --- can't cope */
+	/* Check for multiple ALTER TYPE on same column -- can't cope */
 	if (attTup->atttypid != tab->oldDesc->attrs[attnum - 1]->atttypid ||
 		attTup->atttypmod != tab->oldDesc->attrs[attnum - 1]->atttypmod)
 		ereport(ERROR,
@@ -9142,13 +9142,13 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 
 	/*
 	 * If there is a default expression for the column, get it and ensure we
-	 * can coerce it to the new datatype.  (We must do this before changing
+	 * can coerce it to the new datatype. (We must do this before changing
 	 * the column type, because build_column_default itself will try to
 	 * coerce, and will not issue the error message we want if it fails.)
 	 *
 	 * We remove any implicit coercion steps at the top level of the old
 	 * default expression; this has been agreed to satisfy the principle of
-	 * least surprise.	(The conversion to the new column type should act like
+	 * least surprise. (The conversion to the new column type should act like
 	 * it started from what the user sees as the stored expression, and the
 	 * implicit coercions aren't going to be shown.)
 	 */
@@ -9157,7 +9157,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 		defaultexpr = build_column_default(rel, attnum);
 		Assert(defaultexpr);
 		defaultexpr = strip_implicit_coercions(defaultexpr);
-		defaultexpr = coerce_to_target_type(NULL,		/* no UNKNOWN params */
+		defaultexpr = coerce_to_target_type(NULL, /* no UNKNOWN params */
 										  defaultexpr, exprType(defaultexpr),
 											targettype, targettypmod,
 											COERCION_ASSIGNMENT,
@@ -9166,8 +9166,8 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 		if (defaultexpr == NULL)
 			ereport(ERROR,
 					(errcode(ERRCODE_DATATYPE_MISMATCH),
-			errmsg("default for column \"%s\" cannot be cast to type \"%s\"",
-				   colName, TypeNameToString(typename))));
+					 errmsg("default for column \"%s\" cannot be cast to type \"%s\"",
+							colName, TypeNameToString(typename))));
 	}
 	else
 		defaultexpr = NULL;
@@ -9177,28 +9177,27 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	 * and record enough information to let us recreate the objects.
 	 *
 	 * The actual recreation does not happen here, but only after we have
-	 * performed all the individual ALTER TYPE operations.	We have to save
+	 * performed all the individual ALTER TYPE operations. We have to save
 	 * the info before executing ALTER TYPE, though, else the deparser will
 	 * get confused.
 	 *
 	 * There could be multiple entries for the same object, so we must check
-	 * to ensure we process each one only once.  Note: we assume that an index
+	 * to ensure we process each one only once. Note: we assume that an index
 	 * that implements a constraint will not show a direct dependency on the
 	 * column.
 	 */
 	depRel = heap_open(DependRelationId, RowExclusiveLock);
 
 	/* FOR UPDATE due to DELETE later... */
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), depRel),
-			cql("SELECT * FROM pg_depend "
-				" WHERE refclassid = :1 "
-				" AND refobjid = :2 "
-				" AND refobjsubid = :3 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(RelationRelationId),
-				ObjectIdGetDatum(RelationGetRelid(rel)),
-				Int32GetDatum((int32) attnum)));
+	pcqCtx = caql_beginscan(caql_addrel(cqclr(&cqc), depRel),
+							cql("SELECT * FROM pg_depend "
+								" WHERE refclassid = :1 "
+								" AND refobjid = :2 "
+								" AND refobjsubid = :3 "
+								" FOR UPDATE ",
+								ObjectIdGetDatum(RelationRelationId),
+								ObjectIdGetDatum(RelationGetRelid(rel)),
+								Int32GetDatum((int32) attnum)));
 
 	while (HeapTupleIsValid(depTup = caql_getnext(pcqCtx)))
 	{
@@ -9217,7 +9216,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 		{
 			case OCLASS_CLASS:
 				{
-					char		relKind = get_rel_relkind(foundObject.objectId);
+					char relKind = get_rel_relkind(foundObject.objectId);
 
 					if (relKind == RELKIND_INDEX)
 					{
@@ -9225,26 +9224,31 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 						if (!list_member_oid(tab->changedIndexOids, foundObject.objectId))
 						{
 							char * indexdefstring = pg_get_indexdef_string(foundObject.objectId);
-							tab->changedIndexOids = lappend_oid(tab->changedIndexOids,
-													   foundObject.objectId);
+							tab->changedIndexOids = lappend_oid(tab->changedIndexOids, foundObject.objectId);
 							tab->changedIndexDefs = lappend(tab->changedIndexDefs,indexdefstring);
 
-							if (Gp_role == GP_ROLE_DISPATCH && indexdefstring &&strstr(indexdefstring," UNIQUE ")!=0 && !hashCompatible)
+							if (Gp_role == GP_ROLE_DISPATCH &&
+								indexdefstring &&
+								strstr(indexdefstring," UNIQUE ") != 0 &&
+								!hashCompatible)
 							{
 								policy = rel->rd_cdbpolicy;
 								if (policy != NULL && policy->ptype == POLICYTYPE_PARTITIONED)
 								{
-									int			ia = 0;
+									int ia = 0;
 
 									if (cdbRelSize(rel) != 0)
-
-									for (ia = 0; ia < policy->nattrs; ia++)
 									{
-										if (attnum == policy->attrs[ia])
+										for (ia = 0; ia < policy->nattrs; ia++)
 										{
-											ereport(ERROR,
-													(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-													 errmsg("Changing the type of a column that is part of the distribution policy and used in a unique index is not allowed")));
+											if (attnum == policy->attrs[ia])
+											{
+												ereport(ERROR,
+														(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+														 errmsg("Changing the type of a column that is part of the "
+																"distribution policy and used in a unique index is "
+																"not allowed")));
+											}
 										}
 									}
 								}
@@ -9254,7 +9258,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 					else if (relKind == RELKIND_SEQUENCE)
 					{
 						/*
-						 * This must be a SERIAL column's sequence.  We need
+						 * This must be a SERIAL column's sequence. We need
 						 * not do anything to it.
 						 */
 						Assert(foundObject.objectSubId == 0);
@@ -9270,29 +9274,30 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 
 			case OCLASS_CONSTRAINT:
 				Assert(foundObject.objectSubId == 0);
-				if (!list_member_oid(tab->changedConstraintOids,
-									 foundObject.objectId))
+				if (!list_member_oid(tab->changedConstraintOids, foundObject.objectId))
 				{
-					char	   *defstring = pg_get_constraintdef_string(foundObject.objectId);
+					char *defstring = pg_get_constraintdef_string(foundObject.objectId);
 
 					if (Gp_role == GP_ROLE_DISPATCH && !hashCompatible)
-					if (strstr(defstring," UNIQUE")!=0 ||
-						strstr(defstring,"PRIMARY KEY")!=0 )
+					if (strstr(defstring," UNIQUE") != 0 ||
+						strstr(defstring,"PRIMARY KEY") != 0)
 					{
 						policy = rel->rd_cdbpolicy;
 						if (policy != NULL && policy->ptype == POLICYTYPE_PARTITIONED)
 						{
-							int			ia = 0;
+							int ia = 0;
 
 							if (cdbRelSize(rel) != 0)
-
-							for (ia = 0; ia < policy->nattrs; ia++)
 							{
-								if (attnum == policy->attrs[ia])
+								for (ia = 0; ia < policy->nattrs; ia++)
 								{
-									ereport(ERROR,
-											(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-											 errmsg("Changing the type of a column that is used in a UNIQUE or PRIMARY KEY constraint is not allowed")));
+									if (attnum == policy->attrs[ia])
+									{
+										ereport(ERROR,
+												(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+												 errmsg("Changing the type of a column that is used in a "
+														"UNIQUE or PRIMARY KEY constraint is not allowed")));
+									}
 								}
 							}
 						}
@@ -9300,7 +9305,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 
 					/*
 					 * Put NORMAL dependencies at the front of the list and
-					 * AUTO dependencies at the back.  This makes sure that
+					 * AUTO dependencies at the back. This makes sure that
 					 * foreign-key constraints depending on this column will
 					 * be dropped before unique or primary-key constraints of
 					 * the column; which we must have because the FK
@@ -9309,22 +9314,14 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 					 */
 					if (foundDep->deptype == DEPENDENCY_NORMAL)
 					{
-						tab->changedConstraintOids =
-							lcons_oid(foundObject.objectId,
-									  tab->changedConstraintOids);
-						tab->changedConstraintDefs =
-							lcons(defstring,
-								  tab->changedConstraintDefs);
+						tab->changedConstraintOids = lcons_oid(foundObject.objectId, tab->changedConstraintOids);
+						tab->changedConstraintDefs = lcons(defstring, tab->changedConstraintDefs);
 					}
 					else
 					{
-						tab->changedConstraintOids =
-							lappend_oid(tab->changedConstraintOids,
-													   foundObject.objectId);
-						tab->changedConstraintDefs =
-							lappend(tab->changedConstraintDefs,
-									defstring);
-				}
+						tab->changedConstraintOids = lappend_oid(tab->changedConstraintOids, foundObject.objectId);
+						tab->changedConstraintDefs = lappend(tab->changedConstraintDefs, defstring);
+					}
 				}
 				break;
 
@@ -9379,29 +9376,26 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	caql_endscan(pcqCtx);
 
 	/*
-	 * Now scan for dependencies of this column on other things.  The only
+	 * Now scan for dependencies of this column on other things. The only
 	 * thing we should find is the dependency on the column datatype, which we
 	 * want to remove.
 	 */
-
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), depRel),
-			cql("SELECT * FROM pg_depend "
-				" WHERE classid = :1 "
-				" AND objid = :2 "
-				" AND objsubid = :3 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(RelationRelationId),
-				ObjectIdGetDatum(RelationGetRelid(rel)),
-				Int32GetDatum((int32) attnum)));
+	pcqCtx = caql_beginscan(caql_addrel(cqclr(&cqc), depRel),
+							cql("SELECT * FROM pg_depend "
+								" WHERE classid = :1 "
+								" AND objid = :2 "
+								" AND objsubid = :3 "
+								" FOR UPDATE ",
+								ObjectIdGetDatum(RelationRelationId),
+								ObjectIdGetDatum(RelationGetRelid(rel)),
+								Int32GetDatum((int32) attnum)));
 
 	while (HeapTupleIsValid(depTup = caql_getnext(pcqCtx)))
 	{
 		Form_pg_depend foundDep = (Form_pg_depend) GETSTRUCT(depTup);
 
 		if (foundDep->deptype != DEPENDENCY_NORMAL)
-			elog(ERROR, "found unexpected dependency type '%c'",
-				 foundDep->deptype);
+			elog(ERROR, "found unexpected dependency type '%c'", foundDep->deptype);
 		if (foundDep->refclassid != TypeRelationId ||
 			foundDep->refobjid != attTup->atttypid)
 			elog(ERROR, "found unexpected dependency for column");
@@ -9413,14 +9407,13 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	heap_close(depRel, RowExclusiveLock);
 
 	policy = rel->rd_cdbpolicy;
-	if (policy != NULL && policy->ptype == POLICYTYPE_PARTITIONED &&
-		!hashCompatible)
+	if (policy != NULL && policy->ptype == POLICYTYPE_PARTITIONED && !hashCompatible)
 	{
 		if (Gp_role != GP_ROLE_EXECUTE)
 		{
-			int			ia = 0;
-			ListCell   *lc;
-			List	   *partkeys;
+			int ia = 0;
+			ListCell *lc;
+			List *partkeys;
 			
 			partkeys = rel_partition_key_attrs(rel->rd_id);
 			foreach (lc, partkeys)
@@ -9447,7 +9440,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	}
 
 	/*
-	 * Here we go --- change the recorded column type.	(Note heapTup is a
+	 * Here we go -- change the recorded column type. (Note heapTup is a
 	 * copy of the syscache entry, so okay to scribble on.)
 	 */
 	attTup->atttypid = targettype;
@@ -9460,7 +9453,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 
 	ReleaseType(typeTuple);
 
-	caql_update_current(patCtx, heapTup);/* implicit update of index as well */
+	caql_update_current(patCtx, heapTup); /* implicit update of index as well */
 
 	heap_close(attrelation, RowExclusiveLock);
 
@@ -9473,9 +9466,9 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	RemoveStatistics(RelationGetRelid(rel), attnum);
 
 	/*
-	 * Update the default, if present, by brute force --- remove and re-add
-	 * the default.  Probably unsafe to take shortcuts, since the new version
-	 * may well have additional dependencies.  (It's okay to do this now,
+	 * Update the default, if present, by brute force -- remove and re-add
+	 * the default. Probably unsafe to take shortcuts, since the new version
+	 * may well have additional dependencies. (It's okay to do this now,
 	 * rather than after other ALTER TYPE commands, since the default won't
 	 * depend on other column types.)
 	 */
@@ -9490,8 +9483,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 		 * We use RESTRICT here for safety, but at present we do not expect
 		 * anything to depend on the default.
 		 */
-		adoid = RemoveAttrDefault(RelationGetRelid(rel), attnum,
-								  DROP_RESTRICT, true);
+		adoid = RemoveAttrDefault(RelationGetRelid(rel), attnum, DROP_RESTRICT, true);
 
 		StoreAttrDefault(rel, attnum, defaultexpr, adoid);
 	}
@@ -9499,16 +9491,12 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	/* Cleanup */
 	heap_freetuple(heapTup);
 
-	/* MPP-6929: metadata tracking */
-	if ((Gp_role == GP_ROLE_DISPATCH)
-		&& MetaTrackValidKindNsp(rel->rd_rel))
+	/* metadata tracking */
+	if ((Gp_role == GP_ROLE_DISPATCH) && MetaTrackValidKindNsp(rel->rd_rel))
 		MetaTrackUpdObject(RelationRelationId,
 						   RelationGetRelid(rel),
 						   GetUserId(),
-						   "ALTER", "ALTER COLUMN TYPE"
-				);
-
-
+						   "ALTER", "ALTER COLUMN TYPE");
 }
 
 /*

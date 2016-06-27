@@ -1460,19 +1460,11 @@ CheckDebugDtmActionProtocol(DtxProtocolCommand dtxProtocolCommand,
 	}
 }
 
-
-/*
- * exec_mpp_dtx_protocol_command
- *
- */
 static void
-exec_mpp_dtx_protocol_command(
-					DtxProtocolCommand 			dtxProtocolCommand,
-					int							flags,
-					const char *				loggingStr,
-					const char * 				gid,
-					DistributedTransactionId 	gxid,
-					DtxContextInfo 				*contextInfo)
+exec_mpp_dtx_protocol_command(DtxProtocolCommand dtxProtocolCommand,
+							  int flags, const char *loggingStr,
+							  const char *gid, DistributedTransactionId gxid,
+							  DtxContextInfo *contextInfo)
 {
 	CommandDest dest = whereToSendOutput;
 	const char *commandTag = loggingStr;
@@ -3595,7 +3587,7 @@ CdbProgramErrorHandler(SIGNAL_ARGS)
 
     errno = save_errno;
     StandardHandlerForSigillSigsegvSigbus_OnMainThread(pts, PASS_SIGNAL_ARGS);
-}                               /* CdbProgramErrorHandler */
+}
 
 /* signal handler for floating point exception */
 void
@@ -4347,13 +4339,13 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
 int
 PostgresMain(int argc, char *argv[],
 			 const char *dbname, const char *username)
-	{
-	int			firstchar;
-	char		stack_base;
+{
+	int firstchar;
+	char stack_base;
 	StringInfoData input_message;
-	sigjmp_buf	local_sigjmp_buf;
+	sigjmp_buf local_sigjmp_buf;
 	volatile bool send_ready_for_query = true;
-	int			topErrLevel;
+	int topErrLevel;
 
 	MemoryAccount *postgresMainMemoryAccount = NULL;
 	
@@ -4398,7 +4390,7 @@ PostgresMain(int argc, char *argv[],
 
 	/* Compute paths, if we didn't inherit them from postmaster */
 	if (my_exec_path[0] == '\0')
-		{
+	{
 		if (find_my_exec(argv[0], my_exec_path) < 0)
 			elog(FATAL, "%s: could not locate my own executable path",
 				 argv[0]);
@@ -4471,46 +4463,46 @@ PostgresMain(int argc, char *argv[],
 		WalSndSignals();
 	else
 	{
-	pqsignal(SIGHUP, SigHupHandler);	/* set flag to read config file */
-	pqsignal(SIGINT, StatementCancelHandler);	/* cancel current query */
-	pqsignal(SIGTERM, die);		/* cancel current query and exit */
+		pqsignal(SIGHUP, SigHupHandler); /* set flag to read config file */
+		pqsignal(SIGINT, StatementCancelHandler); /* cancel current query */
+		pqsignal(SIGTERM, die); /* cancel current query and exit */
 
-	/*
-	 * In a standalone backend, SIGQUIT can be generated from the keyboard
-	 * easily, while SIGTERM cannot, so we make both signals do die() rather
-	 * than quickdie().
-	 */
-	if (IsUnderPostmaster)
-		pqsignal(SIGQUIT, quickdie);	/* hard crash time */
-	else
-		pqsignal(SIGQUIT, die); /* cancel current query and exit */
-	pqsignal(SIGALRM, handle_sig_alarm);		/* timeout conditions */
+		/*
+		 * In a standalone backend, SIGQUIT can be generated from the keyboard
+		 * easily, while SIGTERM cannot, so we make both signals do die() rather
+		 * than quickdie().
+		 */
+		if (IsUnderPostmaster)
+			pqsignal(SIGQUIT, quickdie); /* hard crash time */
+		else
+			pqsignal(SIGQUIT, die); /* cancel current query and exit */
+		pqsignal(SIGALRM, handle_sig_alarm); /* timeout conditions */
 
-	/*
-	 * Ignore failure to write to frontend. Note: if frontend closes
-	 * connection, we will notice it and exit cleanly when control next
-	 * returns to outer loop.  This seems safer than forcing exit in the midst
-	 * of output during who-knows-what operation...
-	 */
-	pqsignal(SIGPIPE, SIG_IGN);
+		/*
+		 * Ignore failure to write to frontend. Note: if frontend closes
+		 * connection, we will notice it and exit cleanly when control next
+		 * returns to outer loop.  This seems safer than forcing exit in the midst
+		 * of output during who-knows-what operation...
+		 */
+		pqsignal(SIGPIPE, SIG_IGN);
 		pqsignal(SIGUSR1, procsignal_sigusr1_handler);
-	pqsignal(SIGUSR2, NotifyInterruptHandler);
-	pqsignal(SIGFPE, FloatExceptionHandler);
+		pqsignal(SIGUSR2, NotifyInterruptHandler);
+		pqsignal(SIGFPE, FloatExceptionHandler);
 
-	/*
-	 * Reset some signals that are accepted by postmaster but not by backend
-	 */
-	pqsignal(SIGCHLD, SIG_DFL); /* system() requires this on some platforms */
+		/*
+		 * Reset some signals that are accepted by postmaster but not by backend
+		 */
+		pqsignal(SIGCHLD, SIG_DFL); /* system() requires this on some platforms */
 
 #ifndef _WIN32
 #ifdef SIGILL
-    pqsignal(SIGILL, CdbProgramErrorHandler);
+		pqsignal(SIGILL, CdbProgramErrorHandler);
 #endif
 #ifdef SIGSEGV
-    pqsignal(SIGSEGV, CdbProgramErrorHandler);
+		pqsignal(SIGSEGV, CdbProgramErrorHandler);
 #endif
 #ifdef SIGBUS
-    pqsignal(SIGBUS, CdbProgramErrorHandler);
+		pqsignal(SIGBUS, CdbProgramErrorHandler);
 #endif
 #endif
 	}
@@ -4527,7 +4519,7 @@ PostgresMain(int argc, char *argv[],
 #endif
 	}
 
-	PG_SETMASK(&BlockSig);		/* block everything except SIGQUIT */
+	PG_SETMASK(&BlockSig); /* block everything except SIGQUIT */
 
 	if (IsUnderPostmaster)
 		BaseInit();
@@ -4603,8 +4595,8 @@ PostgresMain(int argc, char *argv[],
 	InitPostgres(dbname, InvalidOid, username, NULL);
 
 	SetProcessingMode(NormalProcessing);
-	
-	/**
+
+	/*
 	 * Initialize resource queue hash structure.
 	 */
 	if (Gp_role == GP_ROLE_DISPATCH && ResourceScheduler && !am_walsender)
@@ -4687,7 +4679,6 @@ PostgresMain(int argc, char *argv[],
 	 * during error recovery.  (If we get into an infinite loop thereby, it
 	 * will soon be stopped by overflow of elog.c's internal state stack.)
 	 */
-
 	if (sigsetjmp(local_sigjmp_buf, 1) != 0)
 	{
 		/*
@@ -4710,7 +4701,7 @@ PostgresMain(int argc, char *argv[],
 		 */
 		QueryCancelPending = false;
 		disable_sig_alarm(true);
-		QueryCancelPending = false;		/* again in case timeout occurred */
+		QueryCancelPending = false; /* again in case timeout occurred */
 		QueryFinishPending = false;
 
 		/*
@@ -4784,7 +4775,7 @@ PostgresMain(int argc, char *argv[],
 	PG_exception_stack = &local_sigjmp_buf;
 
 	if (!ignore_till_sync)
-		send_ready_for_query = true;	/* initially, or after error */
+		send_ready_for_query = true; /* initially, or after error */
 
 	/*
 	 * Non-error queries loop here.
@@ -4857,7 +4848,7 @@ PostgresMain(int argc, char *argv[],
 		 * conditional since we don't want, say, reads on behalf of COPY FROM
 		 * STDIN doing the same thing.)
 		 */
-		QueryCancelPending = false;		/* forget any earlier CANCEL signal */
+		QueryCancelPending = false; /* forget any earlier CANCEL signal */
 		DoingCommandRead = true;
 
 #ifdef USE_TEST_UTILS
@@ -4902,7 +4893,8 @@ PostgresMain(int argc, char *argv[],
 		firstchar = ReadCommand(&input_message);
 		IdleTracker_ActivateProcess();
 
-		if (!IsTransactionOrTransactionBlock()){
+		if (!IsTransactionOrTransactionBlock())
+		{
 			/* Reset memory accounting */
 
 			/*
@@ -4949,7 +4941,7 @@ PostgresMain(int argc, char *argv[],
 		
 		switch (firstchar)
 		{
-			case 'Q':			/* simple query */
+			case 'Q': /* simple query */
 				{
 					const char *query_string = NULL;                    
  
@@ -4975,16 +4967,16 @@ PostgresMain(int argc, char *argv[],
 				break;
             case 'M': /* MPP dispatched stmt from QD */
 				{
-					/* This is exactly like 'Q' above except we peel off and
-					 * set the snapshot information right away.
-					 */
 					/*
+					 * This is exactly like 'Q' above except we peel off and
+					 * set the snapshot information right away.
+					 *
 					 * Since PortalDefineQuery() does not take NULL query string,
 					 * we initialize it with a contant empty string.
 					 */
 					const char *query_string = pstrdup("");
 					
-					const char *serializedSnapshot = NULL;
+					const char *serializedDtxContextInfo = NULL;
 					const char *serializedQuerytree = NULL;
 					const char *serializedPlantree = NULL;
 					const char *serializedParams = NULL;
@@ -4992,7 +4984,7 @@ PostgresMain(int argc, char *argv[],
 					const char *seqServerHost = NULL;
 					
 					int query_string_len = 0;
-					int serializedSnapshotlen = 0;
+					int serializedDtxContextInfolen = 0;
 					int serializedQuerytreelen = 0;
 					int serializedPlantreelen = 0;
 					int serializedParamslen = 0;
@@ -5033,31 +5025,20 @@ PostgresMain(int argc, char *argv[],
 					rootIdx = pq_getmsgint(&input_message, 4);
 
 					statementStart = pq_getmsgint64(&input_message);
-					/*
-					 * Should we set the CurrentStatementStartTimestamp to the 
-					 * original start of the statement (as seen by the masterDB?
-					 * 
-					 * Or have it be the time this particular QE received it's work?
-					 * 
-					 * Or both?
-					 */
-					/* read ser string lengths */
 					query_string_len = pq_getmsgint(&input_message, 4);
 					serializedQuerytreelen = pq_getmsgint(&input_message, 4);
 					serializedPlantreelen = pq_getmsgint(&input_message, 4);
 					serializedParamslen = pq_getmsgint(&input_message, 4);
 					serializedQueryDispatchDesclen = pq_getmsgint(&input_message, 4);
-					serializedSnapshotlen = pq_getmsgint(&input_message, 4);
+					serializedDtxContextInfolen = pq_getmsgint(&input_message, 4);
 						
-					/* read in the snapshot info */
-					if (serializedSnapshotlen == 0)
-						serializedSnapshot = NULL;
+					/* read in the DTX context info */
+					if (serializedDtxContextInfolen == 0)
+						serializedDtxContextInfo = NULL;
 					else
-						serializedSnapshot = pq_getmsgbytes(&input_message,serializedSnapshotlen);
+						serializedDtxContextInfo = pq_getmsgbytes(&input_message,serializedDtxContextInfolen);
 
-					DtxContextInfo_Deserialize(
-						serializedSnapshot, serializedSnapshotlen,
-						&TempDtxContextInfo);
+					DtxContextInfo_Deserialize(serializedDtxContextInfo, serializedDtxContextInfolen, &TempDtxContextInfo);
 
 					/* get the transaction options */
 					unusedFlags = pq_getmsgint(&input_message, 4);
@@ -5107,10 +5088,10 @@ PostgresMain(int argc, char *argv[],
 					elog((Debug_print_full_dtm ? LOG : DEBUG5), "MPP dispatched stmt from QD: %s.",query_string);
 
 					if (suid > 0)				
-						SetSessionUserId(suid, suid_is_super);  /* Set the session UserId */
+						SetSessionUserId(suid, suid_is_super); /* Set the session UserId */
 	
 					if (ouid > 0 && ouid != GetSessionUserId()) 
-						SetCurrentRoleId(ouid, ouid_is_super);		/* Set the outer UserId */
+						SetCurrentRoleId(ouid, ouid_is_super); /* Set the outer UserId */
 
 					// UNDONE: Make this more official...
 					if (TempDtxContextInfo.distributedSnapshot.header.maxCount == 0)
@@ -5161,7 +5142,7 @@ PostgresMain(int argc, char *argv[],
 					send_ready_for_query = true;
 				}
 				break;
-            case 'T':           /* MPP dispatched dtx protocol command from QD */
+            case 'T': /* MPP dispatched dtx protocol command from QD */
 				{
 					DtxProtocolCommand dtxProtocolCommand;
 
@@ -5174,9 +5155,9 @@ PostgresMain(int argc, char *argv[],
 					const char *gid;
 
 					DistributedTransactionId gxid;
-					int serializedSnapshotlen;
-					const char *serializedSnapshot;
 
+					int serializedDtxContextInfolen;
+					const char *serializedDtxContextInfo;
 
 					elog(DEBUG1, "Message type %c received by from libpq, len = %d", firstchar, input_message.len); /* TODO: Remove this */
 					
@@ -5201,34 +5182,30 @@ PostgresMain(int argc, char *argv[],
 					/* get the distributed transaction id */
 					gxid = (DistributedTransactionId) pq_getmsgint(&input_message, 4);
 					
-					serializedSnapshotlen = pq_getmsgint(&input_message, 4);
+					serializedDtxContextInfolen = pq_getmsgint(&input_message, 4);
 
-					/* read in the snapshot info/ DtxContext */
-					if (serializedSnapshotlen == 0)
-						serializedSnapshot = NULL;
+					/* read in the DTX context info */
+					if (serializedDtxContextInfolen == 0)
+						serializedDtxContextInfo = NULL;
 					else
-						serializedSnapshot = pq_getmsgbytes(&input_message,serializedSnapshotlen);
+						serializedDtxContextInfo = pq_getmsgbytes(&input_message,serializedDtxContextInfolen);
 
-					/*
-					 * This is for debugging.  Otherwise we don't need to deserialize this
-					 */
-					DtxContextInfo_Deserialize(serializedSnapshot, serializedSnapshotlen, &TempDtxContextInfo);
+					DtxContextInfo_Deserialize(serializedDtxContextInfo, serializedDtxContextInfolen, &TempDtxContextInfo);
 
 					pq_getmsgend(&input_message);
 
-					// Do not touch DTX context.
 					exec_mpp_dtx_protocol_command(dtxProtocolCommand, flags, loggingStr, gid, gxid, &TempDtxContextInfo);
 
 					send_ready_for_query = true;
             	}
 				break;
 
-			case 'P':			/* parse */
+			case 'P': /* parse */
 				{
 					const char *stmt_name;
 					const char *query_string;
-					int			numParams;
-					Oid		   *paramTypes = NULL;
+					int numParams;
+					Oid *paramTypes = NULL;
 
 					forbidden_in_wal_sender(firstchar);
 
@@ -5240,7 +5217,7 @@ PostgresMain(int argc, char *argv[],
 					numParams = pq_getmsgint(&input_message, 2);
 					if (numParams > 0)
 					{
-						int			i;
+						int i;
 
 						paramTypes = (Oid *) palloc(numParams * sizeof(Oid));
 						for (i = 0; i < numParams; i++)
@@ -5257,7 +5234,7 @@ PostgresMain(int argc, char *argv[],
 				}
 				break;
 
-			case 'B':			/* bind */
+			case 'B': /* bind */
 				forbidden_in_wal_sender(firstchar);
 
 				/* Set statement_timestamp() */
@@ -5272,10 +5249,10 @@ PostgresMain(int argc, char *argv[],
 				exec_bind_message(&input_message);
 				break;
 
-			case 'E':			/* execute */
+			case 'E': /* execute */
 				{
 					const char *portal_name;
-					int64			max_rows;
+					int64 max_rows;
 
 					forbidden_in_wal_sender(firstchar);
 
@@ -5296,7 +5273,7 @@ PostgresMain(int argc, char *argv[],
 				}
 				break;
 
-			case 'F':			/* fastpath function call */
+			case 'F': /* fastpath function call */
 
 				forbidden_in_wal_sender(firstchar);
 
@@ -5327,9 +5304,9 @@ PostgresMain(int argc, char *argv[],
 
 				if (HandleFunctionRequest(&input_message) == EOF)
 				{
-					/* lost frontend connection during F message input */
-
 					/*
+					 * lost frontend connection during F message input
+					 *
 					 * Reset whereToSendOutput to prevent ereport from
 					 * attempting to send any more messages to client.
 					 */
@@ -5345,9 +5322,9 @@ PostgresMain(int argc, char *argv[],
 				send_ready_for_query = true;
 				break;
 
-			case 'C':			/* close */
+			case 'C': /* close */
 				{
-					int			close_type;
+					int close_type;
 					const char *close_target;
 
 					forbidden_in_wal_sender(firstchar);
@@ -5369,7 +5346,7 @@ PostgresMain(int argc, char *argv[],
 							break;
 						case 'P':
 							{
-								Portal		portal;
+								Portal portal;
 
 								portal = GetPortalByName(close_target);
 								if (PortalIsValid(portal))
@@ -5385,13 +5362,13 @@ PostgresMain(int argc, char *argv[],
 					}
 
 					if (whereToSendOutput == DestRemote)
-						pq_putemptymessage('3');		/* CloseComplete */
+						pq_putemptymessage('3'); /* CloseComplete */
 				}
 				break;
 
-			case 'D':			/* describe */
+			case 'D': /* describe */
 				{
-					int			describe_type;
+					int describe_type;
 					const char *describe_target;
 
 					forbidden_in_wal_sender(firstchar);
@@ -5425,13 +5402,13 @@ PostgresMain(int argc, char *argv[],
 				}
 				break;
 
-			case 'H':			/* flush */
+			case 'H': /* flush */
 				pq_getmsgend(&input_message);
 				if (whereToSendOutput == DestRemote)
 					pq_flush();
 				break;
 
-			case 'S':			/* sync */
+			case 'S': /* sync */
 				pq_getmsgend(&input_message);
 				finish_xact_command();
 				send_ready_for_query = true;
@@ -5461,9 +5438,9 @@ PostgresMain(int argc, char *argv[],
 				 */
 				proc_exit(0);
 
-			case 'd':			/* copy data */
-			case 'c':			/* copy done */
-			case 'f':			/* copy fail */
+			case 'd': /* copy data */
+			case 'c': /* copy done */
+			case 'f': /* copy fail */
 
 				/*
 				 * Accept but ignore these messages, per protocol spec; we
@@ -5483,7 +5460,7 @@ PostgresMain(int argc, char *argv[],
 	/* can't get here because the above loop never exits */
 	Assert(false);
 
-	return 1;					/* keep compiler quiet */
+	return 1; /* keep compiler quiet */
 }
 
 /*
