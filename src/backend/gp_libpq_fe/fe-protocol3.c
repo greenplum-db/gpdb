@@ -2311,12 +2311,6 @@ build_startup_packet(const PGconn *conn, char *packet,
 	/* CDB: Add qExec startup data */
 	if (conn->gpqeid && conn->gpqeid[0])
 		ADD_STARTUP_OPTION("gpqeid", conn->gpqeid);
-	/* CDB: Add qExec startup data */
-	if (conn->gpqdid && conn->gpqdid[0])
-		ADD_STARTUP_OPTION("gpqdid", conn->gpqdid);
-	/* CDB: Add qExec startup data */
-	if (conn->gpdaid && conn->gpdaid[0])
-		ADD_STARTUP_OPTION("gpdaid", conn->gpdaid);
 
 	/* Add any environment-driven GUC settings needed */
 	for (next_eo = options; next_eo->envName; next_eo++)

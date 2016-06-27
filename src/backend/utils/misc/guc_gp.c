@@ -1298,46 +1298,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_enable_functions", PGC_USERSET, DEFUNCT_OPTIONS,
-			gettext_noop("Enable functions that must use the callback from the QE to QD."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&defunct_bool,
-		false, NULL, NULL
-	},
-
-	{
-		{"gp_use_snapshop_during_callback", PGC_USERSET, CLIENT_CONN_STATEMENT,
-			gettext_noop("For debugging.. If SPI should try to send snapshot on callback to QD."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
-		},
-		&gp_use_snapshop_during_callback,
-		true, NULL, NULL
-	},
-
-	{
-		{"gp_is_callback", PGC_BACKEND, GP_WORKER_IDENTITY,
-			gettext_noop("True in a worker process executing on behalf of a callback from the QE to QD."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE | GUC_GPDB_ADDOPT
-		},
-		&gp_is_callback,
-		false, NULL, NULL
-	},
-
-	{
-		{"gp_use_dispatch_agent", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("True says to use Query Dispatch Agents to improve dispatching."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_NO_RESET_ALL
-		},
-		&gp_use_dispatch_agent,
-		false, assign_gp_use_dispatch_agent, NULL
-	},
-
-	{
 		{"gp_reraise_signal", PGC_SUSET, DEVELOPER_OPTIONS,
 			gettext_noop("Do we attempt to dump core when a serious problem occurs."),
 			NULL,
@@ -5254,16 +5214,6 @@ struct config_string ConfigureNamesString_gp[] =
 		},
 		&gp_interconnect_fc_method_str,
 		"loss", gpvars_assign_gp_interconnect_fc_method, gpvars_show_gp_interconnect_fc_method
-	},
-
-	{
-		{"gp_qd_callback_info", PGC_BACKEND, GP_WORKER_IDENTITY,
-			gettext_noop("Sets the QD callback information for the QEs in this session."),
-			gettext_noop("Right now, this is the port information"),
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE
-		},
-		&gp_qd_callback_info,
-		"", NULL, NULL
 	},
 
 	{

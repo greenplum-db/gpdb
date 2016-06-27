@@ -38,7 +38,7 @@
 
 #include "access/transam.h"
 #include "access/xact.h"
-#include "catalog/namespace.h"
+#include "catalog/namespace.h" /* TempNamespaceOidIsValid */
 #include "miscadmin.h"
 #include "postmaster/autovacuum.h"
 #include "replication/syncrep.h"
@@ -382,21 +382,22 @@ InitProcess(void)
 
     /* 
      * A nonzero gp_session_id uniquely identifies an MPP client session 
-     * over the lifetime of the entry postmaster process.  A qDisp passes
-     * its gp_session_id down to all of its qExecs.  If this is a qExec,
+     * over the lifetime of the entry postmaster process. A qDisp passes
+     * its gp_session_id down to all of its qExecs. If this is a qExec,
      * we have already received the gp_session_id from the qDisp.
      */
-    elog(DEBUG1,"InitProcess(): gp_session_id %d, gp_is_callback %d",gp_session_id,gp_is_callback);
-    Assert(gp_session_id > 0 || !gp_is_callback);
     if (Gp_role == GP_ROLE_DISPATCH && gp_session_id == -1)
         gp_session_id = mppLocalProcessSerial;
     MyProc->mppSessionId = gp_session_id;
+    elog(DEBUG1,"InitProcess(): gp_session_id %d, Gp_role %d",gp_session_id, Gp_role);
     
     MyProc->mppIsWriter = Gp_is_writer;
-    
-    if (Gp_role == GP_ROLE_DISPATCH)
-    	MyProc->mppIsWriter = !gp_is_callback;
 
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		MyProc->mppIsWriter = true;
+	}
+    
 	/* Initialize fields for sync rep */
 	MyProc->waitLSN.xlogid = 0;
 	MyProc->waitLSN.xrecoff = 0;

@@ -948,8 +948,6 @@ makeOptions(bool iswriter)
 	appendStringInfo(&string, " -c gp_qd_hostname=%s", qdinfo->hostip);
 	appendStringInfo(&string, " -c gp_qd_port=%d", qdinfo->port);
 
-	appendStringInfo(&string, " -c gp_qd_callback_info=port=%d", PostPortNumber);
-
 	/*
 	 * Transactions are tricky.
 	 * Here is the copy and pasted code, and we know they are working.
@@ -1140,52 +1138,6 @@ cdbgang_parse_gpqeid_params(struct Port * port __attribute__((unused)),
 bad:
 	elog(FATAL, "Segment dispatched with invalid option: 'gpqeid=%s'", gpqeid_value);
 }
-
-/*
- * TODO: Dead code: remove it.
- */
-void cdbgang_parse_gpqdid_params(struct Port * port __attribute__((unused)),
-		const char *gpqdid_value)
-{
-	char *gpqdid = pstrdup(gpqdid_value);
-	char *cp;
-	char *np = gpqdid;
-
-	/*
-	 * The presence of an gpqdid string means this is a callback from QE to
-	 * QD.
-	 */
-	SetConfigOption("gp_is_callback", "true", PGC_POSTMASTER, PGC_S_OVERRIDE);
-
-	/* gp_session_id */
-	if (gpqeid_next_param(&cp, &np))
-		SetConfigOption("gp_session_id", cp, PGC_POSTMASTER, PGC_S_OVERRIDE);
-
-	/* PgStartTime */
-	if (gpqeid_next_param(&cp, &np))
-	{
-#ifdef HAVE_INT64_TIMESTAMP
-		if (!scanint8(cp, true, &PgStartTime))
-			goto bad;
-#else
-		PgStartTime = strtod(cp, NULL);
-#endif
-	}
-	Assert(gp_is_callback);
-
-	/* Too few items, or too many? */
-	if (!cp || np)
-		goto bad;
-
-	if (gp_session_id <= 0 || PgStartTime <= 0)
-		goto bad;
-
-	pfree(gpqdid);
-	return;
-
-bad:
-	elog(FATAL, "Master callback dispatched with invalid option: 'gpqdid=%s'", gpqdid_value);
-} /* cdbgang_parse_gpqdid_params */
 
 /*
  * This is where we keep track of all the gangs that exist for this session.

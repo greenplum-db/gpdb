@@ -158,29 +158,6 @@ extern char * qdHostname;
 /* The Postmaster listener port for the QD.  This variable is 0 for the QD itself.*/
 extern int qdPostmasterPort;
 
-
-/* Parameter gp_qd_callback_info
- *
- * This is the port of the QD, sent down to the QEs
- */
-
-extern char * gp_qd_callback_info;
-extern bool gp_use_snapshop_during_callback;
-
-/*
- * Allow callback query?
- */
-extern bool gp_enable_functions;
-/*
- * Are we executing a callback query?
- */
-extern bool gp_is_callback;
-
-/*
- * Use query dispatch agents?
- */
-extern bool gp_use_dispatch_agent;
-
 /*How many gangs to keep around from stmt to stmt.*/
 extern int			gp_cached_gang_threshold;
 
@@ -432,7 +409,6 @@ extern char *gp_fault_action_string;	/* Use by guc.c as user defined fault
 										 * action */
 extern bool gp_set_read_only;
 
-extern bool assign_gp_use_dispatch_agent(bool newval, bool doit, GucSource source);
 extern const char *role_to_string(GpRoleValue role);
 
 extern int	gp_segment_connect_timeout; /* GUC var - timeout specifier for gang creation */

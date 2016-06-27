@@ -317,8 +317,6 @@ struct pg_conn
 
 
     char       *gpqeid;        /* MPP: session id & startup info for qExec */
-    char       *gpqdid;        /* MPP: session id & startup info for QD callback */
-    char       *gpdaid;        /* MPP: session id & startup info for QDA relay */
 
 	/* Optional file to write trace info to */
 	FILE	   *Pfdebug;

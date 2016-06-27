@@ -122,10 +122,6 @@ extern int gp_pthread_create(pthread_t *thread, void *(*start_routine)(void *), 
  */
 extern void cdbgang_parse_gpqeid_params(struct Port *port, const char *gpqeid_value);
 
-extern void cdbgang_parse_gpqdid_params(struct Port *port, const char *gpqdid_value);
-
-extern void cdbgang_parse_gpdaid_params(struct Port *port, const char *gpdaid_value);
-
 /*
  * MPP Worker Process information
  *
@@ -137,7 +133,6 @@ extern void cdbgang_parse_gpdaid_params(struct Port *port, const char *gpdaid_va
  */
 typedef struct CdbProcess
 {
-
 	NodeTag type;
 
 	/*

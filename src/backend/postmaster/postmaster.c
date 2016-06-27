@@ -2637,8 +2637,6 @@ ProcessStartupPacket(Port *port, bool SSLdone)
 	ProtocolVersion proto;
 	MemoryContext oldcontext;
     char       *gpqeid = NULL;
-    char       *gpqdid = NULL;
-    char       *gpdaid = NULL;
 
 	if (pq_getbytes((char *) &len, 4) == EOF)
 	{
@@ -2822,10 +2820,6 @@ retry1:
 				/* ignore for compatibility with libpq >= 8.5 */ ;
 			else if (strcmp(nameptr, "gpqeid") == 0)
 				gpqeid = valptr;
-			else if (strcmp(nameptr, "gpqdid") == 0)
-				gpqdid = valptr;
-			else if (strcmp(nameptr, "gpdaid") == 0)
-				gpdaid = valptr;
 			else if (strcmp(nameptr, "replication") == 0)
 			{
 				if (!parse_bool(valptr, &am_walsender))
@@ -2926,15 +2920,6 @@ retry1:
      */
     if (gpqeid)
         cdbgang_parse_gpqeid_params(port, gpqeid);
-    else if (gpqdid)
-    	cdbgang_parse_gpqdid_params(port, gpqdid);
-    else if (gpdaid)
-	{
-		ereport(FATAL,
-				(errcode(ERRCODE_CANNOT_CONNECT_NOW),
-				 errSendAlert(true),
-				 errmsg("GPAgent deprecated.")));
-	}
 
 	/*
 	 * Done putting stuff in TopMemoryContext.
