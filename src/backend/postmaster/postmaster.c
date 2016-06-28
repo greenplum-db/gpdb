@@ -4314,13 +4314,13 @@ static bool CommenceNormalOperations(void)
 	{
 		char version[512];
 
-		strcpy(version, PG_VERSION_STR " compiled on " __DATE__ " " __TIME__);
+		strlcpy(version, PG_VERSION_STR " compiled on " __DATE__ " " __TIME__,
+			sizeof(version));
 
 #ifdef USE_ASSERT_CHECKING
-		strcat(version, " (with assert checking)");
+		strlcat(version, " (with assert checking)", sizeof(version));
 #endif
 		ereport(LOG,(errmsg("%s", version)));
-
 
 		ereport(LOG,
 			 (errmsg("database system is ready to accept connections"),
