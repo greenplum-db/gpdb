@@ -84,8 +84,8 @@ def get_restore_tables_from_table_file(table_file):
 
     return get_lines_from_file(table_file)
 
-def get_incremental_restore_timestamps(context, full_timestamp):
-    inc_file = context.generate_filename("increments", timestamp=full_timestamp)
+def get_incremental_restore_timestamps(context):
+    inc_file = context.generate_filename("increments", timestamp=context.full_dump_timestamp)
     timestamps = get_lines_from_file(inc_file)
     sorted_timestamps = sorted(timestamps, key=lambda x: int(x), reverse=True)
     incremental_restore_timestamps = []
@@ -144,11 +144,11 @@ def create_restore_plan(context):
 
     table_set_from_metadata_file = [schema + '.' + table for schema, table in dump_tables]
 
-    full_timestamp = get_full_timestamp_for_incremental(context)
+    incremental_restore_timestamps = get_incremental_restore_timestamps(context)
 
-    incremental_restore_timestamps = get_incremental_restore_timestamps(context, full_timestamp)
-
-    plan_file_contents = create_plan_file_contents(context, table_set_from_metadata_file, incremental_restore_timestamps, full_timestamp)
+    plan_file_contents = create_plan_file_contents(context, table_set_from_metadata_file,
+                                                   incremental_restore_timestamps,
+                                                   full_timestamp=context.full_dump_timestamp)
 
     plan_file = context.generate_filename("plan")
 
@@ -259,8 +259,11 @@ def restore_config_files_with_nbu(context):
     gparray = GpArray.initFromCatalog(dbconn.DbURL(port=context.master_port), utility=True)
     segments = gparray.getSegmentList()
     for segment in segments:
-        seg_config_filename = context.generate_filename("segment_config", dbid=segment.get_primary_dbid(), directory=segment.getSegmentDataDirectory())
-        seg_host = segment.get_active_primary().getSegmentHostName()
+        seg = segment.get_active_primary()
+        seg_dump_dir = context.get_backup_dir(directory=seg.getSegmentDataDirectory())
+        seg_config_filename = context.generate_filename("segment_config", dbid=segment.get_primary_dbid(),
+                                                        directory=seg_dump_dir)
+        seg_host = seg.getSegmentHostName()
         restore_file_with_nbu(context, path=seg_config_filename, hostname=seg_host)
 
 def _build_gpdbrestore_cmd_line(context, ts, table_file):
@@ -322,7 +325,7 @@ def truncate_restore_tables(context):
                 qry = 'Truncate %s' % t
                 execSQL(conn, qry)
             except Exception as e:
-                raise Exception("Could not truncate table %s.%s: %s" % (dbname, t, str(e).replace('\n', '')))
+                raise Exception("Could not truncate table %s.%s: %s" % (context.restore_db, t, str(e).replace('\n', '')))
 
         conn.commit()
     except Exception as e:
@@ -731,7 +734,7 @@ class RestoreDatabase(Operation):
     def backup_dir_is_writable(self):
         if self.context.backup_dir and not self.context.report_status_dir:
             try:
-                directory = context.get_backup_dir()
+                directory = self.context.get_backup_dir()
                 check_dir_writable(directory)
             except Exception as e:
                 logger.warning('Backup directory %s is not writable. Error %s' % (directory, str(e)))
@@ -992,39 +995,6 @@ def validate_tablenames_exist_in_dump_file(restore_tables, dumped_tables):
     if len(unmatched_table_names) > 0:
         raise Exception("Tables %s not found in backup" % unmatched_table_names)
 
-class ValidateRestoreTables(Operation):
-    def __init__(self, context):
-        self.context = context
-
-    def execute(self):
-        existing_tables = []
-        table_counts = []
-        conn = None
-        try:
-            dburl = dbconn.DbURL(port=self.context.master_port, dbname=self.context.restore_db)
-            conn = dbconn.connect(dburl)
-            for restore_table in self.self.context.restore_tables:
-                schema, table = split_fqn(restore_table)
-                count = execSQLForSingleton(conn, "select count(*) from pg_class, pg_namespace where pg_class.relname = '%s' and pg_class.relnamespace = pg_namespace.oid and pg_namespace.nspname = '%s'" % (table, schema))
-                if count == 0:
-                    logger.warn("Table %s does not exist in database %s, removing from list of tables to restore" % (table, self.context.restore_db))
-                    continue
-
-                count = execSQLForSingleton(conn, "select count(*) from %s.%s" % (schema, table))
-                if count > 0:
-                    logger.warn('Table %s has %d records %s' % (restore_table, count, WARN_MARK))
-                existing_tables.append(restore_table)
-                table_counts.append((restore_table, count))
-        finally:
-            if conn:
-                conn.close()
-
-        if len(existing_tables) == 0:
-            raise ExceptionNoStackTraceNeeded("Have no tables to restore")
-        logger.info("Have %d tables to restore, will continue" % len(existing_tables))
-
-        return (existing_tables, table_counts)
-
 class CopyPostData(Operation):
     ''' Copy _post_data when using fake timestamp.
         The same operation can be done with/without ddboost, because
@@ -1165,10 +1135,13 @@ class GetDDboostDumpTablesOperation(GetDumpTablesOperation):
         super(GetDDboostDumpTablesOperation, self).__init__(context)
 
     def execute(self):
-        ddboost_cmdStr = 'gpddboost --readFile --from-file=%s' % self.context.generate_filename("dump")
+        # We want to make sure that directory is empty so that we can grab the ddboost directory value
+        # with the timestamp
+        ddboost_parent_dir = self.context.get_backup_dir(directory='')
+        ddboost_cmdStr = 'gpddboost --readFile --from-file=%s' % self.context.generate_filename("dump", directory=ddboost_parent_dir)
 
-        if self.ddboost_storage_unit:
-            ddboost_cmdStr += ' --ddboost-storage-unit=%s' % self.ddboost_storage_unit
+        if self.context.ddboost_storage_unit:
+            ddboost_cmdStr += ' --ddboost-storage-unit=%s' % self.context.ddboost_storage_unit
 
         cmdStr = ddboost_cmdStr + self.gunzip_maybe + self.grep_cmdStr
         cmd = Command('DDBoost copy of master dump file', cmdStr)

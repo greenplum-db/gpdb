@@ -628,8 +628,8 @@ class BackupUtilsTestCase(unittest.TestCase):
 
     @patch('glob.glob', return_value=['/tmp/db_dumps/20130207/gp_dump_20130207093000_increments'])
     @patch('gppylib.operations.backup_utils.get_lines_from_file', return_value=['20130207133001', '20130207133000'])
-    def test_get_full_timestamp_for_incremental_default(self, mock1, mock2):
-        backup_dir = 'home'
+    @patch('os.path.exists', return_value = True)
+    def test_get_full_timestamp_for_incremental_default(self, mock1, mock2, mock3):
         self.context.timestamp = '20130207133000'
         full_ts = get_full_timestamp_for_incremental(self.context)
         self.assertEquals(full_ts, '20130207093000')
@@ -818,7 +818,8 @@ class BackupUtilsTestCase(unittest.TestCase):
 
     @patch('glob.glob', return_value=['/tmp/db_dumps/20130207/foo_gp_dump_20130207093000_increments'])
     @patch('gppylib.operations.backup_utils.get_lines_from_file', return_value=['20130207133001', '20130207133000'])
-    def test_get_full_timestamp_for_incremental_with_prefix_default(self, mock1, mock2):
+    @patch('os.path.exists', return_value = True)
+    def test_get_full_timestamp_for_incremental_with_prefix_default(self, mock1, mock2, mock3):
         self.context.backup_dir = 'home'
         self.context.dump_prefix = 'foo_'
         self.context.timestamp = '20130207133000'
@@ -943,7 +944,7 @@ class BackupUtilsTestCase(unittest.TestCase):
     def test_restore_file_with_nbu_with_segment_and_big_block_size(self, mock1):
         segment_hostname = "sdw"
         self.context.netbackup_block_size = 2048
-        
+
         restore_file_with_nbu(self.context, path=self.netbackup_filepath, hostname=segment_hostname)
 
     @patch('gppylib.operations.backup_utils.Command.run')

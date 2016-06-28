@@ -226,9 +226,13 @@ class GpdbRestore(Operation):
             raise Exception('--list-backup is not supported for restore with full timestamps')
 
         if is_incremental_restore(self.context) and not self.context.no_plan:
+
+            self.context.full_dump_timestamp = get_full_timestamp_for_incremental(self.context)
             if self.context.netbackup_service_host:
-                restore_file_with_nbu(self.context, "partition_list")
-                restore_file_with_nbu(self.context, "increments")
+                restore_file_with_nbu(self.context, filetype="partition_list")
+                restore_file_with_nbu(self.context, filetype="increments",
+                                      timestamp=self.context.full_dump_timestamp)
+
             plan_file = create_restore_plan(self.context)
 
             if self.context.list_backup and self.context.timestamp:
@@ -419,7 +423,7 @@ class GpdbRestore(Operation):
             temp = match[len(prefix):]
             self.context.timestamp = temp[0:14]
         self.context.restore_db = GetDbName(self.context.generate_filename("cdatabase")).run()
-        compressed_file = self.context.generate_filename("metadata")
+        compressed_file = self.context.generate_filename("postdata")
         self.context.compress = CheckFile(compressed_file).run()
 
     def _validate_db_host_path(self):
@@ -482,7 +486,7 @@ class GpdbRestore(Operation):
         self.context.timestamp = str(max(timestamps))
         logger.info("Identified latest dump timestamp for %s as %s" %  (self.search_for_dbname, self.context.timestamp))
         self.context.restore_db = self.search_for_dbname
-        compressed_file = self.context.generate_filename("cdatabase")
+        compressed_file = self.context.generate_filename("postdata")
         self.context.compress = CheckFile(compressed_file).run()
 
     def _select_multi_file(self, dates_and_times):

@@ -8,7 +8,7 @@ import sys
 import unittest2 as unittest
 import tempfile, os, shutil
 from gppylib.commands.base import CommandResult, Command, ExecutionError
-from gppylib.operations.backup_utils import * 
+from gppylib.operations.backup_utils import *
 from gppylib.operations.restore import *
 from gppylib.operations.restore import _build_gpdbrestore_cmd_line
 from gppylib.mainUtils import ExceptionNoStackTraceNeeded
@@ -26,7 +26,7 @@ class RestoreTestCase(unittest.TestCase):
         context.no_analyze = True
         context.drop_db = True
         context.master_port = 5432
-        
+
         self.context = context
         self.restore = RestoreDatabase(self.context)
         self.validate_timestamp = ValidateTimestamp(self.context)
@@ -78,11 +78,11 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
         self.restore._multitry_createdb()
 
     @patch('gppylib.operations.restore.get_partition_list', return_value=[('public', 't1'), ('public', 't2'), ('public', 't3')])
-    @patch('gppylib.operations.restore.get_full_timestamp_for_incremental', return_value='20160101000000')
     @patch('gppylib.operations.restore.get_incremental_restore_timestamps', return_value=['20160101010101', '20160101010111'])
     @patch('gppylib.operations.restore.get_dirty_table_file_contents', return_value=['public.t1', 'public.t2'])
-    def test_create_restore_plan_default(self, mock1, mock2, mock3, mock4):
+    def test_create_restore_plan_default(self, mock1, mock2, mock3):
         expected = ["20160101010111:", "20160101010101:public.t1,public.t2", "20160101000000:public.t3"]
+        self.context.full_dump_timestamp = '20160101000000'
         m = mock_open()
         with patch('__builtin__.open', m, create=True):
             plan_file = create_restore_plan(self.context)
@@ -91,11 +91,11 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
             for i in range(len(expected)):
                 self.assertEqual(call(expected[i]+'\n'), result.write.call_args_list[i])
 
-    @patch('gppylib.operations.restore.get_full_timestamp_for_incremental', return_value='20160101000000')
     @patch('gppylib.operations.restore.get_incremental_restore_timestamps', return_value=['20160101010101', '20160101010111'])
     @patch('gppylib.operations.restore.get_dirty_table_file_contents', return_value=['public.t1', 'public.t2'])
-    def test_create_restore_plan_empty_list(self, mock1, mock2, mock3):
+    def test_create_restore_plan_empty_list(self, mock1, mock2):
         expected = ["20160101010111:", "20160101010101:", "20160101000000:"]
+        self.context.full_dump_timestamp = '20160101000000'
         m = mock_open()
         with patch('__builtin__.open', m, create=True):
             plan_file = create_restore_plan(self.context)
@@ -103,13 +103,6 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
             self.assertEqual(len(expected), len(result.write.call_args_list))
             for i in range(len(expected)):
                 self.assertEqual(call(expected[i]+'\n'), result.write.call_args_list[i])
-
-    @patch('gppylib.operations.restore.get_partition_list', return_value=[])
-    @patch('gppylib.operations.restore.get_timestamp_from_increments_filename', return_value=None)
-    def test_create_restore_plan_no_full_dump(self, mock1, mock2):
-        with patch('__builtin__.open', mock_open(), create=True):
-            with self.assertRaisesRegexp(Exception, 'Could not locate full backup associated with timestamp'):
-                create_restore_plan(self.context)
 
     @patch('gppylib.operations.restore.get_partition_list', return_value=[])
     @patch('gppylib.operations.restore.get_full_timestamp_for_incremental', return_value='20120101000000')
@@ -125,34 +118,25 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
             result = m()
             self.assertEqual(len(result.write.call_args_list), 0)
 
-    @patch('gppylib.operations.restore.get_partition_list', return_value=[])
-    @patch('gppylib.operations.backup_utils.get_full_timestamp_for_incremental_with_nbu', return_value=None)
-    def test_create_restore_plan_no_full_dump_with_nbu(self, mock1, mock2):
-        self.context.netbackup_service_host = 'mdw'
-        self.context.netbackup_block_size = '1024'
-        with patch('__builtin__.open', mock_open(), create=True):
-            with self.assertRaisesRegexp(Exception, 'Could not locate full backup associated with timestamp'):
-                create_restore_plan(self.context)
-
     @patch('gppylib.operations.restore.get_lines_from_file', return_value=['20160101010110', '20160101010109', '20160101010108', '20160101010107', '20160101010106', '20160101010105', '20160101010104', '20160101010103', '20160101010102', '20160101010101'])
     def test_get_incremental_restore_timestamps_midway(self, mock):
-        latest_full_timestamp = '20160101010101'
+        self.context.full_dump_timestamp = '20160101010101'
         self.context.timestamp = '20160101010105'
-        increments = get_incremental_restore_timestamps(self.context, latest_full_timestamp)
+        increments = get_incremental_restore_timestamps(self.context)
         self.assertEqual(increments, ['20160101010105', '20160101010104', '20160101010103', '20160101010102', '20160101010101'])
 
     @patch('gppylib.operations.restore.get_lines_from_file', return_value=['20160101010110', '20160101010109', '20160101010108', '20160101010107', '20160101010106', '20160101010105', '20160101010104', '20160101010103', '20160101010102', '20160101010101'])
     def test_get_incremental_restore_timestamps_latest(self, mock):
-        latest_full_timestamp = '20160101010101'
+        self.context.full_dump_timestamp = '20160101010101'
         self.context.timestamp = '20160101010110'
-        increments = get_incremental_restore_timestamps(self.context, latest_full_timestamp)
+        increments = get_incremental_restore_timestamps(self.context)
         self.assertEqual(increments, ['20160101010110', '20160101010109', '20160101010108', '20160101010107', '20160101010106', '20160101010105', '20160101010104', '20160101010103', '20160101010102', '20160101010101'])
 
     @patch('gppylib.operations.restore.get_lines_from_file', return_value=[])
     def test_get_incremental_restore_timestamps_earliest(self, mock):
-        latest_full_timestamp = '20160101010101'
+        self.context.full_dump_timestamp = '20160101010101'
         self.context.timestamp = '20160101010100'
-        increments = get_incremental_restore_timestamps(self.context, latest_full_timestamp)
+        increments = get_incremental_restore_timestamps(self.context)
         self.assertEqual(increments, [])
 
     @patch('gppylib.operations.restore.get_lines_from_file', side_effect=[['public.t1'], ['public.t1', 'public.t2', 'public.t3'], ['public.t2', 'public.t4']])
@@ -295,7 +279,7 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
         full_restore_with_filter = False
         metadata_file = self.context.generate_filename("metadata")
         expected_output = 'gp_restore -i -h host -p 5432 -U user --gp-i --gp-k=20160101010101 --gp-l=p -s %s --gp-d=db_dumps/20160101 --gp-c -d "testdb"' % metadata_file
-        
+
         restore_line = self.restore.create_schema_only_restore_string(table_filter_file, full_restore_with_filter)
         self.assertEqual(restore_line, expected_output)
 
@@ -518,7 +502,7 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
     def test_build_gpdbrestore_cmd_line_backup_dir(self, mock1, mock2):
         ts = '20160101010101'
-        self.context.backup_dir = '/tmp' 
+        self.context.backup_dir = '/tmp'
         expected_output = 'gpdbrestore -t 20160101010101 --table-file foo -a -v --noplan --noanalyze --noaostats --no-validate-table-name -u /tmp'
         restore_line = _build_gpdbrestore_cmd_line(self.context, ts, 'foo')
         self.assertEqual(restore_line, expected_output)

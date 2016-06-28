@@ -34,12 +34,13 @@ class Context(Values, object):
         "ddboost_hosts": None, "ddboost_ping": True, "ddboost_remote": False, "ddboost_show_config": False, "ddboost_storage_unit": None, "ddboost_user": None,
         "ddboost_verify": False, "drop_db": False, "dump_config": False, "dump_databases": [], "dump_dir": "db_dumps", "dump_global": False, "dump_prefix": "",
         "dump_schema": "", "dump_stats": False, "encoding": None, "exclude_dump_schema": "", "exclude_dump_tables": "", "exclude_dump_tables_file": "",
-        "exclude_schema_file": "", "free_space_percent": None, "history": False, "include_dump_tables": "", "include_dump_tables_file": "", "include_email_file": "",
-        "include_schema_file": "", "incremental": False, "list_backup_files": False, "list_filter_tables": False, "local_dump_prefix": None, "masterDataDirectory": None,
+        "exclude_schema_file": "", "free_space_percent": None, "history": False, "include_dump_tables": "", "include_dump_tables_file": "",
+        "include_schema_file": "", "incremental": False, "list_filter_tables": False, "local_dump_prefix": None, "masterDataDirectory": None,
         "master_port": 0, "max_streams": None, "netbackup_block_size": None, "netbackup_keyword": None, "netbackup_policy": None, "netbackup_schedule": None,
         "netbackup_service_host": None, "metadata_only": False, "no_analyze": False, "no_ao_stats": False, "no_plan": False, "no_validate_table_name": False,
-        "output_options": [], "post_script": "", "redirected_restore_db": None, "replicate": False, "report_dir": "", "report_status_dir": "", "restore_db": None,
+        "output_options": [], "post_script": "", "redirected_restore_db": None, "report_dir": "", "report_status_dir": "", "restore_db": None,
         "restore_global": False, "restore_schemas": None, "restore_stats": None, "restore_tables": [], "timestamp": None, "timestamp_key": None,
+        "full_dump_timestamp": None,
     }
     def __init__(self, values=None):
         if values:
@@ -98,8 +99,10 @@ class Context(Values, object):
                 filename = filename % (0, dbid)
         return filename
 
-    def get_backup_dir(self, timestamp=None):
-        if self.backup_dir and not self.ddboost:
+    def get_backup_dir(self, timestamp=None, directory=None):
+        if directory is not None:
+            use_dir = directory
+        elif self.backup_dir and not self.ddboost:
             use_dir = self.backup_dir
         elif self.master_datadir:
             use_dir = self.master_datadir
@@ -288,7 +291,11 @@ def check_successful_dump(report_file_contents):
 def convert_report_filename_to_cdatabase_filename(context, report_file):
     (dirname, fname) = os.path.split(report_file)
     timestamp = fname[-18:-4]
-    return context.generate_filename("cdatabase", timestamp=timestamp)
+
+    ddboost_parent_dir = None
+    if context.ddboost:
+        ddboost_parent_dir = context.get_backup_dir(directory='')
+    return context.generate_filename("cdatabase", timestamp=timestamp, directory=ddboost_parent_dir)
 
 def get_lines_from_dd_file(filename, ddboost_storage_unit):
     cmdStr = 'gpddboost --readFile --from-file=%s' % filename
@@ -546,12 +553,19 @@ def get_full_timestamp_for_incremental(context):
         increments_files = glob.glob(pattern)
 
         for increments_file in increments_files:
-            increment_ts = get_lines_from_file(increments_file)
+            if os.path.exists(increments_file):
+                increment_ts = get_lines_from_file(increments_file)
+            else:
+                continue
+
             if context.timestamp in increment_ts:
                 full_timestamp = get_timestamp_from_increments_filename(increments_file, context.dump_prefix)
                 break
+
     if not full_timestamp:
-        raise Exception("Could not locate full backup associated with timestamp '%s'. Either increments file or full backup is missing." % context.timestamp)
+        raise Exception("Could not locate full backup associated with timestamp '%s'. "
+                        "Either increments file or full backup is missing.\n"
+                        % (context.timestamp))
 
     return full_timestamp
 
@@ -674,6 +688,7 @@ def restore_file_with_nbu(context, filetype=None, path=None, dbid=1, hostname=No
         raise Exception("Cannot supply both a file type and a file path to restore_file_with_nbu")
     if filetype is None and path is None:
         raise Exception("Cannot call restore_file_with_nbu with no type or path argument")
+
     if timestamp is None:
         timestamp = context.timestamp
     if filetype:
@@ -681,6 +696,7 @@ def restore_file_with_nbu(context, filetype=None, path=None, dbid=1, hostname=No
     command_string = "gp_bsa_restore_agent --netbackup-service-host %s" % context.netbackup_service_host
     if context.netbackup_block_size is not None:
         command_string += " --netbackup-block-size %s" % context.netbackup_block_size
+
     command_string += " --netbackup-filename %s > %s" % (path, path)
     logger.debug("Command string inside restore_%s_file_with_nbu: %s\n", filetype, command_string)
     if hostname is None:
@@ -694,7 +710,7 @@ def check_file_dumped_with_nbu(context, filetype=None, path=None, dbid=1, hostna
     if filetype is None and path is None:
         raise Exception("Cannot call check_file_dumped_with_nbu with no type or path argument")
     if filetype:
-        path = context.generate_filename(filetype, dbid=dbid, timestamp=timestamp)
+        path = context.generate_filename(filetype, dbid=dbid)
     command_string = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (context.netbackup_service_host, path)
     logger.debug("Command string inside 'check_file_dumped_with_nbu': %s\n", command_string)
     if hostname is None:
@@ -716,7 +732,7 @@ def get_full_timestamp_for_incremental_with_nbu(context):
 
     cmd = Command("Query NetBackup server to get the list of increments files backed up", get_inc_files_cmd)
     cmd.run(validateAfter=True)
-    files_list = cmd.get_results().stdout.split('\n')
+    files_list = cmd.get_results().stdout.strip().split('\n')
 
     for line in files_list:
         fname = line.strip()
@@ -737,7 +753,7 @@ def get_latest_full_ts_with_nbu(context):
 
     cmd = Command("Query NetBackup server to get the list of report files backed up", get_rpt_files_cmd)
     cmd.run(validateAfter=True)
-    files_list = cmd.get_results().stdout.split('\n')
+    files_list = cmd.get_results().stdout.strip().split('\n')
 
     for line in files_list:
         fname = line.strip()
@@ -747,8 +763,8 @@ def get_latest_full_ts_with_nbu(context):
             continue
         if ("No object matched the specified predicate" in fname) or ("No objects of the format" in fname):
             return None
-        restore_file_with_nbu(context, fname)
-        timestamp = get_full_ts_from_report_file(context, fname)
+        restore_file_with_nbu(context, path=fname)
+        timestamp = get_full_ts_from_report_file(context, report_file=fname)
         logger.debug('Timestamp = %s' % timestamp)
         if timestamp is not None:
             return timestamp

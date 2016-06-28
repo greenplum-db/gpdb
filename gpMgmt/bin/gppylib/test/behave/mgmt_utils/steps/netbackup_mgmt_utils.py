@@ -215,7 +215,7 @@ def impl(context, filetype):
             backup_utils.master_datadir = seg.getSegmentDataDirectory()
             seg_config_filename = backup_utils.generate_filename('segment_config', dbid=seg.getSegmentDbId())
             seg_host = seg.getSegmentHostName()
-            cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (backup_utils.netbackup_service_host, seg_config_filename) 
+            cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (backup_utils.netbackup_service_host, seg_config_filename)
             cmd = Command("Querying NetBackup server for segment config file", cmd_str, ctxt=REMOTE, remoteHost=seg_host)
             cmd.run(validateAfter=True)
             if cmd.get_results().stdout.strip() != seg_config_filename:
@@ -297,7 +297,6 @@ def impl(context, filetype, prefix, subdir):
         prefix = prefix + '_'
 
     if filetype == 'report':
-        #use_dir = get_backup_directory(master_data_dir, subdir, 'db_dumps', backup_timestamp)
         filename =  "%s/%sgp_dump_%s.rpt" % (dump_dir, prefix, backup_timestamp)
         cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (netbackup_service_host, filename)
         cmd = Command("Querying NetBackup server for report file", cmd_str)
@@ -314,9 +313,8 @@ def impl(context, filetype, prefix, subdir):
             raise Exception('Global file %s was not backup up to NetBackup server %s successfully' % (filename, netbackup_service_host))
 
     elif filetype == 'config':
-        use_dir = get_backup_directory(master_data_dir, subdir, 'db_dumps', backup_timestamp)
         master_config_filename = os.path.join(dump_dir, "%sgp_master_config_files_%s.tar" % (prefix, backup_timestamp))
-        cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (netbackup_service_host, master_config_filename) 
+        cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (netbackup_service_host, master_config_filename)
         cmd = Command("Querying NetBackup server for master config file", cmd_str)
         cmd.run(validateAfter=True)
         if cmd.get_results().stdout.strip() != master_config_filename:
@@ -326,10 +324,11 @@ def impl(context, filetype, prefix, subdir):
         gparray = GpArray.initFromCatalog(dbconn.DbURL(port = master_port), utility=True)
         segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary(current_role=True)]
         for seg in segs:
-            use_dir = get_backup_directory(seg.getSegmentDataDirectory(), subdir, 'db_dumps', backup_timestamp)
-            seg_config_filename = os.path.join(use_dir, "%sgp_segment_config_files_0_%d_%s.tar" % (prefix, seg.getSegmentDbId(), backup_timestamp))
+            seg_dir = seg.getSegmentDataDirectory()
+            dump_dir = os.path.join(seg_dir, 'db_dumps', '%s' % (backup_timestamp[0:8]))
+            seg_config_filename = os.path.join(dump_dir, "%sgp_segment_config_files_0_%d_%s.tar" % (prefix, seg.getSegmentDbId(), backup_timestamp))
             seg_host = seg.getSegmentHostName()
-            cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (netbackup_service_host, seg_config_filename) 
+            cmd_str = "gp_bsa_query_agent --netbackup-service-host %s --netbackup-filename %s" % (netbackup_service_host, seg_config_filename)
             cmd = Command("Querying NetBackup server for segment config file", cmd_str, ctxt=REMOTE, remoteHost=seg_host)
             cmd.run(validateAfter=True)
             if cmd.get_results().stdout.strip() != seg_config_filename:
