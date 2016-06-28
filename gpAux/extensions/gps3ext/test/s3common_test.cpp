@@ -224,6 +224,6 @@ TEST(Common, EncodeQuery) {
         "%24%20&%20%3C%20%3E%20%3F%20%3B%20%23%20%3A%20=%20%2C%20%22%20%27%"
         "20~%20%2B%20%25-_";
 
-    EXPECT_STREQ(dst1.c_str(), encode_query_str(src1).c_str());
-    EXPECT_STREQ(dst2.c_str(), encode_query_str(src2).c_str());
+    EXPECT_EQ(dst1.c_str(), encode_query_str(src1));
+    EXPECT_EQ(dst2.c_str(), encode_query_str(src2));
 }
