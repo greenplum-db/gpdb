@@ -253,7 +253,11 @@ char	   *bonjour_name;
 
 static PrimaryMirrorMode gInitialMode = PMModeMirrorlessSegment;
 
-/* PIDs of special child processes; 0 when not running */
+/*
+ * PIDs of special child processes; 0 when not running. When adding a new PID
+ * to the list, remember to add the process title to GetServerProcessTitle()
+ * as well.
+ */
 static pid_t StartupPID = 0,
 			StartupPass2PID = 0,
 			StartupPass3PID = 0,
@@ -539,7 +543,7 @@ static void do_reaper(void);
 static void do_immediate_shutdown_reaper(void);
 static bool ServiceProcessesExist(int excludeFlags);
 static bool StopServices(int excludeFlags, int signal);
-static char *GetServerProcessTitle(int pid);
+static const char *GetServerProcessTitle(int pid);
 static void sigusr1_handler(SIGNAL_ARGS);
 static void dummy_handler(SIGNAL_ARGS);
 static void CleanupBackend(int pid, int exitstatus);
@@ -1988,7 +1992,7 @@ static void SimExProcExit()
 			if (subclass == SimExESSubClass_ProcKill_BgWriter)
 			{
 				pid = BgWriterPID;
-				procName = "writer process";
+				procname = GetServerProcessTitle(pid);
 			}
 			else
 			{
@@ -4374,7 +4378,7 @@ static void do_reaper()
 
 		if (Debug_print_server_processes)
 		{
-			char *procName;
+			const char *procName;
 
 			procName = GetServerProcessTitle(pid);
 			if (procName != NULL)
@@ -5153,12 +5157,12 @@ StopServices(int excludeFlags, int signal)
 	return signaled;
 }
 
-static char *
+static const char *
 GetServerProcessTitle(int pid)
 {
 	int s;
 
-	for (s=0; s < MaxPMSubType; s++)
+	for (s = 0; s < MaxPMSubType; s++)
 	{
 		PMSubProc *subProc = &PMSubProcList[s];
 		if (subProc->pid == pid)
@@ -5169,31 +5173,31 @@ GetServerProcessTitle(int pid)
 		return "background writer process";
 	if (pid == CheckpointPID)
 		return "checkpoint process";
-	else if (pid == WalWriterPID)
+	if (pid == WalWriterPID)
 		return "walwriter process";
-	else if (pid == WalReceiverPID)
+	if (pid == WalReceiverPID)
 		return "walreceiver process";
-	else if (pid == AutoVacPID)
+	if (pid == AutoVacPID)
 		return "autovacuum process";
-	else if (pid == PgStatPID)
+	if (pid == PgStatPID)
 		return "statistics collector process";
-	else if (pid == PgArchPID)
+	if (pid == PgArchPID)
 		return "archiver process";
-	else if (pid == SysLoggerPID)
+	if (pid == SysLoggerPID)
 		return "system logger process";
-	else if (pid == StartupPID)
+	if (pid == StartupPID)
 		return "startup process";
-    else if (pid == StartupPass2PID)
-        return "startup pass 2 process";
-    else if (pid == StartupPass3PID)
-        return "startup pass 3 process";
-    else if (pid == StartupPass4PID)
-        return "startup pass 4 process";
-	else if (pid == PostmasterPid)
+	if (pid == StartupPass2PID)
+		return "startup pass 2 process";
+	if (pid == StartupPass3PID)
+		return "startup pass 3 process";
+	if (pid == StartupPass4PID)
+		return "startup pass 4 process";
+	if (pid == PostmasterPid)
 		return "postmaster process";
-    else if (pid == FilerepPID )
-        return "filerep process";
-	else if (pid == FilerepPeerResetPID)
+	if (pid == FilerepPID )
+		return "filerep process";
+	if (pid == FilerepPeerResetPID)
 		return "filerep peer reset process";
 
 	return NULL;
@@ -6241,7 +6245,7 @@ signal_child(pid_t pid, int signal)
 
 	if (Debug_print_server_processes)
 	{
-		char *procName;
+		const char *procName;
 
 		procName = GetServerProcessTitle(pid);
 		if (procName != NULL)
