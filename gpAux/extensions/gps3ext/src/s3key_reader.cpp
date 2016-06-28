@@ -1,5 +1,6 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
+#include <string.h>
 
 #include "s3common.h"
 #include "s3interface.h"

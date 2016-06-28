@@ -1,12 +1,6 @@
 #include "s3common_reader.h"
 #include "s3macros.h"
 
-S3CommonReader::S3CommonReader() {
-}
-
-S3CommonReader::~S3CommonReader() {
-}
-
 void S3CommonReader::open(const ReaderParams &params) {
     this->keyReader.setS3interface(s3service);
     S3CompressionType compressionType =

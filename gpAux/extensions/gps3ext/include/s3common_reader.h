@@ -6,8 +6,11 @@
 
 class S3CommonReader : public Reader {
    public:
-    S3CommonReader();
-    virtual ~S3CommonReader();
+    S3CommonReader() {
+    }
+
+    virtual ~S3CommonReader() {
+    }
 
     virtual void open(const ReaderParams& params);
 

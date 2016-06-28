@@ -29,13 +29,17 @@ class DecompressReader : public Reader {
    private:
     void decompress();
 
+    uint64_t getDecompressedBytesNum() {
+        return S3_ZIP_CHUNKSIZE - this->zstream.avail_out;
+    }
+
     Reader *reader;
 
     // zlib related variables.
     z_stream zstream;
-    char *in;       // Input buffer for decompression.
-    char *out;      // Output buffer for decompression.
-    int outOffset;  // Next position to read in out buffer.
+    char *in;            // Input buffer for decompression.
+    char *out;           // Output buffer for decompression.
+    uint64_t outOffset;  // Next position to read in out buffer.
 };
 
 #endif /* INCLUDE_DECOMPRESS_READER_H_ */
