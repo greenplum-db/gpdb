@@ -9237,7 +9237,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 								{
 									int ia = 0;
 
-									if (cdbRelSize(rel) != 0)
+									if (cdbRelMaxSegSize(rel) != 0)
 									{
 										for (ia = 0; ia < policy->nattrs; ia++)
 										{
@@ -9287,7 +9287,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 						{
 							int ia = 0;
 
-							if (cdbRelSize(rel) != 0)
+							if (cdbRelMaxSegSize(rel) != 0)
 							{
 								for (ia = 0; ia < policy->nattrs; ia++)
 								{
@@ -9425,7 +9425,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 									"a partitioning key")));
 			}
 
-			if (cdbRelSize(rel) != 0)
+			if (cdbRelMaxSegSize(rel) != 0)
 			{
 				for (ia = 0; ia < policy->nattrs; ia++)
 				{

@@ -17,7 +17,6 @@ _init_cdbdisp_dispatchPlan(QueryDesc *queryDesc)
 	queryDesc->operation = CMD_NOTHING;
 	queryDesc->plannedstmt = (PlannedStmt *)palloc0(sizeof(PlannedStmt));
 
-	will_be_called(clear_relsize_cache);
 	expect_any(RootSliceIndex, estate);
 	will_return(RootSliceIndex,0);
 }

@@ -61,7 +61,6 @@
 #include "cdb/cdbhash.h"
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbsreh.h"
-#include "cdb/cdbrelsize.h"
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvarblock.h"
 #include "cdb/cdbbufferedappend.h"

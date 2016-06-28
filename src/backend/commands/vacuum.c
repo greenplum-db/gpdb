@@ -49,7 +49,6 @@
 #include "cdb/cdbpartition.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbsrlz.h"
-#include "cdb/cdbrelsize.h"
 #include "cdb/cdbdispatchresult.h"      /* CdbDispatchResults */
 #include "cdb/cdbfilerepprimary.h"
 #include "cdb/cdbpersistentfilesysobj.h"
@@ -381,9 +380,6 @@ vacuum(VacuumStmt *vacstmt, List *relids,
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 		elevel = DEBUG2; /* vacuum messages aren't interesting from the QD */
-
-	if (Gp_role == GP_ROLE_DISPATCH)
-		clear_relsize_cache();
 
 	/*
 	 * We cannot run VACUUM inside a user transaction block; if we were inside
