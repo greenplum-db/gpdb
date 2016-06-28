@@ -125,8 +125,8 @@ static void disconnectAndDestroyGang(Gang *gp);
 static void disconnectAndDestroyAllReaderGangs(bool destroyAllocated);
 
 static bool isTargetPortal(const char *p1, const char *p2);
-static char *makeOptions(bool iswriter);
-static bool cleanupGang(Gang * gp);
+static char *makeOptions();
+static bool cleanupGang(Gang *gp);
 static void resetSessionForPrimaryGangLoss(void);
 static const char* gangTypeToString(GangType);
 static CdbComponentDatabaseInfo *copyCdbComponentDatabaseInfo(
@@ -931,7 +931,7 @@ static void addOneOption(StringInfo string, struct config_generic * guc)
  * Add GUCs to option string.
  */
 static char*
-makeOptions(bool iswriter)
+makeOptions()
 {
 	struct config_generic **gucs = get_guc_variables();
 	int ngucs = get_num_guc_variables();
@@ -942,7 +942,6 @@ makeOptions(bool iswriter)
 	initStringInfo(&string);
 
 	Assert (Gp_role == GP_ROLE_DISPATCH);
-	LOG_GANG_DEBUG(LOG, "makeOptions: iswriter %d", iswriter);
 
 	qdinfo = &cdb_component_dbs->entry_db_info[0];
 	appendStringInfo(&string, " -c gp_qd_hostname=%s", qdinfo->hostip);
@@ -1004,7 +1003,7 @@ static DoConnectParms* makeConnectParms(int parmsCount, GangType type, int gangI
 		MemSet(&pParms->thread, 0, sizeof(pthread_t));
 		pParms->db_count = 0;
 		pParms->type = type;
-		pParms->connectOptions = makeOptions(type == GANGTYPE_PRIMARY_WRITER);
+		pParms->connectOptions = makeOptions();
 		pParms->gangId = gangId;
 	}
 	return doConnectParmsAr;
