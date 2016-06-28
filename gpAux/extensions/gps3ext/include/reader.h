@@ -12,7 +12,8 @@ class Reader {
 
     // read() attempts to read up to count bytes into the buffer starting at
     // buffer.
-    // Return 0 if EOF. Throw exception if encounters errors.
+    // Always return 0 if EOF, no matter how many times it's invoked. Throw exception if encounters
+    // errors.
     virtual uint64_t read(char *buf, uint64_t count) = 0;
 
     // This should be reentrant, has no side effects when called multiple times.

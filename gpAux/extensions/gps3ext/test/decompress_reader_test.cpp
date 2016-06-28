@@ -114,15 +114,20 @@ TEST_F(DecompressReaderTest, AbleToDecompressSmallCompressedData) {
 }
 
 TEST_F(DecompressReaderTest, AbleToDecompressFragmentalCompressedData) {
+    // Fragmental data might not be decompressed, this case makes sure following data will be read
+    // to compose a decompressable unit.
+
     // compressed data to decompress
     const char hello[] = "The quick brown fox jumps over the lazy dog";
     setBufReaderByRawData(hello, sizeof(hello));
 
+    // set chunk size large enough to bypass gzip header.
     this->bufReader.setChunkSize(10);
 
     char buf[100];
     uint64_t offset = decompressReader.read(buf, sizeof(buf));
 
+    // set chunk size to 1 byte, which could not be decompressed by itself.
     this->bufReader.setChunkSize(1);
     while (offset < sizeof(hello)) {
         uint64_t count = decompressReader.read(buf + offset, sizeof(buf));
@@ -262,6 +267,7 @@ TEST_F(DecompressReaderTest, AbleToDecompressWithLargeReadBufferWithDecompressab
     char outputBuffer[30] = {0};
     int outOffset = 0;
 
+    // read and compose all chunks.
     while (outOffset < sizeof(hello)) {
         uint64_t count =
             decompressReader.read(outputBuffer + outOffset, sizeof(outputBuffer) - outOffset);

@@ -83,6 +83,8 @@ void DecompressReader::decompress() {
         this->zstream.next_out = (Byte *)this->out;
 
         // reader S3_ZIP_CHUNKSIZE data from underlying reader and put into this->in buffer.
+        // read() might happen more than one time when it's EOF, make sure every time read() will
+        // return 0.
         uint64_t hasRead = this->reader->read(this->in, S3_ZIP_CHUNKSIZE);
 
         // EOF, no more data to decompress.
