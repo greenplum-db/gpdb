@@ -6237,20 +6237,17 @@ signal_child(pid_t pid, int signal)
 	if (Debug_print_server_processes)
 	{
 		const char *procName;
+		const char *signalName;
 
 		procName = GetServerProcessTitle(pid);
-		if (procName != NULL)
-		{
-			const char *signalName;
+		signalName = signal_to_name(signal);
 
-			signalName = signal_to_name(signal);
-			if (signalName != NULL)
-				elog(LOG,"signal %s sent to '%s' pid %ld",
-				     signalName, procName, (long)pid);
-			else
-				elog(LOG,"signal %d sent to '%s' pid %ld",
-				     signal, procName, (long)pid);
-		}
+		if (signalName != NULL)
+			elog(LOG,"signal %s sent to '%s' pid %ld",
+			     signalName, (procName ? procName : "unknown"), (long)pid);
+		else
+			elog(LOG,"signal %d sent to '%s' pid %ld",
+			     signal, (procName ? procName : "unknown"), (long)pid);
 	}
 
 	if (kill(pid, signal) < 0)
