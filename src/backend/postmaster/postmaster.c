@@ -772,7 +772,7 @@ PostmasterGetMppLocalProcessCounter(void)
 static void
 signal_child_if_up(int pid, int signal)
 {
-	if ( pid != 0)
+	if (pid != 0)
 	{
 		signal_child(pid, signal);
 	}
@@ -1974,9 +1974,7 @@ checkIODataDirectory(void)
  */
 static void SimExProcExit()
 {
-	if (gp_simex_init &&
-	    gp_simex_run &&
-	    pmState == PM_RUN)
+	if (gp_simex_init && gp_simex_run && pmState == PM_RUN)
 	{
 		pid_t pid = 0;
 		int sig = 0;
@@ -4223,9 +4221,10 @@ do_immediate_shutdown_reaper(void)
 }
 
 /*
-* Startup succeeded, commence normal operations
-*/
-static bool CommenceNormalOperations(void)
+ * Startup succeeded, commence normal operations
+ */
+static bool
+CommenceNormalOperations(void)
 {
 	bool didServiceProcessWork = false;
 	int s;
@@ -4298,11 +4297,9 @@ static bool CommenceNormalOperations(void)
 		{
 			PMSubProc *subProc = &PMSubProcList[s];
 
-			if (subProc->pid == 0 &&
-				ServiceStartable(subProc))
+			if (subProc->pid == 0 && ServiceStartable(subProc))
 			{
-				subProc->pid =
-					(subProc->serverStart)();
+				subProc->pid = (subProc->serverStart)();
 
 				if (Debug_print_server_processes)
 				{
@@ -4356,7 +4353,8 @@ reaper(SIGNAL_ARGS)
     }
 }
 
-static void do_reaper()
+static void
+do_reaper()
 {
 	int			save_errno = errno;
 	int         s;
@@ -4367,8 +4365,7 @@ static void do_reaper()
 
 	need_call_reaper = 0;
 
-	ereport(DEBUG4,
-			(errmsg_internal("reaping dead processes")));
+	ereport(DEBUG4, (errmsg_internal("reaping dead processes")));
 
 	while (REAPER_LOOPTEST())
 	{
@@ -4431,8 +4428,7 @@ static void do_reaper()
 			if (!EXIT_STATUS_0(exitstatus))
 			{
 				RecoveryError = true;
-				HandleChildCrash(pid, exitstatus,
-								 _("startup process"));
+				HandleChildCrash(pid, exitstatus, _("startup process"));
 				continue;
 			}
 
@@ -4697,14 +4693,12 @@ static void do_reaper()
 		{
 			PMSubProc *subProc = &PMSubProcList[s];
 
-			if (subProc->pid != 0 &&
-				pid == subProc->pid)
+			if (subProc->pid != 0 && pid == subProc->pid)
 			{
 				subProc->pid = 0;
 
 				if (!EXIT_STATUS_0(exitstatus))
-					LogChildExit(LOG, subProc->procName,
-								 pid, exitstatus);
+					LogChildExit(LOG, subProc->procName, pid, exitstatus);
 
 				if (ServiceStartable(subProc))
 				{
@@ -4723,21 +4717,11 @@ static void do_reaper()
 						}
 
 						/*
-						 * MPP-7676, we can't restart during
-						 * do_reaper() since we may initiate a
-						 * postmaster reset (in which case we'll wind
-						 * up waiting for the restarted process to
-						 * die). Leave the startup to ServerLoop().
+						 * We can't restart during do_reaper() since we may
+						 * initiate a postmaster reset (in which case we'll
+						 * wind up waiting for the restarted process to die).
+						 * Leave the startup to ServerLoop(). (MPP-7676)
 						 */
-						/*
-						  subProc->pid =
-						  (subProc->serverStart)();
-						  if (Debug_print_server_processes)
-						  {
-						  elog(LOG,"restarted '%s' as pid %ld", subProc->procName, (long)subProc->pid);
-						  didServiceProcessWork = true;
-						  }
-						*/
 					}
 				}
 
@@ -4835,7 +4819,7 @@ static void do_reaper()
 				 * revive.  Because they are still connected to shared memory
 				 * and can change segment status etc in case mirror starts
 				 * the peer reset, we should tell them to die immediately
-				 * before runnig reset.  Since this is an immediate shutdown
+				 * before running reset.  Since this is an immediate shutdown
 				 * request, we don't have a way to wait for the completion.
 				 *
 				 * status 2 is not expected here as this is non-shutdown
@@ -4848,7 +4832,6 @@ static void do_reaper()
 									 _("filerep main process"));
 				}
 			}
-
 
             /* PostmasterStateMachine logic does the rest */
 			continue;
@@ -5437,16 +5420,17 @@ HandleChildCrash(int pid, int exitstatus, const char *procname)
             signal_child(FilerepPID, SIGSTOP);
         else
         {
-            /**
-             * For filerep, a graceful shutdown is performed.  This will have the
-             *     primary send a shutdown message to the mirror, so that mirror does
-             *     not enter fault from the reset.  Also, since filerep manages
-             *     its own subprocesses, we want filerep to exit only when
-             *     all its children are gone -- which is done using regular, not immediate,
-             *     shutdown
-             * Note that this is not ideal from a "don't touch shared memory during reset"
-             *     perspective.
-             */
+			/*
+			 * For filerep, a graceful shutdown is performed.  This will have the
+			 * primary send a shutdown message to the mirror, so that mirror does
+			 * not enter fault from the reset.  Also, since filerep manages it's
+			 * own subprocesses, we want filerep to exit only when all its
+			 * children are gone -- which is done using regular, not immediate,
+			 * shutdown
+			 *
+			 * Note that this is not ideal from a "don't touch shared memory
+			 * during reset" perspective.
+			 */
             signal_filerep_to_shutdown(SegmentStateImmediateShutdown);
         }
     }
@@ -5463,7 +5447,7 @@ HandleChildCrash(int pid, int exitstatus, const char *procname)
 		signal_child(WalWriterPID, (SendStop ? SIGSTOP : SIGQUIT));
 	}
 
-	/* Take care of walreceiver */
+	/* Take care of the walreceiver too */
 	if (pid == WalReceiverPID)
 		WalReceiverPID = 0;
 	else if (WalReceiverPID != 0 && !FatalError)
@@ -5649,14 +5633,15 @@ LogChildExit(int lev, const char *procname, int pid, int exitstatus)
  * POSTMASTER STATE MACHINE WAITING!
  */
 
-/**
+/*
  *  Check to see if PM_CHILD_STOP_WAIT_BACKENDS state is done
  */
-static PMState StateMachineCheck_WaitBackends(void)
+static PMState
+StateMachineCheck_WaitBackends(void)
 {
     bool moveToNextState = false;
 
-    Assert(pmState == PM_CHILD_STOP_WAIT_BACKENDS );
+    Assert(pmState == PM_CHILD_STOP_WAIT_BACKENDS);
 
     /*
      * If we are in a state-machine state that implies waiting for backends to
@@ -5682,8 +5667,11 @@ static PMState StateMachineCheck_WaitBackends(void)
             autovacShutdown &&
             isFilerepBackendsDoneShutdown)
         {
-            /* note: on fatal error, children are killed all at once by HandleChildCrash, so asserts are not valid */
-            if ( ! FatalError )
+            /*
+			 * Note: on fatal error, children are killed all at once by
+			 * HandleChildCrash, so asserts are not valid
+			 */
+            if (!FatalError)
             {
                 Assert(StartupPID == 0);
             }
@@ -5708,7 +5696,7 @@ static PMState StateMachineCheck_WaitBackends(void)
         }
         else
         {
-            if ( Debug_print_server_processes )
+            if (Debug_print_server_processes)
             {
                 elog(LOG, "Postmaster State Machine: waiting on backends, children %d, filerep backends %s, av %s",
                     childCount,
@@ -5870,7 +5858,8 @@ static PMState StateMachineCheck_WaitBgWriterCheckpointComplete(void)
 /**
  * Called to transition to PM_CHILD_STOP_WAIT_STARTUP_PROCESSES -- so tell any startup processes to complete
  */
-static void StateMachineTransition_ShutdownStartupProcesses(void)
+static void
+StateMachineTransition_ShutdownStartupProcesses(void)
 {
 	signal_child_if_up(StartupPID, SIGTERM);
 	signal_child_if_up(StartupPass2PID, SIGTERM);
@@ -5879,14 +5868,15 @@ static void StateMachineTransition_ShutdownStartupProcesses(void)
 	signal_child_if_up(WalReceiverPID, SIGTERM);
 }
 
-/**
+/*
  * Called to transition to PM_CHILD_STOP_WAIT_BACKENDS : waiting for all backends to finish
  */
-static void StateMachineTransition_ShutdownBackends(void)
+static void
+StateMachineTransition_ShutdownBackends(void)
 {
-    if ( Shutdown == FastShutdown )
+    if (Shutdown == FastShutdown)
     {
-        /* shut down all backend, including autovac workers */
+        /* shut down all backends, including autovac workers */
         SignalChildren(SIGTERM);
     }
     else
@@ -5902,13 +5892,13 @@ static void StateMachineTransition_ShutdownBackends(void)
 	signal_child_if_up(WalWriterPID, SIGTERM);
 
     signal_filerep_to_shutdown(SegmentStateShutdownFilerepBackends);
-
 }
 
 /**
  * Called to transition to PM_CHILD_STOP_WAIT_PREBGWRITER : waiting for pre-bgwriter processes to finish
  */
-static void StateMachineTransition_ShutdownPreBgWriter(void)
+static void
+StateMachineTransition_ShutdownPreBgWriter(void)
 {
     /* SIGUSR2, regardless of shutdown mode */
     StopServices(/* excludeFlags */ PMSUBPROC_FLAG_STOP_AFTER_BGWRITER, SIGUSR2 );
@@ -6084,8 +6074,9 @@ PostmasterStateMachine(void)
                 nextPmState = pmState;
                 break;
 
+            /* immediately move to next step and run its transition actions ... */
             case PM_CHILD_STOP_BEGIN:
-                nextPmState = pmState + 1; /* immediately move to next step and run its transition actions ... */
+                nextPmState = pmState + 1;
                 break;
 
             /* shutdown has been requested -- check to make sure startup processes are done */
