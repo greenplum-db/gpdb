@@ -549,6 +549,10 @@ SELECT user_relns() AS user_relns
  equipment_r
  f_star
  fast_emp4000
+ fkc_table1
+ fkc_table2
+ fkc_table3
+ fkc_table4
  float4_tbl
  float8_tbl
  floats
@@ -651,7 +655,7 @@ SELECT user_relns() AS user_relns
  toyemp
  usr_define_type
  varchar_tbl
-(147 rows)
+(151 rows)
 
 SELECT name(equipment(hobby_construct(text 'skywalking', text 'mer')));
  name 

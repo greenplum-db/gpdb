@@ -397,3 +397,26 @@ SELECT '' AS five, * FROM UNIQUE_TBL;
 (5 rows)
 
 DROP TABLE UNIQUE_TBL;
+--
+-- Test foreign key constraints
+--
+CREATE TABLE fkc_table1(a text, b text) WITH (APPENDONLY=TRUE) DISTRIBUTED BY (a);
+CREATE TABLE fkc_table2(a text, b text) DISTRIBUTED BY (a);
+ALTER TABLE fkc_table2 ADD CONSTRAINT fkc_table2_pkey PRIMARY KEY (a);
+NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "fkc_table2_pkey" for table "fkc_table2"
+ALTER TABLE fkc_table1 ADD CONSTRAINT fkc_table1_fkey FOREIGN KEY (a) REFERENCES fkc_table2 (a) ON DELETE NO ACTION ON UPDATE NO ACTION;
+INSERT INTO fkc_table2 VALUES ('foobar', 'barbar');
+INSERT INTO fkc_table1 VALUES ('foobar', 'barbar');
+UPDATE fkc_table1 SET b = 'asdf';
+CREATE TABLE fkc_table3(a text, b text) WITH (APPENDONLY=TRUE) DISTRIBUTED BY (b);
+CREATE TABLE fkc_table4(a text, b text) DISTRIBUTED BY (b);
+ALTER TABLE fkc_table4 ADD CONSTRAINT fkc_table2_pkey PRIMARY KEY (a);
+NOTICE:  updating distribution policy to match new primary key
+NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "fkc_table4_pkey" for table "fkc_table4"
+ALTER TABLE fkc_table3 ADD CONSTRAINT fkc_table1_fkey FOREIGN KEY (a) REFERENCES fkc_table2 (a) ON DELETE RESTRICT ON UPDATE RESTRICT;
+INSERT INTO fkc_table4 VALUES ('foobar', 'barbar');
+INSERT INTO fkc_table3 VALUES ('foobar', 'barbar');
+UPDATE fkc_table4 SET a = 'bar';
+INSERT INTO fkc_table3 VALUES ('asdf', 'fdsa');
+INSERT INTO fkc_table4 VALUES ('asdf', 'fdsa');
+DELETE FROM fkc_table4 WHERE a = 'asdf';
