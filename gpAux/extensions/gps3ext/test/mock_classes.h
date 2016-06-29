@@ -19,7 +19,7 @@ class MockS3Interface : public S3Interface {
                                    const string& prefix, const S3Credential& cred));
 
     MOCK_METHOD6(fetchData,
-                 uint64_t(uint64_t offset, char *data, uint64_t len, const string &sourceUrl,
+                 uint64_t(uint64_t offset, vector<uint8_t>& data, uint64_t len, const string &sourceUrl,
                           const string &region, const S3Credential &cred));
 
     MOCK_METHOD3(checkCompressionType, S3CompressionType(const string& keyUrl, const string& region,

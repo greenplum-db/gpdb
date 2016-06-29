@@ -137,7 +137,7 @@ class S3KeyReader : public Reader {
         return region;
     }
 
-   private:
+   protected:
     pthread_mutex_t mutexErrorMessage;
 
     bool sharedError;
@@ -164,8 +164,9 @@ class ChunkBuffer {
 
     ~ChunkBuffer();
 
-    // In C++98, if a class has reference member,
-    // then it can't be copy assigned by default, we need to implement operator= explicitly.
+    // if a class has reference member, then it can't be
+    // copy assigned by default, we need to implement operator= explicitly.
+    // it's needed for vector.
     ChunkBuffer& operator=(const ChunkBuffer& other);
 
     bool isEOF() {
@@ -183,9 +184,6 @@ class ChunkBuffer {
     void setS3interface(S3Interface* s3) {
         this->s3interface = s3;
     }
-
-    void init();
-    void destroy();
 
     pthread_cond_t* getStatCond() {
         return &statusCondVar;
@@ -213,7 +211,8 @@ class ChunkBuffer {
     uint64_t curFileOffset;
     uint64_t curChunkOffset;
     uint64_t chunkDataSize;
-    char* chunkData;
+
+    vector<uint8_t> chunkData;
     OffsetMgr& offsetMgr;
 
     S3Interface* s3interface;

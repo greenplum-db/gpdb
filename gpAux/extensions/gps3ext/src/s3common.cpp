@@ -62,13 +62,10 @@ void SignRequestV4(const string &method, HTTPHeaders *h, const string &orig_regi
     string query_encoded = encode_query_str(query);
     stringstream canonical_str;
 
-    canonical_str << method << "\n"
-                  << path << "\n"
-                  << query_encoded << "\nhost:" << h->Get(HOST)
+    canonical_str << method << "\n" << path << "\n" << query_encoded << "\nhost:" << h->Get(HOST)
                   << "\nx-amz-content-sha256:" << h->Get(X_AMZ_CONTENT_SHA256)
                   << "\nx-amz-date:" << h->Get(X_AMZ_DATE) << "\n\n"
-                  << "host;x-amz-content-sha256;x-amz-date\n"
-                  << h->Get(X_AMZ_CONTENT_SHA256);
+                  << "host;x-amz-content-sha256;x-amz-date\n" << h->Get(X_AMZ_CONTENT_SHA256);
     string signed_headers = "host;x-amz-content-sha256;x-amz-date";
 
     sha256_hex(canonical_str.str().c_str(), canonical_hex);
@@ -78,10 +75,8 @@ void SignRequestV4(const string &method, HTTPHeaders *h, const string &orig_regi
     find_replace(region, "external-1", "us-east-1");
 
     stringstream string2sign_str;
-    string2sign_str << "AWS4-HMAC-SHA256\n"
-                    << h->Get(X_AMZ_DATE) << "\n"
-                    << date_str << "/" << region << "/s3/aws4_request\n"
-                    << canonical_hex;
+    string2sign_str << "AWS4-HMAC-SHA256\n" << h->Get(X_AMZ_DATE) << "\n" << date_str << "/"
+                    << region << "/s3/aws4_request\n" << canonical_hex;
 
     stringstream kSecret;
     kSecret << "AWS4" << cred.secret;

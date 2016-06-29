@@ -34,6 +34,10 @@ class Response {
         return buffer;
     }
 
+    vector<uint8_t>&& moveDataBuffer() {
+        return std::move(buffer);
+    }
+
     const string& getMessage() const {
         return message;
     }

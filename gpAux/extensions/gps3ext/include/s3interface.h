@@ -60,8 +60,9 @@ class S3Interface {
         throw std::runtime_error("Default implementation must not be called.");
     }
 
-    virtual uint64_t fetchData(uint64_t offset, char* data, uint64_t len, const string& sourceUrl,
-                               const string& region, const S3Credential& cred) {
+    virtual uint64_t fetchData(uint64_t offset, vector<uint8_t>& data, uint64_t len,
+                               const string& sourceUrl, const string& region,
+                               const S3Credential& cred) {
         throw std::runtime_error("Default implementation must not be called.");
     }
 
@@ -78,8 +79,8 @@ class S3Service : public S3Interface {
     ListBucketResult* listBucket(const string& schema, const string& region, const string& bucket,
                                  const string& prefix, const S3Credential& cred);
 
-    uint64_t fetchData(uint64_t offset, char* data, uint64_t len, const string& sourceUrl,
-                       const string& region, const S3Credential& cred);
+    uint64_t fetchData(uint64_t offset, vector<uint8_t>& data, uint64_t len,
+                       const string& sourceUrl, const string& region, const S3Credential& cred);
 
     S3CompressionType checkCompressionType(const string& keyUrl, const string& region,
                                            const S3Credential& cred);
@@ -102,7 +103,7 @@ class S3Service : public S3Interface {
     HTTPHeaders composeHTTPHeaders(const string& url, const string& marker, const string& prefix,
                                    const string& region, const S3Credential& cred);
 
-    xmlParserCtxtPtr getXMLContext(Response response);
+    xmlParserCtxtPtr getXMLContext(Response& response);
 
     RESTfulService* service;
 };

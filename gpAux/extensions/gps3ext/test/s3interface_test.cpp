@@ -229,28 +229,25 @@ TEST_F(S3ServiceTest, fetchDataRoutine) {
 
     Response response(RESPONSE_OK, raw);
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
-    char buffer[100];
+
+    vector<uint8_t> buffer;
+
     uint64_t len = s3service->fetchData(
         0, buffer, 100, "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region,
         cred);
 
-    EXPECT_EQ(0, memcmp(buffer, raw.data(), 100));
+    EXPECT_EQ(buffer.size(), raw.size());
+    EXPECT_EQ(0, memcmp(buffer.data(), raw.data(), 100));
     EXPECT_EQ(100, len);
-}
-
-TEST_F(S3ServiceTest, fetchDataNULLBuffer) {
-    EXPECT_THROW(s3service->fetchData(
-                     0, NULL, 100, "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
-                     region, cred),
-                 std::runtime_error);
 }
 
 TEST_F(S3ServiceTest, fetchDataFailedResponse) {
     vector<uint8_t> raw;
     raw.resize(100);
     Response response(RESPONSE_FAIL, raw);
-    EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
-    char buffer[100];
+    EXPECT_CALL(mockRestfulService, get(_, _, _)).WillRepeatedly(Return(response));
+
+    vector<uint8_t> buffer;
 
     EXPECT_THROW(s3service->fetchData(
                      0, buffer, 100,
@@ -263,7 +260,7 @@ TEST_F(S3ServiceTest, fetchDataPartialResponse) {
     raw.resize(80);
     Response response(RESPONSE_OK, raw);
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
-    char buffer[100];
+    vector<uint8_t> buffer;
 
     EXPECT_EQ(0,
               s3service->fetchData(0, buffer, 100,
@@ -348,12 +345,12 @@ TEST_F(S3ServiceTest, fetchDataWithResponseError) {
         "</Error>";
     vector<uint8_t> raw(xml, xml + sizeof(xml) - 1);
     Response response(RESPONSE_ERROR, raw);
-    char buf[128] = {0};
+    vector<uint8_t> buffer;
 
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
 
     EXPECT_THROW(s3service->fetchData(
-                     0, buf, 128, "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
-                     region, cred),
+                     0, buffer, 128,
+                     "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region, cred),
                  std::runtime_error);
 }

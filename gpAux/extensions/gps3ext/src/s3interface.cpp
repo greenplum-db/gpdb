@@ -86,7 +86,7 @@ HTTPHeaders S3Service::composeHTTPHeaders(const string &url, const string &marke
     return header;
 }
 
-xmlParserCtxtPtr S3Service::getXMLContext(Response response) {
+xmlParserCtxtPtr S3Service::getXMLContext(Response &response) {
     xmlParserCtxtPtr xmlptr =
         xmlCreatePushParserCtxt(NULL, NULL, (const char *)(response.getRawData().data()),
                                 response.getRawData().size(), "resp.xml");
@@ -279,10 +279,9 @@ ListBucketResult *S3Service::listBucket(const string &schema, const string &regi
     return result;
 }
 
-uint64_t S3Service::fetchData(uint64_t offset, char *data, uint64_t len, const string &sourceUrl,
-                              const string &region, const S3Credential &cred) {
-    CHECK_OR_DIE(data != NULL);
-
+uint64_t S3Service::fetchData(uint64_t offset, vector<uint8_t> &data, uint64_t len,
+                              const string &sourceUrl, const string &region,
+                              const S3Credential &cred) {
     HTTPHeaders headers;
     map<string, string> params;
     UrlParser parser(sourceUrl.c_str());
@@ -297,14 +296,14 @@ uint64_t S3Service::fetchData(uint64_t offset, char *data, uint64_t len, const s
 
     Response resp = service->get(sourceUrl, headers, params);
     if (resp.getStatus() == RESPONSE_OK) {
-        vector<uint8_t> &responseData = resp.getRawData();
-        if (responseData.size() != len) {
+        // move response data buffer
+        data = resp.moveDataBuffer();
+        if (data.size() != len) {
             S3ERROR("%s", "Response is not fully received.");
             return 0;
         }
 
-        std::copy(responseData.begin(), responseData.end(), data);
-        return responseData.size();
+        return len;
     } else if (resp.getStatus() == RESPONSE_ERROR) {
         xmlParserCtxtPtr xmlContext = getXMLContext(resp);
         if (xmlContext != NULL) {

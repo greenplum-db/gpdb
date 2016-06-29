@@ -29,17 +29,19 @@ Range OffsetMgr::getNextOffset() {
 ChunkBuffer::ChunkBuffer(const string& url, S3KeyReader& reader)
     : sourceUrl(url), offsetMgr(reader.getOffsetMgr()), sharedKeyReader(reader) {
     s3interface = NULL;
-    chunkData = NULL;
     Range range = offsetMgr.getNextOffset();
     curFileOffset = range.offset;
     chunkDataSize = range.length;
     status = ReadyToFill;
     eof = false;
     curChunkOffset = 0;
+    pthread_mutex_init(&this->statusMutex, NULL);
+    pthread_cond_init(&this->statusCondVar, NULL);
 }
 
 ChunkBuffer::~ChunkBuffer() {
-    this->destroy();
+    pthread_mutex_destroy(&this->statusMutex);
+    pthread_cond_destroy(&this->statusCondVar);
 }
 
 ChunkBuffer& ChunkBuffer::operator=(const ChunkBuffer& other) {
@@ -51,28 +53,6 @@ ChunkBuffer& ChunkBuffer::operator=(const ChunkBuffer& other) {
     this->chunkDataSize = other.chunkDataSize;
 
     return *this;
-}
-
-// Copy constructor will copy members, but chunkData must not be initialized before copy.
-// otherwise when worked with vector it will be freed twice.
-void ChunkBuffer::init() {
-    CHECK_OR_DIE_MSG(chunkData == NULL, "%s", "Error: reinitializing chunkBuffer.");
-
-    chunkData = new char[offsetMgr.getChunkSize()];
-    CHECK_OR_DIE_MSG(chunkData != NULL, "%s", "Failed to allocate Buffer, no enough memory?");
-
-    pthread_mutex_init(&this->statusMutex, NULL);
-    pthread_cond_init(&this->statusCondVar, NULL);
-}
-
-void ChunkBuffer::destroy() {
-    if (this->chunkData != NULL) {
-        delete this->chunkData;
-        this->chunkData = NULL;
-
-        pthread_mutex_destroy(&this->statusMutex);
-        pthread_cond_destroy(&this->statusCondVar);
-    }
 }
 
 // ret < len means EMPTY
@@ -102,7 +82,7 @@ uint64_t ChunkBuffer::read(char* buf, uint64_t len) {
     uint64_t lenToRead = std::min(len, leftLen);
 
     if (lenToRead != 0) {
-        memcpy(buf, this->chunkData + this->curChunkOffset, lenToRead);
+        memcpy(buf, this->chunkData.data() + this->curChunkOffset, lenToRead);
     }
 
     if (len <= leftLen) {                   // [1]
@@ -111,6 +91,10 @@ uint64_t ChunkBuffer::read(char* buf, uint64_t len) {
         this->curChunkOffset = 0;
 
         if (!this->isEOF()) {
+            // Release chunkData memory to reduce consumption.
+            this->chunkData.clear();
+            this->chunkData.shrink_to_fit();
+
             this->status = ReadyToFill;
 
             Range range = this->offsetMgr.getNextOffset();
@@ -219,14 +203,13 @@ void S3KeyReader::open(const ReaderParams& params) {
 
     CHECK_OR_DIE_MSG(params.getChunkSize() > 0, "%s", "chunk size must be greater than zero");
 
+    this->chunkBuffers.reserve(this->numOfChunks);
+
     for (uint64_t i = 0; i < this->numOfChunks; i++) {
-        // when vector reallocate memory, it will copy object.
-        // chunkData must be initialized after all copy.
-        this->chunkBuffers.push_back(ChunkBuffer(params.getKeyUrl(), *this));
+        this->chunkBuffers.emplace_back(params.getKeyUrl(), *this);
     }
 
     for (uint64_t i = 0; i < this->numOfChunks; i++) {
-        this->chunkBuffers[i].init();
         this->chunkBuffers[i].setS3interface(this->s3interface);
 
         pthread_t thread;
