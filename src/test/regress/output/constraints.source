@@ -365,3 +365,37 @@ SELECT '' AS five, * FROM UNIQUE_TBL;
 (5 rows)
 
 DROP TABLE UNIQUE_TBL;
+--
+-- Test foreign key constraints
+--
+BEGIN;
+-- Test with two heap tables
+CREATE TABLE fkc_primary_table1(a int PRIMARY KEY, b text) DISTRIBUTED BY (a);
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "fkc_primary_table1_pkey" for table "fkc_primary_table1"
+CREATE TABLE fkc_foreign_table1(a int REFERENCES fkc_primary_table1 ON DELETE RESTRICT ON UPDATE RESTRICT, b text) DISTRIBUTED BY (a);
+-- the following should succeed
+INSERT INTO fkc_primary_table1 VALUES (1, 'bar');
+INSERT INTO fkc_primary_table1 VALUES (2, 'bar');
+INSERT INTO fkc_foreign_table1 VALUES (1, 'bar');
+UPDATE fkc_foreign_table1 SET b = 'foo';
+DELETE FROM fkc_primary_table1 WHERE a = 1;
+COMMIT;
+-- the following should fail with planner but succeed with gporca
+UPDATE fkc_primary_table1 SET a = 2;
+ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+BEGIN;
+-- Test with an ao table and heap table
+CREATE TABLE fkc_primary_table2(a int PRIMARY KEY, b text) DISTRIBUTED BY (a);
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "fkc_primary_table2_pkey" for table "fkc_primary_table2"
+CREATE TABLE fkc_foreign_table2(a int REFERENCES fkc_primary_table2 ON DELETE RESTRICT ON UPDATE RESTRICT,
+                                b text) WITH (APPENDONLY=TRUE) DISTRIBUTED BY (a);
+-- the following should succeed
+INSERT INTO fkc_primary_table2 VALUES (1, 'bar');
+INSERT INTO fkc_primary_table2 VALUES (2, 'bar');
+INSERT INTO fkc_foreign_table2 VALUES (1, 'bar');
+UPDATE fkc_foreign_table2 SET b = 'foo';
+DELETE FROM fkc_primary_table2 WHERE a = 1;
+COMMIT;
+-- the following should fail with planner but succeed with gporca
+UPDATE fkc_primary_table2 SET a = 2;
+ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns

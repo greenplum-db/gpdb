@@ -2152,10 +2152,7 @@ ltrmark:;
 		MIRROREDLOCK_BUFMGR_LOCK;
 		
 		buffer = ReadBuffer(relation, ItemPointerGetBlockNumber(tid));
-		
-		MIRROREDLOCK_BUFMGR_UNLOCK;
-		// -------- MirroredLock ----------
-		
+
 		/*
 		 * Although we already know this tuple is valid, we must lock the
 		 * buffer to ensure that no one has a buffer cleanup lock; otherwise
@@ -2176,6 +2173,9 @@ ltrmark:;
 		tuple.t_self = *tid;
 
 		LockBuffer(buffer, BUFFER_LOCK_UNLOCK);
+
+		MIRROREDLOCK_BUFMGR_UNLOCK;
+		// -------- MirroredLock ----------
 	}
 
 	result = heap_copytuple(&tuple);
