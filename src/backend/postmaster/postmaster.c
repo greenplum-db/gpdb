@@ -5440,7 +5440,7 @@ HandleChildCrash(int pid, int exitstatus, const char *procname)
 		WalWriterPID = 0;
 	else if (WalWriterPID != 0 && !FatalError)
 	{
-		ereport(DEBUG2,
+		ereport((Debug_print_server_processes ? LOG : DEBUG2),
 				(errmsg_internal("sending %s to process %d",
 								 (SendStop ? "SIGSTOP" : "SIGQUIT"),
 								 (int) WalWriterPID)));
