@@ -705,6 +705,11 @@ class SegmentTemplate:
 
         self.oldSegCount = self.gparray.get_segment_count()
 
+        try:
+            self.conn.close()
+        except:
+            pass
+
         GpStop.local('gpexpand _create_template stop gpdb', masterOnly=True, fast=True)
 
         # Verify that we actually stopped
@@ -999,6 +1004,27 @@ class gpexpand:
         self.segTemplate = None
         pass
 
+    def __del__(self):
+        """ Cleanup the environment after the script has finished """
+        logger.info('Cleaning up...')
+        if hasattr(self, 'pool'):
+            try:
+                self.pool.haltWork()
+                self.pool.joinWorkers()
+            except:
+                pass
+        if hasattr(self, 'queue'):
+            try:
+                self.queue.haltWork()
+                self.queue.joinWorkers()
+            except:
+                pass
+        if hasattr(self, 'conn'):
+            try:
+                self.conn.close()
+            except:
+                pass
+
     @staticmethod
     def prepare_gpdb_state(logger, dburl):
         """ Gets GPDB in the appropriate state for an expansion.
@@ -1254,6 +1280,11 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
                 cleanSchema = True
             else:
                 self.logger.debug('Skipping %s' % status[0])
+
+        try:
+            conn.close()
+        except:
+            pass
 
         GpStop.local('gpexpand rollback', masterOnly=True, fast=True)
 
@@ -1970,6 +2001,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
 
         self.conn.commit()
 
+        self.conn.close()
 
         self.statusLogger.set_status('PREPARE_EXPANSION_SCHEMA_DONE')
         self.statusLogger.set_status('EXPANSION_PREPARE_DONE')
@@ -3151,5 +3183,8 @@ finally:
     except NameError:
         pass
     
+    if gp_expand is not None:
+        del gp_expand
+
     coverage.stop()
     coverage.generate_report()
