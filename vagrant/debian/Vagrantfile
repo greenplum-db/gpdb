@@ -45,5 +45,5 @@ Vagrant.configure("2") do |config|
 
 
   config.vm.provision "shell", path: "vagrant-setup.sh"
-  #config.vm.provision "shell", path: "vagrant-build.sh"
+  config.vm.provision "shell", path: "vagrant-build.sh", privileged: false
 end
