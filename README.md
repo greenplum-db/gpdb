@@ -110,6 +110,7 @@ throughout the codebase, but a few larger additions worth noting:
   polls the segments to maintain the status of each segment.
 
 ## Getting Started with Docker
+
 A quickstart guide to Docker can be found on the [Pivotal Engineering Journal](http://engineering.pivotal.io/post/docker-gpdb/).
 
 ## Build GPDB with Planner
