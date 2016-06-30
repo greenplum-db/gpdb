@@ -165,8 +165,8 @@ void table_gen(long long nrows, Stringlist wlist,int numcols, int *column_types,
   int itemp;
   int i,j,ii, nwords;
   int year, month, day, hour, minute, second;
-  int minyear, minmonth, minday, minhour, minminute, minsecond;
-  int maxyear, maxmonth, maxday, maxhour, maxmaxute, maxsecond;
+  int minyear, minmonth, minday;
+  int maxyear, maxmonth, maxday;
 
   int leaps[] = LEAPS;
   int nonleaps[] = NONLEAPS;
