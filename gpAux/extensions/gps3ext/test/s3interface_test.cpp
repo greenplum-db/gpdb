@@ -245,7 +245,7 @@ TEST_F(S3ServiceTest, fetchDataFailedResponse) {
     vector<uint8_t> raw;
     raw.resize(100);
     Response response(RESPONSE_FAIL, raw);
-    EXPECT_CALL(mockRestfulService, get(_, _, _)).WillRepeatedly(Return(response));
+    EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
 
     vector<uint8_t> buffer;
 

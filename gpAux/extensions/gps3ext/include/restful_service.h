@@ -60,10 +60,7 @@ class Response {
     }
 
     void clearBuffer() {
-        buffer.clear();
-
-        // shrink to fit is added in C++11
-        // buffer.shrink_to_fit();
+        buffer = vector<uint8_t>();
     }
 
    private:

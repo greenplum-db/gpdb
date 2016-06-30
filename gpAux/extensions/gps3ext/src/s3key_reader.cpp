@@ -92,8 +92,7 @@ uint64_t ChunkBuffer::read(char* buf, uint64_t len) {
 
         if (!this->isEOF()) {
             // Release chunkData memory to reduce consumption.
-            this->chunkData.clear();
-            this->chunkData.shrink_to_fit();
+            this->chunkData = vector<uint8_t>();
 
             this->status = ReadyToFill;
 

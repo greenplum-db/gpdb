@@ -264,7 +264,7 @@ TEST_F(GPReaderTest, ReadAndGetFailedListBucketResponse) {
     listBucketResponse.setMessage(
         "Mocked error in test 'GPReader.ReadAndGetFailedListBucketResponse'");
 
-    EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(listBucketResponse));
+    EXPECT_CALL(mockRestfulService, get(_, _, _)).WillRepeatedly(Return(listBucketResponse));
 
     ReaderParams params;
     EXPECT_THROW(gpreader.open(params), std::runtime_error);
