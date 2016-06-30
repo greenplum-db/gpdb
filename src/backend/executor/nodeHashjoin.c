@@ -812,14 +812,7 @@ ExecHashJoinNewBatch(HashJoinState *hjstate)
 	TupleTableSlot *slot;
 	uint32		hashvalue;
 
-#ifdef FAULT_INJECTOR
-	FaultInjector_InjectFaultIfSet(
-			FaultExecHashJoinNewBatch,
-			DDLNotSpecified,
-			"",  // databaseName
-			""); // tableName
-#endif
-
+	SIMPLE_FAULT_INJECTOR(FaultExecHashJoinNewBatch);
 
 	HashState *hashState = (HashState *) innerPlanState(hjstate);
 

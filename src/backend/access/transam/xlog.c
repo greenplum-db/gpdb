@@ -8812,13 +8812,7 @@ CreateCheckPoint(int flags)
 		/* database transitions to suspended state, IO activity on the segment is suspended */
 		primaryMirrorSetIOSuspended(TRUE);
 
-#ifdef FAULT_INJECTOR
-		FaultInjector_InjectFaultIfSet(
-									   FileRepTransitionToInSyncBeforeCheckpoint,
-									   DDLNotSpecified,
-									   "",	// databaseName
-									   ""); // tableName
-#endif
+		SIMPLE_FAULT_INJECTOR(FileRepTransitionToInSyncBeforeCheckpoint);
 	}
 	else
 	{
@@ -11863,13 +11857,7 @@ int XLogAddRecordsToChangeTracking(
 
 		lastEndLoc = EndRecPtr;
 
-#ifdef FAULT_INJECTOR
-		FaultInjector_InjectFaultIfSet(
-					       FileRepTransitionToChangeTracking,
-					       DDLNotSpecified,
-					       "",//databaseName
-					       ""); // tableName
-#endif
+		SIMPLE_FAULT_INJECTOR(FileRepTransitionToChangeTracking);
 
 		if (filerep_inject_change_tracking_recovery_fault)
 		{

@@ -2365,13 +2365,8 @@ ServerLoop(void)
                     return STATUS_ERROR;
                 }
             }
-#ifdef FAULT_INJECTOR
-			FaultInjector_InjectFaultIfSet(
-										   Postmaster,
-										   DDLNotSpecified,
-										   "",	//databaseName
-										   ""); // tableName
-#endif											
+
+			SIMPLE_FAULT_INJECTOR(Postmaster);
         }
         else
         {
@@ -3569,16 +3564,7 @@ processPrimaryMirrorTransitionRequest(Port *port, void *pkt)
 		strcpy(args->peerAddress, peer);
 	}
 
-#ifdef FAULT_INJECTOR
-	FaultInjector_InjectFaultIfSet
-		(
-		SegmentTransitionRequest,
-		DDLNotSpecified,
-		"",	//databaseName
-		""  // tableName
-		)
-		;
-#endif
+	SIMPLE_FAULT_INJECTOR(SegmentTransitionRequest);
 
     char extraResultInfo[MAX_TRANSITION_RESULT_EXTRA_INFO];
 	result = requestTransitionToPrimaryMirrorMode(args, extraResultInfo);
@@ -3649,16 +3635,7 @@ processPrimaryMirrorTransitionQuery(Port *port, void *pkt)
 		return;
 	}
 
-#ifdef FAULT_INJECTOR
-	FaultInjector_InjectFaultIfSet
-		(
-		SegmentProbeResponse,
-		DDLNotSpecified,
-		"",	//databaseName
-		""  // tableName
-		)
-		;
-#endif
+	SIMPLE_FAULT_INJECTOR(SegmentProbeResponse);
 
 	getPrimaryMirrorStatusCodes(&pm_mode, &s_state, &d_state, &f_type);
 

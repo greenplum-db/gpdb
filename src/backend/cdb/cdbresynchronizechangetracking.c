@@ -3240,15 +3240,8 @@ int ChangeTracking_CompactLogFile(CTFType source, CTFType dest, XLogRecPtr*	upto
 				persistentTid = DatumGetPointer(DirectFunctionCall1(tidin, CStringGetDatum(str_tid)));
 				persistentSerialNum = DatumGetInt64(DirectFunctionCall1(int8in, CStringGetDatum(str_sn)));
 
-				
-				#ifdef FAULT_INJECTOR	
-						FaultInjector_InjectFaultIfSet(
-									  FileRepChangeTrackingCompacting, 
-									   DDLNotSpecified,
-									   "",	// databaseName
-									   ""); // tableName
-				#endif
-	
+				SIMPLE_FAULT_INJECTOR(FileRepChangeTrackingCompacting);
+
 				/* write this record to the compact file */
 				ChangeTracking_AddBufferPoolChange(dest,
 												   endlsn, 

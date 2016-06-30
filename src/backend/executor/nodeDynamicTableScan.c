@@ -223,14 +223,8 @@ ExecDynamicTableScan(DynamicTableScanState *node)
 		   initNextTableToScan(node))
 	{
 		slot = ExecTableScanRelation(scanState);
-		
-#ifdef FAULT_INJECTOR
-    FaultInjector_InjectFaultIfSet(
-    		FaultDuringExecDynamicTableScan,
-            DDLNotSpecified,
-            "",  // databaseName
-            ""); // tableName
-#endif
+
+		SIMPLE_FAULT_INJECTOR(FaultDuringExecDynamicTableScan);
 
 		if (!TupIsNull(slot))
 		{

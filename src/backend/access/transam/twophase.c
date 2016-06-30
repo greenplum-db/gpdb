@@ -1247,13 +1247,7 @@ StartPrepare(GlobalTransaction gxact)
 		pfree(persistentPrepareBuffer);
 	}
 
-#ifdef FAULT_INJECTOR
-	FaultInjector_InjectFaultIfSet(
-		StartPrepareTx,
-		DDLNotSpecified,
-		"",  // databaseName
-		""); // tableName
-#endif
+	SIMPLE_FAULT_INJECTOR(StartPrepareTx);
 }
 
 /*
@@ -1388,13 +1382,7 @@ EndPrepare(GlobalTransaction gxact)
 
 	MIRRORED_UNLOCK;
 
-#ifdef FAULT_INJECTOR
-	FaultInjector_InjectFaultIfSet(
-		EndPreparedTwoPhaseSleep,
-		DDLNotSpecified,
-		"", // databaseName
-		""); // tableName
-#endif
+	SIMPLE_FAULT_INJECTOR(EndPreparedTwoPhaseSleep);
 
 	/*
 	 * Wait for synchronous replication, if required.
@@ -2139,13 +2127,7 @@ RecordTransactionCommitPrepared(TransactionId xid,
 	}
 	rdata[lastrdata].next = NULL;
 
-#ifdef FAULT_INJECTOR
-	FaultInjector_InjectFaultIfSet(
-		TwoPhaseTransactionCommitPrepared,
-		DDLNotSpecified,
-		"" /* databaseName */,
-		"" /* tableName */);
-#endif
+	SIMPLE_FAULT_INJECTOR(TwoPhaseTransactionCommitPrepared);
 
 	recptr = XLogInsert(RM_XACT_ID, XLOG_XACT_COMMIT_PREPARED, rdata);
 
@@ -2288,13 +2270,7 @@ RecordTransactionAbortPrepared(TransactionId xid,
 	}
 	rdata[lastrdata].next = NULL;
 
-#ifdef FAULT_INJECTOR
-	FaultInjector_InjectFaultIfSet(
-		TwoPhaseTransactionAbortPrepared,
-		DDLNotSpecified,
-		"" /* databaseName */,
-		"" /* tableName */);
-#endif
+	SIMPLE_FAULT_INJECTOR(TwoPhaseTransactionAbortPrepared);
 
 	recptr = XLogInsert(RM_XACT_ID, XLOG_XACT_ABORT_PREPARED, rdata);
 

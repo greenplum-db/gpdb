@@ -225,13 +225,7 @@ ShareInputNext(ShareInputScanState *node)
 		Gpmon_M_Incr_Rows_Out(GpmonPktFromShareInputState(node)); 
 		CheckSendPlanStateGpmonPkt(&node->ss.ps);
 
-#ifdef FAULT_INJECTOR
-	FaultInjector_InjectFaultIfSet(
-			ExecShareInputNext,
-			DDLNotSpecified,
-			"",  // databaseName
-			""); // tableName
-#endif
+		SIMPLE_FAULT_INJECTOR(ExecShareInputNext);
 
 		return slot;
 	}

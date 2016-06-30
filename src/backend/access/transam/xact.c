@@ -1362,13 +1362,7 @@ RecordTransactionCommit(void)
 		}
 	}
 
-#ifdef FAULT_INJECTOR
-	FaultInjector_InjectFaultIfSet(
-		DtmXLogDistributedCommit,
-		DDLNotSpecified,
-		"",	// databaseName
-		""); // tableName
-#endif
+	SIMPLE_FAULT_INJECTOR(DtmXLogDistributedCommit);
 
 	/*
 	 * If we entered a commit critical section, leave it now, and let
@@ -2535,13 +2529,7 @@ AppendToSubxidFile(TransactionId *subxids, uint32 subcnt)
 		elog(ERROR, "Error in saving subtransaction ids");
 	}
 
-#ifdef FAULT_INJECTOR
-		FaultInjector_InjectFaultIfSet(
-			SubtransactionFlushToFile,
-			DDLNotSpecified,
-			"",  // databaseName
-			""); // tableName
-#endif
+	SIMPLE_FAULT_INJECTOR(SubtransactionFlushToFile);
 }
 
 static void
@@ -2769,13 +2757,7 @@ GetSubXidsInXidBuffer(void)
 			}
 		}
 
-#ifdef FAULT_INJECTOR
-		FaultInjector_InjectFaultIfSet(
-			SubtransactionReadFromFile,
-			DDLNotSpecified,
-			"",  // databaseName
-			""); // tableName
-#endif
+		SIMPLE_FAULT_INJECTOR(SubtransactionReadFromFile);
 
 		offset = FileSeek(subxip_file, 0, SEEK_SET);
 		size = (SharedLocalSnapshotSlot->total_subcnt -
@@ -3980,13 +3962,7 @@ AbortTransaction(void)
 	bool needDistribAborted = false;
 	bool willHaveObjectsFromSmgr;
 
-#ifdef FAULT_INJECTOR
-	FaultInjector_InjectFaultIfSet(
-			AbortTransactionFail,
-			DDLNotSpecified,
-			"",  // databaseName
-			""); // tableName
-#endif
+	SIMPLE_FAULT_INJECTOR(AbortTransactionFail);
 
 	LocalDistribXactRef_Init(&localDistribXactRef);
 
@@ -6211,13 +6187,7 @@ CommitSubTransaction(void)
 		elog(WARNING, "CommitSubTransaction while in %s state",
 			 TransStateAsString(s->state));
 
-#ifdef FAULT_INJECTOR
-		FaultInjector_InjectFaultIfSet(
-			SubtransactionRelease,
-			DDLNotSpecified,
-			"",  // databaseName
-			""); // tableName
-#endif
+	SIMPLE_FAULT_INJECTOR(SubtransactionRelease);
 
 	/* Pre-commit processing goes here -- nothing to do at the moment */
 
@@ -6338,13 +6308,7 @@ AbortSubTransaction(void)
 		elog(WARNING, "AbortSubTransaction while in %s state",
 			 TransStateAsString(s->state));
 
-#ifdef FAULT_INJECTOR
-		FaultInjector_InjectFaultIfSet(
-			SubtransactionRollback,
-			DDLNotSpecified,
-			"",  // databaseName
-			""); // tableName
-#endif
+	SIMPLE_FAULT_INJECTOR(SubtransactionRollback);
 
 	s->state = TRANS_ABORT;
 

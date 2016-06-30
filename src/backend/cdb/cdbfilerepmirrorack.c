@@ -417,13 +417,7 @@ FileRepAckMirror_RunSender(void)
 							   FILEREP_UNDEFINED,
 							   FILEREP_UNDEFINED);		
 				
-#ifdef FAULT_INJECTOR
-		FaultInjector_InjectFaultIfSet(
-									   FileRepSender,
-									   DDLNotSpecified,
-									   "",	//databaseName
-									   ""); // tableName
-#endif						
+		SIMPLE_FAULT_INJECTOR(FileRepSender);
 		
 		fileRepMessage = (char*) (fileRepAckShmem->positionConsume + 
 								  sizeof(FileRepShmemMessageDescr_s));

@@ -283,14 +283,7 @@ ExecSort(SortState *node)
 				tuplesort_puttupleslot(tuplesortstate, slot);
 		}
 
-#ifdef FAULT_INJECTOR
-		FaultInjector_InjectFaultIfSet(
-				ExecSortBeforeSorting,
-				DDLNotSpecified,
-				"" /* databaseName */,
-				"" /* tableName */
-				);
-#endif
+		SIMPLE_FAULT_INJECTOR(ExecSortBeforeSorting);
 
 		/*
 		 * Complete the sort.

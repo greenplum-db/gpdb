@@ -627,13 +627,7 @@ PersistentBuild_BuildDb(
 
 	gp_before_persistence_work = false;
 
-#ifdef FAULT_INJECTOR
-	FaultInjector_InjectFaultIfSet(
-								   RebuildPTDB,
-								   DDLNotSpecified,
-								   "",	// databaseName
-								   ""); // tableName
-#endif
+	SIMPLE_FAULT_INJECTOR(RebuildPTDB);
 
 	/* 
 	 * Since we have written XLOG records with <persistentTid,

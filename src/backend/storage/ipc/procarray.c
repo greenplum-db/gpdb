@@ -145,13 +145,7 @@ ProcArrayAdd(PGPROC *proc)
 
 	LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
 
-#ifdef FAULT_INJECTOR
-	FaultInjector_InjectFaultIfSet(
-		ProcArray_Add,
-		DDLNotSpecified,
-		"", // databaseName
-		""); // tableName
-#endif
+	SIMPLE_FAULT_INJECTOR(ProcArray_Add);
 
 	if (arrayP->numProcs >= arrayP->maxProcs)
 	{

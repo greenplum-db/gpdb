@@ -557,14 +557,7 @@ void PersistentDatabase_MarkCreatePending(
 	mmxlog_log_create_database(dbDirNode->tablespace, dbDirNode->database); 
 #endif
 
-
-	#ifdef FAULT_INJECTOR
-			FaultInjector_InjectFaultIfSet(
-										   FaultBeforePendingDeleteDatabaseEntry,
-										   DDLNotSpecified,
-										   "",  // databaseName
-										   ""); // tableName
-	#endif
+	SIMPLE_FAULT_INJECTOR(FaultBeforePendingDeleteDatabaseEntry);
 
 	/*
 	 * MPP-18228

@@ -317,13 +317,7 @@ FileRepAckPrimary_RunReceiver(void)
 			break;
 		}		
 		
-#ifdef FAULT_INJECTOR
-		FaultInjector_InjectFaultIfSet(
-									   FileRepReceiver,
-									   DDLNotSpecified,
-									   "",	//databaseName
-									   ""); // tableName
-#endif				
+		SIMPLE_FAULT_INJECTOR(FileRepReceiver);
 		
 		fileRepShmemMessageDescr = 
 		(FileRepShmemMessageDescr_s*) msgPositionInsert;	
@@ -1037,13 +1031,7 @@ FileRepAckPrimary_RunConsumer(void)
 			break;
 		}
 		
-#ifdef FAULT_INJECTOR
-		FaultInjector_InjectFaultIfSet(
-									   FileRepConsumer,
-									   DDLNotSpecified,
-									   "",	//databaseName
-									   ""); // tableName
-#endif				
+		SIMPLE_FAULT_INJECTOR(FileRepConsumer);
 		
 		/* Calculate and compare FileRepMessageHeader_s Crc */
 		fileRepMessageHeader = (FileRepMessageHeader_s*) (fileRepAckShmem->positionConsume + 

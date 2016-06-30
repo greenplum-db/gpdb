@@ -701,13 +701,7 @@ doPrepareTransaction(void)
 	setCurrentGxactState( DTX_STATE_PREPARED );
 	releaseTmLock();
 
-#ifdef FAULT_INJECTOR
-		FaultInjector_InjectFaultIfSet(
-									   DtmBroadcastPrepare,
-									   DDLNotSpecified,
-									   "",	// databaseName
-									   ""); // tableName
-#endif
+	SIMPLE_FAULT_INJECTOR(DtmBroadcastPrepare);
 
 	elog(DTM_DEBUG5, "doPrepareTransaction leaving in state = %s", DtxStateToString(currentGxact->state));
 }
@@ -769,13 +763,8 @@ doNotifyingCommitPrepared(void)
 		elog(PANIC, "Distribute transaction identifier too long (%d)",
 			 (int)strlen(currentGxact->gid));
 
-#ifdef FAULT_INJECTOR
-	FaultInjector_InjectFaultIfSet(
-								   DtmBroadcastCommitPrepared,
-								   DDLNotSpecified,
-								   "",	// databaseName
-								   ""); // tableName
-#endif
+	SIMPLE_FAULT_INJECTOR(DtmBroadcastCommitPrepared);
+
 	succeeded = doDispatchDtxProtocolCommand(DTX_PROTOCOL_COMMAND_COMMIT_PREPARED, /* flags */ 0,
 											 currentGxact->gid, currentGxact->gxid,
 											 &badGangs, /* raiseError */ false,
@@ -953,13 +942,7 @@ doNotifyingAbort(void)
 			 abortString, currentGxact->gid);
 	}
 
-#ifdef FAULT_INJECTOR
-	FaultInjector_InjectFaultIfSet(
-								   DtmBroadcastAbortPrepared,
-								   DDLNotSpecified,
-								   "",	// databaseName
-								   ""); // tableName
-#endif
+	SIMPLE_FAULT_INJECTOR(DtmBroadcastAbortPrepared);
 
 	/*
 	 * Global locking order: ProcArrayLock then DTM lock.
@@ -1558,13 +1541,8 @@ initTM(void)
 		 * and then restores it back.
 		 */
 		olduser = ChangeToSuperuser();
-#ifdef FAULT_INJECTOR
-	FaultInjector_InjectFaultIfSet(
-		DtmInit,
-		DDLNotSpecified,
-		"", //databaseName,
-		""); //tableName;
-#endif
+
+		SIMPLE_FAULT_INJECTOR(DtmInit);
 
 		oldcontext = CurrentMemoryContext;
 		succeeded = false;

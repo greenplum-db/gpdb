@@ -1199,13 +1199,8 @@ datumstreamread_block_content(DatumStreamRead * acc)
 				{
 					pfree(acc->large_object_buffer);
 					acc->large_object_buffer = NULL;
-#ifdef FAULT_INJECTOR
-					FaultInjector_InjectFaultIfSet(MallocFailure,
-												   DDLNotSpecified,
-												   "", //databaseName
-												   "");
-					/* tableName */
-#endif
+
+					SIMPLE_FAULT_INJECTOR(MallocFailure);
 				}
 
 				acc->large_object_buffer_size = acc->getBlockInfo.contentLen;

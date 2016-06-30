@@ -113,13 +113,7 @@ MultiExecHash(HashState *node)
 	hashkeys = node->hashkeys;
 	econtext = node->ps.ps_ExprContext;
 
-#ifdef FAULT_INJECTOR
-    FaultInjector_InjectFaultIfSet(
-    		MultiExecHashLargeVmem,
-            DDLNotSpecified,
-            "",  // databaseName
-            ""); // tableName
-#endif
+	SIMPLE_FAULT_INJECTOR(MultiExecHashLargeVmem);
 
 	/*
 	 * get all inner tuples and insert into the hash table (or temp files)

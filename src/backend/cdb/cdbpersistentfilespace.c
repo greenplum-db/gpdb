@@ -899,14 +899,7 @@ void PersistentFilespace_MarkCreatePending(
 	mmxlog_log_create_filespace(filespaceOid);
 #endif
 
-
-	#ifdef FAULT_INJECTOR
-			FaultInjector_InjectFaultIfSet(
-										   FaultBeforePendingDeleteFilespaceEntry,
-										   DDLNotSpecified,
-										   "",  // databaseName
-										   ""); // tableName
-	#endif
+	SIMPLE_FAULT_INJECTOR(FaultBeforePendingDeleteFilespaceEntry);
 
 	/*
 	 * MPP-18228

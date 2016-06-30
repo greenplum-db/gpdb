@@ -1943,13 +1943,8 @@ smgrDoDeleteActions(
 			if (forCommit)
 			{
 				dropPending = true;
-#ifdef FAULT_INJECTOR
-				FaultInjector_InjectFaultIfSet(
-											   TransactionCommitPass1FromDropInMemoryToDropPending,
-											   DDLNotSpecified,
-											   "",	// databaseName
-											   ""); // tableName
-#endif
+
+				SIMPLE_FAULT_INJECTOR(TransactionCommitPass1FromDropInMemoryToDropPending);
 			}
 			break;
 

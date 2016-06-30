@@ -3809,13 +3809,8 @@ void PersistentFileSysObj_PreparedEndXactAction(
 				mirrorCatchupRequired = false;
 			}
 
-#ifdef FAULT_INJECTOR
-			FaultInjector_InjectFaultIfSet(
-							UpdateCommittedEofInPersistentTable,
-							DDLNotSpecified,
-							"", 	// databaseName
-							"");	// tablename
-#endif
+			SIMPLE_FAULT_INJECTOR(UpdateCommittedEofInPersistentTable);
+
 			PersistentFileSysObj_UpdateAppendOnlyMirrorResyncEofs(
 															&eofs->relFileNode,
 															eofs->segmentFileNum,

@@ -750,13 +750,7 @@ void PersistentTablespace_MarkCreatePending(
 						tablespaceOid);
 #endif
 
-	#ifdef FAULT_INJECTOR
-			FaultInjector_InjectFaultIfSet(
-										   FaultBeforePendingDeleteTablespaceEntry,
-										   DDLNotSpecified,
-										   "",  // databaseName
-										   ""); // tableName
-	#endif
+	SIMPLE_FAULT_INJECTOR(FaultBeforePendingDeleteTablespaceEntry);
 
 	/*
 	 * MPP-18228

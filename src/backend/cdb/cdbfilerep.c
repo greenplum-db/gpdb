@@ -2212,13 +2212,8 @@ FileRep_ProcessSignals()
 			FileRep_SetPostmasterReset();
 		else
 		{
-#ifdef FAULT_INJECTOR
-			FaultInjector_InjectFaultIfSet(
-						   FileRepImmediateShutdownRequested,
-						   DDLNotSpecified,
-						   "",	// databaseName
-						   ""); // tableName
-#endif
+			SIMPLE_FAULT_INJECTOR(FileRepImmediateShutdownRequested);
+
 			FileRep_SignalChildren(SIGQUIT, false);
 			processExit = true;
 			exitWithImmediateShutdown = true;

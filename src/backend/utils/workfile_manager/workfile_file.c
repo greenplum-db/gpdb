@@ -54,13 +54,7 @@ workfile_mgr_create_fileno(workfile_set *work_set, uint32 file_no)
 			true /* del_on_close */,
 			work_set->metadata.bfz_compress_type);
 
-#ifdef FAULT_INJECTOR
-  FaultInjector_InjectFaultIfSet(
-      WorkfileCreationFail,
-      DDLNotSpecified,
-      "",  // databaseName
-      ""); // tableName
-#endif
+	SIMPLE_FAULT_INJECTOR(WorkfileCreationFail);
 
 	ExecWorkfile_SetWorkset(ewfile, work_set);
 

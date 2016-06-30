@@ -299,13 +299,7 @@ BackgroundWriterMain(void)
 			exit(1);
 
 #ifdef USE_ASSERT_CHECKING
-#ifdef FAULT_INJECTOR
-    FaultInjector_InjectFaultIfSet(
-    		FaultInBackgroundWriterMain,
-            DDLNotSpecified,
-            "",  // databaseName
-            ""); // tableName
-#endif
+		SIMPLE_FAULT_INJECTOR(FaultInBackgroundWriterMain);
 #endif
 		/*
 		 * Process any requests or signals received recently.

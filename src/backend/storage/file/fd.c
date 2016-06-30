@@ -1341,14 +1341,8 @@ FileSync(File file)
 	if (returnCode < 0)
 		return returnCode;
 
-#ifdef FAULT_INJECTOR
-	FaultInjector_InjectFaultIfSet(
-								   FileRepFlush,
-								   DDLNotSpecified,
-								   "",	//databaseName
-								   ""); // tableName
-#endif								
-	
+	SIMPLE_FAULT_INJECTOR(FileRepFlush);
+
 	returnCode =  pg_fsync(VfdCache[file].fd);
 	
 	if (returnCode >= 0)
