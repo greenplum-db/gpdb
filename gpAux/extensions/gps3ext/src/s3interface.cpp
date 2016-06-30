@@ -300,10 +300,10 @@ uint64_t S3Service::fetchData(uint64_t offset, vector<uint8_t> &data, uint64_t l
         data = resp.moveDataBuffer();
         if (data.size() != len) {
             S3ERROR("%s", "Response is not fully received.");
-            return 0;
+            CHECK_OR_DIE_MSG(false, "%s", "Response is not fully received.");
         }
 
-        return len;
+        return data.size();
     } else if (resp.getStatus() == RESPONSE_ERROR) {
         xmlParserCtxtPtr xmlContext = getXMLContext(resp);
         if (xmlContext != NULL) {

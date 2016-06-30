@@ -137,7 +137,7 @@ class S3KeyReader : public Reader {
         return region;
     }
 
-   protected:
+   private:
     pthread_mutex_t mutexErrorMessage;
 
     bool sharedError;
