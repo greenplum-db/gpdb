@@ -269,11 +269,12 @@ CREATE TABLE fkc_foreign_table1(a int REFERENCES fkc_primary_table1 ON DELETE RE
 INSERT INTO fkc_primary_table1 VALUES (1, 'bar');
 INSERT INTO fkc_primary_table1 VALUES (2, 'bar');
 INSERT INTO fkc_foreign_table1 VALUES (1, 'bar');
+INSERT INTO fkc_foreign_table1 VALUES (2, 'bar');
 UPDATE fkc_foreign_table1 SET b = 'foo';
 DELETE FROM fkc_primary_table1 WHERE a = 1;
 COMMIT;
 -- the following should fail with planner but succeed with gporca
-UPDATE fkc_primary_table1 SET a = 2;
+UPDATE fkc_primary_table1 SET a = 3 where a = 2;
 
 BEGIN;
 -- Test with an ao table and heap table
@@ -284,8 +285,9 @@ CREATE TABLE fkc_foreign_table2(a int REFERENCES fkc_primary_table2 ON DELETE RE
 INSERT INTO fkc_primary_table2 VALUES (1, 'bar');
 INSERT INTO fkc_primary_table2 VALUES (2, 'bar');
 INSERT INTO fkc_foreign_table2 VALUES (1, 'bar');
+INSERT INTO fkc_foreign_table2 VALUES (2, 'bar');
 UPDATE fkc_foreign_table2 SET b = 'foo';
 DELETE FROM fkc_primary_table2 WHERE a = 1;
 COMMIT;
 -- the following should fail with planner but succeed with gporca
-UPDATE fkc_primary_table2 SET a = 2;
+UPDATE fkc_primary_table2 SET a = 3 where a = 2;
