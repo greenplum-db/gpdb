@@ -4226,7 +4226,7 @@ do_immediate_shutdown_reaper(void)
 static bool
 CommenceNormalOperations(void)
 {
-	bool didServiceProcessWork = false;
+	bool didServiceProcessWork = true;
 	int s;
 
 	FatalError = false;
@@ -4248,20 +4248,17 @@ CommenceNormalOperations(void)
 	{
 		SetBGWriterPID(StartBackgroundWriter());
 		if (Debug_print_server_processes)
-		{
 			elog(LOG,"on startup successful: started 'background writer' as pid %ld",
 				 (long)BgWriterPID);
-		}
 	}
 
 	if (CheckpointPID == 0)
 	{
 		CheckpointPID = StartCheckpointServer();
 		if (Debug_print_server_processes)
-		{
 			elog(LOG,"on startup successful: started 'checkpoint service' as pid %ld",
 				 (long)CheckpointPID);
-		}
+		didServiceProcessWork &= (CheckpointPID > 0);
 	}
 
 	/*
@@ -4276,21 +4273,17 @@ CommenceNormalOperations(void)
 		{
 			PgArchPID = pgarch_start();
 			if (Debug_print_server_processes)
-			{
 				elog(LOG,"on startup successful: started 'archiver process' as pid %ld",
 					 (long)PgArchPID);
-				didServiceProcessWork = true;
-			}
+			didServiceProcessWork &= (PgArchPID > 0);
 		}
 		if (PgStatPID == 0)
 		{
 			PgStatPID = pgstat_start();
 			if (Debug_print_server_processes)
-			{
 				elog(LOG,"on startup successful: started 'statistics collector process' as pid %ld",
 					 (long)PgStatPID);
-				didServiceProcessWork = true;
-			}
+			didServiceProcessWork &= (PgStatPID > 0);
 		}
 
 		for (s = 0; s < MaxPMSubType; s++)
@@ -4302,11 +4295,9 @@ CommenceNormalOperations(void)
 				subProc->pid = (subProc->serverStart)();
 
 				if (Debug_print_server_processes)
-				{
 					elog(LOG,"on startup successful: started '%s' as pid %ld",
 						 subProc->procName, (long)subProc->pid);
-					didServiceProcessWork = true;
-				}
+				didServiceProcessWork &= (subProc->pid > 0);
 			}
 		}
 	}
@@ -4361,7 +4352,7 @@ do_reaper()
 	int			pid;			/* process id of dead child process */
 	int			exitstatus;		/* its exit status */
 	bool        wasServiceProcess = false;
-	bool        didServiceProcessWork = false;
+	bool        didServiceProcessWork = true;
 
 	need_call_reaper = 0;
 
@@ -4379,11 +4370,8 @@ do_reaper()
 
 			procName = GetServerProcessTitle(pid);
 			if (procName != NULL)
-			{
 				elog(LOG,"'%s' pid %ld exit status %d",
 				     procName, (long)pid, exitstatus);
-				didServiceProcessWork = true; /* TODO: Should this be set in code that depends on a Debug GUC ? */
-			}
 		}
 
 		/*
@@ -4466,7 +4454,7 @@ do_reaper()
 				 * Startup succeeded, commence normal operations
 				 */
 				if (CommenceNormalOperations())
-					didServiceProcessWork = true;
+					didServiceProcessWork &= true;
 			}
 
 			continue;
@@ -4591,7 +4579,7 @@ do_reaper()
 				 * Startup succeeded, commence normal operations
 				 */
 				if (CommenceNormalOperations())
-					didServiceProcessWork = true;
+					didServiceProcessWork &= true;
 			}
 			continue;
 		}
@@ -4672,14 +4660,14 @@ do_reaper()
 				if (Debug_print_server_processes)
 					elog(LOG,"on startup successful: started 'statistics collector process' as pid %ld",
 						 (long)PgStatPID);
-				didServiceProcessWork = true;
+				didServiceProcessWork &= (PgStatPID > 0);
 			}
 
 			/*
 			 * Startup succeeded, commence normal operations
 			 */
 			if (CommenceNormalOperations())
-				didServiceProcessWork = true;
+				didServiceProcessWork &= true;
 			continue;
 		}
 
@@ -4926,11 +4914,9 @@ do_reaper()
 			{
 				PgArchPID = pgarch_start();
 				if (Debug_print_server_processes)
-				{
 					elog(LOG,"restarted 'archiver process' as pid %ld",
 						 (long)PgArchPID);
-					didServiceProcessWork = true;
-				}
+				didServiceProcessWork &= (PgArchPID > 0);
 			}
 			continue;
 		}
@@ -4950,11 +4936,13 @@ do_reaper()
             {
 				PgStatPID = pgstat_start();
 				if (Debug_print_server_processes)
-				{
 					elog(LOG,"restarted 'statistics collector process' as pid %ld",
 						 (long)PgStatPID);
-					didServiceProcessWork = true;
-				}
+				/*
+				 * Since we will retry on failure (see comment above), avoid
+				 * promoting the status to error.
+				 */
+				didServiceProcessWork &= true;
 			}
 			continue;
 		}
@@ -4966,11 +4954,9 @@ do_reaper()
 			/* for safety's sake, launch new logger *first* */
 			SysLoggerPID = SysLogger_Start();
 			if (Debug_print_server_processes)
-			{
 				elog(LOG,"restarted 'system logger process' as pid %ld",
 					 (long)SysLoggerPID);
-				didServiceProcessWork = true; /* TODO: Should this be set in code that depends on a Debug GUC? */
-			}
+			didServiceProcessWork &= (SysLoggerPID > 0);
 			if (!EXIT_STATUS_0(exitstatus))
 				LogChildExit(LOG, _("system logger process"),
 							 pid, exitstatus);
