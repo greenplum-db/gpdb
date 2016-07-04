@@ -2503,8 +2503,6 @@ _bitmap_buildinsert(Relation rel, ItemPointerData ht_ctid, Datum *attdata,
 	TupleDesc	tupDesc;
 	uint64		tidOffset;
 
-	Assert(ItemPointerGetOffsetNumber(&ht_ctid) <= BM_MAX_TUPLES_PER_PAGE);
-
 	tidOffset = BM_IPTR_TO_INT(&ht_ctid); 
 
 	tupDesc = RelationGetDescr(rel);
@@ -2536,7 +2534,6 @@ _bitmap_doinsert(Relation rel, ItemPointerData ht_ctid, Datum *attdata,
 	if (tupDesc->natts <= 0)
 		return ;
 
-	Assert(ItemPointerGetOffsetNumber(&ht_ctid) <= BM_MAX_TUPLES_PER_PAGE);
 	tidOffset = BM_IPTR_TO_INT(&ht_ctid);
 
 	// -------- MirroredLock ----------
