@@ -1,0 +1,28 @@
+-- create the database functions
+CREATE OR REPLACE FUNCTION read_from_s3() RETURNS integer AS
+        '$libdir/gps3ext.so', 's3_import' LANGUAGE C STABLE;
+-- declare the protocol name along with in/out funcs
+CREATE PROTOCOL s3 (
+        readfunc  = read_from_s3
+);
+drop external table s3example;
+ERROR:  table "s3example" does not exist
+create READABLE external table s3example (date text, time text, open float, high float,
+	low float, volume int) location('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset2/1correct1wrong/ config=/home/gpadmin/s3.conf') format 'csv' LOG ERRORS SEGMENT REJECT LIMIT 5;
+SELECT count(*) FROM s3example;
+NOTICE:  Found 1 data formatting errors (1 or more input rows). Rejected related input data.
+ count 
+-------
+     1
+(1 row)
+
+-- start_ignore
+SELECT gp_read_error_log('s3example');
+                                                                                                                          gp_read_error_log                                                                                                                           
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ ("Mon Jul 04 20:11:10.225613 2016 PDT",s3example,"s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset2/1correct1wrong/ config=/home/gpadmin/s3.conf",2,,"extra data after last expected column","whatever,09/28/2009,09:10:37,35.6,35.29,35.75,150,wherever",)
+(1 row)
+
+-- end_ignore
+DROP EXTERNAL TABLE s3example;
+DROP PROTOCOL s3;

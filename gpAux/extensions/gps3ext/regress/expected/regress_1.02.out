@@ -1,30 +1,24 @@
--- ========
--- PROTOCOL
--- ========
-
 -- create the database functions
 CREATE OR REPLACE FUNCTION read_from_s3() RETURNS integer AS
         '$libdir/gps3ext.so', 's3_import' LANGUAGE C STABLE;
-
 -- declare the protocol name along with in/out funcs
 CREATE PROTOCOL s3 (
         readfunc  = read_from_s3
 );
-
--- Check out the catalog table
-select * from pg_extprotocol;
-
 drop external table s3example;
+ERROR:  table "s3example" does not exist
 create READABLE external table s3example (date text, time text, open float, high float,
-	low float, volume int) location('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/baddata/ config=/home/gpadmin/s3.conf') format 'csv' LOG ERRORS SEGMENT REJECT LIMIT 5;
-
+        low float, volume int) location('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal/ config=/home/gpadmin/s3.conf') FORMAT 'text' ( DELIMITER ',' NULL '') LOG ERRORS SEGMENT REJECT LIMIT 5;
 SELECT count(*) FROM s3example;
+  count   
+----------
+ 31033039
+(1 row)
 
 SELECT gp_read_error_log('s3example');
+ gp_read_error_log 
+-------------------
+(0 rows)
 
--- =======
--- CLEANUP
--- =======
 DROP EXTERNAL TABLE s3example;
-
 DROP PROTOCOL s3;

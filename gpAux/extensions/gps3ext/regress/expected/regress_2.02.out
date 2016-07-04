@@ -1,28 +1,17 @@
--- ========
--- PROTOCOL
--- ========
-
 -- create the database functions
 CREATE OR REPLACE FUNCTION read_from_s3() RETURNS integer AS
         '$libdir/gps3ext.so', 's3_import' LANGUAGE C STABLE;
-
 -- declare the protocol name along with in/out funcs
 CREATE PROTOCOL s3 (
         readfunc  = read_from_s3
 );
-
--- Check out the catalog table
-select * from pg_extprotocol;
-
+ERROR:  protocol "s3" already exists
 drop external table s3example;
+ERROR:  table "s3example" does not exist
 create READABLE external table s3example (date text, time text, open float, high float,
 	low float, volume int) location('s3://neverland.amazonaws.com/wherever/smalldata/ config=/home/gpadmin/s3.conf') format 'csv';
-
 SELECT count(*) FROM s3example;
-
--- =======
--- CLEANUP
--- =======
+ERROR:  Failed to init S3 extension, segid = 1, segnum = 6, please check your configurations and net connection: Failed to list bucket with retries: s3://neverland.amazonaws.com/wherever/smalldata/, Function: listBucketWithRetry, File: src/s3bucket_reader.cpp(139). (gps3ext.cpp:88)  (seg1 slice1 ip-172-31-2-196.us-west-2.compute.internal:40001 pid=6518) (cdbdisp.c:1326)
+DETAIL:  External table s3example, file s3://neverland.amazonaws.com/wherever/smalldata/ config=/home/gpadmin/s3.conf
 DROP EXTERNAL TABLE s3example;
-
 DROP PROTOCOL s3;

@@ -1,7 +1,3 @@
--- ========
--- PROTOCOL
--- ========
-
 -- create the database functions
 CREATE OR REPLACE FUNCTION read_from_s3() RETURNS integer AS
         '$libdir/gps3ext.so', 's3_import' LANGUAGE C STABLE;
@@ -11,10 +7,6 @@ CREATE PROTOCOL s3 (
         readfunc  = read_from_s3
 );
 
--- Check out the catalog table
-select * from pg_extprotocol;
-
--- ========
 
 drop external table s3example;
 create READABLE external table s3example (date text, time text, open float, high float,
@@ -24,7 +16,6 @@ create READABLE external table s3example (date text, time text, open float, high
 
 SELECT sum(open) FROM s3example;
 
--- ========
 
 drop external table s3example;
 create READABLE external table s3example (date text, time text, open float, high float,
@@ -34,7 +25,6 @@ create READABLE external table s3example (date text, time text, open float, high
 
 SELECT sum(open) FROM s3example;
 
--- ========
 
 drop external table s3example;
 create READABLE external table s3example (date text, time text, open float, high float,
@@ -44,7 +34,6 @@ create READABLE external table s3example (date text, time text, open float, high
 
 SELECT sum(open) FROM s3example;
 
--- ========
 
 drop external table s3example;
 create READABLE external table s3example (date text, time text, open float, high float,
@@ -54,7 +43,6 @@ create READABLE external table s3example (date text, time text, open float, high
 
 SELECT sum(open) FROM s3example;
 
--- ========
 
 drop external table s3example;
 create READABLE external table s3example (date text, time text, open float, high float,
@@ -64,7 +52,6 @@ create READABLE external table s3example (date text, time text, open float, high
 
 SELECT sum(open) FROM s3example;
 
--- ========
 
 drop external table s3example;
 create READABLE external table s3example (date text, time text, open float, high float,
@@ -74,7 +61,6 @@ create READABLE external table s3example (date text, time text, open float, high
 
 SELECT sum(open) FROM s3example;
 
--- ========
 
 drop external table s3example;
 create READABLE external table s3example (date text, time text, open float, high float,
@@ -84,7 +70,6 @@ create READABLE external table s3example (date text, time text, open float, high
 
 SELECT sum(open) FROM s3example;
 
--- ========
 
 drop external table s3example;
 create READABLE external table s3example (date text, time text, open float, high float,
@@ -94,7 +79,6 @@ create READABLE external table s3example (date text, time text, open float, high
 
 SELECT sum(open) FROM s3example;
 
--- ========
 
 drop external table s3example;
 create READABLE external table s3example (date text, time text, open float, high float,
@@ -104,9 +88,6 @@ create READABLE external table s3example (date text, time text, open float, high
 
 SELECT sum(open) FROM s3example;
 
--- =======
--- CLEANUP
--- =======
 DROP EXTERNAL TABLE s3example;
 
 DROP PROTOCOL s3;

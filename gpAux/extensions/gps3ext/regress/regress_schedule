@@ -1,0 +1,16 @@
+test: regress_1.01
+test: regress_1.02
+test: regress_1.03
+test: regress_1.04
+test: regress_1.05
+test: regress_1.06
+test: regress_1.07
+test: regress_1.08
+test: regress_1.09
+test: regress_1.10
+test: regress_1.11
+test: regress_1.12
+test: regress_2.01
+test: regress_2.02
+test: regress_2.03
+test: regress_2.04
