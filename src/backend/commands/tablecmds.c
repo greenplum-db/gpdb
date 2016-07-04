@@ -9076,12 +9076,13 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	Relation attrelation;
 	Relation depRel;
 	HeapTuple depTup;
-	GpPolicy *policy = NULL;
+	GpPolicy *policy = rel->rd_cdbpolicy;
 	bool sourceIsInt = false;
 	bool targetIsInt = false;
 	bool sourceIsVarlenA = false;
 	bool targetIsVarlenA = false;
 	bool hashCompatible = false;
+	bool relContainsTuples = false;
 	cqContext cqc;
 	cqContext cqc2;
 	cqContext *pcqCtx;
@@ -9172,6 +9173,14 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	else
 		defaultexpr = NULL;
 
+	if (Gp_role == GP_ROLE_DISPATCH &&
+		policy != NULL &&
+		policy->ptype == POLICYTYPE_PARTITIONED &&
+		!hashCompatible)
+	{
+		relContainsTuples = cdbRelMaxSegSize(rel) > 0;
+	}
+
 	/*
 	 * Find everything that depends on the column (constraints, indexes, etc),
 	 * and record enough information to let us recreate the objects.
@@ -9223,33 +9232,28 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 						Assert(foundObject.objectSubId == 0);
 						if (!list_member_oid(tab->changedIndexOids, foundObject.objectId))
 						{
-							char * indexdefstring = pg_get_indexdef_string(foundObject.objectId);
+							char *indexdefstring = pg_get_indexdef_string(foundObject.objectId);
 							tab->changedIndexOids = lappend_oid(tab->changedIndexOids, foundObject.objectId);
 							tab->changedIndexDefs = lappend(tab->changedIndexDefs,indexdefstring);
 
-							if (Gp_role == GP_ROLE_DISPATCH &&
-								indexdefstring &&
+							if (indexdefstring != NULL &&
 								strstr(indexdefstring," UNIQUE ") != 0 &&
-								!hashCompatible)
+								relContainsTuples)
 							{
-								policy = rel->rd_cdbpolicy;
-								if (policy != NULL && policy->ptype == POLICYTYPE_PARTITIONED)
-								{
-									int ia = 0;
+								Assert(Gp_role == GP_ROLE_DISPATCH &&
+									   policy != NULL &&
+									   policy->ptype == POLICYTYPE_PARTITIONED &&
+									   !hashCompatible);
 
-									if (cdbRelMaxSegSize(rel) != 0)
+								for (int ia = 0; ia < policy->nattrs; ia++)
+								{
+									if (attnum == policy->attrs[ia])
 									{
-										for (ia = 0; ia < policy->nattrs; ia++)
-										{
-											if (attnum == policy->attrs[ia])
-											{
-												ereport(ERROR,
-														(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-														 errmsg("Changing the type of a column that is part of the "
-																"distribution policy and used in a unique index is "
-																"not allowed")));
-											}
-										}
+										ereport(ERROR,
+												(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+												 errmsg("Changing the type of a column that is part of the "
+														"distribution policy and used in a unique index is "
+														"not allowed")));
 									}
 								}
 							}
@@ -9278,27 +9282,22 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 				{
 					char *defstring = pg_get_constraintdef_string(foundObject.objectId);
 
-					if (Gp_role == GP_ROLE_DISPATCH && !hashCompatible)
-					if (strstr(defstring," UNIQUE") != 0 ||
-						strstr(defstring,"PRIMARY KEY") != 0)
+					if (relContainsTuples &&
+						(strstr(defstring," UNIQUE") != 0 || strstr(defstring,"PRIMARY KEY") != 0))
 					{
-						policy = rel->rd_cdbpolicy;
-						if (policy != NULL && policy->ptype == POLICYTYPE_PARTITIONED)
-						{
-							int ia = 0;
+						Assert(Gp_role == GP_ROLE_DISPATCH &&
+							   !hashCompatible &&
+							   policy != NULL &&
+							   policy->ptype == POLICYTYPE_PARTITIONED);
 
-							if (cdbRelMaxSegSize(rel) != 0)
+						for (int ia = 0; ia < policy->nattrs; ia++)
+						{
+							if (attnum == policy->attrs[ia])
 							{
-								for (ia = 0; ia < policy->nattrs; ia++)
-								{
-									if (attnum == policy->attrs[ia])
-									{
-										ereport(ERROR,
-												(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-												 errmsg("Changing the type of a column that is used in a "
-														"UNIQUE or PRIMARY KEY constraint is not allowed")));
-									}
-								}
+								ereport(ERROR,
+										(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+										 errmsg("Changing the type of a column that is used in a "
+												"UNIQUE or PRIMARY KEY constraint is not allowed")));
 							}
 						}
 					}
@@ -9406,35 +9405,33 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	caql_endscan(pcqCtx);
 	heap_close(depRel, RowExclusiveLock);
 
-	policy = rel->rd_cdbpolicy;
-	if (policy != NULL && policy->ptype == POLICYTYPE_PARTITIONED && !hashCompatible)
+	if (Gp_role == GP_ROLE_DISPATCH &&
+		policy != NULL &&
+		policy->ptype == POLICYTYPE_PARTITIONED &&
+		!hashCompatible)
 	{
-		if (Gp_role != GP_ROLE_EXECUTE)
+		ListCell *lc;
+		List *partkeys;
+
+		partkeys = rel_partition_key_attrs(rel->rd_id);
+		foreach (lc, partkeys)
 		{
-			int ia = 0;
-			ListCell *lc;
-			List *partkeys;
-			
-			partkeys = rel_partition_key_attrs(rel->rd_id);
-			foreach (lc, partkeys)
+			if (attnum == lfirst_int(lc))
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("cannot alter type of a column used in "
+								"a partitioning key")));
+		}
+
+		if (relContainsTuples)
+		{
+			for (int ia = 0; ia < policy->nattrs; ia++)
 			{
-				if ( attnum == lfirst_int(lc) )
+				if (attnum == policy->attrs[ia])
 					ereport(ERROR,
 							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 							 errmsg("cannot alter type of a column used in "
-									"a partitioning key")));
-			}
-
-			if (cdbRelMaxSegSize(rel) != 0)
-			{
-				for (ia = 0; ia < policy->nattrs; ia++)
-				{
-					if (attnum == policy->attrs[ia])
-						ereport(ERROR,
-								(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-								 errmsg("cannot alter type of a column used in "
-										"a distribution policy")));
-				}
+									"a distribution policy")));
 			}
 		}
 	}
