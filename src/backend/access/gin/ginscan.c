@@ -153,7 +153,7 @@ newScanKey(IndexScanDesc scan)
 	for (i = 0; i < scan->numberOfKeys; i++)
 	{
 		Datum	   *entryValues;
-		int32		nEntryValues;
+		int32		nEntryValues = 0;
 
 		if (scankey[i].sk_flags & SK_ISNULL)
 			elog(ERROR, "Gin doesn't support NULL as scan key");

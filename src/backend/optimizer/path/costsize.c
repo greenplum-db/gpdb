@@ -294,10 +294,10 @@ cost_index(IndexPath *path, PlannerInfo *root,
 	RelOptInfo *baserel = index->rel;
 	Cost		startup_cost = 0;
 	Cost		run_cost = 0;
-	Cost		indexStartupCost;
-	Cost		indexTotalCost;
-	Selectivity indexSelectivity;
-	double		indexCorrelation,
+	Cost		indexStartupCost = 0.0;
+	Cost		indexTotalCost = 0.0;
+	Selectivity indexSelectivity = 0.0;
+	double		indexCorrelation = 0.0,
 				csquared;
 	Cost		min_IO_cost,
 				max_IO_cost;

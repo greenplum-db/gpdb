@@ -48,7 +48,7 @@ execCurrentOf(CurrentOfExpr *cexpr,
 			  Oid table_oid,
 			  ItemPointer current_tid)
 {
-	int			current_gp_segment_id;
+	int			current_gp_segment_id = -1;
 	Oid			current_table_oid;
 
 	/*
