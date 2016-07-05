@@ -783,7 +783,7 @@ FaultInjector_InjectFaultIfSet(
 			
 		case FaultInjectorTypeSegv:
 		{
-			*(int *) 0 = 1234;
+			*(volatile int *) 0 = 1234;
 			break;
 		}
 		
