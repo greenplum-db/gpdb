@@ -1,8 +1,8 @@
-TOP_BUILDDIR = $(shell cd ../../../.. && pwd)
-include $(TOP_BUILDDIR)/src/Makefile.global
+top_builddir = $(shell cd ../../../.. && pwd)
+include $(top_builddir)/src/Makefile.global
 
 installcheck:
-	$(TOP_BUILDDIR)/src/test/regress/pg_regress --psqldir=$$GPHOME/bin/ --schedule=regress_schedule
+	$(top_builddir)/src/test/regress/pg_regress --psqldir=$$GPHOME/bin/ --schedule=regress_schedule
 
 clean:
 	rm -rf results regression.* optimizer_status.out
