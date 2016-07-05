@@ -1609,7 +1609,8 @@ typedef enum
 
 /*
  * TableType
- *   Enum for different types of tables.
+ *   Enum for different types of tables. The code relies on the enum being
+ *   unsigned so the minimum member value should be zero.
  */
 typedef enum
 {

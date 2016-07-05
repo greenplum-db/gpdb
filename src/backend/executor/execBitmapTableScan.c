@@ -59,7 +59,12 @@ getBitmapTableScanMethod(TableType tableType)
 
 	COMPILE_ASSERT(ARRAY_SIZE(scanMethods) == TableTypeInvalid);
 
-	if (tableType < 0 && tableType >= TableTypeInvalid)
+	/*
+	 * The test for the tableType being a valid enum member is inverted since
+	 * the actual datatype for an enum is compiler dependent and we can't rely
+	 * on it always being unsigned.
+	 */
+	if (!(tableType > 0 && tableType <= TableTypeInvalid))
 	{
 		return NULL;
 	}
