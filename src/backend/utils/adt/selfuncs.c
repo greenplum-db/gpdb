@@ -1139,8 +1139,6 @@ patternsel(PG_FUNCTION_ARGS, Pattern_Type ptype, bool negate)
 
 			if (pstatus == Pattern_Prefix_Partial)
             {
-			    Selectivity prefixsel;
-
 				prefixsel = prefix_selectivity(&vardata, vartype,
 											   opfamily, prefix);
 
@@ -1151,8 +1149,10 @@ patternsel(PG_FUNCTION_ARGS, Pattern_Type ptype, bool negate)
                 selec *= prefixsel;
             }
 			else
+			{
 				prefixsel = 1.0;
-			selec = prefixsel * rest_selec;
+				selec = prefixsel * rest_selec;
+			}
 		}
 		else
 		{
