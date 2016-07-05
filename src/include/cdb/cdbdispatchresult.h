@@ -100,12 +100,6 @@ typedef struct CdbDispatchResult
 	 */
 	bool wasCanceled;
 
-	bool QEIsPrimary;
-	bool QEWriter_HaveInfo;
-	DistributedTransactionId QEWriter_DistributedTransactionId;
-	CommandId QEWriter_CommandId;
-	bool QEWriter_Dirty;
-
 	/* num rows rejected in SREH mode */
 	int	numrowsrejected;
 } CdbDispatchResult;

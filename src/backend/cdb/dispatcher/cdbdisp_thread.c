@@ -54,10 +54,6 @@ shouldStillDispatchCommand(DispatchCommandParms *pParms,
 						   CdbDispatchResult *dispatchResult);
 
 static void
-CollectQEWriterTransactionInformation(SegmentDatabaseDescriptor *segdbDesc,
-									  CdbDispatchResult *dispatchResult);
-
-static void
 dispatchCommand(CdbDispatchResult *dispatchResult,
 				const char *query_text, int query_text_len);
 
@@ -1215,8 +1211,6 @@ processResults(CdbDispatchResult *dispatchResult)
 		 */
 		pRes = PQgetResult(segdbDesc->conn);
 
-		CollectQEWriterTransactionInformation(segdbDesc, dispatchResult);
-
 		/*
 		 * Command is complete when PGgetResult() returns NULL. It is critical
 		 * that for any connection that had an asynchronous command sent thru
@@ -1344,25 +1338,6 @@ connection_error:
 	dispatchResult->stillRunning = false;
 
 	return true; /* connection is gone! */
-}
-
-static void
-CollectQEWriterTransactionInformation(SegmentDatabaseDescriptor *segdbDesc,
-									  CdbDispatchResult *dispatchResult)
-{
-	PGconn *conn = segdbDesc->conn;
-
-	if (conn && conn->QEWriter_HaveInfo)
-	{
-		dispatchResult->QEIsPrimary = true;
-		dispatchResult->QEWriter_HaveInfo = true;
-		dispatchResult->QEWriter_DistributedTransactionId = conn->QEWriter_DistributedTransactionId;
-		dispatchResult->QEWriter_CommandId = conn->QEWriter_CommandId;
-		if (conn && conn->QEWriter_Dirty)
-		{
-			dispatchResult->QEWriter_Dirty = true;
-		}
-	}
 }
 
 /*

@@ -159,12 +159,6 @@ struct pg_result
 	PGNoticeHooks noticeHooks;
 	int			client_encoding;	/* encoding id */
 
-	/* Transaction information passed from EXECUTOR to DISPATCHER */
-	bool						QEWriter_HaveInfo;
-	DistributedTransactionId 	QEWriter_DistributedTransactionId;
-	CommandId 					QEWriter_CommandId;
-	bool 						QEWriter_Dirty;
-	
 	/* XLOG passed from Standby Master to Primary */
 	bool						Standby_HaveInfo;
 	uint32						Standby_xlogid;		/* log file #, 0 based */
@@ -329,12 +323,7 @@ struct pg_conn
 	PGAsyncStatusType asyncStatus;
 	PGTransactionStatusType xactStatus; /* never changes to ACTIVE */
 
-	/* Transaction information passed from EXECUTOR to DISPATCHER */
 	bool						utility_mode;
-	bool						QEWriter_HaveInfo;
-	DistributedTransactionId 	QEWriter_DistributedTransactionId;
-	CommandId 					QEWriter_CommandId;
-	bool 						QEWriter_Dirty;
 	
 	/* XLOG passed from Standby Master to Primary */
 	bool						Standby_HaveInfo;

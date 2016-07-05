@@ -1102,20 +1102,6 @@ RecordTransactionCommit(void)
 				 */
 				elog(DEBUG1, "omitting logging commit record for Reader qExec that has written changes.");
 				omitCommitRecordForDirtyQEReader = true;
-#ifdef nothing
-				/*
-				 * we better only do really minor things on the reader that result
-				 * in writing to the xlog here at commit.  for now sequences
-				 * should be the only one
-				 */
-				ereport(ERROR,
-						(errmsg("Reader qExec had local changes to commit! (MyXactMadeXLogEntry = %s, MyXactMadeTempRelUpdate = %s, nrels = %d)",
-								(MyXactMadeXLogEntry ? "true" : "false"), (MyXactMadeTempRelUpdate ? "true" : "false"), nrels),
-						 errdetail("A Reader qExec tried to commit local changes.  "
-								   "Only the single Writer qExec can do so. "),
-						 errhint("This is most likely the result of a feature being turned "
-								 "on that violates the single WRITER principle")));
-#endif
 			}
 		}
 	}
@@ -6025,21 +6011,6 @@ IsTransactionOrTransactionBlock(void)
 	return true;
 }
 
-/*
- * Did the transaction do work that requires a commit record to be written?
- */
-static bool
-IsTransactionDirty(void)
-{
-	TransactionId xid = GetTopTransactionIdIfAny();
-	bool		markXidCommitted = TransactionIdIsValid(xid);
-
-	elog((Debug_print_full_dtm ? LOG : DEBUG5), "IsTransactionDirty: TopTransactionId %u, dirty = %s",
-		 xid, (markXidCommitted ? "true" : "false"));
-	
-	return markXidCommitted;
-}
-
 void
 ExecutorMarkTransactionUsesSequences(void)
 {
@@ -6103,17 +6074,6 @@ TransactionBlockStatusCode(void)
 	return 0;					/* keep compiler quiet */
 }
 
-void
-TransactionInformationQEWriter(DistributedTransactionId *QEDistributedTransactionId, CommandId *QECommandId, bool *QEDirty)
-{
-	*QEDistributedTransactionId = QEDtxContextInfo.distributedXid;
-	*QECommandId = QEDtxContextInfo.curcid;
-	*QEDirty = IsTransactionDirty();
-}
-
-/*
- * IsSubTransaction
- */
 bool
 IsSubTransaction(void)
 {

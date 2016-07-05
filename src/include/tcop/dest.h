@@ -133,7 +133,6 @@ extern void EndCommand(const char *commandTag, CommandDest dest);
 
 extern void NullCommand(CommandDest dest);
 extern void ReadyForQuery(CommandDest dest);
-extern void ReadyForQuery_QEWriter(CommandDest dest);
 
 extern void sendQEDetails(void);
 

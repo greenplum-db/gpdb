@@ -41,9 +41,6 @@
 #include "cdb/cdbvars.h"
 #include "utils/vmem_tracker.h"
 
-void AddQEWriterTransactionInfo(StringInfo buf);
-
-
 /* ----------------
  *		dummy DestReceiver functions
  * ----------------
@@ -170,22 +167,7 @@ EndCommand(const char *commandTag, CommandDest dest)
 			 * We assume the commandTag is plain ASCII and therefore
 			 * requires no encoding conversion.
 			 */
-			if (Gp_role == GP_ROLE_EXECUTE && Gp_is_writer)
-			{
-				/*
-				 * Extra information that indicates if the transaction made
-				 * updates.
-				 */
-				sendQEDetails();
-
-				pq_beginmessage(&buf, 'g');
-				pq_send_ascii_string(&buf, commandTag);
-
-				AddQEWriterTransactionInfo(&buf);
-
-				pq_endmessage(&buf);
-			}
-			else if (Gp_role == GP_ROLE_EXECUTE)
+			if (Gp_role == GP_ROLE_EXECUTE)
 			{
 				sendQEDetails();
 
@@ -292,72 +274,6 @@ ReadyForQuery(CommandDest dest)
 		case DestCopyOut:
 			break;
 	}
-}
-
-/* ----------------
- *		ReadyForQuery_QE - tell dest that we are ready for a new query that
- *          includes QE Writer transaction information.
- *
- * ----------------
- *
- * NOTE: this is GPDB specific, and shouldn't fall inside the codepath
- * of QD->client communication.
- *
- */
-void
-ReadyForQuery_QEWriter(CommandDest dest)
-{
-	switch (dest)
-	{
-		case DestRemote:
-		case DestRemoteExecute:
-			if (PG_PROTOCOL_MAJOR(FrontendProtocol) >= 3)
-			{
-				StringInfoData buf;
-
-				sendQEDetails();
-
-				pq_beginmessage(&buf, 'z');
-				pq_sendbyte(&buf, TransactionBlockStatusCode());
-				AddQEWriterTransactionInfo(&buf);
-				pq_endmessage(&buf);
-			}
-			else if (PG_PROTOCOL_MAJOR(FrontendProtocol) >= 2)
-				pq_putemptymessage('Z');
-
-			/* Flush output at end of cycle in any case. */
-			pq_flush();
-			break;
-
-		case DestNone:
-		case DestDebug:
-		case DestSPI:
-		case DestTuplestore:
-		case DestIntoRel:
-		case DestCopyOut:
-			break;
-	}
-}
-
-/* ----------------
- *		AddQEWriterTransactionInfo - Add QE writer transction information.
- * ----------------
- */
-void
-AddQEWriterTransactionInfo(StringInfo buf)
-{
-	DistributedTransactionId	QEDistributedTransactionId;
-	CommandId					QECommandId;
-	bool						QEDirty;
-
-	TransactionInformationQEWriter(&QEDistributedTransactionId, &QECommandId, &QEDirty);
-
-	elog(DEBUG5,"QEWriterTransactionInfo: (DistributedTransactionId = %u, CommandId = %u, and Dirty = %s)",
-	     QEDistributedTransactionId, QECommandId, (QEDirty ? "true" : "false"));
-
-	pq_sendint(buf, QEDistributedTransactionId, 4);
-	pq_sendint(buf, QECommandId, 4);
-	pq_sendbyte(buf, (QEDirty ? 'T' : 'F'));
 }
 
 /*

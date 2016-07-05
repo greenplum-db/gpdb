@@ -168,10 +168,6 @@ PQmakeEmptyPGresult(PGconn *conn, ExecStatusType status)
 	result->curOffset = 0;
 	result->spaceLeft = 0;
     result->cdbstats = NULL;            /*CDB*/
-    result->QEWriter_HaveInfo = false;
-    result->QEWriter_DistributedTransactionId = 0;
-    result->QEWriter_CommandId = 0;
-    result->QEWriter_Dirty = false;
     result->Standby_HaveInfo = false;
     result->Standby_xlogid = 0;
     result->Standby_xrecoff = 0;
@@ -188,14 +184,6 @@ PQmakeEmptyPGresult(PGconn *conn, ExecStatusType status)
 		/* copy connection data we might need for operations on PGresult */
 		result->noticeHooks = conn->noticeHooks;
 		result->client_encoding = conn->client_encoding;
-
-		if (conn->QEWriter_HaveInfo)
-		{
-			result->QEWriter_HaveInfo = true;
-			result->QEWriter_DistributedTransactionId = conn->QEWriter_DistributedTransactionId;
-			result->QEWriter_CommandId= conn->QEWriter_CommandId;
-			result->QEWriter_Dirty = conn->QEWriter_Dirty;
-		}
 
 		if (conn->Standby_HaveInfo)
 		{
@@ -624,13 +612,7 @@ PQclear(PGresult *res)
 	res->paramDescs = NULL;
 	res->errFields = NULL;
 	/* res->curBlock was zeroed out earlier */
-	
-	
-	res->QEWriter_HaveInfo = false;
-	res->QEWriter_DistributedTransactionId = 0;
-	res->QEWriter_CommandId = 0;
-	res->QEWriter_Dirty = false;
-	
+
 	res->Standby_HaveInfo = false;
 	res->Standby_xlogid = 0;
 	res->Standby_xrecoff = 0;

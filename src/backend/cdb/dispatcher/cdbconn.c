@@ -433,12 +433,6 @@ void cdbconn_disconnect(SegmentDatabaseDescriptor *segdbDesc)
 		if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
 			elog(LOG, "Finishing connection with %s; %s", segdbDesc->whoami, transStatusToString(status));
 
-		elog((Debug_print_full_dtm ? LOG : (gp_log_gang >= GPVARS_VERBOSITY_DEBUG ? LOG : DEBUG5)),
-			"disconnectAndDestroyGang: got QEDistributedTransactionId = %u, QECommandId = %u, and QEDirty = %s",
-			segdbDesc->conn->QEWriter_DistributedTransactionId,
-			segdbDesc->conn->QEWriter_CommandId,
-			(segdbDesc->conn->QEWriter_Dirty ? "true" : "false"));
-
 		if (status == PQTRANS_ACTIVE)
 		{
 			char errbuf[256];

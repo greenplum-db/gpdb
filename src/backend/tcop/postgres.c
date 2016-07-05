@@ -4833,12 +4833,7 @@ PostgresMain(int argc, char *argv[],
 				pgstat_report_activity("<IDLE>");
 			}
 
-			if (Gp_role == GP_ROLE_EXECUTE && Gp_is_writer)
-			{
-				ReadyForQuery_QEWriter(whereToSendOutput);
-			}
-			else
-				ReadyForQuery(whereToSendOutput);
+			ReadyForQuery(whereToSendOutput);
 			send_ready_for_query = false;
 		}
 

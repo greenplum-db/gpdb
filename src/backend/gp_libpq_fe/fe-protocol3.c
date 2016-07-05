@@ -57,10 +57,8 @@ static int	getAnotherTuple(PGconn *conn, int msgLength);
 static int	getParameterStatus(PGconn *conn);
 static int	getNotify(PGconn *conn);
 static int	getCopyStart(PGconn *conn, ExecStatusType copytype);
-static int	getQEWriterTransactionInfo(PGconn *conn);
 static int	getStandbyMasterEndLocation(PGconn *conn);
 static int	getReadyForQuery(PGconn *conn);
-static int	getReadyForQuery_QEWriter(PGconn *conn);
 static void saveCdbStatMsg(PGresult *result, char *data, int len);
 static void reportErrorPosition(PQExpBuffer msg, const char *query,
 					int loc, int encoding);
@@ -247,25 +245,6 @@ pqParseInput3(PGconn *conn)
 					conn->asyncStatus = PGASYNC_READY;
 
 					break;
-				case 'g':		/* command complete with QE Writer transaction information */
-					if (pqGets(&conn->workBuffer, conn))
-						return;
-					
-					if (getQEWriterTransactionInfo(conn))
-						return;
-
-					if (conn->result == NULL)
-					{
-						conn->result = PQmakeEmptyPGresult(conn,
-														   PGRES_COMMAND_OK);
-						if (!conn->result)
-							return;
-					}
-					strncpy(conn->result->cmdStatus, conn->workBuffer.data,
-							CMDSTATUS_LEN);
-					
-					conn->asyncStatus = PGASYNC_READY;
-					break;
 				case 'o':
 				{
 					int i;
@@ -304,11 +283,6 @@ pqParseInput3(PGconn *conn)
 					break;
 				case 'Z':		/* backend is ready for new query */
 					if (getReadyForQuery(conn))
-						return;
-					conn->asyncStatus = PGASYNC_IDLE;
-					break;
-				case 'z':		/* backend is ready for new query (includes additional QE Writer transaction information) */
-					if (getReadyForQuery_QEWriter(conn))
 						return;
 					conn->asyncStatus = PGASYNC_IDLE;
 					break;
@@ -1528,31 +1502,6 @@ failure:
 }
 
 /*
- * getQEWriterTransactionInfo - process QE Writer transaction information in remainer of message
- */
-static int
-getQEWriterTransactionInfo(PGconn *conn)
-{
-	char						dirty;
-
-	/*
-	 * Between the EXECUTOR and DISPATCHER, send back a dirty flag plus
-	 * transaction information for verification purposes.
-	 */
-	if (pqGetInt((int*)&conn->QEWriter_DistributedTransactionId, 4, conn))
-		return EOF;
-	if (pqGetInt((int*)&conn->QEWriter_CommandId, 4, conn))
-		return EOF;
-	if (pqGetc(&dirty, conn))
-		return EOF;
-	conn->QEWriter_Dirty = (dirty == 'T');
-
-	conn->QEWriter_HaveInfo = true;
-
-	return 0;
-}
-
-/*
  * getStandbyEndLocation - process standby master XLOG end location in remainer of message
  */
 static int
@@ -1599,41 +1548,6 @@ getReadyForQuery(PGconn *conn)
 
 	return 0;
 }
-
-/*
- * getReadyForQuery_QEWriter - process ReadyForQuery message with additional
- *    QE Writer information.
- */
-static int
-getReadyForQuery_QEWriter(PGconn *conn)
-{
-	char		xact_status;
-
-	if (pqGetc(&xact_status, conn))
-		return EOF;
-
-	switch (xact_status)
-	{
-		case 'I':
-			conn->xactStatus = PQTRANS_IDLE;
-			break;
-		case 'T':
-			conn->xactStatus = PQTRANS_INTRANS;
-			break;
-		case 'E':
-			conn->xactStatus = PQTRANS_INERROR;
-			break;
-		default:
-			conn->xactStatus = PQTRANS_UNKNOWN;
-			break;
-	}
-
-	if (getQEWriterTransactionInfo(conn))
-		return EOF;
-
-	return 0;
-}
-
 
 /*
  * saveCdbStatMsg - attach qExec statistics message to PGresult
