@@ -144,30 +144,36 @@ bool PGArithFuncGenerator<rtype, Arg0, Arg1>::AddWithOverflow(
     llvm::Value** llvm_out_value) {
   assert(nullptr != llvm_out_value);
   // Assumed caller checked vector size and nullptr for codegen_utils
-  llvm::BasicBlock* llvm_non_overflow_block = codegen_utils->CreateBasicBlock(
-      "add_non_overflow_block", llvm_main_func);
-  llvm::BasicBlock* llvm_overflow_block = codegen_utils->CreateBasicBlock(
-      "add_overflow_block", llvm_main_func);
 
   llvm::Value* llvm_mul_output = codegen_utils->CreateAddOverflow<rtype>(
       llvm_args[0], llvm_args[1]);
 
   llvm::IRBuilder<>* irb = codegen_utils->ir_builder();
 
-  *llvm_out_value = irb->CreateExtractValue(llvm_mul_output, 0);
-  llvm::Value* llvm_overflow_flag = irb->CreateExtractValue(llvm_mul_output, 1);
+  if (!llvm_mul_output->getType()->isDoubleTy())
+  {
+    llvm::BasicBlock* llvm_non_overflow_block = codegen_utils->CreateBasicBlock(
+        "add_non_overflow_block", llvm_main_func);
+    llvm::BasicBlock* llvm_overflow_block = codegen_utils->CreateBasicBlock(
+        "add_overflow_block", llvm_main_func);
 
-  irb->CreateCondBr(
-      irb->CreateICmpEQ(llvm_overflow_flag,
-                        codegen_utils->GetConstant<bool>(true)),
-                        llvm_overflow_block,
-                        llvm_non_overflow_block);
+    *llvm_out_value = irb->CreateExtractValue(llvm_mul_output, 0);
+    llvm::Value* llvm_overflow_flag = irb->CreateExtractValue(llvm_mul_output, 1);
 
-  irb->SetInsertPoint(llvm_overflow_block);
-  // TODO(krajaraman): Elog::ERROR after ElogWrapper integrated.
-  irb->CreateBr(llvm_error_block);
+    irb->CreateCondBr(
+        irb->CreateICmpEQ(llvm_overflow_flag,
+                          codegen_utils->GetConstant<bool>(true)),
+                          llvm_overflow_block,
+                          llvm_non_overflow_block );
 
-  irb->SetInsertPoint(llvm_non_overflow_block);
+    irb->SetInsertPoint(llvm_overflow_block);
+    // TODO : krajaraman Elog::ERROR after ElogWrapper integrad.
+    irb->CreateBr(llvm_error_block);
+    irb->SetInsertPoint(llvm_non_overflow_block);
+  }
+  else {
+    *llvm_out_value = llvm_mul_output;
+  }
 
   return true;
 }

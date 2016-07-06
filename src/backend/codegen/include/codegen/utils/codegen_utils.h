@@ -1340,6 +1340,28 @@ class ArithOpMaker<float> {
 template <>
 class ArithOpMaker<double> {
  public:
+
+  static llvm::Value* CreateAddOverflow(CodegenUtils* generator,
+                                        llvm::Value* arg0,
+                                        llvm::Value* arg1) {
+    Checker(arg0, arg1);
+    llvm::Value* casted_arg0 = generator->ir_builder()->
+        CreateBitCast(arg0, generator->GetType<double>());
+    llvm::Value* casted_arg1 = generator->ir_builder()->
+        CreateBitCast(arg1, generator->GetType<double>());
+
+    // TODO: armenatzoglou Support overflow
+    return generator->ir_builder()->CreateFAdd(casted_arg0, casted_arg1);
+  }
+
+ private:
+  static void Checker(llvm::Value* arg0,
+                      llvm::Value* arg1) {
+    assert(nullptr != arg0 && nullptr != arg0->getType());
+    assert(nullptr != arg1 && nullptr != arg1->getType());
+    assert(arg0->getType()->isIntegerTy());
+    assert(arg1->getType()->isIntegerTy());
+  }
 };
 
 }  // namespace codegen_utils_detail

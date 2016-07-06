@@ -17,6 +17,7 @@
 #include "llvm/IR/Value.h"
 
 extern "C" {
+#include "c.h"
 #include "postgres.h"  // NOLINT(build/include)
 #include "utils/elog.h"
 #include "nodes/execnodes.h"
@@ -36,13 +37,15 @@ OpExprTreeGenerator::supported_function_;
 void OpExprTreeGenerator::InitializeSupportedFunction() {
   if (!supported_function_.empty()) { return; }
 
+  supported_function_[141] = std::unique_ptr<PGFuncGeneratorInterface>(
+      new PGGenericFuncGenerator<int32_t, int32_t>(
+          141,
+          "int4mul",
+          &PGArithFuncGenerator<int32_t, int32_t, int32_t>::MulWithOverflow));
+
   supported_function_[149] = std::unique_ptr<PGFuncGeneratorInterface>(
       new PGIRBuilderFuncGenerator<decltype(&IRBuilder<>::CreateICmpSLE),
       int32_t, int32_t>(149, "int4le", &IRBuilder<>::CreateICmpSLE));
-
-  supported_function_[1088] = std::unique_ptr<PGFuncGeneratorInterface>(
-      new PGIRBuilderFuncGenerator<decltype(&IRBuilder<>::CreateICmpSLE),
-      int32_t, int32_t>(1088, "date_le", &IRBuilder<>::CreateICmpSLE));
 
   supported_function_[177] = std::unique_ptr<PGFuncGeneratorInterface>(
       new PGGenericFuncGenerator<int32_t, int32_t>(
@@ -56,11 +59,16 @@ void OpExprTreeGenerator::InitializeSupportedFunction() {
           "int4mi",
           &PGArithFuncGenerator<int32_t, int32_t, int32_t>::SubWithOverflow));
 
-  supported_function_[141] = std::unique_ptr<PGFuncGeneratorInterface>(
-      new PGGenericFuncGenerator<int32_t, int32_t>(
-          141,
-          "int4mul",
-          &PGArithFuncGenerator<int32_t, int32_t, int32_t>::MulWithOverflow));
+  supported_function_[218] = std::unique_ptr<PGFuncGeneratorInterface>(
+      new PGGenericFuncGenerator<float8, float8>(
+          218,
+          "float8pl",
+          &PGArithFuncGenerator<float8, float8, int64_t>::AddWithOverflow));
+
+  supported_function_[1088] = std::unique_ptr<PGFuncGeneratorInterface>(
+      new PGIRBuilderFuncGenerator<decltype(&IRBuilder<>::CreateICmpSLE),
+      int32_t, int32_t>(1088, "date_le", &IRBuilder<>::CreateICmpSLE));
+
 }
 
 OpExprTreeGenerator::OpExprTreeGenerator(
