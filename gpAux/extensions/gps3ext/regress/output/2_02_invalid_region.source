@@ -5,7 +5,6 @@ CREATE OR REPLACE FUNCTION read_from_s3() RETURNS integer AS
 CREATE PROTOCOL s3 (
         readfunc  = read_from_s3
 );
-ERROR:  protocol "s3" already exists
 drop external table s3example;
 ERROR:  table "s3example" does not exist
 create READABLE external table s3example (date text, time text, open float, high float,
