@@ -31,7 +31,6 @@ MASTER_ONLY_TABLES = [
     'gp_fault_strategy',
     'gp_san_configuration',
     'gp_segment_configuration',
-    'gp_verification_history',
     'pg_description',
     'pg_listener',  # ???
     'pg_partition',
