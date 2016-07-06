@@ -7,7 +7,7 @@
 #include "s3log.h"
 #include "s3macros.h"
 
-unsigned int S3_ZIP_CHUNKSIZE = 1024 * 1024 * 2;
+uint64_t S3_ZIP_CHUNKSIZE = 1024 * 1024 * 2;
 
 DecompressReader::DecompressReader() {
     this->reader = NULL;
@@ -21,8 +21,8 @@ DecompressReader::~DecompressReader() {
     delete this->out;
 }
 
-// Used for unit test to adjust buf size
-void DecompressReader::resizeDecompressReaderBuffer(int size) {
+// Used for unit test to adjust buffer size
+void DecompressReader::resizeDecompressReaderBuffer(uint64_t size) {
     delete this->in;
     delete this->out;
     this->in = new char[size];

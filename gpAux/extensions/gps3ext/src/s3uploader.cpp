@@ -463,7 +463,7 @@ bool CompleteMultiPutS3(const char *host, const char *bucket, const char *obj_na
 
     // std::cout << body.str().c_str() << std::endl;
 
-    uint32_t body_size = strlen(body.str().c_str());
+    uint64_t body_size = strlen(body.str().c_str());
     char *body_data = (char *)malloc(body_size);
     if (body_data) {
         memcpy(body_data, body.str().c_str(), body_size);

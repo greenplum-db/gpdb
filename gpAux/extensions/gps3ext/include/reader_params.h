@@ -62,27 +62,27 @@ class ReaderParams {
         this->urlToLoad = url;
     }
 
-    int getSegId() const {
+    uint64_t getSegId() const {
         return segId;
     }
 
-    void setSegId(int segId) {
+    void setSegId(uint64_t segId) {
         this->segId = segId;
     }
 
-    int getSegNum() const {
+    uint64_t getSegNum() const {
         return segNum;
     }
 
-    void setSegNum(int segNum) {
+    void setSegNum(uint64_t segNum) {
         this->segNum = segNum;
     }
 
-    uint8_t getNumOfChunks() const {
+    uint64_t getNumOfChunks() const {
         return numOfChunks;
     }
 
-    void setNumOfChunks(uint8_t numOfChunks) {
+    void setNumOfChunks(uint64_t numOfChunks) {
         this->numOfChunks = numOfChunks;
     }
 
@@ -94,8 +94,8 @@ class ReaderParams {
     uint64_t chunkSize;    // chunk size
     uint64_t numOfChunks;  // number of chunks(threads).
     S3Credential cred;
-    int segId;
-    int segNum;
+    uint64_t segId;
+    uint64_t segNum;
 };
 
 #endif /* INCLUDE_READER_PARAMS_H_ */

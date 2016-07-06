@@ -32,7 +32,7 @@ class MockBufferReader : public Reader {
 
         uint64_t size = (remaining > count) ? count : remaining;
         size = size < this->chunkSize ? size : this->chunkSize;
-        for (int i = 0; i < size; i++) {
+        for (uint64_t i = 0; i < size; i++) {
             buf[i] = this->data[offset + i];
         }
 
@@ -160,8 +160,8 @@ TEST_F(DecompressReaderTest, AbleToDecompressWithSmallReadBuffer) {
 
     char outputBuffer[16] = {0};
 
-    int expectedLen[] = {16, 16, 2, 0};
-    for (int i = 0; i < sizeof(expectedLen) / sizeof(int); i++) {
+    uint32_t expectedLen[] = {16, 16, 2, 0};
+    for (uint32_t i = 0; i < sizeof(expectedLen) / sizeof(uint32_t); i++) {
         uint64_t count = decompressReader.read(outputBuffer, sizeof(outputBuffer));
         ASSERT_EQ(expectedLen[i], count);
     }
@@ -185,8 +185,8 @@ TEST_F(DecompressReaderTest, AbleToDecompressWithSmallInternalReaderBuffer) {
 
     char outputBuffer[9] = {0};
 
-    int expectedLen[] = {9, 1, 9, 1, 9, 1, 4, 0};
-    for (int i = 0; i < sizeof(expectedLen) / sizeof(int); i++) {
+    uint32_t expectedLen[] = {9, 1, 9, 1, 9, 1, 4, 0};
+    for (uint32_t i = 0; i < sizeof(expectedLen) / sizeof(uint32_t); i++) {
         ASSERT_EQ(expectedLen[i], decompressReader.read(outputBuffer, sizeof(outputBuffer)));
     }
 }
@@ -229,8 +229,8 @@ TEST_F(DecompressReaderTest, AbleToDecompressWithAlignedLargeReadBuffer) {
 
     char outputBuffer[16] = {0};
 
-    int expectedLen[] = {8, 8, 2, 0};
-    for (int i = 0; i < sizeof(expectedLen) / sizeof(int); i++) {
+    uint32_t expectedLen[] = {8, 8, 2, 0};
+    for (uint32_t i = 0; i < sizeof(expectedLen) / sizeof(uint32_t); i++) {
         ASSERT_EQ(expectedLen[i], decompressReader.read(outputBuffer, sizeof(outputBuffer)));
     }
 }
@@ -250,8 +250,8 @@ TEST_F(DecompressReaderTest, AbleToDecompressWithUnalignedLargeReadBuffer) {
 
     char outputBuffer[S3_ZIP_CHUNKSIZE * 6 + 4];
 
-    int expectedLen[] = {8, 8, 8, 8, 8, 8, 2, 0};
-    for (int i = 0; i < sizeof(expectedLen) / sizeof(int); i++) {
+    uint32_t expectedLen[] = {8, 8, 8, 8, 8, 8, 2, 0};
+    for (uint32_t i = 0; i < sizeof(expectedLen) / sizeof(uint32_t); i++) {
         ASSERT_EQ(expectedLen[i], decompressReader.read(outputBuffer, sizeof(outputBuffer)));
     }
 }
@@ -265,7 +265,7 @@ TEST_F(DecompressReaderTest, AbleToDecompressWithLargeReadBufferWithDecompressab
     setBufReaderByRawData(hello, sizeof(hello));
 
     char outputBuffer[30] = {0};
-    int outOffset = 0;
+    uint64_t outOffset = 0;
 
     // read and compose all chunks.
     while (outOffset < sizeof(hello)) {
@@ -289,9 +289,9 @@ TEST_F(DecompressReaderTest, AbleToDecompressWithSmartLargeReadBufferWithDecompr
 
     char outputBuffer[9] = {0};
 
-    int expectedLen[] = {4, 7, 7, 7, 2};
-    int offset = 0;
-    for (int i = 0; i < sizeof(expectedLen) / sizeof(int); i++) {
+    uint32_t expectedLen[] = {4, 7, 7, 7, 2};
+    uint64_t offset = 0;
+    for (uint32_t i = 0; i < sizeof(expectedLen) / sizeof(uint32_t); i++) {
         uint64_t count = decompressReader.read(outputBuffer, sizeof(outputBuffer));
         EXPECT_TRUE(strncmp(hello + offset, outputBuffer, count) == 0);
         ASSERT_EQ(expectedLen[i], count);

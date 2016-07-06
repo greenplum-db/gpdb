@@ -28,13 +28,13 @@ using std::stringstream;
 
 // configurable parameters
 int32_t s3ext_loglevel = -1;
-int32_t s3ext_threadnum = 5;
-int32_t s3ext_chunksize = 64 * 1024 * 1024;
+int32_t s3ext_threadnum = -1;
+int32_t s3ext_chunksize = -1;
 int32_t s3ext_logtype = -1;
 int32_t s3ext_logserverport = -1;
 
-int32_t s3ext_low_speed_limit = 10240;
-int32_t s3ext_low_speed_time = 60;
+int32_t s3ext_low_speed_limit = -1;
+int32_t s3ext_low_speed_time = -1;
 
 string s3ext_logserverhost;
 string s3ext_accessid;
@@ -44,13 +44,11 @@ string s3ext_token;
 bool s3ext_encryption = true;
 bool s3ext_debug_curl = false;
 
-// global variables
 int32_t s3ext_segid = -1;
 int32_t s3ext_segnum = -1;
 
-string s3ext_config_path;
-struct sockaddr_in s3ext_logserveraddr;
 int32_t s3ext_logsock_udp = -1;
+struct sockaddr_in s3ext_logserveraddr;
 
 // not thread safe!!
 bool InitConfig(const string& conf_path, const string section = "default") {

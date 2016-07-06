@@ -21,7 +21,7 @@ void print_template();
 
 void print_usage(FILE *stream);
 
-uint8_t print_contents(ListBucketResult *r);
+uint64_t print_contents(ListBucketResult *r);
 
 bool check_config(const char *url_with_options);
 

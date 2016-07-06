@@ -80,18 +80,18 @@ TEST(Utils, Config) {
 
     EXPECT_EQ(c.Get("configtest", "", "xx"), "xx");
 
-    uint32_t value = 0;
-    EXPECT_TRUE(c.Scan("configtest", "config2", "%ud", &value));
+    uint64_t value = 0;
+    EXPECT_TRUE(c.Scan("configtest", "config2", "%" PRIu64, &value));
     EXPECT_EQ(value, 12345);
 
-    EXPECT_TRUE(c.Scan("configtest", "config4", "%ud", &value));
+    EXPECT_TRUE(c.Scan("configtest", "config4", "%" PRIu64, &value));
     EXPECT_EQ(value, 123);
 
-    EXPECT_FALSE(c.Scan("configtest", "config7", "%ud", &value));
-    EXPECT_FALSE(c.Scan("", "config7", "%ud", &value));
-    EXPECT_FALSE(c.Scan("configtest", "", "%ud", &value));
+    EXPECT_FALSE(c.Scan("configtest", "config7", "%" PRIu64, &value));
+    EXPECT_FALSE(c.Scan("", "config7", "%" PRIu64, &value));
+    EXPECT_FALSE(c.Scan("configtest", "", "%" PRIu64, &value));
 
-    EXPECT_FALSE(c.Scan("configtest", "config5", "%ud", &value));
+    EXPECT_FALSE(c.Scan("configtest", "config5", "%" PRIu64, &value));
 
     char str[128];
     EXPECT_TRUE(c.Scan("configtest", "config3", "%s", str));

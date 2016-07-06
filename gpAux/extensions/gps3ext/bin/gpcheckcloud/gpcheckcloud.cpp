@@ -67,9 +67,9 @@ void print_usage(FILE *stream) {
             "       gpcheckcloud -h, to show this help.\n");
 }
 
-uint8_t print_contents(ListBucketResult *r) {
+uint64_t print_contents(ListBucketResult *r) {
     char urlbuf[256];
-    uint8_t count = 0;
+    uint64_t count = 0;
     vector<BucketContent *>::iterator i;
 
     for (i = r->contents.begin(); i != r->contents.end(); i++) {

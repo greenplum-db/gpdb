@@ -5,7 +5,7 @@
 #include "reader.h"
 
 // 256K by default
-extern unsigned int S3_ZIP_CHUNKSIZE;
+extern uint64_t S3_ZIP_CHUNKSIZE;
 
 class DecompressReader : public Reader {
    public:
@@ -24,7 +24,7 @@ class DecompressReader : public Reader {
 
     void setReader(Reader *reader);
 
-    void resizeDecompressReaderBuffer(int size);
+    void resizeDecompressReaderBuffer(uint64_t size);
 
    private:
     void decompress();

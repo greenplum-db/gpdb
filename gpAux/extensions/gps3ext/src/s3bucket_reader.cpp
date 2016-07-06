@@ -51,7 +51,7 @@ void S3BucketReader::open(const ReaderParams &params) {
 
 BucketContent *S3BucketReader::getNextKey() {
     this->keyIndex =
-        (this->keyIndex == (unsigned int)-1) ? this->segId : this->keyIndex + this->segNum;
+        (this->keyIndex == (uint64_t)-1) ? this->segId : this->keyIndex + this->segNum;
 
     if (this->keyIndex >= this->keyList->contents.size()) {
         return NULL;
@@ -122,7 +122,7 @@ void S3BucketReader::SetSchema() {
     }
 }
 
-ListBucketResult *S3BucketReader::listBucketWithRetry(int retries) {
+ListBucketResult *S3BucketReader::listBucketWithRetry(uint64_t retries) {
     CHECK_OR_DIE(this->s3interface != NULL);
 
     while (retries--) {

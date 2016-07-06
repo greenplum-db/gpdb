@@ -8,6 +8,9 @@
 #include <cstring>
 #include <string>
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 #include <openssl/md5.h>
 #include <openssl/sha.h>
 
@@ -33,7 +36,7 @@ bool sha256hmac(const char* str, unsigned char out_hash[32], const char* secret,
 bool sha256hmac_hex(const char* str, char out_hash_hex[65], const char* secret, int secret_len);
 
 size_t find_Nth(const string& str,  // where to work
-                unsigned N,         // N'th ocurrence
+                unsigned N,         // N'th occurrence
                 const string& find  // what to 'find'
                 );
 

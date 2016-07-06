@@ -105,9 +105,9 @@ void SignRequestV4(const string &method, HTTPHeaders *h, const string &orig_regi
     return;
 }
 
-// Returns string lengh till next occurence of given character.
-static int strlen_to_next_char(const char *ptr, char ch) {
-    int len = 0;
+// Returns string length till next occurrence of given character.
+static size_t strlen_to_next_char(const char *ptr, char ch) {
+    size_t len = 0;
     while ((*ptr != '\0') && (*ptr != ch)) {
         len++;
         ptr++;
@@ -176,7 +176,7 @@ string get_opt_s3(const string &options, const string &key) {
 // It is caller's responsibility to free returned memory.
 char *truncate_options(const char *url_with_options) {
     // get the length of url
-    int url_len = strlen_to_next_char(url_with_options, ' ');
+    size_t url_len = strlen_to_next_char(url_with_options, ' ');
 
     // get the string of url
     char *url = strndup(url_with_options, url_len);
