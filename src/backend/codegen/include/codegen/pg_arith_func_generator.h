@@ -200,7 +200,8 @@ bool PGArithFuncGenerator<rtype, Arg0, Arg1>::SubWithOverflow(
 
   llvm::IRBuilder<>* irb = codegen_utils->ir_builder();
 
-  if (!llvm_sub_output->getType()->isDoubleTy())
+  // We only support overflow checks for integers for now
+  if (llvm_sub_output->getType()->isIntegerTy())
   {
     llvm::BasicBlock* llvm_non_overflow_block = codegen_utils->CreateBasicBlock(
         "sub_non_overflow_block", llvm_main_func);
