@@ -127,6 +127,8 @@ gp_workfile_mgr_cache_entries(PG_FUNCTION_ARGS)
 		 */
 		TupleDesc tupdesc = CreateTemplateTupleDesc(NUM_CACHE_ENTRIES_ELEM, false);
 
+		Assert(NUM_CACHE_ENTRIES_ELEM == 12);
+
 		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "segid",
 				INT4OID, -1 /* typmod */, 0 /* attdim */);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "path",
@@ -151,8 +153,6 @@ gp_workfile_mgr_cache_entries(PG_FUNCTION_ARGS)
 				TIMESTAMPTZOID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 12, "numfiles",
 				INT4OID, -1 /* typmod */, 0 /* attdim */);
-
-		Assert(NUM_CACHE_ENTRIES_ELEM == 12);
 
 		funcctx->tuple_desc = BlessTupleDesc(tupdesc);
 
@@ -216,15 +216,15 @@ gp_workfile_mgr_cache_entries(PG_FUNCTION_ARGS)
 		}
 
 		values[3] = Int64GetDatum(work_set_size);
-		values[5] = UInt32GetDatum(crtEntry->state);
-		values[6] = UInt32GetDatum(work_set->metadata.operator_work_mem);
+		values[4] = UInt32GetDatum(crtEntry->state);
+		values[5] = UInt32GetDatum(work_set->metadata.operator_work_mem);
 
 		work_set_operator_name = gp_workfile_operator_name(work_set->node_type);
-		values[8] = UInt32GetDatum(work_set->slice_id);
-		values[9] = UInt32GetDatum(work_set->session_id);
-		values[10] = UInt32GetDatum(work_set->command_count);
-		values[11] = TimestampTzGetDatum(work_set->session_start_time);
-		values[12] = UInt32GetDatum(work_set->no_files);
+		values[7] = UInt32GetDatum(work_set->slice_id);
+		values[8] = UInt32GetDatum(work_set->session_id);
+		values[9] = UInt32GetDatum(work_set->command_count);
+		values[10] = TimestampTzGetDatum(work_set->session_start_time);
+		values[11] = UInt32GetDatum(work_set->no_files);
 
 		/* Done reading from the payload of the entry, release lock */
 		Cache_UnlockEntry(cache, crtEntry);
