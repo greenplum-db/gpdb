@@ -8,9 +8,6 @@
 #include <cstring>
 #include <string>
 
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
-
 #include <openssl/md5.h>
 #include <openssl/sha.h>
 
@@ -19,21 +16,27 @@
 
 using std::string;
 
-bool gethttpnow(char datebuf[65]);
+#define MD5_DIGEST_STRING_LENGTH 17
+#define SHA_DIGEST_STRING_LENGTH 41
+#define SHA256_DIGEST_STRING_LENGTH 65
 
 bool trim(char* out, const char* in, const char* trimed = " \t\r\n");
 
-bool sha1hmac(const char* str, unsigned char out_hash[20], const char* secret, int secret_len);
+bool sha1hmac(const char* str, unsigned char out_hash[SHA_DIGEST_LENGTH], const char* secret,
+              int secret_len);
 
-bool sha1hmac_hex(const char* str, char out_hash_hex[41], const char* secret, int secret_len);
+bool sha1hmac_hex(const char* str, char out_hash_hex[SHA_DIGEST_STRING_LENGTH], const char* secret,
+                  int secret_len);
 
-bool sha256(const char* string, unsigned char out_hash[32]);
+bool sha256(const char* string, unsigned char out_hash[SHA256_DIGEST_LENGTH]);
 
-bool sha256_hex(const char* string, char out_hash_hex[65]);
+bool sha256_hex(const char* string, char out_hash_hex[SHA256_DIGEST_STRING_LENGTH]);
 
-bool sha256hmac(const char* str, unsigned char out_hash[32], const char* secret, int secret_len);
+bool sha256hmac(const char* str, unsigned char out_hash[SHA256_DIGEST_LENGTH], const char* secret,
+                int secret_len);
 
-bool sha256hmac_hex(const char* str, char out_hash_hex[65], const char* secret, int secret_len);
+bool sha256hmac_hex(const char* str, char out_hash_hex[SHA256_DIGEST_STRING_LENGTH],
+                    const char* secret, int secret_len);
 
 size_t find_Nth(const string& str,  // where to work
                 unsigned N,         // N'th occurrence

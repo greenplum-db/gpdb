@@ -17,6 +17,8 @@
 #include "s3log.h"
 #include "s3utils.h"
 
+#define MAX_MESSAGE_LINE_LENGTH 1024
+
 #ifndef S3_STANDALONE
 extern "C" {
 void write_log(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
@@ -24,7 +26,7 @@ void write_log(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
 #endif
 
 void _LogMessage(const char* fmt, va_list args) {
-    char buf[1024];
+    char buf[MAX_MESSAGE_LINE_LENGTH];
     vsnprintf(buf, sizeof(buf), fmt, args);
 #ifdef S3_STANDALONE
     fprintf(stderr, "%s", buf);

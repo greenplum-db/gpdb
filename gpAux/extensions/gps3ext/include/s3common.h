@@ -9,6 +9,9 @@
 #include "s3http_headers.h"
 #include "s3log.h"
 
+#define DATE_STR_LEN 9
+#define TIME_STAMP_STR_LEN 17
+
 using std::string;
 
 struct S3Credential {

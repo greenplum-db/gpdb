@@ -1,6 +1,9 @@
 #include "s3utils.cpp"
 #include "gtest/gtest.h"
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 // Tests factorial of positive numbers.
 TEST(Utils, trim) {
     char data[] = " \t\n\r  abc \r\r\n\r \t";
@@ -9,11 +12,6 @@ TEST(Utils, trim) {
     ret = trim(out, data);
     EXPECT_EQ(ret, true);
     EXPECT_STREQ("abc", out);
-}
-
-TEST(Utils, time) {
-    char data[65];
-    gethttpnow(data);
 }
 
 TEST(Utils, simplecurl) {

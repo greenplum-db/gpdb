@@ -31,9 +31,6 @@ static string encode_query_str(const string &query) {
     return query_encoded;
 }
 
-#define DATE_STR_LEN 9
-#define TIME_STAMP_STR_LEN 17
-#define SHA256_DIGEST_STRING_LENGTH 65
 void SignRequestV4(const string &method, HTTPHeaders *h, const string &orig_region,
                    const string &path, const string &query, const S3Credential &cred) {
     struct tm tm_info;

@@ -50,8 +50,7 @@ void S3BucketReader::open(const ReaderParams &params) {
 }
 
 BucketContent *S3BucketReader::getNextKey() {
-    this->keyIndex =
-        (this->keyIndex == (uint64_t)-1) ? this->segId : this->keyIndex + this->segNum;
+    this->keyIndex = (this->keyIndex == (uint64_t)-1) ? this->segId : this->keyIndex + this->segNum;
 
     if (this->keyIndex >= this->keyList->contents.size()) {
         return NULL;

@@ -34,22 +34,10 @@ void write_log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 }
 #endif
 
-bool gethttpnow(char datebuf[65]) {  //('D, d M Y H:i:s T')
-    struct tm tm_info;
-    time_t t;
-    if (!datebuf) {
-        return false;
-    }
-    time(&t);
-    localtime_r(&t, &tm_info);
-    strftime(datebuf, 65, "%a, %d %b %Y %H:%M:%S %z", &tm_info);
-    return true;
-}
-
 bool trim(char *out, const char *in, const char *trimed) {
     int targetlen;
 
-    if (!out || !in) {  // invalid string params
+    if (!out || !in) {  // invalid string parameters
         return false;
     }
 
@@ -77,10 +65,11 @@ bool trim(char *out, const char *in, const char *trimed) {
 }
 
 // not returning the normal hex result, might have '\0'
-bool sha1hmac(const char *str, unsigned char out_hash[20], const char *secret, int secret_len) {
+bool sha1hmac(const char *str, unsigned char out_hash[SHA_DIGEST_LENGTH], const char *secret,
+              int secret_len) {
     if (!str) return false;
 
-    unsigned int len = 32;
+    unsigned int len = SHA_DIGEST_LENGTH;  // 20
 
     HMAC_CTX hmac;
     HMAC_CTX_init(&hmac);
@@ -93,23 +82,23 @@ bool sha1hmac(const char *str, unsigned char out_hash[20], const char *secret, i
     return true;
 }
 
-bool sha1hmac_hex(const char *str, char out_hash_hex[41], const char *secret, int secret_len) {
+bool sha1hmac_hex(const char *str, char out_hash_hex[SHA_DIGEST_STRING_LENGTH], const char *secret,
+                  int secret_len) {
     if (!str) return false;
 
-    unsigned char hash[20];
+    unsigned char hash[SHA_DIGEST_LENGTH];
 
     sha1hmac(str, hash, secret, secret_len);
 
-    for (int i = 0; i < 20; i++) {
+    for (int i = 0; i < SHA_DIGEST_LENGTH; i++) {
         sprintf(out_hash_hex + (i * 2), "%02x", hash[i]);
     }
-    out_hash_hex[40] = 0;
+    out_hash_hex[SHA_DIGEST_STRING_LENGTH - 1] = 0;
 
     return true;
 }
 
-// SHA256_DIGEST_LENGTH == 32
-bool sha256(const char *string, unsigned char out_hash[32]) {
+bool sha256(const char *string, unsigned char out_hash[SHA256_DIGEST_LENGTH]) {
     if (!string) return false;
 
     SHA256_CTX sha256;
@@ -120,8 +109,7 @@ bool sha256(const char *string, unsigned char out_hash[32]) {
     return true;
 }
 
-// SHA256_DIGEST_LENGTH * 2 + 1 == 65
-bool sha256_hex(const char *string, char out_hash_hex[65]) {
+bool sha256_hex(const char *string, char out_hash_hex[SHA256_DIGEST_STRING_LENGTH]) {
     if (!string) return false;
 
     unsigned char hash[SHA256_DIGEST_LENGTH];  // 32
@@ -131,7 +119,7 @@ bool sha256_hex(const char *string, char out_hash_hex[65]) {
     for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
         sprintf(out_hash_hex + (i * 2), "%02x", hash[i]);
     }
-    out_hash_hex[64] = 0;
+    out_hash_hex[SHA256_DIGEST_STRING_LENGTH - 1] = 0;
 
     return true;
 }
@@ -139,7 +127,7 @@ bool sha256_hex(const char *string, char out_hash_hex[65]) {
 bool sha256hmac(const char *str, unsigned char out_hash[32], const char *secret, int secret_len) {
     if (!str) return false;
 
-    unsigned int len = 32;
+    unsigned int len = SHA256_DIGEST_LENGTH;  // 32
 
     HMAC_CTX hmac;
     HMAC_CTX_init(&hmac);
@@ -162,7 +150,7 @@ bool sha256hmac_hex(const char *str, char out_hash_hex[65], const char *secret, 
     for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
         sprintf(out_hash_hex + (i * 2), "%02x", hash[i]);
     }
-    out_hash_hex[64] = 0;
+    out_hash_hex[SHA256_DIGEST_STRING_LENGTH - 1] = 0;
 
     return true;
 }
@@ -189,7 +177,7 @@ CURL *CreateCurlHandler(const char *path) {
  * - http://stackoverflow.com/questions/20406744/
  */
 size_t find_Nth(const string &str,  // where to work
-                unsigned N,         // N'th ocurrence
+                unsigned N,         // N'th occurrence
                 const string &find  // what to 'find'
                 ) {
     if (0 == N) {
@@ -209,7 +197,7 @@ size_t find_Nth(const string &str,  // where to work
 }
 
 MD5Calc::MD5Calc() {
-    memset(this->md5, 0, 17);
+    memset(this->md5, 0, MD5_DIGEST_STRING_LENGTH);
     MD5_Init(&this->c);
 }
 
@@ -221,12 +209,12 @@ bool MD5Calc::Update(const char *data, int len) {
 const char *MD5Calc::Get() {
     MD5_Final(this->md5, &c);
     std::stringstream ss;
-    for (int i = 0; i < 16; i++)
+    for (int i = 0; i < MD5_DIGEST_LENGTH; i++)
         ss << std::hex << std::setw(2) << std::setfill('0') << (int)this->md5[i];
     this->result = ss.str();
 
     // Reset MD5 context
-    memset(this->md5, 0, 17);
+    memset(this->md5, 0, MD5_DIGEST_STRING_LENGTH);
     MD5_Init(&this->c);
     return this->result.c_str();
 }
@@ -256,7 +244,7 @@ Config::Config(const string &filename) : _conf(NULL) {
     if (filename != "") this->_conf = ini_load(filename.c_str());
     if (this->_conf == NULL) {
 #ifndef S3_STANDALONE
-        write_log("Failed to load config file\n");
+        write_log("Failed to load configuration file\n");
 #endif
     }
 }
