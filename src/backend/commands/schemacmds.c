@@ -156,7 +156,7 @@ CreateSchemaCommand(CreateSchemaStmt *stmt, const char *queryString)
 							   "CREATE", "SCHEMA"
 					);
 	}
-	else if (Gp_role == GP_ROLE_EXECUTE)
+	else
 	{
 		namespaceId = NamespaceCreate(schemaName, owner_uid, stmt->schemaOid);
 	}

@@ -4209,16 +4209,19 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 						pc->arg1 = (Node *)lappend((List *)pc->arg1, NULL);
 						continue;
 					}
-					else if (is_at)
-						l1 = (List *)t;
-					else if (!is_at)
+					else
 					{
-						Node *n = t;
-						PartitionRangeItem *ri = (PartitionRangeItem *)n;
+						if (is_at)
+							l1 = (List *)t;
+						else
+						{
+							Node *n = t;
+							PartitionRangeItem *ri = (PartitionRangeItem *)n;
 
-						Assert(IsA(n, PartitionRangeItem));
+							Assert(IsA(n, PartitionRangeItem));
 
-						l1 = ri->partRangeVal;
+							l1 = ri->partRangeVal;
+						}
 					}
 
 					if (IsA(linitial(l1), A_Const) ||
