@@ -2118,7 +2118,7 @@ static size_t gp_proto1_read(char *buf, int bufsz, URL_FILE *file, CopyState pst
 			 */
 			memcpy(&line_number, curl->in.ptr + curl->in.bot, len);
 			line_number = local_ntohll(line_number);
-			pstate->cur_lineno = line_number ? line_number - 1 : (int64) - 1 << 63;
+			pstate->cur_lineno = line_number ? line_number - 1 : INT64_MIN;
 			curl->in.bot += 8;
 			Assert(curl->in.bot <= curl->in.top);
 			continue;
