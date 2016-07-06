@@ -59,11 +59,24 @@ void OpExprTreeGenerator::InitializeSupportedFunction() {
           "int4mi",
           &PGArithFuncGenerator<int32_t, int32_t, int32_t>::SubWithOverflow));
 
+
+  supported_function_[216] = std::unique_ptr<PGFuncGeneratorInterface>(
+      new PGGenericFuncGenerator<float8, float8>(
+          216,
+          "float8mul",
+          &PGArithFuncGenerator<float8, float8, int64_t>::MulWithOverflow));
+
   supported_function_[218] = std::unique_ptr<PGFuncGeneratorInterface>(
       new PGGenericFuncGenerator<float8, float8>(
           218,
           "float8pl",
           &PGArithFuncGenerator<float8, float8, int64_t>::AddWithOverflow));
+
+  supported_function_[219] = std::unique_ptr<PGFuncGeneratorInterface>(
+      new PGGenericFuncGenerator<float8, float8>(
+          219,
+          "float8mi",
+          &PGArithFuncGenerator<float8, float8, int64_t>::SubWithOverflow));
 
   supported_function_[1088] = std::unique_ptr<PGFuncGeneratorInterface>(
       new PGIRBuilderFuncGenerator<decltype(&IRBuilder<>::CreateICmpSLE),

@@ -53,10 +53,10 @@ class PGArithFuncGenerator {
    *        error block.
    **/
   static bool MulWithOverflow(gpcodegen::CodegenUtils* codegen_utils,
-                               llvm::Function* llvm_main_func,
-                               llvm::BasicBlock* llvm_error_block,
-                               const std::vector<llvm::Value*>& llvm_args,
-                               llvm::Value** llvm_out_value);
+                              llvm::Function* llvm_main_func,
+                              llvm::BasicBlock* llvm_error_block,
+                              const std::vector<llvm::Value*>& llvm_args,
+                              llvm::Value** llvm_out_value);
 
   /**
    * @brief Create LLVM Add instruction with check for overflow
@@ -92,10 +92,10 @@ class PGArithFuncGenerator {
    *        error block.
    **/
   static bool SubWithOverflow(gpcodegen::CodegenUtils* codegen_utils,
-                                llvm::Function* llvm_main_func,
-                                llvm::BasicBlock* llvm_error_block,
-                                const std::vector<llvm::Value*>& llvm_args,
-                                llvm::Value** llvm_out_value);
+                              llvm::Function* llvm_main_func,
+                              llvm::BasicBlock* llvm_error_block,
+                              const std::vector<llvm::Value*>& llvm_args,
+                              llvm::Value** llvm_out_value);
 };
 
 template <typename rtype, typename Arg0, typename Arg1>
@@ -107,30 +107,37 @@ bool PGArithFuncGenerator<rtype, Arg0, Arg1>::MulWithOverflow(
     llvm::Value** llvm_out_value) {
   assert(nullptr != llvm_out_value);
   // Assumed caller checked vector size and nullptr for codegen_utils
-  llvm::BasicBlock* llvm_non_overflow_block = codegen_utils->CreateBasicBlock(
-             "mul_non_overflow_block", llvm_main_func);
-  llvm::BasicBlock* llvm_overflow_block = codegen_utils->CreateBasicBlock(
-             "mul_overflow_block", llvm_main_func);
 
   llvm::Value* llvm_mul_output = codegen_utils->CreateMulOverflow<rtype>(
       llvm_args[0], llvm_args[1]);
 
   llvm::IRBuilder<>* irb = codegen_utils->ir_builder();
 
-  *llvm_out_value = irb->CreateExtractValue(llvm_mul_output, 0);
-  llvm::Value* llvm_overflow_flag = irb->CreateExtractValue(llvm_mul_output, 1);
+  if (!llvm_mul_output->getType()->isDoubleTy())
+  {
+    llvm::BasicBlock* llvm_non_overflow_block = codegen_utils->CreateBasicBlock(
+        "mul_non_overflow_block", llvm_main_func);
+    llvm::BasicBlock* llvm_overflow_block = codegen_utils->CreateBasicBlock(
+        "mul_overflow_block", llvm_main_func);
 
-  irb->CreateCondBr(
-      irb->CreateICmpEQ(llvm_overflow_flag,
-                        codegen_utils->GetConstant<bool>(true)),
-                        llvm_overflow_block,
-                        llvm_non_overflow_block);
+    *llvm_out_value = irb->CreateExtractValue(llvm_mul_output, 0);
+    llvm::Value* llvm_overflow_flag = irb->CreateExtractValue(llvm_mul_output, 1);
 
-  irb->SetInsertPoint(llvm_overflow_block);
-  // TODO(krajaraman): Elog::ERROR after ElogWrapper integrated.
-  irb->CreateBr(llvm_error_block);
+    irb->CreateCondBr(
+        irb->CreateICmpEQ(llvm_overflow_flag,
+                          codegen_utils->GetConstant<bool>(true)),
+                          llvm_overflow_block,
+                          llvm_non_overflow_block);
 
-  irb->SetInsertPoint(llvm_non_overflow_block);
+    irb->SetInsertPoint(llvm_overflow_block);
+    // TODO(krajaraman): Elog::ERROR after ElogWrapper integrated.
+    irb->CreateBr(llvm_error_block);
+
+    irb->SetInsertPoint(llvm_non_overflow_block);
+  }
+  else {
+    *llvm_out_value = llvm_mul_output;
+  }
 
   return true;
 }
@@ -145,20 +152,20 @@ bool PGArithFuncGenerator<rtype, Arg0, Arg1>::AddWithOverflow(
   assert(nullptr != llvm_out_value);
   // Assumed caller checked vector size and nullptr for codegen_utils
 
-  llvm::Value* llvm_mul_output = codegen_utils->CreateAddOverflow<rtype>(
+  llvm::Value* llvm_add_output = codegen_utils->CreateAddOverflow<rtype>(
       llvm_args[0], llvm_args[1]);
 
   llvm::IRBuilder<>* irb = codegen_utils->ir_builder();
 
-  if (!llvm_mul_output->getType()->isDoubleTy())
+  if (!llvm_add_output->getType()->isDoubleTy())
   {
     llvm::BasicBlock* llvm_non_overflow_block = codegen_utils->CreateBasicBlock(
         "add_non_overflow_block", llvm_main_func);
     llvm::BasicBlock* llvm_overflow_block = codegen_utils->CreateBasicBlock(
         "add_overflow_block", llvm_main_func);
 
-    *llvm_out_value = irb->CreateExtractValue(llvm_mul_output, 0);
-    llvm::Value* llvm_overflow_flag = irb->CreateExtractValue(llvm_mul_output, 1);
+    *llvm_out_value = irb->CreateExtractValue(llvm_add_output, 0);
+    llvm::Value* llvm_overflow_flag = irb->CreateExtractValue(llvm_add_output, 1);
 
     irb->CreateCondBr(
         irb->CreateICmpEQ(llvm_overflow_flag,
@@ -172,7 +179,7 @@ bool PGArithFuncGenerator<rtype, Arg0, Arg1>::AddWithOverflow(
     irb->SetInsertPoint(llvm_non_overflow_block);
   }
   else {
-    *llvm_out_value = llvm_mul_output;
+    *llvm_out_value = llvm_add_output;
   }
 
   return true;
@@ -187,31 +194,37 @@ bool PGArithFuncGenerator<rtype, Arg0, Arg1>::SubWithOverflow(
     llvm::Value** llvm_out_value) {
   assert(nullptr != llvm_out_value);
   // Assumed caller checked vector size and nullptr for codegen_utils
-  llvm::BasicBlock* llvm_non_overflow_block = codegen_utils->CreateBasicBlock(
-      "sub_non_overflow_block", llvm_main_func);
-  llvm::BasicBlock* llvm_overflow_block = codegen_utils->CreateBasicBlock(
-      "sub_overflow_block", llvm_main_func);
 
-  llvm::Value* llvm_mul_output = codegen_utils->CreateSubOverflow<rtype>(
+  llvm::Value* llvm_sub_output = codegen_utils->CreateSubOverflow<rtype>(
       llvm_args[0], llvm_args[1]);
 
   llvm::IRBuilder<>* irb = codegen_utils->ir_builder();
 
-  *llvm_out_value = irb->CreateExtractValue(llvm_mul_output, 0);
-  llvm::Value* llvm_overflow_flag = irb->CreateExtractValue(llvm_mul_output, 1);
+  if (!llvm_sub_output->getType()->isDoubleTy())
+  {
+    llvm::BasicBlock* llvm_non_overflow_block = codegen_utils->CreateBasicBlock(
+        "sub_non_overflow_block", llvm_main_func);
+    llvm::BasicBlock* llvm_overflow_block = codegen_utils->CreateBasicBlock(
+        "sub_overflow_block", llvm_main_func);
 
-  irb->CreateCondBr(
-      irb->CreateICmpEQ(llvm_overflow_flag,
-                        codegen_utils->GetConstant<bool>(true)),
-                        llvm_overflow_block,
-                        llvm_non_overflow_block);
+    *llvm_out_value = irb->CreateExtractValue(llvm_sub_output, 0);
+    llvm::Value* llvm_overflow_flag = irb->CreateExtractValue(llvm_sub_output, 1);
 
-  irb->SetInsertPoint(llvm_overflow_block);
-  // TODO(krajaraman): Elog::ERROR after ElogWrapper integrated.
-  irb->CreateBr(llvm_error_block);
+    irb->CreateCondBr(
+        irb->CreateICmpEQ(llvm_overflow_flag,
+                          codegen_utils->GetConstant<bool>(true)),
+                          llvm_overflow_block,
+                          llvm_non_overflow_block);
 
-  irb->SetInsertPoint(llvm_non_overflow_block);
+    irb->SetInsertPoint(llvm_overflow_block);
+    // TODO(krajaraman): Elog::ERROR after ElogWrapper integrated.
+    irb->CreateBr(llvm_error_block);
 
+    irb->SetInsertPoint(llvm_non_overflow_block);
+  }
+  else {
+    *llvm_out_value = llvm_sub_output;
+  }
   return true;
 }
 
