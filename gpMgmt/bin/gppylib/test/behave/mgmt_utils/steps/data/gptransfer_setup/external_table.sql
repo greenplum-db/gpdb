@@ -4,8 +4,13 @@
 CREATE external web TABLE e_REGION  ( R_REGIONKEY  INTEGER ,
                             R_NAME       CHAR(25) ,
                             R_COMMENT    VARCHAR(152))
-                        execute 'bash -c "$GPHOME/bin/dbgen -b $GPHOME/bin/dists.dss -T r -s 1"'
-                        on 1 format 'text' (delimiter '|');
+                            EXECUTE 'echo "1|region1|region 1. some description
+                                           2|region2|region 2. some description
+                                           3|region3|region 3. some description
+                                           4|region4|region 4. some description
+                                           5|region5|region 5. some description"'
+                            on 1 format 'text' (delimiter '|');
+
 --
 -- create WET with similiar schema def as the original heap table
 --
