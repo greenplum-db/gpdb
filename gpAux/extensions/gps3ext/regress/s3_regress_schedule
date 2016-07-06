@@ -1,0 +1,16 @@
+test: 1_01_normal
+test: 1_02_log_error
+test: 1_03_bad_data
+test: 1_04_empty_prefix
+test: 1_05_one_line
+test: 1_06_1correct_1wrong
+test: 1_07_huge_bad_data
+test: 1_08_huge_correct_data
+test: 1_09_partition
+test: 1_10_all_regions
+test: 1_11_gzipped_data
+test: 1_12_no_prefix
+test: 2_01_invalid_syntax
+test: 2_02_invalid_region
+test: 2_03_invalid_config
+test: 2_04_invalid_header
