@@ -1,4 +1,5 @@
 #include "s3http_headers.cpp"
+#include <limits.h>
 #include "gtest/gtest.h"
 
 TEST(Common, GetFieldString) {
@@ -13,6 +14,7 @@ TEST(Common, GetFieldString) {
     EXPECT_STREQ("ETag", GetFieldString(ETAG));
     EXPECT_STREQ("x-amz-date", GetFieldString(X_AMZ_DATE));
     EXPECT_STREQ("x-amz-content-sha256", GetFieldString(X_AMZ_CONTENT_SHA256));
+    EXPECT_STREQ("Unknown", GetFieldString((HeaderField)INT_MAX));
 }
 
 TEST(Common, HTTPHeaders) {
@@ -27,6 +29,7 @@ TEST(Common, HTTPHeaders) {
     EXPECT_EQ((void *)NULL, l);
     h->FreeList();
 
+    ASSERT_FALSE(h->Add(HOST, ""));
     ASSERT_TRUE(h->Add(HOST, HOSTSTR));
     ASSERT_TRUE(h->Add(RANGE, RANGESTR));
     ASSERT_TRUE(h->Add(CONTENTMD5, MD5STR));

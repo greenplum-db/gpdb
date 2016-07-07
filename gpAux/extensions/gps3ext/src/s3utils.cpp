@@ -34,36 +34,6 @@ void write_log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 }
 #endif
 
-bool trim(char *out, const char *in, const char *trimed) {
-    int targetlen;
-
-    if (!out || !in) {  // invalid string parameters
-        return false;
-    }
-
-    targetlen = strlen(in);
-
-    while (targetlen > 0) {
-        if (strchr(trimed, in[targetlen - 1]) == NULL)  // can't find stripped char
-            break;
-        else
-            targetlen--;
-    }
-
-    while (targetlen > 0) {
-        if (strchr(trimed, *in) == NULL)  // normal string
-            break;
-        else {
-            in++;
-            targetlen--;
-        }
-    }
-
-    memcpy(out, in, targetlen);
-    out[targetlen] = 0;
-    return true;
-}
-
 // not returning the normal hex result, might have '\0'
 bool sha1hmac(const char *str, unsigned char out_hash[SHA_DIGEST_LENGTH], const char *secret,
               int secret_len) {
@@ -219,29 +189,17 @@ const char *MD5Calc::Get() {
     return this->result.c_str();
 }
 
-DataBuffer::DataBuffer(uint64_t size) : maxsize(size), length(0) {
-    this->data = (char *)malloc(this->maxsize);
-}
-
-DataBuffer::~DataBuffer() {
-    if (this->data) {
-        free(this->data);
-    }
-}
-
-uint64_t DataBuffer::append(const char *buf, uint64_t len) {
-    uint64_t copylen = std::min(len, maxsize - length);
-    if (this->data) {
-        memcpy(this->data + length, buf, copylen);
-        this->length += copylen;
-        return copylen;
-    } else {
-        return 0;
-    }
-}
-
 Config::Config(const string &filename) : _conf(NULL) {
-    if (filename != "") this->_conf = ini_load(filename.c_str());
+    if (!filename.empty()) this->_conf = ini_load(filename.c_str());
+    if (this->_conf == NULL) {
+#ifndef S3_STANDALONE
+        write_log("Failed to load config file\n");
+#endif
+    }
+}
+
+Config::Config(const char *filename) : _conf(NULL) {
+    if (filename != NULL) this->_conf = ini_load(filename);
     if (this->_conf == NULL) {
 #ifndef S3_STANDALONE
         write_log("Failed to load configuration file\n");
@@ -255,22 +213,17 @@ Config::~Config() {
 
 string Config::Get(const string &sec, const string &key, const string &defaultvalue) {
     string ret = defaultvalue;
-    if ((key == "") || (sec == "")) return ret;
+    if ((key == "") || (sec == "") || (this->_conf == NULL)) return ret;
 
-    if (this->_conf) {
-        const char *tmp = ini_get(this->_conf, sec.c_str(), key.c_str());
-        if (tmp) ret = tmp;
-    }
+    const char *tmp = ini_get(this->_conf, sec.c_str(), key.c_str());
+    if (tmp) ret = tmp;
     return ret;
 }
 
 bool Config::Scan(const string &sec, const string &key, const char *scanfmt, void *dst) {
-    if ((key == "") || (sec == "")) return false;
+    if ((key == "") || (sec == "") || (this->_conf == NULL)) return false;
 
-    if (this->_conf) {
-        return ini_sget(this->_conf, sec.c_str(), key.c_str(), scanfmt, dst);
-    }
-    return false;
+    return ini_sget(this->_conf, sec.c_str(), key.c_str(), scanfmt, dst);
 }
 
 bool to_bool(std::string str) {

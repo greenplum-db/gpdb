@@ -20,8 +20,6 @@ using std::string;
 #define SHA_DIGEST_STRING_LENGTH 41
 #define SHA256_DIGEST_STRING_LENGTH 65
 
-bool trim(char* out, const char* in, const char* trimed = " \t\r\n");
-
 bool sha1hmac(const char* str, unsigned char out_hash[SHA_DIGEST_LENGTH], const char* secret,
               int secret_len);
 
@@ -56,38 +54,10 @@ class MD5Calc {
     string result;
 };
 
-class DataBuffer {
-   public:
-    DataBuffer(uint64_t size);
-    ~DataBuffer();
-    void reset() {
-        length = 0;
-    };
-
-    uint64_t append(const char* buf, uint64_t len);  // ret < len means full
-    const char* getdata() {
-        return data;
-    };
-    uint64_t len() {
-        return this->length;
-    };
-    bool full() {
-        return maxsize == length;
-    };
-    bool empty() {
-        return 0 == length;
-    };
-
-   private:
-    const uint64_t maxsize;
-    uint64_t length;
-    // uint64_t offset;
-    char* data;
-};
-
 class Config {
    public:
     Config(const string& filename);
+    Config(const char* filename);
     ~Config();
     string Get(const string& sec, const string& key, const string& defaultvalue);
     bool Scan(const string& sec, const string& key, const char* scanfmt, void* dst);

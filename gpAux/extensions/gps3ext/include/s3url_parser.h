@@ -16,13 +16,16 @@ class UrlParser {
     const char* Path() {
         return this->path;
     };
+    const char* Query() {
+        return this->query;
+    }
 
-    /* data */
    private:
     char* extractField(const struct http_parser_url* u, http_parser_url_fields i);
     char* schema;
     char* host;
     char* path;
+    char* query;
     char* fullurl;
 };
 

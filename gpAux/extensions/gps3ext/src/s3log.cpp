@@ -15,6 +15,7 @@
 
 #include "s3conf.h"
 #include "s3log.h"
+#include "s3macros.h"
 #include "s3utils.h"
 
 #define MAX_MESSAGE_LINE_LENGTH 1024
@@ -70,9 +71,7 @@ void InitRemoteLog() {
     }
 
     s3ext_logsock_udp = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (s3ext_logsock_udp < 0) {
-        perror("Failed to create socket while InitRemoteLog()");
-    }
+    CHECK_OR_DIE_MSG(s3ext_logsock_udp != -1, "Failed to create socket: %s", strerror(errno));
 
     memset(&s3ext_logserveraddr, 0, sizeof(struct sockaddr_in));
     s3ext_logserveraddr.sin_family = AF_INET;

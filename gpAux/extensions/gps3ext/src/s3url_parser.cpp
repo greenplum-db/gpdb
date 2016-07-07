@@ -33,6 +33,7 @@ UrlParser::UrlParser(const char *url) {
     this->schema = extractField(&url_parser, UF_SCHEMA);
     this->host = extractField(&url_parser, UF_HOST);
     this->path = extractField(&url_parser, UF_PATH);
+    this->query = extractField(&url_parser, UF_QUERY);
 }
 
 UrlParser::~UrlParser() {

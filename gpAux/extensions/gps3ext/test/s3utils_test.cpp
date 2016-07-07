@@ -4,16 +4,6 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
-// Tests factorial of positive numbers.
-TEST(Utils, trim) {
-    char data[] = " \t\n\r  abc \r\r\n\r \t";
-    char out[8] = {0};
-    bool ret;
-    ret = trim(out, data);
-    EXPECT_EQ(ret, true);
-    EXPECT_STREQ("abc", out);
-}
-
 TEST(Utils, simplecurl) {
     CURL *c = CreateCurlHandler(NULL);
     EXPECT_EQ(c, (void *)NULL);
@@ -24,6 +14,7 @@ TEST(Utils, simplecurl) {
 
 TEST(Utils, nth) {
     const char *teststr = "aaabbbcccaaatttaaa";
+    EXPECT_EQ(find_Nth(teststr, 0, "aaa"), -1);
     EXPECT_EQ(find_Nth(teststr, 1, "aaa"), 0);
     EXPECT_EQ(find_Nth(teststr, 2, "aaa"), 9);
     EXPECT_EQ(find_Nth(teststr, 3, "aaa"), 15);
@@ -61,6 +52,19 @@ TEST(Utils, sha256hmac) {
     char hash_str[65] = {0};
     EXPECT_TRUE(sha256hmac_hex(TEST_STRING, hash_str, "key", 3));
     EXPECT_STREQ("f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8", hash_str);
+}
+
+TEST(Utils, ConfigNull) {
+    Config c1(NULL);
+    uint64_t value = 0;
+    EXPECT_FALSE(c1.Scan("configtest", "config7", "%" PRIu64, &value));
+
+    Config c2("");
+    EXPECT_FALSE(c2.Scan("configtest", "config7", "%" PRIu64, &value));
+
+    string str;
+    Config c3(str);
+    EXPECT_FALSE(c3.Scan("configtest", "config7", "%" PRIu64, &value));
 }
 
 TEST(Utils, Config) {
