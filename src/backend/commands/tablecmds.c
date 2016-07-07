@@ -13974,32 +13974,13 @@ static void
 ATPExecPartCoalesce(Relation rel,
                     AlterPartitionCmd *pc)
 {
-	AlterPartitionId *pid = (AlterPartitionId *)pc->partid;
-	PgPartRule   *prule = NULL;
-
 	if (Gp_role != GP_ROLE_DISPATCH)
 		return;
-
-	prule = get_part_rule(rel, pid, true, true, NULL, false);
-
-	if (0)
-	{
-
-		parruleord_open_gap(
-				prule->pNode->part->partid,
-				prule->pNode->part->parlevel,
-				prule->topRule->parparentoid,
-				prule->topRule->parruleord,
-				0,
-				false /* closegap */);
-
-	}
 
     ereport(ERROR,
             (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
              errmsg("cannot COALESCE PARTITION for relation \"%s\"",
                     RelationGetRelationName(rel))));
-
 }
 
 /* ALTER TABLE ... DROP PARTITION */
