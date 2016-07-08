@@ -1507,7 +1507,7 @@ EOF_formatfix
                 # special case for explain
                if (exists($directive->{explain}) &&
                    ($ini =~ m/^\s*((\-\-)(\-)+(\+(\-)+)*)+\s*$/) &&
-                   ($outarr[-1] =~ m/QUERY PLAN/))
+                   (scalar(@outarr) && $outarr[-1] =~ m/QUERY PLAN/))
                 {
                     # ENGINF-88: fixup explain headers
                     $outarr[-1] = "QUERY PLAN\n";
