@@ -716,6 +716,7 @@ set_subquery_pathlist(PlannerInfo *root, RelOptInfo *rel,
 		/* This is a preplanned sub-query RTE. */
 		rel->subplan = rte->subquery_plan;
 		rel->subrtable = rte->subquery_rtable;
+		subroot = root;
 		/* XXX rel->onerow = ??? */
 	}
 
