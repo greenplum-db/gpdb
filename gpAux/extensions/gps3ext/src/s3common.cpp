@@ -102,87 +102,29 @@ void SignRequestV4(const string &method, HTTPHeaders *h, const string &orig_regi
     return;
 }
 
-// Returns string length till next occurrence of given character.
-static size_t strlen_to_next_char(const char *ptr, char ch) {
-    size_t len = 0;
-    while ((*ptr != '\0') && (*ptr != ch)) {
-        len++;
-        ptr++;
-    }
-
-    return len;
-}
-
 // get_opt_s3 returns first value according to given key.
 // key=value pair are separated by whitespace.
-// It is caller's responsibility to free returned memory.
-char *get_opt_s3(const char *url, const char *key) {
-    CHECK_ARG_OR_DIE((url != NULL) && (key != NULL));
-
-    // construct the key to search " key="
-    int key_len = strlen(key);
-    char *key2search = (char *)malloc(key_len + 3);
-    CHECK_OR_DIE_MSG(key2search != NULL, "Can not allocate %d bytes memory for key string",
-                     key_len + 3);
-
-    snprintf(key2search, key_len + 3, " %s=", key);
-
-    // get the pointer " key1=blah1 key2=blah2 ..."
-    char *key_start = strstr((char *)url, key2search);
-    free(key2search);
-
-    CHECK_OR_DIE_MSG(key_start != NULL, "Can not find %s in %s", key, url);
-
-    // get the pointer "blah1 key2=blah2 ..."
-    char *value_start = key_start + key_len + 2;
-
-    // get the length of string "blah1"
-    int value_len = strlen_to_next_char(value_start, ' ');
-
-    CHECK_OR_DIE_MSG(value_len != 0, "Can not find value of %s in %s", key, url);
-
-    // get the string "blah1"
-    char *value = strndup(value_start, value_len);
-    CHECK_OR_DIE_MSG(value != NULL, "Can not allocate %d bytes memory for value string", value_len);
-
-    return value;
-}
-
-// a C++ version of above function
-string get_opt_s3(const string &options, const string &key) {
+string get_opt_s3(const string &urlWithOptions, const string &key) {
     string keyStr = " ";
     keyStr += key;
     keyStr += "=";
 
-    size_t beginIndex = options.find(keyStr);
-    if (beginIndex == options.npos) {
+    size_t beginIndex = urlWithOptions.find(keyStr);
+    if (beginIndex == urlWithOptions.npos) {
         return "";
     } else {
         beginIndex += keyStr.length();
-        size_t endIndex = options.find(" ", beginIndex);
+        size_t endIndex = urlWithOptions.find(" ", beginIndex);
 
-        if (endIndex == options.npos) {
-            return options.substr(beginIndex);
+        if (endIndex == urlWithOptions.npos) {
+            return urlWithOptions.substr(beginIndex);
         } else {
-            return options.substr(beginIndex, endIndex - beginIndex);
+            return urlWithOptions.substr(beginIndex, endIndex - beginIndex);
         }
     }
 }
 
 // truncate_options truncates substring after first whitespace.
-// It is caller's responsibility to free returned memory.
-char *truncate_options(const char *url_with_options) {
-    // get the length of url
-    size_t url_len = strlen_to_next_char(url_with_options, ' ');
-
-    // get the string of url
-    char *url = strndup(url_with_options, url_len);
-    CHECK_OR_DIE_MSG(url != NULL, "Can not allocate %d bytes memory for value string", url_len);
-
-    return url;
-}
-
-// a C++ version of above function
 string truncate_options(const string &urlWithOptions) {
     size_t firstSpace = urlWithOptions.find(" ");
     if (firstSpace == urlWithOptions.npos) {

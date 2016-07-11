@@ -27,179 +27,79 @@ TEST(Common, SignRequestV4) {
 }
 
 TEST(Common, UrlOptions) {
-    char *option = NULL;
-    EXPECT_STREQ("secret_test",
-                 option = get_opt_s3("s3://neverland.amazonaws.com secret=secret_test", "secret"));
-    if (option) {
-        free(option);
-        option = NULL;
-    }
+    EXPECT_EQ("secret_test",
+              get_opt_s3(string("s3://neverland.amazonaws.com secret=secret_test"), "secret"));
 
-    EXPECT_STREQ("\".\\!@#$%^&*()DFGHJK\"",
-                 option = get_opt_s3(
-                     "s3://neverland.amazonaws.com accessid=\".\\!@#$%^&*()DFGHJK\"", "accessid"));
-    if (option) {
-        free(option);
-        option = NULL;
-    }
+    EXPECT_EQ("\".\\!@#$%^&*()DFGHJK\"",
+              get_opt_s3(string("s3://neverland.amazonaws.com accessid=\".\\!@#$%^&*()DFGHJK\""),
+                         "accessid"));
 
-    EXPECT_STREQ("3456789", option = get_opt_s3("s3://neverland.amazonaws.com chunksize=3456789",
-                                                "chunksize"));
-    if (option) {
-        free(option);
-        option = NULL;
-    }
+    EXPECT_EQ("3456789",
+              get_opt_s3(string("s3://neverland.amazonaws.com chunksize=3456789"), "chunksize"));
 
-    EXPECT_STREQ("secret_test",
-                 option = get_opt_s3("s3://neverland.amazonaws.com secret=secret_test "
-                                     "accessid=\".\\!@#$%^&*()DFGHJK\" chunksize=3456789",
-                                     "secret"));
-    if (option) {
-        free(option);
-        option = NULL;
-    }
-
-    EXPECT_STREQ("\".\\!@#$%^&*()DFGHJK\"",
-                 option = get_opt_s3("s3://neverland.amazonaws.com secret=secret_test "
-                                     "accessid=\".\\!@#$%^&*()DFGHJK\" chunksize=3456789",
-                                     "accessid"));
-    if (option) {
-        free(option);
-        option = NULL;
-    }
-
-    EXPECT_STREQ("3456789",
-                 option = get_opt_s3("s3://neverland.amazonaws.com secret=secret_test "
-                                     "accessid=\".\\!@#$%^&*()DFGHJK\" chunksize=3456789",
-                                     "chunksize"));
-    if (option) {
-        free(option);
-        option = NULL;
-    }
-
-    EXPECT_STREQ("secret_test",
-                 option = get_opt_s3("s3://neverland.amazonaws.com secret=secret_test "
-                                     "blah=whatever accessid=\".\\!@#$%^&*()DFGHJK\" "
-                                     "chunksize=3456789 KingOfTheWorld=sanpang",
-                                     "secret"));
-    if (option) {
-        free(option);
-        option = NULL;
-    }
-
-    EXPECT_STREQ("secret_test",
-                 option = get_opt_s3("s3://neverland.amazonaws.com secret=secret_test "
-                                     "blah= accessid=\".\\!@#$%^&*()DFGHJK\" "
-                                     "chunksize=3456789 KingOfTheWorld=sanpang",
-                                     "secret"));
-    if (option) {
-        free(option);
-        option = NULL;
-    }
-
-    EXPECT_STREQ("3456789", option = get_opt_s3("s3://neverland.amazonaws.com secret=secret_test "
-                                                "chunksize=3456789 KingOfTheWorld=sanpang ",
-                                                "chunksize"));
-    if (option) {
-        free(option);
-        option = NULL;
-    }
-
-    EXPECT_STREQ("3456789", option = get_opt_s3("s3://neverland.amazonaws.com   secret=secret_test "
-                                                "chunksize=3456789  KingOfTheWorld=sanpang ",
-                                                "chunksize"));
-    if (option) {
-        free(option);
-        option = NULL;
-    }
-
-    EXPECT_STREQ("=sanpang", option = get_opt_s3("s3://neverland.amazonaws.com secret=secret_test "
-                                                 "chunksize=3456789 KingOfTheWorld==sanpang ",
-                                                 "KingOfTheWorld"));
-    if (option) {
-        free(option);
-        option = NULL;
-    }
-
-    EXPECT_THROW(get_opt_s3("", "accessid"), std::runtime_error);
-
-    EXPECT_THROW(get_opt_s3(NULL, "accessid"), std::runtime_error);
-
-    EXPECT_THROW(get_opt_s3("s3://neverland.amazonaws.com", "secret"), std::runtime_error);
-
-    EXPECT_THROW(get_opt_s3("s3://neverland.amazonaws.com secret=secret_test "
-                            "blah=whatever accessid= chunksize=3456789 "
-                            "KingOfTheWorld=sanpang",
-                            "accessid"),
-                 std::runtime_error);
-
-    EXPECT_THROW(get_opt_s3("s3://neverland.amazonaws.com secret=secret_test "
-                            "blah=whatever chunksize=3456789 KingOfTheWorld=sanpang",
-                            ""),
-                 std::runtime_error);
-
-    EXPECT_THROW(get_opt_s3("s3://neverland.amazonaws.com secret=secret_test "
-                            "blah=whatever chunksize=3456789 KingOfTheWorld=sanpang",
-                            NULL),
-                 std::runtime_error);
-
-    EXPECT_THROW(get_opt_s3("s3://neverland.amazonaws.com secret=secret_test "
-                            "chunksize=3456789 KingOfTheWorld=sanpang ",
-                            "chunk size"),
-                 std::runtime_error);
-}
-
-TEST(Common, UrlOptionsCPP) {
     EXPECT_EQ("secret_test",
               get_opt_s3(string("s3://neverland.amazonaws.com secret=secret_test "
                                 "accessid=\".\\!@#$%^&*()DFGHJK\" chunksize=3456789"),
                          "secret"));
 
-    EXPECT_EQ("", get_opt_s3(string("s3://neverland.amazonaws.com secret=secret_test "
-                                    "accessid=\".\\!@#$%^&*()DFGHJK\" chunksize=3456789"),
-                             "secret1"));
+    EXPECT_EQ("\".\\!@#$%^&*()DFGHJK\"",
+              get_opt_s3(string("s3://neverland.amazonaws.com secret=secret_test "
+                                "accessid=\".\\!@#$%^&*()DFGHJK\" chunksize=3456789"),
+                         "accessid"));
+
+    EXPECT_EQ("3456789", get_opt_s3(string("s3://neverland.amazonaws.com secret=secret_test "
+                                           "accessid=\".\\!@#$%^&*()DFGHJK\" chunksize=3456789"),
+                                    "chunksize"));
+
+    EXPECT_EQ("secret_test", get_opt_s3(string("s3://neverland.amazonaws.com secret=secret_test "
+                                               "blah=whatever accessid=\".\\!@#$%^&*()DFGHJK\" "
+                                               "chunksize=3456789 KingOfTheWorld=sanpang"),
+                                        "secret"));
+
+    EXPECT_EQ("secret_test", get_opt_s3(string("s3://neverland.amazonaws.com secret=secret_test "
+                                               "blah= accessid=\".\\!@#$%^&*()DFGHJK\" "
+                                               "chunksize=3456789 KingOfTheWorld=sanpang"),
+                                        "secret"));
+
+    EXPECT_EQ("3456789", get_opt_s3(string("s3://neverland.amazonaws.com secret=secret_test "
+                                           "chunksize=3456789 KingOfTheWorld=sanpang "),
+                                    "chunksize"));
+
+    EXPECT_EQ("3456789", get_opt_s3(string("s3://neverland.amazonaws.com   secret=secret_test "
+                                           "chunksize=3456789  KingOfTheWorld=sanpang "),
+                                    "chunksize"));
+
+    EXPECT_EQ("=sanpang", get_opt_s3(string("s3://neverland.amazonaws.com secret=secret_test "
+                                            "chunksize=3456789 KingOfTheWorld==sanpang "),
+                                     "KingOfTheWorld"));
+
+    EXPECT_TRUE(get_opt_s3(string(""), "accessid").empty());
+
+    EXPECT_TRUE(get_opt_s3(string("s3://neverland.amazonaws.com secret=secret_test "
+                                  "accessid=\".\\!@#$%^&*()DFGHJK\" chunksize=3456789"),
+                           "secret1")
+                    .empty());
+    EXPECT_TRUE(get_opt_s3(string("s3://neverland.amazonaws.com"), "secret").empty());
+
+    EXPECT_TRUE(get_opt_s3(string("s3://neverland.amazonaws.com secret=secret_test blah=whatever "
+                                  "accessid= chunksize=3456789 KingOfTheWorld=sanpang"),
+                           "accessid")
+                    .empty());
+
+    EXPECT_TRUE(get_opt_s3(string("s3://neverland.amazonaws.com secret=secret_test blah=whatever "
+                                  "chunksize=3456789 KingOfTheWorld=sanpang"),
+                           "")
+                    .empty());
+
+    EXPECT_TRUE(get_opt_s3(string("s3://neverland.amazonaws.com secret=secret_test "
+                                  "chunksize=3456789 KingOfTheWorld=sanpang "),
+                           "chunk size")
+                    .empty());
 }
 
 TEST(Common, TruncateOptions) {
-    char *truncated = NULL;
-
-    EXPECT_STREQ("s3://neverland.amazonaws.com",
-                 truncated = truncate_options("s3://neverland.amazonaws.com secret=secret_test"));
-    if (truncated) {
-        free(truncated);
-        truncated = NULL;
-    }
-
-    EXPECT_STREQ("s3://neverland.amazonaws.com",
-                 truncated = truncate_options(
-                     "s3://neverland.amazonaws.com accessid=\".\\!@#$%^&*()DFGHJK\""));
-    if (truncated) {
-        free(truncated);
-        truncated = NULL;
-    }
-
-    EXPECT_STREQ(
-        "s3://neverland.amazonaws.com",
-        truncated = truncate_options("s3://neverland.amazonaws.com secret=secret_test "
-                                     "accessid=\".\\!@#$%^&*()DFGHJK\" chunksize=3456789"));
-    if (truncated) {
-        free(truncated);
-        truncated = NULL;
-    }
-
-    EXPECT_STREQ("s3://neverland.amazonaws.com",
-                 truncated = truncate_options("s3://neverland.amazonaws.com secret=secret_test "
-                                              "blah= accessid=\".\\!@#$%^&*()DFGHJK\" "
-                                              "chunksize=3456789 KingOfTheWorld=sanpang"));
-    if (truncated) {
-        free(truncated);
-        truncated = NULL;
-    }
-}
-
-TEST(Common, TruncateOptionsCPP) {
-    string url = "s3://neverland.amazonaws.com secret=secret_test";
-    EXPECT_EQ("s3://neverland.amazonaws.com", truncate_options(url));
+    EXPECT_EQ("s3://neverland.amazonaws.com",
+              truncate_options(string("s3://neverland.amazonaws.com secret=secret_test")));
 
     EXPECT_EQ(
         "s3://neverland.amazonaws.com",
