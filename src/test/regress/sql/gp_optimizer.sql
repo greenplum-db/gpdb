@@ -1283,6 +1283,45 @@ explain select * from orca.index_test where a = 5 and c = 5;
 -- renaming columns
 select * from (values (2),(null)) v(k);
 
+-- Checking if ORCA correctly populates canSetTag in PlannedStmt for multiple statements because of rules
+drop table if exists can_set_tag_target;
+create table can_set_tag_target
+(
+	x int,
+	y int,
+	z char
+);
+
+drop table if exists can_set_tag_audit;
+create table can_set_tag_audit
+(
+	t timestamp without time zone,
+	x int,
+	y int,
+	z char
+);
+
+create rule can_set_tag_audit_update AS
+    ON UPDATE TO can_set_tag_target DO  INSERT INTO can_set_tag_audit (t, x, y, z)
+  VALUES (now(), old.x, old.y, old.z);
+
+insert into can_set_tag_target select i, i + 1, i + 2 from generate_series(1,2) as i;
+
+create role unpriv;
+grant all on can_set_tag_target to unpriv;
+grant all on can_set_tag_audit to unpriv;
+set role unpriv;
+show optimizer;
+update can_set_tag_target set y = y + 1;
+select count(1) from can_set_tag_audit;
+reset role;
+
+revoke all on can_set_tag_target from unpriv;
+revoke all on can_set_tag_audit from unpriv;
+drop role unpriv;
+drop table can_set_tag_target;
+drop table can_set_tag_audit;
+
 -- clean up
 drop schema orca cascade;
 reset optimizer_segments;

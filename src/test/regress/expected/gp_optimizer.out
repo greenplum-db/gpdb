@@ -9946,6 +9946,56 @@ select * from (values (2),(null)) v(k);
 
 (2 rows)
 
+-- Checking if ORCA correctly populates canSetTag in PlannedStmt for multiple statements because of rules
+drop table if exists can_set_tag_target;
+NOTICE:  table "can_set_tag_target" does not exist, skipping
+create table can_set_tag_target
+(
+	x int,
+	y int,
+	z char
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'x' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+drop table if exists can_set_tag_audit;
+NOTICE:  table "can_set_tag_audit" does not exist, skipping
+create table can_set_tag_audit
+(
+	t timestamp without time zone,
+	x int,
+	y int,
+	z char
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 't' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create rule can_set_tag_audit_update AS
+    ON UPDATE TO can_set_tag_target DO  INSERT INTO can_set_tag_audit (t, x, y, z)
+  VALUES (now(), old.x, old.y, old.z);
+insert into can_set_tag_target select i, i + 1, i + 2 from generate_series(1,2) as i;
+create role unpriv;
+NOTICE:  resource queue required -- using default resource queue "pg_default"
+grant all on can_set_tag_target to unpriv;
+grant all on can_set_tag_audit to unpriv;
+set role unpriv;
+show optimizer;
+ optimizer 
+-----------
+ on
+(1 row)
+
+update can_set_tag_target set y = y + 1;
+select count(1) from can_set_tag_audit;
+ count 
+-------
+     2
+(1 row)
+
+reset role;
+revoke all on can_set_tag_target from unpriv;
+revoke all on can_set_tag_audit from unpriv;
+drop role unpriv;
+drop table can_set_tag_target;
+drop table can_set_tag_audit;
 -- clean up
 drop schema orca cascade;
 NOTICE:  drop cascades to table orca.index_test
