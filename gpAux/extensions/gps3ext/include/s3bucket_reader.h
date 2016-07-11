@@ -33,8 +33,6 @@ class S3BucketReader : public Reader {
         validateURL();
     };
 
-    ListBucketResult *listBucketWithRetry(uint64_t retries);
-
     ListBucketResult *getKeyList() {
         return keyList;
     }

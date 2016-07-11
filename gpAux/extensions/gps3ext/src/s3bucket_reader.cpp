@@ -45,7 +45,16 @@ void S3BucketReader::open(const ReaderParams &params) {
     this->numOfChunks = params.getNumOfChunks();
 
     this->validateURL();
-    this->keyList = this->listBucketWithRetry(3);
+
+    CHECK_OR_DIE(this->s3interface != NULL);
+
+    this->keyList = this->s3interface->listBucket(this->schema, this->region, this->bucket,
+                                                  this->prefix, this->cred);
+    if (this->keyList == NULL) {
+        S3ERROR("Failed to list bucket for URL: %s", this->url.c_str());
+        CHECK_OR_DIE_MSG(false, "Failed to list bucket for URL: %s", this->url.c_str());
+    }
+
     return;
 }
 
@@ -119,24 +128,6 @@ void S3BucketReader::SetSchema() {
     if (this->schema == "s3") {
         this->schema = s3ext_encryption ? "https" : "http";
     }
-}
-
-ListBucketResult *S3BucketReader::listBucketWithRetry(uint64_t retries) {
-    CHECK_OR_DIE(this->s3interface != NULL);
-
-    while (retries--) {
-        ListBucketResult *result = this->s3interface->listBucket(
-            this->schema, this->region, this->bucket, this->prefix, this->cred);
-        if (result != NULL) {
-            return result;
-        }
-
-        S3INFO("Can't get keylist from bucket '%s', retrying ...", this->bucket.c_str());
-    }
-
-    S3ERROR("Failed to list bucket for URL: %s", this->url.c_str());
-    CHECK_OR_DIE_MSG(false, "Failed to list bucket with retries: %s", this->url.c_str());
-    // return NULL;  Not needed, as CHECK_OR_DIE_MSG will return always.
 }
 
 string S3BucketReader::getKeyURL(const string &key) {

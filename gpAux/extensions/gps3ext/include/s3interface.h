@@ -11,6 +11,9 @@
 
 #define S3_MAGIC_BYTES_NUM 4
 
+#define S3_GET_RESPONSE_NO_RETRY 1
+#define S3_GET_RESPONSE_MAX_RETRIES 3
+
 enum S3CompressionType {
     S3_COMPRESSION_GZIP,
     S3_COMPRESSION_PLAIN,
@@ -85,9 +88,14 @@ class S3Service : public S3Interface {
     S3CompressionType checkCompressionType(const string& keyUrl, const string& region,
                                            const S3Credential& cred);
 
-    void setRESTfulService(RESTfulService* service) {
-        this->service = service;
+    // following two functions are exposed publicly for UT tests
+    void setRESTfulService(RESTfulService* restfullService) {
+        this->restfulService = restfullService;
     }
+
+    Response getResponseWithRetries(const string& url, HTTPHeaders& headers,
+                                    const map<string, string>& params,
+                                    uint64_t retries = S3_GET_RESPONSE_MAX_RETRIES);
 
    private:
     string getUrl(const string& prefix, const string& schema, const string& host,
@@ -105,7 +113,7 @@ class S3Service : public S3Interface {
 
     xmlParserCtxtPtr getXMLContext(Response& response);
 
-    RESTfulService* service;
+    RESTfulService* restfulService;
 };
 
 #endif /* INCLUDE_S3INTERFACE_H_ */

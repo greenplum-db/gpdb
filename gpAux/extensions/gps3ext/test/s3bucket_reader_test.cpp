@@ -58,6 +58,14 @@ TEST_F(S3BucketReaderTest, OpenURL) {
     EXPECT_NO_THROW(bucketReader->open(params));
 }
 
+TEST_F(S3BucketReaderTest, OpenThrowExceptionWhenS3InterfaceIsNULL) {
+    bucketReader->setS3interface(NULL);
+
+    string url = "https://s3-us-east-2.amazonaws.com/s3test.pivotal.io/whatever";
+    params.setUrlToLoad(url);
+    EXPECT_THROW(bucketReader->open(params), std::runtime_error);
+}
+
 TEST_F(S3BucketReaderTest, ValidateURL_normal) {
     EXPECT_NO_THROW(this->bucketReader->validateURL(
         "s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal"));
@@ -126,35 +134,6 @@ TEST_F(S3BucketReaderTest, ValidateURL_apnortheast21) {
     EXPECT_EQ("ap-northeast-2", this->bucketReader->getRegion());
     EXPECT_EQ("s3test.pivotal.io", this->bucketReader->getBucket());
     EXPECT_EQ("dataset1/normal", this->bucketReader->getPrefix());
-}
-
-TEST_F(S3BucketReaderTest, ListBucketWithRetryThrowException) {
-    EXPECT_THROW(bucketReader->listBucketWithRetry(0), std::runtime_error);
-}
-
-TEST_F(S3BucketReaderTest, ListBucketWithRetryThrowExceptionWhenS3InterfaceIsNULL) {
-    bucketReader->setS3interface(NULL);
-    EXPECT_THROW(bucketReader->listBucketWithRetry(1), std::runtime_error);
-}
-
-TEST_F(S3BucketReaderTest, ListBucketWithRetry) {
-    ListBucketResult* result = new ListBucketResult();
-
-    EXPECT_CALL(s3interface, listBucket(_, _, _, _, _)).Times(1).WillOnce(Return(result));
-
-    EXPECT_NE((void*)NULL, bucketReader->listBucketWithRetry(1));
-}
-
-TEST_F(S3BucketReaderTest, ListBucketWithRetries) {
-    ListBucketResult* result = new ListBucketResult();
-
-    EXPECT_CALL(s3interface, listBucket(_, _, _, _, _))
-        .Times(3)
-        .WillOnce(Return((ListBucketResult*)NULL))
-        .WillOnce(Return((ListBucketResult*)NULL))
-        .WillOnce(Return(result));
-
-    EXPECT_EQ(result, bucketReader->listBucketWithRetry(3));
 }
 
 TEST_F(S3BucketReaderTest, ReaderThrowExceptionWhenUpstreamReaderIsNULL) {

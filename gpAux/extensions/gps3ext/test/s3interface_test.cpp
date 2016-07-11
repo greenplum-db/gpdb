@@ -58,12 +58,34 @@ class S3ServiceTest : public testing::Test {
     Response response;
 };
 
+TEST_F(S3ServiceTest, GetResponseWithZeroRetry) {
+    string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
+    HTTPHeaders headers;
+    map<string, string> params;
+    EXPECT_EQ(RESPONSE_FAIL,
+              s3service->getResponseWithRetries(url, headers, params, 0).getStatus());
+}
+
+TEST_F(S3ServiceTest, GetResponseWithTwoRetries) {
+    string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
+    HTTPHeaders headers;
+    map<string, string> params;
+
+    EXPECT_CALL(mockRestfulService, get(_, _, _))
+        .Times(2)
+        .WillOnce(Return(response))
+        .WillOnce(Return(response));
+
+    EXPECT_EQ(RESPONSE_FAIL,
+              s3service->getResponseWithRetries(url, headers, params, 2).getStatus());
+}
+
 TEST_F(S3ServiceTest, ListBucketThrowExceptionWhenBucketStringIsEmpty) {
     EXPECT_THROW(s3service->listBucket("", "", "", "", cred), std::runtime_error);
 }
 
 TEST_F(S3ServiceTest, ListBucketWithWrongRegion) {
-    EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
+    EXPECT_CALL(mockRestfulService, get(_, _, _)).WillRepeatedly(Return(response));
 
     EXPECT_EQ((void *)NULL, s3service->listBucket(schema, "nonexist", "", "", cred));
 }
@@ -84,7 +106,7 @@ TEST_F(S3ServiceTest, ListBucketWithWrongBucketName) {
     vector<uint8_t> raw(xml, xml + sizeof(xml) - 1);
     Response response(RESPONSE_ERROR, raw);
 
-    EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
+    EXPECT_CALL(mockRestfulService, get(_, _, _)).WillRepeatedly(Return(response));
 
     EXPECT_EQ((void *)NULL, s3service->listBucket(schema, "us-west-2", "foo/bar", "", cred));
 }
@@ -150,7 +172,7 @@ TEST_F(S3ServiceTest, ListBucketWithBucketWithTruncatedResponse) {
     EXPECT_CALL(mockRestfulService, get(_, _, _))
         .WillOnce(Return(this->buildListBucketResponse(1000, true)))
         .WillOnce(Return(this->buildListBucketResponse(1000, true)))
-        .WillOnce(Return(EmptyResponse));
+        .WillRepeatedly(Return(EmptyResponse));
 
     ListBucketResult *result =
         s3service->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/", cred);
@@ -190,7 +212,7 @@ TEST_F(S3ServiceTest, ListBucketWithAllZeroedFilesBucket) {
 }
 
 TEST_F(S3ServiceTest, ListBucketWithErrorResponse) {
-    EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
+    EXPECT_CALL(mockRestfulService, get(_, _, _)).WillRepeatedly(Return(response));
 
     EXPECT_EQ((void *)NULL,
               s3service->listBucket(schema, "nonexist", "s3test.pivotal.io", "s3files/", cred));
@@ -201,7 +223,7 @@ TEST_F(S3ServiceTest, ListBucketWithErrorReturnedXML) {
     vector<uint8_t> raw(xml, xml + sizeof(xml) - 1);
     Response response(RESPONSE_ERROR, raw);
 
-    EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
+    EXPECT_CALL(mockRestfulService, get(_, _, _)).WillRepeatedly(Return(response));
 
     EXPECT_EQ((void *)NULL,
               s3service->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/", cred));
@@ -212,7 +234,7 @@ TEST_F(S3ServiceTest, ListBucketWithNonRootXML) {
     vector<uint8_t> raw(xml, xml + sizeof(xml) - 1);
     Response response(RESPONSE_ERROR, raw);
 
-    EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
+    EXPECT_CALL(mockRestfulService, get(_, _, _)).WillRepeatedly(Return(response));
 
     EXPECT_EQ((void *)NULL,
               s3service->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/", cred));

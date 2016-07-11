@@ -34,7 +34,7 @@ class XMLContextHolder {
     xmlParserCtxtPtr context;
 };
 
-S3Service::S3Service() : service(NULL) {
+S3Service::S3Service() : restfulService(NULL) {
     xmlInitParser();
 }
 
@@ -42,6 +42,19 @@ S3Service::~S3Service() {
     // Cleanup function for the XML library.
     xmlCleanupParser();
 }
+
+Response S3Service::getResponseWithRetries(const string &url, HTTPHeaders &headers,
+                                           const map<string, string> &params, uint64_t retries) {
+    while (retries--) {
+        // declare response here to leverage RVO (Return Value Optimization)
+        Response response = restfulService->get(url, headers, params);
+        if (response.isSuccess() || retries == 0) {
+            return response;
+        };
+    };
+
+    return Response();
+};
 
 // S3 requires query parameters specified alphabetically.
 string S3Service::getUrl(const string &prefix, const string &schema, const string &host,
@@ -105,7 +118,7 @@ Response S3Service::getBucketResponse(const string &region, const string &url, c
     HTTPHeaders header = composeHTTPHeaders(url, marker, prefix, region, cred);
     std::map<string, string> empty;
 
-    return service->get(url, header, empty);
+    return this->getResponseWithRetries(url, header, empty);
 }
 
 // parseXMLMessage must not throw exception, otherwise result is leaked.
@@ -294,7 +307,7 @@ uint64_t S3Service::fetchData(uint64_t offset, vector<uint8_t> &data, uint64_t l
 
     SignRequestV4("GET", &headers, region, parser.Path(), "", cred);
 
-    Response resp = service->get(sourceUrl, headers, params);
+    Response resp = this->getResponseWithRetries(sourceUrl, headers, params);
     if (resp.getStatus() == RESPONSE_OK) {
         // move response data buffer
         data = resp.moveDataBuffer();
@@ -341,7 +354,7 @@ S3CompressionType S3Service::checkCompressionType(const string &keyUrl, const st
 
     SignRequestV4("GET", &headers, region, parser.Path(), "", cred);
 
-    Response resp = service->get(keyUrl, headers, params);
+    Response resp = this->getResponseWithRetries(keyUrl, headers, params);
     if (resp.getStatus() == RESPONSE_OK) {
         vector<uint8_t> &responseData = resp.getRawData();
         if (responseData.size() < S3_MAGIC_BYTES_NUM) {
