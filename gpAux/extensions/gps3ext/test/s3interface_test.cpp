@@ -263,11 +263,25 @@ TEST_F(S3ServiceTest, fetchDataRoutine) {
     EXPECT_EQ(100, len);
 }
 
+TEST_F(S3ServiceTest, fetchDataErrorResponse) {
+    vector<uint8_t> raw;
+    raw.resize(100);
+    Response response(RESPONSE_ERROR, raw);
+    EXPECT_CALL(mockRestfulService, get(_, _, _)).WillRepeatedly(Return(response));
+
+    vector<uint8_t> buffer;
+
+    EXPECT_THROW(s3service->fetchData(
+                     0, buffer, 100,
+                     "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region, cred),
+                 std::runtime_error);
+}
+
 TEST_F(S3ServiceTest, fetchDataFailedResponse) {
     vector<uint8_t> raw;
     raw.resize(100);
     Response response(RESPONSE_FAIL, raw);
-    EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
+    EXPECT_CALL(mockRestfulService, get(_, _, _)).WillRepeatedly(Return(response));
 
     vector<uint8_t> buffer;
 
@@ -345,7 +359,7 @@ TEST_F(S3ServiceTest, checkCompreesionTypeWithResponseError) {
     vector<uint8_t> raw(xml, xml + sizeof(xml) - 1);
     Response response(RESPONSE_ERROR, raw);
 
-    EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
+    EXPECT_CALL(mockRestfulService, get(_, _, _)).WillRepeatedly(Return(response));
 
     EXPECT_THROW(s3service->checkCompressionType(
                      "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region, cred),
@@ -369,7 +383,7 @@ TEST_F(S3ServiceTest, fetchDataWithResponseError) {
     Response response(RESPONSE_ERROR, raw);
     vector<uint8_t> buffer;
 
-    EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
+    EXPECT_CALL(mockRestfulService, get(_, _, _)).WillRepeatedly(Return(response));
 
     EXPECT_THROW(s3service->fetchData(
                      0, buffer, 128,

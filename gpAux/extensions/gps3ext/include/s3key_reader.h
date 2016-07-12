@@ -193,6 +193,10 @@ class ChunkBuffer {
         this->status = status;
     }
 
+    ChunkStatus getStatus() const {
+        return status;
+    }
+
     void setSharedError(bool sharedError, string message) {
         this->sharedKeyReader.setSharedError(sharedError, message);
     }

@@ -302,8 +302,8 @@ uint64_t S3Service::fetchData(uint64_t offset, vector<uint8_t> &data, uint64_t l
     map<string, string> params;
     UrlParser parser(sourceUrl.c_str());
 
-    char rangeBuf[128] = {0};
-    snprintf(rangeBuf, 128, "bytes=%" PRIu64 "-%" PRIu64, offset, offset + len - 1);
+    char rangeBuf[S3_RANGE_HEADER_STRING_LEN] = {0};
+    snprintf(rangeBuf, sizeof(rangeBuf), "bytes=%" PRIu64 "-%" PRIu64, offset, offset + len - 1);
     headers.Add(HOST, parser.Host());
     headers.Add(RANGE, rangeBuf);
     headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
@@ -312,7 +312,6 @@ uint64_t S3Service::fetchData(uint64_t offset, vector<uint8_t> &data, uint64_t l
 
     Response resp = this->getResponseWithRetries(sourceUrl, headers, params);
     if (resp.getStatus() == RESPONSE_OK) {
-        // move response data buffer
         data = resp.moveDataBuffer();
         if (data.size() != len) {
             S3ERROR("%s", "Response is not fully received.");
@@ -348,8 +347,8 @@ S3CompressionType S3Service::checkCompressionType(const string &keyUrl, const st
     map<string, string> params;
     UrlParser parser(keyUrl.c_str());
 
-    char rangeBuf[128] = {0};
-    snprintf(rangeBuf, 128, "bytes=%d-%d", 0, S3_MAGIC_BYTES_NUM - 1);
+    char rangeBuf[S3_RANGE_HEADER_STRING_LEN] = {0};
+    snprintf(rangeBuf, sizeof(rangeBuf), "bytes=%d-%d", 0, S3_MAGIC_BYTES_NUM - 1);
 
     headers.Add(HOST, parser.Host());
     headers.Add(RANGE, rangeBuf);

@@ -22,26 +22,26 @@ TEST(Utils, nth) {
     EXPECT_EQ(find_Nth(teststr, 1, ""), 0);
 }
 
-#define MD5TESTBUF "abcdefghijklmnopqrstuvwxyz\n"
+#define MD5TESTSTRING "abcdefghijklmnopqrstuvwxyz\n"
 TEST(Utils, md5) {
     MD5Calc m;
-    m.Update(MD5TESTBUF, strlen(MD5TESTBUF));
+    m.Update(MD5TESTSTRING, strlen(MD5TESTSTRING));
     EXPECT_STREQ("e302f9ecd2d189fa80aac1c3392e9b9c", m.Get());
-    m.Update(MD5TESTBUF, strlen(MD5TESTBUF));
-    m.Update(MD5TESTBUF, strlen(MD5TESTBUF));
-    m.Update(MD5TESTBUF, strlen(MD5TESTBUF));
+    m.Update(MD5TESTSTRING, strlen(MD5TESTSTRING));
+    m.Update(MD5TESTSTRING, strlen(MD5TESTSTRING));
+    m.Update(MD5TESTSTRING, strlen(MD5TESTSTRING));
     EXPECT_STREQ("3f8c2c6e2579e864071c33919fac61ee", m.Get());
 }
 
 #define TEST_STRING "The quick brown fox jumps over the lazy dog"
 TEST(Utils, sha256) {
-    char hash_str[65] = {0};
+    char hash_str[SHA256_DIGEST_STRING_LENGTH] = {0};
     EXPECT_TRUE(sha256_hex(TEST_STRING, hash_str));
     EXPECT_STREQ("d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592", hash_str);
 }
 
 TEST(Utils, sha1hmac) {
-    char hash_hex[41] = {0};
+    char hash_hex[SHA_DIGEST_STRING_LENGTH] = {0};
 
     EXPECT_TRUE(sha1hmac_hex(TEST_STRING, (char *)hash_hex, "key", 3));
 
@@ -49,7 +49,7 @@ TEST(Utils, sha1hmac) {
 }
 
 TEST(Utils, sha256hmac) {
-    char hash_str[65] = {0};
+    char hash_str[SHA256_DIGEST_STRING_LENGTH] = {0};
     EXPECT_TRUE(sha256hmac_hex(TEST_STRING, hash_str, "key", 3));
     EXPECT_STREQ("f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8", hash_str);
 }

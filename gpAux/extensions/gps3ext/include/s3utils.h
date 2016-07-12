@@ -50,7 +50,7 @@ class MD5Calc {
 
    private:
     MD5_CTX c;
-    unsigned char md5[17];
+    unsigned char md5[MD5_DIGEST_STRING_LENGTH];
     string result;
 };
 

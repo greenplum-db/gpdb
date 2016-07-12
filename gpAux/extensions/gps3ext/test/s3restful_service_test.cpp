@@ -23,7 +23,7 @@ TEST(S3RESTfulService, GetWithWrongHeader) {
     EXPECT_EQ(RESPONSE_ERROR, resp.getStatus());
 }
 
-TEST(S3RESTfulService, DISABLED_GetWithEmptyHeader) {
+TEST(S3RESTfulService, GetWithEmptyHeader) {
     HTTPHeaders headers;
     map<string, string> params;
     string url;
@@ -62,4 +62,19 @@ TEST(S3RESTfulService, GetWithWrongURL) {
     Response resp = service.get(url, headers, params);
 
     EXPECT_EQ(RESPONSE_ERROR, resp.getStatus());
+}
+
+TEST(S3RESTfulService, GetWithoutURLWithDebugParam) {
+    HTTPHeaders headers;
+    map<string, string> params;
+    params.insert(make_pair("debug", "true"));
+
+    string url;
+    S3RESTfulService service;
+
+    Response resp = service.get(url, headers, params);
+
+    EXPECT_EQ(RESPONSE_FAIL, resp.getStatus());
+    EXPECT_EQ("Failed to talk to s3 service URL using bad/illegal format or missing URL",
+              resp.getMessage());
 }

@@ -759,3 +759,15 @@ TEST_F(S3KeyReaderTest, MTReadWithHundredsOfThreadsAndSignalCancel) {
     // be careful to reset it, otherwise following tests will suck.
     QueryCancelPending = false;
 }
+
+TEST(ChunkBuffer, ChunkBufferOperatorEqual) {
+    string url;
+    S3KeyReader reader;
+    ChunkBuffer buf1(url, reader);
+    ChunkBuffer buf2(url, reader);
+
+    buf1.setStatus(ReadyToRead);
+    buf2.setStatus(ReadyToFill);
+    buf1 = buf2;
+    EXPECT_EQ(ReadyToFill, buf1.getStatus());
+}

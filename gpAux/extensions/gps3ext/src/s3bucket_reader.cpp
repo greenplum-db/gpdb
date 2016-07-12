@@ -169,7 +169,7 @@ void S3BucketReader::SetBucketAndPrefix() {
     }
     // s3://s3-region.amazonaws.com/bucket
     if (iend == string::npos) {
-        this->bucket = url.substr(ibegin + 1, url.length() - ibegin);
+        this->bucket = url.substr(ibegin + 1, url.length() - ibegin - 1);
         this->prefix = "";
         return;
     }
@@ -177,7 +177,7 @@ void S3BucketReader::SetBucketAndPrefix() {
     this->bucket = url.substr(ibegin + 1, iend - ibegin - 1);
 
     // s3://s3-region.amazonaws.com/bucket/
-    if (iend == url.length()) {
+    if (iend == url.length() - 1) {
         this->prefix = "";
         return;
     }
