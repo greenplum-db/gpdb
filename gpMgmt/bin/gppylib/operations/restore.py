@@ -286,48 +286,6 @@ def _build_gpdbrestore_cmd_line(context, ts, table_file):
 
     return cmd
 
-def truncate_restore_tables(context):
-    """
-    Truncate either specific table or all tables under a schema
-    """
-
-    try:
-        dburl = dbconn.DbURL(port=context.master_port, dbname=context.restore_db)
-        conn = dbconn.connect(dburl)
-        truncate_list = []
-
-        if context.restore_schemas:
-            for schemaname in context.restore_schemas:
-                truncate_list.extend(self.get_full_tables_in_schema(conn, schemaname))
-        else:
-            for restore_table in context.restore_tables:
-                schemaname, tablename = split_fqn(restore_table)
-                check_table_exists_qry = """SELECT EXISTS (
-                                                   SELECT 1
-                                                   FROM pg_catalog.pg_class c
-                                                   JOIN pg_catalog.pg_namespace n on n.oid = c.relnamespace
-                                                   WHERE n.nspname = '%s' and c.relname = '%s')""" % (pg.escape_string(schemaname),
-                                                                                                      pg.escape_string(tablename))
-                exists_result = execSQLForSingleton(conn, check_table_exists_qry)
-                if exists_result:
-                    schema = escapeDoubleQuoteInSQLString(schemaname)
-                    table = escapeDoubleQuoteInSQLString(tablename)
-                    truncate_table = '%s.%s' % (schema, table)
-                    truncate_list.append(truncate_table)
-                else:
-                    logger.warning("Skipping truncate of %s.%s because the relation does not exist." % (context.restore_db, restore_table))
-
-        for t in truncate_list:
-            try:
-                qry = 'Truncate %s' % t
-                execSQL(conn, qry)
-            except Exception as e:
-                raise Exception("Could not truncate table %s.%s: %s" % (dbname, t, str(e).replace('\n', '')))
-
-        conn.commit()
-    except Exception as e:
-        raise Exception("Failure from truncating tables, %s" % (str(e).replace('\n', '')))
-
 class RestoreDatabase(Operation):
     def __init__(self, context):
         self.context = context
@@ -337,7 +295,7 @@ class RestoreDatabase(Operation):
             self.context.restore_db = self.context.redirected_restore_db
 
         if len(self.context.restore_tables) > 0 and self.context.truncate:
-            truncate_restore_tables(self.context)
+            self.truncate_restore_tables()
 
         if not self.context.ddboost:
             ValidateSegments(self.context).run()
@@ -503,7 +461,7 @@ class RestoreDatabase(Operation):
 
     def get_full_tables_in_schema(self, conn, schemaname):
         res = []
-        get_all_tables_qry = 'select \'"\' || schemaname || \'"\', \'"\' || tablename || \'"\'from pg_tables where schemaname = \'%s\';' % pg.escape_string(schemaname)
+        get_all_tables_qry = 'select schemaname, tablename from pg_tables where schemaname = \'%s\';' % pg.escape_string(schemaname)
         relations = execSQL(conn, get_all_tables_qry)
         for relation in relations:
             schema, table = relation[0], relation[1]
@@ -889,6 +847,48 @@ class RestoreDatabase(Operation):
             gpd_path = "%s/%s" % (self.context.dump_dir, self.context.timestamp[0:8])
 
         return (gpr_path, status_path, gpd_path)
+
+    def truncate_restore_tables(self):
+        """
+        Truncate either specific table or all tables under a schema
+        """
+
+        try:
+            dburl = dbconn.DbURL(port=self.context.master_port, dbname=self.context.restore_db)
+            conn = dbconn.connect(dburl)
+            truncate_list = []
+
+            if self.context.restore_schemas:
+                for schemaname in self.context.restore_schemas:
+                    truncate_list.extend(self.get_full_tables_in_schema(conn, schemaname))
+            else:
+                for restore_table in self.context.restore_tables:
+                    schemaname, tablename = split_fqn(restore_table)
+                    check_table_exists_qry = """SELECT EXISTS (
+                                                       SELECT 1
+                                                       FROM pg_catalog.pg_class c
+                                                       JOIN pg_catalog.pg_namespace n on n.oid = c.relnamespace
+                                                       WHERE n.nspname = '%s' and c.relname = '%s')""" % (pg.escape_string(schemaname),
+                                                                                                          pg.escape_string(tablename))
+                    exists_result = execSQLForSingleton(conn, check_table_exists_qry)
+                    if exists_result:
+                        schema = escapeDoubleQuoteInSQLString(schemaname)
+                        table = escapeDoubleQuoteInSQLString(tablename)
+                        truncate_table = '%s.%s' % (schema, table)
+                        truncate_list.append(truncate_table)
+                    else:
+                        logger.warning("Skipping truncate of %s.%s because the relation does not exist." % (self.context.restore_db, restore_table))
+
+            for table in truncate_list:
+                try:
+                    qry = 'Truncate %s' % table
+                    execSQL(conn, qry)
+                except Exception as e:
+                    raise Exception("Could not truncate table %s.%s: %s" % (self.context.restore_db, table, str(e).replace('\n', '')))
+
+            conn.commit()
+        except Exception as e:
+            raise Exception("Failure from truncating tables, %s" % (str(e).replace('\n', '')))
 
 class ValidateTimestamp(Operation):
     def __init__(self, context):

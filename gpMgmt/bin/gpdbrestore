@@ -66,9 +66,8 @@ class GpdbRestore(Operation):
         if self.context.restore_stats:
             self.context.no_analyze = True
 
-        # NetBackup params
-        if self.context.truncate and not (self.context.restore_tables or self.context.table_file):
-            raise Exception('--truncate can be specified only with -T or --table-file option')
+        if self.context.truncate and not (self.context.restore_tables or self.context.table_file or self.context.restore_schemas):
+            raise Exception('--truncate can be specified only with -S, -T, or --table-file option')
 
         if self.context.truncate and self.context.drop_db:
             raise Exception('Cannot specify --truncate and -e together')
@@ -107,6 +106,7 @@ class GpdbRestore(Operation):
             else:
                 self.context.db_host_path = self.context.db_host_path.split(':')
 
+        # NetBackup params
         if self.context.db_host_path and self.context.netbackup_service_host:
             raise Exception('-R is not supported for restore with NetBackup.')
 
@@ -185,7 +185,6 @@ class GpdbRestore(Operation):
         info = self._gather_cluster_info()
 
         self.validate_tablename_from_filtering_options()
-
         if self.context.restore_stats == "only":
             restore_type = "Statistics-Only Restore"
 

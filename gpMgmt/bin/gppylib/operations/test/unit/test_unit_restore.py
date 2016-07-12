@@ -555,6 +555,21 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
         restore_line = _build_gpdbrestore_cmd_line(self.context, ts, 'foo')
         self.assertEqual(restore_line, expected_output)
 
+    @patch('gppylib.operations.restore.dbconn.DbURL')
+    @patch('gppylib.operations.restore.dbconn.connect')
+    @patch('gppylib.operations.restore.execSQL')
+    def test_truncate_restore_tables_restore_schemas(self, mock1, mock2, mock3):
+        self.context.restore_schemas = ['public']
+        restore_line = self.restore.truncate_restore_tables()
+
+    @patch('gppylib.operations.restore.dbconn.DbURL')
+    @patch('gppylib.operations.restore.dbconn.connect')
+    @patch('gppylib.operations.restore.execSQL')
+    @patch('gppylib.operations.restore.execSQLForSingleton')
+    def test_truncate_restore_tables_restore_tables(self, mock1, mock2, mock3, mock4):
+        self.context.restore_tables = ['public.ao1', 'testschema.heap1']
+        restore_line = self.restore.truncate_restore_tables()
+
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
     def test_create_restore_string_no_filter_file(self, mock1, mock2):
