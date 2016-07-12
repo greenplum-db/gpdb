@@ -84,8 +84,10 @@ HTTPHeaders S3Service::composeHTTPHeaders(const string &url, const string &marke
 
     HTTPHeaders header;
     header.Add(HOST, host.str());
-    UrlParser p(url.c_str());
     header.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
+
+    UrlParser p(url);
+
     std::stringstream query;
     if (!marker.empty()) {
         query << "marker=" << marker;
@@ -97,7 +99,7 @@ HTTPHeaders S3Service::composeHTTPHeaders(const string &url, const string &marke
         query << "prefix=" << prefix;
     }
 
-    SignRequestV4("GET", &header, region, p.Path(), query.str(), cred);
+    SignRequestV4("GET", &header, region, p.getPath(), query.str(), cred);
 
     return header;
 }
@@ -300,15 +302,15 @@ uint64_t S3Service::fetchData(uint64_t offset, vector<uint8_t> &data, uint64_t l
                               const S3Credential &cred) {
     HTTPHeaders headers;
     map<string, string> params;
-    UrlParser parser(sourceUrl.c_str());
+    UrlParser parser(sourceUrl);
 
     char rangeBuf[S3_RANGE_HEADER_STRING_LEN] = {0};
     snprintf(rangeBuf, sizeof(rangeBuf), "bytes=%" PRIu64 "-%" PRIu64, offset, offset + len - 1);
-    headers.Add(HOST, parser.Host());
+    headers.Add(HOST, parser.getHost());
     headers.Add(RANGE, rangeBuf);
     headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
 
-    SignRequestV4("GET", &headers, region, parser.Path(), "", cred);
+    SignRequestV4("GET", &headers, region, parser.getPath(), "", cred);
 
     Response resp = this->getResponseWithRetries(sourceUrl, headers, params);
     if (resp.getStatus() == RESPONSE_OK) {
@@ -345,16 +347,16 @@ S3CompressionType S3Service::checkCompressionType(const string &keyUrl, const st
                                                   const S3Credential &cred) {
     HTTPHeaders headers;
     map<string, string> params;
-    UrlParser parser(keyUrl.c_str());
+    UrlParser parser(keyUrl);
 
     char rangeBuf[S3_RANGE_HEADER_STRING_LEN] = {0};
     snprintf(rangeBuf, sizeof(rangeBuf), "bytes=%d-%d", 0, S3_MAGIC_BYTES_NUM - 1);
 
-    headers.Add(HOST, parser.Host());
+    headers.Add(HOST, parser.getHost());
     headers.Add(RANGE, rangeBuf);
     headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
 
-    SignRequestV4("GET", &headers, region, parser.Path(), "", cred);
+    SignRequestV4("GET", &headers, region, parser.getPath(), "", cred);
 
     Response resp = this->getResponseWithRetries(keyUrl, headers, params);
     if (resp.getStatus() == RESPONSE_OK) {

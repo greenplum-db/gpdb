@@ -15,20 +15,16 @@
 using std::string;
 using std::stringstream;
 
-UrlParser::UrlParser(const char *url) {
-    CHECK_ARG_OR_DIE(url);
+UrlParser::UrlParser(const string &url) {
+    CHECK_ARG_OR_DIE(!url.empty());
 
-    this->schema = NULL;
-    this->host = NULL;
-    this->path = NULL;
-    this->fullurl = NULL;
-
-    this->fullurl = strdup(url);
-    CHECK_OR_DIE_MSG(this->fullurl != NULL, "%s", "Could not allocate memory for fullurl");
+    this->fullurl = url;
 
     struct http_parser_url url_parser;
-    int result = http_parser_parse_url(this->fullurl, strlen(this->fullurl), false, &url_parser);
-    CHECK_OR_DIE_MSG(result == 0, "Failed to parse URL %s at field %d", this->fullurl, result);
+    int result =
+        http_parser_parse_url(this->fullurl.c_str(), this->fullurl.length(), false, &url_parser);
+    CHECK_OR_DIE_MSG(result == 0, "Failed to parse URL %s at field %d", this->fullurl.c_str(),
+                     result);
 
     this->schema = extractField(&url_parser, UF_SCHEMA);
     this->host = extractField(&url_parser, UF_HOST);
@@ -36,22 +32,10 @@ UrlParser::UrlParser(const char *url) {
     this->query = extractField(&url_parser, UF_QUERY);
 }
 
-UrlParser::~UrlParser() {
-    if (this->schema) free(this->schema);
-    if (this->host) free(this->host);
-    if (this->path) free(this->path);
-    if (this->fullurl) free(this->fullurl);
-
-    this->schema = NULL;
-    this->host = NULL;
-    this->path = NULL;
-    this->fullurl = NULL;
-}
-
-char *UrlParser::extractField(const struct http_parser_url *url_parser, http_parser_url_fields i) {
+string UrlParser::extractField(const struct http_parser_url *url_parser, http_parser_url_fields i) {
     if ((url_parser->field_set & (1 << i)) == 0) {
-        return NULL;
+        return "";
     }
 
-    return strndup(this->fullurl + url_parser->field_data[i].off, url_parser->field_data[i].len);
+    return this->fullurl.substr(url_parser->field_data[i].off, url_parser->field_data[i].len);
 }

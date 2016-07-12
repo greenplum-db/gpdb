@@ -181,8 +181,8 @@ const char *GetUploadId(const char *host, const char *bucket, const char *obj_na
     HTTPHeaders *header = new HTTPHeaders();
     header->Add(HOST, host);
     header->Add(CONTENTTYPE, "application/x-www-form-urlencoded");
-    UrlParser p(url.str().c_str());
-    path_with_query << p.Path() << "?uploads";
+    UrlParser p(url.str());
+    path_with_query << p.getPath() << "?uploads";
     SignPOSTv2(header, path_with_query.str(), cred);
 
     CURL *curl = curl_easy_init();
@@ -284,8 +284,8 @@ const char *PartPutS3Object(const char *host, const char *bucket, const char *ob
     // MIME type doesn't matter actually, server wouldn't store it either
     header->Add(CONTENTTYPE, "text/plain");
     header->Add(CONTENTLENGTH, std::to_string(data_size));
-    UrlParser p(url.str().c_str());
-    path_with_query << p.Path() << "?partNumber=" << part_number << "&uploadId=" << upload_id;
+    UrlParser p(url.str());
+    path_with_query << p.getPath() << "?partNumber=" << part_number << "&uploadId=" << upload_id;
     SignPUTv2(header, path_with_query.str(), cred);
 
     CURL *curl = curl_easy_init();
@@ -474,8 +474,8 @@ bool CompleteMultiPutS3(const char *host, const char *bucket, const char *obj_na
     header->Add(HOST, host);
     header->Add(CONTENTTYPE, "application/xml");
     header->Add(CONTENTLENGTH, std::to_string(body_size));
-    UrlParser p(url.str().c_str());
-    path_with_query << p.Path() << "?uploadId=" << upload_id;
+    UrlParser p(url.str());
+    path_with_query << p.getPath() << "?uploadId=" << upload_id;
     SignPOSTv2(header, path_with_query.str(), cred);
 
     CURL *curl = curl_easy_init();

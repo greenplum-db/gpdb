@@ -769,5 +769,6 @@ TEST(ChunkBuffer, ChunkBufferOperatorEqual) {
     buf1.setStatus(ReadyToRead);
     buf2.setStatus(ReadyToFill);
     buf1 = buf2;
+
     EXPECT_EQ(ReadyToFill, buf1.getStatus());
 }

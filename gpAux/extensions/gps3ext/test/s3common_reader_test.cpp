@@ -35,6 +35,7 @@ class S3CommonReaderTest : public ::testing::Test, public S3CommonReader {
 
     // TearDown() is invoked immediately after a test finishes.
     virtual void TearDown() {
+        this->close();
     }
 
     MockS3InterfaceForCompressionRead mockS3Interface;

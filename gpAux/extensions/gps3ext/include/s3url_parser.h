@@ -5,28 +5,32 @@
 
 class UrlParser {
    public:
-    UrlParser(const char* url);
-    ~UrlParser();
-    const char* Schema() {
+    UrlParser(const string &url);
+
+    ~UrlParser() {
+    }
+
+    const string &getSchema() {
         return this->schema;
     };
-    const char* Host() {
+    const string &getHost() {
         return this->host;
     };
-    const char* Path() {
+    const string &getPath() {
         return this->path;
     };
-    const char* Query() {
+    const string &getQuery() {
         return this->query;
     }
 
    private:
-    char* extractField(const struct http_parser_url* u, http_parser_url_fields i);
-    char* schema;
-    char* host;
-    char* path;
-    char* query;
-    char* fullurl;
+    string extractField(const struct http_parser_url *u, http_parser_url_fields i);
+
+    string schema;
+    string host;
+    string path;
+    string query;
+    string fullurl;
 };
 
 #endif
