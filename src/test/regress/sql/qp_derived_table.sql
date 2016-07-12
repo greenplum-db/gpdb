@@ -7,7 +7,7 @@ create table T0(
 	C0 int,
 	C1 int,
 	C2 int,
-	C3 int);
+	C3 int) distributed by (C0);
 
 create table T1(
 	C4 int,
@@ -20,7 +20,7 @@ create table T1(
 	C11 int,
 	C12 int,
 	C13 int,
-	C14 int);
+	C14 int) distributed by (C4);
 
 create table T2(
 	C15 int,
@@ -39,7 +39,7 @@ create table T2(
 	C28 int,
 	C29 int,
 	C30 int,
-	C31 int);
+	C31 int) distributed by (C15);
 
 create table T3(
 	C32 int,
@@ -62,7 +62,7 @@ create table T3(
 	C49 int,
 	C50 int,
 	C51 int,
-	C52 int);
+	C52 int) distributed by (C32);
 
 create table T4(
 	C53 int,
@@ -77,7 +77,7 @@ create table T4(
 	C62 int,
 	C63 int,
 	C64 int,
-	C65 int);
+	C65 int) distributed by (C53);
 
 create table T5(
 	C66 int,
@@ -88,7 +88,7 @@ create table T5(
 	C71 int,
 	C72 int,
 	C73 int,
-	C74 int);
+	C74 int) distributed by (C66);
 
 create table T6(
 	C75 int,
@@ -104,7 +104,7 @@ create table T6(
 	C85 int,
 	C86 int,
 	C87 int,
-	C88 int);
+	C88 int) distributed by (C75);
 
 create table T7(
 	C89 int,
@@ -127,7 +127,7 @@ create table T7(
 	C106 int,
 	C107 int,
 	C108 int,
-	C109 int);
+	C109 int) distributed by (C89);
 
 create table T8(
 	C110 int,
@@ -145,7 +145,7 @@ create table T8(
 	C122 int,
 	C123 int,
 	C124 int,
-	C125 int);
+	C125 int) distributed by (C110);
 
 create table T9(
 	C126 int,
@@ -159,7 +159,7 @@ create table T9(
 	C134 int,
 	C135 int,
 	C136 int,
-	C137 int);
+	C137 int) distributed by (C126);
 
 create table T10(
 	C138 int,
@@ -175,14 +175,14 @@ create table T10(
 	C148 int,
 	C149 int,
 	C150 int,
-	C151 int);
+	C151 int) distributed by (C138);
 
 create table T11(
 	C152 int,
 	C153 int,
 	C154 int,
 	C155 int,
-	C156 int);
+	C156 int) distributed by (C152);
 
 create table T12(
 	C157 int,
@@ -191,7 +191,7 @@ create table T12(
 	C160 int,
 	C161 int,
 	C162 int,
-	C163 int);
+	C163 int) distributed by (C157);
 
 create table T13(
 	C164 int,
@@ -209,7 +209,7 @@ create table T13(
 	C176 int,
 	C177 int,
 	C178 int,
-	C179 int);
+	C179 int) distributed by (C164);
 
 create table T14(
 	C180 int,
@@ -217,7 +217,7 @@ create table T14(
 	C182 int,
 	C183 int,
 	C184 int,
-	C185 int);
+	C185 int) distributed by (C180);
 
 create table T15(
 	C186 int,
@@ -233,7 +233,7 @@ create table T15(
 	C196 int,
 	C197 int,
 	C198 int,
-	C199 int);
+	C199 int) distributed by (C186);
 
 create table T16(
 	C200 int,
@@ -242,7 +242,7 @@ create table T16(
 	C203 int,
 	C204 int,
 	C205 int,
-	C206 int);
+	C206 int) distributed by (C200);
 
 create table T17(
 	C207 int,
@@ -256,7 +256,7 @@ create table T17(
 	C215 int,
 	C216 int,
 	C217 int,
-	C218 int);
+	C218 int) distributed by (C207);
 
 create table T18(
 	C219 int,
@@ -269,12 +269,12 @@ create table T18(
 	C226 int,
 	C227 int,
 	C228 int,
-	C229 int);
+	C229 int) distributed by (C219);
 
 create table T19(
 	C230 int,
 	C231 int,
-	C232 int);
+	C232 int) distributed by (C230);
 
 create table T20(
 	C233 int,
@@ -290,7 +290,7 @@ create table T20(
 	C243 int,
 	C244 int,
 	C245 int,
-	C246 int);
+	C246 int) distributed by (C233);
 
 create table T21(
 	C247 int,
@@ -304,7 +304,7 @@ create table T21(
 	C255 int,
 	C256 int,
 	C257 int,
-	C258 int);
+	C258 int) distributed by (C247);
 
 create table T22(
 	C259 int,
@@ -317,7 +317,7 @@ create table T22(
 	C266 int,
 	C267 int,
 	C268 int,
-	C269 int);
+	C269 int) distributed by (C259);
 
 create table T23(
 	C270 int,
@@ -328,13 +328,13 @@ create table T23(
 	C275 int,
 	C276 int,
 	C277 int,
-	C278 int);
+	C278 int) distributed by (C270);
 
 create table T24(
 	C279 int,
 	C280 int,
 	C281 int,
-	C282 int);
+	C282 int) distributed by (C279);
 
 create table T25(
 	C283 int,
@@ -350,7 +350,7 @@ create table T25(
 	C293 int,
 	C294 int,
 	C295 int,
-	C296 int);
+	C296 int) distributed by (C283);
 
 create table T26(
 	C297 int,
@@ -374,7 +374,7 @@ create table T26(
 	C315 int,
 	C316 int,
 	C317 int,
-	C318 int);
+	C318 int) distributed by (C297);
 
 create table T27(
 	C319 int,
@@ -385,7 +385,7 @@ create table T27(
 	C324 int,
 	C325 int,
 	C326 int,
-	C327 int);
+	C327 int) distributed by (C319);
 
 create table T28(
 	C328 int,
@@ -393,7 +393,7 @@ create table T28(
 	C330 int,
 	C331 int,
 	C332 int,
-	C333 int);
+	C333 int) distributed by (C328);
 
 create table T29(
 	C334 int,
@@ -402,12 +402,12 @@ create table T29(
 	C337 int,
 	C338 int,
 	C339 int,
-	C340 int);
+	C340 int) distributed by (C334);
 
 create table T30(
 	C341 int,
 	C342 int,
-	C343 int);
+	C343 int) distributed by (C341);
 
 create table T31(
 	C344 int,
@@ -429,7 +429,7 @@ create table T31(
 	C360 int,
 	C361 int,
 	C362 int,
-	C363 int);
+	C363 int) distributed by (C344);
 
 create table T32(
 	C364 int,
@@ -450,7 +450,7 @@ create table T32(
 	C379 int,
 	C380 int,
 	C381 int,
-	C382 int);
+	C382 int) distributed by (C364);
 
 create table T33(
 	C383 int,
@@ -471,7 +471,7 @@ create table T33(
 	C398 int,
 	C399 int,
 	C400 int,
-	C401 int);
+	C401 int) distributed by (C383);
 
 create table T34(
 	C402 int,
@@ -482,7 +482,7 @@ create table T34(
 	C407 int,
 	C408 int,
 	C409 int,
-	C410 int);
+	C410 int) distributed by (C402);
 
 create table T35(
 	C411 int,
@@ -492,7 +492,7 @@ create table T35(
 	C415 int,
 	C416 int,
 	C417 int,
-	C418 int);
+	C418 int) distributed by (C411);
 
 create table T36(
 	C419 int,
@@ -513,28 +513,28 @@ create table T36(
 	C434 int,
 	C435 int,
 	C436 int,
-	C437 int);
+	C437 int) distributed by (C419);
 
 create table T37(
 	C438 int,
 	C439 int,
-	C440 int);
+	C440 int) distributed by (C438);
 
 create table T38(
 	C441 int,
 	C442 int,
-	C443 int);
+	C443 int) distributed by (C441);
 
 create table T39(
 	C444 int,
 	C445 int,
-	C446 int);
+	C446 int) distributed by (C444);
 
 create table T40(
 	C447 int,
 	C448 int,
 	C449 int,
-	C450 int);
+	C450 int) distributed by (C447);
 
 create table T41(
 	C451 int,
@@ -558,7 +558,7 @@ create table T41(
 	C469 int,
 	C470 int,
 	C471 int,
-	C472 int);
+	C472 int) distributed by (C451);
 
 create table T42(
 	C473 int,
@@ -574,7 +574,7 @@ create table T42(
 	C483 int,
 	C484 int,
 	C485 int,
-	C486 int);
+	C486 int) distributed by (C473);
 
 create table T43(
 	C487 int,
@@ -591,7 +591,7 @@ create table T43(
 	C498 int,
 	C499 int,
 	C500 int,
-	C501 int);
+	C501 int) distributed by (C487);
 
 create table T44(
 	C502 int,
@@ -603,7 +603,7 @@ create table T44(
 	C508 int,
 	C509 int,
 	C510 int,
-	C511 int);
+	C511 int) distributed by (C502);
 
 create table T45(
 	C512 int,
@@ -621,7 +621,7 @@ create table T45(
 	C524 int,
 	C525 int,
 	C526 int,
-	C527 int);
+	C527 int) distributed by (C512);
 
 create table T46(
 	C528 int,
@@ -643,7 +643,7 @@ create table T46(
 	C544 int,
 	C545 int,
 	C546 int,
-	C547 int);
+	C547 int) distributed by (C528);
 
 create table T47(
 	C548 int,
@@ -665,7 +665,7 @@ create table T47(
 	C564 int,
 	C565 int,
 	C566 int,
-	C567 int);
+	C567 int) distributed by (C548);
 
 create table T48(
 	C568 int,
@@ -685,7 +685,7 @@ create table T48(
 	C582 int,
 	C583 int,
 	C584 int,
-	C585 int);
+	C585 int) distributed by (C568);
 
 create table T49(
 	C586 int,
@@ -701,7 +701,7 @@ create table T49(
 	C596 int,
 	C597 int,
 	C598 int,
-	C599 int);
+	C599 int) distributed by (C586);
 
 create table T50(
 	C600 int,
@@ -711,7 +711,7 @@ create table T50(
 	C604 int,
 	C605 int,
 	C606 int,
-	C607 int);
+	C607 int) distributed by (C600);
 
 create table T51(
 	C608 int,
@@ -730,7 +730,7 @@ create table T51(
 	C621 int,
 	C622 int,
 	C623 int,
-	C624 int);
+	C624 int) distributed by (C608);
 
 create table T52(
 	C625 int,
@@ -743,7 +743,7 @@ create table T52(
 	C632 int,
 	C633 int,
 	C634 int,
-	C635 int);
+	C635 int) distributed by (C625);
 
 create table T53(
 	C636 int,
@@ -763,13 +763,13 @@ create table T53(
 	C650 int,
 	C651 int,
 	C652 int,
-	C653 int);
+	C653 int) distributed by (C636);
 
 create table T54(
 	C654 int,
 	C655 int,
 	C656 int,
-	C657 int);
+	C657 int) distributed by (C654);
 
 create table T55(
 	C658 int,
@@ -781,7 +781,7 @@ create table T55(
 	C664 int,
 	C665 int,
 	C666 int,
-	C667 int);
+	C667 int) distributed by (C658);
 
 create table T56(
 	C668 int,
@@ -797,7 +797,7 @@ create table T56(
 	C678 int,
 	C679 int,
 	C680 int,
-	C681 int);
+	C681 int) distributed by (C668);
 
 create table T57(
 	C682 int,
@@ -815,7 +815,7 @@ create table T57(
 	C694 int,
 	C695 int,
 	C696 int,
-	C697 int);
+	C697 int) distributed by (C682);
 
 create table T58(
 	C698 int,
@@ -832,13 +832,13 @@ create table T58(
 	C709 int,
 	C710 int,
 	C711 int,
-	C712 int);
+	C712 int) distributed by (C698);
 
 create table T59(
 	C713 int,
 	C714 int,
 	C715 int,
-	C716 int);
+	C716 int) distributed by (C713);
 
 create table T60(
 	C717 int,
@@ -848,7 +848,7 @@ create table T60(
 	C721 int,
 	C722 int,
 	C723 int,
-	C724 int);
+	C724 int) distributed by (C717);
 
 create table T61(
 	C725 int,
@@ -865,12 +865,12 @@ create table T61(
 	C736 int,
 	C737 int,
 	C738 int,
-	C739 int);
+	C739 int) distributed by (C725);
 
 create table T62(
 	C740 int,
 	C741 int,
-	C742 int);
+	C742 int) distributed by (C740);
 
 create table T63(
 	C743 int,
@@ -893,7 +893,7 @@ create table T63(
 	C760 int,
 	C761 int,
 	C762 int,
-	C763 int);
+	C763 int) distributed by (C743);
 
 create table T64(
 	C764 int,
@@ -914,7 +914,7 @@ create table T64(
 	C779 int,
 	C780 int,
 	C781 int,
-	C782 int);
+	C782 int) distributed by (C764);
 
 create table T65(
 	C783 int,
@@ -931,7 +931,7 @@ create table T65(
 	C794 int,
 	C795 int,
 	C796 int,
-	C797 int);
+	C797 int) distributed by (C783);
 
 create table T66(
 	C798 int,
@@ -944,7 +944,7 @@ create table T66(
 	C805 int,
 	C806 int,
 	C807 int,
-	C808 int);
+	C808 int) distributed by (C798);
 
 create table T67(
 	C809 int,
@@ -958,12 +958,12 @@ create table T67(
 	C817 int,
 	C818 int,
 	C819 int,
-	C820 int);
+	C820 int) distributed by (C809);
 
 create table T68(
 	C821 int,
 	C822 int,
-	C823 int);
+	C823 int) distributed by (C821);
 
 create table T69(
 	C824 int,
@@ -980,7 +980,7 @@ create table T69(
 	C835 int,
 	C836 int,
 	C837 int,
-	C838 int);
+	C838 int) distributed by (C824);
 
 create table T70(
 	C839 int,
@@ -1003,7 +1003,7 @@ create table T70(
 	C856 int,
 	C857 int,
 	C858 int,
-	C859 int);
+	C859 int) distributed by (C839);
 
 create table T71(
 	C860 int,
@@ -1012,7 +1012,7 @@ create table T71(
 	C863 int,
 	C864 int,
 	C865 int,
-	C866 int);
+	C866 int) distributed by (C860);
 
 create table T72(
 	C867 int,
@@ -1036,7 +1036,7 @@ create table T72(
 	C885 int,
 	C886 int,
 	C887 int,
-	C888 int);
+	C888 int) distributed by (C867);
 
 create table T73(
 	C889 int,
@@ -1059,7 +1059,7 @@ create table T73(
 	C906 int,
 	C907 int,
 	C908 int,
-	C909 int);
+	C909 int) distributed by (C889);
 
 create table T74(
 	C910 int,
@@ -1081,7 +1081,7 @@ create table T74(
 	C926 int,
 	C927 int,
 	C928 int,
-	C929 int);
+	C929 int) distributed by (C910);
 
 create table T75(
 	C930 int,
@@ -1091,7 +1091,7 @@ create table T75(
 	C934 int,
 	C935 int,
 	C936 int,
-	C937 int);
+	C937 int) distributed by (C930);
 
 create table T76(
 	C938 int,
@@ -1102,7 +1102,7 @@ create table T76(
 	C943 int,
 	C944 int,
 	C945 int,
-	C946 int);
+	C946 int) distributed by (C938);
 
 create table T77(
 	C947 int,
@@ -1122,7 +1122,7 @@ create table T77(
 	C961 int,
 	C962 int,
 	C963 int,
-	C964 int);
+	C964 int) distributed by (C947);
 
 create table T78(
 	C965 int,
@@ -1138,7 +1138,7 @@ create table T78(
 	C975 int,
 	C976 int,
 	C977 int,
-	C978 int);
+	C978 int) distributed by (C965);
 
 create table T79(
 	C979 int,
@@ -1147,20 +1147,20 @@ create table T79(
 	C982 int,
 	C983 int,
 	C984 int,
-	C985 int);
+	C985 int) distributed by (C979);
 
 create table T80(
 	C986 int,
 	C987 int,
 	C988 int,
-	C989 int);
+	C989 int) distributed by (C986);
 
 create table T81(
 	C990 int,
 	C991 int,
 	C992 int,
 	C993 int,
-	C994 int);
+	C994 int) distributed by (C990);
 
 create table T82(
 	C995 int,
@@ -1168,7 +1168,7 @@ create table T82(
 	C997 int,
 	C998 int,
 	C999 int,
-	C1000 int);
+	C1000 int) distributed by (C995);
 
 create table T83(
 	C1001 int,
@@ -1177,7 +1177,7 @@ create table T83(
 	C1004 int,
 	C1005 int,
 	C1006 int,
-	C1007 int);
+	C1007 int) distributed by (C1001);
 
 create table T84(
 	C1008 int,
@@ -1200,7 +1200,7 @@ create table T84(
 	C1025 int,
 	C1026 int,
 	C1027 int,
-	C1028 int);
+	C1028 int) distributed by (C1008);
 
 create table T85(
 	C1029 int,
@@ -1220,7 +1220,7 @@ create table T85(
 	C1043 int,
 	C1044 int,
 	C1045 int,
-	C1046 int);
+	C1046 int) distributed by (C1029);
 
 create table T86(
 	C1047 int,
@@ -1231,7 +1231,7 @@ create table T86(
 	C1052 int,
 	C1053 int,
 	C1054 int,
-	C1055 int);
+	C1055 int) distributed by (C1047);
 
 create table T87(
 	C1056 int,
@@ -1241,7 +1241,7 @@ create table T87(
 	C1060 int,
 	C1061 int,
 	C1062 int,
-	C1063 int);
+	C1063 int) distributed by (C1056);
 
 create table T88(
 	C1064 int,
@@ -1255,12 +1255,12 @@ create table T88(
 	C1072 int,
 	C1073 int,
 	C1074 int,
-	C1075 int);
+	C1075 int) distributed by (C1064);
 
 create table T89(
 	C1076 int,
 	C1077 int,
-	C1078 int);
+	C1078 int) distributed by (C1076);
 
 create table T90(
 	C1079 int,
@@ -1276,7 +1276,7 @@ create table T90(
 	C1089 int,
 	C1090 int,
 	C1091 int,
-	C1092 int);
+	C1092 int) distributed by (C1079);
 
 create table T91(
 	C1093 int,
@@ -1300,7 +1300,7 @@ create table T91(
 	C1111 int,
 	C1112 int,
 	C1113 int,
-	C1114 int);
+	C1114 int) distributed by (C1093);
 
 create table T92(
 	C1115 int,
@@ -1323,7 +1323,7 @@ create table T92(
 	C1132 int,
 	C1133 int,
 	C1134 int,
-	C1135 int);
+	C1135 int) distributed by (C1115);
 
 create table T93(
 	C1136 int,
@@ -1334,7 +1334,7 @@ create table T93(
 	C1141 int,
 	C1142 int,
 	C1143 int,
-	C1144 int);
+	C1144 int) distributed by (C1136);
 
 create table T94(
 	C1145 int,
@@ -1358,7 +1358,7 @@ create table T94(
 	C1163 int,
 	C1164 int,
 	C1165 int,
-	C1166 int);
+	C1166 int) distributed by (C1145);
 
 create table T95(
 	C1167 int,
@@ -1369,7 +1369,7 @@ create table T95(
 	C1172 int,
 	C1173 int,
 	C1174 int,
-	C1175 int);
+	C1175 int) distributed by (C1167);
 
 create table T96(
 	C1176 int,
@@ -1385,7 +1385,7 @@ create table T96(
 	C1186 int,
 	C1187 int,
 	C1188 int,
-	C1189 int);
+	C1189 int) distributed by (C1176);
 
 create table T97(
 	C1190 int,
@@ -1398,19 +1398,19 @@ create table T97(
 	C1197 int,
 	C1198 int,
 	C1199 int,
-	C1200 int);
+	C1200 int) distributed by (C1190);
 
 create table T98(
 	C1201 int,
 	C1202 int,
-	C1203 int);
+	C1203 int) distributed by (C1201);
 
 create table T99(
 	C1204 int,
 	C1205 int,
 	C1206 int,
 	C1207 int,
-	C1208 int);
+	C1208 int) distributed by (C1204);
 
 INSERT INTO T0 VALUES ( 3, 2, 1, 5 ),( 3, 4, 4, 4 ),( 5, 4, 5, 5 ),( 1, 1, 4, 3 ),( 2, 3, 2, 4 ),( 4, 4, 3, 1 ),( 2, 2, 5, 2 ),( 5, 2, 3, 2 ),( 4, 5, 4, 1 ),( 2, 3, 2, 5 );
 
