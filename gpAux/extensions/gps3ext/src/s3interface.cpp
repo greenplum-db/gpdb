@@ -48,11 +48,14 @@ Response S3Service::getResponseWithRetries(const string &url, HTTPHeaders &heade
     while (retries--) {
         // declare response here to leverage RVO (Return Value Optimization)
         Response response = restfulService->get(url, headers, params);
-        if (response.isSuccess() || retries == 0) {
+        if (response.isSuccess() || (retries == 0)) {
             return response;
         };
+
+        S3WARN("Failed to get a good response from '%s', retrying ...", url.c_str());
     };
 
+    // an empty response(default status is RESPONSE_FAIL) returned if retries is 0
     return Response();
 };
 
