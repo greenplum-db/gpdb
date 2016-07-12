@@ -17439,9 +17439,8 @@ static Datum transformExecOnClause(List	*on_clause)
 }
 
 /*
- * transform format name to format code and validate that
- * the format is supported. Currently the only supported formats
- * are "text" (type 't') ,"csv" (type 'c') and "custom" (type 'b')
+ * Transform format name for external table FORMAT option to format code and
+ * validate that the requested format is supported.
  */
 static char transformFormatType(char *formatname)
 {
@@ -17461,7 +17460,8 @@ static char transformFormatType(char *formatname)
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
 				 errmsg("unsupported format '%s'", formatname),
-				 errhint("available formats are \"text\", \"csv\", or \"custom\"")));
+				 errhint("Available formats for external tables are \"text\", "
+				 		 "\"csv\", \"avro\", \"parquet\" and \"custom\"")));
 
 	return result;
 }
