@@ -307,6 +307,7 @@ static void
 ProcessCatchupEvent(void)
 {
 	bool		notify_enabled;
+	bool		client_wait_timeout_enabled;
 	DtxContext  saveDistributedTransactionContext;
 
 	/*
@@ -316,49 +317,53 @@ ProcessCatchupEvent(void)
 	 */
 	PG_TRY();
 	{
-	in_process_catchup_event = 1;
+		in_process_catchup_event = 1;
 
-	/* Must prevent notify interrupt while I am running */
-	notify_enabled = DisableNotifyInterrupt();
-
-	/*
-	 * What we need to do here is cause ReceiveSharedInvalidMessages() to run,
-	 * which will do the necessary work and also reset the
-	 * catchupInterruptOccurred flag.  If we are inside a transaction we can
-	 * just call AcceptInvalidationMessages() to do this.  If we aren't, we
-	 * start and immediately end a transaction; the call to
-	 * AcceptInvalidationMessages() happens down inside transaction start.
-	 *
-	 * It is awfully tempting to just call AcceptInvalidationMessages()
-	 * without the rest of the xact start/stop overhead, and I think that
-	 * would actually work in the normal case; but I am not sure that things
-	 * would clean up nicely if we got an error partway through.
-	 */
-	if (IsTransactionOrTransactionBlock())
-	{
-		elog(DEBUG1, "ProcessCatchupEvent inside transaction");
-		AcceptInvalidationMessages();
-	}
-	else
-	{
-		elog(DEBUG1, "ProcessCatchupEvent outside transaction");
+		/* Must prevent SIGUSR2 and SIGALRM(for IdleSessionGangTimeout) interrupt while I am running */
+		notify_enabled = DisableNotifyInterrupt();
+		client_wait_timeout_enabled = DisableClientWaitTimeoutInterrupt();
 
 		/*
-		 * Save distributed transaction context first.
+		 * What we need to do here is cause ReceiveSharedInvalidMessages() to run,
+		 * which will do the necessary work and also reset the
+		 * catchupInterruptOccurred flag.  If we are inside a transaction we can
+		 * just call AcceptInvalidationMessages() to do this.  If we aren't, we
+		 * start and immediately end a transaction; the call to
+		 * AcceptInvalidationMessages() happens down inside transaction start.
+		 *
+		 * It is awfully tempting to just call AcceptInvalidationMessages()
+		 * without the rest of the xact start/stop overhead, and I think that
+		 * would actually work in the normal case; but I am not sure that things
+		 * would clean up nicely if we got an error partway through.
 		 */
-		saveDistributedTransactionContext = DistributedTransactionContext;
-		DistributedTransactionContext = DTX_CONTEXT_LOCAL_ONLY;
+		if (IsTransactionOrTransactionBlock())
+		{
+			elog(DEBUG1, "ProcessCatchupEvent inside transaction");
+			AcceptInvalidationMessages();
+		}
+		else
+		{
+			elog(DEBUG1, "ProcessCatchupEvent outside transaction");
 
-		StartTransactionCommand();
-		CommitTransactionCommand();
+			/*
+			 * Save distributed transaction context first.
+			 */
+			saveDistributedTransactionContext = DistributedTransactionContext;
+			DistributedTransactionContext = DTX_CONTEXT_LOCAL_ONLY;
 
-		DistributedTransactionContext = saveDistributedTransactionContext;
-	}
+			StartTransactionCommand();
+			CommitTransactionCommand();
 
-	if (notify_enabled)
-		EnableNotifyInterrupt();
+			DistributedTransactionContext = saveDistributedTransactionContext;
+		}
 
-	in_process_catchup_event = 0;
+		if (notify_enabled)
+			EnableNotifyInterrupt();
+
+		if (client_wait_timeout_enabled)
+			EnableClientWaitTimeoutInterrupt();
+
+		in_process_catchup_event = 0;
 
 	}
 	PG_CATCH();

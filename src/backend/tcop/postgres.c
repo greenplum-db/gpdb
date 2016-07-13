@@ -616,6 +616,7 @@ prepare_for_client_read(void)
 		/* Enable immediate processing of asynchronous signals */
 		EnableNotifyInterrupt();
 		EnableCatchupInterrupt();
+		EnableClientWaitTimeoutInterrupt();
 
 		/* Allow "die" interrupt to be processed while waiting */
 		ImmediateInterruptOK = true;
@@ -653,6 +654,7 @@ client_read_ended(void)
 
 		DisableNotifyInterrupt();
 		DisableCatchupInterrupt();
+		DisableClientWaitTimeoutInterrupt();
 	}
 	else
 	{
@@ -3467,6 +3469,7 @@ die(SIGNAL_ARGS)
 			LockWaitCancel();	/* prevent CheckDeadLock from running */
 			DisableNotifyInterrupt();
 			DisableCatchupInterrupt();
+			DisableClientWaitTimeoutInterrupt();
 			InterruptHoldoffCount--;
 			ProcessInterrupts();
 		}
@@ -3651,6 +3654,7 @@ ProcessInterrupts(void)
 		ImmediateDieOK = false;		/* prevent re-entry */
 		DisableNotifyInterrupt();
 		DisableCatchupInterrupt();
+		DisableClientWaitTimeoutInterrupt();
 		if (IsAutoVacuumWorkerProcess())
 			ereport(FATAL,
 					(errcode(ERRCODE_ADMIN_SHUTDOWN),
@@ -3669,6 +3673,7 @@ ProcessInterrupts(void)
 		ImmediateInterruptOK = false;	/* not idle anymore */
 		DisableNotifyInterrupt();
 		DisableCatchupInterrupt();
+		DisableClientWaitTimeoutInterrupt();
 		/* don't send to client, we already know the connection to be dead. */
 		whereToSendOutput = DestNone;
 		ereport(FATAL,
@@ -4712,6 +4717,7 @@ PostgresMain(int argc, char *argv[],
 		DoingCommandRead = false;
 		DisableNotifyInterrupt();
 		DisableCatchupInterrupt();
+		DisableClientWaitTimeoutInterrupt();
 
 		/* Make sure libpq is in a good state */
 		pq_comm_reset();

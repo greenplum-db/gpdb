@@ -95,6 +95,7 @@
 #include "libpq/pqformat.h"
 #include "miscadmin.h"
 #include "storage/ipc.h"
+#include "storage/proc.h"
 #include "storage/sinval.h"
 #include "tcop/tcopprot.h"
 #include "utils/builtins.h"
@@ -960,9 +961,11 @@ ProcessIncomingNotify(void)
 	bool		repl[Natts_pg_listener],
 				nulls[Natts_pg_listener];
 	bool		catchup_enabled;
+	bool		client_wait_timeout_enabled;
 
-	/* Must prevent SIGUSR1 interrupt while I am running */
+	/* Must prevent SIGUSR1 and SIGALRM(for IdleSessionGangTimeout) interrupt while I am running */
 	catchup_enabled = DisableCatchupInterrupt();
+	client_wait_timeout_enabled = DisableClientWaitTimeoutInterrupt();
 
 	if (Trace_notify)
 		elog(DEBUG1, "ProcessIncomingNotify");
@@ -1042,6 +1045,9 @@ ProcessIncomingNotify(void)
 
 	if (catchup_enabled)
 		EnableCatchupInterrupt();
+
+	if (client_wait_timeout_enabled)
+		EnableClientWaitTimeoutInterrupt();
 }
 
 /*
