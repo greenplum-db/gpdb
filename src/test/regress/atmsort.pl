@@ -32,7 +32,6 @@ Options:
 
     -help            brief help message
     -man             full documentation
-    -ignore_headers  ignore header lines in query output
     -ignore_plans    ignore explain plan content in query output
     -init <file>     load initialization file
     -do_equiv        construct or compare equivalent query regions
@@ -48,16 +47,6 @@ Options:
 =item B<-man>
     
     Prints the manual page and exits.
-
-=item B<-ignore_headers> 
-
-gpdiff/atmsort expect PostgreSQL "psql-style" output for SELECT
-statements, with a two line header composed of the column names,
-separated by vertical bars (|), and a "separator" line of dashes and
-pluses beneath, followed by the row output.  The psql utility performs
-some formatting to adjust the column widths to match the size of the
-row output.  Setting this parameter causes gpdiff to ignore any
-differences in the column naming and format widths globally.
 
 =item B<-ignore_plans> 
 
@@ -257,15 +246,6 @@ command can use the -I flag to ignore lines with this prefix.
 
   Ends the ignored region that started with "start_ignore"
 
-=item -- start_headers_ignore
-
-Similar to the command-line "ignore_headers", ignore differences in
-column naming and format widths.
-
-=item -- end_headers_ignore
-
-  Ends the "headers ignored" region that started with "start_headers_ignore"
-
 =item -- start_equiv
 
 Begin an "equivalent" region, and treat contents according to the
@@ -375,7 +355,6 @@ my $help = 0;
 my $compare_equiv = 0;
 my $make_equiv_expected = 0;
 my $do_equiv;
-my $ignore_headers;
 my $ignore_plans;
 my @init_file;
 my $verbose;
@@ -383,7 +362,6 @@ my $orderwarn;
 
 GetOptions(
     'help|?' => \$help, man => \$man, 
-    'gpd_ignore_headers|gp_ignore_headers|ignore_headers' => \$ignore_headers,
     'gpd_ignore_plans|gp_ignore_plans|ignore_plans' => \$ignore_plans,
     'gpd_init|gp_init|init:s' => \@init_file,
     'do_equiv:s' => \$do_equiv,
@@ -400,7 +378,6 @@ push @{$glob_init}, @init_file;
 
 my %args;
 
-$args{IGNORE_HEADERS} = $ignore_headers if (defined ($ignore_headers));
 $args{IGNORE_PLANS} = $ignore_plans if (defined ($ignore_plans));
 @{$args{INIT_FILES}} = @init_file if (scalar(@init_file));
 $args{DO_EQUIV} = $do_equiv if (defined ($do_equiv));

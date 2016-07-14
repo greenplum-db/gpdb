@@ -42,7 +42,6 @@ my $dpref = '';
 
 my $glob_compare_equiv;
 my $glob_make_equiv_expected;
-my $glob_ignore_headers;
 my $glob_ignore_plans;
 my $glob_ignore_whitespace;
 my @glob_init;
@@ -73,7 +72,6 @@ sub atmsort_init
 
     $glob_compare_equiv       = 0;
     $glob_make_equiv_expected = 0;
-    $glob_ignore_headers      = 0;
     $glob_ignore_plans        = 0;
     $glob_ignore_whitespace   = 0;
     @glob_init                = ();
@@ -112,7 +110,6 @@ sub atmsort_init
     $glob_compare_equiv       = $compare_equiv;
     $glob_make_equiv_expected = $make_equiv_expected;
 
-    $glob_ignore_headers      = $args{IGNORE_HEADERS};
     $glob_ignore_plans        = $args{IGNORE_PLANS};
 
     $glob_ignore_whitespace   = $ignore_headers; # XXX XXX: for now
@@ -1278,11 +1275,6 @@ EOF_formatfix
             $equiv_expected_rows = undef;
         }
 
-        if ($ini =~ m/\-\-\s*end\_head(er|ers|ing|ings)\_ignore\s*$/i)
-        {
-            $glob_ignore_headers = 0;
-        }
-
         if ($getrows) # getting rows from SELECT output
         {
             # The end of "result set" for a COPY TO STDOUT is a bit tricky
@@ -1498,35 +1490,15 @@ EOF_formatfix
                     # ENGINF-88: fixup explain headers
                     $outarr[-1] = "QUERY PLAN\n";
                     $ini = ("_" x length($outarr[-1])) . "\n";
-
-                    if ($glob_ignore_headers)
-                    {
-                        $ini = "GP_IGNORE:" . $ini;
-                    }
                 }
 
                 $getstatement = 0;
-
-                # ENGINF-180: ignore header formatting
-                # the last line of the outarr is the first line of the header
-                if ($glob_ignore_headers && $outarr[-1])
-                {
-                    $outarr[-1] = "GP_IGNORE:" . $outarr[-1];
-                }
 
                 for my $line (@outarr)
                 {
                     print $atmsort_outfh $apref, $line;
                 }
                 @outarr = ();
-
-                # ENGINF-180: ignore header formatting
-                # the current line is the last line of the header
-                if ($glob_ignore_headers
-                    && ($ini =~ m/^\s*((\-\-)(\-)+(\+(\-)+)*)+\s*$/))
-                {
-                    $ini = "GP_IGNORE:" . $ini;
-                }
 
                 print $atmsort_outfh $apref, $ini;
 
