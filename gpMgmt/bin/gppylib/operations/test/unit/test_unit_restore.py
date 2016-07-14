@@ -12,7 +12,7 @@ from gppylib.operations.backup_utils import *
 from gppylib.operations.restore import *
 from gppylib.operations.restore import _build_gpdbrestore_cmd_line
 from gppylib.mainUtils import ExceptionNoStackTraceNeeded
-from mock import patch, MagicMock, Mock, mock_open, call
+from mock import patch, MagicMock, Mock, mock_open, call, ANY
 
 class RestoreTestCase(unittest.TestCase):
 
@@ -561,6 +561,7 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
     def test_truncate_restore_tables_restore_schemas(self, mock1, mock2, mock3):
         self.context.restore_schemas = ['public']
         restore_line = self.restore.truncate_restore_tables()
+        mock1.assert_called_with(ANY,"select schemaname, tablename from pg_tables where schemaname = 'public';")
 
     @patch('gppylib.operations.restore.dbconn.DbURL')
     @patch('gppylib.operations.restore.dbconn.connect')
@@ -569,6 +570,7 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
     def test_truncate_restore_tables_restore_tables(self, mock1, mock2, mock3, mock4):
         self.context.restore_tables = ['public.ao1', 'testschema.heap1']
         restore_line = self.restore.truncate_restore_tables()
+        mock2.assert_called_with(ANY,'Truncate "testschema"."heap1"')
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
     @patch('gppylib.operations.restore.getpass.getuser', return_value='user')
