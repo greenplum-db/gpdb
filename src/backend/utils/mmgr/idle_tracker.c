@@ -180,9 +180,6 @@ IdleTracker_DeactivateProcess()
 		/* At this point the process must be clean, unless we don't have a runaway event before deactivation */
 		Assert(*latestRunawayVersion > deactivationVersion ||
 				!RunawayCleaner_IsCleanupInProgress());
-
-		/* At least 1 process is deactivated at this point */
-		Assert(MySessionState->activeProcessCount < MySessionState->pinCount);
 	}
 
 	/* At this point the process is ready to be blocked in ReadCommand() */
