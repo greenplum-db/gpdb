@@ -294,7 +294,7 @@ class RestoreDatabase(Operation):
         if self.context.redirected_restore_db:
             self.context.restore_db = self.context.redirected_restore_db
 
-        if len(self.context.restore_tables) > 0 and self.context.truncate:
+        if (len(self.context.restore_tables) > 0 or len(self.context.restore_schemas) > 0) and self.context.truncate:
             self.truncate_restore_tables()
 
         if not self.context.ddboost:
