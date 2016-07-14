@@ -317,54 +317,53 @@ ProcessCatchupEvent(void)
 	 */
 	PG_TRY();
 	{
-		in_process_catchup_event = 1;
+	in_process_catchup_event = 1;
 
-		/* Must prevent SIGUSR2 and SIGALRM(for IdleSessionGangTimeout) interrupt while I am running */
-		notify_enabled = DisableNotifyInterrupt();
-		client_wait_timeout_enabled = DisableClientWaitTimeoutInterrupt();
+	/* Must prevent SIGUSR2 and SIGALRM(for IdleSessionGangTimeout) interrupt while I am running */
+	notify_enabled = DisableNotifyInterrupt();
+	client_wait_timeout_enabled = DisableClientWaitTimeoutInterrupt();
+
+	/*
+	 * What we need to do here is cause ReceiveSharedInvalidMessages() to run,
+	 * which will do the necessary work and also reset the
+	 * catchupInterruptOccurred flag.  If we are inside a transaction we can
+	 * just call AcceptInvalidationMessages() to do this.  If we aren't, we
+	 * start and immediately end a transaction; the call to
+	 * AcceptInvalidationMessages() happens down inside transaction start.
+	 *
+	 * It is awfully tempting to just call AcceptInvalidationMessages()
+	 * without the rest of the xact start/stop overhead, and I think that
+	 * would actually work in the normal case; but I am not sure that things
+	 * would clean up nicely if we got an error partway through.
+	 */
+	if (IsTransactionOrTransactionBlock())
+	{
+		elog(DEBUG1, "ProcessCatchupEvent inside transaction");
+		AcceptInvalidationMessages();
+	}
+	else
+	{
+		elog(DEBUG1, "ProcessCatchupEvent outside transaction");
 
 		/*
-		 * What we need to do here is cause ReceiveSharedInvalidMessages() to run,
-		 * which will do the necessary work and also reset the
-		 * catchupInterruptOccurred flag.  If we are inside a transaction we can
-		 * just call AcceptInvalidationMessages() to do this.  If we aren't, we
-		 * start and immediately end a transaction; the call to
-		 * AcceptInvalidationMessages() happens down inside transaction start.
-		 *
-		 * It is awfully tempting to just call AcceptInvalidationMessages()
-		 * without the rest of the xact start/stop overhead, and I think that
-		 * would actually work in the normal case; but I am not sure that things
-		 * would clean up nicely if we got an error partway through.
+		 * Save distributed transaction context first.
 		 */
-		if (IsTransactionOrTransactionBlock())
-		{
-			elog(DEBUG1, "ProcessCatchupEvent inside transaction");
-			AcceptInvalidationMessages();
-		}
-		else
-		{
-			elog(DEBUG1, "ProcessCatchupEvent outside transaction");
+		saveDistributedTransactionContext = DistributedTransactionContext;
+		DistributedTransactionContext = DTX_CONTEXT_LOCAL_ONLY;
 
-			/*
-			 * Save distributed transaction context first.
-			 */
-			saveDistributedTransactionContext = DistributedTransactionContext;
-			DistributedTransactionContext = DTX_CONTEXT_LOCAL_ONLY;
+		StartTransactionCommand();
+		CommitTransactionCommand();
 
-			StartTransactionCommand();
-			CommitTransactionCommand();
+		DistributedTransactionContext = saveDistributedTransactionContext;
+	}
 
-			DistributedTransactionContext = saveDistributedTransactionContext;
-		}
+	if (notify_enabled)
+		EnableNotifyInterrupt();
 
-		if (notify_enabled)
-			EnableNotifyInterrupt();
+	if (client_wait_timeout_enabled)
+		EnableClientWaitTimeoutInterrupt();
 
-		if (client_wait_timeout_enabled)
-			EnableClientWaitTimeoutInterrupt();
-
-		in_process_catchup_event = 0;
-
+	in_process_catchup_event = 0;
 	}
 	PG_CATCH();
 	{
