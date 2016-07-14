@@ -15,6 +15,12 @@
 #   hitting max_connections limit on segments.
 #
 
+test: variadic_parameters default_parameters
+
+# test workfiles compressed using zlib
+# 'zlib' utilizes fault injectors so it needs to be in a group by itself
+test: zlib
+
 ignore: leastsquares
 test: opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile naivebayes join_gp union_gp gpcopy gp_create_table
 test: filter gpctas gpdist matrix toast sublink table_functions olap_setup complex opclass_ddl bitmap_index information_schema

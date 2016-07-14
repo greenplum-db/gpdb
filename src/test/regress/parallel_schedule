@@ -143,9 +143,3 @@ test: plancache limit copy2 temp domain rangefuncs prepare without_oid conversio
 # Disabled because tablespaces live in filespaces in GPDB, so the syntax
 # is quite different.
 #test: tablespace
-test: variadic_parameters
-test: default_parameters
-
-# test workfiles compressed using zlib
-# 'zlib' utilizes fault injectors so it needs to be in a group by itself
-test: zlib
