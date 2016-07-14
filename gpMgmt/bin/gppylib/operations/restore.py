@@ -461,7 +461,7 @@ class RestoreDatabase(Operation):
 
     def get_full_tables_in_schema(self, conn, schemaname):
         res = []
-        get_all_tables_qry = 'select schemaname, tablename from pg_tables where schemaname = \'%s\';' % pg.escape_string(schemaname)
+        get_all_tables_qry = "select schemaname, tablename from pg_tables where schemaname = '%s';" % pg.escape_string(schemaname)
         relations = execSQL(conn, get_all_tables_qry)
         for relation in relations:
             schema, table = relation[0], relation[1]
