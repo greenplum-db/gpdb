@@ -766,7 +766,7 @@ class Segment:
         if self.primaryDB.isSegmentPrimary(current_role=True):
             return self.primaryDB
         else:
-            for mirror in mirrorDBs:
+            for mirror in self.mirrorDBs:
                 if mirror.isSegmentPrimary(current_role=True):
                     return mirror
 
@@ -2265,6 +2265,7 @@ class GpArray:
         datadirs = {}
         used_ports = {}
         used_replication_ports = {}
+        hostname = ""
         for db in self.getDbList(True):
             datadir = db.getSegmentDataDirectory()
             hostname = db.getSegmentHostName()

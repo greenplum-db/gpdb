@@ -426,7 +426,7 @@ def get_lines_from_zipped_file(fname):
     try:
         for line in fd:
             content.append(line.strip('\n'))
-    except err:
+    except Exception as err:
         raise Exception("Error reading from file %s: %s" % (fname, err))
     finally:
         fd.close()

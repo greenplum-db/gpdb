@@ -859,9 +859,9 @@ class GpCronDump(Operation):
             if self.context.history:
                 # This certainly does not belong under DumpDatabase, due to CLI assumptions. Note the use of options_list.
                 UpdateHistoryTable(self.context,
-                                   self.options_list,
                                    time_start = dump_outcome['time_start'],
                                    time_end = dump_outcome['time_end'],
+                                   options_list = self.options_list,
                                    dump_exit_status = dump_outcome['exit_status'],
                                    timestamp = post_dump_outcome['timestamp'],
                                    pseudo_exit_status = current_exit_status).run()

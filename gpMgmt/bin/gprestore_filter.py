@@ -71,17 +71,17 @@ def get_table_from_alter_table(line, alter_expr):
     has_special_chars = True if last_double_quote_idx != -1 else False
 
     if not has_schema_table_fmt and not has_special_chars:
-        line[len(alter_expr):].split()[0]
+        return line[len(alter_expr):].split()[0]
     elif has_schema_table_fmt and not has_special_chars:
         full_table_name = line[len(alter_expr):].split()[0]
         _, table = split_fqn(full_table_name)
         return table
     elif not has_schema_table_fmt and has_special_chars:
-        return line[len(alter_expr) : last_double_quote_idx + 1]
+        return line[len(alter_expr) + 1 : last_double_quote_idx + 1]
     else:
         if dot_separator_idx < last_double_quote_idx:
             # table name is double quoted
-            full_table_name = line[len(alter_expr) : last_double_idx + 1]
+            full_table_name = line[len(alter_expr) : last_double_quote_idx + 1]
         else:
             # only schema name double quoted
             ending_space_idx = line.find(' ', dot_separator_idx)

@@ -7,7 +7,8 @@ from gppylib import gplog
 from mock import patch
 from gppylib.mainUtils import ExceptionNoStackTraceNeeded
 from gprestore_filter import get_table_schema_set, extract_schema, extract_table, \
-                            process_data, get_table_info, process_schema, check_valid_schema, check_valid_table, check_dropped_table
+                            process_data, get_table_info, process_schema, check_valid_schema, check_valid_table, \
+                            check_dropped_table, get_table_from_alter_table
 
 
 logger = gplog.get_unittest_logger()
@@ -67,6 +68,42 @@ class GpRestoreFilterTestCase(unittest.TestCase):
         line = 'COPYao_table(column1column2column3)FROMstdin;'
         with self.assertRaisesRegexp(Exception, "Failed to extract table name"):
             table = extract_table(line)
+
+    def test_get_table_from_alter_table_with_schemaname(self):
+        line = 'ALTER TABLE schema1.table1 OWNER TO gpadmin;'
+        alter_expr = "ALTER TABLE"
+        res = get_table_from_alter_table(line, alter_expr)
+        self.assertEqual(res, 'table1')
+
+    def test_get_table_from_alter_table_without_schemaname(self):
+        line = 'ALTER TABLE table1 OWNER TO gpadmin;'
+        alter_expr = "ALTER TABLE"
+        res = get_table_from_alter_table(line, alter_expr)
+        self.assertEqual(res, 'table1')
+
+    def test_get_table_from_alter_table_with_specialchar(self):
+        line = 'ALTER TABLE Tab#$_1 OWNER TO gpadmin;'
+        alter_expr = "ALTER TABLE"
+        res = get_table_from_alter_table(line, alter_expr)
+        self.assertEqual(res, 'Tab#$_1')
+
+    def test_get_table_from_alter_table_with_specialchar_and_schema(self):
+        line = 'ALTER TABLE "Foo#$1"."Tab#$_1" OWNER TO gpadmin;'
+        alter_expr = "ALTER TABLE"
+        res = get_table_from_alter_table(line, alter_expr)
+        self.assertEqual(res, '"Tab#$_1"')
+
+    def test_get_table_from_alter_table_with_specialchar(self):
+        line = 'ALTER TABLE "T a""b#$_1" OWNER TO gpadmin;'
+        alter_expr = "ALTER TABLE"
+        res = get_table_from_alter_table(line, alter_expr)
+        self.assertEqual(res, '"T a""b#$_1"')
+
+    def test_get_table_from_alter_table_with_specialchar_and_double_quoted_schema(self):
+        line = 'ALTER TABLE "schema1".table1 OWNER TO gpadmin;'
+        alter_expr = "ALTER TABLE"
+        res = get_table_from_alter_table(line, alter_expr)
+        self.assertEqual(res, 'table1')
 
     def test_process_data00(self):
 

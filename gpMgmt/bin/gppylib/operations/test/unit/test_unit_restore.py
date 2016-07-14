@@ -1017,6 +1017,14 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
         self.context.change_schema = 'newschema'
         self.restore._analyze_restore_tables()
 
+    @patch('gppylib.operations.restore.execSQL', side_effect=Exception())
+    @patch('gppylib.operations.backup_utils.dbconn.DbURL')
+    @patch('gppylib.operations.backup_utils.dbconn.connect')
+    def test_analyze_restore_tables_execSQL_failed(self, mock1, mock2, mock3):
+        self.context.restore_db = 'db1'
+        self.context.restore_tables = ['public.t1', 'public.t2']
+        self.assertRaisesRegexp(Exception, 'Issue with \'ANALYZE\' of restored table \'"public"."t1"\' in \'db1\' database', self.restore._analyze_restore_tables)
+
     @patch('os.path.exists', side_effect=[True, False])
     def test_validate_metadata_file_with_compression_exists(self, mock):
         compressed_file = 'compressed_file.gz'

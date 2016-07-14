@@ -446,7 +446,7 @@ class RestoreDatabase(Operation):
                     try:
                         execSQL(conn, analyze_table)
                     except Exception as e:
-                        raise Exception('Issue with \'ANALYZE\' of restored table \'%s\' in \'%s\' database' % (restore_table, self.context.restore_db))
+                        raise Exception('Issue with \'ANALYZE\' of restored table \'%s\' in \'%s\' database' % (tbl, self.context.restore_db))
                     else:
                         num_sqls += 1
                         if num_sqls == 1000: # The choice of batch size was choosen arbitrarily
