@@ -196,40 +196,45 @@ InitSerTupInfo(TupleDesc tupdesc, SerTupInfo * pSerInfo)
 								format_type_be(attrInfo->atttypid))));
 								
 			/* If we don't have both binary routines */
-			if (!OidIsValid(pt->typsend))
+			//			if (!OidIsValid(pt->typsend))
+			//			{
+			//				ereport(ERROR,
+			//					(errcode(ERRCODE_UNDEFINED_FUNCTION),
+			//					 errmsg("No send function available for type %s. Motion requires send function",
+			//							format_type_be(attrInfo->atttypid))));
+			//			}
+			//
+			//			if (!OidIsValid(pt->typreceive))
+			//			{
+			//				ereport(ERROR,
+			//					(errcode(ERRCODE_UNDEFINED_FUNCTION),
+			//					 errmsg("No receive function available for type %s. Motion requires receive function",
+			//							format_type_be(attrInfo->atttypid))));
+			//			}
+
+
+			attrInfo->typsend = pt->typsend;
+
+			if (OidIsValid(pt->typsend))
 			{
-				ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_FUNCTION),
-					 errmsg("No send function available for type %s. Motion requires send function",
-							format_type_be(attrInfo->atttypid))));
-		
-				attrInfo->typsend = pt->typoutput;
-				attrInfo->send_typio_param = getTypeIOParam(typeTuple);
-				attrInfo->typisvarlena = (!pt->typbyval) && (pt->typlen == -1);
-				attrInfo->typrecv = pt->typinput;
-				attrInfo->recv_typio_param = getTypeIOParam(typeTuple);
+				fmgr_info(attrInfo->typsend, &attrInfo->send_finfo);
 			}
 
-			if (!OidIsValid(pt->typreceive))
+			attrInfo->typrecv  = pt->typreceive;
+			if (OidIsValid(pt->typreceive))
 			{
-				ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_FUNCTION),
-					 errmsg("No receive function available for type %s. Motion requires receive function",
-							format_type_be(attrInfo->atttypid))));
+				fmgr_info(attrInfo->typrecv, &attrInfo->recv_finfo);
 			}
-			attrInfo->typsend = pt->typsend;
+
 			attrInfo->send_typio_param = getTypeIOParam(typeTuple);
 			attrInfo->typisvarlena = (!pt->typbyval) && (pt->typlen == -1);
-			attrInfo->typrecv  = pt->typreceive;
 			attrInfo->recv_typio_param = getTypeIOParam(typeTuple);
 			
 			caql_endscan(pcqCtx);
 		}
 
 		
-		fmgr_info(attrInfo->typsend, &attrInfo->send_finfo);
 
-		fmgr_info(attrInfo->typrecv, &attrInfo->recv_finfo);
 
 #ifdef TUPSER_SCRATCH_SPACE
 
@@ -593,37 +598,50 @@ SerializeTupleIntoChunks(HeapTuple tuple, SerTupInfo * pSerInfo, TupleChunkList 
 				if (fHandled)
 					continue;
 
-				/*
-				 * the FunctionCall2 call into the send function may result in some
-				 * allocations which we'd like to have contained by our reset-able
-				 * context
-				 */
-				oldCtxt = MemoryContextSwitchTo(s_tupSerMemCtxt);						  
-							  
-				/* Call the attribute type's binary input converter. */
-				if (attrInfo->send_finfo.fn_nargs == 1)
-					outputbytes =
-						DatumGetByteaP(FunctionCall1(&attrInfo->send_finfo,
-													 attr));
-				else if (attrInfo->send_finfo.fn_nargs == 2)
-					outputbytes =
-						DatumGetByteaP(FunctionCall2(&attrInfo->send_finfo,
-													 attr,
-													 ObjectIdGetDatum(attrInfo->send_typio_param)));
-				else if (attrInfo->send_finfo.fn_nargs == 3)
-					outputbytes =
-						DatumGetByteaP(FunctionCall3(&attrInfo->send_finfo,
-													 attr,
-													 ObjectIdGetDatum(attrInfo->send_typio_param),
-													 Int32GetDatum(tupdesc->attrs[i]->atttypmod)));
+				if (OidIsValid(attrInfo->typsend))
+				{
+					/*
+					 * the FunctionCall2 call into the send function may result in some
+					 * allocations which we'd like to have contained by our reset-able
+					 * context
+					 */
+					oldCtxt = MemoryContextSwitchTo(s_tupSerMemCtxt);
+
+					/* Call the attribute type's binary input converter. */
+					if (attrInfo->send_finfo.fn_nargs == 1)
+						outputbytes =
+							DatumGetByteaP(FunctionCall1(&attrInfo->send_finfo,
+														 attr));
+					else if (attrInfo->send_finfo.fn_nargs == 2)
+						outputbytes =
+							DatumGetByteaP(FunctionCall2(&attrInfo->send_finfo,
+														 attr,
+														 ObjectIdGetDatum(attrInfo->send_typio_param)));
+					else if (attrInfo->send_finfo.fn_nargs == 3)
+						outputbytes =
+							DatumGetByteaP(FunctionCall3(&attrInfo->send_finfo,
+														 attr,
+														 ObjectIdGetDatum(attrInfo->send_typio_param),
+														 Int32GetDatum(tupdesc->attrs[i]->atttypmod)));
+					else
+					{
+						ereport(ERROR,
+								(errcode(ERRCODE_INVALID_BINARY_REPRESENTATION),
+								 errmsg("Conversion function takes %d args",attrInfo->send_finfo.fn_nargs)));
+					}
+
+					MemoryContextSwitchTo(oldCtxt);
+				}
 				else
 				{
-					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_BINARY_REPRESENTATION),
-							 errmsg("Conversion function takes %d args",attrInfo->recv_finfo.fn_nargs)));
+					elog(WARNING, "No Send. Entering debug break");
+					debug_break();
+
+						ereport(ERROR,
+							(errcode(ERRCODE_UNDEFINED_FUNCTION),
+							 errmsg("No send function available for type %s. Motion requires send function",
+									format_type_be(attrInfo->atttypid))));
 				}
-		
-				MemoryContextSwitchTo(oldCtxt);
 
 				/* We assume the result will not have been toasted */
 				addInt32ToChunkList(tcList, VARSIZE(outputbytes) - VARHDRSZ, &pSerInfo->chunkCache);
@@ -979,24 +997,37 @@ DeserializeTuple(SerTupInfo * pSerInfo, StringInfo serialTup)
 							   pq_getmsgbytes(serialTup, attr_size), attr_size);
 		skipPadding(serialTup);
 
-		/* Call the attribute type's binary input converter. */
-		if (attrInfo->recv_finfo.fn_nargs == 1)
-			pSerInfo->values[i] = FunctionCall1(&attrInfo->recv_finfo,
-												PointerGetDatum(&attr_data));
-		else if (attrInfo->recv_finfo.fn_nargs == 2)
-			pSerInfo->values[i] = FunctionCall2(&attrInfo->recv_finfo,
-												PointerGetDatum(&attr_data),
-												ObjectIdGetDatum(attrInfo->recv_typio_param));
-		else if (attrInfo->recv_finfo.fn_nargs == 3)
-			pSerInfo->values[i] = FunctionCall3(&attrInfo->recv_finfo,
-												PointerGetDatum(&attr_data),
-												ObjectIdGetDatum(attrInfo->recv_typio_param),
-												Int32GetDatum(tupdesc->attrs[i]->atttypmod) );  
+		if (OidIsValid(attrInfo->typrecv))
+		{
+			/* Call the attribute type's binary input converter. */
+			if (attrInfo->recv_finfo.fn_nargs == 1)
+				pSerInfo->values[i] = FunctionCall1(&attrInfo->recv_finfo,
+													PointerGetDatum(&attr_data));
+			else if (attrInfo->recv_finfo.fn_nargs == 2)
+				pSerInfo->values[i] = FunctionCall2(&attrInfo->recv_finfo,
+													PointerGetDatum(&attr_data),
+													ObjectIdGetDatum(attrInfo->recv_typio_param));
+			else if (attrInfo->recv_finfo.fn_nargs == 3)
+				pSerInfo->values[i] = FunctionCall3(&attrInfo->recv_finfo,
+													PointerGetDatum(&attr_data),
+													ObjectIdGetDatum(attrInfo->recv_typio_param),
+													Int32GetDatum(tupdesc->attrs[i]->atttypmod) );
+			else
+			{
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_BINARY_REPRESENTATION),
+						 errmsg("Conversion function takes %d args",attrInfo->recv_finfo.fn_nargs)));
+			}
+		}
 		else
 		{
+			elog(WARNING, "No Receive. Entering debug break");
+			debug_break();
+
 			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_BINARY_REPRESENTATION),
-					 errmsg("Conversion function takes %d args",attrInfo->recv_finfo.fn_nargs)));
+				(errcode(ERRCODE_UNDEFINED_FUNCTION),
+				 errmsg("No receive function available for type %s. Motion requires receive function",
+						format_type_be(attrInfo->atttypid))));
 		}
 
 		/* Trouble if it didn't eat the whole buffer */
