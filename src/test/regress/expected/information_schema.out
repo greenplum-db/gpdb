@@ -12,7 +12,7 @@ from pg_attribute
 where attnum > 0 and attrelid = 'r'::regclass;
                           QUERY PLAN
 --------------------------------------------------------------
- Seq Scan on pg_attribute  (cost=0.00..376.30 rows=5 width=2)
+ Seq Scan on pg_attribute  (cost=0.00..376.30 rows=6 width=2)
    Filter: attnum > 0 AND attrelid = 1699317::oid
  Settings:  enable_bitmapscan=off; enable_indexscan=off
 (3 rows)
