@@ -185,7 +185,7 @@ sub gpdiff_files
         $newf2 = atmsort::run($f2);
     }
 
-    my $args = join(" ", @ARGV, $newf1, $newf2);
+    my $args = join(' ', @ARGV, $newf1, $newf2);
 
 #   print "args: $args\n";
 

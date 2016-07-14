@@ -544,7 +544,7 @@ sub format_explain
     if (exists($directive->{explain})
         && ($directive->{explain} =~ m/operator/i))
     {
-        $xopt = "operator";
+        $xopt = 'operator';
         $sort = 1;
     }
 
@@ -1264,7 +1264,7 @@ EOF_formatfix
                 # differ because of session level GUCs.
                 if (exists($directive->{explain}))
                 {
-                    $ini = "GP_IGNORE:" . $ini;
+                    $ini = 'GP_IGNORE:' . $ini;
                 }
 
                 $directive = {};
@@ -1296,7 +1296,7 @@ EOF_formatfix
                 }
                 @outarr = ();
 
-                print $atmsort_outfh "GP_IGNORE:", $ini;
+                print $atmsort_outfh 'GP_IGNORE:', $ini;
                 next;
             }
             elsif ($has_comment && ($glob_make_equiv_expected && $ini =~ m/\-\-\s*start\_equiv\s*$/))
@@ -1471,7 +1471,7 @@ EOF_formatfix
                     $has_order = 0; # need to sort query output
                     $directive->{sql_statement} = $sql_statement;
                 }
-                $sql_statement = "";
+                $sql_statement = '';
 
                 $getrows = 1;
                 next;
@@ -1489,7 +1489,7 @@ EOF_formatfix
             # MPP-1557,AUTO-3: horrific ERROR DETAIL External Table trifecta
             if ($glob_verbose)
             {
-                print $atmsort_outfh "GP_IGNORE: External Table ERROR DETAIL fixup\n";
+                print $atmsort_outfh 'GP_IGNORE: External Table ERROR DETAIL fixup' . "\n";
             }
             if ($ini !~ m/^DETAIL/)
             {
@@ -1507,7 +1507,7 @@ EOF_formatfix
             if (scalar(@outarr) &&
                 ($outarr[-1] =~ m/^ERROR:\s+missing data for column/))
             {
-                $outarr[-1] = "ERROR:  missing data for column DUMMY_COL\n";
+                $outarr[-1] = 'ERROR:  missing data for column DUMMY_COL' . "\n";
             }
         }
 
