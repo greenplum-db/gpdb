@@ -1,25 +1,23 @@
--- create the database functions
 CREATE OR REPLACE FUNCTION read_from_s3() RETURNS integer AS
         '$libdir/gps3ext.so', 's3_import' LANGUAGE C STABLE;
 
--- declare the protocol name along with in/out funcs
 CREATE PROTOCOL s3 (
         readfunc  = read_from_s3
 );
 
-drop external table s3example;
-create READABLE external table s3example (date text, time text, open float, high float,
-        low float, volume int) location('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/gzipped_normal1/ config=/home/gpadmin/s3.conf') FORMAT 'csv';
+DROP EXTERNAL TABLE s3regress;
 
-SELECT count(*) FROM s3example;
-SELECT sum(open) FROM s3example;
-SELECT avg(open) FROM s3example;
+CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high float,
+        low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/gzipped_normal1/ config=/home/gpadmin/s3.conf') FORMAT 'csv';
 
-drop external table s3example;
-create READABLE external table s3example (Year text, Month text, DayofMonth text, DayOfWeek text, DepTime text, CRSDepTime text, ArrTime text,CRSArrTime text, UniqueCarrier text, FlightNum text,TailNum text, ActualElapsedTime text, CRSElapsedTime text, AirTime text, ArrDelay text, DepDelay text, Origin text, Dest text, Distance text, TaxiIn text, TaxiOut text, Cancelled text, CancellationCode text, Diverted text, CarrierDelay text, WeatherDelay text, NASDelay text, SecurityDelay text, LateAircraftDelay text) location('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset2/gzipped_normal2/ config=/home/gpadmin/s3.conf') format 'csv' SEGMENT REJECT LIMIT 100 PERCENT;
+SELECT count(*) count, sum(open) sum, avg(open) avg FROM s3regress;
 
-SELECT count(*) FROM s3example;
+DROP EXTERNAL TABLE s3regress;
 
-DROP EXTERNAL TABLE s3example;
+CREATE READABLE EXTERNAL TABLE s3regress (Year text, Month text, DayofMonth text, DayOfWeek text, DepTime text, CRSDepTime text, ArrTime text,CRSArrTime text, UniqueCarrier text, FlightNum text,TailNum text, ActualElapsedTime text, CRSElapsedTime text, AirTime text, ArrDelay text, DepDelay text, Origin text, Dest text, Distance text, TaxiIn text, TaxiOut text, Cancelled text, CancellationCode text, Diverted text, CarrierDelay text, WeatherDelay text, NASDelay text, SecurityDelay text, LateAircraftDelay text) LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset2/gzipped_2002and2003/ config=/home/gpadmin/s3.conf') format 'csv' SEGMENT REJECT LIMIT 100 PERCENT;
+
+SELECT count(*) FROM s3regress;
+
+DROP EXTERNAL TABLE s3regress;
 
 DROP PROTOCOL s3;

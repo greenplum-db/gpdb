@@ -1,17 +1,21 @@
-CREATE OR REPLACE FUNCTION read_from_s3() RETURNS integer AS
+-- start_ignore
+CREATE FUNCTION read_from_s3() RETURNS integer AS
         '$libdir/gps3ext.so', 's3_import' LANGUAGE C STABLE;
 CREATE PROTOCOL s3 (
         readfunc  = read_from_s3
 );
-DROP EXTERNAL TABLE s3regress;
-ERROR:  table "s3regress" does not exist
-CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high float,
+-- end_ignore
+DROP EXTERNAL TABLE parallel1;
+ERROR:  table "parallel1" does not exist
+CREATE READABLE EXTERNAL TABLE parallel1 (date text, time text, open float, high float,
         low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal/ config=/home/gpadmin/s3.conf') FORMAT 'csv';
-SELECT count(*) count, sum(open) sum, avg(open) avg FROM s3regress;
+SELECT count(*) count, sum(open) sum, avg(open) avg FROM parallel1;
   count   |       sum        |       avg        
 ----------+------------------+------------------
  31033039 | 1490754474.37251 | 48.0376567171687
 (1 row)
 
-DROP EXTERNAL TABLE s3regress;
+DROP EXTERNAL TABLE parallel1;
+-- start_ignore
 DROP PROTOCOL s3;
+-- end_ignore

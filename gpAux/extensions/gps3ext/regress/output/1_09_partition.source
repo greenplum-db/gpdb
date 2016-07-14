@@ -1,12 +1,10 @@
--- create the database functions
 CREATE OR REPLACE FUNCTION read_from_s3() RETURNS integer AS
-'$libdir/gps3ext.so', 's3_import' LANGUAGE C STABLE;
--- declare the protocol name along with in/out funcs
+        '$libdir/gps3ext.so', 's3_import' LANGUAGE C STABLE;
 CREATE PROTOCOL s3 (
 	readfunc  = read_from_s3
 );
-drop external table s3example;
-ERROR:  table "s3example" does not exist
+DROP EXTERNAL TABLE s3regress;
+ERROR:  table "s3regress" does not exist
 CREATE TABLE stock (date text, time text, open float, high float, low float, volume int) DISTRIBUTED BY (date) PARTITION BY RANGE (volume)
 (
 	PARTITION stock10000 START (10000) INCLUSIVE,
@@ -17,22 +15,22 @@ NOTICE:  CREATE TABLE will create partition "stock_1_prt_stock10000" for table "
 NOTICE:  CREATE TABLE will create partition "stock_1_prt_stock20000" for table "stock"
 NOTICE:  CREATE TABLE will create partition "stock_1_prt_stock30000" for table "stock"
 INSERT INTO stock (date, time, open, high, low, volume) VALUES (03/08/2011, 094022, 35.25, 35.24, 35.29, 20001);
-create READABLE external table ext_stock000 (date text, time text, open float, high float,
-	low float, volume int) location('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal/ config=/home/gpadmin/s3.conf') FORMAT 'csv';
+CREATE READABLE EXTERNAL TABLE ext_stock000 (date text, time text, open float, high float,
+	low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal/xao config=/home/gpadmin/s3.conf') FORMAT 'csv';
 ALTER TABLE stock ADD PARTITION stock000 START (0) INCLUSIVE END (10000) EXCLUSIVE;
 NOTICE:  CREATE TABLE will create partition "stock_1_prt_stock000" for table "stock"
 ALTER TABLE stock EXCHANGE PARTITION FOR (0) WITH TABLE ext_stock000 WITHOUT VALIDATION;
 NOTICE:  exchanged partition "stock000" of relation "stock" with relation "ext_stock000"
 SELECT count(*) FROM stock_1_prt_stock000;
-  count   
-----------
- 31024410
+  count  
+---------
+ 1938855
 (1 row)
 
 SELECT count(*) FROM stock;
-  count   
-----------
- 31024411
+  count  
+---------
+ 1938856
 (1 row)
 
 DROP TABLE ext_stock000;

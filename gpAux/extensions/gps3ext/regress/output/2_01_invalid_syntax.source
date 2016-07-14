@@ -1,19 +1,14 @@
--- create the database functions
 CREATE OR REPLACE FUNCTION read_from_s3() RETURNS integer AS
         '$libdir/gps3ext.so', 's3_import' LANGUAGE C STABLE;
--- declare the protocol name along with in/out funcs
 CREATE PROTOCOL s3 (
         readfunc  = read_from_s3
 );
-drop external table s3example;
-ERROR:  table "s3example" does not exist
-create READABLE external table s3example (date float, time float, open float, high float,
-	low float, volume int) location('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal/ config=/home/gpadmin/s3.conf') format 'csv';
-SELECT count(*) FROM s3example;
-ERROR:  invalid input syntax for type double precision: "09/28/2009"  (seg0 slice1 ip-172-31-2-196.us-west-2.compute.internal:40000 pid=6425)
-DETAIL:  External table s3example, line 1 of s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal/ config=/home/gpadmin/s3.conf, column date
-DROP EXTERNAL TABLE s3example;
+DROP EXTERNAL TABLE s3regress;
+ERROR:  table "s3regress" does not exist
+CREATE READABLE EXTERNAL TABLE s3regress (date float, time float, open float, high float,
+	low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal/xac config=/home/gpadmin/s3.conf') format 'csv';
+SELECT count(*) FROM s3regress;
+ERROR:  invalid input syntax for type double precision: "05/18/2010"  (seg0 slice1 ip-172-31-2-196.us-west-2.compute.internal:40000 pid=19247)
+DETAIL:  External table s3regress, line 1 of s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal/xac config=/home/gpadmin/s3.conf, column date
+DROP EXTERNAL TABLE s3regress;
 DROP PROTOCOL s3;
-WARNING:  Releasing segworker groups since one or more segment connections failed.  This will abort the transactions in the segments that did not get prepared.
-NOTICE:  Retry of the distributed transaction 'Abort Prepared' broadcast succeeded to the segments for gid = 1467688031-0000000206.
-ERROR:  The distributed transaction 'Prepare' broadcast failed to one or more segments for gid = 1467688031-0000000206. (cdbtm.c:689)
