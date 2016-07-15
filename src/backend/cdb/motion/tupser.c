@@ -164,10 +164,11 @@ InitSerTupInfo(TupleDesc tupdesc, SerTupInfo * pSerInfo)
 		attrInfo->atttypid = tupdesc->attrs[i]->atttypid;
 		
 		/*
-		 * Ok, we want the Binary input/output routines for the type if they exist,
-		 * else we want the normal text input/output routines.
+		 * We want the Binary input/output routines for the type if they exist.
+		 * Otherwise, we defer erroring out until a motion node explicitly requires
+		 * binary send/receive functions for serialization/deserialization.
 		 * 
-		 * User defined types might or might not have binary routines.
+		 * Note, user defined types might or might not have binary routines.
 		 * 
 		 * getTypeBinaryOutputInfo throws an error if we try to call it to get
 		 * the binary output routine and one doesn't exist, so let's not call that.
@@ -196,21 +197,20 @@ InitSerTupInfo(TupleDesc tupdesc, SerTupInfo * pSerInfo)
 								format_type_be(attrInfo->atttypid))));
 								
 			attrInfo->typsend = pt->typsend;
-
 			if (OidIsValid(attrInfo->typsend))
 			{
 				fmgr_info(attrInfo->typsend, &attrInfo->send_finfo);
+				attrInfo->send_typio_param = getTypeIOParam(typeTuple);
 			}
 
 			attrInfo->typrecv  = pt->typreceive;
 			if (OidIsValid(attrInfo->typrecv))
 			{
 				fmgr_info(attrInfo->typrecv, &attrInfo->recv_finfo);
+				attrInfo->recv_typio_param = getTypeIOParam(typeTuple);
 			}
 
-			attrInfo->send_typio_param = getTypeIOParam(typeTuple);
 			attrInfo->typisvarlena = (!pt->typbyval) && (pt->typlen == -1);
-			attrInfo->recv_typio_param = getTypeIOParam(typeTuple);
 			
 			caql_endscan(pcqCtx);
 		}
