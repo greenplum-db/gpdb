@@ -365,8 +365,9 @@ OPTIONS
 
  Schema names to restore, specify multiple times for multiple schemas. 
  Existing tables are not automatically truncated before data is restored 
- from backup. If your intention is to replace existing data in the table 
- from backup, truncate the table prior to running gpdbrestore -S. 
+ from backup. To replace the data in the schema tables with the data from
+ backup, you can specify the --truncate option. The schema tables are 
+ truncated.
 
 
 --table-file <file_name> 
@@ -379,8 +380,9 @@ OPTIONS
 --truncate
 
  Truncate table data before restoring data to the table from the backup.
- This option is supported only when restoring a set of tables with the 
- option -T or --table-file. 
+ If this option is not specified, existing table data is not removed 
+ before data is restored to the table. This option is supported only 
+ when restoring a set of tables with the option -S, -T, or --table-file. 
  This option is not supported with the -e option.
 
 
