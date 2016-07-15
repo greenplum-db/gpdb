@@ -925,8 +925,6 @@
 
  CREATE FUNCTION gp_distributed_xacts() RETURNS SETOF record LANGUAGE internal VOLATILE AS 'gp_distributed_xacts__' WITH (OID=6035, DESCRIPTION="view mpp distributed transaction state");
 
- CREATE FUNCTION gp_max_distributed_xid() RETURNS xid LANGUAGE internal VOLATILE STRICT AS 'gp_max_distributed_xid' WITH (OID=6036, DESCRIPTION="Highest distributed transaction id used so far");
-
  CREATE FUNCTION gp_distributed_xid() RETURNS xid LANGUAGE internal VOLATILE STRICT AS 'gp_distributed_xid' WITH (OID=6037, DESCRIPTION="Current distributed transaction id");
 
  CREATE FUNCTION gp_transaction_log() RETURNS SETOF record LANGUAGE internal VOLATILE AS 'gp_transaction_log' WITH (OID=6043, DESCRIPTION="view logged local transaction status");

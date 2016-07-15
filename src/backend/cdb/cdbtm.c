@@ -64,7 +64,7 @@ extern struct Port *MyProcPort;
 static LWLockId shmControlLock;
 static volatile bool *shmTmRecoverred;
 static volatile DistributedTransactionTimeStamp *shmDistribTimeStamp;
-static volatile DistributedTransactionId *shmGIDSeq;
+static volatile DistributedTransactionId *shmGIDSeq = NULL;
 static volatile int *shmNumGxacts;
 static int *shmCurrentPhase1Count;
 
@@ -157,7 +157,6 @@ static void ReplayRedoFromUtilityMode(void);
 static void RemoveRedoUtilityModeFile(void);
 static void performDtxProtocolCommitPrepared(const char *gid, bool raiseErrorIfNotFound);
 static void performDtxProtocolAbortPrepared(const char *gid, bool raiseErrorIfNotFound);
-static DistributedTransactionId determineSegmentMaxDistributedXid(void);
 
 extern void resetSessionForPrimaryGangLoss(bool resetSession);
 extern void CheckForResetSession(void);
@@ -2380,7 +2379,7 @@ initGxact(TMGXACT * gxact)
 
 	gxact->explicitBeginRemembered = false;
 
-	LocalDistribXactRef_Init(&gxact->localDistribXactRef);
+	gxact->localDistribXactData.state = LOCALDISTRIBXACT_STATE_NONE;
 
     gxact->xminDistributedSnapshot = 0;
 
@@ -2501,7 +2500,7 @@ createDtxSnapshot(
 	 * ReadNewTransactionId(), the distributed-xmax of a transaction
 	 * is the last distributed-xmax available
 	 */
-	xmax = LocalDistribXact_GetMaxDistributedXid();
+	xmax = getMaxDistributedXid();
 	count = 0;
 	inProgressEntryArray = distribSnapshotWithLocalMapping->inProgressEntryArray;
 
@@ -2711,7 +2710,7 @@ createDtx(DistributedTransactionId		*distribXid,
 			*shmDistribTimeStamp,
 			gxact->gxid,
 			&gxact->localXid,
-			&gxact->localDistribXactRef);
+			&gxact->localDistribXactData);
 
 		*distribXid = gxact->gxid;
 		*localXid = gxact->localXid;
@@ -2761,8 +2760,7 @@ releaseGxact_UnderLocks(void)
 	/*
 	 * Protected by ProcArrayLock.
 	 */
-	LocalDistribXactRef_ReleaseUnderLock(
-		&currentGxact->localDistribXactRef);
+	currentGxact->localDistribXactData.state = LOCALDISTRIBXACT_STATE_NONE;
 
 	/* find slot of current transaction */
 
@@ -3047,6 +3045,15 @@ generateGID(char *gid, DistributedTransactionId *gxid)
 			 (int)strlen(gid));
 }
 
+DistributedTransactionId
+getMaxDistributedXid(void)
+{
+	if (!shmGIDSeq)
+		return 0;
+
+	return *shmGIDSeq;
+}
+
 /*
  * recoverTM:
  * perform TM recovery, this connects to all QE and resolve all in-doubt txn.
@@ -3066,8 +3073,6 @@ generateGID(char *gid, DistributedTransactionId *gxid)
 static void
 recoverTM(void)
 {
-	DistributedTransactionId segmentMaxDistributedTransactionId = 0;
-
 	/* intialize fts sync count */
 	verifyFtsSyncCount();
 
@@ -3116,13 +3121,7 @@ recoverTM(void)
 
 	/* finished recovery successfully. */
 
-	segmentMaxDistributedTransactionId = determineSegmentMaxDistributedXid();
-	if (segmentMaxDistributedTransactionId >= *shmGIDSeq)
-	{
-		*shmGIDSeq = segmentMaxDistributedTransactionId + 1;
-	}
-
-	elog(LOG, "Next distributed transaction id is %u", *shmGIDSeq);
+	*shmGIDSeq = 1;
 
 	*shmDtmStarted = true;
 	elog(LOG, "DTM Started");
@@ -3327,93 +3326,6 @@ recoverInDoubtTransactions(void)
 
 	return true;
 }
-
-/*
- * determineSegmentMaxDistributedXid:
- *
- * Since we don't know whether the Segment Databases were left over from
- * an earlier start or left over from a postmaster system reset due to
- * a server process failure, we must go out and determine the maximum
- * distributed transaction id currently in-use.
- */
-static DistributedTransactionId
-determineSegmentMaxDistributedXid(void)
-{
-	DistributedTransactionId max = 0;
-	int		i;
-	int 	resultCount = 0;
-	struct pg_result **results = NULL;
-	StringInfoData buffer;
-	StringInfoData errbuf;
-
-#define FUNCTION_DOES_NOT_EXIST "function gp_max_distributed_xid() does not exist"
-
-	initStringInfo(&buffer);
-
-	appendStringInfo(&buffer, "select gp_max_distributed_xid()");
-
-	initStringInfo(&errbuf);
-
-	results = cdbdisp_dispatchRMCommand(buffer.data, /* Snapshot */ false,
-		                                &errbuf, &resultCount);
-
-	if (errbuf.len > 0)
-	{
-		int cmplen = strlen(FUNCTION_DOES_NOT_EXIST);
-
-		if (strlen(errbuf.data) >= cmplen &&
-			strncmp(errbuf.data, FUNCTION_DOES_NOT_EXIST, cmplen ) == 0)
-		{
-			elog(LOG, "The function gp_max_distributed_xid is missing on one or more segments.  The beta 3.0 upgrade steps are necessary");
-
-		}
-		else
-		{
-			ereport(ERROR,
-					(errmsg("gp_max_distributed_xid error (gathered %d results from cmd '%s')", resultCount, buffer.data),
-					 errdetail("%s", errbuf.data)));
-		}
-	}
-	else
-	{
-		elog(DTM_DEBUG5, "determineSegmentMaxDistributedXid resultCount = %d",resultCount);
-
-		for (i = 0; i < resultCount; i++)
-		{
-			if (PQresultStatus(results[i]) != PGRES_TUPLES_OK)
-			{
-				elog(ERROR, "gp_max_distributed_xid: resultStatus not tuples_Ok");
-			}
-			else
-			{
-				/*
-				 * Due to funkyness in the current dispatch agent code, instead of 1 result
-				 * per QE with 1 row each, we can get back 1 result per dispatch agent, with
-				 * one row per QE controlled by that agent.
-				 */
-				int j;
-				for (j = 0; j < PQntuples(results[i]); j++)
-				{
-					DistributedTransactionId temp = 0;
-					temp  =  atol(PQgetvalue(results[i], j, 0));
-					elog(DTM_DEBUG5, "determineSegmentMaxDistributedXid value = %d",temp);
-					if (temp  > max)
-						max = temp;
-				}
-			}
-		}
-	}
-
-	pfree(errbuf.data);
-
-	for (i = 0; i < resultCount; i++)
-		PQclear(results[i]);
-	free(results);
-
-	return max;
-}
-
-
 
 /*
  * gatherRMInDoubtTransactions:

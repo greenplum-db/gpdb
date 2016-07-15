@@ -21,7 +21,7 @@
 #include "storage/pg_sema.h"
 #include "access/xlog.h"
 
-#include "cdb/cdbpublic.h"  /* LocalDistribXactRef */
+#include "cdb/cdblocaldistribxact.h"  /* LocalDistribXactData */
 
 
 /*
@@ -87,13 +87,18 @@ struct PGPROC
 								 * executed by this proc, if running and XID
 								 * is assigned; else InvalidTransactionId */
 
-	LocalDistribXactRef	localDistribXactRef;
-								/* Reference to the LocalDistribXact 
-								 * element. */
 	TransactionId xmin;			/* minimal running XID as it was when we were
 								 * starting our xact, excluding LAZY VACUUM:
 								 * vacuum must not remove tuples deleted by
 								 * xid >= xmin ! */
+
+	/*
+	 * Distributed transaction information. This is only accessed by the backend
+	 * itself, so this doesn't need to be protected by any lock. In fact, it
+	 * could be just a global variable in backend-private memory, but it seems
+	 * useful to have this information available for debugging purposes.
+	 */
+	LocalDistribXactData localDistribXactData;
 
 	int			pid;			/* This backend's process id, or 0 */
 	BackendId	backendId;		/* This backend's backend ID (if assigned) */

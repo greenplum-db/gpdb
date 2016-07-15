@@ -524,7 +524,7 @@ PostPrepare_Twophase()
  */
 GlobalTransaction
 MarkAsPreparing(TransactionId xid,
-				LocalDistribXactRef *localDistribXactRef,
+				LocalDistribXactData *localDistribXactRef,
 				const char *gid,
 				TimestampTz prepared_at, Oid owner, Oid databaseid
                 , XLogRecPtr *xlogrecptr)
@@ -593,10 +593,7 @@ MarkAsPreparing(TransactionId xid,
 	gxact->proc.waitLock = NULL;
 	gxact->proc.waitProcLock = NULL;
 
-	LocalDistribXactRef_Init(&gxact->proc.localDistribXactRef);
-	LocalDistribXactRef_Clone(
-			&gxact->proc.localDistribXactRef,
-			localDistribXactRef);
+	gxact->proc.localDistribXactData = *localDistribXactRef;
 
 	for (i = 0; i < NUM_LOCK_PARTITIONS; i++)
 		SHMQueueInit(&(gxact->proc.myProcLocks[i]));
@@ -691,6 +688,9 @@ MarkAsPrepared(GlobalTransaction gxact)
 
 	elog((Debug_print_full_dtm ? LOG : DEBUG5),"MarkAsPrepared marking GXACT gid = %s as valid (prepared)",
 		 gxact->gid);
+
+	LocalDistribXact_ChangeState(&gxact->proc,
+								 LOCALDISTRIBXACT_STATE_PREPARED);
 
 	/*
 	 * Put it into the global ProcArray so TransactionIdIsInProgress considers
@@ -1362,8 +1362,6 @@ EndPrepare(GlobalTransaction gxact)
 	 */
 	MarkAsPrepared(gxact);
 
-	LocalDistribXact_ChangeState(gxact->proc.xid,
-								 &gxact->proc.localDistribXactRef, LOCALDISTRIBXACT_STATE_PREPARED);
 	/*
 	 * Remember that we have this GlobalTransaction entry locked for us.  If
 	 * we crash after this point, it's too late to abort, but we must unlock
@@ -1597,7 +1595,7 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 
 	prepareAppendOnlyIntentCount = gxact->prepareAppendOnlyIntentCount;
 
-	ProcArrayRemove(&gxact->proc, latestXid, /* forPrepare */ true, isCommit);
+	ProcArrayRemove(&gxact->proc, latestXid);
 
 	/*
 	 * In case we fail while running the callbacks, mark the gxact invalid so
@@ -1903,7 +1901,7 @@ RecoverPreparedTransactions(void)
 	XLogRecPtr *tfXLogRecPtr = NULL;
 	XLogRecord *tfRecord     = NULL;
 	PersistentEndXactRecObjects persistentPrepareObjects;
-	LocalDistribXactRef localDistribXactRef;
+	LocalDistribXactData localDistribXactData;
 	TwoPhaseFileHeader *hdr = NULL;
 	HASH_SEQ_STATUS hsStatus;
 
@@ -1996,10 +1994,11 @@ RecoverPreparedTransactions(void)
 			 "RecoverPreparedTransactions: Calling MarkAsPreparing on id = %s with distribTimeStamp %u and distribXid %u",
 			 hdr->gid, distribTimeStamp, distribXid);
 
-		LocalDistribXact_CreateRedoPrepared(distribTimeStamp, distribXid, xid,
-											&localDistribXactRef);
+		localDistribXactData.state = LOCALDISTRIBXACT_STATE_ACTIVE;
+		localDistribXactData.distribTimeStamp = distribTimeStamp;
+		localDistribXactData.distribXid = distribXid;
 		gxact = MarkAsPreparing(xid,
-								&localDistribXactRef,
+								&localDistribXactData,
 								hdr->gid,
 								hdr->prepared_at,
 								hdr->owner,
@@ -2007,8 +2006,6 @@ RecoverPreparedTransactions(void)
 								tfXLogRecPtr);
 		GXactLoadSubxactData(gxact, hdr->nsubxacts, subxids);
 		MarkAsPrepared(gxact);
-
-		LocalDistribXactRef_Release(&localDistribXactRef);
 
 		/*
 		 * Recover other state (notably locks) using resource managers

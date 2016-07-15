@@ -230,11 +230,6 @@ DtxContextInfo_Serialize(char *buffer, DtxContextInfo *dtxContextInfo)
 	int used;
 	DistributedSnapshot *ds = &dtxContextInfo->distributedSnapshot;
 
-	if (dtxContextInfo->distributedXid == FirstDistributedTransactionId)
-		elog(WARNING, "serializing FirstDistributedTransactionId: %u %u %u %u",
-			 dtxContextInfo->distributedXid, dtxContextInfo->distributedTimeStamp,
-			 dtxContextInfo->curcid, dtxContextInfo->segmateSync);
-
 	memcpy(p, &dtxContextInfo->distributedXid, sizeof(DistributedTransactionId));
 	p += sizeof(DistributedTransactionId);
 	if (dtxContextInfo->distributedXid != InvalidDistributedTransactionId)
@@ -453,11 +448,6 @@ DtxContextInfo_Deserialize(const char *serializedDtxContextInfo,
 
 		memcpy(&dtxContextInfo->cursorContext, p, sizeof(bool));
 		p += sizeof(bool);
-
-		if (dtxContextInfo->distributedXid == FirstDistributedTransactionId)
-			elog(WARNING, "Deserializing FirstDistributedTransactionId: %u %u %u %u",
-				 dtxContextInfo->distributedXid, dtxContextInfo->distributedTimeStamp,
-				 dtxContextInfo->curcid, dtxContextInfo->segmateSync);
 
 		elog((Debug_print_full_dtm ? LOG : DEBUG3),
 			 "DtxContextInfo_Deserialize distributedTimeStamp %u, distributedXid = %u, curcid %d nestingLevel %d segmateSync %u as %s",

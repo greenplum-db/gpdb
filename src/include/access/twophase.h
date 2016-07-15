@@ -71,7 +71,7 @@ extern PGPROC *TwoPhaseGetDummyProc(TransactionId xid);
 extern BackendId TwoPhaseGetDummyBackendId(TransactionId xid);
 
 extern GlobalTransaction MarkAsPreparing(TransactionId xid, 
-				LocalDistribXactRef *distribToLocalXactRef,
+				LocalDistribXactData *localDistribXactRef,
 				const char *gid,
 				TimestampTz prepared_at,
 				Oid owner, Oid databaseid

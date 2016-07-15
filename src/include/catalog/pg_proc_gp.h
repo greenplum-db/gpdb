@@ -1540,10 +1540,6 @@ DESCR("Highest oid used so far");
 DATA(insert OID = 6035 ( gp_distributed_xacts  PGNSP PGUID 12 1 1000 0 f f f t v 0 0 2249 f "" _null_ _null_ _null_ _null_ gp_distributed_xacts__ _null_ _null_ _null_ n ));
 DESCR("view mpp distributed transaction state");
 
-/* gp_max_distributed_xid() => xid */ 
-DATA(insert OID = 6036 ( gp_max_distributed_xid  PGNSP PGUID 12 1 0 0 f f t f v 0 0 28 f "" _null_ _null_ _null_ _null_ gp_max_distributed_xid _null_ _null_ _null_ n ));
-DESCR("Highest distributed transaction id used so far");
-
 /* gp_distributed_xid() => xid */ 
 DATA(insert OID = 6037 ( gp_distributed_xid  PGNSP PGUID 12 1 0 0 f f t f v 0 0 28 f "" _null_ _null_ _null_ _null_ gp_distributed_xid _null_ _null_ _null_ n ));
 DESCR("Current distributed transaction id");
