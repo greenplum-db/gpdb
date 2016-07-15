@@ -67,13 +67,18 @@ LIBS := $(filter-out -lpgport, $(LIBS)) $(LDAP_LIBS_BE) $(CONNECTEMCLIB)
 # The backend doesn't need everything that's in LIBS, however
 LIBS := $(filter-out -lreadline -ledit -ltermcap -lncurses -lcurses, $(LIBS))
 
-# adding orca libraries
+# Add ORCA libraries
 ifeq ($(enable_orca),yes)
-LIBS := $(LIBS) -L$(LIBGPOS)/$(OBJDIR_DEFAULT) -lgpos
-LIBS := $(LIBS) -L$(XERCES_LIBDIR) -lxerces-c-3.1
-LIBS := $(LIBS) -L$(OPTIMIZER)/libnaucrates/$(OBJDIR_DEFAULT) -lnaucrates
-LIBS := $(LIBS) -L$(OPTIMIZER)/libgpdbcost/$(OBJDIR_DEFAULT) -lgpdbcost
-LIBS := $(LIBS) -L$(OPTIMIZER)/libgpopt/$(OBJDIR_DEFAULT) -lgpopt
+LIBS := $(LIBS) -L$(LIBGPOS)/$(OBJDIR_DEFAULT)
+LIBS := $(LIBS) -L$(OPTIMIZER)/libnaucrates/$(OBJDIR_DEFAULT)
+LIBS := $(LIBS) -L$(OPTIMIZER)/libgpdbcost/$(OBJDIR_DEFAULT)
+LIBS := $(LIBS) -L$(OPTIMIZER)/libgpopt/$(OBJDIR_DEFAULT)
+LIBS := $(LIBS) -L$(XERCES_LIBDIR)
+
+# The order of the libraries is significant, when building against static
+# ORCA libraries.
+LIBS := $(LIBS) -lgpopt -lnaucrates -lgpdbcost -lgpos
+LIBS := $(LIBS) -lxerces-c-3.1
 endif
 
 # adding codegen libraries
