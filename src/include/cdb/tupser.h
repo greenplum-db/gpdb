@@ -58,7 +58,6 @@ typedef struct SerAttrInfo
 
 	Oid			typrecv;		/* Oid for the type's binary input fn */
 	Oid			recv_typio_param;		/* param to pass to the receive fn */
-
 	/*
 	 * Precomputed call info for receive fn. Valid only if typrecv is valid,
 	 * i.e., a receive function was provided.
