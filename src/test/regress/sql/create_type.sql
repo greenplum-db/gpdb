@@ -119,3 +119,30 @@ CREATE TYPE compfoo as (f1 int, f2 text);
 DROP TYPE compfoo;
 RESET SESSION AUTHORIZATION;
 DROP USER user_bob;
+
+-- Check if motion layer correctly errors out in the absence of send/receive functions
+CREATE TYPE incomplete_type;
+
+CREATE FUNCTION incomplete_type_in(cstring)
+   RETURNS incomplete_type
+   AS 'textin'
+   LANGUAGE internal IMMUTABLE STRICT;
+CREATE FUNCTION incomplete_type_out(incomplete_type)
+   RETURNS cstring
+   AS 'textout'
+   LANGUAGE internal IMMUTABLE STRICT;
+
+CREATE TYPE incomplete_type (
+   internallength = variable,
+   input = incomplete_type_in,
+   output = incomplete_type_out,
+   alignment = double,
+   storage = EXTENDED,
+   default = 'zippo'
+);
+
+CREATE TABLE table_with_incomplete_type (id int, incomplete incomplete_type);
+INSERT INTO table_with_incomplete_type(id, incomplete) VALUES(1, repeat('abcde', 1000000)::incomplete_type);
+
+drop table table_with_incomplete_type;
+drop type incomplete_type cascade; 
