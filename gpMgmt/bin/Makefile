@@ -46,7 +46,6 @@ endif
 STREAM_DIR=$(SRC)/src/stream
 stream:
 	@echo "--- stream"
-	pwd
 	cd $(STREAM_DIR) && NO_M64=TRUE $(CC) stream.c -o stream
 	cp $(STREAM_DIR)/stream $(SERVER_SRC)/lib/stream
 

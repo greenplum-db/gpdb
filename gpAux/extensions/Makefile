@@ -25,13 +25,13 @@ all: mkdbgen mkgphdfs mks3ext
 
 .PHONY:
 mapreduce:
-	if [ "$(enable_mapreduce)" = "yes" ]; then \
+	@if [ "$(enable_mapreduce)" = "yes" ]; then \
 		echo "gpmapreduce enabled"; \
 		$(MAKE) -C gpmapreduce; \
 	fi
 
 install: mapreduce
-	if [ "$(enable_mapreduce)" = "yes" ]; then \
+	@if [ "$(enable_mapreduce)" = "yes" ]; then \
 		$(MAKE) -C gpmapreduce install; \
 	fi
 

@@ -104,7 +104,7 @@ install: generate_greenplum_path_file
 	cp $(top_builddir)/src/test/regress/*.pm $(prefix)/bin
 	if [ ! -d ${prefix}/docs ] ; then mkdir ${prefix}/docs ; fi
 	if [ -d doc ]; then cp -rp doc $(prefix)/docs/cli_help; fi
-	if [ -d demo/gpmapreduce ]; then \
+	@if [ -d demo/gpmapreduce ]; then \
 	  mkdir -p $(prefix)/demo; \
 	  $(TAR) -C demo -czf $(prefix)/demo/gpmapreduce.tar.gz gpmapreduce; \
 	fi
@@ -117,13 +117,9 @@ install: generate_greenplum_path_file
 
 	$(MAKE) set_scripts_version prefix=$(prefix)
 	# Remove unwanted files.
-	rm -rf $(prefix)/bin/CVS
-	rm -rf $(prefix)/doc/CVS
 	rm -rf $(prefix)/bin/ext
 	rm -rf $(prefix)/bin/pythonSrc
 	rm -rf $(prefix)/bin/Makefile
-	rm -rf $(prefix)/bin/lib/CVS
-	rm -rf $(prefix)/bin/lib/.p4ignore
 	rm -rf $(prefix)/bin/src
 	rm -f $(prefix)/bin/gpchecksubnetcfg
 	echo "`date` -- INFO: Removing $(prefix)/bin/gpexpandsystem"
