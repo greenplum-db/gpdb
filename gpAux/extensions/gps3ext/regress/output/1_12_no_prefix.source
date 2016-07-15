@@ -7,10 +7,10 @@ DROP EXTERNAL TABLE s3regress;
 ERROR:  table "s3regress" does not exist
 CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high float,
         low float, volume int) LOCATION('s3://s3-ap-northeast-1.amazonaws.com/ap-northeast-1.s3test.pivotal.io config=/home/gpadmin/s3.conf') FORMAT 'csv';
-SELECT sum(open) FROM s3regress;
-       sum        
-------------------
- 71676418.9189046
+SELECT round(sum(open)) FROM s3regress;
+  round   
+----------
+ 71676419
 (1 row)
 
 DROP EXTERNAL TABLE s3regress;

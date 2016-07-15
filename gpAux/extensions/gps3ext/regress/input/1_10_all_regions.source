@@ -13,7 +13,7 @@ CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high
 
 \d s3regress
 
-SELECT sum(open) FROM s3regress;
+SELECT round(sum(open)) FROM s3regress;
 
 
 DROP EXTERNAL TABLE s3regress;
@@ -23,7 +23,7 @@ CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high
 
 \d s3regress
 
-SELECT sum(open) FROM s3regress;
+SELECT round(sum(open)) FROM s3regress;
 
 
 DROP EXTERNAL TABLE s3regress;
@@ -33,7 +33,7 @@ CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high
 
 \d s3regress
 
-SELECT sum(open) FROM s3regress;
+SELECT round(sum(open)) FROM s3regress;
 
 
 DROP EXTERNAL TABLE s3regress;
@@ -43,7 +43,7 @@ CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high
 
 \d s3regress
 
-SELECT sum(open) FROM s3regress;
+SELECT round(sum(open)) FROM s3regress;
 
 
 DROP EXTERNAL TABLE s3regress;
@@ -53,7 +53,7 @@ CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high
 
 \d s3regress
 
-SELECT sum(open) FROM s3regress;
+SELECT round(sum(open)) FROM s3regress;
 
 
 DROP EXTERNAL TABLE s3regress;
@@ -63,7 +63,7 @@ CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high
 
 \d s3regress
 
-SELECT sum(open) FROM s3regress;
+SELECT round(sum(open)) FROM s3regress;
 
 
 DROP EXTERNAL TABLE s3regress;
@@ -73,7 +73,7 @@ CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high
 
 \d s3regress
 
-SELECT sum(open) FROM s3regress;
+SELECT round(sum(open)) FROM s3regress;
 
 
 DROP EXTERNAL TABLE s3regress;
@@ -83,7 +83,7 @@ CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high
 
 \d s3regress
 
-SELECT sum(open) FROM s3regress;
+SELECT round(sum(open)) FROM s3regress;
 
 
 DROP EXTERNAL TABLE s3regress;
@@ -93,7 +93,7 @@ CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high
 
 \d s3regress
 
-SELECT sum(open) FROM s3regress;
+SELECT round(sum(open)) FROM s3regress;
 
 
 DROP EXTERNAL TABLE s3regress;
@@ -103,7 +103,7 @@ CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high
 
 \d s3regress
 
-SELECT sum(open) FROM s3regress;
+SELECT round(sum(open)) FROM s3regress;
 
 DROP EXTERNAL TABLE s3regress;
 
