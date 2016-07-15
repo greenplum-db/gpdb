@@ -3439,7 +3439,18 @@ Feature: Validate command line arguments
         And verify that there are "730" tuples in "bkdb" for table "testschema.ao_foo_1_prt_p2_2_prt_3"
         And verify that there are "4380" tuples in "bkdb" for table "schema_ao.ao_index_table"
         And verify that there are "0" tuples in "bkdb" for table "schema_ao.ao_part_table"
-
+        When the user runs gpdbrestore with the stored timestamp and options "-S schema_ao -S testschema --truncate" without -e option
+        Then gpdbrestore should return a return code of 0
+        And verify that there are "0" tuples in "bkdb" for table "public.ao_index_table"
+        And verify that there are "0" tuples in "bkdb" for table "public.ao_table"
+        And verify that there are "365" tuples in "bkdb" for table "testschema.ao_foo_1_prt_p1_2_prt_1"
+        And verify that there are "365" tuples in "bkdb" for table "testschema.ao_foo_1_prt_p1_2_prt_2"
+        And verify that there are "365" tuples in "bkdb" for table "testschema.ao_foo_1_prt_p1_2_prt_3"
+        And verify that there are "365" tuples in "bkdb" for table "testschema.ao_foo_1_prt_p2_2_prt_1"
+        And verify that there are "365" tuples in "bkdb" for table "testschema.ao_foo_1_prt_p2_2_prt_2"
+        And verify that there are "365" tuples in "bkdb" for table "testschema.ao_foo_1_prt_p2_2_prt_3"
+        And verify that there are "2190" tuples in "bkdb" for table "schema_ao.ao_index_table"
+        And verify that there are "0" tuples in "bkdb" for table "schema_ao.ao_part_table"
     Scenario: Restore with --redirect option should not rely on existance of dumped database
         Given the test is initialized
         When the user runs "gpcrondump -a -x bkdb"

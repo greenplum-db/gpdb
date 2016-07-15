@@ -561,17 +561,17 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
     @patch('gppylib.operations.restore.RestoreDatabase.get_full_tables_in_schema', return_value=['"public"."tablename1"', '"public"."tablename2"', '"public"."tablename3"'])
     def test_truncate_restore_tables_restore_schemas(self, mock1, mock2, mock3, mock4):
         self.context.restore_schemas = ['public']
-        restore_line = self.restore.truncate_restore_tables()
+        self.restore.truncate_restore_tables()
         calls = [call(ANY,'Truncate "public"."tablename1"'), call(ANY,'Truncate "public"."tablename2"'), call(ANY,'Truncate "public"."tablename3"')]
         mock2.assert_has_calls(calls)
 
     @patch('gppylib.operations.restore.dbconn.DbURL')
     @patch('gppylib.operations.restore.dbconn.connect')
     @patch('gppylib.operations.restore.execSQL')
-    @patch('gppylib.operations.restore.execSQLForSingleton')
+    @patch('gppylib.operations.restore.execSQLForSingleton', return_value='t')
     def test_truncate_restore_tables_restore_tables(self, mock1, mock2, mock3, mock4):
         self.context.restore_tables = ['public.ao1', 'testschema.heap1']
-        restore_line = self.restore.truncate_restore_tables()
+        self.restore.truncate_restore_tables()
         calls = [call(ANY,'Truncate "public"."ao1"'), call(ANY,'Truncate "testschema"."heap1"')]
         mock2.assert_has_calls(calls)
 
