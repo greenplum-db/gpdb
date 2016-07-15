@@ -34,7 +34,6 @@ else
 endif
 
 BLD_FLAGS = $(ARCH_FLAGS) -D$(ARCH_BIT) -D$(ARCH_CPU) -D$(ARCH_OS) $(GPOPT_flags)
-override CPPFLAGS := -fPIC $(CPPFLAGS)
 override CPPFLAGS := $(BLD_FLAGS)  $(CPPFLAGS)
 override CPPFLAGS := -I $(XERCES)/include $(CPPFLAGS)
 override CPPFLAGS := -I $(LIBGPOS)/include $(CPPFLAGS)
