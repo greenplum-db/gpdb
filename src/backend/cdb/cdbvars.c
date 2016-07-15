@@ -470,10 +470,6 @@ string_to_role(const char *string)
 	{
 		role = GP_ROLE_EXECUTE;
 	}
-	else if (pg_strcasecmp(string, "dispatchagent") == 0 || pg_strcasecmp(string, "qda") == 0)
-	{
-		role = GP_ROLE_DISPATCHAGENT;
-	}
 	else if (pg_strcasecmp(string, "utility") == 0)
 	{
 		role = GP_ROLE_UTILITY;
@@ -496,8 +492,6 @@ role_to_string(GpRoleValue role)
 			return "dispatch";
 		case GP_ROLE_EXECUTE:
 			return "execute";
-		case GP_ROLE_DISPATCHAGENT:
-			return "dispatchagent";
 		case GP_ROLE_UTILITY:
 			return "utility";
 		case GP_ROLE_UNDEFINED:

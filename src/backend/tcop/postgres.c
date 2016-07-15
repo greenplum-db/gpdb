@@ -3580,8 +3580,6 @@ CdbProgramErrorHandler(SIGNAL_ARGS)
         pts = "Master process";
     else if (Gp_role == GP_ROLE_EXECUTE)
         pts = "Segment process";
-    else if (Gp_role == GP_ROLE_DISPATCHAGENT)
-    	pts = "DA process";
     else
         pts = "Process";
 

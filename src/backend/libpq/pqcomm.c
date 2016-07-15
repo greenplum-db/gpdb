@@ -1381,7 +1381,7 @@ pq_flush(void)
 {
 	int			res;
 
-	if ((Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_DISPATCHAGENT) && IsUnderPostmaster)
+	if (Gp_role == GP_ROLE_DISPATCH && IsUnderPostmaster)
 	{
 		if (!pq_send_mutex_lock())
 		{
@@ -1391,7 +1391,7 @@ pq_flush(void)
 	pq_set_nonblocking(false);
 	res = internal_flush();
 
-	if ((Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_DISPATCHAGENT) && IsUnderPostmaster)
+	if (Gp_role == GP_ROLE_DISPATCH && IsUnderPostmaster)
 		pthread_mutex_unlock(&send_mutex);
 	return res;
 }
@@ -1489,7 +1489,7 @@ pq_flush_if_writable(void)
 	/* Quick exit if nothing to do */
 	if (PqSendPointer == PqSendStart)
 		return 0;
-	if ((Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_DISPATCHAGENT) && IsUnderPostmaster)
+	if (Gp_role == GP_ROLE_DISPATCH && IsUnderPostmaster)
 	{
 		if (!pq_send_mutex_lock())
 		{
@@ -1500,7 +1500,7 @@ pq_flush_if_writable(void)
 	pq_set_nonblocking(true);
 
 	res = internal_flush();
-	if ((Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_DISPATCHAGENT) && IsUnderPostmaster)
+	if (Gp_role == GP_ROLE_DISPATCH && IsUnderPostmaster)
 		pthread_mutex_unlock(&send_mutex);
 	return res;
 }
@@ -1554,7 +1554,7 @@ pq_putmessage(char msgtype, const char *s, size_t len)
 		return EOF;
 	}
 
-	if ((Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_DISPATCHAGENT) && IsUnderPostmaster)
+	if (Gp_role == GP_ROLE_DISPATCH && IsUnderPostmaster)
 	{
 		if (!pq_send_mutex_lock())
 		{
@@ -1580,13 +1580,13 @@ pq_putmessage(char msgtype, const char *s, size_t len)
 	if (internal_putbytes(s, len))
 		goto fail;
 
-	if ((Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_DISPATCHAGENT) && IsUnderPostmaster)
+	if (Gp_role == GP_ROLE_DISPATCH && IsUnderPostmaster)
 		pthread_mutex_unlock(&send_mutex);
 
 	return 0;
 
 fail:
-	if ((Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_DISPATCHAGENT) && IsUnderPostmaster)
+	if (Gp_role == GP_ROLE_DISPATCH && IsUnderPostmaster)
 		pthread_mutex_unlock(&send_mutex);
 
 	return EOF;

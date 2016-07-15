@@ -978,10 +978,6 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	{
 		addSharedSnapshot("Query Dispatcher", gp_session_id);
 	}
-	else if (Gp_role == GP_ROLE_DISPATCHAGENT)
-	{
-		SharedLocalSnapshotSlot = NULL;
-	}
     else if (Gp_segment == -1 && Gp_role == GP_ROLE_EXECUTE && !Gp_is_writer)
     {
 		/* 
