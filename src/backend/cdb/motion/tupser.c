@@ -195,33 +195,15 @@ InitSerTupInfo(TupleDesc tupdesc, SerTupInfo * pSerInfo)
 						 errmsg("type %s is only a shell",
 								format_type_be(attrInfo->atttypid))));
 								
-			/* If we don't have both binary routines */
-			//			if (!OidIsValid(pt->typsend))
-			//			{
-			//				ereport(ERROR,
-			//					(errcode(ERRCODE_UNDEFINED_FUNCTION),
-			//					 errmsg("No send function available for type %s. Motion requires send function",
-			//							format_type_be(attrInfo->atttypid))));
-			//			}
-			//
-			//			if (!OidIsValid(pt->typreceive))
-			//			{
-			//				ereport(ERROR,
-			//					(errcode(ERRCODE_UNDEFINED_FUNCTION),
-			//					 errmsg("No receive function available for type %s. Motion requires receive function",
-			//							format_type_be(attrInfo->atttypid))));
-			//			}
-
-
 			attrInfo->typsend = pt->typsend;
 
-			if (OidIsValid(pt->typsend))
+			if (OidIsValid(attrInfo->typsend))
 			{
 				fmgr_info(attrInfo->typsend, &attrInfo->send_finfo);
 			}
 
 			attrInfo->typrecv  = pt->typreceive;
-			if (OidIsValid(pt->typreceive))
+			if (OidIsValid(attrInfo->typrecv))
 			{
 				fmgr_info(attrInfo->typrecv, &attrInfo->recv_finfo);
 			}
@@ -634,13 +616,10 @@ SerializeTupleIntoChunks(HeapTuple tuple, SerTupInfo * pSerInfo, TupleChunkList 
 				}
 				else
 				{
-					elog(WARNING, "No Send. Entering debug break");
-					debug_break();
-
-						ereport(ERROR,
-							(errcode(ERRCODE_UNDEFINED_FUNCTION),
-							 errmsg("No send function available for type %s. Motion requires send function",
-									format_type_be(attrInfo->atttypid))));
+					ereport(ERROR,
+						(errcode(ERRCODE_UNDEFINED_FUNCTION),
+						 errmsg("No send function available for type %s. Motion requires send function",
+								format_type_be(attrInfo->atttypid))));
 				}
 
 				/* We assume the result will not have been toasted */
@@ -1021,9 +1000,6 @@ DeserializeTuple(SerTupInfo * pSerInfo, StringInfo serialTup)
 		}
 		else
 		{
-			elog(WARNING, "No Receive. Entering debug break");
-			debug_break();
-
 			ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_FUNCTION),
 				 errmsg("No receive function available for type %s. Motion requires receive function",
