@@ -43,6 +43,7 @@ get_max_oid_from_segDBs(void)
 {
 
 	Oid	oid = 0;
+	Oid tempoid = 0;
 	int		i;
 	int 	resultCount = 0;
 	struct pg_result **results = NULL;
@@ -69,20 +70,11 @@ get_max_oid_from_segDBs(void)
 		}
 		else
 		{
-			/*
-			 * Due to funkyness in the current dispatch agent code, instead of 1 result 
-			 * per QE with 1 row each, we can get back 1 result per dispatch agent, with
-			 * one row per QE controlled by that agent.
-			 */
-			int j;
-			for (j = 0; j < PQntuples(results[i]); j++)
-			{
-				Oid tempoid = 0;
-				tempoid =  atol(PQgetvalue(results[i], j, 0));
-	
-				if (tempoid > oid)
-					oid = tempoid;
-			}
+			Assert(PQntuples(results[i]) == 1);
+			tempoid = atol(PQgetvalue(results[i], 0, 0));
+
+			if (tempoid > oid)
+				oid = tempoid;
 		}
 	}
 
