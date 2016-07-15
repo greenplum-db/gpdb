@@ -1610,7 +1610,9 @@ typedef enum
 /*
  * TableType
  *   Enum for different types of tables. The code relies on the enum being
- *   unsigned so the minimum member value should be zero.
+ *   unsigned so the minimum member value should be zero. Reordering and/or
+ *   renumbering the enum will most likely break assumptions and should be
+ *   refrained from.
  */
 typedef enum
 {

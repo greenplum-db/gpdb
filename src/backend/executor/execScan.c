@@ -26,12 +26,12 @@
 /*
  * getScanMethod
  *   Return ScanMethod for a given table type.
- *
- * Return NULL if the given type is TableTypeInvalid or not defined in TableType.
  */
 static const ScanMethod *
 getScanMethod(int tableType)
 {
+	Assert(tableType >= TableTypeHeap && tableType < TableTypeInvalid);
+
 	/*
 	 * scanMethods
 	 *    Array that specifies different scan methods for various table types.
@@ -56,11 +56,6 @@ getScanMethod(int tableType)
 	};
 	
 	COMPILE_ASSERT(ARRAY_SIZE(scanMethods) == TableTypeInvalid);
-
-	if (tableType < 0 && tableType >= TableTypeInvalid)
-	{
-		return NULL;
-	}
 
 	return &scanMethods[tableType];
 }
@@ -438,8 +433,6 @@ getTableType(Relation rel)
 TupleTableSlot *
 ExecTableScanRelation(ScanState *scanState)
 {
-	Assert(scanState->tableType >= 0 && scanState->tableType < TableTypeInvalid);
-	
 	return ExecScan(scanState, getScanMethod(scanState->tableType)->accessMethod);
 }
 
@@ -450,8 +443,6 @@ ExecTableScanRelation(ScanState *scanState)
 void
 BeginTableScanRelation(ScanState *scanState)
 {
-	Assert(scanState->tableType >= 0 && scanState->tableType < TableTypeInvalid);
-
 	getScanMethod(scanState->tableType)->beginScanMethod(scanState);
 }
 
@@ -462,8 +453,6 @@ BeginTableScanRelation(ScanState *scanState)
 void
 EndTableScanRelation(ScanState *scanState)
 {
-	Assert(scanState->tableType >= 0 && scanState->tableType < TableTypeInvalid);
-
 	getScanMethod(scanState->tableType)->endScanMethod(scanState);
 }
 
@@ -474,8 +463,7 @@ EndTableScanRelation(ScanState *scanState)
 void
 ReScanRelation(ScanState *scanState)
 {
-	Assert(scanState->tableType >= 0 && scanState->tableType < TableTypeInvalid);
-
+	const ScanMethod *scanMethod;
 	EState *estate = scanState->ps.state;
 	Index scanrelid = ((Scan *)scanState->ps.plan)->scanrelid;
 	
@@ -487,9 +475,7 @@ ReScanRelation(ScanState *scanState)
 		return;
 	}
 
-	const ScanMethod *scanMethod = getScanMethod(scanState->tableType);
-	Assert(scanMethod != NULL);
-
+	scanMethod = getScanMethod(scanState->tableType);
 	if ((scanState->scan_state & SCAN_SCAN) == 0)
 	{
 		scanMethod->beginScanMethod(scanState);
@@ -505,8 +491,6 @@ ReScanRelation(ScanState *scanState)
 void
 MarkPosScanRelation(ScanState *scanState)
 {
-	Assert(scanState->tableType >= 0 && scanState->tableType < TableTypeInvalid);
-
 	getScanMethod(scanState->tableType)->markPosMethod(scanState);	
 }
 
@@ -517,8 +501,6 @@ MarkPosScanRelation(ScanState *scanState)
 void
 RestrPosScanRelation(ScanState *scanState)
 {
-	Assert(scanState->tableType >= 0 && scanState->tableType < TableTypeInvalid);
-
 	getScanMethod(scanState->tableType)->restrPosMethod(scanState);	
 }
 
