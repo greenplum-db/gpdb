@@ -49,19 +49,19 @@ typedef struct SerAttrInfo
 	bool		typisvarlena;	/* is type varlena (ie possibly toastable)? */
 
 	Oid			typsend;		/* Oid for the type's binary output fn */
-	Oid			send_typio_param;		/* param to pass to the output fn */
+	Oid			send_typio_param;		/* param to pass to the send fn */
 	/*
-	 * Precomputed call info for output fn.
-	 * Valid only if typsend is valid, i.e., a send function was provided.
+	 * Precomputed call info for send fn. Valid only if typsend is valid,
+	 * i.e., a send function was provided.
 	 */
 	FmgrInfo	send_finfo;		/* Precomputed call info for output fn */
 
 	Oid			typrecv;		/* Oid for the type's binary input fn */
-	Oid			recv_typio_param;		/* param to pass to the input fn */
+	Oid			recv_typio_param;		/* param to pass to the receive fn */
 
 	/*
-	 * Precomputed call info for input fn.
-	 * Valid only if typrecv is valid, i.e., a receive function was provided.
+	 * Precomputed call info for receive fn. Valid only if typrecv is valid,
+	 * i.e., a receive function was provided.
 	 */
 	FmgrInfo	recv_finfo;
 
