@@ -6,7 +6,7 @@ CREATE PROTOCOL s3 (
 DROP EXTERNAL TABLE s3regress;
 ERROR:  table "s3regress" does not exist
 CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high float,
-        low float, volume int) LOCATION('s3://s3-ap-northeast-1.amazonaws.com/apnortheast1.s3test.pivotal.io/small17/data0000 config=/home/gpadmin/s3.conf') FORMAT 'csv';
+        low float, volume int) LOCATION('s3://s3-us-east-1.amazonaws.com/us-east-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf') FORMAT 'csv';
 \d s3regress
    External table "public.s3regress"
  Column |       Type       | Modifiers 
@@ -21,7 +21,7 @@ Type: readable
 Encoding: UTF8
 Format type: csv
 Format options: delimiter ',' null '' escape '"' quote '"'
-External location: "s3://s3-ap-northeast-1.amazonaws.com/apnortheast1.s3test.pivotal.io/small17/data0000 config=/home/gpadmin/s3.conf"
+External location: "s3://s3-us-east-1.amazonaws.com/us-east-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf"
 
 SELECT sum(open) FROM s3regress;
        sum        
@@ -31,7 +31,7 @@ SELECT sum(open) FROM s3regress;
 
 DROP EXTERNAL TABLE s3regress;
 CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high float,
-        low float, volume int) LOCATION('s3://s3-ap-northeast-2.amazonaws.com/apnortheast2.s3test.pivotal.io/small17/data0000 config=/home/gpadmin/s3.conf') FORMAT 'csv';
+        low float, volume int) LOCATION('s3://s3-us-west-1.amazonaws.com/us-west-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf') FORMAT 'csv';
 \d s3regress
    External table "public.s3regress"
  Column |       Type       | Modifiers 
@@ -46,7 +46,7 @@ Type: readable
 Encoding: UTF8
 Format type: csv
 Format options: delimiter ',' null '' escape '"' quote '"'
-External location: "s3://s3-ap-northeast-2.amazonaws.com/apnortheast2.s3test.pivotal.io/small17/data0000 config=/home/gpadmin/s3.conf"
+External location: "s3://s3-us-west-1.amazonaws.com/us-west-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf"
 
 SELECT sum(open) FROM s3regress;
        sum        
@@ -56,7 +56,7 @@ SELECT sum(open) FROM s3regress;
 
 DROP EXTERNAL TABLE s3regress;
 CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high float,
-        low float, volume int) LOCATION('s3://s3-ap-south-1.amazonaws.com/apsouth1.s3test.pivotal.io/small17/data0000 config=/home/gpadmin/s3.conf') FORMAT 'csv';
+        low float, volume int) LOCATION('s3://s3-ap-south-1.amazonaws.com/ap-south-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf') FORMAT 'csv';
 \d s3regress
    External table "public.s3regress"
  Column |       Type       | Modifiers 
@@ -71,7 +71,7 @@ Type: readable
 Encoding: UTF8
 Format type: csv
 Format options: delimiter ',' null '' escape '"' quote '"'
-External location: "s3://s3-ap-south-1.amazonaws.com/apsouth1.s3test.pivotal.io/small17/data0000 config=/home/gpadmin/s3.conf"
+External location: "s3://s3-ap-south-1.amazonaws.com/ap-south-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf"
 
 SELECT sum(open) FROM s3regress;
        sum        
@@ -81,7 +81,7 @@ SELECT sum(open) FROM s3regress;
 
 DROP EXTERNAL TABLE s3regress;
 CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high float,
-        low float, volume int) LOCATION('s3://s3-ap-southeast-1.amazonaws.com/apsoutheast1.s3test.pivotal.io/small17/data0000 config=/home/gpadmin/s3.conf') FORMAT 'csv';
+        low float, volume int) LOCATION('s3://s3-ap-northeast-2.amazonaws.com/ap-northeast-2.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf') FORMAT 'csv';
 \d s3regress
    External table "public.s3regress"
  Column |       Type       | Modifiers 
@@ -96,7 +96,7 @@ Type: readable
 Encoding: UTF8
 Format type: csv
 Format options: delimiter ',' null '' escape '"' quote '"'
-External location: "s3://s3-ap-southeast-1.amazonaws.com/apsoutheast1.s3test.pivotal.io/small17/data0000 config=/home/gpadmin/s3.conf"
+External location: "s3://s3-ap-northeast-2.amazonaws.com/ap-northeast-2.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf"
 
 SELECT sum(open) FROM s3regress;
        sum        
@@ -106,7 +106,7 @@ SELECT sum(open) FROM s3regress;
 
 DROP EXTERNAL TABLE s3regress;
 CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high float,
-        low float, volume int) LOCATION('s3://s3-ap-southeast-2.amazonaws.com/apsoutheast2.s3test.pivotal.io/small17/data0000 config=/home/gpadmin/s3.conf') FORMAT 'csv';
+        low float, volume int) LOCATION('s3://s3-ap-southeast-1.amazonaws.com/ap-southeast-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf') FORMAT 'csv';
 \d s3regress
    External table "public.s3regress"
  Column |       Type       | Modifiers 
@@ -121,7 +121,7 @@ Type: readable
 Encoding: UTF8
 Format type: csv
 Format options: delimiter ',' null '' escape '"' quote '"'
-External location: "s3://s3-ap-southeast-2.amazonaws.com/apsoutheast2.s3test.pivotal.io/small17/data0000 config=/home/gpadmin/s3.conf"
+External location: "s3://s3-ap-southeast-1.amazonaws.com/ap-southeast-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf"
 
 SELECT sum(open) FROM s3regress;
        sum        
@@ -131,7 +131,7 @@ SELECT sum(open) FROM s3regress;
 
 DROP EXTERNAL TABLE s3regress;
 CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high float,
-        low float, volume int) LOCATION('s3://s3-eu-central-1.amazonaws.com/eucentral1.s3test.pivotal.io/small17/data0000 config=/home/gpadmin/s3.conf') FORMAT 'csv';
+        low float, volume int) LOCATION('s3://s3-ap-southeast-2.amazonaws.com/ap-southeast-2.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf') FORMAT 'csv';
 \d s3regress
    External table "public.s3regress"
  Column |       Type       | Modifiers 
@@ -146,7 +146,7 @@ Type: readable
 Encoding: UTF8
 Format type: csv
 Format options: delimiter ',' null '' escape '"' quote '"'
-External location: "s3://s3-eu-central-1.amazonaws.com/eucentral1.s3test.pivotal.io/small17/data0000 config=/home/gpadmin/s3.conf"
+External location: "s3://s3-ap-southeast-2.amazonaws.com/ap-southeast-2.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf"
 
 SELECT sum(open) FROM s3regress;
        sum        
@@ -156,7 +156,7 @@ SELECT sum(open) FROM s3regress;
 
 DROP EXTERNAL TABLE s3regress;
 CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high float,
-        low float, volume int) LOCATION('s3://s3-eu-west-1.amazonaws.com/euwest1.s3test.pivotal.io/small17/data0000 config=/home/gpadmin/s3.conf') FORMAT 'csv';
+        low float, volume int) LOCATION('s3://s3-ap-northeast-1.amazonaws.com/ap-northeast-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf') FORMAT 'csv';
 \d s3regress
    External table "public.s3regress"
  Column |       Type       | Modifiers 
@@ -171,7 +171,7 @@ Type: readable
 Encoding: UTF8
 Format type: csv
 Format options: delimiter ',' null '' escape '"' quote '"'
-External location: "s3://s3-eu-west-1.amazonaws.com/euwest1.s3test.pivotal.io/small17/data0000 config=/home/gpadmin/s3.conf"
+External location: "s3://s3-ap-northeast-1.amazonaws.com/ap-northeast-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf"
 
 SELECT sum(open) FROM s3regress;
        sum        
@@ -181,7 +181,7 @@ SELECT sum(open) FROM s3regress;
 
 DROP EXTERNAL TABLE s3regress;
 CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high float,
-        low float, volume int) LOCATION('s3://s3-sa-east-1.amazonaws.com/saeast1.s3test.pivotal.io/small17/data0000 config=/home/gpadmin/s3.conf') FORMAT 'csv';
+        low float, volume int) LOCATION('s3://s3-eu-central-1.amazonaws.com/eu-central-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf') FORMAT 'csv';
 \d s3regress
    External table "public.s3regress"
  Column |       Type       | Modifiers 
@@ -196,7 +196,7 @@ Type: readable
 Encoding: UTF8
 Format type: csv
 Format options: delimiter ',' null '' escape '"' quote '"'
-External location: "s3://s3-sa-east-1.amazonaws.com/saeast1.s3test.pivotal.io/small17/data0000 config=/home/gpadmin/s3.conf"
+External location: "s3://s3-eu-central-1.amazonaws.com/eu-central-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf"
 
 SELECT sum(open) FROM s3regress;
        sum        
@@ -206,7 +206,7 @@ SELECT sum(open) FROM s3regress;
 
 DROP EXTERNAL TABLE s3regress;
 CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high float,
-        low float, volume int) LOCATION('s3://s3-us-east-1.amazonaws.com/useast1.s3test.pivotal.io/small17/data0000 config=/home/gpadmin/s3.conf') FORMAT 'csv';
+        low float, volume int) LOCATION('s3://s3-eu-west-1.amazonaws.com/eu-west-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf') FORMAT 'csv';
 \d s3regress
    External table "public.s3regress"
  Column |       Type       | Modifiers 
@@ -221,7 +221,7 @@ Type: readable
 Encoding: UTF8
 Format type: csv
 Format options: delimiter ',' null '' escape '"' quote '"'
-External location: "s3://s3-us-east-1.amazonaws.com/useast1.s3test.pivotal.io/small17/data0000 config=/home/gpadmin/s3.conf"
+External location: "s3://s3-eu-west-1.amazonaws.com/eu-west-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf"
 
 SELECT sum(open) FROM s3regress;
        sum        
@@ -231,7 +231,7 @@ SELECT sum(open) FROM s3regress;
 
 DROP EXTERNAL TABLE s3regress;
 CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high float,
-        low float, volume int) LOCATION('s3://s3-us-west-1.amazonaws.com/uswest1.s3test.pivotal.io/small17/data0000 config=/home/gpadmin/s3.conf') FORMAT 'csv';
+        low float, volume int) LOCATION('s3://s3-sa-east-1.amazonaws.com/sa-east-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf') FORMAT 'csv';
 \d s3regress
    External table "public.s3regress"
  Column |       Type       | Modifiers 
@@ -246,7 +246,7 @@ Type: readable
 Encoding: UTF8
 Format type: csv
 Format options: delimiter ',' null '' escape '"' quote '"'
-External location: "s3://s3-us-west-1.amazonaws.com/uswest1.s3test.pivotal.io/small17/data0000 config=/home/gpadmin/s3.conf"
+External location: "s3://s3-sa-east-1.amazonaws.com/sa-east-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf"
 
 SELECT sum(open) FROM s3regress;
        sum        

@@ -11,6 +11,7 @@ test: 1_10_all_regions
 test: 1_11_gzipped_data
 test: 1_12_no_prefix
 test: 1_13_parallel1 1_13_parallel2
+test: 1_14_thousands_of_files
 test: 2_01_invalid_syntax
 test: 2_02_invalid_region
 test: 2_03_invalid_config

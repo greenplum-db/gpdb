@@ -10,7 +10,7 @@ CREATE PROTOCOL s3 (
 DROP EXTERNAL TABLE parallel2;
 
 CREATE READABLE EXTERNAL TABLE parallel2 (date text, time text, open float, high float,
-        low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal/ config=/home/gpadmin/s3.conf') FORMAT 'csv';
+        low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/normal/ config=/home/gpadmin/s3.conf') FORMAT 'csv';
 
 SELECT count(*) count, sum(open) sum, avg(open) avg FROM parallel2;
 

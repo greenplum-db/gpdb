@@ -6,7 +6,7 @@ CREATE PROTOCOL s3 (
 DROP EXTERNAL TABLE s3regress;
 ERROR:  table "s3regress" does not exist
 CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high float,
-        low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal/ config=/home/gpadmin/s3.conf') FORMAT 'text' ( DELIMITER ',' NULL '') LOG ERRORS SEGMENT REJECT LIMIT 5;
+        low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/normal/ config=/home/gpadmin/s3.conf') FORMAT 'text' ( DELIMITER ',' NULL '') LOG ERRORS SEGMENT REJECT LIMIT 5;
 SELECT count(*) FROM s3regress;
   count   
 ----------

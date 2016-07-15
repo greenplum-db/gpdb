@@ -8,7 +8,7 @@ CREATE PROTOCOL s3 (
 DROP EXTERNAL TABLE s3regress;
 
 CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high float,
-	low float, volume int) LOCATION('s3://neverland.amazonaws.com/wherever/smalldata/ config=/home/gpadmin/s3.conf') format 'csv';
+	low float, volume int) LOCATION('s3://neverland.amazonaws.com/wherever/whatever/ config=/home/gpadmin/s3.conf') format 'csv';
 
 SELECT count(*) FROM s3regress;
 

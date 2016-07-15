@@ -6,11 +6,11 @@ CREATE PROTOCOL s3 (
 DROP EXTERNAL TABLE s3regress;
 ERROR:  table "s3regress" does not exist
 CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high float,
-        low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/normal/ config=/home/gpadmin/s3.conf') FORMAT 'csv';
+        low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/5120files/ config=/home/gpadmin/s3.conf') FORMAT 'csv';
 SELECT count(*) count, sum(open) sum, avg(open) avg FROM s3regress;
-  count   |       sum        |       avg        
-----------+------------------+------------------
- 31033039 | 1490754474.37251 | 48.0376567171687
+ count  |       sum        |       avg        
+--------+------------------+------------------
+ 655360 | 23302752.2559905 | 35.5571781249855
 (1 row)
 
 DROP EXTERNAL TABLE s3regress;

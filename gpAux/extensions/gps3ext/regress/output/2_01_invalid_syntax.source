@@ -6,9 +6,9 @@ CREATE PROTOCOL s3 (
 DROP EXTERNAL TABLE s3regress;
 ERROR:  table "s3regress" does not exist
 CREATE READABLE EXTERNAL TABLE s3regress (date float, time float, open float, high float,
-	low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal/xac config=/home/gpadmin/s3.conf') format 'csv';
+	low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/normal/xac config=/home/gpadmin/s3.conf') format 'csv';
 SELECT count(*) FROM s3regress;
-ERROR:  invalid input syntax for type double precision: "05/18/2010"  (seg0 slice1 ip-172-31-2-196.us-west-2.compute.internal:40000 pid=19247)
-DETAIL:  External table s3regress, line 1 of s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal/xac config=/home/gpadmin/s3.conf, column date
+ERROR:  invalid input syntax for type double precision: "05/18/2010"  (seg0 slice1 ip-172-31-2-196.us-west-2.compute.internal:40000 pid=23076)
+DETAIL:  External table s3regress, line 1 of s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/normal/xac config=/home/gpadmin/s3.conf, column date
 DROP EXTERNAL TABLE s3regress;
 DROP PROTOCOL s3;
