@@ -32,6 +32,7 @@ class GpCheckCatTestCase(GpTestCase):
                                1:dict(hostname='host1', port=123, id=1, address='123', datadir='dir', content=1, dbid=1)}
         self.subject.GV.checkStatus = True
         self.subject.setError = Mock()
+        self.subject.print_repair_issues = Mock()
 
         self.apply_patches([
             patch("gpcheckcat.pg.connect", return_value=self.db_connection),
@@ -149,6 +150,24 @@ class GpCheckCatTestCase(GpTestCase):
         self.assertEquals(last_call, "Truncated batch size to number of primaries: 50")
 
 
+    def test_do_repair_for_extra__no_issues(self):
+        issues = {}
+        self.subject.do_repair_for_extra(issues)
+        self.subject.setError.assert_not_called()
+
+    def test_do_repair_for_extra__issues_no_repair(self):
+        issues = {"a":1}
+        self.subject.do_repair_for_extra(issues)
+        self.subject.setError.assert_any_call(self.subject.ERROR_NOREPAIR)
+
+    @patch('gpcheckcat_modules.repair.Repair', return_value=Mock())
+    @patch('gpcheckcat_modules.repair.Repair.create_repair_for_extra_missing', return_value="/tmp")
+    def test_do_repair_for_extra__issues_repair(self, mock1, mock2):
+        issues = {("pg_class", "oid"):"extra"}
+        self.subject.GV.opt['-E'] = True
+        self.subject.do_repair_for_extra(issues)
+        self.subject.setError.assert_any_call(self.subject.ERROR_REMOVE)
+        self.subject.print_repair_issues.assert_any_call("/tmp")
 
     ####################### PRIVATE METHODS #######################
     def _run_batch_size_experiment(self, num_primaries):

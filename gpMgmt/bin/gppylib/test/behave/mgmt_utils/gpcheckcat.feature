@@ -232,9 +232,12 @@ Feature: gpcheckcat tests
         Then The user runs sql "set allow_system_table_mods=DML;delete from pg_class where relname='foo'" in "extra_db" on first primary segment
         And the user runs "psql extra_db -c "drop table if exists foo""
         Then the user runs "gpcheckcat -R missing_extraneous extra_db"
+        Then gpcheckcat should return a return code of 3
+        Then the path "gpcheckcat.repair.*" is found in cwd "0" times
+        Then the user runs "gpcheckcat -R missing_extraneous -E extra_db"
         Then gpcheckcat should return a return code of 1
         Then validate and run gpcheckcat repair
-        When the user runs "gpcheckcat -R missing_extraneous extra_db"
+        When the user runs "gpcheckcat -R missing_extraneous -E extra_db"
         Then gpcheckcat should return a return code of 0
         Then the path "gpcheckcat.repair.*" is found in cwd "0" times
         And the user runs "dropdb extra_db"
@@ -256,26 +259,26 @@ Feature: gpcheckcat tests
         And the path "gpcheckcat.repair.*" is removed from current working directory
 
     @extra_gr
-    Scenario: gpcheckcat should genreate repair scripts when both -g and -R options are provided
+    Scenario: gpcheckcat should generate repair scripts when -g, -R, and -E options are provided
         Given database "extra_gr_db" is dropped and recreated
         And the path "repair_dir" is removed from current working directory
         And the user runs "psql extra_gr_db -c "CREATE TABLE foo(i int)""
         Then The user runs sql "set allow_system_table_mods=DML;delete from pg_class where relname='foo'" in "extra_gr_db" on first primary segment
         And the user runs "psql extra_gr_db -c "drop table if exists foo""
-        Then the user runs "gpcheckcat -R missing_extraneous -g repair_dir extra_gr_db"
+        Then the user runs "gpcheckcat -R missing_extraneous -E -g repair_dir extra_gr_db"
         Then gpcheckcat should return a return code of 1
         Then gpcheckcat should print repair script\(s\) generated in dir repair_dir to stdout
         Then the path "repair_dir" is found in cwd "1" times
         Then run all the repair scripts in the dir "repair_dir"
         And the path "repair_dir" is removed from current working directory
-        When the user runs "gpcheckcat -R missing_extraneous -g repair_dir extra_gr_db"
+        When the user runs "gpcheckcat -R missing_extraneous -E -g repair_dir extra_gr_db"
         Then gpcheckcat should return a return code of 0
         Then the path "repair_dir" is found in cwd "0" times
         And the user runs "dropdb extra_gr_db"
         And the path "repair_dir" is removed from current working directory
 
     @constraint_g
-    Scenario: gpcheckcat should genreate repair scripts when only -g option is provided
+    Scenario: gpcheckcat should generate repair scripts when only -g option is provided
         Given database "constraint_g_db" is dropped and recreated
         And the user runs "psql constraint_g_db -f gppylib/test/behave/mgmt_utils/steps/data/gpcheckcat/create_invalid_constraint.sql"
         Then psql should return a return code of 0

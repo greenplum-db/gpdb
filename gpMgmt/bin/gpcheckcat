@@ -112,6 +112,8 @@ class Global():
         self.opt['-C'] = None
         self.opt['-l'] = False
 
+        self.opt['-E'] = False
+
         self.cfg = None
         self.dbname = None
         self.firstdb = None
@@ -212,7 +214,7 @@ def getalldbs():
 ###############################
 def parseCommandLine():
     try:
-        (options, args) = getopt.getopt(sys.argv[1:], '?p:P:U:B:vg:t:AOS:R:C:l')
+        (options, args) = getopt.getopt(sys.argv[1:], '?p:P:U:B:vg:t:AOS:R:C:lE')
     except Exception, e:
         usage('Error: ' + str(e))
 
@@ -221,7 +223,7 @@ def parseCommandLine():
             usage(0)
         elif switch[1] in 'pBPUgSRC':
             GV.opt[switch] = val
-        elif switch[1] in 'vtAOl':
+        elif switch[1] in 'vtAOlE':
             GV.opt[switch] = True
 
     def setdef(x, v):
@@ -3722,6 +3724,9 @@ def do_repair(sql_repair_contents, issue_type, description):
 
 def do_repair_for_extra(catalog_issues):
     if len(catalog_issues) == 0:
+        return
+    if not GV.opt['-E']:
+        setError(ERROR_NOREPAIR)
         return
 
     setError(ERROR_REMOVE)

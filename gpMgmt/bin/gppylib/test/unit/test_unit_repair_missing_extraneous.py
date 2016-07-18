@@ -27,7 +27,7 @@ class RepairMissingExtraneousTestCase(GpTestCase):
         self.assertEqual(repair_sql_contents[2], set([49401, 49403, 49404, 49405]))
         self.assertEqual(repair_sql_contents[3], set([49403, 49404, 49405, 49406]))
 
-    def test_get_segment_to_oid_mappin_with_only_extra(self):
+    def test_get_segment_to_oid_mapping_with_only_extra(self):
         issues = [(49401, 'cmax', "extra", '{1,2}'),
                   (49401, 'cmax', "extra", '{1,2}'),
                   (49403, 'cmax', "extra", '{2,3}'),
@@ -41,7 +41,7 @@ class RepairMissingExtraneousTestCase(GpTestCase):
         self.assertEqual(repair_sql_contents[2], set([49401, 49403, 49405]))
         self.assertEqual(repair_sql_contents[3], set([49403, 49405]))
 
-    def test_get_segment_to_oid_mappin_with_only_missing(self):
+    def test_get_segment_to_oid_mapping_with_only_missing(self):
         issues = [(49401, 'cmax', "missing", '{1,2}'),
                   (49401, 'cmax', "missing", '{1,2}'),
                   (49403, 'cmax', "missing", '{2,3}'),
@@ -56,14 +56,14 @@ class RepairMissingExtraneousTestCase(GpTestCase):
         self.assertEqual(repair_sql_contents[1], set([49403, 49405]))
         self.assertEqual(repair_sql_contents[3], set([49401]))
 
-    def test_get_delelte_sql__with_multiple_oids(self):
+    def test_get_delete_sql__with_multiple_oids(self):
         self.subject = RepairMissingExtraneous(self.table_name, None, "attrelid")
         oids = [1,3,4]
         delete_sql = self.subject.get_delete_sql(oids)
         self.assertEqual(delete_sql, 'BEGIN;set allow_system_table_mods="dml";'
                                       'delete from "pg_attribut""e" where "attrelid" in (1,3,4);COMMIT;')
 
-    def test_get_delelte_sql__with_one_oid(self):
+    def test_get_delete_sql__with_one_oid(self):
         self.subject = RepairMissingExtraneous(self.table_name, None, "attrelid")
         oids = [5]
         delete_sql = self.subject.get_delete_sql(oids)
