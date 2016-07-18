@@ -2575,6 +2575,32 @@ _readTupleDescNode(void)
 	READ_DONE();
 }
 
+static AlterTSConfigurationStmt *
+_readAlterTSConfigurationStmt(void)
+{
+	READ_LOCALS(AlterTSConfigurationStmt);
+
+	READ_NODE_FIELD(cfgname);
+	READ_NODE_FIELD(tokentype);
+	READ_NODE_FIELD(dicts);
+	READ_BOOL_FIELD(override);
+	READ_BOOL_FIELD(replace);
+	READ_BOOL_FIELD(missing_ok);
+
+	READ_DONE();
+}
+
+static AlterTSDictionaryStmt *
+_readAlterTSDictionaryStmt(void)
+{
+	READ_LOCALS(AlterTSDictionaryStmt);
+
+	READ_NODE_FIELD(dictname);
+	READ_NODE_FIELD(options);
+
+	READ_DONE();
+}
+
 static Node *
 _readValue(NodeTag nt)
 {
@@ -3399,6 +3425,13 @@ readNodeBinary(void)
 				break;
 			case T_TupleDescNode:
 				return_value = _readTupleDescNode();
+				break;
+
+			case T_AlterTSConfigurationStmt:
+				return_value = _readAlterTSConfigurationStmt();
+				break;
+			case T_AlterTSDictionaryStmt:
+				return_value = _readAlterTSDictionaryStmt();
 				break;
 
 			default:

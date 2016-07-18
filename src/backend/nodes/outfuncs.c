@@ -4298,6 +4298,28 @@ _outAlterTypeStmt(StringInfo str, AlterTypeStmt *node)
 	WRITE_NODE_FIELD(encoding);
 }
 
+static void
+_outAlterTSConfigurationStmt(StringInfo str, AlterTSConfigurationStmt *node)
+{
+	WRITE_NODE_TYPE("ALTERTSCONFIGURATIONSTMT");
+
+	WRITE_NODE_FIELD(cfgname);
+	WRITE_NODE_FIELD(tokentype);
+	WRITE_NODE_FIELD(dicts);
+	WRITE_BOOL_FIELD(override);
+	WRITE_BOOL_FIELD(replace);
+	WRITE_BOOL_FIELD(missing_ok);
+}
+
+static void
+_outAlterTSDictionaryStmt(StringInfo str, AlterTSDictionaryStmt *node)
+{
+	WRITE_NODE_TYPE("ALTERTSDICTIONARYSTMT");
+
+	WRITE_NODE_FIELD(dictname);
+	WRITE_NODE_FIELD(options);
+}
+
 #ifndef COMPILING_BINARY_FUNCS
 static void
 _outTupleDescNode(StringInfo str, TupleDescNode *node)
@@ -5186,6 +5208,13 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_TupleDescNode:
 				_outTupleDescNode(str, obj);
+				break;
+
+			case T_AlterTSConfigurationStmt:
+				_outAlterTSConfigurationStmt(str, obj);
+				break;
+			case T_AlterTSDictionaryStmt:
+				_outAlterTSDictionaryStmt(str, obj);
 				break;
 
 			default:

@@ -627,6 +627,35 @@ ProcessDropStatement(DropStmt *stmt)
 				RemoveExtProtocol(names, stmt->behavior, stmt->missing_ok);
 				break;
 
+
+			case OBJECT_TSPARSER:
+				/*
+				 * RemoveTSParser does it's own permission checks
+				 */
+				RemoveTSParser(names, stmt->behavior, stmt->missing_ok);
+				break;
+
+			case OBJECT_TSDICTIONARY:
+				/*
+				 * RemoveTSDictionary does it's own permission checks
+				 */
+				RemoveTSDictionary(names, stmt->behavior, stmt->missing_ok);
+				break;
+
+			case OBJECT_TSTEMPLATE:
+				/*
+				 * RemoveTSTemplate does it's own permission checks
+				 */
+				RemoveTSTemplate(names, stmt->behavior, stmt->missing_ok);
+				break;
+
+			case OBJECT_TSCONFIGURATION:
+				/*
+				 * RemoveTSConfiguration does it's own permission checks
+				 */
+				RemoveTSConfiguration(names, stmt->behavior, stmt->missing_ok);
+				break;
+
 			default:
 				elog(ERROR, "unrecognized drop object type: %d",
 					 (int) stmt->removeType);
@@ -1252,19 +1281,19 @@ ProcessUtility(Node *parsetree,
 						break;						
 					case OBJECT_TSPARSER:
 						Assert(stmt->args == NIL);
-						DefineTSParser(stmt->defnames, stmt->definition);
+						DefineTSParser(stmt->defnames, stmt->definition, stmt->newOid);
 						break;
 					case OBJECT_TSDICTIONARY:
 						Assert(stmt->args == NIL);
-						DefineTSDictionary(stmt->defnames, stmt->definition);
+						DefineTSDictionary(stmt->defnames, stmt->definition, stmt->newOid);
 						break;
 					case OBJECT_TSTEMPLATE:
 						Assert(stmt->args == NIL);
-						DefineTSTemplate(stmt->defnames, stmt->definition);
+						DefineTSTemplate(stmt->defnames, stmt->definition, stmt->newOid);
 						break;
 					case OBJECT_TSCONFIGURATION:
 						Assert(stmt->args == NIL);
-						DefineTSConfiguration(stmt->defnames, stmt->definition);
+						DefineTSConfiguration(stmt->defnames, stmt->definition, stmt->newOid);
 						break;
 					default:
 						elog(ERROR, "unrecognized define stmt type: %d",

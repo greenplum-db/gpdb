@@ -1992,6 +1992,13 @@ _outNode(StringInfo str, void *obj)
 				_outTupleDescNode(str, obj);
 				break;
 
+			case T_AlterTSConfigurationStmt:
+				_outAlterTSConfigurationStmt(str, obj);
+				break;
+			case T_AlterTSDictionaryStmt:
+				_outAlterTSDictionaryStmt(str, obj);
+				break;
+
 			default:
 				elog(ERROR, "could not serialize unrecognized node type: %d",
 						 (int) nodeTag(obj));
