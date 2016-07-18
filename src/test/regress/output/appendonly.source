@@ -815,6 +815,143 @@ select count(*) from tenk_ao5_temp_pres_rows;
      0
 (1 row)
 
+-- TEMP TABLES w/ access multiple times
+BEGIN;
+CREATE TEMP TABLE aocs_temp_delete_rows_multi(c int, d TEXT) WITH (appendonly=true, orientation=column)
+    ON COMMIT DELETE ROWS;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO aocs_temp_delete_rows_multi VALUES(1, 'test');
+SELECT * FROM aocs_temp_delete_rows_multi;
+ c |  d   
+---+------
+ 1 | test
+(1 row)
+
+INSERT INTO aocs_temp_delete_rows_multi VALUES(0, 'test');
+SELECT * FROM aocs_temp_delete_rows_multi;
+ c |  d   
+---+------
+ 0 | test
+ 1 | test
+(2 rows)
+
+COMMIT;
+SELECT * FROM aocs_temp_delete_rows_multi;
+ c | d 
+---+---
+(0 rows)
+
+BEGIN;
+INSERT INTO aocs_temp_delete_rows_multi VALUES(1, 'test');
+INSERT INTO aocs_temp_delete_rows_multi VALUES(0, 'test');
+INSERT INTO aocs_temp_delete_rows_multi VALUES(1, 'test');
+INSERT INTO aocs_temp_delete_rows_multi VALUES(0, 'test');
+SELECT * FROM aocs_temp_delete_rows_multi;
+ c |  d   
+---+------
+ 0 | test
+ 0 | test
+ 1 | test
+ 1 | test
+(4 rows)
+
+COMMIT;
+BEGIN;
+INSERT INTO aocs_temp_delete_rows_multi VALUES(1, 'test');
+INSERT INTO aocs_temp_delete_rows_multi VALUES(0, 'test');
+INSERT INTO aocs_temp_delete_rows_multi VALUES(1, 'test');
+INSERT INTO aocs_temp_delete_rows_multi VALUES(0, 'test');
+SELECT * FROM aocs_temp_delete_rows_multi;
+ c |  d   
+---+------
+ 1 | test
+ 1 | test
+ 0 | test
+ 0 | test
+(4 rows)
+
+ROLLBACK;
+SELECT * FROM aocs_temp_delete_rows_multi;
+ c | d 
+---+---
+(0 rows)
+
+INSERT INTO aocs_temp_delete_rows_multi VALUES(1, 'test');
+INSERT INTO aocs_temp_delete_rows_multi VALUES(0, 'test');
+SELECT * FROM aocs_temp_delete_rows_multi;
+ c | d 
+---+---
+(0 rows)
+
+BEGIN;
+CREATE TEMP TABLE ao_temp_delete_rows_multi(c int, d TEXT) WITH (appendonly=true, orientation=row)
+    ON COMMIT DELETE ROWS;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO ao_temp_delete_rows_multi VALUES(1, 'test');
+SELECT * FROM ao_temp_delete_rows_multi;
+ c |  d   
+---+------
+ 1 | test
+(1 row)
+
+INSERT INTO ao_temp_delete_rows_multi VALUES(0, 'test');
+SELECT * FROM ao_temp_delete_rows_multi;
+ c |  d   
+---+------
+ 0 | test
+ 1 | test
+(2 rows)
+
+COMMIT;
+SELECT * FROM ao_temp_delete_rows_multi;
+ c | d 
+---+---
+(0 rows)
+
+BEGIN;
+INSERT INTO ao_temp_delete_rows_multi VALUES(1, 'test');
+INSERT INTO ao_temp_delete_rows_multi VALUES(0, 'test');
+INSERT INTO ao_temp_delete_rows_multi VALUES(1, 'test');
+INSERT INTO ao_temp_delete_rows_multi VALUES(0, 'test');
+SELECT * FROM ao_temp_delete_rows_multi;
+ c |  d   
+---+------
+ 0 | test
+ 0 | test
+ 1 | test
+ 1 | test
+(4 rows)
+
+COMMIT;
+BEGIN;
+INSERT INTO ao_temp_delete_rows_multi VALUES(1, 'test');
+INSERT INTO ao_temp_delete_rows_multi VALUES(0, 'test');
+INSERT INTO ao_temp_delete_rows_multi VALUES(1, 'test');
+INSERT INTO ao_temp_delete_rows_multi VALUES(0, 'test');
+SELECT * FROM ao_temp_delete_rows_multi;
+ c |  d   
+---+------
+ 1 | test
+ 1 | test
+ 0 | test
+ 0 | test
+(4 rows)
+
+ROLLBACK;
+SELECT * FROM ao_temp_delete_rows_multi;
+ c | d 
+---+---
+(0 rows)
+
+INSERT INTO ao_temp_delete_rows_multi VALUES(1, 'test');
+INSERT INTO ao_temp_delete_rows_multi VALUES(0, 'test');
+SELECT * FROM ao_temp_delete_rows_multi;
+ c | d 
+---+---
+(0 rows)
+
 -- RULES
 insert into tenk_ao5(unique1, unique2) values (1, 99998889);
 create rule ao_rule_update as on insert to tenk_ao5 do instead update tenk_ao5 set two=2;

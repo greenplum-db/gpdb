@@ -369,6 +369,70 @@ select count(*) from tenk_ao5_temp_pres_rows;
 commit;
 select count(*) from tenk_ao5_temp_pres_rows;
 
+-- TEMP TABLES w/ access multiple times
+BEGIN;
+CREATE TEMP TABLE aocs_temp_delete_rows_multi(c int, d TEXT) WITH (appendonly=true, orientation=column)
+    ON COMMIT DELETE ROWS;
+INSERT INTO aocs_temp_delete_rows_multi VALUES(1, 'test');
+SELECT * FROM aocs_temp_delete_rows_multi;
+INSERT INTO aocs_temp_delete_rows_multi VALUES(0, 'test');
+SELECT * FROM aocs_temp_delete_rows_multi;
+COMMIT;
+
+SELECT * FROM aocs_temp_delete_rows_multi;
+
+BEGIN;
+INSERT INTO aocs_temp_delete_rows_multi VALUES(1, 'test');
+INSERT INTO aocs_temp_delete_rows_multi VALUES(0, 'test');
+INSERT INTO aocs_temp_delete_rows_multi VALUES(1, 'test');
+INSERT INTO aocs_temp_delete_rows_multi VALUES(0, 'test');
+SELECT * FROM aocs_temp_delete_rows_multi;
+COMMIT;
+
+BEGIN;
+INSERT INTO aocs_temp_delete_rows_multi VALUES(1, 'test');
+INSERT INTO aocs_temp_delete_rows_multi VALUES(0, 'test');
+INSERT INTO aocs_temp_delete_rows_multi VALUES(1, 'test');
+INSERT INTO aocs_temp_delete_rows_multi VALUES(0, 'test');
+SELECT * FROM aocs_temp_delete_rows_multi;
+ROLLBACK;
+
+SELECT * FROM aocs_temp_delete_rows_multi;
+INSERT INTO aocs_temp_delete_rows_multi VALUES(1, 'test');
+INSERT INTO aocs_temp_delete_rows_multi VALUES(0, 'test');
+SELECT * FROM aocs_temp_delete_rows_multi;
+
+BEGIN;
+CREATE TEMP TABLE ao_temp_delete_rows_multi(c int, d TEXT) WITH (appendonly=true, orientation=row)
+    ON COMMIT DELETE ROWS;
+INSERT INTO ao_temp_delete_rows_multi VALUES(1, 'test');
+SELECT * FROM ao_temp_delete_rows_multi;
+INSERT INTO ao_temp_delete_rows_multi VALUES(0, 'test');
+SELECT * FROM ao_temp_delete_rows_multi;
+COMMIT;
+
+SELECT * FROM ao_temp_delete_rows_multi;
+
+BEGIN;
+INSERT INTO ao_temp_delete_rows_multi VALUES(1, 'test');
+INSERT INTO ao_temp_delete_rows_multi VALUES(0, 'test');
+INSERT INTO ao_temp_delete_rows_multi VALUES(1, 'test');
+INSERT INTO ao_temp_delete_rows_multi VALUES(0, 'test');
+SELECT * FROM ao_temp_delete_rows_multi;
+COMMIT;
+
+BEGIN;
+INSERT INTO ao_temp_delete_rows_multi VALUES(1, 'test');
+INSERT INTO ao_temp_delete_rows_multi VALUES(0, 'test');
+INSERT INTO ao_temp_delete_rows_multi VALUES(1, 'test');
+INSERT INTO ao_temp_delete_rows_multi VALUES(0, 'test');
+SELECT * FROM ao_temp_delete_rows_multi;
+ROLLBACK;
+
+SELECT * FROM ao_temp_delete_rows_multi;
+INSERT INTO ao_temp_delete_rows_multi VALUES(1, 'test');
+INSERT INTO ao_temp_delete_rows_multi VALUES(0, 'test');
+SELECT * FROM ao_temp_delete_rows_multi;
 -- RULES
 insert into tenk_ao5(unique1, unique2) values (1, 99998889);
 create rule ao_rule_update as on insert to tenk_ao5 do instead update tenk_ao5 set two=2;

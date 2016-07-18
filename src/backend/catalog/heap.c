@@ -30,6 +30,10 @@
  */
 #include "postgres.h"
 
+#include "access/aocs_compaction.h"
+#include "access/aocssegfiles.h"
+#include "access/aosegfiles.h"
+#include "access/appendonly_compaction.h"
 #include "access/genam.h"
 #include "access/heapam.h"
 #include "access/transam.h"
@@ -3216,13 +3220,9 @@ heap_truncate(List *relids)
 		Oid			rid = lfirst_oid(cell);
 		Relation	rel;
 		Oid			toastrelid;
-		Oid			aosegrelid;
-		Oid         aoblkdirrelid;
-		Oid         aovisimaprelid;
 		AppendOnlyEntry *aoEntry = NULL;
 
 		rel = heap_open(rid, AccessExclusiveLock);
-		relations = lappend(relations, rel);
 
 		/* If there is a toast table, add it to the list too */
 		toastrelid = rel->rd_rel->reltoastrelid;
@@ -3237,34 +3237,73 @@ heap_truncate(List *relids)
 		/*
 		 * CONCERN: Not clear this EVER makes sense for Append-Only.
 		 */
-		if (RelationIsAoRows(rel) || RelationIsAoCols(rel))
+		if (RelationIsHeap(rel))
 		{
+			relations = lappend(relations, rel);
+		}
+		if (RelationIsAoRows(rel))
+		{
+			FileSegInfo	  **fsi;
+			int				totalSegs;
+			int				i;
+			List		   *seg_list = NIL;
+
+			CommandCounterIncrement();
 			aoEntry = GetAppendOnlyEntry(rid, SnapshotNow);
-
-			/* If there is an aoseg table, add it to the list too */
-			aosegrelid = aoEntry->segrelid;
-			if (OidIsValid(aosegrelid))
+			fsi = GetAllFileSegInfo(rel, aoEntry, SnapshotNow, &totalSegs);
+			for (i = 0; i < totalSegs; i++)
 			{
-				rel = heap_open(aosegrelid, AccessExclusiveLock);
-				relations = lappend(relations, rel);
-			}
+				int		segno = fsi[i]->segno;
 
-			/* If there is an aoblkdir table, add it to the list too */
-			aoblkdirrelid = aoEntry->blkdirrelid;
-			if (OidIsValid(aoblkdirrelid))
+				seg_list = lappend_int(seg_list, segno);
+				LockRelationAppendOnlySegmentFile(&rel->rd_node, segno,
+						AccessExclusiveLock, false);
+				SetFileSegInfoState(rel, aoEntry, segno,
+						AOSEG_STATE_AWAITING_DROP);
+			}
+			if (fsi)
 			{
-				rel = heap_open(aoblkdirrelid, AccessExclusiveLock);
-				relations = lappend(relations, rel);
+				FreeAllSegFileInfo(fsi, totalSegs);
+				pfree(fsi);
 			}
-
-			aovisimaprelid = aoEntry->visimaprelid;
-			if (OidIsValid(aovisimaprelid))
-			{
-				rel = heap_open(aovisimaprelid, AccessExclusiveLock);
-				relations = lappend(relations, rel);
-			}
-
 			pfree(aoEntry);
+
+			CommandCounterIncrement();
+			AppendOnlyDrop(rel, seg_list);
+			CommandCounterIncrement();
+			heap_close(rel, NoLock);
+		}
+		else if (RelationIsAoCols(rel))
+		{
+			AOCSFileSegInfo	  **fsi;
+			int					totalSegs;
+			int					i;
+			List			   *seg_list = NIL;
+
+			CommandCounterIncrement();
+			aoEntry = GetAppendOnlyEntry(rid, SnapshotNow);
+			fsi = GetAllAOCSFileSegInfo(rel, aoEntry, SnapshotNow, &totalSegs);
+			for (i = 0; i < totalSegs; i++)
+			{
+				int		segno = fsi[i]->segno;
+
+				seg_list = lappend_int(seg_list, segno);
+				LockRelationAppendOnlySegmentFile(&rel->rd_node, segno,
+						AccessExclusiveLock, false);
+				SetAOCSFileSegInfoState(rel, aoEntry, segno,
+						AOSEG_STATE_AWAITING_DROP);
+			}
+			if (fsi)
+			{
+				FreeAllAOCSSegFileInfo(fsi, totalSegs);
+				pfree(fsi);
+			}
+			pfree(aoEntry);
+
+			CommandCounterIncrement();
+			AOCSDrop(rel, seg_list);
+			CommandCounterIncrement();
+			heap_close(rel, NoLock);
 		}
 	}
 
