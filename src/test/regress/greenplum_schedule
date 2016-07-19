@@ -17,7 +17,8 @@
 
 ignore: leastsquares
 test: opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile naivebayes join_gp union_gp gpcopy gp_create_table
-test: filter gpctas gpdist matrix toast sublink sirv_functions table_functions olap_setup complex opclass_ddl bitmap_index
+test: filter gpctas gpdist matrix toast sublink table_functions olap_setup complex opclass_ddl bitmap_index information_schema
+test: indexjoin as_alias regex_gp gpparams with_clause
 
 test: dispatch
 
@@ -29,9 +30,9 @@ test: segspace
 # so it needs to be in a group by itself
 test: query_finish_pending
 
-test: gpdiffcheck gptokencheck information_schema gp_hashagg sequence_gp tidscan
+test: gpdiffcheck gptokencheck gp_hashagg sequence_gp tidscan co_nestloop_idxscan
 
-test: rangefuncs_cdb gp_dqa external_table subselect_gp subselect_gp2 indexjoin distributed_transactions olap_group olap_window_seq with_clause as_alias regex_gp partition1
+test: rangefuncs_cdb gp_dqa subselect_gp subselect_gp2 distributed_transactions olap_group olap_window_seq partition1 sirv_functions
 
 # 'partition' runs for a long time, so try to keep it together with other
 # long-running tests. Unfortunately, 'partition' also assumes that there
@@ -58,7 +59,7 @@ test: vacuum_gp
 # ERROR:  parameter "gp_interconnect_type" cannot be set after connection start
 
 ignore: gp_portal_error
-test: partition_indexing column_compression eagerfree mapred gpparams tidycat co_nestloop_idxscan  gpdtm_plpgsql alter_table_aocs alter_table_ao alter_distribution_policy ic aoco_privileges
+test: external_table partition_indexing column_compression eagerfree mapred tidycat gpdtm_plpgsql alter_table_aocs alter_table_ao alter_distribution_policy ic aoco_privileges
 ignore: icudp_full
 test: aocs
 
@@ -73,35 +74,23 @@ test: filespace trig auth_constraint role rle portals_updatable plpgsql_cache ti
 # direct dispatch tests
 test: bfv_dd bfv_dd_multicolumn bfv_dd_types
 
-test: catalog bfv_catalog bfv_index bfv_olap bfv_aggregate bfv_partition DML_over_joins gp_optimizer 
+test: catalog bfv_catalog bfv_index bfv_olap bfv_aggregate bfv_partition DML_over_joins gp_optimizer bfv_statistic
  
 test: aggregate_with_groupingsets 
 
 test: nested_case_null
 
-test: qp_olap_mdqa 
+test: bfv_cte bfv_joins bfv_subquery bfv_planner bfv_legacy
 
-test: qp_with_clause 
+test: qp_olap_mdqa qp_misc
 
-test: qp_misc 
-
-test: qp_misc_jiras
-
-test: bfv_cte bfv_joins bfv_statistic bfv_subquery bfv_planner bfv_legacy
-
-test: qp_executor qp_olap_windowerr qp_olap_window qp_derived_table qp_bitmapscan
-test: qp_functions qp_misc_rio_join_small qp_misc_rio
-
-test: qp_correlated_query qp_targeted_dispatch
+test: qp_misc_jiras qp_with_clause qp_executor qp_olap_windowerr qp_olap_window qp_derived_table qp_bitmapscan
+test: qp_functions qp_misc_rio_join_small qp_misc_rio qp_correlated_query qp_targeted_dispatch qp_gist_indexes2 qp_gist_indexes3 qp_gist_indexes4 qp_query_execution
 
 test: qp_dpe qp_subquery qp_functions_idf qp_regexp qp_resource_queue
 
-test: qp_gist_indexes2 qp_gist_indexes3 qp_gist_indexes4
-
 test: olap_setup
 test: qp_olap_group
-
-test: qp_query_execution
 
 ignore: tpch500GB_orca
 
