@@ -1,6 +1,7 @@
 -- turn off autostats so we don't have to worry about the logging of the autostat queries
 set gp_autostats_mode = None;
--- create needed tables
+-- create needed tables (in a transaction, for speed)
+begin;
 create table direct_test
 (
   key int NULL,
@@ -78,6 +79,7 @@ create table direct_test_type_inet (x inet) distributed by (x);
 create table direct_test_type_macaddr (x macaddr) distributed by (x);
 create table direct_test_type_tinterval (x tinterval) distributed by (x);
 create table direct_test_type_varbit (x varbit) distributed by (x);
+commit;
 -- enable printing of printing info
 set test_print_direct_dispatch_info=on;
 -- Constant single-row insert, one column in distribution
@@ -1027,30 +1029,33 @@ INFO:  Dispatch command to ALL contents
 
 -- cleanup
 set test_print_direct_dispatch_info=off;
-drop table direct_test;
-drop table direct_test_two_column;
-drop table direct_test_bitmap;
-drop table direct_test_partition;
-drop table direct_test_range_partition;
-drop table direct_test_type_real;
-drop table direct_test_type_smallint;
-drop table direct_test_type_int;
-drop table direct_test_type_double;
-drop table direct_test_type_date;
-drop table direct_test_type_numeric;
-drop table direct_dispatch_foo;
-drop table direct_dispatch_bar;
-drop table direct_test_type_int2;
-drop table direct_test_type_int4;
-drop table direct_test_type_int8;
-drop table direct_test_type_abstime;
-drop table direct_test_type_bit;
-drop table direct_test_type_bpchar;
-drop table direct_test_type_bytea;
-drop table direct_test_type_cidr;
-drop table direct_test_type_inet;
-drop table direct_test_type_macaddr;
-drop table direct_test_type_tinterval;
-drop table direct_test_type_varbit;
-drop table MPP_22019_a;
-drop table MPP_22019_b;
+begin;
+drop table if exists direct_test;
+drop table if exists direct_test_two_column;
+drop table if exists direct_test_bitmap;
+drop table if exists direct_test_partition;
+drop table if exists direct_test_range_partition;
+drop table if exists direct_test_type_real;
+drop table if exists direct_test_type_smallint;
+drop table if exists direct_test_type_boolean;
+drop table if exists direct_test_type_int;
+drop table if exists direct_test_type_double;
+drop table if exists direct_test_type_date;
+drop table if exists direct_test_type_numeric;
+drop table if exists direct_dispatch_foo;
+drop table if exists direct_dispatch_bar;
+drop table if exists direct_test_type_int2;
+drop table if exists direct_test_type_int4;
+drop table if exists direct_test_type_int8;
+drop table if exists direct_test_type_abstime;
+drop table if exists direct_test_type_bit;
+drop table if exists direct_test_type_bpchar;
+drop table if exists direct_test_type_bytea;
+drop table if exists direct_test_type_cidr;
+drop table if exists direct_test_type_inet;
+drop table if exists direct_test_type_macaddr;
+drop table if exists direct_test_type_tinterval;
+drop table if exists direct_test_type_varbit;
+drop table if exists MPP_22019_a;
+drop table if exists MPP_22019_b;
+commit;
