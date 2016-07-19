@@ -8032,34 +8032,34 @@ select CITY,POPULATION from
 select avg(population) avg_p,CITY
 from
 (
-with size0_cities(CITY,POPULATION) as (select city.name,city.population from city where city.population >= 100)
+with size0_cities(CITY,POPULATION) as (select city.name,city.population from city where city.population >= 350000)
 select CITY,POPULATION from 
 (
-  with size1_cities(CITY,POPULATION) as ( select city,population from size0_cities where population >= 1000 )
+  with size1_cities(CITY,POPULATION) as ( select city,population from size0_cities where population >= 360000 )
   select CITY,POPULATION from 
   (
-     with size2_cities(CITY,POPULATION) as (select city,population from size1_cities where population >= 10000)
+     with size2_cities(CITY,POPULATION) as (select city,population from size1_cities where population >= 370000)
      select CITY,POPULATION from
      (
-       with size3_cities as (select city,population from  size2_cities where population >= 20000)
+       with size3_cities as (select city,population from  size2_cities where population >= 380000)
        select CITY,POPULATION from
        (
-        with size4_cities as (select city,population from  size3_cities where population >= 50000)
+        with size4_cities as (select city,population from  size3_cities where population >= 390000)
         select CITY,POPULATION from
         (
-         with size5_cities as (select city,population from  size4_cities where population >= 80000)
+         with size5_cities as (select city,population from  size4_cities where population >= 400000)
          select CITY,POPULATION from
          (
-          with size6_cities as (select city,population from  size5_cities where population >= 150000)
+          with size6_cities as (select city,population from  size5_cities where population >= 410000)
           select CITY,POPULATION from
           (
-           with size7_cities as (select city,population from  size6_cities where population >= 200000)
+           with size7_cities as (select city,population from  size6_cities where population >= 420000)
            select CITY,POPULATION from
            (
-            with size8_cities as (select city,population from  size7_cities where population >= 250000)
+            with size8_cities as (select city,population from  size7_cities where population >= 430000)
             select CITY,POPULATION from
             (
-             with size9_cities as (select city,population from  size8_cities where population >= 300000)
+             with size9_cities as (select city,population from  size8_cities where population >= 440000)
              select city,population from
              (
               with size10_cities as (select city,population from  size9_cities where population >= 6500000)
@@ -8091,27 +8091,27 @@ select CITY,POPULATION from
 ) FOO0 group by city order by avg_p,city
 LIMIT 20;
  avg_p  |       city       
---------+------------------
- 150000 | Rufisque
- 150100 | Kanchipuram
- 150112 | Munger (Monghyr)
- 150115 | Rockford
- 150116 | Quelimane
- 150123 | Pingdu
- 150166 | Trondheim
- 150168 | Taonan
- 150624 | Tallahassee
- 150645 | Durg
- 150664 | Itapevi
- 150700 | Kolomna
- 150869 | Sambhal
- 151000 | Blackpool
- 151000 | Borisov
- 151000 | Kamoke
- 151045 | Raiganj
- 151060 | Salinas
- 151069 | Tamale
- 151088 | Santa Clarita
+--------+----------------
+ 410000 | Port Harcourt
+ 410102 | Alberton
+ 410407 | Xiangfan
+ 410775 | Pingdingshan
+ 411542 | Bhubaneswar
+ 411822 | General Santos
+ 412639 | Kaunas
+ 415346 | San Salvador
+ 415466 | Panzhihua
+ 416100 | al-Taif
+ 416289 | Bikaner
+ 416428 | Matamoros
+ 416474 | Atlanta
+ 416988 | Szczecin
+ 417517 | Kisangani
+ 417597 | Sialkot
+ 417610 | Suez
+ 417748 | Rasht
+ 417810 | Kolwezi
+ 418624 | Kirkuk
 (20 rows)
 
 -- sanity tests with queries using CTEs in insert,update,delete and create
@@ -8715,34 +8715,34 @@ create view view_with_deep_nested_CTE as
 (select avg(population),CITY
 from
 (
-with size0_cities(CITY,POPULATION) as (select city.name,city.population from city where city.population >= 100)
+with size0_cities(CITY,POPULATION) as (select city.name,city.population from city where city.population >= 350000)
 select CITY,POPULATION from 
 (
-  with size1_cities(CITY,POPULATION) as ( select city,population from size0_cities where population >= 1000 )
+  with size1_cities(CITY,POPULATION) as ( select city,population from size0_cities where population >= 360000 )
   select CITY,POPULATION from 
   (
-     with size2_cities(CITY,POPULATION) as (select city,population from size1_cities where population >= 10000)
+     with size2_cities(CITY,POPULATION) as (select city,population from size1_cities where population >= 370000)
      select CITY,POPULATION from
      (
-       with size3_cities as (select city,population from  size2_cities where population >= 20000)
+       with size3_cities as (select city,population from  size2_cities where population >= 380000)
        select CITY,POPULATION from
        (
-        with size4_cities as (select city,population from  size3_cities where population >= 50000)
+        with size4_cities as (select city,population from  size3_cities where population >= 390000)
         select CITY,POPULATION from
         (
-         with size5_cities as (select city,population from  size4_cities where population >= 80000)
+         with size5_cities as (select city,population from  size4_cities where population >= 400000)
          select CITY,POPULATION from
          (
-          with size6_cities as (select city,population from  size5_cities where population >= 150000)
+          with size6_cities as (select city,population from  size5_cities where population >= 410000)
           select CITY,POPULATION from
           (
-           with size7_cities as (select city,population from  size6_cities where population >= 200000)
+           with size7_cities as (select city,population from  size6_cities where population >= 420000)
            select CITY,POPULATION from
            (
-            with size8_cities as (select city,population from  size7_cities where population >= 250000)
+            with size8_cities as (select city,population from  size7_cities where population >= 430000)
             select CITY,POPULATION from
             (
-             with size9_cities as (select city,population from  size8_cities where population >= 300000)
+             with size9_cities as (select city,population from  size8_cities where population >= 440000)
              select city,population from
              (
               with size10_cities as (select city,population from  size9_cities where population >= 6500000)
@@ -8784,61 +8784,61 @@ View definition:
    FROM ( WITH size0_cities(city, population) AS (
                  SELECT city.name, city.population
                    FROM city
-                  WHERE city.population >= 100
+                  WHERE city.population >= 350000
                 )
          SELECT foo1.city, foo1.population
            FROM ( WITH size1_cities(city, population) AS (
                          SELECT size0_cities.city, size0_cities.population
                            FROM size0_cities
-                          WHERE size0_cities.population >= 1000
+                          WHERE size0_cities.population >= 360000
                         )
                  SELECT foo2.city, foo2.population
                    FROM ( WITH size2_cities(city, population) AS (
                                  SELECT size1_cities.city, size1_cities.population
                                    FROM size1_cities
-                                  WHERE size1_cities.population >= 10000
+                                  WHERE size1_cities.population >= 370000
                                 )
                          SELECT foo3.city, foo3.population
                            FROM ( WITH size3_cities AS (
                                          SELECT size2_cities.city, size2_cities.population
                                            FROM size2_cities
-                                          WHERE size2_cities.population >= 20000
+                                          WHERE size2_cities.population >= 380000
                                         )
                                  SELECT foo4.city, foo4.population
                                    FROM ( WITH size4_cities AS (
                                                  SELECT size3_cities.city, size3_cities.population
                                                    FROM size3_cities
-                                                  WHERE size3_cities.population >= 50000
+                                                  WHERE size3_cities.population >= 390000
                                                 )
                                          SELECT foo5.city, foo5.population
                                            FROM ( WITH size5_cities AS (
                                                          SELECT size4_cities.city, size4_cities.population
                                                            FROM size4_cities
-                                                          WHERE size4_cities.population >= 80000
+                                                          WHERE size4_cities.population >= 400000
                                                         )
                                                  SELECT foo6.city, foo6.population
                                                    FROM ( WITH size6_cities AS (
                                                                  SELECT size5_cities.city, size5_cities.population
                                                                    FROM size5_cities
-                                                                  WHERE size5_cities.population >= 150000
+                                                                  WHERE size5_cities.population >= 410000
                                                                 )
                                                          SELECT foo7.city, foo7.population
                                                            FROM ( WITH size7_cities AS (
                                                                          SELECT size6_cities.city, size6_cities.population
                                                                            FROM size6_cities
-                                                                          WHERE size6_cities.population >= 200000
+                                                                          WHERE size6_cities.population >= 420000
                                                                         )
                                                                  SELECT foo8.city, foo8.population
                                                                    FROM ( WITH size8_cities AS (
                                                                                  SELECT size7_cities.city, size7_cities.population
                                                                                    FROM size7_cities
-                                                                                  WHERE size7_cities.population >= 250000
+                                                                                  WHERE size7_cities.population >= 430000
                                                                                 )
                                                                          SELECT foo9.city, foo9.population
                                                                            FROM ( WITH size9_cities AS (
                                                                                          SELECT size8_cities.city, size8_cities.population
                                                                                            FROM size8_cities
-                                                                                          WHERE size8_cities.population >= 300000
+                                                                                          WHERE size8_cities.population >= 440000
                                                                                         )
                                                                                  SELECT foo10.city, foo10.population
                                                                                    FROM ( WITH size10_cities AS (
@@ -8874,28 +8874,28 @@ View definition:
   ORDER BY foo0.city;
 
 select * from view_with_deep_nested_CTE order by city LIMIT 20;
-   avg   |         city         
----------+----------------------
-  243825 | Aachen
-  161161 | Aalborg
-  298900 | Aba
-  206073 | Abadan
-  169200 | Abakan
+   avg   |        city        
+---------+--------------------
   427400 | Abeokuta
-  213070 | Aberdeen
  2500000 | Abidjan
-  398695 | Abu Dhabi
-  350100 | Abuja
   721011 | Acapulco de Juarez
-  158954 | Acarigua
  1070000 | Accra
-  197595 | Acheng
-  243402 | A Coruaa (La Coruaa)
  1131198 | Adana
  2495000 | Addis Abeba
   978100 | Adelaide
-  398300 | Aden
-  359400 | Ado-Ekiti
+  891790 | Agra
+  643360 | Aguascalientes
+ 2876710 | Ahmedabad
+  804980 | Ahvaz
+  410102 | Alberton
+  448607 | Albuquerque
+  482300 | al-Dammam
+ 1261983 | Aleppo
+ 3328196 | Alexandria
+ 2168000 | Alger
+  480520 | Aligarh
+  792858 | Allahabad
+ 1129400 | Almaty
 (20 rows)
 
 select * from view_with_deep_nested_CTE where avg > 2000000 order by city LIMIT 20;

@@ -9388,35 +9388,35 @@ select CITY,POPULATION from
 select avg(population) avg_p,CITY
 from
 (
-with size0_cities(CITY,POPULATION) as (select city.name,city.population from city where city.population >= 100)
+with size0_cities(CITY,POPULATION) as (select city.name,city.population from city where city.population >= 350000)
 
 select CITY,POPULATION from 
 (
-  with size1_cities(CITY,POPULATION) as ( select city,population from size0_cities where population >= 1000 )
+  with size1_cities(CITY,POPULATION) as ( select city,population from size0_cities where population >= 360000 )
   select CITY,POPULATION from 
   (
-     with size2_cities(CITY,POPULATION) as (select city,population from size1_cities where population >= 10000)
+     with size2_cities(CITY,POPULATION) as (select city,population from size1_cities where population >= 370000)
      select CITY,POPULATION from
      (
-       with size3_cities as (select city,population from  size2_cities where population >= 20000)
+       with size3_cities as (select city,population from  size2_cities where population >= 380000)
        select CITY,POPULATION from
        (
-        with size4_cities as (select city,population from  size3_cities where population >= 50000)
+        with size4_cities as (select city,population from  size3_cities where population >= 390000)
         select CITY,POPULATION from
         (
-         with size5_cities as (select city,population from  size4_cities where population >= 80000)
+         with size5_cities as (select city,population from  size4_cities where population >= 400000)
          select CITY,POPULATION from
          (
-          with size6_cities as (select city,population from  size5_cities where population >= 150000)
+          with size6_cities as (select city,population from  size5_cities where population >= 410000)
           select CITY,POPULATION from
           (
-           with size7_cities as (select city,population from  size6_cities where population >= 200000)
+           with size7_cities as (select city,population from  size6_cities where population >= 420000)
            select CITY,POPULATION from
            (
-            with size8_cities as (select city,population from  size7_cities where population >= 250000)
+            with size8_cities as (select city,population from  size7_cities where population >= 430000)
             select CITY,POPULATION from
             (
-             with size9_cities as (select city,population from  size8_cities where population >= 300000)
+             with size9_cities as (select city,population from  size8_cities where population >= 440000)
              select city,population from
              (
               with size10_cities as (select city,population from  size9_cities where population >= 6500000)
@@ -9683,35 +9683,35 @@ create view view_with_deep_nested_CTE as
 (select avg(population),CITY
 from
 (
-with size0_cities(CITY,POPULATION) as (select city.name,city.population from city where city.population >= 100)
+with size0_cities(CITY,POPULATION) as (select city.name,city.population from city where city.population >= 350000)
 
 select CITY,POPULATION from 
 (
-  with size1_cities(CITY,POPULATION) as ( select city,population from size0_cities where population >= 1000 )
+  with size1_cities(CITY,POPULATION) as ( select city,population from size0_cities where population >= 360000 )
   select CITY,POPULATION from 
   (
-     with size2_cities(CITY,POPULATION) as (select city,population from size1_cities where population >= 10000)
+     with size2_cities(CITY,POPULATION) as (select city,population from size1_cities where population >= 370000)
      select CITY,POPULATION from
      (
-       with size3_cities as (select city,population from  size2_cities where population >= 20000)
+       with size3_cities as (select city,population from  size2_cities where population >= 380000)
        select CITY,POPULATION from
        (
-        with size4_cities as (select city,population from  size3_cities where population >= 50000)
+        with size4_cities as (select city,population from  size3_cities where population >= 390000)
         select CITY,POPULATION from
         (
-         with size5_cities as (select city,population from  size4_cities where population >= 80000)
+         with size5_cities as (select city,population from  size4_cities where population >= 400000)
          select CITY,POPULATION from
          (
-          with size6_cities as (select city,population from  size5_cities where population >= 150000)
+          with size6_cities as (select city,population from  size5_cities where population >= 410000)
           select CITY,POPULATION from
           (
-           with size7_cities as (select city,population from  size6_cities where population >= 200000)
+           with size7_cities as (select city,population from  size6_cities where population >= 420000)
            select CITY,POPULATION from
            (
-            with size8_cities as (select city,population from  size7_cities where population >= 250000)
+            with size8_cities as (select city,population from  size7_cities where population >= 430000)
             select CITY,POPULATION from
             (
-             with size9_cities as (select city,population from  size8_cities where population >= 300000)
+             with size9_cities as (select city,population from  size8_cities where population >= 440000)
              select city,population from
              (
               with size10_cities as (select city,population from  size9_cities where population >= 6500000)
