@@ -6,10 +6,6 @@ set search_path=bfv_aggregate;
 ---
 
 -- SETUP
--- start_ignore
-DROP TABLE IF EXISTS x_outer;
-DROP TABLE IF EXISTS y_inner;
--- end_ignore
 create table x_outer (a int, b int, c int);
 create table y_inner (d int, e int);
 insert into x_outer select i%3, i, i from generate_series(1,10) i;
@@ -30,12 +26,6 @@ select * from x_outer where not exists (select rank() over(order by a) from y_in
 
 select * from x_outer where a in (select last_value(d) over(partition by b order by e rows between e preceding and e+1 following) from y_inner) order by 1, 2;
 
--- CLEANUP
--- start_ignore
-DROP TABLE IF EXISTS x_outer;
-DROP TABLE IF EXISTS y_inner;
--- end_ignore
-
 ---
 --- Testing aggregation in a query
 ---
@@ -47,21 +37,11 @@ insert into d select to_date('2014-01-01', 'YYYY-DD-MM'), generate_series(1,100)
 -- TEST
 select 1, to_char(col1, 'YYYY'), median(col2) from d group by 1, 2;
 
--- CLEANUP
--- start_ignore
-DROP TABLE IF EXISTS d;
--- end_ignore
-
 ---
 --- Testing if aggregate derived window function produces incorrect results
 ---
 
 -- SETUP
--- start_ignore
-drop table if exists toy;
-drop aggregate mysum1(int4);
-drop aggregate mysum2(int4);
--- end_ignore
 create table toy(id,val) as select i,i from generate_series(1,5) i;
 create aggregate mysum1(int4) (sfunc = int4_sum, prefunc=int8pl, stype=bigint);
 create aggregate mysum2(int4) (sfunc = int4_sum, stype=bigint);
@@ -74,13 +54,6 @@ select
    mysum2(val) over (w)
 from toy
 window w as (order by id rows 2 preceding);
-
--- CLEANUP
--- start_ignore
-drop table if exists toy;
-drop aggregate mysum1(int4);
-drop aggregate mysum2(int4);
--- end_ignore
 
 ---
 --- Error executing for aggregate with anyarry as return type
@@ -117,15 +90,6 @@ insert into t values(3,array[3],'b');
 
 select f3, array_sort(myaggp20a(f1)) from t group by f3 order by f3;
 
--- CLEANUP
--- start_ignore
-drop table if exists t;
-drop function array_sort (ANYARRAY) cascade;
-drop function tfp(anyarray,anyelement) cascade;
-drop function ffp(anyarray) cascade;
--- end_ignore
-
--- start_ignore
 -- start_ignore
 create language plpythonu;
 -- end_ignore
@@ -147,40 +111,28 @@ language plpythonu;
 ---
 
 -- SETUP
--- start_ignore
-DROP TABLE IF EXISTS multi_stage_test;
--- end_ignore
 create table multi_stage_test(a int, b int);
 insert into multi_stage_test select i, i%4 from generate_series(1,10) i;
 analyze multi_stage_test;
 
 -- TEST
--- start_ignore
 set optimizer_segments=2;
 set optimizer_prefer_multistage_agg = on;
--- end_ignore
 select count_operator('explain select count(*) from multi_stage_test group by b;','GroupAggregate');
--- start_ignore
+
 set optimizer_prefer_multistage_agg = off;
--- end_ignore
 select count_operator('explain select count(*) from multi_stage_test group by b;','GroupAggregate');
 
 --CLEANUP
--- start_ignore
-DROP TABLE IF EXISTS multi_stage_test;
 reset optimizer_segments;
 set optimizer_prefer_multistage_agg = off;
--- end_ignore
 
 ---
 --- Testing not picking HashAgg for aggregates without preliminary functions
 ---
 
 -- SETUP
--- start_ignore
 SET optimizer_disable_missing_stats_collection=on;
-DROP TABLE IF EXISTS attribute_table;
--- end_ignore
 CREATE TABLE attribute_table (product_id integer, attribute_id integer,attribute text, attribute2 text,attribute_ref_lists text,short_name text,attribute6 text,attribute5 text,measure double precision,unit character varying(60)) DISTRIBUTED BY (product_id ,attribute_id);
 -- create the transition function
 CREATE OR REPLACE FUNCTION do_concat(text,text)
@@ -193,9 +145,6 @@ ELSE $1 || $2 END;'
      IMMUTABLE
      RETURNS NULL ON NULL INPUT;
 -- UDA definition. No PREFUNC exists
--- start_ignore
-DROP AGGREGATE IF EXISTS concat(text);
--- end_ignore
 CREATE AGGREGATE concat(text) (
    --text/string concatenation
    SFUNC = do_concat, --Function to call for each string that builds the aggregate
@@ -205,19 +154,12 @@ CREATE AGGREGATE concat(text) (
 
 -- TEST
 -- cook some stats
--- start_ignore
 set allow_system_table_mods='DML';
--- end_ignore
 UPDATE pg_class set reltuples=524592::real, relpages=2708::integer where oid = 'attribute_table'::regclass;
 select count_operator('explain select product_id,concat(E''#attribute_''||attribute_id::varchar||E'':''||attribute) as attr FROM attribute_table GROUP BY product_id;','HashAggregate');
 
 -- CLEANUP
--- start_ignore
-DROP TABLE IF EXISTS attribute_table;
-DROP AGGREGATE IF EXISTS concat(text);
-drop function do_concat(text,text) cascade;
 SET optimizer_disable_missing_stats_collection=off;
--- end_ignore
 
 
 ---
@@ -225,9 +167,6 @@ SET optimizer_disable_missing_stats_collection=off;
 ---
 
 -- SETUP
--- start_ignore
-DROP TABLE IF EXISTS foo;
--- end_ignore
 create table foo(a int, b text) distributed by (a);
 
 -- TEST
@@ -1417,9 +1356,5 @@ from mtup1 where c0 = 'foo' group by c0, c1 limit 10;
 
 
 -- CLEANUP
--- start_ignore
-drop function count_operator(text,text);
-DROP TABLE IF EXISTS foo;
-drop function if exists count_operator(explain_query text, operator text);
-drop schema if exists bfv_aggregate;
--- end_ignore
+set client_min_messages='warning';
+drop schema bfv_aggregate cascade;
