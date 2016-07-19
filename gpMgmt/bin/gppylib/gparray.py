@@ -1486,7 +1486,7 @@ class GpArray:
         if strategy_rows.rowcount == 0:
             raise Exception("Database does not contain gp_fault_strategy entry")
         if strategy_rows.rowcount > 1:
-            raise Exception("Database does too many gp_fault_strategy entries")
+            raise Exception("Database has too many gp_fault_strategy entries")
         strategy = strategy_rows.fetchone()[0]
 
         array = GpArray(segments, origSegments, strategy)
