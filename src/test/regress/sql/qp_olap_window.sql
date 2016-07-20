@@ -24036,6 +24036,14 @@ SELECT a,color,sum(a) over (partition by member_id,color) FROM tab12773_test ord
 
 SELECT member_id,a,color,sum(a) over (partition by member_id,color) FROM tab12773_test order by member_id,name;
 
+-- This is a test for a bug in parallel window planning in the GPDB postgres planner
+-- so turn off Orca before running just in case.
+SET optimizer = off;
+SET gp_enable_sequential_window_plans = off;
+SELECT avg(vn) OVER (PARTITION BY cn) FROM ow_sale;
+SET gp_enable_sequential_window_plans = on;
+SELECT avg(vn) OVER (PARTITION BY cn) FROM ow_sale;
+
 -- start_ignore
 reset datestyle;
 drop table tab12773_test;
