@@ -1451,6 +1451,29 @@ test__clean_up_table(void **state)
     assert_true(HASH_TABLE_SIZE == 0);
 }
 
+/*
+ * Test the base64 implementation in cdb_dump_util.c.
+ */
+void
+test__base64(void **state)
+{
+	unsigned char orig[256];
+	char	   *encoded;
+	unsigned char *decoded;
+	int			backlen;
+	int			i;
+
+	for (i = 0; i < 256; i++)
+		orig[i] = i;
+
+	encoded = DataToBase64((char *) orig, 256);
+	decoded = (unsigned char *) Base64ToData(encoded, &backlen);
+	assert_int_equal(backlen, 256);
+
+	for (i = 0; i < 256; i++)
+		assert_int_equal(decoded[i], i);
+}
+
 int 
 main(int argc, char* argv[]) 
 {
@@ -1543,6 +1566,7 @@ main(int argc, char* argv[])
             unit_test(test__remove_node_not_present),       
             unit_test(test__remove_node_not_present_in_list),       
             unit_test(test__clean_up_table),
+            unit_test(test__base64),
 	};
 	return run_tests(tests);
 }

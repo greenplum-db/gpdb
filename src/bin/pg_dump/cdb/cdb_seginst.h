@@ -7,6 +7,8 @@
 #ifndef CDB_SEGINST_H
 #define CDB_SEGINST_H
 
+#include "libpq-fe.h"
+
 typedef enum segment_role
 {
 	ROLE_SEGDB = 0,

@@ -10,6 +10,7 @@
 
 #include <regex.h>
 #include "cdb_seginst.h"
+#include "libpq-int.h"
 
 #define CDB_BACKUP_KEY_LEN 14
 
@@ -22,6 +23,10 @@
 
 #define DDBOOST_CONFIG_FILE ".ddconfig"
 #define DDBOOST_USERNAME_MAXLENGTH 30
+/*
+ * NOTE: If you increase this, you must also increase OBFUSCATE_PAYLOAD_LENGTH
+ * in cdb_lockbox.c!
+ */
 #define DDBOOST_PASSWORD_MAXLENGTH 40
 #define DDBOOST_LOG_NUM_OF_FILES 10
 #ifndef DDBOOST_POOL_SIZE
@@ -30,7 +35,6 @@
 
 extern int getDDBoostCredential(char** hostname, char** user, char** password, char** log_level ,char** log_size, char **default_backup_directory, char **ddboost_storage_unit, bool remote);
 extern int  setDDBoostCredential(char *hostname, char *user, char *password, char *log_level ,char *log_size, char *default_backup_directory, char *ddboost_storage_unit,  bool remote);
-extern int  parseDDBoostCredential(char *hostname, char *user, char *password, const char *progName);
 extern void rotate_dd_logs(const char *file_name, unsigned int num_of_files, unsigned int log_size);
 extern void _ddp_test_log(const void *session_ptr, const ddp_char_t *log_msg, ddp_severity_t severity);
 extern int initDDSystem(ddp_inst_desc_t *ddp_inst, ddp_conn_desc_t *ddp_conn, ddp_client_info_t *cl_info,
@@ -154,8 +158,8 @@ extern const char* getBackupTypeString(bool incremental);
 /* Base64 Encoding and Decoding Routines */
 /* Base64 Data is assumed to be in a NULL terminated string */
 /* Data is just assumed to be an array of chars, with a length */
-extern char *DataToBase64(char *pszIn, unsigned int InLen);
-extern char *Base64ToData(char *pszIn, unsigned int *pOutLen);
+extern char *DataToBase64(const char *pszIn, unsigned int InLen);
+extern char *Base64ToData(const char *pszIn, unsigned int *pOutLen);
 extern char *nextToken(register char **stringp, register const char *delim);
 extern int	parseDbidSet(int *dbidset, char *dump_set);
 extern char* formCompressionProgramString(char* compPg);
