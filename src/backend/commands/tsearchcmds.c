@@ -45,6 +45,8 @@
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
 
+#include "cdb/cdbvars.h"
+#include "cdb/cdbdisp_query.h"
 
 static void MakeConfigurationMapping(AlterTSConfigurationStmt *stmt,
 						 HeapTuple tup, Relation relMap);
@@ -158,7 +160,7 @@ makeParserDependencies(HeapTuple tuple)
  * CREATE TEXT SEARCH PARSER
  */
 void
-DefineTSParser(List *names, List *parameters)
+DefineTSParser(List *names, List *parameters, Oid newOid)
 {
 	char	   *prsname;
 	ListCell   *pl;
@@ -255,6 +257,9 @@ DefineTSParser(List *names, List *parameters)
 
 	tup = heap_form_tuple(prsRel->rd_att, values, nulls);
 
+	if (newOid != InvalidOid)
+		HeapTupleSetOid(tup, newOid);
+
 	prsOid = simple_heap_insert(prsRel, tup);
 
 	CatalogUpdateIndexes(prsRel, tup);
@@ -264,6 +269,21 @@ DefineTSParser(List *names, List *parameters)
 	heap_freetuple(tup);
 
 	heap_close(prsRel, RowExclusiveLock);
+
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		DefineStmt *stmt = makeNode(DefineStmt);
+
+		stmt->kind = OBJECT_TSPARSER;
+		stmt->oldstyle = false;
+		stmt->defnames = names;
+		stmt->args = NIL;
+		stmt->definition = parameters;
+		stmt->newOid = prsOid;
+		stmt->arrayOid = stmt->commutatorOid = stmt->negatorOid = InvalidOid;
+
+		CdbDispatchUtilityStatement((Node *) stmt, "DefineTSParser");
+	}
 }
 
 /*
@@ -470,7 +490,7 @@ verify_dictoptions(Oid tmplId, List *dictoptions)
  * CREATE TEXT SEARCH DICTIONARY
  */
 void
-DefineTSDictionary(List *names, List *parameters)
+DefineTSDictionary(List *names, List *parameters, Oid newOid)
 {
 	ListCell   *pl;
 	Relation	dictRel;
@@ -543,6 +563,9 @@ DefineTSDictionary(List *names, List *parameters)
 
 	tup = heap_form_tuple(dictRel->rd_att, values, nulls);
 
+	if (newOid != InvalidOid)
+		HeapTupleSetOid(tup, newOid);
+
 	dictOid = simple_heap_insert(dictRel, tup);
 
 	CatalogUpdateIndexes(dictRel, tup);
@@ -552,6 +575,20 @@ DefineTSDictionary(List *names, List *parameters)
 	heap_freetuple(tup);
 
 	heap_close(dictRel, RowExclusiveLock);
+
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		DefineStmt *stmt = makeNode(DefineStmt);
+		stmt->kind = OBJECT_TSDICTIONARY;
+		stmt->oldstyle = false;
+		stmt->defnames = names;
+		stmt->args = NIL;
+		stmt->definition = parameters;
+		stmt->newOid = dictOid;
+		stmt->arrayOid = stmt->commutatorOid = stmt->negatorOid = InvalidOid;
+		stmt->ordered = false;
+		CdbDispatchUtilityStatement((Node *) stmt, "DefineTSDictionary");
+	}
 }
 
 /*
@@ -801,6 +838,9 @@ AlterTSDictionary(AlterTSDictionaryStmt *stmt)
 	ReleaseSysCache(tup);
 
 	heap_close(rel, RowExclusiveLock);
+
+	if (Gp_role == GP_ROLE_DISPATCH)
+		CdbDispatchUtilityStatement((Node *) stmt, "AlterTSDictionary");
 }
 
 /*
@@ -950,7 +990,7 @@ makeTSTemplateDependencies(HeapTuple tuple)
  * CREATE TEXT SEARCH TEMPLATE
  */
 void
-DefineTSTemplate(List *names, List *parameters)
+DefineTSTemplate(List *names, List *parameters, Oid newOid)
 {
 	ListCell   *pl;
 	Relation	tmplRel;
@@ -1023,6 +1063,9 @@ DefineTSTemplate(List *names, List *parameters)
 
 	tup = heap_form_tuple(tmplRel->rd_att, values, nulls);
 
+	if (newOid != InvalidOid)
+		HeapTupleSetOid(tup, newOid);
+
 	dictOid = simple_heap_insert(tmplRel, tup);
 
 	CatalogUpdateIndexes(tmplRel, tup);
@@ -1032,6 +1075,19 @@ DefineTSTemplate(List *names, List *parameters)
 	heap_freetuple(tup);
 
 	heap_close(tmplRel, RowExclusiveLock);
+
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		DefineStmt *stmt = makeNode(DefineStmt);
+		stmt->kind = OBJECT_TSTEMPLATE;
+		stmt->oldstyle = false;
+		stmt->newOid = dictOid;
+		stmt->defnames = names;
+		stmt->args = NIL;
+		stmt->definition = parameters;
+		stmt->arrayOid = stmt->commutatorOid = stmt->negatorOid = InvalidOid;
+		CdbDispatchUtilityStatement((Node *) stmt, "DefineTSTemplate");
+	}
 }
 
 /*
@@ -1263,7 +1319,7 @@ makeConfigurationDependencies(HeapTuple tuple, bool removeOld,
  * CREATE TEXT SEARCH CONFIGURATION
  */
 void
-DefineTSConfiguration(List *names, List *parameters)
+DefineTSConfiguration(List *names, List *parameters, Oid newOid)
 {
 	Relation	cfgRel;
 	Relation	mapRel = NULL;
@@ -1357,6 +1413,9 @@ DefineTSConfiguration(List *names, List *parameters)
 
 	tup = heap_form_tuple(cfgRel->rd_att, values, nulls);
 
+	if (newOid != InvalidOid)
+		HeapTupleSetOid(tup, newOid);
+
 	cfgOid = simple_heap_insert(cfgRel, tup);
 
 	CatalogUpdateIndexes(cfgRel, tup);
@@ -1414,6 +1473,19 @@ DefineTSConfiguration(List *names, List *parameters)
 	if (mapRel)
 		heap_close(mapRel, RowExclusiveLock);
 	heap_close(cfgRel, RowExclusiveLock);
+
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		DefineStmt *stmt = makeNode(DefineStmt);
+		stmt->kind = OBJECT_TSCONFIGURATION;
+		stmt->oldstyle = false;
+		stmt->defnames = names;
+		stmt->args = NIL;
+		stmt->definition = parameters;
+		stmt->newOid = cfgOid;
+		stmt->arrayOid = stmt->commutatorOid = stmt->negatorOid = InvalidOid;
+		CdbDispatchUtilityStatement((Node *) stmt, "DefineTSConfiguration");
+	}
 }
 
 /*
@@ -1665,6 +1737,9 @@ AlterTSConfiguration(AlterTSConfigurationStmt *stmt)
 	heap_close(relMap, RowExclusiveLock);
 
 	ReleaseSysCache(tup);
+
+	if (Gp_role == GP_ROLE_DISPATCH)
+		CdbDispatchUtilityStatement((Node *) stmt, "AlterTSConfiguration");
 }
 
 /*

@@ -100,13 +100,13 @@ extern void AlterOpFamilyOwner(List *name, const char *access_method, Oid newOwn
 extern void AlterOpFamilyOwner_oid(Oid opfamilyOid, Oid newOwnerId);
 
 /* commands/tsearchcmds.c */
-extern void DefineTSParser(List *names, List *parameters);
+extern void DefineTSParser(List *names, List *parameters, Oid newOid);
 extern void RenameTSParser(List *oldname, const char *newname);
 extern void RemoveTSParser(List *names, DropBehavior behavior,
 			   bool missing_ok);
 extern void RemoveTSParserById(Oid prsId);
 
-extern void DefineTSDictionary(List *names, List *parameters);
+extern void DefineTSDictionary(List *names, List *parameters, Oid newOid);
 extern void RenameTSDictionary(List *oldname, const char *newname);
 extern void RemoveTSDictionary(List *names, DropBehavior behavior,
 				   bool missing_ok);
@@ -114,13 +114,13 @@ extern void RemoveTSDictionaryById(Oid dictId);
 extern void AlterTSDictionary(AlterTSDictionaryStmt *stmt);
 extern void AlterTSDictionaryOwner(List *name, Oid newOwnerId);
 
-extern void DefineTSTemplate(List *names, List *parameters);
+extern void DefineTSTemplate(List *names, List *parameters, Oid newOid);
 extern void RenameTSTemplate(List *oldname, const char *newname);
 extern void RemoveTSTemplate(List *names, DropBehavior behavior,
 				 bool missing_ok);
 extern void RemoveTSTemplateById(Oid tmplId);
 
-extern void DefineTSConfiguration(List *names, List *parameters);
+extern void DefineTSConfiguration(List *names, List *parameters, Oid newOid);
 extern void RenameTSConfiguration(List *oldname, const char *newname);
 extern void RemoveTSConfiguration(List *names, DropBehavior behavior,
 					  bool missing_ok);
