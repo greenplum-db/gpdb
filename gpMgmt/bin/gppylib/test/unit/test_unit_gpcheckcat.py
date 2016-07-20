@@ -156,7 +156,7 @@ class GpCheckCatTestCase(GpTestCase):
         self.subject.setError.assert_not_called()
 
     def test_do_repair_for_extra__issues_no_repair(self):
-        issues = {"a":1}
+        issues = {("pg_class", "oid"):"extra"}
         self.subject.do_repair_for_extra(issues)
         self.subject.setError.assert_any_call(self.subject.ERROR_NOREPAIR)
 

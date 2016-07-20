@@ -214,6 +214,7 @@ def getalldbs():
 ###############################
 def parseCommandLine():
     try:
+        # A colon following the flag indicates an argument is expected
         (options, args) = getopt.getopt(sys.argv[1:], '?p:P:U:B:vg:t:AOS:R:C:lE')
     except Exception, e:
         usage('Error: ' + str(e))
