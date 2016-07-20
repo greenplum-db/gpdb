@@ -1224,17 +1224,6 @@ class GpCatVersionDirectory(Command):
         return cmd.get_version()
 
 #-----------------------------------------------
-class GpSuspendSegmentsOnHost(Command):
-    def __init__(self, name, gpconfigstrings, resume, ctxt=LOCAL, remoteHost=None):
-        if resume:
-            pauseOrResume = "--resume"
-        else:
-            pauseOrResume = "--pause"
-
-        cmdStr="echo '%s' | $GPHOME/sbin/gpsuspend.py %s" % (gpconfigstrings, pauseOrResume)
-        Command.__init__(self,name,cmdStr,ctxt,remoteHost)
-
-#-----------------------------------------------
 class GpAddConfigScript(Command):
     def __init__(self, name, directorystring, entry, value=None, removeonly=False, ctxt=LOCAL, remoteHost=None):
         cmdStr="echo '%s' | $GPHOME/sbin/gpaddconfig.py --entry %s" % (directorystring, entry)

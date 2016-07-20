@@ -1111,7 +1111,7 @@ class GpMfr(Operation):
         """
         gplog dumps logs on stdout.  In order to show progress bars correctly,
         we don't want these logs on stdout.  If this class is used by other
-        Python modules (e.g. gpcrondump.py), we must provide a way to restore
+        Python modules (e.g. gpcrondump), we must provide a way to restore
         log level after we are done.
         """
         self.originalStdoutLog = gplog._SOUT_HANDLER.level

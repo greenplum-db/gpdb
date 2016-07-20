@@ -75,8 +75,6 @@ class GpCronDump(Operation):
             self.context.dump_database = self.context.dump_databases[0]
 
         self.include_email_file = options.include_email_file
-        if options.report_dir:
-            logger.warn("-y is a deprecacted option.  Report files are always generated with the backup set.")
 
         if self.context.incremental and len(self.context.dump_databases) == 0:
             raise ExceptionNoStackTraceNeeded("Must supply -x <database name> with incremental option")
@@ -1366,8 +1364,6 @@ def create_parser():
 
     addTo.add_option('-u', dest='backup_dir', metavar="<BACKUPFILEDIR>",
                      help="Directory where backup files are placed [default: data directories]")
-    addTo.add_option('-y', dest='report_dir', metavar="<REPORTFILEDIR>",
-                     help="DEPRECATED OPTION: Directory where report file is placed")
     addTo.add_option('-E', dest='encoding', metavar="<encoding>",
                      help="Dump the data under the given encoding")
     addTo.add_option('--clean', const='--clean', action='append_const', dest='output_options',

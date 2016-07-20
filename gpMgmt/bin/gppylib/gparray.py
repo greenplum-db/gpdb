@@ -864,8 +864,7 @@ def createSegmentRows( hostlist
         return rows
     elif mirror_type.lower().strip() == 'spread':
         #TODO: must be sure to put mirrors on a different subnet than primary.
-        #      this is a general problem for GPDB these days. perhaps we should
-        #      add something to gpdetective to be able to detect this and fix it.
+        #      this is a general problem for GPDB these days.
         #      best to have the interface mapping stuff 1st.
         content=0
         isprimary='f'
@@ -1506,7 +1505,7 @@ class GpArray:
         (called by gpexpand.)
 
         Note: Currently this is only used by the gpexpand rollback facility,
-        and by gpsuspend utility,
+        and by gpmigrator utility,
         there is currently NO expectation that this file format is saved
         on disk in any long term fashion.  
 

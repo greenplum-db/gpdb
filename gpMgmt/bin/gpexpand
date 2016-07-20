@@ -2795,8 +2795,8 @@ System Expansion is used to add segments to an existing GPDB array.
 gpexpand did not detect a System Expansion that is in progress.
 
 Before initiating a System Expansion, you need to provision and burn-in
-the new hardware.  Please be sure to run gpcheckperf/gpcheckos to make
-sure the new hardware is working properly.
+the new hardware.  Please be sure to run gpcheckperf to make sure the
+new hardware is working properly.
 
 Please refer to the Admin Guide for more information."""
 

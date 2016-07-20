@@ -7,14 +7,12 @@ bin/generate_load_tpch.pl
 bin/gp
 bin/gpaddmirrors.py
 bin/gpdbupgrade
-bin/gpexpandsystem
 bin/gpfaultinjector
 bin/gpha
 bin/gpma
 bin/gppaxos
 bin/gpprintdbsizes
 bin/gprecoverseg.py
-bin/gpsuspend
 bin/gptorment.pl
 bin/gpugcluster
 bin/lib/gpgetconfig.py
@@ -26,7 +24,5 @@ bin/run_operator_tests.pl
 bin/test_fsync
 bin/gp_filedump
 docs/contrib/README.gp_filedump
-docs/cli_help/gpsuspend_help
 lib/python/gppylib/programs/clsInjectFault.py
-sbin/gpsuspend.py
 

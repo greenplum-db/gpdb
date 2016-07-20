@@ -61,7 +61,7 @@ static bool testPartitioningSupport(void);
 static bool transformPassThroughParms(InputOptions * pInputOpts);
 static bool copyFilesToSegments(InputOptions * pInputOpts, SegmentDatabaseArray *segDBAr);
 static int	getRemoteVersion(void);
-static bool no_expand_children; /* Do not expand child partitions. This option is passed from gpcrondump.py */
+static bool no_expand_children; /* Do not expand child partitions. This option is passed from gpcrondump */
 
 /*
  * static and extern global variables left over from pg_dump
