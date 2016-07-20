@@ -118,7 +118,7 @@ show_motion_keys(Plan *plan, List *hashExpr, int nkeys, AttrNumber *keycols,
 			     const char *qlabel,
                  StringInfo str, int indent, ExplainState *es);
 static void
-show_static_part_selection(PartitionSelector *ps, Sequence *parent, StringInfo str, int indent, ExplainState *es);
+show_static_part_selection(Plan *plan, int indent, StringInfo str);
 
 /*
  * ExplainQuery -
@@ -153,23 +153,23 @@ ExplainQuery(ExplainStmt *stmt, const char *queryString,
 	/* prepare for projection of tuples */
 	tstate = begin_tup_output_tupdesc(dest, ExplainResultDesc(stmt));
 
-	if (rewritten == NIL)
-	{
-		/* In the case of an INSTEAD NOTHING, tell at least that */
-		do_text_output_oneline(tstate, "Query rewrites to nothing");
-	}
-	else
-	{
-		/* Explain every plan */
-		foreach(l, rewritten)
+		if (rewritten == NIL)
 		{
+			/* In the case of an INSTEAD NOTHING, tell at least that */
+			do_text_output_oneline(tstate, "Query rewrites to nothing");
+		}
+		else
+		{
+			/* Explain every plan */
+			foreach(l, rewritten)
+			{
 			ExplainOneQuery((Query *) lfirst(l), stmt,
 							queryString, params, tstate);
-			/* put a blank line between plans */
-			if (lnext(l) != NULL)
-				do_text_output_oneline(tstate, "");
+				/* put a blank line between plans */
+				if (lnext(l) != NULL)
+					do_text_output_oneline(tstate, "");
+			}
 		}
-	}
 
 	end_tup_output(tstate);
 }
@@ -283,7 +283,7 @@ ExplainOneQuery(Query *query, ExplainStmt *stmt, const char *queryString,
 	{
 		PlannedStmt *plan;
 
-		/* plan the query */
+	/* plan the query */
 		plan = planner(query, 0, params);
 
 		/* run it (if needed) and produce output */
@@ -384,7 +384,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 	/* Create a QueryDesc requesting no output */
 	queryDesc = CreateQueryDesc(plannedstmt,
 								queryString,
-								ActiveSnapshot, InvalidSnapshot,
+			                    ActiveSnapshot, InvalidSnapshot,
 								None_Receiver, params,
 								stmt->analyze);
 
@@ -427,7 +427,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 		{
 			queryDesc->plannedstmt->query_mem = ResourceQueueGetQueryMemoryLimit(queryDesc->plannedstmt, GetResQueueId());			
 		}
-	}
+    }
 
 #ifdef USE_CODEGEN
 	if (stmt->codegen && codegen && Gp_segment == -1) {
@@ -632,7 +632,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 			report_triggers(rInfo, show_relname, &buf);
 
 		foreach(l, targrels)
-		{
+				{
 			rInfo = (ResultRelInfo *) lfirst(l);
 			report_triggers(rInfo, show_relname, &buf);
 		}
@@ -1690,24 +1690,7 @@ explain_outNode(StringInfo str,
 				show_upper_qual(list_qual,
 								"Filter", plan,
 								str, indent, es);
-				if (((PartitionSelector *) plan)->staticSelection)
-				{
-					/*
-					 * We should not encounter static selectors as part of the
-					 * normal plan traversal: they are handled specially, as
-					 * part of a Sequence node.
-					 */
-					elog(WARNING, "unexpected static PartitionSelector");
-				}
-			}
-			break;
-		case T_Sequence:
-			{
-				Sequence *s = (Sequence *) plan;
-
-				if (s->static_selector)
-					show_static_part_selection(s->static_selector, s,
-											   str, indent, es);
+				show_static_part_selection(plan, indent, str);
 			}
 			break;
 		default:
@@ -2055,7 +2038,7 @@ show_grouping_keys(Plan        *plan,
 	/* Set up deparse context */
 	context = deparse_context_for_plan((Node *) outerPlan(subplan),
 									   (Node *) innerPlan(subplan),
-									   es->rtable);
+										   es->rtable);
 
 	if (IsA(plan, Agg))
 	{
@@ -2131,7 +2114,7 @@ show_sort_keys(Plan *sortplan, int nkeys, AttrNumber *keycols,
 	/* Set up deparsing context */
 	context = deparse_context_for_plan((Node *) outerPlan(sortplan),
 									   NULL,	/* Sort has no innerPlan */
-									   es->rtable);
+										   es->rtable);
 	useprefix = list_length(es->rtable) > 1;
 
 	for (keyno = 0; keyno < nkeys; keyno++)
@@ -2176,7 +2159,7 @@ show_motion_keys(Plan *plan, List *hashExpr, int nkeys, AttrNumber *keycols,
 	/* Set up deparse context */
 	context = deparse_context_for_plan((Node *) outerPlan(plan),
 									   NULL,	/* Motion has no innerPlan */
-									   es->rtable);
+										   es->rtable);
 
     /* Merge Receive ordering key */
     if (nkeys > 0)
@@ -2226,38 +2209,23 @@ show_motion_keys(Plan *plan, List *hashExpr, int nkeys, AttrNumber *keycols,
 
 /*
  * Show the number of statically selected partitions if available.
- *
- * This is similar to show_upper_qual(), but the "printablePredicate" produced
- * by ORCA is a bit special: INNER Vars refer to the child of the Sequence node
- * we are part of.
  */
 static void
-show_static_part_selection(PartitionSelector *ps, Sequence *parent,
-						   StringInfo str, int indent, ExplainState *es)
+show_static_part_selection(Plan *plan, int indent, StringInfo str)
 {
+	PartitionSelector *ps = (PartitionSelector *) plan;
+
 	if (!ps->staticSelection)
+	{
 		return;
 
 	if (ps->printablePredicate)
 	{
-		List	   *context;
-		bool		useprefix;
-		char	   *exprstr;
-		int			i;
-
-		/* Set up deparsing context */
-		context = deparse_context_for_plan(NULL,
-										   (Node *) parent,
-										   es->rtable);
-		useprefix = list_length(es->rtable) > 1;
-
-		/* Deparse the expression */
-		exprstr = deparse_expr_sweet(ps->printablePredicate, context, useprefix, false);
-
-		/* And add to str */
-		for (i = 0; i < indent; i++)
-			appendStringInfo(str, "  ");
-		appendStringInfo(str, "  %s: %s\n", "Partition Selector", exprstr);
+		show_upper_qual(list_make1(ps->printablePredicate),
+						"Partition Selector",
+						NULL, NULL,
+						NULL, (Plan *) parent,
+						str, indent, es);
 	}
 
 	int nPartsSelected = list_length(ps->staticPartOids);
