@@ -21,6 +21,8 @@
 #include "nodes/primnodes.h"
 #include "storage/itemptr.h"
 
+typedef struct PartitionSelector PartitionSelector;
+
 typedef struct DirectDispatchInfo
 {
      /**

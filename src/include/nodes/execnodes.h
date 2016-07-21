@@ -41,6 +41,8 @@ struct FileScanDescData;
 struct MirroredBufferPoolBulkLoadInfo;
 struct SliceTable;
 
+typedef struct PartitionSelectorState PartitionSelectorState;
+
 /* ----------------
  *	  IndexInfo information
  *

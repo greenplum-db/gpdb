@@ -117,8 +117,10 @@ static void
 show_motion_keys(Plan *plan, List *hashExpr, int nkeys, AttrNumber *keycols,
 			     const char *qlabel,
                  StringInfo str, int indent, ExplainState *es);
+
 static void
-show_static_part_selection(Plan *plan, int indent, StringInfo str);
+explain_partition_selector(PartitionSelector *ps, Sequence *parent,
+						   StringInfo str, int indent, ExplainState *es);
 
 /*
  * ExplainQuery -
@@ -1684,16 +1686,8 @@ explain_outNode(StringInfo str,
 			break;
 		case T_PartitionSelector:
 			{
-				List *list_qual = NULL;
-				Node *printablePredicate = ((PartitionSelector *) plan)->printablePredicate;
-				if (NULL != printablePredicate)
-				{
-					list_qual = list_make1(printablePredicate);
-				}
-				show_upper_qual(list_qual,
-								"Filter", plan,
-								str, indent, es);
-				show_static_part_selection(plan, indent, str);
+				explain_partition_selector(plan, parentPlan,
+						str, indent, es);
 			}
 			break;
 		default:
@@ -2219,34 +2213,46 @@ show_motion_keys(Plan *plan, List *hashExpr, int nkeys, AttrNumber *keycols,
 }                               /* show_motion_keys */
 
 /*
- * Show the number of statically selected partitions if available.
+ * Explain a partition selector node, including partition elimination expression
+ * and number of statically selected partitions, if available.
  */
 static void
-show_static_part_selection(Plan *plan, int indent, StringInfo str)
+explain_partition_selector(PartitionSelector *ps, Sequence *parent,
+						   StringInfo str, int indent, ExplainState *es)
 {
-	PartitionSelector *ps = (PartitionSelector *) plan;
-
-	if (! ps->staticSelection)
-	{
-		return;
-
 	if (ps->printablePredicate)
 	{
-		show_upper_qual(list_make1(ps->printablePredicate),
-						"Partition Selector",
-						NULL, NULL,
-						NULL, (Plan *) parent,
-						str, indent, es);
+		List	   *context;
+		bool		useprefix;
+		char	   *exprstr;
+		int			i;
+
+		/* Set up deparsing context */
+		context = deparse_context_for_plan(NULL,
+										   (Node *) parent,
+										   es->rtable);
+		useprefix = list_length(es->rtable) > 1;
+
+		/* Deparse the expression */
+		exprstr = deparse_expr_sweet(ps->printablePredicate, context, useprefix, false);
+
+		/* And add to str */
+		for (i = 0; i < indent; i++)
+			appendStringInfo(str, "  ");
+		appendStringInfo(str, "  %s: %s\n", "Filter", exprstr);
 	}
 
-	int nPartsSelected = list_length(ps->staticPartOids);
-	int nPartsTotal = countLeafPartTables(ps->relid);
-	for (int i = 0; i < indent; i++)
+	if (ps->staticSelection)
 	{
-		appendStringInfoString(str, "  ");
-	}
+		int nPartsSelected = list_length(ps->staticPartOids);
+		int nPartsTotal = countLeafPartTables(ps->relid);
+		for (int i = 0; i < indent; i++)
+		{
+			appendStringInfoString(str, "  ");
+		}
 
-	appendStringInfo(str, "  Partitions selected:  %d (out of %d)\n", nPartsSelected, nPartsTotal);
+		appendStringInfo(str, "  Partitions selected: %d (out of %d)\n", nPartsSelected, nPartsTotal);
+	}
 }
 
 /*
