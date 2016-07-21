@@ -155,23 +155,23 @@ ExplainQuery(ExplainStmt *stmt, const char *queryString,
 	/* prepare for projection of tuples */
 	tstate = begin_tup_output_tupdesc(dest, ExplainResultDesc(stmt));
 
-		if (rewritten == NIL)
+	if (rewritten == NIL)
+	{
+		/* In the case of an INSTEAD NOTHING, tell at least that */
+		do_text_output_oneline(tstate, "Query rewrites to nothing");
+	}
+	else
+	{
+		/* Explain every plan */
+		foreach(l, rewritten)
 		{
-			/* In the case of an INSTEAD NOTHING, tell at least that */
-			do_text_output_oneline(tstate, "Query rewrites to nothing");
-		}
-		else
-		{
-			/* Explain every plan */
-			foreach(l, rewritten)
-			{
 			ExplainOneQuery((Query *) lfirst(l), stmt,
 							queryString, params, tstate);
-				/* put a blank line between plans */
-				if (lnext(l) != NULL)
-					do_text_output_oneline(tstate, "");
-			}
+			/* put a blank line between plans */
+			if (lnext(l) != NULL)
+				do_text_output_oneline(tstate, "");
 		}
+	}
 
 	end_tup_output(tstate);
 }
@@ -285,7 +285,7 @@ ExplainOneQuery(Query *query, ExplainStmt *stmt, const char *queryString,
 	{
 		PlannedStmt *plan;
 
-	/* plan the query */
+		/* plan the query */
 		plan = planner(query, 0, params);
 
 		/* run it (if needed) and produce output */
@@ -386,7 +386,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 	/* Create a QueryDesc requesting no output */
 	queryDesc = CreateQueryDesc(plannedstmt,
 								queryString,
-			                    ActiveSnapshot, InvalidSnapshot,
+								ActiveSnapshot, InvalidSnapshot,
 								None_Receiver, params,
 								stmt->analyze);
 
@@ -429,7 +429,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 		{
 			queryDesc->plannedstmt->query_mem = ResourceQueueGetQueryMemoryLimit(queryDesc->plannedstmt, GetResQueueId());			
 		}
-    }
+	}
 
 #ifdef USE_CODEGEN
 	if (stmt->codegen && codegen && Gp_segment == -1) {
@@ -634,7 +634,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 			report_triggers(rInfo, show_relname, &buf);
 
 		foreach(l, targrels)
-			{
+		{
 			rInfo = (ResultRelInfo *) lfirst(l);
 			report_triggers(rInfo, show_relname, &buf);
 		}
@@ -2043,7 +2043,7 @@ show_grouping_keys(Plan        *plan,
 	/* Set up deparse context */
 	context = deparse_context_for_plan((Node *) outerPlan(subplan),
 									   (Node *) innerPlan(subplan),
-										   es->rtable);
+									   es->rtable);
 
 	if (IsA(plan, Agg))
 	{
@@ -2119,7 +2119,7 @@ show_sort_keys(Plan *sortplan, int nkeys, AttrNumber *keycols,
 	/* Set up deparsing context */
 	context = deparse_context_for_plan((Node *) outerPlan(sortplan),
 									   NULL,	/* Sort has no innerPlan */
-										   es->rtable);
+									   es->rtable);
 	useprefix = list_length(es->rtable) > 1;
 
 	for (keyno = 0; keyno < nkeys; keyno++)
@@ -2164,7 +2164,7 @@ show_motion_keys(Plan *plan, List *hashExpr, int nkeys, AttrNumber *keycols,
 	/* Set up deparse context */
 	context = deparse_context_for_plan((Node *) outerPlan(plan),
 									   NULL,	/* Motion has no innerPlan */
-										   es->rtable);
+									   es->rtable);
 
     /* Merge Receive ordering key */
     if (nkeys > 0)
@@ -2228,7 +2228,7 @@ explain_partition_selector(PartitionSelector *ps, Sequence *parent,
 		int			i;
 
 		/* Set up deparsing context */
-		context = deparse_context_for_plan(NULL,
+		context = deparse_context_for_plan((Node *) parent,
 										   (Node *) parent,
 										   es->rtable);
 		useprefix = list_length(es->rtable) > 1;
