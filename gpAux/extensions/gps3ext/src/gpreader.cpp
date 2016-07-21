@@ -11,6 +11,8 @@
 #include "s3macros.h"
 #include "s3utils.h"
 
+string gpReaderErrorMessage;
+
 // Thread related functions, called only by gpreader and gpcheckcloud
 #define MUTEX_TYPE pthread_mutex_t
 #define MUTEX_SETUP(x) pthread_mutex_init(&(x), NULL)
@@ -60,8 +62,6 @@ int thread_cleanup(void) {
     mutex_buf = NULL;
     return 1;
 }
-
-string gpReaderErrorMessage;
 
 GPReader::GPReader(const string& url) {
     constructReaderParam(url);

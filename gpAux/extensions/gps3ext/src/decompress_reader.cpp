@@ -1,4 +1,5 @@
 #include <algorithm>
+
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include <string.h>
@@ -36,7 +37,7 @@ void DecompressReader::setReader(Reader *reader) {
 }
 
 void DecompressReader::open(const ReaderParams &params) {
-    // allocate inflate state
+    // allocate inflate state for zlib
     zstream.zalloc = Z_NULL;
     zstream.zfree = Z_NULL;
     zstream.opaque = Z_NULL;

@@ -3,8 +3,10 @@
 
 void S3CommonReader::open(const ReaderParams &params) {
     this->keyReader.setS3interface(s3service);
+
     S3CompressionType compressionType =
         s3service->checkCompressionType(params.getKeyUrl(), params.getRegion(), params.getCred());
+
     switch (compressionType) {
         case S3_COMPRESSION_GZIP:
             this->upstreamReader = &this->decompressReader;
@@ -16,6 +18,7 @@ void S3CommonReader::open(const ReaderParams &params) {
         default:
             CHECK_OR_DIE_MSG(false, "%s", "unknown file type");
     };
+
     this->upstreamReader->open(params);
 }
 

@@ -109,7 +109,7 @@ uint64_t ChunkBuffer::read(char* buf, uint64_t len) {
     return lenToRead;
 }
 
-// returning -1 means error
+// returning uint64_t(-1) means error
 uint64_t ChunkBuffer::fill() {
     pthread_mutex_lock(&this->statusMutex);
     while (this->status != ReadyToFill) {
@@ -249,6 +249,7 @@ uint64_t S3KeyReader::read(char* buf, uint64_t count) {
     return readLen;
 }
 
+// reset marks before reading next key
 void S3KeyReader::reset() {
     this->sharedError = false;
     this->curReadingChunk = 0;

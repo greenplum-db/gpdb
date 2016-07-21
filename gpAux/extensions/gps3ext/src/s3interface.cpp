@@ -19,6 +19,7 @@
 #include "s3interface.h"
 using std::stringstream;
 
+// use destructor ~XMLContextHolder() to do the cleanup
 class XMLContextHolder {
    public:
     XMLContextHolder(xmlParserCtxtPtr ctx) : context(ctx) {
@@ -88,7 +89,7 @@ HTTPHeaders S3Service::composeHTTPHeaders(const string &url, const string &marke
 
     UrlParser p(url);
 
-    std::stringstream query;
+    stringstream query;
     if (!marker.empty()) {
         query << "marker=" << marker;
         if (!prefix.empty()) {

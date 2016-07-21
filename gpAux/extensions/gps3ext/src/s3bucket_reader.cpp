@@ -44,7 +44,7 @@ void S3BucketReader::open(const ReaderParams &params) {
     this->chunkSize = params.getChunkSize();
     this->numOfChunks = params.getNumOfChunks();
 
-    this->validateURL();
+    this->parseURL();
 
     CHECK_OR_DIE(this->s3interface != NULL);
 
@@ -188,7 +188,7 @@ void S3BucketReader::SetBucketAndPrefix() {
     this->prefix = url.substr(ibegin + 1, url.length() - ibegin - 1);
 }
 
-void S3BucketReader::validateURL() {
+void S3BucketReader::parseURL() {
     this->SetSchema();
     this->SetRegion();
     this->SetBucketAndPrefix();

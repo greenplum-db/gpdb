@@ -1,5 +1,5 @@
-#ifndef __S3_UTILFUNCTIONS__
-#define __S3_UTILFUNCTIONS__
+#ifndef __S3_UTILS_H__
+#define __S3_UTILS_H__
 
 #include <stdint.h>
 #include <sys/types.h>
@@ -69,12 +69,12 @@ class Config {
     ini_t* _conf;
 };
 
-bool to_bool(std::string str);
+bool to_bool(string str);
 
-std::string uri_encode(const std::string& src);
+string uri_encode(const string& src);
 
-std::string uri_decode(const std::string& src);
+string uri_decode(const string& src);
 
 void find_replace(string& str, const string& find, const string& replace);
 
-#endif  // _UTILFUNCTIONS_
+#endif  // __S3_UTILS_H__

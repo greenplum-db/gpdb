@@ -30,6 +30,7 @@ struct BucketContent {
     }
     ~BucketContent() {
     }
+
     string getName() const {
         return this->name;
     };

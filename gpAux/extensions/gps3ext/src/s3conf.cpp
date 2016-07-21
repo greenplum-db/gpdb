@@ -50,7 +50,7 @@ int32_t s3ext_segnum = -1;
 int32_t s3ext_logsock_udp = -1;
 struct sockaddr_in s3ext_logserveraddr;
 
-// not thread safe!!
+// not thread safe
 bool InitConfig(const string& conf_path, const string section = "default") {
     if (conf_path == "") {
 #ifndef S3_STANDALONE

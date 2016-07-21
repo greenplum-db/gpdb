@@ -237,7 +237,7 @@ TEST_F(GPReaderTest, ReadFromEmptyURL) {
     MockS3RESTfulService mockRestfulService;
     MockGPReader gpreader(url, &mockRestfulService);
 
-    // an exception should be throwed in validateURL()
+    // an exception should be throwed in parseURL()
     //    with message "'' is not valid"
     ReaderParams params;
     EXPECT_THROW(gpreader.open(params), std::runtime_error);
@@ -249,7 +249,7 @@ TEST_F(GPReaderTest, ReadFromInvalidURL) {
     MockS3RESTfulService mockRestfulService;
     MockGPReader gpreader(url, &mockRestfulService);
 
-    // an exception should be throwed in validateURL()
+    // an exception should be throwed in parseURL()
     //    with message "'s3://' is not valid,"
     ReaderParams params;
     EXPECT_THROW(gpreader.open(params), std::runtime_error);

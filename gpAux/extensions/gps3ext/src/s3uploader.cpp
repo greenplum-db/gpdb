@@ -169,8 +169,8 @@ const char *GetUploadId(const char *host, const char *bucket, const char *obj_na
     //     <Key>example-object</Key>
     //       <UploadId>VXBsb2FkIElEIGZvciA2aWWpbmcncyBteS1tb3ZpZS5tMnRzIHVwbG9hZA</UploadId>
     //       </InitiateMultipartUploadResult>
-    std::stringstream url;
-    std::stringstream path_with_query;
+    stringstream url;
+    stringstream path_with_query;
     XMLInfo xml;
     xml.ctxt = NULL;
 
@@ -248,8 +248,8 @@ const char *GetUploadId(const char *host, const char *bucket, const char *obj_na
 const char *PartPutS3Object(const char *host, const char *bucket, const char *obj_name,
                             const S3Credential &cred, const char *data, uint64_t data_size,
                             uint64_t part_number, const char *upload_id) {
-    std::stringstream url;
-    std::stringstream path_with_query;
+    stringstream url;
+    stringstream path_with_query;
     XMLInfo xml;
     xml.ctxt = NULL;
 
@@ -353,7 +353,7 @@ const char *PartPutS3Object(const char *host, const char *bucket, const char *ob
 
     // TODO general header content extracting func
     uint64_t etag_start_pos = out.str().find("ETag: ") + 6;
-    std::string etag_to_end = out.str().substr(etag_start_pos);
+    string etag_to_end = out.str().substr(etag_start_pos);
     // RFC 2616 states "HTTP/1.1 defines the sequence CR LF as the end-of-line
     // marker for all protocol elements except the entity-body"
     uint64_t etag_len = etag_to_end.find("\r");
@@ -413,8 +413,8 @@ const char *PartPutS3Object(const char *host, const char *bucket, const char *ob
 bool CompleteMultiPutS3(const char *host, const char *bucket, const char *obj_name,
                         const char *upload_id, const char **etag_array, uint64_t count,
                         const S3Credential &cred) {
-    std::stringstream url;
-    std::stringstream path_with_query;
+    stringstream url;
+    stringstream path_with_query;
     XMLInfo xml;
     xml.ctxt = NULL;
 
@@ -452,7 +452,7 @@ bool CompleteMultiPutS3(const char *host, const char *bucket, const char *obj_na
     //     <ETag>"acbd18db4cc2f85cedef654fccc4a4d8"</ETag>
     //   </Part>
     // </CompleteMultipartUpload>
-    std::stringstream body;
+    stringstream body;
 
     body << "<CompleteMultipartUpload>\n";
     for (uint64_t i = 0; i < count; ++i) {

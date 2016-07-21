@@ -4,7 +4,7 @@
 #include <zlib.h>
 #include "reader.h"
 
-// 256K by default
+// 2MB by default
 extern uint64_t S3_ZIP_CHUNKSIZE;
 
 class DecompressReader : public Reader {

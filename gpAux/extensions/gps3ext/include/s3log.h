@@ -1,5 +1,5 @@
-#ifndef __S3LOG__
-#define __S3LOG__
+#ifndef __S3_LOG_H__
+#define __S3_LOG_H__
 
 #include <cstdarg>
 #include <cstdio>
@@ -13,10 +13,10 @@ enum LOGLEVEL { EXT_FATAL, EXT_ERROR, EXT_WARNING, EXT_INFO, EXT_DEBUG };
 
 // log type
 enum LOGTYPE {
-    REMOTE_LOG,    // log to remote udp server
-    LOCAL_LOG,     // log to local unix dgram domain socket
-    INTERNAL_LOG,  // use pg elog
-    STDERR_LOG     // use stderr
+    REMOTE_LOG,    // log to remote UDP server
+    LOCAL_LOG,     // log to local Unix domain socket
+    INTERNAL_LOG,  // use PostgreSQL's elog()
+    STDERR_LOG     // use STDERR
 };
 
 void LogMessage(LOGLEVEL level, const char* fmt, ...);
@@ -48,4 +48,4 @@ LOGLEVEL getLogLevel(const char* v);
 
 void InitRemoteLog();
 
-#endif  // __S3LOG__
+#endif  // __S3_LOG_H__

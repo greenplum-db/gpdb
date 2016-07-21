@@ -23,7 +23,7 @@ HTTPHeaders::~HTTPHeaders() {
     this->FreeList();
 }
 
-bool HTTPHeaders::Add(HeaderField f, const std::string &v) {
+bool HTTPHeaders::Add(HeaderField f, const string &v) {
     if (v.empty()) {
         return false;
     } else {

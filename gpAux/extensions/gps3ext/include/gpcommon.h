@@ -5,7 +5,7 @@
 #include <signal.h>
 #include <sys/types.h>
 
-// GPDB's global val
+// GPDB's global variable
 extern volatile bool QueryCancelPending;
 
 // TODO change to functions getgpsegmentId() and getgpsegmentCount()

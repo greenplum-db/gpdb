@@ -14,7 +14,7 @@ using std::vector;
 using std::map;
 
 enum ResponseStatus {
-    RESPONSE_OK,     // everything is ok
+    RESPONSE_OK,     // everything is OK
     RESPONSE_FAIL,   // curl failed (i.e., the status is not CURLE_OK)
     RESPONSE_ERROR,  // server error (server return code is not 200)
 };

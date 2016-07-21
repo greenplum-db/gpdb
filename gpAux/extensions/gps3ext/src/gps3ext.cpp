@@ -1,4 +1,4 @@
-// Required by building cpp dynamic library via Makefile of GPDB.
+// Required by building CPP dynamic library via Makefile of GPDB.
 #define PGDLLIMPORT "C"
 
 #include <signal.h>
@@ -24,7 +24,6 @@
 #include "s3utils.h"
 
 /* Do the module magic dance */
-
 PG_MODULE_MAGIC;
 PG_FUNCTION_INFO_V1(s3_export);
 PG_FUNCTION_INFO_V1(s3_import);

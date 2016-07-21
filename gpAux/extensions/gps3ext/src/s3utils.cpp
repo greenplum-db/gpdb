@@ -226,7 +226,7 @@ bool Config::Scan(const string &sec, const string &key, const char *scanfmt, voi
     return ini_sget(this->_conf, sec.c_str(), key.c_str(), scanfmt, dst);
 }
 
-bool to_bool(std::string str) {
+bool to_bool(string str) {
     std::transform(str.begin(), str.end(), str.begin(), ::tolower);
     if ((str == "yes") || (str == "true") || (str == "y") || (str == "t") || (str == "1")) {
         return true;
@@ -274,7 +274,7 @@ const char uri_mapping[256] = {
     /* F */ -1, -1, -1, -1, -1, -1, -1, -1,
     /*   */ -1, -1, -1, -1, -1, -1, -1, -1};
 
-// alpha, num and - _ . ~ are reserved(RFC 3986).
+// alpha, numbers and - _ . ~ are reserved(RFC 3986).
 const char uri_reserved[256] = {
     /*      0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F */
     /* 0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -297,7 +297,7 @@ const char uri_reserved[256] = {
     /* E */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     /* F */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-std::string uri_encode(const std::string &src) {
+string uri_encode(const string &src) {
     const unsigned char *src_str = (const unsigned char *)src.c_str();
     const int src_len = src.length();
 
@@ -319,12 +319,12 @@ std::string uri_encode(const std::string &src) {
         src_str++;
     }
 
-    std::string ret_str((char *)sub_start, (char *)sub_end);
+    string ret_str((char *)sub_start, (char *)sub_end);
     delete[] sub_start;
     return ret_str;
 }
 
-std::string uri_decode(const std::string &src) {
+string uri_decode(const string &src) {
     const unsigned char *src_str = (const unsigned char *)src.c_str();
     const int src_len = src.length();
 
@@ -353,7 +353,7 @@ std::string uri_decode(const std::string &src) {
 
     while (src_str < src_end) *sub_end++ = *src_str++;
 
-    std::string ret_str(sub_start, sub_end);
+    string ret_str(sub_start, sub_end);
     delete[] sub_start;
     return ret_str;
 }

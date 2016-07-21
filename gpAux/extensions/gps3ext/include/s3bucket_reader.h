@@ -27,10 +27,10 @@ class S3BucketReader : public Reader {
         this->upstreamReader = reader;
     }
 
-    void validateURL();
-    void validateURL(const string &url) {
+    void parseURL();
+    void parseURL(const string &url) {
         this->url = url;
-        validateURL();
+        parseURL();
     };
 
     ListBucketResult *getKeyList() {

@@ -24,6 +24,7 @@ class UrlParser {
     }
 
    private:
+    // get the string of URL field
     string extractField(const struct http_parser_url *u, http_parser_url_fields i);
 
     string schema;

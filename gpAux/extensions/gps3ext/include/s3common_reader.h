@@ -6,7 +6,7 @@
 
 class S3CommonReader : public Reader {
    public:
-    S3CommonReader() {
+    S3CommonReader() : upstreamReader(NULL), s3service(NULL) {
     }
 
     virtual ~S3CommonReader() {
