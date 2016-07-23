@@ -194,6 +194,8 @@ optimize_query(Query *parse, ParamListInfo boundParams)
 	glob->rewindPlanIDs = NULL;
 	glob->transientPlan = false;
 	glob->share.sharedNodes = NIL;
+	glob->share.producers = NULL;
+	glob->share.producer_count = 0;
 	glob->share.sliceMarks = NIL;
 	glob->share.motStack = NIL;
 	glob->share.qdShares = NIL;
@@ -204,6 +206,7 @@ optimize_query(Query *parse, ParamListInfo boundParams)
 	glob->subplans = NIL;
 	glob->relationOids = NIL;
 	glob->invalItems = NIL;
+	glob->planGenerator = PLANGEN_OPTIMIZER;
 
 	/* create a local copy to hand to the optimizer */
 	pqueryCopy = (Query *) copyObject(parse);
@@ -241,6 +244,20 @@ optimize_query(Query *parse, ParamListInfo boundParams)
 	 */
 	glob->finalrtable = result->rtable;
 	glob->subplans = result->subplans;
+
+	/*
+	 * For optimizer, we already have share_id and the plan tree is already a tree.
+	 * However, the apply_shareinput_dag_to_tree walker does more than DAG conversion.
+	 * It will also populate column names for RTE_CTE entries that will be later used
+	 * for readable column names in EXPLAIN, if needed.
+	 */
+	foreach(lp, glob->subplans)
+	{
+		Plan	   *subplan = (Plan *) lfirst(lp);
+
+		lfirst(lp) = apply_shareinput_dag_to_tree(glob, subplan, result->rtable);
+	}
+	result->planTree = apply_shareinput_dag_to_tree(glob, result->planTree, result->rtable);
 
 	/* Post-process ShareInputScan nodes */
 	(void) apply_shareinput_xslice(result->planTree, glob);
@@ -426,11 +443,14 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	glob->transientPlan = false;
 	/* ApplyShareInputContext initialization. */
 	glob->share.sharedNodes = NIL;
+	glob->share.producers = NULL;
+	glob->share.producer_count = 0;
 	glob->share.sliceMarks = NIL;
 	glob->share.motStack = NIL;
 	glob->share.qdShares = NIL;
 	glob->share.qdSlices = NIL;
 	glob->share.nextPlanId = 0;
+	glob->planGenerator = PLANGEN_PLANNER;
 
 	/* Determine what fraction of the plan is likely to be scanned */
 	if (cursorOptions & CURSOR_OPT_FAST_PLAN)

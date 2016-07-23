@@ -72,6 +72,8 @@ typedef struct ApplyShareInputContext
 	List *qdShares;
 	List *qdSlices;
 	int nextPlanId;
+	ShareInputScan **producers;
+	int producer_count;
 } ApplyShareInputContext;
 
 
@@ -108,6 +110,7 @@ typedef struct PlannerGlobal
 
 	ApplyShareInputContext share;	/* workspace for GPDB plan sharing */
 
+	PlanGenerator planGenerator;	/* Whether planner/optimizer generated the plan */
 } PlannerGlobal;
 
 /*
