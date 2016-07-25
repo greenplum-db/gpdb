@@ -100,6 +100,20 @@ void GPReader::close() {
     this->bucketReader.close();
 }
 
+void CheckEssentialConfig() {
+    if (s3ext_accessid.empty()) {
+        CHECK_OR_DIE_MSG(false, "%s", "\"FATAL: access id not set\"");
+    }
+
+    if (s3ext_secret.empty()) {
+        CHECK_OR_DIE_MSG(false, "%s", "\"FATAL: secret id not set\"");
+    }
+
+    if ((s3ext_segnum == -1) || (s3ext_segid == -1)) {
+        CHECK_OR_DIE_MSG(false, "%s", "\"FATAL: segment id is invalid\"");
+    }
+}
+
 // invoked by s3_import(), need to be exception safe
 GPReader* reader_init(const char* url_with_options) {
     GPReader* reader = NULL;
@@ -118,12 +132,15 @@ GPReader* reader_init(const char* url_with_options) {
 
         string config_path = get_opt_s3(urlWithOptions, "config");
         if (config_path.empty()) {
+            S3ERROR("The 'config' parameter is not provided, use default value 's3/s3.conf'.");
             config_path = "s3/s3.conf";
         }
 
         if (!InitConfig(config_path, "default")) {
             return NULL;
         }
+
+        CheckEssentialConfig();
 
         InitRemoteLog();
 
@@ -140,7 +157,7 @@ GPReader* reader_init(const char* url_with_options) {
         if (reader != NULL) {
             delete reader;
         }
-        S3ERROR("reader_init caught an exception: %s, aborting", e.what());
+        S3ERROR("reader_init caught an exception: %s", e.what());
         gpReaderErrorMessage = e.what();
         return NULL;
     }
@@ -162,7 +179,7 @@ bool reader_transfer_data(GPReader* reader, char* data_buf, int& data_len) {
         // sure read_len <= data_len here, hence truncation will never happen
         data_len = (int)read_len;
     } catch (std::exception& e) {
-        S3ERROR("reader_transfer_data caught an exception: %s, aborting", e.what());
+        S3ERROR("reader_transfer_data caught an exception: %s", e.what());
         gpReaderErrorMessage = e.what();
         return false;
     }
@@ -182,7 +199,7 @@ bool reader_cleanup(GPReader** reader) {
             result = false;
         }
     } catch (std::exception& e) {
-        S3ERROR("reader_cleanup caught an exception: %s, aborting", e.what());
+        S3ERROR("reader_cleanup caught an exception: %s", e.what());
         gpReaderErrorMessage = e.what();
         result = false;
     }

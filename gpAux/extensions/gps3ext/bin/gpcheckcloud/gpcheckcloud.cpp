@@ -1,51 +1,80 @@
+#include <map>
+#include <sstream>
+#include <string>
+
 #include "gpcheckcloud.h"
+
+using std::map;
+using std::string;
+using std::stringstream;
 
 volatile bool QueryCancelPending = false;
 
-int main(int argc, char *argv[]) {
+void printUsage(FILE *stream) {
+    fprintf(stream,
+            "Usage: gpcheckcloud -c \"s3://endpoint/bucket/prefix "
+            "config=path_to_config_file\", to check the configuration.\n"
+            "       gpcheckcloud -d \"s3://endpoint/bucket/prefix "
+            "config=path_to_config_file\", to download and output to stdout.\n"
+            "       gpcheckcloud -t, to show the config template.\n"
+            "       gpcheckcloud -h, to show this help.\n");
+}
+
+// parse the arguments into char-string value pairs
+map<char, string> parseCommandLineArgs(int argc, char *argv[]) {
     int opt = 0;
-    bool ret = true;
-
-    s3ext_loglevel = EXT_ERROR;
-    s3ext_logtype = STDERR_LOG;
-
-    if (argc == 1) {
-        print_usage(stderr);
-        exit(EXIT_FAILURE);
-    }
+    map<char, string> optionPairs;
 
     while ((opt = getopt(argc, argv, "c:d:ht")) != -1) {
         switch (opt) {
             case 'c':
-                ret = check_config(optarg);
-                break;
             case 'd':
-                ret = s3_download(optarg);
-                break;
             case 'h':
-                print_usage(stdout);
-                break;
             case 't':
-                print_template();
+                if (optarg == NULL) {
+                    optionPairs[opt] = "";
+                } else if (optarg[0] == '-') {
+                    fprintf(stderr, "Failed. Invalid argument for -%c: '%s'\n\n", opt, optarg);
+                    printUsage(stderr);
+                    exit(EXIT_FAILURE);
+                } else {
+                    optionPairs[opt] = optarg;
+                }
+
                 break;
-            default:
-                print_usage(stderr);
+            default:  // '?'
+                printUsage(stderr);
                 exit(EXIT_FAILURE);
         }
-
-        break;
     }
 
-    if (ret) {
-        exit(EXIT_SUCCESS);
-    } else {
-        fprintf(stderr, "Failed. Please check the arguments and configuration file.\n\n");
-        print_usage(stderr);
+    return optionPairs;
+}
+
+// check if command line arguments are valid
+void validateCommadLineArgs(map<char, string> &optionPairs) {
+    // only one option is allowed(for now)
+    if (optionPairs.size() > 1) {
+        stringstream ss;
+
+        ss << "Failed. Can't set options ";
+
+        // concatenate all option names
+        // e.g. if we have -c and -d, insert "-c, -d" into the stream.
+        for (map<char, string>::iterator i = optionPairs.begin(); i != optionPairs.end(); i++) {
+            ss << "'-" << i->first << "' ";
+        }
+
+        ss << "at the same time.";
+
+        // example message: "Failed. Can't set options '-c' '-d' at the same time."
+        fprintf(stderr, "%s\n\n", ss.str().c_str());
+        printUsage(stderr);
         exit(EXIT_FAILURE);
     }
 }
 
-void print_template() {
+void printTemplate() {
     printf(
         "[default]\n"
         "secret = \"aws secret\"\n"
@@ -57,27 +86,12 @@ void print_template() {
         "encryption = true\n");
 }
 
-void print_usage(FILE *stream) {
-    fprintf(stream,
-            "Usage: gpcheckcloud -c \"s3://endpoint/bucket/prefix "
-            "config=path_to_config_file\", to check the configuration.\n"
-            "       gpcheckcloud -d \"s3://endpoint/bucket/prefix "
-            "config=path_to_config_file\", to download and output to stdout.\n"
-            "       gpcheckcloud -t, to show the config template.\n"
-            "       gpcheckcloud -h, to show this help.\n");
-}
-
-uint64_t print_contents(ListBucketResult *r) {
+uint64_t printBucketContents(ListBucketResult *result) {
     char urlbuf[256];
     uint64_t count = 0;
     vector<BucketContent *>::iterator i;
 
-    for (i = r->contents.begin(); i != r->contents.end(); i++) {
-        if ((s3ext_loglevel <= EXT_WARNING) && count > 8) {
-            printf("... ...\n");
-            break;
-        }
-
+    for (i = result->contents.begin(); i != result->contents.end(); i++) {
         BucketContent *p = *i;
         snprintf(urlbuf, 256, "%s", p->getName().c_str());
         printf("File: %s, Size: %" PRIu64 "\n", urlbuf, p->getSize());
@@ -88,24 +102,24 @@ uint64_t print_contents(ListBucketResult *r) {
     return count;
 }
 
-bool check_config(const char *url_with_options) {
-    if (!url_with_options) {
+bool checkConfig(const char *urlWithOptions) {
+    if (!urlWithOptions) {
         return false;
     }
 
-    GPReader *reader = reader_init(url_with_options);
+    GPReader *reader = reader_init(urlWithOptions);
     if (!reader) {
         return false;
     }
 
     ListBucketResult *result = reader->getKeyList();
     if (result != NULL) {
-        if (print_contents(result)) {
-            printf("\nYea! Your configuration works well.\n");
+        if (printBucketContents(result)) {
+            fprintf(stderr, "\nYour configuration works well.\n");
         } else {
-            printf(
-                "\nYour configuration works well, however there is no file "
-                "matching your prefix.\n");
+            fprintf(stderr,
+                    "\nYour configuration works well, however there is no file matching your "
+                    "prefix.\n");
         }
     }
 
@@ -114,8 +128,8 @@ bool check_config(const char *url_with_options) {
     return true;
 }
 
-bool s3_download(const char *url_with_options) {
-    if (!url_with_options) {
+bool downloadS3(const char *urlWithOptions) {
+    if (!urlWithOptions) {
         return false;
     }
 
@@ -125,7 +139,7 @@ bool s3_download(const char *url_with_options) {
 
     thread_setup();
 
-    GPReader *reader = reader_init(url_with_options);
+    GPReader *reader = reader_init(urlWithOptions);
     if (!reader) {
         return false;
     }
@@ -134,7 +148,7 @@ bool s3_download(const char *url_with_options) {
         data_len = BUF_SIZE;
 
         if (!reader_transfer_data(reader, data_buf, data_len)) {
-            fprintf(stderr, "Failed to read data\n");
+            fprintf(stderr, "Failed to read data from Amazon S3\n");
             ret = false;
             break;
         }
@@ -147,4 +161,50 @@ bool s3_download(const char *url_with_options) {
     thread_cleanup();
 
     return ret;
+}
+
+int main(int argc, char *argv[]) {
+    bool ret = true;
+
+    s3ext_loglevel = EXT_ERROR;
+    s3ext_logtype = STDERR_LOG;
+
+    if (argc == 1) {
+        printUsage(stderr);
+        exit(EXIT_FAILURE);
+    }
+
+    map<char, string> optionPairs = parseCommandLineArgs(argc, argv);
+
+    validateCommadLineArgs(optionPairs);
+
+    if (!optionPairs.empty()) {
+        const char *arg = optionPairs.begin()->second.c_str();
+
+        switch (optionPairs.begin()->first) {
+            case 'c':
+                ret = checkConfig(arg);
+                break;
+            case 'd':
+                ret = downloadS3(arg);
+                break;
+            case 'h':
+                printUsage(stdout);
+                break;
+            case 't':
+                printTemplate();
+                break;
+            default:
+                printUsage(stderr);
+                exit(EXIT_FAILURE);
+        }
+    }
+
+    if (ret) {
+        exit(EXIT_SUCCESS);
+    } else {
+        fprintf(stderr, "Failed. Please check the arguments and configuration file.\n\n");
+        printUsage(stderr);
+        exit(EXIT_FAILURE);
+    }
 }

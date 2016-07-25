@@ -33,20 +33,6 @@ Datum s3_export(PG_FUNCTION_ARGS);
 Datum s3_import(PG_FUNCTION_ARGS);
 }
 
-void check_essential_config() {
-    if (s3ext_accessid == "") {
-        ereport(ERROR, (0, errmsg("ERROR: access id is empty")));
-    }
-
-    if (s3ext_secret == "") {
-        ereport(ERROR, (0, errmsg("ERROR: secret is empty")));
-    }
-
-    if ((s3ext_segnum == -1) || (s3ext_segid == -1)) {
-        ereport(ERROR, (0, errmsg("ERROR: segment id is invalid")));
-    }
-}
-
 /*
  * Import data into GPDB.
  * invoked by GPDB, be careful with C++ exceptions.
@@ -86,8 +72,6 @@ Datum s3_import(PG_FUNCTION_ARGS) {
                                       "configurations and net connection: %s",
                                       s3ext_segid, s3ext_segnum, gpReaderErrorMessage.c_str())));
         }
-
-        check_essential_config();
 
         EXTPROTOCOL_SET_USER_CTX(fcinfo, gpreader);
     }

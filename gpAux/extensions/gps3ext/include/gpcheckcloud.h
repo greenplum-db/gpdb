@@ -17,14 +17,4 @@
 
 extern volatile bool QueryCancelPending;
 
-void print_template();
-
-void print_usage(FILE *stream);
-
-uint64_t print_contents(ListBucketResult *r);
-
-bool check_config(const char *url_with_options);
-
-bool s3_download(const char *url_with_options);
-
 #endif
