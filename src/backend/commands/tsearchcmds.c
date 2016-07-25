@@ -282,7 +282,7 @@ DefineTSParser(List *names, List *parameters, Oid newOid)
 		stmt->newOid = prsOid;
 		stmt->arrayOid = stmt->commutatorOid = stmt->negatorOid = InvalidOid;
 
-		CdbDispatchUtilityStatement((Node *) stmt, "DefineTSParser");
+		CdbDispatchUtilityStatement((Node *) stmt, DF_CANCEL_ON_ERROR | DF_NEED_TWO_PHASE | DF_WITH_SNAPSHOT, NULL);
 	}
 }
 
@@ -587,7 +587,7 @@ DefineTSDictionary(List *names, List *parameters, Oid newOid)
 		stmt->newOid = dictOid;
 		stmt->arrayOid = stmt->commutatorOid = stmt->negatorOid = InvalidOid;
 		stmt->ordered = false;
-		CdbDispatchUtilityStatement((Node *) stmt, "DefineTSDictionary");
+		CdbDispatchUtilityStatement((Node *) stmt, DF_CANCEL_ON_ERROR | DF_NEED_TWO_PHASE | DF_WITH_SNAPSHOT, NULL);
 	}
 }
 
@@ -840,7 +840,7 @@ AlterTSDictionary(AlterTSDictionaryStmt *stmt)
 	heap_close(rel, RowExclusiveLock);
 
 	if (Gp_role == GP_ROLE_DISPATCH)
-		CdbDispatchUtilityStatement((Node *) stmt, "AlterTSDictionary");
+		CdbDispatchUtilityStatement((Node *) stmt, DF_CANCEL_ON_ERROR | DF_NEED_TWO_PHASE | DF_WITH_SNAPSHOT, NULL);
 }
 
 /*
@@ -1086,7 +1086,7 @@ DefineTSTemplate(List *names, List *parameters, Oid newOid)
 		stmt->args = NIL;
 		stmt->definition = parameters;
 		stmt->arrayOid = stmt->commutatorOid = stmt->negatorOid = InvalidOid;
-		CdbDispatchUtilityStatement((Node *) stmt, "DefineTSTemplate");
+		CdbDispatchUtilityStatement((Node *) stmt, DF_CANCEL_ON_ERROR | DF_NEED_TWO_PHASE | DF_WITH_SNAPSHOT, NULL);
 	}
 }
 
@@ -1484,7 +1484,7 @@ DefineTSConfiguration(List *names, List *parameters, Oid newOid)
 		stmt->definition = parameters;
 		stmt->newOid = cfgOid;
 		stmt->arrayOid = stmt->commutatorOid = stmt->negatorOid = InvalidOid;
-		CdbDispatchUtilityStatement((Node *) stmt, "DefineTSConfiguration");
+		CdbDispatchUtilityStatement((Node *) stmt, DF_CANCEL_ON_ERROR | DF_NEED_TWO_PHASE | DF_WITH_SNAPSHOT, NULL);
 	}
 }
 
@@ -1739,7 +1739,7 @@ AlterTSConfiguration(AlterTSConfigurationStmt *stmt)
 	ReleaseSysCache(tup);
 
 	if (Gp_role == GP_ROLE_DISPATCH)
-		CdbDispatchUtilityStatement((Node *) stmt, "AlterTSConfiguration");
+		CdbDispatchUtilityStatement((Node *) stmt, DF_CANCEL_ON_ERROR | DF_NEED_TWO_PHASE | DF_WITH_SNAPSHOT, NULL);
 }
 
 /*

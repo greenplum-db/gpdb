@@ -189,7 +189,11 @@ DefineOperator(List *names, List *parameters,
 		stmt->commutatorOid = newCommutatorOid;
 		stmt->negatorOid = newNegatorOid;
 		stmt->arrayOid = InvalidOid;
-		CdbDispatchUtilityStatement((Node *) stmt, "DefineOperator");
+		CdbDispatchUtilityStatement((Node *) stmt,
+									DF_CANCEL_ON_ERROR|
+									DF_WITH_SNAPSHOT|
+									DF_NEED_TWO_PHASE,
+									NULL);
 	}
 }
 
@@ -252,7 +256,11 @@ RemoveOperator(RemoveFuncStmt *stmt)
 	
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
-		CdbDispatchUtilityStatement((Node *) stmt, "RemoveOperator");
+		CdbDispatchUtilityStatement((Node *) stmt,
+									DF_CANCEL_ON_ERROR|
+									DF_WITH_SNAPSHOT|
+									DF_NEED_TWO_PHASE,
+									NULL);
 	}
 }
 

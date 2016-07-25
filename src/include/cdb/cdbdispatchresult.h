@@ -19,6 +19,12 @@ struct SegmentDatabaseDescriptor;   /* #include "cdb/cdbconn.h" */
 struct StringInfoData;              /* #include "lib/stringinfo.h" */
 struct PQExpBufferData;             /* #include "libpq-int.h" */
 
+typedef struct CdbPgResults
+{
+	struct pg_result **pg_results;
+	int numResults;
+}CdbPgResults;
+
 /*
  * CdbDispatchResults_SliceInfo:
  * An entry in a CdbDispatchResults object's slice map.
@@ -306,10 +312,8 @@ cdbdisp_resultBegin(CdbDispatchResults *results, int sliceIndex);
 CdbDispatchResult *
 cdbdisp_resultEnd(CdbDispatchResults *results, int sliceIndex);
 
-struct pg_result **
-cdbdisp_returnResults(CdbDispatchResults *primaryResults,
-                      StringInfo errmsgbuf,
-                      int *numresults);
+void
+cdbdisp_returnResults(CdbDispatchResults *primaryResults, CdbPgResults *cdb_pgresults);
 
 /*
  * used in the interconnect on the dispatcher to avoid error-cleanup deadlocks.
@@ -326,5 +330,8 @@ cdbdisp_checkResultsErrcode(struct CdbDispatchResults *meeleResults);
 CdbDispatchResults *
 cdbdisp_makeDispatchResults(int sliceCapacity,
 							bool cancelOnError);
+
+void
+cdbdisp_clearCdbPgResults(CdbPgResults* cdb_pgresults);
 
 #endif   /* CDBDISPATCHRESULT_H */

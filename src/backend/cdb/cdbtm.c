@@ -24,6 +24,7 @@
 #include "cdb/cdbdisp.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdisp_dtx.h"
+#include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbdtxcontextinfo.h"
 
 #include "cdb/cdbvars.h"
@@ -2236,16 +2237,16 @@ doDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand, int flags,
 	if (errbuf.len > 0)
 	{
 		ereport((raiseError ? ERROR : LOG),
-				(errmsg("DTM error (gathered %d results from cmd '%s')", resultCount, dtxProtocolCommandStr),
+				(errmsg("DTM error (gathered results from cmd '%s')", dtxProtocolCommandStr),
 				 errdetail("%s", errbuf.data)));
 		return false;
 	}
 
-	Assert(results != NULL);
 	if (results == NULL)
 	{
 		numOfFailed++; /* If we got no results, we need to treat it as an error! */
 	}
+
 	for (i = 0; i < resultCount; i++)
 	{
 		char			*cmdStatus;
@@ -2281,7 +2282,6 @@ doDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand, int flags,
 	/* discard the errbuf text */
 	pfree(errbuf.data);
 
-	/* Now we clean up the results array. */
 	for (i = 0; i < resultCount; i++)
 		PQclear(results[i]);
 	free(results);
@@ -2291,40 +2291,28 @@ doDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand, int flags,
 
 
 bool
-dispatchDtxCommand(const char *cmd, bool withSnapshot, bool raiseError)
+dispatchDtxCommand(const char *cmd)
 {
-	int		i, resultCount, numOfFailed = 0;
+	int		i, numOfFailed = 0;
 
-	struct pg_result **results = NULL;
-	StringInfoData errbuf;
+	CdbPgResults cdb_pgresults = {NULL, 0};
 
 	elog(DTM_DEBUG5, "dispatchDtxCommand: '%s'", cmd);
 
-	initStringInfo(&errbuf);
-	results = cdbdisp_dispatchRMCommand(cmd, withSnapshot,
-										&errbuf, &resultCount);
+	CdbDispatchCommand(cmd, DF_NONE, &cdb_pgresults);
 
-	if (errbuf.len > 0)
+	if (cdb_pgresults.numResults == 0)
 	{
-		ereport((raiseError ? ERROR : WARNING),
-				(errmsg("DTM error (gathered %d results from cmd '%s')", resultCount, cmd),
-				 errdetail("%s", errbuf.data)));
-		return false;
+		return false; /* If we got no results, we need to treat it as an error! */
 	}
 
-	Assert(results != NULL);
-	if (results == NULL)
-	{
-		numOfFailed++; /* If we got no results, we need to treat it as an error! */
-	}
-
-	for (i = 0; i < resultCount; i++)
+	for (i = 0; i < cdb_pgresults.numResults; i++)
 	{
 		char			*cmdStatus;
 		ExecStatusType	resultStatus;
 
 		/* note: PQresultStatus() is smart enough to deal with results[i] == NULL */
-		resultStatus = PQresultStatus(results[i]);
+		resultStatus = PQresultStatus(cdb_pgresults.pg_results[i]);
 		if (resultStatus != PGRES_COMMAND_OK &&
 			resultStatus != PGRES_TUPLES_OK)
 		{
@@ -2339,7 +2327,7 @@ dispatchDtxCommand(const char *cmd, bool withSnapshot, bool raiseError)
 			 * status, otherwise we could issue a COMMIT when we don't want
 			 * to!
 			 */
-			cmdStatus = PQcmdStatus(results[i]);
+			cmdStatus = PQcmdStatus(cdb_pgresults.pg_results[i]);
 
 			elog(DEBUG3, "DTM: status message cmd '%s' [%d] result '%s'", cmd, i, cmdStatus);
 			if (strncmp(cmdStatus, cmd, strlen(cmdStatus)) != 0)
@@ -2350,13 +2338,7 @@ dispatchDtxCommand(const char *cmd, bool withSnapshot, bool raiseError)
 		}
 	}
 
-	/* discard the errbuf text */
-	pfree(errbuf.data);
-
-	/* Now we clean up the results array. */
-	for (i = 0; i < resultCount; i++)
-		PQclear(results[i]);
-	free(results);
+	cdbdisp_clearCdbPgResults(&cdb_pgresults);
 
 	return (numOfFailed == 0);
 }
@@ -3341,9 +3323,7 @@ recoverInDoubtTransactions(void)
 static HTAB *
 gatherRMInDoubtTransactions(void)
 {
-	PGresult  **pgresultSets;
-	int			nresultSets;
-	StringInfoData errmsgbuf;
+	CdbPgResults cdb_pgresults = {NULL, 0};
 	const char *cmdbuf = "select gid from pg_prepared_xacts";
 	PGresult   *rs;
 
@@ -3356,32 +3336,13 @@ gatherRMInDoubtTransactions(void)
 				rows;
 	bool		found;
 
-	initStringInfo(&errmsgbuf);
-
 	/* call to all QE to get in-doubt transactions */
-	pgresultSets = cdbdisp_dispatchRMCommand(cmdbuf, /* withSnapshot */false,
-											 &errmsgbuf, &nresultSets);
-
-	/* display error messages */
-	if (errmsgbuf.len > 0)
-	{
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-					errmsg("Unable to collect list of prepared transactions "
-						   "from all segment databases."),
-						errdetail("%s", errmsgbuf.data)));
-
-		pfree(errmsgbuf.data);
-
-		/* need recovery */
-		return NULL;
-	}
-
-	pfree(errmsgbuf.data);
+	CdbDispatchCommand(cmdbuf, DF_NONE, &cdb_pgresults);
 
 	/* If any result set is nonempty, there are in-doubt transactions. */
-	for (i = 0; i < nresultSets; i++)
+	for (i = 0; i < cdb_pgresults.numResults; i++)
 	{
-		rs  = pgresultSets[i];
+		rs  = cdb_pgresults.pg_results[i];
 		rows = PQntuples(rs);
 
 		for (j = 0; j < rows; j++)
@@ -3427,9 +3388,7 @@ gatherRMInDoubtTransactions(void)
 		}
 	}
 
-	for (i = 0; i < nresultSets; i++)
-		PQclear(pgresultSets[i]);
-	free(pgresultSets);
+	cdbdisp_clearCdbPgResults(&cdb_pgresults);
 
 	return htab;
 }
@@ -3555,7 +3514,11 @@ void verify_shared_snapshot_ready(void)
 {
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
-		CdbDoCommand("set gp_write_shared_snapshot=true", true, true);
+		CdbDispatchCommand("set gp_write_shared_snapshot=true",
+					DF_CANCEL_ON_ERROR |
+					DF_WITH_SNAPSHOT |
+					DF_NEED_TWO_PHASE,
+					NULL);
 
 		dumpSharedLocalSnapshot_forCursor();
 
@@ -4056,7 +4019,7 @@ sendDtxExplicitBegin(void)
 	 * dispatch a DTX command, in the event of an error, this call
 	 * will either exit via elog()/ereport() or return false
 	 */
-	if (!dispatchDtxCommand(cmdbuf, false, /* raiseError */ false))
+	if (!dispatchDtxCommand(cmdbuf))
 	{
 		ereport(ERROR, (errmsg("Global transaction BEGIN failed for gid = \"%s\" due to error",
 							   currentGxact->gid)));

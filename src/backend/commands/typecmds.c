@@ -192,7 +192,11 @@ DefineType(List *names, List *parameters, Oid newOid, Oid newArrayOid)
 				stmt->newOid = typoid;
 				stmt->arrayOid = newArrayOid;
 				stmt->commutatorOid = stmt->negatorOid = InvalidOid;
-				CdbDispatchUtilityStatement((Node *) stmt, "DefineType");
+				CdbDispatchUtilityStatement((Node *) stmt,
+											DF_CANCEL_ON_ERROR|
+											DF_WITH_SNAPSHOT|
+											DF_NEED_TWO_PHASE,
+											NULL);
 			}
 			return;
 		}
@@ -533,7 +537,12 @@ DefineType(List *names, List *parameters, Oid newOid, Oid newArrayOid)
 		stmt->newOid = typoid;
 		stmt->arrayOid = array_oid;
 		stmt->commutatorOid = stmt->negatorOid = InvalidOid;
-		CdbDispatchUtilityStatement((Node *) stmt, "DefineType");
+
+		CdbDispatchUtilityStatement((Node *) stmt,
+									DF_CANCEL_ON_ERROR|
+									DF_WITH_SNAPSHOT|
+									DF_NEED_TWO_PHASE,
+									NULL);
 	}
 }
 
@@ -997,7 +1006,11 @@ DefineDomain(CreateDomainStmt *stmt)
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
-		CdbDispatchUtilityStatement((Node *) stmt, "DefineDomain");
+		CdbDispatchUtilityStatement((Node *) stmt,
+									DF_CANCEL_ON_ERROR|
+									DF_WITH_SNAPSHOT|
+									DF_NEED_TWO_PHASE,
+									NULL);
 	}
 }
 
@@ -1196,7 +1209,11 @@ DefineEnum(CreateEnumStmt *stmt)
 	pfree(enumArrayName);
 
 	if (Gp_role == GP_ROLE_DISPATCH)
-		CdbDispatchUtilityStatement((Node *) stmt, "DefineEnum");
+		CdbDispatchUtilityStatement((Node *) stmt,
+									DF_CANCEL_ON_ERROR|
+									DF_WITH_SNAPSHOT|
+									DF_NEED_TWO_PHASE,
+									NULL);
 }
 
 
@@ -2976,7 +2993,11 @@ AlterType(AlterTypeStmt *stmt)
 	}	
 
 	if (Gp_role == GP_ROLE_DISPATCH)
-		CdbDispatchUtilityStatement((Node *)stmt, NULL);
+		CdbDispatchUtilityStatement((Node *) stmt,
+									DF_CANCEL_ON_ERROR|
+									DF_WITH_SNAPSHOT|
+									DF_NEED_TWO_PHASE,
+									NULL);
 
 	heap_close(pgtypeenc, NoLock);
 }

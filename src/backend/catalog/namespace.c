@@ -3226,7 +3226,11 @@ InitTempTableNamespaceWithOids(Oid tempSchema, Oid tempToastSchema)
 		 * Starts a global transaction and reconfigures cluster if needed.
 		 * Waits for QEs to finish.  Exits via ereport(ERROR,...) if error.
 		 */
-		CdbDispatchUtilityStatement((Node *)stmt, "(internal create temp schema command)");
+		CdbDispatchUtilityStatement((Node *) stmt,
+									DF_CANCEL_ON_ERROR|
+									DF_WITH_SNAPSHOT|
+									DF_NEED_TWO_PHASE,
+									NULL);
 	}
 }
 

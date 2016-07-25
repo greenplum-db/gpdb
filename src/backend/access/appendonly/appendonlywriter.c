@@ -26,6 +26,7 @@
 
 #include "cdb/cdbvars.h"			  /* Gp_role              */
 #include "cdb/cdbdisp_query.h"
+#include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbtm.h"
 #include "cdb/cdbutil.h"
 #include "utils/tqual.h"
@@ -1273,11 +1274,9 @@ GetTotalTupleCountFromSegments(Oid aoRelid,
 							   int segno)
 {
 	StringInfoData	sqlstmt;
-	StringInfoData	errbuf;
 	Relation		aosegrel;
 	AppendOnlyEntry *aoEntry = NULL;
-	struct pg_result **results = NULL;
-	int				resultCount;
+	CdbPgResults cdb_pgresults = {NULL, 0};
 	int				i, j;
 	int64		   *total_tupcount = NULL;
 	Oid				save_userid;
@@ -1300,8 +1299,6 @@ GetTotalTupleCountFromSegments(Oid aoRelid,
 		appendStringInfo(&sqlstmt, " WHERE segno = %d", segno);
 	heap_close(aosegrel, AccessShareLock);
 
-	initStringInfo(&errbuf);
-
 	/* Allocate result array to be returned. */
 	total_tupcount = palloc0(sizeof(int64) * MAX_AOREL_CONCURRENCY);
 
@@ -1315,45 +1312,43 @@ GetTotalTupleCountFromSegments(Oid aoRelid,
 	 */
 	GetUserIdAndContext(&save_userid, &save_secdefcxt);
 	SetUserIdAndContext(BOOTSTRAP_SUPERUSERID, true);
-	results = cdbdisp_dispatchRMCommand(sqlstmt.data, true,
-										&errbuf, &resultCount);
-	/* Restore userid */
-	SetUserIdAndContext(save_userid, save_secdefcxt);
 
 	PG_TRY();
 	{
-		if (errbuf.len > 0)
-			ereport(ERROR,
-					(errmsg("failed to obtain AO total tupcount: %s (%s)",
-							sqlstmt.data, errbuf.data)));
+		CdbDispatchCommand(sqlstmt.data, DF_WITH_SNAPSHOT, &cdb_pgresults);
 
-		for (i = 0; i < resultCount; i++)
+		/* Restore userid */
+		SetUserIdAndContext(save_userid, save_secdefcxt);
+
+		for (i = 0; i < cdb_pgresults.numResults; i++)
 		{
-			if (PQresultStatus(results[i]) != PGRES_TUPLES_OK)
+			struct pg_result * pgresult = cdb_pgresults.pg_results[i];
+
+			if (PQresultStatus(pgresult) != PGRES_TUPLES_OK)
 				ereport(ERROR,
 						(errmsg("failed to obtain AO total tupcount: %s (%s)",
 								sqlstmt.data,
-								PQresultErrorMessage(results[i]))));
+								PQresultErrorMessage(pgresult))));
 			else
 			{
-				for (j = 0; j < PQntuples(results[i]); j++)
+				for (j = 0; j < PQntuples(pgresult); j++)
 				{
 					char	   *value;
 					int64		tupcount;
 					int			segno;
 
 					/* We don't expect NULL, but sanity check. */
-					if (PQgetisnull(results[i], j, 0) == 1)
+					if (PQgetisnull(pgresult, j, 0) == 1)
 						elog(ERROR, "unexpected NULL in tupcount in results[%d]: %s",
 									i, sqlstmt.data);
-					if (PQgetisnull(results[i], j, 0) == 1)
+					if (PQgetisnull(pgresult, j, 0) == 1)
 						elog(ERROR, "unexpected NULL in segno in results[%d]: %s",
 								i, sqlstmt.data);
 
-					value = PQgetvalue(results[i], j, 0);
+					value = PQgetvalue(pgresult, j, 0);
 					tupcount = DatumGetFloat8(
 						DirectFunctionCall1(float8in, CStringGetDatum(value)));
-					value = PQgetvalue(results[i], j, 1);
+					value = PQgetvalue(pgresult, j, 1);
 					segno = pg_atoi(value, sizeof(int32), 0);
 					total_tupcount[segno] += tupcount;
 				}
@@ -1362,23 +1357,14 @@ GetTotalTupleCountFromSegments(Oid aoRelid,
 	}
 	PG_CATCH();
 	{
-		/* Clean up malloc'ed items */
-		if (results)
-		{
-			for (i = 0; i < resultCount; i++)
-				PQclear(results[i]);
-			free(results);
-		}
+		SetUserIdAndContext(save_userid, save_secdefcxt);
+		cdbdisp_clearCdbPgResults(&cdb_pgresults);
 		PG_RE_THROW();
 	}
 	PG_END_TRY();
 
 	pfree(sqlstmt.data);
-	pfree(errbuf.data);
-
-	for (i = 0; i < resultCount; i++)
-		PQclear(results[i]);
-	free(results);
+	cdbdisp_clearCdbPgResults(&cdb_pgresults);
 
 	return total_tupcount;
 }
@@ -1394,10 +1380,8 @@ static bool *
 GetFileSegStateInfoFromSegments(Relation parentrel, AppendOnlyEntry *aoEntry)
 {
 	StringInfoData	sqlstmt;
-	StringInfoData	errbuf;
 	Relation		aosegrel;
-	struct pg_result **results = NULL;
-	int				resultCount;
+	CdbPgResults cdb_pgresults = {NULL, 0};
 	int				i, j;
 	bool		   *awaiting_drop;
 	Oid				save_userid;
@@ -1424,8 +1408,6 @@ GetFileSegStateInfoFromSegments(Relation parentrel, AppendOnlyEntry *aoEntry)
 				RelationGetRelationName(parentrel),
 				RelationGetRelid(parentrel));
 
-	initStringInfo(&errbuf);
-
 	/* Allocate result array to be returned. */
 	awaiting_drop = palloc0(sizeof(bool) * MAX_AOREL_CONCURRENCY);
 
@@ -1441,43 +1423,41 @@ GetFileSegStateInfoFromSegments(Relation parentrel, AppendOnlyEntry *aoEntry)
 	 */
 	GetUserIdAndContext(&save_userid, &save_secdefcxt);
 	SetUserIdAndContext(BOOTSTRAP_SUPERUSERID, true);
-	results = cdbdisp_dispatchRMCommand(sqlstmt.data, true,
-										&errbuf, &resultCount);
-	/* Restore userid */
-	SetUserIdAndContext(save_userid, save_secdefcxt);
 
 	PG_TRY();
 	{
-		if (errbuf.len > 0)
-			ereport(ERROR,
-					(errmsg("failed to obtain AO segfile state: %s (%s)",
-							sqlstmt.data, errbuf.data)));
+		CdbDispatchCommand(sqlstmt.data, DF_WITH_SNAPSHOT, &cdb_pgresults);
 
-		for (i = 0; i < resultCount; i++)
+		/* Restore userid */
+		SetUserIdAndContext(save_userid, save_secdefcxt);
+
+		for (i = 0; i < cdb_pgresults.numResults; i++)
 		{
-			if (PQresultStatus(results[i]) != PGRES_TUPLES_OK)
+			struct pg_result* pgresult = cdb_pgresults.pg_results[i];
+
+			if (PQresultStatus(pgresult) != PGRES_TUPLES_OK)
 				ereport(ERROR,
 						(errmsg("failed to obtain AO segfile state: %s (%s)",
 								sqlstmt.data,
-								PQresultErrorMessage(results[i]))));
+								PQresultErrorMessage(pgresult))));
 			else
 			{
-				for (j = 0; j < PQntuples(results[i]); j++)
+				for (j = 0; j < PQntuples(pgresult); j++)
 				{
 					char	   *value;
 					int			qe_state;
 					int			segno;
 
 					/* We don't expect NULL, but sanity check. */
-					if (PQgetisnull(results[i], j, 0) == 1)
+					if (PQgetisnull(pgresult, j, 0) == 1)
 						elog(ERROR, "unexpected NULL in state in results[%d]: %s",
 									i, sqlstmt.data);
-					if (PQgetisnull(results[i], j, 1) == 1)
+					if (PQgetisnull(pgresult, j, 1) == 1)
 						elog(ERROR, "unexpected NULL in segno in results[%d}: %s",
 									i, sqlstmt.data);
-					value = PQgetvalue(results[i], j, 0);
+					value = PQgetvalue(pgresult, j, 0);
 					qe_state = pg_atoi(value, sizeof(int32), 0);
-					value = PQgetvalue(results[i], j, 1);
+					value = PQgetvalue(pgresult, j, 1);
 					segno = pg_atoi(value, sizeof(int32), 0);
 
 					if (segno < 0)
@@ -1501,23 +1481,14 @@ GetFileSegStateInfoFromSegments(Relation parentrel, AppendOnlyEntry *aoEntry)
 	}
 	PG_CATCH();
 	{
-		/* Clean up malloc'ed items */
-		if (results)
-		{
-			for (i = 0; i < resultCount; i++)
-				PQclear(results[i]);
-			free(results);
-		}
+		SetUserIdAndContext(save_userid, save_secdefcxt);
+		cdbdisp_clearCdbPgResults(&cdb_pgresults);
 		PG_RE_THROW();
 	}
 	PG_END_TRY();
 
 	pfree(sqlstmt.data);
-	pfree(errbuf.data);
-
-	for (i = 0; i < resultCount; i++)
-		PQclear(results[i]);
-	free(results);
+	cdbdisp_clearCdbPgResults(&cdb_pgresults);
 
 	return awaiting_drop;
 }

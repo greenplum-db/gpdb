@@ -34,6 +34,7 @@
 #include "lib/stringinfo.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbdisp_query.h"
+#include "cdb/cdbdispatchresult.h"
 #include "utils/int8.h"
 #include "utils/lsyscache.h"
 #include "cdb/cdboidsync.h"
@@ -45,46 +46,30 @@ get_max_oid_from_segDBs(void)
 	Oid oid = 0;
 	Oid tempoid = 0;
 	int i;
-	int resultCount = 0;
-	struct pg_result **results = NULL;
-	StringInfoData buffer;
-	StringInfoData errbuf;
+	CdbPgResults cdb_pgresults = {NULL, 0};
 
-	initStringInfo(&buffer);
+	const char* cmd = "select pg_highest_oid()";
 
-	appendStringInfo(&buffer, "select pg_highest_oid()");
+	CdbDispatchCommand(cmd, DF_WITH_SNAPSHOT, &cdb_pgresults);
 
-	initStringInfo(&errbuf);
-
-	results = cdbdisp_dispatchRMCommand(buffer.data, true, &errbuf, &resultCount);
-
-	if (errbuf.len > 0)
-		ereport(ERROR, (errmsg("pg_highest_oid error (gathered %d results from cmd '%s')", resultCount, buffer.data),
-						errdetail("%s", errbuf.data)));
-										
-	for (i = 0; i < resultCount; i++)
+	for (i = 0; i < cdb_pgresults.numResults; i++)
 	{
-		if (PQresultStatus(results[i]) != PGRES_TUPLES_OK)
+		if (PQresultStatus(cdb_pgresults.pg_results[i]) != PGRES_TUPLES_OK)
 		{
+			cdbdisp_clearCdbPgResults(&cdb_pgresults);
 			elog(ERROR,"dboid: resultStatus not tuples_Ok");
 		}
 		else
 		{
-			Assert(PQntuples(results[i]) == 1);
-			tempoid = atol(PQgetvalue(results[i], 0, 0));
+			Assert(PQntuples(cdb_pgresults.pg_results[i]) == 1);
+			tempoid = atol(PQgetvalue(cdb_pgresults.pg_results[i], 0, 0));
 
 			if (tempoid > oid)
 				oid = tempoid;
 		}
 	}
 
-	pfree(errbuf.data);
-
-	for (i = 0; i < resultCount; i++)
-		PQclear(results[i]);
-
-	free(results);
-
+	cdbdisp_clearCdbPgResults(&cdb_pgresults);
 	return oid;
 }
 

@@ -94,12 +94,9 @@ cdbCopyStart(CdbCopy *c, char *copyCmd)
 {
 	int			seg;
 	MemoryContext oldcontext;
-	CdbDispatcherState ds = {NULL, NULL, NULL};
 	List	   *parsetree_list;
 	Node	   *parsetree = NULL;
 	List	   *querytree_list;
-	char	   *serializedQuerytree;
-	int			serializedQuerytree_len;
 	Query	   *q = makeNode(Query);
 	
 	/* clean err message */
@@ -162,10 +159,6 @@ cdbCopyStart(CdbCopy *c, char *copyCmd)
 	Assert(q->commandType == CMD_UTILITY);
 	Assert(q->utilityStmt != NULL);
 	Assert(IsA(q->utilityStmt,CopyStmt));
-	
-	q->querySource = QSRC_ORIGINAL;
-
-	q->canSetTag = true;
 
 	/* add in partitions for dispatch */
 	((CopyStmt *)q->utilityStmt)->partitions = c->partitions;
@@ -177,31 +170,11 @@ cdbCopyStart(CdbCopy *c, char *copyCmd)
 	
 	MemoryContextSwitchTo(oldcontext);
 
-	/*
-	 * serialized the stmt tree, and dispatch it ....
-	 */
-	serializedQuerytree = serializeNode((Node *) q, &serializedQuerytree_len, NULL /*uncompressed_size*/);
-
-	Assert(serializedQuerytree != NULL);
-	
-	dtmPreCommand("CdbCopy", copyCmd, NULL,
-			c->copy_in, /* needs 2-phase */
-			true, /* want snapshot */
-			false /* in cursor */);
-	
-	cdbdisp_dispatchCommand(copyCmd, serializedQuerytree, serializedQuerytree_len, 
-								false 		/* cancelonError */, 
-								c->copy_in 	/* need2phase */, 
-								true 		/* withSnapshot */,
-								&ds);
+	CdbDispatchUtilityStatement((Node *)q->utilityStmt,
+								(c->copy_in ? DF_NEED_TWO_PHASE | DF_WITH_SNAPSHOT : DF_WITH_SNAPSHOT),
+								NULL);
 
 	SIMPLE_FAULT_INJECTOR(CdbCopyStartAfterDispatch);
-
-	/*
-	 * Wait for all QEs to finish. If not all of our QEs were successful,
-	 * report the error and throw up.
-	 */
-	cdbdisp_finishCommand(&ds, NULL, NULL);
 
 	/* fill in CdbCopy structure */
 	for (seg = 0; seg < c->total_segs; seg++)

@@ -81,7 +81,8 @@ cdbdisp_dispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 {
 	CdbDispatcherState ds = {NULL, NULL, NULL};
 
-	PGresult **resultSets = NULL;
+	CdbDispatchResults* pr = NULL;
+	CdbPgResults cdb_pgresults;
 
 	DispatchCommandDtxProtocolParms dtxProtocolParms;
 	Gang *primaryGang;
@@ -129,27 +130,42 @@ cdbdisp_dispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 								queryText, queryTextLen);
 	ds.primaryResults->writer_gang = primaryGang;
 
-	cdbdisp_dispatchToGang(&ds, primaryGang, -1, direct);
-
-	/*
-	 * Wait for all QEs to finish. Don't cancel.
-	 */
-	CdbCheckDispatchResult(&ds, DISPATCH_WAIT_NONE);
-
-	if (!gangOK(primaryGang))
+	PG_TRY();
 	{
-		*badGangs = true;
+		cdbdisp_dispatchToGang(&ds, primaryGang, -1, direct);
 
-		elog((Debug_print_full_dtm ? LOG : DEBUG5),
-			 "cdbdisp_dispatchDtxProtocolCommand: Bad gang from dispatch of %s for gid = %s",
-			 dtxProtocolCommandLoggingStr, gid);
+		/*
+		 * Wait for all QEs to finish.	Don't cancel.
+		 */
+		pr = cdbdisp_getDispatchResults(&ds, errmsgbuf);
+
+		if (!gangOK(primaryGang))
+		{
+			*badGangs = true;
+			elog((Debug_print_full_dtm ? LOG : DEBUG5),
+					"cdbdisp_dispatchDtxProtocolCommand: Bad gang from dispatch of %s for gid = %s",
+					dtxProtocolCommandLoggingStr, gid);
+		}
+		/*
+		 * No errors happens in QEs
+		 */
+		if (pr)
+		{
+			cdbdisp_returnResults(pr, &cdb_pgresults);
+		}
+
+		cdbdisp_destroyDispatcherState(&ds);
 	}
+	PG_CATCH();
+	{
+		cdbdisp_cancelDispatch(&ds);
+		cdbdisp_destroyDispatcherState(&ds);
+		PG_RE_THROW();
+	}
+	PG_END_TRY();
 
-	resultSets = cdbdisp_returnResults(ds.primaryResults, errmsgbuf, numresults);
-
-	cdbdisp_destroyDispatcherState((struct CdbDispatcherState *) &ds);
-
-	return resultSets;
+	*numresults = cdb_pgresults.numResults;
+	return cdb_pgresults.pg_results;
 }
 
 char *

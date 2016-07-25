@@ -1094,7 +1094,11 @@ ProcessUtility(Node *parsetree,
 						 */
 						if (Gp_role == GP_ROLE_DISPATCH)
 						{
-							CdbDispatchUtilityStatement((Node *) stmt, "ProcessUtility");
+							CdbDispatchUtilityStatement((Node *) stmt,
+														DF_CANCEL_ON_ERROR|
+														DF_WITH_SNAPSHOT|
+														DF_NEED_TWO_PHASE,
+														NULL);
 						}
 					}
 				}
@@ -1239,7 +1243,11 @@ ProcessUtility(Node *parsetree,
 
 				if (Gp_role == GP_ROLE_DISPATCH)
 				{
-					CdbDispatchUtilityStatement((Node *) stmt, "ProcessUtility");
+					CdbDispatchUtilityStatement((Node *) stmt,
+												DF_CANCEL_ON_ERROR|
+												DF_WITH_SNAPSHOT|
+												DF_NEED_TWO_PHASE,
+												NULL);
 				}
 			}
 			break;
@@ -1372,7 +1380,11 @@ ProcessUtility(Node *parsetree,
 			DefineRule((RuleStmt *) parsetree, queryString);
 			if (Gp_role == GP_ROLE_DISPATCH)
 			{
-				CdbDispatchUtilityStatement((Node *) parsetree, "ProcessUtility");
+				CdbDispatchUtilityStatement((Node *) parsetree,
+											DF_CANCEL_ON_ERROR|
+											DF_WITH_SNAPSHOT|
+											DF_NEED_TWO_PHASE,
+											NULL);
 			}
 			break;
 
@@ -1504,7 +1516,10 @@ ProcessUtility(Node *parsetree,
 
 					appendStringInfo(&buffer, "LOAD '%s'", stmt->filename);
 
-					CdbDoCommand(buffer.data, false, /*no txn*/ false);
+					CdbDispatchCommand(buffer.data,
+										DF_WITH_SNAPSHOT,
+										NULL);
+					pfree(buffer.data);
 				}
 			}
 			break;
@@ -1551,7 +1566,7 @@ ProcessUtility(Node *parsetree,
 						else
 							appendStringInfo(&buffer, "RESET %s", n->name);
 
-						CdbDoCommand(buffer.data, false, /*no txn*/ false);
+						CdbDispatchCommand(buffer.data, DF_WITH_SNAPSHOT, NULL);
 					}
 				}
 				else
@@ -1614,7 +1629,11 @@ ProcessUtility(Node *parsetree,
 				if (Gp_role == GP_ROLE_DISPATCH)
 				{
 					((CreateTrigStmt *) parsetree)->trigOid = trigOid;
-					CdbDispatchUtilityStatement((Node *) parsetree, "ProcessUtility");
+					CdbDispatchUtilityStatement((Node *) parsetree,
+												DF_CANCEL_ON_ERROR|
+												DF_WITH_SNAPSHOT|
+												DF_NEED_TWO_PHASE,
+												NULL);
 				}
 			}
 			break;
@@ -1645,7 +1664,11 @@ ProcessUtility(Node *parsetree,
 				}
 				if (Gp_role == GP_ROLE_DISPATCH)
 				{
-					CdbDispatchUtilityStatement((Node *) parsetree, "ProcessUtility");
+					CdbDispatchUtilityStatement((Node *) parsetree,
+												DF_CANCEL_ON_ERROR|
+												DF_WITH_SNAPSHOT|
+												DF_NEED_TWO_PHASE,
+												NULL);
 				}
 			}
 			break;
@@ -1733,7 +1756,7 @@ ProcessUtility(Node *parsetree,
 
 			if (Gp_role == GP_ROLE_DISPATCH)
 			{
-				CdbDoCommand("CHECKPOINT", false, false);
+				CdbDispatchCommand("CHECKPOINT", DF_WITH_SNAPSHOT, NULL);
 			}
 			RequestCheckpoint(CHECKPOINT_IMMEDIATE | CHECKPOINT_FORCE | CHECKPOINT_WAIT);
 			break;

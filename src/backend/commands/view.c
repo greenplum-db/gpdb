@@ -509,7 +509,11 @@ DefineView(ViewStmt *stmt, const char *queryString)
 	{
 		ViewStmt *dispatchStmt = (ViewStmt *) copyObject(stmt);
 		dispatchStmt->query = (Node *) viewParse_orig;
-		CdbDispatchUtilityStatement((Node *) dispatchStmt, "DefineView");
+		CdbDispatchUtilityStatement((Node *) dispatchStmt,
+									DF_CANCEL_ON_ERROR|
+									DF_WITH_SNAPSHOT|
+									DF_NEED_TWO_PHASE,
+									NULL);
 	}
 }
 

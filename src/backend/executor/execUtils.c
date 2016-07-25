@@ -60,6 +60,7 @@
 
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
+#include "cdb/cdbdisp.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/ml_ipc.h"
@@ -2125,7 +2126,7 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 		 * error, report it and exit to our error handler via PG_THROW.
 		 * NB: This call doesn't wait, because we already waited above.
 		 */
-		cdbdisp_finishCommand(estate->dispatcherState, NULL, NULL);
+		cdbdisp_finishCommand(estate->dispatcherState);
 	}
 
 	/* Teardown the Interconnect */
@@ -2200,7 +2201,8 @@ void mppExecutorCleanup(QueryDesc *queryDesc)
 		if (estate->es_interconnect_is_setup && !estate->es_got_eos)
 			ExecSquelchNode(queryDesc->planstate);
 
-		cdbdisp_handleError(estate->dispatcherState);
+		cdbdisp_cancelDispatch(estate->dispatcherState);
+		cdbdisp_destroyDispatcherState(estate->dispatcherState);
 	}
 
 	/* Clean up the interconnect. */

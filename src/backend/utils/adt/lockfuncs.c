@@ -21,6 +21,7 @@
 
 #include "gp-libpq-fe.h"
 #include "cdb/cdbdisp_query.h"
+#include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbvars.h"
 
 /* This must match enum LockTagType! */
@@ -163,12 +164,9 @@ pg_lock_status(PG_FUNCTION_ARGS)
 
 		if (Gp_role == GP_ROLE_DISPATCH)
 		{
-			int 	resultCount = 0;
-			struct pg_result **results = NULL;
+			CdbPgResults cdb_pgresults = {NULL, 0};
 			StringInfoData buffer;
-			StringInfoData errbuf;
 			int i;
-
 			initStringInfo(&buffer);
 
 			/*
@@ -181,8 +179,6 @@ pg_lock_status(PG_FUNCTION_ARGS)
 					 " virtualxid text, transactionid xid, classid oid, objid oid, objsubid int2,"
 					 " virtualtransaction text, pid int4, mode text, granted boolean, "
 					 " mppSessionId int4, mppIsWriter boolean, gp_segment_id int4) ");
-
-			initStringInfo(&errbuf);
 
 			/*
 			 * Why dispatch something here, rather than do a UNION ALL in pg_locks view, and
@@ -223,28 +219,21 @@ pg_lock_status(PG_FUNCTION_ARGS)
 			 *
 			 */
 
-			results = cdbdisp_dispatchRMCommand(buffer.data, true, &errbuf, &resultCount);
+			CdbDispatchCommand(buffer.data, DF_WITH_SNAPSHOT, &cdb_pgresults);
 
-			if (errbuf.len > 0)
-				ereport(ERROR, (errmsg("pg_lock internal error (gathered %d results from cmd '%s')", resultCount, buffer.data),
-								errdetail("%s", errbuf.data)));
-
-			/*
-			 * I don't think resultCount can ever be zero if errbuf isn't set.
-			 * But check to be sure.
-			 */
-			if (resultCount == 0)
+			if (cdb_pgresults.numResults == 0)
 				elog(ERROR, "pg_locks didn't get back any data from the segDBs");
 
-			for (i = 0; i < resultCount; i++)
+			for (i = 0; i < cdb_pgresults.numResults; i++)
 			{
 				/*
 				 * Any error here should have propagated into errbuf, so we shouldn't
 				 * ever see anything other that tuples_ok here.  But, check to be
 				 * sure.
 				 */
-				if (PQresultStatus(results[i]) != PGRES_TUPLES_OK)
+				if (PQresultStatus(cdb_pgresults.pg_results[i]) != PGRES_TUPLES_OK)
 				{
+					cdbdisp_clearCdbPgResults(&cdb_pgresults);
 					elog(ERROR,"pg_locks: resultStatus not tuples_Ok");
 				}
 				else
@@ -254,17 +243,16 @@ pg_lock_status(PG_FUNCTION_ARGS)
 					 * the application. At the start of this loop, it has the count
 					 * for the masterDB locks.  Add each of the segDB lock counts.
 					 */
-					mystatus->numSegLocks += PQntuples(results[i]);
+					mystatus->numSegLocks += PQntuples(cdb_pgresults.pg_results[i]);
 				}
 			}
 
-			pfree(errbuf.data);
-			mystatus->numsegresults = resultCount;
+			mystatus->numsegresults = cdb_pgresults.numResults;
 			/*
 			 * cdbdisp_dispatchRMCommand copies the result sets into our memory, which
 			 * will still exist on the subsequent calls.
 			 */
-			mystatus->segresults = results;
+			mystatus->segresults = cdb_pgresults.pg_results;
 		}
 
 		MemoryContextSwitchTo(oldcontext);

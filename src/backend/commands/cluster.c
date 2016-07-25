@@ -196,7 +196,11 @@ cluster(ClusterStmt *stmt, bool isTopLevel)
 
 		if (Gp_role == GP_ROLE_DISPATCH)
 		{
-			CdbDispatchUtilityStatement((Node *) stmt, "cluster");
+			CdbDispatchUtilityStatement((Node *) stmt,
+										DF_CANCEL_ON_ERROR|
+										DF_WITH_SNAPSHOT|
+										DF_NEED_TWO_PHASE,
+										NULL);
 		}
 	}
 	else
@@ -257,7 +261,10 @@ cluster(ClusterStmt *stmt, bool isTopLevel)
 				stmt->relation = makeNode(RangeVar);
 				stmt->relation->schemaname = get_namespace_name(get_rel_namespace(rvtc->tableOid));
 				stmt->relation->relname = get_rel_name(rvtc->tableOid);
-				CdbDispatchUtilityStatement_NoTwoPhase((Node *) stmt, "cluster");
+				CdbDispatchUtilityStatement((Node *) stmt,
+											DF_CANCEL_ON_ERROR|
+											DF_WITH_SNAPSHOT,
+											NULL);
 			}
 			CommitTransactionCommand();
 		}

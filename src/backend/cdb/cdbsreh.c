@@ -22,6 +22,7 @@
 #include "catalog/pg_depend.h"
 #include "catalog/pg_type.h"
 #include "cdb/cdbdisp_query.h"
+#include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbpartition.h"
 #include "cdb/cdbsreh.h"
 #include "cdb/cdbvars.h"
@@ -701,15 +702,12 @@ gp_read_error_log(PG_FUNCTION_ARGS)
 		 */
 		if (Gp_role == GP_ROLE_DISPATCH)
 		{
-			int		resultCount = 0;
-			PGresult **results = NULL;
+			struct CdbPgResults cdb_pgresults = {NULL, 0};
 			StringInfoData sql;
-			StringInfoData errbuf;
+
 			int		i;
 
 			initStringInfo(&sql);
-			initStringInfo(&errbuf);
-
 			/*
 			 * construct SQL
 			 */
@@ -717,26 +715,23 @@ gp_read_error_log(PG_FUNCTION_ARGS)
 					"SELECT * FROM pg_catalog.gp_read_error_log(%s) ",
 							 quote_literal_internal(text_to_cstring(relname)));
 
-			results = cdbdisp_dispatchRMCommand(sql.data, true, &errbuf,
-												&resultCount);
+			CdbDispatchCommand(sql.data, DF_WITH_SNAPSHOT, &cdb_pgresults);
 
-			if (errbuf.len > 0)
-				elog(ERROR, "%s", errbuf.data);
-			Assert(resultCount > 0);
-
-			for (i = 0; i < resultCount; i++)
+			for (i = 0; i < cdb_pgresults.numResults; i++)
 			{
-				if (PQresultStatus(results[i]) != PGRES_TUPLES_OK)
+				if (PQresultStatus(cdb_pgresults.pg_results[i]) != PGRES_TUPLES_OK)
+				{
+					cdbdisp_clearCdbPgResults(&cdb_pgresults);
 					elog(ERROR, "unexpected result from segment: %d",
-								PQresultStatus(results[i]));
-				context->numTuples += PQntuples(results[i]);
+								PQresultStatus(cdb_pgresults.pg_results[i]));
+				}
+				context->numTuples += PQntuples(cdb_pgresults.pg_results[i]);
 			}
 
-			pfree(errbuf.data);
 			pfree(sql.data);
 
-			context->segResults = results;
-			context->numSegResults = resultCount;
+			context->segResults = cdb_pgresults.pg_results;
+			context->numSegResults = cdb_pgresults.numResults;
 		}
 		else
 		{
@@ -1029,40 +1024,37 @@ gp_truncate_error_log(PG_FUNCTION_ARGS)
 	 */
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
-		int			i, resultCount = 0;
-		StringInfoData	sql, errbuf;
-		PGresult  **results;
+		int			i = 0;
+		StringInfoData	sql;
+		CdbPgResults cdb_pgresults = {NULL, 0};
 
 		initStringInfo(&sql);
-		initStringInfo(&errbuf);
+
 
 		appendStringInfo(&sql,
 						 "SELECT pg_catalog.gp_truncate_error_log(%s)",
 						 quote_literal_internal(text_to_cstring(relname)));
 
-		results = cdbdisp_dispatchRMCommand(sql.data, true, &errbuf,
-											&resultCount);
+		CdbDispatchCommand(sql.data, DF_WITH_SNAPSHOT, &cdb_pgresults);
 
-		if (errbuf.len > 0)
-			elog(ERROR, "%s", errbuf.data);
-		Assert(resultCount > 0);
-
-		for (i = 0; i < resultCount; i++)
+		for (i = 0; i < cdb_pgresults.numResults; i++)
 		{
 			Datum		value;
 			bool		isnull;
+			struct pg_result *pgresult = cdb_pgresults.pg_results[i];
 
-			if (PQresultStatus(results[i]) != PGRES_TUPLES_OK)
+			if (PQresultStatus(pgresult) != PGRES_TUPLES_OK)
+			{
+				cdbdisp_clearCdbPgResults(&cdb_pgresults);
 				ereport(ERROR,
 						(errmsg("unexpected result from segment: %d",
-								PQresultStatus(results[i]))));
-
-			value = ResultToDatum(results[i], 0, 0, boolin, &isnull);
+								PQresultStatus(pgresult))));
+			}
+			value = ResultToDatum(pgresult, 0, 0, boolin, &isnull);
 			allResults &= (!isnull && DatumGetBool(value));
-			PQclear(results[i]);
 		}
 
-		pfree(errbuf.data);
+		cdbdisp_clearCdbPgResults(&cdb_pgresults);
 		pfree(sql.data);
 	}
 

@@ -1123,32 +1123,10 @@ bool Persistent_DBSpecificPTCatVerification (void)
 void
 Persistent_PostDTMRecv_NonDBSpecificPTCatVerification(void)
 {
-	PGresult  **pgresultSets = NULL;
-	StringInfoData errmsgbuf;
-	int			nresults;
-	int			i;
 	const char *cmdbuf = "select * from gp_nondbspecific_ptcat_verification()";
 
-	initStringInfo(&errmsgbuf);
-
 	/* call to all QE to perform verifications */
-	pgresultSets = cdbdisp_dispatchRMCommand(cmdbuf, /* withSnapshot */false,
-											 &errmsgbuf, &nresults);
-
-	if (errmsgbuf.len > 0)
-	{
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-				errmsg("Failure seen during non-db specific verification"),
-				errdetail("%s", errmsgbuf.data)));
-
-		pfree(errmsgbuf.data);
-	}
-
-	for (i = 0; i < nresults; i++)
-		PQclear(pgresultSets[i]);
-
-	pfree(errmsgbuf.data);
-	free(pgresultSets);
+	CdbDispatchCommand(cmdbuf, DF_NONE, NULL);
 }
 
 /*
@@ -1158,33 +1136,10 @@ Persistent_PostDTMRecv_NonDBSpecificPTCatVerification(void)
 void
 Persistent_PostDTMRecv_DBSpecificPTCatVerification(void)
 {
-	PGresult  **pgresultSets = NULL;
-	StringInfoData errmsgbuf;
-	int			nresults;
-	int			i;
 	const char *cmdbuf = "select * from gp_dbspecific_ptcat_verification()";
 
-	initStringInfo(&errmsgbuf);
-
 	/* call to all QE to perform verifications */
-	pgresultSets = cdbdisp_dispatchRMCommand(cmdbuf, /* withSnapshot */false,
-											 &errmsgbuf, &nresults);
-
-	/* display error messages */
-	if (errmsgbuf.len > 0)
-	{
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-				errmsg("Failure seen during non-db specific verification"),
-				errdetail("%s", errmsgbuf.data)));
-
-		pfree(errmsgbuf.data);
-	}
-
-	for (i = 0; i < nresults; i++)
-		PQclear(pgresultSets[i]);
-
-	pfree(errmsgbuf.data);
-	free(pgresultSets);
+	CdbDispatchCommand(cmdbuf, DF_NONE, NULL);
 }
 
 Datum

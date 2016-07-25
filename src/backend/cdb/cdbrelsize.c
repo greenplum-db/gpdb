@@ -17,6 +17,7 @@
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"
 #include "cdb/cdbdisp_query.h"
+#include "cdb/cdbdispatchresult.h"
 #include "gp-libpq-fe.h"
 #include "lib/stringinfo.h"
 #include "utils/int8.h"
@@ -33,9 +34,7 @@ cdbRelMaxSegSize(Relation rel)
 {
 	int64 size = 0;
 	int i;
-	int resultCount = 0;
-	struct pg_result **results = NULL;
-	StringInfoData errbuf;
+	CdbPgResults cdb_pgresults = {NULL, 0};
 	StringInfoData buffer;
 
 	char *schemaName;
@@ -45,7 +44,6 @@ cdbRelMaxSegSize(Relation rel)
 	 * Let's ask the QEs for the size of the relation
 	 */
 	initStringInfo(&buffer);
-	initStringInfo(&errbuf);
 
 	schemaName = get_namespace_name(RelationGetNamespace(rel));
 	if (schemaName == NULL)
@@ -60,49 +58,52 @@ cdbRelMaxSegSize(Relation rel)
 	appendStringInfo(&buffer, "select pg_relation_size('%s.%s')",
 					 quote_identifier(schemaName), quote_identifier(relName));
 
+	bool hasError = false;
+
 	/*
 	 * In the future, it would be better to send the command to only one QE for the optimizer's needs,
 	 * but for ALTER TABLE, we need to be sure if the table has any rows at all.
 	 */
-	results = cdbdisp_dispatchRMCommand(buffer.data, true, &errbuf, &resultCount);
-
-	if (errbuf.len > 0)
+	PG_TRY();
 	{
-		ereport(WARNING,
-				(errmsg("cdbRelMaxSegSize error (gathered %d results from cmd '%s')", resultCount, buffer.data),
-				 errdetail("%s", errbuf.data)));
-		pfree(errbuf.data);
+		CdbDispatchCommand(buffer.data, DF_WITH_SNAPSHOT, &cdb_pgresults);
+	}
+	PG_CATCH();
+	{
+		ErrorData *edata = CopyErrorData();
+		hasError = true;
+
+		ereport(WARNING,(errmsg("cdbRelSize error (gathered results from cmd '%s')", buffer.data),
+				errdetail("%s", edata->detail)));
 		pfree(buffer.data);
-		
+	}
+	PG_END_TRY();
+
+	if (hasError)
 		return -1;
-	}
-	else
+
+	for (i = 0; i < cdb_pgresults.numResults; i++)
 	{
-		for (i = 0; i < resultCount; i++)
+		struct pg_result * pgresult = cdb_pgresults.pg_results[i];
+		if (PQresultStatus(pgresult) != PGRES_TUPLES_OK)
 		{
-			if (PQresultStatus(results[i]) != PGRES_TUPLES_OK)
-			{
-				elog(ERROR,"cdbRelMaxSegSize: resultStatus not tuples_Ok: %s %s",
-					 PQresStatus(PQresultStatus(results[i])),PQresultErrorMessage(results[i]));
-			}
-			else
-			{
-				Assert(PQntuples(results[i]) == 1);
-				int64 tempsize = 0;
-				(void) scanint8(PQgetvalue(results[i], 0, 0), false, &tempsize);
-				if (tempsize > size)
-					size = tempsize;
-			}
+			cdbdisp_clearCdbPgResults(&cdb_pgresults);
+			elog(ERROR,"cdbRelMaxSegSize: resultStatus not tuples_Ok: %s %s",
+				 PQresStatus(PQresultStatus(pgresult)),PQresultErrorMessage(pgresult));
 		}
-
-		pfree(errbuf.data);
-		pfree(buffer.data);
-
-		for (i = 0; i < resultCount; i++)
-			PQclear(results[i]);
-
-		free(results);
+		else
+		{
+			Assert(PQntuples(pgresult) == 1);
+			int64 tempsize = 0;
+			(void) scanint8(PQgetvalue(pgresult, 0, 0), false, &tempsize);
+			if (tempsize > size)
+				size = tempsize;
+		}
 	}
+
+	pfree(buffer.data);
+
+	cdbdisp_clearCdbPgResults(&cdb_pgresults);
 
 	return size;
 }

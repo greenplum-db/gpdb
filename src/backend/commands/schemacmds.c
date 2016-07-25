@@ -135,17 +135,21 @@ CreateSchemaCommand(CreateSchemaStmt *stmt, const char *queryString)
 
 		if (shouldDispatch)
 		{
-            elog(DEBUG5, "shouldDispatch = true, namespaceOid = %d", namespaceId);
+			elog(DEBUG5, "shouldDispatch = true, namespaceOid = %d", namespaceId);
 
-            Assert(stmt->schemaOid == 0);
-            stmt->schemaOid = namespaceId;
+			Assert(stmt->schemaOid == 0);
+			stmt->schemaOid = namespaceId;
 
-            /*
-             * Dispatch the command to all primary and mirror segment dbs.
-             * Starts a global transaction and reconfigures cluster if needed.
-             * Waits for QEs to finish.  Exits via ereport(ERROR,...) if error.
-             */
-            CdbDispatchUtilityStatement((Node *)stmt, "CreateSchemaCommand");
+			/*
+			 * Dispatch the command to all primary and mirror segment dbs.
+			 * Starts a global transaction and reconfigures cluster if needed.
+			 * Waits for QEs to finish.  Exits via ereport(ERROR,...) if error.
+			 */
+			CdbDispatchUtilityStatement((Node *) stmt,
+										DF_CANCEL_ON_ERROR |
+										DF_WITH_SNAPSHOT |
+										DF_NEED_TWO_PHASE,
+										NULL);
 		}
 
 		/* MPP-6929: metadata tracking */

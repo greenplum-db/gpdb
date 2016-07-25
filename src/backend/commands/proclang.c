@@ -355,7 +355,11 @@ CreateProceduralLanguage(CreatePLangStmt *stmt)
 		stmt->plhandlerOid = handlerOid;
 		stmt->plinlineOid = inlineOid;
 		stmt->plvalidatorOid = valOid;
-		CdbDispatchUtilityStatement((Node *) stmt, "CreateProceduralLanguage");
+		CdbDispatchUtilityStatement((Node *) stmt,
+									DF_CANCEL_ON_ERROR|
+									DF_WITH_SNAPSHOT|
+									DF_NEED_TWO_PHASE,
+									NULL);
 	}
 }
 
@@ -574,7 +578,11 @@ DropProceduralLanguage(DropPLangStmt *stmt)
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
-		CdbDispatchUtilityStatement((Node *) stmt, "DropProceduralLanguage");
+		CdbDispatchUtilityStatement((Node *) stmt,
+									DF_CANCEL_ON_ERROR|
+									DF_WITH_SNAPSHOT|
+									DF_NEED_TWO_PHASE,
+									NULL);
 	}
 }
 

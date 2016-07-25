@@ -1201,7 +1201,7 @@ ExecSetParamPlan(SubPlanState *node, ExprContext *econtext, QueryDesc *queryDesc
              * If the dispatcher or any QE had an error, report it and
              * exit to our error handler (below) via PG_THROW.
              */
-            cdbdisp_finishCommand(queryDesc->estate->dispatcherState, NULL, NULL);
+            cdbdisp_finishCommand(queryDesc->estate->dispatcherState);
         }
 
 		/* teardown the sequence server */
@@ -1250,8 +1250,11 @@ ExecSetParamPlan(SubPlanState *node, ExprContext *econtext, QueryDesc *queryDesc
          * Replace current error info with QE error info if more interesting.
 		 */
         if (shouldDispatch && queryDesc && queryDesc->estate && queryDesc->estate->dispatcherState && queryDesc->estate->dispatcherState->primaryResults)
-			cdbdisp_handleError(queryDesc->estate->dispatcherState);
-		
+        {
+        		cdbdisp_cancelDispatch(queryDesc->estate->dispatcherState);
+        		cdbdisp_destroyDispatcherState(queryDesc->estate->dispatcherState);
+        }
+
 		/* teardown the sequence server */
 		TeardownSequenceServer();
 		

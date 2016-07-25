@@ -45,6 +45,7 @@
 #include "pgstat.h"
 #include "miscadmin.h"
 #include "cdb/cdbdisp_query.h"
+#include "cdb/cdbdispatchresult.h"
 #include "gp-libpq-fe.h"
 #include <unistd.h>
 
@@ -963,13 +964,8 @@ gp_adjust_priority_int(PG_FUNCTION_ARGS)
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
 		int i = 0;
-		int resultCount = 0;
-		struct pg_result **results = NULL;
+		CdbPgResults cdb_pgresults = {NULL, 0};
 		char cmd[255];
-
-		StringInfoData errbuf;
-
-		initStringInfo(&errbuf);
 
 		/*
 		 * Make sure the session exists before dispatching
@@ -997,38 +993,31 @@ gp_adjust_priority_int(PG_FUNCTION_ARGS)
 		 */
 		sprintf(cmd, "select gp_adjust_priority(%d,%d,%d)", session_id, command_count, wt);
 
-		results = cdbdisp_dispatchRMCommand(cmd, true, &errbuf, &resultCount);
+		CdbDispatchCommand(cmd, DF_WITH_SNAPSHOT, &cdb_pgresults);
 
-		if (errbuf.len > 0)
-			ereport(ERROR,(
-					errmsg("gp_adjust_priority error (gathered %d results from cmd '%s')",
-							resultCount, cmd), errdetail("%s",	errbuf.data)));
-
-		for (i = 0; i < resultCount; i++)
+		for (i = 0; i < cdb_pgresults.numResults; i++)
 		{
-			if (PQresultStatus(results[i]) != PGRES_TUPLES_OK)
+			struct pg_result * pgresult = cdb_pgresults.pg_results[i];
+
+			if (PQresultStatus(pgresult) != PGRES_TUPLES_OK)
 			{
+				cdbdisp_clearCdbPgResults(&cdb_pgresults);
 				elog(ERROR, "gp_adjust_priority: resultStatus not tuples_Ok");
 			}
 			else
 			{
 
 				int j;
-				for (j = 0; j < PQntuples(results[i]); j++)
+				for (j = 0; j < PQntuples(pgresult); j++)
 				{
 					int retvalue = 0;
-					retvalue = atoi(PQgetvalue(results[i], j, 0));
+					retvalue = atoi(PQgetvalue(pgresult, j, 0));
 					numfound += retvalue;
 				}
 			}
 		}
 
-		pfree(errbuf.data);
-
-		for (i = 0; i < resultCount; i++)
-			PQclear(results[i]);
-
-		free(results);
+		cdbdisp_clearCdbPgResults(&cdb_pgresults);
 
 	}
 	else /* Gp_role == EXECUTE */

@@ -324,8 +324,8 @@ static void vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 						 bool for_wraparound, bool isTopLevel);
 
 static void
-vacuum_combine_stats(CdbDispatchResults *primaryResults,
-						 void *ctx);
+vacuum_combine_stats(VacuumStatsContext *stats_context,
+					CdbPgResults* cdb_pgresults);
 
 static void vacuum_appendonly_index(Relation indexRelation,
 		AppendOnlyIndexVacuumState *vacuumIndexState,
@@ -5284,79 +5284,24 @@ vacuum_delay_point(void)
 static void
 dispatchVacuum(VacuumStmt *vacstmt, VacuumStatsContext *ctx)
 {
-	char	   *pszVacuum=NULL;
-	int			pszVacuum_len;
-	Query	   *q = NULL;
+	CdbPgResults cdb_pgresults;
 
 	/* should these be marked volatile ? */
-	volatile struct CdbDispatcherState ds = {NULL, NULL, NULL};
 
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 	Assert(vacstmt);
 	Assert(vacstmt->vacuum);
 	Assert(!vacstmt->analyze);
 
-	/*
-	 * Serialize the stmt tree, and create the sql statement....
-	 */
-	q = makeNode(Query);
+	CdbDispatchUtilityStatement((Node *) vacstmt,
+											DF_CANCEL_ON_ERROR|
+											DF_WITH_SNAPSHOT|
+											DF_NEED_TWO_PHASE,
+											&cdb_pgresults);
 
-	Assert(q);
+	vacuum_combine_stats(ctx, &cdb_pgresults);
 
-	q->commandType = CMD_UTILITY;
-	q->utilityStmt = (Node *) vacstmt;
-	q->querySource = QSRC_ORIGINAL;
-	q->canSetTag = true;	/* ? */
-
-	pszVacuum = serializeNode((Node *) q, &pszVacuum_len, NULL /*uncompressed_size*/);
-	Assert(pszVacuum);
-
-	/*
-	 * MPP-6796/MPP-6801:
-	 *
-	 * I'm not exactly sure about the way this code uses
-	 * dtmPreCommand(). We call it twice, which may make sense
-	 * if we're going to be using separate transactions. Calling it
-	 * multiple times does no harm, but I find it confusing (are these
-	 * vacuum calls auto-committed ?).
-	 *
-	 * We need to handle the dispatcher-cleanup *here* otherwise the
-	 * rest of the cleanup will be trying to do further dispatcher
-	 * work on our gangs -- and those operations *expect* the gangs to
-	 * be clean.
-	 */
-	PG_TRY();
-	{
-		/* mark the dtx as dirty */
-		dtmPreCommand("cdbdisp_dispatchCommand", "(none)", NULL,
-				true /* needs two-phase */, true /* withSnapshot */, false /* inCursor */);
-
-		cdbdisp_dispatchCommand( "vacuum" , pszVacuum, pszVacuum_len,
-								 true /* cancelOnError */, true /* needTwoPhase */,
-								 true /* withSnapshot */,
-								 (struct CdbDispatcherState *)&ds);
-
-		/*
-		 * Wait for all QEs to finish. If not all of our QEs were successful,
-		 * report the error and throw up.
-		 *
-		 * NOTE: this has the side-effect of calling pfree() on
-		 * pszVacuum! (we re-serialize for our mirrors below).
-		 */
-		cdbdisp_finishCommand((struct CdbDispatcherState *)&ds, vacuum_combine_stats, ctx);
-	}
-	PG_CATCH();
-	{
-		/*
-		 * Handle errors/cancels
-		 */
-		cdbdisp_handleError((struct CdbDispatcherState *)&ds);
-
-		PG_RE_THROW();
-	}
-	PG_END_TRY();
-
-	pfree(q);
+	cdbdisp_clearCdbPgResults(&cdb_pgresults);
 }
 
 /*
@@ -5615,15 +5560,13 @@ get_oids_for_bitmap(List *all_extra_oids, Relation Irel,
  * Note that the mirrorResults is ignored by this function.
  */
 static void
-vacuum_combine_stats(CdbDispatchResults *primaryResults,
-						 void *ctx)
+vacuum_combine_stats(VacuumStatsContext *stats_context, CdbPgResults* cdb_pgresults)
 {
 	int result_no;
-	VacuumStatsContext *stats_context = (VacuumStatsContext *)ctx;
 
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 
-	if (primaryResults == NULL)
+	if (cdb_pgresults == NULL || cdb_pgresults->numResults <= 0)
 		return;
 
 	/*
@@ -5637,52 +5580,44 @@ vacuum_combine_stats(CdbDispatchResults *primaryResults,
 	 * maximum number of pages after processing the stats from each QE.
 	 *
 	 */
-	for(result_no = 0; result_no < primaryResults->resultCount; result_no++)
+	for(result_no = 0; result_no < cdb_pgresults->numResults; result_no++)
 	{
-		CdbDispatchResult *result = &(primaryResults->resultArray[result_no]);
-		int num_pgresults = cdbdisp_numPGresult(result);
-		int pgresult_no;
+
 		VPgClassStats *pgclass_stats = NULL;
+		ListCell *lc = NULL;
+		struct pg_result *pgresult = cdb_pgresults->pg_results[result_no];
 
-		for (pgresult_no = 0; pgresult_no < num_pgresults; pgresult_no++)
+		if (pgresult->extras == NULL)
+			continue;
+
+		Assert(pgresult->extraslen > sizeof(int));
+
+		/*
+		 * Process the stats for pg_class. We simple compute the maximum
+		 * number of rel_tuples and rel_pages.
+		 */
+		pgclass_stats = (VPgClassStats *) pgresult->extras;
+		foreach (lc, stats_context->updated_stats)
 		{
-			ListCell *lc = NULL;
+			VPgClassStats *tmp_stats = (VPgClassStats *) lfirst(lc);
 
-			struct pg_result *pgresult = cdbdisp_getPGresult(result, pgresult_no);
-
-			if (pgresult->extras == NULL)
-				continue;
-
-			Assert(pgresult->extraslen > sizeof(int));
-
-			/*
-			 * Process the stats for pg_class. We simple compute the maximum
-			 * number of rel_tuples and rel_pages.
-			 */
-			pgclass_stats = (VPgClassStats *) pgresult->extras;
-			foreach (lc, stats_context->updated_stats)
+			if (tmp_stats->relid == pgclass_stats->relid)
 			{
-				VPgClassStats *tmp_stats = (VPgClassStats *) lfirst(lc);
-
-				if (tmp_stats->relid == pgclass_stats->relid)
-				{
-					tmp_stats->rel_pages += pgclass_stats->rel_pages;
-					tmp_stats->rel_tuples += pgclass_stats->rel_tuples;
-					break;
-				}
-			}
-
-			if (lc == NULL)
-			{
-				Assert(pgresult->extraslen == sizeof(VPgClassStats));
-
-				pgclass_stats = palloc(sizeof(VPgClassStats));
-				memcpy(pgclass_stats, pgresult->extras, pgresult->extraslen);
-
-				stats_context->updated_stats =
-						lappend(stats_context->updated_stats, pgclass_stats);
+				tmp_stats->rel_pages += pgclass_stats->rel_pages;
+				tmp_stats->rel_tuples += pgclass_stats->rel_tuples;
+				break;
 			}
 		}
-	}
 
+		if (lc == NULL)
+		{
+			Assert(pgresult->extraslen == sizeof(VPgClassStats));
+
+			pgclass_stats = palloc(sizeof(VPgClassStats));
+			memcpy(pgclass_stats, pgresult->extras, pgresult->extraslen);
+
+			stats_context->updated_stats =
+					lappend(stats_context->updated_stats, pgclass_stats);
+		}
+	}
 }

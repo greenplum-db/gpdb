@@ -674,7 +674,11 @@ DefineOpClass(CreateOpClassStmt *stmt)
 	{
 		stmt->opclassOid = opclassoid;
 		stmt->opfamilyOid = opfamilyoid;
-		CdbDispatchUtilityStatement((Node *) stmt, "DefineOpClass");
+		CdbDispatchUtilityStatement((Node *) stmt,
+									DF_CANCEL_ON_ERROR|
+									DF_WITH_SNAPSHOT|
+									DF_NEED_TWO_PHASE,
+									NULL);
 	}
 }
 
@@ -800,7 +804,11 @@ DefineOpFamily(CreateOpFamilyStmt *stmt)
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
 		stmt->newOid = opfamilyoid;
-		CdbDispatchUtilityStatement((Node *) stmt, "DefineOpFamily");
+		CdbDispatchUtilityStatement((Node *) stmt,
+									DF_CANCEL_ON_ERROR|
+									DF_WITH_SNAPSHOT|
+									DF_NEED_TWO_PHASE,
+									NULL);
 	}
 }
 
@@ -878,7 +886,11 @@ AlterOpFamily(AlterOpFamilyStmt *stmt)
 						 stmt->items);
 
 	if (Gp_role == GP_ROLE_DISPATCH)
-		CdbDispatchUtilityStatement((Node *) stmt, "AlterOpFamilyStmt");
+		CdbDispatchUtilityStatement((Node *) stmt,
+									DF_CANCEL_ON_ERROR|
+									DF_WITH_SNAPSHOT|
+									DF_NEED_TWO_PHASE,
+									NULL);
 }
 
 /*
@@ -1617,7 +1629,11 @@ RemoveOpClass(RemoveOpClassStmt *stmt)
 	
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
-		CdbDispatchUtilityStatement((Node *) stmt, "RemoveOpClass");
+		CdbDispatchUtilityStatement((Node *) stmt,
+									DF_CANCEL_ON_ERROR|
+									DF_WITH_SNAPSHOT|
+									DF_NEED_TWO_PHASE,
+									NULL);
 	}
 }
 
@@ -1684,7 +1700,11 @@ RemoveOpFamily(RemoveOpFamilyStmt *stmt)
 	performDeletion(&object, stmt->behavior);
 
 	if (Gp_role == GP_ROLE_DISPATCH)
-		CdbDispatchUtilityStatement((Node *) stmt, "RemoveOpFamily");
+		CdbDispatchUtilityStatement((Node *) stmt,
+									DF_CANCEL_ON_ERROR|
+									DF_WITH_SNAPSHOT|
+									DF_NEED_TWO_PHASE,
+									NULL);
 }
 
 

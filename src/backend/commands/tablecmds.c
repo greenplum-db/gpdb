@@ -370,8 +370,6 @@ static Datum transformExecOnClause(List	*on_clause);
 static char transformFormatType(char *formatname);
 static Datum transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswritable);
 
-static Oid DefineRelation_int(CreateStmt *stmt, char relkind, char relstorage, CdbDispatcherState *ds);
-
 static void ATExecPartAddInternal(Relation rel, Node *def);
 
 static void
@@ -400,43 +398,6 @@ static char *alterTableCmdString(AlterTableType subtype);
  */
 Oid
 DefineRelation(CreateStmt *stmt, char relkind, char relstorage)
-{
-	volatile struct CdbDispatcherState ds = {NULL, NULL, NULL};
-
-    Oid reloid = 0;
-    Assert(stmt->relation->schemaname == NULL || strlen(stmt->relation->schemaname)>0);
-
-    PG_TRY();
-    {
-        reloid = DefineRelation_int(stmt, relkind, relstorage, (struct CdbDispatcherState *)&ds);
-    }
-	PG_CATCH();
-	{
-        /* If dispatched, stop QEs and clean up after them. */
-        if (ds.primaryResults)
-            cdbdisp_handleError((struct CdbDispatcherState *)&ds);
-
-        /* Carry on with error handling. */
-		PG_RE_THROW();
-	}
-	PG_END_TRY();
-
-	/*
-	 * We successfully completed our work.	Now check the results from the
-	 * qExecs, if dispatched.  This waits for them to all finish, and exits
-	 * via ereport(ERROR,...) if unsuccessful.
-	 */
-	cdbdisp_finishCommand((struct CdbDispatcherState *)&ds, NULL, NULL);
-
-    return reloid;
-}
-
-
-Oid
-DefineRelation_int(CreateStmt *stmt,
-                   char relkind,
-                   char relstorage,
-				   CdbDispatcherState *ds)
 {
 	char		relname[NAMEDATALEN];
 	Oid			namespaceId;
@@ -836,12 +797,11 @@ DefineRelation_int(CreateStmt *stmt,
 		/* Dispatch the statement tree to all primary and mirror segdbs.
 		 * Doesn't wait for the QEs to finish execution.
 		 */
-		cdbdisp_dispatchUtilityStatement((Node *)stmt,
-										 true,      /* cancelOnError */
-										 true,      /* startTransaction */
-										 true,      /* withSnapshot */
-										 ds,
-										 "DefineRelation_int");
+		CdbDispatchUtilityStatement((Node *)stmt,
+									DF_CANCEL_ON_ERROR |
+									DF_NEED_TWO_PHASE |
+									DF_WITH_SNAPSHOT,
+									NULL);
 
 	}
 
@@ -872,7 +832,6 @@ DefineRelation_int(CreateStmt *stmt,
 extern void
 DefineExternalRelation(CreateExternalStmt *createExtStmt)
 {
-	volatile struct CdbDispatcherState ds = {NULL, NULL, NULL};
 	CreateStmt				  *createStmt = makeNode(CreateStmt);
 	ExtTableTypeDesc 		  *exttypeDesc = (ExtTableTypeDesc *)createExtStmt->exttypedesc;
 	SingleRowErrorDesc 		  *singlerowerrorDesc = NULL;
@@ -1173,86 +1132,63 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 
 	/*
 	 * Now we take care of pg_exttable.
+	 *
+	 * get our pg_class external rel OID. If we're the QD we just created
+	 * it above. If we're a QE DefineRelation() was already dispatched to
+	 * us and therefore we have a local entry in pg_class. get the OID
+	 * from cache.
 	 */
-    PG_TRY();
-    {
-
-		/*
-		 * get our pg_class external rel OID. If we're the QD we just created
-		 * it above. If we're a QE DefineRelation() was already dispatched to
-		 * us and therefore we have a local entry in pg_class. get the OID
-		 * from cache.
-		 */
-		if (Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_UTILITY)
-			Assert(reloid != InvalidOid);
-		else
-			reloid = RangeVarGetRelid(createExtStmt->relation, true);
-
-		/*
-		 * In the case of error log file, set fmtErrorTblOid to the external table itself.
-		 */
-		if (issreh)
-			fmtErrTblOid = reloid;
-
-		/*
-		 * create a pg_exttable entry for this external table.
-		 */
-		InsertExtTableEntry(reloid, 
-							iswritable, 
-							isweb,
-							issreh,
-							formattype,
-							rejectlimittype,
-							commandString,
-							rejectlimit,
-							fmtErrTblOid,
-							encoding,
-							formatOptStr,
-							locationExec,
-							locationUris);
-
-		/*
-		 * DefineRelation loaded the new relation into relcache, but the
-		 * relcache contains the distribution policy, which in turn depends on
-		 * the contents of pg_exttable, for EXECUTE-type external tables
-		 * (see GpPolicyFetch()). Now that we have created the pg_exttable
-		 * entry, invalidate the relcache, so that it gets loaded with the
-		 * correct information.
-		 */
-		CacheInvalidateRelcacheByRelid(reloid);
-
-		if (shouldDispatch)
-		{
-
-			/*
-			 * Dispatch the statement tree to all primary segdbs.
-			 * Doesn't wait for the QEs to finish execution.
-			 */
-			cdbdisp_dispatchUtilityStatement((Node *)createExtStmt,
-											 true,      /* cancelOnError */
-											 true,      /* startTransaction */
-											 true,      /* withSnapshot */
-											 (struct CdbDispatcherState *)&ds,
-											 "DefineExternalRelation");
-		}
-    }
-	PG_CATCH();
-	{
-        /* If dispatched, stop QEs and clean up after them. */
-        if (ds.primaryResults)
-            cdbdisp_handleError((struct CdbDispatcherState *)&ds);
-
-        /* Carry on with error handling. */
-		PG_RE_THROW();
-	}
-	PG_END_TRY();
+	if (Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_UTILITY)
+		Assert(reloid != InvalidOid);
+	else
+		reloid = RangeVarGetRelid(createExtStmt->relation, true);
 
 	/*
-	 * We successfully completed our work.	Now check the results from the
-	 * qExecs, if dispatched.  This waits for them to all finish, and exits
-	 * via ereport(ERROR,...) if unsuccessful.
+	 * In the case of error log file, set fmtErrorTblOid to the external table itself.
 	 */
-	cdbdisp_finishCommand((struct CdbDispatcherState *)&ds, NULL, NULL);
+	if (issreh)
+		fmtErrTblOid = reloid;
+
+	/*
+	 * create a pg_exttable entry for this external table.
+	 */
+	InsertExtTableEntry(reloid,
+						iswritable,
+						isweb,
+						issreh,
+						formattype,
+						rejectlimittype,
+						commandString,
+						rejectlimit,
+						fmtErrTblOid,
+						encoding,
+						formatOptStr,
+						locationExec,
+						locationUris);
+
+	/*
+	 * DefineRelation loaded the new relation into relcache, but the
+	 * relcache contains the distribution policy, which in turn depends on
+	 * the contents of pg_exttable, for EXECUTE-type external tables
+	 * (see GpPolicyFetch()). Now that we have created the pg_exttable
+	 * entry, invalidate the relcache, so that it gets loaded with the
+	 * correct information.
+	 */
+	CacheInvalidateRelcacheByRelid(reloid);
+
+	if (shouldDispatch)
+	{
+
+		/*
+		 * Dispatch the statement tree to all primary segdbs.
+		 * Doesn't wait for the QEs to finish execution.
+		 */
+		CdbDispatchUtilityStatement((Node *)createExtStmt,
+									DF_CANCEL_ON_ERROR|
+									DF_WITH_SNAPSHOT|
+									DF_NEED_TWO_PHASE,
+									NULL);
+	}
 	
 	if(customProtName)
 		pfree(customProtName);
@@ -1819,7 +1755,11 @@ ExecuteTruncate(TruncateStmt *stmt)
 			stmt->new_aovisimap_oids = new_aovisimap_oids;
 			stmt->new_ind_oids = new_ind_oids;
 
-			CdbDispatchUtilityStatement((Node *) stmt, "ExecuteTruncate");
+			CdbDispatchUtilityStatement((Node *) stmt,
+										DF_CANCEL_ON_ERROR |
+										DF_WITH_SNAPSHOT |
+										DF_NEED_TWO_PHASE,
+										NULL);
 
 			/* MPP-6929: metadata tracking */
 			foreach(lc, meta_relids)
@@ -3426,7 +3366,11 @@ AlterTable(AlterTableStmt *stmt)
 				 &stmt->oidmap);
 
 	if (Gp_role == GP_ROLE_DISPATCH)
-		CdbDispatchUtilityStatement((Node *) stmt, "AlterTable");
+		CdbDispatchUtilityStatement((Node *) stmt,
+									DF_CANCEL_ON_ERROR |
+									DF_WITH_SNAPSHOT |
+									DF_NEED_TWO_PHASE,
+									NULL);
 }
 
 /*

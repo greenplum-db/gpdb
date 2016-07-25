@@ -15,8 +15,6 @@
 
 #include "cdb/cdbtm.h"
 
-#define CDB_MOTION_LOST_CONTACT_STRING "Interconnect error master lost contact with segment."
-
 struct CdbDispatchResults; /* #include "cdb/cdbdispatchresult.h" */
 struct Gang; /* #include "cdb/cdbgang.h" */
 
@@ -107,6 +105,18 @@ void
 CdbCheckDispatchResult(struct CdbDispatcherState *ds, DispatchWaitMode waitMode);
 
 /*
+ * cdbdisp_getDispatchResults:
+ *
+ * Block until all QEs return results or report errors.
+ *
+ * Return Values:
+ *   Return NULL If one or more QEs got Error in which case qeErrorMsg contain
+ *   QE error messages.
+ */
+struct CdbDispatchResults *
+cdbdisp_getDispatchResults(struct CdbDispatcherState *ds, StringInfoData *qeErrorMsg);
+
+/*
  * Wait for all QEs to finish, then report any errors from the given
  * CdbDispatchResults objects and free them.  If not all QEs in the
  * associated gang(s) executed the command successfully, throws an
@@ -115,26 +125,10 @@ CdbCheckDispatchResult(struct CdbDispatcherState *ds, DispatchWaitMode waitMode)
  * instead call CdbCheckDispatchResult(), etc., directly.
  */
 void
-cdbdisp_finishCommand(struct CdbDispatcherState *ds,
-					  void (*handle_results_callback)(struct CdbDispatchResults *primaryResults, void *ctx),
-					  void *ctx);
+cdbdisp_finishCommand(struct CdbDispatcherState *ds);
 
-/*
- * cdbdisp_handleError
- *
- * When caller catches an error, the PG_CATCH handler can use this
- * function instead of cdbdisp_finishCommand to wait for all QEs
- * to finish, clean up, and report QE errors if appropriate.
- * This function should be called only from PG_CATCH handlers.
- *
- * This function destroys and frees the given CdbDispatchResults objects.
- * It is a no-op if both CdbDispatchResults ptrs are NULL.
- *
- * On return, the caller is expected to finish its own cleanup and
- * exit via PG_RE_THROW().
- */
 void
-cdbdisp_handleError(struct CdbDispatcherState *ds);
+cdbdisp_cancelDispatch(CdbDispatcherState *ds);
 
 /*
  * Allocate memory and initialize CdbDispatcherState.

@@ -5350,7 +5350,7 @@ DefineDispatchSavepoint(char *name)
 		 * dispatch a DTX command, in the event of an error, this call
 		 * will either exit via elog()/ereport() or return false
 		 */
-		if (!dispatchDtxCommand(cmd, /* withSnapshot */ false, /* raiseError */ false))
+		if (!dispatchDtxCommand(cmd))
 		{
 			elog(ERROR, "Could not create a new savepoint (%s)", cmd);
 		}
@@ -5498,7 +5498,7 @@ ReleaseSavepoint(List *options)
 		 * dispatch a DTX command, in the event of an error, this call will
 		 * either exit via elog()/ereport() or return false
 		 */
-		if (!dispatchDtxCommand(cmd, /* withSnapshot*/ false, /* raiseError */ false))
+		if (!dispatchDtxCommand(cmd))
 		{
 			elog(ERROR, "Could not release savepoint (%s)", cmd);
 		}
@@ -5678,7 +5678,7 @@ DispatchRollbackToSavepoint(char *name)
 	 * dispatch a DTX command, in the event of an error, this call will
 	 * either exit via elog()/ereport() or return false
 	 */
-	if (!dispatchDtxCommand(cmd, /* withSnapshot */ false, /* raiseError */ false))
+	if (!dispatchDtxCommand(cmd))
 	{
 		elog(ERROR, "Could not rollback to savepoint (%s)", cmd);
 	}
