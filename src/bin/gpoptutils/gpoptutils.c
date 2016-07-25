@@ -11,107 +11,69 @@
  *	AS '$libdir/gpoptutils', 'gp_dump_query_oids'
  *	LANGUAGE C STRICT;
  */
-
+#include "postgres_fe.h"
 #include "postgres.h"
 #include "funcapi.h"
 #include "utils/builtins.h"
-#include "gpopt/utils/nodeutils.h"
 #include "rewrite/rewriteHandler.h"
 #include "tcop/tcopprot.h"
-#include "c.h"
 
-extern
-List *pg_parse_and_rewrite(const char *query_string, Oid *paramTypes, int iNumParams);
-
-extern
-List *QueryRewrite(Query *parsetree);
-
-static
-void traverseQueryOids(Query *pquery, HTAB *relhtab, StringInfoData *relbuf, HTAB *funchtab, StringInfoData *funcbuf);
+#define atooid(x)  ((Oid) strtoul((x), NULL, 10))
 
 Datum gp_dump_query_oids(PG_FUNCTION_ARGS);
 
-#ifdef PG_MODULE_MAGIC
 PG_MODULE_MAGIC;
-#endif
-
 PG_FUNCTION_INFO_V1(gp_dump_query_oids);
 
-static void traverseQueryOids
+static void
+traverseQueryOids
 	(
-	Query *pquery,
-	HTAB *relhtab,
+	Query          *pquery,
+	HTAB           *relhtab,
 	StringInfoData *relbuf,
-	HTAB *funchtab,
+	HTAB           *funchtab,
 	StringInfoData *funcbuf
 	)
 {
-	ListCell *plc;
-	bool relFound, funcFound;
-	foreach (plc, pquery->rtable)
-	{
-		RangeTblEntry *rte = (RangeTblEntry *) lfirst(plc);
+	bool	   found;
+	const char *whitespace = " \t\n\r";
+	char	   *query = nodeToString(pquery);
+	char	   *token = strtok(query, whitespace);
 
-		switch (rte->rtekind)
+	while (token)
+	{
+		if (pg_strcasecmp(token, ":relid") == 0)
 		{
-			case RTE_RELATION:
+			token = strtok(NULL, whitespace);
+			if (token)
 			{
-				hash_search(relhtab, (void *)&rte->relid, HASH_ENTER, &relFound);
-				if (!relFound)
+				Oid relid = atooid(token);
+				hash_search(relhtab, (void *)&relid, HASH_ENTER, &found);
+				if (!found)
 				{
-					if (0 != relbuf->len)
+					if (relbuf->len != 0)
 						appendStringInfo(relbuf, "%s", ",");
-					appendStringInfo(relbuf, "%u", rte->relid);
+					appendStringInfo(relbuf, "%u", relid);
 				}
 			}
-				break;
-			case RTE_FUNCTION:
+		}
+		else if (pg_strcasecmp(token, ":funcid") == 0)
+		{
+			token = strtok(NULL, whitespace);
+			if (token)
 			{
-				FuncExpr *node = (FuncExpr *)rte->funcexpr; 
-				hash_search(funchtab, (void *)&node->funcid, HASH_ENTER, &funcFound);
-				if (!funcFound)
+				Oid funcid = atooid(token);
+				hash_search(funchtab, (void *)&funcid, HASH_ENTER, &found);
+				if (!found)
 				{
-					if (0 != funcbuf->len)
+					if (funcbuf->len != 0)
 						appendStringInfo(funcbuf, "%s", ",");
-					appendStringInfo(funcbuf, "%u", node->funcid);
+					appendStringInfo(funcbuf, "%u", funcid);
 				}
 			}
-				break;
-			case RTE_SUBQUERY:
-				traverseQueryOids(rte->subquery, relhtab, relbuf, funchtab, funcbuf);
-				break;
-			default:
-				break;
 		}
-	}
-	
-	foreach (plc, pquery->targetList)
-	{
-		Expr *expr = ((TargetEntry *) lfirst(plc))->expr;
-		if (expr->type == T_FuncExpr)
-		{
-			// expression node for a function call, i.e. select f();
-			FuncExpr *node = (FuncExpr *)expr;
-			hash_search(funchtab, (void *)&node->funcid, HASH_ENTER, &funcFound);
-			if (!funcFound)
-			{
-				if (0 != funcbuf->len)
-					appendStringInfo(funcbuf, "%s", ",");
-				appendStringInfo(funcbuf, "%u", node->funcid);
-			}
-		}
-		else if(expr->type == T_SubLink)
-		{
-			// subselect appearing in an expression
-			SubLink *sublink = (SubLink *)expr;
-			traverseQueryOids((Query *)sublink->subselect, relhtab, relbuf, funchtab, funcbuf);
-		}
-	}
 
-	foreach(plc, pquery->cteList)
-	{
-		CommonTableExpr *cte = (CommonTableExpr *) lfirst(plc);
-		traverseQueryOids((Query *)cte->ctequery, relhtab, relbuf, funchtab, funcbuf);
+		token = strtok(NULL, whitespace);
 	}
 }
 
