@@ -241,7 +241,10 @@ CreateTrigger(CreateTrigStmt *stmt, Oid constraintOid)
 	 */
 	tgrel = heap_open(TriggerRelationId, RowExclusiveLock);
 
-	trigoid = GetNewOid(tgrel);
+	if (OidIsValid(stmt->trigOid))
+		trigoid = stmt->trigOid;
+	else
+		trigoid = GetNewOid(tgrel);
 
 	/*
 	 * If trigger is for an RI constraint, the passed-in name is the
