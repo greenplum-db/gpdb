@@ -379,8 +379,6 @@ typedef struct Sequence
 {
 	Plan plan;
 	List *subplans;
-
-	PartitionSelector *static_selector;
 } Sequence;
 
 /* ----------------

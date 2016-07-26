@@ -1541,8 +1541,6 @@ typedef struct SequenceState
 	PlanState **subplans;
 	int			numSubplans;
 
-	PartitionSelectorState *static_selector;
-
 	/*
 	 * True if no subplan has been executed.
 	 */

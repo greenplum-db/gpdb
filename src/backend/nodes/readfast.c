@@ -1600,7 +1600,6 @@ _readSequence(void)
 	READ_LOCALS(Sequence);
 	readPlanInfo((Plan *)local_node);
 	READ_NODE_FIELD(subplans);
-	READ_NODE_FIELD(static_selector);
 	READ_DONE();
 }
 
