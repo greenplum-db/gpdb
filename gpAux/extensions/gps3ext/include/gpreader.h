@@ -8,7 +8,7 @@
 #include "s3interface.h"
 #include "s3key_reader.h"
 
-extern string gpReaderErrorMessage;
+extern string s3extErrorMessage;
 
 class GPReader : public Reader {
    public:

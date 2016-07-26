@@ -11,7 +11,7 @@
 #include "s3macros.h"
 #include "s3utils.h"
 
-string gpReaderErrorMessage;
+string s3extErrorMessage;
 
 // Thread related functions, called only by gpreader and gpcheckcloud
 #define MUTEX_TYPE pthread_mutex_t
@@ -117,7 +117,7 @@ void CheckEssentialConfig() {
 // invoked by s3_import(), need to be exception safe
 GPReader* reader_init(const char* url_with_options) {
     GPReader* reader = NULL;
-    gpReaderErrorMessage.clear();
+    s3extErrorMessage.clear();
     try {
         if (!url_with_options) {
             return NULL;
@@ -158,7 +158,7 @@ GPReader* reader_init(const char* url_with_options) {
             delete reader;
         }
         S3ERROR("reader_init caught an exception: %s", e.what());
-        gpReaderErrorMessage = e.what();
+        s3extErrorMessage = e.what();
         return NULL;
     }
 }
@@ -180,7 +180,7 @@ bool reader_transfer_data(GPReader* reader, char* data_buf, int& data_len) {
         data_len = (int)read_len;
     } catch (std::exception& e) {
         S3ERROR("reader_transfer_data caught an exception: %s", e.what());
-        gpReaderErrorMessage = e.what();
+        s3extErrorMessage = e.what();
         return false;
     }
 
@@ -200,7 +200,7 @@ bool reader_cleanup(GPReader** reader) {
         }
     } catch (std::exception& e) {
         S3ERROR("reader_cleanup caught an exception: %s", e.what());
-        gpReaderErrorMessage = e.what();
+        s3extErrorMessage = e.what();
         result = false;
     }
 

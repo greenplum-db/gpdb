@@ -1,0 +1,15 @@
+CREATE OR REPLACE FUNCTION write_to_s3() RETURNS integer AS
+        '$libdir/gps3ext.so', 's3_export' LANGUAGE C STABLE;
+
+CREATE PROTOCOL s3 (
+        writefunc  = write_to_s3
+);
+
+DROP EXTERNAL TABLE s3regress;
+
+CREATE WRITABLE EXTERNAL TABLE s3regress (date text, time text, open float, high float,
+        low float, volume int) FORMAT 'csv';
+
+DROP EXTERNAL TABLE s3regress;
+
+DROP PROTOCOL s3;
