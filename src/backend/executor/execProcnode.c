@@ -1852,12 +1852,14 @@ ExecEndNode(PlanState *node)
 			break;
 	}
 
+#ifdef USE_CODEGEN
 	/*
 	 * if codegen guc is true, then assert if CodegenManager is NULL
 	 */
 	AssertImply(codegen, NULL != node->CodegenManager);
 	CodeGeneratorManagerDestroy(node->CodegenManager);
 	node->CodegenManager = NULL;
+#endif
 
 	estate->currentSliceIdInPlan = origSliceIdInPlan;
 	estate->currentExecutingSliceId = origExecutingSliceId;
