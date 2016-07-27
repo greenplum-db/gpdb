@@ -48,7 +48,7 @@ Response S3Service::getResponseWithRetries(const string &url, HTTPHeaders &heade
                                            const map<string, string> &params, uint64_t retries) {
     while (retries--) {
         // declare response here to leverage RVO (Return Value Optimization)
-        Response response = restfulService->get(url, headers, params);
+        Response response = this->restfulService->get(url, headers, params);
         if (response.isSuccess() || (retries == 0)) {
             return response;
         };
@@ -385,6 +385,26 @@ S3CompressionType S3Service::checkCompressionType(const string &keyUrl, const st
     }
 
     return S3_COMPRESSION_PLAIN;
+}
+
+bool S3Service::checkKeyExistence(const string &keyUrl, const string &region,
+                                  const S3Credential &cred) {
+    HTTPHeaders headers;
+    map<string, string> params;
+    UrlParser parser(keyUrl);
+
+    headers.Add(HOST, parser.getHost());
+    headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
+
+    SignRequestV4("HEAD", &headers, region, parser.getPath(), "", cred);
+
+    ResponseCode code = this->restfulService->head(keyUrl, headers, params);
+
+    if (code == 200 || code == 206) {
+        return true;
+    }
+
+    return false;
 }
 
 ListBucketResult::~ListBucketResult() {

@@ -393,3 +393,35 @@ TEST_F(S3ServiceTest, fetchDataWithResponseError) {
                      "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region, cred),
                  std::runtime_error);
 }
+
+TEST_F(S3ServiceTest, HeadResponse200) {
+    string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
+
+    EXPECT_CALL(mockRestfulService, head(_, _, _)).WillOnce(Return(200));
+
+    EXPECT_TRUE(s3service->checkKeyExistence(url, this->region, this->cred));
+}
+
+TEST_F(S3ServiceTest, HeadResponse206) {
+    string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
+
+    EXPECT_CALL(mockRestfulService, head(_, _, _)).WillOnce(Return(206));
+
+    EXPECT_TRUE(s3service->checkKeyExistence(url, this->region, this->cred));
+}
+
+TEST_F(S3ServiceTest, HeadResponse404) {
+    string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
+
+    EXPECT_CALL(mockRestfulService, head(_, _, _)).WillOnce(Return(404));
+
+    EXPECT_FALSE(s3service->checkKeyExistence(url, this->region, this->cred));
+}
+
+TEST_F(S3ServiceTest, HeadResponse403) {
+    string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
+
+    EXPECT_CALL(mockRestfulService, head(_, _, _)).WillOnce(Return(403));
+
+    EXPECT_FALSE(s3service->checkKeyExistence(url, this->region, this->cred));
+}

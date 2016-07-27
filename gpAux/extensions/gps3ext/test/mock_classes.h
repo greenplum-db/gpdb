@@ -31,6 +31,9 @@ class MockS3RESTfulService : public S3RESTfulService {
    public:
     MOCK_METHOD3(get, Response(const string &url, HTTPHeaders &headers,
                                const map<string, string> &params));
+
+    MOCK_METHOD3(head, ResponseCode(const string &url, HTTPHeaders &headers,
+                               const map<string, string> &params));
 };
 
 class XMLGenerator {

@@ -19,6 +19,16 @@ enum ResponseStatus {
     RESPONSE_ERROR,  // server error (server return code is not 200)
 };
 
+typedef long ResponseCode;
+
+struct UploadData {
+    UploadData(const vector<uint8_t>& buff) : buffer(buff), currentPosition(0) {
+    }
+
+    const vector<uint8_t>& buffer;
+    uint64_t currentPosition;
+};
+
 class Response {
    public:
     Response() : status(RESPONSE_FAIL) {
@@ -82,6 +92,9 @@ class RESTfulService {
 
     virtual Response put(const string& url, HTTPHeaders& headers, const map<string, string>& params,
                          const vector<uint8_t>& data) = 0;
+
+    virtual ResponseCode head(const string& url, HTTPHeaders& headers,
+                              const map<string, string>& params) = 0;
 };
 
 #endif /* INCLUDE_RESTFUL_SERVICE_H_ */

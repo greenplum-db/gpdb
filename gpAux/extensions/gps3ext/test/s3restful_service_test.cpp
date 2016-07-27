@@ -167,3 +167,40 @@ TEST(S3RESTfulService, DISABLED_PutToDummyServer) {
     EXPECT_EQ(RESPONSE_OK, resp.getStatus());
     EXPECT_TRUE(compareVector(data, resp.getRawData()));
 }
+
+TEST(S3RESTfulService, HeadWithoutURL) {
+    HTTPHeaders headers;
+    map<string, string> params;
+    string url;
+    S3RESTfulService service;
+
+    ResponseCode code = service.head(url, headers, params);
+
+    EXPECT_EQ(-1, code);
+}
+
+TEST(S3RESTfulService, HeadWithWrongURL) {
+    HTTPHeaders headers;
+    map<string, string> params;
+    string url;
+    S3RESTfulService service;
+
+    url = "https://www.bing.com/pivotal.html";
+
+    ResponseCode code = service.head(url, headers, params);
+
+    EXPECT_EQ(404, code);
+}
+
+TEST(S3RESTfulService, HeadWithCorrectURL) {
+    HTTPHeaders headers;
+    map<string, string> params;
+    string url;
+    S3RESTfulService service;
+
+    url = "https://www.bing.com/";
+
+    ResponseCode code = service.head(url, headers, params);
+
+    EXPECT_EQ(200, code);
+}

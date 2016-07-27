@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include <map>
 #include <string>
+#include <string.h>
 
 #include "gpcommon.h"
 #include "s3http_headers.h"
@@ -38,15 +39,7 @@ size_t RESTfulServiceWriteFuncCallback(char *ptr, size_t size, size_t nmemb, voi
     return realsize;
 }
 
-struct UploadData {
-    UploadData(const vector<uint8_t> &buff) : buffer(buff), currentPosition(0) {
-    }
-
-    const vector<uint8_t> &buffer;
-    uint64_t currentPosition;
-};
-
-// curl's read function callback.
+// curl's reading function callback.
 size_t RESTfulServiceReadFuncCallback(char *ptr, size_t size, size_t nmemb, void *userp) {
     if (QueryCancelPending) {
         return -1;
@@ -56,16 +49,16 @@ size_t RESTfulServiceReadFuncCallback(char *ptr, size_t size, size_t nmemb, void
     uint64_t dataLeft = data->buffer.size() - data->currentPosition;
 
     size_t requestedSize = size * nmemb;
-    size_t copyItemNum = requestedSize < dataLeft ? nmemb : (dataLeft / size);
-    size_t copySize = copyItemNum * size;
+    size_t copiedItemNum = requestedSize < dataLeft ? nmemb : (dataLeft / size);
+    size_t copiedDataSize = copiedItemNum * size;
 
-    if (copySize == 0) return 0;
+    if (copiedDataSize == 0) return 0;
 
-    memcpy(ptr, data->buffer.data() + data->currentPosition, copySize);
+    memcpy(ptr, data->buffer.data() + data->currentPosition, copiedDataSize);
 
-    data->currentPosition += copySize;
+    data->currentPosition += copiedDataSize;
 
-    return copyItemNum;
+    return copiedItemNum;
 }
 
 // get() will execute HTTP GET RESTful API with given url/headers/params,
@@ -146,7 +139,7 @@ Response S3RESTfulService::put(const string &url, HTTPHeaders &headers,
 
     headers.CreateList();
 
-    /* configs for download */
+    /* options for downloading */
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1L);
     curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
@@ -154,7 +147,7 @@ Response S3RESTfulService::put(const string &url, HTTPHeaders &headers,
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, RESTfulServiceWriteFuncCallback);
 
-    /* configs for upload */
+    /* options for uploading */
     UploadData uploadData(data);
     curl_easy_setopt(curl, CURLOPT_READDATA, (void *)&uploadData);
     curl_easy_setopt(curl, CURLOPT_READFUNCTION, RESTfulServiceReadFuncCallback);
@@ -207,4 +200,50 @@ Response S3RESTfulService::put(const string &url, HTTPHeaders &headers,
     headers.FreeList();
 
     return response;
+}
+
+// head() will execute HTTP HEAD RESTful API with given url/headers/params, and return the HTTP
+// response code.
+//
+// Currently, this method only return the HTTP code, will be extended if needed in the future
+// implementation.
+ResponseCode S3RESTfulService::head(const string &url, HTTPHeaders &headers,
+                                    const map<string, string> &params) {
+    ResponseCode responseCode = -1;
+
+    CURL *curl = curl_easy_init();
+    CHECK_OR_DIE_MSG(curl != NULL, "%s", "Failed to create curl handler");
+
+    headers.CreateList();
+
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1L);
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.GetList());
+
+    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "HEAD");
+    curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
+
+    map<string, string>::const_iterator iter = params.find("debug");
+    if (iter != params.end() && iter->second == "true") {
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+    }
+
+    if (s3ext_debug_curl) {
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+    }
+
+    CURLcode res = curl_easy_perform(curl);
+
+    if (res != CURLE_OK) {
+        S3ERROR("curl_easy_perform() failed: %s", curl_easy_strerror(res));
+    } else {
+        // Get the HTTP response status code from HTTP header
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
+    }
+
+    curl_easy_cleanup(curl);
+    headers.FreeList();
+
+    return responseCode;
 }

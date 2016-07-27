@@ -76,6 +76,11 @@ class S3Interface {
                                                    const S3Credential& cred) {
         throw std::runtime_error("Default implementation must not be called.");
     }
+
+    virtual bool checkKeyExistence(const string& keyUrl, const string& region,
+                                   const S3Credential& cred) {
+        throw std::runtime_error("Default implementation must not be called.");
+    }
 };
 
 class S3Service : public S3Interface {
@@ -90,6 +95,8 @@ class S3Service : public S3Interface {
 
     S3CompressionType checkCompressionType(const string& keyUrl, const string& region,
                                            const S3Credential& cred);
+
+    bool checkKeyExistence(const string& keyUrl, const string& region, const S3Credential& cred);
 
     // following two functions are exposed publicly for UT tests
     void setRESTfulService(RESTfulService* restfullService) {
