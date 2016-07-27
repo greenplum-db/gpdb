@@ -8,6 +8,8 @@ class S3RESTfulService : public RESTfulService {
     S3RESTfulService();
     virtual ~S3RESTfulService();
     Response get(const string& url, HTTPHeaders& headers, const map<string, string>& params);
+    Response put(const string& url, HTTPHeaders& headers, const map<string, string>& params,
+                 const vector<uint8_t>& data);
 };
 
 #endif /* INCLUDE_S3RESTFUL_SERVICE_H_ */

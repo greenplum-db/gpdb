@@ -67,7 +67,7 @@ TEST(S3RESTfulService, GetWithWrongURL) {
 TEST(S3RESTfulService, GetWithoutURLWithDebugParam) {
     HTTPHeaders headers;
     map<string, string> params;
-    params.insert(make_pair("debug", "true"));
+    params["debug"] = "true";
 
     string url;
     S3RESTfulService service;
@@ -77,4 +77,93 @@ TEST(S3RESTfulService, GetWithoutURLWithDebugParam) {
     EXPECT_EQ(RESPONSE_FAIL, resp.getStatus());
     EXPECT_EQ("Failed to talk to s3 service URL using bad/illegal format or missing URL",
               resp.getMessage());
+}
+
+TEST(S3RESTfulService, PutWithoutURL) {
+    HTTPHeaders headers;
+    map<string, string> params;
+    string url;
+    S3RESTfulService service;
+    vector<uint8_t> data;
+
+    Response resp = service.put(url, headers, params, data);
+
+    EXPECT_EQ(RESPONSE_FAIL, resp.getStatus());
+    EXPECT_EQ("Failed to talk to s3 service URL using bad/illegal format or missing URL",
+              resp.getMessage());
+}
+
+TEST(S3RESTfulService, PutToServerWithBlindPutService) {
+    HTTPHeaders headers;
+    map<string, string> params;
+    string url;
+    S3RESTfulService service;
+
+    /* data = "abcdefghij", len = 11 (including '\0') */
+    vector<uint8_t> data;
+    for (int i = 0; i < 10; i++) data.push_back('a' + i);
+    data.push_back(0);
+
+    url = "https://www.bing.com";
+
+    Response resp = service.put(url, headers, params, data);
+
+    EXPECT_EQ(RESPONSE_OK, resp.getStatus());
+}
+
+TEST(S3RESTfulService, PutToServerWith404Page) {
+    HTTPHeaders headers;
+    map<string, string> params;
+    string url;
+    S3RESTfulService service;
+
+    /* data = "abcdefghij", len = 11 (including '\0') */
+    vector<uint8_t> data;
+    for (int i = 0; i < 10; i++) data.push_back('a' + i);
+    data.push_back(0);
+
+    url = "https://www.bing.com/pivotal.html";
+
+    Response resp = service.put(url, headers, params, data);
+
+    EXPECT_EQ(RESPONSE_ERROR, resp.getStatus());
+    EXPECT_EQ("S3 server returned error, error code is 404", resp.getMessage());
+}
+
+/*
+ * The reason we define our vector-compare function is because:
+ *   we may suffer from the Segment fault error when using std::equal() for comparison
+ */
+template <typename T>
+bool compareVector(const vector<T>& a, const vector<T>& b) {
+    if (a.size() != b.size()) return false;
+
+    for (size_t i = 0; i < a.size(); i++) {
+        if (a[i] != b[i]) return false;
+    }
+
+    return true;
+}
+
+/* Run 'python bin/dummyHTTPServer.py' before enable this test */
+TEST(S3RESTfulService, DISABLED_PutToDummyServer) {
+    HTTPHeaders headers;
+    map<string, string> params;
+    string url;
+    S3RESTfulService service;
+
+    /* data = "abcdefghij", len = 11 (including '\0') */
+    vector<uint8_t> data;
+    for (int i = 0; i < 10; i++) data.push_back('a' + i);
+    data.push_back(0);
+
+    headers.Add(CONTENTTYPE, "text/plain");
+    headers.Add(CONTENTLENGTH, std::to_string(data.size()));
+
+    /* 553 is our office room number */
+    url = "http://localhost:8553";
+
+    Response resp = service.put(url, headers, params, data);
+    EXPECT_EQ(RESPONSE_OK, resp.getStatus());
+    EXPECT_TRUE(compareVector(data, resp.getRawData()));
 }

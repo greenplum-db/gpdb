@@ -79,6 +79,9 @@ class RESTfulService {
 
     virtual Response get(const string& url, HTTPHeaders& headers,
                          const map<string, string>& params) = 0;
+
+    virtual Response put(const string& url, HTTPHeaders& headers, const map<string, string>& params,
+                         const vector<uint8_t>& data) = 0;
 };
 
 #endif /* INCLUDE_RESTFUL_SERVICE_H_ */
