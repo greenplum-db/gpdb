@@ -82,8 +82,6 @@ typedef FormData_pg_attribute_encoding *Form_pg_attribute_encoding;
 
 extern PGFunction *get_funcs_for_compression(char *compresstype);
 extern PGFunction **RelationGetColumnCompressionFuncs(Relation rel);
-extern uint32 *RelationGetColumnBlocksize(Relation rel);
-extern uint32 RelationGetRelationBlocksize(Relation rel);
 extern StdRdOptions **RelationGetAttributeOptions(Relation rel);
 extern List **RelationGetUntransformedAttributeOptions(Relation rel);
 
