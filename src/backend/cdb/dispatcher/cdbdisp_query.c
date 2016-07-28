@@ -107,7 +107,7 @@ fillSliceVector(SliceTable *sliceTable,
 
 static char *
 buildGpQueryString(struct CdbDispatcherState *ds,
-				   DispatchCommandQueryParms * pQueryParms,
+				   DispatchCommandQueryParms *pQueryParms,
 				   int *finalLen);
 
 static void
@@ -238,7 +238,7 @@ cdbdisp_dispatchPlan(struct QueryDesc *queryDesc,
 		queryDesc->operation == CMD_DELETE)
 	{
 		MemoryContext oldContext;
-		List	   *cursors;
+		List *cursors;
 
 		oldContext = CurrentMemoryContext;
 		if (stmt->qdContext)
@@ -552,10 +552,10 @@ CdbDispatchUtilityStatement(struct Node *stmt,
  */
 static void
 cdbdisp_dispatchCommandInternal(const char *strCommand,
-											char *serializedQuerytree,
-											int serializedQuerytreelen,
-											int flags,
-											CdbPgResults *cdb_pgresults)
+								char *serializedQuerytree,
+								int serializedQuerytreelen,
+								int flags,
+								CdbPgResults *cdb_pgresults)
 {
 	struct CdbDispatcherState ds = { NULL, NULL, NULL };
 	CdbDispatchResults* dispatchresults = NULL;
@@ -1147,8 +1147,8 @@ cdbdisp_dispatchX(DispatchCommandQueryParms *pQueryParms,
 
 	int iSlice;
 	int rootIdx = pQueryParms->rootIdx;
-	char       *queryText = NULL;
-	int         queryTextLength = 0;
+	char *queryText = NULL;
+	int queryTextLength = 0;
 
 	if (log_dispatch_stats)
 		ResetUsage();

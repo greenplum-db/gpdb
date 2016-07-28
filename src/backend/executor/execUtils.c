@@ -1665,7 +1665,8 @@ static void InventorySliceTree(Slice ** sliceMap, int sliceIndex, SliceReq * req
 static void AssociateSlicesToProcesses(Slice ** sliceMap, int sliceIndex, SliceReq * req);
 
 
-/* Function AssignGangs runs on the QD and finishes construction of the
+/*
+ * Function AssignGangs runs on the QD and finishes construction of the
  * global slice table for a plan by assigning gangs allocated by the
  * executor factory to the slices of the slice table.
  *
@@ -1677,13 +1678,6 @@ static void AssociateSlicesToProcesses(Slice ** sliceMap, int sliceIndex, SliceR
  * each slice tree in the slice table, asking the executor factory to
  * allocate a minimal set of gangs that can satisfy any of the slice trees,
  * and associating the allocated gangs with slices in the slice table.
- *
- * The argument utility_segment_index is the segment index to use for
- * 1-gangs that run on QEs.
- *
- * TODO Currently (July 2005) this argument is always supplied as 0, but
- *		there are no cases of the planner specifying a fixed Motion to a
- *		QE, so we don't know the case works.
  *
  * On successful exit, the CDBProcess lists (primaryProcesses, mirrorProcesses)
  * and the Gang pointers (primaryGang, mirrorGang) are set correctly in each
@@ -1702,7 +1696,7 @@ AssignGangs(QueryDesc *queryDesc)
 	SliceReq	req,
 				inv;
 
-	/* Make a map so we can access slices quickly by index.  */
+	/* Make a map so we can access slices quickly by index. */
 	nslices = list_length(sliceTable->slices);
 	sliceMap = (Slice **) palloc(nslices * sizeof(Slice *));
 	i = 0;
@@ -1769,7 +1763,6 @@ AssignGangs(QueryDesc *queryDesc)
 	}
 
 	/* Use the gangs to construct the CdbProcess lists in slices. */
-
 	inv.nxtNgang = 0;
     inv.nxt1gang_primary_reader = 0;
     inv.nxt1gang_entrydb_reader = 0;
