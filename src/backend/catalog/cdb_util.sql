@@ -73,7 +73,7 @@ DECLARE rec gp_type_aoseg_info;
 BEGIN
     select relstorage into relst from pg_class where oid = $1; 
     if relst = 'a' then
-        select 'select gp_segment_id as segmentid, 
+        sqlstr = 'select gp_segment_id as segmentid,
             segno::int as segno,
             -1::int as colno,
             eof::bigint as eof,
@@ -81,15 +81,11 @@ BEGIN
             varblockcount::bigint as varblockcount,
             eofuncompressed::bigint as eofuncompressed
             from
-            gp_dist_random(''pg_aoseg.' || c2.relname || ''');'
-        into sqlstr
-        from pg_class c, pg_class c2
-        where c.oid = $1 and c2.oid = c.relaosegrelid
-        ;
+            gp_dist_random(''pg_aoseg.pg_aoseg_' || $1 || ''');';
     else 
         if relst = 'c' then
             select relnatts into ncol from pg_class where oid = $1;
-            select 'select gp_segment_id as segmentid,
+	    sqlstr = 'select gp_segment_id as segmentid,
                 segno::int as segno,
                 col::int as colno,
                 aocsvpinfo_decode(vpinfo, col, 0) as eof,
@@ -97,12 +93,8 @@ BEGIN
                 varblockcount::bigint as varblockcount,
                 aocsvpinfo_decode(vpinfo, col, 1) as eofuncompressed
                 from
-                gp_dist_random(''pg_aoseg.' || c2.relname || '''),
-                generate_series(0, ' || (ncol-1)::varchar(100) || ') col;'
-            into sqlstr
-            from pg_class c, pg_class c2
-            where c.oid = $1 and c2.oid = c.relaosegrelid
-            ;
+                gp_dist_random(''pg_aoseg.pg_aocsseg_' || $1 || '''),
+                generate_series(0, ' || (ncol-1)::varchar(100) || ') col;';
         else
             raise exception '% is not a appendonly storage type', relst;
         end if;
