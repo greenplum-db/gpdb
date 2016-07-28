@@ -12,9 +12,10 @@
 #ifndef CDBDATABASEINFO_H
 #define CDBDATABASEINFO_H
 
+#include "catalog/pg_appendonly.h"
 #include "storage/itemptr.h"
 #include "storage/dbdirnode.h"
-#include "catalog/pg_appendonly.h"
+#include "utils/tqual.h"
 
 /* ------------------------------------------------------------------------
  * Structure definitions

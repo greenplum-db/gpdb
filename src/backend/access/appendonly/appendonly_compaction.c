@@ -28,6 +28,7 @@
 #include "access/tuptoaster.h"
 #include "catalog/catalog.h"
 #include "catalog/indexing.h"
+#include "catalog/pg_appendonly_fn.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbpersistentfilesysobj.h"
 #include "cdb/cdbmirroredfilesysobj.h"

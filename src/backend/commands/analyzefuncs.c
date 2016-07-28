@@ -1,6 +1,7 @@
 #include "postgres.h"
 
 #include "access/aocssegfiles.h"
+#include "catalog/pg_appendonly_fn.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbfilerepprimary.h"
 #include "cdb/cdbvars.h"

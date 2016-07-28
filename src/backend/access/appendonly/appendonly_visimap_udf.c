@@ -12,6 +12,7 @@
 #include "access/appendonly_visimap_entry.h"
 #include "access/appendonly_visimap_store.h"
 #include "catalog/namespace.h"
+#include "catalog/pg_appendonly_fn.h"
 #include "cdb/cdbappendonlyblockdirectory.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"

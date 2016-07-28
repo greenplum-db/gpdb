@@ -18,6 +18,7 @@
 #include "access/aocssegfiles.h"                  /* AOCS */
 #include "access/heapam.h"			  /* heap_open            */
 #include "access/transam.h"			  /* InvalidTransactionId */
+#include "catalog/pg_appendonly_fn.h"
 #include "catalog/pg_authid.h"
 #include "gp-libpq-fe.h"
 #include "miscadmin.h"

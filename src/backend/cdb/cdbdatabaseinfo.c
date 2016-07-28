@@ -6,8 +6,8 @@
  *
  *-------------------------------------------------------------------------
  */
-#include "c.h"
 #include "postgres.h"
+
 #include "miscadmin.h"
 #include "pgstat.h"
 #include "utils/palloc.h"
@@ -25,7 +25,7 @@
 #include "catalog/pg_tablespace.h"
 #include "cdb/cdbpersistentdatabase.h"
 #include "cdb/cdbdirectopen.h"
-#include "catalog/pg_appendonly.h"
+#include "catalog/pg_appendonly_fn.h"
 #include "access/aosegfiles.h"
 #include "access/aocssegfiles.h"
 #include "access/appendonlytid.h"

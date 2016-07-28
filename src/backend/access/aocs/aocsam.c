@@ -18,7 +18,7 @@
 #include "access/xact.h"
 #include "access/appendonlywriter.h"
 #include "catalog/catalog.h"
-#include "catalog/pg_appendonly.h"
+#include "catalog/pg_appendonly_fn.h"
 #include "catalog/pg_attribute_encoding.h"
 #include "catalog/namespace.h"
 #include "catalog/gp_fastsequence.h"

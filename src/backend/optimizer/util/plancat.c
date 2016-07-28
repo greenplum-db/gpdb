@@ -22,6 +22,7 @@
 #include "catalog/catquery.h"
 #include "access/heapam.h"
 #include "access/transam.h"
+#include "catalog/pg_appendonly_fn.h"
 #include "catalog/pg_inherits.h"
 #include "catalog/pg_exttable.h"
 #include "commands/tablecmds.h"
