@@ -1100,7 +1100,6 @@ DatabaseInfo_HandleAppendOnly(
 				aocsSegfileArray = GetAllAOCSFileSegInfo_pg_aocsseg_rel(
 																dbInfoRel->relnatts,
 																dbInfoRel->relname, 
-																aoEntry, 
 																pg_aocsseg_rel,
 																SnapshotNow, 
 																&totalAocsSegFiles);

@@ -158,7 +158,6 @@ extern AOCSFileSegInfo **
 GetAllAOCSFileSegInfo_pg_aocsseg_rel(
 	int 				numOfColumsn, 
 	char 				*relationName, 
-	AppendOnlyEntry 	*aoEntry, 
 	Relation 			pg_aocsseg_rel, 
 	Snapshot 			appendOnlyMetaDataSnapshot, 
 	int32 				*totalseg);

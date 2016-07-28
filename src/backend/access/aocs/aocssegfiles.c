@@ -215,7 +215,6 @@ AOCSFileSegInfo **GetAllAOCSFileSegInfo(Relation prel,
 	results = GetAllAOCSFileSegInfo_pg_aocsseg_rel(
 											RelationGetNumberOfAttributes(prel),
 											RelationGetRelationName(prel),
-											aoEntry,
 											pg_aocsseg_rel,
 											appendOnlyMetaDataSnapshot,
 											totalseg);
@@ -249,13 +248,12 @@ aocsFileSegInfoCmp(const void *left, const void *right)
 	return 0;
 }
 
-AOCSFileSegInfo **GetAllAOCSFileSegInfo_pg_aocsseg_rel(
-										int numOfColumns,
-										char *relationName,
-										AppendOnlyEntry *aoEntry,
-										Relation pg_aocsseg_rel,
-										Snapshot snapshot,
-										int32 *totalseg)
+AOCSFileSegInfo **
+GetAllAOCSFileSegInfo_pg_aocsseg_rel(int numOfColumns,
+									 char *relationName,
+									 Relation pg_aocsseg_rel,
+									 Snapshot snapshot,
+									 int32 *totalseg)
 {
 
     int32 nvp = numOfColumns;
@@ -269,8 +267,6 @@ AOCSFileSegInfo **GetAllAOCSFileSegInfo_pg_aocsseg_rel(
     Datum *d;
     bool *null;
 	int seginfo_slot_no = AO_FILESEGINFO_ARRAY_SIZE;
-
-	Assert(aoEntry != NULL);
 
 	/* MPP-16407:
 	 * Initialize the segment file information array, we first allocate 8 slot for the array,
@@ -1172,7 +1168,6 @@ gp_aocsseg_internal(PG_FUNCTION_ARGS, Oid aocsRelOid)
 		context->aocsSegfileArray = GetAllAOCSFileSegInfo_pg_aocsseg_rel(
 														aocsRel->rd_rel->relnatts,
 														RelationGetRelationName(aocsRel), 
-														aoEntry, 
 														pg_aocsseg_rel,
 														SnapshotNow, 
 														&context->totalAocsSegFiles);
@@ -1405,7 +1400,6 @@ gp_aocsseg_history(PG_FUNCTION_ARGS)
 		context->aocsSegfileArray = GetAllAOCSFileSegInfo_pg_aocsseg_rel(
 														RelationGetNumberOfAttributes(aocsRel),
 														RelationGetRelationName(aocsRel), 
-														aoEntry, 
 														pg_aocsseg_rel,
 														SnapshotAny,	// Get ALL tuples from pg_aocsseg_% including aborted and in-progress ones. 
 														&context->totalAocsSegFiles);
