@@ -58,7 +58,7 @@ test: vacuum_gp
 # ERROR:  parameter "gp_interconnect_type" cannot be set after connection start
 
 ignore: gp_portal_error
-test: partition_indexing column_compression eagerfree mapred gpparams tidycat co_nestloop_idxscan  gpdtm_plpgsql alter_table_aocs alter_distribution_policy ic aoco_privileges
+test: partition_indexing column_compression eagerfree mapred gpparams tidycat co_nestloop_idxscan  gpdtm_plpgsql alter_table_aocs alter_table_ao alter_distribution_policy ic aoco_privileges
 ignore: icudp_full
 test: aocs
 
