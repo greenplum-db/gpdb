@@ -1604,14 +1604,17 @@ appendonly_beginrangescan_internal(Relation relation,
 	/*
 	 * These attributes describe the AppendOnly format to be scanned.
 	 */
-	if (aoentry->compresstype == NULL || pg_strcasecmp(aoentry->compresstype, "none") == 0)
+	if (strcmp(aoentry->compresstype, "") == 0 ||
+		pg_strcasecmp(aoentry->compresstype, "none") == 0)
+	{
 		attr->compress = false;
-	else
-		attr->compress = true;
-	if (aoentry->compresstype != NULL)
-		attr->compressType = aoentry->compresstype;
-	else
 		attr->compressType = "none";
+	}
+	else
+	{
+		attr->compress = true;
+		attr->compressType = aoentry->compresstype;
+	}
 	attr->compressLevel     = aoentry->compresslevel;
 	attr->checksum			= aoentry->checksum;
 	attr->safeFSWriteSize	= aoentry->safefswritesize;
@@ -1680,8 +1683,7 @@ appendonly_beginrangescan(Relation relation,
 	/*
 	 * Get the pg_appendonly information for this table
 	 */
-	AppendOnlyEntry *aoentry = GetAppendOnlyEntry(RelationGetRelid(relation),
-		appendOnlyMetaDataSnapshot);
+	AppendOnlyEntry *aoentry = GetAppendOnlyEntry(relation);
 
 	FileSegInfo **seginfo = palloc0(sizeof(FileSegInfo *) * segfile_count);
 	for (int i = 0; i < segfile_count; i++)
@@ -1712,8 +1714,7 @@ appendonly_beginscan(Relation relation,
 	/*
 	 * Get the pg_appendonly information for this table
 	 */
-	AppendOnlyEntry *aoentry = GetAppendOnlyEntry(RelationGetRelid(relation),
-		appendOnlyMetaDataSnapshot);
+	AppendOnlyEntry *aoentry = GetAppendOnlyEntry(relation);
 
 	int segfile_count;
 	FileSegInfo **seginfo = GetAllFileSegInfo(relation, aoentry,
@@ -2148,7 +2149,7 @@ appendonly_fetch_init(
 	/*
 	 * Get the pg_appendonly information for this table
 	 */
-	aoentry = GetAppendOnlyEntry(RelationGetRelid(relation), appendOnlyMetaDataSnapshot);
+	aoentry = GetAppendOnlyEntry(relation);
 
 	aoFetchDesc->aoEntry = aoentry;
 
@@ -2160,14 +2161,17 @@ appendonly_fetch_init(
 	/*
 	 * These attributes describe the AppendOnly format to be scanned.
 	 */
-  if (aoentry->compresstype == NULL || pg_strcasecmp(aoentry->compresstype, "none") == 0)
+	if (strcmp(aoentry->compresstype, "") == 0 ||
+		pg_strcasecmp(aoentry->compresstype, "none") == 0)
+	{
 		attr->compress = false;
-	else
-		attr->compress = true;
-	if (aoentry->compresstype != NULL)
-		attr->compressType = aoentry->compresstype;
-	else
 		attr->compressType = "none";
+	}
+	else
+	{
+		attr->compress = true;
+		attr->compressType = aoentry->compresstype;
+	}
 	attr->compressLevel = aoentry->compresslevel;
 	attr->checksum			= aoentry->checksum;
 	attr->safeFSWriteSize	= aoentry->safefswritesize;
@@ -2501,8 +2505,7 @@ appendonly_delete_init(Relation rel, Snapshot appendOnlyMetaDataSnapshot)
 	/*
 	 * Get the pg_appendonly information
 	 */
-	AppendOnlyEntry *aoentry = GetAppendOnlyEntry(RelationGetRelid(rel),
-			appendOnlyMetaDataSnapshot);
+	AppendOnlyEntry *aoentry = GetAppendOnlyEntry(rel);
 	Assert(aoentry && aoentry->majorversion == 1 && aoentry->minorversion == 1);
 	Assert(!IsXactIsoLevelSerializable);
 
@@ -2673,7 +2676,7 @@ appendonly_insert_init(Relation rel, Snapshot appendOnlyMetaDataSnapshot, int se
 	/*
 	 * Get the pg_appendonly information for this table
 	 */
-	aoentry = GetAppendOnlyEntry(RelationGetRelid(rel), appendOnlyMetaDataSnapshot);
+	aoentry = GetAppendOnlyEntry(rel);
 	Assert(aoentry->majorversion == 1 && aoentry->minorversion == 1);
 
 	/*
@@ -2722,14 +2725,17 @@ appendonly_insert_init(Relation rel, Snapshot appendOnlyMetaDataSnapshot, int se
 	/*
 	 * These attributes describe the AppendOnly format to be scanned.
 	 */
-  if (aoentry->compresstype == NULL || pg_strcasecmp(aoentry->compresstype, "none") == 0)
+	if (strcmp(aoentry->compresstype, "") == 0 ||
+		pg_strcasecmp(aoentry->compresstype, "none") == 0)
+	{
 		attr->compress = false;
-	else
-		attr->compress = true;
-	if (aoentry->compresstype != NULL)
-		attr->compressType	= aoentry->compresstype;
-	else
 		attr->compressType = "none";
+	}
+	else
+	{
+		attr->compress = true;
+		attr->compressType = aoentry->compresstype;
+	}
 	attr->compressLevel	= aoentry->compresslevel;
 	attr->checksum			= aoentry->checksum;
 	attr->safeFSWriteSize	= aoentry->safefswritesize;
@@ -2799,7 +2805,7 @@ appendonly_insert_init(Relation rel, Snapshot appendOnlyMetaDataSnapshot, int se
 			 NameStr(aoInsertDesc->aoi_rel->rd_rel->relname),
 			 aoInsertDesc->cur_segno,
 			 (attr->compress ? "true" : "false"),
-			 (aoentry->compresstype ? aoentry->compresstype : "<none>"),
+			 aoentry->compresstype,
 			 attr->compressLevel);
 
 	/*

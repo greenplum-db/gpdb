@@ -217,7 +217,7 @@ static void gp_statistics_estimate_reltuples_relpages_ao_cs(Relation rel, float4
 	*relpages = 0.0;
 	
     /* get table level statistics from the pg_aoseg table */
-	aoEntry = GetAppendOnlyEntry(RelationGetRelid(rel), SnapshotNow);
+	aoEntry = GetAppendOnlyEntry(rel);
 	aocsInfo = GetAllAOCSFileSegInfo(rel, aoEntry, SnapshotNow, &nsegs);
 	if (aocsInfo)
 	{
@@ -289,7 +289,7 @@ static void gp_statistics_estimate_reltuples_relpages_ao_rows(Relation rel, floa
 	 */
 	*relpages = RelationGuessNumberOfBlocks((double)fstotal->totalbytes);
 
-	aoEntry = GetAppendOnlyEntry(RelationGetRelid(rel), SnapshotNow);
+	aoEntry = GetAppendOnlyEntry(rel);
 	AppendOnlyVisimap_Init(&visimap, aoEntry->visimaprelid, aoEntry->visimapidxid, AccessShareLock, SnapshotNow);
 	hidden_tupcount = AppendOnlyVisimap_GetRelationHiddenTupleCount(&visimap);
 	AppendOnlyVisimap_Finish(&visimap, AccessShareLock);

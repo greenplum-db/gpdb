@@ -667,13 +667,13 @@ static bool vacuum_assign_compaction_segno(
 		return false;
 	}
 
-	new_compaction_list = SetSegnoForCompaction(onerel->rd_id,
+	new_compaction_list = SetSegnoForCompaction(onerel,
 			compactedSegmentFileList, insertedSegmentFileList, &is_drop);
 	if (new_compaction_list)
 	{
 		if (!is_drop)
 		{
-			insert_segno = lappend_int(NIL, SetSegnoForCompactionInsert(onerel->rd_id,
+			insert_segno = lappend_int(NIL, SetSegnoForCompactionInsert(onerel,
 				new_compaction_list, compactedSegmentFileList, insertedSegmentFileList));
 		}
 		else
@@ -2208,9 +2208,7 @@ vacuum_appendonly_indexes(Relation aoRelation,
 	else
 		vac_open_indexes(aoRelation, RowExclusiveLock, &nindexes, &Irel);
 
-	aoEntry = GetAppendOnlyEntry(
-			aoRelation->rd_id,
-			SnapshotNow);
+	aoEntry = GetAppendOnlyEntry(aoRelation);
 	Assert(aoEntry);
 
 	if (RelationIsAoRows(aoRelation))

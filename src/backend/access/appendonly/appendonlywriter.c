@@ -55,8 +55,7 @@ static AORelHashEntry AORelLookupHashEntry(Oid relid);
 static bool AORelCreateHashEntry(Oid relid);
 static bool *GetFileSegStateInfoFromSegments(Relation parentrel,
 				AppendOnlyEntry *aoEntry);
-static int64 *GetTotalTupleCountFromSegments(Oid aoRelid,
-				Snapshot appendOnlyMetaDataSnapshot, int segno);
+static int64 *GetTotalTupleCountFromSegments(Relation parentrel, int segno);
 
 /*
  * AppendOnlyWriterShmemSize -- estimate size the append only writer structures
@@ -195,7 +194,7 @@ AORelCreateHashEntry(Oid relid)
 	/*
 	 * Use SnapshotNow since we have an exclusive lock on the relation.
 	 */
-	aoEntry = GetAppendOnlyEntry(relid, SnapshotNow);
+	aoEntry = GetAppendOnlyEntry(aorel);
 
 	if (RelationIsAoRows(aorel))
 	{
@@ -782,7 +781,8 @@ RegisterSegnoForCompactionDrop(Oid relid, List *compactedSegmentFileList)
  *
  * Should only be called in DISPATCH and UTILITY mode.
  */
-List *SetSegnoForCompaction(Oid relid,
+List *
+SetSegnoForCompaction(Relation rel,
 		List *compactedSegmentFileList,
 		List *insertedSegmentFileList,
 		bool *is_drop)
@@ -818,7 +818,7 @@ List *SetSegnoForCompaction(Oid relid,
 		(errmsg("SetSegnoForCompaction: "
 						"Choosing a compaction segno for append-only "
 							 "relation \"%s\" (%d)", 
-							 get_rel_name(relid), relid)));
+				RelationGetRelationName(rel), RelationGetRelid(rel))));
 
 	/* 
 	 * On the first call in a vacuum run, get an updated estimate from segno 0.
@@ -828,14 +828,14 @@ List *SetSegnoForCompaction(Oid relid,
 	{
 		int64	   *total_tupcount;
 
-		total_tupcount = GetTotalTupleCountFromSegments(relid, SnapshotNow, 0);
+		total_tupcount = GetTotalTupleCountFromSegments(rel, 0);
 		segzero_tupcount = total_tupcount[0];
 		pfree(total_tupcount);
 	}
 
 	LWLockAcquire(AOSegFileLock, LW_EXCLUSIVE);
 
-	aoentry = AORelGetOrCreateHashEntry(relid);
+	aoentry = AORelGetOrCreateHashEntry(RelationGetRelid(rel));
 	Assert(aoentry);
 
 	/* 
@@ -855,14 +855,14 @@ List *SetSegnoForCompaction(Oid relid,
 
 		ereportif(Debug_appendonly_print_segfile_choice, LOG,
 			(errmsg("segment file %i for append-only relation \"%s\" (%d): state %d",
-				i, get_rel_name(relid), relid, segfilestat->state)));
+					i, RelationGetRelationName(rel), RelationGetRelid(rel), segfilestat->state)));
 
 		if (segfilestat->state == AWAITING_DROP_READY && 
 				!usedByConcurrentTransaction(segfilestat, i))
 		{
 			ereportif(Debug_appendonly_print_segfile_choice, LOG,
 				(errmsg("Found segment awaiting drop for append-only relation \"%s\" (%d)",
-				get_rel_name(relid), relid)));
+						RelationGetRelationName(rel), RelationGetRelid(rel))));
 			
 			*is_drop = true;
 			usesegno = i;
@@ -883,7 +883,7 @@ List *SetSegnoForCompaction(Oid relid,
 						"Check segno %d for appendonly relation \"%s\" (%d): "
 						"total tupcount " INT64_FORMAT ", state %d, "
 						"in compacted list %d, in inserted list %d", 
-						i, get_rel_name(relid), relid,
+						i, RelationGetRelationName(rel), RelationGetRelid(rel),
 						segfilestat->total_tupcount, segfilestat->state,
 						in_compaction_list, in_inserted_list)));
 
@@ -924,15 +924,15 @@ List *SetSegnoForCompaction(Oid relid,
 		ereportif(Debug_appendonly_print_segfile_choice, LOG,
 			(errmsg("Compaction segment chosen for append-only relation \"%s\" (%d) "
 							 "is %d (tupcount " INT64_FORMAT ", txns count %d)", 
-							 get_rel_name(relid), relid, usesegno, 
+							 RelationGetRelationName(rel), RelationGetRelid(rel), usesegno,
 							 aoentry->relsegfiles[usesegno].total_tupcount,
 							 aoentry->txns_using_rel)));
 	}
 	else
 	{
 		ereportif(Debug_appendonly_print_segfile_choice, LOG,
-			(errmsg("No compaction segment chosen for append-only relation \"%s\" (%d)", 
-							 get_rel_name(relid), relid))); 
+			(errmsg("No compaction segment chosen for append-only relation \"%s\" (%d)",
+							 RelationGetRelationName(rel), RelationGetRelid(rel))));
 	}
 
 	LWLockRelease(AOSegFileLock);
@@ -959,7 +959,8 @@ List *SetSegnoForCompaction(Oid relid,
  *
  * Should only be called in DISPATCH and UTILITY mode.
  */ 
-int SetSegnoForCompactionInsert(Oid relid, 
+int
+SetSegnoForCompactionInsert(Relation rel,
 		List *compacted_segno,
 		List *compactedSegmentFileList,
 		List *insertedSegmentFileList)
@@ -981,16 +982,16 @@ int SetSegnoForCompactionInsert(Oid relid,
 		(errmsg("SetSegnoForCompactionInsert: "
 						"Choosing a segno for append-only "
 							 "relation \"%s\" (%d)", 
-							 get_rel_name(relid), relid)));
+							 RelationGetRelationName(rel), RelationGetRelid(rel))));
 
 	LWLockAcquire(AOSegFileLock, LW_EXCLUSIVE);
 
-	aoentry = AORelGetOrCreateHashEntry(relid);
+	aoentry = AORelGetOrCreateHashEntry(RelationGetRelid(rel));
 	Assert(aoentry);
 
 	ereportif(Debug_appendonly_print_segfile_choice, LOG,
 		(errmsg("SetSegnoForCompaction: got the hash entry for relation \"%s\" (%d).",
-							 get_rel_name(relid), relid)));
+							 RelationGetRelationName(rel), RelationGetRelid(rel))));
 
 	min_tupcount = INT64_MAX;
 	usesegno = 0;
@@ -1026,7 +1027,7 @@ int SetSegnoForCompactionInsert(Oid relid,
 						 "%d. there are " INT64_FORMAT " tuples "
 						 "added to it from previous operations "
 						 "in this not yet committed txn.",
-						 usesegno, relid,
+						 usesegno, RelationGetRelid(rel),
 						 (int64) segfilestat->tupsadded)));
 			break;
 		}
@@ -1037,7 +1038,7 @@ int SetSegnoForCompactionInsert(Oid relid,
 		LWLockRelease(AOSegFileLock);
 		ereport(ERROR, (errmsg("could not find segment file to use for "
 							   "inserting into relation %s (%d).", 
-							   get_rel_name(relid), relid)));
+							   RelationGetRelationName(rel), RelationGetRelid(rel))));
 	}
 		
 	Insist(usesegno != RESERVED_SEGNO);
@@ -1054,7 +1055,7 @@ int SetSegnoForCompactionInsert(Oid relid,
 
 	ereportif(Debug_appendonly_print_segfile_choice, LOG,
 		(errmsg("Segno chosen for append-only relation \"%s\" (%d) "
-							 "is %d", get_rel_name(relid), relid, usesegno)));
+							 "is %d", RelationGetRelationName(rel), RelationGetRelid(rel), usesegno)));
 
 	return usesegno;
 }
@@ -1086,7 +1087,8 @@ int SetSegnoForCompactionInsert(Oid relid,
  * ROLE_UTILITY  - always use the reserved segno RESERVED_SEGNO
  *
  */
-int SetSegnoForWrite(int existingsegno, Oid relid)
+int
+SetSegnoForWrite(Relation rel, int existingsegno)
 {
 	/* these vars are used in GP_ROLE_DISPATCH only */
 	int					i, usesegno = -1;
@@ -1114,18 +1116,18 @@ int SetSegnoForWrite(int existingsegno, Oid relid)
 			ereportif(Debug_appendonly_print_segfile_choice, LOG,
 				(errmsg("SetSegnoForWrite: Choosing a segno for append-only "
 									 "relation \"%s\" (%d) ", 
-									 get_rel_name(relid), relid)));
+									 RelationGetRelationName(rel), RelationGetRelid(rel))));
 
 			LWLockAcquire(AOSegFileLock, LW_EXCLUSIVE);
 
-			aoentry = AORelGetOrCreateHashEntry(relid);
+			aoentry = AORelGetOrCreateHashEntry(RelationGetRelid(rel));
 			Assert(aoentry);
 			aoentry->txns_using_rel++;
 
 			ereportif(Debug_appendonly_print_segfile_choice, LOG,
 				(errmsg("SetSegnoForWrite: got the hash entry for relation \"%s\" (%d). "
 									 "setting txns_using_rel to %d",
-									 get_rel_name(relid), relid, 
+									 RelationGetRelationName(rel), RelationGetRelid(rel),
 									 aoentry->txns_using_rel)));
 
 			/*
@@ -1172,7 +1174,7 @@ int SetSegnoForWrite(int existingsegno, Oid relid)
 									 "added to it from previous operations "
 									 "in this not yet committed txn. decrementing"
 									 "txns_using_rel back to %d",
-									 usesegno, relid,
+									 usesegno, RelationGetRelid(rel),
 									 (int64) segfilestat->tupsadded,
 									 aoentry->txns_using_rel)));
 
@@ -1186,7 +1188,7 @@ int SetSegnoForWrite(int existingsegno, Oid relid)
 				LWLockRelease(AOSegFileLock);
 				ereport(ERROR, (errmsg("could not find segment file to use for "
 									   "inserting into relation %s (%d).", 
-									   get_rel_name(relid), relid)));
+									   RelationGetRelationName(rel), RelationGetRelid(rel))));
 			}
 				
 			Insist(usesegno != RESERVED_SEGNO);
@@ -1203,7 +1205,7 @@ int SetSegnoForWrite(int existingsegno, Oid relid)
 
 			ereportif(Debug_appendonly_print_segfile_choice, LOG,
 				(errmsg("Segno chosen for append-only relation \"%s\" (%d) "
-									 "is %d", get_rel_name(relid), relid, usesegno)));
+									 "is %d", RelationGetRelationName(rel), RelationGetRelid(rel), usesegno)));
 
 			return usesegno;
 
@@ -1243,7 +1245,7 @@ List *assignPerRelSegno(List *all_relids)
 
 			n = makeNode(SegfileMapNode);
 			n->relid = cur_relid;
-			n->segno = SetSegnoForWrite(InvalidFileSegNumber, cur_relid);
+			n->segno = SetSegnoForWrite(rel, InvalidFileSegNumber);
 
 			Assert(n->relid != InvalidOid);
 			Assert(n->segno != InvalidFileSegNumber);
@@ -1270,8 +1272,7 @@ List *assignPerRelSegno(List *all_relids)
  * tries to fetch the tupcount for only the segfile that is passed by segno.
  */
 static int64 *
-GetTotalTupleCountFromSegments(Oid aoRelid,
-							   Snapshot appendOnlyMetaDataSnapshot,
+GetTotalTupleCountFromSegments(Relation parentrel,
 							   int segno)
 {
 	StringInfoData	sqlstmt;
@@ -1283,7 +1284,7 @@ GetTotalTupleCountFromSegments(Oid aoRelid,
 	Oid				save_userid;
 	bool			save_secdefcxt;
 
-	aoEntry = GetAppendOnlyEntry(aoRelid, appendOnlyMetaDataSnapshot);
+	aoEntry = GetAppendOnlyEntry(parentrel);
 	Assert(aoEntry != NULL);
 
 	/*
@@ -1511,13 +1512,11 @@ UpdateMasterAosegTotalsFromSegments(Relation parentrel,
 	Assert(RelationIsAoRows(parentrel) || RelationIsAoCols(parentrel));
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 
-	aoEntry = GetAppendOnlyEntry(RelationGetRelid(parentrel), SnapshotNow);
+	aoEntry = GetAppendOnlyEntry(parentrel);
 	Assert(aoEntry != NULL);
 
 	/* Give -1 for segno, so that we'll have all segfile tupcount. */
-	total_tupcount = GetTotalTupleCountFromSegments(RelationGetRelid(parentrel),
-													appendOnlyMetaDataSnapshot,
-													-1);
+	total_tupcount = GetTotalTupleCountFromSegments(parentrel, -1);
 
 	/*
 	 * We are interested in only the segfiles that were told to be updated.
@@ -1603,7 +1602,7 @@ void UpdateMasterAosegTotals(Relation parentrel, int segno, int64 tupcount, int6
 							"with " INT64_FORMAT " new tuples for segno %d",
 							RelationGetRelid(parentrel), (int64)tupcount, segno)));
 
-	aoEntry = GetAppendOnlyEntry(RelationGetRelid(parentrel), SnapshotNow);
+	aoEntry = GetAppendOnlyEntry(parentrel);
 	Assert(aoEntry != NULL);
 
 	// CONSIDER: We should probably get this lock even sooner.

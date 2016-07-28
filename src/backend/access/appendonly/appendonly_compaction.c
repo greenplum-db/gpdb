@@ -501,8 +501,7 @@ HasLockForSegmentFileDrop(Relation aorel)
  *
  */ 
 void
-AppendOnlyDrop(Relation aorel,
-		List* compaction_segno)
+AppendOnlyDrop(Relation aorel, List *compaction_segno)
 {
 	const char* relname;
 	int total_segfiles;
@@ -514,7 +513,7 @@ AppendOnlyDrop(Relation aorel,
 	Assert (RelationIsAoRows(aorel));
 
 	relname = RelationGetRelationName(aorel);
-	AppendOnlyEntry *aoEntry = GetAppendOnlyEntry(RelationGetRelid(aorel), SnapshotNow);
+	AppendOnlyEntry *aoEntry = GetAppendOnlyEntry(aorel);
 
 	elogif (Debug_appendonly_print_compaction, LOG, 
 			"Drop AO relation %s", relname);
@@ -582,7 +581,7 @@ AppendOnlyTruncateToEOF(Relation aorel)
 	Assert (RelationIsAoRows(aorel));
 
 	relname = RelationGetRelationName(aorel);
-	AppendOnlyEntry *aoEntry = GetAppendOnlyEntry(RelationGetRelid(aorel), SnapshotNow);
+	AppendOnlyEntry *aoEntry = GetAppendOnlyEntry(aorel);
 
 	elogif (Debug_appendonly_print_compaction, LOG, 
 			"Compact AO relation %s", relname);
@@ -669,7 +668,7 @@ AppendOnlyCompact(Relation aorel,
 	Assert(insert_segno >= 0);
 
 	relname = RelationGetRelationName(aorel);
-	AppendOnlyEntry *aoEntry = GetAppendOnlyEntry(RelationGetRelid(aorel), SnapshotNow);
+	AppendOnlyEntry *aoEntry = GetAppendOnlyEntry(aorel);
 
 	elogif (Debug_appendonly_print_compaction, LOG, 
 			"Compact AO relation %s", relname);
@@ -765,7 +764,7 @@ AppendOnlyCompaction_IsRelationEmpty(Relation aorel)
 
 	Assert(RelationIsAoRows(aorel) || RelationIsAoCols(aorel));
 
-	aoEntry = GetAppendOnlyEntry(RelationGetRelid(aorel), SnapshotNow);
+	aoEntry = GetAppendOnlyEntry(aorel);
 	pg_aoseg_rel = heap_open(aoEntry->segrelid, AccessShareLock);
 	pg_aoseg_dsc = RelationGetDescr(pg_aoseg_rel);
 	aoscan = heap_beginscan(pg_aoseg_rel, SnapshotNow, 0, NULL);

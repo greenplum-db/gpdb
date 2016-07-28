@@ -175,7 +175,7 @@ AOCSTruncateToEOF(Relation aorel)
 	Assert(RelationIsAoCols(aorel));
 
 	relname = RelationGetRelationName(aorel);
-	AppendOnlyEntry *aoEntry = GetAppendOnlyEntry(RelationGetRelid(aorel), SnapshotNow);
+	AppendOnlyEntry *aoEntry = GetAppendOnlyEntry(aorel);
 
 	elogif (Debug_appendonly_print_compaction, LOG, 
 			"Compact AO relation %s", relname);
@@ -437,7 +437,7 @@ AOCSDrop(Relation aorel,
 	Assert (RelationIsAoCols(aorel));
 
 	relname = RelationGetRelationName(aorel);
-	AppendOnlyEntry *aoEntry = GetAppendOnlyEntry(RelationGetRelid(aorel), SnapshotNow);
+	AppendOnlyEntry *aoEntry = GetAppendOnlyEntry(aorel);
 
 	elogif (Debug_appendonly_print_compaction, LOG, 
 			"Drop AOCS relation %s", relname);
@@ -530,7 +530,7 @@ AOCSCompact(Relation aorel,
 	Assert(insert_segno >= 0);
 
 	relname = RelationGetRelationName(aorel);
-	AppendOnlyEntry *aoEntry = GetAppendOnlyEntry(RelationGetRelid(aorel), SnapshotNow);
+	AppendOnlyEntry *aoEntry = GetAppendOnlyEntry(aorel);
 
 	elogif (Debug_appendonly_print_compaction, LOG, 
 			"Compact AO relation %s", relname);

@@ -393,8 +393,7 @@ aocs_beginrangescan(Relation relation,
 	/*
 	 * Get the pg_appendonly information for this table
 	 */
-	aoentry = GetAppendOnlyEntry(RelationGetRelid(relation),
-		appendOnlyMetaDataSnapshot);
+	aoentry = GetAppendOnlyEntry(relation);
 
 	seginfo = palloc0(sizeof(AOCSFileSegInfo *) * segfile_count);
 	for (i = 0; i < segfile_count; i++)
@@ -425,7 +424,7 @@ aocs_beginscan(Relation relation,
 	ValidateAppendOnlyMetaDataSnapshot(&appendOnlyMetaDataSnapshot);
     RelationIncrementReferenceCount(relation);
 
-    aoentry = GetAppendOnlyEntry(RelationGetRelid(relation), appendOnlyMetaDataSnapshot);
+    aoentry = GetAppendOnlyEntry(relation);
     Assert(aoentry->majorversion == 1 && aoentry->minorversion == 1);
 
     seginfo = GetAllAOCSFileSegInfo(relation, aoentry, appendOnlyMetaDataSnapshot, &total_seg);
@@ -779,7 +778,7 @@ AOCSInsertDesc aocs_insert_init(Relation rel, int segno, bool update_mode)
 	TupleDesc tupleDesc;
 	int64 firstSequence = 0;
 
-    aoentry = GetAppendOnlyEntry(RelationGetRelid(rel), SnapshotNow);
+    aoentry = GetAppendOnlyEntry(rel);
     Assert(aoentry->majorversion == 1 && aoentry->minorversion == 1);
 
 
@@ -1218,7 +1217,7 @@ aocs_fetch_init(Relation relation,
 	Assert(proj);
 	aocsFetchDesc->proj = proj;
 
-	aoentry = GetAppendOnlyEntry(RelationGetRelid(relation), appendOnlyMetaDataSnapshot);
+	aoentry = GetAppendOnlyEntry(relation);
     Assert(aoentry->majorversion == 1 && aoentry->minorversion == 1);
 	aocsFetchDesc->aoEntry = aoentry;
 
@@ -1669,8 +1668,7 @@ aocs_delete_init(Relation rel)
 	/*
 	 * Get the pg_appendonly information
 	 */
-	AppendOnlyEntry *aoentry = GetAppendOnlyEntry(RelationGetRelid(rel),
-			SnapshotNow);
+	AppendOnlyEntry *aoentry = GetAppendOnlyEntry(rel);
 	Assert(aoentry && aoentry->majorversion == 1 && aoentry->minorversion == 1);
 
 	AOCSDeleteDesc aoDeleteDesc = palloc0(sizeof(AOCSDeleteDescData));

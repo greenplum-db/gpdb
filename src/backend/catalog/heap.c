@@ -3237,7 +3237,7 @@ heap_truncate(List *relids)
 		 */
 		if (RelationIsAoRows(rel) || RelationIsAoCols(rel))
 		{
-			aoEntry = GetAppendOnlyEntry(rid, SnapshotNow);
+			aoEntry = GetAppendOnlyEntry(rel);
 
 			/* If there is an aoseg table, add it to the list too */
 			aosegrelid = aoEntry->segrelid;

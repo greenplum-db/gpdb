@@ -27,7 +27,7 @@
    majorversion     smallint, 
    minorversion     smallint, 
    checksum         boolean, 
-   compresstype     text, 
+   compresstype     name,
    columnstore      boolean, 
    segrelid         oid, 
    segidxid         oid, 
@@ -56,7 +56,7 @@ CATALOG(pg_appendonly,6105) BKI_WITHOUT_OIDS
 	int2			majorversion;		/* major version indicating what's stored in this table  */
 	int2			minorversion;		/* minor version indicating what's stored in this table  */
 	bool			checksum;			/* true if checksum is stored with data and checked */
-	text			compresstype;		/* the compressor used (zlib, or quicklz) */
+	NameData		compresstype;		/* the compressor used (zlib, or quicklz) */
     bool            columnstore;        /* true if orientation is column */ 
     Oid             segrelid;           /* OID of aoseg table; 0 if none */
     Oid             segidxid;           /* if aoseg table, OID of segno index */
@@ -67,6 +67,12 @@ CATALOG(pg_appendonly,6105) BKI_WITHOUT_OIDS
 	Oid             visimapidxid;		/* OID of aovisimap index */
 } FormData_pg_appendonly;
 
+/*
+ * Size of fixed part of pg_appendonly tuples, not counting var-length fields
+ * (there are no var-length fields currentl.)
+*/
+#define APPENDONLY_TUPLE_SIZE \
+	 (offsetof(FormData_pg_appendonly,visimapidxid) + sizeof(Oid))
 
 /* ----------------
 *		Form_pg_appendonly corresponds to a pointer to a tuple with
@@ -107,7 +113,7 @@ typedef FormData_pg_appendonly *Form_pg_appendonly;
 { AppendOnlyRelationId, {"majorversion"},			21, -1, 2, 5, 0, -1, -1, true, 'p', 's', true, false, false, true, 0 }, \
 { AppendOnlyRelationId, {"minorversion"},			21, -1, 2, 6, 0, -1, -1, true, 'p', 's', true, false, false, true, 0 }, \
 { AppendOnlyRelationId, {"checksum"},				16, -1, 1, 7, 0, -1, -1, true, 'p', 'c', true, false, false, true, 0 }, \
-{ AppendOnlyRelationId, {"compresstype"},			25, -1, -1, 8, 0, -1, -1, false, 'x', 'i', false, false, false, true, 0 }, \
+{ AppendOnlyRelationId, {"compresstype"},			19, -1, NAMEDATALEN, 8, 0, -1, -1, false, 'p', 'c', true, false, false, true, 0 }, \
 { AppendOnlyRelationId, {"columnstore"},			16, -1, 1, 9, 0, -1, -1, true, 'p', 'c', false, false, false, true, 0 }, \
 { AppendOnlyRelationId, {"segrelid"},				26, -1, 4, 10, 0, -1, -1, true, 'p', 'i', false, false, false, true, 0 }, \
 { AppendOnlyRelationId, {"segidxid"},				26, -1, 4, 11, 0, -1, -1, true, 'p', 'i', false, false, false, true, 0 }, \

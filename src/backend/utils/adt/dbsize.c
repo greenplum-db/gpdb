@@ -617,7 +617,7 @@ calculate_total_relation_size(Oid Relid)
 	toastOid = heapRel->rd_rel->reltoastrelid;
 
 	if (RelationIsAoRows(heapRel) || RelationIsAoCols(heapRel))
-		aoEntry = GetAppendOnlyEntry(Relid, SnapshotNow);
+		aoEntry = GetAppendOnlyEntry(heapRel);
 	
 	/* Get the heap size */
 	if (Relid == 0 || heapRel->rd_node.relNode == 0)

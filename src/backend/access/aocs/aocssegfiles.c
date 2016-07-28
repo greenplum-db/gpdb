@@ -381,7 +381,7 @@ GetAOCSSSegFilesTotals(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot)
 	totals = (FileSegTotals *) palloc0(sizeof(FileSegTotals));
 	memset(totals, 0, sizeof(FileSegTotals));
 
-	aoEntry = GetAppendOnlyEntry(RelationGetRelid(parentrel), appendOnlyMetaDataSnapshot);
+	aoEntry = GetAppendOnlyEntry(parentrel);
 	Assert(aoEntry != NULL);
 
 	allseg = GetAllAOCSFileSegInfo(parentrel, aoEntry, appendOnlyMetaDataSnapshot, &totalseg);
@@ -432,7 +432,7 @@ GetAOCSTotalBytes(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot)
 	AOCSVPInfo *vpinfo;
 	AppendOnlyEntry *aoEntry = NULL;
 
-	aoEntry = GetAppendOnlyEntry(RelationGetRelid(parentrel), appendOnlyMetaDataSnapshot);
+	aoEntry = GetAppendOnlyEntry(parentrel);
 	Assert(aoEntry != NULL);
 
 	result = 0;
@@ -1162,7 +1162,7 @@ gp_aocsseg_internal(PG_FUNCTION_ARGS, Oid aocsRelOid)
 		// Remember the number of columns.
 		context->relnatts = aocsRel->rd_rel->relnatts;
 
-		aoEntry = GetAppendOnlyEntry(aocsRelOid, SnapshotNow);
+		aoEntry = GetAppendOnlyEntry(aocsRel);
 		
 		pg_aocsseg_rel = heap_open(aoEntry->segrelid, NoLock);
 		
@@ -1394,7 +1394,7 @@ gp_aocsseg_history(PG_FUNCTION_ARGS)
 		// Remember the number of columns.
 		context->relnatts = aocsRel->rd_rel->relnatts;
 
-		aoEntry = GetAppendOnlyEntry(aocsRelOid, SnapshotNow);
+		aoEntry = GetAppendOnlyEntry(aocsRel);
 		
 		pg_aocsseg_rel = heap_open(aoEntry->segrelid, NoLock);
 		
@@ -1501,7 +1501,7 @@ gp_update_aocol_master_stats_internal(Relation parentrel, Snapshot appendOnlyMet
 	float8			total_count = 0;
 	MemoryContext	oldcontext = CurrentMemoryContext;
     int32			nvp = RelationGetNumberOfAttributes(parentrel);
-	AppendOnlyEntry *aoEntry = GetAppendOnlyEntry(RelationGetRelid(parentrel), appendOnlyMetaDataSnapshot);
+	AppendOnlyEntry *aoEntry = GetAppendOnlyEntry(parentrel);
 
 	Assert(aoEntry != NULL);
 	

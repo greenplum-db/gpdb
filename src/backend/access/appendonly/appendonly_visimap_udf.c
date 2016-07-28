@@ -84,7 +84,7 @@ gp_aovisimap_internal(PG_FUNCTION_ARGS, Oid aoRelOid)
 					 errmsg("Function not supported on relation")));
 		}
 
-		aoEntry = GetAppendOnlyEntry(aoRelOid, SnapshotNow);
+		aoEntry = GetAppendOnlyEntry(context->aorel);
 
 		AppendOnlyVisimapScan_Init(&context->visiMapScan,
 				aoEntry->visimaprelid,
@@ -221,7 +221,7 @@ gp_aovisimap_hidden_info_internal(PG_FUNCTION_ARGS, Oid aoRelOid)
 					 errmsg("Function not supported on relation")));
 		}
 
-		aoEntry = GetAppendOnlyEntry(aoRelOid, SnapshotNow);
+		aoEntry = GetAppendOnlyEntry(context->parentRelation);
 
 		if (RelationIsAoRows(context->parentRelation))
 		{
@@ -421,7 +421,7 @@ gp_aovisimap_entry_internal(PG_FUNCTION_ARGS, Oid aoRelOid)
 					 errmsg("Function not supported on relation")));
 		}
 
-		aoEntry = GetAppendOnlyEntry(aoRelOid, SnapshotNow);
+		aoEntry = GetAppendOnlyEntry(context->parentRelation);
 
 		AppendOnlyVisimap_Init(&context->visiMap,
 				aoEntry->visimaprelid,

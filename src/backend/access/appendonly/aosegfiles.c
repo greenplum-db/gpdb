@@ -877,7 +877,7 @@ GetSegFilesTotals(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot)
 	
 	Assert(RelationIsAoRows(parentrel)); /* doesn't fit for AO column store. should implement same for CO */
 	
-	aoEntry = GetAppendOnlyEntry(RelationGetRelid(parentrel), appendOnlyMetaDataSnapshot);
+	aoEntry = GetAppendOnlyEntry(parentrel);
 
 	result = (FileSegTotals *) palloc0(sizeof(FileSegTotals));
 
@@ -939,7 +939,7 @@ int64 GetAOTotalBytes(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot)
 
     Assert(RelationIsAoRows(parentrel));
 
-	aoEntry = GetAppendOnlyEntry(RelationGetRelid(parentrel), appendOnlyMetaDataSnapshot);
+	aoEntry = GetAppendOnlyEntry(parentrel);
 
 	result = 0;
 
@@ -1062,7 +1062,7 @@ gp_aoseg_history(PG_FUNCTION_ARGS)
 					errmsg("'%s' is not an append-only row relation",
 							RelationGetRelationName(aocsRel))));
 
-		aoEntry = GetAppendOnlyEntry(aoRelOid, SnapshotNow);
+		aoEntry = GetAppendOnlyEntry(aocsRel);
 		
 		pg_aoseg_rel = heap_open(aoEntry->segrelid, NoLock);
 		
@@ -1153,7 +1153,7 @@ gp_update_aorow_master_stats_internal(Relation parentrel, Snapshot appendOnlyMet
 	AppendOnlyEntry *aoEntry = NULL;
 	
     Assert(RelationIsAoRows(parentrel));
-	aoEntry = GetAppendOnlyEntry(RelationGetRelid(parentrel), appendOnlyMetaDataSnapshot);
+	aoEntry = GetAppendOnlyEntry(parentrel);
 	Assert(aoEntry != NULL);
 
 	/*
@@ -1400,7 +1400,7 @@ gp_aoseg_name(PG_FUNCTION_ARGS)
 					errmsg("'%s' is not an append-only row relation",
 							RelationGetRelationName(aocsRel))));
 
-		aoEntry = GetAppendOnlyEntry(aoRelOid, SnapshotNow);
+		aoEntry = GetAppendOnlyEntry(aocsRel);
 		
 		pg_aoseg_rel = heap_open(aoEntry->segrelid, NoLock);
 		

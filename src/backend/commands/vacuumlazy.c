@@ -1231,7 +1231,7 @@ vacuum_appendonly_fill_stats(Relation aorel, Snapshot snapshot,
 	totalbytes = eof;
 	nblocks = (uint32)RelationGuessNumberOfBlocks(totalbytes);
 
-	aoEntry = GetAppendOnlyEntry(RelationGetRelid(aorel), snapshot);
+	aoEntry = GetAppendOnlyEntry(aorel);
 	AppendOnlyVisimap_Init(&visimap, aoEntry->visimaprelid, aoEntry->visimapidxid, AccessShareLock, snapshot);
 	hidden_tupcount = AppendOnlyVisimap_GetRelationHiddenTupleCount(&visimap);
 	num_tuples -= hidden_tupcount;

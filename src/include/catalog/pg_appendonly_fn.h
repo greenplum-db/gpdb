@@ -28,15 +28,9 @@ InsertAppendOnlyEntry(Oid relid,
 					  Oid visimaprelid,
 					  Oid visimapidxid);
 
-extern AppendOnlyEntry *
-GetAppendOnlyEntry(Oid relid, Snapshot appendOnlyMetaDataSnapshot);
+extern AppendOnlyEntry *GetAppendOnlyEntry(Relation rel);
 
-extern AppendOnlyEntry *
-GetAppendOnlyEntryFromTuple(
-	Relation	pg_appendonly_rel,
-	TupleDesc	pg_appendonly_dsc,
-	HeapTuple	tuple,
-	Oid			*relationId);
+extern AppendOnlyEntry *GetAppendOnlyEntryFromTuple(HeapTuple tuple, Oid *relationId);
 
 /*
  * Get the OIDs of the auxiliary relations and their indexes for an appendonly

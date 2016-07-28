@@ -1155,11 +1155,7 @@ DatabaseInfo_CollectPgAppendOnly(
 				
 		heap_deform_tuple(tuple, RelationGetDescr(pg_appendonly_rel), values, nulls);
 
-		aoEntry = GetAppendOnlyEntryFromTuple(
-									pg_appendonly_rel,
-									RelationGetDescr(pg_appendonly_rel),
-									tuple,
-									&relationId);
+		aoEntry = GetAppendOnlyEntryFromTuple(tuple, &relationId);
 
 		Assert(aoEntry != NULL);
 

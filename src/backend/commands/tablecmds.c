@@ -5453,7 +5453,7 @@ ATAocsNoRewrite(AlteredTableInfo *tab)
 	}
 
 	rel = heap_open(tab->relid, NoLock);
-	aoEntry = GetAppendOnlyEntry(tab->relid, SnapshotNow);
+	aoEntry = GetAppendOnlyEntry(rel);
 	segInfos = GetAllAOCSFileSegInfo(rel, aoEntry, SnapshotNow, &nseg);
 	basepath = relpath(rel->rd_node);
 	if (nseg > 0)
@@ -10471,7 +10471,7 @@ ATExecSetTableSpace_AppendOnly(
 	/* Use palloc to ensure we get a maxaligned buffer */		
 	buffer = palloc(2*BLCKSZ);
 
-	aoEntry = GetAppendOnlyEntry(RelationGetRelid(rel), appendOnlyMetaDataSnapshot);
+	aoEntry = GetAppendOnlyEntry(rel);
 
 	if (Debug_persistent_print)
 		elog(Persistent_DebugPrintLevel(), 

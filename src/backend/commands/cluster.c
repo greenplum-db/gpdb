@@ -883,6 +883,8 @@ make_new_heap(Oid OIDOldHeap, const char *NewName, Oid NewTableSpace,
 										 aoblkdirComptypeOid, is_part);
     }
 
+	CacheInvalidateRelcacheByRelid(OIDNewHeap);
+
 	cloneAttributeEncoding(OIDOldHeap,
 						   OIDNewHeap,
 						   RelationGetNumberOfAttributes(OldHeap));
