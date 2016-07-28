@@ -25,18 +25,25 @@ class GpCheckCatTestCase(GpTestCase):
         self.leaked_schema_dropper = Mock(spec=['drop_leaked_schemas'])
         self.leaked_schema_dropper.drop_leaked_schemas.return_value = []
 
-        # MagicMock: we are choosing to trust the implementation of GV.cfg
-        # If we wanted full coverage we would make this a normal Mock()
-        # and fully define its behavior
+        self.foreign_key_check = Mock(spec=['runCheck', 'checkTableForeignKey'])
+        issues_list = dict()
+        issues_list['cat1'] = [('pg_class', ['pkey1', 'pkey2'], [('r1', 'r2'), ('r3', 'r4')]),
+                              ('arbitrary_catalog_table', ['pkey1', 'pkey2'], [('r1', 'r2'), ('r3', 'r4')])]
+        issues_list['cat2'] = [('pg_type', ['pkey1', 'pkey2'], [('r1', 'r2'), ('r3', 'r4')]),
+                               ('arbitrary_catalog_table', ['pkey1', 'pkey2'], [('r1', 'r2'), ('r3', 'r4')])]
+        self.foreign_key_check.runCheck.return_value = issues_list
+
         self.subject.GV.cfg = {0:dict(hostname='host0', port=123, id=1, address='123', datadir='dir', content=-1, dbid=0),
                                1:dict(hostname='host1', port=123, id=1, address='123', datadir='dir', content=1, dbid=1)}
         self.subject.GV.checkStatus = True
+        self.subject.GV.foreignKeyStatus = True
         self.subject.setError = Mock()
         self.subject.print_repair_issues = Mock()
 
         self.apply_patches([
             patch("gpcheckcat.pg.connect", return_value=self.db_connection),
             patch("gpcheckcat.UniqueIndexViolationCheck", return_value=self.unique_index_violation_check),
+            patch("gpcheckcat.ForeignKeyCheck", return_value=self.foreign_key_check),
         ])
 
     def test_running_unknown_check__raises_exception(self):
@@ -169,7 +176,83 @@ class GpCheckCatTestCase(GpTestCase):
         self.subject.setError.assert_any_call(self.subject.ERROR_REMOVE)
         self.subject.print_repair_issues.assert_any_call("/tmp")
 
+    @patch('gpcheckcat.removeFastSequence')
+    @patch('gpcheckcat.processForeignKeyResult')
+    def test_checkForeignKey__with_arg_gp_fastsequence(self, process_foreign_key_mock,fast_seq_mock):
+        cat_mock = Mock()
+        self.subject.GV.catalog = cat_mock
+
+        gp_fastsequence_issue = dict()
+        gp_fastsequence_issue['gp_fastsequence'] = [('pg_class', ['pkey1', 'pkey2'], [('r1', 'r2'), ('r3', 'r4')]),
+                               ('arbitrary_catalog_table', ['pkey1', 'pkey2'], [('r1', 'r2'), ('r3', 'r4')])]
+        gp_fastsequence_issue['cat2'] = [('pg_type', ['pkey1', 'pkey2'], [('r1', 'r2'), ('r3', 'r4')]),
+                               ('arbitrary_catalog_table', ['pkey1', 'pkey2'], [('r1', 'r2'), ('r3', 'r4')])]
+        self.foreign_key_check.runCheck.return_value = gp_fastsequence_issue
+
+        cat_tables = ["input1", "input2"]
+        self.subject.checkForeignKey(cat_tables)
+
+        self.assertEquals(cat_mock.getCatalogTables.call_count, 0)
+        self.assertFalse(self.subject.GV.checkStatus)
+        self.assertTrue(self.subject.GV.foreignKeyStatus)
+        self.subject.setError.assert_any_call(self.subject.ERROR_REMOVE)
+        self.foreign_key_check.runCheck.assert_called_once_with(cat_tables, ANY)
+        fast_seq_mock.assert_called_once_with(self.db_connection)
+
+    @patch('gpcheckcat.processForeignKeyResult')
+    def test_checkForeignKey__with_arg(self, process_foreign_key_mock):
+        cat_mock = Mock()
+        self.subject.GV.catalog = cat_mock
+
+        cat_tables = ["input1", "input2"]
+        self.subject.checkForeignKey(cat_tables)
+
+        self.assertEquals(cat_mock.getCatalogTables.call_count, 0)
+        self.assertFalse(self.subject.GV.checkStatus)
+        self.assertTrue(self.subject.GV.foreignKeyStatus)
+        self.subject.setError.assert_any_call(self.subject.ERROR_NOREPAIR)
+        self.foreign_key_check.runCheck.assert_called_once_with(cat_tables, ANY)
+
+    @patch('gpcheckcat.processForeignKeyResult')
+    def test_checkForeignKey__no_arg(self, process_foreign_key_mock):
+        cat_mock = Mock(spec=['getCatalogTables'])
+        cat_tables = ["input1", "input2"]
+        cat_mock.getCatalogTables.return_value = cat_tables
+        self.subject.GV.catalog = cat_mock
+
+        self.subject.checkForeignKey()
+        self.assertEquals(cat_mock.getCatalogTables.call_count, 1)
+        self.assertFalse(self.subject.GV.checkStatus)
+        self.assertTrue(self.subject.GV.foreignKeyStatus)
+        self.subject.setError.assert_any_call(self.subject.ERROR_NOREPAIR)
+        self.foreign_key_check.runCheck.assert_called_once_with(cat_tables, ANY)
+
+    # Test gpcheckat -C option with checkForeignKey
+    @patch('gpcheckcat.GPCatalog', return_value=Mock())
+    @patch('sys.exit')
+    @patch('gpcheckcat.checkTableMissingEntry')
+    def test_runCheckCatname__for_checkForeignKey(self, mock1, mock2, mock3):
+        self.subject.checkForeignKey = Mock()
+        cat_table_obj = Mock()
+        self.subject.getCatObj = Mock()
+        primaries = [dict(hostname='host0', port=123, id=1, address='123', datadir='dir', content=-1, dbid=0, isprimary='t')]
+
+        for i in range(1, 50):
+            primaries.append(dict(hostname='host0', port=123, id=1, address='123', datadir='dir', content=1, dbid=i, isprimary='t'))
+        self.db_connection.query.return_value.getresult.return_value = [['4.3']]
+        self.db_connection.query.return_value.dictresult.return_value = primaries
+
+        self.subject.GV.opt['-C'] = 'pg_class'
+
+        testargs = ['gpcrondump', '-port 1', '-C pg_class']
+        with patch.object(sys, 'argv', testargs):
+            self.subject.main()
+
+        self.assertEqual(self.subject.getCatObj.call_count, 1)
+        self.assertEqual(self.subject.checkForeignKey.call_count, 1)
+
     ####################### PRIVATE METHODS #######################
+
     def _run_batch_size_experiment(self, num_primaries):
         BATCH_SIZE = 4
         self.subject.GV.opt['-B'] = BATCH_SIZE

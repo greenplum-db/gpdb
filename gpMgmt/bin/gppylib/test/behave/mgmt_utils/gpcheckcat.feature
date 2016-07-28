@@ -39,7 +39,7 @@ Feature: gpcheckcat tests
         Then psql should return a return code of 0
         And psql should not print (0 rows) to stdout
         When the user runs "gpcheckcat unique_index_db"
-        Then gpcheckcat should not return a return code of 0
+        Then gpcheckcat should return a return code of 3
         And gpcheckcat should print Table pg_compression has a violated unique index: pg_compression_compname_index to stdout
         And the user runs "dropdb unique_index_db"
         And verify that a log was created by gpcheckcat in the user's "gpAdminLogs" directory
@@ -213,16 +213,67 @@ Feature: gpcheckcat tests
         Given database "fkey_db" is dropped and recreated
         And the path "gpcheckcat.repair.*" is removed from current working directory
         And there is a "heap" table "gpadmin_tbl" in "fkey_db" with data
-        When the entry for the table "gpadmin_tbl" is removed from "pg_catalog.pg_class" in the database "fkey_db"
-        And the user runs "gpcheckcat -R foreign_key fkey_db"
-        Then gpcheckcat should print No pg_class entry for pg_attribute column to stdout
-        Then the user runs "gpcheckcat -R missing_extraneous -E fkey_db"
+        When the entry for the table "gpadmin_tbl" is removed from "pg_catalog.pg_class" with key "oid" in the database "fkey_db"
+        Then the user runs "gpcheckcat -E -R missing_extraneous fkey_db"
+        And gpcheckcat should print Name of test which found this issue: missing_extraneous_pg_class to stdout
         Then gpcheckcat should return a return code of 1
         Then validate and run gpcheckcat repair
-        Then the user runs "gpcheckcat -R missing_extraneous -E fkey_db"
+        Then the user runs "gpcheckcat -E -R foreign_key fkey_db"
+        Then gpcheckcat should print No pg_class {.*} entry for pg_attribute {.*} to stdout
+        Then gpcheckcat should print No pg_class {.*} entry for pg_type {.*} to stdout
+        Then gpcheckcat should print No pg_class {.*} entry for gp_distribution_policy {.*} to stdout
+        Then gpcheckcat should return a return code of 3
+        Then the user runs "gpcheckcat -E -R missing_extraneous fkey_db"
         Then gpcheckcat should return a return code of 0
         Then the path "gpcheckcat.repair.*" is found in cwd "0" times
         And the user runs "dropdb fkey_db"
+
+    @foreignkey_full_segment
+    Scenario Outline: gpcheckcat foreign key check should report missing catalog entries for segments. Also test missing_extraneous for the same case.
+        Given database "fkey_ta" is dropped and recreated
+        And the path "gpcheckcat.repair.*" is removed from current working directory
+        And the user creates an index for table "index_table" in database "fkey_ta"
+        And there is a "ao" table "ao_table" in "fkey_ta" with data
+        When the entry for the table "<table_name>" is removed from "pg_catalog.<catalog_name>" with key "<catalog_oid_key>" in the database "fkey_ta" on the first primary segment
+        Then the user runs "gpcheckcat -E -R foreign_key fkey_ta"
+        Then gpcheckcat should print No <catalog_name> {.*} entry for pg_class {.*} to stdout
+        Then gpcheckcat should return a return code of 3
+        And the user runs "dropdb fkey_ta"
+        Examples:
+          | catalog_name                | catalog_oid_key | table_name |
+          | pg_attribute                | attrelid        | index_table |
+          | pg_index                    | indrelid        | index_table |
+          | pg_constraint               | conrelid        | index_table |
+          | pg_appendonly               | relid           | ao_table   |
+
+    @foreignkey_full_master
+    Scenario Outline: gpcheckcat foreign key check should report missing catalog entries. Also test missing_extraneous for the same case.
+        Given database "fkey_ta" is dropped and recreated
+        And the path "gpcheckcat.repair.*" is removed from current working directory
+        And the user creates an index for table "index_table" in database "fkey_ta"
+        And there is a "ao" table "ao_table" in "fkey_ta" with data
+        When the entry for the table "<table_name>" is removed from "pg_catalog.<catalog_name>" with key "<catalog_oid_key>" in the database "fkey_ta"
+        Then the user runs "gpcheckcat -E -R foreign_key fkey_ta"
+        Then gpcheckcat should print No <catalog_name> {.*} entry for pg_class {.*} to stdout
+        Then gpcheckcat should return a return code of 3
+        And the user runs "dropdb fkey_ta"
+        Examples:
+          | catalog_name                | catalog_oid_key | table_name |
+          | pg_attribute                | attrelid        | index_table |
+          | pg_index                    | indrelid        | index_table |
+          | pg_constraint               | conrelid        | index_table |
+          | pg_appendonly               | relid           | ao_table   |
+
+    @foreignkey_type
+    Scenario: gpcheckcat foreign key check should report missing catalog entries. Also test missing_extraneous for the same case.
+        Given database "fkey_ta" is dropped and recreated
+        And the path "gpcheckcat.repair.*" is removed from current working directory
+        And there is a "heap" table "gpadmin_tbl" in "fkey_ta" with data
+        When the entry for the table "gpadmin_tbl" is removed from "pg_catalog.pg_type" with key "typrelid" in the database "fkey_ta"
+        Then the user runs "gpcheckcat -E -R foreign_key fkey_ta"
+        Then gpcheckcat should print No pg_type {.*} entry for pg_class {.*} to stdout
+        Then gpcheckcat should return a return code of 3
+        And the user runs "dropdb fkey_ta"
 
     @extra
     Scenario: gpcheckcat should report and repair extra entries in master as well as all the segments
@@ -243,7 +294,7 @@ Feature: gpcheckcat tests
         And the user runs "dropdb extra_db"
         And the path "gpcheckcat.repair.*" is removed from current working directory
 
-    @foreignkey2
+    @foreignkey_gp_fastsequence
     Scenario: gpcheckcat should report inconsistency between gp_fastsequence and pg_class
         Given database "fkey2_db" is dropped and recreated
         And the path "gpcheckcat.repair.*" is removed from current working directory
@@ -251,10 +302,11 @@ Feature: gpcheckcat tests
         And the user runs sql file "gppylib/test/behave/mgmt_utils/steps/data/gpcheckcat/create_inconsistent_gpfastsequence.sql" in "fkey2_db" on all the segments
         Then the user runs "gpcheckcat fkey2_db"
         Then gpcheckcat should return a return code of 3
+        Then gpcheckcat should print No pg_class {.*} entry for gp_fastsequence {.*} to stdout
         Then validate and run gpcheckcat repair
-        When the user runs "gpcheckcat fkey2_db"
+        Then the user runs "gpcheckcat -R foreign_key fkey2_db"
+        Then gpcheckcat should not print No pg_class {.*} entry for gp_fastsequence {.*} to stdout
         Then gpcheckcat should return a return code of 3
-        Then the path "gpcheckcat.repair.*" is found in cwd "0" times
         And the user runs "dropdb fkey2_db"
         And the path "gpcheckcat.repair.*" is removed from current working directory
 

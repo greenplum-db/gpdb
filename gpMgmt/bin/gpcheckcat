@@ -34,6 +34,8 @@ try:
     from gpcheckcat_modules.unique_index_violation_check import UniqueIndexViolationCheck
     from gpcheckcat_modules.leaked_schema_dropper import LeakedSchemaDropper
     from gpcheckcat_modules.repair import Repair
+    from gpcheckcat_modules.foreign_key_check import ForeignKeyCheck
+
 
 except ImportError, e:
     sys.exit('Error: unable to import module: ' + str(e))
@@ -2794,7 +2796,7 @@ def checkTableACL(cat):
 
 
 # -------------------------------------------------------------------------------
-def checkForeignKey():
+def checkForeignKey(cat_tables=None):
     logger.info('-----------------------------------')
     logger.info('Performing foreign key tests')
 
@@ -2802,132 +2804,28 @@ def checkForeignKey():
         GV.foreignKeyStatus = True
 
     # looks up information in the catalog:
-    tables = GV.catalog.getCatalogTables()
+    if not cat_tables:
+        cat_tables = GV.catalog.getCatalogTables()
 
-    for cat in sorted(tables):
-        checkTableForeignKey(cat)
+    db_connection = connect2(GV.cfg[1], utilityMode=False)
+    try:
+        foreign_key_check = ForeignKeyCheck(db_connection, logger, GV.opt['-S'])
+        foreign_key_issues = foreign_key_check.runCheck(cat_tables, autoCast)
+        if foreign_key_issues:
+            GV.checkStatus = False
 
-
-# -------------------------------------------------------------------------------
-def checkTableForeignKey(cat):
-    catname = cat.getTableName()
-    fkeylist = cat.getForeignKeys()
-    isShared = cat.isShared()
-    pkeylist = cat.getPrimaryKey()
-    coltypes = cat.getTableColtypes()
-
-    # skip tables without fkey
-    if len(fkeylist) <= 0:
-        return
-    if len(cat.getPrimaryKey()) <= 0:
-        return
-
-    # skip these master-only tables
-    skipped_masteronly = ['gp_relation_node', 'pg_description', 'pg_shdescription',
-                          'pg_stat_last_operation', 'pg_stat_last_shoperation', 'pg_statistic']
-
-    if catname in skipped_masteronly:
-        return
-
-    # skip shared/non-shared tables
-    if GV.opt['-S']:
-        if re.match("none", GV.opt['-S'], re.I) and isShared:
-            return
-        if re.match("only", GV.opt['-S'], re.I) and not isShared:
-            return
-
-    # primary key lists
-    cat1pkeys = []
-    pkeys = []
-
-    # build array of catalog primary keys (with aliases) and
-    # primary key alias list
-    for pk in pkeylist:
-        cat1pkeys.append('cat1.' + pk + ' as %s_%s' % (catname, pk))
-        pkeys.append('%s_%s' % (catname, pk))
-
-    logger.info('Building %d queries to check FK constraint on table %s' % (len(fkeylist), catname))
-    for fkeydef in fkeylist:
-        castedFkey = [c + autoCast.get(coltypes[c], '') for c in fkeydef.getColumns()]
-        fkeystr = ', '.join(castedFkey)
-        cat1fkeystr = 'cat1.' + ', cat1.'.join(fkeydef.getColumns())
-        pkeystr = ', '.join(fkeydef.getPKey())
-        pkcatname = fkeydef.getPkeyTableName()
-
-        qry = fkQuery(catname, pkcatname, fkeystr, pkeystr, pkeys, cat1pkeys)
-
-        # Execute the query
-        try:
-            db = connect2(GV.cfg[1], utilityMode=False)
-            curs = db.query(qry)
-            nrows = curs.ntuples()
-
-            if nrows == 0:
-                logger.info('[OK] Foreign key check for %s(%s) referencing %s(%s)' %
-                            (catname, fkeystr, pkcatname, pkeystr))
-            else:
-                GV.checkStatus = False
-                setError(ERROR_NOREPAIR)
-                GV.foreignKeyStatus = False
-                logger.info('[FAIL] Foreign key check for %s(%s) referencing %s(%s)' %
-                            (catname, fkeystr, pkcatname, pkeystr))
-                logger.error('  %s has %d issue(s): entry has NULL reference of %s(%s)' %
-                             (catname, nrows, pkcatname, pkeystr))
-
-                fields = curs.listfields()
-                log_literal(logger, logging.ERROR, "    " + " | ".join(fields))
-                for row in curs.getresult():
-                    log_literal(logger, logging.ERROR, "    " + " | ".join(map(str, row)))
-                processForeignKeyResult(catname, pkcatname, fields, curs.getresult())
-
-                if catname == 'gp_fastsequence' and pkcatname == 'pg_class':
-                    setError(ERROR_REMOVE)
-                    removeFastSequence(db)
-
-        except Exception, e:
-            setError(ERROR_NOREPAIR)
-            GV.foreignKeyStatus = False
-            myprint('[ERROR] executing: Foreign key check for ' + catname)
-            myprint('  Execution error: ' + str(e))
-            myprint(qry)
-
-
-# -------------------------------------------------------------------------------
-def fkQuery(catname, pkcatname, fkeystr, pkeystr, pkeys, cat1pkeys):
-    qry = """
-          SELECT {primary_key_alias}, {cat2_dot_pk},
-                 array_agg(gp_segment_id order by gp_segment_id) as segids
-          FROM (
-                SELECT cat1.gp_segment_id, {cat1_dot_pk}, cat1.{FK1} as {cat2_dot_pk}
-                FROM
-                    gp_dist_random('{CATALOG1}') cat1 LEFT OUTER JOIN
-                    gp_dist_random('{CATALOG2}') cat2
-                    ON (cat1.gp_segment_id = cat2.gp_segment_id AND
-                        cat1.{FK1} = cat2.{PK2} )
-                WHERE cat2.{PK2} is NULL
-                  AND cat1.{FK1} != 0
-                UNION ALL
-                SELECT -1 as gp_segment_id, {cat1_dot_pk}, cat1.{FK1} as {cat2_dot_pk}
-                FROM
-                    {CATALOG1} cat1 LEFT OUTER JOIN
-                    {CATALOG2} cat2
-                    ON (cat1.gp_segment_id = cat2.gp_segment_id AND
-                        cat1.{FK1} = cat2.{PK2} )
-                WHERE cat2.{PK2} is NULL
-                  AND cat1.{FK1} != 0
-                ORDER BY {primary_key_alias}, gp_segment_id
-          ) allresults
-          GROUP BY {primary_key_alias}, {cat2_dot_pk}
-          """.format(FK1=fkeystr,
-                     PK2=pkeystr,
-                     CATALOG1=catname,
-                     CATALOG2=pkcatname,
-                     cat1_dot_pk=', '.join(cat1pkeys),
-                     cat2_dot_pk='%s_%s' % (pkcatname, pkeystr),
-                     primary_key_alias=', '.join(pkeys))
-
-    return qry
-
+        for catname, tuples in foreign_key_issues.iteritems():
+                for pkcatname, fields, results in tuples:
+                    processForeignKeyResult(catname, pkcatname, fields, results)
+                    if catname == 'gp_fastsequence' and pkcatname == 'pg_class':
+                        setError(ERROR_REMOVE)
+                        removeFastSequence(db_connection)
+                    else:
+                        setError(ERROR_NOREPAIR)
+    except Exception, ex:
+        setError(ERROR_NOREPAIR)
+        GV.foreignKeyStatus = False
+        myprint('  Execution error: ' + str(ex))
 
 # -------------------------------------------------------------------------------
 def checkMissingEntry():
@@ -3612,16 +3510,17 @@ def listAllChecks():
 
 
 #-------------------------------------------------------------------------------
-def runCheckCatname(cat):
+def runCheckCatname(catalog_table_obj):
 
-    checks = {'missing_extraneous': lambda: checkTableMissingEntry(cat),
-             'inconsistent': lambda: checkTableInconsistentEntry(cat),
-             'foreign_key': lambda: checkTableForeignKey(cat),
-             'duplicate': lambda: checkTableDuplicateEntry(cat),
-             'acl': lambda: checkTableACL(cat)}
+    checks = {'missing_extraneous': lambda: checkTableMissingEntry(catalog_table_obj),
+             'inconsistent': lambda: checkTableInconsistentEntry(catalog_table_obj),
+             # We assume that everything is passed as a list to checkForeignKey
+             'foreign_key': lambda:  checkForeignKey([catalog_table_obj]),
+             'duplicate': lambda: checkTableDuplicateEntry(catalog_table_obj),
+             'acl': lambda: checkTableACL(catalog_table_obj)}
 
     for check in sorted(checks):
-        myprint("Performing test '%s' for %s" % (check,cat.getTableName()))
+        myprint("Performing test '%s' for %s" % (check, catalog_table_obj.getTableName()))
         stime = time.time()
         checks[check]()
         etime = time.time()
@@ -3992,14 +3891,14 @@ def getResourceTypeOid(oid):
 def processMissingDuplicateEntryResult(catname, colname, allValues, type):
     # type = {"missing" | "duplicate"}
     '''
-    colname:       proname | pronamespace | proargtypes | exists | segids
-    allValues:         add | 2200 | 23 23 | extra | {2,3}
-                     scube | 2200 | 1700 | missing | {2}
-               scube_accum | 2200 | 1700 1700 | missing | {2}
+    colname:       proname | pronamespace | proargtypes | exists  | segids
+    allValues:         add | 2200         | 23 23       | extra   | {2,3}
+                     scube | 2200         | 1700        | missing | {2}
+               scube_accum | 2200         | 1700 1700   | missing | {2}
 
     colname:        oid | total | segids
-    allValues:    18853 | 2 | {-1,1}
-                  18853 | 3 | {0}
+    allValues:    18853 | 2     | {-1,1}
+                  18853 | 3     | {0}
     '''
     gpObjName = catname
     gpColName = None
@@ -4110,7 +4009,11 @@ def processForeignKeyResult(catname, pkcatname, colname, allValues):
     gpObjName = pkcatname
     gpColName = colname[-2].rsplit('_', 1)[1]
     fkeytab = catname
-    fkeylist = [name.rsplit('_', 1)[1] for name in colname[:-2]]
+    # The foreign keys are all entries except the last 4
+    # NOTE: We can't assume the first few rows are the expected issues anymore...
+    # or change the query so that we can always assume that the first few
+    # values are the issues...
+    fkeylist = [name.rsplit('_', 1)[1] for name in colname[:-4]]
 
     # This catname may not be a GPObject (e.g. pg_attribute)
     #    1. pg_attrdef(adrelid) referencing pg_attribute(attrelid)
@@ -4123,10 +4026,32 @@ def processForeignKeyResult(catname, pkcatname, colname, allValues):
     for row in allValues:
         rowObjName = gpObjName
         segids = row[-1]
+
         oid = row[len(colname) - 2]
+        missing_cat = row[-4]
+
+        existing_cat = [pkcatname, fkeytab]
+        existing_cat.remove(missing_cat)
+        existing_cat = existing_cat[0]
+
         # Build fkeys dict: used to find oid of pg_class
-        fkeys = dict((n, row[colname.index(fkeytab + '_' + n)]) for n in fkeylist)
-        issue = CatForeignKeyIssue(pkcatname, {gpColName: oid}, segids, catname, fkeys)
+        fkeys = dict((n, row[colname.index(catname + '_' + n)]) for n in fkeylist)
+
+        # Must get third column from end since fkeylist length can vary
+        if fkeys is None:
+            fkeys = row[-3]
+
+        # We are flipping the values of the primary key and the foreign key
+        # depending on the missing catalog, since we want to print out the
+        # missing catalog at the front of the stderr
+        missing_pkeys={gpColName: oid}
+        existing_fkeys=fkeys
+        if catname == missing_cat:
+            missing_pkeys=fkeys
+            existing_fkeys={gpColName: oid}
+
+        issue = CatForeignKeyIssue(catname=missing_cat, pkeys=missing_pkeys,
+                                   segids=segids, fcatname=existing_cat, fkeys=existing_fkeys)
 
         # Special cases:
         #    1. pg_class(oid) referencing pg_type(oid) - relation & composite type
@@ -4138,7 +4063,6 @@ def processForeignKeyResult(catname, pkcatname, colname, allValues):
             oid = getResourceTypeOid(oid)
         gpObj = getGPObject(oid, rowObjName)
         gpObj.addForeignKeyIssue(issue)
-
 
 def getPrimaryKeyColumn(catname, pknames):
     # We have to look up key to report (pg_pltemplate)
@@ -4235,12 +4159,8 @@ class CatForeignKeyIssue:
                          (GV.report_cfg[i]['segname'], GV.report_cfg[i]['hostname'],
                           GV.report_cfg[i]['port'])
 
-        if self.fcatname == 'pg_attribute':
-            myprint("        No %s entry for %s column '%s' on %s" \
-                    % (self.catname, self.fcatname, self.fkeys['attname'], idstr))
-        else:
-            myprint("        No %s entry for %s %s on %s" \
-                    % (self.catname, self.fcatname, self.fkeys, idstr))
+        myprint("        No %s %s entry for %s %s on %s" \
+                % (self.catname, self.pkeys, self.fcatname, self.fkeys, idstr))
 
 
 # -------------------------------------------------------------------------------
@@ -4831,8 +4751,8 @@ def main():
         elif GV.opt['-C']:
             namestr = GV.opt['-C']
             try:
-                cat = getCatObj(namestr)
-                runCheckCatname(cat)
+                catalog_table_obj = getCatObj(namestr)
+                runCheckCatname(catalog_table_obj)
             except Exception, e:
                 setError(ERROR_NOREPAIR)
                 sys.exit(GV.retcode)
