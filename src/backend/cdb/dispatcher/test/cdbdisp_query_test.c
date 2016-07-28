@@ -9,13 +9,14 @@
  * Mocked object initializations required for dispatchPlan.
  */
 void
-_init_cdbdisp_dispatchPlan(QueryDesc *queryDesc)
+_init_cdbdisp_buildPlanQueryParms(QueryDesc *queryDesc)
 {
 	queryDesc->estate = (struct EState *)palloc0(sizeof(struct EState));
 	queryDesc->estate->es_sliceTable =
 		(struct SliceTable *) palloc0(sizeof(struct SliceTable));
 	queryDesc->operation = CMD_NOTHING;
 	queryDesc->plannedstmt = (PlannedStmt *)palloc0(sizeof(PlannedStmt));
+	queryDesc->plannedstmt->planTree = (struct Plan *)palloc0(sizeof(struct Plan));
 
 	expect_any(RootSliceIndex, estate);
 	will_return(RootSliceIndex,0);
@@ -25,25 +26,20 @@ _init_cdbdisp_dispatchPlan(QueryDesc *queryDesc)
  * Test that cdbdisp_dispatchPlan handles a plan size overflow well
  */
 void
-test__cdbdisp_dispatchPlan__Overflow_plan_size_in_kb(void **state)
+test__cdbdisp_buildPlanQueryParms__Overflow_plan_size_in_kb(void **state)
 {
 	bool success = false;
-
-	struct CdbDispatcherState *ds = (struct CdbDispatcherState *)
-		palloc0(sizeof(struct CdbDispatcherState));
 
 	struct QueryDesc *queryDesc = (struct QueryDesc *)
 		palloc0(sizeof(QueryDesc));
 
-	_init_cdbdisp_dispatchPlan(queryDesc);
+	_init_cdbdisp_buildPlanQueryParms(queryDesc);
 
 	/*
 	 * Set max plan to a value that will require handling INT32
 	 * overflow of the current plan size
 	 */
 	gp_max_plan_size = 1024;
-
-	queryDesc->plannedstmt->planTree = (struct Plan *)palloc0(sizeof(struct Plan));
 
 	will_assign_value(serializeNode, uncompressed_size_out, INT_MAX-1);
 	expect_any(serializeNode, node);
@@ -54,7 +50,7 @@ test__cdbdisp_dispatchPlan__Overflow_plan_size_in_kb(void **state)
 
 	PG_TRY();
 	{
-		cdbdisp_dispatchPlan(queryDesc, true, true, ds);
+		cdbdisp_buildPlanQueryParms(queryDesc, false);
 	}
 	PG_CATCH();
 	{
@@ -90,7 +86,7 @@ main(int argc, char* argv[])
 
 	const UnitTest tests[] =
 	{
-		unit_test(test__cdbdisp_dispatchPlan__Overflow_plan_size_in_kb)
+		unit_test(test__cdbdisp_buildPlanQueryParms__Overflow_plan_size_in_kb)
 	};
 
 	/* There are assertions in dispatch code for this */
