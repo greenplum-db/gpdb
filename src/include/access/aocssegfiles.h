@@ -139,20 +139,14 @@ struct AOCSAddColumnDescData;
  * stability of the pg_aoseg information on this segment file and exclusive right
  * to append data to the segment file.
  */
-extern AOCSFileSegInfo *
-GetAOCSFileSegInfo(
-	Relation 			prel,
-	AppendOnlyEntry 	*aoEntry,
-	Snapshot 			appendOnlyMetaDataSnapshot,
-	int32 				segno);
+extern AOCSFileSegInfo *GetAOCSFileSegInfo(Relation prel,
+				   Snapshot appendOnlyMetaDataSnapshot,
+				   int32 segno);
 
 
-extern AOCSFileSegInfo **
-GetAllAOCSFileSegInfo(
-	Relation 			prel, 
-	AppendOnlyEntry 	*aoEntry, 
-	Snapshot 			appendOnlyMetaDataSnapshot, 
-	int 				*totalseg);
+extern AOCSFileSegInfo **GetAllAOCSFileSegInfo(Relation prel,
+					  Snapshot appendOnlyMetaDataSnapshot, 
+					  int *totalseg);
 
 extern AOCSFileSegInfo **
 GetAllAOCSFileSegInfo_pg_aocsseg_rel(
@@ -171,14 +165,14 @@ extern FileSegTotals *GetAOCSSSegFilesTotals(Relation parentrel,
 	Snapshot appendOnlyMetaDataSnapshot);
 
 extern AOCSFileSegInfo *NewAOCSFileSegInfo(int4 segno, int4 nvp);
-extern void InsertInitialAOCSFileSegInfo(Oid segrelid, int32 segno, int32 nvp); 
+extern void InsertInitialAOCSFileSegInfo(Relation prel, int32 segno, int32 nvp); 
 extern void UpdateAOCSFileSegInfo(struct AOCSInsertDescData *desc);
 extern void AOCSFileSegInfoAddVpe(
-		Relation prel, AppendOnlyEntry *aoEntry, int32 segno,
+		Relation prel, int32 segno,
 		struct AOCSAddColumnDescData *desc, int num_newcols, bool empty);
-extern void AOCSFileSegInfoAddCount(Relation prel, AppendOnlyEntry *aoEntry, int32 segno, int64 tupadded, int64 varblockadded, int64 modcount_added); 
-extern void ClearAOCSFileSegInfo(Relation prel, AppendOnlyEntry *aoEntry, int segno, FileSegInfoState newState);
-extern void SetAOCSFileSegInfoState(Relation parentrel, AppendOnlyEntry *aoEntry, int segno, FileSegInfoState newState);
+extern void AOCSFileSegInfoAddCount(Relation prel, int32 segno, int64 tupadded, int64 varblockadded, int64 modcount_added); 
+extern void ClearAOCSFileSegInfo(Relation prel, int segno, FileSegInfoState newState);
+extern void SetAOCSFileSegInfoState(Relation parentrel, int segno, FileSegInfoState newState);
 extern Datum gp_update_aocol_master_stats_internal(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot);
 extern Datum aocol_compression_ratio_internal(Relation parentrel);
 

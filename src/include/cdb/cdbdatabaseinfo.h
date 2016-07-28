@@ -153,7 +153,7 @@ typedef struct PgAppendOnlyHashEntry
 	Oid					 relationId;
 
 	/* Pointer */
-	AppendOnlyEntry		*aoEntry;
+	Form_pg_appendonly	aoEntry;
 } PgAppendOnlyHashEntry;
 
 

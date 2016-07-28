@@ -2188,7 +2188,6 @@ vacuum_appendonly_indexes(Relation aoRelation,
 	Relation   *Irel;
 	int			nindexes;
 	AppendOnlyIndexVacuumState vacuumIndexState;
-	AppendOnlyEntry *aoEntry;
 	List *extra_oids;
 	FileSegInfo **segmentFileInfo = NULL; /* Might be a casted AOCSFileSegInfo */
 	int totalSegfiles;
@@ -2208,28 +2207,24 @@ vacuum_appendonly_indexes(Relation aoRelation,
 	else
 		vac_open_indexes(aoRelation, RowExclusiveLock, &nindexes, &Irel);
 
-	aoEntry = GetAppendOnlyEntry(aoRelation);
-	Assert(aoEntry);
-
 	if (RelationIsAoRows(aoRelation))
 	{
-		segmentFileInfo = GetAllFileSegInfo(aoRelation, aoEntry, SnapshotNow, &totalSegfiles);
+		segmentFileInfo = GetAllFileSegInfo(aoRelation, SnapshotNow, &totalSegfiles);
 	}
 	else
 	{
 		Assert(RelationIsAoCols(aoRelation));
-		segmentFileInfo = (FileSegInfo **)GetAllAOCSFileSegInfo(aoRelation, aoEntry, SnapshotNow, &totalSegfiles);
+		segmentFileInfo = (FileSegInfo **)GetAllAOCSFileSegInfo(aoRelation, SnapshotNow, &totalSegfiles);
 	}
 
 	AppendOnlyVisimap_Init(
 			&vacuumIndexState.visiMap,
-			aoEntry->visimaprelid,
-			aoEntry->visimapidxid,
+			aoRelation->rd_appendonly->visimaprelid,
+			aoRelation->rd_appendonly->visimapidxid,
 			AccessShareLock,
 			SnapshotNow);
 
 	AppendOnlyBlockDirectory_Init_forSearch(&vacuumIndexState.blockDirectory,
-			aoEntry,
 			SnapshotNow,
 			segmentFileInfo,
 			totalSegfiles,
@@ -2281,8 +2276,6 @@ vacuum_appendonly_indexes(Relation aoRelation,
 		}
 		pfree(segmentFileInfo);
 	}
-	pfree(aoEntry);
-	aoEntry = NULL;
 
 	vac_close_indexes(nindexes, Irel, NoLock);
 	return nindexes;

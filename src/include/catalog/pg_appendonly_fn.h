@@ -28,10 +28,6 @@ InsertAppendOnlyEntry(Oid relid,
 					  Oid visimaprelid,
 					  Oid visimapidxid);
 
-extern AppendOnlyEntry *GetAppendOnlyEntry(Relation rel);
-
-extern AppendOnlyEntry *GetAppendOnlyEntryFromTuple(HeapTuple tuple, Oid *relationId);
-
 /*
  * Get the OIDs of the auxiliary relations and their indexes for an appendonly
  * relation.

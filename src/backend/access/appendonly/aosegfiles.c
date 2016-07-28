@@ -37,7 +37,6 @@
 
 static Datum ao_compression_ratio_internal(Oid relid);
 static void UpdateFileSegInfo_internal(Relation parentrel,
-				  AppendOnlyEntry *aoEntry,
 				  int segno,
 				  int64 eof,
 				  int64 eof_uncompressed,
@@ -84,8 +83,7 @@ NewFileSegInfo(int segno)
  * Also insert a new entry to gp_fastsequence for this segment file.
  */
 void
-InsertInitialSegnoEntry(AppendOnlyEntry *aoEntry,
-						int segno)
+InsertInitialSegnoEntry(Relation parentrel, int segno)
 {
 	Relation	pg_aoseg_rel;
 	Relation	pg_aoseg_idx;
@@ -95,13 +93,11 @@ InsertInitialSegnoEntry(AppendOnlyEntry *aoEntry,
 	bool	   *nulls;
 	Datum	   *values;
 
-	Assert(aoEntry != NULL);
-
-	InsertFastSequenceEntry(aoEntry->segrelid,
+	InsertFastSequenceEntry(parentrel->rd_appendonly->segrelid,
 							(int64)segno,
 							0);
 
-	pg_aoseg_rel = heap_open(aoEntry->segrelid, RowExclusiveLock);
+	pg_aoseg_rel = heap_open(parentrel->rd_appendonly->segrelid, RowExclusiveLock);
 
 	pg_aoseg_dsc = RelationGetDescr(pg_aoseg_rel);
 	natts = pg_aoseg_dsc->natts;
@@ -109,7 +105,7 @@ InsertInitialSegnoEntry(AppendOnlyEntry *aoEntry,
 	values = palloc0(sizeof(Datum) * natts);
 	MemSet(nulls, false, sizeof(char) * natts);
 
-	pg_aoseg_idx = index_open(aoEntry->segidxid, RowExclusiveLock);
+	pg_aoseg_idx = index_open(parentrel->rd_appendonly->segidxid, RowExclusiveLock);
 
 	values[Anum_pg_aoseg_segno - 1] = Int32GetDatum(segno);
 	values[Anum_pg_aoseg_tupcount - 1] = Float8GetDatum(0);
@@ -149,7 +145,7 @@ InsertInitialSegnoEntry(AppendOnlyEntry *aoEntry,
  * to append data to the segment file.
  */
 FileSegInfo *
-GetFileSegInfo(Relation parentrel, AppendOnlyEntry *aoEntry, Snapshot appendOnlyMetaDataSnapshot, int segno)
+GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segno)
 {
 
 	Relation		pg_aoseg_rel;
@@ -166,9 +162,9 @@ GetFileSegInfo(Relation parentrel, AppendOnlyEntry *aoEntry, Snapshot appendOnly
 	 * Check the pg_aoseg relation to be certain the ao table segment file
 	 * is there.
 	 */
-	pg_aoseg_rel = heap_open(aoEntry->segrelid, AccessShareLock);
+	pg_aoseg_rel = heap_open(parentrel->rd_appendonly->segrelid, AccessShareLock);
 	pg_aoseg_dsc = RelationGetDescr(pg_aoseg_rel);
-	pg_aoseg_idx = index_open(aoEntry->segidxid, AccessShareLock);
+	pg_aoseg_idx = index_open(parentrel->rd_appendonly->segidxid, AccessShareLock);
 
 	/*
 	 * Setup a scan key to fetch from the index by segno.
@@ -291,21 +287,20 @@ GetFileSegInfo(Relation parentrel, AppendOnlyEntry *aoEntry, Snapshot appendOnly
  * AppendOnly table. This is basically a physical snapshot that a
  * scanner can use to scan all the data in a local segment database.
  */
-FileSegInfo **GetAllFileSegInfo(Relation parentrel,
-								AppendOnlyEntry *aoEntry,
-								Snapshot appendOnlyMetaDataSnapshot,
-								int *totalsegs)
+FileSegInfo **
+GetAllFileSegInfo(Relation parentrel,
+				  Snapshot appendOnlyMetaDataSnapshot,
+				  int *totalsegs)
 {
 	Relation		pg_aoseg_rel;
 	FileSegInfo		**result;
 
 	Assert(RelationIsAoRows(parentrel));
 
-	pg_aoseg_rel = heap_open(aoEntry->segrelid, AccessShareLock);
+	pg_aoseg_rel = heap_open(parentrel->rd_appendonly->segrelid, AccessShareLock);
 
 	result = GetAllFileSegInfo_pg_aoseg_rel(
 									RelationGetRelationName(parentrel),
-									aoEntry,
 									pg_aoseg_rel,
 									appendOnlyMetaDataSnapshot,
 									totalsegs);
@@ -339,12 +334,11 @@ aoFileSegInfoCmp(const void *left, const void *right)
 	return 0;
 }
 
-FileSegInfo **GetAllFileSegInfo_pg_aoseg_rel(
-								char *relationName,
-								AppendOnlyEntry *aoEntry,
-								Relation pg_aoseg_rel,
-								Snapshot appendOnlyMetaDataSnapshot,
-								int *totalsegs)
+FileSegInfo **
+GetAllFileSegInfo_pg_aoseg_rel(char *relationName,
+							   Relation pg_aoseg_rel,
+							   Snapshot appendOnlyMetaDataSnapshot,
+							   int *totalsegs)
 {
 	TupleDesc		pg_aoseg_dsc;
 	HeapTuple		tuple;
@@ -457,7 +451,6 @@ FileSegInfo **GetAllFileSegInfo_pg_aoseg_rel(
 
 void
 SetFileSegInfoState(Relation parentrel,
-		AppendOnlyEntry *aoEntry,
 		int segno,
 		FileSegInfoState newState)
 {
@@ -468,7 +461,6 @@ SetFileSegInfoState(Relation parentrel,
 			newState);
 
 	UpdateFileSegInfo_internal(parentrel,
-				  aoEntry,
 				  segno,
 				  -1,
 				  -1,
@@ -480,7 +472,6 @@ SetFileSegInfoState(Relation parentrel,
 
 void
 ClearFileSegInfo(Relation parentrel,
-		AppendOnlyEntry *aoEntry,
 		int segno,
 		FileSegInfoState newState)
 {
@@ -521,9 +512,9 @@ ClearFileSegInfo(Relation parentrel,
 	/*
 	 * Open the aoseg relation and its index.
 	 */
-	pg_aoseg_rel = heap_open(aoEntry->segrelid, RowExclusiveLock);
+	pg_aoseg_rel = heap_open(parentrel->rd_appendonly->segrelid, RowExclusiveLock);
 	pg_aoseg_dsc = RelationGetDescr(pg_aoseg_rel);
-	pg_aoseg_idx = index_open(aoEntry->segidxid, RowExclusiveLock);
+	pg_aoseg_idx = index_open(parentrel->rd_appendonly->segidxid, RowExclusiveLock);
 
 	/*
 	 * Setup a scan key to fetch from the index by segno.
@@ -588,7 +579,6 @@ ClearFileSegInfo(Relation parentrel,
  */
 void
 UpdateFileSegInfo(Relation parentrel,
-				  AppendOnlyEntry *aoEntry,
 				  int segno,
 				  int64 eof,
 				  int64 eof_uncompressed,
@@ -603,7 +593,6 @@ UpdateFileSegInfo(Relation parentrel,
 	elog(DEBUG3, "UpdateFileSegInfo called. segno = %d", segno);
 
 	UpdateFileSegInfo_internal(parentrel,
-				  aoEntry,
 				  segno,
 				  eof,
 				  eof_uncompressed,
@@ -624,7 +613,6 @@ UpdateFileSegInfo(Relation parentrel,
  */
 static void
 UpdateFileSegInfo_internal(Relation parentrel,
-				  AppendOnlyEntry *aoEntry,
 				  int segno,
 				  int64 eof,
 				  int64 eof_uncompressed,
@@ -674,9 +662,9 @@ UpdateFileSegInfo_internal(Relation parentrel,
 	/*
 	 * Open the aoseg relation and its index.
 	 */
-	pg_aoseg_rel = heap_open(aoEntry->segrelid, RowExclusiveLock);
+	pg_aoseg_rel = heap_open(parentrel->rd_appendonly->segrelid, RowExclusiveLock);
 	pg_aoseg_dsc = RelationGetDescr(pg_aoseg_rel);
-	pg_aoseg_idx = index_open(aoEntry->segidxid, RowExclusiveLock);
+	pg_aoseg_idx = index_open(parentrel->rd_appendonly->segidxid, RowExclusiveLock);
 
 	/*
 	 * Setup a scan key to fetch from the index by segno.
@@ -873,15 +861,12 @@ GetSegFilesTotals(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot)
 					varblockcount,
 					state;
 	bool			isNull;
-	AppendOnlyEntry *aoEntry = NULL;
 	
 	Assert(RelationIsAoRows(parentrel)); /* doesn't fit for AO column store. should implement same for CO */
 	
-	aoEntry = GetAppendOnlyEntry(parentrel);
-
 	result = (FileSegTotals *) palloc0(sizeof(FileSegTotals));
 
-	pg_aoseg_rel = heap_open(aoEntry->segrelid, AccessShareLock);
+	pg_aoseg_rel = heap_open(parentrel->rd_appendonly->segrelid, AccessShareLock);
 	pg_aoseg_dsc = RelationGetDescr(pg_aoseg_rel);
 
 	aoscan = heap_beginscan(pg_aoseg_rel, appendOnlyMetaDataSnapshot, 0, NULL);
@@ -914,8 +899,6 @@ GetSegFilesTotals(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot)
 	heap_endscan(aoscan);
 	heap_close(pg_aoseg_rel, AccessShareLock);
 
-	pfree(aoEntry);
-	
 	return result;
 }
 
@@ -935,15 +918,12 @@ int64 GetAOTotalBytes(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot)
 	int64		  	result;
 	Datum			eof;
 	bool			isNull;
-	AppendOnlyEntry *aoEntry = NULL;
 
     Assert(RelationIsAoRows(parentrel));
 
-	aoEntry = GetAppendOnlyEntry(parentrel);
-
 	result = 0;
 
-	pg_aoseg_rel = heap_open(aoEntry->segrelid, AccessShareLock);
+	pg_aoseg_rel = heap_open(parentrel->rd_appendonly->segrelid, AccessShareLock);
 	pg_aoseg_dsc = RelationGetDescr(pg_aoseg_rel);
 
 	aoscan = heap_beginscan(pg_aoseg_rel, appendOnlyMetaDataSnapshot, 0, NULL);
@@ -960,8 +940,6 @@ int64 GetAOTotalBytes(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot)
 
 	heap_endscan(aoscan);
 	heap_close(pg_aoseg_rel, AccessShareLock);
-
-	pfree(aoEntry);
 
 	return result;
 }
@@ -995,7 +973,6 @@ gp_aoseg_history(PG_FUNCTION_ARGS)
 		TupleDesc	tupdesc;
 		MemoryContext oldcontext;
 		Relation aocsRel;
-		AppendOnlyEntry *aoEntry;
 		Relation pg_aoseg_rel;
 
 		/* create a function context for cross-call persistence */
@@ -1062,14 +1039,11 @@ gp_aoseg_history(PG_FUNCTION_ARGS)
 					errmsg("'%s' is not an append-only row relation",
 							RelationGetRelationName(aocsRel))));
 
-		aoEntry = GetAppendOnlyEntry(aocsRel);
-		
-		pg_aoseg_rel = heap_open(aoEntry->segrelid, NoLock);
+		pg_aoseg_rel = heap_open(aocsRel->rd_appendonly->segrelid, NoLock);
 		
 		context->aoSegfileArray = 
 				GetAllFileSegInfo_pg_aoseg_rel(
 											RelationGetRelationName(aocsRel), 
-											aoEntry, 
 											pg_aoseg_rel,
 											SnapshotAny,	// Get ALL tuples from pg_aoseg_% including aborted and in-progress ones. 
 											&context->totalAoSegFiles);
@@ -1150,16 +1124,13 @@ gp_update_aorow_master_stats_internal(Relation parentrel, Snapshot appendOnlyMet
 	int 			ret;
 	int64			total_count = 0;
 	MemoryContext 	oldcontext = CurrentMemoryContext;
-	AppendOnlyEntry *aoEntry = NULL;
 	
     Assert(RelationIsAoRows(parentrel));
-	aoEntry = GetAppendOnlyEntry(parentrel);
-	Assert(aoEntry != NULL);
 
 	/*
 	 * get the name of the aoseg relation
 	 */
-	aosegrel = heap_open(aoEntry->segrelid, AccessShareLock);
+	aosegrel = heap_open(parentrel->rd_appendonly->segrelid, AccessShareLock);
 	snprintf(aoseg_relname, NAMEDATALEN, "%s", RelationGetRelationName(aosegrel));
 	heap_close(aosegrel, AccessShareLock);
 
@@ -1246,10 +1217,10 @@ gp_update_aorow_master_stats_internal(Relation parentrel, Snapshot appendOnlyMet
 												AccessExclusiveLock,
 												/* dontWait */ false);
 
-				fsinfo = GetFileSegInfo(parentrel, aoEntry, appendOnlyMetaDataSnapshot, qe_segno);
+				fsinfo = GetFileSegInfo(parentrel, appendOnlyMetaDataSnapshot, qe_segno);
 				if (fsinfo == NULL)
 				{
-					InsertInitialSegnoEntry(aoEntry, qe_segno);
+					InsertInitialSegnoEntry(parentrel, qe_segno);
 
 					fsinfo = NewFileSegInfo(qe_segno);
 				}
@@ -1271,7 +1242,7 @@ gp_update_aorow_master_stats_internal(Relation parentrel, Snapshot appendOnlyMet
 					 * QD tup count !=  QE tup count. update QD count by
 					 * passing in the diff (may be negative sometimes).
 					 */
-					UpdateFileSegInfo_internal(parentrel, aoEntry, qe_segno, -1, -1, 
+					UpdateFileSegInfo_internal(parentrel, qe_segno, -1, -1, 
 							tupcount_diff, 0, 1, AOSEG_STATE_USECURRENT);
 				}
 				else
@@ -1310,7 +1281,6 @@ gp_update_aorow_master_stats_internal(Relation parentrel, Snapshot appendOnlyMet
 	}
 	PG_END_TRY();
 
-	pfree(aoEntry);
 	pfree(sqlstmt.data);
 
 	PG_RETURN_FLOAT8((float8)total_count);
@@ -1353,7 +1323,6 @@ gp_aoseg_name(PG_FUNCTION_ARGS)
 		TupleDesc	tupdesc;
 		MemoryContext oldcontext;
 		Relation aocsRel;
-		AppendOnlyEntry *aoEntry;
 		Relation pg_aoseg_rel;
 
 		/* create a function context for cross-call persistence */
@@ -1400,21 +1369,16 @@ gp_aoseg_name(PG_FUNCTION_ARGS)
 					errmsg("'%s' is not an append-only row relation",
 							RelationGetRelationName(aocsRel))));
 
-		aoEntry = GetAppendOnlyEntry(aocsRel);
-		
-		pg_aoseg_rel = heap_open(aoEntry->segrelid, NoLock);
+		pg_aoseg_rel = heap_open(aocsRel->rd_appendonly->segrelid, NoLock);
 		
 		context->aoSegfileArray = 
-				GetAllFileSegInfo_pg_aoseg_rel(
-											RelationGetRelationName(aocsRel), 
-											aoEntry, 
-											pg_aoseg_rel,
-											SnapshotNow,
-											&context->totalAoSegFiles);
+			GetAllFileSegInfo_pg_aoseg_rel(RelationGetRelationName(aocsRel), 
+										   pg_aoseg_rel,
+										   SnapshotNow,
+										   &context->totalAoSegFiles);
 
 		heap_close(pg_aoseg_rel, NoLock);
 		heap_close(aocsRel, NoLock);
-		pfree(aoEntry);
 
 		// Iteration position.
 		context->segfileArrayIndex = 0;

@@ -175,13 +175,12 @@ AOCSTruncateToEOF(Relation aorel)
 	Assert(RelationIsAoCols(aorel));
 
 	relname = RelationGetRelationName(aorel);
-	AppendOnlyEntry *aoEntry = GetAppendOnlyEntry(aorel);
 
 	elogif (Debug_appendonly_print_compaction, LOG, 
 			"Compact AO relation %s", relname);
 
 	/* Get information about all the file segments we need to scan */
-	segfile_array = GetAllAOCSFileSegInfo(aorel, aoEntry, SnapshotNow, &total_segfiles);
+	segfile_array = GetAllAOCSFileSegInfo(aorel, SnapshotNow, &total_segfiles);
 
 	for(i = 0 ; i < total_segfiles ; i++)
 	{
@@ -205,7 +204,7 @@ AOCSTruncateToEOF(Relation aorel)
 		}
 
 		/* Re-fetch under the write lock to get latest committed eof. */
-		fsinfo = GetAOCSFileSegInfo(aorel, aoEntry, SnapshotNow, segno);
+		fsinfo = GetAOCSFileSegInfo(aorel, SnapshotNow, segno);
 
 		/*
 		 * This should not occur since this segfile info was found by the
@@ -223,8 +222,6 @@ AOCSTruncateToEOF(Relation aorel)
 		AOCSSegmentFileTruncateToEOF(aorel,  fsinfo);
 		pfree(fsinfo);
 	}
-
-	pfree(aoEntry);
 
 	if (segfile_array)
 	{
@@ -274,7 +271,6 @@ AOCSMoveTuple(TupleTableSlot	*slot,
  */
 static bool
 AOCSSegmentFileFullCompaction(Relation aorel, 
-		AppendOnlyEntry *aoEntry, 
 		AOCSInsertDesc insertDesc,
 		AOCSFileSegInfo* fsinfo)
 {
@@ -306,8 +302,8 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 	relname = RelationGetRelationName(aorel);
 
 	AppendOnlyVisimap_Init(&visiMap,
-			aoEntry->visimaprelid,
-			aoEntry->visimapidxid,
+			aorel->rd_appendonly->visimaprelid,
+			aorel->rd_appendonly->visimapidxid,
 			ShareLock,
 			SnapshotNow);
 
@@ -380,16 +376,16 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 
 	}
 
-	SetAOCSFileSegInfoState(aorel, aoEntry, compact_segno,
+	SetAOCSFileSegInfoState(aorel, compact_segno,
 			AOSEG_STATE_AWAITING_DROP);
 
 	AppendOnlyVisimap_DeleteSegmentFile(&visiMap,
 			compact_segno);
 
 	/* Delete all mini pages of the segment files if block directory exists */
-	if (OidIsValid(aoEntry->blkdirrelid)) {
-		AppendOnlyBlockDirectory_DeleteSegmentFile(
-			aoEntry,
+	if (OidIsValid(aorel->rd_appendonly->blkdirrelid))
+	{
+		AppendOnlyBlockDirectory_DeleteSegmentFile(aorel,
 			SnapshotNow,
 			compact_segno,
 			0);
@@ -437,13 +433,12 @@ AOCSDrop(Relation aorel,
 	Assert (RelationIsAoCols(aorel));
 
 	relname = RelationGetRelationName(aorel);
-	AppendOnlyEntry *aoEntry = GetAppendOnlyEntry(aorel);
 
 	elogif (Debug_appendonly_print_compaction, LOG, 
 			"Drop AOCS relation %s", relname);
 
 	/* Get information about all the file segments we need to scan */
-	segfile_array = GetAllAOCSFileSegInfo(aorel, aoEntry, 
+	segfile_array = GetAllAOCSFileSegInfo(aorel,
 			SnapshotNow, &total_segfiles);
 
 	for(i = 0 ; i < total_segfiles ; i++)
@@ -472,15 +467,14 @@ AOCSDrop(Relation aorel,
 		}
 
 		/* Re-fetch under the write lock to get latest committed eof. */
-		fsinfo = GetAOCSFileSegInfo(aorel, aoEntry, SnapshotNow, segno);
+		fsinfo = GetAOCSFileSegInfo(aorel, SnapshotNow, segno);
 
 		/* drop not planned, try at least eof truncation */
 		if (fsinfo->state == AOSEG_STATE_AWAITING_DROP)
 		{
 			Assert(HasLockForSegmentFileDrop(aorel));
 			AOCSCompaction_DropSegmentFile(aorel, segno);
-			ClearAOCSFileSegInfo(aorel, aoEntry, segno,
-					AOSEG_STATE_DEFAULT);
+			ClearAOCSFileSegInfo(aorel, segno, AOSEG_STATE_DEFAULT);
 		}
 		else
 		{	
@@ -488,8 +482,6 @@ AOCSDrop(Relation aorel,
 		}
 		pfree(fsinfo);
 	}
-
-	pfree(aoEntry);
 
 	if (segfile_array)
 	{
@@ -530,13 +522,12 @@ AOCSCompact(Relation aorel,
 	Assert(insert_segno >= 0);
 
 	relname = RelationGetRelationName(aorel);
-	AppendOnlyEntry *aoEntry = GetAppendOnlyEntry(aorel);
 
 	elogif (Debug_appendonly_print_compaction, LOG, 
 			"Compact AO relation %s", relname);
 
 	/* Get information about all the file segments we need to scan */
-	segfile_array = GetAllAOCSFileSegInfo(aorel, aoEntry, SnapshotNow, &total_segfiles);
+	segfile_array = GetAllAOCSFileSegInfo(aorel, SnapshotNow, &total_segfiles);
 
 	if (insert_segno >= 0)
 	{
@@ -574,7 +565,7 @@ AOCSCompact(Relation aorel,
 		}
 
 		/* Re-fetch under the write lock to get latest committed eof. */
-		fsinfo = GetAOCSFileSegInfo(aorel, aoEntry, SnapshotNow, segno);
+		fsinfo = GetAOCSFileSegInfo(aorel, SnapshotNow, segno);
 
 		/*
 		 * This should not occur since this segfile info was found by the
@@ -589,10 +580,10 @@ AOCSCompact(Relation aorel,
 				 aorel->rd_node.relNode,
 				 segno);
 
-		if (AppendOnlyCompaction_ShouldCompact(aorel, aoEntry,
+		if (AppendOnlyCompaction_ShouldCompact(aorel,
 				fsinfo->segno, fsinfo->total_tupcount,isFull))
 		{
-			AOCSSegmentFileFullCompaction(aorel, aoEntry, insertDesc, fsinfo);
+			AOCSSegmentFileFullCompaction(aorel, insertDesc, fsinfo);
 		} 
 		else
 		{
@@ -605,8 +596,6 @@ AOCSCompact(Relation aorel,
 
 	if (insertDesc != NULL)
 		aocs_insert_finish(insertDesc);
-
-	pfree(aoEntry);
 
 	if (segfile_array)
 	{

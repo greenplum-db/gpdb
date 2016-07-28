@@ -168,7 +168,6 @@ init_internal(AppendOnlyBlockDirectory *blockDirectory)
 void
 AppendOnlyBlockDirectory_Init_forSearch(
 	AppendOnlyBlockDirectory *blockDirectory,
-	AppendOnlyEntry *aoEntry,
 	Snapshot appendOnlyMetaDataSnapshot,
 	FileSegInfo **segmentFileInfo,
 	int totalSegfiles,
@@ -177,13 +176,11 @@ AppendOnlyBlockDirectory_Init_forSearch(
 	bool isAOCol,
 	bool *proj)
 {
-	Assert(aoEntry != NULL);
-
 	blockDirectory->aoRel = aoRel;
 
-	if (!OidIsValid(aoEntry->blkdirrelid))
+	if (!OidIsValid(aoRel->rd_appendonly->blkdirrelid))
 	{
-		Assert(!OidIsValid(aoEntry->blkdiridxid));
+		Assert(!OidIsValid(aoRel->rd_appendonly->blkdiridxid));
 		blockDirectory->blkdirRel = NULL;
 		blockDirectory->blkdirIdx = NULL;
 
@@ -205,15 +202,15 @@ AppendOnlyBlockDirectory_Init_forSearch(
 	blockDirectory->proj = proj;
 	blockDirectory->currentSegmentFileNum = -1;
 
-	Assert(OidIsValid(aoEntry->blkdirrelid));
+	Assert(OidIsValid(aoRel->rd_appendonly->blkdirrelid));
 
 	blockDirectory->blkdirRel =
-		heap_open(aoEntry->blkdirrelid, AccessShareLock);
+		heap_open(aoRel->rd_appendonly->blkdirrelid, AccessShareLock);
 
-	Assert(OidIsValid(aoEntry->blkdiridxid));
+	Assert(OidIsValid(aoRel->rd_appendonly->blkdiridxid));
 
 	blockDirectory->blkdirIdx =
-		index_open(aoEntry->blkdiridxid, AccessShareLock);
+		index_open(aoRel->rd_appendonly->blkdiridxid, AccessShareLock);
 
 	init_internal(blockDirectory);
 }
@@ -230,7 +227,6 @@ AppendOnlyBlockDirectory_Init_forSearch(
 void
 AppendOnlyBlockDirectory_Init_forInsert(
 	AppendOnlyBlockDirectory *blockDirectory,
-	AppendOnlyEntry *aoEntry,
 	Snapshot appendOnlyMetaDataSnapshot,
 	FileSegInfo *segmentFileInfo,
 	int64 lastSequence,
@@ -241,14 +237,12 @@ AppendOnlyBlockDirectory_Init_forInsert(
 {
 	int groupNo;
 
-	Assert(aoEntry != NULL);
-
 	blockDirectory->aoRel = aoRel;
 	blockDirectory->appendOnlyMetaDataSnapshot = appendOnlyMetaDataSnapshot;
 
-	if (!OidIsValid(aoEntry->blkdirrelid))
+	if (!OidIsValid(aoRel->rd_appendonly->blkdirrelid))
 	{
-		Assert(!OidIsValid(aoEntry->blkdiridxid));
+		Assert(!OidIsValid(aoRel->rd_appendonly->blkdiridxid));
 		blockDirectory->blkdirRel = NULL;
 		blockDirectory->blkdirIdx = NULL;
 
@@ -264,15 +258,15 @@ AppendOnlyBlockDirectory_Init_forInsert(
 	blockDirectory->isAOCol = isAOCol;
 	blockDirectory->proj = NULL;
 
-	Assert(OidIsValid(aoEntry->blkdirrelid));
+	Assert(OidIsValid(aoRel->rd_appendonly->blkdirrelid));
 
 	blockDirectory->blkdirRel =
-		heap_open(aoEntry->blkdirrelid, RowExclusiveLock);
+		heap_open(aoRel->rd_appendonly->blkdirrelid, RowExclusiveLock);
 
-	Assert(OidIsValid(aoEntry->blkdiridxid));
+	Assert(OidIsValid(aoRel->rd_appendonly->blkdiridxid));
 
 	blockDirectory->blkdirIdx =
-		index_open(aoEntry->blkdiridxid, RowExclusiveLock);
+		index_open(aoRel->rd_appendonly->blkdiridxid, RowExclusiveLock);
 
 	init_internal(blockDirectory);
 
@@ -298,7 +292,6 @@ AppendOnlyBlockDirectory_Init_forInsert(
 void
 AppendOnlyBlockDirectory_Init_addCol(
 	AppendOnlyBlockDirectory *blockDirectory,
-	AppendOnlyEntry *aoEntry,
 	Snapshot appendOnlyMetaDataSnapshot,
 	FileSegInfo *segmentFileInfo,
 	Relation aoRel,
@@ -306,14 +299,12 @@ AppendOnlyBlockDirectory_Init_addCol(
 	int numColumnGroups,
 	bool isAOCol)
 {
-	Assert(aoEntry != NULL);
-
 	blockDirectory->aoRel = aoRel;
 	blockDirectory->appendOnlyMetaDataSnapshot = appendOnlyMetaDataSnapshot;
 
-	if (!OidIsValid(aoEntry->blkdirrelid))
+	if (!OidIsValid(aoRel->rd_appendonly->blkdirrelid))
 	{
-		Assert(!OidIsValid(aoEntry->blkdiridxid));
+		Assert(!OidIsValid(aoRel->rd_appendonly->blkdiridxid));
 		blockDirectory->blkdirRel = NULL;
 		blockDirectory->blkdirIdx = NULL;
 		blockDirectory->numColumnGroups = 0;
@@ -329,7 +320,7 @@ AppendOnlyBlockDirectory_Init_addCol(
 	blockDirectory->isAOCol = isAOCol;
 	blockDirectory->proj = NULL;
 
-	Assert(OidIsValid(aoEntry->blkdirrelid));
+	Assert(OidIsValid(aoRel->rd_appendonly->blkdirrelid));
 
 	/*
 	 * TODO: refactor the *_addCol* interface so that opening of
@@ -339,12 +330,12 @@ AppendOnlyBlockDirectory_Init_addCol(
 	 * called for every appendonly segment.
 	 */
 	blockDirectory->blkdirRel =
-		heap_open(aoEntry->blkdirrelid, RowExclusiveLock);
+		heap_open(aoRel->rd_appendonly->blkdirrelid, RowExclusiveLock);
 
-	Assert(OidIsValid(aoEntry->blkdiridxid));
+	Assert(OidIsValid(aoRel->rd_appendonly->blkdiridxid));
 
 	blockDirectory->blkdirIdx =
-		index_open(aoEntry->blkdiridxid, RowExclusiveLock);
+		index_open(aoRel->rd_appendonly->blkdiridxid, RowExclusiveLock);
 
 	init_internal(blockDirectory);
 }
@@ -808,18 +799,16 @@ AppendOnlyBlockDirectory_addCol_InsertEntry(
  * append-only relation.
  */ 
 void
-AppendOnlyBlockDirectory_DeleteSegmentFile(
-		AppendOnlyEntry *aoEntry,
+AppendOnlyBlockDirectory_DeleteSegmentFile(Relation aoRel,
 		Snapshot snapshot,
 		int segno,
 		int columnGroupNo)
 {
-	Assert(aoEntry);
-	Assert(OidIsValid(aoEntry->blkdirrelid));
-	Assert(OidIsValid(aoEntry->blkdiridxid));
+	Assert(OidIsValid(aoRel->rd_appendonly->blkdirrelid));
+	Assert(OidIsValid(aoRel->rd_appendonly->blkdiridxid));
 
-	Relation blkdirRel = heap_open(aoEntry->blkdirrelid, RowExclusiveLock);
-	Relation blkdirIdx = index_open(aoEntry->blkdiridxid, RowExclusiveLock);
+	Relation blkdirRel = heap_open(aoRel->rd_appendonly->blkdirrelid, RowExclusiveLock);
+	Relation blkdirIdx = index_open(aoRel->rd_appendonly->blkdiridxid, RowExclusiveLock);
 
 	ScanKeyData scanKey;
 	ScanKeyInit(&scanKey,

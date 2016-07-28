@@ -133,29 +133,6 @@ typedef FormData_pg_appendonly *Form_pg_appendonly;
                0, 0, 0, 0, 0, false, false, false, false, FirstNormalTransactionId, {0}, {{{'\0','\0','\0','\0'},{'\0'}}}
 
 
-/*
- * Descriptor of a single AO relation.
- * For now very similar to the catalog row itself but may change in time.
- */
-typedef struct AppendOnlyEntry
-{
-	int		blocksize;
-	int		safefswritesize;
-	int		compresslevel;
-	int		majorversion;
-	int		minorversion;
-	bool	checksum;
-	char*	compresstype;
-    bool    columnstore;
-	Oid     segrelid;
-	Oid     segidxid;
-	Oid     blkdirrelid;
-	Oid     blkdiridxid;
-	Oid     visimaprelid;
-	Oid     visimapidxid;
-	int4    version;
-} AppendOnlyEntry;
-
 /* No initial contents. */
 
 /*

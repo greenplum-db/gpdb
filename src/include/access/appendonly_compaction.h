@@ -26,7 +26,6 @@ extern void AppendOnlyCompact(Relation aorel,
 		bool isFull);
 extern bool AppendOnlyCompaction_ShouldCompact(
 	Relation aoRelation,
-	AppendOnlyEntry *aoEntry,
 	int segno,
 	int64 segmentTotalTupcount,
 	bool isFull);

@@ -537,8 +537,7 @@ estimate_rel_size(Relation rel, int32 *attr_widths,
 				
 				int					nsegs, i , j;
 				double				totalBytes = 0;
-				AppendOnlyEntry*	aoEntry = GetAppendOnlyEntry(rel);
-				AOCSFileSegInfo**	aocsInfo = GetAllAOCSFileSegInfo(rel, aoEntry, SnapshotNow, &nsegs);
+				AOCSFileSegInfo**	aocsInfo = GetAllAOCSFileSegInfo(rel, SnapshotNow, &nsegs);
 				
 			    if (aocsInfo)
 			    {
@@ -553,7 +552,6 @@ estimate_rel_size(Relation rel, int32 *attr_widths,
 			    	}
 			    }
 			    curpages = RelationGuessNumberOfBlocks(totalBytes);
-			    pfree(aoEntry);
 			}
 			else
 			{

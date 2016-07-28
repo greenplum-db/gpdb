@@ -5405,7 +5405,6 @@ column_to_scan(AOCSFileSegInfo **segInfos, int nseg, int natts)
 static bool
 ATAocsNoRewrite(AlteredTableInfo *tab)
 {
-	AppendOnlyEntry *aoEntry;
 	AOCSFileSegInfo **segInfos;
 	AOCSHeaderScanDesc sdesc;
 	AOCSAddColumnDesc idesc;
@@ -5453,12 +5452,11 @@ ATAocsNoRewrite(AlteredTableInfo *tab)
 	}
 
 	rel = heap_open(tab->relid, NoLock);
-	aoEntry = GetAppendOnlyEntry(rel);
-	segInfos = GetAllAOCSFileSegInfo(rel, aoEntry, SnapshotNow, &nseg);
+	segInfos = GetAllAOCSFileSegInfo(rel, SnapshotNow, &nseg);
 	basepath = relpath(rel->rd_node);
 	if (nseg > 0)
 	{
-		aocs_addcol_emptyvpe(rel, aoEntry, segInfos, nseg,
+		aocs_addcol_emptyvpe(rel, segInfos, nseg,
 							 list_length(tab->newvals));
 	}
 
@@ -5494,8 +5492,8 @@ ATAocsNoRewrite(AlteredTableInfo *tab)
 		memset(slot_get_isnull(slot), true,
 			   RelationGetDescr(rel)->natts * sizeof(bool));
 
-		sdesc = aocs_begin_headerscan(rel, aoEntry, scancol);
-		idesc = aocs_addcol_init(rel, aoEntry, list_length(addColCmds));
+		sdesc = aocs_begin_headerscan(rel, scancol);
+		idesc = aocs_addcol_init(rel, list_length(addColCmds));
 
 		/* Loop over all appendonly segments */
 		for (segi = 0; segi < nseg; ++segi)
@@ -10445,8 +10443,6 @@ ATExecSetTableSpace_AppendOnly(
 
 	HeapTuple tupleCopy;
 
-	AppendOnlyEntry *aoEntry;
-
 	Snapshot	appendOnlyMetaDataSnapshot = SnapshotNow;
 				/*
 				 * We can use SnapshotNow since we have an exclusive lock on the source.
@@ -10471,8 +10467,6 @@ ATExecSetTableSpace_AppendOnly(
 	/* Use palloc to ensure we get a maxaligned buffer */		
 	buffer = palloc(2*BLCKSZ);
 
-	aoEntry = GetAppendOnlyEntry(rel);
-
 	if (Debug_persistent_print)
 		elog(Persistent_DebugPrintLevel(), 
 			 "ALTER TABLE SET TABLESPACE: pg_appendonly entry for Append-Only %u/%u/%u, "
@@ -10481,8 +10475,8 @@ ATExecSetTableSpace_AppendOnly(
 			 rel->rd_node.spcNode,
 			 rel->rd_node.dbNode,
 			 rel->rd_node.relNode,
-			 aoEntry->segrelid,
-			 aoEntry->segidxid,
+			 rel->rd_appendonly->segrelid,
+			 rel->rd_appendonly->segidxid,
 			 ItemPointerToString(&oldPersistentTid));
 
 	/*
@@ -10571,7 +10565,7 @@ ATExecSetTableSpace_AppendOnly(
 		{
 			FileSegInfo *fileSegInfo;
 
-			fileSegInfo = GetFileSegInfo(rel, aoEntry, appendOnlyMetaDataSnapshot, segmentFileNum);
+			fileSegInfo = GetFileSegInfo(rel, appendOnlyMetaDataSnapshot, segmentFileNum);
 			if (fileSegInfo == NULL)
 			{
 				/*
@@ -10610,7 +10604,7 @@ ATExecSetTableSpace_AppendOnly(
 
 			actualSegmentNum = segmentFileNum % AOTupleId_MultiplierSegmentFileNum;
 			
-			aocsFileSegInfo = GetAOCSFileSegInfo(rel, aoEntry, appendOnlyMetaDataSnapshot, actualSegmentNum);
+			aocsFileSegInfo = GetAOCSFileSegInfo(rel, appendOnlyMetaDataSnapshot, actualSegmentNum);
 			if (aocsFileSegInfo == NULL)
 			{
 				/*
@@ -10680,8 +10674,6 @@ ATExecSetTableSpace_AppendOnly(
 			 newRelFileNode->relNode,
 			 ItemPointerToString(&newPersistentTid),
 			 newPersistentSerialNum);
-
-	pfree(aoEntry);
 
 	pfree(buffer);
 }

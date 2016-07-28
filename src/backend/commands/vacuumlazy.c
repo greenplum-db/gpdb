@@ -1208,7 +1208,6 @@ vacuum_appendonly_fill_stats(Relation aorel, Snapshot snapshot,
 	double		eof;
 	int64       hidden_tupcount;
 	AppendOnlyVisimap visimap;
-	AppendOnlyEntry *aoEntry;
 
 	Assert(RelationIsAoRows(aorel) || RelationIsAoCols(aorel));
 
@@ -1231,13 +1230,15 @@ vacuum_appendonly_fill_stats(Relation aorel, Snapshot snapshot,
 	totalbytes = eof;
 	nblocks = (uint32)RelationGuessNumberOfBlocks(totalbytes);
 
-	aoEntry = GetAppendOnlyEntry(aorel);
-	AppendOnlyVisimap_Init(&visimap, aoEntry->visimaprelid, aoEntry->visimapidxid, AccessShareLock, snapshot);
+	AppendOnlyVisimap_Init(&visimap,
+						   aorel->rd_appendonly->visimaprelid,
+						   aorel->rd_appendonly->visimapidxid,
+						   AccessShareLock,
+						   snapshot);
 	hidden_tupcount = AppendOnlyVisimap_GetRelationHiddenTupleCount(&visimap);
 	num_tuples -= hidden_tupcount;
 	Assert(num_tuples > -1.0);
 	AppendOnlyVisimap_Finish(&visimap, AccessShareLock);
-	pfree(aoEntry);
 
 	elogif (Debug_appendonly_print_compaction, LOG,
 			"Gather statistics after vacuum for append-only relation %s: "

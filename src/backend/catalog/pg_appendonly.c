@@ -251,52 +251,6 @@ GetAppendOnlyEntryAuxOids(Oid relid,
 }
 
 /*
- * Get the catalog entry for an appendonly relation
- */
-AppendOnlyEntry *
-GetAppendOnlyEntry(Relation rel)
-{
-	Oid dummy;
-
-	return  GetAppendOnlyEntryFromTuple(rel->rd_aotuple, &dummy);
-}
-
-/*
- * Get the catalog entry for an appendonly relation tuple.
- */
-AppendOnlyEntry *
-GetAppendOnlyEntryFromTuple(HeapTuple aotuple,
-							Oid	*relationId)
-{
-	Form_pg_appendonly form = (Form_pg_appendonly) GETSTRUCT(aotuple);
-	AppendOnlyEntry *aoentry;
-
-	aoentry = (AppendOnlyEntry *) palloc(sizeof(AppendOnlyEntry));
-
-	aoentry->blocksize = form->blocksize;
-	aoentry->safefswritesize = form->safefswritesize;
-	aoentry->compresslevel = form->compresslevel;
-	aoentry->majorversion = form->majorversion;
-	aoentry->minorversion = form->minorversion;
-	aoentry->checksum = form->checksum;
-	aoentry->columnstore = form->columnstore;
-	aoentry->compresstype = pstrdup(NameStr(form->compresstype));
-	aoentry->segrelid = form->segrelid;
-	aoentry->segidxid = form->segidxid;
-	aoentry->blkdirrelid = form->blkdirrelid;
-	aoentry->blkdiridxid = form->blkdiridxid;
-	aoentry->visimaprelid = form->visimaprelid;
-	aoentry->visimapidxid = form->visimapidxid;
-	aoentry->version = form->version;
-
-	AORelationVersion_CheckValid(aoentry->version);
-
-	*relationId = form->relid;
-
-	return aoentry;
-}
-
-/*
  * Update the segrelid and/or blkdirrelid if the input new values
  * are valid OIDs.
  */

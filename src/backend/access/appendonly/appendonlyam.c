@@ -99,11 +99,6 @@ typedef struct AppendOnlyDeleteDescData
 	Snapshot		appendOnlyMetaDataSnapshot;
 
 	/*
-	 * pg_appendonly entry for the append-only relation
-	 */
-	AppendOnlyEntry *aoEntry;
-
-	/*
 	 * visibility map
 	 */
 	AppendOnlyVisimap visibilityMap;
@@ -233,7 +228,7 @@ SetNextFileSegForRead(AppendOnlyScanDesc scan)
 
 		/* Get the relation specific compression functions */
 
-		fns = get_funcs_for_compression(scan->aoEntry->compresstype);
+		fns = get_funcs_for_compression(NameStr(reln->rd_appendonly->compresstype));
 		scan->storageRead.compression_functions = fns;
 
 		if (scan->storageRead.compression_functions != NULL)
@@ -308,13 +303,12 @@ SetNextFileSegForRead(AppendOnlyScanDesc scan)
 				 * update the sequence value.
 				 */
 				int64 firstSequence =
-					GetFastSequences(scan->aoEntry->segrelid,
+					GetFastSequences(reln->rd_appendonly->segrelid,
 									 segno,
 									 fsinfo->total_tupcount + 1,
 									 NUM_FAST_SEQUENCES);
 
 				AppendOnlyBlockDirectory_Init_forInsert(scan->blockDirectory,
-														scan->aoEntry,
 														scan->appendOnlyMetaDataSnapshot,
 														fsinfo,
 														0, /* lastSequence */
@@ -323,7 +317,7 @@ SetNextFileSegForRead(AppendOnlyScanDesc scan)
 														1, /* columnGroupNo */
 														false);
 
-				InsertFastSequenceEntry(scan->aoEntry->segrelid,
+				InsertFastSequenceEntry(reln->rd_appendonly->segrelid,
 										segno,
 										firstSequence);
 			}
@@ -485,7 +479,6 @@ SetCurrentFileSegForWrite(AppendOnlyInsertDesc aoInsertDesc)
 	/* Now, get the information for the file segment we are going to append to. */
 	aoInsertDesc->fsInfo = GetFileSegInfo(
 										  aoInsertDesc->aoi_rel,
-										  aoInsertDesc->aoEntry,
 										  aoInsertDesc->appendOnlyMetaDataSnapshot,
 										  aoInsertDesc->cur_segno);
 
@@ -517,7 +510,7 @@ SetCurrentFileSegForWrite(AppendOnlyInsertDesc aoInsertDesc)
 			persistentSerialNum);
 		}
 
-		InsertInitialSegnoEntry(aoInsertDesc->aoEntry, aoInsertDesc->cur_segno);
+		InsertInitialSegnoEntry(aoInsertDesc->aoi_rel, aoInsertDesc->cur_segno);
 		aoInsertDesc->fsInfo = NewFileSegInfo(aoInsertDesc->cur_segno);
 	}
 
@@ -649,7 +642,6 @@ CloseWritableFileSeg(AppendOnlyInsertDesc aoInsertDesc)
 	 * Update the AO segment info table with our new eof
 	 */
 	UpdateFileSegInfo(aoInsertDesc->aoi_rel,
-					  aoInsertDesc->aoEntry,
 					  aoInsertDesc->cur_segno,
 					  fileLen,
 					  fileLen_uncompressed,
@@ -1546,7 +1538,6 @@ static AppendOnlyScanDesc
 appendonly_beginrangescan_internal(Relation relation,
 						Snapshot snapshot,
 						Snapshot appendOnlyMetaDataSnapshot,
-						AppendOnlyEntry *aoentry,
 						FileSegInfo **seginfo,
 						int segfile_count,
 						int nkeys,
@@ -1574,8 +1565,7 @@ appendonly_beginrangescan_internal(Relation relation,
 	 */
 	scan = (AppendOnlyScanDesc) palloc0(sizeof(AppendOnlyScanDescData));
 
-	scan->aoEntry = aoentry;
-	Assert(aoentry->majorversion == 1 && aoentry->minorversion == 1);
+	Assert(relation->rd_appendonly->majorversion == 1 && relation->rd_appendonly->minorversion == 1);
 
 	/*
 	 * initialize the scan descriptor
@@ -1583,7 +1573,7 @@ appendonly_beginrangescan_internal(Relation relation,
 	scan->aos_filenamepath_maxlen = AOSegmentFilePathNameLen(relation) + 1;
 	scan->aos_filenamepath = (char*)palloc(scan->aos_filenamepath_maxlen);
 	scan->aos_filenamepath[0] = '\0';
-	scan->usableBlockSize = AppendOnlyStorage_GetUsableBlockSize(aoentry->blocksize);
+	scan->usableBlockSize = AppendOnlyStorage_GetUsableBlockSize(relation->rd_appendonly->blocksize);
 	scan->aos_rd = relation;
 	scan->appendOnlyMetaDataSnapshot = appendOnlyMetaDataSnapshot;
 	scan->snapshot = snapshot;
@@ -1604,8 +1594,8 @@ appendonly_beginrangescan_internal(Relation relation,
 	/*
 	 * These attributes describe the AppendOnly format to be scanned.
 	 */
-	if (strcmp(aoentry->compresstype, "") == 0 ||
-		pg_strcasecmp(aoentry->compresstype, "none") == 0)
+	if (strcmp(NameStr(relation->rd_appendonly->compresstype), "") == 0 ||
+		pg_strcasecmp(NameStr(relation->rd_appendonly->compresstype), "none") == 0)
 	{
 		attr->compress = false;
 		attr->compressType = "none";
@@ -1613,12 +1603,12 @@ appendonly_beginrangescan_internal(Relation relation,
 	else
 	{
 		attr->compress = true;
-		attr->compressType = aoentry->compresstype;
+		attr->compressType = NameStr(relation->rd_appendonly->compresstype);
 	}
-	attr->compressLevel     = aoentry->compresslevel;
-	attr->checksum			= aoentry->checksum;
-	attr->safeFSWriteSize	= aoentry->safefswritesize;
-	attr->version			= aoentry->version;
+	attr->compressLevel     = relation->rd_appendonly->compresslevel;
+	attr->checksum			= relation->rd_appendonly->checksum;
+	attr->safeFSWriteSize	= relation->rd_appendonly->safefswritesize;
+	attr->version			= relation->rd_appendonly->version;
 
 	AORelationVersion_CheckValid(attr->version);
 
@@ -1628,7 +1618,7 @@ appendonly_beginrangescan_internal(Relation relation,
 	 *
 	 * This GUC must have the same value on write and read.
 	 */
-//	scan->aos_notoast = aoentry->notoast;
+//	scan->aos_notoast = relation->rd_appendonly->notoast;
 	scan->aos_notoast = Debug_appendonly_use_no_toast;
 
 
@@ -1660,8 +1650,8 @@ appendonly_beginrangescan_internal(Relation relation,
 	scan->blockDirectory = NULL;
 
 	AppendOnlyVisimap_Init(&scan->visibilityMap,
-			aoentry->visimaprelid,
-			aoentry->visimapidxid,
+			relation->rd_appendonly->visimaprelid,
+			relation->rd_appendonly->visimapidxid,
 			AccessShareLock,
 			appendOnlyMetaDataSnapshot);
 
@@ -1683,18 +1673,16 @@ appendonly_beginrangescan(Relation relation,
 	/*
 	 * Get the pg_appendonly information for this table
 	 */
-	AppendOnlyEntry *aoentry = GetAppendOnlyEntry(relation);
 
 	FileSegInfo **seginfo = palloc0(sizeof(FileSegInfo *) * segfile_count);
 	for (int i = 0; i < segfile_count; i++)
 	{
-		seginfo[i] = GetFileSegInfo(relation, aoentry, appendOnlyMetaDataSnapshot,
+		seginfo[i] = GetFileSegInfo(relation, appendOnlyMetaDataSnapshot,
 				segfile_no_arr[i]);
 	}
 	return appendonly_beginrangescan_internal(relation,
 		snapshot,
 		appendOnlyMetaDataSnapshot,
-		aoentry,
 		seginfo,
 		segfile_count,
 		nkeys,
@@ -1714,16 +1702,13 @@ appendonly_beginscan(Relation relation,
 	/*
 	 * Get the pg_appendonly information for this table
 	 */
-	AppendOnlyEntry *aoentry = GetAppendOnlyEntry(relation);
-
 	int segfile_count;
-	FileSegInfo **seginfo = GetAllFileSegInfo(relation, aoentry,
+	FileSegInfo **seginfo = GetAllFileSegInfo(relation,
 		appendOnlyMetaDataSnapshot, &segfile_count);
 
 	return appendonly_beginrangescan_internal(relation,
 		snapshot,
 		appendOnlyMetaDataSnapshot,
-		aoentry,
 		seginfo,
 		segfile_count,
 		nkeys,
@@ -1793,8 +1778,6 @@ appendonly_endscan(AppendOnlyScanDesc scan)
 
 	AppendOnlyVisimap_Finish(&scan->visibilityMap, AccessShareLock);
 	pfree(scan->aos_filenamepath);
-
-	pfree(scan->aoEntry);
 
 	pfree(scan->title);
 
@@ -2107,7 +2090,6 @@ appendonly_fetch_init(
 	Snapshot 	appendOnlyMetaDataSnapshot)
 {
 	AppendOnlyFetchDesc	aoFetchDesc;
-	AppendOnlyEntry		*aoentry;
 
 	AppendOnlyStorageAttributes *attr;
 
@@ -2147,13 +2129,6 @@ appendonly_fetch_init(
 	aoFetchDesc->title = titleBuf.data;
 
 	/*
-	 * Get the pg_appendonly information for this table
-	 */
-	aoentry = GetAppendOnlyEntry(relation);
-
-	aoFetchDesc->aoEntry = aoentry;
-
-	/*
 	 * Fill in Append-Only Storage layer attributes.
 	 */
 	attr = &aoFetchDesc->storageAttributes;
@@ -2161,8 +2136,8 @@ appendonly_fetch_init(
 	/*
 	 * These attributes describe the AppendOnly format to be scanned.
 	 */
-	if (strcmp(aoentry->compresstype, "") == 0 ||
-		pg_strcasecmp(aoentry->compresstype, "none") == 0)
+	if (strcmp(NameStr(relation->rd_appendonly->compresstype), "") == 0 ||
+		pg_strcasecmp(NameStr(relation->rd_appendonly->compresstype), "none") == 0)
 	{
 		attr->compress = false;
 		attr->compressType = "none";
@@ -2170,17 +2145,17 @@ appendonly_fetch_init(
 	else
 	{
 		attr->compress = true;
-		attr->compressType = aoentry->compresstype;
+		attr->compressType = NameStr(relation->rd_appendonly->compresstype);
 	}
-	attr->compressLevel = aoentry->compresslevel;
-	attr->checksum			= aoentry->checksum;
-	attr->safeFSWriteSize	= aoentry->safefswritesize;
-	attr->version			= aoentry->version;
+	attr->compressLevel = relation->rd_appendonly->compresslevel;
+	attr->checksum			= relation->rd_appendonly->checksum;
+	attr->safeFSWriteSize	= relation->rd_appendonly->safefswritesize;
+	attr->version			= relation->rd_appendonly->version;
 
 	AORelationVersion_CheckValid(attr->version);
 
 	aoFetchDesc->usableBlockSize =
-				AppendOnlyStorage_GetUsableBlockSize(aoentry->blocksize);
+				AppendOnlyStorage_GetUsableBlockSize(relation->rd_appendonly->blocksize);
 
 	/*
 	 * Get information about all the file segments we need to scan
@@ -2188,7 +2163,6 @@ appendonly_fetch_init(
 	aoFetchDesc->segmentFileInfo =
 						GetAllFileSegInfo(
 									relation,
-									aoentry,
 									appendOnlyMetaDataSnapshot,
 									&aoFetchDesc->totalSegfiles);
 
@@ -2201,7 +2175,7 @@ appendonly_fetch_init(
 						&aoFetchDesc->storageAttributes);
 
 
-	fns = get_funcs_for_compression(aoentry->compresstype);
+	fns = get_funcs_for_compression(NameStr(relation->rd_appendonly->compresstype));
 	aoFetchDesc->storageRead.compression_functions = fns;
 
 	if (fns)
@@ -2210,9 +2184,9 @@ appendonly_fetch_init(
 		CompressionState *cs;
 		StorageAttributes sa;
 
-		sa.comptype = aoentry->compresstype;
-		sa.complevel = aoentry->compresslevel;
-		sa.blocksize = aoentry->blocksize;
+		sa.comptype = NameStr(relation->rd_appendonly->compresstype);
+		sa.complevel = relation->rd_appendonly->compresslevel;
+		sa.blocksize = relation->rd_appendonly->blocksize;
 
 
 		cs = callCompressionConstructor(cons, RelationGetDescr(relation),
@@ -2230,7 +2204,6 @@ appendonly_fetch_init(
 
 	AppendOnlyBlockDirectory_Init_forSearch(
 						&aoFetchDesc->blockDirectory,
-						aoentry,
 						appendOnlyMetaDataSnapshot,
 						aoFetchDesc->segmentFileInfo,
 						aoFetchDesc->totalSegfiles,
@@ -2240,8 +2213,8 @@ appendonly_fetch_init(
 						NULL);
 
 	AppendOnlyVisimap_Init(&aoFetchDesc->visibilityMap,
-						aoentry->visimaprelid,
-						aoentry->visimapidxid,
+						relation->rd_appendonly->visimaprelid,
+						relation->rd_appendonly->visimapidxid,
 						AccessShareLock,
 						appendOnlyMetaDataSnapshot);
 
@@ -2481,9 +2454,6 @@ appendonly_fetch_finish(AppendOnlyFetchDesc aoFetchDesc)
 
 	AppendOnlyVisimap_Finish(&aoFetchDesc->visibilityMap, AccessShareLock);
 
-	pfree(aoFetchDesc->aoEntry);
-	aoFetchDesc->aoEntry = NULL;
-
 	pfree(aoFetchDesc->segmentFileName);
 	aoFetchDesc->segmentFileName = NULL;
 
@@ -2502,21 +2472,16 @@ appendonly_delete_init(Relation rel, Snapshot appendOnlyMetaDataSnapshot)
 {
 	Assert(RelationIsAoRows(rel));
 
-	/*
-	 * Get the pg_appendonly information
-	 */
-	AppendOnlyEntry *aoentry = GetAppendOnlyEntry(rel);
-	Assert(aoentry && aoentry->majorversion == 1 && aoentry->minorversion == 1);
+	Assert(rel->rd_appendonly->majorversion == 1 && rel->rd_appendonly->minorversion == 1);
 	Assert(!IsXactIsoLevelSerializable);
 
 	AppendOnlyDeleteDesc aoDeleteDesc = palloc0(sizeof(AppendOnlyDeleteDescData));
 	aoDeleteDesc->aod_rel = rel;
 	aoDeleteDesc->appendOnlyMetaDataSnapshot = appendOnlyMetaDataSnapshot;
-	aoDeleteDesc->aoEntry = aoentry;
 
 	AppendOnlyVisimap_Init(&aoDeleteDesc->visibilityMap,
-			aoentry->visimaprelid,
-			aoentry->visimapidxid,
+			rel->rd_appendonly->visimaprelid,
+			rel->rd_appendonly->visimapidxid,
 			RowExclusiveLock,
 			aoDeleteDesc->appendOnlyMetaDataSnapshot);
 
@@ -2531,11 +2496,6 @@ void appendonly_delete_finish(AppendOnlyDeleteDesc aoDeleteDesc)
 	Assert(aoDeleteDesc);
 
 	AppendOnlyVisimapDelete_Finish(&aoDeleteDesc->visiMapDelete);
-
-	if (aoDeleteDesc->aoEntry != NULL)
-	{
-		pfree(aoDeleteDesc->aoEntry);
-	}
 
 	AppendOnlyVisimap_Finish(&aoDeleteDesc->visibilityMap, NoLock);
 
@@ -2585,8 +2545,8 @@ appendonly_update_init(Relation rel, Snapshot appendOnlyMetaDataSnapshot, int se
 	aoUpdateDesc->aoInsertDesc = appendonly_insert_init(rel, appendOnlyMetaDataSnapshot, segno, true);
 
 	AppendOnlyVisimap_Init(&aoUpdateDesc->visibilityMap,
-			aoUpdateDesc->aoInsertDesc->aoEntry->visimaprelid,
-			aoUpdateDesc->aoInsertDesc->aoEntry->visimapidxid,
+			aoUpdateDesc->aoInsertDesc->aoi_rel->rd_appendonly->visimaprelid,
+			aoUpdateDesc->aoInsertDesc->aoi_rel->rd_appendonly->visimapidxid,
 			RowExclusiveLock,
 			appendOnlyMetaDataSnapshot);
 
@@ -2662,7 +2622,6 @@ AppendOnlyInsertDesc
 appendonly_insert_init(Relation rel, Snapshot appendOnlyMetaDataSnapshot, int segno, bool update_mode)
 {
 	AppendOnlyInsertDesc 	aoInsertDesc;
-	AppendOnlyEntry				*aoentry;
 	int 							maxtupsize;
 	int64 						firstSequence = 0;
 	PGFunction 				*fns;
@@ -2676,8 +2635,7 @@ appendonly_insert_init(Relation rel, Snapshot appendOnlyMetaDataSnapshot, int se
 	/*
 	 * Get the pg_appendonly information for this table
 	 */
-	aoentry = GetAppendOnlyEntry(rel);
-	Assert(aoentry->majorversion == 1 && aoentry->minorversion == 1);
+	Assert(rel->rd_appendonly->majorversion == 1 && rel->rd_appendonly->minorversion == 1);
 
 	/*
 	 * allocate and initialize the insert descriptor
@@ -2706,7 +2664,6 @@ appendonly_insert_init(Relation rel, Snapshot appendOnlyMetaDataSnapshot, int se
 
 	Assert(segno >= 0);
 	aoInsertDesc->cur_segno = segno;
-	aoInsertDesc->aoEntry = aoentry;
 	aoInsertDesc->update_mode = update_mode;
 
 	/*
@@ -2718,15 +2675,15 @@ appendonly_insert_init(Relation rel, Snapshot appendOnlyMetaDataSnapshot, int se
 //	aoInsertDesc->useNoToast = aoentry->notoast;
 	aoInsertDesc->useNoToast = Debug_appendonly_use_no_toast;
 
-	aoInsertDesc->usableBlockSize = AppendOnlyStorage_GetUsableBlockSize(aoentry->blocksize);
+	aoInsertDesc->usableBlockSize = AppendOnlyStorage_GetUsableBlockSize(rel->rd_appendonly->blocksize);
 
 	attr = &aoInsertDesc->storageAttributes;
 
 	/*
 	 * These attributes describe the AppendOnly format to be scanned.
 	 */
-	if (strcmp(aoentry->compresstype, "") == 0 ||
-		pg_strcasecmp(aoentry->compresstype, "none") == 0)
+	if (strcmp(NameStr(rel->rd_appendonly->compresstype), "") == 0 ||
+		pg_strcasecmp(NameStr(rel->rd_appendonly->compresstype), "none") == 0)
 	{
 		attr->compress = false;
 		attr->compressType = "none";
@@ -2734,16 +2691,16 @@ appendonly_insert_init(Relation rel, Snapshot appendOnlyMetaDataSnapshot, int se
 	else
 	{
 		attr->compress = true;
-		attr->compressType = aoentry->compresstype;
+		attr->compressType	= NameStr(rel->rd_appendonly->compresstype);
 	}
-	attr->compressLevel	= aoentry->compresslevel;
-	attr->checksum			= aoentry->checksum;
-	attr->safeFSWriteSize	= aoentry->safefswritesize;
-	attr->version			= aoentry->version;
+	attr->compressLevel	= rel->rd_appendonly->compresslevel;
+	attr->checksum			= rel->rd_appendonly->checksum;
+	attr->safeFSWriteSize	= rel->rd_appendonly->safefswritesize;
+	attr->version			= rel->rd_appendonly->version;
 
 	AORelationVersion_CheckValid(attr->version);
 
-	fns = get_funcs_for_compression(aoentry->compresstype);
+	fns = get_funcs_for_compression(NameStr(rel->rd_appendonly->compresstype));
 
 	CompressionState *cs = NULL;
 	CompressionState *verifyCs = NULL;
@@ -2752,9 +2709,9 @@ appendonly_insert_init(Relation rel, Snapshot appendOnlyMetaDataSnapshot, int se
 		PGFunction cons = fns[COMPRESSION_CONSTRUCTOR];
 		StorageAttributes sa;
 
-		sa.comptype = aoentry->compresstype;
-		sa.complevel = aoentry->compresslevel;
-		sa.blocksize = aoentry->blocksize;
+		sa.comptype = NameStr(rel->rd_appendonly->compresstype);
+		sa.complevel = rel->rd_appendonly->compresslevel;
+		sa.blocksize = rel->rd_appendonly->blocksize;
 
 		cs = callCompressionConstructor(cons, RelationGetDescr(rel),
 										&sa,
@@ -2805,7 +2762,7 @@ appendonly_insert_init(Relation rel, Snapshot appendOnlyMetaDataSnapshot, int se
 			 NameStr(aoInsertDesc->aoi_rel->rd_rel->relname),
 			 aoInsertDesc->cur_segno,
 			 (attr->compress ? "true" : "false"),
-			 aoentry->compresstype,
+		     NameStr(rel->rd_appendonly->compresstype),
 			 attr->compressLevel);
 
 	/*
@@ -2845,7 +2802,7 @@ appendonly_insert_init(Relation rel, Snapshot appendOnlyMetaDataSnapshot, int se
 	Assert(aoInsertDesc->fsInfo->segno == segno);
 
 	firstSequence =
-		GetFastSequences(aoInsertDesc->aoEntry->segrelid,
+		GetFastSequences(aoInsertDesc->aoi_rel->rd_appendonly->segrelid,
 						 segno,
 						 aoInsertDesc->rowCount + 1,
 						 NUM_FAST_SEQUENCES);
@@ -2860,7 +2817,6 @@ appendonly_insert_init(Relation rel, Snapshot appendOnlyMetaDataSnapshot, int se
 	/* Initialize the block directory. */
 	AppendOnlyBlockDirectory_Init_forInsert(
 		&(aoInsertDesc->blockDirectory),
-		aoentry,
 		aoInsertDesc->appendOnlyMetaDataSnapshot,		// CONCERN: Safe to assume all block directory entries for segment are "covered" by same exclusive lock.
 		aoInsertDesc->fsInfo, aoInsertDesc->lastSequence,
 		rel, segno, 1, false);
@@ -3135,7 +3091,7 @@ appendonly_insert_init(Relation rel, Snapshot appendOnlyMetaDataSnapshot, int se
 		int64 firstSequence;
 
 		firstSequence =
-			GetFastSequences(aoInsertDesc->aoEntry->segrelid,
+			GetFastSequences(aoInsertDesc->aoi_rel->rd_appendonly->segrelid,
 							 aoInsertDesc->cur_segno,
 							 aoInsertDesc->lastSequence + 1,
 							 NUM_FAST_SEQUENCES);
@@ -3177,7 +3133,6 @@ appendonly_insert_finish(AppendOnlyInsertDesc aoInsertDesc)
 
 	AppendOnlyStorageWrite_FinishSession(&aoInsertDesc->storageWrite);
 
-	pfree(aoInsertDesc->aoEntry);
 	pfree(aoInsertDesc->title);
 	pfree(aoInsertDesc);
 }

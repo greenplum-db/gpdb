@@ -359,7 +359,7 @@ static DbInfoRel *DatabaseInfo_FindRelationId(
 static void DatabaseInfo_AddPgAppendOnly(
 	HTAB 				*pgAppendOnlyHashTable,	
 	Oid					 relationId,
-	AppendOnlyEntry 	*aoEntry)
+	Form_pg_appendonly 	 aoEntry)
 {
 	PgAppendOnlyHashEntry *pgAppendOnlyHashEntry;
 
@@ -383,9 +383,9 @@ static void DatabaseInfo_AddPgAppendOnly(
  * DatabaseInfo_FindPgAppendOnly()
  *   Lookup an entry to a pgAppendOnly hash table.
  */
-static AppendOnlyEntry *DatabaseInfo_FindPgAppendOnly(
+static Form_pg_appendonly
+DatabaseInfo_FindPgAppendOnly(
 	HTAB 				*pgAppendOnlyHashTable,
-	
 	Oid					relationId)
 {
 	PgAppendOnlyHashEntry *pgAppendOnlyHashEntry;
@@ -1013,7 +1013,7 @@ DatabaseInfo_HandleAppendOnly(
 		if (dbInfoRel->relstorage == RELSTORAGE_AOROWS ||
 			dbInfoRel->relstorage == RELSTORAGE_AOCOLS)
 		{
-			AppendOnlyEntry 	*aoEntry;
+			Form_pg_appendonly 	 aoEntry;
 			DbInfoRel 			*aosegDbInfoRel;
 			int i;
 				
@@ -1034,7 +1034,7 @@ DatabaseInfo_HandleAppendOnly(
 					 aoEntry->majorversion,
 					 aoEntry->minorversion,
 					 (aoEntry->checksum ? "true" : "false"),
-					 (aoEntry->compresstype ? aoEntry->compresstype : "NULL"),
+					 NameStr(aoEntry->compresstype),
 					 (aoEntry->columnstore ? "true" : "false"),
 					 aoEntry->segrelid,
 					 aoEntry->segidxid,
@@ -1069,7 +1069,6 @@ DatabaseInfo_HandleAppendOnly(
 				aoSegfileArray = 
 						GetAllFileSegInfo_pg_aoseg_rel(
 												dbInfoRel->relname, 
-												aoEntry,
 												pg_aoseg_rel,
 												SnapshotNow, 
 												&totalAoSegFiles);
@@ -1146,16 +1145,9 @@ DatabaseInfo_CollectPgAppendOnly(
 	scan = heap_beginscan(pg_appendonly_rel, SnapshotNow, 0, NULL);
 	while ((tuple = heap_getnext(scan, ForwardScanDirection)) != NULL)
 	{
-		bool			nulls[Natts_pg_appendonly];
-		Datum			values[Natts_pg_appendonly];
-				
-		AppendOnlyEntry *aoEntry;
+		Form_pg_appendonly aoEntry;
 
-		Oid 			relationId;
-				
-		heap_deform_tuple(tuple, RelationGetDescr(pg_appendonly_rel), values, nulls);
-
-		aoEntry = GetAppendOnlyEntryFromTuple(tuple, &relationId);
+		aoEntry = (Form_pg_appendonly) GETSTRUCT(tuple);
 
 		Assert(aoEntry != NULL);
 
@@ -1164,14 +1156,14 @@ DatabaseInfo_CollectPgAppendOnly(
 				 "DatabaseInfo_Collect: Append-Only entry for relation id %u, "
 				 "blocksize %d, safefswritesize %d, compresslevel %d, major version %d, minor version %d, "
 				 " checksum %s, compresstype %s, columnstore %s, segrelid %u, segidxid %u, blkdirrelid %u, blkdiridxid %u",
-				 relationId,
+				 aoEntry->relid,
 				 aoEntry->blocksize,
 				 aoEntry->safefswritesize,
 				 aoEntry->compresslevel,
 				 aoEntry->majorversion,
 				 aoEntry->minorversion,
 				 (aoEntry->checksum ? "true" : "false"),
-				 (aoEntry->compresstype ? aoEntry->compresstype : "NULL"),
+				 NameStr(aoEntry->compresstype),
 				 (aoEntry->columnstore ? "true" : "false"),
 				 aoEntry->segrelid,
 				 aoEntry->segidxid,
@@ -1180,7 +1172,7 @@ DatabaseInfo_CollectPgAppendOnly(
 
 		DatabaseInfo_AddPgAppendOnly(
 								pgAppendOnlyHashTable,
-								relationId,
+								aoEntry->relid,
 								aoEntry);
 	}
 	heap_endscan(scan);

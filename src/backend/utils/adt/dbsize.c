@@ -605,7 +605,6 @@ calculate_total_relation_size(Oid Relid)
 {
 	Relation	heapRel;
 	Oid			toastOid;
-	AppendOnlyEntry *aoEntry = NULL;
 	int64		size;
 	ListCell   *cell;
 
@@ -615,9 +614,6 @@ calculate_total_relation_size(Oid Relid)
 		return 0;
 
 	toastOid = heapRel->rd_rel->reltoastrelid;
-
-	if (RelationIsAoRows(heapRel) || RelationIsAoCols(heapRel))
-		aoEntry = GetAppendOnlyEntry(heapRel);
 	
 	/* Get the heap size */
 	if (Relid == 0 || heapRel->rd_node.relNode == 0)
@@ -652,24 +648,21 @@ calculate_total_relation_size(Oid Relid)
 	if (OidIsValid(toastOid))
 		size += calculate_total_relation_size(toastOid);
 
-	if (aoEntry != NULL)
+	if (RelationIsAoRows(heapRel) || RelationIsAoCols(heapRel))
 	{
-		Assert(OidIsValid(aoEntry->segrelid));
-		size += calculate_total_relation_size(aoEntry->segrelid);
+		Assert(OidIsValid(heapRel->rd_appendonly->segrelid));
+		size += calculate_total_relation_size(heapRel->rd_appendonly->segrelid);
 
         /* block directory may not exist, post upgrade or new table that never has indexes */
-   		if (OidIsValid(aoEntry->blkdirrelid))
+   		if (OidIsValid(heapRel->rd_appendonly->blkdirrelid))
         {
-     		size += calculate_total_relation_size(aoEntry->blkdirrelid);
+     		size += calculate_total_relation_size(heapRel->rd_appendonly->blkdirrelid);
         }
-		if (OidIsValid(aoEntry->visimaprelid))
+		if (OidIsValid(heapRel->rd_appendonly->visimaprelid))
 		{
-			size += calculate_total_relation_size(aoEntry->visimaprelid);
+			size += calculate_total_relation_size(heapRel->rd_appendonly->visimaprelid);
 		}
 	}
-
-	if (aoEntry != NULL)
-		pfree(aoEntry);
 
 	relation_close(heapRel, AccessShareLock);
 

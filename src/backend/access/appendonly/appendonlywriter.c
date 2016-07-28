@@ -53,8 +53,7 @@ static AORelHashEntry AppendOnlyRelHashNew(Oid relid, bool *exists);
 static AORelHashEntry AORelGetHashEntry(Oid relid);
 static AORelHashEntry AORelLookupHashEntry(Oid relid);
 static bool AORelCreateHashEntry(Oid relid);
-static bool *GetFileSegStateInfoFromSegments(Relation parentrel,
-				AppendOnlyEntry *aoEntry);
+static bool *GetFileSegStateInfoFromSegments(Relation parentrel);
 static int64 *GetTotalTupleCountFromSegments(Relation parentrel, int segno);
 
 /*
@@ -173,7 +172,6 @@ AORelCreateHashEntry(Oid relid)
 	int				total_segfiles = 0;
 	AORelHashEntry	aoHashEntry = NULL;
 	Relation		aorel;
-	AppendOnlyEntry *aoEntry;
 	bool		   *awaiting_drop = NULL;
 
 	Insist(Gp_role == GP_ROLE_DISPATCH);
@@ -194,22 +192,19 @@ AORelCreateHashEntry(Oid relid)
 	/*
 	 * Use SnapshotNow since we have an exclusive lock on the relation.
 	 */
-	aoEntry = GetAppendOnlyEntry(aorel);
-
 	if (RelationIsAoRows(aorel))
 	{
-		allfsinfo = GetAllFileSegInfo(aorel, aoEntry, SnapshotNow, &total_segfiles);
+		allfsinfo = GetAllFileSegInfo(aorel, SnapshotNow, &total_segfiles);
 	}
 	else
 	{
 		Assert(RelationIsAoCols(aorel));
-		aocsallfsinfo = GetAllAOCSFileSegInfo(aorel, aoEntry, SnapshotNow, &total_segfiles);
+		aocsallfsinfo = GetAllAOCSFileSegInfo(aorel, SnapshotNow, &total_segfiles);
 	}
 
 	/* Ask segment DBs about the segfile status */
-	awaiting_drop = GetFileSegStateInfoFromSegments(aorel, aoEntry);
+	awaiting_drop = GetFileSegStateInfoFromSegments(aorel);
 
-	pfree(aoEntry);
 	heap_close(aorel, RowExclusiveLock);
 
 	/*
@@ -1277,20 +1272,16 @@ GetTotalTupleCountFromSegments(Relation parentrel,
 {
 	StringInfoData	sqlstmt;
 	Relation		aosegrel;
-	AppendOnlyEntry *aoEntry = NULL;
 	CdbPgResults cdb_pgresults = {NULL, 0};
 	int				i, j;
 	int64		   *total_tupcount = NULL;
 	Oid				save_userid;
 	bool			save_secdefcxt;
 
-	aoEntry = GetAppendOnlyEntry(parentrel);
-	Assert(aoEntry != NULL);
-
 	/*
 	 * get the name of the aoseg relation
 	 */
-	aosegrel = heap_open(aoEntry->segrelid, AccessShareLock);
+	aosegrel = heap_open(parentrel->rd_appendonly->segrelid, AccessShareLock);
 	/*
 	 * assemble our query string
 	 */
@@ -1379,7 +1370,7 @@ GetTotalTupleCountFromSegments(Relation parentrel,
  * dispatch cost increases as the number of segment becomes large.
  */
 static bool *
-GetFileSegStateInfoFromSegments(Relation parentrel, AppendOnlyEntry *aoEntry)
+GetFileSegStateInfoFromSegments(Relation parentrel)
 {
 	StringInfoData	sqlstmt;
 	Relation		aosegrel;
@@ -1390,12 +1381,11 @@ GetFileSegStateInfoFromSegments(Relation parentrel, AppendOnlyEntry *aoEntry)
 	bool			save_secdefcxt;
 
 	Assert(RelationIsAoRows(parentrel) || RelationIsAoCols(parentrel));
-	Assert(aoEntry != NULL);
 
 	/*
 	 * get the name of the aoseg relation
 	 */
-	aosegrel = heap_open(aoEntry->segrelid, AccessShareLock);
+	aosegrel = heap_open(parentrel->rd_appendonly->segrelid, AccessShareLock);
 	/*
 	 * assemble our query string
 	 */
@@ -1507,13 +1497,9 @@ UpdateMasterAosegTotalsFromSegments(Relation parentrel,
 {
 	ListCell	   *l;
 	int64		   *total_tupcount;
-	AppendOnlyEntry *aoEntry = NULL;
 
 	Assert(RelationIsAoRows(parentrel) || RelationIsAoCols(parentrel));
 	Assert(Gp_role == GP_ROLE_DISPATCH);
-
-	aoEntry = GetAppendOnlyEntry(parentrel);
-	Assert(aoEntry != NULL);
 
 	/* Give -1 for segno, so that we'll have all segfile tupcount. */
 	total_tupcount = GetTotalTupleCountFromSegments(parentrel, -1);
@@ -1537,7 +1523,7 @@ UpdateMasterAosegTotalsFromSegments(Relation parentrel,
 		{
 			FileSegInfo	   *fsinfo;
 
-			fsinfo = GetFileSegInfo(parentrel, aoEntry,
+			fsinfo = GetFileSegInfo(parentrel,
 									appendOnlyMetaDataSnapshot, qe_segno);
 			if (fsinfo != NULL)
 			{
@@ -1550,7 +1536,7 @@ UpdateMasterAosegTotalsFromSegments(Relation parentrel,
 			AOCSFileSegInfo *seginfo;
 			Assert(RelationIsAoCols(parentrel));
 
-			seginfo = GetAOCSFileSegInfo(parentrel, aoEntry,
+			seginfo = GetAOCSFileSegInfo(parentrel,
 										 SnapshotNow, qe_segno);
 			if (seginfo != NULL)
 			{
@@ -1592,7 +1578,6 @@ UpdateMasterAosegTotalsFromSegments(Relation parentrel,
 void UpdateMasterAosegTotals(Relation parentrel, int segno, int64 tupcount, int64 modcount_added)
 {
 	AORelHashEntry	aoHashEntry = NULL;
-	AppendOnlyEntry *aoEntry = NULL;
 
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 	Assert(segno >= 0);
@@ -1601,9 +1586,6 @@ void UpdateMasterAosegTotals(Relation parentrel, int segno, int64 tupcount, int6
 		(errmsg("UpdateMasterAosegTotals: Updating aoseg entry for append-only relation %d "
 							"with " INT64_FORMAT " new tuples for segno %d",
 							RelationGetRelid(parentrel), (int64)tupcount, segno)));
-
-	aoEntry = GetAppendOnlyEntry(parentrel);
-	Assert(aoEntry != NULL);
 
 	// CONSIDER: We should probably get this lock even sooner.
 	LockRelationAppendOnlySegmentFile(
@@ -1621,10 +1603,10 @@ void UpdateMasterAosegTotals(Relation parentrel, int segno, int64 tupcount, int6
 		/*
 		 * Since we have an exclusive lock on the segment-file entry, we can use SnapshotNow.
 		 */
-		fsinfo = GetFileSegInfo(parentrel, aoEntry, SnapshotNow, segno);
+		fsinfo = GetFileSegInfo(parentrel, SnapshotNow, segno);
 		if (fsinfo == NULL)
 		{
-			InsertInitialSegnoEntry(aoEntry, segno);
+			InsertInitialSegnoEntry(parentrel, segno);
 		}
 		else
 		{
@@ -1634,7 +1616,7 @@ void UpdateMasterAosegTotals(Relation parentrel, int segno, int64 tupcount, int6
 		/*
 		 * Update the master AO segment info table with correct tuple count total
 		 */
-		UpdateFileSegInfo(parentrel, aoEntry, segno, 0, 0, tupcount, 0, 
+		UpdateFileSegInfo(parentrel, segno, 0, 0, tupcount, 0, 
 				modcount_added, AOSEG_STATE_USECURRENT);
 	}
 	else
@@ -1646,19 +1628,18 @@ void UpdateMasterAosegTotals(Relation parentrel, int segno, int64 tupcount, int6
 
 		seginfo = GetAOCSFileSegInfo(
 							parentrel, 
-							aoEntry, 
 							SnapshotNow, 
 							segno);
 		if (seginfo == NULL)
 		{
-			InsertInitialAOCSFileSegInfo(aoEntry->segrelid, segno, 
+			InsertInitialAOCSFileSegInfo(parentrel, segno, 
 					RelationGetNumberOfAttributes(parentrel));
 		}
 		else
 		{
 			pfree(seginfo);
 		}
-		AOCSFileSegInfoAddCount(parentrel, aoEntry, segno, tupcount, 0, modcount_added);
+		AOCSFileSegInfoAddCount(parentrel, segno, tupcount, 0, modcount_added);
 	}
 
 	/*
@@ -1669,8 +1650,6 @@ void UpdateMasterAosegTotals(Relation parentrel, int segno, int64 tupcount, int6
 	 */
 	aoHashEntry = AORelGetHashEntry(RelationGetRelid(parentrel));
 	aoHashEntry->relsegfiles[segno].tupsadded += tupcount;
-
-	pfree(aoEntry);
 }
 
 

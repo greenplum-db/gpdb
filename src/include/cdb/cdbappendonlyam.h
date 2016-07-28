@@ -67,7 +67,6 @@ typedef struct AppendOnlyInsertDescData
 	int64           numSequences; /* total number of available sequences */
 	int64           lastSequence; /* last used sequence */
 	BlockNumber		cur_segno;
-	AppendOnlyEntry *aoEntry;
 	FileSegInfo     *fsInfo;
 	VarBlockMaker	varBlockMaker;
 	int64			bufferCount;
@@ -197,8 +196,6 @@ typedef struct AppendOnlyScanDescData
 				 *
 				 * We manage the storage for this.
 				 */
-
-	AppendOnlyEntry		*aoEntry;
 	
 	/*
 	 * The block directory info.
@@ -282,8 +279,6 @@ typedef struct AppendOnlyFetchDescData
 
 	int				totalSegfiles;
 	FileSegInfo 	**segmentFileInfo;
-
-	AppendOnlyEntry *aoEntry;
 
 	char			*segmentFileName;
 	int				segmentFileNameMaxLen;
