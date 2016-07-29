@@ -172,3 +172,4 @@ jobs:
         bin_xerces: bin_xerces_centos6
         bin_gpdb: bin_gpdb_with_orca_centos6
       file: gpdb_src/concourse/test_with_orca.yml
+      timeout: 1h30m

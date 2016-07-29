@@ -92,6 +92,7 @@ jobs:
   - task: test_gpdb
     input_mapping: {bin_gpdb: bin_gpdb_planner}
     file: gpdb_src/concourse/test_with_codegen.yml
+    timeout: 1h30m
     on_failure:
       aggregate:
       - put: regression_diffs
@@ -140,6 +141,7 @@ jobs:
   - task: test_gpdb
     input_mapping: {bin_gpdb: bin_gpdb_orca}
     file: gpdb_src/concourse/test_with_orca_and_codegen.yml
+    timeout: 1h30m
     on_failure:
       aggregate:
       - put: regression_diffs
