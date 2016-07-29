@@ -17,4 +17,5 @@ test: 2_02_invalid_region
 test: 2_03_invalid_config
 test: 2_04_invalid_header
 test: 3_01_create_wet
+test: 3_02_insert_quick_shoot_wet
 test: 4_01_create_invalid_wet

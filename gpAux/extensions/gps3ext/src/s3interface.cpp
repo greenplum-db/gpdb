@@ -344,6 +344,45 @@ uint64_t S3Service::fetchData(uint64_t offset, vector<uint8_t> &data, uint64_t l
     }
 }
 
+uint64_t S3Service::uploadData(vector<uint8_t> &data, const string &sourceUrl, const string &region,
+                               const S3Credential &cred) {
+    HTTPHeaders headers;
+    map<string, string> params;
+    UrlParser parser(sourceUrl);
+
+    headers.Add(HOST, parser.getHost());
+    headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
+
+    headers.Add(CONTENTTYPE, "text/plain");
+    headers.Add(CONTENTLENGTH, std::to_string((unsigned long long)data.size()));
+
+    SignRequestV4("PUT", &headers, region, parser.getPath(), "", cred);
+
+    Response resp = this->restfulService->put(sourceUrl, headers, params, data);
+    if (resp.getStatus() == RESPONSE_OK) {
+        return data.size();
+    } else if (resp.getStatus() == RESPONSE_ERROR) {
+        xmlParserCtxtPtr xmlContext = getXMLContext(resp);
+        if (xmlContext != NULL) {
+            XMLContextHolder holder(xmlContext);
+            parseXMLMessage(xmlContext);
+        }
+
+        S3ERROR("Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
+                resp.getMessage().c_str());
+        CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
+                         resp.getMessage().c_str());
+
+        return 0;
+    } else {
+        S3ERROR("Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
+                resp.getMessage().c_str());
+        CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
+                         resp.getMessage().c_str());
+        return 0;
+    }
+}
+
 S3CompressionType S3Service::checkCompressionType(const string &keyUrl, const string &region,
                                                   const S3Credential &cred) {
     HTTPHeaders headers;

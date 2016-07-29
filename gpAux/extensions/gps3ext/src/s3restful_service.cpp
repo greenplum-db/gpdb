@@ -3,6 +3,7 @@
 #define __STDC_FORMAT_MACROS
 #include <curl/curl.h>
 #include <inttypes.h>
+#include <string.h>
 #include <map>
 #include <string>
 #include <string.h>
@@ -151,6 +152,7 @@ Response S3RESTfulService::put(const string &url, HTTPHeaders &headers,
     UploadData uploadData(data);
     curl_easy_setopt(curl, CURLOPT_READDATA, (void *)&uploadData);
     curl_easy_setopt(curl, CURLOPT_READFUNCTION, RESTfulServiceReadFuncCallback);
+    /* CURLOPT_INFILESIZE_LARGE for sending files larger than 2GB.*/
     curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)data.size());
     curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
 
