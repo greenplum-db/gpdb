@@ -52,4 +52,3 @@ extern int32_t s3ext_low_speed_time;
 
 // not thread safe!! call it only once.
 bool InitConfig(const string &path, const string section);
-void CheckEssentialConfig();

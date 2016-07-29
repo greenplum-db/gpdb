@@ -14,8 +14,7 @@ class DecompressReader : public Reader {
 
     void open(const ReaderParams &params);
 
-    // read() attempts to read up to count bytes into the buffer starting at
-    // buffer.
+    // read() attempts to read up to count bytes into the buffer.
     // Return 0 if EOF. Throw exception if encounters errors.
     uint64_t read(char *buf, uint64_t count);
 

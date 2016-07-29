@@ -64,11 +64,11 @@ int thread_cleanup(void) {
 }
 
 GPReader::GPReader(const string& url) {
-    constructReaderParam(url);
+    constructReaderParams(url);
     restfulServicePtr = &restfulService;
 }
 
-void GPReader::constructReaderParam(const string& url) {
+void GPReader::constructReaderParams(const string& url) {
     this->params.setUrlToLoad(url);
     this->params.setSegId(s3ext_segid);
     this->params.setSegNum(s3ext_segnum);
@@ -88,8 +88,7 @@ void GPReader::open(const ReaderParams& params) {
     this->bucketReader.open(this->params);
 }
 
-// read() attempts to read up to count bytes into the buffer starting at
-// buffer.
+// read() attempts to read up to count bytes into the buffer.
 // Return 0 if EOF. Throw exception if encounters errors.
 uint64_t GPReader::read(char* buf, uint64_t count) {
     return this->bucketReader.read(buf, count);
@@ -149,8 +148,8 @@ GPReader* reader_init(const char* url_with_options) {
             return NULL;
         }
 
-        ReaderParams param;
-        reader->open(param);
+        ReaderParams params;
+        reader->open(params);
         return reader;
 
     } catch (std::exception& e) {

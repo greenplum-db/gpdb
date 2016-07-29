@@ -1,31 +1,46 @@
 #ifndef INCLUDE_GPWRITER_H_
 #define INCLUDE_GPWRITER_H_
 
+#include <string>
 #include <string.h>
-#include "s3common.h"
-#include "s3interface.h"
-#include "s3restful_service.h"
-#include "writer.h"
 
-extern string s3extErrorMessage;
+#include "writer.h"
 
 class GPWriter : public Writer {
    public:
     GPWriter(const string &url);
-    virtual ~GPWriter();
+    virtual ~GPWriter() {
+    }
 
-    virtual void open(const ReaderParams &params);
+    virtual void open(const WriterParams &params);
+
+    // write() attempts to write up to count bytes from the buffer.
+    // Always return 0 if EOF, no matter how many times it's invoked. Throw exception if encounters
+    // errors.
     virtual uint64_t write(char *buf, uint64_t count);
+
+    // This should be reentrant, has no side effects when called multiple times.
     virtual void close();
 
+    const string &getKeyToUpload() const {
+        return keyToUpload;
+    }
+
+    void setKeyToUpload(const string &keyToUpload) {
+        this->keyToUpload = keyToUpload;
+    }
+
    private:
-    void constructWriterParam(const string &url);
+    void constructWriterParams(const string &url);
+    string constructKeyName(const string &url);
+    string genUniqueKeyName(const string &url);
 
-    S3Service s3service;
-    ReaderParams params;
-    S3Credential cred;
-
+   protected:
+    WriterParams params;
     S3RESTfulService restfulService;
+    S3Service s3service;
+    S3Credential cred;
+    string keyToUpload;
 
     // it links to itself by default
     // but the pointer here leaves a chance to mock it in unit test

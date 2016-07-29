@@ -3,6 +3,7 @@
 
 #include <string>
 
+#include "reader.h"
 #include "s3bucket_reader.h"
 #include "s3common_reader.h"
 #include "s3interface.h"
@@ -18,8 +19,7 @@ class GPReader : public Reader {
 
     virtual void open(const ReaderParams &params);
 
-    // read() attempts to read up to count bytes into the buffer starting at
-    // buffer.
+    // read() attempts to read up to count bytes into the buffer.
     // Return 0 if EOF. Throw exception if encounters errors.
     virtual uint64_t read(char *buf, uint64_t count);
 
@@ -31,7 +31,7 @@ class GPReader : public Reader {
     }
 
    private:
-    void constructReaderParam(const string &url);
+    void constructReaderParams(const string &url);
 
    protected:
     S3BucketReader bucketReader;
@@ -47,6 +47,8 @@ class GPReader : public Reader {
     // but the pointer here leaves a chance to mock it in unit test
     S3RESTfulService *restfulServicePtr;
 };
+
+void CheckEssentialConfig();
 
 // Following 3 functions are invoked by s3_import(), need to be exception safe
 GPReader *reader_init(const char *url_with_options);

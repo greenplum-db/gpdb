@@ -1,3 +1,9 @@
+#include <cstdarg>
+#include <cstdio>
+#include <cstring>
+#include <sstream>
+#include <string>
+
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -6,11 +12,6 @@
 #include <sys/types.h>
 #include <sys/un.h>
 #include <unistd.h>
-#include <cstdarg>
-#include <cstdio>
-#include <cstring>
-#include <sstream>
-#include <string>
 
 #include "gpcommon.h"
 #include "s3conf.h"

@@ -1,11 +1,10 @@
-#include <unistd.h>
+#include <map>
+#include <string>
 
+#include <unistd.h>
 #define __STDC_FORMAT_MACROS
 #include <curl/curl.h>
 #include <inttypes.h>
-#include <string.h>
-#include <map>
-#include <string>
 #include <string.h>
 
 #include "gpcommon.h"

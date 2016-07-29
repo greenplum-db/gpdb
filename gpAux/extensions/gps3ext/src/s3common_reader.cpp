@@ -22,8 +22,7 @@ void S3CommonReader::open(const ReaderParams &params) {
     this->upstreamReader->open(params);
 }
 
-// read() attempts to read up to count bytes into the buffer starting at
-// buffer.
+// read() attempts to read up to count bytes into the buffer.
 // Return 0 if EOF. Throw exception if encounters errors.
 uint64_t S3CommonReader::read(char *buf, uint64_t count) {
     return this->upstreamReader->read(buf, count);

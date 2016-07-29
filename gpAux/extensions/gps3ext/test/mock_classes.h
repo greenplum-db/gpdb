@@ -24,6 +24,9 @@ class MockS3Interface : public S3Interface {
 
     MOCK_METHOD3(checkCompressionType, S3CompressionType(const string& keyUrl, const string& region,
                                            const S3Credential& cred));
+
+    MOCK_METHOD3(checkKeyExistence, bool(const string& keyUrl, const string& region,
+                                   const S3Credential& cred));
 };
 
 

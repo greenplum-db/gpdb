@@ -55,7 +55,7 @@ $(TEST_APP): $(TEST_OBJS) gtest_main.a
 
 test: $(TEST_APP)
 	@-rm -f *.gcda test/*.gcda # workaround for XCode/Clang
-	@-./$(TEST_APP) --gtest_filter=$(gtest_filter)
+	@./$(TEST_APP) --gtest_filter=$(gtest_filter)
 
 coverage: test
 	@gcov $(TEST_SRC) | grep -A 1 "src/.*.cpp"
