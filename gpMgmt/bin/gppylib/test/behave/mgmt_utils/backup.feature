@@ -911,7 +911,7 @@ Feature: Validate command line arguments
         And all the data from "bkdb" is saved for verification
         And the user runs gpdbrestore with the stored timestamp
         And gpdbrestore should return a return code of 0
-        And verify that the data of "20" tables in "bkdb" is validated after restore
+        And verify that the data of "21" tables in "bkdb" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
 
     Scenario: Simple Incremental Backup to test ADD COLUMN
@@ -940,7 +940,7 @@ Feature: Validate command line arguments
         And all the data from "bkdb" is saved for verification
         And the user runs gpdbrestore with the stored timestamp
         And gpdbrestore should return a return code of 0
-        And verify that the data of "22" tables in "bkdb" is validated after restore
+        And verify that the data of "23" tables in "bkdb" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
 
     @backupfire
@@ -968,7 +968,7 @@ Feature: Validate command line arguments
         Then the user runs gpdbrestore with the stored timestamp
         And gpdbrestore should return a return code of 0
         And verify that there is no table "testschema.heap_table" in "bkdb"
-        And verify that the data of "10" tables in "bkdb" is validated after restore
+        And verify that the data of "11" tables in "bkdb" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
         And verify that the plan file is created for the latest timestamp
 
@@ -994,7 +994,7 @@ Feature: Validate command line arguments
         And the user runs gpdbrestore with the stored timestamp
         And gpdbrestore should return a return code of 0
         And the plan file is validated against "data/bar_plan2"
-        And verify that the data of "2" tables in "bkdb" is validated after restore
+        And verify that the data of "3" tables in "bkdb" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
 
     Scenario: Rollback Truncate Table
@@ -1019,7 +1019,7 @@ Feature: Validate command line arguments
         And the user runs gpdbrestore with the stored timestamp
         And gpdbrestore should return a return code of 0
         And the plan file is validated against "data/bar_plan2"
-        And verify that the data of "2" tables in "bkdb" is validated after restore
+        And verify that the data of "3" tables in "bkdb" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
 
     Scenario: Rollback Alter table
@@ -1044,7 +1044,7 @@ Feature: Validate command line arguments
         And the user runs gpdbrestore with the stored timestamp
         And gpdbrestore should return a return code of 0
         And the plan file is validated against "data/bar_plan2"
-        And verify that the data of "2" tables in "bkdb" is validated after restore
+        And verify that the data of "3" tables in "bkdb" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
 
     @backupsmoke
@@ -1168,21 +1168,30 @@ Feature: Validate command line arguments
         Then gpcrondump should return a return code of 0
         And config files should be backed up on all segments
 
-    Scenario: Verify the gpcrondump -h option works with full and incremental backups
+    Scenario: Verify the gpcrondump history table works by default with full and incremental backups
         Given the test is initialized
         And there is schema "testschema" exists in "bkdb"
         And there is a "ao" table "testschema.ao_table" in "bkdb" with data
         And there is a "co" table "testschema.co_table" in "bkdb" with data
-        When the user runs "gpcrondump -a -x bkdb -h"
+        When the user runs "gpcrondump -a -x bkdb"
         And the timestamp from gpcrondump is stored
         Then gpcrondump should return a return code of 0
         And verify that there is a "heap" table "gpcrondump_history" in "bkdb"
         And verify that the table "gpcrondump_history" in "bkdb" has dump info for the stored timestamp
-        When the user runs "gpcrondump -a -x bkdb -h --incremental"
+        When the user runs "gpcrondump -a -x bkdb --incremental"
         And the timestamp from gpcrondump is stored
         Then gpcrondump should return a return code of 0
         And verify that there is a "heap" table "gpcrondump_history" in "bkdb"
+        And verify that table "gpcrondump_history" in "bkdb" has "2" rows
         And verify that the table "gpcrondump_history" in "bkdb" has dump info for the stored timestamp
+
+    Scenario: Verify the gpcrondump -H option should not create history table
+        Given the test is initialized
+        And there is schema "testschema" exists in "bkdb"
+        And there is a "ao" table "testschema.ao_table" in "bkdb" with data
+        When the user runs "gpcrondump -a -x bkdb -H"
+        Then gpcrondump should return a return code of 0
+        Then verify that there is no table "public.gpcrondump_history" in "bkdb"
 
     @backupfire
     Scenario: Verify gpdbrestore -s option works with full backup
@@ -1225,7 +1234,7 @@ Feature: Validate command line arguments
         And the database "bkdb2" does not exist
         And the user runs "gpdbrestore -e -s bkdb -a"
         Then gpdbrestore should return a return code of 0
-        And verify that the data of "2" tables in "bkdb" is validated after restore
+        And verify that the data of "3" tables in "bkdb" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
         And verify that database "bkdb2" does not exist
 
@@ -1259,7 +1268,7 @@ Feature: Validate command line arguments
         And there are no backup files
         And the user runs gpdbrestore with the stored timestamp and options "-u /tmp"
         And gpdbrestore should return a return code of 0
-        Then verify that the data of "2" tables in "bkdb" is validated after restore
+        Then verify that the data of "3" tables in "bkdb" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
 
     Scenario: gpcrondump -x with multiple databases
@@ -1318,7 +1327,7 @@ Feature: Validate command line arguments
         And gpcrondump should return a return code of 0
         And the user runs gpdbrestore with the stored timestamp
         Then gpdbrestore should return a return code of 0
-        And verify that the data of "2" tables in "bkdb" is validated after restore
+        And verify that the data of "3" tables in "bkdb" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
 
     @backupfire
@@ -1335,7 +1344,7 @@ Feature: Validate command line arguments
         And all the data from "bkdb" is saved for verification
         And the user runs gpdbrestore with the stored timestamp
         Then gpdbrestore should return a return code of 0
-        And verify that the data of "3" tables in "bkdb" is validated after restore
+        And verify that the data of "4" tables in "bkdb" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
         And verify that there is no "public.ext_tab" in the "dirty_list" file in " "
         And verify that there is no "public.ext_tab" in the "table_list" file in " "
@@ -1531,7 +1540,7 @@ Feature: Validate command line arguments
         And all the data from "bkdb" is saved for verification
         And the user runs "gpdbrestore -e -s bkdb -u /tmp -a"
         And gpdbrestore should return a return code of 0
-        And verify that the data of "11" tables in "bkdb" is validated after restore
+        And verify that the data of "12" tables in "bkdb" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
 
     Scenario: gpdbrestore -b option should display the timestamps in sorted order
@@ -1646,7 +1655,7 @@ Feature: Validate command line arguments
         And all the data from "bkdb" is saved for verification
         And the user runs gpdbrestore with the stored timestamp and options "--verbose"
         Then gpdbrestore should return a return code of 0
-        And verify that the data of "1" tables in "bkdb" is validated after restore
+        And verify that the data of "2" tables in "bkdb" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
 
     @backupfire
@@ -1832,7 +1841,7 @@ Feature: Validate command line arguments
         And the named pipe script for the "restore" is run for the files under " "
         And all the data from "bkdb" is saved for verification
         And gpdbrestore should return a return code of 0
-        And verify that the data of "10" tables in "bkdb" is validated after restore
+        And verify that the data of "11" tables in "bkdb" is validated after restore
         When the named pipe script for the "restore" is run for the files under " "
         And the user runs gpdbrestore with the stored timestamp and options "-T public.ao_part_table"
         Then gpdbrestore should print \[WARNING\]:-Skipping validation of tables in dump file due to the use of named pipes to stdout
@@ -2297,7 +2306,7 @@ Feature: Validate command line arguments
         And all the data from "bkdb" is saved for verification
         And the user runs "gpdbrestore --redirect=bkdb2 -e -a" with the stored timestamp
         Then gpdbrestore should return a return code of 0
-        And verify that the data of "10" tables in "bkdb2" is validated after restore
+        And verify that the data of "11" tables in "bkdb2" is validated after restore
 
     Scenario: Full backup and redirected restore with -T
         Given the test is initialized
@@ -2459,7 +2468,7 @@ Feature: Validate command line arguments
         And the user runs gpdbrestore with the stored timestamp
         Then gpdbrestore should return a return code of 0
         And gpdbestore should not print Issue with analyze of to stdout
-        And verify that the data of "10" tables in "TESTING" is validated after restore
+        And verify that the data of "11" tables in "TESTING" is validated after restore
 
     Scenario: Full backup and Restore should create the gp_toolkit schema with -e option
         Given the test is initialized
@@ -2488,7 +2497,7 @@ Feature: Validate command line arguments
         And the timestamp from gpcrondump is stored
         And the user runs gpdbrestore with the stored timestamp
         And gpdbrestore should return a return code of 0
-        And verify that the data of "10" tables in "bkdb" is validated after restore
+        And verify that the data of "11" tables in "bkdb" is validated after restore
         And the gp_toolkit schema for "bkdb" is verified after restore
 
     Scenario: Redirected Restore should create the gp_toolkit schema with or without -e option

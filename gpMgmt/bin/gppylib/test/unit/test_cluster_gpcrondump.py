@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import sys
 import imp
 gpcrondump_path = os.path.abspath('gpcrondump')
 gpcrondump = imp.load_source('gpcrondump', gpcrondump_path)
@@ -523,6 +524,12 @@ class GpcrondumpTestCase(unittest.TestCase):
         with self.assertRaisesRegexp(Exception, '--ddboost is not supported with NetBackup'):
             GpCronDump(self.options, None)
 
+    def test_gpcrondump_options_h_H(self):
+        testargs = ["","-h", "-H"]
+        with patch.object(sys, 'argv', testargs):
+            with self.assertRaisesRegexp(Exception, '-H option cannot be selected with -h option. '):
+                self.crondump = GpCronDump(self.options, None)
+
     def test_options_ddboost_storage_unit_should_be_used_with_ddboost(self):
         """
         --ddboost-storage-unit option must come with --ddboost option
@@ -541,7 +548,7 @@ class GpcrondumpTestCase(unittest.TestCase):
         (inc, exc) = gpcd.get_include_exclude_for_dump_database(dirtyfile, dbname)
         self.assertEquals(inc, None)
         self.assertEquals(exc, None)
- 
+
     @patch('gpcrondump.validate_current_timestamp')
     @patch('gpcrondump.expand_partitions_and_populate_filter_file', return_value='/tmp/include_dump_tables_file')
     @patch('gpcrondump.get_lines_from_file', return_value=['public.t1', 'public.t2'])

@@ -285,8 +285,10 @@ def get_table_data_to_file(filename, tablename, dbname):
 def diff_backup_restore_data(context, backup_file, restore_file):
     if not filecmp.cmp(backup_file, restore_file):
         raise Exception('%s and %s do not match' % (backup_file, restore_file))
-    
+
 def validate_restore_data(context, tablename, dbname, backedup_table=None):
+    if tablename == "public.gpcrondump_history":
+        return
     filename = tablename.strip() + "_restore"
     get_table_data_to_file(filename, tablename, dbname)
     current_dir = os.getcwd()

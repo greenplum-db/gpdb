@@ -59,7 +59,7 @@ class DumpTestCase(unittest.TestCase):
         m = mock_open()
         with patch('__builtin__.open', m, create=True):
             tmpfilename = write_dirty_file(self.context, dirty_tables, timestamp)
-            mock1.assert_called_with("dirty_table", timestamp) 
+            mock1.assert_called_with("dirty_table", timestamp)
             result = m()
             self.assertEqual(len(dirty_tables), len(result.write.call_args_list))
             for i in range(len(dirty_tables)):
@@ -1034,6 +1034,54 @@ class DumpTestCase(unittest.TestCase):
     def test_mail_execute_default(self, mock1, mock2):
         m = MailEvent(subject="test", message="Hello", to_addrs="example@pivotal.io")
         m.execute()
+
+    @patch('gppylib.operations.dump.dbconn.DbURL')
+    @patch('gppylib.operations.dump.dbconn.connect')
+    @patch('gppylib.operations.dump.CheckTableExists.run', return_value=True)
+    @patch('gppylib.operations.dump.execSQL', return_value='10000000000000000')
+    def test_update_history_table_with_existing_history_table(self, execSQL_mock, mock2, mock3, mock4):
+        self.context.history = True
+        time_start = datetime(2015, 7, 31, 9, 30, 00)
+        time_end = datetime(2015, 8, 1, 12, 21, 11)
+        timestamp = '121601010101'
+        options_list = '-x 1337 -a'
+        dump_exit_status = 0
+        pseudo_exit_status = 0
+        UpdateHistoryTable(self.context, time_start, time_end,
+                           options_list, timestamp,
+                           dump_exit_status,
+                           pseudo_exit_status).execute()
+
+        expected_queries = " insert into public.gpcrondump_history values (now(), '2015-07-31 09:30:00', '2015-08-01 12:21:11', '-x 1337 -a', '121601010101', 0, 0, 'COMPLETED'); "
+        for exec_sql in execSQL_mock.call_args_list:
+            # [0] index removes the call object,
+            # [1] grabs the sql command from execSQL
+            self.assertEquals(exec_sql[0][1], expected_queries)
+
+    @patch('gppylib.operations.dump.dbconn.DbURL')
+    @patch('gppylib.operations.dump.dbconn.connect')
+    @patch('gppylib.operations.dump.CheckTableExists.run', return_value=False)
+    @patch('gppylib.operations.dump.execSQL', return_value='10000000000000000')
+    def test_update_history_table_with_new_update_table(self, execSQL_mock, mock2, mock3, mock4):
+        self.context.history = True
+        time_start = datetime(2015, 7, 31, 9, 30, 00)
+        time_end = datetime(2015, 8, 1, 12, 21, 11)
+        timestamp = '121601010101'
+        options_list = '-x bkdb -a'
+        dump_exit_status = 0
+        pseudo_exit_status = 0
+        UpdateHistoryTable(self.context, time_start, time_end,
+                           options_list, timestamp,
+                           dump_exit_status,
+                           pseudo_exit_status).execute()
+
+        expected_queries = []
+        expected_queries.append(' create table public.gpcrondump_history (rec_date timestamp, start_time char(8), end_time char(8), options text, dump_key varchar(20), dump_exit_status smallint, script_exit_status smallint, exit_text varchar(10)) distributed by (rec_date); ')
+        expected_queries.append(" insert into public.gpcrondump_history values (now(), '2015-07-31 09:30:00', '2015-08-01 12:21:11', '-x bkdb -a', '121601010101', 0, 0, 'COMPLETED'); ")
+        for i, exec_sql in enumerate(execSQL_mock.call_args_list):
+            # [0] index removes the call object,
+            # [1] grabs the sql command from execSQL
+            self.assertEquals(exec_sql[0][1] , expected_queries[i])
 
 if __name__ == '__main__':
     unittest.main()

@@ -34,7 +34,7 @@ class Context(Values, object):
         "ddboost_hosts": None, "ddboost_ping": True, "ddboost_remote": False, "ddboost_show_config": False, "ddboost_storage_unit": None, "ddboost_user": None,
         "ddboost_verify": False, "drop_db": False, "dump_config": False, "dump_databases": [], "dump_dir": "db_dumps", "dump_global": False, "dump_prefix": "",
         "dump_schema": "", "dump_stats": False, "encoding": None, "exclude_dump_schema": "", "exclude_dump_tables": "", "exclude_dump_tables_file": "",
-        "exclude_schema_file": "", "free_space_percent": None, "history": False, "include_dump_tables": "", "include_dump_tables_file": "",
+        "exclude_schema_file": "", "free_space_percent": None, "history": True, "include_dump_tables": "", "include_dump_tables_file": "",
         "include_schema_file": "", "incremental": False, "list_filter_tables": False, "local_dump_prefix": None, "masterDataDirectory": None,
         "master_port": 0, "max_streams": None, "netbackup_block_size": None, "netbackup_keyword": None, "netbackup_policy": None, "netbackup_schedule": None,
         "netbackup_service_host": None, "metadata_only": False, "no_analyze": False, "no_ao_stats": False, "no_plan": False, "no_validate_table_name": False,

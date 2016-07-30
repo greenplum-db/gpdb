@@ -55,6 +55,9 @@ class GpCronDump(Operation):
         self.context = Context(options)
         self.options_list = " ".join(sys.argv[1:])
 
+        if "-h" in self.options_list and "-H" in self.options_list:
+            raise Exception("-H option cannot be selected with -h option. ")
+
         self.interactive = options.interactive
         self.cur_host = socket.gethostname()
         self.pre_vacuum = options.pre_vacuum
@@ -336,10 +339,10 @@ class GpCronDump(Operation):
     # check if one of gpcrondump option was specified, except of ddboost options
     def only_ddboost_options(self):
         return (len(self.context.dump_databases) == 0 and (not self.context.dump_schema)
-                and (not self.context.backup_dir)
+                and (not self.context.backup_dir) and self.context.history
                 and not (self.context.include_dump_tables or self.context.output_options or self.context.clear_dumps_only or self.pre_vacuum
                          or self.context.clear_dumps_only or self.context.dump_global or self.rollback or self.context.exclude_dump_tables
-                         or self.context.dump_config or self.context.clear_dumps_only or self.context.clear_dumps or self.post_vacuum or self.context.history))
+                         or self.context.dump_config or self.context.clear_dumps_only or self.context.clear_dumps or self.post_vacuum))
 
     def validateUserName(self, userName):
         if not re.search(r'^[a-zA-Z0-9-_]{1,30}$', userName):
@@ -1370,8 +1373,14 @@ def create_parser():
     parser.remove_option('-h')
     help._short_opts.remove('-h')
     parser.add_option(help)
-    addTo.add_option('-h', action='store_true', dest='history', default=False,
-                     help="Record details of database dump in database table %s in database supplied via -x option. Utility will create table if it does not currently exist." % UpdateHistoryTable.HISTORY_TABLE)
+    addTo.add_option('-h', action='store_true', dest='history', default=True,
+                         help="Record details of database dump in database table %s in database supplied via -x option."
+                              "Utility will create table if it does not currently exist."
+                              "This option will be deprecated in a future release." % UpdateHistoryTable.HISTORY_TABLE)
+
+    addTo.add_option('-H', action='store_false', dest='history', default=True,
+                     help="Disable recording details of database dump in database table %s in database supplied via -x option."
+                          "If not specified, the utility  will create/update the history table." % UpdateHistoryTable.HISTORY_TABLE)
 
     addTo.add_option('-u', dest='backup_dir', metavar="<BACKUPFILEDIR>",
                      help="Directory where backup files are placed [default: data directories]")

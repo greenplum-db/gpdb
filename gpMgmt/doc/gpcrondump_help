@@ -16,7 +16,7 @@ gpcrondump -x database_name
      [ -K <timestamp> [--list-backup-files] ] 
      [--prefix <prefix_string> [--list-filter-tables] ]
      [ -c  [ --cleanup-date yyyymmdd  |  --cleanup-total n ] ]
-     [-z] [-r] [-f <free_space_percent>] [-b] [-h] [-j | -k]
+     [-z] [-r] [-f <free_space_percent>] [-b] [-h] [-H] [-j | -k]
      [-g] [-G] [-C] [-d <master_data_directory>] [-B <parallel_processes>] 
      [-a] [-q] [-y <reportfile>] [-l <logfile_directory>]
      [--email-file <path_to_file> ] [-v]
@@ -451,7 +451,15 @@ OPTIONS
  Record details of database dump in database table 
  public.gpcrondump_history in database supplied via -x option. Utility 
  will create table if it does not currently exist. 
+ This option will be deprecated in a future release.
 
+-H (disable recording dump details)
+
+ Disable recording details of database dump in database table
+ public.gpcrondump_history in database supplied via -x option.
+ If not specified, the utility will create / update the
+ public.gpcrondump_history table.
+ -H option cannot be selected with -h option.
 
 --incremental (backup changes to append-optimized tables)
 

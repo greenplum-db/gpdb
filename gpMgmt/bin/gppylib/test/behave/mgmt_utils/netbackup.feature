@@ -207,7 +207,7 @@ Feature: NetBackup Integration with GPDB
         And the user truncates "public.ao_table" tables in "bkdb"
         And the user runs gpdbrestore with the stored timestamp and options " " without -e option using netbackup
         Then gpdbrestore should return a return code of 0
-        And verify that the data of "2" tables in "bkdb" is validated after restore
+        And verify that the data of "3" tables in "bkdb" is validated after restore
 
     @nbusmoke
     @nbupartI
@@ -303,7 +303,7 @@ Feature: NetBackup Integration with GPDB
         When the table names in "bkdb" is stored
         And the user runs gpdbrestore with the stored timestamp using netbackup
         Then gpdbrestore should return a return code of 0
-        And tables names should be identical to stored table names in "bkdb"
+        And tables names should be identical to stored table names in "bkdb" except "public.gpcrondump_history"
 
     @nbusmoke
     @nbupartI
@@ -465,7 +465,7 @@ Feature: NetBackup Integration with GPDB
         And verify that there is a "ao" table "public.ao_table" in "bkdb" with data
 
     @nbupartI
-    Scenario: gpdbrestore list_backup option with full timestamp 
+    Scenario: gpdbrestore list_backup option with full timestamp
         Given the test is initialized
         And the netbackup params have been parsed
         And there is a "heap" table "public.heap_table" in "bkdb" with data
@@ -679,7 +679,7 @@ Feature: NetBackup Integration with GPDB
         And psql should not print bitmap_co_index to stdout
         And the user runs "psql -c '\d public.heap_table_ex' bkdb"
         And psql should not print heap_ex_trigger to stdout
-        And verify that the data of "6" tables in "bkdb" is validated after restore
+        And verify that the data of "7" tables in "bkdb" is validated after restore
 
     @nbupartI
     Scenario: Full Backup and Restore dropped database filtering tables with post data objects
@@ -1035,7 +1035,7 @@ Feature: NetBackup Integration with GPDB
         And the user runs gpdbrestore with the stored timestamp using netbackup
         Then gpdbrestore should return a return code of 0
         And verify that there is no table "testschema.heap_table" in "bkdb"
-        And verify that the data of "59" tables in "bkdb" is validated after restore
+        And verify that the data of "60" tables in "bkdb" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
         And verify that the plan file is created for the latest timestamp
 
@@ -1070,7 +1070,7 @@ Feature: NetBackup Integration with GPDB
         When the user runs gpdbrestore with the stored timestamp using netbackup
         Then gpdbrestore should return a return code of 0
         And verify that there is no table "testschema.heap_table" in "bkdb"
-        And verify that the data of "10" tables in "bkdb" is validated after restore
+        And verify that the data of "11" tables in "bkdb" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
         And verify that the plan file is created for the latest timestamp
 
@@ -1107,7 +1107,7 @@ Feature: NetBackup Integration with GPDB
         And all the data from "bkdb" is saved for verification
         And the user runs gpdbrestore with the stored timestamp and options "-u /tmp --verbose" using netbackup
         And gpdbrestore should return a return code of 0
-        Then verify that the data of "2" tables in "bkdb" is validated after restore
+        Then verify that the data of "3" tables in "bkdb" is validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb"
 
     @nbupartII
@@ -1267,7 +1267,7 @@ Feature: NetBackup Integration with GPDB
         And all the data from "bkdb" is saved for verification
         When the user runs gpdbrestore with the stored timestamp and options "--prefix=foo --netbackup-block-size 4096" using netbackup
         Then gpdbrestore should return a return code of 0
-        And verify that the data of "11" tables in "bkdb" is validated after restore
+        And verify that the data of "12" tables in "bkdb" is validated after restore
 
     @nbupartII
     Scenario: Incremental Backup and Restore with --prefix and -u options
@@ -1290,7 +1290,7 @@ Feature: NetBackup Integration with GPDB
         And all the data from "bkdb" is saved for verification
         When the user runs gpdbrestore with the stored timestamp and options "--prefix=foo -u /tmp --netbackup-block-size 4096" using netbackup
         Then gpdbrestore should return a return code of 0
-        And verify that the data of "11" tables in "bkdb" is validated after restore
+        And verify that the data of "12" tables in "bkdb" is validated after restore
 
     @nbupartII
     Scenario: Incremental Backup with table filter on Full Backup should update the tracker files
@@ -1385,7 +1385,7 @@ Feature: NetBackup Integration with GPDB
         And psql should print \"heap_const_1\" FOREIGN KEY \(column1, column2, column3\) REFERENCES heap_table_ex\(column1, column2, column3\) to stdout
         And the user runs "psql -c '\d public.co_index_table' bkdb"
         And psql should not print bitmap_co_index to stdout
-        And verify that the data of "51" tables in "bkdb" is validated after restore
+        And verify that the data of "52" tables in "bkdb" is validated after restore
 
     @nbupartII
     Scenario: Restore -T for incremental dump should restore metadata/postdata objects for tablenames with English and multibyte (chinese) characters

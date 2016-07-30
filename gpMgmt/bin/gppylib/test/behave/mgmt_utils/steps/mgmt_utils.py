@@ -1337,10 +1337,12 @@ def impl(context, tmp_file_prefix):
     else:
         raise Exception('Invalid call to temp file removal %s' % tmp_file_prefix)
 
-@then('tables names should be identical to stored table names in "{dbname}"')
-def impl(context, dbname):
+@then('tables names should be identical to stored table names in "{dbname}" except "{fq_table_name}"')
+def impl(context, dbname, fq_table_name):
     table_names = sorted(get_table_names(dbname))
     stored_table_names = sorted(context.table_names)
+    if fq_table_name != "" :
+        stored_table_names.remove(fq_table_name.strip().split('.'))
 
     if table_names != stored_table_names:
         print "Table names after backup:"
