@@ -39,6 +39,7 @@
 #include "catalog/index.h"
 #include "catalog/indexing.h"
 #include "catalog/namespace.h"
+#include "catalog/pg_appendonly_fn.h"
 #include "catalog/pg_constraint.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_operator.h"
@@ -2291,6 +2292,7 @@ IndexBuildAppendOnlyRowScan(Relation parentRelation,
 	double reltuples = 0;
 	Datum		values[INDEX_MAX_KEYS];
 	bool		isnull[INDEX_MAX_KEYS];
+	bool		buildBlockDirectory = false;
 	AppendOnlyBlockDirectory *blockDirectory = NULL;
 	
 	Assert(estate->es_per_tuple_exprcontext != NULL);
@@ -2301,14 +2303,8 @@ IndexBuildAppendOnlyRowScan(Relation parentRelation,
 	predicate = (List *)
 		ExecPrepareExpr((Expr *)indexInfo->ii_Predicate, estate);
 	
-	aoscan = appendonly_beginscan(parentRelation,
-								  snapshot,
-								  snapshot,
-								  0,
-								  NULL);
-
-	if (!OidIsValid(aoscan->aoEntry->blkdirrelid) ||
-		!OidIsValid(aoscan->aoEntry->blkdiridxid))
+	if (!OidIsValid(parentRelation->rd_appendonly->blkdirrelid) ||
+		!OidIsValid(parentRelation->rd_appendonly->blkdiridxid))
 	{
 		IndexInfoOpaque *opaque;
 
@@ -2317,29 +2313,33 @@ IndexBuildAppendOnlyRowScan(Relation parentRelation,
 					(errcode(ERRCODE_GP_COMMAND_ERROR),
 					 errmsg("Cannot create index concurrently. Create an index non-concurrently "
 					        "before creating an index concurrently in an appendonly table.")));
-		
+
 		/* Obtain the oids from IndexInfo. */
 		Assert(indexInfo->opaque != NULL);
 
 		opaque = (IndexInfoOpaque *)indexInfo->opaque;
-		
+
 		Assert(OidIsValid(opaque->blkdirRelOid) && OidIsValid(opaque->blkdirIdxOid));
 		AlterTableCreateAoBlkdirTableWithOid(RelationGetRelid(parentRelation),
 											 opaque->blkdirRelOid,
 											 opaque->blkdirIdxOid,
 											 &opaque->blkdirComptypeOid,
 											 false);
-
-		/* Update blkdirrelid, blkdiridxid in aoEntry with new values */
-		aoscan->aoEntry->blkdirrelid = opaque->blkdirRelOid;
-		aoscan->aoEntry->blkdiridxid = opaque->blkdirIdxOid;
-		
-		aoscan->buildBlockDirectory = true;
-		aoscan->blockDirectory =
-			(AppendOnlyBlockDirectory *)palloc0(sizeof(AppendOnlyBlockDirectory));
-		blockDirectory = aoscan->blockDirectory;
+		buildBlockDirectory = true;
 	}
-	
+
+	aoscan = appendonly_beginscan(parentRelation,
+								  snapshot,
+								  snapshot,
+								  0,
+								  NULL);
+
+	if (blockDirectory)
+	{
+		aoscan->blockDirectory = (AppendOnlyBlockDirectory *) palloc0(sizeof(AppendOnlyBlockDirectory));
+		aoscan->buildBlockDirectory = true;
+	}
+
 	while (appendonly_getnext(aoscan, ForwardScanDirection, slot) != NULL)
 	{
 		CHECK_FOR_INTERRUPTS();
@@ -2483,10 +2483,6 @@ IndexBuildAppendOnlyColScan(Relation parentRelation,
 											 opaque->blkdirIdxOid,
 											 &opaque->blkdirComptypeOid,
 											 false);
-
-		/* Update blkdirrelid, blkdiridxid in aoEntry with new values */
-		aocsscan->aoEntry->blkdirrelid = opaque->blkdirRelOid;
-		aocsscan->aoEntry->blkdiridxid = opaque->blkdirIdxOid;
 		
 		aocsscan->buildBlockDirectory = true;
 		aocsscan->blockDirectory =
@@ -2528,7 +2524,6 @@ IndexBuildAppendOnlyColScan(Relation parentRelation,
 
 		callback(indexRelation, slot_get_ctid(slot),
 				 values, isnull, true, callback_state);
-		
 	}
 
 	pfree(proj);

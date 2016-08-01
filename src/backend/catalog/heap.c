@@ -43,7 +43,7 @@
 #include "catalog/index.h"
 #include "catalog/indexing.h"
 #include "catalog/namespace.h"
-#include "catalog/pg_appendonly.h"
+#include "catalog/pg_appendonly_fn.h"
 #include "catalog/pg_attrdef.h"
 #include "catalog/pg_attribute_encoding.h"
 #include "catalog/pg_authid.h"
@@ -1038,8 +1038,6 @@ InsertPgClassTuple(Relation pg_class_desc,
 	values[Anum_pg_class_reltuples - 1] = Float4GetDatum(rd_rel->reltuples);
 	values[Anum_pg_class_reltoastrelid - 1] = ObjectIdGetDatum(rd_rel->reltoastrelid);
 	values[Anum_pg_class_reltoastidxid - 1] = ObjectIdGetDatum(rd_rel->reltoastidxid);
-	values[Anum_pg_class_relaosegrelid - 1] = ObjectIdGetDatum(rd_rel->relaosegrelid);
-	values[Anum_pg_class_relaosegidxid - 1] = ObjectIdGetDatum(rd_rel->relaosegidxid);
 	values[Anum_pg_class_relhasindex - 1] = BoolGetDatum(rd_rel->relhasindex);
 	values[Anum_pg_class_relisshared - 1] = BoolGetDatum(rd_rel->relisshared);
 	values[Anum_pg_class_relkind - 1] = CharGetDatum(rd_rel->relkind);
@@ -3219,7 +3217,6 @@ heap_truncate(List *relids)
 		Oid			aosegrelid;
 		Oid         aoblkdirrelid;
 		Oid         aovisimaprelid;
-		AppendOnlyEntry *aoEntry = NULL;
 
 		rel = heap_open(rid, AccessExclusiveLock);
 		relations = lappend(relations, rel);
@@ -3239,32 +3236,34 @@ heap_truncate(List *relids)
 		 */
 		if (RelationIsAoRows(rel) || RelationIsAoCols(rel))
 		{
-			aoEntry = GetAppendOnlyEntry(rid, SnapshotNow);
-
 			/* If there is an aoseg table, add it to the list too */
-			aosegrelid = aoEntry->segrelid;
+			aosegrelid = rel->rd_appendonly->segrelid;
 			if (OidIsValid(aosegrelid))
 			{
-				rel = heap_open(aosegrelid, AccessExclusiveLock);
-				relations = lappend(relations, rel);
+				Relation aosegrel;
+
+				aosegrel = heap_open(aosegrelid, AccessExclusiveLock);
+				relations = lappend(relations, aosegrel);
 			}
 
 			/* If there is an aoblkdir table, add it to the list too */
-			aoblkdirrelid = aoEntry->blkdirrelid;
+			aoblkdirrelid = rel->rd_appendonly->blkdirrelid;
 			if (OidIsValid(aoblkdirrelid))
 			{
-				rel = heap_open(aoblkdirrelid, AccessExclusiveLock);
-				relations = lappend(relations, rel);
+				Relation aoblkdirrel;
+
+				aoblkdirrel = heap_open(aoblkdirrelid, AccessExclusiveLock);
+				relations = lappend(relations, aoblkdirrel);
 			}
 
-			aovisimaprelid = aoEntry->visimaprelid;
+			aovisimaprelid = rel->rd_appendonly->visimaprelid;
 			if (OidIsValid(aovisimaprelid))
 			{
-				rel = heap_open(aovisimaprelid, AccessExclusiveLock);
-				relations = lappend(relations, rel);
-			}
+				Relation aovisimaprel;
 
-			pfree(aoEntry);
+				aovisimaprel = heap_open(aovisimaprelid, AccessExclusiveLock);
+				relations = lappend(relations, aovisimaprel);
+			}
 		}
 	}
 

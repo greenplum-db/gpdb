@@ -17,6 +17,7 @@
 
 #include "access/tupdesc.h"
 #include "catalog/pg_am.h"
+#include "catalog/pg_appendonly.h"
 #include "catalog/pg_class.h"
 #include "catalog/pg_index.h"
 #include "fmgr.h"
@@ -218,6 +219,12 @@ typedef struct RelationData
 	List	   *rd_indexprs;	/* index expression trees, if any */
 	List	   *rd_indpred;		/* index predicate tree, if any */
 	void	   *rd_amcache;		/* available for use by index AM */
+
+	/*
+	 * AO table support info (used only for AO and AOCS relations)
+	 */
+	Form_pg_appendonly rd_appendonly;
+	struct HeapTupleData *rd_aotuple;		/* all of pg_appendonly tuple */
 
 	/*
 	 * Physical file-system information.

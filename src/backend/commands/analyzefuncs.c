@@ -1,6 +1,7 @@
 #include "postgres.h"
 
 #include "access/aocssegfiles.h"
+#include "catalog/pg_appendonly_fn.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbfilerepprimary.h"
 #include "cdb/cdbvars.h"
@@ -197,12 +198,12 @@ static void gp_statistics_estimate_reltuples_relpages_heap(Relation rel, float4 
  * 	relpages  - exact number of pages.
  */
 
-static void gp_statistics_estimate_reltuples_relpages_ao_cs(Relation rel, float4 *reltuples, float4 *relpages)
+static void
+gp_statistics_estimate_reltuples_relpages_ao_cs(Relation rel, float4 *reltuples, float4 *relpages)
 {
 	AOCSFileSegInfo	**aocsInfo = NULL;
 	int				nsegs = 0;
 	double			totalBytes = 0;
-	AppendOnlyEntry *aoEntry;
 	int64 hidden_tupcount;
 	AppendOnlyVisimap visimap;
 
@@ -216,8 +217,7 @@ static void gp_statistics_estimate_reltuples_relpages_ao_cs(Relation rel, float4
 	*relpages = 0.0;
 	
     /* get table level statistics from the pg_aoseg table */
-	aoEntry = GetAppendOnlyEntry(RelationGetRelid(rel), SnapshotNow);
-	aocsInfo = GetAllAOCSFileSegInfo(rel, aoEntry, SnapshotNow, &nsegs);
+	aocsInfo = GetAllAOCSFileSegInfo(rel, SnapshotNow, &nsegs);
 	if (aocsInfo)
 	{
 		int i = 0;
@@ -244,13 +244,11 @@ static void gp_statistics_estimate_reltuples_relpages_ao_cs(Relation rel, float4
 		*relpages = RelationGuessNumberOfBlocks(totalBytes);
 	}
 
-	AppendOnlyVisimap_Init(&visimap, aoEntry->visimaprelid, aoEntry->visimapidxid, AccessShareLock, SnapshotNow);
+	AppendOnlyVisimap_Init(&visimap, rel->rd_appendonly->visimaprelid, rel->rd_appendonly->visimapidxid, AccessShareLock, SnapshotNow);
 	hidden_tupcount = AppendOnlyVisimap_GetRelationHiddenTupleCount(&visimap);
 	AppendOnlyVisimap_Finish(&visimap, AccessShareLock);
 
 	(*reltuples) -= hidden_tupcount;
-
-	pfree(aoEntry);
 	  
 	return;
 }
@@ -271,7 +269,6 @@ static void gp_statistics_estimate_reltuples_relpages_ao_cs(Relation rel, float4
 static void gp_statistics_estimate_reltuples_relpages_ao_rows(Relation rel, float4 *reltuples, float4 *relpages)
 {
 	FileSegTotals		*fstotal;
-	AppendOnlyEntry *aoEntry;
 	AppendOnlyVisimap visimap;
 	int64 hidden_tupcount = 0;
 	/**
@@ -288,8 +285,11 @@ static void gp_statistics_estimate_reltuples_relpages_ao_rows(Relation rel, floa
 	 */
 	*relpages = RelationGuessNumberOfBlocks((double)fstotal->totalbytes);
 
-	aoEntry = GetAppendOnlyEntry(RelationGetRelid(rel), SnapshotNow);
-	AppendOnlyVisimap_Init(&visimap, aoEntry->visimaprelid, aoEntry->visimapidxid, AccessShareLock, SnapshotNow);
+	AppendOnlyVisimap_Init(&visimap,
+						   rel->rd_appendonly->visimaprelid,
+						   rel->rd_appendonly->visimapidxid,
+						   AccessShareLock,
+						   SnapshotNow);
 	hidden_tupcount = AppendOnlyVisimap_GetRelationHiddenTupleCount(&visimap);
 	AppendOnlyVisimap_Finish(&visimap, AccessShareLock);
 
@@ -299,7 +299,6 @@ static void gp_statistics_estimate_reltuples_relpages_ao_rows(Relation rel, floa
 	*reltuples = (double)(fstotal->totaltuples - hidden_tupcount);
 
 	pfree(fstotal);
-	pfree(aoEntry);
 	
 	return;
 }

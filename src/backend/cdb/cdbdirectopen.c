@@ -17,6 +17,7 @@
 #include "utils/memutils.h"
 #include "catalog/pg_authid.h"
 #include "catalog/pg_am.h"
+#include "catalog/pg_class.h"
 #include "catalog/pg_index.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_opclass.h"

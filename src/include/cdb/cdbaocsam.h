@@ -48,7 +48,6 @@ typedef struct AOCSInsertDescData
 	int64		numSequences; /* total number of available sequences */
 	int64		lastSequence; /* last used sequence */
 	int32		cur_segno;
-	AppendOnlyEntry *aoEntry;
 
 	char *compType;
 	int32 compLevel;
@@ -109,8 +108,6 @@ typedef struct AOCSScanDescData
 	int64 total_row;
 	int64 cur_seg_row;
 
-	AppendOnlyEntry *aoEntry;
-
 	/*
 	 * The block directory info.
 	 *
@@ -156,8 +153,6 @@ typedef struct AOCSFetchDescData
 
 	DatumStreamFetchDesc *datumStreamFetchDesc;
 
-	AppendOnlyEntry *aoEntry;
-
 	int64	skipBlockCount;
 
 	AppendOnlyVisimap visibilityMap;
@@ -182,8 +177,6 @@ typedef AOCSHeaderScanDescData *AOCSHeaderScanDesc;
 typedef struct AOCSAddColumnDescData
 {
 	Relation rel;
-
-	AppendOnlyEntry *aoEntry;
 
 	AppendOnlyBlockDirectory blockDirectory;
 
@@ -247,13 +240,13 @@ extern HTSU_Result aocs_delete(AOCSDeleteDesc desc,
 extern void aocs_delete_finish(AOCSDeleteDesc desc);
 
 extern AOCSHeaderScanDesc aocs_begin_headerscan(
-		Relation rel, AppendOnlyEntry *aoentry, int colno);
+		Relation rel, int colno);
 extern void aocs_headerscan_opensegfile(
 		AOCSHeaderScanDesc hdesc, AOCSFileSegInfo *seginfo, char *basepath);
 extern bool aocs_get_nextheader(AOCSHeaderScanDesc hdesc);
 extern void aocs_end_headerscan(AOCSHeaderScanDesc hdesc);
 extern AOCSAddColumnDesc aocs_addcol_init(
-		Relation rel, AppendOnlyEntry *aoentry, int num_newcols);
+		Relation rel, int num_newcols);
 extern void aocs_addcol_newsegfile(
 		AOCSAddColumnDesc desc, AOCSFileSegInfo *seginfo, char *basepath,
 		RelFileNode relfilenode);
@@ -263,6 +256,6 @@ extern void aocs_addcol_insert_datum(AOCSAddColumnDesc desc,
 									   Datum *d, bool *isnull);
 extern void aocs_addcol_finish(AOCSAddColumnDesc desc);
 extern void aocs_addcol_emptyvpe(
-		Relation rel, AppendOnlyEntry *aoentry, AOCSFileSegInfo **segInfos,
+		Relation rel, AOCSFileSegInfo **segInfos,
 		int32 nseg, int num_newcols);
 #endif   /* AOCSAM_H */

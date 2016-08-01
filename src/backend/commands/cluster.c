@@ -30,6 +30,7 @@
 #include "catalog/index.h"
 #include "catalog/indexing.h"
 #include "catalog/namespace.h"
+#include "catalog/pg_appendonly_fn.h"
 #include "catalog/pg_attribute_encoding.h"
 #include "catalog/pg_type.h"
 #include "catalog/toasting.h"
@@ -881,6 +882,8 @@ make_new_heap(Oid OIDOldHeap, const char *NewName, Oid NewTableSpace,
 	    AlterTableCreateAoBlkdirTableWithOid(OIDNewHeap, blkdirOid, blkdirIdxOid,
 										 aoblkdirComptypeOid, is_part);
     }
+
+	CacheInvalidateRelcacheByRelid(OIDNewHeap);
 
 	cloneAttributeEncoding(OIDOldHeap,
 						   OIDNewHeap,

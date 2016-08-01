@@ -12,6 +12,7 @@
 #include "access/appendonly_visimap_entry.h"
 #include "access/appendonly_visimap_store.h"
 #include "catalog/namespace.h"
+#include "catalog/pg_appendonly_fn.h"
 #include "cdb/cdbappendonlyblockdirectory.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
@@ -47,7 +48,6 @@ gp_aovisimap_internal(PG_FUNCTION_ARGS, Oid aoRelOid)
 	{
 		TupleDesc	tupdesc;
 		MemoryContext oldcontext;
-		AppendOnlyEntry *aoEntry;
 		
 		/* create a function context for cross-call persistence */
 		funcctx = SRF_FIRSTCALL_INIT();
@@ -83,16 +83,13 @@ gp_aovisimap_internal(PG_FUNCTION_ARGS, Oid aoRelOid)
 					 errmsg("Function not supported on relation")));
 		}
 
-		aoEntry = GetAppendOnlyEntry(aoRelOid, SnapshotNow);
-
 		AppendOnlyVisimapScan_Init(&context->visiMapScan,
-				aoEntry->visimaprelid,
-				aoEntry->visimapidxid,
+				context->aorel->rd_appendonly->visimaprelid,
+				context->aorel->rd_appendonly->visimapidxid,
 				AccessShareLock,
 				SnapshotNow);
 		AOTupleIdInit_Init(&context->aoTupleId);
 
-		pfree(aoEntry);
 		funcctx->user_fctx = (void *) context;
 
 		MemoryContextSwitchTo(oldcontext);
@@ -184,8 +181,7 @@ gp_aovisimap_hidden_info_internal(PG_FUNCTION_ARGS, Oid aoRelOid)
 	{
 		TupleDesc	tupdesc;
 		MemoryContext oldcontext;
-		AppendOnlyEntry *aoEntry;
-		
+
 		/* create a function context for cross-call persistence */
 		funcctx = SRF_FIRSTCALL_INIT();
 
@@ -220,13 +216,10 @@ gp_aovisimap_hidden_info_internal(PG_FUNCTION_ARGS, Oid aoRelOid)
 					 errmsg("Function not supported on relation")));
 		}
 
-		aoEntry = GetAppendOnlyEntry(aoRelOid, SnapshotNow);
-
 		if (RelationIsAoRows(context->parentRelation))
 		{
 			context->appendonlySegfileInfo = GetAllFileSegInfo(
 				context->parentRelation,
-				aoEntry,
 				SnapshotNow,
 				&context->segfile_info_total);
 		}
@@ -234,17 +227,16 @@ gp_aovisimap_hidden_info_internal(PG_FUNCTION_ARGS, Oid aoRelOid)
 		{
 			Assert(RelationIsAoCols(context->parentRelation));
 			context->aocsSegfileInfo = GetAllAOCSFileSegInfo(context->parentRelation,
-					aoEntry, SnapshotNow, &context->segfile_info_total);
+					SnapshotNow, &context->segfile_info_total);
 		}
 		context->i = 0;
 
 		AppendOnlyVisimap_Init(&context->visiMap,
-				aoEntry->visimaprelid,
-				aoEntry->visimapidxid,
+				context->parentRelation->rd_appendonly->visimaprelid,
+				context->parentRelation->rd_appendonly->visimapidxid,
 				AccessShareLock,
 				SnapshotNow);
 
-		pfree(aoEntry);
 		funcctx->user_fctx = (void *) context;
 
 		MemoryContextSwitchTo(oldcontext);
@@ -382,7 +374,6 @@ gp_aovisimap_entry_internal(PG_FUNCTION_ARGS, Oid aoRelOid)
 	{
 		TupleDesc	tupdesc;
 		MemoryContext oldcontext;
-		AppendOnlyEntry *aoEntry;
 		
 		/* create a function context for cross-call persistence */
 		funcctx = SRF_FIRSTCALL_INIT();
@@ -420,11 +411,9 @@ gp_aovisimap_entry_internal(PG_FUNCTION_ARGS, Oid aoRelOid)
 					 errmsg("Function not supported on relation")));
 		}
 
-		aoEntry = GetAppendOnlyEntry(aoRelOid, SnapshotNow);
-
 		AppendOnlyVisimap_Init(&context->visiMap,
-				aoEntry->visimaprelid,
-				aoEntry->visimapidxid,
+				context->parentRelation->rd_appendonly->visimaprelid,
+				context->parentRelation->rd_appendonly->visimapidxid,
 				AccessShareLock,
 				SnapshotNow);
 
@@ -433,7 +422,6 @@ gp_aovisimap_entry_internal(PG_FUNCTION_ARGS, Oid aoRelOid)
 
 		context->bitmapBuffer = palloc0(VARHDRSZ + APPENDONLY_VISIMAP_MAX_RANGE + 1);
 
-		pfree(aoEntry);
 		funcctx->user_fctx = (void *) context;
 
 		MemoryContextSwitchTo(oldcontext);

@@ -38,6 +38,7 @@
 #include "catalog/catalog.h"
 #include "catalog/catquery.h"
 #include "catalog/namespace.h"
+#include "catalog/pg_appendonly_fn.h"
 #include "catalog/pg_database.h"
 #include "catalog/pg_index.h"
 #include "catalog/indexing.h"
@@ -666,13 +667,13 @@ static bool vacuum_assign_compaction_segno(
 		return false;
 	}
 
-	new_compaction_list = SetSegnoForCompaction(onerel->rd_id,
+	new_compaction_list = SetSegnoForCompaction(onerel,
 			compactedSegmentFileList, insertedSegmentFileList, &is_drop);
 	if (new_compaction_list)
 	{
 		if (!is_drop)
 		{
-			insert_segno = lappend_int(NIL, SetSegnoForCompactionInsert(onerel->rd_id,
+			insert_segno = lappend_int(NIL, SetSegnoForCompactionInsert(onerel,
 				new_compaction_list, compactedSegmentFileList, insertedSegmentFileList));
 		}
 		else
@@ -2187,7 +2188,6 @@ vacuum_appendonly_indexes(Relation aoRelation,
 	Relation   *Irel;
 	int			nindexes;
 	AppendOnlyIndexVacuumState vacuumIndexState;
-	AppendOnlyEntry *aoEntry;
 	List *extra_oids;
 	FileSegInfo **segmentFileInfo = NULL; /* Might be a casted AOCSFileSegInfo */
 	int totalSegfiles;
@@ -2207,30 +2207,24 @@ vacuum_appendonly_indexes(Relation aoRelation,
 	else
 		vac_open_indexes(aoRelation, RowExclusiveLock, &nindexes, &Irel);
 
-	aoEntry = GetAppendOnlyEntry(
-			aoRelation->rd_id,
-			SnapshotNow);
-	Assert(aoEntry);
-
 	if (RelationIsAoRows(aoRelation))
 	{
-		segmentFileInfo = GetAllFileSegInfo(aoRelation, aoEntry, SnapshotNow, &totalSegfiles);
+		segmentFileInfo = GetAllFileSegInfo(aoRelation, SnapshotNow, &totalSegfiles);
 	}
 	else
 	{
 		Assert(RelationIsAoCols(aoRelation));
-		segmentFileInfo = (FileSegInfo **)GetAllAOCSFileSegInfo(aoRelation, aoEntry, SnapshotNow, &totalSegfiles);
+		segmentFileInfo = (FileSegInfo **)GetAllAOCSFileSegInfo(aoRelation, SnapshotNow, &totalSegfiles);
 	}
 
 	AppendOnlyVisimap_Init(
 			&vacuumIndexState.visiMap,
-			aoEntry->visimaprelid,
-			aoEntry->visimapidxid,
+			aoRelation->rd_appendonly->visimaprelid,
+			aoRelation->rd_appendonly->visimapidxid,
 			AccessShareLock,
 			SnapshotNow);
 
 	AppendOnlyBlockDirectory_Init_forSearch(&vacuumIndexState.blockDirectory,
-			aoEntry,
 			SnapshotNow,
 			segmentFileInfo,
 			totalSegfiles,
@@ -2282,8 +2276,6 @@ vacuum_appendonly_indexes(Relation aoRelation,
 		}
 		pfree(segmentFileInfo);
 	}
-	pfree(aoEntry);
-	aoEntry = NULL;
 
 	vac_close_indexes(nindexes, Irel, NoLock);
 	return nindexes;

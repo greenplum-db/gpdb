@@ -333,7 +333,7 @@ DATA(insert OID = 18 (	char	   PGNSP PGUID	1 t b t \054 0	 0 1002 charin charout
 DESCR("single character");
 #define CHAROID			18
 
-DATA(insert OID = 19 (	name	   PGNSP PGUID NAMEDATALEN f b t \054 0 18 1003 namein nameout namerecv namesend - - - i p f 0 -1 0 _null_ _null_ ));
+DATA(insert OID = 19 (	name	   PGNSP PGUID NAMEDATALEN f b t \054 0 18 1003 namein nameout namerecv namesend - - - c p f 0 -1 0 _null_ _null_ ));
 DESCR("63-character type for storing system identifiers");
 #define NAMEOID			19
 

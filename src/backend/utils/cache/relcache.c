@@ -228,6 +228,7 @@ static void RelationParseRelOptions(Relation relation, HeapTuple tuple);
 static void RelationBuildTupleDesc(Relation relation);
 static Relation RelationBuildDesc(Oid targetRelId, bool insertIt);
 static void RelationInitPhysicalAddr(Relation relation);
+static void RelationInitAppendOnlyInfo(Relation relation);
 static void load_critical_index(Oid indexoid, Oid heapoid);
 static TupleDesc GetPgClassDescriptor(void);
 static TupleDesc GetPgIndexDescriptor(void);
@@ -1338,6 +1339,15 @@ RelationBuildDesc(Oid targetRelId, bool insertIt)
 	if (OidIsValid(relation->rd_rel->relam))
 		RelationInitIndexAccessInfo(relation);
 
+	/*
+	 * if it's an append-only table, get information from pg_appendonly
+	 */
+	if (relation->rd_rel->relstorage == RELSTORAGE_AOROWS ||
+		relation->rd_rel->relstorage == RELSTORAGE_AOCOLS)
+	{
+		RelationInitAppendOnlyInfo(relation);
+	}
+
 	/* extract reloptions if any */
 	RelationParseRelOptions(relation, pg_class_tuple);
 
@@ -1984,6 +1994,49 @@ formrdesc(const char *relationName, Oid relationReltype,
 }
 
 
+static void
+RelationInitAppendOnlyInfo(Relation relation)
+{
+	Relation	pg_appendonly_rel;
+	HeapTuple	tuple;
+	MemoryContext oldcontext;
+	SysScanDesc scan;
+	ScanKeyData skey;
+
+	/*
+	 * Check the pg_appendonly relation to be certain the ao table
+	 * is there.
+	 */
+	pg_appendonly_rel = heap_open(AppendOnlyRelationId, AccessShareLock);
+
+	ScanKeyInit(&skey,
+				Anum_pg_appendonly_relid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(RelationGetRelid(relation)));
+	/* FIXME: isn't there a mode in relcache code to *not* use an index? Should
+	 * we do something here to obey it?
+	 */
+	scan = systable_beginscan(pg_appendonly_rel, AppendOnlyRelidIndexId, true,
+							  SnapshotNow, 1, &skey);
+
+	tuple = systable_getnext(scan);
+	if (!tuple)
+		elog(ERROR, "could not find pg_appendonly tuple for relation \"%s\"",
+			 RelationGetRelationName(relation));
+
+	/*
+	 * Make a copy of the pg_appendonly entry for the table.
+	 */
+	oldcontext = MemoryContextSwitchTo(CacheMemoryContext);
+	relation->rd_aotuple = heap_copytuple(tuple);
+	relation->rd_appendonly = (Form_pg_appendonly) GETSTRUCT(relation->rd_aotuple);
+	MemoryContextSwitchTo(oldcontext);
+	systable_endscan(scan);
+	heap_close(pg_appendonly_rel, AccessShareLock);
+
+}
+
+
 /* ----------------------------------------------------------------
  *				 Relation Descriptor Lookup Interface
  * ----------------------------------------------------------------
@@ -2279,6 +2332,8 @@ RelationDestroyRelation(Relation relation)
 		pfree(relation->rd_options);
 	if (relation->rd_indextuple)
 		pfree(relation->rd_indextuple);
+	if (relation->rd_aotuple)
+		pfree(relation->rd_aotuple);
 	if (relation->rd_am)
 		pfree(relation->rd_am);
 	if (relation->rd_indexcxt)

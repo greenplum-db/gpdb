@@ -22,6 +22,7 @@
 #include "catalog/catquery.h"
 #include "access/heapam.h"
 #include "access/transam.h"
+#include "catalog/pg_appendonly_fn.h"
 #include "catalog/pg_inherits.h"
 #include "catalog/pg_exttable.h"
 #include "commands/tablecmds.h"
@@ -536,8 +537,7 @@ estimate_rel_size(Relation rel, int32 *attr_widths,
 				
 				int					nsegs, i , j;
 				double				totalBytes = 0;
-				AppendOnlyEntry*	aoEntry = GetAppendOnlyEntry(RelationGetRelid(rel), SnapshotNow);
-				AOCSFileSegInfo**	aocsInfo = GetAllAOCSFileSegInfo(rel, aoEntry, SnapshotNow, &nsegs);
+				AOCSFileSegInfo**	aocsInfo = GetAllAOCSFileSegInfo(rel, SnapshotNow, &nsegs);
 				
 			    if (aocsInfo)
 			    {
@@ -552,7 +552,6 @@ estimate_rel_size(Relation rel, int32 *attr_widths,
 			    	}
 			    }
 			    curpages = RelationGuessNumberOfBlocks(totalBytes);
-			    pfree(aoEntry);
 			}
 			else
 			{

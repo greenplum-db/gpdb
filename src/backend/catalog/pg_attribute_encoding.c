@@ -68,10 +68,13 @@ get_funcs_for_compression(char *compresstype)
 {
 	PGFunction *func = NULL;
 
-	if (!compresstype)
+	if (compresstype == NULL ||
+		compresstype[0] == '\0' ||
+		pg_strcasecmp("none", compresstype) == 0)
+	{
 		return func;
-
-	if (pg_strcasecmp("none", compresstype) != 0)
+	}
+	else
 	{
 		func = GetCompressionImplementation(compresstype);
 

@@ -1489,7 +1489,7 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 				{
 					SegfileMapNode *n = makeNode(SegfileMapNode);
 					n->relid = RelationGetRelid(cstate->rel);
-					n->segno = SetSegnoForWrite(InvalidFileSegNumber, n->relid);
+					n->segno = SetSegnoForWrite(cstate->rel, InvalidFileSegNumber);
 					cstate->ao_segnos = lappend(cstate->ao_segnos, n);
 				}
 			}

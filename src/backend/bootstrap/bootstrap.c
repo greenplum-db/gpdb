@@ -132,7 +132,7 @@ static const struct typinfo TypInfo[] = {
 	F_INT4IN, F_INT4OUT},
 	{"float4", FLOAT4OID, 0, 4, FLOAT4PASSBYVAL, 'i', 'p',
 	F_FLOAT4IN, F_FLOAT4OUT},
-	{"name", NAMEOID, CHAROID, NAMEDATALEN, false, 'i', 'p',
+	{"name", NAMEOID, CHAROID, NAMEDATALEN, false, 'c', 'p',
 	F_NAMEIN, F_NAMEOUT},
 	{"regclass", REGCLASSOID, 0, 4, true, 'i', 'p',
 	F_REGCLASSIN, F_REGCLASSOUT},
