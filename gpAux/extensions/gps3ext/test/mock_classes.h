@@ -29,7 +29,6 @@ class MockS3Interface : public S3Interface {
                                    const S3Credential& cred));
 };
 
-
 class MockS3RESTfulService : public S3RESTfulService {
    public:
     MOCK_METHOD3(get, Response(const string &url, HTTPHeaders &headers,

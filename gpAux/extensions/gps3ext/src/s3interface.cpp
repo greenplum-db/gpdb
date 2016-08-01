@@ -446,6 +446,11 @@ bool S3Service::checkKeyExistence(const string &keyUrl, const string &region,
     return false;
 }
 
+string S3Service::getUploadId(const string &keyUrl, const string &region,
+                              const S3Credential &cred) {
+    return "";
+}
+
 ListBucketResult::~ListBucketResult() {
     vector<BucketContent *>::iterator i;
     for (i = this->contents.begin(); i != this->contents.end(); i++) {

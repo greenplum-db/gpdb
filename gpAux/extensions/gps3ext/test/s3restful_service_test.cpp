@@ -145,14 +145,14 @@ bool compareVector(const vector<T>& a, const vector<T>& b) {
     return true;
 }
 
-/* Run 'python bin/dummyHTTPServer.py' before enable this test */
+/* Run './bin/dummyHTTPServer.py' before enabling this test */
 TEST(S3RESTfulService, DISABLED_PutToDummyServer) {
     HTTPHeaders headers;
     map<string, string> params;
     string url;
     S3RESTfulService service;
 
-    /* data = "abcdefghij", len = 11 (including '\0') */
+    /* data = "abcdefghij", length = 11 (including '\0') */
     vector<uint8_t> data;
     for (int i = 0; i < 10; i++) data.push_back('a' + i);
     data.push_back(0);
@@ -160,7 +160,6 @@ TEST(S3RESTfulService, DISABLED_PutToDummyServer) {
     headers.Add(CONTENTTYPE, "text/plain");
     headers.Add(CONTENTLENGTH, std::to_string(data.size()));
 
-    /* 553 is our office room number */
     url = "http://localhost:8553";
 
     Response resp = service.put(url, headers, params, data);
@@ -203,4 +202,64 @@ TEST(S3RESTfulService, HeadWithCorrectURL) {
     ResponseCode code = service.head(url, headers, params);
 
     EXPECT_EQ(200, code);
+}
+
+TEST(S3RESTfulService, PostWithoutURL) {
+    HTTPHeaders headers;
+    map<string, string> params;
+    string url;
+    S3RESTfulService service;
+    string query;
+
+    Response resp = service.post(url, headers, params, query);
+
+    EXPECT_EQ(RESPONSE_FAIL, resp.getStatus());
+    EXPECT_EQ("Failed to talk to s3 service URL using bad/illegal format or missing URL",
+              resp.getMessage());
+}
+
+TEST(S3RESTfulService, PostToServerWithBlindPutService) {
+    HTTPHeaders headers;
+    map<string, string> params;
+    string url;
+    S3RESTfulService service;
+
+    string query = "abcdefghij";
+    url = "https://www.bing.com";
+
+    Response resp = service.post(url, headers, params, query);
+
+    EXPECT_EQ(RESPONSE_OK, resp.getStatus());
+}
+
+TEST(S3RESTfulService, PostToServerWith404Page) {
+    HTTPHeaders headers;
+    map<string, string> params;
+    string url;
+    S3RESTfulService service;
+
+    string query = "abcdefghij";
+
+    url = "https://www.bing.com/pivotal.html";
+
+    Response resp = service.post(url, headers, params, query);
+
+    EXPECT_EQ(RESPONSE_ERROR, resp.getStatus());
+    EXPECT_EQ("S3 server returned error, error code is 404", resp.getMessage());
+}
+
+/* Run './bin/dummyHTTPServer.py' before enabling this test */
+TEST(S3RESTfulService, DISABLED_PostToDummyServer) {
+    HTTPHeaders headers;
+    map<string, string> params;
+    string url;
+    S3RESTfulService service;
+
+    string query = "abcdefghij";
+
+    url = "http://localhost:8553";
+
+    Response resp = service.post(url, headers, params, query);
+    EXPECT_EQ(RESPONSE_OK, resp.getStatus());
+    EXPECT_EQ(query, string(resp.getRawData().begin(), resp.getRawData().end()));
 }

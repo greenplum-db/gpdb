@@ -3,7 +3,7 @@ CREATE FUNCTION read_from_s3() RETURNS integer AS
         '$libdir/gps3ext.so', 's3_import' LANGUAGE C STABLE;
 ERROR:  function "read_from_s3" already exists with same argument types
 CREATE PROTOCOL s3 (
-        readfunc  = read_from_s3
+        readfunc = read_from_s3
 );
 ERROR:  duplicate key value violates unique constraint "pg_extprotocol_ptcname_index"
 DETAIL:  Key (ptcname)=(s3) already exists.

@@ -31,8 +31,8 @@ class S(BaseHTTPRequestHandler):
         self._set_headers()
 
     def do_PUT(self):
-        # Doesn't do anything with posted data
-        print "----- SOMETHING WAS PUT!! ------"
+        # Just bounce the request back
+        print "----- SOMETHING WAS PUT ------"
         print self.headers
         length = int(self.headers['Content-Length'])
         content = self.rfile.read(length)
@@ -40,8 +40,8 @@ class S(BaseHTTPRequestHandler):
         self.wfile.write(content)
 
     def do_POST(self):
-        # Doesn't do anything with posted data
-        print "----- SOMETHING WAS POST!! ------"
+        # Just bounce the request back
+        print "----- SOMETHING WAS POST ------"
         print self.headers
         length = int(self.headers['Content-Length'])
         content = self.rfile.read(length)

@@ -126,6 +126,8 @@ class S3Service : public S3Interface {
 
     xmlParserCtxtPtr getXMLContext(Response& response);
 
+    string getUploadId(const string& keyUrl, const string& region, const S3Credential& cred);
+
     RESTfulService* restfulService;
 };
 

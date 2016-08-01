@@ -1,23 +1,26 @@
-CREATE OR REPLACE FUNCTION read_from_s3() RETURNS integer AS '$libdir/gps3ext.so', 's3_import' LANGUAGE C STABLE;
+CREATE OR REPLACE FUNCTION read_from_s3() RETURNS integer AS
+        '$libdir/gps3ext.so', 's3_import' LANGUAGE C STABLE;
 
 CREATE OR REPLACE FUNCTION write_to_s3() RETURNS integer AS
         '$libdir/gps3ext.so', 's3_export' LANGUAGE C STABLE;
 
 CREATE PROTOCOL s3 (
-	readfunc  = read_from_s3,
-        writefunc  = write_to_s3
+        readfunc = read_from_s3,
+        writefunc = write_to_s3
 );
 
 DROP EXTERNAL TABLE IF EXISTS s3regress_r;
 DROP EXTERNAL TABLE IF EXISTS s3regress_w;
 
-CREATE READABLE EXTERNAL TABLE s3regress_r (date text, time text, open float, high float, low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/s3write/quick/ config=/home/gpadmin/s3.conf') FORMAT 'csv';
+CREATE READABLE EXTERNAL TABLE s3regress_r (date text, time text, open float, high float, low float,
+        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/s3write/quick/533.csv config=/home/gpadmin/s3.conf') FORMAT 'csv';
 
-CREATE WRITABLE EXTERNAL TABLE s3regress_w (date text, time text, open float, high float, low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/s3write/quick/533.csv config=/home/gpadmin/s3.conf') FORMAT 'csv';
+CREATE WRITABLE EXTERNAL TABLE s3regress_w (date text, time text, open float, high float, low float,
+        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/s3write/quick/533.csv config=/home/gpadmin/s3.conf') FORMAT 'csv';
 
-INSERT INTO s3regress_w (date, time, open, high, low, volume) values ('2016-07-28', '12:00:00', 0.5, 0.5, 0.3, 1);
+INSERT INTO s3regress_w (date, time, open, high, low, volume) VALUES ('2016-07-28', '12:00:00', 0.5, 0.5, 0.3, 1);
 
-SELECT * FROM s3regress_r limit 1;
+SELECT * FROM s3regress_r LIMIT 1;
 
 DROP EXTERNAL TABLE IF EXISTS s3regress_r;
 DROP EXTERNAL TABLE IF EXISTS s3regress_w;

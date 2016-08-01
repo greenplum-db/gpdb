@@ -45,7 +45,7 @@ uint64_t GPWriter::write(char* buf, uint64_t count) {
     vector<uint8_t> data;
     data.insert(data.end(), buf, buf + count);
 
-    return this->s3service.uploadData(data, this->params.getUrlToUpload(), this->params.getRegion(),
+    return this->s3service.uploadData(data, this->getKeyToUpload(), this->params.getRegion(),
                                       this->params.getCred());
 }
 

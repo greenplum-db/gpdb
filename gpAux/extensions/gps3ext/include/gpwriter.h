@@ -1,8 +1,8 @@
 #ifndef INCLUDE_GPWRITER_H_
 #define INCLUDE_GPWRITER_H_
 
-#include <string>
 #include <string.h>
+#include <string>
 
 #include "writer.h"
 

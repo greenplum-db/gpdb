@@ -12,6 +12,9 @@ class S3RESTfulService : public RESTfulService {
     Response put(const string& url, HTTPHeaders& headers, const map<string, string>& params,
                  const vector<uint8_t>& data);
 
+    Response post(const string& url, HTTPHeaders& headers, const map<string, string>& params,
+                  const string& queryString);
+
     ResponseCode head(const string& url, HTTPHeaders& headers, const map<string, string>& params);
 };
 

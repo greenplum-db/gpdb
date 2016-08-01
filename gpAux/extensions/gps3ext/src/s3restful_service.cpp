@@ -203,6 +203,75 @@ Response S3RESTfulService::put(const string &url, HTTPHeaders &headers,
     return response;
 }
 
+Response S3RESTfulService::post(const string &url, HTTPHeaders &headers,
+                                const map<string, string> &params, const string &queryString) {
+    Response response;
+
+    CURL *curl = curl_easy_init();
+    CHECK_OR_DIE_MSG(curl != NULL, "%s", "Failed to create curl handler");
+
+    headers.CreateList();
+
+    /* options for downloading */
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1L);
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.GetList());
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, RESTfulServiceWriteFuncCallback);
+
+    curl_easy_setopt(curl, CURLOPT_POST, 1L);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, queryString.c_str());
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)queryString.length());
+
+    // consider low speed as timeout
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, s3ext_low_speed_limit);
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, s3ext_low_speed_time);
+
+    map<string, string>::const_iterator iter = params.find("debug");
+    if (iter != params.end() && iter->second == "true") {
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+    }
+
+    if (s3ext_debug_curl) {
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+    }
+
+    CURLcode res = curl_easy_perform(curl);
+
+    if (res != CURLE_OK) {
+        S3ERROR("curl_easy_perform() failed: %s", curl_easy_strerror(res));
+
+        response.clearBuffer();
+        response.setStatus(RESPONSE_FAIL);
+        response.setMessage(
+            string("Failed to talk to s3 service ").append(curl_easy_strerror(res)));
+
+    } else {
+        long responseCode;
+        // Get the HTTP response status code from HTTP header
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
+
+        // 2XX are successful response. Here we deal with 200 (OK) and 206 (partial content)
+        // firstly.
+        if ((responseCode == 200) || (responseCode == 206)) {
+            response.setStatus(RESPONSE_OK);
+            response.setMessage("Success");
+        } else {  // Server error, set status to RESPONSE_ERROR
+            stringstream sstr;
+
+            sstr << "S3 server returned error, error code is " << responseCode;
+            response.setStatus(RESPONSE_ERROR);
+            response.setMessage(sstr.str());
+        }
+    }
+
+    curl_easy_cleanup(curl);
+    headers.FreeList();
+
+    return response;
+}
+
 // head() will execute HTTP HEAD RESTful API with given url/headers/params, and return the HTTP
 // response code.
 //

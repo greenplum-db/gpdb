@@ -1,7 +1,7 @@
 CREATE OR REPLACE FUNCTION write_to_s3() RETURNS integer AS
         '$libdir/gps3ext.so', 's3_export' LANGUAGE C STABLE;
 CREATE PROTOCOL s3 (
-        writefunc  = write_to_s3
+        writefunc = write_to_s3
 );
 DROP EXTERNAL TABLE s3regress;
 ERROR:  table "s3regress" does not exist
