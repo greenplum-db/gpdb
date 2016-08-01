@@ -533,7 +533,7 @@ assign_gp_session_role(const char *newval, bool doit, GucSource source __attribu
 
 
 /*
- * Assign hook routine for "gp_role" option.  This variablle has context
+ * Assign hook routine for "gp_role" option.  This variable has context
  * PGC_SUSET so that is can only be set by a superuser via the SET command.
  * (It can also be set using an option on postmaster start, but this isn't
  * interesting beccause the derived global CdbRole is always set (along with
@@ -615,7 +615,7 @@ assign_gp_role(const char *newval, bool doit, GucSource source)
 
 
 /*
- * Assign hook routine for "gp_connections_per_thread" option.  This variablle has context
+ * Assign hook routine for "gp_connections_per_thread" option.  This variable has context
  * PGC_SUSET so that is can only be set by a superuser via the SET command.
  * (It can also be set in config file, but not inside of PGOPTIONS.)
  *

@@ -14,7 +14,7 @@ indexes are much less expensive to construct than b-trees.
 Hybrid Run-Length (HRL) equality encoding bitmap index
 ------------------------------------------------------
 
-HRL is the bitmap encoding mechanism used in this implemention. In HRL,
+HRL is the bitmap encoding mechanism used in this implementation. In HRL,
 each vector is represented in two sections: the header section and the
 content section. The header section contains bits, each of which
 corresponds to a word in the content section. If a bit in the header
