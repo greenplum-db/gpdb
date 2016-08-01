@@ -726,10 +726,12 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 
 				if (childPlan == NULL)
 				{
-					Assert(sisc->share_type != SHARE_NOTSHARED
-						   && sisc->share_id >= 0
-						   && glob->share.sharedNodes);
-					childPlan = list_nth(glob->share.sharedNodes, sisc->share_id);
+					ShareInputScan *producer;
+
+					Assert(sisc->share_type != SHARE_NOTSHARED);
+					Assert(sisc->share_id >= 0 && sisc->share_id < glob->share.producer_count);
+					producer = glob->share.producers[sisc->share_id];
+					childPlan = producer->scan.plan.lefttree;
 				}
 
 #ifdef DEBUG
