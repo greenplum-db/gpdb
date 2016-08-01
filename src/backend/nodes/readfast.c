@@ -2067,9 +2067,6 @@ _readShareInputScan(void)
 	READ_ENUM_FIELD(share_type, ShareType);
 	READ_INT_FIELD(share_id);
 	READ_INT_FIELD(driver_slice);
-	READ_NODE_FIELD(colnames);
-	READ_NODE_FIELD(coltypes);
-	READ_NODE_FIELD(coltypmods);
 
 	readPlanInfo((Plan *)local_node);
 

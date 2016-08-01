@@ -1934,163 +1934,237 @@ assign_plannode_id_walker(Node *node, assign_plannode_id_walker_context *ctxt)
 }
 
 /*
- * Extracts the readable names of all the TLE of a producer's subplan and saves those in the
- * ShareInputScan node.
+ * Create a fake CTE range table entry that reflects the target list of a
+ * shared input.
  */
-static void
-shareinput_save_producer_colnames(ShareInputScan *plan, ApplyShareInputContext *ctxt)
+static RangeTblEntry *
+create_shareinput_producer_rte(ApplyShareInputContext *ctxt, int share_id,
+							   int refno)
 {
-	Plan *subplan = plan->scan.plan.lefttree;
-	Assert(subplan != NULL && get_plan_share_id(subplan) == plan->share_id);
+	int			attno = 1;
+	ListCell   *lc;
+	Plan	   *subplan;
+	char		buf[100];
+	RangeTblEntry *rte;
+	List	   *colnames = NIL;
+	List	   *coltypes = NIL;
+	List	   *coltypmods = NIL;
+	ShareInputScan *producer;
 
-	int attno = 1;
-	ListCell   *lc = NULL;
+	Assert(ctxt->producer_count > share_id);
+	producer = ctxt->producers[share_id];
+	subplan = producer->scan.plan.lefttree;
 
 	foreach(lc, subplan->targetlist)
 	{
 		TargetEntry *tle = (TargetEntry *) lfirst(lc);
-		char		buf[100];
 		Oid			vartype;
 		int32		vartypmod;
-
-		snprintf(buf, sizeof(buf), "col_%d", attno);
+		char	   *resname;
 
 		vartype = exprType((Node *) tle->expr);
 		vartypmod = exprTypmod((Node *) tle->expr);
 
-		plan->colnames = lappend(plan->colnames, get_tle_name(tle, ctxt->curr_rtable, buf));
-		plan->coltypes = lappend_oid(plan->coltypes, vartype);
-		plan->coltypmods = lappend_int(plan->coltypmods, vartypmod);
+		/*
+		 * We should've filled in tle->resname in
+		 * shareinput_save_producer(). Note that it's too late to call
+		 * get_tle_name() here, because this runs after all the varnos in Vars
+		 * have already been changed to INNER/OUTER.
+		 */
+		resname = tle->resname;
+		if (!resname)
+			resname = pstrdup("unnamed_attr");
+
+		colnames = lappend(colnames, makeString(resname));
+		coltypes = lappend_oid(coltypes, vartype);
+		coltypmods = lappend_int(coltypmods, vartypmod);
 		attno++;
 	}
+
+	/*
+	 * Create a new RTE. Note that we use a different RTE for each reference,
+	 * because we want to give each reference a different name.
+	 */
+	snprintf(buf, sizeof(buf), "share%d_ref%d", share_id, refno);
+
+	rte = makeNode(RangeTblEntry);
+	rte->rtekind = RTE_CTE;
+	rte->ctename = pstrdup(buf);
+	rte->ctelevelsup = 0;
+	rte->self_reference = false;
+	rte->alias = NULL;
+
+	rte->eref = makeAlias(rte->ctename, colnames);
+	rte->ctecoltypes = coltypes;
+	rte->ctecoltypmods = coltypmods;
+
+	rte->inh = false;
+	rte->inFromCl = false;
+
+	rte->requiredPerms = 0;
+	rte->checkAsUser = InvalidOid;
+
+	return rte;
 }
 
 /*
- * Saves the producer in an array of producers, one producer per share_id
+ * Memorize the producer of a shared input in an array of producers, one
+ * producer per share_id.
  */
 static void
 shareinput_save_producer(ShareInputScan *plan, ApplyShareInputContext *ctxt)
 {
+	int			share_id = plan->share_id;
+	int			new_producer_count = (share_id + 1);
+
 	Assert(plan->share_id >= 0);
 
-	int share_id = plan->share_id;
-	int min_share_count = (share_id + 1);
-
-	if (NULL == ctxt->producers)
+	if (ctxt->producers == NULL)
 	{
-		ctxt->producers = palloc0(sizeof(ShareInputScan *) * min_share_count);
+		ctxt->producers = palloc0(sizeof(ShareInputScan *) * new_producer_count);
+		ctxt->producer_count = new_producer_count;
 	}
-	else if (ctxt->producer_count < min_share_count)
+	else if (ctxt->producer_count < new_producer_count)
 	{
-		ctxt->producers = repalloc(ctxt->producers, sizeof(ShareInputScan *) * min_share_count);
-		memset(&ctxt->producers[ctxt->producer_count], 0, (min_share_count - ctxt->producer_count) * sizeof(ShareInputScan *));
+		ctxt->producers = repalloc(ctxt->producers, new_producer_count * sizeof(ShareInputScan *));
+		memset(&ctxt->producers[ctxt->producer_count], 0, (new_producer_count - ctxt->producer_count) * sizeof(ShareInputScan *));
+		ctxt->producer_count = new_producer_count;
 	}
 
-	Assert(NULL == ctxt->producers[share_id]);
-	ctxt->producer_count = min_share_count;
+	Assert(ctxt->producers[share_id] == NULL);
 	ctxt->producers[share_id] = plan;
 
 	/* Also add the producer's subplan in the sharedNodes as we need it for further transformation */
-	Plan *subplan = plan->scan.plan.lefttree;
-	Assert(NULL != subplan);
-	ctxt->sharedNodes = lappend(ctxt->sharedNodes, subplan);
-
-	shareinput_save_producer_colnames(plan, ctxt);
+	Assert(plan->scan.plan.lefttree != NULL);
+	ctxt->sharedNodes = lappend(ctxt->sharedNodes, plan->scan.plan.lefttree);
 }
 
 /*
- * For planner produced plans, it does the following:
+ * When a plan comes out of the planner, all the ShareInputScan nodes belonging
+ * to the same "share" have the same child node. apply_shareinput_dag_to_tree()
+ * turns the DAG into a proper tree. The first occurrence of a ShareInput scan,
+ * with a particular child tree, becomes the "producer" of the share, and the
+ * others becomes consumers. The subtree is removed from all the consumer nodes.
  *
- * 1. Finds out if the ShareInputScan is a producer based on seeing its subplan for the first time
- * 2. If producer, then assigns a sequential share_id. Otherwise, replicate the share_id of the
- * corresponding producer
- * 3. For consumers, it prunes the subplan of ShareInputScan
- * 4. For producer, saves the ShareInputScan in the producer array
+ * Also, a share_id is assigned to each ShareInputScan node, as well as the
+ * Material/Sort nodes below the producers. The producers and its consumers
+ * are linked together by the same share_id.
  */
 static bool
-process_planner_shareinput(ShareInputScan *plan, ApplyShareInputContext *ctxt)
-{
-	Plan* subplan = plan->scan.plan.lefttree;
-
-	for (int i = 0; i < ctxt->producer_count; i++)
-	{
-		if (NULL != ctxt->producers[i] && ctxt->producers[i]->scan.plan.lefttree == subplan)
-		{
-			Assert(get_plan_share_id((Plan *)ctxt->producers[i]) == i);
-			set_plan_share_id((Plan *) plan, ctxt->producers[i]->share_id);
-			plan->scan.plan.lefttree = NULL;
-			return false;
-		}
-	}
-
-	/* Couldn't find a match in existing list of share input scan */
-	Assert(get_plan_share_id(subplan) == SHARE_ID_NOT_ASSIGNED);
-	set_plan_share_id((Plan *) plan, ctxt->producer_count);
-	set_plan_share_id(subplan, ctxt->producer_count);
-
-	shareinput_save_producer(plan, ctxt);
-	return true;
-}
-
-/*
- * For optimizer produced plans, the plans already have share_id assigned and the
- * consumers already do not have any child. So, this method simply saves the producer
- * is the producer array.
- */
-static bool
-process_optimizer_shareinput(ShareInputScan *plan, ApplyShareInputContext *ctxt)
-{
-	int share_id = get_plan_share_id((Plan *) plan);
-	Assert(share_id >= 0);
-
-	Plan* subplan = plan->scan.plan.lefttree;
-
-	if (subplan)
-	{
-		shareinput_save_producer(plan, ctxt);
-		return true;
-	}
-
-	return false;
-}
-
-/* 
- * DAG to Tree
- * Zap children if I am not the first sharer (not recursive down).  
- * Assign share_id to both ShareInputScan and Material/Sort.
- */
-static bool shareinput_mutator_dag_to_tree(Node *node, PlannerGlobal *glob, bool fPop)
+shareinput_mutator_dag_to_tree(Node *node, PlannerGlobal *glob, bool fPop)
 {
 	ApplyShareInputContext *ctxt = &glob->share;
-	Plan *plan = (Plan *) node;
+	Plan	   *plan = (Plan *) node;
 
-	if(fPop)
+	if (fPop)
 		return true;
 
-	if(IsA(plan, ShareInputScan))
+	if (IsA(plan, ShareInputScan))
 	{
-		if (PLANGEN_OPTIMIZER == glob->planGenerator)
+		ShareInputScan *siscan = (ShareInputScan *) plan;
+		Plan	   *subplan = plan->lefttree;
+		int			i;
+		int			attno;
+		ListCell   *lc;
+
+		/* Is there a producer for this sub-tree already? */
+		for (i = 0; i < ctxt->producer_count; i++)
 		{
-			return process_optimizer_shareinput((ShareInputScan *) plan, ctxt);
+			if (ctxt->producers[i] && ctxt->producers[i]->scan.plan.lefttree == subplan)
+			{
+				/*
+				 * Yes. This is a consumer. Remove the subtree, and assign
+				 * the same share_id as the producer.
+				 */
+				Assert(get_plan_share_id((Plan *)ctxt->producers[i]) == i);
+				set_plan_share_id((Plan *) plan, ctxt->producers[i]->share_id);
+				siscan->scan.plan.lefttree = NULL;
+				return false;
+			}
 		}
-		else
+
+		/*
+		 * Couldn't find a match in existing list of producers, so this
+		 * is a producer. Add this to the list of producers, and assign
+		 * a new share_id.
+		 */
+		Assert(get_plan_share_id(subplan) == SHARE_ID_NOT_ASSIGNED);
+		set_plan_share_id((Plan *) plan, ctxt->producer_count);
+		set_plan_share_id(subplan, ctxt->producer_count);
+
+		shareinput_save_producer(siscan, ctxt);
+
+		/*
+		 * Also make sure that all the entries in the subplan's target list
+		 * have human-readable column names. They are used for EXPLAIN.
+		 */
+		attno = 1;
+		foreach(lc, subplan->targetlist)
 		{
-			return process_planner_shareinput((ShareInputScan *) plan, ctxt);
+			TargetEntry *tle = (TargetEntry *) lfirst(lc);
+
+			if (tle->resname == NULL)
+			{
+				char		default_name[100];
+				char	   *resname;
+
+				snprintf(default_name, sizeof(default_name), "col_%d", attno);
+
+				resname = strVal(get_tle_name(tle, ctxt->curr_rtable, default_name));
+				tle->resname = pstrdup(resname);
+			}
+			attno++;
 		}
 	}
 
 	return true;
 }
 
-/* 
- * Apply the share input mutator.
- */
 Plan *
 apply_shareinput_dag_to_tree(PlannerGlobal *glob, Plan *plan, List *rtable)
 {
 	glob->share.curr_rtable = rtable;
 	shareinput_walker(shareinput_mutator_dag_to_tree, (Node *) plan, glob);
 	return plan;
+}
+
+/*
+ * Collect all the producer ShareInput nodes into an array, for later use by
+ * replace_shareinput_targetlists().
+ *
+ * This is a stripped-down version of apply_shareinput_dag_to_tree(), for use
+ * on ORCA-produced plans. ORCA assigns share_ids to all ShareInputScan nodes,
+ * and only producer nodes have a subtree, so we don't need to do the DAG to
+ * tree conversion or assign share_ids here.
+ */
+static bool
+collect_shareinput_producers_walker(Node *node, PlannerGlobal *glob, bool fPop)
+{
+	ApplyShareInputContext *ctxt = &glob->share;
+
+	if (fPop)
+		return true;
+
+	if (IsA(node, ShareInputScan))
+	{
+		ShareInputScan	   *siscan = (ShareInputScan *) node;
+		Plan	   *subplan = siscan->scan.plan.lefttree;
+
+		Assert(get_plan_share_id((Plan *) siscan) >= 0);
+
+		if (subplan)
+		{
+			shareinput_save_producer(siscan, ctxt);
+		}
+	}
+	return true;
+}
+
+void
+collect_shareinput_producers(PlannerGlobal *glob, Plan *plan, List *rtable)
+{
+	glob->share.curr_rtable = rtable;
+	shareinput_walker(collect_shareinput_producers_walker, (Node *) plan, glob);
 }
 
 /* Some helper: implements a stack using List. */
@@ -2125,7 +2199,7 @@ static int shareinput_peekmot(ApplyShareInputContext *ctxt)
  * Vars that point to the CTE instead of the child plan.
  */
 Plan *
-replace_shareinput_targetlists(PlannerGlobal *glob, Plan *plan)
+replace_shareinput_targetlists(PlannerGlobal *glob, Plan *plan, List *rtable)
 {
 	shareinput_walker(replace_shareinput_targetlists_walker, (Node *) plan, glob);
 	return plan;
@@ -2147,7 +2221,6 @@ replace_shareinput_targetlists_walker(Node *node, PlannerGlobal *glob, bool fPop
 		int			attno;
 		List	   *newtargetlist;
 		RangeTblEntry *rte;
-		char		buf[100];
 
 		/*
 		 * Note that even though the planner assigns sequential share_ids for each
@@ -2178,38 +2251,8 @@ replace_shareinput_targetlists_walker(Node *node, PlannerGlobal *glob, bool fPop
 		 * Create a new RTE. Note that we use a different RTE for each reference,
 		 * because we want to give each reference a different name.
 		 */
-		snprintf(buf, sizeof(buf), "share%d_ref%d",
-				 sisc->share_id,
-				 ctxt->share_refcounts[share_id]);
-
-		rte = makeNode(RangeTblEntry);
-		rte->rtekind = RTE_CTE;
-		rte->ctename = pstrdup(buf);
-		rte->ctelevelsup = 0;
-		rte->self_reference = false;
-		rte->alias = NULL;
-
-		List *colnames = NULL;
-		List *coltypes = NULL;
-		List *coltypmods = NULL;
-
-		Assert(NULL != ctxt->producers && ctxt->producer_count > share_id && NULL != ctxt->producers[share_id]);
-		ShareInputScan *producer = ctxt->producers[share_id];
-
-		colnames = producer->colnames;
-		coltypes = producer->coltypes;
-		coltypmods = producer->coltypmods;
-
-		rte->eref = makeAlias(rte->ctename, colnames);
-
-		rte->ctecoltypes = coltypes;
-		rte->ctecoltypmods = coltypmods;
-
-		rte->inh = false;
-		rte->inFromCl = false;
-
-		rte->requiredPerms = 0;
-		rte->checkAsUser = InvalidOid;
+		rte = create_shareinput_producer_rte(ctxt, share_id,
+											 ctxt->share_refcounts[share_id]);
 
 		glob->finalrtable = lappend(glob->finalrtable, rte);
 		sisc->scan.scanrelid = list_length(glob->finalrtable);

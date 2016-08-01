@@ -206,7 +206,6 @@ optimize_query(Query *parse, ParamListInfo boundParams)
 	glob->subplans = NIL;
 	glob->relationOids = NIL;
 	glob->invalItems = NIL;
-	glob->planGenerator = PLANGEN_OPTIMIZER;
 
 	/* create a local copy to hand to the optimizer */
 	pqueryCopy = (Query *) copyObject(parse);
@@ -255,9 +254,9 @@ optimize_query(Query *parse, ParamListInfo boundParams)
 	{
 		Plan	   *subplan = (Plan *) lfirst(lp);
 
-		lfirst(lp) = apply_shareinput_dag_to_tree(glob, subplan, result->rtable);
+		collect_shareinput_producers(glob, subplan, result->rtable);
 	}
-	result->planTree = apply_shareinput_dag_to_tree(glob, result->planTree, result->rtable);
+	collect_shareinput_producers(glob, result->planTree, result->rtable);
 
 	/* Post-process ShareInputScan nodes */
 	(void) apply_shareinput_xslice(result->planTree, glob);
@@ -269,9 +268,9 @@ optimize_query(Query *parse, ParamListInfo boundParams)
 	foreach(lp, glob->subplans)
 	{
 		Plan	   *subplan = (Plan *) lfirst(lp);
-		lfirst(lp) = replace_shareinput_targetlists(glob, subplan);
+		lfirst(lp) = replace_shareinput_targetlists(glob, subplan, result->rtable);
 	}
-	result->planTree = replace_shareinput_targetlists(glob, result->planTree);
+	result->planTree = replace_shareinput_targetlists(glob, result->planTree, result->rtable);
 
 	/*
 	 * To save on memory, and on the network bandwidth when the plan is
@@ -450,7 +449,6 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	glob->share.qdShares = NIL;
 	glob->share.qdSlices = NIL;
 	glob->share.nextPlanId = 0;
-	glob->planGenerator = PLANGEN_PLANNER;
 
 	/* Determine what fraction of the plan is likely to be scanned */
 	if (cursorOptions & CURSOR_OPT_FAST_PLAN)
@@ -565,9 +563,9 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	foreach(lp, glob->subplans)
 	{
 		Plan	   *subplan = (Plan *) lfirst(lp);
-		lfirst(lp) = replace_shareinput_targetlists(glob, subplan);
+		lfirst(lp) = replace_shareinput_targetlists(glob, subplan, glob->finalrtable);
 	}
-	top_plan = replace_shareinput_targetlists(glob, top_plan);
+	top_plan = replace_shareinput_targetlists(glob, top_plan, glob->finalrtable);
 
 	/*
 	 * To save on memory, and on the network bandwidth when the plan is dispatched

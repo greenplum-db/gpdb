@@ -851,9 +851,6 @@ _outShareInputScan(StringInfo str, ShareInputScan *node)
 	WRITE_ENUM_FIELD(share_type, ShareType);
 	WRITE_INT_FIELD(share_id);
 	WRITE_INT_FIELD(driver_slice);
-	WRITE_NODE_FIELD(colnames);
-	WRITE_NODE_FIELD(coltypes);
-	WRITE_NODE_FIELD(coltypmods);
 
 	_outPlanInfo(str, (Plan *) node);
 }
@@ -1951,6 +1948,30 @@ _outCdbMotionPath(StringInfo str, CdbMotionPath *node)
 
     WRITE_NODE_FIELD(subpath);
 }
+
+#ifndef COMPILING_BINARY_FUNCS
+static void
+_outPlannerGlobal(StringInfo str, PlannerGlobal *node)
+{
+	WRITE_NODE_TYPE("PLANNERGLOBAL");
+	
+	/* NB: this isn't a complete set of fields */
+	WRITE_NODE_FIELD(paramlist);
+	WRITE_NODE_FIELD(subplans);
+	WRITE_NODE_FIELD(subrtables);
+	WRITE_BITMAPSET_FIELD(rewindPlanIDs);
+	WRITE_NODE_FIELD(finalrtable);
+	WRITE_NODE_FIELD(relationOids);
+	WRITE_NODE_FIELD(invalItems);
+	WRITE_BOOL_FIELD(transientPlan);
+	WRITE_NODE_FIELD(share.sharedNodes);
+	WRITE_NODE_FIELD(share.sliceMarks);
+	WRITE_NODE_FIELD(share.motStack);
+	WRITE_NODE_FIELD(share.qdShares);
+	WRITE_NODE_FIELD(share.qdSlices);
+	WRITE_INT_FIELD(share.nextPlanId);
+}
+#endif /* COMPILING_BINARY_FUNCS */
 
 static void
 _outPlannerInfo(StringInfo str, PlannerInfo *node)
@@ -4676,6 +4697,9 @@ _outNode(StringInfo str, void *obj)
             case T_CdbMotionPath:
                 _outCdbMotionPath(str, obj);
                 break;
+			case T_PlannerGlobal:
+				_outPlannerGlobal(str, obj);
+				break;
 			case T_PlannerInfo:
 				_outPlannerInfo(str, obj);
 				break;

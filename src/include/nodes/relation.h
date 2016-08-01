@@ -110,7 +110,6 @@ typedef struct PlannerGlobal
 
 	ApplyShareInputContext share;	/* workspace for GPDB plan sharing */
 
-	PlanGenerator planGenerator;	/* Whether planner/optimizer generated the plan */
 } PlannerGlobal;
 
 /*
