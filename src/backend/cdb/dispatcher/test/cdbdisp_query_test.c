@@ -19,7 +19,7 @@ _init_cdbdisp_buildPlanQueryParms(QueryDesc *queryDesc)
 	queryDesc->plannedstmt->planTree = (struct Plan *)palloc0(sizeof(struct Plan));
 
 	expect_any(RootSliceIndex, estate);
-	will_return(RootSliceIndex, 1);
+	will_return(RootSliceIndex, 0);
 }
 
 bool
@@ -37,7 +37,7 @@ verify_built_query_parms(DispatchCommandQueryParms *pQueryParms)
 		pQueryParms->serializedParamslen == 0 &&
 		strcmp(pQueryParms->serializedQueryDispatchDesc, "serialized dispatch desc") == 0 &&
 		pQueryParms->serializedQueryDispatchDesclen == 1024 &&
-		pQueryParms->rootIdx == 1 &&
+		pQueryParms->rootIdx == 0 &&
 		strcmp(pQueryParms->seqServerHost, "127.0.0.1") == 0 &&
 		pQueryParms->seqServerHostlen == 10 &&
 		strcmp(pQueryParms->serializedDtxContextInfo, "serialized dtx context info") == 0 &&
