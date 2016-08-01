@@ -193,10 +193,9 @@ optimize_query(Query *parse, ParamListInfo boundParams)
 	glob->subrtables = NIL;
 	glob->rewindPlanIDs = NULL;
 	glob->transientPlan = false;
-	glob->share.sharedNodes = NIL;
 	glob->share.producers = NULL;
 	glob->share.producer_count = 0;
-	glob->share.sliceMarks = NIL;
+	glob->share.sliceMarks = NULL;
 	glob->share.motStack = NIL;
 	glob->share.qdShares = NIL;
 	glob->share.qdSlices = NIL;
@@ -441,10 +440,9 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	glob->invalItems = NIL;
 	glob->transientPlan = false;
 	/* ApplyShareInputContext initialization. */
-	glob->share.sharedNodes = NIL;
 	glob->share.producers = NULL;
 	glob->share.producer_count = 0;
-	glob->share.sliceMarks = NIL;
+	glob->share.sliceMarks = NULL;
 	glob->share.motStack = NIL;
 	glob->share.qdShares = NIL;
 	glob->share.qdSlices = NIL;
@@ -539,6 +537,14 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 		top_plan = cdbparallelize(root, top_plan, parse,
 									cursorOptions,
 									boundParams);
+		/*
+		 * cdbparallelize() mutates all the nodes, so the producer nodes
+		 * we memorized earlier are no longer valid. apply_shareinput_xslice()
+		 * will re-populate it, but clear it for now, just to make sure
+		 * that we don't access the obsolete copies of the nodes.
+		 */
+		if (glob->share.producer_count > 0)
+			memset(glob->share.producers, 0, glob->share.producer_count * sizeof(ShareInputScan *));
 
 		/* cdbparallelize may create additional slices that may affect share input.
 		 * need to mark material nodes that are split acrossed multi slices.

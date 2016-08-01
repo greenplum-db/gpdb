@@ -2033,10 +2033,6 @@ shareinput_save_producer(ShareInputScan *plan, ApplyShareInputContext *ctxt)
 
 	Assert(ctxt->producers[share_id] == NULL);
 	ctxt->producers[share_id] = plan;
-
-	/* Also add the producer's subplan in the sharedNodes as we need it for further transformation */
-	Assert(plan->scan.plan.lefttree != NULL);
-	ctxt->sharedNodes = lappend(ctxt->sharedNodes, plan->scan.plan.lefttree);
 }
 
 /*
@@ -2290,39 +2286,39 @@ typedef struct ShareNodeWithSliceMark
 	int slice_mark;
 } ShareNodeWithSliceMark;
 
-static bool shareinput_find_sharenode(ApplyShareInputContext *ctxt, int share_id, ShareNodeWithSliceMark *result)
+static bool
+shareinput_find_sharenode(ApplyShareInputContext *ctxt, int share_id, ShareNodeWithSliceMark *result)
 {
-	ListCell *lc;
-	ListCell *lc_slicemark;
-	
-	if(ctxt->sharedNodes == NULL)
+	ShareInputScan *siscan;
+	Plan	   *plan;
+
+	Assert(share_id < ctxt->producer_count);
+	if (share_id >= ctxt->producer_count)
 		return false;
 
-	forboth(lc, ctxt->sharedNodes, lc_slicemark, ctxt->sliceMarks)
-	{
-		Plan *plan = (Plan *) lfirst(lc);
+	siscan = ctxt->producers[share_id];
+	if (!siscan)
+		return false;
 
-		Assert(IsA(plan, Material) || IsA(plan, Sort));
-		if(get_plan_share_id(plan) == share_id)
-		{
-			if(result)
-			{
-				result->plan = plan;
-				result->slice_mark = lfirst_int(lc_slicemark);
-			}
-			return true;
-		}
+	plan = siscan->scan.plan.lefttree;
+
+	Assert(get_plan_share_id(plan) == share_id);
+	Assert(IsA(plan, Material) || IsA(plan, Sort));
+
+	if (result)
+	{
+		result->plan = plan;
+		result->slice_mark = ctxt->sliceMarks[share_id];
 	}
 
-	return false;
+	return true;
 }
 
 /* 
  * First walk on shareinput xslice.  It does the following:
  *
- * 1. Build the sharedNodes in context.
- * 2. Build the sliceMarks in context.
- * 3. Build a list a share on QD
+ * 1. Build the sliceMarks in context.
+ * 2. Build a list a share on QD
  */
 static bool
 shareinput_mutator_xslice_1(Node* node, PlannerGlobal *glob, bool fPop)
@@ -2359,12 +2355,17 @@ shareinput_mutator_xslice_1(Node* node, PlannerGlobal *glob, bool fPop)
 
 		if (shared)
 		{
-			Assert(shareinput_find_sharenode(ctxt, sisc->share_id, NULL) == false);
 			Assert(get_plan_share_id(plan) == get_plan_share_id(shared));
 			set_plan_driver_slice(shared, motId);
 
-			ctxt->sharedNodes = lappend(ctxt->sharedNodes, shared);
-			ctxt->sliceMarks = lappend_int(ctxt->sliceMarks, motId);
+			/*
+			 * We need to repopulate the producers array. cdbparallelize() was
+			 * run on the plan tree between shareinput_mutator_dag_to_tree() and
+			 * here, which copies all the nodes, and the destroys the producers
+			 * array in the process.
+			 */
+			ctxt->producers[sisc->share_id] = sisc;
+			ctxt->sliceMarks[sisc->share_id] = motId;
 		}
 	}
 
@@ -2538,12 +2539,12 @@ apply_shareinput_xslice(Plan *plan, PlannerGlobal *glob)
 	ApplyShareInputContext *ctxt = &glob->share;
 	ListCell *lp;
 
-	ctxt->sharedNodes = NULL;
-	ctxt->sliceMarks = NULL;
 	ctxt->motStack = NULL;
 	ctxt->qdShares = NULL;
 	ctxt->qdSlices = NULL;
 	ctxt->nextPlanId = 0;
+
+	ctxt->sliceMarks = palloc0(ctxt->producer_count * sizeof(int));
 
 	shareinput_pushmot(ctxt, 0);
 

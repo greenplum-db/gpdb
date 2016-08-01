@@ -1964,8 +1964,6 @@ _outPlannerGlobal(StringInfo str, PlannerGlobal *node)
 	WRITE_NODE_FIELD(relationOids);
 	WRITE_NODE_FIELD(invalItems);
 	WRITE_BOOL_FIELD(transientPlan);
-	WRITE_NODE_FIELD(share.sharedNodes);
-	WRITE_NODE_FIELD(share.sliceMarks);
 	WRITE_NODE_FIELD(share.motStack);
 	WRITE_NODE_FIELD(share.qdShares);
 	WRITE_NODE_FIELD(share.qdSlices);
