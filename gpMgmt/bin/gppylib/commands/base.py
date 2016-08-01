@@ -218,6 +218,9 @@ class Worker(Thread):
                 else:
                     try_count += 1
                     if self.shouldStop:
+                        # if we got a cmd from work queue, we should finish it before stop.
+                        if self.cmd is not None:
+                            self.pool.addFinishedWorkItem(self.cmd)
                         self.logger.debug("[%s] stopping" % self.name)
                         return
                       
