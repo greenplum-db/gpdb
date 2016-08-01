@@ -509,7 +509,6 @@ AppendOnlyDrop(Relation aorel,
 	int i, segno;
 	FileSegInfo* fsinfo;
 
-	Assert (Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
 	Assert (RelationIsAoRows(aorel));
 
 	relname = RelationGetRelationName(aorel);
