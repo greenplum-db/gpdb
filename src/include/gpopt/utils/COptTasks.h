@@ -209,7 +209,7 @@ class COptTasks
 
 		// translate a DXL tree into a planned statement
 		static
-		PlannedStmt *Pplstmt(IMemoryPool *pmp, CMDAccessor *pmda, const CDXLNode *pdxln, const Query *pquery);
+		PlannedStmt *Pplstmt(IMemoryPool *pmp, CMDAccessor *pmda, const CDXLNode *pdxln, bool canSetTag);
 
 		// load search strategy from given path
 		static
