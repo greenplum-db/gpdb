@@ -10010,6 +10010,27 @@ revoke all on can_set_tag_audit from unpriv;
 drop role unpriv;
 drop table can_set_tag_target;
 drop table can_set_tag_audit;
+-- start_ignore
+create language plpythonu;
+-- end_ignore
+-- Checking if ORCA uses parser's canSetTag for CREATE TABLE AS SELECT
+create or replace function canSetTag_Func(x int) returns int as $$
+    if (x is None):
+        return 0
+    else:
+        return x * 3
+$$ language plpythonu;
+create table canSetTag_input_data (domain integer, class integer, attr text, value integer)
+   distributed by (domain);
+insert into canSetTag_input_data values(1, 1, 'A', 1);
+insert into canSetTag_input_data values(2, 1, 'A', 0);
+insert into canSetTag_input_data values(3, 0, 'B', 1);
+create table canSetTag_bug_table as 
+SELECT attr, class, (select canSetTag_Func(count(distinct class)::int) from canSetTag_input_data)
+   as dclass FROM canSetTag_input_data GROUP BY attr, class distributed by (attr);
+drop function canSetTag_Func(x int);
+drop table canSetTag_bug_table;
+drop table canSetTag_input_data;
 -- clean up
 drop schema orca cascade;
 NOTICE:  drop cascades to table orca.index_test
