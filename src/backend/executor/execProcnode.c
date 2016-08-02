@@ -925,54 +925,6 @@ ExecProcNode(PlanState *node)
 	START_MEMORY_ACCOUNT(node->memoryAccount);
 	{
 
-#ifndef WIN32
-	static void *ExecJmpTbl[] = {
-		&&Exec_Jmp_Result,
-		&&Exec_Jmp_Append,
-		&&Exec_Jmp_Sequence,
-		&&Exec_Jmp_BitmapAnd,
-		&&Exec_Jmp_BitmapOr,
-		&&Exec_Jmp_TableScan,
-		&&Exec_Jmp_TableScan,
-		&&Exec_Jmp_TableScan,
-		&&Exec_Jmp_TableScan,
-		&&Exec_Jmp_DynamicTableScan,
-		&&Exec_Jmp_ExternalScan,
-		&&Exec_Jmp_IndexScan,
-		&&Exec_Jmp_DynamicIndexScan,
-		&&Exec_Jmp_BitmapIndexScan,
-		&&Exec_Jmp_BitmapHeapScan,
-		&&Exec_Jmp_BitmapAppendOnlyScan,
-		&&Exec_Jmp_BitmapTableScan,
-		&&Exec_Jmp_TidScan,
-		&&Exec_Jmp_SubqueryScan,
-		&&Exec_Jmp_FunctionScan,
-		&&Exec_Jmp_TableFunctionScan,
-		&&Exec_Jmp_ValuesScan,
-		&&Exec_Jmp_NestLoop,
-		&&Exec_Jmp_MergeJoin,
-		&&Exec_Jmp_HashJoin,
-		&&Exec_Jmp_Material,
-		&&Exec_Jmp_Sort,
-		&&Exec_Jmp_Agg,
-		&&Exec_Jmp_Unique,
-		&&Exec_Jmp_Hash,
-		&&Exec_Jmp_SetOp,
-		&&Exec_Jmp_Limit,
-		&&Exec_Jmp_Motion,
-		&&Exec_Jmp_ShareInputScan,
-		&&Exec_Jmp_Window,
-		&&Exec_Jmp_Repeat,
-		&&Exec_Jmp_DML,
-		&&Exec_Jmp_SplitUpdate,
-		&&Exec_Jmp_RowTrigger,
-		&&Exec_Jmp_AssertOp,
-		&&Exec_Jmp_PartitionSelector
-	};
-
-	COMPILE_ASSERT((T_Plan_End - T_Plan_Start) == (T_PlanState_End - T_PlanState_Start));
-	COMPILE_ASSERT(ARRAY_SIZE(ExecJmpTbl) == (T_PlanState_End - T_PlanState_Start));
-
 	CHECK_FOR_INTERRUPTS();
 
 	/*
@@ -1000,179 +952,6 @@ ExecProcNode(PlanState *node)
 	if(!node->fHadSentGpmon)
 		CheckSendPlanStateGpmonPkt(node);
 
-	Assert(nodeTag(node) >= T_PlanState_Start && nodeTag(node) < T_PlanState_End);
-	goto *ExecJmpTbl[nodeTag(node) - T_PlanState_Start];
-
-Exec_Jmp_Result:
-	result = ExecResult((ResultState *) node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_Append:
-	result = ExecAppend((AppendState *) node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_Sequence:
-	result = ExecSequence((SequenceState *) node);
-	goto Exec_Jmp_Done;
-
-	/* These two does not yield tuple */
-Exec_Jmp_BitmapAnd:
-Exec_Jmp_BitmapOr:
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_TableScan:
-	result = ExecTableScan((TableScanState *)node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_DynamicTableScan:
-	result = ExecDynamicTableScan((DynamicTableScanState *) node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_ExternalScan:
-	result = ExecExternalScan((ExternalScanState *) node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_IndexScan:
-	result = ExecIndexScan((IndexScanState *) node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_DynamicIndexScan:
-	result = ExecDynamicIndexScan((DynamicIndexScanState *) node);
-	goto Exec_Jmp_Done;
-	/* BitmapIndexScanState does not yield tuples */
-Exec_Jmp_BitmapIndexScan:
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_BitmapHeapScan:
-	result = ExecBitmapHeapScan((BitmapHeapScanState *) node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_BitmapAppendOnlyScan:
-	result = ExecBitmapAppendOnlyScan((BitmapAppendOnlyScanState *) node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_BitmapTableScan:
-	result = ExecBitmapTableScan((BitmapTableScanState *) node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_TidScan:
-	result = ExecTidScan((TidScanState *) node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_SubqueryScan:
-	result = ExecSubqueryScan((SubqueryScanState *) node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_FunctionScan:
-	result = ExecFunctionScan((FunctionScanState *) node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_TableFunctionScan:
-	result = ExecTableFunction((TableFunctionState *) node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_ValuesScan:
-	result = ExecValuesScan((ValuesScanState *) node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_NestLoop:
-	result = ExecNestLoop((NestLoopState *) node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_MergeJoin:
-	result = ExecMergeJoin((MergeJoinState *) node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_HashJoin:
-	result = ExecHashJoin((HashJoinState *) node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_Material:
-	result = ExecMaterial((MaterialState *) node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_Sort:
-	result = ExecSort((SortState *) node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_Agg:
-	result = ExecAgg((AggState *) node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_Unique:
-	result = ExecUnique((UniqueState *) node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_Hash:
-	result = ExecHash((HashState *) node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_SetOp:
-	result = ExecSetOp((SetOpState *) node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_Limit:
-	result = ExecLimit((LimitState *) node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_Motion:
-	result = ExecMotion((MotionState *) node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_ShareInputScan:
-	result = ExecShareInputScan((ShareInputScanState *) node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_Window:
-	result = ExecWindow((WindowState *) node);
-	goto Exec_Jmp_Done;
-Exec_Jmp_Repeat:
-	result = ExecRepeat((RepeatState *) node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_DML:
-	result = ExecDML((DMLState *) node);
-	goto Exec_Jmp_Done;
-	
-Exec_Jmp_SplitUpdate:
-	result = ExecSplitUpdate((SplitUpdateState *) node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_RowTrigger:
-	result = ExecRowTrigger((RowTriggerState *) node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_AssertOp:
-	result = ExecAssertOp((AssertOpState *) node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_PartitionSelector:
-	result = ExecPartitionSelector((PartitionSelectorState *) node);
-	goto Exec_Jmp_Done;
-
-Exec_Jmp_Done:
-	if (node->instrument)
-		InstrStopNode(node->instrument, TupIsNull(result) ? 0.0 : 1.0);
-
-	if(node->plan)
-		PG_TRACE5(execprocnode__exit, Gp_segment, currentSliceId, nodeTag(node), node->plan->plan_node_id, node->plan->plan_parent_node_id);
-#else
-
-	CHECK_FOR_INTERRUPTS();
-
-	if (QueryFinishPending && !IsA(node, MotionState))
-		return NULL;
-
-#ifdef CDB_TRACE_EXECUTOR
-	ExecCdbTraceNode(node, true, NULL);
-#endif   /* CDB_TRACE_EXECUTOR */
-
-	if (node->chgParam != NULL) /* something changed */
-		ExecReScan(node, NULL); /* let ReScan handle this */
-
-	if (node->instrument)
-		InstrStartNode(node->instrument);
-
 	switch (nodeTag(node))
 	{
 			/*
@@ -1186,6 +965,10 @@ Exec_Jmp_Done:
 			result = ExecAppend((AppendState *) node);
 			break;
 
+		case T_SequenceState:
+			result = ExecSequence((SequenceState *) node);
+			break;
+
 			/* BitmapAndState does not yield tuples */
 
 			/* BitmapOrState does not yield tuples */
@@ -1193,24 +976,38 @@ Exec_Jmp_Done:
 			/*
 			 * scan nodes
 			 */
-		case T_SeqScanState:
-		case T_AppendOnlyScanState:
-		case T_AOCSScanState:
-			insist_log(false, "SeqScan/AppendOnlyScan/AOCSScan are defunct");
+		case T_TableScanState:
+			result = ExecTableScan((TableScanState *)node);
+			break;
+
+		case T_DynamicTableScanState:
+			result = ExecDynamicTableScan((DynamicTableScanState *) node);
+			break;
+
+		case T_ExternalScanState:
+			result = ExecExternalScan((ExternalScanState *) node);
 			break;
 
 		case T_IndexScanState:
 			result = ExecIndexScan((IndexScanState *) node);
 			break;
 
-		case T_ExternalScanState:
-			result = ExecExternalScan((ExternalScanState *) node);
+		case T_DynamicIndexScanState:
+			result = ExecDynamicIndexScan((DynamicIndexScanState *) node);
 			break;
-			
+
 			/* BitmapIndexScanState does not yield tuples */
 
 		case T_BitmapHeapScanState:
 			result = ExecBitmapHeapScan((BitmapHeapScanState *) node);
+			break;
+
+		case T_BitmapAppendOnlyScanState:
+			result = ExecBitmapAppendOnlyScan((BitmapAppendOnlyScanState *) node);
+			break;
+
+		case T_BitmapTableScanState:
+			result = ExecBitmapTableScan((BitmapTableScanState *) node);
 			break;
 
 		case T_TidScanState:
@@ -1233,10 +1030,6 @@ Exec_Jmp_Done:
 			result = ExecValuesScan((ValuesScanState *) node);
 			break;
 
-		case T_BitmapAppendOnlyScanState:
-			result = ExecBitmapAppendOnlyScan((BitmapAppendOnlyScanState *) node);
-			break;
-			
 			/*
 			 * join nodes
 			 */
@@ -1253,13 +1046,6 @@ Exec_Jmp_Done:
 			break;
 
 			/*
-			 * shareinput nodes
-			 */
-		case T_ShareInputScanState:
-			result = ExecShareInputScan((ShareInputScanState *) node);
-			break;
-
-			/*
 			 * materialization nodes
 			 */
 		case T_MaterialState:
@@ -1270,16 +1056,8 @@ Exec_Jmp_Done:
 			result = ExecSort((SortState *) node);
 			break;
 
-		case T_GroupState:
-			result = ExecGroup((GroupState *) node);
-			break;
-
 		case T_AggState:
 			result = ExecAgg((AggState *) node);
-			break;
-
-		case T_WindowState:
-			result = ExecWindow((WindowState *) node);
 			break;
 
 		case T_UniqueState:
@@ -1302,6 +1080,38 @@ Exec_Jmp_Done:
 			result = ExecMotion((MotionState *) node);
 			break;
 
+		case T_ShareInputScanState:
+			result = ExecShareInputScan((ShareInputScanState *) node);
+			break;
+
+		case T_WindowState:
+			result = ExecWindow((WindowState *) node);
+			break;
+
+		case T_RepeatState:
+			result = ExecRepeat((RepeatState *) node);
+			break;
+
+		case T_DMLState:
+			result = ExecDML((DMLState *) node);
+			break;
+
+		case T_SplitUpdateState:
+			result = ExecSplitUpdate((SplitUpdateState *) node);
+			break;
+
+		case T_RowTriggerState:
+			result = ExecRowTrigger((RowTriggerState *) node);
+			break;
+
+		case T_AssertOpState:
+			result = ExecAssertOp((AssertOpState *) node);
+			break;
+
+		case T_PartitionSelectorState:
+			result = ExecPartitionSelector((PartitionSelectorState *) node);
+			break;
+
 		default:
 			elog(ERROR, "unrecognized node type: %d", (int) nodeTag(node));
 			result = NULL;
@@ -1310,7 +1120,10 @@ Exec_Jmp_Done:
 
 	if (node->instrument)
 		InstrStopNode(node->instrument, TupIsNull(result) ? 0.0 : 1.0);
-#endif 
+
+	if (node->plan)
+		PG_TRACE5(execprocnode__exit, Gp_segment, currentSliceId, nodeTag(node), node->plan->plan_node_id, node->plan->plan_parent_node_id);
+
 #ifdef CDB_TRACE_EXECUTOR
 	ExecCdbTraceNode(node, false, result);
 #endif   /* CDB_TRACE_EXECUTOR */
