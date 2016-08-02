@@ -21,25 +21,6 @@
 
 #include "catalog/genbki.h"
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_attrdef
-   with (camelcase=AttrDefault, relid=2604, toast_oid=2830, toast_index=2831)
-   (
-   adrelid  oid, 
-   adnum    smallint, 
-   adbin    text, 
-   adsrc    text
-   );
-
-   create unique index on pg_attrdef(adrelid, adnum) with (indexid=2656, CamelCase=AttrDefault);
-   create unique index on pg_attrdef(oid) with (indexid=2657, CamelCase=AttrDefaultOid);
-
-   alter table pg_attrdef add fk adrelid on pg_attribute(attrelid);
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
 /* ----------------
  *		pg_attrdef definition.	cpp turns this into
  *		typedef struct FormData_pg_attrdef
@@ -54,6 +35,9 @@ CATALOG(pg_attrdef,2604)
 	text		adbin;
 	text		adsrc;
 } FormData_pg_attrdef;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(adrelid REFERENCES pg_attribute(attrelid));
 
 /* ----------------
  *		Form_pg_attrdef corresponds to a pointer to a tuple with

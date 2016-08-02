@@ -1,13 +1,9 @@
-tidycat tools
-=============
+Modifying system catalogs
+=========================
 
 The system catalog is a complicated beast.  Adding or modifying
 catalog tables is difficult, since this task requires a set of
-co-ordinated changes across multiple files.  The difficulty is further
-compounded by Greenplum's additional requirements to support catalog
-upgrade and perform catalog integrity checks.  The tidycat tools were
-developed to simplify this process by automatically generating catalog
-code and validation scripts.
+co-ordinated changes across multiple files.
 
 In Postgres, the header files are sprinkled with special CATALOG and
 DATA macros that define the structure and contents of the system
@@ -20,18 +16,8 @@ to introduce subtle bugs when updating these structures manually.
 The Greenplum tidycat tools eliminate much of the difficulty
 associated with this process.  Instead of manually constructing these
 CATALOG and DATA statements, the developer writes SQL-like
-declarations like "CREATE TABLE..." or "CREATE FUNCTION..." that get
-converted to the required C code and macro statements.  A single,
-centralized specification for a table in a header file will generate a
-set of updates to the header file and other places like the catalog
-Makefile, indexing.h, toasting.h, toasting.c, catalog.c, bootparse.y,
-pg_type.h, and pg_tidycat.h, plus regression scripts to self-check the
-table definitions.  In addition, these tools build a structured JSON
-document of catalog tables and their dependencies that is used for
-upgrade, catalog validation, and visual graphs of the catalog
-structure for documentation.  The generated code is properly formatted
-and commented, and it is almost breathtaking in its harmonious beauty
-and elegant construction.
+declarations like "CREATE FUNCTION..." that get converted to the required
+macro statements.
 
 catullus - function definitions
 ===============================
@@ -51,18 +37,10 @@ CREATE FUNCTION int2eq(int2, int2) RETURNS bool LANGUAGE internal IMMUTABLE STRI
 When catullus.pl is run, it converts these SQL statements to DATA
 macros and updates the contents of pg_proc_gp.h.  In Greenplum, all functions
 inherited from PostgreSQL are in pg_proc.h, like in PostgreSQL, but additional
-lines are kept in pg_proc_gp.h, which is generated from pg_proc.sql. tidycat
-table definitions spread throughout the catalog header files.
+lines are kept in pg_proc_gp.h, which is generated from pg_proc.sql.
 
-pablopcatso - graphing table dependencies
-=========================================
-
-The pablopcatso.pl tool reads the JSON document and generates a
-Graphviz .dot file of the table relationships.  A variety of tools can
-process the .dot file to produce JPEG or PDF output for documentation.
-
-tidycat - table definitions
-===========================
+table definitions
+=================
 
 In Postgres, the definition of a catalog table is spread across
 multiple files.  The basic structure of the table is usually defined
@@ -70,58 +48,27 @@ in an eponymous header file.  Any indexes on that table are defined in
 indexing.h.  If the table uses "large" columns, it requires a separate
 toast table in toasting.c|h.  If the table is shared, then
 catalog.c:isSharedRelation() must list the table and its associated
-indexes, and toast table and toast indexes if they exist.  In order to
-support catalog upgrade, Greenplum has the further requirement that
-new catalog tables have a static type in pg_type.h, and a special
-modification of bootparse.y to handle the upgrade of the new table
-type.  Finally, any new catalog table header must be listed in the
+indexes, and toast table and toast indexes if they exist.  Finally, any
+new catalog table header must be listed in the
 Postgres .bki source file dependencies in the catalog Makefile.
 
-The tidycat.pl tool reads a single, central, SQL-like specification
-for a table and generates all of the required code across this set of
-files.
+In addition to the Postgres macros, you should declare any "foreign
+key" references in a table with a FOREIGN_KEY line. Those declarations
+are used by gpcheckcat, they are not used for anything by the server
+itself.
 
 For example, the Greenplum resource queue capability table is a shared
 table with a unique index and two subsidiary indexes.  It also has a
 foreign key relationship with pg_resqueue and pg_resourcetype.  The
-tidycat definition is:
+FOREIGN_KEY definition is:
 
-   CREATE TABLE pg_resqueuecapability
-   with (camelcase=ResQueueCapability, shared=true, relid=6060, reltype_oid=6446)
-   (
-   resqueueid oid,		-- OID of the queue with this capability 
-   restypid smallint,	-- resource type id (key to pg_resourcetype) 
-   ressetting text		-- resource setting (opaque type) 
-   );
+FOREIGN_KEY(resqueueid REFERENCES pg_resqueue(oid));
+FOREIGN_KEY(restypid REFERENCES pg_resourcetype(restypid));
 
-   create unique index on pg_resqueuecapability(oid) with (indexid=6064);
-   create index on pg_resqueuecapability(resqueueid) with (indexid=6065);
-   create index on pg_resqueuecapability(restypid) with (indexid=6066);
+If you modify any foreign key declarations, you must re-generate
+gpMgmt/bin/gppylib/data/<version>.json file. There is a script for that
+in src/backend/catalog:
 
-   alter table pg_resqueuecapability add fk resqueueid on pg_resqueue(oid);
-   alter table pg_resqueuecapability add fk restypid on pg_resourcetype(restypid);
-
-Note that the CREATE TABLE and CREATE INDEX statements are very
-similar to standard SQL, but they have special WITH clauses that
-define some of the special characteristics of catalog table and
-indexes, such as the static oids.  In addition, tidycat supports a
-special ALTER TABLE ... ADD FK statement that records any foreign
-dependencies for the table.  pablopcatso can graph these dependencies,
-and the Greenplum checkcat tool can use this information to perform
-catalog verification checks.
-
-tidycat.pl reads this definition and spits out heaps of modified
-catalog files like some crazy mofo with a chainsaw.  Because the
-modifications are widespread, the developer must manually copy the
-changed files from the /tmp directory to the appropriate locations in
-the source tree and do a "make distclean", a new make, install, and
-initdb.  When the build and install is complete, the basic
-installcheck regression contains a tidycat test that scans for tidycat
-table definitions in the catalog headers and ensures that the catalog
-has been rebuilt and updated correctly.
-
-About one-third of the catalog tables in Greenplum have been converted
-to actual tidycat definitions and generated code.  The remainder have
-placeholder "fake defs" that track index and dependency information,
-but do not generate catalog code.
-
+  cd src/backend/catalog
+  make 4.3.json
+  cp 4.3.json ../../../gpMgmt/bin/gppylib/data

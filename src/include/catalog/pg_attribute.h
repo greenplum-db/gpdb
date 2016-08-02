@@ -27,39 +27,6 @@
 
 #include "catalog/genbki.h"
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_attribute
-   with (camelcase=Attribute, relid=1249)
-   (
-   attrelid       oid, 
-   attname        name, 
-   atttypid       oid, 
-   attstattarget  integer, 
-   attlen         smallint, 
-   attnum         smallint, 
-   attndims       integer, 
-   attcacheoff    integer, 
-   atttypmod      integer, 
-   attbyval       boolean, 
-   attstorage     "char", 
-   attalign       "char", 
-   attnotnull     boolean, 
-   atthasdef      boolean, 
-   attisdropped   boolean, 
-   attislocal     boolean, 
-   attinhcount    integer
-   );
-
-   create unique index on pg_attribute(attrelid, attname) with (indexid=2658, CamelCase=AttributeRelidName, syscacheid=ATTNAME, syscache_nbuckets=2048);
-   create unique index on pg_attribute(attrelid, attnum) with (indexid=2659, CamelCase=AttributeRelidNum, syscacheid=ATTNUM, syscache_nbuckets=2048);
-
-   alter table pg_attribute add fk attrelid on pg_class(oid);
-   alter table pg_attribute add fk atttypid on pg_type(oid);
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
 /* ----------------
  *		pg_attribute definition.  cpp turns this into
  *		typedef struct FormData_pg_attribute
@@ -187,6 +154,10 @@ CATALOG(pg_attribute,1249) BKI_BOOTSTRAP BKI_WITHOUT_OIDS
 
 	/* Column-level access permissions */
 } FormData_pg_attribute;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(attrelid REFERENCES pg_class(oid));
+FOREIGN_KEY(atttypid REFERENCES pg_type(oid));
 
 /*
  * ATTRIBUTE_FIXED_PART_SIZE is the size of the fixed-layout,

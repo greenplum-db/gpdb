@@ -31,24 +31,6 @@
  * ----------------
  */
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_enum
-   with (relid=3501)
-   (
-   enumtypid       oid,
-   enumlabel       name
-   );
-
-   create index on pg_enum(oid) with (indexid=3502, CamelCase=EnumOidIndexId);
-   create unique index on pg_enum(enumtypid, enumlabel) with (indexid=3503, CamelCase=EnumTypIdLabel);
-
-   alter table pg_enum add fk enumtypid on pg_type(oid);
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
-
 /* ----------------
  *		pg_enum definition.  cpp turns this into
  *		typedef struct FormData_pg_enum
@@ -61,6 +43,9 @@ CATALOG(pg_enum,3501)
 	Oid			enumtypid;		/* OID of owning enum type */
 	NameData	enumlabel;		/* text representation of enum value */
 } FormData_pg_enum;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(enumtypid REFERENCES pg_type(oid));
 
 /* ----------------
  *		Form_pg_enum corresponds to a pointer to a tuple with

@@ -15,29 +15,6 @@
 
 #include "catalog/genbki.h"
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_autovacuum
-   with (oid=false, relid=1248)
-   (
-   vacrelid          oid, 
-   enabled           boolean, 
-   vac_base_thresh   integer, 
-   vac_scale_factor  real, 
-   anl_base_thresh   integer, 
-   anl_scale_factor  real, 
-   vac_cost_delay    integer, 
-   vac_cost_limit    integer, 
-   freeze_min_age    integer, 
-   freeze_max_age    integer
-   );
-
-   create unique index on pg_autovacuum(vacrelid) with (indexid=1250, CamelCase=AutovacuumRelid);
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
-
 /* ----------------
  *		pg_autovacuum definition.	cpp turns this into
  *		typedef struct FormData_pg_autovacuum
@@ -57,6 +34,9 @@ CATALOG(pg_autovacuum,1248) BKI_WITHOUT_OIDS
 	int4		freeze_min_age; /* vacuum min freeze age */
 	int4		freeze_max_age; /* max age before forcing vacuum */
 } FormData_pg_autovacuum;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+/* FIXME: Missing! */
 
 /* ----------------
  *		Form_pg_autovacuum corresponds to a pointer to a tuple with

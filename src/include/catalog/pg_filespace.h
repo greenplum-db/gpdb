@@ -29,23 +29,6 @@
  * ----------------
  */
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_filespace
-   with (camelcase=FileSpace, shared=true, relid=5009)
-   (
-   fsname name, -- filespace name
-   fsowner oid -- owner of filespace
-   );
-
-   create unique index on pg_filespace(oid) with (indexid=2858, CamelCase=FilespaceOid);
-   create unique index on pg_filespace(fsname) with (indexid=2859, CamelCase=FilespaceName);
-
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
-
 /* ----------------
  *		pg_filespace definition.  cpp turns this into
  *		typedef struct FormData_pg_filespace
@@ -58,6 +41,9 @@ CATALOG(pg_filespace,5009) BKI_SHARED_RELATION
 	NameData	fsname;		/* filespace name */
 	Oid			fsowner;	/* owner of filespace */
 } FormData_pg_filespace;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+/* none */
 
 /* ----------------
  *		Form_pg_filespace corresponds to a pointer to a tuple with

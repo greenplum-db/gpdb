@@ -28,45 +28,6 @@
  */
 typedef struct varlena anyarray;
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_statistic
-   with (camelcase=Statistic, oid=false, relid=2619, toast_oid=2840, toast_index=2841, content=SEGMENT_LOCAL)
-   (
-   starelid     oid, 
-   staattnum    smallint, 
-   stanullfrac  real, 
-   stawidth     integer, 
-   stadistinct  real, 
-   stakind1     smallint, 
-   stakind2     smallint, 
-   stakind3     smallint, 
-   stakind4     smallint, 
-   staop1       oid, 
-   staop2       oid, 
-   staop3       oid, 
-   staop4       oid, 
-   stanumbers1  real[], 
-   stanumbers2  real[], 
-   stanumbers3  real[], 
-   stanumbers4  real[], 
-   stavalues1   text, 
-   stavalues2   text, 
-   stavalues3   text, 
-   stavalues4   text
-   );
-
-   create unique index on pg_statistic(starelid, staattnum) with (indexid=2696, CamelCase=StatisticRelidAttnum, syscacheid=STATRELATT, syscache_nbuckets=1024);
-
-   alter table pg_statistic add fk starelid on pg_attribute(attrelid);
-   alter table pg_statistic add fk staop1 on pg_operator(oid);
-   alter table pg_statistic add fk staop2 on pg_operator(oid);
-   alter table pg_statistic add fk staop3 on pg_operator(oid);
-   alter table pg_statistic add fk staop4 on pg_operator(oid);
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
 /* ----------------
  *		pg_statistic definition.  cpp turns this into
  *		typedef struct FormData_pg_statistic
@@ -163,6 +124,13 @@ CATALOG(pg_statistic,2619) BKI_WITHOUT_OIDS
 } FormData_pg_statistic;
 
 #define STATISTIC_NUM_SLOTS  4
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(starelid REFERENCES pg_attribute(attrelid));
+FOREIGN_KEY(staop1 REFERENCES pg_operator(oid));
+FOREIGN_KEY(staop2 REFERENCES pg_operator(oid));
+FOREIGN_KEY(staop3 REFERENCES pg_operator(oid));
+FOREIGN_KEY(staop4 REFERENCES pg_operator(oid));
 
 /* ----------------
  *		Form_pg_statistic corresponds to a pointer to a tuple with
@@ -270,29 +238,6 @@ typedef FormData_pg_statistic *Form_pg_statistic;
  */
 #define STATISTIC_KIND_CORRELATION	3
 
-
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_stat_last_operation
-   with (camelcase=StatLastOp, oid=false, relid=6052, content=MASTER_ONLY)
-   (
-   classid        oid, 
-   objid          oid, 
-   staactionname  name, 
-   stasysid       oid, 
-   stausename     name, 
-   stasubtype     text, 
-   statime        timestamp with time zone
-   );
-
-   create index on pg_stat_last_operation(classid, objid) with (indexid=6053, CamelCase=StatLastOpClassidObjid);
-   create unique index on pg_stat_last_operation(classid, objid, staactionname) with (indexid=6054, CamelCase=StatLastOpClassidObjidStaactionname);
-
-   alter table pg_stat_last_operation add fk classid on pg_class(oid);
-   alter table pg_stat_last_operation add fk stasysid on pg_authid(oid);
-
-   TIDYCAT_ENDFAKEDEF
-*/
 /* quoting pg_authid and gp_configuration: */
 
 /*
@@ -325,6 +270,11 @@ CATALOG(pg_stat_last_operation,6052) BKI_WITHOUT_OIDS
 	timestamptz	statime;
 } FormData_pg_statlastop;
 
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(classid REFERENCES pg_class(oid));
+FOREIGN_KEY(stasysid REFERENCES pg_authid(oid));
+
 #undef timestamptz
 
 /* ----------------
@@ -349,28 +299,6 @@ typedef FormData_pg_statlastop *Form_pg_statlastop;
 
 /* here is the "shared" version */
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_stat_last_shoperation
-   with (camelcase=StatLastShOp, shared=true, oid=false, relid=6056, content=MASTER_ONLY)
-   (
-   classid        oid, 
-   objid          oid, 
-   staactionname  name, 
-   stasysid       oid, 
-   stausename     name, 
-   stasubtype     text, 
-   statime        timestamp with time zone
-   );
-
-   create index on pg_stat_last_shoperation(classid, objid) with (indexid=6057, CamelCase=StatLastShOpClassidObjid);
-   create unique index on pg_stat_last_shoperation(classid, objid, staactionname) with (indexid=6058, CamelCase=StatLastShOpClassidObjidStaactionname);
-
-   alter table pg_stat_last_shoperation add fk classid on pg_class(oid);
-   alter table pg_stat_last_shoperation add fk stasysid on pg_authid(oid);
-
-   TIDYCAT_ENDFAKEDEF
-*/
 #define timestamptz Datum
 
 #define StatLastShOpRelationName		"pg_stat_last_shoperation"
@@ -390,6 +318,10 @@ CATALOG(pg_stat_last_shoperation,6056)  BKI_SHARED_RELATION BKI_WITHOUT_OIDS
 	text		stasubtype;		/* action subtype */
 	timestamptz	statime;
 } FormData_pg_statlastshop;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(classid REFERENCES pg_class(oid));
+FOREIGN_KEY(stasysid REFERENCES pg_authid(oid));
 
 #undef timestamptz
 

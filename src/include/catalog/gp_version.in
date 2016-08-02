@@ -7,19 +7,6 @@
  */
 #define GpVersionRelationName		"gp_version_at_initdb"
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE gp_version_at_initdb
-   with (shared=true, oid=false, relid=5003)
-   (
-    schemaversion   smallint ,
-	productversion  text      
-   );
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
-
 #define GpVersionRelationId 5003
 
 CATALOG(gp_version_at_initdb,5003) BKI_SHARED_RELATION BKI_WITHOUT_OIDS
@@ -27,6 +14,8 @@ CATALOG(gp_version_at_initdb,5003) BKI_SHARED_RELATION BKI_WITHOUT_OIDS
 	int2		schemaversion;
 	text		productversion;
 } FormData_gp_version;
+
+/* no foreign key */
 
 #define Natts_gp_version				2
 #define Anum_gp_version_schemaversion		1

@@ -42,33 +42,6 @@
 
 #include "catalog/genbki.h"
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_amop
-   with (camelcase=AccessMethodOperator, oid=false, relid=2602)
-   (
-   amopfamily    oid, 
-   amoplefttype  oid, 
-   amoprighttype oid, 
-   amopstrategy  smallint, 
-   amopreqcheck  boolean, 
-   amopopr       oid,
-   amopmethod    oid
-   );
-
-   create unique index on pg_amop(amopfamily, amoplefttype, amoprighttype, amopstrategy) with (indexid=2653, CamelCase=AccessMethodStrategy, syscacheid=AMOPSTRATEGY, syscache_nbuckets=64);
-   create unique index on pg_amop(amopopr, amopfamily) with (indexid=2654, CamelCase=AccessMethodOperator, syscacheid=AMOPOPID, syscache_nbuckets=64);
-
-   alter table pg_amop add fk amopfamily on pg_opfamily(oid);
-   alter table pg_amop add fk amoplefttype on pg_type(oid);
-   alter table pg_amop add fk amoprighttype on pg_type(oid);
-   alter table pg_amop add fk amopopr on pg_operator(oid);
-   alter table pg_amop add fk amopmethod on pg_am(oid);
-
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
 /* ----------------
  *		pg_amop definition.  cpp turns this into
  *		typedef struct FormData_pg_amop
@@ -86,6 +59,13 @@ CATALOG(pg_amop,2602)
 	Oid			amopopr;		/* the operator's pg_operator OID */
 	Oid			amopmethod;		/* the index access method this entry is for */
 } FormData_pg_amop;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(amopfamily REFERENCES pg_opfamily(oid));
+FOREIGN_KEY(amoplefttype REFERENCES pg_type(oid));
+FOREIGN_KEY(amoprighttype REFERENCES pg_type(oid));
+FOREIGN_KEY(amopopr REFERENCES pg_operator(oid));
+FOREIGN_KEY(amopmethod REFERENCES pg_am(oid));
 
 /* ----------------
  *		Form_pg_amop corresponds to a pointer to a tuple with

@@ -28,27 +28,6 @@
  * ----------------
  */
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_ts_template
-   with (relid=3600)
-   (
-   tmplname        name,
-   tmplnamespace   oid,
-   tmplinit        regproc,
-   tmpllexize      regproc
-   );
-
-   create unique index on pg_ts_template(tmplname, tmplnamespace) with (indexid=3766, CamelCase=TSTemplateNameNsp);
-   create unique index on pg_ts_template(oid) with (indexid=3767, CamelCase=TSTemplateOid);
-
-   alter table pg_ts_template add fk tmplnamespace on pg_namespace(oid);
-   alter table pg_ts_template add fk tmplinit on pg_proc(oid);
-   alter table pg_ts_template add fk tmpllexize on pg_proc(oid);
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
 /* ----------------
  *		pg_ts_template definition.	cpp turns this into
  *		typedef struct FormData_pg_ts_template
@@ -63,6 +42,11 @@ CATALOG(pg_ts_template,3764)
 	regproc		tmplinit;		/* initialization method of dict (may be 0) */
 	regproc		tmpllexize;		/* base method of dictionary */
 } FormData_pg_ts_template;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(tmplnamespace REFERENCES pg_namespace(oid));
+FOREIGN_KEY(tmplinit REFERENCES pg_proc(oid));
+FOREIGN_KEY(tmpllexize REFERENCES pg_proc(oid));
 
 typedef FormData_pg_ts_template *Form_pg_ts_template;
 

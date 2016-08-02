@@ -23,44 +23,6 @@
 #include "nodes/pg_list.h"
 #include "access/attnum.h"
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_constraint
-   with (relid=2606, toast_oid=2832, toast_index=2833)
-   (
-   conname        name, 
-   connamespace   oid, 
-   contype        "char", 
-   condeferrable  boolean, 
-   condeferred    boolean, 
-   conrelid       oid, 
-   contypid       oid, 
-   confrelid      oid, 
-   confupdtype    "char", 
-   confdeltype    "char", 
-   confmatchtype  "char", 
-   conkey         smallint[], 
-   confkey        smallint[], 
-   conpfeqop      oid[],
-   conppeqop      oid[],
-   conffeqop      oid[],
-   conbin         text, 
-   consrc         text
-   );
-
-   create unique index on pg_constraint(oid) with (indexid=2667, CamelCase=ConstraintOid);
-   create index on pg_constraint(conname, connamespace) with (indexid=2664, CamelCase=ConstraintNameNsp);
-   create index on pg_constraint(conrelid) with (indexid=2665, CamelCase=ConstraintRelid);
-   create index on pg_constraint(contypid) with (indexid=2666, CamelCase=ConstraintTypid);
-
-   alter table pg_constraint add fk connamespace on pg_namespace(oid);
-   alter table pg_constraint add fk conrelid on pg_class(oid);
-   alter table pg_constraint add fk contypid on pg_type(oid);
-   alter table pg_constraint add fk confrelid on pg_class(oid);
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
 /* ----------------
  *		pg_constraint definition.  cpp turns this into
  *		typedef struct FormData_pg_constraint
@@ -152,6 +114,12 @@ CATALOG(pg_constraint,2606)
 	 */
 	text		consrc;
 } FormData_pg_constraint;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(connamespace REFERENCES pg_namespace(oid));
+FOREIGN_KEY(conrelid REFERENCES pg_class(oid));
+FOREIGN_KEY(contypid REFERENCES pg_type(oid));
+FOREIGN_KEY(confrelid REFERENCES pg_class(oid));
 
 /* ----------------
  *		Form_pg_constraint corresponds to a pointer to a tuple with

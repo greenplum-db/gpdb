@@ -25,45 +25,12 @@
 #include "catalog/genbki.h"
 #include "nodes/pg_list.h"
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_operator
-   with (camelcase=Operator, shared=false, relid=2617)
-   (
-   oprname       name    ,
-   oprnamespace  oid     ,
-   oprowner      oid     ,
-   oprkind       "char"  ,
-   oprcanmerge   boolean ,
-   oprcanhash    boolean ,
-   oprleft       oid     ,
-   oprright      oid     ,
-   oprresult     oid     ,
-   oprcom        oid     ,
-   oprnegate     oid     ,
-   oprcode       regproc ,
-   oprrest       regproc ,
-   oprjoin       regproc 
-   );
-
-   create unique index on pg_operator(oid) with (indexid=2688, CamelCase=OperatorOid, syscacheid=OPEROID, syscache_nbuckets=1024);
-
-   create unique index on pg_operator(oprname, oprleft, oprright, oprnamespace) with (indexid=2689, CamelCase=OperatorNameNsp, syscacheid=OPERNAMENSP, syscache_nbuckets=1024);
-
-   alter table pg_operator add fk oprnamespace on pg_namespace(oid);
-   alter table pg_operator add fk oprowner on pg_authid(oid);
-   alter table pg_operator add fk oprleft on pg_type(oid);
-   alter table pg_operator add fk oprright on pg_type(oid);
-   alter table pg_operator add fk oprresult on pg_type(oid);
-   alter table pg_operator add fk oprcom on pg_operator(oid);
-   alter table pg_operator add fk oprnegate on pg_operator(oid);
-   alter table pg_operator add fk oprcode on pg_proc(oid);
-   alter table pg_operator add fk oprrest on pg_proc(oid);
-   alter table pg_operator add fk oprjoin on pg_proc(oid);
-
-
-   TIDYCAT_ENDFAKEDEF
-*/
+/* ----------------
+ *		postgres.h contains the system type definitions and the
+ *		CATALOG(), BKI_BOOTSTRAP and DATA() sugar words so this file
+ *		can be read by both genbki.sh and the C compiler.
+ * ----------------
+ */
 
 /* ----------------
  *		pg_operator definition.  cpp turns this into
@@ -89,6 +56,18 @@ CATALOG(pg_operator,2617)
 	regproc		oprrest;		/* OID of restriction estimator, or 0 */
 	regproc		oprjoin;		/* OID of join estimator, or 0 */
 } FormData_pg_operator;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(oprnamespace REFERENCES pg_namespace(oid));
+FOREIGN_KEY(oprowner REFERENCES pg_authid(oid));
+FOREIGN_KEY(oprleft REFERENCES pg_type(oid));
+FOREIGN_KEY(oprright REFERENCES pg_type(oid));
+FOREIGN_KEY(oprresult REFERENCES pg_type(oid));
+FOREIGN_KEY(oprcom REFERENCES pg_operator(oid));
+FOREIGN_KEY(oprnegate REFERENCES pg_operator(oid));
+FOREIGN_KEY(oprcode REFERENCES pg_proc(oid));
+FOREIGN_KEY(oprrest REFERENCES pg_proc(oid));
+FOREIGN_KEY(oprjoin REFERENCES pg_proc(oid));
 
 /* ----------------
  *		Form_pg_operator corresponds to a pointer to a tuple with

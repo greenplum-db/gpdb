@@ -38,24 +38,6 @@
 
 #include "catalog/genbki.h"
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_description
-   with (oid=false, relid=2609, toast_oid=2834, toast_index=2835, content=MASTER_ONLY)
-   (
-   objoid       oid, 
-   classoid     oid, 
-   objsubid     integer, 
-   description  text
-   );
-
-   create unique index on pg_description(objoid, classoid, objsubid) with (indexid=2675, CamelCase=DescriptionObj);
-
-   alter table pg_description add fk classoid on pg_class(oid);
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
 /* ----------------
  *		pg_description definition.	cpp turns this into
  *		typedef struct FormData_pg_description
@@ -70,6 +52,9 @@ CATALOG(pg_description,2609) BKI_WITHOUT_OIDS
 	int4		objsubid;		/* column number, or 0 if not used */
 	text		description;	/* description of object */
 } FormData_pg_description;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(classoid REFERENCES pg_class(oid));
 
 /* ----------------
  *		Form_pg_description corresponds to a pointer to a tuple with

@@ -28,27 +28,6 @@
  * ----------------
  */
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_ts_config
-   with (relid=3602)
-   (
-   cfgname         name,
-   cfgnamespace    oid,
-   cfgowner        oid,
-   cfgparser       oid
-   );
-
-   create unique index on pg_ts_config(cfgname, cfgnamespace) with (indexid=3608, CamelCase=TSConfigNameNsp);
-   create unique index on pg_ts_config(oid) with (indexid=3712, CamelCase=TSConfigOid);
-
-   alter table pg_ts_config add fk cfgnamespace on pg_namespace(oid);
-   alter table pg_ts_config add fk cfgowner on pg_authid(oid);
-   alter table pg_ts_config add fk cfgparser on pg_ts_parser(oid);
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
 /* ----------------
  *		pg_ts_config definition.  cpp turns this into
  *		typedef struct FormData_pg_ts_config
@@ -63,6 +42,11 @@ CATALOG(pg_ts_config,3602)
 	Oid			cfgowner;		/* owner */
 	Oid			cfgparser;		/* OID of parser (in pg_ts_parser) */
 } FormData_pg_ts_config;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(cfgnamespace REFERENCES pg_namespace(oid));
+FOREIGN_KEY(cfgowner REFERENCES pg_authid(oid));
+FOREIGN_KEY(cfgparser REFERENCES pg_ts_parser(oid));
 
 typedef FormData_pg_ts_config *Form_pg_ts_config;
 

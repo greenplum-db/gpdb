@@ -21,24 +21,6 @@
 
 #include "catalog/genbki.h"
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_inherits
-   with (oid=false, relid=2611)
-   (
-   inhrelid   oid     ,
-   inhparent  oid     ,
-   inhseqno   integer 
-   );
-
-   create unique index on pg_inherits(inhrelid, inhseqno) with (indexid=2680, CamelCase=InheritsRelidSeqno, syscache_nbuckets=256);
-
-   alter table pg_inherits add fk inhrelid on pg_class(oid);
-   alter table pg_inherits add fk inhparent on pg_class(oid);
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
 /* ----------------
  *		pg_inherits definition.  cpp turns this into
  *		typedef struct FormData_pg_inherits
@@ -52,6 +34,10 @@ CATALOG(pg_inherits,2611) BKI_WITHOUT_OIDS
 	Oid			inhparent;
 	int4		inhseqno;
 } FormData_pg_inherits;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(inhrelid REFERENCES pg_class(oid));
+FOREIGN_KEY(inhparent REFERENCES pg_class(oid));
 
 /* ----------------
  *		Form_pg_inherits corresponds to a pointer to a tuple with

@@ -29,56 +29,6 @@
  * ----------------
  */
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_class
-   with (camelcase=Relation, bootstrap=true, relid=1259)
-   (
-   relname         name      ,
-   relnamespace    oid       ,
-   reltype         oid       ,
-   relowner        oid       ,
-   relam           oid       ,
-   relfilenode     oid       ,
-   reltablespace   oid       ,
-   relpages        integer   ,
-   reltuples       real      ,
-   reltoastrelid   oid       ,
-   reltoastidxid   oid       ,
-   relhasindex     boolean   ,
-   relisshared     boolean   ,
-   relkind         "char"    ,
-   relstorage      "char"    ,
-   relnatts        smallint  ,
-   relchecks       smallint  ,
-   reltriggers     smallint  ,
-   relukeys        smallint  ,
-   relfkeys        smallint  ,
-   relrefs         smallint  ,
-   relhasoids      boolean   ,
-   relhaspkey      boolean   ,
-   relhasrules     boolean   ,
-   relhassubclass  boolean   ,
-   relfrozenxid    xid       ,
-   relacl          aclitem[] ,
-   reloptions      text[]    
-   );
-
-   create unique index on pg_class(oid) with (indexid=2662, CamelCase=ClassOid, syscacheid=RELOID, syscache_nbuckets=1024);
-
-   create unique index on pg_class(relname, relnamespace) with (indexid=2663, CamelCase=ClassNameNsp, syscacheid=RELNAMENSP, syscache_nbuckets=1024);
-
-   alter table pg_class add fk relnamespace on pg_namespace(oid);
-   alter table pg_class add fk reltype on pg_type(oid);
-   alter table pg_class add fk relowner on pg_authid(oid);
-   alter table pg_class add fk relam on pg_am(oid);
-   alter table pg_class add fk reltablespace on pg_tablespace(oid);
-   alter table pg_class add fk reltoastrelid on pg_class(oid);
-   alter table pg_class add fk reltoastidxid on pg_class(oid);
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
 /* ----------------
  *		pg_class definition.  cpp turns this into
  *		typedef struct FormData_pg_class
@@ -130,6 +80,15 @@ CATALOG(pg_class,1259) BKI_BOOTSTRAP
 	aclitem		relacl[1];		/* access permissions */
 	text		reloptions[1];	/* access-method-specific options */
 } FormData_pg_class;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(relnamespace REFERENCES pg_namespace(oid));
+FOREIGN_KEY(reltype REFERENCES pg_type(oid));
+FOREIGN_KEY(relowner REFERENCES pg_authid(oid));
+FOREIGN_KEY(relam REFERENCES pg_am(oid));
+FOREIGN_KEY(reltablespace REFERENCES pg_tablespace(oid));
+FOREIGN_KEY(reltoastrelid REFERENCES pg_class(oid));
+FOREIGN_KEY(reltoastidxid REFERENCES pg_class(oid));
 
 /* Size of fixed part of pg_class tuples, not counting var-length fields */
 #define CLASS_TUPLE_SIZE \

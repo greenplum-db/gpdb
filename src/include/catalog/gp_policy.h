@@ -20,22 +20,6 @@
  */
 #define GpPolicyRelationName		"gp_distribution_policy"
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE gp_distribution_policy
-   with (camelcase=GpPolicy, oid=false, relid=5002, content=MASTER_ONLY)
-   (
-   localoid  oid,
-   attrnums  smallint[]
-   );
-
-   create unique index on gp_distribution_policy(localoid) with (indexid=6103, CamelCase=GpPolicyLocalOid);
-
-   alter table gp_distribution_policy add fk localoid on pg_class(oid);
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
 #define GpPolicyRelationId  5002
 
 CATALOG(gp_distribution_policy,5002) BKI_WITHOUT_OIDS
@@ -43,6 +27,9 @@ CATALOG(gp_distribution_policy,5002) BKI_WITHOUT_OIDS
 	Oid			localoid;
 	int2		attrnums[1];
 } FormData_gp_policy;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(localoid REFERENCES pg_class(oid));
 
 #define Natts_gp_policy			2
 #define Anum_gp_policy_localoid	1
