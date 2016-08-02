@@ -1416,22 +1416,6 @@ PortalRunUtility(Portal portal, Node *utilityStmt, bool isTopLevel,
 		ActiveSnapshot = CopySnapshot(GetTransactionSnapshot());
 	else
 		ActiveSnapshot = NULL;
-	gpmon_packet_t *gpmon_pkt = NULL;
-	if(gp_enable_gpperfmon && Gp_role == GP_ROLE_DISPATCH)
-	{
-		gpmon_pkt = (gpmon_packet_t *) palloc0(sizeof(gpmon_packet_t));
-		gpmon_qlog_packet_init(gpmon_pkt);
-		/* set gpmon_pkt->u.qlog.key.ccnt to 0 in utility mode becasue the gp_command_count is changing */
-		gpmon_pkt->u.qlog.key.ccnt = 0;
-		gpmon_qlog_query_submit(gpmon_pkt);
-		gpmon_qlog_query_text(gpmon_pkt,
-				portal->sourceText ? portal->sourceText: "(Source text for portal is not available)",
-				application_name,
-				GetResqueueName(portal->queueId),
-				GetResqueuePriority(portal->queueId));
-				gpmon_qlog_query_start(gpmon_pkt);
-	}
-
 
 	/* check if this utility statement need to be involved into resoure queue
 	 * mgmt */
@@ -1450,12 +1434,6 @@ PortalRunUtility(Portal portal, Node *utilityStmt, bool isTopLevel,
 	if (ActiveSnapshot)
 		FreeSnapshot(ActiveSnapshot);
 	ActiveSnapshot = NULL;
-
-	if(gp_enable_gpperfmon && Gp_role == GP_ROLE_DISPATCH)
-	{
-		gpmon_qlog_query_end(gpmon_pkt);
-		pfree(gpmon_pkt);
-	}
 }
 
 /*
