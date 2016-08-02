@@ -3363,7 +3363,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 #else
 		false,
 #endif
-		NULL, NULL
+		assign_codegen, NULL
 	},
 
 	{
@@ -3383,12 +3383,12 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&codegen_validate_functions,
-#ifdef USE_ASSERT_CHECKING
-		true, NULL, NULL	/* true by default on debug builds. */
+#if defined(USE_ASSERT_CHECKING) && defined(USE_CODEGEN)
+		true, 	/* true by default on debug builds. */
 #else
-		false, NULL, NULL
+		false,
 #endif
-
+		assign_codegen, NULL
 	},
 	/* End-of-list marker */
 	{
