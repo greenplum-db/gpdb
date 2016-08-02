@@ -35,7 +35,6 @@ TEST_F(GPWriterTest, ConstructKeyName) {
     EXPECT_CALL(mockRestfulService, head(_, _, _)).WillOnce(Return(404));
 
     WriterParams params;
-    params.setUrlToUpload(url);
     gpwriter.open(params);
 
     // "0"+".data"'s length is 6
@@ -50,7 +49,7 @@ TEST_F(GPWriterTest, GenerateUniqueKeyName) {
     EXPECT_CALL(mockRestfulService, head(_, _, _)).Times(AtLeast(1)).WillRepeatedly(Return(404));
 
     WriterParams params;
-    params.setUrlToUpload(url);
+    params.setKeyUrl(url);
     gpwriter.open(params);
 
     MockGPWriter gpwriter2(url, &mockRestfulService);
@@ -71,7 +70,7 @@ TEST_F(GPWriterTest, ReGenerateKeyName) {
     EXPECT_CALL(mockRestfulService, head(_, _, _)).WillOnce(Return(200)).WillOnce(Return(404));
 
     WriterParams params;
-    params.setUrlToUpload(url);
+    params.setKeyUrl(url);
     gpwriter.open(params);
 
     // expect the restfulService->head() was called twice

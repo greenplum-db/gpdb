@@ -165,12 +165,8 @@ GPReader* reader_init(const char* url_with_options) {
 // invoked by s3_import(), need to be exception safe
 bool reader_transfer_data(GPReader* reader, char* data_buf, int& data_len) {
     try {
-        if (!reader || !data_buf || (data_len < 0)) {
+        if (!reader || !data_buf || (data_len <= 0)) {
             return false;
-        }
-
-        if (data_len == 0) {
-            return true;
         }
 
         uint64_t read_len = reader->read(data_buf, data_len);

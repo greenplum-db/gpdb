@@ -24,7 +24,7 @@ GPWriter::GPWriter(const string& url) {
 }
 
 void GPWriter::constructWriterParams(const string& url) {
-    this->params.setUrlToUpload(url);
+    this->params.setKeyUrl(url);
     this->params.setSegId(s3ext_segid);
     this->params.setSegNum(s3ext_segnum);
     this->params.setNumOfChunks(s3ext_threadnum);
@@ -38,18 +38,17 @@ void GPWriter::constructWriterParams(const string& url) {
 
 void GPWriter::open(const WriterParams& params) {
     this->s3service.setRESTfulService(this->restfulServicePtr);
-    this->setKeyToUpload(this->genUniqueKeyName(this->params.getUrlToUpload()));
+    this->params.setKeyUrl(this->genUniqueKeyName(this->params.getKeyUrl()));
+    this->keyWriter.setS3interface(&this->s3service);
+    this->keyWriter.open(this->params);
 }
 
 uint64_t GPWriter::write(char* buf, uint64_t count) {
-    vector<uint8_t> data;
-    data.insert(data.end(), buf, buf + count);
-
-    return this->s3service.uploadData(data, this->getKeyToUpload(), this->params.getRegion(),
-                                      this->params.getCred());
+    return this->keyWriter.write(buf, count);
 }
 
 void GPWriter::close() {
+    this->keyWriter.close();
 }
 
 string GPWriter::genUniqueKeyName(const string& url) {
@@ -141,12 +140,8 @@ GPWriter* writer_init(const char* url_with_options) {
 // invoked by s3_export(), need to be exception safe
 bool writer_transfer_data(GPWriter* writer, char* data_buf, int& data_len) {
     try {
-        if (!writer || !data_buf || (data_len < 0)) {
+        if (!writer || !data_buf || (data_len <= 0)) {
             return false;
-        }
-
-        if (data_len == 0) {
-            return true;
         }
 
         uint64_t write_len = writer->write(data_buf, data_len);

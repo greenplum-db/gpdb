@@ -188,6 +188,8 @@ void* DownloadThreadFunc(void* data) {
 }
 
 void S3KeyReader::open(const ReaderParams& params) {
+    CHECK_OR_DIE_MSG(this->s3interface != NULL, "%s", "s3interface must not be NULL");
+
     this->sharedError = false;
     this->sharedErrorMessage.clear();
 

@@ -15,6 +15,10 @@
 using std::string;
 
 struct S3Credential {
+    bool operator==(const S3Credential& other) const {
+        return this->accessID == other.accessID && this->secret == other.secret;
+    }
+
     string accessID;
     string secret;
 };

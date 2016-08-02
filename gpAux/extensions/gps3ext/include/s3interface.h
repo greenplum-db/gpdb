@@ -72,6 +72,11 @@ class S3Interface {
         throw std::runtime_error("Default implementation must not be called.");
     }
 
+    virtual uint64_t uploadData(vector<uint8_t>& data, const string& sourceUrl,
+                                const string& region, const S3Credential& cred) {
+        throw std::runtime_error("Default implementation must not be called.");
+    }
+
     virtual S3CompressionType checkCompressionType(const string& keyUrl, const string& region,
                                                    const S3Credential& cred) {
         throw std::runtime_error("Default implementation must not be called.");

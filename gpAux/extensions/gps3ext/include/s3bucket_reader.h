@@ -13,7 +13,7 @@ using std::string;
 class S3BucketReader : public Reader {
    public:
     S3BucketReader();
-    ~S3BucketReader();
+    virtual ~S3BucketReader();
 
     void open(const ReaderParams &params);
     uint64_t read(char *buf, uint64_t count);

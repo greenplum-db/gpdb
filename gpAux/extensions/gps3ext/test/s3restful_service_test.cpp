@@ -158,7 +158,7 @@ TEST(S3RESTfulService, DISABLED_PutToDummyServer) {
     data.push_back(0);
 
     headers.Add(CONTENTTYPE, "text/plain");
-    headers.Add(CONTENTLENGTH, std::to_string(data.size()));
+    headers.Add(CONTENTLENGTH, std::to_string((unsigned long long)data.size()));
 
     url = "http://localhost:8553";
 

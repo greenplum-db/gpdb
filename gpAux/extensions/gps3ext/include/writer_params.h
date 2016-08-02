@@ -30,14 +30,6 @@ class WriterParams {
         this->cred = cred;
     }
 
-    const string& getKeyUrl() const {
-        return keyUrl;
-    }
-
-    void setKeyUrl(const string& keyUrl) {
-        this->keyUrl = keyUrl;
-    }
-
     const string& getRegion() const {
         return region;
     }
@@ -46,12 +38,12 @@ class WriterParams {
         this->region = region;
     }
 
-    const string& getUrlToUpload() const {
-        return urlToUpload;
+    const string& getKeyUrl() const {
+        return keyUrl;
     }
 
-    void setUrlToUpload(const string& url) {
-        this->urlToUpload = url;
+    void setKeyUrl(const string& url) {
+        this->keyUrl = url;
     }
 
     uint64_t getSegId() const {
@@ -79,8 +71,7 @@ class WriterParams {
     }
 
    private:
-    string urlToUpload;  // original url to read/write.
-    string keyUrl;       // key url in s3 bucket.
+    string keyUrl;
     string region;
     uint64_t chunkSize;    // chunk size
     uint64_t numOfChunks;  // number of chunks(threads).

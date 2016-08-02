@@ -4,6 +4,7 @@
 #include <string.h>
 #include <string>
 
+#include "s3key_writer.h"
 #include "writer.h"
 
 class GPWriter : public Writer {
@@ -23,11 +24,11 @@ class GPWriter : public Writer {
     virtual void close();
 
     const string &getKeyToUpload() const {
-        return keyToUpload;
+        return this->params.getKeyUrl();
     }
 
     void setKeyToUpload(const string &keyToUpload) {
-        this->keyToUpload = keyToUpload;
+        this->params.setKeyUrl(keyToUpload);
     }
 
    private:
@@ -40,7 +41,8 @@ class GPWriter : public Writer {
     S3RESTfulService restfulService;
     S3Service s3service;
     S3Credential cred;
-    string keyToUpload;
+
+    S3KeyWriter keyWriter;
 
     // it links to itself by default
     // but the pointer here leaves a chance to mock it in unit test
