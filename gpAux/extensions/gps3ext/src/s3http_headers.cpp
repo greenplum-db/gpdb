@@ -32,6 +32,10 @@ bool HTTPHeaders::Add(HeaderField f, const string &v) {
     }
 }
 
+void HTTPHeaders::Disable(HeaderField f) {
+    this->disabledFields.insert(f);
+}
+
 const char *HTTPHeaders::Get(HeaderField f) {
     return this->fields[f].empty() ? NULL : this->fields[f].c_str();
 }
@@ -44,6 +48,13 @@ void HTTPHeaders::CreateList() {
     for (it = this->fields.begin(); it != this->fields.end(); it++) {
         std::stringstream sstr;
         sstr << GetFieldString(it->first) << ": " << it->second;
+        headers = curl_slist_append(headers, sstr.str().c_str());
+    }
+
+    std::set<HeaderField>::iterator it2;
+    for (it2 = this->disabledFields.begin(); it2 != this->disabledFields.end(); it2++) {
+        std::stringstream sstr;
+        sstr << GetFieldString(*it2) << ":";
         headers = curl_slist_append(headers, sstr.str().c_str());
     }
 

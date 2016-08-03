@@ -128,8 +128,7 @@ class RESTfulService {
                          const vector<uint8_t>& data) = 0;
 
     virtual Response post(const string& url, HTTPHeaders& headers,
-                          const map<string, string>& params, const string& queryString,
-                          const vector<uint8_t>& data) = 0;
+                          const map<string, string>& params, const vector<uint8_t>& data) = 0;
 
     virtual ResponseCode head(const string& url, HTTPHeaders& headers,
                               const map<string, string>& params) = 0;

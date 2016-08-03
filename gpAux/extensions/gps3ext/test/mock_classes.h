@@ -22,7 +22,7 @@ class MockS3Interface : public S3Interface {
                  uint64_t(uint64_t offset, vector<uint8_t>& data, uint64_t len, const string &sourceUrl,
                           const string &region, const S3Credential &cred));
 
-    MOCK_METHOD4(uploadData, uint64_t(vector<uint8_t>& data, const string& sourceUrl,
+    MOCK_METHOD4(uploadData, uint64_t(vector<uint8_t>& data, const string& keyUrl,
                                 const string& region, const S3Credential& cred));
 
     MOCK_METHOD3(checkCompressionType, S3CompressionType(const string& keyUrl, const string& region,
@@ -30,6 +30,14 @@ class MockS3Interface : public S3Interface {
 
     MOCK_METHOD3(checkKeyExistence, bool(const string& keyUrl, const string& region,
                                    const S3Credential& cred));
+
+    MOCK_METHOD3(getUploadId, string(const string& keyUrl, const string& region, const S3Credential& cred));
+
+    MOCK_METHOD6(uploadPartOfData, string(vector<uint8_t>& data, const string& keyUrl, const string& region,
+                            const S3Credential& cred, uint64_t partNumber, const string& uploadId));
+
+    MOCK_METHOD5(completeMultiPart, bool(const string& keyUrl, const string& region, const S3Credential& cred,
+                           const string& uploadId, const vector<string>& etagArray));
 };
 
 class MockS3RESTfulService : public S3RESTfulService {
@@ -43,9 +51,8 @@ class MockS3RESTfulService : public S3RESTfulService {
     MOCK_METHOD4(put, Response(const string &url, HTTPHeaders &headers,
                                const map<string, string> &params, const vector<uint8_t> &data));
 
-    MOCK_METHOD5(post, Response(const string &url, HTTPHeaders &headers,
-                                const map<string, string> &params, const string &queryString,
-                                const vector<uint8_t> &data));
+    MOCK_METHOD4(post, Response(const string &url, HTTPHeaders &headers,
+                                const map<string, string> &params,const vector<uint8_t> &data));
 };
 
 class XMLGenerator {

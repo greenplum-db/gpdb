@@ -79,11 +79,10 @@ Response S3Service::putResponseWithRetries(const string &url, HTTPHeaders &heade
 
 Response S3Service::postResponseWithRetries(const string &url, HTTPHeaders &headers,
                                             const map<string, string> &params,
-                                            const string &queryString, const vector<uint8_t> &data,
-                                            uint64_t retries) {
+                                            const vector<uint8_t> &data, uint64_t retries) {
     while (retries--) {
         // declare response here to leverage RVO (Return Value Optimization)
-        Response response = this->restfulService->post(url, headers, params, queryString, data);
+        Response response = this->restfulService->post(url, headers, params, data);
         if (response.isSuccess() || (retries == 0)) {
             return response;
         };
@@ -395,14 +394,14 @@ uint64_t S3Service::fetchData(uint64_t offset, vector<uint8_t> &data, uint64_t l
                     parseXMLMessage(xmlContext, "Message").c_str());
         }
 
-        S3ERROR("Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
+        S3ERROR("Failed to request: %s, Response message: %s", sourceUrl.c_str(),
                 resp.getMessage().c_str());
         CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
                          resp.getMessage().c_str());
 
         return 0;
     } else {
-        S3ERROR("Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
+        S3ERROR("Failed to request: %s, Response message: %s", sourceUrl.c_str(),
                 resp.getMessage().c_str());
         CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
                          resp.getMessage().c_str());
@@ -410,11 +409,11 @@ uint64_t S3Service::fetchData(uint64_t offset, vector<uint8_t> &data, uint64_t l
     }
 }
 
-uint64_t S3Service::uploadData(vector<uint8_t> &data, const string &sourceUrl, const string &region,
+uint64_t S3Service::uploadData(vector<uint8_t> &data, const string &keyUrl, const string &region,
                                const S3Credential &cred) {
     HTTPHeaders headers;
     map<string, string> params;
-    UrlParser parser(sourceUrl);
+    UrlParser parser(keyUrl);
 
     headers.Add(HOST, parser.getHost());
     headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
@@ -424,7 +423,7 @@ uint64_t S3Service::uploadData(vector<uint8_t> &data, const string &sourceUrl, c
 
     SignRequestV4("PUT", &headers, region, parser.getPath(), "", cred);
 
-    Response resp = this->putResponseWithRetries(sourceUrl, headers, params, data);
+    Response resp = this->putResponseWithRetries(keyUrl, headers, params, data);
     if (resp.getStatus() == RESPONSE_OK) {
         return data.size();
     } else if (resp.getStatus() == RESPONSE_ERROR) {
@@ -435,16 +434,16 @@ uint64_t S3Service::uploadData(vector<uint8_t> &data, const string &sourceUrl, c
                     parseXMLMessage(xmlContext, "Message").c_str());
         }
 
-        S3ERROR("Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
+        S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
                 resp.getMessage().c_str());
-        CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
+        CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", keyUrl.c_str(),
                          resp.getMessage().c_str());
 
         return 0;
     } else {
-        S3ERROR("Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
+        S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
                 resp.getMessage().c_str());
-        CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
+        CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", keyUrl.c_str(),
                          resp.getMessage().c_str());
         return 0;
     }
@@ -487,7 +486,7 @@ S3CompressionType S3Service::checkCompressionType(const string &keyUrl, const st
                         parseXMLMessage(xmlContext, "Message").c_str());
             }
         }
-        CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", keyUrl.c_str(),
+        CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", keyUrl.c_str(),
                          resp.getMessage().c_str());
     }
 
@@ -513,18 +512,18 @@ string S3Service::getUploadId(const string &keyUrl, const string &region,
     HTTPHeaders headers;
     map<string, string> params;
     UrlParser parser(keyUrl);
-    stringstream pathWithQuery;
 
     headers.Add(HOST, parser.getHost());
-    headers.Add(CONTENTTYPE, "application/x-www-form-urlencoded");
+    headers.Disable(CONTENTTYPE);
+    headers.Disable(CONTENTLENGTH);
     headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
 
-    pathWithQuery << parser.getPath() << "?uploads";
+    SignRequestV4("POST", &headers, region, parser.getPath(), "uploads=", cred);
 
-    SignRequestV4("POST", &headers, region, pathWithQuery.str(), "", cred);
+    stringstream urlWithQuery;
+    urlWithQuery << keyUrl << "?uploads";
 
-    Response resp =
-        this->postResponseWithRetries(keyUrl, headers, params, "uploads", vector<uint8_t>());
+    Response resp = this->postResponseWithRetries(urlWithQuery.str(), headers, params, vector<uint8_t>());
     if (resp.getStatus() == RESPONSE_OK) {
         xmlParserCtxtPtr xmlContext = getXMLContext(resp);
         if (xmlContext != NULL) {
@@ -539,14 +538,14 @@ string S3Service::getUploadId(const string &keyUrl, const string &region,
                     parseXMLMessage(xmlContext, "Message").c_str());
         }
 
-        S3ERROR("Failed to fetch: %s, Response message: %s", keyUrl.c_str(),
+        S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
                 resp.getMessage().c_str());
         CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", keyUrl.c_str(),
                          resp.getMessage().c_str());
 
         return "";
     } else {
-        S3ERROR("Failed to fetch: %s, Response message: %s", keyUrl.c_str(),
+        S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
                 resp.getMessage().c_str());
         CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", keyUrl.c_str(),
                          resp.getMessage().c_str());
@@ -556,13 +555,13 @@ string S3Service::getUploadId(const string &keyUrl, const string &region,
     return "";
 }
 
-string S3Service::uploadPartOfData(vector<uint8_t> &data, const string &sourceUrl,
+string S3Service::uploadPartOfData(vector<uint8_t> &data, const string &keyUrl,
                                    const string &region, const S3Credential &cred,
                                    uint64_t partNumber, const string &uploadId) {
     HTTPHeaders headers;
     map<string, string> params;
-    UrlParser parser(sourceUrl);
-    stringstream pathWithQuery;
+    UrlParser parser(keyUrl);
+    stringstream queryString;
 
     headers.Add(HOST, parser.getHost());
     headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
@@ -570,12 +569,12 @@ string S3Service::uploadPartOfData(vector<uint8_t> &data, const string &sourceUr
     headers.Add(CONTENTTYPE, "text/plain");
     headers.Add(CONTENTLENGTH, std::to_string((unsigned long long)data.size()));
 
-    pathWithQuery << parser.getPath() << "?partNumber=" << partNumber << "&uploadId=" << uploadId;
+    queryString << "partNumber=" << partNumber << "&uploadId=" << uploadId;
 
-    SignRequestV4("PUT", &headers, region, pathWithQuery.str(), "", cred);
+    SignRequestV4("PUT", &headers, region, parser.getPath(), queryString.str(), cred);
 
     stringstream urlWithQuery;
-    urlWithQuery << sourceUrl << "?partNumber=" << partNumber << "&uploadId=" << uploadId;
+    urlWithQuery << keyUrl << "?partNumber=" << partNumber << "&uploadId=" << uploadId;
 
     Response resp = this->putResponseWithRetries(urlWithQuery.str(), headers, params, data);
     if (resp.getStatus() == RESPONSE_OK) {
@@ -596,16 +595,16 @@ string S3Service::uploadPartOfData(vector<uint8_t> &data, const string &sourceUr
                     parseXMLMessage(xmlContext, "Message").c_str());
         }
 
-        S3ERROR("Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
+        S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
                 resp.getMessage().c_str());
-        CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
+        CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", keyUrl.c_str(),
                          resp.getMessage().c_str());
 
         return "";
     } else {
-        S3ERROR("Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
+        S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
                 resp.getMessage().c_str());
-        CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
+        CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", keyUrl.c_str(),
                          resp.getMessage().c_str());
         return "";
     }
@@ -613,11 +612,11 @@ string S3Service::uploadPartOfData(vector<uint8_t> &data, const string &sourceUr
 
 bool S3Service::completeMultiPart(const string &keyUrl, const string &region,
                                   const S3Credential &cred, const string &uploadId,
-                                  vector<string> &etagArray) {
+                                  const vector<string> &etagArray) {
     HTTPHeaders headers;
     map<string, string> params;
     UrlParser parser(keyUrl);
-    stringstream pathWithQuery;
+    stringstream queryString;
 
     stringstream body;
 
@@ -633,17 +632,17 @@ bool S3Service::completeMultiPart(const string &keyUrl, const string &region,
     headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
     headers.Add(CONTENTLENGTH, std::to_string((unsigned long long)body.str().length()));
 
-    pathWithQuery << parser.getPath() << "?uploadId" << uploadId;
+    queryString << "uploadId=" << uploadId;
 
-    SignRequestV4("POST", &headers, region, pathWithQuery.str(), "", cred);
+    SignRequestV4("POST", &headers, region, parser.getPath(), queryString.str(), cred);
 
     stringstream urlWithQuery;
-    urlWithQuery << keyUrl << "?uploadId" << uploadId;
+    urlWithQuery << keyUrl << "?uploadId=" << uploadId;
 
     string bodyString = body.str();
-    Response resp =
-        this->postResponseWithRetries(urlWithQuery.str(), headers, params, "",
-                                      vector<uint8_t>(bodyString.begin(), bodyString.end()));
+    Response resp = this->postResponseWithRetries(
+        urlWithQuery.str(), headers, params, vector<uint8_t>(bodyString.begin(), bodyString.end()));
+
     if (resp.getStatus() == RESPONSE_OK) {
         return true;
     } else if (resp.getStatus() == RESPONSE_ERROR) {
@@ -654,16 +653,16 @@ bool S3Service::completeMultiPart(const string &keyUrl, const string &region,
                     parseXMLMessage(xmlContext, "Message").c_str());
         }
 
-        S3ERROR("Failed to fetch: %s, Response message: %s", keyUrl.c_str(),
+        S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
                 resp.getMessage().c_str());
-        CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", keyUrl.c_str(),
+        CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", keyUrl.c_str(),
                          resp.getMessage().c_str());
 
         return false;
     } else {
-        S3ERROR("Failed to fetch: %s, Response message: %s", keyUrl.c_str(),
+        S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
                 resp.getMessage().c_str());
-        CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", keyUrl.c_str(),
+        CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", keyUrl.c_str(),
                          resp.getMessage().c_str());
         return false;
     }

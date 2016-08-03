@@ -38,6 +38,8 @@ class S3KeyWriter : Writer {
     }
 
    protected:
+    void flushBuffer();
+
     WriterBuffer buffer;
     S3Interface* s3interface;
 

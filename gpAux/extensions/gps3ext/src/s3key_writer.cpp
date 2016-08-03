@@ -27,8 +27,7 @@ uint64_t S3KeyWriter::write(char *buf, uint64_t count) {
     }
 
     if (this->buffer.size() + count > this->chunkSize) {
-        this->s3interface->uploadData(this->buffer, this->url, this->region, this->cred);
-        this->buffer.clear();
+        flushBuffer();
     }
 
     this->buffer.insert(this->buffer.end(), buf, buf + count);
@@ -38,8 +37,17 @@ uint64_t S3KeyWriter::write(char *buf, uint64_t count) {
 
 // This should be reentrant, has no side effects when called multiple times.
 void S3KeyWriter::close() {
+    flushBuffer();
+}
+
+void S3KeyWriter::flushBuffer() {
     if (!this->buffer.empty()) {
-        this->s3interface->uploadData(this->buffer, this->url, this->region, this->cred);
+        string id = this->s3interface->getUploadId(this->url, this->region, this->cred);
+        string etag =
+            this->s3interface->uploadPartOfData(buffer, this->url, this->region, this->cred, 1, id);
+
+        this->s3interface->completeMultiPart(this->url, this->region, this->cred, id, {etag});
+
         this->buffer.clear();
     }
 }

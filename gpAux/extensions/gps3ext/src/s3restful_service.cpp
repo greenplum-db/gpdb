@@ -219,8 +219,7 @@ Response S3RESTfulService::put(const string &url, HTTPHeaders &headers,
 }
 
 Response S3RESTfulService::post(const string &url, HTTPHeaders &headers,
-                                const map<string, string> &params, const string &queryString,
-                                const vector<uint8_t> &data) {
+                                const map<string, string> &params, const vector<uint8_t> &data) {
     Response response;
 
     CURL *curl = curl_easy_init();
@@ -237,15 +236,12 @@ Response S3RESTfulService::post(const string &url, HTTPHeaders &headers,
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, RESTfulServiceWriteFuncCallback);
 
     curl_easy_setopt(curl, CURLOPT_POST, 1L);
-    if (!queryString.empty()) {
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, queryString.c_str());
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)queryString.length());
-    }
 
     if (!data.empty()) {
         UploadData uploadData(data);
         curl_easy_setopt(curl, CURLOPT_READDATA, (void *)&uploadData);
         curl_easy_setopt(curl, CURLOPT_READFUNCTION, RESTfulServiceReadFuncCallback);
+
         /* CURLOPT_INFILESIZE_LARGE for sending files larger than 2GB.*/
         curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)data.size());
     }

@@ -182,7 +182,7 @@ TEST_F(S3ServiceTest, PostResponseWithZeroRetry) {
     vector<uint8_t> data;
 
     EXPECT_EQ(RESPONSE_FAIL,
-              this->postResponseWithRetries(url, headers, params, "", data, 0).getStatus());
+              this->postResponseWithRetries(url, headers, params, data, 0).getStatus());
 }
 
 TEST_F(S3ServiceTest, PostResponseWithTwoRetries) {
@@ -191,13 +191,13 @@ TEST_F(S3ServiceTest, PostResponseWithTwoRetries) {
     map<string, string> params;
     vector<uint8_t> data;
 
-    EXPECT_CALL(mockRestfulService, post(_, _, _, _, _))
+    EXPECT_CALL(mockRestfulService, post(_, _, _, _))
         .Times(2)
         .WillOnce(Return(response))
         .WillOnce(Return(response));
 
     EXPECT_EQ(RESPONSE_FAIL,
-              this->postResponseWithRetries(url, headers, params, "", data, 2).getStatus());
+              this->postResponseWithRetries(url, headers, params, data, 2).getStatus());
 }
 
 TEST_F(S3ServiceTest, PostResponseWithRetriesAndSuccess) {
@@ -209,13 +209,12 @@ TEST_F(S3ServiceTest, PostResponseWithRetriesAndSuccess) {
     Response responseSuccess;
     responseSuccess.setStatus(RESPONSE_OK);
 
-    EXPECT_CALL(mockRestfulService, post(_, _, _, _, _))
+    EXPECT_CALL(mockRestfulService, post(_, _, _, _))
         .Times(2)
         .WillOnce(Return(response))
         .WillOnce(Return(responseSuccess));
 
-    EXPECT_EQ(RESPONSE_OK,
-              this->postResponseWithRetries(url, headers, params, "", data).getStatus());
+    EXPECT_EQ(RESPONSE_OK, this->postResponseWithRetries(url, headers, params, data).getStatus());
 }
 
 TEST_F(S3ServiceTest, ListBucketThrowExceptionWhenBucketStringIsEmpty) {
@@ -630,8 +629,7 @@ TEST_F(S3ServiceTest, getUploadIdRoutine) {
     vector<uint8_t> raw(xml, xml + sizeof(xml) - 1);
     Response response(RESPONSE_OK, raw);
 
-    EXPECT_CALL(mockRestfulService, post(_, _, _, "uploads", vector<uint8_t>()))
-        .WillOnce(Return(response));
+    EXPECT_CALL(mockRestfulService, post(_, _, _, vector<uint8_t>())).WillOnce(Return(response));
 
     EXPECT_EQ("VXBsb2FkIElEIGZvciA2aWWpbmcncyBteS1tb3ZpZS5tMnRzIHVwbG9hZA",
               this->getUploadId("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
@@ -643,7 +641,7 @@ TEST_F(S3ServiceTest, getUploadIdFailedResponse) {
     raw.resize(100);
     Response response(RESPONSE_FAIL, raw);
 
-    EXPECT_CALL(mockRestfulService, post(_, _, _, "uploads", vector<uint8_t>()))
+    EXPECT_CALL(mockRestfulService, post(_, _, _, vector<uint8_t>()))
         .WillRepeatedly(Return(response));
 
     EXPECT_THROW(this->getUploadId("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
@@ -667,7 +665,7 @@ TEST_F(S3ServiceTest, getUploadIdErrorResponse) {
     vector<uint8_t> raw(xml, xml + sizeof(xml) - 1);
     Response response(RESPONSE_ERROR, raw);
 
-    EXPECT_CALL(mockRestfulService, post(_, _, _, "uploads", vector<uint8_t>()))
+    EXPECT_CALL(mockRestfulService, post(_, _, _, vector<uint8_t>()))
         .WillRepeatedly(Return(response));
 
     EXPECT_THROW(this->getUploadId("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
@@ -739,7 +737,7 @@ TEST_F(S3ServiceTest, completeMultiPartRoutine) {
     vector<uint8_t> raw;
     raw.resize(100);
     Response response(RESPONSE_OK, raw);
-    EXPECT_CALL(mockRestfulService, post(_, _, _, "", _)).WillOnce(Return(response));
+    EXPECT_CALL(mockRestfulService, post(_, _, _, _)).WillOnce(Return(response));
 
     vector<string> etagArray;
 
@@ -755,7 +753,7 @@ TEST_F(S3ServiceTest, completeMultiPartFailedResponse) {
     vector<uint8_t> raw;
     raw.resize(100);
     Response response(RESPONSE_FAIL, raw);
-    EXPECT_CALL(mockRestfulService, post(_, _, _, "", _)).WillRepeatedly(Return(response));
+    EXPECT_CALL(mockRestfulService, post(_, _, _, _)).WillRepeatedly(Return(response));
 
     vector<string> etagArray;
 
@@ -781,7 +779,7 @@ TEST_F(S3ServiceTest, completeMultiPartErrorResponse) {
     vector<uint8_t> raw(xml, xml + sizeof(xml) - 1);
     Response response(RESPONSE_ERROR, raw);
 
-    EXPECT_CALL(mockRestfulService, post(_, _, _, "", _)).WillRepeatedly(Return(response));
+    EXPECT_CALL(mockRestfulService, post(_, _, _, _)).WillRepeatedly(Return(response));
 
     vector<string> etagArray;
 

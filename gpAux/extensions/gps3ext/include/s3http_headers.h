@@ -2,6 +2,7 @@
 #define __S3_HTTP_HEADERS_H__
 
 #include <map>
+#include <set>
 #include <string>
 
 #include <curl/curl.h>
@@ -33,6 +34,7 @@ class HTTPHeaders {
     ~HTTPHeaders();
 
     bool Add(HeaderField f, const string& value);
+    void Disable(HeaderField f);
     const char* Get(HeaderField f);
 
     void CreateList();
@@ -41,7 +43,9 @@ class HTTPHeaders {
 
    private:
     struct curl_slist* header_list;
+
     std::map<HeaderField, string> fields;
+    std::set<HeaderField> disabledFields;
 };
 
 const char* GetFieldString(HeaderField f);

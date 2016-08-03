@@ -72,8 +72,8 @@ class S3Interface {
         throw std::runtime_error("Default implementation must not be called.");
     }
 
-    virtual uint64_t uploadData(vector<uint8_t>& data, const string& sourceUrl,
-                                const string& region, const S3Credential& cred) {
+    virtual uint64_t uploadData(vector<uint8_t>& data, const string& keyUrl, const string& region,
+                                const S3Credential& cred) {
         throw std::runtime_error("Default implementation must not be called.");
     }
 
@@ -84,6 +84,23 @@ class S3Interface {
 
     virtual bool checkKeyExistence(const string& keyUrl, const string& region,
                                    const S3Credential& cred) {
+        throw std::runtime_error("Default implementation must not be called.");
+    }
+
+    virtual string getUploadId(const string& keyUrl, const string& region,
+                               const S3Credential& cred) {
+        throw std::runtime_error("Default implementation must not be called.");
+    }
+
+    virtual string uploadPartOfData(vector<uint8_t>& data, const string& keyUrl,
+                                    const string& region, const S3Credential& cred,
+                                    uint64_t partNumber, const string& uploadId) {
+        throw std::runtime_error("Default implementation must not be called.");
+    }
+
+    virtual bool completeMultiPart(const string& keyUrl, const string& region,
+                                   const S3Credential& cred, const string& uploadId,
+                                   const vector<string>& etagArray) {
         throw std::runtime_error("Default implementation must not be called.");
     }
 };
@@ -98,7 +115,7 @@ class S3Service : public S3Interface {
     uint64_t fetchData(uint64_t offset, vector<uint8_t>& data, uint64_t len,
                        const string& sourceUrl, const string& region, const S3Credential& cred);
 
-    uint64_t uploadData(vector<uint8_t>& data, const string& sourceUrl, const string& region,
+    uint64_t uploadData(vector<uint8_t>& data, const string& keyUrl, const string& region,
                         const S3Credential& cred);
 
     S3CompressionType checkCompressionType(const string& keyUrl, const string& region,
@@ -106,7 +123,6 @@ class S3Service : public S3Interface {
 
     bool checkKeyExistence(const string& keyUrl, const string& region, const S3Credential& cred);
 
-    // following two functions are exposed publicly for UT tests
     void setRESTfulService(RESTfulService* restfullService) {
         this->restfulService = restfullService;
     }
@@ -121,8 +137,7 @@ class S3Service : public S3Interface {
                                     uint64_t retries = S3_REQUEST_MAX_RETRIES);
 
     Response postResponseWithRetries(const string& url, HTTPHeaders& headers,
-                                     const map<string, string>& params, const string& queryString,
-                                     const vector<uint8_t>& data,
+                                     const map<string, string>& params, const vector<uint8_t>& data,
                                      uint64_t retries = S3_REQUEST_MAX_RETRIES);
 
     ResponseCode headResponseWithRetries(const string& url, HTTPHeaders& headers,
@@ -131,11 +146,11 @@ class S3Service : public S3Interface {
 
     string getUploadId(const string& keyUrl, const string& region, const S3Credential& cred);
 
-    string uploadPartOfData(vector<uint8_t>& data, const string& sourceUrl, const string& region,
+    string uploadPartOfData(vector<uint8_t>& data, const string& keyUrl, const string& region,
                             const S3Credential& cred, uint64_t partNumber, const string& uploadId);
 
     bool completeMultiPart(const string& keyUrl, const string& region, const S3Credential& cred,
-                           const string& uploadId, vector<string>& eTagArray);
+                           const string& uploadId, const vector<string>& etagArray);
 
    private:
     string getUrl(const string& prefix, const string& schema, const string& host,

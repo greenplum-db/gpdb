@@ -16,7 +16,7 @@ class S3RESTfulService : public RESTfulService {
                  const vector<uint8_t>& data);
 
     Response post(const string& url, HTTPHeaders& headers, const map<string, string>& params,
-                  const string& queryString, const vector<uint8_t>& data);
+                  const vector<uint8_t>& data);
 };
 
 #endif /* INCLUDE_S3RESTFUL_SERVICE_H_ */

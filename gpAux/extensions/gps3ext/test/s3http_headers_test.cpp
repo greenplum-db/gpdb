@@ -21,27 +21,53 @@ TEST(Common, HTTPHeaders) {
 #define HOSTSTR "www.google.com"
 #define RANGESTR "1-10000"
 #define MD5STR "xxxxxxxxxxxxxxxxxxx"
-    HTTPHeaders *h = new HTTPHeaders();
-    ASSERT_NE((void *)NULL, h);
+    HTTPHeaders headers;
 
-    h->CreateList();
-    curl_slist *l = h->GetList();
-    EXPECT_EQ((void *)NULL, l);
-    h->FreeList();
+    headers.CreateList();
+    curl_slist *headersList = headers.GetList();
+    EXPECT_EQ((void *)NULL, headersList);
+    headers.FreeList();
 
-    ASSERT_FALSE(h->Add(HOST, ""));
-    ASSERT_TRUE(h->Add(HOST, HOSTSTR));
-    ASSERT_TRUE(h->Add(RANGE, RANGESTR));
-    ASSERT_TRUE(h->Add(CONTENTMD5, MD5STR));
+    ASSERT_FALSE(headers.Add(HOST, ""));
+    ASSERT_TRUE(headers.Add(HOST, HOSTSTR));
+    ASSERT_TRUE(headers.Add(RANGE, RANGESTR));
+    ASSERT_TRUE(headers.Add(CONTENTMD5, MD5STR));
 
-    EXPECT_STREQ(HOSTSTR, h->Get(HOST));
-    EXPECT_STREQ(RANGESTR, h->Get(RANGE));
-    EXPECT_STREQ(MD5STR, h->Get(CONTENTMD5));
+    EXPECT_STREQ(HOSTSTR, headers.Get(HOST));
+    EXPECT_STREQ(RANGESTR, headers.Get(RANGE));
+    EXPECT_STREQ(MD5STR, headers.Get(CONTENTMD5));
 
-    h->CreateList();
-    l = h->GetList();
-    ASSERT_NE((void *)NULL, l);
-    h->FreeList();
+    headers.CreateList();
+    headersList = headers.GetList();
+    ASSERT_NE((void *)NULL, headersList);
 
-    delete h;
+    EXPECT_STREQ(headersList->data, "Host: www.google.com");
+    headersList = headersList->next;
+
+    EXPECT_STREQ(headersList->data, "Range: 1-10000");
+    headersList = headersList->next;
+
+    EXPECT_STREQ(headersList->data, "Content-MD5: xxxxxxxxxxxxxxxxxxx");
+    headersList = headersList->next;
+
+    EXPECT_EQ((void *)NULL, headersList);
+
+    headers.FreeList();
+}
+
+TEST(Common, HTTPHeadersDisable) {
+    HTTPHeaders headers;
+    headers.Disable(CONTENTLENGTH);
+
+    headers.CreateList();
+    curl_slist *headersList = headers.GetList();
+
+    ASSERT_NE((void *)NULL, headersList);
+
+    EXPECT_STREQ(headersList->data, "Content-Length:");
+
+    headersList = headersList->next;
+    EXPECT_EQ((void *)NULL, headersList);
+
+    headers.FreeList();
 }
