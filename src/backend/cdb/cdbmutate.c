@@ -20,6 +20,7 @@
 #include "optimizer/predtest.h"
 #include "optimizer/var.h"
 #include "parser/parse_relation.h"
+#include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
 #include "utils/datum.h"
 #include "utils/syscache.h"
@@ -3327,8 +3328,8 @@ pre_dispatch_function_evaluation_mutator(Node *node,
 			 * QD will flush the xlog which will also flush any xlog writes that
 			 * the sequence server might do. 
 			 */
-			if (funcid == NEXTVAL_FUNC_OID || funcid == CURRVAL_FUNC_OID ||
-				funcid == SETVAL_FUNC_OID)
+			if (funcid == F_NEXTVAL_OID || funcid == F_CURRVAL_OID ||
+				funcid == F_SETVAL_OID)
 			{
 				ExecutorMarkTransactionUsesSequences();
 				is_seq_func = true;

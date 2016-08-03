@@ -312,7 +312,7 @@ lazy_vacuum_rel(Relation onerel, VacuumStmt *vacstmt,
 
 		for (i = 0; i < nindexes; i++)
 		{
-			if (Irel[i]->rd_am->aminsert == BTINSERT_OID)
+			if (Irel[i]->rd_rel->relam == BTREE_AM_OID)
 				_bt_validate_vacuum(Irel[i], onerel, OldestXmin);
 		}
 	}
