@@ -38,9 +38,6 @@ extern Datum check_gp_activate_standby(PG_FUNCTION_ARGS);
 /* tests for caql coverage in queue.c */
 extern Datum check_GetResqueueName(PG_FUNCTION_ARGS);
 
-/* test for caql coverage in functioncmds.c */
-extern Datum check_GetFuncSQLDataAccess(PG_FUNCTION_ARGS);
-
 PG_FUNCTION_INFO_V1(caql_bootstrap_regproc);
 Datum
 caql_bootstrap_regproc(PG_FUNCTION_ARGS)
@@ -232,31 +229,4 @@ check_GetResqueueName(PG_FUNCTION_ARGS)
 	Oid		resqueueOid = PG_GETARG_OID(0);
 
 	PG_RETURN_TEXT_P(cstring_to_text(GetResqueueName(resqueueOid)));
-}
-
-PG_FUNCTION_INFO_V1(check_GetFuncSQLDataAccess);
-Datum
-check_GetFuncSQLDataAccess(PG_FUNCTION_ARGS)
-{
-	Oid		funcOid = PG_GETARG_OID(0);
-	SQLDataAccess data_access = SDA_NO_SQL;
-	char   *data_access_name = NULL;
-
-	data_access = GetFuncSQLDataAccess(funcOid);
-	switch (data_access) {
-	case SDA_NO_SQL:
-		data_access_name = "NO SQL";
-		break;
-	case SDA_CONTAINS_SQL:
-		data_access_name = "CONTAINS SQL";
-		break;
-	case SDA_READS_SQL:
-		data_access_name = "READS SQL DATA";
-		break;
-	case SDA_MODIFIES_SQL:
-		data_access_name = "MODIFIES SQL DATA";
-		break;
-	}
-
-	PG_RETURN_TEXT_P(cstring_to_text(data_access_name));
 }

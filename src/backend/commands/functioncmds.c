@@ -2431,57 +2431,6 @@ AlterFunctionNamespace(List *name, List *argtypes, bool isagg,
 	heap_close(procRel, RowExclusiveLock);
 }
 
-/*
- * GetFuncSQLDataAccess
- *  Returns the data-access indication of a function specified by
- *  the input funcOid.
- */
-SQLDataAccess
-GetFuncSQLDataAccess(Oid funcOid)
-{
-	Relation	procRelation;
-	HeapTuple	procTuple;
-	bool		isnull = false;
-	char		proDataAccess;
-	SQLDataAccess	result = SDA_NO_SQL;
-	cqContext	cqc;
-
-	procRelation = heap_open(ProcedureRelationId, AccessShareLock);
-
-	procTuple = caql_getfirst(
-			caql_addrel(cqclr(&cqc), procRelation),
-			cql("SELECT * from pg_proc"
-				" WHERE oid = :1",
-				ObjectIdGetDatum(funcOid)));
-
-	if (!HeapTupleIsValid(procTuple))
-		elog(ERROR, "cache lookup failed for function %u", funcOid);
-
-	/* get the prodataaccess */
-	proDataAccess = DatumGetChar(heap_getattr(procTuple,
-											  Anum_pg_proc_prodataaccess,
-											  RelationGetDescr(procRelation),
-											  &isnull));
-
-	heap_freetuple(procTuple);
-	heap_close(procRelation, AccessShareLock);
-
-	Assert(!isnull);
-
-	if (proDataAccess == PRODATAACCESS_NONE)
-		result = SDA_NO_SQL;
-	else if (proDataAccess == PRODATAACCESS_CONTAINS)
-		result = SDA_CONTAINS_SQL;
-	else if (proDataAccess == PRODATAACCESS_READS)
-		result = SDA_READS_SQL;
-	else if (proDataAccess == PRODATAACCESS_MODIFIES)
-		result = SDA_MODIFIES_SQL;
-	else
-		elog(ERROR, "invalid data access option for function %u", funcOid);
-
-	return result;
-}
-
 static void
 CheckForModifySystemFunc(Oid funcOid, List *funcName)
 {

@@ -4587,17 +4587,4 @@ extern Oid ProcedureCreate(const char *procedureName,
 
 extern bool function_parse_error_transpose(const char *prosrc);
 
-/*
- * API to access prodataaccess colum
- */
-typedef enum SQLDataAccess
-{
-   SDA_NO_SQL = 0,		/* procedure does not possibly contain SQL */
-   SDA_CONTAINS_SQL,		/* possibly contains SQL */
-   SDA_READS_SQL,		/* possibly reads SQL */
-   SDA_MODIFIES_SQL		/* possibly modifies SQL */
-}  SQLDataAccess;
-
-extern SQLDataAccess GetFuncSQLDataAccess(Oid);
-
 #endif   /* PG_PROC_H */
