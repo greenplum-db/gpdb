@@ -184,27 +184,6 @@ static void MPPnoticeReceiver(void * arg, const PGresult * res)
 			appendBinaryPQExpBuffer(&msgbuf, context, strlen(context)+1);
 		}
 
-		/*
-		  if (edata->cursorpos > 0)
-		  {
-		  snprintf(tbuf, sizeof(tbuf), "%d", edata->cursorpos);
-		  appendPQExpBufferChar(&msgbuf, PG_DIAG_STATEMENT_POSITION);
-		  appendBinaryPQExpBuffer(&msgbuf, tbuf);
-		  }
-
-		  if (edata->internalpos > 0)
-		  {
-		  snprintf(tbuf, sizeof(tbuf), "%d", edata->internalpos);
-		  appendPQExpBufferChar(&msgbuf, PG_DIAG_INTERNAL_POSITION);
-		  appendBinaryPQExpBuffer(&msgbuf, tbuf);
-		  }
-
-		  if (edata->internalquery)
-		  {
-		  appendPQExpBufferChar(&msgbuf, PG_DIAG_INTERNAL_QUERY);
-		  appendBinaryPQExpBuffer(&msgbuf, edata->internalquery);
-		  }
-		*/
 		if (file)
 		{
 			appendPQExpBufferChar(&msgbuf, PG_DIAG_SOURCE_FILE);
