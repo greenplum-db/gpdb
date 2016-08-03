@@ -128,30 +128,34 @@ Response S3Service::getBucketResponse(const string &region, const string &url, c
 }
 
 // parseXMLMessage must not throw exception, otherwise result is leaked.
-void S3Service::parseXMLMessage(xmlParserCtxtPtr xmlcontext) {
+string S3Service::parseXMLMessage(xmlParserCtxtPtr xmlcontext, const string &tag) {
+    string returnMessage;
+
     if (xmlcontext == NULL) {
-        return;
+        return returnMessage;
     }
 
     xmlNode *rootElement = xmlDocGetRootElement(xmlcontext->myDoc);
     if (rootElement == NULL) {
         S3ERROR("Failed to parse returned xml of bucket list");
-        return;
+        return returnMessage;
     }
 
     xmlNodePtr curNode = rootElement->xmlChildrenNode;
     while (curNode != NULL) {
-        if (xmlStrcmp(curNode->name, (const xmlChar *)"Message") == 0) {
+        if (xmlStrcmp(curNode->name, (const xmlChar *)tag.c_str()) == 0) {
             char *content = (char *)xmlNodeGetContent(curNode);
             if (content != NULL) {
-                S3ERROR("Amazon S3 returns error \"%s\"", content);
+                returnMessage = content;
                 xmlFree(content);
             }
-            return;
+            return returnMessage;
         }
 
         curNode = curNode->next;
     }
+
+    return returnMessage;
 }
 
 // parseBucketXML must not throw exception, otherwise result is leaked.
@@ -288,7 +292,8 @@ ListBucketResult *S3Service::listBucket(const string &schema, const string &regi
                 continue;
             }
         } else {
-            parseXMLMessage(xmlContext);
+            S3ERROR("Amazon S3 returns error \"%s\"",
+                    parseXMLMessage(xmlContext, "Message").c_str());
         }
 
         delete result;
@@ -326,7 +331,8 @@ uint64_t S3Service::fetchData(uint64_t offset, vector<uint8_t> &data, uint64_t l
         xmlParserCtxtPtr xmlContext = getXMLContext(resp);
         if (xmlContext != NULL) {
             XMLContextHolder holder(xmlContext);
-            parseXMLMessage(xmlContext);
+            S3ERROR("Amazon S3 returns error \"%s\"",
+                    parseXMLMessage(xmlContext, "Message").c_str());
         }
 
         S3ERROR("Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
@@ -365,7 +371,8 @@ uint64_t S3Service::uploadData(vector<uint8_t> &data, const string &sourceUrl, c
         xmlParserCtxtPtr xmlContext = getXMLContext(resp);
         if (xmlContext != NULL) {
             XMLContextHolder holder(xmlContext);
-            parseXMLMessage(xmlContext);
+            S3ERROR("Amazon S3 returns error \"%s\"",
+                    parseXMLMessage(xmlContext, "Message").c_str());
         }
 
         S3ERROR("Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
@@ -416,7 +423,8 @@ S3CompressionType S3Service::checkCompressionType(const string &keyUrl, const st
             xmlParserCtxtPtr xmlContext = getXMLContext(resp);
             if (xmlContext != NULL) {
                 XMLContextHolder holder(xmlContext);
-                parseXMLMessage(xmlContext);
+                S3ERROR("Amazon S3 returns error \"%s\"",
+                        parseXMLMessage(xmlContext, "Message").c_str());
             }
         }
         CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", keyUrl.c_str(),
@@ -448,7 +456,164 @@ bool S3Service::checkKeyExistence(const string &keyUrl, const string &region,
 
 string S3Service::getUploadId(const string &keyUrl, const string &region,
                               const S3Credential &cred) {
+    HTTPHeaders headers;
+    map<string, string> params;
+    UrlParser parser(keyUrl);
+    stringstream pathWithQuery;
+
+    headers.Add(HOST, parser.getHost());
+    headers.Add(CONTENTTYPE, "application/x-www-form-urlencoded");
+    headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
+
+    pathWithQuery << parser.getPath() << "?uploads";
+
+    SignRequestV4("POST", &headers, region, pathWithQuery.str(), "", cred);
+
+    Response resp =
+        this->restfulService->post(keyUrl, headers, params, "uploads", vector<uint8_t>());
+    if (resp.getStatus() == RESPONSE_OK) {
+        xmlParserCtxtPtr xmlContext = getXMLContext(resp);
+        if (xmlContext != NULL) {
+            XMLContextHolder holder(xmlContext);
+            return parseXMLMessage(xmlContext, "UploadId");
+        }
+    } else if (resp.getStatus() == RESPONSE_ERROR) {
+        xmlParserCtxtPtr xmlContext = getXMLContext(resp);
+        if (xmlContext != NULL) {
+            XMLContextHolder holder(xmlContext);
+            S3ERROR("Amazon S3 returns error \"%s\"",
+                    parseXMLMessage(xmlContext, "Message").c_str());
+        }
+
+        S3ERROR("Failed to fetch: %s, Response message: %s", keyUrl.c_str(),
+                resp.getMessage().c_str());
+        CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", keyUrl.c_str(),
+                         resp.getMessage().c_str());
+
+        return "";
+    } else {
+        S3ERROR("Failed to fetch: %s, Response message: %s", keyUrl.c_str(),
+                resp.getMessage().c_str());
+        CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", keyUrl.c_str(),
+                         resp.getMessage().c_str());
+        return "";
+    }
+
     return "";
+}
+
+string S3Service::uploadPartOfData(vector<uint8_t> &data, const string &sourceUrl,
+                                   const string &region, const S3Credential &cred,
+                                   uint64_t partNumber, const string &uploadId) {
+    HTTPHeaders headers;
+    map<string, string> params;
+    UrlParser parser(sourceUrl);
+    stringstream pathWithQuery;
+
+    headers.Add(HOST, parser.getHost());
+    headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
+
+    headers.Add(CONTENTTYPE, "text/plain");
+    headers.Add(CONTENTLENGTH, std::to_string((unsigned long long)data.size()));
+
+    pathWithQuery << parser.getPath() << "?partNumber=" << partNumber << "&uploadId=" << uploadId;
+
+    SignRequestV4("PUT", &headers, region, pathWithQuery.str(), "", cred);
+
+    stringstream urlWithQuery;
+    urlWithQuery << sourceUrl << "?partNumber=" << partNumber << "&uploadId=" << uploadId;
+
+    Response resp = this->restfulService->put(urlWithQuery.str(), headers, params, data);
+    if (resp.getStatus() == RESPONSE_OK) {
+        string headers(resp.getRawHeaders().begin(), resp.getRawHeaders().end());
+
+        uint64_t etagStartPos = headers.find("ETag: ") + 6;
+        string etagToEnd = headers.substr(etagStartPos);
+        // RFC 2616 states "HTTP/1.1 defines the sequence CR LF as the end-of-line
+        // marker for all protocol elements except the entity-body"
+        uint64_t etagStrLen = etagToEnd.find("\r");
+
+        return etagToEnd.substr(0, etagStrLen);
+    } else if (resp.getStatus() == RESPONSE_ERROR) {
+        xmlParserCtxtPtr xmlContext = getXMLContext(resp);
+        if (xmlContext != NULL) {
+            XMLContextHolder holder(xmlContext);
+            S3ERROR("Amazon S3 returns error \"%s\"",
+                    parseXMLMessage(xmlContext, "Message").c_str());
+        }
+
+        S3ERROR("Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
+                resp.getMessage().c_str());
+        CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
+                         resp.getMessage().c_str());
+
+        return "";
+    } else {
+        S3ERROR("Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
+                resp.getMessage().c_str());
+        CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
+                         resp.getMessage().c_str());
+        return "";
+    }
+}
+
+bool S3Service::completeMultiPart(const string &keyUrl, const string &region,
+                                  const S3Credential &cred, const string &uploadId,
+                                  vector<string> &etagArray) {
+    HTTPHeaders headers;
+    map<string, string> params;
+    UrlParser parser(keyUrl);
+    stringstream pathWithQuery;
+
+    stringstream body;
+
+    body << "<CompleteMultipartUpload>\n";
+    for (uint64_t i = 0; i < etagArray.size(); ++i) {
+        body << "  <Part>\n    <PartNumber>" << i + 1 << "</PartNumber>\n    <ETag>" << etagArray[i]
+             << "</ETag>\n  </Part>\n";
+    }
+    body << "</CompleteMultipartUpload>";
+
+    headers.Add(HOST, parser.getHost());
+    headers.Add(CONTENTTYPE, "application/xml");
+    headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
+    headers.Add(CONTENTLENGTH, std::to_string((unsigned long long)body.str().length()));
+
+    pathWithQuery << parser.getPath() << "?uploadId" << uploadId;
+
+    SignRequestV4("POST", &headers, region, pathWithQuery.str(), "", cred);
+
+    stringstream urlWithQuery;
+    urlWithQuery << keyUrl << "?uploadId" << uploadId;
+
+    Response resp =
+        this->restfulService->post(urlWithQuery.str(), headers, params, "",
+                                   vector<uint8_t>(body.str().begin(), body.str().end()));
+    if (resp.getStatus() == RESPONSE_OK) {
+        return true;
+    } else if (resp.getStatus() == RESPONSE_ERROR) {
+        xmlParserCtxtPtr xmlContext = getXMLContext(resp);
+        if (xmlContext != NULL) {
+            XMLContextHolder holder(xmlContext);
+            S3ERROR("Amazon S3 returns error \"%s\"",
+                    parseXMLMessage(xmlContext, "Message").c_str());
+        }
+
+        S3ERROR("Failed to fetch: %s, Response message: %s", keyUrl.c_str(),
+                resp.getMessage().c_str());
+        CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", keyUrl.c_str(),
+                         resp.getMessage().c_str());
+
+        return false;
+    } else {
+        S3ERROR("Failed to fetch: %s, Response message: %s", keyUrl.c_str(),
+                resp.getMessage().c_str());
+        CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", keyUrl.c_str(),
+                         resp.getMessage().c_str());
+        return false;
+    }
+
+    return false;
 }
 
 ListBucketResult::~ListBucketResult() {

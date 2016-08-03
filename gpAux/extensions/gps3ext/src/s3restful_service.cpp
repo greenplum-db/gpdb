@@ -35,7 +35,19 @@ size_t RESTfulServiceWriteFuncCallback(char *ptr, size_t size, size_t nmemb, voi
 
     size_t realsize = size * nmemb;
     Response *resp = (Response *)userp;
-    resp->appendBuffer(ptr, realsize);
+    resp->appendDataBuffer(ptr, realsize);
+    return realsize;
+}
+
+// curl's headers write function callback.
+size_t RESTfulServiceHeadersWriteFuncCallback(char *ptr, size_t size, size_t nmemb, void *userp) {
+    if (QueryCancelPending) {
+        return -1;
+    }
+
+    size_t realsize = size * nmemb;
+    Response *resp = (Response *)userp;
+    resp->appendHeadersBuffer(ptr, realsize);
     return realsize;
 }
 
@@ -100,7 +112,7 @@ Response S3RESTfulService::get(const string &url, HTTPHeaders &headers,
     if (res != CURLE_OK) {
         S3ERROR("curl_easy_perform() failed: %s", curl_easy_strerror(res));
 
-        response.clearBuffer();
+        response.clearBuffers();
         response.setStatus(RESPONSE_FAIL);
         response.setMessage(
             string("Failed to talk to s3 service ").append(curl_easy_strerror(res)));
@@ -155,6 +167,9 @@ Response S3RESTfulService::put(const string &url, HTTPHeaders &headers,
     curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)data.size());
     curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
 
+    curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *)&response);
+    curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, RESTfulServiceHeadersWriteFuncCallback);
+
     // consider low speed as timeout
     curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, s3ext_low_speed_limit);
     curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, s3ext_low_speed_time);
@@ -173,7 +188,7 @@ Response S3RESTfulService::put(const string &url, HTTPHeaders &headers,
     if (res != CURLE_OK) {
         S3ERROR("curl_easy_perform() failed: %s", curl_easy_strerror(res));
 
-        response.clearBuffer();
+        response.clearBuffers();
         response.setStatus(RESPONSE_FAIL);
         response.setMessage(
             string("Failed to talk to s3 service ").append(curl_easy_strerror(res)));
@@ -204,7 +219,8 @@ Response S3RESTfulService::put(const string &url, HTTPHeaders &headers,
 }
 
 Response S3RESTfulService::post(const string &url, HTTPHeaders &headers,
-                                const map<string, string> &params, const string &queryString) {
+                                const map<string, string> &params, const string &queryString,
+                                const vector<uint8_t> &data) {
     Response response;
 
     CURL *curl = curl_easy_init();
@@ -221,8 +237,18 @@ Response S3RESTfulService::post(const string &url, HTTPHeaders &headers,
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, RESTfulServiceWriteFuncCallback);
 
     curl_easy_setopt(curl, CURLOPT_POST, 1L);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, queryString.c_str());
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)queryString.length());
+    if (!queryString.empty()) {
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, queryString.c_str());
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)queryString.length());
+    }
+
+    if (!data.empty()) {
+        UploadData uploadData(data);
+        curl_easy_setopt(curl, CURLOPT_READDATA, (void *)&uploadData);
+        curl_easy_setopt(curl, CURLOPT_READFUNCTION, RESTfulServiceReadFuncCallback);
+        /* CURLOPT_INFILESIZE_LARGE for sending files larger than 2GB.*/
+        curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)data.size());
+    }
 
     // consider low speed as timeout
     curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, s3ext_low_speed_limit);
@@ -242,7 +268,7 @@ Response S3RESTfulService::post(const string &url, HTTPHeaders &headers,
     if (res != CURLE_OK) {
         S3ERROR("curl_easy_perform() failed: %s", curl_easy_strerror(res));
 
-        response.clearBuffer();
+        response.clearBuffers();
         response.setStatus(RESPONSE_FAIL);
         response.setMessage(
             string("Failed to talk to s3 service ").append(curl_easy_strerror(res)));

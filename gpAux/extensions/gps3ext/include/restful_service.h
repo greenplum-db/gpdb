@@ -33,19 +33,52 @@ class Response {
    public:
     Response() : status(RESPONSE_FAIL) {
     }
-    Response(ResponseStatus status, const vector<uint8_t>& buf) : status(status), buffer(buf) {
+    Response(ResponseStatus status, const vector<uint8_t>& dataBuffer)
+        : status(status), dataBuffer(dataBuffer) {
+    }
+    Response(ResponseStatus status, const vector<uint8_t>& headersBuffer,
+             const vector<uint8_t>& dataBuffer)
+        : status(status), headersBuffer(headersBuffer), dataBuffer(dataBuffer) {
     }
 
     bool isSuccess() {
         return status == RESPONSE_OK;
     }
 
+    vector<uint8_t>& getRawHeaders() {
+        return headersBuffer;
+    }
+
+    vector<uint8_t>&& moveHeadersBuffer() {
+        return std::move(headersBuffer);
+    }
+
+    void appendHeadersBuffer(char* ptr, size_t size) {
+        // Fix Eclipse warning
+        headersBuffer.insert(headersBuffer.end(), ptr, ptr + size);
+    }
+
+    void clearHeadersBuffer() {
+        headersBuffer = vector<uint8_t>();
+    }
+
     vector<uint8_t>& getRawData() {
-        return buffer;
+        return dataBuffer;
     }
 
     vector<uint8_t>&& moveDataBuffer() {
-        return std::move(buffer);
+        return std::move(dataBuffer);
+    }
+
+    void appendDataBuffer(char* ptr, size_t size) {
+        // Fix Eclipse warning
+        dataBuffer.insert(dataBuffer.end(), ptr, ptr + size);
+    }
+
+    void clearBuffers() {
+        // don't use vector.clear() because it may not be able to release memory.
+        dataBuffer = vector<uint8_t>();
+        headersBuffer = vector<uint8_t>();
     }
 
     const string& getMessage() const {
@@ -64,20 +97,12 @@ class Response {
         this->status = status;
     }
 
-    void appendBuffer(char* ptr, size_t size) {
-        // Fix Eclipse warning
-        buffer.insert(buffer.end(), ptr, ptr + size);
-    }
-
-    void clearBuffer() {
-        buffer = vector<uint8_t>();
-    }
-
    private:
     // status is OK when get full HTTP response even response body may means request failure.
     ResponseStatus status;
     string message;
-    vector<uint8_t> buffer;
+    vector<uint8_t> headersBuffer;
+    vector<uint8_t> dataBuffer;
 };
 
 class RESTfulService {
@@ -92,6 +117,10 @@ class RESTfulService {
 
     virtual Response put(const string& url, HTTPHeaders& headers, const map<string, string>& params,
                          const vector<uint8_t>& data) = 0;
+
+    virtual Response post(const string& url, HTTPHeaders& headers,
+                          const map<string, string>& params, const string& queryString,
+                          const vector<uint8_t>& data) = 0;
 
     virtual ResponseCode head(const string& url, HTTPHeaders& headers,
                               const map<string, string>& params) = 0;

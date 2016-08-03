@@ -115,6 +115,15 @@ class S3Service : public S3Interface {
                                     const map<string, string>& params,
                                     uint64_t retries = S3_GET_RESPONSE_MAX_RETRIES);
 
+   protected:
+    string getUploadId(const string& keyUrl, const string& region, const S3Credential& cred);
+
+    string uploadPartOfData(vector<uint8_t>& data, const string& sourceUrl, const string& region,
+                            const S3Credential& cred, uint64_t partNumber, const string& uploadId);
+
+    bool completeMultiPart(const string& keyUrl, const string& region, const S3Credential& cred,
+                           const string& uploadId, vector<string>& eTagArray);
+
    private:
     string getUrl(const string& prefix, const string& schema, const string& host,
                   const string& bucket, const string& marker);
@@ -124,14 +133,12 @@ class S3Service : public S3Interface {
     Response getBucketResponse(const string& region, const string& url, const string& prefix,
                                const S3Credential& cred, const string& marker);
 
-    void parseXMLMessage(xmlParserCtxtPtr xmlcontext);
+    string parseXMLMessage(xmlParserCtxtPtr xmlcontext, const string& tag);
 
     HTTPHeaders composeHTTPHeaders(const string& url, const string& marker, const string& prefix,
                                    const string& region, const S3Credential& cred);
 
     xmlParserCtxtPtr getXMLContext(Response& response);
-
-    string getUploadId(const string& keyUrl, const string& region, const S3Credential& cred);
 
     RESTfulService* restfulService;
 };

@@ -34,14 +34,18 @@ class MockS3Interface : public S3Interface {
 
 class MockS3RESTfulService : public S3RESTfulService {
    public:
+    MOCK_METHOD3(head, ResponseCode(const string &url, HTTPHeaders &headers,
+                               const map<string, string> &params));
+
     MOCK_METHOD3(get, Response(const string &url, HTTPHeaders &headers,
                                const map<string, string> &params));
 
-    MOCK_METHOD4(put, Response(const string& url, HTTPHeaders& headers, const map<string, string>& params,
-                 const vector<uint8_t>& data));
+    MOCK_METHOD4(put, Response(const string &url, HTTPHeaders &headers,
+                               const map<string, string> &params, const vector<uint8_t> &data));
 
-    MOCK_METHOD3(head, ResponseCode(const string &url, HTTPHeaders &headers,
-                               const map<string, string> &params));
+    MOCK_METHOD5(post, Response(const string &url, HTTPHeaders &headers,
+                                const map<string, string> &params, const string &queryString,
+                                const vector<uint8_t> &data));
 };
 
 class XMLGenerator {

@@ -52,7 +52,7 @@ def run(server_class=HTTPServer, handler_class=S, port=8553):
 	server_address = ('', port)
 	handler_class.protocol_version = 'HTTP/1.1'
 	httpd = server_class(server_address, handler_class)
-	print 'Starting httpd...'
+	print 'Starting http server...'
 	httpd.serve_forever()
 
 if __name__ == "__main__":

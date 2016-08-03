@@ -211,7 +211,7 @@ TEST(S3RESTfulService, PostWithoutURL) {
     S3RESTfulService service;
     string query;
 
-    Response resp = service.post(url, headers, params, query);
+    Response resp = service.post(url, headers, params, query, vector<uint8_t>());
 
     EXPECT_EQ(RESPONSE_FAIL, resp.getStatus());
     EXPECT_EQ("Failed to talk to s3 service URL using bad/illegal format or missing URL",
@@ -227,7 +227,7 @@ TEST(S3RESTfulService, PostToServerWithBlindPutService) {
     string query = "abcdefghij";
     url = "https://www.bing.com";
 
-    Response resp = service.post(url, headers, params, query);
+    Response resp = service.post(url, headers, params, query, vector<uint8_t>());
 
     EXPECT_EQ(RESPONSE_OK, resp.getStatus());
 }
@@ -242,10 +242,31 @@ TEST(S3RESTfulService, PostToServerWith404Page) {
 
     url = "https://www.bing.com/pivotal.html";
 
-    Response resp = service.post(url, headers, params, query);
+    Response resp = service.post(url, headers, params, query, vector<uint8_t>());
 
     EXPECT_EQ(RESPONSE_ERROR, resp.getStatus());
     EXPECT_EQ("S3 server returned error, error code is 404", resp.getMessage());
+}
+
+TEST(S3RESTfulService, PostToServerWithData) {
+    HTTPHeaders headers;
+    map<string, string> params;
+    string url;
+    S3RESTfulService service;
+
+    url = "https://www.bing.com";
+
+    /* data = "abcdefghij", length = 11 (including '\0') */
+    vector<uint8_t> data;
+    for (int i = 0; i < 10; i++) data.push_back('a' + i);
+    data.push_back(0);
+
+    headers.Add(CONTENTTYPE, "text/plain");
+    headers.Add(CONTENTLENGTH, std::to_string(data.size()));
+
+    Response resp = service.post(url, headers, params, "", data);
+
+    EXPECT_EQ(RESPONSE_OK, resp.getStatus());
 }
 
 /* Run './bin/dummyHTTPServer.py' before enabling this test */
@@ -259,7 +280,29 @@ TEST(S3RESTfulService, DISABLED_PostToDummyServer) {
 
     url = "http://localhost:8553";
 
-    Response resp = service.post(url, headers, params, query);
+    Response resp = service.post(url, headers, params, query, vector<uint8_t>());
     EXPECT_EQ(RESPONSE_OK, resp.getStatus());
     EXPECT_EQ(query, string(resp.getRawData().begin(), resp.getRawData().end()));
+}
+
+/* Run './bin/dummyHTTPServer.py' before enabling this test */
+TEST(S3RESTfulService, DISABLED_PostToDummyServerWithData) {
+    HTTPHeaders headers;
+    map<string, string> params;
+    string url;
+    S3RESTfulService service;
+
+    /* data = "abcdefghij", length = 11 (including '\0') */
+    vector<uint8_t> data;
+    for (int i = 0; i < 10; i++) data.push_back('a' + i);
+    data.push_back(0);
+
+    headers.Add(CONTENTTYPE, "text/plain");
+    headers.Add(CONTENTLENGTH, std::to_string(data.size()));
+
+    url = "http://localhost:8553";
+
+    Response resp = service.post(url, headers, params, "", data);
+    EXPECT_EQ(RESPONSE_OK, resp.getStatus());
+    EXPECT_TRUE(compareVector(data, resp.getRawData()));
 }
