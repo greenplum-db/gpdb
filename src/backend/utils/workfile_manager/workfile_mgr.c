@@ -405,8 +405,6 @@ workfile_mgr_cleanup_set(const void *resource)
 					work_set->path),
 					errprintstack(true)));
 
-	workfile_mgr_delete_set_directory(work_set->path);
-
 	/*
 	 * The most accurate size of a workset is recorded in work_set->in_progress_size.
 	 * work_set->size is only updated when we close a file, so it lags behind
@@ -425,7 +423,13 @@ workfile_mgr_cleanup_set(const void *resource)
 	CacheEntry *cacheEntry = CACHE_ENTRY_HEADER(resource);
 	bool update_query_space = (cacheEntry->state == CACHE_ENTRY_ACQUIRED);
 
+	/*
+	 * We are updating the segspace counters first, to make sure we don't leak.
+	 * Deleting the directory could throw an exception, so we do it last.
+	 */
 	WorkfileDiskspace_Commit(0, size_to_delete, update_query_space);
+
+	workfile_mgr_delete_set_directory(work_set->path);
 }
 
 /*
