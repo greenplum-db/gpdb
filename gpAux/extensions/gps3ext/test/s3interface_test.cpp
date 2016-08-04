@@ -84,6 +84,140 @@ TEST_F(S3ServiceTest, GetResponseWithTwoRetries) {
     EXPECT_EQ(RESPONSE_FAIL, this->getResponseWithRetries(url, headers, params, 2).getStatus());
 }
 
+TEST_F(S3ServiceTest, GetResponseWithRetriesAndSuccess) {
+    string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
+    HTTPHeaders headers;
+    map<string, string> params;
+
+    Response responseSuccess;
+    responseSuccess.setStatus(RESPONSE_OK);
+
+    EXPECT_CALL(mockRestfulService, get(_, _, _))
+        .Times(2)
+        .WillOnce(Return(response))
+        .WillOnce(Return(responseSuccess));
+
+    EXPECT_EQ(RESPONSE_OK, this->getResponseWithRetries(url, headers, params).getStatus());
+}
+
+TEST_F(S3ServiceTest, PutResponseWithZeroRetry) {
+    string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
+    HTTPHeaders headers;
+    map<string, string> params;
+    vector<uint8_t> data;
+    EXPECT_EQ(RESPONSE_FAIL,
+              this->putResponseWithRetries(url, headers, params, data, 0).getStatus());
+}
+
+TEST_F(S3ServiceTest, PutResponseWithTwoRetries) {
+    string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
+    HTTPHeaders headers;
+    map<string, string> params;
+    vector<uint8_t> data;
+
+    EXPECT_CALL(mockRestfulService, put(_, _, _, _))
+        .Times(2)
+        .WillOnce(Return(response))
+        .WillOnce(Return(response));
+
+    EXPECT_EQ(RESPONSE_FAIL,
+              this->putResponseWithRetries(url, headers, params, data, 2).getStatus());
+}
+
+TEST_F(S3ServiceTest, PutResponseWithRetriesAndSuccess) {
+    string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
+    HTTPHeaders headers;
+    map<string, string> params;
+    vector<uint8_t> data;
+
+    Response responseSuccess;
+    responseSuccess.setStatus(RESPONSE_OK);
+
+    EXPECT_CALL(mockRestfulService, put(_, _, _, _))
+        .Times(2)
+        .WillOnce(Return(response))
+        .WillOnce(Return(responseSuccess));
+
+    EXPECT_EQ(RESPONSE_OK, this->putResponseWithRetries(url, headers, params, data).getStatus());
+}
+
+TEST_F(S3ServiceTest, HeadResponseWithZeroRetry) {
+    string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
+    HTTPHeaders headers;
+    map<string, string> params;
+    EXPECT_EQ(HeadResponseFail, this->headResponseWithRetries(url, headers, params, 0));
+}
+
+TEST_F(S3ServiceTest, HeadResponseWithRetriesAndFail) {
+    string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
+    HTTPHeaders headers;
+    map<string, string> params;
+
+    EXPECT_CALL(mockRestfulService, head(_, _, _))
+        .Times(S3_REQUEST_MAX_RETRIES)
+        .WillOnce(Return(HeadResponseFail))
+        .WillOnce(Return(HeadResponseFail))
+        .WillOnce(Return(HeadResponseFail));
+
+    EXPECT_EQ(HeadResponseFail, this->headResponseWithRetries(url, headers, params));
+}
+
+TEST_F(S3ServiceTest, HeadResponseWithRetriesAndSuccess) {
+    string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
+    HTTPHeaders headers;
+    map<string, string> params;
+
+    EXPECT_CALL(mockRestfulService, head(_, _, _))
+        .Times(2)
+        .WillOnce(Return(HeadResponseFail))
+        .WillOnce(Return(404));
+
+    EXPECT_EQ(404, this->headResponseWithRetries(url, headers, params));
+}
+
+TEST_F(S3ServiceTest, PostResponseWithZeroRetry) {
+    string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
+    HTTPHeaders headers;
+    map<string, string> params;
+    vector<uint8_t> data;
+
+    EXPECT_EQ(RESPONSE_FAIL,
+              this->postResponseWithRetries(url, headers, params, "", data, 0).getStatus());
+}
+
+TEST_F(S3ServiceTest, PostResponseWithTwoRetries) {
+    string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
+    HTTPHeaders headers;
+    map<string, string> params;
+    vector<uint8_t> data;
+
+    EXPECT_CALL(mockRestfulService, post(_, _, _, _, _))
+        .Times(2)
+        .WillOnce(Return(response))
+        .WillOnce(Return(response));
+
+    EXPECT_EQ(RESPONSE_FAIL,
+              this->postResponseWithRetries(url, headers, params, "", data, 2).getStatus());
+}
+
+TEST_F(S3ServiceTest, PostResponseWithRetriesAndSuccess) {
+    string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
+    HTTPHeaders headers;
+    map<string, string> params;
+    vector<uint8_t> data;
+
+    Response responseSuccess;
+    responseSuccess.setStatus(RESPONSE_OK);
+
+    EXPECT_CALL(mockRestfulService, post(_, _, _, _, _))
+        .Times(2)
+        .WillOnce(Return(response))
+        .WillOnce(Return(responseSuccess));
+
+    EXPECT_EQ(RESPONSE_OK,
+              this->postResponseWithRetries(url, headers, params, "", data).getStatus());
+}
+
 TEST_F(S3ServiceTest, ListBucketThrowExceptionWhenBucketStringIsEmpty) {
     // here is a memory leak because we haven't defined ~S3ServiceTest() to clean up.
     EXPECT_THROW(result = this->listBucket("", "", "", "", cred), std::runtime_error);
@@ -388,6 +522,16 @@ TEST_F(S3ServiceTest, fetchDataWithResponseError) {
                  std::runtime_error);
 }
 
+TEST_F(S3ServiceTest, HeadResponseWithHeadResponseFail) {
+    string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
+
+    EXPECT_CALL(mockRestfulService, head(_, _, _))
+        .Times(3)
+        .WillRepeatedly(Return(HeadResponseFail));
+
+    EXPECT_FALSE(this->checkKeyExistence(url, this->region, this->cred));
+}
+
 TEST_F(S3ServiceTest, HeadResponse200) {
     string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
 
@@ -442,7 +586,7 @@ TEST_F(S3ServiceTest, uploadDataFailedResponse) {
     vector<uint8_t> raw;
     raw.resize(100);
     Response response(RESPONSE_FAIL, raw);
-    EXPECT_CALL(mockRestfulService, put(_, _, _, _)).WillOnce(Return(response));
+    EXPECT_CALL(mockRestfulService, put(_, _, _, _)).WillRepeatedly(Return(response));
 
     EXPECT_THROW(
         this->uploadData(raw, "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
@@ -466,7 +610,7 @@ TEST_F(S3ServiceTest, uploadDataErrorResponse) {
     vector<uint8_t> raw(xml, xml + sizeof(xml) - 1);
     Response response(RESPONSE_ERROR, raw);
 
-    EXPECT_CALL(mockRestfulService, put(_, _, _, _)).WillOnce(Return(response));
+    EXPECT_CALL(mockRestfulService, put(_, _, _, _)).WillRepeatedly(Return(response));
 
     EXPECT_THROW(
         this->uploadData(raw, "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
@@ -500,7 +644,7 @@ TEST_F(S3ServiceTest, getUploadIdFailedResponse) {
     Response response(RESPONSE_FAIL, raw);
 
     EXPECT_CALL(mockRestfulService, post(_, _, _, "uploads", vector<uint8_t>()))
-        .WillOnce(Return(response));
+        .WillRepeatedly(Return(response));
 
     EXPECT_THROW(this->getUploadId("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
                                    region, cred),
@@ -524,7 +668,7 @@ TEST_F(S3ServiceTest, getUploadIdErrorResponse) {
     Response response(RESPONSE_ERROR, raw);
 
     EXPECT_CALL(mockRestfulService, post(_, _, _, "uploads", vector<uint8_t>()))
-        .WillOnce(Return(response));
+        .WillRepeatedly(Return(response));
 
     EXPECT_THROW(this->getUploadId("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
                                    region, cred),
@@ -559,7 +703,7 @@ TEST_F(S3ServiceTest, uploadPartOfDataFailedResponse) {
     vector<uint8_t> raw;
     raw.resize(100);
     Response response(RESPONSE_FAIL, raw);
-    EXPECT_CALL(mockRestfulService, put(_, _, _, _)).WillOnce(Return(response));
+    EXPECT_CALL(mockRestfulService, put(_, _, _, _)).WillRepeatedly(Return(response));
 
     EXPECT_THROW(
         this->uploadPartOfData(raw, "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
@@ -583,7 +727,7 @@ TEST_F(S3ServiceTest, uploadPartOfDataErrorResponse) {
     vector<uint8_t> raw(xml, xml + sizeof(xml) - 1);
     Response response(RESPONSE_ERROR, raw);
 
-    EXPECT_CALL(mockRestfulService, put(_, _, _, _)).WillOnce(Return(response));
+    EXPECT_CALL(mockRestfulService, put(_, _, _, _)).WillRepeatedly(Return(response));
 
     EXPECT_THROW(
         this->uploadPartOfData(raw, "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
@@ -611,7 +755,7 @@ TEST_F(S3ServiceTest, completeMultiPartFailedResponse) {
     vector<uint8_t> raw;
     raw.resize(100);
     Response response(RESPONSE_FAIL, raw);
-    EXPECT_CALL(mockRestfulService, post(_, _, _, "", _)).WillOnce(Return(response));
+    EXPECT_CALL(mockRestfulService, post(_, _, _, "", _)).WillRepeatedly(Return(response));
 
     vector<string> etagArray;
 
@@ -637,7 +781,7 @@ TEST_F(S3ServiceTest, completeMultiPartErrorResponse) {
     vector<uint8_t> raw(xml, xml + sizeof(xml) - 1);
     Response response(RESPONSE_ERROR, raw);
 
-    EXPECT_CALL(mockRestfulService, post(_, _, _, "", _)).WillOnce(Return(response));
+    EXPECT_CALL(mockRestfulService, post(_, _, _, "", _)).WillRepeatedly(Return(response));
 
     vector<string> etagArray;
 

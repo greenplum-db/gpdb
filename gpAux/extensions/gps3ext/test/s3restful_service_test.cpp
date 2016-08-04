@@ -130,6 +130,22 @@ TEST(S3RESTfulService, PutToServerWith404Page) {
     EXPECT_EQ("S3 server returned error, error code is 404", resp.getMessage());
 }
 
+TEST(S3RESTfulService, PutWithoutURLWithDebugParam) {
+    HTTPHeaders headers;
+    map<string, string> params;
+    params["debug"] = "true";
+
+    string url;
+    S3RESTfulService service;
+    vector<uint8_t> data;
+
+    Response resp = service.put(url, headers, params, data);
+
+    EXPECT_EQ(RESPONSE_FAIL, resp.getStatus());
+    EXPECT_EQ("Failed to talk to s3 service URL using bad/illegal format or missing URL",
+              resp.getMessage());
+}
+
 /*
  * The reason we define our vector-compare function is because:
  *   we may suffer from the Segment fault error when using std::equal() for comparison
@@ -178,6 +194,21 @@ TEST(S3RESTfulService, HeadWithoutURL) {
     EXPECT_EQ(-1, code);
 }
 
+TEST(S3RESTfulService, HeadWithCorrectURLAndDebugParam) {
+    HTTPHeaders headers;
+    map<string, string> params;
+    params["debug"] = "true";
+
+    string url;
+    S3RESTfulService service;
+
+    url = "https://www.bing.com/";
+
+    ResponseCode code = service.head(url, headers, params);
+
+    EXPECT_EQ(200, code);
+}
+
 TEST(S3RESTfulService, HeadWithWrongURL) {
     HTTPHeaders headers;
     map<string, string> params;
@@ -216,6 +247,21 @@ TEST(S3RESTfulService, PostWithoutURL) {
     EXPECT_EQ(RESPONSE_FAIL, resp.getStatus());
     EXPECT_EQ("Failed to talk to s3 service URL using bad/illegal format or missing URL",
               resp.getMessage());
+}
+
+TEST(S3RESTfulService, PostToServerWithBlindPutServiceAndDebugParam) {
+    HTTPHeaders headers;
+    map<string, string> params;
+    params["debug"] = "true";
+    string url;
+    S3RESTfulService service;
+
+    string query = "abcdefghij";
+    url = "https://www.bing.com";
+
+    Response resp = service.post(url, headers, params, query, vector<uint8_t>());
+
+    EXPECT_EQ(RESPONSE_OK, resp.getStatus());
 }
 
 TEST(S3RESTfulService, PostToServerWithBlindPutService) {

@@ -53,11 +53,71 @@ Response S3Service::getResponseWithRetries(const string &url, HTTPHeaders &heade
             return response;
         };
 
-        S3WARN("Failed to get a good response from '%s', retrying ...", url.c_str());
+        S3WARN("Failed to get a good response in GET from '%s', retrying ...", url.c_str());
     };
 
     // an empty response(default status is RESPONSE_FAIL) returned if retries is 0
     return Response();
+};
+
+Response S3Service::putResponseWithRetries(const string &url, HTTPHeaders &headers,
+                                           const map<string, string> &params, vector<uint8_t> &data,
+                                           uint64_t retries) {
+    while (retries--) {
+        // declare response here to leverage RVO (Return Value Optimization)
+        Response response = this->restfulService->put(url, headers, params, data);
+        if (response.isSuccess() || (retries == 0)) {
+            return response;
+        };
+
+        S3WARN("Failed to get a good response in PUT from '%s', retrying ...", url.c_str());
+    };
+
+    // an empty response(default status is RESPONSE_FAIL) returned if retries is 0
+    return Response();
+};
+
+Response S3Service::postResponseWithRetries(const string &url, HTTPHeaders &headers,
+                                            const map<string, string> &params,
+                                            const string &queryString, const vector<uint8_t> &data,
+                                            uint64_t retries) {
+    while (retries--) {
+        // declare response here to leverage RVO (Return Value Optimization)
+        Response response = this->restfulService->post(url, headers, params, queryString, data);
+        if (response.isSuccess() || (retries == 0)) {
+            return response;
+        };
+
+        S3WARN("Failed to get a good response in POST from '%s', retrying ...", url.c_str());
+    };
+
+    // an empty response(default status is RESPONSE_FAIL) returned if retries is 0
+    return Response();
+}
+
+bool S3Service::isKeyExisted(ResponseCode code) {
+    return isSuccessfulResponse(code);
+}
+
+bool S3Service::isHeadResponseCodeNeedRetry(ResponseCode code) {
+    return code == HeadResponseFail;
+}
+
+ResponseCode S3Service::headResponseWithRetries(const string &url, HTTPHeaders &headers,
+                                                const map<string, string> &params,
+                                                uint64_t retries) {
+    ResponseCode response = HeadResponseFail;
+
+    while (retries--) {
+        response = this->restfulService->head(url, headers, params);
+        if (!isHeadResponseCodeNeedRetry(response) || (retries == 0)) {
+            return response;
+        };
+
+        S3WARN("Failed to get a good response in PUT from '%s', retrying ...", url.c_str());
+    };
+
+    return response;
 };
 
 // S3 requires query parameters specified alphabetically.
@@ -364,7 +424,7 @@ uint64_t S3Service::uploadData(vector<uint8_t> &data, const string &sourceUrl, c
 
     SignRequestV4("PUT", &headers, region, parser.getPath(), "", cred);
 
-    Response resp = this->restfulService->put(sourceUrl, headers, params, data);
+    Response resp = this->putResponseWithRetries(sourceUrl, headers, params, data);
     if (resp.getStatus() == RESPONSE_OK) {
         return data.size();
     } else if (resp.getStatus() == RESPONSE_ERROR) {
@@ -445,13 +505,7 @@ bool S3Service::checkKeyExistence(const string &keyUrl, const string &region,
 
     SignRequestV4("HEAD", &headers, region, parser.getPath(), "", cred);
 
-    ResponseCode code = this->restfulService->head(keyUrl, headers, params);
-
-    if (code == 200 || code == 206) {
-        return true;
-    }
-
-    return false;
+    return isKeyExisted(headResponseWithRetries(keyUrl, headers, params));
 }
 
 string S3Service::getUploadId(const string &keyUrl, const string &region,
@@ -470,7 +524,7 @@ string S3Service::getUploadId(const string &keyUrl, const string &region,
     SignRequestV4("POST", &headers, region, pathWithQuery.str(), "", cred);
 
     Response resp =
-        this->restfulService->post(keyUrl, headers, params, "uploads", vector<uint8_t>());
+        this->postResponseWithRetries(keyUrl, headers, params, "uploads", vector<uint8_t>());
     if (resp.getStatus() == RESPONSE_OK) {
         xmlParserCtxtPtr xmlContext = getXMLContext(resp);
         if (xmlContext != NULL) {
@@ -523,7 +577,7 @@ string S3Service::uploadPartOfData(vector<uint8_t> &data, const string &sourceUr
     stringstream urlWithQuery;
     urlWithQuery << sourceUrl << "?partNumber=" << partNumber << "&uploadId=" << uploadId;
 
-    Response resp = this->restfulService->put(urlWithQuery.str(), headers, params, data);
+    Response resp = this->putResponseWithRetries(urlWithQuery.str(), headers, params, data);
     if (resp.getStatus() == RESPONSE_OK) {
         string headers(resp.getRawHeaders().begin(), resp.getRawHeaders().end());
 
@@ -586,9 +640,10 @@ bool S3Service::completeMultiPart(const string &keyUrl, const string &region,
     stringstream urlWithQuery;
     urlWithQuery << keyUrl << "?uploadId" << uploadId;
 
+    string bodyString = body.str();
     Response resp =
-        this->restfulService->post(urlWithQuery.str(), headers, params, "",
-                                   vector<uint8_t>(body.str().begin(), body.str().end()));
+        this->postResponseWithRetries(urlWithQuery.str(), headers, params, "",
+                                      vector<uint8_t>(bodyString.begin(), bodyString.end()));
     if (resp.getStatus() == RESPONSE_OK) {
         return true;
     } else if (resp.getStatus() == RESPONSE_ERROR) {

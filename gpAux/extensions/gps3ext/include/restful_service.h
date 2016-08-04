@@ -20,6 +20,15 @@ enum ResponseStatus {
 };
 
 typedef long ResponseCode;
+#define HeadResponseFail -1
+
+// 2XX are successful response.
+// Here we deal with 200 (OK) and 206 (partial content) currently.
+//
+//   We may move this function to RESTfulService() in future
+inline bool isSuccessfulResponse(ResponseCode code) {
+    return (code == 200 || code == 206);
+}
 
 struct UploadData {
     UploadData(const vector<uint8_t>& buff) : buffer(buff), currentPosition(0) {

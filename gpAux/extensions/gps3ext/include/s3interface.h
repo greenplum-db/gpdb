@@ -11,8 +11,8 @@
 
 #define S3_MAGIC_BYTES_NUM 4
 
-#define S3_GET_RESPONSE_NO_RETRY 1
-#define S3_GET_RESPONSE_MAX_RETRIES 3
+#define S3_REQUEST_NO_RETRY 1
+#define S3_REQUEST_MAX_RETRIES 3
 
 #define S3_RANGE_HEADER_STRING_LEN 128
 
@@ -111,11 +111,24 @@ class S3Service : public S3Interface {
         this->restfulService = restfullService;
     }
 
+   protected:
     Response getResponseWithRetries(const string& url, HTTPHeaders& headers,
                                     const map<string, string>& params,
-                                    uint64_t retries = S3_GET_RESPONSE_MAX_RETRIES);
+                                    uint64_t retries = S3_REQUEST_MAX_RETRIES);
 
-   protected:
+    Response putResponseWithRetries(const string& url, HTTPHeaders& headers,
+                                    const map<string, string>& params, vector<uint8_t>& data,
+                                    uint64_t retries = S3_REQUEST_MAX_RETRIES);
+
+    Response postResponseWithRetries(const string& url, HTTPHeaders& headers,
+                                     const map<string, string>& params, const string& queryString,
+                                     const vector<uint8_t>& data,
+                                     uint64_t retries = S3_REQUEST_MAX_RETRIES);
+
+    ResponseCode headResponseWithRetries(const string& url, HTTPHeaders& headers,
+                                         const map<string, string>& params,
+                                         uint64_t retries = S3_REQUEST_MAX_RETRIES);
+
     string getUploadId(const string& keyUrl, const string& region, const S3Credential& cred);
 
     string uploadPartOfData(vector<uint8_t>& data, const string& sourceUrl, const string& region,
@@ -140,6 +153,10 @@ class S3Service : public S3Interface {
 
     xmlParserCtxtPtr getXMLContext(Response& response);
 
+    bool isKeyExisted(ResponseCode code);
+    bool isHeadResponseCodeNeedRetry(ResponseCode code);
+
+   private:
     RESTfulService* restfulService;
 };
 

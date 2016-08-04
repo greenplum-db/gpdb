@@ -124,7 +124,7 @@ Response S3RESTfulService::get(const string &url, HTTPHeaders &headers,
 
         // 2XX are successful response. Here we deal with 200 (OK) and 206 (partial content)
         // firstly.
-        if ((responseCode == 200) || (responseCode == 206)) {
+        if (isSuccessfulResponse(responseCode)) {
             response.setStatus(RESPONSE_OK);
             response.setMessage("Success");
         } else {  // Server error, set status to RESPONSE_ERROR
@@ -200,7 +200,7 @@ Response S3RESTfulService::put(const string &url, HTTPHeaders &headers,
 
         // 2XX are successful response. Here we deal with 200 (OK) and 206 (partial content)
         // firstly.
-        if ((responseCode == 200) || (responseCode == 206)) {
+        if (isSuccessfulResponse(responseCode)) {
             response.setStatus(RESPONSE_OK);
             response.setMessage("Success");
         } else {  // Server error, set status to RESPONSE_ERROR
@@ -280,7 +280,7 @@ Response S3RESTfulService::post(const string &url, HTTPHeaders &headers,
 
         // 2XX are successful response. Here we deal with 200 (OK) and 206 (partial content)
         // firstly.
-        if ((responseCode == 200) || (responseCode == 206)) {
+        if (isSuccessfulResponse(responseCode)) {
             response.setStatus(RESPONSE_OK);
             response.setMessage("Success");
         } else {  // Server error, set status to RESPONSE_ERROR
@@ -305,7 +305,7 @@ Response S3RESTfulService::post(const string &url, HTTPHeaders &headers,
 // implementation.
 ResponseCode S3RESTfulService::head(const string &url, HTTPHeaders &headers,
                                     const map<string, string> &params) {
-    ResponseCode responseCode = -1;
+    ResponseCode responseCode = HeadResponseFail;
 
     CURL *curl = curl_easy_init();
     CHECK_OR_DIE_MSG(curl != NULL, "%s", "Failed to create curl handler");
