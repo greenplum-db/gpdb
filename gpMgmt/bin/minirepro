@@ -35,7 +35,8 @@ PARAMETERS
 
 -U <username>
   Greenplum Database user name to log into the database and run the
-  SQL command. Default is the OS user name running the utility.
+  SQL command. Default is the PGUSER environment variable. If PGUSER
+  is not defined, OS user name running the utility is used.
 
 -p <port>
   Port that is used to connect to Greenplum Database.
@@ -137,8 +138,8 @@ def dump_query(connectionInfo, query_file):
         errormsg = p.communicate()[1]
         sys.stderr.writelines('\nError when executing function gp_toolkit.gp_dump_query_oids.\n\n' + errormsg + '\n\n')
         sys.exit(1)
+
     outmsg, errormsg = p.communicate()
-    
     if errormsg:
         sys.stderr.writelines('\nError when executing function gp_toolkit.gp_dump_query_oids.\n\n' + errormsg + '\n\n')
         sys.exit(1)
@@ -268,8 +269,8 @@ def main():
     envOpts = os.environ
     db = args[0]
     host = options.host or platform.node()
-    user = options.user or os.getlogin()
-    port = options.port or envOpts['PGPORT'] or '5432'
+    user = options.user or ('PGUSER' in envOpts and envOpts['PGUSER']) or os.getlogin()
+    port = options.port or ('PGPORT' in envOpts and envOpts['PGPORT']) or '5432'
     query_file = options.query_file
     output_file = options.output_file
 
@@ -282,6 +283,7 @@ def main():
     if not os.path.isfile(query_file):
         parser.error('Query file %s does not exist.' % query_file)
         exit(1)
+    output_file = os.path.abspath(output_file)
 
     timestamp = generate_timestamp()
     global PATH_PREFIX
