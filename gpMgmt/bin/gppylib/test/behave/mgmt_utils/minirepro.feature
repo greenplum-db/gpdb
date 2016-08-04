@@ -39,16 +39,22 @@ Feature: Dump minimum database objects that is related to the query
       Then minirepro error should contain relation "tbl_none" does not exist
 
     @minirepro_core
-    Scenario: Query parse error with multiple queries
+    Scenario: Query parse with multiple queries
       Given the file "/tmp/in.sql" exists and contains "select * from t1; delete from t2;"
       When the user runs "minirepro minireprodb -q /tmp/in.sql -f /tmp/out.sql"
-      Then minirepro error should contain Error while running gp_toolkit.gp_dump_query_oids
+      Then the output file "/tmp/out.sql" should exist
+      And the output file "/tmp/out.sql" should contain "CREATE TABLE t1"
+      And the output file "/tmp/out.sql" should contain "CREATE TABLE t2"
+      And the output file "/tmp/out.sql" should contain "WHERE relname = 't1'"
+      And the output file "/tmp/out.sql" should contain "WHERE relname = 't2'"
+      And the output file "/tmp/out.sql" should be loaded to database "minidb_tmp" without error
+      And the file "/tmp/in.sql" should be executed in database "minidb_tmp" without error
 
     @minirepro_core
     Scenario: Query parse error with wrong syntax query
       Given the file "/tmp/in.sql" exists and contains "delete * from t1"
       When the user runs "minirepro minireprodb -q /tmp/in.sql -f /tmp/out.sql"
-      Then minirepro error should contain Error while running gp_toolkit.gp_dump_query_oids
+      Then minirepro error should contain Error when executing function gp_toolkit.gp_dump_query_oids
 
     @minirepro_core
     Scenario: Dump database objects related with select query

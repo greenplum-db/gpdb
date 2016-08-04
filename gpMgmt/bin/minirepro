@@ -137,7 +137,12 @@ def dump_query(connectionInfo, query_file):
         errormsg = p.communicate()[1]
         sys.stderr.writelines('\nError when executing function gp_toolkit.gp_dump_query_oids.\n\n' + errormsg + '\n\n')
         sys.exit(1)
-    return p.communicate()[0]
+    outmsg, errormsg = p.communicate()
+    
+    if errormsg:
+        sys.stderr.writelines('\nError when executing function gp_toolkit.gp_dump_query_oids.\n\n' + errormsg + '\n\n')
+        sys.exit(1)
+    return outmsg
 
 # relation and function oids will be extracted from the dump string
 def parse_oids(cursor, json_oids):
