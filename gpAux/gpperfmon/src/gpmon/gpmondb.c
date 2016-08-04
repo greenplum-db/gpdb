@@ -1471,12 +1471,31 @@ void gpdb_import_alert_log(apr_pool_t *pool)
 	}
 
 	// Insert tail file to history table.
-	if (gpdb_insert_alert_log())
+	if (!gpdb_insert_alert_log())
 	{
-		// Delete tail file
-		gpdb_remove_success_files(success_append_files, pool);
-		truncate_file(dst_file, pool);
+		// Failure might happen on malformed log entries
+		time_t now;
+		char timestr[20];
+		char *bad_file;
+
+		// Copy failed log into separate file for user attention
+		now = time(NULL);
+		strftime(timestr, 20, "%Y-%m-%d_%H%M%S", localtime(&now));
+		bad_file = apr_pstrcat(pool, GPMON_LOG, "/", GPMON_ALERT_LOG_STAGE, "_broken_", timestr, ".csv", NULL);
+		if (apr_file_copy(dst_file, bad_file, APR_FPROT_FILE_SOURCE_PERMS, pool) == APR_SUCCESS)
+		{
+			gpmon_warningx(FLINE, status, "Staging file with broken entries is archived to %s", bad_file);
+		}
+		else
+		{
+			gpmon_warningx(FLINE, status, "failed copying stage file:%s to broken file:%s", dst_file, bad_file);
+		}
 	}
+
+	// Delete tail file regardless of load success, as keeping too many tail files
+	// might cause serious harm to the system
+	gpdb_remove_success_files(success_append_files, pool);
+	truncate_file(dst_file, pool);
 }
 
 
