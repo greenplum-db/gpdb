@@ -445,8 +445,6 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 	switch (nodeTag(plan))
 	{
 		case T_SeqScan: /* Rely on structure equivalence */
-		case T_AppendOnlyScan: /* Rely on structure equivalence */
-		case T_AOCSScan: /* Rely on structure equivalence */
 		case T_ExternalScan: /* Rely on structure equivalence */
 			{
 				Scan    *splan = (Scan *) plan;

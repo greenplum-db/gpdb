@@ -1492,8 +1492,6 @@ cdbpath_dedup_fixup_walker(Path *path, void *context)
 
 		case T_SeqScan:
 		case T_ExternalScan:
-		case T_AppendOnlyScan:
-		case T_AOCSScan:
 		case T_IndexScan:
 		case T_BitmapHeapScan:
 		case T_BitmapAppendOnlyScan:

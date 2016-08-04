@@ -1975,21 +1975,6 @@ typedef struct ExternalScanState
 	ItemPointerData cdb_fake_ctid;
 } ExternalScanState;
 
-/* ----------------
- * AppendOnlyScanState information
- *
- *   AppendOnlyScan nodes are used to scan append only tables
- *
- *   aos_ScanDesc is the additional data that is needed for scanning
- * AppendOnly table.
- * ----------------
- */
-typedef struct AppendOnlyScanState
-{
-	ScanState	ss;
-	struct AppendOnlyScanDescData *aos_ScanDesc;
-} AppendOnlyScanState;
-
 /*
  * AOCSScanOpaqueData
  *    Additional data (in addition to ScanState) for scanning AppendOnly
@@ -2006,16 +1991,6 @@ typedef struct AOCSScanOpaqueData
 	struct AOCSScanDescData *scandesc;
 } AOCSScanOpaqueData;
 
-/* -----------------------------------------------
- *      AOCSScanState
- * -----------------------------------------------
- */
-typedef struct AOCSScanState
-{
-	ScanState ss;
-	AOCSScanOpaqueData *opaque;
-} AOCSScanState;
-
 /*
  * TableScanState
  *   Encapsulate the scan state for different table type.
@@ -2030,7 +2005,11 @@ typedef struct TableScanState
 	/*
 	 * Opaque data that is associated with different table type.
 	 */
-	void	   *opaque;
+	union
+	{
+		struct AppendOnlyScanDescData *appendonly;
+		AOCSScanOpaqueData *aocs;
+	} opaque;
 } TableScanState;
 
 /*

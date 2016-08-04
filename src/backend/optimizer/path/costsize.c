@@ -174,7 +174,7 @@ cost_seqscan(Path *path, PlannerInfo *root,
  *	  Determines and returns the cost of scanning a relation sequentially.
  */
 void
-cost_appendonlyscan(AppendOnlyPath *path, PlannerInfo *root,
+cost_appendonlyscan(Path *path, PlannerInfo *root,
 					RelOptInfo *baserel)
 {
 	Cost		startup_cost = 0;
@@ -195,8 +195,8 @@ cost_appendonlyscan(AppendOnlyPath *path, PlannerInfo *root,
 	cpu_per_tuple = cpu_tuple_cost + baserel->baserestrictcost.per_tuple;
 	run_cost += cpu_per_tuple * baserel->tuples;
 	
-	path->path.startup_cost = startup_cost;
-	path->path.total_cost = startup_cost + run_cost;
+	path->startup_cost = startup_cost;
+	path->total_cost = startup_cost + run_cost;
 }
 
 /*
@@ -204,8 +204,8 @@ cost_appendonlyscan(AppendOnlyPath *path, PlannerInfo *root,
  *	  Determines and returns the cost of scanning a relation sequentially.
  */
 void
-cost_aocsscan(AOCSPath *path, PlannerInfo *root,
-					RelOptInfo *baserel)
+cost_aocsscan(Path *path, PlannerInfo *root,
+			  RelOptInfo *baserel)
 {
 	Cost		startup_cost = 0;
 	Cost		run_cost = 0;
@@ -225,8 +225,8 @@ cost_aocsscan(AOCSPath *path, PlannerInfo *root,
 	cpu_per_tuple = cpu_tuple_cost + baserel->baserestrictcost.per_tuple;
 	run_cost += cpu_per_tuple * baserel->tuples;
 	
-	path->path.startup_cost = startup_cost;
-	path->path.total_cost = startup_cost + run_cost;
+	path->startup_cost = startup_cost;
+	path->total_cost = startup_cost + run_cost;
 }
 
 /*
