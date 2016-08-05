@@ -24,27 +24,6 @@
 
 #include "catalog/genbki.h"
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_cast
-   with (relid=2605)
-   (
-   castsource   oid, 
-   casttarget   oid, 
-   castfunc     oid, 
-   castcontext  "char"
-   );
-
-   create unique index on pg_cast(oid) with (indexid=2660, CamelCase=CastOid);
-   create unique index on pg_cast(castsource, casttarget) with (indexid=2661, CamelCase=CastSourceTarget, syscacheid=CASTSOURCETARGET, syscache_nbuckets=256);
-
-   alter table pg_cast add fk castsource on pg_type(oid);
-   alter table pg_cast add fk casttarget on pg_type(oid);
-   alter table pg_cast add fk castfunc on pg_proc(oid);
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
 /* ----------------
  *		pg_cast definition.  cpp turns this into
  *		typedef struct FormData_pg_cast
@@ -59,6 +38,11 @@ CATALOG(pg_cast,2605)
 	Oid			castfunc;		/* cast function; 0 = binary coercible */
 	char		castcontext;	/* contexts in which cast can be used */
 } FormData_pg_cast;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(castsource REFERENCES pg_type(oid));
+FOREIGN_KEY(casttarget REFERENCES pg_type(oid));
+FOREIGN_KEY(castfunc REFERENCES pg_proc(oid));
 
 typedef FormData_pg_cast *Form_pg_cast;
 

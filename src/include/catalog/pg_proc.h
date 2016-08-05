@@ -27,54 +27,6 @@
 #include "catalog/genbki.h"
 #include "nodes/pg_list.h"
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_proc
-   with (camelcase=Procedure, bootstrap=true, relid=1255, toast_oid=2836, toast_index=2837)
-   (
-   proname         name, 
-   pronamespace    oid, 
-   proowner        oid, 
-   prolang         oid, 
-   procost         float4, 
-   prorows         float4, 
-   provariadic     oid,
-   proisagg        boolean, 
-   prosecdef       boolean, 
-   proisstrict     boolean, 
-   proretset       boolean, 
-   provolatile     "char", 
-   pronargs        smallint, 
-   pronargdefaults smallint,
-   prorettype      oid, 
-   proiswin        boolean, 
-   proargtypes     oidvector, 
-   proallargtypes  oid[], 
-   proargmodes     "char"[], 
-   proargnames     text[], 
-   proargdefaults  text,
-   prosrc          text, 
-   probin          bytea, 
-   proconfig       text[], 
-   proacl          aclitem[],
-   prodataaccess   "char"
-   );
-
-
-   create unique index on pg_proc(oid) with (indexid=2690, CamelCase=ProcedureOid, syscacheid=PROCOID, syscache_nbuckets=2048);
-
-   create unique index on pg_proc(proname, proargtypes, pronamespace) with (indexid=2691, CamelCase=ProcedureNameArgsNsp, syscacheid=PROCNAMEARGSNSP, syscache_nbuckets=2048);
-
-   alter table pg_proc add fk pronamespace on pg_namespace(oid);
-   alter table pg_proc add fk proowner on pg_authid(oid);
-   alter table pg_proc add fk prolang on pg_language(oid);
-   alter table pg_proc add fk prorettype on pg_type(oid);
-   alter table pg_proc add vector_fk proargtypes on pg_type(oid);
-   alter table pg_proc add vector_fk proallargtypes on pg_type(oid);
-
-   TIDYCAT_ENDFAKEDEF
- */
-
 /* ----------------
  *		pg_proc definition.  cpp turns this into
  *		typedef struct FormData_pg_proc
@@ -114,6 +66,14 @@ CATALOG(pg_proc,1255) BKI_BOOTSTRAP
 	aclitem		proacl[1];		/* access permissions */
 	char		prodataaccess;	/* data access indicator */
 } FormData_pg_proc;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(pronamespace REFERENCES pg_namespace(oid));
+FOREIGN_KEY(proowner REFERENCES pg_authid(oid));
+FOREIGN_KEY(prolang REFERENCES pg_language(oid));
+FOREIGN_KEY(prorettype REFERENCES pg_type(oid));
+/*   alter table pg_proc add vector_fk proargtypes on pg_type(oid); */
+/*   alter table pg_proc add vector_fk proallargtypes on pg_type(oid); */
 
 /* ----------------
  *		Form_pg_proc corresponds to a pointer to a tuple with

@@ -27,19 +27,15 @@
 #include "bootstrap/bootstrap.h"
 #include "catalog/index.h"
 #include "catalog/pg_type.h"
-#include "cdb/cdbfilerepprimary.h"
 #include "cdb/cdbfilerep.h"
-#include "cdb/cdbvars.h"
 #include "libpq/pqsignal.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "postmaster/bgwriter.h"
-#include "postmaster/primary_mirror_mode.h"
 #include "postmaster/walwriter.h"
 #include "replication/walreceiver.h"
 #include "storage/freespace.h"
 #include "storage/ipc.h"
-#include "storage/pmsignal.h"
 #include "storage/proc.h"
 #include "tcop/tcopprot.h"
 #include "utils/builtins.h"
@@ -47,7 +43,6 @@
 #include "utils/fmgroids.h"
 #include "utils/memutils.h"
 #include "utils/ps_status.h"
-#include "utils/resscheduler.h"
 
 extern int	optind;
 extern char *optarg;

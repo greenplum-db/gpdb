@@ -24,60 +24,6 @@
 
 #include "catalog/genbki.h"
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_am
-   with (camelcase=AccessMethod,  relid=2601)
-   (
-   amname           name, 
-   amstrategies     smallint, 
-   amsupport        smallint, 
-   amcanorder       boolean, 
-   amcanunique      boolean, 
-   amcanmulticol    boolean, 
-   amoptionalkey    boolean, 
-   amindexnulls     boolean, 
-   amsearchnulls    boolean, 
-   amstorage        boolean, 
-   amclusterable    boolean, 
-   amcanshrink      boolean, 
-   aminsert         regproc, 
-   ambeginscan      regproc, 
-   amgettuple       regproc, 
-   amgetmulti       regproc, 
-   amrescan         regproc, 
-   amendscan        regproc, 
-   ammarkpos        regproc, 
-   amrestrpos       regproc, 
-   ambuild          regproc, 
-   ambulkdelete     regproc, 
-   amvacuumcleanup  regproc, 
-   amcostestimate   regproc, 
-   amoptions        regproc
-    );
-
-	create unique index on pg_am(amname) with (indexid=2651, CamelCase=AmName, syscacheid=AMNAME, syscache_nbuckets=4);
-	create unique index on pg_am(oid) with (indexid=2652, CamelCase=AmOid, syscacheid=AMOID, syscache_nbuckets=4);
-
-   alter table pg_am add fk aminsert on pg_proc(oid);
-   alter table pg_am add fk ambeginscan on pg_proc(oid);
-   alter table pg_am add fk amgettuple on pg_proc(oid);
-   alter table pg_am add fk amgetmulti on pg_proc(oid);
-   alter table pg_am add fk amrescan on pg_proc(oid);
-   alter table pg_am add fk amendscan on pg_proc(oid);
-   alter table pg_am add fk ammarkpos on pg_proc(oid);
-   alter table pg_am add fk amrestrpos on pg_proc(oid);
-   alter table pg_am add fk ambuild on pg_proc(oid);
-   alter table pg_am add fk ambulkdelete on pg_proc(oid);
-   alter table pg_am add fk amvacuumcleanup on pg_proc(oid);
-   alter table pg_am add fk amcostestimate on pg_proc(oid);  
-   alter table pg_am add fk amoptions on pg_proc(oid);
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
-
-
 /* ----------------
  *		pg_am definition.  cpp turns this into
  *		typedef struct FormData_pg_am
@@ -118,6 +64,21 @@ CATALOG(pg_am,2601)
 	regproc		amcostestimate; /* estimate cost of an indexscan */
 	regproc		amoptions;		/* parse AM-specific parameters */
 } FormData_pg_am;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(aminsert REFERENCES pg_proc(oid));
+FOREIGN_KEY(ambeginscan REFERENCES pg_proc(oid));
+FOREIGN_KEY(amgettuple REFERENCES pg_proc(oid));
+FOREIGN_KEY(amgetmulti REFERENCES pg_proc(oid));
+FOREIGN_KEY(amrescan REFERENCES pg_proc(oid));
+FOREIGN_KEY(amendscan REFERENCES pg_proc(oid));
+FOREIGN_KEY(ammarkpos REFERENCES pg_proc(oid));
+FOREIGN_KEY(amrestrpos REFERENCES pg_proc(oid));
+FOREIGN_KEY(ambuild REFERENCES pg_proc(oid));
+FOREIGN_KEY(ambulkdelete REFERENCES pg_proc(oid));
+FOREIGN_KEY(amvacuumcleanup REFERENCES pg_proc(oid));
+FOREIGN_KEY(amcostestimate REFERENCES pg_proc(oid));
+FOREIGN_KEY(amoptions REFERENCES pg_proc(oid));
 
 /* ----------------
  *		Form_pg_am corresponds to a pointer to a tuple with

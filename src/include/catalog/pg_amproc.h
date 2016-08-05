@@ -35,28 +35,6 @@
 
 #include "catalog/genbki.h"
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_amproc
-   with (camelcase=AccessMethodProcedure, oid=false, relid=2603)
-   (
-   amprocfamily   oid,
-   amproclefttype oid,
-   amprocrighttype oid,
-   amprocnum      smallint, 
-   amproc         regproc
-   );
-
-   create unique index on pg_amproc(amprocfamily, amproclefttype, amprocrighttype, amprocnum) with (indexid=2655, CamelCase=AccessMethodProcedure, syscacheid=AMPROCNUM, syscache_nbuckets=64);
-
-   alter table pg_amproc add fk amprocfamily on pg_opfamily(oid);
-   alter table pg_amproc add fk amproclefttype on pg_type(oid);
-   alter table pg_amproc add fk amprocrighttype on pg_type(oid);
-   alter table pg_amproc add fk amproc on pg_proc(oid);
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
 /* ----------------
  *		pg_amproc definition.  cpp turns this into
  *		typedef struct FormData_pg_amproc
@@ -72,6 +50,12 @@ CATALOG(pg_amproc,2603)
 	int2		amprocnum;		/* support procedure index */
 	regproc		amproc;			/* OID of the proc */
 } FormData_pg_amproc;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(amprocfamily REFERENCES pg_opfamily(oid));
+FOREIGN_KEY(amproclefttype REFERENCES pg_type(oid));
+FOREIGN_KEY(amprocrighttype REFERENCES pg_type(oid));
+FOREIGN_KEY(amproc REFERENCES pg_proc(oid));
 
 /* ----------------
  *		Form_pg_amproc corresponds to a pointer to a tuple with

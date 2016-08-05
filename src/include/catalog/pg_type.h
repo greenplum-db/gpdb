@@ -33,67 +33,6 @@
  * ----------------
  */
 
-/* XXX XXX XXX XXX XXX XXX XXX XXX
- *   
- *   Use a fake tidycat definition here.  Note that it does not
- *   interfere with the type entry code generation because fake
- *   definitions are only parsed if tidycat.pl is called with the
- *   "sqldef" option, which extracts sql definitions and does not
- *   generate real code.
- *   
- * XXX XXX XXX XXX XXX XXX XXX XXX
-*/
-
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_type
-   with (bootstrap=true, relid=1247)
-   (
-   typname        name     ,
-   typnamespace   oid      ,
-   typowner       oid      ,
-   typlen         smallint ,
-   typbyval       boolean  ,
-   typtype        "char"   ,
-   typisdefined   boolean  ,
-   typdelim       "char"   ,
-   typrelid       oid      ,
-   typelem        oid      ,
-   typarray       oid      ,
-   typinput       regproc  ,
-   typoutput      regproc  ,
-   typreceive     regproc  ,
-   typsend        regproc  ,
-   typmodin       regproc  ,
-   typmodout      regproc  ,
-   typanalyze     regproc  ,
-   typalign       "char"   ,
-   typstorage     "char"   ,
-   typnotnull     boolean  ,
-   typbasetype    oid      ,
-   typtypmod      integer  ,
-   typndims       integer  ,
-   typdefaultbin  text     ,
-   typdefault     text     
-   );
-
-   create unique index on pg_type(oid) with (indexid=2703, CamelCase=TypeOid, syscacheid=TYPEOID, syscache_nbuckets=1024);
-   create unique index on pg_type(typname, typnamespace) with (indexid=2704, CamelCase=TypeNameNsp, syscacheid=TYPENAMENSP, syscache_nbuckets=1024);
-
-   alter table pg_type add fk typnamespace on pg_namespace(oid);
-   alter table pg_type add fk typowner on pg_authid(oid);
-   alter table pg_type add fk typrelid on pg_class(oid);
-   alter table pg_type add fk typinput on pg_proc(oid);
-   alter table pg_type add fk typoutput on pg_proc(oid);
-   alter table pg_type add fk typreceive on pg_proc(oid);
-   alter table pg_type add fk typsend on pg_proc(oid);
-   alter table pg_type add fk typanalyze on pg_proc(oid);
-   alter table pg_type add fk typmodin on pg_proc(oid);
-   alter table pg_type add fk typmodout on pg_proc(oid);
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
 #define TypeRelationId	1247
 
 CATALOG(pg_type,1247) BKI_BOOTSTRAP
@@ -264,6 +203,18 @@ CATALOG(pg_type,1247) BKI_BOOTSTRAP
 	text		typdefault;		/* VARIABLE LENGTH FIELD */
 
 } FormData_pg_type;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(typnamespace REFERENCES pg_namespace(oid));
+FOREIGN_KEY(typowner REFERENCES pg_authid(oid));
+FOREIGN_KEY(typrelid REFERENCES pg_class(oid));
+FOREIGN_KEY(typinput REFERENCES pg_proc(oid));
+FOREIGN_KEY(typoutput REFERENCES pg_proc(oid));
+FOREIGN_KEY(typreceive REFERENCES pg_proc(oid));
+FOREIGN_KEY(typsend REFERENCES pg_proc(oid));
+FOREIGN_KEY(typanalyze REFERENCES pg_proc(oid));
+FOREIGN_KEY(typmodin REFERENCES pg_proc(oid));
+FOREIGN_KEY(typmodout REFERENCES pg_proc(oid));
 
 /* ----------------
  *		Form_pg_type corresponds to a pointer to a row with

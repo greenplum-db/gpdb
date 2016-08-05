@@ -21,37 +21,6 @@
 
 #include "catalog/genbki.h"
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_index
-   with (oid=false, relid=2610)
-   (
-   indexrelid      oid        ,
-   indrelid        oid        ,
-   indnatts        smallint   ,
-   indisunique     boolean    ,
-   indisprimary    boolean    ,
-   indisclustered  boolean    ,
-   indisvalid      boolean    ,
-   indcheckxmin    boolean    ,
-   indisready      boolean    ,
-   indkey          int2vector ,
-   indclass        oidvector  ,
-   indoption       int2vector ,
-   indexprs        text       ,
-   indpred         text       
-   );
-
-   create index on pg_index(indrelid) with (indexid=2678, CamelCase=IndexIndrelid);
-   create unique index on pg_index(indexrelid) with (indexid=2679, CamelCase=IndexRelid, syscacheid=INDEXRELID, syscache_nbuckets=1024);
-
-   alter table pg_index add fk indexrelid on pg_class(oid);
-   alter table pg_index add fk indrelid on pg_class(oid);
-   alter table pg_index add vector_fk indclass on pg_opclass(oid);
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
 /* ----------------
  *		pg_index definition.  cpp turns this into
  *		typedef struct FormData_pg_index.
@@ -81,6 +50,12 @@ CATALOG(pg_index,2610) BKI_WITHOUT_OIDS
 	text		indpred;		/* expression tree for predicate, if a partial
 								 * index; else NULL */
 } FormData_pg_index;
+
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(indexrelid REFERENCES pg_class(oid));
+FOREIGN_KEY(indrelid REFERENCES pg_class(oid));
+/*   alter table pg_index add vector_fk indclass on pg_opclass(oid); */
 
 /* ----------------
  *		Form_pg_index corresponds to a pointer to a tuple with

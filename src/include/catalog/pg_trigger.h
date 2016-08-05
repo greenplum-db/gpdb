@@ -21,39 +21,6 @@
 
 #include "catalog/genbki.h"
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_trigger
-   with (relid=2620)
-   (
-   tgrelid         oid, 
-   tgname          name, 
-   tgfoid          oid, 
-   tgtype          smallint, 
-   tgenabled       "char", 
-   tgisconstraint  boolean, 
-   tgconstrname    name, 
-   tgconstrrelid   oid, 
-   tgconstraint    oid,
-   tgdeferrable    boolean, 
-   tginitdeferred  boolean, 
-   tgnargs         smallint, 
-   tgattr          int2vector, 
-   tgargs          bytea
-   );
-
-   create index on pg_trigger(tgconstrname) with (indexid=2699, CamelCase=TriggerConstrName);
-   create index on pg_trigger(tgconstrrelid) with (indexid=2700, CamelCase=TriggerConstrRelid);
-   create unique index on pg_trigger(tgrelid, tgname) with (indexid=2701, CamelCase=TriggerRelidName);
-   create unique index on pg_trigger(oid) with (indexid=2702, CamelCase=TriggerOid);
-
-   alter table pg_trigger add fk tgrelid on pg_class(oid);
-   alter table pg_trigger add fk tgfoid on pg_proc(oid);
-   alter table pg_trigger add fk tgconstrrelid on pg_class(oid);
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
 /* ----------------
  *		pg_trigger definition.	cpp turns this into
  *		typedef struct FormData_pg_trigger
@@ -88,6 +55,11 @@ CATALOG(pg_trigger,2620)
 	int2vector	tgattr;			/* reserved for column-specific triggers */
 	bytea		tgargs;			/* first\000second\000tgnargs\000 */
 } FormData_pg_trigger;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(tgrelid REFERENCES pg_class(oid));
+FOREIGN_KEY(tgfoid REFERENCES pg_proc(oid));
+FOREIGN_KEY(tgconstrrelid REFERENCES pg_class(oid));
 
 /* ----------------
  *		Form_pg_trigger corresponds to a pointer to a tuple with

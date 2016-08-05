@@ -31,23 +31,6 @@
 
 #include "catalog/genbki.h"
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_shdescription
-   with (camelcase=SharedDescription, shared=true, oid=false, relid=2396, toast_oid=2846, toast_index=2847, content=MASTER_ONLY)
-   (
-   objoid       oid, 
-   classoid     oid, 
-   description  text
-   );
-
-   create unique index on pg_shdescription(objoid, classoid) with (indexid=2397, CamelCase=SharedDescriptionObj);
-
-   alter table pg_shdescription add fk classoid on pg_class(oid);
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
 /* ----------------
  *		pg_shdescription definition.	cpp turns this into
  *		typedef struct FormData_pg_shdescription
@@ -61,6 +44,9 @@ CATALOG(pg_shdescription,2396) BKI_SHARED_RELATION BKI_WITHOUT_OIDS
 	Oid			classoid;		/* OID of table containing object */
 	text		description;	/* description of object */
 } FormData_pg_shdescription;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(classoid REFERENCES pg_class(oid));
 
 /* ----------------
  *		Form_pg_shdescription corresponds to a pointer to a tuple with

@@ -28,25 +28,6 @@
  * ----------------
  */
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_ts_config_map
-   with (relid=3603)
-   (
-   mapcfg          oid,
-   maptokentype    integer,
-   mapseqno        integer,
-   mapdict         oid
-   );
-
-   create unique index on pg_ts_config_map(mapcfg, maptokentype, mapseqno) with (indexid=3608, CamelCase=TSConfigMap);
-
-   alter table pg_ts_config_map add fk mapcfg on pg_ts_config(oid);
-   alter table pg_ts_config_map add fk mapdict on pg_ts_dict(oid);
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
 /* ----------------
  *		pg_ts_config_map definition.  cpp turns this into
  *		typedef struct FormData_pg_ts_config_map
@@ -61,6 +42,10 @@ CATALOG(pg_ts_config_map,3603) BKI_WITHOUT_OIDS
 	int4		mapseqno;		/* order in which to consult dictionaries */
 	Oid			mapdict;		/* dictionary to consult */
 } FormData_pg_ts_config_map;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(mapcfg REFERENCES pg_ts_config(oid));
+FOREIGN_KEY(mapdict REFERENCES pg_ts_dict(oid));
 
 typedef FormData_pg_ts_config_map *Form_pg_ts_config_map;
 

@@ -31,29 +31,6 @@
  * If an upgrade strategy is developed that will allow dropping of
  * columns then this table should be restructured.
  */
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_tablespace
-   with (camelcase=TableSpace, shared=true, relid=1213)
-   (
-   spcname          name, 
-   spcowner         oid, 
-   spclocation      text, 
-   spcacl           aclitem[], 
-   spcprilocations  text[], 
-   spcmirlocations  text[], 
-   spcfsoid         oid
-   );
-
-   create unique index on pg_tablespace(oid) with (indexid=2697, CamelCase=TablespaceOid);
-   create unique index on pg_tablespace(spcname) with (indexid=2698, CamelCase=TablespaceName);
-
-   alter table pg_tablespace add fk spcowner on pg_authid(oid);
-   alter table pg_tablespace add fk spcfsoid on pg_filespace(oid);
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
 
 /* ----------------
  *		pg_tablespace definition.  cpp turns this into
@@ -80,6 +57,10 @@ CATALOG(pg_tablespace,1213) BKI_SHARED_RELATION
 	text		spcmirlocations[1];	/* mirror segment physical location  */
 	Oid         spcfsoid;           /* FilespaceOid */
 } FormData_pg_tablespace;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(spcowner REFERENCES pg_authid(oid));
+FOREIGN_KEY(spcfsoid REFERENCES pg_filespace(oid));
 
 /* ----------------
  *		Form_pg_tablespace corresponds to a pointer to a tuple with

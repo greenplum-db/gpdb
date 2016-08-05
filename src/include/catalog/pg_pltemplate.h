@@ -26,26 +26,6 @@
  * ----------------
  */
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_pltemplate
-   with (camelcase=PLTemplate, shared=true, oid=false, relid=1136)
-   (
-   tmplname       name, 
-   tmpltrusted    boolean, 
-   tmpldbacreate  boolean, 
-   tmplhandler    text, 
-   tmplinline     text,
-   tmplvalidator  text, 
-   tmpllibrary    text, 
-   tmplacl        aclitem[]
-   );
-   
-   create unique index on pg_pltemplate(tmplname) with (indexid=1137, CamelCase=PLTemplateName);
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
 /* ----------------
  *		pg_pltemplate definition.  cpp turns this into
  *		typedef struct FormData_pg_pltemplate
@@ -64,6 +44,9 @@ CATALOG(pg_pltemplate,1136) BKI_SHARED_RELATION BKI_WITHOUT_OIDS
 	text		tmpllibrary;	/* path of shared library */
 	aclitem		tmplacl[1];		/* access privileges for template */
 } FormData_pg_pltemplate;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+/* none */
 
 /* ----------------
  *		Form_pg_pltemplate corresponds to a pointer to a row with

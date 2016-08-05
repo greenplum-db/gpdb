@@ -15,36 +15,6 @@
  * pg_appendonly definition.
  */
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_appendonly
-   with (camelcase=AppendOnly, oid=false, relid=6105)
-   (
-   relid            oid, 
-   blocksize        integer, 
-   safefswritesize  integer, 
-   compresslevel    smallint, 
-   majorversion     smallint, 
-   minorversion     smallint, 
-   checksum         boolean, 
-   compresstype     name,
-   columnstore      boolean, 
-   segrelid         oid, 
-   segidxid         oid, 
-   blkdirrelid      oid, 
-   blkdiridxid      oid, 
-   version          integer,
-   visimaprelid     oid,
-   visimapidxid     oid
-   );
-
-   create unique index on pg_appendonly(relid) with (indexid=5007, CamelCase=AppendOnlyRelid);
-
-   alter table pg_appendonly add fk relid on pg_class(oid);
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
 #define AppendOnlyRelationId  6105
 
 CATALOG(pg_appendonly,6105) BKI_WITHOUT_OIDS
@@ -66,6 +36,9 @@ CATALOG(pg_appendonly,6105) BKI_WITHOUT_OIDS
 	Oid             visimaprelid;		/* OID of the aovisimap table */
 	Oid             visimapidxid;		/* OID of aovisimap index */
 } FormData_pg_appendonly;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(relid REFERENCES pg_class(oid));
 
 /*
  * Size of fixed part of pg_appendonly tuples, not counting var-length fields

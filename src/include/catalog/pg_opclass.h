@@ -41,30 +41,6 @@
 
 #include "catalog/genbki.h"
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_opclass
-   with (camelcase=OperatorClass, shared=false, relid=2616)
-   (
-   opcmethod     oid     ,
-   opcname       name    ,
-   opcnamespace  oid     ,
-   opcowner      oid     ,
-   opcfamily     oid     ,
-   opcintype     oid     ,
-   opcdefault    boolean ,
-   opckeytype    oid     
-   );
-
-   create unique index on pg_opclass(opcmethod, opcname, opcnamespace) with (indexid=2686, CamelCase=OpclassAmNameNsp, syscacheid=CLAAMNAMENSP, syscache_nbuckets=64);
-   create unique index on pg_opclass(oid) with (indexid=2687, CamelCase=OpclassOid, syscacheid=CLAOID, syscache_nbuckets=64);
-
-   alter table pg_opclass add fk opcnamespace on pg_namespace(oid);
-   alter table pg_opclass add fk opcowner on pg_authid(oid);
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
 /* ----------------
  *		pg_opclass definition.	cpp turns this into
  *		typedef struct FormData_pg_opclass
@@ -83,6 +59,10 @@ CATALOG(pg_opclass,2616)
 	bool		opcdefault;		/* T if opclass is default for opcintype */
 	Oid			opckeytype;		/* type of data in index, or InvalidOid */
 } FormData_pg_opclass;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(opcnamespace REFERENCES pg_namespace(oid));
+FOREIGN_KEY(opcowner REFERENCES pg_authid(oid));
 
 /* ----------------
  *		Form_pg_opclass corresponds to a pointer to a tuple with

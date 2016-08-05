@@ -24,29 +24,6 @@
 
 #include "catalog/genbki.h"
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_rewrite
-   with (relid=2618, toast_oid=2838, toast_index=2839)
-   (
-   rulename    name, 
-   ev_class    oid, 
-   ev_attr     smallint, 
-   ev_type     "char", 
-   ev_enabled  "char", 
-   is_instead  boolean, 
-   ev_qual     text, 
-   ev_action   text
-   );
-
-   create unique index on pg_rewrite(oid) with (indexid=2692, CamelCase=RewriteOid);
-   create unique index on pg_rewrite(ev_class, rulename) with (indexid=2693, CamelCase=RewriteRelRulename, syscacheid=RULERELNAME, syscache_nbuckets=1024);
-
-   alter table pg_rewrite add fk ev_class on pg_attribute(attrelid);
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
 /* ----------------
  *		pg_rewrite definition.	cpp turns this into
  *		typedef struct FormData_pg_rewrite
@@ -67,6 +44,9 @@ CATALOG(pg_rewrite,2618)
 	text		ev_qual;
 	text		ev_action;
 } FormData_pg_rewrite;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(ev_class REFERENCES pg_attribute(attrelid));
 
 /* ----------------
  *		Form_pg_rewrite corresponds to a pointer to a tuple with

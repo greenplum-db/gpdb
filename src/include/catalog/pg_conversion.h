@@ -36,33 +36,6 @@
  * ----------------------------------------------------------------
  */
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_conversion
-   with (relid=2607)
-   (
-   conname         name, 
-   connamespace    oid, 
-   conowner        oid, 
-   conforencoding  integer, 
-   contoencoding   integer, 
-   conproc         regproc, 
-   condefault      boolean
-   );
-
-   create unique index on pg_conversion(connamespace, conforencoding, contoencoding, oid) with (indexid=2668, CamelCase=ConversionDefault, syscacheid=CONDEFAULT, syscache_nbuckets=128);
-
-   create unique index on pg_conversion(conname, connamespace) with (indexid=2669, CamelCase=ConversionNameNsp, syscacheid=CONNAMENSP, syscache_nbuckets=128);
-
-   create unique index on pg_conversion(oid) with (indexid=2670, CamelCase=ConversionOid, syscacheid=CONVOID, syscache_nbuckets=128);
-
-   alter table pg_conversion add fk connamespace on pg_namespace(oid);
-   alter table pg_conversion add fk conowner on pg_authid(oid);
-   alter table pg_conversion add fk conproc on pg_proc(oid);
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
 #define ConversionRelationId  2607
 
 CATALOG(pg_conversion,2607)
@@ -75,6 +48,11 @@ CATALOG(pg_conversion,2607)
 	regproc		conproc;
 	bool		condefault;
 } FormData_pg_conversion;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(connamespace REFERENCES pg_namespace(oid));
+FOREIGN_KEY(conowner REFERENCES pg_authid(oid));
+FOREIGN_KEY(conproc REFERENCES pg_proc(oid));
 
 /* ----------------
  *		Form_pg_conversion corresponds to a pointer to a tuple with

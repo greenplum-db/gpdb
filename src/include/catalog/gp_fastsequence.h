@@ -21,23 +21,6 @@
 /*
  * gp_fastsequence definition
  */
-
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE gp_fastsequence
-   with (camelcase=FastSequence, oid=false, relid=5043, content=SEGMENT_LOCAL)
-   (
-   objid   oid,
-   objmod  bigint,
-   last_sequence bigint
-   );
-
-   create unique index on gp_fastsequence(objid, objmod) with (indexid=6067);
-
-   alter table gp_fastsequence add fk objid on pg_class(oid);
-
-   TIDYCAT_ENDFAKEDEF
-*/
 #define FastSequenceRelationId 5043
 
 CATALOG(gp_fastsequence,5043) BKI_WITHOUT_OIDS
@@ -47,6 +30,9 @@ CATALOG(gp_fastsequence,5043) BKI_WITHOUT_OIDS
 	int8			last_sequence;      /* the last sequence number used by the object */
 } FormData_gp_fastsequence;
 
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(objid REFERENCES pg_class(oid));
 
 /* ----------------
 *		Form_gp_fastsequence corresponds to a pointer to a tuple with

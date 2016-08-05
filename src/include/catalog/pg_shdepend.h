@@ -21,29 +21,6 @@
 
 #include "catalog/genbki.h"
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_shdepend
-   with (camelcase=SharedDepend, shared=true, oid=false, relid=1214, content=SEGMENT_LOCAL)
-   (
-   dbid        oid, 
-   classid     oid, 
-   objid       oid, 
-   refclassid  oid, 
-   refobjid    oid, 
-   deptype     "char"
-   );
-
-   create index on pg_shdepend(dbid, classid, objid) with (indexid=1232, CamelCase=SharedDependDepender);
-   create index on pg_shdepend(refclassid, refobjid) with (indexid=1233, CamelCase=SharedDependReference);
-
-   alter table pg_shdepend add fk dbid on pg_database(oid);
-   alter table pg_shdepend add fk classid on pg_class(oid);
-   alter table pg_shdepend add fk refclassid on pg_class(oid);
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
 /* ----------------
  *		pg_shdepend definition.  cpp turns this into
  *		typedef struct FormData_pg_shdepend
@@ -75,6 +52,11 @@ CATALOG(pg_shdepend,1214) BKI_SHARED_RELATION BKI_WITHOUT_OIDS
 	 */
 	char		deptype;		/* see codes in dependency.h */
 } FormData_pg_shdepend;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(dbid REFERENCES pg_database(oid));
+FOREIGN_KEY(classid REFERENCES pg_class(oid));
+FOREIGN_KEY(refclassid REFERENCES pg_class(oid));
 
 /* ----------------
  *		Form_pg_shdepend corresponds to a pointer to a row with

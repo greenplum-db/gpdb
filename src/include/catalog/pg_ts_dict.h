@@ -28,28 +28,6 @@
  * ----------------
  */
 
-/* TIDYCAT_BEGINFAKEDEF
-
-   CREATE TABLE pg_ts_dict
-   with (relid=3600, toast=true)
-   (
-   dictname        name,
-   dictnamespace   oid,
-   dictowner       oid,
-   dicttemplate    oid,
-   dictinitoption  text
-   );
-
-   create unique index on pg_ts_dict(dictname, dictnamespace) with (indexid=3604, CamelCase=TSDictionaryNameNsp);
-   create unique index on pg_ts_dict(oid) with (indexid=3605, CamelCase=TSDictionaryOid);
-
-   alter table pg_ts_dict add fk dictnamespace on pg_namespace(oid);
-   alter table pg_ts_dict add fk dictowner on pg_authid(oid);
-   alter table pg_ts_dict add fk dicttemplate on pg_ts_template(oid);
-
-   TIDYCAT_ENDFAKEDEF
-*/
-
 /* ----------------
  *		pg_ts_dict definition.	cpp turns this into
  *		typedef struct FormData_pg_ts_dict
@@ -65,6 +43,11 @@ CATALOG(pg_ts_dict,3600)
 	Oid			dicttemplate;	/* dictionary's template */
 	text		dictinitoption; /* options passed to dict_init() */
 } FormData_pg_ts_dict;
+
+/* GPDB added foreign key definitions for gpcheckcat. */
+FOREIGN_KEY(dictnamespace REFERENCES pg_namespace(oid));
+FOREIGN_KEY(dictowner REFERENCES pg_authid(oid));
+FOREIGN_KEY(dicttemplate REFERENCES pg_ts_template(oid));
 
 typedef FormData_pg_ts_dict *Form_pg_ts_dict;
 
