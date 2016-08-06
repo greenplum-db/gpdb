@@ -2230,9 +2230,7 @@ get_with_clause(Query *query, deparse_context *context)
 		appendContextKeyword(context, "", 0, 0, 0);
 	}
 	else
-	{
 		appendStringInfoChar(buf, ' ');
-	}
 }
 
 /* ----------
@@ -3747,8 +3745,8 @@ isSimpleNode(Node *node, Node *parentNode, int prettyFlags)
 		case T_RowExpr:
 		case T_CoalesceExpr:
 		case T_MinMaxExpr:
-		case T_NullIfExpr:
 		case T_XmlExpr:
+		case T_NullIfExpr:
 		case T_Aggref:
 		case T_FuncExpr:
 		case T_PercentileExpr:

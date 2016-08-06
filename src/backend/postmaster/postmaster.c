@@ -814,7 +814,7 @@ PostmasterMain(int argc, char *argv[])
 {
 	int			opt;
 	int			status;
-	char       *userDoption = NULL;
+	char	   *userDoption = NULL;
 	int			i;
 	char		stack_base;
 

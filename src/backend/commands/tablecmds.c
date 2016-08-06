@@ -249,9 +249,12 @@ static void ATSimplePermissions(Relation rel, bool allowView);
 static void ATSimplePermissionsRelationOrIndex(Relation rel);
 static void ATSimpleRecursion(List **wqueue, Relation rel,
 				  AlterTableCmd *cmd, bool recurse);
-/* static void ATOneLevelRecursion(List **wqueue, Relation rel,
-					AlterTableCmd *cmd); */
-static void ATPrepAddColumn(Relation rel, bool recurse, AlterTableCmd *cmd);
+#if 0
+static void ATOneLevelRecursion(List **wqueue, Relation rel,
+					AlterTableCmd *cmd);
+#endif
+static void ATPrepAddColumn(List **wqueue, Relation rel, bool recurse,
+				AlterTableCmd *cmd);
 static void ATExecAddColumn(AlteredTableInfo *tab, Relation rel,
 				ColumnDef *colDef);
 static void add_column_datatype_dependency(Oid relid, int32 attnum, Oid typid);
@@ -272,8 +275,10 @@ static void ATExecDropColumn(List **wqueue, Relation rel, const char *colName,
 				 bool recurse, bool recursing);
 static void ATExecAddIndex(AlteredTableInfo *tab, Relation rel,
 			   IndexStmt *stmt, bool is_rebuild, bool part_expanded);
-static void ATExecAddConstraint(AlteredTableInfo *tab, Relation rel, Node *newConstraint, bool recurse);
-static void ATAddCheckConstraint(AlteredTableInfo *tab, Relation rel, Constraint *constr, bool recurse);
+static void ATExecAddConstraint(AlteredTableInfo *tab, Relation rel,
+					Node *newConstraint, bool recurse);
+static void ATAddCheckConstraint(AlteredTableInfo *tab, Relation rel,
+					 Constraint *constr, bool recurse);
 
 static void ATAddForeignKeyConstraint(AlteredTableInfo *tab, Relation rel,
 						  FkConstraint *fkconstraint);
@@ -1201,7 +1206,6 @@ ExecuteTruncate(TruncateStmt *stmt)
 			meta_relids = lappend_oid(meta_relids, RelationGetRelid(rel));
 	}
 
-
 	/*
 	 * In CASCADE mode, suck in all referencing relations as well.	This
 	 * requires multiple iterations to find indirectly-dependent relations. At
@@ -1239,7 +1243,6 @@ ExecuteTruncate(TruncateStmt *stmt)
 			}
 		}
 	}
-
 
 	/*
 	 * Check foreign key references.  In CASCADE mode, this should be
@@ -2985,11 +2988,11 @@ AlterTable(AlterTableStmt *stmt)
  *
  * ALTER TABLE with target specified by OID
  *
- * We do not reject if the relation is already open, because it's quite likely
- * that one or more layers of caller have it open.  That means it is unsafe to
- * use this entry point for alterations that could break existing query plans.
- * On the assumption it's not used for such, we don't have to reject pending
- * AFTER triggers, either.
+ * We do not reject if the relation is already open, because it's quite
+ * likely that one or more layers of caller have it open.  That means it
+ * is unsafe to use this entry point for alterations that could break
+ * existing query plans.  On the assumption it's not used for such, we
+ * don't have to reject pending AFTER triggers, either.
  *
  * It is also unsafe to use this function for any Alter Table subcommand that
  * requires rewriting the table or creating toast tables, because that requires
@@ -3178,14 +3181,14 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 			ATExternalPartitionCheck(cmd->subtype, rel, recursing);
 			ATPartitionCheck(cmd->subtype, rel, false, recursing);
 			/* Performs own recursion */
-			ATPrepAddColumn(rel, recurse, cmd);
+			ATPrepAddColumn(wqueue, rel, recurse, cmd);
 			pass = AT_PASS_ADD_COL;
 			break;
 		case AT_AddColumnRecurse:		/* ADD COLUMN internal */
 			ATSimplePermissions(rel, false);
 			/* No need to do ATPartitionCheck */
 			/* Performs own recursion */
-			ATPrepAddColumn(rel, recurse, cmd);
+			ATPrepAddColumn(wqueue, rel, recurse, cmd);
 			pass = AT_PASS_ADD_COL;
 			break;
 		case AT_ColumnDefault:	/* ALTER COLUMN DEFAULT */
@@ -4744,7 +4747,7 @@ ATRewriteTables(List **wqueue,
 			 */
 			ATRewriteTable(tab, OIDNewHeap);
 
-			/* 
+			/*
 			 * Swap the physical files of the old and new heaps.  Since we are
 			 * generating a new heap, we can use RecentXmin for the table's
 			 * new relfrozenxid because we rewrote all the tuples on
@@ -5165,7 +5168,9 @@ ATRewriteTable(AlteredTableInfo *tab, Oid OIDNewHeap)
 	EState	   *estate;
 
 	/*
-	 * Open the relation(s).  We have surely already locked the existing table.
+	 * Open the relation(s).  We have surely already locked the existing
+	 * table.
+	 *
 	 * In EXCHANGE of partition case, we only need to validate the content
 	 * based on new constraints.  oldTupDesc should point to the oldrel's tuple
 	 * descriptor since tab->oldDesc comes from the parent partition.
@@ -5298,7 +5303,6 @@ ATRewriteTable(AlteredTableInfo *tab, Oid OIDNewHeap)
 			if (newTupDesc->attrs[i]->attisdropped)
 				dropped_attrs = lappend_int(dropped_attrs, i);
 		}
-
 
 		/*
 		 * Scan through the rows, generating a new row if needed and then
@@ -5934,7 +5938,7 @@ ATSimpleRecursion(List **wqueue, Relation rel,
  * When using this technique, a multiply-inheriting child will be visited
  * multiple times.
  */
-/*
+#if 0 /* unused in GPDB */
 static void
 ATOneLevelRecursion(List **wqueue, Relation rel,
 					AlterTableCmd *cmd)
@@ -5943,7 +5947,7 @@ ATOneLevelRecursion(List **wqueue, Relation rel,
 	ListCell   *child;
 	List	   *children;
 
-	* this routine is actually in the planner *
+	/* this routine is actually in the planner */
 	children = find_inheritance_children(relid);
 
 	foreach(child, children)
@@ -5957,7 +5961,7 @@ ATOneLevelRecursion(List **wqueue, Relation rel,
 		relation_close(childrel, NoLock);
 	}
 }
-*/
+#endif
 
 /*
  * find_composite_type_dependencies
@@ -6070,7 +6074,8 @@ find_composite_type_dependencies(Oid typeOid,
  * AlterTableCmd's.
  */
 static void
-ATPrepAddColumn(Relation rel, bool recurse, AlterTableCmd *cmd)
+ATPrepAddColumn(List **wqueue, Relation rel, bool recurse,
+				AlterTableCmd *cmd)
 {
 	/* 
 	 * If there's an encoding clause, this better be an append only
@@ -6087,76 +6092,80 @@ ATPrepAddColumn(Relation rel, bool recurse, AlterTableCmd *cmd)
 		def->encoding = transformStorageEncodingClause(def->encoding);
 
 	/*
-	 * If we are told not to recurse, there had better not be any child
-	 * tables; else the addition would put them out of step.
+	 * Recurse to add the column to child classes, if requested.
+	 *
+	 * We must recurse one level at a time, so that multiply-inheriting
+	 * children are visited the right number of times and end up with the
+	 * right attinhcount.
 	 */
-	if (!recurse && find_inheritance_children(RelationGetRelid(rel)) != NIL)
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				 errmsg("column must be added to child tables too")));
-	}
-	/*
-	 * We are the master and the table has child(ren):
-	 * 		internally create and execute new AlterTableStmt(s) on child(ren)
-	 * 		before dispatching the original AlterTableStmt
-	 * This is to ensure that pg_constraint oid is consistent across segments for
-	 * 		ALTER TABLE ... ADD COLUMN ... CHECK ...
-	 */
-	else if (Gp_role == GP_ROLE_DISPATCH)
+	if (recurse)
 	{
 		/*
-		 * Recurse to add the column to child classes.
-		 *
-		 * We must recurse one level at a time, so that multiply-inheriting
-		 * children are visited the right number of times and end up with the
-		 * right attinhcount.
+		 * We are the master and the table has child(ren):
+		 * 		internally create and execute new AlterTableStmt(s) on child(ren)
+		 * 		before dispatching the original AlterTableStmt
+		 * This is to ensure that pg_constraint oid is consistent across segments for
+		 * 		ALTER TABLE ... ADD COLUMN ... CHECK ...
 		 */
-		List		*children;
-		ListCell	*lchild;
-
-		children = find_inheritance_children(RelationGetRelid(rel));
-		DestReceiver *dest = None_Receiver;
-		foreach(lchild, children)
+		if (Gp_role == GP_ROLE_DISPATCH)
 		{
-			Oid 			childrelid = lfirst_oid(lchild);
-			Relation 		childrel;
+			List		*children;
+			ListCell	*lchild;
 
-			RangeVar 		*rv;
-			AlterTableCmd 	*atc;
-			AlterTableStmt 	*ats;
+			children = find_inheritance_children(RelationGetRelid(rel));
+			DestReceiver *dest = None_Receiver;
+			foreach(lchild, children)
+			{
+				Oid 			childrelid = lfirst_oid(lchild);
+				Relation 		childrel;
 
-			if (childrelid == RelationGetRelid(rel))
-				continue;
+				RangeVar 		*rv;
+				AlterTableCmd 	*atc;
+				AlterTableStmt 	*ats;
 
-			childrel = heap_open(childrelid, AccessShareLock);
-			CheckTableNotInUse(childrel, "ALTER TABLE");
+				if (childrelid == RelationGetRelid(rel))
+					continue;
 
-			/* Recurse to child */
-			atc = copyObject(cmd);
-			atc->subtype = AT_AddColumnRecurse;
+				childrel = heap_open(childrelid, AccessShareLock);
+				CheckTableNotInUse(childrel, "ALTER TABLE");
 
-			/* Child should see column as singly inherited */
-			((ColumnDef *) atc->def)->inhcount = 1;
-			((ColumnDef *) atc->def)->is_local = false;
+				/* Recurse to child */
+				atc = copyObject(cmd);
+				atc->subtype = AT_AddColumnRecurse;
 
-			rv = makeRangeVar(get_namespace_name(RelationGetNamespace(childrel)),
-							  get_rel_name(childrelid), -1);
+				/* Child should see column as singly inherited */
+				((ColumnDef *) atc->def)->inhcount = 1;
+				((ColumnDef *) atc->def)->is_local = false;
 
-			ats = makeNode(AlterTableStmt);
-			ats->relation = rv;
-			ats->cmds = list_make1(atc);
-			ats->relkind = OBJECT_TABLE;
+				rv = makeRangeVar(get_namespace_name(RelationGetNamespace(childrel)),
+								  get_rel_name(childrelid), -1);
 
-			heap_close(childrel, NoLock);
+				ats = makeNode(AlterTableStmt);
+				ats->relation = rv;
+				ats->cmds = list_make1(atc);
+				ats->relkind = OBJECT_TABLE;
 
-			ProcessUtility((Node *)ats,
-							synthetic_sql,
-							NULL,
-							false, /* not top level */
-							dest,
-							NULL);
+				heap_close(childrel, NoLock);
+
+				ProcessUtility((Node *)ats,
+							   synthetic_sql,
+							   NULL,
+							   false, /* not top level */
+							   dest,
+							   NULL);
+			}
 		}
+	}
+	else
+	{
+		/*
+		 * If we are told not to recurse, there had better not be any child
+		 * tables; else the addition would put them out of step.
+		 */
+		if (find_inheritance_children(RelationGetRelid(rel)) != NIL)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+					 errmsg("column must be added to child tables too")));
 	}
 }
 
@@ -6399,7 +6408,7 @@ ATExecAddColumn(AlteredTableInfo *tab, Relation rel,
 		baseTypeMod = typmod;
 		baseTypeId = getBaseTypeAndTypmod(typeOid, &baseTypeMod);
 		defval = (Expr *) makeNullConst(baseTypeId, baseTypeMod);
-		defval = (Expr *) coerce_to_target_type(NULL, 
+		defval = (Expr *) coerce_to_target_type(NULL,
 												(Node *) defval,
 												baseTypeId,
 												typeOid,
@@ -7144,10 +7153,9 @@ ATExecDropColumn(List **wqueue, Relation rel, const char *colName,
 			if (recurse)
 			{
 				/*
-				 * If the child column has other definition sources,
-				 * just decrement its inheritance count;
-				 * if not or if this is part of a partition
-				 * configuration, recurse to delete it.
+				 * If the child column has other definition sources, just
+				 * decrement its inheritance count; if not or if this is part
+				 * of a partition configuration, recurse to delete it.
 				 */
 				if ((childatt->attinhcount == 1 && !childatt->attislocal) ||
 					pn)
@@ -7405,6 +7413,7 @@ ATExecAddConstraint(AlteredTableInfo *tab, Relation rel, Node *newConstraint, bo
 		case T_Constraint:
 			{
 				Constraint *constr = (Constraint *) newConstraint;
+
 				/*
 				 * Currently, we only expect to see CONSTR_CHECK nodes
 				 * arriving here (see the preprocessing done in
@@ -7717,18 +7726,18 @@ ATAddForeignKeyConstraint(AlteredTableInfo *tab, Relation rel,
 
 	for (i = 0; i < numpks; i++)
 	{
-		Oid				pktype = pktypoid[i];
-		Oid				fktype = fktypoid[i];
-		Oid				fktyped;
-		HeapTuple		cla_ht;
-		Form_pg_opclass	cla_tup;
-		Oid				amid;
-		Oid				opfamily;
-		Oid				opcintype;
-		Oid				pfeqop;
-		Oid				ppeqop;
-		Oid				ffeqop;
-		int16			eqstrategy;
+		Oid			pktype = pktypoid[i];
+		Oid			fktype = fktypoid[i];
+		Oid			fktyped;
+		HeapTuple	cla_ht;
+		Form_pg_opclass cla_tup;
+		Oid			amid;
+		Oid			opfamily;
+		Oid			opcintype;
+		Oid			pfeqop;
+		Oid			ppeqop;
+		Oid			ffeqop;
+		int16		eqstrategy;
 
 		/* We need several fields out of the pg_opclass entry */
 		cla_ht = SearchSysCache(CLAOID,
@@ -8235,7 +8244,6 @@ CreateFKCheckTrigger(RangeVar *myRel, FkConstraint *fkconstraint,
 	fk_trigger->deferrable = fkconstraint->deferrable;
 	fk_trigger->initdeferred = fkconstraint->initdeferred;
 	fk_trigger->constrrel = fkconstraint->pktable;
-
 	fk_trigger->args = NIL;
 
 	trigobj = CreateTrigger(fk_trigger, constraintOid);
@@ -8325,7 +8333,6 @@ createForeignKeyTriggers(Relation rel, FkConstraint *fkconstraint,
 				 (int) fkconstraint->fk_del_action);
 			break;
 	}
-
 	fk_trigger->args = NIL;
 	fk_trigger->trigOid = fkconstraint->trig3Oid;
 
@@ -8397,14 +8404,12 @@ createForeignKeyTriggers(Relation rel, FkConstraint *fkconstraint,
 				 (int) fkconstraint->fk_upd_action);
 			break;
 	}
-
 	fk_trigger->args = NIL;
 
 	fk_trigger->trigOid = fkconstraint->trig4Oid;
 
 	fkconstraint->trig4Oid = CreateTrigger(fk_trigger, constraintOid);
 }
-
 
 /*
  * ALTER TABLE DROP CONSTRAINT
@@ -8617,24 +8622,24 @@ static void
 ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 					  const char *colName, TypeName *typename)
 {
-	HeapTuple heapTup;
+	HeapTuple	heapTup;
 	Form_pg_attribute attTup;
-	AttrNumber attnum;
-	HeapTuple typeTuple;
+	AttrNumber	attnum;
+	HeapTuple	typeTuple;
 	Form_pg_type tform;
-	Oid targettype;
-	int32 targettypmod;
-	Node *defaultexpr;
-	Relation attrelation;
-	Relation depRel;
-	HeapTuple depTup;
-	GpPolicy *policy = rel->rd_cdbpolicy;
-	bool sourceIsInt = false;
-	bool targetIsInt = false;
-	bool sourceIsVarlenA = false;
-	bool targetIsVarlenA = false;
-	bool hashCompatible = false;
-	bool relContainsTuples = false;
+	Oid			targettype;
+	int32		targettypmod;
+	Node	   *defaultexpr;
+	Relation	attrelation;
+	Relation	depRel;
+	HeapTuple	depTup;
+	GpPolicy   *policy = rel->rd_cdbpolicy;
+	bool		sourceIsInt = false;
+	bool		targetIsInt = false;
+	bool		sourceIsVarlenA = false;
+	bool		targetIsVarlenA = false;
+	bool		hashCompatible = false;
+	bool		relContainsTuples = false;
 	cqContext cqc;
 	cqContext cqc2;
 	cqContext *pcqCtx;
@@ -8655,7 +8660,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	attTup = (Form_pg_attribute) GETSTRUCT(heapTup);
 	attnum = attTup->attnum;
 
-	/* Check for multiple ALTER TYPE on same column -- can't cope */
+	/* Check for multiple ALTER TYPE on same column --- can't cope */
 	if (attTup->atttypid != tab->oldDesc->attrs[attnum - 1]->atttypid ||
 		attTup->atttypmod != tab->oldDesc->attrs[attnum - 1]->atttypmod)
 		ereport(ERROR,
@@ -8695,13 +8700,13 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 
 	/*
 	 * If there is a default expression for the column, get it and ensure we
-	 * can coerce it to the new datatype. (We must do this before changing
+	 * can coerce it to the new datatype.  (We must do this before changing
 	 * the column type, because build_column_default itself will try to
 	 * coerce, and will not issue the error message we want if it fails.)
 	 *
 	 * We remove any implicit coercion steps at the top level of the old
 	 * default expression; this has been agreed to satisfy the principle of
-	 * least surprise. (The conversion to the new column type should act like
+	 * least surprise.	(The conversion to the new column type should act like
 	 * it started from what the user sees as the stored expression, and the
 	 * implicit coercions aren't going to be shown.)
 	 */
@@ -8710,7 +8715,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 		defaultexpr = build_column_default(rel, attnum);
 		Assert(defaultexpr);
 		defaultexpr = strip_implicit_coercions(defaultexpr);
-		defaultexpr = coerce_to_target_type(NULL, /* no UNKNOWN params */
+		defaultexpr = coerce_to_target_type(NULL,		/* no UNKNOWN params */
 										  defaultexpr, exprType(defaultexpr),
 											targettype, targettypmod,
 											COERCION_ASSIGNMENT,
@@ -8719,8 +8724,8 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 		if (defaultexpr == NULL)
 			ereport(ERROR,
 					(errcode(ERRCODE_DATATYPE_MISMATCH),
-					 errmsg("default for column \"%s\" cannot be cast to type \"%s\"",
-							colName, TypeNameToString(typename))));
+			errmsg("default for column \"%s\" cannot be cast to type \"%s\"",
+				   colName, TypeNameToString(typename))));
 	}
 	else
 		defaultexpr = NULL;
@@ -8738,12 +8743,12 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	 * and record enough information to let us recreate the objects.
 	 *
 	 * The actual recreation does not happen here, but only after we have
-	 * performed all the individual ALTER TYPE operations. We have to save
+	 * performed all the individual ALTER TYPE operations.	We have to save
 	 * the info before executing ALTER TYPE, though, else the deparser will
 	 * get confused.
 	 *
 	 * There could be multiple entries for the same object, so we must check
-	 * to ensure we process each one only once. Note: we assume that an index
+	 * to ensure we process each one only once.  Note: we assume that an index
 	 * that implements a constraint will not show a direct dependency on the
 	 * column.
 	 */
@@ -8777,7 +8782,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 		{
 			case OCLASS_CLASS:
 				{
-					char relKind = get_rel_relkind(foundObject.objectId);
+					char		relKind = get_rel_relkind(foundObject.objectId);
 
 					if (relKind == RELKIND_INDEX)
 					{
@@ -8814,7 +8819,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 					else if (relKind == RELKIND_SEQUENCE)
 					{
 						/*
-						 * This must be a SERIAL column's sequence. We need
+						 * This must be a SERIAL column's sequence.  We need
 						 * not do anything to it.
 						 */
 						Assert(foundObject.objectSubId == 0);
@@ -8830,9 +8835,10 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 
 			case OCLASS_CONSTRAINT:
 				Assert(foundObject.objectSubId == 0);
-				if (!list_member_oid(tab->changedConstraintOids, foundObject.objectId))
+				if (!list_member_oid(tab->changedConstraintOids,
+									 foundObject.objectId))
 				{
-					char *defstring = pg_get_constraintdef_string(foundObject.objectId);
+					char	   *defstring = pg_get_constraintdef_string(foundObject.objectId);
 
 					if (relContainsTuples &&
 						(strstr(defstring," UNIQUE") != 0 || strstr(defstring,"PRIMARY KEY") != 0))
@@ -8856,7 +8862,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 
 					/*
 					 * Put NORMAL dependencies at the front of the list and
-					 * AUTO dependencies at the back. This makes sure that
+					 * AUTO dependencies at the back.  This makes sure that
 					 * foreign-key constraints depending on this column will
 					 * be dropped before unique or primary-key constraints of
 					 * the column; which we must have because the FK
@@ -8865,13 +8871,21 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 					 */
 					if (foundDep->deptype == DEPENDENCY_NORMAL)
 					{
-						tab->changedConstraintOids = lcons_oid(foundObject.objectId, tab->changedConstraintOids);
-						tab->changedConstraintDefs = lcons(defstring, tab->changedConstraintDefs);
+						tab->changedConstraintOids =
+							lcons_oid(foundObject.objectId,
+									  tab->changedConstraintOids);
+						tab->changedConstraintDefs =
+							lcons(defstring,
+								  tab->changedConstraintDefs);
 					}
 					else
 					{
-						tab->changedConstraintOids = lappend_oid(tab->changedConstraintOids, foundObject.objectId);
-						tab->changedConstraintDefs = lappend(tab->changedConstraintDefs, defstring);
+						tab->changedConstraintOids =
+							lappend_oid(tab->changedConstraintOids,
+										foundObject.objectId);
+						tab->changedConstraintDefs =
+							lappend(tab->changedConstraintDefs,
+									defstring);
 					}
 				}
 				break;
@@ -8927,7 +8941,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	caql_endscan(pcqCtx);
 
 	/*
-	 * Now scan for dependencies of this column on other things. The only
+	 * Now scan for dependencies of this column on other things.  The only
 	 * thing we should find is the dependency on the column datatype, which we
 	 * want to remove.
 	 */
@@ -8946,7 +8960,8 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 		Form_pg_depend foundDep = (Form_pg_depend) GETSTRUCT(depTup);
 
 		if (foundDep->deptype != DEPENDENCY_NORMAL)
-			elog(ERROR, "found unexpected dependency type '%c'", foundDep->deptype);
+			elog(ERROR, "found unexpected dependency type '%c'",
+				 foundDep->deptype);
 		if (foundDep->refclassid != TypeRelationId ||
 			foundDep->refobjid != attTup->atttypid)
 			elog(ERROR, "found unexpected dependency for column");
@@ -8989,7 +9004,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	}
 
 	/*
-	 * Here we go -- change the recorded column type. (Note heapTup is a
+	 * Here we go --- change the recorded column type.	(Note heapTup is a
 	 * copy of the syscache entry, so okay to scribble on.)
 	 */
 	attTup->atttypid = targettype;
@@ -9015,9 +9030,9 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	RemoveStatistics(RelationGetRelid(rel), attnum);
 
 	/*
-	 * Update the default, if present, by brute force -- remove and re-add
-	 * the default. Probably unsafe to take shortcuts, since the new version
-	 * may well have additional dependencies. (It's okay to do this now,
+	 * Update the default, if present, by brute force --- remove and re-add
+	 * the default.  Probably unsafe to take shortcuts, since the new version
+	 * may well have additional dependencies.  (It's okay to do this now,
 	 * rather than after other ALTER TYPE commands, since the default won't
 	 * depend on other column types.)
 	 */
@@ -9623,19 +9638,19 @@ get_settable_tablespace_oid(char *tablespacename)
 {
 	Oid			tablespaceId;
 	AclResult	aclresult;
-	
+
 	/* Check that the tablespace exists */
 	tablespaceId = get_tablespace_oid(tablespacename);
 	if (!OidIsValid(tablespaceId))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 errmsg("tablespace \"%s\" does not exist", tablespacename)));
-	
+
 	/* Check its permissions */
 	aclresult = pg_tablespace_aclcheck(tablespaceId, GetUserId(), ACL_CREATE);
 	if (aclresult != ACLCHECK_OK)
 		aclcheck_error(aclresult, ACL_KIND_TABLESPACE, tablespacename);
-	
+
 	return tablespaceId;
 }
 

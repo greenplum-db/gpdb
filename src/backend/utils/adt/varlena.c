@@ -133,7 +133,7 @@ text_to_cstring(const text *t)
 
 	if (tunpacked != t)
 		pfree(tunpacked);
-	
+
 	return result;
 }
 
