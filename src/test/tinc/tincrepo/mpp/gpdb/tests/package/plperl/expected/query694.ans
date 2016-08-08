@@ -1,0 +1,20 @@
+-- start_ignore
+SET optimizer=off;
+SET
+-- end_ignore
+-- Test: plperl 57
+CREATE OR REPLACE FUNCTION perl_elog(TEXT) RETURNS VOID AS $$
+							  my $msg = shift;
+							  elog(NOTICE,$msg);
+							  $$ LANGUAGE plperl;
+CREATE FUNCTION
+							  
+SELECT perl_elog('explicit elog');
+psql:/path/sql_file:1: NOTICE:  explicit elog
+CONTEXT:  PL/Perl function "perl_elog"
+ perl_elog 
+-----------
+ 
+(1 row)
+
+							  

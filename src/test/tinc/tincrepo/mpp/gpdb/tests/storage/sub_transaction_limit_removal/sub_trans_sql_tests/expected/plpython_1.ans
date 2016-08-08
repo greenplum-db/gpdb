@@ -1,0 +1,1045 @@
+Create Language plpythonu;
+CREATE LANGUAGE
+DROP FUNCTION subt_queryexec(text);
+ERROR:  function subt_queryexec(text) does not exist
+CREATE OR REPLACE FUNCTION subt_queryexec( query text )
+        returns boolean
+AS $$
+
+        try:
+                plan = plpy.prepare( query )
+                rv = plpy.execute( plan )
+        except:
+                plpy.notice( "Error Trapped: Not a valid input value" )
+                return 'false'
+
+        for r in rv:
+                plpy.notice( str( r ) )
+
+        return 'true'
+
+$$ LANGUAGE plpythonu;
+CREATE FUNCTION
+DROP FUNCTION subt_insertWrongValue(integer,integer);
+ERROR:  function subt_insertwrongvalue(integer, integer) does not exist
+CREATE OR REPLACE FUNCTION subt_insertWrongValue (startValue INTEGER, endValue INTEGER) RETURNS VOID
+AS
+$$
+DECLARE
+   i INTEGER;
+BEGIN
+   i = startValue;
+   WHILE i <= endValue LOOP
+       PERFORM subt_queryexec('insert into subt_plpython_t1 values(4545)');
+       i = i + 1;
+   END LOOP;
+END;
+$$
+LANGUAGE PLPGSQL
+;
+CREATE FUNCTION
+Drop table if exists subt_plpython_t1;
+NOTICE:  table "subt_plpython_t1" does not exist, skipping
+DROP TABLE
+Create table subt_plpython_t1(a char);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+SELECT subt_insertWrongValue(3, 250);
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+NOTICE:  Error Trapped: Not a valid input value
+CONTEXT:  PL/Python function "subt_queryexec"
+SQL statement "SELECT  subt_queryexec('insert into subt_plpython_t1 values(4545)')"
+PL/pgSQL function "subt_insertwrongvalue" line 6 at perform
+ subt_insertwrongvalue 
+-----------------------
+ 
+(1 row)
+

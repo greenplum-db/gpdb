@@ -1,0 +1,72 @@
+-- 
+-- @created 2009-01-27 14:00:00
+-- @modified 2013-06-24 17:00:00
+-- @tags ddl schema_topology
+
+-- Create Roles   
+   CREATE ROLE sch_fsts_db_owner1;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+-- Create Database
+   CREATE DATABASE sch_fsts_db_name1 WITH OWNER = sch_fsts_db_owner1 TEMPLATE =template1 ENCODING='utf8'  CONNECTION LIMIT= 2 TABLESPACE = ts_sch1;
+CREATE DATABASE
+   
+-- Alter Database   
+   ALTER DATABASE sch_fsts_db_name1 WITH  CONNECTION LIMIT 3;
+ALTER DATABASE
+-- Alter Database to new tablespace is not supported
+   ALTER DATABASE sch_fsts_db_name1 set TABLESPACE = ts_sch3;
+psql:/path/sql_file:1: ERROR:  unrecognized configuration parameter "tablespace"
+   set default_tablespace='ts_sch3';
+SET
+--Create Table   
+  CREATE TABLE sch_fsts_test_part1 (id int, name text,rank int, year date, gender  char(1)) tablespace ts_sch3 DISTRIBUTED BY (id, gender, year)
+      partition by list (gender) subpartition by range (year) subpartition template (start (date '2001-01-01')) 
+      (values ('M'),values ('F'));
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sch_fsts_test_part1_1_prt_1" for table "sch_fsts_test_part1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sch_fsts_test_part1_1_prt_2" for table "sch_fsts_test_part1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sch_fsts_test_part1_1_prt_1_2_prt_1" for table "sch_fsts_test_part1_1_prt_1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sch_fsts_test_part1_1_prt_2_2_prt_1" for table "sch_fsts_test_part1_1_prt_2"
+CREATE TABLE
+-- Add default partition
+   alter table sch_fsts_test_part1 add default partition default_part;
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sch_fsts_test_part1_1_prt_default_part" for table "sch_fsts_test_part1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sch_fsts_test_part1_1_prt_default_part_2_prt_1" for table "sch_fsts_test_part1_1_prt_default_part"
+ALTER TABLE
+-- Drop Default Partition
+   alter table sch_fsts_test_part1 DROP default partition if exists;
+psql:/path/sql_file:1: NOTICE:  dropped partition "default_part" for relation "sch_fsts_test_part1" and its children
+ALTER TABLE
+-- Vacuum analyze the table
+   vacuum analyze sch_fsts_test_part1 ;
+VACUUM
+-- Alter the table to new table space 
+   alter table sch_fsts_test_part1 set tablespace ts_sch2;
+ALTER TABLE
+-- Insert few records into the table
+   insert into sch_fsts_test_part1 values (1,'ann',1,'2001-01-01','F');
+INSERT 0 1
+   insert into sch_fsts_test_part1 values (2,'ben',2,'2002-01-01','M');
+INSERT 0 1
+   insert into sch_fsts_test_part1 values (3,'leni',3,'2003-01-01','F');
+INSERT 0 1
+   insert into sch_fsts_test_part1 values (4,'sam',4,'2003-01-01','M');
+INSERT 0 1
+-- Alter the table set distributed by 
+   Alter table sch_fsts_test_part1 set with ( reorganize='true') distributed randomly;
+ALTER TABLE
+-- select from the Table
+   select * from sch_fsts_test_part1;
+ id | name | rank |    year    | gender 
+----+------+------+------------+--------
+  3 | leni |    3 | 2003-01-01 | F
+  4 | sam  |    4 | 2003-01-01 | M
+  1 | ann  |    1 | 2001-01-01 | F
+  2 | ben  |    2 | 2002-01-01 | M
+(4 rows)
+
+-- Vacuum analyze the table
+   vacuum analyze sch_fsts_test_part1 ;
+VACUUM
+   vacuum analyze ;
+VACUUM

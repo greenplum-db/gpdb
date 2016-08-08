@@ -1,0 +1,7 @@
+-- Large Content Header
+drop table if exists chksum_off_header_large_co;
+DROP TABLE
+create table chksum_off_header_large_co(comment bytea ) with (appendonly=true, orientation=column, checksum=false) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+insert into chksum_off_header_large_co select ("decode"(repeat('a',33554432),'escape')) from generate_series(1,16)  ;
+INSERT 0 16

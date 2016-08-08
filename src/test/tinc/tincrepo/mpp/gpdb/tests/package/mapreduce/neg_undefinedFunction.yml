@@ -1,0 +1,23 @@
+%YAML 1.1
+---
+VERSION:         1.0.0.1
+
+DEFINE:
+  - INPUT:
+      NAME:      access_logs
+      FILE:
+         # change seghostname1, seghostname2 and file_path to reflect
+         # your runtime file locations
+         - rh5-qavm63:/data/tungs1_cdbfast/cdbfast/main/mapreduce/access_log
+         
+  - MAP:
+      NAME:      grep_map
+      LANGUAGE:  perl
+
+EXECUTE:
+  - RUN:
+      SOURCE:    access_logs
+      MAP:       grep_map
+      REDUCE:    IDENTITY
+
+

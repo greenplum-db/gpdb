@@ -1,0 +1,348 @@
+-- @description : Create Updatable AO tables , with indexes, with and without compression
+-- 
+-- Create AO tables 
+DROP TABLE if exists sto_uao1;
+DROP TABLE
+CREATE TABLE sto_uao1(
+          col_int int,
+          col_text text,
+          col_numeric numeric,
+          col_unq int
+          ) with(appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+SELECT 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='sto_uao1');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+Create index sto_uao1_int_idx1 on sto_uao1(col_int);
+CREATE INDEX
+select * from sto_uao1 order by col_int;
+ col_int | col_text | col_numeric | col_unq 
+---------+----------+-------------+---------
+(0 rows)
+
+Create index sto_uao1_text_idx1 on sto_uao1(col_text);
+CREATE INDEX
+select * from sto_uao1 order by col_text;
+ col_int | col_text | col_numeric | col_unq 
+---------+----------+-------------+---------
+(0 rows)
+
+Create index sto_uao1_numeric_idx1 on sto_uao1(col_numeric);
+CREATE INDEX
+select * from sto_uao1 order by col_numeric;
+ col_int | col_text | col_numeric | col_unq 
+---------+----------+-------------+---------
+(0 rows)
+
+Create index sto_uao1_idx2 on sto_uao1 USING bitmap (col_text);
+CREATE INDEX
+select * from sto_uao1 order by col_numeric;
+ col_int | col_text | col_numeric | col_unq 
+---------+----------+-------------+---------
+(0 rows)
+
+insert into sto_uao1 values(1,'aa',1001,101),(2,'bb',1002,102);
+INSERT 0 2
+select * from sto_uao1 order by col_numeric;
+ col_int | col_text | col_numeric | col_unq 
+---------+----------+-------------+---------
+       1 | aa       |        1001 |     101
+       2 | bb       |        1002 |     102
+(2 rows)
+
+update sto_uao1 set col_text=' new value' where col_int = 1;
+UPDATE 1
+select * from sto_uao1 order by col_numeric;
+ col_int |  col_text  | col_numeric | col_unq 
+---------+------------+-------------+---------
+       1 |  new value |        1001 |     101
+       2 | bb         |        1002 |     102
+(2 rows)
+
+\d+ sto_uao1;
+                                  Append-Only Columnar Table "public.sto_uao1"
+   Column    |  Type   | Modifiers | Storage  | Compression Type | Compression Level | Block Size | Description 
+-------------+---------+-----------+----------+------------------+-------------------+------------+-------------
+ col_int     | integer |           | plain    | none             | 0                 | 32768      | 
+ col_text    | text    |           | extended | none             | 0                 | 32768      | 
+ col_numeric | numeric |           | main     | none             | 0                 | 32768      | 
+ col_unq     | integer |           | plain    | none             | 0                 | 32768      | 
+Checksum: f
+Indexes:
+    "sto_uao1_idx2" bitmap (col_text)
+    "sto_uao1_int_idx1" btree (col_int)
+    "sto_uao1_numeric_idx1" btree (col_numeric)
+    "sto_uao1_text_idx1" btree (col_text)
+Has OIDs: no
+Options: appendonly=true, orientation=column
+Distributed randomly
+
+-- Create table with all data_types 
+Drop table if exists sto_uao2;
+DROP TABLE
+Create table sto_uao2 (id SERIAL,a1 int,a2 char(5),a3 numeric,a4 boolean DEFAULT false ,a5 char DEFAULT 'd',a6 text,a7 timestamp,a8 character varying(705),a9 bigint,a10 date,a11 varchar(600),a12 text,a13 decimal,a14 real,a15 bigint,a16 int4 ,a17 bytea,a18 timestamp with time zone,a19 timetz,a20 path,a21 box,a22 macaddr,a23 interval,a24 character varying(800),a25 lseg,a26 point,a27 double precision,a28 circle,a29 int4,a30 numeric(8),a31 polygon,a32 date,a33 real,a34 money,a35 cidr,a36 inet,a37 time,a38 text,a39 bit,a40 bit varying(5),a41 smallint,a42 int )  with(appendonly=true, orientation=column) distributed randomly;
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create implicit sequence "sto_uao2_id_seq" for serial column "sto_uao2.id"
+CREATE TABLE
+SELECT 1  AS VisimapPresent FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='sto_uao2');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+\d+ sto_uao2;
+                                                               Append-Only Columnar Table "public.sto_uao2"
+ Column |            Type             |                       Modifiers                       | Storage  | Compression Type | Compression Level | Block Size | Description 
+--------+-----------------------------+-------------------------------------------------------+----------+------------------+-------------------+------------+-------------
+ id     | integer                     | not null default nextval('sto_uao2_id_seq'::regclass) | plain    | none             | 0                 | 32768      | 
+ a1     | integer                     |                                                       | plain    | none             | 0                 | 32768      | 
+ a2     | character(5)                |                                                       | extended | none             | 0                 | 32768      | 
+ a3     | numeric                     |                                                       | main     | none             | 0                 | 32768      | 
+ a4     | boolean                     | default false                                         | plain    | none             | 0                 | 32768      | 
+ a5     | character(1)                | default 'd'::bpchar                                   | extended | none             | 0                 | 32768      | 
+ a6     | text                        |                                                       | extended | none             | 0                 | 32768      | 
+ a7     | timestamp without time zone |                                                       | plain    | none             | 0                 | 32768      | 
+ a8     | character varying(705)      |                                                       | extended | none             | 0                 | 32768      | 
+ a9     | bigint                      |                                                       | plain    | none             | 0                 | 32768      | 
+ a10    | date                        |                                                       | plain    | none             | 0                 | 32768      | 
+ a11    | character varying(600)      |                                                       | extended | none             | 0                 | 32768      | 
+ a12    | text                        |                                                       | extended | none             | 0                 | 32768      | 
+ a13    | numeric                     |                                                       | main     | none             | 0                 | 32768      | 
+ a14    | real                        |                                                       | plain    | none             | 0                 | 32768      | 
+ a15    | bigint                      |                                                       | plain    | none             | 0                 | 32768      | 
+ a16    | integer                     |                                                       | plain    | none             | 0                 | 32768      | 
+ a17    | bytea                       |                                                       | extended | none             | 0                 | 32768      | 
+ a18    | timestamp with time zone    |                                                       | plain    | none             | 0                 | 32768      | 
+ a19    | time with time zone         |                                                       | plain    | none             | 0                 | 32768      | 
+ a20    | path                        |                                                       | extended | none             | 0                 | 32768      | 
+ a21    | box                         |                                                       | plain    | none             | 0                 | 32768      | 
+ a22    | macaddr                     |                                                       | plain    | none             | 0                 | 32768      | 
+ a23    | interval                    |                                                       | plain    | none             | 0                 | 32768      | 
+ a24    | character varying(800)      |                                                       | extended | none             | 0                 | 32768      | 
+ a25    | lseg                        |                                                       | plain    | none             | 0                 | 32768      | 
+ a26    | point                       |                                                       | plain    | none             | 0                 | 32768      | 
+ a27    | double precision            |                                                       | plain    | none             | 0                 | 32768      | 
+ a28    | circle                      |                                                       | plain    | none             | 0                 | 32768      | 
+ a29    | integer                     |                                                       | plain    | none             | 0                 | 32768      | 
+ a30    | numeric(8,0)                |                                                       | main     | none             | 0                 | 32768      | 
+ a31    | polygon                     |                                                       | extended | none             | 0                 | 32768      | 
+ a32    | date                        |                                                       | plain    | none             | 0                 | 32768      | 
+ a33    | real                        |                                                       | plain    | none             | 0                 | 32768      | 
+ a34    | money                       |                                                       | plain    | none             | 0                 | 32768      | 
+ a35    | cidr                        |                                                       | plain    | none             | 0                 | 32768      | 
+ a36    | inet                        |                                                       | plain    | none             | 0                 | 32768      | 
+ a37    | time without time zone      |                                                       | plain    | none             | 0                 | 32768      | 
+ a38    | text                        |                                                       | extended | none             | 0                 | 32768      | 
+ a39    | bit(1)                      |                                                       | extended | none             | 0                 | 32768      | 
+ a40    | bit varying(5)              |                                                       | extended | none             | 0                 | 32768      | 
+ a41    | smallint                    |                                                       | plain    | none             | 0                 | 32768      | 
+ a42    | integer                     |                                                       | plain    | none             | 0                 | 32768      | 
+Checksum: f
+Has OIDs: no
+Options: appendonly=true, orientation=column
+Distributed randomly
+
+INSERT INTO sto_uao2 (a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42) values(generate_series(1,4),'M',2011,'t','a','This is news of today: Deadlock between Republicans and Democrats over how best to reduce the U.S. deficit, and over what period, has blocked an agreement to allow the raising of the $14.3 trillion debt ceiling','2001-12-24 02:26:11','U.S. House of Representatives Speaker John Boehner, the top Republican in Congress who has put forward a deficit reduction plan to be voted on later on Thursday said he had no control over whether his bill would avert a credit downgrade.',generate_series(5,7),'2011-10-11','The Republican-controlled House is tentatively scheduled to vote on Boehner proposal this afternoon at around 6 p.m. EDT (2200 GMT). The main Republican vote counter in the House, Kevin McCarthy, would not say if there were enough votes to pass the bill.','WASHINGTON:House Speaker John Boehner says his plan mixing spending cuts in exchange for raising the nations $14.3 trillion debt limit is not perfect but is as large a step that a divided government can take that is doable and signable by President Barack Obama.The Ohio Republican says the measure is an honest and sincere attempt at compromise and was negotiated with Democrats last weekend and that passing it would end the ongoing debt crisis. The plan blends $900 billion-plus in spending cuts with a companion increase in the nations borrowing cap.','1234.56',323453,generate_series(4,6),7845,'0011','2005-07-16 01:51:15+1359','2001-12-13 01:51:15','((1,2),(0,3),(2,1))','((2,3)(4,5))','08:00:2b:01:02:03','1-2','Republicans had been working throughout the day Thursday to lock down support for their plan to raise the nations debt ceiling, even as Senate Democrats vowed to swiftly kill it if passed.','((2,3)(4,5))','(6,7)',11.222,'((4,5),7)',32,3214,'(1,0,2,3)','2010-02-21',43564,'$1,000.00','192.168.1','126.1.3.4','12:30:45','Johnson & Johnsons McNeil Consumer Healthcare announced the voluntary dosage reduction today. Labels will carry new dosing instructions this fall.The company says it will cut the maximum dosage of Regular Strength Tylenol and other acetaminophen-containing products in 2012.Acetaminophen is safe when used as directed, says Edwin Kuffner, MD, McNeil vice president of over-the-counter medical affairs. But, when too much is taken, it can cause liver damage.The action is intended to cut the risk of such accidental overdoses, the company says in a news release.','1','0',12,23);
+INSERT 0 12
+select count(*) from sto_uao2;
+ count 
+-------
+    12
+(1 row)
+
+-- Create table with constriants
+Drop table if exists sto_uao3;
+DROP TABLE
+CREATE TABLE sto_uao3(
+          col_text text DEFAULT 'text',
+          col_numeric numeric
+          CONSTRAINT tbl_chk_con1 CHECK (col_numeric < 250)
+          ) with(appendonly=true, orientation=column) DISTRIBUTED by(col_text);
+CREATE TABLE
+\d+ sto_uao3;
+                                       Append-Only Columnar Table "public.sto_uao3"
+   Column    |  Type   |      Modifiers       | Storage  | Compression Type | Compression Level | Block Size | Description 
+-------------+---------+----------------------+----------+------------------+-------------------+------------+-------------
+ col_text    | text    | default 'text'::text | extended | none             | 0                 | 32768      | 
+ col_numeric | numeric |                      | main     | none             | 0                 | 32768      | 
+Checksum: f
+Check constraints:
+    "tbl_chk_con1" CHECK (col_numeric < 250::numeric)
+Has OIDs: no
+Options: appendonly=true, orientation=column
+Distributed by: (col_text)
+
+SELECT 1  AS VisimapPresent FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='sto_uao3');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+insert into sto_uao3 values ('0_zero',30);
+INSERT 0 1
+insert into sto_uao3 values ('1_one',10);
+INSERT 0 1
+insert into sto_uao3 values ('2_two',25);
+INSERT 0 1
+select count(*) from sto_uao3;
+ count 
+-------
+     3
+(1 row)
+
+Drop table if exists sto_uao4;
+DROP TABLE
+CREATE TABLE sto_uao4  (    did integer,
+    name varchar(40), 
+    CONSTRAINT con1 CHECK (did > 99 AND name <> '') 
+    ) with(appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+\d+ sto_uao4;
+                                      Append-Only Columnar Table "public.sto_uao4"
+ Column |         Type          | Modifiers | Storage  | Compression Type | Compression Level | Block Size | Description 
+--------+-----------------------+-----------+----------+------------------+-------------------+------------+-------------
+ did    | integer               |           | plain    | none             | 0                 | 32768      | 
+ name   | character varying(40) |           | extended | none             | 0                 | 32768      | 
+Checksum: f
+Check constraints:
+    "con1" CHECK (did > 99 AND name::text <> ''::text)
+Has OIDs: no
+Options: appendonly=true, orientation=column
+Distributed randomly
+
+insert into sto_uao4  values (100,'name_1');
+INSERT 0 1
+insert into sto_uao4  values (200,'name_2');
+INSERT 0 1
+insert into sto_uao4  values (300,'name_3');
+INSERT 0 1
+select count(*) from sto_uao4;
+ count 
+-------
+     3
+(1 row)
+
+--Create table in user created scehma
+Drop schema if exists uao_co_schema1 cascade;
+psql:/path/sql_file:1: NOTICE:  drop cascades to append only columnar table uao_co_schema1.sto_uao5
+DROP SCHEMA
+Create schema uao_co_schema1;
+CREATE SCHEMA
+CREATE TABLE uao_co_schema1.sto_uao5(
+          stud_id int,
+          stud_name varchar(20)
+          ) with(appendonly=true, orientation=column) DISTRIBUTED by(stud_id);
+CREATE TABLE
+SELECT 1  AS VisimapPresent FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='sto_uao5');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+\d+ sto_uao5;
+Did not find any relation named "sto_uao5".
+Insert into uao_co_schema1.sto_uao5 values(generate_series(1,20), 'studentname');
+INSERT 0 20
+-- Truncate, Drop table and index
+Drop table if exists sto_uao6;
+psql:/path/sql_file:1: NOTICE:  table "sto_uao6" does not exist, skipping
+DROP TABLE
+CREATE TABLE sto_uao6  (did integer,
+    name varchar(40),
+    CONSTRAINT con1 CHECK (did > 99 AND name <> '')
+    ) with(appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+SELECT 1  AS VisimapPresent FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='sto_uao6');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+Create index heap6_idx on sto_uao6(did);
+CREATE INDEX
+\d+ sto_uao6;
+                                      Append-Only Columnar Table "public.sto_uao6"
+ Column |         Type          | Modifiers | Storage  | Compression Type | Compression Level | Block Size | Description 
+--------+-----------------------+-----------+----------+------------------+-------------------+------------+-------------
+ did    | integer               |           | plain    | none             | 0                 | 32768      | 
+ name   | character varying(40) |           | extended | none             | 0                 | 32768      | 
+Checksum: f
+Indexes:
+    "heap6_idx" btree (did)
+Check constraints:
+    "con1" CHECK (did > 99 AND name::text <> ''::text)
+Has OIDs: no
+Options: appendonly=true, orientation=column
+Distributed randomly
+
+insert into sto_uao6  values (100,'name_1');
+INSERT 0 1
+insert into sto_uao6  values (200,'name_2');
+INSERT 0 1
+select * from sto_uao6 order by did;
+ did |  name  
+-----+--------
+ 100 | name_1
+ 200 | name_2
+(2 rows)
+
+Truncate sto_uao6;
+TRUNCATE TABLE
+select * from sto_uao6 order by did;
+ did | name 
+-----+------
+(0 rows)
+
+Drop index heap6_idx;
+DROP INDEX
+select * from sto_uao6 order by did;
+ did | name 
+-----+------
+(0 rows)
+
+Drop table sto_uao6;
+DROP TABLE
+-- Drop table cascade
+CREATE TABLE sto_uao7  (did integer,
+    name varchar(40),
+    CONSTRAINT con1 CHECK (did > 99 AND name <> '')
+    ) with(appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+SELECT 1  AS VisimapPresent FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='sto_uao7');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+Create index heap6_idx on sto_uao7(did);
+CREATE INDEX
+insert into sto_uao7  values (100,'name_1');
+INSERT 0 1
+insert into sto_uao7  values (200,'name_2');
+INSERT 0 1
+\d+ sto_uao7;
+                                      Append-Only Columnar Table "public.sto_uao7"
+ Column |         Type          | Modifiers | Storage  | Compression Type | Compression Level | Block Size | Description 
+--------+-----------------------+-----------+----------+------------------+-------------------+------------+-------------
+ did    | integer               |           | plain    | none             | 0                 | 32768      | 
+ name   | character varying(40) |           | extended | none             | 0                 | 32768      | 
+Checksum: f
+Indexes:
+    "heap6_idx" btree (did)
+Check constraints:
+    "con1" CHECK (did > 99 AND name::text <> ''::text)
+Has OIDs: no
+Options: appendonly=true, orientation=column
+Distributed randomly
+
+select * from sto_uao7 order by did;
+ did |  name  
+-----+--------
+ 100 | name_1
+ 200 | name_2
+(2 rows)
+
+Drop table sto_uao7 cascade;
+DROP TABLE

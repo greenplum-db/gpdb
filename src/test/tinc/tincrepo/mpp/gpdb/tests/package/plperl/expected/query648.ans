@@ -1,0 +1,8 @@
+-- Test: plperl 11
+SELECT * FROM perl_row();
+ f1 | f2 | f3 
+----+----+----
+    |    | 
+(1 row)
+
+							  

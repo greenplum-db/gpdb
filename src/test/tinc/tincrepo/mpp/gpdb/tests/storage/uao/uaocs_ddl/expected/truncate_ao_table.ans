@@ -1,0 +1,90 @@
+-- @description : : Truncate Updatable AO tables 
+-- 
+-- Create AO tables
+--start_ignore
+DROP TABLE IF EXISTS sto_ao_country_trunc cascade;
+DROP TABLE
+--end_ignore
+BEGIN;
+BEGIN
+--SET client_encoding = 'LATIN1';
+CREATE TABLE sto_ao_country_trunc (
+    code character(3) NOT NULL,
+    name text NOT NULL,
+    continent text NOT NULL,
+    region text NOT NULL,
+    surfacearea real NOT NULL,
+    indepyear smallint,
+    population integer NOT NULL,
+    lifeexpectancy real,
+    gnp numeric(10,2),
+    gnpold numeric(10,2),
+    localname text NOT NULL,
+    governmentform text NOT NULL,
+    headofstate text,
+    capital integer,
+    code2 character(2) NOT NULL
+) with (appendonly=true, orientation=column) distributed by (code);
+CREATE TABLE
+--
+-- Data for Name: sto_ao_country_trunc; Type: TABLE DATA; Schema: public; 
+--
+COPY sto_ao_country_trunc (code, name, continent, region, surfacearea, indepyear, population, lifeexpectancy, gnp, gnpold, localname, governmentform, headofstate, capital, code2) FROM stdin WITH NULL AS '';
+commit;
+COMMIT
+ANALYZE sto_ao_country_trunc;
+ANALYZE
+SELECT 1  AS VisimapPresent FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid  FROM pg_class WHERE relname='sto_ao_country_trunc');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+select count(*) from sto_ao_country_trunc ;
+ count 
+-------
+    22
+(1 row)
+
+delete from sto_ao_country_trunc  where name='Australia';
+DELETE 1
+select count(*) AS only_visi_tups  from sto_ao_country_trunc;
+ only_visi_tups 
+----------------
+             21
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*) AS invisi_and_visi_tups  from sto_ao_country_trunc;
+ invisi_and_visi_tups 
+----------------------
+                   22
+(1 row)
+
+set gp_select_invisible = false;
+SET
+truncate table sto_ao_country_trunc;
+TRUNCATE TABLE
+select count(*) AS only_visi_tups  from sto_ao_country_trunc;
+ only_visi_tups 
+----------------
+              0
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*) AS invisi_and_visi_tups  from sto_ao_country_trunc;
+ invisi_and_visi_tups 
+----------------------
+                    0
+(1 row)
+
+set gp_select_invisible = false;
+SET
+SELECT 1  AS VisimapPresent FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid  FROM pg_class WHERE relname='sto_ao_country_trunc');
+ visimappresent 
+----------------
+              1
+(1 row)
+

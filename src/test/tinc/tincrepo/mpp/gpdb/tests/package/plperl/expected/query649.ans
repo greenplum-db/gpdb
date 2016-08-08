@@ -1,0 +1,13 @@
+-- Test: plperl 12
+CREATE OR REPLACE FUNCTION perl_row() RETURNS testrowperl AS $$
+							return { f2 => 'hello', f1 => 1, f3 => 'world' };
+							$$ LANGUAGE plperl;
+CREATE FUNCTION
+							  
+SELECT perl_row();
+    perl_row     
+-----------------
+ (1,hello,world)
+(1 row)
+
+							  

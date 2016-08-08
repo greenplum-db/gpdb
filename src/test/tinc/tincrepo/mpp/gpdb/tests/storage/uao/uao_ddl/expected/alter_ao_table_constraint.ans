@@ -1,0 +1,225 @@
+-- @description : Alter  UAO tables and execute DML statements on the tables
+-- 
+Drop table if exists sto_alt_uao2_constraint cascade;
+DROP TABLE
+CREATE TABLE sto_alt_uao2_constraint(
+  text_col text,
+  bigint_col bigint,
+  char_vary_col character varying(30),
+  numeric_col numeric
+  ) with(appendonly=true) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+\d+ sto_alt_uao2_constraint
+             Append-Only Table "public.sto_alt_uao2_constraint"
+    Column     |         Type          | Modifiers | Storage  | Description 
+---------------+-----------------------+-----------+----------+-------------
+ text_col      | text                  |           | extended | 
+ bigint_col    | bigint                |           | plain    | 
+ char_vary_col | character varying(30) |           | extended | 
+ numeric_col   | numeric               |           | main     | 
+Compression Type: None
+Compression Level: 0
+Block Size: 32768
+Checksum: f
+Has OIDs: no
+Options: appendonly=true
+Distributed randomly
+
+insert into sto_alt_uao2_constraint values ('1_zero', 1, '1_zero', 1);
+INSERT 0 1
+SELECT 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='sto_alt_uao2_constraint');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+select * from sto_alt_uao2_constraint order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col 
+----------+------------+---------------+-------------
+ 1_zero   |          1 | 1_zero        |           1
+(1 row)
+
+update sto_alt_uao2_constraint set numeric_col = 100 where text_col = '1_zero';
+UPDATE 1
+select count(*) AS only_visi_tups from sto_alt_uao2_constraint;
+ only_visi_tups 
+----------------
+              1
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*)  AS invisi_and_visi_tups from sto_alt_uao2_constraint;
+ invisi_and_visi_tups 
+----------------------
+                    2
+(1 row)
+
+set gp_select_invisible = false;
+SET
+-- Alter table add table constraint
+ALTER TABLE sto_alt_uao2_constraint  ADD CONSTRAINT lenchk CHECK (char_length(char_vary_col) < 10);
+ALTER TABLE
+\d+ sto_alt_uao2_constraint
+             Append-Only Table "public.sto_alt_uao2_constraint"
+    Column     |         Type          | Modifiers | Storage  | Description 
+---------------+-----------------------+-----------+----------+-------------
+ text_col      | text                  |           | extended | 
+ bigint_col    | bigint                |           | plain    | 
+ char_vary_col | character varying(30) |           | extended | 
+ numeric_col   | numeric               |           | main     | 
+Compression Type: None
+Compression Level: 0
+Block Size: 32768
+Checksum: f
+Check constraints:
+    "lenchk" CHECK (char_length(char_vary_col::text) < 10)
+Has OIDs: no
+Options: appendonly=true
+Distributed randomly
+
+insert into sto_alt_uao2_constraint values ('6_zero', 6, '6_zeroooooo', 6);
+ERROR:  new row for relation "sto_alt_uao2_constraint" violates check constraint "lenchk"  
+select * from sto_alt_uao2_constraint order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col 
+----------+------------+---------------+-------------
+ 1_zero   |          1 | 1_zero        |         100
+(1 row)
+
+select count(*) AS only_visi_tups from sto_alt_uao2_constraint;
+ only_visi_tups 
+----------------
+              1
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*)  AS invisi_and_visi_tups from sto_alt_uao2_constraint;
+ invisi_and_visi_tups 
+----------------------
+                    2
+(1 row)
+
+set gp_select_invisible = false;
+SET
+insert into sto_alt_uao2_constraint values ('6_zero', 6, '6_zero', 6);
+INSERT 0 1
+select * from sto_alt_uao2_constraint order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col 
+----------+------------+---------------+-------------
+ 1_zero   |          1 | 1_zero        |         100
+ 6_zero   |          6 | 6_zero        |           6
+(2 rows)
+
+select count(*) AS only_visi_tups from sto_alt_uao2_constraint;
+ only_visi_tups 
+----------------
+              2
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*)  AS invisi_and_visi_tups from sto_alt_uao2_constraint;
+ invisi_and_visi_tups 
+----------------------
+                    3
+(1 row)
+
+set gp_select_invisible = false;
+SET
+update sto_alt_uao2_constraint set numeric_col = 100 where text_col = '1_zero';
+UPDATE 1
+select * from sto_alt_uao2_constraint order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col 
+----------+------------+---------------+-------------
+ 1_zero   |          1 | 1_zero        |         100
+ 6_zero   |          6 | 6_zero        |           6
+(2 rows)
+
+select count(*) AS only_visi_tups from sto_alt_uao2_constraint;
+ only_visi_tups 
+----------------
+              2
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*)  AS invisi_and_visi_tups from sto_alt_uao2_constraint;
+ invisi_and_visi_tups 
+----------------------
+                    4
+(1 row)
+
+set gp_select_invisible = false;
+SET
+-- Alter table drop constriant
+Alter table sto_alt_uao2_constraint  Drop constraint lenchk;
+ALTER TABLE
+\d+ sto_alt_uao2_constraint
+             Append-Only Table "public.sto_alt_uao2_constraint"
+    Column     |         Type          | Modifiers | Storage  | Description 
+---------------+-----------------------+-----------+----------+-------------
+ text_col      | text                  |           | extended | 
+ bigint_col    | bigint                |           | plain    | 
+ char_vary_col | character varying(30) |           | extended | 
+ numeric_col   | numeric               |           | main     | 
+Compression Type: None
+Compression Level: 0
+Block Size: 32768
+Checksum: f
+Has OIDs: no
+Options: appendonly=true
+Distributed randomly
+
+insert into sto_alt_uao2_constraint values ('7_zero', 7, '7_zeroooooooooo', 7);
+INSERT 0 1
+select * from sto_alt_uao2_constraint order by bigint_col;
+ text_col | bigint_col |  char_vary_col  | numeric_col 
+----------+------------+-----------------+-------------
+ 1_zero   |          1 | 1_zero          |         100
+ 6_zero   |          6 | 6_zero          |           6
+ 7_zero   |          7 | 7_zeroooooooooo |           7
+(3 rows)
+
+select count(*) AS only_visi_tups from sto_alt_uao2_constraint;
+ only_visi_tups 
+----------------
+              3
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*)  AS invisi_and_visi_tups from sto_alt_uao2_constraint;
+ invisi_and_visi_tups 
+----------------------
+                    5
+(1 row)
+
+set gp_select_invisible = false;
+SET
+select * from sto_alt_uao2_constraint order by bigint_col;
+ text_col | bigint_col |  char_vary_col  | numeric_col 
+----------+------------+-----------------+-------------
+ 1_zero   |          1 | 1_zero          |         100
+ 6_zero   |          6 | 6_zero          |           6
+ 7_zero   |          7 | 7_zeroooooooooo |           7
+(3 rows)
+
+update sto_alt_uao2_constraint set numeric_col = 100 where text_col = '1_zero';
+UPDATE 1
+select count(*) AS only_visi_tups from sto_alt_uao2_constraint;
+ only_visi_tups 
+----------------
+              3
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*)  AS invisi_and_visi_tups from sto_alt_uao2_constraint;
+ invisi_and_visi_tups 
+----------------------
+                    6
+(1 row)
+
+set gp_select_invisible = false;
+SET

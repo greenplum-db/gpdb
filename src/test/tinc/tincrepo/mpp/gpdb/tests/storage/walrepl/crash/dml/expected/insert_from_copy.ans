@@ -1,0 +1,70 @@
+--drop table if exists
+-- start_ignore
+DROP TABLE IF EXISTS city cascade;
+psql:/path/sql_file:1: NOTICE:  table "city" does not exist, skipping
+DROP TABLE
+DROP TABLE IF EXISTS country cascade;
+psql:/path/sql_file:1: NOTICE:  table "country" does not exist, skipping
+DROP TABLE
+DROP TABLE IF EXISTS countrylanguage cascade;
+psql:/path/sql_file:1: NOTICE:  table "countrylanguage" does not exist, skipping
+DROP TABLE
+-- end_ignore
+BEGIN;
+BEGIN
+CREATE TABLE city (
+    id integer NOT NULL,
+    name text NOT NULL,
+    countrycode character(3) NOT NULL,
+    district text NOT NULL,
+    population integer NOT NULL
+) distributed by(id);
+CREATE TABLE
+CREATE TABLE country (
+    code character(3) NOT NULL,
+    name text NOT NULL,
+    continent text NOT NULL,
+    region text NOT NULL,
+    surfacearea real NOT NULL,
+    indepyear smallint,
+    population integer NOT NULL,
+    lifeexpectancy real,
+    gnp numeric(10,2),
+    gnpold numeric(10,2),
+    localname text NOT NULL,
+    governmentform text NOT NULL,
+    headofstate text,
+    capital integer,
+    code2 character(2) NOT NULL
+) distributed by (code);
+CREATE TABLE
+CREATE TABLE countrylanguage (
+    countrycode character(3) NOT NULL,
+    "language" text NOT NULL,
+    isofficial boolean NOT NULL,
+    percentage real NOT NULL
+)distributed by (countrycode,language);
+CREATE TABLE
+COPY city (id, name, countrycode, district, population) FROM stdin;
+COPY country (code, name, continent, region, surfacearea, indepyear, population, lifeexpectancy, gnp, gnpold, localname, governmentform, headofstate, capital, code2) FROM stdin WITH NULL AS '';
+COPY countrylanguage (countrycode, "language", isofficial, percentage) FROM stdin;
+SELECT count(*) from city;
+ count 
+-------
+    10
+(1 row)
+
+SELECT count(*) from country;
+ count 
+-------
+    22
+(1 row)
+
+SELECT count(*) from countrylanguage;
+ count 
+-------
+    23
+(1 row)
+
+COMMIT;
+COMMIT

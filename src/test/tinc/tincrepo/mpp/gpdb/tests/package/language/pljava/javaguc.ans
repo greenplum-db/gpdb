@@ -1,0 +1,26 @@
+ pljava_classpath 
+------------------
+ examples.jar
+(1 row)
+
+ pljava_statement_cache_size 
+-----------------------------
+ 0
+(1 row)
+
+ pljava_release_lingering_savepoints 
+-------------------------------------
+ off
+(1 row)
+
+ pljava_vmoptions 
+------------------
+ 
+(1 row)
+
+ pljava_debug 
+--------------
+ off
+(1 row)
+
+

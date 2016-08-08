@@ -1,0 +1,12 @@
+-- 
+-- @description test sql test case
+-- @created 2012-07-05 12:00:00
+-- @modified 2012-07-08 12:00:02
+-- @tags orca hashagg executor
+select 'foo';
+psql:/Users/ravisb/Perforce/perforce.sanmateo.greenplum.com_1666/ravi_gpdbqa_ws/cdbfast/private/ravi/dynamic_partition_elimination/test12_dpe_with_IN_csqs.sql:16: LOG:  DPE matched partitions: {d_plineitem_1
+ ?column? 
+----------
+ foo
+(1 row)
+

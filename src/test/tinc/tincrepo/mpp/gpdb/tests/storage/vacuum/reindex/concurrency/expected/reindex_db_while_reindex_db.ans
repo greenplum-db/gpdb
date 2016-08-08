@@ -1,0 +1,10 @@
+-- @Description Ensures that reindex database during reindex database on same db works
+-- 
+1: @db_name reindexdb:COMMIT;
+COMMIT
+1: REINDEX database reindexdb;
+REINDEX
+2: @db_name reindexdb:COMMIT;
+COMMIT
+2: reindex database reindexdb;
+REINDEX

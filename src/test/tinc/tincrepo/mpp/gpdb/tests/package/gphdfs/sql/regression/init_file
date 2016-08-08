@@ -1,0 +1,6 @@
+-- start_matchsubs
+-- m/gphdfs:\/\/.*:\d+/
+-- s/gphdfs:\/\/.*:\d+/gphdfs:\/\/<hostname>:<port>/
+-- m/gphdfs:\/\/.*\//
+-- s/gphdfs:\/\/.*\//gphdfs:\/\/<maprhostname>/
+-- end_matchsubs

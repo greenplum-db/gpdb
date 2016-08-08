@@ -1,0 +1,17 @@
+%YAML 1.1
+---
+VERSION:   1.0.0.2
+
+DEFINE:
+  - INPUT:
+      NAME:      documents
+      TABLE:     t1adsfasdf
+      COLUMNS:   [line text]
+
+  - MAP:
+      NAME:        abbrev
+
+EXECUTE:
+  - RUN:
+      SOURCE:   t1
+      MAP:      abbrev

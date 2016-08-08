@@ -1,0 +1,44 @@
+-- @Description select with subquery
+-- 
+DROP TABLE IF EXISTS country_uao_subq cascade;
+DROP TABLE
+BEGIN;
+BEGIN
+CREATE TABLE country_uao_subq (
+    code character(3) NOT NULL,
+    name text NOT NULL,
+    continent text NOT NULL,
+    region text NOT NULL,
+    surfacearea real NOT NULL,
+    indepyear smallint,
+    population integer NOT NULL,
+    lifeexpectancy real,
+    gnp numeric(10,2),
+    gnpold numeric(10,2),
+    localname text NOT NULL,
+    governmentform text NOT NULL,
+    headofstate text,
+    capital integer,
+    code2 character(2) NOT NULL
+) with (appendonly=true)  distributed by (code);
+CREATE TABLE
+--
+-- Data for Name: country; Type: TABLE DATA; Schema: public; 
+--
+COPY country_uao_subq (code, name, continent, region, surfacearea, indepyear, population, lifeexpectancy, gnp, gnpold, localname, governmentform, headofstate, capital, code2) FROM stdin WITH NULL AS '';
+COMMIT;
+COMMIT
+ANALYZE country_uao_subq;
+ANALYZE
+-- Using subquery
+select *
+from
+country_uao_subq
+where code in (select code from country_uao_subq where gnp between 80000 and 100000)
+and code in (select code from country_uao_subq where lifeexpectancy between 70 and 80)
+and code in (select code from country_uao_subq where  indepyear between 1800 and 1900);
+ code |   name    |   continent   |    region     | surfacearea | indepyear | population | lifeexpectancy |   gnp    |  gnpold  | localname |  governmentform  |    headofstate    | capital | code2 
+------+-----------+---------------+---------------+-------------+-----------+------------+----------------+----------+----------+-----------+------------------+-------------------+---------+-------
+ VEN  | Venezuela | South America | South America |      912050 |      1811 |   24170000 |           73.1 | 95023.00 | 88434.00 | Venezuela | Federal Republic | Hugo Chavez Frias |    3539 | VE
+(1 row)
+

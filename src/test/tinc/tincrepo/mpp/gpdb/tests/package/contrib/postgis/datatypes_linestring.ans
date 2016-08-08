@@ -1,0 +1,30 @@
+select '3',ST_asewkt('LINESTRING( 0 0, 1 1, 2 2, 3 3 , 4 4)'::GEOMETRY) as geom;
+ ?column? |              geom               
+----------+---------------------------------
+ 3        | LINESTRING(0 0,1 1,2 2,3 3,4 4)
+(1 row)
+
+select '4',ST_asewkt('LINESTRING( 0 0 0 , 1 1 1 , 2 2 2 , 3 3 3, 4 4 4)'::GEOMETRY) as geom;
+ ?column? |                   geom                    
+----------+-------------------------------------------
+ 4        | LINESTRING(0 0 0,1 1 1,2 2 2,3 3 3,4 4 4)
+(1 row)
+
+select '5',ST_asewkt('LINESTRING( 1 2 3 , 4 5 6 , 7 8 9 , 10 11 12, 13 14 15)'::GEOMETRY) as geom;
+ ?column? |                      geom                       
+----------+-------------------------------------------------
+ 5        | LINESTRING(1 2 3,4 5 6,7 8 9,10 11 12,13 14 15)
+(1 row)
+
+select '14',ST_asewkt('GEOMETRYCOLLECTION(LINESTRING( 0 0, 1 1, 2 2, 3 3 , 4 4))'::GEOMETRY);
+ ?column? |                      st_asewkt                      
+----------+-----------------------------------------------------
+ 14       | GEOMETRYCOLLECTION(LINESTRING(0 0,1 1,2 2,3 3,4 4))
+(1 row)
+
+select '15',ST_asewkt('GEOMETRYCOLLECTION(LINESTRING( 1 2 3 , 4 5 6 , 7 8 9 , 10 11 12, 13 14 15))'::GEOMETRY);
+ ?column? |                              st_asewkt                              
+----------+---------------------------------------------------------------------
+ 15       | GEOMETRYCOLLECTION(LINESTRING(1 2 3,4 5 6,7 8 9,10 11 12,13 14 15))
+(1 row)
+

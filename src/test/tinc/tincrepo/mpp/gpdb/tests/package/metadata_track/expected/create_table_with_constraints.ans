@@ -1,0 +1,52 @@
+-- start_ignore
+SET optimizer=off;
+SET
+-- end_ignore
+--Table constraint
+    CREATE TABLE mdt_table_constraint  (
+    did integer,
+    name varchar(40)
+    CONSTRAINT con1 CHECK (did > 99 AND name <> '')
+    )DISTRIBUTED RANDOMLY;
+CREATE TABLE
+--Tables with Default and column constraint
+    CREATE TABLE mdt_table_with_default_constraint (
+    col_with_default_numeric numeric DEFAULT 0,
+    col_with_default_text character varying(30) DEFAULT 'test1',
+    col_with_constraint numeric UNIQUE
+    ) DISTRIBUTED BY (col_with_constraint);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE / UNIQUE will create implicit index "mdt_table_with_default_constraint_col_with_constraint_key" for table "mdt_table_with_default_constraint"
+CREATE TABLE
+--Table with column constraint
+    CREATE TABLE mdt_table_with_default_constraint1 (
+    col_with_default_numeric numeric PRIMARY KEY,
+    col_with_default_text character varying(30) DEFAULT 'test1',
+    col_with_constraint numeric
+    ) DISTRIBUTED BY (col_with_default_numeric);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "mdt_table_with_default_constraint1_pkey" for table "mdt_table_with_default_constraint1"
+CREATE TABLE
+select classname  , schemaname , objname  , usestatus , usename , actionname , subtype from pg_stat_operations  where statime > ( select statime from pg_stat_operations where objname ='my_first_table' and actionname ='CREATE') and objname  not in ('pg_stat_operations','pg_stat_partition_operations') order by statime;
+  classname  | schemaname |                          objname                          | usestatus | usename  | actionname | subtype  
+-------------+------------+-----------------------------------------------------------+-----------+----------+------------+----------
+ pg_authid   |            | mdt_user                                                  | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_database |            | mdt_db                                                    | CURRENT   | mdt_user | CREATE     | DATABASE
+ pg_class    | public     | mdt_table_constraint                                      | CURRENT   | gpadmin  | CREATE     | TABLE
+ pg_class    | public     | mdt_table_with_default_constraint                         | CURRENT   | gpadmin  | CREATE     | TABLE
+ pg_class    | public     | mdt_table_with_default_constraint_col_with_constraint_key | CURRENT   | gpadmin  | CREATE     | INDEX
+ pg_class    | public     | mdt_table_with_default_constraint1                        | CURRENT   | gpadmin  | CREATE     | TABLE
+ pg_class    | public     | mdt_table_with_default_constraint1_pkey                   | CURRENT   | gpadmin  | CREATE     | INDEX
+(7 rows)
+
+drop table mdt_table_constraint ;
+DROP TABLE
+drop table mdt_table_with_default_constraint;
+DROP TABLE
+drop table mdt_table_with_default_constraint1;
+DROP TABLE
+select classname  , schemaname , objname  , usestatus , usename , actionname , subtype from pg_stat_operations  where statime > ( select statime from pg_stat_operations where objname ='my_first_table' and actionname ='CREATE') and objname  not in ('pg_stat_operations','pg_stat_partition_operations') order by statime;
+  classname  | schemaname | objname  | usestatus | usename  | actionname | subtype  
+-------------+------------+----------+-----------+----------+------------+----------
+ pg_authid   |            | mdt_user | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_database |            | mdt_db   | CURRENT   | mdt_user | CREATE     | DATABASE
+(2 rows)
+

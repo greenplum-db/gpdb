@@ -1,0 +1,100 @@
+-- 
+-- @created 2015-07-11 12:00:00
+-- @modified 2015-07-11 12:00:00
+-- @tags external_partition 
+-- @gpdiff true 
+-- @description Tests for external partition 
+--start_ignore
+drop table if exists pt_ext;
+DROP TABLE
+CREATE TABLE pt_ext
+(
+  col1 int,
+  col2 decimal,
+  col3 text,
+  col4 bool
+  
+)
+distributed by (col1)
+partition by list(col2)
+(
+	partition part1 values(1,2,3,4,5,6,7,8,9,10),
+	partition part2 values(11,12,13,14,15,16,17,18,19,20),
+	partition part3 values(21,22,23,24,25,26,27,28,29,30),
+	partition part4 values(31,32,33,34,35,36,37,38,39,40),
+	partition part5 values(41,42,43,44,45,46,47,48,49,50)
+);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part1" for table "pt_ext"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part2" for table "pt_ext"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part3" for table "pt_ext"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part4" for table "pt_ext"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part5" for table "pt_ext"
+CREATE TABLE
+create index pt_ext_idx on pt_ext(col1);
+psql:/path/sql_file:1: NOTICE:  building index for child partition "pt_ext_1_prt_part1"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "pt_ext_1_prt_part2"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "pt_ext_1_prt_part3"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "pt_ext_1_prt_part4"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "pt_ext_1_prt_part5"
+CREATE INDEX
+insert into pt_ext select i,i,'test',true from generate_series(1,50) i;
+INSERT 0 50
+create temp table tmp as select * from pt_ext where col1 < 11; 
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'col1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT 10
+copy tmp to '/tmp/exttab_list' csv;
+COPY 10
+create readable external table ret(like pt_ext) location('file://mdw/tmp/exttab_list') format 'csv';
+CREATE EXTERNAL TABLE
+alter table pt_ext exchange partition part1 with table ret without validation;
+ALTER TABLE
+drop table ret;
+DROP TABLE
+SET enable_indexscan=on;
+SET
+SET enable_seqscan=off;
+SET
+SET enable_hashjoin=off;
+SET
+SET enable_nestloop=on;
+SET
+SET gp_segments_for_planner=2;
+SET
+SET enable_bitmapscan=off;
+SET
+--end_ignore
+explain select * from pt_ext where col1=3;
+                                                                  QUERY PLAN                                                                   
+-----------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..14301.08 rows=1004 width=69)
+   ->  Append  (cost=0.00..14301.08 rows=1004 width=69)
+         ->  Index Scan using pt_ext_idx_1_prt_part2 on pt_ext_1_prt_part2 pt_ext  (cost=0.00..200.27 rows=1 width=69)
+               Index Cond: col1 = 3
+         ->  Index Scan using pt_ext_idx_1_prt_part3 on pt_ext_1_prt_part3 pt_ext  (cost=0.00..200.27 rows=1 width=69)
+               Index Cond: col1 = 3
+         ->  Index Scan using pt_ext_idx_1_prt_part4 on pt_ext_1_prt_part4 pt_ext  (cost=0.00..200.27 rows=1 width=69)
+               Index Cond: col1 = 3
+         ->  Index Scan using pt_ext_idx_1_prt_part5 on pt_ext_1_prt_part5 pt_ext  (cost=0.00..200.27 rows=1 width=69)
+               Index Cond: col1 = 3
+         ->  External Scan on pt_ext_1_prt_part1 pt_ext  (cost=0.00..13500.00 rows=1000 width=69)
+               Filter: col1 = 3
+ Settings:  enable_bitmapscan=off; enable_hashjoin=off; enable_indexscan=on; enable_nestloop=on; enable_seqscan=off; gp_segments_for_planner=2
+(13 rows)
+
+create index pt_ext_idx2 on pt_ext(col2);
+psql:/path/sql_file:1: NOTICE:  building index for child partition "pt_ext_1_prt_part2"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "pt_ext_1_prt_part3"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "pt_ext_1_prt_part4"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "pt_ext_1_prt_part5"
+psql:/path/sql_file:1: NOTICE:  skip building index for external partition "pt_ext_1_prt_part1"
+CREATE INDEX
+drop index pt_ext_idx2;
+psql:/path/sql_file:1: WARNING:  Only dropped the index "pt_ext_idx2"
+HINT:  To drop other indexes on child partitions, drop each one explicitly.
+DROP INDEX
+--start_ignore
+drop table pt_ext;
+DROP TABLE
+\! rm /tmp/exttab_list
+--end_ignore

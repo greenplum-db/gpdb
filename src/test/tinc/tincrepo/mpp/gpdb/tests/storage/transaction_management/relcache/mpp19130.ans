@@ -1,0 +1,47 @@
+-- 
+-- @description MPP-19130
+-- @created 2013-02-26 00:00:00
+-- @modified 2013-02-26 00:00:00
+-- @tags plpython transaction echo
+-- start_ignore
+drop table if exists stran_foo, stran_tt;
+NOTICE:  table "stran_foo" does not exist, skipping
+NOTICE:  table "stran_tt" does not exist, skipping
+DROP TABLE
+-- end_ignore
+create table stran_foo (a, b) as values(1, 10), (2, 20);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT 2
+-- The PL/pgSQL EXCEPTION block opens a subtransaction.
+-- If it's in reader, it was messing up relcache previously.
+create table stran_foo(a, b) as values(1, 10), (2, 20);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+ERROR:  relation "stran_foo" already exists
+create or replace function stran_func(a int) returns int as $$
+declare
+  x int;
+begin
+  begin
+    select 1 + 2 into x;
+  exception
+    when division_by_zero then
+      raise info 'except';
+  end;
+  return x;
+end;
+$$ language plpgsql;
+CREATE FUNCTION
+create table stran_tt as select stran_func(b) from stran_foo;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'stran_func' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT 2
+-- start_ignore
+drop table stran_foo;
+DROP TABLE
+drop table stran_tt;
+DROP TABLE
+drop function stran_func(int);
+DROP FUNCTION
+-- end_ignore

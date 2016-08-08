@@ -1,0 +1,60 @@
+-- start_ignore
+SET optimizer=off;
+SET
+-- end_ignore
+CREATE TABLE mdt_test_emp (ename varchar(20),eno int,salary int,ssn int,gender char(1)) distributed by (ename,eno,gender);
+CREATE TABLE
+CREATE UNIQUE INDEX mdt_eno_idx ON mdt_test_emp (eno);
+psql:/path/sql_file:1: NOTICE:  updating distribution policy to match new unique index
+CREATE INDEX
+CREATE INDEX mdt_gender_bmp_idx ON mdt_test_emp USING bitmap (gender);
+CREATE INDEX
+CREATE INDEX mdt_lower_ename_idex  ON mdt_test_emp ((upper(ename))) WHERE upper(ename)='JIM';
+CREATE INDEX
+CREATE  INDEX mdt_ename_idx ON mdt_test_emp  (ename) WITH (fillfactor =80);
+CREATE INDEX
+CREATE  INDEX mdt_ename_idx1 ON mdt_test_emp  (ename) WITH (fillfactor =80);
+CREATE INDEX
+ALTER INDEX mdt_gender_bmp_idx RENAME TO mdt_new_gender_bmp_idx;
+ALTER INDEX
+ALTER INDEX mdt_ename_idx SET (fillfactor =100);
+ALTER INDEX
+ALTER INDEX mdt_ename_idx1 SET (fillfactor =100);
+ALTER INDEX
+ALTER INDEX mdt_ename_idx1 RESET (fillfactor) ;
+ALTER INDEX
+select classname  , schemaname , objname  , usestatus , usename , actionname , subtype from pg_stat_operations  where statime > ( select statime from pg_stat_operations where objname ='my_first_table' and actionname ='CREATE') and objname  not in ('pg_stat_operations','pg_stat_partition_operations') order by statime;
+  classname  | schemaname |        objname         | usestatus | usename  | actionname | subtype  
+-------------+------------+------------------------+-----------+----------+------------+----------
+ pg_authid   |            | mdt_user               | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_database |            | mdt_db                 | CURRENT   | mdt_user | CREATE     | DATABASE
+ pg_class    | public     | mdt_test_emp           | CURRENT   | gpadmin  | CREATE     | TABLE
+ pg_class    | public     | mdt_eno_idx            | CURRENT   | gpadmin  | CREATE     | INDEX
+ pg_class    | public     | mdt_new_gender_bmp_idx | CURRENT   | gpadmin  | CREATE     | INDEX
+ pg_class    | public     | mdt_lower_ename_idex   | CURRENT   | gpadmin  | CREATE     | INDEX
+ pg_class    | public     | mdt_ename_idx          | CURRENT   | gpadmin  | CREATE     | INDEX
+ pg_class    | public     | mdt_ename_idx1         | CURRENT   | gpadmin  | CREATE     | INDEX
+ pg_class    | public     | mdt_new_gender_bmp_idx | CURRENT   | gpadmin  | ALTER      | RENAME
+ pg_class    | public     | mdt_ename_idx          | CURRENT   | gpadmin  | ALTER      | SET
+ pg_class    | public     | mdt_ename_idx1         | CURRENT   | gpadmin  | ALTER      | RESET
+(11 rows)
+
+drop index mdt_eno_idx;
+DROP INDEX
+drop index mdt_new_gender_bmp_idx;
+DROP INDEX
+drop index mdt_lower_ename_idex;
+DROP INDEX
+drop index mdt_ename_idx ;
+DROP INDEX
+drop index mdt_ename_idx1 ;
+DROP INDEX
+drop table mdt_test_emp;
+DROP TABLE
+select classname  , schemaname , objname  , usestatus , usename , actionname , subtype from pg_stat_operations  where statime > ( select statime from pg_stat_operations where objname ='my_first_table' and actionname ='CREATE') and objname  not in ('pg_stat_operations','pg_stat_partition_operations') order by statime;
+  classname  | schemaname | objname  | usestatus | usename  | actionname | subtype  
+-------------+------------+----------+-----------+----------+------------+----------
+ pg_authid   |            | mdt_user | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_database |            | mdt_db   | CURRENT   | mdt_user | CREATE     | DATABASE
+(2 rows)
+

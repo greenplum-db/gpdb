@@ -1,0 +1,69 @@
+-- @description : Create Data and execute select statements on UAO tables INTERSECT
+-- 
+DROP TABLE IF EXISTS city_uao cascade;
+DROP TABLE
+DROP TABLE IF EXISTS country_uao cascade;
+DROP TABLE
+DROP TABLE IF EXISTS countrylanguage_uao cascade;
+DROP TABLE
+BEGIN;
+BEGIN
+CREATE TABLE city_uao (
+    id integer NOT NULL,
+    name text NOT NULL,
+    countrycode character(3) NOT NULL,
+    district text NOT NULL,
+    population integer NOT NULL
+) with (appendonly=true) distributed by(id);
+CREATE TABLE
+CREATE TABLE country_uao (
+    code character(3) NOT NULL,
+    name text NOT NULL,
+    continent text NOT NULL,
+    region text NOT NULL,
+    surfacearea real NOT NULL,
+    indepyear smallint,
+    population integer NOT NULL,
+    lifeexpectancy real,
+    gnp numeric(10,2),
+    gnpold numeric(10,2),
+    localname text NOT NULL,
+    governmentform text NOT NULL,
+    headofstate text,
+    capital integer,
+    code2 character(2) NOT NULL
+) with (appendonly=true)  distributed by (code);
+CREATE TABLE
+CREATE TABLE countrylanguage_uao (
+    countrycode character(3) NOT NULL,
+    "language" text NOT NULL,
+    isofficial boolean NOT NULL,
+    percentage real NOT NULL
+)  with (appendonly=true) distributed by (countrycode,language);
+CREATE TABLE
+COPY city_uao (id, name, countrycode, district, population) FROM stdin;
+--
+-- Data for Name: country; Type: TABLE DATA; Schema: public; 
+--
+COPY country_uao (code, name, continent, region, surfacearea, indepyear, population, lifeexpectancy, gnp, gnpold, localname, governmentform, headofstate, capital, code2) FROM stdin WITH NULL AS '';
+--
+-- Data for Name: countrylanguage; Type: TABLE DATA; Schema: public; 
+--
+COPY countrylanguage_uao (countrycode, "language", isofficial, percentage) FROM stdin;
+COMMIT;
+COMMIT
+ANALYZE city_uao;
+ANALYZE
+ANALYZE country_uao;
+ANALYZE
+ANALYZE countrylanguage_uao;
+ANALYZE
+-- Using  EXCEPT clause
+select population from city_uao where countrycode = 'CAN'
+INTERSECT
+select population from city_uao where countrycode = 'MEX';
+ population 
+------------
+      92686
+(1 row)
+

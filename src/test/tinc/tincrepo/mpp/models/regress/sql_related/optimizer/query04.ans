@@ -1,0 +1,31 @@
+-- 
+-- @description test sql test case
+-- @created 2012-07-05 12:00:00
+-- @modified 2012-07-08 12:00:02
+-- @tags orca hashagg executor
+-- @product_version gpdb: main
+-- @repetitions 3
+-- @threshold 10
+-- @baseline 4.2.2.0
+-- start_ignore
+\timing
+Timing is on.
+SET statement_timeout=0;
+SET
+Time: 16.619 ms
+SELECT Disable_XForm('CXformDynamicIndexGet2DynamicIndexScan');
+                   disable_xform                    
+----------------------------------------------------
+ CXformDynamicIndexGet2DynamicIndexScan is disabled
+(1 row)
+
+Time: 2.365 ms
+-- end_ignore
+-- start query
+select 'foo';
+ ?column? 
+----------
+ foo
+(1 row)
+Time: 0.474 ms
+-- end query

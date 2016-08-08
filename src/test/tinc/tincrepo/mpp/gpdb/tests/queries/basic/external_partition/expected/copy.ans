@@ -1,0 +1,110 @@
+-- start_ignore
+-- end_ignore
+-- 
+-- @created 2015-07-11 12:00:00
+-- @modified 2015-07-11 12:00:00
+-- @tags external_partition 
+-- @gpdiff true 
+-- @description check copy's behavior regarding external partition.
+--start_ignore
+drop table if exists pt_ext;
+DROP TABLE
+CREATE TABLE pt_ext
+(
+  col1 int,
+  col2 decimal,
+  col3 text,
+  col4 bool
+)
+distributed by (col1)
+partition by list(col2)
+(
+	partition part1 values(1,2,3,4,5,6,7,8,9,10),
+	partition part2 values(11,12,13,14,15,16,17,18,19,20),
+	partition part3 values(21,22,23,24,25,26,27,28,29,30),
+	partition part4 values(31,32,33,34,35,36,37,38,39,40),
+	partition part5 values(41,42,43,44,45,46,47,48,49,50)
+);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part1" for table "pt_ext"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part2" for table "pt_ext"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part3" for table "pt_ext"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part4" for table "pt_ext"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part5" for table "pt_ext"
+CREATE TABLE
+insert into pt_ext select i,i,'test',true from generate_series(1,50) i;
+INSERT 0 50
+create temp table tmp as select * from pt_ext where col1 < 11;
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'col1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT 10
+\! rm /tmp/exttab_list
+copy tmp to '/tmp/exttab_list' csv;
+COPY 10
+create readable external table ret(like pt_ext) location('file://mdw/tmp/exttab_list') format 'csv';
+CREATE EXTERNAL TABLE
+alter table pt_ext exchange partition part1 with table ret without validation;
+ALTER TABLE
+drop table ret;
+DROP TABLE
+--end_ignore
+copy pt_ext to stdout;
+psql:/path/sql_file:1: ERROR:  cannot copy from relation "pt_ext" which has external partition(s)
+HINT:  Try the COPY (SELECT ...) TO variant.
+copy (select * from pt_ext order by col1) to stdout;
+1	1	test	t
+2	2	test	t
+3	3	test	t
+4	4	test	t
+5	5	test	t
+6	6	test	t
+7	7	test	t
+8	8	test	t
+9	9	test	t
+10	10	test	t
+11	11	test	t
+12	12	test	t
+13	13	test	t
+14	14	test	t
+15	15	test	t
+16	16	test	t
+17	17	test	t
+18	18	test	t
+19	19	test	t
+20	20	test	t
+21	21	test	t
+22	22	test	t
+23	23	test	t
+24	24	test	t
+25	25	test	t
+26	26	test	t
+27	27	test	t
+28	28	test	t
+29	29	test	t
+30	30	test	t
+31	31	test	t
+32	32	test	t
+33	33	test	t
+34	34	test	t
+35	35	test	t
+36	36	test	t
+37	37	test	t
+38	38	test	t
+39	39	test	t
+40	40	test	t
+41	41	test	t
+42	42	test	t
+43	43	test	t
+44	44	test	t
+45	45	test	t
+46	46	test	t
+47	47	test	t
+48	48	test	t
+49	49	test	t
+50	50	test	t
+copy pt_ext to '/tmp/exttab_list' ignore external partitions;
+psql:/path/sql_file:1: NOTICE:  COPY ignores external partition(s)
+COPY 40
+copy pt_ext from '/tmp/exttab_list' csv;
+psql:/path/sql_file:1: ERROR:  missing data for column "col2"
+CONTEXT:  COPY pt_ext, line 1: "11	11	test	t"
+\! rm /tmp/exttab_list

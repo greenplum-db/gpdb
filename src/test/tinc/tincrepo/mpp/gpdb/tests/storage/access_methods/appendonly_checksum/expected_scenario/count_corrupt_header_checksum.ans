@@ -1,0 +1,6 @@
+select count(*) from chksum_on_corrupt_header_large_co;
+ count 
+-------
+     8
+(1 row)
+

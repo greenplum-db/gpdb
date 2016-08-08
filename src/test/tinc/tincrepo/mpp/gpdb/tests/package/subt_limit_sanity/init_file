@@ -1,0 +1,11 @@
+-- start_matchsubs
+
+m/ERROR:  language .* already exists/
+s/ERROR:  language .* already exists/CREATE LANGUAGE/
+
+m/ERROR:  function .* does not exist/
+s/ERROR:  function .* does not exist/DROP FUNCTION/
+
+-- end_matchsubs
+
+

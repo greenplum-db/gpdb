@@ -1,0 +1,19 @@
+set gp_select_invisible = true;
+SET
+SELECT * FROM foo;
+ a  | b |                                                                c                                                                 
+----+---+----------------------------------------------------------------------------------------------------------------------------------
+  3 | 1 | hello world                                                                                                                     
+  7 | 1 | hello world                                                                                                                     
+  4 | 1 | hello world                                                                                                                     
+  8 | 1 | hello world                                                                                                                     
+  1 | 1 | hello world                                                                                                                     
+  5 | 1 | hello world                                                                                                                     
+  9 | 1 | hello world                                                                                                                     
+  2 | 1 | hello world                                                                                                                     
+  6 | 1 | hello world                                                                                                                     
+ 10 | 1 | hello world                                                                                                                     
+(10 rows)
+
+set gp_select_invisible = false;
+SET

@@ -1,0 +1,14 @@
+-- start_ignore
+SET optimizer=off;
+SET
+-- end_ignore
+-- Test: plperl 43
+CREATE OR REPLACE FUNCTION foo_set_bad() RETURNS SETOF footype AS $$
+								return  { y => 3, z => 4 } ;
+								$$ LANGUAGE plperl;
+CREATE FUNCTION
+							  
+SELECT * FROM foo_set_bad();
+psql:/path/sql_file:1: ERROR:  set-returning PL/Perl function must return reference to array or use return_next
+CONTEXT:  PL/Perl function "foo_set_bad"
+							  

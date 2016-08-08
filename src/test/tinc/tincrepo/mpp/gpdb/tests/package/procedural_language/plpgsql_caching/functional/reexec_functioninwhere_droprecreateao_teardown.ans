@@ -1,0 +1,4 @@
+drop function cacheao();
+DROP FUNCTION
+drop table aocompressed;
+DROP TABLE

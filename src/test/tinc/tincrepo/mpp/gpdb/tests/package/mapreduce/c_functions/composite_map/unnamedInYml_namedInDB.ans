@@ -1,0 +1,12 @@
+-- start_matchsubs
+-- m/mapreduce_\d+_/
+-- s/mapreduce_\d+/mapreduce_DUMMY/
+-- m/\(\w+.\w+:[0-9]+\)$/
+-- s/\(\w+.\w+:[0-9]+\)$/\(file:line\)/
+-- end_matchsubs
+WARNING: unset parameter - retcomposite(state => NULL)
+mapreduce_18390_run_1
+f1|f2|f3
+--+--+--
+(0 rows)
+

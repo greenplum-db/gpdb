@@ -1,0 +1,11 @@
+-- start_matchsubs
+-- m/mapreduce_\d+_/
+-- s/mapreduce_\d+/mapreduce_DUMMY/
+-- m/\(\w+.\w+:[0-9]+\)$/
+-- s/\(\w+.\w+:[0-9]+\)$/\(file:line\)/
+-- end_matchsubs
+ERROR:  function f1_(__retcomposite) does not exist
+LINE 2: SELECT f1_(m) as f1_, f2_(m) as f2_, f3_(m) as f3_
+               ^
+HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+Error: Object creation Failure

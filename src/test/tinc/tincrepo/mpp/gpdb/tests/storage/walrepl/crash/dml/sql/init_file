@@ -1,0 +1,4 @@
+-- start_matchsubs
+m/psql:.* NOTICE/
+s/psql:.* NOTICE/psql:file-path NOTICE/
+-- end_matchsubs

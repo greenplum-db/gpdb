@@ -1,0 +1,228 @@
+-- start_ignore
+drop external table if exists ext_line;
+DROP EXTERNAL TABLE
+-- end_ignore
+CREATE EXTERNAL TABLE EXT_LINE (a integer,b text)
+location ('file://@hostname@@gpfdist_datadir@/lines?')
+FORMAT 'text'(delimiter',')
+log errors
+segment reject limit 40 rows;
+CREATE EXTERNAL TABLE
+select count(*) from ext_line;
+NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
+ count 
+-------
+    36
+(1 row)
+
+select linenum,bytenum,rawdata from gp_read_error_log('ext_line') order by linenum;
+ linenum | bytenum |    rawdata    
+---------+---------+---------------
+       3 |         | line3,"
+       3 |         | line3,"
+      19 |         | line1999999,"
+      19 |         | line1999999,"
+(4 rows)
+
+-- start_ignore
+drop external table if exists ext_line;
+DROP EXTERNAL TABLE
+-- end_ignore
+CREATE EXTERNAL TABLE EXT_LINE (a integer,b text)
+location ('file://@hostname@@gpfdist_datadir@/lines?')
+FORMAT 'text'(delimiter',' header)
+log errors
+segment reject limit 40 rows;
+NOTICE:  HEADER means that each one of the data files has a header row.
+CREATE EXTERNAL TABLE
+select count(*) from ext_line;
+NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
+ count 
+-------
+    34
+(1 row)
+
+select linenum,bytenum,rawdata from gp_read_error_log('ext_line') order by linenum;
+ linenum | bytenum |    rawdata    
+---------+---------+---------------
+       3 |         | line3,"
+       3 |         | line3,"
+      19 |         | line1999999,"
+      19 |         | line1999999,"
+(4 rows)
+
+-- start_ignore
+drop external table if exists ext_line;
+DROP EXTERNAL TABLE
+-- end_ignore
+CREATE EXTERNAL TABLE EXT_LINE (a integer,b text)
+location ('file://@hostname@@gpfdist_datadir@/lines?')
+FORMAT 'csv'(delimiter','quote as '"')
+log errors
+segment reject limit 40 rows;
+CREATE EXTERNAL TABLE
+select count(*) from ext_line;
+NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
+ count 
+-------
+    16
+(1 row)
+
+select linenum,bytenum,rawdata from gp_read_error_log('ext_line') order by linenum;
+ linenum | bytenum |    rawdata    
+---------+---------+---------------
+       4 |         | line3,"       
+                   : 4,"
+       4 |         | line3,"       
+                   : 4,"
+      20 |         | line1999999," 
+                   : 2000000,"
+      20 |         | line1999999," 
+                   : 2000000,"
+(4 rows)
+
+-- start_ignore
+drop external table if exists ext_line;
+DROP EXTERNAL TABLE
+-- end_ignore
+CREATE EXTERNAL TABLE EXT_LINE (a integer,b text)
+location ('file://@hostname@@gpfdist_datadir@/lines?')
+FORMAT 'csv'(delimiter','quote as '"' header)
+log errors
+segment reject limit 40 rows;
+NOTICE:  HEADER means that each one of the data files has a header row.
+CREATE EXTERNAL TABLE
+select count(*) from ext_line;
+NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
+ count 
+-------
+    14
+(1 row)
+
+select linenum,bytenum,rawdata from gp_read_error_log('ext_line') order by linenum;
+ linenum | bytenum |    rawdata    
+---------+---------+---------------
+       4 |         | line3,"       
+                   : 4,"
+       4 |         | line3,"       
+                   : 4,"
+      20 |         | line1999999," 
+                   : 2000000,"
+      20 |         | line1999999," 
+                   : 2000000,"
+(4 rows)
+
+-- start_ignore
+drop external table if exists ext_line;
+DROP EXTERNAL TABLE
+-- end_ignore
+CREATE EXTERNAL TABLE EXT_LINE (a integer,b text)
+location ('gpfdist://@hostname@:@gp_port@/lines?')
+FORMAT 'text'(delimiter',')
+log errors
+segment reject limit 40 rows;
+CREATE EXTERNAL TABLE
+select count(*) from ext_line;
+NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
+ count 
+-------
+    36
+(1 row)
+
+select linenum,bytenum,rawdata from gp_read_error_log('ext_line') order by linenum;
+ linenum | bytenum |    rawdata    
+---------+---------+---------------
+       3 |         | line3,"
+       3 |         | line3,"
+      19 |         | line1999999,"
+      19 |         | line1999999,"
+(4 rows)
+
+-- start_ignore
+drop external table if exists ext_line;
+DROP EXTERNAL TABLE
+-- end_ignore
+CREATE EXTERNAL TABLE EXT_LINE (a integer,b text)
+location ('gpfdist://@hostname@:@gp_port@/lines?')
+FORMAT 'text'(delimiter',' header)
+log errors
+segment reject limit 40 rows;
+NOTICE:  HEADER means that each one of the data files has a header row.
+CREATE EXTERNAL TABLE
+select count(*) from ext_line;
+NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
+ count 
+-------
+    34
+(1 row)
+
+select linenum,bytenum,rawdata from gp_read_error_log('ext_line') order by linenum;
+ linenum | bytenum |    rawdata    
+---------+---------+---------------
+       3 |         | line3,"
+       3 |         | line3,"
+      19 |         | line1999999,"
+      19 |         | line1999999,"
+(4 rows)
+
+-- start_ignore
+drop external table if exists ext_line;
+DROP EXTERNAL TABLE
+-- end_ignore
+CREATE EXTERNAL TABLE EXT_LINE (a integer,b text)
+location ('gpfdist://@hostname@:@gp_port@/lines?')
+FORMAT 'csv'(delimiter','quote as '"')
+log errors
+segment reject limit 40 rows;
+CREATE EXTERNAL TABLE
+select count(*) from ext_line;
+NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
+ count 
+-------
+    16
+(1 row)
+
+select linenum,bytenum,rawdata from gp_read_error_log('ext_line') order by linenum;
+ linenum | bytenum |    rawdata    
+---------+---------+---------------
+       4 |         | line3,"       
+                   : 4,"
+       4 |         | line3,"       
+                   : 4,"
+      20 |         | line1999999," 
+                   : 2000000,"
+      20 |         | line1999999," 
+                   : 2000000,"
+(4 rows)
+
+-- start_ignore
+drop external table if exists ext_line;
+DROP EXTERNAL TABLE
+-- end_ignore
+CREATE EXTERNAL TABLE EXT_LINE (a integer,b text)
+location ('gpfdist://@hostname@:@gp_port@/lines?')
+FORMAT 'csv'(delimiter','quote as '"' header)
+log errors
+segment reject limit 40 rows;
+NOTICE:  HEADER means that each one of the data files has a header row.
+CREATE EXTERNAL TABLE
+select count(*) from ext_line;
+NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
+ count 
+-------
+    14
+(1 row)
+
+select linenum,bytenum,rawdata from gp_read_error_log('ext_line') order by linenum;
+ linenum | bytenum |    rawdata    
+---------+---------+---------------
+       4 |         | line3,"       
+                   : 4,"
+       4 |         | line3,"       
+                   : 4,"
+      20 |         | line1999999," 
+                   : 2000000,"
+      20 |         | line1999999," 
+                   : 2000000,"
+(4 rows)
+

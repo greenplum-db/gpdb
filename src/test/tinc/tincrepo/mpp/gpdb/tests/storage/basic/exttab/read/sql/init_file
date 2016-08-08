@@ -1,0 +1,21 @@
+-- start_matchsubs
+-- m/file:\/\//
+-- s/:\/\/(.)+/:\/\/\@hostnamehai\@\//g
+-- m/file:\/\/\@hostname\@/
+-- s/\@hostname\@(.)+\/lines/\@hostname\@\@abs_srcdir\@\/lines/g
+# The followings are to handle differences for build@centbuild5
+# Replace  Record expires on 18-Apr-20..." with empty
+-- m/ Record expires/
+-- s/ Record expires on 18-Apr-20...\"//
+# Replace missing data for column "ip_address"
+# with extra data after last expected column
+-- m/missing data for column \"ip_address\"/
+-- s/missing data for column \"ip_address\"/extra data after last expected column/
+# Replace External table bad3_whois, line N/A of gpfdist://hostname:8080/whois.csv: " Domain servers in listed order:"
+# with External table DUMMY_EX, line DUMMY_LINE of DUMMY_LOCATION
+-- m/External table bad3_whois, line N\/A of gpfdist:\/\/.*:8080\/whois.csv:/
+-- s/External table bad3_whois, line N\/A of gpfdist:\/\/.*:8080\/whois.csv:.+/External table DUMMY_EX, line DUMMY_LINE of DUMMY_LOCATION/
+# For test12
+-- m/ERROR:  gpfdist error - cannot read file/
+-- s/ERROR:  gpfdist error - cannot read file.+/ERROR:  gpfdist error - cannot read file/g
+-- end_matchsubs

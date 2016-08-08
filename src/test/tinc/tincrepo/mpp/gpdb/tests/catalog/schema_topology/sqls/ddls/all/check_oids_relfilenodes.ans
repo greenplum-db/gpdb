@@ -1,0 +1,106 @@
+-- 
+-- @created 2009-01-27 14:00:00
+-- @modified 2013-06-24 17:00:00
+-- @tags ddl schema_topology
+-- @description checks the oids and relfilenodes
+
+--CHANGING OIDS and RELFILENODES (OS FILES)
+create database check_oid_relfilenode_db;
+CREATE DATABASE
+\c check_oid_relfilenode_db
+You are now connected to database "check_oid_relfilenode_db".
+--CLUSTER TABLE: reorders the entire table by b-tree index and rebuilds the index
+create table table2 (col1 int,col2 int) distributed randomly;
+CREATE TABLE
+insert into table2 values (generate_series(1,100),generate_series(1,100));
+INSERT 0 100
+create index clusterindex on table2(col1);
+CREATE INDEX
+-- start_ignore
+select oid,relname, relfilenode from pg_class where relname = 'table2';
+  oid   | relname | relfilenode 
+--------+---------+-------------
+ 114444 | table2  |      114444
+(1 row)
+
+-- end_ignore
+CLUSTER clusterindex on table2;
+CLUSTER
+-- start_ignore
+select oid, relname, relfilenode from pg_class where relname = 'table2';
+  oid   | relname | relfilenode 
+--------+---------+-------------
+ 114444 | table2  |      114486
+(1 row)
+
+-- end_ignore
+--RE-INDEXING: changes the relfilenode of the indexes
+create table bm_test (i int, j int);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+insert into bm_test values (0, 0), (0, 0), (0, 1), (1,0), (1,0), (1,1);
+INSERT 0 6
+create index bm_test_j on bm_test using bitmap(j);
+CREATE INDEX
+delete from bm_test where j =1;
+DELETE 2
+insert into bm_test values (0, 0), (1,0);
+INSERT 0 2
+insert into bm_test values (generate_series(2,100),generate_series(2,100));
+INSERT 0 99
+-- start_ignore
+select relname, relfilenode from pg_class where relname = 'bm_test';
+ relname | relfilenode 
+---------+-------------
+ bm_test |      114511
+(1 row)
+
+-- end_ignore
+REINDEX index "public"."bm_test_j";
+REINDEX
+-- start_ignore
+select relname, relfilenode from pg_class where relname = 'bm_test';
+ relname | relfilenode 
+---------+-------------
+ bm_test |      114511
+(1 row)
+
+-- end_ignore
+--The relfilenode should stay the same before and after the delete from tablename
+create table foo (a int, b text) distributed randomly;
+CREATE TABLE
+insert into foo values (1, '1_one'), (2, '2_two');
+INSERT 0 2
+insert into foo select i,i||'_'||repeat('text',100) from generate_series(3,100)i;
+INSERT 0 98
+-- start_ignore
+select relname, relfilenode from pg_class where relname = 'foo';
+ relname | relfilenode 
+---------+-------------
+ foo     |      114560
+(1 row)
+
+-- end_ignore
+delete from foo where a = 1;
+DELETE 1
+-- start_ignore
+select relname, relfilenode from pg_class where relname = 'foo';
+ relname | relfilenode 
+---------+-------------
+ foo     |      114560
+(1 row)
+
+-- end_ignore
+--the relfilenode should have stayed the same.
+delete from foo;
+DELETE 99
+-- start_ignore
+select relname, relfilenode from pg_class where relname = 'foo';
+ relname | relfilenode 
+---------+-------------
+ foo     |      114560
+(1 row)
+
+-- end_ignore
+--the relfilenode should still have stayed the same.

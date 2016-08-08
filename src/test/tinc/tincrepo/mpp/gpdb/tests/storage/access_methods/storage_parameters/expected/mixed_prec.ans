@@ -1,0 +1,40 @@
+-- Database - Appendonly True, , blocksize=8192, Role checksum=true, Session=compresslevel=4, table compresstype=zlib
+\c dsp_db1 dsp_role1
+You are now connected to database "dsp_db1" as user "dsp_role1".
+SET gp_default_storage_options='compresslevel=4';
+SET
+Create table dsp_ao_1 ( i int, j int) with(compresstype=zlib, appendonly=true);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+Select relkind, relstorage, reloptions from pg_class where relname='dsp_ao_1';
+ relkind | relstorage |                     reloptions                      
+---------+------------+-----------------------------------------------------
+ r       | a          | {compresstype=zlib,appendonly=true,compresslevel=4}
+(1 row)
+
+select compresslevel, compresstype, blocksize, checksum, columnstore from pg_appendonly where relid ='dsp_ao_1'::regclass;
+ compresslevel | compresstype | blocksize | checksum | columnstore 
+---------------+--------------+-----------+----------+-------------
+             4 | zlib         |     32768 | t        | f
+(1 row)
+
+Drop table dsp_ao_1;
+DROP TABLE
+-- Database - Appendonly True, Orientation column; Role -compresslevel=5 , Session- blocksize=8192, Table Appendonly=false
+\c dsp_db2 dsp_role2
+You are now connected to database "dsp_db2" as user "dsp_role2".
+SET gp_default_storage_options='blocksize=8192';
+SET
+Create table dsp_ao_1 ( i int, j int) with(appendonly=false);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+Select relkind, relstorage, reloptions from pg_class where relname='dsp_ao_1';
+ relkind | relstorage |     reloptions     
+---------+------------+--------------------
+ r       | h          | {appendonly=false}
+(1 row)
+
+Drop table dsp_ao_1;
+DROP TABLE

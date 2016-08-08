@@ -1,0 +1,282 @@
+-- start_ignore
+SET optimizer=off;
+SET
+-- end_ignore
+CREATE USER mdt_db_user1 WITH SUPERUSER CREATEDB  INHERIT LOGIN CONNECTION LIMIT  1 ENCRYPTED PASSWORD 'passwd';
+CREATE ROLE
+CREATE USER mdt_db_user2 WITH NOSUPERUSER NOCREATEDB  NOINHERIT NOLOGIN  UNENCRYPTED PASSWORD 'passwd';
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE USER mdt_db_user3 WITH NOCREATEROLE NOCREATEUSER;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE USER mdt_db_user4 WITH CREATEROLE CREATEUSER;
+CREATE ROLE
+CREATE USER mdt_db_user5 WITH VALID UNTIL '2009-02-13 01:51:15';
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE ROLE mdt_db_role1;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE USER mdt_db_user6 WITH IN ROLE mdt_db_role1; 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE GROUP mdt_db_user_grp1;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE USER mdt_db_user7 WITH IN GROUP mdt_db_user_grp1; 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE USER mdt_db_user8 WITH ROLE mdt_db_user7;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE USER mdt_db_user9 WITH ADMIN mdt_db_user8;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE USER mdt_db_user10 WITH USER mdt_db_user1;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE USER mdt_db_user11 SYSID 100 ;
+psql:/path/sql_file:1: NOTICE:  SYSID can no longer be specified
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE RESOURCE QUEUE mdt_resqueu3 ACTIVE THRESHOLD 1;
+CREATE QUEUE
+CREATE USER mdt_db_user12 RESOURCE QUEUE mdt_resqueu3;
+CREATE ROLE
+CREATE USER mdt_db_user13;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE USER mdt_db_user14;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE USER mdt_db_user15;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE USER mdt_db_user16;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE USER mdt_db_user17;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE USER mdt_db_user18 login;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE USER mdt_db_user19 login ENCRYPTED PASSWORD 'passwd';
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE USER mdt_db_user20;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE USER mdt_db_user21;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE USER mdt_db_user22;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE USER mdt_db_user23;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE USER mdt_db_user24;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE USER mdt_db_user25;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE USER mdt_db_user26;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE USER mdt_db_user27;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+ALTER USER mdt_db_user1 WITH NOSUPERUSER NOCREATEDB  NOINHERIT NOLOGIN  UNENCRYPTED PASSWORD 'passwd';
+ALTER ROLE
+ALTER USER mdt_db_user2 WITH SUPERUSER CREATEDB  INHERIT LOGIN CONNECTION LIMIT  1 ENCRYPTED PASSWORD 'passwd';
+ALTER ROLE
+ALTER USER mdt_db_user3 WITH CREATEROLE CREATEUSER;
+ALTER ROLE
+ALTER USER mdt_db_user4 WITH NOCREATEROLE NOCREATEUSER;
+ALTER ROLE
+ALTER USER mdt_db_user5 WITH VALID UNTIL '2009-06-13 01:51:15';
+ALTER ROLE
+ALTER USER mdt_db_user6 WITH CONNECTION LIMIT 5;
+ALTER ROLE
+CREATE RESOURCE QUEUE mdt_resqueu4 ACTIVE THRESHOLD 1;
+CREATE QUEUE
+ALTER USER mdt_db_user7 WITH RESOURCE QUEUE mdt_resqueu4;
+ALTER ROLE
+ALTER USER mdt_db_user8 RENAME TO mdt_new_user8; 
+ALTER ROLE
+CREATE SCHEMA mdt_db_schema2;
+CREATE SCHEMA
+ALTER USER mdt_db_user9 SET search_path TO mdt_db_schema2;
+ALTER ROLE
+ALTER USER mdt_db_user10 SET search_path TO mdt_db_schema2;
+ALTER ROLE
+ALTER USER mdt_db_user10 RESET search_path ;
+ALTER ROLE
+ALTER USER mdt_db_user13 WITH SUPERUSER;
+ALTER ROLE
+ALTER USER mdt_db_user14 WITH CREATEDB;
+ALTER ROLE
+ALTER USER mdt_db_user15 WITH INHERIT;
+ALTER ROLE
+ALTER USER mdt_db_user16 WITH LOGIN;
+ALTER ROLE
+ALTER USER mdt_db_user17 WITH CONNECTION LIMIT  1;
+ALTER ROLE
+ALTER USER mdt_db_user18 WITH ENCRYPTED PASSWORD 'passwd';
+ALTER ROLE
+ALTER USER mdt_db_user19 WITH UNENCRYPTED PASSWORD 'passwd';
+ALTER ROLE
+ALTER USER mdt_db_user20 WITH NOSUPERUSER;
+ALTER ROLE
+ALTER USER mdt_db_user21 WITH NOCREATEDB;
+ALTER ROLE
+ALTER USER mdt_db_user22 WITH NOINHERIT;
+ALTER ROLE
+ALTER USER mdt_db_user23 WITH NOLOGIN;
+ALTER ROLE
+ALTER USER mdt_db_user24 WITH CREATEROLE;
+ALTER ROLE
+ALTER USER mdt_db_user25 WITH NOCREATEROLE;
+ALTER ROLE
+ALTER USER mdt_db_user26 WITH CREATEUSER;
+ALTER ROLE
+ALTER USER mdt_db_user27 WITH NOCREATEUSER;
+ALTER ROLE
+select classname  , schemaname , objname  , usestatus , usename , actionname , subtype from pg_stat_operations  where statime > ( select statime from pg_stat_operations where objname ='my_first_table' and actionname ='CREATE') and objname  not in ('pg_stat_operations','pg_stat_partition_operations') order by statime;
+  classname   | schemaname |     objname      | usestatus | usename  | actionname |     subtype      
+--------------+------------+------------------+-----------+----------+------------+------------------
+ pg_authid    |            | mdt_user         | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_database  |            | mdt_db           | CURRENT   | mdt_user | CREATE     | DATABASE
+ pg_authid    |            | mdt_db_user1     | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_authid    |            | mdt_db_user2     | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_authid    |            | mdt_db_user3     | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_authid    |            | mdt_db_user4     | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_authid    |            | mdt_db_user5     | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_authid    |            | mdt_db_role1     | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_authid    |            | mdt_db_user6     | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_authid    |            | mdt_db_user_grp1 | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_authid    |            | mdt_db_user7     | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_authid    |            | mdt_new_user8    | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_authid    |            | mdt_db_user9     | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_authid    |            | mdt_db_user10    | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_authid    |            | mdt_db_user11    | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_resqueue  |            | mdt_resqueu3     | CURRENT   | gpadmin  | CREATE     | RESOURCE QUEUE
+ pg_authid    |            | mdt_db_user12    | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_authid    |            | mdt_db_user13    | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_authid    |            | mdt_db_user14    | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_authid    |            | mdt_db_user15    | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_authid    |            | mdt_db_user16    | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_authid    |            | mdt_db_user17    | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_authid    |            | mdt_db_user18    | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_authid    |            | mdt_db_user19    | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_authid    |            | mdt_db_user20    | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_authid    |            | mdt_db_user21    | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_authid    |            | mdt_db_user22    | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_authid    |            | mdt_db_user23    | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_authid    |            | mdt_db_user24    | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_authid    |            | mdt_db_user25    | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_authid    |            | mdt_db_user26    | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_authid    |            | mdt_db_user27    | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_authid    |            | mdt_db_user1     | CURRENT   | gpadmin  | ALTER      | 5 OPTIONS
+ pg_authid    |            | mdt_db_user2     | CURRENT   | gpadmin  | ALTER      | 6 OPTIONS
+ pg_authid    |            | mdt_db_user3     | CURRENT   | gpadmin  | ALTER      | 2 OPTIONS
+ pg_authid    |            | mdt_db_user4     | CURRENT   | gpadmin  | ALTER      | 2 OPTIONS
+ pg_authid    |            | mdt_db_user5     | CURRENT   | gpadmin  | ALTER      | VALID UNTIL
+ pg_authid    |            | mdt_db_user6     | CURRENT   | gpadmin  | ALTER      | CONNECTION LIMIT
+ pg_resqueue  |            | mdt_resqueu4     | CURRENT   | gpadmin  | CREATE     | RESOURCE QUEUE
+ pg_authid    |            | mdt_db_user7     | CURRENT   | gpadmin  | ALTER      | RESOURCE QUEUE
+ pg_authid    |            | mdt_new_user8    | CURRENT   | gpadmin  | ALTER      | RENAME
+ pg_namespace |            | mdt_db_schema2   | CURRENT   | gpadmin  | CREATE     | SCHEMA
+ pg_authid    |            | mdt_db_user9     | CURRENT   | gpadmin  | ALTER      | SET
+ pg_authid    |            | mdt_db_user10    | CURRENT   | gpadmin  | ALTER      | RESET
+ pg_authid    |            | mdt_db_user13    | CURRENT   | gpadmin  | ALTER      | SUPERUSER
+ pg_authid    |            | mdt_db_user14    | CURRENT   | gpadmin  | ALTER      | CREATEDB
+ pg_authid    |            | mdt_db_user15    | CURRENT   | gpadmin  | ALTER      | INHERIT
+ pg_authid    |            | mdt_db_user16    | CURRENT   | gpadmin  | ALTER      | LOGIN
+ pg_authid    |            | mdt_db_user17    | CURRENT   | gpadmin  | ALTER      | CONNECTION LIMIT
+ pg_authid    |            | mdt_db_user18    | CURRENT   | gpadmin  | ALTER      | PASSWORD
+ pg_authid    |            | mdt_db_user19    | CURRENT   | gpadmin  | ALTER      | PASSWORD
+ pg_authid    |            | mdt_db_user20    | CURRENT   | gpadmin  | ALTER      | SUPERUSER
+ pg_authid    |            | mdt_db_user21    | CURRENT   | gpadmin  | ALTER      | CREATEDB
+ pg_authid    |            | mdt_db_user22    | CURRENT   | gpadmin  | ALTER      | INHERIT
+ pg_authid    |            | mdt_db_user23    | CURRENT   | gpadmin  | ALTER      | LOGIN
+ pg_authid    |            | mdt_db_user24    | CURRENT   | gpadmin  | ALTER      | CREATEROLE
+ pg_authid    |            | mdt_db_user25    | CURRENT   | gpadmin  | ALTER      | CREATEROLE
+ pg_authid    |            | mdt_db_user26    | CURRENT   | gpadmin  | ALTER      | SUPERUSER
+ pg_authid    |            | mdt_db_user27    | CURRENT   | gpadmin  | ALTER      | SUPERUSER
+(59 rows)
+
+drop user mdt_db_user1;
+DROP ROLE
+drop user mdt_db_user2;
+DROP ROLE
+drop user mdt_db_user3;
+DROP ROLE
+drop user mdt_db_user4;
+DROP ROLE
+drop user mdt_db_user5;
+DROP ROLE
+drop user mdt_db_user6;
+DROP ROLE
+drop user mdt_db_user7;
+DROP ROLE
+drop user mdt_new_user8;
+DROP ROLE
+drop user mdt_db_user9;
+DROP ROLE
+drop user mdt_db_user10;
+DROP ROLE
+drop user mdt_db_user11;
+DROP ROLE
+drop user mdt_db_user12;
+DROP ROLE
+drop group mdt_db_user_grp1;
+DROP ROLE
+drop resource queue mdt_resqueu3;
+DROP QUEUE
+drop resource queue mdt_resqueu4;
+DROP QUEUE
+drop schema mdt_db_schema2;
+DROP SCHEMA
+drop role mdt_db_role1;
+DROP ROLE
+drop USER mdt_db_user13 ;
+DROP ROLE
+drop USER mdt_db_user14;
+DROP ROLE
+drop USER mdt_db_user15;
+DROP ROLE
+drop USER mdt_db_user16;
+DROP ROLE
+drop USER mdt_db_user17;
+DROP ROLE
+drop USER mdt_db_user18;
+DROP ROLE
+drop USER mdt_db_user19;
+DROP ROLE
+drop USER mdt_db_user20;
+DROP ROLE
+drop USER mdt_db_user21;
+DROP ROLE
+drop USER mdt_db_user22;
+DROP ROLE
+drop USER mdt_db_user23;
+DROP ROLE
+drop USER mdt_db_user24;
+DROP ROLE
+drop USER mdt_db_user25;
+DROP ROLE
+drop USER mdt_db_user26;
+DROP ROLE
+drop USER mdt_db_user27;
+DROP ROLE
+select classname  , schemaname , objname  , usestatus , usename , actionname , subtype from pg_stat_operations  where statime > ( select statime from pg_stat_operations where objname ='my_first_table' and actionname ='CREATE') and objname  not in ('pg_stat_operations','pg_stat_partition_operations') order by statime;
+  classname  | schemaname | objname  | usestatus | usename  | actionname | subtype  
+-------------+------------+----------+-----------+----------+------------+----------
+ pg_authid   |            | mdt_user | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_database |            | mdt_db   | CURRENT   | mdt_user | CREATE     | DATABASE
+(2 rows)
+

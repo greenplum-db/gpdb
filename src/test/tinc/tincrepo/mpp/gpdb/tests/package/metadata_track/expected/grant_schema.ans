@@ -1,0 +1,60 @@
+-- start_ignore
+SET optimizer=off;
+SET
+-- end_ignore
+create user mdt_user1 with superuser;
+CREATE ROLE
+create group mdt_group1 with superuser;
+CREATE ROLE
+create schema mdt_schema1;
+CREATE SCHEMA
+grant create on  schema mdt_schema1 to mdt_user1 with grant option;
+GRANT
+create schema mdt_schema2;
+CREATE SCHEMA
+grant usage on schema mdt_schema2 to group mdt_group1 with grant option;
+GRANT
+create schema mdt_schema3;
+CREATE SCHEMA
+grant all privileges on schema mdt_schema3 to public;
+GRANT
+create schema mdt_schema4;
+CREATE SCHEMA
+grant all on schema mdt_schema4 to public;
+GRANT
+select classname  , schemaname , objname  , usestatus , usename , actionname , subtype from pg_stat_operations  where statime > ( select statime from pg_stat_operations where objname ='my_first_table' and actionname ='CREATE') and objname  not in ('pg_stat_operations','pg_stat_partition_operations') order by statime;
+  classname   | schemaname |   objname   | usestatus | usename  | actionname | subtype  
+--------------+------------+-------------+-----------+----------+------------+----------
+ pg_authid    |            | mdt_user    | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_database  |            | mdt_db      | CURRENT   | mdt_user | CREATE     | DATABASE
+ pg_authid    |            | mdt_user1   | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_authid    |            | mdt_group1  | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_namespace |            | mdt_schema1 | CURRENT   | gpadmin  | CREATE     | SCHEMA
+ pg_namespace |            | mdt_schema1 | CURRENT   | gpadmin  | PRIVILEGE  | GRANT
+ pg_namespace |            | mdt_schema2 | CURRENT   | gpadmin  | CREATE     | SCHEMA
+ pg_namespace |            | mdt_schema2 | CURRENT   | gpadmin  | PRIVILEGE  | GRANT
+ pg_namespace |            | mdt_schema3 | CURRENT   | gpadmin  | CREATE     | SCHEMA
+ pg_namespace |            | mdt_schema3 | CURRENT   | gpadmin  | PRIVILEGE  | GRANT
+ pg_namespace |            | mdt_schema4 | CURRENT   | gpadmin  | CREATE     | SCHEMA
+ pg_namespace |            | mdt_schema4 | CURRENT   | gpadmin  | PRIVILEGE  | GRANT
+(12 rows)
+
+drop schema mdt_schema1;
+DROP SCHEMA
+drop schema mdt_schema2;
+DROP SCHEMA
+drop schema mdt_schema3;
+DROP SCHEMA
+drop schema mdt_schema4;
+DROP SCHEMA
+drop user mdt_user1;
+DROP ROLE
+drop group mdt_group1;
+DROP ROLE
+select classname  , schemaname , objname  , usestatus , usename , actionname , subtype from pg_stat_operations  where statime > ( select statime from pg_stat_operations where objname ='my_first_table' and actionname ='CREATE') and objname  not in ('pg_stat_operations','pg_stat_partition_operations') order by statime;
+  classname  | schemaname | objname  | usestatus | usename  | actionname | subtype  
+-------------+------------+----------+-----------+----------+------------+----------
+ pg_authid   |            | mdt_user | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_database |            | mdt_db   | CURRENT   | mdt_user | CREATE     | DATABASE
+(2 rows)
+

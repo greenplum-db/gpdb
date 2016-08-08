@@ -1,0 +1,60 @@
+-- start_ignore
+SET optimizer=off;
+SET
+-- end_ignore
+CREATE TABLE mdt_test_part1 (id int, rank int, year date, gender
+char(1)) DISTRIBUTED BY (id, gender, year)
+partition by list (gender)
+subpartition by range (year)
+subpartition template (
+start (date '2001-01-01'))
+(
+values ('M'),
+values ('F')
+);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mdt_test_part1_1_prt_1" for table "mdt_test_part1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mdt_test_part1_1_prt_2" for table "mdt_test_part1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mdt_test_part1_1_prt_1_2_prt_1" for table "mdt_test_part1_1_prt_1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mdt_test_part1_1_prt_2_2_prt_1" for table "mdt_test_part1_1_prt_2"
+CREATE TABLE
+alter table mdt_test_part1 add default partition default_part;
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mdt_test_part1_1_prt_default_part" for table "mdt_test_part1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mdt_test_part1_1_prt_default_part_2_prt_1" for table "mdt_test_part1_1_prt_default_part"
+ALTER TABLE
+alter table mdt_test_part1 truncate default partition;
+psql:/path/sql_file:1: NOTICE:  truncated partition "default_part" for relation "mdt_test_part1" and its children
+ALTER TABLE
+select classname,schemaname, objname, usestatus, usename, actionname, subtype, partitionlevel, parenttablename, parentschemaname  from pg_stat_partition_operations  where statime > ( select statime from pg_stat_partition_operations where objname ='my_first_table' and actionname ='CREATE') and objname  not in ('pg_stat_operations','pg_stat_partition_operations') order by statime;
+  classname  | schemaname |                  objname                  | usestatus | usename  | actionname | subtype  | partitionlevel | parenttablename | parentschemaname 
+-------------+------------+-------------------------------------------+-----------+----------+------------+----------+----------------+-----------------+------------------
+ pg_authid   |            | mdt_user                                  | CURRENT   | gpadmin  | CREATE     | ROLE     |                |                 | 
+ pg_database |            | mdt_db                                    | CURRENT   | mdt_user | CREATE     | DATABASE |                |                 | 
+ pg_class    | public     | mdt_test_part1                            | CURRENT   | gpadmin  | CREATE     | TABLE    |              0 |                 | 
+ pg_class    | public     | mdt_test_part1_1_prt_1                    | CURRENT   | gpadmin  | CREATE     | TABLE    |              0 | mdt_test_part1  | public
+ pg_class    | public     | mdt_test_part1_1_prt_1_2_prt_1            | CURRENT   | gpadmin  | CREATE     | TABLE    |              1 | mdt_test_part1  | public
+ pg_class    | public     | mdt_test_part1_1_prt_2                    | CURRENT   | gpadmin  | CREATE     | TABLE    |              0 | mdt_test_part1  | public
+ pg_class    | public     | mdt_test_part1_1_prt_2_2_prt_1            | CURRENT   | gpadmin  | CREATE     | TABLE    |              1 | mdt_test_part1  | public
+ pg_class    | public     | mdt_test_part1_1_prt_1                    | CURRENT   | gpadmin  | ALTER      | INHERIT  |              0 | mdt_test_part1  | public
+ pg_class    | public     | mdt_test_part1_1_prt_2                    | CURRENT   | gpadmin  | ALTER      | INHERIT  |              0 | mdt_test_part1  | public
+ pg_class    | public     | mdt_test_part1_1_prt_1_2_prt_1            | CURRENT   | gpadmin  | ALTER      | INHERIT  |              1 | mdt_test_part1  | public
+ pg_class    | public     | mdt_test_part1_1_prt_2_2_prt_1            | CURRENT   | gpadmin  | ALTER      | INHERIT  |              1 | mdt_test_part1  | public
+ pg_class    | public     | mdt_test_part1_1_prt_default_part         | CURRENT   | gpadmin  | CREATE     | TABLE    |              0 | mdt_test_part1  | public
+ pg_class    | public     | mdt_test_part1_1_prt_default_part_2_prt_1 | CURRENT   | gpadmin  | CREATE     | TABLE    |              1 | mdt_test_part1  | public
+ pg_class    | public     | mdt_test_part1_1_prt_default_part         | CURRENT   | gpadmin  | ALTER      | INHERIT  |              0 | mdt_test_part1  | public
+ pg_class    | public     | mdt_test_part1_1_prt_default_part_2_prt_1 | CURRENT   | gpadmin  | ALTER      | INHERIT  |              1 | mdt_test_part1  | public
+ pg_class    | public     | mdt_test_part1                            | CURRENT   | gpadmin  | PARTITION  | ADD      |              0 |                 | 
+ pg_class    | public     | mdt_test_part1_1_prt_default_part_2_prt_1 | CURRENT   | gpadmin  | VACUUM     | TRUNCATE |              1 | mdt_test_part1  | public
+ pg_class    | public     | mdt_test_part1_1_prt_default_part_2_prt_1 | CURRENT   | gpadmin  | TRUNCATE   |          |              1 | mdt_test_part1  | public
+ pg_class    | public     | mdt_test_part1_1_prt_default_part         | CURRENT   | gpadmin  | VACUUM     | TRUNCATE |              0 | mdt_test_part1  | public
+ pg_class    | public     | mdt_test_part1_1_prt_default_part         | CURRENT   | gpadmin  | TRUNCATE   |          |              0 | mdt_test_part1  | public
+(20 rows)
+
+drop table mdt_test_part1;
+DROP TABLE
+select classname,schemaname, objname, usestatus, usename, actionname, subtype, partitionlevel, parenttablename, parentschemaname  from pg_stat_partition_operations  where statime > ( select statime from pg_stat_partition_operations where objname ='my_first_table' and actionname ='CREATE') and objname  not in ('pg_stat_operations','pg_stat_partition_operations') order by statime;
+  classname  | schemaname | objname  | usestatus | usename  | actionname | subtype  | partitionlevel | parenttablename | parentschemaname 
+-------------+------------+----------+-----------+----------+------------+----------+----------------+-----------------+------------------
+ pg_authid   |            | mdt_user | CURRENT   | gpadmin  | CREATE     | ROLE     |                |                 | 
+ pg_database |            | mdt_db   | CURRENT   | mdt_user | CREATE     | DATABASE |                |                 | 
+(2 rows)
+

@@ -1,0 +1,174 @@
+-- start_ignore
+SET gp_create_table_random_default_distribution=off;
+SET
+-- end_ignore
+-- start_ignore
+SET gp_create_table_random_default_distribution=off;
+SET
+-- end_ignore
+-- CO table
+select count(*) from sto_altcp1;
+ count 
+-------
+     5
+(1 row)
+
+select count(*) from sto_altcp2;
+ count 
+-------
+    20
+(1 row)
+
+select count(*) from sto_altcp3;
+ count 
+-------
+    15
+(1 row)
+
+select * from sto_altcp1 order by b;
+ a | b  | c | d 
+---+----+---+---
+ 1 |  4 | 3 | 4
+ 1 |  7 | 3 | 4
+ 1 | 10 | 3 | 4
+ 1 | 15 | 3 | 4
+ 1 | 25 | 3 | 4
+(5 rows)
+
+select * from sto_altce1 order by a1;
+ a1 | a2  |            a3            
+----+-----+--------------------------
+  3 | 100 | heap table
+  5 | 100 | co table to be exchanged
+  6 | 100 | co table to be exchanged
+  7 | 100 | co table to be exchanged
+  8 | 100 | co table to be exchanged
+  9 | 100 | co table to be exchanged
+ 12 | 100 | co table
+ 15 | 100 | co table to be exchanged
+ 16 | 100 | co table to be exchanged
+ 17 | 100 | co table to be exchanged
+ 18 | 100 | co table to be exchanged
+ 19 | 100 | co table to be exchanged
+ 20 | 100 | co table to be exchanged
+(13 rows)
+
+select * from sto_altae1 order by a1;
+ a1 | a2  |            a3            
+----+-----+--------------------------
+  3 | 100 | heap table
+  5 | 100 | ao table to be exchanged
+  6 | 100 | ao table to be exchanged
+  7 | 100 | ao table to be exchanged
+  8 | 100 | ao table to be exchanged
+  9 | 100 | ao table to be exchanged
+ 12 | 100 | co table
+ 15 | 100 | ao table to be exchanged
+ 16 | 100 | ao table to be exchanged
+ 17 | 100 | ao table to be exchanged
+ 18 | 100 | ao table to be exchanged
+ 19 | 100 | ao table to be exchanged
+ 20 | 100 | ao table to be exchanged
+(13 rows)
+
+-- AO table
+select count(*) from sto_altap1;
+ count 
+-------
+     5
+(1 row)
+
+select count(*) from sto_altap2;
+ count 
+-------
+    20
+(1 row)
+
+select count(*) from sto_altap3;
+ count 
+-------
+    15
+(1 row)
+
+select * from sto_altap1 order by b;
+ a | b  | c | d 
+---+----+---+---
+ 1 |  4 | 3 | 4
+ 1 |  7 | 3 | 4
+ 1 | 10 | 3 | 4
+ 1 | 15 | 3 | 4
+ 1 | 25 | 3 | 4
+(5 rows)
+
+-- Heap table
+select count(*) from sto_althp1;
+ count 
+-------
+     5
+(1 row)
+
+select count(*) from sto_althp2;
+ count 
+-------
+    20
+(1 row)
+
+select count(*) from sto_althp3;
+ count 
+-------
+    15
+(1 row)
+
+select * from sto_althp1 order by b;
+ a | b  | c | d 
+---+----+---+---
+ 1 |  4 | 3 | 4
+ 1 |  7 | 3 | 4
+ 1 | 10 | 3 | 4
+ 1 | 15 | 3 | 4
+ 1 | 25 | 3 | 4
+(5 rows)
+
+select * from sto_althe1 order by a1;
+ a1 | a2  |             a3             
+----+-----+----------------------------
+  1 | 100 | heap table to be exchanged
+  2 | 100 | heap table to be exchanged
+  3 | 100 | heap table to be exchanged
+  4 | 100 | heap table to be exchanged
+  6 | 100 | ao table
+ 12 | 100 | co table
+ 15 | 100 | heap table to be exchanged
+ 16 | 100 | heap table to be exchanged
+ 17 | 100 | heap table to be exchanged
+ 18 | 100 | heap table to be exchanged
+ 19 | 100 | heap table to be exchanged
+ 20 | 100 | heap table to be exchanged
+(12 rows)
+
+--Mixed
+select * from sto_altmsp1 order by col1,col2,col3;
+ col1 |    col2    |   col3   | col4 
+------+------------+----------+------
+    1 | 2008-01-02 | one      |     
+    1 | 2008-01-03 | one      |     
+    1 | 2008-02-02 | newfive  |     
+    1 | 2008-02-02 | newfour  |     
+    1 | 2008-02-02 | newone   |     
+    1 | 2008-02-02 | newsix   |     
+    1 | 2008-02-02 | newthree |     
+    1 | 2008-02-02 | newtwo   |     
+    2 | 2008-01-02 | two      |     
+    2 | 2008-01-03 | two      |     
+    3 | 2008-01-02 | three    |     
+    3 | 2008-01-03 | three    |     
+    4 | 2008-01-02 | four     |     
+    4 | 2008-01-03 | four     |     
+    5 | 2008-01-02 | five     |     
+    5 | 2008-01-03 | five     |     
+    6 | 2008-01-02 | six      |     
+    6 | 2008-01-03 | six      |     
+    7 | 2008-01-02 | nine     |     
+    7 | 2008-01-03 | nine     |     
+(20 rows)
+

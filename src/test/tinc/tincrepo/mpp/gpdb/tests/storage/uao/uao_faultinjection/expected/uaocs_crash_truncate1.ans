@@ -1,0 +1,2 @@
+truncate table  foo;
+TRUNCATE TABLE

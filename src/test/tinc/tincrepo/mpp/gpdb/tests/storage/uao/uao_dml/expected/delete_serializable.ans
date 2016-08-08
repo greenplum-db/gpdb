@@ -1,0 +1,7 @@
+-- @Description Tests that delete in a serializable transaction is not supported
+-- 
+
+BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+BEGIN
+DELETE FROM foo WHERE a < 4;
+ERROR:  Deletes on append-only tables are not supported in serializable transactions.  (seg0 gesameistd1m1.corp.emc.com:40000 pid=96582)

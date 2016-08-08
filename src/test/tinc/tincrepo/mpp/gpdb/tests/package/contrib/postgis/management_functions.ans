@@ -1,0 +1,56 @@
+-- start_ignore
+DROP TABLE IF EXISTS management_functions;
+DROP TABLE
+-- end_ignore
+CREATE TABLE management_functions (id INT4, name text);
+CREATE TABLE
+SELECT AddGeometryColumn('public','management_functions','geom', 0,'GEOMETRY',2);
+                       addgeometrycolumn                       
+---------------------------------------------------------------
+ public.management_functions.geom SRID:0 TYPE:GEOMETRY DIMS:2 
+(1 row)
+
+INSERT INTO management_functions(id, name, geom) VALUES (1, 'A', ST_GeomFromText('POLYGON((1 1, 4 1, 4 4, 1 4, 1 1))'));
+INSERT 0 1
+INSERT INTO management_functions(id, name, geom) VALUES (2, 'B', ST_GeomFromText('POLYGON((2 7, 2 9, 4 7, 2 7))'));
+INSERT 0 1
+SELECT GeometryType(geom) FROM management_functions;
+ geometrytype 
+--------------
+ POLYGON
+ POLYGON
+(2 rows)
+
+SELECT id, name, ST_AsText(geom) FROM management_functions;
+ id | name |           st_astext            
+----+------+--------------------------------
+  1 | A    | POLYGON((1 1,4 1,4 4,1 4,1 1))
+  2 | B    | POLYGON((2 7,2 9,4 7,2 7))
+(2 rows)
+
+SELECT PostGIS_Full_Version();
+                                     postgis_full_version                                      
+-----------------------------------------------------------------------------------------------
+ POSTGIS="2.0.3 r11128" GEOS="3.3.8-CAPI-1.7.8" PROJ="Rel. 4.8.0, 6 March 2012" LIBXML="2.7.8"
+(1 row)
+
+SELECT Populate_Geometry_Columns();
+ populate_geometry_columns 
+---------------------------
+ probed:1 inserted:1
+(1 row)
+
+SELECT UpdateGeometrySRID('public', 'management_functions', 'geom', 0);
+                 updategeometrysrid                 
+----------------------------------------------------
+ public.management_functions.geom SRID changed to 0
+(1 row)
+
+SELECT DropGeometryColumn('public', 'management_functions', 'geom');
+                  dropgeometrycolumn                   
+-------------------------------------------------------
+ public.management_functions.geom effectively removed.
+(1 row)
+
+DROP TABLE management_functions;
+DROP TABLE

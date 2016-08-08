@@ -1,0 +1,20 @@
+-- start_ignore
+SET optimizer=off;
+SET
+-- end_ignore
+-- Test: plperl 58
+CREATE OR REPLACE FUNCTION perl_warn(TEXT) RETURNS VOID AS $$
+							  my $msg = shift;
+							  warn($msg);
+							  $$ LANGUAGE plperl;
+CREATE FUNCTION
+							  
+SELECT perl_warn('implicit elog via warn');
+psql:/path/sql_file:1: WARNING:  implicit elog via warn at line 3.
+CONTEXT:  PL/Perl function "perl_warn"
+ perl_warn 
+-----------
+ 
+(1 row)
+
+							  

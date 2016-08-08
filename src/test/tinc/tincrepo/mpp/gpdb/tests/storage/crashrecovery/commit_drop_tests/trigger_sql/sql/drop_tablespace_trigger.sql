@@ -1,0 +1,1 @@
+DROP TABLESPACE ts1;

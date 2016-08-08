@@ -1,0 +1,120 @@
+CREATE or REPLACE function pltest.PLPERLreturnrecord_0 (  ) RETURNS RECORD as $$  
+				my $rv = spi_exec_query('select * from pltest.tupleCOMPOSITE_BIT ORDER BY ID1');
+				return $rv->{rows}[0];
+$$ language PLPERL;
+CREATE FUNCTION
+--ERROR:  function returning record called in context that cannot accept type record
+select pltest.PLPERLreturnrecord_0();
+ERROR:  function returning record called in context that cannot accept type record
+CONTEXT:  PL/Perl function "plperlreturnrecord_0"
+--ERROR:  record type has not been registered
+select (pltest.PLPERLreturnrecord_0()).*;
+ERROR:  record type has not been registered
+LINE 1: select (pltest.PLPERLreturnrecord_0()).*;
+                ^
+--ERROR:  a column definition list is required for functions returning "record"
+select * from pltest.PLPERLreturnrecord_0();
+ERROR:  a column definition list is required for functions returning "record"
+LINE 1: select * from pltest.PLPERLreturnrecord_0();
+                      ^
+select * from pltest.PLPERLreturnrecord_0() f(id1 SMALLINT,id2 BIT(8),id3 BIT VARYING(10),id4 BOOLEAN,id5 BYTEA);
+  id1   |   id2    |   id3    | id4 | id5  
+--------+----------+----------+-----+------
+ -32768 | 11001111 | 11001111 | f   | \000
+(1 row)
+
+DROP function pltest.PLPERLreturnrecord_0 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLreturnrecord_2 (  ) RETURNS RECORD as $$  
+				my $rv = spi_exec_query('select id1 from pltest.tupleCOMPOSITE_INTERNET ORDER BY id1');
+				return $rv->{rows}[0];
+$$ language PLPERL;
+CREATE FUNCTION
+select * from pltest.PLPERLreturnrecord_2() f(id1 SMALLINT,id2 INET,id3 CIDR,id4 MACADDR);
+  id1   | id2 | id3 | id4 
+--------+-----+-----+-----
+ -32768 |     |     | 
+(1 row)
+
+DROP function pltest.PLPERLreturnrecord_2 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLreturnrecord_4 (  ) RETURNS RECORD as $$
+                                my $rv = spi_exec_query('select id1,* from pltest.tupleCOMPOSITE_DATE');
+                                return $rv->{rows}[0];
+$$ language PLPERL;
+CREATE FUNCTION
+--ERROR:  Perl hash contains nonexistent column "id5"
+select * from pltest.PLPERLreturnrecord_4() f(id1 DATE, id1_dup DATE,id2 TIME,id3 TIMETZ,id4 TIMESTAMP);
+ERROR:  Perl hash contains nonexistent column "id5"
+CONTEXT:  PL/Perl function "plperlreturnrecord_4"
+DROP function pltest.PLPERLreturnrecord_4 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLreturnrecord_1 ( OUT id1 SMALLINT , OUT id2 BIT(8) , OUT id3 BIT VARYING(10) , OUT id4 BOOLEAN , OUT id5 BYTEA ) RETURNS RECORD as $$  
+				my $rv = spi_exec_query('select * from pltest.tupleCOMPOSITE_BIT ORDER BY id1');
+				return $rv->{rows}[0];
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLreturnrecord_1();
+         plperlreturnrecord_1         
+--------------------------------------
+ (-32768,11001111,11001111,f,"\\000")
+(1 row)
+
+select (pltest.PLPERLreturnrecord_1()).*;
+  id1   |   id2    |   id3    | id4 | id5  
+--------+----------+----------+-----+------
+ -32768 | 11001111 | 11001111 | f   | \000
+(1 row)
+
+select * from pltest.PLPERLreturnrecord_1();
+  id1   |   id2    |   id3    | id4 | id5  
+--------+----------+----------+-----+------
+ -32768 | 11001111 | 11001111 | f   | \000
+(1 row)
+
+DROP function pltest.PLPERLreturnrecord_1 ( OUT id1 SMALLINT , OUT id2 BIT(8) , OUT id3 BIT VARYING(10) , OUT id4 BOOLEAN , OUT id5 BYTEA );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLreturnrecord_3 ( OUT id1 SMALLINT , OUT id2 INET , OUT id3 CIDR , OUT id4 MACADDR ) RETURNS RECORD as $$  
+				my $rv = spi_exec_query('select id1 from pltest.tupleCOMPOSITE_INTERNET order by id1');
+				return $rv->{rows}[0];
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLreturnrecord_3();
+ plperlreturnrecord_3 
+----------------------
+ (-32768,,,)
+(1 row)
+
+select (pltest.PLPERLreturnrecord_3()).*;
+  id1   | id2 | id3 | id4 
+--------+-----+-----+-----
+ -32768 |     |     | 
+(1 row)
+
+select * from pltest.PLPERLreturnrecord_3();
+  id1   | id2 | id3 | id4 
+--------+-----+-----+-----
+ -32768 |     |     | 
+(1 row)
+
+DROP function pltest.PLPERLreturnrecord_3 ( OUT id1 SMALLINT , OUT id2 INET , OUT id3 CIDR , OUT id4 MACADDR );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLreturnrecord_5( OUT id1 DATE , OUT id2 TIME , OUT id3 TIMETZ ) RETURNS RECORD as $$  
+				my $rv = spi_exec_query('select * from pltest.tupleCOMPOSITE_DATE');
+				return $rv->{rows}[0];
+$$ language PLPERL;
+CREATE FUNCTION
+--ERROR:  Perl hash contains nonexistent column "id5"
+select pltest.PLPERLreturnrecord_5();
+ERROR:  Perl hash contains nonexistent column "id5"
+CONTEXT:  PL/Perl function "plperlreturnrecord_5"
+--ERROR:  Perl hash contains nonexistent column "id5"
+select (pltest.PLPERLreturnrecord_5()).*;
+ERROR:  Perl hash contains nonexistent column "id5"
+CONTEXT:  PL/Perl function "plperlreturnrecord_5"
+--ERROR:  Perl hash contains nonexistent column "id5"
+select * from pltest.PLPERLreturnrecord_5();
+ERROR:  Perl hash contains nonexistent column "id5"
+CONTEXT:  PL/Perl function "plperlreturnrecord_5"
+DROP function pltest.PLPERLreturnrecord_5 ( OUT id1 DATE , OUT id2 TIME , OUT id3 TIMETZ );
+DROP FUNCTION

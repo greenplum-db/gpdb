@@ -1,0 +1,24 @@
+-- start_ignore
+show optimizer;
+ optimizer 
+-----------
+ off
+(1 row)
+
+-- end_ignore
+-- test comment
+select i, j from foo where i = 10;
+ i  | j 
+----+---
+ 10 | 0
+(1 row)
+
+-- test comment2
+explain select i from foo where i > 10;
+                                 QUERY PLAN                                  
+-----------------------------------------------------------------------------
+ Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..3.25 rows=46 width=4)
+   ->  Seq Scan on foo  (cost=0.00..3.25 rows=46 width=4)
+         Filter: i > 10
+(3 rows)
+

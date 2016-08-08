@@ -1,0 +1,8 @@
+-- Test: plperl 4
+SELECT * FROM perl_int(42);
+ perl_int 
+----------
+       43
+(1 row)
+
+							  

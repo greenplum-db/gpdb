@@ -1,0 +1,46 @@
+-- start_ignore
+DROP TABLE IF EXISTS tenk1;
+DROP TABLE IF EXISTS INT4_TBL;
+DROP TABLE IF EXISTS INT8_TBL;
+-- end_ignore
+
+CREATE TABLE tenk1 (
+        unique1         int4,
+        unique2         int4,
+        two                     int4,
+        four            int4,
+        ten                     int4,
+        twenty          int4,
+        hundred         int4,
+        thousand        int4,
+        twothousand     int4,
+        fivethous       int4,
+        tenthous        int4,
+        odd                     int4,
+        even            int4,
+        stringu1        name,
+        stringu2        name,
+        string4         name
+) WITH OIDS;
+copy tenk1 from 'tenk.data';
+
+CREATE TABLE INT8_TBL(q1 int8, q2 int8);
+
+INSERT INTO INT8_TBL VALUES('  123   ','  456');
+INSERT INTO INT8_TBL VALUES('123   ','4567890123456789');
+INSERT INTO INT8_TBL VALUES('4567890123456789','123');
+INSERT INTO INT8_TBL VALUES('4567890123456789','4567890123456789');
+INSERT INTO INT8_TBL VALUES('4567890123456789','-4567890123456789');
+
+CREATE TABLE INT4_TBL(f1 int4);
+
+INSERT INTO INT4_TBL(f1) VALUES ('   0  ');
+INSERT INTO INT4_TBL(f1) VALUES ('123456     ');
+INSERT INTO INT4_TBL(f1) VALUES ('    -123456');
+INSERT INTO INT4_TBL(f1) VALUES ('34');
+INSERT INTO INT4_TBL(f1) VALUES ('2147483647');
+INSERT INTO INT4_TBL(f1) VALUES ('-2147483647');
+
+SELECT * FROM INT8_TBL;
+SELECT * FROM INT4_TBL;
+SELECT COUNT(*) FROM tenk1;

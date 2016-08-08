@@ -1,0 +1,91 @@
+-- @Description This is to test the reindex functionality of a database.
+-- A user who ownes a database should be able to reindex the database and all the tables in it
+-- even if he does not own them or has no privileges on them.
+-- 
+--
+DROP database IF EXISTS reindexdb2;
+DROP
+1: DROP role IF EXISTS test1;
+DROP
+1: DROP role IF EXISTS test2;
+DROP
+1: CREATE ROLE test1 WITH login;
+CREATE
+1: CREATE ROLE test2 WITH login CREATEDB;
+CREATE
+1: SET role = test2;
+SET
+1: CREATE database reindexdb2;
+CREATE
+2: @db_name reindexdb2: BEGIN;
+BEGIN
+2: SET role = test1;
+SET
+2: CREATE TABLE mytab1_heap(a int, b int);
+CREATE
+2: CREATE INDEX idx_mytab1_heap ON mytab1_heap(b);
+CREATE
+2: INSERT INTO mytab1_heap SELECT a , a - 10 FROM generate_series(1,100) a;
+INSERT 100
+2: DELETE FROM mytab1_heap WHERE a % 4 = 0;
+DELETE 25
+2: REVOKE ALL PRIVILEGES ON mytab1_heap FROM test2;
+REVOKE
+2: CREATE TABLE mytab1_ao(a int, b int) WITH (appendonly = TRUE);
+CREATE
+2: CREATE INDEX idx_mytab1_ao ON mytab1_ao(b);
+CREATE
+2: INSERT INTO mytab1_ao SELECT a , a - 10 FROM generate_series(1,100) a;
+INSERT 100
+2: DELETE FROM mytab1_ao WHERE a % 4 = 0;
+DELETE 25
+2: REVOKE ALL PRIVILEGES ON mytab1_ao FROM test2;
+REVOKE
+2: CREATE TABLE mytab1_aoco(a int, b int) WITH (appendonly = TRUE, orientation = COLUMN);
+CREATE
+2: CREATE INDEX idx_mytab1_aoco ON mytab1_aoco(b);
+CREATE
+2: INSERT INTO mytab1_aoco SELECT a , a - 10 FROM generate_series(1,100) a;
+INSERT 100
+2: DELETE FROM mytab1_aoco WHERE a % 4 = 0;
+DELETE 25
+2: REVOKE ALL PRIVILEGES ON mytab1_aoco FROM test2;
+REVOKE
+2: COMMIT;
+COMMIT
+3: @db_name reindexdb2: SET role = test2;
+SET
+3: SET role = test2;
+SET
+3: REINDEX DATABASE  reindexdb2;
+REINDEX
+3: select usename as user_for_reindex_heap from pg_stat_operations where objname = 'idx_mytab1_heap' and subtype = 'REINDEX' ;
+user_for_reindex_heap
+---------------------
+test2                
+(1 row)
+3: select usename as user_for_reindex_ao from pg_stat_operations where objname = 'idx_mytab1_ao' and subtype = 'REINDEX' ;
+user_for_reindex_ao
+-------------------
+test2              
+(1 row)
+3: select usename as user_for_reindex_aoco from pg_stat_operations where objname = 'idx_mytab1_aoco' and subtype = 'REINDEX' ;
+user_for_reindex_aoco
+---------------------
+test2                
+(1 row)
+3: SELECT 1 AS relfilenode_same_on_all_segs_heap from gp_dist_random('pg_class')   WHERE relname = 'idx_mytab1_heap' GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
+relfilenode_same_on_all_segs_heap
+---------------------------------
+1                                
+(1 row)
+3: SELECT 1 AS relfilenode_same_on_all_segs_ao from gp_dist_random('pg_class')   WHERE relname = 'idx_mytab1_ao' GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
+relfilenode_same_on_all_segs_ao
+-------------------------------
+1                              
+(1 row)
+3: SELECT 1 AS relfilenode_same_on_all_segs_aoco from gp_dist_random('pg_class')   WHERE relname = 'idx_mytab1_aoco' GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
+relfilenode_same_on_all_segs_aoco
+---------------------------------
+1                                
+(1 row)

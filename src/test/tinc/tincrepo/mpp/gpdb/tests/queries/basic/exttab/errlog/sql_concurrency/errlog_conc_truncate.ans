@@ -1,0 +1,16 @@
+-- start_ignore
+-- end_ignore
+-- @concurrency 5
+-- Try executing gp_truncate_error_log concurrently
+SELECT gp_truncate_error_log('exttab_conc_truncate_1');
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+
+SELECT gp_truncate_error_log('exttab_conc_truncate_2');
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+

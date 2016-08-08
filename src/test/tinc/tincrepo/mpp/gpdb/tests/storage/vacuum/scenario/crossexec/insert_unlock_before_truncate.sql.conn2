@@ -1,0 +1,8 @@
+set client_min_messages=WARNING;
+begin;
+insert into xheap select 1, 100+i, 'c' from generate_series(1, 10)i;
+-- Release RowExclusiveLock
+select lockrelease('xheap'::regclass, 3);
+lock sync_table in access exclusive mode;
+commit;
+select count(*) from xheap where b > 100;

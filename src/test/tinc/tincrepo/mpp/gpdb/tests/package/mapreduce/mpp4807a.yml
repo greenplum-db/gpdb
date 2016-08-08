@@ -1,0 +1,21 @@
+%YAML 1.1
+---
+VERSION:         1.0.0.1
+USER:            cwelton
+
+DEFINE:
+  - INPUT:
+      NAME:      myInput
+      QUERY:     SELECT 'hello world'::text as value
+      
+  - MAP:
+      NAME:      myMap
+      LANGUAGE:  perl
+      FUNCTION:  |
+        return [{"key" => $_[0], "value" => $_[1]}] if ($_[1] =~/$_[0]/);
+          }GABLECK!{
+      
+EXECUTE:
+  - RUN:
+      SOURCE:    myInput
+      MAP:       myMap

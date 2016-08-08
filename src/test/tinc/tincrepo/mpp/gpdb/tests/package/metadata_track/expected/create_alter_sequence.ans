@@ -1,0 +1,106 @@
+-- start_ignore
+SET optimizer=off;
+SET
+-- end_ignore
+CREATE TEMPORARY SEQUENCE  mdt_db_seq1 START WITH 101;
+CREATE SEQUENCE
+CREATE SEQUENCE  mdt_db_seq9 START WITH 101;
+CREATE SEQUENCE
+CREATE TEMP SEQUENCE  mdt_db_seq2 START 101;
+CREATE SEQUENCE
+CREATE SEQUENCE  mdt_db_seq10 START 101;
+CREATE SEQUENCE
+CREATE SEQUENCE mdt_db_seq3  INCREMENT BY 2 MINVALUE 1 MAXVALUE  100;
+CREATE SEQUENCE
+CREATE SEQUENCE mdt_db_seq4  INCREMENT BY 2 NO MINVALUE  NO MAXVALUE ;
+CREATE SEQUENCE
+CREATE SEQUENCE mdt_db_seq5  INCREMENT BY 2 MINVALUE 1 MAXVALUE  100  CACHE 100 CYCLE;
+CREATE SEQUENCE
+CREATE SEQUENCE mdt_db_seq6  INCREMENT BY 2 MINVALUE 1 MAXVALUE  100  NO CYCLE;
+CREATE SEQUENCE
+CREATE SEQUENCE mdt_db_seq7 START 101 OWNED BY NONE;
+CREATE SEQUENCE
+CREATE TABLE mdt_test_tbl ( col1 int, col2 int) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+INSERT INTO mdt_test_tbl values (generate_series(1,100),generate_series(1,100));
+INSERT 0 100
+CREATE SEQUENCE mdt_db_seq8 START 101 OWNED BY mdt_test_tbl.col1;
+CREATE SEQUENCE
+ALTER SEQUENCE mdt_db_seq1 RESTART WITH 100;
+ALTER SEQUENCE
+ALTER SEQUENCE mdt_db_seq9 RESTART WITH 100;
+ALTER SEQUENCE
+ALTER SEQUENCE mdt_db_seq2 INCREMENT BY 2 MINVALUE 101 MAXVALUE  400  CACHE 100 CYCLE;
+ALTER SEQUENCE
+ALTER SEQUENCE mdt_db_seq10 INCREMENT BY 2 MINVALUE 101 MAXVALUE  400  CACHE 100 CYCLE;
+ALTER SEQUENCE
+ALTER SEQUENCE mdt_db_seq3  INCREMENT BY 2 NO MINVALUE  NO MAXVALUE;
+ALTER SEQUENCE
+ALTER SEQUENCE mdt_db_seq4 INCREMENT BY 2 MINVALUE 1 MAXVALUE  100;
+ALTER SEQUENCE
+ALTER SEQUENCE mdt_db_seq5 NO CYCLE;
+ALTER SEQUENCE
+CREATE SCHEMA mdt_db_schema9;
+CREATE SCHEMA
+ALTER SEQUENCE mdt_db_seq6 SET SCHEMA mdt_db_schema9;
+ALTER SEQUENCE
+ALTER SEQUENCE mdt_db_seq7  OWNED BY mdt_test_tbl.col2;
+ALTER SEQUENCE
+ALTER SEQUENCE mdt_db_seq7  OWNED BY NONE;
+ALTER SEQUENCE
+select classname  , schemaname , objname  , usestatus , usename , actionname , subtype from pg_stat_operations  where statime > ( select statime from pg_stat_operations where objname ='my_first_table' and actionname ='CREATE') and objname  not in ('pg_stat_operations','pg_stat_partition_operations') order by statime;
+  classname   |   schemaname   |    objname     | usestatus | usename  | actionname |  subtype   
+--------------+----------------+----------------+-----------+----------+------------+------------
+ pg_authid    |                | mdt_user       | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_database  |                | mdt_db         | CURRENT   | mdt_user | CREATE     | DATABASE
+ pg_class     | public         | mdt_db_seq9    | CURRENT   | gpadmin  | CREATE     | SEQUENCE
+ pg_class     | public         | mdt_db_seq10   | CURRENT   | gpadmin  | CREATE     | SEQUENCE
+ pg_class     | public         | mdt_db_seq3    | CURRENT   | gpadmin  | CREATE     | SEQUENCE
+ pg_class     | public         | mdt_db_seq4    | CURRENT   | gpadmin  | CREATE     | SEQUENCE
+ pg_class     | public         | mdt_db_seq5    | CURRENT   | gpadmin  | CREATE     | SEQUENCE
+ pg_class     | mdt_db_schema9 | mdt_db_seq6    | CURRENT   | gpadmin  | CREATE     | SEQUENCE
+ pg_class     | public         | mdt_db_seq7    | CURRENT   | gpadmin  | CREATE     | SEQUENCE
+ pg_class     | public         | mdt_test_tbl   | CURRENT   | gpadmin  | CREATE     | TABLE
+ pg_class     | public         | mdt_test_tbl   | CURRENT   | gpadmin  | ANALYZE    | 
+ pg_class     | public         | mdt_db_seq8    | CURRENT   | gpadmin  | CREATE     | SEQUENCE
+ pg_class     | public         | mdt_db_seq9    | CURRENT   | gpadmin  | ALTER      | RESTART
+ pg_class     | public         | mdt_db_seq10   | CURRENT   | gpadmin  | ALTER      | 5 OPTIONS
+ pg_class     | public         | mdt_db_seq3    | CURRENT   | gpadmin  | ALTER      | 3 OPTIONS
+ pg_class     | public         | mdt_db_seq4    | CURRENT   | gpadmin  | ALTER      | 3 OPTIONS
+ pg_class     | public         | mdt_db_seq5    | CURRENT   | gpadmin  | ALTER      | CYCLE
+ pg_namespace |                | mdt_db_schema9 | CURRENT   | gpadmin  | CREATE     | SCHEMA
+ pg_class     | mdt_db_schema9 | mdt_db_seq6    | CURRENT   | gpadmin  | ALTER      | SET SCHEMA
+ pg_class     | public         | mdt_db_seq7    | CURRENT   | gpadmin  | ALTER      | OWNED BY
+(20 rows)
+
+drop sequence if exists mdt_db_seq1;
+DROP SEQUENCE
+drop sequence mdt_db_seq2 cascade;
+DROP SEQUENCE
+drop sequence mdt_db_seq3 restrict;
+DROP SEQUENCE
+drop sequence mdt_db_seq4;
+DROP SEQUENCE
+drop sequence mdt_db_seq5;
+DROP SEQUENCE
+drop sequence mdt_db_schema9.mdt_db_seq6;
+DROP SEQUENCE
+drop sequence mdt_db_seq7;
+DROP SEQUENCE
+drop sequence mdt_db_seq8;
+DROP SEQUENCE
+drop schema mdt_db_schema9 ;
+DROP SCHEMA
+drop table mdt_test_tbl;
+DROP TABLE
+drop sequence mdt_db_seq9;
+DROP SEQUENCE
+drop sequence mdt_db_seq10;
+DROP SEQUENCE
+select classname  , schemaname , objname  , usestatus , usename , actionname , subtype from pg_stat_operations  where statime > ( select statime from pg_stat_operations where objname ='my_first_table' and actionname ='CREATE') and objname  not in ('pg_stat_operations','pg_stat_partition_operations') order by statime;
+  classname  | schemaname | objname  | usestatus | usename  | actionname | subtype  
+-------------+------------+----------+-----------+----------+------------+----------
+ pg_authid   |            | mdt_user | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_database |            | mdt_db   | CURRENT   | mdt_user | CREATE     | DATABASE
+(2 rows)
+

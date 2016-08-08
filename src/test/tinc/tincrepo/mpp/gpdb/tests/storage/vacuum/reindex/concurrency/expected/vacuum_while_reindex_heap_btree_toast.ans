@@ -1,0 +1,28 @@
+-- @Description Ensures that a vacuum during reindex operations is ok
+-- 
+
+DELETE FROM reindex_toast_heap WHERE b % 4 = 0 ;
+DELETE 25
+1: BEGIN;
+BEGIN
+1: REINDEX index idx_btree_reindex_toast_heap;
+REINDEX
+2&: VACUUM reindex_toast_heap;  <waiting ...>
+1: COMMIT;
+COMMIT
+2<:  <... completed>
+VACUUM
+2: COMMIT;
+COMMIT
+3: SELECT COUNT(*) FROM reindex_toast_heap WHERE a = 1500;
+count
+-----
+0    
+(1 row)
+3: INSERT INTO reindex_toast_heap VALUES (0);
+INSERT 1
+3: SELECT 1 AS relfilenode_same_on_all_segs from gp_dist_random('pg_class')   WHERE relname = 'idx_btree_reindex_toast_heap' GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
+relfilenode_same_on_all_segs
+----------------------------
+1                           
+(1 row)

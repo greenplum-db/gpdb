@@ -1,0 +1,41 @@
+-- start_ignore
+drop table simple;
+drop function tran (int, int);
+drop function cons (int,int);
+drop function final (int);
+drop function retcomposite(int);
+drop type __retcomposite;
+drop function tran (int);
+drop function cons (int);
+drop function final (int, int);
+drop function retcomposite(int,int);
+-- end_ignore
+
+
+
+create table simple(m int,n int) distributed randomly;
+insert into simple values (1,10);
+insert into simple values (2,20);
+insert into simple values (2,21);
+insert into simple values (2,22);
+insert into simple values (3,30);
+insert into simple values (4,40);
+insert into simple values (5,50);
+insert into simple values (5,50);
+insert into simple values (10,100);
+insert into simple values (2,21);
+
+
+
+create function tran (state int,value int) returns int language 'C' as '%funclib_path%', 'tran';
+create function cons (state int, value int) returns int language 'C' as '%funclib_path%', 'cons';
+create function final (state int) returns int language 'C' as '%funclib_path%', 'final';
+
+CREATE TYPE __retcomposite AS (f1 integer, f2 integer, f3 integer);
+
+CREATE OR REPLACE FUNCTION retcomposite(int)
+    RETURNS SETOF __retcomposite
+    AS '%funclib_path%', 'retcomposite'
+    LANGUAGE C IMMUTABLE STRICT;
+
+

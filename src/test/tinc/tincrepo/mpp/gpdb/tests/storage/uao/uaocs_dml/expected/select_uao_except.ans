@@ -1,0 +1,83 @@
+-- @description : Create Data and execute select statements on UAO tables EXCEPT
+-- 
+DROP TABLE IF EXISTS city_uao cascade;
+DROP TABLE
+DROP TABLE IF EXISTS country_uao cascade;
+DROP TABLE
+DROP TABLE IF EXISTS countrylanguage_uao cascade;
+DROP TABLE
+BEGIN;
+BEGIN
+CREATE TABLE city_uao (
+    id integer NOT NULL,
+    name text NOT NULL,
+    countrycode character(3) NOT NULL,
+    district text NOT NULL,
+    population integer NOT NULL
+) with (appendonly=true, orientation=column) distributed by(id);
+CREATE TABLE
+CREATE TABLE country_uao (
+    code character(3) NOT NULL,
+    name text NOT NULL,
+    continent text NOT NULL,
+    region text NOT NULL,
+    surfacearea real NOT NULL,
+    indepyear smallint,
+    population integer NOT NULL,
+    lifeexpectancy real,
+    gnp numeric(10,2),
+    gnpold numeric(10,2),
+    localname text NOT NULL,
+    governmentform text NOT NULL,
+    headofstate text,
+    capital integer,
+    code2 character(2) NOT NULL
+) with (appendonly=true, orientation=column)  distributed by (code);
+CREATE TABLE
+CREATE TABLE countrylanguage_uao (
+    countrycode character(3) NOT NULL,
+    "language" text NOT NULL,
+    isofficial boolean NOT NULL,
+    percentage real NOT NULL
+)  with (appendonly=true, orientation=column) distributed by (countrycode,language);
+CREATE TABLE
+COPY city_uao (id, name, countrycode, district, population) FROM stdin;
+--
+-- Data for Name: country; Type: TABLE DATA; Schema: public; 
+--
+COPY country_uao (code, name, continent, region, surfacearea, indepyear, population, lifeexpectancy, gnp, gnpold, localname, governmentform, headofstate, capital, code2) FROM stdin WITH NULL AS '';
+--
+-- Data for Name: countrylanguage; Type: TABLE DATA; Schema: public; 
+--
+COPY countrylanguage_uao (countrycode, "language", isofficial, percentage) FROM stdin;
+COMMIT;
+COMMIT
+ANALYZE city_uao;
+ANALYZE
+ANALYZE country_uao;
+ANALYZE
+ANALYZE countrylanguage_uao;
+ANALYZE
+-- Using  EXCEPT clause
+select * from city_uao where population > 770000
+UNION
+select * from city_uao where population < 100000
+EXCEPT
+select * from city_uao where countrycode in ('MEX','USA');
+  id  |        name         | countrycode |     district     | population 
+------+---------------------+-------------+------------------+------------
+ 1857 | Kelowna             | CAN         | British Colombia |      89442
+ 2413 | La Habana           | CUB         | La Habana        |    2256000
+  184 | Belize City         | BLZ         | Belize City      |      55810
+  190 | Saint George        | BMU         | Saint Georges    |       1800
+  925 | Quetzaltenango      | GTM         | Quetzaltenango   |      90801
+ 1856 | Sudbury             | CAN         | Ontario          |      92686
+ 1858 | Barrie              | CAN         | Ontario          |      89269
+ 2426 | Ciego de Avila      | CUB         | Ciego de Avila   |      98505
+  185 | Belmopan            | BLZ         | Cayo             |       7105
+  191 | Hamilton            | BMU         | Hamilton         |       1200
+  922 | Ciudad de Guatemala | GTM         | Guatemala        |     823301
+ 1810 | Montreal            | CAN         | Quebec           |    1016376
+ 1855 | Delta               | CAN         | British Colombia |      95411
+(13 rows)
+

@@ -1,0 +1,84 @@
+-- start_ignore
+SET gp_create_table_random_default_distribution=off;
+SET
+-- end_ignore
+-- @concurrency 20
+-- @iterations 5
+INSERT INTO TEST_AO_LOAD1 SELECT * FROM exttab_conc_1;
+psql:/path/sql_file:1: NOTICE:  Found 10 data formatting errors (10 or more input rows). Rejected related input data.
+INSERT 0 990
+COPY TEST_AO_LOAD1 FROM '@data_dir@/data.tbl' WITH DELIMITER '|' SEGMENT REJECT LIMIT 100;
+psql:/path/sql_file:1: NOTICE:  Found 10 data formatting errors (10 or more input rows). Rejected related input data.
+COPY 990
+SELECT duplicate_check_aoseg('pg_aoseg.pg_aoseg_' || a.relfilenode) FROM 
+(SELECT relfilenode FROM pg_class WHERE relname = 'TEST_AO_LOAD1')a;
+ duplicate_check_aoseg 
+-----------------------
+(0 rows)
+
+SELECT duplicate_check_visimap('pg_aoseg.pg_aovisimap_' || a.relfilenode) FROM 
+(SELECT relfilenode FROM pg_class WHERE relname = 'TEST_AO_LOAD1')a;
+
+ duplicate_check_visimap 
+-------------------------
+(0 rows)
+
+COPY TEST_AO_LOAD1 FROM STDIN WITH DELIMITER '|';
+BEGIN;
+BEGIN
+INSERT INTO TEST_AO_LOAD1 select i, 'test123' from generate_series(1, 10000)i;
+INSERT 0 10000
+ABORT;
+ROLLBACK
+INSERT INTO TEST_AO_LOAD1 VALUES (1, 'test');
+INSERT 0 1
+-- start_ignore
+COPY TEST_AO_LOAD1 TO '@data_dir@/output.tbl' WITH DELIMITER '|';
+COPY 70923
+-- end_ignore
+SELECT duplicate_check_aoseg('pg_aoseg.pg_aoseg_' || a.relfilenode) FROM 
+(SELECT relfilenode FROM pg_class WHERE relname = 'TEST_AO_LOAD1')a;
+ duplicate_check_aoseg 
+-----------------------
+(0 rows)
+
+SELECT duplicate_check_visimap('pg_aoseg.pg_aovisimap_' || a.relfilenode) FROM 
+(SELECT relfilenode FROM pg_class WHERE relname = 'TEST_AO_LOAD1')a;
+
+ duplicate_check_visimap 
+-------------------------
+(0 rows)
+
+INSERT INTO TEST_AO_LOAD1 select i, 'test456' from generate_series(10000, 20000)i;;
+INSERT 0 10001
+BEGIN;
+BEGIN
+COPY TEST_AO_LOAD1 FROM '@data_dir@/data.tbl' WITH DELIMITER '|' SEGMENT REJECT LIMIT 100;
+psql:/path/sql_file:1: NOTICE:  Found 10 data formatting errors (10 or more input rows). Rejected related input data.
+COPY 990
+ABORT;
+ROLLBACK
+INSERT INTO TEST_AO_LOAD1 select i, 'test789' from generate_series(20000, 30000)i;;
+INSERT 0 10001
+-- start_ignore
+COPY TEST_AO_LOAD1 TO '@data_dir@/output1.tbl' WITH DELIMITER '|';
+COPY 90925
+-- end_ignore
+INSERT INTO TEST_AO_LOAD1 VALUES (1, 'test');
+INSERT 0 1
+COPY TEST_AO_LOAD1 FROM '@data_dir@/data.tbl' WITH DELIMITER '|' SEGMENT REJECT LIMIT 100;
+psql:/path/sql_file:1: NOTICE:  Found 10 data formatting errors (10 or more input rows). Rejected related input data.
+COPY 990
+SELECT duplicate_check_aoseg('pg_aoseg.pg_aoseg_' || a.relfilenode) FROM 
+(SELECT relfilenode FROM pg_class WHERE relname = 'TEST_AO_LOAD1')a;
+ duplicate_check_aoseg 
+-----------------------
+(0 rows)
+
+SELECT duplicate_check_visimap('pg_aoseg.pg_aovisimap_' || a.relfilenode) FROM 
+(SELECT relfilenode FROM pg_class WHERE relname = 'TEST_AO_LOAD1')a;
+
+ duplicate_check_visimap 
+-------------------------
+(0 rows)
+

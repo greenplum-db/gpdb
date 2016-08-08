@@ -1,0 +1,70 @@
+-- @description : Alter  UAO tables and execute DML statements on the tables
+-- 
+--Alter table to a new owner
+Drop table if exists sto_alt_uao4;
+DROP TABLE
+-- start_ignore
+drop owned by uao_user2 cascade;
+DROP OWNED
+Drop role if exists uao_user2 ;
+DROP ROLE
+-- stop_ignore
+Create role uao_user2;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+create table sto_alt_uao4 (i int, j char(10)) with (appendonly=true, orientation=column) DISTRIBUTED BY (i);
+CREATE TABLE
+insert into sto_alt_uao4 select i , 'cc'||i from generate_series(1,5) as i;
+INSERT 0 5
+SELECT 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='sto_alt_uao4');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+Alter Table sto_alt_uao4  Owner to uao_user2;
+ALTER TABLE
+select 1 as owner_changed from pg_class where relname='sto_alt_uao4' and relowner = (select oid from pg_roles where rolname = 'uao_user2');
+ owner_changed 
+---------------
+             1
+(1 row)
+
+select * from sto_alt_uao4 order by 1;
+ i |     j      
+---+------------
+ 1 | cc1       
+ 2 | cc2       
+ 3 | cc3       
+ 4 | cc4       
+ 5 | cc5       
+(5 rows)
+
+update sto_alt_uao4 set j = 'azzza3' where i = 3;
+UPDATE 1
+select * from sto_alt_uao4 order by 1;
+ i |     j      
+---+------------
+ 1 | cc1       
+ 2 | cc2       
+ 3 | azzza3    
+ 4 | cc4       
+ 5 | cc5       
+(5 rows)
+
+select count(*) AS only_visi_tups from sto_alt_uao4;
+ only_visi_tups 
+----------------
+              5
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*)  AS invisi_and_visi_tups from sto_alt_uao4;
+ invisi_and_visi_tups 
+----------------------
+                    6
+(1 row)
+
+set gp_select_invisible = false;
+SET

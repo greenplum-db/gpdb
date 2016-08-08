@@ -1,0 +1,10 @@
+-- start_ignore
+SET optimizer=off;
+SET
+-- end_ignore
+-- Test: plperl 21
+SELECT * FROM perl_record();
+psql:/path/sql_file:1: ERROR:  a column definition list is required for functions returning "record"
+LINE 1: SELECT * FROM perl_record();
+                      ^
+							  

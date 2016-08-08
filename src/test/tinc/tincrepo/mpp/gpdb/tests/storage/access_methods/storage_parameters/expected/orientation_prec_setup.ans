@@ -1,0 +1,22 @@
+Alter database dsp_db1 set gp_default_storage_options='appendonly=true, orientation=column';
+ALTER DATABASE
+Alter role dsp_role1 set gp_default_storage_options='appendonly=true, orientation=row';
+ALTER ROLE
+Alter database dsp_db2 set gp_default_storage_options='appendonly=true,orientation=row';
+ALTER DATABASE
+Alter role dsp_role2 set gp_default_storage_options='appendonly=true, orientation=column';
+ALTER ROLE
+Select datname,datconfig from pg_database where datname in ('dsp_db1', 'dsp_db2');
+ datname |                             datconfig                              
+---------+--------------------------------------------------------------------
+ dsp_db1 | {"gp_default_storage_options=appendonly=true, orientation=column"}
+ dsp_db2 | {"gp_default_storage_options=appendonly=true,orientation=row"}
+(2 rows)
+
+select rolname, rolconfig from pg_roles where rolname in ('dsp_role1', 'dsp_role2');
+  rolname  |                             rolconfig                              
+-----------+--------------------------------------------------------------------
+ dsp_role1 | {"gp_default_storage_options=appendonly=true, orientation=row"}
+ dsp_role2 | {"gp_default_storage_options=appendonly=true, orientation=column"}
+(2 rows)
+

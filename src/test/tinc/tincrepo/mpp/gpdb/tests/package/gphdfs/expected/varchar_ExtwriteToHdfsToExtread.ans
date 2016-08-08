@@ -1,0 +1,588 @@
+-- start_ignore
+-- end_ignore
+\echo --start_ignore
+--start_ignore
+drop external table varchar_heap;
+DROP EXTERNAL TABLE
+drop external table varchar_writehdfs;
+DROP EXTERNAL TABLE
+drop external table varchar_verification_mapreduce;
+DROP EXTERNAL TABLE
+drop external table varchar_verification_mapred;
+DROP EXTERNAL TABLE
+drop external table varchar_verification_blockcomp_mapreduce;
+DROP EXTERNAL TABLE
+drop external table varchar_verification_blockcomp_mapred;
+DROP EXTERNAL TABLE
+drop external table varchar_verification_recordcomp_mapreduce;
+DROP EXTERNAL TABLE
+drop external table varchar_verification_recordcomp_mapred;
+DROP EXTERNAL TABLE
+\echo --end_ignore
+--end_ignore
+create readable external table varchar_heap(
+datatype_varchar varchar,x_varchar bigint, col1_varchar varchar,col2_varchar varchar, nullcol_varchar varchar
+) location ('gpfdist://sdw1.dh.greenplum.com:8080/varchar.txt')format 'TEXT';
+CREATE EXTERNAL TABLE
+create writable external table varchar_writehdfs(like varchar_heap) location ('gphdfs://sdw1.dh.greenplum.com:8020/extwrite/varchar')format 'custom' (formatter='gphdfs_export');
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+CREATE EXTERNAL TABLE
+insert into varchar_writehdfs select * from varchar_heap;
+INSERT 0 5000
+\!export HADOOP_HOME=/usr/lib/gphd/hadoop/; source /data/gpadmin/gpdb/greenplum/lib/hadoop/hadoop_env.sh; java -cp .:$CLASSPATH:/data/gpadmin/gpdb/greenplum/lib/hadoop/gphd-2.0.2-gnet-1.2.0.0.jar:/data/gpadmin/workspace/tincrepo/main/mpp/gpdb/tests/package/gphdfs/maptest.jar -Dhdfshost=sdw1.dh.greenplum.com -Ddatanodeport=8020 -Djobtrackerhost=sdw1.dh.greenplum.com -Djobtrackerport=8020  -DcompressionType=none javaclasses/TestHadoopIntegration mapreduce Mapreduce_mapper_GPDB_INOUT /extwrite/varchar /mapreduce/varchar_gpdb/ 
+14/08/15 14:07:30 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS
+14/08/15 14:07:30 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+14/08/15 14:07:31 INFO client.RMProxy: Connecting to ResourceManager at /0.0.0.0:8032
+14/08/15 14:07:32 INFO hdfs.DFSClient: Created HDFS_DELEGATION_TOKEN token 927 for gpadmin on 192.168.2.100:8020
+14/08/15 14:07:32 INFO security.TokenCache: Got dt for hdfs://sdw1.dh.greenplum.com:8020; Kind: HDFS_DELEGATION_TOKEN, Service: 192.168.2.100:8020, Ident: (HDFS_DELEGATION_TOKEN token 927 for gpadmin)
+14/08/15 14:07:32 WARN mapreduce.JobSubmitter: Hadoop command-line option parsing not performed. Implement the Tool interface and execute your application with ToolRunner to remedy this.
+14/08/15 14:07:32 INFO input.FileInputFormat: Total input paths to process : 2
+14/08/15 14:07:32 INFO mapreduce.JobSubmitter: number of splits:2
+14/08/15 14:07:32 INFO Configuration.deprecation: user.name is deprecated. Instead, use mapreduce.job.user.name
+14/08/15 14:07:32 INFO Configuration.deprecation: mapred.jar is deprecated. Instead, use mapreduce.job.jar
+14/08/15 14:07:32 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS
+14/08/15 14:07:32 INFO Configuration.deprecation: mapred.job.reduce.memory.mb is deprecated. Instead, use mapreduce.reduce.memory.mb
+14/08/15 14:07:32 INFO Configuration.deprecation: mapred.output.value.class is deprecated. Instead, use mapreduce.job.output.value.class
+14/08/15 14:07:32 INFO Configuration.deprecation: mapreduce.map.class is deprecated. Instead, use mapreduce.job.map.class
+14/08/15 14:07:32 INFO Configuration.deprecation: mapred.job.name is deprecated. Instead, use mapreduce.job.name
+14/08/15 14:07:32 INFO Configuration.deprecation: mapred.job.tracker is deprecated. Instead, use mapreduce.jobtracker.address
+14/08/15 14:07:32 INFO Configuration.deprecation: mapreduce.inputformat.class is deprecated. Instead, use mapreduce.job.inputformat.class
+14/08/15 14:07:32 INFO Configuration.deprecation: mapred.input.dir is deprecated. Instead, use mapreduce.input.fileinputformat.inputdir
+14/08/15 14:07:32 INFO Configuration.deprecation: mapred.output.dir is deprecated. Instead, use mapreduce.output.fileoutputformat.outputdir
+14/08/15 14:07:32 INFO Configuration.deprecation: mapreduce.outputformat.class is deprecated. Instead, use mapreduce.job.outputformat.class
+14/08/15 14:07:32 INFO Configuration.deprecation: mapred.map.tasks is deprecated. Instead, use mapreduce.job.maps
+14/08/15 14:07:32 INFO Configuration.deprecation: mapred.output.key.class is deprecated. Instead, use mapreduce.job.output.key.class
+14/08/15 14:07:32 INFO Configuration.deprecation: mapred.job.map.memory.mb is deprecated. Instead, use mapreduce.map.memory.mb
+14/08/15 14:07:32 INFO Configuration.deprecation: mapred.working.dir is deprecated. Instead, use mapreduce.job.working.dir
+14/08/15 14:07:32 INFO mapreduce.JobSubmitter: Submitting tokens for job: job_1408131000469_0127
+14/08/15 14:07:32 INFO mapreduce.JobSubmitter: Kind: HDFS_DELEGATION_TOKEN, Service: 192.168.2.100:8020, Ident: (HDFS_DELEGATION_TOKEN token 927 for gpadmin)
+14/08/15 14:07:32 INFO impl.YarnClientImpl: Submitted application application_1408131000469_0127 to ResourceManager at /0.0.0.0:8032
+14/08/15 14:07:32 INFO mapreduce.Job: The url to track the job: http://0.0.0.0:9999/proxy/application_1408131000469_0127/
+14/08/15 14:07:32 INFO mapreduce.Job: Running job: job_1408131000469_0127
+14/08/15 14:07:40 INFO mapreduce.Job: Job job_1408131000469_0127 running in uber mode : false
+14/08/15 14:07:40 INFO mapreduce.Job:  map 0% reduce 0%
+14/08/15 14:07:47 INFO mapreduce.Job:  map 100% reduce 0%
+14/08/15 14:07:53 INFO mapreduce.Job:  map 100% reduce 100%
+14/08/15 14:07:53 INFO mapreduce.Job: Job job_1408131000469_0127 completed successfully
+14/08/15 14:07:53 INFO mapreduce.Job: Counters: 43
+	File System Counters
+		FILE: Number of bytes read=745895
+		FILE: Number of bytes written=1746031
+		FILE: Number of read operations=0
+		FILE: Number of large read operations=0
+		FILE: Number of write operations=0
+		HDFS: Number of bytes read=780750
+		HDFS: Number of bytes written=780366
+		HDFS: Number of read operations=11
+		HDFS: Number of large read operations=0
+		HDFS: Number of write operations=2
+	Job Counters 
+		Launched map tasks=2
+		Launched reduce tasks=1
+		Data-local map tasks=2
+		Total time spent by all maps in occupied slots (ms)=23001
+		Total time spent by all reduces in occupied slots (ms)=10968
+	Map-Reduce Framework
+		Map input records=5000
+		Map output records=5000
+		Map output bytes=732840
+		Map output materialized bytes=745901
+		Input split bytes=278
+		Combine input records=0
+		Combine output records=0
+		Reduce input groups=1
+		Reduce shuffle bytes=745901
+		Reduce input records=5000
+		Reduce output records=5000
+		Spilled Records=10000
+		Shuffled Maps =2
+		Failed Shuffles=0
+		Merged Map outputs=2
+		GC time elapsed (ms)=63
+		CPU time spent (ms)=5540
+		Physical memory (bytes) snapshot=1786458112
+		Virtual memory (bytes) snapshot=8288530432
+		Total committed heap usage (bytes)=2242641920
+	Shuffle Errors
+		BAD_ID=0
+		CONNECTION=0
+		IO_ERROR=0
+		WRONG_LENGTH=0
+		WRONG_MAP=0
+		WRONG_REDUCE=0
+	File Input Format Counters 
+		Bytes Read=780472
+	File Output Format Counters 
+		Bytes Written=780366
+\!export HADOOP_HOME=/usr/lib/gphd/hadoop/; source /data/gpadmin/gpdb/greenplum/lib/hadoop/hadoop_env.sh; java -cp .:$CLASSPATH:/data/gpadmin/gpdb/greenplum/lib/hadoop/gphd-2.0.2-gnet-1.2.0.0.jar:/data/gpadmin/workspace/tincrepo/main/mpp/gpdb/tests/package/gphdfs/maptest.jar -Dhdfshost=sdw1.dh.greenplum.com -Ddatanodeport=8020 -Djobtrackerhost=sdw1.dh.greenplum.com -Djobtrackerport=8020  -DcompressionType=none javaclasses/TestHadoopIntegration mapred Mapred_mapper_GPDB_INOUT /extwrite/varchar /mapred/varchar_gpdb/
+14/08/15 14:07:54 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS
+14/08/15 14:07:54 INFO Configuration.deprecation: mapred.job.tracker is deprecated. Instead, use mapreduce.jobtracker.address
+14/08/15 14:07:54 INFO Configuration.deprecation: mapred.job.map.memory.mb is deprecated. Instead, use mapreduce.map.memory.mb
+14/08/15 14:07:54 INFO Configuration.deprecation: mapred.job.reduce.memory.mb is deprecated. Instead, use mapreduce.reduce.memory.mb
+14/08/15 14:07:54 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+14/08/15 14:07:55 INFO client.RMProxy: Connecting to ResourceManager at /0.0.0.0:8032
+14/08/15 14:07:55 INFO client.RMProxy: Connecting to ResourceManager at /0.0.0.0:8032
+14/08/15 14:07:56 INFO hdfs.DFSClient: Created HDFS_DELEGATION_TOKEN token 928 for gpadmin on 192.168.2.100:8020
+14/08/15 14:07:56 INFO security.TokenCache: Got dt for hdfs://sdw1.dh.greenplum.com:8020; Kind: HDFS_DELEGATION_TOKEN, Service: 192.168.2.100:8020, Ident: (HDFS_DELEGATION_TOKEN token 928 for gpadmin)
+14/08/15 14:07:56 WARN mapreduce.JobSubmitter: Hadoop command-line option parsing not performed. Implement the Tool interface and execute your application with ToolRunner to remedy this.
+14/08/15 14:07:56 INFO mapred.FileInputFormat: Total input paths to process : 2
+14/08/15 14:07:56 INFO mapreduce.JobSubmitter: number of splits:2
+14/08/15 14:07:56 INFO Configuration.deprecation: user.name is deprecated. Instead, use mapreduce.job.user.name
+14/08/15 14:07:56 INFO Configuration.deprecation: mapred.jar is deprecated. Instead, use mapreduce.job.jar
+14/08/15 14:07:56 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS
+14/08/15 14:07:56 INFO Configuration.deprecation: mapred.output.value.class is deprecated. Instead, use mapreduce.job.output.value.class
+14/08/15 14:07:56 INFO Configuration.deprecation: mapred.job.name is deprecated. Instead, use mapreduce.job.name
+14/08/15 14:07:56 INFO Configuration.deprecation: mapred.job.tracker is deprecated. Instead, use mapreduce.jobtracker.address
+14/08/15 14:07:56 INFO Configuration.deprecation: mapred.input.dir is deprecated. Instead, use mapreduce.input.fileinputformat.inputdir
+14/08/15 14:07:56 INFO Configuration.deprecation: mapred.output.dir is deprecated. Instead, use mapreduce.output.fileoutputformat.outputdir
+14/08/15 14:07:56 INFO Configuration.deprecation: mapred.map.tasks is deprecated. Instead, use mapreduce.job.maps
+14/08/15 14:07:56 INFO Configuration.deprecation: mapred.output.key.class is deprecated. Instead, use mapreduce.job.output.key.class
+14/08/15 14:07:56 INFO Configuration.deprecation: mapred.working.dir is deprecated. Instead, use mapreduce.job.working.dir
+14/08/15 14:07:56 INFO mapreduce.JobSubmitter: Submitting tokens for job: job_1408131000469_0128
+14/08/15 14:07:56 INFO mapreduce.JobSubmitter: Kind: HDFS_DELEGATION_TOKEN, Service: 192.168.2.100:8020, Ident: (HDFS_DELEGATION_TOKEN token 928 for gpadmin)
+14/08/15 14:07:56 INFO impl.YarnClientImpl: Submitted application application_1408131000469_0128 to ResourceManager at /0.0.0.0:8032
+14/08/15 14:07:56 INFO mapreduce.Job: The url to track the job: http://0.0.0.0:9999/proxy/application_1408131000469_0128/
+14/08/15 14:07:56 INFO mapreduce.Job: Running job: job_1408131000469_0128
+14/08/15 14:08:08 INFO mapreduce.Job: Job job_1408131000469_0128 running in uber mode : false
+14/08/15 14:08:08 INFO mapreduce.Job:  map 0% reduce 0%
+14/08/15 14:08:13 INFO mapreduce.Job:  map 100% reduce 0%
+14/08/15 14:08:19 INFO mapreduce.Job:  map 100% reduce 100%
+14/08/15 14:08:20 INFO mapreduce.Job: Job job_1408131000469_0128 completed successfully
+14/08/15 14:08:20 INFO mapreduce.Job: Counters: 43
+	File System Counters
+		FILE: Number of bytes read=745895
+		FILE: Number of bytes written=1745539
+		FILE: Number of read operations=0
+		FILE: Number of large read operations=0
+		FILE: Number of write operations=0
+		HDFS: Number of bytes read=780724
+		HDFS: Number of bytes written=780366
+		HDFS: Number of read operations=11
+		HDFS: Number of large read operations=0
+		HDFS: Number of write operations=2
+	Job Counters 
+		Launched map tasks=2
+		Launched reduce tasks=1
+		Data-local map tasks=2
+		Total time spent by all maps in occupied slots (ms)=20952
+		Total time spent by all reduces in occupied slots (ms)=10974
+	Map-Reduce Framework
+		Map input records=5000
+		Map output records=5000
+		Map output bytes=732840
+		Map output materialized bytes=745901
+		Input split bytes=252
+		Combine input records=0
+		Combine output records=0
+		Reduce input groups=1
+		Reduce shuffle bytes=745901
+		Reduce input records=5000
+		Reduce output records=5000
+		Spilled Records=10000
+		Shuffled Maps =2
+		Failed Shuffles=0
+		Merged Map outputs=2
+		GC time elapsed (ms)=60
+		CPU time spent (ms)=4720
+		Physical memory (bytes) snapshot=1791856640
+		Virtual memory (bytes) snapshot=8288530432
+		Total committed heap usage (bytes)=2242641920
+	Shuffle Errors
+		BAD_ID=0
+		CONNECTION=0
+		IO_ERROR=0
+		WRONG_LENGTH=0
+		WRONG_MAP=0
+		WRONG_REDUCE=0
+	File Input Format Counters 
+		Bytes Read=780472
+	File Output Format Counters 
+		Bytes Written=780366
+\!export HADOOP_HOME=/usr/lib/gphd/hadoop/; source /data/gpadmin/gpdb/greenplum/lib/hadoop/hadoop_env.sh; java -cp .:$CLASSPATH:/data/gpadmin/gpdb/greenplum/lib/hadoop/gphd-2.0.2-gnet-1.2.0.0.jar:/data/gpadmin/workspace/tincrepo/main/mpp/gpdb/tests/package/gphdfs/maptest.jar -Dhdfshost=sdw1.dh.greenplum.com -Ddatanodeport=8020 -Djobtrackerhost=sdw1.dh.greenplum.com -Djobtrackerport=8020  -DcompressionType=block javaclasses/TestHadoopIntegration mapreduce Mapreduce_mapper_GPDB_INOUT /extwrite/varchar /mapreduce/blockcomp/varchar_gpdb/
+14/08/15 14:08:21 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS
+14/08/15 14:08:21 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+14/08/15 14:08:22 INFO client.RMProxy: Connecting to ResourceManager at /0.0.0.0:8032
+14/08/15 14:08:23 INFO hdfs.DFSClient: Created HDFS_DELEGATION_TOKEN token 929 for gpadmin on 192.168.2.100:8020
+14/08/15 14:08:23 INFO security.TokenCache: Got dt for hdfs://sdw1.dh.greenplum.com:8020; Kind: HDFS_DELEGATION_TOKEN, Service: 192.168.2.100:8020, Ident: (HDFS_DELEGATION_TOKEN token 929 for gpadmin)
+14/08/15 14:08:23 WARN mapreduce.JobSubmitter: Hadoop command-line option parsing not performed. Implement the Tool interface and execute your application with ToolRunner to remedy this.
+14/08/15 14:08:23 INFO input.FileInputFormat: Total input paths to process : 2
+14/08/15 14:08:23 INFO mapreduce.JobSubmitter: number of splits:2
+14/08/15 14:08:23 INFO Configuration.deprecation: user.name is deprecated. Instead, use mapreduce.job.user.name
+14/08/15 14:08:23 INFO Configuration.deprecation: mapred.output.compress is deprecated. Instead, use mapreduce.output.fileoutputformat.compress
+14/08/15 14:08:23 INFO Configuration.deprecation: mapred.jar is deprecated. Instead, use mapreduce.job.jar
+14/08/15 14:08:23 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS
+14/08/15 14:08:23 INFO Configuration.deprecation: mapred.job.reduce.memory.mb is deprecated. Instead, use mapreduce.reduce.memory.mb
+14/08/15 14:08:23 INFO Configuration.deprecation: mapred.output.value.class is deprecated. Instead, use mapreduce.job.output.value.class
+14/08/15 14:08:23 INFO Configuration.deprecation: mapreduce.map.class is deprecated. Instead, use mapreduce.job.map.class
+14/08/15 14:08:23 INFO Configuration.deprecation: mapred.job.name is deprecated. Instead, use mapreduce.job.name
+14/08/15 14:08:23 INFO Configuration.deprecation: mapred.job.tracker is deprecated. Instead, use mapreduce.jobtracker.address
+14/08/15 14:08:23 INFO Configuration.deprecation: mapreduce.inputformat.class is deprecated. Instead, use mapreduce.job.inputformat.class
+14/08/15 14:08:23 INFO Configuration.deprecation: mapred.output.compression.type is deprecated. Instead, use mapreduce.output.fileoutputformat.compress.type
+14/08/15 14:08:23 INFO Configuration.deprecation: mapred.input.dir is deprecated. Instead, use mapreduce.input.fileinputformat.inputdir
+14/08/15 14:08:23 INFO Configuration.deprecation: mapred.output.dir is deprecated. Instead, use mapreduce.output.fileoutputformat.outputdir
+14/08/15 14:08:23 INFO Configuration.deprecation: mapreduce.outputformat.class is deprecated. Instead, use mapreduce.job.outputformat.class
+14/08/15 14:08:23 INFO Configuration.deprecation: mapred.map.tasks is deprecated. Instead, use mapreduce.job.maps
+14/08/15 14:08:23 INFO Configuration.deprecation: mapred.output.key.class is deprecated. Instead, use mapreduce.job.output.key.class
+14/08/15 14:08:23 INFO Configuration.deprecation: mapred.job.map.memory.mb is deprecated. Instead, use mapreduce.map.memory.mb
+14/08/15 14:08:23 INFO Configuration.deprecation: mapred.working.dir is deprecated. Instead, use mapreduce.job.working.dir
+14/08/15 14:08:23 INFO mapreduce.JobSubmitter: Submitting tokens for job: job_1408131000469_0129
+14/08/15 14:08:23 INFO mapreduce.JobSubmitter: Kind: HDFS_DELEGATION_TOKEN, Service: 192.168.2.100:8020, Ident: (HDFS_DELEGATION_TOKEN token 929 for gpadmin)
+14/08/15 14:08:23 INFO impl.YarnClientImpl: Submitted application application_1408131000469_0129 to ResourceManager at /0.0.0.0:8032
+14/08/15 14:08:23 INFO mapreduce.Job: The url to track the job: http://0.0.0.0:9999/proxy/application_1408131000469_0129/
+14/08/15 14:08:23 INFO mapreduce.Job: Running job: job_1408131000469_0129
+14/08/15 14:08:34 INFO mapreduce.Job: Job job_1408131000469_0129 running in uber mode : false
+14/08/15 14:08:34 INFO mapreduce.Job:  map 0% reduce 0%
+14/08/15 14:08:40 INFO mapreduce.Job:  map 100% reduce 0%
+14/08/15 14:08:46 INFO mapreduce.Job:  map 100% reduce 100%
+14/08/15 14:08:46 INFO mapreduce.Job: Job job_1408131000469_0129 completed successfully
+14/08/15 14:08:46 INFO mapreduce.Job: Counters: 43
+	File System Counters
+		FILE: Number of bytes read=745895
+		FILE: Number of bytes written=1746037
+		FILE: Number of read operations=0
+		FILE: Number of large read operations=0
+		FILE: Number of write operations=0
+		HDFS: Number of bytes read=780750
+		HDFS: Number of bytes written=48516
+		HDFS: Number of read operations=11
+		HDFS: Number of large read operations=0
+		HDFS: Number of write operations=2
+	Job Counters 
+		Launched map tasks=2
+		Launched reduce tasks=1
+		Data-local map tasks=2
+		Total time spent by all maps in occupied slots (ms)=22509
+		Total time spent by all reduces in occupied slots (ms)=11115
+	Map-Reduce Framework
+		Map input records=5000
+		Map output records=5000
+		Map output bytes=732840
+		Map output materialized bytes=745901
+		Input split bytes=278
+		Combine input records=0
+		Combine output records=0
+		Reduce input groups=1
+		Reduce shuffle bytes=745901
+		Reduce input records=5000
+		Reduce output records=5000
+		Spilled Records=10000
+		Shuffled Maps =2
+		Failed Shuffles=0
+		Merged Map outputs=2
+		GC time elapsed (ms)=92
+		CPU time spent (ms)=5360
+		Physical memory (bytes) snapshot=1787256832
+		Virtual memory (bytes) snapshot=8290717696
+		Total committed heap usage (bytes)=2242641920
+	Shuffle Errors
+		BAD_ID=0
+		CONNECTION=0
+		IO_ERROR=0
+		WRONG_LENGTH=0
+		WRONG_MAP=0
+		WRONG_REDUCE=0
+	File Input Format Counters 
+		Bytes Read=780472
+	File Output Format Counters 
+		Bytes Written=48516
+\!export HADOOP_HOME=/usr/lib/gphd/hadoop/; source /data/gpadmin/gpdb/greenplum/lib/hadoop/hadoop_env.sh; java -cp .:$CLASSPATH:/data/gpadmin/gpdb/greenplum/lib/hadoop/gphd-2.0.2-gnet-1.2.0.0.jar:/data/gpadmin/workspace/tincrepo/main/mpp/gpdb/tests/package/gphdfs/maptest.jar -Dhdfshost=sdw1.dh.greenplum.com -Ddatanodeport=8020 -Djobtrackerhost=sdw1.dh.greenplum.com -Djobtrackerport=8020  -DcompressionType=block javaclasses/TestHadoopIntegration mapred Mapred_mapper_GPDB_INOUT /extwrite/varchar /mapred/blockcomp/varchar_gpdb/
+14/08/15 14:08:47 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS
+14/08/15 14:08:47 INFO Configuration.deprecation: mapred.job.tracker is deprecated. Instead, use mapreduce.jobtracker.address
+14/08/15 14:08:47 INFO Configuration.deprecation: mapred.job.map.memory.mb is deprecated. Instead, use mapreduce.map.memory.mb
+14/08/15 14:08:47 INFO Configuration.deprecation: mapred.job.reduce.memory.mb is deprecated. Instead, use mapreduce.reduce.memory.mb
+14/08/15 14:08:47 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+14/08/15 14:08:48 INFO client.RMProxy: Connecting to ResourceManager at /0.0.0.0:8032
+14/08/15 14:08:48 INFO client.RMProxy: Connecting to ResourceManager at /0.0.0.0:8032
+14/08/15 14:08:49 INFO hdfs.DFSClient: Created HDFS_DELEGATION_TOKEN token 930 for gpadmin on 192.168.2.100:8020
+14/08/15 14:08:49 INFO security.TokenCache: Got dt for hdfs://sdw1.dh.greenplum.com:8020; Kind: HDFS_DELEGATION_TOKEN, Service: 192.168.2.100:8020, Ident: (HDFS_DELEGATION_TOKEN token 930 for gpadmin)
+14/08/15 14:08:49 WARN mapreduce.JobSubmitter: Hadoop command-line option parsing not performed. Implement the Tool interface and execute your application with ToolRunner to remedy this.
+14/08/15 14:08:49 INFO mapred.FileInputFormat: Total input paths to process : 2
+14/08/15 14:08:49 INFO mapreduce.JobSubmitter: number of splits:2
+14/08/15 14:08:49 INFO Configuration.deprecation: user.name is deprecated. Instead, use mapreduce.job.user.name
+14/08/15 14:08:49 INFO Configuration.deprecation: mapred.output.compress is deprecated. Instead, use mapreduce.output.fileoutputformat.compress
+14/08/15 14:08:49 INFO Configuration.deprecation: mapred.jar is deprecated. Instead, use mapreduce.job.jar
+14/08/15 14:08:49 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS
+14/08/15 14:08:49 INFO Configuration.deprecation: mapred.output.value.class is deprecated. Instead, use mapreduce.job.output.value.class
+14/08/15 14:08:49 INFO Configuration.deprecation: mapred.job.name is deprecated. Instead, use mapreduce.job.name
+14/08/15 14:08:49 INFO Configuration.deprecation: mapred.job.tracker is deprecated. Instead, use mapreduce.jobtracker.address
+14/08/15 14:08:49 INFO Configuration.deprecation: mapred.output.compression.type is deprecated. Instead, use mapreduce.output.fileoutputformat.compress.type
+14/08/15 14:08:49 INFO Configuration.deprecation: mapred.input.dir is deprecated. Instead, use mapreduce.input.fileinputformat.inputdir
+14/08/15 14:08:49 INFO Configuration.deprecation: mapred.output.dir is deprecated. Instead, use mapreduce.output.fileoutputformat.outputdir
+14/08/15 14:08:49 INFO Configuration.deprecation: mapred.map.tasks is deprecated. Instead, use mapreduce.job.maps
+14/08/15 14:08:49 INFO Configuration.deprecation: mapred.output.key.class is deprecated. Instead, use mapreduce.job.output.key.class
+14/08/15 14:08:49 INFO Configuration.deprecation: mapred.working.dir is deprecated. Instead, use mapreduce.job.working.dir
+14/08/15 14:08:49 INFO mapreduce.JobSubmitter: Submitting tokens for job: job_1408131000469_0130
+14/08/15 14:08:49 INFO mapreduce.JobSubmitter: Kind: HDFS_DELEGATION_TOKEN, Service: 192.168.2.100:8020, Ident: (HDFS_DELEGATION_TOKEN token 930 for gpadmin)
+14/08/15 14:08:50 INFO impl.YarnClientImpl: Submitted application application_1408131000469_0130 to ResourceManager at /0.0.0.0:8032
+14/08/15 14:08:50 INFO mapreduce.Job: The url to track the job: http://0.0.0.0:9999/proxy/application_1408131000469_0130/
+14/08/15 14:08:50 INFO mapreduce.Job: Running job: job_1408131000469_0130
+14/08/15 14:09:00 INFO mapreduce.Job: Job job_1408131000469_0130 running in uber mode : false
+14/08/15 14:09:00 INFO mapreduce.Job:  map 0% reduce 0%
+14/08/15 14:09:06 INFO mapreduce.Job:  map 100% reduce 0%
+14/08/15 14:09:12 INFO mapreduce.Job:  map 100% reduce 100%
+14/08/15 14:09:12 INFO mapreduce.Job: Job job_1408131000469_0130 completed successfully
+14/08/15 14:09:12 INFO mapreduce.Job: Counters: 43
+	File System Counters
+		FILE: Number of bytes read=745895
+		FILE: Number of bytes written=1745545
+		FILE: Number of read operations=0
+		FILE: Number of large read operations=0
+		FILE: Number of write operations=0
+		HDFS: Number of bytes read=780724
+		HDFS: Number of bytes written=48516
+		HDFS: Number of read operations=11
+		HDFS: Number of large read operations=0
+		HDFS: Number of write operations=2
+	Job Counters 
+		Launched map tasks=2
+		Launched reduce tasks=1
+		Data-local map tasks=2
+		Total time spent by all maps in occupied slots (ms)=20826
+		Total time spent by all reduces in occupied slots (ms)=11289
+	Map-Reduce Framework
+		Map input records=5000
+		Map output records=5000
+		Map output bytes=732840
+		Map output materialized bytes=745901
+		Input split bytes=252
+		Combine input records=0
+		Combine output records=0
+		Reduce input groups=1
+		Reduce shuffle bytes=745901
+		Reduce input records=5000
+		Reduce output records=5000
+		Spilled Records=10000
+		Shuffled Maps =2
+		Failed Shuffles=0
+		Merged Map outputs=2
+		GC time elapsed (ms)=52
+		CPU time spent (ms)=4730
+		Physical memory (bytes) snapshot=1791475712
+		Virtual memory (bytes) snapshot=8290717696
+		Total committed heap usage (bytes)=2242641920
+	Shuffle Errors
+		BAD_ID=0
+		CONNECTION=0
+		IO_ERROR=0
+		WRONG_LENGTH=0
+		WRONG_MAP=0
+		WRONG_REDUCE=0
+	File Input Format Counters 
+		Bytes Read=780472
+	File Output Format Counters 
+		Bytes Written=48516
+\!export HADOOP_HOME=/usr/lib/gphd/hadoop/; source /data/gpadmin/gpdb/greenplum/lib/hadoop/hadoop_env.sh; java -cp .:$CLASSPATH:/data/gpadmin/gpdb/greenplum/lib/hadoop/gphd-2.0.2-gnet-1.2.0.0.jar:/data/gpadmin/workspace/tincrepo/main/mpp/gpdb/tests/package/gphdfs/maptest.jar -Dhdfshost=sdw1.dh.greenplum.com -Ddatanodeport=8020 -Djobtrackerhost=sdw1.dh.greenplum.com -Djobtrackerport=8020  -DcompressionType=record javaclasses/TestHadoopIntegration mapreduce Mapreduce_mapper_GPDB_INOUT /extwrite/varchar /mapreduce/recordcomp/varchar_gpdb/
+14/08/15 14:09:13 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS
+14/08/15 14:09:13 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+14/08/15 14:09:14 INFO client.RMProxy: Connecting to ResourceManager at /0.0.0.0:8032
+14/08/15 14:09:15 INFO hdfs.DFSClient: Created HDFS_DELEGATION_TOKEN token 931 for gpadmin on 192.168.2.100:8020
+14/08/15 14:09:15 INFO security.TokenCache: Got dt for hdfs://sdw1.dh.greenplum.com:8020; Kind: HDFS_DELEGATION_TOKEN, Service: 192.168.2.100:8020, Ident: (HDFS_DELEGATION_TOKEN token 931 for gpadmin)
+14/08/15 14:09:15 WARN mapreduce.JobSubmitter: Hadoop command-line option parsing not performed. Implement the Tool interface and execute your application with ToolRunner to remedy this.
+14/08/15 14:09:15 INFO input.FileInputFormat: Total input paths to process : 2
+14/08/15 14:09:15 INFO mapreduce.JobSubmitter: number of splits:2
+14/08/15 14:09:15 INFO Configuration.deprecation: user.name is deprecated. Instead, use mapreduce.job.user.name
+14/08/15 14:09:15 INFO Configuration.deprecation: mapred.output.compress is deprecated. Instead, use mapreduce.output.fileoutputformat.compress
+14/08/15 14:09:15 INFO Configuration.deprecation: mapred.jar is deprecated. Instead, use mapreduce.job.jar
+14/08/15 14:09:15 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS
+14/08/15 14:09:15 INFO Configuration.deprecation: mapred.job.reduce.memory.mb is deprecated. Instead, use mapreduce.reduce.memory.mb
+14/08/15 14:09:15 INFO Configuration.deprecation: mapred.output.value.class is deprecated. Instead, use mapreduce.job.output.value.class
+14/08/15 14:09:15 INFO Configuration.deprecation: mapreduce.map.class is deprecated. Instead, use mapreduce.job.map.class
+14/08/15 14:09:15 INFO Configuration.deprecation: mapred.job.name is deprecated. Instead, use mapreduce.job.name
+14/08/15 14:09:15 INFO Configuration.deprecation: mapred.job.tracker is deprecated. Instead, use mapreduce.jobtracker.address
+14/08/15 14:09:15 INFO Configuration.deprecation: mapreduce.inputformat.class is deprecated. Instead, use mapreduce.job.inputformat.class
+14/08/15 14:09:15 INFO Configuration.deprecation: mapred.output.compression.type is deprecated. Instead, use mapreduce.output.fileoutputformat.compress.type
+14/08/15 14:09:15 INFO Configuration.deprecation: mapred.input.dir is deprecated. Instead, use mapreduce.input.fileinputformat.inputdir
+14/08/15 14:09:15 INFO Configuration.deprecation: mapred.output.dir is deprecated. Instead, use mapreduce.output.fileoutputformat.outputdir
+14/08/15 14:09:15 INFO Configuration.deprecation: mapreduce.outputformat.class is deprecated. Instead, use mapreduce.job.outputformat.class
+14/08/15 14:09:15 INFO Configuration.deprecation: mapred.map.tasks is deprecated. Instead, use mapreduce.job.maps
+14/08/15 14:09:15 INFO Configuration.deprecation: mapred.output.key.class is deprecated. Instead, use mapreduce.job.output.key.class
+14/08/15 14:09:15 INFO Configuration.deprecation: mapred.job.map.memory.mb is deprecated. Instead, use mapreduce.map.memory.mb
+14/08/15 14:09:15 INFO Configuration.deprecation: mapred.working.dir is deprecated. Instead, use mapreduce.job.working.dir
+14/08/15 14:09:16 INFO mapreduce.JobSubmitter: Submitting tokens for job: job_1408131000469_0131
+14/08/15 14:09:16 INFO mapreduce.JobSubmitter: Kind: HDFS_DELEGATION_TOKEN, Service: 192.168.2.100:8020, Ident: (HDFS_DELEGATION_TOKEN token 931 for gpadmin)
+14/08/15 14:09:16 INFO impl.YarnClientImpl: Submitted application application_1408131000469_0131 to ResourceManager at /0.0.0.0:8032
+14/08/15 14:09:16 INFO mapreduce.Job: The url to track the job: http://0.0.0.0:9999/proxy/application_1408131000469_0131/
+14/08/15 14:09:16 INFO mapreduce.Job: Running job: job_1408131000469_0131
+14/08/15 14:09:27 INFO mapreduce.Job: Job job_1408131000469_0131 running in uber mode : false
+14/08/15 14:09:27 INFO mapreduce.Job:  map 0% reduce 0%
+14/08/15 14:09:32 INFO mapreduce.Job:  map 100% reduce 0%
+14/08/15 14:09:38 INFO mapreduce.Job:  map 100% reduce 100%
+14/08/15 14:09:38 INFO mapreduce.Job: Job job_1408131000469_0131 completed successfully
+14/08/15 14:09:38 INFO mapreduce.Job: Counters: 43
+	File System Counters
+		FILE: Number of bytes read=745895
+		FILE: Number of bytes written=1746043
+		FILE: Number of read operations=0
+		FILE: Number of large read operations=0
+		FILE: Number of write operations=0
+		HDFS: Number of bytes read=780750
+		HDFS: Number of bytes written=350787
+		HDFS: Number of read operations=11
+		HDFS: Number of large read operations=0
+		HDFS: Number of write operations=2
+	Job Counters 
+		Launched map tasks=2
+		Launched reduce tasks=1
+		Data-local map tasks=2
+		Total time spent by all maps in occupied slots (ms)=21051
+		Total time spent by all reduces in occupied slots (ms)=11685
+	Map-Reduce Framework
+		Map input records=5000
+		Map output records=5000
+		Map output bytes=732840
+		Map output materialized bytes=745901
+		Input split bytes=278
+		Combine input records=0
+		Combine output records=0
+		Reduce input groups=1
+		Reduce shuffle bytes=745901
+		Reduce input records=5000
+		Reduce output records=5000
+		Spilled Records=10000
+		Shuffled Maps =2
+		Failed Shuffles=0
+		Merged Map outputs=2
+		GC time elapsed (ms)=56
+		CPU time spent (ms)=5040
+		Physical memory (bytes) snapshot=1800167424
+		Virtual memory (bytes) snapshot=8291004416
+		Total committed heap usage (bytes)=2242641920
+	Shuffle Errors
+		BAD_ID=0
+		CONNECTION=0
+		IO_ERROR=0
+		WRONG_LENGTH=0
+		WRONG_MAP=0
+		WRONG_REDUCE=0
+	File Input Format Counters 
+		Bytes Read=780472
+	File Output Format Counters 
+		Bytes Written=350787
+\!export HADOOP_HOME=/usr/lib/gphd/hadoop/; source /data/gpadmin/gpdb/greenplum/lib/hadoop/hadoop_env.sh; java -cp .:$CLASSPATH:/data/gpadmin/gpdb/greenplum/lib/hadoop/gphd-2.0.2-gnet-1.2.0.0.jar:/data/gpadmin/workspace/tincrepo/main/mpp/gpdb/tests/package/gphdfs/maptest.jar -Dhdfshost=sdw1.dh.greenplum.com -Ddatanodeport=8020 -Djobtrackerhost=sdw1.dh.greenplum.com -Djobtrackerport=8020  -DcompressionType=record javaclasses/TestHadoopIntegration mapred Mapred_mapper_GPDB_INOUT /extwrite/varchar /mapred/recordcomp/varchar_gpdb/
+14/08/15 14:09:39 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS
+14/08/15 14:09:39 INFO Configuration.deprecation: mapred.job.tracker is deprecated. Instead, use mapreduce.jobtracker.address
+14/08/15 14:09:39 INFO Configuration.deprecation: mapred.job.map.memory.mb is deprecated. Instead, use mapreduce.map.memory.mb
+14/08/15 14:09:39 INFO Configuration.deprecation: mapred.job.reduce.memory.mb is deprecated. Instead, use mapreduce.reduce.memory.mb
+14/08/15 14:09:40 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+14/08/15 14:09:41 INFO client.RMProxy: Connecting to ResourceManager at /0.0.0.0:8032
+14/08/15 14:09:41 INFO client.RMProxy: Connecting to ResourceManager at /0.0.0.0:8032
+14/08/15 14:09:41 INFO hdfs.DFSClient: Created HDFS_DELEGATION_TOKEN token 932 for gpadmin on 192.168.2.100:8020
+14/08/15 14:09:41 INFO security.TokenCache: Got dt for hdfs://sdw1.dh.greenplum.com:8020; Kind: HDFS_DELEGATION_TOKEN, Service: 192.168.2.100:8020, Ident: (HDFS_DELEGATION_TOKEN token 932 for gpadmin)
+14/08/15 14:09:41 WARN mapreduce.JobSubmitter: Hadoop command-line option parsing not performed. Implement the Tool interface and execute your application with ToolRunner to remedy this.
+14/08/15 14:09:41 INFO mapred.FileInputFormat: Total input paths to process : 2
+14/08/15 14:09:42 INFO mapreduce.JobSubmitter: number of splits:2
+14/08/15 14:09:42 INFO Configuration.deprecation: user.name is deprecated. Instead, use mapreduce.job.user.name
+14/08/15 14:09:42 INFO Configuration.deprecation: mapred.output.compress is deprecated. Instead, use mapreduce.output.fileoutputformat.compress
+14/08/15 14:09:42 INFO Configuration.deprecation: mapred.jar is deprecated. Instead, use mapreduce.job.jar
+14/08/15 14:09:42 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS
+14/08/15 14:09:42 INFO Configuration.deprecation: mapred.output.value.class is deprecated. Instead, use mapreduce.job.output.value.class
+14/08/15 14:09:42 INFO Configuration.deprecation: mapred.job.name is deprecated. Instead, use mapreduce.job.name
+14/08/15 14:09:42 INFO Configuration.deprecation: mapred.job.tracker is deprecated. Instead, use mapreduce.jobtracker.address
+14/08/15 14:09:42 INFO Configuration.deprecation: mapred.output.compression.type is deprecated. Instead, use mapreduce.output.fileoutputformat.compress.type
+14/08/15 14:09:42 INFO Configuration.deprecation: mapred.input.dir is deprecated. Instead, use mapreduce.input.fileinputformat.inputdir
+14/08/15 14:09:42 INFO Configuration.deprecation: mapred.output.dir is deprecated. Instead, use mapreduce.output.fileoutputformat.outputdir
+14/08/15 14:09:42 INFO Configuration.deprecation: mapred.map.tasks is deprecated. Instead, use mapreduce.job.maps
+14/08/15 14:09:42 INFO Configuration.deprecation: mapred.output.key.class is deprecated. Instead, use mapreduce.job.output.key.class
+14/08/15 14:09:42 INFO Configuration.deprecation: mapred.working.dir is deprecated. Instead, use mapreduce.job.working.dir
+14/08/15 14:09:42 INFO mapreduce.JobSubmitter: Submitting tokens for job: job_1408131000469_0132
+14/08/15 14:09:42 INFO mapreduce.JobSubmitter: Kind: HDFS_DELEGATION_TOKEN, Service: 192.168.2.100:8020, Ident: (HDFS_DELEGATION_TOKEN token 932 for gpadmin)
+14/08/15 14:09:42 INFO impl.YarnClientImpl: Submitted application application_1408131000469_0132 to ResourceManager at /0.0.0.0:8032
+14/08/15 14:09:42 INFO mapreduce.Job: The url to track the job: http://0.0.0.0:9999/proxy/application_1408131000469_0132/
+14/08/15 14:09:42 INFO mapreduce.Job: Running job: job_1408131000469_0132
+14/08/15 14:09:53 INFO mapreduce.Job: Job job_1408131000469_0132 running in uber mode : false
+14/08/15 14:09:53 INFO mapreduce.Job:  map 0% reduce 0%
+14/08/15 14:09:59 INFO mapreduce.Job:  map 100% reduce 0%
+14/08/15 14:10:05 INFO mapreduce.Job:  map 100% reduce 100%
+14/08/15 14:10:05 INFO mapreduce.Job: Job job_1408131000469_0132 completed successfully
+14/08/15 14:10:05 INFO mapreduce.Job: Counters: 43
+	File System Counters
+		FILE: Number of bytes read=745895
+		FILE: Number of bytes written=1745551
+		FILE: Number of read operations=0
+		FILE: Number of large read operations=0
+		FILE: Number of write operations=0
+		HDFS: Number of bytes read=780724
+		HDFS: Number of bytes written=350787
+		HDFS: Number of read operations=11
+		HDFS: Number of large read operations=0
+		HDFS: Number of write operations=2
+	Job Counters 
+		Launched map tasks=2
+		Launched reduce tasks=1
+		Data-local map tasks=2
+		Total time spent by all maps in occupied slots (ms)=21198
+		Total time spent by all reduces in occupied slots (ms)=12111
+	Map-Reduce Framework
+		Map input records=5000
+		Map output records=5000
+		Map output bytes=732840
+		Map output materialized bytes=745901
+		Input split bytes=252
+		Combine input records=0
+		Combine output records=0
+		Reduce input groups=1
+		Reduce shuffle bytes=745901
+		Reduce input records=5000
+		Reduce output records=5000
+		Spilled Records=10000
+		Shuffled Maps =2
+		Failed Shuffles=0
+		Merged Map outputs=2
+		GC time elapsed (ms)=71
+		CPU time spent (ms)=5510
+		Physical memory (bytes) snapshot=1816326144
+		Virtual memory (bytes) snapshot=8290717696
+		Total committed heap usage (bytes)=2242641920
+	Shuffle Errors
+		BAD_ID=0
+		CONNECTION=0
+		IO_ERROR=0
+		WRONG_LENGTH=0
+		WRONG_MAP=0
+		WRONG_REDUCE=0
+	File Input Format Counters 
+		Bytes Read=780472
+	File Output Format Counters 
+		Bytes Written=350787
+create readable external table varchar_verification_mapreduce(like varchar_heap) location ('gphdfs://sdw1.dh.greenplum.com:8020/mapreduce/varchar_gpdb/')format 'custom' (formatter='gphdfs_import');
+CREATE EXTERNAL TABLE
+create readable external table varchar_verification_mapred(like varchar_heap) location ('gphdfs://sdw1.dh.greenplum.com:8020/mapred/varchar_gpdb/')format 'custom' (formatter='gphdfs_import');
+CREATE EXTERNAL TABLE
+create readable external table varchar_verification_blockcomp_mapreduce(like varchar_heap) location ('gphdfs://sdw1.dh.greenplum.com:8020/mapreduce/blockcomp/varchar_gpdb/')format 'custom' (formatter='gphdfs_import');
+CREATE EXTERNAL TABLE
+create readable external table varchar_verification_blockcomp_mapred(like varchar_heap) location ('gphdfs://sdw1.dh.greenplum.com:8020/mapred/blockcomp/varchar_gpdb/')format 'custom' (formatter='gphdfs_import');
+CREATE EXTERNAL TABLE
+create readable external table varchar_verification_recordcomp_mapreduce(like varchar_heap) location ('gphdfs://sdw1.dh.greenplum.com:8020/mapreduce/recordcomp/varchar_gpdb/')format 'custom' (formatter='gphdfs_import');
+CREATE EXTERNAL TABLE
+create readable external table varchar_verification_recordcomp_mapred(like varchar_heap) location ('gphdfs://sdw1.dh.greenplum.com:8020/mapred/recordcomp/varchar_gpdb/')format 'custom' (formatter='gphdfs_import');
+CREATE EXTERNAL TABLE
+(select * from varchar_verification_mapreduce except select * from varchar_verification_mapred) union (select * from varchar_verification_mapred except select * from varchar_verification_mapreduce);
+ datatype_varchar | x_varchar | col1_varchar | col2_varchar | nullcol_varchar 
+------------------+-----------+--------------+--------------+-----------------
+(0 rows)
+
+(select * from varchar_verification_blockcomp_mapreduce except select * from varchar_verification_blockcomp_mapred) union (select * from varchar_verification_blockcomp_mapred except select * from varchar_verification_blockcomp_mapreduce);
+ datatype_varchar | x_varchar | col1_varchar | col2_varchar | nullcol_varchar 
+------------------+-----------+--------------+--------------+-----------------
+(0 rows)
+
+(select * from varchar_verification_recordcomp_mapreduce except select * from varchar_verification_recordcomp_mapred) union (select * from varchar_verification_recordcomp_mapred except select * from varchar_verification_recordcomp_mapreduce);
+ datatype_varchar | x_varchar | col1_varchar | col2_varchar | nullcol_varchar 
+------------------+-----------+--------------+--------------+-----------------
+(0 rows)
+
+(select * from varchar_verification_recordcomp_mapreduce except select * from varchar_verification_blockcomp_mapreduce) union (select * from varchar_verification_blockcomp_mapreduce except select * from varchar_verification_recordcomp_mapreduce);
+ datatype_varchar | x_varchar | col1_varchar | col2_varchar | nullcol_varchar 
+------------------+-----------+--------------+--------------+-----------------
+(0 rows)
+
+(select * from varchar_verification_recordcomp_mapreduce except select * from varchar_verification_mapreduce) union (select * from varchar_verification_mapreduce except select * from varchar_verification_recordcomp_mapreduce);
+ datatype_varchar | x_varchar | col1_varchar | col2_varchar | nullcol_varchar 
+------------------+-----------+--------------+--------------+-----------------
+(0 rows)
+
+(select * from varchar_verification_recordcomp_mapreduce except select * from varchar_heap) union (select * from varchar_heap except select * from varchar_verification_recordcomp_mapreduce);
+ datatype_varchar | x_varchar | col1_varchar | col2_varchar | nullcol_varchar 
+------------------+-----------+--------------+--------------+-----------------
+(0 rows)
+

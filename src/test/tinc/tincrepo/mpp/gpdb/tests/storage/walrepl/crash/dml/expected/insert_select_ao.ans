@@ -1,0 +1,132 @@
+-- start_ignore
+DROP TABLE  IF EXISTS ao_table;
+DROP TABLE
+DROP TABLE  IF EXISTS new_ao_table;
+DROP TABLE
+-- end_ignore
+CREATE TABLE ao_table ( a int,col001 char DEFAULT 'z',col002 numeric,col003 boolean DEFAULT false,col004 bit(3) DEFAULT '111',col005 text DEFAULT 'pookie', col006 integer[] DEFAULT '{5, 4, 3, 2, 1}', col007 character varying(512) DEFAULT 'Now is the time', col008 character varying DEFAULT 'Now is the time', col009 character varying(512)[], col010 numeric(8),col011 int,col012 double precision, col013 bigint, col014 char(8), col015 bytea,col016 timestamp with time zone,col017 interval, col018 cidr, col019 inet, col020 macaddr,col022 money, col025 circle, col026 box, col027 name,col028 path, col029 int2, col031 bit varying(256),col032 date, col034 lseg,col035 point,col036 polygon,col037 real,col039 time, col040 timestamp )with (appendonly=true);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+\d+ ao_table
+                                     Append-Only Table "public.ao_table"
+ Column |            Type             |                  Modifiers                   | Storage  | Description 
+--------+-----------------------------+----------------------------------------------+----------+-------------
+ a      | integer                     |                                              | plain    | 
+ col001 | character(1)                | default 'z'::bpchar                          | extended | 
+ col002 | numeric                     |                                              | main     | 
+ col003 | boolean                     | default false                                | plain    | 
+ col004 | bit(3)                      | default B'111'::"bit"                        | extended | 
+ col005 | text                        | default 'pookie'::text                       | extended | 
+ col006 | integer[]                   | default '{5,4,3,2,1}'::integer[]             | extended | 
+ col007 | character varying(512)      | default 'Now is the time'::character varying | extended | 
+ col008 | character varying           | default 'Now is the time'::character varying | extended | 
+ col009 | character varying(512)[]    |                                              | extended | 
+ col010 | numeric(8,0)                |                                              | main     | 
+ col011 | integer                     |                                              | plain    | 
+ col012 | double precision            |                                              | plain    | 
+ col013 | bigint                      |                                              | plain    | 
+ col014 | character(8)                |                                              | extended | 
+ col015 | bytea                       |                                              | extended | 
+ col016 | timestamp with time zone    |                                              | plain    | 
+ col017 | interval                    |                                              | plain    | 
+ col018 | cidr                        |                                              | plain    | 
+ col019 | inet                        |                                              | plain    | 
+ col020 | macaddr                     |                                              | plain    | 
+ col022 | money                       |                                              | plain    | 
+ col025 | circle                      |                                              | plain    | 
+ col026 | box                         |                                              | plain    | 
+ col027 | name                        |                                              | plain    | 
+ col028 | path                        |                                              | extended | 
+ col029 | smallint                    |                                              | plain    | 
+ col031 | bit varying(256)            |                                              | extended | 
+ col032 | date                        |                                              | plain    | 
+ col034 | lseg                        |                                              | plain    | 
+ col035 | point                       |                                              | plain    | 
+ col036 | polygon                     |                                              | extended | 
+ col037 | real                        |                                              | plain    | 
+ col039 | time without time zone      |                                              | plain    | 
+ col040 | timestamp without time zone |                                              | plain    | 
+Compression Type: None
+Compression Level: 0
+Block Size: 32768
+Checksum: f
+Has OIDs: no
+Options: appendonly=true
+Distributed by: (a)
+
+INSERT INTO ao_table VALUES (1,'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO ao_table VALUES (    2,   'b',   22,  false, '001',   '2_one',  '{6,7,8,9,10}',  'Hey.. whtz up 2', 'Hey .. whtz up 2',    '{one,two,three,four,five}', 76767669, 1, 222.2222, 11,   '2_two_22',   'c',   '2002-12-13 01:51:15+1359',   '22',    '0.0.0.0',  '0.0.0.0',  'BB:BB:BB:BB:BB:BB', '200.00',  '((3,3),2)',  '((3,2),(2,3))',   'hello',  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+select * from ao_table  order by a; -- order 1
+ a | col001 | col002 | col003 | col004 | col005 |    col006    |         col007         |         col008         |          col009           |  col010  | col011 |  col012  | col013 |  col014  | col015 |         col016         |  col017  |   col018   | col019  |      col020       | col022  |  col025   |   col026    | col027 |    col028     | col029 |   col031    |   col032   |    col034     | col035 |                col036                 | col037 |  col039  |       col040        
+---+--------+--------+--------+--------+--------+--------------+------------------------+------------------------+---------------------------+----------+--------+----------+--------+----------+--------+------------------------+----------+------------+---------+-------------------+---------+-----------+-------------+--------+---------------+--------+-------------+------------+---------------+--------+---------------------------------------+--------+----------+---------------------
+ 1 | a      |     11 | t      | 111    | 1_one  | {1,2,3,4,5}  | Hello .. how are you 1 | Hello .. how are you 1 | {one,two,three,four,five} | 12345678 |      1 | 111.1111 |     11 | 1_one_11 | d      | 2001-12-12 03:52:15-08 | 00:00:11 | 0.0.0.0/32 | 0.0.0.0 | aa:aa:aa:aa:aa:aa |  $34.23 | <(2,2),1> | (2,2),(1,1) | hello  | ((1,2),(2,1)) |     11 | 010101      | 2001-12-13 | [(1,1),(2,2)] | (1,1)  | ((1,2),(2,3),(3,4),(4,3),(3,2),(2,1)) | 111111 | 23:00:00 | 2001-12-13 01:51:15
+ 2 | b      |     22 | f      | 001    | 2_one  | {6,7,8,9,10} | Hey.. whtz up 2        | Hey .. whtz up 2       | {one,two,three,four,five} | 76767669 |      1 | 222.2222 |     11 | 2_two_22 | c      | 2002-12-12 03:52:15-08 | 00:00:22 | 0.0.0.0/32 | 0.0.0.0 | bb:bb:bb:bb:bb:bb | $200.00 | <(3,3),2> | (3,3),(2,2) | hello  | ((3,2),(2,3)) |     22 | 01010100101 | 2002-12-13 | [(2,2),(3,3)] | (2,2)  | ((1,2),(2,3),(3,4),(4,3),(3,2),(2,1)) |  11111 | 22:00:00 | 2002-12-13 01:51:15
+(2 rows)
+
+CREATE TABLE new_ao_table ( a int,col001 char DEFAULT 'z',col002 numeric,col003 boolean DEFAULT false,col004 bit(3) DEFAULT '111',col005 text DEFAULT 'pookie', col006 integer[] DEFAULT '{5, 4, 3, 2, 1}', col007 character varying(512) DEFAULT 'Now is the time', col008 character varying DEFAULT 'Now is the time', col009 character varying(512)[], col010 numeric(8),col011 int,col012 double precision, col013 bigint, col014 char(8), col015 bytea,col016 timestamp with time zone,col017 interval, col018 cidr, col019 inet, col020 macaddr,col022 money, col025 circle, col026 box, col027 name,col028 path, col029 int2, col031 bit varying(256),col032 date, col034 lseg,col035 point,col036 polygon,col037 real,col039 time, col040 timestamp )with (appendonly=true);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+\d+ new_ao_table
+                                   Append-Only Table "public.new_ao_table"
+ Column |            Type             |                  Modifiers                   | Storage  | Description 
+--------+-----------------------------+----------------------------------------------+----------+-------------
+ a      | integer                     |                                              | plain    | 
+ col001 | character(1)                | default 'z'::bpchar                          | extended | 
+ col002 | numeric                     |                                              | main     | 
+ col003 | boolean                     | default false                                | plain    | 
+ col004 | bit(3)                      | default B'111'::"bit"                        | extended | 
+ col005 | text                        | default 'pookie'::text                       | extended | 
+ col006 | integer[]                   | default '{5,4,3,2,1}'::integer[]             | extended | 
+ col007 | character varying(512)      | default 'Now is the time'::character varying | extended | 
+ col008 | character varying           | default 'Now is the time'::character varying | extended | 
+ col009 | character varying(512)[]    |                                              | extended | 
+ col010 | numeric(8,0)                |                                              | main     | 
+ col011 | integer                     |                                              | plain    | 
+ col012 | double precision            |                                              | plain    | 
+ col013 | bigint                      |                                              | plain    | 
+ col014 | character(8)                |                                              | extended | 
+ col015 | bytea                       |                                              | extended | 
+ col016 | timestamp with time zone    |                                              | plain    | 
+ col017 | interval                    |                                              | plain    | 
+ col018 | cidr                        |                                              | plain    | 
+ col019 | inet                        |                                              | plain    | 
+ col020 | macaddr                     |                                              | plain    | 
+ col022 | money                       |                                              | plain    | 
+ col025 | circle                      |                                              | plain    | 
+ col026 | box                         |                                              | plain    | 
+ col027 | name                        |                                              | plain    | 
+ col028 | path                        |                                              | extended | 
+ col029 | smallint                    |                                              | plain    | 
+ col031 | bit varying(256)            |                                              | extended | 
+ col032 | date                        |                                              | plain    | 
+ col034 | lseg                        |                                              | plain    | 
+ col035 | point                       |                                              | plain    | 
+ col036 | polygon                     |                                              | extended | 
+ col037 | real                        |                                              | plain    | 
+ col039 | time without time zone      |                                              | plain    | 
+ col040 | timestamp without time zone |                                              | plain    | 
+Compression Type: None
+Compression Level: 0
+Block Size: 32768
+Checksum: f
+Has OIDs: no
+Options: appendonly=true
+Distributed by: (a)
+
+INSERT INTO new_ao_table VALUES (generate_series(500,505),'a',generate_series(500,505),true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  generate_series(500,505), generate_series(500,505), 111.1111,  generate_series(500,505),  '1_one_11',   'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 6
+select * from new_ao_table  order by a; -- order 1
+  a  | col001 | col002 | col003 | col004 | col005 |   col006    |         col007         |         col008         |          col009           | col010 | col011 |  col012  | col013 |  col014  | col015 |         col016         |  col017  |   col018   | col019  |      col020       | col022 |  col025   |   col026    | col027 |    col028     | col029 | col031 |   col032   |    col034     | col035 |                col036                 | col037 |  col039  |       col040        
+-----+--------+--------+--------+--------+--------+-------------+------------------------+------------------------+---------------------------+--------+--------+----------+--------+----------+--------+------------------------+----------+------------+---------+-------------------+--------+-----------+-------------+--------+---------------+--------+--------+------------+---------------+--------+---------------------------------------+--------+----------+---------------------
+ 500 | a      |    500 | t      | 111    | 1_one  | {1,2,3,4,5} | Hello .. how are you 1 | Hello .. how are you 1 | {one,two,three,four,five} |    500 |    500 | 111.1111 |    500 | 1_one_11 | d      | 2001-12-12 03:52:15-08 | 00:00:11 | 0.0.0.0/32 | 0.0.0.0 | aa:aa:aa:aa:aa:aa | $34.23 | <(2,2),1> | (2,2),(1,1) | hello  | ((1,2),(2,1)) |     11 | 010101 | 2001-12-13 | [(1,1),(2,2)] | (1,1)  | ((1,2),(2,3),(3,4),(4,3),(3,2),(2,1)) | 111111 | 23:00:00 | 2001-12-13 01:51:15
+ 501 | a      |    501 | t      | 111    | 1_one  | {1,2,3,4,5} | Hello .. how are you 1 | Hello .. how are you 1 | {one,two,three,four,five} |    501 |    501 | 111.1111 |    501 | 1_one_11 | d      | 2001-12-12 03:52:15-08 | 00:00:11 | 0.0.0.0/32 | 0.0.0.0 | aa:aa:aa:aa:aa:aa | $34.23 | <(2,2),1> | (2,2),(1,1) | hello  | ((1,2),(2,1)) |     11 | 010101 | 2001-12-13 | [(1,1),(2,2)] | (1,1)  | ((1,2),(2,3),(3,4),(4,3),(3,2),(2,1)) | 111111 | 23:00:00 | 2001-12-13 01:51:15
+ 502 | a      |    502 | t      | 111    | 1_one  | {1,2,3,4,5} | Hello .. how are you 1 | Hello .. how are you 1 | {one,two,three,four,five} |    502 |    502 | 111.1111 |    502 | 1_one_11 | d      | 2001-12-12 03:52:15-08 | 00:00:11 | 0.0.0.0/32 | 0.0.0.0 | aa:aa:aa:aa:aa:aa | $34.23 | <(2,2),1> | (2,2),(1,1) | hello  | ((1,2),(2,1)) |     11 | 010101 | 2001-12-13 | [(1,1),(2,2)] | (1,1)  | ((1,2),(2,3),(3,4),(4,3),(3,2),(2,1)) | 111111 | 23:00:00 | 2001-12-13 01:51:15
+ 503 | a      |    503 | t      | 111    | 1_one  | {1,2,3,4,5} | Hello .. how are you 1 | Hello .. how are you 1 | {one,two,three,four,five} |    503 |    503 | 111.1111 |    503 | 1_one_11 | d      | 2001-12-12 03:52:15-08 | 00:00:11 | 0.0.0.0/32 | 0.0.0.0 | aa:aa:aa:aa:aa:aa | $34.23 | <(2,2),1> | (2,2),(1,1) | hello  | ((1,2),(2,1)) |     11 | 010101 | 2001-12-13 | [(1,1),(2,2)] | (1,1)  | ((1,2),(2,3),(3,4),(4,3),(3,2),(2,1)) | 111111 | 23:00:00 | 2001-12-13 01:51:15
+ 504 | a      |    504 | t      | 111    | 1_one  | {1,2,3,4,5} | Hello .. how are you 1 | Hello .. how are you 1 | {one,two,three,four,five} |    504 |    504 | 111.1111 |    504 | 1_one_11 | d      | 2001-12-12 03:52:15-08 | 00:00:11 | 0.0.0.0/32 | 0.0.0.0 | aa:aa:aa:aa:aa:aa | $34.23 | <(2,2),1> | (2,2),(1,1) | hello  | ((1,2),(2,1)) |     11 | 010101 | 2001-12-13 | [(1,1),(2,2)] | (1,1)  | ((1,2),(2,3),(3,4),(4,3),(3,2),(2,1)) | 111111 | 23:00:00 | 2001-12-13 01:51:15
+ 505 | a      |    505 | t      | 111    | 1_one  | {1,2,3,4,5} | Hello .. how are you 1 | Hello .. how are you 1 | {one,two,three,four,five} |    505 |    505 | 111.1111 |    505 | 1_one_11 | d      | 2001-12-12 03:52:15-08 | 00:00:11 | 0.0.0.0/32 | 0.0.0.0 | aa:aa:aa:aa:aa:aa | $34.23 | <(2,2),1> | (2,2),(1,1) | hello  | ((1,2),(2,1)) |     11 | 010101 | 2001-12-13 | [(1,1),(2,2)] | (1,1)  | ((1,2),(2,3),(3,4),(4,3),(3,2),(2,1)) | 111111 | 23:00:00 | 2001-12-13 01:51:15
+(6 rows)
+

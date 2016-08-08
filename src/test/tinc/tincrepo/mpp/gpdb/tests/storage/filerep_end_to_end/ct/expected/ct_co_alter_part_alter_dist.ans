@@ -1,0 +1,275 @@
+--
+-- CT CO TABLE 1
+--
+CREATE TABLE ct_co_alter_part_alter_dist1 (id int, name text,rank int, year date, gender char(1))   with ( appendonly='true', orientation='column') DISTRIBUTED randomly
+partition by list (gender)
+subpartition by range (year)
+subpartition template (
+start (date '2001-01-01'))
+(
+values ('M'),
+values ('F')
+);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_co_alter_part_alter_dist1_1_prt_1" for table "ct_co_alter_part_alter_dist1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_co_alter_part_alter_dist1_1_prt_2" for table "ct_co_alter_part_alter_dist1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_co_alter_part_alter_dist1_1_prt_1_2_prt_1" for table "ct_co_alter_part_alter_dist1_1_prt_1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_co_alter_part_alter_dist1_1_prt_2_2_prt_1" for table "ct_co_alter_part_alter_dist1_1_prt_2"
+CREATE TABLE
+--
+-- Insert few records into the table
+--
+insert into ct_co_alter_part_alter_dist1 values (generate_series(1,10),'ann',1,'2001-01-01','F');
+INSERT 0 10
+--
+-- select from the Table
+--
+select count(*) from ct_co_alter_part_alter_dist1;
+ count 
+-------
+    10
+(1 row)
+
+--
+-- CT CO TABLE 2
+--
+CREATE TABLE ct_co_alter_part_alter_dist2 (id int, name text,rank int, year date, gender char(1))   with ( appendonly='true', orientation='column') DISTRIBUTED randomly
+partition by list (gender)
+subpartition by range (year)
+subpartition template (
+start (date '2001-01-01'))
+(
+values ('M'),
+values ('F')
+);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_co_alter_part_alter_dist2_1_prt_1" for table "ct_co_alter_part_alter_dist2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_co_alter_part_alter_dist2_1_prt_2" for table "ct_co_alter_part_alter_dist2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_co_alter_part_alter_dist2_1_prt_1_2_prt_1" for table "ct_co_alter_part_alter_dist2_1_prt_1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_co_alter_part_alter_dist2_1_prt_2_2_prt_1" for table "ct_co_alter_part_alter_dist2_1_prt_2"
+CREATE TABLE
+--
+-- Insert few records into the table
+--
+insert into ct_co_alter_part_alter_dist2 values (generate_series(1,10),'ann',1,'2001-01-01','F');
+INSERT 0 10
+--
+-- select from the Table
+--
+select count(*) from ct_co_alter_part_alter_dist2;
+ count 
+-------
+    10
+(1 row)
+
+--
+-- CT CO TABLE 3
+--
+CREATE TABLE ct_co_alter_part_alter_dist3 (id int, name text,rank int, year date, gender char(1))   with ( appendonly='true', orientation='column') DISTRIBUTED randomly
+partition by list (gender)
+subpartition by range (year)
+subpartition template (
+start (date '2001-01-01'))
+(
+values ('M'),
+values ('F')
+);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_co_alter_part_alter_dist3_1_prt_1" for table "ct_co_alter_part_alter_dist3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_co_alter_part_alter_dist3_1_prt_2" for table "ct_co_alter_part_alter_dist3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_co_alter_part_alter_dist3_1_prt_1_2_prt_1" for table "ct_co_alter_part_alter_dist3_1_prt_1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_co_alter_part_alter_dist3_1_prt_2_2_prt_1" for table "ct_co_alter_part_alter_dist3_1_prt_2"
+CREATE TABLE
+--
+-- Insert few records into the table
+--
+insert into ct_co_alter_part_alter_dist3 values (generate_series(1,10),'ann',1,'2001-01-01','F');
+INSERT 0 10
+--
+-- select from the Table
+--
+select count(*) from ct_co_alter_part_alter_dist3;
+ count 
+-------
+    10
+(1 row)
+
+--
+-- CT CO TABLE 4
+--
+CREATE TABLE ct_co_alter_part_alter_dist4 (id int, name text,rank int, year date, gender char(1))   with ( appendonly='true', orientation='column') DISTRIBUTED randomly
+partition by list (gender)
+subpartition by range (year)
+subpartition template (
+start (date '2001-01-01'))
+(
+values ('M'),
+values ('F')
+);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_co_alter_part_alter_dist4_1_prt_1" for table "ct_co_alter_part_alter_dist4"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_co_alter_part_alter_dist4_1_prt_2" for table "ct_co_alter_part_alter_dist4"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_co_alter_part_alter_dist4_1_prt_1_2_prt_1" for table "ct_co_alter_part_alter_dist4_1_prt_1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_co_alter_part_alter_dist4_1_prt_2_2_prt_1" for table "ct_co_alter_part_alter_dist4_1_prt_2"
+CREATE TABLE
+--
+-- Insert few records into the table
+--
+insert into ct_co_alter_part_alter_dist4 values (generate_series(1,10),'ann',1,'2001-01-01','F');
+INSERT 0 10
+--
+-- select from the Table
+--
+select count(*) from ct_co_alter_part_alter_dist4;
+ count 
+-------
+    10
+(1 row)
+
+--
+-- CT CO TABLE 5
+--
+CREATE TABLE ct_co_alter_part_alter_dist5 (id int, name text,rank int, year date, gender char(1))   with ( appendonly='true', orientation='column') DISTRIBUTED randomly
+partition by list (gender)
+subpartition by range (year)
+subpartition template (
+start (date '2001-01-01'))
+(
+values ('M'),
+values ('F')
+);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_co_alter_part_alter_dist5_1_prt_1" for table "ct_co_alter_part_alter_dist5"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_co_alter_part_alter_dist5_1_prt_2" for table "ct_co_alter_part_alter_dist5"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_co_alter_part_alter_dist5_1_prt_1_2_prt_1" for table "ct_co_alter_part_alter_dist5_1_prt_1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_co_alter_part_alter_dist5_1_prt_2_2_prt_1" for table "ct_co_alter_part_alter_dist5_1_prt_2"
+CREATE TABLE
+--
+-- Insert few records into the table
+--
+insert into ct_co_alter_part_alter_dist5 values (generate_series(1,10),'ann',1,'2001-01-01','F');
+INSERT 0 10
+--
+-- select from the Table
+--
+select count(*) from ct_co_alter_part_alter_dist5;
+ count 
+-------
+    10
+(1 row)
+
+--
+-- ALTER SYNC1 CO TABLE 
+--
+--
+-- ALTER PARTITION TABLE ALTER SET DISTRIBUTED BY
+--
+alter table sync1_co_alter_part_alter_dist4 set distributed BY (id, gender, year);
+ALTER TABLE
+--
+-- Insert few records into the table
+--
+insert into sync1_co_alter_part_alter_dist4 values (generate_series(1,10),'ann',1,'2001-01-01','F');
+INSERT 0 10
+--
+-- select from the Table
+--
+select count(*) from sync1_co_alter_part_alter_dist4;
+ count 
+-------
+    20
+(1 row)
+
+-- ALTER PARTITION TABLE ALTER SET DISTRIBUTED RANDOMLY
+--
+alter table sync1_co_alter_part_alter_dist4 set distributed randomly;
+ALTER TABLE
+--
+-- Insert few records into the table
+--
+insert into sync1_co_alter_part_alter_dist4 values (generate_series(1,10),'ann',1,'2001-01-01','F');
+INSERT 0 10
+--
+-- select from the Table
+--
+select count(*) from sync1_co_alter_part_alter_dist4;
+ count 
+-------
+    30
+(1 row)
+
+--
+-- ALTER CK_SYNC1 CO TABLE 
+--
+--
+-- ALTER PARTITION TABLE ALTER SET DISTRIBUTED BY
+--
+alter table ck_sync1_co_alter_part_alter_dist3 set distributed BY (id, gender, year);
+ALTER TABLE
+--
+-- Insert few records into the table
+--
+insert into ck_sync1_co_alter_part_alter_dist3 values (generate_series(1,10),'ann',1,'2001-01-01','F');
+INSERT 0 10
+--
+-- select from the Table
+--
+select count(*) from ck_sync1_co_alter_part_alter_dist3;
+ count 
+-------
+    20
+(1 row)
+
+-- ALTER PARTITION TABLE ALTER SET DISTRIBUTED RANDOMLY
+--
+alter table ck_sync1_co_alter_part_alter_dist3 set distributed randomly;
+ALTER TABLE
+--
+-- Insert few records into the table
+--
+insert into ck_sync1_co_alter_part_alter_dist3 values (generate_series(1,10),'ann',1,'2001-01-01','F');
+INSERT 0 10
+--
+-- select from the Table
+--
+select count(*) from ck_sync1_co_alter_part_alter_dist3;
+ count 
+-------
+    30
+(1 row)
+
+--
+-- ALTER CT CO TABLE 
+--
+--
+-- ALTER PARTITION TABLE ALTER SET DISTRIBUTED BY
+--
+alter table ct_co_alter_part_alter_dist1 set distributed BY (id, gender, year);
+ALTER TABLE
+--
+-- Insert few records into the table
+--
+insert into ct_co_alter_part_alter_dist1 values (generate_series(1,10),'ann',1,'2001-01-01','F');
+INSERT 0 10
+--
+-- select from the Table
+--
+select count(*) from ct_co_alter_part_alter_dist1;
+ count 
+-------
+    20
+(1 row)
+
+-- ALTER PARTITION TABLE ALTER SET DISTRIBUTED RANDOMLY
+--
+alter table ct_co_alter_part_alter_dist1 set distributed randomly;
+ALTER TABLE
+--
+-- Insert few records into the table
+--
+insert into ct_co_alter_part_alter_dist1 values (generate_series(1,10),'ann',1,'2001-01-01','F');
+INSERT 0 10
+--
+-- select from the Table
+--
+select count(*) from ct_co_alter_part_alter_dist1;
+ count 
+-------
+    30
+(1 row)
+

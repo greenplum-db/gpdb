@@ -1,0 +1,14 @@
+-- start_ignore
+SET optimizer=off;
+SET
+-- end_ignore
+-- Test: plperl 39
+CREATE OR REPLACE FUNCTION foo_bad() RETURNS footype AS $$
+								return {y => 3, z => 4};
+								$$ LANGUAGE plperl;
+CREATE FUNCTION
+							  
+SELECT * FROM foo_bad();
+psql:/path/sql_file:1: ERROR:  Perl hash contains nonexistent column "z"
+CONTEXT:  PL/Perl function "foo_bad"
+							  

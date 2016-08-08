@@ -1,0 +1,8 @@
+set gp_appendonly_verify_block_checksums = false;
+SET
+select count(*) from appendonly_verify_block_checksums_co;
+ count 
+-------
+   100
+(1 row)
+

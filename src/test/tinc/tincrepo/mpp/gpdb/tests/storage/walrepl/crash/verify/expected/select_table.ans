@@ -1,0 +1,101 @@
+select count(*) from sto_heap2;
+ count 
+-------
+    12
+(1 row)
+
+select count(*) from sto_ao2;
+ count 
+-------
+    12
+(1 row)
+
+select count(*) from sto_co2;
+ count 
+-------
+    12
+(1 row)
+
+select * from sto_heap1 order by col_numeric;
+ col_text | col_numeric | col_unq 
+----------+-------------+---------
+ 0_zero   |           0 |       0
+ 1_one    |           1 |       1
+(2 rows)
+
+select * from sto_ao1 order by col_numeric;
+ col_text | col_numeric | col_unq 
+----------+-------------+---------
+ 0_zero   |           0 |       0
+ 1_one    |           1 |       1
+(2 rows)
+
+select * from sto_co1 order by col_numeric;
+ col_text | col_numeric | col_unq 
+----------+-------------+---------
+ 0_zero   |           0 |       0
+ 1_one    |           1 |       1
+(2 rows)
+
+-- Part tables
+select count(*) from sto_heap_p1 ;
+ count 
+-------
+   105
+(1 row)
+
+select count(*) from sto_ao_p1 ;
+ count 
+-------
+    15
+(1 row)
+
+select count(*) from sto_co_p1;
+ count 
+-------
+    22
+(1 row)
+
+select count(*) from sto_mx_p1;
+ count 
+-------
+    20
+(1 row)
+
+select * from sto_aocomp_p1 order by b;
+ a | b  | c | d 
+---+----+---+---
+ 1 |  1 | 4 | 5
+ 1 |  2 | 4 | 5
+ 1 |  3 | 4 | 5
+ 1 |  4 | 4 | 5
+ 1 |  5 | 4 | 5
+ 1 |  6 | 4 | 5
+ 1 |  7 | 4 | 5
+ 1 |  8 | 4 | 5
+ 1 |  9 | 4 | 5
+ 1 | 10 | 4 | 5
+ 1 | 11 | 4 | 5
+ 1 | 12 | 4 | 5
+ 1 | 13 | 4 | 5
+ 1 | 14 | 4 | 5
+(14 rows)
+
+select count(*) from sto_cocomp_p1;
+ count 
+-------
+    30
+(1 row)
+
+select * from sto_cocomp_p2 order by col_int1;
+ col_int1 | col_int2 |          col_text           
+----------+----------+-----------------------------
+        1 |      100 | value to co comp part table
+        2 |      100 | value to co comp part table
+        3 |      100 | value to co comp part table
+        4 |      100 | value to co comp part table
+        5 |      100 | value to co comp part table
+        6 |      100 | value to co comp part table
+        7 |      100 | value to co comp part table
+(7 rows)
+

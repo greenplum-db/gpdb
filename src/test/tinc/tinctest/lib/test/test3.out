@@ -1,0 +1,22 @@
+-- start_ignore
+
+-- end_ignore
+
+-- test test test
+
+-- test
+SELECT 'foo';
+ ?column? 
+----------
+ foo
+(1 row)
+
+-- another comment
+
+SELECT 'bar';
+ ?column? 
+----------
+ bar
+(1 row)
+
+-- another comment here

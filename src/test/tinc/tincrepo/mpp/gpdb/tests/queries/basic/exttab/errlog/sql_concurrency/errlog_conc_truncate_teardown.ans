@@ -1,0 +1,13 @@
+-- start_ignore
+-- end_ignore
+-- Should not return any rows
+SELECT gp_read_error_log('exttab_conc_truncate_1');
+ gp_read_error_log 
+-------------------
+(0 rows)
+
+SELECT gp_read_error_log('exttab_conc_truncate_2');
+ gp_read_error_log 
+-------------------
+(0 rows)
+

@@ -1,0 +1,5 @@
+SELECT * FROM foo;
+ a | b | c 
+---+---+---
+(0 rows)
+

@@ -1,0 +1,17 @@
+-- start_matchsubs
+-- m/mapreduce_\d+_/
+-- s/mapreduce_\d+/mapreduce_DUMMY/
+-- m/\(\w+.\w+:[0-9]+\)$/
+-- s/\(\w+.\w+:[0-9]+\)$/\(file:line\)/
+-- end_matchsubs
+mapreduce_20967_run_1
+ m|  value
+--+-------
+ 1|   1000
+ 2|  37170
+ 3|  27000
+ 4|  64000
+ 5| 250000
+10|1000000
+(6 rows)
+

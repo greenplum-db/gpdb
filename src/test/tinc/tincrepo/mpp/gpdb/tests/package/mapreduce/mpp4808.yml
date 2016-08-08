@@ -1,0 +1,43 @@
+%YAML 1.1
+---
+VERSION:         1.0.0.1
+USER:            cwelton
+
+DEFINE:
+  - INPUT:
+      NAME:      myInput
+      QUERY:     SELECT 'hello world'::text as value
+      
+  - MAP:
+      NAME:      myMap
+      LANGUAGE:  python
+      FUNCTION:  |
+        """syntax error at compile time""
+      
+EXECUTE:
+  - RUN:
+      SOURCE:    myInput
+      MAP:       myMap
+
+--------
+
+%YAML 1.1
+---
+VERSION:         1.0.0.1
+USER:            cwelton
+
+DEFINE:
+  - INPUT:
+      NAME:      myInput
+      QUERY:     SELECT 'hello world'::text as value
+      
+  - MAP:
+      NAME:      myMap
+      LANGUAGE:  python
+      FUNCTION:  |
+        """syntax error at compile time""
+      
+EXECUTE:
+  - RUN:
+      SOURCE:    myInput
+      MAP:       myMap

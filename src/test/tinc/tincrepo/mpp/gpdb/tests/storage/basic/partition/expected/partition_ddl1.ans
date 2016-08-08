@@ -1,0 +1,1449 @@
+set client_min_messages = WARNING;
+SET
+set gp_enable_hash_partitioned_tables = true;
+SET
+DROP SCHEMA IF EXISTS partition_ddl1 CASCADE;
+DROP SCHEMA
+CREATE SCHEMA partition_ddl1;
+CREATE SCHEMA
+SET search_path TO partition_ddl1;
+SET
+create table ggg (a char(1), b char(2), d char(3))
+distributed by (a)
+partItion by hash(b)
+partitions 3;
+CREATE TABLE
+create table ggg (a char(1), b char(2), d char(3))
+distributed by (a)
+partition by hash (b)
+(
+partition aa (subpartition cc, subpartition dd),
+partition bb (subpartition cc, subpartition dd)
+);
+ERROR:  missing SUBPARTITION BY clause for subpartition specification
+LINE 5: partition aa (subpartition cc, subpartition dd),
+        ^
+create table ggg (a char(1), b char(2), d char(3))
+distributed by (a)
+partition by hash (b)
+subpartition by hash (d) 
+(
+partition aa ,
+partition bb 
+);
+ERROR:  hash partition requires PARTITIONS clause or partition specification
+LINE 4: subpartition by hash (d) 
+                        ^
+create table ggg (a char(1), b char(2), d char(3))
+distributed by (a)
+partition by hash (b) 
+subpartition by hash (d) subpartition template (subpartition jjj)
+(
+partition aa (subpartition cc, subpartition dd),
+partition bb (subpartition cc, subpartition dd)
+);
+ERROR:  subpartition configuration conflicts with subpartition template
+LINE 4: subpartition by hash (d) subpartition template (subpartition...
+                        ^
+create table ggg (a char(1), b char(2), d char(3))
+distributed by (a)
+partition by hash (b)
+subpartition by hash (d)
+(
+partition aa (subpartition cc, subpartition dd (subpartition iii)),
+partition bb (subpartition cc, subpartition dd)
+);
+ERROR:  missing SUBPARTITION BY clause for subpartition specification (at depth 2)
+LINE 6: partition aa (subpartition cc, subpartition dd (subpartition...
+                      ^
+create table ggg (a char(1), b char(2), d char(3))
+distributed by (a)
+partition by hash (b)
+subpartition by hash (d) ,
+subpartition by hash (d) 
+(
+partition aa (subpartition cc, subpartition dd),
+partition bb (subpartition cc, subpartition dd)
+);
+ERROR:  hash partition requires PARTITIONS clause or partition specification
+LINE 5: subpartition by hash (d) 
+                        ^
+-- start_ignore
+-- end_ignore
+drop table if exists ggg cascade;
+DROP TABLE
+-- should work
+create table ggg (a char(1), b char(2), d char(3))
+distributed by (a)
+partition by hash (b)
+subpartition by hash (d) 
+(
+partition aa (subpartition cc, subpartition dd),
+partition bb (subpartition cc, subpartition dd)
+);
+CREATE TABLE
+drop table ggg cascade;
+DROP TABLE
+create table ggg (a char(1), b char(2), d char(3))
+distributed by (a)
+partition by hash (b)
+subpartition by hash (d) 
+subpartition template ( 
+subpartition cc,
+subpartition dd
+), 
+subpartition by hash (d) 
+subpartition template ( 
+subpartition ee,
+subpartition ff
+) 
+(
+partition aa,
+partition bb
+);
+CREATE TABLE
+drop table ggg cascade;
+DROP TABLE
+-- start_ignore
+-- end_ignore
+-- should work
+drop table if exists ggg cascade;
+DROP TABLE
+create table ggg (a char(1), b char(2), d char(3))
+distributed by (a)
+partition by hash (b)
+subpartition by hash (d) , 
+subpartition by hash (d) 
+subpartition template ( 
+subpartition ee,
+subpartition ff
+) 
+(
+partition aa (subpartition cc, subpartition dd),
+partition bb (subpartition cc, subpartition dd)
+);
+CREATE TABLE
+drop table ggg cascade;
+DROP TABLE
+drop table if exists ggg;
+DROP TABLE
+create table ggg (a char(1), b char(2), d char(3))
+distributed by (a)
+partition by hash (b)
+subpartition by hash (d) 
+subpartition template ( 
+subpartition cc (subpartition ee, subpartition ff),
+subpartition dd (subpartition ee, subpartition ff)
+), 
+subpartition by hash (d) 
+(
+partition aa,
+partition bb
+);
+ERROR:  template cannot contain specification for child partition
+drop table ggg cascade;
+ERROR:  table "ggg" does not exist
+create table fff (a char(1), b char(2), d char(3)) distributed by
+(a) partition by list (b) (partition aa );
+ERROR:  missing boundary specification in partition "aa" of type LIST
+LINE 2: (a) partition by list (b) (partition aa );
+                                   ^
+create table fff (a char(1), b char(2), d char(3)) distributed by (a)
+partition by list (b) (start with ('a') );
+ERROR:  syntax error at or near "with ("
+LINE 2: partition by list (b) (start with ('a') );
+                               ^
+create table fff (a char(1), b char(2), d char(3)) distributed by (a)
+partition by list (b) (partition aa values ('2'));
+CREATE TABLE
+drop table fff cascade;
+DROP TABLE
+create table ggg (a char(1), b char(2), d char(3)) distributed by (a)
+partition by hash (b) subpartition by hash (d) , subpartition by hash
+(d) subpartition template ( subpartition ee, subpartition ff ) (
+partition aa (subpartition cc, subpartition dd), partition bb
+(subpartition cc start with ('a') , subpartition dd) );
+ERROR:  syntax error at or near "with ("
+LINE 5: (subpartition cc start with ('a') , subpartition dd) );
+                               ^
+-- start_ignore
+-- end_ignore
+-- generate 2 anonymous partitions
+drop table if exists ggg;
+DROP TABLE
+create table ggg (a char(1), b date, d char(3))
+distributed by (a)
+partition by range (b)
+(
+partition aa start ('2007'), end ('2008'),
+partition bb start ('2008'), end ('2009')
+);
+psql:/path/sql_file:1: ERROR:  invalid input syntax for type date: "2007"
+create table ggg (a char(1), b date, d char(3))
+distributed by (a)
+partition by range (b)
+(
+partition aa start (date '2007-01-01') end (date '2008-01-01'),
+partition bb start (date '2008-01-01') end (date '2009-01-01')
+);
+CREATE TABLE
+drop table ggg cascade;
+DROP TABLE
+create table ggg (a char(1), b numeric, d numeric)
+distributed by (a)
+partition by range (b,d)
+(
+partition aa start (2007,1) end (2008,2+2),
+partition bb start (2008,2) end (2009,3)
+);
+ERROR:  syntax error at or near "+"
+LINE 5: partition aa start (2007,1) end (2008,2+2),
+                                               ^
+create table ggg (a char(1), b numeric, d numeric)
+distributed by (a)
+partition by range (b,d)
+(
+partition aa start (2007,1) end (2008,2),
+partition bb start (2008,2) end (2009,3)
+);
+ERROR:  too many columns for RANGE partition -- only one column is allowed.
+LINE 3: partition by range (b,d)
+                     ^
+drop table ggg cascade;
+ERROR:  table "ggg" does not exist
+create table ggg
+ (a char(1),   b date,
+  d char(3),  e numeric,
+  f numeric,  g numeric,
+  h numeric)
+distributed by (a)
+partition by hash(b)
+partitions 2
+subpartition by hash(d)
+subpartitions 2,
+subpartition by hash(e) subpartitions 2,
+subpartition by hash(f) subpartitions 2,
+subpartition by hash(g) subpartitions 2,
+subpartition by hash(h) subpartitions 2;
+CREATE TABLE
+drop table ggg cascade;
+DROP TABLE
+create table ggg (a char(1), b char(2), d char(3))
+distributed by (a)
+partition by hash (b)
+subpartition by hash (d) 
+(
+partition aa (subpartition cc, subpartition dd),
+partition bb (subpartition cc, subpartition dd)
+);
+CREATE TABLE
+drop table ggg cascade;
+DROP TABLE
+create table ggg (a char(1), b char(2), d char(3), e numeric)
+distributed by (a)
+partition by hash (b)
+subpartition by hash (d) 
+subpartition template ( 
+subpartition cc,
+subpartition dd
+), 
+subpartition by hash (e) 
+subpartition template ( 
+subpartition ee,
+subpartition ff
+) 
+(
+partition aa,
+partition bb
+);
+CREATE TABLE
+drop table ggg cascade;
+DROP TABLE
+create table ggg (a char(1), b char(2), d char(3), e numeric)
+distributed by (a)
+partition by hash (b)
+subpartition by hash (d) , 
+subpartition by hash (e) 
+subpartition template ( 
+subpartition ee,
+subpartition ff
+) 
+(
+partition aa (subpartition cc, subpartition dd),
+partition bb (subpartition cc, subpartition dd)
+);
+CREATE TABLE
+drop table ggg cascade;
+DROP TABLE
+create table ggg (a char(1), b char(2), d char(3))
+distributed by (a)
+partition by LIST (b)
+(
+partition aa values ('a', 'b', 'c', 'd'),
+partition bb values ('e', 'f', 'g')
+);
+CREATE TABLE
+insert into ggg values ('x', 'a');
+INSERT 0 1
+insert into ggg values ('x', 'b');
+INSERT 0 1
+insert into ggg values ('x', 'c');
+INSERT 0 1
+insert into ggg values ('x', 'd');
+INSERT 0 1
+insert into ggg values ('x', 'e');
+INSERT 0 1
+insert into ggg values ('x', 'f');
+INSERT 0 1
+insert into ggg values ('x', 'g');
+INSERT 0 1
+insert into ggg values ('x', 'a');
+INSERT 0 1
+insert into ggg values ('x', 'b');
+INSERT 0 1
+insert into ggg values ('x', 'c');
+INSERT 0 1
+insert into ggg values ('x', 'd');
+INSERT 0 1
+insert into ggg values ('x', 'e');
+INSERT 0 1
+insert into ggg values ('x', 'f');
+INSERT 0 1
+insert into ggg values ('x', 'g');
+INSERT 0 1
+select * from ggg;
+ a | b  | d 
+---+----+---
+ x | a  | 
+ x | b  | 
+ x | c  | 
+ x | d  | 
+ x | a  | 
+ x | b  | 
+ x | c  | 
+ x | d  | 
+ x | e  | 
+ x | f  | 
+ x | g  | 
+ x | e  | 
+ x | f  | 
+ x | g  | 
+(14 rows)
+
+select * from ggg_1_prt_aa ;
+ a | b  | d 
+---+----+---
+ x | a  | 
+ x | b  | 
+ x | c  | 
+ x | d  | 
+ x | a  | 
+ x | b  | 
+ x | c  | 
+ x | d  | 
+(8 rows)
+
+select * from ggg_1_prt_bb ;
+ a | b  | d 
+---+----+---
+ x | e  | 
+ x | f  | 
+ x | g  | 
+ x | e  | 
+ x | f  | 
+ x | g  | 
+(6 rows)
+
+drop table ggg cascade;
+DROP TABLE
+CREATE TABLE rank (id int, rank int, year date, gender 
+char(1)) DISTRIBUTED BY (id, gender, year)
+partition by list (gender)
+subpartition by range (year)
+subpartition template (
+start (date '2001-01-01'),
+start (date '2002-01-01'),
+start (date '2003-01-01'),
+start (date '2004-01-01'),
+start (date '2005-01-01')
+)
+(
+  partition boys values ('M'),
+  partition girls values ('F')
+);
+CREATE TABLE
+insert into rank values (1, 1, date '2001-01-15', 'M');
+INSERT 0 1
+insert into rank values (2, 1, date '2002-02-15', 'M');
+INSERT 0 1
+insert into rank values (3, 1, date '2003-03-15', 'M');
+INSERT 0 1
+insert into rank values (4, 1, date '2004-04-15', 'M');
+INSERT 0 1
+insert into rank values (5, 1, date '2005-05-15', 'M');
+INSERT 0 1
+insert into rank values (6, 1, date '2001-01-15', 'F');
+INSERT 0 1
+insert into rank values (7, 1, date '2002-02-15', 'F');
+INSERT 0 1
+insert into rank values (8, 1, date '2003-03-15', 'F');
+INSERT 0 1
+insert into rank values (9, 1, date '2004-04-15', 'F');
+INSERT 0 1
+insert into rank values (10, 1, date '2005-05-15', 'F');
+INSERT 0 1
+select * from rank;
+ id | rank |    year    | gender 
+----+------+------------+--------
+  2 |    1 | 2002-02-15 | M
+  1 |    1 | 2001-01-15 | M
+  4 |    1 | 2004-04-15 | M
+  3 |    1 | 2003-03-15 | M
+  5 |    1 | 2005-05-15 | M
+  6 |    1 | 2001-01-15 | F
+  7 |    1 | 2002-02-15 | F
+  8 |    1 | 2003-03-15 | F
+  9 |    1 | 2004-04-15 | F
+ 10 |    1 | 2005-05-15 | F
+(10 rows)
+
+select * from rank_1_prt_boys;
+ id | rank |    year    | gender 
+----+------+------------+--------
+  2 |    1 | 2002-02-15 | M
+  1 |    1 | 2001-01-15 | M
+  4 |    1 | 2004-04-15 | M
+  3 |    1 | 2003-03-15 | M
+  5 |    1 | 2005-05-15 | M
+(5 rows)
+
+select * from rank_1_prt_girls;
+ id | rank |    year    | gender 
+----+------+------------+--------
+  6 |    1 | 2001-01-15 | F
+  7 |    1 | 2002-02-15 | F
+  8 |    1 | 2003-03-15 | F
+  9 |    1 | 2004-04-15 | F
+ 10 |    1 | 2005-05-15 | F
+(5 rows)
+
+select * from rank_1_prt_girls_2_prt_1 ;
+ id | rank |    year    | gender 
+----+------+------------+--------
+  6 |    1 | 2001-01-15 | F
+(1 row)
+
+select * from rank_1_prt_girls_2_prt_2 ;
+ id | rank |    year    | gender 
+----+------+------------+--------
+  7 |    1 | 2002-02-15 | F
+(1 row)
+
+drop table rank cascade;
+DROP TABLE
+create table ggg (a char(1), b date, d char(3), e numeric)
+distributed by (a)
+partition by range (b)
+subpartition by list(d),
+subpartition by hash(e) subpartitions 3
+(
+partition aa 
+start  (date '2007-01-01') 
+end (date '2008-01-01') 
+       (subpartition dd values (1,2,3), subpartition ee values (4,5,6)),
+partition bb
+start  (date '2008-01-01') 
+end (date '2009-01-01') 
+       (subpartition dd values (1,2,3), subpartition ee values (4,5,6))
+);
+CREATE TABLE
+drop table ggg cascade;
+DROP TABLE
+CREATE TABLE rank (id int, rank int, year date, gender
+char(1)) DISTRIBUTED BY (id, gender, year)
+partition by list (gender)
+(
+  partition boys values ('M'),
+  partition girls values ('a'),
+  partition girls values ('b'),
+  partition girls values ('c'),
+  partition girls values ('d'),
+  partition girls values ('e'),
+  partition bob values ('M')
+);
+ERROR:  duplicate partition name for partition "girls"
+LINE 7:   partition girls values ('b'),
+          ^
+CREATE TABLE rank (id int, rank int, year date, gender
+char(1)) DISTRIBUTED BY (id, gender, year)
+partition by list (rank,gender)
+(
+ values (1, 'M'),
+ values (2, 'M'),
+ values (3, 'M'),
+ values (1, 'F'),
+ partition ff values (4, 'M'),
+ partition bb values (1, 'M')
+);
+ERROR:  partition key has 2 columns but 1 columns specified in VALUES clause
+LINE 5:  values (1, 'M'),
+         ^
+create table ggg (a char(1), b date, d char(3)) 
+distributed by (a)
+partition by range (b)
+(
+partition aa start (date '2007-01-01') end (date '2008-01-01'),
+partition bb start (date '2008-01-01') end (date '2009-01-01') 
+every (interval '10 days'));
+CREATE TABLE
+drop table ggg cascade;
+DROP TABLE
+create table ggg (a char(1), b date, d char(3)) 
+distributed by (a)
+partition by range (b)
+(
+partition aa start (date '2007-01-01') end (date '2008-01-01') inclusive,
+partition bb start (date '2008-01-01') end (date '2009-01-01') 
+every (interval '10 days'));
+ERROR:  starting value of partition "bb_1" overlaps previous range
+LINE 6: partition bb start (date '2008-01-01') end (date '2009-01-01...
+                     ^
+drop table ggg cascade;
+ERROR:  table "ggg" does not exist
+create table ggg (a char(1), b date, d char(3)) 
+distributed by (a)
+partition by range (b)
+(
+partition aa start (date '2007-01-01') end (date '2008-01-01') inclusive,
+partition bb start (date '2008-01-01') exclusive end (date '2009-01-01') 
+every (interval '10 days'));
+CREATE TABLE
+drop table ggg cascade;
+DROP TABLE
+create table ggg (a char(1), b date, d char(3)) 
+distributed by (a)
+partition by range (b)
+(
+partition bb start (date '2008-01-01') end (date '2009-01-01'),
+partition aa start (date '2007-01-01') end (date '2008-01-01')
+);
+CREATE TABLE
+drop table ggg cascade;
+DROP TABLE
+create table ggg (a char(1), b date, d char(3)) 
+distributed by (a)
+partition by range (b)
+(
+partition bb start (date '2008-01-01') end (date '2009-01-01'),
+partition aa start (date '2007-01-01') end (date '2008-01-01') inclusive
+);
+ERROR:  starting value of partition "bb" overlaps previous range
+LINE 5: partition bb start (date '2008-01-01') end (date '2009-01-01...
+                     ^
+drop table ggg cascade;
+ERROR:  table "ggg" does not exist
+create table ggg (a char(1), b date, d char(3)) 
+distributed by (a)
+partition by range (b)
+(
+partition bb start (date '2008-01-01') exclusive end (date '2009-01-01'),
+partition aa start (date '2007-01-01') end (date '2008-01-01') inclusive
+);
+CREATE TABLE
+drop table ggg cascade;
+DROP TABLE
+create table ggg (a char(1), b date, d char(3)) 
+distributed by (a)
+partition by range (b)
+(
+partition bb start (date '2008-01-01') end (date '2009-01-01'),
+partition aa start (date '2007-01-01') end (date '2006-01-01')
+);
+ERROR:  START greater than END for partition "aa"
+LINE 6: partition aa start (date '2007-01-01') end (date '2006-01-01...
+                     ^
+drop table ggg cascade;
+ERROR:  table "ggg" does not exist
+create table ggg (a char(1), b date, d char(3)) 
+distributed by (a)
+partition by range (b)
+(
+partition bb start (date '2008-01-01') ,
+partition aa start (date '2007-01-01') 
+);
+CREATE TABLE
+drop table ggg cascade;
+DROP TABLE
+CREATE TABLE rank (id int,
+rank int, year date, gender char(1))
+DISTRIBUTED BY (id, gender, year)
+partition by list (gender)
+subpartition by range (year)
+subpartition template (
+start (date '2001-01-01')
+end (date '2006-01-01') every (interval '1 year')) (
+partition boys values ('M'),
+partition girls values ('F')
+);
+CREATE TABLE
+insert into rank values (1, 1, date '2001-01-15', 'M');
+INSERT 0 1
+insert into rank values (2, 1, date '2002-02-15', 'M');
+INSERT 0 1
+insert into rank values (3, 1, date '2003-03-15', 'M');
+INSERT 0 1
+insert into rank values (4, 1, date '2004-04-15', 'M');
+INSERT 0 1
+insert into rank values (5, 1, date '2005-05-15', 'M');
+INSERT 0 1
+insert into rank values (6, 1, date '2001-01-15', 'F');
+INSERT 0 1
+insert into rank values (7, 1, date '2002-02-15', 'F');
+INSERT 0 1
+insert into rank values (8, 1, date '2003-03-15', 'F');
+INSERT 0 1
+insert into rank values (9, 1, date '2004-04-15', 'F');
+INSERT 0 1
+insert into rank values (10, 1, date '2005-05-15', 'F');
+INSERT 0 1
+select * from rank;
+ id | rank |    year    | gender 
+----+------+------------+--------
+  2 |    1 | 2002-02-15 | M
+  1 |    1 | 2001-01-15 | M
+  4 |    1 | 2004-04-15 | M
+  3 |    1 | 2003-03-15 | M
+  5 |    1 | 2005-05-15 | M
+  6 |    1 | 2001-01-15 | F
+  7 |    1 | 2002-02-15 | F
+  8 |    1 | 2003-03-15 | F
+  9 |    1 | 2004-04-15 | F
+ 10 |    1 | 2005-05-15 | F
+(10 rows)
+
+select * from rank_1_prt_boys;
+ id | rank |    year    | gender 
+----+------+------------+--------
+  2 |    1 | 2002-02-15 | M
+  1 |    1 | 2001-01-15 | M
+  4 |    1 | 2004-04-15 | M
+  3 |    1 | 2003-03-15 | M
+  5 |    1 | 2005-05-15 | M
+(5 rows)
+
+select * from rank_1_prt_girls;
+ id | rank |    year    | gender 
+----+------+------------+--------
+  6 |    1 | 2001-01-15 | F
+  7 |    1 | 2002-02-15 | F
+  8 |    1 | 2003-03-15 | F
+  9 |    1 | 2004-04-15 | F
+ 10 |    1 | 2005-05-15 | F
+(5 rows)
+
+select * from rank_1_prt_boys_2_prt_1 ;
+ id | rank |    year    | gender 
+----+------+------------+--------
+  1 |    1 | 2001-01-15 | M
+(1 row)
+
+select * from rank_1_prt_boys_2_prt_2 ;
+ id | rank |    year    | gender 
+----+------+------------+--------
+  2 |    1 | 2002-02-15 | M
+(1 row)
+
+select * from rank_1_prt_girls_2_prt_1 ;
+ id | rank |    year    | gender 
+----+------+------------+--------
+  6 |    1 | 2001-01-15 | F
+(1 row)
+
+select * from rank_1_prt_girls_2_prt_2 ;
+ id | rank |    year    | gender 
+----+------+------------+--------
+  7 |    1 | 2002-02-15 | F
+(1 row)
+
+drop table rank cascade;
+DROP TABLE
+create table ggg (id integer, a integer)
+distributed by (id)
+partition by range (a)
+(start (1) end (10) every (1));
+CREATE TABLE
+insert into ggg values (1, 1);
+INSERT 0 1
+insert into ggg values (2, 2);
+INSERT 0 1
+insert into ggg values (3, 3);
+INSERT 0 1
+insert into ggg values (4, 4);
+INSERT 0 1
+insert into ggg values (5, 5);
+INSERT 0 1
+insert into ggg values (6, 6);
+INSERT 0 1
+insert into ggg values (7, 7);
+INSERT 0 1
+insert into ggg values (8, 8);
+INSERT 0 1
+insert into ggg values (9, 9);
+INSERT 0 1
+insert into ggg values (10, 10);
+ERROR:  no partition for partitioning key  (seg2 localhost:18509 pid=13308)
+select * from ggg;
+ id | a 
+----+---
+  3 | 3
+  4 | 4
+  5 | 5
+  6 | 6
+  7 | 7
+  8 | 8
+  9 | 9
+  1 | 1
+  2 | 2
+(9 rows)
+
+select * from ggg_1_prt_1;
+ id | a 
+----+---
+  1 | 1
+(1 row)
+
+select * from ggg_1_prt_2;
+ id | a 
+----+---
+  2 | 2
+(1 row)
+
+select * from ggg_1_prt_3;
+ id | a 
+----+---
+  3 | 3
+(1 row)
+
+select * from ggg_1_prt_4;
+ id | a 
+----+---
+  4 | 4
+(1 row)
+
+drop table ggg cascade;
+DROP TABLE
+create table ggg (a char(1), b varchar(2), d varchar(2))
+distributed by (a)
+partition by hash(b)
+partitions 3;
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1" for table "ggg"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2" for table "ggg"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_3" for table "ggg"
+CREATE TABLE
+insert into ggg values (1,1,1);
+INSERT 0 1
+insert into ggg values (2,2,1);
+INSERT 0 1
+insert into ggg values (1,3,1);
+INSERT 0 1
+insert into ggg values (2,2,3);
+INSERT 0 1
+insert into ggg values (1,4,5);
+INSERT 0 1
+insert into ggg values (2,2,4);
+INSERT 0 1
+insert into ggg values (1,5,6);
+INSERT 0 1
+insert into ggg values (2,7,3);
+INSERT 0 1
+insert into ggg values (1,'a','b');
+INSERT 0 1
+insert into ggg values (2,'c','c');
+INSERT 0 1
+select * from ggg;
+ a | b | d 
+---+---+---
+ 1 | 1 | 1
+ 1 | 3 | 1
+ 1 | 4 | 5
+ 1 | 5 | 6
+ 1 | a | b
+ 2 | 7 | 3
+ 2 | 2 | 1
+ 2 | 2 | 3
+ 2 | 2 | 4
+ 2 | c | c
+(10 rows)
+
+select * from ggg_1_prt_1;
+ a | b | d 
+---+---+---
+ 1 | 1 | 1
+ 1 | 3 | 1
+ 2 | 7 | 3
+(3 rows)
+
+select * from ggg_1_prt_2;
+ a | b | d 
+---+---+---
+ 1 | 4 | 5
+(1 row)
+
+select * from ggg_1_prt_3;
+ a | b | d 
+---+---+---
+ 1 | 5 | 6
+ 1 | a | b
+ 2 | 2 | 1
+ 2 | 2 | 3
+ 2 | 2 | 4
+ 2 | c | c
+(6 rows)
+
+drop table ggg cascade;
+DROP TABLE
+create table ggg (a char(1), b varchar(2), d varchar(2))
+distributed by (a)
+partition by hash(b,d)
+partitions 3;
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1" for table "ggg"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2" for table "ggg"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_3" for table "ggg"
+CREATE TABLE
+insert into ggg values (1,1,1);
+INSERT 0 1
+insert into ggg values (2,2,1);
+INSERT 0 1
+insert into ggg values (1,3,1);
+INSERT 0 1
+insert into ggg values (2,2,3);
+INSERT 0 1
+insert into ggg values (1,4,5);
+INSERT 0 1
+insert into ggg values (2,2,4);
+INSERT 0 1
+insert into ggg values (1,5,6);
+INSERT 0 1
+insert into ggg values (2,7,3);
+INSERT 0 1
+insert into ggg values (1,'a','b');
+INSERT 0 1
+insert into ggg values (2,'c','c');
+INSERT 0 1
+select * from ggg;
+ a | b | d 
+---+---+---
+ 1 | 1 | 1
+ 1 | a | b
+ 1 | 5 | 6
+ 1 | 3 | 1
+ 1 | 4 | 5
+ 2 | 2 | 4
+ 2 | 2 | 1
+ 2 | 2 | 3
+ 2 | 7 | 3
+ 2 | c | c
+(10 rows)
+
+select * from ggg_1_prt_1;
+ a | b | d 
+---+---+---
+ 1 | 1 | 1
+ 1 | a | b
+ 2 | 2 | 4
+(3 rows)
+
+select * from ggg_1_prt_2;
+ a | b | d 
+---+---+---
+ 1 | 5 | 6
+ 2 | 2 | 1
+ 2 | 2 | 3
+ 2 | 7 | 3
+ 2 | c | c
+(5 rows)
+
+select * from ggg_1_prt_3;
+ a | b | d 
+---+---+---
+ 1 | 3 | 1
+ 1 | 4 | 5
+(2 rows)
+
+drop table ggg cascade;
+DROP TABLE
+create table ggg (a char(1), b varchar(2), d integer, e date)
+distributed by (a)
+partition by hash(b,d,e)
+partitions 3;
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_1" for table "ggg"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_2" for table "ggg"
+NOTICE:  CREATE TABLE will create partition "ggg_1_prt_3" for table "ggg"
+CREATE TABLE
+insert into ggg values (1,1,1,date '2001-01-15');
+INSERT 0 1
+insert into ggg values (2,2,1,date '2001-01-15');
+INSERT 0 1
+insert into ggg values (1,3,1,date '2001-01-15');
+INSERT 0 1
+insert into ggg values (2,2,3,date '2001-01-15');
+INSERT 0 1
+insert into ggg values (1,4,5,date '2001-01-15');
+INSERT 0 1
+insert into ggg values (2,2,4,date '2001-01-15');
+INSERT 0 1
+insert into ggg values (1,5,6,date '2001-01-15');
+INSERT 0 1
+insert into ggg values (2,7,3,date '2001-01-15');
+INSERT 0 1
+insert into ggg values (1,'a',33,date '2001-01-15');
+INSERT 0 1
+insert into ggg values (2,'c',44,date '2001-01-15');
+INSERT 0 1
+select * from ggg;
+ a | b | d  |     e      
+---+---+----+------------
+ 1 | 1 |  1 | 2001-01-15
+ 1 | 3 |  1 | 2001-01-15
+ 1 | 4 |  5 | 2001-01-15
+ 1 | 5 |  6 | 2001-01-15
+ 1 | a | 33 | 2001-01-15
+ 2 | 2 |  4 | 2001-01-15
+ 2 | 7 |  3 | 2001-01-15
+ 2 | 2 |  3 | 2001-01-15
+ 2 | 2 |  1 | 2001-01-15
+ 2 | c | 44 | 2001-01-15
+(10 rows)
+
+select * from ggg_1_prt_1;
+ a | b | d |     e      
+---+---+---+------------
+ 1 | 1 | 1 | 2001-01-15
+ 1 | 3 | 1 | 2001-01-15
+ 2 | 2 | 4 | 2001-01-15
+ 2 | 7 | 3 | 2001-01-15
+(4 rows)
+
+select * from ggg_1_prt_2;
+ a | b | d  |     e      
+---+---+----+------------
+ 1 | 4 |  5 | 2001-01-15
+ 1 | 5 |  6 | 2001-01-15
+ 1 | a | 33 | 2001-01-15
+ 2 | 2 |  3 | 2001-01-15
+(4 rows)
+
+select * from ggg_1_prt_3;
+ a | b | d  |     e      
+---+---+----+------------
+ 2 | 2 |  1 | 2001-01-15
+ 2 | c | 44 | 2001-01-15
+(2 rows)
+
+drop table ggg cascade;
+DROP TABLE
+-- start_ignore
+-- end_ignore
+create table mpp_2914A(id int,  buyDate date, kind char(1))
+DISTRIBUTED BY (id)
+partition by list (kind) 
+subpartition by range(buyDate) 
+subpartition template 
+(
+        start (date '2001-01-01'),
+        start (date '2002-01-01'),
+        start (date '2003-01-01'),
+        start (date '2004-01-01'),
+        start (date '2005-01-01')
+)
+(
+        partition auction  values('a','A'),
+        partition buyItNow values('b', 'B'),
+        default partition catchall
+);
+CREATE TABLE
+\d mpp_2914a*
+      Table "partition_ddl1.mpp_2914a"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Number of child tables: 3 (Use \d+ to list them.)
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914a_1_prt_auction"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
+Inherits: mpp_2914a
+Number of child tables: 5 (Use \d+ to list them.)
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914a_1_prt_auction_2_prt_1"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_auction_2_prt_1_check" CHECK (buydate >= '2001-01-01'::date AND buydate < '2002-01-01'::date)
+    "mpp_2914a_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
+Inherits: mpp_2914a_1_prt_auction
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914a_1_prt_auction_2_prt_2"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_auction_2_prt_2_check" CHECK (buydate >= '2002-01-01'::date AND buydate < '2003-01-01'::date)
+    "mpp_2914a_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
+Inherits: mpp_2914a_1_prt_auction
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914a_1_prt_auction_2_prt_3"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_auction_2_prt_3_check" CHECK (buydate >= '2003-01-01'::date AND buydate < '2004-01-01'::date)
+    "mpp_2914a_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
+Inherits: mpp_2914a_1_prt_auction
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914a_1_prt_auction_2_prt_4"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_auction_2_prt_4_check" CHECK (buydate >= '2004-01-01'::date AND buydate < '2005-01-01'::date)
+    "mpp_2914a_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
+Inherits: mpp_2914a_1_prt_auction
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914a_1_prt_auction_2_prt_5"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_auction_2_prt_5_check" CHECK (buydate >= '2005-01-01'::date)
+    "mpp_2914a_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
+Inherits: mpp_2914a_1_prt_auction
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914a_1_prt_buyitnow"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
+Inherits: mpp_2914a
+Number of child tables: 5 (Use \d+ to list them.)
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914a_1_prt_buyitnow_2_prt_1"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_buyitnow_2_prt_1_check" CHECK (buydate >= '2001-01-01'::date AND buydate < '2002-01-01'::date)
+    "mpp_2914a_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
+Inherits: mpp_2914a_1_prt_buyitnow
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914a_1_prt_buyitnow_2_prt_2"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_buyitnow_2_prt_2_check" CHECK (buydate >= '2002-01-01'::date AND buydate < '2003-01-01'::date)
+    "mpp_2914a_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
+Inherits: mpp_2914a_1_prt_buyitnow
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914a_1_prt_buyitnow_2_prt_3"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_buyitnow_2_prt_3_check" CHECK (buydate >= '2003-01-01'::date AND buydate < '2004-01-01'::date)
+    "mpp_2914a_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
+Inherits: mpp_2914a_1_prt_buyitnow
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914a_1_prt_buyitnow_2_prt_4"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_buyitnow_2_prt_4_check" CHECK (buydate >= '2004-01-01'::date AND buydate < '2005-01-01'::date)
+    "mpp_2914a_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
+Inherits: mpp_2914a_1_prt_buyitnow
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914a_1_prt_buyitnow_2_prt_5"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_buyitnow_2_prt_5_check" CHECK (buydate >= '2005-01-01'::date)
+    "mpp_2914a_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
+Inherits: mpp_2914a_1_prt_buyitnow
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914a_1_prt_catchall"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Inherits: mpp_2914a
+Number of child tables: 5 (Use \d+ to list them.)
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914a_1_prt_catchall_2_prt_1"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_catchall_2_prt_1_check" CHECK (buydate >= '2001-01-01'::date AND buydate < '2002-01-01'::date)
+Inherits: mpp_2914a_1_prt_catchall
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914a_1_prt_catchall_2_prt_2"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_catchall_2_prt_2_check" CHECK (buydate >= '2002-01-01'::date AND buydate < '2003-01-01'::date)
+Inherits: mpp_2914a_1_prt_catchall
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914a_1_prt_catchall_2_prt_3"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_catchall_2_prt_3_check" CHECK (buydate >= '2003-01-01'::date AND buydate < '2004-01-01'::date)
+Inherits: mpp_2914a_1_prt_catchall
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914a_1_prt_catchall_2_prt_4"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_catchall_2_prt_4_check" CHECK (buydate >= '2004-01-01'::date AND buydate < '2005-01-01'::date)
+Inherits: mpp_2914a_1_prt_catchall
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914a_1_prt_catchall_2_prt_5"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914a_1_prt_catchall_2_prt_5_check" CHECK (buydate >= '2005-01-01'::date)
+Inherits: mpp_2914a_1_prt_catchall
+Distributed by: (id)
+
+select count(*) from mpp_2914A;
+ count 
+-------
+     0
+(1 row)
+
+create table mpp_2914B(id int,  buyDate date, kind char(1))
+DISTRIBUTED BY (id)
+partition by list (kind)
+subpartition by range(buyDate)
+(
+        partition auction  values('a','A')
+        (
+                subpartition  y2001 start (date '2001-01-01'),
+                subpartition  y2002 start (date '2002-01-01'),
+                subpartition  y2003 start (date '2003-01-01'),
+                subpartition y2004 start (date '2004-01-01'),
+                subpartition y2005 start (date '2005-01-01')
+        ),
+        partition buyitnow  values('b','B')
+        (
+                subpartition  y2001 start (date '2001-01-01'),
+                subpartition  y2002 start (date '2002-01-01'),
+                subpartition  y2003 start (date '2003-01-01'),
+                subpartition y2004 start (date '2004-01-01'),
+                subpartition y2005 start (date '2005-01-01')
+        ),
+        default partition catchAll  
+        (
+                subpartition  y2001 start (date '2001-01-01'),
+                subpartition  y2002 start (date '2002-01-01'),
+                subpartition  y2003 start (date '2003-01-01'),
+                subpartition y2004 start (date '2004-01-01'),
+                subpartition y2005 start (date '2005-01-01')
+        )
+);
+CREATE TABLE
+\d mpp_2914b*
+      Table "partition_ddl1.mpp_2914b"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Number of child tables: 3 (Use \d+ to list them.)
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914b_1_prt_auction"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
+Inherits: mpp_2914b
+Number of child tables: 5 (Use \d+ to list them.)
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914b_1_prt_auction_2_prt_y2001"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_auction_2_prt_y2001_check" CHECK (buydate >= '2001-01-01'::date AND buydate < '2002-01-01'::date)
+    "mpp_2914b_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
+Inherits: mpp_2914b_1_prt_auction
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914b_1_prt_auction_2_prt_y2002"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_auction_2_prt_y2002_check" CHECK (buydate >= '2002-01-01'::date AND buydate < '2003-01-01'::date)
+    "mpp_2914b_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
+Inherits: mpp_2914b_1_prt_auction
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914b_1_prt_auction_2_prt_y2003"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_auction_2_prt_y2003_check" CHECK (buydate >= '2003-01-01'::date AND buydate < '2004-01-01'::date)
+    "mpp_2914b_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
+Inherits: mpp_2914b_1_prt_auction
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914b_1_prt_auction_2_prt_y2004"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_auction_2_prt_y2004_check" CHECK (buydate >= '2004-01-01'::date AND buydate < '2005-01-01'::date)
+    "mpp_2914b_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
+Inherits: mpp_2914b_1_prt_auction
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914b_1_prt_auction_2_prt_y2005"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_auction_2_prt_y2005_check" CHECK (buydate >= '2005-01-01'::date)
+    "mpp_2914b_1_prt_auction_check" CHECK (kind = 'a'::bpchar OR kind = 'A'::bpchar)
+Inherits: mpp_2914b_1_prt_auction
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914b_1_prt_buyitnow"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
+Inherits: mpp_2914b
+Number of child tables: 5 (Use \d+ to list them.)
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914b_1_prt_buyitnow_2_prt_y2001"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_buyitnow_2_prt_y2001_check" CHECK (buydate >= '2001-01-01'::date AND buydate < '2002-01-01'::date)
+    "mpp_2914b_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
+Inherits: mpp_2914b_1_prt_buyitnow
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914b_1_prt_buyitnow_2_prt_y2002"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_buyitnow_2_prt_y2002_check" CHECK (buydate >= '2002-01-01'::date AND buydate < '2003-01-01'::date)
+    "mpp_2914b_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
+Inherits: mpp_2914b_1_prt_buyitnow
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914b_1_prt_buyitnow_2_prt_y2003"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_buyitnow_2_prt_y2003_check" CHECK (buydate >= '2003-01-01'::date AND buydate < '2004-01-01'::date)
+    "mpp_2914b_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
+Inherits: mpp_2914b_1_prt_buyitnow
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914b_1_prt_buyitnow_2_prt_y2004"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_buyitnow_2_prt_y2004_check" CHECK (buydate >= '2004-01-01'::date AND buydate < '2005-01-01'::date)
+    "mpp_2914b_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
+Inherits: mpp_2914b_1_prt_buyitnow
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914b_1_prt_buyitnow_2_prt_y2005"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_buyitnow_2_prt_y2005_check" CHECK (buydate >= '2005-01-01'::date)
+    "mpp_2914b_1_prt_buyitnow_check" CHECK (kind = 'b'::bpchar OR kind = 'B'::bpchar)
+Inherits: mpp_2914b_1_prt_buyitnow
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914b_1_prt_catchall"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Inherits: mpp_2914b
+Number of child tables: 5 (Use \d+ to list them.)
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914b_1_prt_catchall_2_prt_y2001"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_catchall_2_prt_y2001_check" CHECK (buydate >= '2001-01-01'::date AND buydate < '2002-01-01'::date)
+Inherits: mpp_2914b_1_prt_catchall
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914b_1_prt_catchall_2_prt_y2002"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_catchall_2_prt_y2002_check" CHECK (buydate >= '2002-01-01'::date AND buydate < '2003-01-01'::date)
+Inherits: mpp_2914b_1_prt_catchall
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914b_1_prt_catchall_2_prt_y2003"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_catchall_2_prt_y2003_check" CHECK (buydate >= '2003-01-01'::date AND buydate < '2004-01-01'::date)
+Inherits: mpp_2914b_1_prt_catchall
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914b_1_prt_catchall_2_prt_y2004"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_catchall_2_prt_y2004_check" CHECK (buydate >= '2004-01-01'::date AND buydate < '2005-01-01'::date)
+Inherits: mpp_2914b_1_prt_catchall
+Distributed by: (id)
+
+Table "partition_ddl1.mpp_2914b_1_prt_catchall_2_prt_y2005"
+ Column  |     Type     | Modifiers 
+---------+--------------+-----------
+ id      | integer      | 
+ buydate | date         | 
+ kind    | character(1) | 
+Check constraints:
+    "mpp_2914b_1_prt_catchall_2_prt_y2005_check" CHECK (buydate >= '2005-01-01'::date)
+Inherits: mpp_2914b_1_prt_catchall
+Distributed by: (id)
+
+select count(*) from mpp_2914B;
+ count 
+-------
+     0
+(1 row)
+
+drop table mpp_2914a cascade;
+DROP TABLE
+drop table mpp_2914b cascade;
+DROP TABLE

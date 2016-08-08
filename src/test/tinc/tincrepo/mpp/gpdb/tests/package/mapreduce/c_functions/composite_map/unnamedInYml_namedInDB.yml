@@ -1,0 +1,24 @@
+%YAML 1.1
+---
+VERSION:         1.0.0.1
+DATABASE:        template1
+
+DEFINE:
+  - INPUT:
+      NAME:      data
+      QUERY: "select m,n as value from simple"
+
+
+  - MAP:
+      NAME: retcomposite 
+      #PARAMETERS:
+      #  - m int 
+      RETURNS:
+        - f1 integer
+        - f2 integer
+        - f3 integer 
+
+EXECUTE:
+  - RUN:
+      SOURCE: data
+      MAP: retcomposite 

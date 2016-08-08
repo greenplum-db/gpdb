@@ -1,0 +1,40 @@
+-- start_ignore
+drop table if exists aopython cascade;
+psql:/path/sql_file:1: NOTICE:  table "aopython" does not exist, skipping
+DROP TABLE
+drop function if exists pythonfunc();
+DROP FUNCTION
+-- end_ignore
+create table aopython(a int, b int, c text) with (appendonly=true) distributed by (a);
+CREATE TABLE
+insert into aopython(a, b, c) values (1, 1, 'test11');
+INSERT 0 1
+insert into aopython(a, b, c) values (1, 2, 'test12');
+INSERT 0 1
+insert into aopython(a, b, c) values (2, 1, 'test21');
+INSERT 0 1
+insert into aopython(a, b, c) values (2, 2, 'test22');
+INSERT 0 1
+create or replace function pythonfunc() returns integer as
+$$
+    rv = plpy.execute("SELECT count(*) as count from aopython WHERE a = 1");
+    return rv[0]["count"];
+    
+$$ language plpythonu;
+CREATE FUNCTION
+select pythonfunc();
+ pythonfunc 
+------------
+          2
+(1 row)
+
+drop table aopython;
+DROP TABLE
+create table aopython(a int, b int, c text) with (appendonly=true) distributed by (a);
+CREATE TABLE
+select pythonfunc();
+ pythonfunc 
+------------
+          0
+(1 row)
+

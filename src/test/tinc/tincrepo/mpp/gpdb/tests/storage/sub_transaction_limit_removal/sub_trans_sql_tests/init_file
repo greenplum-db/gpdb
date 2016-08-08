@@ -1,0 +1,16 @@
+-- start_matchsubs
+
+m/ERROR:  language .* already exists/
+s/ERROR:  language .* already exists/CREATE LANGUAGE/
+
+m/ERROR:  function .* does not exist/
+s/ERROR:  function .* does not exist/DROP FUNCTION/
+
+
+m/\\d+ subt_alter_table_ao1;/
+s/\\d+ subt_alter_table_ao1;//
+
+m/.*ERROR:  tablespace .* does not exist/
+s/.*ERROR:  tablespace .* does not exist/DROP TABLESPACE/
+
+-- end_matchsubs

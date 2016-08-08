@@ -1,0 +1,34 @@
+Alter database dsp_db1 set gp_default_storage_options='appendonly=true, orientation=column, compresslevel=1';
+ALTER DATABASE
+Alter role dsp_role1 set gp_default_storage_options='appendonly=true, orientation=column, compresslevel=3';
+ALTER ROLE
+Alter database dsp_db2 set gp_default_storage_options='appendonly=true,orientation=row, compresslevel=2';
+ALTER DATABASE
+Alter role dsp_role2 set gp_default_storage_options='appendonly=true, orientation=row, compresslevel=4';
+ALTER ROLE
+Alter database dsp_db3 set gp_default_storage_options='appendonly=true,orientation=row,compresstype=quicklz,compresslevel=1';
+ALTER DATABASE
+Alter role dsp_role3 set gp_default_storage_options='appendonly=true, orientation=column, compresstype=quicklz,compresslevel=1';
+ALTER ROLE
+Alter database dsp_db4 set gp_default_storage_options='appendonly=true,orientation=column,compresstype=rle_type,compresslevel=1';
+ALTER DATABASE
+Alter role dsp_role4 set gp_default_storage_options='appendonly=true, orientation=column, compresstype=rle_type,compresslevel=3';
+ALTER ROLE
+Select datname,datconfig from pg_database where datname in ('dsp_db1', 'dsp_db2', 'dsp_db3', 'dsp_db4');
+ datname |                                                datconfig                                                
+---------+---------------------------------------------------------------------------------------------------------
+ dsp_db1 | {"gp_default_storage_options=appendonly=true, orientation=column, compresslevel=1"}
+ dsp_db2 | {"gp_default_storage_options=appendonly=true,orientation=row, compresslevel=2"}
+ dsp_db3 | {"gp_default_storage_options=appendonly=true,orientation=row,compresstype=quicklz,compresslevel=1"}
+ dsp_db4 | {"gp_default_storage_options=appendonly=true,orientation=column,compresstype=rle_type,compresslevel=1"}
+(4 rows)
+
+select rolname, rolconfig from pg_roles where rolname in ('dsp_role1', 'dsp_role2', 'dsp_role3', 'dsp_role4', 'dsp_role4');
+  rolname  |                                                 rolconfig                                                 
+-----------+-----------------------------------------------------------------------------------------------------------
+ dsp_role1 | {"gp_default_storage_options=appendonly=true, orientation=column, compresslevel=3"}
+ dsp_role2 | {"gp_default_storage_options=appendonly=true, orientation=row, compresslevel=4"}
+ dsp_role3 | {"gp_default_storage_options=appendonly=true, orientation=column, compresstype=quicklz,compresslevel=1"}
+ dsp_role4 | {"gp_default_storage_options=appendonly=true, orientation=column, compresstype=rle_type,compresslevel=3"}
+(4 rows)
+

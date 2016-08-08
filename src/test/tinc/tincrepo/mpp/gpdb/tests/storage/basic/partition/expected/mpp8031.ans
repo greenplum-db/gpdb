@@ -1,0 +1,59 @@
+create table mpp8031 (oid integer,
+odate timestamp without time zone,
+cid integer)
+PARTITION BY RANGE(odate)
+(
+PARTITION foo START ('2005-05-01 00:00:00'::timestamp
+without time zone) END ('2005-07-01 00:00:00'::timestamp
+without time zone) EVERY ('2 mons'::interval),
+START ('2005-07-01 00:00:00'::timestamp without time zone)
+END ('2006-01-01 00:00:00'::timestamp without time zone)
+EVERY ('2 mons'::interval)
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'oid' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "mpp8031_1_prt_foo" for table "mpp8031"
+NOTICE:  CREATE TABLE will create partition "mpp8031_1_prt_2" for table "mpp8031"
+NOTICE:  CREATE TABLE will create partition "mpp8031_1_prt_3" for table "mpp8031"
+NOTICE:  CREATE TABLE will create partition "mpp8031_1_prt_4" for table "mpp8031"
+CREATE TABLE
+explain analyze select a.* from mpp8031 a, mpp8031 b where a.oid = b.oid;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 2:1  (slice1; segments: 2)  (cost=0.05..0.10 rows=2 width=16)
+   Rows out:  0 rows at destination with 56 ms to end, start offset by 1.959 ms.
+   ->  Hash Join  (cost=0.05..0.10 rows=2 width=16)
+         Hash Cond: a.oid = b.oid
+         Rows out:  0 rows (seg0) with 0 ms to end.
+         ->  Append  (cost=0.00..0.00 rows=2 width=16)
+               Rows out:  0 rows (seg0) with 0 ms to end.
+               ->  Seq Scan on mpp8031_1_prt_foo a  (cost=0.00..0.00 rows=1 width=16)
+                     Rows out:  0 rows (seg0) with 0 ms to end.
+               ->  Seq Scan on mpp8031_1_prt_2 a  (cost=0.00..0.00 rows=1 width=16)
+                     Rows out:  0 rows (seg0) with 0 ms to end.
+               ->  Seq Scan on mpp8031_1_prt_3 a  (cost=0.00..0.00 rows=1 width=16)
+                     Rows out:  0 rows (seg0) with 0 ms to end.
+               ->  Seq Scan on mpp8031_1_prt_4 a  (cost=0.00..0.00 rows=1 width=16)
+                     Rows out:  0 rows (seg0) with 0 ms to end.
+         ->  Hash  (cost=0.00..0.00 rows=2 width=4)
+               Rows in:  0 rows (seg0) with 0 ms to end.
+               ->  Append  (cost=0.00..0.00 rows=2 width=4)
+                     Rows out:  0 rows (seg0) with 0 ms to end.
+                     ->  Seq Scan on mpp8031_1_prt_foo b  (cost=0.00..0.00 rows=1 width=4)
+                           Rows out:  0 rows (seg0) with 0 ms to end.
+                     ->  Seq Scan on mpp8031_1_prt_2 b  (cost=0.00..0.00 rows=1 width=4)
+                           Rows out:  0 rows (seg0) with 0 ms to end.
+                     ->  Seq Scan on mpp8031_1_prt_3 b  (cost=0.00..0.00 rows=1 width=4)
+                           Rows out:  0 rows (seg0) with 0 ms to end.
+                     ->  Seq Scan on mpp8031_1_prt_4 b  (cost=0.00..0.00 rows=1 width=4)
+                           Rows out:  0 rows (seg0) with 0 ms to end.
+ Slice statistics:
+   (slice0)    Executor memory: 308K bytes.
+   (slice1)    Executor memory: 8509K bytes avg x 2 workers, 8509K bytes max (seg0).
+ Statement statistics:
+   Memory used: 128000K bytes
+ Total runtime: 58.453 ms
+(33 rows)
+
+drop table mpp8031;
+DROP TABLE

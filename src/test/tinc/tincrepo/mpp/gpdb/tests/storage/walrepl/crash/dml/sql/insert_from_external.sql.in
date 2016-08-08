@@ -1,0 +1,16 @@
+-- start_ignore
+drop external table if exists test_quote1 cascade;
+drop external table if exists test_quote2 cascade;
+-- end_ignore
+CREATE EXTERNAL TABLE test_quote1( i text)  
+location ('file://rh55-qavm65/tmp/quote.csv' )
+FORMAT 'csv' (delimiter '|' quote '''') ;
+
+select * from test_quote1 order by i;
+
+CREATE EXTERNAL TABLE test_quote2( i text)  
+location ('file://rh55-qavm65/tmp/quote.csv' )
+FORMAT 'csv' (delimiter '|' quote '"') ;
+
+select * from test_quote2 order by i;
+

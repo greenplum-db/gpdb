@@ -1,0 +1,293 @@
+-- @Description Alter on uao partition tables
+-- 
+Drop table if exists sto_alt_uao_part1;
+DROP TABLE
+Create table sto_alt_uao_part1(
+  a int, b int, c int,d int  ) with(appendonly=true) partition by range(b)  subpartition by range( c )
+  subpartition template ( default subpartition subothers,start (1) end(7) every (4) )    ( default partition others, start(1) end(5) every(3));
+CREATE TABLE
+select count(*) FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid in (SELECT oid FROM pg_class WHERE relname like 'sto_alt_uao_part1%');
+ count 
+-------
+    13
+(1 row)
+
+SELECT 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='sto_alt_uao_part1');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+\d+ sto_alt_uao_part1
+     Append-Only Table "public.sto_alt_uao_part1"
+ Column |  Type   | Modifiers | Storage | Description 
+--------+---------+-----------+---------+-------------
+ a      | integer |           | plain   | 
+ b      | integer |           | plain   | 
+ c      | integer |           | plain   | 
+ d      | integer |           | plain   | 
+Compression Type: None
+Compression Level: 0
+Block Size: 32768
+Checksum: f
+Child tables: sto_alt_uao_part1_1_prt_2,
+              sto_alt_uao_part1_1_prt_3,
+              sto_alt_uao_part1_1_prt_others
+Has OIDs: no
+Options: appendonly=true
+Distributed by: (a)
+
+Insert into sto_alt_uao_part1 values(1,generate_series(1,8),3,4);
+INSERT 0 8
+Insert into sto_alt_uao_part1 values(2,3,generate_series(1,9),3);
+INSERT 0 9
+select count(*) from sto_alt_uao_part1;
+ count 
+-------
+    17
+(1 row)
+
+select * from sto_alt_uao_part1;
+ a | b | c | d 
+---+---+---+---
+ 2 | 3 | 7 | 3
+ 2 | 3 | 8 | 3
+ 2 | 3 | 9 | 3
+ 2 | 3 | 1 | 3
+ 2 | 3 | 2 | 3
+ 2 | 3 | 3 | 3
+ 2 | 3 | 4 | 3
+ 2 | 3 | 5 | 3
+ 2 | 3 | 6 | 3
+ 1 | 1 | 3 | 4
+ 1 | 2 | 3 | 4
+ 1 | 3 | 3 | 4
+ 1 | 5 | 3 | 4
+ 1 | 6 | 3 | 4
+ 1 | 7 | 3 | 4
+ 1 | 8 | 3 | 4
+ 1 | 4 | 3 | 4
+(17 rows)
+
+select count(*) AS only_visi_tups from sto_alt_uao_part1;
+ only_visi_tups 
+----------------
+             17
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*)  AS invisi_and_visi_tups from sto_alt_uao_part1;
+ invisi_and_visi_tups 
+----------------------
+                   17
+(1 row)
+
+set gp_select_invisible = false;
+SET
+-- Alter table rename default partition
+Alter table sto_alt_uao_part1 rename default partition to new_others;
+ALTER TABLE
+select count(*) FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid in (SELECT oid FROM pg_class WHERE relname like 'sto_alt_uao_part1%');
+ count 
+-------
+    13
+(1 row)
+
+\d+ sto_alt_uao_part1
+     Append-Only Table "public.sto_alt_uao_part1"
+ Column |  Type   | Modifiers | Storage | Description 
+--------+---------+-----------+---------+-------------
+ a      | integer |           | plain   | 
+ b      | integer |           | plain   | 
+ c      | integer |           | plain   | 
+ d      | integer |           | plain   | 
+Compression Type: None
+Compression Level: 0
+Block Size: 32768
+Checksum: f
+Child tables: sto_alt_uao_part1_1_prt_2,
+              sto_alt_uao_part1_1_prt_3,
+              sto_alt_uao_part1_1_prt_new_others
+Has OIDs: no
+Options: appendonly=true
+Distributed by: (a)
+
+Insert into sto_alt_uao_part1 values(1,10,3,4);
+INSERT 0 1
+select * from sto_alt_uao_part1 order by b,c;
+ a | b  | c | d 
+---+----+---+---
+ 1 |  1 | 3 | 4
+ 1 |  2 | 3 | 4
+ 2 |  3 | 1 | 3
+ 2 |  3 | 2 | 3
+ 2 |  3 | 3 | 3
+ 1 |  3 | 3 | 4
+ 2 |  3 | 4 | 3
+ 2 |  3 | 5 | 3
+ 2 |  3 | 6 | 3
+ 2 |  3 | 7 | 3
+ 2 |  3 | 8 | 3
+ 2 |  3 | 9 | 3
+ 1 |  4 | 3 | 4
+ 1 |  5 | 3 | 4
+ 1 |  6 | 3 | 4
+ 1 |  7 | 3 | 4
+ 1 |  8 | 3 | 4
+ 1 | 10 | 3 | 4
+(18 rows)
+
+select count(*) AS only_visi_tups from sto_alt_uao_part1;
+ only_visi_tups 
+----------------
+             18
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*)  AS invisi_and_visi_tups from sto_alt_uao_part1;
+ invisi_and_visi_tups 
+----------------------
+                   18
+(1 row)
+
+set gp_select_invisible = false;
+SET
+select count(*) AS only_visi_tups from sto_alt_uao_part1;
+ only_visi_tups 
+----------------
+             18
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*)  AS invisi_and_visi_tups from sto_alt_uao_part1;
+ invisi_and_visi_tups 
+----------------------
+                   18
+(1 row)
+
+set gp_select_invisible = false;
+SET
+Drop table if exists sto_alt_uao_part2;
+DROP TABLE
+create table sto_alt_uao_part2
+ ( 
+ col1 bigint, col2 date, col3 text, col4 int) with(appendonly=true) 
+ distributed randomly  partition by range(col2)
+ subpartition by list (col3)
+ subpartition template ( default subpartition subothers, subpartition sub1 values ('one'), subpartition sub2 values ('two'))
+ (default partition others, start(date '2008-01-01') end(date '2008-04-30') every(interval '1 month'));
+CREATE TABLE
+\d+ sto_alt_uao_part2
+     Append-Only Table "public.sto_alt_uao_part2"
+ Column |  Type   | Modifiers | Storage  | Description 
+--------+---------+-----------+----------+-------------
+ col1   | bigint  |           | plain    | 
+ col2   | date    |           | plain    | 
+ col3   | text    |           | extended | 
+ col4   | integer |           | plain    | 
+Compression Type: None
+Compression Level: 0
+Block Size: 32768
+Checksum: f
+Child tables: sto_alt_uao_part2_1_prt_2,
+              sto_alt_uao_part2_1_prt_3,
+              sto_alt_uao_part2_1_prt_4,
+              sto_alt_uao_part2_1_prt_5,
+              sto_alt_uao_part2_1_prt_others
+Has OIDs: no
+Options: appendonly=true
+Distributed randomly
+
+select count(*) FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid in (SELECT oid FROM pg_class WHERE relname like 'sto_alt_uao_part2%');
+ count 
+-------
+    21
+(1 row)
+
+SELECT 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='sto_alt_uao_part2');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+insert into sto_alt_uao_part2(col1, col2, col3) values (1, '2008-01-02', 'one'), (2, '2008-01-02', 'two'), (3, '2008-01-02', 'three');
+INSERT 0 3
+insert into sto_alt_uao_part2(col1, col2, col3) values (1, '2008-02-03', 'two'), (2, '2008-02-03', 'one'), (3, '2008-02-03', 'three');
+INSERT 0 3
+insert into sto_alt_uao_part2(col1, col2, col3)  values(1, '2008-03-04', 'three'),(1, '2008-04-04', 'one'), (2, '2008-03-04', 'two') ;
+INSERT 0 3
+insert into sto_alt_uao_part2(col1, col2, col3) values (1, '2008-04-05', 'one'), (2, '2008-04-05', 'two'), (3, '2008-04-05', 'three');
+INSERT 0 3
+insert into sto_alt_uao_part2(col1, col2, col3) values (1, '2008-05-06', 'one'), (2, '2008-05-06', 'two'), (3, '2008-05-06', 'three');
+INSERT 0 3
+select count(*) from sto_alt_uao_part2;
+ count 
+-------
+    15
+(1 row)
+
+-- Alter table rename partition
+Alter table sto_alt_uao_part2 RENAME PARTITION FOR ('2008-01-01') TO jan08;
+ALTER TABLE
+select count(*) FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid in (SELECT oid FROM pg_class WHERE relname like 'sto_alt_uao_part2%');
+ count 
+-------
+    21
+(1 row)
+
+\d+ sto_alt_uao_part2
+     Append-Only Table "public.sto_alt_uao_part2"
+ Column |  Type   | Modifiers | Storage  | Description 
+--------+---------+-----------+----------+-------------
+ col1   | bigint  |           | plain    | 
+ col2   | date    |           | plain    | 
+ col3   | text    |           | extended | 
+ col4   | integer |           | plain    | 
+Compression Type: None
+Compression Level: 0
+Block Size: 32768
+Checksum: f
+Child tables: sto_alt_uao_part2_1_prt_3,
+              sto_alt_uao_part2_1_prt_4,
+              sto_alt_uao_part2_1_prt_5,
+              sto_alt_uao_part2_1_prt_jan08,
+              sto_alt_uao_part2_1_prt_others
+Has OIDs: no
+Options: appendonly=true
+Distributed randomly
+
+select count(*) AS only_visi_tups from sto_alt_uao_part2;
+ only_visi_tups 
+----------------
+             15
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*)  AS invisi_and_visi_tups from sto_alt_uao_part2;
+ invisi_and_visi_tups 
+----------------------
+                   15
+(1 row)
+
+set gp_select_invisible = false;
+SET
+select count(*) AS only_visi_tups from sto_alt_uao_part2;
+ only_visi_tups 
+----------------
+             15
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*)  AS invisi_and_visi_tups from sto_alt_uao_part2;
+ invisi_and_visi_tups 
+----------------------
+                   15
+(1 row)
+
+set gp_select_invisible = false;
+SET

@@ -1,0 +1,201 @@
+-- @Description Alter exchange subparts with ao/co/heap/ao_compr/co_compr
+
+--start_ignore
+Drop table if exists sto_altmsp1;
+DROP TABLE
+--end_ignore
+create table sto_altmsp1
+ (
+ col1 bigint, col2 date, col3 text, col4 int) 
+ distributed randomly  partition by range(col2)
+ subpartition by list (col3)
+ subpartition template ( 
+    default subpartition subothers, 
+    subpartition sub1 values ('one', 'newone') with(appendonly=true), 
+    subpartition sub2 values ('two', 'newtwo')  with(appendonly=false), 
+    subpartition sub3 values('three', 'newthree') with(appendonly=true, orientation=column),
+    subpartition sub4 values ('four', 'newfour') with(appendonly=true), 
+    subpartition sub5 values ('five', 'newfive')  with(appendonly=false), 
+    subpartition sub6 values('six', 'newsix') with(appendonly=true, orientation=column))
+ (default partition others, start(date '2008-01-01') end(date '2008-04-30') every(interval '1 month'));
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_others" for table "sto_altmsp1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_2" for table "sto_altmsp1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_3" for table "sto_altmsp1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_4" for table "sto_altmsp1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_5" for table "sto_altmsp1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_others_2_prt_subothers" for table "sto_altmsp1_1_prt_others"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_others_2_prt_sub1" for table "sto_altmsp1_1_prt_others"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_others_2_prt_sub2" for table "sto_altmsp1_1_prt_others"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_others_2_prt_sub3" for table "sto_altmsp1_1_prt_others"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_others_2_prt_sub4" for table "sto_altmsp1_1_prt_others"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_others_2_prt_sub5" for table "sto_altmsp1_1_prt_others"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_others_2_prt_sub6" for table "sto_altmsp1_1_prt_others"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_2_2_prt_subothers" for table "sto_altmsp1_1_prt_2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_2_2_prt_sub1" for table "sto_altmsp1_1_prt_2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_2_2_prt_sub2" for table "sto_altmsp1_1_prt_2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_2_2_prt_sub3" for table "sto_altmsp1_1_prt_2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_2_2_prt_sub4" for table "sto_altmsp1_1_prt_2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_2_2_prt_sub5" for table "sto_altmsp1_1_prt_2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_2_2_prt_sub6" for table "sto_altmsp1_1_prt_2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_3_2_prt_subothers" for table "sto_altmsp1_1_prt_3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_3_2_prt_sub1" for table "sto_altmsp1_1_prt_3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_3_2_prt_sub2" for table "sto_altmsp1_1_prt_3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_3_2_prt_sub3" for table "sto_altmsp1_1_prt_3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_3_2_prt_sub4" for table "sto_altmsp1_1_prt_3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_3_2_prt_sub5" for table "sto_altmsp1_1_prt_3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_3_2_prt_sub6" for table "sto_altmsp1_1_prt_3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_4_2_prt_subothers" for table "sto_altmsp1_1_prt_4"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_4_2_prt_sub1" for table "sto_altmsp1_1_prt_4"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_4_2_prt_sub2" for table "sto_altmsp1_1_prt_4"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_4_2_prt_sub3" for table "sto_altmsp1_1_prt_4"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_4_2_prt_sub4" for table "sto_altmsp1_1_prt_4"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_4_2_prt_sub5" for table "sto_altmsp1_1_prt_4"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_4_2_prt_sub6" for table "sto_altmsp1_1_prt_4"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_5_2_prt_subothers" for table "sto_altmsp1_1_prt_5"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_5_2_prt_sub1" for table "sto_altmsp1_1_prt_5"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_5_2_prt_sub2" for table "sto_altmsp1_1_prt_5"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_5_2_prt_sub3" for table "sto_altmsp1_1_prt_5"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_5_2_prt_sub4" for table "sto_altmsp1_1_prt_5"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_5_2_prt_sub5" for table "sto_altmsp1_1_prt_5"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altmsp1_1_prt_5_2_prt_sub6" for table "sto_altmsp1_1_prt_5"
+CREATE TABLE
+insert into sto_altmsp1(col1, col2, col3) values (1, '2008-01-02', 'one'), (2, '2008-01-02', 'two'), (3, '2008-01-02', 'three'), (4, '2008-01-02', 'four'), (5, '2008-01-02', 'five'), (6, '2008-01-02', 'six'), (7, '2008-01-02', 'nine');
+INSERT 0 7
+insert into sto_altmsp1(col1, col2, col3) values (1, '2008-01-03', 'one'), (2, '2008-01-03', 'two'), (3, '2008-01-03', 'three'), (4, '2008-01-03', 'four'), (5, '2008-01-03', 'five'), (6, '2008-01-03', 'six'), (7, '2008-01-03', 'nine');
+INSERT 0 7
+select * from sto_altmsp1 order by col1, col2;
+ col1 |    col2    | col3  | col4 
+------+------------+-------+------
+    1 | 2008-01-02 | one   |     
+    1 | 2008-01-03 | one   |     
+    2 | 2008-01-02 | two   |     
+    2 | 2008-01-03 | two   |     
+    3 | 2008-01-02 | three |     
+    3 | 2008-01-03 | three |     
+    4 | 2008-01-02 | four  |     
+    4 | 2008-01-03 | four  |     
+    5 | 2008-01-02 | five  |     
+    5 | 2008-01-03 | five  |     
+    6 | 2008-01-02 | six   |     
+    6 | 2008-01-03 | six   |     
+    7 | 2008-01-02 | nine  |     
+    7 | 2008-01-03 | nine  |     
+(14 rows)
+
+-- Alter table exchange subpartition heap with ao_compr
+--start_ignore
+Drop table if exists exh_ac;
+DROP TABLE
+--end_ignore
+create table exh_ac (like sto_altmsp1) with(appendonly=true, compresstype=zlib);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+CREATE TABLE
+insert into exh_ac values(1, '2008-02-02', 'newtwo');
+INSERT 0 1
+Alter table sto_altmsp1 alter partition for (rank(2)) exchange partition for ('two') with table exh_ac;
+psql:/path/sql_file:1: NOTICE:  exchanged partition "sub2" of partition for rank 2 of relation "sto_altmsp1" with relation "exh_ac"
+ALTER TABLE
+-- Alter table exchange subpartition heap with co_compr
+--start_ignore
+Drop table if exists exh_cc;
+DROP TABLE
+--end_ignore
+create table exh_cc (like sto_altmsp1) with(appendonly=true, compresstype=zlib);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+CREATE TABLE
+insert into exh_cc values(1, '2008-02-02', 'newfive');
+INSERT 0 1
+Alter table sto_altmsp1 alter partition for (rank(2)) exchange partition for ('five') with table exh_cc;
+psql:/path/sql_file:1: NOTICE:  exchanged partition "sub5" of partition for rank 2 of relation "sto_altmsp1" with relation "exh_cc"
+ALTER TABLE
+-- Alter table exchange subpartition ao with co_compr
+--start_ignore
+Drop table if exists exh_cc1;
+DROP TABLE
+--end_ignore
+create table exh_cc1 (like sto_altmsp1) with(appendonly=true, orientation=column, compresstype=quicklz);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+CREATE TABLE
+insert into exh_cc1 values(1, '2008-02-02', 'newone');
+INSERT 0 1
+Alter table sto_altmsp1 alter partition for (rank(2)) exchange partition for ('one') with table exh_cc1;
+psql:/path/sql_file:1: NOTICE:  exchanged partition "sub1" of partition for rank 2 of relation "sto_altmsp1" with relation "exh_cc1"
+ALTER TABLE
+-- Alter table exchange subpartition ao with ao_compr
+--start_ignore
+Drop table if exists exh_ac1;
+DROP TABLE
+--end_ignore
+create table exh_ac1 (like sto_altmsp1) with(appendonly=true, orientation=column, compresstype=quicklz);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+CREATE TABLE
+insert into exh_ac1 values(1, '2008-02-02', 'newfour');
+INSERT 0 1
+Alter table sto_altmsp1 alter partition for (rank(2)) exchange partition for ('four') with table exh_ac1;
+psql:/path/sql_file:1: NOTICE:  exchanged partition "sub4" of partition for rank 2 of relation "sto_altmsp1" with relation "exh_ac1"
+ALTER TABLE
+-- Alter table exchange subpartition co  with co_compr
+--start_ignore
+Drop table if exists exh_cc2;
+DROP TABLE
+--end_ignore
+create table exh_cc2 (like sto_altmsp1) with(appendonly=true,orientation= column, compresstype=zlib);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+CREATE TABLE
+insert into exh_cc2 values(1, '2008-02-02', 'newthree');
+INSERT 0 1
+Alter table sto_altmsp1 alter partition for (rank(2)) exchange partition for ('three') with table exh_cc2;
+psql:/path/sql_file:1: NOTICE:  exchanged partition "sub3" of partition for rank 2 of relation "sto_altmsp1" with relation "exh_cc2"
+ALTER TABLE
+-- Alter table exchange subpartition co  with ao_compr
+--start_ignore
+Drop table if exists exh_ac2;
+DROP TABLE
+--end_ignore
+create table exh_ac2 (like sto_altmsp1) with(appendonly=true,orientation= column, compresstype=zlib);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+CREATE TABLE
+insert into exh_ac2 values(1, '2008-02-02', 'newsix');
+INSERT 0 1
+Alter table sto_altmsp1 alter partition for (rank(2)) exchange partition for ('six') with table exh_ac2;
+psql:/path/sql_file:1: NOTICE:  exchanged partition "sub6" of partition for rank 2 of relation "sto_altmsp1" with relation "exh_ac2"
+ALTER TABLE
+-- Alter table exchage default subpartition with ao table
+--start_ignore
+Drop table if exists exh_def;
+DROP TABLE
+--end_ignore
+create table exh_def (like sto_altmsp1) with(appendonly=true);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+CREATE TABLE
+insert into exh_def values(1, '2008-02-01', 'ten');
+INSERT 0 1
+Alter table sto_altmsp1 alter partition for (rank(2)) exchange default partition with table exh_def;
+psql:/path/sql_file:1: NOTICE:  exchanged partition "subothers" of partition for rank 2 of relation "sto_altmsp1" with relation "exh_def"
+ALTER TABLE
+select * from sto_altmsp1 order by col1,col2,col3;
+ col1 |    col2    |   col3   | col4 
+------+------------+----------+------
+    1 | 2008-01-02 | one      |     
+    1 | 2008-01-03 | one      |     
+    1 | 2008-02-01 | ten      |     
+    1 | 2008-02-02 | newfive  |     
+    1 | 2008-02-02 | newfour  |     
+    1 | 2008-02-02 | newone   |     
+    1 | 2008-02-02 | newsix   |     
+    1 | 2008-02-02 | newthree |     
+    1 | 2008-02-02 | newtwo   |     
+    2 | 2008-01-02 | two      |     
+    2 | 2008-01-03 | two      |     
+    3 | 2008-01-02 | three    |     
+    3 | 2008-01-03 | three    |     
+    4 | 2008-01-02 | four     |     
+    4 | 2008-01-03 | four     |     
+    5 | 2008-01-02 | five     |     
+    5 | 2008-01-03 | five     |     
+    6 | 2008-01-02 | six      |     
+    6 | 2008-01-03 | six      |     
+    7 | 2008-01-02 | nine     |     
+    7 | 2008-01-03 | nine     |     
+(21 rows)
+

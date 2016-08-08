@@ -1,0 +1,528 @@
+-- 
+-- @created 2009-01-27 14:00:00
+-- @modified 2013-06-24 17:00:00
+-- @tags ddl schema_topology
+
+DROP type if exists int_type1 cascade ; 
+psql:/path/sql_file:1: NOTICE:  type "int_type1" does not exist, skipping
+DROP TYPE
+CREATE type int_type1;
+CREATE TYPE
+CREATE FUNCTION int_type1_in(cstring) 
+ RETURNS int_type1
+ AS 'int4in' 
+ LANGUAGE internal IMMUTABLE STRICT; 
+psql:/path/sql_file:1: NOTICE:  return type int_type1 is only a shell
+CREATE FUNCTION
+CREATE FUNCTION int_type1_out(int_type1) 
+ RETURNS cstring
+ AS 'int4out' 
+ LANGUAGE internal IMMUTABLE STRICT; 
+psql:/path/sql_file:1: NOTICE:  argument type int_type1 is only a shell
+CREATE FUNCTION
+CREATE TYPE int_type1( 
+ input = int_type1_in ,
+ output = int_type1_out ,
+ internallength = 4, 
+ default =55, 
+ passedbyvalue, 
+ compresstype=zlib,
+ blocksize=32768,
+ compresslevel=3);
+CREATE TYPE
+--Drop and recreate the data type 
+ Drop type if exists int_type1 cascade;
+psql:/path/sql_file:1: NOTICE:  drop cascades to function int_type1_out(int_type1)
+psql:/path/sql_file:1: NOTICE:  drop cascades to function int_type1_in(cstring)
+DROP TYPE
+CREATE FUNCTION int_type1_in(cstring) 
+ RETURNS int_type1
+ AS 'int4in' 
+ LANGUAGE internal IMMUTABLE STRICT; 
+psql:/path/sql_file:1: NOTICE:  type "int_type1" is not yet defined
+DETAIL:  Creating a shell type definition.
+CREATE FUNCTION
+CREATE FUNCTION int_type1_out(int_type1) 
+ RETURNS cstring
+ AS 'int4out' 
+ LANGUAGE internal IMMUTABLE STRICT; 
+psql:/path/sql_file:1: NOTICE:  argument type int_type1 is only a shell
+CREATE FUNCTION
+CREATE TYPE int_type1( 
+ input = int_type1_in ,
+ output = int_type1_out ,
+ internallength = 4, 
+ default =55, 
+ passedbyvalue, 
+ compresstype=zlib,
+ blocksize=32768,
+ compresslevel=2);
+CREATE TYPE
+select typoptions from pg_type_encoding where typid='int_type1 '::regtype;
+                     typoptions                      
+-----------------------------------------------------
+ {compresstype=zlib,blocksize=32768,compresslevel=2}
+(1 row)
+
+DROP type if exists char_type1 cascade ; 
+psql:/path/sql_file:1: NOTICE:  type "char_type1" does not exist, skipping
+DROP TYPE
+CREATE type char_type1;
+CREATE TYPE
+CREATE FUNCTION char_type1_in(cstring) 
+ RETURNS char_type1
+ AS 'charin' 
+ LANGUAGE internal IMMUTABLE STRICT; 
+psql:/path/sql_file:1: NOTICE:  return type char_type1 is only a shell
+CREATE FUNCTION
+CREATE FUNCTION char_type1_out(char_type1) 
+ RETURNS cstring
+ AS 'charout' 
+ LANGUAGE internal IMMUTABLE STRICT; 
+psql:/path/sql_file:1: NOTICE:  argument type char_type1 is only a shell
+CREATE FUNCTION
+CREATE TYPE char_type1( 
+ input = char_type1_in ,
+ output = char_type1_out ,
+ internallength = 4, 
+ default = 'asd' , 
+ passedbyvalue, 
+ compresstype=quicklz,
+ blocksize=32768,
+ compresslevel=1);
+CREATE TYPE
+--Drop and recreate the data type 
+ Drop type if exists char_type1 cascade;
+psql:/path/sql_file:1: NOTICE:  drop cascades to function char_type1_out(char_type1)
+psql:/path/sql_file:1: NOTICE:  drop cascades to function char_type1_in(cstring)
+DROP TYPE
+CREATE FUNCTION char_type1_in(cstring) 
+ RETURNS char_type1
+ AS 'charin' 
+ LANGUAGE internal IMMUTABLE STRICT; 
+psql:/path/sql_file:1: NOTICE:  type "char_type1" is not yet defined
+DETAIL:  Creating a shell type definition.
+CREATE FUNCTION
+CREATE FUNCTION char_type1_out(char_type1) 
+ RETURNS cstring
+ AS 'charout' 
+ LANGUAGE internal IMMUTABLE STRICT; 
+psql:/path/sql_file:1: NOTICE:  argument type char_type1 is only a shell
+CREATE FUNCTION
+CREATE TYPE char_type1( 
+ input = char_type1_in ,
+ output = char_type1_out ,
+ internallength = 4, 
+ default = 'asd' , 
+ passedbyvalue, 
+ compresstype=zlib,
+ blocksize=32768,
+ compresslevel=2);
+CREATE TYPE
+select typoptions from pg_type_encoding where typid='char_type1 '::regtype;
+                     typoptions                      
+-----------------------------------------------------
+ {compresstype=zlib,blocksize=32768,compresslevel=2}
+(1 row)
+
+DROP type if exists text_type1 cascade ; 
+psql:/path/sql_file:1: NOTICE:  type "text_type1" does not exist, skipping
+DROP TYPE
+CREATE type text_type1;
+CREATE TYPE
+CREATE FUNCTION text_type1_in(cstring) 
+ RETURNS text_type1
+ AS 'textin' 
+ LANGUAGE internal IMMUTABLE STRICT; 
+psql:/path/sql_file:1: NOTICE:  return type text_type1 is only a shell
+CREATE FUNCTION
+CREATE FUNCTION text_type1_out(text_type1) 
+ RETURNS cstring
+ AS 'textout' 
+ LANGUAGE internal IMMUTABLE STRICT; 
+psql:/path/sql_file:1: NOTICE:  argument type text_type1 is only a shell
+CREATE FUNCTION
+CREATE TYPE text_type1( 
+ input = text_type1_in ,
+ output = text_type1_out ,
+ internallength = variable, 
+ default = 'hfkdshfkjsdhflkshadfkhsadflkh' , 
+ compresstype=zlib,
+ blocksize=32768,
+ compresslevel=2);
+CREATE TYPE
+--Drop and recreate the data type 
+ Drop type if exists text_type1 cascade;
+psql:/path/sql_file:1: NOTICE:  drop cascades to function text_type1_out(text_type1)
+psql:/path/sql_file:1: NOTICE:  drop cascades to function text_type1_in(cstring)
+DROP TYPE
+CREATE FUNCTION text_type1_in(cstring) 
+ RETURNS text_type1
+ AS 'textin' 
+ LANGUAGE internal IMMUTABLE STRICT; 
+psql:/path/sql_file:1: NOTICE:  type "text_type1" is not yet defined
+DETAIL:  Creating a shell type definition.
+CREATE FUNCTION
+CREATE FUNCTION text_type1_out(text_type1) 
+ RETURNS cstring
+ AS 'textout' 
+ LANGUAGE internal IMMUTABLE STRICT; 
+psql:/path/sql_file:1: NOTICE:  argument type text_type1 is only a shell
+CREATE FUNCTION
+CREATE TYPE text_type1( 
+ input = text_type1_in ,
+ output = text_type1_out ,
+ internallength = variable, 
+ default = 'hfkdshfkjsdhflkshadfkhsadflkh' , 
+ compresstype=zlib,
+ blocksize=32768,
+ compresslevel=7);
+CREATE TYPE
+select typoptions from pg_type_encoding where typid='text_type1 '::regtype;
+                     typoptions                      
+-----------------------------------------------------
+ {compresstype=zlib,blocksize=32768,compresslevel=7}
+(1 row)
+
+DROP type if exists varchar_type1 cascade ; 
+psql:/path/sql_file:1: NOTICE:  type "varchar_type1" does not exist, skipping
+DROP TYPE
+CREATE type varchar_type1;
+CREATE TYPE
+CREATE FUNCTION varchar_type1_in(cstring) 
+ RETURNS varchar_type1
+ AS 'varcharin' 
+ LANGUAGE internal IMMUTABLE STRICT; 
+psql:/path/sql_file:1: NOTICE:  return type varchar_type1 is only a shell
+CREATE FUNCTION
+CREATE FUNCTION varchar_type1_out(varchar_type1) 
+ RETURNS cstring
+ AS 'varcharout' 
+ LANGUAGE internal IMMUTABLE STRICT; 
+psql:/path/sql_file:1: NOTICE:  argument type varchar_type1 is only a shell
+CREATE FUNCTION
+CREATE TYPE varchar_type1( 
+ input = varchar_type1_in ,
+ output = varchar_type1_out ,
+ internallength = variable, 
+ default = 'ajhgdjagdjasdkjashk' , 
+ compresstype=zlib,
+ blocksize=32768,
+ compresslevel=1);
+CREATE TYPE
+--Drop and recreate the data type 
+ Drop type if exists varchar_type1 cascade;
+psql:/path/sql_file:1: NOTICE:  drop cascades to function varchar_type1_out(varchar_type1)
+psql:/path/sql_file:1: NOTICE:  drop cascades to function varchar_type1_in(cstring)
+DROP TYPE
+CREATE FUNCTION varchar_type1_in(cstring) 
+ RETURNS varchar_type1
+ AS 'varcharin' 
+ LANGUAGE internal IMMUTABLE STRICT; 
+psql:/path/sql_file:1: NOTICE:  type "varchar_type1" is not yet defined
+DETAIL:  Creating a shell type definition.
+CREATE FUNCTION
+CREATE FUNCTION varchar_type1_out(varchar_type1) 
+ RETURNS cstring
+ AS 'varcharout' 
+ LANGUAGE internal IMMUTABLE STRICT; 
+psql:/path/sql_file:1: NOTICE:  argument type varchar_type1 is only a shell
+CREATE FUNCTION
+CREATE TYPE varchar_type1( 
+ input = varchar_type1_in ,
+ output = varchar_type1_out ,
+ internallength = variable, 
+ default = 'ajhgdjagdjasdkjashk' , 
+ compresstype=zlib,
+ blocksize=32768,
+ compresslevel=9);
+CREATE TYPE
+select typoptions from pg_type_encoding where typid='varchar_type1 '::regtype;
+                     typoptions                      
+-----------------------------------------------------
+ {compresstype=zlib,blocksize=32768,compresslevel=9}
+(1 row)
+
+DROP type if exists date_type1 cascade ; 
+psql:/path/sql_file:1: NOTICE:  type "date_type1" does not exist, skipping
+DROP TYPE
+CREATE type date_type1;
+CREATE TYPE
+CREATE FUNCTION date_type1_in(cstring) 
+ RETURNS date_type1
+ AS 'date_in' 
+ LANGUAGE internal IMMUTABLE STRICT; 
+psql:/path/sql_file:1: NOTICE:  return type date_type1 is only a shell
+CREATE FUNCTION
+CREATE FUNCTION date_type1_out(date_type1) 
+ RETURNS cstring
+ AS 'date_out' 
+ LANGUAGE internal IMMUTABLE STRICT; 
+psql:/path/sql_file:1: NOTICE:  argument type date_type1 is only a shell
+CREATE FUNCTION
+CREATE TYPE date_type1( 
+ input = date_type1_in ,
+ output = date_type1_out ,
+ internallength = 4, 
+ default = '2001-12-11' , 
+ passedbyvalue, 
+ compresstype=rle_type,
+ blocksize=32768,
+ compresslevel=1);
+CREATE TYPE
+--Drop and recreate the data type 
+ Drop type if exists date_type1 cascade;
+psql:/path/sql_file:1: NOTICE:  drop cascades to function date_type1_out(date_type1)
+psql:/path/sql_file:1: NOTICE:  drop cascades to function date_type1_in(cstring)
+DROP TYPE
+CREATE FUNCTION date_type1_in(cstring) 
+ RETURNS date_type1
+ AS 'date_in' 
+ LANGUAGE internal IMMUTABLE STRICT; 
+psql:/path/sql_file:1: NOTICE:  type "date_type1" is not yet defined
+DETAIL:  Creating a shell type definition.
+CREATE FUNCTION
+CREATE FUNCTION date_type1_out(date_type1) 
+ RETURNS cstring
+ AS 'date_out' 
+ LANGUAGE internal IMMUTABLE STRICT; 
+psql:/path/sql_file:1: NOTICE:  argument type date_type1 is only a shell
+CREATE FUNCTION
+CREATE TYPE date_type1( 
+ input = date_type1_in ,
+ output = date_type1_out ,
+ internallength = 4, 
+ default = '2001-12-11' , 
+ passedbyvalue, 
+ compresstype=zlib,
+ blocksize=32768,
+ compresslevel=2);
+CREATE TYPE
+select typoptions from pg_type_encoding where typid='date_type1 '::regtype;
+                     typoptions                      
+-----------------------------------------------------
+ {compresstype=zlib,blocksize=32768,compresslevel=2}
+(1 row)
+
+DROP type if exists timestamp_type1 cascade ; 
+psql:/path/sql_file:1: NOTICE:  type "timestamp_type1" does not exist, skipping
+DROP TYPE
+CREATE type timestamp_type1;
+CREATE TYPE
+CREATE FUNCTION timestamp_type1_in(cstring) 
+ RETURNS timestamp_type1
+ AS 'timestamp_in' 
+ LANGUAGE internal IMMUTABLE STRICT; 
+psql:/path/sql_file:1: NOTICE:  return type timestamp_type1 is only a shell
+CREATE FUNCTION
+CREATE FUNCTION timestamp_type1_out(timestamp_type1) 
+ RETURNS cstring
+ AS 'timestamp_out' 
+ LANGUAGE internal IMMUTABLE STRICT; 
+psql:/path/sql_file:1: NOTICE:  argument type timestamp_type1 is only a shell
+CREATE FUNCTION
+CREATE TYPE timestamp_type1( 
+ input = timestamp_type1_in ,
+ output = timestamp_type1_out ,
+ internallength = 4, 
+ default = '2001-12-24 02:26:11' , 
+ passedbyvalue, 
+ compresstype=rle_type,
+ blocksize=32768,
+ compresslevel=2);
+CREATE TYPE
+--Drop and recreate the data type 
+ Drop type if exists timestamp_type1 cascade;
+psql:/path/sql_file:1: NOTICE:  drop cascades to function timestamp_type1_out(timestamp_type1)
+psql:/path/sql_file:1: NOTICE:  drop cascades to function timestamp_type1_in(cstring)
+DROP TYPE
+CREATE FUNCTION timestamp_type1_in(cstring) 
+ RETURNS timestamp_type1
+ AS 'timestamp_in' 
+ LANGUAGE internal IMMUTABLE STRICT; 
+psql:/path/sql_file:1: NOTICE:  type "timestamp_type1" is not yet defined
+DETAIL:  Creating a shell type definition.
+CREATE FUNCTION
+CREATE FUNCTION timestamp_type1_out(timestamp_type1) 
+ RETURNS cstring
+ AS 'timestamp_out' 
+ LANGUAGE internal IMMUTABLE STRICT; 
+psql:/path/sql_file:1: NOTICE:  argument type timestamp_type1 is only a shell
+CREATE FUNCTION
+CREATE TYPE timestamp_type1( 
+ input = timestamp_type1_in ,
+ output = timestamp_type1_out ,
+ internallength = 4, 
+ default = '2001-12-24 02:26:11' , 
+ passedbyvalue, 
+ compresstype=rle_type,
+ blocksize=32768,
+ compresslevel=4);
+CREATE TYPE
+select typoptions from pg_type_encoding where typid='timestamp_type1 '::regtype;
+                       typoptions                        
+---------------------------------------------------------
+ {compresstype=rle_type,blocksize=32768,compresslevel=4}
+(1 row)
+
+DROP table if exists co_compr_type_tb; 
+psql:/path/sql_file:1: NOTICE:  table "co_compr_type_tb" does not exist, skipping
+DROP TABLE
+-- Create table 
+CREATE TABLE co_compr_type_tb
+	 (id serial,  a1 int_type1, a2 char_type1, a3 text_type1, a4 date_type1, a5 varchar_type1, a6 timestamp_type1)  WITH (appendonly=true, orientation=column) distributed randomly;
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create implicit sequence "co_compr_type_tb_id_seq" for serial column "co_compr_type_tb.id"
+CREATE TABLE
+\d+ co_compr_type_tb
+                                                         Append-Only Columnar Table "public.co_compr_type_tb"
+ Column |      Type       |                           Modifiers                           | Storage | Compression Type | Compression Level | Block Size | Description 
+--------+-----------------+---------------------------------------------------------------+---------+------------------+-------------------+------------+-------------
+ id     | integer         | not null default nextval('co_compr_type_tb_id_seq'::regclass) | plain   | none             | 0                 | 32768      | 
+ a1     | int_type1       |                                                               | plain   | zlib             | 2                 | 32768      | 
+ a2     | char_type1      |                                                               | plain   | zlib             | 2                 | 32768      | 
+ a3     | text_type1      |                                                               | plain   | zlib             | 7                 | 32768      | 
+ a4     | date_type1      |                                                               | plain   | zlib             | 2                 | 32768      | 
+ a5     | varchar_type1   |                                                               | plain   | zlib             | 9                 | 32768      | 
+ a6     | timestamp_type1 |                                                               | plain   | rle_type         | 4                 | 32768      | 
+Checksum: f
+Has OIDs: no
+Options: appendonly=true, orientation=column
+Distributed randomly
+
+INSERT into co_compr_type_tb DEFAULT VALUES ; 
+INSERT 0 1
+Select * from co_compr_type_tb;
+ id | a1 | a2 |              a3               |     a4     |         a5          |             a6             
+----+----+----+-------------------------------+------------+---------------------+----------------------------
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+(1 row)
+
+Insert into co_compr_type_tb select * from co_compr_type_tb; 
+INSERT 0 1
+Insert into co_compr_type_tb select * from co_compr_type_tb; 
+INSERT 0 2
+Insert into co_compr_type_tb select * from co_compr_type_tb; 
+INSERT 0 4
+Insert into co_compr_type_tb select * from co_compr_type_tb; 
+INSERT 0 8
+Insert into co_compr_type_tb select * from co_compr_type_tb; 
+INSERT 0 16
+Insert into co_compr_type_tb select * from co_compr_type_tb; 
+INSERT 0 32
+Select * from co_compr_type_tb;
+ id | a1 | a2 |              a3               |     a4     |         a5          |             a6             
+----+----+----+-------------------------------+------------+---------------------+----------------------------
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+  1 | 55 | a  | hfkdshfkjsdhflkshadfkhsadflkh | 2001-12-11 | ajhgdjagdjasdkjashk | 2000-01-01 00:22:56.712384
+(64 rows)
+
+--Alter table drop a column 
+Alter table co_compr_type_tb Drop column a2; 
+ALTER TABLE
+Insert into co_compr_type_tb(a1,a3,a4,a5,a6)  select a1,a3,a4,a5,a6 from co_compr_type_tb ;
+INSERT 0 64
+Select count(*) from co_compr_type_tb; 
+ count 
+-------
+   128
+(1 row)
+
+--Alter table rename a column 
+Alter table co_compr_type_tb Rename column a3 TO after_rename_a3; 
+ALTER TABLE
+--Insert data to the table, select count(*)
+Insert into co_compr_type_tb(a1,after_rename_a3,a4,a5,a6)  select a1,after_rename_a3,a4,a5,a6 from co_compr_type_tb ;
+INSERT 0 128
+Select count(*) from co_compr_type_tb; 
+ count 
+-------
+   256
+(1 row)
+
+Alter type int_type1 set default encoding (compresstype=rle_type,compresslevel=3);
+ALTER TYPE
+\d+ co_compr_type_tb
+                                                             Append-Only Columnar Table "public.co_compr_type_tb"
+     Column      |      Type       |                           Modifiers                           | Storage | Compression Type | Compression Level | Block Size | Description 
+-----------------+-----------------+---------------------------------------------------------------+---------+------------------+-------------------+------------+-------------
+ id              | integer         | not null default nextval('co_compr_type_tb_id_seq'::regclass) | plain   | none             | 0                 | 32768      | 
+ a1              | int_type1       |                                                               | plain   | zlib             | 2                 | 32768      | 
+ after_rename_a3 | text_type1      |                                                               | plain   | zlib             | 7                 | 32768      | 
+ a4              | date_type1      |                                                               | plain   | zlib             | 2                 | 32768      | 
+ a5              | varchar_type1   |                                                               | plain   | zlib             | 9                 | 32768      | 
+ a6              | timestamp_type1 |                                                               | plain   | rle_type         | 4                 | 32768      | 
+Checksum: f
+Has OIDs: no
+Options: appendonly=true, orientation=column
+Distributed randomly
+
+Insert into co_compr_type_tb(a1,after_rename_a3,a4,a5,a6)  select a1,after_rename_a3,a4,a5,a6 from co_compr_type_tb ;
+INSERT 0 256
+Select count(*) from co_compr_type_tb; 
+ count 
+-------
+   512
+(1 row)
+

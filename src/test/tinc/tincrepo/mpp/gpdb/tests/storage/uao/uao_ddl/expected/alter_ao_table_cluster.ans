@@ -1,0 +1,108 @@
+-- @description : Alter  UAO tables and execute DML statements on the tables
+-- 
+Drop table if exists sto_alt_uao3_cluster cascade;
+DROP TABLE
+CREATE TABLE sto_alt_uao3_cluster(
+  text_col text,
+  bigint_col bigint,
+  char_vary_col character varying(30),
+  numeric_col numeric
+  ) with(appendonly=true) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+\d+ sto_alt_uao3_cluster
+              Append-Only Table "public.sto_alt_uao3_cluster"
+    Column     |         Type          | Modifiers | Storage  | Description 
+---------------+-----------------------+-----------+----------+-------------
+ text_col      | text                  |           | extended | 
+ bigint_col    | bigint                |           | plain    | 
+ char_vary_col | character varying(30) |           | extended | 
+ numeric_col   | numeric               |           | main     | 
+Compression Type: None
+Compression Level: 0
+Block Size: 32768
+Checksum: f
+Has OIDs: no
+Options: appendonly=true
+Distributed randomly
+
+insert into sto_alt_uao3_cluster values ('1_zero', 1, '1_zero', 1);
+INSERT 0 1
+SELECT 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='sto_alt_uao3_cluster');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+select * from sto_alt_uao3_cluster order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col 
+----------+------------+---------------+-------------
+ 1_zero   |          1 | 1_zero        |           1
+(1 row)
+
+update sto_alt_uao3_cluster set numeric_col = 100 where text_col = '1_zero';
+UPDATE 1
+select count(*) AS only_visi_tups from sto_alt_uao3_cluster;
+ only_visi_tups 
+----------------
+              1
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*)  AS invisi_and_visi_tups from sto_alt_uao3_cluster;
+ invisi_and_visi_tups 
+----------------------
+                    2
+(1 row)
+
+set gp_select_invisible = false;
+SET
+-- Alter table SET without cluster
+Alter table sto_alt_uao3_cluster set without cluster;
+ALTER TABLE
+\d+ sto_alt_uao3_cluster
+              Append-Only Table "public.sto_alt_uao3_cluster"
+    Column     |         Type          | Modifiers | Storage  | Description 
+---------------+-----------------------+-----------+----------+-------------
+ text_col      | text                  |           | extended | 
+ bigint_col    | bigint                |           | plain    | 
+ char_vary_col | character varying(30) |           | extended | 
+ numeric_col   | numeric               |           | main     | 
+Compression Type: None
+Compression Level: 0
+Block Size: 32768
+Checksum: f
+Has OIDs: no
+Options: appendonly=true
+Distributed randomly
+
+select * from sto_alt_uao3_cluster order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col 
+----------+------------+---------------+-------------
+ 1_zero   |          1 | 1_zero        |         100
+(1 row)
+
+update sto_alt_uao3_cluster set numeric_col=100 where text_col = '1_zero';
+UPDATE 1
+select * from sto_alt_uao3_cluster order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col 
+----------+------------+---------------+-------------
+ 1_zero   |          1 | 1_zero        |         100
+(1 row)
+
+select count(*) AS only_visi_tups from sto_alt_uao3_cluster;
+ only_visi_tups 
+----------------
+              1
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*)  AS invisi_and_visi_tups from sto_alt_uao3_cluster;
+ invisi_and_visi_tups 
+----------------------
+                    3
+(1 row)
+
+set gp_select_invisible = false;
+SET

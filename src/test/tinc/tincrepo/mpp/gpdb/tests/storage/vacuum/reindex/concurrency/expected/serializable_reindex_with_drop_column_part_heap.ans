@@ -1,0 +1,78 @@
+-- @product_version gpdb: [4.3.4.0 -],4.3.4.0O2
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+2: SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+SET
+1: alter table reindex_serialize_tab_heap_part drop column f;
+ALTER
+1: COMMIT;
+COMMIT
+2: reindex table reindex_serialize_tab_heap_part;
+REINDEX
+2: COMMIT;
+COMMIT
+3: select count(*) from  reindex_serialize_tab_heap_part where id  < 5; 3: set enable_seqscan=false;
+count
+-----
+8    
+(1 row)
+3: set enable_indexscan=true;
+SET
+3: select count(*) from  reindex_serialize_tab_heap_part where id = 1;
+count
+-----
+2    
+(1 row)
+3: SELECT 1 AS relfilenode_same_on_all_segs from gp_dist_random('pg_class')   WHERE relname = 'reindex_serialize_tab_heap_part' GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
+relfilenode_same_on_all_segs
+----------------------------
+1                           
+(1 row)
+3: SELECT 1 AS relfilenode_same_on_all_segs from gp_dist_random('pg_class')   WHERE relname = 'idxa_reindex_serialize_tab_heap_part_1_prt_p_one' GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
+relfilenode_same_on_all_segs
+----------------------------
+1                           
+(1 row)
+
+SELECT 1 AS relfilenode_same_on_all_segs_maintable from gp_dist_random('pg_class') WHERE relname = 'reindex_serialize_tab_heap_part' and relfilenode = oid GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
+relfilenode_same_on_all_segs_maintable
+--------------------------------------
+1                                     
+(1 row)
+
+select 1 AS relfilenode_same_on_all_segs_mainidx from gp_dist_random('pg_class') WHERE relname = 'idxi_reindex_serialize_tab_heap_part' and relfilenode != oid GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
+relfilenode_same_on_all_segs_mainidx
+------------------------------------
+(0 rows)
+
+select  1 AS relfilenode_same_on_all_segs_partition_default_data from gp_dist_random('pg_class') WHERE relname = 'reindex_serialize_tab_heap_part_1_prt_de_fault' and relfilenode = oid GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
+relfilenode_same_on_all_segs_partition_default_data
+---------------------------------------------------
+1                                                  
+(1 row)
+
+
+select  1 AS relfilenode_same_on_all_segs_partition_default_idx from gp_dist_random('pg_class') WHERE relname = 'idxi_reindex_serialize_tab_heap_part_1_prt_de_fault' and relfilenode != oid GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
+relfilenode_same_on_all_segs_partition_default_idx
+--------------------------------------------------
+(0 rows)
+
+
+select 1 AS relfilenode_same_on_all_segs_partition_1_data from gp_dist_random('pg_class') WHERE relname = 'reindex_serialize_tab_heap_part_1_prt_p_one' and relfilenode = oid GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
+relfilenode_same_on_all_segs_partition_1_data
+---------------------------------------------
+1                                            
+(1 row)
+
+select 1 AS relfilenode_same_on_all_segs_partition_1_idx from gp_dist_random('pg_class') WHERE relname = 'idxi_reindex_serialize_tab_heap_part_1_prt_p_one' and relfilenode != oid GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
+relfilenode_same_on_all_segs_partition_1_idx
+--------------------------------------------
+(0 rows)
+select 1 AS relfilenode_same_on_all_segs_partition_1_idx from gp_dist_random('pg_class') WHERE relname = 'idxa_reindex_serialize_tab_heap_part_1_prt_p_one' and relfilenode != oid GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
+relfilenode_same_on_all_segs_partition_1_idx
+--------------------------------------------
+1                                           
+(1 row)
+

@@ -1,0 +1,4 @@
+create database cr_newdb;
+CREATE DATABASE
+drop database cr_newdb;
+DROP DATABASE

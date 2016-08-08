@@ -1,0 +1,32 @@
+-- start_ignore
+SET work_mem="256kB";
+psql:/path/sql_file:1: WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
+SET
+SET optimizer=off;
+SET
+-- end_ignore
+create index idx_i_aoco on aoco_tab (i);
+CREATE INDEX
+select count(*) from aoco_tab where i >= 0;
+  count  
+---------
+ 4063232
+(1 row)
+
+drop index idx_i_aoco;
+DROP INDEX
+-- Edge case: without lossy pages
+truncate table aoco_tab;
+TRUNCATE TABLE
+insert into aoco_tab select generate_series(1, 65536);
+INSERT 0 65536
+create index idx_i_aoco on aoco_tab (i);
+CREATE INDEX
+select count(*) from aoco_tab where i >= 0;
+ count 
+-------
+ 65536
+(1 row)
+
+drop index idx_i_aoco;
+DROP INDEX

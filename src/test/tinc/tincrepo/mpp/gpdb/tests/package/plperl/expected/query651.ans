@@ -1,0 +1,16 @@
+-- start_ignore
+SET optimizer=off;
+SET
+-- end_ignore
+-- Test: plperl 14
+CREATE OR REPLACE FUNCTION perl_set() RETURNS SETOF testrowperl AS $$
+								return undef;
+								$$  LANGUAGE plperl;
+CREATE FUNCTION
+							  
+SELECT perl_set();
+ perl_set 
+----------
+(0 rows)
+
+							  

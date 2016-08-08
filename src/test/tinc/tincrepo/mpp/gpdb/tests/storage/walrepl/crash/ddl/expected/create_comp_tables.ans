@@ -1,0 +1,93 @@
+-- @description : ao and co compression tables
+-- 
+-- AO compr tables
+--start_ignore
+DROP TABLE if exists sto_ao_compr1;
+DROP TABLE
+--end_ignore
+CREATE TABLE sto_ao_compr1(
+          col_text text,
+          col_numeric numeric
+          CONSTRAINT tbl_chk_con1 CHECK (col_numeric < 250)
+          ) with(appendonly=true, compresstype='zlib', compresslevel=1, blocksize=8192) DISTRIBUTED by(col_text);
+CREATE TABLE
+insert into sto_ao_compr1 values ('0_zero',0);
+INSERT 0 1
+insert into sto_ao_compr1 values ('1_one',1);
+INSERT 0 1
+insert into sto_ao_compr1 values ('2_two',2);
+INSERT 0 1
+select * from sto_ao_compr1;
+ col_text | col_numeric 
+----------+-------------
+ 0_zero   |           0
+ 2_two    |           2
+ 1_one    |           1
+(3 rows)
+
+--start_ignore
+DROP TABLE if exists sto_ao_compr2;
+DROP TABLE
+--end_ignore
+CREATE TABLE sto_ao_compr2(
+          stud_id int,
+          stud_name varchar(60) default 'default'
+          ) with(appendonly=true, compresstype=quicklz, compresslevel=1) DISTRIBUTED by(stud_id);
+CREATE TABLE
+insert into sto_ao_compr2 values ( 1,'annnnnnnnnnnnnnnnnnnnnnnn');
+INSERT 0 1
+insert into sto_ao_compr2 values ( 2,'bennnnnnnnnnnnnnnnnnnnnnn');
+INSERT 0 1
+select * from sto_ao_compr2;
+ stud_id |         stud_name         
+---------+---------------------------
+       1 | annnnnnnnnnnnnnnnnnnnnnnn
+       2 | bennnnnnnnnnnnnnnnnnnnnnn
+(2 rows)
+
+-- CO compr tables
+--start_ignore
+DROP TABLE if exists sto_co_compr1;
+DROP TABLE
+--end_ignore
+CREATE TABLE sto_co_compr1(
+          col_text text,
+          col_numeric numeric
+          CONSTRAINT tbl_chk_con1 CHECK (col_numeric < 250)
+          ) with(appendonly=true, orientation=column, compresstype='quicklz', compresslevel=1, blocksize=8192) DISTRIBUTED by(col_text);
+CREATE TABLE
+insert into sto_co_compr1 values ('0_zero',0);
+INSERT 0 1
+insert into sto_co_compr1 values ('1_one',1);
+INSERT 0 1
+insert into sto_co_compr1 values ('2_two',2);
+INSERT 0 1
+select * from sto_co_compr1;
+ col_text | col_numeric 
+----------+-------------
+ 0_zero   |           0
+ 2_two    |           2
+ 1_one    |           1
+(3 rows)
+
+--start_ignore
+DROP TABLE if exists sto_co_compr2;
+DROP TABLE
+--end_ignore
+CREATE TABLE sto_co_compr2(
+            col_int int  ENCODING (compresstype=zlib,compresslevel=8),
+            col_text text,
+            DEFAULT COLUMN ENCODING (compresstype=rle_type,blocksize=8192,compresslevel=1)) 
+            WITH (appendonly=true, orientation=column) distributed randomly ;
+CREATE TABLE
+insert into sto_co_compr2 values(1, 'first row');
+INSERT 0 1
+insert into sto_co_compr2 values(1, 'second row');
+INSERT 0 1
+select * from sto_co_compr2;
+ col_int |  col_text  
+---------+------------
+       1 | second row
+       1 | first row
+(2 rows)
+

@@ -1,0 +1,14 @@
+-- start_matchsubs
+# The relfilenode_oid might vary between runs
+m/Dropping file-system object -- Relation File:.*/
+s/Dropping file-system object -- Relation File:.*/Dropping file-system object -- Relation File:/ 
+
+# The freeTID value may be different based on the tests which are run before the freeTID test suite
+m/FreeTID at \(\d+,\d+\)/
+s/FreeTID at \(\d+,\d+\)//
+
+# Take out the psql statement in front of DETAIL as TINC hack
+m/psql.*DETAIL/
+s/psql.*DETAIL/DETAIL/
+
+-- end_matchsubs

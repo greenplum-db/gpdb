@@ -1,0 +1,14 @@
+-- start_ignore
+-- end_ignore
+select 'mockdb';
+ ?column? 
+----------
+ mockdb
+(1 row)
+
+select 'tag1';
+ ?column? 
+----------
+ tag1
+(1 row)
+

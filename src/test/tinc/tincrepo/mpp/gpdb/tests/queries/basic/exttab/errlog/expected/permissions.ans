@@ -1,0 +1,270 @@
+-- start_ignore
+-- end_ignore
+-- Check permissions with gp_truncate_error_log and gp_read_error_log
+DROP EXTERNAL TABLE IF EXISTS exttab_permissions_1;
+psql:/path/sql_file:1: NOTICE:  table "exttab_permissions_1" does not exist, skipping
+DROP EXTERNAL TABLE
+DROP EXTERNAL TABLE IF EXISTS exttab_permissions_2;
+psql:/path/sql_file:1: NOTICE:  table "exttab_permissions_2" does not exist, skipping
+DROP EXTERNAL TABLE
+-- Generate the file with very few errors
+\! python @script@ 10 2 > @data_dir@/exttab_permissions_1.tbl
+-- does not reach reject limit
+CREATE EXTERNAL TABLE exttab_permissions_1( i int, j text ) 
+LOCATION ('gpfdist://@host@:@port@/exttab_permissions_1.tbl') FORMAT 'TEXT' (DELIMITER '|') 
+LOG ERRORS SEGMENT REJECT LIMIT 10;
+CREATE EXTERNAL TABLE
+-- Generate the file with lot of errors
+\! python @script@ 200 50 > @data_dir@/exttab_permissions_2.tbl
+-- reaches reject limit
+CREATE EXTERNAL TABLE exttab_permissions_2( i int, j text ) 
+LOCATION ('gpfdist://@host@:@port@/exttab_permissions_2.tbl') FORMAT 'TEXT' (DELIMITER '|') 
+LOG ERRORS SEGMENT REJECT LIMIT 2;
+CREATE EXTERNAL TABLE
+-- generate some error logs
+SELECT COUNT(*) FROM exttab_permissions_1, exttab_permissions_2;
+psql:/path/sql_file:1: ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg1 slice1 @host@:40001 pid=22676)
+DETAIL:  External table exttab_permissions_2, line 6 of gpfdist://@host@:@port@/exttab_permissions_2.tbl: "error_1"
+-- Test: that only superuser can do gp_truncate_error_log('*.*')
+DROP ROLE IF EXISTS exttab_non_superuser;
+DROP ROLE
+CREATE ROLE exttab_non_superuser WITH NOSUPERUSER LOGIN CREATEDB;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+SET ROLE exttab_non_superuser;
+SET
+SELECT COUNT(*) FROM gp_read_error_log('exttab_permissions_1');
+psql:/path/sql_file:1: ERROR:  permission denied for relation exttab_permissions_1  (seg1 slice1 @host@:40001 pid=22659)
+SELECT COUNT(*) FROM gp_read_error_log('exttab_permissions_2');
+psql:/path/sql_file:1: ERROR:  permission denied for relation exttab_permissions_2  (seg1 slice1 @host@:40001 pid=22659)
+SELECT gp_truncate_error_log('exttab_permissions_1');
+psql:/path/sql_file:1: ERROR:  permission denied for relation exttab_permissions_1  (seg0 @host@:40000 pid=22657) (cdbsreh.c:1416)
+DETAIL:  permission denied for relation exttab_permissions_1  (seg1 @host@:40001 pid=22659)
+SELECT gp_truncate_error_log('exttab_permissions_2');
+psql:/path/sql_file:1: ERROR:  permission denied for relation exttab_permissions_2  (seg0 @host@:40000 pid=22657) (cdbsreh.c:1416)
+DETAIL:  permission denied for relation exttab_permissions_2  (seg1 @host@:40001 pid=22659)
+SELECT gp_truncate_error_log('*');
+psql:/path/sql_file:1: ERROR:  must be owner of database @dbname@  (seg0 @host@:40000 pid=22657) (cdbsreh.c:1416)
+DETAIL:  must be owner of database @dbname@  (seg1 @host@:40001 pid=22659)
+SELECT gp_truncate_error_log('*.*');
+psql:/path/sql_file:1: ERROR:  must be superuser to delete all error log files  (seg0 @host@:40000 pid=22657) (cdbsreh.c:1416)
+DETAIL:  must be superuser to delete all error log files  (seg1 @host@:40001 pid=22659)
+SET ROLE @user@;
+SET
+DROP ROLE IF EXISTS exttab_superuser;
+DROP ROLE
+CREATE ROLE exttab_superuser WITH SUPERUSER LOGIN;
+CREATE ROLE
+SET ROLE exttab_superuser;
+SET
+SELECT COUNT(*) FROM gp_read_error_log('exttab_permissions_1');
+ count 
+-------
+     0
+(1 row)
+
+SELECT COUNT(*) FROM gp_read_error_log('exttab_permissions_2');
+ count 
+-------
+     1
+(1 row)
+
+SELECT gp_truncate_error_log('*');
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+
+SELECT gp_truncate_error_log('*.*');
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+
+SELECT gp_truncate_error_log('exttab_permissions_1');
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+
+SELECT gp_truncate_error_log('exttab_permissions_2');
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+
+SET ROLE @user@;
+SET
+SELECT * FROM gp_read_error_log('exttab_permissions_1');
+ cmdtime | relname | filename | linenum | bytenum | errmsg | rawdata | rawbytes 
+---------+---------+----------+---------+---------+--------+---------+----------
+(0 rows)
+
+SELECT * FROM gp_read_error_log('exttab_permissions_2');
+ cmdtime | relname | filename | linenum | bytenum | errmsg | rawdata | rawbytes 
+---------+---------+----------+---------+---------+--------+---------+----------
+(0 rows)
+
+-- Test: only database owner can do gp_truncate_error_log('*')
+DROP DATABASE IF EXISTS exttab_db;
+DROP DATABASE
+DROP ROLE IF EXISTS exttab_user1;
+DROP ROLE
+DROP ROLE IF EXISTS exttab_user2;
+DROP ROLE
+CREATE ROLE exttab_user1 WITH NOSUPERUSER LOGIN;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE ROLE exttab_user2 WITH NOSUPERUSER LOGIN;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE DATABASE exttab_db WITH OWNER=exttab_user1;
+CREATE DATABASE
+\c exttab_db
+You are now connected to database "exttab_db" as user "@user@".
+-- generate some error logs in this db
+DROP EXTERNAL TABLE IF EXISTS exttab_permissions_1 CASCADE;
+psql:/path/sql_file:1: NOTICE:  table "exttab_permissions_1" does not exist, skipping
+DROP EXTERNAL TABLE
+CREATE EXTERNAL TABLE exttab_permissions_1( i int, j text ) 
+LOCATION ('gpfdist://@host@:@port@/exttab_permissions_1.tbl') FORMAT 'TEXT' (DELIMITER '|') 
+LOG ERRORS SEGMENT REJECT LIMIT 10;
+CREATE EXTERNAL TABLE
+SELECT COUNT(*) FROM exttab_permissions_1 e1, exttab_permissions_1 e2;
+ count 
+-------
+    64
+(1 row)
+
+SELECT COUNT(*) FROM gp_read_error_log('exttab_permissions_1');
+ count 
+-------
+     4
+(1 row)
+
+SET ROLE exttab_user2;
+SET
+SELECT COUNT(*) FROM gp_read_error_log('exttab_permissions_1');
+psql:/path/sql_file:1: ERROR:  permission denied for relation exttab_permissions_1  (seg0 slice1 @host@:40000 pid=22740)
+SELECT gp_truncate_error_log('*');
+psql:/path/sql_file:1: ERROR:  must be owner of database exttab_db  (seg0 @host@:40000 pid=22740) (cdbsreh.c:1416)
+DETAIL:  must be owner of database exttab_db  (seg1 @host@:40001 pid=22742)
+SELECT gp_truncate_error_log('*.*');
+psql:/path/sql_file:1: ERROR:  must be superuser to delete all error log files  (seg0 @host@:40000 pid=22740) (cdbsreh.c:1416)
+DETAIL:  must be superuser to delete all error log files  (seg1 @host@:40001 pid=22742)
+SELECT gp_truncate_error_log('exttab_permissions_1');
+psql:/path/sql_file:1: ERROR:  permission denied for relation exttab_permissions_1  (seg0 @host@:40000 pid=22740) (cdbsreh.c:1416)
+DETAIL:  permission denied for relation exttab_permissions_1  (seg1 @host@:40001 pid=22742)
+SET ROLE exttab_user1;
+SET
+-- Database owner can still not perform read / truncate on specific tables. This follows the same mechanism as TRUNCATE table.
+SELECT COUNT(*) FROM gp_read_error_log('exttab_permissions_1');
+psql:/path/sql_file:1: ERROR:  permission denied for relation exttab_permissions_1  (seg0 slice1 @host@:40000 pid=22740)
+SELECT gp_truncate_error_log('exttab_permissions_1');
+psql:/path/sql_file:1: ERROR:  permission denied for relation exttab_permissions_1  (seg0 @host@:40000 pid=22740) (cdbsreh.c:1416)
+DETAIL:  permission denied for relation exttab_permissions_1  (seg1 @host@:40001 pid=22742)
+SELECT gp_truncate_error_log('*');
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+
+-- should fail
+SELECT gp_truncate_error_log('*.*');
+psql:/path/sql_file:1: ERROR:  must be superuser to delete all error log files  (seg0 @host@:40000 pid=22740) (cdbsreh.c:1416)
+DETAIL:  must be superuser to delete all error log files  (seg1 @host@:40001 pid=22742)
+SET ROLE @user@;
+SET
+SELECT * FROM gp_read_error_log('exttab_permissions_1');
+ cmdtime | relname | filename | linenum | bytenum | errmsg | rawdata | rawbytes 
+---------+---------+----------+---------+---------+--------+---------+----------
+(0 rows)
+
+\c @dbname@
+You are now connected to database "@dbname@" as user "@user@".
+DROP EXTERNAL TABLE IF EXISTS exttab_permissions_3 CASCADE;
+psql:/path/sql_file:1: NOTICE:  table "exttab_permissions_3" does not exist, skipping
+DROP EXTERNAL TABLE
+DROP ROLE IF EXISTS errlog_exttab_user3;
+DROP ROLE
+DROP ROLE IF EXISTS errlog_exttab_user4;
+DROP ROLE
+CREATE ROLE errlog_exttab_user3 WITH NOSUPERUSER LOGIN;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE ROLE errlog_exttab_user4 WITH NOSUPERUSER LOGIN;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+-- generate some error logs in this db
+CREATE EXTERNAL TABLE exttab_permissions_3( i int, j text ) 
+LOCATION ('gpfdist://@host@:@port@/exttab_permissions_1.tbl') FORMAT 'TEXT' (DELIMITER '|') 
+LOG ERRORS SEGMENT REJECT LIMIT 10;
+CREATE EXTERNAL TABLE
+SELECT COUNT(*) FROM exttab_permissions_3 e1, exttab_permissions_3 e2;
+ count 
+-------
+    64
+(1 row)
+
+SELECT COUNT(*) FROM gp_read_error_log('exttab_permissions_3');
+ count 
+-------
+     4
+(1 row)
+
+ALTER EXTERNAL TABLE exttab_permissions_3 OWNER TO errlog_exttab_user3;
+ALTER EXTERNAL TABLE
+-- This should fail with non table owner
+SET ROLE errlog_exttab_user4;
+SET
+SELECT COUNT(*) FROM gp_read_error_log('exttab_permissions_3');
+psql:/path/sql_file:1: ERROR:  permission denied for relation exttab_permissions_3  (seg1 slice1 @host@:40001 pid=22782)
+SELECT gp_truncate_error_log('exttab_permissions_3');
+psql:/path/sql_file:1: ERROR:  permission denied for relation exttab_permissions_3  (seg0 @host@:40000 pid=22780) (cdbsreh.c:1416)
+DETAIL:  permission denied for relation exttab_permissions_3  (seg1 @host@:40001 pid=22782)
+-- should go through fine with table owner
+SET ROLE errlog_exttab_user3;
+SET
+SELECT gp_truncate_error_log('exttab_permissions_3');
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+
+SET ROLE @user@;
+SET
+SELECT * FROM gp_read_error_log('exttab_permissions_3');
+ cmdtime | relname | filename | linenum | bytenum | errmsg | rawdata | rawbytes 
+---------+---------+----------+---------+---------+--------+---------+----------
+(0 rows)
+
+-- Grant TRUNCATE permission on table to a non table owner and make sure he is able to do gp_truncate_error_log
+GRANT TRUNCATE on exttab_permissions_3 to errlog_exttab_user4;
+GRANT
+SELECT COUNT(*) FROM exttab_permissions_3 e1, exttab_permissions_3 e2;
+ count 
+-------
+    64
+(1 row)
+
+SELECT COUNT(*) FROM gp_read_error_log('exttab_permissions_3');
+ count 
+-------
+     4
+(1 row)
+
+SET ROLE errlog_exttab_user4;
+SET
+SELECT gp_truncate_error_log('exttab_permissions_3');
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+
+SET ROLE @user@;
+SET
+SELECT * FROM gp_read_error_log('exttab_permissions_3');
+ cmdtime | relname | filename | linenum | bytenum | errmsg | rawdata | rawbytes 
+---------+---------+----------+---------+---------+--------+---------+----------
+(0 rows)
+

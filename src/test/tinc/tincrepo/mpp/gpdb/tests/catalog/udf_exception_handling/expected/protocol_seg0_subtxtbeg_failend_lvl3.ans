@@ -1,0 +1,40 @@
+-- @Description: The Test executes Procedure test_setup_1 to exercise UDF Exception Handling in various subtransaction condition for debug_dtm_action_target=protocol and debug_dtm_action_segment = 0
+-- 
+DROP TABLE IF EXISTS employees;
+DROP TABLE
+DROP TABLE IF EXISTS shops;
+DROP TABLE
+select test_protocol_allseg(1, 2,'f','abc',100,0);
+psql:/path/sql_file:1: NOTICE:  table "employees" does not exist, skipping
+CONTEXT:  SQL statement "DROP TABLE IF EXISTS employees"
+PL/pgSQL function "test_protocol_allseg" line 4 at SQL statement
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "employees_pkey" for table "employees"
+CONTEXT:  SQL statement "CREATE TABLE employees ( id int NOT NULL PRIMARY KEY, shop_id int NOT NULL , gender character NOT NULL, name varchar(32) NOT NULL, salary int CHECK(salary > 0), factor int )"
+PL/pgSQL function "test_protocol_allseg" line 6 at SQL statement
+psql:/path/sql_file:1: NOTICE:  table "shops" does not exist, skipping
+CONTEXT:  SQL statement "DROP TABLE IF EXISTS shops"
+PL/pgSQL function "test_protocol_allseg" line 16 at SQL statement
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create implicit sequence "shops_id_seq" for serial column "shops.id"
+CONTEXT:  SQL statement "CREATE TABLE shops ( id serial PRIMARY KEY, shop varchar(32) )"
+PL/pgSQL function "test_protocol_allseg" line 18 at SQL statement
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "shops_pkey" for table "shops"
+CONTEXT:  SQL statement "CREATE TABLE shops ( id serial PRIMARY KEY, shop varchar(32) )"
+PL/pgSQL function "test_protocol_allseg" line 18 at SQL statement
+psql:/path/sql_file:1: NOTICE:  catching the exception ...2
+ test_protocol_allseg 
+----------------------
+ 
+(1 row)
+
+select * from employees;
+ id | shop_id | gender | name | salary | factor 
+----+---------+--------+------+--------+--------
+(0 rows)
+
+select * from shops order by id;
+ id |     shop      
+----+---------------
+  1 | san francisco
+  2 | New York
+(2 rows)
+

@@ -1,0 +1,191 @@
+--start_ignore
+drop external table rescan_lineitem;
+DROP EXTERNAL TABLE
+drop external table rescan_orders;
+DROP EXTERNAL TABLE
+drop external table rescan_lineitem_writeHDFS;
+DROP EXTERNAL TABLE
+drop external table rescan_lineitem_readHDFS;
+DROP EXTERNAL TABLE
+drop external table rescan_orders_writeHDFS;
+DROP EXTERNAL TABLE
+drop external table rescan_orders_readHDFS;
+DROP EXTERNAL TABLE
+--end_ignore
+create readable external table rescan_lineitem(
+L_ORDERKEY    INTEGER ,
+L_PARTKEY     INTEGER ,
+L_SUPPKEY INTEGER ,
+L_LINENUMBER  INTEGER ,
+L_QUANTITY    DECIMAL(15,2) ,
+L_EXTENDEDPRICE  DECIMAL(15,2) ,
+L_DISCOUNT    DECIMAL(15,2) ,
+L_TAX         DECIMAL(15,2) ,
+L_RETURNFLAG  CHAR(1) ,
+L_LINESTATUS  CHAR(1) ,
+L_SHIPDATE    DATE ,
+L_COMMITDATE  DATE ,
+L_RECEIPTDATE DATE ,
+L_SHIPINSTRUCT CHAR(25) ,
+L_SHIPMODE     CHAR(10) ,
+L_COMMENT      VARCHAR(44) 
+) location ('gphdfs://rh55-qavm20:54310/plaintext/lineitem.txt')format 'text' (delimiter as '|');
+CREATE EXTERNAL TABLE
+create writable external table rescan_lineitem_writeHDFS (like rescan_lineitem) location ('gphdfs://rh55-qavm20:54310/extwrite/lineitem') format 'custom' (formatter='gphdfs_export');
+NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+CREATE EXTERNAL TABLE
+insert into rescan_lineitem_writeHDFS select * from rescan_lineitem;
+INSERT 0 25
+create readable external table rescan_lineitem_readHDFS (like rescan_lineitem) location ('gphdfs://rh55-qavm20:54310/extwrite/lineitem') format 'custom' (formatter='gphdfs_import');
+CREATE EXTERNAL TABLE
+create readable external table rescan_orders(
+O_ORDERKEY       INTEGER ,
+O_CUSTKEY        INTEGER ,
+O_ORDERSTATUS CHAR(1) ,
+O_TOTALPRICE     DECIMAL(15,2),
+O_ORDERDATE      DATE ,
+O_ORDERPRIORITY  CHAR(15) ,
+O_CLERK          CHAR(15) ,
+O_SHIPPRIORITY   INTEGER ,
+O_COMMENT        VARCHAR(79) 
+) location ('gphdfs://rh55-qavm20:54310/plaintext/orders.txt')format 'text' (delimiter as '|');
+CREATE EXTERNAL TABLE
+create writable external table rescan_orders_writeHDFS (like rescan_orders ) location ('gphdfs://rh55-qavm20:54310/extwrite/orders') format 'custom' (formatter='gphdfs_export');
+NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+CREATE EXTERNAL TABLE
+insert into rescan_orders_writeHDFS select * from rescan_orders;
+INSERT 0 25
+create readable external table rescan_orders_readHDFS (like rescan_orders ) location ('gphdfs://rh55-qavm20:54310/extwrite/orders') format 'custom' (formatter='gphdfs_import');
+CREATE EXTERNAL TABLE
+select * from rescan_lineitem order by l_partkey;
+ l_orderkey | l_partkey | l_suppkey | l_linenumber | l_quantity | l_extendedprice | l_discount | l_tax | l_returnflag | l_linestatus | l_shipdate | l_commitdate | l_receiptdate |      l_shipinstruct       | l_shipmode |                 l_comment                  
+------------+-----------+-----------+--------------+------------+-----------------+------------+-------+--------------+--------------+------------+--------------+---------------+---------------------------+------------+--------------------------------------------
+          1 |      2132 |      4633 |            4 |      28.00 |        28955.64 |       0.09 |  0.06 | N            | O            | 1996-04-21 | 1996-03-30   | 1996-05-16    | NONE                      | AIR        | lites. fluffily even de
+          3 |      4297 |      1798 |            1 |      45.00 |        54058.05 |       0.06 |  0.00 | R            | F            | 1994-02-02 | 1994-01-04   | 1994-02-23    | NONE                      | AIR        | ongside of the furiously brave acco
+          1 |     15635 |       638 |            6 |      32.00 |        49620.16 |       0.07 |  0.02 | N            | O            | 1996-01-30 | 1996-02-07   | 1996-02-03    | DELIVER IN PERSON         | MAIL       | arefully slyly ex
+          3 |     19036 |      6540 |            2 |      49.00 |        46796.47 |       0.10 |  0.00 | R            | F            | 1993-11-09 | 1993-12-20   | 1993-11-24    | TAKE BACK RETURN          | RAIL       |  unusual accounts. eve
+          1 |     24027 |      1534 |            5 |      24.00 |        22824.48 |       0.10 |  0.04 | N            | O            | 1996-03-30 | 1996-03-14   | 1996-04-01    | NONE                      | FOB        |  pending foxes. slyly re
+          3 |     29380 |      1883 |            4 |       2.00 |         2618.76 |       0.01 |  0.06 | A            | F            | 1993-12-04 | 1994-01-07   | 1994-01-01    | NONE                      | TRUCK      | y. fluffily pending d
+          5 |     37531 |        35 |            3 |      50.00 |        73426.50 |       0.08 |  0.03 | A            | F            | 1994-08-08 | 1994-10-13   | 1994-08-26    | DELIVER IN PERSON         | AIR        | eodolites. fluffily unusual
+         98 |     44706 |      4707 |            3 |      14.00 |        23109.80 |       0.05 |  0.02 | A            | F            | 1994-12-30 | 1994-11-22   | 1995-01-27    | COLLECT COD               | AIR        |  cajole furiously. blithely ironic ideas 
+          3 |     62143 |      9662 |            6 |      26.00 |        28733.64 |       0.10 |  0.02 | A            | F            | 1993-10-29 | 1993-12-18   | 1993-11-04    | TAKE BACK RETURN          | RAIL       | ges sleep after the caref
+          1 |     63700 |      3701 |            3 |       8.00 |        13309.60 |       0.10 |  0.02 | N            | O            | 1996-01-29 | 1996-03-05   | 1996-01-31    | TAKE BACK RETURN          | REG AIR    | riously. regular, express dep
+          1 |     67310 |      7311 |            2 |      36.00 |        45983.16 |       0.09 |  0.06 | N            | O            | 1996-04-12 | 1996-02-28   | 1996-04-20    | TAKE BACK RETURN          | MAIL       | ly final dependencies: slyly bold 
+          7 |     79251 |      1759 |            6 |      35.00 |        43058.75 |       0.06 |  0.03 | N            | O            | 1996-01-16 | 1996-02-23   | 1996-01-22    | TAKE BACK RETURN          | FOB        | jole. excuses wake carefully alongside of 
+          4 |     88035 |      5560 |            1 |      30.00 |        30690.90 |       0.03 |  0.08 | N            | O            | 1996-01-10 | 1995-12-14   | 1996-01-18    | DELIVER IN PERSON         | REG AIR    | - quickly regular packages sleep. idly
+          7 |     94780 |      9799 |            3 |      46.00 |        81639.88 |       0.10 |  0.07 | N            | O            | 1996-01-15 | 1996-03-27   | 1996-02-03    | COLLECT COD               | MAIL       |  unusual reques
+          2 |    106170 |      1191 |            1 |      38.00 |        44694.46 |       0.00 |  0.05 | N            | O            | 1997-01-28 | 1997-01-14   | 1997-02-02    | TAKE BACK RETURN          | RAIL       | ven requests. deposits breach a
+          5 |    108570 |      8571 |            1 |      15.00 |        23678.55 |       0.02 |  0.04 | R            | F            | 1994-10-31 | 1994-08-31   | 1994-11-20    | NONE                      | AIR        | ts wake furiously 
+          5 |    123927 |      3928 |            2 |      26.00 |        50723.92 |       0.07 |  0.08 | R            | F            | 1994-10-16 | 1994-09-25   | 1994-10-19    | NONE                      | FOB        | sts use slyly quickly special instruc
+          3 |    128449 |      3474 |            3 |      27.00 |        39890.88 |       0.06 |  0.07 | A            | F            | 1994-01-16 | 1993-11-22   | 1994-01-23    | DELIVER IN PERSON         | SHIP       | nal foxes wake. 
+          6 |    139636 |      2150 |            1 |      37.00 |        61998.31 |       0.08 |  0.03 | A            | F            | 1992-04-27 | 1992-05-15   | 1992-05-02    | TAKE BACK RETURN          | TRUCK      | p furiously special foxes
+          7 |    145243 |      7758 |            2 |       9.00 |        11594.16 |       0.08 |  0.08 | N            | O            | 1996-02-01 | 1996-03-02   | 1996-02-19    | TAKE BACK RETURN          | SHIP       | es. instructions
+          7 |    151894 |      9440 |            5 |      38.00 |        73943.82 |       0.08 |  0.01 | N            | O            | 1996-02-11 | 1996-02-24   | 1996-02-18    | DELIVER IN PERSON         | TRUCK      | ns haggle carefully ironic deposits. bl
+          1 |    155190 |      7706 |            1 |      17.00 |        21168.23 |       0.04 |  0.02 | N            | O            | 1996-03-13 | 1996-02-12   | 1996-03-22    | DELIVER IN PERSON         | TRUCK      | egular courts above the
+          7 |    163073 |      3074 |            4 |      28.00 |        31809.96 |       0.03 |  0.04 | N            | O            | 1996-03-21 | 1996-04-08   | 1996-04-20    | NONE                      | FOB        | . slyly special requests haggl
+          7 |    182052 |      9607 |            1 |      12.00 |        13608.60 |       0.07 |  0.03 | N            | O            | 1996-05-07 | 1996-03-13   | 1996-06-03    | TAKE BACK RETURN          | FOB        | ss pinto beans wake against th
+          3 |    183095 |       650 |            5 |      28.00 |        32986.52 |       0.04 |  0.00 | R            | F            | 1993-12-14 | 1994-01-10   | 1994-01-01    | TAKE BACK RETURN          | FOB        | ages nag slyly pending
+(25 rows)
+
+select * from rescan_orders order by o_custkey;
+ o_orderkey | o_custkey | o_orderstatus | o_totalprice | o_orderdate | o_orderpriority |     o_clerk     | o_shippriority |                                   o_comment                                   
+------------+-----------+---------------+--------------+-------------+-----------------+-----------------+----------------+-------------------------------------------------------------------------------
+         71 |      3373 | O             |    276992.74 | 1998-01-24  | 4-NOT SPECIFIED | Clerk#000000271 |              0 |  express deposits along the blithely regul
+         65 |     16252 | P             |    110643.60 | 1995-03-18  | 1-URGENT        | Clerk#000000632 |              0 | ular requests are blithely pending orbits-- even requests against the deposit
+         68 |     28547 | O             |    330793.52 | 1998-04-18  | 3-MEDIUM        | Clerk#000000440 |              0 |  pinto beans sleep carefully. blithely ironic deposits haggle furiously acro
+         64 |     32113 | F             |     39414.99 | 1994-07-16  | 3-MEDIUM        | Clerk#000000661 |              0 | wake fluffily. sometimes ironic pinto beans about the dolphin
+          1 |     36901 | O             |    173665.47 | 1996-01-02  | 5-LOW           | Clerk#000000951 |              0 | nstructions sleep furiously among 
+          7 |     39136 | O             |    252004.18 | 1996-01-10  | 2-HIGH          | Clerk#000000470 |              0 | ly special requests 
+          5 |     44485 | F             |    144659.20 | 1994-07-30  | 5-LOW           | Clerk#000000925 |              0 | quickly. bold deposits sleep slyly. packages use slyly
+        388 |     44668 | F             |    198800.71 | 1992-12-16  | 4-NOT SPECIFIED | Clerk#000000356 |              0 | ar foxes above the furiously ironic deposits nag slyly final reque
+          6 |     55624 | F             |     58749.59 | 1992-02-21  | 4-NOT SPECIFIED | Clerk#000000058 |              0 | ggle. special, final requests are against the furiously specia
+         67 |     56614 | O             |    169405.01 | 1996-12-19  | 4-NOT SPECIFIED | Clerk#000000547 |              0 | symptotes haggle slyly around the furiously iron
+         34 |     61001 | O             |     58949.67 | 1998-07-21  | 3-MEDIUM        | Clerk#000000223 |              0 | ly final packages. fluffily final deposits wake blithely ideas. spe
+         70 |     64340 | F             |    113534.42 | 1993-12-18  | 5-LOW           | Clerk#000000322 |              0 |  carefully ironic request
+         33 |     66958 | F             |    163243.98 | 1993-10-27  | 3-MEDIUM        | Clerk#000000409 |              0 | uriously. furiously final request
+          2 |     78002 | O             |     46929.18 | 1996-12-01  | 1-URGENT        | Clerk#000000880 |              0 |  foxes. pending accounts at the pending, silent asymptot
+         39 |     81763 | O             |    341734.47 | 1996-09-20  | 3-MEDIUM        | Clerk#000000659 |              0 | ole express, ironic requests: ir
+         69 |     84487 | F             |    197689.49 | 1994-06-04  | 4-NOT SPECIFIED | Clerk#000000330 |              0 |  depths atop the slyly thin deposits detect among the furiously silent accou
+         37 |     86116 | F             |    206680.66 | 1992-06-03  | 3-MEDIUM        | Clerk#000000456 |              0 | kly regular pinto beans. carefully unusual waters cajole never
+         96 |    107779 | F             |     68989.90 | 1994-04-17  | 2-HIGH          | Clerk#000000395 |              0 | oost furiously. pinto
+         36 |    115252 | O             |     68289.96 | 1995-11-03  | 1-URGENT        | Clerk#000000358 |              0 |  quick packages are blithely. slyly silent accounts wake qu
+          3 |    123314 | F             |    193846.25 | 1993-10-14  | 5-LOW           | Clerk#000000955 |              0 | sly final accounts boost. carefully regular ideas cajole carefully. depos
+         38 |    124828 | O             |     82500.05 | 1996-08-21  | 4-NOT SPECIFIED | Clerk#000000604 |              0 | haggle blithely. furiously express ideas haggle blithely furiously regular re
+         35 |    127588 | O             |    253724.56 | 1995-10-23  | 4-NOT SPECIFIED | Clerk#000000259 |              0 | zzle. carefully enticing deposits nag furio
+         66 |    129200 | F             |    103740.67 | 1994-01-20  | 5-LOW           | Clerk#000000743 |              0 | y pending requests integrate
+         32 |    130057 | O             |    208660.75 | 1995-07-16  | 2-HIGH          | Clerk#000000616 |              0 | ise blithely bold, regular requests. quickly unusual dep
+          4 |    136777 | O             |     32151.78 | 1995-10-11  | 5-LOW           | Clerk#000000124 |              0 | sits. slyly regular warthogs cajole. regular, regular theodolites acro
+(25 rows)
+
+select * from rescan_lineitem_readHDFS order by l_partkey;
+ l_orderkey | l_partkey | l_suppkey | l_linenumber | l_quantity | l_extendedprice | l_discount | l_tax | l_returnflag | l_linestatus | l_shipdate | l_commitdate | l_receiptdate |      l_shipinstruct       | l_shipmode |                 l_comment                  
+------------+-----------+-----------+--------------+------------+-----------------+------------+-------+--------------+--------------+------------+--------------+---------------+---------------------------+------------+--------------------------------------------
+          1 |      2132 |      4633 |            4 |      28.00 |        28955.64 |       0.09 |  0.06 | N            | O            | 1996-04-21 | 1996-03-30   | 1996-05-16    | NONE                      | AIR        | lites. fluffily even de
+          3 |      4297 |      1798 |            1 |      45.00 |        54058.05 |       0.06 |  0.00 | R            | F            | 1994-02-02 | 1994-01-04   | 1994-02-23    | NONE                      | AIR        | ongside of the furiously brave acco
+          1 |     15635 |       638 |            6 |      32.00 |        49620.16 |       0.07 |  0.02 | N            | O            | 1996-01-30 | 1996-02-07   | 1996-02-03    | DELIVER IN PERSON         | MAIL       | arefully slyly ex
+          3 |     19036 |      6540 |            2 |      49.00 |        46796.47 |       0.10 |  0.00 | R            | F            | 1993-11-09 | 1993-12-20   | 1993-11-24    | TAKE BACK RETURN          | RAIL       |  unusual accounts. eve
+          1 |     24027 |      1534 |            5 |      24.00 |        22824.48 |       0.10 |  0.04 | N            | O            | 1996-03-30 | 1996-03-14   | 1996-04-01    | NONE                      | FOB        |  pending foxes. slyly re
+          3 |     29380 |      1883 |            4 |       2.00 |         2618.76 |       0.01 |  0.06 | A            | F            | 1993-12-04 | 1994-01-07   | 1994-01-01    | NONE                      | TRUCK      | y. fluffily pending d
+          5 |     37531 |        35 |            3 |      50.00 |        73426.50 |       0.08 |  0.03 | A            | F            | 1994-08-08 | 1994-10-13   | 1994-08-26    | DELIVER IN PERSON         | AIR        | eodolites. fluffily unusual
+         98 |     44706 |      4707 |            3 |      14.00 |        23109.80 |       0.05 |  0.02 | A            | F            | 1994-12-30 | 1994-11-22   | 1995-01-27    | COLLECT COD               | AIR        |  cajole furiously. blithely ironic ideas 
+          3 |     62143 |      9662 |            6 |      26.00 |        28733.64 |       0.10 |  0.02 | A            | F            | 1993-10-29 | 1993-12-18   | 1993-11-04    | TAKE BACK RETURN          | RAIL       | ges sleep after the caref
+          1 |     63700 |      3701 |            3 |       8.00 |        13309.60 |       0.10 |  0.02 | N            | O            | 1996-01-29 | 1996-03-05   | 1996-01-31    | TAKE BACK RETURN          | REG AIR    | riously. regular, express dep
+          1 |     67310 |      7311 |            2 |      36.00 |        45983.16 |       0.09 |  0.06 | N            | O            | 1996-04-12 | 1996-02-28   | 1996-04-20    | TAKE BACK RETURN          | MAIL       | ly final dependencies: slyly bold 
+          7 |     79251 |      1759 |            6 |      35.00 |        43058.75 |       0.06 |  0.03 | N            | O            | 1996-01-16 | 1996-02-23   | 1996-01-22    | TAKE BACK RETURN          | FOB        | jole. excuses wake carefully alongside of 
+          4 |     88035 |      5560 |            1 |      30.00 |        30690.90 |       0.03 |  0.08 | N            | O            | 1996-01-10 | 1995-12-14   | 1996-01-18    | DELIVER IN PERSON         | REG AIR    | - quickly regular packages sleep. idly
+          7 |     94780 |      9799 |            3 |      46.00 |        81639.88 |       0.10 |  0.07 | N            | O            | 1996-01-15 | 1996-03-27   | 1996-02-03    | COLLECT COD               | MAIL       |  unusual reques
+          2 |    106170 |      1191 |            1 |      38.00 |        44694.46 |       0.00 |  0.05 | N            | O            | 1997-01-28 | 1997-01-14   | 1997-02-02    | TAKE BACK RETURN          | RAIL       | ven requests. deposits breach a
+          5 |    108570 |      8571 |            1 |      15.00 |        23678.55 |       0.02 |  0.04 | R            | F            | 1994-10-31 | 1994-08-31   | 1994-11-20    | NONE                      | AIR        | ts wake furiously 
+          5 |    123927 |      3928 |            2 |      26.00 |        50723.92 |       0.07 |  0.08 | R            | F            | 1994-10-16 | 1994-09-25   | 1994-10-19    | NONE                      | FOB        | sts use slyly quickly special instruc
+          3 |    128449 |      3474 |            3 |      27.00 |        39890.88 |       0.06 |  0.07 | A            | F            | 1994-01-16 | 1993-11-22   | 1994-01-23    | DELIVER IN PERSON         | SHIP       | nal foxes wake. 
+          6 |    139636 |      2150 |            1 |      37.00 |        61998.31 |       0.08 |  0.03 | A            | F            | 1992-04-27 | 1992-05-15   | 1992-05-02    | TAKE BACK RETURN          | TRUCK      | p furiously special foxes
+          7 |    145243 |      7758 |            2 |       9.00 |        11594.16 |       0.08 |  0.08 | N            | O            | 1996-02-01 | 1996-03-02   | 1996-02-19    | TAKE BACK RETURN          | SHIP       | es. instructions
+          7 |    151894 |      9440 |            5 |      38.00 |        73943.82 |       0.08 |  0.01 | N            | O            | 1996-02-11 | 1996-02-24   | 1996-02-18    | DELIVER IN PERSON         | TRUCK      | ns haggle carefully ironic deposits. bl
+          1 |    155190 |      7706 |            1 |      17.00 |        21168.23 |       0.04 |  0.02 | N            | O            | 1996-03-13 | 1996-02-12   | 1996-03-22    | DELIVER IN PERSON         | TRUCK      | egular courts above the
+          7 |    163073 |      3074 |            4 |      28.00 |        31809.96 |       0.03 |  0.04 | N            | O            | 1996-03-21 | 1996-04-08   | 1996-04-20    | NONE                      | FOB        | . slyly special requests haggl
+          7 |    182052 |      9607 |            1 |      12.00 |        13608.60 |       0.07 |  0.03 | N            | O            | 1996-05-07 | 1996-03-13   | 1996-06-03    | TAKE BACK RETURN          | FOB        | ss pinto beans wake against th
+          3 |    183095 |       650 |            5 |      28.00 |        32986.52 |       0.04 |  0.00 | R            | F            | 1993-12-14 | 1994-01-10   | 1994-01-01    | TAKE BACK RETURN          | FOB        | ages nag slyly pending
+(25 rows)
+
+select * from rescan_orders_readHDFS order by o_custkey;
+ o_orderkey | o_custkey | o_orderstatus | o_totalprice | o_orderdate | o_orderpriority |     o_clerk     | o_shippriority |                                   o_comment                                   
+------------+-----------+---------------+--------------+-------------+-----------------+-----------------+----------------+-------------------------------------------------------------------------------
+         71 |      3373 | O             |    276992.74 | 1998-01-24  | 4-NOT SPECIFIED | Clerk#000000271 |              0 |  express deposits along the blithely regul
+         65 |     16252 | P             |    110643.60 | 1995-03-18  | 1-URGENT        | Clerk#000000632 |              0 | ular requests are blithely pending orbits-- even requests against the deposit
+         68 |     28547 | O             |    330793.52 | 1998-04-18  | 3-MEDIUM        | Clerk#000000440 |              0 |  pinto beans sleep carefully. blithely ironic deposits haggle furiously acro
+         64 |     32113 | F             |     39414.99 | 1994-07-16  | 3-MEDIUM        | Clerk#000000661 |              0 | wake fluffily. sometimes ironic pinto beans about the dolphin
+          1 |     36901 | O             |    173665.47 | 1996-01-02  | 5-LOW           | Clerk#000000951 |              0 | nstructions sleep furiously among 
+          7 |     39136 | O             |    252004.18 | 1996-01-10  | 2-HIGH          | Clerk#000000470 |              0 | ly special requests 
+          5 |     44485 | F             |    144659.20 | 1994-07-30  | 5-LOW           | Clerk#000000925 |              0 | quickly. bold deposits sleep slyly. packages use slyly
+        388 |     44668 | F             |    198800.71 | 1992-12-16  | 4-NOT SPECIFIED | Clerk#000000356 |              0 | ar foxes above the furiously ironic deposits nag slyly final reque
+          6 |     55624 | F             |     58749.59 | 1992-02-21  | 4-NOT SPECIFIED | Clerk#000000058 |              0 | ggle. special, final requests are against the furiously specia
+         67 |     56614 | O             |    169405.01 | 1996-12-19  | 4-NOT SPECIFIED | Clerk#000000547 |              0 | symptotes haggle slyly around the furiously iron
+         34 |     61001 | O             |     58949.67 | 1998-07-21  | 3-MEDIUM        | Clerk#000000223 |              0 | ly final packages. fluffily final deposits wake blithely ideas. spe
+         70 |     64340 | F             |    113534.42 | 1993-12-18  | 5-LOW           | Clerk#000000322 |              0 |  carefully ironic request
+         33 |     66958 | F             |    163243.98 | 1993-10-27  | 3-MEDIUM        | Clerk#000000409 |              0 | uriously. furiously final request
+          2 |     78002 | O             |     46929.18 | 1996-12-01  | 1-URGENT        | Clerk#000000880 |              0 |  foxes. pending accounts at the pending, silent asymptot
+         39 |     81763 | O             |    341734.47 | 1996-09-20  | 3-MEDIUM        | Clerk#000000659 |              0 | ole express, ironic requests: ir
+         69 |     84487 | F             |    197689.49 | 1994-06-04  | 4-NOT SPECIFIED | Clerk#000000330 |              0 |  depths atop the slyly thin deposits detect among the furiously silent accou
+         37 |     86116 | F             |    206680.66 | 1992-06-03  | 3-MEDIUM        | Clerk#000000456 |              0 | kly regular pinto beans. carefully unusual waters cajole never
+         96 |    107779 | F             |     68989.90 | 1994-04-17  | 2-HIGH          | Clerk#000000395 |              0 | oost furiously. pinto
+         36 |    115252 | O             |     68289.96 | 1995-11-03  | 1-URGENT        | Clerk#000000358 |              0 |  quick packages are blithely. slyly silent accounts wake qu
+          3 |    123314 | F             |    193846.25 | 1993-10-14  | 5-LOW           | Clerk#000000955 |              0 | sly final accounts boost. carefully regular ideas cajole carefully. depos
+         38 |    124828 | O             |     82500.05 | 1996-08-21  | 4-NOT SPECIFIED | Clerk#000000604 |              0 | haggle blithely. furiously express ideas haggle blithely furiously regular re
+         35 |    127588 | O             |    253724.56 | 1995-10-23  | 4-NOT SPECIFIED | Clerk#000000259 |              0 | zzle. carefully enticing deposits nag furio
+         66 |    129200 | F             |    103740.67 | 1994-01-20  | 5-LOW           | Clerk#000000743 |              0 | y pending requests integrate
+         32 |    130057 | O             |    208660.75 | 1995-07-16  | 2-HIGH          | Clerk#000000616 |              0 | ise blithely bold, regular requests. quickly unusual dep
+          4 |    136777 | O             |     32151.78 | 1995-10-11  | 5-LOW           | Clerk#000000124 |              0 | sits. slyly regular warthogs cajole. regular, regular theodolites acro
+(25 rows)
+
+select count(rescan_lineitem.*) from rescan_lineitem,rescan_orders where l_extendedprice < o_totalprice;
+ count 
+-------
+   579
+(1 row)
+
+select count(rescan_lineitem_readHDFS.*) from rescan_lineitem_readHDFS,rescan_orders_readHDFS where l_extendedprice < o_totalprice;
+ count 
+-------
+   579
+(1 row)
+

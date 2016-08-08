@@ -1,0 +1,28 @@
+-- @Description Ensures that a vacuum during reindex operations is ok
+-- 
+
+DELETE FROM reindex_aoco WHERE a < 128;
+DELETE 254
+1: BEGIN;
+BEGIN
+1: REINDEX index idx_bitmap_reindex_aoco;
+REINDEX
+2&: VACUUM reindex_aoco;  <waiting ...>
+1: COMMIT;
+COMMIT
+2<:  <... completed>
+VACUUM
+2: COMMIT;
+COMMIT
+3: SELECT COUNT(*) FROM reindex_aoco WHERE a = 1500;
+count
+-----
+0    
+(1 row)
+3: INSERT INTO reindex_aoco VALUES (0);
+INSERT 1
+3: SELECT 1 AS relfilenode_same_on_all_segs from gp_dist_random('pg_class')   WHERE relname = 'idx_bitmap_reindex_aoco' GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
+relfilenode_same_on_all_segs
+----------------------------
+1                           
+(1 row)

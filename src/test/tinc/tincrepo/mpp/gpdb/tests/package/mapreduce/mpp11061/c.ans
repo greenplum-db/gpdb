@@ -1,0 +1,36 @@
+-- start_matchsubs
+-- m/mapreduce_\d+_/
+-- s/mapreduce_\d+/mapreduce_DUMMY/
+-- m/\(\w+.\w+:[0-9]+\)$/
+-- s/\(\w+.\w+:[0-9]+\)$/\(file:line\)/
+-- end_matchsubs
+mapreduce_23701_run_1
+mapreduce_23701_run_2
+key|value
+---+-----
+  1|    1
+  2|    2
+  3|    3
+  4|    4
+  5|    5
+  6|    6
+  7|    7
+  8|    8
+  9|    9
+ 10|   10
+(10 rows)
+
+key|value
+---+-----
+  1|    1
+  2|    2
+  3|    3
+  4|    4
+  5|    5
+  6|    6
+  7|    7
+  8|    8
+  9|    9
+ 10|   10
+(10 rows)
+

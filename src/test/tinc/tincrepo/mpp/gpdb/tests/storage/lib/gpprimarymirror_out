@@ -1,0 +1,21 @@
+Success: mode:PrimarySegment
+segmentState:Ready
+dataState:InResync
+faultType:NotInitialized
+databaseStatus:Suspended
+postmasterState:run
+isFullResync:0
+resyncNumCompleted:0
+resyncTotalToComplete:48
+changeTrackingBytesUsed:63569006
+estimatedCompletionTimeSecondsSinceEpoch:0
+totalResyncObjectCount:16
+curResyncObjectCount:0
+verificationStatus:None
+verificationMode:Full
+verificationStartTimeSecondsSinceEpoch:0
+verificationTotalCount:0.00
+verificationCompletedCount:0.00
+estimatedCompletionVerificationTimeSecondsSinceEpoch:0
+verificationToken:
+

@@ -1,0 +1,73 @@
+-- 
+-- @created 2014-04-14 12:00:00
+-- @modified 2014-04-14 12:00:00
+-- @tags storage
+-- @description AOCO table: Alter add column in a transaction and then rollback the transaction
+Drop table if exists myao_rollback;
+DROP TABLE
+create table myao_rollback(i int , j int) with (appendonly=true, orientation=column);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+insert into myao_rollback select i, i+10 from generate_series(1,2000) i ;
+INSERT 0 2000
+insert into myao_rollback select i, i+10 from generate_series(1,2000) i ;
+INSERT 0 2000
+insert into myao_rollback select i, i+10 from generate_series(1,2000) i ;
+INSERT 0 2000
+insert into myao_rollback select i, i+10 from generate_series(1,2000) i ;
+INSERT 0 2000
+select count(*) from myao_rollback;
+ count 
+-------
+  8000
+(1 row)
+
+\d myao_rollback
+Append-Only Columnar Table "public.myao_rollback"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ i      | integer | 
+ j      | integer | 
+Checksum: f
+Distributed by: (i)
+
+begin transaction;
+BEGIN
+alter table myao_rollback add column k int default 0;
+ALTER TABLE
+insert into myao_rollback select i , i + 10, i - 10 from generate_series(1,10) i;
+INSERT 0 10
+select count(*) from myao_rollback;
+ count 
+-------
+  8010
+(1 row)
+
+\d myao_rollback
+Append-Only Columnar Table "public.myao_rollback"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ i      | integer | 
+ j      | integer | 
+ k      | integer | default 0
+Checksum: f
+Distributed by: (i)
+
+rollback;
+ROLLBACK
+select count(*) from myao_rollback;
+ count 
+-------
+  8000
+(1 row)
+
+\d myao_rollback
+Append-Only Columnar Table "public.myao_rollback"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ i      | integer | 
+ j      | integer | 
+Checksum: f
+Distributed by: (i)
+

@@ -1,0 +1,8 @@
+-- start_ignore
+-- end_ignore
+select 'bar';
+ ?column? 
+----------
+ bar
+(1 row)
+

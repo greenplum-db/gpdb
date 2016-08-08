@@ -1,0 +1,62 @@
+-- start_ignore
+drop function if exists func1();
+psql:/path/sql_file:1: NOTICE:  function func1() does not exist, skipping
+DROP FUNCTION
+drop function if exists func2();
+psql:/path/sql_file:1: NOTICE:  function func2() does not exist, skipping
+DROP FUNCTION
+drop table if exists functest;
+psql:/path/sql_file:1: NOTICE:  table "functest" does not exist, skipping
+DROP TABLE
+-- end_ignore
+create table functest(a int, b int) distributed by (b);
+CREATE TABLE
+create function func2()
+returns integer
+as
+$$
+declare 
+    rowcnt integer;
+begin
+    insert into functest values(1,2);
+    select count(*) into rowcnt from functest;
+    return rowcnt;
+end;
+$$ language plpgsql;
+CREATE FUNCTION
+create function func1()
+returns integer
+as
+$$
+begin
+    return func2();
+end;
+$$ language plpgsql;
+CREATE FUNCTION
+select func1();
+ func1 
+-------
+     1
+(1 row)
+
+drop function func2();
+DROP FUNCTION
+create function func2()
+returns integer
+as
+$$
+declare
+    rowcnt integer;
+begin
+    insert into functest values(1,2);
+    select count(*) into rowcnt from functest;
+    return rowcnt;
+end;
+$$ language plpgsql;
+CREATE FUNCTION
+select func1();
+ func1 
+-------
+     2
+(1 row)
+

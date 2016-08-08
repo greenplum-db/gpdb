@@ -1,0 +1,16 @@
+---
+--- @tags sanity
+---
+SELECT * FROM foo;
+ a | b  
+---+----
+ 1 | 10
+ 2 | 20
+(2 rows)
+
+SELECT myfunc(1);
+ myfunc 
+--------
+      2
+(1 row)
+

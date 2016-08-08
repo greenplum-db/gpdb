@@ -1,0 +1,27 @@
+-- start_ignore
+-- end_ignore
+-- MPP-18179 CLONE (4.2.3) - Unable to add partitions if the partitioned column has been altered from timestamp to date
+-- start_ignore
+drop table if exists mpp18179;
+psql:/path/sql_file:1: NOTICE:  table "mpp18179" does not exist, skipping
+DROP TABLE
+-- end_ignore
+create table mpp18179 (a int, b int, i int)
+distributed by (a)
+partition by list (a,b) 
+   ( PARTITION ab1 VALUES ((1,1)),
+     PARTITION ab2 values ((1,2)),
+     default partition other
+   );
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mpp18179_1_prt_ab1" for table "mpp18179"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mpp18179_1_prt_ab2" for table "mpp18179"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mpp18179_1_prt_other" for table "mpp18179"
+CREATE TABLE
+alter table mpp18179 alter column a type varchar(20);
+psql:/path/sql_file:1: ERROR:  cannot alter type of a column used in a partitioning key
+alter table mpp18179 alter column b type varchar(20);
+psql:/path/sql_file:1: ERROR:  cannot alter type of a column used in a partitioning key
+-- start_ignore
+drop table if exists mpp18179;
+DROP TABLE
+-- end_ignore

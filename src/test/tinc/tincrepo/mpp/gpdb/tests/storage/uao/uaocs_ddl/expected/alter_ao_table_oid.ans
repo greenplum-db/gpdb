@@ -1,0 +1,103 @@
+-- @description : Alter  UAO tables and execute DML statements on the tables
+-- 
+Drop table if exists sto_alt_uao2_oid cascade;
+DROP TABLE
+create table sto_alt_uao2_oid (i int, j char(10)) with (appendonly=true, orientation=column, oids=false) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+\d+ sto_alt_uao2_oid
+                              Append-Only Columnar Table "public.sto_alt_uao2_oid"
+ Column |     Type      | Modifiers | Storage  | Compression Type | Compression Level | Block Size | Description 
+--------+---------------+-----------+----------+------------------+-------------------+------------+-------------
+ i      | integer       |           | plain    | none             | 0                 | 32768      | 
+ j      | character(10) |           | extended | none             | 0                 | 32768      | 
+Checksum: f
+Has OIDs: no
+Options: appendonly=true, orientation=column
+Distributed randomly
+
+SELECT 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='sto_alt_uao2_oid');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+insert into sto_alt_uao2_oid select i , 'aa' from generate_series(1,5) as i;
+INSERT 0 5
+select * from sto_alt_uao2_oid order by 1;
+ i |     j      
+---+------------
+ 1 | aa        
+ 2 | aa        
+ 3 | aa        
+ 4 | aa        
+ 5 | aa        
+(5 rows)
+
+select count(*) AS only_visi_tups from sto_alt_uao2_oid;
+ only_visi_tups 
+----------------
+              5
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*)  AS invisi_and_visi_tups from sto_alt_uao2_oid;
+ invisi_and_visi_tups 
+----------------------
+                    5
+(1 row)
+
+set gp_select_invisible = false;
+SET
+--Alter table SET without OIDs
+Alter table sto_alt_uao2_oid SET without oids;
+ALTER TABLE
+\d+ sto_alt_uao2_oid
+                              Append-Only Columnar Table "public.sto_alt_uao2_oid"
+ Column |     Type      | Modifiers | Storage  | Compression Type | Compression Level | Block Size | Description 
+--------+---------------+-----------+----------+------------------+-------------------+------------+-------------
+ i      | integer       |           | plain    | none             | 0                 | 32768      | 
+ j      | character(10) |           | extended | none             | 0                 | 32768      | 
+Checksum: f
+Has OIDs: no
+Options: appendonly=true, orientation=column
+Distributed randomly
+
+select * from sto_alt_uao2_oid order by 1;
+ i |     j      
+---+------------
+ 1 | aa        
+ 2 | aa        
+ 3 | aa        
+ 4 | aa        
+ 5 | aa        
+(5 rows)
+
+update sto_alt_uao2_oid set j= 'new val'  where i=3; 
+UPDATE 1
+select * from sto_alt_uao2_oid order by 1;
+ i |     j      
+---+------------
+ 1 | aa        
+ 2 | aa        
+ 3 | new val   
+ 4 | aa        
+ 5 | aa        
+(5 rows)
+
+select count(*) AS only_visi_tups from sto_alt_uao2_oid;
+ only_visi_tups 
+----------------
+              5
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*)  AS invisi_and_visi_tups from sto_alt_uao2_oid;
+ invisi_and_visi_tups 
+----------------------
+                    6
+(1 row)
+
+set gp_select_invisible = false;
+SET

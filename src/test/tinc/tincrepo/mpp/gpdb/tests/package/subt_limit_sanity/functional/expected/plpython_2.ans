@@ -1,0 +1,35 @@
+Create Language plpythonu;
+ERROR:  language "plpythonu" already exists
+DROP FUNCTION subt_fn2(int);
+ERROR:  function subt_fn2(integer) does not exist
+CREATE OR REPLACE FUNCTION subt_fn2(x int) returns int as $$
+for i in range(0, x):
+  plpy.execute('insert into subt_plpython_t2 values(%d)' % i);
+return plpy.execute('select count(*) as a from subt_plpython_t2')[0]["a"]
+$$ language plpythonu;
+CREATE FUNCTION
+Drop table if exists subt_plpython_t2;
+NOTICE:  table "subt_plpython_t2" does not exist, skipping
+DROP TABLE
+Create table  subt_plpython_t2(a int) distributed randomly;
+CREATE TABLE
+BEGIN;
+BEGIN
+select subt_fn2(200);
+ subt_fn2 
+----------
+      200
+(1 row)
+
+ROLLBACK;
+ROLLBACK
+BEGIN;
+BEGIN
+select subt_fn2(2000);
+ subt_fn2 
+----------
+     2000
+(1 row)
+
+Commit;
+COMMIT

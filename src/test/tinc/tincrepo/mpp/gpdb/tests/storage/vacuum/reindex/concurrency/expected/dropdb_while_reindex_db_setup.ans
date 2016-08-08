@@ -1,0 +1,4 @@
+1: DROP DATABASE IF EXISTS reindexdb;
+DROP
+1: CREATE DATABASE reindexdb;
+CREATE

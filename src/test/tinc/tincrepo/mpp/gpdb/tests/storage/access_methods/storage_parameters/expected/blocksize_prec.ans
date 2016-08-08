@@ -1,0 +1,69 @@
+-- 
+-- @description Precedence testing with GUC values at database, role, session, table level
+-- Database - blocksize=8192
+\c dsp_db1 
+You are now connected to database "dsp_db1" as user "sivand".
+Drop table if exists dsp_bk_1;
+psql:/path/sql_file:1: NOTICE:  table "dsp_bk_1" does not exist, skipping
+DROP TABLE
+Create table dsp_bk_1 ( i int, j int);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+Select relkind, relstorage, reloptions from pg_class where relname='dsp_bk_1';
+ relkind | relstorage |            reloptions            
+---------+------------+----------------------------------
+ r       | a          | {appendonly=true,blocksize=8192}
+(1 row)
+
+Drop table dsp_bk_1;
+DROP TABLE
+-- Database - blocksize=8192 ; Role - blocksize=65536
+\c dsp_db1 dsp_role1
+You are now connected to database "dsp_db1" as user "dsp_role1".
+Create table dsp_bk_1 ( i int, j int);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+Select relkind, relstorage, reloptions from pg_class where relname='dsp_bk_1';
+ relkind | relstorage |            reloptions             
+---------+------------+-----------------------------------
+ r       | a          | {appendonly=true,blocksize=65536}
+(1 row)
+
+Drop table dsp_bk_1;
+DROP TABLE
+-- Database - blocksize=8192, Role - blocksize=65536, Session - blocksize=1048576
+\c dsp_db1 dsp_role1
+You are now connected to database "dsp_db1" as user "dsp_role1".
+SET gp_default_storage_options='appendonly=true, blocksize=1048576';
+SET
+Create table dsp_bk_1 ( i int, j int);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+Select relkind, relstorage, reloptions from pg_class where relname='dsp_bk_1';
+ relkind | relstorage |             reloptions              
+---------+------------+-------------------------------------
+ r       | a          | {appendonly=true,blocksize=1048576}
+(1 row)
+
+Drop table dsp_bk_1;
+DROP TABLE
+-- Database - blocksize=8192, Role - blocksize=65536, Session - blocksize=1048576, Table - blocksize=32768
+\c dsp_db1 dsp_role1
+You are now connected to database "dsp_db1" as user "dsp_role1".
+SET gp_default_storage_options='appendonly=true, blocksize=1048576';
+SET
+Create table dsp_bk_1 ( i int, j int) with (blocksize=32768);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+Select relkind, relstorage, reloptions from pg_class where relname='dsp_bk_1';
+ relkind | relstorage |            reloptions             
+---------+------------+-----------------------------------
+ r       | a          | {blocksize=32768,appendonly=true}
+(1 row)
+
+Drop table dsp_bk_1;
+DROP TABLE

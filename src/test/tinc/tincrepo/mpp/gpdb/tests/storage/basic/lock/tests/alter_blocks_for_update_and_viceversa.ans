@@ -1,0 +1,38 @@
+-- setup
+1: drop table if exists alter_block;
+DROP
+1: create table alter_block(a int, b int) distributed by (a);
+CREATE
+1: insert into alter_block select 1, 1;
+INSERT 1
+-- Validate UPDATE blocks the Alter
+2: BEGIN;
+BEGIN
+2: UPDATE alter_block SET b = b + 1;
+UPDATE 1
+1&: ALTER TABLE alter_block SET DISTRIBUTED BY (b);  <waiting ...>
+-- Alter process should be blocked
+2: SELECT waiting FROM pg_stat_activity where current_query like 'ALTER TABLE alter_block %';
+waiting
+-------
+t      
+(1 row)
+2: COMMIT;
+COMMIT
+1<:  <... completed>
+ALTER
+-- Now validate ALTER blocks the UPDATE
+2: BEGIN;
+BEGIN
+2: ALTER TABLE alter_block SET DISTRIBUTED BY (a);
+ALTER
+1&: UPDATE alter_block SET b = b + 1;  <waiting ...>
+2: SELECT waiting FROM pg_stat_activity where current_query like 'UPDATE alter_block SET %';
+waiting
+-------
+t      
+(1 row)
+2: COMMIT;
+COMMIT
+1<:  <... completed>
+UPDATE 1

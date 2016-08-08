@@ -1,0 +1,192 @@
+-- @description : Create Updatable AO tables , with indexes, with and without compression
+-- 
+-- Create AO tables 
+DROP TABLE if exists sto_uao_upd_1_upd;
+DROP TABLE
+CREATE TABLE sto_uao_upd_1_upd (
+          col_int int,
+          col_text text,
+          col_numeric numeric
+          ) with(appendonly=true) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+SELECT 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='sto_uao_upd_1_upd');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+Create index sto_uao_upd_1_upd_int_idx1 on sto_uao_upd_1_upd(col_int);
+CREATE INDEX
+insert into sto_uao_upd_1_upd values(1,'val1',100);
+INSERT 0 1
+insert into sto_uao_upd_1_upd values(2,'val2',200);
+INSERT 0 1
+insert into sto_uao_upd_1_upd values(3,'val3',300);
+INSERT 0 1
+select *  from sto_uao_upd_1_upd order by col_int,col_text;
+ col_int | col_text | col_numeric 
+---------+----------+-------------
+       1 | val1     |         100
+       2 | val2     |         200
+       3 | val3     |         300
+(3 rows)
+
+update sto_uao_upd_1_upd set col_text=col_text||' new value' where col_int = 1;
+UPDATE 1
+select *  from sto_uao_upd_1_upd order by col_int,col_text;
+ col_int |    col_text    | col_numeric 
+---------+----------------+-------------
+       1 | val1 new value |         100
+       2 | val2           |         200
+       3 | val3           |         300
+(3 rows)
+
+select count(*) AS only_visi_tups  from sto_uao_upd_1_upd ;
+ only_visi_tups 
+----------------
+              3
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*) AS invisi_and_visi_tups  from sto_uao_upd_1_upd ;
+ invisi_and_visi_tups 
+----------------------
+                    4
+(1 row)
+
+set gp_select_invisible = false;
+SET
+-- Create table with all data_types 
+-- Create table with constriants
+Drop table if exists sto_uao_upd_2_upd;
+DROP TABLE
+CREATE TABLE sto_uao_upd_2_upd(
+          col_text text DEFAULT 'text',
+          col_numeric numeric
+          CONSTRAINT tbl_chk_con1 CHECK (col_numeric < 250)
+          ) with(appendonly=true) DISTRIBUTED by(col_text);
+CREATE TABLE
+SELECT 1  AS VisimapPresent FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='sto_uao_upd_2_upd');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+insert into sto_uao_upd_2_upd values ('0_zero',20);
+INSERT 0 1
+insert into sto_uao_upd_2_upd values ('1_one',10);
+INSERT 0 1
+insert into sto_uao_upd_2_upd values ('2_two',25);
+INSERT 0 1
+select count(*) from sto_uao_upd_2_upd;
+ count 
+-------
+     3
+(1 row)
+
+update sto_uao_upd_2_upd set col_numeric = 30 where col_text = '1_one';
+UPDATE 1
+select count(*) from sto_uao_upd_2_upd;
+ count 
+-------
+     3
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*) from sto_uao_upd_2_upd;
+ count 
+-------
+     4
+(1 row)
+
+--Update table in user created scehma
+set gp_select_invisible = false;
+SET
+Drop schema if exists uao_upd_schema1 cascade;
+psql:/path/sql_file:1: NOTICE:  drop cascades to append only table uao_upd_schema1.sto_uao_upd_3_upd
+DROP SCHEMA
+Create schema uao_upd_schema1;
+CREATE SCHEMA
+CREATE TABLE uao_upd_schema1.sto_uao_upd_3_upd(
+          stud_id int,
+          stud_name varchar(20)
+          ) with(appendonly=true) DISTRIBUTED by(stud_id);
+CREATE TABLE
+SELECT 1  AS VisimapPresent FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='sto_uao_upd_3_upd');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+Insert into uao_upd_schema1.sto_uao_upd_3_upd values(1,'name1'), (2,'name2'),(3,'name3');
+INSERT 0 3
+select * from uao_upd_schema1.sto_uao_upd_3_upd;
+ stud_id | stud_name 
+---------+-----------
+       2 | name2
+       1 | name1
+       3 | name3
+(3 rows)
+
+update uao_upd_schema1.sto_uao_upd_3_upd set stud_name = stud_name||' new value' where stud_id=1;
+UPDATE 1
+select * from uao_upd_schema1.sto_uao_upd_3_upd;
+ stud_id |    stud_name    
+---------+-----------------
+       2 | name2
+       3 | name3
+       1 | name1 new value
+(3 rows)
+
+set gp_select_invisible = true;
+SET
+select * from uao_upd_schema1.sto_uao_upd_3_upd;
+ stud_id |    stud_name    
+---------+-----------------
+       2 | name2
+       1 | name1
+       3 | name3
+       1 | name1 new value
+(4 rows)
+
+-- Truncate
+Drop table if exists sto_uao_upd_7_upd;
+DROP TABLE
+CREATE TABLE sto_uao_upd_7_upd  (
+    did integer,
+    name varchar(40),
+    CONSTRAINT con1 CHECK (did > 99 AND name <> '')
+    ) with(appendonly=true) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+insert into sto_uao_upd_7_upd  values (100,'name_1');
+INSERT 0 1
+insert into sto_uao_upd_7_upd  values (200,'name_2');
+INSERT 0 1
+set gp_select_invisible = true;
+SET
+select count(*) from sto_uao_upd_7_upd ;
+ count 
+-------
+     2
+(1 row)
+
+update sto_uao_upd_7_upd set name= name || ' new value';
+UPDATE 2
+select count(*) from sto_uao_upd_7_upd;
+ count 
+-------
+     4
+(1 row)
+
+Truncate sto_uao_upd_7_upd;
+TRUNCATE TABLE
+select count(*) from sto_uao_upd_7_upd;
+ count 
+-------
+     0
+(1 row)
+
+set gp_select_invisible = false;
+SET

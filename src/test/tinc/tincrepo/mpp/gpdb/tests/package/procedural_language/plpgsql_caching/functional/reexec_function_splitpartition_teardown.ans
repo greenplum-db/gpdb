@@ -1,0 +1,4 @@
+drop table partitioned_t;
+DROP TABLE
+drop function partfunc();
+DROP FUNCTION

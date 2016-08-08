@@ -1,0 +1,35 @@
+-- 
+-- @created 2014-05-19 12:00:00
+-- @modified 2014-05-19 12:00:00
+-- @tags storage
+-- @description AOCO multi_encoding  table : drop column with default value non NULL
+DROP table if exists aoco_multi_encoding;
+DROP TABLE
+CREATE TABLE aoco_multi_encoding (
+         col1 int ENCODING (compresstype=ZLIB,compresslevel=8,blocksize=8192),
+         col2 char(5) ENCODING (compresstype=ZLIB,compresslevel=8,blocksize=8192),
+         col3 text ENCODING (compresstype=ZLIB,compresslevel=8,blocksize=8192),
+         col4 timestamp ENCODING (compresstype=ZLIB,compresslevel=8,blocksize=8192),
+         col5 date ENCODING (compresstype=ZLIB,compresslevel=8,blocksize=8192)
+)with (appendonly=true,orientation=column);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'col1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+alter table aoco_multi_encoding ADD COLUMN added_col6  bytea default ("decode"(repeat('1234567890',10000),'greenplum'));
+ALTER TABLE
+select count(*) as added_col6 from pg_attribute pa, pg_class pc where pa.attrelid = pc.oid and pc.relname='aoco_multi_encoding' and attname='added_col6';
+ added_col6 
+------------
+          1
+(1 row)
+
+alter table aoco_multi_encoding DROP COLUMN added_col6;
+ALTER TABLE
+select count(*) as added_col6 from pg_attribute pa, pg_class pc where pa.attrelid = pc.oid and pc.relname='aoco_multi_encoding' and attname='added_col6';
+ added_col6 
+------------
+          0
+(1 row)
+
+VACUUM aoco_multi_encoding;
+VACUUM

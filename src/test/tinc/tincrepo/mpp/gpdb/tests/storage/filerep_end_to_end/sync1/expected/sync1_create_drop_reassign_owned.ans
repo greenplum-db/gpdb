@@ -1,0 +1,87 @@
+--
+-- SYNC1
+--
+CREATE ROLE sync1_user1;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE ROLE sync1_user2;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE ROLE sync1_user3;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE ROLE sync1_user4;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE ROLE sync1_user5;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE ROLE sync1_user6;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE ROLE sync1_user7;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE ROLE sync1_admin;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE TABLE sync1_foo1 (i int, j int) DISTRIBUTED  RANDOMLY;
+CREATE TABLE
+ALTER TABLE sync1_foo1 OWNER TO sync1_user1;
+ALTER TABLE
+CREATE TABLE sync1_foo2 (i int, j int) DISTRIBUTED  RANDOMLY;
+CREATE TABLE
+ALTER TABLE sync1_foo2 OWNER TO sync1_user2;
+ALTER TABLE
+CREATE TABLE sync1_foo3 (i int, j int) DISTRIBUTED  RANDOMLY;
+CREATE TABLE
+ALTER TABLE sync1_foo3 OWNER TO sync1_user3;
+ALTER TABLE
+CREATE TABLE sync1_foo4 (i int, j int) DISTRIBUTED  RANDOMLY;
+CREATE TABLE
+ALTER TABLE sync1_foo4 OWNER TO sync1_user4;
+ALTER TABLE
+CREATE TABLE sync1_foo5 (i int, j int) DISTRIBUTED  RANDOMLY;
+CREATE TABLE
+ALTER TABLE sync1_foo5 OWNER TO sync1_user5;
+ALTER TABLE
+CREATE TABLE sync1_foo6 (i int, j int) DISTRIBUTED  RANDOMLY;
+CREATE TABLE
+ALTER TABLE sync1_foo6 OWNER TO sync1_user6;
+ALTER TABLE
+CREATE TABLE sync1_foo7 (i int, j int) DISTRIBUTED  RANDOMLY;
+CREATE TABLE
+ALTER TABLE sync1_foo7 OWNER TO sync1_user7;
+ALTER TABLE
+DROP OWNED by sync1_user1;
+DROP OWNED
+CREATE TABLE sync1_foo11 (i int, j int) DISTRIBUTED  RANDOMLY;
+CREATE TABLE
+ALTER TABLE sync1_foo11 OWNER TO sync1_user1;
+ALTER TABLE
+CREATE TABLE sync1_foo22(i int, j int) DISTRIBUTED  RANDOMLY;
+CREATE TABLE
+ALTER TABLE sync1_foo22 OWNER TO sync1_user2;
+ALTER TABLE
+CREATE TABLE sync1_foo33 (i int, j int) DISTRIBUTED  RANDOMLY;
+CREATE TABLE
+ALTER TABLE sync1_foo33 OWNER TO sync1_user3;
+ALTER TABLE
+CREATE TABLE sync1_foo44 (i int, j int) DISTRIBUTED  RANDOMLY;
+CREATE TABLE
+ALTER TABLE sync1_foo44 OWNER TO sync1_user4;
+ALTER TABLE
+CREATE TABLE sync1_foo55 (i int, j int) DISTRIBUTED  RANDOMLY;
+CREATE TABLE
+ALTER TABLE sync1_foo55 OWNER TO sync1_user5;
+ALTER TABLE
+CREATE TABLE sync1_foo66 (i int, j int) DISTRIBUTED  RANDOMLY;
+CREATE TABLE
+ALTER TABLE sync1_foo66 OWNER TO sync1_user6;
+ALTER TABLE
+CREATE TABLE sync1_foo77 (i int, j int) DISTRIBUTED  RANDOMLY;
+CREATE TABLE
+ALTER TABLE sync1_foo77 OWNER TO sync1_user7;
+ALTER TABLE
+REASSIGN OWNED BY  sync1_user1 to sync1_admin;
+REASSIGN OWNED

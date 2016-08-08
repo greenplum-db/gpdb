@@ -1,0 +1,62 @@
+-- start_ignore
+SET optimizer=off;
+SET
+-- end_ignore
+select classname  , schemaname , objname  , usestatus , usename , actionname , subtype from pg_stat_operations  where statime > ( select statime from pg_stat_operations where objname ='my_first_table' and actionname ='CREATE') and objname  not in ('pg_stat_operations','pg_stat_partition_operations') order by statime;
+  classname  | schemaname | objname  | usestatus | usename  | actionname | subtype  
+-------------+------------+----------+-----------+----------+------------+----------
+ pg_authid   |            | mdt_user | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_database |            | mdt_db   | CURRENT   | mdt_user | CREATE     | DATABASE
+(2 rows)
+
+--drop toast column    
+CREATE TABLE mdt_test_column(
+    toast_col text,
+    bigint_col bigint,
+    char_vary_col character varying(30),
+    numeric_col numeric,
+    int_col int4,
+    float_col float4,
+    int_array_col int[],
+    non_toast_col numeric,
+    a_ts_without timestamp without time zone,
+    b_ts_with timestamp with time zone,
+    date_column date,
+    col_with_constraint numeric UNIQUE,
+    col_with_default_text character varying(30) DEFAULT 'test1'
+    );
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE / UNIQUE will create implicit index "mdt_test_column_col_with_constraint_key" for table "mdt_test_column"
+CREATE TABLE
+    ALTER TABLE mdt_test_column DROP COLUMN toast_col ;
+ALTER TABLE
+--drop non toast column
+    CREATE TABLE mdt_test_column1(
+    toast_col text,
+    bigint_col bigint,
+    char_vary_col character varying(30),
+    numeric_col numeric,
+    int_col int4,
+    float_col float4,
+    int_array_col int[],
+    non_toast_col numeric,
+    a_ts_without timestamp without time zone,
+    b_ts_with timestamp with time zone,
+    date_column date,
+    col_with_constraint numeric UNIQUE,
+    col_with_default_text character varying(30) DEFAULT 'test1'
+    );
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE / UNIQUE will create implicit index "mdt_test_column1_col_with_constraint_key" for table "mdt_test_column1"
+CREATE TABLE
+    ALTER TABLE mdt_test_column1 DROP COLUMN non_toast_col ;
+ALTER TABLE
+drop table mdt_test_column;
+DROP TABLE
+drop table mdt_test_column1;
+DROP TABLE
+select classname  , schemaname , objname  , usestatus , usename , actionname , subtype from pg_stat_operations  where statime > ( select statime from pg_stat_operations where objname ='my_first_table' and actionname ='CREATE') and objname  not in ('pg_stat_operations','pg_stat_partition_operations') order by statime;
+  classname  | schemaname | objname  | usestatus | usename  | actionname | subtype  
+-------------+------------+----------+-----------+----------+------------+----------
+ pg_authid   |            | mdt_user | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_database |            | mdt_db   | CURRENT   | mdt_user | CREATE     | DATABASE
+(2 rows)
+

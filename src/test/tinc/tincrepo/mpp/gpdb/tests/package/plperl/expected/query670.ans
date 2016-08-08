@@ -1,0 +1,8 @@
+-- Test: plperl 33
+SELECT * FROM perl_out_params();
+ f1 |  f2   |  f3   
+----+-------+-------
+  1 | hello | world
+(1 row)
+
+							  

@@ -1,0 +1,38 @@
+-- start_ignore
+drop  external table random_heap;
+DROP EXTERNAL TABLE
+drop  external table random_writehdfs;
+DROP EXTERNAL TABLE
+drop  external table random_readhdfs;
+DROP EXTERNAL TABLE
+/*use this string to create data: custom,bpchar,timestamp,bpchar,timestamp,int,varchar,int,bigint,date,int,date,bigint,boolean,real,varchar,text,timestamp,bigint,float,date,bigint,smallint,real,date,bpchar,numeric,text,float,date*/
+create readable external table random_heap(
+Column0 bpchar,Column1 timestamp,Column2 bpchar,Column3 timestamp,Column4 int,Column5 varchar,Column6 int,Column7 bigint,Column8 date,Column9 int,Column10 date,Column11 bigint,Column12 boolean,Column13 real,Column14 varchar,Column15 text,Column16 timestamp,Column17 bigint,Column18 float,Column19 date,Column20 bigint,Column21 smallint,Column22 real,Column23 date,Column24 bpchar,Column25 numeric,Column26 text,Column27 float,Column28 date
+) location ('gpfdist://rh55-qavm20:8090/random.txt')format 'TEXT';
+CREATE EXTERNAL TABLE
+-- end_ignore
+create writable external table random_writehdfs(like random_heap) location ('gphdfs://rh55-qavm63:54310/extwrite/random')format 'custom' (formatter='gphdfs_export');
+NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+CREATE EXTERNAL TABLE
+create readable external table random_readhdfs(like random_heap) location ('gphdfs://rh55-qavm63:54310/extwrite/random') format 'custom' (formatter='gphdfs_import');
+CREATE EXTERNAL TABLE
+select count(*) from random_heap;
+ count 
+-------
+  5000
+(1 row)
+
+insert into random_writehdfs select * from random_heap;
+INSERT 0 5000
+select count(*) from random_readhdfs;
+ count 
+-------
+  5000
+(1 row)
+
+select count(*) from ((select * from random_heap except select * from random_readhdfs) union (select * from random_readhdfs except select * from random_heap)) as a;
+ count 
+-------
+     0
+(1 row)
+

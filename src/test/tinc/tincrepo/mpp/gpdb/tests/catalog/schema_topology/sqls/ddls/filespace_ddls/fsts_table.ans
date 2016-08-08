@@ -1,0 +1,259 @@
+-- 
+-- @created 2009-01-27 14:00:00
+-- @modified 2013-06-24 17:00:00
+-- @tags ddl schema_topology
+
+-- Create heap table
+   CREATE TABLE sch_fsts_table (
+          text_col text,
+          bigint_col bigint,
+          char_vary_col character varying(30),
+          numeric_col numeric
+          ) tablespace ts_sch1 DISTRIBUTED RANDOMLY;
+CREATE TABLE
+          
+          
+-- Insert few records into the table
+   INSERT into sch_fsts_table values ('text_1' , 55667788,'hello .. hi there',1);
+INSERT 0 1
+   INSERT into sch_fsts_table values ('text_2' , 55667788,'hello .. hi there',2);
+INSERT 0 1
+   INSERT into sch_fsts_table values ('text_3' , 55667788,'hello .. hi there',3);
+INSERT 0 1
+-- SELECT from the Table
+   SELECT * from sch_fsts_table;
+ text_col | bigint_col |   char_vary_col   | numeric_col 
+----------+------------+-------------------+-------------
+ text_1   |   55667788 | hello .. hi there |           1
+ text_3   |   55667788 | hello .. hi there |           3
+ text_2   |   55667788 | hello .. hi there |           2
+(3 rows)
+
+-- ALTER the table to new table space ts_b1
+   ALTER table sch_fsts_table set tablespace ts_sch3;
+ALTER TABLE
+-- ALTER the table to add a column with default
+   ALTER table sch_fsts_table add column new_col int default 10;
+ALTER TABLE
+-- SELECT from the Table
+   SELECT * from sch_fsts_table;
+ text_col | bigint_col |   char_vary_col   | numeric_col | new_col 
+----------+------------+-------------------+-------------+---------
+ text_2   |   55667788 | hello .. hi there |           2 |      10
+ text_1   |   55667788 | hello .. hi there |           1 |      10
+ text_3   |   55667788 | hello .. hi there |           3 |      10
+(3 rows)
+
+          
+   
+-- Create AO table
+   CREATE TABLE sch_fsts_table_ao ( a int,col001 char DEFAULT 'z',col002 numeric,col003 boolean DEFAULT false,col004 bit(3) DEFAULT
+   '111',col005 text DEFAULT 'pookie',col006 integer[] DEFAULT '{5, 4, 3, 2, 1}', col007 character varying(512) DEFAULT 'Now is the time',
+   col008 character varying DEFAULT 'Now is the time', col009 character varying(512)[], col010 numeric(8),col011 int,col012 double precision,
+   col013 bigint, col014 char(8), col015 bytea,col016 timestamp with time zone,col017 interval, col018 cidr, col019 inet, col020 macaddr,
+   col022 money, col024 timetz,col025 circle, col026 box, col027 name,col028 path, col029 int2, col031 bit varying(256),col032 date,
+   col034 lseg,col035 point,col036 polygon,col037 real,col039 time, col040 timestamp ) with (appendonly=true) tablespace ts_sch3;
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+-- create an index for the creation of block dir
+   CREATE index sch_fsts_table_ao_index on sch_fsts_table_ao(a);
+CREATE INDEX
+   
+-- Insert few records into the table
+   INSERT INTO sch_fsts_table_ao VALUES (1,'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',12345678, 1, 111.1111,  11,  '1_one_11',   'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',  '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00','2001-12-13 01:51:15');
+INSERT 0 1
+   INSERT INTO sch_fsts_table_ao VALUES (    2,   'b',   22,  false, '001',   '2_one',  '{6,7,8,9,10}',  'Hey.. whtz up 2', 'Hey .. whtz up 2',    '{one,two,three,four,five}',76767669, 1, 222.2222, 11,   '2_two_22',   'c',   '2002-12-13 01:51:15+1359',   '22',    '0.0.0.0',  '0.0.0.0',  'BB:BB:BB:BB:BB:BB', '200.00',    '00:00:05-07', '((3,3),2)',  '((3,2),(2,3))',   'hello',  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+-- SELECT from the Table
+   SELECT * from sch_fsts_table_ao;
+ a | col001 | col002 | col003 | col004 | col005 |    col006    |         col007         |         col008         |          col009           |  col010  | col011 |  col012  | col013 |  col014  | col015 |         col016         |  col017  |   col018   | col019  |      col020       | col022  |     col024     |  col025   |   col026    | col027 |    col028     | col029 |   col031    |   col032   |    col034     | col035 |                col036                 | col037 |  col039  |       col040        
+---+--------+--------+--------+--------+--------+--------------+------------------------+------------------------+---------------------------+----------+--------+----------+--------+----------+--------+------------------------+----------+------------+---------+-------------------+---------+----------------+-----------+-------------+--------+---------------+--------+-------------+------------+---------------+--------+---------------------------------------+--------+----------+---------------------
+ 2 | b      |     22 | f      | 001    | 2_one  | {6,7,8,9,10} | Hey.. whtz up 2        | Hey .. whtz up 2       | {one,two,three,four,five} | 76767669 |      1 | 222.2222 |     11 | 2_two_22 | c      | 2002-12-12 03:52:15-08 | 00:00:22 | 0.0.0.0/32 | 0.0.0.0 | bb:bb:bb:bb:bb:bb | $200.00 | 00:00:05-07    | <(3,3),2> | (3,3),(2,2) | hello  | ((3,2),(2,3)) |     22 | 01010100101 | 2002-12-13 | [(2,2),(3,3)] | (2,2)  | ((1,2),(2,3),(3,4),(4,3),(3,2),(2,1)) |  11111 | 22:00:00 | 2002-12-13 01:51:15
+ 1 | a      |     11 | t      | 111    | 1_one  | {1,2,3,4,5}  | Hello .. how are you 1 | Hello .. how are you 1 | {one,two,three,four,five} | 12345678 |      1 | 111.1111 |     11 | 1_one_11 | d      | 2001-12-12 03:52:15-08 | 00:00:11 | 0.0.0.0/32 | 0.0.0.0 | aa:aa:aa:aa:aa:aa |  $34.23 | 00:00:00+13:59 | <(2,2),1> | (2,2),(1,1) | hello  | ((1,2),(2,1)) |     11 | 010101      | 2001-12-13 | [(1,1),(2,2)] | (1,1)  | ((1,2),(2,3),(3,4),(4,3),(3,2),(2,1)) | 111111 | 23:00:00 | 2001-12-13 01:51:15
+(2 rows)
+
+-- ALTER the table set distributed randomly
+   ALTER table sch_fsts_table_ao set with ( reorganize='true') distributed randomly;
+ALTER TABLE
+-- Vacuum analyze the table
+   vacuum analyze sch_fsts_table_ao;
+VACUUM
+-- ALTER the table to new table space 
+   ALTER table sch_fsts_table_ao set tablespace ts_sch6;
+ALTER TABLE
+-- Insert few records into the table
+   INSERT INTO sch_fsts_table_ao VALUES (1,'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+   INSERT INTO sch_fsts_table_ao VALUES (    2,   'b',   22,  false, '001',   '2_one',  '{6,7,8,9,10}',  'Hey.. whtz up 2', 'Hey .. whtz up 2',    '{one,two,three,four,five}', 76767669, 1, 222.2222, 11,   '2_two_22',   'c',   '2002-12-13 01:51:15+1359',   '22',    '0.0.0.0',  '0.0.0.0',  'BB:BB:BB:BB:BB:BB', '200.00',    '00:00:05-07', '((3,3),2)',  '((3,2),(2,3))',   'hello',  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+-- ALTER the table set distributed by 
+   ALTER table sch_fsts_table_ao set with ( reorganize='true') distributed by (col010);
+ALTER TABLE
+-- SELECT from the Table
+   SELECT * from sch_fsts_table_ao;
+ a | col001 | col002 | col003 | col004 | col005 |    col006    |         col007         |         col008         |          col009           |  col010  | col011 |  col012  | col013 |  col014  | col015 |         col016         |  col017  |   col018   | col019  |      col020       | col022  |     col024     |  col025   |   col026    | col027 |    col028     | col029 |   col031    |   col032   |    col034     | col035 |                col036                 | col037 |  col039  |       col040        
+---+--------+--------+--------+--------+--------+--------------+------------------------+------------------------+---------------------------+----------+--------+----------+--------+----------+--------+------------------------+----------+------------+---------+-------------------+---------+----------------+-----------+-------------+--------+---------------+--------+-------------+------------+---------------+--------+---------------------------------------+--------+----------+---------------------
+ 1 | a      |     11 | t      | 111    | 1_one  | {1,2,3,4,5}  | Hello .. how are you 1 | Hello .. how are you 1 | {one,two,three,four,five} | 12345678 |      1 | 111.1111 |     11 | 1_one_11 | d      | 2001-12-12 03:52:15-08 | 00:00:11 | 0.0.0.0/32 | 0.0.0.0 | aa:aa:aa:aa:aa:aa |  $34.23 | 00:00:00+13:59 | <(2,2),1> | (2,2),(1,1) | hello  | ((1,2),(2,1)) |     11 | 010101      | 2001-12-13 | [(1,1),(2,2)] | (1,1)  | ((1,2),(2,3),(3,4),(4,3),(3,2),(2,1)) | 111111 | 23:00:00 | 2001-12-13 01:51:15
+ 1 | a      |     11 | t      | 111    | 1_one  | {1,2,3,4,5}  | Hello .. how are you 1 | Hello .. how are you 1 | {one,two,three,four,five} | 12345678 |      1 | 111.1111 |     11 | 1_one_11 | d      | 2001-12-12 03:52:15-08 | 00:00:11 | 0.0.0.0/32 | 0.0.0.0 | aa:aa:aa:aa:aa:aa |  $34.23 | 00:00:00+13:59 | <(2,2),1> | (2,2),(1,1) | hello  | ((1,2),(2,1)) |     11 | 010101      | 2001-12-13 | [(1,1),(2,2)] | (1,1)  | ((1,2),(2,3),(3,4),(4,3),(3,2),(2,1)) | 111111 | 23:00:00 | 2001-12-13 01:51:15
+ 2 | b      |     22 | f      | 001    | 2_one  | {6,7,8,9,10} | Hey.. whtz up 2        | Hey .. whtz up 2       | {one,two,three,four,five} | 76767669 |      1 | 222.2222 |     11 | 2_two_22 | c      | 2002-12-12 03:52:15-08 | 00:00:22 | 0.0.0.0/32 | 0.0.0.0 | bb:bb:bb:bb:bb:bb | $200.00 | 00:00:05-07    | <(3,3),2> | (3,3),(2,2) | hello  | ((3,2),(2,3)) |     22 | 01010100101 | 2002-12-13 | [(2,2),(3,3)] | (2,2)  | ((1,2),(2,3),(3,4),(4,3),(3,2),(2,1)) |  11111 | 22:00:00 | 2002-12-13 01:51:15
+ 2 | b      |     22 | f      | 001    | 2_one  | {6,7,8,9,10} | Hey.. whtz up 2        | Hey .. whtz up 2       | {one,two,three,four,five} | 76767669 |      1 | 222.2222 |     11 | 2_two_22 | c      | 2002-12-12 03:52:15-08 | 00:00:22 | 0.0.0.0/32 | 0.0.0.0 | bb:bb:bb:bb:bb:bb | $200.00 | 00:00:05-07    | <(3,3),2> | (3,3),(2,2) | hello  | ((3,2),(2,3)) |     22 | 01010100101 | 2002-12-13 | [(2,2),(3,3)] | (2,2)  | ((1,2),(2,3),(3,4),(4,3),(3,2),(2,1)) |  11111 | 22:00:00 | 2002-12-13 01:51:15
+(4 rows)
+
+-- Vacuum analyze the table
+   vacuum analyze sch_fsts_table_ao;
+VACUUM
+   
+   
+-- Create CO table
+   CREATE TABLE sch_fsts_table_co ( a int,col001 char DEFAULT 'z',col002 numeric,col003 boolean DEFAULT false,col004 bit(3) DEFAULT
+   '111',col005 text DEFAULT 'pookie',col006 integer[] DEFAULT '{5, 4, 3, 2, 1}', col007 character varying(512) DEFAULT 'Now is the time',
+   col008 character varying DEFAULT 'Now is the time', col009 character varying(512)[], col010 numeric(8),col011 int,col012 double precision,
+   col013 bigint, col014 char(8), col015 bytea,col016 timestamp with time zone,col017 interval, col018 cidr, col019 inet, col020 macaddr,
+   col022 money, col024 timetz,col025 circle, col026 box, col027 name,col028 path, col029 int2, col031 bit varying(256),col032 date,
+   col034 lseg,col035 point,col036 polygon,col037 real,col039 time, col040 timestamp ) with (orientation='column',appendonly=true) tablespace ts_sch4;
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+-- create an index for the creation of block dir
+   CREATE index sch_fsts_table_co_index on sch_fsts_table_co(a);
+CREATE INDEX
+-- Insert few records into the table
+   INSERT INTO sch_fsts_table_co VALUES (1,'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))', 'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+   INSERT INTO sch_fsts_table_co VALUES (    2,   'b',   22,  false, '001',   '2_one',  '{6,7,8,9,10}',  'Hey.. whtz up 2', 'Hey .. whtz up 2',    '{one,two,three,four,five}', 76767669, 1, 222.2222, 11,   '2_two_22',   'c',   '2002-12-13 01:51:15+1359',   '22',    '0.0.0.0',  '0.0.0.0',  'BB:BB:BB:BB:BB:BB', '200.00',    '00:00:05-07', '((3,3),2)',  '((3,2),(2,3))',   'hello',  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+-- SELECT from the Table
+   SELECT * from sch_fsts_table_co;
+ a | col001 | col002 | col003 | col004 | col005 |    col006    |         col007         |         col008         |          col009           |  col010  | col011 |  col012  | col013 |  col014  | col015 |         col016         |  col017  |   col018   | col019  |      col020       | col022  |     col024     |  col025   |   col026    | col027 |    col028     | col029 |   col031    |   col032   |    col034     | col035 |                col036                 | col037 |  col039  |       col040        
+---+--------+--------+--------+--------+--------+--------------+------------------------+------------------------+---------------------------+----------+--------+----------+--------+----------+--------+------------------------+----------+------------+---------+-------------------+---------+----------------+-----------+-------------+--------+---------------+--------+-------------+------------+---------------+--------+---------------------------------------+--------+----------+---------------------
+ 2 | b      |     22 | f      | 001    | 2_one  | {6,7,8,9,10} | Hey.. whtz up 2        | Hey .. whtz up 2       | {one,two,three,four,five} | 76767669 |      1 | 222.2222 |     11 | 2_two_22 | c      | 2002-12-12 03:52:15-08 | 00:00:22 | 0.0.0.0/32 | 0.0.0.0 | bb:bb:bb:bb:bb:bb | $200.00 | 00:00:05-07    | <(3,3),2> | (3,3),(2,2) | hello  | ((3,2),(2,3)) |     22 | 01010100101 | 2002-12-13 | [(2,2),(3,3)] | (2,2)  | ((1,2),(2,3),(3,4),(4,3),(3,2),(2,1)) |  11111 | 22:00:00 | 2002-12-13 01:51:15
+ 1 | a      |     11 | t      | 111    | 1_one  | {1,2,3,4,5}  | Hello .. how are you 1 | Hello .. how are you 1 | {one,two,three,four,five} | 12345678 |      1 | 111.1111 |     11 | 1_one_11 | d      | 2001-12-12 03:52:15-08 | 00:00:11 | 0.0.0.0/32 | 0.0.0.0 | aa:aa:aa:aa:aa:aa |  $34.23 | 00:00:00+13:59 | <(2,2),1> | (2,2),(1,1) | hello  | ((1,2),(2,1)) |     11 | 010101      | 2001-12-13 | [(1,1),(2,2)] | (1,1)  | ((1,2),(2,3),(3,4),(4,3),(3,2),(2,1)) | 111111 | 23:00:00 | 2001-12-13 01:51:15
+(2 rows)
+
+-- ALTER the table set distributed randomly 
+   ALTER table sch_fsts_table_co set with ( reorganize='true') distributed randomly;
+ALTER TABLE
+-- Vacuum analyze the table
+   vacuum analyze sch_fsts_table_co;
+VACUUM
+-- ALTER the table to new table space 
+   ALTER table sch_fsts_table_co set tablespace ts_sch2;
+ALTER TABLE
+-- Insert few records into the table
+   INSERT INTO sch_fsts_table_co VALUES (1,'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+   INSERT INTO sch_fsts_table_co VALUES (    2,   'b',   22,  false, '001',   '2_one',  '{6,7,8,9,10}',  'Hey.. whtz up 2', 'Hey .. whtz up 2',    '{one,two,three,four,five}', 76767669, 1, 222.2222, 11,   '2_two_22',   'c',   '2002-12-13 01:51:15+1359',   '22',    '0.0.0.0',  '0.0.0.0',  'BB:BB:BB:BB:BB:BB', '200.00',    '00:00:05-07', '((3,3),2)',  '((3,2),(2,3))',   'hello',  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+-- ALTER the table set distributed by 
+   ALTER table sch_fsts_table_co set with ( reorganize='true') distributed by (col010);
+ALTER TABLE
+-- SELECT from the Table
+   SELECT * from sch_fsts_table_co;
+ a | col001 | col002 | col003 | col004 | col005 |    col006    |         col007         |         col008         |          col009           |  col010  | col011 |  col012  | col013 |  col014  | col015 |         col016         |  col017  |   col018   | col019  |      col020       | col022  |     col024     |  col025   |   col026    | col027 |    col028     | col029 |   col031    |   col032   |    col034     | col035 |                col036                 | col037 |  col039  |       col040        
+---+--------+--------+--------+--------+--------+--------------+------------------------+------------------------+---------------------------+----------+--------+----------+--------+----------+--------+------------------------+----------+------------+---------+-------------------+---------+----------------+-----------+-------------+--------+---------------+--------+-------------+------------+---------------+--------+---------------------------------------+--------+----------+---------------------
+ 2 | b      |     22 | f      | 001    | 2_one  | {6,7,8,9,10} | Hey.. whtz up 2        | Hey .. whtz up 2       | {one,two,three,four,five} | 76767669 |      1 | 222.2222 |     11 | 2_two_22 | c      | 2002-12-12 03:52:15-08 | 00:00:22 | 0.0.0.0/32 | 0.0.0.0 | bb:bb:bb:bb:bb:bb | $200.00 | 00:00:05-07    | <(3,3),2> | (3,3),(2,2) | hello  | ((3,2),(2,3)) |     22 | 01010100101 | 2002-12-13 | [(2,2),(3,3)] | (2,2)  | ((1,2),(2,3),(3,4),(4,3),(3,2),(2,1)) |  11111 | 22:00:00 | 2002-12-13 01:51:15
+ 2 | b      |     22 | f      | 001    | 2_one  | {6,7,8,9,10} | Hey.. whtz up 2        | Hey .. whtz up 2       | {one,two,three,four,five} | 76767669 |      1 | 222.2222 |     11 | 2_two_22 | c      | 2002-12-12 03:52:15-08 | 00:00:22 | 0.0.0.0/32 | 0.0.0.0 | bb:bb:bb:bb:bb:bb | $200.00 | 00:00:05-07    | <(3,3),2> | (3,3),(2,2) | hello  | ((3,2),(2,3)) |     22 | 01010100101 | 2002-12-13 | [(2,2),(3,3)] | (2,2)  | ((1,2),(2,3),(3,4),(4,3),(3,2),(2,1)) |  11111 | 22:00:00 | 2002-12-13 01:51:15
+ 1 | a      |     11 | t      | 111    | 1_one  | {1,2,3,4,5}  | Hello .. how are you 1 | Hello .. how are you 1 | {one,two,three,four,five} | 12345678 |      1 | 111.1111 |     11 | 1_one_11 | d      | 2001-12-12 03:52:15-08 | 00:00:11 | 0.0.0.0/32 | 0.0.0.0 | aa:aa:aa:aa:aa:aa |  $34.23 | 00:00:00+13:59 | <(2,2),1> | (2,2),(1,1) | hello  | ((1,2),(2,1)) |     11 | 010101      | 2001-12-13 | [(1,1),(2,2)] | (1,1)  | ((1,2),(2,3),(3,4),(4,3),(3,2),(2,1)) | 111111 | 23:00:00 | 2001-12-13 01:51:15
+ 1 | a      |     11 | t      | 111    | 1_one  | {1,2,3,4,5}  | Hello .. how are you 1 | Hello .. how are you 1 | {one,two,three,four,five} | 12345678 |      1 | 111.1111 |     11 | 1_one_11 | d      | 2001-12-12 03:52:15-08 | 00:00:11 | 0.0.0.0/32 | 0.0.0.0 | aa:aa:aa:aa:aa:aa |  $34.23 | 00:00:00+13:59 | <(2,2),1> | (2,2),(1,1) | hello  | ((1,2),(2,1)) |     11 | 010101      | 2001-12-13 | [(1,1),(2,2)] | (1,1)  | ((1,2),(2,3),(3,4),(4,3),(3,2),(2,1)) | 111111 | 23:00:00 | 2001-12-13 01:51:15
+(4 rows)
+
+-- Vacuum analyze the table
+   vacuum analyze sch_fsts_table_co;
+VACUUM
+   
+-- Create hybrid partitioned table
+   CREATE table sch_fsts_part_ao_co (a char, b int, d char,e text) WITH (orientation='column',appendonly=true)tablespace ts_sch2
+       partition by range (b)
+       subpartition by list (d)
+       subpartition template (
+       subpartition sp1 values ('a'),
+       subpartition sp2 values ('b'))
+    (
+     start (1) end (10) every (5)
+    );
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sch_fsts_part_ao_co_1_prt_1" for table "sch_fsts_part_ao_co"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sch_fsts_part_ao_co_1_prt_2" for table "sch_fsts_part_ao_co"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sch_fsts_part_ao_co_1_prt_1_2_prt_sp1" for table "sch_fsts_part_ao_co_1_prt_1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sch_fsts_part_ao_co_1_prt_1_2_prt_sp2" for table "sch_fsts_part_ao_co_1_prt_1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sch_fsts_part_ao_co_1_prt_2_2_prt_sp1" for table "sch_fsts_part_ao_co_1_prt_2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sch_fsts_part_ao_co_1_prt_2_2_prt_sp2" for table "sch_fsts_part_ao_co_1_prt_2"
+CREATE TABLE
+-- create an index for the creation of block dir
+   CREATE index sch_fsts_part_ao_co_index on sch_fsts_part_ao_co(b);
+psql:/path/sql_file:1: NOTICE:  building index for child partition "sch_fsts_part_ao_co_1_prt_1"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "sch_fsts_part_ao_co_1_prt_2"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "sch_fsts_part_ao_co_1_prt_1_2_prt_sp1"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "sch_fsts_part_ao_co_1_prt_1_2_prt_sp2"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "sch_fsts_part_ao_co_1_prt_2_2_prt_sp1"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "sch_fsts_part_ao_co_1_prt_2_2_prt_sp2"
+CREATE INDEX
+-- Insert few records into the table
+   INSERT into sch_fsts_part_ao_co values ('a',1,'b','test_1');
+INSERT 0 1
+   INSERT into sch_fsts_part_ao_co values ('a',2,'b','test_2');
+INSERT 0 1
+   INSERT into sch_fsts_part_ao_co values ('b',3,'b','test_3');
+INSERT 0 1
+   INSERT into sch_fsts_part_ao_co values ('a',4,'a','test_4');
+INSERT 0 1
+   INSERT into sch_fsts_part_ao_co values ('a',5,'a','test_5');
+INSERT 0 1
+-- SELECT from the Table
+   SELECT * from sch_fsts_part_ao_co;
+ a | b | d |   e    
+---+---+---+--------
+ a | 4 | a | test_4
+ a | 5 | a | test_5
+ a | 1 | b | test_1
+ a | 2 | b | test_2
+ b | 3 | b | test_3
+(5 rows)
+
+-- Add partition
+   ALTER table sch_fsts_part_ao_co add partition p1 end (11);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sch_fsts_part_ao_co_1_prt_p1" for table "sch_fsts_part_ao_co"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sch_fsts_part_ao_co_1_prt_p1_2_prt_sp1" for table "sch_fsts_part_ao_co_1_prt_p1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sch_fsts_part_ao_co_1_prt_p1_2_prt_sp2" for table "sch_fsts_part_ao_co_1_prt_p1"
+ALTER TABLE
+-- Vacuum analyze the table
+   vacuum analyze sch_fsts_part_ao_co;
+VACUUM
+-- ALTER the table to new table space
+   ALTER table sch_fsts_part_ao_co  set tablespace ts_sch5;
+ALTER TABLE
+-- Insert few records into the table
+   INSERT into sch_fsts_part_ao_co values ('a',1,'b','test_1');
+INSERT 0 1
+   INSERT into sch_fsts_part_ao_co values ('a',2,'b','test_2');
+INSERT 0 1
+   INSERT into sch_fsts_part_ao_co values ('b',3,'b','test_3');
+INSERT 0 1
+   INSERT into sch_fsts_part_ao_co values ('a',4,'a','test_4');
+INSERT 0 1
+   INSERT into sch_fsts_part_ao_co values ('a',5,'a','test_5');
+INSERT 0 1
+-- ALTER the table set distributed by 
+   ALTER table sch_fsts_part_ao_co set with ( reorganize='true') distributed by (b);
+ALTER TABLE
+-- SELECT from the Table
+   SELECT * from sch_fsts_part_ao_co;
+ a | b | d |   e    
+---+---+---+--------
+ a | 2 | b | test_2
+ a | 2 | b | test_2
+ a | 4 | a | test_4
+ a | 4 | a | test_4
+ b | 3 | b | test_3
+ b | 3 | b | test_3
+ a | 5 | a | test_5
+ a | 5 | a | test_5
+ a | 1 | b | test_1
+ a | 1 | b | test_1
+(10 rows)
+
+-- Vacuum analyze the table
+   vacuum analyze sch_fsts_part_ao_co;   
+VACUUM

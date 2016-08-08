@@ -1,0 +1,28 @@
+-- @Description Ensures that a drop table during reindex operations is ok
+-- 
+
+DELETE FROM reindex_drop_aoco_bitmap WHERE a < 128;
+DELETE 254
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+1: REINDEX index idx_reindex_drop_aoco_bitmap;
+REINDEX
+2&: drop table reindex_drop_aoco_bitmap;  <waiting ...>
+1: SELECT 1 AS relfilenode_same_on_all_segs from gp_dist_random('pg_class')   WHERE relname = 'idx_reindex_drop_aoco_bitmap' GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
+relfilenode_same_on_all_segs
+----------------------------
+1                           
+(1 row)
+1: COMMIT;
+COMMIT
+2<:  <... completed>
+DROP
+2: COMMIT;
+COMMIT
+3: SELECT COUNT(*) FROM pg_class where relname = 'reindex_drop_aoco_bitmap';
+count
+-----
+0    
+(1 row)

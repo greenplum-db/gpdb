@@ -1,0 +1,222 @@
+-- @Description Alter on uao partition tables
+-- 
+Drop table if exists sto_alt_uao_part_splitpartition;
+DROP TABLE
+CREATE TABLE sto_alt_uao_part_splitpartition (id int, date date, amt decimal(10,2)) with (appendonly=true)
+DISTRIBUTED BY (id)
+PARTITION BY RANGE (date)
+( PARTITION sales_Jul13 START (date '2013-07-01') INCLUSIVE ,
+PARTITION sales_Aug13 START (date '2013-08-01') INCLUSIVE ,
+PARTITION sales_Sep13 START (date '2013-09-01') INCLUSIVE 
+END (date '2014-01-01') EXCLUSIVE );
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_alt_uao_part_splitpartition_1_prt_sales_jul13" for table "sto_alt_uao_part_splitpartition"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_alt_uao_part_splitpartition_1_prt_sales_aug13" for table "sto_alt_uao_part_splitpartition"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_alt_uao_part_splitpartition_1_prt_sales_sep13" for table "sto_alt_uao_part_splitpartition"
+CREATE TABLE
+select count(*) FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid in (SELECT oid FROM pg_class WHERE relname like 'sto_alt_uao_part_splitpartition%');
+ count 
+-------
+     4
+(1 row)
+
+SELECT 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='sto_alt_uao_part_splitpartition');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+\d+ sto_alt_uao_part_splitpartition
+ Append-Only Table "public.sto_alt_uao_part_splitpartition"
+ Column |     Type      | Modifiers | Storage | Description 
+--------+---------------+-----------+---------+-------------
+ id     | integer       |           | plain   | 
+ date   | date          |           | plain   | 
+ amt    | numeric(10,2) |           | main    | 
+Compression Type: None
+Compression Level: 0
+Block Size: 32768
+Checksum: f
+Child tables: sto_alt_uao_part_splitpartition_1_prt_sales_aug13,
+              sto_alt_uao_part_splitpartition_1_prt_sales_jul13,
+              sto_alt_uao_part_splitpartition_1_prt_sales_sep13
+Has OIDs: no
+Options: appendonly=true
+Distributed by: (id)
+
+Insert into sto_alt_uao_part_splitpartition values(1,'2013-07-05',19.20);
+INSERT 0 1
+Insert into sto_alt_uao_part_splitpartition values(2,'2013-08-15',10.20);
+INSERT 0 1
+Insert into sto_alt_uao_part_splitpartition values(3,'2013-09-09',14.20);
+INSERT 0 1
+select count(*) from sto_alt_uao_part_splitpartition;
+ count 
+-------
+     3
+(1 row)
+
+-- Alter table add default partition
+Alter table sto_alt_uao_part_splitpartition add default partition part_others with(appendonly=true);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_alt_uao_part_splitpartition_1_prt_part_others" for table "sto_alt_uao_part_splitpartition"
+ALTER TABLE
+select count(*) FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid in (SELECT oid FROM pg_class WHERE relname like 'sto_alt_uao_part_splitpartition%');
+ count 
+-------
+     5
+(1 row)
+
+\d+ sto_alt_uao_part_splitpartition
+ Append-Only Table "public.sto_alt_uao_part_splitpartition"
+ Column |     Type      | Modifiers | Storage | Description 
+--------+---------------+-----------+---------+-------------
+ id     | integer       |           | plain   | 
+ date   | date          |           | plain   | 
+ amt    | numeric(10,2) |           | main    | 
+Compression Type: None
+Compression Level: 0
+Block Size: 32768
+Checksum: f
+Child tables: sto_alt_uao_part_splitpartition_1_prt_part_others,
+              sto_alt_uao_part_splitpartition_1_prt_sales_aug13,
+              sto_alt_uao_part_splitpartition_1_prt_sales_jul13,
+              sto_alt_uao_part_splitpartition_1_prt_sales_sep13
+Has OIDs: no
+Options: appendonly=true
+Distributed by: (id)
+
+Insert into sto_alt_uao_part_splitpartition values(10,'2013-04-22',12.52);
+INSERT 0 1
+Insert into sto_alt_uao_part_splitpartition values(11,'2013-02-22',13.53);
+INSERT 0 1
+Insert into sto_alt_uao_part_splitpartition values(12,'2013-01-22',14.54);
+INSERT 0 1
+select * from sto_alt_uao_part_splitpartition order by  date, amt;
+ id |    date    |  amt  
+----+------------+-------
+ 12 | 2013-01-22 | 14.54
+ 11 | 2013-02-22 | 13.53
+ 10 | 2013-04-22 | 12.52
+  1 | 2013-07-05 | 19.20
+  2 | 2013-08-15 | 10.20
+  3 | 2013-09-09 | 14.20
+(6 rows)
+
+-- Alter table split default partition
+Alter table sto_alt_uao_part_splitpartition split default partition start(date '2013-01-01') end(date '2013-03-01') into (partition p1, partition part_others);
+psql:/path/sql_file:1: NOTICE:  exchanged partition "part_others" of relation "sto_alt_uao_part_splitpartition" with relation "pg_temp_292675"
+psql:/path/sql_file:1: NOTICE:  dropped partition "part_others" for relation "sto_alt_uao_part_splitpartition"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_alt_uao_part_splitpartition_1_prt_p1" for table "sto_alt_uao_part_splitpartition"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_alt_uao_part_splitpartition_1_prt_part_others" for table "sto_alt_uao_part_splitpartition"
+ALTER TABLE
+select count(*) FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid in (SELECT oid FROM pg_class WHERE relname like 'sto_alt_uao_part_splitpartition%');
+ count 
+-------
+     6
+(1 row)
+
+\d+ sto_alt_uao_part_splitpartition
+ Append-Only Table "public.sto_alt_uao_part_splitpartition"
+ Column |     Type      | Modifiers | Storage | Description 
+--------+---------------+-----------+---------+-------------
+ id     | integer       |           | plain   | 
+ date   | date          |           | plain   | 
+ amt    | numeric(10,2) |           | main    | 
+Compression Type: None
+Compression Level: 0
+Block Size: 32768
+Checksum: f
+Child tables: sto_alt_uao_part_splitpartition_1_prt_p1,
+              sto_alt_uao_part_splitpartition_1_prt_part_others,
+              sto_alt_uao_part_splitpartition_1_prt_sales_aug13,
+              sto_alt_uao_part_splitpartition_1_prt_sales_jul13,
+              sto_alt_uao_part_splitpartition_1_prt_sales_sep13
+Has OIDs: no
+Options: appendonly=true
+Distributed by: (id)
+
+select * from sto_alt_uao_part_splitpartition order by  date, amt;
+ id |    date    |  amt  
+----+------------+-------
+ 12 | 2013-01-22 | 14.54
+ 11 | 2013-02-22 | 13.53
+ 10 | 2013-04-22 | 12.52
+  1 | 2013-07-05 | 19.20
+  2 | 2013-08-15 | 10.20
+  3 | 2013-09-09 | 14.20
+(6 rows)
+
+Update sto_alt_uao_part_splitpartition set amt =20.5 where date='2013-02-22';
+UPDATE 1
+set gp_select_invisible = true;
+SET
+select *  from sto_alt_uao_part_splitpartition order by  date, amt;
+ id |    date    |  amt  
+----+------------+-------
+ 12 | 2013-01-22 | 14.54
+ 11 | 2013-02-22 | 13.53
+ 11 | 2013-02-22 | 20.50
+ 10 | 2013-04-22 | 12.52
+  1 | 2013-07-05 | 19.20
+  2 | 2013-08-15 | 10.20
+  3 | 2013-09-09 | 14.20
+(7 rows)
+
+set gp_select_invisible = false;
+SET
+select *  from sto_alt_uao_part_splitpartition order by  date, amt;
+ id |    date    |  amt  
+----+------------+-------
+ 12 | 2013-01-22 | 14.54
+ 11 | 2013-02-22 | 20.50
+ 10 | 2013-04-22 | 12.52
+  1 | 2013-07-05 | 19.20
+  2 | 2013-08-15 | 10.20
+  3 | 2013-09-09 | 14.20
+(6 rows)
+
+Delete from sto_alt_uao_part_splitpartition where date='2013-01-22';
+DELETE 1
+set gp_select_invisible = true;
+SET
+select *  from sto_alt_uao_part_splitpartition order by  date, amt;
+ id |    date    |  amt  
+----+------------+-------
+ 12 | 2013-01-22 | 14.54
+ 11 | 2013-02-22 | 13.53
+ 11 | 2013-02-22 | 20.50
+ 10 | 2013-04-22 | 12.52
+  1 | 2013-07-05 | 19.20
+  2 | 2013-08-15 | 10.20
+  3 | 2013-09-09 | 14.20
+(7 rows)
+
+set gp_select_invisible = false;
+SET
+select *  from sto_alt_uao_part_splitpartition order by  date, amt;
+ id |    date    |  amt  
+----+------------+-------
+ 11 | 2013-02-22 | 20.50
+ 10 | 2013-04-22 | 12.52
+  1 | 2013-07-05 | 19.20
+  2 | 2013-08-15 | 10.20
+  3 | 2013-09-09 | 14.20
+(5 rows)
+
+VACUUM sto_alt_uao_part_splitpartition;
+VACUUM
+select count(*) AS only_visi_tups_vacuum  from sto_alt_uao_part_splitpartition;
+ only_visi_tups_vacuum 
+-----------------------
+                     5
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*) AS invisi_and_visi_tups_vacuum  from sto_alt_uao_part_splitpartition;
+ invisi_and_visi_tups_vacuum 
+-----------------------------
+                           5
+(1 row)
+
+set gp_select_invisible = false;
+SET

@@ -1,0 +1,48 @@
+-- start_ignore
+drop function if exists recursive(int);
+psql:/path/sql_file:1: NOTICE:  function recursive(pg_catalog.int4) does not exist, skipping
+DROP FUNCTION
+drop table if exists aorecursive;
+psql:/path/sql_file:1: NOTICE:  table "aorecursive" does not exist, skipping
+DROP TABLE
+-- end_ignore
+create table aorecursive(id int, username text) 
+WITH (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1, blocksize=32768) 
+DISTRIBUTED randomly;
+CREATE TABLE
+insert into aorecursive(id, username) values(1, 'user1');
+INSERT 0 1
+create function recursive(i int) returns integer as
+$$
+declare
+	rowcnt integer;
+begin
+        select count(*) into rowcnt from aorecursive;        
+        if rowcnt = 0 then
+           insert into aorecursive(id, username) values(i, 'user' || i);
+           return 1;
+        else
+           drop table aorecursive;
+           create table aorecursive(id int, username text)
+           WITH (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1, blocksize=32768)
+           DISTRIBUTED randomly;
+           return recursive(i+1);
+        end if;
+end;
+$$ language plpgsql modifies sql data;
+CREATE FUNCTION
+set gp_resqueue_memory_policy=none;
+SET
+set gp_plpgsql_clear_cache_always=on;
+SET
+select * from aorecursive order by id;
+ id | username 
+----+----------
+  1 | user1
+(1 row)
+
+select 1 as test where recursive(1) is null;
+ test 
+------
+(0 rows)
+

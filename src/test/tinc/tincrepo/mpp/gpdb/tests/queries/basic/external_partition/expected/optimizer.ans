@@ -1,0 +1,81 @@
+-- start_ignore
+-- end_ignore
+-- 
+-- @created 2015-07-23 12:00:00
+-- @modified 2015-07-23 12:00:00
+-- @tags external_partition 
+-- @gpdiff true 
+-- @check ORCA would fallback when query has external partition
+--start_ignore
+drop table if exists pt_ext_opt;
+psql:/path/sql_file:1: NOTICE:  table "pt_ext_opt" does not exist, skipping
+DROP TABLE
+CREATE TABLE pt_ext_opt
+(
+  col1 int,
+  col2 decimal
+)
+distributed by (col1)
+partition by list(col2)
+(
+	partition part1 values(1,2,3),
+	partition part2 values(4,5,6)
+);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_opt_1_prt_part1" for table "pt_ext_opt"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_opt_1_prt_part2" for table "pt_ext_opt"
+CREATE TABLE
+insert into pt_ext_opt select i,i from generate_series(1,6) i;
+INSERT 0 6
+create temp table tmp as select * from pt_ext_opt where col1 < 4 distributed by (col1); 
+SELECT 3
+copy tmp to '/tmp/exttab_text';
+COPY 3
+create readable external table ret(like pt_ext_opt) location('file://mdw/tmp/exttab_text') format 'text';
+CREATE EXTERNAL TABLE
+alter table pt_ext_opt exchange partition part1 with table ret without validation;
+ALTER TABLE
+drop table ret;
+DROP TABLE
+--end_ignore
+set optimizer = on;
+SET
+select * from pt_ext_opt;
+ col1 | col2 
+------+------
+    4 |    4
+    5 |    5
+    6 |    6
+    1 |    1
+    2 |    2
+    3 |    3
+(6 rows)
+
+select * from (select * from pt_ext_opt) foo;
+ col1 | col2 
+------+------
+    4 |    4
+    5 |    5
+    6 |    6
+    1 |    1
+    2 |    2
+    3 |    3
+(6 rows)
+
+with foo as (select * from pt_ext_opt) select * from foo;
+ col1 | col2 
+------+------
+    4 |    4
+    5 |    5
+    6 |    6
+    1 |    1
+    2 |    2
+    3 |    3
+(6 rows)
+
+set optimizer = off;
+SET
+--start_ignore
+drop table pt_ext_opt;
+DROP TABLE
+\! rm /tmp/exttab_text
+--end_ignore

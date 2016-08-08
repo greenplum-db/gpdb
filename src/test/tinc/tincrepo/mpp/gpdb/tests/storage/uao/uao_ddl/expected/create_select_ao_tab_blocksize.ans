@@ -1,0 +1,147 @@
+-- create select uao table with BLOCKSIZE=8K 
+DROP TABLE IF EXISTS uao_tab_blocksize_8k cascade;
+DROP TABLE
+CREATE TABLE uao_tab_blocksize_8k  with (appendonly=true , BLOCKSIZE=8192 )  AS (
+SELECT GENERATE_SERIES::numeric sno
+     , (random() * 10000000)::numeric + 10000000 val1
+     , timeofday()::varchar(50) val2
+     , (random() * 5000)::bigint + 10000000 val3
+     , (random() * 10000000)::numeric + 10000000 val4
+     , (random() * 10000000)::numeric + 10000000 val5	
+  FROM GENERATE_SERIES(10000, 19999)
+) ;
+SELECT 10000
+CREATE index val3_bmp_idxblocksize_8k on uao_tab_blocksize_8k using bitmap (val3);
+CREATE INDEX
+\d+ uao_tab_blocksize_8k 
+           Append-Only Table "public.uao_tab_blocksize_8k"
+ Column |         Type          | Modifiers | Storage  | Description 
+--------+-----------------------+-----------+----------+-------------
+ sno    | numeric               |           | main     | 
+ val1   | numeric               |           | main     | 
+ val2   | character varying(50) |           | extended | 
+ val3   | bigint                |           | plain    | 
+ val4   | numeric               |           | main     | 
+ val5   | numeric               |           | main     | 
+Compression Type: None
+Compression Level: 0
+Block Size: 8192
+Checksum: f
+Indexes:
+    "val3_bmp_idxblocksize_8k" bitmap (val3)
+Has OIDs: no
+Options: appendonly=true, blocksize=8192
+Distributed by: (sno)
+SELECT count(*) from uao_tab_blocksize_8k;
+ count 
+-------
+ 10000
+(1 row)
+SELECT 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='uao_tab_blocksize_8k');
+ visimappresent 
+----------------
+              1
+(1 row)
+select 1 as block8k_present from pg_appendonly WHERE   blocksize=8192 AND relid=(SELECT oid  FROM pg_class WHERE relname='uao_tab_blocksize_8k');
+ block8k_present 
+-----------------
+               1
+(1 row)
+-- create select uao table with BLOCKSIZE=2048K 
+DROP TABLE IF EXISTS uao_tab_blocksize_2048k cascade;
+DROP TABLE
+CREATE TABLE uao_tab_blocksize_2048k  with (appendonly=true , BLOCKSIZE=2097152 )  AS (
+SELECT GENERATE_SERIES::numeric sno
+     , (random() * 10000000)::numeric + 10000000 val1
+     , timeofday()::varchar(50) val2
+     , (random() * 5000)::bigint + 10000000 val3
+     , (random() * 10000000)::numeric + 10000000 val4
+     , (random() * 10000000)::numeric + 10000000 val5	
+  FROM GENERATE_SERIES(10000, 19999)
+) ;
+SELECT 10000
+CREATE index val3_bmp_idxblocksize_2048k on uao_tab_blocksize_2048k using bitmap (val3);
+CREATE INDEX
+\d+ uao_tab_blocksize_2048k 
+         Append-Only Table "public.uao_tab_blocksize_2048k"
+ Column |         Type          | Modifiers | Storage  | Description 
+--------+-----------------------+-----------+----------+-------------
+ sno    | numeric               |           | main     | 
+ val1   | numeric               |           | main     | 
+ val2   | character varying(50) |           | extended | 
+ val3   | bigint                |           | plain    | 
+ val4   | numeric               |           | main     | 
+ val5   | numeric               |           | main     | 
+Compression Type: None
+Compression Level: 0
+Block Size: 2097152
+Checksum: f
+Indexes:
+    "val3_bmp_idxblocksize_2048k" bitmap (val3)
+Has OIDs: no
+Options: appendonly=true, blocksize=2097152
+Distributed by: (sno)
+SELECT count(*) from uao_tab_blocksize_2048k;
+ count 
+-------
+ 10000
+(1 row)
+SELECT 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='uao_tab_blocksize_2048k');
+ visimappresent 
+----------------
+              1
+(1 row)
+select 1 as block2048k_present from pg_appendonly WHERE   blocksize=2097152 AND relid=(SELECT oid  FROM pg_class WHERE relname='uao_tab_blocksize_2048k');
+ block2048k_present 
+--------------------
+                  1
+(1 row)
+-- create select uao table with BLOCKSIZE=default
+DROP TABLE IF EXISTS uao_tab_blocksize_default cascade;
+DROP TABLE
+CREATE TABLE uao_tab_blocksize_default with (appendonly=true)  AS (
+SELECT GENERATE_SERIES::numeric sno
+     , (random() * 10000000)::numeric + 10000000 val1
+     , timeofday()::varchar(50) val2
+     , (random() * 5000)::bigint + 10000000 val3
+     , (random() * 10000000)::numeric + 10000000 val4
+     , (random() * 10000000)::numeric + 10000000 val5	
+  FROM GENERATE_SERIES(10000, 19999)
+) ;
+SELECT 10000
+CREATE index val3_bmp_idxblocksize_default on uao_tab_blocksize_default using bitmap (val3);
+CREATE INDEX
+\d+ uao_tab_blocksize_default 
+        Append-Only Table "public.uao_tab_blocksize_default"
+ Column |         Type          | Modifiers | Storage  | Description 
+--------+-----------------------+-----------+----------+-------------
+ sno    | numeric               |           | main     | 
+ val1   | numeric               |           | main     | 
+ val2   | character varying(50) |           | extended | 
+ val3   | bigint                |           | plain    | 
+ val4   | numeric               |           | main     | 
+ val5   | numeric               |           | main     | 
+Compression Type: None
+Compression Level: 0
+Block Size: 32768
+Checksum: f
+Indexes:
+    "val3_bmp_idxblocksize_default" bitmap (val3)
+Has OIDs: no
+Options: appendonly=true
+Distributed by: (sno)
+SELECT count(*) from uao_tab_blocksize_default;
+ count 
+-------
+ 10000
+(1 row)
+SELECT 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='uao_tab_blocksize_default');
+ visimappresent 
+----------------
+              1
+(1 row)
+select 1 as blockdefault_present from pg_appendonly WHERE   blocksize=32768 AND relid=(SELECT oid  FROM pg_class WHERE relname='uao_tab_blocksize_default');
+ blockdefault_present 
+----------------------
+                    1
+(1 row)

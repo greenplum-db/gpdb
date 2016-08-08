@@ -1,0 +1,39 @@
+--ALTER column [ SET | DROP ] NOT NULL
+          CREATE TABLE mdt_alter_table1(
+          col_text text,
+          col_numeric numeric NOT NULL
+          ) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+          ALTER TABLE mdt_alter_table1 ALTER COLUMN col_numeric DROP NOT NULL;
+ALTER TABLE
+          CREATE TABLE mdt_alter_table2(
+          col_text text,
+          col_numeric numeric
+          ) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+          ALTER TABLE mdt_alter_table2 ALTER COLUMN col_numeric SET NOT NULL;
+ALTER TABLE
+-- select from the Metadata Tracking View
+select classname  , objname  , cur_usename , stausename , staactionname , stasubtype from pg_stat_operations  where statime > ( select statime from pg_stat_operations where objname ='gp_distributed_log' and staactionname ='CREATE') and objname  not in ('pg_stat_operations') order by statime;
+  classname  |     objname      | cur_usename | stausename | staactionname |         stasubtype         
+-------------+------------------+-------------+------------+---------------+----------------------------
+ pg_authid   | anu              | anu         | anu        | ALTER         | 
+ pg_database | gptest           | anu         | anu        | CREATE        | DATABASE
+ pg_class    | mdt_alter_table1 | anu         | anu        | CREATE        | TABLE
+ pg_class    | mdt_alter_table1 | anu         | anu        | ALTER         | ALTER COLUMN DROP NOT NULL
+ pg_class    | mdt_alter_table2 | anu         | anu        | CREATE        | TABLE
+ pg_class    | mdt_alter_table2 | anu         | anu        | ALTER         | ALTER COLUMN SET NOT NULL
+(6 rows)
+
+drop table mdt_alter_table1;
+DROP TABLE
+drop table mdt_alter_table2;
+DROP TABLE
+-- select from the Metadata Tracking View
+select classname  , objname  , cur_usename , stausename , staactionname , stasubtype from pg_stat_operations  where statime > ( select statime from pg_stat_operations where objname ='gp_distributed_log' and staactionname ='CREATE') and objname  not in ('pg_stat_operations') order by statime;
+  classname  | objname | cur_usename | stausename | staactionname | stasubtype 
+-------------+---------+-------------+------------+---------------+------------
+ pg_authid   | anu     | anu         | anu        | ALTER         | 
+ pg_database | gptest  | anu         | anu        | CREATE        | DATABASE
+(2 rows)
+

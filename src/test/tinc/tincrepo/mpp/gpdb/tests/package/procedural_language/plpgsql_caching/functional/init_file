@@ -1,0 +1,8 @@
+-- start_matchsubs
+m/psql:.* ERROR:/
+s/psql:\/.*\/.*\.sql:.* ERROR:.*/psql:\/newpath\/.*\.sql:.* ERROR:.*/
+m/.* OID [0-9]+/
+s/OID \d+/OID [0-9]+/ 
+m/ERROR:.* cache lookup failed for relation [0-9]+/
+s/relation \d+/relation [0-9]+/ 
+-- end_matchsubs

@@ -1,0 +1,11 @@
+-- start_matchsubs
+-- m/mapreduce_\d+_/
+-- s/mapreduce_\d+/mapreduce_DUMMY/
+-- m/\(\w+.\w+:[0-9]+\)$/
+-- s/\(\w+.\w+:[0-9]+\)$/\(file:line\)/
+-- end_matchsubs
+WARNING: unset parameter - myMap(key => NULL)
+mapreduce_13680_run_1
+ERROR:  Perl function "mapreduce_13680_mymap" failed (plperl.c:1175)
+DETAIL:  }GABLECK!{ at line 15.
+Error: Execution Failure

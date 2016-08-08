@@ -1,0 +1,323 @@
+--
+-- CK_SYNC1 AO TABLE 1
+--
+CREATE TABLE ck_sync1_ao_alter_part_exchange_partrange1 (
+        unique1         int4,
+        unique2         int4
+)   with ( appendonly='true') partition by range (unique1)
+( partition aa start (0) end (500) every (100), default partition default_part );
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'unique1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange1_1_prt_default_part" for table "ck_sync1_ao_alter_part_exchange_partrange1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange1_1_prt_aa_1" for table "ck_sync1_ao_alter_part_exchange_partrange1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange1_1_prt_aa_2" for table "ck_sync1_ao_alter_part_exchange_partrange1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange1_1_prt_aa_3" for table "ck_sync1_ao_alter_part_exchange_partrange1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange1_1_prt_aa_4" for table "ck_sync1_ao_alter_part_exchange_partrange1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange1_1_prt_aa_5" for table "ck_sync1_ao_alter_part_exchange_partrange1"
+CREATE TABLE
+CREATE TABLE ck_sync1_ao_alter_part_exchange_partrange1_A (
+        unique1         int4,
+        unique2         int4)  with ( appendonly='true');
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'unique1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+--
+-- Insert few records into the table
+--
+insert into ck_sync1_ao_alter_part_exchange_partrange1 values ( generate_series(5,50),generate_series(15,60));
+INSERT 0 46
+insert into ck_sync1_ao_alter_part_exchange_partrange1_A values ( generate_series(1,10),generate_series(21,30));
+INSERT 0 10
+--
+-- select from the Table
+--
+select count(*) from ck_sync1_ao_alter_part_exchange_partrange1;
+ count 
+-------
+    46
+(1 row)
+
+--
+-- CK_SYNC1 AO TABLE 2
+--
+CREATE TABLE ck_sync1_ao_alter_part_exchange_partrange2 (
+        unique1         int4,
+        unique2         int4
+)   with ( appendonly='true') partition by range (unique1)
+( partition aa start (0) end (500) every (100), default partition default_part );
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'unique1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange2_1_prt_default_part" for table "ck_sync1_ao_alter_part_exchange_partrange2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange2_1_prt_aa_1" for table "ck_sync1_ao_alter_part_exchange_partrange2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange2_1_prt_aa_2" for table "ck_sync1_ao_alter_part_exchange_partrange2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange2_1_prt_aa_3" for table "ck_sync1_ao_alter_part_exchange_partrange2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange2_1_prt_aa_4" for table "ck_sync1_ao_alter_part_exchange_partrange2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange2_1_prt_aa_5" for table "ck_sync1_ao_alter_part_exchange_partrange2"
+CREATE TABLE
+CREATE TABLE ck_sync1_ao_alter_part_exchange_partrange2_A (
+        unique1         int4,
+        unique2         int4)  with ( appendonly='true');
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'unique1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+--
+-- Insert few records into the table
+--
+insert into ck_sync1_ao_alter_part_exchange_partrange2 values ( generate_series(5,50),generate_series(15,60));
+INSERT 0 46
+insert into ck_sync1_ao_alter_part_exchange_partrange2_A values ( generate_series(1,10),generate_series(21,30));
+INSERT 0 10
+--
+-- select from the Table
+--
+select count(*) from ck_sync1_ao_alter_part_exchange_partrange2;
+ count 
+-------
+    46
+(1 row)
+
+--
+-- CK_SYNC1 AO TABLE 3
+--
+CREATE TABLE ck_sync1_ao_alter_part_exchange_partrange3 (
+        unique1         int4,
+        unique2         int4
+)   with ( appendonly='true') partition by range (unique1)
+( partition aa start (0) end (500) every (100), default partition default_part );
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'unique1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange3_1_prt_default_part" for table "ck_sync1_ao_alter_part_exchange_partrange3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange3_1_prt_aa_1" for table "ck_sync1_ao_alter_part_exchange_partrange3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange3_1_prt_aa_2" for table "ck_sync1_ao_alter_part_exchange_partrange3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange3_1_prt_aa_3" for table "ck_sync1_ao_alter_part_exchange_partrange3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange3_1_prt_aa_4" for table "ck_sync1_ao_alter_part_exchange_partrange3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange3_1_prt_aa_5" for table "ck_sync1_ao_alter_part_exchange_partrange3"
+CREATE TABLE
+CREATE TABLE ck_sync1_ao_alter_part_exchange_partrange3_A (
+        unique1         int4,
+        unique2         int4)  with ( appendonly='true');
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'unique1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+--
+-- Insert few records into the table
+--
+insert into ck_sync1_ao_alter_part_exchange_partrange3 values ( generate_series(5,50),generate_series(15,60));
+INSERT 0 46
+insert into ck_sync1_ao_alter_part_exchange_partrange3_A values ( generate_series(1,10),generate_series(21,30));
+INSERT 0 10
+--
+-- select from the Table
+--
+select count(*) from ck_sync1_ao_alter_part_exchange_partrange3;
+ count 
+-------
+    46
+(1 row)
+
+--
+-- CK_SYNC1 AO TABLE 4
+--
+CREATE TABLE ck_sync1_ao_alter_part_exchange_partrange4 (
+        unique1         int4,
+        unique2         int4
+)   with ( appendonly='true') partition by range (unique1)
+( partition aa start (0) end (500) every (100), default partition default_part );
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'unique1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange4_1_prt_default_part" for table "ck_sync1_ao_alter_part_exchange_partrange4"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange4_1_prt_aa_1" for table "ck_sync1_ao_alter_part_exchange_partrange4"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange4_1_prt_aa_2" for table "ck_sync1_ao_alter_part_exchange_partrange4"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange4_1_prt_aa_3" for table "ck_sync1_ao_alter_part_exchange_partrange4"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange4_1_prt_aa_4" for table "ck_sync1_ao_alter_part_exchange_partrange4"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange4_1_prt_aa_5" for table "ck_sync1_ao_alter_part_exchange_partrange4"
+CREATE TABLE
+CREATE TABLE ck_sync1_ao_alter_part_exchange_partrange4_A (
+        unique1         int4,
+        unique2         int4)  with ( appendonly='true');
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'unique1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+--
+-- Insert few records into the table
+--
+insert into ck_sync1_ao_alter_part_exchange_partrange4 values ( generate_series(5,50),generate_series(15,60));
+INSERT 0 46
+insert into ck_sync1_ao_alter_part_exchange_partrange4_A values ( generate_series(1,10),generate_series(21,30));
+INSERT 0 10
+--
+-- select from the Table
+--
+select count(*) from ck_sync1_ao_alter_part_exchange_partrange4;
+ count 
+-------
+    46
+(1 row)
+
+--
+-- CK_SYNC1 AO TABLE 5
+--
+CREATE TABLE ck_sync1_ao_alter_part_exchange_partrange5 (
+        unique1         int4,
+        unique2         int4
+)   with ( appendonly='true') partition by range (unique1)
+( partition aa start (0) end (500) every (100), default partition default_part );
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'unique1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange5_1_prt_default_part" for table "ck_sync1_ao_alter_part_exchange_partrange5"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange5_1_prt_aa_1" for table "ck_sync1_ao_alter_part_exchange_partrange5"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange5_1_prt_aa_2" for table "ck_sync1_ao_alter_part_exchange_partrange5"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange5_1_prt_aa_3" for table "ck_sync1_ao_alter_part_exchange_partrange5"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange5_1_prt_aa_4" for table "ck_sync1_ao_alter_part_exchange_partrange5"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange5_1_prt_aa_5" for table "ck_sync1_ao_alter_part_exchange_partrange5"
+CREATE TABLE
+CREATE TABLE ck_sync1_ao_alter_part_exchange_partrange5_A (
+        unique1         int4,
+        unique2         int4)  with ( appendonly='true');
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'unique1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+--
+-- Insert few records into the table
+--
+insert into ck_sync1_ao_alter_part_exchange_partrange5 values ( generate_series(5,50),generate_series(15,60));
+INSERT 0 46
+insert into ck_sync1_ao_alter_part_exchange_partrange5_A values ( generate_series(1,10),generate_series(21,30));
+INSERT 0 10
+--
+-- select from the Table
+--
+select count(*) from ck_sync1_ao_alter_part_exchange_partrange5;
+ count 
+-------
+    46
+(1 row)
+
+--
+-- CK_SYNC1 AO TABLE 6
+--
+CREATE TABLE ck_sync1_ao_alter_part_exchange_partrange6 (
+        unique1         int4,
+        unique2         int4
+)   with ( appendonly='true') partition by range (unique1)
+( partition aa start (0) end (500) every (100), default partition default_part );
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'unique1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange6_1_prt_default_part" for table "ck_sync1_ao_alter_part_exchange_partrange6"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange6_1_prt_aa_1" for table "ck_sync1_ao_alter_part_exchange_partrange6"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange6_1_prt_aa_2" for table "ck_sync1_ao_alter_part_exchange_partrange6"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange6_1_prt_aa_3" for table "ck_sync1_ao_alter_part_exchange_partrange6"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange6_1_prt_aa_4" for table "ck_sync1_ao_alter_part_exchange_partrange6"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange6_1_prt_aa_5" for table "ck_sync1_ao_alter_part_exchange_partrange6"
+CREATE TABLE
+CREATE TABLE ck_sync1_ao_alter_part_exchange_partrange6_A (
+        unique1         int4,
+        unique2         int4)  with ( appendonly='true');
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'unique1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+--
+-- Insert few records into the table
+--
+insert into ck_sync1_ao_alter_part_exchange_partrange6 values ( generate_series(5,50),generate_series(15,60));
+INSERT 0 46
+insert into ck_sync1_ao_alter_part_exchange_partrange6_A values ( generate_series(1,10),generate_series(21,30));
+INSERT 0 10
+--
+-- select from the Table
+--
+select count(*) from ck_sync1_ao_alter_part_exchange_partrange6;
+ count 
+-------
+    46
+(1 row)
+
+--
+-- CK_SYNC1 AO TABLE 7
+--
+CREATE TABLE ck_sync1_ao_alter_part_exchange_partrange7 (
+        unique1         int4,
+        unique2         int4
+)   with ( appendonly='true') partition by range (unique1)
+( partition aa start (0) end (500) every (100), default partition default_part );
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'unique1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange7_1_prt_default_part" for table "ck_sync1_ao_alter_part_exchange_partrange7"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange7_1_prt_aa_1" for table "ck_sync1_ao_alter_part_exchange_partrange7"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange7_1_prt_aa_2" for table "ck_sync1_ao_alter_part_exchange_partrange7"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange7_1_prt_aa_3" for table "ck_sync1_ao_alter_part_exchange_partrange7"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange7_1_prt_aa_4" for table "ck_sync1_ao_alter_part_exchange_partrange7"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_part_exchange_partrange7_1_prt_aa_5" for table "ck_sync1_ao_alter_part_exchange_partrange7"
+CREATE TABLE
+CREATE TABLE ck_sync1_ao_alter_part_exchange_partrange7_A (
+        unique1         int4,
+        unique2         int4)  with ( appendonly='true');
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'unique1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+--
+-- Insert few records into the table
+--
+insert into ck_sync1_ao_alter_part_exchange_partrange7 values ( generate_series(5,50),generate_series(15,60));
+INSERT 0 46
+insert into ck_sync1_ao_alter_part_exchange_partrange7_A values ( generate_series(1,10),generate_series(21,30));
+INSERT 0 10
+--
+-- select from the Table
+--
+select count(*) from ck_sync1_ao_alter_part_exchange_partrange7;
+ count 
+-------
+    46
+(1 row)
+
+--
+-- ALTER SYNC1 AO 
+--
+--
+-- ALTER PARTITION TABLE EXCHANGE PARTITION RANGE
+--
+alter table sync1_ao_alter_part_exchange_partrange2 exchange partition for (rank(1)) with table sync1_ao_alter_part_exchange_partrange2_A;
+psql:/path/sql_file:1: NOTICE:  exchanged partition "aa_1" of relation "sync1_ao_alter_part_exchange_partrange2" with relation "sync1_ao_alter_part_exchange_partrange2_a"
+ALTER TABLE
+--
+-- Insert few records into the table
+--
+insert into sync1_ao_alter_part_exchange_partrange2 values ( generate_series(5,50),generate_series(15,60));
+INSERT 0 46
+insert into sync1_ao_alter_part_exchange_partrange2_A values ( generate_series(1,10),generate_series(21,30));
+INSERT 0 10
+--
+-- select from the Table
+--
+select count(*) from sync1_ao_alter_part_exchange_partrange2;
+ count 
+-------
+    56
+(1 row)
+
+--
+-- ALTER CK_SYNC1 AO 
+--
+--
+-- ALTER PARTITION TABLE EXCHANGE PARTITION RANGE
+--
+alter table ck_sync1_ao_alter_part_exchange_partrange1 exchange partition for (rank(1)) with table ck_sync1_ao_alter_part_exchange_partrange1_A;
+psql:/path/sql_file:1: NOTICE:  exchanged partition "aa_1" of relation "ck_sync1_ao_alter_part_exchange_partrange1" with relation "ck_sync1_ao_alter_part_exchange_partrange1_a"
+ALTER TABLE
+--
+-- Insert few records into the table
+--
+insert into ck_sync1_ao_alter_part_exchange_partrange1 values ( generate_series(5,50),generate_series(15,60));
+INSERT 0 46
+insert into ck_sync1_ao_alter_part_exchange_partrange1_A values ( generate_series(1,10),generate_series(21,30));
+INSERT 0 10
+--
+-- select from the Table
+--
+select count(*) from ck_sync1_ao_alter_part_exchange_partrange1;
+ count 
+-------
+    56
+(1 row)
+

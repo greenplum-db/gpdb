@@ -1,0 +1,34 @@
+-- start_ignore
+drop  external table date_heap;
+DROP EXTERNAL TABLE
+drop  external table date_writehdfs;
+DROP EXTERNAL TABLE
+drop  external table date_readhdfs;
+DROP EXTERNAL TABLE
+-- end_ignore
+create readable external table date_heap(datatype_date varchar,x_date bigint, col1_date date,col2_date date, col3_date date, col4_date date, col5_date date, col6_date date, col7_date date, nullcol_date date) location ('gpfdist://rh55-qavm20:5487/date.txt')format 'TEXT';
+CREATE EXTERNAL TABLE
+create writable external table date_writehdfs(like date_heap) location ('gphdfs://my.cluster.com/extwrite/date')format 'custom' (formatter='gphdfs_export');
+NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+CREATE EXTERNAL TABLE
+create readable external table date_readhdfs(like date_heap) location ('gphdfs://my.cluster.com/extwrite/date') format 'custom' (formatter='gphdfs_import');
+CREATE EXTERNAL TABLE
+select count(*) from date_heap;
+ count 
+-------
+  5000
+(1 row)
+
+insert into date_writehdfs select * from date_heap;
+INSERT 0 5000
+select count(*) from date_readhdfs;
+ count 
+-------
+  5000
+(1 row)
+
+(select * from date_heap except select * from date_readhdfs) union (select * from date_readhdfs except select * from date_heap);
+ datatype_date | x_date | col1_date | col2_date | col3_date | col4_date | col5_date | col6_date | col7_date | nullcol_date 
+---------------+--------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+--------------
+(0 rows)
+

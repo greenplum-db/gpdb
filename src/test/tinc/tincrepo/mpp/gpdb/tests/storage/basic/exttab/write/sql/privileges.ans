@@ -1,0 +1,1548 @@
+show gp_external_grant_privileges; -- MUST BE OFF for the following tests to work.
+ gp_external_grant_privileges 
+------------------------------
+ off
+(1 row)
+
+--
+-- Super User priv
+--
+CREATE ROLE ext_su SUPERUSER; -- SU with no privs in pg_auth
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_su';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_su  | f                 | f                 | f
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_su;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';
+CREATE EXTERNAL TABLE
+select * from priv_ext_test1 order by a;
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+(5 rows)
+
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/output/wet_file') format 'text';
+CREATE EXTERNAL TABLE
+insert into priv_ext_test2 values (generate_series(1,10));
+INSERT 0 10
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text';
+CREATE EXTERNAL TABLE
+select * from priv_ext_test3 order by a;
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+(5 rows)
+
+drop external table priv_ext_test1;
+DROP EXTERNAL TABLE
+drop external table priv_ext_test2;
+DROP EXTERNAL TABLE
+drop external table priv_ext_test3;
+DROP EXTERNAL TABLE
+RESET SESSION AUTHORIZATION;
+RESET
+--
+-- Role to create RET gpfdist 
+--
+CREATE ROLE ext_u1 CREATEEXTTABLE(protocol='gpfdist', type='readable');
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u1';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u1  | t                 | f                 | f
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u1;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';
+CREATE EXTERNAL TABLE
+select * from priv_ext_test1 order by a;
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+(5 rows)
+
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/output/wet_file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+drop external table priv_ext_test1;
+DROP EXTERNAL TABLE
+RESET SESSION AUTHORIZATION;
+RESET
+--
+-- Role to create WET gpfdist
+--
+CREATE ROLE ext_u2 CREATEEXTTABLE(protocol='gpfdist', type='writable');
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u2';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u2  | f                 | f                 | t
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u2;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';  -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a readable gpfdist(s) external table
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/output/wet_file') format 'text';
+CREATE EXTERNAL TABLE
+insert into priv_ext_test2 values (generate_series(1,10));
+INSERT 0 10
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+drop external table priv_ext_test2;
+DROP EXTERNAL TABLE
+RESET SESSION AUTHORIZATION;
+RESET
+--
+-- Role to create RET http
+--
+CREATE ROLE ext_u3 CREATEEXTTABLE(protocol='http', type='readable');
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u3';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u3  | f                 | t                 | f
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u3;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';  -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a readable gpfdist(s) external table
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';  -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text';
+CREATE EXTERNAL TABLE
+select * from priv_ext_test3 order by a;
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+(5 rows)
+
+drop external table priv_ext_test3;
+DROP EXTERNAL TABLE
+RESET SESSION AUTHORIZATION;
+RESET
+--
+-- Role to create RET http and NO create RET http
+--
+CREATE ROLE ext_u5 CREATEEXTTABLE(protocol='http') NOCREATEEXTTABLE(protocol='http', type='readable'); -- fail due to conflict
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+psql:/path/sql_file:1: ERROR:  conflicting specifications in CREATEEXTTABLE and NOCREATEEXTTABLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u5';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+(0 rows)
+
+--
+-- 
+--
+CREATE ROLE ext_u12 CREATEEXTTABLE(protocol='http',type='readable') NOCREATEEXTTABLE(protocol='http', type='readable'); -- fail due to conflict
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+psql:/path/sql_file:1: ERROR:  conflicting specifications in CREATEEXTTABLE and NOCREATEEXTTABLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u12';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+(0 rows)
+
+--
+-- Role to create RET gpfdist and NO create RET gpfdist
+--
+CREATE ROLE ext_u4 CREATEEXTTABLE(protocol='gpfdist') NOCREATEEXTTABLE(protocol='gpfdist', type='readable'); -- fail due to conflict
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+psql:/path/sql_file:1: ERROR:  conflicting specifications in CREATEEXTTABLE and NOCREATEEXTTABLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u4';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+(0 rows)
+
+CREATE ROLE ext_u7 CREATEEXTTABLE(type='readable') NOCREATEEXTTABLE(protocol='gpfdist', type='readable'); -- fail due to conflict
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+psql:/path/sql_file:1: ERROR:  conflicting specifications in CREATEEXTTABLE and NOCREATEEXTTABLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u7';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+(0 rows)
+
+CREATE ROLE ext_u10 CREATEEXTTABLE(protocol='gpfdist',type='readable') NOCREATEEXTTABLE(protocol='gpfdist', type='readable'); -- fail due to conflict
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+psql:/path/sql_file:1: ERROR:  conflicting specifications in CREATEEXTTABLE and NOCREATEEXTTABLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u10';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+(0 rows)
+
+--
+-- Role to create WET gpfdist and NO create WET gpfdist
+--
+CREATE ROLE ext_u9 CREATEEXTTABLE(type='writable') NOCREATEEXTTABLE(protocol='gpfdist', type='writable'); -- fail due to conflict
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+psql:/path/sql_file:1: ERROR:  conflicting specifications in CREATEEXTTABLE and NOCREATEEXTTABLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u9';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+(0 rows)
+
+--
+-- 
+--
+CREATE ROLE ext_u11 CREATEEXTTABLE(protocol='gpfdist',type='writable') NOCREATEEXTTABLE(protocol='gpfdist', type='writable'); -- fail due to conflict
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+psql:/path/sql_file:1: ERROR:  conflicting specifications in CREATEEXTTABLE and NOCREATEEXTTABLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u11';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+(0 rows)
+
+--
+-- Role to create RET gpfdist and NO create WET gpfdist
+--
+CREATE ROLE ext_u6 CREATEEXTTABLE(protocol='gpfdist') NOCREATEEXTTABLE(protocol='gpfdist', type='writable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u6';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u6  | t                 | f                 | f
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u6;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';
+CREATE EXTERNAL TABLE
+select * from priv_ext_test1 order by a;
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+(5 rows)
+
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+drop external table priv_ext_test1;
+DROP EXTERNAL TABLE
+RESET SESSION AUTHORIZATION;
+RESET
+--
+-- 
+--
+CREATE ROLE ext_u13 CREATEEXTTABLE(protocol='gpfdist',type='readable') NOCREATEEXTTABLE(protocol='gpfdist', type='writable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u13';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u13 | t                 | f                 | f
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u13;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';
+CREATE EXTERNAL TABLE
+select * from priv_ext_test1 order by a;
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+(5 rows)
+
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+drop external table priv_ext_test1;
+DROP EXTERNAL TABLE
+RESET SESSION AUTHORIZATION;
+RESET
+--
+-- Role to create RET gpfdist and NO create RET http
+--
+CREATE ROLE ext_u8 CREATEEXTTABLE(type='readable') NOCREATEEXTTABLE(protocol='http', type='readable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u8';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u8  | t                 | f                 | f
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u8;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';
+CREATE EXTERNAL TABLE
+select * from priv_ext_test1 order by a;
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+(5 rows)
+
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+drop external table priv_ext_test1;
+DROP EXTERNAL TABLE
+RESET SESSION AUTHORIZATION;
+RESET
+--
+-- 
+--
+CREATE ROLE ext_u14 CREATEEXTTABLE(protocol='gpfdist',type='readable') NOCREATEEXTTABLE(protocol='http', type='readable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u14';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u14 | t                 | f                 | f
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u14;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';
+CREATE EXTERNAL TABLE
+select * from priv_ext_test1 order by a;
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+(5 rows)
+
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+drop external table priv_ext_test1;
+DROP EXTERNAL TABLE
+RESET SESSION AUTHORIZATION;
+RESET
+--
+-- Role to create WET gpfdist and NO create RET gpfdist
+--
+CREATE ROLE ext_u15 CREATEEXTTABLE(protocol='gpfdist',type='writable') NOCREATEEXTTABLE(protocol='gpfdist', type='readable');
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u15';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u15 | f                 | f                 | t
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u15;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';  -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a readable gpfdist(s) external table
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/output/wet_file') format 'text';
+CREATE EXTERNAL TABLE
+insert into priv_ext_test2 values (generate_series(1,10));
+INSERT 0 10
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+drop external table priv_ext_test2;
+DROP EXTERNAL TABLE
+RESET SESSION AUTHORIZATION;
+RESET
+--
+-- Role to create WET gpfdist and NO create RET http
+--
+CREATE ROLE ext_u16 CREATEEXTTABLE(protocol='gpfdist',type='writable') NOCREATEEXTTABLE(protocol='http', type='readable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u16';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u16 | f                 | f                 | t
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u16;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';  -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a readable gpfdist(s) external table
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/output/wet_file') format 'text';
+CREATE EXTERNAL TABLE
+insert into priv_ext_test2 values (generate_series(1,10));
+INSERT 0 10
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+drop external table priv_ext_test2;
+DROP EXTERNAL TABLE
+RESET SESSION AUTHORIZATION;
+RESET
+--
+-- Role to create RET http and NO create RET gpfdist
+--
+CREATE ROLE ext_u17 CREATEEXTTABLE(protocol='http',type='readable') NOCREATEEXTTABLE(protocol='gpfdist', type='readable');
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u17';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u17 | f                 | t                 | f
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u17;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';  -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a readable gpfdist(s) external table
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';  -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text';
+CREATE EXTERNAL TABLE
+select * from priv_ext_test3 order by a;
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+(5 rows)
+
+drop external table priv_ext_test3;
+DROP EXTERNAL TABLE
+RESET SESSION AUTHORIZATION;
+RESET
+--
+-- Role to create RET http and NO create WET gpfdist
+--
+CREATE ROLE ext_u18 CREATEEXTTABLE(protocol='http',type='readable') NOCREATEEXTTABLE(protocol='gpfdist', type='writable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u18';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u18 | f                 | t                 | f
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u18;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';  -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a readable gpfdist(s) external table
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';  -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text';
+CREATE EXTERNAL TABLE
+select * from priv_ext_test3 order by a;
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+(5 rows)
+
+drop external table priv_ext_test3;
+DROP EXTERNAL TABLE
+RESET SESSION AUTHORIZATION;
+RESET
+--
+-- Role to create RET gpfdist and create RET gpfdist
+--
+CREATE ROLE ext_u19 CREATEEXTTABLE(protocol='gpfdist') CREATEEXTTABLE(protocol='gpfdist', type='readable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u19';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u19 | t                 | f                 | f
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u19;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';
+CREATE EXTERNAL TABLE
+select * from priv_ext_test1 order by a;
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+(5 rows)
+
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+drop external table priv_ext_test1;
+DROP EXTERNAL TABLE
+RESET SESSION AUTHORIZATION;
+RESET
+--
+--
+--
+CREATE ROLE ext_u22 CREATEEXTTABLE(type='readable') CREATEEXTTABLE(protocol='gpfdist', type='readable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u22';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u22 | t                 | f                 | f
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u22;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';
+CREATE EXTERNAL TABLE
+select * from priv_ext_test1 order by a;
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+(5 rows)
+
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+drop external table priv_ext_test1;
+DROP EXTERNAL TABLE
+RESET SESSION AUTHORIZATION;
+RESET
+--
+-- 
+--
+CREATE ROLE ext_u25 CREATEEXTTABLE(protocol='gpfdist',type='readable') CREATEEXTTABLE(protocol='gpfdist', type='readable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u25';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u25 | t                 | f                 | f
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u25;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';
+CREATE EXTERNAL TABLE
+select * from priv_ext_test1 order by a;
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+(5 rows)
+
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+drop external table priv_ext_test1;
+DROP EXTERNAL TABLE
+RESET SESSION AUTHORIZATION;
+RESET
+--
+-- Role to create RET http and  create RET http
+--
+CREATE ROLE ext_u20 CREATEEXTTABLE(protocol='http') CREATEEXTTABLE(protocol='http', type='readable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u20';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u20 | f                 | t                 | f
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u20;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';  -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a readable gpfdist(s) external table
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';  -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text';
+CREATE EXTERNAL TABLE
+select * from priv_ext_test3 order by a;
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+(5 rows)
+
+drop external table priv_ext_test3;
+DROP EXTERNAL TABLE
+RESET SESSION AUTHORIZATION;
+RESET
+--
+-- 
+--
+CREATE ROLE ext_u27 CREATEEXTTABLE(protocol='http',type='readable') CREATEEXTTABLE(protocol='http', type='readable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u27';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u27 | f                 | t                 | f
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u27;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';  -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a readable gpfdist(s) external table
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';  -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text';
+CREATE EXTERNAL TABLE
+select * from priv_ext_test3 order by a;
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+(5 rows)
+
+drop external table priv_ext_test3;
+DROP EXTERNAL TABLE
+RESET SESSION AUTHORIZATION;
+RESET
+--
+-- Role to create RET gpfdist and create WET gpfdist
+--
+CREATE ROLE ext_u21 CREATEEXTTABLE(protocol='gpfdist') CREATEEXTTABLE(protocol='gpfdist', type='writable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u21';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u21 | t                 | f                 | t
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u21;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';
+CREATE EXTERNAL TABLE
+select * from priv_ext_test1 order by a;
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+(5 rows)
+
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/output/wet_file') format 'text'; 
+CREATE EXTERNAL TABLE
+insert into priv_ext_test2 values (generate_series(1,10));
+INSERT 0 10
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+drop external table priv_ext_test1;
+DROP EXTERNAL TABLE
+drop external table priv_ext_test2;
+DROP EXTERNAL TABLE
+RESET SESSION AUTHORIZATION;
+RESET
+--
+--
+--
+CREATE ROLE ext_u28 CREATEEXTTABLE(protocol='gpfdist',type='readable') CREATEEXTTABLE(protocol='gpfdist', type='writable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u28';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u28 | t                 | f                 | t
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u28;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';
+CREATE EXTERNAL TABLE
+select * from priv_ext_test1 order by a;
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+(5 rows)
+
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/output/wet_file') format 'text'; 
+CREATE EXTERNAL TABLE
+insert into priv_ext_test2 values (generate_series(1,10));
+INSERT 0 10
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+drop external table priv_ext_test1;
+DROP EXTERNAL TABLE
+drop external table priv_ext_test2;
+DROP EXTERNAL TABLE
+RESET SESSION AUTHORIZATION;
+RESET
+--
+-- 
+--
+CREATE ROLE ext_u30 CREATEEXTTABLE(protocol='gpfdist',type='writable') CREATEEXTTABLE(protocol='gpfdist', type='readable');
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u30';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u30 | t                 | f                 | t
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u30;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';
+CREATE EXTERNAL TABLE
+select * from priv_ext_test1 order by a;
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+(5 rows)
+
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/output/wet_file') format 'text'; 
+CREATE EXTERNAL TABLE
+insert into priv_ext_test2 values (generate_series(1,10));
+INSERT 0 10
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+drop external table priv_ext_test1;
+DROP EXTERNAL TABLE
+drop external table priv_ext_test2;
+DROP EXTERNAL TABLE
+RESET SESSION AUTHORIZATION;
+RESET
+--
+-- Role to create RET gpfdist and create RET http
+--
+CREATE ROLE ext_u23 CREATEEXTTABLE(type='readable') CREATEEXTTABLE(protocol='http', type='readable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u23';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u23 | t                 | t                 | f
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u23;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';
+CREATE EXTERNAL TABLE
+select * from priv_ext_test1 order by a;
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+(5 rows)
+
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text';
+CREATE EXTERNAL TABLE
+select * from priv_ext_test3 order by a;
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+(5 rows)
+
+drop external table priv_ext_test1;
+DROP EXTERNAL TABLE
+drop external table priv_ext_test3;
+DROP EXTERNAL TABLE
+RESET SESSION AUTHORIZATION;
+RESET
+--
+-- Role to create RET gpfdist and create RET http
+--
+CREATE ROLE ext_u29 CREATEEXTTABLE(protocol='gpfdist',type='readable') CREATEEXTTABLE(protocol='http', type='readable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u29';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u29 | t                 | t                 | f
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u29;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';
+CREATE EXTERNAL TABLE
+select * from priv_ext_test1 order by a;
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+(5 rows)
+
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text';
+CREATE EXTERNAL TABLE
+select * from priv_ext_test3 order by a;
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+(5 rows)
+
+drop external table priv_ext_test1;
+DROP EXTERNAL TABLE
+drop external table priv_ext_test3;
+DROP EXTERNAL TABLE
+RESET SESSION AUTHORIZATION;
+RESET
+--
+-- 
+--
+CREATE ROLE ext_u32 CREATEEXTTABLE(protocol='http',type='readable') CREATEEXTTABLE(protocol='gpfdist', type='readable');
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u32';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u32 | t                 | t                 | f
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u32;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';
+CREATE EXTERNAL TABLE
+select * from priv_ext_test1 order by a;
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+(5 rows)
+
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text'; 
+CREATE EXTERNAL TABLE
+select * from priv_ext_test3 order by a;
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+(5 rows)
+
+drop external table priv_ext_test1;
+DROP EXTERNAL TABLE
+drop external table priv_ext_test3;
+DROP EXTERNAL TABLE
+RESET SESSION AUTHORIZATION;
+RESET
+--
+-- Role to create WET gpfdist and create WET gpfdist
+--
+CREATE ROLE ext_u24 CREATEEXTTABLE(type='writable') CREATEEXTTABLE(protocol='gpfdist', type='writable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u24';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u24 | f                 | f                 | t
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u24;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';  -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a readable gpfdist(s) external table
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/output/wet_file') format 'text';
+CREATE EXTERNAL TABLE
+insert into priv_ext_test2 values (generate_series(1,10));
+INSERT 0 10
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+drop external table priv_ext_test2;
+DROP EXTERNAL TABLE
+RESET SESSION AUTHORIZATION;
+RESET
+--
+-- 
+--
+CREATE ROLE ext_u26 CREATEEXTTABLE(protocol='gpfdist',type='writable') CREATEEXTTABLE(protocol='gpfdist', type='writable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u26';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u26 | f                 | f                 | t
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u26;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';  -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a readable gpfdist(s) external table
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/output/wet_file') format 'text';
+CREATE EXTERNAL TABLE
+insert into priv_ext_test2 values (generate_series(1,10));
+INSERT 0 10
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+drop external table priv_ext_test2;
+DROP EXTERNAL TABLE
+RESET SESSION AUTHORIZATION;
+RESET
+--
+-- Role to create WET gpfdist and create RET http
+--
+CREATE ROLE ext_u31 CREATEEXTTABLE(protocol='gpfdist',type='writable') CREATEEXTTABLE(protocol='http', type='readable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u31';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u31 | f                 | t                 | t
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u31;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';  -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a readable gpfdist(s) external table
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/output/wet_file') format 'text';
+CREATE EXTERNAL TABLE
+insert into priv_ext_test2 values (generate_series(1,10));
+INSERT 0 10
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text'; 
+CREATE EXTERNAL TABLE
+select * from priv_ext_test3 order by a;
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+(5 rows)
+
+drop external table priv_ext_test2;
+DROP EXTERNAL TABLE
+drop external table priv_ext_test3;
+DROP EXTERNAL TABLE
+RESET SESSION AUTHORIZATION;
+RESET
+--
+-- 
+--
+CREATE ROLE ext_u33 CREATEEXTTABLE(protocol='http',type='readable') CREATEEXTTABLE(protocol='gpfdist', type='writable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u33';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u33 | f                 | t                 | t
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u33;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';  -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a readable gpfdist(s) external table
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/output/wet_file') format 'text';
+CREATE EXTERNAL TABLE
+insert into priv_ext_test2 values (generate_series(1,10));
+INSERT 0 10
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text'; -- fail 
+CREATE EXTERNAL TABLE
+drop external table priv_ext_test2;
+DROP EXTERNAL TABLE
+drop external table priv_ext_test3;
+DROP EXTERNAL TABLE
+RESET SESSION AUTHORIZATION;
+RESET
+--
+--
+-- Role to NO create RET gpfdist and NO create RET gpfdist
+--
+CREATE ROLE ext_u34 NOCREATEEXTTABLE(protocol='gpfdist') NOCREATEEXTTABLE(protocol='gpfdist', type='readable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u34';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u34 | f                 | f                 | f
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u34;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';  --fail 
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a readable gpfdist(s) external table
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text'; --fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text';  --fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+drop external table priv_ext_test1;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test1" does not exist
+drop external table priv_ext_test2;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test2" does not exist
+drop external table priv_ext_test3;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test3" does not exist
+RESET SESSION AUTHORIZATION;
+RESET
+--
+CREATE ROLE ext_u40 NOCREATEEXTTABLE(protocol='gpfdist',type='readable') NOCREATEEXTTABLE(protocol='gpfdist', type='readable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u40';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u40 | f                 | f                 | f
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u40;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';  --fail 
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a readable gpfdist(s) external table
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text'; --fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text';  --fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+drop external table priv_ext_test1;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test1" does not exist
+drop external table priv_ext_test2;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test2" does not exist
+drop external table priv_ext_test3;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test3" does not exist
+RESET SESSION AUTHORIZATION;
+RESET
+--
+CREATE ROLE ext_u37 NOCREATEEXTTABLE(type='readable') NOCREATEEXTTABLE(protocol='gpfdist', type='readable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u37';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u37 | f                 | f                 | f
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u37;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';  --fail 
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a readable gpfdist(s) external table
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';  --fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text';  --fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+drop external table priv_ext_test1;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test1" does not exist
+drop external table priv_ext_test2;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test2" does not exist
+drop external table priv_ext_test3;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test3" does not exist
+RESET SESSION AUTHORIZATION;
+RESET
+--
+-- Role to NO create RET http and NO create RET http
+--
+CREATE ROLE ext_u35 NOCREATEEXTTABLE(protocol='http') NOCREATEEXTTABLE(protocol='http', type='readable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u35';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u35 | f                 | f                 | f
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u35;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';  --fail 
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a readable gpfdist(s) external table
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text'; --fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text';  --fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+drop external table priv_ext_test1;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test1" does not exist
+drop external table priv_ext_test2;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test2" does not exist
+drop external table priv_ext_test3;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test3" does not exist
+RESET SESSION AUTHORIZATION;
+RESET
+--
+CREATE ROLE ext_u42 NOCREATEEXTTABLE(protocol='http',type='readable') NOCREATEEXTTABLE(protocol='http', type='readable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u42';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u42 | f                 | f                 | f
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u42;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';  --fail 
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a readable gpfdist(s) external table
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text'; --fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text';  --fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+drop external table priv_ext_test1;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test1" does not exist
+drop external table priv_ext_test2;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test2" does not exist
+drop external table priv_ext_test3;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test3" does not exist
+RESET SESSION AUTHORIZATION;
+RESET
+--
+-- Role to NO create RET gpfdist and NO create WET gpfdist
+--
+CREATE ROLE ext_u36 NOCREATEEXTTABLE(protocol='gpfdist') NOCREATEEXTTABLE(protocol='gpfdist', type='writable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u36';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u36 | f                 | f                 | f
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u36;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';  --fail 
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a readable gpfdist(s) external table
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text'; --fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text';  --fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+drop external table priv_ext_test1;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test1" does not exist
+drop external table priv_ext_test2;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test2" does not exist
+drop external table priv_ext_test3;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test3" does not exist
+RESET SESSION AUTHORIZATION;
+RESET
+--
+CREATE ROLE ext_u41 NOCREATEEXTTABLE(protocol='gpfdist',type='writable') NOCREATEEXTTABLE(protocol='gpfdist', type='writable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u41';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u41 | f                 | f                 | f
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u41;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';  --fail 
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a readable gpfdist(s) external table
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text'; --fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text';  --fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+drop external table priv_ext_test1;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test1" does not exist
+drop external table priv_ext_test2;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test2" does not exist
+drop external table priv_ext_test3;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test3" does not exist
+RESET SESSION AUTHORIZATION;
+RESET
+--
+CREATE ROLE ext_u43 NOCREATEEXTTABLE(protocol='gpfdist',type='readable') NOCREATEEXTTABLE(protocol='gpfdist', type='writable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u43';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u43 | f                 | f                 | f
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u43;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';  --fail 
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a readable gpfdist(s) external table
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text'; --fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text';  --fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+drop external table priv_ext_test1;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test1" does not exist
+drop external table priv_ext_test2;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test2" does not exist
+drop external table priv_ext_test3;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test3" does not exist
+RESET SESSION AUTHORIZATION;
+RESET
+--
+CREATE ROLE ext_u45 NOCREATEEXTTABLE(protocol='gpfdist',type='writable') NOCREATEEXTTABLE(protocol='gpfdist', type='readable');
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u45';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u45 | f                 | f                 | f
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u45;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';  --fail 
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a readable gpfdist(s) external table
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text'; --fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text';  --fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+drop external table priv_ext_test1;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test1" does not exist
+drop external table priv_ext_test2;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test2" does not exist
+drop external table priv_ext_test3;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test3" does not exist
+RESET SESSION AUTHORIZATION;
+RESET
+--
+-- Role to NO create RET gpfdist and NO create RET http
+--
+CREATE ROLE ext_u38 NOCREATEEXTTABLE(type='readable') NOCREATEEXTTABLE(protocol='http', type='readable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u38';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u38 | f                 | f                 | f
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u38;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';  --fail 
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a readable gpfdist(s) external table
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text'; --fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text';  --fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+drop external table priv_ext_test1;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test1" does not exist
+drop external table priv_ext_test2;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test2" does not exist
+drop external table priv_ext_test3;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test3" does not exist
+RESET SESSION AUTHORIZATION;
+RESET
+--
+CREATE ROLE ext_u44 NOCREATEEXTTABLE(protocol='gpfdist',type='readable') NOCREATEEXTTABLE(protocol='http', type='readable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u44';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u44 | f                 | f                 | f
+(1 row)
+
+--
+--
+SET SESSION AUTHORIZATION ext_u44;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';  --fail 
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a readable gpfdist(s) external table
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text'; --fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text'; --fail 
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+drop external table priv_ext_test1;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test1" does not exist
+drop external table priv_ext_test2;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test2" does not exist
+drop external table priv_ext_test3;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test3" does not exist
+RESET SESSION AUTHORIZATION;
+RESET
+--
+-- Role to NO create WET gpfdist and NO create WET gpfdist
+--
+CREATE ROLE ext_u39 NOCREATEEXTTABLE(type='writable') NOCREATEEXTTABLE(protocol='gpfdist', type='writable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u39';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u39 | f                 | f                 | f
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u39;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/writable_ext_tbl/file') format 'text';  --fail 
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a readable gpfdist(s) external table
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/writable_ext_tbl/output/wet_file') format 'text'; --fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/writable_ext_tbl/file') format 'text';  --fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+drop external table priv_ext_test1;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test1" does not exist
+drop external table priv_ext_test2;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test2" does not exist
+drop external table priv_ext_test3;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test3" does not exist
+RESET SESSION AUTHORIZATION;
+RESET
+--
+-- Role to NO create WET gpfdist and NO create RET http
+--
+CREATE ROLE ext_u46 NOCREATEEXTTABLE(protocol='gpfdist',type='writable') NOCREATEEXTTABLE(protocol='http', type='readable'); 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+select rolname, rolcreaterextgpfd,rolcreaterexthttp,rolcreatewextgpfd from pg_authid where rolname='ext_u46';
+ rolname | rolcreaterextgpfd | rolcreaterexthttp | rolcreatewextgpfd 
+---------+-------------------+-------------------+-------------------
+ ext_u46 | f                 | f                 | f
+(1 row)
+
+--
+SET SESSION AUTHORIZATION ext_u46;
+SET
+create readable external table priv_ext_test1(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';   --fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a readable gpfdist(s) external table
+create writable external table priv_ext_test2(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text'; --fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text';  --fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+drop external table priv_ext_test1;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test1" does not exist
+drop external table priv_ext_test2;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test2" does not exist
+drop external table priv_ext_test3;
+psql:/path/sql_file:1: ERROR:  table "priv_ext_test3" does not exist
+RESET SESSION AUTHORIZATION;
+RESET
+SET SESSION AUTHORIZATION ext_u1;
+SET
+create readable external table priv_ext_test3(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text';
+CREATE EXTERNAL TABLE
+select * from priv_ext_test3 order by a;
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+(5 rows)
+
+RESET SESSION AUTHORIZATION;
+RESET
+ALTER ROLE ext_u1 NOCREATEEXTTABLE(protocol='gpfdist', type='readable');
+ALTER ROLE
+SET SESSION AUTHORIZATION ext_u1;
+SET
+create readable external table priv_ext_test4(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a readable gpfdist(s) external table
+RESET SESSION AUTHORIZATION;
+RESET
+drop external table priv_ext_test3;
+DROP EXTERNAL TABLE
+SET SESSION AUTHORIZATION ext_u2;
+SET
+create writable external table priv_ext_test3(a int) location ('gpfdist://@hostname@:@gp_port@/output/wet_file') format 'text';
+CREATE EXTERNAL TABLE
+insert into priv_ext_test3 values (generate_series(1,10));
+INSERT 0 10
+RESET SESSION AUTHORIZATION;
+RESET
+ALTER ROLE ext_u2 NOCREATEEXTTABLE(protocol='gpfdist', type='writable');
+ALTER ROLE
+SET SESSION AUTHORIZATION ext_u2;
+SET
+create writable external table priv_ext_test4(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+RESET SESSION AUTHORIZATION;
+RESET
+drop external table priv_ext_test3;
+DROP EXTERNAL TABLE
+SET SESSION AUTHORIZATION ext_u3;
+SET
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text';
+CREATE EXTERNAL TABLE
+select * from priv_ext_test3 order by a;
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+(5 rows)
+
+RESET SESSION AUTHORIZATION;
+RESET
+ALTER ROLE ext_u3 NOCREATEEXTTABLE(protocol='http', type='readable');
+ALTER ROLE
+SET SESSION AUTHORIZATION ext_u3;
+SET
+create readable external web table priv_ext_test4(a int) location ('http://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+RESET SESSION AUTHORIZATION;
+RESET
+drop external table priv_ext_test3;
+DROP EXTERNAL TABLE
+SET SESSION AUTHORIZATION ext_u34;
+SET
+create readable external table priv_ext_test3(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a readable gpfdist(s) external table
+RESET SESSION AUTHORIZATION;
+RESET
+ALTER ROLE ext_u34 CREATEEXTTABLE(protocol='gpfdist', type='readable');
+ALTER ROLE
+SET SESSION AUTHORIZATION ext_u34;
+SET
+create readable external table priv_ext_test4(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text'; 
+CREATE EXTERNAL TABLE
+select * from priv_ext_test4 order by a;
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+(5 rows)
+
+RESET SESSION AUTHORIZATION;
+RESET
+drop external table priv_ext_test4;
+DROP EXTERNAL TABLE
+SET SESSION AUTHORIZATION ext_u39;
+SET
+create writable external table priv_ext_test3(a int) location ('gpfdist://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create a writable gpfdist(s) external table
+RESET SESSION AUTHORIZATION;
+RESET
+ALTER ROLE ext_u39 CREATEEXTTABLE(protocol='gpfdist', type='writable');
+ALTER ROLE
+SET SESSION AUTHORIZATION ext_u39;
+SET
+create writable external table priv_ext_test4(a int) location ('gpfdist://@hostname@:@gp_port@/output/wet_file') format 'text'; 
+CREATE EXTERNAL TABLE
+insert into priv_ext_test4 values (generate_series(1,10));
+INSERT 0 10
+RESET SESSION AUTHORIZATION;
+RESET
+drop external table priv_ext_test4;
+DROP EXTERNAL TABLE
+SET SESSION AUTHORIZATION ext_u35;
+SET
+create readable external web table priv_ext_test3(a int) location ('http://@hostname@:@gp_port@/file') format 'text'; -- fail
+psql:/path/sql_file:1: ERROR:  permission denied: no privilege to create an http external table
+RESET SESSION AUTHORIZATION;
+RESET
+ALTER ROLE ext_u35 CREATEEXTTABLE(protocol='http', type='readable');
+ALTER ROLE
+SET SESSION AUTHORIZATION ext_u35;
+SET
+create readable external web table priv_ext_test4(a int) location ('http://@hostname@:@gp_port@/file') format 'text'; 
+CREATE EXTERNAL TABLE
+select * from priv_ext_test4 order by a;
+ a 
+---
+ 1
+ 2
+ 3
+ 4
+ 5
+(5 rows)
+
+RESET SESSION AUTHORIZATION;
+RESET
+drop external table priv_ext_test4;
+DROP EXTERNAL TABLE

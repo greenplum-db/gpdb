@@ -1,0 +1,715 @@
+-- start_ignore
+-- end_ignore
+-- @product_version gpdb: [4.3.6.0-]
+drop table if exists pt_range;
+DROP TABLE
+create table pt_range (aa int, bb int) partition by range (bb) 
+(partition foo1 start(3) inclusive end(6) exclusive, 
+ partition foo2 start(6) inclusive end(9) exclusive,
+ partition foo3 start(9) inclusive end(12) exclusive,
+ partition foo4 start(12) inclusive end(15) exclusive,
+ partition foo5 start(15) inclusive end(18) exclusive);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'aa' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo1" for table "pt_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo2" for table "pt_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo3" for table "pt_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo4" for table "pt_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo5" for table "pt_range"
+CREATE TABLE
+alter table pt_range drop partition foo2;
+ALTER TABLE
+select parchildrelid::regclass, parname, parruleord
+   from pg_partition_rule r left join pg_partition p
+   on p.oid = r.paroid where p.parrelid = 'pt_range'::regclass
+   order by parruleord;
+    parchildrelid    | parname | parruleord 
+---------------------+---------+------------
+ pt_range_1_prt_foo1 | foo1    |          1
+ pt_range_1_prt_foo3 | foo3    |          3
+ pt_range_1_prt_foo4 | foo4    |          4
+ pt_range_1_prt_foo5 | foo5    |          5
+(4 rows)
+
+-- Add partition before first, without start
+alter table pt_range add partition foo6 end (0) inclusive;
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo6" for table "pt_range"
+ALTER TABLE
+select parchildrelid::regclass, parname, parruleord
+   from pg_partition_rule r left join pg_partition p
+   on p.oid = r.paroid where p.parrelid = 'pt_range'::regclass
+   order by parruleord;
+    parchildrelid    | parname | parruleord 
+---------------------+---------+------------
+ pt_range_1_prt_foo6 | foo6    |          1
+ pt_range_1_prt_foo1 | foo1    |          2
+ pt_range_1_prt_foo3 | foo3    |          3
+ pt_range_1_prt_foo4 | foo4    |          4
+ pt_range_1_prt_foo5 | foo5    |          5
+(5 rows)
+
+alter table pt_range drop partition foo6;
+ALTER TABLE
+-- Add partition before first, end = first start.
+alter table pt_range add partition foo7 start(1) inclusive end(3) exclusive;
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo7" for table "pt_range"
+ALTER TABLE
+select parchildrelid::regclass, parname, parruleord
+   from pg_partition_rule r left join pg_partition p
+   on p.oid = r.paroid where p.parrelid = 'pt_range'::regclass
+   order by parruleord;
+    parchildrelid    | parname | parruleord 
+---------------------+---------+------------
+ pt_range_1_prt_foo7 | foo7    |          1
+ pt_range_1_prt_foo1 | foo1    |          2
+ pt_range_1_prt_foo3 | foo3    |          3
+ pt_range_1_prt_foo4 | foo4    |          4
+ pt_range_1_prt_foo5 | foo5    |          5
+(5 rows)
+
+alter table pt_range drop partition foo1;
+ALTER TABLE
+-- Add partition before first, end < first start.
+alter table pt_range add partition foo8 start (-100) end (-50);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo8" for table "pt_range"
+ALTER TABLE
+select parchildrelid::regclass, parname, parruleord
+   from pg_partition_rule r left join pg_partition p
+   on p.oid = r.paroid where p.parrelid = 'pt_range'::regclass
+   order by parruleord;
+    parchildrelid    | parname | parruleord 
+---------------------+---------+------------
+ pt_range_1_prt_foo8 | foo8    |          1
+ pt_range_1_prt_foo7 | foo7    |          2
+ pt_range_1_prt_foo3 | foo3    |          3
+ pt_range_1_prt_foo4 | foo4    |          4
+ pt_range_1_prt_foo5 | foo5    |          5
+(5 rows)
+
+alter table pt_range drop partition foo8;
+ALTER TABLE
+-- Add in-between, new start = existing end, new end < existing start
+alter table pt_range drop partition foo4;
+ALTER TABLE
+alter table pt_range add partition foo10 start (12) inclusive end (14) exclusive;
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo10" for table "pt_range"
+ALTER TABLE
+select parchildrelid::regclass, parname, parruleord
+   from pg_partition_rule r left join pg_partition p
+   on p.oid = r.paroid where p.parrelid = 'pt_range'::regclass
+   order by parruleord;
+    parchildrelid     | parname | parruleord 
+----------------------+---------+------------
+ pt_range_1_prt_foo7  | foo7    |          2
+ pt_range_1_prt_foo3  | foo3    |          3
+ pt_range_1_prt_foo10 | foo10   |          4
+ pt_range_1_prt_foo5  | foo5    |          5
+(4 rows)
+
+alter table pt_range drop partition foo10;
+ALTER TABLE
+-- Add in-between, new start = existing end, new end = existing start
+alter table pt_range add partition foo4 start (12) inclusive end (15) exclusive;
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo4" for table "pt_range"
+ALTER TABLE
+select parchildrelid::regclass, parname, parruleord
+   from pg_partition_rule r left join pg_partition p
+   on p.oid = r.paroid where p.parrelid = 'pt_range'::regclass
+   order by parruleord;
+    parchildrelid    | parname | parruleord 
+---------------------+---------+------------
+ pt_range_1_prt_foo7 | foo7    |          2
+ pt_range_1_prt_foo3 | foo3    |          3
+ pt_range_1_prt_foo4 | foo4    |          4
+ pt_range_1_prt_foo5 | foo5    |          5
+(4 rows)
+
+alter table pt_range drop partition foo4;
+ALTER TABLE
+-- Add in-between, new start > existing end, new end = existing start
+alter table pt_range add partition foo11 start (13) end (15) exclusive;
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo11" for table "pt_range"
+ALTER TABLE
+select parchildrelid::regclass, parname, parruleord
+   from pg_partition_rule r left join pg_partition p
+   on p.oid = r.paroid where p.parrelid = 'pt_range'::regclass
+   order by parruleord;
+    parchildrelid     | parname | parruleord 
+----------------------+---------+------------
+ pt_range_1_prt_foo7  | foo7    |          2
+ pt_range_1_prt_foo3  | foo3    |          3
+ pt_range_1_prt_foo11 | foo11   |          4
+ pt_range_1_prt_foo5  | foo5    |          5
+(4 rows)
+
+alter table pt_range drop partition foo11;
+ALTER TABLE
+-- Add in-between, new start > existing end, new end < existing start
+alter table pt_range add partition foo9 start (4) end (5);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo9" for table "pt_range"
+ALTER TABLE
+select parchildrelid::regclass, parname, parruleord
+   from pg_partition_rule r left join pg_partition p
+   on p.oid = r.paroid where p.parrelid = 'pt_range'::regclass
+   order by parruleord;
+    parchildrelid    | parname | parruleord 
+---------------------+---------+------------
+ pt_range_1_prt_foo7 | foo7    |          1
+ pt_range_1_prt_foo9 | foo9    |          2
+ pt_range_1_prt_foo3 | foo3    |          3
+ pt_range_1_prt_foo5 | foo5    |          5
+(4 rows)
+
+alter table pt_range drop partition foo9;
+ALTER TABLE
+drop table pt_range;
+DROP TABLE
+create table pt_range (aa int, bb int) partition by range (bb)
+(partition foo1 start(3) inclusive end(6) exclusive,
+ partition foo2 start(6) inclusive end(9) exclusive,
+ partition foo3 start(9) inclusive end(12) exclusive,
+ partition foo4 start(12) inclusive end(15) exclusive,
+ partition foo5 start(15) inclusive end(18) exclusive,
+ partition foo6 start(18) inclusive end(21) exclusive,
+ partition foo7 start(21) inclusive end(25) exclusive);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'aa' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo1" for table "pt_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo2" for table "pt_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo3" for table "pt_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo4" for table "pt_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo5" for table "pt_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo6" for table "pt_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo7" for table "pt_range"
+CREATE TABLE
+alter table pt_range drop partition foo3;
+ALTER TABLE
+alter table pt_range drop partition foo5;
+ALTER TABLE
+alter table pt_range drop partition foo6;
+ALTER TABLE
+select parchildrelid::regclass, parname, parruleord
+   from pg_partition_rule r left join pg_partition p
+   on p.oid = r.paroid where p.parrelid = 'pt_range'::regclass
+   order by parruleord;
+    parchildrelid    | parname | parruleord 
+---------------------+---------+------------
+ pt_range_1_prt_foo1 | foo1    |          1
+ pt_range_1_prt_foo2 | foo2    |          2
+ pt_range_1_prt_foo4 | foo4    |          4
+ pt_range_1_prt_foo7 | foo7    |          7
+(4 rows)
+
+-- Add before first, only start specified
+alter table pt_range add partition foo8 start(1);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo8" for table "pt_range"
+ALTER TABLE
+select parchildrelid::regclass, parname, parruleord
+   from pg_partition_rule r left join pg_partition p
+   on p.oid = r.paroid where p.parrelid = 'pt_range'::regclass
+   order by parruleord;
+    parchildrelid    | parname | parruleord 
+---------------------+---------+------------
+ pt_range_1_prt_foo8 | foo8    |          1
+ pt_range_1_prt_foo1 | foo1    |          2
+ pt_range_1_prt_foo2 | foo2    |          3
+ pt_range_1_prt_foo4 | foo4    |          4
+ pt_range_1_prt_foo7 | foo7    |          7
+(5 rows)
+
+-- create two holes, make sure that the new partiton plugs the hole
+-- that is closest to the end.
+alter table pt_range drop partition foo2;
+ALTER TABLE
+select parchildrelid::regclass, parname, parruleord
+   from pg_partition_rule r left join pg_partition p
+   on p.oid = r.paroid where p.parrelid = 'pt_range'::regclass
+   order by parruleord;
+    parchildrelid    | parname | parruleord 
+---------------------+---------+------------
+ pt_range_1_prt_foo8 | foo8    |          1
+ pt_range_1_prt_foo1 | foo1    |          2
+ pt_range_1_prt_foo4 | foo4    |          4
+ pt_range_1_prt_foo7 | foo7    |          7
+(4 rows)
+
+-- Add after last, start and end specified, new start > last end
+alter table pt_range add partition foo9
+   start(26) inclusive end(30) exclusive;
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo9" for table "pt_range"
+ALTER TABLE
+select parchildrelid::regclass, parname, parruleord
+   from pg_partition_rule r left join pg_partition p
+   on p.oid = r.paroid where p.parrelid = 'pt_range'::regclass
+   order by parruleord;
+    parchildrelid    | parname | parruleord 
+---------------------+---------+------------
+ pt_range_1_prt_foo8 | foo8    |          1
+ pt_range_1_prt_foo1 | foo1    |          2
+ pt_range_1_prt_foo4 | foo4    |          4
+ pt_range_1_prt_foo7 | foo7    |          6
+ pt_range_1_prt_foo9 | foo9    |          7
+(5 rows)
+
+-- Add after last, new start = last end
+alter table pt_range add partition foo10
+   start(30) inclusive end(35) exclusive;
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo10" for table "pt_range"
+ALTER TABLE
+select parchildrelid::regclass, parname, parruleord
+   from pg_partition_rule r left join pg_partition p
+   on p.oid = r.paroid where p.parrelid = 'pt_range'::regclass
+   order by parruleord;
+    parchildrelid     | parname | parruleord 
+----------------------+---------+------------
+ pt_range_1_prt_foo8  | foo8    |          1
+ pt_range_1_prt_foo1  | foo1    |          2
+ pt_range_1_prt_foo4  | foo4    |          4
+ pt_range_1_prt_foo7  | foo7    |          5
+ pt_range_1_prt_foo9  | foo9    |          6
+ pt_range_1_prt_foo10 | foo10   |          7
+(6 rows)
+
+-- this should plug the hole created by dropping foo2.
+alter table pt_range add partition foo11 start(35) end(40);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo11" for table "pt_range"
+ALTER TABLE
+-- ensure that we handle the case when first parruleord is
+-- greater than 1.
+alter table pt_range drop partition foo8;
+ALTER TABLE
+select parchildrelid::regclass, parname, parruleord
+   from pg_partition_rule r left join pg_partition p
+   on p.oid = r.paroid where p.parrelid = 'pt_range'::regclass
+   order by parruleord;
+    parchildrelid     | parname | parruleord 
+----------------------+---------+------------
+ pt_range_1_prt_foo1  | foo1    |          2
+ pt_range_1_prt_foo4  | foo4    |          3
+ pt_range_1_prt_foo7  | foo7    |          4
+ pt_range_1_prt_foo9  | foo9    |          5
+ pt_range_1_prt_foo10 | foo10   |          6
+ pt_range_1_prt_foo11 | foo11   |          7
+(6 rows)
+
+-- Add after last, new first = last end
+alter table pt_range add partition foo12 start(40) end(45);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo12" for table "pt_range"
+ALTER TABLE
+alter table pt_range add partition foo13 start(45) end(50);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo13" for table "pt_range"
+ALTER TABLE
+alter table pt_range add partition foo14 start(50) end(55);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo14" for table "pt_range"
+ALTER TABLE
+select parchildrelid::regclass, parname, parruleord
+   from pg_partition_rule r left join pg_partition p
+   on p.oid = r.paroid where p.parrelid = 'pt_range'::regclass
+   order by parruleord;
+    parchildrelid     | parname | parruleord 
+----------------------+---------+------------
+ pt_range_1_prt_foo1  | foo1    |          1
+ pt_range_1_prt_foo4  | foo4    |          2
+ pt_range_1_prt_foo7  | foo7    |          3
+ pt_range_1_prt_foo9  | foo9    |          4
+ pt_range_1_prt_foo10 | foo10   |          5
+ pt_range_1_prt_foo11 | foo11   |          6
+ pt_range_1_prt_foo12 | foo12   |          7
+ pt_range_1_prt_foo13 | foo13   |          8
+ pt_range_1_prt_foo14 | foo14   |          9
+(9 rows)
+
+drop table pt_range;
+DROP TABLE
+create table pt_range (aa int, bb int) partition by range (bb)
+(partition foo1 start(3) inclusive end(6) exclusive,
+ partition foo2 start(6) inclusive end(9) exclusive,
+ partition foo3 start(9) inclusive end(12) exclusive,
+ partition foo4 start(12) inclusive end(15) exclusive,
+ partition foo5 start(15) inclusive end(18) exclusive,
+ partition foo6 start(18) inclusive end(21) exclusive,
+ partition foo7 start(21) inclusive end(25) exclusive);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'aa' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo1" for table "pt_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo2" for table "pt_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo3" for table "pt_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo4" for table "pt_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo5" for table "pt_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo6" for table "pt_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo7" for table "pt_range"
+CREATE TABLE
+alter table pt_range drop partition foo3;
+ALTER TABLE
+alter table pt_range drop partition foo5;
+ALTER TABLE
+alter table pt_range drop partition foo6;
+ALTER TABLE
+-- Add after last, only end specified
+alter table pt_range add partition foo8 end(30);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo8" for table "pt_range"
+ALTER TABLE
+select parchildrelid::regclass, parname, parruleord
+   from pg_partition_rule r left join pg_partition p
+   on p.oid = r.paroid where p.parrelid = 'pt_range'::regclass
+   order by parruleord;
+    parchildrelid    | parname | parruleord 
+---------------------+---------+------------
+ pt_range_1_prt_foo1 | foo1    |          1
+ pt_range_1_prt_foo2 | foo2    |          2
+ pt_range_1_prt_foo4 | foo4    |          4
+ pt_range_1_prt_foo7 | foo7    |          6
+ pt_range_1_prt_foo8 | foo8    |          7
+(5 rows)
+
+-- Add after last, only start specified, new start > last end
+alter table pt_range add partition foo9 start(31);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo9" for table "pt_range"
+ALTER TABLE
+select parchildrelid::regclass, parname, parruleord
+   from pg_partition_rule r left join pg_partition p
+   on p.oid = r.paroid where p.parrelid = 'pt_range'::regclass
+   order by parruleord;
+    parchildrelid    | parname | parruleord 
+---------------------+---------+------------
+ pt_range_1_prt_foo1 | foo1    |          1
+ pt_range_1_prt_foo2 | foo2    |          2
+ pt_range_1_prt_foo4 | foo4    |          4
+ pt_range_1_prt_foo7 | foo7    |          5
+ pt_range_1_prt_foo8 | foo8    |          6
+ pt_range_1_prt_foo9 | foo9    |          7
+(6 rows)
+
+drop table pt_range;
+DROP TABLE
+create table pt_range (aa int, bb int) partition by range (bb)
+(partition foo1 start(3) inclusive end(6) exclusive,
+ partition foo2 start(9) inclusive end(12) exclusive,
+ partition foo3 start(12) inclusive end(15) exclusive,
+ partition foo4 start(15) inclusive end(18) exclusive,
+ partition foo5 start(21) inclusive end(25) exclusive,
+ partition foo6 start(25) inclusive end(28) exclusive,
+ partition foo7 start(35) inclusive end(38) exclusive);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'aa' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo1" for table "pt_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo2" for table "pt_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo3" for table "pt_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo4" for table "pt_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo5" for table "pt_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo6" for table "pt_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo7" for table "pt_range"
+CREATE TABLE
+alter table pt_range drop partition foo5;
+ALTER TABLE
+-- New partition falls after foo1, hole exists beyond (after foo4).
+alter table pt_range add partition foo8
+   start(6) inclusive end(9) exclusive;
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo8" for table "pt_range"
+ALTER TABLE
+select parchildrelid::regclass, parname, parruleord
+   from pg_partition_rule r left join pg_partition p
+   on p.oid = r.paroid where p.parrelid = 'pt_range'::regclass
+   order by parruleord;
+    parchildrelid    | parname | parruleord 
+---------------------+---------+------------
+ pt_range_1_prt_foo1 | foo1    |          1
+ pt_range_1_prt_foo8 | foo8    |          2
+ pt_range_1_prt_foo2 | foo2    |          3
+ pt_range_1_prt_foo3 | foo3    |          4
+ pt_range_1_prt_foo4 | foo4    |          5
+ pt_range_1_prt_foo6 | foo6    |          6
+ pt_range_1_prt_foo7 | foo7    |          7
+(7 rows)
+
+alter table pt_range drop partition foo8;
+ALTER TABLE
+-- New partition falls after foo6, hole exists before foo3.
+alter table pt_range add partition foo9 start(29) end (31);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo9" for table "pt_range"
+ALTER TABLE
+select parchildrelid::regclass, parname, parruleord
+   from pg_partition_rule r left join pg_partition p
+   on p.oid = r.paroid where p.parrelid = 'pt_range'::regclass
+   order by parruleord;
+    parchildrelid    | parname | parruleord 
+---------------------+---------+------------
+ pt_range_1_prt_foo1 | foo1    |          1
+ pt_range_1_prt_foo2 | foo2    |          2
+ pt_range_1_prt_foo3 | foo3    |          3
+ pt_range_1_prt_foo4 | foo4    |          4
+ pt_range_1_prt_foo6 | foo6    |          5
+ pt_range_1_prt_foo9 | foo9    |          6
+ pt_range_1_prt_foo7 | foo7    |          7
+(7 rows)
+
+alter table pt_range drop partition foo1;
+ALTER TABLE
+-- Hole before first, new partition falls in the middle.
+alter table pt_range add partition foo10
+   start(21) inclusive end(25) exclusive;
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo10" for table "pt_range"
+ALTER TABLE
+select parchildrelid::regclass, parname, parruleord
+   from pg_partition_rule r left join pg_partition p
+   on p.oid = r.paroid where p.parrelid = 'pt_range'::regclass
+   order by parruleord;
+    parchildrelid     | parname | parruleord 
+----------------------+---------+------------
+ pt_range_1_prt_foo2  | foo2    |          1
+ pt_range_1_prt_foo3  | foo3    |          2
+ pt_range_1_prt_foo4  | foo4    |          3
+ pt_range_1_prt_foo10 | foo10   |          4
+ pt_range_1_prt_foo6  | foo6    |          5
+ pt_range_1_prt_foo9  | foo9    |          6
+ pt_range_1_prt_foo7  | foo7    |          7
+(7 rows)
+
+-- New partition falls in the middle, no hole exists.
+alter table pt_range add partition foo11
+   start(32) inclusive end(34) exclusive;
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo11" for table "pt_range"
+ALTER TABLE
+select parchildrelid::regclass, parname, parruleord
+   from pg_partition_rule r left join pg_partition p
+   on p.oid = r.paroid where p.parrelid = 'pt_range'::regclass
+   order by parruleord;
+    parchildrelid     | parname | parruleord 
+----------------------+---------+------------
+ pt_range_1_prt_foo2  | foo2    |          1
+ pt_range_1_prt_foo3  | foo3    |          2
+ pt_range_1_prt_foo4  | foo4    |          3
+ pt_range_1_prt_foo10 | foo10   |          4
+ pt_range_1_prt_foo6  | foo6    |          5
+ pt_range_1_prt_foo9  | foo9    |          6
+ pt_range_1_prt_foo11 | foo11   |          7
+ pt_range_1_prt_foo7  | foo7    |          8
+(8 rows)
+
+-- Split a partition in the middle
+insert into pt_range values (9, 9), (10, 10), (11, 11), (25, 25),
+   (26, 26), (27, 27), (29, 29), (30, 30);
+INSERT 0 8
+alter table pt_range split partition foo6 at (26) into
+   (partition foo6_1, partition foo6_2);
+psql:/path/sql_file:1: NOTICE:  exchanged partition "foo6" of relation "pt_range" with relation "pg_temp_3679779"
+psql:/path/sql_file:1: NOTICE:  dropped partition "foo6" for relation "pt_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo6_1" for table "pt_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo6_2" for table "pt_range"
+ALTER TABLE
+select * from pt_range_1_prt_foo6_1 order by aa;
+ aa | bb 
+----+----
+ 25 | 25
+(1 row)
+
+select * from pt_range_1_prt_foo6_2 order by aa;
+ aa | bb 
+----+----
+ 26 | 26
+ 27 | 27
+(2 rows)
+
+select parchildrelid::regclass, parname, parruleord
+   from pg_partition_rule r left join pg_partition p
+   on p.oid = r.paroid where p.parrelid = 'pt_range'::regclass
+   order by parruleord;
+     parchildrelid     | parname | parruleord 
+-----------------------+---------+------------
+ pt_range_1_prt_foo2   | foo2    |          1
+ pt_range_1_prt_foo3   | foo3    |          2
+ pt_range_1_prt_foo4   | foo4    |          3
+ pt_range_1_prt_foo10  | foo10   |          4
+ pt_range_1_prt_foo6_1 | foo6_1  |          5
+ pt_range_1_prt_foo6_2 | foo6_2  |          6
+ pt_range_1_prt_foo9   | foo9    |          7
+ pt_range_1_prt_foo11  | foo11   |          8
+ pt_range_1_prt_foo7   | foo7    |          9
+(9 rows)
+
+alter table pt_range add default partition def;
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_def" for table "pt_range"
+ALTER TABLE
+insert into pt_range select i, i from generate_series(1, 40)i;
+INSERT 0 40
+select parchildrelid::regclass, parname, parruleord
+   from pg_partition_rule r left join pg_partition p
+   on p.oid = r.paroid where p.parrelid = 'pt_range'::regclass
+   order by parruleord;
+     parchildrelid     | parname | parruleord 
+-----------------------+---------+------------
+ pt_range_1_prt_def    | def     |          0
+ pt_range_1_prt_foo2   | foo2    |          1
+ pt_range_1_prt_foo3   | foo3    |          2
+ pt_range_1_prt_foo4   | foo4    |          3
+ pt_range_1_prt_foo10  | foo10   |          4
+ pt_range_1_prt_foo6_1 | foo6_1  |          5
+ pt_range_1_prt_foo6_2 | foo6_2  |          6
+ pt_range_1_prt_foo9   | foo9    |          7
+ pt_range_1_prt_foo11  | foo11   |          8
+ pt_range_1_prt_foo7   | foo7    |          9
+(10 rows)
+
+select count(*) from pt_range_1_prt_def;
+ count 
+-------
+    17
+(1 row)
+
+-- Split default partition
+alter table pt_range split default partition
+   start(38) inclusive end(45) exclusive into
+   (partition def, partition foo12);
+psql:/path/sql_file:1: NOTICE:  exchanged partition "def" of relation "pt_range" with relation "pg_temp_3679779"
+psql:/path/sql_file:1: NOTICE:  dropped partition "def" for relation "pt_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo12" for table "pt_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_def" for table "pt_range"
+ALTER TABLE
+select parchildrelid::regclass, parname, parruleord
+   from pg_partition_rule r left join pg_partition p
+   on p.oid = r.paroid where p.parrelid = 'pt_range'::regclass
+   order by parruleord;
+     parchildrelid     | parname | parruleord 
+-----------------------+---------+------------
+ pt_range_1_prt_def    | def     |          0
+ pt_range_1_prt_foo2   | foo2    |          1
+ pt_range_1_prt_foo3   | foo3    |          2
+ pt_range_1_prt_foo4   | foo4    |          3
+ pt_range_1_prt_foo10  | foo10   |          4
+ pt_range_1_prt_foo6_1 | foo6_1  |          5
+ pt_range_1_prt_foo6_2 | foo6_2  |          6
+ pt_range_1_prt_foo9   | foo9    |          7
+ pt_range_1_prt_foo11  | foo11   |          8
+ pt_range_1_prt_foo7   | foo7    |          9
+ pt_range_1_prt_foo12  | foo12   |         10
+(11 rows)
+
+select count(*) from pt_range_1_prt_def;
+ count 
+-------
+    14
+(1 row)
+
+select count(*) from pt_range_1_prt_foo12;
+ count 
+-------
+     3
+(1 row)
+
+-- Drop all but one partitions
+alter table pt_range drop partition foo2;
+ALTER TABLE
+alter table pt_range drop partition foo3;
+ALTER TABLE
+alter table pt_range drop partition foo4;
+ALTER TABLE
+alter table pt_range drop partition foo10;
+ALTER TABLE
+alter table pt_range drop partition foo6_1;
+ALTER TABLE
+alter table pt_range drop partition foo6_2;
+ALTER TABLE
+alter table pt_range drop partition foo9;
+ALTER TABLE
+alter table pt_range drop partition foo11;
+ALTER TABLE
+alter table pt_range drop partition foo7;
+ALTER TABLE
+alter table pt_range drop partition foo12;
+ALTER TABLE
+-- Split the only existing partition
+alter table pt_range split default partition
+   start(-10) inclusive end(0) exclusive into
+   (partition def, partition foo1);
+psql:/path/sql_file:1: NOTICE:  exchanged partition "def" of relation "pt_range" with relation "pg_temp_3679779"
+psql:/path/sql_file:1: NOTICE:  dropped partition "def" for relation "pt_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_foo1" for table "pt_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_range_1_prt_def" for table "pt_range"
+ALTER TABLE
+select parchildrelid::regclass, parname, parruleord
+   from pg_partition_rule r left join pg_partition p
+   on p.oid = r.paroid where p.parrelid = 'pt_range'::regclass
+   order by parruleord;
+    parchildrelid    | parname | parruleord 
+---------------------+---------+------------
+ pt_range_1_prt_def  | def     |          0
+ pt_range_1_prt_foo1 | foo1    |          1
+(2 rows)
+
+insert into pt_range values (-5, -5), (20, 20);
+INSERT 0 2
+select count(*) from pt_range_1_prt_def;
+ count 
+-------
+    15
+(1 row)
+
+select count(*) from pt_range_1_prt_foo1;
+ count 
+-------
+     1
+(1 row)
+
+-- Test for list partitions
+drop table if exists pt_list;
+psql:/path/sql_file:1: NOTICE:  table "pt_list" does not exist, skipping
+DROP TABLE
+create table pt_list (a char(1), b char(2), d char(3)) distributed by (a)
+partition by list (b) (partition aa values('1'),
+	     	       partition bb values('2'),
+		       partition cc values('3'),
+		       partition dd values('4'));
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_list_1_prt_aa" for table "pt_list"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_list_1_prt_bb" for table "pt_list"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_list_1_prt_cc" for table "pt_list"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_list_1_prt_dd" for table "pt_list"
+CREATE TABLE
+alter table pt_list drop partition cc;
+ALTER TABLE
+select parchildrelid::regclass, parname, parruleord
+   from pg_partition_rule r left join pg_partition p
+   on p.oid = r.paroid where p.parrelid = 'pt_list'::regclass
+   order by parruleord;
+  parchildrelid   | parname | parruleord 
+------------------+---------+------------
+ pt_list_1_prt_aa | aa      |          1
+ pt_list_1_prt_bb | bb      |          2
+ pt_list_1_prt_dd | dd      |          4
+(3 rows)
+
+alter table pt_list add partition cc values('5');
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_list_1_prt_cc" for table "pt_list"
+ALTER TABLE
+select parchildrelid::regclass, parname, parruleord
+   from pg_partition_rule r left join pg_partition p
+   on p.oid = r.paroid where p.parrelid = 'pt_list'::regclass
+   order by parruleord;
+  parchildrelid   | parname | parruleord 
+------------------+---------+------------
+ pt_list_1_prt_aa | aa      |          1
+ pt_list_1_prt_bb | bb      |          2
+ pt_list_1_prt_cc | cc      |          3
+ pt_list_1_prt_dd | dd      |          4
+(4 rows)
+
+alter table pt_list drop partition aa;
+ALTER TABLE
+alter table pt_list add partition aa values('1');
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_list_1_prt_aa" for table "pt_list"
+ALTER TABLE
+select parchildrelid::regclass, parname, parruleord
+   from pg_partition_rule r left join pg_partition p
+   on p.oid = r.paroid where p.parrelid = 'pt_list'::regclass
+   order by parruleord;
+  parchildrelid   | parname | parruleord 
+------------------+---------+------------
+ pt_list_1_prt_aa | aa      |          1
+ pt_list_1_prt_bb | bb      |          2
+ pt_list_1_prt_cc | cc      |          3
+ pt_list_1_prt_dd | dd      |          4
+(4 rows)
+
+drop table if exists pt_range;
+DROP TABLE
+drop table if exists pt_list;
+DROP TABLE

@@ -1,0 +1,94 @@
+-- @Description select with where clause
+-- 
+DROP TABLE IF EXISTS city_uao_where cascade;
+DROP TABLE
+DROP TABLE IF EXISTS country_uao_where cascade;
+DROP TABLE
+DROP TABLE IF EXISTS countrylanguage_uao_where cascade;
+DROP TABLE
+BEGIN;
+BEGIN
+CREATE TABLE city_uao_where (
+    id integer NOT NULL,
+    name text NOT NULL,
+    countrycode character(3) NOT NULL,
+    district text NOT NULL,
+    population integer NOT NULL
+) with (appendonly=true) distributed by(id);
+CREATE TABLE
+CREATE TABLE country_uao_where (
+    code character(3) NOT NULL,
+    name text NOT NULL,
+    continent text NOT NULL,
+    region text NOT NULL,
+    surfacearea real NOT NULL,
+    indepyear smallint,
+    population integer NOT NULL,
+    lifeexpectancy real,
+    gnp numeric(10,2),
+    gnpold numeric(10,2),
+    localname text NOT NULL,
+    governmentform text NOT NULL,
+    headofstate text,
+    capital integer,
+    code2 character(2) NOT NULL
+) with (appendonly=true)  distributed by (code);
+CREATE TABLE
+CREATE TABLE countrylanguage_uao_where (
+    countrycode character(3) NOT NULL,
+    "language" text NOT NULL,
+    isofficial boolean NOT NULL,
+    percentage real NOT NULL
+)  with (appendonly=true) distributed by (countrycode,language);
+CREATE TABLE
+COPY city_uao_where (id, name, countrycode, district, population) FROM stdin;
+--
+-- Data for Name: country; Type: TABLE DATA; Schema: public; 
+--
+COPY country_uao_where (code, name, continent, region, surfacearea, indepyear, population, lifeexpectancy, gnp, gnpold, localname, governmentform, headofstate, capital, code2) FROM stdin WITH NULL AS '';
+--
+-- Data for Name: countrylanguage; Type: TABLE DATA; Schema: public; 
+--
+COPY countrylanguage_uao_where (countrycode, "language", isofficial, percentage) FROM stdin;
+COMMIT;
+COMMIT
+ANALYZE city_uao_where;
+ANALYZE
+ANALYZE country_uao_where;
+ANALYZE
+ANALYZE countrylanguage_uao_where;
+ANALYZE
+-- Using  WHERE clause
+with lang_total_uao as
+( select lang_count,countrycode from
+  (
+  (
+   select count(*) as lang_count,country_uao_where.code,countrylanguage_uao_where.countrycode
+  from country_uao_where join countrylanguage_uao_where on (country_uao_where.code=countrylanguage_uao_where.countrycode and governmentform='Federal Republic')
+  group by country_uao_where.code,countrylanguage_uao_where.countrycode order by country_uao_where.code)
+ 
+   UNION ALL
+ 
+  (
+   select count(*) as lang_count,country_uao_where.code,countrylanguage_uao_where.countrycode
+  from country_uao_where join countrylanguage_uao_where on (country_uao_where.code=countrylanguage_uao_where.countrycode and governmentform='Monarchy')
+  group by country_uao_where.code,countrylanguage_uao_where.countrycode order by country_uao_where.code)
+ 
+ ) FOO1_uao
+)
+select * from
+(
+select count(*) as cnt,country_uao_where.code,country_uao_where.name 
+from
+country_uao_where,countrylanguage_uao_where
+where country_uao_where.code=countrylanguage_uao_where.countrycode group by country_uao_where.code,country_uao_where.name) AS FOO_uao
+where foo_uao.cnt = (select max(lang_count) from lang_total_uao) order by foo_uao.code;
+ cnt | code |        name        
+-----+------+--------------------
+  12 | CAN  | Canada
+  12 | CHN  | China
+  12 | IND  | India
+  12 | RUS  | Russian Federation
+  12 | USA  | United States
+(5 rows)
+

@@ -1,0 +1,370 @@
+--start_ignore
+DROP TABLE if exists sto_alt_heap1;
+psql:/path/sql_file:1: NOTICE:  table "sto_alt_heap1" does not exist, skipping
+DROP TABLE
+--end_ignore
+CREATE TABLE sto_alt_heap1(
+          text_col text default 'remove it',
+          bigint_col bigint,
+          char_vary_col character varying(30),
+          numeric_col numeric,
+          int_col int4 NOT NULL,
+          float_col float4,
+          int_array_col int[],
+          before_rename_col int4,
+          change_datatype_col numeric,
+          a_ts_without timestamp without time zone,
+          b_ts_with timestamp with time zone,
+          date_column date,
+          col_set_default numeric)DISTRIBUTED RANDOMLY;
+CREATE TABLE
+insert into sto_alt_heap1 values ('0_zero', 0, '0_zero', 0, 0, 0, '{0}', 0, 0, '2004-10-19 10:23:54', '2004-10-19 10:23:54+02', '1-1-2000',0);
+INSERT 0 1
+insert into sto_alt_heap1 values ('1_zero', 1, '1_zero', 1, 1, 1, '{1}', 1, 1, '2005-10-19 10:23:54', '2005-10-19 10:23:54+02', '1-1-2001',1);
+INSERT 0 1
+insert into sto_alt_heap1 values ('2_zero', 2, '2_zero', 2, 2, 2, '{2}', 2, 2, '2006-10-19 10:23:54', '2006-10-19 10:23:54+02', '1-1-2002',2);
+INSERT 0 1
+select * from sto_alt_heap1 order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col | int_col | float_col | int_array_col | before_rename_col | change_datatype_col |    a_ts_without     |       b_ts_with        | date_column | col_set_default 
+----------+------------+---------------+-------------+---------+-----------+---------------+-------------------+---------------------+---------------------+------------------------+-------------+-----------------
+ 0_zero   |          0 | 0_zero        |           0 |       0 |         0 | {0}           |                 0 |                   0 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               0
+ 1_zero   |          1 | 1_zero        |           1 |       1 |         1 | {1}           |                 1 |                   1 | 2005-10-19 10:23:54 | 2005-10-19 01:23:54-07 | 2001-01-01  |               1
+ 2_zero   |          2 | 2_zero        |           2 |       2 |         2 | {2}           |                 2 |                   2 | 2006-10-19 10:23:54 | 2006-10-19 01:23:54-07 | 2002-01-01  |               2
+(3 rows)
+
+--start_ignore
+Drop table if exists sto_alt_heap3;
+psql:/path/sql_file:1: NOTICE:  table "sto_alt_heap3" does not exist, skipping
+DROP TABLE
+--end_ignore
+Create table sto_alt_heap3 as select * from sto_alt_heap1;
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'text_col' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT 3
+-- Alter table add column
+Alter Table sto_alt_heap1  ADD COLUMN added_col character varying(30) default 'default';
+ALTER TABLE
+insert into sto_alt_heap1 values ('3_zero', 3, '3_zero', 3, 3, 3, '{3}', 3, 3, '2004-10-19 10:23:54', '2004-10-19 10:23:54+02', '1-1-2000',3, 'newcol');
+INSERT 0 1
+select * from sto_alt_heap1 order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col | int_col | float_col | int_array_col | before_rename_col | change_datatype_col |    a_ts_without     |       b_ts_with        | date_column | col_set_default | added_col 
+----------+------------+---------------+-------------+---------+-----------+---------------+-------------------+---------------------+---------------------+------------------------+-------------+-----------------+-----------
+ 0_zero   |          0 | 0_zero        |           0 |       0 |         0 | {0}           |                 0 |                   0 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               0 | default
+ 1_zero   |          1 | 1_zero        |           1 |       1 |         1 | {1}           |                 1 |                   1 | 2005-10-19 10:23:54 | 2005-10-19 01:23:54-07 | 2001-01-01  |               1 | default
+ 2_zero   |          2 | 2_zero        |           2 |       2 |         2 | {2}           |                 2 |                   2 | 2006-10-19 10:23:54 | 2006-10-19 01:23:54-07 | 2002-01-01  |               2 | default
+ 3_zero   |          3 | 3_zero        |           3 |       3 |         3 | {3}           |                 3 |                   3 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               3 | newcol
+(4 rows)
+
+-- Alter table Drop column
+Alter table sto_alt_heap1 Drop column float_col;
+ALTER TABLE
+insert into sto_alt_heap1 values ('4_zero', 4, '4_zero', 4, 4, '{4}', 4, 4, '2004-10-19 10:23:54', '2004-10-19 10:23:54+02', '1-1-2000',4, 'newcol');
+INSERT 0 1
+select * from sto_alt_heap1 order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col | int_col | int_array_col | before_rename_col | change_datatype_col |    a_ts_without     |       b_ts_with        | date_column | col_set_default | added_col 
+----------+------------+---------------+-------------+---------+---------------+-------------------+---------------------+---------------------+------------------------+-------------+-----------------+-----------
+ 0_zero   |          0 | 0_zero        |           0 |       0 | {0}           |                 0 |                   0 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               0 | default
+ 1_zero   |          1 | 1_zero        |           1 |       1 | {1}           |                 1 |                   1 | 2005-10-19 10:23:54 | 2005-10-19 01:23:54-07 | 2001-01-01  |               1 | default
+ 2_zero   |          2 | 2_zero        |           2 |       2 | {2}           |                 2 |                   2 | 2006-10-19 10:23:54 | 2006-10-19 01:23:54-07 | 2002-01-01  |               2 | default
+ 3_zero   |          3 | 3_zero        |           3 |       3 | {3}           |                 3 |                   3 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               3 | newcol
+ 4_zero   |          4 | 4_zero        |           4 |       4 | {4}           |                 4 |                   4 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               4 | newcol
+(5 rows)
+
+-- Alter table rename column
+Alter Table sto_alt_heap1 RENAME COLUMN before_rename_col TO after_rename_col;
+ALTER TABLE
+select * from sto_alt_heap1 order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col | int_col | int_array_col | after_rename_col | change_datatype_col |    a_ts_without     |       b_ts_with        | date_column | col_set_default | added_col 
+----------+------------+---------------+-------------+---------+---------------+------------------+---------------------+---------------------+------------------------+-------------+-----------------+-----------
+ 0_zero   |          0 | 0_zero        |           0 |       0 | {0}           |                0 |                   0 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               0 | default
+ 1_zero   |          1 | 1_zero        |           1 |       1 | {1}           |                1 |                   1 | 2005-10-19 10:23:54 | 2005-10-19 01:23:54-07 | 2001-01-01  |               1 | default
+ 2_zero   |          2 | 2_zero        |           2 |       2 | {2}           |                2 |                   2 | 2006-10-19 10:23:54 | 2006-10-19 01:23:54-07 | 2002-01-01  |               2 | default
+ 3_zero   |          3 | 3_zero        |           3 |       3 | {3}           |                3 |                   3 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               3 | newcol
+ 4_zero   |          4 | 4_zero        |           4 |       4 | {4}           |                4 |                   4 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               4 | newcol
+(5 rows)
+
+-- Alter table column type
+Alter Table sto_alt_heap1 ALTER COLUMN change_datatype_col TYPE int4;
+ALTER TABLE
+insert into sto_alt_heap1 values ('5_zero', 5, '5_zero', 5, 5, '{5}', 5, 5, '2004-10-19 10:23:54', '2004-10-19 10:23:54+02', '1-1-2000',5, 'newcol');
+INSERT 0 1
+select * from sto_alt_heap1 order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col | int_col | int_array_col | after_rename_col | change_datatype_col |    a_ts_without     |       b_ts_with        | date_column | col_set_default | added_col 
+----------+------------+---------------+-------------+---------+---------------+------------------+---------------------+---------------------+------------------------+-------------+-----------------+-----------
+ 0_zero   |          0 | 0_zero        |           0 |       0 | {0}           |                0 |                   0 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               0 | default
+ 1_zero   |          1 | 1_zero        |           1 |       1 | {1}           |                1 |                   1 | 2005-10-19 10:23:54 | 2005-10-19 01:23:54-07 | 2001-01-01  |               1 | default
+ 2_zero   |          2 | 2_zero        |           2 |       2 | {2}           |                2 |                   2 | 2006-10-19 10:23:54 | 2006-10-19 01:23:54-07 | 2002-01-01  |               2 | default
+ 3_zero   |          3 | 3_zero        |           3 |       3 | {3}           |                3 |                   3 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               3 | newcol
+ 4_zero   |          4 | 4_zero        |           4 |       4 | {4}           |                4 |                   4 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               4 | newcol
+ 5_zero   |          5 | 5_zero        |           5 |       5 | {5}           |                5 |                   5 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               5 | newcol
+(6 rows)
+
+-- Alter column set default expression
+Alter Table sto_alt_heap1 ALTER COLUMN col_set_default SET DEFAULT 0;
+ALTER TABLE
+select * from sto_alt_heap1 order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col | int_col | int_array_col | after_rename_col | change_datatype_col |    a_ts_without     |       b_ts_with        | date_column | col_set_default | added_col 
+----------+------------+---------------+-------------+---------+---------------+------------------+---------------------+---------------------+------------------------+-------------+-----------------+-----------
+ 0_zero   |          0 | 0_zero        |           0 |       0 | {0}           |                0 |                   0 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               0 | default
+ 1_zero   |          1 | 1_zero        |           1 |       1 | {1}           |                1 |                   1 | 2005-10-19 10:23:54 | 2005-10-19 01:23:54-07 | 2001-01-01  |               1 | default
+ 2_zero   |          2 | 2_zero        |           2 |       2 | {2}           |                2 |                   2 | 2006-10-19 10:23:54 | 2006-10-19 01:23:54-07 | 2002-01-01  |               2 | default
+ 3_zero   |          3 | 3_zero        |           3 |       3 | {3}           |                3 |                   3 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               3 | newcol
+ 4_zero   |          4 | 4_zero        |           4 |       4 | {4}           |                4 |                   4 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               4 | newcol
+ 5_zero   |          5 | 5_zero        |           5 |       5 | {5}           |                5 |                   5 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               5 | newcol
+(6 rows)
+
+-- Alter column Drop default
+Alter table sto_alt_heap1  alter column text_col drop default;
+ALTER TABLE
+select * from sto_alt_heap1 order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col | int_col | int_array_col | after_rename_col | change_datatype_col |    a_ts_without     |       b_ts_with        | date_column | col_set_default | added_col 
+----------+------------+---------------+-------------+---------+---------------+------------------+---------------------+---------------------+------------------------+-------------+-----------------+-----------
+ 0_zero   |          0 | 0_zero        |           0 |       0 | {0}           |                0 |                   0 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               0 | default
+ 1_zero   |          1 | 1_zero        |           1 |       1 | {1}           |                1 |                   1 | 2005-10-19 10:23:54 | 2005-10-19 01:23:54-07 | 2001-01-01  |               1 | default
+ 2_zero   |          2 | 2_zero        |           2 |       2 | {2}           |                2 |                   2 | 2006-10-19 10:23:54 | 2006-10-19 01:23:54-07 | 2002-01-01  |               2 | default
+ 3_zero   |          3 | 3_zero        |           3 |       3 | {3}           |                3 |                   3 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               3 | newcol
+ 4_zero   |          4 | 4_zero        |           4 |       4 | {4}           |                4 |                   4 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               4 | newcol
+ 5_zero   |          5 | 5_zero        |           5 |       5 | {5}           |                5 |                   5 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               5 | newcol
+(6 rows)
+
+-- Alter column drop NOT NULL
+Alter Table sto_alt_heap1 ALTER COLUMN int_col DROP NOT NULL;
+ALTER TABLE
+select * from sto_alt_heap1 order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col | int_col | int_array_col | after_rename_col | change_datatype_col |    a_ts_without     |       b_ts_with        | date_column | col_set_default | added_col 
+----------+------------+---------------+-------------+---------+---------------+------------------+---------------------+---------------------+------------------------+-------------+-----------------+-----------
+ 0_zero   |          0 | 0_zero        |           0 |       0 | {0}           |                0 |                   0 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               0 | default
+ 1_zero   |          1 | 1_zero        |           1 |       1 | {1}           |                1 |                   1 | 2005-10-19 10:23:54 | 2005-10-19 01:23:54-07 | 2001-01-01  |               1 | default
+ 2_zero   |          2 | 2_zero        |           2 |       2 | {2}           |                2 |                   2 | 2006-10-19 10:23:54 | 2006-10-19 01:23:54-07 | 2002-01-01  |               2 | default
+ 3_zero   |          3 | 3_zero        |           3 |       3 | {3}           |                3 |                   3 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               3 | newcol
+ 4_zero   |          4 | 4_zero        |           4 |       4 | {4}           |                4 |                   4 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               4 | newcol
+ 5_zero   |          5 | 5_zero        |           5 |       5 | {5}           |                5 |                   5 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               5 | newcol
+(6 rows)
+
+-- Alter column set NOT NULL
+Alter Table sto_alt_heap1 ALTER COLUMN int_col SET NOT NULL;
+ALTER TABLE
+select * from sto_alt_heap1 order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col | int_col | int_array_col | after_rename_col | change_datatype_col |    a_ts_without     |       b_ts_with        | date_column | col_set_default | added_col 
+----------+------------+---------------+-------------+---------+---------------+------------------+---------------------+---------------------+------------------------+-------------+-----------------+-----------
+ 0_zero   |          0 | 0_zero        |           0 |       0 | {0}           |                0 |                   0 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               0 | default
+ 1_zero   |          1 | 1_zero        |           1 |       1 | {1}           |                1 |                   1 | 2005-10-19 10:23:54 | 2005-10-19 01:23:54-07 | 2001-01-01  |               1 | default
+ 2_zero   |          2 | 2_zero        |           2 |       2 | {2}           |                2 |                   2 | 2006-10-19 10:23:54 | 2006-10-19 01:23:54-07 | 2002-01-01  |               2 | default
+ 3_zero   |          3 | 3_zero        |           3 |       3 | {3}           |                3 |                   3 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               3 | newcol
+ 4_zero   |          4 | 4_zero        |           4 |       4 | {4}           |                4 |                   4 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               4 | newcol
+ 5_zero   |          5 | 5_zero        |           5 |       5 | {5}           |                5 |                   5 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               5 | newcol
+(6 rows)
+
+-- Alter table SET STORAGE
+Alter Table sto_alt_heap1 ALTER char_vary_col SET STORAGE PLAIN;
+ALTER TABLE
+insert into sto_alt_heap1 values ('6_zero', 6, '6_zero', 6, 6, '{6}', 6, 6, '2004-10-19 10:23:54', '2004-10-19 10:23:54+02', '1-1-2000',6, 'newcol');
+INSERT 0 1
+select * from sto_alt_heap1 order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col | int_col | int_array_col | after_rename_col | change_datatype_col |    a_ts_without     |       b_ts_with        | date_column | col_set_default | added_col 
+----------+------------+---------------+-------------+---------+---------------+------------------+---------------------+---------------------+------------------------+-------------+-----------------+-----------
+ 0_zero   |          0 | 0_zero        |           0 |       0 | {0}           |                0 |                   0 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               0 | default
+ 1_zero   |          1 | 1_zero        |           1 |       1 | {1}           |                1 |                   1 | 2005-10-19 10:23:54 | 2005-10-19 01:23:54-07 | 2001-01-01  |               1 | default
+ 2_zero   |          2 | 2_zero        |           2 |       2 | {2}           |                2 |                   2 | 2006-10-19 10:23:54 | 2006-10-19 01:23:54-07 | 2002-01-01  |               2 | default
+ 3_zero   |          3 | 3_zero        |           3 |       3 | {3}           |                3 |                   3 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               3 | newcol
+ 4_zero   |          4 | 4_zero        |           4 |       4 | {4}           |                4 |                   4 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               4 | newcol
+ 5_zero   |          5 | 5_zero        |           5 |       5 | {5}           |                5 |                   5 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               5 | newcol
+ 6_zero   |          6 | 6_zero        |           6 |       6 | {6}           |                6 |                   6 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               6 | newcol
+(7 rows)
+
+-- Alter table inherit tables
+--start_ignore
+Drop table if exists sto_heap_parent cascade;
+psql:/path/sql_file:1: NOTICE:  table "sto_heap_parent" does not exist, skipping
+DROP TABLE
+--end_ignore
+CREATE TABLE sto_heap_parent (
+  text_col text,
+  bigint_col bigint,
+  char_vary_col character varying(30),
+  numeric_col numeric
+  ) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+insert into sto_heap_parent values ('0_zero', 0, '0_zero', 0);
+INSERT 0 1
+--start_ignore
+Drop table if exists sto_alt_heap2;
+psql:/path/sql_file:1: NOTICE:  table "sto_alt_heap2" does not exist, skipping
+DROP TABLE
+--end_ignore
+CREATE TABLE sto_alt_heap2(
+  text_col text,
+  bigint_col bigint,
+  char_vary_col character varying(30),
+  numeric_col numeric
+  )  DISTRIBUTED RANDOMLY;
+CREATE TABLE
+insert into sto_alt_heap2 values ('1_zero', 1, '1_zero', 1);
+INSERT 0 1
+-- Alter table inherit parent table
+ALTER TABLE sto_alt_heap2 INHERIT sto_heap_parent;
+ALTER TABLE
+select * from sto_alt_heap2 order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col 
+----------+------------+---------------+-------------
+ 1_zero   |          1 | 1_zero        |           1
+(1 row)
+
+-- Alter table set distributed byt to a new column
+Alter Table sto_alt_heap2 SET distributed by(text_col);
+ALTER TABLE
+insert into sto_alt_heap2 values ('2_zero', 2, '2_zero', 2);
+INSERT 0 1
+select * from sto_alt_heap2 order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col 
+----------+------------+---------------+-------------
+ 1_zero   |          1 | 1_zero        |           1
+ 2_zero   |          2 | 2_zero        |           2
+(2 rows)
+
+--Alter table set distributed randomly
+Alter Table sto_alt_heap2 SET distributed randomly;
+ALTER TABLE
+insert into sto_alt_heap2 values ('3_zero', 3, '3_zero', 3);
+INSERT 0 1
+select * from sto_alt_heap2 order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col 
+----------+------------+---------------+-------------
+ 1_zero   |          1 | 1_zero        |           1
+ 2_zero   |          2 | 2_zero        |           2
+ 3_zero   |          3 | 3_zero        |           3
+(3 rows)
+
+-- Alter table set Reorganize to true 
+Alter Table sto_alt_heap2 SET WITH (reorganize=true);
+ALTER TABLE
+insert into sto_alt_heap2 values ('4_zero', 4, '4_zero', 4);
+INSERT 0 1
+select * from sto_alt_heap2 order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col 
+----------+------------+---------------+-------------
+ 1_zero   |          1 | 1_zero        |           1
+ 2_zero   |          2 | 2_zero        |           2
+ 3_zero   |          3 | 3_zero        |           3
+ 4_zero   |          4 | 4_zero        |           4
+(4 rows)
+
+-- Alter table set Reorganize to false 
+Alter Table sto_alt_heap2 SET WITH (reorganize=false);
+ALTER TABLE
+insert into sto_alt_heap2 values ('5_zero', 5, '5_zero', 5);
+INSERT 0 1
+select * from sto_alt_heap2 order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col 
+----------+------------+---------------+-------------
+ 1_zero   |          1 | 1_zero        |           1
+ 2_zero   |          2 | 2_zero        |           2
+ 3_zero   |          3 | 3_zero        |           3
+ 4_zero   |          4 | 4_zero        |           4
+ 5_zero   |          5 | 5_zero        |           5
+(5 rows)
+
+-- Alter table add table constraint
+ALTER TABLE sto_alt_heap2  ADD CONSTRAINT lenchk CHECK (char_length(char_vary_col) < 10);
+ALTER TABLE
+insert into sto_alt_heap2 values ('6_zero', 6, '6_zero', 6);
+INSERT 0 1
+select * from sto_alt_heap2 order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col 
+----------+------------+---------------+-------------
+ 1_zero   |          1 | 1_zero        |           1
+ 2_zero   |          2 | 2_zero        |           2
+ 3_zero   |          3 | 3_zero        |           3
+ 4_zero   |          4 | 4_zero        |           4
+ 5_zero   |          5 | 5_zero        |           5
+ 6_zero   |          6 | 6_zero        |           6
+(6 rows)
+
+-- Alter table drop constriant
+Alter table sto_alt_heap2  Drop constraint lenchk;
+ALTER TABLE
+insert into sto_alt_heap2 values ('7_zero', 7, '7_zero', 7);
+INSERT 0 1
+select * from sto_alt_heap2 order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col 
+----------+------------+---------------+-------------
+ 1_zero   |          1 | 1_zero        |           1
+ 2_zero   |          2 | 2_zero        |           2
+ 3_zero   |          3 | 3_zero        |           3
+ 4_zero   |          4 | 4_zero        |           4
+ 5_zero   |          5 | 5_zero        |           5
+ 6_zero   |          6 | 6_zero        |           6
+ 7_zero   |          7 | 7_zero        |           7
+(7 rows)
+
+-- Alter column  set statistics
+Alter table sto_alt_heap3  alter column before_rename_col set statistics 3;
+ALTER TABLE
+select * from sto_alt_heap3 order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col | int_col | float_col | int_array_col | before_rename_col | change_datatype_col |    a_ts_without     |       b_ts_with        | date_column | col_set_default 
+----------+------------+---------------+-------------+---------+-----------+---------------+-------------------+---------------------+---------------------+------------------------+-------------+-----------------
+ 0_zero   |          0 | 0_zero        |           0 |       0 |         0 | {0}           |                 0 |                   0 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               0
+ 1_zero   |          1 | 1_zero        |           1 |       1 |         1 | {1}           |                 1 |                   1 | 2005-10-19 10:23:54 | 2005-10-19 01:23:54-07 | 2001-01-01  |               1
+ 2_zero   |          2 | 2_zero        |           2 |       2 |         2 | {2}           |                 2 |                   2 | 2006-10-19 10:23:54 | 2006-10-19 01:23:54-07 | 2002-01-01  |               2
+(3 rows)
+
+-- Alter table cluster on indexname
+Create index sto_alt_heap3_idx on sto_alt_heap3(bigint_col);
+CREATE INDEX
+Alter table sto_alt_heap3 cluster on sto_alt_heap3_idx;
+ALTER TABLE
+select * from sto_alt_heap3 order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col | int_col | float_col | int_array_col | before_rename_col | change_datatype_col |    a_ts_without     |       b_ts_with        | date_column | col_set_default 
+----------+------------+---------------+-------------+---------+-----------+---------------+-------------------+---------------------+---------------------+------------------------+-------------+-----------------
+ 0_zero   |          0 | 0_zero        |           0 |       0 |         0 | {0}           |                 0 |                   0 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               0
+ 1_zero   |          1 | 1_zero        |           1 |       1 |         1 | {1}           |                 1 |                   1 | 2005-10-19 10:23:54 | 2005-10-19 01:23:54-07 | 2001-01-01  |               1
+ 2_zero   |          2 | 2_zero        |           2 |       2 |         2 | {2}           |                 2 |                   2 | 2006-10-19 10:23:54 | 2006-10-19 01:23:54-07 | 2002-01-01  |               2
+(3 rows)
+
+-- Alter table SET without cluster
+Alter table sto_alt_heap3 set without cluster;
+ALTER TABLE
+select * from sto_alt_heap3 order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col | int_col | float_col | int_array_col | before_rename_col | change_datatype_col |    a_ts_without     |       b_ts_with        | date_column | col_set_default 
+----------+------------+---------------+-------------+---------+-----------+---------------+-------------------+---------------------+---------------------+------------------------+-------------+-----------------
+ 0_zero   |          0 | 0_zero        |           0 |       0 |         0 | {0}           |                 0 |                   0 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               0
+ 1_zero   |          1 | 1_zero        |           1 |       1 |         1 | {1}           |                 1 |                   1 | 2005-10-19 10:23:54 | 2005-10-19 01:23:54-07 | 2001-01-01  |               1
+ 2_zero   |          2 | 2_zero        |           2 |       2 |         2 | {2}           |                 2 |                   2 | 2006-10-19 10:23:54 | 2006-10-19 01:23:54-07 | 2002-01-01  |               2
+(3 rows)
+
+--Alter table SET without OIDs
+Alter table sto_alt_heap3 SET without oids;
+ALTER TABLE
+select * from sto_alt_heap3 order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col | int_col | float_col | int_array_col | before_rename_col | change_datatype_col |    a_ts_without     |       b_ts_with        | date_column | col_set_default 
+----------+------------+---------------+-------------+---------+-----------+---------------+-------------------+---------------------+---------------------+------------------------+-------------+-----------------
+ 0_zero   |          0 | 0_zero        |           0 |       0 |         0 | {0}           |                 0 |                   0 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               0
+ 1_zero   |          1 | 1_zero        |           1 |       1 |         1 | {1}           |                 1 |                   1 | 2005-10-19 10:23:54 | 2005-10-19 01:23:54-07 | 2001-01-01  |               1
+ 2_zero   |          2 | 2_zero        |           2 |       2 |         2 | {2}           |                 2 |                   2 | 2006-10-19 10:23:54 | 2006-10-19 01:23:54-07 | 2002-01-01  |               2
+(3 rows)
+
+--Alter table to a new owner
+--start_ignore
+Drop table if exists sto_alt_heap4 ;
+psql:/path/sql_file:1: NOTICE:  table "sto_alt_heap4" does not exist, skipping
+DROP TABLE
+Drop role if exists heap_user1;
+DROP ROLE
+--end_ignore
+Create role heap_user1;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+Create table sto_alt_heap4  as select * from sto_alt_heap3;
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'text_col' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT 3
+Alter Table sto_alt_heap4  Owner to heap_user1;
+ALTER TABLE
+select * from sto_alt_heap4 order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col | int_col | float_col | int_array_col | before_rename_col | change_datatype_col |    a_ts_without     |       b_ts_with        | date_column | col_set_default 
+----------+------------+---------------+-------------+---------+-----------+---------------+-------------------+---------------------+---------------------+------------------------+-------------+-----------------
+ 0_zero   |          0 | 0_zero        |           0 |       0 |         0 | {0}           |                 0 |                   0 | 2004-10-19 10:23:54 | 2004-10-19 01:23:54-07 | 2000-01-01  |               0
+ 1_zero   |          1 | 1_zero        |           1 |       1 |         1 | {1}           |                 1 |                   1 | 2005-10-19 10:23:54 | 2005-10-19 01:23:54-07 | 2001-01-01  |               1
+ 2_zero   |          2 | 2_zero        |           2 |       2 |         2 | {2}           |                 2 |                   2 | 2006-10-19 10:23:54 | 2006-10-19 01:23:54-07 | 2002-01-01  |               2
+(3 rows)
+

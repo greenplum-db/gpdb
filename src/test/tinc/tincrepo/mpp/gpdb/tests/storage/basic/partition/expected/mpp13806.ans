@@ -1,0 +1,58 @@
+--start_ignore
+drop table if exists mpp13806 cascade;
+NOTICE:  table "mpp13806" does not exist, skipping
+DROP TABLE
+--end_ignore
+CREATE TABLE mpp13806 (id int, date date, amt decimal(10,2))
+DISTRIBUTED BY (id)
+PARTITION BY RANGE (date)
+( START (date '2008-01-01') INCLUSIVE
+ END (date '2008-01-05') EXCLUSIVE
+ EVERY (INTERVAL '1 day') );
+NOTICE:  CREATE TABLE will create partition "mpp13806_1_prt_1" for table "mpp13806"
+NOTICE:  CREATE TABLE will create partition "mpp13806_1_prt_2" for table "mpp13806"
+NOTICE:  CREATE TABLE will create partition "mpp13806_1_prt_3" for table "mpp13806"
+NOTICE:  CREATE TABLE will create partition "mpp13806_1_prt_4" for table "mpp13806"
+CREATE TABLE
+alter table mpp13806 add partition test end (date '2008-01-01') exclusive;
+NOTICE:  CREATE TABLE will create partition "mpp13806_1_prt_test" for table "mpp13806"
+ALTER TABLE
+select partitiontablename, partitionrangestart, partitionstartinclusive, partitionrangeend, partitionendinclusive from pg_partitions where tablename like 'mpp13806%' order by partitionrank;
+ partitiontablename  | partitionrangestart | partitionstartinclusive | partitionrangeend  | partitionendinclusive 
+---------------------+---------------------+-------------------------+--------------------+-----------------------
+ mpp13806_1_prt_test |                     | f                       | '2008-01-01'::date | f
+ mpp13806_1_prt_1    | '2008-01-01'::date  | t                       | '2008-01-02'::date | f
+ mpp13806_1_prt_2    | '2008-01-02'::date  | t                       | '2008-01-03'::date | f
+ mpp13806_1_prt_3    | '2008-01-03'::date  | t                       | '2008-01-04'::date | f
+ mpp13806_1_prt_4    | '2008-01-04'::date  | t                       | '2008-01-05'::date | f
+(5 rows)
+
+alter TABLE mpp13806 drop partition test;
+ALTER TABLE
+alter table mpp13806 add partition test end (date '2007-12-31') exclusive;
+NOTICE:  CREATE TABLE will create partition "mpp13806_1_prt_test" for table "mpp13806"
+ALTER TABLE
+select partitiontablename, partitionrangestart, partitionstartinclusive, partitionrangeend, partitionendinclusive from pg_partitions where tablename like 'mpp13806%' order by partitionrank;
+ partitiontablename  | partitionrangestart | partitionstartinclusive | partitionrangeend  | partitionendinclusive 
+---------------------+---------------------+-------------------------+--------------------+-----------------------
+ mpp13806_1_prt_test |                     | f                       | '2007-12-31'::date | f
+ mpp13806_1_prt_1    | '2008-01-01'::date  | t                       | '2008-01-02'::date | f
+ mpp13806_1_prt_2    | '2008-01-02'::date  | t                       | '2008-01-03'::date | f
+ mpp13806_1_prt_3    | '2008-01-03'::date  | t                       | '2008-01-04'::date | f
+ mpp13806_1_prt_4    | '2008-01-04'::date  | t                       | '2008-01-05'::date | f
+(5 rows)
+
+alter table mpp13806 add partition test1 start (date '2007-12-31') inclusive end (date '2008-01-01') exclusive;
+NOTICE:  CREATE TABLE will create partition "mpp13806_1_prt_test1" for table "mpp13806"
+ALTER TABLE
+select partitiontablename, partitionrangestart, partitionstartinclusive, partitionrangeend, partitionendinclusive from pg_partitions where tablename like 'mpp13806%' order by partitionrank;
+  partitiontablename  | partitionrangestart | partitionstartinclusive | partitionrangeend  | partitionendinclusive 
+----------------------+---------------------+-------------------------+--------------------+-----------------------
+ mpp13806_1_prt_test  |                     | f                       | '2007-12-31'::date | f
+ mpp13806_1_prt_test1 | '2007-12-31'::date  | t                       | '2008-01-01'::date | f
+ mpp13806_1_prt_1     | '2008-01-01'::date  | t                       | '2008-01-02'::date | f
+ mpp13806_1_prt_2     | '2008-01-02'::date  | t                       | '2008-01-03'::date | f
+ mpp13806_1_prt_3     | '2008-01-03'::date  | t                       | '2008-01-04'::date | f
+ mpp13806_1_prt_4     | '2008-01-04'::date  | t                       | '2008-01-05'::date | f
+(6 rows)
+

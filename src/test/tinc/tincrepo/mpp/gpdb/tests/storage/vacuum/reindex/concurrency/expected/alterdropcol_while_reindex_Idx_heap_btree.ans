@@ -1,0 +1,27 @@
+-- @Description Ensures that alter table during reindex operations is ok
+-- 
+
+DELETE FROM reindex_alter_heap_btree WHERE a < 128;
+DELETE 254
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+1: REINDEX index idx_reindex_alter_heap_btree;
+REINDEX
+2&: alter table reindex_alter_heap_btree drop column j;  <waiting ...>
+1: COMMIT;
+COMMIT
+2<:  <... completed>
+ALTER
+2: COMMIT;
+COMMIT
+3: SELECT COUNT(*) FROM pg_class where relname = 'reindex_alter_heap_btree';
+count
+-----
+1    
+(1 row)
+3: SELECT 1 AS relfilenode_same_on_all_segs from gp_dist_random('pg_class')   WHERE relname = 'idx_reindex_alter_heap_btree' GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
+relfilenode_same_on_all_segs
+----------------------------
+(0 rows)

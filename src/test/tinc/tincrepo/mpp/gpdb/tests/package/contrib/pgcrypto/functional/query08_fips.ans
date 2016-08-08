@@ -1,0 +1,78 @@
+select pgp_sym_decrypt(pgp_sym_encrypt('1234abcd', '#2x@', 'cipher-algo=aes'), '#2x@', 'cipher-algo=aes');
+ pgp_sym_decrypt 
+-----------------
+ 1234abcd
+(1 row)
+
+select pgp_sym_decrypt(pgp_sym_encrypt('1234abcd', '#2x@', 'cipher-algo=aes128'), '#2x@', 'cipher-algo=aes128');
+ pgp_sym_decrypt 
+-----------------
+ 1234abcd
+(1 row)
+
+select pgp_sym_decrypt(pgp_sym_encrypt('1234abcd', '#2x@', 'cipher-algo=aes256'), '#2x@', 'cipher-algo=aes256');
+ pgp_sym_decrypt 
+-----------------
+ 1234abcd
+(1 row)
+
+select pgp_sym_decrypt(pgp_sym_encrypt('1234abcd', '#2x@', 'cipher-algo=bf'), '#2x@', 'cipher-algo=bf');
+psql:/path/sql_file:1: ERROR:  This algorithm not allowed in FIPS mode
+select pgp_sym_decrypt(pgp_sym_encrypt('1234abcd', '#2x@', 'cipher-algo=blowfish'), '#2x@', 'cipher-algo=blowfish');
+psql:/path/sql_file:1: ERROR:  This algorithm not allowed in FIPS mode
+select pgp_sym_decrypt(pgp_sym_encrypt('1234abcd', '#2x@', 'cipher-algo=twofish'), '#2x@', 'cipher-algo=twofish');
+psql:/path/sql_file:1: ERROR:  This algorithm not allowed in FIPS mode
+select pgp_sym_decrypt(pgp_sym_encrypt('1234abcd', '#2x@', 'cipher-algo=aes192'), '#2x@', 'cipher-algo=aes192');
+ pgp_sym_decrypt 
+-----------------
+ 1234abcd
+(1 row)
+
+select pgp_sym_decrypt(pgp_sym_encrypt('1234abcd', '#2x@', 'cipher-algo=3des'), '#2x@', 'cipher-algo=3des');
+ pgp_sym_decrypt 
+-----------------
+ 1234abcd
+(1 row)
+
+select pgp_sym_decrypt(pgp_sym_encrypt('1234abcd', '#2x@', 'cipher-algo=cast5'), '#2x@', 'cipher-algo=cast5');
+psql:/path/sql_file:1: ERROR:  This algorithm not allowed in FIPS mode
+select pgp_sym_decrypt(pgp_sym_encrypt('1234abcd', '#2x@', ''), '#2x@', '');
+ pgp_sym_decrypt 
+-----------------
+ 1234abcd
+(1 row)
+
+select pgp_sym_decrypt(pgp_sym_encrypt('1234abcd', '#2x@', 's2k-digest-algo=md5'), '#2x@', 's2k-digest-algo=md5');
+psql:/path/sql_file:1: ERROR:  This algorithm not allowed in FIPS mode
+select pgp_sym_decrypt(pgp_sym_encrypt('1234abcd', '#2x@', 's2k-digest-algo=sha1'), '#2x@', 's2k-digest-algo=sha1');
+ pgp_sym_decrypt 
+-----------------
+ 1234abcd
+(1 row)
+
+select pgp_sym_decrypt(pgp_sym_encrypt('1234abcd', '#2x@', 's2k-cipher-algo=bf'), '#2x@', 's2k-cipher-algo=bf');
+psql:/path/sql_file:1: ERROR:  This algorithm not allowed in FIPS mode
+select pgp_sym_decrypt(pgp_sym_encrypt('1234abcd', '#2x@', 's2k-cipher-algo=aes'), '#2x@', 's2k-cipher-algo=aes');
+ pgp_sym_decrypt 
+-----------------
+ 1234abcd
+(1 row)
+
+select pgp_sym_decrypt(pgp_sym_encrypt('1234abcd', '#2x@', 's2k-cipher-algo=aes128'), '#2x@', 's2k-cipher-algo=aes128');
+ pgp_sym_decrypt 
+-----------------
+ 1234abcd
+(1 row)
+
+select pgp_sym_decrypt(pgp_sym_encrypt('1234abcd', '#2x@', 's2k-cipher-algo=aes192'), '#2x@', 's2k-cipher-algo=aes192');
+ pgp_sym_decrypt 
+-----------------
+ 1234abcd
+(1 row)
+
+select pgp_sym_decrypt(pgp_sym_encrypt('1234abcd', '#2x@', 's2k-cipher-algo=aes256'), '#2x@', 's2k-cipher-algo=aes256');
+ pgp_sym_decrypt 
+-----------------
+ 1234abcd
+(1 row)
+

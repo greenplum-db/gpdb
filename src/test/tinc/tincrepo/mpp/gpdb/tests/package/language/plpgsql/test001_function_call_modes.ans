@@ -1,0 +1,43 @@
+-- start_ignore
+DROP FUNCTION IF EXISTS func_plpgsql();
+DROP FUNCTION
+DROP TABLE IF EXISTS func_call_modes_data CASCADE;
+DROP TABLE
+-- end_ignore
+CREATE TABLE func_call_modes_data ( c1 INT, c2 INT ) DISTRIBUTED BY (c1);
+CREATE TABLE
+INSERT INTO func_call_modes_data SELECT i, i FROM generate_series(1,3) i;
+INSERT 0 3
+CREATE OR REPLACE FUNCTION func_plpgsql() RETURNS SETOF func_call_modes_data
+AS $$
+        DECLARE r
+                func_call_modes_data%rowtype;
+        BEGIN
+                FOR r IN SELECT * FROM func_call_modes_data ORDER BY c1
+                LOOP
+                RETURN NEXT r;
+                END LOOP;
+        RETURN;
+END
+$$ LANGUAGE PLPGSQL;
+CREATE FUNCTION
+SELECT func_plpgsql();
+ func_plpgsql 
+--------------
+ (1,1)
+ (2,2)
+ (3,3)
+(3 rows)
+
+SELECT * FROM func_plpgsql();
+ c1 | c2 
+----+----
+  1 |  1
+  2 |  2
+  3 |  3
+(3 rows)
+
+DROP FUNCTION IF EXISTS func_plpgsql();
+DROP FUNCTION
+DROP TABLE IF EXISTS func_call_modes_data CASCADE;
+DROP TABLE

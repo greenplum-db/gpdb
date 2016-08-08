@@ -1,0 +1,24 @@
+\echo '-- start_ignore'
+-- start_ignore
+DROP TYPE IF EXISTS testrowperl cascade;
+psql:/path/sql_file:1: NOTICE:  drop cascades to function perl_set()
+psql:/path/sql_file:1: NOTICE:  drop cascades to function perl_row()
+DROP TYPE
+\echo '-- end_ignore'
+-- end_ignore
+-- Test: plperl 10
+CREATE TYPE testrowperl AS (f1 integer, f2 text, f3 text);
+CREATE TYPE
+							  
+CREATE OR REPLACE FUNCTION perl_row() RETURNS testrowperl AS $$
+							return undef;
+							$$ LANGUAGE plperl;
+CREATE FUNCTION
+							  
+SELECT perl_row();
+ perl_row 
+----------
+ 
+(1 row)
+
+							  

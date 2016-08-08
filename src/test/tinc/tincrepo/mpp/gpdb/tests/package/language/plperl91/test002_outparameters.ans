@@ -1,0 +1,3133 @@
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_77 ( IN  REAL , OUT  REAL ) RETURNS REAL as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_77(pltest.tableREAL.key) AS ID from pltest.tableREAL ORDER BY ID;
+    id     
+-----------
+ -Infinity
+    39.333
+  Infinity
+       NaN
+          
+(5 rows)
+
+create table pltest.tableREAL1 as select pltest.PLPERLoutpara_unname_77(pltest.tableREAL.key) AS ID from pltest.tableREAL DISTRIBUTED randomly;
+SELECT 5
+select * from pltest.tableREAL1 ORDER BY ID;
+    id     
+-----------
+ -Infinity
+    39.333
+  Infinity
+       NaN
+          
+(5 rows)
+
+drop table pltest.tableREAL1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_77(39.333::REAL);
+ plperloutpara_unname_77 
+-------------------------
+                  39.333
+(1 row)
+
+select pltest.PLPERLoutpara_unname_77('NAN'::REAL);
+ plperloutpara_unname_77 
+-------------------------
+                     NaN
+(1 row)
+
+select pltest.PLPERLoutpara_unname_77('-INFINITY'::REAL);
+ plperloutpara_unname_77 
+-------------------------
+               -Infinity
+(1 row)
+
+select pltest.PLPERLoutpara_unname_77('+INFINITY'::REAL);
+ plperloutpara_unname_77 
+-------------------------
+                Infinity
+(1 row)
+
+select pltest.PLPERLoutpara_unname_77(NULL);
+ plperloutpara_unname_77 
+-------------------------
+                        
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_77(39.333::REAL);
+ plperloutpara_unname_77 
+-------------------------
+                  39.333
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_77('NAN'::REAL);
+ plperloutpara_unname_77 
+-------------------------
+                     NaN
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_77('-INFINITY'::REAL);
+ plperloutpara_unname_77 
+-------------------------
+               -Infinity
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_77('+INFINITY'::REAL);
+ plperloutpara_unname_77 
+-------------------------
+                Infinity
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_77(NULL);
+ plperloutpara_unname_77 
+-------------------------
+                        
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_77 ( IN  REAL , OUT  REAL );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_78 ( IN  BOX , OUT  BOX ) RETURNS BOX as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_78('((1,2),(3,4))'::BOX);
+ plperloutpara_unname_78 
+-------------------------
+ (3,4),(1,2)
+(1 row)
+
+select pltest.PLPERLoutpara_unname_78(NULL);
+ plperloutpara_unname_78 
+-------------------------
+ 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_78('((1,2),(3,4))'::BOX);
+ plperloutpara_unname_78 
+-------------------------
+ (3,4),(1,2)
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_78(NULL);
+ plperloutpara_unname_78 
+-------------------------
+ 
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_78 ( IN  BOX , OUT  BOX );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_79 ( IN  VARCHAR(16) , OUT  VARCHAR(16) ) RETURNS VARCHAR(16) as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_79(pltest.tableVARCHAR16.key) AS ID from pltest.tableVARCHAR16 ORDER BY ID;
+    id     
+-----------
+ ASDFGHJKL
+ 
+(2 rows)
+
+create table pltest.tableVARCHAR161 as select pltest.PLPERLoutpara_unname_79(pltest.tableVARCHAR16.key) AS ID from pltest.tableVARCHAR16 DISTRIBUTED randomly;
+SELECT 2
+select * from pltest.tableVARCHAR161 ORDER BY ID;
+    id     
+-----------
+ ASDFGHJKL
+ 
+(2 rows)
+
+drop table pltest.tableVARCHAR161;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_79('ASDFGHJKL'::VARCHAR(16));
+ plperloutpara_unname_79 
+-------------------------
+ ASDFGHJKL
+(1 row)
+
+select pltest.PLPERLoutpara_unname_79(NULL);
+ plperloutpara_unname_79 
+-------------------------
+ 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_79('ASDFGHJKL'::VARCHAR(16));
+ plperloutpara_unname_79 
+-------------------------
+ ASDFGHJKL
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_79(NULL);
+ plperloutpara_unname_79 
+-------------------------
+ 
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_79 ( IN  VARCHAR(16) , OUT  VARCHAR(16) );
+DROP FUNCTION
+--ERROR:  PL/Perl functions cannot return type nyarray
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_80 ( IN  ANYARRAY , OUT  ANYARRAY ) RETURNS ANYARRAY as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+ERROR:  PL/Perl functions cannot return type anyarray
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_81 ( IN  UNKNOWN , OUT  UNKNOWN ) RETURNS UNKNOWN as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_81('QAZWSXEDCRFV'::UNKNOWN);
+ plperloutpara_unname_81 
+-------------------------
+ QAZWSXEDCRFV
+(1 row)
+
+select pltest.PLPERLoutpara_unname_81(NULL::UNKNOWN);
+ plperloutpara_unname_81 
+-------------------------
+ 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_81('QAZWSXEDCRFV'::UNKNOWN);
+ plperloutpara_unname_81 
+-------------------------
+ QAZWSXEDCRFV
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_81(NULL::UNKNOWN);
+ plperloutpara_unname_81 
+-------------------------
+ 
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_81 ( IN  UNKNOWN , OUT  UNKNOWN );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_82 ( IN  BIT VARYING(10) , OUT  BIT VARYING(10) ) RETURNS BIT VARYING(10) as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_82(pltest.tableBITVARYING10.key) AS ID from pltest.tableBITVARYING10 ORDER BY ID;
+    id    
+----------
+ 11001111
+ 
+(2 rows)
+
+create table pltest.tableBITVARYING101 as select pltest.PLPERLoutpara_unname_82(pltest.tableBITVARYING10.key) AS ID from pltest.tableBITVARYING10 DISTRIBUTED randomly;
+SELECT 2
+select * from pltest.tableBITVARYING101 ORDER BY ID;
+    id    
+----------
+ 11001111
+ 
+(2 rows)
+
+drop table pltest.tableBITVARYING101;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_82(B'11001111'::BIT VARYING(10));
+ plperloutpara_unname_82 
+-------------------------
+ 11001111
+(1 row)
+
+select pltest.PLPERLoutpara_unname_82(NULL);
+ plperloutpara_unname_82 
+-------------------------
+ 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_82(B'11001111'::BIT VARYING(10));
+ plperloutpara_unname_82 
+-------------------------
+ 11001111
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_82(NULL);
+ plperloutpara_unname_82 
+-------------------------
+ 
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_82 ( IN  BIT VARYING(10) , OUT  BIT VARYING(10) );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_83 ( IN  TIMESTAMPTZ , OUT  TIMESTAMPTZ ) RETURNS TIMESTAMPTZ as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_83(pltest.tableTIMESTAMPTZ.key) AS ID from pltest.tableTIMESTAMPTZ ORDER BY ID;
+            id             
+---------------------------
+ 2011-08-12 10:00:52.14-07
+ 
+(2 rows)
+
+create table pltest.tableTIMESTAMPTZ1 as select pltest.PLPERLoutpara_unname_83(pltest.tableTIMESTAMPTZ.key) AS ID from pltest.tableTIMESTAMPTZ DISTRIBUTED randomly;
+SELECT 2
+select * from pltest.tableTIMESTAMPTZ1 ORDER BY ID;
+            id             
+---------------------------
+ 2011-08-12 10:00:52.14-07
+ 
+(2 rows)
+
+drop table pltest.tableTIMESTAMPTZ1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_83('2011-08-12 10:00:52.14'::TIMESTAMPTZ);
+  plperloutpara_unname_83  
+---------------------------
+ 2011-08-12 10:00:52.14-07
+(1 row)
+
+select pltest.PLPERLoutpara_unname_83(NULL);
+ plperloutpara_unname_83 
+-------------------------
+ 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_83('2011-08-12 10:00:52.14'::TIMESTAMPTZ);
+  plperloutpara_unname_83  
+---------------------------
+ 2011-08-12 10:00:52.14-07
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_83(NULL);
+ plperloutpara_unname_83 
+-------------------------
+ 
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_83 ( IN  TIMESTAMPTZ , OUT  TIMESTAMPTZ );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_84 ( IN  "char" , OUT  "char" ) RETURNS "char" as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_84(pltest.tableQUTOCHAR.key) AS ID from pltest.tableQUTOCHAR ORDER BY ID;
+ id 
+----
+ a
+ 
+(2 rows)
+
+create table pltest.tableQUTOCHAR1 as select pltest.PLPERLoutpara_unname_84(pltest.tableQUTOCHAR.key) AS ID from pltest.tableQUTOCHAR DISTRIBUTED randomly;
+SELECT 2
+select * from pltest.tableQUTOCHAR1 ORDER BY ID;
+ id 
+----
+ a
+ 
+(2 rows)
+
+drop table pltest.tableQUTOCHAR1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_84('a'::"char");
+ plperloutpara_unname_84 
+-------------------------
+ a
+(1 row)
+
+select pltest.PLPERLoutpara_unname_84(null::"char");
+ plperloutpara_unname_84 
+-------------------------
+ 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_84('a'::"char");
+ plperloutpara_unname_84 
+-------------------------
+ a
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_84(null::"char");
+ plperloutpara_unname_84 
+-------------------------
+ 
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_84 ( IN  "char" , OUT  "char" );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_85 ( IN  CHAR , OUT  CHAR ) RETURNS CHAR as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_85(pltest.tableCHAR.key) AS ID from pltest.tableCHAR ORDER BY ID;
+ id 
+----
+ B
+ 
+(2 rows)
+
+create table pltest.tableCHAR1 as select pltest.PLPERLoutpara_unname_85(pltest.tableCHAR.key) AS ID from pltest.tableCHAR DISTRIBUTED randomly;
+SELECT 2
+select * from pltest.tableCHAR1 ORDER BY ID;
+ id 
+----
+ B
+ 
+(2 rows)
+
+drop table pltest.tableCHAR1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_85('B'::CHAR);
+ plperloutpara_unname_85 
+-------------------------
+ B
+(1 row)
+
+select pltest.PLPERLoutpara_unname_85(NULL::CHAR);
+ plperloutpara_unname_85 
+-------------------------
+ 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_85('B'::CHAR);
+ plperloutpara_unname_85 
+-------------------------
+ B
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_85(NULL::CHAR);
+ plperloutpara_unname_85 
+-------------------------
+ 
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_85 ( IN  CHAR , OUT  CHAR );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_86 ( IN  BIGINT , OUT  BIGINT ) RETURNS BIGINT as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_86(pltest.tableBIGINT.key) AS ID from pltest.tableBIGINT ORDER BY ID;
+          id          
+----------------------
+ -9223372036854775808
+            123456789
+  9223372036854775807
+                     
+(4 rows)
+
+create table pltest.tableBIGINT1 as select pltest.PLPERLoutpara_unname_86(pltest.tableBIGINT.key) AS ID from pltest.tableBIGINT DISTRIBUTED randomly;
+SELECT 4
+select * from pltest.tableBIGINT1 ORDER BY ID;
+          id          
+----------------------
+ -9223372036854775808
+            123456789
+  9223372036854775807
+                     
+(4 rows)
+
+drop table pltest.tableBIGINT1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_86((-9223372036854775808)::BIGINT);
+ plperloutpara_unname_86 
+-------------------------
+    -9223372036854775808
+(1 row)
+
+select pltest.PLPERLoutpara_unname_86(9223372036854775807::BIGINT);
+ plperloutpara_unname_86 
+-------------------------
+     9223372036854775807
+(1 row)
+
+select pltest.PLPERLoutpara_unname_86(123456789::BIGINT);
+ plperloutpara_unname_86 
+-------------------------
+               123456789
+(1 row)
+
+select pltest.PLPERLoutpara_unname_86(NULL);
+ plperloutpara_unname_86 
+-------------------------
+                        
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_86((-9223372036854775808)::BIGINT);
+ plperloutpara_unname_86 
+-------------------------
+    -9223372036854775808
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_86(9223372036854775807::BIGINT);
+ plperloutpara_unname_86 
+-------------------------
+     9223372036854775807
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_86(123456789::BIGINT);
+ plperloutpara_unname_86 
+-------------------------
+               123456789
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_86(NULL);
+ plperloutpara_unname_86 
+-------------------------
+                        
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_86 ( IN  BIGINT , OUT  BIGINT );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_87 ( IN  DATE , OUT  DATE ) RETURNS DATE as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_87(pltest.tableDATE.key) AS ID from pltest.tableDATE ORDER BY ID;
+     id     
+------------
+ 1970-01-01
+ 2011-08-12
+ 
+(3 rows)
+
+create table pltest.tableDATE1 as select pltest.PLPERLoutpara_unname_87(pltest.tableDATE.key) AS ID from pltest.tableDATE DISTRIBUTED randomly;
+SELECT 3
+select * from pltest.tableDATE1 ORDER BY ID;
+     id     
+------------
+ 1970-01-01
+ 2011-08-12
+ 
+(3 rows)
+
+drop table pltest.tableDATE1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_87('2011-08-12'::DATE);
+ plperloutpara_unname_87 
+-------------------------
+ 2011-08-12
+(1 row)
+
+select pltest.PLPERLoutpara_unname_87('EPOCH'::DATE);
+ plperloutpara_unname_87 
+-------------------------
+ 1970-01-01
+(1 row)
+
+select pltest.PLPERLoutpara_unname_87(NULL);
+ plperloutpara_unname_87 
+-------------------------
+ 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_87('2011-08-12'::DATE);
+ plperloutpara_unname_87 
+-------------------------
+ 2011-08-12
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_87('EPOCH'::DATE);
+ plperloutpara_unname_87 
+-------------------------
+ 1970-01-01
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_87(NULL);
+ plperloutpara_unname_87 
+-------------------------
+ 
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_87 ( IN  DATE , OUT  DATE );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_88 ( IN  PATH , OUT  PATH ) RETURNS PATH as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_88('(1,1),(2,2)'::PATH);
+ plperloutpara_unname_88 
+-------------------------
+ ((1,1),(2,2))
+(1 row)
+
+select pltest.PLPERLoutpara_unname_88(NULL);
+ plperloutpara_unname_88 
+-------------------------
+ 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_88('(1,1),(2,2)'::PATH);
+ plperloutpara_unname_88 
+-------------------------
+ ((1,1),(2,2))
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_88(NULL);
+ plperloutpara_unname_88 
+-------------------------
+ 
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_88 ( IN  PATH , OUT  PATH );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_89 ( IN  SMALLINT , OUT  SMALLINT ) RETURNS SMALLINT as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_89(pltest.tableSMALLINT.key) AS ID from pltest.tableSMALLINT ORDER BY ID;
+   id   
+--------
+ -32768
+   1234
+  32767
+       
+(4 rows)
+
+create table pltest.tableSMALLINT1 as select pltest.PLPERLoutpara_unname_89(pltest.tableSMALLINT.key) AS ID from pltest.tableSMALLINT DISTRIBUTED randomly;
+SELECT 4
+select * from pltest.tableSMALLINT1 ORDER BY ID;
+   id   
+--------
+ -32768
+   1234
+  32767
+       
+(4 rows)
+
+drop table pltest.tableSMALLINT1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_89((-32768)::SMALLINT);
+ plperloutpara_unname_89 
+-------------------------
+                  -32768
+(1 row)
+
+select pltest.PLPERLoutpara_unname_89(32767::SMALLINT);
+ plperloutpara_unname_89 
+-------------------------
+                   32767
+(1 row)
+
+select pltest.PLPERLoutpara_unname_89(1234::SMALLINT);
+ plperloutpara_unname_89 
+-------------------------
+                    1234
+(1 row)
+
+select pltest.PLPERLoutpara_unname_89(NULL);
+ plperloutpara_unname_89 
+-------------------------
+                        
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_89((-32768)::SMALLINT);
+ plperloutpara_unname_89 
+-------------------------
+                  -32768
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_89(32767::SMALLINT);
+ plperloutpara_unname_89 
+-------------------------
+                   32767
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_89(1234::SMALLINT);
+ plperloutpara_unname_89 
+-------------------------
+                    1234
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_89(NULL);
+ plperloutpara_unname_89 
+-------------------------
+                        
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_89 ( IN  SMALLINT , OUT  SMALLINT );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_90 ( IN  MACADDR , OUT  MACADDR ) RETURNS MACADDR as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_90(pltest.tableMACADDR.key) AS ID from pltest.tableMACADDR ORDER BY ID;
+        id         
+-------------------
+ 12:34:56:78:90:ab
+ 
+(2 rows)
+
+create table pltest.tableMACADDR1 as select pltest.PLPERLoutpara_unname_90(pltest.tableMACADDR.key) AS ID from pltest.tableMACADDR DISTRIBUTED randomly;
+SELECT 2
+select * from pltest.tableMACADDR1 ORDER BY ID;
+        id         
+-------------------
+ 12:34:56:78:90:ab
+ 
+(2 rows)
+
+drop table pltest.tableMACADDR1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_90('12:34:56:78:90:AB'::MACADDR);
+ plperloutpara_unname_90 
+-------------------------
+ 12:34:56:78:90:ab
+(1 row)
+
+select pltest.PLPERLoutpara_unname_90(NULL);
+ plperloutpara_unname_90 
+-------------------------
+ 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_90('12:34:56:78:90:AB'::MACADDR);
+ plperloutpara_unname_90 
+-------------------------
+ 12:34:56:78:90:ab
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_90(NULL);
+ plperloutpara_unname_90 
+-------------------------
+ 
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_90 ( IN  MACADDR , OUT  MACADDR );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_91 ( IN  POINT , OUT  POINT ) RETURNS POINT as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_91('(1,2)'::POINT);
+ plperloutpara_unname_91 
+-------------------------
+ (1,2)
+(1 row)
+
+select pltest.PLPERLoutpara_unname_91(NULL);
+ plperloutpara_unname_91 
+-------------------------
+ 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_91('(1,2)'::POINT);
+ plperloutpara_unname_91 
+-------------------------
+ (1,2)
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_91(NULL);
+ plperloutpara_unname_91 
+-------------------------
+ 
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_91 ( IN  POINT , OUT  POINT );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_92 ( IN  INTERVAL , OUT  INTERVAL ) RETURNS INTERVAL as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_92(pltest.tableINTERVAL.key) AS ID from pltest.tableINTERVAL ORDER BY ID;
+       id       
+----------------
+ 1 day 12:59:10
+ 1 day 12:59:10
+ 
+(3 rows)
+
+create table pltest.tableINTERVAL1 as select pltest.PLPERLoutpara_unname_92(pltest.tableINTERVAL.key) AS ID from pltest.tableINTERVAL DISTRIBUTED randomly;
+SELECT 3
+select * from pltest.tableINTERVAL1 ORDER BY ID;
+       id       
+----------------
+ 1 day 12:59:10
+ 1 day 12:59:10
+ 
+(3 rows)
+
+drop table pltest.tableINTERVAL1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_92('1 DAY 12 HOURS 59 MIN 10 SEC'::INTERVAL);
+ plperloutpara_unname_92 
+-------------------------
+ 1 day 12:59:10
+(1 row)
+
+select pltest.PLPERLoutpara_unname_92('1 12:59:10'::INTERVAL);
+ plperloutpara_unname_92 
+-------------------------
+ 1 day 12:59:10
+(1 row)
+
+select pltest.PLPERLoutpara_unname_92(NULL);
+ plperloutpara_unname_92 
+-------------------------
+ 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_92('1 DAY 12 HOURS 59 MIN 10 SEC'::INTERVAL);
+ plperloutpara_unname_92 
+-------------------------
+ 1 day 12:59:10
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_92('1 12:59:10'::INTERVAL);
+ plperloutpara_unname_92 
+-------------------------
+ 1 day 12:59:10
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_92(NULL);
+ plperloutpara_unname_92 
+-------------------------
+ 
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_92 ( IN  INTERVAL , OUT  INTERVAL );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_93 ( IN  NUMERIC , OUT  NUMERIC ) RETURNS NUMERIC as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_93(pltest.tableNUMERIC.key) AS ID from pltest.tableNUMERIC ORDER BY ID;
+                            id                            
+----------------------------------------------------------
+               0.0000000000000000000000096204987201369818
+                                                      0.5
+                                    1234567890.0987654321
+ 340282366920938463463374607431768211456.0000000000000000
+                                                      NaN
+                                                         
+(6 rows)
+
+create table pltest.tableNUMERIC1 as select pltest.PLPERLoutpara_unname_93(pltest.tableNUMERIC.key) AS ID from pltest.tableNUMERIC DISTRIBUTED randomly;
+SELECT 6
+select * from pltest.tableNUMERIC1 ORDER BY ID;
+                            id                            
+----------------------------------------------------------
+               0.0000000000000000000000096204987201369818
+                                                      0.5
+                                    1234567890.0987654321
+ 340282366920938463463374607431768211456.0000000000000000
+                                                      NaN
+                                                         
+(6 rows)
+
+drop table pltest.tableNUMERIC1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_93(1234567890.0987654321::NUMERIC);
+ plperloutpara_unname_93 
+-------------------------
+   1234567890.0987654321
+(1 row)
+
+select pltest.PLPERLoutpara_unname_93('NAN'::NUMERIC);
+ plperloutpara_unname_93 
+-------------------------
+                     NaN
+(1 row)
+
+select pltest.PLPERLoutpara_unname_93(2::NUMERIC^128 / 3::NUMERIC^129);
+          plperloutpara_unname_93           
+--------------------------------------------
+ 0.0000000000000000000000096204987201369818
+(1 row)
+
+select pltest.PLPERLoutpara_unname_93(2::NUMERIC^128);
+                 plperloutpara_unname_93                  
+----------------------------------------------------------
+ 340282366920938463463374607431768211456.0000000000000000
+(1 row)
+
+select pltest.PLPERLoutpara_unname_93(0.5::NUMERIC);
+ plperloutpara_unname_93 
+-------------------------
+                     0.5
+(1 row)
+
+select pltest.PLPERLoutpara_unname_93(NULL);
+ plperloutpara_unname_93 
+-------------------------
+                        
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_93(1234567890.0987654321::NUMERIC);
+ plperloutpara_unname_93 
+-------------------------
+   1234567890.0987654321
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_93('NAN'::NUMERIC);
+ plperloutpara_unname_93 
+-------------------------
+                     NaN
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_93(2::NUMERIC^128 / 3::NUMERIC^129);
+          plperloutpara_unname_93           
+--------------------------------------------
+ 0.0000000000000000000000096204987201369818
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_93(2::NUMERIC^128);
+                 plperloutpara_unname_93                  
+----------------------------------------------------------
+ 340282366920938463463374607431768211456.0000000000000000
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_93(0.5::NUMERIC);
+ plperloutpara_unname_93 
+-------------------------
+                     0.5
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_93(NULL);
+ plperloutpara_unname_93 
+-------------------------
+                        
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_93 ( IN  NUMERIC , OUT  NUMERIC );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_94 ( IN  INT4 , OUT  INT4 ) RETURNS INT4 as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_94((-2147483648)::INT4);
+ plperloutpara_unname_94 
+-------------------------
+             -2147483648
+(1 row)
+
+select pltest.PLPERLoutpara_unname_94(2147483647::INT4);
+ plperloutpara_unname_94 
+-------------------------
+              2147483647
+(1 row)
+
+select pltest.PLPERLoutpara_unname_94(1234);
+ plperloutpara_unname_94 
+-------------------------
+                    1234
+(1 row)
+
+select pltest.PLPERLoutpara_unname_94(NULL);
+ plperloutpara_unname_94 
+-------------------------
+                        
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_94((-2147483648)::INT4);
+ plperloutpara_unname_94 
+-------------------------
+             -2147483648
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_94(2147483647::INT4);
+ plperloutpara_unname_94 
+-------------------------
+              2147483647
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_94(1234);
+ plperloutpara_unname_94 
+-------------------------
+                    1234
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_94(NULL);
+ plperloutpara_unname_94 
+-------------------------
+                        
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_94 ( IN  INT4 , OUT  INT4 );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_95 ( IN  CHAR(4) , OUT  CHAR(4) ) RETURNS CHAR(4) as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_95(pltest.tableCHAR4.key) AS ID from pltest.tableCHAR4 ORDER BY ID;
+  id  
+------
+ SSSS
+ 
+(2 rows)
+
+create table pltest.tableCHAR41 as select pltest.PLPERLoutpara_unname_95(pltest.tableCHAR4.key) AS ID from pltest.tableCHAR4 DISTRIBUTED randomly;
+SELECT 2
+select * from pltest.tableCHAR41 ORDER BY ID;
+  id  
+------
+ SSSS
+ 
+(2 rows)
+
+drop table pltest.tableCHAR41;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_95('SSSS'::CHAR(4));
+ plperloutpara_unname_95 
+-------------------------
+ SSSS
+(1 row)
+
+select pltest.PLPERLoutpara_unname_95(NULL);
+ plperloutpara_unname_95 
+-------------------------
+ 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_95('SSSS'::CHAR(4));
+ plperloutpara_unname_95 
+-------------------------
+ SSSS
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_95(NULL);
+ plperloutpara_unname_95 
+-------------------------
+ 
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_95 ( IN  CHAR(4) , OUT  CHAR(4) );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_96 ( IN  TEXT , OUT  TEXT ) RETURNS TEXT as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_96(pltest.tableTEXT.key) AS ID from pltest.tableTEXT ORDER BY ID;
+       id        
+-----------------
+ QAZWSXEDCRFVTGB
+ 
+(2 rows)
+
+create table pltest.tableTEXT1 as select pltest.PLPERLoutpara_unname_96(pltest.tableTEXT.key) AS ID from pltest.tableTEXT DISTRIBUTED randomly;
+SELECT 2
+select * from pltest.tableTEXT1 ORDER BY ID;
+       id        
+-----------------
+ QAZWSXEDCRFVTGB
+ 
+(2 rows)
+
+drop table pltest.tableTEXT1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_96('QAZWSXEDCRFVTGB'::TEXT);
+ plperloutpara_unname_96 
+-------------------------
+ QAZWSXEDCRFVTGB
+(1 row)
+
+select pltest.PLPERLoutpara_unname_96(NULL);
+ plperloutpara_unname_96 
+-------------------------
+ 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_96('QAZWSXEDCRFVTGB'::TEXT);
+ plperloutpara_unname_96 
+-------------------------
+ QAZWSXEDCRFVTGB
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_96(NULL);
+ plperloutpara_unname_96 
+-------------------------
+ 
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_96 ( IN  TEXT , OUT  TEXT );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_97 ( IN  INET , OUT  INET ) RETURNS INET as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_97(pltest.tableINET.key) AS ID from pltest.tableINET ORDER BY ID;
+     id      
+-------------
+ 192.168.0.1
+ 
+(2 rows)
+
+create table pltest.tableINET1 as select pltest.PLPERLoutpara_unname_97(pltest.tableINET.key) AS ID from pltest.tableINET DISTRIBUTED randomly;
+SELECT 2
+select * from pltest.tableINET1 ORDER BY ID;
+     id      
+-------------
+ 192.168.0.1
+ 
+(2 rows)
+
+drop table pltest.tableINET1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_97('192.168.0.1'::INET);
+ plperloutpara_unname_97 
+-------------------------
+ 192.168.0.1
+(1 row)
+
+select pltest.PLPERLoutpara_unname_97(NULL);
+ plperloutpara_unname_97 
+-------------------------
+ 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_97('192.168.0.1'::INET);
+ plperloutpara_unname_97 
+-------------------------
+ 192.168.0.1
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_97(NULL);
+ plperloutpara_unname_97 
+-------------------------
+ 
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_97 ( IN  INET , OUT  INET );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_98 ( IN  POLYGON , OUT  POLYGON ) RETURNS POLYGON as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_98('(0,0),(1,1),(2,0)'::POLYGON);
+ plperloutpara_unname_98 
+-------------------------
+ ((0,0),(1,1),(2,0))
+(1 row)
+
+select pltest.PLPERLoutpara_unname_98(NULL);
+ plperloutpara_unname_98 
+-------------------------
+ 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_98('(0,0),(1,1),(2,0)'::POLYGON);
+ plperloutpara_unname_98 
+-------------------------
+ ((0,0),(1,1),(2,0))
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_98(NULL);
+ plperloutpara_unname_98 
+-------------------------
+ 
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_98 ( IN  POLYGON , OUT  POLYGON );
+DROP FUNCTION
+--ERROR:  PL/Perl functions cannot return type cstring
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_99 ( IN  CSTRING , OUT  CSTRING ) RETURNS CSTRING as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+ERROR:  PL/Perl functions cannot return type cstring
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_100 ( IN  LSEG , OUT  LSEG ) RETURNS LSEG as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_100('((1,1),(2,2))'::LSEG);
+ plperloutpara_unname_100 
+--------------------------
+ [(1,1),(2,2)]
+(1 row)
+
+select pltest.PLPERLoutpara_unname_100(NULL);
+ plperloutpara_unname_100 
+--------------------------
+ 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_100('((1,1),(2,2))'::LSEG);
+ plperloutpara_unname_100 
+--------------------------
+ [(1,1),(2,2)]
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_100(NULL);
+ plperloutpara_unname_100 
+--------------------------
+ 
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_100 ( IN  LSEG , OUT  LSEG );
+DROP FUNCTION
+--ERROR:  PL/Perl functions cannot return type anyelement
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_101 ( IN  ANYELEMENT , OUT  ANYELEMENT ) RETURNS ANYELEMENT as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+ERROR:  PL/Perl functions cannot return type anyelement
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_102 ( IN  CIDR , OUT  CIDR ) RETURNS CIDR as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_102(pltest.tableCIDR.key) AS ID from pltest.tableCIDR ORDER BY ID;
+       id       
+----------------
+ 192.168.0.1/32
+ 
+(2 rows)
+
+create table pltest.tableCIDR1 as select pltest.PLPERLoutpara_unname_102(pltest.tableCIDR.key) AS ID from pltest.tableCIDR DISTRIBUTED randomly;
+SELECT 2
+select * from pltest.tableCIDR1 ORDER BY ID;
+       id       
+----------------
+ 192.168.0.1/32
+ 
+(2 rows)
+
+drop table pltest.tableCIDR1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_102('192.168.0.1/32'::CIDR);
+ plperloutpara_unname_102 
+--------------------------
+ 192.168.0.1/32
+(1 row)
+
+select pltest.PLPERLoutpara_unname_102(NULL);
+ plperloutpara_unname_102 
+--------------------------
+ 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_102('192.168.0.1/32'::CIDR);
+ plperloutpara_unname_102 
+--------------------------
+ 192.168.0.1/32
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_102(NULL);
+ plperloutpara_unname_102 
+--------------------------
+ 
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_102 ( IN  CIDR , OUT  CIDR );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_103 ( IN  BYTEA , OUT  BYTEA ) RETURNS BYTEA as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_103(pltest.tableBYTEA.key) AS ID from pltest.tableBYTEA ORDER BY ID;
+  id  
+------
+ \000
+ 
+(2 rows)
+
+create table pltest.tableBYTEA1 as select pltest.PLPERLoutpara_unname_103(pltest.tableBYTEA.key) AS ID from pltest.tableBYTEA DISTRIBUTED randomly;
+SELECT 2
+select * from pltest.tableBYTEA1 ORDER BY ID;
+  id  
+------
+ \000
+ 
+(2 rows)
+
+drop table pltest.tableBYTEA1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_103(E'\\000'::BYTEA);
+ plperloutpara_unname_103 
+--------------------------
+ \000
+(1 row)
+
+select pltest.PLPERLoutpara_unname_103(NULL);
+ plperloutpara_unname_103 
+--------------------------
+ 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_103(E'\\000'::BYTEA);
+ plperloutpara_unname_103 
+--------------------------
+ \000
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_103(NULL);
+ plperloutpara_unname_103 
+--------------------------
+ 
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_103 ( IN  BYTEA , OUT  BYTEA );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_104 ( IN  MONEY , OUT  MONEY ) RETURNS MONEY as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_104(pltest.tableMONEY.key) AS ID from pltest.tableMONEY ORDER BY ID;
+       id        
+-----------------
+ -$21,474,836.48
+       $1,234.00
+  $21,474,836.47
+                
+(4 rows)
+
+create table pltest.tableMONEY1 as select pltest.PLPERLoutpara_unname_104(pltest.tableMONEY.key) AS ID from pltest.tableMONEY DISTRIBUTED randomly;
+SELECT 4
+select * from pltest.tableMONEY1 ORDER BY ID;
+       id        
+-----------------
+ -$21,474,836.48
+       $1,234.00
+  $21,474,836.47
+                
+(4 rows)
+
+drop table pltest.tableMONEY1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_104('$-21474836.48'::MONEY);
+ plperloutpara_unname_104 
+--------------------------
+          -$21,474,836.48
+(1 row)
+
+select pltest.PLPERLoutpara_unname_104('$21474836.47'::MONEY);
+ plperloutpara_unname_104 
+--------------------------
+           $21,474,836.47
+(1 row)
+
+select pltest.PLPERLoutpara_unname_104('$1234'::MONEY);
+ plperloutpara_unname_104 
+--------------------------
+                $1,234.00
+(1 row)
+
+select pltest.PLPERLoutpara_unname_104(NULL);
+ plperloutpara_unname_104 
+--------------------------
+                         
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_104('$-21474836.48'::MONEY);
+ plperloutpara_unname_104 
+--------------------------
+          -$21,474,836.48
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_104('$21474836.47'::MONEY);
+ plperloutpara_unname_104 
+--------------------------
+           $21,474,836.47
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_104('$1234'::MONEY);
+ plperloutpara_unname_104 
+--------------------------
+                $1,234.00
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_104(NULL);
+ plperloutpara_unname_104 
+--------------------------
+                         
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_104 ( IN  MONEY , OUT  MONEY );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_105 ( IN  TIMESTAMP , OUT  TIMESTAMP ) RETURNS TIMESTAMP as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_105(pltest.tableTIMESTAMP.key) AS ID from pltest.tableTIMESTAMP ORDER BY ID;
+           id           
+------------------------
+ 2011-08-12 10:00:52.14
+ 
+(2 rows)
+
+create table pltest.tableTIMESTAMP1 as select pltest.PLPERLoutpara_unname_105(pltest.tableTIMESTAMP.key) AS ID from pltest.tableTIMESTAMP DISTRIBUTED randomly;
+SELECT 2
+select * from pltest.tableTIMESTAMP1 ORDER BY ID;
+           id           
+------------------------
+ 2011-08-12 10:00:52.14
+ 
+(2 rows)
+
+drop table pltest.tableTIMESTAMP1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_105('2011-08-12 10:00:52.14'::TIMESTAMP);
+ plperloutpara_unname_105 
+--------------------------
+ 2011-08-12 10:00:52.14
+(1 row)
+
+select pltest.PLPERLoutpara_unname_105(NULL);
+ plperloutpara_unname_105 
+--------------------------
+ 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_105('2011-08-12 10:00:52.14'::TIMESTAMP);
+ plperloutpara_unname_105 
+--------------------------
+ 2011-08-12 10:00:52.14
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_105(NULL);
+ plperloutpara_unname_105 
+--------------------------
+ 
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_105 ( IN  TIMESTAMP , OUT  TIMESTAMP );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_106 ( IN  BOOLEAN , OUT  BOOLEAN ) RETURNS BOOLEAN as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_106(pltest.tableBOOLEAN.key) AS ID from pltest.tableBOOLEAN ORDER BY ID;
+ id 
+----
+ f
+ t
+ 
+(3 rows)
+
+create table pltest.tableBOOLEAN1 as select pltest.PLPERLoutpara_unname_106(pltest.tableBOOLEAN.key) AS ID from pltest.tableBOOLEAN DISTRIBUTED randomly;
+SELECT 3
+select * from pltest.tableBOOLEAN1 ORDER BY ID;
+ id 
+----
+ f
+ t
+ 
+(3 rows)
+
+drop table pltest.tableBOOLEAN1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_106(FALSE::BOOLEAN);
+ plperloutpara_unname_106 
+--------------------------
+ f
+(1 row)
+
+select pltest.PLPERLoutpara_unname_106(TRUE::BOOLEAN);
+ plperloutpara_unname_106 
+--------------------------
+ t
+(1 row)
+
+select pltest.PLPERLoutpara_unname_106(NULL);
+ plperloutpara_unname_106 
+--------------------------
+ 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_106(FALSE::BOOLEAN);
+ plperloutpara_unname_106 
+--------------------------
+ f
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_106(TRUE::BOOLEAN);
+ plperloutpara_unname_106 
+--------------------------
+ t
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_106(NULL);
+ plperloutpara_unname_106 
+--------------------------
+ 
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_106 ( IN  BOOLEAN , OUT  BOOLEAN );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_107 ( IN  FLOAT8 , OUT  FLOAT8 ) RETURNS FLOAT8 as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_107(pltest.tableFLOAT8.key) AS ID from pltest.tableFLOAT8 ORDER BY ID;
+        id        
+------------------
+        -Infinity
+ 123456789.987654
+         Infinity
+              NaN
+                 
+(5 rows)
+
+create table pltest.tableFLOAT81 as select pltest.PLPERLoutpara_unname_107(pltest.tableFLOAT8.key) AS ID from pltest.tableFLOAT8 DISTRIBUTED randomly;
+SELECT 5
+select * from pltest.tableFLOAT81 ORDER BY ID;
+        id        
+------------------
+        -Infinity
+ 123456789.987654
+         Infinity
+              NaN
+                 
+(5 rows)
+
+drop table pltest.tableFLOAT81;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_107(123456789.98765432::FLOAT8);
+ plperloutpara_unname_107 
+--------------------------
+         123456789.987654
+(1 row)
+
+select pltest.PLPERLoutpara_unname_107('NAN'::FLOAT8);
+ plperloutpara_unname_107 
+--------------------------
+                      NaN
+(1 row)
+
+select pltest.PLPERLoutpara_unname_107('-INFINITY'::FLOAT8);
+ plperloutpara_unname_107 
+--------------------------
+                -Infinity
+(1 row)
+
+select pltest.PLPERLoutpara_unname_107('+INFINITY'::FLOAT8);
+ plperloutpara_unname_107 
+--------------------------
+                 Infinity
+(1 row)
+
+select pltest.PLPERLoutpara_unname_107(NULL);
+ plperloutpara_unname_107 
+--------------------------
+                         
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_107(123456789.98765432::FLOAT8);
+ plperloutpara_unname_107 
+--------------------------
+         123456789.987654
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_107('NAN'::FLOAT8);
+ plperloutpara_unname_107 
+--------------------------
+                      NaN
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_107('-INFINITY'::FLOAT8);
+ plperloutpara_unname_107 
+--------------------------
+                -Infinity
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_107('+INFINITY'::FLOAT8);
+ plperloutpara_unname_107 
+--------------------------
+                 Infinity
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_107(NULL);
+ plperloutpara_unname_107 
+--------------------------
+                         
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_107 ( IN  FLOAT8 , OUT  FLOAT8 );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_108 ( IN  TIME , OUT  TIME ) RETURNS TIME as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_108(pltest.tableTIME.key) AS ID from pltest.tableTIME ORDER BY ID;
+     id      
+-------------
+ 00:00:00
+ 10:00:52.14
+ 
+(3 rows)
+
+create table pltest.tableTIME1 as select pltest.PLPERLoutpara_unname_108(pltest.tableTIME.key) AS ID from pltest.tableTIME DISTRIBUTED randomly;
+SELECT 3
+select * from pltest.tableTIME1 ORDER BY ID;
+     id      
+-------------
+ 00:00:00
+ 10:00:52.14
+ 
+(3 rows)
+
+drop table pltest.tableTIME1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_108('10:00:52.14'::TIME);
+ plperloutpara_unname_108 
+--------------------------
+ 10:00:52.14
+(1 row)
+
+select pltest.PLPERLoutpara_unname_108('ALLBALLS'::TIME);
+ plperloutpara_unname_108 
+--------------------------
+ 00:00:00
+(1 row)
+
+select pltest.PLPERLoutpara_unname_108(NULL);
+ plperloutpara_unname_108 
+--------------------------
+ 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_108('10:00:52.14'::TIME);
+ plperloutpara_unname_108 
+--------------------------
+ 10:00:52.14
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_108('ALLBALLS'::TIME);
+ plperloutpara_unname_108 
+--------------------------
+ 00:00:00
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_108(NULL);
+ plperloutpara_unname_108 
+--------------------------
+ 
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_108 ( IN  TIME , OUT  TIME );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_109 ( IN  CIRCLE , OUT  CIRCLE ) RETURNS CIRCLE as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_109('<(1,1),2>'::CIRCLE);
+ plperloutpara_unname_109 
+--------------------------
+ <(1,1),2>
+(1 row)
+
+select pltest.PLPERLoutpara_unname_109(NULL);
+ plperloutpara_unname_109 
+--------------------------
+ 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_109('<(1,1),2>'::CIRCLE);
+ plperloutpara_unname_109 
+--------------------------
+ <(1,1),2>
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_109(NULL);
+ plperloutpara_unname_109 
+--------------------------
+ 
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_109 ( IN  CIRCLE , OUT  CIRCLE );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_110 ( IN  TIMETZ , OUT  TIMETZ ) RETURNS TIMETZ as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_110(pltest.tableTIMETZ.key) AS ID from pltest.tableTIMETZ ORDER BY ID;
+       id       
+----------------
+ 10:00:52.14-07
+ 
+(2 rows)
+
+create table pltest.tableTIMETZ1 as select pltest.PLPERLoutpara_unname_110(pltest.tableTIMETZ.key) AS ID from pltest.tableTIMETZ DISTRIBUTED randomly;
+SELECT 2
+select * from pltest.tableTIMETZ1 ORDER BY ID;
+       id       
+----------------
+ 10:00:52.14-07
+ 
+(2 rows)
+
+drop table pltest.tableTIMETZ1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_110('2011-08-12 10:00:52.14'::TIMETZ);
+ plperloutpara_unname_110 
+--------------------------
+ 10:00:52.14-07
+(1 row)
+
+select pltest.PLPERLoutpara_unname_110(NULL);
+ plperloutpara_unname_110 
+--------------------------
+ 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_110('2011-08-12 10:00:52.14'::TIMETZ);
+ plperloutpara_unname_110 
+--------------------------
+ 10:00:52.14-07
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_110(NULL);
+ plperloutpara_unname_110 
+--------------------------
+ 
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_110 ( IN  TIMETZ , OUT  TIMETZ );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_111 ( IN  BIT(8) , OUT  BIT(8) ) RETURNS BIT(8) as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_111(pltest.tableBIT8.key) AS ID from pltest.tableBIT8 ORDER BY ID;
+    id    
+----------
+ 11001111
+ 
+(2 rows)
+
+create table pltest.tableBIT81 as select pltest.PLPERLoutpara_unname_111(pltest.tableBIT8.key) AS ID from pltest.tableBIT8 DISTRIBUTED randomly;
+SELECT 2
+select * from pltest.tableBIT81 ORDER BY ID;
+    id    
+----------
+ 11001111
+ 
+(2 rows)
+
+drop table pltest.tableBIT81;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_111(B'11001111'::BIT(8));
+ plperloutpara_unname_111 
+--------------------------
+ 11001111
+(1 row)
+
+select pltest.PLPERLoutpara_unname_111(NULL);
+ plperloutpara_unname_111 
+--------------------------
+ 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_111(B'11001111'::BIT(8));
+ plperloutpara_unname_111 
+--------------------------
+ 11001111
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_111(NULL);
+ plperloutpara_unname_111 
+--------------------------
+ 
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_111 ( IN  BIT(8) , OUT  BIT(8) );
+DROP FUNCTION
+--ERROR:  syntax error at or near "ANY"
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_112 ( IN  ANY , OUT  ANY ) RETURNS ANY as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+ERROR:  syntax error at or near "ANY"
+LINE 1: ...CE function pltest.PLPERLoutpara_unname_112 ( IN  ANY , OUT ...
+                                                             ^
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_113 ( IN  BOOLEAN[] , OUT  BOOLEAN[] ) RETURNS BOOLEAN[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_113(pltest.tableBOOLEANarray.key) AS ID from pltest.tableBOOLEANarray ORDER BY ID;
+     id     
+------------
+ {f,t,NULL}
+(1 row)
+
+create table pltest.tableBOOLEANarray1 as select pltest.PLPERLoutpara_unname_113(pltest.tableBOOLEANarray.key) AS ID from pltest.tableBOOLEANarray DISTRIBUTED randomly;
+SELECT 1
+select * from pltest.tableBOOLEANarray1 ORDER BY ID;
+     id     
+------------
+ {f,t,NULL}
+(1 row)
+
+drop table pltest.tableBOOLEANarray1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_113(array[FALSE::BOOLEAN,TRUE::BOOLEAN,NULL]::BOOLEAN[]);
+ plperloutpara_unname_113 
+--------------------------
+ {f,t,NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_113(array[FALSE::BOOLEAN,TRUE::BOOLEAN,NULL]::BOOLEAN[]);
+ plperloutpara_unname_113 
+--------------------------
+ {f,t,NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_113 ( IN  BOOLEAN[] , OUT  BOOLEAN[] );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_114 ( IN  INTERVAL[] , OUT  INTERVAL[] ) RETURNS INTERVAL[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_114(pltest.tableINTERVALarray.key) AS ID from pltest.tableINTERVALarray ORDER BY ID;
+                    id                    
+------------------------------------------
+ {"1 day 12:59:10","1 day 12:59:10",NULL}
+(1 row)
+
+create table pltest.tableINTERVALarray1 as select pltest.PLPERLoutpara_unname_114(pltest.tableINTERVALarray.key) AS ID from pltest.tableINTERVALarray DISTRIBUTED randomly;
+SELECT 1
+select * from pltest.tableINTERVALarray1 ORDER BY ID;
+                    id                    
+------------------------------------------
+ {"1 day 12:59:10","1 day 12:59:10",NULL}
+(1 row)
+
+drop table pltest.tableINTERVALarray1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_114(array['1 DAY 12 HOURS 59 MIN 10 SEC'::INTERVAL,'1 12:59:10'::INTERVAL,NULL]::INTERVAL[]);
+         plperloutpara_unname_114         
+------------------------------------------
+ {"1 day 12:59:10","1 day 12:59:10",NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_114(array['1 DAY 12 HOURS 59 MIN 10 SEC'::INTERVAL,'1 12:59:10'::INTERVAL,NULL]::INTERVAL[]);
+         plperloutpara_unname_114         
+------------------------------------------
+ {"1 day 12:59:10","1 day 12:59:10",NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_114 ( IN  INTERVAL[] , OUT  INTERVAL[] );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_115 ( IN  BIT(8)[] , OUT  BIT(8)[] ) RETURNS BIT(8)[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_115(pltest.tableBIT8array.key) AS ID from pltest.tableBIT8array ORDER BY ID;
+       id        
+-----------------
+ {11001111,NULL}
+(1 row)
+
+create table pltest.tableBIT8array1 as select pltest.PLPERLoutpara_unname_115(pltest.tableBIT8array.key) AS ID from pltest.tableBIT8array DISTRIBUTED randomly;
+SELECT 1
+select * from pltest.tableBIT8array1 ORDER BY ID;
+       id        
+-----------------
+ {11001111,NULL}
+(1 row)
+
+drop table pltest.tableBIT8array1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_115(array[B'11001111'::BIT(8),NULL]::BIT(8)[]);
+ plperloutpara_unname_115 
+--------------------------
+ {11001111,NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_115(array[B'11001111'::BIT(8),NULL]::BIT(8)[]);
+ plperloutpara_unname_115 
+--------------------------
+ {11001111,NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_115 ( IN  BIT(8)[] , OUT  BIT(8)[] );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_116 ( IN  TIMETZ[] , OUT  TIMETZ[] ) RETURNS TIMETZ[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_116(pltest.tableTIMETZarray.key) AS ID from pltest.tableTIMETZarray ORDER BY ID;
+          id           
+-----------------------
+ {10:00:52.14-07,NULL}
+(1 row)
+
+create table pltest.tableTIMETZarray1 as select pltest.PLPERLoutpara_unname_116(pltest.tableTIMETZarray.key) AS ID from pltest.tableTIMETZarray DISTRIBUTED randomly;
+SELECT 1
+select * from pltest.tableTIMETZarray1 ORDER BY ID;
+          id           
+-----------------------
+ {10:00:52.14-07,NULL}
+(1 row)
+
+drop table pltest.tableTIMETZarray1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_116(array['2011-08-12 10:00:52.14'::TIMETZ,NULL]::TIMETZ[]);
+ plperloutpara_unname_116 
+--------------------------
+ {10:00:52.14-07,NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_116(array['2011-08-12 10:00:52.14'::TIMETZ,NULL]::TIMETZ[]);
+ plperloutpara_unname_116 
+--------------------------
+ {10:00:52.14-07,NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_116 ( IN  TIMETZ[] , OUT  TIMETZ[] );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_117 ( IN  CIRCLE[] , OUT  CIRCLE[] ) RETURNS CIRCLE[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_117(array['<(1,1),2>'::CIRCLE,NULL]::CIRCLE[]);
+ plperloutpara_unname_117 
+--------------------------
+ {"<(1,1),2>",NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_117(array['<(1,1),2>'::CIRCLE,NULL]::CIRCLE[]);
+ plperloutpara_unname_117 
+--------------------------
+ {"<(1,1),2>",NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_117 ( IN  CIRCLE[] , OUT  CIRCLE[] );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_118 ( IN  BYTEA[] , OUT  BYTEA[] ) RETURNS BYTEA[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_118(pltest.tableBYTEAarray.key) AS ID from pltest.tableBYTEAarray ORDER BY ID;
+       id       
+----------------
+ {"\\000",NULL}
+(1 row)
+
+create table pltest.tableBYTEAarray1 as select pltest.PLPERLoutpara_unname_118(pltest.tableBYTEAarray.key) AS ID from pltest.tableBYTEAarray DISTRIBUTED randomly;
+SELECT 1
+select * from pltest.tableBYTEAarray1 ORDER BY ID;
+       id       
+----------------
+ {"\\000",NULL}
+(1 row)
+
+drop table pltest.tableBYTEAarray1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_118(array[E'\\000'::BYTEA,NULL]::BYTEA[]);
+ plperloutpara_unname_118 
+--------------------------
+ {"\\000",NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_118(array[E'\\000'::BYTEA,NULL]::BYTEA[]);
+ plperloutpara_unname_118 
+--------------------------
+ {"\\000",NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_118 ( IN  BYTEA[] , OUT  BYTEA[] );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_119 ( IN  TIME[] , OUT  TIME[] ) RETURNS TIME[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_119(pltest.tableTIMEarray.key) AS ID from pltest.tableTIMEarray ORDER BY ID;
+             id              
+-----------------------------
+ {10:00:52.14,00:00:00,NULL}
+(1 row)
+
+create table pltest.tableTIMEarray1 as select pltest.PLPERLoutpara_unname_119(pltest.tableTIMEarray.key) AS ID from pltest.tableTIMEarray DISTRIBUTED randomly;
+SELECT 1
+select * from pltest.tableTIMEarray1 ORDER BY ID;
+             id              
+-----------------------------
+ {10:00:52.14,00:00:00,NULL}
+(1 row)
+
+drop table pltest.tableTIMEarray1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_119(array['10:00:52.14'::TIME,'ALLBALLS'::TIME,NULL]::TIME[]);
+  plperloutpara_unname_119   
+-----------------------------
+ {10:00:52.14,00:00:00,NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_119(array['10:00:52.14'::TIME,'ALLBALLS'::TIME,NULL]::TIME[]);
+  plperloutpara_unname_119   
+-----------------------------
+ {10:00:52.14,00:00:00,NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_119 ( IN  TIME[] , OUT  TIME[] );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_120 ( IN  REAL[] , OUT  REAL[] ) RETURNS REAL[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_120(pltest.tableREALarray.key) AS ID from pltest.tableREALarray ORDER BY ID;
+                  id                  
+--------------------------------------
+ {39.333,NaN,-Infinity,Infinity,NULL}
+(1 row)
+
+create table pltest.tableREALarray1 as select pltest.PLPERLoutpara_unname_120(pltest.tableREALarray.key) AS ID from pltest.tableREALarray DISTRIBUTED randomly;
+SELECT 1
+select * from pltest.tableREALarray1 ORDER BY ID;
+                  id                  
+--------------------------------------
+ {39.333,NaN,-Infinity,Infinity,NULL}
+(1 row)
+
+drop table pltest.tableREALarray1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_120(array[39.333::REAL,'NAN'::REAL,'-INFINITY'::REAL,'+INFINITY'::REAL,NULL]::REAL[]);
+       plperloutpara_unname_120       
+--------------------------------------
+ {39.333,NaN,-Infinity,Infinity,NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_120(array[39.333::REAL,'NAN'::REAL,'-INFINITY'::REAL,'+INFINITY'::REAL,NULL]::REAL[]);
+       plperloutpara_unname_120       
+--------------------------------------
+ {39.333,NaN,-Infinity,Infinity,NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_120 ( IN  REAL[] , OUT  REAL[] );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_122 ( IN  MONEY[] , OUT  MONEY[] ) RETURNS MONEY[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_122(pltest.tableMONEYarray.key) AS ID from pltest.tableMONEYarray ORDER BY ID;
+                          id                           
+-------------------------------------------------------
+ {"-$21,474,836.48","$21,474,836.47","$1,234.00",NULL}
+(1 row)
+
+create table pltest.tableMONEYarray1 as select pltest.PLPERLoutpara_unname_122(pltest.tableMONEYarray.key) AS ID from pltest.tableMONEYarray DISTRIBUTED randomly;
+SELECT 1
+select * from pltest.tableMONEYarray1 ORDER BY ID;
+                          id                           
+-------------------------------------------------------
+ {"-$21,474,836.48","$21,474,836.47","$1,234.00",NULL}
+(1 row)
+
+drop table pltest.tableMONEYarray1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_122(array['$-21474836.48'::MONEY,'$21474836.47'::MONEY,'$1234'::MONEY,NULL]::MONEY[]);
+               plperloutpara_unname_122                
+-------------------------------------------------------
+ {"-$21,474,836.48","$21,474,836.47","$1,234.00",NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_122(array['$-21474836.48'::MONEY,'$21474836.47'::MONEY,'$1234'::MONEY,NULL]::MONEY[]);
+               plperloutpara_unname_122                
+-------------------------------------------------------
+ {"-$21,474,836.48","$21,474,836.47","$1,234.00",NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_122 ( IN  MONEY[] , OUT  MONEY[] );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_123 ( IN  POINT[] , OUT  POINT[] ) RETURNS POINT[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_123(array['(1,2)'::POINT,NULL]::POINT[]);
+ plperloutpara_unname_123 
+--------------------------
+ {"(1,2)",NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_123(array['(1,2)'::POINT,NULL]::POINT[]);
+ plperloutpara_unname_123 
+--------------------------
+ {"(1,2)",NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_123 ( IN  POINT[] , OUT  POINT[] );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_124 ( IN  CHAR[] , OUT  CHAR[] ) RETURNS CHAR[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_124(pltest.tableCHARarray.key) AS ID from pltest.tableCHARarray ORDER BY ID;
+    id    
+----------
+ {B,NULL}
+(1 row)
+
+create table pltest.tableCHARarray1 as select pltest.PLPERLoutpara_unname_124(pltest.tableCHARarray.key) AS ID from pltest.tableCHARarray DISTRIBUTED randomly;
+SELECT 1
+select * from pltest.tableCHARarray1 ORDER BY ID;
+    id    
+----------
+ {B,NULL}
+(1 row)
+
+drop table pltest.tableCHARarray1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_124(array['B'::CHAR,NULL::CHAR]::CHAR[]);
+ plperloutpara_unname_124 
+--------------------------
+ {B,NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_124(array['B'::CHAR,NULL::CHAR]::CHAR[]);
+ plperloutpara_unname_124 
+--------------------------
+ {B,NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_124 ( IN  CHAR[] , OUT  CHAR[] );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_125 ( IN  MACADDR[] , OUT  MACADDR[] ) RETURNS MACADDR[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_125(pltest.tableMACADDRarray.key) AS ID from pltest.tableMACADDRarray ORDER BY ID;
+            id            
+--------------------------
+ {12:34:56:78:90:ab,NULL}
+(1 row)
+
+create table pltest.tableMACADDRarray1 as select pltest.PLPERLoutpara_unname_125(pltest.tableMACADDRarray.key) AS ID from pltest.tableMACADDRarray DISTRIBUTED randomly;
+SELECT 1
+select * from pltest.tableMACADDRarray1 ORDER BY ID;
+            id            
+--------------------------
+ {12:34:56:78:90:ab,NULL}
+(1 row)
+
+drop table pltest.tableMACADDRarray1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_125(array['12:34:56:78:90:AB'::MACADDR,NULL]::MACADDR[]);
+ plperloutpara_unname_125 
+--------------------------
+ {12:34:56:78:90:ab,NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_125(array['12:34:56:78:90:AB'::MACADDR,NULL]::MACADDR[]);
+ plperloutpara_unname_125 
+--------------------------
+ {12:34:56:78:90:ab,NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_125 ( IN  MACADDR[] , OUT  MACADDR[] );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_126 ( IN  FLOAT8[] , OUT  FLOAT8[] ) RETURNS FLOAT8[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_126(pltest.tableFLOAT8array.key) AS ID from pltest.tableFLOAT8array ORDER BY ID;
+                       id                       
+------------------------------------------------
+ {123456789.987654,NaN,-Infinity,Infinity,NULL}
+(1 row)
+
+create table pltest.tableFLOAT8array1 as select pltest.PLPERLoutpara_unname_126(pltest.tableFLOAT8array.key) AS ID from pltest.tableFLOAT8array DISTRIBUTED randomly;
+SELECT 1
+select * from pltest.tableFLOAT8array1 ORDER BY ID;
+                       id                       
+------------------------------------------------
+ {123456789.987654,NaN,-Infinity,Infinity,NULL}
+(1 row)
+
+drop table pltest.tableFLOAT8array1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_126(array[123456789.98765432::FLOAT8,'NAN'::FLOAT8,'-INFINITY'::FLOAT8,'+INFINITY'::FLOAT8,NULL]::FLOAT8[]);
+            plperloutpara_unname_126            
+------------------------------------------------
+ {123456789.987654,NaN,-Infinity,Infinity,NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_126(array[123456789.98765432::FLOAT8,'NAN'::FLOAT8,'-INFINITY'::FLOAT8,'+INFINITY'::FLOAT8,NULL]::FLOAT8[]);
+            plperloutpara_unname_126            
+------------------------------------------------
+ {123456789.987654,NaN,-Infinity,Infinity,NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_126 ( IN  FLOAT8[] , OUT  FLOAT8[] );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_127 ( IN  LSEG[] , OUT  LSEG[] ) RETURNS LSEG[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_127(array['((1,1),(2,2))'::LSEG,NULL]::LSEG[]);
+ plperloutpara_unname_127 
+--------------------------
+ {"[(1,1),(2,2)]",NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_127(array['((1,1),(2,2))'::LSEG,NULL]::LSEG[]);
+ plperloutpara_unname_127 
+--------------------------
+ {"[(1,1),(2,2)]",NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_127 ( IN  LSEG[] , OUT  LSEG[] );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_128 ( IN  DATE[] , OUT  DATE[] ) RETURNS DATE[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_128(pltest.tableDATEarray.key) AS ID from pltest.tableDATEarray ORDER BY ID;
+              id              
+------------------------------
+ {2011-08-12,1970-01-01,NULL}
+(1 row)
+
+create table pltest.tableDATEarray1 as select pltest.PLPERLoutpara_unname_128(pltest.tableDATEarray.key) AS ID from pltest.tableDATEarray DISTRIBUTED randomly;
+SELECT 1
+select * from pltest.tableDATEarray1 ORDER BY ID;
+              id              
+------------------------------
+ {2011-08-12,1970-01-01,NULL}
+(1 row)
+
+drop table pltest.tableDATEarray1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_128(array['2011-08-12'::DATE,'EPOCH'::DATE,NULL]::DATE[]);
+   plperloutpara_unname_128   
+------------------------------
+ {2011-08-12,1970-01-01,NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_128(array['2011-08-12'::DATE,'EPOCH'::DATE,NULL]::DATE[]);
+   plperloutpara_unname_128   
+------------------------------
+ {2011-08-12,1970-01-01,NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_128 ( IN  DATE[] , OUT  DATE[] );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_129 ( IN  BIGINT[] , OUT  BIGINT[] ) RETURNS BIGINT[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_129(pltest.tableBIGINTarray.key) AS ID from pltest.tableBIGINTarray ORDER BY ID;
+                            id                             
+-----------------------------------------------------------
+ {-9223372036854775808,9223372036854775807,123456789,NULL}
+(1 row)
+
+create table pltest.tableBIGINTarray1 as select pltest.PLPERLoutpara_unname_129(pltest.tableBIGINTarray.key) AS ID from pltest.tableBIGINTarray DISTRIBUTED randomly;
+SELECT 1
+select * from pltest.tableBIGINTarray1 ORDER BY ID;
+                            id                             
+-----------------------------------------------------------
+ {-9223372036854775808,9223372036854775807,123456789,NULL}
+(1 row)
+
+drop table pltest.tableBIGINTarray1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_129(array[(-9223372036854775808)::BIGINT,9223372036854775807::BIGINT,123456789::BIGINT,NULL]::BIGINT[]);
+                 plperloutpara_unname_129                  
+-----------------------------------------------------------
+ {-9223372036854775808,9223372036854775807,123456789,NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_129(array[(-9223372036854775808)::BIGINT,9223372036854775807::BIGINT,123456789::BIGINT,NULL]::BIGINT[]);
+                 plperloutpara_unname_129                  
+-----------------------------------------------------------
+ {-9223372036854775808,9223372036854775807,123456789,NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_129 ( IN  BIGINT[] , OUT  BIGINT[] );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_131 ( IN  PATH[] , OUT  PATH[] ) RETURNS PATH[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_131(array['(1,1),(2,2)'::PATH,NULL]::PATH[]);
+ plperloutpara_unname_131 
+--------------------------
+ {"((1,1),(2,2))",NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_131(array['(1,1),(2,2)'::PATH,NULL]::PATH[]);
+ plperloutpara_unname_131 
+--------------------------
+ {"((1,1),(2,2))",NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_131 ( IN  PATH[] , OUT  PATH[] );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_132 ( IN  POLYGON[] , OUT  POLYGON[] ) RETURNS POLYGON[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_132(array['(0,0),(1,1),(2,0)'::POLYGON,NULL]::POLYGON[]);
+   plperloutpara_unname_132   
+------------------------------
+ {"((0,0),(1,1),(2,0))",NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_132(array['(0,0),(1,1),(2,0)'::POLYGON,NULL]::POLYGON[]);
+   plperloutpara_unname_132   
+------------------------------
+ {"((0,0),(1,1),(2,0))",NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_132 ( IN  POLYGON[] , OUT  POLYGON[] );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_133 ( IN  INET[] , OUT  INET[] ) RETURNS INET[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_133(pltest.tableINETarray.key) AS ID from pltest.tableINETarray ORDER BY ID;
+         id         
+--------------------
+ {192.168.0.1,NULL}
+(1 row)
+
+create table pltest.tableINETarray1 as select pltest.PLPERLoutpara_unname_133(pltest.tableINETarray.key) AS ID from pltest.tableINETarray DISTRIBUTED randomly;
+SELECT 1
+select * from pltest.tableINETarray1 ORDER BY ID;
+         id         
+--------------------
+ {192.168.0.1,NULL}
+(1 row)
+
+drop table pltest.tableINETarray1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_133(array['192.168.0.1'::INET,NULL]::INET[]);
+ plperloutpara_unname_133 
+--------------------------
+ {192.168.0.1,NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_133(array['192.168.0.1'::INET,NULL]::INET[]);
+ plperloutpara_unname_133 
+--------------------------
+ {192.168.0.1,NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_133 ( IN  INET[] , OUT  INET[] );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_135 ( IN  TIMESTAMPTZ[] , OUT  TIMESTAMPTZ[] ) RETURNS TIMESTAMPTZ[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_135(pltest.tableTIMESTAMPTZarray.key) AS ID from pltest.tableTIMESTAMPTZarray ORDER BY ID;
+                 id                 
+------------------------------------
+ {"2011-08-12 10:00:52.14-07",NULL}
+(1 row)
+
+create table pltest.tableTIMESTAMPTZarray1 as select pltest.PLPERLoutpara_unname_135(pltest.tableTIMESTAMPTZarray.key) AS ID from pltest.tableTIMESTAMPTZarray DISTRIBUTED randomly;
+SELECT 1
+select * from pltest.tableTIMESTAMPTZarray1 ORDER BY ID;
+                 id                 
+------------------------------------
+ {"2011-08-12 10:00:52.14-07",NULL}
+(1 row)
+
+drop table pltest.tableTIMESTAMPTZarray1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_135(array['2011-08-12 10:00:52.14'::TIMESTAMPTZ,NULL]::TIMESTAMPTZ[]);
+      plperloutpara_unname_135      
+------------------------------------
+ {"2011-08-12 10:00:52.14-07",NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_135(array['2011-08-12 10:00:52.14'::TIMESTAMPTZ,NULL]::TIMESTAMPTZ[]);
+      plperloutpara_unname_135      
+------------------------------------
+ {"2011-08-12 10:00:52.14-07",NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_135 ( IN  TIMESTAMPTZ[] , OUT  TIMESTAMPTZ[] );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_136 ( IN  CHAR(4)[] , OUT  CHAR(4)[] ) RETURNS CHAR(4)[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_136(pltest.tableCHAR4array.key) AS ID from pltest.tableCHAR4array ORDER BY ID;
+     id      
+-------------
+ {SSSS,NULL}
+(1 row)
+
+create table pltest.tableCHAR4array1 as select pltest.PLPERLoutpara_unname_136(pltest.tableCHAR4array.key) AS ID from pltest.tableCHAR4array DISTRIBUTED randomly;
+SELECT 1
+select * from pltest.tableCHAR4array1 ORDER BY ID;
+     id      
+-------------
+ {SSSS,NULL}
+(1 row)
+
+drop table pltest.tableCHAR4array1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_136(array['SSSS'::CHAR(4),NULL]::CHAR(4)[]);
+ plperloutpara_unname_136 
+--------------------------
+ {SSSS,NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_136(array['SSSS'::CHAR(4),NULL]::CHAR(4)[]);
+ plperloutpara_unname_136 
+--------------------------
+ {SSSS,NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_136 ( IN  CHAR(4)[] , OUT  CHAR(4)[] );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_137 ( IN  VARCHAR(16)[] , OUT  VARCHAR(16)[] ) RETURNS VARCHAR(16)[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_137(pltest.tableVARCHAR16array.key) AS ID from pltest.tableVARCHAR16array ORDER BY ID;
+        id        
+------------------
+ {ASDFGHJKL,NULL}
+(1 row)
+
+create table pltest.tableVARCHAR16array1 as select pltest.PLPERLoutpara_unname_137(pltest.tableVARCHAR16array.key) AS ID from pltest.tableVARCHAR16array DISTRIBUTED randomly;
+SELECT 1
+select * from pltest.tableVARCHAR16array1 ORDER BY ID;
+        id        
+------------------
+ {ASDFGHJKL,NULL}
+(1 row)
+
+drop table pltest.tableVARCHAR16array1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_137(array['ASDFGHJKL'::VARCHAR(16),NULL]::VARCHAR(16)[]);
+ plperloutpara_unname_137 
+--------------------------
+ {ASDFGHJKL,NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_137(array['ASDFGHJKL'::VARCHAR(16),NULL]::VARCHAR(16)[]);
+ plperloutpara_unname_137 
+--------------------------
+ {ASDFGHJKL,NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_137 ( IN  VARCHAR(16)[] , OUT  VARCHAR(16)[] );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_138 ( IN  INT4[] , OUT  INT4[] ) RETURNS INT4[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_138(pltest.tableINT4array.key) AS ID from pltest.tableINT4array ORDER BY ID;
+                 id                 
+------------------------------------
+ {-2147483648,2147483647,1234,NULL}
+(1 row)
+
+create table pltest.tableINT4array1 as select pltest.PLPERLoutpara_unname_138(pltest.tableINT4array.key) AS ID from pltest.tableINT4array DISTRIBUTED randomly;
+SELECT 1
+select * from pltest.tableINT4array1 ORDER BY ID;
+                 id                 
+------------------------------------
+ {-2147483648,2147483647,1234,NULL}
+(1 row)
+
+drop table pltest.tableINT4array1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_138(array[(-2147483648)::INT4,2147483647::INT4,1234,NULL]::INT4[]);
+      plperloutpara_unname_138      
+------------------------------------
+ {-2147483648,2147483647,1234,NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_138(array[(-2147483648)::INT4,2147483647::INT4,1234,NULL]::INT4[]);
+      plperloutpara_unname_138      
+------------------------------------
+ {-2147483648,2147483647,1234,NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_138 ( IN  INT4[] , OUT  INT4[] );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_139 ( IN  CIDR[] , OUT  CIDR[] ) RETURNS CIDR[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_139(pltest.tableCIDRarray.key) AS ID from pltest.tableCIDRarray ORDER BY ID;
+          id           
+-----------------------
+ {192.168.0.1/32,NULL}
+(1 row)
+
+create table pltest.tableCIDRarray1 as select pltest.PLPERLoutpara_unname_139(pltest.tableCIDRarray.key) AS ID from pltest.tableCIDRarray DISTRIBUTED randomly;
+SELECT 1
+select * from pltest.tableCIDRarray1 ORDER BY ID;
+          id           
+-----------------------
+ {192.168.0.1/32,NULL}
+(1 row)
+
+drop table pltest.tableCIDRarray1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_139(array['192.168.0.1/32'::CIDR,NULL]::CIDR[]);
+ plperloutpara_unname_139 
+--------------------------
+ {192.168.0.1/32,NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_139(array['192.168.0.1/32'::CIDR,NULL]::CIDR[]);
+ plperloutpara_unname_139 
+--------------------------
+ {192.168.0.1/32,NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_139 ( IN  CIDR[] , OUT  CIDR[] );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_140 ( IN  "char"[] , OUT  "char"[] ) RETURNS "char"[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_140(pltest.tableQUTOCHARarray.key) AS ID from pltest.tableQUTOCHARarray ORDER BY ID;
+    id    
+----------
+ {a,NULL}
+(1 row)
+
+create table pltest.tableQUTOCHARarray1 as select pltest.PLPERLoutpara_unname_140(pltest.tableQUTOCHARarray.key) AS ID from pltest.tableQUTOCHARarray DISTRIBUTED randomly;
+SELECT 1
+select * from pltest.tableQUTOCHARarray1 ORDER BY ID;
+    id    
+----------
+ {a,NULL}
+(1 row)
+
+drop table pltest.tableQUTOCHARarray1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_140(array['a'::"char",null::"char"]::"char"[]);
+ plperloutpara_unname_140 
+--------------------------
+ {a,NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_140(array['a'::"char",null::"char"]::"char"[]);
+ plperloutpara_unname_140 
+--------------------------
+ {a,NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_140 ( IN  "char"[] , OUT  "char"[] );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_141 ( IN  TIMESTAMP[] , OUT  TIMESTAMP[] ) RETURNS TIMESTAMP[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_141(pltest.tableTIMESTAMParray.key) AS ID from pltest.tableTIMESTAMParray ORDER BY ID;
+               id                
+---------------------------------
+ {"2011-08-12 10:00:52.14",NULL}
+(1 row)
+
+create table pltest.tableTIMESTAMParray1 as select pltest.PLPERLoutpara_unname_141(pltest.tableTIMESTAMParray.key) AS ID from pltest.tableTIMESTAMParray DISTRIBUTED randomly;
+SELECT 1
+select * from pltest.tableTIMESTAMParray1 ORDER BY ID;
+               id                
+---------------------------------
+ {"2011-08-12 10:00:52.14",NULL}
+(1 row)
+
+drop table pltest.tableTIMESTAMParray1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_141(array['2011-08-12 10:00:52.14'::TIMESTAMP,NULL]::TIMESTAMP[]);
+    plperloutpara_unname_141     
+---------------------------------
+ {"2011-08-12 10:00:52.14",NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_141(array['2011-08-12 10:00:52.14'::TIMESTAMP,NULL]::TIMESTAMP[]);
+    plperloutpara_unname_141     
+---------------------------------
+ {"2011-08-12 10:00:52.14",NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_141 ( IN  TIMESTAMP[] , OUT  TIMESTAMP[] );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_142 ( IN  BOX[] , OUT  BOX[] ) RETURNS BOX[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_142(array['((1,2),(3,4))'::BOX,NULL]::BOX[]);
+ plperloutpara_unname_142 
+--------------------------
+ {(3,4),(1,2);NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_142(array['((1,2),(3,4))'::BOX,NULL]::BOX[]);
+ plperloutpara_unname_142 
+--------------------------
+ {(3,4),(1,2);NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_142 ( IN  BOX[] , OUT  BOX[] );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_143 ( IN  TEXT[] , OUT  TEXT[] ) RETURNS TEXT[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_143(pltest.tableTEXTarray.key) AS ID from pltest.tableTEXTarray ORDER BY ID;
+           id           
+------------------------
+ {QAZWSXEDCRFVTGB,NULL}
+(1 row)
+
+create table pltest.tableTEXTarray1 as select pltest.PLPERLoutpara_unname_143(pltest.tableTEXTarray.key) AS ID from pltest.tableTEXTarray DISTRIBUTED randomly;
+SELECT 1
+select * from pltest.tableTEXTarray1 ORDER BY ID;
+           id           
+------------------------
+ {QAZWSXEDCRFVTGB,NULL}
+(1 row)
+
+drop table pltest.tableTEXTarray1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_143(array['QAZWSXEDCRFVTGB'::TEXT,NULL]::TEXT[]);
+ plperloutpara_unname_143 
+--------------------------
+ {QAZWSXEDCRFVTGB,NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_143(array['QAZWSXEDCRFVTGB'::TEXT,NULL]::TEXT[]);
+ plperloutpara_unname_143 
+--------------------------
+ {QAZWSXEDCRFVTGB,NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_143 ( IN  TEXT[] , OUT  TEXT[] );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_144 ( IN  BIT VARYING(10)[] , OUT  BIT VARYING(10)[] ) RETURNS BIT VARYING(10)[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_144(pltest.tableBITVARYING10array.key) AS ID from pltest.tableBITVARYING10array ORDER BY ID;
+       id        
+-----------------
+ {11001111,NULL}
+(1 row)
+
+create table pltest.tableBITVARYING10array1 as select pltest.PLPERLoutpara_unname_144(pltest.tableBITVARYING10array.key) AS ID from pltest.tableBITVARYING10array DISTRIBUTED randomly;
+SELECT 1
+select * from pltest.tableBITVARYING10array1 ORDER BY ID;
+       id        
+-----------------
+ {11001111,NULL}
+(1 row)
+
+drop table pltest.tableBITVARYING10array1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_144(array[B'11001111'::BIT VARYING(10),NULL]::BIT VARYING(10)[]);
+ plperloutpara_unname_144 
+--------------------------
+ {11001111,NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_144(array[B'11001111'::BIT VARYING(10),NULL]::BIT VARYING(10)[]);
+ plperloutpara_unname_144 
+--------------------------
+ {11001111,NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_144 ( IN  BIT VARYING(10)[] , OUT  BIT VARYING(10)[] );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_145 ( IN  NUMERIC[] , OUT  NUMERIC[] ) RETURNS NUMERIC[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_145(pltest.tableNUMERICarray.key) AS ID from pltest.tableNUMERICarray ORDER BY ID;
+                                                                    id                                                                    
+------------------------------------------------------------------------------------------------------------------------------------------
+ {1234567890.0987654321,NaN,0.0000000000000000000000096204987201369818,340282366920938463463374607431768211456.0000000000000000,0.5,NULL}
+(1 row)
+
+create table pltest.tableNUMERICarray1 as select pltest.PLPERLoutpara_unname_145(pltest.tableNUMERICarray.key) AS ID from pltest.tableNUMERICarray DISTRIBUTED randomly;
+SELECT 1
+select * from pltest.tableNUMERICarray1 ORDER BY ID;
+                                                                    id                                                                    
+------------------------------------------------------------------------------------------------------------------------------------------
+ {1234567890.0987654321,NaN,0.0000000000000000000000096204987201369818,340282366920938463463374607431768211456.0000000000000000,0.5,NULL}
+(1 row)
+
+drop table pltest.tableNUMERICarray1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_145(array[1234567890.0987654321::NUMERIC,'NAN'::NUMERIC,2::NUMERIC^128 / 3::NUMERIC^129,2::NUMERIC^128,0.5::NUMERIC,NULL]::NUMERIC[]);
+                                                         plperloutpara_unname_145                                                         
+------------------------------------------------------------------------------------------------------------------------------------------
+ {1234567890.0987654321,NaN,0.0000000000000000000000096204987201369818,340282366920938463463374607431768211456.0000000000000000,0.5,NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_145(array[1234567890.0987654321::NUMERIC,'NAN'::NUMERIC,2::NUMERIC^128 / 3::NUMERIC^129,2::NUMERIC^128,0.5::NUMERIC,NULL]::NUMERIC[]);
+                                                         plperloutpara_unname_145                                                         
+------------------------------------------------------------------------------------------------------------------------------------------
+ {1234567890.0987654321,NaN,0.0000000000000000000000096204987201369818,340282366920938463463374607431768211456.0000000000000000,0.5,NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_145 ( IN  NUMERIC[] , OUT  NUMERIC[] );
+DROP FUNCTION
+--ERROR:  syntax error at or near "ANY"
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_146 ( IN  ANY[] , OUT  ANY[] ) RETURNS ANY[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+ERROR:  syntax error at or near "ANY"
+LINE 1: ...CE function pltest.PLPERLoutpara_unname_146 ( IN  ANY[] , OU...
+                                                             ^
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_147 ( IN  SMALLINT[] , OUT  SMALLINT[] ) RETURNS SMALLINT[] as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_147(pltest.tableSMALLINTarray.key) AS ID from pltest.tableSMALLINTarray ORDER BY ID;
+            id            
+--------------------------
+ {-32768,32767,1234,NULL}
+(1 row)
+
+create table pltest.tableSMALLINTarray1 as select pltest.PLPERLoutpara_unname_147(pltest.tableSMALLINTarray.key) AS ID from pltest.tableSMALLINTarray DISTRIBUTED randomly;
+SELECT 1
+select * from pltest.tableSMALLINTarray1 ORDER BY ID;
+            id            
+--------------------------
+ {-32768,32767,1234,NULL}
+(1 row)
+
+drop table pltest.tableSMALLINTarray1;
+DROP TABLE
+select pltest.PLPERLoutpara_unname_147(array[(-32768)::SMALLINT,32767::SMALLINT,1234::SMALLINT,NULL]::SMALLINT[]);
+ plperloutpara_unname_147 
+--------------------------
+ {-32768,32767,1234,NULL}
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_147(array[(-32768)::SMALLINT,32767::SMALLINT,1234::SMALLINT,NULL]::SMALLINT[]);
+ plperloutpara_unname_147 
+--------------------------
+ {-32768,32767,1234,NULL}
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_147 ( IN  SMALLINT[] , OUT  SMALLINT[] );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_148 ( IN  pltest.COMPOSITE_INTERNET , OUT  pltest.COMPOSITE_INTERNET ) RETURNS pltest.COMPOSITE_INTERNET as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_148(((-32768)::SMALLINT, '192.168.0.1'::INET, '192.168.0.1/32'::CIDR, '12:34:56:78:90:AB'::MACADDR)::pltest.COMPOSITE_INTERNET);
+               plperloutpara_unname_148                
+-------------------------------------------------------
+ (-32768,192.168.0.1,192.168.0.1/32,12:34:56:78:90:ab)
+(1 row)
+
+select pltest.PLPERLoutpara_unname_148((32767::SMALLINT, NULL, NULL, NULL)::pltest.COMPOSITE_INTERNET);
+ plperloutpara_unname_148 
+--------------------------
+ (32767,,,)
+(1 row)
+
+select pltest.PLPERLoutpara_unname_148((1234::SMALLINT, '192.168.0.1'::INET, '192.168.0.1/32'::CIDR, '12:34:56:78:90:AB'::MACADDR)::pltest.COMPOSITE_INTERNET);
+              plperloutpara_unname_148               
+-----------------------------------------------------
+ (1234,192.168.0.1,192.168.0.1/32,12:34:56:78:90:ab)
+(1 row)
+
+select pltest.PLPERLoutpara_unname_148((NULL, NULL, NULL, NULL)::pltest.COMPOSITE_INTERNET);
+ plperloutpara_unname_148 
+--------------------------
+ (,,,)
+(1 row)
+
+select (pltest.PLPERLoutpara_unname_148(((-32768)::SMALLINT, '192.168.0.1'::INET, '192.168.0.1/32'::CIDR, '12:34:56:78:90:AB'::MACADDR)::pltest.COMPOSITE_INTERNET)).*;
+  id1   |     id2     |      id3       |        id4        
+--------+-------------+----------------+-------------------
+ -32768 | 192.168.0.1 | 192.168.0.1/32 | 12:34:56:78:90:ab
+(1 row)
+
+select (pltest.PLPERLoutpara_unname_148((32767::SMALLINT, NULL, NULL, NULL)::pltest.COMPOSITE_INTERNET)).*;
+  id1  | id2 | id3 | id4 
+-------+-----+-----+-----
+ 32767 |     |     | 
+(1 row)
+
+select (pltest.PLPERLoutpara_unname_148((1234::SMALLINT, '192.168.0.1'::INET, '192.168.0.1/32'::CIDR, '12:34:56:78:90:AB'::MACADDR)::pltest.COMPOSITE_INTERNET)).*;
+ id1  |     id2     |      id3       |        id4        
+------+-------------+----------------+-------------------
+ 1234 | 192.168.0.1 | 192.168.0.1/32 | 12:34:56:78:90:ab
+(1 row)
+
+select (pltest.PLPERLoutpara_unname_148((NULL, NULL, NULL, NULL)::pltest.COMPOSITE_INTERNET)).*;
+ id1 | id2 | id3 | id4 
+-----+-----+-----+-----
+     |     |     | 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_148(((-32768)::SMALLINT, '192.168.0.1'::INET, '192.168.0.1/32'::CIDR, '12:34:56:78:90:AB'::MACADDR)::pltest.COMPOSITE_INTERNET);
+  id1   |     id2     |      id3       |        id4        
+--------+-------------+----------------+-------------------
+ -32768 | 192.168.0.1 | 192.168.0.1/32 | 12:34:56:78:90:ab
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_148((32767::SMALLINT, NULL, NULL, NULL)::pltest.COMPOSITE_INTERNET);
+  id1  | id2 | id3 | id4 
+-------+-----+-----+-----
+ 32767 |     |     | 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_148((1234::SMALLINT, '192.168.0.1'::INET, '192.168.0.1/32'::CIDR, '12:34:56:78:90:AB'::MACADDR)::pltest.COMPOSITE_INTERNET);
+ id1  |     id2     |      id3       |        id4        
+------+-------------+----------------+-------------------
+ 1234 | 192.168.0.1 | 192.168.0.1/32 | 12:34:56:78:90:ab
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_148((NULL, NULL, NULL, NULL)::pltest.COMPOSITE_INTERNET);
+ id1 | id2 | id3 | id4 
+-----+-----+-----+-----
+     |     |     | 
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_148 ( IN  pltest.COMPOSITE_INTERNET , OUT  pltest.COMPOSITE_INTERNET );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_149 ( IN  pltest.COMPOSITE_CHAR , OUT  pltest.COMPOSITE_CHAR ) RETURNS pltest.COMPOSITE_CHAR as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_149(('SSSS'::CHAR(4), 'ASDFGHJKL'::VARCHAR(16), 'QAZWSXEDCRFVTGB'::TEXT)::pltest.COMPOSITE_CHAR);
+     plperloutpara_unname_149     
+----------------------------------
+ (SSSS,ASDFGHJKL,QAZWSXEDCRFVTGB)
+(1 row)
+
+select pltest.PLPERLoutpara_unname_149((NULL, NULL, NULL)::pltest.COMPOSITE_CHAR);
+ plperloutpara_unname_149 
+--------------------------
+ (,,)
+(1 row)
+
+select (pltest.PLPERLoutpara_unname_149(('SSSS'::CHAR(4), 'ASDFGHJKL'::VARCHAR(16), 'QAZWSXEDCRFVTGB'::TEXT)::pltest.COMPOSITE_CHAR)).*;
+ id1  |    id2    |       id3       
+------+-----------+-----------------
+ SSSS | ASDFGHJKL | QAZWSXEDCRFVTGB
+(1 row)
+
+select (pltest.PLPERLoutpara_unname_149((NULL, NULL, NULL)::pltest.COMPOSITE_CHAR)).*;
+ id1 | id2 | id3 
+-----+-----+-----
+     |     | 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_149(('SSSS'::CHAR(4), 'ASDFGHJKL'::VARCHAR(16), 'QAZWSXEDCRFVTGB'::TEXT)::pltest.COMPOSITE_CHAR);
+ id1  |    id2    |       id3       
+------+-----------+-----------------
+ SSSS | ASDFGHJKL | QAZWSXEDCRFVTGB
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_149((NULL, NULL, NULL)::pltest.COMPOSITE_CHAR);
+ id1 | id2 | id3 
+-----+-----+-----
+     |     | 
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_149 ( IN  pltest.COMPOSITE_CHAR , OUT  pltest.COMPOSITE_CHAR );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_150 ( IN  pltest.COMPOSITE_BIT , OUT  pltest.COMPOSITE_BIT ) RETURNS pltest.COMPOSITE_BIT as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_150(((-32768)::SMALLINT, B'11001111'::BIT(8), B'11001111'::BIT VARYING(10), FALSE::BOOLEAN, E'\\000'::BYTEA)::pltest.COMPOSITE_BIT);
+       plperloutpara_unname_150       
+--------------------------------------
+ (-32768,11001111,11001111,f,"\\000")
+(1 row)
+
+select pltest.PLPERLoutpara_unname_150((32767::SMALLINT, NULL, NULL, TRUE::BOOLEAN, NULL)::pltest.COMPOSITE_BIT);
+ plperloutpara_unname_150 
+--------------------------
+ (32767,,,t,)
+(1 row)
+
+select pltest.PLPERLoutpara_unname_150((1234::SMALLINT, B'11001111'::BIT(8), B'11001111'::BIT VARYING(10), NULL, E'\\000'::BYTEA)::pltest.COMPOSITE_BIT);
+     plperloutpara_unname_150      
+-----------------------------------
+ (1234,11001111,11001111,,"\\000")
+(1 row)
+
+select pltest.PLPERLoutpara_unname_150((NULL, NULL, NULL, FALSE::BOOLEAN, NULL)::pltest.COMPOSITE_BIT);
+ plperloutpara_unname_150 
+--------------------------
+ (,,,f,)
+(1 row)
+
+select (pltest.PLPERLoutpara_unname_150(((-32768)::SMALLINT, B'11001111'::BIT(8), B'11001111'::BIT VARYING(10), FALSE::BOOLEAN, E'\\000'::BYTEA)::pltest.COMPOSITE_BIT)).*;
+  id1   |   id2    |   id3    | id4 | id5  
+--------+----------+----------+-----+------
+ -32768 | 11001111 | 11001111 | f   | \000
+(1 row)
+
+select (pltest.PLPERLoutpara_unname_150((32767::SMALLINT, NULL, NULL, TRUE::BOOLEAN, NULL)::pltest.COMPOSITE_BIT)).*;
+  id1  | id2 | id3 | id4 | id5 
+-------+-----+-----+-----+-----
+ 32767 |     |     | t   | 
+(1 row)
+
+select (pltest.PLPERLoutpara_unname_150((1234::SMALLINT, B'11001111'::BIT(8), B'11001111'::BIT VARYING(10), NULL, E'\\000'::BYTEA)::pltest.COMPOSITE_BIT)).*;
+ id1  |   id2    |   id3    | id4 | id5  
+------+----------+----------+-----+------
+ 1234 | 11001111 | 11001111 |     | \000
+(1 row)
+
+select (pltest.PLPERLoutpara_unname_150((NULL, NULL, NULL, FALSE::BOOLEAN, NULL)::pltest.COMPOSITE_BIT)).*;
+ id1 | id2 | id3 | id4 | id5 
+-----+-----+-----+-----+-----
+     |     |     | f   | 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_150(((-32768)::SMALLINT, B'11001111'::BIT(8), B'11001111'::BIT VARYING(10), FALSE::BOOLEAN, E'\\000'::BYTEA)::pltest.COMPOSITE_BIT);
+  id1   |   id2    |   id3    | id4 | id5  
+--------+----------+----------+-----+------
+ -32768 | 11001111 | 11001111 | f   | \000
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_150((32767::SMALLINT, NULL, NULL, TRUE::BOOLEAN, NULL)::pltest.COMPOSITE_BIT);
+  id1  | id2 | id3 | id4 | id5 
+-------+-----+-----+-----+-----
+ 32767 |     |     | t   | 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_150((1234::SMALLINT, B'11001111'::BIT(8), B'11001111'::BIT VARYING(10), NULL, E'\\000'::BYTEA)::pltest.COMPOSITE_BIT);
+ id1  |   id2    |   id3    | id4 | id5  
+------+----------+----------+-----+------
+ 1234 | 11001111 | 11001111 |     | \000
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_150((NULL, NULL, NULL, FALSE::BOOLEAN, NULL)::pltest.COMPOSITE_BIT);
+ id1 | id2 | id3 | id4 | id5 
+-----+-----+-----+-----+-----
+     |     |     | f   | 
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_150 ( IN  pltest.COMPOSITE_BIT , OUT  pltest.COMPOSITE_BIT );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_151 ( IN  pltest.COMPOSITE_GEOMETRIC , OUT  pltest.COMPOSITE_GEOMETRIC ) RETURNS pltest.COMPOSITE_GEOMETRIC as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_151(((-32768)::SMALLINT, '(0,0),(1,1),(2,0)'::POLYGON, '(1,1),(2,2)'::PATH, '((1,1),(2,2))'::LSEG, '<(1,1),2>'::CIRCLE, '(1,2)'::POINT, '((1,2),(3,4))'::BOX)::pltest.COMPOSITE_GEOMETRIC);
+                                     plperloutpara_unname_151                                     
+--------------------------------------------------------------------------------------------------
+ (-32768,"((0,0),(1,1),(2,0))","((1,1),(2,2))","[(1,1),(2,2)]","<(1,1),2>","(1,2)","(3,4),(1,2)")
+(1 row)
+
+select pltest.PLPERLoutpara_unname_151((32767::SMALLINT, NULL, NULL, NULL, NULL, NULL, NULL)::pltest.COMPOSITE_GEOMETRIC);
+ plperloutpara_unname_151 
+--------------------------
+ (32767,,,,,,)
+(1 row)
+
+select pltest.PLPERLoutpara_unname_151((1234::SMALLINT, '(0,0),(1,1),(2,0)'::POLYGON, '(1,1),(2,2)'::PATH, '((1,1),(2,2))'::LSEG, '<(1,1),2>'::CIRCLE, '(1,2)'::POINT, '((1,2),(3,4))'::BOX)::pltest.COMPOSITE_GEOMETRIC);
+                                    plperloutpara_unname_151                                    
+------------------------------------------------------------------------------------------------
+ (1234,"((0,0),(1,1),(2,0))","((1,1),(2,2))","[(1,1),(2,2)]","<(1,1),2>","(1,2)","(3,4),(1,2)")
+(1 row)
+
+select pltest.PLPERLoutpara_unname_151((NULL, NULL, NULL, NULL, NULL, NULL, NULL)::pltest.COMPOSITE_GEOMETRIC);
+ plperloutpara_unname_151 
+--------------------------
+ (,,,,,,)
+(1 row)
+
+select (pltest.PLPERLoutpara_unname_151(((-32768)::SMALLINT, '(0,0),(1,1),(2,0)'::POLYGON, '(1,1),(2,2)'::PATH, '((1,1),(2,2))'::LSEG, '<(1,1),2>'::CIRCLE, '(1,2)'::POINT, '((1,2),(3,4))'::BOX)::pltest.COMPOSITE_GEOMETRIC)).*;
+  id1   |         id2         |      id3      |      id4      |    id5    |  id6  |     id7     
+--------+---------------------+---------------+---------------+-----------+-------+-------------
+ -32768 | ((0,0),(1,1),(2,0)) | ((1,1),(2,2)) | [(1,1),(2,2)] | <(1,1),2> | (1,2) | (3,4),(1,2)
+(1 row)
+
+select (pltest.PLPERLoutpara_unname_151((32767::SMALLINT, NULL, NULL, NULL, NULL, NULL, NULL)::pltest.COMPOSITE_GEOMETRIC)).*;
+  id1  | id2 | id3 | id4 | id5 | id6 | id7 
+-------+-----+-----+-----+-----+-----+-----
+ 32767 |     |     |     |     |     | 
+(1 row)
+
+select (pltest.PLPERLoutpara_unname_151((1234::SMALLINT, '(0,0),(1,1),(2,0)'::POLYGON, '(1,1),(2,2)'::PATH, '((1,1),(2,2))'::LSEG, '<(1,1),2>'::CIRCLE, '(1,2)'::POINT, '((1,2),(3,4))'::BOX)::pltest.COMPOSITE_GEOMETRIC)).*;
+ id1  |         id2         |      id3      |      id4      |    id5    |  id6  |     id7     
+------+---------------------+---------------+---------------+-----------+-------+-------------
+ 1234 | ((0,0),(1,1),(2,0)) | ((1,1),(2,2)) | [(1,1),(2,2)] | <(1,1),2> | (1,2) | (3,4),(1,2)
+(1 row)
+
+select (pltest.PLPERLoutpara_unname_151((NULL, NULL, NULL, NULL, NULL, NULL, NULL)::pltest.COMPOSITE_GEOMETRIC)).*;
+ id1 | id2 | id3 | id4 | id5 | id6 | id7 
+-----+-----+-----+-----+-----+-----+-----
+     |     |     |     |     |     | 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_151(((-32768)::SMALLINT, '(0,0),(1,1),(2,0)'::POLYGON, '(1,1),(2,2)'::PATH, '((1,1),(2,2))'::LSEG, '<(1,1),2>'::CIRCLE, '(1,2)'::POINT, '((1,2),(3,4))'::BOX)::pltest.COMPOSITE_GEOMETRIC);
+  id1   |         id2         |      id3      |      id4      |    id5    |  id6  |     id7     
+--------+---------------------+---------------+---------------+-----------+-------+-------------
+ -32768 | ((0,0),(1,1),(2,0)) | ((1,1),(2,2)) | [(1,1),(2,2)] | <(1,1),2> | (1,2) | (3,4),(1,2)
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_151((32767::SMALLINT, NULL, NULL, NULL, NULL, NULL, NULL)::pltest.COMPOSITE_GEOMETRIC);
+  id1  | id2 | id3 | id4 | id5 | id6 | id7 
+-------+-----+-----+-----+-----+-----+-----
+ 32767 |     |     |     |     |     | 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_151((1234::SMALLINT, '(0,0),(1,1),(2,0)'::POLYGON, '(1,1),(2,2)'::PATH, '((1,1),(2,2))'::LSEG, '<(1,1),2>'::CIRCLE, '(1,2)'::POINT, '((1,2),(3,4))'::BOX)::pltest.COMPOSITE_GEOMETRIC);
+ id1  |         id2         |      id3      |      id4      |    id5    |  id6  |     id7     
+------+---------------------+---------------+---------------+-----------+-------+-------------
+ 1234 | ((0,0),(1,1),(2,0)) | ((1,1),(2,2)) | [(1,1),(2,2)] | <(1,1),2> | (1,2) | (3,4),(1,2)
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_151((NULL, NULL, NULL, NULL, NULL, NULL, NULL)::pltest.COMPOSITE_GEOMETRIC);
+ id1 | id2 | id3 | id4 | id5 | id6 | id7 
+-----+-----+-----+-----+-----+-----+-----
+     |     |     |     |     |     | 
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_151 ( IN  pltest.COMPOSITE_GEOMETRIC , OUT  pltest.COMPOSITE_GEOMETRIC );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_152 ( IN  pltest.COMPOSITE_DATE , OUT  pltest.COMPOSITE_DATE ) RETURNS pltest.COMPOSITE_DATE as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_152(('2011-08-12'::DATE, '10:00:52.14'::TIME, '2011-08-12 10:00:52.14'::TIMETZ, '2011-08-12 10:00:52.14'::TIMESTAMP, '2011-08-12 10:00:52.14'::TIMESTAMPTZ)::pltest.COMPOSITE_DATE);
+                                   plperloutpara_unname_152                                   
+----------------------------------------------------------------------------------------------
+ (2011-08-12,10:00:52.14,10:00:52.14-07,"2011-08-12 10:00:52.14","2011-08-12 10:00:52.14-07")
+(1 row)
+
+select pltest.PLPERLoutpara_unname_152(('EPOCH'::DATE, 'ALLBALLS'::TIME, NULL, NULL, NULL)::pltest.COMPOSITE_DATE);
+ plperloutpara_unname_152 
+--------------------------
+ (1970-01-01,00:00:00,,,)
+(1 row)
+
+select pltest.PLPERLoutpara_unname_152((NULL, NULL, '2011-08-12 10:00:52.14'::TIMETZ, '2011-08-12 10:00:52.14'::TIMESTAMP, '2011-08-12 10:00:52.14'::TIMESTAMPTZ)::pltest.COMPOSITE_DATE);
+                        plperloutpara_unname_152                         
+-------------------------------------------------------------------------
+ (,,10:00:52.14-07,"2011-08-12 10:00:52.14","2011-08-12 10:00:52.14-07")
+(1 row)
+
+select (pltest.PLPERLoutpara_unname_152(('2011-08-12'::DATE, '10:00:52.14'::TIME, '2011-08-12 10:00:52.14'::TIMETZ, '2011-08-12 10:00:52.14'::TIMESTAMP, '2011-08-12 10:00:52.14'::TIMESTAMPTZ)::pltest.COMPOSITE_DATE)).*;
+    id1     |     id2     |      id3       |          id4           |            id5            
+------------+-------------+----------------+------------------------+---------------------------
+ 2011-08-12 | 10:00:52.14 | 10:00:52.14-07 | 2011-08-12 10:00:52.14 | 2011-08-12 10:00:52.14-07
+(1 row)
+
+select (pltest.PLPERLoutpara_unname_152(('EPOCH'::DATE, 'ALLBALLS'::TIME, NULL, NULL, NULL)::pltest.COMPOSITE_DATE)).*;
+    id1     |   id2    | id3 | id4 | id5 
+------------+----------+-----+-----+-----
+ 1970-01-01 | 00:00:00 |     |     | 
+(1 row)
+
+select (pltest.PLPERLoutpara_unname_152((NULL, NULL, '2011-08-12 10:00:52.14'::TIMETZ, '2011-08-12 10:00:52.14'::TIMESTAMP, '2011-08-12 10:00:52.14'::TIMESTAMPTZ)::pltest.COMPOSITE_DATE)).*;
+ id1 | id2 |      id3       |          id4           |            id5            
+-----+-----+----------------+------------------------+---------------------------
+     |     | 10:00:52.14-07 | 2011-08-12 10:00:52.14 | 2011-08-12 10:00:52.14-07
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_152(('2011-08-12'::DATE, '10:00:52.14'::TIME, '2011-08-12 10:00:52.14'::TIMETZ, '2011-08-12 10:00:52.14'::TIMESTAMP, '2011-08-12 10:00:52.14'::TIMESTAMPTZ)::pltest.COMPOSITE_DATE);
+    id1     |     id2     |      id3       |          id4           |            id5            
+------------+-------------+----------------+------------------------+---------------------------
+ 2011-08-12 | 10:00:52.14 | 10:00:52.14-07 | 2011-08-12 10:00:52.14 | 2011-08-12 10:00:52.14-07
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_152(('EPOCH'::DATE, 'ALLBALLS'::TIME, NULL, NULL, NULL)::pltest.COMPOSITE_DATE);
+    id1     |   id2    | id3 | id4 | id5 
+------------+----------+-----+-----+-----
+ 1970-01-01 | 00:00:00 |     |     | 
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_152((NULL, NULL, '2011-08-12 10:00:52.14'::TIMETZ, '2011-08-12 10:00:52.14'::TIMESTAMP, '2011-08-12 10:00:52.14'::TIMESTAMPTZ)::pltest.COMPOSITE_DATE);
+ id1 | id2 |      id3       |          id4           |            id5            
+-----+-----+----------------+------------------------+---------------------------
+     |     | 10:00:52.14-07 | 2011-08-12 10:00:52.14 | 2011-08-12 10:00:52.14-07
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_152 ( IN  pltest.COMPOSITE_DATE , OUT  pltest.COMPOSITE_DATE );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLoutpara_unname_153 ( IN  pltest.COMPOSITE_NUMERIC , OUT  pltest.COMPOSITE_NUMERIC ) RETURNS pltest.COMPOSITE_NUMERIC as $$    	 
+	my $key = shift; return $key;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLoutpara_unname_153(((-9223372036854775808)::BIGINT, 1234567890.0987654321::NUMERIC, 123456789.98765432::FLOAT8, (-2147483648)::INT4, '$-21474836.48'::MONEY, 39.333::REAL, (-32768)::SMALLINT)::pltest.COMPOSITE_NUMERIC);
+                                         plperloutpara_unname_153                                          
+-----------------------------------------------------------------------------------------------------------
+ (-9223372036854775808,1234567890.0987654321,123456789.987654,-2147483648,"-$21,474,836.48",39.333,-32768)
+(1 row)
+
+select pltest.PLPERLoutpara_unname_153((9223372036854775807::BIGINT, 'NAN'::NUMERIC, 'NAN'::FLOAT8, 2147483647::INT4, '$21474836.47'::MONEY, 'NAN'::REAL, 32767::SMALLINT)::pltest.COMPOSITE_NUMERIC);
+                      plperloutpara_unname_153                       
+---------------------------------------------------------------------
+ (9223372036854775807,NaN,NaN,2147483647,"$21,474,836.47",NaN,32767)
+(1 row)
+
+select pltest.PLPERLoutpara_unname_153((123456789::BIGINT, 2::NUMERIC^128 / 3::NUMERIC^129, '-INFINITY'::FLOAT8, 1234, '$1234'::MONEY, '-INFINITY'::REAL, 1234::SMALLINT)::pltest.COMPOSITE_NUMERIC);
+                                     plperloutpara_unname_153                                     
+--------------------------------------------------------------------------------------------------
+ (123456789,0.0000000000000000000000096204987201369818,-Infinity,1234,"$1,234.00",-Infinity,1234)
+(1 row)
+
+select pltest.PLPERLoutpara_unname_153((NULL, 2::NUMERIC^128, '+INFINITY'::FLOAT8, NULL, NULL, '+INFINITY'::REAL, NULL)::pltest.COMPOSITE_NUMERIC);
+                             plperloutpara_unname_153                             
+----------------------------------------------------------------------------------
+ (,340282366920938463463374607431768211456.0000000000000000,Infinity,,,Infinity,)
+(1 row)
+
+select pltest.PLPERLoutpara_unname_153(((-9223372036854775808)::BIGINT, 0.5::NUMERIC, NULL, (-2147483648)::INT4, '$-21474836.48'::MONEY, NULL, (-32768)::SMALLINT)::pltest.COMPOSITE_NUMERIC);
+                     plperloutpara_unname_153                      
+-------------------------------------------------------------------
+ (-9223372036854775808,0.5,,-2147483648,"-$21,474,836.48",,-32768)
+(1 row)
+
+select pltest.PLPERLoutpara_unname_153((9223372036854775807::BIGINT, NULL, 123456789.98765432::FLOAT8, 2147483647::INT4, '$21474836.47'::MONEY, 39.333::REAL, 32767::SMALLINT)::pltest.COMPOSITE_NUMERIC);
+                             plperloutpara_unname_153                             
+----------------------------------------------------------------------------------
+ (9223372036854775807,,123456789.987654,2147483647,"$21,474,836.47",39.333,32767)
+(1 row)
+
+select (pltest.PLPERLoutpara_unname_153(((-9223372036854775808)::BIGINT, 1234567890.0987654321::NUMERIC, 123456789.98765432::FLOAT8, (-2147483648)::INT4, '$-21474836.48'::MONEY, 39.333::REAL, (-32768)::SMALLINT)::pltest.COMPOSITE_NUMERIC)).*;
+         id1          |          id2          |       id3        |     id4     |       id5       |  id6   |  id7   
+----------------------+-----------------------+------------------+-------------+-----------------+--------+--------
+ -9223372036854775808 | 1234567890.0987654321 | 123456789.987654 | -2147483648 | -$21,474,836.48 | 39.333 | -32768
+(1 row)
+
+select (pltest.PLPERLoutpara_unname_153((9223372036854775807::BIGINT, 'NAN'::NUMERIC, 'NAN'::FLOAT8, 2147483647::INT4, '$21474836.47'::MONEY, 'NAN'::REAL, 32767::SMALLINT)::pltest.COMPOSITE_NUMERIC)).*;
+         id1         | id2 | id3 |    id4     |      id5       | id6 |  id7  
+---------------------+-----+-----+------------+----------------+-----+-------
+ 9223372036854775807 | NaN | NaN | 2147483647 | $21,474,836.47 | NaN | 32767
+(1 row)
+
+select (pltest.PLPERLoutpara_unname_153((123456789::BIGINT, 2::NUMERIC^128 / 3::NUMERIC^129, '-INFINITY'::FLOAT8, 1234, '$1234'::MONEY, '-INFINITY'::REAL, 1234::SMALLINT)::pltest.COMPOSITE_NUMERIC)).*;
+    id1    |                    id2                     |    id3    | id4  |    id5    |    id6    | id7  
+-----------+--------------------------------------------+-----------+------+-----------+-----------+------
+ 123456789 | 0.0000000000000000000000096204987201369818 | -Infinity | 1234 | $1,234.00 | -Infinity | 1234
+(1 row)
+
+select (pltest.PLPERLoutpara_unname_153((NULL, 2::NUMERIC^128, '+INFINITY'::FLOAT8, NULL, NULL, '+INFINITY'::REAL, NULL)::pltest.COMPOSITE_NUMERIC)).*;
+ id1 |                           id2                            |   id3    | id4 | id5 |   id6    | id7 
+-----+----------------------------------------------------------+----------+-----+-----+----------+-----
+     | 340282366920938463463374607431768211456.0000000000000000 | Infinity |     |     | Infinity |    
+(1 row)
+
+select (pltest.PLPERLoutpara_unname_153(((-9223372036854775808)::BIGINT, 0.5::NUMERIC, NULL, (-2147483648)::INT4, '$-21474836.48'::MONEY, NULL, (-32768)::SMALLINT)::pltest.COMPOSITE_NUMERIC)).*;
+         id1          | id2 | id3 |     id4     |       id5       | id6 |  id7   
+----------------------+-----+-----+-------------+-----------------+-----+--------
+ -9223372036854775808 | 0.5 |     | -2147483648 | -$21,474,836.48 |     | -32768
+(1 row)
+
+select (pltest.PLPERLoutpara_unname_153((9223372036854775807::BIGINT, NULL, 123456789.98765432::FLOAT8, 2147483647::INT4, '$21474836.47'::MONEY, 39.333::REAL, 32767::SMALLINT)::pltest.COMPOSITE_NUMERIC)).*;
+         id1         | id2 |       id3        |    id4     |      id5       |  id6   |  id7  
+---------------------+-----+------------------+------------+----------------+--------+-------
+ 9223372036854775807 |     | 123456789.987654 | 2147483647 | $21,474,836.47 | 39.333 | 32767
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_153(((-9223372036854775808)::BIGINT, 1234567890.0987654321::NUMERIC, 123456789.98765432::FLOAT8, (-2147483648)::INT4, '$-21474836.48'::MONEY, 39.333::REAL, (-32768)::SMALLINT)::pltest.COMPOSITE_NUMERIC);
+         id1          |          id2          |       id3        |     id4     |       id5       |  id6   |  id7   
+----------------------+-----------------------+------------------+-------------+-----------------+--------+--------
+ -9223372036854775808 | 1234567890.0987654321 | 123456789.987654 | -2147483648 | -$21,474,836.48 | 39.333 | -32768
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_153((9223372036854775807::BIGINT, 'NAN'::NUMERIC, 'NAN'::FLOAT8, 2147483647::INT4, '$21474836.47'::MONEY, 'NAN'::REAL, 32767::SMALLINT)::pltest.COMPOSITE_NUMERIC);
+         id1         | id2 | id3 |    id4     |      id5       | id6 |  id7  
+---------------------+-----+-----+------------+----------------+-----+-------
+ 9223372036854775807 | NaN | NaN | 2147483647 | $21,474,836.47 | NaN | 32767
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_153((123456789::BIGINT, 2::NUMERIC^128 / 3::NUMERIC^129, '-INFINITY'::FLOAT8, 1234, '$1234'::MONEY, '-INFINITY'::REAL, 1234::SMALLINT)::pltest.COMPOSITE_NUMERIC);
+    id1    |                    id2                     |    id3    | id4  |    id5    |    id6    | id7  
+-----------+--------------------------------------------+-----------+------+-----------+-----------+------
+ 123456789 | 0.0000000000000000000000096204987201369818 | -Infinity | 1234 | $1,234.00 | -Infinity | 1234
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_153((NULL, 2::NUMERIC^128, '+INFINITY'::FLOAT8, NULL, NULL, '+INFINITY'::REAL, NULL)::pltest.COMPOSITE_NUMERIC);
+ id1 |                           id2                            |   id3    | id4 | id5 |   id6    | id7 
+-----+----------------------------------------------------------+----------+-----+-----+----------+-----
+     | 340282366920938463463374607431768211456.0000000000000000 | Infinity |     |     | Infinity |    
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_153(((-9223372036854775808)::BIGINT, 0.5::NUMERIC, NULL, (-2147483648)::INT4, '$-21474836.48'::MONEY, NULL, (-32768)::SMALLINT)::pltest.COMPOSITE_NUMERIC);
+         id1          | id2 | id3 |     id4     |       id5       | id6 |  id7   
+----------------------+-----+-----+-------------+-----------------+-----+--------
+ -9223372036854775808 | 0.5 |     | -2147483648 | -$21,474,836.48 |     | -32768
+(1 row)
+
+select * from pltest.PLPERLoutpara_unname_153((9223372036854775807::BIGINT, NULL, 123456789.98765432::FLOAT8, 2147483647::INT4, '$21474836.47'::MONEY, 39.333::REAL, 32767::SMALLINT)::pltest.COMPOSITE_NUMERIC);
+         id1         | id2 |       id3        |    id4     |      id5       |  id6   |  id7  
+---------------------+-----+------------------+------------+----------------+--------+-------
+ 9223372036854775807 |     | 123456789.987654 | 2147483647 | $21,474,836.47 | 39.333 | 32767
+(1 row)
+
+DROP function pltest.PLPERLoutpara_unname_153 ( IN  pltest.COMPOSITE_NUMERIC , OUT  pltest.COMPOSITE_NUMERIC );
+DROP FUNCTION

@@ -1,0 +1,32 @@
+-- start_ignore
+drop function if exists forloop();
+psql:/path/sql_file:1: NOTICE:  function forloop() does not exist, skipping
+DROP FUNCTION
+drop table if exists fordata;
+psql:/path/sql_file:1: NOTICE:  table "fordata" does not exist, skipping
+DROP TABLE
+-- end_ignore
+create table fordata(a int) distributed by (a);
+CREATE TABLE
+create function forloop() returns int as $$
+declare
+   rowcnt integer;
+begin
+   for i IN 1..200 LOOP
+      insert into fordata(a) values(i);
+      drop table fordata;
+      create table fordata(a int) distributed by (a);
+   end loop;
+   select count(*) into rowcnt from fordata; 
+   return rowcnt;
+end;
+$$ language plpgsql;
+CREATE FUNCTION
+set gp_plpgsql_clear_cache_always=on;
+SET
+select forloop();
+ forloop 
+---------
+       0
+(1 row)
+

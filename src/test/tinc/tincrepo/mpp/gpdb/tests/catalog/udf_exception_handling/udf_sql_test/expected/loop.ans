@@ -1,0 +1,103 @@
+-- @Description Tests loop and update in function with exception
+-- 
+DROP TABLE IF EXISTS db CASCADE;
+DROP TABLE
+CREATE TABLE db (a INT NOT NULL, b TEXT);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+DROP FUNCTION IF EXISTS insert_db(key INT, data TEXT) CASCADE;
+DROP FUNCTION
+CREATE FUNCTION insert_db(key INT, data TEXT) RETURNS VOID AS
+$$
+BEGIN
+	LOOP
+   	-- first try to update the key
+	UPDATE db SET b = data WHERE a = key;
+	IF found THEN
+		RETURN;
+	END IF;
+	-- not there, so try to insert the key
+	BEGIN
+		INSERT INTO db(a,b) VALUES (NULL, data);
+	RETURN;
+	EXCEPTION WHEN OTHERS THEN
+			INSERT INTO db(a,b) VALUES (2, 'dummy');
+			INSERT INTO db(a,b) VALUES (key, 'dummy');
+	END;
+	END LOOP;
+END;
+$$
+LANGUAGE plpgsql;
+CREATE FUNCTION
+SELECT insert_db(1, 'david');
+ insert_db 
+-----------
+ 
+(1 row)
+
+SELECT * from db;
+ a |   b   
+---+-------
+ 2 | dummy
+ 1 | david
+(2 rows)
+
+INSERT INTO db select *,'abcdefghijklmnopqrstuvwxyz' from generate_series(1, 100);
+INSERT 0 100
+DROP FUNCTION IF EXISTS insert_db1(flag INT) CASCADE;
+DROP FUNCTION
+CREATE FUNCTION insert_db1(flag INT) RETURNS INT AS
+$$
+DECLARE
+	rec   record;
+	x INT;
+BEGIN
+	FOR rec IN
+	SELECT *
+	FROM   db
+	WHERE  a % 2 = 0
+	LOOP
+		x = rec.a * flag;
+		IF x = 400 THEN
+			INSERT INTO db VALUES (NULL);
+		ELSE
+			INSERT INTO db VALUES (rec.a);
+		END IF;
+	END LOOP;
+	RETURN 1;
+	EXCEPTION WHEN OTHERS THEN
+	BEGIN
+		INSERT INTO db VALUES (999), (9999), (99999);
+		RAISE NOTICE 'Exception Hit !!!';
+		RETURN -1;
+	END;
+END;
+$$
+LANGUAGE plpgsql;
+CREATE FUNCTION
+SELECT insert_db1(1);
+ insert_db1 
+------------
+          1
+(1 row)
+
+SELECT count(*) FROM db;
+ count 
+-------
+   153
+(1 row)
+
+SELECT insert_db1(200);
+psql:/path/sql_file:1: NOTICE:  Exception Hit !!!
+ insert_db1 
+------------
+         -1
+(1 row)
+
+SELECT count(*) FROM db;
+ count 
+-------
+   156
+(1 row)
+

@@ -1,0 +1,6 @@
+-- start_matchsubs
+
+m/psql:.* LOG.*/
+s/psql:.* LOG.*//
+
+-- end_matchsubs

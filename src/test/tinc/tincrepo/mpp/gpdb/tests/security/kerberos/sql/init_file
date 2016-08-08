@@ -1,0 +1,10 @@
+-- start_matchignore
+# match ignore the gpmon WARNING message
+m/^WARNING*/
+s/^WARNING*//
+m/^HINT*/
+s/^HINT*//
+m/^NOTICE*/
+s/^NOTICE*//
+-- end_matchignore
+

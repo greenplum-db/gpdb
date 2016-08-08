@@ -1,0 +1,338 @@
+-- 
+-- @created 2009-01-27 14:00:00
+-- @modified 2013-06-24 17:00:00
+-- @tags ddl schema_topology
+-- @description Time based constraints
+
+DROP USER IF EXISTS testuser;
+DROP ROLE
+CREATE USER testuser WITH LOGIN DENY BETWEEN DAY 'Monday' TIME '01:00:00' AND DAY 'Monday' TIME '01:30:00';;
+CREATE ROLE
+SELECT r.rolname, d.start_day, d.start_time, d.end_day, d.end_time
+FROM pg_auth_time_constraint d join pg_roles r ON (d.authid = r.oid)
+WHERE r.rolname = 'testuser'
+ORDER BY r.rolname, d.start_day, d.start_time, d.end_day, d.end_time;
+ rolname  | start_day | start_time | end_day | end_time 
+----------+-----------+------------+---------+----------
+ testuser |         1 | 01:00:00   |       1 | 01:30:00
+(1 row)
+
+ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '01:00:00' AND DAY 'Monday' TIME '01:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '02:00:00' AND DAY 'Monday' TIME '02:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '03:00:00' AND DAY 'Monday' TIME '03:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '04:00:00' AND DAY 'Monday' TIME '04:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '05:00:00' AND DAY 'Monday' TIME '05:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '06:00:00' AND DAY 'Monday' TIME '06:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '07:00:00' AND DAY 'Monday' TIME '07:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '08:00:00' AND DAY 'Monday' TIME '08:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '09:00:00' AND DAY 'Monday' TIME '09:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '10:00:00' AND DAY 'Monday' TIME '10:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '11:00:00' AND DAY 'Monday' TIME '11:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '12:00:00' AND DAY 'Monday' TIME '12:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '13:00:00' AND DAY 'Monday' TIME '13:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '14:00:00' AND DAY 'Monday' TIME '14:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '15:00:00' AND DAY 'Monday' TIME '15:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '16:00:00' AND DAY 'Monday' TIME '16:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '17:00:00' AND DAY 'Monday' TIME '17:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '18:00:00' AND DAY 'Monday' TIME '18:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '19:00:00' AND DAY 'Monday' TIME '19:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Monday' TIME '20:00:00' AND DAY 'Monday' TIME '20:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '01:00:00' AND DAY 'Tuesday' TIME '01:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '02:00:00' AND DAY 'Tuesday' TIME '02:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '03:00:00' AND DAY 'Tuesday' TIME '03:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '04:00:00' AND DAY 'Tuesday' TIME '04:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '05:00:00' AND DAY 'Tuesday' TIME '05:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '06:00:00' AND DAY 'Tuesday' TIME '06:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '07:00:00' AND DAY 'Tuesday' TIME '07:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '08:00:00' AND DAY 'Tuesday' TIME '08:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '09:00:00' AND DAY 'Tuesday' TIME '09:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '10:00:00' AND DAY 'Tuesday' TIME '10:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '11:00:00' AND DAY 'Tuesday' TIME '11:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '12:00:00' AND DAY 'Tuesday' TIME '12:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '13:00:00' AND DAY 'Tuesday' TIME '13:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '14:00:00' AND DAY 'Tuesday' TIME '14:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '15:00:00' AND DAY 'Tuesday' TIME '15:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '16:00:00' AND DAY 'Tuesday' TIME '16:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '17:00:00' AND DAY 'Tuesday' TIME '17:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '18:00:00' AND DAY 'Tuesday' TIME '18:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '19:00:00' AND DAY 'Tuesday' TIME '19:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Tuesday' TIME '20:00:00' AND DAY 'Tuesday' TIME '20:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '01:00:00' AND DAY 'Wednesday' TIME '01:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '02:00:00' AND DAY 'Wednesday' TIME '02:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '03:00:00' AND DAY 'Wednesday' TIME '03:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '04:00:00' AND DAY 'Wednesday' TIME '04:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '05:00:00' AND DAY 'Wednesday' TIME '05:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '06:00:00' AND DAY 'Wednesday' TIME '06:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '07:00:00' AND DAY 'Wednesday' TIME '07:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '08:00:00' AND DAY 'Wednesday' TIME '08:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '09:00:00' AND DAY 'Wednesday' TIME '09:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '10:00:00' AND DAY 'Wednesday' TIME '10:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '11:00:00' AND DAY 'Wednesday' TIME '11:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '12:00:00' AND DAY 'Wednesday' TIME '12:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '13:00:00' AND DAY 'Wednesday' TIME '13:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '14:00:00' AND DAY 'Wednesday' TIME '14:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '15:00:00' AND DAY 'Wednesday' TIME '15:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '16:00:00' AND DAY 'Wednesday' TIME '16:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '17:00:00' AND DAY 'Wednesday' TIME '17:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '18:00:00' AND DAY 'Wednesday' TIME '18:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '19:00:00' AND DAY 'Wednesday' TIME '19:30:00';
+ALTER ROLE
+ALTER USER testuser DENY BETWEEN DAY 'Wednesday' TIME '20:00:00' AND DAY 'Wednesday' TIME '20:30:00';
+ALTER ROLE
+SELECT r.rolname, d.start_day, d.start_time, d.end_day, d.end_time
+FROM pg_auth_time_constraint d join pg_roles r ON (d.authid = r.oid)
+WHERE r.rolname = 'testuser'
+ORDER BY r.rolname, d.start_day, d.start_time, d.end_day, d.end_time;
+ rolname  | start_day | start_time | end_day | end_time 
+----------+-----------+------------+---------+----------
+ testuser |         1 | 01:00:00   |       1 | 01:30:00
+ testuser |         1 | 01:00:00   |       1 | 01:30:00
+ testuser |         1 | 02:00:00   |       1 | 02:30:00
+ testuser |         1 | 03:00:00   |       1 | 03:30:00
+ testuser |         1 | 04:00:00   |       1 | 04:30:00
+ testuser |         1 | 05:00:00   |       1 | 05:30:00
+ testuser |         1 | 06:00:00   |       1 | 06:30:00
+ testuser |         1 | 07:00:00   |       1 | 07:30:00
+ testuser |         1 | 08:00:00   |       1 | 08:30:00
+ testuser |         1 | 09:00:00   |       1 | 09:30:00
+ testuser |         1 | 10:00:00   |       1 | 10:30:00
+ testuser |         1 | 11:00:00   |       1 | 11:30:00
+ testuser |         1 | 12:00:00   |       1 | 12:30:00
+ testuser |         1 | 13:00:00   |       1 | 13:30:00
+ testuser |         1 | 14:00:00   |       1 | 14:30:00
+ testuser |         1 | 15:00:00   |       1 | 15:30:00
+ testuser |         1 | 16:00:00   |       1 | 16:30:00
+ testuser |         1 | 17:00:00   |       1 | 17:30:00
+ testuser |         1 | 18:00:00   |       1 | 18:30:00
+ testuser |         1 | 19:00:00   |       1 | 19:30:00
+ testuser |         1 | 20:00:00   |       1 | 20:30:00
+ testuser |         2 | 01:00:00   |       2 | 01:30:00
+ testuser |         2 | 02:00:00   |       2 | 02:30:00
+ testuser |         2 | 03:00:00   |       2 | 03:30:00
+ testuser |         2 | 04:00:00   |       2 | 04:30:00
+ testuser |         2 | 05:00:00   |       2 | 05:30:00
+ testuser |         2 | 06:00:00   |       2 | 06:30:00
+ testuser |         2 | 07:00:00   |       2 | 07:30:00
+ testuser |         2 | 08:00:00   |       2 | 08:30:00
+ testuser |         2 | 09:00:00   |       2 | 09:30:00
+ testuser |         2 | 10:00:00   |       2 | 10:30:00
+ testuser |         2 | 11:00:00   |       2 | 11:30:00
+ testuser |         2 | 12:00:00   |       2 | 12:30:00
+ testuser |         2 | 13:00:00   |       2 | 13:30:00
+ testuser |         2 | 14:00:00   |       2 | 14:30:00
+ testuser |         2 | 15:00:00   |       2 | 15:30:00
+ testuser |         2 | 16:00:00   |       2 | 16:30:00
+ testuser |         2 | 17:00:00   |       2 | 17:30:00
+ testuser |         2 | 18:00:00   |       2 | 18:30:00
+ testuser |         2 | 19:00:00   |       2 | 19:30:00
+ testuser |         2 | 20:00:00   |       2 | 20:30:00
+ testuser |         3 | 01:00:00   |       3 | 01:30:00
+ testuser |         3 | 02:00:00   |       3 | 02:30:00
+ testuser |         3 | 03:00:00   |       3 | 03:30:00
+ testuser |         3 | 04:00:00   |       3 | 04:30:00
+ testuser |         3 | 05:00:00   |       3 | 05:30:00
+ testuser |         3 | 06:00:00   |       3 | 06:30:00
+ testuser |         3 | 07:00:00   |       3 | 07:30:00
+ testuser |         3 | 08:00:00   |       3 | 08:30:00
+ testuser |         3 | 09:00:00   |       3 | 09:30:00
+ testuser |         3 | 10:00:00   |       3 | 10:30:00
+ testuser |         3 | 11:00:00   |       3 | 11:30:00
+ testuser |         3 | 12:00:00   |       3 | 12:30:00
+ testuser |         3 | 13:00:00   |       3 | 13:30:00
+ testuser |         3 | 14:00:00   |       3 | 14:30:00
+ testuser |         3 | 15:00:00   |       3 | 15:30:00
+ testuser |         3 | 16:00:00   |       3 | 16:30:00
+ testuser |         3 | 17:00:00   |       3 | 17:30:00
+ testuser |         3 | 18:00:00   |       3 | 18:30:00
+ testuser |         3 | 19:00:00   |       3 | 19:30:00
+ testuser |         3 | 20:00:00   |       3 | 20:30:00
+(61 rows)
+
+ALTER USER testuser DROP DENY FOR DAY 'Tuesday' TIME '01:30:00';
+ALTER ROLE
+SELECT r.rolname, d.start_day, d.start_time, d.end_day, d.end_time
+FROM pg_auth_time_constraint d join pg_roles r ON (d.authid = r.oid)
+WHERE r.rolname = 'testuser'
+ORDER BY r.rolname, d.start_day, d.start_time, d.end_day, d.end_time;
+ rolname  | start_day | start_time | end_day | end_time 
+----------+-----------+------------+---------+----------
+ testuser |         1 | 01:00:00   |       1 | 01:30:00
+ testuser |         1 | 01:00:00   |       1 | 01:30:00
+ testuser |         1 | 02:00:00   |       1 | 02:30:00
+ testuser |         1 | 03:00:00   |       1 | 03:30:00
+ testuser |         1 | 04:00:00   |       1 | 04:30:00
+ testuser |         1 | 05:00:00   |       1 | 05:30:00
+ testuser |         1 | 06:00:00   |       1 | 06:30:00
+ testuser |         1 | 07:00:00   |       1 | 07:30:00
+ testuser |         1 | 08:00:00   |       1 | 08:30:00
+ testuser |         1 | 09:00:00   |       1 | 09:30:00
+ testuser |         1 | 10:00:00   |       1 | 10:30:00
+ testuser |         1 | 11:00:00   |       1 | 11:30:00
+ testuser |         1 | 12:00:00   |       1 | 12:30:00
+ testuser |         1 | 13:00:00   |       1 | 13:30:00
+ testuser |         1 | 14:00:00   |       1 | 14:30:00
+ testuser |         1 | 15:00:00   |       1 | 15:30:00
+ testuser |         1 | 16:00:00   |       1 | 16:30:00
+ testuser |         1 | 17:00:00   |       1 | 17:30:00
+ testuser |         1 | 18:00:00   |       1 | 18:30:00
+ testuser |         1 | 19:00:00   |       1 | 19:30:00
+ testuser |         1 | 20:00:00   |       1 | 20:30:00
+ testuser |         2 | 02:00:00   |       2 | 02:30:00
+ testuser |         2 | 03:00:00   |       2 | 03:30:00
+ testuser |         2 | 04:00:00   |       2 | 04:30:00
+ testuser |         2 | 05:00:00   |       2 | 05:30:00
+ testuser |         2 | 06:00:00   |       2 | 06:30:00
+ testuser |         2 | 07:00:00   |       2 | 07:30:00
+ testuser |         2 | 08:00:00   |       2 | 08:30:00
+ testuser |         2 | 09:00:00   |       2 | 09:30:00
+ testuser |         2 | 10:00:00   |       2 | 10:30:00
+ testuser |         2 | 11:00:00   |       2 | 11:30:00
+ testuser |         2 | 12:00:00   |       2 | 12:30:00
+ testuser |         2 | 13:00:00   |       2 | 13:30:00
+ testuser |         2 | 14:00:00   |       2 | 14:30:00
+ testuser |         2 | 15:00:00   |       2 | 15:30:00
+ testuser |         2 | 16:00:00   |       2 | 16:30:00
+ testuser |         2 | 17:00:00   |       2 | 17:30:00
+ testuser |         2 | 18:00:00   |       2 | 18:30:00
+ testuser |         2 | 19:00:00   |       2 | 19:30:00
+ testuser |         2 | 20:00:00   |       2 | 20:30:00
+ testuser |         3 | 01:00:00   |       3 | 01:30:00
+ testuser |         3 | 02:00:00   |       3 | 02:30:00
+ testuser |         3 | 03:00:00   |       3 | 03:30:00
+ testuser |         3 | 04:00:00   |       3 | 04:30:00
+ testuser |         3 | 05:00:00   |       3 | 05:30:00
+ testuser |         3 | 06:00:00   |       3 | 06:30:00
+ testuser |         3 | 07:00:00   |       3 | 07:30:00
+ testuser |         3 | 08:00:00   |       3 | 08:30:00
+ testuser |         3 | 09:00:00   |       3 | 09:30:00
+ testuser |         3 | 10:00:00   |       3 | 10:30:00
+ testuser |         3 | 11:00:00   |       3 | 11:30:00
+ testuser |         3 | 12:00:00   |       3 | 12:30:00
+ testuser |         3 | 13:00:00   |       3 | 13:30:00
+ testuser |         3 | 14:00:00   |       3 | 14:30:00
+ testuser |         3 | 15:00:00   |       3 | 15:30:00
+ testuser |         3 | 16:00:00   |       3 | 16:30:00
+ testuser |         3 | 17:00:00   |       3 | 17:30:00
+ testuser |         3 | 18:00:00   |       3 | 18:30:00
+ testuser |         3 | 19:00:00   |       3 | 19:30:00
+ testuser |         3 | 20:00:00   |       3 | 20:30:00
+(60 rows)
+
+ALTER USER testuser DROP DENY FOR DAY 'Wednesday';
+ALTER ROLE
+SELECT r.rolname, d.start_day, d.start_time, d.end_day, d.end_time
+FROM pg_auth_time_constraint d join pg_roles r ON (d.authid = r.oid)
+WHERE r.rolname = 'testuser'
+ORDER BY r.rolname, d.start_day, d.start_time, d.end_day, d.end_time;
+ rolname  | start_day | start_time | end_day | end_time 
+----------+-----------+------------+---------+----------
+ testuser |         1 | 01:00:00   |       1 | 01:30:00
+ testuser |         1 | 01:00:00   |       1 | 01:30:00
+ testuser |         1 | 02:00:00   |       1 | 02:30:00
+ testuser |         1 | 03:00:00   |       1 | 03:30:00
+ testuser |         1 | 04:00:00   |       1 | 04:30:00
+ testuser |         1 | 05:00:00   |       1 | 05:30:00
+ testuser |         1 | 06:00:00   |       1 | 06:30:00
+ testuser |         1 | 07:00:00   |       1 | 07:30:00
+ testuser |         1 | 08:00:00   |       1 | 08:30:00
+ testuser |         1 | 09:00:00   |       1 | 09:30:00
+ testuser |         1 | 10:00:00   |       1 | 10:30:00
+ testuser |         1 | 11:00:00   |       1 | 11:30:00
+ testuser |         1 | 12:00:00   |       1 | 12:30:00
+ testuser |         1 | 13:00:00   |       1 | 13:30:00
+ testuser |         1 | 14:00:00   |       1 | 14:30:00
+ testuser |         1 | 15:00:00   |       1 | 15:30:00
+ testuser |         1 | 16:00:00   |       1 | 16:30:00
+ testuser |         1 | 17:00:00   |       1 | 17:30:00
+ testuser |         1 | 18:00:00   |       1 | 18:30:00
+ testuser |         1 | 19:00:00   |       1 | 19:30:00
+ testuser |         1 | 20:00:00   |       1 | 20:30:00
+ testuser |         2 | 02:00:00   |       2 | 02:30:00
+ testuser |         2 | 03:00:00   |       2 | 03:30:00
+ testuser |         2 | 04:00:00   |       2 | 04:30:00
+ testuser |         2 | 05:00:00   |       2 | 05:30:00
+ testuser |         2 | 06:00:00   |       2 | 06:30:00
+ testuser |         2 | 07:00:00   |       2 | 07:30:00
+ testuser |         2 | 08:00:00   |       2 | 08:30:00
+ testuser |         2 | 09:00:00   |       2 | 09:30:00
+ testuser |         2 | 10:00:00   |       2 | 10:30:00
+ testuser |         2 | 11:00:00   |       2 | 11:30:00
+ testuser |         2 | 12:00:00   |       2 | 12:30:00
+ testuser |         2 | 13:00:00   |       2 | 13:30:00
+ testuser |         2 | 14:00:00   |       2 | 14:30:00
+ testuser |         2 | 15:00:00   |       2 | 15:30:00
+ testuser |         2 | 16:00:00   |       2 | 16:30:00
+ testuser |         2 | 17:00:00   |       2 | 17:30:00
+ testuser |         2 | 18:00:00   |       2 | 18:30:00
+ testuser |         2 | 19:00:00   |       2 | 19:30:00
+ testuser |         2 | 20:00:00   |       2 | 20:30:00
+(40 rows)
+
+DROP USER IF EXISTS testuser;
+DROP ROLE
+SELECT r.rolname, d.start_day, d.start_time, d.end_day, d.end_time
+FROM pg_auth_time_constraint d join pg_roles r ON (d.authid = r.oid)
+WHERE r.rolname = 'testuser'
+ORDER BY r.rolname, d.start_day, d.start_time, d.end_day, d.end_time;
+ rolname | start_day | start_time | end_day | end_time 
+---------+-----------+------------+---------+----------
+(0 rows)
+

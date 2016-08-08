@@ -1,0 +1,18 @@
+-- start_ignore
+CREATE OR REPLACE FUNCTION pltest.super_untrustfunc() RETURNS integer AS $$
+     my $tmpfile = "/data/home/gpadmin/dev/cdbfast/main/language/plperl91/plsuperuser.tmp";
+     open my $fh, '>', $tmpfile or elog(ERROR, qq{could not open the file "$tmpfile": $!});
+     print $fh "Testing superuser can execute unsafe function\n";
+     close $fh or elog(ERROR, qq{could not close the file "$tmpfile": $!});
+     return 1;
+$$ LANGUAGE plperlu;
+CREATE FUNCTION
+-- end_ignore
+SELECT  pltest.super_untrustfunc();
+ super_untrustfunc 
+-------------------
+                 1
+(1 row)
+
+DROP FUNCTION pltest.super_untrustfunc();
+DROP FUNCTION

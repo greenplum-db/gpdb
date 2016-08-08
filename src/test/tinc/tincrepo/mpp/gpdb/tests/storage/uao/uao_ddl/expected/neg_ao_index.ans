@@ -1,0 +1,22 @@
+--------------------------------------------------------------------------
+-- @TITLE: Negative tests for UAO
+-- 
+--------------------------------------------------------------------------
+Drop table if exists sto_ao_neg_index;
+DROP TABLE
+CREATE TABLE sto_ao_neg_index (id int, date date, amt decimal(10,2))
+with (appendonly=true)
+DISTRIBUTED BY (id);
+CREATE TABLE
+drop index if exists uni_index;
+psql:/path/sql_file:1: NOTICE:  index "uni_index" does not exist, skipping
+DROP INDEX
+CREATE UNIQUE INDEX uni_index ON sto_ao_neg_index (date);
+psql:/path/sql_file:1: ERROR:  append-only tables do not support unique indexes
+drop index if exists clustered_index;
+psql:/path/sql_file:1: NOTICE:  index "clustered_index" does not exist, skipping
+DROP INDEX
+CREATE INDEX clustered_index ON sto_ao_neg_index (date);
+CREATE INDEX
+CLUSTER clustered_index ON sto_ao_neg_index;
+psql:/path/sql_file:1: ERROR:  cannot cluster append-only table "sto_ao_neg_index": not supported

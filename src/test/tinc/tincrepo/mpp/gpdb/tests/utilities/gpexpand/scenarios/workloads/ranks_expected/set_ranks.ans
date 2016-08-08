@@ -1,0 +1,10 @@
+-- start_ignore
+-- end_ignore
+UPDATE gpexpand.status_detail SET rank= 10; 
+UPDATE 79
+UPDATE gpexpand.status_detail SET rank=1 WHERE fq_name = 'public.users_rank_1';
+UPDATE 1
+UPDATE gpexpand.status_detail SET rank=2 WHERE fq_name = 'public.users_rank_2';
+UPDATE 1
+UPDATE gpexpand.status_detail SET rank=3 WHERE fq_name = 'public.users_rank_3';
+UPDATE 1

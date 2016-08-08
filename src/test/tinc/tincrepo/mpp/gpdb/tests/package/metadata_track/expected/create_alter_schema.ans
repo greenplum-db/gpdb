@@ -1,0 +1,45 @@
+-- start_ignore
+SET optimizer=off;
+SET
+-- end_ignore
+CREATE USER mdt_db_user13;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE SCHEMA mdt_schema1;
+CREATE SCHEMA
+CREATE SCHEMA mdt_db_schema5 AUTHORIZATION mdt_user ;
+CREATE SCHEMA
+CREATE SCHEMA AUTHORIZATION mdt_user;
+CREATE SCHEMA
+ALTER SCHEMA mdt_user RENAME TO mdt_db_schema6;
+ALTER SCHEMA
+ALTER SCHEMA  mdt_schema1 OWNER TO mdt_db_user13;
+ALTER SCHEMA
+select classname  , schemaname , objname  , usestatus , usename , actionname , subtype from pg_stat_operations  where statime > ( select statime from pg_stat_operations where objname ='my_first_table' and actionname ='CREATE') and objname  not in ('pg_stat_operations','pg_stat_partition_operations') order by statime;
+  classname   | schemaname |    objname     | usestatus | usename  | actionname | subtype  
+--------------+------------+----------------+-----------+----------+------------+----------
+ pg_authid    |            | mdt_user       | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_database  |            | mdt_db         | CURRENT   | mdt_user | CREATE     | DATABASE
+ pg_authid    |            | mdt_db_user13  | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_namespace |            | mdt_schema1    | CURRENT   | gpadmin  | CREATE     | SCHEMA
+ pg_namespace |            | mdt_db_schema5 | CURRENT   | gpadmin  | CREATE     | SCHEMA
+ pg_namespace |            | mdt_db_schema6 | CURRENT   | gpadmin  | CREATE     | SCHEMA
+ pg_namespace |            | mdt_db_schema6 | CURRENT   | gpadmin  | ALTER      | RENAME
+ pg_namespace |            | mdt_schema1    | CURRENT   | gpadmin  | ALTER      | OWNER
+(8 rows)
+
+drop schema mdt_schema1;
+DROP SCHEMA
+drop schema mdt_db_schema5;
+DROP SCHEMA
+drop schema mdt_db_schema6;
+DROP SCHEMA
+drop role mdt_db_user13;
+DROP ROLE
+select classname  , schemaname , objname  , usestatus , usename , actionname , subtype from pg_stat_operations  where statime > ( select statime from pg_stat_operations where objname ='my_first_table' and actionname ='CREATE') and objname  not in ('pg_stat_operations','pg_stat_partition_operations') order by statime;
+  classname  | schemaname | objname  | usestatus | usename  | actionname | subtype  
+-------------+------------+----------+-----------+----------+------------+----------
+ pg_authid   |            | mdt_user | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_database |            | mdt_db   | CURRENT   | mdt_user | CREATE     | DATABASE
+(2 rows)
+

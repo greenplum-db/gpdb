@@ -1,0 +1,15 @@
+-- start_ignore
+SET optimizer=off;
+SET
+-- end_ignore
+-- Test: plperl 26
+CREATE OR REPLACE FUNCTION perl_record_set() RETURNS SETOF record AS $$
+								return undef;
+								$$  LANGUAGE plperl;
+CREATE FUNCTION
+							  
+SELECT perl_record_set();
+psql:/path/sql_file:1: ERROR:  Unsupported Perl function "perl_record_set"
+DETAIL:  function returning record called in context that cannot accept type record
+CONTEXT:  PL/Perl function "perl_record_set"
+							  

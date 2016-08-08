@@ -1,0 +1,11 @@
+-- start_matchsubs
+-- m/mapreduce_\d+_/
+-- s/mapreduce_\d+/mapreduce_DUMMY/
+-- m/\(\w+.\w+:[0-9]+\)$/
+-- s/\(\w+.\w+:[0-9]+\)$/\(file:line\)/
+-- end_matchsubs
+mapreduce_6365_run_1
+DONE
+Error: cannot drop table bfs_delta because other objects depend on it
+Error: OUTPUT 'delta_replace': Table 'bfs_delta' can't be replaced, at line 24
+Error: Object creation Failure

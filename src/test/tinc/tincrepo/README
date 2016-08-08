@@ -1,0 +1,56 @@
+Copyright (C) 2004-2015 Pivotal Software, Inc. All rights reserved.
+
+This program and the accompanying materials are made available under
+the terms of the under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+-> tincrepo is the repository that will host all the test scripts that can be
+   run atop tinc. E.g. all the SQL files, python test methods etc.
+-> tinc.py should be able to run any tests off tincrepo
+-> To make it easier for any user to find relevant tests for a bug fix or a
+   changelist, tincrepo will impose a specific folder structure while
+   checking-in tests to the repository.
+
+NOTE: It is the test author's responsibility to not grow tincrepo/main
+      vertically. Please use caution while adding tests for new features.
+
+Following is the initial test classification that was decided upon for tincrepo:
+
+benchmarks
+catalog
+cursors
+data_mining
+ddl
+dispatch
+dml
+errors
+functions
+interconnect
+languages
+loading
+mirroring
+olap
+partitioning
+query
+resource_management
+security
+storage
+transactions
+types
+user_defined_objects
+utilities
+vacuum
+
+While checking-in tests for a feature, the tests should belong to one of the
+above mentioned categories making it easier for users to find tests to run
+for a specific feature or a changelist. E.g. upgrade tests should belong to
+utilities/upgrade etc.

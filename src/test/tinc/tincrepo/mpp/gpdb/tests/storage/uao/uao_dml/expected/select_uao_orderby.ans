@@ -1,0 +1,167 @@
+-- @description : Create Data and execute select statements on UAO tables ORDER BY ASC DESC USING 
+-- 
+--
+DROP TABLE IF EXISTS city_uao_using cascade;
+DROP TABLE
+DROP TABLE IF EXISTS country_uao_using cascade;
+DROP TABLE
+DROP TABLE IF EXISTS countrylanguage_uao_using cascade;
+DROP TABLE
+BEGIN;
+BEGIN
+CREATE TABLE city_uao_using (
+    id integer NOT NULL,
+    name text NOT NULL,
+    countrycode character(3) NOT NULL,
+    district text NOT NULL,
+    population integer NOT NULL
+) with (appendonly=true) distributed by(id);
+CREATE TABLE
+CREATE TABLE country_uao_using (
+    code character(3) NOT NULL,
+    name text NOT NULL,
+    continent text NOT NULL,
+    region text NOT NULL,
+    surfacearea real NOT NULL,
+    indepyear smallint,
+    population integer NOT NULL,
+    lifeexpectancy real,
+    gnp numeric(10,2),
+    gnpold numeric(10,2),
+    localname text NOT NULL,
+    governmentform text NOT NULL,
+    headofstate text,
+    capital integer,
+    code2 character(2) NOT NULL
+) with (appendonly=true)  distributed by (code);
+CREATE TABLE
+CREATE TABLE countrylanguage_uao_using (
+    countrycode character(3) NOT NULL,
+    "language" text NOT NULL,
+    isofficial boolean NOT NULL,
+    percentage real NOT NULL
+)  with (appendonly=true) distributed by (countrycode,language);
+CREATE TABLE
+COPY city_uao_using (id, name, countrycode, district, population) FROM stdin;
+--
+-- Data for Name: country; Type: TABLE DATA; Schema: public; 
+--
+COPY country_uao_using (code, name, continent, region, surfacearea, indepyear, population, lifeexpectancy, gnp, gnpold, localname, governmentform, headofstate, capital, code2) FROM stdin WITH NULL AS '';
+--
+-- Data for Name: countrylanguage; Type: TABLE DATA; Schema: public; 
+--
+COPY countrylanguage_uao_using (countrycode, "language", isofficial, percentage) FROM stdin;
+COMMIT;
+COMMIT
+ANALYZE city_uao_using;
+ANALYZE
+ANALYZE country_uao_using;
+ANALYZE
+ANALYZE countrylanguage_uao_using;
+ANALYZE
+--query1
+with capitals_uao as 
+(select country_uao_using.code,id,city_uao_using.name from city_uao_using,country_uao_using 
+ where city_uao_using.countrycode = country_uao_using.code AND city_uao_using.id = country_uao_using.capital) 
+select capitals_uao.code,language from 
+capitals_uao,countrylanguage_uao_using
+where capitals_uao.code = countrylanguage_uao_using.countrycode and isofficial='true'
+order by capitals_uao.code asc,countrylanguage_uao_using.language asc LIMIT 10;
+ code |  language  
+------+------------
+ AFG  | Dari
+ AFG  | Pashto
+ AIA  | English
+ ALB  | Albaniana
+ AND  | Catalan
+ ANT  | Dutch
+ ANT  | Papiamento
+ ARE  | Arabic
+ ARG  | Spanish
+ ASM  | English
+(10 rows)
+
+with capitals_uao as
+(select country_uao_using.code,id,city_uao_using.name from city_uao_using,country_uao_using
+ where city_uao_using.countrycode = country_uao_using.code AND city_uao_using.id = country_uao_using.capital)
+select capitals_uao.code,language from
+capitals_uao,countrylanguage_uao_using
+where capitals_uao.code = countrylanguage_uao_using.countrycode and isofficial='true'
+order by capitals_uao.code desc, 2 desc LIMIT 10;
+ code |  language  
+------+------------
+ NLD  | Dutch
+ DZA  | Arabic
+ ATG  | English
+ ASM  | Samoan
+ ASM  | English
+ ARG  | Spanish
+ ARE  | Arabic
+ ANT  | Papiamento
+ ANT  | Dutch
+ AND  | Catalan
+(10 rows)
+
+with capitals_uao as
+(select country_uao_using.code,id,city_uao_using.name from city_uao_using,country_uao_using
+ where city_uao_using.countrycode = country_uao_using.code AND city_uao_using.id = country_uao_using.capital)
+select capitals_uao.code,language from
+capitals_uao,countrylanguage_uao_using
+where capitals_uao.code = countrylanguage_uao_using.countrycode and isofficial='true'
+order by capitals_uao.code asc,countrylanguage_uao_using.language desc LIMIT 10;
+ code |  language  
+------+------------
+ AFG  | Pashto
+ AFG  | Dari
+ AIA  | English
+ ALB  | Albaniana
+ AND  | Catalan
+ ANT  | Papiamento
+ ANT  | Dutch
+ ARE  | Arabic
+ ARG  | Spanish
+ ASM  | Samoan
+(10 rows)
+
+with capitals_uao as
+(select country_uao_using.code,id,city_uao_using.name from city_uao_using,country_uao_using
+ where city_uao_using.countrycode = country_uao_using.code AND city_uao_using.id = country_uao_using.capital)
+select capitals_uao.code,language from
+capitals_uao,countrylanguage_uao_using
+where capitals_uao.code = countrylanguage_uao_using.countrycode and isofficial='true'
+order by capitals_uao.code using > , 2  using > LIMIT 10;
+ code |  language  
+------+------------
+ NLD  | Dutch
+ DZA  | Arabic
+ ATG  | English
+ ASM  | Samoan
+ ASM  | English
+ ARG  | Spanish
+ ARE  | Arabic
+ ANT  | Papiamento
+ ANT  | Dutch
+ AND  | Catalan
+(10 rows)
+
+with capitals_uao as
+(select country_uao_using.code,id,city_uao_using.name from city_uao_using,country_uao_using
+ where city_uao_using.countrycode = country_uao_using.code AND city_uao_using.id = country_uao_using.capital)
+select capitals_uao.code,language from
+capitals_uao,countrylanguage_uao_using
+where capitals_uao.code = countrylanguage_uao_using.countrycode and isofficial='true'
+order by capitals_uao.code USING < , 2 using < LIMIT 10;
+ code |  language  
+------+------------
+ AFG  | Dari
+ AFG  | Pashto
+ AIA  | English
+ ALB  | Albaniana
+ AND  | Catalan
+ ANT  | Dutch
+ ANT  | Papiamento
+ ARE  | Arabic
+ ARG  | Spanish
+ ASM  | English
+(10 rows)
+

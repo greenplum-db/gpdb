@@ -1,0 +1,23 @@
+-- start_matchsubs
+-- m/mapreduce_\d+_/
+-- s/mapreduce_\d+/mapreduce_DUMMY/
+-- m/\(\w+.\w+:[0-9]+\)$/
+-- s/\(\w+.\w+:[0-9]+\)$/\(file:line\)/
+-- end_matchsubs
+WARNING: unset parameter - tran(state => NULL)
+WARNING: unset parameter - tran(value => NULL)
+mapreduce_30445_run_1
+key
+---
+  0
+  0
+  0
+  0
+  0
+  0
+  0
+  0
+  0
+  0
+(10 rows)
+

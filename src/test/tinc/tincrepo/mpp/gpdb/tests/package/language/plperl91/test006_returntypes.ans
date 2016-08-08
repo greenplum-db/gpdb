@@ -1,0 +1,893 @@
+CREATE or REPLACE function pltest.PLPERLsetoftype_0 (  ) RETURNS SETOF REAL as $$  
+			my $rv = spi_exec_query('select * from pltest.TABLEREAL;');
+			my $status = $rv->{status};
+			my $nrows = $rv->{processed};
+			foreach my $rn (0 .. $nrows - 1) {
+			my $row = $rv->{rows}[$rn] -> {key};
+				return_next($row);
+			}
+			return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLsetoftype_0() order by PLPERLsetoftype_0;
+ plperlsetoftype_0 
+-------------------
+         -Infinity
+            39.333
+          Infinity
+               NaN
+                  
+(5 rows)
+
+select * from pltest.PLPERLsetoftype_0() order by PLPERLsetoftype_0;
+ plperlsetoftype_0 
+-------------------
+         -Infinity
+            39.333
+          Infinity
+               NaN
+                  
+(5 rows)
+
+DROP function pltest.PLPERLsetoftype_0 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLsetoftype_2 (  ) RETURNS SETOF VARCHAR(16) as $$  
+			my $rv = spi_exec_query('select * from pltest.TABLEVARCHAR16;');
+			my $status = $rv->{status};
+			my $nrows = $rv->{processed};
+			foreach my $rn (0 .. $nrows - 1) {
+			my $row = $rv->{rows}[$rn] -> {key};
+				return_next($row);
+			}
+			return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLsetoftype_2() order by PLPERLsetoftype_2;
+ plperlsetoftype_2 
+-------------------
+ ASDFGHJKL
+ 
+(2 rows)
+
+select * from pltest.PLPERLsetoftype_2() order by PLPERLsetoftype_2;
+ plperlsetoftype_2 
+-------------------
+ ASDFGHJKL
+ 
+(2 rows)
+
+DROP function pltest.PLPERLsetoftype_2 (  );
+DROP FUNCTION
+--ERROR:  cannot determine result data type
+CREATE or REPLACE function pltest.PLPERLsetoftype_3 (  ) RETURNS SETOF ANYARRAY as $$  
+			my $rv = spi_exec_query('select * from pltest.TABLEANYARRAY;');
+			my $status = $rv->{status};
+			my $nrows = $rv->{processed};
+			foreach my $rn (0 .. $nrows - 1) {
+			my $row = $rv->{rows}[$rn] -> {key};
+				return_next($row);
+			}
+			return undef;
+$$ language PLPERL;
+ERROR:  cannot determine result data type
+DETAIL:  A function returning "anyarray" or "anyelement" must have at least one argument of either type.
+CREATE or REPLACE function pltest.PLPERLsetoftype_4 (  ) RETURNS SETOF UNKNOWN as $$  
+			my $rv = spi_exec_query('select * from pltest.TABLECHAR;');
+			my $status = $rv->{status};
+			my $nrows = $rv->{processed};
+			foreach my $rn (0 .. $nrows - 1) {
+			my $row = $rv->{rows}[$rn] -> {key};
+				return_next($row);
+			}
+			return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+select * from pltest.PLPERLsetoftype_4() order by PLPERLsetoftype_4;
+ plperlsetoftype_4 
+-------------------
+ B
+ 
+(2 rows)
+
+DROP function pltest.PLPERLsetoftype_4 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLsetoftype_5 (  ) RETURNS SETOF BIT VARYING(10) as $$  
+			my $rv = spi_exec_query('select * from pltest.TABLEBITVARYING10;');
+			my $status = $rv->{status};
+			my $nrows = $rv->{processed};
+			foreach my $rn (0 .. $nrows - 1) {
+			my $row = $rv->{rows}[$rn] -> {key};
+				return_next($row);
+			}
+			return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLsetoftype_5() order by PLPERLsetoftype_5;
+ plperlsetoftype_5 
+-------------------
+ 11001111
+ 
+(2 rows)
+
+select * from pltest.PLPERLsetoftype_5() order by PLPERLsetoftype_5;
+ plperlsetoftype_5 
+-------------------
+ 11001111
+ 
+(2 rows)
+
+DROP function pltest.PLPERLsetoftype_5 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLsetoftype_6 (  ) RETURNS SETOF TIMESTAMPTZ as $$  
+			my $rv = spi_exec_query('select * from pltest.TABLETIMESTAMPTZ;');
+			my $status = $rv->{status};
+			my $nrows = $rv->{processed};
+			foreach my $rn (0 .. $nrows - 1) {
+			my $row = $rv->{rows}[$rn] -> {key};
+				return_next($row);
+			}
+			return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLsetoftype_6() order by PLPERLsetoftype_6;
+     plperlsetoftype_6     
+---------------------------
+ 2011-08-12 10:00:52.14-07
+ 
+(2 rows)
+
+select * from pltest.PLPERLsetoftype_6() order by PLPERLsetoftype_6;
+     plperlsetoftype_6     
+---------------------------
+ 2011-08-12 10:00:52.14-07
+ 
+(2 rows)
+
+DROP function pltest.PLPERLsetoftype_6 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLsetoftype_7 (  ) RETURNS SETOF "char" as $$  
+			my $rv = spi_exec_query('select * from pltest.TABLEchar;');
+			my $status = $rv->{status};
+			my $nrows = $rv->{processed};
+			foreach my $rn (0 .. $nrows - 1) {
+			my $row = $rv->{rows}[$rn] -> {key};
+				return_next($row);
+			}
+			return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLsetoftype_7() order by PLPERLsetoftype_7;
+ plperlsetoftype_7 
+-------------------
+ B
+ 
+(2 rows)
+
+select * from pltest.PLPERLsetoftype_7() order by PLPERLsetoftype_7;
+ plperlsetoftype_7 
+-------------------
+ B
+ 
+(2 rows)
+
+DROP function pltest.PLPERLsetoftype_7 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLsetoftype_8 (  ) RETURNS SETOF CHAR as $$  
+			my $rv = spi_exec_query('select * from pltest.TABLECHAR;');
+			my $status = $rv->{status};
+			my $nrows = $rv->{processed};
+			foreach my $rn (0 .. $nrows - 1) {
+			my $row = $rv->{rows}[$rn] -> {key};
+				return_next($row);
+			}
+			return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLsetoftype_8() order by PLPERLsetoftype_8;
+ plperlsetoftype_8 
+-------------------
+ B
+ 
+(2 rows)
+
+select * from pltest.PLPERLsetoftype_8() order by PLPERLsetoftype_8;
+ plperlsetoftype_8 
+-------------------
+ B
+ 
+(2 rows)
+
+DROP function pltest.PLPERLsetoftype_8 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLsetoftype_9 (  ) RETURNS SETOF BIGINT as $$  
+			my $rv = spi_exec_query('select * from pltest.TABLEBIGINT;');
+			my $status = $rv->{status};
+			my $nrows = $rv->{processed};
+			foreach my $rn (0 .. $nrows - 1) {
+			my $row = $rv->{rows}[$rn] -> {key};
+				return_next($row);
+			}
+			return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLsetoftype_9() order by PLPERLsetoftype_9;
+  plperlsetoftype_9   
+----------------------
+ -9223372036854775808
+            123456789
+  9223372036854775807
+                     
+(4 rows)
+
+select * from pltest.PLPERLsetoftype_9() order by PLPERLsetoftype_9;
+  plperlsetoftype_9   
+----------------------
+ -9223372036854775808
+            123456789
+  9223372036854775807
+                     
+(4 rows)
+
+DROP function pltest.PLPERLsetoftype_9 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLsetoftype_10 (  ) RETURNS SETOF DATE as $$  
+			my $rv = spi_exec_query('select * from pltest.TABLEDATE;');
+			my $status = $rv->{status};
+			my $nrows = $rv->{processed};
+			foreach my $rn (0 .. $nrows - 1) {
+			my $row = $rv->{rows}[$rn] -> {key};
+				return_next($row);
+			}
+			return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLsetoftype_10() order by PLPERLsetoftype_10;
+ plperlsetoftype_10 
+--------------------
+ 1970-01-01
+ 2011-08-12
+ 
+(3 rows)
+
+select * from pltest.PLPERLsetoftype_10() order by PLPERLsetoftype_10;
+ plperlsetoftype_10 
+--------------------
+ 1970-01-01
+ 2011-08-12
+ 
+(3 rows)
+
+DROP function pltest.PLPERLsetoftype_10 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLsetoftype_12 (  ) RETURNS SETOF SMALLINT as $$  
+			my $rv = spi_exec_query('select * from pltest.TABLESMALLINT;');
+			my $status = $rv->{status};
+			my $nrows = $rv->{processed};
+			foreach my $rn (0 .. $nrows - 1) {
+			my $row = $rv->{rows}[$rn] -> {key};
+				return_next($row);
+			}
+			return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLsetoftype_12() order by PLPERLsetoftype_12;
+ plperlsetoftype_12 
+--------------------
+             -32768
+               1234
+              32767
+                   
+(4 rows)
+
+select * from pltest.PLPERLsetoftype_12() order by PLPERLsetoftype_12;
+ plperlsetoftype_12 
+--------------------
+             -32768
+               1234
+              32767
+                   
+(4 rows)
+
+DROP function pltest.PLPERLsetoftype_12 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLsetoftype_13 (  ) RETURNS SETOF MACADDR as $$  
+			my $rv = spi_exec_query('select * from pltest.TABLEMACADDR;');
+			my $status = $rv->{status};
+			my $nrows = $rv->{processed};
+			foreach my $rn (0 .. $nrows - 1) {
+			my $row = $rv->{rows}[$rn] -> {key};
+				return_next($row);
+			}
+			return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLsetoftype_13() order by PLPERLsetoftype_13;
+ plperlsetoftype_13 
+--------------------
+ 12:34:56:78:90:ab
+ 
+(2 rows)
+
+select * from pltest.PLPERLsetoftype_13() order by PLPERLsetoftype_13;
+ plperlsetoftype_13 
+--------------------
+ 12:34:56:78:90:ab
+ 
+(2 rows)
+
+DROP function pltest.PLPERLsetoftype_13 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLsetoftype_15 (  ) RETURNS SETOF INTERVAL as $$  
+			my $rv = spi_exec_query('select * from pltest.TABLEINTERVAL;');
+			my $status = $rv->{status};
+			my $nrows = $rv->{processed};
+			foreach my $rn (0 .. $nrows - 1) {
+			my $row = $rv->{rows}[$rn] -> {key};
+				return_next($row);
+			}
+			return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLsetoftype_15() order by PLPERLsetoftype_15;
+ plperlsetoftype_15 
+--------------------
+ 1 day 12:59:10
+ 1 day 12:59:10
+ 
+(3 rows)
+
+select * from pltest.PLPERLsetoftype_15() order by PLPERLsetoftype_15;
+ plperlsetoftype_15 
+--------------------
+ 1 day 12:59:10
+ 1 day 12:59:10
+ 
+(3 rows)
+
+DROP function pltest.PLPERLsetoftype_15 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLsetoftype_16 (  ) RETURNS SETOF NUMERIC as $$  
+			my $rv = spi_exec_query('select * from pltest.TABLENUMERIC;');
+			my $status = $rv->{status};
+			my $nrows = $rv->{processed};
+			foreach my $rn (0 .. $nrows - 1) {
+			my $row = $rv->{rows}[$rn] -> {key};
+				return_next($row);
+			}
+			return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLsetoftype_16() order by PLPERLsetoftype_16;
+                    plperlsetoftype_16                    
+----------------------------------------------------------
+               0.0000000000000000000000096204987201369818
+                                                      0.5
+                                    1234567890.0987654321
+ 340282366920938463463374607431768211456.0000000000000000
+                                                      NaN
+                                                         
+(6 rows)
+
+select * from pltest.PLPERLsetoftype_16() order by PLPERLsetoftype_16;
+                    plperlsetoftype_16                    
+----------------------------------------------------------
+               0.0000000000000000000000096204987201369818
+                                                      0.5
+                                    1234567890.0987654321
+ 340282366920938463463374607431768211456.0000000000000000
+                                                      NaN
+                                                         
+(6 rows)
+
+DROP function pltest.PLPERLsetoftype_16 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLsetoftype_17 (  ) RETURNS SETOF INT4 as $$  
+			my $rv = spi_exec_query('select * from pltest.TABLEINT4;');
+			my $status = $rv->{status};
+			my $nrows = $rv->{processed};
+			foreach my $rn (0 .. $nrows - 1) {
+			my $row = $rv->{rows}[$rn] -> {key};
+				return_next($row);
+			}
+			return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLsetoftype_17() order by PLPERLsetoftype_17;
+ plperlsetoftype_17 
+--------------------
+        -2147483648
+               1234
+         2147483647
+                   
+(4 rows)
+
+select * from pltest.PLPERLsetoftype_17() order by PLPERLsetoftype_17;
+ plperlsetoftype_17 
+--------------------
+        -2147483648
+               1234
+         2147483647
+                   
+(4 rows)
+
+DROP function pltest.PLPERLsetoftype_17 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLsetoftype_18 (  ) RETURNS SETOF CHAR(4) as $$  
+			my $rv = spi_exec_query('select * from pltest.TABLECHAR4;');
+			my $status = $rv->{status};
+			my $nrows = $rv->{processed};
+			foreach my $rn (0 .. $nrows - 1) {
+			my $row = $rv->{rows}[$rn] -> {key};
+				return_next($row);
+			}
+			return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLsetoftype_18() order by PLPERLsetoftype_18;
+ plperlsetoftype_18 
+--------------------
+ SSSS
+ 
+(2 rows)
+
+select * from pltest.PLPERLsetoftype_18() order by PLPERLsetoftype_18;
+ plperlsetoftype_18 
+--------------------
+ SSSS
+ 
+(2 rows)
+
+DROP function pltest.PLPERLsetoftype_18 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLsetoftype_19 (  ) RETURNS SETOF TEXT as $$  
+			my $rv = spi_exec_query('select * from pltest.TABLETEXT;');
+			my $status = $rv->{status};
+			my $nrows = $rv->{processed};
+			foreach my $rn (0 .. $nrows - 1) {
+			my $row = $rv->{rows}[$rn] -> {key};
+				return_next($row);
+			}
+			return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLsetoftype_19() order by PLPERLsetoftype_19;
+ plperlsetoftype_19 
+--------------------
+ QAZWSXEDCRFVTGB
+ 
+(2 rows)
+
+select * from pltest.PLPERLsetoftype_19() order by PLPERLsetoftype_19;
+ plperlsetoftype_19 
+--------------------
+ QAZWSXEDCRFVTGB
+ 
+(2 rows)
+
+DROP function pltest.PLPERLsetoftype_19 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLsetoftype_20 (  ) RETURNS SETOF INET as $$  
+			my $rv = spi_exec_query('select * from pltest.TABLEINET;');
+			my $status = $rv->{status};
+			my $nrows = $rv->{processed};
+			foreach my $rn (0 .. $nrows - 1) {
+			my $row = $rv->{rows}[$rn] -> {key};
+				return_next($row);
+			}
+			return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLsetoftype_20()  order by PLPERLsetoftype_20;
+ plperlsetoftype_20 
+--------------------
+ 192.168.0.1
+ 
+(2 rows)
+
+select * from pltest.PLPERLsetoftype_20()  order by PLPERLsetoftype_20;
+ plperlsetoftype_20 
+--------------------
+ 192.168.0.1
+ 
+(2 rows)
+
+DROP function pltest.PLPERLsetoftype_20 (  );
+DROP FUNCTION
+--ERROR:  PL/Perl functions cannot return type cstring
+CREATE or REPLACE function pltest.PLPERLsetoftype_22 (  ) RETURNS SETOF CSTRING as $$  
+			my $rv = spi_exec_query('select * from pltest.TABLECSTRING;');
+			my $status = $rv->{status};
+			my $nrows = $rv->{processed};
+			foreach my $rn (0 .. $nrows - 1) {
+			my $row = $rv->{rows}[$rn] -> {key};
+				return_next($row);
+			}
+			return undef;
+$$ language PLPERL;
+ERROR:  PL/Perl functions cannot return type cstring
+--ERROR:  cannot determine result data type
+CREATE or REPLACE function pltest.PLPERLsetoftype_24 (  ) RETURNS SETOF ANYELEMENT as $$  
+			my $rv = spi_exec_query('select * from pltest.TABLEANYELEMENT;');
+			my $status = $rv->{status};
+			my $nrows = $rv->{processed};
+			foreach my $rn (0 .. $nrows - 1) {
+			my $row = $rv->{rows}[$rn] -> {key};
+				return_next($row);
+			}
+			return undef;
+$$ language PLPERL;
+ERROR:  cannot determine result data type
+DETAIL:  A function returning "anyarray" or "anyelement" must have at least one argument of either type.
+CREATE or REPLACE function pltest.PLPERLsetoftype_25 (  ) RETURNS SETOF CIDR as $$  
+			my $rv = spi_exec_query('select * from pltest.TABLECIDR;');
+			my $status = $rv->{status};
+			my $nrows = $rv->{processed};
+			foreach my $rn (0 .. $nrows - 1) {
+			my $row = $rv->{rows}[$rn] -> {key};
+				return_next($row);
+			}
+			return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLsetoftype_25()  order by plperlsetoftype_25;
+ plperlsetoftype_25 
+--------------------
+ 192.168.0.1/32
+ 
+(2 rows)
+
+select * from pltest.PLPERLsetoftype_25()  order by plperlsetoftype_25;
+ plperlsetoftype_25 
+--------------------
+ 192.168.0.1/32
+ 
+(2 rows)
+
+DROP function pltest.PLPERLsetoftype_25 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLsetoftype_26 (  ) RETURNS SETOF BYTEA as $$  
+			my $rv = spi_exec_query('select * from pltest.TABLEBYTEA;');
+			my $status = $rv->{status};
+			my $nrows = $rv->{processed};
+			foreach my $rn (0 .. $nrows - 1) {
+			my $row = $rv->{rows}[$rn] -> {key};
+				return_next($row);
+			}
+			return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLsetoftype_26() order by plperlsetoftype_26;
+ plperlsetoftype_26 
+--------------------
+ \000
+ 
+(2 rows)
+
+select * from pltest.PLPERLsetoftype_26() order by plperlsetoftype_26;
+ plperlsetoftype_26 
+--------------------
+ \000
+ 
+(2 rows)
+
+DROP function pltest.PLPERLsetoftype_26 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLsetoftype_27 (  ) RETURNS SETOF MONEY as $$  
+			my $rv = spi_exec_query('select * from pltest.TABLEMONEY;');
+			my $status = $rv->{status};
+			my $nrows = $rv->{processed};
+			foreach my $rn (0 .. $nrows - 1) {
+			my $row = $rv->{rows}[$rn] -> {key};
+				return_next($row);
+			}
+			return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLsetoftype_27() order by plperlsetoftype_27;
+ plperlsetoftype_27 
+--------------------
+    -$21,474,836.48
+          $1,234.00
+     $21,474,836.47
+                   
+(4 rows)
+
+select * from pltest.PLPERLsetoftype_27()  order by plperlsetoftype_27;
+ plperlsetoftype_27 
+--------------------
+    -$21,474,836.48
+          $1,234.00
+     $21,474,836.47
+                   
+(4 rows)
+
+DROP function pltest.PLPERLsetoftype_27 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLsetoftype_28 (  ) RETURNS SETOF TIMESTAMP as $$  
+			my $rv = spi_exec_query('select * from pltest.TABLETIMESTAMP;');
+			my $status = $rv->{status};
+			my $nrows = $rv->{processed};
+			foreach my $rn (0 .. $nrows - 1) {
+			my $row = $rv->{rows}[$rn] -> {key};
+				return_next($row);
+			}
+			return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLsetoftype_28()  order by plperlsetoftype_28;
+   plperlsetoftype_28   
+------------------------
+ 2011-08-12 10:00:52.14
+ 
+(2 rows)
+
+select * from pltest.PLPERLsetoftype_28() order by plperlsetoftype_28;
+   plperlsetoftype_28   
+------------------------
+ 2011-08-12 10:00:52.14
+ 
+(2 rows)
+
+DROP function pltest.PLPERLsetoftype_28 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLsetoftype_29 (  ) RETURNS SETOF BOOLEAN as $$  
+			my $rv = spi_exec_query('select * from pltest.TABLEBOOLEAN;');
+			my $status = $rv->{status};
+			my $nrows = $rv->{processed};
+			foreach my $rn (0 .. $nrows - 1) {
+			my $row = $rv->{rows}[$rn] -> {key};
+				return_next($row);
+			}
+			return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLsetoftype_29() order by plperlsetoftype_29;
+ plperlsetoftype_29 
+--------------------
+ f
+ t
+ 
+(3 rows)
+
+select * from pltest.PLPERLsetoftype_29() order by plperlsetoftype_29;
+ plperlsetoftype_29 
+--------------------
+ f
+ t
+ 
+(3 rows)
+
+DROP function pltest.PLPERLsetoftype_29 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLsetoftype_30 (  ) RETURNS SETOF FLOAT8 as $$  
+			my $rv = spi_exec_query('select * from pltest.TABLEFLOAT8;');
+			my $status = $rv->{status};
+			my $nrows = $rv->{processed};
+			foreach my $rn (0 .. $nrows - 1) {
+			my $row = $rv->{rows}[$rn] -> {key};
+				return_next($row);
+			}
+			return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLsetoftype_30()  order by plperlsetoftype_30;
+ plperlsetoftype_30 
+--------------------
+          -Infinity
+   123456789.987654
+           Infinity
+                NaN
+                   
+(5 rows)
+
+select * from pltest.PLPERLsetoftype_30()  order by plperlsetoftype_30;
+ plperlsetoftype_30 
+--------------------
+          -Infinity
+   123456789.987654
+           Infinity
+                NaN
+                   
+(5 rows)
+
+DROP function pltest.PLPERLsetoftype_30 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLsetoftype_31 (  ) RETURNS SETOF TIME as $$  
+			my $rv = spi_exec_query('select * from pltest.TABLETIME;');
+			my $status = $rv->{status};
+			my $nrows = $rv->{processed};
+			foreach my $rn (0 .. $nrows - 1) {
+			my $row = $rv->{rows}[$rn] -> {key};
+				return_next($row);
+			}
+			return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLsetoftype_31()  order by plperlsetoftype_31;
+ plperlsetoftype_31 
+--------------------
+ 00:00:00
+ 10:00:52.14
+ 
+(3 rows)
+
+select * from pltest.PLPERLsetoftype_31()  order by plperlsetoftype_31;
+ plperlsetoftype_31 
+--------------------
+ 00:00:00
+ 10:00:52.14
+ 
+(3 rows)
+
+DROP function pltest.PLPERLsetoftype_31 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLsetoftype_33 (  ) RETURNS SETOF TIMETZ as $$  
+			my $rv = spi_exec_query('select * from pltest.TABLETIMETZ;');
+			my $status = $rv->{status};
+			my $nrows = $rv->{processed};
+			foreach my $rn (0 .. $nrows - 1) {
+			my $row = $rv->{rows}[$rn] -> {key};
+				return_next($row);
+			}
+			return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLsetoftype_33()  order by plperlsetoftype_33;
+ plperlsetoftype_33 
+--------------------
+ 10:00:52.14-07
+ 
+(2 rows)
+
+select * from pltest.PLPERLsetoftype_33()  order by plperlsetoftype_33;
+ plperlsetoftype_33 
+--------------------
+ 10:00:52.14-07
+ 
+(2 rows)
+
+DROP function pltest.PLPERLsetoftype_33 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLsetoftype_34 (  ) RETURNS SETOF BIT(8) as $$  
+			my $rv = spi_exec_query('select * from pltest.TABLEBIT8;');
+			my $status = $rv->{status};
+			my $nrows = $rv->{processed};
+			foreach my $rn (0 .. $nrows - 1) {
+			my $row = $rv->{rows}[$rn] -> {key};
+				return_next($row);
+			}
+			return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLsetoftype_34()  order by plperlsetoftype_34;
+ plperlsetoftype_34 
+--------------------
+ 11001111
+ 
+(2 rows)
+
+select * from pltest.PLPERLsetoftype_34()  order by plperlsetoftype_34;
+ plperlsetoftype_34 
+--------------------
+ 11001111
+ 
+(2 rows)
+
+DROP function pltest.PLPERLsetoftype_34 (  );
+DROP FUNCTION
+--ERROR:  syntax error at or near "ANY"
+CREATE or REPLACE function pltest.PLPERLsetoftype_35 (  ) RETURNS SETOF ANY as $$  
+			my $rv = spi_exec_query('select * from pltest.TABLEANY;');
+			my $status = $rv->{status};
+			my $nrows = $rv->{processed};
+			foreach my $rn (0 .. $nrows - 1) {
+			my $row = $rv->{rows}[$rn] -> {key};
+				return_next($row);
+			}
+			return undef;
+$$ language PLPERL;
+ERROR:  syntax error at or near "ANY"
+LINE 1: ...tion pltest.PLPERLsetoftype_35 (  ) RETURNS SETOF ANY as $$ ...
+                                                             ^
+CREATE or REPLACE function pltest.PLPERLsetoftype_1 (  ) RETURNS SETOF BOX as $$
+                        my $rv = spi_exec_query('select * from pltest.TABLEBOX;');
+                        my $status = $rv->{status};
+                        my $nrows = $rv->{processed};
+                        foreach my $rn (0 .. $nrows - 1) {
+                        my $row = $rv->{rows}[$rn] -> {key};
+                                return_next($row);
+                        }
+                        return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+DROP function pltest.PLPERLsetoftype_1 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLsetoftype_11 (  ) RETURNS SETOF PATH as $$
+                        my $rv = spi_exec_query('select * from pltest.TABLEPATH;');
+                        my $status = $rv->{status};
+                        my $nrows = $rv->{processed};
+                        foreach my $rn (0 .. $nrows - 1) {
+                        my $row = $rv->{rows}[$rn] -> {key};
+                                return_next($row);
+                        }
+                        return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+DROP function pltest.PLPERLsetoftype_11 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLsetoftype_14 (  ) RETURNS SETOF POINT as $$
+                        my $rv = spi_exec_query('select * from pltest.TABLEPOINT;');
+                        my $status = $rv->{status};
+                        my $nrows = $rv->{processed};
+                        foreach my $rn (0 .. $nrows - 1) {
+                        my $row = $rv->{rows}[$rn] -> {key};
+                                return_next($row);
+                        }
+                        return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+DROP function pltest.PLPERLsetoftype_14 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLsetoftype_21 (  ) RETURNS SETOF POLYGON as $$
+                        my $rv = spi_exec_query('select * from pltest.TABLEPOLYGON;');
+                        my $status = $rv->{status};
+                        my $nrows = $rv->{processed};
+                        foreach my $rn (0 .. $nrows - 1) {
+                        my $row = $rv->{rows}[$rn] -> {key};
+                                return_next($row);
+                        }
+                        return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+DROP function pltest.PLPERLsetoftype_21 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLsetoftype_23 (  ) RETURNS SETOF LSEG as $$
+                        my $rv = spi_exec_query('select * from pltest.TABLELSEG;');
+                        my $status = $rv->{status};
+                        my $nrows = $rv->{processed};
+                        foreach my $rn (0 .. $nrows - 1) {
+                        my $row = $rv->{rows}[$rn] -> {key};
+                                return_next($row);
+                        }
+                        return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+DROP function pltest.PLPERLsetoftype_23 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLsetoftype_32 (  ) RETURNS SETOF CIRCLE as $$
+                        my $rv = spi_exec_query('select * from pltest.TABLECIRCLE;');
+                        my $status = $rv->{status};
+                        my $nrows = $rv->{processed};
+                        foreach my $rn (0 .. $nrows - 1) {
+                        my $row = $rv->{rows}[$rn] -> {key};
+                                return_next($row);
+                        }
+                        return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+DROP function pltest.PLPERLsetoftype_32 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLreturnvoid_77 (  ) RETURNS VOID as $$   
+	my ($emp) = @_;
+	my $result = '';
+	for my $key ( keys %$emp ) {
+		$result = $result . ',' . $emp->{$key}
+	}
+
+	return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLreturnvoid_77();
+ plperlreturnvoid_77 
+---------------------
+ 
+(1 row)
+
+select * from pltest.PLPERLreturnvoid_77();
+ plperlreturnvoid_77 
+---------------------
+ 
+(1 row)
+
+DROP function pltest.PLPERLreturnvoid_77 (  );
+DROP FUNCTION

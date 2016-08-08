@@ -1,0 +1,64 @@
+-- taken from uao test_suite
+-- start_ignore
+DROP TABLE IF EXISTS delta_one;
+DROP TABLE
+DROP TABLE IF EXISTS delta_two;
+DROP TABLE
+-- end_ignore
+-- This contrived choice of distribution key is to ensure that
+-- subsequent DELETE operations happen on a single GPDB segment.
+-- Otherwise, we may not exercise the case of out-of-order delete.
+CREATE TABLE delta_one (a INT, b INT, c CHAR(100)) WITH (appendonly=true, orientation=column, compresstype=rle_type)
+DISTRIBUTED BY (b);
+CREATE TABLE
+\d+ delta_one
+                                  Append-Only Columnar Table "public.delta_one"
+ Column |      Type      | Modifiers | Storage  | Compression Type | Compression Level | Block Size | Description 
+--------+----------------+-----------+----------+------------------+-------------------+------------+-------------
+ a      | integer        |           | plain    | rle_type         | 1                 | 32768      | 
+ b      | integer        |           | plain    | rle_type         | 1                 | 32768      | 
+ c      | character(100) |           | extended | rle_type         | 1                 | 32768      | 
+Checksum: f
+Has OIDs: no
+Options: appendonly=true, orientation=column, compresstype=rle_type
+Distributed by: (b)
+
+INSERT INTO delta_one SELECT i as a, 1 as b, '' as c FROM generate_series(1, 100000) AS i;
+INSERT 0 100000
+INSERT INTO delta_one SELECT i as a, 2 as b, '' as c FROM generate_series(1, 100000) AS i;
+INSERT 0 100000
+CREATE TABLE delta_two (a INT, b INT, c CHAR(100)) DISTRIBUTED BY (b);
+CREATE TABLE
+-- Populate delta_two such that at least one segment contains multiple
+-- occurences of the same value for a.
+INSERT INTO delta_two SELECT i as a, 1 as b, '' as c  FROM generate_series(1, 100000) AS i;
+INSERT 0 100000
+INSERT INTO delta_two SELECT i as a, 2 as b, '' as c  FROM generate_series(1, 100000) AS i;
+INSERT 0 100000
+INSERT INTO delta_two SELECT i as a, 1 as b, '' as c  FROM generate_series(1, 100000) AS i;
+INSERT 0 100000
+INSERT INTO delta_two SELECT i as a, 2 as b, '' as c  FROM generate_series(1, 100000) AS i;
+INSERT 0 100000
+ANALYZE delta_one;
+ANALYZE
+ANALYZE delta_two;
+ANALYZE
+DELETE FROM delta_one USING delta_two WHERE delta_one.b = delta_two.b AND delta_one.a = delta_two.a AND
+(delta_two.a = 10 OR delta_two.a = 40000 OR delta_two.a = 20000);
+DELETE 6
+-- Ensure that tuples to be deleted are from the same GPDB segment.
+-- This query should return the same output irrespective of GPDB
+-- configuration (1 segdb, 2 or more segdbs).
+SELECT distinct(a) FROM delta_one
+WHERE gp_segment_id = 0 AND delta_one.a IN (12, 80001, 1001)
+ORDER BY a;
+   a   
+-------
+    12
+  1001
+ 80001
+(3 rows)
+
+DELETE FROM delta_one USING delta_two WHERE delta_one.b = delta_two.b AND delta_one.a = delta_two.a AND
+(delta_two.a = 12 OR delta_two.a = 80001 OR delta_two.a = 1001);
+DELETE 6

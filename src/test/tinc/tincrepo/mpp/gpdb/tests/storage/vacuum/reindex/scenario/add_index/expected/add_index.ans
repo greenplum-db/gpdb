@@ -1,0 +1,5 @@
+\c gpreindextest;
+You are now connected to database "gpreindextest" as user "gpadmin".
+--Heap tables with indexes
+create index a4_idx on heap_add_index(a);
+CREATE INDEX

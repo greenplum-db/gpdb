@@ -1,0 +1,95 @@
+-- start_ignore
+drop table if exists functest;
+psql:/path/sql_file:1: NOTICE:  table "functest" does not exist, skipping
+DROP TABLE
+drop function if exists func1(int);
+psql:/path/sql_file:1: NOTICE:  function func1(pg_catalog.int4) does not exist, skipping
+DROP FUNCTION
+drop function if exists func2();
+psql:/path/sql_file:1: NOTICE:  function func2() does not exist, skipping
+DROP FUNCTION
+drop function if exists func3();
+psql:/path/sql_file:1: NOTICE:  function func3() does not exist, skipping
+DROP FUNCTION
+drop function if exists func4();
+psql:/path/sql_file:1: NOTICE:  function func4() does not exist, skipping
+DROP FUNCTION
+-- end_ignore
+create table functest(a int, b int) distributed by (b);
+CREATE TABLE
+create function func4() returns void as
+$$
+begin
+    insert into functest values(1,2);
+    insert into functest values(2,3);
+    insert into functest values(3,4);
+end; 
+$$ language plpgsql;
+CREATE FUNCTION
+create function func3() returns int as
+$$
+declare 
+    rowcnt int;
+begin
+    perform func4();
+    select count(*) into rowcnt from functest;
+    return rowcnt;
+end;
+$$ language plpgsql;
+CREATE FUNCTION
+create function func2() returns int as
+$$
+declare 
+    newcnt int;
+begin
+    select func3() + 2 into newcnt;
+    return newcnt;
+end;
+$$ language plpgsql;
+CREATE FUNCTION
+create function func1(padding int) returns int as
+$$
+begin
+    return func2() + $1;
+end;
+$$ language plpgsql;
+CREATE FUNCTION
+select func1(1) as func1, 
+       6 as expected;
+ func1 | expected 
+-------+----------
+     6 |        6
+(1 row)
+
+select count(*) from functest;
+ count 
+-------
+     3
+(1 row)
+
+drop function func4();
+DROP FUNCTION
+create function func4() returns void as
+$$
+begin
+    insert into functest values(4,4);
+end; 
+$$ language plpgsql;
+CREATE FUNCTION
+create or replace function func2() returns int as
+$$
+declare
+    newcnt int;
+begin
+    select func3() + 4 into newcnt;
+    return newcnt;
+end;
+$$ language plpgsql;
+CREATE FUNCTION
+select func1(1) as func1,
+       9 as expected;
+ func1 | expected 
+-------+----------
+     9 |        9 
+(1 row)
+

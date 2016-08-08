@@ -1,0 +1,161 @@
+-- 
+-- @description Precedence testing with GUC values at database, role, session, table level
+-- Database - Orientation=column,Compresslevel=1
+\c dsp_db1 
+You are now connected to database "dsp_db1" as user "sivand".
+Drop table if exists dsp_cl_1;
+psql:/path/sql_file:1: NOTICE:  table "dsp_cl_1" does not exist, skipping
+DROP TABLE
+Create table dsp_cl_1 ( i int, j int);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+Select relkind, relstorage, reloptions from pg_class where relname='dsp_cl_1';
+ relkind | relstorage |                       reloptions                       
+---------+------------+--------------------------------------------------------
+ r       | c          | {appendonly=true,compresstype=zlib,orientation=column}
+(1 row)
+
+Drop table dsp_cl_1;
+DROP TABLE
+-- Database - Orientation=column,Compresslevel=1; Role - Orientation=column,Compresslevel=3 
+\c dsp_db1 dsp_role1
+You are now connected to database "dsp_db1" as user "dsp_role1".
+Create table dsp_cl_1 ( i int, j int);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+Select relkind, relstorage, reloptions from pg_class where relname='dsp_cl_1';
+ relkind | relstorage |                      reloptions                      
+---------+------------+------------------------------------------------------
+ r       | c          | {appendonly=true,compresslevel=3,orientation=column}
+(1 row)
+
+Drop table dsp_cl_1;
+DROP TABLE
+-- Database - Orientation=column,Compresslevel=1; Role - Orientation=column,Compresslevel=3; 
+-- Session - Orientation=column,Compresslevel=4
+\c dsp_db1 dsp_role1
+You are now connected to database "dsp_db1" as user "dsp_role1".
+SET gp_default_storage_options='appendonly=true, orientation=column,compresslevel=4';
+SET
+Create table dsp_cl_1 ( i int, j int);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+Select relkind, relstorage, reloptions from pg_class where relname='dsp_cl_1';
+ relkind | relstorage |                      reloptions                      
+---------+------------+------------------------------------------------------
+ r       | c          | {appendonly=true,compresslevel=4,orientation=column}
+(1 row)
+
+Drop table dsp_cl_1;
+DROP TABLE
+-- Database - Orientation=column,Compresslevel=1; Role - Orientation=column,Compresslevel=3; 
+-- Session - Orientation=column,Compresslevel=4;Table - Orientation=column,Compresslevel=9
+\c dsp_db1 dsp_role1
+You are now connected to database "dsp_db1" as user "dsp_role1".
+SET gp_default_storage_options='appendonly=true, orientation=column,compresslevel=4';
+SET
+Create table dsp_cl_1 ( i int, j int) with (compresslevel=9);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+Select relkind, relstorage, reloptions from pg_class where relname='dsp_cl_1';
+ relkind | relstorage |                      reloptions                      
+---------+------------+------------------------------------------------------
+ r       | c          | {compresslevel=9,appendonly=true,orientation=column}
+(1 row)
+
+Drop table dsp_cl_1;
+DROP TABLE
+-- Database - Orientation=row,Compresslevel=2; Role - Orientation=row, Compresslevel=4
+\c dsp_db2 dsp_role2
+You are now connected to database "dsp_db2" as user "dsp_role2".
+Drop table if exists dsp_cl_2;
+psql:/path/sql_file:1: NOTICE:  table "dsp_cl_2" does not exist, skipping
+DROP TABLE
+Create table dsp_cl_2 ( i int, j int);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+Select relkind, relstorage, reloptions from pg_class where relname='dsp_cl_2';
+ relkind | relstorage |            reloptions             
+---------+------------+-----------------------------------
+ r       | a          | {appendonly=true,compresslevel=4}
+(1 row)
+
+Drop table dsp_cl_2;
+DROP TABLE
+-- Database - Orientation=row,Compresslevel=2; Role - Orientation=row, Compresslevel=4;
+-- Session - Orientation=row,Compresslevel=3
+\c dsp_db2 dsp_role2
+You are now connected to database "dsp_db2" as user "dsp_role2".
+SET gp_default_storage_options='appendonly=true, orientation=row,compresslevel=3';
+SET
+Create table dsp_cl_2 ( i int, j int);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+Select relkind, relstorage, reloptions from pg_class where relname='dsp_cl_2';
+ relkind | relstorage |            reloptions             
+---------+------------+-----------------------------------
+ r       | a          | {appendonly=true,compresslevel=3}
+(1 row)
+
+Drop table dsp_cl_2;
+DROP TABLE
+-- Database - Orientation=row,Compresslevel=2; Role - Orientation=row, Compresslevel=4; 
+-- Session - Orientation=row,Compresslevel=3, Table - Orientation=row,Compresslevel=5
+\c dsp_db2 dsp_role2
+You are now connected to database "dsp_db2" as user "dsp_role2".
+SET gp_default_storage_options='appendonly=true, orientation=row,compresslevel=3';
+SET
+Create table dsp_cl_2 ( i int, j int) with(orientation=row,compresslevel=5);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+Select relkind, relstorage, reloptions from pg_class where relname='dsp_cl_2';
+ relkind | relstorage |                    reloptions                     
+---------+------------+---------------------------------------------------
+ r       | a          | {orientation=row,compresslevel=5,appendonly=true}
+(1 row)
+
+Drop table dsp_cl_2;
+DROP TABLE
+-- Database - Orientation=row,Compresstype=quicklz,compresslevel=1; Role - Orientation=column, compresstype=quicklz,compresslevel=1; 
+-- Session - Orientation=row,Compresstype=quicklz,compresslevel=1, Table - compresslevel=0
+\c dsp_db3 dsp_role3
+You are now connected to database "dsp_db3" as user "dsp_role3".
+SET gp_default_storage_options='appendonly=true, orientation=row,compresstype=quicklz, compresslevel=1';
+SET
+Create table dsp_cl_2 ( i int, j int) with(compresstype=none,compresslevel=0);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+Select relkind, relstorage, reloptions from pg_class where relname='dsp_cl_2';
+ relkind | relstorage |                     reloptions                      
+---------+------------+-----------------------------------------------------
+ r       | a          | {compresstype=none,compresslevel=0,appendonly=true}
+(1 row)
+
+Drop table dsp_cl_2;
+DROP TABLE
+-- Database - Orientation=column,Compresstype=rle_type,Compresslevel=1; Role - Orientation=column, compresstype=rle_type,Compresslevel=3; 
+-- Session - Orientation=column,Compresstype=rle_type,Compresslevel=4, Table - Orientation=column,Compresstype=rle_type,Compresslevel=2
+\c dsp_db4 dsp_role4
+You are now connected to database "dsp_db4" as user "dsp_role4".
+SET gp_default_storage_options='appendonly=true, orientation=column,compresstype=rle_type, compresslevel=4';
+SET
+Create table dsp_cl_2 ( i int, j int) with(compresstype=rle_type,compresslevel=2);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+Select relkind, relstorage, reloptions from pg_class where relname='dsp_cl_2';
+ relkind | relstorage |                                 reloptions                                 
+---------+------------+----------------------------------------------------------------------------
+ r       | c          | {compresstype=rle_type,compresslevel=2,appendonly=true,orientation=column}
+(1 row)
+
+Drop table dsp_cl_2;
+DROP TABLE

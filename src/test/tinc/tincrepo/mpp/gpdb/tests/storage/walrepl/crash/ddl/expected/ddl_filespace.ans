@@ -1,0 +1,51 @@
+-- @Description Objects in filespace
+
+-- Drop objects
+Drop table if exists fs_ddl_t1;
+psql:/path/sql_file:1: NOTICE:  table "fs_ddl_t1" does not exist, skipping
+DROP TABLE
+Drop database if exists db_ddl;
+DROP DATABASE
+Drop tablespace if exists ts_ddl2;
+DROP TABLESPACE
+Drop tablespace if exists ts_ddl1;
+DROP TABLESPACE
+-- Tablespace
+CREATE tablespace ts_ddl1 filespace fs_ddl;
+CREATE TABLESPACE
+CREATE tablespace ts_ddl2 filespace fs_ddl;
+CREATE TABLESPACE
+-- Database
+CREATE database db_ddl tablespace = ts_ddl1;
+CREATE DATABASE
+-- Tables
+\c db_ddl
+You are now connected to database "db_ddl" as user "sivand".
+CREATE TABLE fs_ddl_t1 (
+          text_col text,
+          bigint_col bigint,
+          char_vary_col character varying(30),
+          numeric_col numeric
+          ) tablespace ts_ddl1 DISTRIBUTED RANDOMLY;
+CREATE TABLE
+Create index fs_idx on fs_ddl_t1(numeric_col);
+CREATE INDEX
+-- Insert few records into the table
+   INSERT into fs_ddl_t1 values ('text_1' , 55667788,'hello .. hi there',1);
+INSERT 0 1
+   INSERT into fs_ddl_t1 values ('text_2' , 55667788,'hello .. hi there',2);
+INSERT 0 1
+   INSERT into fs_ddl_t1 values ('text_3' , 55667788,'hello .. hi there',3);
+INSERT 0 1
+-- SELECT from the Table
+   SELECT * from fs_ddl_t1;
+ text_col | bigint_col |   char_vary_col   | numeric_col 
+----------+------------+-------------------+-------------
+ text_2   |   55667788 | hello .. hi there |           2
+ text_3   |   55667788 | hello .. hi there |           3
+ text_1   |   55667788 | hello .. hi there |           1
+(3 rows)
+
+-- ALTER the table to new table space ts_b1
+   ALTER table fs_ddl_t1 set tablespace ts_ddl2;
+ALTER TABLE

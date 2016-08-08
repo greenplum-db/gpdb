@@ -1,0 +1,23 @@
+-- @Description Tests the basic behavior of (lazy) vacuum when called from utility mode
+-- 
+
+DELETE FROM foo WHERE a < 20;
+DELETE 19
+SELECT COUNT(*) FROM foo;
+count
+-----
+81   
+(1 row)
+2U: VACUUM foo;
+VACUUM
+SELECT COUNT(*) FROM foo;
+count
+-----
+81   
+(1 row)
+2U: SELECT DISTINCT segno, tupcount FROM gp_aocsseg_name('foo');
+segno|tupcount
+-----+--------
+0    |81      
+1    |0       
+(2 rows)

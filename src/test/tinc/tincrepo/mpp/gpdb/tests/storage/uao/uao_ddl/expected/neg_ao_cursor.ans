@@ -1,0 +1,42 @@
+--------------------------------------------------------------------------
+-- @TITLE: Negative tests for UAO
+-- 
+--------------------------------------------------------------------------
+Drop table if exists sto_ao_neg_cursor;
+DROP TABLE
+CREATE TABLE sto_ao_neg_cursor (id int, date date, amt decimal(10,2))
+with (appendonly=true)
+DISTRIBUTED BY (id);
+CREATE TABLE
+Insert into sto_ao_neg_cursor values(1,'2013-07-05',19.20);
+INSERT 0 1
+Insert into sto_ao_neg_cursor values(2,'2013-08-15',10.20);
+INSERT 0 1
+Insert into sto_ao_neg_cursor values(3,'2013-09-09',14.20);
+INSERT 0 1
+Insert into sto_ao_neg_cursor values(10,'2013-07-22',12.52);
+INSERT 0 1
+begin;
+BEGIN
+DECLARE update_cursor CURSOR
+FOR select * from sto_ao_neg_cursor ORDER BY id;
+DECLARE CURSOR
+fetch 1 from update_cursor;
+ id |    date    |  amt  
+----+------------+-------
+  1 | 2013-07-05 | 19.20
+(1 row)
+
+UPDATE sto_ao_neg_cursor SET amt = 40.40 WHERE CURRENT OF update_cursor;
+psql:/path/sql_file:1: ERROR:  "sto_ao_neg_cursor" is not simply updatable
+end;
+ROLLBACK
+select * from sto_ao_neg_cursor ORDER BY id;
+ id |    date    |  amt  
+----+------------+-------
+  1 | 2013-07-05 | 19.20
+  2 | 2013-08-15 | 10.20
+  3 | 2013-09-09 | 14.20
+ 10 | 2013-07-22 | 12.52
+(4 rows)
+

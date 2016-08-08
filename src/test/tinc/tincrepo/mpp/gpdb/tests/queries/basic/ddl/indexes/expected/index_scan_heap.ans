@@ -1,0 +1,32 @@
+-- start_ignore
+SET work_mem="256kB";
+psql:/path/sql_file:1: WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
+SET
+SET optimizer=off;
+SET
+-- end_ignore
+create index idx_i_heap on heap_tab (i);
+CREATE INDEX
+select count(*) from heap_tab where i >= 0;
+  count  
+---------
+ 4063232
+(1 row)
+
+drop index idx_i_heap;
+DROP INDEX
+-- Edge case: without lossy pages
+truncate table heap_tab;
+TRUNCATE TABLE
+insert into heap_tab select generate_series(1, 65536);
+INSERT 0 65536
+create index idx_i_heap on heap_tab (i);
+CREATE INDEX
+select count(*) from heap_tab where i >= 0;
+ count 
+-------
+ 65536
+(1 row)
+
+drop index idx_i_heap;
+DROP INDEX

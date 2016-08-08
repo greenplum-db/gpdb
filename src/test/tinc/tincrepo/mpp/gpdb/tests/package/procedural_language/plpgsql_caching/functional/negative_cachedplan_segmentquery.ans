@@ -1,0 +1,70 @@
+-- start_ignore
+drop table if exists aotest;
+DROP TABLE
+drop function if exists segonly();
+DROP FUNCTION
+drop function if exists notsegonly();
+psql:/path/sql_file:1: NOTICE:  function notsegonly() does not exist, skipping
+DROP FUNCTION
+-- end_ignore
+CREATE TABLE aotest
+(dtype char(1), partnum int, sales numeric)
+WITH (appendonly=true)
+DISTRIBUTED BY (partnum);
+CREATE TABLE
+insert into aotest(dtype, partnum, sales) values ('p', 1200, 5000.25);
+INSERT 0 1
+insert into aotest(dtype, partnum, sales) values ('a', 4455, 10000.1234);
+INSERT 0 1
+insert into aotest(dtype, partnum, sales) values ('n', 2764, 100.345789);
+INSERT 0 1
+create function segonly() returns char(1) as $$
+declare 
+	dp char(1); 
+begin 
+	select into dp deptype from pg_depend order by deptype desc limit 1;
+	if dp = 'p'
+	then
+		return 'p';
+	else
+		return 'n';
+	end if;
+end;
+$$ language plpgsql;
+CREATE FUNCTION
+create function notsegonly() returns char(1) as $$
+declare 
+        dp char(1); 
+begin 
+        select dtype into dp from aotest order by dtype desc limit 1;
+        if dp = 'p'
+        then
+                return 'p';
+        else
+                return 'n';
+        end if;
+end;    
+$$ language plpgsql;
+CREATE FUNCTION
+-- This query is getting compiled on segments only
+select dtype, sales, dtype = segonly() as window, sum(sales) 
+over (partition by dtype = segonly()) as sum_window
+from aotest
+order by 1;
+ dtype |   sales    | window |  sum_window  
+-------+------------+--------+--------------
+ a     | 10000.1234 | f      | 10100.469189
+ n     | 100.345789 | f      | 10100.469189
+ p     |    5000.25 | t      |      5000.25
+(3 rows)
+
+-- Confirm that query above is getting compiled on segments only
+--   TEST: This should throw error since function is only getting compiled on segments
+select dtype, sum(sales)
+over (partition by dtype = notsegonly())
+from aotest
+order by 1;
+psql:/path/sql_file:1: ERROR:  function cannot execute on segment because it accesses relation "public.aotest" (functions.c:151)  (seg3 slice1 rh55-qavm50:40001 pid=28879) (cdbdisp.c:1475)
+DETAIL:  
+	 SQL statement "select dtype from aotest order by dtype desc limit 1"
+PL/pgSQL function "notsegonly" line 4 at SQL statement

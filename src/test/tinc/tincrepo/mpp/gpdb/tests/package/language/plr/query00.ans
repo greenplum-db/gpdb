@@ -1,0 +1,4 @@
+-- start_ignore
+create language plr;
+psql:/path/sql_file:1: ERROR:  language "plr" already exists
+-- end_ignore

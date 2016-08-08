@@ -1,0 +1,20 @@
+-- 
+-- @created 2014-06-06 12:00:00
+-- @modified 2014-06-06 12:00:00
+-- @tags storage
+-- @description Validate that the alter table add/drop column did not work when a 'panic fault'  was introduced as the alter was taking place
+\d large_aoco_table
+ Append-Only Columnar Table "public.large_aoco_table"
+   Column    |            Type             | Modifiers 
+-------------+-----------------------------+-----------
+ c_custkey   | integer                     | 
+ c_name      | character varying(25)       | 
+ c_comment   | text                        | 
+ c_rating    | double precision            | 
+ c_phone     | character(15)               | 
+ c_acctbal   | numeric(15,2)               | 
+ c_date      | date                        | 
+ c_timestamp | timestamp without time zone | 
+Checksum: t
+Distributed by: (c_custkey)
+

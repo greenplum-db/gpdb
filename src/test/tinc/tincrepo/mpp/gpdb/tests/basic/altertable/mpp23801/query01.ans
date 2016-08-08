@@ -1,0 +1,51 @@
+-- start_ignore
+-- end_ignore
+-- @tag mpp-23801
+-- @description ALTER TABLE set distribution key should check compatible with unique index. 
+-- case 1
+-- start_ignore
+DROP TABLE IF EXISTS t_dist1;
+DROP TABLE
+CREATE TABLE t_dist1(col1 INTEGER, col2 INTEGER, CONSTRAINT pk_t_dist1 PRIMARY KEY(col2)) DISTRIBUTED BY(col2);
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "t_dist1_pkey" for table "t_dist1"
+CREATE TABLE
+-- end_ignore
+ALTER TABLE t_dist1 SET DISTRIBUTED BY(col1); 
+ERROR:  UNIQUE INDEX and DISTRIBUTED BY definitions incompatible
+HINT:  the DISTRIBUTED BY columns must be equal to or a left-subset of the UNIQUE INDEX columns.
+-- case 2
+-- start_ignore
+DROP TABLE t_dist2;
+DROP TABLE
+CREATE TABLE t_dist2(col1 INTEGER, col2 INTEGER, col3 INTEGER, col4 INTEGER) DISTRIBUTED BY(col1);
+CREATE TABLE
+DROP INDEX idx1_t_dist2;
+ERROR:  index "idx1_t_dist2" does not exist
+CREATE UNIQUE INDEX idx1_t_dist2 ON t_dist2(col1, col2);
+CREATE INDEX
+DROP INDEX idx2_t_dist2;
+ERROR:  index "idx2_t_dist2" does not exist
+CREATE UNIQUE INDEX idx2_t_dist2 ON t_dist2(col1, col2, col3);
+CREATE INDEX
+DROP INDEX idx3_t_dist2;
+ERROR:  index "idx3_t_dist2" does not exist
+CREATE UNIQUE INDEX idx2_t_dist2 ON t_dist2(col1, col2, col4);
+ERROR:  relation "idx2_t_dist2" already exists
+-- end_ignore
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col1); 
+psql:/path/sql_file:1: WARNING:  distribution policy of relation "t_dist2" already set to (col1)
+HINT:  Use ALTER TABLE "t_dist2" SET WITH (REORGANIZE=TRUE) DISTRIBUTED BY (col1) to force redistribution
+ALTER TABLE
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col2); 
+ALTER TABLE
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col1, col2); 
+ALTER TABLE
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col1, col2, col3); 
+ERROR:  UNIQUE INDEX and DISTRIBUTED BY definitions incompatible
+HINT:  the DISTRIBUTED BY columns must be equal to or a left-subset of the UNIQUE INDEX columns.
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col3); 
+ERROR:  UNIQUE INDEX and DISTRIBUTED BY definitions incompatible
+HINT:  the DISTRIBUTED BY columns must be equal to or a left-subset of the UNIQUE INDEX columns.
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col4); 
+ERROR:  UNIQUE INDEX and DISTRIBUTED BY definitions incompatible
+HINT:  the DISTRIBUTED BY columns must be equal to or a left-subset of the UNIQUE INDEX columns.

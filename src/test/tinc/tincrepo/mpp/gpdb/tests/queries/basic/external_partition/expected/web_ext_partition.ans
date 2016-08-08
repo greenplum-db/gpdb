@@ -1,0 +1,60 @@
+-- 
+-- @created 2015-07-23 12:00:00
+-- @modified 2015-07-23 12:00:00
+-- @tags external_partition 
+-- @gpdiff true 
+-- @check whether external partition works on gphdfs
+drop table if exists pt_ext_web;
+psql:/path/sql_file:1: NOTICE:  table "pt_ext_web" does not exist, skipping
+DROP TABLE
+CREATE TABLE pt_ext_web
+(
+  col1 int,
+  col2 decimal
+)
+distributed by (col1)
+partition by list(col2)
+(
+	partition part1 values(1,2,3),
+	partition part2 values(4,5,6)
+);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_web_1_prt_part1" for table "pt_ext_web"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_web_1_prt_part2" for table "pt_ext_web"
+CREATE TABLE
+insert into pt_ext_web select i,i from generate_series(1,6) i;
+INSERT 0 6
+create temp table tmp as select * from pt_ext_web where col1 < 4 distributed by (col1); 
+SELECT 3
+copy tmp to '/tmp/pt_ext_web_out';
+COPY 3
+drop external table if exists pt_ext_web_ext;
+psql:/path/sql_file:1: NOTICE:  table "pt_ext_web_ext" does not exist, skipping
+DROP EXTERNAL TABLE
+create external web table pt_ext_web_ext(like pt_ext_web) execute 'cat /tmp/pt_ext_web_out' on master format 'text';
+CREATE EXTERNAL TABLE
+select * from pt_ext_web_ext;
+ col1 | col2 
+------+------
+    1 |    1
+    2 |    2
+    3 |    3
+(3 rows)
+
+alter table pt_ext_web exchange partition part1 with table pt_ext_web_ext without validation;
+ALTER TABLE
+drop table if exists pt_ext_web_ext;
+DROP TABLE
+select * from pt_ext_web;
+ col1 | col2 
+------+------
+    4 |    4
+    5 |    5
+    6 |    6
+    1 |    1
+    2 |    2
+    3 |    3
+(6 rows)
+
+drop table pt_ext_web;
+DROP TABLE
+\! rm '/tmp/pt_ext_web_out'

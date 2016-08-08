@@ -1,0 +1,11 @@
+-- start_matchsubs
+-- m/mapreduce_\d+_/
+-- s/mapreduce_\d+/mapreduce_DUMMY/
+-- m/\(\w+.\w+:[0-9]+\)$/
+-- s/\(\w+.\w+:[0-9]+\)$/\(file:line\)/
+-- end_matchsubs
+ERROR:  function f1(record) does not exist
+LINE 2: SELECT f1(m) as f1, f2(m) as f2, f3(m) as f3
+               ^
+HINT:  No function matches the given name and argument types. You may need to add explicit type casts.
+Error: Object creation Failure

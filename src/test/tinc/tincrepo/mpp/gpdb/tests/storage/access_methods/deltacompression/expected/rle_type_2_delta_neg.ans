@@ -1,0 +1,83 @@
+-- Insert into columns with rle_type compresslevel 2 + positive and  negative delta .
+-- start_ignore
+Drop table if exists rle_type_2_delta_neg;
+DROP TABLE
+-- end_ignore
+Create table rle_type_2_delta_neg(
+    a1 integer,
+    a2 bigint,
+    a3 date,
+    a4 time,
+    a5 timestamp,
+    a6 timestamp with time zone
+    ) with(appendonly=true, orientation=column, compresstype=rle_type, compresslevel=2);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_attribute_encoding e  where c.relname = 'rle_type_2_delta_neg'  and c.oid=e.attrelid  order by relname, attnum;
+       relname        | attnum |                       attoptions                        
+----------------------+--------+---------------------------------------------------------
+ rle_type_2_delta_neg |      1 | {compresstype=rle_type,compresslevel=2,blocksize=32768}
+ rle_type_2_delta_neg |      2 | {compresstype=rle_type,compresslevel=2,blocksize=32768}
+ rle_type_2_delta_neg |      3 | {compresstype=rle_type,compresslevel=2,blocksize=32768}
+ rle_type_2_delta_neg |      4 | {compresstype=rle_type,compresslevel=2,blocksize=32768}
+ rle_type_2_delta_neg |      5 | {compresstype=rle_type,compresslevel=2,blocksize=32768}
+ rle_type_2_delta_neg |      6 | {compresstype=rle_type,compresslevel=2,blocksize=32768}
+(6 rows)
+
+\d+ rle_type_2_delta_neg
+                                   Append-Only Columnar Table "public.rle_type_2_delta_neg"
+ Column |            Type             | Modifiers | Storage | Compression Type | Compression Level | Block Size | Description 
+--------+-----------------------------+-----------+---------+------------------+-------------------+------------+-------------
+ a1     | integer                     |           | plain   | rle_type         | 2                 | 32768      | 
+ a2     | bigint                      |           | plain   | rle_type         | 2                 | 32768      | 
+ a3     | date                        |           | plain   | rle_type         | 2                 | 32768      | 
+ a4     | time without time zone      |           | plain   | rle_type         | 2                 | 32768      | 
+ a5     | timestamp without time zone |           | plain   | rle_type         | 2                 | 32768      | 
+ a6     | timestamp with time zone    |           | plain   | rle_type         | 2                 | 32768      | 
+Checksum: f
+Has OIDs: no
+Options: appendonly=true, orientation=column, compresstype=rle_type, compresslevel=2
+Distributed by: (a1)
+
+Insert into rle_type_2_delta_neg values
+    (1000, 2147479999, '2014-07-31', '14:22:23.778899-07', '2014-07-30 14:22:58.357229', '2014-07-30 14:22:23.778899-07'),
+    (1000, 2147479999, '2014-07-31', '14:22:23.778899-07', '2014-07-30 14:22:58.357229', '2014-07-30 14:22:23.778899-07'),
+    (10, 2147483660, '2014-07-30', '14:22:23.776892', '2014-07-30 14:22:58.356249', '2014-07-30 14:22:23.776899-07'),
+    (10, 2147483660, '2014-07-30', '14:22:23.776892', '2014-07-30 14:22:58.356249', '2014-07-30 14:22:23.776899-07'),
+    (10, 2147483660, '2014-07-30', '14:22:23.776892', '2014-07-30 14:22:58.356249', '2014-07-30 14:22:23.776899-07'),
+    (10, 2147483660, '2014-07-30', '14:22:23.776892', '2014-07-30 14:22:58.356249', '2014-07-30 14:22:23.776899-07'),
+    (800000, 2147499999, '2024-07-30', '14:22:24.778899', '2014-07-30 10:22:31', '2014-07-30 14:22:24.776892-07'),
+    (800000, 2147499999, '2024-07-30', '14:22:24.778899', '2014-07-30 10:22:31', '2014-07-30 14:22:24.776892-07'),
+    (800000, 2147499999, '2024-07-30', '14:22:24.778899', '2014-07-30 10:22:31', '2014-07-30 14:22:24.776892-07'),
+    (10, 2147483660, '2014-07-30', '14:22:23.776892', '2014-07-30 14:22:58.356249', '2014-07-30 14:22:23.776899-07'),
+    (10, 2147483660, '2014-07-30', '14:22:23.776892', '2014-07-30 14:22:58.356249', '2014-07-30 14:22:23.776899-07'),
+    (1, 2147483648, '2014-07-29', '14:22:23.776890', '2014-07-30 14:22:58.356229', '2014-07-30 14:22:23.776892-07'),
+    (1, 2147483648, '2014-07-29', '14:22:23.776890', '2014-07-30 14:22:58.356229', '2014-07-30 14:22:23.776892-07'),
+    (1, 2147483648, '2014-07-29', '14:22:23.776890', '2014-07-30 14:22:58.356229', '2014-07-30 14:22:23.776892-07');
+INSERT 0 14
+Select 'compression_ratio' as compr_ratio, get_ao_compression_ratio('rle_type_2_delta_neg');
+    compr_ratio    | get_ao_compression_ratio 
+-------------------+--------------------------
+ compression_ratio |                     1.37
+(1 row)
+
+Select * from rle_type_2_delta_neg order by a1;
+   a1   |     a2     |     a3     |       a4        |             a5             |              a6               
+--------+------------+------------+-----------------+----------------------------+-------------------------------
+      1 | 2147483648 | 2014-07-29 | 14:22:23.77689  | 2014-07-30 14:22:58.356229 | 2014-07-30 14:22:23.776892-07
+      1 | 2147483648 | 2014-07-29 | 14:22:23.77689  | 2014-07-30 14:22:58.356229 | 2014-07-30 14:22:23.776892-07
+      1 | 2147483648 | 2014-07-29 | 14:22:23.77689  | 2014-07-30 14:22:58.356229 | 2014-07-30 14:22:23.776892-07
+     10 | 2147483660 | 2014-07-30 | 14:22:23.776892 | 2014-07-30 14:22:58.356249 | 2014-07-30 14:22:23.776899-07
+     10 | 2147483660 | 2014-07-30 | 14:22:23.776892 | 2014-07-30 14:22:58.356249 | 2014-07-30 14:22:23.776899-07
+     10 | 2147483660 | 2014-07-30 | 14:22:23.776892 | 2014-07-30 14:22:58.356249 | 2014-07-30 14:22:23.776899-07
+     10 | 2147483660 | 2014-07-30 | 14:22:23.776892 | 2014-07-30 14:22:58.356249 | 2014-07-30 14:22:23.776899-07
+     10 | 2147483660 | 2014-07-30 | 14:22:23.776892 | 2014-07-30 14:22:58.356249 | 2014-07-30 14:22:23.776899-07
+     10 | 2147483660 | 2014-07-30 | 14:22:23.776892 | 2014-07-30 14:22:58.356249 | 2014-07-30 14:22:23.776899-07
+   1000 | 2147479999 | 2014-07-31 | 14:22:23.778899 | 2014-07-30 14:22:58.357229 | 2014-07-30 14:22:23.778899-07
+   1000 | 2147479999 | 2014-07-31 | 14:22:23.778899 | 2014-07-30 14:22:58.357229 | 2014-07-30 14:22:23.778899-07
+ 800000 | 2147499999 | 2024-07-30 | 14:22:24.778899 | 2014-07-30 10:22:31        | 2014-07-30 14:22:24.776892-07
+ 800000 | 2147499999 | 2024-07-30 | 14:22:24.778899 | 2014-07-30 10:22:31        | 2014-07-30 14:22:24.776892-07
+ 800000 | 2147499999 | 2024-07-30 | 14:22:24.778899 | 2014-07-30 10:22:31        | 2014-07-30 14:22:24.776892-07
+(14 rows)
+

@@ -1,0 +1,21 @@
+--------------------------------------------------------------------------------
+query:  update tags=newvalue 
+
+test_name|metadata|class_value|method_value
+
+test_update.sample_tincmm_tests.MockTestCase1.test_01|tags|newvalue|None
+test_update.sample_tincmm_tests.MockTestCase1.test_02|tags|newvalue|None
+test_update.sample_tincmm_tests.MockTestCase1.test_03|tags|newvalue|None
+test_update.sample_tincmm_tests.MockTestCase2.test_01|tags|newvalue|None
+test_update.sample_tincmm_tests.MockTestCase2.test_02|tags|newvalue|None
+test_update.sample_tincmm_tests.MockTestCase2.test_03|tags|newvalue|None
+test_update.sample_tincmm_tests.MockTestCase3.test_01|tags|Cannot update metadata tags for test test_update.sample_tincmm_tests.MockTestCase3.test_01. Metadata doesn't exist!
+test_update.sample_tincmm_tests.MockTestCase3.test_02|tags|Cannot update metadata tags for test test_update.sample_tincmm_tests.MockTestCase3.test_02. Metadata doesn't exist!
+test_update.sample_tincmm_tests.MockTestCase3.test_03|tags|Cannot update metadata tags for test test_update.sample_tincmm_tests.MockTestCase3.test_03. Metadata doesn't exist!
+test_update.sample_tincmm_tests.MockTestCase4.test_01|tags|Cannot update metadata tags for test test_update.sample_tincmm_tests.MockTestCase4.test_01. Metadata doesn't exist!
+test_update.sample_tincmm_tests.MockTestCase4.test_02|tags|Cannot update metadata tags for test test_update.sample_tincmm_tests.MockTestCase4.test_02. Metadata doesn't exist!
+test_update.sample_tincmm_tests.MockTestCase4.test_03|tags|Cannot update metadata tags for test test_update.sample_tincmm_tests.MockTestCase4.test_03. Metadata doesn't exist!
+test_update.sample_tincmm_sql_tests.SampleSQLMockTest.test_query01|tags|None|newvalue
+test_update.sample_tincmm_sql_tests.SampleSQLMockTest.test_query02|tags|Cannot update metadata tags for test test_update.sample_tincmm_sql_tests.SampleSQLMockTest.test_query02. Metadata doesn't exist!
+test_update.sample_tincmm_sql_tests.SampleSQLMockTest.test_query_nodocstring|tags|Cannot update metadata tags for test test_update.sample_tincmm_sql_tests.SampleSQLMockTest.test_query_nodocstring. Metadata doesn't exist!
+--------------------------------------------------------------------------------

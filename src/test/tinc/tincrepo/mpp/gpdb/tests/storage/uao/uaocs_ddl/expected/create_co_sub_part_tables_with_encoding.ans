@@ -1,0 +1,177 @@
+--start_ignore
+Drop table if exists sto_co_en_sp;
+psql:/path/sql_file:1: NOTICE:  table "sto_co_en_sp" does not exist, skipping
+DROP TABLE
+--end_ignore
+Create table sto_co_en_sp (id SERIAL,a1 int ,a2 char(5) ,a3 text ) 
+WITH (appendonly=true, orientation=column, compresstype=zlib) partition by list(a2) subpartition by range(a1) 
+subpartition template (default subpartition subothers,subpartition sp1 start(1) end(9) with(appendonly=true,orientation=column,compresstype=rle_type), subpartition sp2 start(11) end(20) with(appendonly=true,orientation=column,compresstype=zlib)) (default partition others, partition p1 values('val1') , partition p2 values('val2'));
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create implicit sequence "sto_co_en_sp_id_seq" for serial column "sto_co_en_sp.id"
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_co_en_sp_1_prt_others" for table "sto_co_en_sp"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_co_en_sp_1_prt_p1" for table "sto_co_en_sp"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_co_en_sp_1_prt_p2" for table "sto_co_en_sp"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_co_en_sp_1_prt_others_2_prt_subothers" for table "sto_co_en_sp_1_prt_others"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_co_en_sp_1_prt_others_2_prt_sp1" for table "sto_co_en_sp_1_prt_others"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_co_en_sp_1_prt_others_2_prt_sp2" for table "sto_co_en_sp_1_prt_others"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_co_en_sp_1_prt_p1_2_prt_subothers" for table "sto_co_en_sp_1_prt_p1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_co_en_sp_1_prt_p1_2_prt_sp1" for table "sto_co_en_sp_1_prt_p1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_co_en_sp_1_prt_p1_2_prt_sp2" for table "sto_co_en_sp_1_prt_p1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_co_en_sp_1_prt_p2_2_prt_subothers" for table "sto_co_en_sp_1_prt_p2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_co_en_sp_1_prt_p2_2_prt_sp1" for table "sto_co_en_sp_1_prt_p2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_co_en_sp_1_prt_p2_2_prt_sp2" for table "sto_co_en_sp_1_prt_p2"
+CREATE TABLE
+SELECT 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='sto_co_en_sp');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+Create index sto_en_sp_idx1 on sto_co_en_sp(a1);
+psql:/path/sql_file:1: NOTICE:  building index for child partition "sto_co_en_sp_1_prt_p1"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "sto_co_en_sp_1_prt_others"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "sto_co_en_sp_1_prt_p2"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "sto_co_en_sp_1_prt_p1_2_prt_subothers"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "sto_co_en_sp_1_prt_p1_2_prt_sp1"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "sto_co_en_sp_1_prt_p1_2_prt_sp2"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "sto_co_en_sp_1_prt_others_2_prt_subothers"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "sto_co_en_sp_1_prt_others_2_prt_sp1"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "sto_co_en_sp_1_prt_others_2_prt_sp2"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "sto_co_en_sp_1_prt_p2_2_prt_subothers"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "sto_co_en_sp_1_prt_p2_2_prt_sp1"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "sto_co_en_sp_1_prt_p2_2_prt_sp2"
+CREATE INDEX
+Create index sto_en_sp_idx2 on sto_co_en_sp using bitmap(a3);
+psql:/path/sql_file:1: NOTICE:  building index for child partition "sto_co_en_sp_1_prt_p1"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "sto_co_en_sp_1_prt_others"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "sto_co_en_sp_1_prt_p2"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "sto_co_en_sp_1_prt_p1_2_prt_subothers"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "sto_co_en_sp_1_prt_p1_2_prt_sp1"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "sto_co_en_sp_1_prt_p1_2_prt_sp2"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "sto_co_en_sp_1_prt_others_2_prt_subothers"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "sto_co_en_sp_1_prt_others_2_prt_sp1"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "sto_co_en_sp_1_prt_others_2_prt_sp2"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "sto_co_en_sp_1_prt_p2_2_prt_subothers"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "sto_co_en_sp_1_prt_p2_2_prt_sp1"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "sto_co_en_sp_1_prt_p2_2_prt_sp2"
+CREATE INDEX
+Insert into sto_co_en_sp(a1,a2,a3) values(generate_series(1,10),'val1','Johnson & Johnsons McNeil Consumer Healthcare announced the voluntary dosage reduction today. Labels will carry new dosing instructions this fall');
+INSERT 0 10
+Insert into sto_co_en_sp(a1,a2,a3) values(generate_series(11,20),'val2','We are pleased to share the September schedule for onsite legal consultations with Duane Morris, our legal counsel for all Pivotal immigration matters.  Representatives will be onsite for one-on-one consultations regarding your individual case');
+INSERT 0 10
+\d+ sto_co_en_sp_1_prt_others_2_prt_sp1
+                                            Append-Only Columnar Table "public.sto_co_en_sp_1_prt_others_2_prt_sp1"
+ Column |     Type     |                         Modifiers                         | Storage  | Compression Type | Compression Level | Block Size | Description 
+--------+--------------+-----------------------------------------------------------+----------+------------------+-------------------+------------+-------------
+ id     | integer      | not null default nextval('sto_co_en_sp_id_seq'::regclass) | plain    | rle_type         | 1                 | 32768      | 
+ a1     | integer      |                                                           | plain    | rle_type         | 1                 | 32768      | 
+ a2     | character(5) |                                                           | extended | rle_type         | 1                 | 32768      | 
+ a3     | text         |                                                           | extended | rle_type         | 1                 | 32768      | 
+Checksum: f
+Indexes:
+    "sto_en_sp_idx1_1_prt_others_2_prt_sp1" btree (a1)
+    "sto_en_sp_idx2_1_prt_others_2_prt_sp1" bitmap (a3)
+Check constraints:
+    "sto_co_en_sp_1_prt_others_2_prt_sp1_check" CHECK (a1 >= 1 AND a1 < 9)
+Inherits: sto_co_en_sp_1_prt_others
+Has OIDs: no
+Options: appendonly=true, orientation=column, compresstype=rle_type
+Distributed by: (id)
+
+\d+ sto_co_en_sp_1_prt_others_2_prt_sp2
+                                            Append-Only Columnar Table "public.sto_co_en_sp_1_prt_others_2_prt_sp2"
+ Column |     Type     |                         Modifiers                         | Storage  | Compression Type | Compression Level | Block Size | Description 
+--------+--------------+-----------------------------------------------------------+----------+------------------+-------------------+------------+-------------
+ id     | integer      | not null default nextval('sto_co_en_sp_id_seq'::regclass) | plain    | zlib             | 1                 | 32768      | 
+ a1     | integer      |                                                           | plain    | zlib             | 1                 | 32768      | 
+ a2     | character(5) |                                                           | extended | zlib             | 1                 | 32768      | 
+ a3     | text         |                                                           | extended | zlib             | 1                 | 32768      | 
+Checksum: f
+Indexes:
+    "sto_en_sp_idx1_1_prt_others_2_prt_sp2" btree (a1)
+    "sto_en_sp_idx2_1_prt_others_2_prt_sp2" bitmap (a3)
+Check constraints:
+    "sto_co_en_sp_1_prt_others_2_prt_sp2_check" CHECK (a1 >= 11 AND a1 < 20)
+Inherits: sto_co_en_sp_1_prt_others
+Has OIDs: no
+Options: appendonly=true, orientation=column, compresstype=zlib
+Distributed by: (id)
+
+\d+ sto_co_en_sp_1_prt_others_2_prt_subothers
+                                         Append-Only Columnar Table "public.sto_co_en_sp_1_prt_others_2_prt_subothers"
+ Column |     Type     |                         Modifiers                         | Storage  | Compression Type | Compression Level | Block Size | Description 
+--------+--------------+-----------------------------------------------------------+----------+------------------+-------------------+------------+-------------
+ id     | integer      | not null default nextval('sto_co_en_sp_id_seq'::regclass) | plain    | zlib             | 1                 | 32768      | 
+ a1     | integer      |                                                           | plain    | zlib             | 1                 | 32768      | 
+ a2     | character(5) |                                                           | extended | zlib             | 1                 | 32768      | 
+ a3     | text         |                                                           | extended | zlib             | 1                 | 32768      | 
+Checksum: f
+Indexes:
+    "sto_en_sp_idx1_1_prt_others_2_prt_subothers" btree (a1)
+    "sto_en_sp_idx2_1_prt_others_2_prt_subothers" bitmap (a3)
+Inherits: sto_co_en_sp_1_prt_others
+Has OIDs: no
+Options: appendonly=true, orientation=column, compresstype=zlib
+Distributed by: (id)
+
+select count(*) from sto_co_en_sp;
+ count 
+-------
+    20
+(1 row)
+
+Update sto_co_en_sp set a3='Parents and other family members are always welcome at Stratford. After the first two weeks ofschool, we encourage you to stop b#%J,mbj756HNM&%.jlyyttlnvisiting, please berespectful of the classroom environment and do not disturb the students or teachers. Prior toeach visit, we require all visits to sign in at the school offbduysfifdsna v worn while visiting.As a safety precaution, the Stratford playgrounds are closed for outside visitation during normal school hours. We thank you for your cooperation.' where id>8 and id <12;
+UPDATE 2
+select count(*) AS only_visi_tups  from sto_co_en_sp;
+ only_visi_tups 
+----------------
+             20
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*) AS invisi_and_visi_tups  from sto_co_en_sp;
+ invisi_and_visi_tups 
+----------------------
+                   22
+(1 row)
+
+set gp_select_invisible = false;
+SET
+Delete from sto_co_en_sp where a1 <3 or a1>17;
+DELETE 5
+select count(*) AS only_visi_tups  from sto_co_en_sp;
+ only_visi_tups 
+----------------
+             15
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*) AS invisi_and_visi_tups  from sto_co_en_sp;
+ invisi_and_visi_tups 
+----------------------
+                   22
+(1 row)
+
+set gp_select_invisible = false;
+SET
+VACUUM sto_co_en_sp;
+VACUUM
+select count(*) AS only_visi_tups_vacuum  from sto_co_en_sp;
+ only_visi_tups_vacuum 
+-----------------------
+                    15
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*) AS invisi_and_visi_tups_vacuum  from sto_co_en_sp;
+ invisi_and_visi_tups_vacuum 
+-----------------------------
+                          15
+(1 row)
+
+set gp_select_invisible = false;
+SET

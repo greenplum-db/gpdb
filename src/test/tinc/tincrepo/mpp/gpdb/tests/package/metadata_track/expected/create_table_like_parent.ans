@@ -1,0 +1,68 @@
+-- start_ignore
+SET optimizer=off;
+SET
+-- end_ignore
+--local table
+    CREATE LOCAL TEMP TABLE mdt_table_local (
+    text_col text,
+    bigint_col bigint,
+    char_vary_col character varying(30),
+    numeric_col numeric
+    ) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+--like parent_table
+    CREATE TABLE mdt_table_like_parent (
+    like mdt_table_local
+    ) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+--like parent_table
+    CREATE TABLE mdt_table_like_parent1 (
+    like mdt_table_local INCLUDING DEFAULTS
+    ) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+--like parent_table
+    CREATE TABLE mdt_table_like_parent2 (
+    like mdt_table_local INCLUDING CONSTRAINTS
+    ) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+--like parent_table
+    CREATE TABLE mdt_table_like_parent3 (
+    like mdt_table_local EXCLUDING DEFAULTS
+    ) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+--like parent_table
+    CREATE TABLE mdt_table_like_parent4 (
+    like mdt_table_local EXCLUDING CONSTRAINTS
+    ) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+select classname  , schemaname , objname  , usestatus , usename , actionname , subtype from pg_stat_operations  where statime > ( select statime from pg_stat_operations where objname ='my_first_table' and actionname ='CREATE') and objname  not in ('pg_stat_operations','pg_stat_partition_operations') order by statime;
+  classname  | schemaname |        objname         | usestatus | usename  | actionname | subtype  
+-------------+------------+------------------------+-----------+----------+------------+----------
+ pg_authid   |            | mdt_user               | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_database |            | mdt_db                 | CURRENT   | mdt_user | CREATE     | DATABASE
+ pg_class    | public     | mdt_table_like_parent  | CURRENT   | gpadmin  | CREATE     | TABLE
+ pg_class    | public     | mdt_table_like_parent1 | CURRENT   | gpadmin  | CREATE     | TABLE
+ pg_class    | public     | mdt_table_like_parent2 | CURRENT   | gpadmin  | CREATE     | TABLE
+ pg_class    | public     | mdt_table_like_parent3 | CURRENT   | gpadmin  | CREATE     | TABLE
+ pg_class    | public     | mdt_table_like_parent4 | CURRENT   | gpadmin  | CREATE     | TABLE
+(7 rows)
+
+drop table mdt_table_like_parent;
+DROP TABLE
+drop table mdt_table_like_parent1;
+DROP TABLE
+drop table mdt_table_like_parent2;
+DROP TABLE
+drop table mdt_table_like_parent3;
+DROP TABLE
+drop table mdt_table_like_parent4;
+DROP TABLE
+drop table mdt_table_local;
+DROP TABLE
+select classname  , schemaname , objname  , usestatus , usename , actionname , subtype from pg_stat_operations  where statime > ( select statime from pg_stat_operations where objname ='my_first_table' and actionname ='CREATE') and objname  not in ('pg_stat_operations','pg_stat_partition_operations') order by statime;
+  classname  | schemaname | objname  | usestatus | usename  | actionname | subtype  
+-------------+------------+----------+-----------+----------+------------+----------
+ pg_authid   |            | mdt_user | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_database |            | mdt_db   | CURRENT   | mdt_user | CREATE     | DATABASE
+(2 rows)
+

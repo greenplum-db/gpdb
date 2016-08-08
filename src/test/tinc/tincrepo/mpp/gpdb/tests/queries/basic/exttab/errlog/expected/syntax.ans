@@ -1,0 +1,98 @@
+-- start_ignore
+-- end_ignore
+-- Test new syntax for create external table and copy
+DROP EXTERNAL TABLE IF EXISTS exttab_syntax_1;
+psql:/path/sql_file:1: NOTICE:  table "exttab_syntax_1" does not exist, skipping
+DROP EXTERNAL TABLE
+DROP EXTERNAL TABLE IF EXISTS exttab_syntax_2;
+DROP EXTERNAL TABLE
+-- Generate the file with very few errors
+\! python @script@ 10 2 > @data_dir@/exttab_syntax_1.tbl
+-- Generate the file with lot of errors
+\! python @script@ 200 50 > @data_dir@/exttab_syntax_2.tbl
+-- Without error logs or error tables
+CREATE EXTERNAL TABLE exttab_syntax_1( i int, j text ) 
+LOCATION ('gpfdist://@host@:@port@/exttab_syntax_1.tbl') FORMAT 'TEXT' (DELIMITER '|');
+CREATE EXTERNAL TABLE
+SELECT COUNT(*) FROM exttab_syntax_1;
+psql:/path/sql_file:1: ERROR:  missing data for column "j"  (seg0 slice1 @host@:40000 pid=19669)
+DETAIL:  External table exttab_syntax_1, line 3 of gpfdist://@host@:@port@/exttab_syntax_1.tbl: "error_0"
+SELECT COUNT(*) FROM gp_read_error_log('exttab_syntax_1');
+ count 
+-------
+     0
+(1 row)
+
+SELECT gp_truncate_error_log('exttab_syntax_1');
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+
+DROP EXTERNAL TABLE IF EXISTS exttab_syntax_1;
+DROP EXTERNAL TABLE
+-- Error logs with percentage
+CREATE EXTERNAL TABLE exttab_syntax_1( i int, j text ) 
+LOCATION ('gpfdist://@host@:@port@/exttab_syntax_1.tbl') FORMAT 'TEXT' (DELIMITER '|')
+LOG ERRORS SEGMENT REJECT LIMIT 9 PERCENT;
+CREATE EXTERNAL TABLE
+SELECT COUNT(*) FROM exttab_syntax_1;
+psql:/path/sql_file:1: NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
+ count 
+-------
+     8
+(1 row)
+
+SELECT COUNT(*) FROM gp_read_error_log('exttab_syntax_1');
+ count 
+-------
+     2
+(1 row)
+
+SELECT gp_truncate_error_log('exttab_syntax_1');
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+
+DROP EXTERNAL TABLE IF EXISTS exttab_syntax_1;
+DROP EXTERNAL TABLE
+-- Error logs with percentage, reaching segment reject limit
+DROP EXTERNAL TABLE IF EXISTS exttab_syntax_2;
+psql:/path/sql_file:1: NOTICE:  table "exttab_syntax_2" does not exist, skipping
+DROP EXTERNAL TABLE
+SELECT * FROM gp_read_error_log('exttab_syntax_2');
+ cmdtime | relname | filename | linenum | bytenum | errmsg | rawdata | rawbytes 
+---------+---------+----------+---------+---------+--------+---------+----------
+(0 rows)
+
+CREATE EXTERNAL TABLE exttab_syntax_2( i int, j text ) 
+LOCATION ('gpfdist://@host@:@port@/exttab_syntax_2.tbl') FORMAT 'TEXT' (DELIMITER '|')
+LOG ERRORS SEGMENT REJECT LIMIT 1 PERCENT;
+CREATE EXTERNAL TABLE
+-- Set gp_reject_percent_threshold to error out after one bad row per segment after processing 100 initial rows
+SET gp_reject_percent_threshold = 100;
+SET
+SELECT COUNT(*) FROM exttab_syntax_2;
+psql:/path/sql_file:1: ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg1 slice1 @host@:40001 pid=19671)
+DETAIL:  External table exttab_syntax_2, line 105 of gpfdist://@host@:@port@/exttab_syntax_2.tbl: "error_29"
+SELECT COUNT(*) FROM gp_read_error_log('exttab_syntax_2');
+ count 
+-------
+    29
+(1 row)
+
+SELECT gp_truncate_error_log('exttab_syntax_2');
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+
+-- Try COPY with KEEP. Should error out.
+DROP TABLE IF EXISTS exttab_syntax_copy;
+psql:/path/sql_file:1: NOTICE:  table "exttab_syntax_copy" does not exist, skipping
+DROP TABLE
+CREATE TABLE exttab_syntax_copy (LIKE exttab_syntax_1);
+psql:/path/sql_file:1: ERROR:  relation "exttab_syntax_1" does not exist
+COPY exttab_syntax_copy FROM '@data_dir@/exttab_syntax_2.tbl' LOG ERRORS KEEP SEGMENT REJECT LIMIT 10;
+psql:/path/sql_file:1: ERROR:  KEEP may only be specified with an error table

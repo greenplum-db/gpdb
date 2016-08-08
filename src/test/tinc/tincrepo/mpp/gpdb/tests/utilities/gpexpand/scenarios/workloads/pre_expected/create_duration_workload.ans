@@ -1,0 +1,223 @@
+DROP TABLE IF EXISTS users_dur_pkey;
+psql:/path/sql_file:1: NOTICE:  table "users_dur_pkey" does not exist, skipping
+DROP TABLE
+CREATE TABLE users_dur_pkey (
+    id    SERIAL PRIMARY KEY,
+    name  TEXT,
+    age   INT4
+);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create implicit sequence "users_dur_pkey_id_seq" for serial column "users_dur_pkey.id"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "users_dur_pkey_pkey" for table "users_dur_pkey"
+CREATE TABLE
+INSERT INTO users_dur_pkey select i, 'name'||i, i%50+1 from generate_series(1,1000) i;
+INSERT 0 1000
+DROP TABLE IF EXISTS users_duration_2;
+psql:/path/sql_file:1: NOTICE:  table "users_duration_2" does not exist, skipping
+DROP TABLE
+CREATE TABLE users_duration_2(
+    a text,
+    b int,
+    c text,
+    d timestamp
+)
+distributed by (a)
+PARTITION BY RANGE(b) (START (0) END (100) INCLUSIVE EVERY(20));
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_2_1_prt_1" for table "users_duration_2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_2_1_prt_2" for table "users_duration_2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_2_1_prt_3" for table "users_duration_2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_2_1_prt_4" for table "users_duration_2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_2_1_prt_5" for table "users_duration_2"
+CREATE TABLE
+INSERT INTO users_duration_2
+SELECT i, (i * 10) % 100, i::text, '2012-09-01 03:04:05'
+FROM generate_series(1, 5000)i;
+INSERT 0 5000
+DROP TABLE IF EXISTS users_duration_3;
+psql:/path/sql_file:1: NOTICE:  table "users_duration_3" does not exist, skipping
+DROP TABLE
+CREATE TABLE users_duration_3(
+    a text,
+    b int,
+    c text,
+    d timestamp
+)
+distributed by (a)
+PARTITION BY RANGE(b) (START (0) END (100) INCLUSIVE EVERY(20));
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_3_1_prt_1" for table "users_duration_3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_3_1_prt_2" for table "users_duration_3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_3_1_prt_3" for table "users_duration_3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_3_1_prt_4" for table "users_duration_3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_3_1_prt_5" for table "users_duration_3"
+CREATE TABLE
+INSERT INTO users_duration_3
+SELECT i, (i * 10) % 100, i::text, '2013-09-01 03:04:05'
+FROM generate_series(1, 5000)i;
+INSERT 0 5000
+DROP TABLE IF EXISTS users_duration_4;
+psql:/path/sql_file:1: NOTICE:  table "users_duration_4" does not exist, skipping
+DROP TABLE
+CREATE TABLE users_duration_4(
+    a text,
+    b int,
+    c text,
+    d timestamp
+)
+distributed by (a)
+PARTITION BY RANGE(b) (START (0) END (100) INCLUSIVE EVERY(20));
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_4_1_prt_1" for table "users_duration_4"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_4_1_prt_2" for table "users_duration_4"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_4_1_prt_3" for table "users_duration_4"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_4_1_prt_4" for table "users_duration_4"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_4_1_prt_5" for table "users_duration_4"
+CREATE TABLE
+INSERT INTO users_duration_4  
+SELECT i, (i * 10) % 100, i::text, '2013-09-01 03:04:05'
+FROM generate_series(1, 1000000)i;
+INSERT 0 1000000
+DROP TABLE IF EXISTS users_duration_5;
+psql:/path/sql_file:1: NOTICE:  table "users_duration_5" does not exist, skipping
+DROP TABLE
+CREATE TABLE users_duration_5(
+    a text,
+    b int,
+    c text,
+    d timestamp
+)
+distributed by (a)
+PARTITION BY RANGE(b) (START (0) END (100) INCLUSIVE EVERY(20));
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_5_1_prt_1" for table "users_duration_5"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_5_1_prt_2" for table "users_duration_5"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_5_1_prt_3" for table "users_duration_5"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_5_1_prt_4" for table "users_duration_5"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_5_1_prt_5" for table "users_duration_5"
+CREATE TABLE
+INSERT INTO users_duration_5  
+SELECT i, (i * 10) % 100, i::text, '2013-09-01 03:04:05'
+FROM generate_series(1, 1000000)i;
+INSERT 0 1000000
+DROP TABLE IF EXISTS users_duration_6;
+psql:/path/sql_file:1: NOTICE:  table "users_duration_6" does not exist, skipping
+DROP TABLE
+CREATE TABLE users_duration_6(
+    a text,
+    b int,
+    c text,
+    d timestamp
+)
+distributed by (a)
+PARTITION BY RANGE(b) (START (0) END (100) INCLUSIVE EVERY(20));
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_6_1_prt_1" for table "users_duration_6"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_6_1_prt_2" for table "users_duration_6"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_6_1_prt_3" for table "users_duration_6"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_6_1_prt_4" for table "users_duration_6"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_6_1_prt_5" for table "users_duration_6"
+CREATE TABLE
+INSERT INTO users_duration_6  
+SELECT i, (i * 10) % 100, i::text, '2013-09-01 03:04:05'
+FROM generate_series(1, 1000000)i;
+INSERT 0 1000000
+DROP TABLE IF EXISTS users_duration_7;
+psql:/path/sql_file:1: NOTICE:  table "users_duration_7" does not exist, skipping
+DROP TABLE
+CREATE TABLE users_duration_7(
+    a text,
+    b int,
+    c text,
+    d timestamp
+)
+distributed by (a)
+PARTITION BY RANGE(b) (START (0) END (100) INCLUSIVE EVERY(20));
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_7_1_prt_1" for table "users_duration_7"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_7_1_prt_2" for table "users_duration_7"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_7_1_prt_3" for table "users_duration_7"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_7_1_prt_4" for table "users_duration_7"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_7_1_prt_5" for table "users_duration_7"
+CREATE TABLE
+INSERT INTO users_duration_7
+SELECT i, (i * 10) % 100, i::text, '2013-09-01 03:04:05'
+FROM generate_series(1, 1000000)i;
+INSERT 0 1000000
+DROP TABLE IF EXISTS users_duration_8;
+psql:/path/sql_file:1: NOTICE:  table "users_duration_8" does not exist, skipping
+DROP TABLE
+CREATE TABLE users_duration_8(
+    a text,
+    b int,
+    c text,
+    d timestamp
+)
+distributed by (a)
+PARTITION BY RANGE(b) (START (0) END (100) INCLUSIVE EVERY(20));
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_8_1_prt_1" for table "users_duration_8"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_8_1_prt_2" for table "users_duration_8"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_8_1_prt_3" for table "users_duration_8"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_8_1_prt_4" for table "users_duration_8"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_8_1_prt_5" for table "users_duration_8"
+CREATE TABLE
+INSERT INTO users_duration_8
+SELECT i, (i * 10) % 100, i::text, '2013-09-01 03:04:05'
+FROM generate_series(1, 1000000)i;
+INSERT 0 1000000
+DROP TABLE IF EXISTS users_duration_9;
+psql:/path/sql_file:1: NOTICE:  table "users_duration_9" does not exist, skipping
+DROP TABLE
+CREATE TABLE users_duration_9(
+    a text,
+    b int,
+    c text,
+    d timestamp
+)
+distributed by (a)
+PARTITION BY RANGE(b) (START (0) END (100) INCLUSIVE EVERY(20));
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_9_1_prt_1" for table "users_duration_9"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_9_1_prt_2" for table "users_duration_9"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_9_1_prt_3" for table "users_duration_9"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_9_1_prt_4" for table "users_duration_9"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_9_1_prt_5" for table "users_duration_9"
+CREATE TABLE
+INSERT INTO users_duration_9
+SELECT i, (i * 10) % 100, i::text, '2013-09-01 03:04:05'
+FROM generate_series(1, 1000000)i;
+INSERT 0 1000000
+DROP TABLE IF EXISTS users_duration_10;
+psql:/path/sql_file:1: NOTICE:  table "users_duration_10" does not exist, skipping
+DROP TABLE
+CREATE TABLE users_duration_10(
+    a text,
+    b int,
+    c text,
+    d timestamp
+)
+distributed by (a)
+PARTITION BY RANGE(b) (START (0) END (100) INCLUSIVE EVERY(20));
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_10_1_prt_1" for table "users_duration_10"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_10_1_prt_2" for table "users_duration_10"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_10_1_prt_3" for table "users_duration_10"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_10_1_prt_4" for table "users_duration_10"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_10_1_prt_5" for table "users_duration_10"
+CREATE TABLE
+INSERT INTO users_duration_10
+SELECT i, (i * 10) % 100, i::text, '2013-09-01 03:04:05'
+FROM generate_series(1, 1000000)i;
+INSERT 0 1000000
+DROP TABLE IF EXISTS users_duration_11;
+psql:/path/sql_file:1: NOTICE:  table "users_duration_11" does not exist, skipping
+DROP TABLE
+CREATE TABLE users_duration_11(
+    a text,
+    b int,
+    c text,
+    d timestamp
+)
+distributed by (a)
+PARTITION BY RANGE(b) (START (0) END (100) INCLUSIVE EVERY(20));
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_11_1_prt_1" for table "users_duration_11"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_11_1_prt_2" for table "users_duration_11"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_11_1_prt_3" for table "users_duration_11"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_11_1_prt_4" for table "users_duration_11"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "users_duration_11_1_prt_5" for table "users_duration_11"
+CREATE TABLE
+INSERT INTO users_duration_11
+SELECT i, (i * 10) % 100, i::text, '2013-09-01 03:04:05'
+FROM generate_series(1, 1000000)i;
+INSERT 0 1000000

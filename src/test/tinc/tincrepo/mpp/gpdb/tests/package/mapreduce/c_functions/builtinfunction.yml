@@ -1,0 +1,50 @@
+%YAML 1.1
+---
+VERSION:         1.0.0.1
+DATABASE:        template1
+
+DEFINE:
+  - INPUT:
+      NAME:      data
+      QUERY: "select m,n as value from simple"
+   
+  - TASK:
+       NAME: builtin_min 
+       SOURCE: data 
+       REDUCE: MIN 
+
+  - TASK:
+       NAME: builtin_max 
+       SOURCE: data
+       REDUCE: MAX
+
+  - TASK:
+       NAME: builtin_avg
+       SOURCE: data
+       REDUCE: AVG 
+
+  - TASK:
+       NAME: builtin_count 
+       SOURCE: data
+       REDUCE: COUNT 
+
+  - TASK:
+       NAME: builtin_ident
+       SOURCE: data
+       REDUCE: IDENTITY 
+
+EXECUTE:
+  - RUN:
+       SOURCE:  builtin_min
+
+  - RUN:
+       SOURCE:  builtin_max
+
+  - RUN:
+       SOURCE:  builtin_avg
+
+  - RUN:
+       SOURCE:  builtin_count
+
+  - RUN:
+       SOURCE:  builtin_ident

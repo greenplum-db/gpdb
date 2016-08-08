@@ -1,0 +1,21 @@
+--------------------------------------------------------------------------------
+query:  insert newmetadata=newvalue 
+
+test_name|metadata|class_value|method_value
+
+test_insert_new_class_metadata.sample_tincmm_tests.MockTestCase1.test_01|newmetadata|newvalue|None
+test_insert_new_class_metadata.sample_tincmm_tests.MockTestCase1.test_02|newmetadata|newvalue|None
+test_insert_new_class_metadata.sample_tincmm_tests.MockTestCase1.test_03|newmetadata|newvalue|None
+test_insert_new_class_metadata.sample_tincmm_tests.MockTestCase2.test_01|newmetadata|newvalue|None
+test_insert_new_class_metadata.sample_tincmm_tests.MockTestCase2.test_02|newmetadata|newvalue|None
+test_insert_new_class_metadata.sample_tincmm_tests.MockTestCase2.test_03|newmetadata|newvalue|None
+test_insert_new_class_metadata.sample_tincmm_tests.MockTestCase3.test_01|newmetadata|newvalue|None
+test_insert_new_class_metadata.sample_tincmm_tests.MockTestCase3.test_02|newmetadata|newvalue|None
+test_insert_new_class_metadata.sample_tincmm_tests.MockTestCase3.test_03|newmetadata|newvalue|None
+test_insert_new_class_metadata.sample_tincmm_tests.MockTestCase4.test_01|newmetadata|newvalue|None
+test_insert_new_class_metadata.sample_tincmm_tests.MockTestCase4.test_02|newmetadata|newvalue|None
+test_insert_new_class_metadata.sample_tincmm_tests.MockTestCase4.test_03|newmetadata|newvalue|None
+test_insert_new_class_metadata.sample_tincmm_sql_tests.SampleSQLMockTest.test_query01|newmetadata|newvalue|None
+test_insert_new_class_metadata.sample_tincmm_sql_tests.SampleSQLMockTest.test_query02|newmetadata|newvalue|None
+test_insert_new_class_metadata.sample_tincmm_sql_tests.SampleSQLMockTest.test_query_nodocstring|newmetadata|newvalue|None
+--------------------------------------------------------------------------------

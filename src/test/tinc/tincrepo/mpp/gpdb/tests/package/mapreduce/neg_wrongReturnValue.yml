@@ -1,0 +1,33 @@
+%YAML 1.1
+---
+VERSION:         1.0.0.1
+
+DEFINE:
+  - INPUT:
+      NAME:      access_logs
+      FILE:
+         # change seghostname1, seghostname2 and file_path to reflect
+         # your runtime file locations
+         - rh55-qavm63:/data/test.txt
+         
+  - MAP:
+      NAME:      grep_map
+      LANGUAGE:  perl
+      FUNCTION:  |
+        # 0: name the input parameters
+        #my ($key, $value) = @_;
+        
+        # 1: extract the URL portion of the access log
+        #$value =~ /"GET (.*) HTTP/;
+        #my $url = $1;
+        
+        #return [{"key" => $key, "value" => $value}] if ($value =~/$key/);
+        return grep_map;
+      
+EXECUTE:
+  - RUN:
+      SOURCE:    access_logs
+      MAP:       grep_map
+      REDUCE:    IDENTITY
+
+

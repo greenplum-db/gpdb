@@ -1,0 +1,6 @@
+drop table if exists uao_visimap_test09;
+DROP TABLE
+create table uao_visimap_test09(i int, j varchar(20), k int ) with (appendonly=true) DISTRIBUTED BY (i);
+CREATE TABLE
+insert into uao_visimap_test09 select i,'aa'||i,i+10 from generate_series(1,10) as i;
+INSERT 0 10

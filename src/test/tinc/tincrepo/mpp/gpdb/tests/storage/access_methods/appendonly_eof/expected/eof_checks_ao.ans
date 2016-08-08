@@ -1,0 +1,39 @@
+1: BEGIN;
+BEGIN
+1: SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+SET
+1: SELECT COUNT(*) FROM test_ao_mpp19912;
+count
+-----
+1000 
+(1 row)
+2: BEGIN;
+BEGIN
+2: INSERT INTO test_ao_mpp19912 SELECT i, i from generate_series(1, 1000) i;
+INSERT 1000
+2: COMMIT;
+COMMIT
+3: BEGIN;
+BEGIN
+3: INSERT INTO test_ao_mpp19912_supp1 SELECT i, i FROM generate_series(1, 1000) i;
+INSERT 1000
+4: BEGIN;
+BEGIN
+4: INSERT INTO test_ao_mpp19912_supp2 SELECT i, i FROM generate_series(1, 1000) i;
+INSERT 1000
+5: BEGIN;
+BEGIN
+5: INSERT INTO test_ao_mpp19912_supp3 SELECT i, i FROM generate_series(1, 1000) i;
+INSERT 1000
+6: INSERT INTO test_ao_mpp19912_supp4 SELECT i, i FROM generate_series(1, 1000) i;
+ERROR:  can't have more than 3 different append-only tables open for writing data at the same time. if tables are heavily partitioned or if your workload requires, increase the value of max_appendonly_tables and retry (appendonlywriter.c:432)
+3: COMMIT;
+COMMIT
+4: COMMIT;
+COMMIT
+5: COMMIT;
+COMMIT
+1: INSERT INTO test_ao_mpp19912 SELECT i, i FROM generate_series(1, 200) i;
+ERROR:  Unexpected EOF for relation name test_ao_mpp19912, relfilenode 25150, segment file 1. EOF from gp_persistent_relation_node 36048 greater than current EOF 18024 (appendonlyam.c:591)  (seg0 agrawa2-mac.local:4100 pid=14684) (cdbdisp.c:1526)
+1: COMMIT;
+COMMIT

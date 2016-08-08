@@ -1,0 +1,26 @@
+create table sync2_airline_booking_heap_1 (c1 int, c2 char(100)) distributed by (c1); 
+CREATE TABLE
+insert into sync2_airline_booking_heap_1 values (112232, 'xyz'); 
+INSERT 0 1
+insert into sync2_airline_booking_heap_1 select generate_series(1,100000), 'abcdefg'; 
+INSERT 0 100000
+delete from sync2_airline_booking_heap_1 where c1 not in (1, 12, 45, 46, 112232);
+DELETE 99996
+create table sync2_airline_booking_heap_2 (c1 int, c2 char(100)) distributed by (c1);
+CREATE TABLE
+insert into sync2_airline_booking_heap_2 values (112232, 'xyz');
+INSERT 0 1
+insert into sync2_airline_booking_heap_2 select generate_series(1,100000), 'abcdefg';
+INSERT 0 100000
+delete from sync2_airline_booking_heap_2 where c1 not in (1, 12, 45, 46, 112232);
+DELETE 99996
+vacuum sync2_airline_booking_heap_1;
+VACUUM
+vacuum resync_airline_booking_heap_2;
+VACUUM
+vacuum ct_airline_booking_heap_4;
+VACUUM
+vacuum ck_sync1_airline_booking_heap_6;
+VACUUM
+vacuum sync1_airline_booking_heap_7;
+VACUUM

@@ -1,0 +1,16 @@
+drop table if exists uao_tab_test1;
+DROP TABLE
+drop table if exists uao_tab_test2;
+DROP TABLE
+drop table if exists uao_tab_test3;
+DROP TABLE
+create table uao_tab_test1 (i int, j varchar(20), k int ) with (appendonly=true) DISTRIBUTED BY (i);
+CREATE TABLE
+create table uao_tab_test2 (i int, j varchar(20), k int ) with (appendonly=true) DISTRIBUTED BY (i);
+CREATE TABLE
+create table uao_tab_test3 (i int, j varchar(20) ) with (appendonly=true) DISTRIBUTED BY (i);
+CREATE TABLE
+insert into uao_tab_test1 values(1,'test',2);
+INSERT 0 1
+insert into uao_tab_test2 values(1,'test',4);
+INSERT 0 1

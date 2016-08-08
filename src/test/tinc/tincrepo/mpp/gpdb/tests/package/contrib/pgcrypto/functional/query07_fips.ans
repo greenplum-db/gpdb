@@ -1,0 +1,10 @@
+select crypt('new password', 'crypt-key');
+psql:/path/sql_file:1: ERROR:  crypt is insecure in fips mode
+select crypt('new password', gen_salt('des'));
+psql:/path/sql_file:1: ERROR:  gen_salt is insecure in fips mode
+select crypt('new password', gen_salt('xdes',3));
+psql:/path/sql_file:1: ERROR:  gen_salt is insecure in fips mode
+select crypt('new password', gen_salt('md5'));
+psql:/path/sql_file:1: ERROR:  gen_salt is insecure in fips mode
+select crypt('new password', gen_salt('bf', 8));
+psql:/path/sql_file:1: ERROR:  gen_salt is insecure in fips mode

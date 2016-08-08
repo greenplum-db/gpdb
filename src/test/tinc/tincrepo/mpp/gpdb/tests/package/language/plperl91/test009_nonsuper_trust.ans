@@ -1,0 +1,89 @@
+-- check that restricted operations are rejected in a plperl
+CREATE or REPLACE function pltest.restrict_op () RETURNS VOID AS $$
+     use Safe;
+     my $safeobj = new Safe;
+     return 'okay';
+$$ LANGUAGE plperl;
+psql:/path/sql_file:1: ERROR:  creation of Perl function failed
+DETAIL:  Unable to load Safe.pm into plperl at line 2.
+BEGIN failed--compilation aborted at line 2.
+CONTEXT:  compilation of PL/Perl function "restrict_op"
+-- check that restricted operations are rejected in a plperl
+CREATE or REPLACE function pltest.restrict_op () RETURNS VOID AS $$ 
+	system("/nonesuch");
+$$ LANGUAGE plperl;
+psql:/path/sql_file:1: ERROR:  creation of Perl function failed
+DETAIL:  'system' trapped by operation mask at line 2.
+CONTEXT:  compilation of PL/Perl function "restrict_op"
+-- check that restricted operations are rejected in a plperl
+CREATE or REPLACE function pltest.restrict_op () RETURNS VOID AS $$ 
+   qx("/nonesuch");
+$$ LANGUAGE plperl;
+psql:/path/sql_file:1: ERROR:  creation of Perl function failed
+DETAIL:  'quoted execution (``, qx)' trapped by operation mask at line 2.
+CONTEXT:  compilation of PL/Perl function "restrict_op"
+-- check that restricted operations are rejected in a plperl
+CREATE or REPLACE function pltest.restrict_op () RETURNS VOID AS $$ 
+   open my $fh, "</nonesuch";
+$$ LANGUAGE plperl;
+psql:/path/sql_file:1: ERROR:  creation of Perl function failed
+DETAIL:  'open' trapped by operation mask at line 2.
+CONTEXT:  compilation of PL/Perl function "restrict_op"
+-- check that eval is allowed and eval d restricted ops are caught'
+CREATE or REPLACE function pltest.restrict_op () RETURNS VOID AS $$ 
+    eval q{chdir '.'}; warn "Caught: $@";
+$$ LANGUAGE plperl;
+CREATE FUNCTION
+SELECT pltest.restrict_op ();
+psql:/path/sql_file:1: WARNING:  Caught: 'chdir' trapped by operation mask at line 2.
+CONTEXT:  PL/Perl function "restrict_op"
+ restrict_op 
+-------------
+ 
+(1 row)
+
+DROP FUNCTION pltest.restrict_op ();
+DROP FUNCTION
+-- check that compiling do (dofile opcode) is allowed
+-- but that executing it for a file not already loaded (via require) dies
+CREATE or REPLACE function pltest.restrict_op () RETURNS VOID AS $$ 
+   warn do "/dev/null";
+$$ LANGUAGE plperl;
+CREATE FUNCTION
+SELECT pltest.restrict_op ();
+psql:/path/sql_file:1: ERROR:  Perl function "restrict_op" failed (plperl.c:1968)
+DETAIL:  Unable to load /dev/null into plperl at line 2.
+CONTEXT:  PL/Perl function "restrict_op"
+DROP FUNCTION pltest.restrict_op ();
+DROP FUNCTION
+-- check that we can t "use" a module that's not been loaded already'
+- compile-time error: "Unable to load blib.pm into plperl"
+CREATE or REPLACE function pltest.restrict_op () RETURNS VOID AS $$ 
+   use blib;
+$$ LANGUAGE plperl;
+psql:/path/sql_file:1: ERROR:  creation of Perl function failed
+DETAIL:  Unable to load blib.pm into plperl at line 2.
+BEGIN failed--compilation aborted at line 2.
+CONTEXT:  compilation of PL/Perl function "restrict_op"
+-- check that we can "use warnings" (in this case to turn a warn into an error)
+-- yields "ERROR:  Useless use of sort in scalar context."
+/*
+\echo '-- check that we can "use" a module that has already been loaded'
+\echo '-- runtime error: "Can't use string ("foo") as a SCALAR ref while "strict refs" in use'
+CREATE or REPLACE function pltest.restrict_op () RETURNS VOID AS $$ 
+   use strict; 
+   my $name = "foo"; 
+   my $ref = $name; 
+$$ LANGUAGE plperl;
+
+*/
+CREATE or REPLACE function pltest.restrict_op () RETURNS VOID AS
+$$ 
+   use warnings FATAL => qw(void) ; 
+   my @y; 
+   my $x = sort @y; 
+   1; 
+$$ LANGUAGE plperl;
+psql:/path/sql_file:1: ERROR:  creation of Perl function failed
+DETAIL:  Useless use of sort in scalar context at line 4.
+CONTEXT:  compilation of PL/Perl function "restrict_op"

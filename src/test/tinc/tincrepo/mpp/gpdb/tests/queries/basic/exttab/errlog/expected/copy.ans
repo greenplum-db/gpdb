@@ -1,0 +1,159 @@
+-- start_ignore
+-- end_ignore
+drop table if exists errcopy, errcopy_err, errcopy_temp;
+psql:/path/sql_file:1: NOTICE:  table "errcopy_err" does not exist, skipping
+psql:/path/sql_file:1: NOTICE:  table "errcopy_temp" does not exist, skipping
+DROP TABLE
+create table errcopy(a int, b int, c text) distributed by (a);
+CREATE TABLE
+insert into errcopy select i, i, case when i <> 5 then i end || '_text' from generate_series(1, 10)i;
+INSERT 0 10
+copy errcopy to '/tmp/errcopy.csv' csv null '';
+COPY 10
+-- check if not null constraint not affect error log.
+truncate errcopy;
+TRUNCATE TABLE
+alter table errcopy alter c set not null;
+ALTER TABLE
+copy errcopy from '/tmp/errcopy.csv' csv null '' log errors segment reject limit 10 rows;
+psql:/path/sql_file:1: ERROR:  null value in column "c" violates not-null constraint  (seg0 @host@:40000 pid=25528)
+CONTEXT:  COPY errcopy, line 5: "5,5,"
+select * from errcopy;
+ a | b | c 
+---+---+---
+(0 rows)
+
+-- reject rows with invalid format for int / TODO: dropped column name
+alter table errcopy alter c drop not null;
+ALTER TABLE
+alter table errcopy drop column c;
+ALTER TABLE
+alter table errcopy add column c int;
+ALTER TABLE
+copy errcopy from '/tmp/errcopy.csv' csv null '' log errors segment reject limit 10 rows;
+psql:/path/sql_file:1: NOTICE:  Found 9 data formatting errors (9 or more input rows). Rejected related input data.
+COPY 1
+select * from errcopy;
+ a | b | c 
+---+---+---
+ 5 | 5 |  
+(1 row)
+
+select relname, linenum, errmsg, rawdata from gp_read_error_log('errcopy') order by linenum;
+ relname | linenum |                        errmsg                         |    rawdata    
+---------+---------+-------------------------------------------------------+---------------
+ errcopy |       1 | invalid input syntax for integer: "1_text", column c  | 1,1,1_text    
+                                                                           : 
+ errcopy |       2 | invalid input syntax for integer: "2_text", column c  | 2,2,2_text    
+                                                                           : 
+ errcopy |       3 | invalid input syntax for integer: "3_text", column c  | 3,3,3_text    
+                                                                           : 
+ errcopy |       4 | invalid input syntax for integer: "4_text", column c  | 4,4,4_text    
+                                                                           : 
+ errcopy |       6 | invalid input syntax for integer: "6_text", column c  | 6,6,6_text    
+                                                                           : 
+ errcopy |       7 | invalid input syntax for integer: "7_text", column c  | 7,7,7_text    
+                                                                           : 
+ errcopy |       8 | invalid input syntax for integer: "8_text", column c  | 8,8,8_text    
+                                                                           : 
+ errcopy |       9 | invalid input syntax for integer: "9_text", column c  | 9,9,9_text    
+                                                                           : 
+ errcopy |      10 | invalid input syntax for integer: "10_text", column c | 10,10,10_text 
+                                                                           : 
+(9 rows)
+
+-- reject one row with extra column, one row with fewer columns
+truncate errcopy;
+TRUNCATE TABLE
+select gp_truncate_error_log('errcopy');
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+
+copy (select i::text || ',' || i::text || case when i = 4 then '' else ',' || i::text || case when i = 5 then ',5' else '' end end from generate_series(1, 10)i) to '/tmp/errcopy.csv';
+COPY 10
+copy errcopy from '/tmp/errcopy.csv' csv null '' log errors segment reject limit 10 rows;
+psql:/path/sql_file:1: NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
+COPY 8
+select * from errcopy order by a;
+ a  | b  | c  
+----+----+----
+  1 |  1 |  1
+  2 |  2 |  2
+  3 |  3 |  3
+  6 |  6 |  6
+  7 |  7 |  7
+  8 |  8 |  8
+  9 |  9 |  9
+ 10 | 10 | 10
+(8 rows)
+
+select relname, linenum, errmsg, rawdata from gp_read_error_log('errcopy') order by linenum;
+ relname | linenum |                errmsg                 | rawdata 
+---------+---------+---------------------------------------+---------
+ errcopy |       4 | missing data for column "c"           | 4,4     
+                                                           : 
+ errcopy |       5 | extra data after last expected column | 5,5,5,5 
+                                                           : 
+(2 rows)
+
+-- metacharacter
+truncate errcopy;
+TRUNCATE TABLE
+copy errcopy from stdin csv newline 'LF' log errors segment reject limit 3 rows;
+psql:/path/sql_file:1: NOTICE:  Found 1 data formatting errors (1 or more input rows). Rejected related input data.
+select * from errcopy;
+ a | b | c 
+---+---+---
+ 1 | 2 | 0
+ 1 | 3 | 3
+(2 rows)
+
+-- exceed reject limit
+truncate errcopy;
+TRUNCATE TABLE
+select gp_truncate_error_log('errcopy');
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+
+copy errcopy from stdin delimiter '\t' log errors segment reject limit 3 rows;
+psql:/path/sql_file:1: WARNING:  nonstandard use of escape in a string literal
+LINE 1: copy errcopy from stdin delimiter '\t' log errors segment re...
+                                          ^
+HINT:  Use the escape string syntax for escapes, e.g., E'\r\n'.
+psql:/path/sql_file:1: ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "b"
+CONTEXT:  COPY errcopy, line 3: "1       4"
+select * from errcopy;
+ a | b | c 
+---+---+---
+(0 rows)
+
+select relname, filename, linenum, bytenum, errmsg from gp_read_error_log('errcopy') order by linenum;
+ relname | filename | linenum | bytenum |           errmsg            
+---------+----------+---------+---------+-----------------------------
+ errcopy | <stdin>  |       1 |         | missing data for column "b"
+ errcopy | <stdin>  |       2 |         | missing data for column "b"
+(2 rows)
+
+-- abort and keep
+truncate errcopy;
+TRUNCATE TABLE
+select gp_truncate_error_log('errcopy');
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+
+copy errcopy from stdin delimiter '/' log errors segment reject limit 3 rows;
+psql:/path/sql_file:1: ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "b"  (seg0 @host@:40000 pid=25528)
+CONTEXT:  COPY errcopy, line 5: "1"
+select relname, filename, linenum, bytenum, errmsg from gp_read_error_log('errcopy');
+ relname | filename | linenum | bytenum |                errmsg                 
+---------+----------+---------+---------+---------------------------------------
+ errcopy | <stdin>  |       2 |         | missing data for column "c"
+ errcopy | <stdin>  |       4 |         | extra data after last expected column
+(2 rows)
+

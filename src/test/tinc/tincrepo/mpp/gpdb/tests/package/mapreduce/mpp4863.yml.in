@@ -1,0 +1,21 @@
+%YAML 1.1
+---
+VERSION:         1.0.0.1
+DATABASE:        gptest
+USER:            @db_user@
+
+DEFINE:
+  - INPUT:
+      NAME:      data
+      GPFDIST:   @hostname@:8090/data/www.small.dat
+
+  - OUTPUT:
+      NAME:      mpp4863_replace
+      TABLE:     mpp4863
+      MODE:      REPLACE
+
+EXECUTE:
+  - RUN:
+      SOURCE:    data
+      TARGET:    mpp4863_replace
+

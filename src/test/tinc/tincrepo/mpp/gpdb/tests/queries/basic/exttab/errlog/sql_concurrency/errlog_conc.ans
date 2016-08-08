@@ -1,0 +1,10 @@
+-- start_ignore
+-- end_ignore
+-- @concurrency 10
+-- Execute this concurrently
+SELECT COUNT(*) FROM exttab_conc_1, exttab_conc_2;
+ count 
+-------
+  1200
+(1 row)
+

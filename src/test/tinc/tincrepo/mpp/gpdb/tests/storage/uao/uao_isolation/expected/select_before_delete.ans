@@ -1,0 +1,34 @@
+1: SELECT * FROM ao WHERE a < 5;
+a
+-
+1
+2
+3
+4
+(4 rows)
+
+2: BEGIN;
+BEGIN
+2: SELECT * FROM ao WHERE a < 5;
+a
+-
+1
+2
+3
+4
+(4 rows)
+2: DELETE FROM ao WHERE a < 5;
+DELETE 4
+2: COMMIT;
+COMMIT
+2: SELECT * FROM ao WHERE a < 5;
+a
+-
+(0 rows)
+
+3: SELECT * FROM ao WHERE a < 5;
+a
+-
+(0 rows)
+
+

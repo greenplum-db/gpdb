@@ -1,0 +1,325 @@
+-- @Description Alter on heap partition tables
+-- 
+-- start_ignore
+Drop table if exists sto_altap1;
+DROP TABLE
+-- end_ignore
+
+Create table sto_altap1(
+  a int, b int, c int,d int  ) with(appendonly=true) partition by range(b)  subpartition by range( c )
+  subpartition template ( default subpartition subothers,start (1) end(7) every (4) )    ( default partition others, start(1) end(5) every(3));
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap1_1_prt_others" for table "sto_altap1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap1_1_prt_2" for table "sto_altap1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap1_1_prt_3" for table "sto_altap1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap1_1_prt_others_2_prt_subothers" for table "sto_altap1_1_prt_others"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap1_1_prt_others_2_prt_2" for table "sto_altap1_1_prt_others"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap1_1_prt_others_2_prt_3" for table "sto_altap1_1_prt_others"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap1_1_prt_2_2_prt_subothers" for table "sto_altap1_1_prt_2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap1_1_prt_2_2_prt_2" for table "sto_altap1_1_prt_2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap1_1_prt_2_2_prt_3" for table "sto_altap1_1_prt_2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap1_1_prt_3_2_prt_subothers" for table "sto_altap1_1_prt_3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap1_1_prt_3_2_prt_2" for table "sto_altap1_1_prt_3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap1_1_prt_3_2_prt_3" for table "sto_altap1_1_prt_3"
+CREATE TABLE
+Insert into sto_altap1 values(1,generate_series(1,8),3,4);
+INSERT 0 8
+Insert into sto_altap1 values(2,3,generate_series(1,9),3);
+INSERT 0 9
+select count(*) from sto_altap1;
+ count 
+-------
+    17
+(1 row)
+
+-- start_ignore
+Drop table if exists sto_altap2;
+DROP TABLE
+-- end_ignore
+
+Create table sto_altap2 (a int, b int , c varchar(20)) with(appendonly=true) partition by range(a)
+    (default partition others, partition p1 start(1) end(5), partition p2 start(5) end(10), partition p3 start(10) end(15));
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap2_1_prt_others" for table "sto_altap2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap2_1_prt_p1" for table "sto_altap2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap2_1_prt_p2" for table "sto_altap2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap2_1_prt_p3" for table "sto_altap2"
+CREATE TABLE
+Insert into sto_altap2 values(generate_series(1,20), 12, 'A');
+INSERT 0 20
+select count(*) from sto_altap2;
+ count 
+-------
+    20
+(1 row)
+
+-- start_ignore
+Drop table if exists sto_altap3;
+DROP TABLE
+-- end_ignore
+
+create table sto_altap3
+ ( 
+ col1 bigint, col2 date, col3 text, col4 int) with(appendonly=true) 
+ distributed randomly  partition by range(col2)
+ subpartition by list (col3)
+ subpartition template ( default subpartition subothers, subpartition sub1 values ('one'), subpartition sub2 values ('two'))
+ (default partition others, start(date '2008-01-01') end(date '2008-04-30') every(interval '1 month'));
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap3_1_prt_others" for table "sto_altap3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap3_1_prt_2" for table "sto_altap3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap3_1_prt_3" for table "sto_altap3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap3_1_prt_4" for table "sto_altap3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap3_1_prt_5" for table "sto_altap3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap3_1_prt_others_2_prt_subothers" for table "sto_altap3_1_prt_others"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap3_1_prt_others_2_prt_sub1" for table "sto_altap3_1_prt_others"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap3_1_prt_others_2_prt_sub2" for table "sto_altap3_1_prt_others"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap3_1_prt_2_2_prt_subothers" for table "sto_altap3_1_prt_2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap3_1_prt_2_2_prt_sub1" for table "sto_altap3_1_prt_2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap3_1_prt_2_2_prt_sub2" for table "sto_altap3_1_prt_2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap3_1_prt_3_2_prt_subothers" for table "sto_altap3_1_prt_3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap3_1_prt_3_2_prt_sub1" for table "sto_altap3_1_prt_3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap3_1_prt_3_2_prt_sub2" for table "sto_altap3_1_prt_3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap3_1_prt_4_2_prt_subothers" for table "sto_altap3_1_prt_4"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap3_1_prt_4_2_prt_sub1" for table "sto_altap3_1_prt_4"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap3_1_prt_4_2_prt_sub2" for table "sto_altap3_1_prt_4"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap3_1_prt_5_2_prt_subothers" for table "sto_altap3_1_prt_5"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap3_1_prt_5_2_prt_sub1" for table "sto_altap3_1_prt_5"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap3_1_prt_5_2_prt_sub2" for table "sto_altap3_1_prt_5"
+CREATE TABLE
+insert into sto_altap3(col1, col2, col3) values (1, '2008-01-02', 'one'), (2, '2008-01-02', 'two'), (3, '2008-01-02', 'three');
+INSERT 0 3
+insert into sto_altap3(col1, col2, col3) values (1, '2008-02-03', 'two'), (2, '2008-02-03', 'one'), (3, '2008-02-03', 'three');
+INSERT 0 3
+insert into sto_altap3(col1, col2, col3)  values(1, '2008-03-04', 'three'),(1, '2008-04-04', 'one'), (2, '2008-03-04', 'two') ;
+INSERT 0 3
+insert into sto_altap3(col1, col2, col3) values (1, '2008-04-05', 'one'), (2, '2008-04-05', 'two'), (3, '2008-04-05', 'three');
+INSERT 0 3
+insert into sto_altap3(col1, col2, col3) values (1, '2008-05-06', 'one'), (2, '2008-05-06', 'two'), (3, '2008-05-06', 'three');
+INSERT 0 3
+select count(*) from sto_altap3;
+ count 
+-------
+    15
+(1 row)
+
+-- Alter table rename default partition
+Alter table sto_altap1 rename default partition to new_others;
+psql:/path/sql_file:1: NOTICE:  renamed partition "others" to "new_others" for relation "sto_altap1"
+ALTER TABLE
+Insert into sto_altap1 values(1,10,3,4);
+INSERT 0 1
+select * from sto_altap1 order by b,c;
+ a | b  | c | d 
+---+----+---+---
+ 1 |  1 | 3 | 4
+ 1 |  2 | 3 | 4
+ 2 |  3 | 1 | 3
+ 2 |  3 | 2 | 3
+ 2 |  3 | 3 | 3
+ 1 |  3 | 3 | 4
+ 2 |  3 | 4 | 3
+ 2 |  3 | 5 | 3
+ 2 |  3 | 6 | 3
+ 2 |  3 | 7 | 3
+ 2 |  3 | 8 | 3
+ 2 |  3 | 9 | 3
+ 1 |  4 | 3 | 4
+ 1 |  5 | 3 | 4
+ 1 |  6 | 3 | 4
+ 1 |  7 | 3 | 4
+ 1 |  8 | 3 | 4
+ 1 | 10 | 3 | 4
+(18 rows)
+
+-- Alter table rename partition
+Alter table sto_altap3 RENAME PARTITION FOR ('2008-01-01') TO jan08;
+ALTER TABLE
+select count(*) from sto_altap3;
+ count 
+-------
+    15
+(1 row)
+
+-- Alter table drop default partition
+Alter table sto_altap1 drop default partition;
+psql:/path/sql_file:1: NOTICE:  dropped partition "new_others" for relation "sto_altap1" and its children
+ALTER TABLE
+select * from sto_altap1 order by b,c;
+ a | b | c | d 
+---+---+---+---
+ 1 | 1 | 3 | 4
+ 1 | 2 | 3 | 4
+ 2 | 3 | 1 | 3
+ 2 | 3 | 2 | 3
+ 2 | 3 | 3 | 3
+ 1 | 3 | 3 | 4
+ 2 | 3 | 4 | 3
+ 2 | 3 | 5 | 3
+ 2 | 3 | 6 | 3
+ 2 | 3 | 7 | 3
+ 2 | 3 | 8 | 3
+ 2 | 3 | 9 | 3
+ 1 | 4 | 3 | 4
+(13 rows)
+
+-- Alter table drop partition
+Alter table sto_altap1 drop partition for (rank(1));
+psql:/path/sql_file:1: NOTICE:  dropped partition for rank 1 for relation "sto_altap1" and its children
+ALTER TABLE
+select * from sto_altap1 order by b,c;
+ a | b | c | d 
+---+---+---+---
+ 1 | 4 | 3 | 4
+(1 row)
+
+-- Alter table add heap partition
+Alter table sto_altap1 add partition new_p start(6) end(8);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap1_1_prt_new_p" for table "sto_altap1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap1_1_prt_new_p_2_prt_subothers" for table "sto_altap1_1_prt_new_p"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap1_1_prt_new_p_2_prt_2" for table "sto_altap1_1_prt_new_p"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap1_1_prt_new_p_2_prt_3" for table "sto_altap1_1_prt_new_p"
+ALTER TABLE
+Insert into sto_altap1 values(1,7,3,4);
+INSERT 0 1
+select * from sto_altap1 order by b,c;
+ a | b | c | d 
+---+---+---+---
+ 1 | 4 | 3 | 4
+ 1 | 7 | 3 | 4
+(2 rows)
+
+-- Alter table add ao partition
+Alter table sto_altap1 add partition p1 start(9) end(13) with(appendonly=true);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap1_1_prt_p1" for table "sto_altap1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap1_1_prt_p1_2_prt_subothers" for table "sto_altap1_1_prt_p1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap1_1_prt_p1_2_prt_2" for table "sto_altap1_1_prt_p1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap1_1_prt_p1_2_prt_3" for table "sto_altap1_1_prt_p1"
+ALTER TABLE
+Insert into sto_altap1 values(1,10,3,4);
+INSERT 0 1
+select * from sto_altap1 order by b,c;
+ a | b  | c | d 
+---+----+---+---
+ 1 |  4 | 3 | 4
+ 1 |  7 | 3 | 4
+ 1 | 10 | 3 | 4
+(3 rows)
+
+-- Alter table add co partition
+Alter table sto_altap1 add partition p2 start(14) end(17) with(appendonly=true, orientation=column);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap1_1_prt_p2" for table "sto_altap1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap1_1_prt_p2_2_prt_subothers" for table "sto_altap1_1_prt_p2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap1_1_prt_p2_2_prt_2" for table "sto_altap1_1_prt_p2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap1_1_prt_p2_2_prt_3" for table "sto_altap1_1_prt_p2"
+ALTER TABLE
+Insert into sto_altap1 values(1,15,3,4);
+INSERT 0 1
+select * from sto_altap1 order by b,c ;
+ a | b  | c | d 
+---+----+---+---
+ 1 |  4 | 3 | 4
+ 1 |  7 | 3 | 4
+ 1 | 10 | 3 | 4
+ 1 | 15 | 3 | 4
+(4 rows)
+
+-- Alter table add default partition
+Alter table sto_altap1 add default partition part_others;
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap1_1_prt_part_others" for table "sto_altap1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap1_1_prt_part_others_2_prt_subothers" for table "sto_altap1_1_prt_part_others"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap1_1_prt_part_others_2_prt_2" for table "sto_altap1_1_prt_part_others"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap1_1_prt_part_others_2_prt_3" for table "sto_altap1_1_prt_part_others"
+ALTER TABLE
+Insert into sto_altap1 values(1,25,3,4);
+INSERT 0 1
+select * from sto_altap1 order by b,c;
+ a | b  | c | d 
+---+----+---+---
+ 1 |  4 | 3 | 4
+ 1 |  7 | 3 | 4
+ 1 | 10 | 3 | 4
+ 1 | 15 | 3 | 4
+ 1 | 25 | 3 | 4
+(5 rows)
+
+-- Alter table split partition
+Alter table sto_altap2 split partition p1 at(3) into (partition splitc,partition splitd) ;
+psql:/path/sql_file:1: NOTICE:  exchanged partition "p1" of relation "sto_altap2" with relation "pg_temp_172288"
+psql:/path/sql_file:1: NOTICE:  dropped partition "p1" for relation "sto_altap2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap2_1_prt_splitc" for table "sto_altap2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap2_1_prt_splitd" for table "sto_altap2"
+ALTER TABLE
+select * from sto_altap2 order by a;
+ a  | b  | c 
+----+----+---
+  1 | 12 | A
+  2 | 12 | A
+  3 | 12 | A
+  4 | 12 | A
+  5 | 12 | A
+  6 | 12 | A
+  7 | 12 | A
+  8 | 12 | A
+  9 | 12 | A
+ 10 | 12 | A
+ 11 | 12 | A
+ 12 | 12 | A
+ 13 | 12 | A
+ 14 | 12 | A
+ 15 | 12 | A
+ 16 | 12 | A
+ 17 | 12 | A
+ 18 | 12 | A
+ 19 | 12 | A
+ 20 | 12 | A
+(20 rows)
+
+-- Alter table split subpartition
+Alter table  sto_altap1 alter partition p1 split partition FOR (RANK(1)) at(2) into (partition splita,partition splitb);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap1_1_prt_p1_2_prt_splita" for table "sto_altap1_1_prt_p1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap1_1_prt_p1_2_prt_splitb" for table "sto_altap1_1_prt_p1"
+ALTER TABLE
+select * from sto_altap1 order by b,c;
+ a | b  | c | d 
+---+----+---+---
+ 1 |  4 | 3 | 4
+ 1 |  7 | 3 | 4
+ 1 | 10 | 3 | 4
+ 1 | 15 | 3 | 4
+ 1 | 25 | 3 | 4
+(5 rows)
+
+-- Alter table split default partition
+Alter table sto_altap2 split default partition start(15) end(17) into (partition p1, partition others);
+psql:/path/sql_file:1: NOTICE:  exchanged partition "others" of relation "sto_altap2" with relation "pg_temp_172288"
+psql:/path/sql_file:1: NOTICE:  dropped partition "others" for relation "sto_altap2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap2_1_prt_p1" for table "sto_altap2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_altap2_1_prt_others" for table "sto_altap2"
+ALTER TABLE
+select * from sto_altap2 order by a;
+ a  | b  | c 
+----+----+---
+  1 | 12 | A
+  2 | 12 | A
+  3 | 12 | A
+  4 | 12 | A
+  5 | 12 | A
+  6 | 12 | A
+  7 | 12 | A
+  8 | 12 | A
+  9 | 12 | A
+ 10 | 12 | A
+ 11 | 12 | A
+ 12 | 12 | A
+ 13 | 12 | A
+ 14 | 12 | A
+ 15 | 12 | A
+ 16 | 12 | A
+ 17 | 12 | A
+ 18 | 12 | A
+ 19 | 12 | A
+ 20 | 12 | A
+(20 rows)
+

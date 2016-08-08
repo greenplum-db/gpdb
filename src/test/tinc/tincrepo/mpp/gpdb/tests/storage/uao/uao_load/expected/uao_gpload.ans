@@ -1,0 +1,14 @@
+SELECT * FROM customer;
+ id | name | sponsor 
+----+------+---------
+  1 | a    | a
+  2 | b    | b
+  3 | c    | c
+  4 | d    | d
+  5 | e    | e
+(5 rows)
+
+SELECT * FROM gp_read_error_log('ext_customer');
+ cmdtime | relname | filename | linenum | bytenum | errmsg | rawdata | rawbytes 
+---------+---------+----------+---------+---------+--------+---------+----------
+(0 rows)

@@ -1,0 +1,53 @@
+-- start_ignore
+drop table if exists test;
+psql:/path/sql_file:1: NOTICE:  table "test" does not exist, skipping
+DROP TABLE
+-- end_ignore
+create table test (a integer, b integer);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+insert into test select a, a%25 from generate_series(1,100) a;
+INSERT 0 100
+create index test_b on test (b);
+CREATE INDEX
+set enable_seqscan=off;
+SET
+set enable_bitmapscan=off;
+SET
+set enable_indexscan=on;
+SET
+-- start_ignore
+explain analyze select a, b from test where b=10 order by a desc;
+                                                                  QUERY PLAN                                                                  
+----------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 4:1  (slice1; segments: 4)  (cost=400.36..400.37 rows=1 width=8)
+   Merge Key: a
+   Rows out:  4 rows at destination with 1.349 ms to first row, 1.350 ms to end, start offset by 0.304 ms.
+   ->  Sort  (cost=400.36..400.37 rows=1 width=8)
+         Sort Key: a
+         Rows out:  Avg 1.0 rows x 4 workers.  Max 1 rows (seg0) with 0.171 ms to first row, 0.172 ms to end, start offset by 0.957 ms.
+         Executor memory:  58K bytes avg, 58K bytes max (seg0).
+         Work_mem used:  58K bytes avg, 58K bytes max (seg0). Workfile: (0 spilling, 0 reused)
+         ->  Index Scan using test_b on test  (cost=0.00..400.32 rows=1 width=8)
+               Index Cond: b = 10
+               Rows out:  Avg 1.0 rows x 4 workers.  Max 1 rows (seg0) with 0.119 ms to first row, 0.123 ms to end, start offset by 1.000 ms.
+ Slice statistics:
+   (slice0)    Executor memory: 159K bytes.
+   (slice1)    Executor memory: 177K bytes avg x 4 workers, 177K bytes max (seg0).  Work_mem: 58K bytes max.
+ Statement statistics:
+   Memory used: 128000K bytes
+ Settings:  enable_bitmapscan=off; enable_indexscan=on; enable_seqscan=off
+ Total runtime: 1.833 ms
+(18 rows)
+
+-- end_ignore
+select a, b from test where b=10 order by a desc;
+ a  | b  
+----+----
+ 85 | 10
+ 60 | 10
+ 35 | 10
+ 10 | 10
+(4 rows)
+

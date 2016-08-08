@@ -1,0 +1,271 @@
+-- 
+-- @created 2009-01-27 14:00:00
+-- @modified 2013-06-24 17:00:00
+-- @tags ddl schema_topology
+-- @description Tables using enhanced functions
+-----------------------------------------
+-- Create test tables which will be used for table function testing
+DROP TABLE IF EXISTS t1 CASCADE;
+psql:/path/sql_file:1: NOTICE:  table "t1" does not exist, skipping
+DROP TABLE
+CREATE TABLE t1 (a int, b int, c int, d int, e text)
+DISTRIBUTED BY (a);
+CREATE TABLE
+INSERT INTO t1 SELECT i, i/3, i%2, 100-i, 'text'||i 
+FROM generate_series(1,100) i;
+INSERT 0 100
+DROP TABLE IF EXISTS outtable CASCADE;
+psql:/path/sql_file:1: NOTICE:  table "outtable" does not exist, skipping
+DROP TABLE
+DROP TABLE IF EXISTS intable CASCADE;
+psql:/path/sql_file:1: NOTICE:  table "intable" does not exist, skipping
+DROP TABLE
+DROP TABLE IF EXISTS randtable;
+psql:/path/sql_file:1: NOTICE:  table "randtable" does not exist, skipping
+DROP TABLE
+CREATE TABLE outtable(a text, b int) distributed randomly;
+CREATE TABLE
+CREATE TABLE intable(id int, value text) distributed by (id);
+CREATE TABLE
+CREATE TABLE randtable(id int, value text) distributed randomly;
+CREATE TABLE
+INSERT INTO intable   SELECT id::int, ('value_'||id)::text FROM generate_series(1, 10) id;
+INSERT 0 10
+INSERT INTO randtable SELECT id::int, ('value_'||id)::text FROM generate_series(1, 10) id;
+INSERT 0 10
+DROP TABLE IF EXISTS history CASCADE;
+psql:/path/sql_file:1: NOTICE:  table "history" does not exist, skipping
+DROP TABLE
+CREATE TABLE history(id integer, time timestamp) DISTRIBUTED BY (id);
+CREATE TABLE
+INSERT INTO history values 
+(1,'2011/08/21 10:15:02am'),
+(1,'2011/08/21 10:15:30am'),
+(1,'2011/08/22 10:15:04am'),
+(1,'2011/08/22 10:16:10am'),
+(2,'2011/08/21 10:15:02am'),
+(2,'2011/08/21 10:15:02am'),
+(2,'2011/08/21 10:16:02am'),
+(2,'2011/08/21 10:16:02am'),
+(3,'2011-08-19 19:05:13'),
+(3,'2011-08-19 19:06:50'),
+(3,'2011-08-19 19:07:35'),
+(3,'2011-08-19 19:08:18'),
+(3,'2011-08-19 19:09:07'),
+(3,'2011-08-20 10:07:10'),
+(3,'2011-08-20 10:07:35'),
+(3,'2011-08-20 10:11:29'),
+(3,'2011-08-20 10:17:10'),
+(3,'2011-08-20 10:17:42');
+INSERT 0 18
+-----------------------------------------
+-- Create Enhanced Table Function (ETF) using input syntax: 
+-- CREATE FUNCTION tabfunc(t anytable) RETURNS ...
+CREATE OR REPLACE FUNCTION transform(a anytable)
+RETURNS SETOF outtable
+AS '$libdir/tabfunc_demo', 'mytransform'
+LANGUAGE C;
+CREATE FUNCTION
+\df transform;
+                          List of functions
+ Schema |   Name    | Result data type | Argument data types |  Type  
+--------+-----------+------------------+---------------------+--------
+ public | transform | SETOF outtable   | a anytable          | normal
+(1 row)
+
+SELECT * FROM transform( 
+    TABLE( SELECT * FROM randtable ORDER BY id, value SCATTER BY id) 
+) order by b;
+    a     | b  
+----------+----
+ value_1  |  1
+ value_2  |  2
+ value_3  |  3
+ value_4  |  4
+ value_5  |  5
+ value_6  |  6
+ value_7  |  7
+ value_8  |  8
+ value_9  |  9
+ value_10 | 10
+(10 rows)
+
+-- Functions can have parameters besides the anytable parameter 
+-- Create Enhanced Table Function (ETF) using input syntax
+-- CREATE FUNCTION tabfunc(t anytable, i integer) ...
+CREATE OR REPLACE FUNCTION sessionize(anytable, interval) 
+RETURNS TABLE(id integer, "time" timestamp, sessionnum integer)
+AS '$libdir/tabfunc_demo', 'sessionize' 
+LANGUAGE C;
+CREATE FUNCTION
+select * from pg_proc where proname = 'sessionize';
+proname   | pronamespace | proowner | prolang | procost | prorows | provariadic | proisagg | prosecdef | proisstrict | proretset | provolatile | pronargs | pronargdefaults | prorettype | proiswin | proargtypes |     proallargtypes     | proargmodes |        proargnames         | proargdefaults |   prosrc   |        probin        | proacl | prodataaccess 
+------------+--------------+----------+---------+---------+---------+-------------+----------+-----------+-------------+-----------+-------------+----------+-----------------+------------+----------+-------------+------------------------+-------------+----------------------------+----------------+------------+----------------------+--------+---------------
+sessionize|2200|10|13|1|1000|0|f|f|f|t|v|2|0|2249|f|3053 1186|{3053,1186,23,1114,23}|{i,i,t,t,t}|{"","",id,time,sessionnum}||sessionize|$libdir/tabfunc_demo||n
+(1 row)
+
+SELECT *
+FROM sessionize( TABLE( SELECT id, time
+                        FROM history
+                        ORDER BY id, time
+                        SCATTER BY id ),
+                  '1 minute' )
+ORDER BY id, time;
+ id |        time         | sessionnum 
+----+---------------------+------------
+  1 | 2011-08-21 10:15:02 |          1
+  1 | 2011-08-21 10:15:30 |          1
+  1 | 2011-08-22 10:15:04 |          2
+  1 | 2011-08-22 10:16:10 |          3
+  2 | 2011-08-21 10:15:02 |          1
+  2 | 2011-08-21 10:15:02 |          1
+  2 | 2011-08-21 10:16:02 |          1
+  2 | 2011-08-21 10:16:02 |          1
+  3 | 2011-08-19 19:05:13 |          1
+  3 | 2011-08-19 19:06:50 |          2
+  3 | 2011-08-19 19:07:35 |          2
+  3 | 2011-08-19 19:08:18 |          2
+  3 | 2011-08-19 19:09:07 |          2
+  3 | 2011-08-20 10:07:10 |          3
+  3 | 2011-08-20 10:07:35 |          3
+  3 | 2011-08-20 10:11:29 |          4
+  3 | 2011-08-20 10:17:10 |          5
+  3 | 2011-08-20 10:17:42 |          5
+(18 rows)
+
+SELECT *
+FROM sessionize( TABLE( SELECT id, time
+                        FROM history
+                        ORDER BY id, time
+                        SCATTER BY id ),
+                  '1 hour')
+ORDER BY id, time;
+ id |        time         | sessionnum 
+----+---------------------+------------
+  1 | 2011-08-21 10:15:02 |          1
+  1 | 2011-08-21 10:15:30 |          1
+  1 | 2011-08-22 10:15:04 |          2
+  1 | 2011-08-22 10:16:10 |          2
+  2 | 2011-08-21 10:15:02 |          1
+  2 | 2011-08-21 10:15:02 |          1
+  2 | 2011-08-21 10:16:02 |          1
+  2 | 2011-08-21 10:16:02 |          1
+  3 | 2011-08-19 19:05:13 |          1
+  3 | 2011-08-19 19:06:50 |          1
+  3 | 2011-08-19 19:07:35 |          1
+  3 | 2011-08-19 19:08:18 |          1
+  3 | 2011-08-19 19:09:07 |          1
+  3 | 2011-08-20 10:07:10 |          2
+  3 | 2011-08-20 10:07:35 |          2
+  3 | 2011-08-20 10:11:29 |          2
+  3 | 2011-08-20 10:17:10 |          2
+  3 | 2011-08-20 10:17:42 |          2
+(18 rows)
+
+    -- create describe (callback) function
+    -- both input and output type must be internal
+    CREATE OR REPLACE FUNCTION project_desc(internal)
+    RETURNS internal
+    AS '$libdir/tabfunc_demo', 'project_describe'
+    LANGUAGE C;
+CREATE FUNCTION
+    -- create dynamic return type (drt) table function
+    -- using the callback function
+    -- the return type must be defined as set of record
+    CREATE OR REPLACE FUNCTION project(anytable, integer) 
+    RETURNS setof record
+    AS '$libdir/tabfunc_demo', 'project' 
+    LANGUAGE C
+    WITH (describe = project_desc);
+CREATE FUNCTION
+    -- Check callback function project_desc is registerred in pg_proc_callback
+    select * from pg_proc_callback 
+    where profnoid='project'::regproc 
+    and procallback='project_desc'::regproc;
+ profnoid | procallback  | promethod 
+----------+--------------+-----------
+ project  | project_desc | d
+(1 row)
+
+    -- Using order by and scatter by inside ETF, with order by outside ETF
+    SELECT * FROM project( 
+        TABLE( SELECT * FROM history order by id scatter by id), 1) 
+    order by 1;
+ id 
+----
+  1
+  1
+  1
+  1
+  2
+  2
+  2
+  2
+  3
+  3
+  3
+  3
+  3
+  3
+  3
+  3
+  3
+  3
+(18 rows)
+
+    -- Using distinct outside ETF, scatter by multiple columns inside ETF
+    SELECT distinct id FROM project( 
+        TABLE( SELECT id FROM history order by id scatter by id, time), 1) 
+    order by 1 desc;
+ id 
+----
+  3
+  2
+  1
+(3 rows)
+
+    -- Using distinct filter inside ETF, and filter outside ETF
+    SELECT time FROM project( 
+        TABLE( SELECT distinct * FROM history scatter by id), 2) 
+    where time <'2011-08-20' order by 1;
+        time         
+---------------------
+ 2011-08-19 19:05:13
+ 2011-08-19 19:06:50
+ 2011-08-19 19:07:35
+ 2011-08-19 19:08:18
+ 2011-08-19 19:09:07
+(5 rows)
+
+-----------------------------------------
+-- Check catalog table pg_type for new type anytable
+    \x
+Expanded display is on.
+    select * from pg_type where typname='anytable';
+-[ RECORD 1 ]-+-------------
+typname       | anytable
+typnamespace  | 11
+typowner      | 10
+typlen        | -1
+typbyval      | f
+typtype       | p
+typisdefined  | t
+typdelim      | ,
+typrelid      | 0
+typelem       | 0
+typinput      | anytable_in
+typoutput     | anytable_out
+typreceive    | -
+typsend       | -
+typmodin      | -
+typmodout     | -
+typanalyze    | -
+typalign      | d
+typstorage    | x
+typnotnull    | f
+typbasetype   | 0
+typtypmod     | -1
+typndims      | 0
+typdefaultbin | 
+typdefault    | 
+

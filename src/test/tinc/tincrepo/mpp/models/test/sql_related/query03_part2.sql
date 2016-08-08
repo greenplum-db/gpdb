@@ -1,0 +1,9 @@
+-- 
+-- @description test sql test case
+-- @created 2012-07-20 12:00:00
+-- @modified 2012-07-20 12:00:02
+-- @tags orca hashagg executor
+-- @product_version gpdb: main
+-- @skip demonstrating skipping
+
+select 'foo';

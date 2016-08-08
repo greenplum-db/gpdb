@@ -1,0 +1,199 @@
+-- @description : delete tuples from  Updatable AO tables 
+-- 
+-- Create AO tables 
+DROP TABLE if exists sto_uao1_del;
+DROP TABLE
+CREATE TABLE sto_uao1_del (
+          col_int int,
+          col_text text,
+          col_numeric numeric
+          ) with(appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+SELECT 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='sto_uao1_del');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+Create index sto_uao1_del_int_idx1 on sto_uao1_del(col_int);
+CREATE INDEX
+insert into sto_uao1_del values(1,'val1',100);
+INSERT 0 1
+insert into sto_uao1_del values(2,'val2',200);
+INSERT 0 1
+insert into sto_uao1_del values(3,'val3',300);
+INSERT 0 1
+select *  from sto_uao1_del order by col_int;
+ col_int | col_text | col_numeric 
+---------+----------+-------------
+       1 | val1     |         100
+       2 | val2     |         200
+       3 | val3     |         300
+(3 rows)
+
+delete from sto_uao1_del where col_int = 1;
+DELETE 1
+select *  from sto_uao1_del order by col_int;
+ col_int | col_text | col_numeric 
+---------+----------+-------------
+       2 | val2     |         200
+       3 | val3     |         300
+(2 rows)
+
+select count(*) AS only_visi_tups  from sto_uao1_del ;
+ only_visi_tups 
+----------------
+              2
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*) AS invisi_and_visi_tups  from sto_uao1_del ;
+ invisi_and_visi_tups 
+----------------------
+                    3
+(1 row)
+
+set gp_select_invisible = false;
+SET
+-- Create table with all data_types 
+-- Create table with constriants
+Drop table if exists sto_uao2_del;
+DROP TABLE
+CREATE TABLE sto_uao2_del(
+          col_text text DEFAULT 'text',
+          col_numeric numeric
+          CONSTRAINT tbl_chk_con1 CHECK (col_numeric < 250)
+          ) with(appendonly=true, orientation=column) DISTRIBUTED by(col_text);
+CREATE TABLE
+SELECT 1  AS VisimapPresent FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='sto_uao2_del');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+insert into sto_uao2_del values ('0_zero',20);
+INSERT 0 1
+insert into sto_uao2_del values ('1_one',10);
+INSERT 0 1
+insert into sto_uao2_del values ('2_two',25);
+INSERT 0 1
+select count(*) from sto_uao2_del;
+ count 
+-------
+     3
+(1 row)
+
+delete from sto_uao2_del where col_text = '1_one';
+DELETE 1
+select count(*) from sto_uao2_del;
+ count 
+-------
+     2
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*) from sto_uao2_del;
+ count 
+-------
+     3
+(1 row)
+
+--Update table in user created scehma
+set gp_select_invisible = false;
+SET
+Drop schema if exists uao_co_schema1 cascade;
+psql:/path/sql_file:1: NOTICE:  drop cascades to append only columnar table uao_co_schema1.sto_uao5
+DROP SCHEMA
+Create schema uao_co_schema1;
+CREATE SCHEMA
+CREATE TABLE uao_co_schema1.sto_uao3_del(
+          stud_id int,
+          stud_name varchar(20)
+          ) with(appendonly=true, orientation=column) DISTRIBUTED by(stud_id);
+CREATE TABLE
+SELECT 1  AS VisimapPresent FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='sto_uao3_del');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+Insert into uao_co_schema1.sto_uao3_del values(1,'name1'), (2,'name2'),(3,'name3');
+INSERT 0 3
+select * from uao_co_schema1.sto_uao3_del order by stud_id;
+ stud_id | stud_name 
+---------+-----------
+       1 | name1
+       2 | name2
+       3 | name3
+(3 rows)
+
+delete from uao_co_schema1.sto_uao3_del where stud_id=1;
+DELETE 1
+select * from uao_co_schema1.sto_uao3_del order by stud_id;
+ stud_id | stud_name 
+---------+-----------
+       2 | name2
+       3 | name3
+(2 rows)
+
+set gp_select_invisible = true;
+SET
+select * from uao_co_schema1.sto_uao3_del order by stud_id;
+ stud_id | stud_name 
+---------+-----------
+       1 | name1
+       2 | name2
+       3 | name3
+(3 rows)
+
+set gp_select_invisible = false;
+SET
+-- Truncate
+Drop table if exists sto_uao7_del;
+DROP TABLE
+CREATE TABLE sto_uao7_del  (
+    did integer,
+    name varchar(40),
+    CONSTRAINT con1 CHECK (did > 99 AND name <> '')
+    ) with(appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+insert into sto_uao7_del  values (100,'name_1');
+INSERT 0 1
+insert into sto_uao7_del  values (200,'name_2');
+INSERT 0 1
+insert into sto_uao7_del  values (300,'name_3');
+INSERT 0 1
+select count(*) from sto_uao7_del ;
+ count 
+-------
+     3
+(1 row)
+
+delete from sto_uao7_del where did = 100;
+DELETE 1
+select count(*) from sto_uao7_del ;
+ count 
+-------
+     2
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*) from sto_uao7_del;
+ count 
+-------
+     3
+(1 row)
+
+Truncate sto_uao7_del;
+TRUNCATE TABLE
+select count(*) from sto_uao7_del;
+ count 
+-------
+     0
+(1 row)
+
+set gp_select_invisible = false;
+SET

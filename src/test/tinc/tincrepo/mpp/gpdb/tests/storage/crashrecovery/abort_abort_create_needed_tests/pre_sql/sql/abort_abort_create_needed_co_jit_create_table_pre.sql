@@ -1,0 +1,1 @@
+create tablespace abort_create_needed_co_ts filespace filespace_test_a;

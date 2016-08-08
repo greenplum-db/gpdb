@@ -1,0 +1,113 @@
+-- start_ignore
+drop schema gpdb_language cascade;
+psql:/path/sql_file:1: NOTICE:  drop cascades to view gpdb_language.example3_nb_classify
+psql:/path/sql_file:1: NOTICE:  drop cascades to rule _RETURN on view gpdb_language.example3_nb_classify
+psql:/path/sql_file:1: NOTICE:  drop cascades to table gpdb_language.example3_nb_training
+psql:/path/sql_file:1: NOTICE:  drop cascades to view gpdb_language.example3_unpivot
+psql:/path/sql_file:1: NOTICE:  drop cascades to rule _RETURN on view gpdb_language.example3_unpivot
+psql:/path/sql_file:1: NOTICE:  drop cascades to table gpdb_language.example3
+DROP SCHEMA
+create schema gpdb_language;
+CREATE SCHEMA
+set search_path=gpdb_language,"$user",public;
+SET
+-- end_ignore
+CREATE TABLE example3(id int, class text, A1 int, A2 int, A3 int)
+DISTRIBUTED BY (id);
+CREATE TABLE
+insert into example3 values(1, 'C1', 1, 2, 3);
+INSERT 0 1
+insert into example3 values(2, 'C1', 1, 2, 1);
+INSERT 0 1
+insert into example3 values(3, 'C1', 1, 4, 3);
+INSERT 0 1
+insert into example3 values(4, 'C2', 1, 2, 2);
+INSERT 0 1
+insert into example3 values(5, 'C2', 0, 2, 2);
+INSERT 0 1
+insert into example3 values(6, 'C2', 0, 1, 3);
+INSERT 0 1
+select * from example3
+ORDER BY 1,2,3,4,5;
+ id | class | a1 | a2 | a3 
+----+-------+----+----+----
+  1 | C1    |  1 |  2 |  3
+  2 | C1    |  1 |  2 |  1
+  3 | C1    |  1 |  4 |  3
+  4 | C2    |  1 |  2 |  2
+  5 | C2    |  0 |  2 |  2
+  6 | C2    |  0 |  1 |  3
+(6 rows)
+
+CREATE OR REPLACE VIEW example3_unpivot AS
+SELECT id, class,
+unnest(array['A1','A2','A3']) as attr,
+unnest(array[a1,a2,a3]) as value
+FROM example3;
+CREATE VIEW
+SELECT * FROM example3_unpivot
+ORDER BY 1,2,3,4;
+ id | class | attr | value 
+----+-------+------+-------
+  1 | C1    | A1   |     1
+  1 | C1    | A2   |     2
+  1 | C1    | A3   |     3
+  2 | C1    | A1   |     1
+  2 | C1    | A2   |     2
+  2 | C1    | A3   |     1
+  3 | C1    | A1   |     1
+  3 | C1    | A2   |     4
+  3 | C1    | A3   |     3
+  4 | C2    | A1   |     1
+  4 | C2    | A2   |     2
+  4 | C2    | A3   |     2
+  5 | C2    | A1   |     0
+  5 | C2    | A2   |     2
+  5 | C2    | A3   |     2
+  6 | C2    | A1   |     0
+  6 | C2    | A2   |     1
+  6 | C2    | A3   |     3
+(18 rows)
+
+-- Next we have to create a training table:
+-- start_ignore
+DROP table example3_nb_training CASCADE;
+psql:/path/sql_file:1: ERROR:  table "example3_nb_training" does not exist
+-- end_ignore
+CREATE table example3_nb_training AS
+SELECT attr, value, pivot_sum(array['C1', 'C2'], class, 1) as class_count
+FROM example3_unpivot
+GROUP BY attr, value
+DISTRIBUTED by (attr);
+SELECT 8
+SELECT * FROM example3_nb_training
+ORDER BY 1,2,3;
+ attr | value | class_count 
+------+-------+-------------
+ A1   |     0 | {0,2}
+ A1   |     1 | {3,1}
+ A2   |     1 | {0,1}
+ A2   |     2 | {2,2}
+ A2   |     4 | {1,0}
+ A3   |     1 | {1,0}
+ A3   |     2 | {0,2}
+ A3   |     3 | {2,1}
+(8 rows)
+
+-- And a summary view over the training.
+CREATE OR REPLACE VIEW example3_nb_classify AS
+SELECT attr, value, class_count, array['C1', 'C2'] as classes,
+sum(class_count) over (wa)::integer[] as class_total,
+count(distinct value) over (wa) as attr_count
+FROM example3_nb_training
+WINDOW wa as (partition by attr);
+CREATE VIEW
+-- classify a new row (A1 = 0, A2 = 2, A3 = 1)
+select nb_classify(classes, attr_count, class_count, class_total) as class
+from example3_nb_classify
+where (attr = 'A1' and value = 0) or (attr = 'A2' and value = 2) or (attr = 'A3' and value = 1);
+ class 
+-------
+ C2
+(1 row)
+

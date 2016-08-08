@@ -1,0 +1,11 @@
+--
+-- @tags sanity
+-- @cleanup_filespace true
+--
+SELECT * FROM fspc_table ORDER BY a;
+ a |  b  
+---+-----
+ 1 | foo
+ 2 | bar
+(2 rows)
+

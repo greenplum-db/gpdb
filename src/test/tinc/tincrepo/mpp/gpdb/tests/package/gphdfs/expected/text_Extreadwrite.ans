@@ -1,0 +1,34 @@
+-- start_ignore
+drop  external table text_heap;
+DROP EXTERNAL TABLE
+drop  external table text_writehdfs;
+DROP EXTERNAL TABLE
+drop  external table text_readhdfs;
+DROP EXTERNAL TABLE
+-- end_ignore
+create readable external table text_heap(datatype_text text,x_text bigint, col1_text text,col2_text text, nullcol_text text) location ('gpfdist://rh55-qavm20:5487/text.txt')format 'TEXT';
+CREATE EXTERNAL TABLE
+create writable external table text_writehdfs(like text_heap) location ('gphdfs://my.cluster.com/extwrite/text')format 'custom' (formatter='gphdfs_export');
+NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+CREATE EXTERNAL TABLE
+create readable external table text_readhdfs(like text_heap) location ('gphdfs://my.cluster.com/extwrite/text') format 'custom' (formatter='gphdfs_import');
+CREATE EXTERNAL TABLE
+select count(*) from text_heap;
+ count 
+-------
+  5000
+(1 row)
+
+insert into text_writehdfs select * from text_heap;
+INSERT 0 5000
+select count(*) from text_readhdfs;
+ count 
+-------
+  5000
+(1 row)
+
+(select * from text_heap except select * from text_readhdfs) union (select * from text_readhdfs except select * from text_heap);
+ datatype_text | x_text | col1_text | col2_text | nullcol_text 
+---------------+--------+-----------+-----------+--------------
+(0 rows)
+

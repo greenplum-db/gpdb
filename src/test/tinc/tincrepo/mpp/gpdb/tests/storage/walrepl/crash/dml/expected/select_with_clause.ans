@@ -1,0 +1,59 @@
+-- start_ignore
+drop table if exists mpp15087_t;
+psql:/path/sql_file:1: NOTICE:  table "mpp15087_t" does not exist, skipping
+DROP TABLE
+-- end_ignore
+create table mpp15087_t(code char(3), n numeric);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'code' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+insert into mpp15087_t values ('abc',1);
+INSERT 0 1
+insert into mpp15087_t values ('xyz',2);  
+INSERT 0 1
+insert into mpp15087_t values ('def',3); 
+INSERT 0 1
+with cte as 
+	(
+	select code, n, x 
+	from mpp15087_t 
+	, (select 100 as x) d
+	)
+select code from mpp15087_t t where 1= (select count(*) from cte where cte.code::text=t.code::text or cte.code::text = t.code::text);
+ code 
+------
+ abc
+ xyz
+ def
+(3 rows)
+
+with cte as
+        (
+        select count(*) from
+        (
+        select code, n, x
+        from mpp15087_t
+        , (select 100 as x) d
+        ) FOO
+        )
+select code from mpp15087_t t where 1= (select * from cte);
+ code 
+------
+(0 rows)
+
+with cte as
+        (
+        select count(*) from
+        (
+        select code, n, x
+        from mpp15087_t
+        , (select 100 as x) d
+        ) FOO
+        )
+select code from mpp15087_t t where 1= (select count(*) from cte);
+ code 
+------
+ xyz
+ def
+ abc
+(3 rows)

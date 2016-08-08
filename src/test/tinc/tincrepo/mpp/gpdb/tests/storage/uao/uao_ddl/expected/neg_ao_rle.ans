@@ -1,0 +1,12 @@
+--------------------------------------------------------------------------
+-- @TITLE: Negative tests for UAO
+-- 
+--------------------------------------------------------------------------
+Drop table if exists sto_ao_neg_RLE;
+psql:/path/sql_file:1: NOTICE:  table "sto_ao_neg_rle" does not exist, skipping
+DROP TABLE
+CREATE TABLE sto_ao_neg_RLE (id int, date date, amt decimal(10,2))
+with (appendonly=true, COMPRESSTYPE=RLE_TYPE);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+psql:/path/sql_file:1: ERROR:  rle_type cannot be used with Append Only relations row orientation

@@ -1,0 +1,78 @@
+-- @description : Alter  UAO tables and execute DML statements on the tables
+-- 
+Drop table if exists sto_alt_uao3_idx cascade;
+DROP TABLE
+CREATE TABLE sto_alt_uao3_idx(
+  text_col text,
+  bigint_col bigint,
+  char_vary_col character varying(30),
+  numeric_col numeric
+  ) with(appendonly=true) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+insert into sto_alt_uao3_idx values ('1_zero', 1, '1_zero', 1);
+INSERT 0 1
+SELECT 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='sto_alt_uao3_idx');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+select * from sto_alt_uao3_idx order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col 
+----------+------------+---------------+-------------
+ 1_zero   |          1 | 1_zero        |           1
+(1 row)
+
+update sto_alt_uao3_idx set numeric_col = 100 where text_col = '1_zero';
+UPDATE 1
+select count(*) AS only_visi_tups from sto_alt_uao3_idx;
+ only_visi_tups 
+----------------
+              1
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*)  AS invisi_and_visi_tups from sto_alt_uao3_idx;
+ invisi_and_visi_tups 
+----------------------
+                    2
+(1 row)
+
+set gp_select_invisible = false;
+SET
+-- Alter table cluster on indexname
+Create index sto_alt_uao3_idx_idx on sto_alt_uao3_idx(bigint_col);
+CREATE INDEX
+Alter table sto_alt_uao3_idx cluster on sto_alt_uao3_idx_idx;
+ALTER TABLE
+select * from sto_alt_uao3_idx order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col 
+----------+------------+---------------+-------------
+ 1_zero   |          1 | 1_zero        |         100
+(1 row)
+
+update sto_alt_uao3_idx set numeric_col = 111 where text_col = '1_zero';
+UPDATE 1
+select * from sto_alt_uao3_idx order by bigint_col;
+ text_col | bigint_col | char_vary_col | numeric_col 
+----------+------------+---------------+-------------
+ 1_zero   |          1 | 1_zero        |         111
+(1 row)
+
+select count(*) AS only_visi_tups from sto_alt_uao3_idx;
+ only_visi_tups 
+----------------
+              1
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*)  AS invisi_and_visi_tups from sto_alt_uao3_idx;
+ invisi_and_visi_tups 
+----------------------
+                    3
+(1 row)
+
+set gp_select_invisible = false;
+SET

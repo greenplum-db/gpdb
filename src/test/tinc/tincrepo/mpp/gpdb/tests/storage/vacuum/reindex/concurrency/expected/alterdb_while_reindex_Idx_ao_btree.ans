@@ -1,0 +1,12 @@
+-- @Description Ensures that drop database during reindex operations does not work
+-- 
+1: @db_name reindexdb:DELETE FROM reindex_alter_ao_btree WHERE a < 128;
+DELETE 254
+2: @db_name reindexdb:BEGIN;
+BEGIN
+2: REINDEX index idx_reindex_alter_ao_btree;
+REINDEX
+3: @db_name template1: alter database reindexdb rename to reindexdb2;
+ERROR:  database "reindexdb" is being accessed by other users
+2: COMMIT;
+COMMIT

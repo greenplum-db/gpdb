@@ -1,0 +1,8 @@
+-- Large Content Header
+drop table if exists chksum_on_corrupt_header_large_co;
+psql:/path/sql_file:1: NOTICE:  table "chksum_on_corrupt_header_large_co" does not exist, skipping
+DROP TABLE
+create table chksum_on_corrupt_header_large_co(comment bytea ) with (appendonly=true, orientation=column, checksum=true) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+insert into chksum_on_corrupt_header_large_co select ("decode"(repeat('a',33554432),'escape')) from generate_series(1,8)  ;
+INSERT 0 8

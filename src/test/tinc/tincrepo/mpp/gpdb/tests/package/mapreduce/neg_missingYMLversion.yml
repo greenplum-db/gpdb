@@ -1,0 +1,36 @@
+DATABASE:        template1
+
+DEFINE:
+  - INPUT:
+      NAME:      mystart
+      QUERY:  |
+        SELECT *
+        FROM mytest;
+
+  - OUTPUT:
+      NAME:      myoutput_replace
+      TABLE:     mytest_replace
+      MODE:      REPLACE
+
+  - OUTPUT:
+      NAME:      myoutput_append
+      #FILE:      /data/test.txt
+      TABLE:     mytest_append
+      MODE:      APPEND
+
+EXECUTE:
+  - RUN:
+      SOURCE:    mystart
+      TARGET:    myoutput_replace
+
+  - RUN:
+      SOURCE:    mystart
+      TARGET:    myoutput_append
+
+  - RUN:
+      SOURCE:    mystart
+      TARGET:    myoutput_replace
+
+  - RUN:
+      SOURCE:    mystart
+      TARGET:    myoutput_append

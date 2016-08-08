@@ -1,0 +1,78 @@
+Drop table if exists st_uao_oids_del ;
+DROP TABLE
+CREATE TABLE st_uao_oids_del(
+text_col text,
+bigint_col bigint,
+char_vary_col character varying(30),
+numeric_col numeric,
+int_col int4,
+float_col float4,
+int_array_col int[],
+drop_col numeric,
+before_rename_col int4,
+change_datatype_col numeric,
+a_ts_without timestamp without time zone,
+b_ts_with timestamp with time zone,
+date_column date) with ( appendonly='true', OIDS)  distributed randomly;
+psql:/path/sql_file:1: NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+CREATE TABLE
+INSERT INTO st_uao_oids_del select i||'_'||repeat('text',100),i,i||'_'||repeat('text',3),i,i,i,'{3}',i,i,i,'2006-10-19 10:23:54', '2006-10-19 10:23:54+02', '1-1-2002' from generate_series(1,100)i;
+INSERT 0 100
+select count(*) FROM pg_appendonly WHERE visimaprelid is not NULL AND visimapidxid is not NULL AND relid in (SELECT oid FROM pg_class WHERE relname ='st_uao_oids_del');
+ count 
+-------
+     1
+(1 row)
+
+select count(*) AS only_visi_tups_ins  from st_uao_oids_del;
+ only_visi_tups_ins 
+--------------------
+                100
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*) AS invisi_and_visi_tups_ins  from st_uao_oids_del;
+ invisi_and_visi_tups_ins 
+--------------------------
+                      100
+(1 row)
+
+set gp_select_invisible = false;
+SET
+delete from st_uao_oids_del  where bigint_col >=  50;
+DELETE 51
+select count(*) AS only_visi_tups  from st_uao_oids_del;
+ only_visi_tups 
+----------------
+             49
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*) AS invisi_and_visi_tups  from st_uao_oids_del;
+ invisi_and_visi_tups 
+----------------------
+                  100
+(1 row)
+
+set gp_select_invisible = false;
+SET
+VACUUM st_uao_oids_del;
+VACUUM
+select count(*) AS only_visi_tups_vacuum  from st_uao_oids_del;
+ only_visi_tups_vacuum 
+-----------------------
+                    49
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*) AS invisi_and_visi_tups_vacuum  from st_uao_oids_del;
+ invisi_and_visi_tups_vacuum 
+-----------------------------
+                          49
+(1 row)
+
+set gp_select_invisible = false;
+SET

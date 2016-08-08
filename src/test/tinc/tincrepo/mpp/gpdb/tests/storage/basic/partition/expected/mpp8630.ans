@@ -1,0 +1,30 @@
+-- start_matchsubs
+-- m/^INFO:/
+-- s/^INFO:/GP_IGNORE:INFO:/
+-- end_matchsubs
+create table mpp8630(x int, y gpxlogloc) distributed randomly;
+CREATE TABLE
+insert into mpp8630 select i, '(1/2)'::gpxlogloc from generate_series(1,20000) i;
+INSERT 0 20000
+insert into mpp8630 select i, '(1/3)'::gpxlogloc from generate_series(1,20000) i;
+INSERT 0 20000
+analyze verbose mpp8630;
+INFO:  ANALYZE estimated reltuples=40000.000000, relpages=54.000000 for table mpp8630
+INFO:  ANALYZE building sample table of size 25432 on table mpp8630 because it has too many rows.
+INFO:  Created sample table pg_temp.pg_analyze_491850_2 with nrows=25302
+INFO:  ANALYZE computing statistics on attribute x
+INFO:  nullfrac = 0.000000
+INFO:  avgwidth = 4.000000
+INFO:  count(ndistinct()) gives 17293.000000 values.
+INFO:  ndistinct = -0.499698
+INFO:  mcv={8678,17786,18244,5419,13482,4388,2335,12118,139,12330,8961,13066,13960,7946,2622,5599,1672,5698,18333,3021,1793,3610,10860,13931,16869}
+INFO:  freq={7.90451e-05,7.90451e-05,7.90451e-05,7.90451e-05,7.90451e-05,7.90451e-05,7.90451e-05,7.90451e-05,7.90451e-05,7.90451e-05,7.90451e-05,7.90451e-05,7.90451e-05,7.90451e-05,7.90451e-05,7.90451e-05,7.90451e-05,7.90451e-05,7.90451e-05,7.90451e-05,7.90451e-05,7.90451e-05,7.90451e-05,7.90451e-05,7.90451e-05}
+INFO:  hist={1,781,1627,2410,3209,4009,4800,5616,6412,7212,8009,8810,9609,10405,11202,12000,12799,13615,14373,15195,15986,16799,17592,18402,19191,19999,20000}
+INFO:  ANALYZE computing statistics on attribute y
+INFO:  nullfrac = 0.000000
+INFO:  avgwidth = 8.000000
+INFO:  ndistinct = -1.000000
+INFO:  ANALYZE dropping sample table
+ANALYZE
+drop table mpp8630;
+DROP TABLE

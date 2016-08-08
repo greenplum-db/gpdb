@@ -1,0 +1,16 @@
+select * from mytest_append order by 1;
+ a 
+---
+ 1
+ 1
+ 2
+ 2
+(4 rows)
+
+select * from mytest_replace order by 1;
+ a 
+---
+ 1
+ 2
+(2 rows)
+

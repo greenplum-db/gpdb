@@ -1,0 +1,4 @@
+drop function cacheheap();
+DROP FUNCTION
+drop table heaptest;
+DROP TABLE

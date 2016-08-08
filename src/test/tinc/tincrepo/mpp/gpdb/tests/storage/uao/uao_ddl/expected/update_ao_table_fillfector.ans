@@ -1,0 +1,91 @@
+-- @description : Update UAO tableswith fillfector 
+-- 
+-- create select uao table with fillfector=70 
+Drop table if exists uao_tab_fillfector70_upd;
+DROP TABLE
+CREATE TABLE uao_tab_fillfector70_upd (      
+          col_int int,
+          col_text text,
+          col_numeric numeric)
+ with (appendonly=true , FILLFACTOR=70) ; 
+CREATE TABLE
+SELECT 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='uao_tab_fillfector70_upd');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+CREATE index col_text_bmp_idx_fillfector70_upd on uao_tab_fillfector70_upd using bitmap (col_text) with (FILLFACTOR=70);
+CREATE INDEX
+select  1 AS fillfector_ao_set from pg_class where relname = 'uao_tab_fillfector70_upd' and reloptions ='{appendonly=true,fillfactor=70}';
+ fillfector_ao_set 
+-------------------
+                 1
+(1 row)
+
+\d+ uao_tab_fillfector70_upd
+    Append-Only Table "public.uao_tab_fillfector70_upd"
+   Column    |  Type   | Modifiers | Storage  | Description 
+-------------+---------+-----------+----------+-------------
+ col_int     | integer |           | plain    | 
+ col_text    | text    |           | extended | 
+ col_numeric | numeric |           | main     | 
+Compression Type: None
+Compression Level: 0
+Block Size: 32768
+Checksum: f
+Indexes:
+    "col_text_bmp_idx_fillfector70_upd" bitmap (col_text) WITH (fillfactor=70)
+Has OIDs: no
+Options: appendonly=true, fillfactor=70
+Distributed by: (col_int)
+
+insert into uao_tab_fillfector70_upd values(1,'val1',100);
+INSERT 0 1
+insert into uao_tab_fillfector70_upd values(2,'val2',200);
+INSERT 0 1
+insert into uao_tab_fillfector70_upd values(3,'val3',300);
+INSERT 0 1
+select *  from uao_tab_fillfector70_upd order by col_int,col_text;
+ col_int | col_text | col_numeric 
+---------+----------+-------------
+       1 | val1     |         100
+       2 | val2     |         200
+       3 | val3     |         300
+(3 rows)
+
+update uao_tab_fillfector70_upd set col_text=col_text||' new value' where col_int = 1;
+UPDATE 1
+select *  from uao_tab_fillfector70_upd order by col_int,col_text;
+ col_int |    col_text    | col_numeric 
+---------+----------------+-------------
+       1 | val1 new value |         100
+       2 | val2           |         200
+       3 | val3           |         300
+(3 rows)
+
+select count(*) AS only_visi_tups  from uao_tab_fillfector70_upd ;
+ only_visi_tups 
+----------------
+              3
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*) AS invisi_and_visi_tups  from uao_tab_fillfector70_upd ;
+ invisi_and_visi_tups 
+----------------------
+                    4
+(1 row)
+
+select *  from uao_tab_fillfector70_upd order by col_int,col_text;
+ col_int |    col_text    | col_numeric 
+---------+----------------+-------------
+       1 | val1           |         100
+       1 | val1 new value |         100
+       2 | val2           |         200
+       3 | val3           |         300
+(4 rows)
+
+set gp_select_invisible = false;
+SET

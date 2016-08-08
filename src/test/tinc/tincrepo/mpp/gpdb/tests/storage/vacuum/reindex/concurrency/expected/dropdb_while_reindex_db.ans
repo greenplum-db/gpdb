@@ -1,0 +1,11 @@
+-- @Description Ensures that drop database during reindex operations on db does not work
+-- 
+1: @db_name reindexdb:commit;
+COMMIT
+1: REINDEX database reindexdb;
+REINDEX 
+2: @db_name template1: drop database reindexdb;
+ERROR:  database "reindexdb" is being accessed by other users
+1q: ... <quitting>
+2: drop database reindexdb;
+DROP

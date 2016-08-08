@@ -1,0 +1,2 @@
+-- @tags long
+select 'foo';

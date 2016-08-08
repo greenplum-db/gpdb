@@ -1,0 +1,99 @@
+--
+-- HEAP TEST
+--
+CREATE TABLE ck_sync1_add_column_heap (col1 char DEFAULT 'z',col2 numeric  DEFAULT  100 )distributed randomly;
+CREATE TABLE
+INSERT INTO ck_sync1_add_column_heap VALUES ('a',generate_series(1,100));
+INSERT 0 100
+select count(*) from ck_sync1_add_column_heap;
+ count 
+-------
+   100
+(1 row)
+
+ALTER TABLE sync1_add_column_heap ADD COLUMN col3 boolean DEFAULT false   ;
+ALTER TABLE
+INSERT INTO sync1_add_column_heap VALUES ('c',generate_series(1,100),true);
+INSERT 0 100
+select count(*) from sync1_add_column_heap;
+ count 
+-------
+   201
+(1 row)
+
+ALTER TABLE ck_sync1_add_column_heap ADD COLUMN col3 boolean DEFAULT false   ;
+ALTER TABLE
+INSERT INTO ck_sync1_add_column_heap VALUES ('b',generate_series(1,100),true);
+INSERT 0 100
+select count(*) from ck_sync1_add_column_heap;
+ count 
+-------
+   200
+(1 row)
+
+--
+-- AO TEST
+--
+CREATE TABLE ck_sync1_add_column_ao (col1 char DEFAULT 'z',col2 numeric  DEFAULT  100 )  with (appendonly=true) distributed randomly;
+CREATE TABLE
+INSERT INTO ck_sync1_add_column_ao VALUES ('a',generate_series(1,100));
+INSERT 0 100
+select count(*) from ck_sync1_add_column_ao;
+ count 
+-------
+   100
+(1 row)
+
+ALTER TABLE sync1_add_column_ao ADD COLUMN col3 boolean DEFAULT false   ;
+ALTER TABLE
+INSERT INTO sync1_add_column_ao VALUES ('c',generate_series(1,100),true);
+INSERT 0 100
+select count(*) from sync1_add_column_ao;
+ count 
+-------
+   201
+(1 row)
+
+ALTER TABLE ck_sync1_add_column_ao ADD COLUMN col3 boolean DEFAULT false   ;
+ALTER TABLE
+INSERT INTO ck_sync1_add_column_ao VALUES ('b',generate_series(1,100),true);
+INSERT 0 100
+select count(*) from ck_sync1_add_column_ao;
+ count 
+-------
+   200
+(1 row)
+
+--
+-- CO TEST
+--
+CREATE TABLE ck_sync1_add_column_co (col1 char DEFAULT 'z',col2 numeric  DEFAULT  100 )  with (orientation='column',appendonly=true) distributed randomly;
+CREATE TABLE
+INSERT INTO ck_sync1_add_column_co VALUES ('a',generate_series(1,100));
+INSERT 0 100
+select count(*) from ck_sync1_add_column_co;
+ count 
+-------
+   100
+(1 row)
+
+ALTER TABLE sync1_add_column_co ADD COLUMN col3 boolean DEFAULT false   ;
+ALTER TABLE
+INSERT INTO sync1_add_column_co VALUES ('c',generate_series(1,100),true);
+INSERT 0 100
+select count(*) from sync1_add_column_co;
+ count 
+-------
+   201
+(1 row)
+
+ALTER TABLE ck_sync1_add_column_co ADD COLUMN col3 boolean DEFAULT false   ;
+ALTER TABLE
+INSERT INTO ck_sync1_add_column_co VALUES ('b',generate_series(1,100),true);
+INSERT 0 100
+select count(*) from ck_sync1_add_column_co;
+ count 
+-------
+   200
+(1 row)
+

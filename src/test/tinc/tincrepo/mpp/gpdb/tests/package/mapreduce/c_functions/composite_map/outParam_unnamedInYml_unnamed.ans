@@ -1,0 +1,21 @@
+-- start_matchsubs
+-- m/mapreduce_\d+_/
+-- s/mapreduce_\d+/mapreduce_DUMMY/
+-- m/\(\w+.\w+:[0-9]+\)$/
+-- s/\(\w+.\w+:[0-9]+\)$/\(file:line\)/
+-- end_matchsubs
+mapreduce_12271_run_1
+column1|column2|column3
+-------+-------+-------
+      1|      2|      3
+      2|      4|      6
+      2|      4|      6
+      2|      4|      6
+      2|      4|      6
+      3|      6|      9
+      4|      8|     12
+      5|     10|     15
+      5|     10|     15
+     10|     20|     30
+(10 rows)
+

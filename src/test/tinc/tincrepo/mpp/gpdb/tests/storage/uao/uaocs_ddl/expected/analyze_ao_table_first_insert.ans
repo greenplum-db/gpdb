@@ -1,0 +1,80 @@
+-- @description : Create Updatable AO tables  and copy data from external source
+-- 
+-- Create AO tables
+DROP TABLE IF EXISTS sto_uao_city_analyze_firstins cascade;
+DROP TABLE
+BEGIN;
+BEGIN
+CREATE TABLE sto_uao_city_analyze_firstins (
+    id integer NOT NULL,
+    name text NOT NULL,
+    countrycode character(3) NOT NULL,
+    district text NOT NULL,
+    population integer NOT NULL
+) with (appendonly=true, orientation=column) distributed by(id);
+CREATE TABLE
+-- gucs set to auto update statistics after first  insert
+set gp_autostats_mode=ON_NO_STATS;
+SET
+select count(*)  from sto_uao_city_analyze_firstins;
+ count 
+-------
+     0
+(1 row)
+
+select relname, reltuples from pg_class where relname = 'sto_uao_city_analyze_firstins';
+            relname            | reltuples 
+-------------------------------+-----------
+ sto_uao_city_analyze_firstins |         0
+(1 row)
+
+SELECT 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='sto_uao_city_analyze_firstins');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+-- Copy 7 rows in table sto_uao_city_analyze_firstins
+COPY sto_uao_city_analyze_firstins (id, name, countrycode, district, population) FROM stdin;
+COMMIT;
+COMMIT
+select count(*)  from sto_uao_city_analyze_firstins;
+ count 
+-------
+     7
+(1 row)
+
+select relname, reltuples from pg_class where relname = 'sto_uao_city_analyze_firstins';
+            relname            | reltuples 
+-------------------------------+-----------
+ sto_uao_city_analyze_firstins |         7
+(1 row)
+
+-- Copy 3 more rows in table sto_uao_city_analyze_firstins
+COPY sto_uao_city_analyze_firstins (id, name, countrycode, district, population) FROM stdin;
+select count(*)  from sto_uao_city_analyze_firstins;
+ count 
+-------
+    10
+(1 row)
+
+select relname, reltuples from pg_class where relname = 'sto_uao_city_analyze_firstins';
+            relname            | reltuples 
+-------------------------------+-----------
+ sto_uao_city_analyze_firstins |         7
+(1 row)
+
+-- Copy 2 more rows in table sto_uao_city_analyze_firstins
+COPY sto_uao_city_analyze_firstins (id, name, countrycode, district, population) FROM stdin;
+select count(*)  from sto_uao_city_analyze_firstins;
+ count 
+-------
+    12
+(1 row)
+
+select relname, reltuples from pg_class where relname = 'sto_uao_city_analyze_firstins';
+            relname            | reltuples 
+-------------------------------+-----------
+ sto_uao_city_analyze_firstins |         7
+(1 row)
+

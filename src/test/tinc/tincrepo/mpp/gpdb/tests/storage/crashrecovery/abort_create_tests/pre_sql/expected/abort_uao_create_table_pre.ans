@@ -1,0 +1,3 @@
+-- @product_version gpdb: [4.3.0.0-4.3.99.99]
+create tablespace uao_ts filespace filespace_test_a;
+CREATE TABLESPACE

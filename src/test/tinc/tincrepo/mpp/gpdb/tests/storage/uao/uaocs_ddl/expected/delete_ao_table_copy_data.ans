@@ -1,0 +1,77 @@
+-- @description : delete from UAO tables that has data copied from external source
+-- 
+-- Create AO tables
+DROP TABLE IF EXISTS sto_uao_city_del cascade;
+DROP TABLE
+BEGIN;
+BEGIN
+CREATE TABLE sto_uao_city_del (
+    id integer NOT NULL,
+    name text NOT NULL,
+    countrycode character(3) NOT NULL,
+    district text NOT NULL,
+    population integer NOT NULL
+) with (appendonly=true, orientation=column) distributed by(id);
+CREATE TABLE
+select count(*)  from sto_uao_city_del;
+ count 
+-------
+     0
+(1 row)
+
+SELECT 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='sto_uao_city_del');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+\d+ sto_uao_city_del 
+                                Append-Only Columnar Table "public.sto_uao_city_del"
+   Column    |     Type     | Modifiers | Storage  | Compression Type | Compression Level | Block Size | Description 
+-------------+--------------+-----------+----------+------------------+-------------------+------------+-------------
+ id          | integer      | not null  | plain    | none             | 0                 | 32768      | 
+ name        | text         | not null  | extended | none             | 0                 | 32768      | 
+ countrycode | character(3) | not null  | extended | none             | 0                 | 32768      | 
+ district    | text         | not null  | extended | none             | 0                 | 32768      | 
+ population  | integer      | not null  | plain    | none             | 0                 | 32768      | 
+Checksum: f
+Has OIDs: no
+Options: appendonly=true, orientation=column
+Distributed by: (id)
+
+-- Copy 7 rows in table sto_uao_city_del
+COPY sto_uao_city_del (id, name, countrycode, district, population) FROM stdin;
+COMMIT;
+COMMIT
+select *  from sto_uao_city_del order by id;
+ id |      name      | countrycode |   district    | population 
+----+----------------+-------------+---------------+------------
+  1 | Kabul          | AFG         | Kabol         |    1780000
+  2 | Qandahar       | AFG         | Qandahar      |     237500
+  3 | Herat          | AFG         | Herat         |     186800
+  4 | Mazar-e-Sharif | AFG         | Balkh         |     127800
+  5 | Amsterdam      | NLD         | Noord-Holland |     731200
+  6 | Rotterdam      | NLD         | Zuid-Holland  |     593321
+  7 | Haag           | NLD         | Zuid-Holland  |     440900
+(7 rows)
+
+-- Increase the population by 1000 for all cities in NetherLands (NLD) 
+-- Should update 3 rows
+delete from  sto_uao_city_del where countrycode='NLD';
+DELETE 3
+select count(*)  AS only_visi_tups from sto_uao_city_del;
+ only_visi_tups 
+----------------
+              4
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*)  AS invisi_and_visi_tups from sto_uao_city_del;
+ invisi_and_visi_tups 
+----------------------
+                    7
+(1 row)
+
+set gp_select_invisible = false;
+SET

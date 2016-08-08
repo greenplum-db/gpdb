@@ -1,0 +1,29 @@
+-- start_ignore
+SET optimizer=off;
+SET
+-- end_ignore
+create table mdt_test_reindex_tbl (col1 int,col2 int) distributed randomly;
+CREATE TABLE
+create index clusterindex on mdt_test_reindex_tbl(col1);
+CREATE INDEX
+REINDEX index "public".clusterindex;
+REINDEX
+select classname  , schemaname , objname  , usestatus , usename , actionname , subtype from pg_stat_operations  where statime > ( select statime from pg_stat_operations where objname ='my_first_table' and actionname ='CREATE') and objname  not in ('pg_stat_operations','pg_stat_partition_operations') order by statime;
+  classname  | schemaname |       objname        | usestatus | usename  | actionname | subtype  
+-------------+------------+----------------------+-----------+----------+------------+----------
+ pg_authid   |            | mdt_user             | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_database |            | mdt_db               | CURRENT   | mdt_user | CREATE     | DATABASE
+ pg_class    | public     | mdt_test_reindex_tbl | CURRENT   | gpadmin  | CREATE     | TABLE
+ pg_class    | public     | clusterindex         | CURRENT   | gpadmin  | CREATE     | INDEX
+ pg_class    | public     | clusterindex         | CURRENT   | gpadmin  | VACUUM     | REINDEX
+(5 rows)
+
+drop table mdt_test_reindex_tbl;
+DROP TABLE
+select classname  , schemaname , objname  , usestatus , usename , actionname , subtype from pg_stat_operations  where statime > ( select statime from pg_stat_operations where objname ='my_first_table' and actionname ='CREATE') and objname  not in ('pg_stat_operations','pg_stat_partition_operations') order by statime;
+  classname  | schemaname | objname  | usestatus | usename  | actionname | subtype  
+-------------+------------+----------+-----------+----------+------------+----------
+ pg_authid   |            | mdt_user | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_database |            | mdt_db   | CURRENT   | mdt_user | CREATE     | DATABASE
+(2 rows)
+

@@ -1,0 +1,69 @@
+-- start_ignore
+-- end_ignore
+-- 
+-- @created 2015-07-11 12:00:00
+-- @modified 2015-07-11 12:00:00
+-- @tags external_partition 
+-- @gpdiff true 
+-- @description Tests for text format 
+--start_ignore
+drop table if exists pt_ext;
+psql:/path/sql_file:1: NOTICE:  table "pt_ext" does not exist, skipping
+DROP TABLE
+CREATE TABLE pt_ext
+(
+  col1 int,
+  col2 decimal,
+  col3 text,
+  col4 bool
+  
+)
+distributed by (col1)
+partition by list(col2)
+(
+	partition part1 values(1,2,3,4,5,6,7,8,9,10),
+	partition part2 values(11,12,13,14,15,16,17,18,19,20),
+	partition part3 values(21,22,23,24,25,26,27,28,29,30),
+	partition part4 values(31,32,33,34,35,36,37,38,39,40),
+	partition part5 values(41,42,43,44,45,46,47,48,49,50)
+);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part1" for table "pt_ext"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part2" for table "pt_ext"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part3" for table "pt_ext"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part4" for table "pt_ext"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part5" for table "pt_ext"
+CREATE TABLE
+insert into pt_ext select i,i,'test',true from generate_series(1,50) i;
+INSERT 0 50
+create temp table tmp as select * from pt_ext where col1 < 11; 
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'col1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT 10
+copy tmp to '/tmp/exttab_list';
+COPY 10
+create readable external table ret(like pt_ext) location('file://mdw/tmp/exttab_list') format 'text';
+CREATE EXTERNAL TABLE
+alter table pt_ext exchange partition part1 with table ret without validation;
+ALTER TABLE
+drop table ret;
+DROP TABLE
+--end_ignore
+select * from pt_ext where col2 < 10;
+ col1 | col2 | col3 | col4 
+------+------+------+------
+    1 |    1 | test | t
+    2 |    2 | test | t
+    3 |    3 | test | t
+    4 |    4 | test | t
+    5 |    5 | test | t
+    6 |    6 | test | t
+    7 |    7 | test | t
+    8 |    8 | test | t
+    9 |    9 | test | t
+(9 rows)
+
+--start_ignore
+drop table pt_ext;
+DROP TABLE
+\! rm /tmp/exttab_list
+--end_ignore

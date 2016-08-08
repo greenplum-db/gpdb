@@ -1,0 +1,61 @@
+-- start_ignore
+-- end_ignore
+-- 
+-- @created 2015-07-11 12:00:00
+-- @modified 2015-07-11 12:00:00
+-- @tags external_partition 
+-- @gpdiff true 
+-- @description Tests for sub partition 
+--start_ignore
+drop table if exists pt_ext;
+DROP TABLE
+CREATE TABLE pt_ext
+(
+  col1 int,
+  col2 decimal,
+  col3 int,
+  col4 bool
+  
+)
+distributed by (col1)
+partition by range(col2)
+SUBPARTITION BY RANGE (col3)
+SUBPARTITION TEMPLATE (
+SUBPARTITION sub1 START (2001),
+SUBPARTITION sub2 START (2002),
+SUBPARTITION sub3 START (2006) END (2007) )
+(
+	partition part1 start ('1')  end ('10'), 
+	partition part2 start ('10') end ('20'), 
+	partition part3 start ('20') end ('30'), 
+	partition part4 start ('30') end ('40'), 
+	partition part5 start ('40') end ('50') 
+);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part1" for table "pt_ext"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part2" for table "pt_ext"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part3" for table "pt_ext"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part4" for table "pt_ext"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part5" for table "pt_ext"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part1_2_prt_sub1" for table "pt_ext_1_prt_part1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part1_2_prt_sub2" for table "pt_ext_1_prt_part1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part1_2_prt_sub3" for table "pt_ext_1_prt_part1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part2_2_prt_sub1" for table "pt_ext_1_prt_part2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part2_2_prt_sub2" for table "pt_ext_1_prt_part2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part2_2_prt_sub3" for table "pt_ext_1_prt_part2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part3_2_prt_sub1" for table "pt_ext_1_prt_part3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part3_2_prt_sub2" for table "pt_ext_1_prt_part3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part3_2_prt_sub3" for table "pt_ext_1_prt_part3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part4_2_prt_sub1" for table "pt_ext_1_prt_part4"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part4_2_prt_sub2" for table "pt_ext_1_prt_part4"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part4_2_prt_sub3" for table "pt_ext_1_prt_part4"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part5_2_prt_sub1" for table "pt_ext_1_prt_part5"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part5_2_prt_sub2" for table "pt_ext_1_prt_part5"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part5_2_prt_sub3" for table "pt_ext_1_prt_part5"
+CREATE TABLE
+create readable external table ret(like pt_ext) location('file://mdw/tmp/exttab_list') format 'csv';
+CREATE EXTERNAL TABLE
+--end_ignore
+alter table pt_ext alter partition part1 exchange partition sub1 with table ret without validation;
+psql:/path/sql_file:1: ERROR:  cannot exchange sub partition with external table
+drop external table ret;
+DROP EXTERNAL TABLE

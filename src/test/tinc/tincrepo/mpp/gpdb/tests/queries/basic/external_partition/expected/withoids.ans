@@ -1,0 +1,8 @@
+-- 
+-- @created 2015-07-11 12:00:00
+-- @modified 2015-07-11 12:00:00
+-- @tags external_partition 
+-- @gpdiff true 
+-- @description Tests for external partition 
+alter table pt_ext set without oids;
+ALTER TABLE

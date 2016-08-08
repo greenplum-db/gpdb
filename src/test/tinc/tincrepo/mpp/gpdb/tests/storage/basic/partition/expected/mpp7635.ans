@@ -1,0 +1,44 @@
+-- start_ignore
+-- end_ignore
+--start_ignore
+DROP TABLE mpp7635_aoi_table2 CASCADE;
+DROP TABLE
+--end_ignore
+CREATE TABLE mpp7635_aoi_table2 (id INTEGER)
+ PARTITION BY RANGE (id)
+  (START (0) END (200000) EVERY (100000))
+;
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mpp7635_aoi_table2_1_prt_1" for table "mpp7635_aoi_table2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mpp7635_aoi_table2_1_prt_2" for table "mpp7635_aoi_table2"
+CREATE TABLE
+INSERT INTO mpp7635_aoi_table2(id) VALUES (0);
+INSERT 0 1
+CREATE INDEX mpp7635_ix3 ON mpp7635_aoi_table2 USING BITMAP (id);
+psql:/path/sql_file:1: NOTICE:  building index for child partition "mpp7635_aoi_table2_1_prt_1"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "mpp7635_aoi_table2_1_prt_2"
+CREATE INDEX
+select * from pg_indexes where tablename like 'mpp7635%';
+ schemaname |         tablename          |      indexname      | tablespace |                                     indexdef                                     
+------------+----------------------------+---------------------+------------+----------------------------------------------------------------------------------
+ public     | mpp7635_aoi_table2         | mpp7635_ix3         |            | CREATE INDEX mpp7635_ix3 ON mpp7635_aoi_table2 USING bitmap (id)
+ public     | mpp7635_aoi_table2_1_prt_1 | mpp7635_ix3_1_prt_1 |            | CREATE INDEX mpp7635_ix3_1_prt_1 ON mpp7635_aoi_table2_1_prt_1 USING bitmap (id)
+ public     | mpp7635_aoi_table2_1_prt_2 | mpp7635_ix3_1_prt_2 |            | CREATE INDEX mpp7635_ix3_1_prt_2 ON mpp7635_aoi_table2_1_prt_2 USING bitmap (id)
+(3 rows)
+
+DROP INDEX mpp7635_ix3;
+psql:/path/sql_file:1: WARNING:  Only dropped the index "mpp7635_ix3"
+HINT:  To drop other indexes on child partitions, drop each one explicitly.
+DROP INDEX
+select * from pg_indexes where tablename like 'mpp7635%';
+ schemaname |         tablename          |      indexname      | tablespace |                                     indexdef                                     
+------------+----------------------------+---------------------+------------+----------------------------------------------------------------------------------
+ public     | mpp7635_aoi_table2_1_prt_1 | mpp7635_ix3_1_prt_1 |            | CREATE INDEX mpp7635_ix3_1_prt_1 ON mpp7635_aoi_table2_1_prt_1 USING bitmap (id)
+ public     | mpp7635_aoi_table2_1_prt_2 | mpp7635_ix3_1_prt_2 |            | CREATE INDEX mpp7635_ix3_1_prt_2 ON mpp7635_aoi_table2_1_prt_2 USING bitmap (id)
+(2 rows)
+
+CREATE INDEX mpp7635_ix3 ON mpp7635_aoi_table2 (id);
+psql:/path/sql_file:1: NOTICE:  building index for child partition "mpp7635_aoi_table2_1_prt_1"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "mpp7635_aoi_table2_1_prt_2"
+CREATE INDEX

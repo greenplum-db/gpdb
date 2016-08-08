@@ -1,0 +1,6 @@
+select * from Tab2;
+ col1 | col2 
+------+------
+    5 |    6 
+(1 row)
+

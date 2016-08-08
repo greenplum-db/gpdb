@@ -1,0 +1,4 @@
+drop table aorecursive;
+DROP TABLE
+drop function recursive(int);
+DROP FUNCTION

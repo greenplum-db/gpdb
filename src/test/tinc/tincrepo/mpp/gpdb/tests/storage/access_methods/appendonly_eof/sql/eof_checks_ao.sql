@@ -1,0 +1,18 @@
+1: BEGIN;
+1: SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+1: SELECT COUNT(*) FROM test_ao_mpp19912;
+2: BEGIN;
+2: INSERT INTO test_ao_mpp19912 SELECT i, i from generate_series(1, 1000) i;
+2: COMMIT;
+3: BEGIN;
+3: INSERT INTO test_ao_mpp19912_supp1 SELECT i, i FROM generate_series(1, 1000) i;
+4: BEGIN;
+4: INSERT INTO test_ao_mpp19912_supp2 SELECT i, i FROM generate_series(1, 1000) i;
+5: BEGIN;
+5: INSERT INTO test_ao_mpp19912_supp3 SELECT i, i FROM generate_series(1, 1000) i;
+6: INSERT INTO test_ao_mpp19912_supp4 SELECT i, i FROM generate_series(1, 1000) i;
+3: COMMIT;
+4: COMMIT;
+5: COMMIT;
+1: INSERT INTO test_ao_mpp19912 SELECT i, i FROM generate_series(1, 200) i;
+1: COMMIT;

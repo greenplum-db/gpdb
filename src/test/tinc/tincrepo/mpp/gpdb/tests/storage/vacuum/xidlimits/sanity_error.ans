@@ -1,0 +1,2 @@
+psql: FATAL:  database is not accepting commands to avoid wraparound data loss in database "sample"
+HINT:  Shutdown Greenplum Database. Lower the xid_stop_limit GUC. Execute a full-database VACUUM in "sample". Reset the xid_stop_limit GUC.

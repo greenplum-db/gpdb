@@ -1,0 +1,42 @@
+-- start_matchsubs
+-- m/ /
+-- s/\[\/.+\]/[PATH]/
+-- m/DETAIL:/
+-- s/line N\/A/ line DUMMY_LINE /
+-- m/DETAIL:/
+-- s/ext_lineitem/ DUMMY_EX/
+-- m/DETAIL:/
+-- s/gpfdist.+/ DUMMY_LOCATION /
+-- m/ERROR:/
+-- s/missing data for column.+/ DUMMY_COL /
+-- m/ /
+-- s/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})\.(\d+)-(\d+)/TODAYS_DATE/
+-- m/ /
+-- s/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})/TODAYS_DATE1/
+-- m/psql:/
+-- s/psql:.+\//PATH1\//
+-- m/ /
+-- s/\/Users\/awinn/PATH2/
+-- m/(\d+)\.(\d+)\.(\d+)\.(\d+)/
+-- s/(\d+)\.(\d+)\.(\d+)\.(\d+)/HOST/g
+# IPV6, 2620:0:170:611::14
+m/\[*\d+:\d+:\d+:\d+::\d+\]*/
+s/\[*\d+:\d+:\d+:\d+::\d+\]*/HOST/g
+
+m/LOCATION (.*)/
+s/LOCATION (.*)/LOCATION (PATH)/
+
+m/(COptTasks.cpp:.*)/
+s/(COptTasks.cpp:.*)//
+-- m/ /
+-- s/\s+\(.*\.[ch]:\d+\)/ (SOMEFILE:SOMEFUNC)/
+-- m/ /
+-- s/\w+\.c:\d+\]/FILE:LINE]/
+-- m/ /
+-- s/file open failure .*?: /file open failure FILE: /
+-- end_matchsubs
+-- start_matchignore
+--
+-- m/WARNING\:\s+skipping.*cannot vacuum indexes, views, external tables/
+--
+-- end_matchignore

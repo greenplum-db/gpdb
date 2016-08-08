@@ -1,0 +1,26 @@
+create table test (d integer, a integer, b integer);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'd' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+insert into test select a, a, a%25 from generate_series(1,100) a;
+INSERT 0 100
+create or replace function bu() returns trigger as '
+begin
+    if new.a != old.a then
+        -- delete from test where a = old.a;
+        -- insert into test (a,b) values (new.a, new.b);
+        return null;
+    end if;
+    return new;
+end;
+' language plpgsql;
+CREATE FUNCTION
+create trigger tg_bu before update
+   on test for each row execute procedure bu();
+CREATE TRIGGER
+update test set a=200 where a=10;
+UPDATE 0
+drop trigger tg_bu on test;
+DROP TRIGGER
+drop function bu();
+DROP FUNCTION

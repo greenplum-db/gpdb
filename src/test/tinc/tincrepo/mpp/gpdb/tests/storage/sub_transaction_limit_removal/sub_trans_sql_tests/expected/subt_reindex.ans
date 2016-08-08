@@ -1,0 +1,186 @@
+-- start_ignore
+-- end_ignore
+Drop table if exists subt_tab_reindex_heap;
+DROP TABLE
+Create table subt_tab_reindex_heap(i int, x text,c char,v varchar, d date, n numeric, t timestamp without time zone, tz time with time zone, b box) distributed by (i);
+CREATE TABLE
+Insert into subt_tab_reindex_heap values(generate_series(1,4),'create table with subtransactions','s','subtransaction table','12-11-2012',3,'2012-10-09 10:23:54', '2011-08-19 10:23:54+02', '( (0,0), (1,1) )');
+INSERT 0 4
+Create index subt_btree_rix_heap on subt_tab_reindex_heap (x);
+CREATE INDEX
+Create index subt_bitmap_rix_heap on subt_tab_reindex_heap using bitmap (n);
+CREATE INDEX
+Create index subt_gist_rix_heap on subt_tab_reindex_heap using gist (b);
+CREATE INDEX
+Create Unique index subt_unique_rix_heap on subt_tab_reindex_heap (i);
+CREATE INDEX
+Drop table if exists subt_tab_reindex_ao;
+DROP TABLE
+Create table subt_tab_reindex_ao(i int, x text,c char,v varchar, d date, n numeric, t timestamp without time zone, tz time with time zone, b box) with(appendonly=true) distributed by (i);
+CREATE TABLE
+Insert into subt_tab_reindex_ao values(generate_series(1,4),'create table with subtransactions','s','subtransaction table','12-11-2012',3,'2012-10-09 10:23:54', '2011-08-19 10:23:54+02', '( (0,0), (1,1) )');
+INSERT 0 4
+Create index subt_btree_rix_ao on subt_tab_reindex_ao (x);
+CREATE INDEX
+Create index subt_bitmap_rix_ao on subt_tab_reindex_ao using bitmap (n);
+CREATE INDEX
+Create index subt_gist_rix_ao on subt_tab_reindex_ao using gist (b);
+CREATE INDEX
+Drop table if exists subt_tab_reindex_co;
+DROP TABLE
+Create table subt_tab_reindex_co(i int, x text,c char,v varchar, d date, n numeric, t timestamp without time zone, tz time with time zone, b box) with(appendonly=true, orientation=column) distributed by (i);
+CREATE TABLE
+Insert into subt_tab_reindex_co values(generate_series(1,4),'create table with subtransactions','s','subtransaction table','12-11-2012',3,'2012-10-09 10:23:54', '2011-08-19 10:23:54+02', '( (0,0), (1,1) )');
+INSERT 0 4
+Create index subt_btree_rix_co on subt_tab_reindex_co (x);
+CREATE INDEX
+Create index subt_bitmap_rix_co on subt_tab_reindex_co using bitmap (n);
+CREATE INDEX
+Create index subt_gist_rix_co on subt_tab_reindex_co using gist (b);
+CREATE INDEX
+BEGIN;
+BEGIN
+Savepoint sp1;
+SAVEPOINT
+Insert into subt_tab_reindex_ao values(5,'create table with subtransactions','s','subtransaction table','12-11-2012',3,'2012-10-09 10:23:54', '2011-08-19 10:23:54+02', '( (0,0), (1,1) )');
+INSERT 0 1
+Insert into subt_tab_reindex_co values(5,'create table with subtransactions','s','subtransaction table','12-11-2012',3,'2012-10-09 10:23:54', '2011-08-19 10:23:54+02', '( (0,0), (1,1) )');
+INSERT 0 1
+REINDEX index subt_btree_rix_heap;
+REINDEX
+REINDEX index subt_bitmap_rix_heap;
+REINDEX
+REINDEX index subt_gist_rix_heap;
+REINDEX
+REINDEX index subt_unique_rix_heap;
+REINDEX
+REINDEX index subt_btree_rix_ao;
+REINDEX
+REINDEX index subt_bitmap_rix_ao;
+REINDEX
+REINDEX index subt_gist_rix_ao;
+REINDEX
+REINDEX index subt_btree_rix_co;
+REINDEX
+REINDEX index subt_bitmap_rix_co;
+REINDEX
+REINDEX index subt_gist_rix_co;
+REINDEX
+Select count(*) from subt_tab_reindex_ao;
+ count 
+-------
+     5
+(1 row)
+
+Select count(*) from subt_tab_reindex_co;
+ count 
+-------
+     5
+(1 row)
+
+Savepoint sp2;
+SAVEPOINT
+Insert into subt_tab_reindex_ao values(5,'create table with subtransactions','s','subtransaction table','12-11-2012',3,'2012-10-09 10:23:54', '2011-08-19 10:23:54+02', '( (0,0), (1,1) )');
+INSERT 0 1
+Insert into subt_tab_reindex_co values(5,'create table with subtransactions','s','subtransaction table','12-11-2012',3,'2012-10-09 10:23:54', '2011-08-19 10:23:54+02', '( (0,0), (1,1) )');
+INSERT 0 1
+REINDEX index subt_btree_rix_heap;
+REINDEX
+REINDEX index subt_bitmap_rix_heap;
+REINDEX
+REINDEX index subt_gist_rix_heap;
+REINDEX
+REINDEX index subt_unique_rix_heap;
+REINDEX
+REINDEX index subt_btree_rix_ao;
+REINDEX
+REINDEX index subt_bitmap_rix_ao;
+REINDEX
+REINDEX index subt_gist_rix_ao;
+REINDEX
+REINDEX index subt_btree_rix_co;
+REINDEX
+REINDEX index subt_bitmap_rix_co;
+REINDEX
+REINDEX index subt_gist_rix_co;
+REINDEX
+Select count(*) from subt_tab_reindex_ao;
+ count 
+-------
+     6
+(1 row)
+
+Select count(*) from subt_tab_reindex_co;
+ count 
+-------
+     6
+(1 row)
+
+Savepoint sp3;
+SAVEPOINT
+Rollback to sp2;
+ROLLBACK
+Select count(*) from subt_tab_reindex_ao;
+ count 
+-------
+     5
+(1 row)
+
+Select count(*) from subt_tab_reindex_co;
+ count 
+-------
+     5
+(1 row)
+
+Insert into subt_tab_reindex_ao values(5,'create table with subtransactions','s','subtransaction table','12-11-2012',3,'2012-10-09 10:23:54', '2011-08-19 10:23:54+02', '( (0,0), (1,1) )');
+INSERT 0 1
+Insert into subt_tab_reindex_co values(5,'create table with subtransactions','s','subtransaction table','12-11-2012',3,'2012-10-09 10:23:54', '2011-08-19 10:23:54+02', '( (0,0), (1,1) )');
+INSERT 0 1
+REINDEX index subt_btree_rix_heap;
+REINDEX
+REINDEX index subt_bitmap_rix_heap;
+REINDEX
+REINDEX index subt_gist_rix_heap;
+REINDEX
+REINDEX index subt_unique_rix_heap;
+REINDEX
+REINDEX index subt_btree_rix_ao;
+REINDEX
+REINDEX index subt_bitmap_rix_ao;
+REINDEX
+REINDEX index subt_gist_rix_ao;
+REINDEX
+REINDEX index subt_btree_rix_co;
+REINDEX
+REINDEX index subt_bitmap_rix_co;
+REINDEX
+REINDEX index subt_gist_rix_co;
+REINDEX
+Select count(*) from subt_tab_reindex_ao;
+ count 
+-------
+     6
+(1 row)
+
+Select count(*) from subt_tab_reindex_co;
+ count 
+-------
+     6
+(1 row)
+
+Release Savepoint sp2;
+RELEASE
+Select count(*) from subt_tab_reindex_ao;
+ count 
+-------
+     6
+(1 row)
+
+Select count(*) from subt_tab_reindex_co;
+ count 
+-------
+     6
+(1 row)
+
+COMMIT;
+COMMIT

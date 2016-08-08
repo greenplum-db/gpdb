@@ -1,0 +1,82 @@
+-- start_ignore
+SET optimizer=off;
+SET
+-- end_ignore
+CREATE RESOURCE QUEUE db_resque_new1 ACTIVE THRESHOLD 2 COST THRESHOLD 2000.00;
+CREATE QUEUE
+CREATE RESOURCE QUEUE db_resque_new2 COST THRESHOLD 3000.00 OVERCOMMIT;
+CREATE QUEUE
+CREATE RESOURCE QUEUE db_resque_new3 ACTIVE THRESHOLD 2 COST THRESHOLD 2000.00;
+CREATE QUEUE
+CREATE RESOURCE QUEUE db_resque_new4 ACTIVE THRESHOLD 2 COST THRESHOLD 2000.00;
+CREATE QUEUE
+CREATE RESOURCE QUEUE db_resque_new5 COST THRESHOLD 3000.00 OVERCOMMIT;
+CREATE QUEUE
+CREATE RESOURCE QUEUE db_resque_new6 ACTIVE THRESHOLD 2 COST THRESHOLD 2000.00;
+CREATE QUEUE
+CREATE RESOURCE QUEUE db_resque_new7 ACTIVE THRESHOLD 2 COST THRESHOLD 2000.00;
+CREATE QUEUE
+CREATE RESOURCE QUEUE db_resque_new8 ACTIVE THRESHOLD 2 COST THRESHOLD 2000.00;
+CREATE QUEUE
+ALTER RESOURCE QUEUE db_resque_new1 with(priority=high, max_cost=300) without (cost_overcommit=false) ;
+ALTER QUEUE
+ALTER RESOURCE QUEUE db_resque_new2 without (cost_overcommit=false);
+ALTER QUEUE
+ALTER RESOURCE QUEUE db_resque_new3 with(priority=low); 
+ALTER QUEUE
+ALTER RESOURCE QUEUE db_resque_new4 with(MAX_COST=3.0);
+ALTER QUEUE
+ALTER RESOURCE QUEUE db_resque_new5 with(MIN_COST=1.0);
+ALTER QUEUE
+ALTER RESOURCE QUEUE db_resque_new6 with(ACTIVE_STATEMENTS=3);
+ALTER QUEUE
+ALTER RESOURCE QUEUE db_resque_new7 without(cost_overcommit=false);
+ALTER QUEUE
+ALTER RESOURCE QUEUE db_resque_new8 without(ACTIVE_STATEMENTS=2);
+ALTER QUEUE
+select classname  , schemaname , objname  , usestatus , usename , actionname , subtype from pg_stat_operations  where statime > ( select statime from pg_stat_operations where objname ='my_first_table' and actionname ='CREATE') and objname  not in ('pg_stat_operations','pg_stat_partition_operations') order by statime;
+  classname  | schemaname |    objname     | usestatus | usename  | actionname |      subtype      
+-------------+------------+----------------+-----------+----------+------------+-------------------
+ pg_authid   |            | mdt_user       | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_database |            | mdt_db         | CURRENT   | mdt_user | CREATE     | DATABASE
+ pg_resqueue |            | db_resque_new1 | CURRENT   | gpadmin  | CREATE     | RESOURCE QUEUE
+ pg_resqueue |            | db_resque_new2 | CURRENT   | gpadmin  | CREATE     | RESOURCE QUEUE
+ pg_resqueue |            | db_resque_new3 | CURRENT   | gpadmin  | CREATE     | RESOURCE QUEUE
+ pg_resqueue |            | db_resque_new4 | CURRENT   | gpadmin  | CREATE     | RESOURCE QUEUE
+ pg_resqueue |            | db_resque_new5 | CURRENT   | gpadmin  | CREATE     | RESOURCE QUEUE
+ pg_resqueue |            | db_resque_new6 | CURRENT   | gpadmin  | CREATE     | RESOURCE QUEUE
+ pg_resqueue |            | db_resque_new7 | CURRENT   | gpadmin  | CREATE     | RESOURCE QUEUE
+ pg_resqueue |            | db_resque_new8 | CURRENT   | gpadmin  | CREATE     | RESOURCE QUEUE
+ pg_resqueue |            | db_resque_new1 | CURRENT   | gpadmin  | ALTER      | 3 OPTIONS
+ pg_resqueue |            | db_resque_new2 | CURRENT   | gpadmin  | ALTER      | COST_OVERCOMMIT
+ pg_resqueue |            | db_resque_new3 | CURRENT   | gpadmin  | ALTER      | PRIORITY
+ pg_resqueue |            | db_resque_new4 | CURRENT   | gpadmin  | ALTER      | MAX_COST
+ pg_resqueue |            | db_resque_new5 | CURRENT   | gpadmin  | ALTER      | MIN_COST
+ pg_resqueue |            | db_resque_new6 | CURRENT   | gpadmin  | ALTER      | ACTIVE_STATEMENTS
+ pg_resqueue |            | db_resque_new7 | CURRENT   | gpadmin  | ALTER      | COST_OVERCOMMIT
+ pg_resqueue |            | db_resque_new8 | CURRENT   | gpadmin  | ALTER      | ACTIVE_STATEMENTS
+(18 rows)
+
+drop resource queue db_resque_new1;
+DROP QUEUE
+drop resource queue db_resque_new2;
+DROP QUEUE
+drop resource queue db_resque_new3;
+DROP QUEUE
+drop resource queue db_resque_new4;
+DROP QUEUE
+drop resource queue db_resque_new5;
+DROP QUEUE
+drop resource queue db_resque_new6;
+DROP QUEUE
+drop resource queue db_resque_new7;
+DROP QUEUE
+drop resource queue db_resque_new8;
+DROP QUEUE
+select classname  , schemaname , objname  , usestatus , usename , actionname , subtype from pg_stat_operations  where statime > ( select statime from pg_stat_operations where objname ='my_first_table' and actionname ='CREATE') and objname  not in ('pg_stat_operations','pg_stat_partition_operations') order by statime;
+  classname  | schemaname | objname  | usestatus | usename  | actionname | subtype  
+-------------+------------+----------+-----------+----------+------------+----------
+ pg_authid   |            | mdt_user | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_database |            | mdt_db   | CURRENT   | mdt_user | CREATE     | DATABASE
+(2 rows)
+

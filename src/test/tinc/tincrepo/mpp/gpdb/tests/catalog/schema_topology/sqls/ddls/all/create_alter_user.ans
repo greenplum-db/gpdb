@@ -1,0 +1,71 @@
+-- 
+-- @created 2009-01-27 14:00:00
+-- @modified 2013-06-24 17:00:00
+-- @tags ddl schema_topology
+\c db_test_bed
+You are now connected to database "db_test_bed" as user "nbhojwani".
+CREATE USER db_user1 WITH SUPERUSER CREATEDB  INHERIT LOGIN CONNECTION LIMIT  1 ENCRYPTED PASSWORD 'passwd';
+CREATE ROLE
+CREATE USER db_user2 WITH NOSUPERUSER NOCREATEDB  NOINHERIT NOLOGIN  UNENCRYPTED PASSWORD 'passwd';
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE USER db_user3 WITH NOCREATEROLE NOCREATEUSER;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE USER db_user4 WITH CREATEROLE CREATEUSER;
+CREATE ROLE
+CREATE USER db_user5 WITH VALID UNTIL '2009-02-13 01:51:15';
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE USER db_user6 WITH IN ROLE dba_role1; 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE GROUP db_user_grp1;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE USER db_user7 WITH IN GROUP db_user_grp1; 
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE USER db_user8 WITH ROLE db_user7;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE USER db_user9 WITH ADMIN db_user8;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE USER db_user10 WITH USER db_user1;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE USER db_user11 SYSID 100 ;
+psql:/path/sql_file:1: NOTICE:  SYSID can no longer be specified
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+DROP RESOURCE QUEUE resqueu3;
+psql:/path/sql_file:1: ERROR:  resource queue "resqueu3" does not exist
+CREATE RESOURCE QUEUE resqueu3 ACTIVE THRESHOLD 1;
+CREATE QUEUE
+CREATE USER db_user12 RESOURCE QUEUE resqueu3;
+CREATE ROLE
+ALTER USER db_user1 WITH NOSUPERUSER NOCREATEDB  NOINHERIT NOLOGIN  UNENCRYPTED PASSWORD 'passwd';
+ALTER ROLE
+ALTER USER db_user2 WITH SUPERUSER CREATEDB  INHERIT LOGIN CONNECTION LIMIT  1 ENCRYPTED PASSWORD 'passwd';
+ALTER ROLE
+ALTER USER db_user3 WITH CREATEROLE CREATEUSER;
+ALTER ROLE
+ALTER USER db_user4 WITH NOCREATEROLE NOCREATEUSER;
+ALTER ROLE
+ALTER USER db_user5 WITH VALID UNTIL '2009-06-13 01:51:15';
+ALTER ROLE
+ALTER USER db_user6 WITH CONNECTION LIMIT 5;
+ALTER ROLE
+CREATE RESOURCE QUEUE resqueu4 ACTIVE THRESHOLD 1;
+CREATE QUEUE
+ALTER USER db_user7 WITH RESOURCE QUEUE resqueu4;
+ALTER ROLE
+ALTER USER db_user8 RENAME TO new_user8; 
+ALTER ROLE
+CREATE SCHEMA db_schema2;
+CREATE SCHEMA
+ALTER USER db_user9 SET search_path TO db_schema2;
+ALTER ROLE
+ALTER USER db_user9 RESET search_path ;
+ALTER ROLE

@@ -1,0 +1,81 @@
+-- start_ignore
+-- end_ignore
+-- start_igonre
+Drop tablespace subt_tbsp_ao_new;
+psql:/path/sql_file:1: ERROR:  tablespace "subt_tbsp_ao_new" does not exist
+-- end_ignore
+create tablespace subt_tbsp_ao_new filespace subt_filespace_a ;
+CREATE TABLESPACE
+BEGIN;
+BEGIN
+Savepoint sp1;
+SAVEPOINT
+Drop table if exists subt_alter_table_ao1;
+psql:/path/sql_file:1: NOTICE:  table "subt_alter_table_ao1" does not exist, skipping
+DROP TABLE
+Create table subt_alter_table_ao1 (col0 int) with(appendonly=true) distributed randomly;
+CREATE TABLE
+Insert into subt_alter_table_ao1 values(generate_series(1,5));
+INSERT 0 5
+select count(*) from subt_alter_table_ao1;
+ count 
+-------
+     5
+(1 row)
+
+select tablespace from pg_tables where tablename ='subt_alter_table_ao1';
+ tablespace 
+------------
+ 
+(1 row)
+
+Savepoint sp2;
+SAVEPOINT
+Alter table subt_alter_table_ao1 add column subt_aol1 int default 10 ;
+ALTER TABLE
+Alter table subt_alter_table_ao1 add column subt_aol2 int default 10 ;
+ALTER TABLE
+select tablespace from pg_tables where tablename ='subt_alter_table_ao1';
+ tablespace 
+------------
+ 
+(1 row)
+
+Alter table subt_alter_table_ao1 alter column subt_aol1 type numeric ;
+ALTER TABLE
+Alter table subt_alter_table_ao1 rename column subt_aol1 to new_aol1 ;
+ALTER TABLE
+Alter table subt_alter_table_ao1 drop column new_aol1 ;
+ALTER TABLE
+Alter table subt_alter_table_ao1 set tablespace subt_tbsp_ao_new;
+ALTER TABLE
+select tablespace from pg_tables where tablename ='subt_alter_table_ao1';
+    tablespace    
+------------------
+ subt_tbsp_ao_new
+(1 row)
+
+Savepoint sp3;
+SAVEPOINT
+select count(*) from subt_alter_table_ao1;
+ count 
+-------
+     5
+(1 row)
+
+select tablespace from pg_tables where tablename ='subt_alter_table_ao1';
+    tablespace    
+------------------
+ subt_tbsp_ao_new
+(1 row)
+
+Rollback to sp1;
+ROLLBACK
+select count(*) from subt_alter_table_ao1;
+psql:/path/sql_file:1: ERROR:  relation "subt_alter_table_ao1" does not exist
+LINE 1: select count(*) from subt_alter_table_ao1;
+                             ^
+select tablespace from pg_tables where tablename ='subt_alter_table_ao1';
+psql:/path/sql_file:1: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+COMMIT;
+ROLLBACK

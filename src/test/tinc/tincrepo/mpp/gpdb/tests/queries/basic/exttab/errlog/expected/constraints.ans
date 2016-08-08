@@ -1,0 +1,85 @@
+-- start_ignore
+-- end_ignore
+-- Test 1: Insert into another table with unique constraints
+DROP EXTERNAL TABLE IF EXISTS exttab_constraints_1 cascade;
+psql:/path/sql_file:1: NOTICE:  table "exttab_constraints_1" does not exist, skipping
+DROP EXTERNAL TABLE
+-- Generate the file
+\! python @script@ 10 1 > @data_dir@/exttab_constraints_1.tbl
+-- Generate duplicates
+\! python @script@ 10 1 >> @data_dir@/exttab_constraints_1.tbl
+CREATE EXTERNAL TABLE exttab_constraints_1( i int, j text ) 
+LOCATION ('gpfdist://@host@:@port@/exttab_constraints_1.tbl') FORMAT 'TEXT' (DELIMITER '|') 
+LOG ERRORS SEGMENT REJECT LIMIT 10;
+CREATE EXTERNAL TABLE
+-- Empty error log
+SELECT * FROM gp_read_error_log('exttab_constraints_1');
+ cmdtime | relname | filename | linenum | bytenum | errmsg | rawdata | rawbytes 
+---------+---------+----------+---------+---------+--------+---------+----------
+(0 rows)
+
+-- Should not error out
+SELECT COUNT(*) FROM exttab_constraints_1;
+psql:/path/sql_file:1: NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
+ count 
+-------
+    18
+(1 row)
+
+-- Error table should have a couple of rows
+SELECT COUNT(*) from gp_read_error_log('exttab_constraints_1');
+ count 
+-------
+     2
+(1 row)
+
+DROP TABLE IF EXISTS exttab_constraints_insert_1;
+psql:/path/sql_file:1: NOTICE:  table "exttab_constraints_insert_1" does not exist, skipping
+DROP TABLE
+CREATE TABLE exttab_constraints_insert_1 (LIKE exttab_constraints_1) distributed by (i);
+CREATE TABLE
+ALTER TABLE exttab_constraints_insert_1 ADD CONSTRAINT exttab_uniq_constraint_1 UNIQUE (j);
+psql:/path/sql_file:1: NOTICE:  updating distribution policy to match new unique index
+psql:/path/sql_file:1: NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "exttab_constraints_insert_1_j_key" for table "exttab_constraints_insert_1"
+ALTER TABLE
+-- This should fail
+select gp_truncate_error_log('exttab_constraints_1');
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+
+INSERT INTO exttab_constraints_insert_1 SELECT * FROM exttab_constraints_1;
+psql:/path/sql_file:1: NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
+psql:/path/sql_file:1: ERROR:  duplicate key violates unique constraint "exttab_constraints_insert_1_j_key"  (seg0 @host@:40000 pid=24021)
+SELECT COUNT(*) FROM gp_read_error_log('exttab_constraints_1');
+ count 
+-------
+     2
+(1 row)
+
+-- Test: Unique index constraint
+DROP TABLE IF EXISTS exttab_constraints_insert_2;
+psql:/path/sql_file:1: NOTICE:  table "exttab_constraints_insert_2" does not exist, skipping
+DROP TABLE
+CREATE TABLE exttab_constraints_insert_2 (LIKE exttab_constraints_1) distributed by (i);
+CREATE TABLE
+CREATE UNIQUE INDEX exttab_uniq_idx ON exttab_constraints_insert_2 (j);
+psql:/path/sql_file:1: NOTICE:  updating distribution policy to match new unique index
+CREATE INDEX
+-- This should fail
+select gp_truncate_error_log('exttab_constraints_1');
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+
+INSERT INTO exttab_constraints_insert_2 SELECT * FROM exttab_constraints_1;
+psql:/path/sql_file:1: NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
+psql:/path/sql_file:1: ERROR:  duplicate key violates unique constraint "exttab_uniq_idx"  (seg1 @host@:40001 pid=24023)
+SELECT COUNT(*) FROM gp_read_error_log('exttab_constraints_1');
+ count 
+-------
+     2
+(1 row)
+

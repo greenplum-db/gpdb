@@ -1,0 +1,48 @@
+-- start_matchsubs
+-- m/  \d\d \w\w\w \d\d \d\d:\d\d:\d\d/
+-- s/  \d\d \w\w\w \d\d \d\d:\d\d:\d\d/  dd mm yy hh:mm:ss/
+-- m/\d\d\d\d-\d\d-\d\d/
+-- s/\d\d\d\d-\d\d-\d\d/yyyy-mm-dd/
+-- m/\d\d:\d\d:\d\d/
+-- s/\d\d:\d\d:\d\d/hh:mm:ss/
+-- m/hh:mm:ss.*/
+-- s/hh:mm:ss.*/hh:mm:ss/
+-- m/TupleDesc .+ \(/
+-- s/\(\d+,-1\)/\(xxxx,-1\)/
+-- m/TupleDesc .+ \(/
+-- s/TupleDesc .+ \(/TupleDesc xxxxxxx \(/
+-- m/ \(\d,.+,/
+-- s/ \(\d,.+/ \(ID,xxxxxx/
+-- m/^\s+\d+/
+-- s/^\s+\d+/ xxxxxxx/
+-- m/^\s+-\d+/
+-- s/^\s+-\d+/ xxxxxxx/
+-- m/^\s+\d |\s+\d+ | \d\d\d\d-/
+-- s/^(\s+\d) |\s+\d+ | (\d\d\d\d)-/NUMBER | xxxxxxx | yyyy-/
+-- m/^\s+\d |\s+-\d+ | \d\d\d\d-/
+-- s/^(\s+\d) |\s+-\d+ | (\d\d\d\d)-/NUMBER | xxxxxxx | yyyy-/
+-- m/^.+\/jre/
+-- s/^(.)+\/jre/GP_IGNORE: $1\/jre/
+-- m/toolkit_admin/
+-- s/^(.)+toolkit_admin/GP_IGNORE:$1toolkit_admin/
+-- m/plsuperuser/
+-- s/^(.)+plsuperuser/GP_IGNORE:$1plsuperuser/
+-- m/pltestuser/
+-- s/^(.)+pltestuser/GP_IGNORE:$1pltestuser/
+-- m/gpug_/
+-- s/^(.)+gpug_/GP_IGNORE:$1gpug_/
+-- m/rolet\d/
+-- s/^(.)+rolet/GP_IGNORE:$1role/
+-- m/catalog_user/
+-- s/^(.)+catalog_user/GP_IGNORE:$1catalog_user/
+-- m/\(\d row/
+-- s/\(\d row.*/\( x row/
+-- m/File\$LazyInitialization/
+-- s/^(.)+File\$LazyInitialization/GP_IGNORE:$1File\$LazyInitialization/
+-- m/\/tmp\/pljava\d+.test/
+-- s/pljava\d+.test/pljavaXXXXXXX.test/
+-- m/PDT -0700/
+-- s/PDT -0700/GMT -XXXX/
+-- m/PST -0800/
+-- s/PST -0800/GMT -XXXX/
+-- end_matchsubs

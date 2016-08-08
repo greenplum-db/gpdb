@@ -1,0 +1,12 @@
+create table test ( a int, b text) distributed by (a);
+CREATE TABLE
+insert into test values (generate_series(1,5),'test_1');
+INSERT 0 5
+-- Negative Test of using 2 identical gpfdist URLS. Should Fail
+CREATE WRITABLE EXTERNAL TABLE tbl_wet_2gpfdist_identical ( a int, b text) LOCATION ('gpfdist://@hostname@:@gp_port@/output/wet_2gpfdist.tbl', 'gpfdist://@hostname@:@gp_port@/output/wet_2gpfdist.tbl') FORMAT 'TEXT' (DELIMITER AS '|' NULL AS 'null'  ) ;
+psql:/path/sql_file:1: ERROR:  location uri "gpfdist://@hostname@:@gp_port@/output/wet_2gpfdist.tbl" appears more than once
+-- Negative Test of using more gpfdist URLS than valid primary segments. Should Fail
+CREATE WRITABLE EXTERNAL TABLE tbl_wet_multiple_gpfdist ( a int, b text) LOCATION ('gpfdist://@hostname@:@gp_port@/output/wet_2gpfdist1.tbl', 'gpfdist://@hostname@:@gp_port@/output/wet_2gpfdist2.tbl','gpfdist://@hostname@:@gp_port@/output/wet_2gpfdist3.tbl') FORMAT 'TEXT' (DELIMITER AS '|' NULL AS 'null'  ) ;
+CREATE EXTERNAL TABLE
+insert into tbl_wet_multiple_gpfdist select * from test;
+psql:/path/sql_file:1: ERROR:  External table has more URLs then available primary segments that can write into them  (seg0 hawthorn9:7311 pid=14649)

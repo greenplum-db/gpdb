@@ -1,0 +1,23 @@
+%YAML 1.1
+---
+VERSION:         1.0.0.1
+DATABASE:        template1
+
+DEFINE:
+  - INPUT:
+      NAME:      data
+      QUERY: "select m,n from simple"
+
+  - MAP:
+      NAME: tran 
+      PARAMETERS:
+        - m int 
+        - n int
+      RETURNS:
+        - output int 
+        
+  
+EXECUTE:
+  - RUN:
+      SOURCE: data 
+      MAP: tran

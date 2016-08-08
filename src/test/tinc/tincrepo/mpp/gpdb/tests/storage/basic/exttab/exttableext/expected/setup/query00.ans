@@ -1,0 +1,160 @@
+DROP SCHEMA IF EXISTS exttableext;
+DROP SCHEMA
+CREATE SCHEMA exttableext;
+CREATE SCHEMA
+GRANT ALL ON SCHEMA exttableext TO PUBLIC;
+GRANT
+SET search_path TO 'exttablext';
+SET
+-- Create an example table exttabtest that will be used as source table
+    -- Clean up existing external tables, functions
+    DROP TABLE IF EXISTS exttabtest;
+psql:/path/sql_file:1: NOTICE:  table "exttabtest" does not exist, skipping
+DROP TABLE
+    DROP EXTERNAL TABLE IF EXISTS exttabtest_r;
+psql:/path/sql_file:1: NOTICE:  table "exttabtest_r" does not exist, skipping
+DROP EXTERNAL TABLE
+    DROP EXTERNAL TABLE IF EXISTS exttabtest_r_1m;
+psql:/path/sql_file:1: NOTICE:  table "exttabtest_r_1m" does not exist, skipping
+DROP EXTERNAL TABLE
+    DROP EXTERNAL TABLE IF EXISTS exttabtest_r_1m_null;
+psql:/path/sql_file:1: NOTICE:  table "exttabtest_r_1m_null" does not exist, skipping
+DROP EXTERNAL TABLE
+    DROP EXTERNAL TABLE IF EXISTS exttabtest_r_2url;
+psql:/path/sql_file:1: NOTICE:  table "exttabtest_r_2url" does not exist, skipping
+DROP EXTERNAL TABLE
+    DROP EXTERNAL TABLE IF EXISTS exttabtest_r_circle;
+psql:/path/sql_file:1: NOTICE:  table "exttabtest_r_circle" does not exist, skipping
+DROP EXTERNAL TABLE
+    DROP EXTERNAL TABLE IF EXISTS exttabtest_r_dist;
+psql:/path/sql_file:1: NOTICE:  table "exttabtest_r_dist" does not exist, skipping
+DROP EXTERNAL TABLE
+    DROP EXTERNAL TABLE IF EXISTS exttabtest_r_invalid;
+psql:/path/sql_file:1: NOTICE:  table "exttabtest_r_invalid" does not exist, skipping
+DROP EXTERNAL TABLE
+    DROP EXTERNAL TABLE IF EXISTS exttabtest_r_new;
+psql:/path/sql_file:1: NOTICE:  table "exttabtest_r_new" does not exist, skipping
+DROP EXTERNAL TABLE
+    DROP EXTERNAL TABLE IF EXISTS exttabtest_r_null;
+psql:/path/sql_file:1: NOTICE:  table "exttabtest_r_null" does not exist, skipping
+DROP EXTERNAL TABLE
+    DROP EXTERNAL TABLE IF EXISTS exttabtest_r_uni;
+psql:/path/sql_file:1: NOTICE:  table "exttabtest_r_uni" does not exist, skipping
+DROP EXTERNAL TABLE
+    DROP EXTERNAL TABLE IF EXISTS exttabtest_w;
+psql:/path/sql_file:1: NOTICE:  table "exttabtest_w" does not exist, skipping
+DROP EXTERNAL TABLE
+    DROP EXTERNAL TABLE IF EXISTS exttabtest_w_1m;
+psql:/path/sql_file:1: NOTICE:  table "exttabtest_w_1m" does not exist, skipping
+DROP EXTERNAL TABLE
+    DROP EXTERNAL TABLE IF EXISTS exttabtest_w_1m_null;
+psql:/path/sql_file:1: NOTICE:  table "exttabtest_w_1m_null" does not exist, skipping
+DROP EXTERNAL TABLE
+    DROP EXTERNAL TABLE IF EXISTS exttabtest_w_2url;
+psql:/path/sql_file:1: NOTICE:  table "exttabtest_w_2url" does not exist, skipping
+DROP EXTERNAL TABLE
+    DROP EXTERNAL TABLE IF EXISTS exttabtest_w_5url;
+psql:/path/sql_file:1: NOTICE:  table "exttabtest_w_5url" does not exist, skipping
+DROP EXTERNAL TABLE
+    DROP EXTERNAL TABLE IF EXISTS exttabtest_w_circle;
+psql:/path/sql_file:1: NOTICE:  table "exttabtest_w_circle" does not exist, skipping
+DROP EXTERNAL TABLE
+    DROP EXTERNAL TABLE IF EXISTS exttabtest_w_dist;
+psql:/path/sql_file:1: NOTICE:  table "exttabtest_w_dist" does not exist, skipping
+DROP EXTERNAL TABLE
+    DROP EXTERNAL TABLE IF EXISTS exttabtest_w_invalid;
+psql:/path/sql_file:1: NOTICE:  table "exttabtest_w_invalid" does not exist, skipping
+DROP EXTERNAL TABLE
+    DROP EXTERNAL TABLE IF EXISTS exttabtest_w_misspath;
+psql:/path/sql_file:1: NOTICE:  table "exttabtest_w_misspath" does not exist, skipping
+DROP EXTERNAL TABLE
+    DROP EXTERNAL TABLE IF EXISTS exttabtest_w_new;
+psql:/path/sql_file:1: NOTICE:  table "exttabtest_w_new" does not exist, skipping
+DROP EXTERNAL TABLE
+    DROP EXTERNAL TABLE IF EXISTS exttabtest_w_null;
+psql:/path/sql_file:1: NOTICE:  table "exttabtest_w_null" does not exist, skipping
+DROP EXTERNAL TABLE
+    DROP EXTERNAL TABLE IF EXISTS exttabtest_w_uni;
+psql:/path/sql_file:1: NOTICE:  table "exttabtest_w_uni" does not exist, skipping
+DROP EXTERNAL TABLE
+    DROP EXTERNAL TABLE IF EXISTS format_long_r;
+psql:/path/sql_file:1: NOTICE:  table "format_long_r" does not exist, skipping
+DROP EXTERNAL TABLE
+    DROP EXTERNAL TABLE IF EXISTS format_long_w;
+psql:/path/sql_file:1: NOTICE:  table "format_long_w" does not exist, skipping
+DROP EXTERNAL TABLE
+    DROP EXTERNAL TABLE IF EXISTS format_r;
+psql:/path/sql_file:1: NOTICE:  table "format_r" does not exist, skipping
+DROP EXTERNAL TABLE
+    DROP EXTERNAL TABLE IF EXISTS format_r_s1;
+psql:/path/sql_file:1: NOTICE:  table "format_r_s1" does not exist, skipping
+DROP EXTERNAL TABLE
+    DROP EXTERNAL TABLE IF EXISTS format_r_s2;
+psql:/path/sql_file:1: NOTICE:  table "format_r_s2" does not exist, skipping
+DROP EXTERNAL TABLE
+    DROP EXTERNAL TABLE IF EXISTS format_w;
+psql:/path/sql_file:1: NOTICE:  table "format_w" does not exist, skipping
+DROP EXTERNAL TABLE
+    DROP EXTERNAL TABLE IF EXISTS format_w_s1;
+psql:/path/sql_file:1: NOTICE:  table "format_w_s1" does not exist, skipping
+DROP EXTERNAL TABLE
+    DROP EXTERNAL TABLE IF EXISTS format_w_s2;
+psql:/path/sql_file:1: NOTICE:  table "format_w_s2" does not exist, skipping
+DROP EXTERNAL TABLE
+    DROP FUNCTION IF EXISTS formatter_export_s(record) CASCADE;
+psql:/path/sql_file:1: NOTICE:  function formatter_export_s(record) does not exist, skipping
+DROP FUNCTION
+    DROP FUNCTION IF EXISTS formatter_export_v(record) CASCADE;
+psql:/path/sql_file:1: NOTICE:  function formatter_export_v(record) does not exist, skipping
+DROP FUNCTION
+    DROP FUNCTION IF EXISTS formatter_import_s() CASCADE;
+psql:/path/sql_file:1: NOTICE:  function formatter_import_s() does not exist, skipping
+DROP FUNCTION
+    DROP FUNCTION IF EXISTS formatter_import_v() CASCADE;
+psql:/path/sql_file:1: NOTICE:  function formatter_import_v() does not exist, skipping
+DROP FUNCTION
+    DROP FUNCTION IF EXISTS read_from_file() CASCADE;
+psql:/path/sql_file:1: NOTICE:  function read_from_file() does not exist, skipping
+DROP FUNCTION
+    DROP FUNCTION IF EXISTS read_from_file_stable() CASCADE;
+psql:/path/sql_file:1: NOTICE:  function read_from_file_stable() does not exist, skipping
+DROP FUNCTION
+    DROP FUNCTION IF EXISTS write_to_file_stable() CASCADE;
+psql:/path/sql_file:1: NOTICE:  function write_to_file_stable() does not exist, skipping
+DROP FUNCTION
+    DROP FUNCTION IF EXISTS url_validator() CASCADE;
+psql:/path/sql_file:1: NOTICE:  function url_validator() does not exist, skipping
+DROP FUNCTION
+    DROP FUNCTION IF EXISTS write_to_file() CASCADE;
+psql:/path/sql_file:1: NOTICE:  function write_to_file() does not exist, skipping
+DROP FUNCTION
+    DROP FUNCTION IF EXISTS write_to_file_stable() CASCADE;
+psql:/path/sql_file:1: NOTICE:  function write_to_file_stable() does not exist, skipping
+DROP FUNCTION
+    CREATE TABLE exttabtest(
+       id       int,
+       name     varchar(20),
+       value1   int,
+       value2   int
+    ) 
+    DISTRIBUTED BY (id);
+CREATE TABLE
+-- Loading 100 records
+-- Use only 100 rows for easy to verify the results
+-- In order to test multiple data buffers and related edge cases, more data (at least several MBs or more)
+-- will be used, as in Performance tests 1M and 100M test cases
+    \echo 'loading data...'
+loading data...
+    INSERT INTO exttabtest SELECT i, 'name'||i, i*2, i*3 FROM generate_series(1,100) i;
+INSERT 0 100
+    DROP EXTERNAL TABLE IF EXISTS clean_exttabtest_files;
+DROP TABLE
+    CREATE EXTERNAL WEB TABLE clean_exttabtest_files(stdout text) EXECUTE 'rm -f exttabtest*' ON ALL FORMAT 'text';
+CREATE TABLE
+    GRANT ALL ON clean_exttabtest_files TO PUBLIC;
+GRANT
+    SELECT * FROM clean_exttabtest_files;
+ stdout 
+--------
+(0 rows)
+

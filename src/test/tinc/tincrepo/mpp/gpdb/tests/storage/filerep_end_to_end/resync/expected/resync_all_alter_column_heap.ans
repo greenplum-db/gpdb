@@ -1,0 +1,353 @@
+--
+-- SYNC1 HEAP TABLE
+--
+--
+--RENAME Column
+--
+          ALTER TABLE sync1_heap_all_alter_column_table6 RENAME COLUMN phase TO after_rename_col;
+ALTER TABLE
+INSERT INTO sync1_heap_all_alter_column_table6 VALUES ('sync1_heap1',generate_series(1,10),'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',
+'2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15'
+);
+INSERT 0 10
+select count(*) from sync1_heap_all_alter_column_table6;
+ count 
+-------
+    20
+(1 row)
+
+--
+--ALTER column TYPE type
+--
+          ALTER TABLE sync1_heap_all_alter_column_table6 ALTER COLUMN col002 TYPE int4;
+ALTER TABLE
+INSERT INTO sync1_heap_all_alter_column_table6 VALUES ('sync1_heap1',generate_series(1,10),'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',
+'2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15'
+);
+INSERT 0 10
+select count(*) from sync1_heap_all_alter_column_table6;
+ count 
+-------
+    30
+(1 row)
+
+--
+--ALTER column SET DEFAULT expression
+--
+          ALTER TABLE sync1_heap_all_alter_column_table6 ALTER COLUMN col010 SET DEFAULT 0;
+ALTER TABLE
+INSERT INTO sync1_heap_all_alter_column_table6 VALUES ('sync1_heap1',generate_series(1,10),'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',
+'2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15'
+);
+INSERT 0 10
+select count(*) from sync1_heap_all_alter_column_table6;
+ count 
+-------
+    40
+(1 row)
+
+          ALTER TABLE sync1_heap_all_alter_column_table6 ALTER COLUMN  after_rename_col SET DEFAULT 'stages' ;
+ALTER TABLE
+INSERT INTO sync1_heap_all_alter_column_table6 VALUES ('sync1_heap1',generate_series(1,10),'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',
+'2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15'
+);
+INSERT 0 10
+select count(*) from sync1_heap_all_alter_column_table6;
+ count 
+-------
+    50
+(1 row)
+
+--
+--ALTER column [ SET | DROP ] NOT NULL
+--
+          ALTER TABLE sync1_heap_all_alter_column_table6 ALTER COLUMN a SET NOT NULL;
+ALTER TABLE
+INSERT INTO sync1_heap_all_alter_column_table6 VALUES ('sync1_heap1',generate_series(1,10),'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',
+'2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15'
+);
+INSERT 0 10
+select count(*) from sync1_heap_all_alter_column_table6;
+ count 
+-------
+    60
+(1 row)
+
+          ALTER TABLE sync1_heap_all_alter_column_table6 ALTER COLUMN a DROP NOT NULL;
+ALTER TABLE
+INSERT INTO sync1_heap_all_alter_column_table6 VALUES ('sync1_heap1',generate_series(1,10),'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',
+'2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15'
+);
+INSERT 0 10
+select count(*) from sync1_heap_all_alter_column_table6;
+ count 
+-------
+    70
+(1 row)
+
+--
+--ALTER column SET STATISTICS integer
+--
+          ALTER TABLE sync1_heap_all_alter_column_table6 ALTER a SET STATISTICS 1;
+ALTER TABLE
+INSERT INTO sync1_heap_all_alter_column_table6 VALUES ('sync1_heap1',generate_series(1,10),'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',
+'2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15'
+);
+INSERT 0 10
+select count(*) from sync1_heap_all_alter_column_table6;
+ count 
+-------
+    80
+(1 row)
+
+--
+--ALTER column SET STORAGE
+--
+         ALTER TABLE sync1_heap_all_alter_column_table6 ALTER col007 SET STORAGE PLAIN;
+ALTER TABLE
+INSERT INTO sync1_heap_all_alter_column_table6 VALUES ('sync1_heap1',generate_series(1,10),'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',
+'2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15'
+);
+INSERT 0 10
+select count(*) from sync1_heap_all_alter_column_table6;
+ count 
+-------
+    90
+(1 row)
+
+--
+-- CK_SYNC1 HEAP TABLE
+--
+--
+--RENAME Column
+--
+          ALTER TABLE ck_sync1_heap_all_alter_column_table5 RENAME COLUMN phase TO after_rename_col;
+ALTER TABLE
+INSERT INTO ck_sync1_heap_all_alter_column_table5 VALUES ('ck_sync1_heap1',generate_series(1,10),'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',
+'2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15'
+);
+INSERT 0 10
+select count(*) from ck_sync1_heap_all_alter_column_table5;
+ count 
+-------
+    20
+(1 row)
+
+--
+--ALTER column TYPE type
+--
+          ALTER TABLE ck_sync1_heap_all_alter_column_table5 ALTER COLUMN col002 TYPE int4;
+ALTER TABLE
+INSERT INTO ck_sync1_heap_all_alter_column_table5 VALUES ('ck_sync1_heap1',generate_series(1,10),'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',
+'2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15'
+);
+INSERT 0 10
+select count(*) from ck_sync1_heap_all_alter_column_table5;
+ count 
+-------
+    30
+(1 row)
+
+--
+--ALTER column SET DEFAULT expression
+--
+          ALTER TABLE ck_sync1_heap_all_alter_column_table5 ALTER COLUMN col010 SET DEFAULT 0;
+ALTER TABLE
+INSERT INTO ck_sync1_heap_all_alter_column_table5 VALUES ('ck_sync1_heap1',generate_series(1,10),'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',
+'2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15'
+);
+INSERT 0 10
+select count(*) from ck_sync1_heap_all_alter_column_table5;
+ count 
+-------
+    40
+(1 row)
+
+          ALTER TABLE ck_sync1_heap_all_alter_column_table5 ALTER COLUMN  after_rename_col SET DEFAULT 'stages' ;
+ALTER TABLE
+INSERT INTO ck_sync1_heap_all_alter_column_table5 VALUES ('ck_sync1_heap1',generate_series(1,10),'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',
+'2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15'
+);
+INSERT 0 10
+select count(*) from ck_sync1_heap_all_alter_column_table5;
+ count 
+-------
+    50
+(1 row)
+
+--
+--ALTER column [ SET | DROP ] NOT NULL
+--
+          ALTER TABLE ck_sync1_heap_all_alter_column_table5 ALTER COLUMN a SET NOT NULL;
+ALTER TABLE
+INSERT INTO ck_sync1_heap_all_alter_column_table5 VALUES ('ck_sync1_heap1',generate_series(1,10),'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',
+'2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15'
+);
+INSERT 0 10
+select count(*) from ck_sync1_heap_all_alter_column_table5;
+ count 
+-------
+    60
+(1 row)
+
+          ALTER TABLE ck_sync1_heap_all_alter_column_table5 ALTER COLUMN a DROP NOT NULL;
+ALTER TABLE
+INSERT INTO ck_sync1_heap_all_alter_column_table5 VALUES ('ck_sync1_heap1',generate_series(1,10),'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',
+'2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15'
+);
+INSERT 0 10
+select count(*) from ck_sync1_heap_all_alter_column_table5;
+ count 
+-------
+    70
+(1 row)
+
+--
+--ALTER column SET STATISTICS integer
+--
+          ALTER TABLE ck_sync1_heap_all_alter_column_table5 ALTER a SET STATISTICS 1;
+ALTER TABLE
+INSERT INTO ck_sync1_heap_all_alter_column_table5 VALUES ('ck_sync1_heap1',generate_series(1,10),'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',
+'2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15'
+);
+INSERT 0 10
+select count(*) from ck_sync1_heap_all_alter_column_table5;
+ count 
+-------
+    80
+(1 row)
+
+--
+--ALTER column SET STORAGE
+--
+         ALTER TABLE ck_sync1_heap_all_alter_column_table5 ALTER col007 SET STORAGE PLAIN;
+ALTER TABLE
+INSERT INTO ck_sync1_heap_all_alter_column_table5 VALUES ('ck_sync1_heap1',generate_series(1,10),'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',
+'2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15'
+);
+INSERT 0 10
+select count(*) from ck_sync1_heap_all_alter_column_table5;
+ count 
+-------
+    90
+(1 row)
+
+
+
+--
+-- RESYNC HEAP TABLE
+--
+--
+--RENAME Column
+--
+          ALTER TABLE resync_heap_all_alter_column_table1 RENAME COLUMN phase TO after_rename_col;
+ALTER TABLE
+INSERT INTO resync_heap_all_alter_column_table1 VALUES ('ct_heap1',generate_series(1,10),'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',
+'2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15'
+);
+INSERT 0 10
+select count(*) from resync_heap_all_alter_column_table1;
+ count 
+-------
+    20
+(1 row)
+
+--
+--ALTER column TYPE type
+--
+          ALTER TABLE resync_heap_all_alter_column_table1 ALTER COLUMN col002 TYPE int4;
+ALTER TABLE
+INSERT INTO resync_heap_all_alter_column_table1 VALUES ('ct_heap1',generate_series(1,10),'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',
+'2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15'
+);
+INSERT 0 10
+select count(*) from resync_heap_all_alter_column_table1;
+ count 
+-------
+    30
+(1 row)
+
+--
+--ALTER column SET DEFAULT expression
+--
+          ALTER TABLE resync_heap_all_alter_column_table1 ALTER COLUMN col010 SET DEFAULT 0;
+ALTER TABLE
+INSERT INTO resync_heap_all_alter_column_table1 VALUES ('ct_heap1',generate_series(1,10),'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',
+'2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15'
+);
+INSERT 0 10
+select count(*) from resync_heap_all_alter_column_table1;
+ count 
+-------
+    40
+(1 row)
+
+          ALTER TABLE resync_heap_all_alter_column_table1 ALTER COLUMN  after_rename_col SET DEFAULT 'stages' ;
+ALTER TABLE
+INSERT INTO resync_heap_all_alter_column_table1 VALUES ('ct_heap1',generate_series(1,10),'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',
+'2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15'
+);
+INSERT 0 10
+select count(*) from resync_heap_all_alter_column_table1;
+ count 
+-------
+    50
+(1 row)
+
+--
+--ALTER column [ SET | DROP ] NOT NULL
+--
+          ALTER TABLE resync_heap_all_alter_column_table1 ALTER COLUMN a SET NOT NULL;
+ALTER TABLE
+INSERT INTO resync_heap_all_alter_column_table1 VALUES ('ct_heap1',generate_series(1,10),'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',
+'2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15'
+);
+INSERT 0 10
+select count(*) from resync_heap_all_alter_column_table1;
+ count 
+-------
+    60
+(1 row)
+
+          ALTER TABLE resync_heap_all_alter_column_table1 ALTER COLUMN a DROP NOT NULL;
+ALTER TABLE
+INSERT INTO resync_heap_all_alter_column_table1 VALUES ('ct_heap1',generate_series(1,10),'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',
+'2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15'
+);
+INSERT 0 10
+select count(*) from resync_heap_all_alter_column_table1;
+ count 
+-------
+    70
+(1 row)
+
+--
+--ALTER column SET STATISTICS integer
+--
+          ALTER TABLE resync_heap_all_alter_column_table1 ALTER a SET STATISTICS 1;
+ALTER TABLE
+INSERT INTO resync_heap_all_alter_column_table1 VALUES ('ct_heap1',generate_series(1,10),'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',
+'2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15'
+);
+INSERT 0 10
+select count(*) from resync_heap_all_alter_column_table1;
+ count 
+-------
+    80
+(1 row)
+
+--
+--ALTER column SET STORAGE
+--
+         ALTER TABLE resync_heap_all_alter_column_table1 ALTER col007 SET STORAGE PLAIN;
+ALTER TABLE
+INSERT INTO resync_heap_all_alter_column_table1 VALUES ('ct_heap1',generate_series(1,10),'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',
+'2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15'
+);
+INSERT 0 10
+select count(*) from resync_heap_all_alter_column_table1;
+ count 
+-------
+    90
+(1 row)
+

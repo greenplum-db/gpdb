@@ -1,0 +1,51 @@
+-- start_ignore
+drop function if exists utilityfunc();
+DROP FUNCTION
+drop table if exists utilitytest cascade;
+psql:/path/sql_file:1: NOTICE:  table "utilitytest" does not exist, skipping
+DROP TABLE
+-- end_ignore
+create function utilityfunc() returns integer as
+$$
+begin
+    create table utilitytest(a int NOT NULL, b int, description text) distributed by (a);
+    return 0;
+end;
+$$ language plpgsql;
+CREATE FUNCTION
+select utilityfunc(); 
+ utilityfunc 
+-------------
+           0
+(1 row)
+
+\d utilitytest;
+    Table "public.utilitytest"
+   Column    |  Type   | Modifiers 
+-------------+---------+-----------
+ a           | integer | not null
+ b           | integer | 
+ description | text    | 
+Distributed by: (a)
+
+drop table utilitytest;
+DROP TABLE
+select utilityfunc(); 
+ utilityfunc 
+-------------
+           0
+(1 row)
+
+insert into utilitytest(a, b) values (1, 2);
+INSERT 0 1
+insert into utilitytest(a, b) values (2, 3);
+INSERT 0 1
+select *
+from utilitytest
+order by a,b;
+ a | b | description 
+---+---+-------------
+ 1 | 2 | 
+ 2 | 3 | 
+(2 rows)
+

@@ -1,0 +1,8 @@
+-- Test: plperl 47
+SELECT perl_get_field((11,12), 'y');
+ perl_get_field 
+----------------
+             12
+(1 row)
+
+							  

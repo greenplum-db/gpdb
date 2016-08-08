@@ -1,0 +1,78 @@
+-- 
+-- @description Interconncet flow control test case: single guc value
+-- @created 2012-11-27
+-- @modified 2012-11-27
+-- @tags executor
+-- @gpdb_version [4.2.3.0,main]
+-- @skip skip this random para generation test case in continus integration
+$$$SET_GUC_VALUE$$$
+-- Create tables
+CREATE TABLE small_table(dkey INT, jkey INT, rval REAL, tval TEXT default 'abcdefghijklmnopqrstuvwxyz') DISTRIBUTED BY (dkey);
+CREATE TABLE
+CREATE TABLE media_table(dkey INT, jkey INT, rval REAL, tval TEXT default 'i like travelling') DISTRIBUTED BY (jkey);
+CREATE TABLE
+CREATE TABLE big_table(dkey INT, jkey INT, rval REAL, tval TEXT default 'can you tell me a joke') DISTRIBUTED BY (rval);
+CREATE TABLE
+-- Generate some data
+INSERT INTO small_table VALUES(generate_series(1, 5000), generate_series(5001, 10000), sqrt(generate_series(5001, 10000)));
+INSERT 0 5000
+INSERT INTO media_table VALUES(generate_series(1, 5000), generate_series(5001, 10000), sqrt(generate_series(5001, 10000)));
+INSERT 0 5000
+INSERT INTO big_table VALUES(generate_series(1, 5000), generate_series(5001, 10000), sqrt(generate_series(5001, 10000)));
+INSERT 0 5000
+-- Functional tests
+-- Skew with gather+redistribute
+SELECT ROUND(rval * rval)::INT % 30 AS rval2, SUM(dkey) AS sum_dkey, AVG(jkey) AS ave_jkey,
+                                SUM(length(tval)) AS sum_len_tval, SUM(length(tval2)) AS sum_len_tval2, SUM(length(tval3)) AS sum_len_tval3 
+FROM
+ (SELECT dkey, big_table.jkey, big_table.rval, foo2.tval, foo2.tval2, big_table.tval AS tval3  FROM
+  (SELECT rval, media_table.jkey, media_table.dkey, media_table.tval AS tval2, foo1.tval  FROM
+   (SELECT jkey, dkey,  small_table.rval, small_table.tval  FROM
+     (SELECT  jkey, rval, tval  FROM
+       small_table ORDER BY dkey ) foo
+        JOIN small_table USING(jkey) ORDER BY dkey) foo1
+          JOIN media_table USING(rval) ORDER BY jkey) foo2
+             JOIN big_table USING(dkey) ORDER BY rval) foo3
+GROUP BY rval2
+ORDER BY rval2;
+ rval2 | sum_dkey | ave_jkey | sum_len_tval | sum_len_tval2 | sum_len_tval3 
+-------+----------+----------+--------------+---------------+---------------
+     0 |   417500 |     7500 |         4342 |          2839 |          3674
+     1 |   417667 |     7501 |         4342 |          2839 |          3674
+     2 |   417834 |     7502 |         4342 |          2839 |          3674
+     3 |   418001 |     7503 |         4342 |          2839 |          3674
+     4 |   418168 |     7504 |         4342 |          2839 |          3674
+     5 |   418335 |     7505 |         4342 |          2839 |          3674
+     6 |   418502 |     7506 |         4342 |          2839 |          3674
+     7 |   418669 |     7507 |         4342 |          2839 |          3674
+     8 |   418836 |     7508 |         4342 |          2839 |          3674
+     9 |   419003 |     7509 |         4342 |          2839 |          3674
+    10 |   419170 |     7510 |         4342 |          2839 |          3674
+    11 |   414336 |     7496 |         4316 |          2822 |          3652
+    12 |   414502 |     7497 |         4316 |          2822 |          3652
+    13 |   414668 |     7498 |         4316 |          2822 |          3652
+    14 |   414834 |     7499 |         4316 |          2822 |          3652
+    15 |   415000 |     7500 |         4316 |          2822 |          3652
+    16 |   415166 |     7501 |         4316 |          2822 |          3652
+    17 |   415332 |     7502 |         4316 |          2822 |          3652
+    18 |   415498 |     7503 |         4316 |          2822 |          3652
+    19 |   415664 |     7504 |         4316 |          2822 |          3652
+    20 |   415830 |     7505 |         4316 |          2822 |          3652
+    21 |   415997 |     7491 |         4342 |          2839 |          3674
+    22 |   416164 |     7492 |         4342 |          2839 |          3674
+    23 |   416331 |     7493 |         4342 |          2839 |          3674
+    24 |   416498 |     7494 |         4342 |          2839 |          3674
+    25 |   416665 |     7495 |         4342 |          2839 |          3674
+    26 |   416832 |     7496 |         4342 |          2839 |          3674
+    27 |   416999 |     7497 |         4342 |          2839 |          3674
+    28 |   417166 |     7498 |         4342 |          2839 |          3674
+    29 |   417333 |     7499 |         4342 |          2839 |          3674
+(30 rows)
+
+-- drop table testemp
+DROP TABLE small_table;
+DROP TABLE
+DROP TABLE media_table;
+DROP TABLE
+DROP TABLE big_table;
+DROP TABLE

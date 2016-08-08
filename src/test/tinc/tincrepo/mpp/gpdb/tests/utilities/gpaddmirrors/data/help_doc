@@ -1,0 +1,257 @@
+COMMAND NAME: gpaddmirrors
+
+Adds mirror segments to a Greenplum Database system that was 
+initially configured without mirroring.
+
+
+*****************************************************
+SYNOPSIS
+*****************************************************
+
+
+gpaddmirrors [-p <port_offset>] [-m <datadir_config_file> [-a]] [-s] 
+             [-d <master_data_directory>] [-B <parallel_processes>] 
+             [-l <logfile_directory>] [-v]
+
+gpaddmirrors -i <mirror_config_file> [-s] [-a] 
+             [-d <master_data_directory>] [-B <parallel_processes>] 
+             [-l <logfile_directory>] [-v]
+
+gpaddmirrors -o <output_sample_mirror_config> [-m <datadir_config_file>]
+
+gpaddmirrors -? 
+
+gpaddmirrors --version
+
+
+*****************************************************
+DESCRIPTION
+*****************************************************
+The gpaddmirrors utility configures mirror segment instances for an 
+existing Greenplum Database system that was initially configured with 
+primary segment instances only. The utility will create the mirror 
+instances and begin the online replication process between the primary 
+and mirror segment instances. Once all mirrors are synchronized with 
+their primaries, your Greenplum Database system is fully data redundant.
+
+IMPORTANT: During the online replication process, Greenplum Database 
+should be in a quiescent state, workloads and other queries should not 
+be running. 
+
+By default, the utility will prompt you for the file system location(s) 
+where it will create the mirror segment data directories. If you do not 
+want to be prompted, you can pass in a file containing the file system 
+locations using the -m option.
+
+The mirror locations and ports must be different than your primary 
+segment data locations and ports. If you have created additional filespaces, 
+you will also be prompted for mirror locations for each of your filespaces.
+
+The utility will create a unique data directory for each mirror segment 
+instance in the specified location using the predefined naming convention. 
+There must be the same number of file system locations declared for mirror 
+segment instances as for primary segment instances. It is OK to specify 
+the same directory name multiple times if you want your mirror data 
+directories created in the same location, or you can enter a different 
+data location for each mirror. Enter the absolute path. For example:
+
+Enter mirror segment data directory location 1 of 2 > /gpdb/mirror
+Enter mirror segment data directory location 2 of 2 > /gpdb/mirror
+OR
+Enter mirror segment data directory location 1 of 2 > /gpdb/m1
+Enter mirror segment data directory location 2 of 2 > /gpdb/m2
+
+Alternatively, you can run the gpaddmirrors utility and supply a 
+detailed configuration file using the -i option. This is useful if 
+you want your mirror segments on a completely different set of hosts 
+than your primary segments. The format of the mirror configuration file is:
+
+filespaceOrder=[<filespace1_fsname>[:<filespace2_fsname>:...]
+mirror<content>=<content>:<address>:<port>:<mir_replication_port>:<pri_replication_port>:<fselocation>[:<fselocation>:...]
+
+For example (if you do not have additional filespaces configured 
+besides the default pg_system filespace):
+
+filespaceOrder=
+mirror0=0:sdw1-1:60000:61000:62000:/gpdata/mir1/gp0
+mirror1=1:sdw1-1:60001:61001:62001:/gpdata/mir2/gp1
+
+The gp_segment_configuration, pg_filespace, and pg_filespace_entry 
+system catalog tables can help you determine your current primary 
+segment configuration so that you can plan your mirror segment 
+configuration. For example, run the following query:
+
+=# SELECT dbid, content, address as host_address, port, 
+   replication_port, fselocation as datadir 
+   FROM gp_segment_configuration, pg_filespace_entry 
+   WHERE dbid=fsedbid 
+   ORDER BY dbid;
+
+If creating your mirrors on alternate mirror hosts, the new 
+mirror segment hosts must be pre-installed with the Greenplum 
+Database software and configured exactly the same as the 
+existing primary segment hosts. 
+
+You must make sure that the user who runs gpaddmirrors (the 
+gpadmin user) has permissions to write to the data directory 
+locations specified. You may want to create these directories 
+on the segment hosts and chown them to the appropriate user 
+before running gpaddmirrors.
+
+
+*****************************************************
+OPTIONS
+*****************************************************
+
+-a (do not prompt)
+
+ Run in quiet mode - do not prompt for information. Must supply 
+ a configuration file with either -m or -i if this option is used.
+
+
+-B <parallel_processes>
+
+ The number of mirror setup processes to start in parallel. If 
+ not specified, the utility will start up to 10 parallel processes 
+ depending on how many mirror segment instances it needs to set up.
+
+
+-d <master_data_directory>
+
+ The master data directory. If not specified, the value set for 
+ $MASTER_DATA_DIRECTORY will be used.
+
+
+-i <mirror_config_file>
+
+ A configuration file containing one line for each mirror segment 
+ you want to create. You must have one mirror segment listed for 
+ each primary segment in the system. The format of this file is as 
+ follows (as per attributes in the gp_segment_configuration, 
+ pg_filespace, and pg_filespace_entry catalog tables):
+
+   filespaceOrder=[<filespace1_fsname>[:<filespace2_fsname>:...]
+   mirror<content>=<content>:<address>:<port>:<mir_replication_port>:<pri_replication_port>:<fselocation>[:<fselocation>:...]
+
+ Note that you only need to specify a name for filespaceOrder if 
+ your system has multiple filespaces configured. If your system does 
+ not have additional filespaces configured besides the default pg_system 
+ filespace, this file will only have one location per segment (for 
+ the default data directory filespace, pg_system). pg_system does 
+ not need to be listed in the filespaceOrder line. It will always be 
+ the first <fselocation> listed after <replication_port>.
+
+
+-l <logfile_directory>
+
+ The directory to write the log file. Defaults to ~/gpAdminLogs.
+
+
+-m <datadir_config_file>
+
+ A configuration file containing a list of file system locations where 
+ the mirror data directories will be created. If not supplied, the 
+ utility will prompt you for locations. Each line in the file specifies 
+ a mirror data directory location. For example:
+   /gpdata/m1
+   /gpdata/m2
+   /gpdata/m3
+   /gpdata/m4
+ If your system has additional filespaces configured in addition to the 
+ default pg_system filespace, you must also list file system locations 
+ for each filespace as follows:
+    filespace filespace1
+    /gpfs1/m1
+    /gpfs1/m2
+    /gpfs1/m3
+    /gpfs1/m4
+
+
+-o <output_sample_mirror_config>
+
+ If you are not sure how to lay out the mirror configuration file 
+ used by the -i option, you can run gpaddmirrors with this option 
+ to generate a sample mirror configuration file based on your 
+ primary segment configuration. The utility will prompt you for 
+ your mirror segment data directory locations (unless you provide 
+ these in a file using -m). You can then edit this file to change 
+ the host names to alternate mirror hosts if necessary.
+
+
+-p <port_offset>
+
+ Optional. This number is used to calculate the database ports 
+ and replication ports used for mirror segments. The default offset 
+ is 1000. Mirror port assignments are calculated as follows: 
+	primary port + offset = mirror database port
+	primary port + (2 * offset) = mirror replication port
+	primary port + (3 * offset) = primary replication port
+ For example, if a primary segment has port 50001, then its mirror 
+ will use a database port of 51001, a mirror replication port of 
+ 52001, and a primary replication port of 53001 by default.
+
+
+-s (spread mirrors)
+
+ Spreads the mirror segments across the available hosts. The 
+ default is to group a set of mirror segments together on an 
+ alternate host from their primary segment set. Mirror spreading 
+ will place each mirror on a different host within the Greenplum 
+ Database array. Spreading is only allowed if there is a sufficient 
+ number of hosts in the array (number of hosts is greater than 
+ or equal to the number of segment instances per host).
+
+
+-v (verbose)
+
+ Sets logging output to verbose.
+
+
+--version (show utility version)
+
+ Displays the version of this utility.
+
+
+-? (help)
+
+ Displays the online help.
+
+
+*****************************************************
+EXAMPLES
+*****************************************************
+
+Add mirroring to an existing Greenplum Database system using 
+the same set of hosts as your primary data. Calculate the mirror 
+database and replication ports by adding 100 to the current 
+primary segment port numbers:
+
+  $ gpaddmirrors -p 100
+
+
+Add mirroring to an existing Greenplum Database system using a 
+different set of hosts from your primary data:
+
+$ gpaddmirrors -i mirror_config_file
+
+Where the mirror_config_file looks something like this (if you do not 
+have additional filespaces configured besides the default pg_system 
+filespace):
+
+filespaceOrder=
+mirror0=0:sdw1-1:52001:53001:54001:/gpdata/mir1/gp0
+mirror1=1:sdw1-2:52002:53002:54002:/gpdata/mir2/gp1
+mirror2=2:sdw2-1:52001:53001:54001:/gpdata/mir1/gp2
+mirror3=3:sdw2-2:52002:53002:54002:/gpdata/mir2/gp3
+
+
+Output a sample mirror configuration file to use with gpaddmirrors -i:
+
+  $ gpaddmirrors -o /home/gpadmin/sample_mirror_config
+
+
+*****************************************************
+SEE ALSO
+*****************************************************
+
+gpinitsystem, gpinitstandby, gpactivatestandby

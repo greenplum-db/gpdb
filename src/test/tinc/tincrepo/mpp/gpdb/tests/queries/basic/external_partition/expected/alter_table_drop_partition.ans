@@ -1,0 +1,63 @@
+-- 
+-- @created 2015-07-11 12:00:00
+-- @modified 2015-07-11 12:00:00
+-- @tags external_partition 
+-- @gpdiff true 
+-- @description Tests for drop partition 
+--start_ignore
+drop table if exists pt_ext;
+DROP TABLE
+CREATE TABLE pt_ext
+(
+  col1 int,
+  col2 decimal,
+  col3 text,
+  col4 bool
+)
+distributed by (col1)
+partition by list(col2)
+(
+	partition part1 values(1,2,3,4,5,6,7,8,9,10),
+	partition part2 values(11,12,13,14,15,16,17,18,19,20),
+	partition part3 values(21,22,23,24,25,26,27,28,29,30),
+	partition part4 values(31,32,33,34,35,36,37,38,39,40),
+	partition part5 values(41,42,43,44,45,46,47,48,49,50)
+);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part1" for table "pt_ext"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part2" for table "pt_ext"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part3" for table "pt_ext"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part4" for table "pt_ext"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_ext_1_prt_part5" for table "pt_ext"
+CREATE TABLE
+create readable external table ret(like pt_ext) location('file://g182/tmp/exttab_list') format 'csv';
+CREATE EXTERNAL TABLE
+create readable external table ret1(like pt_ext) location('file://g182/tmp/exttab_list') format 'csv';
+psql:/path/sql_file:1: ERROR:  relation "ret1" already exists
+alter table pt_ext exchange partition part1 with table ret without validation;
+ALTER TABLE
+alter table pt_ext exchange partition part2 with table ret1 without validation;
+ALTER TABLE
+drop table ret;
+DROP TABLE
+drop table ret1;
+DROP TABLE
+--end_ignore
+alter table pt_ext drop partition if exists for (5); 
+psql:/path/sql_file:1: NOTICE:  dropped partition "part1" for relation "pt_ext"
+ALTER TABLE
+alter table pt_ext drop partition if exists part2;
+ALTER TABLE
+\d+ pt_ext
+                 Table "public.pt_ext"
+ Column |  Type   | Modifiers | Storage  | Description 
+--------+---------+-----------+----------+-------------
+ col1   | integer |           | plain    | 
+ col2   | numeric |           | main     | 
+ col3   | text    |           | extended | 
+ col4   | boolean |           | plain    | 
+Child tables: pt_ext_1_prt_part3,
+              pt_ext_1_prt_part4,
+              pt_ext_1_prt_part5
+Has OIDs: no
+Distributed by: (col1)
+

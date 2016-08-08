@@ -1,0 +1,178 @@
+-- start_ignore
+-- end_ignore
+drop schema if exists qf cascade;
+psql:/path/sql_file:1: NOTICE:  drop cascades to append only table qf.bar3
+psql:/path/sql_file:1: NOTICE:  drop cascades to table qf.bar2
+psql:/path/sql_file:1: NOTICE:  drop cascades to table qf.foo
+DROP SCHEMA
+create schema qf;
+CREATE SCHEMA
+-- It used to fail because query cancel is sent and QE goes out of
+-- transaction block, though QD sends 2PC request.
+begin;
+BEGIN
+drop table if exists qf.foo;
+psql:/path/sql_file:1: NOTICE:  table "foo" does not exist, skipping
+DROP TABLE
+create table qf.foo as select i a, i b from generate_series(1, 100)i;
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT 100
+select case when gp_segment_id = 0 then pg_sleep(3) end from qf.foo limit 1;
+ case 
+------
+ 
+(1 row)
+
+commit;
+COMMIT
+-- with order by.  CTE can prevent LIMIT from being pushed down.
+begin;
+BEGIN
+drop table if exists qf.bar2;
+psql:/path/sql_file:1: NOTICE:  table "bar2" does not exist, skipping
+DROP TABLE
+create table qf.bar2 as select i a, i b from generate_series(1, 100)i;
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT 100
+with t2 as(
+	select * from skewed_lineitem
+	order by l_orderkey
+)
+select * from t2 order by 1,2,3,4,5 limit 1;
+ l_skewkey | l_orderkey | l_partkey | l_suppkey | l_linenumber | l_quantity | l_extendedprice | l_discount | l_tax | l_returnflag | l_linestatus | l_shipdate | l_commitdate | l_receiptdate |      l_shipinstruct       | l_shipmode |        l_comment        
+-----------+------------+-----------+-----------+--------------+------------+-----------------+------------+-------+--------------+--------------+------------+--------------+---------------+---------------------------+------------+-------------------------
+         1 |          1 |        22 |        48 |            4 |      28.00 |        25816.56 |       0.09 |  0.06 | N            | O            | 1996-04-21 | 1996-03-30   | 1996-05-16    | NONE                      | AIR        | lites. fluffily even de
+(1 row)
+
+commit;
+COMMIT
+-- with window function.
+begin;
+BEGIN
+drop table if exists qf.bar3;
+psql:/path/sql_file:1: NOTICE:  table "bar3" does not exist, skipping
+DROP TABLE
+create table qf.bar3(a int, b text, c numeric) with (appendonly=true);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+insert into qf.bar3 select a, repeat('x', 10) b, b from qf.bar2;
+INSERT 0 100
+with t3 as(
+	select
+		l_skewkey,
+		count(*) over (partition by l_skewkey order by l_quantity, l_orderkey)
+	from skewed_lineitem
+)
+select * from t3 order by 1,2 limit 2;
+ l_skewkey | count 
+-----------+-------
+         1 |     1
+         1 |     2
+(2 rows)
+
+commit;
+COMMIT
+-- combination.
+begin;
+BEGIN
+drop table if exists qf.bar4;
+psql:/path/sql_file:1: NOTICE:  table "bar4" does not exist, skipping
+DROP TABLE
+create table qf.bar4(a int, b int, c text) with (appendonly=true, orientation=column);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+insert into qf.bar4 select a, b, 'foo' from qf.bar2;
+INSERT 0 100
+with t4a as(
+	select
+		l_skewkey,
+		count(*) over (partition by l_skewkey order by l_quantity, l_orderkey)
+	from skewed_lineitem
+), t4b as (
+	select * from skewed_lineitem
+	order by l_orderkey
+)
+select a.l_skewkey, b.l_skewkey from t4a a
+inner join t4b b on a.l_skewkey = b.l_skewkey
+limit 3;
+ l_skewkey | l_skewkey 
+-----------+-----------
+         2 |         2
+         2 |         2
+         2 |         2
+(3 rows)
+
+commit;
+COMMIT
+-- median.
+begin;
+BEGIN
+drop table if exists qf.bar5;
+psql:/path/sql_file:1: NOTICE:  table "bar5" does not exist, skipping
+DROP TABLE
+create table qf.bar5(a int, b int);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+insert into qf.bar5 select i, i % 10 from generate_series(1, 10)i;
+INSERT 0 10
+with t5a as(
+	select
+		l_skewkey,
+		median(l_quantity) med
+	from skewed_lineitem
+	group by l_skewkey
+), t5b as (
+	select * from skewed_lineitem
+	order by l_orderkey
+)
+select a.l_skewkey, a.med from t5a a
+inner join t5b b on a.l_skewkey = b.l_skewkey order by a.l_skewkey, a.med
+limit 1;
+ l_skewkey | med 
+-----------+-----
+         1 |  25
+(1 row)
+
+commit;
+COMMIT
+--Combination median and windows
+begin;
+BEGIN
+with t3 as(
+    select
+        l_skewkey,
+        count(*) over (partition by l_skewkey order by l_quantity, l_orderkey)
+    from skewed_lineitem
+),
+t4 as ( select
+        l_skewkey,
+        median(l_quantity) med
+    from skewed_lineitem
+    group by l_skewkey
+)
+select a.l_skewkey from t3 a  left outer join t4 b  on a. l_skewkey  = b. l_skewkey order by a.l_skewkey  limit 1;
+ l_skewkey 
+-----------
+         1
+(1 row)
+
+commit;
+COMMIT
+--csq
+begin;
+BEGIN
+select l_returnflag  from skewed_lineitem  t1 where l_skewkey in (select l_skewkey from  skewed_lineitem t2 where t1.l_shipinstruct = t2.l_shipinstruct) order by l_returnflag limit 3;
+ l_returnflag 
+--------------
+ A
+ A
+ A
+(3 rows)
+
+commit;
+COMMIT

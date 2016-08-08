@@ -1,0 +1,404 @@
+-- start_ignore
+-- end_ignore
+DROP DATABASE IF EXISTS const_fix;
+psql:/path/sql_file:1: NOTICE:  database "const_fix" does not exist, skipping
+DROP DATABASE
+CREATE DATABASE const_fix;
+CREATE DATABASE
+\c const_fix
+You are now connected to database "const_fix" as user "gpadmin".
+-- Verification
+create or replace function verify(varchar) returns bigint as
+$$
+        select count(distinct(foo.oid)) from (
+               (select oid from pg_constraint
+               where conrelid = $1::regclass)
+               union
+               (select oid from gp_dist_random('pg_constraint')
+               where conrelid = $1::regclass)) foo;
+$$ language sql;
+CREATE FUNCTION
+CREATE TABLE pt1 (id int, date date, amt decimal(10,2)) DISTRIBUTED BY (id)
+PARTITION BY RANGE (date)
+      (PARTITION Jan08 START (date '2008-01-01') INCLUSIVE ,
+      PARTITION Feb08 START (date '2008-02-01') INCLUSIVE ,
+      PARTITION Mar08 START (date '2008-03-01') INCLUSIVE
+      END (date '2008-04-01') EXCLUSIVE);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt1_1_prt_jan08" for table "pt1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt1_1_prt_feb08" for table "pt1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt1_1_prt_mar08" for table "pt1"
+CREATE TABLE
+CREATE TABLE t1 (id int, date date, amt decimal(10,2)) DISTRIBUTED BY (id);
+CREATE TABLE
+INSERT INTO pt1 SELECT i, '2008-01-13', i FROM generate_series(1,5)i;
+INSERT 0 5
+INSERT INTO pt1 SELECT i, '2008-02-13', i FROM generate_series(1,5)i;
+INSERT 0 5
+INSERT INTO pt1 SELECT i, '2008-03-13', i FROM generate_series(1,5)i;
+INSERT 0 5
+INSERT INTO t1 SELECT i, '2008-02-02', i FROM generate_series(11,15)i;
+INSERT 0 5
+ALTER TABLE pt1 EXCHANGE PARTITION Feb08 WITH TABLE t1;
+ALTER TABLE
+select verify('pt1_1_prt_feb08');
+ verify 
+--------
+      1
+(1 row)
+
+select verify('t1');
+ verify 
+--------
+      1
+(1 row)
+
+SELECT * FROM pt1 ORDER BY date, id;
+ id |    date    |  amt  
+----+------------+-------
+  1 | 2008-01-13 |  1.00
+  2 | 2008-01-13 |  2.00
+  3 | 2008-01-13 |  3.00
+  4 | 2008-01-13 |  4.00
+  5 | 2008-01-13 |  5.00
+ 11 | 2008-02-02 | 11.00
+ 12 | 2008-02-02 | 12.00
+ 13 | 2008-02-02 | 13.00
+ 14 | 2008-02-02 | 14.00
+ 15 | 2008-02-02 | 15.00
+  1 | 2008-03-13 |  1.00
+  2 | 2008-03-13 |  2.00
+  3 | 2008-03-13 |  3.00
+  4 | 2008-03-13 |  4.00
+  5 | 2008-03-13 |  5.00
+(15 rows)
+
+ALTER TABLE pt1 ALTER COLUMN amt SET DEFAULT 67,
+ EXCHANGE PARTITION Feb08 WITH TABLE t1;
+ALTER TABLE
+select verify('pt1_1_prt_feb08');
+ verify 
+--------
+      1
+(1 row)
+
+SELECT * FROM t1 ORDER BY date, id;
+ id |    date    |  amt  
+----+------------+-------
+ 11 | 2008-02-02 | 11.00
+ 12 | 2008-02-02 | 12.00
+ 13 | 2008-02-02 | 13.00
+ 14 | 2008-02-02 | 14.00
+ 15 | 2008-02-02 | 15.00
+(5 rows)
+
+SELECT * FROM pt1 ORDER BY date, id;
+ id |    date    | amt  
+----+------------+------
+  1 | 2008-01-13 | 1.00
+  2 | 2008-01-13 | 2.00
+  3 | 2008-01-13 | 3.00
+  4 | 2008-01-13 | 4.00
+  5 | 2008-01-13 | 5.00
+  1 | 2008-02-13 | 1.00
+  2 | 2008-02-13 | 2.00
+  3 | 2008-02-13 | 3.00
+  4 | 2008-02-13 | 4.00
+  5 | 2008-02-13 | 5.00
+  1 | 2008-03-13 | 1.00
+  2 | 2008-03-13 | 2.00
+  3 | 2008-03-13 | 3.00
+  4 | 2008-03-13 | 4.00
+  5 | 2008-03-13 | 5.00
+(15 rows)
+
+-- exchange with appendonly
+CREATE TABLE pt2 (id int, date date, amt decimal(10,2)
+       CHECK (amt > 0)) DISTRIBUTED BY (id)
+PARTITION BY RANGE (date)
+      (PARTITION Jan08 START (date '2008-01-01') INCLUSIVE,
+      PARTITION Feb08 START (date '2008-02-01') INCLUSIVE,
+      PARTITION Mar08 START (date '2008-03-01') INCLUSIVE
+      END (date '2008-04-01') EXCLUSIVE);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt2_1_prt_jan08" for table "pt2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt2_1_prt_feb08" for table "pt2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt2_1_prt_mar08" for table "pt2"
+CREATE TABLE
+CREATE TABLE t2 (id int, date date, amt decimal(10,2))
+       WITH (appendonly=true, orientation=column) DISTRIBUTED BY (id);
+CREATE TABLE
+INSERT INTO pt2 SELECT i, '2008-01-13', i FROM generate_series(1,5)i;
+INSERT 0 5
+INSERT INTO pt2 SELECT i, '2008-01-20', i FROM generate_series(11,15)i;
+INSERT 0 5
+INSERT INTO pt2 SELECT i, '2008-02-13', i FROM generate_series(1,5)i;
+INSERT 0 5
+INSERT INTO pt2 SELECT i, '2008-03-13', i FROM generate_series(1,5)i;
+INSERT 0 5
+INSERT INTO t2 SELECT i, '2008-02-02', i FROM generate_series(11,15)i;
+INSERT 0 5
+-- split and exchange
+ALTER TABLE pt2 EXCHANGE PARTITION Feb08 WITH TABLE t2,
+      SPLIT PARTITION FOR ('2008-01-01') AT ('2008-01-16') INTO
+       (PARTITION jan08_15, PARTITION jan08_31);
+psql:/path/sql_file:1: NOTICE:  exchanged partition "jan08" of relation "pt2" with relation "pg_temp_539739"
+psql:/path/sql_file:1: NOTICE:  dropped partition "jan08" for relation "pt2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt2_1_prt_jan08_15" for table "pt2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt2_1_prt_jan08_31" for table "pt2"
+ALTER TABLE
+select verify('pt2_1_prt_feb08');
+ verify 
+--------
+      2
+(1 row)
+
+select verify('t2');
+ verify 
+--------
+      2
+(1 row)
+
+SELECT * FROM pt2 ORDER BY date, id;
+ id |    date    |  amt  
+----+------------+-------
+  1 | 2008-01-13 |  1.00
+  2 | 2008-01-13 |  2.00
+  3 | 2008-01-13 |  3.00
+  4 | 2008-01-13 |  4.00
+  5 | 2008-01-13 |  5.00
+ 11 | 2008-01-20 | 11.00
+ 12 | 2008-01-20 | 12.00
+ 13 | 2008-01-20 | 13.00
+ 14 | 2008-01-20 | 14.00
+ 15 | 2008-01-20 | 15.00
+ 11 | 2008-02-02 | 11.00
+ 12 | 2008-02-02 | 12.00
+ 13 | 2008-02-02 | 13.00
+ 14 | 2008-02-02 | 14.00
+ 15 | 2008-02-02 | 15.00
+  1 | 2008-03-13 |  1.00
+  2 | 2008-03-13 |  2.00
+  3 | 2008-03-13 |  3.00
+  4 | 2008-03-13 |  4.00
+  5 | 2008-03-13 |  5.00
+(20 rows)
+
+SELECT * FROM t2 ORDER BY date, id;
+ id |    date    | amt  
+----+------------+------
+  1 | 2008-02-13 | 1.00
+  2 | 2008-02-13 | 2.00
+  3 | 2008-02-13 | 3.00
+  4 | 2008-02-13 | 4.00
+  5 | 2008-02-13 | 5.00
+(5 rows)
+
+CREATE TABLE t3 (id int, date date, amt decimal(10,2))
+       WITH (appendonly=true, orientation=column) DISTRIBUTED BY (id);
+CREATE TABLE
+INSERT INTO t3 SELECT i, '2008-03-02', i FROM generate_series(11,15)i;
+INSERT 0 5
+-- add, rename and exchange
+ALTER TABLE pt2 ADD PARTITION START (date '2009-02-01') INCLUSIVE
+       END (date '2009-03-01') EXCLUSIVE,
+       EXCHANGE PARTITION mar08 WITH TABLE t3,
+       RENAME PARTITION FOR ('2008-01-16') TO jan2ndhalf;
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt2_1_prt_r1392178198" for table "pt2"
+psql:/path/sql_file:1: NOTICE:  renamed partition "jan08_31" to "jan2ndhalf" for relation "pt2"
+ALTER TABLE
+select verify('pt2_1_prt_mar08');
+ verify 
+--------
+      2
+(1 row)
+
+-- truncate and exchage
+ALTER TABLE pt2 TRUNCATE PARTITION feb08,
+       EXCHANGE PARTITION feb08 WITH TABLE t2;
+ALTER TABLE
+SELECT * FROM pt2 ORDER BY date, id;
+ id |    date    |  amt  
+----+------------+-------
+  1 | 2008-01-13 |  1.00
+  2 | 2008-01-13 |  2.00
+  3 | 2008-01-13 |  3.00
+  4 | 2008-01-13 |  4.00
+  5 | 2008-01-13 |  5.00
+ 11 | 2008-01-20 | 11.00
+ 12 | 2008-01-20 | 12.00
+ 13 | 2008-01-20 | 13.00
+ 14 | 2008-01-20 | 14.00
+ 15 | 2008-01-20 | 15.00
+  1 | 2008-02-13 |  1.00
+  2 | 2008-02-13 |  2.00
+  3 | 2008-02-13 |  3.00
+  4 | 2008-02-13 |  4.00
+  5 | 2008-02-13 |  5.00
+ 11 | 2008-03-02 | 11.00
+ 12 | 2008-03-02 | 12.00
+ 13 | 2008-03-02 | 13.00
+ 14 | 2008-03-02 | 14.00
+ 15 | 2008-03-02 | 15.00
+(20 rows)
+
+SELECT * FROM t2;
+ id | date | amt 
+----+------+-----
+(0 rows)
+
+select verify('pt2_1_prt_feb08');
+ verify 
+--------
+      2
+(1 row)
+
+-- exchange a subpartition
+SET client_min_messages='warning';
+SET
+CREATE TABLE pt3 (id int, year int, month int CHECK (month > 0),
+       day int CHECK (day > 0), region text)
+DISTRIBUTED BY (id)
+PARTITION BY RANGE (year)
+      SUBPARTITION BY RANGE (month)
+      SUBPARTITION TEMPLATE (
+      START (1) END (5) EVERY (1),
+      DEFAULT SUBPARTITION other_months )
+      SUBPARTITION BY LIST (region)
+      SUBPARTITION TEMPLATE (
+      SUBPARTITION usa VALUES ('usa'),
+      SUBPARTITION europe VALUES ('europe'),
+      SUBPARTITION asia VALUES ('asia'),
+      DEFAULT SUBPARTITION other_regions )
+( START (2001) END (2003) EVERY (1),
+DEFAULT PARTITION outlying_years );
+CREATE TABLE
+RESET client_min_messages;
+RESET
+INSERT INTO pt3 SELECT i, 2001, 02, i, 'usa' FROM generate_series(1,5)i;
+INSERT 0 5
+INSERT INTO pt3 SELECT i, 2001, 02, i, 'europe' FROM generate_series(1,5)i;
+INSERT 0 5
+INSERT INTO pt3 SELECT i, 2002, 02, i, 'europe' FROM generate_series(1,5)i;
+INSERT 0 5
+INSERT INTO pt3 SELECT i, 2002, 4, i, 'asia' FROM generate_series(1,5)i;
+INSERT 0 5
+INSERT INTO pt3 SELECT i, 2002, 4, i, 'europe' FROM generate_series(1,5)i;
+INSERT 0 5
+-- look at the constraints of the partition we plan to exchange
+SELECT conname,consrc from pg_constraint where conrelid =
+       'pt3_1_prt_2_2_prt_3_3_prt_europe'::regclass;
+                conname                 |               consrc               
+----------------------------------------+------------------------------------
+ pt3_month_check                        | (month > 0)
+ pt3_day_check                          | (day > 0)
+ pt3_1_prt_2_check                      | ((year >= 2001) AND (year < 2002))
+ pt3_1_prt_2_2_prt_3_check              | ((month >= 2) AND (month < 3))
+ pt3_1_prt_2_2_prt_3_3_prt_europe_check | (region = 'europe'::text)
+(5 rows)
+
+DROP TABLE t3;
+DROP TABLE
+CREATE TABLE t3 (id int, year int, month int, day int, region text)
+       WITH (appendonly=true) DISTRIBUTED BY (id);
+CREATE TABLE
+ALTER TABLE pt3 ALTER PARTITION FOR ('2001')
+      ALTER PARTITION FOR ('2')
+      EXCHANGE PARTITION FOR ('europe') WITH TABLE t3;
+psql:/path/sql_file:1: NOTICE:  exchanged partition "europe" of partition for value ('2') of partition for value ('2001') of relation "pt3" with relation "t3"
+ALTER TABLE
+select verify('pt3_1_prt_2_2_prt_3_3_prt_europe');
+ verify 
+--------
+      5
+(1 row)
+
+select verify('t3');
+ verify 
+--------
+      5
+(1 row)
+
+INSERT INTO pt3 SELECT i, 2001, 02, i, 'europe' FROM generate_series(11,15)i;
+INSERT 0 5
+SELECT * FROM pt3 ORDER BY year, month, region, id;
+ id | year | month | day | region 
+----+------+-------+-----+--------
+ 11 | 2001 |     2 |  11 | europe
+ 12 | 2001 |     2 |  12 | europe
+ 13 | 2001 |     2 |  13 | europe
+ 14 | 2001 |     2 |  14 | europe
+ 15 | 2001 |     2 |  15 | europe
+  1 | 2001 |     2 |   1 | usa
+  2 | 2001 |     2 |   2 | usa
+  3 | 2001 |     2 |   3 | usa
+  4 | 2001 |     2 |   4 | usa
+  5 | 2001 |     2 |   5 | usa
+  1 | 2002 |     2 |   1 | europe
+  2 | 2002 |     2 |   2 | europe
+  3 | 2002 |     2 |   3 | europe
+  4 | 2002 |     2 |   4 | europe
+  5 | 2002 |     2 |   5 | europe
+  1 | 2002 |     4 |   1 | asia
+  2 | 2002 |     4 |   2 | asia
+  3 | 2002 |     4 |   3 | asia
+  4 | 2002 |     4 |   4 | asia
+  5 | 2002 |     4 |   5 | asia
+  1 | 2002 |     4 |   1 | europe
+  2 | 2002 |     4 |   2 | europe
+  3 | 2002 |     4 |   3 | europe
+  4 | 2002 |     4 |   4 | europe
+  5 | 2002 |     4 |   5 | europe
+(25 rows)
+
+SELECT * FROM t3 ORDER BY year, month, region, id;
+ id | year | month | day | region 
+----+------+-------+-----+--------
+  1 | 2001 |     2 |   1 | europe
+  2 | 2001 |     2 |   2 | europe
+  3 | 2001 |     2 |   3 | europe
+  4 | 2001 |     2 |   4 | europe
+  5 | 2001 |     2 |   5 | europe
+(5 rows)
+
+\d+ pt3_1_prt_2_2_prt_3_3_prt_europe
+Append-Only Table "public.pt3_1_prt_2_2_prt_3_3_prt_europe"
+ Column |  Type   | Modifiers | Storage  | Description 
+--------+---------+-----------+----------+-------------
+ id     | integer |           | plain    | 
+ year   | integer |           | plain    | 
+ month  | integer |           | plain    | 
+ day    | integer |           | plain    | 
+ region | text    |           | extended | 
+Compression Type: None
+Compression Level: 0
+Block Size: 32768
+Checksum: t
+Check constraints:
+    "pt3_1_prt_2_2_prt_3_3_prt_europe_check" CHECK (region = 'europe'::text)
+    "pt3_1_prt_2_2_prt_3_check" CHECK (month >= 2 AND month < 3)
+    "pt3_1_prt_2_check" CHECK (year >= 2001 AND year < 2002)
+    "pt3_day_check" CHECK (day > 0)
+    "pt3_month_check" CHECK (month > 0)
+Inherits: pt3_1_prt_2_2_prt_3
+Has OIDs: no
+Options: appendonly=true
+Distributed by: (id)
+
+CREATE DOMAIN const_domain1 AS TEXT
+      CONSTRAINT cons_check1 check (char_length(VALUE) = 5);
+CREATE DOMAIN
+CREATE DOMAIN const_domain2 AS TEXT;
+CREATE DOMAIN
+ALTER DOMAIN const_domain2 ADD CONSTRAINT
+      cons_check2 CHECK (char_length(VALUE) = 5);
+ALTER DOMAIN
+select count(distinct(foo.oid)) from (
+       (select oid from pg_constraint
+        where conname ~ 'cons_check')
+       union
+       (select oid from gp_dist_random('pg_constraint')
+        where conname ~ 'cons_check')) foo;
+ count 
+-------
+     2
+(1 row)
+

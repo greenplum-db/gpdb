@@ -1,0 +1,42 @@
+-- 
+-- @created 2009-01-27 14:00:00
+-- @modified 2013-06-24 17:00:00
+-- @tags ddl schema_topology
+
+-- start_matchsubs
+-- m/psql:/
+-- s/psql:.+\//PATH1\//
+-- m/AS '/
+-- s/AS\s'.+',/AS 'FUNCTION_PATH\/funcs',/
+-- m/TO '/
+-- s/TO\s'.+test1_file_copy'/TO 'FUNCTION_PATH\/test1_file_copy'/
+-- m/TO '/
+-- s/TO\s'.+test2_file_copy'/TO 'FUNCTION_PATH\/test2_file_copy'/
+-- m/FROM '/
+-- s/FROM\s'.+test1_file_copy'/FROM 'FUNCTION_PATH\/test1_file_copy'/
+-- m/FROM '/
+-- s/FROM\s'.+test2_file_copy'/FROM 'FUNCTION_PATH\/test2_file_copy'/
+-- m/TO '/
+-- s/TO\s'.+CO_all_types_file_copy'/TO 'FUNCTION_PATH\/CO_all_types_file_copy'/
+-- m/FROM '/
+-- s/FROM\s'.+CO_all_types_file_copy'/FROM 'FUNCTION_PATH\/CO_all_types_file_copy'/
+-- m/WARNING:  column "\?column\?" has type "unknown"/
+-- s/psql:.+:?/WARNING:  column "\?column\?" has type "unknown"/
+-- m/WARNING:  irrelevant option 'fillfactor' for append-only relation/
+-- s/psql:.+:?/WARNING:  irrelevant option 'fillfactor' for append-only relation/
+-- m/psql:/
+-- s/psql:\/.*:\d+:/PATH/
+-- m/Motion \d+:\d+/
+-- s/Motion \d+:\d+/Motion x:x/
+-- end_matchsubs
+-- start_matchignore
+--
+-- m/WARNING\:\s+skipping.*cannot vacuum indexes, views, external tables/
+--
+
+### subselect.c:395)
+m/subselect.c:\d+\)/
+s/subselect.c:\d+\)/subselect.c:LINE_NUMBER/
+
+
+-- end_matchignore

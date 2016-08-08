@@ -1,0 +1,17 @@
+-- start_ignore
+SET optimizer=off;
+SET
+-- end_ignore
+-- Test: plperl 41
+CREATE OR REPLACE FUNCTION foo_bad() RETURNS footype AS $$
+								return  [
+								[1, 2],
+								[3, 4]
+								];
+								$$ LANGUAGE plperl;
+CREATE FUNCTION
+							  
+SELECT * FROM foo_bad();
+psql:/path/sql_file:1: ERROR:  composite-returning PL/Perl function must return reference to hash
+CONTEXT:  PL/Perl function "foo_bad"
+							  

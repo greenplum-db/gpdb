@@ -1,0 +1,29 @@
+-- start_ignore
+drop external table if exists test_quote1 cascade;
+psql:/path/sql_file:1: NOTICE:  table "test_quote1" does not exist, skipping
+DROP EXTERNAL TABLE
+drop external table if exists test_quote2 cascade;
+psql:/path/sql_file:1: NOTICE:  table "test_quote2" does not exist, skipping
+DROP EXTERNAL TABLE
+-- end_ignore
+CREATE EXTERNAL TABLE test_quote1( i text)  
+location ('file://rh55-qavm65/tmp/quote.csv' )
+FORMAT 'csv' (delimiter '|' quote '''') ;
+CREATE EXTERNAL TABLE
+select * from test_quote1 order by i;
+  i  
+-----
+ a
+ "b"
+(2 rows)
+
+CREATE EXTERNAL TABLE test_quote2( i text)  
+location ('file://rh55-qavm65/tmp/quote.csv' )
+FORMAT 'csv' (delimiter '|' quote '"') ;
+CREATE EXTERNAL TABLE
+select * from test_quote2 order by i;
+  i  
+-----
+ 'a'
+ b
+(2 rows)

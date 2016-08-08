@@ -1,0 +1,116 @@
+-- start_ignore
+drop external table if exists ext_lineitem;
+DROP EXTERNAL TABLE
+-- end_ignore
+CREATE EXTERNAL TABLE EXT_LINEITEM (L_COMMENT      VARCHAR(1000) )
+location ('file://@hostname@@gpfdist_datadir@/lineitem.tbl-dir' )
+FORMAT 'csv' (delimiter '=');
+CREATE EXTERNAL TABLE
+-- start_ignore
+drop external table if exists ext_lineitem1;
+DROP EXTERNAL TABLE
+-- end_ignore
+CREATE EXTERNAL TABLE EXT_LINEITEM1 (L_COMMENT      VARCHAR(1000) )
+location ('file://@hostname@@gpfdist_datadir@/lineitem.tbl-dir' )
+FORMAT 'csv' (delimiter '=' header);
+NOTICE:  HEADER means that each one of the data files has a header row.
+CREATE EXTERNAL TABLE
+-- start_ignore
+drop external table if exists ext_lineitem2;
+DROP EXTERNAL TABLE
+-- end_ignore
+CREATE EXTERNAL TABLE EXT_LINEITEM2 (L_COMMENT      VARCHAR(1000) )
+location ('gpfdist://@hostname@:@gp_port@/lineitem.tbl-dir' )
+FORMAT 'csv' (delimiter '=');
+CREATE EXTERNAL TABLE
+-- start_ignore
+drop external table if exists ext_lineitem3;
+DROP EXTERNAL TABLE
+-- end_ignore
+CREATE EXTERNAL TABLE EXT_LINEITEM3 (L_COMMENT      VARCHAR(1000) )
+location ('gpfdist://@hostname@:@gp_port@/lineitem.tbl-dir' )
+FORMAT 'csv' (delimiter '=' header);
+NOTICE:  HEADER means that each one of the data files has a header row.
+CREATE EXTERNAL TABLE
+-- start_ignore
+drop external table if exists ext_lineitem4;
+DROP EXTERNAL TABLE
+-- end_ignore
+CREATE EXTERNAL TABLE EXT_LINEITEM4 (L_COMMENT      VARCHAR(1000) )
+location ('file://@hostname@@gpfdist_datadir@/lineitem.tbl-dir' )
+FORMAT 'text' (delimiter '=');
+CREATE EXTERNAL TABLE
+-- start_ignore
+drop external table if exists ext_lineitem5;
+DROP EXTERNAL TABLE
+-- end_ignore
+CREATE EXTERNAL TABLE EXT_LINEITEM5 (L_COMMENT      VARCHAR(1000) )
+location ('file://@hostname@@gpfdist_datadir@/lineitem.tbl-dir' )
+FORMAT 'text' (delimiter '=' header);
+NOTICE:  HEADER means that each one of the data files has a header row.
+CREATE EXTERNAL TABLE
+-- start_ignore
+drop external table if exists ext_lineitem6;
+DROP EXTERNAL TABLE
+-- end_ignore
+CREATE EXTERNAL TABLE EXT_LINEITEM6 (L_COMMENT      VARCHAR(1000) )
+location ('gpfdist://@hostname@:@gp_port@/lineitem.tbl-dir' )
+FORMAT 'text' (delimiter '=');
+CREATE EXTERNAL TABLE
+-- start_ignore
+drop external table if exists ext_lineitem7;
+DROP EXTERNAL TABLE
+-- end_ignore
+CREATE EXTERNAL TABLE EXT_LINEITEM7 (L_COMMENT      VARCHAR(1000) )
+location ('gpfdist://@hostname@:@gp_port@/lineitem.tbl-dir' )
+FORMAT 'text' (delimiter '=' header);
+NOTICE:  HEADER means that each one of the data files has a header row.
+CREATE EXTERNAL TABLE
+select count(*) from ext_lineitem;
+ count 
+-------
+ 60175
+(1 row)
+
+select count(*) from ext_lineitem1;
+ count 
+-------
+ 60114
+(1 row)
+
+select count(*) from ext_lineitem2;
+ count 
+-------
+ 60175
+(1 row)
+
+select count(*) from ext_lineitem3;
+ count 
+-------
+ 60114
+(1 row)
+
+select count(*) from ext_lineitem4;
+ count 
+-------
+ 60175
+(1 row)
+
+select count(*) from ext_lineitem5;
+ count 
+-------
+ 60114
+(1 row)
+
+select count(*) from ext_lineitem6;
+ count 
+-------
+ 60175
+(1 row)
+
+select count(*) from ext_lineitem7;
+ count 
+-------
+ 60114
+(1 row)
+

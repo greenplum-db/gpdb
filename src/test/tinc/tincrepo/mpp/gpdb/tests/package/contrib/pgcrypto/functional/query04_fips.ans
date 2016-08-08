@@ -1,0 +1,18 @@
+-- kumara64=# select gen_salt('des');
+--  gen_salt 
+-- ----------
+--  3G
+-- (1 row)
+select crypt('À1234abcd', '3G');
+psql:/path/sql_file:1: ERROR:  crypt is insecure in fips mode
+select crypt('À9234abcd', '3G');
+psql:/path/sql_file:1: ERROR:  crypt is insecure in fips mode
+-- kumara64=# select gen_salt('xdes', 725);
+--  gen_salt  
+-- -----------
+--  _J9..LQde
+-- (1 row)
+select crypt('À1234abcd', '_J9..LQde');
+psql:/path/sql_file:1: ERROR:  crypt is insecure in fips mode
+select crypt('À9234abcd', '_J9..LQde');
+psql:/path/sql_file:1: ERROR:  crypt is insecure in fips mode

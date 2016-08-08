@@ -1,0 +1,45 @@
+-- @Description Tests the AO segment file selection policy
+-- 
+
+1: INSERT INTO AO VALUES (1);
+INSERT 1
+2U: SELECT segno, tupcount FROM gp_aoseg_name('ao');
+segno|tupcount
+-----+--------
+1    |127       
+(1 row)
+1: INSERT INTO AO VALUES (2);
+INSERT 1
+2U: SELECT segno, tupcount FROM gp_aoseg_name('ao');
+segno|tupcount
+-----+--------
+1    |128       
+(1 row)
+1: BEGIN;
+BEGIN
+1: INSERT INTO AO VALUES (2);
+INSERT 1
+2: BEGIN;
+BEGIN
+2: INSERT INTO AO VALUES (2);
+INSERT 1
+1: COMMIT;
+COMMIT
+2: COMMIT;
+COMMIT
+2U: SELECT segno, tupcount FROM gp_aoseg_name('ao');
+segno|tupcount
+-----+--------
+1    |129     
+2    |  1
+(2 rows)
+1: insert into ao select generate_series(1,100000);
+INSERT 100000
+1: INSERT INTO AO VALUES (2);
+INSERT 1
+2U: SELECT segno, tupcount FROM gp_aoseg_name('ao');
+segno|tupcount
+-----+--------
+1    | 100129
+2    |      2
+(2 rows)

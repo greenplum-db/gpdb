@@ -1,0 +1,10 @@
+-- @Description Tests that update in a serializable transaction is not supported
+-- even in a subtransaction.
+-- 
+
+BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+BEGIN
+SAVEPOINT my_savepoint;
+SAVEPOINT
+UPDATE foo SET b = 1 WHERE a < 4;
+ERROR:  Updates on append-only tables are not supported in serializable transactions.  (seg0 gesameistd1m1.corp.emc.com:40000 pid=73392)

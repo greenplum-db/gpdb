@@ -1,0 +1,49 @@
+%YAML 1.1
+---
+VERSION:         1.0.0.1
+DATABASE:        template1
+
+DEFINE:
+  - INPUT:
+      NAME:      data
+      QUERY: "select m,n as value from simple"
+
+  - FINALIZE:
+      NAME: final 
+      FUNCTION: final 
+      PARAMETERS:
+        - arg1 int 
+      RETURNS:
+        - retval int 
+
+  - TRANSITION:
+      NAME: tran 
+      PARAMETERS:
+        - m int 
+        - value int
+      RETURNS:
+        - output_override int 
+
+  - CONSOLIDATE:
+      NAME: cons
+      PARAMETERS:
+        - m int
+        - value int
+      RETURNS:
+        - cons_ret int
+        
+  
+  - REDUCE:
+      NAME: reducer 
+      TRANSITION: tran 
+      CONSOLIDATE: cons
+      FINALIZE: final
+   
+  - TASK:
+       NAME: worker
+       SOURCE: data 
+       REDUCE: reducer 
+
+EXECUTE:
+  - RUN:
+      SOURCE:  worker 

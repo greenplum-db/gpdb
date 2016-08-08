@@ -1,0 +1,88 @@
+BEGIN;
+BEGIN
+Savepoint sp1;
+SAVEPOINT
+Drop table if exists subt_alter_part_tab_ao1;
+psql:/path/sql_file:1: NOTICE:  table "subt_alter_part_tab_ao1" does not exist, skipping
+DROP TABLE
+Create table subt_alter_part_tab_ao1 (i int, x text,c char,v varchar, d date, n numeric, t timestamp without time zone, tz time with time zone) with(appendonly=true) partition by range (i) (partition p1 start(1) end(5),partition p2 start(5) end(8), partition p3 start(8) end(10) );
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "subt_alter_part_tab_ao1_1_prt_p1" for table "subt_alter_part_tab_ao1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "subt_alter_part_tab_ao1_1_prt_p2" for table "subt_alter_part_tab_ao1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "subt_alter_part_tab_ao1_1_prt_p3" for table "subt_alter_part_tab_ao1"
+CREATE TABLE
+Savepoint sp2;
+SAVEPOINT
+Alter table subt_alter_part_tab_ao1 add partition p4 start(11) end(15);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "subt_alter_part_tab_ao1_1_prt_p4" for table "subt_alter_part_tab_ao1"
+ALTER TABLE
+Alter table subt_alter_part_tab_ao1 add default partition def_part;
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "subt_alter_part_tab_ao1_1_prt_def_part" for table "subt_alter_part_tab_ao1"
+ALTER TABLE
+Insert into subt_alter_part_tab_ao1 values(generate_series(1,15),'create table with subtransactions','s','subtransaction table','12-11-2012',3,'2012-10-09 10:23:54', '2011-08-19 10:23:54+02');
+INSERT 0 15
+Savepoint sp3;
+SAVEPOINT
+Select count(*) from subt_alter_part_tab_ao1;
+ count 
+-------
+    15
+(1 row)
+
+Alter table subt_alter_part_tab_ao1 drop partition p3 ;
+ALTER TABLE
+Select count(*) from subt_alter_part_tab_ao1;
+ count 
+-------
+    13
+(1 row)
+
+Alter table subt_alter_part_tab_ao1 drop default partition;
+psql:/path/sql_file:1: NOTICE:  dropped partition "def_part" for relation "subt_alter_part_tab_ao1"
+ALTER TABLE
+Drop table if exists exg_pt_ao1;
+psql:/path/sql_file:1: NOTICE:  table "exg_pt_ao1" does not exist, skipping
+DROP TABLE
+Select count(*) from subt_alter_part_tab_ao1;
+ count 
+-------
+    11
+(1 row)
+
+Create table exg_pt_ao1(i int, x text,c char,v varchar, d date, n numeric, t timestamp without time zone, tz time with time zone);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+Insert into exg_pt_ao1 values (7,'to be exchanged','s','partition table','12-11-2012',3,'2012-10-09 10:23:54', '2011-08-19 10:23:54+02');
+INSERT 0 1
+Alter table subt_alter_part_tab_ao1 exchange partition p2 with table exg_pt_ao1;
+ALTER TABLE
+Alter table subt_alter_part_tab_ao1 split partition p4 at (13) into (partition splita,partition splitb);
+psql:/path/sql_file:1: NOTICE:  exchanged partition "p4" of relation "subt_alter_part_tab_ao1" with relation "pg_temp_368445"
+psql:/path/sql_file:1: NOTICE:  dropped partition "p4" for relation "subt_alter_part_tab_ao1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "subt_alter_part_tab_ao1_1_prt_splita" for table "subt_alter_part_tab_ao1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "subt_alter_part_tab_ao1_1_prt_splitb" for table "subt_alter_part_tab_ao1"
+ALTER TABLE
+Savepoint sp4;
+SAVEPOINT
+Alter table subt_alter_part_tab_ao1 drop partition splita ;
+ALTER TABLE
+Select count(*) from subt_alter_part_tab_ao1;
+ count 
+-------
+     7
+(1 row)
+
+rollback to sp3;
+ROLLBACK
+Select count(*) from subt_alter_part_tab_ao1;
+ count 
+-------
+    15
+(1 row)
+
+Alter table subt_alter_part_tab_ao1 drop partition splita ;
+psql:/path/sql_file:1: ERROR:  partition "splita" of relation "subt_alter_part_tab_ao1" does not exist
+COMMIT;
+ROLLBACK

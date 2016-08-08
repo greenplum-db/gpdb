@@ -1,0 +1,7 @@
+-- @Description Checkes the deletion and vacuuming of toast values
+-- 
+
+DELETE FROM foo;
+DELETE 10
+VACUUM foo;
+VACUUM

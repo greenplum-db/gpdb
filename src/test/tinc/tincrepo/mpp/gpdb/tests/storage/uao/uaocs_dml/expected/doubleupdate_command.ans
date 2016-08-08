@@ -1,0 +1,16 @@
+-- @Description Tests that deleting the same tuple twice within the same
+-- commands works fine.
+-- 
+
+SELECT * FROM foo;
+ a  | b  
+----+----
+ 10 | 10
+(1 row)
+UPDATE foo SET b = bar.a FROM bar WHERE foo.b = bar.b;
+UPDATE 1
+SELECT * FROM foo;
+ a  | b  
+----+----
+ 10 | 15
+(1 row)

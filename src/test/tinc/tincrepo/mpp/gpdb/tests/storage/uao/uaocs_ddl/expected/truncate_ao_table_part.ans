@@ -1,0 +1,90 @@
+-- @Description Truncate on uao partition tables
+-- 
+Drop table if exists sto_alt_uao_part_trunc;
+DROP TABLE
+CREATE TABLE sto_alt_uao_part_trunc (id int, date date, amt decimal(10,2)) with (appendonly=true, orientation=column)
+DISTRIBUTED BY (id)
+PARTITION BY RANGE (date)
+( PARTITION sales_Jul13 START (date '2013-07-01') INCLUSIVE ,
+PARTITION sales_Aug13 START (date '2013-08-01') INCLUSIVE ,
+PARTITION sales_Sep13 START (date '2013-09-01') INCLUSIVE 
+END (date '2014-01-01') EXCLUSIVE );
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_alt_uao_part_trunc_1_prt_sales_jul13" for table "sto_alt_uao_part_trunc"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_alt_uao_part_trunc_1_prt_sales_aug13" for table "sto_alt_uao_part_trunc"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_alt_uao_part_trunc_1_prt_sales_sep13" for table "sto_alt_uao_part_trunc"
+CREATE TABLE
+select count(*) FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid in (SELECT oid FROM pg_class WHERE relname like 'sto_alt_uao_part_trunc%');
+ count 
+-------
+     4
+(1 row)
+
+SELECT 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='sto_alt_uao_part_trunc');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+\d+ sto_alt_uao_part_trunc
+                           Append-Only Columnar Table "public.sto_alt_uao_part_trunc"
+ Column |     Type      | Modifiers | Storage | Compression Type | Compression Level | Block Size | Description 
+--------+---------------+-----------+---------+------------------+-------------------+------------+-------------
+ id     | integer       |           | plain   | none             | 0                 | 32768      | 
+ date   | date          |           | plain   | none             | 0                 | 32768      | 
+ amt    | numeric(10,2) |           | main    | none             | 0                 | 32768      | 
+Checksum: f
+Child tables: sto_alt_uao_part_trunc_1_prt_sales_aug13,
+              sto_alt_uao_part_trunc_1_prt_sales_jul13,
+              sto_alt_uao_part_trunc_1_prt_sales_sep13
+Has OIDs: no
+Options: appendonly=true, orientation=column
+Distributed by: (id)
+
+Insert into sto_alt_uao_part_trunc values(1,'2013-07-05',19.20);
+INSERT 0 1
+Insert into sto_alt_uao_part_trunc values(2,'2013-08-15',10.20);
+INSERT 0 1
+Insert into sto_alt_uao_part_trunc values(3,'2013-09-09',14.20);
+INSERT 0 1
+Insert into sto_alt_uao_part_trunc values(10,'2013-07-22',12.52);
+INSERT 0 1
+select count(*) AS only_visi_tups  from sto_alt_uao_part_trunc;
+ only_visi_tups 
+----------------
+              4
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*) AS invisi_and_visi_tups  from sto_alt_uao_part_trunc;
+ invisi_and_visi_tups 
+----------------------
+                    4
+(1 row)
+
+set gp_select_invisible = false;
+SET
+truncate table sto_alt_uao_part_trunc;
+TRUNCATE TABLE
+select count(*) AS only_visi_tups  from sto_alt_uao_part_trunc;
+ only_visi_tups 
+----------------
+              0
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*) AS invisi_and_visi_tups  from sto_alt_uao_part_trunc;
+ invisi_and_visi_tups 
+----------------------
+                    0
+(1 row)
+
+set gp_select_invisible = false;
+SET
+select count(*) FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid in (SELECT oid FROM pg_class WHERE relname like 'sto_alt_uao_part_trunc%');
+ count 
+-------
+     4
+(1 row)
+

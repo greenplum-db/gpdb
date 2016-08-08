@@ -1,0 +1,184 @@
+-- @description : Create Data and execute select statements on UAO tables GROUP BY
+-- 
+DROP TABLE IF EXISTS sto_uao_emp_groupby;
+psql:/path/sql_file:1: NOTICE:  table "sto_uao_emp_groupby" does not exist, skipping
+DROP TABLE
+CREATE TABLE sto_uao_emp_groupby (
+   empno    INT  ,
+   ename    VARCHAR(10),
+   job      VARCHAR(9),
+   mgr      INT NULL,
+   hiredate DATE,
+   sal      NUMERIC(7,2),
+   comm     NUMERIC(7,2) NULL,
+   dept     INT) with (appendonly=true) distributed by (empno);
+CREATE TABLE
+insert into sto_uao_emp_groupby values 
+ (1,'JOHNSON','ADMIN',6,'12-17-1990',18000,10,4)
+,(2,'HARDING','MANAGER',9,'02-02-1998',52000,15,3)
+,(3,'TAFT','SALES I',2,'01-02-1996',25000,20,3)
+,(4,'HOOVER','SALES I',2,'04-02-1990',27000,15,3)
+,(5,'LINCOLN','TECH',6,'06-23-1994',22500,15,4)
+,(6,'GARFIELD','MANAGER',9,'05-01-1993',54000,20,4)
+,(7,'POLK','TECH',6,'09-22-1997',25000,15,4)
+,(8,'GRANT','ENGINEER',10,'03-30-1997',32000,20,2)
+,(9,'JACKSON','CEO',NULL,'01-01-1990',75000,30,4)
+,(10,'FILLMORE','MANAGER',9,'08-09-1994',56000,20,2)
+,(11,'ADAMS','ENGINEER',10,'03-15-1996',34000,20,2)
+,(12,'WASHINGTON','ADMIN',6,'04-16-1998',18000,15,4)
+,(13,'MONROE','ENGINEER',10,'12-03-2000',30000,20,2)
+,(14,'ROOSEVELT','CPA',9,'10-12-1995',35000,30,1)
+,(15,'More','ENGINEER',9,'10-12-1994',25000,20,2)
+,(16,'ROSE','SALES I',10,'10-12-1999',18000,15,3)
+,(17,'CLINT','CPA',2,'10-12-2001',24000,30,1);
+INSERT 0 17
+DROP TABLE IF EXISTS sto_uao_dept_groupby;
+psql:/path/sql_file:1: NOTICE:  table "sto_uao_dept_groupby" does not exist, skipping
+DROP TABLE
+CREATE TABLE sto_uao_dept_groupby (
+   deptno INT NOT NULL,
+   dname  VARCHAR(14),
+   loc    VARCHAR(13)) with (appendonly=true) distributed by (deptno);
+CREATE TABLE
+insert into sto_uao_dept_groupby values 
+ (1,'ACCOUNTING','ST LOUIS')
+,(2,'RESEARCH','NEW YORK')
+,(3,'SALES','ATLANTA')
+,(4, 'OPERATIONS','SEATTLE');
+INSERT 0 4
+-- Simple Group by
+select count(*) as num_of_emp, loc from sto_uao_dept_groupby, sto_uao_emp_groupby where sto_uao_dept_groupby.deptno = sto_uao_emp_groupby.dept group by loc order by 1 asc;
+ num_of_emp |   loc    
+------------+----------
+          2 | ST LOUIS
+          4 | ATLANTA
+          5 | NEW YORK
+          6 | SEATTLE
+(4 rows)
+
+select  loc ,job, sum(sal) as sum_of_salary, count(*) as num_emp  from sto_uao_emp_groupby,sto_uao_dept_groupby where sto_uao_emp_groupby.dept=sto_uao_dept_groupby.deptno
+group by loc,job order by loc,job;
+   loc    |   job    | sum_of_salary | num_emp 
+----------+----------+---------------+---------
+ ATLANTA  | MANAGER  |      52000.00 |       1
+ ATLANTA  | SALES I  |      70000.00 |       3
+ NEW YORK | ENGINEER |     121000.00 |       4
+ NEW YORK | MANAGER  |      56000.00 |       1
+ SEATTLE  | ADMIN    |      36000.00 |       2
+ SEATTLE  | CEO      |      75000.00 |       1
+ SEATTLE  | MANAGER  |      54000.00 |       1
+ SEATTLE  | TECH     |      47500.00 |       2
+ ST LOUIS | CPA      |      59000.00 |       2
+(9 rows)
+
+-- Rollup
+select  loc ,job,comm,sum(sal),  count(*) as cnt from sto_uao_emp_groupby,sto_uao_dept_groupby where sto_uao_emp_groupby.dept=sto_uao_dept_groupby.deptno
+and loc in ('NEW YORK', 'ATLANTA')
+group by rollup (loc,job,comm) order by loc,job,comm;
+   loc    |   job    | comm  |    sum    | cnt 
+----------+----------+-------+-----------+-----
+ ATLANTA  | MANAGER  | 15.00 |  52000.00 |   1
+ ATLANTA  | MANAGER  |       |  52000.00 |   1
+ ATLANTA  | SALES I  | 15.00 |  45000.00 |   2
+ ATLANTA  | SALES I  | 20.00 |  25000.00 |   1
+ ATLANTA  | SALES I  |       |  70000.00 |   3
+ ATLANTA  |          |       | 122000.00 |   4
+ NEW YORK | ENGINEER | 20.00 | 121000.00 |   4
+ NEW YORK | ENGINEER |       | 121000.00 |   4
+ NEW YORK | MANAGER  | 20.00 |  56000.00 |   1
+ NEW YORK | MANAGER  |       |  56000.00 |   1
+ NEW YORK |          |       | 177000.00 |   5
+          |          |       | 299000.00 |   9
+(12 rows)
+
+-- Cube
+select  loc ,job,comm,sum(sal),  count(*) as cnt from sto_uao_emp_groupby,sto_uao_dept_groupby where sto_uao_emp_groupby.dept=sto_uao_dept_groupby.deptno
+and loc != 'SEATTLE'
+group by cube (loc,job,comm) order by loc,job,comm;
+   loc    |   job    | comm  |    sum    | cnt 
+----------+----------+-------+-----------+-----
+ ATLANTA  | MANAGER  | 15.00 |  52000.00 |   1
+ ATLANTA  | MANAGER  |       |  52000.00 |   1
+ ATLANTA  | SALES I  | 15.00 |  45000.00 |   2
+ ATLANTA  | SALES I  | 20.00 |  25000.00 |   1
+ ATLANTA  | SALES I  |       |  70000.00 |   3
+ ATLANTA  |          | 15.00 |  97000.00 |   3
+ ATLANTA  |          | 20.00 |  25000.00 |   1
+ ATLANTA  |          |       | 122000.00 |   4
+ NEW YORK | ENGINEER | 20.00 | 121000.00 |   4
+ NEW YORK | ENGINEER |       | 121000.00 |   4
+ NEW YORK | MANAGER  | 20.00 |  56000.00 |   1
+ NEW YORK | MANAGER  |       |  56000.00 |   1
+ NEW YORK |          | 20.00 | 177000.00 |   5
+ NEW YORK |          |       | 177000.00 |   5
+ ST LOUIS | CPA      | 30.00 |  59000.00 |   2
+ ST LOUIS | CPA      |       |  59000.00 |   2
+ ST LOUIS |          | 30.00 |  59000.00 |   2
+ ST LOUIS |          |       |  59000.00 |   2
+          | CPA      | 30.00 |  59000.00 |   2
+          | CPA      |       |  59000.00 |   2
+          | ENGINEER | 20.00 | 121000.00 |   4
+          | ENGINEER |       | 121000.00 |   4
+          | MANAGER  | 15.00 |  52000.00 |   1
+          | MANAGER  | 20.00 |  56000.00 |   1
+          | MANAGER  |       | 108000.00 |   2
+          | SALES I  | 15.00 |  45000.00 |   2
+          | SALES I  | 20.00 |  25000.00 |   1
+          | SALES I  |       |  70000.00 |   3
+          |          | 15.00 |  97000.00 |   3
+          |          | 20.00 | 202000.00 |   6
+          |          | 30.00 |  59000.00 |   2
+          |          |       | 358000.00 |  11
+(32 rows)
+
+-- grouping sets
+select  loc ,job,comm,sum(sal) as sum from sto_uao_emp_groupby,sto_uao_dept_groupby where sto_uao_emp_groupby.dept=sto_uao_dept_groupby.deptno
+group by grouping sets ((loc,job),  (loc,comm)) 
+order by loc,job,comm;
+   loc    |   job    | comm  |    sum    
+----------+----------+-------+-----------
+ ATLANTA  | MANAGER  |       |  52000.00
+ ATLANTA  | SALES I  |       |  70000.00
+ ATLANTA  |          | 15.00 |  97000.00
+ ATLANTA  |          | 20.00 |  25000.00
+ NEW YORK | ENGINEER |       | 121000.00
+ NEW YORK | MANAGER  |       |  56000.00
+ NEW YORK |          | 20.00 | 177000.00
+ SEATTLE  | ADMIN    |       |  36000.00
+ SEATTLE  | CEO      |       |  75000.00
+ SEATTLE  | MANAGER  |       |  54000.00
+ SEATTLE  | TECH     |       |  47500.00
+ SEATTLE  |          | 10.00 |  18000.00
+ SEATTLE  |          | 15.00 |  65500.00
+ SEATTLE  |          | 20.00 |  54000.00
+ SEATTLE  |          | 30.00 |  75000.00
+ ST LOUIS | CPA      |       |  59000.00
+ ST LOUIS |          | 30.00 |  59000.00
+(17 rows)
+
+-- grouping set , rollup
+select  loc ,job, sum(sal) from sto_uao_emp_groupby,sto_uao_dept_groupby where sto_uao_emp_groupby.dept=sto_uao_dept_groupby.deptno
+group by grouping sets (loc, rollup (loc,job) ) 
+order by loc,job ;
+   loc    |   job    |    sum    
+----------+----------+-----------
+ ATLANTA  | MANAGER  |  52000.00
+ ATLANTA  | SALES I  |  70000.00
+ ATLANTA  |          | 122000.00
+ ATLANTA  |          | 122000.00
+ NEW YORK | ENGINEER | 121000.00
+ NEW YORK | MANAGER  |  56000.00
+ NEW YORK |          | 177000.00
+ NEW YORK |          | 177000.00
+ SEATTLE  | ADMIN    |  36000.00
+ SEATTLE  | CEO      |  75000.00
+ SEATTLE  | MANAGER  |  54000.00
+ SEATTLE  | TECH     |  47500.00
+ SEATTLE  |          | 212500.00
+ SEATTLE  |          | 212500.00
+ ST LOUIS | CPA      |  59000.00
+ ST LOUIS |          |  59000.00
+ ST LOUIS |          |  59000.00
+          |          | 570500.00
+(18 rows)
+

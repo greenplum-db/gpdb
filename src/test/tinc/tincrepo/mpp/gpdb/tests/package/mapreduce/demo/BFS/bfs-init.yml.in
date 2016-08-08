@@ -1,0 +1,46 @@
+%YAML 1.1
+---  
+VERSION:   1.0.0.1
+
+## Perform one step of breadth-first search in a graph
+
+DEFINE:
+  - INPUT:
+    ## This is a set of pairs "src|dest" representing the adjacency relation of a graph
+      NAME:      network_file
+      FILE:      @hostname@:@abs_srcdir@/data/www.small.dat
+      COLUMNS:   [src text, dest text]
+      DELIMITER: '|'
+
+  - OUTPUT: 
+      NAME:  link
+      TABLE: bfs_link
+      MODE:  REPLACE
+
+  - OUTPUT: 
+      NAME:  delta
+      TABLE: bfs_delta
+      MODE:  REPLACE
+
+  - MAP:
+      NAME:  form_path
+      LANGUAGE: plperl
+      PARAMETERS: [src text, dest text]
+      RETURNS: [src text, dest text, hops integer]
+      MODE: SINGLE
+      FUNCTION: |
+        my ($src, $dest) = @_;
+        return {"src" => $src, "dest" => $dest, "hops" => 1}
+      
+  - TASK:
+      NAME:     initialize
+      SOURCE:   network_file
+      MAP:      form_path
+      
+EXECUTE:
+  - RUN:
+      SOURCE: initialize
+      TARGET: link
+  - RUN:
+      SOURCE: initialize
+      TARGET: delta

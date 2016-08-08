@@ -1,0 +1,17 @@
+CREATE ROLE resync_role1 with login;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE ROLE resync_role2 with login;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+CREATE ROLE resync_role3 with login;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+DROP ROLE sync1_role6;
+DROP ROLE
+DROP ROLE ck_sync1_role5;
+DROP ROLE
+DROP ROLE ct_role3;
+DROP ROLE
+DROP ROLE resync_role1;
+DROP ROLE

@@ -1,0 +1,6 @@
+drop function cursorfunc();
+DROP FUNCTION
+drop table maxvalues;
+DROP TABLE
+drop table cursordata;
+DROP TABLE

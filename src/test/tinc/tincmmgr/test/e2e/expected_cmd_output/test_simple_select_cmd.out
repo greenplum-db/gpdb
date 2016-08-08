@@ -1,0 +1,18 @@
+--------------------------------------------------------------------------------
+query:  select tags 
+
+test_name|metadata|class_value|method_value
+
+tincmmgr.test.e2e.sample.sample_tincmm_tests.MockTestCase1.test_01|tags|functional|None
+tincmmgr.test.e2e.sample.sample_tincmm_tests.MockTestCase1.test_02|tags|functional|None
+tincmmgr.test.e2e.sample.sample_tincmm_tests.MockTestCase1.test_03|tags|functional|None
+tincmmgr.test.e2e.sample.sample_tincmm_tests.MockTestCase2.test_01|tags|smoke|None
+tincmmgr.test.e2e.sample.sample_tincmm_tests.MockTestCase2.test_02|tags|smoke|None
+tincmmgr.test.e2e.sample.sample_tincmm_tests.MockTestCase2.test_03|tags|smoke|None
+tincmmgr.test.e2e.sample.sample_tincmm_tests.MockTestCase3.test_01|tags|None|None
+tincmmgr.test.e2e.sample.sample_tincmm_tests.MockTestCase3.test_02|tags|None|None
+tincmmgr.test.e2e.sample.sample_tincmm_tests.MockTestCase3.test_03|tags|None|None
+tincmmgr.test.e2e.sample.sample_tincmm_tests.MockTestCase4.test_01|tags|None|None
+tincmmgr.test.e2e.sample.sample_tincmm_tests.MockTestCase4.test_02|tags|None|None
+tincmmgr.test.e2e.sample.sample_tincmm_tests.MockTestCase4.test_03|tags|None|None
+--------------------------------------------------------------------------------

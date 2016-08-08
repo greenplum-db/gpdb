@@ -1,0 +1,67 @@
+-- start_ignore
+SET optimizer=off;
+SET
+-- end_ignore
+CREATE TABLE mdt_part_tbl_split_range (
+c_id varchar(36),
+ss_id varchar(36),
+c_ts timestamp,
+name varchar(36),
+PRIMARY KEY (c_id,ss_id,c_ts)) partition by range (c_ts)
+(
+  start (date '2007-01-01')
+  end (date '2007-04-01') every (interval '1 month'),
+  default partition default_part
+);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mdt_part_tbl_split_range_1_prt_default_part" for table "mdt_part_tbl_split_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mdt_part_tbl_split_range_1_prt_2" for table "mdt_part_tbl_split_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mdt_part_tbl_split_range_1_prt_3" for table "mdt_part_tbl_split_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mdt_part_tbl_split_range_1_prt_4" for table "mdt_part_tbl_split_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "mdt_part_tbl_split_range_pkey" for table "mdt_part_tbl_split_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "mdt_part_tbl_split_range_1_prt_default_part_pkey" for table "mdt_part_tbl_split_range_1_prt_default_part"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "mdt_part_tbl_split_range_1_prt_2_pkey" for table "mdt_part_tbl_split_range_1_prt_2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "mdt_part_tbl_split_range_1_prt_3_pkey" for table "mdt_part_tbl_split_range_1_prt_3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "mdt_part_tbl_split_range_1_prt_4_pkey" for table "mdt_part_tbl_split_range_1_prt_4"
+CREATE TABLE
+alter table mdt_part_tbl_split_range split default partition start ('2009-01-01') end ('2009-02-01') into (partition a3, default partition);
+psql:/path/sql_file:1: NOTICE:  exchanged partition "default_part" of relation "mdt_part_tbl_split_range" with relation "pg_temp_22235"
+psql:/path/sql_file:1: NOTICE:  dropped partition "default_part" for relation "mdt_part_tbl_split_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mdt_part_tbl_split_range_1_prt_a3" for table "mdt_part_tbl_split_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "mdt_part_tbl_split_range_1_prt_a3_pkey" for table "mdt_part_tbl_split_range_1_prt_a3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mdt_part_tbl_split_range_1_prt_default_part" for table "mdt_part_tbl_split_range"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "mdt_part_tbl_split_range_1_prt_default_part_pkey1" for table "mdt_part_tbl_split_range_1_prt_default_part"
+ALTER TABLE
+select classname,schemaname, objname, usestatus, usename, actionname, subtype, partitionlevel, parenttablename, parentschemaname  from pg_stat_partition_operations  where statime > ( select statime from pg_stat_partition_operations where objname ='my_first_table' and actionname ='CREATE') and objname  not in ('pg_stat_operations','pg_stat_partition_operations') order by statime;
+  classname  | schemaname |                      objname                      | usestatus | usename  | actionname | subtype  | partitionlevel |     parenttablename      | parentschemaname 
+-------------+------------+---------------------------------------------------+-----------+----------+------------+----------+----------------+--------------------------+------------------
+ pg_authid   |            | mdt_user                                          | CURRENT   | gpadmin  | CREATE     | ROLE     |                |                          | 
+ pg_database |            | mdt_db                                            | CURRENT   | mdt_user | CREATE     | DATABASE |                |                          | 
+ pg_class    | public     | mdt_part_tbl_split_range                          | CURRENT   | gpadmin  | CREATE     | TABLE    |              0 |                          | 
+ pg_class    | public     | mdt_part_tbl_split_range_pkey                     | CURRENT   | gpadmin  | CREATE     | INDEX    |                |                          | 
+ pg_class    | public     | mdt_part_tbl_split_range_1_prt_2                  | CURRENT   | gpadmin  | CREATE     | TABLE    |              0 | mdt_part_tbl_split_range | public
+ pg_class    | public     | mdt_part_tbl_split_range_1_prt_2_pkey             | CURRENT   | gpadmin  | CREATE     | INDEX    |                |                          | 
+ pg_class    | public     | mdt_part_tbl_split_range_1_prt_3                  | CURRENT   | gpadmin  | CREATE     | TABLE    |              0 | mdt_part_tbl_split_range | public
+ pg_class    | public     | mdt_part_tbl_split_range_1_prt_3_pkey             | CURRENT   | gpadmin  | CREATE     | INDEX    |                |                          | 
+ pg_class    | public     | mdt_part_tbl_split_range_1_prt_4                  | CURRENT   | gpadmin  | CREATE     | TABLE    |              0 | mdt_part_tbl_split_range | public
+ pg_class    | public     | mdt_part_tbl_split_range_1_prt_4_pkey             | CURRENT   | gpadmin  | CREATE     | INDEX    |                |                          | 
+ pg_class    | public     | mdt_part_tbl_split_range_1_prt_2                  | CURRENT   | gpadmin  | ALTER      | INHERIT  |              0 | mdt_part_tbl_split_range | public
+ pg_class    | public     | mdt_part_tbl_split_range_1_prt_3                  | CURRENT   | gpadmin  | ALTER      | INHERIT  |              0 | mdt_part_tbl_split_range | public
+ pg_class    | public     | mdt_part_tbl_split_range_1_prt_4                  | CURRENT   | gpadmin  | ALTER      | INHERIT  |              0 | mdt_part_tbl_split_range | public
+ pg_class    | public     | mdt_part_tbl_split_range_1_prt_a3                 | CURRENT   | gpadmin  | CREATE     | TABLE    |              0 | mdt_part_tbl_split_range | public
+ pg_class    | public     | mdt_part_tbl_split_range_1_prt_a3_pkey            | CURRENT   | gpadmin  | CREATE     | INDEX    |                |                          | 
+ pg_class    | public     | mdt_part_tbl_split_range_1_prt_a3                 | CURRENT   | gpadmin  | ALTER      | INHERIT  |              0 | mdt_part_tbl_split_range | public
+ pg_class    | public     | mdt_part_tbl_split_range_1_prt_default_part       | CURRENT   | gpadmin  | CREATE     | TABLE    |              0 | mdt_part_tbl_split_range | public
+ pg_class    | public     | mdt_part_tbl_split_range_1_prt_default_part_pkey1 | CURRENT   | gpadmin  | CREATE     | INDEX    |                |                          | 
+ pg_class    | public     | mdt_part_tbl_split_range_1_prt_default_part       | CURRENT   | gpadmin  | ALTER      | INHERIT  |              0 | mdt_part_tbl_split_range | public
+ pg_class    | public     | mdt_part_tbl_split_range                          | CURRENT   | gpadmin  | PARTITION  | SPLIT    |              0 |                          | 
+(20 rows)
+
+drop table mdt_part_tbl_split_range;
+DROP TABLE
+select classname,schemaname, objname, usestatus, usename, actionname, subtype, partitionlevel, parenttablename, parentschemaname  from pg_stat_partition_operations  where statime > ( select statime from pg_stat_partition_operations where objname ='my_first_table' and actionname ='CREATE') and objname  not in ('pg_stat_operations','pg_stat_partition_operations') order by statime;
+  classname  | schemaname | objname  | usestatus | usename  | actionname | subtype  | partitionlevel | parenttablename | parentschemaname 
+-------------+------------+----------+-----------+----------+------------+----------+----------------+-----------------+------------------
+ pg_authid   |            | mdt_user | CURRENT   | gpadmin  | CREATE     | ROLE     |                |                 | 
+ pg_database |            | mdt_db   | CURRENT   | mdt_user | CREATE     | DATABASE |                |                 | 
+(2 rows)
+

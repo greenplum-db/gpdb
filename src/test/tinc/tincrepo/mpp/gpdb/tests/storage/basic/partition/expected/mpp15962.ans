@@ -1,0 +1,76 @@
+-- start_ignore
+-- end_ignore
+--start_ignore
+Drop table if exists pt_indx_tab  cascade;
+DROP TABLE
+--end_ignore
+create table pt_indx_tab (c1 integer, c2 int, c3 text) partition by range (c1) (partition A start (integer '0') end (integer '5') every (integer '1'));
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_indx_tab_1_prt_a_1" for table "pt_indx_tab"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_indx_tab_1_prt_a_2" for table "pt_indx_tab"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_indx_tab_1_prt_a_3" for table "pt_indx_tab"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_indx_tab_1_prt_a_4" for table "pt_indx_tab"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "pt_indx_tab_1_prt_a_5" for table "pt_indx_tab"
+CREATE TABLE
+--start_ignore
+Drop index if exists pt_indx_drop cascade;
+psql:/path/sql_file:1: NOTICE:  index "pt_indx_drop" does not exist, skipping
+DROP INDEX
+--end_ignore
+create unique index pt_indx_drop on pt_indx_tab(c1);
+psql:/path/sql_file:1: NOTICE:  building index for child partition "pt_indx_tab_1_prt_a_1"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "pt_indx_tab_1_prt_a_2"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "pt_indx_tab_1_prt_a_3"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "pt_indx_tab_1_prt_a_4"
+psql:/path/sql_file:1: NOTICE:  building index for child partition "pt_indx_tab_1_prt_a_5"
+CREATE INDEX
+\d+ pt_indx_tab
+              Table "public.pt_indx_tab"
+ Column |  Type   | Modifiers | Storage  | Description 
+--------+---------+-----------+----------+-------------
+ c1     | integer |           | plain    | 
+ c2     | integer |           | plain    | 
+ c3     | text    |           | extended | 
+Indexes:
+    "pt_indx_drop" UNIQUE, btree (c1)
+Child tables: pt_indx_tab_1_prt_a_1,
+              pt_indx_tab_1_prt_a_2,
+              pt_indx_tab_1_prt_a_3,
+              pt_indx_tab_1_prt_a_4,
+              pt_indx_tab_1_prt_a_5
+Has OIDs: no
+Distributed by: (c1)
+
+\d pt_indx_tab_1_prt_a_1
+Table "public.pt_indx_tab_1_prt_a_1"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ c1     | integer | 
+ c2     | integer | 
+ c3     | text    | 
+Indexes:
+    "pt_indx_drop_1_prt_a_1" UNIQUE, btree (c1)
+Check constraints:
+    "pt_indx_tab_1_prt_a_1_check" CHECK (c1 >= 0 AND c1 < 1)
+Inherits: pt_indx_tab
+Distributed by: (c1)
+
+drop index pt_indx_drop;
+psql:/path/sql_file:1: WARNING:  Only dropped the index "pt_indx_drop"
+HINT:  To drop other indexes on child partitions, drop each one explicitly.
+DROP INDEX
+\d pt_indx_tab_1_prt_a_1
+Table "public.pt_indx_tab_1_prt_a_1"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ c1     | integer | 
+ c2     | integer | 
+ c3     | text    | 
+Indexes:
+    "pt_indx_drop_1_prt_a_1" UNIQUE, btree (c1)
+Check constraints:
+    "pt_indx_tab_1_prt_a_1_check" CHECK (c1 >= 0 AND c1 < 1)
+Inherits: pt_indx_tab
+Distributed by: (c1)
+

@@ -1,0 +1,55 @@
+-- start_ignore
+drop table mpp8405;
+ERROR:  table "mpp8405" does not exist
+-- end_ignore
+CREATE TABLE mpp8405
+(
+  mp_sys_no bigint NOT NULL,
+  mp_as_of_date date NOT NULL,
+  mp_status character varying(50),
+  mp_cumunav_incp_divreinv_sor numeric(12,4),
+  mp_great_mnth_rtn_incep_sor numeric(12,4),
+  mp_who_created character varying(30),
+  mp_when_created timestamp without time zone,
+  mp_who_updated character varying(30),
+  mp_when_updated timestamp without time zone,
+  mp_iss_sys_no bigint NOT NULL,
+  mp_geo_sys_no bigint,
+  mp_per_sys_no bigint,
+  mp_cur_sys_no bigint,
+  mp_prfm_sys_no bigint NOT NULL,
+  mp_fba_sys_no bigint,
+  mp_comp_gross_mkt_2yr_sor numeric(12,4),
+  mp_comp_gross_mkt_2yr_sors character varying(30),
+  mp_comp_gross_mkt_2yr_mod numeric(12,4),
+   mp_comp_gross_mkt_ytd_mods character varying(30),
+   CONSTRAINT mpp8405_pkey1 PRIMARY KEY (mp_sys_no, mp_iss_sys_no, mp_as_of_date)
+)
+WITH (
+  OIDS=FALSE
+)
+DISTRIBUTED BY (mp_sys_no, mp_iss_sys_no, mp_as_of_date)
+PARTITION BY RANGE(mp_as_of_date)
+          (
+          PARTITION "2009q1" START ('2009-01-01'::date) END ('2009-03-31'::date) INCLUSIVE,
+          PARTITION "2009q2" START ('2009-04-01'::date) END ('2009-06-30'::date) INCLUSIVE,
+          PARTITION "2009q3" START ('2009-07-01'::date) END ('2009-09-30'::date) INCLUSIVE,
+          PARTITION "2009q4" START ('2009-10-01'::date) END ('2009-12-31'::date) INCLUSIVE          )
+;
+NOTICE:  CREATE TABLE will create partition "mpp8405_1_prt_2009q1" for table "mpp8405"
+NOTICE:  CREATE TABLE will create partition "mpp8405_1_prt_2009q2" for table "mpp8405"
+NOTICE:  CREATE TABLE will create partition "mpp8405_1_prt_2009q3" for table "mpp8405"
+NOTICE:  CREATE TABLE will create partition "mpp8405_1_prt_2009q4" for table "mpp8405"
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "mpp8405_pkey1" for table "mpp8405"
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "mpp8405_pkey1_prt_2009q1" for table "mpp8405_1_prt_2009q1"
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "mpp8405_pkey1_prt_2009q2" for table "mpp8405_1_prt_2009q2"
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "mpp8405_pkey1_prt_2009q3" for table "mpp8405_1_prt_2009q3"
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "mpp8405_pkey1_prt_2009q4" for table "mpp8405_1_prt_2009q4"
+CREATE TABLE
+ALTER TABLE mpp8405 ADD PARTITION "2010q1" START (date '2010-01-01') INCLUSIVE END (date '2010-03-01') EXCLUSIVE WITH (OIDS=TRUE);
+NOTICE:  CREATE TABLE will create partition "mpp8405_1_prt_2010q1" for table "mpp8405"
+ERROR:  OIDS=TRUE is not allowed on partitioned tables. Use OIDS=FALSE
+ALTER TABLE mpp8405 ADD PARTITION "2010q1" START (date '2010-01-01') INCLUSIVE END (date '2010-03-01') EXCLUSIVE WITH (OIDS=FALSE);
+NOTICE:  CREATE TABLE will create partition "mpp8405_1_prt_2010q1" for table "mpp8405"
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "mpp8405_1_prt_2010q1_pkey" for table "mpp8405_1_prt_2010q1"
+ALTER TABLE

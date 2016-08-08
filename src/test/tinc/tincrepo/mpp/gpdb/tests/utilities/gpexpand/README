@@ -1,0 +1,20 @@
+========================================================================================================================================================================
+Tests for gpexpand utility
+========================================================================================================================================================================
+
+How to run:
+From the root folder, just do tinc.py discover .
+
+Prerequisites:
+-> GPEXPAND_HOSTS environment variable needs to be set. 
+   This is a space separated list of hostnames that includes all the hosts involved in the expansion tests. For eg: GPEXPAND_HOSTS='rh55-qavm44 rh55-qavm45'
+
+-> PGDATABASE environment variable set to a valid database
+
+-> GPDB / HAWQ binaries installed on the host where the tests are running. Note that we need not have an initialized cluster as the tests take care of initializing a required cluster
+
+-> GPDB / HAWQ binaries installed on all the hosts involved in the expansion tests. This requirement might be removed  when the framework is enhanced to take care of seg install
+
+
+Design:
+TBD

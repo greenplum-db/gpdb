@@ -1,0 +1,605 @@
+-- 
+-- @description Guc setting at role level for compresslevel
+-- Guc value to valid value compresslevel=1
+Alter role dsp_role1 set gp_default_storage_options="appendonly=true, compresslevel=1";
+ALTER ROLE
+-- Set the role level guc to an invalid value
+Alter role dsp_role2 set gp_default_storage_options="appendonly=true, compresslevel=10";
+psql:/path/sql_file:1: ERROR:  compresslevel=10 is out of range (should be between 0 and 9)
+-- Set role level Guc to 2, and create compresstype=quicklz
+Alter role dsp_role3 set gp_default_storage_options="appendonly=true, compresslevel=2";
+ALTER ROLE
+-- GUC with appendonly=true not specified
+Alter role dsp_role4 set gp_default_storage_options="compresslevel=1";
+ALTER ROLE
+select datname, datconfig from pg_database where datname in ('dsp_db1', 'dsp_db2', 'dsp_db3', 'dsp_db4') order by datname;
+ datname | datconfig 
+---------+-----------
+ dsp_db1 | 
+ dsp_db2 | 
+ dsp_db3 | 
+ dsp_db4 | 
+(4 rows)
+
+select rolname, rolconfig from pg_roles where rolname in ('dsp_role1', 'dsp_role2', 'dsp_role3', 'dsp_role4') order by rolname;
+  rolname  |                            rolconfig                            
+-----------+-----------------------------------------------------------------
+ dsp_role1 | {"gp_default_storage_options=appendonly=true, compresslevel=1"}
+ dsp_role2 | 
+ dsp_role3 | {"gp_default_storage_options=appendonly=true, compresslevel=2"}
+ dsp_role4 | {gp_default_storage_options=compresslevel=1}
+(4 rows)
+
+\c dsp_db1 dsp_role1
+You are now connected to database "dsp_db1" as user "dsp_role1".
+show gp_default_storage_options;
+                                   gp_default_storage_options                                    
+-------------------------------------------------------------------------------------------------
+ appendonly=true,blocksize=32768,compresstype=zlib,compresslevel=1,checksum=true,orientation=row
+(1 row)
+
+-- Table with no options
+Drop table if exists ao_rl_cl_t1;
+psql:/path/sql_file:1: NOTICE:  table "ao_rl_cl_t1" does not exist, skipping
+DROP TABLE
+Create table ao_rl_cl_t1 ( i int, j int);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+Create index ap_t1_ix on ao_rl_cl_t1(i);
+CREATE INDEX
+Insert into ao_rl_cl_t1 select i, i+1 from generate_series(1,10) i;
+INSERT 0 10
+update ao_rl_cl_t1 set j=i where i>5;
+UPDATE 5
+Delete from ao_rl_cl_t1 where i<2;
+DELETE 1
+Select count(*) from ao_rl_cl_t1;
+ count 
+-------
+     9
+(1 row)
+
+\d+ ao_rl_cl_t1;
+        Append-Only Table "public.ao_rl_cl_t1"
+ Column |  Type   | Modifiers | Storage | Description 
+--------+---------+-----------+---------+-------------
+ i      | integer |           | plain   | 
+ j      | integer |           | plain   | 
+Compression Type: zlib
+Compression Level: 1
+Block Size: 32768
+Checksum: t
+Indexes:
+    "ap_t1_ix" btree (i)
+Has OIDs: no
+Options: appendonly=true, compresstype=zlib
+Distributed by: (i)
+
+select relkind, relstorage, reloptions from pg_class where relname='ao_rl_cl_t1';
+ relkind | relstorage |             reloptions              
+---------+------------+-------------------------------------
+ r       | a          | {appendonly=true,compresstype=zlib}
+(1 row)
+
+select compresslevel, compresstype, blocksize, checksum, columnstore from pg_appendonly where relid = (select oid from pg_class where relname='ao_rl_cl_t1');
+ compresslevel | compresstype | blocksize | checksum | columnstore 
+---------------+--------------+-----------+----------+-------------
+             1 | zlib         |     32768 | t        | f
+(1 row)
+
+Alter table ao_rl_cl_t1 add column k int default 2;
+ALTER TABLE
+\d+ ao_rl_cl_t1;
+        Append-Only Table "public.ao_rl_cl_t1"
+ Column |  Type   | Modifiers | Storage | Description 
+--------+---------+-----------+---------+-------------
+ i      | integer |           | plain   | 
+ j      | integer |           | plain   | 
+ k      | integer | default 2 | plain   | 
+Compression Type: zlib
+Compression Level: 1
+Block Size: 32768
+Checksum: t
+Indexes:
+    "ap_t1_ix" btree (i)
+Has OIDs: no
+Options: appendonly=true, compresstype=zlib
+Distributed by: (i)
+
+select relkind, relstorage, reloptions from pg_class where relname='ao_rl_cl_t1';
+ relkind | relstorage |             reloptions              
+---------+------------+-------------------------------------
+ r       | a          | {appendonly=true,compresstype=zlib}
+(1 row)
+
+select compresslevel, compresstype, blocksize, checksum, columnstore from pg_appendonly where relid = (select oid from pg_class where relname='ao_rl_cl_t1');
+ compresslevel | compresstype | blocksize | checksum | columnstore 
+---------------+--------------+-----------+----------+-------------
+             1 | zlib         |     32768 | t        | f
+(1 row)
+
+SET gp_default_storage_options='appendonly=true, orientation=column, blocksize=8192,compresslevel=0';
+SET
+Alter table ao_rl_cl_t1 add column l int default 3;
+ALTER TABLE
+\d+ ao_rl_cl_t1;
+        Append-Only Table "public.ao_rl_cl_t1"
+ Column |  Type   | Modifiers | Storage | Description 
+--------+---------+-----------+---------+-------------
+ i      | integer |           | plain   | 
+ j      | integer |           | plain   | 
+ k      | integer | default 2 | plain   | 
+ l      | integer | default 3 | plain   | 
+Compression Type: zlib
+Compression Level: 1
+Block Size: 32768
+Checksum: t
+Indexes:
+    "ap_t1_ix" btree (i)
+Has OIDs: no
+Options: appendonly=true, compresstype=zlib
+Distributed by: (i)
+
+select relkind, relstorage, reloptions from pg_class where relname='ao_rl_cl_t1';
+ relkind | relstorage |             reloptions              
+---------+------------+-------------------------------------
+ r       | a          | {appendonly=true,compresstype=zlib}
+(1 row)
+
+select compresslevel, compresstype, blocksize, checksum, columnstore from pg_appendonly where relid = (select oid from pg_class where relname='ao_rl_cl_t1');
+ compresslevel | compresstype | blocksize | checksum | columnstore 
+---------------+--------------+-----------+----------+-------------
+             1 | zlib         |     32768 | t        | f
+(1 row)
+
+SET gp_default_storage_options='appendonly=false,compresstype=quicklz';
+SET
+Alter table ao_rl_cl_t1 add column m int default 5;
+ALTER TABLE
+\d+ ao_rl_cl_t1;
+        Append-Only Table "public.ao_rl_cl_t1"
+ Column |  Type   | Modifiers | Storage | Description 
+--------+---------+-----------+---------+-------------
+ i      | integer |           | plain   | 
+ j      | integer |           | plain   | 
+ k      | integer | default 2 | plain   | 
+ l      | integer | default 3 | plain   | 
+ m      | integer | default 5 | plain   | 
+Compression Type: zlib
+Compression Level: 1
+Block Size: 32768
+Checksum: t
+Indexes:
+    "ap_t1_ix" btree (i)
+Has OIDs: no
+Options: appendonly=true, compresstype=zlib
+Distributed by: (i)
+
+select relkind, relstorage, reloptions from pg_class where relname='ao_rl_cl_t1';
+ relkind | relstorage |             reloptions              
+---------+------------+-------------------------------------
+ r       | a          | {appendonly=true,compresstype=zlib}
+(1 row)
+
+select compresslevel, compresstype, blocksize, checksum, columnstore from pg_appendonly where relid = (select oid from pg_class where relname='ao_rl_cl_t1');
+ compresslevel | compresstype | blocksize | checksum | columnstore 
+---------------+--------------+-----------+----------+-------------
+             1 | zlib         |     32768 | t        | f
+(1 row)
+
+RESET gp_default_storage_options;
+RESET
+show gp_default_storage_options;
+                                   gp_default_storage_options                                    
+-------------------------------------------------------------------------------------------------
+ appendonly=true,blocksize=32768,compresstype=zlib,compresslevel=1,checksum=true,orientation=row
+(1 row)
+
+Drop table ao_rl_cl_t1;
+DROP TABLE
+-- Create table with compresstype=quicklz
+Drop table if exists ao_rl_cl_t2;
+psql:/path/sql_file:1: NOTICE:  table "ao_rl_cl_t2" does not exist, skipping
+DROP TABLE
+Create table ao_rl_cl_t2 ( i int, j int) with(compresstype=quicklz);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+Insert into ao_rl_cl_t2 select i, i+1 from generate_series(1,10) i;
+INSERT 0 10
+Select count(*) from ao_rl_cl_t2;
+ count 
+-------
+    10
+(1 row)
+
+\d+ ao_rl_cl_t2;
+        Append-Only Table "public.ao_rl_cl_t2"
+ Column |  Type   | Modifiers | Storage | Description 
+--------+---------+-----------+---------+-------------
+ i      | integer |           | plain   | 
+ j      | integer |           | plain   | 
+Compression Type: quicklz
+Compression Level: 1
+Block Size: 32768
+Checksum: t
+Has OIDs: no
+Options: compresstype=quicklz, appendonly=true
+Distributed by: (i)
+
+select relkind, relstorage, reloptions from pg_class where relname='ao_rl_cl_t2';
+ relkind | relstorage |               reloptions               
+---------+------------+----------------------------------------
+ r       | a          | {compresstype=quicklz,appendonly=true}
+(1 row)
+
+select compresslevel, compresstype, blocksize, checksum, columnstore from pg_appendonly where relid = (select oid from pg_class where relname='ao_rl_cl_t2');
+ compresslevel | compresstype | blocksize | checksum | columnstore 
+---------------+--------------+-----------+----------+-------------
+             1 | quicklz      |     32768 | t        | f
+(1 row)
+
+Drop table ao_rl_cl_t2;
+DROP TABLE
+-- Create table with rle_type, orientation=column
+Drop table if exists ao_rl_cl_t3;
+psql:/path/sql_file:1: NOTICE:  table "ao_rl_cl_t3" does not exist, skipping
+DROP TABLE
+Create table ao_rl_cl_t3 ( i int, j int) with(compresstype=rle_type, orientation=column);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+Insert into ao_rl_cl_t3 select i, i+1 from generate_series(1,10) i;
+INSERT 0 10
+Select count(*) from ao_rl_cl_t3;
+ count 
+-------
+    10
+(1 row)
+
+\d+ ao_rl_cl_t3;
+                             Append-Only Columnar Table "public.ao_rl_cl_t3"
+ Column |  Type   | Modifiers | Storage | Compression Type | Compression Level | Block Size | Description 
+--------+---------+-----------+---------+------------------+-------------------+------------+-------------
+ i      | integer |           | plain   | rle_type         | 1                 | 32768      | 
+ j      | integer |           | plain   | rle_type         | 1                 | 32768      | 
+Checksum: t
+Has OIDs: no
+Options: compresstype=rle_type, orientation=column, appendonly=true
+Distributed by: (i)
+
+select relkind, relstorage, reloptions from pg_class where relname='ao_rl_cl_t3';
+ relkind | relstorage |                         reloptions                         
+---------+------------+------------------------------------------------------------
+ r       | c          | {compresstype=rle_type,orientation=column,appendonly=true}
+(1 row)
+
+select compresslevel, compresstype, blocksize, checksum, columnstore from pg_appendonly where relid = (select oid from pg_class where relname='ao_rl_cl_t3');
+ compresslevel | compresstype | blocksize | checksum | columnstore 
+---------------+--------------+-----------+----------+-------------
+             1 | rle_type     |     32768 | t        | t
+(1 row)
+
+select attnum, attoptions from pg_attribute_encoding where attrelid='ao_rl_cl_t3'::regclass;
+ attnum |                       attoptions                        
+--------+---------------------------------------------------------
+      1 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+      2 | {compresstype=rle_type,compresslevel=1,blocksize=32768}
+(2 rows)
+
+Drop table ao_rl_cl_t3;
+DROP TABLE
+-- Create table with compresstype=zlib
+Drop table if exists ao_rl_cl_t6;
+psql:/path/sql_file:1: NOTICE:  table "ao_rl_cl_t6" does not exist, skipping
+DROP TABLE
+Create table ao_rl_cl_t6 ( i int, j int) with(compresstype=zlib);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+Insert into ao_rl_cl_t6 select i, i+1 from generate_series(1,10) i;
+INSERT 0 10
+Select count(*) from ao_rl_cl_t6;
+ count 
+-------
+    10
+(1 row)
+
+\d+ ao_rl_cl_t6;
+        Append-Only Table "public.ao_rl_cl_t6"
+ Column |  Type   | Modifiers | Storage | Description 
+--------+---------+-----------+---------+-------------
+ i      | integer |           | plain   | 
+ j      | integer |           | plain   | 
+Compression Type: zlib
+Compression Level: 1
+Block Size: 32768
+Checksum: t
+Has OIDs: no
+Options: compresstype=zlib, appendonly=true
+Distributed by: (i)
+
+select relkind, relstorage, reloptions from pg_class where relname='ao_rl_cl_t6';
+ relkind | relstorage |             reloptions              
+---------+------------+-------------------------------------
+ r       | a          | {compresstype=zlib,appendonly=true}
+(1 row)
+
+select compresslevel, compresstype, blocksize, checksum, columnstore from pg_appendonly where relid = (select oid from pg_class where relname='ao_rl_cl_t6');
+ compresslevel | compresstype | blocksize | checksum | columnstore 
+---------------+--------------+-----------+----------+-------------
+             1 | zlib         |     32768 | t        | f
+(1 row)
+
+Drop table ao_rl_cl_t6;
+DROP TABLE
+-- Create table with invalid value compresslevel=10
+Drop table if exists ao_rl_cl_t4;
+psql:/path/sql_file:1: NOTICE:  table "ao_rl_cl_t4" does not exist, skipping
+DROP TABLE
+Create table ao_rl_cl_t4 ( i int, j int) with(compresslevel=10);
+psql:/path/sql_file:1: ERROR:  compresslevel=10 is out of range (should be between 0 and 9)
+-- Create table with appendonly=false
+Drop table if exists ao_rl_cl_t4;
+psql:/path/sql_file:1: NOTICE:  table "ao_rl_cl_t4" does not exist, skipping
+DROP TABLE
+Create table ao_rl_cl_t4 ( i int, j int) with(appendonly=false);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+Insert into ao_rl_cl_t4 select i, i+1 from generate_series(1,10) i;
+INSERT 0 10
+Select count(*) from ao_rl_cl_t4;
+ count 
+-------
+    10
+(1 row)
+
+\d+ ao_rl_cl_t4;
+              Table "public.ao_rl_cl_t4"
+ Column |  Type   | Modifiers | Storage | Description 
+--------+---------+-----------+---------+-------------
+ i      | integer |           | plain   | 
+ j      | integer |           | plain   | 
+Has OIDs: no
+Options: appendonly=false
+Distributed by: (i)
+
+select relkind, relstorage, reloptions from pg_class where relname='ao_rl_cl_t4';
+ relkind | relstorage |     reloptions     
+---------+------------+--------------------
+ r       | h          | {appendonly=false}
+(1 row)
+
+Drop table ao_rl_cl_t4;
+DROP TABLE
+-- Create table with orientation and checksum
+Drop table if exists ao_rl_cl_t5;
+psql:/path/sql_file:1: NOTICE:  table "ao_rl_cl_t5" does not exist, skipping
+DROP TABLE
+Create table ao_rl_cl_t5 ( i int, j int) with(orientation=column, checksum=true);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+Insert into ao_rl_cl_t5 select i, i+1 from generate_series(1,10) i;
+INSERT 0 10
+Select count(*) from ao_rl_cl_t5;
+ count 
+-------
+    10
+(1 row)
+
+\d+ ao_rl_cl_t5
+                             Append-Only Columnar Table "public.ao_rl_cl_t5"
+ Column |  Type   | Modifiers | Storage | Compression Type | Compression Level | Block Size | Description 
+--------+---------+-----------+---------+------------------+-------------------+------------+-------------
+ i      | integer |           | plain   | zlib             | 1                 | 32768      | 
+ j      | integer |           | plain   | zlib             | 1                 | 32768      | 
+Checksum: t
+Has OIDs: no
+Options: orientation=column, checksum=true, appendonly=true, compresstype=zlib
+Distributed by: (i)
+
+select relkind, relstorage, reloptions from pg_class where relname='ao_rl_cl_t5';
+ relkind | relstorage |                              reloptions                              
+---------+------------+----------------------------------------------------------------------
+ r       | c          | {orientation=column,checksum=true,appendonly=true,compresstype=zlib}
+(1 row)
+
+select compresslevel, compresstype, blocksize, checksum, columnstore from pg_appendonly where relid = (select oid from pg_class where relname='ao_rl_cl_t5');
+ compresslevel | compresstype | blocksize | checksum | columnstore 
+---------------+--------------+-----------+----------+-------------
+             1 | zlib         |     32768 | t        | t
+(1 row)
+
+Drop table ao_rl_cl_t5;
+DROP TABLE
+-- Create table with compresstype in encoding clause, add new column with new compresslevel
+Drop table if exists ao_rl_cl_t7;
+psql:/path/sql_file:1: NOTICE:  table "ao_rl_cl_t7" does not exist, skipping
+DROP TABLE
+Create table ao_rl_cl_t7 ( i int, j int encoding(compresstype=quicklz)) with(orientation=column);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+Insert into ao_rl_cl_t7 select i, i+1 from generate_series(1,10) i;
+INSERT 0 10
+Select count(*) from ao_rl_cl_t7;
+ count 
+-------
+    10
+(1 row)
+
+\d+ ao_rl_cl_t7;
+                             Append-Only Columnar Table "public.ao_rl_cl_t7"
+ Column |  Type   | Modifiers | Storage | Compression Type | Compression Level | Block Size | Description 
+--------+---------+-----------+---------+------------------+-------------------+------------+-------------
+ i      | integer |           | plain   | zlib             | 1                 | 32768      | 
+ j      | integer |           | plain   | quicklz          | 1                 | 32768      | 
+Checksum: t
+Has OIDs: no
+Options: orientation=column, appendonly=true, compresstype=zlib
+Distributed by: (i)
+
+select relkind, relstorage, reloptions from pg_class where relname='ao_rl_cl_t7';
+ relkind | relstorage |                       reloptions                       
+---------+------------+--------------------------------------------------------
+ r       | c          | {orientation=column,appendonly=true,compresstype=zlib}
+(1 row)
+
+select compresslevel, compresstype, blocksize, checksum, columnstore from pg_appendonly where relid = (select oid from pg_class where relname='ao_rl_cl_t7');
+ compresslevel | compresstype | blocksize | checksum | columnstore 
+---------------+--------------+-----------+----------+-------------
+             1 | zlib         |     32768 | t        | t
+(1 row)
+
+select attnum, attoptions from pg_attribute_encoding where attrelid='ao_rl_cl_t7'::regclass;
+ attnum |                       attoptions                       
+--------+--------------------------------------------------------
+      1 | {compresstype=zlib,blocksize=32768,compresslevel=1}
+      2 | {compresstype=quicklz,compresslevel=1,blocksize=32768}
+(2 rows)
+
+Alter table ao_rl_cl_t7 add column k int default 3 encoding(compresstype=rle_type, compresslevel=3) ;
+ALTER TABLE
+Alter table ao_rl_cl_t7 add column l int default 2 encoding(compresslevel=5);
+ALTER TABLE
+\d+ ao_rl_cl_t7;
+                             Append-Only Columnar Table "public.ao_rl_cl_t7"
+ Column |  Type   | Modifiers | Storage | Compression Type | Compression Level | Block Size | Description 
+--------+---------+-----------+---------+------------------+-------------------+------------+-------------
+ i      | integer |           | plain   | zlib             | 1                 | 32768      | 
+ j      | integer |           | plain   | quicklz          | 1                 | 32768      | 
+ k      | integer | default 3 | plain   | rle_type         | 3                 | 32768      | 
+ l      | integer | default 2 | plain   | zlib             | 5                 | 32768      | 
+Checksum: t
+Has OIDs: no
+Options: orientation=column, appendonly=true, compresstype=zlib
+Distributed by: (i)
+
+select relkind, relstorage, reloptions from pg_class where relname='ao_rl_cl_t7';
+ relkind | relstorage |                       reloptions                       
+---------+------------+--------------------------------------------------------
+ r       | c          | {orientation=column,appendonly=true,compresstype=zlib}
+(1 row)
+
+select compresslevel, compresstype, blocksize, checksum, columnstore from pg_appendonly where relid = (select oid from pg_class where relname='ao_rl_cl_t7');
+ compresslevel | compresstype | blocksize | checksum | columnstore 
+---------------+--------------+-----------+----------+-------------
+             1 | zlib         |     32768 | t        | t
+(1 row)
+
+select attnum, attoptions from pg_attribute_encoding where attrelid='ao_rl_cl_t7'::regclass;
+ attnum |                       attoptions                        
+--------+---------------------------------------------------------
+      1 | {compresstype=zlib,blocksize=32768,compresslevel=1}
+      2 | {compresstype=quicklz,compresslevel=1,blocksize=32768}
+      3 | {compresstype=rle_type,compresslevel=3,blocksize=32768}
+      4 | {compresslevel=5,compresstype=zlib,blocksize=32768}
+(4 rows)
+
+Drop table ao_rl_cl_t7;
+DROP TABLE
+-- ========================
+-- Guc with compresslevel = 2
+\c dsp_db2 dsp_role3
+You are now connected to database "dsp_db2" as user "dsp_role3".
+show gp_default_storage_options;
+                                   gp_default_storage_options                                    
+-------------------------------------------------------------------------------------------------
+ appendonly=true,blocksize=32768,compresstype=zlib,compresslevel=2,checksum=true,orientation=row
+(1 row)
+
+-- Create table with compresstype=quicklz
+Drop table if exists ao_rl_cl_t1;
+psql:/path/sql_file:1: NOTICE:  table "ao_rl_cl_t1" does not exist, skipping
+DROP TABLE
+Create table ao_rl_cl_t1 ( i int, j int) with(compresstype=quicklz);
+psql:/path/sql_file:1: ERROR:  compresslevel=2 is out of range for quicklz (should be 1)
+-- Guc with no appendonly=true specified
+\c dsp_db3 dsp_role4
+You are now connected to database "dsp_db3" as user "dsp_role4".
+show gp_default_storage_options;
+                                    gp_default_storage_options                                    
+--------------------------------------------------------------------------------------------------
+ appendonly=false,blocksize=32768,compresstype=zlib,compresslevel=1,checksum=true,orientation=row
+(1 row)
+
+-- With no option it will a heap table
+Drop table if exists ao_rl_cl_t1;
+psql:/path/sql_file:1: NOTICE:  table "ao_rl_cl_t1" does not exist, skipping
+DROP TABLE
+Create table ao_rl_cl_t1( i int, j int);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+Insert into ao_rl_cl_t1 select i, i+1 from generate_series(1,10) i;
+INSERT 0 10
+Select count(*) from ao_rl_cl_t1;
+ count 
+-------
+    10
+(1 row)
+
+\d+ ao_rl_cl_t1;
+              Table "public.ao_rl_cl_t1"
+ Column |  Type   | Modifiers | Storage | Description 
+--------+---------+-----------+---------+-------------
+ i      | integer |           | plain   | 
+ j      | integer |           | plain   | 
+Has OIDs: no
+Distributed by: (i)
+
+select relkind, relstorage,reloptions from pg_class where relname='ao_rl_cl_t1';
+ relkind | relstorage | reloptions 
+---------+------------+------------
+ r       | h          | 
+(1 row)
+
+Drop table ao_rl_cl_t1;
+DROP TABLE
+-- with appendonly=true specified the table will be created as AO table with compresslevel
+Drop table if exists ao_rl_cl_t2;
+psql:/path/sql_file:1: NOTICE:  table "ao_rl_cl_t2" does not exist, skipping
+DROP TABLE
+Create table ao_rl_cl_t2( i int, j int) with(appendonly=true);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+Insert into ao_rl_cl_t2 select i, i+1 from generate_series(1,10) i;
+INSERT 0 10
+Select count(*) from ao_rl_cl_t2;
+ count 
+-------
+    10
+(1 row)
+
+\d+ ao_rl_cl_t2;
+        Append-Only Table "public.ao_rl_cl_t2"
+ Column |  Type   | Modifiers | Storage | Description 
+--------+---------+-----------+---------+-------------
+ i      | integer |           | plain   | 
+ j      | integer |           | plain   | 
+Compression Type: zlib
+Compression Level: 1
+Block Size: 32768
+Checksum: t
+Has OIDs: no
+Options: appendonly=true, compresstype=zlib
+Distributed by: (i)
+
+select relkind, relstorage,reloptions from pg_class where relname='ao_rl_cl_t2';
+ relkind | relstorage |             reloptions              
+---------+------------+-------------------------------------
+ r       | a          | {appendonly=true,compresstype=zlib}
+(1 row)
+
+select compresslevel, compresstype, blocksize, checksum, columnstore from pg_appendonly where relid = (select oid from pg_class where relname='ao_rl_cl_t2');
+ compresslevel | compresstype | blocksize | checksum | columnstore 
+---------------+--------------+-----------+----------+-------------
+             1 | zlib         |     32768 | t        | f
+(1 row)
+
+Drop table ao_rl_cl_t2;
+DROP TABLE

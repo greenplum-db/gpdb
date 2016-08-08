@@ -1,0 +1,266 @@
+--
+-- CT AO Part Table 1
+--
+CREATE TABLE ct_ao_alter_table_alter_part1 (
+id int,
+rank int,
+year int,
+gender char(1),
+name text,
+count int ) 
+ with ( appendonly='true') DISTRIBUTED BY (id)
+PARTITION BY LIST (gender)
+SUBPARTITION BY RANGE (year)
+SUBPARTITION TEMPLATE (
+SUBPARTITION year1 START (2001),
+SUBPARTITION year2 START (2002),
+SUBPARTITION year6 START (2006) END (2007) )
+(PARTITION girls VALUES ('F'),
+PARTITION boys VALUES ('M') );
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part1_1_prt_girls" for table "ct_ao_alter_table_alter_part1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part1_1_prt_boys" for table "ct_ao_alter_table_alter_part1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part1_1_prt_girls_2_prt_year1" for table "ct_ao_alter_table_alter_part1_1_prt_girls"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part1_1_prt_girls_2_prt_year2" for table "ct_ao_alter_table_alter_part1_1_prt_girls"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part1_1_prt_girls_2_prt_year6" for table "ct_ao_alter_table_alter_part1_1_prt_girls"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part1_1_prt_boys_2_prt_year1" for table "ct_ao_alter_table_alter_part1_1_prt_boys"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part1_1_prt_boys_2_prt_year2" for table "ct_ao_alter_table_alter_part1_1_prt_boys"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part1_1_prt_boys_2_prt_year6" for table "ct_ao_alter_table_alter_part1_1_prt_boys"
+CREATE TABLE
+--
+-- Insert few records into the table
+--
+insert into ct_ao_alter_table_alter_part1 values (generate_series(1,10),1,2001,'F',6);
+INSERT 0 10
+--
+-- CT AO Part Table 2
+--
+CREATE TABLE ct_ao_alter_table_alter_part2 (
+id int,
+rank int,
+year int,
+gender char(1),
+name text,
+count int ) 
+ with ( appendonly='true') DISTRIBUTED BY (id)
+PARTITION BY LIST (gender)
+SUBPARTITION BY RANGE (year)
+SUBPARTITION TEMPLATE (
+SUBPARTITION year1 START (2001),
+SUBPARTITION year2 START (2002),
+SUBPARTITION year6 START (2006) END (2007) )
+(PARTITION girls VALUES ('F'),
+PARTITION boys VALUES ('M') );
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part2_1_prt_girls" for table "ct_ao_alter_table_alter_part2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part2_1_prt_boys" for table "ct_ao_alter_table_alter_part2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part2_1_prt_girls_2_prt_year1" for table "ct_ao_alter_table_alter_part2_1_prt_girls"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part2_1_prt_girls_2_prt_year2" for table "ct_ao_alter_table_alter_part2_1_prt_girls"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part2_1_prt_girls_2_prt_year6" for table "ct_ao_alter_table_alter_part2_1_prt_girls"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part2_1_prt_boys_2_prt_year1" for table "ct_ao_alter_table_alter_part2_1_prt_boys"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part2_1_prt_boys_2_prt_year2" for table "ct_ao_alter_table_alter_part2_1_prt_boys"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part2_1_prt_boys_2_prt_year6" for table "ct_ao_alter_table_alter_part2_1_prt_boys"
+CREATE TABLE
+--
+-- Insert few records into the table
+--
+insert into ct_ao_alter_table_alter_part2 values (generate_series(1,10),1,2001,'F',6);
+INSERT 0 10
+--
+-- CT AO Part Table 3
+--
+CREATE TABLE ct_ao_alter_table_alter_part3 (
+id int,
+rank int,
+year int,
+gender char(1),
+name text,
+count int ) 
+ with ( appendonly='true') DISTRIBUTED BY (id)
+PARTITION BY LIST (gender)
+SUBPARTITION BY RANGE (year)
+SUBPARTITION TEMPLATE (
+SUBPARTITION year1 START (2001),
+SUBPARTITION year2 START (2002),
+SUBPARTITION year6 START (2006) END (2007) )
+(PARTITION girls VALUES ('F'),
+PARTITION boys VALUES ('M') );
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part3_1_prt_girls" for table "ct_ao_alter_table_alter_part3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part3_1_prt_boys" for table "ct_ao_alter_table_alter_part3"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part3_1_prt_girls_2_prt_year1" for table "ct_ao_alter_table_alter_part3_1_prt_girls"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part3_1_prt_girls_2_prt_year2" for table "ct_ao_alter_table_alter_part3_1_prt_girls"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part3_1_prt_girls_2_prt_year6" for table "ct_ao_alter_table_alter_part3_1_prt_girls"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part3_1_prt_boys_2_prt_year1" for table "ct_ao_alter_table_alter_part3_1_prt_boys"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part3_1_prt_boys_2_prt_year2" for table "ct_ao_alter_table_alter_part3_1_prt_boys"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part3_1_prt_boys_2_prt_year6" for table "ct_ao_alter_table_alter_part3_1_prt_boys"
+CREATE TABLE
+--
+-- Insert few records into the table
+--
+insert into ct_ao_alter_table_alter_part3 values (generate_series(1,10),1,2001,'F',6);
+INSERT 0 10
+--
+-- CT AO Part Table 4
+--
+CREATE TABLE ct_ao_alter_table_alter_part4(
+id int,
+rank int,
+year int,
+gender char(1),
+name text,
+count int ) 
+ with ( appendonly='true') DISTRIBUTED BY (id)
+PARTITION BY LIST (gender)
+SUBPARTITION BY RANGE (year)
+SUBPARTITION TEMPLATE (
+SUBPARTITION year1 START (2001),
+SUBPARTITION year2 START (2002),
+SUBPARTITION year6 START (2006) END (2007) )
+(PARTITION girls VALUES ('F'),
+PARTITION boys VALUES ('M') );
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part4_1_prt_girls" for table "ct_ao_alter_table_alter_part4"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part4_1_prt_boys" for table "ct_ao_alter_table_alter_part4"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part4_1_prt_girls_2_prt_year1" for table "ct_ao_alter_table_alter_part4_1_prt_girls"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part4_1_prt_girls_2_prt_year2" for table "ct_ao_alter_table_alter_part4_1_prt_girls"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part4_1_prt_girls_2_prt_year6" for table "ct_ao_alter_table_alter_part4_1_prt_girls"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part4_1_prt_boys_2_prt_year1" for table "ct_ao_alter_table_alter_part4_1_prt_boys"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part4_1_prt_boys_2_prt_year2" for table "ct_ao_alter_table_alter_part4_1_prt_boys"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part4_1_prt_boys_2_prt_year6" for table "ct_ao_alter_table_alter_part4_1_prt_boys"
+CREATE TABLE
+--
+-- Insert few records into the table
+--
+insert into ct_ao_alter_table_alter_part4 values (generate_series(1,10),1,2001,'F',6);
+INSERT 0 10
+--
+-- CT AO Part Table 5
+--
+CREATE TABLE ct_ao_alter_table_alter_part5 (
+id int,
+rank int,
+year int,
+gender char(1),
+name text,
+count int ) 
+ with ( appendonly='true') DISTRIBUTED BY (id)
+PARTITION BY LIST (gender)
+SUBPARTITION BY RANGE (year)
+SUBPARTITION TEMPLATE (
+SUBPARTITION year1 START (2001),
+SUBPARTITION year2 START (2002),
+SUBPARTITION year6 START (2006) END (2007) )
+(PARTITION girls VALUES ('F'),
+PARTITION boys VALUES ('M') );
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part5_1_prt_girls" for table "ct_ao_alter_table_alter_part5"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part5_1_prt_boys" for table "ct_ao_alter_table_alter_part5"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part5_1_prt_girls_2_prt_year1" for table "ct_ao_alter_table_alter_part5_1_prt_girls"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part5_1_prt_girls_2_prt_year2" for table "ct_ao_alter_table_alter_part5_1_prt_girls"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part5_1_prt_girls_2_prt_year6" for table "ct_ao_alter_table_alter_part5_1_prt_girls"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part5_1_prt_boys_2_prt_year1" for table "ct_ao_alter_table_alter_part5_1_prt_boys"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part5_1_prt_boys_2_prt_year2" for table "ct_ao_alter_table_alter_part5_1_prt_boys"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part5_1_prt_boys_2_prt_year6" for table "ct_ao_alter_table_alter_part5_1_prt_boys"
+CREATE TABLE
+--
+-- Insert few records into the table
+--
+insert into ct_ao_alter_table_alter_part5 values (generate_series(1,10),1,2001,'F',6);
+INSERT 0 10
+--
+--
+--ALTER TABLE TO ALTER PART
+--
+--
+--
+-- ALTER SYNC1 AO Part ALTER TABLE TO ALTER PARTITION
+--
+--
+-- Add Default partition for girls
+--
+alter table sync1_ao_alter_table_alter_part4 alter partition girls add default partition gfuture;
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync1_ao_alter_table_alter_part4_1_prt_girls_2_prt_gfuture" for table "sync1_ao_alter_table_alter_part4_1_prt_girls"
+ALTER TABLE
+--
+-- Add Default partition for boys
+--
+alter table sync1_ao_alter_table_alter_part4 alter partition boys add default partition bfuture;
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync1_ao_alter_table_alter_part4_1_prt_boys_2_prt_bfuture" for table "sync1_ao_alter_table_alter_part4_1_prt_boys"
+ALTER TABLE
+select count(*) from sync1_ao_alter_table_alter_part4;
+ count 
+-------
+    10
+(1 row)
+
+--
+-- Insert few records into the table
+--
+insert into sync1_ao_alter_table_alter_part4 values (generate_series(1,10),1,2001,'F',6);
+INSERT 0 10
+select count(*) from sync1_ao_alter_table_alter_part4;
+ count 
+-------
+    20
+(1 row)
+
+--
+-- ALTER CK_SYNC1 AO Part ALTER TABLE TO ALTER PARTITION
+--
+--
+-- Add Default partition for girls
+--
+alter table ck_sync1_ao_alter_table_alter_part3 alter partition girls add default partition gfuture;
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_table_alter_part3_1_prt_girls_2_prt_gfuture" for table "ck_sync1_ao_alter_table_alter_part3_1_prt_girls"
+ALTER TABLE
+--
+-- Add Default partition for boys
+--
+alter table ck_sync1_ao_alter_table_alter_part3 alter partition boys add default partition bfuture;
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ck_sync1_ao_alter_table_alter_part3_1_prt_boys_2_prt_bfuture" for table "ck_sync1_ao_alter_table_alter_part3_1_prt_boys"
+ALTER TABLE
+select count(*) from ck_sync1_ao_alter_table_alter_part3;
+ count 
+-------
+    10
+(1 row)
+
+--
+-- Insert few records into the table
+--
+insert into ck_sync1_ao_alter_table_alter_part3 values (generate_series(1,10),1,2001,'F',6);
+INSERT 0 10
+select count(*) from ck_sync1_ao_alter_table_alter_part3;
+ count 
+-------
+    20
+(1 row)
+
+--
+-- ALTER CT AO Part ALTER TABLE TO ALTER PARTITION
+--
+--
+-- Add Default partition for girls
+--
+alter table ct_ao_alter_table_alter_part1 alter partition girls add default partition gfuture;
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part1_1_prt_girls_2_prt_gfuture" for table "ct_ao_alter_table_alter_part1_1_prt_girls"
+ALTER TABLE
+--
+-- Add Default partition for boys
+--
+alter table ct_ao_alter_table_alter_part1 alter partition boys add default partition bfuture;
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "ct_ao_alter_table_alter_part1_1_prt_boys_2_prt_bfuture" for table "ct_ao_alter_table_alter_part1_1_prt_boys"
+ALTER TABLE
+select count(*) from ct_ao_alter_table_alter_part1;
+ count 
+-------
+    10
+(1 row)
+
+--
+-- Insert few records into the table
+--
+insert into ct_ao_alter_table_alter_part1 values (generate_series(1,10),1,2001,'F',6);
+INSERT 0 10
+select count(*) from ct_ao_alter_table_alter_part1;
+ count 
+-------
+    20
+(1 row)
+

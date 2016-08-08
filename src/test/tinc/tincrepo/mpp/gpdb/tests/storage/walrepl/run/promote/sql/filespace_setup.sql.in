@@ -1,0 +1,7 @@
+CREATE FILESPACE fspc();
+
+CREATE TABLESPACE tspc FILESPACE fspc;
+
+CREATE TABLE fspc_table(a int, b text) TABLESPACE tspc;
+
+INSERT INTO fspc_table VALUES(1, 'foo'), (2, 'bar');

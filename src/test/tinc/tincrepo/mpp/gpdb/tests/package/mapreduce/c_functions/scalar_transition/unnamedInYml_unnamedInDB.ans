@@ -1,0 +1,20 @@
+-- start_matchsubs
+-- m/mapreduce_\d+_/
+-- s/mapreduce_\d+/mapreduce_DUMMY/
+-- m/\(\w+.\w+:[0-9]+\)$/
+-- s/\(\w+.\w+:[0-9]+\)$/\(file:line\)/
+-- end_matchsubs
+WARNING: unset parameter - reducer(state => NULL)
+mapreduce_10425_run_1
+ m|value|retval
+--+-----+------
+ 1|   10|     0
+ 2|   20|     0
+ 2|   21|     0
+ 2|   22|     0
+ 3|   30|     0
+ 4|   40|     0
+ 5|   50|     0
+10|  100|     0
+(8 rows)
+

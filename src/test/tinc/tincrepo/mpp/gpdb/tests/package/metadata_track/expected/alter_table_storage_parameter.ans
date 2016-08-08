@@ -1,0 +1,57 @@
+-- start_ignore
+SET optimizer=off;
+SET
+-- end_ignore
+--SET & RESET ( storage_parameter = value , ... )
+          CREATE TABLE mdt_table_set_storage_parameters (
+          text_col text,
+          bigint_col bigint,
+          char_vary_col character varying(30),
+          numeric_col numeric
+          ) with (APPENDONLY=TRUE) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+          ALTER TABLE mdt_table_set_storage_parameters SET WITH (COMPRESSLEVEL= 5);
+psql:/path/sql_file:1: ERROR:  option "compresslevel" not supported
+          CREATE TABLE mdt_table_set_storage_parameters1 (
+          text_col text,
+          bigint_col bigint,
+          char_vary_col character varying(30),
+          numeric_col numeric
+          ) with (APPENDONLY=TRUE) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+          ALTER TABLE mdt_table_set_storage_parameters1 SET WITH (FILLFACTOR=50);
+psql:/path/sql_file:1: ERROR:  option "fillfactor" not supported
+          CREATE TABLE mdt_table_set_storage_parameters2 (
+          text_col text,
+          bigint_col bigint,
+          char_vary_col character varying(30),
+          numeric_col numeric
+          ) with (APPENDONLY=TRUE) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+          ALTER TABLE mdt_table_set_storage_parameters2 SET WITH (FILLFACTOR=50);
+psql:/path/sql_file:1: ERROR:  option "fillfactor" not supported
+          ALTER TABLE mdt_table_set_storage_parameters2 RESET (FILLFACTOR);
+psql:/path/sql_file:1: ERROR:  altering reloptions for append only tables is not permitted
+select classname  , schemaname , objname  , usestatus , usename , actionname , subtype from pg_stat_operations  where statime > ( select statime from pg_stat_operations where objname ='my_first_table' and actionname ='CREATE') and objname  not in ('pg_stat_operations','pg_stat_partition_operations') order by statime;
+  classname  | schemaname |              objname              | usestatus | usename  | actionname | subtype  
+-------------+------------+-----------------------------------+-----------+----------+------------+----------
+ pg_authid   |            | mdt_user                          | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_database |            | mdt_db                            | CURRENT   | mdt_user | CREATE     | DATABASE
+ pg_class    | public     | mdt_table_set_storage_parameters  | CURRENT   | gpadmin  | CREATE     | TABLE
+ pg_class    | public     | mdt_table_set_storage_parameters1 | CURRENT   | gpadmin  | CREATE     | TABLE
+ pg_class    | public     | mdt_table_set_storage_parameters2 | CURRENT   | gpadmin  | CREATE     | TABLE
+(5 rows)
+
+drop table mdt_table_set_storage_parameters;
+DROP TABLE
+drop table mdt_table_set_storage_parameters1;
+DROP TABLE
+drop table mdt_table_set_storage_parameters2;
+DROP TABLE
+select classname  , schemaname , objname  , usestatus , usename , actionname , subtype from pg_stat_operations  where statime > ( select statime from pg_stat_operations where objname ='my_first_table' and actionname ='CREATE') and objname  not in ('pg_stat_operations','pg_stat_partition_operations') order by statime;
+  classname  | schemaname | objname  | usestatus | usename  | actionname | subtype  
+-------------+------------+----------+-----------+----------+------------+----------
+ pg_authid   |            | mdt_user | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_database |            | mdt_db   | CURRENT   | mdt_user | CREATE     | DATABASE
+(2 rows)
+

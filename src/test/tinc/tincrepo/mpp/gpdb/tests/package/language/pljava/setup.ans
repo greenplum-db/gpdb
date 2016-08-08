@@ -1,0 +1,4 @@
+\! gpconfig -c custom_variable_classes -v 'pljava'
+20140924:10:18:42:027427 gpconfig:rh55-qavm61:gpadmin-[INFO]:-completed successfully
+\! gpconfig -c pljava_classpath -v \'examples.jar\'
+20140924:10:18:48:027840 gpconfig:rh55-qavm61:gpadmin-[INFO]:-completed successfully

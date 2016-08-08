@@ -1,0 +1,65 @@
+-- start_matchsubs
+-- m/mapreduce_\d+_/
+-- s/mapreduce_\d+/mapreduce_DUMMY/
+-- m/\(\w+.\w+:[0-9]+\)$/
+-- s/\(\w+.\w+:[0-9]+\)$/\(file:line\)/
+-- end_matchsubs
+mapreduce_18478_run_1
+mapreduce_18478_run_2
+mapreduce_18478_run_3
+mapreduce_18478_run_4
+mapreduce_18478_run_5
+ m|value
+--+-----
+ 1|   10
+ 2|   20
+ 3|   30
+ 4|   40
+ 5|   50
+10|  100
+(6 rows)
+
+ m|value
+--+-----
+ 1|   10
+ 2|   22
+ 3|   30
+ 4|   40
+ 5|   50
+10|  100
+(6 rows)
+
+ m|value
+--+-----
+ 1|   10
+ 2|   21
+ 3|   30
+ 4|   40
+ 5|   50
+10|  100
+(6 rows)
+
+ m|value
+--+-----
+ 1|    1
+ 2|    4
+ 3|    1
+ 4|    1
+ 5|    2
+10|    1
+(6 rows)
+
+ m|value
+--+-----
+ 1|   10
+ 2|   20
+ 2|   21
+ 2|   21
+ 2|   22
+ 3|   30
+ 4|   40
+ 5|   50
+ 5|   50
+10|  100
+(10 rows)
+

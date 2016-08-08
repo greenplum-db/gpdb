@@ -1,0 +1,33 @@
+--start_ignore
+DROP DATABASE sto_db1;
+psql:/path/sql_file:1: ERROR:  database "sto_db1" does not exist
+--end_ignore
+CREATE DATABASE sto_db1;
+CREATE DATABASE
+\c sto_db1
+You are now connected to database "sto_db1" as user "sivand".
+CREATE TABLE sto_db_tb1 (
+  text_col text,
+  bigint_col bigint,
+  char_vary_col character varying(30),
+  numeric_col numeric
+  ) with(appendonly= true) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+insert into sto_db_tb1 values ('0_zero', 0, '0_zero', 0);
+INSERT 0 1
+select * from sto_db_tb1;
+ text_col | bigint_col | char_vary_col | numeric_col 
+----------+------------+---------------+-------------
+ 0_zero   |          0 | 0_zero        |           0
+(1 row)
+
+\c template1
+You are now connected to database "template1" as user "sivand".
+select current_database();
+ current_database 
+------------------
+ template1
+(1 row)
+
+DROP DATABASE sto_db1;
+DROP DATABASE

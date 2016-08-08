@@ -1,0 +1,38 @@
+-- @Description Tests that a delete operation in progress will block all other deletes
+-- until the transaction is committed.
+-- 
+
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+2: DELETE FROM ao WHERE a = 1;
+DELETE 1
+2: SELECT * FROM locktest WHERE coalesce = 'ao';
+coalesce|mode               |locktype                
+--------+-------------------+------------------------
+ao      |AccessExclusiveLock|append-only segment file
+ao      |ExclusiveLock      |relation                
+(2 rows)
+1&: DELETE FROM ao WHERE a = 2;  <waiting ...>
+2: COMMIT;
+COMMIT
+1<:  <... completed>
+DELETE 1
+1: COMMIT;
+COMMIT
+3: BEGIN;
+BEGIN
+3: SELECT * FROM ao WHERE a < 5 ORDER BY a;
+a
+-
+3
+4
+(2 rows)
+3: COMMIT;
+COMMIT
+2U: SELECT * FROM gp_aovisimap_name('ao');
+tid             |segno|row_num
+----------------+-----+-------
+(33554432,32769)|1    |1      
+(1 row)

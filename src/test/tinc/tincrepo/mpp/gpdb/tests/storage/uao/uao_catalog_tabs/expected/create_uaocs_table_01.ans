@@ -1,0 +1,19 @@
+drop table if exists uaocs_tab_test1;
+NOTICE:  table "uaocs_tab_test1" does not exist, skipping
+DROP TABLE
+drop table if exists uaocs_tab_test2;
+NOTICE:  table "uaocs_tab_test2" does not exist, skipping
+DROP TABLE
+drop table if exists uaocs_tab_test3;
+NOTICE:  table "uaocs_tab_test3" does not exist, skipping
+DROP TABLE
+create table uaocs_tab_test1 (i int, j varchar(20), k int ) with (appendonly=true, orientation=column) DISTRIBUTED BY (i);
+CREATE TABLE
+create table uaocs_tab_test2 (i int, j varchar(20), k int ) with (appendonly=true, orientation=column) DISTRIBUTED BY (i);
+CREATE TABLE
+create table uaocs_tab_test3 (i int, j varchar(20) ) with (appendonly=true, orientation=column) DISTRIBUTED BY (i);
+CREATE TABLE
+insert into uaocs_tab_test1 values(1,'test',2);
+INSERT 0 1
+insert into uaocs_tab_test2 values(1,'test',4);
+INSERT 0 1

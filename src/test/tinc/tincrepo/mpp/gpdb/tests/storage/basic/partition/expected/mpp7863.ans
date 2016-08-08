@@ -1,0 +1,88 @@
+CREATE TABLE mpp7863 (id int, dat char(8))
+DISTRIBUTED BY (id)
+PARTITION BY RANGE (dat)
+( PARTITION Oct09 START (200910) INCLUSIVE END (200911) EXCLUSIVE ,
+PARTITION Nov09 START (200911) INCLUSIVE END (200912) EXCLUSIVE ,
+PARTITION Dec09 START (200912) INCLUSIVE END (201001) EXCLUSIVE ,
+DEFAULT PARTITION extra);
+NOTICE:  CREATE TABLE will create partition "mpp7863_1_prt_extra" for table "mpp7863"
+NOTICE:  CREATE TABLE will create partition "mpp7863_1_prt_oct09" for table "mpp7863"
+NOTICE:  CREATE TABLE will create partition "mpp7863_1_prt_nov09" for table "mpp7863"
+NOTICE:  CREATE TABLE will create partition "mpp7863_1_prt_dec09" for table "mpp7863"
+CREATE TABLE
+insert into mpp7863 values(generate_series(1,100),'200910');
+INSERT 0 100
+insert into mpp7863 values(generate_series(101,200),'200911');
+INSERT 0 100
+insert into mpp7863 values(generate_series(201,300),'200912');
+INSERT 0 100
+insert into mpp7863 values(generate_series(301,300300),'');
+INSERT 0 300000
+insert into mpp7863 (id) values(generate_series(300301,600300));
+INSERT 0 300000
+insert into mpp7863 values(generate_series(600301,600400),'201001');
+INSERT 0 100
+select count(*) from mpp7863_1_prt_extra;
+ count  
+--------
+ 600100
+(1 row)
+
+select count(*) from mpp7863_1_prt_extra where dat is null;
+ count  
+--------
+ 300000
+(1 row)
+
+select count(*) from mpp7863_1_prt_extra where dat ='';
+ count  
+--------
+ 300000
+(1 row)
+
+select count(*) from mpp7863;
+ count  
+--------
+ 600400
+(1 row)
+
+alter table mpp7863 split default partition start (201001) inclusive end (201002) exclusive into (partition jan10,default partition);
+NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+NOTICE:  exchanged partition "extra" of relation "mpp7863" with relation "pg_temp_17362"
+NOTICE:  dropped partition "extra" for relation "mpp7863"
+NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+NOTICE:  CREATE TABLE will create partition "mpp7863_1_prt_jan10" for table "mpp7863"
+NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+NOTICE:  CREATE TABLE will create partition "mpp7863_1_prt_extra" for table "mpp7863"
+ALTER TABLE
+select count(*) from mpp7863_1_prt_extra where dat is null;
+ count  
+--------
+ 300000
+(1 row)
+
+select count(*) from mpp7863_1_prt_extra where dat ='';
+ count  
+--------
+ 300000
+(1 row)
+
+select count(*) from mpp7863_1_prt_extra;
+ count  
+--------
+ 600000
+(1 row)
+
+select dat,count(*) from mpp7863 group by 1 order by 2,1;
+   dat    | count  
+----------+--------
+ 200910   |    100
+ 200911   |    100
+ 200912   |    100
+ 201001   |    100
+          | 300000
+          | 300000
+(6 rows)
+
+drop table mpp7863;
+DROP TABLE

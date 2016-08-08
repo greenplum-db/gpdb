@@ -1,0 +1,21 @@
+-- start_ignore
+-- end_ignore
+drop language if exists plpythonu;
+psql:/path/sql_file:1: NOTICE:  language "plpythonu" does not exist, skipping
+DROP LANGUAGE
+create language plpythonu;
+CREATE LANGUAGE
+select count(foo.*) 
+from (
+      select oid, lanname, lanplcallfoid, lanvalidator
+      from pg_language
+      where lanname='plpythonu'
+      union
+      select oid, lanname, lanplcallfoid, lanvalidator
+      from gp_dist_random('pg_language')
+      where lanname='plpythonu' ) foo;
+ count 
+-------
+     1
+(1 row)
+

@@ -1,0 +1,7 @@
+-- start_ignore
+select * from pg_exttable;
+ reloid | location | command | fmttype | fmtopts 
+--------+----------+---------+---------+---------
+(0 rows)
+
+-- end_ignore

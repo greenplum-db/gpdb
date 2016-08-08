@@ -1,0 +1,192 @@
+-- start_ignore
+-- end_ignore
+DROP EXTERNAL TABLE IF EXISTS exttab_limit_1 cascade;
+psql:/path/sql_file:1: NOTICE:  table "exttab_limit_1" does not exist, skipping
+DROP EXTERNAL TABLE
+DROP EXTERNAL TABLE IF EXISTS exttab_limit_2 cascade;
+psql:/path/sql_file:1: NOTICE:  table "exttab_limit_2" does not exist, skipping
+DROP EXTERNAL TABLE
+-- Generate the file with very few errors
+\! python /data/home/gpadmin/pramod/workspace/tincrepo/main/mpp/gpdb/tests/queries/basic/exttab/errlog/sql/datagen.py 10 2 > /data/home/gpadmin/pramod/workspace/tincrepo/main/mpp/gpdb/tests/queries/basic/exttab/errlog/data//exttab_limit_1.tbl
+-- does not reach reject limit
+CREATE EXTERNAL TABLE exttab_limit_1( i int, j text ) 
+LOCATION ('gpfdist://localhost:8080/exttab_limit_1.tbl') FORMAT 'TEXT' (DELIMITER '|') 
+LOG ERRORS SEGMENT REJECT LIMIT 10;
+CREATE EXTERNAL TABLE
+-- Generate the file with lot of errors
+\! python /data/home/gpadmin/pramod/workspace/tincrepo/main/mpp/gpdb/tests/queries/basic/exttab/errlog/sql/datagen.py 200 50 > /data/home/gpadmin/pramod/workspace/tincrepo/main/mpp/gpdb/tests/queries/basic/exttab/errlog/data//exttab_limit_2.tbl
+-- reaches reject limit, use the same err table
+CREATE EXTERNAL TABLE exttab_limit_2( i int, j text ) 
+LOCATION ('gpfdist://localhost:8080/exttab_limit_2.tbl') FORMAT 'TEXT' (DELIMITER '|') 
+LOG ERRORS SEGMENT REJECT LIMIT 2;
+CREATE EXTERNAL TABLE
+-- Test: LIMIT queries without segment reject limit reached
+-- Note that even though we use exttab_limit_2 here , the LIMIT 3 will not throw a segment reject limit error
+-- order 0
+with cte1 as 
+(
+SELECT e1.i, e2.j FROM exttab_limit_1 e1, exttab_limit_1 e2
+WHERE e1.i = e2.i LIMIT 5
+)
+SELECT * FROM cte1, exttab_limit_2 e3 where cte1.i = e3.i LIMIT 3;
+psql:/path/sql_file:1: ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg1 slice5 rh55-qa03.sanmateo.greenplum.com:42001 pid=21654)
+DETAIL:  External table exttab_limit_2, line 6 of gpfdist://localhost:8080/exttab_limit_2.tbl: "error_1"
+SELECT count(*) FROM gp_read_error_log('exttab_limit_1');
+ count 
+-------
+     4
+(1 row)
+
+SELECT gp_truncate_error_log('exttab_limit_1');
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+
+SELECT gp_truncate_error_log('exttab_limit_2');
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+
+-- Note that even though we use exttab_limit_2 here , the LIMIT 3 will not throw a segment reject limit error
+SELECT * FROM
+(
+(SELECT * FROM exttab_limit_1 LIMIT 3)
+UNION
+(SELECT * FROM exttab_limit_1 LIMIT 3)
+UNION
+(SELECT * FROM exttab_limit_1 LIMIT 3)
+UNION
+(SELECT * FROM exttab_limit_1 LIMIT 3)
+UNION
+(SELECT * FROM exttab_limit_1 LIMIT 5)
+UNION
+(SELECT * FROM exttab_limit_2 LIMIT 3)
+UNION
+(SELECT * FROM exttab_limit_2 LIMIT 3)
+UNION
+(SELECT * FROM exttab_limit_2 LIMIT 3)
+) FOO
+LIMIT 5;
+psql:/path/sql_file:1: NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
+ i |    j     
+---+----------
+ 1 | 1_number
+ 6 | 6_number
+ 5 | 5_number
+ 4 | 4_number
+ 0 | 0_number
+(5 rows)
+
+SELECT COUNT(*) > 0 FROM gp_read_error_log('exttab_limit_1');
+ ?column? 
+----------
+ t
+(1 row)
+
+SELECT COUNT(*) > 0 FROM gp_read_error_log('exttab_limit_2');
+ ?column? 
+----------
+ t
+(1 row)
+
+-- Test: LIMIT queries with segment reject limit reached
+SELECT gp_truncate_error_log('exttab_limit_1');
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+
+SELECT gp_truncate_error_log('exttab_limit_2');
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+
+-- order 0
+with cte1 as 
+(
+SELECT e1.i, e2.j FROM exttab_limit_1 e1, exttab_limit_1 e2
+WHERE e1.i = e2.i LIMIT 3
+)
+SELECT * FROM cte1, exttab_limit_2 e3 where cte1.i = e3.i LIMIT 5;
+psql:/path/sql_file:1: ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice5 rh55-qa03.sanmateo.greenplum.com:42000 pid=21652)
+DETAIL:  External table exttab_limit_2, line 6 of gpfdist://localhost:8080/exttab_limit_2.tbl: "error_1"
+SELECT count(*) > 0 FROM gp_read_error_log('exttab_limit_2');
+ ?column? 
+----------
+ t
+(1 row)
+
+SELECT gp_truncate_error_log('exttab_limit_1');
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+
+SELECT gp_truncate_error_log('exttab_limit_2');
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+
+SELECT * FROM
+(
+(SELECT * FROM exttab_limit_1 LIMIT 3)
+UNION
+(SELECT * FROM exttab_limit_1 LIMIT 3)
+UNION
+(SELECT * FROM exttab_limit_1 LIMIT 3)
+UNION
+(SELECT * FROM exttab_limit_1 LIMIT 3)
+UNION
+(SELECT * FROM exttab_limit_2 LIMIT 5)
+UNION
+(SELECT * FROM exttab_limit_2 LIMIT 5)
+UNION
+(SELECT * FROM exttab_limit_2 LIMIT 5)
+UNION
+(SELECT * FROM exttab_limit_2 LIMIT 5)
+) FOO
+LIMIT 5;
+psql:/path/sql_file:1: ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg1 slice17 rh55-qa03.sanmateo.greenplum.com:42001 pid=21850)
+DETAIL:  External table exttab_limit_2, line 6 of gpfdist://localhost:8080/exttab_limit_2.tbl: "error_1"
+SELECT count(*) > 0 FROM 
+(
+SELECT * FROM gp_read_error_log('exttab_limit_1')
+UNION ALL
+SELECT * FROM gp_read_error_log('exttab_limit_2')
+) FOO;
+ ?column? 
+----------
+ t
+(1 row)
+
+-- This query will materialize exttab_limit_2 completely even if LIMIT is just 3 and hence will throw segment reject limit reached
+SELECT gp_truncate_error_log('exttab_limit_1');
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+
+SELECT gp_truncate_error_log('exttab_limit_2');
+ gp_truncate_error_log 
+-----------------------
+ t
+(1 row)
+
+select * from exttab_limit_1 e1, exttab_limit_2 e2 where e1.i = e2.i LIMIT 3;
+psql:/path/sql_file:1: ERROR:  Segment reject limit reached. Aborting operation. Last error was: missing data for column "j"  (seg0 slice2 rh55-qa03.sanmateo.greenplum.com:42000 pid=21833)
+DETAIL:  External table exttab_limit_2, line 6 of gpfdist://localhost:8080/exttab_limit_2.tbl: "error_1"
+SELECT count(*) > 0 FROM 
+(
+SELECT * FROM gp_read_error_log('exttab_limit_1')
+UNION ALL
+SELECT * FROM gp_read_error_log('exttab_limit_2')
+) FOO;
+ ?column? 
+----------
+ t
+(1 row)
+

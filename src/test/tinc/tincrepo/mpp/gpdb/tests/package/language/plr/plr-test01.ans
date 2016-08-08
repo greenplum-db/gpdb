@@ -1,0 +1,933 @@
+-- start_ignore
+drop schema joeconway cascade;
+ERROR:  schema "joeconway" does not exist
+create schema joeconway;
+CREATE SCHEMA
+set search_path=joeconway,"$user",public;
+SET
+-- end_ignore
+select load_r_typenames();
+ load_r_typenames 
+------------------
+ OK
+(1 row)
+
+CREATE TABLE plr_modules (
+  modseq int4,
+  modsrc text
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'modseq' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+INSERT INTO plr_modules VALUES (0, 'pg.test.module.load <-function(msg) {print(msg)}');
+INSERT 0 1
+select reload_plr_modules();
+ reload_plr_modules 
+--------------------
+ OK
+(1 row)
+
+create or replace function pg_test_module_load(text) returns text as 'pg.test.module.load(arg1)' language 'plr';
+CREATE FUNCTION
+select pg_test_module_load('hello world');
+ERROR:  R interpreter expression evaluation error
+DETAIL:  Error in PLR121498 <- function(arg1) { : 
+  could not find function "pg.test.module.load"
+CONTEXT:  In PL/R function pg_test_module_load
+select install_rcmd('pg.test.install <-function(msg) {print(msg)}');
+ install_rcmd 
+--------------
+ OK
+(1 row)
+
+create or replace function pg_test_install(text) returns text as 'pg.test.install(arg1)' language 'plr';
+CREATE FUNCTION
+select pg_test_install('hello world');
+ pg_test_install 
+-----------------
+ hello world
+(1 row)
+
+create or replace function throw_notice(text) returns text as 'pg.thrownotice(arg1)' language 'plr';
+CREATE FUNCTION
+select throw_notice('hello');
+NOTICE:  hello
+ throw_notice 
+--------------
+ hello
+(1 row)
+
+create or replace function paste(_text,_text,text) returns text[] as 'paste(arg1,arg2, sep = arg3)' language 'plr';
+CREATE FUNCTION
+select paste('{hello, happy}','{world, birthday}',' ');
+              paste               
+----------------------------------
+ {"hello world","happy birthday"}
+(1 row)
+
+create or replace function vec(_float8) returns _float8 as 'arg1' language 'plr';
+CREATE FUNCTION
+select vec('{1.23, 1.32}'::float8[]);
+     vec     
+-------------
+ {1.23,1.32}
+(1 row)
+
+create or replace function vec(float, float) returns _float8 as 'c(arg1,arg2)' language 'plr';
+CREATE FUNCTION
+select vec(1.23, 1.32);
+     vec     
+-------------
+ {1.23,1.32}
+(1 row)
+
+create or replace function echo(text) returns text as 'print(arg1)' language 'plr';
+CREATE FUNCTION
+select echo('hello');
+ echo  
+-------
+ hello
+(1 row)
+
+create or replace function reval(text) returns text as 'eval(parse(text = arg1))' language 'plr';
+CREATE FUNCTION
+select reval('a <- sd(c(1,2,3)); b <- mean(c(1,2,3)); a + b');
+ reval 
+-------
+ 3
+(1 row)
+
+create or replace function "commandArgs"() returns text[] as '' language 'plr';
+CREATE FUNCTION
+select "commandArgs"();
+              commandArgs               
+----------------------------------------
+ {PL/R,--silent,--no-save,--no-restore}
+(1 row)
+
+create or replace function vec(float) returns text as 'c(arg1)' language 'plr';
+CREATE FUNCTION
+select vec(1.23);
+ vec  
+------
+ 1.23
+(1 row)
+
+create or replace function reval(_text) returns text as 'eval(parse(text = arg1))' language 'plr';
+CREATE FUNCTION
+select round(reval('{"sd(c(1.12,1.23,1.18,1.34))"}'::text[])::numeric,8);
+   round    
+------------
+ 0.09322911
+(1 row)
+
+create or replace function print(text) returns text as '' language 'plr';
+CREATE FUNCTION
+select print('hello');
+ print 
+-------
+ hello
+(1 row)
+
+create or replace function cube(int) returns float as 'sq <- function(x) {return(x * x)}; return(arg1 * sq(arg1))' language 'plr';
+ERROR:  syntax error at or near "("
+LINE 1: create or replace function cube(int) returns float as 'sq <-...
+                                       ^
+select cube(3);
+ERROR:  syntax error at or near "("
+LINE 1: select cube(3);
+                   ^
+create or replace function sd(_float8) returns float as 'sd(arg1)' language 'plr';
+CREATE FUNCTION
+select round(sd('{1.23,1.31,1.42,1.27}'::_float8)::numeric,8);
+   round    
+------------
+ 0.08180261
+(1 row)
+
+create or replace function sd(_float8) returns float as '' language 'plr';
+CREATE FUNCTION
+select round(sd('{1.23,1.31,1.42,1.27}'::_float8)::numeric,8);
+   round    
+------------
+ 0.08180261
+(1 row)
+
+create or replace function mean(_float8) returns float as '' language 'plr';
+CREATE FUNCTION
+select mean('{1.23,1.31,1.42,1.27}'::_float8);
+  mean  
+--------
+ 1.3075
+(1 row)
+
+create or replace function sprintf(text,text,text) returns text as 'sprintf(arg1,arg2,arg3)' language 'plr';
+CREATE FUNCTION
+select sprintf('%s is %s feet tall', 'Sven', '7');
+       sprintf       
+---------------------
+ Sven is 7 feet tall
+(1 row)
+
+create table foo(f0 int, f1 text, f2 float8) with oids;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f0' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+CREATE TABLE
+insert into foo values(1,'cat1',1.21);
+INSERT 121528 1
+insert into foo values(2,'cat1',1.24);
+INSERT 121528 1
+insert into foo values(3,'cat1',1.18);
+INSERT 121529 1
+insert into foo values(4,'cat1',1.26);
+INSERT 121529 1
+insert into foo values(5,'cat1',1.15);
+INSERT 121530 1
+insert into foo values(6,'cat2',1.15);
+INSERT 121530 1
+insert into foo values(7,'cat2',1.26);
+INSERT 121531 1
+insert into foo values(8,'cat2',1.32);
+INSERT 121531 1
+insert into foo values(9,'cat2',1.30);
+INSERT 121532 1
+create or replace function r_median(_float8) returns float as 'median(arg1)' language 'plr';
+CREATE FUNCTION
+select r_median('{1.23,1.31,1.42,1.27}'::_float8);
+ r_median 
+----------
+     1.29
+(1 row)
+
+CREATE AGGREGATE "median" (sfunc = plr_array_accum, basetype = float8, stype = _float8, finalfunc = r_median);
+CREATE AGGREGATE
+select f1, median(f2) from foo group by f1 order by f1;
+  f1  | median 
+------+--------
+ cat1 |   1.21
+ cat2 |   1.28
+(2 rows)
+
+create or replace function r_gamma(_float8) returns float as 'gamma(arg1)' language 'plr';
+CREATE FUNCTION
+select round(r_gamma('{1.23,1.31,1.42,1.27}'::_float8)::numeric,8);
+   round    
+------------
+ 0.91075486
+(1 row)
+
+create or replace function test_vt() returns text as 'array(1:10,c(2,5))' language 'plr';
+CREATE FUNCTION
+select test_vt();
+ test_vt 
+---------
+ 1
+(1 row)
+
+create or replace function test_vi() returns int as 'array(1:10,c(2,5))' language 'plr';
+CREATE FUNCTION
+select test_vi();
+ test_vi 
+---------
+       1
+(1 row)
+
+create or replace function test_mt() returns text as 'as.matrix(array(1:10,c(2,5)))' language 'plr';
+CREATE FUNCTION
+select test_mt();
+ test_mt 
+---------
+ 1
+(1 row)
+
+create or replace function test_mi() returns int as 'as.matrix(array(1:10,c(2,5)))' language 'plr';
+CREATE FUNCTION
+select test_mi();
+ test_mi 
+---------
+       1
+(1 row)
+
+create or replace function test_dt() returns text as 'as.data.frame(array(1:10,c(2,5)))[[1]]' language 'plr';
+CREATE FUNCTION
+select test_dt();
+ test_dt 
+---------
+ 1
+(1 row)
+
+create or replace function test_di() returns int as 'as.data.frame(array(1:10,c(2,5)))[[1]]' language 'plr';
+CREATE FUNCTION
+select test_di() as error;
+ error 
+-------
+     1
+(1 row)
+
+create or replace function test_vta() returns text[] as 'array(1:10,c(2,5))' language 'plr';
+CREATE FUNCTION
+select test_vta();
+          test_vta          
+----------------------------
+ {{1,3,5,7,9},{2,4,6,8,10}}
+(1 row)
+
+create or replace function test_via() returns int[] as 'array(1:10,c(2,5))' language 'plr';
+CREATE FUNCTION
+select test_via();
+          test_via          
+----------------------------
+ {{1,3,5,7,9},{2,4,6,8,10}}
+(1 row)
+
+create or replace function test_mta() returns text[] as 'as.matrix(array(1:10,c(2,5)))' language 'plr';
+CREATE FUNCTION
+select test_mta();
+          test_mta          
+----------------------------
+ {{1,3,5,7,9},{2,4,6,8,10}}
+(1 row)
+
+create or replace function test_mia() returns int[] as 'as.matrix(array(1:10,c(2,5)))' language 'plr';
+CREATE FUNCTION
+select test_mia();
+          test_mia          
+----------------------------
+ {{1,3,5,7,9},{2,4,6,8,10}}
+(1 row)
+
+create or replace function test_dia() returns int[] as 'as.data.frame(array(1:10,c(2,5)))' language 'plr';
+CREATE FUNCTION
+select test_dia();
+          test_dia          
+----------------------------
+ {{1,3,5,7,9},{2,4,6,8,10}}
+(1 row)
+
+create or replace function test_dta() returns text[] as 'as.data.frame(array(1:10,c(2,5)))' language 'plr';
+CREATE FUNCTION
+select test_dta();
+          test_dta          
+----------------------------
+ {{1,3,5,7,9},{2,4,6,8,10}}
+(1 row)
+
+create or replace function test_dta1() returns text[] as 'as.data.frame(array(letters[1:10], c(2,5)))' language 'plr';
+CREATE FUNCTION
+select test_dta1();
+         test_dta1         
+---------------------------
+ {{a,c,e,g,i},{b,d,f,h,j}}
+(1 row)
+
+create or replace function test_dta2() returns text[] as 'as.data.frame(data.frame(letters[1:10],1:10))' language 'plr';
+CREATE FUNCTION
+select test_dta2();
+                           test_dta2                            
+----------------------------------------------------------------
+ {{a,1},{b,2},{c,3},{d,4},{e,5},{f,6},{g,7},{h,8},{i,9},{j,10}}
+(1 row)
+
+create or replace function test_dia1() returns int[] as 'as.data.frame(array(letters[1:10], c(2,5)))' language 'plr';
+CREATE FUNCTION
+select test_dia1() as error;
+ERROR:  invalid input syntax for integer: "a"
+CONTEXT:  In PL/R function test_dia1
+create or replace function test_dtup() returns setof record as 'data.frame(letters[1:10],1:10)' language 'plr';
+CREATE FUNCTION
+select * from test_dtup() as t(f1 text, f2 int);
+ f1 | f2 
+----+----
+ a  |  1
+ b  |  2
+ c  |  3
+ d  |  4
+ e  |  5
+ f  |  6
+ g  |  7
+ h  |  8
+ i  |  9
+ j  | 10
+(10 rows)
+
+create or replace function test_mtup() returns setof record as 'as.matrix(array(1:15,c(5,3)))' language 'plr';
+CREATE FUNCTION
+select * from test_mtup() as t(f1 int, f2 int, f3 int);
+ f1 | f2 | f3 
+----+----+----
+  1 |  6 | 11
+  2 |  7 | 12
+  3 |  8 | 13
+  4 |  9 | 14
+  5 | 10 | 15
+(5 rows)
+
+create or replace function test_vtup() returns setof record as 'as.vector(array(1:15,c(5,3)))' language 'plr';
+CREATE FUNCTION
+select * from test_vtup() as t(f1 int);
+ f1 
+----
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+  9
+ 10
+ 11
+ 12
+ 13
+ 14
+ 15
+(15 rows)
+
+create or replace function test_vint() returns setof int as 'as.vector(array(1:15,c(5,3)))' language 'plr';
+CREATE FUNCTION
+select * from test_vint();
+ test_vint 
+-----------
+         1
+         2
+         3
+         4
+         5
+         6
+         7
+         8
+         9
+        10
+        11
+        12
+        13
+        14
+        15
+(15 rows)
+
+CREATE TYPE dtup AS (f1 text, f2 int);
+CREATE TYPE
+CREATE TYPE mtup AS (f1 int, f2 int, f3 int);
+CREATE TYPE
+CREATE TYPE vtup AS (f1 int);
+CREATE TYPE
+create or replace function test_dtup1() returns setof dtup as 'data.frame(letters[1:10],1:10)' language 'plr';
+CREATE FUNCTION
+select * from test_dtup1();
+ f1 | f2 
+----+----
+ a  |  1
+ b  |  2
+ c  |  3
+ d  |  4
+ e  |  5
+ f  |  6
+ g  |  7
+ h  |  8
+ i  |  9
+ j  | 10
+(10 rows)
+
+create or replace function test_dtup2() returns setof dtup as 'data.frame(c("c","qw","ax","h","k","ax","l","t","b","u"),1:10)' language 'plr';
+CREATE FUNCTION
+select * from test_dtup2();
+ f1 | f2 
+----+----
+ c  |  1
+ qw |  2
+ ax |  3
+ h  |  4
+ k  |  5
+ ax |  6
+ l  |  7
+ t  |  8
+ b  |  9
+ u  | 10
+(10 rows)
+
+create or replace function test_mtup1() returns setof mtup as 'as.matrix(array(1:15,c(5,3)))' language 'plr';
+CREATE FUNCTION
+select * from test_mtup1();
+ f1 | f2 | f3 
+----+----+----
+  1 |  6 | 11
+  2 |  7 | 12
+  3 |  8 | 13
+  4 |  9 | 14
+  5 | 10 | 15
+(5 rows)
+
+create or replace function test_vtup1() returns setof vtup as 'as.vector(array(1:15,c(5,3)))' language 'plr';
+CREATE FUNCTION
+select * from test_vtup1();
+ f1 
+----
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+  9
+ 10
+ 11
+ 12
+ 13
+ 14
+ 15
+(15 rows)
+
+create or replace function pg_quote_ident(text) returns text as 'pg.quoteident(arg1)' language 'plr';
+CREATE FUNCTION
+select pg_quote_ident('Hello World');
+ pg_quote_ident 
+----------------
+ "Hello World"
+(1 row)
+
+create or replace function pg_quote_literal(text) returns text as 'pg.quoteliteral(arg1)' language 'plr';
+CREATE FUNCTION
+select pg_quote_literal('Hello''World');
+ pg_quote_literal 
+------------------
+ 'Hello''World'
+(1 row)
+
+create or replace function test_spi_t(text) returns text as '(pg.spi.exec(arg1))[[1]]' language 'plr';
+CREATE FUNCTION
+select test_spi_t('select oid, typname from pg_type where typname = ''oid'' or typname = ''text''');
+ test_spi_t 
+------------
+ 25
+(1 row)
+
+create or replace function test_spi_ta(text) returns text[] as 'pg.spi.exec(arg1)' language 'plr';
+CREATE FUNCTION
+select test_spi_ta('select oid, typname from pg_type where typname = ''oid'' or typname = ''text''');
+     test_spi_ta      
+----------------------
+ {{25,text},{26,oid}}
+(1 row)
+
+create or replace function test_spi_tup(text) returns setof record as 'pg.spi.exec(arg1)' language 'plr';
+CREATE FUNCTION
+select * from test_spi_tup('select oid, typname from pg_type where typname = ''oid'' or typname = ''text''') as t(typeid oid, typename name);
+ typeid | typename 
+--------+----------
+     25 | text
+     26 | oid
+(2 rows)
+
+create or replace function fetch_pgoid(text) returns int as 'pg.reval(arg1)' language 'plr';
+CREATE FUNCTION
+select fetch_pgoid('BYTEAOID');
+ fetch_pgoid 
+-------------
+          17
+(1 row)
+
+create or replace function test_spi_prep(text) returns text as 'sp <<- pg.spi.prepare(arg1, c(NAMEOID, NAMEOID)); print("OK")' language 'plr';
+CREATE FUNCTION
+select test_spi_prep('select oid, typname from pg_type where typname = $1 or typname = $2');
+ test_spi_prep 
+---------------
+ OK
+(1 row)
+
+create or replace function test_spi_execp(text, text, text) returns setof record as 'pg.spi.execp(pg.reval(arg1), list(arg2,arg3))' language 'plr';
+CREATE FUNCTION
+select * from test_spi_execp('sp','oid','text') as t(typeid oid, typename name);
+ typeid | typename 
+--------+----------
+     25 | text
+     26 | oid
+(2 rows)
+
+create or replace function test_spi_lastoid(text) returns text as 'pg.spi.exec(arg1); pg.spi.lastoid()/pg.spi.lastoid()' language 'plr';
+CREATE FUNCTION
+select test_spi_lastoid('insert into foo values(10,''cat3'',3.333)') as "ONE";
+ ONE 
+-----
+ 1
+(1 row)
+
+CREATE OR REPLACE FUNCTION r_test (float8) RETURNS float8 AS 'arg1' LANGUAGE 'plr';
+CREATE FUNCTION
+select r_test(null) is null as "NULL";
+ NULL 
+------
+ t
+(1 row)
+
+CREATE OR REPLACE FUNCTION r_max (integer, integer) RETURNS integer AS 'if (is.null(arg1) && is.null(arg2)) return(NA);if (is.null(arg1)) return(arg2);if (is.null(arg2)) return(arg1);if (arg1 > arg2) return(arg1);arg2' LANGUAGE 'plr';
+CREATE FUNCTION
+select r_max(1,2) as "TWO";
+ TWO 
+-----
+   2
+(1 row)
+
+select r_max(null,2) as "TWO";
+ TWO 
+-----
+   2
+(1 row)
+
+select r_max(1,null) as "ONE";
+ ONE 
+-----
+   1
+(1 row)
+
+select r_max(null,null) is null as "NULL";
+ NULL 
+------
+ t
+(1 row)
+
+create or replace function get_foo(int) returns foo as 'select * from foo where f0 = $1' language 'sql';
+CREATE FUNCTION
+create or replace function test_foo(foo) returns foo as 'return(arg1)' language 'plr';
+CREATE FUNCTION
+select * from test_foo(get_foo(1));
+ f0 |  f1  |  f2  
+----+------+------
+  1 | cat1 | 1.21
+(1 row)
+
+create or replace function test_in_m_tup(_int4) returns setof record as 'arg1' language 'plr';
+CREATE FUNCTION
+select * from test_in_m_tup('{{1,3,5},{2,4,6}}') as t(f1 int, f2 int, f3 int);
+ f1 | f2 | f3 
+----+----+----
+  1 |  3 |  5
+  2 |  4 |  6
+(2 rows)
+
+create or replace function arr3d(_int4,int4,int4,int4) returns int4 as '
+if (arg2 < 1 || arg3 < 1 || arg4 < 1)
+  return(NA)
+if (arg2 > dim(arg1)[1] || arg3 > dim(arg1)[2] || arg4 > dim(arg1)[3])
+  return(NA)
+return(arg1[arg2,arg3,arg4])
+' language 'plr' WITH (isstrict);
+CREATE FUNCTION
+select arr3d('{{{111,112},{121,122},{131,132}},{{211,212},{221,222},{231,232}}}',2,3,1) as "231";
+ 231 
+-----
+ 231
+(1 row)
+
+select f1[2][3][1] as "231" from (select '{{{111,112},{121,122},{131,132}},{{211,212},{221,222},{231,232}}}'::int4[] as f1) as t;
+ 231 
+-----
+ 231
+(1 row)
+
+select arr3d('{{{111,112},{121,122},{131,132}},{{211,212},{221,222},{231,232}}}',1,4,1) is null as "NULL";
+ NULL 
+------
+ t
+(1 row)
+
+select f1[1][4][1] is null as "NULL" from (select '{{{111,112},{121,122},{131,132}},{{211,212},{221,222},{231,232}}}'::int4[] as f1) as t;
+ NULL 
+------
+ t
+(1 row)
+
+select arr3d('{{{111,112},{121,122},{131,132}},{{211,212},{221,222},{231,232}}}',0,1,1) is null as "NULL";
+ NULL 
+------
+ t
+(1 row)
+
+select f1[0][1][1] is null as "NULL" from (select '{{{111,112},{121,122},{131,132}},{{211,212},{221,222},{231,232}}}'::int4[] as f1) as t;
+ NULL 
+------
+ t
+(1 row)
+
+create or replace function arr3d(_int4) returns int4[] as 'return(arg1)' language 'plr' WITH (isstrict);
+CREATE FUNCTION
+select arr3d('{{{111,112},{121,122},{131,132}},{{211,212},{221,222},{231,232}}}');
+                               arr3d                               
+-------------------------------------------------------------------
+ {{{111,112},{121,122},{131,132}},{{211,212},{221,222},{231,232}}}
+(1 row)
+
+create or replace function rejectfoo() returns trigger as 'return(NULL)' language plr;
+CREATE FUNCTION
+create trigger footrig before insert or update or delete on foo for each row execute procedure rejectfoo();
+CREATE TRIGGER
+select count(*) from foo;
+ count 
+-------
+    10
+(1 row)
+
+insert into foo values(11,'cat99',1.89);
+INSERT 0 0
+select count(*) from foo;
+ count 
+-------
+    10
+(1 row)
+
+update foo set f1 = 'zzz';
+UPDATE 0
+select count(*) from foo;
+ count 
+-------
+    10
+(1 row)
+
+delete from foo;
+DELETE 0
+select count(*) from foo;
+ count 
+-------
+    10
+(1 row)
+
+drop trigger footrig on foo;
+DROP TRIGGER
+create or replace function acceptfoo() returns trigger as '
+switch (pg.tg.op, INSERT = return(pg.tg.new), UPDATE = return(pg.tg.new), DELETE = return(pg.tg.old))
+' language plr;
+CREATE FUNCTION
+create trigger footrig before insert or update or delete on foo for each row execute procedure acceptfoo();
+CREATE TRIGGER
+select count(*) from foo;
+ count 
+-------
+    10
+(1 row)
+
+insert into foo values(11,'cat99',1.89);
+INSERT 121627 1
+select count(*) from foo;
+ count 
+-------
+    11
+(1 row)
+
+update foo set f1 = 'zzz' where f0 = 11;
+UPDATE 1
+select * from foo where f0 = 11;
+ f0 | f1  |  f2  
+----+-----+------
+ 11 | zzz | 1.89
+(1 row)
+
+delete from foo where f0 = 11;
+DELETE 1
+select count(*) from foo;
+ count 
+-------
+    10
+(1 row)
+
+drop trigger footrig on foo;
+DROP TRIGGER
+create or replace function modfoo() returns trigger as '
+if (pg.tg.op == "INSERT")
+{
+  retval <- pg.tg.new
+  retval$f1 <- "xxx"
+}
+if (pg.tg.op == "UPDATE")
+{
+  retval <- pg.tg.new
+  retval$f1 <- "aaa"
+}
+if (pg.tg.op == "DELETE")
+  retval <- pg.tg.old
+return(retval)
+' language plr;
+CREATE FUNCTION
+create trigger footrig before insert or update or delete on foo for each row execute procedure modfoo();
+CREATE TRIGGER
+select count(*) from foo;
+ count 
+-------
+    10
+(1 row)
+
+insert into foo values(11,'cat99',1.89);
+INSERT 121628 1
+select * from foo where f0 = 11;
+ f0 | f1  |  f2  
+----+-----+------
+ 11 | xxx | 1.89
+(1 row)
+
+update foo set f1 = 'zzz' where f0 = 11;
+UPDATE 1
+select * from foo where f0 = 11;
+ f0 | f1  |  f2  
+----+-----+------
+ 11 | aaa | 1.89
+(1 row)
+
+delete from foo where f0 = 11;
+DELETE 1
+select count(*) from foo;
+ count 
+-------
+    10
+(1 row)
+
+drop trigger footrig on foo;
+DROP TRIGGER
+create or replace function foonotice() returns trigger as '
+msg <- paste(pg.tg.name,pg.tg.relname,pg.tg.when,pg.tg.level,pg.tg.op,pg.tg.args[1],pg.tg.args[2])
+pg.thrownotice(msg)
+return(NULL)
+' language plr;
+CREATE FUNCTION
+create trigger footrig after insert or update or delete on foo for each row execute procedure foonotice();
+CREATE TRIGGER
+select count(*) from foo;
+ count 
+-------
+    10
+(1 row)
+
+insert into foo values(11,'cat99',1.89);
+NOTICE:  footrig foo AFTER ROW INSERT NA NA  (seg0 vm7.rel.dh.greenplum.com:40000 pid=25205)
+INSERT 121629 1
+select count(*) from foo;
+ count 
+-------
+    11
+(1 row)
+
+update foo set f1 = 'zzz' where f0 = 11;
+NOTICE:  footrig foo AFTER ROW UPDATE NA NA  (seg0 vm7.rel.dh.greenplum.com:40000 pid=25205)
+UPDATE 1
+select * from foo where f0 = 11;
+ f0 | f1  |  f2  
+----+-----+------
+ 11 | zzz | 1.89
+(1 row)
+
+delete from foo where f0 = 11;
+NOTICE:  footrig foo AFTER ROW DELETE NA NA  (seg0 vm7.rel.dh.greenplum.com:40000 pid=25205)
+DELETE 1
+select count(*) from foo;
+ count 
+-------
+    10
+(1 row)
+
+drop trigger footrig on foo;
+DROP TRIGGER
+create trigger footrig after insert or update or delete on foo for each statement execute procedure foonotice('hello','world');
+CREATE TRIGGER
+select count(*) from foo;
+ count 
+-------
+    10
+(1 row)
+
+insert into foo values(11,'cat99',1.89);
+NOTICE:  footrig foo AFTER STATEMENT INSERT hello world  (seg0 vm7.rel.dh.greenplum.com:40000 pid=25205)
+INSERT 121630 1
+select count(*) from foo;
+ count 
+-------
+    11
+(1 row)
+
+update foo set f1 = 'zzz' where f0 = 11;
+NOTICE:  footrig foo AFTER STATEMENT UPDATE hello world  (seg0 vm7.rel.dh.greenplum.com:40000 pid=25205)
+UPDATE 1
+select * from foo where f0 = 11;
+ f0 | f1  |  f2  
+----+-----+------
+ 11 | zzz | 1.89
+(1 row)
+
+delete from foo where f0 = 11;
+NOTICE:  footrig foo AFTER STATEMENT DELETE hello world  (seg0 vm7.rel.dh.greenplum.com:40000 pid=25205)
+DELETE 1
+select count(*) from foo;
+ count 
+-------
+    10
+(1 row)
+
+drop trigger footrig on foo;
+DROP TRIGGER
+CREATE OR REPLACE FUNCTION cursor_fetch_test(integer,boolean) RETURNS SETOF integer AS 'plan<-pg.spi.prepare("SELECT * FROM generate_series(1,10)"); cursor<-pg.spi.cursor_open("curs",plan); dat<-pg.spi.cursor_fetch(cursor,arg2,arg1); pg.spi.cursor_close(cursor); return (dat);' language 'plr';
+CREATE FUNCTION
+SELECT * FROM cursor_fetch_test(1,true);
+ cursor_fetch_test 
+-------------------
+                 1
+(1 row)
+
+SELECT * FROM cursor_fetch_test(2,true);
+ cursor_fetch_test 
+-------------------
+                 1
+                 2
+(2 rows)
+
+SELECT * FROM cursor_fetch_test(20,true);
+ cursor_fetch_test 
+-------------------
+                 1
+                 2
+                 3
+                 4
+                 5
+                 6
+                 7
+                 8
+                 9
+                10
+(10 rows)
+
+CREATE OR REPLACE FUNCTION cursor_direction_test() RETURNS SETOF integer AS'plan<-pg.spi.prepare("SELECT * FROM generate_series(1,10)"); cursor<-pg.spi.cursor_open("curs",plan); dat<-pg.spi.cursor_fetch(cursor,TRUE,as.integer(3)); dat2<-pg.spi.cursor_fetch(cursor,FALSE,as.integer(3)); pg.spi.cursor_close(cursor); return (dat2);' language 'plr';
+CREATE FUNCTION
+SELECT * FROM cursor_direction_test();
+ERROR:  R interpreter expression evaluation error
+DETAIL:  Error in pg.spi.cursor_fetch(cursor, FALSE, as.integer(3)) : 
+  error in SQL statement : backward scan is not supported in this version of Greenplum Database
+CONTEXT:  In R support function pg.spi.cursor_fetch
+In PL/R function cursor_direction_test
+CREATE OR REPLACE FUNCTION cursor_fetch_test_arg(integer) RETURNS SETOF integer AS 'plan<-pg.spi.prepare("SELECT * FROM generate_series(1,$1)",c(INT4OID)); cursor<-pg.spi.cursor_open("curs",plan,list(arg1)); dat<-pg.spi.cursor_fetch(cursor,TRUE,arg1); pg.spi.cursor_close(cursor); return (dat);' language 'plr';
+CREATE FUNCTION
+SELECT * FROM cursor_fetch_test_arg(3);
+ cursor_fetch_test_arg 
+-----------------------
+                     1
+                     2
+                     3
+(3 rows)
+
+create or replace function test_serialize(text)
+returns bytea as '
+ mydf <- pg.spi.exec(arg1)
+ return (mydf)
+' language 'plr';
+CREATE FUNCTION
+create or replace function restore_df(bytea)
+returns setof record as '
+ return (arg1)
+' language 'plr';
+CREATE FUNCTION
+select * from restore_df((select test_serialize('select oid, typname from pg_type where typname in (''oid'',''name'',''int4'')'))) as t(oid oid, typname name);
+ oid | typname 
+-----+---------
+  19 | name
+  23 | int4
+  26 | oid
+(3 rows)
+

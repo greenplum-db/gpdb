@@ -1,0 +1,752 @@
+DROP FUNCTION subt_insertData(integer);
+ERROR:  function subt_insertdata(integer) does not exist
+CREATE OR REPLACE FUNCTION subt_insertData (startValue INTEGER) RETURNS VOID
+AS
+$$
+DECLARE
+   i INTEGER;
+BEGIN
+   i = startValue;
+    EXECUTE 'INSERT INTO subt_plpgsql_t2(a) VALUES (' || i || ')';
+END;
+$$
+LANGUAGE PLPGSQL
+;
+CREATE FUNCTION
+drop table if exists subt_plpgsql_t2;
+NOTICE:  table "subt_plpgsql_t2" does not exist, skipping
+DROP TABLE
+create table subt_plpgsql_t2( a int );
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+BEGIN;
+BEGIN
+select subt_insertData(1);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(2);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(3);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(4);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(5);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(6);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(7);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(8);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(9);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(10);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(11);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(12);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(13);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(14);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(15);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(16);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(17);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(18);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(19);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(20);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(1);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(2);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(3);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(4);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(5);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(6);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(7);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(8);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(9);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(10);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(11);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(12);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(13);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(14);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(15);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(16);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(17);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(18);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(19);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(20);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(1);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(2);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(3);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(4);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(5);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(6);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(7);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(8);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(9);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(10);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(11);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(12);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(13);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(14);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(15);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(16);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(17);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(18);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(19);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(20);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(1);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(2);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(3);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(4);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(5);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(6);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(7);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(8);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(9);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(10);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(11);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(12);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(13);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(14);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(15);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(16);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(17);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(18);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(19);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(20);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(1);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(2);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(3);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(4);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(5);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(6);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(7);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(8);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(9);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(10);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(11);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(12);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(13);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(14);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(15);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(16);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(17);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(18);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(19);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(20);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(1);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(2);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(3);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(4);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(5);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(6);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(7);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(8);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(9);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(10);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(11);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(12);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(13);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(14);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(15);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(16);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(17);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(18);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(19);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+select subt_insertData(20);
+ subt_insertdata 
+-----------------
+ 
+(1 row)
+
+COMMIT;
+COMMIT
+Select count(*) from subt_plpgsql_t2;
+ count 
+-------
+   120
+(1 row)
+

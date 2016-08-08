@@ -1,0 +1,437 @@
+-- @product_version gpdb: [4.3.0.0- 4.3.99.99]
+--
+-- SYNC2 UAO TABLE 1
+--
+CREATE TABLE sync2_uao_alter_part_truncate_part1 (
+        unique1         int4,
+        unique2         int4
+)  with ( appendonly='true') partition by range (unique1)
+( partition aa start (0) end (500) every (100), default partition default_part );
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'unique1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync2_uao_alter_part_truncate_part1_1_prt_default_part" for table "sync2_uao_alter_part_truncate_part1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync2_uao_alter_part_truncate_part1_1_prt_aa_1" for table "sync2_uao_alter_part_truncate_part1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync2_uao_alter_part_truncate_part1_1_prt_aa_2" for table "sync2_uao_alter_part_truncate_part1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync2_uao_alter_part_truncate_part1_1_prt_aa_3" for table "sync2_uao_alter_part_truncate_part1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync2_uao_alter_part_truncate_part1_1_prt_aa_4" for table "sync2_uao_alter_part_truncate_part1"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync2_uao_alter_part_truncate_part1_1_prt_aa_5" for table "sync2_uao_alter_part_truncate_part1"
+CREATE TABLE
+CREATE TABLE sync2_uao_alter_part_truncate_part1_A (
+        unique1         int4,
+        unique2         int4)with ( appendonly='true') ;
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'unique1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+--
+-- Insert few records into the table
+--
+insert into sync2_uao_alter_part_truncate_part1 values ( generate_series(5,50),generate_series(15,60));
+INSERT 0 46
+insert into sync2_uao_alter_part_truncate_part1_A values ( generate_series(1,10),generate_series(21,30));
+INSERT 0 10
+select count(*) FROM pg_appendonly WHERE visimaprelid is not NULL AND visimapidxid is not NULL AND relid in (SELECT oid FROM pg_class WHERE relname ='sync2_uao_alter_part_truncate_part1');
+ count 
+-------
+     1
+(1 row)
+
+select count(*) AS only_visi_tups_ins  from sync2_uao_alter_part_truncate_part1;
+ only_visi_tups_ins 
+--------------------
+                 46
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*) AS invisi_and_visi_tups_ins  from sync2_uao_alter_part_truncate_part1;
+ invisi_and_visi_tups_ins 
+--------------------------
+                       46
+(1 row)
+
+set gp_select_invisible = false;
+SET
+update sync2_uao_alter_part_truncate_part1 set  unique2 = unique2 + 100   where unique1=6;
+UPDATE 1
+select count(*) AS only_visi_tups_upd  from sync2_uao_alter_part_truncate_part1;
+ only_visi_tups_upd 
+--------------------
+                 46
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*) AS invisi_and_visi_tups  from sync2_uao_alter_part_truncate_part1;
+ invisi_and_visi_tups 
+----------------------
+                   47
+(1 row)
+
+set gp_select_invisible = false;
+SET
+delete from sync2_uao_alter_part_truncate_part1  where unique1>=7;
+DELETE 44
+select count(*) AS only_visi_tups  from sync2_uao_alter_part_truncate_part1;
+ only_visi_tups 
+----------------
+              2
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*) AS invisi_and_visi_tups  from sync2_uao_alter_part_truncate_part1;
+ invisi_and_visi_tups 
+----------------------
+                   47
+(1 row)
+
+set gp_select_invisible = false;
+SET
+--
+-- select from the Table
+--
+select count(*) from sync2_uao_alter_part_truncate_part1;
+ count 
+-------
+     2
+(1 row)
+
+--
+-- SYNC2 UAO TABLE 2
+--
+CREATE TABLE sync2_uao_alter_part_truncate_part2 (
+        unique1         int4,
+        unique2         int4
+)  with ( appendonly='true') partition by range (unique1)
+( partition aa start (0) end (500) every (100), default partition default_part );
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'unique1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync2_uao_alter_part_truncate_part2_1_prt_default_part" for table "sync2_uao_alter_part_truncate_part2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync2_uao_alter_part_truncate_part2_1_prt_aa_1" for table "sync2_uao_alter_part_truncate_part2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync2_uao_alter_part_truncate_part2_1_prt_aa_2" for table "sync2_uao_alter_part_truncate_part2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync2_uao_alter_part_truncate_part2_1_prt_aa_3" for table "sync2_uao_alter_part_truncate_part2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync2_uao_alter_part_truncate_part2_1_prt_aa_4" for table "sync2_uao_alter_part_truncate_part2"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sync2_uao_alter_part_truncate_part2_1_prt_aa_5" for table "sync2_uao_alter_part_truncate_part2"
+CREATE TABLE
+CREATE TABLE sync2_uao_alter_part_truncate_part2_A (
+        unique1         int4,
+        unique2         int4) with ( appendonly='true');
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'unique1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+--
+-- Insert few records into the table
+--
+insert into sync2_uao_alter_part_truncate_part2 values ( generate_series(5,50),generate_series(15,60));
+INSERT 0 46
+insert into sync2_uao_alter_part_truncate_part2_A values ( generate_series(1,10),generate_series(21,30));
+INSERT 0 10
+--
+-- select from the Table
+--
+select count(*) from sync2_uao_alter_part_truncate_part2;
+ count 
+-------
+    46
+(1 row)
+
+--
+-- ALTER SYNC1 AO
+--
+--
+-- Truncate Partition
+--
+alter table sync1_uao_alter_part_truncate_part7 truncate partition for (rank(1));
+psql:/path/sql_file:1: NOTICE:  truncated partition "aa_1" for relation "sync1_uao_alter_part_truncate_part7"
+ALTER TABLE
+--
+-- Insert few records into the table
+--
+insert into sync1_uao_alter_part_truncate_part7 values ( generate_series(5,50),generate_series(15,60));
+INSERT 0 46
+insert into sync1_uao_alter_part_truncate_part7_A values ( generate_series(1,10),generate_series(21,30));
+INSERT 0 10
+--
+-- Alter the table set distributed by 
+--
+Alter table sync1_uao_alter_part_truncate_part7 set with ( reorganize='true') distributed by (unique2);
+ALTER TABLE
+--
+-- select from the Table
+--
+select count(*) from sync1_uao_alter_part_truncate_part7;
+ count 
+-------
+    46
+(1 row)
+
+--
+-- Truncate default partition
+--
+alter table sync1_uao_alter_part_truncate_part7 truncate default partition;
+psql:/path/sql_file:1: NOTICE:  truncated partition "default_part" for relation "sync1_uao_alter_part_truncate_part7"
+ALTER TABLE
+--
+-- Insert few records into the table
+--
+insert into sync1_uao_alter_part_truncate_part7 values ( generate_series(5,50),generate_series(15,60));
+INSERT 0 46
+insert into sync1_uao_alter_part_truncate_part7_A values ( generate_series(1,10),generate_series(21,30));
+INSERT 0 10
+select count(*) FROM pg_appendonly WHERE visimaprelid is not NULL AND visimapidxid is not NULL AND relid in (SELECT oid FROM pg_class WHERE relname ='sync1_uao_alter_part_truncate_part7');
+ count 
+-------
+     1
+(1 row)
+
+select count(*) AS only_visi_tups_ins  from sync1_uao_alter_part_truncate_part7;
+ only_visi_tups_ins 
+--------------------
+                 92
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*) AS invisi_and_visi_tups_ins  from sync1_uao_alter_part_truncate_part7;
+ invisi_and_visi_tups_ins 
+--------------------------
+                       92
+(1 row)
+
+set gp_select_invisible = false;
+SET
+delete from sync1_uao_alter_part_truncate_part7  where unique1>=7;
+DELETE 88
+select count(*) AS only_visi_tups  from sync1_uao_alter_part_truncate_part7;
+ only_visi_tups 
+----------------
+              4
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*) AS invisi_and_visi_tups  from sync1_uao_alter_part_truncate_part7;
+ invisi_and_visi_tups 
+----------------------
+                   92
+(1 row)
+
+set gp_select_invisible = false;
+SET
+--
+-- select from the Table
+--
+select count(*) from sync1_uao_alter_part_truncate_part7;
+ count 
+-------
+     4
+(1 row)
+
+--
+-- ALTER CK_SYNC1 AO
+--
+--
+-- Truncate Partition
+--
+alter table ck_sync1_uao_alter_part_truncate_part6 truncate partition for (rank(1));
+psql:/path/sql_file:1: NOTICE:  truncated partition "aa_1" for relation "ck_sync1_uao_alter_part_truncate_part6"
+ALTER TABLE
+--
+-- Insert few records into the table
+--
+insert into ck_sync1_uao_alter_part_truncate_part6 values ( generate_series(5,50),generate_series(15,60));
+INSERT 0 46
+insert into ck_sync1_uao_alter_part_truncate_part6_A values ( generate_series(1,10),generate_series(21,30));
+INSERT 0 10
+--
+-- Alter the table set distributed by 
+--
+Alter table ck_sync1_uao_alter_part_truncate_part6 set with ( reorganize='true') distributed by (unique2);
+ALTER TABLE
+--
+-- select from the Table
+--
+select count(*) from ck_sync1_uao_alter_part_truncate_part6;
+ count 
+-------
+    46
+(1 row)
+
+--
+-- Truncate default partition
+--
+alter table ck_sync1_uao_alter_part_truncate_part6 truncate default partition;
+psql:/path/sql_file:1: NOTICE:  truncated partition "default_part" for relation "ck_sync1_uao_alter_part_truncate_part6"
+ALTER TABLE
+--
+-- Insert few records into the table
+--
+insert into ck_sync1_uao_alter_part_truncate_part6 values ( generate_series(5,50),generate_series(15,60));
+INSERT 0 46
+insert into ck_sync1_uao_alter_part_truncate_part6_A values ( generate_series(1,10),generate_series(21,30));
+INSERT 0 10
+--
+-- select from the Table
+--
+select count(*) from ck_sync1_uao_alter_part_truncate_part6;
+ count 
+-------
+    92
+(1 row)
+
+--
+-- ALTER CT AO
+--
+--
+-- Truncate Partition
+--
+alter table ct_uao_alter_part_truncate_part4 truncate partition for (rank(1));
+psql:/path/sql_file:1: NOTICE:  truncated partition "aa_1" for relation "ct_uao_alter_part_truncate_part4"
+ALTER TABLE
+--
+-- Insert few records into the table
+--
+insert into ct_uao_alter_part_truncate_part4 values ( generate_series(5,50),generate_series(15,60));
+INSERT 0 46
+insert into ct_uao_alter_part_truncate_part4_A values ( generate_series(1,10),generate_series(21,30));
+INSERT 0 10
+--
+-- Alter the table set distributed by 
+--
+Alter table ct_uao_alter_part_truncate_part4 set with ( reorganize='true') distributed by (unique2);
+ALTER TABLE
+--
+-- select from the Table
+--
+select count(*) from ct_uao_alter_part_truncate_part4;
+ count 
+-------
+    46
+(1 row)
+
+--
+-- Truncate default partition
+--
+alter table ct_uao_alter_part_truncate_part4 truncate default partition;
+psql:/path/sql_file:1: NOTICE:  truncated partition "default_part" for relation "ct_uao_alter_part_truncate_part4"
+ALTER TABLE
+--
+-- Insert few records into the table
+--
+insert into ct_uao_alter_part_truncate_part4 values ( generate_series(5,50),generate_series(15,60));
+INSERT 0 46
+insert into ct_uao_alter_part_truncate_part4_A values ( generate_series(1,10),generate_series(21,30));
+INSERT 0 10
+--
+-- select from the Table
+--
+select count(*) from ct_uao_alter_part_truncate_part4;
+ count 
+-------
+    92
+(1 row)
+
+--
+-- ALTER RESYNC AO
+--
+--
+-- Truncate Partition
+--
+alter table resync_uao_alter_part_truncate_part2 truncate partition for (rank(1));
+psql:/path/sql_file:1: NOTICE:  truncated partition "aa_1" for relation "resync_uao_alter_part_truncate_part2"
+ALTER TABLE
+--
+-- Insert few records into the table
+--
+insert into resync_uao_alter_part_truncate_part2 values ( generate_series(5,50),generate_series(15,60));
+INSERT 0 46
+insert into resync_uao_alter_part_truncate_part2_A values ( generate_series(1,10),generate_series(21,30));
+INSERT 0 10
+--
+-- Alter the table set distributed by 
+--
+Alter table resync_uao_alter_part_truncate_part2 set with ( reorganize='true') distributed by (unique2);
+ALTER TABLE
+--
+-- select from the Table
+--
+select count(*) from resync_uao_alter_part_truncate_part2;
+ count 
+-------
+    46
+(1 row)
+
+--
+-- Truncate default partition
+--
+alter table resync_uao_alter_part_truncate_part2 truncate default partition;
+psql:/path/sql_file:1: NOTICE:  truncated partition "default_part" for relation "resync_uao_alter_part_truncate_part2"
+ALTER TABLE
+--
+-- Insert few records into the table
+--
+insert into resync_uao_alter_part_truncate_part2 values ( generate_series(5,50),generate_series(15,60));
+INSERT 0 46
+insert into resync_uao_alter_part_truncate_part2_A values ( generate_series(1,10),generate_series(21,30));
+INSERT 0 10
+--
+-- select from the Table
+--
+select count(*) from resync_uao_alter_part_truncate_part2;
+ count 
+-------
+    92
+(1 row)
+
+--
+-- ALTER SYNC2 AO
+--
+--
+-- Truncate Partition
+--
+alter table sync2_uao_alter_part_truncate_part1 truncate partition for (rank(1));
+psql:/path/sql_file:1: NOTICE:  truncated partition "aa_1" for relation "sync2_uao_alter_part_truncate_part1"
+ALTER TABLE
+--
+-- Insert few records into the table
+--
+insert into sync2_uao_alter_part_truncate_part1 values ( generate_series(5,50),generate_series(15,60));
+INSERT 0 46
+insert into sync2_uao_alter_part_truncate_part1_A values ( generate_series(1,10),generate_series(21,30));
+INSERT 0 10
+--
+-- Alter the table set distributed by 
+--
+Alter table sync2_uao_alter_part_truncate_part1 set with ( reorganize='true') distributed by (unique2);
+ALTER TABLE
+--
+-- select from the Table
+--
+select count(*) from sync2_uao_alter_part_truncate_part1;
+ count 
+-------
+    46
+(1 row)
+
+--
+-- Truncate default partition
+--
+alter table sync2_uao_alter_part_truncate_part1 truncate default partition;
+psql:/path/sql_file:1: NOTICE:  truncated partition "default_part" for relation "sync2_uao_alter_part_truncate_part1"
+ALTER TABLE
+--
+-- Insert few records into the table
+--
+insert into sync2_uao_alter_part_truncate_part1 values ( generate_series(5,50),generate_series(15,60));
+INSERT 0 46
+insert into sync2_uao_alter_part_truncate_part1_A values ( generate_series(1,10),generate_series(21,30));
+INSERT 0 10
+--
+-- select from the Table
+--
+select count(*) from sync2_uao_alter_part_truncate_part1;
+ count 
+-------
+    92
+(1 row)
+

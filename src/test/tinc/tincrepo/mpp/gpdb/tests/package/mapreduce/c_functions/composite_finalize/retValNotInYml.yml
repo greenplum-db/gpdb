@@ -1,0 +1,57 @@
+%YAML 1.1
+---
+VERSION:         1.0.0.1
+DATABASE:        template1
+
+DEFINE:
+  - INPUT:
+      NAME:      data
+      QUERY: "select * from simple"
+      COLUMNS:  [m int, n int]
+
+  - OUTPUT:
+      NAME: out
+      TABLE: output
+      MODE: APPEND
+
+  - FINALIZE:
+      NAME: retcomposite 
+      PARAMETERS:
+        - state int 
+      #RETURNS:
+      #  - f1 integer
+      #  - f2 integer
+      #  - f3 integer 
+
+  - FINALIZE:
+      NAME: final 
+      FUNCTION: final 
+      PARAMETERS:
+        - arg1 int 
+      RETURNS:
+        - retval int 
+
+  - TRANSITION:
+      NAME: tran 
+      PARAMETERS:
+        - m int 
+        - n int
+      RETURNS:
+        - state int 
+        
+  
+  - REDUCE:
+      NAME: reducer 
+      TRANSITION: tran 
+      #FINALIZE: final
+      FINALIZE: retcomposite
+   
+  - TASK:
+       NAME: worker
+       SOURCE: data 
+       REDUCE: reducer 
+
+EXECUTE:
+  - RUN:
+      SOURCE:  worker 
+      #TARGET: out

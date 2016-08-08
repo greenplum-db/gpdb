@@ -1,0 +1,27 @@
+\echo '-- start_ignore'
+-- start_ignore
+DROP TYPE IF EXISTS footype cascade;
+psql:/path/sql_file:1: NOTICE:  drop cascades to function foo_good()
+DROP TYPE
+\echo '-- end_ignore'
+-- end_ignore
+-- Test: plperl 38
+CREATE TYPE footype AS (x INTEGER, y INTEGER);
+CREATE TYPE
+							  
+CREATE OR REPLACE FUNCTION foo_good() RETURNS SETOF footype AS $$
+								return [
+								{x => 1, y => 2},
+								{x => 3, y => 4}
+								];
+								$$ LANGUAGE plperl;
+CREATE FUNCTION
+							  
+SELECT * FROM foo_good();
+ x | y 
+---+---
+ 1 | 2
+ 3 | 4
+(2 rows)
+
+							  

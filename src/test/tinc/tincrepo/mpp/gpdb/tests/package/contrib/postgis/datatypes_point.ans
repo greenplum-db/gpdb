@@ -1,0 +1,30 @@
+select '1',ST_asewkt('POINT( 1 2 )'::GEOMETRY) as geom;
+ ?column? |    geom    
+----------+------------
+ 1        | POINT(1 2)
+(1 row)
+
+select '2',ST_asewkt('POINT( 1 2 3)'::GEOMETRY) as geom;
+ ?column? |     geom     
+----------+--------------
+ 2        | POINT(1 2 3)
+(1 row)
+
+select '12',ST_asewkt('GEOMETRYCOLLECTION(POINT( 1 2 ))'::GEOMETRY);
+ ?column? |           st_asewkt            
+----------+--------------------------------
+ 12       | GEOMETRYCOLLECTION(POINT(1 2))
+(1 row)
+
+select '13',ST_asewkt('GEOMETRYCOLLECTION(POINT( 1 2 3))'::GEOMETRY);
+ ?column? |            st_asewkt             
+----------+----------------------------------
+ 13       | GEOMETRYCOLLECTION(POINT(1 2 3))
+(1 row)
+
+select '17',ST_asewkt('GEOMETRYCOLLECTION(POINT( 1 2 0),POINT( 1 2 3) )'::GEOMETRY);
+ ?column? |                   st_asewkt                   
+----------+-----------------------------------------------
+ 17       | GEOMETRYCOLLECTION(POINT(1 2 0),POINT(1 2 3))
+(1 row)
+

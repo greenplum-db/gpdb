@@ -1,0 +1,56 @@
+-- start_ignore
+drop function if exists segonlyview();
+psql:/path/sql_file:1: NOTICE:  function segonlyview() does not exist, skipping
+DROP FUNCTION
+drop view if exists segview cascade;
+psql:/path/sql_file:1: NOTICE:  view "segview" does not exist, skipping
+DROP VIEW
+-- end_ignore
+create view segview as select deptype as dp from pg_depend where deptype = 'p' limit 1;
+CREATE VIEW
+create function segonlyview() returns char(1) as $$
+begin 
+        return dp from segview;
+end;    
+$$ language plpgsql;
+CREATE FUNCTION
+explain select deptype, segonlyview(), deptype = segonlyview() as same  
+from pg_depend
+where deptype = segonlyview()
+order by 1
+limit 2;
+                                   QUERY PLAN                                    
+---------------------------------------------------------------------------------
+ Limit  (cost=0.00..320394.01 rows=1 width=24)
+   ->  Result  (cost=0.00..320393.00 rows=374 width=24)
+         ->  Sort  (cost=0.00..320387.63 rows=374 width=1)
+               Sort Key: deptype
+               ->  Table Scan on pg_depend  (cost=0.00..798.63 rows=374 width=1)
+                     Filter: text(deptype) = text(segonlyview())
+ Settings:  optimizer=on
+(7 rows)
+
+select deptype, segonlyview(), deptype = segonlyview() as same 
+from pg_depend
+where deptype = segonlyview()
+order by 1
+limit 2;
+ deptype | segonlyview | same 
+---------+-------------+------
+ p       | p           | t
+ p       | p           | t
+(2 rows)
+
+create or replace view segview as select deptype as dp from pg_depend where deptype = 'n' limit 1;
+CREATE VIEW
+select deptype, segonlyview(), deptype = segonlyview() as same
+from pg_depend
+where deptype = segonlyview()
+order by 1
+limit 2;
+ deptype | segonlyview | same 
+---------+-------------+------
+ n       | n           | t
+ n       | n           | t
+(2 rows)
+

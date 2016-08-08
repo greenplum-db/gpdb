@@ -1,0 +1,215 @@
+-- @description : update UAO tables , with different blocksize
+-- 
+-- create select uao table with BLOCKSIZE=8K 
+DROP TABLE IF EXISTS uao_tab_blocksize_upd_8k cascade;
+DROP TABLE
+CREATE TABLE uao_tab_blocksize_upd_8k  with (appendonly=true , BLOCKSIZE=8192 )  AS (
+SELECT GENERATE_SERIES::numeric sno
+     , (random() * 10000000)::numeric + 10000000 val1
+     , timeofday()::varchar(50) val2
+     , (random() * 5000)::bigint + 10000000 val3
+     , (random() * 10000000)::numeric + 10000000 val4
+     , (random() * 10000000)::numeric + 10000000 val5	
+  FROM GENERATE_SERIES(10000, 19999)
+) ;
+SELECT 10000
+CREATE index val3_bmp_idxblocksize_upd_8k on uao_tab_blocksize_upd_8k using bitmap (val3);
+CREATE INDEX
+\d+ uao_tab_blocksize_upd_8k 
+         Append-Only Table "public.uao_tab_blocksize_upd_8k"
+ Column |         Type          | Modifiers | Storage  | Description 
+--------+-----------------------+-----------+----------+-------------
+ sno    | numeric               |           | main     | 
+ val1   | numeric               |           | main     | 
+ val2   | character varying(50) |           | extended | 
+ val3   | bigint                |           | plain    | 
+ val4   | numeric               |           | main     | 
+ val5   | numeric               |           | main     | 
+Compression Type: None
+Compression Level: 0
+Block Size: 8192
+Checksum: f
+Indexes:
+    "val3_bmp_idxblocksize_upd_8k" bitmap (val3)
+Has OIDs: no
+Options: appendonly=true, blocksize=8192
+Distributed by: (sno)
+
+SELECT count(*) from uao_tab_blocksize_upd_8k;
+ count 
+-------
+ 10000
+(1 row)
+
+SELECT 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='uao_tab_blocksize_upd_8k');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+select 1 as block8k_present from pg_appendonly WHERE   blocksize=8192 AND relid=(SELECT oid  FROM pg_class WHERE relname='uao_tab_blocksize_upd_8k');
+ block8k_present 
+-----------------
+               1
+(1 row)
+
+update  uao_tab_blocksize_upd_8k set val2 = 'new_val' where sno = 10000;
+UPDATE 1
+select count(*) AS only_visi_tups  from uao_tab_blocksize_upd_8k;
+ only_visi_tups 
+----------------
+          10000
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*) AS invisi_and_visi_tups  from uao_tab_blocksize_upd_8k;
+ invisi_and_visi_tups 
+----------------------
+                10001
+(1 row)
+
+set gp_select_invisible = false;
+SET
+-- create select uao table with BLOCKSIZE=2048K 
+DROP TABLE IF EXISTS uao_tab_blocksize_upd_2048k cascade;
+DROP TABLE
+CREATE TABLE uao_tab_blocksize_upd_2048k  with (appendonly=true , BLOCKSIZE=2097152 )  AS (
+SELECT GENERATE_SERIES::numeric sno
+     , (random() * 10000000)::numeric + 10000000 val1
+     , timeofday()::varchar(50) val2
+     , (random() * 5000)::bigint + 10000000 val3
+     , (random() * 10000000)::numeric + 10000000 val4
+     , (random() * 10000000)::numeric + 10000000 val5	
+  FROM GENERATE_SERIES(10000, 19999)
+) ;
+SELECT 10000
+CREATE index val3_bmp_idxblocksize_upd_2048k on uao_tab_blocksize_upd_2048k using bitmap (val3);
+CREATE INDEX
+\d+ uao_tab_blocksize_upd_2048k 
+       Append-Only Table "public.uao_tab_blocksize_upd_2048k"
+ Column |         Type          | Modifiers | Storage  | Description 
+--------+-----------------------+-----------+----------+-------------
+ sno    | numeric               |           | main     | 
+ val1   | numeric               |           | main     | 
+ val2   | character varying(50) |           | extended | 
+ val3   | bigint                |           | plain    | 
+ val4   | numeric               |           | main     | 
+ val5   | numeric               |           | main     | 
+Compression Type: None
+Compression Level: 0
+Block Size: 2097152
+Checksum: f
+Indexes:
+    "val3_bmp_idxblocksize_upd_2048k" bitmap (val3)
+Has OIDs: no
+Options: appendonly=true, blocksize=2097152
+Distributed by: (sno)
+
+SELECT count(*) from uao_tab_blocksize_upd_2048k;
+ count 
+-------
+ 10000
+(1 row)
+
+SELECT 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='uao_tab_blocksize_upd_2048k');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+select 1 as block2048k_present from pg_appendonly WHERE   blocksize=2097152 AND relid=(SELECT oid  FROM pg_class WHERE relname='uao_tab_blocksize_upd_2048k');
+ block2048k_present 
+--------------------
+                  1
+(1 row)
+
+update  uao_tab_blocksize_upd_2048k set val2 = 'new_val' where sno = 10000;
+UPDATE 1
+select count(*) AS only_visi_tups  from uao_tab_blocksize_upd_2048k;
+ only_visi_tups 
+----------------
+          10000
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*) AS invisi_and_visi_tups  from uao_tab_blocksize_upd_2048k;
+ invisi_and_visi_tups 
+----------------------
+                10001
+(1 row)
+
+set gp_select_invisible = false;
+SET
+-- create select uao table with BLOCKSIZE=default
+DROP TABLE IF EXISTS uao_tab_blocksize_upd_default cascade;
+DROP TABLE
+CREATE TABLE uao_tab_blocksize_upd_default with (appendonly=true)  AS (
+SELECT GENERATE_SERIES::numeric sno
+     , (random() * 10000000)::numeric + 10000000 val1
+     , timeofday()::varchar(50) val2
+     , (random() * 5000)::bigint + 10000000 val3
+     , (random() * 10000000)::numeric + 10000000 val4
+     , (random() * 10000000)::numeric + 10000000 val5	
+  FROM GENERATE_SERIES(10000, 19999)
+) ;
+SELECT 10000
+CREATE index val3_bmp_idxblocksize_upd_default on uao_tab_blocksize_upd_default using bitmap (val3);
+CREATE INDEX
+\d+ uao_tab_blocksize_upd_default 
+      Append-Only Table "public.uao_tab_blocksize_upd_default"
+ Column |         Type          | Modifiers | Storage  | Description 
+--------+-----------------------+-----------+----------+-------------
+ sno    | numeric               |           | main     | 
+ val1   | numeric               |           | main     | 
+ val2   | character varying(50) |           | extended | 
+ val3   | bigint                |           | plain    | 
+ val4   | numeric               |           | main     | 
+ val5   | numeric               |           | main     | 
+Compression Type: None
+Compression Level: 0
+Block Size: 32768
+Checksum: f
+Indexes:
+    "val3_bmp_idxblocksize_upd_default" bitmap (val3)
+Has OIDs: no
+Options: appendonly=true
+Distributed by: (sno)
+
+SELECT count(*) from uao_tab_blocksize_upd_default;
+ count 
+-------
+ 10000
+(1 row)
+
+SELECT 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='uao_tab_blocksize_upd_default');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+select 1 as blockdefault_present from pg_appendonly WHERE   blocksize=32768 AND relid=(SELECT oid  FROM pg_class WHERE relname='uao_tab_blocksize_upd_default');
+ blockdefault_present 
+----------------------
+                    1
+(1 row)
+
+update  uao_tab_blocksize_upd_default set val2 = 'new_val' where sno = 10000;
+UPDATE 1
+select count(*) AS only_visi_tups  from uao_tab_blocksize_upd_default;
+ only_visi_tups 
+----------------
+          10000
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*) AS invisi_and_visi_tups  from uao_tab_blocksize_upd_default;
+ invisi_and_visi_tups 
+----------------------
+                10001
+(1 row)
+
+set gp_select_invisible = false;
+SET

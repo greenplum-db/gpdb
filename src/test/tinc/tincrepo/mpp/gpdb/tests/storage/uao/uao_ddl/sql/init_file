@@ -1,0 +1,13 @@
+-- start_matchsubs
+m/\s+(\W)?(\W)?\(\w+\.[chp]+:\d+\)/
+s/\s+(\W)?(\W)?\(\w+\.[chp]+:\d+\)//
+
+# Older versions of ORCA capitalized the error message about violating
+# NULL-constaint differently than the planner. The expected output has
+# been fixed for the new message, but the tests also need to run against
+# 4.3_STABLE branch, with older version of ORCA, which had the different
+# message.
+m/NULL value in column/
+s/NULL value in column/null value in column/
+
+-- end_matchsubs

@@ -1,0 +1,24 @@
+-- Test: plperl 52
+CREATE OR REPLACE FUNCTION recurse(i int) RETURNS SETOF TEXT AS $$
+
+							    my $i = shift;
+							    foreach my $x (1..$i)
+							    {
+							      return_next "hello $x";
+							    }
+							    if ($i > 2)
+							    {
+							      my $z = $i-1;
+							      my $cursor = spi_query("select * from recurse($z)");
+							      while (defined(my $row = spi_fetchrow($cursor)))
+							      {
+							        return_next "recurse $i: $row->{recurse}";
+							      }
+							    }
+							    return undef;
+
+							  $$ LANGUAGE plperl;
+							  
+SELECT * FROM recurse(2);
+							  
+

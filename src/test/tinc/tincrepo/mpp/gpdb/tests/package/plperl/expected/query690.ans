@@ -1,0 +1,12 @@
+-- Test: plperl 53
+SELECT * FROM recurse(3);
+      recurse       
+--------------------
+ hello 1
+ hello 2
+ hello 3
+ recurse 3: hello 1
+ recurse 3: hello 2
+(5 rows)
+
+							  

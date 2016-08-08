@@ -1,0 +1,50 @@
+-- @description :Drop Updatable AO tables
+-- 
+-- Create AO tables
+--start_ignore
+DROP TABLE IF EXISTS sto_ao_country_droptable cascade;
+psql:/path/sql_file:1: NOTICE:  table "sto_ao_country_droptable" does not exist, skipping
+DROP TABLE
+--end_ignore
+BEGIN;
+BEGIN
+--SET client_encoding = 'LATIN1';
+CREATE TABLE sto_ao_country_droptable (
+    code character(3) NOT NULL,
+    name text NOT NULL,
+    continent text NOT NULL,
+    region text NOT NULL,
+    surfacearea real NOT NULL,
+    indepyear smallint,
+    population integer NOT NULL,
+    lifeexpectancy real,
+    gnp numeric(10,2),
+    gnpold numeric(10,2),
+    localname text NOT NULL,
+    governmentform text NOT NULL,
+    headofstate text,
+    capital integer,
+    code2 character(2) NOT NULL
+) with (appendonly=true, orientation=column) distributed by (code);
+CREATE TABLE
+--
+-- Data for Name: sto_ao_country_droptable; Type: TABLE DATA; Schema: public; 
+--
+COPY sto_ao_country_droptable (code, name, continent, region, surfacearea, indepyear, population, lifeexpectancy, gnp, gnpold, localname, governmentform, headofstate, capital, code2) FROM stdin WITH NULL AS '';
+commit;
+COMMIT
+ANALYZE sto_ao_country_droptable;
+ANALYZE
+SELECT 1  AS VisimapPresent FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid  FROM pg_class WHERE relname='sto_ao_country_droptable');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+drop table sto_ao_country_droptable;
+DROP TABLE
+SELECT 1  AS VisimapPresent FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid  FROM pg_class WHERE relname='sto_ao_country_droptable');
+ visimappresent 
+----------------
+(0 rows)
+

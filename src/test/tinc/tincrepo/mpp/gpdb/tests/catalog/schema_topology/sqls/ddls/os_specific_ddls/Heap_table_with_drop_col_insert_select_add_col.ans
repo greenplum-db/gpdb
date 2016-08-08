@@ -1,0 +1,2077 @@
+-- 
+-- @created 2009-01-27 14:00:00
+-- @modified 2013-06-24 17:00:00
+-- @tags ddl schema_topology
+-- @description HEAP tables with drop column, insert, select, add column
+create database heap_table_drop_col3;
+CREATE DATABASE
+\c heap_table_drop_col3;
+You are now connected to database "heap_table_drop_col3" as user "reng3".
+CREATE TABLE busted ( a int,col001 char DEFAULT 'z',col002 numeric,col003 boolean DEFAULT false,col004 bit(3) DEFAULT '111',col005 text DEFAULT 'pookie', col006 integer[] DEFAULT '{5, 4, 3, 2, 1}', col007 character varying(512) DEFAULT 'Now is the time', col008 character varying DEFAULT 'Now is the time', col009 character varying(512)[], col010 numeric(8),col011 int,col012 double precision, col013 bigint, col014 char(8), col015 bytea,col016 timestamp with time zone,col017 interval, col018 cidr, col019 inet, col020 macaddr,col022 money, col024 timetz,col025 circle, col026 box, col027 name,col028 path, col029 int2, col031 bit varying(256),col032 date, col034 lseg,col035 point,col036 polygon,col037 real,col039 time, col040 timestamp );
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+\d+ busted
+                                            Table "public.busted"
+ Column |            Type             |                  Modifiers                   | Storage  | Description 
+--------+-----------------------------+----------------------------------------------+----------+-------------
+ a      | integer                     |                                              | plain    | 
+ col001 | character(1)                | default 'z'::bpchar                          | extended | 
+ col002 | numeric                     |                                              | main     | 
+ col003 | boolean                     | default false                                | plain    | 
+ col004 | bit(3)                      | default B'111'::"bit"                        | extended | 
+ col005 | text                        | default 'pookie'::text                       | extended | 
+ col006 | integer[]                   | default '{5,4,3,2,1}'::integer[]             | extended | 
+ col007 | character varying(512)      | default 'Now is the time'::character varying | extended | 
+ col008 | character varying           | default 'Now is the time'::character varying | extended | 
+ col009 | character varying(512)[]    |                                              | extended | 
+ col010 | numeric(8,0)                |                                              | main     | 
+ col011 | integer                     |                                              | plain    | 
+ col012 | double precision            |                                              | plain    | 
+ col013 | bigint                      |                                              | plain    | 
+ col014 | character(8)                |                                              | extended | 
+ col015 | bytea                       |                                              | extended | 
+ col016 | timestamp with time zone    |                                              | plain    | 
+ col017 | interval                    |                                              | plain    | 
+ col018 | cidr                        |                                              | plain    | 
+ col019 | inet                        |                                              | plain    | 
+ col020 | macaddr                     |                                              | plain    | 
+ col022 | money                       |                                              | plain    | 
+ col024 | time with time zone         |                                              | plain    | 
+ col025 | circle                      |                                              | plain    | 
+ col026 | box                         |                                              | plain    | 
+ col027 | name                        |                                              | plain    | 
+ col028 | path                        |                                              | extended | 
+ col029 | smallint                    |                                              | plain    | 
+ col031 | bit varying(256)            |                                              | extended | 
+ col032 | date                        |                                              | plain    | 
+ col034 | lseg                        |                                              | plain    | 
+ col035 | point                       |                                              | plain    | 
+ col036 | polygon                     |                                              | extended | 
+ col037 | real                        |                                              | plain    | 
+ col039 | time without time zone      |                                              | plain    | 
+ col040 | timestamp without time zone |                                              | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (1,'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES (    2,   'b',   22,  false, '001',   '2_one',  '{6,7,8,9,10}',  'Hey.. whtz up 2', 'Hey .. whtz up 2',    '{one,two,three,four,five}', 76767669, 1, 222.2222, 11,   '2_two_22',   'c',   '2002-12-13 01:51:15+1359',   '22',    '0.0.0.0',  '0.0.0.0',  'BB:BB:BB:BB:BB:BB', '200.00',    '00:00:05', '((3,3),2)',  '((3,2),(2,3))',   'hello',  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+     2
+(1 row)
+
+CREATE TABLE new_busted ( a int,col001 char DEFAULT 'z',col002 numeric,col003 boolean DEFAULT false,col004 bit(3) DEFAULT '111',col005 text DEFAULT 'pookie', col006 integer[] DEFAULT '{5, 4, 3, 2, 1}', col007 character varying(512) DEFAULT 'Now is the time', col008 character varying DEFAULT 'Now is the time', col009 character varying(512)[], col010 numeric(8),col011 int,col012 double precision, col013 bigint, col014 char(8), col015 bytea,col016 timestamp with time zone,col017 interval, col018 cidr, col019 inet, col020 macaddr,col022 money, col024 timetz,col025 circle, col026 box, col027 name,col028 path, col029 int2, col031 bit varying(256),col032 date, col034 lseg,col035 point,col036 polygon,col037 real,col039 time, col040 timestamp );
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+\d+ new_busted
+                                          Table "public.new_busted"
+ Column |            Type             |                  Modifiers                   | Storage  | Description 
+--------+-----------------------------+----------------------------------------------+----------+-------------
+ a      | integer                     |                                              | plain    | 
+ col001 | character(1)                | default 'z'::bpchar                          | extended | 
+ col002 | numeric                     |                                              | main     | 
+ col003 | boolean                     | default false                                | plain    | 
+ col004 | bit(3)                      | default B'111'::"bit"                        | extended | 
+ col005 | text                        | default 'pookie'::text                       | extended | 
+ col006 | integer[]                   | default '{5,4,3,2,1}'::integer[]             | extended | 
+ col007 | character varying(512)      | default 'Now is the time'::character varying | extended | 
+ col008 | character varying           | default 'Now is the time'::character varying | extended | 
+ col009 | character varying(512)[]    |                                              | extended | 
+ col010 | numeric(8,0)                |                                              | main     | 
+ col011 | integer                     |                                              | plain    | 
+ col012 | double precision            |                                              | plain    | 
+ col013 | bigint                      |                                              | plain    | 
+ col014 | character(8)                |                                              | extended | 
+ col015 | bytea                       |                                              | extended | 
+ col016 | timestamp with time zone    |                                              | plain    | 
+ col017 | interval                    |                                              | plain    | 
+ col018 | cidr                        |                                              | plain    | 
+ col019 | inet                        |                                              | plain    | 
+ col020 | macaddr                     |                                              | plain    | 
+ col022 | money                       |                                              | plain    | 
+ col024 | time with time zone         |                                              | plain    | 
+ col025 | circle                      |                                              | plain    | 
+ col026 | box                         |                                              | plain    | 
+ col027 | name                        |                                              | plain    | 
+ col028 | path                        |                                              | extended | 
+ col029 | smallint                    |                                              | plain    | 
+ col031 | bit varying(256)            |                                              | extended | 
+ col032 | date                        |                                              | plain    | 
+ col034 | lseg                        |                                              | plain    | 
+ col035 | point                       |                                              | plain    | 
+ col036 | polygon                     |                                              | extended | 
+ col037 | real                        |                                              | plain    | 
+ col039 | time without time zone      |                                              | plain    | 
+ col040 | timestamp without time zone |                                              | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO new_busted VALUES (generate_series(5,100),'a',generate_series(5,100),true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 1', 'Hello .. how are you 1',    '{one,two,three,four,five}',  generate_series(5,100), generate_series(5,100), 111.1111,  generate_series(5,100),  '1_one_11',   'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 96
+select count(*) from new_busted  ;
+ count 
+-------
+    96
+(1 row)
+
+CREATE SEQUENCE busted_seq START WITH 100 INCREMENT BY 5 OWNED BY busted.col002;
+CREATE SEQUENCE
+ALTER TABLE busted ALTER COLUMN col002 SET DEFAULT nextval('busted_seq');
+ALTER TABLE
+CREATE SEQUENCE new_busted_seq START WITH 100 INCREMENT BY 5 OWNED BY new_busted.col002;
+CREATE SEQUENCE
+ALTER TABLE new_busted ALTER COLUMN col002 SET DEFAULT nextval('new_busted_seq');
+ALTER TABLE
+ALTER TABLE busted DROP COLUMN col001;
+ALTER TABLE
+\d+ busted
+                                            Table "public.busted"
+ Column |            Type             |                  Modifiers                   | Storage  | Description 
+--------+-----------------------------+----------------------------------------------+----------+-------------
+ a      | integer                     |                                              | plain    | 
+ col002 | numeric                     | default nextval('busted_seq'::regclass)      | main     | 
+ col003 | boolean                     | default false                                | plain    | 
+ col004 | bit(3)                      | default B'111'::"bit"                        | extended | 
+ col005 | text                        | default 'pookie'::text                       | extended | 
+ col006 | integer[]                   | default '{5,4,3,2,1}'::integer[]             | extended | 
+ col007 | character varying(512)      | default 'Now is the time'::character varying | extended | 
+ col008 | character varying           | default 'Now is the time'::character varying | extended | 
+ col009 | character varying(512)[]    |                                              | extended | 
+ col010 | numeric(8,0)                |                                              | main     | 
+ col011 | integer                     |                                              | plain    | 
+ col012 | double precision            |                                              | plain    | 
+ col013 | bigint                      |                                              | plain    | 
+ col014 | character(8)                |                                              | extended | 
+ col015 | bytea                       |                                              | extended | 
+ col016 | timestamp with time zone    |                                              | plain    | 
+ col017 | interval                    |                                              | plain    | 
+ col018 | cidr                        |                                              | plain    | 
+ col019 | inet                        |                                              | plain    | 
+ col020 | macaddr                     |                                              | plain    | 
+ col022 | money                       |                                              | plain    | 
+ col024 | time with time zone         |                                              | plain    | 
+ col025 | circle                      |                                              | plain    | 
+ col026 | box                         |                                              | plain    | 
+ col027 | name                        |                                              | plain    | 
+ col028 | path                        |                                              | extended | 
+ col029 | smallint                    |                                              | plain    | 
+ col031 | bit varying(256)            |                                              | extended | 
+ col032 | date                        |                                              | plain    | 
+ col034 | lseg                        |                                              | plain    | 
+ col035 | point                       |                                              | plain    | 
+ col036 | polygon                     |                                              | extended | 
+ col037 | real                        |                                              | plain    | 
+ col039 | time without time zone      |                                              | plain    | 
+ col040 | timestamp without time zone |                                              | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (4,11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 4', 'Hello .. how are you 4',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:01+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES (    5,    22,  false, '001',   '2_one',  '{6,7,8,9,10}',  'Hey.. whtz up 5', 'Hey .. whtz up 5',    '{one,two,three,four,five}', 76767669, 1, 222.2222,   11,   '2_two_22',   'c',   '2002-12-13 01:51:15+1359',   '22',    '0.0.0.0',  '0.0.0.0',  'BB:BB:BB:BB:BB:BB', '200.00',    '00:00:02', '((3,3),2)',  '((3,2),(2,3))',   'hello',  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+ INSERT INTO busted VALUES (    6,  33,  true,  '110',  '3_three',  '{6,7,8,9,10}',  'Hey.. whtz up 6', 'Hey .. whtz up 6', '{one,two,three,four,five}',33367633,1,  333.3333, 11,     '2_two_22', 'c', '2003-12-13 01:51:15+1359',    '33',   '0.0.0.0',  '0.0.0.0',    'BB:BB:BB:BB:BB:BB',   '200.22', '00:00:03',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', 11,  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111,     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+     5
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col001;
+ALTER TABLE
+INSERT INTO new_busted VALUES (generate_series(101,200),generate_series(101,200),true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 4', 'Hello .. how are you 4',    '{one,two,three,four,five}',  generate_series(101,200), generate_series(101,200), 111.1111,  generate_series(101,200),  '1_one_11',   'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:01+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', generate_series(101,200),   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 196
+SELECT count(*) from  busted  ;
+ count 
+-------
+   201
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col002;
+ALTER TABLE
+\d+ busted
+                                            Table "public.busted"
+ Column |            Type             |                  Modifiers                   | Storage  | Description 
+--------+-----------------------------+----------------------------------------------+----------+-------------
+ a      | integer                     |                                              | plain    | 
+ col003 | boolean                     | default false                                | plain    | 
+ col004 | bit(3)                      | default B'111'::"bit"                        | extended | 
+ col005 | text                        | default 'pookie'::text                       | extended | 
+ col006 | integer[]                   | default '{5,4,3,2,1}'::integer[]             | extended | 
+ col007 | character varying(512)      | default 'Now is the time'::character varying | extended | 
+ col008 | character varying           | default 'Now is the time'::character varying | extended | 
+ col009 | character varying(512)[]    |                                              | extended | 
+ col010 | numeric(8,0)                |                                              | main     | 
+ col011 | integer                     |                                              | plain    | 
+ col012 | double precision            |                                              | plain    | 
+ col013 | bigint                      |                                              | plain    | 
+ col014 | character(8)                |                                              | extended | 
+ col015 | bytea                       |                                              | extended | 
+ col016 | timestamp with time zone    |                                              | plain    | 
+ col017 | interval                    |                                              | plain    | 
+ col018 | cidr                        |                                              | plain    | 
+ col019 | inet                        |                                              | plain    | 
+ col020 | macaddr                     |                                              | plain    | 
+ col022 | money                       |                                              | plain    | 
+ col024 | time with time zone         |                                              | plain    | 
+ col025 | circle                      |                                              | plain    | 
+ col026 | box                         |                                              | plain    | 
+ col027 | name                        |                                              | plain    | 
+ col028 | path                        |                                              | extended | 
+ col029 | smallint                    |                                              | plain    | 
+ col031 | bit varying(256)            |                                              | extended | 
+ col032 | date                        |                                              | plain    | 
+ col034 | lseg                        |                                              | plain    | 
+ col035 | point                       |                                              | plain    | 
+ col036 | polygon                     |                                              | extended | 
+ col037 | real                        |                                              | plain    | 
+ col039 | time without time zone      |                                              | plain    | 
+ col040 | timestamp without time zone |                                              | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (1,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 7', 'Hello .. how are you 7',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:04+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES (    1,  false, '001',   '2_one',  '{6,7,8,9,10}',  'Hey.. whtz up 8', 'Hey .. whtz up 8',    '{one,two,three,four,five}', 76767669, 1, 222.2222,   11,   '2_two_22',   'c',   '2002-12-13 01:51:15+1359',   '22',    '0.0.0.0',  '0.0.0.0',  'BB:BB:BB:BB:BB:BB', '200.00',    '00:00:05', '((3,3),2)',  '((3,2),(2,3))',   'hello',  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+ INSERT INTO busted VALUES (    3,  true,  '110',  '3_three',  '{6,7,8,9,10}',  'Hey.. whtz up 9', 'Hey .. whtz up 9', '{one,two,three,four,five}',33367633,1,  333.3333, 11,     '2_two_22', 'c', '2003-12-13 01:51:15+1359',    '33',   '0.0.0.0',  '0.0.0.0',    'BB:BB:BB:BB:BB:BB',   '200.22', '00:00:06',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', 11,  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111,     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+   204
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col002;
+ALTER TABLE
+INSERT INTO new_busted VALUES (generate_series(201,300),true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 7', 'Hello .. how are you 7',    '{one,two,three,four,five}',  generate_series(201,300), generate_series(201,300), 111.1111,  generate_series(201,300),  '1_one_11',   'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:04+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', generate_series(201,300),   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 296
+select count(*) from new_busted  ;
+ count 
+-------
+   296
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col003;
+ALTER TABLE
+\d+ busted
+                                            Table "public.busted"
+ Column |            Type             |                  Modifiers                   | Storage  | Description 
+--------+-----------------------------+----------------------------------------------+----------+-------------
+ a      | integer                     |                                              | plain    | 
+ col004 | bit(3)                      | default B'111'::"bit"                        | extended | 
+ col005 | text                        | default 'pookie'::text                       | extended | 
+ col006 | integer[]                   | default '{5,4,3,2,1}'::integer[]             | extended | 
+ col007 | character varying(512)      | default 'Now is the time'::character varying | extended | 
+ col008 | character varying           | default 'Now is the time'::character varying | extended | 
+ col009 | character varying(512)[]    |                                              | extended | 
+ col010 | numeric(8,0)                |                                              | main     | 
+ col011 | integer                     |                                              | plain    | 
+ col012 | double precision            |                                              | plain    | 
+ col013 | bigint                      |                                              | plain    | 
+ col014 | character(8)                |                                              | extended | 
+ col015 | bytea                       |                                              | extended | 
+ col016 | timestamp with time zone    |                                              | plain    | 
+ col017 | interval                    |                                              | plain    | 
+ col018 | cidr                        |                                              | plain    | 
+ col019 | inet                        |                                              | plain    | 
+ col020 | macaddr                     |                                              | plain    | 
+ col022 | money                       |                                              | plain    | 
+ col024 | time with time zone         |                                              | plain    | 
+ col025 | circle                      |                                              | plain    | 
+ col026 | box                         |                                              | plain    | 
+ col027 | name                        |                                              | plain    | 
+ col028 | path                        |                                              | extended | 
+ col029 | smallint                    |                                              | plain    | 
+ col031 | bit varying(256)            |                                              | extended | 
+ col032 | date                        |                                              | plain    | 
+ col034 | lseg                        |                                              | plain    | 
+ col035 | point                       |                                              | plain    | 
+ col036 | polygon                     |                                              | extended | 
+ col037 | real                        |                                              | plain    | 
+ col039 | time without time zone      |                                              | plain    | 
+ col040 | timestamp without time zone |                                              | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (7,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 10', 'Hello .. how are you 10',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '01:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES (    8,  '001',   '2_one',  '{6,7,8,9,10}',  'Hey.. whtz up 11', 'Hey .. whtz up 11',    '{one,two,three,four,five}', 76767669, 1, 222.2222,   11,   '2_two_22',   'c',   '2002-12-13 01:51:15+1359',   '22',    '0.0.0.0',  '0.0.0.0',  'BB:BB:BB:BB:BB:BB', '200.00',    '02:00:05', '((3,3),2)',  '((3,2),(2,3))',   'hello',  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+ INSERT INTO busted VALUES (    9,'110',  '3_three',  '{6,7,8,9,10}',  'Hey.. whtz up 12', 'Hey .. whtz up 12', '{one,two,three,four,five}',33367633,1,  333.3333, 11,     '2_two_22', 'c', '2003-12-13 01:51:15+1359',    '33',   '0.0.0.0',  '0.0.0.0',    'BB:BB:BB:BB:BB:BB',   '200.22', '03:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', 11,  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111,     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+   503
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col003;
+ALTER TABLE
+INSERT INTO new_busted VALUES (generate_series(301,400),'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you 10', 'Hello .. how are you 10',    '{one,two,three,four,five}',  generate_series(301,400), generate_series(301,400), 111.1111, generate_series(301,400),  '1_one_11',   'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '01:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', generate_series(301,400),   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 396
+select count(*) from new_busted  ;
+ count 
+-------
+   396
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col004;
+ALTER TABLE
+\d+ busted
+                                            Table "public.busted"
+ Column |            Type             |                  Modifiers                   | Storage  | Description 
+--------+-----------------------------+----------------------------------------------+----------+-------------
+ a      | integer                     |                                              | plain    | 
+ col005 | text                        | default 'pookie'::text                       | extended | 
+ col006 | integer[]                   | default '{5,4,3,2,1}'::integer[]             | extended | 
+ col007 | character varying(512)      | default 'Now is the time'::character varying | extended | 
+ col008 | character varying           | default 'Now is the time'::character varying | extended | 
+ col009 | character varying(512)[]    |                                              | extended | 
+ col010 | numeric(8,0)                |                                              | main     | 
+ col011 | integer                     |                                              | plain    | 
+ col012 | double precision            |                                              | plain    | 
+ col013 | bigint                      |                                              | plain    | 
+ col014 | character(8)                |                                              | extended | 
+ col015 | bytea                       |                                              | extended | 
+ col016 | timestamp with time zone    |                                              | plain    | 
+ col017 | interval                    |                                              | plain    | 
+ col018 | cidr                        |                                              | plain    | 
+ col019 | inet                        |                                              | plain    | 
+ col020 | macaddr                     |                                              | plain    | 
+ col022 | money                       |                                              | plain    | 
+ col024 | time with time zone         |                                              | plain    | 
+ col025 | circle                      |                                              | plain    | 
+ col026 | box                         |                                              | plain    | 
+ col027 | name                        |                                              | plain    | 
+ col028 | path                        |                                              | extended | 
+ col029 | smallint                    |                                              | plain    | 
+ col031 | bit varying(256)            |                                              | extended | 
+ col032 | date                        |                                              | plain    | 
+ col034 | lseg                        |                                              | plain    | 
+ col035 | point                       |                                              | plain    | 
+ col036 | polygon                     |                                              | extended | 
+ col037 | real                        |                                              | plain    | 
+ col039 | time without time zone      |                                              | plain    | 
+ col040 | timestamp without time zone |                                              | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (10, '1_one', '{1,2,3,4,5}', 'Hello .. how are you 13', 'Hello .. how are you 13',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '04:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES (    11,     '2_one',  '{6,7,8,9,10}',  'Hey.. whtz up 14', 'Hey .. whtz up 14',    '{one,two,three,four,five}', 76767669, 1, 222.2222,   11,   '2_two_22',   'c',   '2002-12-13 01:51:15+1359',   '22',    '0.0.0.0',  '0.0.0.0',  'BB:BB:BB:BB:BB:BB', '200.00',    '05:00:05', '((3,3),2)',  '((3,2),(2,3))',   'hello',  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+ INSERT INTO busted VALUES (    12, '3_three',  '{6,7,8,9,10}',  'Hey.. whtz up 15', 'Hey .. whtz up 15', '{one,two,three,four,five}',33367633,1,  333.3333, 11,     '2_two_22', 'c', '2003-12-13 01:51:15+1359',    '33',   '0.0.0.0',  '0.0.0.0',    'BB:BB:BB:BB:BB:BB',   '200.22', '06:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', 11,  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111,     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+   902
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col004;
+ALTER TABLE
+INSERT INTO new_busted VALUES (generate_series(401,500), '1_one', '{1,2,3,4,5}', 'Hello .. how are you 13', 'Hello .. how are you 13',    '{one,two,three,four,five}',  generate_series(401,500),generate_series(401,500), 111.1111, generate_series(401,500),  '1_one_11',   'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '04:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', generate_series(401,500),   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 496
+select count(*) from new_busted  ;
+ count 
+-------
+   496
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col005;
+ALTER TABLE
+\d+ busted
+                                            Table "public.busted"
+ Column |            Type             |                  Modifiers                   | Storage  | Description 
+--------+-----------------------------+----------------------------------------------+----------+-------------
+ a      | integer                     |                                              | plain    | 
+ col006 | integer[]                   | default '{5,4,3,2,1}'::integer[]             | extended | 
+ col007 | character varying(512)      | default 'Now is the time'::character varying | extended | 
+ col008 | character varying           | default 'Now is the time'::character varying | extended | 
+ col009 | character varying(512)[]    |                                              | extended | 
+ col010 | numeric(8,0)                |                                              | main     | 
+ col011 | integer                     |                                              | plain    | 
+ col012 | double precision            |                                              | plain    | 
+ col013 | bigint                      |                                              | plain    | 
+ col014 | character(8)                |                                              | extended | 
+ col015 | bytea                       |                                              | extended | 
+ col016 | timestamp with time zone    |                                              | plain    | 
+ col017 | interval                    |                                              | plain    | 
+ col018 | cidr                        |                                              | plain    | 
+ col019 | inet                        |                                              | plain    | 
+ col020 | macaddr                     |                                              | plain    | 
+ col022 | money                       |                                              | plain    | 
+ col024 | time with time zone         |                                              | plain    | 
+ col025 | circle                      |                                              | plain    | 
+ col026 | box                         |                                              | plain    | 
+ col027 | name                        |                                              | plain    | 
+ col028 | path                        |                                              | extended | 
+ col029 | smallint                    |                                              | plain    | 
+ col031 | bit varying(256)            |                                              | extended | 
+ col032 | date                        |                                              | plain    | 
+ col034 | lseg                        |                                              | plain    | 
+ col035 | point                       |                                              | plain    | 
+ col036 | polygon                     |                                              | extended | 
+ col037 | real                        |                                              | plain    | 
+ col039 | time without time zone      |                                              | plain    | 
+ col040 | timestamp without time zone |                                              | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (13,  '{1,2,3,4,5}', 'Hello .. how are you 16', 'Hello .. how are you 16',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '07:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES (    14,   '{6,7,8,9,10}',  'Hey.. whtz up 17', 'Hey .. whtz up 17',    '{one,two,three,four,five}', 76767669, 1, 222.2222,   11,   '2_two_22',   'c',   '2006-12-13 01:51:15+1359',   '22',    '0.0.0.0',  '0.0.0.0',  'BB:BB:BB:BB:BB:BB', '200.00',    '00:00:05', '((3,3),2)',  '((3,2),(2,3))',   'hello',  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+ INSERT INTO busted VALUES (    15,  '{6,7,8,9,10}',  'Hey.. whtz up 18', 'Hey .. whtz up 18', '{one,two,three,four,five}',33367633,1,  333.3333, 11,     '2_two_22', 'c', '2007-12-13 01:51:15+1359',    '33',   '0.0.0.0',  '0.0.0.0',    'BB:BB:BB:BB:BB:BB',   '200.22', '00:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', 11,  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111,     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+  1401
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col005;
+ALTER TABLE
+INSERT INTO new_busted VALUES (generate_series(501,600),  '{1,2,3,4,5}', 'Hello .. how are you 16', 'Hello .. how are you 16',    '{one,two,three,four,five}',  12345678,generate_series(501,600), 111.1111,  generate_series(501,600),  '1_one_11',   'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '07:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', generate_series(501,600),   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    generate_series(501,600), '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 596
+select count(*) from new_busted  ;
+ count 
+-------
+   596
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col006;
+ALTER TABLE
+\d+ busted
+                                            Table "public.busted"
+ Column |            Type             |                  Modifiers                   | Storage  | Description 
+--------+-----------------------------+----------------------------------------------+----------+-------------
+ a      | integer                     |                                              | plain    | 
+ col007 | character varying(512)      | default 'Now is the time'::character varying | extended | 
+ col008 | character varying           | default 'Now is the time'::character varying | extended | 
+ col009 | character varying(512)[]    |                                              | extended | 
+ col010 | numeric(8,0)                |                                              | main     | 
+ col011 | integer                     |                                              | plain    | 
+ col012 | double precision            |                                              | plain    | 
+ col013 | bigint                      |                                              | plain    | 
+ col014 | character(8)                |                                              | extended | 
+ col015 | bytea                       |                                              | extended | 
+ col016 | timestamp with time zone    |                                              | plain    | 
+ col017 | interval                    |                                              | plain    | 
+ col018 | cidr                        |                                              | plain    | 
+ col019 | inet                        |                                              | plain    | 
+ col020 | macaddr                     |                                              | plain    | 
+ col022 | money                       |                                              | plain    | 
+ col024 | time with time zone         |                                              | plain    | 
+ col025 | circle                      |                                              | plain    | 
+ col026 | box                         |                                              | plain    | 
+ col027 | name                        |                                              | plain    | 
+ col028 | path                        |                                              | extended | 
+ col029 | smallint                    |                                              | plain    | 
+ col031 | bit varying(256)            |                                              | extended | 
+ col032 | date                        |                                              | plain    | 
+ col034 | lseg                        |                                              | plain    | 
+ col035 | point                       |                                              | plain    | 
+ col036 | polygon                     |                                              | extended | 
+ col037 | real                        |                                              | plain    | 
+ col039 | time without time zone      |                                              | plain    | 
+ col040 | timestamp without time zone |                                              | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (16,  'Hello .. how are you 19', 'Hello .. how are you 19',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES (    17,   'Hey.. whtz up 20', 'Hey .. whtz up 20',    '{one,two,three,four,five}', 76767669, 1, 222.2222,   11,   '2_two_22',   'c',   '2002-12-13 01:51:15+1359',   '22',    '0.0.0.0',  '0.0.0.0',  'BB:BB:BB:BB:BB:BB', '200.00',    '00:00:05', '((3,3),2)',  '((3,2),(2,3))',   'hello',  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+ INSERT INTO busted VALUES (    18,  'Hey.. whtz up 21', 'Hey .. whtz up 21', '{one,two,three,four,five}',33367633,1,  333.3333, 11,     '2_two_22', 'c', '2003-12-13 01:51:15+1359',    '33',   '0.0.0.0',  '0.0.0.0',    'BB:BB:BB:BB:BB:BB',   '200.22', '00:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', 11,  '01000100101',   '2008-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111,     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+  2000
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col006;
+ALTER TABLE
+INSERT INTO new_busted VALUES (generate_series(601,700),  'Hello .. how are you 19', 'Hello .. how are you 19',    '{one,two,three,four,five}',  generate_series(601,700), generate_series(601,700), 111.1111,  generate_series(601,700),  '1_one_11',   'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', generate_series(601,700),   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    generate_series(601,700), '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 696
+select count(*) from new_busted  ;
+ count 
+-------
+   696
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col007;
+ALTER TABLE
+\d+ busted
+                                            Table "public.busted"
+ Column |            Type             |                  Modifiers                   | Storage  | Description 
+--------+-----------------------------+----------------------------------------------+----------+-------------
+ a      | integer                     |                                              | plain    | 
+ col008 | character varying           | default 'Now is the time'::character varying | extended | 
+ col009 | character varying(512)[]    |                                              | extended | 
+ col010 | numeric(8,0)                |                                              | main     | 
+ col011 | integer                     |                                              | plain    | 
+ col012 | double precision            |                                              | plain    | 
+ col013 | bigint                      |                                              | plain    | 
+ col014 | character(8)                |                                              | extended | 
+ col015 | bytea                       |                                              | extended | 
+ col016 | timestamp with time zone    |                                              | plain    | 
+ col017 | interval                    |                                              | plain    | 
+ col018 | cidr                        |                                              | plain    | 
+ col019 | inet                        |                                              | plain    | 
+ col020 | macaddr                     |                                              | plain    | 
+ col022 | money                       |                                              | plain    | 
+ col024 | time with time zone         |                                              | plain    | 
+ col025 | circle                      |                                              | plain    | 
+ col026 | box                         |                                              | plain    | 
+ col027 | name                        |                                              | plain    | 
+ col028 | path                        |                                              | extended | 
+ col029 | smallint                    |                                              | plain    | 
+ col031 | bit varying(256)            |                                              | extended | 
+ col032 | date                        |                                              | plain    | 
+ col034 | lseg                        |                                              | plain    | 
+ col035 | point                       |                                              | plain    | 
+ col036 | polygon                     |                                              | extended | 
+ col037 | real                        |                                              | plain    | 
+ col039 | time without time zone      |                                              | plain    | 
+ col040 | timestamp without time zone |                                              | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (19,  'Hello .. how are you 22',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES (    20,  'Hey .. whtz up 23',    '{one,two,three,four,five}', 76767669, 1, 222.2222,   11,   '2_two_22',   'c',   '2002-12-13 01:51:15+1359',   '22',    '0.0.0.0',  '0.0.0.0',  'BB:BB:BB:BB:BB:BB', '200.00',    '00:00:05', '((3,3),2)',  '((3,2),(2,3))',   'hello',  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+ INSERT INTO busted VALUES (    21,  'Hey .. whtz up 24', '{one,two,three,four,five}',33367633,1,  333.3333, 11,     '2_two_22', 'c', '2003-12-13 01:51:15+1359',    '33',   '0.0.0.0',  '0.0.0.0',    'BB:BB:BB:BB:BB:BB',   '200.22', '00:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', 11,  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111,     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+  2699
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col007;
+ALTER TABLE
+INSERT INTO new_busted VALUES (generate_series(701,800),  'Hello .. how are you 22',    '{one,two,three,four,five}',  generate_series(701,800), generate_series(701,800), 111.1111,  generate_series(701,800),  '1_one_11',   'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    generate_series(701,800), '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 796
+select count(*) from new_busted  ;
+ count 
+-------
+   796
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col008;
+ALTER TABLE
+\d+ busted
+                           Table "public.busted"
+ Column |            Type             | Modifiers | Storage  | Description 
+--------+-----------------------------+-----------+----------+-------------
+ a      | integer                     |           | plain    | 
+ col009 | character varying(512)[]    |           | extended | 
+ col010 | numeric(8,0)                |           | main     | 
+ col011 | integer                     |           | plain    | 
+ col012 | double precision            |           | plain    | 
+ col013 | bigint                      |           | plain    | 
+ col014 | character(8)                |           | extended | 
+ col015 | bytea                       |           | extended | 
+ col016 | timestamp with time zone    |           | plain    | 
+ col017 | interval                    |           | plain    | 
+ col018 | cidr                        |           | plain    | 
+ col019 | inet                        |           | plain    | 
+ col020 | macaddr                     |           | plain    | 
+ col022 | money                       |           | plain    | 
+ col024 | time with time zone         |           | plain    | 
+ col025 | circle                      |           | plain    | 
+ col026 | box                         |           | plain    | 
+ col027 | name                        |           | plain    | 
+ col028 | path                        |           | extended | 
+ col029 | smallint                    |           | plain    | 
+ col031 | bit varying(256)            |           | extended | 
+ col032 | date                        |           | plain    | 
+ col034 | lseg                        |           | plain    | 
+ col035 | point                       |           | plain    | 
+ col036 | polygon                     |           | extended | 
+ col037 | real                        |           | plain    | 
+ col039 | time without time zone      |           | plain    | 
+ col040 | timestamp without time zone |           | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (22,  '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 23,  '{one,two,three,four,five}', 76767669, 1, 222.2222,   11,   '2_two_22',   'c',   '2002-12-13 01:51:15+1359',   '22',    '0.0.0.0',  '0.0.0.0',  'BB:BB:BB:BB:BB:BB', '200.00',    '00:00:05', '((3,3),2)',  '((3,2),(2,3))',   'hello',  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+ INSERT INTO busted VALUES ( 24, '{one,two,three,four,five}',33367633,1,  333.3333, 11,     '2_two_22', 'c', '2003-12-13 01:51:15+1359',    '33',   '0.0.0.0',  '0.0.0.0',    'BB:BB:BB:BB:BB:BB',   '200.22', '00:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', 11,  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111,     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+  3498
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col008;
+ALTER TABLE
+INSERT INTO new_busted VALUES (generate_series(801,900),  '{one,two,three,four,five}',  generate_series(801,900), generate_series(801,900), 111.1111,  generate_series(801,900),  '1_one_11',   'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', generate_series(801,900),   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    generate_series(801,900), '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 896
+select count(*) from new_busted  ;
+ count 
+-------
+   896
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col009;
+ALTER TABLE
+\d+ busted
+                           Table "public.busted"
+ Column |            Type             | Modifiers | Storage  | Description 
+--------+-----------------------------+-----------+----------+-------------
+ a      | integer                     |           | plain    | 
+ col010 | numeric(8,0)                |           | main     | 
+ col011 | integer                     |           | plain    | 
+ col012 | double precision            |           | plain    | 
+ col013 | bigint                      |           | plain    | 
+ col014 | character(8)                |           | extended | 
+ col015 | bytea                       |           | extended | 
+ col016 | timestamp with time zone    |           | plain    | 
+ col017 | interval                    |           | plain    | 
+ col018 | cidr                        |           | plain    | 
+ col019 | inet                        |           | plain    | 
+ col020 | macaddr                     |           | plain    | 
+ col022 | money                       |           | plain    | 
+ col024 | time with time zone         |           | plain    | 
+ col025 | circle                      |           | plain    | 
+ col026 | box                         |           | plain    | 
+ col027 | name                        |           | plain    | 
+ col028 | path                        |           | extended | 
+ col029 | smallint                    |           | plain    | 
+ col031 | bit varying(256)            |           | extended | 
+ col032 | date                        |           | plain    | 
+ col034 | lseg                        |           | plain    | 
+ col035 | point                       |           | plain    | 
+ col036 | polygon                     |           | extended | 
+ col037 | real                        |           | plain    | 
+ col039 | time without time zone      |           | plain    | 
+ col040 | timestamp without time zone |           | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (25,    12345678, 1, 111.1111,  11,  '1_one_11',   'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 26,  76767669, 1, 222.2222,   11,   '2_two_22',   'c',   '2002-12-13 01:51:15+1359',   '22',    '0.0.0.0',  '0.0.0.0',  'BB:BB:BB:BB:BB:BB', '200.00',    '00:00:05', '((3,3),2)',  '((3,2),(2,3))',   'hello',  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+ INSERT INTO busted VALUES ( 27, 33367633,1,  333.3333, 11,     '2_two_22', 'c', '2003-12-13 01:51:15+1359',    '33',   '0.0.0.0',  '0.0.0.0',    'BB:BB:BB:BB:BB:BB',   '200.22', '00:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', 11,  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111,     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+  4397
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col009;
+ALTER TABLE
+ INSERT INTO new_busted VALUES ( generate_series(901,1000), generate_series(901,1000),generate_series(901,1000),  333.3333, generate_series(901,1000),     '2_two_22', 'c', '2003-12-13 01:51:15+1359',    '33',   '0.0.0.0',  '0.0.0.0',    'BB:BB:BB:BB:BB:BB',   '200.22', '00:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', generate_series(901,1000),  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  generate_series(901,1000),     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 996
+select count(*) from new_busted  ;
+ count 
+-------
+   996
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col010;
+ALTER TABLE
+\d+ busted
+                           Table "public.busted"
+ Column |            Type             | Modifiers | Storage  | Description 
+--------+-----------------------------+-----------+----------+-------------
+ a      | integer                     |           | plain    | 
+ col011 | integer                     |           | plain    | 
+ col012 | double precision            |           | plain    | 
+ col013 | bigint                      |           | plain    | 
+ col014 | character(8)                |           | extended | 
+ col015 | bytea                       |           | extended | 
+ col016 | timestamp with time zone    |           | plain    | 
+ col017 | interval                    |           | plain    | 
+ col018 | cidr                        |           | plain    | 
+ col019 | inet                        |           | plain    | 
+ col020 | macaddr                     |           | plain    | 
+ col022 | money                       |           | plain    | 
+ col024 | time with time zone         |           | plain    | 
+ col025 | circle                      |           | plain    | 
+ col026 | box                         |           | plain    | 
+ col027 | name                        |           | plain    | 
+ col028 | path                        |           | extended | 
+ col029 | smallint                    |           | plain    | 
+ col031 | bit varying(256)            |           | extended | 
+ col032 | date                        |           | plain    | 
+ col034 | lseg                        |           | plain    | 
+ col035 | point                       |           | plain    | 
+ col036 | polygon                     |           | extended | 
+ col037 | real                        |           | plain    | 
+ col039 | time without time zone      |           | plain    | 
+ col040 | timestamp without time zone |           | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (28,   1, 111.1111,  11,  '1_one_11',   'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES (   29,  1, 222.2222,   11,   '2_two_22',   'c',   '2002-12-13 01:51:15+1359',   '22',    '0.0.0.0',  '0.0.0.0',  'BB:BB:BB:BB:BB:BB', '200.00',    '00:00:05', '((3,3),2)',  '((3,2),(2,3))',   'hello',  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+ INSERT INTO busted VALUES ( 30, 1,  333.3333, 11,     '2_two_22', 'c', '2003-12-13 01:51:15+1359',    '33',   '0.0.0.0',  '0.0.0.0',    'BB:BB:BB:BB:BB:BB',   '200.22', '00:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', 11,  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111,     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+  5396
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col010;
+ALTER TABLE
+INSERT INTO new_busted VALUES (generate_series(1001,1100),   generate_series(1001,1100), 111.1111,  generate_series(1001,1100),  '1_one_11',   'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', generate_series(1001,1100),   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    generate_series(1001,1100), '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 1096
+select count(*) from new_busted  ;
+ count 
+-------
+  1096
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col011;
+ALTER TABLE
+\d+ busted
+                           Table "public.busted"
+ Column |            Type             | Modifiers | Storage  | Description 
+--------+-----------------------------+-----------+----------+-------------
+ a      | integer                     |           | plain    | 
+ col012 | double precision            |           | plain    | 
+ col013 | bigint                      |           | plain    | 
+ col014 | character(8)                |           | extended | 
+ col015 | bytea                       |           | extended | 
+ col016 | timestamp with time zone    |           | plain    | 
+ col017 | interval                    |           | plain    | 
+ col018 | cidr                        |           | plain    | 
+ col019 | inet                        |           | plain    | 
+ col020 | macaddr                     |           | plain    | 
+ col022 | money                       |           | plain    | 
+ col024 | time with time zone         |           | plain    | 
+ col025 | circle                      |           | plain    | 
+ col026 | box                         |           | plain    | 
+ col027 | name                        |           | plain    | 
+ col028 | path                        |           | extended | 
+ col029 | smallint                    |           | plain    | 
+ col031 | bit varying(256)            |           | extended | 
+ col032 | date                        |           | plain    | 
+ col034 | lseg                        |           | plain    | 
+ col035 | point                       |           | plain    | 
+ col036 | polygon                     |           | extended | 
+ col037 | real                        |           | plain    | 
+ col039 | time without time zone      |           | plain    | 
+ col040 | timestamp without time zone |           | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (31,  111.1111,  11,  '1_one_11',   'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 32, 222.2222,   11,   '2_two_22',   'c',   '2002-12-13 01:51:15+1359',   '22',    '0.0.0.0',  '0.0.0.0',  'BB:BB:BB:BB:BB:BB', '200.00',    '00:00:05', '((3,3),2)',  '((3,2),(2,3))',   'hello',  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+ INSERT INTO busted VALUES ( 33, 333.3333, 11,     '2_two_22', 'c', '2003-12-13 01:51:15+1359',    '33',   '0.0.0.0',  '0.0.0.0',    'BB:BB:BB:BB:BB:BB',   '200.22', '00:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', 11,  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111,     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+  6495
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col011;
+ALTER TABLE
+ INSERT INTO new_busted VALUES ( generate_series(1101,1200), 333.3333, generate_series(1101,1200),     '2_two_22', 'c', '2003-12-13 01:51:15+1359',    '33',   '0.0.0.0',  '0.0.0.0',    'BB:BB:BB:BB:BB:BB',   '200.22', '00:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', generate_series(1101,1200),  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  generate_series(1101,1200),     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 1196
+select count(*) from new_busted  ;
+ count 
+-------
+  1196
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col012;
+ALTER TABLE
+\d+ busted
+                           Table "public.busted"
+ Column |            Type             | Modifiers | Storage  | Description 
+--------+-----------------------------+-----------+----------+-------------
+ a      | integer                     |           | plain    | 
+ col013 | bigint                      |           | plain    | 
+ col014 | character(8)                |           | extended | 
+ col015 | bytea                       |           | extended | 
+ col016 | timestamp with time zone    |           | plain    | 
+ col017 | interval                    |           | plain    | 
+ col018 | cidr                        |           | plain    | 
+ col019 | inet                        |           | plain    | 
+ col020 | macaddr                     |           | plain    | 
+ col022 | money                       |           | plain    | 
+ col024 | time with time zone         |           | plain    | 
+ col025 | circle                      |           | plain    | 
+ col026 | box                         |           | plain    | 
+ col027 | name                        |           | plain    | 
+ col028 | path                        |           | extended | 
+ col029 | smallint                    |           | plain    | 
+ col031 | bit varying(256)            |           | extended | 
+ col032 | date                        |           | plain    | 
+ col034 | lseg                        |           | plain    | 
+ col035 | point                       |           | plain    | 
+ col036 | polygon                     |           | extended | 
+ col037 | real                        |           | plain    | 
+ col039 | time without time zone      |           | plain    | 
+ col040 | timestamp without time zone |           | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (34,  11,  '1_one_11',   'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '12:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 35,  11,   '2_two_22',   'c',   '2002-12-13 01:51:15+1359',   '22',    '0.0.0.0',  '0.0.0.0',  'BB:BB:BB:BB:BB:BB', '200.00',    '00:00:05', '((3,3),2)',  '((3,2),(2,3))',   'hello',  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '11:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+ INSERT INTO busted VALUES ( 36,  11,     '2_two_22', 'c', '2003-12-13 01:51:15+1359',    '33',   '0.0.0.0',  '0.0.0.0',    'BB:BB:BB:BB:BB:BB',   '200.22', '00:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', 11,  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111,     '10:00:00', '2003-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+  7694
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col012;
+ALTER TABLE
+ INSERT INTO new_busted VALUES ( generate_series(1201,1300),  generate_series(1201,1300),     '2_two_22', 'c', '2003-12-13 01:51:15+1359',    '33',   '0.0.0.0',  '0.0.0.0',    'BB:BB:BB:BB:BB:BB',   '200.22', '00:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', generate_series(1201,1300),  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  generate_series(1201,1300),     '10:00:00', '2003-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 1296
+select count(*) from new_busted  ;
+ count 
+-------
+  1296
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col013;
+ALTER TABLE
+\d+ busted
+                           Table "public.busted"
+ Column |            Type             | Modifiers | Storage  | Description 
+--------+-----------------------------+-----------+----------+-------------
+ a      | integer                     |           | plain    | 
+ col014 | character(8)                |           | extended | 
+ col015 | bytea                       |           | extended | 
+ col016 | timestamp with time zone    |           | plain    | 
+ col017 | interval                    |           | plain    | 
+ col018 | cidr                        |           | plain    | 
+ col019 | inet                        |           | plain    | 
+ col020 | macaddr                     |           | plain    | 
+ col022 | money                       |           | plain    | 
+ col024 | time with time zone         |           | plain    | 
+ col025 | circle                      |           | plain    | 
+ col026 | box                         |           | plain    | 
+ col027 | name                        |           | plain    | 
+ col028 | path                        |           | extended | 
+ col029 | smallint                    |           | plain    | 
+ col031 | bit varying(256)            |           | extended | 
+ col032 | date                        |           | plain    | 
+ col034 | lseg                        |           | plain    | 
+ col035 | point                       |           | plain    | 
+ col036 | polygon                     |           | extended | 
+ col037 | real                        |           | plain    | 
+ col039 | time without time zone      |           | plain    | 
+ col040 | timestamp without time zone |           | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (37,  '1_one_11',   'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 38,  '2_two_22',   'c',   '2002-12-13 01:51:15+1359',   '22',    '0.0.0.0',  '0.0.0.0',  'BB:BB:BB:BB:BB:BB', '200.00',    '00:00:05', '((3,3),2)',  '((3,2),(2,3))',   'hello',  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+ INSERT INTO busted VALUES ( 39,  '2_two_22', 'c', '2003-12-13 01:51:15+1359',    '33',   '0.0.0.0',  '0.0.0.0',    'BB:BB:BB:BB:BB:BB',   '200.22', '00:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', 11,  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111,     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+  8993
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col013;
+ALTER TABLE
+ INSERT INTO new_busted VALUES ( generate_series(1301,1400),  '2_two_22', 'c', '2003-12-13 01:51:15+1359',    '33',   '0.0.0.0',  '0.0.0.0',    'BB:BB:BB:BB:BB:BB',   '200.22', '00:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', generate_series(1301,1400),  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  generate_series(1301,1400),     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 1396
+select count(*) from new_busted  ;
+ count 
+-------
+  1396
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col014;
+ALTER TABLE
+\d+ busted
+                           Table "public.busted"
+ Column |            Type             | Modifiers | Storage  | Description 
+--------+-----------------------------+-----------+----------+-------------
+ a      | integer                     |           | plain    | 
+ col015 | bytea                       |           | extended | 
+ col016 | timestamp with time zone    |           | plain    | 
+ col017 | interval                    |           | plain    | 
+ col018 | cidr                        |           | plain    | 
+ col019 | inet                        |           | plain    | 
+ col020 | macaddr                     |           | plain    | 
+ col022 | money                       |           | plain    | 
+ col024 | time with time zone         |           | plain    | 
+ col025 | circle                      |           | plain    | 
+ col026 | box                         |           | plain    | 
+ col027 | name                        |           | plain    | 
+ col028 | path                        |           | extended | 
+ col029 | smallint                    |           | plain    | 
+ col031 | bit varying(256)            |           | extended | 
+ col032 | date                        |           | plain    | 
+ col034 | lseg                        |           | plain    | 
+ col035 | point                       |           | plain    | 
+ col036 | polygon                     |           | extended | 
+ col037 | real                        |           | plain    | 
+ col039 | time without time zone      |           | plain    | 
+ col040 | timestamp without time zone |           | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (40,  'd',  '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 41,  'c',   '2002-12-13 01:51:15+1359',   '22',    '0.0.0.0',  '0.0.0.0',  'BB:BB:BB:BB:BB:BB', '200.00',    '00:00:05', '((3,3),2)',  '((3,2),(2,3))',   'hello',  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+ INSERT INTO busted VALUES ( 42, 'c', '2003-12-13 01:51:15+1359',    '33',   '0.0.0.0',  '0.0.0.0',    'BB:BB:BB:BB:BB:BB',   '200.22', '00:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', 11,  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111,     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+ 10392
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col014;
+ALTER TABLE
+ INSERT INTO new_busted VALUES ( generate_series(1401,1500), 'c', '2003-12-13 01:51:15+1359',    '33',   '0.0.0.0',  '0.0.0.0',    'BB:BB:BB:BB:BB:BB',   '200.22', '00:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', generate_series(1401,1500),  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  generate_series(1401,1500),     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 1496
+select count(*) from new_busted  ;
+ count 
+-------
+  1496
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col015;
+ALTER TABLE
+\d+ busted
+                           Table "public.busted"
+ Column |            Type             | Modifiers | Storage  | Description 
+--------+-----------------------------+-----------+----------+-------------
+ a      | integer                     |           | plain    | 
+ col016 | timestamp with time zone    |           | plain    | 
+ col017 | interval                    |           | plain    | 
+ col018 | cidr                        |           | plain    | 
+ col019 | inet                        |           | plain    | 
+ col020 | macaddr                     |           | plain    | 
+ col022 | money                       |           | plain    | 
+ col024 | time with time zone         |           | plain    | 
+ col025 | circle                      |           | plain    | 
+ col026 | box                         |           | plain    | 
+ col027 | name                        |           | plain    | 
+ col028 | path                        |           | extended | 
+ col029 | smallint                    |           | plain    | 
+ col031 | bit varying(256)            |           | extended | 
+ col032 | date                        |           | plain    | 
+ col034 | lseg                        |           | plain    | 
+ col035 | point                       |           | plain    | 
+ col036 | polygon                     |           | extended | 
+ col037 | real                        |           | plain    | 
+ col039 | time without time zone      |           | plain    | 
+ col040 | timestamp without time zone |           | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (43, '2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 44,  '2002-12-13 01:51:15+1359',   '22',    '0.0.0.0',  '0.0.0.0',  'BB:BB:BB:BB:BB:BB', '200.00',    '00:00:05', '((3,3),2)',  '((3,2),(2,3))',   'hello',  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+ INSERT INTO busted VALUES ( 45,'2003-12-13 01:51:15+1359',    '33',   '0.0.0.0',  '0.0.0.0',    'BB:BB:BB:BB:BB:BB',   '200.22', '00:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', 11,  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111,     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+ 11891
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col015;
+ALTER TABLE
+ INSERT INTO new_busted VALUES ( generate_series(1501,1600),'2003-12-13 01:51:15+1359',    '33',   '0.0.0.0',  '0.0.0.0',    'BB:BB:BB:BB:BB:BB',   '200.22', '00:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', generate_series(1501,1600),  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  generate_series(1501,1600),     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 1596
+select count(*) from new_busted  ;
+ count 
+-------
+  1596
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col016;
+ALTER TABLE
+\d+ busted
+                           Table "public.busted"
+ Column |            Type             | Modifiers | Storage  | Description 
+--------+-----------------------------+-----------+----------+-------------
+ a      | integer                     |           | plain    | 
+ col017 | interval                    |           | plain    | 
+ col018 | cidr                        |           | plain    | 
+ col019 | inet                        |           | plain    | 
+ col020 | macaddr                     |           | plain    | 
+ col022 | money                       |           | plain    | 
+ col024 | time with time zone         |           | plain    | 
+ col025 | circle                      |           | plain    | 
+ col026 | box                         |           | plain    | 
+ col027 | name                        |           | plain    | 
+ col028 | path                        |           | extended | 
+ col029 | smallint                    |           | plain    | 
+ col031 | bit varying(256)            |           | extended | 
+ col032 | date                        |           | plain    | 
+ col034 | lseg                        |           | plain    | 
+ col035 | point                       |           | plain    | 
+ col036 | polygon                     |           | extended | 
+ col037 | real                        |           | plain    | 
+ col039 | time without time zone      |           | plain    | 
+ col040 | timestamp without time zone |           | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (46, '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 47,   '22',    '0.0.0.0',  '0.0.0.0',  'BB:BB:BB:BB:BB:BB', '200.00',    '00:00:05', '((3,3),2)',  '((3,2),(2,3))',   'hello',  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+ INSERT INTO busted VALUES ( 48,    '33',   '0.0.0.0',  '0.0.0.0',    'BB:BB:BB:BB:BB:BB',   '200.22', '00:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', 11,  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111,     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+ 13490
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col016;
+ALTER TABLE
+ INSERT INTO new_busted VALUES ( generate_series(1601,1700),    '33',   '0.0.0.0',  '0.0.0.0',    'BB:BB:BB:BB:BB:BB',   '200.22', '00:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', generate_series(1601,1700),  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  generate_series(1601,1700),     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 1696
+select count(*) from new_busted  ;
+ count 
+-------
+  1696
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col017;
+ALTER TABLE
+\d+ busted
+                           Table "public.busted"
+ Column |            Type             | Modifiers | Storage  | Description 
+--------+-----------------------------+-----------+----------+-------------
+ a      | integer                     |           | plain    | 
+ col018 | cidr                        |           | plain    | 
+ col019 | inet                        |           | plain    | 
+ col020 | macaddr                     |           | plain    | 
+ col022 | money                       |           | plain    | 
+ col024 | time with time zone         |           | plain    | 
+ col025 | circle                      |           | plain    | 
+ col026 | box                         |           | plain    | 
+ col027 | name                        |           | plain    | 
+ col028 | path                        |           | extended | 
+ col029 | smallint                    |           | plain    | 
+ col031 | bit varying(256)            |           | extended | 
+ col032 | date                        |           | plain    | 
+ col034 | lseg                        |           | plain    | 
+ col035 | point                       |           | plain    | 
+ col036 | polygon                     |           | extended | 
+ col037 | real                        |           | plain    | 
+ col039 | time without time zone      |           | plain    | 
+ col040 | timestamp without time zone |           | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (49,  '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 50,   '0.0.0.0',  '0.0.0.0',  'BB:BB:BB:BB:BB:BB', '200.00',    '00:00:05', '((3,3),2)',  '((3,2),(2,3))',   'hello',  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+ INSERT INTO busted VALUES ( 51,     '0.0.0.0',  '0.0.0.0',    'BB:BB:BB:BB:BB:BB',   '200.22', '00:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', 11,  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111,     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+ 15189
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col017;
+ALTER TABLE
+INSERT INTO new_busted VALUES ( generate_series(1701,1800),     '0.0.0.0',  '0.0.0.0',    'BB:BB:BB:BB:BB:BB',   '200.22', '00:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', generate_series(1701,1800),  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  generate_series(1701,1800),     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 1796
+select count(*) from new_busted  ;
+ count 
+-------
+  1796
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col018;
+ALTER TABLE
+\d+ busted
+                           Table "public.busted"
+ Column |            Type             | Modifiers | Storage  | Description 
+--------+-----------------------------+-----------+----------+-------------
+ a      | integer                     |           | plain    | 
+ col019 | inet                        |           | plain    | 
+ col020 | macaddr                     |           | plain    | 
+ col022 | money                       |           | plain    | 
+ col024 | time with time zone         |           | plain    | 
+ col025 | circle                      |           | plain    | 
+ col026 | box                         |           | plain    | 
+ col027 | name                        |           | plain    | 
+ col028 | path                        |           | extended | 
+ col029 | smallint                    |           | plain    | 
+ col031 | bit varying(256)            |           | extended | 
+ col032 | date                        |           | plain    | 
+ col034 | lseg                        |           | plain    | 
+ col035 | point                       |           | plain    | 
+ col036 | polygon                     |           | extended | 
+ col037 | real                        |           | plain    | 
+ col039 | time without time zone      |           | plain    | 
+ col040 | timestamp without time zone |           | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (52,   '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 53,  '0.0.0.0',  'BB:BB:BB:BB:BB:BB', '200.00',    '00:00:05', '((3,3),2)',  '((3,2),(2,3))',   'hello',  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+ INSERT INTO busted VALUES ( 54,  '0.0.0.0',    'BB:BB:BB:BB:BB:BB',   '200.22', '00:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', 11,  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111,     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+ 16988
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col018;
+ALTER TABLE
+ INSERT INTO new_busted VALUES ( generate_series(1801,1900),  '0.0.0.0',    'BB:BB:BB:BB:BB:BB',   '200.22', '00:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', generate_series(1801,1900),  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  generate_series(1801,1900),     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 1896
+select count(*) from new_busted  ;
+ count 
+-------
+  1896
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col019;
+ALTER TABLE
+\d+ busted
+                           Table "public.busted"
+ Column |            Type             | Modifiers | Storage  | Description 
+--------+-----------------------------+-----------+----------+-------------
+ a      | integer                     |           | plain    | 
+ col020 | macaddr                     |           | plain    | 
+ col022 | money                       |           | plain    | 
+ col024 | time with time zone         |           | plain    | 
+ col025 | circle                      |           | plain    | 
+ col026 | box                         |           | plain    | 
+ col027 | name                        |           | plain    | 
+ col028 | path                        |           | extended | 
+ col029 | smallint                    |           | plain    | 
+ col031 | bit varying(256)            |           | extended | 
+ col032 | date                        |           | plain    | 
+ col034 | lseg                        |           | plain    | 
+ col035 | point                       |           | plain    | 
+ col036 | polygon                     |           | extended | 
+ col037 | real                        |           | plain    | 
+ col039 | time without time zone      |           | plain    | 
+ col040 | timestamp without time zone |           | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (55,  'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 56,  'BB:BB:BB:BB:BB:BB', '200.00',    '00:00:05', '((3,3),2)',  '((3,2),(2,3))',   'hello',  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+ INSERT INTO busted VALUES ( 57,   'BB:BB:BB:BB:BB:BB',   '200.22', '00:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', 11,  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111,     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+ 18887
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col019;
+ALTER TABLE
+ INSERT INTO new_busted VALUES ( generate_series(1901,2000),   'BB:BB:BB:BB:BB:BB',   '200.22', '00:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', generate_series(1901,2000),  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  generate_series(1901,2000),     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 1996
+select count(*) from new_busted  ;
+ count 
+-------
+  1996
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col020;
+ALTER TABLE
+\d+ busted
+                           Table "public.busted"
+ Column |            Type             | Modifiers | Storage  | Description 
+--------+-----------------------------+-----------+----------+-------------
+ a      | integer                     |           | plain    | 
+ col022 | money                       |           | plain    | 
+ col024 | time with time zone         |           | plain    | 
+ col025 | circle                      |           | plain    | 
+ col026 | box                         |           | plain    | 
+ col027 | name                        |           | plain    | 
+ col028 | path                        |           | extended | 
+ col029 | smallint                    |           | plain    | 
+ col031 | bit varying(256)            |           | extended | 
+ col032 | date                        |           | plain    | 
+ col034 | lseg                        |           | plain    | 
+ col035 | point                       |           | plain    | 
+ col036 | polygon                     |           | extended | 
+ col037 | real                        |           | plain    | 
+ col039 | time without time zone      |           | plain    | 
+ col040 | timestamp without time zone |           | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (58,   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 59,  '200.00',    '00:00:05', '((3,3),2)',  '((3,2),(2,3))',   'hello',  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+ INSERT INTO busted VALUES ( 60,   '200.22', '00:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', 11,  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111,     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+ 20886
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col020;
+ALTER TABLE
+ INSERT INTO new_busted VALUES ( generate_series(2001,2100),   '200.22', '00:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', generate_series(2001,2100),  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  generate_series(2001,2100),     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 2096
+select count(*) from new_busted  ;
+ count 
+-------
+  2096
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col022;
+ALTER TABLE
+\d+ busted
+                           Table "public.busted"
+ Column |            Type             | Modifiers | Storage  | Description 
+--------+-----------------------------+-----------+----------+-------------
+ a      | integer                     |           | plain    | 
+ col024 | time with time zone         |           | plain    | 
+ col025 | circle                      |           | plain    | 
+ col026 | box                         |           | plain    | 
+ col027 | name                        |           | plain    | 
+ col028 | path                        |           | extended | 
+ col029 | smallint                    |           | plain    | 
+ col031 | bit varying(256)            |           | extended | 
+ col032 | date                        |           | plain    | 
+ col034 | lseg                        |           | plain    | 
+ col035 | point                       |           | plain    | 
+ col036 | polygon                     |           | extended | 
+ col037 | real                        |           | plain    | 
+ col039 | time without time zone      |           | plain    | 
+ col040 | timestamp without time zone |           | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (61,   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 62,   '00:00:05', '((3,3),2)',  '((3,2),(2,3))',   'hello',  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+ INSERT INTO busted VALUES ( 63,  '00:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', 11,  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111,     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+ 22985
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col022;
+ALTER TABLE
+ INSERT INTO new_busted VALUES ( generate_series(2101,2200),  '00:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))',  generate_series(2101,2200),  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',   generate_series(2101,2200),     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 2196
+select count(*) from new_busted  ;
+ count 
+-------
+  2196
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col024;
+ALTER TABLE
+\d+ busted
+                           Table "public.busted"
+ Column |            Type             | Modifiers | Storage  | Description 
+--------+-----------------------------+-----------+----------+-------------
+ a      | integer                     |           | plain    | 
+ col025 | circle                      |           | plain    | 
+ col026 | box                         |           | plain    | 
+ col027 | name                        |           | plain    | 
+ col028 | path                        |           | extended | 
+ col029 | smallint                    |           | plain    | 
+ col031 | bit varying(256)            |           | extended | 
+ col032 | date                        |           | plain    | 
+ col034 | lseg                        |           | plain    | 
+ col035 | point                       |           | plain    | 
+ col036 | polygon                     |           | extended | 
+ col037 | real                        |           | plain    | 
+ col039 | time without time zone      |           | plain    | 
+ col040 | timestamp without time zone |           | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (64, '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 65,  '((3,3),2)',  '((3,2),(2,3))',   'hello',  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+ INSERT INTO busted VALUES ( 66,   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', 11,  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111,     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+ 25184
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col024;
+ALTER TABLE
+ INSERT INTO new_busted VALUES ( generate_series(2201,2300),   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))',  generate_series(2201,2300),  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',   generate_series(2201,2300),     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 2296
+select count(*) from new_busted  ;
+ count 
+-------
+  2296
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col025;
+ALTER TABLE
+\d+ busted
+                           Table "public.busted"
+ Column |            Type             | Modifiers | Storage  | Description 
+--------+-----------------------------+-----------+----------+-------------
+ a      | integer                     |           | plain    | 
+ col026 | box                         |           | plain    | 
+ col027 | name                        |           | plain    | 
+ col028 | path                        |           | extended | 
+ col029 | smallint                    |           | plain    | 
+ col031 | bit varying(256)            |           | extended | 
+ col032 | date                        |           | plain    | 
+ col034 | lseg                        |           | plain    | 
+ col035 | point                       |           | plain    | 
+ col036 | polygon                     |           | extended | 
+ col037 | real                        |           | plain    | 
+ col039 | time without time zone      |           | plain    | 
+ col040 | timestamp without time zone |           | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (67,  '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 68,  '((3,2),(2,3))',   'hello',  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+ INSERT INTO busted VALUES ( 69,  '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', 11,  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111,     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+ 27483
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col025;
+ALTER TABLE
+ INSERT INTO new_busted VALUES ( generate_series(2301,2400),  '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', generate_series(2301,2400),  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  generate_series(2301,2400),     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 2396
+select count(*) from new_busted  ;
+ count 
+-------
+  2396
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col026;
+ALTER TABLE
+\d+ busted
+                           Table "public.busted"
+ Column |            Type             | Modifiers | Storage  | Description 
+--------+-----------------------------+-----------+----------+-------------
+ a      | integer                     |           | plain    | 
+ col027 | name                        |           | plain    | 
+ col028 | path                        |           | extended | 
+ col029 | smallint                    |           | plain    | 
+ col031 | bit varying(256)            |           | extended | 
+ col032 | date                        |           | plain    | 
+ col034 | lseg                        |           | plain    | 
+ col035 | point                       |           | plain    | 
+ col036 | polygon                     |           | extended | 
+ col037 | real                        |           | plain    | 
+ col039 | time without time zone      |           | plain    | 
+ col040 | timestamp without time zone |           | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (70,  'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 71,    'hello',  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+ INSERT INTO busted VALUES ( 72, 'hello2',   '((3,2),(2,3))', 11,  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111,     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+ 29882
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col026;
+ALTER TABLE
+ INSERT INTO new_busted VALUES ( generate_series(2401,2500), 'hello2',   '((3,2),(2,3))', generate_series(2401,2500),  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  generate_series(2401,2500),     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 2496
+select count(*) from new_busted  ;
+ count 
+-------
+  2496
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col027;
+ALTER TABLE
+\d+ busted
+                           Table "public.busted"
+ Column |            Type             | Modifiers | Storage  | Description 
+--------+-----------------------------+-----------+----------+-------------
+ a      | integer                     |           | plain    | 
+ col028 | path                        |           | extended | 
+ col029 | smallint                    |           | plain    | 
+ col031 | bit varying(256)            |           | extended | 
+ col032 | date                        |           | plain    | 
+ col034 | lseg                        |           | plain    | 
+ col035 | point                       |           | plain    | 
+ col036 | polygon                     |           | extended | 
+ col037 | real                        |           | plain    | 
+ col039 | time without time zone      |           | plain    | 
+ col040 | timestamp without time zone |           | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (73, '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 74,  '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 75,  '((3,2),(2,3))', 11,  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111,     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+ 32381
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col027;
+ALTER TABLE
+INSERT INTO new_busted VALUES ( generate_series(2501,2600),  '((3,2),(2,3))',  generate_series(2501,2600),  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',   generate_series(2501,2600),     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 2596
+select count(*) from new_busted  ;
+ count 
+-------
+  2596
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col028;
+ALTER TABLE
+\d+ busted
+                           Table "public.busted"
+ Column |            Type             | Modifiers | Storage  | Description 
+--------+-----------------------------+-----------+----------+-------------
+ a      | integer                     |           | plain    | 
+ col029 | smallint                    |           | plain    | 
+ col031 | bit varying(256)            |           | extended | 
+ col032 | date                        |           | plain    | 
+ col034 | lseg                        |           | plain    | 
+ col035 | point                       |           | plain    | 
+ col036 | polygon                     |           | extended | 
+ col037 | real                        |           | plain    | 
+ col039 | time without time zone      |           | plain    | 
+ col040 | timestamp without time zone |           | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (76, 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 77, 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+ INSERT INTO busted VALUES ( 78, 11,  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111,     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+ 34980
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col028;
+ALTER TABLE
+ INSERT INTO new_busted VALUES ( generate_series(2601,2700), generate_series(2601,2700),  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  generate_series(2601,2700),     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 2696
+select count(*) from new_busted  ;
+ count 
+-------
+  2696
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col029;
+ALTER TABLE
+\d+ busted
+                           Table "public.busted"
+ Column |            Type             | Modifiers | Storage  | Description 
+--------+-----------------------------+-----------+----------+-------------
+ a      | integer                     |           | plain    | 
+ col031 | bit varying(256)            |           | extended | 
+ col032 | date                        |           | plain    | 
+ col034 | lseg                        |           | plain    | 
+ col035 | point                       |           | plain    | 
+ col036 | polygon                     |           | extended | 
+ col037 | real                        |           | plain    | 
+ col039 | time without time zone      |           | plain    | 
+ col040 | timestamp without time zone |           | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES ( 79, '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 80,   '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+ INSERT INTO busted VALUES ( 81, '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111,     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+ 37679
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col029;
+ALTER TABLE
+ INSERT INTO new_busted VALUES (generate_series(2701,2800), '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  generate_series(2701,2800),     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 2796
+select count(*) from new_busted  ;
+ count 
+-------
+  2796
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col031;
+ALTER TABLE
+\d+ busted
+                           Table "public.busted"
+ Column |            Type             | Modifiers | Storage  | Description 
+--------+-----------------------------+-----------+----------+-------------
+ a      | integer                     |           | plain    | 
+ col032 | date                        |           | plain    | 
+ col034 | lseg                        |           | plain    | 
+ col035 | point                       |           | plain    | 
+ col036 | polygon                     |           | extended | 
+ col037 | real                        |           | plain    | 
+ col039 | time without time zone      |           | plain    | 
+ col040 | timestamp without time zone |           | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES ( 82,  '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 83,  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+ INSERT INTO busted VALUES ( 84,  '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111,     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+ 40478
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col031;
+ALTER TABLE
+ INSERT INTO new_busted VALUES ( generate_series(2801,2900),  '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  generate_series(2801,2900),     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 2896
+select count(*) from new_busted  ;
+ count 
+-------
+  2896
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col032;
+ALTER TABLE
+\d+ busted
+                           Table "public.busted"
+ Column |            Type             | Modifiers | Storage  | Description 
+--------+-----------------------------+-----------+----------+-------------
+ a      | integer                     |           | plain    | 
+ col034 | lseg                        |           | plain    | 
+ col035 | point                       |           | plain    | 
+ col036 | polygon                     |           | extended | 
+ col037 | real                        |           | plain    | 
+ col039 | time without time zone      |           | plain    | 
+ col040 | timestamp without time zone |           | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (85,  '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 86, '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 87,  '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111, '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+ 43377
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col032;
+ALTER TABLE
+INSERT INTO new_busted VALUES ( generate_series(2901,3000),  '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  generate_series(2901,3000), '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 2996
+select count(*) from new_busted  ;
+ count 
+-------
+  2996
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col034;
+ALTER TABLE
+\d+ busted
+                           Table "public.busted"
+ Column |            Type             | Modifiers | Storage  | Description 
+--------+-----------------------------+-----------+----------+-------------
+ a      | integer                     |           | plain    | 
+ col035 | point                       |           | plain    | 
+ col036 | polygon                     |           | extended | 
+ col037 | real                        |           | plain    | 
+ col039 | time without time zone      |           | plain    | 
+ col040 | timestamp without time zone |           | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (88, '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '1983-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 89, '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '1984-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 90,  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111, '21:00:00', '1985-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+ 46376
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col034;
+ALTER TABLE
+INSERT INTO new_busted VALUES ( generate_series(3001,3100),  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  generate_series(3001,3100), '21:00:00', '1985-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 3096
+select count(*) from new_busted  ;
+ count 
+-------
+  3096
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col035;
+ALTER TABLE
+\d+ busted
+                           Table "public.busted"
+ Column |            Type             | Modifiers | Storage  | Description 
+--------+-----------------------------+-----------+----------+-------------
+ a      | integer                     |           | plain    | 
+ col036 | polygon                     |           | extended | 
+ col037 | real                        |           | plain    | 
+ col039 | time without time zone      |           | plain    | 
+ col040 | timestamp without time zone |           | plain    | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES ( 91, '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  111111, '23:00:00',   '1980-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 92,'((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '1981-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 93,'((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111,  '21:00:00', '1982-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+ 49475
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col035;
+ALTER TABLE
+INSERT INTO new_busted VALUES ( generate_series(3101,3200),'((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', generate_series(3101,3200),  '21:00:00', '1982-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 3196
+select count(*) from new_busted  ;
+ count 
+-------
+  3196
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col036;
+ALTER TABLE
+\d+ busted
+                          Table "public.busted"
+ Column |            Type             | Modifiers | Storage | Description 
+--------+-----------------------------+-----------+---------+-------------
+ a      | integer                     |           | plain   | 
+ col037 | real                        |           | plain   | 
+ col039 | time without time zone      |           | plain   | 
+ col040 | timestamp without time zone |           | plain   | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES ( 94,   111111, '23:00:00',   '1997-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 95, 11111,  '22:00:00', '1998-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 96,  11111,  '21:00:00', '1990-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+ 52674
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col036;
+ALTER TABLE
+INSERT INTO new_busted VALUES ( generate_series(3201,3300),  generate_series(3201,3300),  '21:00:00', '1990-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 3296
+select count(*) from new_busted  ;
+ count 
+-------
+  3296
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col037;
+ALTER TABLE
+\d+ busted
+                          Table "public.busted"
+ Column |            Type             | Modifiers | Storage | Description 
+--------+-----------------------------+-----------+---------+-------------
+ a      | integer                     |           | plain   | 
+ col039 | time without time zone      |           | plain   | 
+ col040 | timestamp without time zone |           | plain   | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (97, '23:00:00',   '1996-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 98,  '22:00:00', '1995-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 99, '21:00:00', '1994-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+ 55973
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col037;
+ALTER TABLE
+INSERT INTO new_busted VALUES ( generate_series(3301,3400), '23:00:00', '1994-12-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 3396
+select count(*) from new_busted  ;
+ count 
+-------
+  3396
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col039;
+ALTER TABLE
+\d+ busted
+                          Table "public.busted"
+ Column |            Type             | Modifiers | Storage | Description 
+--------+-----------------------------+-----------+---------+-------------
+ a      | integer                     |           | plain   | 
+ col040 | timestamp without time zone |           | plain   | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (100,  '1981-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 101, '1982-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO busted VALUES ( 102, '1983-12-13 01:51:15');
+INSERT 0 1
+select count(*) from busted  ;
+ count 
+-------
+ 59372
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col039;
+ALTER TABLE
+INSERT INTO new_busted VALUES ( generate_series(3401,3500), '1985-11-13 01:51:15');
+INSERT 0 100
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 3496
+select count(*) from new_busted  ;
+ count 
+-------
+  3496
+(1 row)
+
+ALTER TABLE busted DROP COLUMN col040;
+ALTER TABLE
+\d+ busted
+                Table "public.busted"
+ Column |  Type   | Modifiers | Storage | Description 
+--------+---------+-----------+---------+-------------
+ a      | integer |           | plain   | 
+Has OIDs: no
+Distributed by: (a)
+
+INSERT INTO busted VALUES (103);
+INSERT 0 1
+INSERT INTO busted VALUES ( 104);
+INSERT 0 1
+INSERT INTO busted VALUES ( 105);
+INSERT 0 1
+select count(*) from busted ; 
+ count 
+-------
+ 62871
+(1 row)
+
+ALTER TABLE new_busted DROP COLUMN col040;
+ALTER TABLE
+INSERT INTO new_busted VALUES ( generate_series(676,680));
+INSERT 0 5
+INSERT INTO busted SELECT * FROM new_busted;
+INSERT 0 3501
+select count(*) from new_busted  ; 
+ count 
+-------
+  3501
+(1 row)
+
+ALTER TABLE new_busted ADD COLUMN col001 char DEFAULT 'z'   ;
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col002 numeric  DEFAULT  100;
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col003 boolean DEFAULT false   ;
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col004 bit(3) DEFAULT B'111'   ;
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col005 text DEFAULT 'pookie'   ;
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col006 integer[] DEFAULT '{5,4, 3, 2, 1}'   ;
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col007 character varying(512) DEFAULT 'Now is the time'  ;
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col008 character varying DEFAULT 'Now is the time'   ;
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col009 character varying(512)[]  DEFAULT '{one,two,three,four,five}';
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col010 numeric(8)  DEFAULT 1111111;
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col011 int  DEFAULT  12;
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col012 double precision  DEFAULT  78.90;
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col013 bigint  DEFAULT 797090 ;
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col014 char(8)  DEFAULT 'i_am_eig';
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col015 bytea  DEFAULT 'd';
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col016 timestamp with time zone  DEFAULT '2000-12-13 01:51:15';
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col017 interval  DEFAULT '10';
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col018 cidr  DEFAULT '0.0.0.0';
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col019 inet  DEFAULT '0.0.0.0';
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col020 macaddr  DEFAULT 'AA:AA:AA:AA:AA:AA';
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col022 money  DEFAULT '100.00';
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col024 timetz  DEFAULT '00:00:01';
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col025 circle  DEFAULT '((2,2),1)' ;
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col026 box  DEFAULT '((1,2),(2,1))';
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col027 name  DEFAULT 'ann' ;
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col028 path  DEFAULT '((1,2),(2,1))';
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col029 int2  DEFAULT 22;
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col031 bit varying(256)  DEFAULT '1000001';
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col032 date  DEFAULT '2005-05-05';
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col034 lseg  DEFAULT '((1,2),(2,1))';
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col035 point  DEFAULT '(5,5)';
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col036 polygon  DEFAULT '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))';
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col037 real  DEFAULT 23425;
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col039 time  DEFAULT '01:00:10';
+ALTER TABLE
+ALTER TABLE new_busted ADD COLUMN col040 timestamp  DEFAULT '2005-05-05 01:51:15';
+ALTER TABLE
+INSERT INTO new_busted VALUES (1,'a',11,true,'111', '1_one', '{1,2,3,4,5}', 'Hello .. how are you', 'Hello .. how are you',    '{one,two,three,four,five}',  12345678, 1, 111.1111,  11,  '1_one_11',   'd',  
+'2001-12-13 01:51:15+1359',  '11',   '0.0.0.0', '0.0.0.0', 'AA:AA:AA:AA:AA:AA',   '34.23',   '00:00:00+1359',  '((2,2),1)',   '((1,2),(2,1))',   'hello', '((1,2),(2,1))', 11,   '010101',   '2001-12-13', '((1,1),(2,2))', '(1,1)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',    111111, '23:00:00',   '2001-12-13 01:51:15');
+INSERT 0 1
+INSERT INTO new_busted VALUES (    1,   'b',   22,  false, '001',   '2_one',  '{6,7,8,9,10}',  'Hey.. whtz up', 'Hey .. whtz up',    '{one,two,three,four,five}', 76767669, 1, 222.2222, 11,   '2_two_22',   'c',  
+'2002-12-13 01:51:15+1359',   '22',    '0.0.0.0',  '0.0.0.0',  'BB:BB:BB:BB:BB:BB', '200.00',    '00:00:05', '((3,3),2)',  '((3,2),(2,3))',   'hello', '((3,2),(2,3))', 22,    '01010100101',  '2002-12-13', '((2,2),(3,3))', '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))', 11111,  '22:00:00', '2002-12-13 01:51:15');
+INSERT 0 1
+ INSERT INTO new_busted VALUES (   3, 'c',   33,  true,  '110',  '3_three',  '{6,7,8,9,10}',  'Hey.. whtz up 3', 'Hey .. whtz up 3', '{one,two,three,four,five}',33367633,1,  333.3333, 11,     '2_two_22', 'c',
+'2003-12-13 01:51:15+1359',    '33',   '0.0.0.0',  '0.0.0.0',    'BB:BB:BB:BB:BB:BB',   '200.22', '00:00:01',   '((3,3),2)', '((3,2),(2,3))', 'hello2',   '((3,2),(2,3))', 11,  '01000100101',   '2002-12-13', '((2,2),(3,3))',  '(2,2)', '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))',  11111,     '21:00:00', '2003-12-13 01:51:15');
+INSERT 0 1
+SELECT count(*) FROM new_busted;
+ count 
+-------
+  3504
+(1 row)
+
+ALTER TABLE busted ADD COLUMN col001 char DEFAULT 'z'   ;                                                                                                                                                        
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col002 numeric  DEFAULT  100;                                                                                                                                                                
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col003 boolean DEFAULT false   ;                                                                                                                                                   
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col004 bit(3) DEFAULT B'111'   ;                                                                                                                                                   
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col005 text DEFAULT 'pookie'   ;                                                                                                                                                   
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col006 integer[] DEFAULT '{5,4, 3, 2, 1}'   ;                                                                                                                                     
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col007 character varying(512) DEFAULT 'Now is the time'  ;                                                                                                                        
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col008 character varying DEFAULT 'Now is the time'   ;                                                                                                                             
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col009 character varying(512)[]  DEFAULT '{one,two,three,four,five}';
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col010 numeric(8)  DEFAULT 1111111; 
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col011 int  DEFAULT  12;                                                                                                                                                                     
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col012 double precision  DEFAULT  78.90;                                                                                                                                             
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col013 bigint  DEFAULT 797090 ;                                                                                                                                                             
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col014 char(8)  DEFAULT 'i_am_eig';                                                                                                                                                          
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col015 bytea  DEFAULT 'd';                                                                                                                                          
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col016 timestamp with time zone  DEFAULT '2000-12-13 01:51:15';                                                                                                                          
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col017 interval  DEFAULT '10';                                                                                        
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col018 cidr  DEFAULT '0.0.0.0';                                                                                                                                                          
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col019 inet  DEFAULT '0.0.0.0';                                                                                                                                                       
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col020 macaddr  DEFAULT 'AA:AA:AA:AA:AA:AA';
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col022 money  DEFAULT '100.00';
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col024 timetz  DEFAULT '00:00:01';                                                                                                                                                   
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col025 circle  DEFAULT '((2,2),1)' ;                                                                                                                                                 
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col026 box  DEFAULT '((1,2),(2,1))';                                                                                                                                                  
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col027 name  DEFAULT 'ann' ;                                                                                                                                                       
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col028 path  DEFAULT '((1,2),(2,1))';                                                                                                                                         
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col029 int2  DEFAULT 22; 
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col031 bit varying(256)  DEFAULT '1000001';                                                                                                                                            
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col032 date  DEFAULT '2005-05-05';              
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col034 lseg  DEFAULT '((1,2),(2,1))';                                                                                                                                            
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col035 point  DEFAULT '(5,5)';                                                                                                                                                       
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col036 polygon  DEFAULT '((1,2),(2,3),(3,4),(4,3),(3,2),(2,1))';                                                                                                           
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col037 real  DEFAULT 23425; 
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col039 time  DEFAULT '01:00:10';                                                                                                                                                   
+ALTER TABLE
+ALTER TABLE busted ADD COLUMN col040 timestamp  DEFAULT '2005-05-05 01:51:15';
+ALTER TABLE
+INSERT INTO busted SELECT * FROM new_busted; 
+INSERT 0 3504
+SELECT count(*) FROM busted;
+ count 
+-------
+ 69876
+(1 row)
+

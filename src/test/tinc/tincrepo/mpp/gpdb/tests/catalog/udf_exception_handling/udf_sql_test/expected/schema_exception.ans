@@ -1,0 +1,123 @@
+-- @Description Tests invalid schema creation from function with exception
+-- 
+DROP TABLE IF EXISTS test_exception_block CASCADE;
+psql:/path/sql_file:1: NOTICE:  table "test_exception_block" does not exist, skipping
+DROP TABLE
+DROP FUNCTION IF EXISTS test_exception_block_fn() CASCADE;
+DROP FUNCTION
+-- create base table
+CREATE TABLE test_exception_block
+(
+  f1 smallint,
+  f2 smallint,
+  f3 smallint
+)
+WITH ( OIDS=FALSE ) DISTRIBUTED BY (f1);
+CREATE TABLE
+--  create function execution of which post fix avoid catalog corruption
+CREATE OR REPLACE FUNCTION test_exception_block_fn() RETURNS integer AS
+$BODY$
+	begin
+		-- this view definition is valid
+		CREATE VIEW public.test_exception_block_v1 AS SELECT f1 FROM public.test_exception_block;
+		-- this view definition is invalid
+		CREATE VIEW public.test_exception_block_v2 AS SELECT f4 FROM public.test_exception_block;
+		return 1;
+	exception
+		WHEN OTHERS THEN
+		RAISE NOTICE 'EXCEPTION HIT !!!';
+	        return 0;
+		RAISE EXCEPTION 'ERROR 0';
+	end;
+$BODY$
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER;
+CREATE FUNCTION
+--execute the function
+SELECT * FROM test_exception_block_fn();
+psql:/path/sql_file:1: NOTICE:  EXCEPTION HIT !!!
+ test_exception_block_fn 
+-------------------------
+                       0
+(1 row)
+
+SELECT relname FROM pg_class WHERE relname IN ('test_exception_block_v1','test_exception_block_v2');
+ relname 
+---------
+(0 rows)
+
+-- no record returned i.e. v1 does not exist in the catalog
+--let's try and create v1
+CREATE VIEW public.test_exception_block_v1 AS SELECT f1 FROM public.test_exception_block;
+CREATE VIEW
+  -- Should not thow ERROR:  relation "test_exception_block_v1" already exists
+DROP VIEW public.test_exception_block_v1;
+DROP VIEW
+-- Function call from savepoint which commits
+BEGIN;
+BEGIN
+	SAVEPOINT SP1;
+SAVEPOINT
+	SELECT * FROM test_exception_block_fn();
+psql:/path/sql_file:1: NOTICE:  EXCEPTION HIT !!!
+ test_exception_block_fn 
+-------------------------
+                       0
+(1 row)
+
+	RELEASE SP1;
+RELEASE
+COMMIT;
+COMMIT
+SELECT relname FROM pg_class WHERE relname IN ('test_exception_block_v1','test_exception_block_v2');
+ relname 
+---------
+(0 rows)
+
+-- no record returned i.e. v1 does not exist in the catalog
+--let's try and create v1
+CREATE VIEW public.test_exception_block_v1 AS SELECT f1 FROM public.test_exception_block;
+CREATE VIEW
+  -- Should not thow ERROR:  relation "test_exception_block_v1" already exists
+DROP VIEW public.test_exception_block_v1;
+DROP VIEW
+--  create function execution of which post fix avoids catalog corruption
+CREATE OR REPLACE FUNCTION test_exception_block_fn() RETURNS integer AS
+$BODY$
+	begin
+		-- this view definition is valid
+		CREATE VIEW public.test_exception_block_v1 AS SELECT f1 FROM public.test_exception_block;
+		return 1;
+	exception
+		WHEN OTHERS THEN
+		RAISE NOTICE 'EXCEPTION HIT !!!';
+	        return 0;
+		RAISE EXCEPTION 'ERROR 0';
+	end;
+$BODY$
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER;
+CREATE FUNCTION
+-- Function call from savepoint which commits
+BEGIN;
+BEGIN
+	SAVEPOINT SP1;
+SAVEPOINT
+	SELECT * FROM test_exception_block_fn();
+ test_exception_block_fn 
+-------------------------
+                       1
+(1 row)
+
+	ROLLBACK TO SP1;
+ROLLBACK
+COMMIT;
+COMMIT
+SELECT relname FROM pg_class WHERE relname IN ('test_exception_block_v1','test_exception_block_v2');
+ relname 
+---------
+(0 rows)
+
+-- no record returned i.e. v1 does not exist in the catalog
+--let's try and create v1
+CREATE VIEW public.test_exception_block_v1 AS SELECT f1 FROM public.test_exception_block;
+CREATE VIEW
+  -- Should not thow ERROR:  relation "test_exception_block_v1" already exists

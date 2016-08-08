@@ -1,0 +1,34 @@
+-- start_ignore
+-- end_ignore
+DROP EXTERNAL TABLE IF EXISTS exttab_conc_truncate_1 CASCADE;
+psql:/path/sql_file:1: NOTICE:  table "exttab_conc_truncate_1" does not exist, skipping
+DROP EXTERNAL TABLE
+DROP EXTERNAL TABLE IF EXISTS exttab_conc_truncate_2 CASCADE;
+psql:/path/sql_file:1: NOTICE:  table "exttab_conc_truncate_2" does not exist, skipping
+DROP EXTERNAL TABLE
+-- Generate the file with very few errors
+\! python @script@ 10 2 > @data_dir@/exttab_conc_truncate_1.tbl
+-- does not reach reject limit
+CREATE EXTERNAL TABLE exttab_conc_truncate_1( i int, j text ) 
+LOCATION ('gpfdist://@host@:@port@/exttab_conc_truncate_1.tbl') FORMAT 'TEXT' (DELIMITER '|') 
+LOG ERRORS SEGMENT REJECT LIMIT 10;
+CREATE EXTERNAL TABLE
+-- Generate the file with lot of errors
+\! python @script@ 200 50 > @data_dir@/exttab_conc_truncate_2.tbl
+CREATE EXTERNAL TABLE exttab_conc_truncate_2( i int, j text ) 
+LOCATION ('gpfdist://@host@:@port@/exttab_conc_truncate_2.tbl') FORMAT 'TEXT' (DELIMITER '|') 
+LOG ERRORS SEGMENT REJECT LIMIT 100;
+CREATE EXTERNAL TABLE
+-- Generate error rows
+SELECT COUNT(*) FROM exttab_conc_truncate_1, exttab_conc_truncate_2;
+ count 
+-------
+  1200
+(1 row)
+
+SELECT COUNT(*) FROM exttab_conc_truncate_1, exttab_conc_truncate_2;
+ count 
+-------
+  1200
+(1 row)
+

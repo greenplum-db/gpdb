@@ -1,0 +1,34 @@
+-- start_ignore
+drop  external table timestamp_heap;
+DROP EXTERNAL TABLE
+drop  external table timestamp_writehdfs;
+DROP EXTERNAL TABLE
+drop  external table timestamp_readhdfs;
+DROP EXTERNAL TABLE
+-- end_ignore
+create readable external table timestamp_heap(datatype_timestamp varchar,x_timestamp bigint, col1_timestamp timestamp,col2_timestamp timestamp, col3_timestamp timestamp, nullcol_timestamp timestamp) location ('gpfdist://rh55-qavm20:5487/timestamp.txt')format 'TEXT';
+CREATE EXTERNAL TABLE
+create writable external table timestamp_writehdfs(like timestamp_heap) location ('gphdfs://my.cluster.com/extwrite/timestamp')format 'custom' (formatter='gphdfs_export');
+NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+CREATE EXTERNAL TABLE
+create readable external table timestamp_readhdfs(like timestamp_heap) location ('gphdfs://my.cluster.com/extwrite/timestamp') format 'custom' (formatter='gphdfs_import');
+CREATE EXTERNAL TABLE
+select count(*) from timestamp_heap;
+ count 
+-------
+  5000
+(1 row)
+
+insert into timestamp_writehdfs select * from timestamp_heap;
+INSERT 0 5000
+select count(*) from timestamp_readhdfs;
+ count 
+-------
+  5000
+(1 row)
+
+(select * from timestamp_heap except select * from timestamp_readhdfs) union (select * from timestamp_readhdfs except select * from timestamp_heap);
+ datatype_timestamp | x_timestamp | col1_timestamp | col2_timestamp | col3_timestamp | nullcol_timestamp 
+--------------------+-------------+----------------+----------------+----------------+-------------------
+(0 rows)
+

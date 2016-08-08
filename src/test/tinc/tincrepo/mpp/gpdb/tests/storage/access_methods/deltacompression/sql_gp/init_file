@@ -1,0 +1,5 @@
+-- start_matchignore
+m/.*{compresstype=none,.*/
+m/.*compression_ratio .*[02-9]+[.]?(\d+)?/
+
+-- end_matchignore

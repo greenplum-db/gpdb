@@ -1,0 +1,60 @@
+-- @product_version gpdb: [4.3.0.0-4.3.99.99]
+\d+ cr_uao_ctas
+                  Append-Only Table "public.cr_uao_ctas"
+ Column |            Type             | Modifiers | Storage  | Description 
+--------+-----------------------------+-----------+----------+-------------
+ phase  | text                        |           | extended | 
+ a      | integer                     |           | plain    | 
+ col001 | character(1)                |           | extended | 
+ col002 | numeric                     |           | main     | 
+ col003 | boolean                     |           | plain    | 
+ col004 | bit(3)                      |           | extended | 
+ col005 | text                        |           | extended | 
+ col006 | integer[]                   |           | extended | 
+ col007 | character varying(512)      |           | extended | 
+ col008 | character varying           |           | extended | 
+ col009 | character varying(512)[]    |           | extended | 
+ col010 | numeric(8,0)                |           | main     | 
+ col011 | integer                     |           | plain    | 
+ col012 | double precision            |           | plain    | 
+ col013 | bigint                      |           | plain    | 
+ col014 | character(8)                |           | extended | 
+ col015 | bytea                       |           | extended | 
+ col016 | timestamp with time zone    |           | plain    | 
+ col017 | interval                    |           | plain    | 
+ col018 | cidr                        |           | plain    | 
+ col019 | inet                        |           | plain    | 
+ col020 | macaddr                     |           | plain    | 
+ col022 | money                       |           | plain    | 
+ col024 | time with time zone         |           | plain    | 
+ col025 | circle                      |           | plain    | 
+ col026 | box                         |           | plain    | 
+ col027 | name                        |           | plain    | 
+ col028 | path                        |           | extended | 
+ col029 | smallint                    |           | plain    | 
+ col031 | bit varying(256)            |           | extended | 
+ col032 | date                        |           | plain    | 
+ col034 | lseg                        |           | plain    | 
+ col035 | point                       |           | plain    | 
+ col036 | polygon                     |           | extended | 
+ col037 | real                        |           | plain    | 
+ col039 | time without time zone      |           | plain    | 
+ col040 | timestamp without time zone |           | plain    | 
+Compression Type: None
+Compression Level: 0
+Block Size: 32768
+Checksum: f
+Has OIDs: no
+Options: appendonly=true
+Distributed by: (phase)
+
+select count(*) from cr_uao_ctas;
+ count 
+-------
+   100
+(1 row)
+
+drop table cr_uao_ctas;
+DROP TABLE
+drop table cr_seed_table_for_uao;
+DROP TABLE

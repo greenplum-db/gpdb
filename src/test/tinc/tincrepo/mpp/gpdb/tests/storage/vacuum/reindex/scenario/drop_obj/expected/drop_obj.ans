@@ -1,0 +1,4 @@
+\c gpreindextest;
+You are now connected to database "gpreindextest" as user "gpadmin".
+drop table heap_drop;
+DROP TABLE

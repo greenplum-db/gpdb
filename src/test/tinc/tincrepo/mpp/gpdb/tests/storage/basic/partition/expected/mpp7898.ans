@@ -1,0 +1,31 @@
+-- start_ignore
+-- end_ignore
+--start_ignore
+drop table if exists mpp7898_r cascade;
+psql:/path/sql_file:1: NOTICE:  table "mpp7898_r" does not exist, skipping
+DROP TABLE
+drop table if exists mpp7898_s cascade;
+DROP TABLE
+--end_ignore
+-- Inheritance parent: mpp7898_s
+create table mpp7898_s 
+    (a int, b text) 
+    distributed by (a);
+CREATE TABLE
+    
+insert into mpp7898_s values 
+    (1, 'one');
+INSERT 0 1
+-- Try to create a table that mixes inheritance and partitioning.
+-- Correct behavior: ERROR
+-- Partition: mpp7898_r
+create table mpp7898_r 
+    ( c int, d int) 
+    inherits (mpp7898_s)
+    partition by range(d) 
+    (
+        start (0) 
+        end (2) 
+        every (1)
+    );
+psql:/path/sql_file:1: ERROR:  cannot mix inheritance with partitioning

@@ -1,0 +1,24 @@
+--------------------------------------------------------------------------------
+query:  insert newmetadata=newvalue 
+
+test_name|metadata|class_value|method_value
+
+test_insert_metadata_method_level.sample_tincmm_tests.MockTestCase1.test_01|newmetadata|None|newvalue
+test_insert_metadata_method_level.sample_tincmm_tests.MockTestCase2.test_01|newmetadata|None|newvalue
+test_insert_metadata_method_level.sample_tincmm_tests.MockTestCase3.test_01|newmetadata|None|newvalue
+test_insert_metadata_method_level.sample_tincmm_tests.MockTestCase4.test_01|newmetadata|None|newvalue
+test_insert_metadata_method_level.sample_tincmm_sql_tests.SampleSQLMockTest.test_query01|newmetadata|None|newvalue
+test_insert_metadata_method_level.sample_tincmm_sql_tests.SampleSQLMockTest.test_query_nodocstring|newmetadata|None|newvalue
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+query:  insert anothernewmd=newvalue 
+
+test_name|metadata|class_value|method_value
+
+test_insert_metadata_method_level.sample_tincmm_tests.MockTestCase1.test_01|anothernewmd|None|newvalue
+test_insert_metadata_method_level.sample_tincmm_tests.MockTestCase2.test_01|anothernewmd|None|newvalue
+test_insert_metadata_method_level.sample_tincmm_tests.MockTestCase3.test_01|anothernewmd|None|newvalue
+test_insert_metadata_method_level.sample_tincmm_tests.MockTestCase4.test_01|anothernewmd|None|newvalue
+test_insert_metadata_method_level.sample_tincmm_sql_tests.SampleSQLMockTest.test_query01|anothernewmd|None|newvalue
+test_insert_metadata_method_level.sample_tincmm_sql_tests.SampleSQLMockTest.test_query_nodocstring|anothernewmd|None|newvalue
+--------------------------------------------------------------------------------

@@ -1,0 +1,97 @@
+--------------------------------------------------------------------------
+-- @TITLE: Negative tests for UAO
+-- 
+--------------------------------------------------------------------------
+Drop table if exists sto_ao_neg_vac;
+DROP TABLE
+CREATE TABLE sto_ao_neg_vac (id int, date date, amt decimal(10,2))
+with (appendonly=true)
+DISTRIBUTED BY (id);
+CREATE TABLE
+Insert into sto_ao_neg_vac values(1,'2013-07-05',19.20);
+INSERT 0 1
+Insert into sto_ao_neg_vac values(2,'2013-08-15',10.20);
+INSERT 0 1
+Insert into sto_ao_neg_vac values(3,'2013-09-09',14.20);
+INSERT 0 1
+Insert into sto_ao_neg_vac values(10,'2013-07-22',12.52);
+INSERT 0 1
+select * from sto_ao_neg_vac ORDER BY id;
+ id |    date    |  amt  
+----+------------+-------
+  1 | 2013-07-05 | 19.20
+  2 | 2013-08-15 | 10.20
+  3 | 2013-09-09 | 14.20
+ 10 | 2013-07-22 | 12.52
+(4 rows)
+
+UPDATE sto_ao_neg_vac SET amt = 40.40 WHERE id =2;
+UPDATE 1
+select * from sto_ao_neg_vac ORDER BY id,amt;
+ id |    date    |  amt  
+----+------------+-------
+  1 | 2013-07-05 | 19.20
+  2 | 2013-08-15 | 40.40
+  3 | 2013-09-09 | 14.20
+ 10 | 2013-07-22 | 12.52
+(4 rows)
+
+set gp_select_invisible = true;
+SET
+select * from sto_ao_neg_vac ORDER BY id,amt;
+ id |    date    |  amt  
+----+------------+-------
+  1 | 2013-07-05 | 19.20
+  2 | 2013-08-15 | 10.20
+  2 | 2013-08-15 | 40.40
+  3 | 2013-09-09 | 14.20
+ 10 | 2013-07-22 | 12.52
+(5 rows)
+
+set gp_appendonly_compaction=false;
+SET
+select * from sto_ao_neg_vac ORDER BY id,amt;
+ id |    date    |  amt  
+----+------------+-------
+  1 | 2013-07-05 | 19.20
+  2 | 2013-08-15 | 10.20
+  2 | 2013-08-15 | 40.40
+  3 | 2013-09-09 | 14.20
+ 10 | 2013-07-22 | 12.52
+(5 rows)
+
+VACUUM ANALYZE sto_ao_neg_vac;
+VACUUM
+select * from sto_ao_neg_vac ORDER BY id,amt;
+ id |    date    |  amt  
+----+------------+-------
+  1 | 2013-07-05 | 19.20
+  2 | 2013-08-15 | 10.20
+  2 | 2013-08-15 | 40.40
+  3 | 2013-09-09 | 14.20
+ 10 | 2013-07-22 | 12.52
+(5 rows)
+
+set gp_appendonly_compaction=true;
+SET
+select * from sto_ao_neg_vac ORDER BY id,amt;
+ id |    date    |  amt  
+----+------------+-------
+  1 | 2013-07-05 | 19.20
+  2 | 2013-08-15 | 10.20
+  2 | 2013-08-15 | 40.40
+  3 | 2013-09-09 | 14.20
+ 10 | 2013-07-22 | 12.52
+(5 rows)
+
+VACUUM ANALYZE sto_ao_neg_vac;
+VACUUM
+select * from sto_ao_neg_vac ORDER BY id,amt;
+ id |    date    |  amt  
+----+------------+-------
+  1 | 2013-07-05 | 19.20
+  2 | 2013-08-15 | 40.40
+  3 | 2013-09-09 | 14.20
+ 10 | 2013-07-22 | 12.52
+(4 rows)
+

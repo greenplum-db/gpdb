@@ -1,0 +1,65 @@
+select count(*) from tbl_with_all_type;
+ count 
+-------
+  4577
+(1 row)
+
+select * from int8_tbl order by q1,q2;
+        q1        |        q2         
+------------------+-------------------
+              123 |               456
+              123 |  4567890123456789
+ 4567890123456789 | -4567890123456789
+ 4567890123456789 |               123
+ 4567890123456789 |  4567890123456789
+(5 rows)
+
+select * from int4_tbl order by f1;
+     f1      
+-------------
+ -2147483647
+     -123456
+           0
+          34
+      123456
+  2147483647
+(6 rows)
+
+select count(*) from tenk1;
+ count 
+-------
+ 10000
+(1 row)
+
+with cte as
+        (
+        select count(*) from
+        (
+        select code, n, x
+        from mpp15087_t
+        , (select 100 as x) d
+        ) FOO
+        )
+select code from mpp15087_t t where 1= (select count(*) from cte) order by code;
+ code 
+------
+ abc
+ def
+ xyz
+(3 rows)
+
+select * from csq_t4 order by a;
+  a   | b 
+------+---
+    9 | 4
+   25 | 6
+ 3333 | 2
+ 9999 | 8
+(4 rows)
+
+select count(*) from tt2 full outer join tt1 on (tt1.x=tt2.z) where tt2.z=2;
+ count 
+-------
+   333
+(1 row)
+

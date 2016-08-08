@@ -1,0 +1,180 @@
+CREATE TABLE  sync2_insert_into_select_heap7 AS SELECT * FROM sync1_heap_table;
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'phase' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT 100
+INSERT INTO sync2_insert_into_select_heap7 SELECT * FROM sync1_heap_table;
+INSERT 0 100
+SELECT count(*) FROM sync2_insert_into_select_heap7;
+ count 
+-------
+   200
+(1 row)
+
+CREATE TABLE  sync2_insert_into_select_heap6 AS SELECT * FROM ck_sync1_heap_table;
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'phase' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT 100
+INSERT INTO sync2_insert_into_select_heap6 SELECT * FROM ck_sync1_heap_table;
+INSERT 0 100
+SELECT count(*) FROM sync2_insert_into_select_heap6;
+ count 
+-------
+   200
+(1 row)
+
+CREATE TABLE  sync2_insert_into_select_heap4 AS SELECT * FROM ct_heap_table;
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'phase' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT 100
+INSERT INTO sync2_insert_into_select_heap4 SELECT * FROM ct_heap_table;
+INSERT 0 100
+SELECT count(*) FROM sync2_insert_into_select_heap4;
+ count 
+-------
+   200
+(1 row)
+
+CREATE TABLE  sync2_insert_into_select_heap2 AS SELECT * FROM resync_heap_table;
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'phase' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT 100
+INSERT INTO sync2_insert_into_select_heap2 SELECT * FROM resync_heap_table;
+INSERT 0 100
+SELECT count(*) FROM sync2_insert_into_select_heap2;
+ count 
+-------
+   200
+(1 row)
+
+CREATE TABLE  sync2_insert_into_select_heap1 AS SELECT * FROM sync2_heap_table;
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'phase' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT 100
+INSERT INTO sync2_insert_into_select_heap1 SELECT * FROM sync2_heap_table;
+INSERT 0 100
+SELECT count(*) FROM sync2_insert_into_select_heap1;
+ count 
+-------
+   200
+(1 row)
+
+CREATE TABLE  sync2_insert_into_select_ao7   with ( appendonly='true') AS SELECT * FROM sync1_ao_table;
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'phase' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT 100
+INSERT INTO sync2_insert_into_select_ao7 SELECT * FROM sync1_ao_table;
+INSERT 0 100
+SELECT count(*) FROM sync2_insert_into_select_ao7;
+ count 
+-------
+   200
+(1 row)
+
+CREATE TABLE  sync2_insert_into_select_ao6   with ( appendonly='true') AS SELECT * FROM ck_sync1_ao_table;
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'phase' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT 100
+INSERT INTO sync2_insert_into_select_ao6 SELECT * FROM ck_sync1_ao_table;
+INSERT 0 100
+SELECT count(*) FROM sync2_insert_into_select_ao6;
+ count 
+-------
+   200
+(1 row)
+
+CREATE TABLE  sync2_insert_into_select_ao4   with ( appendonly='true') AS SELECT * FROM ct_ao_table;
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'phase' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT 100
+INSERT INTO sync2_insert_into_select_ao4 SELECT * FROM ct_ao_table;
+INSERT 0 100
+SELECT count(*) FROM sync2_insert_into_select_ao4;
+ count 
+-------
+   200
+(1 row)
+
+CREATE TABLE  sync2_insert_into_select_ao2   with ( appendonly='true') AS SELECT * FROM resync_ao_table;
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'phase' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT 100
+INSERT INTO sync2_insert_into_select_ao2 SELECT * FROM resync_ao_table;
+INSERT 0 100
+SELECT count(*) FROM sync2_insert_into_select_ao2;
+ count 
+-------
+   200
+(1 row)
+
+CREATE TABLE  sync2_insert_into_select_ao1   with ( appendonly='true') AS SELECT * FROM sync2_ao_table;
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'phase' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT 100
+INSERT INTO sync2_insert_into_select_ao1 SELECT * FROM sync2_ao_table;
+INSERT 0 100
+SELECT count(*) FROM sync2_insert_into_select_ao1;
+ count 
+-------
+   200
+(1 row)
+
+CREATE TABLE  sync2_insert_into_select_co7  with ( appendonly='true', orientation='column') AS SELECT * FROM sync1_co_table;
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'phase' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT 100
+INSERT INTO sync2_insert_into_select_co7 SELECT * FROM sync1_co_table;
+INSERT 0 100
+SELECT count(*) FROM sync2_insert_into_select_co7;
+ count 
+-------
+   200
+(1 row)
+
+CREATE TABLE  sync2_insert_into_select_co6  with ( appendonly='true', orientation='column') AS SELECT * FROM ck_sync1_co_table;
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'phase' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT 100
+INSERT INTO sync2_insert_into_select_co6 SELECT * FROM ck_sync1_co_table;
+INSERT 0 100
+SELECT count(*) FROM sync2_insert_into_select_co6;
+ count 
+-------
+   200
+(1 row)
+
+CREATE TABLE  sync2_insert_into_select_co4  with ( appendonly='true', orientation='column') AS SELECT * FROM ct_co_table;
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'phase' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT 100
+INSERT INTO sync2_insert_into_select_co4 SELECT * FROM ct_co_table;
+INSERT 0 100
+SELECT count(*) FROM sync2_insert_into_select_co4;
+ count 
+-------
+   200
+(1 row)
+
+CREATE TABLE  sync2_insert_into_select_co2  with ( appendonly='true', orientation='column') AS SELECT * FROM resync_co_table;
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'phase' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT 100
+INSERT INTO sync2_insert_into_select_co2 SELECT * FROM resync_co_table;
+INSERT 0 100
+SELECT count(*) FROM sync2_insert_into_select_co2;
+ count 
+-------
+   200
+(1 row)
+
+CREATE TABLE  sync2_insert_into_select_co1  with ( appendonly='true', orientation='column') AS SELECT * FROM sync2_co_table;
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'phase' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT 100
+INSERT INTO sync2_insert_into_select_co1 SELECT * FROM sync2_co_table;
+INSERT 0 100
+SELECT count(*) FROM sync2_insert_into_select_co1;
+ count 
+-------
+   200
+(1 row)
+

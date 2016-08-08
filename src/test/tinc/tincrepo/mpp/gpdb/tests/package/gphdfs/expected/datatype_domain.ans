@@ -1,0 +1,52 @@
+--start_ignore
+drop external table domaintype_write_error;
+DROP EXTERNAL TABLE
+drop external table domaintype_write;
+DROP EXTERNAL TABLE
+drop external table readcty;
+DROP EXTERNAL TABLE
+drop table errortable;
+DROP TABLE
+drop domain country_code CASCADE;
+DROP DOMAIN
+--end_ignore
+CREATE DOMAIN country_code char(2) NOT NULL;
+CREATE DOMAIN
+create writable external table domaintype_write(id INT4, country country_code)location ('gphdfs://rh55-qavm20:54310/extwrite/domainDataType')format 'custom' (formatter='gphdfs_export');
+CREATE EXTERNAL TABLE
+insert into domaintype_write values (1,'US');
+INSERT 0 1
+insert into domaintype_write values (2,'CH');
+INSERT 0 1
+insert into domaintype_write values (3,'HK');
+INSERT 0 1
+create readable external table readcty(id INT4, country country_code)location ('gphdfs://rh55-qavm20:54310/extwrite/domainDataType')format 'custom' (formatter='gphdfs_import') log errors into errortable segment reject limit 100;
+NOTICE:  Error table "errortable" does not exist. Auto generating an error table with the same name
+CREATE EXTERNAL TABLE
+select * from readcty order by id;
+ id | country 
+----+---------
+  1 | US
+  2 | CH
+  3 | HK
+(3 rows)
+
+create writable external table domaintype_write_error(id INT4, text text)location ('gphdfs://rh55-qavm20:54310/extwrite/domainDataType')format 'custom' (formatter='gphdfs_export');
+CREATE EXTERNAL TABLE
+insert into domaintype_write_error values (3,'aaa');
+INSERT 0 1
+select * from readcty order by id;
+NOTICE:  Found 1 data formatting errors (1 or more input rows). Rejected related input data.
+ id | country 
+----+---------
+  1 | US
+  2 | CH
+  3 | HK
+(3 rows)
+
+select relname,linenum,bytenum,errmsg,rawdata,rawbytes from errortable;
+ relname | linenum | bytenum |                errmsg                | rawdata | rawbytes 
+---------+---------+---------+--------------------------------------+---------+----------
+ readcty |         |         | value too long for type character(2) |         | 
+(1 row)
+

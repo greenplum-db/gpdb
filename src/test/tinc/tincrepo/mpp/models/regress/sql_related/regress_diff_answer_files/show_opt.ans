@@ -1,0 +1,5 @@
+show optimizer;
+optimizer
+-----------
+off
+(1 row)

@@ -1,0 +1,8 @@
+-- start_ignore
+DROP TABLE IF EXISTS gpl;
+-- end_ignore
+CREATE TABLE gpl (
+                 myc text
+                );
+\! gpload -f gpl.yaml>>gpload.log
+select * from gpl;

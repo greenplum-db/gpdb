@@ -1,0 +1,34 @@
+-- start_ignore
+drop  external table numeric_heap;
+ERROR:  table "numeric_heap" does not exist
+drop  external table numeric_writehdfs;
+ERROR:  table "numeric_writehdfs" does not exist
+drop  external table numeric_readhdfs;
+ERROR:  table "numeric_readhdfs" does not exist
+-- end_ignore
+create readable external table numeric_heap(datatype_numeric varchar, xcount_numeric bigint,max_numeric numeric, min_numeric numeric, x_numeric numeric, reverse_numeric numeric, increment_numeric numeric, nullcol_numeric numeric) location ('gpfdist://rh55-qavm20:8090/numeric.txt')format 'TEXT';
+CREATE EXTERNAL TABLE
+create writable external table numeric_writehdfs(like numeric_heap) location ('gphdfs://rh55-qavm20:54310/extwrite/numeric')format 'custom' (formatter='gphdfs_export');
+NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+CREATE EXTERNAL TABLE
+create readable external table numeric_readhdfs(like numeric_heap) location ('gphdfs://rh55-qavm20:54310/extwrite/numeric') format 'custom' (formatter='gphdfs_import');
+CREATE EXTERNAL TABLE
+select count(*) from numeric_heap;
+ count 
+-------
+  5000
+(1 row)
+
+insert into numeric_writehdfs select * from numeric_heap;
+INSERT 0 5000
+select count(*) from numeric_readhdfs;
+ count 
+-------
+  5000
+(1 row)
+
+(select * from numeric_heap except select * from numeric_readhdfs) union (select * from numeric_readhdfs except select * from numeric_heap);
+ datatype_numeric | xcount_numeric | max_numeric | min_numeric | x_numeric | reverse_numeric | increment_numeric | nullcol_numeric 
+------------------+----------------+-------------+-------------+-----------+-----------------+-------------------+-----------------
+(0 rows)
+

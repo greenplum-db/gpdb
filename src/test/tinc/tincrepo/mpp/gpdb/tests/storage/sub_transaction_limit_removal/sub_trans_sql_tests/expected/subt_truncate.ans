@@ -1,0 +1,140 @@
+-- start_ignore
+-- end_ignore
+Drop table if exists subt_trunc_tab_co;
+psql:/path/sql_file:1: NOTICE:  table "subt_trunc_tab_co" does not exist, skipping
+DROP TABLE
+Create table subt_trunc_tab_co (i int, x text,c char,v varchar, d date, n numeric, t timestamp without time zone, tz time with time zone) with(appendonly=true,orientation=column) distributed randomly partition by range (i) (default partition others, start (0) inclusive end (10) exclusive every (5));
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "subt_trunc_tab_co_1_prt_others" for table "subt_trunc_tab_co"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "subt_trunc_tab_co_1_prt_2" for table "subt_trunc_tab_co"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "subt_trunc_tab_co_1_prt_3" for table "subt_trunc_tab_co"
+CREATE TABLE
+Insert into subt_trunc_tab_co values(generate_series(1,10),'create table with subtransactions','s','subtransaction table','12-11-2012',3,'2012-10-09 10:23:54', '2011-08-19 10:23:54+02');
+INSERT 0 10
+Drop table if exists subt_trunc_tab_ao;
+DROP TABLE
+Create table subt_trunc_tab_ao (i int, x text,c char,v varchar, d date, n numeric, t timestamp without time zone, tz time with time zone) with(appendonly=true) distributed randomly partition by range (i) (default partition others, start (0) inclusive end (10) exclusive every (5));
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "subt_trunc_tab_ao_1_prt_others" for table "subt_trunc_tab_ao"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "subt_trunc_tab_ao_1_prt_2" for table "subt_trunc_tab_ao"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "subt_trunc_tab_ao_1_prt_3" for table "subt_trunc_tab_ao"
+CREATE TABLE
+Insert into subt_trunc_tab_ao values(generate_series(1,10),'create table with subtransactions','s','subtransaction table','12-11-2012',3,'2012-10-09 10:23:54', '2011-08-19 10:23:54+02');
+INSERT 0 10
+Drop table if exists subt_trunc_tab_heap;
+DROP TABLE
+Create table subt_trunc_tab_heap (i int, x text,c char,v varchar, d date, n numeric, t timestamp without time zone, tz time with time zone) distributed randomly partition by range (i) (default partition others, start (0) inclusive end (10) exclusive every (5));
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "subt_trunc_tab_heap_1_prt_others" for table "subt_trunc_tab_heap"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "subt_trunc_tab_heap_1_prt_2" for table "subt_trunc_tab_heap"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "subt_trunc_tab_heap_1_prt_3" for table "subt_trunc_tab_heap"
+CREATE TABLE
+Insert into subt_trunc_tab_heap values(generate_series(1,10),'create table with subtransactions','s','subtransaction table','12-11-2012',3,'2012-10-09 10:23:54', '2011-08-19 10:23:54+02');
+INSERT 0 10
+BEGIN;
+BEGIN
+Savepoint sp1;
+SAVEPOINT
+Insert into subt_trunc_tab_co values(generate_series(1,10),'create table with subtransactions','s','subtransaction table','12-11-2012',3,'2012-10-09 10:23:54', '2011-08-19 10:23:54+02');
+INSERT 0 10
+Truncate table subt_trunc_tab_co;
+TRUNCATE TABLE
+Insert into subt_trunc_tab_ao values(generate_series(1,10),'create table with subtransactions','s','subtransaction table','12-11-2012',3,'2012-10-09 10:23:54', '2011-08-19 10:23:54+02');
+INSERT 0 10
+Truncate table subt_trunc_tab_ao;
+TRUNCATE TABLE
+Insert into subt_trunc_tab_heap values(generate_series(1,10),'create table with subtransactions','s','subtransaction table','12-11-2012',3,'2012-10-09 10:23:54', '2011-08-19 10:23:54+02');
+INSERT 0 10
+Truncate table subt_trunc_tab_heap;
+TRUNCATE TABLE
+select count(*) from subt_trunc_tab_co;
+ count 
+-------
+     0
+(1 row)
+
+select count(*) from subt_trunc_tab_ao;
+ count 
+-------
+     0
+(1 row)
+
+select count(*) from subt_trunc_tab_heap;
+ count 
+-------
+     0
+(1 row)
+
+Savepoint sp2;
+SAVEPOINT
+Rollback to sp1;
+ROLLBACK
+select count(*) from subt_trunc_tab_co;
+ count 
+-------
+    10
+(1 row)
+
+select count(*) from subt_trunc_tab_ao;
+ count 
+-------
+    10
+(1 row)
+
+select count(*) from subt_trunc_tab_heap;
+ count 
+-------
+    10
+(1 row)
+
+Savepoint sp3;
+SAVEPOINT
+Insert into subt_trunc_tab_co values(generate_series(1,10),'create table with subtransactions','s','subtransaction table','12-11-2012',3,'2012-10-09 10:23:54', '2011-08-19 10:23:54+02');
+INSERT 0 10
+Truncate table subt_trunc_tab_co;
+TRUNCATE TABLE
+Insert into subt_trunc_tab_ao values(generate_series(1,10),'create table with subtransactions','s','subtransaction table','12-11-2012',3,'2012-10-09 10:23:54', '2011-08-19 10:23:54+02');
+INSERT 0 10
+Truncate table subt_trunc_tab_ao;
+TRUNCATE TABLE
+Insert into subt_trunc_tab_heap values(generate_series(1,10),'create table with subtransactions','s','subtransaction table','12-11-2012',3,'2012-10-09 10:23:54', '2011-08-19 10:23:54+02');
+INSERT 0 10
+Truncate table subt_trunc_tab_heap;
+TRUNCATE TABLE
+select count(*) from subt_trunc_tab_co;
+ count 
+-------
+     0
+(1 row)
+
+select count(*) from subt_trunc_tab_ao;
+ count 
+-------
+     0
+(1 row)
+
+select count(*) from subt_trunc_tab_heap;
+ count 
+-------
+     0
+(1 row)
+
+Release Savepoint sp1;
+RELEASE
+select count(*) from subt_trunc_tab_co;
+ count 
+-------
+     0
+(1 row)
+
+select count(*) from subt_trunc_tab_ao;
+ count 
+-------
+     0
+(1 row)
+
+select count(*) from subt_trunc_tab_heap;
+ count 
+-------
+     0
+(1 row)
+
+COMMIT;
+COMMIT

@@ -1,0 +1,91 @@
+-- @Description select with aggregate function
+-- 
+DROP TABLE IF EXISTS city_uao_aggregate cascade;
+DROP TABLE
+DROP TABLE IF EXISTS country_uao_aggregate cascade;
+DROP TABLE
+DROP TABLE IF EXISTS countrylanguage_uao_aggregate cascade;
+DROP TABLE
+BEGIN;
+BEGIN
+CREATE TABLE city_uao_aggregate (
+    id integer NOT NULL,
+    name text NOT NULL,
+    countrycode character(3) NOT NULL,
+    district text NOT NULL,
+    population integer NOT NULL
+) with (appendonly=true) distributed by(id);
+CREATE TABLE
+CREATE TABLE country_uao_aggregate (
+    code character(3) NOT NULL,
+    name text NOT NULL,
+    continent text NOT NULL,
+    region text NOT NULL,
+    surfacearea real NOT NULL,
+    indepyear smallint,
+    population integer NOT NULL,
+    lifeexpectancy real,
+    gnp numeric(10,2),
+    gnpold numeric(10,2),
+    localname text NOT NULL,
+    governmentform text NOT NULL,
+    headofstate text,
+    capital integer,
+    code2 character(2) NOT NULL
+) with (appendonly=true)  distributed by (code);
+CREATE TABLE
+CREATE TABLE countrylanguage_uao_aggregate (
+    countrycode character(3) NOT NULL,
+    "language" text NOT NULL,
+    isofficial boolean NOT NULL,
+    percentage real NOT NULL
+)  with (appendonly=true) distributed by (countrycode,language);
+CREATE TABLE
+COPY city_uao_aggregate (id, name, countrycode, district, population) FROM stdin;
+--
+-- Data for Name: country; Type: TABLE DATA; Schema: public; 
+--
+COPY country_uao_aggregate (code, name, continent, region, surfacearea, indepyear, population, lifeexpectancy, gnp, gnpold, localname, governmentform, headofstate, capital, code2) FROM stdin WITH NULL AS '';
+--
+-- Data for Name: countrylanguage; Type: TABLE DATA; Schema: public; 
+--
+COPY countrylanguage_uao_aggregate (countrycode, "language", isofficial, percentage) FROM stdin;
+COMMIT;
+COMMIT
+ANALYZE city_uao_aggregate;
+ANALYZE
+ANALYZE country_uao_aggregate;
+ANALYZE
+ANALYZE countrylanguage_uao_aggregate;
+ANALYZE
+--query with aggregate functions
+select
+(select max(city_uao_aggregate.population) from city_uao_aggregate ) as WORLD_MAX_POP,
+(select avg(city_uao_aggregate.population) from city_uao_aggregate) AS WORLD_AVG_POP,
+ city_uao_aggregate.name as populationwise_top_five_cities,city_uao_aggregate.population
+ from
+ city_uao_aggregate order by city_uao_aggregate.population desc LIMIT 5;
+ world_max_pop |  world_avg_pop   | populationwise_top_five_cities | population 
+---------------+------------------+--------------------------------+------------
+      10500000 | 350468.223584212 | Mumbai (Bombay)                |   10500000
+      10500000 | 350468.223584212 | Seoul                          |    9981619
+      10500000 | 350468.223584212 | Sao Paulo                      |    9968485
+      10500000 | 350468.223584212 | Shanghai                       |    9696300
+      10500000 | 350468.223584212 | Jakarta                        |    9604900
+(5 rows)
+
+select
+(select min(city_uao_aggregate.population) from city_uao_aggregate ) as WORLD_MIN_POP,
+(select SUM(city_uao_aggregate.population) from city_uao_aggregate) AS WORLD_SUM_POP,
+ city_uao_aggregate.name as populationwise_top_five_cities,city_uao_aggregate.population
+ from
+ city_uao_aggregate order by city_uao_aggregate.population desc LIMIT 5;
+ world_min_pop | world_sum_pop | populationwise_top_five_cities | population 
+---------------+---------------+--------------------------------+------------
+            42 |    1429559884 | Mumbai (Bombay)                |   10500000
+            42 |    1429559884 | Seoul                          |    9981619
+            42 |    1429559884 | Sao Paulo                      |    9968485
+            42 |    1429559884 | Shanghai                       |    9696300
+            42 |    1429559884 | Jakarta                        |    9604900
+(5 rows)
+

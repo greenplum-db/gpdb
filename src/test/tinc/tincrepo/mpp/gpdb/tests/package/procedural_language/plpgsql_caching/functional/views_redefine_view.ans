@@ -1,0 +1,34 @@
+-- start_ignore
+drop view if exists v1;
+psql:/path/sql_file:1: NOTICE:  rule _RETURN on view v5 depends on view v1
+psql:/path/sql_file:1: NOTICE:  view v5 depends on rule _RETURN on view v5
+psql:/path/sql_file:1: ERROR:  cannot drop view v1 because other objects depend on it
+HINT:  Use DROP ... CASCADE to drop the dependent objects too.
+drop function if exists viewfunc();
+DROP FUNCTION
+-- end_ignore
+create temp view v1 as
+   select 2+2 as f1;
+CREATE VIEW
+create function viewfunc() returns int as 
+$$
+begin
+    return f1 from v1; 
+end
+$$ language plpgsql;
+CREATE FUNCTION
+select viewfunc(), '4' as expected;
+ viewfunc | expected 
+----------+----------
+        4 | 4
+(1 row)
+
+create or replace temp view v1 as
+    select 2+2+4 as f1; 
+CREATE VIEW
+select viewfunc(), '8' as expected;
+ viewfunc | expected 
+----------+----------
+        8 | 8
+(1 row)
+

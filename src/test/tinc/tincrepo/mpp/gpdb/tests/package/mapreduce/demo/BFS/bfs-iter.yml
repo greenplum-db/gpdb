@@ -1,0 +1,40 @@
+%YAML 1.1
+---  
+VERSION:   1.0.0.1
+
+## Perform one step of breadth-first search in a graph
+
+DEFINE:
+  - INPUT:
+      NAME:      delta_in
+      TABLE:     bfs_delta
+
+  - INPUT:
+      NAME:      hop
+      QUERY: |
+        SELECT s.src, d.dest, s.hops+d.hops AS hops
+          FROM bfs_link AS s INNER JOIN bfs_delta AS d
+            ON s.dest = d.src;
+
+  - OUTPUT:
+      NAME: connected_append
+      TABLE: bfs_connected
+      MODE: APPEND        
+
+  - OUTPUT: 
+      NAME:  delta_replace
+      TABLE: bfs_delta
+      MODE:  REPLACE
+      
+  - TASK:
+      NAME:     do_hop
+      SOURCE:   hop
+
+EXECUTE:
+  - RUN: 
+      SOURCE: delta_in
+      TARGET: connected_append
+      
+  - RUN:
+      SOURCE: do_hop
+      TARGET: delta_replace

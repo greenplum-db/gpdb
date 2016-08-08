@@ -1,0 +1,5 @@
+CREATE FILESPACE fs();
+
+CREATE TABLESPACE ts FILESPACE fs;
+
+CREATE TABLE fs_table(a int, b int) TABLESPACE ts;

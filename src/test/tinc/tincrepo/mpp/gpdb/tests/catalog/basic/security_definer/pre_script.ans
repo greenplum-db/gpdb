@@ -1,0 +1,30 @@
+CREATE or replace FUNCTION sec_definer_create_test() RETURNS void AS $$                                                                                                           
+BEGIN                                                                                                                                                                              
+         RAISE NOTICE 'Creating table';                                                                                                                                                   BEGIN                                                                                                                                                                       
+		 execute 'create temporary table wmt_toast_issue_temp (name varchar, address varchar) distributed randomly';                                                                        
+END;                                                                                                                                                                            
+         RAISE NOTICE 'Table created';                                                                                                                                               
+END;  
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+CREATE FUNCTION
+create role sec_definer_role with login ;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+grant execute on function sec_definer_create_test() to sec_definer_role;
+GRANT
+set role sec_definer_role;
+SET
+select sec_definer_create_test() ;
+psql:/path/sql_file:1: NOTICE:  Creating table
+psql:/path/sql_file:1: NOTICE:  Table created
+ sec_definer_create_test 
+-------------
+ 
+(1 row)
+
+select count(*) from pg_tables where schemaname like 'pg_temp%';
+ count 
+-------
+     1
+(1 row)
+

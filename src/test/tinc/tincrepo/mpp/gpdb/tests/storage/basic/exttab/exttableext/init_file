@@ -1,0 +1,5 @@
+-- start_matchsubs
+# Change things like "psql: /Users/mglkey/cdbfast/main/foo/bar.sql:123:" to "PATH"
+m/psql:\/.*:\d+:/
+s/psql:\/.*:\d+:/psql:PATH:/
+-- end_matchsubs

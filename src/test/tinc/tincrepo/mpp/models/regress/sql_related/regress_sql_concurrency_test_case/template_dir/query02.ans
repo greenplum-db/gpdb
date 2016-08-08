@@ -1,0 +1,17 @@
+-- start_ignore
+-- end_ignore
+-- @iterations 2
+-- @concurrency 2
+-- @gpdiff True
+select '%VAR%';
+ ?column? 
+----------
+ %VAR%
+(1 row)
+
+select pg_sleep(2);
+ pg_sleep 
+----------
+ 
+(1 row)
+

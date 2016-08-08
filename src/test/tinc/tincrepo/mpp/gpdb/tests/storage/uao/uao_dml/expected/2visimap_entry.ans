@@ -1,0 +1,48 @@
+-- @Description Tests the delete feature with two visimap entries and delete jumping
+-- between them.
+-- 
+
+SELECT COUNT(*) FROM foo;
+ count  
+--------
+ 100000
+(1 row)
+DELETE FROM foo WHERE a < 4;
+DELETE 3
+SELECT COUNT(*) FROM foo;
+ count 
+-------
+ 99997
+(1 row)
+BEGIN;
+BEGIN
+DELETE FROM foo WHERE a = 99962;
+DELETE 1
+DELETE FROM foo WHERE a = 5;
+DELETE 1
+DELETE FROM foo WHERE a = 99964;
+DELETE 1
+DELETE FROM foo WHERE a = 42;
+DELETE 1
+DELETE FROM foo WHERE a IN (6, 97000, 99, 1700, 99980);
+DELETE 5
+SELECT a, b FROM foo WHERE a >= 99960 AND a < 99970;
+   a   |   b   
+-------+-------
+ 99960 | 99960
+ 99961 | 99961
+ 99963 | 99963
+ 99965 | 99965
+ 99966 | 99966
+ 99967 | 99967
+ 99968 | 99968
+ 99969 | 99969
+(8 rows)
+SELECT a, b FROM foo WHERE a < 10;
+ a | b 
+---+---
+ 4 | 4
+ 7 | 7
+ 8 | 8
+ 9 | 9
+(4 rows)

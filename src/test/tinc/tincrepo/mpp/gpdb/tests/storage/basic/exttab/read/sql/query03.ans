@@ -1,0 +1,802 @@
+-- start_ignore
+drop external table if exists ext_whois;
+-- end_ignore
+create external table ext_whois (
+source_lineno			int,
+domain_name			varchar(350),
+subdomain			varchar(150),
+tld				varchar(50),
+ip_address			inet,
+ip_address_int			bigint,
+reverse_dns			varchar(512),
+reverse_domain			varchar(350),
+registrar			varchar(200),
+registrar_referral		varchar(512),
+whois_server			varchar(512),
+harvest_date			timestamp with time zone,
+created_on			timestamp with time zone,
+update_date			timestamp with time zone,
+expire_date			timestamp with time zone,
+rank				int,
+status				char(1),
+update_status			int,
+nameserver1			varchar(512),
+nameserver1_domain_name		varchar(350),
+nameserver1_subdomain		varchar(150),
+nameserver1_tld			varchar(50),
+nameserver2			varchar(512),
+nameserver2_domain_name		varchar(350),
+nameserver2_subdomain		varchar(150),
+nameserver2_tld			varchar(50),
+nameserver3			varchar(512),
+nameserver3_domain_name		varchar(350),
+nameserver3_subdomain		varchar(150),
+nameserver3_tld			varchar(50),
+nameserver4			varchar(512),
+nameserver4_domain_name		varchar(350),
+nameserver4_subdomain		varchar(150),
+nameserver4_tld			varchar(50),
+nameserver5			varchar(512),
+nameserver5_domain_name		varchar(350),
+nameserver5_subdomain		varchar(150),
+nameserver5_tld			varchar(50),
+registrant_name			varchar(200),
+registrant_organization		varchar(200),
+registrant_email		varchar(512),
+registrant_email_domain		varchar(350),
+registrant_email_subdomain	varchar(150),
+registrant_email_tld		varchar(50),
+registrant_phone		varchar(50),
+registrant_fax			varchar(50),
+registrant_addrall		varchar(1024),
+registrant_street1		varchar(200),
+registrant_street2		varchar(200),
+registrant_street3		varchar(200),
+registrant_city			varchar(200),
+registrant_state_province	varchar(100),
+registrant_postal_code		varchar(50),
+registrant_country		varchar(100),
+tech_name			varchar(200),
+tech_organization		varchar(200),
+tech_email			varchar(512),
+tech_email_domain		varchar(350),
+tech_email_subdomain		varchar(150),
+tech_email_tld			varchar(50),
+tech_phone			varchar(50),
+tech_fax			varchar(50),
+tech_addrall			varchar(1024),
+tech_street1			varchar(200),
+tech_street2			varchar(200),
+tech_street3			varchar(200),
+tech_city			varchar(200),
+tech_state_province		varchar(100),
+tech_postal_code		varchar(50),
+tech_country			varchar(100),
+admin_name			varchar(200),
+admin_organization		varchar(200),
+admin_email			varchar(512),
+admin_email_domain		varchar(350),
+admin_email_subdomain		varchar(150),
+admin_email_tld			varchar(50),
+admin_phone			varchar(50),
+admin_fax			varchar(50),
+admin_addrall			varchar(1024),
+admin_street1			varchar(200),
+admin_street2			varchar(200),
+admin_street3			varchar(200),
+admin_city			varchar(200),
+admin_state_province		varchar(100),
+admin_postal_code		varchar(50),
+admin_country			varchar(100),
+rec_path			varchar(512),
+raw_record			text
+)
+location ('gpfdist://@hostname@:@gp_port@/whois.csv' )
+format 'csv' (header quote as '"');
+NOTICE:  HEADER means that each one of the data files has a header row.
+CREATE EXTERNAL TABLE
+
+-- start_ignore
+drop table if exists cpy_whois;
+-- end_ignore
+create table cpy_whois (
+source_lineno			int,
+domain_name			varchar(350),
+subdomain			varchar(150),
+tld				varchar(50),
+ip_address			inet,
+ip_address_int			bigint,
+reverse_dns			varchar(512),
+reverse_domain			varchar(350),
+registrar			varchar(200),
+registrar_referral		varchar(512),
+whois_server			varchar(512),
+harvest_date			timestamp with time zone,
+created_on			timestamp with time zone,
+update_date			timestamp with time zone,
+expire_date			timestamp with time zone,
+rank				int,
+status				char(1),
+update_status			int,
+nameserver1			varchar(512),
+nameserver1_domain_name		varchar(350),
+nameserver1_subdomain		varchar(150),
+nameserver1_tld			varchar(50),
+nameserver2			varchar(512),
+nameserver2_domain_name		varchar(350),
+nameserver2_subdomain		varchar(150),
+nameserver2_tld			varchar(50),
+nameserver3			varchar(512),
+nameserver3_domain_name		varchar(350),
+nameserver3_subdomain		varchar(150),
+nameserver3_tld			varchar(50),
+nameserver4			varchar(512),
+nameserver4_domain_name		varchar(350),
+nameserver4_subdomain		varchar(150),
+nameserver4_tld			varchar(50),
+nameserver5			varchar(512),
+nameserver5_domain_name		varchar(350),
+nameserver5_subdomain		varchar(150),
+nameserver5_tld			varchar(50),
+registrant_name			varchar(200),
+registrant_organization		varchar(200),
+registrant_email		varchar(512),
+registrant_email_domain		varchar(350),
+registrant_email_subdomain	varchar(150),
+registrant_email_tld		varchar(50),
+registrant_phone		varchar(50),
+registrant_fax			varchar(50),
+registrant_addrall		varchar(1024),
+registrant_street1		varchar(200),
+registrant_street2		varchar(200),
+registrant_street3		varchar(200),
+registrant_city			varchar(200),
+registrant_state_province	varchar(100),
+registrant_postal_code		varchar(50),
+registrant_country		varchar(100),
+tech_name			varchar(200),
+tech_organization		varchar(200),
+tech_email			varchar(512),
+tech_email_domain		varchar(350),
+tech_email_subdomain		varchar(150),
+tech_email_tld			varchar(50),
+tech_phone			varchar(50),
+tech_fax			varchar(50),
+tech_addrall			varchar(1024),
+tech_street1			varchar(200),
+tech_street2			varchar(200),
+tech_street3			varchar(200),
+tech_city			varchar(200),
+tech_state_province		varchar(100),
+tech_postal_code		varchar(50),
+tech_country			varchar(100),
+admin_name			varchar(200),
+admin_organization		varchar(200),
+admin_email			varchar(512),
+admin_email_domain		varchar(350),
+admin_email_subdomain		varchar(150),
+admin_email_tld			varchar(50),
+admin_phone			varchar(50),
+admin_fax			varchar(50),
+admin_addrall			varchar(1024),
+admin_street1			varchar(200),
+admin_street2			varchar(200),
+admin_street3			varchar(200),
+admin_city			varchar(200),
+admin_state_province		varchar(100),
+admin_postal_code		varchar(50),
+admin_country			varchar(100),
+rec_path			varchar(512),
+raw_record			text
+)
+;
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'source_lineno' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+select count(*) from ext_whois;
+ count 
+-------
+    12
+(1 row)
+
+select count(*) from ext_whois where domain_name like '%viagra%';
+ count 
+-------
+     0
+(1 row)
+
+copy cpy_whois FROM '@abs_srcdir@/data/whois.csv' csv header quote '"';
+COPY 12
+select count(*) from cpy_whois;
+ count 
+-------
+    12
+(1 row)
+
+select count(*) from cpy_whois where domain_name like '%viagra%';
+ count 
+-------
+     0
+(1 row)
+
+-- start_ignore
+drop table if exists v_w;
+NOTICE:  table "v_w" does not exist, skipping
+DROP TABLE
+-- end_ignore
+create table v_w as select * from cpy_whois where domain_name like '%viagra%';
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'source_lineno' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT 0
+select count(*) from (select * from v_w union select * from cpy_whois) as foo;
+ count 
+-------
+    12
+(1 row)
+
+select count(*) from (select * from v_w union all select * from cpy_whois) as foo;
+ count 
+-------
+    12
+(1 row)
+
+select count(*) from (select distinct * from cpy_whois) as foo;
+ count 
+-------
+    12
+(1 row)
+
+select count(*) from (select * from cpy_whois order by 1 limit 300000 offset 30000) as foo;
+ count 
+-------
+     0
+(1 row)
+
+select count(*) from (select * from cpy_whois order by 1 limit 300000 offset 1000) as foo;
+ count 
+-------
+     0
+(1 row)
+
+select source_lineno, domain_name from cpy_whois order by 
+source_lineno	,
+domain_name		,
+subdomain		,
+tld				,
+ip_address		,
+ip_address_int	,
+reverse_dns		,
+reverse_domain	,
+registrar		,
+registrar_referral,
+whois_server		,
+harvest_date		,
+created_on			,
+update_date			,
+expire_date			,
+rank				,
+status				,
+update_status		,
+nameserver1			,
+nameserver1_domain_name,
+nameserver1_subdomain	,
+nameserver1_tld			,
+nameserver2			,
+nameserver2_domain_name	,
+nameserver2_subdomain	,
+nameserver2_tld			,
+nameserver3			,
+nameserver3_domain_name	,
+nameserver3_subdomain	,
+nameserver3_tld			,
+nameserver4			,
+nameserver4_domain_name	,
+nameserver4_subdomain	,
+nameserver4_tld			,
+nameserver5		,
+nameserver5_domain_name,
+nameserver5_subdomain	,
+nameserver5_tld			,
+registrant_name			,
+registrant_organization	,
+registrant_email		,
+registrant_email_domain	,
+registrant_email_subdomain,
+registrant_email_tld		,
+registrant_phone		,
+registrant_fax			,
+registrant_addrall		,
+registrant_street1		,
+registrant_street2		,
+registrant_street3		,
+registrant_city			,
+registrant_state_province,
+registrant_postal_code		,
+registrant_country,
+tech_name			,
+tech_organization	,
+tech_email			,
+tech_email_domain	,
+tech_email_subdomain,
+tech_email_tld		,
+tech_phone			,
+tech_fax			,
+tech_addrall		,
+tech_street1		,
+tech_street2		,
+tech_street3		,
+tech_city			,
+tech_state_province	,
+tech_postal_code	,
+tech_country		,
+admin_name			,
+admin_organization	,
+admin_email			,
+admin_email_domain	,
+admin_email_subdomain,
+admin_email_tld			,
+admin_phone		,
+admin_fax		,
+admin_addrall	,
+admin_street1	,
+admin_street2	,
+admin_street3	,
+admin_city		,
+admin_state_province,
+admin_postal_code	,
+admin_country		,
+rec_path			,
+raw_record			
+limit 10 offset 10;
+ source_lineno | domain_name 
+---------------+-------------
+           596 | 007dy.net
+           650 | 00163.net
+(2 rows)
+
+select count(*) from (select * from v_w union select * from ext_whois) as foo;
+ count 
+-------
+    12
+(1 row)
+
+select count(*) from (select * from v_w union all select * from ext_whois) as foo;
+ count 
+-------
+    12
+(1 row)
+
+select count(*) from (select * from v_w intersect select * from ext_whois) as foo;
+ count 
+-------
+     0
+(1 row)
+
+select count(*) from (select * from v_w intersect all select * from ext_whois) as foo;
+ count 
+-------
+     0
+(1 row)
+
+select count(*) from (select * from v_w except select * from ext_whois) as foo;
+ count 
+-------
+     0
+(1 row)
+
+select count(*) from (select * from v_w except all select * from ext_whois) as foo;
+ count 
+-------
+     0
+(1 row)
+
+select count(*) from (select * from ext_whois except select * from v_w) as foo;
+ count 
+-------
+    12
+(1 row)
+
+select count(*) from (select * from ext_whois except all select * from v_w) as foo;
+ count 
+-------
+    12
+(1 row)
+
+-- start_ignore
+drop external table if exists bad_whois;
+NOTICE:  external table "bad_whois" does not exist, skipping
+DROP EXTERNAL TABLE
+-- end_ignore
+create external table bad_whois (
+source_lineno			int,
+domain_name			varchar(350)
+)
+location ('gpfdist://@hostname@:@gp_port@/whois.csv' )
+format 'csv' ( header quote as 'ggg');
+NOTICE:  HEADER means that each one of the data files has a header row.
+ERROR:  quote must be a single character
+select count(*) from bad_whois;
+ERROR:  relation "bad_whois" does not exist
+LINE 1: select count(*) from bad_whois;
+                             ^
+-- start_ignore
+drop external table if exists bad_whois;
+NOTICE:  external table "bad_whois" does not exist, skipping
+DROP EXTERNAL TABLE
+-- end_ignore
+create external table bad_whois (
+source_lineno			int,
+domain_name			varchar(350),
+subdomain			varchar(150),
+tld				varchar(50),
+ip_address			inet,
+ip_address_int			bigint,
+reverse_dns			varchar(512),
+reverse_domain			varchar(350),
+registrar			varchar(200),
+registrar_referral		varchar(512),
+whois_server			varchar(512),
+harvest_date			timestamp with time zone,
+created_on			timestamp with time zone,
+update_date			timestamp with time zone,
+expire_date			timestamp with time zone,
+rank				int,
+status				char(1),
+update_status			int,
+nameserver1			varchar(512),
+nameserver1_domain_name		varchar(350),
+nameserver1_subdomain		varchar(150),
+nameserver1_tld			varchar(50),
+nameserver2			varchar(512),
+nameserver2_domain_name		varchar(350),
+nameserver2_subdomain		varchar(150),
+nameserver2_tld			varchar(50),
+nameserver3			varchar(512),
+nameserver3_domain_name		varchar(350),
+nameserver3_subdomain		varchar(150),
+nameserver3_tld			varchar(50),
+nameserver4			varchar(512),
+nameserver4_domain_name		varchar(350),
+nameserver4_subdomain		varchar(150),
+nameserver4_tld			varchar(50),
+nameserver5			varchar(512),
+nameserver5_domain_name		varchar(350),
+nameserver5_subdomain		varchar(150),
+nameserver5_tld			varchar(50),
+registrant_name			varchar(200),
+registrant_organization		varchar(200),
+registrant_email		varchar(512),
+registrant_email_domain		varchar(350),
+registrant_email_subdomain	varchar(150),
+registrant_email_tld		varchar(50),
+registrant_phone		varchar(50),
+registrant_fax			varchar(50),
+registrant_addrall		varchar(1024),
+registrant_street1		varchar(200),
+registrant_street2		varchar(200),
+registrant_street3		varchar(200),
+registrant_city			varchar(200),
+registrant_state_province	varchar(100),
+registrant_postal_code		varchar(50),
+registrant_country		varchar(100),
+tech_name			varchar(200),
+tech_organization		varchar(200),
+tech_email			varchar(512),
+tech_email_domain		varchar(350),
+tech_email_subdomain		varchar(150),
+tech_email_tld			varchar(50),
+tech_phone			varchar(50),
+tech_fax			varchar(50),
+tech_addrall			varchar(1024),
+tech_street1			varchar(200),
+tech_street2			varchar(200),
+tech_street3			varchar(200),
+tech_city			varchar(200),
+tech_state_province		varchar(100),
+tech_postal_code		varchar(50),
+tech_country			varchar(100),
+admin_name			varchar(200),
+admin_organization		varchar(200),
+admin_email			varchar(512),
+admin_email_domain		varchar(350),
+admin_email_subdomain		varchar(150),
+admin_email_tld			varchar(50),
+admin_phone			varchar(50),
+admin_fax			varchar(50),
+admin_addrall			varchar(1024),
+admin_street1			varchar(200),
+admin_street2			varchar(200),
+admin_street3			varchar(200),
+admin_city			varchar(200),
+admin_state_province		varchar(100),
+admin_postal_code		varchar(50),
+admin_country			varchar(100),
+rec_path			varchar(512),
+raw_record			text
+)
+location ('gpfdist://@hostname@:@gp_port@/whois.csv' )
+format 'csv' ( header quote as 'g');
+NOTICE:  HEADER means that each one of the data files has a header row.
+CREATE EXTERNAL TABLE
+select count(*) from bad_whois;
+ERROR:  missing data for column "admin_email_tld"  (seg1 slice1 @hostname@:21001 pid=12561)
+DETAIL:  External table bad_whois, line 2 of gpfdist://@hostname@:@gp_port@/whois.csv: "2,00111.net,net,net,,,,,,,,2006-06-16 19:33:12.11421,2006-02-17,2006-02-18 01:19:53,2007-02-17,3,,,n..."
+drop external table bad_whois;
+DROP EXTERNAL TABLE
+-- start_ignore
+drop external table if exists bad2_whois;
+NOTICE:  external table "bad2_whois" does not exist, skipping
+DROP EXTERNAL TABLE
+-- end_ignore
+create external table bad2_whois (
+domain_name			varchar(350),
+subdomain			varchar(150),
+tld				varchar(50),
+ip_address			inet,
+ip_address_int			bigint,
+reverse_dns			varchar(512),
+reverse_domain			varchar(350),
+registrar			varchar(200),
+registrar_referral		varchar(512),
+whois_server			varchar(512),
+harvest_date			timestamp with time zone,
+created_on			timestamp with time zone,
+update_date			timestamp with time zone,
+expire_date			timestamp with time zone,
+rank				int,
+status				char(1),
+update_status			int,
+nameserver1			varchar(512),
+nameserver1_domain_name		varchar(350),
+nameserver1_subdomain		varchar(150),
+nameserver1_tld			varchar(50),
+nameserver2			varchar(512),
+nameserver2_domain_name		varchar(350),
+nameserver2_subdomain		varchar(150),
+nameserver2_tld			varchar(50),
+nameserver3			varchar(512),
+nameserver3_domain_name		varchar(350),
+nameserver3_subdomain		varchar(150),
+nameserver3_tld			varchar(50),
+nameserver4			varchar(512),
+nameserver4_domain_name		varchar(350),
+nameserver4_subdomain		varchar(150),
+nameserver4_tld			varchar(50),
+nameserver5			varchar(512),
+nameserver5_domain_name		varchar(350),
+nameserver5_subdomain		varchar(150),
+nameserver5_tld			varchar(50),
+registrant_name			varchar(200),
+registrant_organization		varchar(200),
+registrant_email		varchar(512),
+registrant_email_domain		varchar(350),
+registrant_email_subdomain	varchar(150),
+registrant_email_tld		varchar(50),
+registrant_phone		varchar(50),
+registrant_fax			varchar(50),
+registrant_addrall		varchar(1024),
+registrant_street1		varchar(200),
+registrant_street2		varchar(200),
+registrant_street3		varchar(200),
+registrant_city			varchar(200),
+registrant_state_province	varchar(100),
+registrant_postal_code		varchar(50),
+registrant_country		varchar(100),
+tech_name			varchar(200),
+tech_organization		varchar(200),
+tech_email			varchar(512),
+tech_email_domain		varchar(350),
+tech_email_subdomain		varchar(150),
+tech_email_tld			varchar(50),
+tech_phone			varchar(50),
+tech_fax			varchar(50),
+tech_addrall			varchar(1024),
+tech_street1			varchar(200),
+tech_street2			varchar(200),
+tech_street3			varchar(200),
+tech_city			varchar(200),
+tech_state_province		varchar(100),
+tech_postal_code		varchar(50),
+tech_country			varchar(100),
+admin_name			varchar(200),
+admin_organization		varchar(200),
+admin_email			varchar(512),
+admin_email_domain		varchar(350),
+admin_email_subdomain		varchar(150),
+admin_email_tld			varchar(50),
+admin_phone			varchar(50),
+admin_fax			varchar(50),
+admin_addrall			varchar(1024),
+admin_street1			varchar(200),
+admin_street2			varchar(200),
+admin_street3			varchar(200),
+admin_city			varchar(200),
+admin_state_province		varchar(100),
+admin_postal_code		varchar(50),
+admin_country			varchar(100),
+rec_path			varchar(512),
+raw_record			text
+)
+location ('gpfdist://@hostname@:@gp_port@/whois.csv' )
+format 'csv' (header quote as '"');
+NOTICE:  HEADER means that each one of the data files has a header row.
+CREATE EXTERNAL TABLE
+select count(rec_path) from bad2_whois;
+ERROR:  extra data after last expected column  (seg1 slice1 @hostname@:12003 pid=56223)
+DETAIL:  External table bad2_whois, line 58 of gpfdist://@hostname@:@gp_port@/whois.csv: "2,00111.net,net,net,,,,,,,,2006-06-16 19:33:12.11421,2006-02-17,2006-02-18 01:19:53,2007-02-17,3,,,n..."
+drop external table bad2_whois;
+DROP EXTERNAL TABLE
+-- start_ignore
+drop external table if exists bad3_whois;
+NOTICE:  external table "bad3_whois" does not exist, skipping
+DROP EXTERNAL TABLE
+-- end_ignore
+create external table bad3_whois (
+source_lineno			int,
+ip_address			inet,
+ip_address_int			bigint,
+reverse_dns			varchar(512)
+)
+location ('gpfdist://@hostname@:@gp_port@/whois.csv' )
+format 'text' (header delimiter '|');
+NOTICE:  HEADER means that each one of the data files has a header row.
+CREATE EXTERNAL TABLE
+select count(*) from bad3_whois;
+ERROR:  extra data after last expected column  (seg0 slice1 @hostname@:12002 pid=56222)
+DETAIL:  External table bad3_whois, line 2 of gpfdist://@hostname@:@gp_port@/whois.csv: "2,00111.net,net,net,,,,,,,,2006-06-16 19:33:12.11421,2006-02-17,2006-02-18 01:19:53,2007-02-17,3,,,n..."
+drop external table bad3_whois;
+DROP EXTERNAL TABLE
+-- start_ignore
+drop external table if exists badt1;
+NOTICE:  external table "badt1" does not exist, skipping
+DROP EXTERNAL TABLE
+-- end_ignore
+create external table badt1 (x text) 
+location ('file://@hostname@@abs_srcdir@/data/no/such/place/badt1.tbl' )
+format 'text' (delimiter '|');
+CREATE EXTERNAL TABLE
+select * from badt1;
+ERROR:  could not open "file://@hostname@@abs_srcdir@/data/no/such/place/badt1.tbl" for reading: 404 file not found  (seg0 slice1 @hostname@:21000 pid=11611)
+drop external table badt1;
+DROP EXTERNAL TABLE
+-- start_ignore
+drop external table if exists badt2;
+NOTICE:  external table "badt2" does not exist, skipping
+DROP EXTERNAL TABLE
+-- end_ignore
+create external table badt2 (x text) 
+location ('bad_protocol://@hostname@@abs_srcdir@/data/no/such/place/badt2.tbl' )
+format 'text' (delimiter '|');
+ERROR: protocol "bad_protocol" does not exist
+create external table ext_missing(a int, b int)
+location ('gpfdist://@hostname@:99/missing.csv')
+format 'csv';
+CREATE EXTERNAL TABLE
+select count(*) from ext_missing;
+ERROR:  connection failed while gpfdist://@hostname@:@gp_port@/whois.csv (url.i:175)  (seg1 slice1 @hostname@:12003 pid=56223)
+drop external table ext_missing;
+DROP EXTERNAL TABLE
+-- start_ignore
+drop table if exists extcpytest;
+NOTICE:  table "extcpytest" does not exist, skipping
+DROP TABLE
+-- end_ignore
+create temp table extcpytest (
+	style	text,
+	test 	text,
+	filler	int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'style' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+insert into extcpytest values('DOS',E'abc\r\ndef',1);
+INSERT 0 1
+insert into extcpytest values('Unix',E'abc\ndef',2);
+INSERT 0 1
+insert into extcpytest values('Mac',E'abc\rdef',3);
+INSERT 0 1
+insert into extcpytest values(E'esc\\ape',E'a\\r\\\r\\\n\\nb',4);
+INSERT 0 1
+copy extcpytest to '@gpfdist_datadir@/output/extcpytest.csv' csv;
+COPY 4
+copy extcpytest to '@gpfdist_datadir@/output/extcpytest.csv' csv quote 'z' escape E'Z';
+COPY 4
+-- start_ignore
+drop external table if exists extcpytest2;
+NOTICE:  external table "extcpytest2" does not exist, skipping
+DROP EXTERNAL TABLE
+-- end_ignore
+create external table  extcpytest2 (
+	style	text,
+	test 	text,
+	filler	int)
+location ('gpfdist://@hostname@:@gp_port@/output/extcpytest.csv')
+format 'csv' ( quote as 'z' escape as 'Z');
+CREATE EXTERNAL TABLE
+select * from extcpytest except select * from extcpytest2 order by 1,2,3;
+ style | test | filler 
+-------+------+--------
+(0 rows)
+
+drop external table extcpytest2;
+DROP EXTERNAL TABLE
+
+-- start_ignore
+drop table if exists extcpytest3;
+NOTICE:  table "extcpytest3" does not exist, skipping
+DROP TABLE
+-- end_ignore
+create temp table extcpytest3 (
+	c1 int, 
+
+
+	c2 text, 
+	c3 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+copy extcpytest3 from stdin csv header;
+copy extcpytest3 to '@gpfdist_datadir@/output/extcpytest3.csv' csv header quote 'z' escape E'Z'  ;
+COPY 2
+-- start_ignore
+drop external web table if exists gpfdist_curl;
+NOTICE:  external table "gpfdist_curl" does not exist, skipping
+DROP EXTERNAL TABLE
+-- end_ignore
+CREATE EXTERNAL WEB TABLE gpfdist_curl (c1 text)
+execute E'(curl http://@hostname@:@gp_port@/output/extcpytest3.csv)'
+on SEGMENT 0
+FORMAT 'text' (header delimiter '|');
+CREATE EXTERNAL TABLE
+select * from gpfdist_curl;
+  c1   
+-------
+ 1,a,1
+ 2,b,2
+(2 rows)
+
+DROP EXTERNAL TABLE gpfdist_curl;
+DROP EXTERNAL TABLE
+-- start_ignore
+drop external table if exists extcpytest4;
+NOTICE:  external table "extcpytest4" does not exist, skipping
+DROP EXTERNAL TABLE
+-- end_ignore
+create external table extcpytest4 (
+c1 int,
+c2 text,
+c3 int)
+location ('gpfdist://@hostname@:@gp_port@/output/extcpytest3.csv')
+format 'csv' (header quote as 'z' escape as 'Z');
+NOTICE:  HEADER means that each one of the data files has a header row.
+CREATE EXTERNAL TABLE
+select * from extcpytest4;
+ c1 | c2 | c3 
+----+----+----
+  1 | a  |  1
+  2 | b  |  2
+(2 rows)
+
+-- start_ignore
+drop external table if exists extcpytest5;
+NOTICE:  external table "extcpytest5" does not exist, skipping
+DROP EXTERNAL TABLE
+-- end_ignore
+create external table extcpytest5 (
+c1 int,
+c2 text,
+c3 int)
+location ('file://@hostname@@gpfdist_datadir@/output/extcpytest3.csv')
+format 'csv' ( header quote as 'z' escape as 'Z');
+NOTICE:  HEADER means that each one of the data files has a header row. Also, if you are using a file distribution utility such as gpfdist re-create this table without HEADER and specify the header option in the utility itself (since the header row will be distributed to only one segment database)
+CREATE EXTERNAL TABLE
+select * from extcpytest5;
+ c1 | c2 | c3 
+----+----+----
+  1 | a  |  1
+  2 | b  |  2
+(2 rows)
+
+drop external table extcpytest4;
+DROP EXTERNAL TABLE
+drop external table extcpytest5;
+DROP EXTERNAL TABLE

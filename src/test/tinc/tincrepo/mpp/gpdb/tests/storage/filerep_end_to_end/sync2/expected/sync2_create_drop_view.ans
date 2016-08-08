@@ -1,0 +1,99 @@
+--
+-- HEAP View
+--
+CREATE VIEW sync2_heap_view1 AS SELECT *  from sync2_heap_table;
+CREATE VIEW
+SELECT count(*) FROM sync2_heap_view1;
+ count 
+-------
+   100
+(1 row)
+
+CREATE VIEW sync2_heap_view2 AS SELECT *  from sync2_heap_table;
+CREATE VIEW
+SELECT count(*) FROM sync2_heap_view2;
+ count 
+-------
+   100
+(1 row)
+
+--
+--
+-- AO View
+--
+--
+CREATE VIEW sync2_ao_view1 AS SELECT *  from sync2_ao_table;
+CREATE VIEW
+SELECT count(*) FROM sync2_ao_view1;
+ count 
+-------
+   100
+(1 row)
+
+CREATE VIEW sync2_ao_view2 AS SELECT *  from sync2_ao_table;
+CREATE VIEW
+SELECT count(*) FROM sync2_ao_view2;
+ count 
+-------
+   100
+(1 row)
+
+--
+--
+-- CO View
+--
+--
+CREATE VIEW sync2_co_view1 AS SELECT *  from sync2_co_table;
+CREATE VIEW
+SELECT count(*) FROM sync2_co_view1;
+ count 
+-------
+   100
+(1 row)
+
+CREATE VIEW sync2_co_view2 AS SELECT *  from sync2_co_table;
+CREATE VIEW
+SELECT count(*) FROM sync2_co_view2;
+ count 
+-------
+   100
+(1 row)
+
+--
+--
+-- DROP View
+--
+--
+DROP VIEW sync1_heap_view7;
+DROP VIEW
+DROP VIEW ck_sync1_heap_view6;
+DROP VIEW
+DROP VIEW ct_heap_view4;
+DROP VIEW
+DROP VIEW resync_heap_view2;
+DROP VIEW
+DROP VIEW sync2_heap_view1;
+DROP VIEW
+--
+DROP VIEW sync1_ao_view7;
+DROP VIEW
+DROP VIEW ck_sync1_ao_view6;
+DROP VIEW
+DROP VIEW ct_ao_view4;
+DROP VIEW
+DROP VIEW resync_ao_view2;
+DROP VIEW
+DROP VIEW sync2_ao_view1;
+DROP VIEW
+--
+DROP VIEW sync1_co_view7;
+DROP VIEW
+DROP VIEW ck_sync1_co_view6;
+DROP VIEW
+DROP VIEW ct_co_view4;
+DROP VIEW
+DROP VIEW resync_co_view2;
+DROP VIEW
+DROP VIEW sync2_co_view1;
+DROP VIEW
+--

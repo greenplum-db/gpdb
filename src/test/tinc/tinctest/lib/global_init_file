@@ -1,0 +1,57 @@
+# Global matchsubs
+-- start_matchsubs
+# Ignore Warning messages
+m/^WARNING:.*/
+s/WARNING/GP_IGNORE: WARNING/
+
+# psql 9 changes now shows username on connection. Ignore the added username.
+m/^You are now connected to database/
+s/ as user ".+"//
+
+# Ignore path with NOTICE
+m/^psql.*NOTICE/
+s/^psql.*NOTICE/NOTICE/
+
+# Strip out psql path when we have comments enabled in the output, psql -a
+m/^psql.*ERROR/
+s/^psql.*ERROR/ERROR/
+
+# Remove code locations eg "(xact.c:1458)" to "(xact.c:xxx)"
+m/(ERROR|WARNING|CONTEXT|NOTICE):\s+/
+s/\.c\:\d+\)/\.c\:xxx\)/
+
+# Remove timing information when \timing is set
+m/^Time: \d+.*/
+s/^Time: \d+.*//
+
+#entry db information eg "localhost:5432 pid=12345"
+m/entry db.*pid.*/
+s/entry db.*pid.*/entryDbPidInfo/
+
+#For the temp table during exchange partition
+m/pg_temp_\d+/
+s/pg_temp_\d+/pg_temp/
+
+m/^psql:.* WARNING|INFO|ERROR/
+s/^psql:.* (WARNING|INFO|ERROR)/$1/
+
+# Ignore diffs in sql comments 
+# Does not consider all forms of comments. For eg: block comments, comments at the end of a line
+# This will suffice to ignore tinc metadata added to sql in the form of comments. 
+m/^--.*/
+s/^--.*//
+
+#Ignore cheecksum
+m/^Checksum:.*/
+s/^Checksum:.*//
+
+-- end_matchsubs
+
+-- start_matchignore
+# Ignore diffs in \d messages with regard to newly added partition key entry
+m/^Partition by: \(.*/
+
+-- m/NOTICE\:  \'VACUUM FULL\' is not safe for large tables and has been known to yield unpredictable runtimes./
+-- m/HINT:  Use \'VACUUM\' instead./
+
+-- end_matchignore

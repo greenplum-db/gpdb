@@ -1,0 +1,7 @@
+-- start_matchsubs
+-- # crypt will always change
+-- # artoo    | 163FMiHvKgKbbfZ2zMfT6MdrF00Yig1 | 098f6bcd4621d373cade4e832627b4f6
+-- # robby    | 1t1uqvDepfEAPHqs3hO.IGa/zYZnRR. | 098f6bcd4621d373cade4e832627b4f6
+-- m/(artoo|robby)\s+\|/
+-- s/(artoo|robby)\s+\|\s+(.*)\s+\|/$1 \| crypt_frompgrcrypto \|/
+-- end_matchsubs

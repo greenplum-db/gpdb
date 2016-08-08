@@ -1,0 +1,34 @@
+-- start_ignore
+drop  external table varchar_heap;
+DROP EXTERNAL TABLE
+drop  external table varchar_writehdfs;
+DROP EXTERNAL TABLE
+drop  external table varchar_readhdfs;
+DROP EXTERNAL TABLE
+-- end_ignore
+create readable external table varchar_heap(datatype_varchar varchar,x_varchar bigint, col1_varchar varchar,col2_varchar varchar, nullcol_varchar varchar) location ('gpfdist://rh55-qavm20:5487/varchar.txt')format 'TEXT';
+CREATE EXTERNAL TABLE
+create writable external table varchar_writehdfs(like varchar_heap) location ('gphdfs://my.cluster.com/extwrite/varchar')format 'custom' (formatter='gphdfs_export');
+NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+CREATE EXTERNAL TABLE
+create readable external table varchar_readhdfs(like varchar_heap) location ('gphdfs://my.cluster.com/extwrite/varchar') format 'custom' (formatter='gphdfs_import');
+CREATE EXTERNAL TABLE
+select count(*) from varchar_heap;
+ count 
+-------
+  5000
+(1 row)
+
+insert into varchar_writehdfs select * from varchar_heap;
+INSERT 0 5000
+select count(*) from varchar_readhdfs;
+ count 
+-------
+  5000
+(1 row)
+
+(select * from varchar_heap except select * from varchar_readhdfs) union (select * from varchar_readhdfs except select * from varchar_heap);
+ datatype_varchar | x_varchar | col1_varchar | col2_varchar | nullcol_varchar 
+------------------+-----------+--------------+--------------+-----------------
+(0 rows)
+

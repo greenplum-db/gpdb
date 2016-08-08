@@ -1,0 +1,7 @@
+-- start_matchsubs
+# Change things like "psql: /Users/mglkey/cdbfast/main/foo/bar.sql:123:" to "PATH"
+m/.*ERROR:.*Unexpected EOF for relation name test_ao_mpp19912.*/
+s/.*ERROR:.*Unexpected EOF for relation name test_ao_mpp19912.*/ERROR: Unexpected EOF for relation name test_ao_mpp19912/
+m/.*ERROR:.*Unexpected EOF for relation name test_aoco_mpp19912.*/
+s/.*ERROR:.*Unexpected EOF for relation name test_aoco_mpp19912.*/ERROR: Unexpected EOF for relation name test_aoco_mpp19912/
+-- end_matchsubs

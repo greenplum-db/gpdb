@@ -1,0 +1,30 @@
+-- start_ignore
+-- end_ignore
+create table mpp5308 (i int) partition by range(i) (start(1) end(10) every(1));
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mpp5308_1_prt_1" for table "mpp5308"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mpp5308_1_prt_2" for table "mpp5308"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mpp5308_1_prt_3" for table "mpp5308"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mpp5308_1_prt_4" for table "mpp5308"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mpp5308_1_prt_5" for table "mpp5308"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mpp5308_1_prt_6" for table "mpp5308"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mpp5308_1_prt_7" for table "mpp5308"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mpp5308_1_prt_8" for table "mpp5308"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mpp5308_1_prt_9" for table "mpp5308"
+CREATE TABLE
+\d mpp5308_1_prt_5
+Table "public.mpp5308_1_prt_5"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ i      | integer | 
+Check constraints:
+    "mpp5308_1_prt_5_check" CHECK (i >= 5 AND i < 6)
+Inherits: mpp5308
+Distributed by: (i)
+
+alter table mpp5308_1_prt_5 drop constraint mpp5308_1_prt_5_check;
+psql:/path/sql_file:1: ERROR:  can't drop a constraint from "mpp5308_1_prt_5"; it is part of a partitioned table
+HINT:  You may be able to perform the operation on the partitioned table as a whole.
+drop table mpp5308;
+DROP TABLE

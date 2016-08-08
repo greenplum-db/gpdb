@@ -1,0 +1,2 @@
+select '%dbname%';
+select '%tags%';

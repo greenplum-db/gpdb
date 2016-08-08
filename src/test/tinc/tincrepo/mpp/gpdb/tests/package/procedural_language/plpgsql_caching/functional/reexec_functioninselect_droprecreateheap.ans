@@ -1,0 +1,35 @@
+-- start_ignore
+drop function if exists cacheheap();
+psql:/path/sql_file:1: NOTICE:  function cacheheap() does not exist, skipping
+DROP FUNCTION
+-- end_ignore
+create function cacheheap() returns void as
+$$
+begin
+	drop table if exists heaptest;
+	create table heaptest(id int) distributed randomly;
+	insert into heaptest values(1);
+end;
+$$ language plpgsql;
+CREATE FUNCTION
+select cacheheap(), null as expected;
+psql:/path/sql_file:1: NOTICE:  table "heaptest" does not exist, skipping
+CONTEXT:  SQL statement "drop table if exists heaptest"
+PL/pgSQL function "cacheheap" line 2 at SQL statement
+ cacheheap | expected 
+-----------+----------
+           | 
+(1 row)
+
+select * from heaptest order by id;
+ id 
+----
+  1
+(1 row)
+
+select cacheheap(), null as expected;
+ cacheheap | expected 
+-----------+----------
+           | 
+(1 row)
+

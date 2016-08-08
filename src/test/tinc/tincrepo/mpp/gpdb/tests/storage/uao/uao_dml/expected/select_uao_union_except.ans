@@ -1,0 +1,145 @@
+-- @Description select with with UNION , UNION ALL 
+-- 
+DROP TABLE IF EXISTS city_uao_union cascade;
+DROP TABLE
+DROP TABLE IF EXISTS country_uao_union cascade;
+DROP TABLE
+DROP TABLE IF EXISTS countrylanguage_uao_union cascade;
+DROP TABLE
+BEGIN;
+BEGIN
+CREATE TABLE city_uao_union (
+    id integer NOT NULL,
+    name text NOT NULL,
+    countrycode character(3) NOT NULL,
+    district text NOT NULL,
+    population integer NOT NULL
+) with (appendonly=true) distributed by(id);
+CREATE TABLE
+CREATE TABLE country_uao_union (
+    code character(3) NOT NULL,
+    name text NOT NULL,
+    continent text NOT NULL,
+    region text NOT NULL,
+    surfacearea real NOT NULL,
+    indepyear smallint,
+    population integer NOT NULL,
+    lifeexpectancy real,
+    gnp numeric(10,2),
+    gnpold numeric(10,2),
+    localname text NOT NULL,
+    governmentform text NOT NULL,
+    headofstate text,
+    capital integer,
+    code2 character(2) NOT NULL
+) with (appendonly=true)  distributed by (code);
+CREATE TABLE
+CREATE TABLE countrylanguage_uao_union (
+    countrycode character(3) NOT NULL,
+    "language" text NOT NULL,
+    isofficial boolean NOT NULL,
+    percentage real NOT NULL
+)  with (appendonly=true) distributed by (countrycode,language);
+CREATE TABLE
+COPY city_uao_union (id, name, countrycode, district, population) FROM stdin;
+--
+-- Data for Name: country; Type: TABLE DATA; Schema: public; 
+--
+COPY country_uao_union (code, name, continent, region, surfacearea, indepyear, population, lifeexpectancy, gnp, gnpold, localname, governmentform, headofstate, capital, code2) FROM stdin WITH NULL AS '';
+--
+-- Data for Name: countrylanguage; Type: TABLE DATA; Schema: public; 
+--
+COPY countrylanguage_uao_union (countrycode, "language", isofficial, percentage) FROM stdin;
+COMMIT;
+COMMIT
+ANALYZE city_uao_union;
+ANALYZE
+ANALYZE country_uao_union;
+ANALYZE
+ANALYZE countrylanguage_uao_union;
+ANALYZE
+--queries Using Union All and except
+with somecheapasiandiversecountries_uao as
+(
+ select FOO_uao.code,FOO_uao.COUNTRY,FOO_uao.CAPITAL,FOO_uao.headofstate,count(*) ASIAN_COUNT from
+ (
+ select country_uao_union.code,country_uao_union.name COUNTRY,city_uao_union.name CAPITAL,country_uao_union.headofstate
+ from country_uao_union,city_uao_union
+ where country_uao_union.capital = city_uao_union.id 
+ and country_uao_union.gnp < 10000
+ and country_uao_union.region = 'Southeast Asia'
+ and country_uao_union.continent = 'Asia'
+ 
+ UNION ALL
+ select country_uao_union.code,country_uao_union.name COUNTRY,city_uao_union.name CAPITAL,country_uao_union.headofstate
+ from country_uao_union,city_uao_union
+ where country_uao_union.capital = city_uao_union.id 
+ and country_uao_union.gnp < 10000
+ and country_uao_union.region = 'Eastern Asia'
+ and country_uao_union.continent = 'Asia'
+ UNION ALL
+ select country_uao_union.code,country_uao_union.name COUNTRY,city_uao_union.name CAPITAL,country_uao_union.headofstate
+ from country_uao_union,city_uao_union
+ where country_uao_union.capital = city_uao_union.id 
+ and country_uao_union.gnp < 10000
+ and country_uao_union.region = 'Middle East'
+ and country_uao_union.continent = 'Asia'
+ ) FOO_uao, countrylanguage_uao_union
+ where FOO_uao.code = countrylanguage_uao_union.countrycode
+ group by FOO_uao.code,FOO_uao.COUNTRY,FOO_uao.CAPITAL,FOO_uao.headofstate,countrylanguage_uao_union.countrycode
+ HAVING count(*) >=
+ (select min(CNT) FROM
+   (select count(*) CNT,country_uao_union.code from countrylanguage_uao_union,country_uao_union
+    where countrylanguage_uao_union.countrycode=country_uao_union.code
+    and country_uao_union.continent = 'Asia'
+    and country_uao_union.region = 'Southern and Central Asia'
+    group by country_uao_union.code
+   ) FOO1_uao
+ )
+)
+select FOO_uao.code,FOO_uao.COUNTRY,FOO_uao.CAPITAL,FOO_uao.headofstate,count(*) compared_with_cheap_asian_cnt
+from
+(
+select country_uao_union.code,country_uao_union.name COUNTRY,city_uao_union.name CAPITAL,country_uao_union.headofstate
+from country_uao_union,city_uao_union
+where country_uao_union.capital = city_uao_union.id 
+and country_uao_union.continent = 'North America'
+UNION ALL
+select country_uao_union.code,country_uao_union.name COUNTRY,city_uao_union.name CAPITAL,country_uao_union.headofstate
+from country_uao_union,city_uao_union
+where country_uao_union.capital =	city_uao_union.id	
+and country_uao_union.continent =	'South America'
+EXCEPT
+select country_uao_union.code,country_uao_union.name COUNTRY,city_uao_union.name CAPITAL,country_uao_union.headofstate
+from country_uao_union,city_uao_union
+where 
+country_uao_union.capital =     city_uao_union.id
+and country_uao_union.code='GTM'
+) FOO_uao,countrylanguage_uao_union
+where FOO_uao.code = countrylanguage_uao_union.countrycode
+group by FOO_uao.code,FOO_uao.COUNTRY,FOO_uao.CAPITAL,FOO_uao.headofstate
+HAVING count(*)  >=
+ (select min(ASIAN_COUNT) FROM
+   (select ASIAN_COUNT FROM somecheapasiandiversecountries_uao,country_uao_union
+    where somecheapasiandiversecountries_uao.code = country_uao_union.code
+    and country_uao_union.gnp >= country_uao_union.gnpold
+   ) ASIANCOUNT
+ )
+order by compared_with_cheap_asian_cnt desc, 1 asc
+LIMIT 10;
+ code |    country    |      capital      |          headofstate           | compared_with_cheap_asian_cnt 
+------+---------------+-------------------+--------------------------------+-------------------------------
+ CAN  | Canada        | Ottawa            | Elisabeth II                   |                            12
+ USA  | United States | Washington        | George W. Bush                 |                            12
+ MEX  | Mexico        | Ciudad de Mexico  | Vicente Fox Quesada            |                             6
+ PAN  | Panama        | Ciudad de Panama  | Mireya Elisa Moscoso Rodriguez |                             6
+ BRA  | Brazil        | Brasilia          | Fernando Henrique Cardoso      |                             5
+ COL  | Colombia      | Santafe de Bogota | Andres Pastrana Arango         |                             5
+ ABW  | Aruba         | Oranjestad        | Beatrix                        |                             4
+ BLZ  | Belize        | Belmopan          | Elisabeth II                   |                             4
+ BOL  | Bolivia       | La Paz            | Hugo Banzer Suarez             |                             4
+ CHL  | Chile         | Santiago de Chile | Ricardo Lagos Escobar          |                             4
+(10 rows)
+
+ 
+ 

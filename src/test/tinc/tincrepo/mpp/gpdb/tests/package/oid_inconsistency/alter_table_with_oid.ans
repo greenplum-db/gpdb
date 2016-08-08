@@ -1,0 +1,12 @@
+Drop table if exists altwithoid cascade;
+NOTICE:  table "altwithoid" does not exist, skipping
+DROP TABLE
+create table altwithoid (col integer) with oids distributed by (col);
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+CREATE TABLE
+create table altinhoid () inherits (altwithoid) without oids;
+NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+CREATE TABLE
+alter table altwithoid set without oids;
+ALTER TABLE

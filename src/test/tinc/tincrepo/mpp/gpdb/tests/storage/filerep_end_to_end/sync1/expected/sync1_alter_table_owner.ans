@@ -1,0 +1,137 @@
+--
+-- SYNC1 ALTER TABLE OWNER
+--
+ CREATE TABLE sync1_alter_table_owner1 (
+ text_col text,
+ bigint_col bigint,
+ char_vary_col character varying(30),
+ numeric_col numeric
+ )DISTRIBUTED RANDOMLY;
+CREATE TABLE
+ insert into sync1_alter_table_owner1 select i||'_'||repeat('text',100),i,i||'_'||repeat('text',5),i from generate_series(1,100)i;
+INSERT 0 100
+select count(*) from sync1_alter_table_owner1;
+ count 
+-------
+   100
+(1 row)
+
+ CREATE TABLE sync1_alter_table_owner2 (
+ text_col text,
+ bigint_col bigint,
+ char_vary_col character varying(30),
+ numeric_col numeric
+ )DISTRIBUTED RANDOMLY;
+CREATE TABLE
+ insert into sync1_alter_table_owner2 select i||'_'||repeat('text',100),i,i||'_'||repeat('text',5),i from generate_series(1,100)i;
+INSERT 0 100
+select count(*) from sync1_alter_table_owner2;
+ count 
+-------
+   100
+(1 row)
+
+ CREATE TABLE sync1_alter_table_owner3 (
+ text_col text,
+ bigint_col bigint,
+ char_vary_col character varying(30),
+ numeric_col numeric
+ )DISTRIBUTED RANDOMLY;
+CREATE TABLE
+ insert into sync1_alter_table_owner3 select i||'_'||repeat('text',100),i,i||'_'||repeat('text',5),i from generate_series(1,100)i;
+INSERT 0 100
+select count(*) from sync1_alter_table_owner3;
+ count 
+-------
+   100
+(1 row)
+
+ CREATE TABLE sync1_alter_table_owner4 (
+ text_col text,
+ bigint_col bigint,
+ char_vary_col character varying(30),
+ numeric_col numeric
+ )DISTRIBUTED RANDOMLY;
+CREATE TABLE
+ insert into sync1_alter_table_owner4 select i||'_'||repeat('text',100),i,i||'_'||repeat('text',5),i from generate_series(1,100)i;
+INSERT 0 100
+select count(*) from sync1_alter_table_owner4;
+ count 
+-------
+   100
+(1 row)
+
+ CREATE TABLE sync1_alter_table_owner5 (
+ text_col text,
+ bigint_col bigint,
+ char_vary_col character varying(30),
+ numeric_col numeric
+ )DISTRIBUTED RANDOMLY;
+CREATE TABLE
+ insert into sync1_alter_table_owner5 select i||'_'||repeat('text',100),i,i||'_'||repeat('text',5),i from generate_series(1,100)i;
+INSERT 0 100
+select count(*) from sync1_alter_table_owner5;
+ count 
+-------
+   100
+(1 row)
+
+ CREATE TABLE sync1_alter_table_owner6 (
+ text_col text,
+ bigint_col bigint,
+ char_vary_col character varying(30),
+ numeric_col numeric
+ )DISTRIBUTED RANDOMLY;
+CREATE TABLE
+ insert into sync1_alter_table_owner6 select i||'_'||repeat('text',100),i,i||'_'||repeat('text',5),i from generate_series(1,100)i;
+INSERT 0 100
+select count(*) from sync1_alter_table_owner6;
+ count 
+-------
+   100
+(1 row)
+
+ CREATE TABLE sync1_alter_table_owner7 (
+ text_col text,
+ bigint_col bigint,
+ char_vary_col character varying(30),
+ numeric_col numeric
+ )DISTRIBUTED RANDOMLY;
+CREATE TABLE
+ insert into sync1_alter_table_owner7 select i||'_'||repeat('text',100),i,i||'_'||repeat('text',5),i from generate_series(1,100)i;
+INSERT 0 100
+select count(*) from sync1_alter_table_owner7;
+ count 
+-------
+   100
+(1 row)
+
+ CREATE TABLE sync1_alter_table_owner8 (
+ text_col text,
+ bigint_col bigint,
+ char_vary_col character varying(30),
+ numeric_col numeric
+ )DISTRIBUTED RANDOMLY;
+CREATE TABLE
+ insert into sync1_alter_table_owner8 select i||'_'||repeat('text',100),i,i||'_'||repeat('text',5),i from generate_series(1,100)i;
+INSERT 0 100
+select count(*) from sync1_alter_table_owner8;
+ count 
+-------
+   100
+(1 row)
+
+--
+-- ALTER TABLE OWNER
+--
+ CREATE ROLE sync1_user_1;
+psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
+CREATE ROLE
+ ALTER TABLE sync1_alter_table_owner1 OWNER TO sync1_user_1;
+ALTER TABLE
+select count(*) from sync1_alter_table_owner1;
+ count 
+-------
+   100
+(1 row)
+

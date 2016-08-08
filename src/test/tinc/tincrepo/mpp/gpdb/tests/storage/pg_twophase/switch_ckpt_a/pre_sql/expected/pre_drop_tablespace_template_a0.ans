@@ -1,0 +1,2 @@
+CREATE TABLESPACE pg2_dropts_a0 FILESPACE filespace_test_a;
+CREATE TABLESPACE

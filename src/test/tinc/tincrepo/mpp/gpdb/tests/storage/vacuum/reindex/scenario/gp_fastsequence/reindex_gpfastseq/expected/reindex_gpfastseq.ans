@@ -1,0 +1,2 @@
+reindex table gp_fastsequence;
+REINDEX

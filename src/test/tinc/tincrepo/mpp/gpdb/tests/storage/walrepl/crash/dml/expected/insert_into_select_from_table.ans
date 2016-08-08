@@ -1,0 +1,20 @@
+-- start_ignore
+drop table if exists insert_to_select_tbl;
+psql:/path/sql_file:1: NOTICE:  table "insert_to_select_tbl" does not exist, skipping
+DROP TABLE
+drop table if exists insert_to_select_tbl_new;
+psql:/path/sql_file:1: NOTICE:  table "insert_to_select_tbl_new" does not exist, skipping
+DROP TABLE
+-- end_ignore
+create table insert_to_select_tbl(i int);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+insert into insert_to_select_tbl select * from generate_series(1,100);
+INSERT 0 100
+create table insert_to_select_tbl_new (i int);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+insert into insert_to_select_tbl_new select * from insert_to_select_tbl; 
+INSERT 0 100

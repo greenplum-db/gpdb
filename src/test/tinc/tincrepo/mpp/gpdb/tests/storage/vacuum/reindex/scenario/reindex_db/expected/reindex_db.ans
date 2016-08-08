@@ -1,0 +1,10 @@
+\c gpreindextest;
+You are now connected to database "gpreindextest" as user "gpadmin".
+reindex database gpreindextest;
+psql:/path/sql_file:1: NOTICE:  table "pg_listener" has no indexes
+psql:/path/sql_file:1: NOTICE:  table "__gp_localid" has no indexes
+psql:/path/sql_file:1: NOTICE:  table "__gp_masterid" has no indexes
+psql:/path/sql_file:1: NOTICE:  table "__gp_log_segment_ext" has no indexes
+psql:/path/sql_file:1: NOTICE:  table "__gp_log_master_ext" has no indexes
+psql:/path/sql_file:1: NOTICE:  table "gp_disk_free" has no indexes
+REINDEX

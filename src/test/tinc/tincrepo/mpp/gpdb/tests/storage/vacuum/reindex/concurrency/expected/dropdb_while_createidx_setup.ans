@@ -1,0 +1,14 @@
+DROP DATABASE IF EXISTS reindexdb;
+DROP
+CREATE DATABASE reindexdb;
+CREATE
+1: @db_name reindexdb:BEGIN;
+BEGIN
+1: drop table if exists reindex_tab_with_dropdb;
+DROP
+1: create table reindex_tab_with_dropdb (a int , b int) with (appendonly=true, orientation=column);
+CREATE
+1: insert into reindex_tab_with_dropdb select i, i -10 from generate_series(1,100) i;
+INSERT 100
+1: commit;
+COMMIT

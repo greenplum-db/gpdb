@@ -1,0 +1,60 @@
+-- start_ignore
+drop table if exists partitioned_t; 
+DROP TABLE
+drop function if exists plperl_prep();
+DROP FUNCTION
+drop function if exists plperl_run();
+DROP FUNCTION
+-- end_ignore
+create table partitioned_t
+( a numeric, b int, c varchar )
+partition by range(b)
+(
+   partition part1 start(1) end (3),
+   default partition defpart
+);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "partitioned_t_1_prt_defpart" for table "partitioned_t"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "partitioned_t_1_prt_part1" for table "partitioned_t"
+CREATE TABLE
+insert into partitioned_t(a, b, c) values (9.9999999999, 1, 'test');
+INSERT 0 1
+insert into partitioned_t(a, b, c) values (8.888888, 2, 'test');
+INSERT 0 1
+insert into partitioned_t(a, b, c) values (4.444444444444, 4, 'testdef');
+INSERT 0 1
+insert into partitioned_t(a, b, c) values (7.7777, 10, 'testdef');
+INSERT 0 1
+insert into partitioned_t(a, b, c) values (5.5555555555555, 1, 'test');
+INSERT 0 1
+create function plperl_prep() returns integer as $$
+   $_SHARED{my_plan} = spi_prepare('select b from partitioned_t as tempb');
+   return 0;
+$$ LANGUAGE plperl;
+CREATE FUNCTION
+create function plperl_run() returns SETOF partitioned_t as $$
+   return spi_exec_prepared($_SHARED{my_plan})->{rows}->[0]->{tempb};
+$$ LANGUAGE plperl;
+CREATE FUNCTION
+select plperl_prep();
+ plperl_prep 
+-------------
+           0
+(1 row)
+
+select plperl_run();
+ plperl_run 
+------------
+(0 rows)
+
+alter table partitioned_t split default partition start(4) inclusive end(10) exclusive into (partition part2, default partition);
+psql:/path/sql_file:1: NOTICE:  exchanged partition "defpart" of relation "partitioned_t" with relation "pg_temp_403315"
+psql:/path/sql_file:1: NOTICE:  dropped partition "defpart" for relation "partitioned_t"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "partitioned_t_1_prt_part2" for table "partitioned_t"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "partitioned_t_1_prt_defpart" for table "partitioned_t"
+ALTER TABLE
+select plperl_run();
+psql:/path/sql_file:1: ERROR:  Perl function "plperl_run" failed (plperl.c:1968)
+DETAIL:  relation with OID 403340 does not exist at line 2.
+CONTEXT:  PL/Perl function "plperl_run"

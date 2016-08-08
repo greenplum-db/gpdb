@@ -1,0 +1,18 @@
+select * from ( select 'a' as a) x join (select 'a' as b) y on a=b;
+ a | b 
+---+---
+ a | a
+(1 row)
+
+select * from ( ( select 'a' as a ) xx join (select 'a' as b) yy on a = b ) x join (select 'a' as c) y on a=c;
+ a | b | c 
+---+---+---
+ a | a | a
+(1 row)
+
+select x.b from ( ( select 'a' as a ) xx join (select 'a' as b) yy on a = b ) x join (select 'a' as c) y on a=c;
+ b 
+---
+ a
+(1 row)
+

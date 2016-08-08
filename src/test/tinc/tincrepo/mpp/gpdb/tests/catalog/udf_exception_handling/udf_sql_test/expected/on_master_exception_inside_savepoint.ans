@@ -1,0 +1,97 @@
+-- @Description Tests exception raised on master instead of segment in function with exception
+-- 
+DROP TABLE IF EXISTS test_exception_block CASCADE;
+psql:/path/sql_file:1: NOTICE:  table "test_exception_block" does not exist, skipping
+DROP TABLE
+DROP FUNCTION IF EXISTS test_exception_block_fn() CASCADE;
+psql:/path/sql_file:1: NOTICE:  function test_exception_block_fn() does not exist, skipping
+DROP FUNCTION
+SELECT relname FROM pg_class WHERE relname = 'test_exception_block';
+ relname 
+---------
+(0 rows)
+
+SELECT relname FROM gp_dist_random('pg_class') WHERE relname = 'test_exception_block';
+ relname 
+---------
+(0 rows)
+
+CREATE OR REPLACE FUNCTION test_exception_block_fn() RETURNS VOID AS
+$$
+BEGIN
+     CREATE TABLE test_exception_block(a int) DISTRIBUTED BY (a);
+     VACUUM pg_type;
+EXCEPTION WHEN OTHERS THEN
+RAISE NOTICE '%', SQLSTATE;
+end;
+$$ LANGUAGE plpgsql;
+CREATE FUNCTION
+SELECT test_exception_block_fn();
+psql:/path/sql_file:1: NOTICE:  25001
+ test_exception_block_fn 
+-------------------------
+ 
+(1 row)
+
+SELECT relname FROM pg_class WHERE relname = 'test_exception_block';
+ relname 
+---------
+(0 rows)
+
+SELECT relname FROM gp_dist_random('pg_class') WHERE relname = 'test_exception_block';
+ relname 
+---------
+(0 rows)
+
+-- Test explicit function call inside SAVEPOINT (sub-transaction)
+BEGIN;
+BEGIN
+	SAVEPOINT SP1;
+SAVEPOINT
+	SELECT test_exception_block_fn();
+psql:/path/sql_file:1: NOTICE:  25001
+ test_exception_block_fn 
+-------------------------
+ 
+(1 row)
+
+	ROLLBACK to SP1;
+ROLLBACK
+COMMIT;
+COMMIT
+SELECT relname FROM pg_class WHERE relname = 'test_exception_block';
+ relname 
+---------
+(0 rows)
+
+SELECT relname FROM gp_dist_random('pg_class') WHERE relname = 'test_exception_block';
+ relname 
+---------
+(0 rows)
+
+-- Test explicit function call inside SAVEPOINT (sub-transaction)
+BEGIN;
+BEGIN
+	SAVEPOINT SP1;
+SAVEPOINT
+	SELECT test_exception_block_fn();
+psql:/path/sql_file:1: NOTICE:  25001
+ test_exception_block_fn 
+-------------------------
+ 
+(1 row)
+
+	RELEASE SP1;
+RELEASE
+COMMIT;
+COMMIT
+SELECT relname FROM pg_class WHERE relname = 'test_exception_block';
+ relname 
+---------
+(0 rows)
+
+SELECT relname FROM gp_dist_random('pg_class') WHERE relname = 'test_exception_block';
+ relname 
+---------
+(0 rows)
+

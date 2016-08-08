@@ -1,0 +1,34 @@
+-- start_ignore
+drop  external table smallint_heap;
+DROP EXTERNAL TABLE
+drop  external table smallint_writehdfs;
+DROP EXTERNAL TABLE
+drop  external table smallint_readhdfs;
+DROP EXTERNAL TABLE
+-- end_ignore
+create readable external table smallint_heap(datatype_smallint varchar, xcount_smallint bigint, max_smallint smallint, min_smallint smallint, x_smallint smallint, reverse_smallint smallint, increment_smallint smallint, nullcol_smallint smallint) location ('gpfdist://rh55-qavm20:5487/smallint.txt')format 'TEXT';
+CREATE EXTERNAL TABLE
+create writable external table smallint_writehdfs(like smallint_heap) location ('gphdfs://my.cluster.com/extwrite/smallint')format 'custom' (formatter='gphdfs_export');
+NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+CREATE EXTERNAL TABLE
+create readable external table smallint_readhdfs(like smallint_heap) location ('gphdfs://my.cluster.com/extwrite/smallint') format 'custom' (formatter='gphdfs_import');
+CREATE EXTERNAL TABLE
+select count(*) from smallint_heap;
+ count 
+-------
+  5000
+(1 row)
+
+insert into smallint_writehdfs select * from smallint_heap;
+INSERT 0 5000
+select count(*) from smallint_readhdfs;
+ count 
+-------
+  5000
+(1 row)
+
+(select * from smallint_heap except select * from smallint_readhdfs) union (select * from smallint_readhdfs except select * from smallint_heap);
+ datatype_smallint | xcount_smallint | max_smallint | min_smallint | x_smallint | reverse_smallint | increment_smallint | nullcol_smallint 
+-------------------+-----------------+--------------+--------------+------------+------------------+--------------------+------------------
+(0 rows)
+

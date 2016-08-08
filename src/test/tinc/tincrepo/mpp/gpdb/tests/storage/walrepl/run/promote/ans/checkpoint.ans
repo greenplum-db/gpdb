@@ -1,0 +1,7 @@
+--
+-- @tags sanity
+--
+SELECT * FROM checkpoint_tbl;
+ERROR:  relation "checkpoint_tbl" does not exist
+LINE 1: SELECT * FROM checkpoint_tbl;
+                      ^

@@ -1,0 +1,30 @@
+-- start_ignore
+SET optimizer=off;
+SET
+-- end_ignore
+--Rename Table
+          CREATE TABLE mdt_table_name(
+          col_text text,
+          col_numeric numeric
+          ) DISTRIBUTED RANDOMLY;
+CREATE TABLE
+          ALTER TABLE mdt_table_name RENAME TO mdt_table_new_name;
+ALTER TABLE
+select classname  , schemaname , objname  , usestatus , usename , actionname , subtype from pg_stat_operations  where statime > ( select statime from pg_stat_operations where objname ='my_first_table' and actionname ='CREATE') and objname  not in ('pg_stat_operations','pg_stat_partition_operations') order by statime;
+  classname  | schemaname |      objname       | usestatus | usename  | actionname | subtype  
+-------------+------------+--------------------+-----------+----------+------------+----------
+ pg_authid   |            | mdt_user           | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_database |            | mdt_db             | CURRENT   | mdt_user | CREATE     | DATABASE
+ pg_class    | public     | mdt_table_new_name | CURRENT   | gpadmin  | CREATE     | TABLE
+ pg_class    | public     | mdt_table_new_name | CURRENT   | gpadmin  | ALTER      | RENAME
+(4 rows)
+
+drop table mdt_table_new_name;
+DROP TABLE
+select classname  , schemaname , objname  , usestatus , usename , actionname , subtype from pg_stat_operations  where statime > ( select statime from pg_stat_operations where objname ='my_first_table' and actionname ='CREATE') and objname  not in ('pg_stat_operations','pg_stat_partition_operations') order by statime;
+  classname  | schemaname | objname  | usestatus | usename  | actionname | subtype  
+-------------+------------+----------+-----------+----------+------------+----------
+ pg_authid   |            | mdt_user | CURRENT   | gpadmin  | CREATE     | ROLE
+ pg_database |            | mdt_db   | CURRENT   | mdt_user | CREATE     | DATABASE
+(2 rows)
+

@@ -1,0 +1,67 @@
+-- @Description Tests the udf on basic updates and deletes.
+-- 
+
+2U: SELECT * FROM gp_aovisimap_name('foo');
+tid|segno|row_num
+---+-----+-------
+(0 rows)
+2U: SELECT * FROM gp_aovisimap_entry_name('foo');
+sego|first_row_num|hiddentupcount|bitmap
+----+-------------+--------------+------
+(0 rows)
+2U: SELECT * FROM gp_aovisimap_hidden_info_name('foo');
+segno|hidden_tupcount|total_tupcount
+-----+---------------+--------------
+1    |0              |30            
+(1 row)
+DELETE FROM foo WHERE a IN (1, 2, 3, 5, 8, 13, 21);
+DELETE 7
+2U: SELECT * FROM gp_aovisimap_name('foo');
+tid             |segno|row_num
+----------------+-----+-------
+(33554432,32769)|1    |1      
+(33554432,32770)|1    |2      
+(33554432,32771)|1    |3      
+(33554432,32773)|1    |5      
+(33554432,32776)|1    |8      
+(33554432,32781)|1    |13     
+(33554432,32789)|1    |21     
+(7 rows)
+2U: SELECT * FROM gp_aovisimap_entry_name('foo');
+1   |0            |7             |0111010010000100000001            
+(1 row)
+2U: SELECT * FROM gp_aovisimap_hidden_info_name('foo');
+segno|hidden_tupcount|total_tupcount
+-----+---------------+--------------
+1    |7              |30            
+(1 row)
+UPDATE FOO SET b=0 WHERE a > 21;
+UPDATE 9
+2U: SELECT * FROM gp_aovisimap_name('foo');
+tid             |segno|row_num
+----------------+-----+-------
+(33554432,32769)|1    |1      
+(33554432,32770)|1    |2      
+(33554432,32771)|1    |3      
+(33554432,32773)|1    |5      
+(33554432,32776)|1    |8      
+(33554432,32781)|1    |13     
+(33554432,32789)|1    |21     
+(33554432,32790)|1    |22     
+(33554432,32791)|1    |23     
+(33554432,32792)|1    |24     
+(33554432,32793)|1    |25     
+(33554432,32794)|1    |26     
+(33554432,32795)|1    |27     
+(33554432,32796)|1    |28     
+(33554432,32797)|1    |29     
+(33554432,32798)|1    |30     
+(16 rows)
+2U: SELECT * FROM gp_aovisimap_entry_name('foo');
+1   |0            |16            |0111010010000100000001111111111      
+(1 row)
+2U: SELECT * FROM gp_aovisimap_hidden_info_name('foo');
+segno|hidden_tupcount|total_tupcount
+-----+---------------+--------------
+1    |16             |39            
+(1 row)

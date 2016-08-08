@@ -1,0 +1,278 @@
+CREATE or REPLACE function pltest.PLPERLerrorhandling1_0 (  ) RETURNS TEXT as $$  
+        spi_exec_query('CREATE TABLE pltest.errorhandlingtmptable(id1 int4) DISTRIBUTED BY(id1);');
+        spi_exec_query('INSERT INTO pltest.errorhandlingtmptable VALUES (1);');
+        spi_exec_query('INSERT INTO pltest.errorhandlingtmptable VALUES (2);');
+        spi_exec_query('INSERT INTO pltest.errorhandlingtmptable VALUES (4);');
+	
+	eval
+	{
+        	spi_exec_query("INSERT INTO pltest.errorhandlingtmptable VALUES ('fjdk');");
+	};
+	if ($@)
+	{
+		elog(NOTICE,"error occurs but ignore...\n");
+                # hide exception
+	}
+        my $rv = spi_exec_query('SELECT id1 from pltest.errorhandlingtmptable order by id1');
+        my $status = $rv->{status};
+        my $nrows = $rv->{processed};
+        my $result = '';
+        foreach my $rn (0 .. $nrows - 1) {
+                my $row = $rv->{rows}[$rn];
+                $result = $result . $row->{id1};
+        }
+	spi_exec_query('DROP TABLE pltest.errorhandlingtmptable');
+        return $result;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLerrorhandling1_0();
+NOTICE:  error occurs but ignore...
+CONTEXT:  PL/Perl function "plperlerrorhandling1_0"
+ plperlerrorhandling1_0 
+------------------------
+ 124
+(1 row)
+
+select * from pltest.PLPERLerrorhandling1_0();
+NOTICE:  error occurs but ignore...
+CONTEXT:  PL/Perl function "plperlerrorhandling1_0"
+ plperlerrorhandling1_0 
+------------------------
+ 124
+(1 row)
+
+DROP function pltest.PLPERLerrorhandling1_0 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLspisupport_1 (  ) RETURNS TEXT as $$  
+        spi_exec_query('CREATE TABLE pltest.myspitable(id1 int4) DISTRIBUTED BY(id1);');
+        spi_exec_query('INSERT INTO pltest.myspitable VALUES (1);');
+        spi_exec_query('INSERT INTO pltest.myspitable VALUES (2);');
+        spi_exec_query('INSERT INTO pltest.myspitable VALUES (4);');
+		
+		my $rv = spi_exec_query('SELECT id1 from pltest.myspitable order by id1');
+        my $status = $rv->{status};
+        my $nrows = $rv->{processed};
+        my $result = '';
+        foreach my $rn (0 .. $nrows - 1) {
+                my $row = $rv->{rows}[$rn];
+                $result = $result . $row->{id1};
+        }
+	spi_exec_query('DROP TABLE pltest.myspitable');
+        return $result;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLspisupport_1();
+ plperlspisupport_1 
+--------------------
+ 124
+(1 row)
+
+select * from pltest.PLPERLspisupport_1();
+ plperlspisupport_1 
+--------------------
+ 124
+(1 row)
+
+DROP function pltest.PLPERLspisupport_1 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLelog_2 ( IN  TEXT ) RETURNS VOID as $$  
+  my $msg = shift;
+  elog(NOTICE,$msg);
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLelog_2('QAZWSXEDCRFVTGB'::TEXT);
+NOTICE:  QAZWSXEDCRFVTGB
+CONTEXT:  PL/Perl function "plperlelog_2"
+ plperlelog_2 
+--------------
+ 
+(1 row)
+
+select pltest.PLPERLelog_2(NULL);
+NOTICE:  missing error text
+CONTEXT:  PL/Perl function "plperlelog_2"
+ plperlelog_2 
+--------------
+ 
+(1 row)
+
+select * from pltest.PLPERLelog_2('QAZWSXEDCRFVTGB'::TEXT);
+NOTICE:  QAZWSXEDCRFVTGB
+CONTEXT:  PL/Perl function "plperlelog_2"
+ plperlelog_2 
+--------------
+ 
+(1 row)
+
+select * from pltest.PLPERLelog_2(NULL);
+NOTICE:  missing error text
+CONTEXT:  PL/Perl function "plperlelog_2"
+ plperlelog_2 
+--------------
+ 
+(1 row)
+
+DROP function pltest.PLPERLelog_2 ( IN  TEXT );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLquote_literal_3 (  ) RETURNS SETOF TEXT as $$  
+	return_next "undef: ".quote_literal(undef);
+	return_next sprintf"$_: ".quote_literal($_)
+			for q{foo}, q{a'b}, q{a"b}, q{c''d}, q{e\f}, q{};
+	return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLquote_literal_3() as id from pltest.tableTEXT order by id;
+       id       
+----------------
+ : ''
+ : ''
+ a"b: 'a"b'
+ a"b: 'a"b'
+ a'b: 'a''b'
+ a'b: 'a''b'
+ c''d: 'c''''d'
+ c''d: 'c''''d'
+ e\f: E'e\\f'
+ e\f: E'e\\f'
+ foo: 'foo'
+ foo: 'foo'
+ undef: 
+ undef: 
+(14 rows)
+
+select pltest.PLPERLquote_literal_3() as id order by id;
+       id       
+----------------
+ : ''
+ a"b: 'a"b'
+ a'b: 'a''b'
+ c''d: 'c''''d'
+ e\f: E'e\\f'
+ foo: 'foo'
+ undef: 
+(7 rows)
+
+select * from pltest.PLPERLquote_literal_3() plperlquote_literal_3;
+ plperlquote_literal_3 
+-----------------------
+ undef: 
+ foo: 'foo'
+ a'b: 'a''b'
+ a"b: 'a"b'
+ c''d: 'c''''d'
+ e\f: E'e\\f'
+ : ''
+(7 rows)
+
+DROP function pltest.PLPERLquote_literal_3 (  );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLsetme_4 ( IN key TEXT , IN val TEXT ) RETURNS VOID as $$  
+  my $key = shift;
+  my $val = shift;
+  $_SHARED{$key}= $val;
+$$ language PLPERL;
+CREATE FUNCTION
+CREATE or REPLACE function pltest.PLPERLgetme ( IN  TEXT ) RETURNS TEXT as $$
+  my $key = shift;
+  return $_SHARED{$key};
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLsetme_4('P1'::TEXT,'V1');
+ plperlsetme_4 
+---------------
+ 
+(1 row)
+
+select pltest.PLPERLgetme('P1'::TEXT);
+ plperlgetme 
+-------------
+ V1
+(1 row)
+
+select pltest.PLPERLgetme('P2'::TEXT);
+ plperlgetme 
+-------------
+ 
+(1 row)
+
+select pltest.PLPERLgetme(NULL);
+ plperlgetme 
+-------------
+ 
+(1 row)
+
+select pltest.PLPERLsetme_4('P1'::TEXT,NULL);
+ plperlsetme_4 
+---------------
+ 
+(1 row)
+
+select pltest.PLPERLgetme('P1'::TEXT);
+ plperlgetme 
+-------------
+ 
+(1 row)
+
+select pltest.PLPERLgetme('P2'::TEXT);
+ plperlgetme 
+-------------
+ 
+(1 row)
+
+select pltest.PLPERLgetme(NULL);
+ plperlgetme 
+-------------
+ 
+(1 row)
+
+select pltest.PLPERLsetme_4(NULL,'P1'::TEXT);
+ plperlsetme_4 
+---------------
+ 
+(1 row)
+
+select pltest.PLPERLgetme('P1'::TEXT);
+ plperlgetme 
+-------------
+ 
+(1 row)
+
+select pltest.PLPERLgetme('P2'::TEXT);
+ plperlgetme 
+-------------
+ 
+(1 row)
+
+select pltest.PLPERLgetme(NULL);
+ plperlgetme 
+-------------
+ P1
+(1 row)
+
+DROP function pltest.PLPERLsetme_4 ( IN key TEXT , IN val TEXT );
+DROP FUNCTION
+DROP function pltest.PLPERLgetme ( IN  TEXT );
+DROP FUNCTION
+CREATE or REPLACE function pltest.PLPERLbuildinwarn_7 (  ) RETURNS TEXT as $$  
+    warn("hello");
+	return "hello";
+$$ language PLPERL;
+CREATE FUNCTION
+select pltest.PLPERLbuildinwarn_7();
+WARNING:  hello at line 2.
+CONTEXT:  PL/Perl function "plperlbuildinwarn_7"
+ plperlbuildinwarn_7 
+---------------------
+ hello
+(1 row)
+
+select * from pltest.PLPERLbuildinwarn_7();
+WARNING:  hello at line 2.
+CONTEXT:  PL/Perl function "plperlbuildinwarn_7"
+ plperlbuildinwarn_7 
+---------------------
+ hello
+(1 row)
+
+DROP function pltest.PLPERLbuildinwarn_7 (  );
+DROP FUNCTION

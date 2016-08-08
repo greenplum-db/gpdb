@@ -1,0 +1,254 @@
+--
+-- Greenplum Database database dump
+--
+
+SET statement_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = off;
+SET check_function_bodies = false;
+SET client_min_messages = warning;
+SET escape_string_warning = off;
+
+SET search_path = public, pg_catalog;
+
+SET default_tablespace = '';
+
+SET default_with_oids = false;
+
+--
+-- Name: mpp10480_partsupp_partition; Type: TABLE; Schema: public; Owner: -; Tablespace: 
+--
+
+CREATE TABLE mpp10480_partsupp_partition (
+    ps_partkey integer,
+    ps_suppkey integer,
+    ps_availqty integer,
+    ps_supplycost numeric,
+    ps_comment character varying(199)
+) DISTRIBUTED BY (ps_partkey) PARTITION BY RANGE(ps_partkey)
+          SUBPARTITION BY RANGE(ps_partkey) 
+          (
+          PARTITION aa_1 START (0) END (100) EVERY (100) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1', appendonly=false ) 
+                  (
+                  SUBPARTITION sp1_1 START (0) END (10) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp1_1', appendonly=false ), 
+                  SUBPARTITION sp1_2 START (10) END (20) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp1_2', appendonly=false ), 
+                  SUBPARTITION sp1_3 START (20) END (30) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp1_3', appendonly=false ), 
+                  SUBPARTITION sp1_4 START (30) END (40) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp1_4', appendonly=false ), 
+                  SUBPARTITION sp1_5 START (40) END (50) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp1_5', appendonly=false ), 
+                  SUBPARTITION sp1_6 START (50) END (60) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp1_6', appendonly=false ), 
+                  SUBPARTITION sp1_7 START (60) END (70) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp1_7', appendonly=false ), 
+                  SUBPARTITION sp1_8 START (70) END (80) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp1_8', appendonly=false ), 
+                  SUBPARTITION sp1_9 START (80) END (90) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp1_9', appendonly=false ), 
+                  SUBPARTITION sp1_10 START (90) END (100) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp1_10', appendonly=false ), 
+                  SUBPARTITION sp2_1 START (100) END (110) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp2_1', appendonly=false ), 
+                  SUBPARTITION sp2_2 START (110) END (120) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp2_2', appendonly=false ), 
+                  SUBPARTITION sp2_3 START (120) END (130) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp2_3', appendonly=false ), 
+                  SUBPARTITION sp2_4 START (130) END (140) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp2_4', appendonly=false ), 
+                  SUBPARTITION sp2_5 START (140) END (150) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp2_5', appendonly=false ), 
+                  SUBPARTITION sp2_6 START (150) END (160) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp2_6', appendonly=false ), 
+                  SUBPARTITION sp2_7 START (160) END (170) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp2_7', appendonly=false ), 
+                  SUBPARTITION sp2_8 START (170) END (180) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp2_8', appendonly=false ), 
+                  SUBPARTITION sp2_9 START (180) END (190) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp2_9', appendonly=false ), 
+                  SUBPARTITION sp2_10 START (190) END (200) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp2_10', appendonly=false ), 
+                  SUBPARTITION sp3_1 START (200) END (210) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp3_1', appendonly=false ), 
+                  SUBPARTITION sp3_2 START (210) END (220) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp3_2', appendonly=false ), 
+                  SUBPARTITION sp3_3 START (220) END (230) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp3_3', appendonly=false ), 
+                  SUBPARTITION sp3_4 START (230) END (240) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp3_4', appendonly=false ), 
+                  SUBPARTITION sp3_5 START (240) END (250) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp3_5', appendonly=false ), 
+                  SUBPARTITION sp3_6 START (250) END (260) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp3_6', appendonly=false ), 
+                  SUBPARTITION sp3_7 START (260) END (270) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp3_7', appendonly=false ), 
+                  SUBPARTITION sp3_8 START (270) END (280) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp3_8', appendonly=false ), 
+                  SUBPARTITION sp3_9 START (280) END (290) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp3_9', appendonly=false ), 
+                  SUBPARTITION sp3_10 START (290) END (300) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp3_10', appendonly=false ), 
+                  SUBPARTITION sp4_1 START (300) END (310) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp4_1', appendonly=false ), 
+                  SUBPARTITION sp4_2 START (310) END (320) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp4_2', appendonly=false ), 
+                  SUBPARTITION sp4_3 START (320) END (330) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp4_3', appendonly=false ), 
+                  SUBPARTITION sp4_4 START (330) END (340) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp4_4', appendonly=false ), 
+                  SUBPARTITION sp4_5 START (340) END (350) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp4_5', appendonly=false ), 
+                  SUBPARTITION sp4_6 START (350) END (360) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp4_6', appendonly=false ), 
+                  SUBPARTITION sp4_7 START (360) END (370) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp4_7', appendonly=false ), 
+                  SUBPARTITION sp4_8 START (370) END (380) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp4_8', appendonly=false ), 
+                  SUBPARTITION sp4_9 START (380) END (390) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp4_9', appendonly=false ), 
+                  SUBPARTITION sp4_10 START (390) END (400) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_1_2_prt_sp4_10', appendonly=false )
+                  ), 
+          PARTITION aa_2 START (100) END (200) EVERY (100) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2', appendonly=false ) 
+                  (
+                  SUBPARTITION sp1_1 START (0) END (10) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp1_1', appendonly=false ), 
+                  SUBPARTITION sp1_2 START (10) END (20) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp1_2', appendonly=false ), 
+                  SUBPARTITION sp1_3 START (20) END (30) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp1_3', appendonly=false ), 
+                  SUBPARTITION sp1_4 START (30) END (40) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp1_4', appendonly=false ), 
+                  SUBPARTITION sp1_5 START (40) END (50) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp1_5', appendonly=false ), 
+                  SUBPARTITION sp1_6 START (50) END (60) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp1_6', appendonly=false ), 
+                  SUBPARTITION sp1_7 START (60) END (70) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp1_7', appendonly=false ), 
+                  SUBPARTITION sp1_8 START (70) END (80) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp1_8', appendonly=false ), 
+                  SUBPARTITION sp1_9 START (80) END (90) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp1_9', appendonly=false ), 
+                  SUBPARTITION sp1_10 START (90) END (100) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp1_10', appendonly=false ), 
+                  SUBPARTITION sp2_1 START (100) END (110) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp2_1', appendonly=false ), 
+                  SUBPARTITION sp2_2 START (110) END (120) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp2_2', appendonly=false ), 
+                  SUBPARTITION sp2_3 START (120) END (130) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp2_3', appendonly=false ), 
+                  SUBPARTITION sp2_4 START (130) END (140) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp2_4', appendonly=false ), 
+                  SUBPARTITION sp2_5 START (140) END (150) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp2_5', appendonly=false ), 
+                  SUBPARTITION sp2_6 START (150) END (160) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp2_6', appendonly=false ), 
+                  SUBPARTITION sp2_7 START (160) END (170) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp2_7', appendonly=false ), 
+                  SUBPARTITION sp2_8 START (170) END (180) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp2_8', appendonly=false ), 
+                  SUBPARTITION sp2_9 START (180) END (190) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp2_9', appendonly=false ), 
+                  SUBPARTITION sp2_10 START (190) END (200) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp2_10', appendonly=false ), 
+                  SUBPARTITION sp3_1 START (200) END (210) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp3_1', appendonly=false ), 
+                  SUBPARTITION sp3_2 START (210) END (220) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp3_2', appendonly=false ), 
+                  SUBPARTITION sp3_3 START (220) END (230) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp3_3', appendonly=false ), 
+                  SUBPARTITION sp3_4 START (230) END (240) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp3_4', appendonly=false ), 
+                  SUBPARTITION sp3_5 START (240) END (250) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp3_5', appendonly=false ), 
+                  SUBPARTITION sp3_6 START (250) END (260) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp3_6', appendonly=false ), 
+                  SUBPARTITION sp3_7 START (260) END (270) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp3_7', appendonly=false ), 
+                  SUBPARTITION sp3_8 START (270) END (280) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp3_8', appendonly=false ), 
+                  SUBPARTITION sp3_9 START (280) END (290) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp3_9', appendonly=false ), 
+                  SUBPARTITION sp3_10 START (290) END (300) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp3_10', appendonly=false ), 
+                  SUBPARTITION sp4_1 START (300) END (310) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp4_1', appendonly=false ), 
+                  SUBPARTITION sp4_2 START (310) END (320) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp4_2', appendonly=false ), 
+                  SUBPARTITION sp4_3 START (320) END (330) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp4_3', appendonly=false ), 
+                  SUBPARTITION sp4_4 START (330) END (340) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp4_4', appendonly=false ), 
+                  SUBPARTITION sp4_5 START (340) END (350) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp4_5', appendonly=false ), 
+                  SUBPARTITION sp4_6 START (350) END (360) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp4_6', appendonly=false ), 
+                  SUBPARTITION sp4_7 START (360) END (370) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp4_7', appendonly=false ), 
+                  SUBPARTITION sp4_8 START (370) END (380) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp4_8', appendonly=false ), 
+                  SUBPARTITION sp4_9 START (380) END (390) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp4_9', appendonly=false ), 
+                  SUBPARTITION sp4_10 START (390) END (400) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_2_2_prt_sp4_10', appendonly=false )
+                  ), 
+          PARTITION aa_3 START (200) END (300) EVERY (100) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3', appendonly=false ) 
+                  (
+                  SUBPARTITION sp1_1 START (0) END (10) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp1_1', appendonly=false ), 
+                  SUBPARTITION sp1_2 START (10) END (20) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp1_2', appendonly=false ), 
+                  SUBPARTITION sp1_3 START (20) END (30) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp1_3', appendonly=false ), 
+                  SUBPARTITION sp1_4 START (30) END (40) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp1_4', appendonly=false ), 
+                  SUBPARTITION sp1_5 START (40) END (50) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp1_5', appendonly=false ), 
+                  SUBPARTITION sp1_6 START (50) END (60) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp1_6', appendonly=false ), 
+                  SUBPARTITION sp1_7 START (60) END (70) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp1_7', appendonly=false ), 
+                  SUBPARTITION sp1_8 START (70) END (80) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp1_8', appendonly=false ), 
+                  SUBPARTITION sp1_9 START (80) END (90) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp1_9', appendonly=false ), 
+                  SUBPARTITION sp1_10 START (90) END (100) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp1_10', appendonly=false ), 
+                  SUBPARTITION sp2_1 START (100) END (110) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp2_1', appendonly=false ), 
+                  SUBPARTITION sp2_2 START (110) END (120) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp2_2', appendonly=false ), 
+                  SUBPARTITION sp2_3 START (120) END (130) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp2_3', appendonly=false ), 
+                  SUBPARTITION sp2_4 START (130) END (140) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp2_4', appendonly=false ), 
+                  SUBPARTITION sp2_5 START (140) END (150) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp2_5', appendonly=false ), 
+                  SUBPARTITION sp2_6 START (150) END (160) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp2_6', appendonly=false ), 
+                  SUBPARTITION sp2_7 START (160) END (170) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp2_7', appendonly=false ), 
+                  SUBPARTITION sp2_8 START (170) END (180) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp2_8', appendonly=false ), 
+                  SUBPARTITION sp2_9 START (180) END (190) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp2_9', appendonly=false ), 
+                  SUBPARTITION sp2_10 START (190) END (200) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp2_10', appendonly=false ), 
+                  SUBPARTITION sp3_1 START (200) END (210) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp3_1', appendonly=false ), 
+                  SUBPARTITION sp3_2 START (210) END (220) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp3_2', appendonly=false ), 
+                  SUBPARTITION sp3_3 START (220) END (230) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp3_3', appendonly=false ), 
+                  SUBPARTITION sp3_4 START (230) END (240) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp3_4', appendonly=false ), 
+                  SUBPARTITION sp3_5 START (240) END (250) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp3_5', appendonly=false ), 
+                  SUBPARTITION sp3_6 START (250) END (260) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp3_6', appendonly=false ), 
+                  SUBPARTITION sp3_7 START (260) END (270) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp3_7', appendonly=false ), 
+                  SUBPARTITION sp3_8 START (270) END (280) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp3_8', appendonly=false ), 
+                  SUBPARTITION sp3_9 START (280) END (290) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp3_9', appendonly=false ), 
+                  SUBPARTITION sp3_10 START (290) END (300) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp3_10', appendonly=false ), 
+                  SUBPARTITION sp4_1 START (300) END (310) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp4_1', appendonly=false ), 
+                  SUBPARTITION sp4_2 START (310) END (320) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp4_2', appendonly=false ), 
+                  SUBPARTITION sp4_3 START (320) END (330) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp4_3', appendonly=false ), 
+                  SUBPARTITION sp4_4 START (330) END (340) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp4_4', appendonly=false ), 
+                  SUBPARTITION sp4_5 START (340) END (350) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp4_5', appendonly=false ), 
+                  SUBPARTITION sp4_6 START (350) END (360) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp4_6', appendonly=false ), 
+                  SUBPARTITION sp4_7 START (360) END (370) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp4_7', appendonly=false ), 
+                  SUBPARTITION sp4_8 START (370) END (380) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp4_8', appendonly=false ), 
+                  SUBPARTITION sp4_9 START (380) END (390) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp4_9', appendonly=false ), 
+                  SUBPARTITION sp4_10 START (390) END (400) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_3_2_prt_sp4_10', appendonly=false )
+                  ), 
+          PARTITION aa_4 START (300) END (400) EVERY (100) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4', appendonly=false ) 
+                  (
+                  SUBPARTITION sp1_1 START (0) END (10) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp1_1', appendonly=false ), 
+                  SUBPARTITION sp1_2 START (10) END (20) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp1_2', appendonly=false ), 
+                  SUBPARTITION sp1_3 START (20) END (30) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp1_3', appendonly=false ), 
+                  SUBPARTITION sp1_4 START (30) END (40) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp1_4', appendonly=false ), 
+                  SUBPARTITION sp1_5 START (40) END (50) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp1_5', appendonly=false ), 
+                  SUBPARTITION sp1_6 START (50) END (60) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp1_6', appendonly=false ), 
+                  SUBPARTITION sp1_7 START (60) END (70) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp1_7', appendonly=false ), 
+                  SUBPARTITION sp1_8 START (70) END (80) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp1_8', appendonly=false ), 
+                  SUBPARTITION sp1_9 START (80) END (90) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp1_9', appendonly=false ), 
+                  SUBPARTITION sp1_10 START (90) END (100) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp1_10', appendonly=false ), 
+                  SUBPARTITION sp2_1 START (100) END (110) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp2_1', appendonly=false ), 
+                  SUBPARTITION sp2_2 START (110) END (120) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp2_2', appendonly=false ), 
+                  SUBPARTITION sp2_3 START (120) END (130) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp2_3', appendonly=false ), 
+                  SUBPARTITION sp2_4 START (130) END (140) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp2_4', appendonly=false ), 
+                  SUBPARTITION sp2_5 START (140) END (150) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp2_5', appendonly=false ), 
+                  SUBPARTITION sp2_6 START (150) END (160) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp2_6', appendonly=false ), 
+                  SUBPARTITION sp2_7 START (160) END (170) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp2_7', appendonly=false ), 
+                  SUBPARTITION sp2_8 START (170) END (180) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp2_8', appendonly=false ), 
+                  SUBPARTITION sp2_9 START (180) END (190) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp2_9', appendonly=false ), 
+                  SUBPARTITION sp2_10 START (190) END (200) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp2_10', appendonly=false ), 
+                  SUBPARTITION sp3_1 START (200) END (210) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp3_1', appendonly=false ), 
+                  SUBPARTITION sp3_2 START (210) END (220) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp3_2', appendonly=false ), 
+                  SUBPARTITION sp3_3 START (220) END (230) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp3_3', appendonly=false ), 
+                  SUBPARTITION sp3_4 START (230) END (240) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp3_4', appendonly=false ), 
+                  SUBPARTITION sp3_5 START (240) END (250) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp3_5', appendonly=false ), 
+                  SUBPARTITION sp3_6 START (250) END (260) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp3_6', appendonly=false ), 
+                  SUBPARTITION sp3_7 START (260) END (270) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp3_7', appendonly=false ), 
+                  SUBPARTITION sp3_8 START (270) END (280) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp3_8', appendonly=false ), 
+                  SUBPARTITION sp3_9 START (280) END (290) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp3_9', appendonly=false ), 
+                  SUBPARTITION sp3_10 START (290) END (300) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp3_10', appendonly=false ), 
+                  SUBPARTITION sp4_1 START (300) END (310) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp4_1', appendonly=false ), 
+                  SUBPARTITION sp4_2 START (310) END (320) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp4_2', appendonly=false ), 
+                  SUBPARTITION sp4_3 START (320) END (330) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp4_3', appendonly=false ), 
+                  SUBPARTITION sp4_4 START (330) END (340) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp4_4', appendonly=false ), 
+                  SUBPARTITION sp4_5 START (340) END (350) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp4_5', appendonly=false ), 
+                  SUBPARTITION sp4_6 START (350) END (360) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp4_6', appendonly=false ), 
+                  SUBPARTITION sp4_7 START (360) END (370) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp4_7', appendonly=false ), 
+                  SUBPARTITION sp4_8 START (370) END (380) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp4_8', appendonly=false ), 
+                  SUBPARTITION sp4_9 START (380) END (390) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp4_9', appendonly=false ), 
+                  SUBPARTITION sp4_10 START (390) END (400) EVERY (10) WITH (tablename='mpp10480_partsupp_partition_1_prt_aa_4_2_prt_sp4_10', appendonly=false )
+                  )
+          );
+ ALTER TABLE mpp10480_partsupp_partition 
+SET SUBPARTITION TEMPLATE  
+          (
+          SUBPARTITION sp1_1 START (0) END (10) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp1_2 START (10) END (20) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp1_3 START (20) END (30) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp1_4 START (30) END (40) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp1_5 START (40) END (50) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp1_6 START (50) END (60) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp1_7 START (60) END (70) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp1_8 START (70) END (80) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp1_9 START (80) END (90) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp1_10 START (90) END (100) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp2_1 START (100) END (110) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp2_2 START (110) END (120) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp2_3 START (120) END (130) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp2_4 START (130) END (140) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp2_5 START (140) END (150) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp2_6 START (150) END (160) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp2_7 START (160) END (170) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp2_8 START (170) END (180) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp2_9 START (180) END (190) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp2_10 START (190) END (200) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp3_1 START (200) END (210) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp3_2 START (210) END (220) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp3_3 START (220) END (230) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp3_4 START (230) END (240) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp3_5 START (240) END (250) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp3_6 START (250) END (260) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp3_7 START (260) END (270) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp3_8 START (270) END (280) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp3_9 START (280) END (290) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp3_10 START (290) END (300) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp4_1 START (300) END (310) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp4_2 START (310) END (320) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp4_3 START (320) END (330) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp4_4 START (330) END (340) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp4_5 START (340) END (350) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp4_6 START (350) END (360) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp4_7 START (360) END (370) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp4_8 START (370) END (380) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp4_9 START (380) END (390) EVERY (10) WITH (tablename='mpp10480_partsupp_partition'), 
+          SUBPARTITION sp4_10 START (390) END (400) EVERY (10) WITH (tablename='mpp10480_partsupp_partition')
+          )
+;
+
+
+--
+-- Greenplum Database database dump complete
+--
+

@@ -1,0 +1,17 @@
+-- Reset guc to default value for all roles
+Alter role dsp_role1 set gp_default_storage_options TO DEFAULT;
+ALTER ROLE
+Alter role dsp_role2 set gp_default_storage_options TO DEFAULT;
+ALTER ROLE
+Alter role dsp_role3 set gp_default_storage_options TO DEFAULT;
+ALTER ROLE
+Alter role dsp_role4 set gp_default_storage_options TO DEFAULT;
+ALTER ROLE
+select rolname, rolconfig from pg_roles where rolname in ('dsp_role1', 'dsp_role2', 'dsp_role3') order by rolname;
+  rolname  | rolconfig 
+-----------+-----------
+ dsp_role1 | 
+ dsp_role2 | 
+ dsp_role3 | 
+(3 rows)
+

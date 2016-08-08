@@ -1,0 +1,27 @@
+-- @Description Ensures that alter table during reindex operations on GiST index is ok
+-- 
+
+DELETE FROM reindex_ao_gist  WHERE id < 128;
+DELETE 254
+1: BEGIN;
+BEGIN
+1: REINDEX index idx_gist_reindex_ao;
+REINDEX
+2&: alter table reindex_ao_gist drop column target;  <waiting ...>
+1: COMMIT;
+COMMIT
+2<:  <... completed>
+ALTER
+2: COMMIT;
+COMMIT
+3: insert into reindex_ao_gist (id, owner, description, property, poli) values(1500, 'user1500' , 'Testing GiST Index', '((3, 1300), (33, 1330))','( (22,660), (57    , 650), (68, 660) )') ;
+INSERT 1
+3: SELECT COUNT(*) FROM reindex_ao_gist WHERE id = 1500;
+count
+-----
+1    
+(1 row)
+3: SELECT 1 AS relfilenode_same_on_all_segs from gp_dist_random('pg_class')   WHERE relname = 'idx_gist_reindex_ao' GROUP BY relfilenode having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
+relfilenode_same_on_all_segs
+----------------------------
+(0 rows)

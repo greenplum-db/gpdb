@@ -1,0 +1,83 @@
+-- start_ignore
+DROP TABLE IF EXISTS areas;
+DROP TABLE
+-- end_ignore
+CREATE TABLE areas (id INT4, name text);
+CREATE TABLE
+SELECT AddGeometryColumn('public','areas','geom', 0,'GEOMETRY',2);
+               addgeometrycolumn                
+------------------------------------------------
+ public.areas.geom SRID:0 TYPE:GEOMETRY DIMS:2 
+(1 row)
+
+INSERT INTO areas(id, geom, name) VALUES (1, ST_GeomFromText('POLYGON((1 1, 4 1, 4 4, 1 4, 1 1))'),'A');
+INSERT 0 1
+INSERT INTO areas(id, geom, name) VALUES (2, ST_GeomFromText('POLYGON((2 7, 2 9, 4 7, 2 7))'),'B');
+INSERT 0 1
+INSERT INTO areas(id, geom, name) VALUES (3, ST_Translate(ST_GeomFromText('POLYGON((2 7, 2 9, 4 7, 2 7))'),0,-2),'C'); --shift a version of B
+INSERT 0 1
+--make a donut
+INSERT INTO areas(id, geom, name) SELECT 4, ST_BuildArea(ST_Collect(smallc,bigc)),'D' FROM (SELECT
+						ST_Buffer( ST_GeomFromText('POINT(6 4)'), 1) As smallc,
+						ST_Buffer(ST_GeomFromText('POINT(6 4)'), 2) As bigc) As foo;
+INSERT 0 1
+--What is the area/perimeter of each region?
+SELECT name, st_area(geom), st_perimeter(geom) FROM areas ORDER BY name;
+ name |     st_area      |   st_perimeter   
+------+------------------+------------------
+ A    |                9 |               12
+ B    |                2 | 6.82842712474619
+ C    |                2 | 6.82842712474619
+ D    | 9.36433545677416 | 18.8192909432756
+(4 rows)
+
+--What type of geometry is this?
+SELECT GeometryType(geom) FROM areas;
+ geometrytype 
+--------------
+ POLYGON
+ POLYGON
+ POLYGON
+ POLYGON
+(4 rows)
+
+--Which region is below y=5?
+SELECT name FROM areas WHERE areas.geom <<| ST_GeomFromText('LINESTRING(0 5, 10 5)');
+ name 
+------
+ A
+(1 row)
+
+--Which region is the triangle one?
+SELECT name FROM areas WHERE ST_equals(areas.geom,ST_GeomFromText('POLYGON((4 7, 2 9, 2 7, 4 7))'));
+ name 
+------
+ B
+(1 row)
+
+--how many regions are there?
+SELECT ST_NumGeometries(ST_UNION(areas.geom)) as NumRegions FROM areas;
+ numregions 
+------------
+          4
+(1 row)
+
+--what is the bounding box of the regions?
+SELECT ST_Extent(geom) FROM areas;
+  st_extent   
+--------------
+ BOX(1 1,8 9)
+(1 row)
+
+--how far from origin?
+SELECT name, ST_Distance(geom,ST_GeomFromText('POINT(0 0)')) as distance FROM areas ORDER BY distance;
+ name |     distance     
+------+------------------
+ A    |  1.4142135623731
+ D    |  5.2111040650159
+ C    |  5.3851648071345
+ B    | 7.28010988928052
+(4 rows)
+
+DROP TABLE areas;
+DROP TABLE

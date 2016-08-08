@@ -1,0 +1,27 @@
+--start_ignore
+drop table if exists foo_test;
+DROP TABLE
+set optimizer=on;
+SET
+--end_ignore
+create table foo_test(i int, j int);
+psql:test.sql:6: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+insert into foo_test select i, i from generate_series(1, 1000) i;
+INSERT 0 1000
+select * from foo_test where i = 1;
+ i | j 
+---+---
+ 1 | 1
+(1 row)
+
+explain select * from foo_test where i=1;
+                                 QUERY PLAN                                 
+----------------------------------------------------------------------------
+ Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..5.92 rows=1 width=8)
+   ->  Table Scan on foo_test  (cost=0.00..4.91 rows=1 width=8)
+         Filter: i = 1
+ Settings:  optimizer=on
+(4 rows)
+

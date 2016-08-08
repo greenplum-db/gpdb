@@ -1,0 +1,10 @@
+insert into r1 values (generate_series(1,1600));
+INSERT 0 1600
+insert into r1 values (generate_series(1,1600));
+INSERT 0 1600
+insert into r1 values (generate_series(1,1600));
+INSERT 0 1600
+insert into r1 values (generate_series(1,1600));
+INSERT 0 1600
+insert into r1 values (generate_series(1,1600));
+INSERT 0 1600

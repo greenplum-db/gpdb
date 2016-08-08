@@ -1,0 +1,156 @@
+--
+-- SYNC2  - ADD Table_constraint & DROP Constraint
+--
+--
+-- HEAP TABLE
+--
+ CREATE TABLE sync2_heap_films1 (
+ code char(5),
+ title varchar(40),
+ did integer,
+ date_prod date,
+ kind varchar(10),
+ len interval hour to minute,
+ CONSTRAINT sync2_production1 UNIQUE(date_prod)
+ );
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE / UNIQUE will create implicit index "sync2_heap_films1_date_prod_key" for table "sync2_heap_films1"
+CREATE TABLE
+ insert into sync2_heap_films1 values ('aaa','Heavenly Life',1,'2008-03-03','good','2 hr 30 mins');
+INSERT 0 1
+ insert into sync2_heap_films1 values ('bbb','Beautiful Mind',2,'2007-05-05','good','1 hr 30 mins');
+INSERT 0 1
+ insert into sync2_heap_films1 values ('ccc','Wonderful Earth',3,'2009-03-03','good','2 hr 15 mins');
+INSERT 0 1
+ insert into sync2_heap_films1 values ('ddd','Heavenly Life 2',4,'2005-03-03','good','2 hr 30 mins');
+INSERT 0 1
+ insert into sync2_heap_films1 values ('eee','Beautiful Mind 3',5,'2006-05-05','good','1 hr 30 mins');
+INSERT 0 1
+select count(*) from sync2_heap_films1;
+ count 
+-------
+     5
+(1 row)
+
+ CREATE TABLE sync2_heap_films2 (
+ code char(5),
+ title varchar(40),
+ did integer,
+ date_prod date,
+ kind varchar(10),
+ len interval hour to minute,
+ CONSTRAINT sync2_production2 UNIQUE(date_prod)
+ );
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE / UNIQUE will create implicit index "sync2_heap_films2_date_prod_key" for table "sync2_heap_films2"
+CREATE TABLE
+ insert into sync2_heap_films2 values ('aaa','Heavenly Life',1,'2008-03-03','good','2 hr 30 mins');
+INSERT 0 1
+ insert into sync2_heap_films2 values ('bbb','Beautiful Mind',2,'2007-05-05','good','1 hr 30 mins');
+INSERT 0 1
+ insert into sync2_heap_films2 values ('ccc','Wonderful Earth',3,'2009-03-03','good','2 hr 15 mins');
+INSERT 0 1
+ insert into sync2_heap_films2 values ('ddd','Heavenly Life 2',4,'2005-03-03','good','2 hr 30 mins');
+INSERT 0 1
+ insert into sync2_heap_films2 values ('eee','Beautiful Mind 3',5,'2006-05-05','good','1 hr 30 mins');
+INSERT 0 1
+select count(*) from sync2_heap_films2;
+ count 
+-------
+     5
+(1 row)
+
+--
+--
+-- ADD Table_constraint & DROP Constraint
+--
+--
+--
+--ADD table_constraint
+--
+ALTER TABLE sync1_heap_films7 ADD UNIQUE(code, date_prod);
+psql:/path/sql_file:1: NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "sync1_heap_films7_code_key" for table "sync1_heap_films7"
+ALTER TABLE
+select count(*) from sync1_heap_films7;
+ count 
+-------
+     5
+(1 row)
+
+ALTER TABLE ck_sync1_heap_films6 ADD UNIQUE(code, date_prod);
+psql:/path/sql_file:1: NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "ck_sync1_heap_films6_code_key" for table "ck_sync1_heap_films6"
+ALTER TABLE
+select count(*) from ck_sync1_heap_films6;
+ count 
+-------
+     5
+(1 row)
+
+ALTER TABLE ct_heap_films4 ADD UNIQUE(code, date_prod);
+psql:/path/sql_file:1: NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "ct_heap_films4_code_key" for table "ct_heap_films4"
+ALTER TABLE
+select count(*) from ct_heap_films4;
+ count 
+-------
+     5
+(1 row)
+
+ALTER TABLE resync_heap_films2 ADD UNIQUE(code, date_prod);
+psql:/path/sql_file:1: NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "resync_heap_films2_code_key" for table "resync_heap_films2"
+ALTER TABLE
+select count(*) from resync_heap_films2;
+ count 
+-------
+     5
+(1 row)
+
+ALTER TABLE sync2_heap_films1 ADD UNIQUE(code, date_prod);
+psql:/path/sql_file:1: NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "sync2_heap_films1_code_key" for table "sync2_heap_films1"
+ALTER TABLE
+select count(*) from sync2_heap_films1;
+ count 
+-------
+     5
+(1 row)
+
+--
+--DROP CONSTRAINT constraint_name [ RESTRICT | CASCADE ]
+--
+ALTER TABLE sync1_heap_films7 DROP CONSTRAINT sync1_production7;
+ALTER TABLE
+select count(*) from sync1_heap_films7;
+ count 
+-------
+     5
+(1 row)
+
+ALTER TABLE ck_sync1_heap_films6 DROP CONSTRAINT ck_sync1_production6;
+ALTER TABLE
+select count(*) from ck_sync1_heap_films6;
+ count 
+-------
+     5
+(1 row)
+
+ALTER TABLE ct_heap_films4 DROP CONSTRAINT ct_production4;
+ALTER TABLE
+select count(*) from ct_heap_films4;
+ count 
+-------
+     5
+(1 row)
+
+ALTER TABLE resync_heap_films2 DROP CONSTRAINT resync_production2;
+ALTER TABLE
+select count(*) from resync_heap_films2;
+ count 
+-------
+     5
+(1 row)
+
+ALTER TABLE sync2_heap_films1 DROP CONSTRAINT sync2_production1;
+ALTER TABLE
+select count(*) from sync2_heap_films1;
+ count 
+-------
+     5
+(1 row)
+

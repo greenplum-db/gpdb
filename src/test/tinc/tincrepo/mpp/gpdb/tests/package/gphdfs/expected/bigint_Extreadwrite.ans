@@ -1,0 +1,34 @@
+-- start_ignore
+drop  external table bigint_heap;
+DROP EXTERNAL TABLE
+drop  external table bigint_writehdfs;
+DROP EXTERNAL TABLE
+drop  external table bigint_readhdfs;
+DROP EXTERNAL TABLE
+-- end_ignore
+create readable external table bigint_heap(datatype_bigint varchar,xcount_bigint bigint, max_bigint bigint, min_bigint bigint, x_bigint bigint, reverse_bigint bigint, increment_bigint bigint, nullcol_bigint bigint) location ('gpfdist://rh55-qavm20:5487/bigint.txt')format 'TEXT';
+CREATE EXTERNAL TABLE
+create writable external table bigint_writehdfs(like bigint_heap) location ('gphdfs://my.cluster.com/extwrite/bigint')format 'custom' (formatter='gphdfs_export');
+NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+CREATE EXTERNAL TABLE
+create readable external table bigint_readhdfs(like bigint_heap) location ('gphdfs://my.cluster.com/extwrite/bigint') format 'custom' (formatter='gphdfs_import');
+CREATE EXTERNAL TABLE
+select count(*) from bigint_heap;
+ count 
+-------
+  5000
+(1 row)
+
+insert into bigint_writehdfs select * from bigint_heap;
+INSERT 0 5000
+select count(*) from bigint_readhdfs;
+ count 
+-------
+  5000
+(1 row)
+
+(select * from bigint_heap except select * from bigint_readhdfs) union (select * from bigint_readhdfs except select * from bigint_heap);
+ datatype_bigint | xcount_bigint | max_bigint | min_bigint | x_bigint | reverse_bigint | increment_bigint | nullcol_bigint 
+-----------------+---------------+------------+------------+----------+----------------+------------------+----------------
+(0 rows)
+

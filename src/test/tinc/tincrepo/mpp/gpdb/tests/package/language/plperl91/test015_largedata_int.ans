@@ -1,0 +1,38 @@
+CREATE or REPLACE function pltest.lineitem_orderkey ( ) RETURNS SETOF bigint as $$
+my $rv = spi_exec_query('select l_orderkey from pltest.lineitem;');
+my $status = $rv->{status};
+my $nrows = $rv->{processed};
+foreach my $rn (0 .. $nrows - 1) {
+my $row = $rv->{rows}[$rn] -> {l_orderkey};
+return_next($row);
+}
+return undef;
+$$ language PLPERL;
+CREATE FUNCTION
+SELECT count(*) FROM pltest.lineitem_orderkey();
+  count  
+-------
+ 2999
+(1 row)
+
+DROP FUNCTION pltest.lineitem_orderkey();
+DROP FUNCTION
+CREATE TABLE pltest.table10000 AS SELECT * from generate_series(1,10000) DISTRIBUTED RANDOMLY;
+SELECT 10000
+CREATE OR REPLACE FUNCTION pltest.setof_int() RETURNS SETOF INTEGER AS $$ 
+   my $range = 20000; 
+   foreach (1..$range) 
+   { 
+      return_next(1); 
+   }
+   return undef; 
+$$ LANGUAGE plperl;
+CREATE FUNCTION
+CREATE TABLE pltest.setofIntRes AS SELECT pltest.setof_int() from pltest.table10000 DISTRIBUTED RANDOMLY;
+SELECT 200000000
+DROP TABLE pltest.setofIntRes;
+DROP TABLE
+DROP FUNCTION pltest.setof_int();
+DROP FUNCTION
+DROP TABLE pltest.table10000;
+DROP TABLE

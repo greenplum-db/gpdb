@@ -1,0 +1,150 @@
+-- start_ignore
+drop table crypto;
+DROP TABLE
+-- end_ignore
+SELECT encode(digest('test', 'sha1'), 'hex');
+                  encode                  
+------------------------------------------
+ a94a8fe5ccb19ba61c4c0873d391e987982fbbd3
+(1 row)
+
+SELECT encode(digest(E'\\\\134', 'sha1'), 'hex');
+                  encode                  
+------------------------------------------
+ f702a3e0c8a30716b70acdfd5edf0211345b7cf9
+(1 row)
+
+select hmac('test','test','sha1');
+                                hmac                                
+--------------------------------------------------------------------
+ \014\224Q\\\025\345\011[\212\207\245\013\240\337;\363\216\320_\346
+(1 row)
+
+select hmac(E'\\\\134',E'\\\\134','sha1');
+                        hmac                        
+----------------------------------------------------
+ Zpo\366\346V\221g/\266\352\201<h\260Q\201\310\300s
+(1 row)
+
+select count(encrypt(E'\\\\134', E'\\\\134', 'bf'));
+ count 
+-------
+     1
+(1 row)
+
+select count(pgp_sym_encrypt('test', 'bf'));
+ count 
+-------
+     1
+(1 row)
+
+select count(pgp_sym_encrypt('test', 'aes128'));
+ count 
+-------
+     1
+(1 row)
+
+select count(pgp_sym_encrypt('test', 'aes192'));
+ count 
+-------
+     1
+(1 row)
+
+select count(pgp_sym_encrypt('test', 'aes256'));
+ count 
+-------
+     1
+(1 row)
+
+CREATE TABLE crypto (
+id SERIAL PRIMARY KEY,
+title VARCHAR(50),
+crypted_content BYTEA
+);
+NOTICE:  CREATE TABLE will create implicit sequence "crypto_id_seq" for serial column "crypto.id"
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "crypto_pkey" for table "crypto"
+CREATE TABLE
+INSERT INTO crypto VALUES (1,'test1',encrypt('daniel', 'fooz', 'aes'));
+INSERT 0 1
+INSERT INTO crypto VALUES (2,'test2',encrypt('struck', 'fooz', 'aes'));
+INSERT 0 1
+INSERT INTO crypto VALUES (3,'test3',encrypt('konz', 'fooz', 'aes'));
+INSERT 0 1
+SELECT * FROM crypto;
+ id | title |              crypted_content              
+----+-------+-------------------------------------------
+  1 | test1 | g\260\361\220399\371\373\271qyg\256\333~
+  2 | test2 | \\\275'\245\254m\327\025\247)r\211Q\035wS
+  3 | test3 | \330\306\021\366\355t\214+7\2212\022RT;.
+(3 rows)
+
+SELECT *,decrypt(crypted_content, 'fooz', 'aes') FROM crypto;
+ id | title |              crypted_content              | decrypt 
+----+-------+-------------------------------------------+---------
+  1 | test1 | g\260\361\220399\371\373\271qyg\256\333~  | daniel
+  2 | test2 | \\\275'\245\254m\327\025\247)r\211Q\035wS | struck
+  3 | test3 | \330\306\021\366\355t\214+7\2212\022RT;.  | konz
+(3 rows)
+
+SELECT *,decrypt(crypted_content, 'fooz', 'aes') FROM crypto WHERE
+decrypt(crypted_content, 'fooz', 'aes') = 'struck';
+ id | title |              crypted_content              | decrypt 
+----+-------+-------------------------------------------+---------
+  2 | test2 | \\\275'\245\254m\327\025\247)r\211Q\035wS | struck
+(1 row)
+
+select count(gen_random_bytes(4));
+ count 
+-------
+     1
+(1 row)
+
+select count(pgp_sym_encrypt('test','test'));
+ count 
+-------
+     1
+(1 row)
+
+select pgp_sym_decrypt(pgp_sym_encrypt('test','test'), 'test');
+ pgp_sym_decrypt 
+-----------------
+ test
+(1 row)
+
+select pgp_sym_decrypt(pgp_sym_encrypt('test','test'), 'test', 'compress-algo=1, cipher-algo=aes256');
+ pgp_sym_decrypt 
+-----------------
+ test
+(1 row)
+
+select count(pgp_sym_encrypt('test','test','compress-algo=1, cipher-algo=aes256'));
+ count 
+-------
+     1
+(1 row)
+
+select count(pgp_sym_encrypt_bytea(E'\\\\123', 'test'));
+ count 
+-------
+     1
+(1 row)
+
+select count(pgp_sym_encrypt_bytea(E'\\\\123', 'test', 'compress-algo=1, cipher-algo=aes256'));
+ count 
+-------
+     1
+(1 row)
+
+select pgp_sym_decrypt_bytea(pgp_sym_encrypt_bytea(E'\\\\123', 'test', 'compress-algo=1, cipher-algo=aes256'), 
+'test');
+ pgp_sym_decrypt_bytea 
+-----------------------
+ \\123
+(1 row)
+
+select pgp_sym_decrypt_bytea(pgp_sym_encrypt_bytea(E'\\\\123', 'test', 'compress-algo=1, cipher-algo=aes256'), 'test', 'compress-algo=1, cipher-algo=aes256');
+ pgp_sym_decrypt_bytea 
+-----------------------
+ \\123
+(1 row)
+

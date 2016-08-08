@@ -1,0 +1,9 @@
+--------------------------------------------------------------------------------
+query:  select tags 
+
+test_name|metadata|class_value|method_value
+
+tincmmgr.test.e2e.sample.sample_tincmm_sql_tests.SampleSQLMockTest.test_query01|tags|None|tag1 tag2 tag3 bug-3
+tincmmgr.test.e2e.sample.sample_tincmm_sql_tests.SampleSQLMockTest.test_query02|tags|None|None
+tincmmgr.test.e2e.sample.sample_tincmm_sql_tests.SampleSQLMockTest.test_query_nodocstring|tags|None|None
+--------------------------------------------------------------------------------

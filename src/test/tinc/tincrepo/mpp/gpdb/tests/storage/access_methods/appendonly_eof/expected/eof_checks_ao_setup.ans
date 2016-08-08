@@ -1,0 +1,26 @@
+DROP TABLE IF EXISTS test_ao_mpp19912;
+DROP
+CREATE TABLE test_ao_mpp19912 ( i int, j int) WITH (appendonly=true);
+CREATE
+INSERT INTO test_ao_mpp19912 SELECT i, i FROM generate_series(1, 1000) i;
+INSERT 1000
+
+
+DROP TABLE IF EXISTS test_ao_mpp19912_supp1;
+DROP
+DROP TABLE IF EXISTS test_ao_mpp19912_supp2;
+DROP
+DROP TABLE IF EXISTS test_ao_mpp19912_supp3;
+DROP
+DROP TABLE IF EXISTS test_ao_mpp19912_supp4;
+DROP
+
+CREATE TABLE test_ao_mpp19912_supp1 ( i int, j int) WITH (appendonly=true);
+CREATE
+CREATE TABLE test_ao_mpp19912_supp2 ( i int, j int) WITH (appendonly=true);
+CREATE
+CREATE TABLE test_ao_mpp19912_supp3 ( i int, j int) WITH (appendonly=true);
+CREATE
+CREATE TABLE test_ao_mpp19912_supp4 ( i int, j int) WITH (appendonly=true);
+CREATE
+

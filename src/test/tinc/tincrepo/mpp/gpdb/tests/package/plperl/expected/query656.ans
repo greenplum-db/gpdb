@@ -1,0 +1,10 @@
+-- Test: plperl 19
+SELECT * FROM perl_set();
+ f1 |  f2   |     f3     
+----+-------+------------
+  1 | Hello | World
+  2 | Hello | PostgreSQL
+  3 | Hello | PL/Perl
+(3 rows)
+
+							  

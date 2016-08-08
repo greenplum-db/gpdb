@@ -1,0 +1,12 @@
+sed -i.bak -e s/storage.persistent_tables/mpp.gpdb.tests.storage.persistent_tables/g ./test_PT_OOM.py
+sed -i.bak -e s/storage.persistent_tables/mpp.gpdb.tests.storage.persistent_tables/g ./test_PT_DropDB.py
+sed -i.bak -e s/storage.persistent_tables/mpp.gpdb.tests.storage.persistent_tables/g ./test_PT_CrashRecovery.py
+sed -i.bak -e s/storage.persistent_tables/mpp.gpdb.tests.storage.persistent_tables/g ./sqls/InitialSetup.py
+sed -i.bak -e s/storage.persistent_tables/mpp.gpdb.tests.storage.persistent_tables/g ./sqls/join_query/JoinQuery.py
+sed -i.bak -e s/storage.persistent_tables/mpp.gpdb.tests.storage.persistent_tables/g ./sqls/partition_tables/generate_partition_sqls.py
+sed -i.bak -e s/storage.persistent_tables/mpp.gpdb.tests.storage.persistent_tables/g ./sqls/partition_tables/partitionTables.py
+sed -i.bak -e s/storage.persistent_tables/mpp.gpdb.tests.storage.persistent_tables/g ./sqls/generate_sqls.py
+sed -i.bak -e s/storage.persistent_tables/mpp.gpdb.tests.storage.persistent_tables/g ./test_PT_RebuildPT.py
+sed -i.bak -e s/storage.persistent_tables/mpp.gpdb.tests.storage.persistent_tables/g ./test_PT_gprecoverseg.py
+sed -i.bak -e s/storage.persistent_tables/mpp.gpdb.tests.storage.persistent_tables/g ./fault/fault.py
+sed -i.bak -e s/storage.persistent_tables/mpp.gpdb.tests.storage.persistent_tables/g ./PTRebuild/persistent_rebuild_scenario.py

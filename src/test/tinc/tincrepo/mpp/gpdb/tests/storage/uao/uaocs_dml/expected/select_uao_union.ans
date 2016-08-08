@@ -1,0 +1,145 @@
+-- @Description PostgreSQL port of the MySQL "World" database.
+--
+-- The sample data used in the world database is Copyright Statistics 
+-- Finland, http://www.stat.fi/worldinfigures.
+--
+-- Modified to use it with GPDB
+--start_ignore
+DROP TABLE IF EXISTS city_uao cascade;
+DROP TABLE
+DROP TABLE IF EXISTS country_uao cascade;
+DROP TABLE
+DROP TABLE IF EXISTS countrylanguage_uao cascade;
+DROP TABLE
+--end_ignore
+BEGIN;
+BEGIN
+--SET client_encoding = 'LATIN1';
+CREATE TABLE city_uao (
+    id integer NOT NULL,
+    name text NOT NULL,
+    countrycode character(3) NOT NULL,
+    district text NOT NULL,
+    population integer NOT NULL
+) with (appendonly=true, orientation=column) distributed by(id);
+CREATE TABLE
+CREATE TABLE country_uao (
+    code character(3) NOT NULL,
+    name text NOT NULL,
+    continent text NOT NULL,
+    region text NOT NULL,
+    surfacearea real NOT NULL,
+    indepyear smallint,
+    population integer NOT NULL,
+    lifeexpectancy real,
+    gnp numeric(10,2),
+    gnpold numeric(10,2),
+    localname text NOT NULL,
+    governmentform text NOT NULL,
+    headofstate text,
+    capital integer,
+    code2 character(2) NOT NULL
+) with (appendonly=true, orientation=column)  distributed by (code);
+CREATE TABLE
+CREATE TABLE countrylanguage_uao (
+    countrycode character(3) NOT NULL,
+    "language" text NOT NULL,
+    isofficial boolean NOT NULL,
+    percentage real NOT NULL
+)  with (appendonly=true, orientation=column) distributed by (countrycode,language);
+CREATE TABLE
+COPY city_uao (id, name, countrycode, district, population) FROM stdin;
+--
+-- Data for Name: country; Type: TABLE DATA; Schema: public; 
+--
+COPY country_uao (code, name, continent, region, surfacearea, indepyear, population, lifeexpectancy, gnp, gnpold, localname, governmentform, headofstate, capital, code2) FROM stdin WITH NULL AS '';
+--
+-- Data for Name: countrylanguage; Type: TABLE DATA; Schema: public; 
+--
+COPY countrylanguage_uao (countrycode, "language", isofficial, percentage) FROM stdin;
+COMMIT;
+COMMIT
+ANALYZE city_uao;
+ANALYZE
+ANALYZE country_uao;
+ANALYZE
+ANALYZE countrylanguage_uao;
+ANALYZE
+-- queries with one CTE that is referenced once
+-- Using CTE in the FROM clause
+--queries Using a CTE in the HAVING clause and Union All
+with somecheapasiandiversecountries_uao as
+(
+ select FOO_uao.code,FOO_uao.COUNTRY,FOO_uao.CAPITAL,FOO_uao.headofstate,count(*) ASIAN_COUNT from
+ (
+ select country_uao.code,country_uao.name COUNTRY,city_uao.name CAPITAL,country_uao.headofstate
+ from country_uao,city_uao
+ where country_uao.capital = city_uao.id 
+ and country_uao.gnp < 10000
+ and country_uao.region = 'Southeast Asia'
+ and country_uao.continent = 'Asia'
+ UNION ALL
+ select country_uao.code,country_uao.name COUNTRY,city_uao.name CAPITAL,country_uao.headofstate
+ from country_uao,city_uao
+ where country_uao.capital = city_uao.id 
+ and country_uao.gnp < 10000
+ and country_uao.region = 'Eastern Asia'
+ and country_uao.continent = 'Asia'
+ UNION ALL
+ select country_uao.code,country_uao.name COUNTRY,city_uao.name CAPITAL,country_uao.headofstate
+ from country_uao,city_uao
+ where country_uao.capital = city_uao.id 
+ and country_uao.gnp < 10000
+ and country_uao.region = 'Middle East'
+ and country_uao.continent = 'Asia'
+ ) FOO_uao, countrylanguage_uao
+ where FOO_uao.code = countrylanguage_uao.countrycode
+ group by FOO_uao.code,FOO_uao.COUNTRY,FOO_uao.CAPITAL,FOO_uao.headofstate,countrylanguage_uao.countrycode
+ HAVING count(*) >=
+ (select min(CNT) FROM
+   (select count(*) CNT,country_uao.code from countrylanguage_uao,country_uao
+    where countrylanguage_uao.countrycode=country_uao.code
+    and country_uao.continent = 'Asia'
+    and country_uao.region = 'Southern and Central Asia'
+    group by country_uao.code
+   ) FOO1_uao
+ )
+)
+select FOO_uao.code,FOO_uao.COUNTRY,FOO_uao.CAPITAL,FOO_uao.headofstate,count(*) compared_with_cheap_asian_cnt
+from
+(
+select country_uao.code,country_uao.name COUNTRY,city_uao.name CAPITAL,country_uao.headofstate
+from country_uao,city_uao
+where country_uao.capital = city_uao.id 
+and country_uao.continent = 'North America'
+UNION ALL
+select country_uao.code,country_uao.name COUNTRY,city_uao.name CAPITAL,country_uao.headofstate
+from country_uao,city_uao
+where country_uao.capital =	city_uao.id	
+and country_uao.continent =	'South America'
+) FOO_uao,countrylanguage_uao
+where FOO_uao.code = countrylanguage_uao.countrycode
+group by FOO_uao.code,FOO_uao.COUNTRY,FOO_uao.CAPITAL,FOO_uao.headofstate
+HAVING count(*)  >=
+ (select min(ASIAN_COUNT) FROM
+   (select ASIAN_COUNT FROM somecheapasiandiversecountries_uao,country_uao
+    where somecheapasiandiversecountries_uao.code = country_uao.code
+    and country_uao.gnp >= country_uao.gnpold
+   ) ASIANCOUNT
+ )
+order by compared_with_cheap_asian_cnt desc , 1 desc
+LIMIT 10;
+ code |    country    |       capital       |          headofstate           | compared_with_cheap_asian_cnt 
+------+---------------+---------------------+--------------------------------+-------------------------------
+ USA  | United States | Washington          | George W. Bush                 |                            12
+ CAN  | Canada        | Ottawa              | Elisabeth II                   |                            12
+ PAN  | Panama        | Ciudad de Panama    | Mireya Elisa Moscoso Rodriguez |                             6
+ MEX  | Mexico        | Ciudad de Mexico    | Vicente Fox Quesada            |                             6
+ GTM  | Guatemala     | Ciudad de Guatemala | Alfonso Portillo Cabrera       |                             5
+ COL  | Colombia      | Santafe de Bogota   | Andres Pastrana Arango         |                             5
+ BRA  | Brazil        | Brasilia            | Fernando Henrique Cardoso      |                             5
+ PRY  | Paraguay      | Asuncion            | Luis Angel Gonzalez Macchi     |                             4
+ NIC  | Nicaragua     | Managua             | Arnoldo Aleman Lacayo          |                             4
+ HND  | Honduras      | Tegucigalpa         | Carlos Roberto Flores Facusse  |                             4
+(10 rows)
+

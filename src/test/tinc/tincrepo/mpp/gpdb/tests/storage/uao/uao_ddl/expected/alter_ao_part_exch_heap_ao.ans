@@ -1,0 +1,139 @@
+--- Exchange AO part with AO table
+--start_ignore
+Drop table if exists sto_heap_ao;
+DROP TABLE
+--end_ignore
+Create table sto_heap_ao
+ (
+ col1 bigint, col2 date, col3 text, col4 int) with(appendonly=true)
+ distributed randomly  partition by range(col2)
+ (default partition others, 
+  partition p1 start(date '2008-01-01') end(date '2008-01-30') with(appendonly=false),
+  partition p2 start(date '2008-02-01') end(date '2008-02-20') with(appendonly=true));
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_heap_ao_1_prt_others" for table "sto_heap_ao"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_heap_ao_1_prt_p1" for table "sto_heap_ao"
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "sto_heap_ao_1_prt_p2" for table "sto_heap_ao"
+CREATE TABLE
+insert into sto_heap_ao(col1, col2, col3) values (1, '2008-01-02', 'one');
+INSERT 0 1
+insert into sto_heap_ao(col1, col2, col3) values (1, '2008-02-03', 'two');
+INSERT 0 1
+insert into sto_heap_ao(col1, col2, col3)  values(1, '2008-03-04', 'three');
+INSERT 0 1
+select count(*) FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid in (SELECT oid FROM pg_class WHERE relname like 'sto_heap_ao%');
+ count 
+-------
+     3
+(1 row)
+
+SELECT 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='sto_heap_ao');
+ visimappresent 
+----------------
+              1
+(1 row)
+
+select oid::regclass, relkind, relstorage from pg_class where relname like 'sto_heap_ao%' order by oid;
+           oid            | relkind | relstorage 
+--------------------------+---------+------------
+ sto_heap_ao              | r       | a
+ sto_heap_ao_1_prt_others | r       | a
+ sto_heap_ao_1_prt_p1     | r       | h
+ sto_heap_ao_1_prt_p2     | r       | a
+(4 rows)
+
+--start_ignore
+Drop table if exists exh_heap_ao;
+DROP TABLE
+--end_ignore
+create table exh_heap_ao (like sto_heap_ao) with (appendonly=true);
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+CREATE TABLE
+insert into exh_heap_ao values (1, '2008-01-20', 'three'),  (2, '2008-01-21', 'two');
+INSERT 0 2
+Alter table sto_heap_ao exchange partition p1  with table exh_heap_ao;
+ALTER TABLE
+select oid::regclass, relkind, relstorage from pg_class where relname like 'sto_heap_ao%' order by oid;
+           oid            | relkind | relstorage 
+--------------------------+---------+------------
+ sto_heap_ao              | r       | a
+ sto_heap_ao_1_prt_others | r       | a
+ sto_heap_ao_1_prt_p2     | r       | a
+ sto_heap_ao_1_prt_p1     | r       | a
+(4 rows)
+
+select * from sto_heap_ao order by col2;
+ col1 |    col2    | col3  | col4 
+------+------------+-------+------
+    1 | 2008-01-20 | three |     
+    2 | 2008-01-21 | two   |     
+    1 | 2008-02-03 | two   |     
+    1 | 2008-03-04 | three |     
+(4 rows)
+
+Update sto_heap_ao set col4=2 where col2='2008-01-20';
+UPDATE 1
+set gp_select_invisible = true;
+SET
+select * from sto_heap_ao order by col2,col4;
+ col1 |    col2    | col3  | col4 
+------+------------+-------+------
+    1 | 2008-01-20 | three |    2
+    1 | 2008-01-20 | three |     
+    2 | 2008-01-21 | two   |     
+    1 | 2008-02-03 | two   |     
+    1 | 2008-03-04 | three |     
+(5 rows)
+
+set gp_select_invisible = false;
+SET
+select * from sto_heap_ao order by col2,col4;
+ col1 |    col2    | col3  | col4 
+------+------------+-------+------
+    1 | 2008-01-20 | three |    2
+    2 | 2008-01-21 | two   |     
+    1 | 2008-02-03 | two   |     
+    1 | 2008-03-04 | three |     
+(4 rows)
+
+Delete from sto_heap_ao where col2='2008-01-21';
+DELETE 1
+set gp_select_invisible = true;
+SET
+select * from sto_heap_ao order by col2,col4;
+ col1 |    col2    | col3  | col4 
+------+------------+-------+------
+    1 | 2008-01-20 | three |    2
+    1 | 2008-01-20 | three |     
+    2 | 2008-01-21 | two   |     
+    1 | 2008-02-03 | two   |     
+    1 | 2008-03-04 | three |     
+(5 rows)
+
+set gp_select_invisible = false;
+SET
+select * from sto_heap_ao order by col2,col4;
+ col1 |    col2    | col3  | col4 
+------+------------+-------+------
+    1 | 2008-01-20 | three |    2
+    1 | 2008-02-03 | two   |     
+    1 | 2008-03-04 | three |     
+(3 rows)
+
+VACUUM sto_heap_ao;
+VACUUM
+select count(*) AS only_visi_tups_vacuum  from sto_heap_ao;
+ only_visi_tups_vacuum 
+-----------------------
+                     3
+(1 row)
+
+set gp_select_invisible = true;
+SET
+select count(*) AS invisi_and_visi_tups_vacuum  from sto_heap_ao;
+ invisi_and_visi_tups_vacuum 
+-----------------------------
+                           3
+(1 row)
+
+set gp_select_invisible = false;
+SET

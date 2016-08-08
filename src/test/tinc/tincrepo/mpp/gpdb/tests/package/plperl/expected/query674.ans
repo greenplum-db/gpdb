@@ -1,0 +1,14 @@
+-- start_ignore
+SET optimizer=off;
+SET
+-- end_ignore
+-- Test: plperl 37
+SELECT (perl_out_params_set()).f3;
+     f3     
+------------
+ World
+ PostgreSQL
+ PL/Perl
+(3 rows)
+
+							  

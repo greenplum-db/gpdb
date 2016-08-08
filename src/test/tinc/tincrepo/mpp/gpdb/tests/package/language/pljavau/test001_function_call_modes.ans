@@ -1,0 +1,33 @@
+-- start_ignore
+DROP FUNCTION IF EXISTS func_pljavau();
+DROP FUNCTION
+-- end_ignore
+SELECT set_config('pljava_classpath', 'pljavatest.jar', false);
+   set_config   
+----------------
+ pljavatest.jar
+(1 row)
+
+CREATE OR REPLACE FUNCTION func_pljavau() RETURNS SETOF VARCHAR
+AS $$
+        pljavatest.PLJavaTest.getNames
+$$ LANGUAGE pljavau;
+CREATE FUNCTION
+SELECT func_pljavau();
+ func_pljavau 
+--------------
+ PL
+ PLJAVA
+ PLJAVAU
+(3 rows)
+
+SELECT * FROM func_pljavau();
+ func_pljavau 
+--------------
+ PL
+ PLJAVA
+ PLJAVAU
+(3 rows)
+
+DROP FUNCTION IF EXISTS func_pljavau();
+DROP FUNCTION

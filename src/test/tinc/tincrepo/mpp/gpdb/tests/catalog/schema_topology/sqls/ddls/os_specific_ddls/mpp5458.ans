@@ -1,0 +1,179 @@
+-- 
+-- @created 2009-01-27 14:00:00
+-- @modified 2013-06-24 17:00:00
+-- @tags ddl schema_topology
+-- @description MPP-5458
+drop table if exists mpp5458_test;
+psql:/path/sql_file:1: NOTICE:  table "mpp5458_test" does not exist, skipping
+DROP TABLE
+create table mpp5458_test (i int, b bigserial);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create implicit sequence "mpp5458_test_b_seq" for serial column "mpp5458_test.b"
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+alter table mpp5458_test drop column b;
+ALTER TABLE
+insert into mpp5458_test values (1);
+INSERT 0 1
+alter table mpp5458_test add column b bigserial;
+psql:/path/sql_file:1: NOTICE:  ALTER TABLE will create implicit sequence "mpp5458_test_b_seq" for serial column "mpp5458_test.b"
+ALTER TABLE
+drop table if exists mpp5458_t;
+psql:/path/sql_file:1: NOTICE:  table "mpp5458_t" does not exist, skipping
+DROP TABLE
+create table mpp5458_t as select j as a, 'abc' as i from
+generate_series(1, 10) j;
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+psql:/path/sql_file:1: WARNING:  column "i" has type "unknown"
+DETAIL:  Proceeding with relation creation anyway.
+SELECT 10
+alter table mpp5458_t alter i type int; -- error out
+psql:/path/sql_file:1: ERROR:  invalid input syntax for integer: "abc"  (seg0 rh55-qa04.sanmateo.greenplum.com:40000 pid=31275)
+alter table mpp5458_t alter i type text;
+ALTER TABLE
+--cursor
+begin;
+BEGIN
+declare c1 cursor for select * from mpp5458_t;
+DECLARE CURSOR
+-- start_ignore
+fetch 1 from c1;
+ a |  i  
+---+-----
+ 1 | abc
+(1 row)
+
+select * from mpp5458_test limit 10;
+ i | b 
+---+---
+ 1 | 1
+(1 row)
+
+-- end_ignore
+drop table if exists mpp5458_test1;
+psql:/path/sql_file:1: NOTICE:  table "mpp5458_test1" does not exist, skipping
+DROP TABLE
+create table mpp5458_test1 (i int, b bigserial);
+psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create implicit sequence "mpp5458_test1_b_seq" for serial column "mpp5458_test1.b"
+psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE
+alter table mpp5458_test1 drop column b;
+ALTER TABLE
+insert into mpp5458_test1 values (1);
+INSERT 0 1
+alter table mpp5458_test1 add column b bigserial;
+psql:/path/sql_file:1: NOTICE:  ALTER TABLE will create implicit sequence "mpp5458_test1_b_seq" for serial column "mpp5458_test1.b"
+ALTER TABLE
+-- start_ignore
+fetch 5 from c1;
+ a |  i  
+---+-----
+ 3 | abc
+ 5 | abc
+ 7 | abc
+ 9 | abc
+ 2 | abc
+(5 rows)
+
+fetch 5 from c1;
+ a  |  i  
+----+-----
+  4 | abc
+  6 | abc
+  8 | abc
+ 10 | abc
+(4 rows)
+
+-- end_ignore
+close c1;
+CLOSE CURSOR
+end;
+COMMIT
+drop sequence if exists mpp5458_s1;
+psql:/path/sql_file:1: NOTICE:  sequence "mpp5458_s1" does not exist, skipping
+DROP SEQUENCE
+create sequence mpp5458_s1;
+CREATE SEQUENCE
+-- start_ignore
+select *, nextval('mpp5458_s1') from mpp5458_t;
+ a  |  i  | nextval 
+----+-----+---------
+  1 | abc |       2
+  3 | abc |       3
+  5 | abc |       5
+  7 | abc |       7
+  9 | abc |       9
+  2 | abc |       1
+  4 | abc |       4
+  6 | abc |       6
+  8 | abc |       8
+ 10 | abc |      10
+(10 rows)
+
+-- end_ignore
+-- prepare
+prepare mpp5458_stmt as select *, nextval('mpp5458_s1') from mpp5458_t;
+PREPARE
+-- start_ignore
+execute mpp5458_stmt;
+ a  |  i  | nextval 
+----+-----+---------
+  2 | abc |      11
+  4 | abc |      13
+  6 | abc |      15
+  8 | abc |      17
+ 10 | abc |      19
+  1 | abc |      12
+  3 | abc |      14
+  5 | abc |      16
+  7 | abc |      18
+  9 | abc |      20
+(10 rows)
+
+-- end_ignore
+deallocate mpp5458_stmt;
+DEALLOCATE
+--cursor
+begin;
+BEGIN
+declare mpp5458_c1 cursor for select *, nextval('mpp5458_s1') from mpp5458_t;
+DECLARE CURSOR
+-- start_ignore
+fetch 1 from mpp5458_c1;
+ a |  i  | nextval 
+---+-----+---------
+ 2 | abc |      21
+(1 row)
+
+select * from mpp5458_test limit 10;
+ i | b 
+---+---
+ 1 | 1
+(1 row)
+
+fetch 10 from mpp5458_c1;
+ a  |  i  | nextval 
+----+-----+---------
+  4 | abc |      22
+  6 | abc |      23
+  8 | abc |      25
+ 10 | abc |      27
+  1 | abc |      24
+  3 | abc |      26
+  5 | abc |      28
+  7 | abc |      29
+  9 | abc |      30
+(9 rows)
+
+fetch 1 from mpp5458_c1;
+ a | i | nextval 
+---+---+---------
+(0 rows)
+
+-- end_ignore
+close mpp5458_c1;
+CLOSE CURSOR
+end;
+COMMIT

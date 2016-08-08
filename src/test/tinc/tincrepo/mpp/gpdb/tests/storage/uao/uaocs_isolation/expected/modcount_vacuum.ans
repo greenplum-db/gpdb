@@ -1,0 +1,18 @@
+-- @Description Tests that vacuum is not changing the modification count.
+-- 
+
+DELETE FROM ao WHERE a < 5;
+DELETE 4
+SELECT DISTINCT state, tupcount, modcount FROM gp_aocsseg_name('ao');
+state|tupcount|modcount
+-----+--------+--------
+1    |10      |2
+(1 row)
+VACUUM ao;
+VACUUM
+SELECT DISTINCT state, tupcount, modcount FROM gp_aocsseg_name('ao');
+state|tupcount|modcount
+-----+--------+--------
+1    |0       |2
+1    |6       |0
+(2 rows)
