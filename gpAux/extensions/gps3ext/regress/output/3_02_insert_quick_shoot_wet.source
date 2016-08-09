@@ -6,21 +6,26 @@ CREATE PROTOCOL s3 (
         readfunc = read_from_s3,
         writefunc = write_to_s3
 );
-DROP EXTERNAL TABLE IF EXISTS s3regress_r;
-NOTICE:  table "s3regress_r" does not exist, skipping
-DROP EXTERNAL TABLE IF EXISTS s3regress_w;
-NOTICE:  table "s3regress_w" does not exist, skipping
-CREATE READABLE EXTERNAL TABLE s3regress_r (date text, time text, open float, high float, low float,
-        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/s3write/quick/533.csv config=/home/gpadmin/s3.conf') FORMAT 'csv';
-CREATE WRITABLE EXTERNAL TABLE s3regress_w (date text, time text, open float, high float, low float,
-        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/s3write/quick/533.csv config=/home/gpadmin/s3.conf') FORMAT 'csv';
-INSERT INTO s3regress_w (date, time, open, high, low, volume) VALUES ('2016-07-28', '12:00:00', 0.5, 0.5, 0.3, 1);
-SELECT * FROM s3regress_r LIMIT 1;
+DROP EXTERNAL TABLE IF EXISTS s3write_quick_read;
+NOTICE:  table "s3write_quick_read" does not exist, skipping
+DROP EXTERNAL TABLE IF EXISTS s3write_quick_write;
+NOTICE:  table "s3write_quick_write" does not exist, skipping
+CREATE READABLE EXTERNAL TABLE s3write_quick_read (date text, time text, open float, high float, low float,
+        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/s3write.pivotal.io/regress/s3write/quick/ config=/home/gpadmin/s3.conf') FORMAT 'csv';
+CREATE WRITABLE EXTERNAL TABLE s3write_quick_write (date text, time text, open float, high float, low float,
+        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/s3write.pivotal.io/regress/s3write/quick/ config=/home/gpadmin/s3.conf') FORMAT 'csv';
+SELECT * FROM s3write_quick_read;
+ date | time | open | high | low | volume 
+------+------+------+------+-----+--------
+(0 rows)
+
+INSERT INTO s3write_quick_write (date, time, open, high, low, volume) VALUES ('2016-07-28', '12:00:00', 0.5, 0.5, 0.3, 1);
+SELECT * FROM s3write_quick_read;
     date    |   time   | open | high | low | volume 
 ------------+----------+------+------+-----+--------
  2016-07-28 | 12:00:00 |  0.5 |  0.5 | 0.3 |      1
 (1 row)
 
-DROP EXTERNAL TABLE IF EXISTS s3regress_r;
-DROP EXTERNAL TABLE IF EXISTS s3regress_w;
+DROP EXTERNAL TABLE IF EXISTS s3write_quick_read;
+DROP EXTERNAL TABLE IF EXISTS s3write_quick_write;
 DROP PROTOCOL s3;
