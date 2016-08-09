@@ -39,12 +39,16 @@ class S3KeyWriter : Writer {
 
    protected:
     void flushBuffer();
+    void completeKeyWriting();
 
     WriterBuffer buffer;
     S3Interface* s3interface;
 
     string url;
     string region;
+
+    string uploadId;
+    vector<string> etagList;
 
     uint64_t chunkSize;
     S3Credential cred;

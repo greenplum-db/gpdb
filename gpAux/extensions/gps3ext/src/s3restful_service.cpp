@@ -163,7 +163,6 @@ Response S3RESTfulService::put(const string &url, HTTPHeaders &headers,
     UploadData uploadData(data);
     curl_easy_setopt(curl, CURLOPT_READDATA, (void *)&uploadData);
     curl_easy_setopt(curl, CURLOPT_READFUNCTION, RESTfulServiceReadFuncCallback);
-    /* CURLOPT_INFILESIZE_LARGE for sending files larger than 2GB.*/
     curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)data.size());
     curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
 
@@ -241,8 +240,6 @@ Response S3RESTfulService::post(const string &url, HTTPHeaders &headers,
         UploadData uploadData(data);
         curl_easy_setopt(curl, CURLOPT_READDATA, (void *)&uploadData);
         curl_easy_setopt(curl, CURLOPT_READFUNCTION, RESTfulServiceReadFuncCallback);
-
-        /* CURLOPT_INFILESIZE_LARGE for sending files larger than 2GB.*/
         curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)data.size());
     }
 

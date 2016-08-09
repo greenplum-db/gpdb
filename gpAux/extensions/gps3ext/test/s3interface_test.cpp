@@ -563,60 +563,6 @@ TEST_F(S3ServiceTest, HeadResponse403) {
     EXPECT_FALSE(this->checkKeyExistence(url, this->region, this->cred));
 }
 
-TEST_F(S3ServiceTest, uploadDataRoutine) {
-    vector<uint8_t> raw;
-
-    srand(time(NULL));
-
-    for (int i = 0; i < 100; i++) {
-        raw.push_back(rand() & 0xFF);
-    }
-
-    Response response(RESPONSE_OK, raw);
-    EXPECT_CALL(mockRestfulService, put(_, _, _, _)).WillOnce(Return(response));
-
-    uint64_t len = this->uploadData(
-        raw, "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region, cred);
-
-    EXPECT_EQ(len, raw.size());
-}
-
-TEST_F(S3ServiceTest, uploadDataFailedResponse) {
-    vector<uint8_t> raw;
-    raw.resize(100);
-    Response response(RESPONSE_FAIL, raw);
-    EXPECT_CALL(mockRestfulService, put(_, _, _, _)).WillRepeatedly(Return(response));
-
-    EXPECT_THROW(
-        this->uploadData(raw, "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
-                         region, cred),
-        std::runtime_error);
-}
-
-TEST_F(S3ServiceTest, uploadDataErrorResponse) {
-    uint8_t xml[] =
-        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
-        "<Error>"
-        "<Code>PermanentRedirect</Code>"
-        "<Message>The bucket you are attempting to access must be addressed "
-        "using the specified endpoint. "
-        "Please send all future requests to this endpoint.</Message>"
-        "<Bucket>foo</Bucket><Endpoint>s3.amazonaws.com</Endpoint>"
-        "<RequestId>27DD9B7004AF83E3</RequestId>"
-        "<HostId>NL3pyGvn+FajhQLKz/"
-        "hXUzV1VnFbbwNjUQsqWeFiDANkV4EVkh8Kpq5NNAi27P7XDhoA9M9Xhg0=</HostId>"
-        "</Error>";
-    vector<uint8_t> raw(xml, xml + sizeof(xml) - 1);
-    Response response(RESPONSE_ERROR, raw);
-
-    EXPECT_CALL(mockRestfulService, put(_, _, _, _)).WillRepeatedly(Return(response));
-
-    EXPECT_THROW(
-        this->uploadData(raw, "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
-                         region, cred),
-        std::runtime_error);
-}
-
 TEST_F(S3ServiceTest, getUploadIdRoutine) {
     uint8_t xml[] =
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
@@ -757,6 +703,9 @@ TEST_F(S3ServiceTest, completeMultiPartFailedResponse) {
 
     vector<string> etagArray;
 
+    etagArray.push_back("\"abc\"");
+    etagArray.push_back("\"def\"");
+
     EXPECT_THROW(
         this->completeMultiPart("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
                                 region, cred, "xyz", etagArray),
@@ -782,6 +731,9 @@ TEST_F(S3ServiceTest, completeMultiPartErrorResponse) {
     EXPECT_CALL(mockRestfulService, post(_, _, _, _)).WillRepeatedly(Return(response));
 
     vector<string> etagArray;
+
+    etagArray.push_back("\"abc\"");
+    etagArray.push_back("\"def\"");
 
     EXPECT_THROW(
         this->completeMultiPart("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",

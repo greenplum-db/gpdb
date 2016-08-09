@@ -72,11 +72,6 @@ class S3Interface {
         throw std::runtime_error("Default implementation must not be called.");
     }
 
-    virtual uint64_t uploadData(vector<uint8_t>& data, const string& keyUrl, const string& region,
-                                const S3Credential& cred) {
-        throw std::runtime_error("Default implementation must not be called.");
-    }
-
     virtual S3CompressionType checkCompressionType(const string& keyUrl, const string& region,
                                                    const S3Credential& cred) {
         throw std::runtime_error("Default implementation must not be called.");
@@ -114,9 +109,6 @@ class S3Service : public S3Interface {
 
     uint64_t fetchData(uint64_t offset, vector<uint8_t>& data, uint64_t len,
                        const string& sourceUrl, const string& region, const S3Credential& cred);
-
-    uint64_t uploadData(vector<uint8_t>& data, const string& keyUrl, const string& region,
-                        const S3Credential& cred);
 
     S3CompressionType checkCompressionType(const string& keyUrl, const string& region,
                                            const S3Credential& cred);
@@ -169,6 +161,7 @@ class S3Service : public S3Interface {
     xmlParserCtxtPtr getXMLContext(Response& response);
 
     bool isKeyExisted(ResponseCode code);
+
     bool isHeadResponseCodeNeedRetry(ResponseCode code);
 
    private:

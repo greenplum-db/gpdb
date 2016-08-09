@@ -52,7 +52,7 @@ TEST(Config, SpecialSectionLowValues) {
     InitConfig("data/s3test.conf", "special_low");
 
     EXPECT_EQ(1, s3ext_threadnum);
-    EXPECT_EQ(2 * 1024 * 1024, s3ext_chunksize);
+    EXPECT_EQ(8 * 1024 * 1024, s3ext_chunksize);
 }
 
 TEST(Config, SpecialSectionWrongKeyName) {

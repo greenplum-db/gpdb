@@ -1,0 +1,56 @@
+CREATE OR REPLACE FUNCTION read_from_s3() RETURNS integer AS
+        '$libdir/gps3ext.so', 's3_import' LANGUAGE C STABLE;
+
+CREATE OR REPLACE FUNCTION write_to_s3() RETURNS integer AS
+        '$libdir/gps3ext.so', 's3_export' LANGUAGE C STABLE;
+
+CREATE PROTOCOL s3 (
+        readfunc = read_from_s3,
+        writefunc = write_to_s3
+);
+
+DROP EXTERNAL TABLE IF EXISTS s3write_mixed_read;
+DROP EXTERNAL TABLE IF EXISTS s3write_mixed_write;
+
+CREATE READABLE EXTERNAL TABLE s3write_mixed_read (date text, time text, status bool, sample1 float, sample2 float,
+        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/s3write/mixed/ config=/home/gpadmin/s3.conf') FORMAT 'csv';
+
+CREATE WRITABLE EXTERNAL TABLE s3write_mixed_write (date text, time text, status bool, sample1 float, sample2 float,
+        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/s3write/mixed/ config=/home/gpadmin/s3.conf') FORMAT 'csv';
+
+SELECT count(*) FROM s3write_mixed_read;
+
+--     100,000 rows occupy 5.4MB in plain CSV format
+--   1,000,000 rows occupy 55MB  in plain CSV format
+--  10,000,000 rows occupy 559MB in plain CSV format
+-- 100,000,000 rows occupy 5.6GB in plain CSV format
+
+INSERT INTO s3write_mixed_write (date, time, status, sample1, sample2, volume)
+        SELECT current_date, localtime, (random() > 0.5)::bool, trunc(random()::numeric, 8), trunc(random()::numeric, 8), v
+        FROM generate_series(1, 100000) as v;
+
+INSERT INTO s3write_mixed_write (date, time, status, sample1, sample2, volume)
+        SELECT current_date, localtime, (random() > 0.5)::bool, trunc(random()::numeric, 8), trunc(random()::numeric, 8), v + 100000
+        FROM generate_series(1, 100000) as v;
+
+-- should be 20,000 rows, ~11MB
+SELECT min(volume), max(volume), count(*) FROM s3write_mixed_read;
+
+INSERT INTO s3write_mixed_write (date, time, status, sample1, sample2, volume)
+        SELECT current_date, localtime, (random() > 0.5)::bool, trunc(random()::numeric, 8), trunc(random()::numeric, 8), v + 200000
+        FROM generate_series(1, 1000000) as v;
+
+-- should be 120,000 rows, ~66MB
+SELECT min(volume), max(volume), count(*) FROM s3write_mixed_read;
+
+INSERT INTO s3write_mixed_write (date, time, status, sample1, sample2, volume)
+        SELECT current_date, localtime, (random() > 0.5)::bool, trunc(random()::numeric, 8), trunc(random()::numeric, 8), v + 1200000
+        FROM generate_series(1, 100000) as v;
+
+-- should be 130,000 rows, ~71MB
+SELECT min(volume), max(volume), count(*) FROM s3write_mixed_read;
+
+DROP EXTERNAL TABLE IF EXISTS s3write_mixed_read;
+DROP EXTERNAL TABLE IF EXISTS s3write_mixed_write;
+
+DROP PROTOCOL s3;

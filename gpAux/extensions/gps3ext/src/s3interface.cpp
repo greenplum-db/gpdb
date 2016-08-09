@@ -396,57 +396,16 @@ uint64_t S3Service::fetchData(uint64_t offset, vector<uint8_t> &data, uint64_t l
 
         S3ERROR("Failed to request: %s, Response message: %s", sourceUrl.c_str(),
                 resp.getMessage().c_str());
-        CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
+        CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", sourceUrl.c_str(),
                          resp.getMessage().c_str());
-
-        return 0;
     } else {
         S3ERROR("Failed to request: %s, Response message: %s", sourceUrl.c_str(),
                 resp.getMessage().c_str());
-        CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", sourceUrl.c_str(),
+        CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", sourceUrl.c_str(),
                          resp.getMessage().c_str());
-        return 0;
     }
-}
 
-uint64_t S3Service::uploadData(vector<uint8_t> &data, const string &keyUrl, const string &region,
-                               const S3Credential &cred) {
-    HTTPHeaders headers;
-    map<string, string> params;
-    UrlParser parser(keyUrl);
-
-    headers.Add(HOST, parser.getHost());
-    headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
-
-    headers.Add(CONTENTTYPE, "text/plain");
-    headers.Add(CONTENTLENGTH, std::to_string((unsigned long long)data.size()));
-
-    SignRequestV4("PUT", &headers, region, parser.getPath(), "", cred);
-
-    Response resp = this->putResponseWithRetries(keyUrl, headers, params, data);
-    if (resp.getStatus() == RESPONSE_OK) {
-        return data.size();
-    } else if (resp.getStatus() == RESPONSE_ERROR) {
-        xmlParserCtxtPtr xmlContext = getXMLContext(resp);
-        if (xmlContext != NULL) {
-            XMLContextHolder holder(xmlContext);
-            S3ERROR("Amazon S3 returns error \"%s\"",
-                    parseXMLMessage(xmlContext, "Message").c_str());
-        }
-
-        S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
-                resp.getMessage().c_str());
-        CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", keyUrl.c_str(),
-                         resp.getMessage().c_str());
-
-        return 0;
-    } else {
-        S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
-                resp.getMessage().c_str());
-        CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", keyUrl.c_str(),
-                         resp.getMessage().c_str());
-        return 0;
-    }
+    return 0;
 }
 
 S3CompressionType S3Service::checkCompressionType(const string &keyUrl, const string &region,
@@ -523,7 +482,8 @@ string S3Service::getUploadId(const string &keyUrl, const string &region,
     stringstream urlWithQuery;
     urlWithQuery << keyUrl << "?uploads";
 
-    Response resp = this->postResponseWithRetries(urlWithQuery.str(), headers, params, vector<uint8_t>());
+    Response resp =
+        this->postResponseWithRetries(urlWithQuery.str(), headers, params, vector<uint8_t>());
     if (resp.getStatus() == RESPONSE_OK) {
         xmlParserCtxtPtr xmlContext = getXMLContext(resp);
         if (xmlContext != NULL) {
@@ -540,16 +500,13 @@ string S3Service::getUploadId(const string &keyUrl, const string &region,
 
         S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
                 resp.getMessage().c_str());
-        CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", keyUrl.c_str(),
+        CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", keyUrl.c_str(),
                          resp.getMessage().c_str());
-
-        return "";
     } else {
         S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
                 resp.getMessage().c_str());
-        CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", keyUrl.c_str(),
+        CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", keyUrl.c_str(),
                          resp.getMessage().c_str());
-        return "";
     }
 
     return "";
@@ -597,17 +554,16 @@ string S3Service::uploadPartOfData(vector<uint8_t> &data, const string &keyUrl,
 
         S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
                 resp.getMessage().c_str());
-        CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", keyUrl.c_str(),
+        CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", keyUrl.c_str(),
                          resp.getMessage().c_str());
-
-        return "";
     } else {
         S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
                 resp.getMessage().c_str());
-        CHECK_OR_DIE_MSG(false, "Failed to fetch: %s, Response message: %s", keyUrl.c_str(),
+        CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", keyUrl.c_str(),
                          resp.getMessage().c_str());
-        return "";
     }
+
+    return "";
 }
 
 bool S3Service::completeMultiPart(const string &keyUrl, const string &region,
@@ -619,6 +575,12 @@ bool S3Service::completeMultiPart(const string &keyUrl, const string &region,
     stringstream queryString;
 
     stringstream body;
+
+    // check whether etagList or uploadId are empty,
+    // no matter we have done this in upper-layer or not.
+    if (etagArray.empty() || uploadId.empty()) {
+        return false;
+    }
 
     body << "<CompleteMultipartUpload>\n";
     for (uint64_t i = 0; i < etagArray.size(); ++i) {
@@ -657,14 +619,11 @@ bool S3Service::completeMultiPart(const string &keyUrl, const string &region,
                 resp.getMessage().c_str());
         CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", keyUrl.c_str(),
                          resp.getMessage().c_str());
-
-        return false;
     } else {
         S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
                 resp.getMessage().c_str());
         CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", keyUrl.c_str(),
                          resp.getMessage().c_str());
-        return false;
     }
 
     return false;

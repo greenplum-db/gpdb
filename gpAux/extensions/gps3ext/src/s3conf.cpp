@@ -118,9 +118,11 @@ bool InitConfig(const string& conf_path, const string section = "default") {
         S3INFO("The given chunksize is too large, use max value 128MB");
         s3ext_chunksize = 128 * 1024 * 1024;
     }
-    if (s3ext_chunksize < 2 * 1024 * 1024) {
-        S3INFO("The given chunksize is too small, use min value 2MB");
-        s3ext_chunksize = 2 * 1024 * 1024;
+    if (s3ext_chunksize < 8 * 1024 * 1024) {
+        // multipart uploading requires the chunksize larger than 5MB(only the last part to upload
+        // could be smaller than 5MB)
+        S3INFO("The given chunksize is too small, use min value 8MB");
+        s3ext_chunksize = 8 * 1024 * 1024;
     }
 
     ret = s3cfg->Scan(section.c_str(), "low_speed_limit", "%d", &s3ext_low_speed_limit);
