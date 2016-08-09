@@ -424,7 +424,7 @@ SocketBackend(StringInfo inBuf)
 	qtype = pq_getbyte();
 
 	if (!disable_sig_alarm(false))
-			elog(FATAL, "could not disable timer for client wiat timeout");
+			elog(FATAL, "could not disable timer for client wait timeout");
 
 	if (qtype == EOF)			/* frontend disconnected */
 	{
