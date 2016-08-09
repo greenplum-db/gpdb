@@ -1481,7 +1481,7 @@ void gpdb_import_alert_log(apr_pool_t *pool)
 		// Copy failed log into separate file for user attention
 		now = time(NULL);
 		strftime(timestr, 20, "%Y-%m-%d_%H%M%S", localtime(&now));
-		bad_file = apr_pstrcat(pool, GPMON_LOG, "/", GPMON_ALERT_LOG_STAGE, "_broken_", timestr, ".csv", NULL);
+		bad_file = apr_pstrcat(pool, GPMON_LOG, "/", GPMON_ALERT_LOG_STAGE, "_broken_", timestr,  NULL);
 		if (apr_file_copy(dst_file, bad_file, APR_FPROT_FILE_SOURCE_PERMS, pool) == APR_SUCCESS)
 		{
 			gpmon_warningx(FLINE, status, "Staging file with broken entries is archived to %s", bad_file);
