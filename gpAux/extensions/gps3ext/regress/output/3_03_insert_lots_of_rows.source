@@ -11,9 +11,9 @@ NOTICE:  table "s3write_bulk_read" does not exist, skipping
 DROP EXTERNAL TABLE IF EXISTS s3write_bulk_write;
 NOTICE:  table "s3write_bulk_write" does not exist, skipping
 CREATE READABLE EXTERNAL TABLE s3write_bulk_read (date text, time text, status bool, sample1 float, sample2 float,
-        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/s3write/bulk/ config=/home/gpadmin/s3.conf') FORMAT 'csv';
+        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/bulk/ config=@config_file@') FORMAT 'csv';
 CREATE WRITABLE EXTERNAL TABLE s3write_bulk_write (date text, time text, status bool, sample1 float, sample2 float,
-        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/s3write/bulk/ config=/home/gpadmin/s3.conf') FORMAT 'csv';
+        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/bulk/ config=@config_file@') FORMAT 'csv';
 SELECT count(*) FROM s3write_bulk_read;
  count 
 -------

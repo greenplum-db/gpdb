@@ -6,9 +6,9 @@ CREATE PROTOCOL s3 (
 DROP EXTERNAL TABLE s3regress;
 ERROR:  table "s3regress" does not exist
 CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high float,
-	low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/normal/') format 'csv';
+	low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/') format 'csv';
 SELECT count(*) FROM s3regress;
 ERROR:  Failed to init S3 extension, segid = -1, segnum = -1, please check your configurations and net connection: (gps3ext.cpp:88)  (seg2 slice1 ip-172-31-2-194.us-west-2.compute.internal:40000 pid=2380) (cdbdisp.c:1326)
-DETAIL:  External table s3regress, file s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/normal/
+DETAIL:  External table s3regress, file s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/
 DROP EXTERNAL TABLE s3regress;
 DROP PROTOCOL s3;

@@ -9,7 +9,7 @@ CREATE PROTOCOL s3 (
 DROP EXTERNAL TABLE parallel2;
 ERROR:  table "parallel2" does not exist
 CREATE READABLE EXTERNAL TABLE parallel2 (date text, time text, open float, high float,
-        low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/normal/ config=/home/gpadmin/s3.conf') FORMAT 'csv';
+        low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/ config=@config_file@') FORMAT 'csv';
 SELECT count(*) count, round(sum(open)) sum, round(avg(open)) avg FROM parallel2;
   count   |    sum     | avg 
 ----------+------------+-----

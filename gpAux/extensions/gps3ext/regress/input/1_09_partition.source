@@ -17,7 +17,7 @@ CREATE TABLE stock (date text, time text, open float, high float, low float, vol
 INSERT INTO stock (date, time, open, high, low, volume) VALUES (03/08/2011, 094022, 35.25, 35.24, 35.29, 20001);
 
 CREATE READABLE EXTERNAL TABLE ext_stock000 (date text, time text, open float, high float,
-	low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/normal/xao config=/home/gpadmin/s3.conf') FORMAT 'csv';
+	low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/xao config=@config_file@') FORMAT 'csv';
 
 ALTER TABLE stock ADD PARTITION stock000 START (0) INCLUSIVE END (10000) EXCLUSIVE;
 

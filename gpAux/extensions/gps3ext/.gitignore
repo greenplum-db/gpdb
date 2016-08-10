@@ -57,6 +57,7 @@ s3.conf
 sql
 expected
 results
+source_replaced
 
 *.out
 *.diffs

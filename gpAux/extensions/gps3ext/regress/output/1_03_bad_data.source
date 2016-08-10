@@ -6,7 +6,7 @@ CREATE PROTOCOL s3 (
 DROP EXTERNAL TABLE s3regress;
 ERROR:  table "s3regress" does not exist
 CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high float,
-	low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/baddata/ config=/home/gpadmin/s3.conf') format 'csv' LOG ERRORS SEGMENT REJECT LIMIT 5;
+	low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/baddata/ config=@config_file@') format 'csv' LOG ERRORS SEGMENT REJECT LIMIT 5;
 SELECT count(*) FROM s3regress;
 NOTICE:  Found 3 data formatting errors (3 or more input rows). Rejected related input data.
  count 
@@ -18,9 +18,9 @@ NOTICE:  Found 3 data formatting errors (3 or more input rows). Rejected related
 SELECT gp_read_error_log('s3regress');
                                                                                                        gp_read_error_log                                                                                                        
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- ("Thu Jul 14 23:21:15.952755 2016 PDT",s3regress,"s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/baddata/ config=/home/gpadmin/s3.conf",3,,"missing data for column ""low""","09/28/2009,09:30:06,35.49,35.37",)
- ("Thu Jul 14 23:21:15.953821 2016 PDT",s3regress,"s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/baddata/ config=/home/gpadmin/s3.conf",2,,"missing data for column ""volume""","10/05/2009,36.19,36.18,36.2,100",)
- ("Thu Jul 14 23:21:15.953821 2016 PDT",s3regress,"s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/baddata/ config=/home/gpadmin/s3.conf",4,,"missing data for column ""low""","10/05/2009,11:56:50,36.21,200",)
+ ("Thu Jul 14 23:21:15.952755 2016 PDT",s3regress,"s3://s3-us-west-2.amazonaws.com/@read_prefix@/baddata/ config=@config_file@",3,,"missing data for column ""low""","09/28/2009,09:30:06,35.49,35.37",)
+ ("Thu Jul 14 23:21:15.953821 2016 PDT",s3regress,"s3://s3-us-west-2.amazonaws.com/@read_prefix@/baddata/ config=@config_file@",2,,"missing data for column ""volume""","10/05/2009,36.19,36.18,36.2,100",)
+ ("Thu Jul 14 23:21:15.953821 2016 PDT",s3regress,"s3://s3-us-west-2.amazonaws.com/@read_prefix@/baddata/ config=@config_file@",4,,"missing data for column ""low""","10/05/2009,11:56:50,36.21,200",)
 (3 rows)
 
 -- end_ignore
