@@ -447,3 +447,29 @@ partition by list(col2)
 );
 create index distrib_part_test_idx on distrib_part_test(col1);
 ALTER TABLE public.distrib_part_test SET with (reorganize=false) DISTRIBUTED RANDOMLY;
+
+-- MPP-23801
+--
+-- ALTER TABLE set distribution key should check compatible with unique index. 
+
+-- case 1
+
+CREATE TABLE t_dist1(col1 INTEGER, col2 INTEGER, CONSTRAINT pk_t_dist1 PRIMARY KEY(col2)) DISTRIBUTED BY(col2);
+ALTER TABLE t_dist1 SET DISTRIBUTED BY(col1); 
+
+-- case 2
+
+CREATE TABLE t_dist2(col1 INTEGER, col2 INTEGER, col3 INTEGER, col4 INTEGER) DISTRIBUTED BY(col1);
+
+CREATE UNIQUE INDEX idx1_t_dist2 ON t_dist2(col1, col2);
+CREATE UNIQUE INDEX idx2_t_dist2 ON t_dist2(col1, col2, col3);
+CREATE UNIQUE INDEX idx3_t_dist2 ON t_dist2(col1, col2, col4);
+
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col1); 
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col2); 
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col1, col2); 
+
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col1, col2, col3); 
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col3); 
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col4); 
+

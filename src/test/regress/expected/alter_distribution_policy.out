@@ -1370,3 +1370,31 @@ NOTICE:  CREATE TABLE will create partition "distrib_part_test_1_prt_part1" for 
 create index distrib_part_test_idx on distrib_part_test(col1);
 NOTICE:  building index for child partition "distrib_part_test_1_prt_part1"
 ALTER TABLE public.distrib_part_test SET with (reorganize=false) DISTRIBUTED RANDOMLY;
+-- MPP-23801
+--
+-- ALTER TABLE set distribution key should check compatible with unique index. 
+-- case 1
+CREATE TABLE t_dist1(col1 INTEGER, col2 INTEGER, CONSTRAINT pk_t_dist1 PRIMARY KEY(col2)) DISTRIBUTED BY(col2);
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "t_dist1_pkey" for table "t_dist1"
+ALTER TABLE t_dist1 SET DISTRIBUTED BY(col1); 
+ERROR:  UNIQUE INDEX and DISTRIBUTED BY definitions incompatible
+HINT:  the DISTRIBUTED BY columns must be equal to or a left-subset of the UNIQUE INDEX columns.
+-- case 2
+CREATE TABLE t_dist2(col1 INTEGER, col2 INTEGER, col3 INTEGER, col4 INTEGER) DISTRIBUTED BY(col1);
+CREATE UNIQUE INDEX idx1_t_dist2 ON t_dist2(col1, col2);
+CREATE UNIQUE INDEX idx2_t_dist2 ON t_dist2(col1, col2, col3);
+CREATE UNIQUE INDEX idx3_t_dist2 ON t_dist2(col1, col2, col4);
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col1); 
+WARNING:  distribution policy of relation "t_dist2" already set to (col1)
+HINT:  Use ALTER TABLE "t_dist2" SET WITH (REORGANIZE=TRUE) DISTRIBUTED BY (col1) to force redistribution
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col2); 
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col1, col2); 
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col1, col2, col3); 
+ERROR:  UNIQUE INDEX and DISTRIBUTED BY definitions incompatible
+HINT:  the DISTRIBUTED BY columns must be equal to or a left-subset of the UNIQUE INDEX columns.
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col3); 
+ERROR:  UNIQUE INDEX and DISTRIBUTED BY definitions incompatible
+HINT:  the DISTRIBUTED BY columns must be equal to or a left-subset of the UNIQUE INDEX columns.
+ALTER TABLE t_dist2 SET DISTRIBUTED BY(col4); 
+ERROR:  UNIQUE INDEX and DISTRIBUTED BY definitions incompatible
+HINT:  the DISTRIBUTED BY columns must be equal to or a left-subset of the UNIQUE INDEX columns.
