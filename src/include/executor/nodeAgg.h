@@ -136,16 +136,6 @@ typedef struct AggStatePerAggData
 	void *sortstate;	/* sort object, if DISTINCT or ORDER BY */
 } AggStatePerAggData;
 
-
-typedef struct AdvanceAggregatesCodegenInfo
-{
-	/* Pointer to store AdvanceAggregatesCodegen from Codegen */
-	void* code_generator;
-	/* Function pointer that points to either regular or generated advance_aggregates */
-	AdvanceAggregatesFn AdvanceAggregates_fn;
-} AdvanceAggregatesCodegenInfo;
-
-
 /*
  * AggStatePerGroupData - per-aggregate-per-group working state
  *
@@ -176,11 +166,6 @@ typedef struct AggStatePerGroupData
 	 * NULL and not auto-replace it with a later input value. Only the first
 	 * non-NULL input will be auto-substituted.
 	 */
-
-#ifdef USE_CODEGEN
-	AdvanceAggregatesCodegenInfo AdvanceAggregates_gen_info;
-#endif
-
 } AggStatePerGroupData;
 
 extern void 

@@ -243,7 +243,7 @@ AdvanceAggregatesCodegenEnroll(AdvanceAggregatesFn regular_func_ptr,
  * Function pointer may point to regular version or generated function
  */
 #define call_AdvanceAggregates(aggstate, pergroup, mem_manager) \
-		aggstate->pergroup->AdvanceAggregates_gen_info.AdvanceAggregates_fn(aggstate, pergroup, mem_manager)
+		aggstate->AdvanceAggregates_gen_info.AdvanceAggregates_fn(aggstate, pergroup, mem_manager)
 
 /*
  * Enrollment macros
@@ -261,9 +261,9 @@ AdvanceAggregatesCodegenEnroll(AdvanceAggregatesFn regular_func_ptr,
         Assert(exprstate->evalfunc == regular_func); \
 
 #define enroll_AdvanceAggregates_codegen(regular_func, ptr_to_regular_func_ptr, aggstate) \
-		aggstate->pergroup->AdvanceAggregates_gen_info.code_generator = AdvanceAggregatesCodegenEnroll( \
+		aggstate->AdvanceAggregates_gen_info.code_generator = AdvanceAggregatesCodegenEnroll( \
         regular_func, ptr_to_regular_func_ptr, aggstate); \
-        Assert(aggstate->pergroup->AdvanceAggregates_gen_info.AdvanceAggregates_fn == regular_func); \
+        Assert(aggstate->AdvanceAggregates_gen_info.AdvanceAggregates_fn == regular_func); \
 
 #endif //USE_CODEGEN
 

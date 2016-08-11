@@ -880,14 +880,13 @@ void
 EnrollTransitionFunctions(AggState* aggstate)
 {
 #ifdef USE_CODEGEN
-  if (NULL == aggstate ||
-      NULL == aggstate->pergroup)
-  {
-    return;
-  }
-  enroll_AdvanceAggregates_codegen(advance_aggregates,
-                                   &aggstate->pergroup->AdvanceAggregates_gen_info.AdvanceAggregates_fn,
-                                   aggstate);
+	if (NULL == aggstate)
+	{
+		return;
+	}
+	enroll_AdvanceAggregates_codegen(advance_aggregates,
+			&aggstate->AdvanceAggregates_gen_info.AdvanceAggregates_fn,
+			aggstate);
 #endif
 }
 
