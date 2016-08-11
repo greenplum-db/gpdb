@@ -1,0 +1,39 @@
+CREATE OR REPLACE FUNCTION read_from_s3() RETURNS integer AS
+        '$libdir/gps3ext.so', 's3_import' LANGUAGE C STABLE;
+CREATE OR REPLACE FUNCTION write_to_s3() RETURNS integer AS
+        '$libdir/gps3ext.so', 's3_export' LANGUAGE C STABLE;
+CREATE PROTOCOL s3 (
+        readfunc = read_from_s3,
+        writefunc = write_to_s3
+);
+DROP EXTERNAL TABLE IF EXISTS s3write_ret2wet_read;
+NOTICE:  table "s3write_ret2wet_read" does not exist, skipping
+DROP EXTERNAL TABLE IF EXISTS s3write_ret2wet_write;
+NOTICE:  table "s3write_ret2wet_write" does not exist, skipping
+CREATE READABLE EXTERNAL TABLE s3write_ret2wet_read (date text, time text, status bool, sample1 float, sample2 float,
+        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/ret2wet/ config=@config_file@') FORMAT 'csv';
+CREATE WRITABLE EXTERNAL TABLE s3write_ret2wet_write (date text, time text, status bool, sample1 float, sample2 float,
+        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/ret2wet/ config=@config_file@') FORMAT 'csv';
+INSERT INTO s3write_ret2wet_write (date, time, status, sample1, sample2, volume)
+        SELECT current_date, localtime, (random() > 0.5)::bool, trunc(random()::numeric, 8), trunc(random()::numeric, 8), v
+        FROM generate_series(1, 10000) as v;
+DROP EXTERNAL TABLE IF EXISTS s3write_ret2wet_read_new;
+NOTICE:  table "s3write_ret2wet_read_new" does not exist, skipping
+DROP EXTERNAL TABLE IF EXISTS s3write_ret2wet_write_new;
+NOTICE:  table "s3write_ret2wet_write_new" does not exist, skipping
+CREATE READABLE EXTERNAL TABLE s3write_ret2wet_read_new (date text, time text, status bool, sample1 float, sample2 float,
+        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/ret2wet_new/ config=@config_file@') FORMAT 'csv';
+CREATE WRITABLE EXTERNAL TABLE s3write_ret2wet_write_new (date text, time text, status bool, sample1 float, sample2 float,
+        volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/ret2wet_new/ config=@config_file@') FORMAT 'csv';
+INSERT INTO s3write_ret2wet_write_new SELECT * FROM s3write_ret2wet_read;
+SELECT min(volume), max(volume), count(*) FROM s3write_ret2wet_read_new;
+ min |  max  | count 
+-----+-------+-------
+   1 | 10000 | 10000
+(1 row)
+
+DROP EXTERNAL TABLE IF EXISTS s3write_ret2wet_read;
+DROP EXTERNAL TABLE IF EXISTS s3write_ret2wet_write;
+DROP EXTERNAL TABLE IF EXISTS s3write_ret2wet_read_new;
+DROP EXTERNAL TABLE IF EXISTS s3write_ret2wet_write_new;
+DROP PROTOCOL s3;
