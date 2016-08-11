@@ -31,7 +31,9 @@ struct ProjectionInfo;
 struct ExprContext;
 struct ExprState;
 struct PlanState;
-
+struct AggState;
+struct MemoryManagerContainer;
+struct AggStatePerGroupData;
 /*
  * Enum used to mimic ExprDoneCond in ExecEvalExpr function pointer.
  */
@@ -39,6 +41,7 @@ typedef enum tmp_enum{
 	TmpResult
 }tmp_enum;
 
+typedef void (*AdvanceAggregatesFn) (struct AggState *aggstate, /*struct AggStatePerGroup*/struct AggStatePerGroupData *pergroup, struct MemoryManagerContainer *mem_manager);
 typedef void (*ExecVariableListFn) (struct ProjectionInfo *projInfo, Datum *values, bool *isnull);
 typedef Datum (*ExecEvalExprFn) (struct ExprState *expression, struct ExprContext *econtext, bool *isNull, /*ExprDoneCond*/ tmp_enum *isDone);
 typedef Datum (*SlotGetAttrFn) (struct TupleTableSlot *slot, int attnum, bool *isnull);
@@ -62,7 +65,8 @@ typedef Datum (*SlotGetAttrFn) (struct TupleTableSlot *slot, int attnum, bool *i
 #define init_codegen()
 #define call_ExecVariableList(projInfo, values, isnull) ExecVariableList(projInfo, values, isnull)
 #define enroll_ExecVariableList_codegen(regular_func, ptr_to_chosen_func, proj_info, slot)
-
+#define #define call_AdvanceAggregates(aggstate, pergroup, mem_manager) advance_aggregates(aggstate, pergroup, mem_manager)
+#define enroll_AdvanceAggregates_codegen(regular_func, ptr_to_chosen_func, aggstate)
 #else
 
 /*
@@ -176,6 +180,14 @@ ExecEvalExprCodegenEnroll(ExecEvalExprFn regular_func_ptr,
                           struct ExprContext *econtext,
                           struct PlanState* plan_state);
 
+/*
+ * Enroll and returns the pointer to AdvanceAggregateGenerator
+ */
+void*
+AdvanceAggregatesCodegenEnroll(AdvanceAggregatesFn regular_func_ptr,
+		AdvanceAggregatesFn* ptr_to_regular_func_ptr,
+		struct AggState *aggstate);
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif
@@ -225,6 +237,14 @@ ExecEvalExprCodegenEnroll(ExecEvalExprFn regular_func_ptr,
  */
 #define call_ExecVariableList(projInfo, values, isnull) \
 		projInfo->ExecVariableList_gen_info.ExecVariableList_fn(projInfo, values, isnull)
+
+/*
+ * Call AdvanceAggregates using function pointer AdvanceAggregates_fn.
+ * Function pointer may point to regular version or generated function
+ */
+#define call_AdvanceAggregates(aggstate, pergroup, mem_manager) \
+		aggstate->pergroup->AdvanceAggregates_gen_info.AdvanceAggregates_fn(aggstate, pergroup, mem_manager)
+
 /*
  * Enrollment macros
  * The enrollment process also ensures that the generated function pointer
@@ -239,6 +259,11 @@ ExecEvalExprCodegenEnroll(ExecEvalExprFn regular_func_ptr,
 		exprstate->ExecEvalExpr_code_generator = ExecEvalExprCodegenEnroll( \
         (ExecEvalExprFn)regular_func, (ExecEvalExprFn*)ptr_to_regular_func_ptr, exprstate, econtext, plan_state); \
         Assert(exprstate->evalfunc == regular_func); \
+
+#define enroll_AdvanceAggregates_codegen(regular_func, ptr_to_regular_func_ptr, aggstate) \
+		aggstate->pergroup->AdvanceAggregates_gen_info.code_generator = AdvanceAggregatesCodegenEnroll( \
+        regular_func, ptr_to_regular_func_ptr, aggstate); \
+        Assert(aggstate->pergroup->AdvanceAggregates_gen_info.AdvanceAggregates_fn == regular_func); \
 
 #endif //USE_CODEGEN
 

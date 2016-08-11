@@ -179,6 +179,7 @@ set(GPCODEGEN_SRC
     op_expr_tree_generator.cc
     pg_date_func_generator.cc
     var_expr_tree_generator.cc
+    advance_aggregates_codegen.cc
 )
 
 # Integrate with GPDB build system. 
