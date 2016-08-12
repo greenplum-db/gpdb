@@ -522,7 +522,7 @@ dispatch_add_to_segment(int16 pridbid, int16 segdbid, ArrayType *fsmap)
 	 * array_out caches data in flinfo, as we cannot just
 	 * do a DirectFunctionCall1().
 	 */
-	fmgr_info(ARRAY_OUT_OID, &flinfo);
+	fmgr_info(F_ARRAY_OUT, &flinfo);
 	a = OutputFunctionCall(&flinfo, PointerGetDatum(fsmap));
 
 	appendStringInfo(q,

@@ -141,9 +141,14 @@ DESCR("bitmap index access method");
 
 /*
  * Am_btree AM values for FormData_pg_am.
+ *
+ * The function oid definitions, F_*, are in fmgroids.h. We don't #include that here, because
+ * most users of pg_am.h don't need this. Also, fmgroids.h is generated as part of the build,
+ * so I'm not 100% sure if that might cause dependency problems. If you need Am_btree, do
+ * #include "utils/fmgroids.h" before including pg_am.h.
  */
 #define Am_btree \
-	{"btree"}, 5, 1, true, true, true, true, true, true, false, true, true, BTINSERT_OID, BTBEGINSCAN_OID, BTGETTUPLE_OID, BTGETMULTI_OID, BTRESCAN_OID, BTENDSCAN_OID, BTMARKPOS_OID, BTRESTRPOS_OID, BTBUILD_OID, BTBULKDELETE_OID, BTVACUUMCLEANUP_OID, BTCOSTESTIMATE_OID, BTOPTIONS_OID
+	{"btree"}, 5, 1, true, true, true, true, true, true, false, true, true, F_BTINSERT, F_BTBEGINSCAN, F_BTGETTUPLE, F_BTGETMULTI, F_BTRESCAN, F_BTENDSCAN, F_BTMARKPOS, F_BTRESTRPOS, F_BTBUILD, F_BTBULKDELETE, F_BTVACUUMCLEANUP, F_BTCOSTESTIMATE, F_BTOPTIONS
 
 
 #endif   /* PG_AM_H */

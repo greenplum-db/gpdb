@@ -20,6 +20,7 @@
 #include "parser/parse_coerce.h"
 #include "lib/stringinfo.h"
 #include "catalog/pg_operator.h"
+#include "utils/fmgroids.h"
 
 /**
  * Static declarations
@@ -302,7 +303,7 @@ static bool is_sirv_funcexpr(FuncExpr *fe)
 	 * Function cannot be sequence related
 	 */
 	Oid funcid = fe->funcid;
-	res = res && !(funcid == NEXTVAL_FUNC_OID || funcid == CURRVAL_FUNC_OID || funcid == SETVAL_FUNC_OID);
+	res = res && !(funcid == F_NEXTVAL_OID || funcid == F_CURRVAL_OID || funcid == F_SETVAL_OID);
 
 	return res;
 }

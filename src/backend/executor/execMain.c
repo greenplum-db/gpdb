@@ -1942,7 +1942,6 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 					(operation == CMD_INSERT || estate->es_select_into) &&
 					ExecMayReturnRawTuples(planstate))
 					junk_filter_needed = true;
-
 				break;
 			case CMD_UPDATE:
 			case CMD_DELETE:

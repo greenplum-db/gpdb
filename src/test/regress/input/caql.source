@@ -327,12 +327,6 @@ CREATE FUNCTION check_GetResqueueName(oid) RETURNS text
 select check_GetResqueueName(6055);
 DROP FUNCTION check_GetResqueueName(oid);
 
-CREATE FUNCTION check_GetFuncSQLDataAccess(oid) RETURNS text
-  AS '@abs_builddir@/regress@DLSUFFIX@', 'check_GetFuncSQLDataAccess'
-  LANGUAGE C READS SQL DATA;
-select check_GetFuncSQLDataAccess('check_GetFuncSQLDataAccess'::regproc);
-DROP FUNCTION check_GetFuncSQLDataAccess(oid);
-
 -- cleanup (as caql_super_luser)
 
 drop type funkytype;

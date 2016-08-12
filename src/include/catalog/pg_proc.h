@@ -686,55 +686,30 @@ DESCR("convert float4 to int4");
 
 DATA(insert OID = 330 (  btgettuple		   PGNSP PGUID 12 1 0 f f t f v 2 16 "2281 2281" _null_ _null_ _null_  btgettuple - _null_ _null_ ));
 DESCR("btree(internal)");
-#define BTGETTUPLE_OID 330
-
 DATA(insert OID = 636 (  btgetmulti		   PGNSP PGUID 12 1 0 f f t f v 2 2281 "2281 2281" _null_ _null_ _null_ btgetmulti - _null_ _null_ ));
 DESCR("btree(internal)");
-#define BTGETMULTI_OID 636
-
 DATA(insert OID = 331 (  btinsert		   PGNSP PGUID 12 1 0 f f t f v 6 16 "2281 2281 2281 2281 2281 2281" _null_ _null_ _null_	btinsert - _null_ _null_ ));
 DESCR("btree(internal)");
-#define BTINSERT_OID 331
-
 DATA(insert OID = 333 (  btbeginscan	   PGNSP PGUID 12 1 0 f f t f v 3 2281 "2281 2281 2281" _null_ _null_ _null_	btbeginscan - _null_ _null_ ));
 DESCR("btree(internal)");
-#define BTBEGINSCAN_OID 333
-
 DATA(insert OID = 334 (  btrescan		   PGNSP PGUID 12 1 0 f f t f v 2 2278 "2281 2281" _null_ _null_ _null_ btrescan - _null_ _null_ ));
 DESCR("btree(internal)");
-#define BTRESCAN_OID 334
-
 DATA(insert OID = 335 (  btendscan		   PGNSP PGUID 12 1 0 f f t f v 1 2278 "2281" _null_ _null_ _null_	btendscan - _null_ _null_ ));
 DESCR("btree(internal)");
-#define BTENDSCAN_OID 335
-
 DATA(insert OID = 336 (  btmarkpos		   PGNSP PGUID 12 1 0 f f t f v 1 2278 "2281" _null_ _null_ _null_	btmarkpos - _null_ _null_ ));
 DESCR("btree(internal)");
-#define BTMARKPOS_OID 336
-
 DATA(insert OID = 337 (  btrestrpos		   PGNSP PGUID 12 1 0 f f t f v 1 2278 "2281" _null_ _null_ _null_	btrestrpos - _null_ _null_ ));
 DESCR("btree(internal)");
-#define BTRESTRPOS_OID 337
-
 DATA(insert OID = 338 (  btbuild		   PGNSP PGUID 12 1 0 f f t f v 3 2281 "2281 2281 2281" _null_ _null_ _null_ btbuild - _null_ _null_ ));
 DESCR("btree(internal)");
-#define BTBUILD_OID 338
-
 DATA(insert OID = 332 (  btbulkdelete	   PGNSP PGUID 12 1 0 f f t f v 4 2281 "2281 2281 2281 2281" _null_ _null_ _null_ btbulkdelete - _null_ _null_ ));
 DESCR("btree(internal)");
-#define BTBULKDELETE_OID 332
-
 DATA(insert OID = 972 (  btvacuumcleanup   PGNSP PGUID 12 1 0 f f t f v 2 2281 "2281 2281" _null_ _null_ _null_ btvacuumcleanup - _null_ _null_ ));
 DESCR("btree(internal)");
-#define BTVACUUMCLEANUP_OID 972
-
 DATA(insert OID = 1268 (  btcostestimate   PGNSP PGUID 12 1 0 f f t f v 8 2278 "2281 2281 2281 2281 2281 2281 2281 2281" _null_ _null_ _null_  btcostestimate - _null_ _null_ ));
 DESCR("btree(internal)");
-#define BTCOSTESTIMATE_OID 1268
-
 DATA(insert OID = 2785 (  btoptions		   PGNSP PGUID 12 1 0 f f t f s 2 17 "1009 16" _null_ _null_ _null_  btoptions - _null_ _null_ ));
 DESCR("btree(internal)");
-#define BTOPTIONS_OID 2785
 
 DATA(insert OID = 339 (  poly_same		   PGNSP PGUID 12 1 0 f f t f i 2 16 "604 604" _null_ _null_ _null_ poly_same - _null_ _null_ ));
 DESCR("same as?");
@@ -1049,7 +1024,6 @@ DATA(insert OID = 747 (  array_dims		   PGNSP PGUID 12 1 0 f f t f i 1 25 "2277"
 DESCR("array dimensions");
 DATA(insert OID = 750 (  array_in		   PGNSP PGUID 12 1 0 f f t f s 3 2277 "2275 26 23" _null_ _null_ _null_	array_in - _null_ _null_ ));
 DESCR("I/O");
-#define ARRAY_OUT_OID 751
 DATA(insert OID = 751 (  array_out		   PGNSP PGUID 12 1 0 f f t f s 1 2275 "2277" _null_ _null_ _null_	array_out - _null_ _null_ ));
 DESCR("I/O");
 DATA(insert OID = 2091 (  array_lower	   PGNSP PGUID 12 1 0 f f t f i 2 23 "2277 23" _null_ _null_ _null_ array_lower - _null_ _null_ ));
@@ -2119,13 +2093,10 @@ DESCR("does not match LIKE expression");
 /* SEQUENCE functions */
 DATA(insert OID = 1574 (  nextval			PGNSP PGUID 12 1 0 f f t f v 1 20 "2205" _null_ _null_ _null_	nextval_oid - _null_ _null_ ));
 DESCR("sequence next value");
-#define NEXTVAL_FUNC_OID 1574
 DATA(insert OID = 1575 (  currval			PGNSP PGUID 12 1 0 f f t f v 1 20 "2205" _null_ _null_ _null_	currval_oid - _null_ _null_ ));
 DESCR("sequence current value");
-#define CURRVAL_FUNC_OID 1575
 DATA(insert OID = 1576 (  setval			PGNSP PGUID 12 1 0 f f t f v 2 20 "2205 20" _null_ _null_ _null_  setval_oid - _null_ _null_ ));
 DESCR("set sequence value");
-#define SETVAL_FUNC_OID 1576
 DATA(insert OID = 1765 (  setval			PGNSP PGUID 12 1 0 f f t f v 3 20 "2205 20 16" _null_ _null_ _null_ setval3_oid - _null_ _null_ ));
 DESCR("set sequence value and iscalled status");
 
@@ -4615,18 +4586,5 @@ extern Oid ProcedureCreate(const char *procedureName,
 				Oid procOid);
 
 extern bool function_parse_error_transpose(const char *prosrc);
-
-/*
- * API to access prodataaccess colum
- */
-typedef enum SQLDataAccess
-{
-   SDA_NO_SQL = 0,		/* procedure does not possibly contain SQL */
-   SDA_CONTAINS_SQL,		/* possibly contains SQL */
-   SDA_READS_SQL,		/* possibly reads SQL */
-   SDA_MODIFIES_SQL		/* possibly modifies SQL */
-}  SQLDataAccess;
-
-extern SQLDataAccess GetFuncSQLDataAccess(Oid);
 
 #endif   /* PG_PROC_H */

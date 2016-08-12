@@ -26,7 +26,6 @@
 #include "access/hash.h"
 #include "access/heapam.h"
 #include "access/fileam.h"
-#include "access/extprotocol.h"
 #include "access/nbtree.h"
 #include "access/reloptions.h"
 #include "access/xact.h"
@@ -43,12 +42,11 @@
 #include "catalog/pg_compression.h"
 #include "catalog/pg_constraint.h"
 #include "catalog/pg_depend.h"
-#include "catalog/pg_exttable.h"
-#include "catalog/pg_extprotocol.h"
 #include "catalog/pg_inherits.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_opclass.h"
 #include "catalog/pg_operator.h"
+#include "catalog/pg_tablespace.h"
 #include "catalog/pg_trigger.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_tablespace.h"
@@ -71,8 +69,6 @@
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "nodes/parsenodes.h"
-#include "nodes/print.h"
-#include "nodes/relation.h"
 #include "optimizer/clauses.h"
 #include "optimizer/plancat.h"
 #include "optimizer/planner.h"
@@ -92,7 +88,6 @@
 #include "rewrite/rewriteDefine.h"
 #include "rewrite/rewriteHandler.h"
 #include "rewrite/rewriteManip.h"
-#include "storage/backendid.h"
 #include "storage/sinval.h"
 #include "storage/smgr.h"
 #include "tcop/utility.h"
@@ -106,9 +101,6 @@
 #include "utils/numeric.h"
 #include "utils/relcache.h"
 #include "utils/syscache.h"
-#include "utils/tqual.h"
-#include "utils/uri.h"
-#include "mb/pg_wchar.h"
 
 #include "cdb/cdbdisp.h"
 #include "cdb/cdbdisp_query.h"
@@ -122,6 +114,7 @@
 #include "cdb/cdbmirroredbufferpool.h"
 #include "cdb/cdbmirroredappendonly.h"
 #include "cdb/cdbpersistentfilesysobj.h"
+
 
 /*
  * ON COMMIT action list
@@ -256,9 +249,12 @@ static void ATSimplePermissions(Relation rel, bool allowView);
 static void ATSimplePermissionsRelationOrIndex(Relation rel);
 static void ATSimpleRecursion(List **wqueue, Relation rel,
 				  AlterTableCmd *cmd, bool recurse);
-/* static void ATOneLevelRecursion(List **wqueue, Relation rel,
-					AlterTableCmd *cmd); */
-static void ATPrepAddColumn(Relation rel, bool recurse, AlterTableCmd *cmd);
+#if 0
+static void ATOneLevelRecursion(List **wqueue, Relation rel,
+					AlterTableCmd *cmd);
+#endif
+static void ATPrepAddColumn(List **wqueue, Relation rel, bool recurse,
+				AlterTableCmd *cmd);
 static void ATExecAddColumn(AlteredTableInfo *tab, Relation rel,
 				ColumnDef *colDef);
 static void add_column_datatype_dependency(Oid relid, int32 attnum, Oid typid);
@@ -279,8 +275,10 @@ static void ATExecDropColumn(List **wqueue, Relation rel, const char *colName,
 				 bool recurse, bool recursing);
 static void ATExecAddIndex(AlteredTableInfo *tab, Relation rel,
 			   IndexStmt *stmt, bool is_rebuild, bool part_expanded);
-static void ATExecAddConstraint(AlteredTableInfo *tab, Relation rel, Node *newConstraint, bool recurse);
-static void ATAddCheckConstraint(AlteredTableInfo *tab, Relation rel, Constraint *constr, bool recurse);
+static void ATExecAddConstraint(AlteredTableInfo *tab, Relation rel,
+					Node *newConstraint, bool recurse);
+static void ATAddCheckConstraint(AlteredTableInfo *tab, Relation rel,
+					 Constraint *constr, bool recurse);
 
 static void ATAddForeignKeyConstraint(AlteredTableInfo *tab, Relation rel,
 						  FkConstraint *fkconstraint);
@@ -365,10 +363,6 @@ copy_buffer_pool_data(
 	bool		useWal);
 
 static bool TypeTupleExists(Oid typeId);
-static Datum transformLocationUris(List *locs, bool isweb, bool iswritable);
-static Datum transformExecOnClause(List	*on_clause);
-static char transformFormatType(char *formatname);
-static Datum transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswritable);
 
 static void ATExecPartAddInternal(Relation rel, Node *def);
 
@@ -385,7 +379,6 @@ static bool prebuild_temp_table(Relation rel, RangeVar *tmpname, List *distro,
 								bool useExistingColumnAttributes);
 static void ATPartitionCheck(AlterTableType subtype, Relation rel, bool rejectroot, bool recursing);
 static void ATExternalPartitionCheck(AlterTableType subtype, Relation rel, bool recursing);
-static void InvokeProtocolValidation(Oid procOid, char *procName, bool iswritable, List *locs);
 
 static char *alterTableCmdString(AlterTableType subtype);
 
@@ -815,387 +808,6 @@ DefineRelation(CreateStmt *stmt, char relkind, char relstorage)
 }
 
 /* ----------------------------------------------------------------
-*		DefineExternalRelation
-*				Creates a new external relation.
-*
-* In here we first dispatch a normal DefineRelation() (with relstorage
-* external) in order to create the external relation entries in pg_class
-* pg_type etc. Then once this is done we dispatch ourselves (DefineExternalRelation)
-* in order to create the pg_exttable entry accross the gp array.
-*
-* Why don't we just do all of this in one dispatch run? because that
-* involves duplicating the DefineRelation() code or severly modifying it
-* to have special cases for external tables. IMHO it's better and cleaner
-* to leave it intact and do another dispatch.
-* ----------------------------------------------------------------
-*/
-extern void
-DefineExternalRelation(CreateExternalStmt *createExtStmt)
-{
-	CreateStmt				  *createStmt = makeNode(CreateStmt);
-	ExtTableTypeDesc 		  *exttypeDesc = (ExtTableTypeDesc *)createExtStmt->exttypedesc;
-	SingleRowErrorDesc 		  *singlerowerrorDesc = NULL;
-	DefElem    				  *dencoding = NULL;
-	ListCell				  *option;
-	Oid						  reloid = 0;
-	Oid						  fmtErrTblOid = InvalidOid;
-	Datum					  formatOptStr;
-	Datum					  locationUris = 0;
-	Datum					  locationExec = 0;
-	char*					  commandString = NULL;
-	char*					  customProtName = NULL;
-	char					  rejectlimittype = '\0';
-	char					  formattype;
-	int						  rejectlimit = -1;
-	int						  encoding = -1;
-	bool					  issreh = false; /* is single row error handling requested? */
-	bool					  iswritable = createExtStmt->iswritable;
-	bool					  isweb = createExtStmt->isweb;
-	bool					  shouldDispatch = (Gp_role == GP_ROLE_DISPATCH &&
-												IsNormalProcessingMode());
-	
-	/*
-	 * now set the parameters for keys/inheritance etc. Most of these are
-	 * uninteresting for external relations...
-	 */
-	createStmt->relation = createExtStmt->relation;
-	createStmt->tableElts = createExtStmt->tableElts;
-	createStmt->inhRelations = NIL;
-	createStmt->constraints = NIL;
-	createStmt->options = NIL;
-	createStmt->oncommit = ONCOMMIT_NOOP;
-	createStmt->tablespacename = NULL;
-	createStmt->policy = createExtStmt->policy; /* policy was set in transform */
-
-	switch(exttypeDesc->exttabletype)
-	{
-		case EXTTBL_TYPE_LOCATION:
-
-			/* Parse and validate URI strings (LOCATION clause) */
-			locationUris = transformLocationUris(exttypeDesc->location_list,
-												 isweb, iswritable);
-			
-			break;
-
-		case EXTTBL_TYPE_EXECUTE:
-			locationExec = transformExecOnClause(exttypeDesc->on_clause);
-			commandString = exttypeDesc->command_string;
-
-			if(strlen(commandString) == 0)
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("Invalid EXECUTE clause. Found an empty command string")));
-
-			break;
-
-		default:
-			ereport(ERROR,
-					(errcode(ERRCODE_GP_INTERNAL_ERROR),
-					 errmsg("Internal error: unknown external table type")));
-	}
-
-	/*
-	 * check permissions to create this external table.
-	 *
-	 * - Always allow if superuser.
-	 * - Never allow EXECUTE or 'file' exttables if not superuser.
-	 * - Allow http, gpfdist or gpfdists tables if pg_auth has the right permissions
-	 *   for this role and for this type of table, or if gp_external_grant_privileges 
-	 *   is on (gp_external_grant_privileges should be deprecated at some point).
-	 */
-	if (!superuser() && Gp_role == GP_ROLE_DISPATCH)
-	{
-		if (exttypeDesc->exttabletype == EXTTBL_TYPE_EXECUTE)
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-					 errmsg("must be superuser to create an EXECUTE external web table")));
-		}
-		else
-		{
-			ListCell   *first_uri = list_head(exttypeDesc->location_list);
-			Value		*v = lfirst(first_uri);
-			char		*uri_str = pstrdup(v->val.str);
-			Uri			*uri = ParseExternalTableUri(uri_str);
-
-			Assert(exttypeDesc->exttabletype == EXTTBL_TYPE_LOCATION);
-
-			if(uri->protocol == URI_FILE)
-			{
-				ereport(ERROR,
-						(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-						 errmsg("must be superuser to create an external table with a file protocol")));
-			}
-			else if(!gp_external_grant_privileges)
-			{
-				/*
-				 * Check if this role has the proper 'gpfdist', 'gpfdists' or 'http'
-				 * permissions in pg_auth for creating this table.
-				 */
-
-				bool		 isnull;				
-				Oid			 userid = GetUserId();
-				cqContext	*pcqCtx;
-				HeapTuple	 tuple;
-
-				pcqCtx = caql_beginscan(
-						NULL,
-						cql("SELECT * FROM pg_authid "
-							 " WHERE oid = :1 "
-							 " FOR UPDATE ",
-							 ObjectIdGetDatum(userid)));
-
-				tuple = caql_getnext(pcqCtx);
-								
-				if (!HeapTupleIsValid(tuple))
-					ereport(ERROR,
-							(errcode(ERRCODE_UNDEFINED_OBJECT),
-							 errmsg("role \"%s\" does not exist (in DefineExternalRelation)", 
-									 GetUserNameFromId(userid))));
-
-				if ( (uri->protocol == URI_GPFDIST || uri->protocol == URI_GPFDISTS) && iswritable)
-				{
-					Datum 	d_wextgpfd = caql_getattr(pcqCtx, Anum_pg_authid_rolcreatewextgpfd, 
-													  &isnull);
-					bool	createwextgpfd = (isnull ? false : DatumGetBool(d_wextgpfd));
-
-					if (!createwextgpfd)
-						ereport(ERROR,
-								(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-								errmsg("permission denied: no privilege to create a writable gpfdist(s) external table")));
-				}
-				else if ( (uri->protocol == URI_GPFDIST || uri->protocol == URI_GPFDISTS) && !iswritable)
-				{
-					Datum 	d_rextgpfd = caql_getattr(pcqCtx, Anum_pg_authid_rolcreaterextgpfd, 
-													  &isnull);
-					bool	createrextgpfd = (isnull ? false : DatumGetBool(d_rextgpfd));
-
-					if (!createrextgpfd)
-						ereport(ERROR,
-								(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-								errmsg("permission denied: no privilege to create a readable gpfdist(s) external table")));
-
-				}
-				else if (uri->protocol == URI_GPHDFS && iswritable)
-				{
-					Datum 	d_wexthdfs = caql_getattr(pcqCtx, Anum_pg_authid_rolcreatewexthdfs,
-													  &isnull);
-					bool	createwexthdfs = (isnull ? false : DatumGetBool(d_wexthdfs));
-
-					if (!createwexthdfs)
-						ereport(ERROR,
-								(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-								errmsg("permission denied: no privilege to create a writable gphdfs external table")));
-				}
-				else if (uri->protocol == URI_GPHDFS && !iswritable)
-				{
-					Datum 	d_rexthdfs = caql_getattr(pcqCtx, Anum_pg_authid_rolcreaterexthdfs,
-													  &isnull);
-					bool	createrexthdfs = (isnull ? false : DatumGetBool(d_rexthdfs));
-
-					if (!createrexthdfs)
-						ereport(ERROR,
-								(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-								errmsg("permission denied: no privilege to create a readable gphdfs external table")));
-
-				}
-				else if (uri->protocol == URI_HTTP && !iswritable)
-				{
-					Datum 	d_exthttp = caql_getattr(pcqCtx, Anum_pg_authid_rolcreaterexthttp, 
-													 &isnull);
-					bool	createrexthttp = (isnull ? false : DatumGetBool(d_exthttp));
-
-					if (!createrexthttp)
-						ereport(ERROR,
-								(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-								errmsg("permission denied: no privilege to create an http external table")));
-				}
-				else if (uri->protocol == URI_CUSTOM)
-				{
-					Oid			ownerId = GetUserId();
-					char*		protname = uri->customprotocol;
-					Oid			ptcId = LookupExtProtocolOid(protname, false);
-					AclResult	aclresult;
-
-					/* Check we have the right permissions on this protocol */
-					if (!pg_extprotocol_ownercheck(ptcId, ownerId))
-					{	
-						AclMode mode = (iswritable ? ACL_INSERT : ACL_SELECT);
-						
-						aclresult = pg_extprotocol_aclcheck(ptcId, ownerId, mode);
-						
-						if (aclresult != ACLCHECK_OK)
-							aclcheck_error(aclresult, ACL_KIND_EXTPROTOCOL, protname);
-					}
-				}
-				else
-				{
-					ereport(ERROR,
-							(errcode(ERRCODE_INTERNAL_ERROR),
-							errmsg("internal error in DefineExternalRelation. "
-								   "protocol is %d, writable is %d", 
-								   uri->protocol, iswritable)));
-				}
-
-				caql_endscan(pcqCtx);
-			}
-			FreeExternalTableUri(uri);
-			pfree(uri_str);
-		}
-	}
-
-	/*
-	 * Parse and validate FORMAT clause.
-	 */
-	formattype = transformFormatType(createExtStmt->format);
-	
-	formatOptStr = transformFormatOpts(formattype,
-									   createExtStmt->formatOpts,
-									   list_length(createExtStmt->tableElts),
-									   iswritable);
-
-	/*
-	 * Parse single row error handling info if available
-	 */
-	singlerowerrorDesc = (SingleRowErrorDesc *)createExtStmt->sreh;
-
-	if (singlerowerrorDesc)
-	{
-		Assert(!iswritable);
-
-		issreh = true;
-
-		/* get reject limit, and reject limit type */
-		rejectlimit = singlerowerrorDesc->rejectlimit;
-		rejectlimittype = (singlerowerrorDesc->is_limit_in_rows ? 'r' : 'p');
-		VerifyRejectLimit(rejectlimittype, rejectlimit);
-	}
-
-	/*
-	 * Parse external table data encoding
-	 */
-	foreach(option, createExtStmt->encoding)
-	{
-		DefElem    *defel = (DefElem *) lfirst(option);
-
-		Assert(strcmp(defel->defname, "encoding") == 0);
-
-		if (dencoding)
-			ereport(ERROR,
-					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("conflicting or redundant ENCODING specification")));
-		dencoding = defel;
-	}
-
-	if (dencoding && dencoding->arg)
-	{
-		const char *encoding_name;
-
-		if (IsA(dencoding->arg, Integer))
-		{
-			encoding = intVal(dencoding->arg);
-			encoding_name = pg_encoding_to_char(encoding);
-			if (strcmp(encoding_name, "") == 0 ||
-				pg_valid_client_encoding(encoding_name) < 0)
-				ereport(ERROR,
-						(errcode(ERRCODE_UNDEFINED_OBJECT),
-						 errmsg("%d is not a valid encoding code",
-								encoding)));
-		}
-		else if (IsA(dencoding->arg, String))
-		{
-			encoding_name = strVal(dencoding->arg);
-			if (pg_valid_client_encoding(encoding_name) < 0)
-				ereport(ERROR,
-						(errcode(ERRCODE_UNDEFINED_OBJECT),
-						 errmsg("%s is not a valid encoding name",
-								encoding_name)));
-			encoding = pg_char_to_encoding(encoding_name);
-		}
-		else
-			elog(ERROR, "unrecognized node type: %d",
-				 nodeTag(dencoding->arg));
-	}
-
-	/* If encoding is defaulted, use database encoding */
-	if (encoding < 0)
-		encoding = pg_get_client_encoding();
-
-
-    /*
-	 * First, create the pg_class and other regular relation catalog entries.
-	 * Under the covers this will dispatch a CREATE TABLE statement to all the
-	 * QEs.
-	 */
-	if (Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_UTILITY)
-		reloid = DefineRelation(createStmt, RELKIND_RELATION, RELSTORAGE_EXTERNAL);
-
-	/*
-	 * Now we take care of pg_exttable.
-	 *
-	 * get our pg_class external rel OID. If we're the QD we just created
-	 * it above. If we're a QE DefineRelation() was already dispatched to
-	 * us and therefore we have a local entry in pg_class. get the OID
-	 * from cache.
-	 */
-	if (Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_UTILITY)
-		Assert(reloid != InvalidOid);
-	else
-		reloid = RangeVarGetRelid(createExtStmt->relation, true);
-
-	/*
-	 * In the case of error log file, set fmtErrorTblOid to the external table itself.
-	 */
-	if (issreh)
-		fmtErrTblOid = reloid;
-
-	/*
-	 * create a pg_exttable entry for this external table.
-	 */
-	InsertExtTableEntry(reloid,
-						iswritable,
-						isweb,
-						issreh,
-						formattype,
-						rejectlimittype,
-						commandString,
-						rejectlimit,
-						fmtErrTblOid,
-						encoding,
-						formatOptStr,
-						locationExec,
-						locationUris);
-
-	/*
-	 * DefineRelation loaded the new relation into relcache, but the
-	 * relcache contains the distribution policy, which in turn depends on
-	 * the contents of pg_exttable, for EXECUTE-type external tables
-	 * (see GpPolicyFetch()). Now that we have created the pg_exttable
-	 * entry, invalidate the relcache, so that it gets loaded with the
-	 * correct information.
-	 */
-	CacheInvalidateRelcacheByRelid(reloid);
-
-	if (shouldDispatch)
-	{
-
-		/*
-		 * Dispatch the statement tree to all primary segdbs.
-		 * Doesn't wait for the QEs to finish execution.
-		 */
-		CdbDispatchUtilityStatement((Node *)createExtStmt,
-									DF_CANCEL_ON_ERROR|
-									DF_WITH_SNAPSHOT|
-									DF_NEED_TWO_PHASE,
-									NULL);
-	}
-	
-	if(customProtName)
-		pfree(customProtName);
-	
-}
-
-/* ----------------------------------------------------------------
 *		DefinePartitionedRelation
 *				Create the rewrite rule for a partitioned table
 *
@@ -1594,7 +1206,6 @@ ExecuteTruncate(TruncateStmt *stmt)
 			meta_relids = lappend_oid(meta_relids, RelationGetRelid(rel));
 	}
 
-
 	/*
 	 * In CASCADE mode, suck in all referencing relations as well.	This
 	 * requires multiple iterations to find indirectly-dependent relations. At
@@ -1632,7 +1243,6 @@ ExecuteTruncate(TruncateStmt *stmt)
 			}
 		}
 	}
-
 
 	/*
 	 * Check foreign key references.  In CASCADE mode, this should be
@@ -3378,11 +2988,11 @@ AlterTable(AlterTableStmt *stmt)
  *
  * ALTER TABLE with target specified by OID
  *
- * We do not reject if the relation is already open, because it's quite likely
- * that one or more layers of caller have it open.  That means it is unsafe to
- * use this entry point for alterations that could break existing query plans.
- * On the assumption it's not used for such, we don't have to reject pending
- * AFTER triggers, either.
+ * We do not reject if the relation is already open, because it's quite
+ * likely that one or more layers of caller have it open.  That means it
+ * is unsafe to use this entry point for alterations that could break
+ * existing query plans.  On the assumption it's not used for such, we
+ * don't have to reject pending AFTER triggers, either.
  *
  * It is also unsafe to use this function for any Alter Table subcommand that
  * requires rewriting the table or creating toast tables, because that requires
@@ -3571,14 +3181,14 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 			ATExternalPartitionCheck(cmd->subtype, rel, recursing);
 			ATPartitionCheck(cmd->subtype, rel, false, recursing);
 			/* Performs own recursion */
-			ATPrepAddColumn(rel, recurse, cmd);
+			ATPrepAddColumn(wqueue, rel, recurse, cmd);
 			pass = AT_PASS_ADD_COL;
 			break;
 		case AT_AddColumnRecurse:		/* ADD COLUMN internal */
 			ATSimplePermissions(rel, false);
 			/* No need to do ATPartitionCheck */
 			/* Performs own recursion */
-			ATPrepAddColumn(rel, recurse, cmd);
+			ATPrepAddColumn(wqueue, rel, recurse, cmd);
 			pass = AT_PASS_ADD_COL;
 			break;
 		case AT_ColumnDefault:	/* ALTER COLUMN DEFAULT */
@@ -5137,7 +4747,7 @@ ATRewriteTables(List **wqueue,
 			 */
 			ATRewriteTable(tab, OIDNewHeap);
 
-			/* 
+			/*
 			 * Swap the physical files of the old and new heaps.  Since we are
 			 * generating a new heap, we can use RecentXmin for the table's
 			 * new relfrozenxid because we rewrote all the tuples on
@@ -5558,7 +5168,9 @@ ATRewriteTable(AlteredTableInfo *tab, Oid OIDNewHeap)
 	EState	   *estate;
 
 	/*
-	 * Open the relation(s).  We have surely already locked the existing table.
+	 * Open the relation(s).  We have surely already locked the existing
+	 * table.
+	 *
 	 * In EXCHANGE of partition case, we only need to validate the content
 	 * based on new constraints.  oldTupDesc should point to the oldrel's tuple
 	 * descriptor since tab->oldDesc comes from the parent partition.
@@ -5691,7 +5303,6 @@ ATRewriteTable(AlteredTableInfo *tab, Oid OIDNewHeap)
 			if (newTupDesc->attrs[i]->attisdropped)
 				dropped_attrs = lappend_int(dropped_attrs, i);
 		}
-
 
 		/*
 		 * Scan through the rows, generating a new row if needed and then
@@ -6327,7 +5938,7 @@ ATSimpleRecursion(List **wqueue, Relation rel,
  * When using this technique, a multiply-inheriting child will be visited
  * multiple times.
  */
-/*
+#if 0 /* unused in GPDB */
 static void
 ATOneLevelRecursion(List **wqueue, Relation rel,
 					AlterTableCmd *cmd)
@@ -6336,7 +5947,7 @@ ATOneLevelRecursion(List **wqueue, Relation rel,
 	ListCell   *child;
 	List	   *children;
 
-	* this routine is actually in the planner *
+	/* this routine is actually in the planner */
 	children = find_inheritance_children(relid);
 
 	foreach(child, children)
@@ -6350,7 +5961,7 @@ ATOneLevelRecursion(List **wqueue, Relation rel,
 		relation_close(childrel, NoLock);
 	}
 }
-*/
+#endif
 
 /*
  * find_composite_type_dependencies
@@ -6463,7 +6074,8 @@ find_composite_type_dependencies(Oid typeOid,
  * AlterTableCmd's.
  */
 static void
-ATPrepAddColumn(Relation rel, bool recurse, AlterTableCmd *cmd)
+ATPrepAddColumn(List **wqueue, Relation rel, bool recurse,
+				AlterTableCmd *cmd)
 {
 	/* 
 	 * If there's an encoding clause, this better be an append only
@@ -6480,76 +6092,80 @@ ATPrepAddColumn(Relation rel, bool recurse, AlterTableCmd *cmd)
 		def->encoding = transformStorageEncodingClause(def->encoding);
 
 	/*
-	 * If we are told not to recurse, there had better not be any child
-	 * tables; else the addition would put them out of step.
+	 * Recurse to add the column to child classes, if requested.
+	 *
+	 * We must recurse one level at a time, so that multiply-inheriting
+	 * children are visited the right number of times and end up with the
+	 * right attinhcount.
 	 */
-	if (!recurse && find_inheritance_children(RelationGetRelid(rel)) != NIL)
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				 errmsg("column must be added to child tables too")));
-	}
-	/*
-	 * We are the master and the table has child(ren):
-	 * 		internally create and execute new AlterTableStmt(s) on child(ren)
-	 * 		before dispatching the original AlterTableStmt
-	 * This is to ensure that pg_constraint oid is consistent across segments for
-	 * 		ALTER TABLE ... ADD COLUMN ... CHECK ...
-	 */
-	else if (Gp_role == GP_ROLE_DISPATCH)
+	if (recurse)
 	{
 		/*
-		 * Recurse to add the column to child classes.
-		 *
-		 * We must recurse one level at a time, so that multiply-inheriting
-		 * children are visited the right number of times and end up with the
-		 * right attinhcount.
+		 * We are the master and the table has child(ren):
+		 * 		internally create and execute new AlterTableStmt(s) on child(ren)
+		 * 		before dispatching the original AlterTableStmt
+		 * This is to ensure that pg_constraint oid is consistent across segments for
+		 * 		ALTER TABLE ... ADD COLUMN ... CHECK ...
 		 */
-		List		*children;
-		ListCell	*lchild;
-
-		children = find_inheritance_children(RelationGetRelid(rel));
-		DestReceiver *dest = None_Receiver;
-		foreach(lchild, children)
+		if (Gp_role == GP_ROLE_DISPATCH)
 		{
-			Oid 			childrelid = lfirst_oid(lchild);
-			Relation 		childrel;
+			List		*children;
+			ListCell	*lchild;
 
-			RangeVar 		*rv;
-			AlterTableCmd 	*atc;
-			AlterTableStmt 	*ats;
+			children = find_inheritance_children(RelationGetRelid(rel));
+			DestReceiver *dest = None_Receiver;
+			foreach(lchild, children)
+			{
+				Oid 			childrelid = lfirst_oid(lchild);
+				Relation 		childrel;
 
-			if (childrelid == RelationGetRelid(rel))
-				continue;
+				RangeVar 		*rv;
+				AlterTableCmd 	*atc;
+				AlterTableStmt 	*ats;
 
-			childrel = heap_open(childrelid, AccessShareLock);
-			CheckTableNotInUse(childrel, "ALTER TABLE");
+				if (childrelid == RelationGetRelid(rel))
+					continue;
 
-			/* Recurse to child */
-			atc = copyObject(cmd);
-			atc->subtype = AT_AddColumnRecurse;
+				childrel = heap_open(childrelid, AccessShareLock);
+				CheckTableNotInUse(childrel, "ALTER TABLE");
 
-			/* Child should see column as singly inherited */
-			((ColumnDef *) atc->def)->inhcount = 1;
-			((ColumnDef *) atc->def)->is_local = false;
+				/* Recurse to child */
+				atc = copyObject(cmd);
+				atc->subtype = AT_AddColumnRecurse;
 
-			rv = makeRangeVar(get_namespace_name(RelationGetNamespace(childrel)),
-							  get_rel_name(childrelid), -1);
+				/* Child should see column as singly inherited */
+				((ColumnDef *) atc->def)->inhcount = 1;
+				((ColumnDef *) atc->def)->is_local = false;
 
-			ats = makeNode(AlterTableStmt);
-			ats->relation = rv;
-			ats->cmds = list_make1(atc);
-			ats->relkind = OBJECT_TABLE;
+				rv = makeRangeVar(get_namespace_name(RelationGetNamespace(childrel)),
+								  get_rel_name(childrelid), -1);
 
-			heap_close(childrel, NoLock);
+				ats = makeNode(AlterTableStmt);
+				ats->relation = rv;
+				ats->cmds = list_make1(atc);
+				ats->relkind = OBJECT_TABLE;
 
-			ProcessUtility((Node *)ats,
-							synthetic_sql,
-							NULL,
-							false, /* not top level */
-							dest,
-							NULL);
+				heap_close(childrel, NoLock);
+
+				ProcessUtility((Node *)ats,
+							   synthetic_sql,
+							   NULL,
+							   false, /* not top level */
+							   dest,
+							   NULL);
+			}
 		}
+	}
+	else
+	{
+		/*
+		 * If we are told not to recurse, there had better not be any child
+		 * tables; else the addition would put them out of step.
+		 */
+		if (find_inheritance_children(RelationGetRelid(rel)) != NIL)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+					 errmsg("column must be added to child tables too")));
 	}
 }
 
@@ -6792,7 +6408,7 @@ ATExecAddColumn(AlteredTableInfo *tab, Relation rel,
 		baseTypeMod = typmod;
 		baseTypeId = getBaseTypeAndTypmod(typeOid, &baseTypeMod);
 		defval = (Expr *) makeNullConst(baseTypeId, baseTypeMod);
-		defval = (Expr *) coerce_to_target_type(NULL, 
+		defval = (Expr *) coerce_to_target_type(NULL,
 												(Node *) defval,
 												baseTypeId,
 												typeOid,
@@ -7537,10 +7153,9 @@ ATExecDropColumn(List **wqueue, Relation rel, const char *colName,
 			if (recurse)
 			{
 				/*
-				 * If the child column has other definition sources,
-				 * just decrement its inheritance count;
-				 * if not or if this is part of a partition
-				 * configuration, recurse to delete it.
+				 * If the child column has other definition sources, just
+				 * decrement its inheritance count; if not or if this is part
+				 * of a partition configuration, recurse to delete it.
 				 */
 				if ((childatt->attinhcount == 1 && !childatt->attislocal) ||
 					pn)
@@ -7798,6 +7413,7 @@ ATExecAddConstraint(AlteredTableInfo *tab, Relation rel, Node *newConstraint, bo
 		case T_Constraint:
 			{
 				Constraint *constr = (Constraint *) newConstraint;
+
 				/*
 				 * Currently, we only expect to see CONSTR_CHECK nodes
 				 * arriving here (see the preprocessing done in
@@ -8110,18 +7726,18 @@ ATAddForeignKeyConstraint(AlteredTableInfo *tab, Relation rel,
 
 	for (i = 0; i < numpks; i++)
 	{
-		Oid				pktype = pktypoid[i];
-		Oid				fktype = fktypoid[i];
-		Oid				fktyped;
-		HeapTuple		cla_ht;
-		Form_pg_opclass	cla_tup;
-		Oid				amid;
-		Oid				opfamily;
-		Oid				opcintype;
-		Oid				pfeqop;
-		Oid				ppeqop;
-		Oid				ffeqop;
-		int16			eqstrategy;
+		Oid			pktype = pktypoid[i];
+		Oid			fktype = fktypoid[i];
+		Oid			fktyped;
+		HeapTuple	cla_ht;
+		Form_pg_opclass cla_tup;
+		Oid			amid;
+		Oid			opfamily;
+		Oid			opcintype;
+		Oid			pfeqop;
+		Oid			ppeqop;
+		Oid			ffeqop;
+		int16		eqstrategy;
 
 		/* We need several fields out of the pg_opclass entry */
 		cla_ht = SearchSysCache(CLAOID,
@@ -8628,7 +8244,6 @@ CreateFKCheckTrigger(RangeVar *myRel, FkConstraint *fkconstraint,
 	fk_trigger->deferrable = fkconstraint->deferrable;
 	fk_trigger->initdeferred = fkconstraint->initdeferred;
 	fk_trigger->constrrel = fkconstraint->pktable;
-
 	fk_trigger->args = NIL;
 
 	trigobj = CreateTrigger(fk_trigger, constraintOid);
@@ -8718,7 +8333,6 @@ createForeignKeyTriggers(Relation rel, FkConstraint *fkconstraint,
 				 (int) fkconstraint->fk_del_action);
 			break;
 	}
-
 	fk_trigger->args = NIL;
 	fk_trigger->trigOid = fkconstraint->trig3Oid;
 
@@ -8790,14 +8404,12 @@ createForeignKeyTriggers(Relation rel, FkConstraint *fkconstraint,
 				 (int) fkconstraint->fk_upd_action);
 			break;
 	}
-
 	fk_trigger->args = NIL;
 
 	fk_trigger->trigOid = fkconstraint->trig4Oid;
 
 	fkconstraint->trig4Oid = CreateTrigger(fk_trigger, constraintOid);
 }
-
 
 /*
  * ALTER TABLE DROP CONSTRAINT
@@ -9010,24 +8622,24 @@ static void
 ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 					  const char *colName, TypeName *typename)
 {
-	HeapTuple heapTup;
+	HeapTuple	heapTup;
 	Form_pg_attribute attTup;
-	AttrNumber attnum;
-	HeapTuple typeTuple;
+	AttrNumber	attnum;
+	HeapTuple	typeTuple;
 	Form_pg_type tform;
-	Oid targettype;
-	int32 targettypmod;
-	Node *defaultexpr;
-	Relation attrelation;
-	Relation depRel;
-	HeapTuple depTup;
-	GpPolicy *policy = rel->rd_cdbpolicy;
-	bool sourceIsInt = false;
-	bool targetIsInt = false;
-	bool sourceIsVarlenA = false;
-	bool targetIsVarlenA = false;
-	bool hashCompatible = false;
-	bool relContainsTuples = false;
+	Oid			targettype;
+	int32		targettypmod;
+	Node	   *defaultexpr;
+	Relation	attrelation;
+	Relation	depRel;
+	HeapTuple	depTup;
+	GpPolicy   *policy = rel->rd_cdbpolicy;
+	bool		sourceIsInt = false;
+	bool		targetIsInt = false;
+	bool		sourceIsVarlenA = false;
+	bool		targetIsVarlenA = false;
+	bool		hashCompatible = false;
+	bool		relContainsTuples = false;
 	cqContext cqc;
 	cqContext cqc2;
 	cqContext *pcqCtx;
@@ -9048,7 +8660,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	attTup = (Form_pg_attribute) GETSTRUCT(heapTup);
 	attnum = attTup->attnum;
 
-	/* Check for multiple ALTER TYPE on same column -- can't cope */
+	/* Check for multiple ALTER TYPE on same column --- can't cope */
 	if (attTup->atttypid != tab->oldDesc->attrs[attnum - 1]->atttypid ||
 		attTup->atttypmod != tab->oldDesc->attrs[attnum - 1]->atttypmod)
 		ereport(ERROR,
@@ -9088,13 +8700,13 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 
 	/*
 	 * If there is a default expression for the column, get it and ensure we
-	 * can coerce it to the new datatype. (We must do this before changing
+	 * can coerce it to the new datatype.  (We must do this before changing
 	 * the column type, because build_column_default itself will try to
 	 * coerce, and will not issue the error message we want if it fails.)
 	 *
 	 * We remove any implicit coercion steps at the top level of the old
 	 * default expression; this has been agreed to satisfy the principle of
-	 * least surprise. (The conversion to the new column type should act like
+	 * least surprise.	(The conversion to the new column type should act like
 	 * it started from what the user sees as the stored expression, and the
 	 * implicit coercions aren't going to be shown.)
 	 */
@@ -9103,7 +8715,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 		defaultexpr = build_column_default(rel, attnum);
 		Assert(defaultexpr);
 		defaultexpr = strip_implicit_coercions(defaultexpr);
-		defaultexpr = coerce_to_target_type(NULL, /* no UNKNOWN params */
+		defaultexpr = coerce_to_target_type(NULL,		/* no UNKNOWN params */
 										  defaultexpr, exprType(defaultexpr),
 											targettype, targettypmod,
 											COERCION_ASSIGNMENT,
@@ -9112,8 +8724,8 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 		if (defaultexpr == NULL)
 			ereport(ERROR,
 					(errcode(ERRCODE_DATATYPE_MISMATCH),
-					 errmsg("default for column \"%s\" cannot be cast to type \"%s\"",
-							colName, TypeNameToString(typename))));
+			errmsg("default for column \"%s\" cannot be cast to type \"%s\"",
+				   colName, TypeNameToString(typename))));
 	}
 	else
 		defaultexpr = NULL;
@@ -9131,12 +8743,12 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	 * and record enough information to let us recreate the objects.
 	 *
 	 * The actual recreation does not happen here, but only after we have
-	 * performed all the individual ALTER TYPE operations. We have to save
+	 * performed all the individual ALTER TYPE operations.	We have to save
 	 * the info before executing ALTER TYPE, though, else the deparser will
 	 * get confused.
 	 *
 	 * There could be multiple entries for the same object, so we must check
-	 * to ensure we process each one only once. Note: we assume that an index
+	 * to ensure we process each one only once.  Note: we assume that an index
 	 * that implements a constraint will not show a direct dependency on the
 	 * column.
 	 */
@@ -9170,7 +8782,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 		{
 			case OCLASS_CLASS:
 				{
-					char relKind = get_rel_relkind(foundObject.objectId);
+					char		relKind = get_rel_relkind(foundObject.objectId);
 
 					if (relKind == RELKIND_INDEX)
 					{
@@ -9207,7 +8819,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 					else if (relKind == RELKIND_SEQUENCE)
 					{
 						/*
-						 * This must be a SERIAL column's sequence. We need
+						 * This must be a SERIAL column's sequence.  We need
 						 * not do anything to it.
 						 */
 						Assert(foundObject.objectSubId == 0);
@@ -9223,9 +8835,10 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 
 			case OCLASS_CONSTRAINT:
 				Assert(foundObject.objectSubId == 0);
-				if (!list_member_oid(tab->changedConstraintOids, foundObject.objectId))
+				if (!list_member_oid(tab->changedConstraintOids,
+									 foundObject.objectId))
 				{
-					char *defstring = pg_get_constraintdef_string(foundObject.objectId);
+					char	   *defstring = pg_get_constraintdef_string(foundObject.objectId);
 
 					if (relContainsTuples &&
 						(strstr(defstring," UNIQUE") != 0 || strstr(defstring,"PRIMARY KEY") != 0))
@@ -9249,7 +8862,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 
 					/*
 					 * Put NORMAL dependencies at the front of the list and
-					 * AUTO dependencies at the back. This makes sure that
+					 * AUTO dependencies at the back.  This makes sure that
 					 * foreign-key constraints depending on this column will
 					 * be dropped before unique or primary-key constraints of
 					 * the column; which we must have because the FK
@@ -9258,13 +8871,21 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 					 */
 					if (foundDep->deptype == DEPENDENCY_NORMAL)
 					{
-						tab->changedConstraintOids = lcons_oid(foundObject.objectId, tab->changedConstraintOids);
-						tab->changedConstraintDefs = lcons(defstring, tab->changedConstraintDefs);
+						tab->changedConstraintOids =
+							lcons_oid(foundObject.objectId,
+									  tab->changedConstraintOids);
+						tab->changedConstraintDefs =
+							lcons(defstring,
+								  tab->changedConstraintDefs);
 					}
 					else
 					{
-						tab->changedConstraintOids = lappend_oid(tab->changedConstraintOids, foundObject.objectId);
-						tab->changedConstraintDefs = lappend(tab->changedConstraintDefs, defstring);
+						tab->changedConstraintOids =
+							lappend_oid(tab->changedConstraintOids,
+										foundObject.objectId);
+						tab->changedConstraintDefs =
+							lappend(tab->changedConstraintDefs,
+									defstring);
 					}
 				}
 				break;
@@ -9320,7 +8941,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	caql_endscan(pcqCtx);
 
 	/*
-	 * Now scan for dependencies of this column on other things. The only
+	 * Now scan for dependencies of this column on other things.  The only
 	 * thing we should find is the dependency on the column datatype, which we
 	 * want to remove.
 	 */
@@ -9339,7 +8960,8 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 		Form_pg_depend foundDep = (Form_pg_depend) GETSTRUCT(depTup);
 
 		if (foundDep->deptype != DEPENDENCY_NORMAL)
-			elog(ERROR, "found unexpected dependency type '%c'", foundDep->deptype);
+			elog(ERROR, "found unexpected dependency type '%c'",
+				 foundDep->deptype);
 		if (foundDep->refclassid != TypeRelationId ||
 			foundDep->refobjid != attTup->atttypid)
 			elog(ERROR, "found unexpected dependency for column");
@@ -9382,7 +9004,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	}
 
 	/*
-	 * Here we go -- change the recorded column type. (Note heapTup is a
+	 * Here we go --- change the recorded column type.	(Note heapTup is a
 	 * copy of the syscache entry, so okay to scribble on.)
 	 */
 	attTup->atttypid = targettype;
@@ -9408,9 +9030,9 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	RemoveStatistics(RelationGetRelid(rel), attnum);
 
 	/*
-	 * Update the default, if present, by brute force -- remove and re-add
-	 * the default. Probably unsafe to take shortcuts, since the new version
-	 * may well have additional dependencies. (It's okay to do this now,
+	 * Update the default, if present, by brute force --- remove and re-add
+	 * the default.  Probably unsafe to take shortcuts, since the new version
+	 * may well have additional dependencies.  (It's okay to do this now,
 	 * rather than after other ALTER TYPE commands, since the default won't
 	 * depend on other column types.)
 	 */
@@ -10016,19 +9638,19 @@ get_settable_tablespace_oid(char *tablespacename)
 {
 	Oid			tablespaceId;
 	AclResult	aclresult;
-	
+
 	/* Check that the tablespace exists */
 	tablespaceId = get_tablespace_oid(tablespacename);
 	if (!OidIsValid(tablespaceId))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 errmsg("tablespace \"%s\" does not exist", tablespacename)));
-	
+
 	/* Check its permissions */
 	aclresult = pg_tablespace_aclcheck(tablespaceId, GetUserId(), ACL_CREATE);
 	if (aclresult != ACLCHECK_OK)
 		aclcheck_error(aclresult, ACL_KIND_TABLESPACE, tablespacename);
-	
+
 	return tablespaceId;
 }
 
@@ -17077,666 +16699,6 @@ AtEOSubXact_on_commit_actions(bool isCommit, SubTransactionId mySubid,
 }
 
 
-/*
- * Transform the URI string list into a text array (the form that is
- * used in the catalog table pg_exttable). While at it we validate
- * the URI strings.
- *
- * The result is a text array but we declare it as Datum to avoid
- * including array.h in analyze.h.
- */
-static Datum transformLocationUris(List *locs, bool isweb, bool iswritable)
-{
-	ListCell   *cell;
-	ArrayBuildState *astate;
-	Datum		result;
-	UriProtocol first_protocol = URI_FILE; /* initialize to keep gcc quiet */
-	bool		first_uri = true;
-	
-#define FDIST_DEF_PORT 8080
-
-	/* Parser should not let this happen */
-	Assert(locs != NIL);
-
-	/* We build new array using accumArrayResult */
-	astate = NULL;
-
-	/*
-	 * first, check for duplicate URI entries
-	 */
-	foreach(cell, locs)
-	{
-		Value		*v1 = lfirst(cell);
-		const char	*uri1 = v1->val.str;
-		ListCell   *rest;
-
-		for_each_cell(rest, lnext(cell))
-		{
-			Value		*v2 = lfirst(rest);
-			const char	*uri2 = v2->val.str;
-
-			if (strcmp(uri1, uri2) == 0)
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-						 errmsg("location uri \"%s\" appears more than once",
-								uri1)));
-		}
-	}
-
-	/*
-	 * iterate through the user supplied URI list from LOCATION clause.
-	 */
-	foreach(cell, locs)
-	{
-		Uri			*uri;
-		text		*t;
-		char		*uri_str_orig;
-		char		*uri_str_final;
-		Size		len;
-		Value		*v = lfirst(cell);
-		
-		/* get the current URI string from the command */
-		uri_str_orig = pstrdup(v->val.str);
-
-		/* parse it to its components */
-		uri = ParseExternalTableUri(uri_str_orig);
-
-		/* allocate memory for a modified URI string (if needs modification) */
-		uri_str_final = (char *) palloc(strlen(uri_str_orig) *
-						  sizeof(char) +
-						  1 + 4 + 1 /* default port if added */);
-
-		/*
-		 * in here edit the uri string if needed
-		 */
-
-		/* no port was specified for gpfdist, gpfdists or hdfs. add the default */
-		if ((uri->protocol == URI_GPFDIST || uri->protocol == URI_GPFDISTS) && uri->port == -1)
-		{
-			char *at_hostname = (char *) uri_str_orig
-					+ strlen(uri->protocol == URI_GPFDIST ? "gpfdist://" : "gpfdists://");
-			char *after_hostname = strchr(at_hostname, '/');
-			int  len = after_hostname - at_hostname;
-			char *hostname = pstrdup(at_hostname);
-
-			hostname[len] = '\0';
-
-			/* add the default port number to the uri string */
-			sprintf(uri_str_final, "%s%s:%d%s",
-					(uri->protocol == URI_GPFDIST ? PROTOCOL_GPFDIST : PROTOCOL_GPFDISTS),
-					hostname,
-					FDIST_DEF_PORT, after_hostname);
-
-			pfree(hostname);
-		}
-		else
-		{
-			/* no changes to original uri string */
-			uri_str_final = (char *) uri_str_orig;
-		}
-
-		/*
-		 * check for various errors
-		 */
-		if (!first_uri && uri->protocol == URI_GPHDFS)
-			ereport(ERROR,
-					(errcode(ERRCODE_SYNTAX_ERROR),
-					errmsg("GPHDFS can only have one location list"),
-					errhint("Combine multiple HDFS files into a single file")));
-
-
-		/* 
-		 * If a custom protocol is used, validate its existence.
-		 * If it exists, and a custom protocol url validator exists
-		 * as well, invoke it now.
-		 */
-		if (first_uri && uri->protocol == URI_CUSTOM)
-		{
-			Oid		procOid = InvalidOid;
-			
-			procOid = LookupExtProtocolFunction(uri->customprotocol, 
-												EXTPTC_FUNC_VALIDATOR, 
-												false);
-
-			if (OidIsValid(procOid) && Gp_role == GP_ROLE_DISPATCH)
-				InvokeProtocolValidation(procOid, 
-										 uri->customprotocol, 
-										 iswritable, 
-										 locs);
-		}
-		
-		if(first_uri)
-		{
-		    first_protocol = uri->protocol;
-		    first_uri = false;
-		} 
-		    	
-
-		if(uri->protocol != first_protocol)
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("URI protocols must be the same for all data sources"),
-					 errhint("Available protocols are 'http', 'file', 'gphdfs', 'gpfdist' and 'gpfdists'")));
-
-		}
-		
-		if(uri->protocol != URI_HTTP && isweb)
-			ereport(ERROR,
-					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("an EXTERNAL WEB TABLE may only use http URI\'s, problem in: \'%s\'", uri_str_final),
-					 errhint("Use CREATE EXTERNAL TABLE instead.")));
-
-		if(uri->protocol == URI_HTTP && !isweb)
-			ereport(ERROR,
-					(errcode(ERRCODE_SYNTAX_ERROR),
-					errmsg("http URI\'s can only be used in an external web table"),
-					errhint("Use CREATE EXTERNAL WEB TABLE instead.")));
-
-		if(iswritable && (uri->protocol == URI_HTTP || uri->protocol == URI_FILE))
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("unsupported URI protocol \'%s\' for writable external table", 
-							(uri->protocol == URI_HTTP ? "http" : "file")),
-					 errhint("Writable external tables may use \'gpfdist\', \'gpfdists\' or \'gphdfs\' URIs only.")));
-
-		if(uri->protocol != URI_CUSTOM && iswritable && strchr(uri->path, '*'))
-			ereport(ERROR,
-					(errcode(ERRCODE_SYNTAX_ERROR),
-					errmsg("Unsupported use of wildcard in a writable external web table definition: "
-							"\'%s\'", uri_str_final),
-					errhint("Specify the explicit path and file name to write into.")));
-		
-		if ((uri->protocol == URI_GPFDIST || uri->protocol == URI_GPFDISTS) && iswritable && uri->path[strlen(uri->path) - 1] == '/')
-			ereport(ERROR,
-					(errcode(ERRCODE_SYNTAX_ERROR),
-					errmsg("Unsupported use of a directory name in a writable gpfdist(s) external table : "
-							"\'%s\'", uri_str_final),
-					errhint("Specify the explicit path and file name to write into.")));
-
-		len = VARHDRSZ + strlen(uri_str_final);
-
-		/* +1 leaves room for sprintf's trailing null */
-		t = (text *) palloc(len + 1);
-		SET_VARSIZE(t, len);
-		sprintf((char *) VARDATA(t), "%s", uri_str_final);
-
-
-		astate = accumArrayResult(astate, PointerGetDatum(t),
-								  false, TEXTOID,
-								  CurrentMemoryContext);
-
-		FreeExternalTableUri(uri);
-		pfree(uri_str_final);
-	}
-
-	if (astate)
-		result = makeArrayResult(astate, CurrentMemoryContext);
-	else
-		result = (Datum) 0;
-
-	return result;
-
-}
-
-static Datum transformExecOnClause(List	*on_clause)
-{
-	ArrayBuildState *astate;
-	Datum		result;
-
-	ListCell   *exec_location_opt;
-	char	   *exec_location_str = NULL;
-	char	   *value_str = NULL;
-	int			value_int;
-	Size		len;
-	text		*t;
-
-	/*
-	 * Extract options from the statement node tree
-	 * NOTE: as of now we only support one option in the ON clause
-	 * and therefore more than one is an error (check here in case
-	 * the sql parser isn't strict enough).
-	 */
-	foreach(exec_location_opt, on_clause)
-	{
-		DefElem    *defel = (DefElem *) lfirst(exec_location_opt);
-
-		/* only one element is allowed! */
-		if(exec_location_str)
-			ereport(ERROR,
-					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("ON clause must not have more than one element.")));
-
-		if (strcmp(defel->defname, "all") == 0)
-		{
-			/* result: "ALL_SEGMENTS" */
-			exec_location_str = (char *) palloc(12 + 1);
-			exec_location_str = "ALL_SEGMENTS";
-		}
-		else if (strcmp(defel->defname, "hostname") == 0)
-		{
-			/* result: "HOST:<hostname>" */
-			value_str = strVal(defel->arg);
-			exec_location_str = (char *) palloc(5 + 1 + strlen(value_str) + 1);
-			sprintf((char *) exec_location_str, "HOST:%s", value_str);
-		}
-		else if (strcmp(defel->defname, "eachhost") == 0)
-		{
-			/* result: "PER_HOST" */
-			exec_location_str = (char *) palloc(8 + 1);
-			exec_location_str = "PER_HOST";
-		}
-		else if (strcmp(defel->defname, "master") == 0)
-		{
-			/* result: "MASTER_ONLY" */
-			exec_location_str = (char *) palloc(11 + 1);
-			exec_location_str = "MASTER_ONLY";
-		}
-		else if (strcmp(defel->defname, "segment") == 0)
-		{
-			/* result: "SEGMENT_ID:<segid>" */
-			value_int = intVal(defel->arg);
-			exec_location_str = (char *) palloc(10 + 1 + 8 + 1);
-			sprintf((char *) exec_location_str, "SEGMENT_ID:%d", value_int);
-		}
-		else if (strcmp(defel->defname, "random") == 0)
-		{
-			/* result: "TOTAL_SEGS:<number>" */
-			value_int = intVal(defel->arg);
-			exec_location_str = (char *) palloc(10 + 1 + 8 + 1);
-			sprintf((char *) exec_location_str, "TOTAL_SEGS:%d", value_int);
-		}
-		else
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_GP_INTERNAL_ERROR),
-					 errmsg("Unknown location code for EXECUTE in tablecmds.")));
-		}
-	}
-
-	/* convert to text[] */
-	astate = NULL;
-	len = VARHDRSZ + strlen(exec_location_str);
-	t = (text *) palloc(len + 1);
-	SET_VARSIZE(t, len);
-	sprintf((char *) VARDATA(t), "%s", exec_location_str);
-
-
-	astate = accumArrayResult(astate, PointerGetDatum(t),
-							  false, TEXTOID,
-							  CurrentMemoryContext);
-
-	if (astate)
-		result = makeArrayResult(astate, CurrentMemoryContext);
-	else
-		result = (Datum) 0;
-
-	return result;
-}
-
-/*
- * Transform format name for external table FORMAT option to format code and
- * validate that the requested format is supported.
- */
-static char transformFormatType(char *formatname)
-{
-	char	result = '\0';
-
-	if(pg_strcasecmp(formatname, "text") == 0)
-		result = 't';
-	else if(pg_strcasecmp(formatname, "csv") == 0)
-		result = 'c';
-	else if(pg_strcasecmp(formatname, "custom") == 0)
-		result = 'b';
-    else if(pg_strcasecmp(formatname, "avro") == 0)
-        result = 'a';
-    else if(pg_strcasecmp(formatname, "parquet") == 0)
-        result = 'p';
-	else
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("unsupported format '%s'", formatname),
-				 errhint("Available formats for external tables are \"text\", "
-				 		 "\"csv\", \"avro\", \"parquet\" and \"custom\"")));
-
-	return result;
-}
-
-
-/*
- * Transform the FORMAT options into a text field. Parse the
- * options and validate them for their respective format type.
- *
- * The result is a text field that includes the format string.
- */
-static Datum transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswritable)
-{
-	ListCell   *option;
-	Datum		result;
-	char *format_str = NULL;
-	char *delim = NULL;
-	char *null_print = NULL;
-	char *quote = NULL;
-	char *escape = NULL;
-	char *eol_str = NULL;
-	char *formatter = NULL;
-	bool header_line = false;
-	bool fill_missing = false;
-	List *force_notnull = NIL;
-	List *force_quote = NIL;
-	Size len;
-	StringInfoData fnn, fq, nl;
-
-    Assert(fmttype_is_custom(formattype) ||
-           fmttype_is_text(formattype) ||
-           fmttype_is_csv(formattype) ||
-           fmttype_is_avro(formattype) ||
-           fmttype_is_parquet(formattype));
-	
-	/* Extract options from the statement node tree */
-	if (fmttype_is_text(formattype) || fmttype_is_csv(formattype))
-	{
-		foreach(option, formatOpts)
-		{
-			DefElem    *defel = (DefElem *) lfirst(option);
-
-			if (strcmp(defel->defname, "delimiter") == 0)
-			{
-				if (delim)
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("conflicting or redundant options")));
-				delim = strVal(defel->arg);
-			}
-			else if (strcmp(defel->defname, "null") == 0)
-			{
-				if (null_print)
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("conflicting or redundant options")));
-				null_print = strVal(defel->arg);
-			}
-			else if (strcmp(defel->defname, "header") == 0)
-			{
-				if (header_line)
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("conflicting or redundant options")));
-				header_line = intVal(defel->arg);
-			}
-			else if (strcmp(defel->defname, "quote") == 0)
-			{
-				if (quote)
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("conflicting or redundant options")));
-				quote = strVal(defel->arg);
-			}
-			else if (strcmp(defel->defname, "escape") == 0)
-			{
-				if (escape)
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("conflicting or redundant options")));
-				escape = strVal(defel->arg);
-			}
-			else if (strcmp(defel->defname, "force_notnull") == 0)
-			{
-				if (force_notnull)
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("conflicting or redundant options")));
-					
-				force_notnull = (List *) defel->arg;
-			}
-			else if (strcmp(defel->defname, "force_quote") == 0)
-			{
-				if (force_quote)
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("conflicting or redundant options")));
-					
-				force_quote = (List *) defel->arg;
-			}
-			else if (strcmp(defel->defname, "fill_missing_fields") == 0)
-			{
-				if (fill_missing)
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("conflicting or redundant options")));
-				fill_missing = intVal(defel->arg);
-			}
-			else if (strcmp(defel->defname, "newline") == 0)
-			{
-				if (eol_str)
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("conflicting or redundant options")));
-				eol_str = strVal(defel->arg);
-			}
-			else if (strcmp(defel->defname, "formatter") == 0)
-			{
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("formatter option only valid for custom formatters")));
-			}
-			else
-				elog(ERROR, "option \"%s\" not recognized",
-					 defel->defname);
-		}
-
-		/*
-		 * Set defaults
-		 */
-		if (!delim)
-			delim = fmttype_is_csv(formattype) ? "," : "\t";
-
-		if (!null_print)
-			null_print = fmttype_is_csv(formattype) ? "" : "\\N";
-
-		if (fmttype_is_csv(formattype))
-		{
-			if (!quote)
-				quote = "\"";
-			if (!escape)
-				escape = quote;
-		}
-
-		if (!fmttype_is_csv(formattype) && !escape)
-			escape = "\\";			/* default escape for text mode */
-
-		/*
-		 * re-construct the FORCE NOT NULL list string.
-		 * TODO: is there no existing util function that does this? can't find.
-		 */
-		if(force_notnull)
-		{
-			ListCell   *l;
-			bool 		is_first_col = true;
-
-			initStringInfo(&fnn);
-			appendStringInfo(&fnn, " force not null");
-
-			foreach(l, force_notnull)
-			{
-				const char	   *col_name = strVal(lfirst(l));
-
-				appendStringInfo(&fnn, (is_first_col ? " %s" : ",%s"),
-								 quote_identifier(col_name));
-				is_first_col = false;
-			}
-		}
-
-		/*
-		 * re-construct the FORCE QUOTE list string.
-		 */
-		if(force_quote)
-		{
-			ListCell   *l;
-			bool 		is_first_col = true;
-
-			initStringInfo(&fq);
-			appendStringInfo(&fq, " force quote");
-
-			foreach(l, force_quote)
-			{
-				const char	   *col_name = strVal(lfirst(l));
-
-				appendStringInfo(&fq, (is_first_col ? " %s" : ",%s"),
-								 quote_identifier(col_name));
-				is_first_col = false;
-			}
-		}
-
-		if(eol_str)
-		{
-			initStringInfo(&nl);
-			appendStringInfo(&nl, " newline '%s'", eol_str);
-		}
-		
-		/* verify all user supplied control char combinations are legal */
-		ValidateControlChars(false,
-							 !iswritable,
-							 fmttype_is_csv(formattype),
-							 delim,
-							 null_print,
-							 quote,
-							 escape,
-							 force_quote,
-							 force_notnull,
-							 header_line,
-							 fill_missing,
-							 eol_str,
-							 numcols);
-	
-		/*
-		 * build the format option string that will get stored in the catalog.
-		 */
-	
-		len = 9 + 1 + 1 + strlen(delim) + 1 +		/* "delimiter 'x' of 'off'" */
-			  1 +									/* space					*/
-			  4 + 1 + 1 + strlen(null_print) + 1 +	/* "null 'str'"				*/
-			  1 +									/* space					*/
-			  6 + 1 + 1 + strlen(escape) + 1;		/* "escape 'c' or 'off' 	*/
-	
-		if (fmttype_is_csv(formattype))
-			len +=	1 +								/* space					*/
-					5 + 1 + 3;						/* "quote 'x'"				*/
-	
-		len += header_line ? strlen(" header") : 0;
-		len += fill_missing ? strlen(" fill missing fields") : 0;
-		len += force_notnull ? strlen(fnn.data) : 0;
-		len += force_quote ? strlen(fq.data) : 0;
-		len += (eol_str ? (1 + 7 + 1 + 1 + strlen(eol_str) + 1) : 0); /* space x 2, newline 'xx/xxxx' */
-	
-		/* +1 leaves room for sprintf's trailing null */
-		format_str = (char *) palloc(len + 1);
-	
-		if(fmttype_is_text(formattype))
-		{
-			sprintf((char *) format_str, "delimiter '%s' null '%s' escape '%s'%s%s%s",
-					delim, null_print, escape, (header_line ? " header":""),
-					(fill_missing ? " fill missing fields":""), (eol_str ?  nl.data : ""));
-		}
-		else if (fmttype_is_csv(formattype))
-		{
-			
-			sprintf((char *) format_str, "delimiter '%s' null '%s' escape '%s' quote '%s'%s%s%s%s%s",
-					delim, null_print, escape, quote, (header_line ? " header" : ""),
-					(fill_missing ? " fill missing fields":""),
-					(force_notnull ? fnn.data :""), (force_quote ? fq.data :""),
-					(eol_str ?  nl.data : ""));
-		}
-		else
-		{
-			/* should never happen */
-			Assert(false);
-		}
-
-	}
-    else if (fmttype_is_avro(formattype) || fmttype_is_parquet(formattype))
-    {
-        /* avro format, add "formatter 'gphdfs_import’ " directly, user don't
-         * need to set this value*/
-        char *val = NULL;
-        if (iswritable)
-        {
-            val = "gphdfs_export";
-        }else{
-            val = "gphdfs_import";
-        }
-
-        const int   maxlen = 32;
-        format_str = (char *) palloc0(maxlen + 1);
-        if(format_str)
-        {
-            sprintf((char *) format_str, "%s '%s' ", "formatter", val);
-        }
-        else
-        {
-            ereport(ERROR, (errcode(ERRCODE_GP_INTERNAL_ERROR),
-                errmsg("palloc return null")));
-        }
-    }
-	else
-	{
-		/* custom format */
-		StringInfoData cfbuf;
-
-		initStringInfo(&cfbuf);
-
-		foreach(option, formatOpts)
-		{
-			DefElem    *defel = (DefElem *) lfirst(option);
-			char	   *key = defel->defname;
-			char	   *val = defGetString(defel);
-			
-			if (strcmp(key, "formatter") == 0)
-			{
-				if (formatter)
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("conflicting or redundant options")));
-					
-				formatter = strVal(defel->arg);
-			}
-
-			/*
-			 * Output "<key> '<val>' ", but replace any space chars in the key
-			 * with meta char (MPP-14467)
-			 */
-			while (*key)
-			{
-				if (*key == ' ')
-					appendStringInfoString(&cfbuf, "<gpx20>");
-				else
-					appendStringInfoChar(&cfbuf, *key);
-				key++;
-			}
-			appendStringInfo(&cfbuf, " '%s' ", val);
-		}
-		
-		if(!formatter)
-			ereport(ERROR,
-					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("no formatter function specified")));
-
-		format_str = cfbuf.data;
-	}
-
-	/* convert c string to text datum */
-	result = DirectFunctionCall1(textin, CStringGetDatum(format_str));
-
-	/* clean up */
-	if (format_str) pfree(format_str);
-	if (force_notnull) pfree(fnn.data);
-	if (force_quote) pfree(fq.data);
-	if (eol_str) pfree(nl.data);
-	
-	return result;
-
-}
-
 /* ALTER TABLE EXCHANGE
  *
  * NB different signature from non-partitioned table Prep functions.
@@ -17934,40 +16896,4 @@ char *alterTableCmdString(AlterTableType subtype)
 	}
 	
 	return cmdstring;
-}
-
-static void 
-InvokeProtocolValidation(Oid procOid, char *procName, bool iswritable, List *locs)
-{
-	
-	ExtProtocolValidatorData   *validator_data;
-	FmgrInfo				   *validator_udf;
-	FunctionCallInfoData		fcinfo;
-	
-	validator_data = (ExtProtocolValidatorData *) palloc0 (sizeof(ExtProtocolValidatorData));
-	validator_udf = palloc(sizeof(FmgrInfo));
-	fmgr_info(procOid, validator_udf);
-	
-	validator_data->type 		= T_ExtProtocolValidatorData;
-	validator_data->url_list 	= locs;
-	validator_data->errmsg		= NULL;
-	validator_data->direction 	= (iswritable ? EXT_VALIDATE_WRITE :
-											    EXT_VALIDATE_READ);
-	
-	InitFunctionCallInfoData(/* FunctionCallInfoData */ fcinfo, 
-							 /* FmgrInfo */ validator_udf, 
-							 /* nArgs */ 0, 
-							 /* Call Context */ (Node *) validator_data, 
-							 /* ResultSetInfo */ NULL);
-	
-	/* invoke validator. if this function returns - validation passed */
-	FunctionCallInvoke(&fcinfo);
-
-	/* We do not expect a null result */
-	if (fcinfo.isnull)
-		elog(ERROR, "validator function %u returned NULL", 
-					fcinfo.flinfo->fn_oid);
-
-	pfree(validator_data);
-	pfree(validator_udf);
 }

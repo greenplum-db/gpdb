@@ -78,8 +78,8 @@ typedef struct ExplainState
 extern bool Test_print_direct_dispatch_info;
 
 static void ExplainOneQuery(Query *query, ExplainStmt *stmt,
-							const char *queryString,
-							ParamListInfo params, TupOutputState *tstate);
+				const char *queryString,
+				ParamListInfo params, TupOutputState *tstate);
 static void report_triggers(ResultRelInfo *rInfo, bool show_relname,
 				StringInfo buf);
 
@@ -370,10 +370,10 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 	instr_time	starttime;
 	double		totaltime = 0;
 	ExplainState *es;
-    StringInfoData buf;
-    EState     *estate = NULL;
+	StringInfoData buf;
+	EState     *estate = NULL;
 	int			eflags;
-    int         nb;
+	int         nb;
 	MemoryContext explaincxt = CurrentMemoryContext;
 
 	/*
@@ -414,7 +414,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 
 	/* If analyzing, we need to cope with queued triggers */
 	if (stmt->analyze)
-        AfterTriggerBeginQuery();
+		AfterTriggerBeginQuery();
 
     /* Allocate workarea for summary stats. */
     if (stmt->analyze)
@@ -428,7 +428,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 
 	/* Select execution options */
 	if (stmt->analyze)
-        eflags = 0;				/* default run-to-completion flags */
+		eflags = 0;				/* default run-to-completion flags */
 	else
 		eflags = EXEC_FLAG_EXPLAIN_ONLY;
 
@@ -544,7 +544,6 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 			else
 				f = format_node_dump(s);
 			pfree(s);
-
 			do_text_output_multiline(tstate, f);
 			pfree(f);
 			do_text_output_oneline(tstate, ""); /* separator line */
@@ -875,7 +874,6 @@ appendGangAndDirectDispatchInfo(StringInfo str, PlanState *planstate, int sliceI
 		}
 	}
 }
-
 
 /*
  * explain_outNode -
@@ -1816,7 +1814,6 @@ explain_outNode(StringInfo str,
 
 			for (i = 0; i < indent; i++)
 				appendStringInfo(str, "  ");
-
 			appendStringInfo(str, "  ->  ");
 
 			/*

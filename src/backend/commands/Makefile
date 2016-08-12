@@ -22,4 +22,6 @@ OBJS = aggregatecmds.o alter.o analyze.o analyzefuncs.o async.o cluster.o commen
 	tsearchcmds.o typecmds.o user.o vacuum.o vacuumlazy.o \
 	variable.o view.o
 
+OBJS += exttablecmds.o
+
 include $(top_srcdir)/src/backend/common.mk
