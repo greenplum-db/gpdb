@@ -4220,6 +4220,7 @@ do_immediate_shutdown_reaper(void)
         zeroIfPidEqual(pid, &BgWriterPID);
         zeroIfPidEqual(pid, &CheckpointPID);
 		zeroIfPidEqual(pid, &WalReceiverPID);
+		zeroIfPidEqual(pid, &WalWriterPID);
         zeroIfPidEqual(pid, &AutoVacPID);
         zeroIfPidEqual(pid, &PgArchPID);
         zeroIfPidEqual(pid, &PgStatPID);
@@ -5052,6 +5053,7 @@ static void do_reaper()
 		    FilerepPeerResetPID != 0 ||
 			AutoVacPID != 0 ||
 			WalReceiverPID != 0 ||
+			WalWriterPID != 0 ||
 			ServiceProcessesExist(0))
         {
             /* important child is still going...wait longer */
@@ -5158,6 +5160,8 @@ GetServerProcessTitle(int pid)
 		return "background writer process";
 	if (pid == CheckpointPID)
 		return "checkpoint process";
+	else if (pid == WalWriterPID)
+		return "walwriter process";
 	else if (pid == WalReceiverPID)
 		return "walreceiver process";
 	else if (pid == AutoVacPID)
@@ -5653,13 +5657,13 @@ static PMState StateMachineCheck_WaitBackends(void)
     }
     else
     {
-        // note: if wal writer is added, check this here: WalWriterPID == 0 &&
         int childCount = CountChildren(BACKEND_TYPE_AUTOVAC|BACKEND_TYPE_NORMAL);
         bool isFilerepBackendsDoneShutdown = IsFilerepBackendsDoneShutdown();
         bool autovacShutdown = AutoVacPID == 0;
 
         if (childCount == 0 &&
 			WalReceiverPID == 0 &&
+			WalWriterPID == 0 &&
             (BgWriterPID == 0 || !FatalError) && /* todo: CHAD_PM why wait for BgWriterPID here?  Can't we just allow
                                                           normal state advancement to hit there? */
             autovacShutdown &&
@@ -5883,6 +5887,9 @@ static void StateMachineTransition_ShutdownBackends(void)
 
     /* and the autovac launcher too */
     signal_child_if_up(AutoVacPID, SIGTERM);
+
+	/* and the wal writer too */
+	signal_child_if_up(WalWriterPID, SIGTERM);
 
     signal_filerep_to_shutdown(SegmentStateShutdownFilerepBackends);
 
