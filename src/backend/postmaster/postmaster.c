@@ -191,7 +191,6 @@ static Dllist *BackendList;
 typedef enum pmsub_type
 {
 	SeqServerProc = 0,
-	WalSendServerProc,
 	WalRedoServerProc,
 	FtsProbeProc,
 	PerfmonProc,
