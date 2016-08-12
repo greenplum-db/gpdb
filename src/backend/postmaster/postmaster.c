@@ -5038,10 +5038,10 @@ static void do_reaper()
 
 		/*
 		 * Wait for all important children to exit, then reset shmem and
-		 * redo database startup.  (We can ignore the archiver and stats processes
-		 * here since they are not connected to shmem.)
+		 * redo database startup.  (We can ignore the syslogger, archiver and stats
+		 * processes here since they are not connected to shmem.)
 		 */
-		if (DLGetHead(BackendList) ||
+		if (CountChildren(BACKEND_TYPE_ALL) != 0 ||
 		    StartupPID != 0 ||
 		    StartupPass2PID != 0 ||
 		    StartupPass3PID != 0 ||
@@ -5058,6 +5058,25 @@ static void do_reaper()
             /* important child is still going...wait longer */
 			goto reaper_done;
         }
+
+		/*
+		 * Start waiting for dead_end children to die. This state change causes
+		 * ServerLoop to stop creating new ones. Otherwise, we may infinitely
+		 * wait here on heavy workload circumstances, or in postmaster reset
+		 * cases of segments where FilerepPeerReset process on primary segment
+		 * continuously connects corresponding mirror postmaster.
+		 */
+		if (DLGetHead(BackendList) != NULL)
+		{
+			pmState = PM_CHILD_STOP_WAIT_DEAD_END_CHILDREN;
+			goto reaper_done;
+		}
+
+		/*
+		 * NB: We cannot change the pmState to PM_CHILD_STOP_NO_CHILDREN here,
+		 * since there should be syslogger existing, and maybe archiver and
+		 * pgstats as well.
+		 */
 
         if ( RecoveryError )
         {
@@ -5688,9 +5707,6 @@ static PMState StateMachineCheck_WaitBackends(void)
             }
             else
             {
-                /*
-                 * This state change causes ServerLoop to stop creating new ones.
-                 */
                 Assert(Shutdown > NoShutdown);
                 moveToNextState = true;
             }
