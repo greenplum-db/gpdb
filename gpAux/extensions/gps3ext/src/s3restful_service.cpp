@@ -114,8 +114,7 @@ Response S3RESTfulService::get(const string &url, HTTPHeaders &headers,
 
         response.clearBuffers();
         response.setStatus(RESPONSE_FAIL);
-        response.setMessage(
-            string("Failed to talk to s3 service ").append(curl_easy_strerror(res)));
+        response.setMessage(string("Server connection failed: ").append(curl_easy_strerror(res)));
 
     } else {
         long responseCode;
@@ -189,8 +188,7 @@ Response S3RESTfulService::put(const string &url, HTTPHeaders &headers,
 
         response.clearBuffers();
         response.setStatus(RESPONSE_FAIL);
-        response.setMessage(
-            string("Failed to talk to s3 service ").append(curl_easy_strerror(res)));
+        response.setMessage(string("Server connection failed: ").append(curl_easy_strerror(res)));
 
     } else {
         long responseCode;
@@ -263,8 +261,7 @@ Response S3RESTfulService::post(const string &url, HTTPHeaders &headers,
 
         response.clearBuffers();
         response.setStatus(RESPONSE_FAIL);
-        response.setMessage(
-            string("Failed to talk to s3 service ").append(curl_easy_strerror(res)));
+        response.setMessage(string("Server connection failed: ").append(curl_easy_strerror(res)));
 
     } else {
         long responseCode;

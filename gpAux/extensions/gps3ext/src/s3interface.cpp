@@ -186,37 +186,6 @@ Response S3Service::getBucketResponse(const string &region, const string &url, c
     return this->getResponseWithRetries(url, header, empty);
 }
 
-// parseXMLMessage must not throw exception, otherwise result is leaked.
-string S3Service::parseXMLMessage(xmlParserCtxtPtr xmlcontext, const string &tag) {
-    string returnMessage;
-
-    if (xmlcontext == NULL) {
-        return returnMessage;
-    }
-
-    xmlNode *rootElement = xmlDocGetRootElement(xmlcontext->myDoc);
-    if (rootElement == NULL) {
-        S3ERROR("Failed to parse returned xml of bucket list");
-        return returnMessage;
-    }
-
-    xmlNodePtr curNode = rootElement->xmlChildrenNode;
-    while (curNode != NULL) {
-        if (xmlStrcmp(curNode->name, (const xmlChar *)tag.c_str()) == 0) {
-            char *content = (char *)xmlNodeGetContent(curNode);
-            if (content != NULL) {
-                returnMessage = content;
-                xmlFree(content);
-            }
-            return returnMessage;
-        }
-
-        curNode = curNode->next;
-    }
-
-    return returnMessage;
-}
-
 // parseBucketXML must not throw exception, otherwise result is leaked.
 bool S3Service::parseBucketXML(ListBucketResult *result, xmlParserCtxtPtr xmlcontext,
                                string &marker) {
@@ -290,12 +259,7 @@ bool S3Service::parseBucketXML(ListBucketResult *result, xmlParserCtxtPtr xmlcon
 
             if (key) {
                 if (size > 0) {  // skip empty item
-                    BucketContent *item = new BucketContent(key, size);
-                    if (item) {
-                        result->contents.push_back(item);
-                    } else {
-                        S3ERROR("Faild to create item for %s", key);
-                    }
+                    result->contents.emplace_back(key, size);
                 } else {
                     S3INFO("Size of \"%s\" is %" PRIu64 ", skip it", key, size);
                 }
@@ -325,16 +289,15 @@ bool S3Service::parseBucketXML(ListBucketResult *result, xmlParserCtxtPtr xmlcon
 // service unstable, so that caller could retry.
 //
 // Caller should delete returned object.
-ListBucketResult *S3Service::listBucket(const string &schema, const string &region,
-                                        const string &bucket, const string &prefix,
-                                        const S3Credential &cred) {
+ListBucketResult S3Service::listBucket(const string &schema, const string &region,
+                                       const string &bucket, const string &prefix,
+                                       const S3Credential &cred) {
     stringstream host;
     host << "s3-" << region << ".amazonaws.com";
     S3DEBUG("Host url is %s", host.str().c_str());
 
     // NOTE: here we might have memory leak.
-    ListBucketResult *result = new ListBucketResult();
-    CHECK_OR_DIE_MSG(result != NULL, "%s", "Failed to allocate bucket list result");
+    ListBucketResult result;
 
     string marker = "";
     do {  // To get next set(up to 1000) keys in one iteration.
@@ -347,16 +310,16 @@ ListBucketResult *S3Service::listBucket(const string &schema, const string &regi
         XMLContextHolder holder(xmlContext);
 
         if (response.isSuccess()) {
-            if (parseBucketXML(result, xmlContext, marker)) {
+            if (parseBucketXML(&result, xmlContext, marker)) {
                 continue;
             }
         } else {
-            S3ERROR("Amazon S3 returns error \"%s\"",
-                    parseXMLMessage(xmlContext, "Message").c_str());
+            S3MessageParser s3msg(response);
+            S3ERROR("Amazon S3 returns error \"%s\"", s3msg.getMessage().c_str());
+            CHECK_OR_DIE_MSG(false, "Amazon S3 returns error \"%s\"", s3msg.getMessage().c_str());
         }
 
-        delete result;
-        return NULL;
+        return result;
     } while (!marker.empty());
 
     return result;
@@ -386,26 +349,20 @@ uint64_t S3Service::fetchData(uint64_t offset, vector<uint8_t> &data, uint64_t l
         }
 
         return data.size();
-    } else if (resp.getStatus() == RESPONSE_ERROR) {
-        xmlParserCtxtPtr xmlContext = getXMLContext(resp);
-        if (xmlContext != NULL) {
-            XMLContextHolder holder(xmlContext);
-            S3ERROR("Amazon S3 returns error \"%s\"",
-                    parseXMLMessage(xmlContext, "Message").c_str());
-        }
 
-        S3ERROR("Failed to request: %s, Response message: %s", sourceUrl.c_str(),
-                resp.getMessage().c_str());
-        CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", sourceUrl.c_str(),
-                         resp.getMessage().c_str());
-    } else {
-        S3ERROR("Failed to request: %s, Response message: %s", sourceUrl.c_str(),
-                resp.getMessage().c_str());
-        CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", sourceUrl.c_str(),
-                         resp.getMessage().c_str());
+    } else if (resp.getStatus() == RESPONSE_ERROR) {
+        S3MessageParser s3msg(resp);
+
+        if (!s3msg.getMessage().empty()) {
+            S3ERROR("Amazon S3 returns error \"%s\"", s3msg.getMessage().c_str());
+        }
     }
 
-    return 0;
+    // getStatus == RESPONSE_ERROR || RESPONSE_FAIL
+    S3ERROR("Failed to request: %s, Response message: %s", sourceUrl.c_str(),
+            resp.getMessage().c_str());
+    CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", sourceUrl.c_str(),
+                     resp.getMessage().c_str());
 }
 
 S3CompressionType S3Service::checkCompressionType(const string &keyUrl, const string &region,
@@ -436,17 +393,19 @@ S3CompressionType S3Service::checkCompressionType(const string &keyUrl, const st
         if ((responseData[0] == 0x1f) && (responseData[1] == 0x8b)) {
             return S3_COMPRESSION_GZIP;
         }
-    } else {
-        if (resp.getStatus() == RESPONSE_ERROR) {
-            xmlParserCtxtPtr xmlContext = getXMLContext(resp);
-            if (xmlContext != NULL) {
-                XMLContextHolder holder(xmlContext);
-                S3ERROR("Amazon S3 returns error \"%s\"",
-                        parseXMLMessage(xmlContext, "Message").c_str());
-            }
+    } else if (resp.getStatus() == RESPONSE_ERROR) {
+        S3MessageParser s3msg(resp);
+
+        if (!s3msg.getMessage().empty()) {
+            S3ERROR("Amazon S3 returns error \"%s\"", s3msg.getMessage().c_str());
         }
+
+        S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
+                resp.getMessage().c_str());
         CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", keyUrl.c_str(),
                          resp.getMessage().c_str());
+    } else if (resp.getStatus() == RESPONSE_FAIL) {
+        return S3_COMPRESSION_PLAIN;
     }
 
     return S3_COMPRESSION_PLAIN;
@@ -484,30 +443,21 @@ string S3Service::getUploadId(const string &keyUrl, const string &region,
 
     Response resp =
         this->postResponseWithRetries(urlWithQuery.str(), headers, params, vector<uint8_t>());
-    if (resp.getStatus() == RESPONSE_OK) {
-        xmlParserCtxtPtr xmlContext = getXMLContext(resp);
-        if (xmlContext != NULL) {
-            XMLContextHolder holder(xmlContext);
-            return parseXMLMessage(xmlContext, "UploadId");
-        }
-    } else if (resp.getStatus() == RESPONSE_ERROR) {
-        xmlParserCtxtPtr xmlContext = getXMLContext(resp);
-        if (xmlContext != NULL) {
-            XMLContextHolder holder(xmlContext);
-            S3ERROR("Amazon S3 returns error \"%s\"",
-                    parseXMLMessage(xmlContext, "Message").c_str());
-        }
+    S3MessageParser s3msg(resp);
 
-        S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
-                resp.getMessage().c_str());
-        CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", keyUrl.c_str(),
-                         resp.getMessage().c_str());
-    } else {
-        S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
-                resp.getMessage().c_str());
-        CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", keyUrl.c_str(),
-                         resp.getMessage().c_str());
+    if (resp.getStatus() == RESPONSE_OK) {
+        return s3msg.parseS3Tag("UploadId");
+    } else if (resp.getStatus() == RESPONSE_ERROR) {
+        if (!s3msg.getMessage().empty()) {
+            S3ERROR("Amazon S3 returns error \"%s\"", s3msg.getMessage().c_str());
+        }
     }
+
+    // getStatus == RESPONSE_ERROR || RESPONSE_FAIL
+    S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
+            resp.getMessage().c_str());
+    CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", keyUrl.c_str(),
+                     resp.getMessage().c_str());
 
     return "";
 }
@@ -545,23 +495,18 @@ string S3Service::uploadPartOfData(vector<uint8_t> &data, const string &keyUrl,
 
         return etagToEnd.substr(0, etagStrLen);
     } else if (resp.getStatus() == RESPONSE_ERROR) {
-        xmlParserCtxtPtr xmlContext = getXMLContext(resp);
-        if (xmlContext != NULL) {
-            XMLContextHolder holder(xmlContext);
-            S3ERROR("Amazon S3 returns error \"%s\"",
-                    parseXMLMessage(xmlContext, "Message").c_str());
-        }
+        S3MessageParser s3msg(resp);
 
-        S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
-                resp.getMessage().c_str());
-        CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", keyUrl.c_str(),
-                         resp.getMessage().c_str());
-    } else {
-        S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
-                resp.getMessage().c_str());
-        CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", keyUrl.c_str(),
-                         resp.getMessage().c_str());
+        if (!s3msg.getMessage().empty()) {
+            S3ERROR("Amazon S3 returns error \"%s\"", s3msg.getMessage().c_str());
+        }
     }
+
+    // getStatus == RESPONSE_ERROR || RESPONSE_FAIL
+    S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
+            resp.getMessage().c_str());
+    CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", keyUrl.c_str(),
+                     resp.getMessage().c_str());
 
     return "";
 }
@@ -608,30 +553,63 @@ bool S3Service::completeMultiPart(const string &keyUrl, const string &region,
     if (resp.getStatus() == RESPONSE_OK) {
         return true;
     } else if (resp.getStatus() == RESPONSE_ERROR) {
-        xmlParserCtxtPtr xmlContext = getXMLContext(resp);
-        if (xmlContext != NULL) {
-            XMLContextHolder holder(xmlContext);
-            S3ERROR("Amazon S3 returns error \"%s\"",
-                    parseXMLMessage(xmlContext, "Message").c_str());
-        }
+        S3MessageParser s3msg(resp);
 
-        S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
-                resp.getMessage().c_str());
-        CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", keyUrl.c_str(),
-                         resp.getMessage().c_str());
-    } else {
-        S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
-                resp.getMessage().c_str());
-        CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", keyUrl.c_str(),
-                         resp.getMessage().c_str());
+        if (!s3msg.getMessage().empty()) {
+            S3ERROR("Amazon S3 returns error \"%s\"", s3msg.getMessage().c_str());
+        }
     }
+
+    // getStatus == RESPONSE_ERROR || RESPONSE_FAIL
+    S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
+            resp.getMessage().c_str());
+    CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", keyUrl.c_str(),
+                     resp.getMessage().c_str());
 
     return false;
 }
 
 ListBucketResult::~ListBucketResult() {
-    vector<BucketContent *>::iterator i;
-    for (i = this->contents.begin(); i != this->contents.end(); i++) {
-        delete *i;
+}
+
+S3MessageParser::S3MessageParser(const Response &resp) {
+    xmlptr = xmlCreatePushParserCtxt(NULL, NULL, (const char *)(resp.getRawData().data()),
+                                     resp.getRawData().size(), "resp.xml");
+    if (xmlptr != NULL) {
+        xmlParseChunk(xmlptr, "", 0, 1);
+        message = parseS3Tag("Message");
+        code = parseS3Tag("Code");
     }
+}
+
+S3MessageParser::~S3MessageParser() {
+    if (xmlptr != NULL) {
+        xmlFreeDoc(xmlptr->myDoc);
+        xmlFreeParserCtxt(xmlptr);
+    }
+}
+
+string S3MessageParser::parseS3Tag(const string &tag) {
+    string contentStr;
+
+    xmlNode *rootElement = xmlDocGetRootElement(xmlptr->myDoc);
+    if (rootElement == NULL) {
+        S3ERROR("Failed to parse returned xml of bucket list");
+        return contentStr;
+    }
+
+    xmlNodePtr curNode = rootElement->xmlChildrenNode;
+    while (curNode != NULL) {
+        if (xmlStrcmp(curNode->name, (const xmlChar *)tag.c_str()) == 0) {
+            char *content = (char *)xmlNodeGetContent(curNode);
+            if (content != NULL) {
+                contentStr = content;
+                xmlFree(content);
+            }
+            return contentStr;
+        }
+
+        curNode = curNode->next;
+    }
+    return contentStr;
 }

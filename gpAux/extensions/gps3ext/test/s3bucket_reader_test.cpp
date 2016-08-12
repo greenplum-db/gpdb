@@ -48,9 +48,9 @@ TEST_F(S3BucketReaderTest, OpenInvalidURL) {
 }
 
 TEST_F(S3BucketReaderTest, OpenURL) {
-    ListBucketResult* result = new ListBucketResult();
-
-    EXPECT_CALL(s3interface, listBucket(_, _, _, _, _)).Times(1).WillOnce(Return(result));
+    EXPECT_CALL(s3interface, listBucket(_, _, _, _, _))
+        .Times(1)
+        .WillOnce(Return(ListBucketResult()));
 
     string url = "https://s3-us-east-2.amazonaws.com/s3test.pivotal.io/whatever";
     params.setUrlToLoad(url);
@@ -141,8 +141,9 @@ TEST_F(S3BucketReaderTest, ReaderThrowExceptionWhenUpstreamReaderIsNULL) {
 }
 
 TEST_F(S3BucketReaderTest, ReaderReturnZeroForEmptyBucket) {
-    ListBucketResult* result = new ListBucketResult();
-    EXPECT_CALL(s3interface, listBucket(_, _, _, _, _)).Times(1).WillOnce(Return(result));
+    EXPECT_CALL(s3interface, listBucket(_, _, _, _, _))
+        .Times(1)
+        .WillOnce(Return(ListBucketResult()));
 
     params.setUrlToLoad("https://s3-us-east-2.amazonaws.com/s3test.pivotal.io/whatever");
     bucketReader->open(params);
@@ -151,9 +152,8 @@ TEST_F(S3BucketReaderTest, ReaderReturnZeroForEmptyBucket) {
 }
 
 TEST_F(S3BucketReaderTest, ReadBucketWithSingleFile) {
-    ListBucketResult* result = new ListBucketResult();
-    BucketContent* item = new BucketContent("foo", 456);
-    result->contents.push_back(item);
+    ListBucketResult result;
+    result.contents.emplace_back("foo", 456);
 
     EXPECT_CALL(s3interface, listBucket(_, _, _, _, _)).Times(1).WillOnce(Return(result));
 
@@ -178,11 +178,9 @@ TEST_F(S3BucketReaderTest, ReadBucketWithSingleFile) {
 }
 
 TEST_F(S3BucketReaderTest, ReadBuckeWithOneEmptyFileOneNonEmptyFile) {
-    ListBucketResult* result = new ListBucketResult();
-    BucketContent* item = new BucketContent("foo", 0);
-    result->contents.push_back(item);
-    item = new BucketContent("bar", 456);
-    result->contents.push_back(item);
+    ListBucketResult result;
+    result.contents.emplace_back("foo", 0);
+    result.contents.emplace_back("bar", 456);
 
     EXPECT_CALL(s3interface, listBucket(_, _, _, _, _)).Times(1).WillOnce(Return(result));
 
@@ -206,9 +204,8 @@ TEST_F(S3BucketReaderTest, ReadBuckeWithOneEmptyFileOneNonEmptyFile) {
 }
 
 TEST_F(S3BucketReaderTest, ReaderShouldSkipIfFileIsNotForThisSegment) {
-    ListBucketResult* result = new ListBucketResult();
-    BucketContent* item = new BucketContent("foo", 456);
-    result->contents.push_back(item);
+    ListBucketResult result;
+    result.contents.emplace_back("foo", 456);
 
     EXPECT_CALL(s3interface, listBucket(_, _, _, _, _)).Times(1).WillOnce(Return(result));
 
@@ -222,11 +219,9 @@ TEST_F(S3BucketReaderTest, ReaderShouldSkipIfFileIsNotForThisSegment) {
 }
 
 TEST_F(S3BucketReaderTest, UpstreamReaderThrowException) {
-    ListBucketResult* result = new ListBucketResult();
-    BucketContent* item = new BucketContent("foo", 0);
-    result->contents.push_back(item);
-    item = new BucketContent("bar", 456);
-    result->contents.push_back(item);
+    ListBucketResult result;
+    result.contents.emplace_back("foo", 0);
+    result.contents.emplace_back("bar", 456);
 
     EXPECT_CALL(s3interface, listBucket(_, _, _, _, _)).Times(1).WillOnce(Return(result));
 

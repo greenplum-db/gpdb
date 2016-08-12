@@ -49,9 +49,29 @@ struct BucketContent {
 struct ListBucketResult {
     string Name;
     string Prefix;
-    vector<BucketContent*> contents;
+    vector<BucketContent> contents;
 
     ~ListBucketResult();
+};
+
+class S3MessageParser {
+   public:
+    S3MessageParser(const Response& resp);
+
+    ~S3MessageParser();
+
+    const string& getMessage() const {
+        return message;
+    }
+    const string& getCode() const {
+        return code;
+    }
+    string parseS3Tag(const string& tag);
+
+   private:
+    xmlParserCtxtPtr xmlptr;
+    string message;
+    string code;
 };
 
 class S3Interface {
@@ -60,9 +80,9 @@ class S3Interface {
     }
 
     // It is caller's responsibility to free returned memory.
-    virtual ListBucketResult* listBucket(const string& schema, const string& region,
-                                         const string& bucket, const string& prefix,
-                                         const S3Credential& cred) {
+    virtual ListBucketResult listBucket(const string& schema, const string& region,
+                                        const string& bucket, const string& prefix,
+                                        const S3Credential& cred) {
         throw std::runtime_error("Default implementation must not be called.");
     }
 
@@ -104,8 +124,8 @@ class S3Service : public S3Interface {
    public:
     S3Service();
     virtual ~S3Service();
-    ListBucketResult* listBucket(const string& schema, const string& region, const string& bucket,
-                                 const string& prefix, const S3Credential& cred);
+    ListBucketResult listBucket(const string& schema, const string& region, const string& bucket,
+                                const string& prefix, const S3Credential& cred);
 
     uint64_t fetchData(uint64_t offset, vector<uint8_t>& data, uint64_t len,
                        const string& sourceUrl, const string& region, const S3Credential& cred);
@@ -152,8 +172,6 @@ class S3Service : public S3Interface {
 
     Response getBucketResponse(const string& region, const string& url, const string& prefix,
                                const S3Credential& cred, const string& marker);
-
-    string parseXMLMessage(xmlParserCtxtPtr xmlcontext, const string& tag);
 
     HTTPHeaders composeHTTPHeaders(const string& url, const string& marker, const string& prefix,
                                    const string& region, const S3Credential& cred);

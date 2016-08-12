@@ -15,7 +15,7 @@ using std::stringstream;
 class MockS3Interface : public S3Interface {
    public:
     MOCK_METHOD5(listBucket,
-                 ListBucketResult*(const string& schema, const string& region, const string& bucket,
+                 ListBucketResult(const string& schema, const string& region, const string& bucket,
                                    const string& prefix, const S3Credential& cred));
 
     MOCK_METHOD6(fetchData,

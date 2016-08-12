@@ -86,20 +86,15 @@ void printTemplate() {
         "encryption = true\n");
 }
 
-uint64_t printBucketContents(ListBucketResult *result) {
+void printBucketContents(const ListBucketResult &result) {
     char urlbuf[256];
     uint64_t count = 0;
-    vector<BucketContent *>::iterator i;
+    vector<BucketContent>::const_iterator i;
 
-    for (i = result->contents.begin(); i != result->contents.end(); i++) {
-        BucketContent *p = *i;
-        snprintf(urlbuf, 256, "%s", p->getName().c_str());
-        printf("File: %s, Size: %" PRIu64 "\n", urlbuf, p->getSize());
-
-        count++;
+    for (i = result.contents.begin(); i != result.contents.end(); i++) {
+        snprintf(urlbuf, 256, "%s", i->getName().c_str());
+        printf("File: %s, Size: %" PRIu64 "\n", urlbuf, i->getSize());
     }
-
-    return count;
 }
 
 bool checkConfig(const char *urlWithOptions) {
@@ -112,15 +107,15 @@ bool checkConfig(const char *urlWithOptions) {
         return false;
     }
 
-    ListBucketResult *result = reader->getKeyList();
-    if (result != NULL) {
-        if (printBucketContents(result)) {
-            fprintf(stderr, "\nYour configuration works well.\n");
-        } else {
-            fprintf(stderr,
-                    "\nYour configuration works well, however there is no file matching your "
-                    "prefix.\n");
-        }
+    ListBucketResult result = reader->getKeyList();
+
+    if (result.contents.empty()) {
+        fprintf(stderr,
+                "\nYour configuration works well, however there is no file matching your "
+                "prefix.\n");
+    } else {
+        printBucketContents(result);
+        fprintf(stderr, "\nYour configuration works well.\n");
     }
 
     reader_cleanup(&reader);

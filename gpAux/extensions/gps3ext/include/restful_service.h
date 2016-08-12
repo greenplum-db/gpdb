@@ -75,6 +75,10 @@ class Response {
         return dataBuffer;
     }
 
+    const vector<uint8_t>& getRawData() const {
+        return dataBuffer;
+    }
+
     vector<uint8_t>&& moveDataBuffer() {
         return std::move(dataBuffer);
     }

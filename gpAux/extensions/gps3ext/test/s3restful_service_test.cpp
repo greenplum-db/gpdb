@@ -47,7 +47,7 @@ TEST(S3RESTfulService, GetWithoutURL) {
     Response resp = service.get(url, headers, params);
 
     EXPECT_EQ(RESPONSE_FAIL, resp.getStatus());
-    EXPECT_EQ("Failed to talk to s3 service URL using bad/illegal format or missing URL",
+    EXPECT_EQ("Server connection failed: URL using bad/illegal format or missing URL",
               resp.getMessage());
 }
 
@@ -75,7 +75,7 @@ TEST(S3RESTfulService, GetWithoutURLWithDebugParam) {
     Response resp = service.get(url, headers, params);
 
     EXPECT_EQ(RESPONSE_FAIL, resp.getStatus());
-    EXPECT_EQ("Failed to talk to s3 service URL using bad/illegal format or missing URL",
+    EXPECT_EQ("Server connection failed: URL using bad/illegal format or missing URL",
               resp.getMessage());
 }
 
@@ -89,7 +89,7 @@ TEST(S3RESTfulService, PutWithoutURL) {
     Response resp = service.put(url, headers, params, data);
 
     EXPECT_EQ(RESPONSE_FAIL, resp.getStatus());
-    EXPECT_EQ("Failed to talk to s3 service URL using bad/illegal format or missing URL",
+    EXPECT_EQ("Server connection failed: URL using bad/illegal format or missing URL",
               resp.getMessage());
 }
 
@@ -142,7 +142,7 @@ TEST(S3RESTfulService, PutWithoutURLWithDebugParam) {
     Response resp = service.put(url, headers, params, data);
 
     EXPECT_EQ(RESPONSE_FAIL, resp.getStatus());
-    EXPECT_EQ("Failed to talk to s3 service URL using bad/illegal format or missing URL",
+    EXPECT_EQ("Server connection failed: URL using bad/illegal format or missing URL",
               resp.getMessage());
 }
 
@@ -244,7 +244,7 @@ TEST(S3RESTfulService, PostWithoutURL) {
     Response resp = service.post(url, headers, params, vector<uint8_t>());
 
     EXPECT_EQ(RESPONSE_FAIL, resp.getStatus());
-    EXPECT_EQ("Failed to talk to s3 service URL using bad/illegal format or missing URL",
+    EXPECT_EQ("Server connection failed: URL using bad/illegal format or missing URL",
               resp.getMessage());
 }
 

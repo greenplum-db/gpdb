@@ -18,7 +18,6 @@ using std::stringstream;
 
 S3BucketReader::S3BucketReader() : Reader() {
     this->keyIndex = -1;
-    this->keyList = NULL;
 
     this->s3interface = NULL;
     this->upstreamReader = NULL;
@@ -50,10 +49,6 @@ void S3BucketReader::open(const ReaderParams &params) {
 
     this->keyList = this->s3interface->listBucket(this->schema, this->region, this->bucket,
                                                   this->prefix, this->cred);
-    if (this->keyList == NULL) {
-        S3ERROR("Failed to list bucket for URL: %s", this->url.c_str());
-        CHECK_OR_DIE_MSG(false, "Failed to list bucket for URL: %s", this->url.c_str());
-    }
 
     return;
 }
@@ -61,11 +56,11 @@ void S3BucketReader::open(const ReaderParams &params) {
 BucketContent *S3BucketReader::getNextKey() {
     this->keyIndex = (this->keyIndex == (uint64_t)-1) ? this->segId : this->keyIndex + this->segNum;
 
-    if (this->keyIndex >= this->keyList->contents.size()) {
+    if (this->keyIndex >= this->keyList.contents.size()) {
         return NULL;
     }
 
-    return this->keyList->contents[this->keyIndex];
+    return &this->keyList.contents[this->keyIndex];
 }
 
 ReaderParams S3BucketReader::getReaderParams(BucketContent *key) {
@@ -109,9 +104,8 @@ uint64_t S3BucketReader::read(char *buf, uint64_t count) {
 }
 
 void S3BucketReader::close() {
-    if (this->keyList != NULL) {
-        delete this->keyList;
-        this->keyList = NULL;
+    if (!this->keyList.contents.empty()) {
+        this->keyList.contents.clear();
     }
 
     return;

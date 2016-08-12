@@ -26,7 +26,7 @@ class GPReader : public Reader {
     // This should be reentrant, has no side effects when called multiple times.
     virtual void close();
 
-    ListBucketResult *getKeyList() {
+    const ListBucketResult &getKeyList() {
         return bucketReader.getKeyList();
     }
 

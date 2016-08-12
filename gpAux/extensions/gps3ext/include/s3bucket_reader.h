@@ -33,7 +33,7 @@ class S3BucketReader : public Reader {
         parseURL();
     };
 
-    ListBucketResult *getKeyList() {
+    const ListBucketResult &getKeyList() {
         return keyList;
     }
 
@@ -70,8 +70,8 @@ class S3BucketReader : public Reader {
     Reader *upstreamReader;
     bool needNewReader;
 
-    ListBucketResult *keyList;  // List of matched keys/files.
-    uint64_t keyIndex;          // BucketContent index of keylist->contents.
+    ListBucketResult keyList;  // List of matched keys/files.
+    uint64_t keyIndex;         // BucketContent index of keylist->contents.
 
     void SetSchema();
     void SetRegion();
