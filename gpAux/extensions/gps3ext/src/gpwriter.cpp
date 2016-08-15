@@ -24,7 +24,7 @@ GPWriter::GPWriter(const string& url) {
 }
 
 void GPWriter::constructWriterParams(const string& url) {
-    this->params.setKeyUrl(url);
+    this->params.setBaseUrl(url);
     this->params.setSegId(s3ext_segid);
     this->params.setSegNum(s3ext_segnum);
     this->params.setNumOfChunks(s3ext_threadnum);
@@ -38,7 +38,7 @@ void GPWriter::constructWriterParams(const string& url) {
 
 void GPWriter::open(const WriterParams& params) {
     this->s3service.setRESTfulService(this->restfulServicePtr);
-    this->params.setKeyUrl(this->genUniqueKeyName(this->params.getKeyUrl()));
+    this->params.setKeyUrl(this->genUniqueKeyName(this->params.getBaseUrl()));
     this->keyWriter.setS3interface(&this->s3service);
     this->keyWriter.open(this->params);
 }

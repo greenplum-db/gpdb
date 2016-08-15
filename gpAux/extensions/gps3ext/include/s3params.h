@@ -1,5 +1,5 @@
-#ifndef INCLUDE_WRITER_PARAMS_H_
-#define INCLUDE_WRITER_PARAMS_H_
+#ifndef __S3_PARAMS_H__
+#define __S3_PARAMS_H__
 
 #include <string>
 
@@ -7,11 +7,11 @@
 
 using std::string;
 
-class WriterParams {
+class S3Params {
    public:
-    WriterParams() : chunkSize(0), numOfChunks(0), segId(0), segNum(1) {
+    S3Params() : keySize(0), chunkSize(0), numOfChunks(0), segId(0), segNum(1) {
     }
-    virtual ~WriterParams() {
+    virtual ~S3Params() {
     }
 
     uint64_t getChunkSize() const {
@@ -70,8 +70,28 @@ class WriterParams {
         this->numOfChunks = numOfChunks;
     }
 
+    uint64_t getKeySize() const {
+        return keySize;
+    }
+
+    void setKeySize(uint64_t size) {
+        this->keySize = size;
+    }
+
+    const string& getBaseUrl() const {
+        return baseUrl;
+    }
+
+    void setBaseUrl(const string& url) {
+        this->baseUrl = url;
+    }
+
    private:
+    string baseUrl;  // original url to read/write.
+
     string keyUrl;
+    uint64_t keySize;  // key/file size.
+
     string region;
     uint64_t chunkSize;    // chunk size
     uint64_t numOfChunks;  // number of chunks(threads).
@@ -80,4 +100,8 @@ class WriterParams {
     uint64_t segNum;
 };
 
-#endif /* INCLUDE_WRITER_PARAMS_H_ */
+class WriterParams : public S3Params {};
+
+class ReaderParams : public S3Params {};
+
+#endif

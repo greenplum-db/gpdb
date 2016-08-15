@@ -5,12 +5,12 @@
 #include <inttypes.h>
 
 #include "reader.h"
-#include "reader_params.h"
 #include "s3bucket_reader.h"
 #include "s3common.h"
 #include "s3conf.h"
 #include "s3log.h"
 #include "s3macros.h"
+#include "s3params.h"
 #include "s3utils.h"
 
 using std::string;
@@ -36,7 +36,7 @@ S3BucketReader::~S3BucketReader() {
 }
 
 void S3BucketReader::open(const ReaderParams &params) {
-    this->url = params.getUrlToLoad();
+    this->url = params.getBaseUrl();
     this->segId = params.getSegId();
     this->segNum = params.getSegNum();
     this->cred = params.getCred();

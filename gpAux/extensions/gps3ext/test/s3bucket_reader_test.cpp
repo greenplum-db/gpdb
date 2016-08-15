@@ -2,8 +2,8 @@
 #include "gtest/gtest.h"
 
 #include "mock_classes.h"
-#include "reader_params.h"
 #include "s3bucket_reader.cpp"
+#include "s3params.h"
 
 using ::testing::AtLeast;
 using ::testing::Return;
@@ -43,7 +43,7 @@ class S3BucketReaderTest : public testing::Test {
 
 TEST_F(S3BucketReaderTest, OpenInvalidURL) {
     string url = "https://s3-us-east-2.amazon.com/s3test.pivotal.io/whatever";
-    params.setUrlToLoad(url);
+    params.setBaseUrl(url);
     EXPECT_THROW(bucketReader->open(params), std::runtime_error);
 }
 
@@ -53,7 +53,7 @@ TEST_F(S3BucketReaderTest, OpenURL) {
         .WillOnce(Return(ListBucketResult()));
 
     string url = "https://s3-us-east-2.amazonaws.com/s3test.pivotal.io/whatever";
-    params.setUrlToLoad(url);
+    params.setBaseUrl(url);
 
     EXPECT_NO_THROW(bucketReader->open(params));
 }
@@ -62,7 +62,7 @@ TEST_F(S3BucketReaderTest, OpenThrowExceptionWhenS3InterfaceIsNULL) {
     bucketReader->setS3interface(NULL);
 
     string url = "https://s3-us-east-2.amazonaws.com/s3test.pivotal.io/whatever";
-    params.setUrlToLoad(url);
+    params.setBaseUrl(url);
     EXPECT_THROW(bucketReader->open(params), std::runtime_error);
 }
 
@@ -145,7 +145,7 @@ TEST_F(S3BucketReaderTest, ReaderReturnZeroForEmptyBucket) {
         .Times(1)
         .WillOnce(Return(ListBucketResult()));
 
-    params.setUrlToLoad("https://s3-us-east-2.amazonaws.com/s3test.pivotal.io/whatever");
+    params.setBaseUrl("https://s3-us-east-2.amazonaws.com/s3test.pivotal.io/whatever");
     bucketReader->open(params);
     bucketReader->setUpstreamReader(&s3reader);
     EXPECT_EQ(0, bucketReader->read(buf, sizeof(buf)));
@@ -168,7 +168,7 @@ TEST_F(S3BucketReaderTest, ReadBucketWithSingleFile) {
 
     params.setSegId(0);
     params.setSegNum(1);
-    params.setUrlToLoad("https://s3-us-east-2.amazonaws.com/s3test.pivotal.io/whatever");
+    params.setBaseUrl("https://s3-us-east-2.amazonaws.com/s3test.pivotal.io/whatever");
     bucketReader->open(params);
     bucketReader->setUpstreamReader(&s3reader);
 
@@ -195,7 +195,7 @@ TEST_F(S3BucketReaderTest, ReadBuckeWithOneEmptyFileOneNonEmptyFile) {
 
     params.setSegId(0);
     params.setSegNum(1);
-    params.setUrlToLoad("https://s3-us-east-2.amazonaws.com/s3test.pivotal.io/whatever");
+    params.setBaseUrl("https://s3-us-east-2.amazonaws.com/s3test.pivotal.io/whatever");
     bucketReader->open(params);
     bucketReader->setUpstreamReader(&s3reader);
 
@@ -211,7 +211,7 @@ TEST_F(S3BucketReaderTest, ReaderShouldSkipIfFileIsNotForThisSegment) {
 
     params.setSegId(10);
     params.setSegNum(16);
-    params.setUrlToLoad("https://s3-us-east-2.amazonaws.com/s3test.pivotal.io/whatever");
+    params.setBaseUrl("https://s3-us-east-2.amazonaws.com/s3test.pivotal.io/whatever");
     bucketReader->open(params);
     bucketReader->setUpstreamReader(&s3reader);
 
@@ -234,7 +234,7 @@ TEST_F(S3BucketReaderTest, UpstreamReaderThrowException) {
 
     params.setSegId(0);
     params.setSegNum(1);
-    params.setUrlToLoad("https://s3-us-east-2.amazonaws.com/s3test.pivotal.io/whatever");
+    params.setBaseUrl("https://s3-us-east-2.amazonaws.com/s3test.pivotal.io/whatever");
     bucketReader->open(params);
     bucketReader->setUpstreamReader(&s3reader);
 

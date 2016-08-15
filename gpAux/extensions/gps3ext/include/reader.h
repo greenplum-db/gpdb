@@ -1,7 +1,7 @@
 #ifndef __GP_EXT_READER_H__
 #define __GP_EXT_READER_H__
 
-#include "reader_params.h"
+#include "s3params.h"
 
 class Reader {
    public:

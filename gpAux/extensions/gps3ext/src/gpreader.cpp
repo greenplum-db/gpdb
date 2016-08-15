@@ -69,7 +69,7 @@ GPReader::GPReader(const string& url) {
 }
 
 void GPReader::constructReaderParams(const string& url) {
-    this->params.setUrlToLoad(url);
+    this->params.setBaseUrl(url);
     this->params.setSegId(s3ext_segid);
     this->params.setSegNum(s3ext_segnum);
     this->params.setNumOfChunks(s3ext_threadnum);

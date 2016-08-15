@@ -1,7 +1,7 @@
 #ifndef __GP_EXT_WRITER_H__
 #define __GP_EXT_WRITER_H__
 
-#include "writer_params.h"
+#include "s3params.h"
 
 class Writer {
    public:
