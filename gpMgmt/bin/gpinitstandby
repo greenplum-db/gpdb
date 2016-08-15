@@ -832,13 +832,12 @@ def copy_master_filespaces_to_standby(options, array, master_filespace_map, stan
     for i in standby_filespace_map:
         standby_fs_dict[i[0]] = i[1]
 
-    """We exclude certain unnecessary directories from being copied as
-    they will greatly slow down the speed of gpinitstandby if containing
-    a lot of data (MPP-6398, MPP-26059)"""
+    # We exclude certain unnecessary directories from being copied as they will greatly
+    # slow down the speed of gpinitstandby if containing a lot of data
     cmd_str = ' '.join(['pg_basebackup',
                         '-x', '-R',
                         '-E', './pg_log',
-                        '-E', './gp_dumps',
+                        '-E', './db_dumps',
                         '-E', './gpperfmon/data',
                         '-E', './gpperfmon/logs',
                         '-D', standby_fs_dict['pg_system'],

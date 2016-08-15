@@ -76,6 +76,34 @@ class GpinitStandsbyTestCase(MPPTestCase):
         os.chmod(filepath, 777)
         os.remove(filepath)
 
+    def touch_file(self, filename):
+        with open(filename, 'w') as fp:
+            pass
+
+    def test_gpinitstandby_exclude_dirs(self):
+        """
+        Test pg_basebackup exclusions when copying filespaces from
+        the master to the standby during gpinitstandby
+        """
+        os.makedirs(self.mdd + '/db_dumps')
+        self.touch_file(self.mdd + '/db_dumps/testfile')
+        self.touch_file(self.mdd + '/gpperfmon/logs/test.log')
+        self.touch_file(self.mdd + '/gpperfmon/data/testfile')
+        self.touch_file(self.mdd + '/pg_log/testfile')
+
+        self.gp.run(option = '-P %s -s %s -F pg_system:%s' % (self.standby_port, self.host, self.standby_loc))
+
+        shutil.rmtree(self.mdd + '/db_dumps')
+        os.remove(self.mdd + '/gpperfmon/logs/test.log')
+        os.remove(self.mdd + '/gpperfmon/data/testfile')
+        os.remove(self.mdd + '/pg_log/testfile')
+
+        self.assertFalse(os.path.exists(self.standby_loc + '/db_dumps/testfile'))
+        self.assertFalse(os.path.exists(self.standby_loc + '/gpperfmon/logs/test.log'))
+        self.assertFalse(os.path.exists(self.standby_loc + '/gpperfmon/data/testfile'))
+        self.assertFalse(os.path.exists(self.standby_loc + '/pg_log/testfile'))
+        self.assertTrue(self.gp.run(option = '-r'))
+
     @unittest.skipIf(not config.is_multinode(), "Test applies only to a multinode cluster")
     def test_gpinitstanby_to_new_host(self):
         self.create_directory(self.mdd)
