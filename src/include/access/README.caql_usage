@@ -205,7 +205,7 @@ the modified cqContext, you can nest or "chain" them:
                 CStringGetDatum(stmt->queue))))
 
 Additional context modification function are caql_indexOK(),
-caql_lockmode(), caql_snapshot(), and caql_syscache().  These
+caql_snapshot(), and caql_syscache().  These
 functions mainly exist to support legacy code requirements for the
 initial CaQL conversion, enforcing particular patterns of index,
 heapscan or syscache usage.  As the Unified Catalog Service evolves to

@@ -147,22 +147,6 @@ cqContext	*caql_indexOK(cqContext *pCtx, bool bindexOK)
 }
 
 /* ----------------------------------------------------------------
- * caql_lockmode()
- * 
- * Change the default lockmode (ie RowExclusiveLock for Delete/Update, 
- * else AccessShareLock) associated with the underlying relation.   
- * Has no effect if the relation is external.
- * ----------------------------------------------------------------
- */
-
-cqContext	*caql_lockmode(cqContext *pCtx, LOCKMODE lm)
-{
-	pCtx->cq_setlockmode = true;
-	pCtx->cq_lockmode	 = lm;
-	return (pCtx);
-}
-
-/* ----------------------------------------------------------------
  * caql_snapshot()
  * 
  * Change the default snapshot (SnapshotNow) associated with the 

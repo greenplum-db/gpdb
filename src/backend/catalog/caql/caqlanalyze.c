@@ -190,13 +190,11 @@ caql_switch(struct caql_hash_cookie *pchn,
 	if (!pCtx->cq_setsnapshot)
 		pCtx->cq_snapshot = SnapshotNow;
 
-	if (!pCtx->cq_setlockmode)
-	{
-		if (pchn->bDelete || pchn->bUpdate || pchn->bInsert)
-			pCtx->cq_lockmode = RowExclusiveLock;
-		else
-			pCtx->cq_lockmode = AccessShareLock;
-	}
+	if (pchn->bDelete || pchn->bUpdate || pchn->bInsert)
+		pCtx->cq_lockmode = RowExclusiveLock;
+	else
+		pCtx->cq_lockmode = AccessShareLock;
+
 	/* get everything we need from cql */
 	for (i = 0; i < pcql->maxkeys; i++)
 	{
@@ -316,8 +314,7 @@ caql_basic_fn_all(caql_hash_cookie *pchn, cqContext *pCtx,
 	 */
 	if (!pCtx->cq_externrel)
 	{
-		if (!pCtx->cq_setlockmode &&
-			pCtx->cq_usesyscache &&
+		if (pCtx->cq_usesyscache &&
 			(AccessShareLock == pCtx->cq_lockmode))
 		{
 			pCtx->cq_externrel = true; /* pretend we have external relation */

@@ -68,7 +68,6 @@ typedef struct cqContextData
 	bool		cq_externrel;	/* heap rel external to caql */
 	bool		cq_setsnapshot;	/* use cq_snapshot (else default) */
 	Snapshot	cq_snapshot;	/* snapshot to see */
-	bool		cq_setlockmode;	/* use cq_lockmode (else default) */
 	LOCKMODE	cq_lockmode;	/* locking mode */
 	bool		cq_EOF;			/* true if hit end of fetch */
 
@@ -213,7 +212,6 @@ cq_list *cql1(const char* caqlStr, const char* filename, int lineno, ...);
  */
 cqContext	*caql_addrel(cqContext *pCtx, Relation rel);		/*  */
 cqContext	*caql_indexOK(cqContext *pCtx, bool bindexOK);		/*  */
-cqContext	*caql_lockmode(cqContext *pCtx, LOCKMODE lm);		/*  */
 cqContext	*caql_snapshot(cqContext *pCtx, Snapshot ss);		/*  */
 cqContext	*caql_syscache(cqContext *pCtx, bool bUseCache);	/*  */
 
