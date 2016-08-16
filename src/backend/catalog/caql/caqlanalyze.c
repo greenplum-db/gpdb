@@ -256,10 +256,9 @@ caql_basic_fn_all(caql_hash_cookie *pchn, cqContext *pCtx,
 		pCtx->cq_usesyscache = true;
 
 		/*
-		 * Normally, must match all columns of the index to use syscache,
-		 * except for case of SearchSysCacheList
+		 * Must match all columns of the index to use syscache.
 		 */
-		if (!pCtx->cq_bCacheList && (pCtx->cq_NumKeys != nkeys))
+		if (pCtx->cq_NumKeys != nkeys)
 			pCtx->cq_usesyscache = false;
 
 		/*
@@ -282,8 +281,8 @@ caql_basic_fn_all(caql_hash_cookie *pchn, cqContext *pCtx,
 		{
 			pCtx->cq_cacheId = pchn->syscacheid;
 
-			/* number of keys must match (unless a SearchSysCacheList ) */
-			Assert(pCtx->cq_bCacheList || (pCtx->cq_NumKeys == nkeys));
+			/* number of keys must match */
+			Assert(pCtx->cq_NumKeys == nkeys);
 		}
 	}
 

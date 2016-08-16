@@ -96,7 +96,6 @@ typedef struct cqContextData
 	 */
 	bool		cq_setsyscache;	/* use syscache (else heap/index scan) */
 	bool		cq_usesyscache;	/* use syscache (internal) */
-	bool		cq_bCacheList;	/* cache list search (internal) */
 	int			cq_cacheId; 	/* cache identifier */
 	Datum	   *cq_cacheKeys;	/* array of keys */
 	HeapTuple   cq_lasttup;		/* last tuple fetched (for ReleaseSysCache) */
@@ -129,11 +128,6 @@ HeapTuple	 caql_getnext(cqContext *pCtx);
 HeapTuple	 caql_getprev(cqContext *pCtx);
 /* XXX XXX: endscan must specify if hold or release locks */
 void		 caql_endscan(cqContext *pCtx);
-
-/* list-search interface.  Users of this must import catcache.h too */
-extern struct catclist *caql_begin_CacheList(cqContext *pCtx,
-											 cq_list *pcql);
-#define caql_end_CacheList(x)	ReleaseSysCacheList(x)
 
 /* during beginscan/endscan iteration, 
  * or subsequent to a getfirst (where a context was supplied), 

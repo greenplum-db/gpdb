@@ -396,34 +396,3 @@ HeapTuple caql_getattname(cqContext *pCtx, Oid relid, const char *attname);
 cqContext *
 caql_getattname_scan(cqContext *pCtx0, Oid relid, const char *attname)
 
-
-/* catcache list-search interface.  Users of this must import catcache.h too */
-/* 
- * In general, catquery will choose the syscache when the cql
- * statement contains an equality predicate on *all* of the syscache
- * primary key index columns, eg: 
- *
- *   cql("SELECT * FROM pg_amop WHERE amopopr = :1 and amopfamily = :2 ")
- *
- * will use the AMOPOPID syscache with index
- * AccessMethodOperatorIndexId.  However, the cql statement for a
- * list-search requires an equality predicate on a subset of the
- * initial columns of the index, with *all* of the index columns
- * specified in an ORDER BY clause, eg:
- *
- *   cql("SELECT * FROM pg_amop WHERE amopopr = :1 "
- *       " ORDER BY amopopr, amopfamily ")
- *
- * will use a syscache list-search if this cql statement is an
- * argument to caql_begin_CacheList().  However, the syscache will
- * *not* be used for this statement if it is supplied for
- * caql_beginscan(), since SearchSysCache() can only return (at most)
- * a single tuple.
- *
- * NOTE: caql_begin_CacheList() will assert (Insist!) at runtime if
- * the cql statement does not map to a syscache lookup.
- * NOTE: it may be possible to "collapse" this API into the existing
- * beginscan/getnext/endscan.
- */
-struct catclist *caql_begin_CacheList(cqContext *pCtx, cq_list *pcql);
-void caql_end_CacheList(struct catclist *cl)
