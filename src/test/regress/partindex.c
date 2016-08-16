@@ -1,9 +1,11 @@
-
 #include "postgres.h"
+
 #include "funcapi.h"
 #include "cdb/cdbpartition.h"
 #include "executor/spi.h"
 #include "executor/execDynamicIndexScan.h"
+#include "optimizer/prep.h"
+#include "optimizer/planmain.h"
 #include "utils/lsyscache.h"
 
 extern Datum gp_build_logical_index_info(PG_FUNCTION_ARGS);
@@ -196,7 +198,7 @@ gp_get_physical_index_relid(PG_FUNCTION_ARGS)
 	Oid                     resultOid;
 	int2vector		*indexKeys;
 	text			*inText;
-	char			*inStr;
+	Relation		rel;
 
 	logicalIndexInfo.nColumns = 0;
 	logicalIndexInfo.indexKeys = NULL;
@@ -210,28 +212,48 @@ gp_get_physical_index_relid(PG_FUNCTION_ARGS)
 		logicalIndexInfo.indexKeys = (AttrNumber *)palloc0(indexKeys->dim1 * sizeof(AttrNumber));
 		
 		for (int i = 0; i < indexKeys->dim1; i++)
-		logicalIndexInfo.indexKeys[i] = indexKeys->values[i];
+			logicalIndexInfo.indexKeys[i] = indexKeys->values[i];
 	}
 
 	if (!PG_ARGISNULL(3))
 	{
+		Node	   *indPred;
+
 		inText = PG_GETARG_TEXT_P(3);
 
-		inStr = text_to_cstring(inText);
-		logicalIndexInfo.indPred = (List *)stringToNode(inStr);
+		indPred = stringToNode(text_to_cstring(inText));
+
+		/* Perform the same normalization as relcache.c does. */
+		indPred = eval_const_expressions(NULL, indPred);
+		indPred = (Node *) canonicalize_qual((Expr *) indPred);
+		set_coercionform_dontcare(indPred);
+		indPred = (Node *) make_ands_implicit((Expr *) indPred);
+		fix_opfuncids(indPred);
+
+		logicalIndexInfo.indPred = (List *) indPred;
 	}
 
 	if (!PG_ARGISNULL(4))
 	{
+		Node	   *indExprs;
+
 		inText = PG_GETARG_TEXT_P(4);
 
-		inStr = text_to_cstring(inText);
-		logicalIndexInfo.indExprs = (List *)stringToNode(inStr);
+		indExprs = stringToNode(text_to_cstring(inText));
+
+		/* Perform the same normalization as relcache.c does. */
+		indExprs = eval_const_expressions(NULL, indExprs);
+		set_coercionform_dontcare(indExprs);
+		fix_opfuncids(indExprs);
+
+		logicalIndexInfo.indExprs = (List *) indExprs;
 	}	
 
 	logicalIndexInfo.indIsUnique = PG_GETARG_BOOL(5);
 
 	AttrNumber *attMap = IndexScan_GetColumnMapping(rootOid, partOid);
+
+	rel = heap_open(partOid, AccessShareLock);
 
 	/*
 	 * The varno is hard-coded to 1 as the original getPhysicalIndexRelid was
@@ -239,12 +261,14 @@ gp_get_physical_index_relid(PG_FUNCTION_ARGS)
 	 */
 	IndexScan_MapLogicalIndexInfo(&logicalIndexInfo, attMap, 1);
 	/* do the actual work */
-	resultOid = getPhysicalIndexRelid(&logicalIndexInfo, partOid);
+	resultOid = getPhysicalIndexRelid(rel, &logicalIndexInfo);
 
 	if (attMap)
 	{
 		pfree(attMap);
 	}
+
+	heap_close(rel, AccessShareLock);
 
 	return ObjectIdGetDatum(resultOid);
 }

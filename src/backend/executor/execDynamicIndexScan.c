@@ -118,6 +118,7 @@ static Oid
 IndexScan_GetIndexOid(IndexScanState *indexScanState, Oid tableOid)
 {
 	IndexScan *indexScan = (IndexScan *) indexScanState->ss.ps.plan;
+	Relation partRel;
 
 	/*
 	 * We return the plan node's indexid for non-partitioned case.
@@ -140,7 +141,11 @@ IndexScan_GetIndexOid(IndexScanState *indexScanState, Oid tableOid)
 	 * We started at table level, and now we are fetching the oid of an index
 	 * partition.
 	 */
-	Oid indexOid = getPhysicalIndexRelid(indexScan->logicalIndexInfo, tableOid);
+	Oid indexOid;
+
+	partRel = OpenScanRelationByOid(tableOid);
+	indexOid = getPhysicalIndexRelid(partRel, indexScan->logicalIndexInfo);
+	CloseScanRelation(partRel);
 
 	Assert(OidIsValid(indexOid));
 

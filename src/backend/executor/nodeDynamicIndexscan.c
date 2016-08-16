@@ -173,11 +173,6 @@ initNextIndexToScan(DynamicIndexScanState *node)
 		 * We started at table level, and now we are fetching the oid of an index
 		 * partition.
 		 */
-		Oid pindex = getPhysicalIndexRelid(dynamicIndexScan->logicalIndexInfo,
-					 *pid);
-
-		Assert(OidIsValid(pindex));
-
 		Relation currentRelation = OpenScanRelationByOid(*pid);
 		indexState->ss.ss_currentRelation = currentRelation;
 
@@ -197,6 +192,10 @@ initNextIndexToScan(DynamicIndexScanState *node)
 		/* Initialize child expressions */
 		indexState->ss.ps.qual = (List *) ExecInitExpr((Expr *) indexState->ss.ps.plan->qual, (PlanState *) indexState);
 		indexState->ss.ps.targetlist = (List *) ExecInitExpr((Expr *) indexState->ss.ps.plan->targetlist, (PlanState *) indexState);
+
+		Oid pindex = getPhysicalIndexRelid(currentRelation, dynamicIndexScan->logicalIndexInfo);
+
+		Assert(OidIsValid(pindex));
 
 		indexState->iss_RelationDesc =
 			OpenIndexRelation(estate, pindex, *pid);

@@ -220,7 +220,7 @@ extern void RemovePartitionEncodingByRelidAttribute(Oid relid, AttrNumber attnum
 extern Datum *get_partition_encoding_attoptions(Relation rel, Oid paroid);
 
 extern LogicalIndexes * BuildLogicalIndexInfo(Oid relid);
-extern Oid getPhysicalIndexRelid(LogicalIndexInfo *iInfo, Oid partOid);
+extern Oid getPhysicalIndexRelid(Relation partRel, LogicalIndexInfo *iInfo);
 
 extern LogicalIndexInfo *logicalIndexInfoForIndexOid(Oid rootOid, Oid indexOid);
 
