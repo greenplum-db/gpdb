@@ -174,12 +174,10 @@ InitResPortalIncrementHash(void)
 void 
 InitResQueues(void)
 {
-
 	HeapTuple			tuple;
 	int					numQueues = 0;
 	bool				queuesok = true;
-	cqContext		   *pcqCtx;
-	cqContext			cqc;
+	SysScanDesc sscan;
 	
 	Assert(ResScheduler);
 
@@ -199,6 +197,7 @@ InitResQueues(void)
 	 * So, we must have obtained ResQueueRelationId and ResQueueCapabilityRelationId lock
 	 * first.
 	 */
+	/* XXX XXX: should this be rowexclusive ? */
 	Relation relResqueue = heap_open(ResQueueRelationId, AccessShareLock);
 	LockRelationOid(ResQueueCapabilityRelationId, RowExclusiveLock);
 	LWLockAcquire(ResQueueLock, LW_EXCLUSIVE);
@@ -214,14 +213,8 @@ InitResQueues(void)
 		return;
 	}
 
-	/* XXX XXX: should this be rowexclusive ? */
-	pcqCtx = caql_beginscan(
-			caql_indexOK(
-					caql_addrel(cqclr(&cqc), relResqueue),
-					false),
-			cql("SELECT * FROM pg_resqueue ", NULL));
-
-	while (HeapTupleIsValid(tuple = caql_getnext(pcqCtx)))
+	sscan = systable_beginscan(relResqueue, InvalidOid, false, SnapshotNow, 0, NULL);
+	while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
 	{
 		Form_pg_resqueue	queueform;
 		Oid					queueid;
@@ -251,7 +244,7 @@ InitResQueues(void)
 		}
 	}
 
-	caql_endscan(pcqCtx);
+	systable_endscan(sscan);
 	LWLockRelease(ResQueueLock);
 	UnlockRelationOid(ResQueueCapabilityRelationId, RowExclusiveLock);
 	heap_close(relResqueue, AccessShareLock);

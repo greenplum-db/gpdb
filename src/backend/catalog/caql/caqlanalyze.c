@@ -233,10 +233,6 @@ caql_basic_fn_all(caql_hash_cookie *pchn, cqContext *pCtx,
 	int				i, numScanKeys;
 	List		   *predicates;
 	ListCell	   *l;
-	bool			can_use_idxOK;
-
-	/* the caller states no index scan? */
-	can_use_idxOK = !(pCtx->cq_setidxOK && !pCtx->cq_useidxOK);
 
 	pCtx->cq_relationId = pchn->relation->relid;
 
@@ -286,7 +282,7 @@ caql_basic_fn_all(caql_hash_cookie *pchn, cqContext *pCtx,
 	/*
 	 * Use index scan if available and unless the caller states otherwise.
 	 */
-	if (index && can_use_idxOK)
+	if (index)
 	{
 		scanIndexId = index->indexoid;
 		pCtx->cq_useidxOK = true;

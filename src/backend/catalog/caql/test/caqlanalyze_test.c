@@ -256,10 +256,9 @@ test__caql_switch4(void **state)
 	hash_cookie = cq_lookup(query, strlen(query), pcql);
 
 	/*
-	 * Add explicit relation, and set indexOK = true
+	 * Add explicit relation
 	 */
 	pCtx = caql_addrel(cqclr(&context), &dummyrel);
-	pCtx = caql_indexOK(pCtx, true);
 
 	/* setup ScanKeyInit */
 	expect__ScanKeyInit(NULL, false,
@@ -310,10 +309,9 @@ test__caql_switch5(void **state)
 	hash_cookie = cq_lookup(query, strlen(query), pcql);
 
 	/*
-	 * Add explicit relation, and set indexOK = true
+	 * Add explicit relation
 	 */
 	pCtx = caql_addrel(cqclr(&context), &dummyrel);
-	pCtx = caql_indexOK(pCtx, true);
 
 	/* setup ScanKeyInit */
 	expect__ScanKeyInit(NULL, false,

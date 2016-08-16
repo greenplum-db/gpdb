@@ -128,21 +128,6 @@ cqContext	*caql_addrel(cqContext *pCtx, Relation rel)
 }
 
 /* ----------------------------------------------------------------
- * caql_indexOK()
- * 
- * if false, force a heapscan
- * ----------------------------------------------------------------
- */
-
-cqContext	*caql_indexOK(cqContext *pCtx, bool bindexOK)
-{
-	pCtx->cq_setidxOK  = true;
-	pCtx->cq_useidxOK  = bindexOK;
-
-	return (pCtx);
-}
-
-/* ----------------------------------------------------------------
  * caql_snapshot()
  * 
  * Change the default snapshot (SnapshotNow) associated with the 
@@ -617,8 +602,7 @@ HeapTuple caql_getattname(cqContext *pCtx, Oid relid, const char *attname)
 			pCtx->cq_heap_rel  = InvalidRelation;
 		}
 
-		if (!pCtx->cq_setidxOK)
-			pCtx->cq_useidxOK = true;
+		pCtx->cq_useidxOK = true;
 
 		pCtx->cq_lasttup = tup;
 	}   
@@ -677,8 +661,7 @@ caql_getattname_scan(cqContext *pCtx0, Oid relid, const char *attname)
 			pCtx->cq_heap_rel  = InvalidRelation;
 		}
 
-		if (!pCtx->cq_setidxOK)
-			pCtx->cq_useidxOK = true;
+		pCtx->cq_useidxOK = true;
 
 		pCtx->cq_freeScan = true;
 		pCtx->cq_EOF  = true;

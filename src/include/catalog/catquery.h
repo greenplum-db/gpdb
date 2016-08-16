@@ -71,7 +71,6 @@ typedef struct cqContextData
 	LOCKMODE	cq_lockmode;	/* locking mode */
 	bool		cq_EOF;			/* true if hit end of fetch */
 
-	bool		cq_setidxOK;	/* set the indexOK mode */
 	bool		cq_useidxOK;	/* use supplied indexOK mode) */
 
 	bool		cq_pklock_excl;	/* lock exclusive if true */
@@ -183,7 +182,6 @@ cq_list *cql1(const char* caqlStr, const char* filename, int lineno, ...);
  * future releases
  */
 cqContext	*caql_addrel(cqContext *pCtx, Relation rel);		/*  */
-cqContext	*caql_indexOK(cqContext *pCtx, bool bindexOK);		/*  */
 cqContext	*caql_snapshot(cqContext *pCtx, Snapshot ss);		/*  */
 
 cqContext	*cqclr(cqContext	 *pCtx);						/*  */
