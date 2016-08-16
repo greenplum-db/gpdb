@@ -3669,7 +3669,7 @@ examine_variable(PlannerInfo *root, Node *node, int varRelid,
 				vardata->rel->cheapest_total_path != NULL)
 			{
 				RelOptInfo *childrel = largest_child_relation(root, vardata->rel);
-				vardata->statscqCtx = NULL;
+				vardata->statsTuple = NULL;
 
 				if (childrel)
 				{
@@ -3682,37 +3682,24 @@ examine_variable(PlannerInfo *root, Node *node, int varRelid,
 					/*
 					 * Get statistics from the child partition.
 					 */
-					vardata->statscqCtx = caql_beginscan
-										(
-										NULL,
-										cql("SELECT * FROM pg_statistic "
-											" WHERE starelid = :1 "
-											" AND staattnum = :2 ",
-											ObjectIdGetDatum(child_rte->relid),
-											Int16GetDatum(var->varattno))
-										);
+					vardata->statsTuple = SearchSysCache(STATRELATT,
+														 ObjectIdGetDatum(child_rte->relid),
+														 Int16GetDatum(var->varattno),
+														 0, 0);
 
-					(void) caql_getnext(vardata->statscqCtx);
-
-					if (NULL != vardata->statscqCtx && NULL != vardata->statscqCtx->cq_lasttup)
+					if (vardata->statsTuple != NULL)
 					{
-						adjust_partition_table_statistic_for_parent(vardata->statscqCtx->cq_lasttup, childrel->tuples);
+						adjust_partition_table_statistic_for_parent(vardata->statsTuple, childrel->tuples);
 					}
 				}
 			}
 		}
 		else if (rte->rtekind == RTE_RELATION)
 		{
-			vardata->statscqCtx = caql_beginscan(
-					NULL,
-					cql("SELECT * FROM pg_statistic "
-						" WHERE starelid = :1 "
-						" AND staattnum = :2 ",
-						ObjectIdGetDatum(rte->relid),
-						Int16GetDatum(var->varattno)));
-			
-			/* fetch the tuple */
-			(void) caql_getnext(vardata->statscqCtx);
+			vardata->statsTuple = SearchSysCache(STATRELATT,
+												 ObjectIdGetDatum(rte->relid),
+												 Int16GetDatum(var->varattno),
+												 0, 0);
 		}
 		else
 		{
@@ -3829,19 +3816,11 @@ examine_variable(PlannerInfo *root, Node *node, int varRelid,
 							index->indpred == NIL)
 							vardata->isunique = true;
 						/* Has it got stats? */
-
-						vardata->statscqCtx = caql_beginscan(
-								NULL,
-								cql("SELECT * FROM pg_statistic "
-									" WHERE starelid = :1 "
-									" AND staattnum = :2 ",
-									ObjectIdGetDatum(index->indexoid),
-									Int16GetDatum(pos + 1)));
-			
-						/* fetch the tuple */
-						(void) caql_getnext(vardata->statscqCtx);
-
-						if (HeapTupleIsValid(getStatsTuple(vardata)))
+						vardata->statsTuple = SearchSysCache(STATRELATT,
+										   ObjectIdGetDatum(index->indexoid),
+													  Int16GetDatum(pos + 1),
+															 0, 0);
+						if (vardata->statsTuple)
 							break;
 					}
 					indexpr_item = lnext(indexpr_item);
@@ -3851,16 +3830,6 @@ examine_variable(PlannerInfo *root, Node *node, int varRelid,
 				break;
 		}
 	}
-}
-
-/**
- * Input: vardata. Must be non-NULL.
- */
-void ReleaseVariableStats(VariableStatData vardata)
-{
- 	if (vardata.statscqCtx)
-		caql_endscan(vardata.statscqCtx);
-	vardata.statscqCtx = NULL;
 }
 
 /*

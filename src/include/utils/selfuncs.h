@@ -69,7 +69,7 @@ typedef struct VariableStatData
 {
 	Node	   *var;			/* the Var or expression tree */
 	RelOptInfo *rel;			/* Relation, or NULL if not identifiable */
-	cqContext  *statscqCtx;		/* pg_statistic cqctx, or NULL if none */
+	HeapTuple	statsTuple;		/* pg_statistic tuple, or NULL if none */
 	/* NB: if statsTuple!=NULL, it must be freed when caller is done */
 	double		numdistinctFromPrimaryKey; /* this is the numdistinct as estimated from the primary key relation. If this is < 0, then it is ignored. */
 	Oid			vartype;		/* exposed type of expression */
@@ -79,9 +79,13 @@ typedef struct VariableStatData
 } VariableStatData;
 
 /* get the pg_statistic tuple, or NULL if none */
-#define getStatsTuple(vardata) \
-(((NULL != (vardata)) && (NULL != (vardata)->statscqCtx)) ?	\
- caql_get_current((vardata)->statscqCtx) : NULL)
+#define getStatsTuple(vardata) ((vardata)->statsTuple)
+
+#define ReleaseVariableStats(vardata)  \
+	do { \
+		if (HeapTupleIsValid((vardata).statsTuple)) \
+			ReleaseSysCache((vardata).statsTuple); \
+	} while(0)
 
 typedef enum
 {
@@ -99,7 +103,6 @@ typedef enum
 
 extern void examine_variable(PlannerInfo *root, Node *node, int varRelid,
 				 VariableStatData *vardata);
-extern void ReleaseVariableStats(VariableStatData vardata);
 extern bool get_restriction_variable(PlannerInfo *root, List *args,
 						 int varRelid,
 						 VariableStatData *vardata, Node **other,
