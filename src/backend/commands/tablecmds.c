@@ -6224,6 +6224,7 @@ ATExecAddColumn(AlteredTableInfo *tab, Relation rel,
 							colDef->colname, RelationGetRelationName(rel))));
 		}
 	}
+
 	minattnum = ((Form_pg_class) GETSTRUCT(reltup))->relnatts;
 	maxatts = minattnum + 1;
 	if (maxatts > MaxHeapAttributeNumber)
@@ -7150,7 +7151,7 @@ ATExecDropColumn(List **wqueue, Relation rel, const char *colName,
 
 		/* Find or create work queue entry for this table */
 		tab = ATGetQueueEntry(wqueue, rel);
-		
+
 		/* Tell Phase 3 to physically remove the OID column */
 		tab->new_dropoids = true;
 	}
@@ -11170,12 +11171,12 @@ MergeConstraintsIntoExisting(Relation child_rel, Relation parent_rel)
 	catalogRelation = heap_open(ConstraintRelationId, AccessShareLock);
 	tupleDesc = RelationGetDescr(catalogRelation);
 
-	 ScanKeyInit(&key,
-				 Anum_pg_constraint_conrelid,
-				 BTEqualStrategyNumber, F_OIDEQ,
-				 ObjectIdGetDatum(RelationGetRelid(child_rel)));
-	 scan = systable_beginscan(catalogRelation, ConstraintRelidIndexId,
-							   true, SnapshotNow, 1, &key);
+	ScanKeyInit(&key,
+				Anum_pg_constraint_conrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(RelationGetRelid(child_rel)));
+	scan = systable_beginscan(catalogRelation, ConstraintRelidIndexId,
+							  true, SnapshotNow, 1, &key);
 
 	constraints = NIL;
 	while (HeapTupleIsValid(constraintTuple = systable_getnext(scan)))
@@ -12767,7 +12768,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		bool		repl_repl[Natts_pg_class];
 		HeapTuple	newOptsTuple;
 		HeapTuple	tuple;
-		cqContext	*relcqCtx;
+		Relation	relationRelation;
 
 		/*
 		 * All we need do here is update the pg_class row; the new
@@ -12785,25 +12786,23 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 
 		repl_repl[Anum_pg_class_reloptions - 1] = true;
 
-		relcqCtx = caql_beginscan(
-				NULL,
-				cql("SELECT * FROM pg_class "
-					" WHERE oid = :1 "
-					" FOR UPDATE ",
-					ObjectIdGetDatum(tarrelid)));
-
-		tuple = caql_getnext(relcqCtx);
+		relationRelation = heap_open(RelationRelationId, RowExclusiveLock);
+		tuple = SearchSysCache(RELOID,
+							   ObjectIdGetDatum(tarrelid),
+							   0, 0, 0);
 
 		Insist(HeapTupleIsValid(tuple));
-		newOptsTuple = caql_modify_current(relcqCtx,
-										   repl_val, repl_null, repl_repl);
+		newOptsTuple = heap_modify_tuple(tuple, RelationGetDescr(relationRelation),
+										 repl_val, repl_null, repl_repl);
 
-		caql_update_current(relcqCtx, newOptsTuple);
-		/* and Update indexes (implicit) */
+		simple_heap_update(relationRelation, &tuple->t_self, newOptsTuple);
+		CatalogUpdateIndexes(relationRelation, newOptsTuple);
 
 		heap_freetuple(newOptsTuple);
 
-		caql_endscan(relcqCtx);
+		ReleaseSysCache(tuple);
+
+		heap_close(relationRelation, RowExclusiveLock);
 
 		/*
 		 * Increment cmd counter to make updates visible; this is
@@ -14365,8 +14364,8 @@ ATPExecPartRename(Relation rel,
 		pgrule = (Form_pg_partition_rule)GETSTRUCT(tuple);
 		namestrcpy(&(pgrule->parname), newpartname);
 
-		caql_update_current(pcqCtx, tuple);
-		/* and Update indexes (implicit) */
+		simple_heap_update(part_rel, &tuple->t_self, tuple);
+		CatalogUpdateIndexes(part_rel, tuple);
 
 		heap_freetuple(tuple);
 		heap_close(part_rel, NoLock);

@@ -207,10 +207,9 @@ void ValidateResqueueCapabilityEntry(int			 resTypeInt,
  * else insert a new row.
  *
  */
-static 
-List *
- AddUpdResqueueCapabilityEntryInternal(
-								  cqContext		*pcqCtx,
+static List *
+AddUpdResqueueCapabilityEntryInternal(
+								  Relation		 resqueuecap_rel,
 								  List			*stmtOptIdList,
 								  Oid			 queueid,
 								  int			 resTypeInt,
@@ -241,17 +240,18 @@ List *
 
 	if (HeapTupleIsValid(old_tuple))
 	{
-		new_tuple = caql_modify_current(pcqCtx, values,
-										isnull, new_record_repl);
+		new_tuple = heap_modify_tuple(old_tuple,
+									  RelationGetDescr(resqueuecap_rel),
+									  values, isnull, new_record_repl);
 
-		caql_update_current(pcqCtx, new_tuple);
-		/* and Update indexes (implicit) */
+		simple_heap_update(resqueuecap_rel, &old_tuple->t_self, new_tuple);
+		CatalogUpdateIndexes(resqueuecap_rel, new_tuple);
 	}
 	else
 	{
 		Oid s1;
 
-		new_tuple = caql_form_tuple(pcqCtx, values, isnull);
+		new_tuple = heap_form_tuple(RelationGetDescr(resqueuecap_rel), values, isnull);
 
 		/* MPP-11858: synchronize the oids for CREATE/ALTER options... */
 		if ((Gp_role != GP_ROLE_DISPATCH) && list_length(stmtOptIdList))
@@ -263,8 +263,8 @@ List *
 				HeapTupleSetOid(new_tuple, s2);
 		}
 
-		s1 = caql_insert(pcqCtx, new_tuple); 
-		/* and Update indexes (implicit) */
+		s1 = simple_heap_insert(resqueuecap_rel, new_tuple);
+		CatalogUpdateIndexes(resqueuecap_rel, new_tuple);
 
 		if (Gp_role == GP_ROLE_DISPATCH)
 		{
@@ -292,8 +292,6 @@ AlterResqueueCapabilityEntry(
 	List		*dropelems = NIL;
 	List		*dupcheck  = NIL;
 	HeapTuple	 tuple;
-	cqContext	*pcqCtx;
-	cqContext	 cqc;
 	Relation	 rel	   = NULL;
 	bool		 bWithout  = false;
 	TupleDesc	 tupdesc   = NULL;
@@ -351,17 +349,21 @@ AlterResqueueCapabilityEntry(
 			pStrVal = makeString(defGetString(defel));
 		else
 		{
+			ScanKeyData scankey;
+			SysScanDesc sscan;
+
 			pStrVal = NULL; /* if NULL, delete entry from
 							 * pg_resqueuecapability 
 							 */
+			ScanKeyInit(&scankey,
+						Anum_pg_resourcetype_restypid,
+						BTEqualStrategyNumber, F_INT2EQ,
+						Int16GetDatum(resTypeInt));
 
-			pcqCtx = caql_beginscan(
-					caql_addrel(cqclr(&cqc), rel),
-					cql("SELECT * FROM pg_resourcetype" 
-						" WHERE restypid = :1 FOR UPDATE", 
-						Int16GetDatum(resTypeInt)));
-	
-			while (HeapTupleIsValid(tuple = caql_getnext(pcqCtx)))
+			sscan = systable_beginscan(rel, ResourceTypeRestypidIndexId,
+									   true, SnapshotNow, 1, &scankey);
+
+			while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
 			{
 				text	*shutoff_text	  = NULL;
 				char	*shutoff_str	  = NULL;
@@ -418,7 +420,7 @@ AlterResqueueCapabilityEntry(
 					
 				break;
 			} /* end while heaptuple is valid */
-			caql_endscan(pcqCtx);
+			systable_endscan(sscan);
 		}
 
 		/* check for duplicate key specifications */
@@ -458,6 +460,8 @@ AlterResqueueCapabilityEntry(
 
 	if (bCreate)
 	{
+		SysScanDesc sscan;
+
 		/* If creating a new resource queue, check pg_resourcetype for
 		 * optional types that have a default value.  Check for
 		 * corresponding match in dupcheck -- if no entry then add the
@@ -468,11 +472,8 @@ AlterResqueueCapabilityEntry(
 
 		/* Note: key is empty - scan entire table */
 
-		pcqCtx = caql_beginscan(
-				caql_addrel(cqclr(&cqc), rel),
-				cql("SELECT * FROM pg_resourcetype FOR UPDATE", NULL));
-
-		while (HeapTupleIsValid(tuple = caql_getnext(pcqCtx)))
+		sscan = systable_beginscan(rel, InvalidOid, false, SnapshotNow, 0, NULL);
+		while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
 		{
 			List	*pentry			  = NIL;
 			Value	*pResnameVal	  = NULL;
@@ -527,7 +528,7 @@ AlterResqueueCapabilityEntry(
 
 			elems = lappend(elems, pentry);
 		} /* end while heaptuple is valid */
-		caql_endscan(pcqCtx);
+		systable_endscan(sscan);
 
 		heap_close(rel, RowExclusiveLock); /* close pg_resourcetype */
 	} /* end if bCreate */
@@ -544,6 +545,8 @@ AlterResqueueCapabilityEntry(
 		Node			*pVal;
 		char			*pResSetting = "";
 		int				 ii;
+		SysScanDesc sscan;
+		ScanKeyData skey;
 
 		Assert (2 == list_length(pentry));
 
@@ -557,15 +560,15 @@ AlterResqueueCapabilityEntry(
 
 		pResSetting = strVal(pVal);
 
-		pcqCtx = caql_beginscan(
-				caql_addrel(cqclr(&cqc), rel),
-				cql("SELECT * FROM pg_resqueuecapability"
-					" WHERE resqueueid = :1  FOR UPDATE", 
-					ObjectIdGetDatum(queueid)));
+		ScanKeyInit(&skey,
+					Anum_pg_resqueuecapability_resqueueid,
+					BTEqualStrategyNumber, F_OIDEQ,
+					ObjectIdGetDatum(queueid));
+		sscan = systable_beginscan(rel, ResQueueCapabilityResqueueidIndexId, true,
+								   SnapshotNow, 1, &skey);
 
 		ii = 0;
-
-		while (HeapTupleIsValid(tuple = caql_getnext(pcqCtx)))
+		while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
 		{
 			if (HeapTupleIsValid(tuple))
 			{
@@ -575,7 +578,7 @@ AlterResqueueCapabilityEntry(
 					/* found it -- update it */
 					stmtOptIdList = 
 							AddUpdResqueueCapabilityEntryInternal(
-									pcqCtx,
+									rel,
 									stmtOptIdList,
 									queueid,
 									resTypeInt,
@@ -587,27 +590,21 @@ AlterResqueueCapabilityEntry(
 				}
 			}
 		}
-		caql_endscan(pcqCtx);
+
+		systable_endscan(sscan);
 
 		if (!ii)
 		{
-			pcqCtx = caql_beginscan(
-					caql_addrel(cqclr(&cqc), rel),
-					cql("INSERT INTO pg_resqueuecapability",
-						NULL));
-
 			/* does not exist -- add it */
 			stmtOptIdList = 
 					AddUpdResqueueCapabilityEntryInternal(
-							pcqCtx,
+							rel,
 							stmtOptIdList,
 							queueid,
 							resTypeInt,
 							pResSetting,
 							rel,
 							InvalidOid);
-			
-			caql_endscan(pcqCtx);
 		}
 
 	} /* end foreach elem */
@@ -739,9 +736,7 @@ CreateQueue(CreateQueueStmt *stmt)
 	Relation	pg_resqueue_rel;
 	TupleDesc	pg_resqueue_dsc;
 	HeapTuple	tuple;
-	cqContext	cqc;
 	cqContext	cqc2;
-	cqContext  *pcqCtx;
 	Oid			queueid;
 	Cost		thresholds[NUM_RES_LIMIT_TYPES];
 	Datum		new_record[Natts_pg_resqueue];
@@ -900,7 +895,8 @@ CreateQueue(CreateQueueStmt *stmt)
 	 * exist. 
 	 */
 	pg_resqueue_rel = heap_open(ResQueueRelationId, RowExclusiveLock);
-	
+	pg_resqueue_dsc = RelationGetDescr(pg_resqueue_rel);
+
 	/**
 	 * Get database locks in anticipation that we'll need to access
 	 * this catalog table later.
@@ -909,13 +905,6 @@ CreateQueue(CreateQueueStmt *stmt)
 			heap_open(ResQueueCapabilityRelationId, RowExclusiveLock);
 	Relation resqueueCapabilityIndexRel = 
 			index_open(ResQueueCapabilityResqueueidIndexId, AccessShareLock);
-
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), pg_resqueue_rel),
-			cql("INSERT INTO pg_resqueue",
-				NULL));
-
-	pg_resqueue_dsc = RelationGetDescr(pg_resqueue_rel);
 
 	if (caql_getcount(
 			caql_addrel(cqclr(&cqc2), pg_resqueue_rel),
@@ -950,7 +939,7 @@ CreateQueue(CreateQueueStmt *stmt)
 		Float4GetDatum(ignorelimit);
 
 
-	tuple = caql_form_tuple(pcqCtx, new_record, new_record_nulls);
+	tuple = heap_form_tuple(pg_resqueue_dsc, new_record, new_record_nulls);
 
 	/* Keep oids synchonized between master and segments */
 	if (OidIsValid(stmt->queueOid))
@@ -959,8 +948,8 @@ CreateQueue(CreateQueueStmt *stmt)
 	/*
 	 * Insert new record in the pg_resqueue table
 	 */
-	queueid = caql_insert(pcqCtx, tuple);
-	/* and Update indexes (implicit) */
+	queueid = simple_heap_insert(pg_resqueue_rel, tuple);
+	CatalogUpdateIndexes(pg_resqueue_rel, tuple);
 
 	/* process the remainder of the WITH (...) list items */
 	if (bWith)
@@ -1034,7 +1023,6 @@ CreateQueue(CreateQueueStmt *stmt)
 				);
 	}
 
-	caql_endscan(pcqCtx);
 	heap_close(resqueueCapabilityIndexRel, NoLock);
 	heap_close(resqueueCapabilityRel, NoLock);
 	heap_close(pg_resqueue_rel, NoLock);
@@ -1049,9 +1037,9 @@ AlterQueue(AlterQueueStmt *stmt)
 {
 	Relation	pg_resqueue_rel;
 	TupleDesc	pg_resqueue_dsc;
+	ScanKeyData scankey;
+	SysScanDesc sscan;
 	HeapTuple	tuple, new_tuple;
-	cqContext	cqc;
-	cqContext  *pcqCtx;
 	Oid			queueid;
 	Cost		thresholds[NUM_RES_LIMIT_TYPES];
 	Datum		new_record[Natts_pg_resqueue];
@@ -1276,8 +1264,6 @@ AlterQueue(AlterQueueStmt *stmt)
 	 */
 	pg_resqueue_rel = heap_open(ResQueueRelationId, RowExclusiveLock);
 
-	pcqCtx = caql_addrel(cqclr(&cqc), pg_resqueue_rel);
-
 	/**
 	 * Get database locks in anticipation that we'll need to access this catalog table later.
 	 */
@@ -1286,11 +1272,13 @@ AlterQueue(AlterQueueStmt *stmt)
 
 	pg_resqueue_dsc = RelationGetDescr(pg_resqueue_rel);
 
-	tuple = caql_getfirst(
-			pcqCtx,
-			cql("SELECT * FROM pg_resqueue WHERE rsqname = :1 FOR UPDATE",
-				CStringGetDatum(stmt->queue)));
-
+	ScanKeyInit(&scankey,
+				Anum_pg_resqueue_rsqname,
+				BTEqualStrategyNumber, F_NAMEEQ,
+				CStringGetDatum(stmt->queue));
+	sscan = systable_beginscan(pg_resqueue_rel, ResQueueRsqnameIndexId,
+							   true, SnapshotNow, 1, &scankey);
+	tuple = systable_getnext(sscan);
 	if (!HeapTupleIsValid(tuple))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -1373,11 +1361,13 @@ AlterQueue(AlterQueueStmt *stmt)
 	/*
 	 * update the tuple in the pg_resqueue table
 	 */
-	new_tuple = caql_modify_current(pcqCtx, new_record,
+	new_tuple = heap_modify_tuple(tuple, pg_resqueue_dsc, new_record,
 									new_record_nulls, new_record_repl);
 
-	caql_update_current(pcqCtx, new_tuple);
-	/* and Update indexes (implicit) */
+	simple_heap_update(pg_resqueue_rel, &tuple->t_self, new_tuple);
+	CatalogUpdateIndexes(pg_resqueue_rel, new_tuple);
+
+	systable_endscan(sscan);
 
 	/* process the remainder of the WITH (...) list items */
 	if (bWith)
@@ -1546,7 +1536,7 @@ DropQueue(DropQueueStmt *stmt)
 	/*
 	 * Delete the queue from the catalog.
 	 */
-	caql_delete_current(pcqCtx);
+	simple_heap_delete(pg_resqueue_rel, &tuple->t_self);
 
 	/*
 	 * If resource scheduling is on, see if we can destroy the in-memory queue.

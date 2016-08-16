@@ -545,7 +545,7 @@ PersistentBuild_BuildDb(
 		/* Insert N frozen tuples of value 0 */
 		MemSet(nulls, false, sizeof(nulls));
 		values[Anum_gp_global_sequence_sequence_num-1] = Int64GetDatum(0);
-		tuple = caql_form_tuple(pcqCtx, values, nulls);
+		tuple = heap_form_tuple(RelationGetDescr(gp_global_sequence), values, nulls);
 
 		if (!HeapTupleIsValid(tuple))
 			elog(ERROR, "failed to build global sequence tuple");

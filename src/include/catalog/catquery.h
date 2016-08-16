@@ -128,24 +128,6 @@ HeapTuple	 caql_getnext(cqContext *pCtx);
 /* XXX XXX: endscan must specify if hold or release locks */
 void		 caql_endscan(cqContext *pCtx);
 
-/* during beginscan/endscan iteration, 
- * or subsequent to a getfirst (where a context was supplied), 
- * delete, update or modify the current tuple 
-*/
-/* delete current tuple */
-void		 caql_delete_current(cqContext *pCtx);
-/* insert tuple */
-Oid			 caql_insert(cqContext *pCtx, HeapTuple tup);
-/* update current tuple */
-void		 caql_update_current(cqContext *pCtx, HeapTuple tup);
-/* modify current tuple */
-HeapTuple	 caql_modify_current(cqContext *pCtx, Datum *replValues,
-								 bool *replIsnull,
-								 bool *doReplace);
-/* form tuple */
-HeapTuple	 caql_form_tuple(cqContext *pCtx, Datum *replValues,
-							 bool *replIsnull);
-
 /* retrieve the last (current) tuple */
 #define caql_get_current(pCtx) ((pCtx)->cq_lasttup)
 

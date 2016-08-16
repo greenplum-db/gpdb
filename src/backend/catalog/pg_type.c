@@ -15,7 +15,6 @@
 #include "postgres.h"
 
 #include "access/heapam.h"
-#include "catalog/catquery.h"
 #include "access/xact.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
@@ -40,27 +39,31 @@
 void
 add_type_encoding(Oid typid, Datum typoptions)
 {
+	Relation	pg_type_encoding_desc;
+	TupleDesc	tupDesc;
 	Datum		 values[Natts_pg_type_encoding];
 	bool		 nulls[Natts_pg_type_encoding];
 	HeapTuple	 tuple;
-	cqContext	*pcqCtx;
 
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("INSERT INTO pg_type_encoding ",
-				NULL));
+	/*
+	 * open pg_type
+	 */
+	pg_type_encoding_desc = heap_open(TypeEncodingRelationId, RowExclusiveLock);
+	tupDesc = pg_type_encoding_desc->rd_att;
 
 	MemSet(nulls, false, sizeof(nulls));
 	
 	values[Anum_pg_type_encoding_typid - 1] = ObjectIdGetDatum(typid);
 	values[Anum_pg_type_encoding_typoptions - 1] = typoptions;
 
-	tuple = caql_form_tuple(pcqCtx, values, nulls);
+	tuple = heap_form_tuple(tupDesc, values, nulls);
 
 	/* Insert tuple into the relation */
-	caql_insert(pcqCtx, tuple); /* implicit update of index as well */
+	simple_heap_insert(pg_type_encoding_desc, tuple);
 
-	caql_endscan(pcqCtx);
+	CatalogUpdateIndexes(pg_type_encoding_desc, tuple);
+
+	heap_close(pg_type_encoding_desc, RowExclusiveLock);
 }
 
 /* ----------------------------------------------------------------

@@ -16,7 +16,6 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
-#include "catalog/catquery.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_authid.h"
 #include "catalog/pg_cast.h"
@@ -1564,9 +1563,12 @@ CommentCast(List *qualname, List *arguments, char *comment)
 static void
 CommentResourceQueue(List *qualname, char *comment)
 {
-	char		*queueName;
-	Oid			 oid = InvalidOid;
-	int			 fetchCount = 0;
+	Relation	pg_resqueue;
+	char	   *queueName;
+	HeapTuple	tuple;
+	SysScanDesc scan;
+	ScanKeyData entry[2];
+	Oid			oid;
 
 	if (list_length(qualname) != 1)
 		ereport(ERROR,
@@ -1574,21 +1576,19 @@ CommentResourceQueue(List *qualname, char *comment)
 				 errmsg("resource queue name may not be qualified")));
 	queueName = strVal(linitial(qualname));
 
-	oid = caql_getoid_plus(
-			NULL,
-			&fetchCount,
-			NULL,
-			cql("SELECT oid FROM pg_resqueue "
-				" WHERE rsqname = :1 ",
-				CStringGetDatum(queueName)));
+	pg_resqueue = heap_open(ResQueueRelationId, AccessShareLock);
+	ScanKeyInit(&entry[1],
+				Anum_pg_resqueue_rsqname,
+				BTEqualStrategyNumber, F_NAMEEQ,
+				CStringGetDatum(queueName));
+	scan = systable_beginscan(pg_resqueue, ResQueueRsqnameIndexId, true,
+							  SnapshotNow, 1, entry);
+	tuple = systable_getnext(scan);
 
-	if (0 == fetchCount)
-	{
+	if (!HeapTupleIsValid(tuple))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 errmsg("resource queue \"%s\" does not exist", queueName)));
-		return;
-	}
 
 	/* Check object security */
 	if (!superuser())
@@ -1596,8 +1596,14 @@ CommentResourceQueue(List *qualname, char *comment)
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("must be superuser to comment on resource queue")));
 
+	oid = HeapTupleGetOid(tuple);
+
+	systable_endscan(scan);
+
 	/* Call CreateSharedComments() to create/drop the comments */
 	CreateSharedComments(oid, ResQueueRelationId, comment);
+
+	heap_close(pg_resqueue, AccessShareLock);
 }
 
 static void

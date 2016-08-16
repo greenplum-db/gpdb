@@ -1579,19 +1579,18 @@ ExecGrant_ExtProtocol(InternalGrant *istmt)
 		Datum		aclDatum;
 		Datum		trustedDatum;
 		Datum		ptcnameDatum;
-		cqContext	cqc;
-		cqContext  *pcqCtx;
+		ScanKeyData entry[1];
+		SysScanDesc scan;
 		TupleDesc	reldsc = RelationGetDescr(relation);
 
-		pcqCtx = caql_beginscan(
-				caql_addrel(cqclr(&cqc), relation),
-				cql("SELECT * FROM pg_extprotocol "
-					" WHERE oid = :1 "
-					" FOR UPDATE ",
-					ObjectIdGetDatum(ptcid)));
-
-		tuple = caql_getnext(pcqCtx);
-
+		/* There's no syscache for pg_extprotocol, so must look the hard way */
+		ScanKeyInit(&entry[0],
+					ObjectIdAttributeNumber,
+					BTEqualStrategyNumber, F_OIDEQ,
+					ObjectIdGetDatum(ptcid));
+		scan = systable_beginscan(relation, ExtprotocolOidIndexId, true,
+								  SnapshotNow, 1, entry);
+		tuple = systable_getnext(scan);
 		if (!HeapTupleIsValid(tuple))
 			elog(ERROR, "lookup failed for external protocol %u", ptcid);
 		
@@ -1687,10 +1686,13 @@ ExecGrant_ExtProtocol(InternalGrant *istmt)
 		replaces[Anum_pg_extprotocol_ptcacl - 1] = true;
 		values[Anum_pg_extprotocol_ptcacl - 1] = PointerGetDatum(new_acl);
 
-		newtuple = caql_modify_current(pcqCtx, values, nulls, replaces);
+		newtuple = heap_modify_tuple(tuple, RelationGetDescr(relation), values,
+									 nulls, replaces);
 
-		caql_update_current(pcqCtx, newtuple);
-		/* and Update indexes (implicit) */
+		simple_heap_update(relation, &newtuple->t_self, newtuple);
+
+		/* keep the catalog indexes up to date */
+		CatalogUpdateIndexes(relation, newtuple);
 
 		/* Update the shared dependency ACL info */
 		updateAclDependencies(ExtprotocolRelationId,
@@ -1699,7 +1701,7 @@ ExecGrant_ExtProtocol(InternalGrant *istmt)
 							  noldmembers, oldmembers,
 							  nnewmembers, newmembers);
 
-		caql_endscan(pcqCtx);
+		systable_endscan(scan);
 
 		pfree(new_acl);
 

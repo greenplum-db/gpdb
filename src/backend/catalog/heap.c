@@ -36,7 +36,6 @@
 #include "access/reloptions.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
-#include "catalog/catquery.h"
 #include "catalog/dependency.h"
 #include "catalog/gp_policy.h"
 #include "catalog/heap.h"
@@ -83,8 +82,7 @@
 
 #include "utils/guc.h"
 
-static void MetaTrackAddUpdInternal(cqContext  *pcqCtx,
-									Oid			classid,
+static void MetaTrackAddUpdInternal(Oid			classid,
 									Oid			objoid,
 									Oid			relowner,
 									char*		actionname,
@@ -644,8 +642,7 @@ CheckAttributeType(const char *attname, Oid atttypid,
  * --------------------------------
  */
 
-static void MetaTrackAddUpdInternal(cqContext  *pcqCtx,
-									Oid			classid,
+static void MetaTrackAddUpdInternal(Oid			classid,
 									Oid			objoid,
 									Oid			relowner,
 									char*		actionname,
@@ -659,6 +656,7 @@ static void MetaTrackAddUpdInternal(cqContext  *pcqCtx,
 	bool		new_record_repl[Natts_pg_statlastop];
 	NameData	uname;
 	NameData	aname;
+	HeapTuple	roletup;
 
 	MemSet(isnull, 0, sizeof(bool) * Natts_pg_statlastop);
 	MemSet(new_record_repl, 0, sizeof(bool) * Natts_pg_statlastop);
@@ -676,28 +674,20 @@ static void MetaTrackAddUpdInternal(cqContext  *pcqCtx,
 
 	uname.data[0] = '\0';
 
+	roletup = SearchSysCache(AUTHOID,
+							 ObjectIdGetDatum(relowner),
+							 0, 0, 0);
+	if (HeapTupleIsValid(roletup))
 	{
-		char	*rolnamestr;
-		int		 fetchCount;
+		Form_pg_authid authid_tup = (Form_pg_authid) GETSTRUCT(roletup);
 
-		rolnamestr = caql_getcstring_plus(
-				NULL,
-				&fetchCount,
-				NULL,
-				cql("SELECT rolname FROM pg_authid "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(relowner)));
-
-		if (fetchCount)
-		{
-			namestrcpy(&uname, rolnamestr);
-			pfree(rolnamestr);
-		}
-		else
-		{
-			/* Generate numeric OID if we don't find an entry */
-			sprintf(NameStr(uname), "%u", relowner);
-		}
+		namecpy(&uname, &authid_tup->rolname);
+		ReleaseSysCache(roletup);
+	}
+	else
+	{
+		/* Generate numeric OID if we don't find an entry */
+		sprintf(NameStr(uname), "%u", relowner);
 	}
 
 	values[Anum_pg_statlastop_stausename - 1] = NameGetDatum(&uname);
@@ -714,19 +704,18 @@ static void MetaTrackAddUpdInternal(cqContext  *pcqCtx,
 
 	if (HeapTupleIsValid(old_tuple))
 	{
-		new_tuple = caql_modify_current(pcqCtx,
-										values,
-										isnull, new_record_repl);
-
-		caql_update_current(pcqCtx, new_tuple);
-		/* and Update indexes (implicit) */
+		new_tuple = heap_modify_tuple(old_tuple, RelationGetDescr(rel),
+									  values,
+									  isnull, new_record_repl);
+		simple_heap_update(rel, &old_tuple->t_self, new_tuple);
+		CatalogUpdateIndexes(rel, new_tuple);
 	}
 	else
 	{
-		new_tuple = caql_form_tuple(pcqCtx, values, isnull);
+		new_tuple = heap_form_tuple(RelationGetDescr(rel), values, isnull);
 
-		(void) caql_insert(pcqCtx, new_tuple);
-		/* and Update indexes (implicit) */
+		simple_heap_insert(rel, new_tuple);
+		CatalogUpdateIndexes(rel, new_tuple);
 	}
 
 	if (HeapTupleIsValid(old_tuple))
@@ -742,8 +731,6 @@ void MetaTrackAddObject(Oid		classid,
 						char*	subtype)
 {
 	Relation	rel;
-	cqContext	cqc;
-	cqContext  *pcqCtx;
 
 	if (IsBootstrapProcessingMode())
 		return;
@@ -751,26 +738,16 @@ void MetaTrackAddObject(Oid		classid,
 	if (IsSharedRelation(classid))
 	{
 		rel = heap_open(StatLastShOpRelationId, RowExclusiveLock);
-		pcqCtx = caql_beginscan(
-				caql_addrel(cqclr(&cqc), rel),
-				cql("INSERT INTO pg_stat_last_shoperation ",
-					NULL));
 	}
 	else
 	{
 		rel = heap_open(StatLastOpRelationId, RowExclusiveLock);
-		pcqCtx = caql_beginscan(
-				caql_addrel(cqclr(&cqc), rel),
-				cql("INSERT INTO pg_stat_last_operation ",
-					NULL));
 	}
 
-	MetaTrackAddUpdInternal(pcqCtx,
-							classid, objoid, relowner,
+	MetaTrackAddUpdInternal(classid, objoid, relowner,
 							actionname, subtype,
 							rel, InvalidOid);
 
-	caql_endscan(pcqCtx);
 	heap_close(rel, RowExclusiveLock);
 
 /*	CommandCounterIncrement(); */
@@ -784,8 +761,8 @@ void MetaTrackUpdObject(Oid		classid,
 						char*	subtype)
 {
 	HeapTuple	tuple;
-	cqContext  *pcqCtx;
-	cqContext	cqc;
+	ScanKeyData key[3];
+	SysScanDesc desc;
 	Relation	rel;
 	int			ii = 0;
 
@@ -793,53 +770,59 @@ void MetaTrackUpdObject(Oid		classid,
 		return;
 
 	if (IsSharedRelation(classid))
-		rel = heap_open(StatLastShOpRelationId, RowExclusiveLock);
-	else
-		rel = heap_open(StatLastOpRelationId, RowExclusiveLock);
-
-	if (IsSharedRelation(classid))
 	{
-		pcqCtx = caql_beginscan(
-				caql_addrel(cqclr(&cqc), rel),
-				cql("SELECT * FROM pg_stat_last_shoperation "
-					" WHERE classid = :1 "
-					" AND objid = :2 "
-					" AND staactionname = :3 "
-					" FOR UPDATE ",
-					ObjectIdGetDatum(classid),
-					ObjectIdGetDatum(objoid),
-					CStringGetDatum(actionname)));
+		rel = heap_open(StatLastShOpRelationId, RowExclusiveLock);
+
+		ScanKeyInit(&key[0],
+					Anum_pg_statlastshop_classid,
+					BTEqualStrategyNumber, F_OIDEQ,
+					ObjectIdGetDatum(classid));
+		ScanKeyInit(&key[1],
+					Anum_pg_statlastshop_objid,
+					BTEqualStrategyNumber, F_OIDEQ,
+					ObjectIdGetDatum(objoid));
+		ScanKeyInit(&key[2],
+					Anum_pg_statlastshop_staactionname,
+					BTEqualStrategyNumber, F_NAMEEQ,
+					CStringGetDatum(actionname));
+
+		desc = systable_beginscan(rel,
+								  StatLastShOpClassidObjidStaactionnameIndexId,
+								  true,
+								  SnapshotNow, 3, key);
 	}
 	else
 	{
-		pcqCtx = caql_beginscan(
-				caql_addrel(cqclr(&cqc), rel),
-				cql("SELECT * FROM pg_stat_last_operation "
-					" WHERE classid = :1 "
-					" AND objid = :2 "
-					" AND staactionname = :3 "
-					" FOR UPDATE ",
-					ObjectIdGetDatum(classid),
-					ObjectIdGetDatum(objoid),
-					CStringGetDatum(actionname)));
+		rel = heap_open(StatLastOpRelationId, RowExclusiveLock);
+
+		ScanKeyInit(&key[0],
+					Anum_pg_statlastop_classid,
+					BTEqualStrategyNumber, F_OIDEQ,
+					ObjectIdGetDatum(classid));
+		ScanKeyInit(&key[1],
+					Anum_pg_statlastop_objid,
+					BTEqualStrategyNumber, F_OIDEQ,
+					ObjectIdGetDatum(objoid));
+		ScanKeyInit(&key[2],
+					Anum_pg_statlastop_staactionname,
+					BTEqualStrategyNumber, F_NAMEEQ,
+					CStringGetDatum(actionname));
+
+		desc = systable_beginscan(rel,
+								  StatLastOpClassidObjidStaactionnameIndexId,
+								  true,
+								  SnapshotNow, 3, key);
 	}
 
 	/* should be a unique index - only 1 answer... */
-	while (HeapTupleIsValid(tuple = caql_getnext(pcqCtx)))
+	while (HeapTupleIsValid(tuple = systable_getnext(desc)))
 	{
-		if (HeapTupleIsValid(tuple))
-		{
-			MetaTrackAddUpdInternal(pcqCtx,
-									classid, objoid, relowner,
-									actionname, subtype,
-									rel, tuple);
-			
-/*			CommandCounterIncrement(); */
-
-			ii++;
-		}
+		MetaTrackAddUpdInternal(classid, objoid, relowner,
+								actionname, subtype,
+								rel, tuple);
+		ii++;
 	}
-	caql_endscan(pcqCtx);
+	systable_endscan(desc);
 	heap_close(rel, RowExclusiveLock);
 
 	/* add it if it didn't already exist */
@@ -854,28 +837,58 @@ void MetaTrackUpdObject(Oid		classid,
 void MetaTrackDropObject(Oid		classid, 
 						 Oid		objoid)
 {
-	int ii = 0;
+	HeapTuple	tuple;
+	ScanKeyData key[3];
+	SysScanDesc desc;
+	Relation	rel;
 
 	if (IsSharedRelation(classid))
 	{
-		ii = caql_getcount(
-				NULL,
-				cql("DELETE FROM pg_stat_last_shoperation "
-					" WHERE classid = :1 "
-					" AND objid = :2 ",
-					ObjectIdGetDatum(classid),
-					ObjectIdGetDatum(objoid)));
+		/* DELETE FROM pg_stat_last_shoperation WHERE classid = :1 AND objid = :2 */
+
+		rel = heap_open(StatLastShOpRelationId, RowExclusiveLock);
+
+		ScanKeyInit(&key[0],
+					Anum_pg_statlastshop_classid,
+					BTEqualStrategyNumber, F_OIDEQ,
+					ObjectIdGetDatum(classid));
+		ScanKeyInit(&key[1],
+					Anum_pg_statlastshop_objid,
+					BTEqualStrategyNumber, F_OIDEQ,
+					ObjectIdGetDatum(objoid));
+
+		desc = systable_beginscan(rel,
+								  StatLastShOpClassidObjidStaactionnameIndexId,
+								  true,
+								  SnapshotNow, 2, key);
 	}
 	else
 	{
-		ii = caql_getcount(
-				NULL,
-				cql("DELETE FROM pg_stat_last_operation "
-					" WHERE classid = :1 "
-					" AND objid = :2 ",
-					ObjectIdGetDatum(classid),
-					ObjectIdGetDatum(objoid)));
+		/* DELETE FROM pg_stat_last_operation WHERE classid = :1 AND objid = :2 */
+		rel = heap_open(StatLastOpRelationId, RowExclusiveLock);
+
+		ScanKeyInit(&key[0],
+					Anum_pg_statlastop_classid,
+					BTEqualStrategyNumber, F_OIDEQ,
+					ObjectIdGetDatum(classid));
+		ScanKeyInit(&key[1],
+					Anum_pg_statlastop_objid,
+					BTEqualStrategyNumber, F_OIDEQ,
+					ObjectIdGetDatum(objoid));
+
+		desc = systable_beginscan(rel,
+								  StatLastOpClassidObjidStaactionnameIndexId,
+								  true,
+								  SnapshotNow, 2, key);
 	}
+
+	/* should be a unique index - only 1 answer... */
+	while (HeapTupleIsValid(tuple = systable_getnext(desc)))
+	{
+		simple_heap_delete(rel, &tuple->t_self);
+	}
+	systable_endscan(desc);
+	heap_close(rel, RowExclusiveLock);
 
 } /* end MetaTrackDropObject */
 
@@ -1880,11 +1893,10 @@ static void
 RemovePartitioning(Oid relid)
 {
 	Relation rel;
+	SysScanDesc scan;
+	ScanKeyData key;
 	HeapTuple tuple;
 	Relation pgrule;
-	cqContext	*pcqCtx;
-	cqContext	 cqc, cqcrul;
-	int			 numDel = 0;
 
 	if (Gp_role == GP_ROLE_EXECUTE)
 		return;
@@ -1896,37 +1908,49 @@ RemovePartitioning(Oid relid)
 	pgrule = heap_open(PartitionRuleRelationId,
 					   RowExclusiveLock);
 
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), rel),
-			cql("SELECT * FROM pg_partition "
-				" WHERE parrelid = :1 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(relid)));
+	ScanKeyInit(&key,
+				Anum_pg_partition_parrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
 
-	while (HeapTupleIsValid(tuple = caql_getnext(pcqCtx)))
+	scan = systable_beginscan(rel, PartitionParrelidIndexId, true,
+							  SnapshotNow, 1, &key);
+	while (HeapTupleIsValid(tuple = systable_getnext(scan)))
 	{
-		Oid paroid = HeapTupleGetOid(tuple);
+		Oid			paroid = HeapTupleGetOid(tuple);
+		SysScanDesc rule_scan;
+		ScanKeyData rule_key;
+		HeapTuple	rule_tuple;
 
-		numDel = caql_getcount(
-				caql_addrel(cqclr(&cqcrul), pgrule),
-				cql("DELETE FROM pg_partition_rule "
-					" WHERE paroid = :1 ",
-					ObjectIdGetDatum(paroid)));
+		/* remove all rows for pg_partition_rule */
+		ScanKeyInit(&rule_key,
+					Anum_pg_partition_rule_paroid,
+					BTEqualStrategyNumber, F_OIDEQ,
+					ObjectIdGetDatum(paroid));
+		rule_scan = systable_beginscan(pgrule, PartitionRuleParoidParparentruleParruleordIndexId, true,
+									   SnapshotNow, 1, &rule_key);
+		while (HeapTupleIsValid(rule_tuple = systable_getnext(rule_scan)))
+			simple_heap_delete(pgrule, &rule_tuple->t_self);
+		systable_endscan(rule_scan);
 
 		/* remove ourself */
-		caql_delete_current(pcqCtx);
+		simple_heap_delete(rel, &tuple->t_self);
 	}
-	caql_endscan(pcqCtx);
+	systable_endscan(scan);
 	heap_close(rel, NoLock);
 
 	/* we might be a leaf partition: delete any records */
 
-	numDel = caql_getcount(
-			caql_addrel(cqclr(&cqcrul), pgrule),
-			cql("DELETE FROM pg_partition_rule "
-				" WHERE parchildrelid = :1 ",
-				ObjectIdGetDatum(relid)));
+	ScanKeyInit(&key,
+				Anum_pg_partition_rule_parchildrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
 
+	scan = systable_beginscan(pgrule, PartitionRuleParchildrelidIndexId, true,
+							  SnapshotNow, 1, &key);
+	while (HeapTupleIsValid(tuple = systable_getnext(scan)))
+		simple_heap_delete(pgrule, &tuple->t_self);
+	systable_endscan(scan);
 	heap_close(pgrule, NoLock);
 
 	CommandCounterIncrement();
