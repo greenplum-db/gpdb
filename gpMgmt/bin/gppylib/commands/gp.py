@@ -161,23 +161,23 @@ class PgCtlBackendOptions(CmdArgs):
     --------
 
     >>> str(PgCtlBackendOptions(5432, 1, 2))
-    '-p 5432 -b 1 -z 2 --silent-mode=true'
+    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_master(2, False, False))
-    '-p 5432 -b 1 -z 2 --silent-mode=true -i -M master -C -1 -x 2'
+    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -i -M master --gp_contentid=-1 -x 2'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_master(2, False, True))
-    '-p 5432 -b 1 -z 2 --silent-mode=true -i -M master -C -1 -x 2 -E'
+    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -i -M master --gp_contentid=-1 -x 2 -E'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_segment('mirror', 1))
-    '-p 5432 -b 1 -z 2 --silent-mode=true -i -M mirror -C 1'
+    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -i -M mirror --gp_contentid=1'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_special('upgrade'))
-    '-p 5432 -b 1 -z 2 --silent-mode=true -U'
+    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -U'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_special('maintenance'))
-    '-p 5432 -b 1 -z 2 --silent-mode=true -m'
+    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -m'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_utility(True))
-    '-p 5432 -b 1 -z 2 --silent-mode=true -c gp_role=utility'
+    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -c gp_role=utility'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_utility(False))
-    '-p 5432 -b 1 -z 2 --silent-mode=true'
+    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_restricted(True,1))
-    '-p 5432 -b 1 -z 2 --silent-mode=true -c superuser_reserved_connections=1'
+    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -c superuser_reserved_connections=1'
     >>> 
 
     """
@@ -190,8 +190,8 @@ class PgCtlBackendOptions(CmdArgs):
         """
         CmdArgs.__init__(self, [
             "-p", str(port),
-            "-b", str(dbid),
-            "-z", str(numcids),
+            "--gp_dbid="+ str(dbid),
+            "--gp_num_contents_in_cluster="+ str(numcids),
             "--silent-mode=true"
         ])
 
@@ -205,7 +205,7 @@ class PgCtlBackendOptions(CmdArgs):
         @param disable: start without master mirroring?
         @param seqserver: start with seqserver?
         """
-        self.extend(["-i", "-M", "master", "-C", "-1", "-x", str(standby_dbid)])
+        self.extend(["-i", "-M", "master", "--gp_contentid=-1", "-x", str(standby_dbid)])
         if disable: self.append("-y")
         if seqserver: self.append("-E")
         return self
@@ -215,7 +215,7 @@ class PgCtlBackendOptions(CmdArgs):
         @param mode: mirroring mode
         @param content: content id
         """
-        self.extend(["-i", "-M", str(mode), "-C", str(content)])
+        self.extend(["-i", "-M", str(mode), "--gp_contentid="+str(content)])
         return self
 
     #
@@ -258,7 +258,7 @@ class PgCtlStartArgs(CmdArgs):
     >>> str(a).split(' ') #doctest: +NORMALIZE_WHITESPACE
     ['env', GPERA=123', '$GPHOME/bin/pg_ctl', '-D', '/data1/master/gpseg-1', '-l', 
      '/data1/master/gpseg-1/pg_log/startup.log', '-w', '-t', '600', 
-     '-o', '"', '-p', '5432', '-b', '1', '-z', '2', '--silent-mode=true', '"', 'start']
+     '-o', '"', '-p', '5432', '--gp_dbid=1', '--gp_num_contents_in_cluster=2', '--silent-mode=true', '"', 'start']
     """
 
     def __init__(self, datadir, backend, era, wrapper, args, wait, timeout=None):
