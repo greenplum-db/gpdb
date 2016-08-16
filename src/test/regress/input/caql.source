@@ -229,14 +229,6 @@ SELECT * FROM check_contentid_get_dbid(-1::int2, 'p', true);
 SELECT * FROM check_contentid_get_dbid(-1::int2, 'p', false);
 DROP FUNCTION check_contentid_get_dbid(int2, "char", bool);
 
-CREATE FUNCTION check_FtsFindSuperuser(bool) RETURNS text
-  AS '@abs_builddir@/regress@DLSUFFIX@', 'check_FtsFindSuperuser'
-  LANGUAGE C READS SQL DATA;
--- start_ignore
-SELECT * FROM check_FtsFindSuperuser(false);
--- end_ignore
-DROP FUNCTION check_FtsFindSuperuser(bool);
-
 -- ---------------------------------------------------------------------
 -- coverage for segadmin.c/filespace.c
 -- ---------------------------------------------------------------------

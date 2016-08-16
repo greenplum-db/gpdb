@@ -92,8 +92,6 @@ typedef struct
  * FTS process interface
  */
 extern int ftsprobe_start(void);
-extern char *FtsFindSuperuser(bool try_bootstrap);
-
 
 /*
  * Interface for probing segments

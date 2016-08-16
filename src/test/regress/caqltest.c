@@ -29,9 +29,6 @@ extern Datum check_my_mirror_dbid(PG_FUNCTION_ARGS);
 extern Datum check_dbid_get_dbinfo(PG_FUNCTION_ARGS);
 extern Datum check_contentid_get_dbid(PG_FUNCTION_ARGS);
 
-/* tests for caql coverage in fts.c */
-extern Datum check_FtsFindSuperuser(PG_FUNCTION_ARGS);
-
 /* tests for caql coverage in segadmin.c */
 extern Datum check_gp_activate_standby(PG_FUNCTION_ARGS);
 
@@ -191,22 +188,6 @@ check_contentid_get_dbid(PG_FUNCTION_ARGS)
 	result = contentid_get_dbid(contentid, role, getPreferredRoleNotCurrentRole);
 
 	PG_RETURN_INT16(result);
-}
-
-PG_FUNCTION_INFO_V1(check_FtsFindSuperuser);
-Datum
-check_FtsFindSuperuser(PG_FUNCTION_ARGS)
-{
-	bool try_bootstrap = PG_GETARG_OID(0);
-	char *result;
-	StringInfoData buf; 
-
-	initStringInfo(&buf); 
-	result = FtsFindSuperuser(try_bootstrap);
-	if (result)
-		appendStringInfo(&buf, "%s", result);
-
-	PG_RETURN_TEXT_P(cstring_to_text(buf.data));
 }
 
 PG_FUNCTION_INFO_V1(check_gp_activate_standby);

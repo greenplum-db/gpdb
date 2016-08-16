@@ -20,6 +20,7 @@
 #include "catalog/catquery.h"
 #include "catalog/gp_configuration.h"
 #include "catalog/gp_segment_config.h"
+#include "catalog/pg_authid.h"
 #include "libpq/pqsignal.h"
 #include "miscadmin.h"
 #include "cdb/cdbvars.h"
@@ -84,7 +85,6 @@ static volatile bool shutdown_requested = false;
 static volatile bool rescan_requested = false;
 static volatile sig_atomic_t got_SIGHUP = false;
 
-static char *probeUser = NULL;
 static char *probeDatabase = "postgres";
 
 static char failover_strategy='n';
@@ -102,8 +102,6 @@ static pid_t ftsprobe_forkexec(void);
 #endif
 NON_EXEC_STATIC void ftsMain(int argc, char *argv[]);
 static void FtsLoop(void);
-
-static void retrieveUserAndDb(char **probeUser);
 
 static void readCdbComponentInfoAndUpdateStatus(MemoryContext probeContext);
 static bool probePublishUpdate(uint8 *scan_status);
@@ -379,12 +377,6 @@ ftsMain(int argc, char *argv[])
 	/* shmem: publish probe pid */
 	ftsProbeInfo->fts_probePid = MyProcPid;
 
-	/*
-	 * Before we can open probe connections, we need a username. (This
-	 * will access catalog tables).
-	 */
-	retrieveUserAndDb(&probeUser);
-
 	/* main loop */
 	FtsLoop();
 
@@ -574,93 +566,6 @@ FtsIsActive(void)
 {
 	return (!ftsProbeInfo->fts_discardResults && !shutdown_requested);
 }
-
-
-/*
- * Wrapper for catalog lookup for a super user appropriate for FTS probing. We
- * want to use the bootstrap super user as a priority, because it seems more
- * obvious for users and probably hasn't been messed with. If it has been (might
- * have been removed, or modified in other ways), find another which can login
- * and which has not expired yet.
- */
-char *
-FtsFindSuperuser(bool try_bootstrap)
-{
-	char *suser = NULL;
-	Relation auth_rel;
-	HeapTuple	auth_tup;
-	cqContext  *pcqCtx;
-	cqContext	cqc;
-	bool	isNull;
-
-	auth_rel = heap_open(AuthIdRelationId, AccessShareLock);
-
-	if (try_bootstrap)
-	{
-		pcqCtx = caql_beginscan(
-				caql_addrel(cqclr(&cqc), auth_rel),
-				cql("SELECT * FROM pg_authid "
-					" WHERE rolsuper = :1 "
-					" AND rolcanlogin = :2 "
-					" AND oid = :3 ",
-					BoolGetDatum(true),
-					BoolGetDatum(true),
-					ObjectIdGetDatum(BOOTSTRAP_SUPERUSERID)));
-	}
-	else
-	{
-		pcqCtx = caql_beginscan(
-				caql_addrel(cqclr(&cqc), auth_rel),
-				cql("SELECT * FROM pg_authid "
-					" WHERE rolsuper = :1 "
-					" AND rolcanlogin = :2 ",
-					BoolGetDatum(true),
-					BoolGetDatum(true)));
-	}
-
-	while (HeapTupleIsValid(auth_tup = caql_getnext(pcqCtx)))
-	{
-		Datum	attrName;
-		Oid		userOid;
-
-		(void) heap_getattr(auth_tup, Anum_pg_authid_rolvaliduntil,
-							RelationGetDescr(auth_rel), &isNull);
-		/* we actually want it to be NULL, that means always valid */
-		if (!isNull)
-			continue;
-
-		attrName = heap_getattr(auth_tup, Anum_pg_authid_rolname, 
-								RelationGetDescr(auth_rel), &isNull);
-		Assert(!isNull);
-		suser = pstrdup(DatumGetCString(attrName));
-
-		userOid = HeapTupleGetOid(auth_tup);
-		SetSessionUserId(userOid, true);
-
-		break;
-	}
-
-	caql_endscan(pcqCtx);
-	heap_close(auth_rel, AccessShareLock);
-	return suser;
-}
-
-/*
- * Get a user for the FTS prober to connect as
- */
-static void
-retrieveUserAndDb(char **probeUser)
-{
-	Assert(probeUser != NULL);
-
-	/* first, let's try the bootstrap super user */
-	*probeUser = FtsFindSuperuser(true);
-	if (!(*probeUser))
-		*probeUser = FtsFindSuperuser(false);
-
-	Assert(*probeUser != NULL);
-}
-
 
 /*
  * Build a set of changes, based on our current state, and the probe results.
