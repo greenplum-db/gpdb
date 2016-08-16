@@ -19,7 +19,6 @@
 
 #include "postgres.h"
 
-#include "catalog/catquery.h"
 #include "catalog/pg_type.h"
 #include "parser/parse_type.h"
 #include "utils/builtins.h"
@@ -456,7 +455,6 @@ TupleDescInitEntry(TupleDesc desc,
 	HeapTuple	tuple;
 	Form_pg_type typeForm;
 	Form_pg_attribute att;
-	cqContext	*pcqCtx;
 
 	/*
 	 * sanity checks
@@ -495,14 +493,9 @@ TupleDescInitEntry(TupleDesc desc,
 	att->attislocal = true;
 	att->attinhcount = 0;
 
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_type "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(oidtypeid)));
-
-	tuple = caql_getnext(pcqCtx);
-
+	tuple = SearchSysCache(TYPEOID,
+						   ObjectIdGetDatum(oidtypeid),
+						   0, 0, 0);
 	if (!HeapTupleIsValid(tuple))
 		elog(ERROR, "cache lookup failed for type %u", oidtypeid);
 	typeForm = (Form_pg_type) GETSTRUCT(tuple);
@@ -513,7 +506,7 @@ TupleDescInitEntry(TupleDesc desc,
 	att->attalign = typeForm->typalign;
 	att->attstorage = typeForm->typstorage;
 
-	caql_endscan(pcqCtx);
+	ReleaseSysCache(tuple);
 }
 
 

@@ -38,7 +38,6 @@
 #include "access/heapam.h"
 #include "access/nbtree.h"
 #include "access/tuptoaster.h"
-#include "catalog/catquery.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_type.h"
 #include "cdb/cdbvars.h"

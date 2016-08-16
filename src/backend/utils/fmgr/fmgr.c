@@ -15,7 +15,6 @@
 
 #include "postgres.h"
 
-#include "catalog/catquery.h"
 #include "access/heapam.h"
 #include "access/tuptoaster.h"
 #include "catalog/pg_language.h"
@@ -84,7 +83,7 @@ static HTAB *CFuncHash = NULL;
 
 static void fmgr_info_cxt_security(Oid functionId, FmgrInfo *finfo, MemoryContext mcxt,
 					   bool ignore_security);
-static void fmgr_info_C_lang(Oid functionId, FmgrInfo *finfo, HeapTuple procedureTuple, cqContext *pcqCtx);
+static void fmgr_info_C_lang(Oid functionId, FmgrInfo *finfo, HeapTuple procedureTuple);
 static void fmgr_info_other_lang(Oid functionId, FmgrInfo *finfo, HeapTuple procedureTuple);
 static CFuncHashTabEntry *lookup_C_func(HeapTuple procedureTuple);
 static void record_C_func(HeapTuple procedureTuple,
@@ -184,7 +183,6 @@ fmgr_info_cxt_security(Oid functionId, FmgrInfo *finfo, MemoryContext mcxt,
 	Datum		prosrcdatum;
 	bool		isnull;
 	char	   *prosrc;
-	cqContext  *procqCtx;
 
 	/*
 	 * fn_oid *must* be filled in last.  Some code assumes that if fn_oid is
@@ -211,14 +209,9 @@ fmgr_info_cxt_security(Oid functionId, FmgrInfo *finfo, MemoryContext mcxt,
 	}
 
 	/* Otherwise we need the pg_proc entry */
-	procqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_proc "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(functionId)));
-
-	procedureTuple = caql_getnext(procqCtx);
-
+	procedureTuple = SearchSysCache(PROCOID,
+									ObjectIdGetDatum(functionId),
+									0, 0, 0);
 	if (!HeapTupleIsValid(procedureTuple))
 		elog(ERROR, "cache lookup failed for function %u", functionId);
 	procedureStruct = (Form_pg_proc) GETSTRUCT(procedureTuple);
@@ -239,9 +232,7 @@ fmgr_info_cxt_security(Oid functionId, FmgrInfo *finfo, MemoryContext mcxt,
 		finfo->fn_addr = fmgr_security_definer;
 		finfo->fn_stats = TRACK_FUNC_ALL;		/* ie, never track */
 		finfo->fn_oid = functionId;
-
-		caql_endscan(procqCtx);
-
+		ReleaseSysCache(procedureTuple);
 		return;
 	}
 
@@ -258,8 +249,8 @@ fmgr_info_cxt_security(Oid functionId, FmgrInfo *finfo, MemoryContext mcxt,
 			 * internal function is stored in prosrc (it doesn't have to be
 			 * the same as the name of the alias!)
 			 */
-			prosrcdatum = caql_getattr(procqCtx,
-									   Anum_pg_proc_prosrc, &isnull);
+			prosrcdatum = SysCacheGetAttr(PROCOID, procedureTuple,
+										  Anum_pg_proc_prosrc, &isnull);
 			if (isnull)
 				elog(ERROR, "null prosrc");
 			prosrc = TextDatumGetCString(prosrcdatum);
@@ -277,7 +268,7 @@ fmgr_info_cxt_security(Oid functionId, FmgrInfo *finfo, MemoryContext mcxt,
 			break;
 
 		case ClanguageId:
-			fmgr_info_C_lang(functionId, finfo, procedureTuple, procqCtx);
+			fmgr_info_C_lang(functionId, finfo, procedureTuple);
 			finfo->fn_stats = TRACK_FUNC_PL;	/* ie, track if ALL */
 			break;
 
@@ -293,8 +284,7 @@ fmgr_info_cxt_security(Oid functionId, FmgrInfo *finfo, MemoryContext mcxt,
 	}
 
 	finfo->fn_oid = functionId;
-
-	caql_endscan(procqCtx);
+	ReleaseSysCache(procedureTuple);
 }
 
 /*
@@ -302,8 +292,7 @@ fmgr_info_cxt_security(Oid functionId, FmgrInfo *finfo, MemoryContext mcxt,
  * finfo->fn_oid is not valid yet.
  */
 static void
-fmgr_info_C_lang(Oid functionId, FmgrInfo *finfo, HeapTuple procedureTuple,
-				 cqContext *pcqCtx)
+fmgr_info_C_lang(Oid functionId, FmgrInfo *finfo, HeapTuple procedureTuple)
 {
 	Form_pg_proc procedureStruct = (Form_pg_proc) GETSTRUCT(procedureTuple);
 	CFuncHashTabEntry *hashentry;
@@ -335,14 +324,14 @@ fmgr_info_C_lang(Oid functionId, FmgrInfo *finfo, HeapTuple procedureTuple,
 		 * While in general these columns might be null, that's not allowed
 		 * for C-language functions.
 		 */
-		prosrcattr = caql_getattr(pcqCtx,
-								  Anum_pg_proc_prosrc, &isnull);
+		prosrcattr = SysCacheGetAttr(PROCOID, procedureTuple,
+									 Anum_pg_proc_prosrc, &isnull);
 		if (isnull)
 			elog(ERROR, "null prosrc for C function %u", functionId);
 		prosrcstring = TextDatumGetCString(prosrcattr);
 
-		probinattr = caql_getattr(pcqCtx,
-								  Anum_pg_proc_probin, &isnull);
+		probinattr = SysCacheGetAttr(PROCOID, procedureTuple,
+									 Anum_pg_proc_probin, &isnull);
 		if (isnull)
 			elog(ERROR, "null probin for C function %u", functionId);
 		probinstring = TextDatumGetCString(probinattr);

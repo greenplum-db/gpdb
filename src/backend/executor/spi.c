@@ -16,7 +16,6 @@
 #include "access/printtup.h"
 #include "access/sysattr.h"
 #include "access/xact.h"
-#include "catalog/catquery.h"
 #include "catalog/heap.h"
 #include "commands/trigger.h"
 #include "executor/spi_priv.h"
@@ -878,7 +877,7 @@ char *
 SPI_gettype(TupleDesc tupdesc, int fnumber)
 {
 	Oid			typoid;
-	int			fetchCount;
+	HeapTuple	typeTuple;
 	char	   *result;
 
 	SPI_result = 0;
@@ -895,20 +894,18 @@ SPI_gettype(TupleDesc tupdesc, int fnumber)
 	else
 		typoid = (SystemAttributeDefinition(fnumber, true))->atttypid;
 
-	result = caql_getcstring_plus(
-			NULL,
-			&fetchCount,
-			NULL,
-			cql("SELECT typname FROM pg_type "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(typoid)));
+	typeTuple = SearchSysCache(TYPEOID,
+							   ObjectIdGetDatum(typoid),
+							   0, 0, 0);
 
-	if (!fetchCount)
+	if (!HeapTupleIsValid(typeTuple))
 	{
 		SPI_result = SPI_ERROR_TYPUNKNOWN;
 		return NULL;
 	}
 
+	result = pstrdup(NameStr(((Form_pg_type) GETSTRUCT(typeTuple))->typname));
+	ReleaseSysCache(typeTuple);
 	return result;
 }
 

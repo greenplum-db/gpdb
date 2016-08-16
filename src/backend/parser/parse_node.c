@@ -14,7 +14,6 @@
  */
 #include "postgres.h"
 
-#include "catalog/catquery.h"
 #include "access/heapam.h"
 #include "catalog/pg_type.h"
 #include "mb/pg_wchar.h"
@@ -242,27 +241,27 @@ Oid
 transformArrayType(Oid arrayType)
 {
 	Oid			elementType;
-	int			fetchCount;
+	HeapTuple	type_tuple_array;
+	Form_pg_type type_struct_array;
 
 	/* Get the type tuple for the array */
-	elementType = caql_getoid_plus(
-			NULL,
-			&fetchCount,
-			NULL,
-			cql("SELECT typelem FROM pg_type "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(arrayType)));
-
-	if (!fetchCount)
+	type_tuple_array = SearchSysCache(TYPEOID,
+									  ObjectIdGetDatum(arrayType),
+									  0, 0, 0);
+	if (!HeapTupleIsValid(type_tuple_array))
 		elog(ERROR, "cache lookup failed for type %u", arrayType);
+	type_struct_array = (Form_pg_type) GETSTRUCT(type_tuple_array);
 
 	/* needn't check typisdefined since this will fail anyway */
 
-	if (!OidIsValid(elementType))
+	elementType = type_struct_array->typelem;
+	if (elementType == InvalidOid)
 		ereport(ERROR,
 				(errcode(ERRCODE_DATATYPE_MISMATCH),
 				 errmsg("cannot subscript type %s because it is not an array",
 						format_type_be(arrayType))));
+
+	ReleaseSysCache(type_tuple_array);
 
 	return elementType;
 }

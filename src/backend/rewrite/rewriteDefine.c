@@ -16,7 +16,6 @@
 #include "postgres.h"
 
 #include "access/heapam.h"
-#include "catalog/catquery.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
 #include "catalog/namespace.h"
@@ -70,13 +69,13 @@ InsertRule(char *rulname,
 	bool		nulls[Natts_pg_rewrite];
 	bool		replaces[Natts_pg_rewrite];
 	NameData	rname;
+	Relation	pg_rewrite_desc;
 	HeapTuple	tup,
 				oldtup;
 	Oid			rewriteObjectId;
 	ObjectAddress myself,
 				referenced;
 	bool		is_update = false;
-	cqContext  *pcqCtx;
 
 	/*
 	 * Set up *nulls and *values arrays
@@ -97,20 +96,15 @@ InsertRule(char *rulname,
 	/*
 	 * Ready to store new pg_rewrite tuple
 	 */
+	pg_rewrite_desc = heap_open(RewriteRelationId, RowExclusiveLock);
 
 	/*
 	 * Check to see if we are replacing an existing tuple
 	 */
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_rewrite "
-				" WHERE ev_class = :1 "
-				" AND rulename = :2 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(eventrel_oid),
-				CStringGetDatum(rulname)));
-	
-	oldtup = caql_getnext(pcqCtx);
+	oldtup = SearchSysCache(RULERELNAME,
+							ObjectIdGetDatum(eventrel_oid),
+							PointerGetDatum(rulname),
+							0, 0);
 
 	if (HeapTupleIsValid(oldtup))
 	{
@@ -130,22 +124,25 @@ InsertRule(char *rulname,
 		replaces[Anum_pg_rewrite_ev_qual - 1] = true;
 		replaces[Anum_pg_rewrite_ev_action - 1] = true;
 
-		tup = caql_modify_current(pcqCtx,
-								  values, nulls, replaces);
+		tup = heap_modify_tuple(oldtup, RelationGetDescr(pg_rewrite_desc),
+								values, nulls, replaces);
 
-		caql_update_current(pcqCtx, tup);
-		/* and Update indexes (implicit) */
+		simple_heap_update(pg_rewrite_desc, &tup->t_self, tup);
+
+		ReleaseSysCache(oldtup);
 
 		rewriteObjectId = HeapTupleGetOid(tup);
 		is_update = true;
 	}
 	else
 	{
-		tup = caql_form_tuple(pcqCtx, values, nulls);
+		tup = heap_form_tuple(pg_rewrite_desc->rd_att, values, nulls);
 
-		rewriteObjectId = caql_insert(pcqCtx, tup);
-		/* and Update indexes (implicit) */
+		rewriteObjectId = simple_heap_insert(pg_rewrite_desc, tup);
 	}
+
+	/* Need to update indexes in either case */
+	CatalogUpdateIndexes(pg_rewrite_desc, tup);
 
 	heap_freetuple(tup);
 
@@ -186,7 +183,7 @@ InsertRule(char *rulname,
 							   DEPENDENCY_NORMAL);
 	}
 
-	caql_endscan(pcqCtx);
+	heap_close(pg_rewrite_desc, RowExclusiveLock);
 
 	return rewriteObjectId;
 }
@@ -797,22 +794,13 @@ RenameRewriteRule(Oid owningRel, const char *oldName,
 {
 	Relation	pg_rewrite_desc;
 	HeapTuple	ruletup;
-	cqContext	cqc;
-	cqContext  *pcqCtx;
 
 	pg_rewrite_desc = heap_open(RewriteRelationId, RowExclusiveLock);
 
-	pcqCtx = caql_addrel(cqclr(&cqc), pg_rewrite_desc);
-
-	ruletup = caql_getfirst(
-			pcqCtx,
-			cql("SELECT * FROM pg_rewrite "
-				" WHERE ev_class = :1 "
-				" AND rulename = :2 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(owningRel),
-				CStringGetDatum(oldName)));
-
+	ruletup = SearchSysCacheCopy(RULERELNAME,
+								 ObjectIdGetDatum(owningRel),
+								 PointerGetDatum(oldName),
+								 0, 0);
 	if (!HeapTupleIsValid(ruletup))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -828,7 +816,10 @@ RenameRewriteRule(Oid owningRel, const char *oldName,
 
 	namestrcpy(&(((Form_pg_rewrite) GETSTRUCT(ruletup))->rulename), newName);
 
-	caql_update_current(pcqCtx, ruletup); /* implicit update of index as well*/
+	simple_heap_update(pg_rewrite_desc, &ruletup->t_self, ruletup);
+
+	/* keep system catalog indexes current */
+	CatalogUpdateIndexes(pg_rewrite_desc, ruletup);
 
 	heap_freetuple(ruletup);
 	heap_close(pg_rewrite_desc, RowExclusiveLock);

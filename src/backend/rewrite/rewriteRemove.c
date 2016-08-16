@@ -16,7 +16,6 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
-#include "catalog/catquery.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_rewrite.h"
@@ -41,21 +40,14 @@ RemoveRewriteRule(Oid owningRel, const char *ruleName, DropBehavior behavior,
 	HeapTuple	tuple;
 	Oid			eventRelationOid;
 	ObjectAddress object;
-	cqContext	*pcqCtx;
 
 	/*
 	 * Find the tuple for the target rule.
 	 */
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_rewrite "
-				" WHERE ev_class = :1 "
-				" AND rulename = :2 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(owningRel),
-				CStringGetDatum((char *) ruleName)));
-
-	tuple = caql_getnext(pcqCtx);
+	tuple = SearchSysCache(RULERELNAME,
+						   ObjectIdGetDatum(owningRel),
+						   PointerGetDatum(ruleName),
+						   0, 0);
 
 	/*
 	 * complain if no rule with such name exists
@@ -72,7 +64,6 @@ RemoveRewriteRule(Oid owningRel, const char *ruleName, DropBehavior behavior,
 					(errmsg("rule \"%s\" for relation \"%s\" does not exist, skipping",
 							ruleName, get_rel_name(owningRel))));
 
-		caql_endscan(pcqCtx);
 		return;
 	}
 
@@ -92,7 +83,7 @@ RemoveRewriteRule(Oid owningRel, const char *ruleName, DropBehavior behavior,
 	object.objectId = HeapTupleGetOid(tuple);
 	object.objectSubId = 0;
 
-	caql_endscan(pcqCtx);
+	ReleaseSysCache(tuple);
 
 	performDeletion(&object, behavior);
 }
@@ -104,23 +95,31 @@ RemoveRewriteRule(Oid owningRel, const char *ruleName, DropBehavior behavior,
 void
 RemoveRewriteRuleById(Oid ruleOid)
 {
-	cqContext  *pcqCtx;
+	Relation	RewriteRelation;
+	ScanKeyData skey[1];
+	SysScanDesc rcscan;
 	Relation	event_relation;
 	HeapTuple	tuple;
 	Oid			eventRelationOid;
 	bool		hasMoreRules;
 
 	/*
+	 * Open the pg_rewrite relation.
+	 */
+	RewriteRelation = heap_open(RewriteRelationId, RowExclusiveLock);
+
+	/*
 	 * Find the tuple for the target rule.
 	 */
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_rewrite "
-				" WHERE oid = :1 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(ruleOid)));
+	ScanKeyInit(&skey[0],
+				ObjectIdAttributeNumber,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(ruleOid));
 
-	tuple = caql_getnext(pcqCtx);
+	rcscan = systable_beginscan(RewriteRelation, RewriteOidIndexId, true,
+								SnapshotNow, 1, skey);
+
+	tuple = systable_getnext(rcscan);
 
 	if (!HeapTupleIsValid(tuple))
 		elog(ERROR, "could not find tuple for rule %u", ruleOid);
@@ -140,10 +139,11 @@ RemoveRewriteRuleById(Oid ruleOid)
 	/*
 	 * Now delete the pg_rewrite tuple for the rule
 	 */
-	caql_delete_current(pcqCtx);
+	simple_heap_delete(RewriteRelation, &tuple->t_self);
 
-	caql_endscan(pcqCtx);
+	systable_endscan(rcscan);
 
+	heap_close(RewriteRelation, RowExclusiveLock);
 
 	/*
 	 * Set pg_class 'relhasrules' field correctly for event relation.

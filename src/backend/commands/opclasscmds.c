@@ -18,7 +18,6 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
-#include "catalog/catquery.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_amop.h"
@@ -274,8 +273,6 @@ DefineOpClass(CreateOpClassStmt *stmt)
 	NameData	opcName;
 	ObjectAddress myself,
 				referenced;
-	cqContext	*pcqCtx;
-	cqContext	 cqc;
 	int			i;
 
 	/* Convert list of names to a name and namespace */
@@ -289,15 +286,9 @@ DefineOpClass(CreateOpClassStmt *stmt)
 					   get_namespace_name(namespaceoid));
 
 	/* Get necessary info about access method */
-
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_am "
-				" WHERE amname = :1 ",
-				CStringGetDatum(stmt->amname)));
-
-	tup = caql_getnext(pcqCtx);
-
+	tup = SearchSysCache(AMNAME,
+						 CStringGetDatum(stmt->amname),
+						 0, 0, 0);
 	if (!HeapTupleIsValid(tup))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -315,7 +306,7 @@ DefineOpClass(CreateOpClassStmt *stmt)
 
 	/* XXX Should we make any privilege check against the AM? */
 
-	caql_endscan(pcqCtx);
+	ReleaseSysCache(tup);
 
 	/*
 	 * The question of appropriate permissions for CREATE OPERATOR CLASS is
@@ -536,10 +527,7 @@ DefineOpClass(CreateOpClassStmt *stmt)
 	}
 
 	rel = heap_open(OperatorClassRelationId, RowExclusiveLock);
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), rel), 
-			cql("INSERT INTO pg_opclass",
-				NULL));
+
 	/*
 	 * Make sure there is no existing opclass of this name (this is just to
 	 * give a more friendly error message than "duplicate key").
@@ -667,7 +655,6 @@ DefineOpClass(CreateOpClassStmt *stmt)
 	/* dependency on owner */
 	recordDependencyOnOwner(OperatorClassRelationId, opclassoid, GetUserId());
 
-	caql_endscan(pcqCtx);
 	heap_close(rel, RowExclusiveLock);
 	
 	if (Gp_role == GP_ROLE_DISPATCH)
@@ -2024,8 +2011,6 @@ AlterOpClassOwner(List *name, const char *access_method, Oid newOwnerId)
 	HeapTuple	tup;
 	char	   *opcname;
 	char	   *schemaname;
-	cqContext	cqc;
-	cqContext  *pcqCtx;
 
 	amOid = GetSysCacheOid(AMNAME,
 						   CStringGetDatum(access_method),
@@ -2042,8 +2027,6 @@ AlterOpClassOwner(List *name, const char *access_method, Oid newOwnerId)
 	 * Look up the opclass
 	 */
 	DeconstructQualifiedName(name, &schemaname, &opcname);
-
-	pcqCtx = caql_addrel(cqclr(&cqc), rel);
 
 	if (schemaname)
 	{

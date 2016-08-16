@@ -9,7 +9,6 @@
 #include "postgres.h"
 
 #include "access/xact.h"
-#include "catalog/catquery.h"
 #include "catalog/namespace.h"
 #include "mb/pg_wchar.h"
 #include "utils/builtins.h"
@@ -273,12 +272,9 @@ pg_do_encoding_conversion(unsigned char *src, int len,
 	 * are going into infinite loop!  So we have to make sure that the
 	 * function exists before calling OidFunctionCall.
 	 */
-	/* XXX: would have been function_exists() */
-	if (!(caql_getcount(
-					NULL,
-					cql("SELECT COUNT(*) FROM pg_proc "
-						" WHERE oid = :1 ",
-						ObjectIdGetDatum(proc))) > 0))
+	if (!SearchSysCacheExists(PROCOID,
+							  ObjectIdGetDatum(proc),
+							  0, 0, 0))
 	{
 		elog(LOG, "cache lookup failed for function %u", proc);
 		return src;

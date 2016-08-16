@@ -1504,11 +1504,9 @@ has_table_privilege_name_id(PG_FUNCTION_ARGS)
 	roleid = get_roleid_checked(NameStr(*username));
 	mode = convert_table_priv_string(priv_type_text);
 
-	if (0 == caql_getcount(
-				NULL,
-				cql("SELECT COUNT(*) FROM pg_class "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(tableoid))))
+	if (!SearchSysCacheExists(RELOID,
+							  ObjectIdGetDatum(tableoid),
+							  0, 0, 0))
 		PG_RETURN_NULL();
 
 	aclresult = pg_class_aclcheck(tableoid, roleid, mode);
@@ -1534,11 +1532,9 @@ has_table_privilege_id(PG_FUNCTION_ARGS)
 	roleid = GetUserId();
 	mode = convert_table_priv_string(priv_type_text);
 
-	if (0 == caql_getcount(
-				NULL,
-				cql("SELECT COUNT(*) FROM pg_class "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(tableoid))))
+	if (!SearchSysCacheExists(RELOID,
+							  ObjectIdGetDatum(tableoid),
+							  0, 0, 0))
 		PG_RETURN_NULL();
 
 	aclresult = pg_class_aclcheck(tableoid, roleid, mode);
@@ -1594,11 +1590,9 @@ has_table_privilege_id_id(PG_FUNCTION_ARGS)
 
 	mode = convert_table_priv_string(priv_type_text);
 
-	if (0 == caql_getcount(
-				NULL,
-				cql("SELECT COUNT(*) FROM pg_class "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(tableoid))))
+	if (!SearchSysCacheExists(RELOID,
+							  ObjectIdGetDatum(tableoid),
+							  0, 0, 0))
 		PG_RETURN_NULL();
 
 	aclresult = pg_class_aclcheck(tableoid, roleid, mode);
@@ -1764,11 +1758,9 @@ has_database_privilege_name_id(PG_FUNCTION_ARGS)
 	roleid = get_roleid_checked(NameStr(*username));
 	mode = convert_database_priv_string(priv_type_text);
 
-	if (0 == caql_getcount(
-				NULL,
-				cql("SELECT COUNT(*) FROM pg_database "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(databaseoid))))
+	if (!SearchSysCacheExists(DATABASEOID,
+							  ObjectIdGetDatum(databaseoid),
+							  0, 0, 0))
 		PG_RETURN_NULL();
 
 	aclresult = pg_database_aclcheck(databaseoid, roleid, mode);
@@ -1794,11 +1786,9 @@ has_database_privilege_id(PG_FUNCTION_ARGS)
 	roleid = GetUserId();
 	mode = convert_database_priv_string(priv_type_text);
 
-	if (0 == caql_getcount(
-				NULL,
-				cql("SELECT COUNT(*) FROM pg_database "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(databaseoid))))
+	if (!SearchSysCacheExists(DATABASEOID,
+							  ObjectIdGetDatum(databaseoid),
+							  0, 0, 0))
 		PG_RETURN_NULL();
 
 	aclresult = pg_database_aclcheck(databaseoid, roleid, mode);
@@ -1845,11 +1835,9 @@ has_database_privilege_id_id(PG_FUNCTION_ARGS)
 
 	mode = convert_database_priv_string(priv_type_text);
 
-	if (0 == caql_getcount(
-				NULL,
-				cql("SELECT COUNT(*) FROM pg_database "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(databaseoid))))
+	if (!SearchSysCacheExists(DATABASEOID,
+							  ObjectIdGetDatum(databaseoid),
+							  0, 0, 0))
 		PG_RETURN_NULL();
 
 	aclresult = pg_database_aclcheck(databaseoid, roleid, mode);
@@ -2001,11 +1989,9 @@ has_function_privilege_name_id(PG_FUNCTION_ARGS)
 	roleid = get_roleid_checked(NameStr(*username));
 	mode = convert_function_priv_string(priv_type_text);
 
-	if (0 == caql_getcount(
-				NULL,
-				cql("SELECT COUNT(*) FROM pg_proc "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(functionoid))))
+	if (!SearchSysCacheExists(PROCOID,
+							  ObjectIdGetDatum(functionoid),
+							  0, 0, 0))
 		PG_RETURN_NULL();
 
 	aclresult = pg_proc_aclcheck(functionoid, roleid, mode);
@@ -2031,11 +2017,9 @@ has_function_privilege_id(PG_FUNCTION_ARGS)
 	roleid = GetUserId();
 	mode = convert_function_priv_string(priv_type_text);
 
-	if (0 == caql_getcount(
-				NULL,
-				cql("SELECT COUNT(*) FROM pg_proc "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(functionoid))))
+	if (!SearchSysCacheExists(PROCOID,
+							  ObjectIdGetDatum(functionoid),
+							  0, 0, 0))
 		PG_RETURN_NULL();
 
 	aclresult = pg_proc_aclcheck(functionoid, roleid, mode);
@@ -2082,11 +2066,9 @@ has_function_privilege_id_id(PG_FUNCTION_ARGS)
 
 	mode = convert_function_priv_string(priv_type_text);
 
-	if (0 == caql_getcount(
-				NULL,
-				cql("SELECT COUNT(*) FROM pg_proc "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(functionoid))))
+	if (!SearchSysCacheExists(PROCOID,
+							  ObjectIdGetDatum(functionoid),
+							  0, 0, 0))
 		PG_RETURN_NULL();
 
 	aclresult = pg_proc_aclcheck(functionoid, roleid, mode);
@@ -2226,11 +2208,9 @@ has_language_privilege_name_id(PG_FUNCTION_ARGS)
 	roleid = get_roleid_checked(NameStr(*username));
 	mode = convert_language_priv_string(priv_type_text);
 
-	if (0 == caql_getcount(
-				NULL,
-				cql("SELECT COUNT(*) FROM pg_language "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(languageoid))))
+	if (!SearchSysCacheExists(LANGOID,
+							  ObjectIdGetDatum(languageoid),
+							  0, 0, 0))
 		PG_RETURN_NULL();
 
 	aclresult = pg_language_aclcheck(languageoid, roleid, mode);
@@ -2256,11 +2236,9 @@ has_language_privilege_id(PG_FUNCTION_ARGS)
 	roleid = GetUserId();
 	mode = convert_language_priv_string(priv_type_text);
 
-	if (0 == caql_getcount(
-				NULL,
-				cql("SELECT COUNT(*) FROM pg_language "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(languageoid))))
+	if (!SearchSysCacheExists(LANGOID,
+							  ObjectIdGetDatum(languageoid),
+							  0, 0, 0))
 		PG_RETURN_NULL();
 
 	aclresult = pg_language_aclcheck(languageoid, roleid, mode);
@@ -2307,11 +2285,9 @@ has_language_privilege_id_id(PG_FUNCTION_ARGS)
 
 	mode = convert_language_priv_string(priv_type_text);
 
-	if (0 == caql_getcount(
-				NULL,
-				cql("SELECT COUNT(*) FROM pg_language "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(languageoid))))
+	if (!SearchSysCacheExists(LANGOID,
+							  ObjectIdGetDatum(languageoid),
+							  0, 0, 0))
 		PG_RETURN_NULL();
 
 	aclresult = pg_language_aclcheck(languageoid, roleid, mode);
@@ -2454,11 +2430,9 @@ has_schema_privilege_name_id(PG_FUNCTION_ARGS)
 	roleid = get_roleid_checked(NameStr(*username));
 	mode = convert_schema_priv_string(priv_type_text);
 
-	if (0 == caql_getcount(
-				NULL,
-				cql("SELECT COUNT(*) FROM pg_namespace "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(schemaoid))))
+	if (!SearchSysCacheExists(NAMESPACEOID,
+							  ObjectIdGetDatum(schemaoid),
+							  0, 0, 0))
 		PG_RETURN_NULL();
 
 	aclresult = pg_namespace_aclcheck(schemaoid, roleid, mode);
@@ -2484,11 +2458,9 @@ has_schema_privilege_id(PG_FUNCTION_ARGS)
 	roleid = GetUserId();
 	mode = convert_schema_priv_string(priv_type_text);
 
-	if (0 == caql_getcount(
-				NULL,
-				cql("SELECT COUNT(*) FROM pg_namespace "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(schemaoid))))
+	if (!SearchSysCacheExists(NAMESPACEOID,
+							  ObjectIdGetDatum(schemaoid),
+							  0, 0, 0))
 		PG_RETURN_NULL();
 
 	aclresult = pg_namespace_aclcheck(schemaoid, roleid, mode);
@@ -2535,11 +2507,9 @@ has_schema_privilege_id_id(PG_FUNCTION_ARGS)
 
 	mode = convert_schema_priv_string(priv_type_text);
 
-	if (0 == caql_getcount(
-				NULL,
-				cql("SELECT COUNT(*) FROM pg_namespace "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(schemaoid))))
+	if (!SearchSysCacheExists(NAMESPACEOID,
+							  ObjectIdGetDatum(schemaoid),
+							  0, 0, 0))
 		PG_RETURN_NULL();
 
 	aclresult = pg_namespace_aclcheck(schemaoid, roleid, mode);
@@ -3137,14 +3107,9 @@ roles_has_privs_of(Oid roleid)
 			continue;
 
 		/* Find roles that memberid is directly a member of */
-		memlist = caql_begin_CacheList(
-				NULL,
-				cql("SELECT * FROM pg_auth_members "
-					" WHERE member = :1 "
-					" ORDER BY member, "
-					" roleid ",
-					ObjectIdGetDatum(memberid)));
-
+		memlist = SearchSysCacheList(AUTHMEMMEMROLE, 1,
+									 ObjectIdGetDatum(memberid),
+									 0, 0, 0);
 		for (i = 0; i < memlist->n_members; i++)
 		{
 			HeapTuple	tup = &memlist->members[i]->tuple;
@@ -3157,7 +3122,7 @@ roles_has_privs_of(Oid roleid)
 			 */
 			roles_list = list_append_unique_oid(roles_list, otherid);
 		}
-		caql_end_CacheList(memlist);
+		ReleaseSysCacheList(memlist);
 	}
 
 	/*
@@ -3222,14 +3187,9 @@ roles_is_member_of(Oid roleid)
 		int			i;
 
 		/* Find roles that memberid is directly a member of */
-		memlist = caql_begin_CacheList(
-				NULL,
-				cql("SELECT * FROM pg_auth_members "
-					" WHERE member = :1 "
-					" ORDER BY member, "
-					" roleid ",
-					ObjectIdGetDatum(memberid)));
-
+		memlist = SearchSysCacheList(AUTHMEMMEMROLE, 1,
+									 ObjectIdGetDatum(memberid),
+									 0, 0, 0);
 		for (i = 0; i < memlist->n_members; i++)
 		{
 			HeapTuple	tup = &memlist->members[i]->tuple;
@@ -3242,7 +3202,7 @@ roles_is_member_of(Oid roleid)
 			 */
 			roles_list = list_append_unique_oid(roles_list, otherid);
 		}
-		caql_end_CacheList(memlist);
+		ReleaseSysCacheList(memlist);
 	}
 
 	/*
@@ -3411,14 +3371,9 @@ is_admin_of_role(Oid member, Oid role)
 		int			i;
 
 		/* Find roles that memberid is directly a member of */
-		memlist = caql_begin_CacheList(
-				NULL,
-				cql("SELECT * FROM pg_auth_members "
-					" WHERE member = :1 "
-					" ORDER BY member, "
-					" roleid ",
-					ObjectIdGetDatum(memberid)));
-
+		memlist = SearchSysCacheList(AUTHMEMMEMROLE, 1,
+									 ObjectIdGetDatum(memberid),
+									 0, 0, 0);
 		for (i = 0; i < memlist->n_members; i++)
 		{
 			HeapTuple	tup = &memlist->members[i]->tuple;
@@ -3434,7 +3389,7 @@ is_admin_of_role(Oid member, Oid role)
 
 			roles_list = list_append_unique_oid(roles_list, otherid);
 		}
-		caql_end_CacheList(memlist);
+		ReleaseSysCacheList(memlist);
 		if (result)
 			break;
 	}

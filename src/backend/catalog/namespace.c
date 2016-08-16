@@ -712,16 +712,10 @@ TypeIsVisible(Oid typid)
 	Form_pg_type typform;
 	Oid			typnamespace;
 	bool		visible;
-	cqContext  *pcqCtx;
 
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_type "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(typid)));
-
-	typtup = caql_getnext(pcqCtx);
-
+	typtup = SearchSysCache(TYPEOID,
+							ObjectIdGetDatum(typid),
+							0, 0, 0);
 	if (!HeapTupleIsValid(typtup))
 		elog(ERROR, "cache lookup failed for type %u", typid);
 	typform = (Form_pg_type) GETSTRUCT(typtup);
@@ -758,14 +752,11 @@ TypeIsVisible(Oid typid)
 				visible = true;
 				break;
 			}
-			
-			if (caql_getcount(
-						NULL,
-						cql("SELECT COUNT(*) FROM pg_type "
-							" WHERE typname = :1 "
-							" AND typnamespace = :2 ",
-							CStringGetDatum((char *) typname),
-							ObjectIdGetDatum(namespaceId))))
+
+			if (SearchSysCacheExists(TYPENAMENSP,
+									 PointerGetDatum(typname),
+									 ObjectIdGetDatum(namespaceId),
+									 0, 0))
 			{
 				/* Found something else first in path */
 				break;
@@ -773,7 +764,7 @@ TypeIsVisible(Oid typid)
 		}
 	}
 
-	caql_endscan(pcqCtx);
+	ReleaseSysCache(typtup);
 
 	return visible;
 }
@@ -1212,44 +1203,35 @@ OpernameGetOprid(List *names, Oid oprleft, Oid oprright)
 	{
 		/* search only in exact schema given */
 		Oid			namespaceId;
-		Oid			operoid;
+		HeapTuple	opertup;
 
 		namespaceId = LookupExplicitNamespace(schemaname);
+		opertup = SearchSysCache(OPERNAMENSP,
+								 CStringGetDatum(opername),
+								 ObjectIdGetDatum(oprleft),
+								 ObjectIdGetDatum(oprright),
+								 ObjectIdGetDatum(namespaceId));
+		if (HeapTupleIsValid(opertup))
+		{
+			Oid			result = HeapTupleGetOid(opertup);
 
-		operoid = caql_getoid(
-				NULL,
-				cql("SELECT oid FROM pg_operator "
-					" WHERE oprname = :1 "
-					" AND oprleft = :2 "
-					" AND oprright = :3 "
-					" AND oprnamespace = :4 ",
-					CStringGetDatum(opername),
-					ObjectIdGetDatum(oprleft),
-					ObjectIdGetDatum(oprright),
-					ObjectIdGetDatum(namespaceId)));
-
-		return operoid;
+			ReleaseSysCache(opertup);
+			return result;
+		}
+		return InvalidOid;
 	}
 
 	/* Search syscache by name and argument types */
-	catlist = caql_begin_CacheList(
-			NULL,
-			cql("SELECT * FROM pg_operator "
-				" WHERE oprname = :1 "
-				" AND oprleft = :2 "
-				" AND oprright = :3 "
-				" ORDER BY oprname, "
-				" oprleft, "
-				" oprright, "
-				" oprnamespace ",
-				CStringGetDatum(opername),
-				ObjectIdGetDatum(oprleft),
-				ObjectIdGetDatum(oprright)));
+	catlist = SearchSysCacheList(OPERNAMENSP, 3,
+								 CStringGetDatum(opername),
+								 ObjectIdGetDatum(oprleft),
+								 ObjectIdGetDatum(oprright),
+								 0);
 
 	if (catlist->n_members == 0)
 	{
 		/* no hope, fall out early */
-		caql_end_CacheList(catlist);
+		ReleaseSysCacheList(catlist);
 		return InvalidOid;
 	}
 
@@ -1277,13 +1259,13 @@ OpernameGetOprid(List *names, Oid oprleft, Oid oprright)
 			{
 				Oid			result = HeapTupleGetOid(opertup);
 
-				caql_end_CacheList(catlist);
+				ReleaseSysCacheList(catlist);
 				return result;
 			}
 		}
 	}
 
-	caql_end_CacheList(catlist);
+	ReleaseSysCacheList(catlist);
 	return InvalidOid;
 }
 
@@ -1332,15 +1314,9 @@ OpernameGetCandidates(List *names, char oprkind)
 	}
 
 	/* Search syscache by name only */
-	catlist = caql_begin_CacheList(
-			NULL, 
-			cql("SELECT * FROM pg_operator "
-				" WHERE oprname = :1 "
-				" ORDER BY oprname, "
-				" oprleft, "
-				" oprright, "
-				" oprnamespace ",
-				CStringGetDatum(opername)));
+	catlist = SearchSysCacheList(OPERNAMENSP, 1,
+								 CStringGetDatum(opername),
+								 0, 0, 0);
 
 	/*
 	 * In typical scenarios, most if not all of the operators found by the
@@ -1397,7 +1373,7 @@ OpernameGetCandidates(List *names, char oprkind)
 			 * arguments as something we already accepted?	If so, keep only
 			 * the one that appears earlier in the search path.
 			 *
-			 * If we have an ordered list from caql_begin_CacheList (the normal
+			 * If we have an ordered list from SearchSysCacheList (the normal
 			 * case), then any conflicting oper must immediately adjoin this
 			 * one in the list, so we only need to look at the newest result
 			 * item.  If we have an unordered list, we have to scan the whole
@@ -1457,7 +1433,7 @@ OpernameGetCandidates(List *names, char oprkind)
 		resultList = newResult;
 	}
 
-	caql_end_CacheList(catlist);
+	ReleaseSysCacheList(catlist);
 
 	return resultList;
 }
@@ -3751,7 +3727,7 @@ fetch_search_path_array(Oid *sarray, int sarray_len)
  * operate on SnapshotNow semantics and so might see the object as already
  * gone when it's still visible to the MVCC snapshot.  (There is no race
  * condition in the current coding because we don't accept sinval messages
- * between the searchsyscacheexists/getcount test and the subsequent lookup.)
+ * between the SearchSysCacheExists test and the subsequent lookup.)
  */
 
 Datum
@@ -3759,11 +3735,9 @@ pg_table_is_visible(PG_FUNCTION_ARGS)
 {
 	Oid			oid = PG_GETARG_OID(0);
 
-	if (0 == caql_getcount(
-				NULL,
-				cql("SELECT COUNT(*) FROM pg_class "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(oid))))
+	if (!SearchSysCacheExists(RELOID,
+							  ObjectIdGetDatum(oid),
+							  0, 0, 0))
 		PG_RETURN_NULL();
 
 	PG_RETURN_BOOL(RelationIsVisible(oid));
@@ -3774,11 +3748,9 @@ pg_type_is_visible(PG_FUNCTION_ARGS)
 {
 	Oid			oid = PG_GETARG_OID(0);
 
-	if (0 == caql_getcount(
-				NULL,
-				cql("SELECT COUNT(*) FROM pg_type "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(oid))))
+	if (!SearchSysCacheExists(TYPEOID,
+							  ObjectIdGetDatum(oid),
+							  0, 0, 0))
 		PG_RETURN_NULL();
 
 	PG_RETURN_BOOL(TypeIsVisible(oid));
@@ -3789,11 +3761,9 @@ pg_function_is_visible(PG_FUNCTION_ARGS)
 {
 	Oid			oid = PG_GETARG_OID(0);
 
-	if (0 == caql_getcount(
-				NULL,
-				cql("SELECT COUNT(*) FROM pg_proc "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(oid))))
+	if (!SearchSysCacheExists(PROCOID,
+							  ObjectIdGetDatum(oid),
+							  0, 0, 0))
 		PG_RETURN_NULL();
 
 	PG_RETURN_BOOL(FunctionIsVisible(oid));
@@ -3804,11 +3774,9 @@ pg_operator_is_visible(PG_FUNCTION_ARGS)
 {
 	Oid			oid = PG_GETARG_OID(0);
 
-	if (0 == caql_getcount(
-				NULL,
-				cql("SELECT COUNT(*) FROM pg_operator "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(oid))))
+	if (!SearchSysCacheExists(OPEROID,
+							  ObjectIdGetDatum(oid),
+							  0, 0, 0))
 		PG_RETURN_NULL();
 
 	PG_RETURN_BOOL(OperatorIsVisible(oid));
@@ -3819,11 +3787,9 @@ pg_opclass_is_visible(PG_FUNCTION_ARGS)
 {
 	Oid			oid = PG_GETARG_OID(0);
 
-	if (0 == caql_getcount(
-				NULL,
-				cql("SELECT COUNT(*) FROM pg_opclass "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(oid))))
+	if (!SearchSysCacheExists(CLAOID,
+							  ObjectIdGetDatum(oid),
+							  0, 0, 0))
 		PG_RETURN_NULL();
 
 	PG_RETURN_BOOL(OpclassIsVisible(oid));
@@ -3834,11 +3800,9 @@ pg_conversion_is_visible(PG_FUNCTION_ARGS)
 {
 	Oid			oid = PG_GETARG_OID(0);
 
-	if (0 == caql_getcount(
-				NULL,
-				cql("SELECT COUNT(*) FROM pg_conversion "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(oid))))
+	if (!SearchSysCacheExists(CONVOID,
+							  ObjectIdGetDatum(oid),
+							  0, 0, 0))
 		PG_RETURN_NULL();
 
 	PG_RETURN_BOOL(ConversionIsVisible(oid));

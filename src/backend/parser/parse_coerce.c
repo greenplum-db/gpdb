@@ -14,7 +14,6 @@
  */
 #include "postgres.h"
 
-#include "catalog/catquery.h"
 #include "catalog/pg_cast.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_type.h"
@@ -2218,7 +2217,6 @@ IsBinaryCoercible(Oid srctype, Oid targettype)
 	HeapTuple	tuple;
 	Form_pg_cast castForm;
 	bool		result;
-	cqContext  *pcqCtx;
 
 	/* Fast path if same type */
 	if (srctype == targettype)
@@ -2248,16 +2246,10 @@ IsBinaryCoercible(Oid srctype, Oid targettype)
 			return true;
 
 	/* Else look in pg_cast */
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_cast "
-				" WHERE castsource = :1 "
-				" AND casttarget = :2 ",
-				ObjectIdGetDatum(srctype),
-				ObjectIdGetDatum(targettype)));
-
-	tuple = caql_getnext(pcqCtx);
-
+	tuple = SearchSysCache(CASTSOURCETARGET,
+						   ObjectIdGetDatum(srctype),
+						   ObjectIdGetDatum(targettype),
+						   0, 0);
 	if (!HeapTupleIsValid(tuple))
 		return false;			/* no cast */
 	castForm = (Form_pg_cast) GETSTRUCT(tuple);
@@ -2265,7 +2257,7 @@ IsBinaryCoercible(Oid srctype, Oid targettype)
 	result = (!OidIsValid(castForm->castfunc) &&
 			  castForm->castcontext == COERCION_CODE_IMPLICIT);
 
-	caql_endscan(pcqCtx);
+	ReleaseSysCache(tuple);
 
 	return result;
 }
@@ -2305,7 +2297,6 @@ find_coercion_pathway(Oid targetTypeId, Oid sourceTypeId,
 {
 	CoercionPathType result = COERCION_PATH_NONE;
 	HeapTuple	tuple;
-	cqContext  *pcqCtx;
 
 	*funcid = InvalidOid;
 
@@ -2322,16 +2313,10 @@ find_coercion_pathway(Oid targetTypeId, Oid sourceTypeId,
 	/* SELECT castcontext from pg_cast */
 
 	/* Look in pg_cast */
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_cast "
-				" WHERE castsource = :1 "
-				" AND casttarget = :2 ",
-				ObjectIdGetDatum(sourceTypeId),
-				ObjectIdGetDatum(targetTypeId)));
-
-	tuple = caql_getnext(pcqCtx);
-
+	tuple = SearchSysCache(CASTSOURCETARGET,
+						   ObjectIdGetDatum(sourceTypeId),
+						   ObjectIdGetDatum(targetTypeId),
+						   0, 0);
 	if (HeapTupleIsValid(tuple))
 	{
 		Form_pg_cast castForm = (Form_pg_cast) GETSTRUCT(tuple);
@@ -2366,6 +2351,7 @@ find_coercion_pathway(Oid targetTypeId, Oid sourceTypeId,
 				result = COERCION_PATH_RELABELTYPE;
 		}
 
+		ReleaseSysCache(tuple);
 	}
 	else
 	{
@@ -2432,7 +2418,7 @@ find_coercion_pathway(Oid targetTypeId, Oid sourceTypeId,
 				result = COERCION_PATH_COERCEVIAIO;
 		}
 	}
-	caql_endscan(pcqCtx);
+
 	return result;
 }
 

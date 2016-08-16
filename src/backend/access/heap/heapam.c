@@ -49,7 +49,6 @@
 #include "access/valid.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
-#include "catalog/catquery.h"
 #include "catalog/gp_policy.h"
 #include "catalog/gp_fastsequence.h"
 #include "catalog/namespace.h"
@@ -1012,11 +1011,9 @@ try_relation_open(Oid relationId, LOCKMODE lockmode, bool noWait)
 	 * Now that we have the lock, probe to see if the relation really exists
 	 * or not.
 	 */
-	if (0 == caql_getcount(
-				NULL,
-				cql("SELECT COUNT(*) FROM pg_class "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(relationId))))
+	if (!SearchSysCacheExists(RELOID,
+							  ObjectIdGetDatum(relationId),
+							  0, 0, 0))
 	{
 		/* Release useless lock */
 		if (lockmode != NoLock)

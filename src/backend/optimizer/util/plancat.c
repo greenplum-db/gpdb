@@ -19,7 +19,6 @@
 #include <math.h>
 
 #include "access/genam.h"
-#include "catalog/catquery.h"
 #include "access/heapam.h"
 #include "access/transam.h"
 #include "catalog/pg_appendonly_fn.h"
@@ -1159,9 +1158,11 @@ List *
 find_inheritance_children(Oid inhparent)
 {
 	List	   *list = NIL;
+	Relation	relation;
+	HeapScanDesc scan;
 	HeapTuple	inheritsTuple;
 	Oid			inhrelid;
-	cqContext  *pcqCtx;
+	ScanKeyData key[1];
 	ListCell   *item;
 	int         i;
 	Oid        *ordered_list;
@@ -1173,18 +1174,19 @@ find_inheritance_children(Oid inhparent)
 	if (!has_subclass_fast(inhparent))
 		return NIL;
 
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_inherits "
-				" WHERE inhparent = :1 ",
-				ObjectIdGetDatum(inhparent)));
-
-	while (HeapTupleIsValid(inheritsTuple = caql_getnext(pcqCtx)))
+	ScanKeyInit(&key[0],
+				Anum_pg_inherits_inhparent,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(inhparent));
+	relation = heap_open(InheritsRelationId, AccessShareLock);
+	scan = heap_beginscan(relation, SnapshotNow, 1, key);
+	while ((inheritsTuple = heap_getnext(scan, ForwardScanDirection)) != NULL)
 	{
 		inhrelid = ((Form_pg_inherits) GETSTRUCT(inheritsTuple))->inhrelid;
 		list = lappend_oid(list, inhrelid);
 	}
-	caql_endscan(pcqCtx);
+	heap_endscan(scan);
+	heap_close(relation, AccessShareLock);
 
 	/*
 	 * The order in which child OIDs are scanned on master may not be

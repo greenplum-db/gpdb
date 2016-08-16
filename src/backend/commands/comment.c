@@ -213,14 +213,14 @@ void
 CreateComments(Oid oid, Oid classoid, int32 subid, char *comment)
 {
 	Relation	description;
+	ScanKeyData skey[3];
+	SysScanDesc sd;
 	HeapTuple	oldtuple;
 	HeapTuple	newtuple = NULL;
 	Datum		values[Natts_pg_description];
 	bool		nulls[Natts_pg_description];
 	bool		replaces[Natts_pg_description];
 	int			i;
-	cqContext	cqc;
-	cqContext  *pcqCtx;
 
 	/* Reduce empty-string to NULL case */
 	if (comment != NULL && strlen(comment) == 0)
@@ -242,52 +242,57 @@ CreateComments(Oid oid, Oid classoid, int32 subid, char *comment)
 	}
 
 	/* Use the index to search for a matching old tuple */
+
+	ScanKeyInit(&skey[0],
+				Anum_pg_description_objoid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(oid));
+	ScanKeyInit(&skey[1],
+				Anum_pg_description_classoid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(classoid));
+	ScanKeyInit(&skey[2],
+				Anum_pg_description_objsubid,
+				BTEqualStrategyNumber, F_INT4EQ,
+				Int32GetDatum(subid));
+
 	description = heap_open(DescriptionRelationId, RowExclusiveLock);
 
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), description),
-			cql("SELECT * FROM pg_description" 
-				 " where objoid = :1 AND "
-				 " classoid = :2 AND "
-				 " objsubid = :3 FOR UPDATE", 
-				 ObjectIdGetDatum(oid),
-				 ObjectIdGetDatum(classoid),
-				Int32GetDatum(subid)));
+	sd = systable_beginscan(description, DescriptionObjIndexId, true,
+							SnapshotNow, 3, skey);
 
-
-	while (HeapTupleIsValid(oldtuple = caql_getnext(pcqCtx)))
+	while ((oldtuple = systable_getnext(sd)) != NULL)
 	{
 		/* Found the old tuple, so delete or update it */
 
 		if (comment == NULL)
-			caql_delete_current(pcqCtx);
+			simple_heap_delete(description, &oldtuple->t_self);
 		else
 		{
-			newtuple = caql_modify_current(pcqCtx,
-										   values, nulls, replaces);
-			caql_update_current(pcqCtx, newtuple);
-			/* update_current updates the index -- don't do it twice */
+			newtuple = heap_modify_tuple(oldtuple, RelationGetDescr(description), values,
+										 nulls, replaces);
+			simple_heap_update(description, &oldtuple->t_self, newtuple);
 		}
 
 		break;					/* Assume there can be only one match */
 	}
 
-	caql_endscan(pcqCtx);
+	systable_endscan(sd);
 
 	/* If we didn't find an old tuple, insert a new one */
 
 	if (newtuple == NULL && comment != NULL)
 	{
-		pcqCtx = caql_beginscan(
-				caql_addrel(cqclr(&cqc), description),
-				cql("INSERT INTO pg_description",
-					NULL));
+		newtuple = heap_form_tuple(RelationGetDescr(description),
+								   values, nulls);
+		simple_heap_insert(description, newtuple);
+	}
 
-		newtuple = caql_form_tuple(pcqCtx, values, nulls);
-		caql_insert(pcqCtx, newtuple); /* implicit update of index as well */
-
+	/* Update indexes, if necessary */
+	if (newtuple != NULL)
+	{
+		CatalogUpdateIndexes(description, newtuple);
 		heap_freetuple(newtuple);
-		caql_endscan(pcqCtx);
 	}
 
 	/* Done */
@@ -308,14 +313,14 @@ void
 CreateSharedComments(Oid oid, Oid classoid, char *comment)
 {
 	Relation	shdescription;
+	ScanKeyData skey[2];
+	SysScanDesc sd;
 	HeapTuple	oldtuple;
 	HeapTuple	newtuple = NULL;
 	Datum		values[Natts_pg_shdescription];
 	bool		nulls[Natts_pg_shdescription];
 	bool		replaces[Natts_pg_shdescription];
 	int			i;
-	cqContext	cqc;
-	cqContext  *pcqCtx;
 
 	/* Reduce empty-string to NULL case */
 	if (comment != NULL && strlen(comment) == 0)
@@ -336,49 +341,53 @@ CreateSharedComments(Oid oid, Oid classoid, char *comment)
 	}
 
 	/* Use the index to search for a matching old tuple */
+
+	ScanKeyInit(&skey[0],
+				Anum_pg_shdescription_objoid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(oid));
+	ScanKeyInit(&skey[1],
+				Anum_pg_shdescription_classoid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(classoid));
+
 	shdescription = heap_open(SharedDescriptionRelationId, RowExclusiveLock);
 
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), shdescription),
-			cql("SELECT * FROM pg_shdescription" 
-				" where objoid  = :1 AND "
-				" classoid = :2 FOR UPDATE", 
-				ObjectIdGetDatum(oid),
-				ObjectIdGetDatum(classoid)));
+	sd = systable_beginscan(shdescription, SharedDescriptionObjIndexId, true,
+							SnapshotNow, 2, skey);
 
-	while (HeapTupleIsValid(oldtuple = caql_getnext(pcqCtx)))
+	while ((oldtuple = systable_getnext(sd)) != NULL)
 	{
 		/* Found the old tuple, so delete or update it */
 
 		if (comment == NULL)
-			caql_delete_current(pcqCtx);
+			simple_heap_delete(shdescription, &oldtuple->t_self);
 		else
 		{
-			newtuple = caql_modify_current(pcqCtx,
-										   values, nulls, replaces);
-			caql_update_current(pcqCtx, newtuple);
-			/* update_current updates the index -- don't do it twice */
+			newtuple = heap_modify_tuple(oldtuple, RelationGetDescr(shdescription),
+										 values, nulls, replaces);
+			simple_heap_update(shdescription, &oldtuple->t_self, newtuple);
 		}
 
 		break;					/* Assume there can be only one match */
 	}
 
-	caql_endscan(pcqCtx);
+	systable_endscan(sd);
 
 	/* If we didn't find an old tuple, insert a new one */
 
 	if (newtuple == NULL && comment != NULL)
 	{
-		pcqCtx = caql_beginscan(
-				caql_addrel(cqclr(&cqc), shdescription),
-				cql("INSERT INTO pg_shdescription",
-					NULL));
+		newtuple = heap_form_tuple(RelationGetDescr(shdescription),
+								   values, nulls);
+		simple_heap_insert(shdescription, newtuple);
+	}
 
-		newtuple = caql_form_tuple(pcqCtx, values, nulls);
-		caql_insert(pcqCtx, newtuple); /* implicit update of index as well */
-
+	/* Update indexes, if necessary */
+	if (newtuple != NULL)
+	{
+		CatalogUpdateIndexes(shdescription, newtuple);
 		heap_freetuple(newtuple);
-		caql_endscan(pcqCtx);
 	}
 
 	/* Done */
@@ -396,35 +405,46 @@ CreateSharedComments(Oid oid, Oid classoid, char *comment)
 void
 DeleteComments(Oid oid, Oid classoid, int32 subid)
 {
+	Relation	description;
+	ScanKeyData skey[3];
+	int			nkeys;
+	SysScanDesc sd;
+	HeapTuple	oldtuple;
+
 	/* Use the index to search for all matching old tuples */
+
+	ScanKeyInit(&skey[0],
+				Anum_pg_description_objoid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(oid));
+	ScanKeyInit(&skey[1],
+				Anum_pg_description_classoid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(classoid));
+
 	if (subid != 0)
 	{
-		int numDel;
-
-		numDel = caql_getcount(
-				NULL,
-				cql("DELETE FROM pg_description" 
-					" where objoid = :1 AND "
-					" classoid = :2 AND "
-					" objsubid = :3", 
-					ObjectIdGetDatum(oid),
-					ObjectIdGetDatum(classoid),
-					Int32GetDatum(subid)));
+		ScanKeyInit(&skey[2],
+					Anum_pg_description_objsubid,
+					BTEqualStrategyNumber, F_INT4EQ,
+					Int32GetDatum(subid));
+		nkeys = 3;
 	}
 	else
-	{
-		int numDel;
+		nkeys = 2;
 
-		numDel = caql_getcount(
-				NULL,
-				cql("DELETE FROM pg_description" 
-					" where objoid = :1 AND "
-					" classoid = :2",
-					ObjectIdGetDatum(oid),
-					ObjectIdGetDatum(classoid)));
-	}
+	description = heap_open(DescriptionRelationId, RowExclusiveLock);
+
+	sd = systable_beginscan(description, DescriptionObjIndexId, true,
+							SnapshotNow, nkeys, skey);
+
+	while ((oldtuple = systable_getnext(sd)) != NULL)
+		simple_heap_delete(description, &oldtuple->t_self);
 
 	/* Done */
+
+	systable_endscan(sd);
+	heap_close(description, RowExclusiveLock);
 }
 
 /*
@@ -433,18 +453,34 @@ DeleteComments(Oid oid, Oid classoid, int32 subid)
 void
 DeleteSharedComments(Oid oid, Oid classoid)
 {
-	int numDel;
+	Relation	shdescription;
+	ScanKeyData skey[2];
+	SysScanDesc sd;
+	HeapTuple	oldtuple;
 
 	/* Use the index to search for all matching old tuples */
-	numDel = caql_getcount(
-			NULL,
-			cql("DELETE FROM pg_shdescription" 
-				" where objoid  = :1 AND "
-				" classoid = :2", 
-				ObjectIdGetDatum(oid),
-				ObjectIdGetDatum(classoid)));
+
+	ScanKeyInit(&skey[0],
+				Anum_pg_shdescription_objoid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(oid));
+	ScanKeyInit(&skey[1],
+				Anum_pg_shdescription_classoid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(classoid));
+
+	shdescription = heap_open(SharedDescriptionRelationId, RowExclusiveLock);
+
+	sd = systable_beginscan(shdescription, SharedDescriptionObjIndexId, true,
+							SnapshotNow, 2, skey);
+
+	while ((oldtuple = systable_getnext(sd)) != NULL)
+		simple_heap_delete(shdescription, &oldtuple->t_self);
 
 	/* Done */
+
+	systable_endscan(sd);
+	heap_close(shdescription, RowExclusiveLock);
 }
 
 /*
@@ -753,12 +789,9 @@ CommentNamespace(List *qualname, char *comment)
 				 errmsg("schema name cannot be qualified")));
 	namespace = strVal(linitial(qualname));
 
-	oid = caql_getoid(
-			NULL,
-			cql("SELECT oid FROM pg_namespace "
-				" WHERE nspname = :1 ",
-				CStringGetDatum(namespace)));
-
+	oid = GetSysCacheOid(NAMESPACENAME,
+						 CStringGetDatum(namespace),
+						 0, 0, 0);
 	if (!OidIsValid(oid))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_SCHEMA),
@@ -804,18 +837,23 @@ CommentRule(List *qualname, char *comment)
 	if (nnames == 1)
 	{
 		/* Old-style: only a rule name is given */
-		bool bOnly;
+		Relation	RewriteRelation;
+		HeapScanDesc scanDesc;
+		ScanKeyData scanKeyData;
 
 		rulename = strVal(linitial(qualname));
 
 		/* Search pg_rewrite for such a rule */
-		tuple = caql_getfirst_only(
-				NULL,
-				&bOnly,
-				cql("SELECT * FROM pg_rewrite "
-					" WHERE rulename = :1 ",
-					CStringGetDatum(rulename)));
+		ScanKeyInit(&scanKeyData,
+					Anum_pg_rewrite_rulename,
+					BTEqualStrategyNumber, F_NAMEEQ,
+					PointerGetDatum(rulename));
 
+		RewriteRelation = heap_open(RewriteRelationId, AccessShareLock);
+		scanDesc = heap_beginscan(RewriteRelation, SnapshotNow,
+								  1, &scanKeyData);
+
+		tuple = heap_getnext(scanDesc, ForwardScanDirection);
 		if (HeapTupleIsValid(tuple))
 		{
 			reloid = ((Form_pg_rewrite) GETSTRUCT(tuple))->ev_class;
@@ -829,7 +867,8 @@ CommentRule(List *qualname, char *comment)
 			reloid = ruleoid = 0;		/* keep compiler quiet */
 		}
 
-		if (!bOnly)
+		if (HeapTupleIsValid(tuple = heap_getnext(scanDesc,
+												  ForwardScanDirection)))
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_DUPLICATE_OBJECT),
@@ -837,15 +876,14 @@ CommentRule(List *qualname, char *comment)
 				errhint("Specify a relation name as well as a rule name.")));
 		}
 
-		/* heap_endscan(scanDesc); */
+		heap_endscan(scanDesc);
+		heap_close(RewriteRelation, AccessShareLock);
 
 		/* Open the owning relation to ensure it won't go away meanwhile */
 		relation = heap_open(reloid, AccessShareLock);
 	}
 	else
 	{
-		cqContext  *pcqCtx;
-
 		/* New-style: rule and relname both provided */
 		Assert(nnames >= 2);
 		relname = list_truncate(list_copy(qualname), nnames - 1);
@@ -857,16 +895,10 @@ CommentRule(List *qualname, char *comment)
 		reloid = RelationGetRelid(relation);
 
 		/* Find the rule's pg_rewrite tuple, get its OID */
-		pcqCtx = caql_beginscan(
-				NULL,
-				cql("SELECT * FROM pg_rewrite "
-					" WHERE ev_class = :1 "
-					" AND rulename = :2 ",
-					ObjectIdGetDatum(reloid),
-					CStringGetDatum(rulename)));
-
-		tuple = caql_getnext(pcqCtx);
-
+		tuple = SearchSysCache(RULERELNAME,
+							   ObjectIdGetDatum(reloid),
+							   PointerGetDatum(rulename),
+							   0, 0);
 		if (!HeapTupleIsValid(tuple))
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -874,7 +906,7 @@ CommentRule(List *qualname, char *comment)
 							rulename, RelationGetRelationName(relation))));
 		Assert(reloid == ((Form_pg_rewrite) GETSTRUCT(tuple))->ev_class);
 		ruleoid = HeapTupleGetOid(tuple);
-		caql_endscan(pcqCtx);
+		ReleaseSysCache(tuple);
 	}
 
 	/* Check object security */
@@ -1021,9 +1053,10 @@ CommentTrigger(List *qualname, char *comment)
 	RangeVar   *rel;
 	Relation	pg_trigger,
 				relation;
-	cqContext	cqc;
+	HeapTuple	triggertuple;
+	SysScanDesc scan;
+	ScanKeyData entry[2];
 	Oid			oid;
-	int			fetchCount = 0;
 
 	/* Separate relname and trig name */
 	nnames = list_length(qualname);
@@ -1047,24 +1080,29 @@ CommentTrigger(List *qualname, char *comment)
 	 * of the unique index.
 	 */
 	pg_trigger = heap_open(TriggerRelationId, AccessShareLock);
-
-	oid = caql_getoid_plus(
-			caql_addrel(cqclr(&cqc), pg_trigger),
-			&fetchCount,
-			NULL,
-			cql("SELECT oid FROM pg_trigger "
-				" WHERE tgrelid = :1 "
-				" AND tgname = :2 ",
-				ObjectIdGetDatum(RelationGetRelid(relation)),
-				CStringGetDatum(trigname)));
+	ScanKeyInit(&entry[0],
+				Anum_pg_trigger_tgrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(RelationGetRelid(relation)));
+	ScanKeyInit(&entry[1],
+				Anum_pg_trigger_tgname,
+				BTEqualStrategyNumber, F_NAMEEQ,
+				CStringGetDatum(trigname));
+	scan = systable_beginscan(pg_trigger, TriggerRelidNameIndexId, true,
+							  SnapshotNow, 2, entry);
+	triggertuple = systable_getnext(scan);
 
 	/* If no trigger exists for the relation specified, notify user */
 
-	if (0 == fetchCount)
+	if (!HeapTupleIsValid(triggertuple))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 errmsg("trigger \"%s\" for table \"%s\" does not exist",
 						trigname, RelationGetRelationName(relation))));
+
+	oid = HeapTupleGetOid(triggertuple);
+
+	systable_endscan(scan);
 
 	/* Call CreateComments() to create/drop the comments */
 	CreateComments(oid, TriggerRelationId, 0, comment);
@@ -1093,8 +1131,8 @@ CommentConstraint(List *qualname, char *comment)
 	Relation	pg_constraint,
 				relation;
 	HeapTuple	tuple;
-	cqContext	cqc;
-	cqContext  *pcqCtx;
+	SysScanDesc scan;
+	ScanKeyData skey[1];
 	Oid			conOid = InvalidOid;
 
 	/* Separate relname and constraint name */
@@ -1121,13 +1159,15 @@ CommentConstraint(List *qualname, char *comment)
 	 */
 	pg_constraint = heap_open(ConstraintRelationId, AccessShareLock);
 
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), pg_constraint),
-			cql("SELECT * FROM pg_constraint "
-				" WHERE conrelid = :1 ",
-				ObjectIdGetDatum(RelationGetRelid(relation))));
+	ScanKeyInit(&skey[0],
+				Anum_pg_constraint_conrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(RelationGetRelid(relation)));
 
-	while (HeapTupleIsValid(tuple = caql_getnext(pcqCtx)))
+	scan = systable_beginscan(pg_constraint, ConstraintRelidIndexId, true,
+							  SnapshotNow, 1, skey);
+
+	while (HeapTupleIsValid(tuple = systable_getnext(scan)))
 	{
 		Form_pg_constraint con = (Form_pg_constraint) GETSTRUCT(tuple);
 
@@ -1142,7 +1182,7 @@ CommentConstraint(List *qualname, char *comment)
 		}
 	}
 
-	caql_endscan(pcqCtx);
+	systable_endscan(scan);
 
 	/* If no constraint exists for the relation specified, notify user */
 	if (!OidIsValid(conOid))
@@ -1210,12 +1250,9 @@ CommentLanguage(List *qualname, char *comment)
 				 errmsg("language name cannot be qualified")));
 	language = strVal(linitial(qualname));
 
-	oid = caql_getoid(
-			NULL,
-			cql("SELECT oid FROM pg_language "
-				" WHERE lanname = :1 ",
-				CStringGetDatum(language)));
-
+	oid = GetSysCacheOid(LANGNAME,
+						 CStringGetDatum(language),
+						 0, 0, 0);
 	if (!OidIsValid(oid))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_SCHEMA),
@@ -1248,7 +1285,7 @@ CommentOpClass(List *qualname, List *arguments, char *comment)
 	char	   *opcname;
 	Oid			amID;
 	Oid			opcID;
-	int			fetchCount = 0;
+	HeapTuple	tuple;
 
 	Assert(list_length(arguments) == 1);
 	amname = strVal(linitial(arguments));
@@ -1256,12 +1293,9 @@ CommentOpClass(List *qualname, List *arguments, char *comment)
 	/*
 	 * Get the access method's OID.
 	 */
-	amID = caql_getoid(
-			NULL,
-			cql("SELECT oid FROM pg_am "
-				" WHERE amname = :1 ",
-				CStringGetDatum(amname)));
-
+	amID = GetSysCacheOid(AMNAME,
+						  CStringGetDatum(amname),
+						  0, 0, 0);
 	if (!OidIsValid(amID))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -1281,41 +1315,27 @@ CommentOpClass(List *qualname, List *arguments, char *comment)
 		Oid			namespaceId;
 
 		namespaceId = LookupExplicitNamespace(schemaname);
-
-		opcID = caql_getoid_plus(
-				NULL,
-				&fetchCount,
-				NULL,
-				cql("SELECT oid FROM pg_opclass "
-					" WHERE opcamid = :1 "
-					" AND opcname = :2 "
-					" AND opcnamespace = :3 ",
-					ObjectIdGetDatum(amID),
-					CStringGetDatum(opcname),
-					ObjectIdGetDatum(namespaceId)));
+		tuple = SearchSysCache(CLAAMNAMENSP,
+							   ObjectIdGetDatum(amID),
+							   PointerGetDatum(opcname),
+							   ObjectIdGetDatum(namespaceId),
+							   0);
 	}
 	else
 	{
-		Oid	opcID1;
 		/* Unqualified opclass name, so search the search path */
-		opcID1 = OpclassnameGetOpcid(amID, opcname);
-		if (!OidIsValid(opcID1))
+		opcID = OpclassnameGetOpcid(amID, opcname);
+		if (!OidIsValid(opcID))
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
 					 errmsg("operator class \"%s\" does not exist for access method \"%s\"",
 							opcname, amname)));
-
-
-		opcID = caql_getoid_plus(
-				NULL,
-				&fetchCount,
-				NULL,
-				cql("SELECT oid FROM pg_opclass "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(opcID1)));
+		tuple = SearchSysCache(CLAOID,
+							   ObjectIdGetDatum(opcID),
+							   0, 0, 0);
 	}
 
-	if (0 == fetchCount)
+	if (!HeapTupleIsValid(tuple))
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -1323,10 +1343,14 @@ CommentOpClass(List *qualname, List *arguments, char *comment)
 						NameListToString(qualname), amname)));
 	}
 
+	opcID = HeapTupleGetOid(tuple);
+
 	/* Permission check: must own opclass */
 	if (!pg_opclass_ownercheck(opcID, GetUserId()))
 		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_OPCLASS,
 					   NameListToString(qualname));
+
+	ReleaseSysCache(tuple);
 
 	/* Call CreateComments() to create/drop the comments */
 	CreateComments(opcID, OperatorClassRelationId, 0, comment);
@@ -1485,7 +1509,7 @@ CommentCast(List *qualname, List *arguments, char *comment)
 	TypeName   *targettype;
 	Oid			sourcetypeid;
 	Oid			targettypeid;
-	int			fetchCount = 0;
+	HeapTuple	tuple;
 	Oid			castOid;
 
 	Assert(list_length(qualname) == 1);
@@ -1498,24 +1522,19 @@ CommentCast(List *qualname, List *arguments, char *comment)
 	sourcetypeid = typenameTypeId(NULL, sourcetype, NULL);
 	targettypeid = typenameTypeId(NULL, targettype, NULL);
 
-	castOid = caql_getoid_plus(
-			NULL,
-			&fetchCount,
-			NULL,
-			cql("SELECT * FROM pg_cast "
-				" WHERE castsource = :1 "
-				" AND casttarget = :2 ",
-				ObjectIdGetDatum(sourcetypeid),
-				ObjectIdGetDatum(targettypeid)));
-
-	if (0 == fetchCount)
-	{
+	tuple = SearchSysCache(CASTSOURCETARGET,
+						   ObjectIdGetDatum(sourcetypeid),
+						   ObjectIdGetDatum(targettypeid),
+						   0, 0);
+	if (!HeapTupleIsValid(tuple))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 errmsg("cast from type %s to type %s does not exist",
 						TypeNameToString(sourcetype),
 						TypeNameToString(targettype))));
-	}
+
+	/* Get the OID of the cast */
+	castOid = HeapTupleGetOid(tuple);
 
 	/* Permission check */
 	if (!pg_type_ownercheck(sourcetypeid, GetUserId())
@@ -1525,6 +1544,8 @@ CommentCast(List *qualname, List *arguments, char *comment)
 				 errmsg("must be owner of type %s or type %s",
 						TypeNameToString(sourcetype),
 						TypeNameToString(targettype))));
+
+	ReleaseSysCache(tuple);
 
 	/* Call CreateComments() to create/drop the comments */
 	CreateComments(castOid, CastRelationId, 0, comment);

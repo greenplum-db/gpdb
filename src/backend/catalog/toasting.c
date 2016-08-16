@@ -17,7 +17,6 @@
 #include "access/heapam.h"
 #include "access/tuptoaster.h"
 #include "access/xact.h"
-#include "catalog/catquery.h"
 #include "catalog/dependency.h"
 #include "catalog/heap.h"
 #include "catalog/index.h"
@@ -145,8 +144,6 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 	int16		coloptions[2];
 	ObjectAddress baseobject,
 				toastobject;
-	cqContext	cqc;
-	cqContext  *pcqCtx;
 
 	/*
 	 * Is it already toasted?
@@ -297,15 +294,9 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 	 */
 	class_rel = heap_open(RelationRelationId, RowExclusiveLock);
 
-	pcqCtx = caql_addrel(cqclr(&cqc), class_rel);
-
-	reltup = caql_getfirst(
-			pcqCtx,
-			cql("SELECT * FROM pg_class "
-				" WHERE oid = :1 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(relOid)));
-
+	reltup = SearchSysCacheCopy(RELOID,
+								ObjectIdGetDatum(relOid),
+								0, 0, 0);
 	if (!HeapTupleIsValid(reltup))
 		elog(ERROR, "cache lookup failed for relation %u", relOid);
 
@@ -314,8 +305,10 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 	if (!IsBootstrapProcessingMode())
 	{
 		/* normal case, use a transactional update */
-		caql_update_current(pcqCtx, reltup);
-		/* and Update indexes (implicit) */
+		simple_heap_update(class_rel, &reltup->t_self, reltup);
+
+		/* Keep catalog indexes current */
+		CatalogUpdateIndexes(class_rel, reltup);
 	}
 	else
 	{

@@ -898,18 +898,18 @@ AddNewAttributeTuples(Oid new_rel_oid,
 	const Form_pg_attribute *dpp;
 	int			i;
 	HeapTuple	tup;
+	Relation	rel;
+	CatalogIndexState indstate;
 	int			natts = tupdesc->natts;
 	ObjectAddress myself,
 				referenced;
-	cqContext  *pcqCtx;
 
 	/*
 	 * open pg_attribute and its indexes.
 	 */
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("INSERT INTO pg_attribute ",
-				NULL));
+	rel = heap_open(AttributeRelationId, RowExclusiveLock);
+
+	indstate = CatalogOpenIndexes(rel);
 
 	/*
 	 * First we add the user attributes.  This is also a convenient place to
@@ -929,8 +929,9 @@ AddNewAttributeTuples(Oid new_rel_oid,
 							 ATTRIBUTE_TUPLE_SIZE,
 							 (void *) *dpp);
 
-		caql_insert(pcqCtx, tup);
-		/* and Update indexes (implicit) */
+		simple_heap_insert(rel, tup);
+
+		CatalogIndexInsert(indstate, tup);
 
 		heap_freetuple(tup);
 
@@ -983,8 +984,9 @@ AddNewAttributeTuples(Oid new_rel_oid,
 				/* attStruct->attstattarget = 0; */
 				/* attStruct->attcacheoff = -1; */
 
-				caql_insert(pcqCtx, tup);
-				/* and Update indexes (implicit) */
+				simple_heap_insert(rel, tup);
+
+				CatalogIndexInsert(indstate, tup);
 
 				heap_freetuple(tup);
 			}
@@ -995,7 +997,9 @@ AddNewAttributeTuples(Oid new_rel_oid,
 	/*
 	 * clean up
 	 */
-	caql_endscan(pcqCtx); /* close rel, indexes */
+	CatalogCloseIndexes(indstate);
+
+	heap_close(rel, RowExclusiveLock);
 }
 
 /* --------------------------------
@@ -1020,8 +1024,6 @@ InsertPgClassTuple(Relation pg_class_desc,
 	Datum		values[Natts_pg_class];
 	bool		nulls[Natts_pg_class];
 	HeapTuple	tup;
-	cqContext	cqc;
-	cqContext  *pcqCtx;
 
 	/* This is a tad tedious, but way cleaner than what we used to do... */
 	memset(values, 0, sizeof(values));
@@ -1060,12 +1062,7 @@ InsertPgClassTuple(Relation pg_class_desc,
 	else
 		nulls[Anum_pg_class_reloptions - 1] = true;
 
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), pg_class_desc),
-			cql("INSERT INTO pg_class ",
-				NULL));
-
-	tup = caql_form_tuple(pcqCtx, values, nulls);
+	tup = heap_form_tuple(RelationGetDescr(pg_class_desc), values, nulls);
 
 	/*
 	 * The new tuple must have the oid already chosen for the rel.	Sure would
@@ -1074,10 +1071,9 @@ InsertPgClassTuple(Relation pg_class_desc,
 	HeapTupleSetOid(tup, new_rel_oid);
 
 	/* finally insert the new tuple, update the indexes, and clean up */
-	caql_insert(pcqCtx, tup);
-	/* and Update indexes (implicit) */
+	simple_heap_insert(pg_class_desc, tup);
 
-	caql_endscan(pcqCtx);
+	CatalogUpdateIndexes(pg_class_desc, tup);
 
 	heap_freetuple(tup);
 }
@@ -1856,13 +1852,26 @@ heap_create_with_catalog(const char *relname,
 static void
 RelationRemoveInheritance(Oid relid)
 {
-	int numDel = 0;
+	Relation	catalogRelation;
+	SysScanDesc scan;
+	ScanKeyData key;
+	HeapTuple	tuple;
 
-	numDel = caql_getcount(
-			NULL,
-			cql("DELETE FROM pg_inherits "
-				" WHERE inhrelid = :1 ",
-				ObjectIdGetDatum(relid)));
+	catalogRelation = heap_open(InheritsRelationId, RowExclusiveLock);
+
+	ScanKeyInit(&key,
+				Anum_pg_inherits_inhrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+
+	scan = systable_beginscan(catalogRelation, InheritsRelidSeqnoIndexId, true,
+							  SnapshotNow, 1, &key);
+
+	while (HeapTupleIsValid(tuple = systable_getnext(scan)))
+		simple_heap_delete(catalogRelation, &tuple->t_self);
+
+	systable_endscan(scan);
+	heap_close(catalogRelation, RowExclusiveLock);
 }
 
 /* del_part_entry_by_key is superfluous - removed */
@@ -1934,27 +1943,24 @@ RemovePartitioning(Oid relid)
 void
 DeleteRelationTuple(Oid relid)
 {
+	Relation	pg_class_desc;
 	HeapTuple	tup;
-	cqContext  *pcqCtx;
 
 	/* Grab an appropriate lock on the pg_class relation */
+	pg_class_desc = heap_open(RelationRelationId, RowExclusiveLock);
 
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_class "
-				" WHERE oid = :1 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(relid)));
-
-	tup = caql_getnext(pcqCtx);
-
+	tup = SearchSysCache(RELOID,
+						 ObjectIdGetDatum(relid),
+						 0, 0, 0);
 	if (!HeapTupleIsValid(tup))
 		elog(ERROR, "cache lookup failed for relation %u", relid);
 
 	/* delete the relation tuple from pg_class, and finish up */
-	caql_delete_current(pcqCtx);
+	simple_heap_delete(pg_class_desc, &tup->t_self);
 
-	caql_endscan(pcqCtx);
+	ReleaseSysCache(tup);
+
+	heap_close(pg_class_desc, RowExclusiveLock);
 }
 
 /*
@@ -1968,13 +1974,30 @@ DeleteRelationTuple(Oid relid)
 void
 DeleteAttributeTuples(Oid relid)
 {
-	int numDel = 0;
+	Relation	attrel;
+	SysScanDesc scan;
+	ScanKeyData key[1];
+	HeapTuple	atttup;
 
-	numDel = caql_getcount(
-			NULL,
-			cql("DELETE FROM pg_attribute "
-				" WHERE attrelid = :1 ",
-				ObjectIdGetDatum(relid)));
+	/* Grab an appropriate lock on the pg_attribute relation */
+	attrel = heap_open(AttributeRelationId, RowExclusiveLock);
+
+	/* Use the index to scan only attributes of the target relation */
+	ScanKeyInit(&key[0],
+				Anum_pg_attribute_attrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+
+	scan = systable_beginscan(attrel, AttributeRelidNumIndexId, true,
+							  SnapshotNow, 1, key);
+
+	/* Delete all the matching tuples */
+	while ((atttup = systable_getnext(scan)) != NULL)
+		simple_heap_delete(attrel, &atttup->t_self);
+
+	/* Clean up after the scan */
+	systable_endscan(scan);
+	heap_close(attrel, RowExclusiveLock);
 }
 
 /*
@@ -1993,8 +2016,6 @@ RemoveAttributeById(Oid relid, AttrNumber attnum)
 	HeapTuple	tuple;
 	Form_pg_attribute attStruct;
 	char		newattname[NAMEDATALEN];
-	cqContext	cqc;
-	cqContext  *pcqCtx;
 
 	/*
 	 * Grab an exclusive lock on the target table, which we will NOT release
@@ -2007,17 +2028,10 @@ RemoveAttributeById(Oid relid, AttrNumber attnum)
 
 	attr_rel = heap_open(AttributeRelationId, RowExclusiveLock);
 
-	pcqCtx = caql_addrel(cqclr(&cqc), attr_rel);
-
-	tuple = caql_getfirst(
-			pcqCtx,
-			cql("SELECT * FROM pg_attribute "
-				" WHERE attrelid = :1 "
-				" AND attnum = :2 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(relid),
-				Int16GetDatum(attnum)));
-
+	tuple = SearchSysCacheCopy(ATTNUM,
+							   ObjectIdGetDatum(relid),
+							   Int16GetDatum(attnum),
+							   0, 0);
 	if (!HeapTupleIsValid(tuple))		/* shouldn't happen */
 		elog(ERROR, "cache lookup failed for attribute %d of relation %u",
 			 attnum, relid);
@@ -2027,7 +2041,7 @@ RemoveAttributeById(Oid relid, AttrNumber attnum)
 	{
 		/* System attribute (probably OID) ... just delete the row */
 
-		caql_delete_current(pcqCtx);
+		simple_heap_delete(attr_rel, &tuple->t_self);
 	}
 	else
 	{
@@ -2060,8 +2074,10 @@ RemoveAttributeById(Oid relid, AttrNumber attnum)
 				 "........pg.dropped.%d........", attnum);
 		namestrcpy(&(attStruct->attname), newattname);
 
-		caql_update_current(pcqCtx, tuple);
+		simple_heap_update(attr_rel, &tuple->t_self, tuple);
 
+		/* keep the system catalog indexes current */
+		CatalogUpdateIndexes(attr_rel, tuple);
 	}
 
 	/*
@@ -2091,31 +2107,28 @@ RemoveAttrDefault(Oid relid, AttrNumber attnum,
 				  DropBehavior behavior, bool complain)
 {
 	Relation	attrdef_rel;
-	cqContext  *pcqCtx;
-	cqContext	cqc;
+	ScanKeyData scankeys[2];
+	SysScanDesc scan;
 	HeapTuple	tuple;
 	bool		found = false;
 	Oid			adoid = InvalidOid;
 
-	/*
-	 * select *
-	 * from pg_attrdef
-	 * where adrelid = :relid and adnum = :attnum
-	 */
 	attrdef_rel = heap_open(AttrDefaultRelationId, RowExclusiveLock);
 
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), attrdef_rel),
-			cql("SELECT * FROM pg_attrdef "
-				" WHERE adrelid = :1 "
-				" AND adnum = :2 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(relid),
-				Int16GetDatum(attnum)));
+	ScanKeyInit(&scankeys[0],
+				Anum_pg_attrdef_adrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+	ScanKeyInit(&scankeys[1],
+				Anum_pg_attrdef_adnum,
+				BTEqualStrategyNumber, F_INT2EQ,
+				Int16GetDatum(attnum));
 
-	/* XXX XXX: SELECT oid ... due to unique index ? */
+	scan = systable_beginscan(attrdef_rel, AttrDefaultIndexId, true,
+							  SnapshotNow, 2, scankeys);
+
 	/* There should be at most one matching tuple, but we loop anyway */
-	while (HeapTupleIsValid(tuple = caql_getnext(pcqCtx)))
+	while (HeapTupleIsValid(tuple = systable_getnext(scan)))
 	{
 		ObjectAddress object;
 
@@ -2129,7 +2142,7 @@ RemoveAttrDefault(Oid relid, AttrNumber attnum,
 		adoid = object.objectId;
 	}
 
-	caql_endscan(pcqCtx);
+	systable_endscan(scan);
 	heap_close(attrdef_rel, RowExclusiveLock);
 
 	if (complain && !found)
@@ -2152,10 +2165,8 @@ RemoveAttrDefaultById(Oid attrdefId)
 	Relation	attrdef_rel;
 	Relation	attr_rel;
 	Relation	myrel;
-	cqContext  *adrcqCtx;
-	cqContext  *attcqCtx;
-	cqContext	cqc;
-	cqContext	cqc2;
+	ScanKeyData scankeys[1];
+	SysScanDesc scan;
 	HeapTuple	tuple;
 	Oid			myrelid;
 	AttrNumber	myattnum;
@@ -2164,15 +2175,15 @@ RemoveAttrDefaultById(Oid attrdefId)
 	attrdef_rel = heap_open(AttrDefaultRelationId, RowExclusiveLock);
 
 	/* Find the pg_attrdef tuple */
+	ScanKeyInit(&scankeys[0],
+				ObjectIdAttributeNumber,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(attrdefId));
 
-	adrcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), attrdef_rel),
-			cql("SELECT * FROM pg_attrdef "
-				" WHERE oid = :1 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(attrdefId)));
+	scan = systable_beginscan(attrdef_rel, AttrDefaultOidIndexId, true,
+							  SnapshotNow, 1, scankeys);
 
-	tuple = caql_getnext(adrcqCtx);
+	tuple = systable_getnext(scan);
 	if (!HeapTupleIsValid(tuple))
 		elog(ERROR, "could not find tuple for attrdef %u", attrdefId);
 
@@ -2183,33 +2194,28 @@ RemoveAttrDefaultById(Oid attrdefId)
 	myrel = relation_open(myrelid, AccessExclusiveLock);
 
 	/* Now we can delete the pg_attrdef row */
-	caql_delete_current(adrcqCtx);
+	simple_heap_delete(attrdef_rel, &tuple->t_self);
 
-	caql_endscan(adrcqCtx);
+	systable_endscan(scan);
 	heap_close(attrdef_rel, RowExclusiveLock);
 
 	/* Fix the pg_attribute row */
 	attr_rel = heap_open(AttributeRelationId, RowExclusiveLock);
 
-	attcqCtx = caql_addrel(cqclr(&cqc2), attr_rel);
-
-	tuple = caql_getfirst(
-			attcqCtx,
-			cql("SELECT * FROM pg_attribute "
-				" WHERE attrelid = :1 "
-				" AND attnum = :2 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(myrelid),
-				Int16GetDatum(myattnum)));
-
+	tuple = SearchSysCacheCopy(ATTNUM,
+							   ObjectIdGetDatum(myrelid),
+							   Int16GetDatum(myattnum),
+							   0, 0);
 	if (!HeapTupleIsValid(tuple))		/* shouldn't happen */
 		elog(ERROR, "cache lookup failed for attribute %d of relation %u",
 			 myattnum, myrelid);
 
 	((Form_pg_attribute) GETSTRUCT(tuple))->atthasdef = false;
 
-	caql_update_current(attcqCtx, tuple);
-	/* and Update indexes (implicit) */
+	simple_heap_update(attr_rel, &tuple->t_self, tuple);
+
+	/* keep the system catalog indexes current */
+	CatalogUpdateIndexes(attr_rel, tuple);
 
 	/*
 	 * Our update of the pg_attribute row will force a relcache rebuild, so
@@ -2454,10 +2460,6 @@ StoreAttrDefault(Relation rel, AttrNumber attnum, Node *expr, Oid attrdefOid)
 	Form_pg_attribute attStruct;
 	ObjectAddress colobject,
 				defobject;
-	cqContext  *adrcqCtx;
-	cqContext  *attcqCtx;
-	cqContext	cqc;
-	cqContext	cqc2;
 
 	/*
 	 * Also deparse it to form the mostly-obsolete adsrc field.
@@ -2477,27 +2479,22 @@ StoreAttrDefault(Relation rel, AttrNumber attnum, Node *expr, Oid attrdefOid)
 
 	adrel = heap_open(AttrDefaultRelationId, RowExclusiveLock);
 
-	adrcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), adrel),
-			cql("INSERT INTO pg_attrdef ", 
-				NULL));
-
 	// Fetch gp_persistent_relation_node information that will be added to XLOG record.
 	RelationFetchGpRelationNodeForXLog(adrel);
 
-	tuple = caql_form_tuple(adrcqCtx, values, nulls);
+	tuple = heap_form_tuple(adrel->rd_att, values, nulls);
 
 	/* force tuple to have the desired OID */
 	if (OidIsValid(attrdefOid))
 		HeapTupleSetOid(tuple, attrdefOid);
-	attrdefOid = caql_insert(adrcqCtx, tuple);
-	/* and Update indexes (implicit) */
+	attrdefOid = simple_heap_insert(adrel, tuple);
+
+	CatalogUpdateIndexes(adrel, tuple);
 
 	defobject.classId = AttrDefaultRelationId;
 	defobject.objectId = attrdefOid;
 	defobject.objectSubId = 0;
 
-	caql_endscan(adrcqCtx);
 	heap_close(adrel, RowExclusiveLock);
 
 	/* now can free some of the stuff allocated above */
@@ -2511,18 +2508,10 @@ StoreAttrDefault(Relation rel, AttrNumber attnum, Node *expr, Oid attrdefOid)
 	 * exists.
 	 */
 	attrrel = heap_open(AttributeRelationId, RowExclusiveLock);
-
-	attcqCtx = caql_addrel(cqclr(&cqc2), attrrel);
-
-	atttup = caql_getfirst(
-			attcqCtx,
-			cql("SELECT * FROM pg_attribute "
-				" WHERE attrelid = :1 "
-				" AND attnum = :2 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(RelationGetRelid(rel)),
-				Int16GetDatum(attnum)));
-
+	atttup = SearchSysCacheCopy(ATTNUM,
+								ObjectIdGetDatum(RelationGetRelid(rel)),
+								Int16GetDatum(attnum),
+								0, 0);
 	if (!HeapTupleIsValid(atttup))
 		elog(ERROR, "cache lookup failed for attribute %d of relation %u",
 			 attnum, RelationGetRelid(rel));
@@ -2530,8 +2519,9 @@ StoreAttrDefault(Relation rel, AttrNumber attnum, Node *expr, Oid attrdefOid)
 	if (!attStruct->atthasdef)
 	{
 		attStruct->atthasdef = true;
-		caql_update_current(attcqCtx, atttup);
-		/* and Update indexes (implicit) */
+		simple_heap_update(attrrel, &atttup->t_self, atttup);
+		/* keep catalog indexes current */
+		CatalogUpdateIndexes(attrrel, atttup);
 	}
 	heap_close(attrrel, RowExclusiveLock);
 	heap_freetuple(atttup);
@@ -2945,20 +2935,11 @@ SetRelationNumChecks(Relation rel, int numchecks)
 	Relation	relrel;
 	HeapTuple	reltup;
 	Form_pg_class relStruct;
-	cqContext	cqc;
-	cqContext  *pcqCtx;
 
 	relrel = heap_open(RelationRelationId, RowExclusiveLock);
-
-	pcqCtx = caql_addrel(cqclr(&cqc), relrel);
-
-	reltup = caql_getfirst(
-			pcqCtx,
-			cql("SELECT * FROM pg_class "
-				" WHERE oid = :1 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(RelationGetRelid(rel))));
-
+	reltup = SearchSysCacheCopy(RELOID,
+								ObjectIdGetDatum(RelationGetRelid(rel)),
+								0, 0, 0);
 	if (!HeapTupleIsValid(reltup))
 		elog(ERROR, "cache lookup failed for relation %u",
 			 RelationGetRelid(rel));
@@ -2968,8 +2949,10 @@ SetRelationNumChecks(Relation rel, int numchecks)
 	{
 		relStruct->relchecks = numchecks;
 
-		caql_update_current(pcqCtx, reltup);
-		/* and Update indexes (implicit) */
+		simple_heap_update(relrel, &reltup->t_self, reltup);
+
+		/* keep catalog indexes current */
+		CatalogUpdateIndexes(relrel, reltup);
 	}
 	else
 	{
@@ -3083,20 +3066,27 @@ RemoveRelConstraints(Relation rel, const char *constrName,
 					 DropBehavior behavior)
 {
 	int			ndeleted = 0;
-	cqContext  *pcqCtx;
+	Relation	conrel;
+	SysScanDesc conscan;
+	ScanKeyData key[1];
 	HeapTuple	contup;
 
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_constraint "
-				" WHERE conrelid = :1 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(RelationGetRelid(rel))));
+	/* Grab an appropriate lock on the pg_constraint relation */
+	conrel = heap_open(ConstraintRelationId, RowExclusiveLock);
+
+	/* Use the index to scan only constraints of the target relation */
+	ScanKeyInit(&key[0],
+				Anum_pg_constraint_conrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(RelationGetRelid(rel)));
+
+	conscan = systable_beginscan(conrel, ConstraintRelidIndexId, true,
+								 SnapshotNow, 1, key);
 
 	/*
 	 * Scan over the result set, removing any matching entries.
 	 */
-	while (HeapTupleIsValid(contup = caql_getnext(pcqCtx)))
+	while ((contup = systable_getnext(conscan)) != NULL)
 	{
 		Form_pg_constraint con = (Form_pg_constraint) GETSTRUCT(contup);
 
@@ -3115,7 +3105,8 @@ RemoveRelConstraints(Relation rel, const char *constrName,
 	}
 
 	/* Clean up after the scan */
-	caql_endscan(pcqCtx);
+	systable_endscan(conscan);
+	heap_close(conrel, RowExclusiveLock);
 
 	return ndeleted;
 }
@@ -3130,26 +3121,39 @@ RemoveRelConstraints(Relation rel, const char *constrName,
 void
 RemoveStatistics(Oid relid, AttrNumber attnum)
 {
-	int numDel = 0;
+	Relation	pgstatistic;
+	SysScanDesc scan;
+	ScanKeyData key[2];
+	int			nkeys;
+	HeapTuple	tuple;
+
+	pgstatistic = heap_open(StatisticRelationId, RowExclusiveLock);
+
+	ScanKeyInit(&key[0],
+				Anum_pg_statistic_starelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
 
 	if (attnum == 0)
-	{
-		numDel = caql_getcount(
-				NULL,
-				cql("DELETE FROM pg_statistic "
-					" WHERE starelid = :1 ",
-					ObjectIdGetDatum(relid)));
-	}
+		nkeys = 1;
 	else
 	{
-		numDel = caql_getcount(
-				NULL,
-				cql("DELETE FROM pg_statistic "
-					" WHERE starelid = :1 "
-					" AND staattnum = :2 ",
-					ObjectIdGetDatum(relid),
-					Int16GetDatum(attnum)));		 
+		ScanKeyInit(&key[1],
+					Anum_pg_statistic_staattnum,
+					BTEqualStrategyNumber, F_INT2EQ,
+					Int16GetDatum(attnum));
+		nkeys = 2;
 	}
+
+	scan = systable_beginscan(pgstatistic, StatisticRelidAttnumIndexId, true,
+							  SnapshotNow, nkeys, key);
+
+	while (HeapTupleIsValid(tuple = systable_getnext(scan)))
+		simple_heap_delete(pgstatistic, &tuple->t_self);
+
+	systable_endscan(scan);
+
+	heap_close(pgstatistic, RowExclusiveLock);
 }
 
 

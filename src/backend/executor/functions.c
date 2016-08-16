@@ -16,7 +16,6 @@
 
 #include "access/xact.h"
 #include "catalog/catalog.h"
-#include "catalog/catquery.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_type.h"
 #include "commands/trigger.h"
@@ -945,22 +944,13 @@ sql_exec_error_callback(void *arg)
 	Form_pg_proc functup;
 	char	   *fn_name;
 	int			syntaxerrposition;
-	cqContext  *pcqCtx;
 
 	/* Need access to function's pg_proc tuple */
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_proc "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(flinfo->fn_oid)));
-
-	func_tuple = caql_getnext(pcqCtx);
-
+	func_tuple = SearchSysCache(PROCOID,
+								ObjectIdGetDatum(flinfo->fn_oid),
+								0, 0, 0);
 	if (!HeapTupleIsValid(func_tuple))
-	{
-		caql_endscan(pcqCtx);
 		return;					/* shouldn't happen */
-	}
 	functup = (Form_pg_proc) GETSTRUCT(func_tuple);
 	fn_name = NameStr(functup->proname);
 
@@ -974,9 +964,8 @@ sql_exec_error_callback(void *arg)
 		Datum		tmp;
 		char	   *prosrc;
 
-		tmp = caql_getattr(pcqCtx,
-						   Anum_pg_proc_prosrc,
-						   &isnull);
+		tmp = SysCacheGetAttr(PROCOID, func_tuple, Anum_pg_proc_prosrc,
+							  &isnull);
 		if (isnull)
 			elog(ERROR, "null prosrc");
 		prosrc = DatumGetCString(DirectFunctionCall1(textout, tmp));
@@ -1026,7 +1015,7 @@ sql_exec_error_callback(void *arg)
 		errcontext("SQL function \"%s\" during startup", fn_name);
 	}
 
-	caql_endscan(pcqCtx);
+	ReleaseSysCache(func_tuple);
 }
 
 

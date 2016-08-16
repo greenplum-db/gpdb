@@ -29,7 +29,6 @@
 #include <utime.h>
 #endif
 
-#include "catalog/catquery.h"
 #include "catalog/pg_authid.h"
 #include "cdb/cdbvars.h"
 #include "mb/pg_wchar.h"
@@ -702,22 +701,20 @@ SetCurrentRoleId(Oid roleid, bool is_superuser)
 char *
 GetUserNameFromId(Oid roleid)
 {
+	HeapTuple	tuple;
 	char	   *result;
-	int			fetchCount;
-	
-	result = caql_getcstring_plus(
-			NULL,
-			&fetchCount,
-			NULL,
-			cql("SELECT rolname FROM pg_authid "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(roleid)));
 
-	if (!fetchCount)
+	tuple = SearchSysCache(AUTHOID,
+						   ObjectIdGetDatum(roleid),
+						   0, 0, 0);
+	if (!HeapTupleIsValid(tuple))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 errmsg("invalid role OID: %u", roleid)));
 
+	result = pstrdup(NameStr(((Form_pg_authid) GETSTRUCT(tuple))->rolname));
+
+	ReleaseSysCache(tuple);
 	return result;
 }
 

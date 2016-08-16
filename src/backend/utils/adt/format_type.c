@@ -17,7 +17,6 @@
 
 #include <ctype.h>
 
-#include "catalog/catquery.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_type.h"
 #include "utils/builtins.h"

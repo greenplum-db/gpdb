@@ -33,7 +33,6 @@
 #include "bootstrap/bootstrap.h"
 #include "catalog/aoblkdir.h"
 #include "catalog/catalog.h"
-#include "catalog/catquery.h"
 #include "catalog/dependency.h"
 #include "catalog/heap.h"
 #include "catalog/index.h"
@@ -148,8 +147,6 @@ ConstructTupleDescriptor(Relation heapRelation,
 	TupleDesc	indexTupDesc;
 	int			natts;			/* #atts in heap rel --- for error checks */
 	int			i;
-	int			fetchCount;
-	cqContext  *pcqCtx;
 
 	heapTupDesc = RelationGetDescr(heapRelation);
 	natts = RelationGetForm(heapRelation)->relnatts;
@@ -237,14 +234,9 @@ ConstructTupleDescriptor(Relation heapRelation,
 			 */
 			keyType = exprType(indexkey);
 
-			pcqCtx = caql_beginscan(
-					NULL,
-					cql("SELECT * FROM pg_type "
-						" WHERE oid = :1 ",
-						ObjectIdGetDatum(keyType)));
-
-			tuple = caql_getnext(pcqCtx);
-
+			tuple = SearchSysCache(TYPEOID,
+								ObjectIdGetDatum(keyType),
+								0, 0, 0);
 			if (!HeapTupleIsValid(tuple))
 				elog(ERROR, "cache lookup failed for type %u", keyType);
 			typeTup = (Form_pg_type) GETSTRUCT(tuple);
@@ -263,7 +255,7 @@ ConstructTupleDescriptor(Relation heapRelation,
 			to->atttypmod = -1;
 			to->attislocal = true;
 
-			caql_endscan(pcqCtx);
+			ReleaseSysCache(tuple);
 		}
 
 		/*
@@ -277,29 +269,21 @@ ConstructTupleDescriptor(Relation heapRelation,
 		 * Check the opclass to see if it provides a keytype (overriding the
 		 * attribute type).
 		 */
-		keyType = caql_getoid_plus(
-				NULL,
-				&fetchCount,
-				NULL,
-				cql("SELECT opckeytype FROM pg_opclass "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(classObjectId[i])));
-
-		if (!fetchCount)
+		tuple = SearchSysCache(CLAOID,
+							   ObjectIdGetDatum(classObjectId[i]),
+							   0, 0, 0);
+		if (!HeapTupleIsValid(tuple))
 			elog(ERROR, "cache lookup failed for opclass %u",
 				 classObjectId[i]);
+		keyType = ((Form_pg_opclass) GETSTRUCT(tuple))->opckeytype;
+		ReleaseSysCache(tuple);
 
 		if (OidIsValid(keyType) && keyType != to->atttypid)
 		{
 			/* index value and heap value have different types */
-			pcqCtx = caql_beginscan(
-					NULL,
-					cql("SELECT * FROM pg_type "
-						" WHERE oid = :1 ",
-						ObjectIdGetDatum(keyType)));
-			
-			tuple = caql_getnext(pcqCtx);
-			
+			tuple = SearchSysCache(TYPEOID,
+								   ObjectIdGetDatum(keyType),
+								   0, 0, 0);
 			if (!HeapTupleIsValid(tuple))
 				elog(ERROR, "cache lookup failed for type %u", keyType);
 			typeTup = (Form_pg_type) GETSTRUCT(tuple);
@@ -311,7 +295,7 @@ ConstructTupleDescriptor(Relation heapRelation,
 			to->attalign = typeTup->typalign;
 			to->attstorage = typeTup->typstorage;
 
-			caql_endscan(pcqCtx);
+			ReleaseSysCache(tuple);
 		}
 	}
 
@@ -343,18 +327,18 @@ InitializeAttributeOids(Relation indexRelation,
 static void
 AppendAttributeTuples(Relation indexRelation, int numatts)
 {
+	Relation	pg_attribute;
+	CatalogIndexState indstate;
 	TupleDesc	indexTupDesc;
 	HeapTuple	new_tuple;
 	int			i;
-	cqContext  *pcqCtx;
 
 	/*
 	 * open the attribute relation and its indexes
 	 */
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("INSERT INTO pg_attribute ",
-				NULL));
+	pg_attribute = heap_open(AttributeRelationId, RowExclusiveLock);
+
+	indstate = CatalogOpenIndexes(pg_attribute);
 
 	/*
 	 * insert data from new index's tupdesc into pg_attribute
@@ -375,13 +359,16 @@ AppendAttributeTuples(Relation indexRelation, int numatts)
 								   ATTRIBUTE_TUPLE_SIZE,
 								   (void *) indexTupDesc->attrs[i]);
 
-		caql_insert(pcqCtx, new_tuple);
-		/* and Update indexes (implicit) */
+		simple_heap_insert(pg_attribute, new_tuple);
+
+		CatalogIndexInsert(indstate, new_tuple);
 
 		heap_freetuple(new_tuple);
 	}
 
-	caql_endscan(pcqCtx); /* close rel, indexes */
+	CatalogCloseIndexes(indstate);
+
+	heap_close(pg_attribute, RowExclusiveLock);
 }
 
 /* ----------------------------------------------------------------
@@ -406,9 +393,10 @@ UpdateIndexRelation(Oid indexoid,
 	Datum		predDatum;
 	Datum		values[Natts_pg_index];
 	bool		nulls[Natts_pg_index];
+	Relation	pg_index;
 	HeapTuple	tuple;
 	int			i;
-	cqContext  *pcqCtx;
+
 	/*
 	 * Copy the index key, opclass, and indoption info into arrays (should we
 	 * make the caller pass them like this to start with?)
@@ -451,10 +439,7 @@ UpdateIndexRelation(Oid indexoid,
 	/*
 	 * open the system catalog index relation
 	 */
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("INSERT INTO pg_index ",
-				NULL));
+	pg_index = heap_open(IndexRelationId, RowExclusiveLock);
 
 	/*
 	 * Build a pg_index tuple
@@ -481,18 +466,20 @@ UpdateIndexRelation(Oid indexoid,
 	if (predDatum == (Datum) 0)
 		nulls[Anum_pg_index_indpred - 1] = true;
 
-	tuple = caql_form_tuple(pcqCtx, values, nulls);
+	tuple = heap_form_tuple(RelationGetDescr(pg_index), values, nulls);
 
 	/*
 	 * insert the tuple into the pg_index catalog
 	 */
-	caql_insert(pcqCtx, tuple);
-	/* and Update indexes (implicit) */
+	simple_heap_insert(pg_index, tuple);
+
+	/* update the indexes on pg_index */
+	CatalogUpdateIndexes(pg_index, tuple);
 
 	/*
 	 * close the relation and free the tuple
 	 */
-	caql_endscan(pcqCtx);
+	heap_close(pg_index, RowExclusiveLock);
 	heap_freetuple(tuple);
 }
 
@@ -1014,10 +1001,10 @@ index_drop(Oid indexId)
 	Oid			heapId;
 	Relation	userHeapRelation;
 	Relation	userIndexRelation;
+	Relation	indexRelation;
 	HeapTuple	tuple;
 	bool		hasexprs;
 	bool		need_long_lock;
-	cqContext  *pcqCtx;
 
 	/*
 	 * To drop an index safely, we must grab exclusive lock on its parent
@@ -1071,23 +1058,20 @@ index_drop(Oid indexId)
 	/*
 	 * fix INDEX relation, and check for expressional index
 	 */
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_index "
-				" WHERE indexrelid = :1 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(indexId)));
+	indexRelation = heap_open(IndexRelationId, RowExclusiveLock);
 
-	tuple = caql_getnext(pcqCtx);
-
+	tuple = SearchSysCache(INDEXRELID,
+						   ObjectIdGetDatum(indexId),
+						   0, 0, 0);
 	if (!HeapTupleIsValid(tuple))
 		elog(ERROR, "cache lookup failed for index %u", indexId);
 
 	hasexprs = !heap_attisnull(tuple, Anum_pg_index_indexprs);
 
-	caql_delete_current(pcqCtx);
+	simple_heap_delete(indexRelation, &tuple->t_self);
 
-	caql_endscan(pcqCtx);
+	ReleaseSysCache(tuple);
+	heap_close(indexRelation, RowExclusiveLock);
 
 	/*
 	 * if it has any expression columns, we might have stored statistics about
@@ -1332,30 +1316,25 @@ index_update_stats(Relation rel, bool hasindex, bool isprimary,
 		ReindexIsProcessingHeap(RelationRelationId))
 	{
 		/* don't assume syscache will work */
-		cqContext	cqc;
+		HeapScanDesc pg_class_scan;
+		ScanKeyData key[1];
 
-		/* heapscan, noindex */
-		tuple = caql_getfirst(
-			caql_syscache(
-					caql_indexOK(caql_addrel(cqclr(&cqc), pg_class),
-								 false),
-					false),
-			cql("SELECT * FROM pg_class "
-				" WHERE oid = :1 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(relid)));
+		ScanKeyInit(&key[0],
+					ObjectIdAttributeNumber,
+					BTEqualStrategyNumber, F_OIDEQ,
+					ObjectIdGetDatum(relid));
+
+		pg_class_scan = heap_beginscan(pg_class, SnapshotNow, 1, key);
+		tuple = heap_getnext(pg_class_scan, ForwardScanDirection);
+		tuple = heap_copytuple(tuple);
+		heap_endscan(pg_class_scan);
 	}
 	else
 	{
-		cqContext	cqc;
-
 		/* normal case, use syscache */
-		tuple = caql_getfirst(
-				caql_addrel(cqclr(&cqc), pg_class),
-			cql("SELECT * FROM pg_class "
-				" WHERE oid = :1 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(relid)));
+		tuple = SearchSysCacheCopy(RELOID,
+								   ObjectIdGetDatum(relid),
+								   0, 0, 0);
 	}
 
 	if (!HeapTupleIsValid(tuple))
@@ -3044,24 +3023,17 @@ IndexGetRelation(Oid indexId)
 	HeapTuple	tuple;
 	Form_pg_index index;
 	Oid			result;
-	cqContext  *pcqCtx;
 
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_index "
-				" WHERE indexrelid = :1 ",
-				ObjectIdGetDatum(indexId)));
-
-	tuple = caql_getnext(pcqCtx);
-
+	tuple = SearchSysCache(INDEXRELID,
+						   ObjectIdGetDatum(indexId),
+						   0, 0, 0);
 	if (!HeapTupleIsValid(tuple))
 		elog(ERROR, "cache lookup failed for index %u", indexId);
 	index = (Form_pg_index) GETSTRUCT(tuple);
 	Assert(index->indexrelid == indexId);
 
 	result = index->indrelid;
-
-	caql_endscan(pcqCtx);
+	ReleaseSysCache(tuple);
 	return result;
 }
 
