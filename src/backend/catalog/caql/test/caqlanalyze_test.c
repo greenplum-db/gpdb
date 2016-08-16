@@ -249,18 +249,17 @@ test__caql_switch4(void **state)
 	SysScanDescData		dummydesc;
 
 	expect_any(GetSysCacheId, indexoid);
-	will_return(GetSysCacheId, 123);	/* pretend there is a syscache */
+	will_return(GetSysCacheId, -1);	/* pretend there is no syscache */
 
 	dummyrel.rd_id = ConstraintRelationId;
 
 	hash_cookie = cq_lookup(query, strlen(query), pcql);
 
 	/*
-	 * Add explicit relation, and set indexOK = true and syscache = false.
+	 * Add explicit relation, and set indexOK = true
 	 */
 	pCtx = caql_addrel(cqclr(&context), &dummyrel);
 	pCtx = caql_indexOK(pCtx, true);
-	pCtx = caql_syscache(pCtx, false);
 
 	/* setup ScanKeyInit */
 	expect__ScanKeyInit(NULL, false,
@@ -311,11 +310,10 @@ test__caql_switch5(void **state)
 	hash_cookie = cq_lookup(query, strlen(query), pcql);
 
 	/*
-	 * Add explicit relation, and set indexOK = true and syscache = false.
+	 * Add explicit relation, and set indexOK = true
 	 */
 	pCtx = caql_addrel(cqclr(&context), &dummyrel);
 	pCtx = caql_indexOK(pCtx, true);
-	pCtx = caql_syscache(pCtx, false);
 
 	/* setup ScanKeyInit */
 	expect__ScanKeyInit(NULL, false,

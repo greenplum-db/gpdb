@@ -233,10 +233,8 @@ caql_basic_fn_all(caql_hash_cookie *pchn, cqContext *pCtx,
 	int				i, numScanKeys;
 	List		   *predicates;
 	ListCell	   *l;
-	bool			can_use_syscache, can_use_idxOK;
+	bool			can_use_idxOK;
 
-	/* the caller states no syscache? */
-	can_use_syscache = !(pCtx->cq_setsyscache && !pCtx->cq_usesyscache);
 	/* the caller states no index scan? */
 	can_use_idxOK = !(pCtx->cq_setidxOK && !pCtx->cq_useidxOK);
 
@@ -249,7 +247,7 @@ caql_basic_fn_all(caql_hash_cookie *pchn, cqContext *pCtx,
 	/*
 	 * Use the syscache if available and unless the caller states otherwise.
 	 */
-	if ((index && pchn->syscacheid >= 0) && can_use_syscache)
+	if (index && pchn->syscacheid >= 0)
 	{
 		int		nkeys = index->nkeys;
 
@@ -273,8 +271,7 @@ caql_basic_fn_all(caql_hash_cookie *pchn, cqContext *pCtx,
 			/* Complain in debug, but behave in production */
 			Assert(!pCtx->cq_usesyscache);
 
-			pCtx->cq_setsyscache = true;
-			pCtx->cq_usesyscache = false;
+			pCtx->cq_usesyscache = true;
 		}
 
 		if (pCtx->cq_usesyscache)

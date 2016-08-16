@@ -89,12 +89,9 @@ typedef struct cqContextData
 										 * beginscan/endscan block */
 		
 	/* 	these attributes control syscache vs normal heap/index
-	 * 	scan. If setsyscache is set, then usesyscache is the
-	 * 	user-setting, else catquery chooses.  If usesyscache is set
-	 * 	then sysScan is NULL, and cq_cacheId is the
+	 * 	scan. If usesyscache is set, then sysScan is NULL, and cq_cacheId is the
 	 * 	SysCacheIdentifier.
 	 */
-	bool		cq_setsyscache;	/* use syscache (else heap/index scan) */
 	bool		cq_usesyscache;	/* use syscache (internal) */
 	int			cq_cacheId; 	/* cache identifier */
 	Datum	   *cq_cacheKeys;	/* array of keys */
@@ -188,7 +185,6 @@ cq_list *cql1(const char* caqlStr, const char* filename, int lineno, ...);
 cqContext	*caql_addrel(cqContext *pCtx, Relation rel);		/*  */
 cqContext	*caql_indexOK(cqContext *pCtx, bool bindexOK);		/*  */
 cqContext	*caql_snapshot(cqContext *pCtx, Snapshot ss);		/*  */
-cqContext	*caql_syscache(cqContext *pCtx, bool bUseCache);	/*  */
 
 cqContext	*cqclr(cqContext	 *pCtx);						/*  */
 #define	cqClearContext(pcqContext) MemSet(pcqContext, 0, sizeof(cqContext))

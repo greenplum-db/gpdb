@@ -158,21 +158,6 @@ cqContext	*caql_snapshot(cqContext *pCtx, Snapshot ss)
 }
 
 /* ----------------------------------------------------------------
- * caql_syscache()
- * 
- * Override the default choice of syscache vs heap/index scan.
- * Note: will Assert if asked to choose cache for non-cached index.
- * ----------------------------------------------------------------
- */
-
-cqContext	*caql_syscache(cqContext *pCtx, bool bUseCache)
-{
-	pCtx->cq_setsyscache = true;
-	pCtx->cq_usesyscache = bUseCache;
-	return (pCtx);
-}
-
-/* ----------------------------------------------------------------
  * cql1()
  * The underlying function for the cql() macro.
  * find the bind parameters in a caql string and build a key list
