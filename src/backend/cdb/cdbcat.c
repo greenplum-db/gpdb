@@ -416,7 +416,9 @@ void
 GpPolicyRemove(Oid tbloid)
 {
 	Relation	gp_policy_rel;
-	cqContext	cqc;
+	ScanKeyData scankey;
+	SysScanDesc sscan;
+	HeapTuple	tuple;
 
     /*
      * Open and lock the gp_distribution_policy catalog.
@@ -424,11 +426,19 @@ GpPolicyRemove(Oid tbloid)
 	gp_policy_rel = heap_open(GpPolicyRelationId, RowExclusiveLock);
 
 	/* Delete the policy entry from the catalog. */
-	(void) caql_getcount(
-		caql_addrel(cqclr(&cqc), gp_policy_rel),
-		cql("DELETE FROM gp_distribution_policy "
-			" WHERE localoid = :1 ",
-			ObjectIdGetDatum(tbloid)));
+	ScanKeyInit(&scankey, Anum_gp_policy_localoid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(tbloid));
+
+	sscan = systable_beginscan(gp_policy_rel, GpPolicyLocalOidIndexId, true,
+							   SnapshotNow, 1, &scankey);
+
+	while ((tuple = systable_getnext(sscan)) != NULL)
+	{
+		simple_heap_delete(gp_policy_rel, &tuple->t_self);
+	}
+
+	systable_endscan(sscan);
 
 	/*
      * Close the gp_distribution_policy relcache entry without unlocking.

@@ -27,8 +27,6 @@ typedef struct caql_hash_cookie
 {
 	const char *name;		/* caql string */
 	int			basequery_code; /* corresponding base query */
-	int			bDelete;	/* query performs DELETE */
-	int			bCount;		/* SELECT COUNT(*) (or DELETE) */
 	int			bUpdate;	/* SELECT ... FOR UPDATE */
 	int			bInsert;	/* INSERT INTO  */
 	bool		bAllEqual;	/* true if all equality operators */
@@ -97,9 +95,6 @@ typedef struct cqContextData
 	HeapTuple   cq_lasttup;		/* last tuple fetched (for ReleaseSysCache) */
 
 } cqContext;
-
-/* count (and optionally delete) */
-int			 caql_getcount(cqContext *pCtx, cq_list *pcql);
 
 /* return the first tuple 
    (and set a flag if the scan finds a second match) 

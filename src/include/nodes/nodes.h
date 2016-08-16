@@ -517,8 +517,6 @@ typedef enum NodeTag
      * TAGS FOR CAQL PARSER
      */
 	T_CaQLSelect = 2000,
-	T_CaQLInsert,
-	T_CaQLDelete,
 	T_CaQLExpr,
 } NodeTag;
 

@@ -2670,22 +2670,7 @@ renamerel(Oid myrelid, const char *newrelname, ObjectType reltype, RenameStmt *s
 static bool
 TypeTupleExists(Oid typeId)
 {
-	Relation	pg_type_desc;
-	cqContext	cqc;
-	bool		bExists;
-
-	pg_type_desc = heap_open(TypeRelationId, AccessShareLock);
-
-	bExists = (0 < 
-			   caql_getcount(
-					   caql_addrel(cqclr(&cqc), pg_type_desc),
-					   cql("SELECT COUNT(*) FROM pg_type "
-						   " WHERE oid = :1 ",
-						   ObjectIdGetDatum(typeId))));
-
-	heap_close(pg_type_desc, AccessShareLock);
-
-	return (bExists);
+	return SearchSysCacheExists(TYPEOID, ObjectIdGetDatum(typeId), 0, 0, 0);
 }
 
 /*
@@ -12970,18 +12955,29 @@ rel_needs_long_lock(Oid relid)
 		needs_lock = !rel_is_child_partition(relid);
 	else
 	{
-		int fetchCount;
+		Relation inhrel;
+		ScanKeyData scankey[2];
+		SysScanDesc sscan;
 
-		fetchCount  = caql_getcount(
-				NULL,
-				cql("SELECT COUNT(*) FROM pg_inherits "
-					" WHERE inhrelid = :1 "
-					" AND inhseqno = :2 ",
-					 ObjectIdGetDatum(relid),
-					Int32GetDatum(1)));
+		ScanKeyInit(&scankey[0],
+					Anum_pg_inherits_inhrelid,
+					BTEqualStrategyNumber, F_OIDEQ,
+					ObjectIdGetDatum(relid));
+		ScanKeyInit(&scankey[1],
+					Anum_pg_inherits_inhseqno,
+					BTEqualStrategyNumber, F_INT4EQ,
+					Int32GetDatum(1));
 
-		if (fetchCount)
+		inhrel = heap_open(InheritsRelationId, AccessShareLock);
+
+		sscan = systable_beginscan(inhrel, InheritsRelidSeqnoIndexId,
+								   true, SnapshotNow, 2, scankey);
+
+		if (systable_getnext(sscan))
 			needs_lock = false;
+
+		systable_endscan(sscan);
+		heap_close(inhrel, AccessShareLock);
 	}
 	return needs_lock;
 }

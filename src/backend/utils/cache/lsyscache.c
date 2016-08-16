@@ -24,6 +24,7 @@
 #include "catalog/pg_amop.h"
 #include "catalog/pg_amproc.h"
 #include "catalog/pg_constraint.h"
+#include "catalog/pg_inherits.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_opclass.h"
 #include "catalog/pg_operator.h"
@@ -3563,11 +3564,7 @@ get_aggregate(const char *aggname, Oid oidType)
 			continue;
 		}
 
-		if (caql_getcount(
-					NULL,
-					cql("SELECT COUNT(*) FROM pg_aggregate "
-						" WHERE aggfnoid = :1 ",
-						ObjectIdGetDatum(oidProc))) > 0)
+		if (SearchSysCacheExists(AGGFNOID, oidProc, 0, 0, 0))
 		{
 			oidResult = oidProc;
 			break;
@@ -3586,11 +3583,26 @@ get_aggregate(const char *aggname, Oid oidType)
 bool
 trigger_exists(Oid oid)
 {
-	return (caql_getcount(
-					NULL,
-					cql("SELECT COUNT(*) FROM pg_trigger "
-						" WHERE oid = :1 ",
-						ObjectIdGetDatum(oid))) > 0);
+	ScanKeyData	scankey;
+	Relation	rel;
+	SysScanDesc sscan;
+	bool		result;
+
+	ScanKeyInit(&scankey, ObjectIdAttributeNumber,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(oid));
+
+	rel = heap_open(TriggerRelationId, AccessShareLock);
+	sscan = systable_beginscan(rel, TriggerOidIndexId, true,
+							   SnapshotNow, 1, &scankey);
+
+	result = (systable_getnext(sscan) != NULL);
+
+	systable_endscan(sscan);
+
+	heap_close(rel, AccessShareLock);
+
+	return result;
 }
 
 /*
@@ -3665,11 +3677,7 @@ get_relation_keys(Oid relid)
 bool
 check_constraint_exists(Oid oidCheckconstraint)
 {
-	return (caql_getcount(
-					NULL,
-					cql("SELECT COUNT(*) FROM pg_constraint "
-						" WHERE oid = :1 ",
-						ObjectIdGetDatum(oidCheckconstraint))) > 0);
+	return SearchSysCacheExists1(CONSTROID, ObjectIdGetDatum(oidCheckconstraint));
 }
 
 /*
@@ -3974,16 +3982,33 @@ has_subclass_fast(Oid relationId)
 bool
 has_subclass(Oid relationId)
 {
+	ScanKeyData	scankey;
+	Relation	rel;
+	SysScanDesc sscan;
+	bool		result;
+
 	if (!has_subclass_fast(relationId))
 	{
 		return false;
 	}
-	
-	return (0 < caql_getcount(
-					NULL,
-					cql("SELECT COUNT(*) FROM pg_inherits "
-						" WHERE inhparent = :1 ",
-						ObjectIdGetDatum(relationId))));
+
+	rel = heap_open(InheritsRelationId, AccessShareLock);
+
+	ScanKeyInit(&scankey, Anum_pg_inherits_inhparent,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relationId));
+
+	/* no index on inhparent */
+	sscan = systable_beginscan(rel, InvalidOid, false,
+							   SnapshotNow, 1, &scankey);
+
+	result = (systable_getnext(sscan) != NULL);
+
+	systable_endscan(sscan);
+
+	heap_close(rel, AccessShareLock);
+
+	return result;
 }
 
 /*

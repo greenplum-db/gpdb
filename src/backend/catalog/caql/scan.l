@@ -58,11 +58,8 @@ typedef struct caql_yyextra_t
 static const ScanKeyword CaQLScanKeywords[] = {
 	CAQL_KEYWORD("and", AND)
 	CAQL_KEYWORD("by", BY)
-	CAQL_KEYWORD("count", COUNT)
-	CAQL_KEYWORD("delete", DELETE)
 	CAQL_KEYWORD("for", FOR)
 	CAQL_KEYWORD("from", FROM)
-	CAQL_KEYWORD("insert", INSERT)
 	CAQL_KEYWORD("into", INTO)
 	CAQL_KEYWORD("is", IS)
 	CAQL_KEYWORD("order", ORDER)

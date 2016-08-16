@@ -65,7 +65,7 @@ int caql_yylex(YYSTYPE *lvalp, YYLTYPE *llocp, caql_scanner_t yyscanner);
 	List			   *list;
 }
 
-%type <node> stmtblock stmt SelectStmt SelectForUpdateStmt InsertStmt DeleteStmt
+%type <node> stmtblock stmt SelectStmt SelectForUpdateStmt
 %type <list> col_list opt_where opt_orderby expr_list
 %type <str>  col_elem table_name op_any
 %type <node> expr_elem
@@ -75,11 +75,8 @@ int caql_yylex(YYSTYPE *lvalp, YYLTYPE *llocp, caql_scanner_t yyscanner);
  */
 %token <keyword> AND
 				 BY
-				 COUNT
-				 DELETE
 				 FOR
 				 FROM
-				 INSERT
 				 INTO
 				 IS
 				 ORDER
@@ -105,8 +102,6 @@ stmtblock: stmt
 stmt:
 		SelectStmt
 		| SelectForUpdateStmt
-		| InsertStmt
-		| DeleteStmt
 		| /*EMPTY*/
 			{ $$ = NULL; }
 		;
@@ -121,20 +116,6 @@ SelectStmt:
 				n->where = $5;
 				n->orderby = $6;
 				n->forupdate = false;
-				n->count = false;
-
-				$$ = (Node *) n;
-			}
-		| SELECT COUNT '(' '*' ')' FROM table_name opt_where
-			{
-				CaQLSelect *n = makeNode(CaQLSelect);
-
-				n->targetlist = list_make1(makeString("*"));
-				n->from = $7;
-				n->where = $8;
-				n->orderby = NIL;
-				n->forupdate = false;
-				n->count = true;
 
 				$$ = (Node *) n;
 			}
@@ -150,30 +131,6 @@ SelectForUpdateStmt:
 				n->where = $5;
 				n->orderby = $6;
 				n->forupdate = true;
-				n->count = false;
-
-				$$ = (Node *) n;
-			}
-		;
-
-InsertStmt:
-		INSERT INTO table_name
-			{
-				CaQLInsert *n = makeNode(CaQLInsert);
-
-				n->into = $3;
-
-				$$ = (Node *) n;
-			}
-		;
-
-DeleteStmt:
-		DELETE FROM table_name opt_where
-			{
-				CaQLDelete *n = makeNode(CaQLDelete);
-
-				n->from = $3;
-				n->where = $4;
 
 				$$ = (Node *) n;
 			}

@@ -260,13 +260,29 @@ int64 GetFastSequences(Oid objid, int64 objmod,
 void
 RemoveFastSequenceEntry(Oid objid)
 {
+	Relation	rel;
+	ScanKeyData scankey;
+	SysScanDesc sscan;
+	HeapTuple	tuple;
+
 	if (!OidIsValid(objid))
 		return;
 
-	(void) caql_getcount(
-		NULL,
-		cql("DELETE FROM gp_fastsequence "
-			" WHERE objid = :1 ",
-			ObjectIdGetDatum(objid)));
+	rel = heap_open(FastSequenceRelationId, RowExclusiveLock);
 
+	ScanKeyInit(&scankey,
+				Anum_gp_fastsequence_objid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(objid));
+
+	sscan = systable_beginscan(rel, FastSequenceObjidObjmodIndexId, true,
+							   SnapshotNow, 1, &scankey);
+
+	while ((tuple = systable_getnext(sscan)) != NULL)
+	{
+		simple_heap_delete(rel, &tuple->t_self);
+	}
+
+	systable_endscan(sscan);
+	heap_close(rel, RowExclusiveLock);
 }

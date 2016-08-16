@@ -2977,11 +2977,25 @@ AlterType(AlterTypeStmt *stmt)
 static void
 remove_type_encoding(Oid typid)
 {
-	int numDel;
+	Relation rel;
+	ScanKeyData scankey;
+	SysScanDesc sscan;
+	HeapTuple tuple;
 
-	numDel = caql_getcount(
-			NULL,
-			cql("DELETE FROM pg_type_encoding "
-				" WHERE typid = :1 ",
-				ObjectIdGetDatum(typid)));
+	rel = heap_open(TypeEncodingRelationId, RowExclusiveLock);
+
+	ScanKeyInit(&scankey,
+				Anum_pg_type_encoding_typid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(typid));
+
+	sscan = systable_beginscan(rel, TypeEncodingTypidIndexId, true,
+							   SnapshotNow, 1, &scankey);
+	while((tuple = systable_getnext(sscan)) != NULL)
+	{
+		simple_heap_delete(rel, &tuple->t_self);
+	}
+	systable_endscan(sscan);
+
+	heap_close(rel, RowExclusiveLock);
 }

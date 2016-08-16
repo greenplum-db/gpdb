@@ -274,77 +274,6 @@ cq_list *cql1(const char* caqlStr, const char* filename, int lineno, ...)
 
 
 /* ----------------------------------------------------------------
- * caql_getcount()
- * Perform COUNT(*) or DELETE
- * ----------------------------------------------------------------
- */
-int caql_getcount(cqContext *pCtx0, cq_list *pcql)
-{
-	const char*				 caql_str = pcql->caqlStr;
-	const char*				 filenam  = pcql->filename;
-	int						 lineno	  = pcql->lineno;
-	struct caql_hash_cookie	*pchn	  = cq_lookup(caql_str, strlen(caql_str), pcql);
-	cqContext				*pCtx;
-	cqContext				 cqc;
-	HeapTuple				 tuple;
-	Relation				 rel;
-	int						 ii		  = 0;
-
-	if (NULL == pchn)
-		elog(ERROR, "invalid caql string: %s\nfile: %s, line %d", 
-			 caql_str, filenam, lineno);
-
-	Assert(!pchn->bInsert); /* INSERT not allowed */
-
-	/* use the provided context, or provide a clean local ctx  */
-	if (pCtx0)
-		pCtx = pCtx0;
-	else
-		pCtx = cqclr(&cqc);
-
-	pCtx = caql_switch(pchn, pCtx, pcql);
-	/* NOTE: caql_switch frees the pcql */
-	rel  = pCtx->cq_heap_rel;
-
-	/* use the SysCache */
-	if (pCtx->cq_usesyscache)
-	{
-		tuple = SearchSysCacheKeyArray(pCtx->cq_cacheId, 
-									   pCtx->cq_NumKeys, 
-									   pCtx->cq_cacheKeys);
-
-		if (HeapTupleIsValid(tuple))
-		{
-			ii++;
-			pCtx->cq_lasttup = tuple;
-			if (pchn->bDelete)
-				simple_heap_delete(rel, &tuple->t_self);
-
-			ReleaseSysCache(tuple);
-			/* only one */
-		}
-		caql_heapclose(pCtx);
-		return (ii);
-	}
-
-	while (HeapTupleIsValid(tuple = systable_getnext(pCtx->cq_sysScan)))
-	{
-		if (HeapTupleIsValid(tuple) && pchn->bDelete)
-		{
-			pCtx->cq_lasttup = tuple;
-			if (pchn->bDelete)
-				simple_heap_delete(rel, &tuple->t_self);
-		}
-
-		ii++;
-	}
-	systable_endscan(pCtx->cq_sysScan); 
-	caql_heapclose(pCtx);
-
-	return (ii);
-}
-
-/* ----------------------------------------------------------------
  * caql_getfirst_only()
  * Return a copy the first tuple, pallocd in the current memory context,
  * and end the scan.  Clients should heap_freetuple() as necessary.
@@ -443,11 +372,6 @@ cqContext *caql_beginscan(cqContext *pCtx0, cq_list *pcql)
 
 	if (NULL == pchn)
 		elog(ERROR, "invalid caql string: %s\nfile: %s, line %d", 
-			 caql_str, filenam, lineno);
-
-	if (pchn->bCount)
-		elog(ERROR, 
-			 "Cannot scan: %s -- COUNTing or DELETing\nfile: %s, line %d", 
 			 caql_str, filenam, lineno);
 
 	pCtx = caql_switch(pchn, pCtx, pcql);

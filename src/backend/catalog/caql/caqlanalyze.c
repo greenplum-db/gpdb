@@ -93,8 +93,6 @@ cq_lookup(const char *str, unsigned int len, cq_list *pcql)
 
 			if (node->forupdate)
 				hash_cookie->bUpdate = true;
-			if (node->count)
-				hash_cookie->bCount = true;
 
 			hash_cookie->relation = catcore_lookup_rel(node->from);
 			if (hash_cookie->relation == NULL)
@@ -117,34 +115,6 @@ cq_lookup(const char *str, unsigned int len, cq_list *pcql)
 					elog(ERROR, "could not find attribute \"%s\" in %s at %s:%d",
 								attname, str, pcql->filename, pcql->lineno);
 			}
-
-			hash_cookie->bAllEqual =
-				caql_process_predicates(hash_cookie, node->where);
-		}
-		break;
-	case T_CaQLInsert:
-		{
-			CaQLInsert	   *node = (CaQLInsert *) query;
-
-			hash_cookie->bInsert = true;
-
-			hash_cookie->relation = catcore_lookup_rel(node->into);
-			if (hash_cookie->relation == NULL)
-				elog(ERROR, "could not find relation \"%s\" in %s at %s:%d",
-							node->into, str, pcql->filename, pcql->lineno);
-
-		}
-		break;
-	case T_CaQLDelete:
-		{
-			CaQLDelete	   *node = (CaQLDelete *) query;
-
-			hash_cookie->bDelete = true;
-
-			hash_cookie->relation = catcore_lookup_rel(node->from);
-			if (hash_cookie->relation == NULL)
-				elog(ERROR, "could not find relation \"%s\" in %s at %s:%d",
-							node->from, str, pcql->filename, pcql->lineno);
 
 			hash_cookie->bAllEqual =
 				caql_process_predicates(hash_cookie, node->where);
@@ -190,7 +160,7 @@ caql_switch(struct caql_hash_cookie *pchn,
 	if (!pCtx->cq_setsnapshot)
 		pCtx->cq_snapshot = SnapshotNow;
 
-	if (pchn->bDelete || pchn->bUpdate || pchn->bInsert)
+	if (pchn->bUpdate)
 		pCtx->cq_lockmode = RowExclusiveLock;
 	else
 		pCtx->cq_lockmode = AccessShareLock;
@@ -341,12 +311,6 @@ caql_basic_fn_all(caql_hash_cookie *pchn, cqContext *pCtx,
 	}
 
 	/*
-	 * If it's INSERT, we don't need to begin scan.
-	 */
-	if (IsA(pchn->query, CaQLInsert))
-		return NULL;
-
-	/*
 	 * Otherwise, begin scan.  Initialize scan keys with given parameters.
 	 */
 	foreach_with_count (l, predicates, i)
@@ -377,10 +341,6 @@ caql_query_predicate(Node *query)
 	{
 	case T_CaQLSelect:
 		return ((CaQLSelect *) query)->where;
-	case T_CaQLInsert:
-		return NIL;
-	case T_CaQLDelete:
-		return ((CaQLDelete *) query)->where;
 	default:
 		elog(ERROR, "unexpected node type(%d)", nodeTag(query));
 	}
@@ -487,9 +447,6 @@ caql_find_index(caql_hash_cookie *pchn, Node *query)
 	List				   *predicates;
 
 	if (relation->nindexes == 0)
-		return NULL;
-
-	if (!(IsA(query, CaQLSelect) || IsA(query, CaQLDelete)))
 		return NULL;
 
 	predicates = caql_query_predicate(query);

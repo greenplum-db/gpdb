@@ -4403,28 +4403,6 @@ _copyCaQLSelect(const CaQLSelect *from)
 	COPY_NODE_FIELD(where);
 	COPY_NODE_FIELD(orderby);
 	COPY_SCALAR_FIELD(forupdate);
-	COPY_SCALAR_FIELD(count);
-
-	return newnode;
-}
-
-static CaQLInsert *
-_copyCaQLInsert(const CaQLInsert *from)
-{
-	CaQLInsert *newnode = makeNode(CaQLInsert);
-
-	COPY_STRING_FIELD(into);
-
-	return newnode;
-}
-
-static CaQLDelete *
-_copyCaQLDelete(const CaQLDelete *from)
-{
-	CaQLDelete *newnode = makeNode(CaQLDelete);
-
-	COPY_STRING_FIELD(from);
-	COPY_NODE_FIELD(where);
 
 	return newnode;
 }
@@ -5355,12 +5333,6 @@ copyObject(void *from)
 
 		case T_CaQLSelect:
 			retval = _copyCaQLSelect(from);
-			break;
-		case T_CaQLInsert:
-			retval = _copyCaQLInsert(from);
-			break;
-		case T_CaQLDelete:
-			retval = _copyCaQLDelete(from);
 			break;
 		case T_CaQLExpr:
 			retval = _copyCaQLExpr(from);

@@ -735,8 +735,9 @@ CreateQueue(CreateQueueStmt *stmt)
 {
 	Relation	pg_resqueue_rel;
 	TupleDesc	pg_resqueue_dsc;
+	ScanKeyData scankey;
+	SysScanDesc sscan;
 	HeapTuple	tuple;
-	cqContext	cqc2;
 	Oid			queueid;
 	Cost		thresholds[NUM_RES_LIMIT_TYPES];
 	Datum		new_record[Natts_pg_resqueue];
@@ -903,19 +904,22 @@ CreateQueue(CreateQueueStmt *stmt)
 	 */
 	Relation resqueueCapabilityRel = 
 			heap_open(ResQueueCapabilityRelationId, RowExclusiveLock);
-	Relation resqueueCapabilityIndexRel = 
-			index_open(ResQueueCapabilityResqueueidIndexId, AccessShareLock);
 
-	if (caql_getcount(
-			caql_addrel(cqclr(&cqc2), pg_resqueue_rel),
-			cql("SELECT COUNT(*) FROM pg_resqueue WHERE rsqname = :1", 
-				CStringGetDatum(stmt->queue))))
-	{
+	ScanKeyInit(&scankey,
+				Anum_pg_resqueue_rsqname,
+				BTEqualStrategyNumber, F_NAMEEQ,
+				CStringGetDatum(stmt->queue));
+
+	sscan = systable_beginscan(pg_resqueue_rel, ResQueueRsqnameIndexId, true,
+							   SnapshotNow, 1, &scankey);
+
+	if (systable_getnext(sscan))
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_OBJECT),
 				 errmsg("resource queue \"%s\" already exists",
 						stmt->queue)));
-	}
+
+	systable_endscan(sscan);
 
 	/*
 	 * Build a tuple to insert
@@ -1023,7 +1027,6 @@ CreateQueue(CreateQueueStmt *stmt)
 				);
 	}
 
-	heap_close(resqueueCapabilityIndexRel, NoLock);
 	heap_close(resqueueCapabilityRel, NoLock);
 	heap_close(pg_resqueue_rel, NoLock);
 }
@@ -1268,8 +1271,6 @@ AlterQueue(AlterQueueStmt *stmt)
 	 * Get database locks in anticipation that we'll need to access this catalog table later.
 	 */
 	Relation resqueueCapabilityRel = heap_open(ResQueueCapabilityRelationId, RowExclusiveLock);
-	Relation resqueueCapabilityIndexRel = index_open(ResQueueCapabilityResqueueidIndexId, AccessShareLock);
-
 	pg_resqueue_dsc = RelationGetDescr(pg_resqueue_rel);
 
 	ScanKeyInit(&scankey,
@@ -1438,7 +1439,6 @@ AlterQueue(AlterQueueStmt *stmt)
 		}
 	}
 
-	heap_close(resqueueCapabilityIndexRel, NoLock);
 	heap_close(resqueueCapabilityRel, NoLock);
 
 	/* MPP-6929, MPP-7583: metadata tracking */
@@ -1467,8 +1467,10 @@ DropQueue(DropQueueStmt *stmt)
 {
 	Relation	 pg_resqueue_rel;
 	HeapTuple	 tuple;
-	cqContext	 cqc;
-	cqContext	*pcqCtx;
+	ScanKeyData scankey;
+	SysScanDesc sscan;
+	ScanKeyData authid_scankey;
+	SysScanDesc authid_scan;
 	Oid			 queueid;
 	bool		 queueok = false;
 
@@ -1490,16 +1492,16 @@ DropQueue(DropQueueStmt *stmt)
 	 * Get database locks in anticipation that we'll need to access this catalog table later.
 	 */
 	Relation resqueueCapabilityRel = heap_open(ResQueueCapabilityRelationId, RowExclusiveLock);
-	Relation resqueueCapabilityIndexRel = index_open(ResQueueCapabilityResqueueidIndexId, AccessShareLock);
 
-	pcqCtx = caql_addrel(cqclr(&cqc), pg_resqueue_rel);
+	ScanKeyInit(&scankey,
+				Anum_pg_resqueue_rsqname,
+				BTEqualStrategyNumber, F_NAMEEQ,
+				CStringGetDatum(stmt->queue));
 
-	tuple = caql_getfirst(
-			pcqCtx,
-			cql("SELECT * FROM pg_resqueue"
-				 " WHERE rsqname = :1 FOR UPDATE",
-				CStringGetDatum(stmt->queue)));
+	sscan = systable_beginscan(pg_resqueue_rel, ResQueueRsqnameIndexId, true,
+							   SnapshotNow, 1, &scankey);
 
+	tuple = systable_getnext(sscan);
 	if (!HeapTupleIsValid(tuple))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -1515,16 +1517,20 @@ DropQueue(DropQueueStmt *stmt)
 	/*
 	 * Check to see if any roles are in this queue.
 	 */
-	if (caql_getcount(
-			NULL,
-			cql("SELECT COUNT(*) FROM pg_authid WHERE rolresqueue = :1", 
-				ObjectIdGetDatum(queueid))))
-	{
+	Relation authIdRel = heap_open(AuthIdRelationId, RowExclusiveLock);
+	ScanKeyInit(&authid_scankey,
+				Anum_pg_authid_rolresqueue,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(queueid));
+
+	authid_scan = systable_beginscan(authIdRel, AuthIdRolResQueueIndexId, true,
+							   SnapshotNow, 1, &authid_scankey);
+
+	if (systable_getnext(authid_scan) != NULL)
 		ereport(ERROR,
 				(errcode(ERRCODE_DEPENDENT_OBJECTS_STILL_EXIST),
 				 errmsg("resource queue \"%s\" is used by at least one role",
 						stmt->queue)));
-	}
 
 	/* MPP-6926: cannot DROP default queue  */
 	if (queueid == DEFAULTRESQUEUE_OID)
@@ -1533,10 +1539,15 @@ DropQueue(DropQueueStmt *stmt)
 				 errmsg("cannot drop default resource queue \"%s\"",
 						stmt->queue)));
 
+	systable_endscan(authid_scan);
+	heap_close(authIdRel, RowExclusiveLock);
+
 	/*
 	 * Delete the queue from the catalog.
 	 */
 	simple_heap_delete(pg_resqueue_rel, &tuple->t_self);
+
+	systable_endscan(sscan);
 
 	/*
 	 * If resource scheduling is on, see if we can destroy the in-memory queue.
@@ -1573,11 +1584,6 @@ DropQueue(DropQueueStmt *stmt)
 		}
 	}
 
-	heap_close(resqueueCapabilityIndexRel, NoLock);
-	heap_close(resqueueCapabilityRel, NoLock);
-
-	heap_close(pg_resqueue_rel, NoLock);
-
 	/*
 	 * Remove any comments on this resource queue
 	 */
@@ -1595,16 +1601,24 @@ DropQueue(DropQueueStmt *stmt)
 	MetaTrackDropObject(ResQueueRelationId,
 						queueid);
 
-	/* MPP-6923: drop the extended attributes for this queue */	 
-	int numDel;
+	/* MPP-6923: drop the extended attributes for this queue */
+	ScanKeyInit(&scankey,
+				Anum_pg_resqueuecapability_resqueueid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(queueid));
 
-	numDel = 
-		caql_getcount(
-				NULL,
-				cql("DELETE FROM pg_resqueuecapability WHERE resqueueid = :1",
-					ObjectIdGetDatum(queueid))
-				); /* null context, so use all default modes */
-		
+	sscan = systable_beginscan(resqueueCapabilityRel, ResQueueCapabilityResqueueidIndexId,
+							   true, SnapshotNow, 1, &scankey);
+
+	while ((tuple = systable_getnext(sscan)) != NULL)
+		simple_heap_delete(resqueueCapabilityRel, &tuple->t_self);
+
+	systable_endscan(sscan);
+
+
+	heap_close(resqueueCapabilityRel, NoLock);
+
+	heap_close(pg_resqueue_rel, NoLock);
 }
 
 /**

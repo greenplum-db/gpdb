@@ -34,27 +34,7 @@ typedef struct CaQLSelect
 	List	   *where;		/* expression list in WHERE */
 	List	   *orderby;	/* identifier list in ORDER BY */
 	bool		forupdate;	/* true if this is FOR UPDATE */
-	bool		count;		/* true if this is COUNT(*) query */
 } CaQLSelect;
-
-/*
- * INSERT statement.
- */
-typedef struct CaQLInsert
-{
-	NodeTag		type;		/* node tag */
-	char	   *into;		/* target table name */
-} CaQLInsert;
-
-/*
- * DELETE statement.
- */
-typedef struct CaQLDelete
-{
-	NodeTag		type;		/* node tag */
-	char	   *from;		/* target table name */
-	List	   *where;		/* expression list in WHERE */
-} CaQLDelete;
 
 /*
  * Expression node.
