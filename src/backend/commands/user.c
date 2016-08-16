@@ -1030,8 +1030,6 @@ AlterRole(AlterRoleStmt *stmt)
 	/* resource queue */
 	if (resqueue)
 	{
-		Oid			queueid;
-
 		/* MPP-6926: NONE not supported -- use default queue  */
 		if (
 /*			( 0 == pg_strcasecmp(resqueue,"none"))) */
@@ -1059,6 +1057,8 @@ AlterRole(AlterRoleStmt *stmt)
 		}
 		else
 		{
+			Oid			queueid;
+
 			queueid = GetResQueueIdForName(resqueue);
 			if (queueid == InvalidOid)
 				ereport(ERROR,
@@ -1066,7 +1066,7 @@ AlterRole(AlterRoleStmt *stmt)
 					 errmsg("resource queue \"%s\" does not exist",
 							resqueue)));
 			new_record[Anum_pg_authid_rolresqueue - 1] = 
-			ObjectIdGetDatum(GetResQueueIdForName(resqueue));
+				ObjectIdGetDatum(queueid);
 		}
 		new_record_repl[Anum_pg_authid_rolresqueue - 1] = true;
 
