@@ -12,13 +12,14 @@
 #include "s3conf.h"
 #include "s3log.h"
 #include "s3macros.h"
+#include "s3url.h"
 #include "s3utils.h"
 
 using std::string;
 using std::stringstream;
 
 GPWriter::GPWriter(const string& url) {
-    string file = replaceSchemaFromURL(url);
+    string file = S3UrlUtility::replaceSchemaFromURL(url, s3ext_encryption);
     constructWriterParams(file);
     restfulServicePtr = &restfulService;
 }
@@ -29,7 +30,7 @@ void GPWriter::constructWriterParams(const string& url) {
     this->params.setSegNum(s3ext_segnum);
     this->params.setNumOfChunks(s3ext_threadnum);
     this->params.setChunkSize(s3ext_chunksize);
-    this->params.setRegion(getRegionFromURL(url));
+    this->params.setRegion(S3UrlUtility::getRegionFromURL(url));
 
     this->cred.accessID = s3ext_accessid;
     this->cred.secret = s3ext_secret;

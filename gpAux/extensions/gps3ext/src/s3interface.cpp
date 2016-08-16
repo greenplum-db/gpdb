@@ -13,7 +13,7 @@
 #include "s3key_reader.h"
 #include "s3log.h"
 #include "s3macros.h"
-#include "s3url_parser.h"
+#include "s3url.h"
 #include "s3utils.h"
 
 #include "s3interface.h"

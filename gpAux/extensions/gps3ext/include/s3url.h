@@ -1,5 +1,5 @@
-#ifndef __S3_URL_PARSER_H__
-#define __S3_URL_PARSER_H__
+#ifndef __S3_URL_H__
+#define __S3_URL_H__
 
 #include "http_parser.h"
 
@@ -34,4 +34,17 @@ class UrlParser {
     string fullurl;
 };
 
+class S3UrlUtility {
+   public:
+    // Set schema to 'https' or 'http'
+    static string replaceSchemaFromURL(const string &url, bool useHttps = true);
+
+    static string getDefaultSchema(bool useHttps = true);
+
+    static string getRegionFromURL(const string &url);
+
+    static string getBucketFromURL(const string &url);
+
+    static string getPrefixFromURL(const string &url);
+};
 #endif

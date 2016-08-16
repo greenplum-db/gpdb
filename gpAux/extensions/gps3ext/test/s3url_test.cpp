@@ -1,4 +1,4 @@
-#include "s3url_parser.cpp"
+#include "s3url.cpp"
 #include "gtest/gtest.h"
 #include "s3macros.h"
 

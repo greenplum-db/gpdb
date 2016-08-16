@@ -73,9 +73,6 @@ class S3BucketReader : public Reader {
     ListBucketResult keyList;  // List of matched keys/files.
     uint64_t keyIndex;         // BucketContent index of keylist->contents.
 
-    void SetSchema();
-    void SetRegion();
-    void SetBucketAndPrefix();
     BucketContent *getNextKey();
     ReaderParams getReaderParams(BucketContent *key);
 };

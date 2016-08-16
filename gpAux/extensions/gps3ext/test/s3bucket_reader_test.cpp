@@ -74,6 +74,12 @@ TEST_F(S3BucketReaderTest, ParseURL_normal) {
     EXPECT_EQ("dataset1/normal", this->bucketReader->getPrefix());
 }
 
+//cannot find '://', so return url itself
+TEST_F(S3BucketReaderTest, ParseURL_noSchema) {
+    string url = "abcd";
+    EXPECT_EQ(url, S3UrlUtility::replaceSchemaFromURL(url));
+}
+
 TEST_F(S3BucketReaderTest, ParseURL_NoPrefixAndSlash) {
     EXPECT_NO_THROW(
         this->bucketReader->parseURL("s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io"));

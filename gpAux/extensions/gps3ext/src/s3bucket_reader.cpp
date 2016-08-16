@@ -11,6 +11,7 @@
 #include "s3log.h"
 #include "s3macros.h"
 #include "s3params.h"
+#include "s3url.h"
 #include "s3utils.h"
 
 using std::string;
@@ -111,19 +112,6 @@ void S3BucketReader::close() {
     return;
 }
 
-// Set schema to 'https' or 'http'
-void S3BucketReader::SetSchema() {
-    size_t iend = this->url.find("://");
-    if (iend == string::npos) {
-        return;
-    }
-
-    this->schema = this->url.substr(0, iend);
-    if (this->schema == "s3") {
-        this->schema = s3ext_encryption ? "https" : "http";
-    }
-}
-
 string S3BucketReader::getKeyURL(const string &key) {
     stringstream sstr;
     sstr << this->schema << "://"
@@ -132,60 +120,11 @@ string S3BucketReader::getKeyURL(const string &key) {
     return sstr.str();
 }
 
-// Set AWS region, use 'external-1' if it is 'us-east-1' or not present
-// http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
-void S3BucketReader::SetRegion() {
-    size_t ibegin =
-        this->url.find("://s3") + strlen("://s3");  // index of character('.' or '-') after "3"
-    size_t iend = this->url.find(".amazonaws.com");
-
-    if (iend == string::npos) {
-        return;
-    } else if (ibegin == iend) {  // "s3.amazonaws.com"
-        this->region = "external-1";
-    } else {
-        // ibegin + 1 is the character after "s3." or "s3-"
-        // for instance: s3-us-west-2.amazonaws.com
-        this->region = this->url.substr(ibegin + 1, iend - (ibegin + 1));
-    }
-
-    if (this->region.compare("us-east-1") == 0) {
-        this->region = "external-1";
-    }
-}
-
-void S3BucketReader::SetBucketAndPrefix() {
-    size_t ibegin = find_Nth(this->url, 3, "/");
-    size_t iend = find_Nth(this->url, 4, "/");
-
-    if (ibegin == string::npos) {
-        return;
-    }
-    // s3://s3-region.amazonaws.com/bucket
-    if (iend == string::npos) {
-        this->bucket = url.substr(ibegin + 1, url.length() - ibegin - 1);
-        this->prefix = "";
-        return;
-    }
-
-    this->bucket = url.substr(ibegin + 1, iend - ibegin - 1);
-
-    // s3://s3-region.amazonaws.com/bucket/
-    if (iend == url.length() - 1) {
-        this->prefix = "";
-        return;
-    }
-
-    ibegin = find_Nth(url, 4, "/");
-    // s3://s3-region.amazonaws.com/bucket/prefix
-    // s3://s3-region.amazonaws.com/bucket/prefix/whatever
-    this->prefix = url.substr(ibegin + 1, url.length() - ibegin - 1);
-}
-
 void S3BucketReader::parseURL() {
-    this->SetSchema();
-    this->SetRegion();
-    this->SetBucketAndPrefix();
+	this->schema = s3ext_encryption ? "https" : "http";
+    this->region = S3UrlUtility::getRegionFromURL(this->url);
+    this->bucket = S3UrlUtility::getBucketFromURL(this->url);
+    this->prefix = S3UrlUtility::getPrefixFromURL(this->url);
 
     bool ok = !(this->schema.empty() || this->region.empty() || this->bucket.empty());
     CHECK_OR_DIE_MSG(ok, "'%s' is not valid", this->url.c_str());

@@ -9,7 +9,7 @@ using std::string;
 #include "s3interface.h"
 #include "s3macros.h"
 #include "s3restful_service.h"
-#include "s3url_parser.h"
+#include "s3url.h"
 
 #include <vector>
 
