@@ -15,7 +15,6 @@
  */
 #include "postgres.h"
 
-#include "catalog/catquery.h"
 #include "catalog/pg_operator.h"
 #include "catalog/gp_policy.h"
 #include "catalog/namespace.h"
@@ -4582,19 +4581,11 @@ eval_basic_opexpr(ParseState *pstate, List *oprname, Node *leftarg,
 	bool		need_typ_info = (PointerIsValid(restypid) && *restypid == InvalidOid);
 	bool		isnull;
 	Oid			oprcode;
-	int			fetchCount;
 
 	opexpr = (OpExpr *) make_op(pstate, oprname, leftarg, rightarg, location);
 
-	oprcode = caql_getoid_plus(
-							   NULL,
-							   &fetchCount,
-							   NULL,
-							   cql("SELECT oprcode FROM pg_operator "
-								   " WHERE oid = :1 ",
-								   ObjectIdGetDatum(opexpr->opno)));
-
-	if (!fetchCount)			/* should not fail */
+	oprcode = get_opcode(opexpr->opno);
+	if (oprcode == InvalidOid)			/* should not fail */
 		elog(ERROR, "cache lookup failed for operator %u", opexpr->opno);
 	opexpr->opfuncid = oprcode;
 
