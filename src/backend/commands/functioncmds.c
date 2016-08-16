@@ -35,7 +35,6 @@
 #include "access/genam.h"
 #include "access/heapam.h"
 #include "catalog/dependency.h"
-#include "catalog/catquery.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_aggregate.h"
 #include "catalog/pg_cast.h"
@@ -623,8 +622,7 @@ update_proconfig_value(ArrayType *a, List *set_items)
 static void
 compute_attributes_sql_style(List *options,
 							 List **as,
-							 Oid *languageOid,
-							 char **languageName,
+							 char **language,
 							 char *volatility_p,
 							 bool *strict_p,
 							 bool *security_definer,
@@ -643,8 +641,6 @@ compute_attributes_sql_style(List *options,
 	DefElem    *cost_item = NULL;
 	DefElem    *rows_item = NULL;
 	DefElem    *data_access_item = NULL;
-
-	char	   *language;
 
 	foreach(option, options)
 	{
@@ -695,30 +691,14 @@ compute_attributes_sql_style(List *options,
 	}
 
 	if (language_item)
-		language = strVal(language_item->arg);
+		*language = strVal(language_item->arg);
 	else
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
 				 errmsg("no language specified")));
-		language = NULL;	/* keep compiler quiet */
+		*language = NULL;		/* keep compiler quiet */
 	}
-
-	/* Convert language name to canonical case */
-	*languageName = case_translate_language_name(language);
-
-	/* Look up the language and validate permissions */
-	*languageOid = caql_getoid(NULL,
-			cql("SELECT * FROM pg_language "
-				" WHERE lanname = :1 ",
-				CStringGetDatum(*languageName)));
-
-	if (!OidIsValid(*languageOid))
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("language \"%s\" does not exist", *languageName),
-				 (PLTemplateExists(*languageName) ?
-				  errhint("Use CREATE LANGUAGE to load the language into the database.") : 0)));
 
 	/* process optional items */
 	if (volatility_item)
@@ -745,10 +725,8 @@ compute_attributes_sql_style(List *options,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("ROWS must be positive")));
 	}
-	/* If prodataaccess indicator not specified, fill in default. */
-	if (data_access_item == NULL)
-		*data_access = getDefaultDataAccess(*languageOid);
-	else
+
+	if (data_access_item)
 		*data_access = interpret_data_access(data_access_item);
 }
 
@@ -1004,6 +982,7 @@ CreateFunction(CreateFunctionStmt *stmt, const char *queryString)
 	char	   *prosrc_str;
 	Oid			prorettype;
 	bool		returnsSet;
+	char	   *language;
 	char	   *languageName;
 	Oid			languageOid;
 	Oid			languageValidator;
@@ -1046,23 +1025,35 @@ CreateFunction(CreateFunctionStmt *stmt, const char *queryString)
 	proconfig = NULL;
 	procost = -1;				/* indicates not set */
 	prorows = -1;				/* indicates not set */
-	dataAccess = PRODATAACCESS_NONE;
+	dataAccess = -1;			/* indicates not set */
 
 	/* override attributes from explicit list */
 	compute_attributes_sql_style(stmt->options,
-								 &as_clause, &languageOid, &languageName,
+								 &as_clause, &language,
 								 &volatility, &isStrict, &security,
 								 &proconfig, &procost, &prorows,
 								 &dataAccess);
 
-	languageTuple = caql_getfirst(NULL,
-			cql("SELECT * FROM pg_language "
-				"WHERE oid = :1",
-				ObjectIdGetDatum(languageOid)));
-	/* language should have been found in compute_attributes_sql_style() */
-	Assert(HeapTupleIsValid(languageTuple));
+	/* Convert language name to canonical case */
+	languageName = case_translate_language_name(language);
 
+	/* Look up the language and validate permissions */
+	languageTuple = SearchSysCache(LANGNAME,
+								   PointerGetDatum(languageName),
+								   0, 0, 0);
+	if (!HeapTupleIsValid(languageTuple))
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				 errmsg("language \"%s\" does not exist", languageName),
+				 (PLTemplateExists(languageName) ?
+				  errhint("Use CREATE LANGUAGE to load the language into the database.") : 0)));
+
+	languageOid = HeapTupleGetOid(languageTuple);
 	languageStruct = (Form_pg_language) GETSTRUCT(languageTuple);
+
+	/* If prodataaccess indicator not specified, fill in default. */
+	if (dataAccess == -1)
+		dataAccess = getDefaultDataAccess(languageOid);
 
 	if (languageStruct->lanpltrusted)
 	{
@@ -1083,6 +1074,8 @@ CreateFunction(CreateFunctionStmt *stmt, const char *queryString)
 	}
 
 	languageValidator = languageStruct->lanvalidator;
+
+	ReleaseSysCache(languageTuple);
 
 	/*
 	 * Check consistency for data access.  Note this comes after the language
