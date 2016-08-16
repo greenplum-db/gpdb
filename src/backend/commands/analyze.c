@@ -25,7 +25,6 @@
 #include "catalog/indexing.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_namespace.h"
-#include "catalog/catquery.h"
 #include "cdb/cdbpartition.h"
 #include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"

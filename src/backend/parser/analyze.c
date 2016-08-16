@@ -26,7 +26,6 @@
 #include "postgres.h"
 
 #include "access/reloptions.h"
-#include "catalog/catquery.h"
 #include "catalog/gp_policy.h"
 #include "catalog/heap.h"
 #include "catalog/indexing.h"
