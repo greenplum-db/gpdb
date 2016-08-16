@@ -77,6 +77,10 @@ class GpinitStandsbyTestCase(MPPTestCase):
         os.remove(filepath)
 
     def touch_file(self, filename):
+        file_dir = os.path.split(filename)[0]
+        if not os.path.exists(file_dir):
+            os.makedirs(file_dir)
+
         with open(filename, 'w') as fp:
             pass
 
