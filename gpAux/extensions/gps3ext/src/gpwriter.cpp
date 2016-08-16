@@ -139,7 +139,7 @@ GPWriter* writer_init(const char* url_with_options) {
 }
 
 // invoked by s3_export(), need to be exception safe
-bool writer_transfer_data(GPWriter* writer, char* data_buf, int& data_len) {
+bool writer_transfer_data(GPWriter* writer, char* data_buf, int data_len) {
     try {
         if (!writer || !data_buf || (data_len <= 0)) {
             return false;
@@ -147,8 +147,8 @@ bool writer_transfer_data(GPWriter* writer, char* data_buf, int& data_len) {
 
         uint64_t write_len = writer->write(data_buf, data_len);
 
-        // sure write_len <= data_len here, hence truncation will never happen
-        data_len = (int)write_len;
+        CHECK_OR_DIE_MSG(write_len == (uint64_t)data_len, "%s",
+                         "Failed to upload the data completely.");
     } catch (std::exception& e) {
         S3ERROR("writer_transfer_data caught an exception: %s", e.what());
         s3extErrorMessage = e.what();

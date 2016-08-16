@@ -121,7 +121,7 @@ string S3BucketReader::getKeyURL(const string &key) {
 }
 
 void S3BucketReader::parseURL() {
-	this->schema = s3ext_encryption ? "https" : "http";
+    this->schema = s3ext_encryption ? "https" : "http";
     this->region = S3UrlUtility::getRegionFromURL(this->url);
     this->bucket = S3UrlUtility::getBucketFromURL(this->url);
     this->prefix = S3UrlUtility::getPrefixFromURL(this->url);

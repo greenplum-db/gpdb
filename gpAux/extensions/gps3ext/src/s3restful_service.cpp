@@ -234,12 +234,10 @@ Response S3RESTfulService::post(const string &url, HTTPHeaders &headers,
 
     curl_easy_setopt(curl, CURLOPT_POST, 1L);
 
-    if (!data.empty()) {
-        UploadData uploadData(data);
-        curl_easy_setopt(curl, CURLOPT_READDATA, (void *)&uploadData);
-        curl_easy_setopt(curl, CURLOPT_READFUNCTION, RESTfulServiceReadFuncCallback);
-        curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)data.size());
-    }
+    UploadData uploadData(data);
+    curl_easy_setopt(curl, CURLOPT_READDATA, (void *)&uploadData);
+    curl_easy_setopt(curl, CURLOPT_READFUNCTION, RESTfulServiceReadFuncCallback);
+    curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)data.size());
 
     // consider low speed as timeout
     curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, s3ext_low_speed_limit);

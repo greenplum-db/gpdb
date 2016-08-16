@@ -7,6 +7,7 @@
 
 #include "gpcommon.h"
 #include "gpreader.h"
+#include "gpwriter.h"
 #include "s3common.h"
 #include "s3conf.h"
 #include "s3interface.h"

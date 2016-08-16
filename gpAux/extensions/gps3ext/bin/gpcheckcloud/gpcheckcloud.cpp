@@ -16,6 +16,8 @@ void printUsage(FILE *stream) {
             "config=path_to_config_file\", to check the configuration.\n"
             "       gpcheckcloud -d \"s3://endpoint/bucket/prefix "
             "config=path_to_config_file\", to download and output to stdout.\n"
+            "       gpcheckcloud -u \"s3://endpoint/bucket/prefix "
+            "config=path_to_config_file\" -f \"/path/to/file\", to upload a file to S3.\n"
             "       gpcheckcloud -t, to show the config template.\n"
             "       gpcheckcloud -h, to show this help.\n");
 }
@@ -25,10 +27,12 @@ map<char, string> parseCommandLineArgs(int argc, char *argv[]) {
     int opt = 0;
     map<char, string> optionPairs;
 
-    while ((opt = getopt(argc, argv, "c:d:ht")) != -1) {
+    while ((opt = getopt(argc, argv, "c:d:u:f:ht")) != -1) {
         switch (opt) {
             case 'c':
             case 'd':
+            case 'u':
+            case 'f':
             case 'h':
             case 't':
                 if (optarg == NULL) {
@@ -52,8 +56,17 @@ map<char, string> parseCommandLineArgs(int argc, char *argv[]) {
 }
 
 // check if command line arguments are valid
-void validateCommadLineArgs(map<char, string> &optionPairs) {
-    // only one option is allowed(for now)
+void validateCommandLineArgs(map<char, string> &optionPairs) {
+    uint64_t count = optionPairs.count('f') + optionPairs.count('u');
+
+    if ((count == 2) && (optionPairs.size() == 2)) {
+        return;
+    } else if (count == 1) {
+        fprintf(stderr, "Failed. Option \'-u\' must work with \'-f\'\n\n");
+        printUsage(stderr);
+        exit(EXIT_FAILURE);
+    }
+
     if (optionPairs.size() > 1) {
         stringstream ss;
 
@@ -88,7 +101,6 @@ void printTemplate() {
 
 void printBucketContents(const ListBucketResult &result) {
     char urlbuf[256];
-    uint64_t count = 0;
     vector<BucketContent>::const_iterator i;
 
     for (i = result.contents.begin(); i != result.contents.end(); i++) {
@@ -148,10 +160,60 @@ bool downloadS3(const char *urlWithOptions) {
             break;
         }
 
-        fwrite(data_buf, data_len, 1, stdout);
+        fwrite(data_buf, (size_t)data_len, 1, stdout);
     } while (data_len);
 
     reader_cleanup(&reader);
+
+    thread_cleanup();
+
+    return ret;
+}
+
+bool uploadS3(const char *urlWithOptions, const char *fileToUpload) {
+    if (!urlWithOptions) {
+        return false;
+    }
+
+    size_t data_len = BUF_SIZE;
+    char data_buf[BUF_SIZE];
+    size_t read_len = 0;
+    bool ret = true;
+
+    thread_setup();
+
+    GPWriter *writer = writer_init(urlWithOptions);
+    if (!writer) {
+        return false;
+    }
+
+    FILE *fd = fopen(fileToUpload, "r");
+    if (fd == NULL) {
+        fprintf(stderr, "File does not exist\n");
+        ret = false;
+    } else {
+        do {
+            read_len = fread(data_buf, 1, data_len, fd);
+
+            if (read_len == 0) {
+                break;
+            }
+
+            if (!writer_transfer_data(writer, data_buf, (int)read_len)) {
+                fprintf(stderr, "Failed to write data to Amazon S3\n");
+                ret = false;
+                break;
+            }
+        } while (read_len == data_len);
+
+        if (ferror(fd)) {
+            ret = false;
+        }
+
+        fclose(fd);
+    }
+
+    writer_cleanup(&writer);
 
     thread_cleanup();
 
@@ -171,7 +233,7 @@ int main(int argc, char *argv[]) {
 
     map<char, string> optionPairs = parseCommandLineArgs(argc, argv);
 
-    validateCommadLineArgs(optionPairs);
+    validateCommandLineArgs(optionPairs);
 
     if (!optionPairs.empty()) {
         const char *arg = optionPairs.begin()->second.c_str();
@@ -182,6 +244,10 @@ int main(int argc, char *argv[]) {
                 break;
             case 'd':
                 ret = downloadS3(arg);
+                break;
+            case 'u':
+            case 'f':
+                ret = uploadS3(optionPairs['u'].c_str(), optionPairs['f'].c_str());
                 break;
             case 'h':
                 printUsage(stdout);
