@@ -22,7 +22,6 @@
 #include "cdb/cdbpartition.h"
 #include "parser/parsetree.h"
 #include "access/genam.h"
-#include "catalog/catquery.h"
 #include "nodes/nodeFuncs.h"
 #include "utils/memutils.h"
 #include "cdb/cdbvars.h"
