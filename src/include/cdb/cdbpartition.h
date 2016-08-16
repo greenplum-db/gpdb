@@ -92,9 +92,6 @@ del_part_template(Oid rootrelid, int16 parlevel, Oid parent);
 extern void
 add_part_to_catalog(Oid relid, PartitionBy *pby, bool bTemplate_Only);
 
-extern void parruleord_reset_rank(Oid partid, int2 level, Oid parent,
-					  int2 ruleord);
-
 extern AttrNumber 
 max_partition_attr(PartitionNode *pn);
 

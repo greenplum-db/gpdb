@@ -1855,65 +1855,6 @@ add_part_to_catalog(Oid relid, PartitionBy *pby,
 	CommandCounterIncrement();
 } /* end add_part_to_catalog */
 
-
-/*
- * parruleord_reset_rank
- *
- * iterate over the specified set of range partitions (in ascending
- * order) in pg_partition_rule and reset the parruleord to start at 1
- * and continue in an ascending sequence.
- */
-void
-parruleord_reset_rank(Oid partid, int2 level, Oid parent, int2 ruleord)
-{
-	ScanKeyData key[3];
-	HeapTuple tuple;
-	Relation rel;
-	SysScanDesc scan;
-	int ii = 1;
-
-	rel = heap_open(PartitionRuleRelationId, AccessShareLock);
-
-	/* CaQL UNDONE: no test coverage; this function is not called at all */
-	ScanKeyInit(&key[0],
-				Anum_pg_partition_rule_paroid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(partid));
-	ScanKeyInit(&key[1],
-				Anum_pg_partition_rule_parparentrule,
-				BTEqualStrategyNumber, F_INT2EQ,
-				ObjectIdGetDatum(parent));
-	ScanKeyInit(&key[2],
-				Anum_pg_partition_rule_parruleord,
-				BTGreaterEqualStrategyNumber, F_INT2GE,
-				Int16GetDatum(ruleord));
-
-	scan = systable_beginscan(rel,
-							  PartitionRuleParoidParparentruleParruleordIndexId,
-							  true, SnapshotNow, 3, key);
-
-	while ((tuple = systable_getnext(scan)))
-	{
-		Form_pg_partition_rule rule_desc;
-
-		Insist(HeapTupleIsValid(tuple));
-
-		tuple = heap_copytuple(tuple);
-
-		rule_desc =
-		(Form_pg_partition_rule)GETSTRUCT(tuple);
-
-		rule_desc->parruleord = ii;
-		ii++;
-
-		simple_heap_update(rel, &tuple->t_self, tuple);
-		CatalogUpdateIndexes(rel, tuple);
-
-	}
-	systable_endscan(scan);
-	heap_close(rel, AccessShareLock);
-} /* end parruleord_reset_rank */
-
 /*
  * parruleord_open_gap
  *

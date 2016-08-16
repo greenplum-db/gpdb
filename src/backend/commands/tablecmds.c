@@ -14317,14 +14317,6 @@ ATPExecPartModify(Relation rel,
 			stat = false;
 		}
 
-
-		if (0)
-		parruleord_reset_rank(
-				prule->pNode->part->partid,
-				prule->pNode->part->parlevel,
-				prule->topRule->parparentoid,
-				prule->topRule->parruleord);
-
 		/* MPP-6929: metadata tracking */
 		MetaTrackUpdObject(RelationRelationId,
 						   RelationGetRelid(rel),
