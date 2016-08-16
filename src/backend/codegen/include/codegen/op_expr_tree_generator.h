@@ -45,6 +45,9 @@ class OpExprTreeGenerator : public ExprTreeGenerator {
         ExprTreeGeneratorInfo* gen_info,
         std::unique_ptr<ExprTreeGenerator>* expr_tree);
 
+  static gpcodegen::PGFuncGeneratorInterface* GetPGFuncGenerator(
+      unsigned int oid);
+
   bool GenerateCode(gpcodegen::GpCodegenUtils* codegen_utils,
                     const ExprTreeGeneratorInfo& gen_info,
                     llvm::Value* llvm_isnull_ptr,

@@ -18,6 +18,9 @@
 #include "codegen/advance_aggregates_codegen.h"
 #include "codegen/base_codegen.h"
 #include "codegen/codegen_wrapper.h"
+#include "codegen/op_expr_tree_generator.h"
+#include "codegen/pg_func_generator_interface.h"
+
 
 #include "codegen/utils/gp_codegen_utils.h"
 #include "codegen/utils/utility.h"
@@ -69,7 +72,9 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
 
   // BasicBlock of function entry.
   llvm::BasicBlock* llvm_entry_block = codegen_utils->CreateBasicBlock(
-      "entry", advance_aggregates_func);
+      "entry block", advance_aggregates_func);
+  llvm::BasicBlock* llvm_error_block = codegen_utils->CreateBasicBlock(
+      "error block", advance_aggregates_func);
 
   // External functions
   llvm::Function* llvm_ExecVariableList =
@@ -128,7 +133,8 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
           llvm_fcinfo_argnull_1
       });
 
-      codegen_utils->CreateElog(INFO, "Variable = %d", irb->CreateLoad(llvm_fcinfo_arg_1));
+      codegen_utils->CreateElog(INFO, "Variable = %d",
+                                irb->CreateLoad(llvm_fcinfo_arg_1));
     }
     else
     {
@@ -147,6 +153,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
     //    advance_transition_function(aggstate, peraggstate, pergroupstate,
     //                        &fcinfo, mem_manager); {{{
 
+    // TODO: Support fn_strict
     if (peraggstate->transfn.fn_strict)
     {
       elog(DEBUG1, "We do not support strict functions.");
@@ -177,11 +184,30 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
     //newVal = FunctionCallInvoke(fcinfo); {{
 
     llvm::Value *llvm_fcinfo_arg_1_i32 = irb->
-        CreateTrunc(irb->CreateLoad(llvm_fcinfo_arg_1), codegen_utils->GetType<int32>());
+        CreateTrunc(irb->CreateLoad(llvm_fcinfo_arg_1),
+                    codegen_utils->GetType<int32>());
 
-    llvm::Value *newVal = irb->CreateAdd(
-        irb->CreateLoad(llvm_fcinfo_arg_0),
-        codegen_utils->CreateCast<int64, int32>(llvm_fcinfo_arg_1_i32));
+    PGFuncGeneratorInfo pg_func_info(
+        advance_aggregates_func,
+        llvm_error_block,
+        {irb->CreateLoad(llvm_fcinfo_arg_0),
+            codegen_utils->CreateCast<int64, int32>(llvm_fcinfo_arg_1_i32)}
+    );
+
+    PGFuncGeneratorInterface* pg_func_gen = OpExprTreeGenerator::
+        GetPGFuncGenerator(peraggstate->transfn.fn_oid);
+    if (nullptr == pg_func_gen)
+    {
+      elog(INFO, "We do not support function with oid = %d",
+           peraggstate->transfn.fn_oid);
+      return false;
+    }
+
+    llvm::Value *newVal = nullptr;
+    pg_func_gen->GenerateCode(codegen_utils, pg_func_info, &newVal);
+
+    llvm::Value *result = codegen_utils->CreateCppTypeToDatumCast(newVal);
+
     // }} FunctionCallInvoke
 
     // }}} advance_transition_function
@@ -193,25 +219,33 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
     }
 
     // pergroupstate->transValue = newval {{{
-    irb->CreateStore(newVal, llvm_pergroupstate_transValue);
+    irb->CreateStore(result, llvm_pergroupstate_transValue);
     // }}}
 
-//    *transValueIsNull = fcinfo->isnull;
-//    if (!fcinfo->isnull)
-//      *noTransvalue = false;    {{{
+    //    *transValueIsNull = fcinfo->isnull;
+    //    if (!fcinfo->isnull)
+    //      *noTransvalue = false;    {{{
 
     irb->CreateStore(codegen_utils->GetConstant<bool>(false),
                      llvm_pergroupstate_transValueIsNull);
 
     // }}}
 
-    codegen_utils->CreateElog(INFO, "transValue = %d", irb->CreateLoad(llvm_pergroupstate_transValue));
+    codegen_utils->CreateElog(INFO, "transValue = %d",
+                              irb->CreateLoad(llvm_pergroupstate_transValue));
 
   } // End of for loop
 
   irb->CreateRetVoid();
 
+  irb->SetInsertPoint(llvm_error_block);
 
+  elog(INFO, "An error has occurred and we are falling back");
+
+  codegen_utils->CreateFallback<AdvanceAggregatesFn>(
+      codegen_utils->GetOrRegisterExternalFunction(advance_aggregates,
+                                                   "advance_aggregates"),
+                                                   advance_aggregates_func);
 
   return true;
 }

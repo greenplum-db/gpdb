@@ -72,6 +72,12 @@ void OpExprTreeGenerator::InitializeSupportedFunction() {
           "int4pl",
           &PGArithFuncGenerator<int32_t, int32_t, int32_t>::AddWithOverflow));
 
+  supported_function_[1841] = std::unique_ptr<PGFuncGeneratorInterface>(
+      new PGGenericFuncGenerator<int64_t, int64_t>(
+          1841,
+          "int4_sum",
+          &PGArithFuncGenerator<int64_t, int64_t, int64_t>::AddWithOverflow));
+
   supported_function_[181] = std::unique_ptr<PGFuncGeneratorInterface>(
       new PGGenericFuncGenerator<int32_t, int32_t>(
           181,
@@ -105,6 +111,16 @@ void OpExprTreeGenerator::InitializeSupportedFunction() {
           2339,
           "date_le_timestamp",
           &PGDateFuncGenerator::DateLETimestamp));
+}
+
+PGFuncGeneratorInterface* OpExprTreeGenerator::GetPGFuncGenerator(
+      unsigned int oid) {
+  InitializeSupportedFunction();
+  auto itr = supported_function_.find(oid);
+  if (itr == supported_function_.end()) {
+    return nullptr;
+  }
+  return itr->second.get();
 }
 
 OpExprTreeGenerator::OpExprTreeGenerator(
