@@ -922,8 +922,6 @@ RemoveRelation(const RangeVar *relation, DropBehavior behavior,
 {
 	Oid			relOid;
 	ObjectAddress object;
-	HeapTuple tuple;
-	cqContext  *pcqCtx;
 
 	AcceptInvalidationMessages();
 
@@ -963,18 +961,6 @@ RemoveRelation(const RangeVar *relation, DropBehavior behavior,
 		return false;
 	}
 
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_class "
-				" WHERE oid = :1 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(relOid)));
-
-	tuple = caql_getnext(pcqCtx);
-
-	if (!HeapTupleIsValid(tuple))
-		elog(ERROR, "relation \"%s\" does not exist", relation->relname);
-
 	/* MPP-3260: disallow direct DROP TABLE of a partition */
 	if (stmt && rel_is_child_partition(relOid) && !stmt->bAllowPartn)
 	{
@@ -997,8 +983,6 @@ RemoveRelation(const RangeVar *relation, DropBehavior behavior,
 	object.classId = RelationRelationId;
 	object.objectId = relOid;
 	object.objectSubId = 0;
-
-	caql_endscan(pcqCtx);
 
 	/* if we got here then we should proceed. */
 	performDeletion(&object, behavior);
