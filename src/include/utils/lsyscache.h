@@ -92,7 +92,6 @@ extern Oid get_trigger_funcid(Oid triggerid);
 extern int32 get_trigger_type(Oid triggerid);
 extern bool trigger_enabled(Oid triggerid);
 extern char *get_func_name(Oid funcid);
-extern Oid	get_func_namespace(Oid funcid);
 extern Oid	get_func_rettype(Oid funcid);
 extern void pfree_ptr_array(char **ptrarray, int nelements);
 extern List *get_func_output_arg_types(Oid funcid);

@@ -1517,31 +1517,6 @@ get_func_rows(Oid funcid)
 /*				---------- RELATION CACHE ----------					 */
  
 /*
- * get_func_namespace
- *		Returns the pg_namespace OID associated with a given procedure.
- *
- */
-Oid
-get_func_namespace(Oid funcid)
-{
-	Oid			result;
-	int			fetchCount;
-
-	result = caql_getoid_plus(
-			NULL,
-			&fetchCount,
-			NULL,
-			cql("SELECT pronamespace FROM pg_proc "
-				 " WHERE oid = :1 ",
-				 ObjectIdGetDatum(funcid)));
-
-	if (!fetchCount)
-		return InvalidOid;
-
-	return result;
-}
-
-/*
  * get_func_rettype
  *		Given procedure id, return the function's result type.
  */
