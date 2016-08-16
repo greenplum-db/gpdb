@@ -223,9 +223,6 @@ cqContext	*cqclr(cqContext	 *pCtx);						/*  */
 void caql_logquery(const char *funcname, const char *filename, int lineno,
 			  int uniqquery_code, Oid arg1);
 
-/* CAQL prototype: expand to nothing */
-#define cql0(x, ...) if (0) {} else 
-
 /* ifdef gnuc ! */
 #define cql(x, ...) cql1(x, __FILE__, __LINE__, __VA_ARGS__)
 
