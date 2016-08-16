@@ -147,14 +147,6 @@ extern SysScanDesc systable_beginscan(Relation heapRelation,
 				   Snapshot snapshot,
 				   int nkeys, ScanKey key);
 extern HeapTuple systable_getnext(SysScanDesc sysscan);
-extern HeapTuple systable_getprev(SysScanDesc sysscan);
 extern void systable_endscan(SysScanDesc sysscan);
-extern SysScanDesc systable_beginscan_ordered(Relation heapRelation,
-						   Relation indexRelation,
-						   Snapshot snapshot,
-						   int nkeys, ScanKey key);
-extern HeapTuple systable_getnext_ordered(SysScanDesc sysscan,
-						 ScanDirection direction);
-extern void systable_endscan_ordered(SysScanDesc sysscan);
 
 #endif   /* GENAM_H */

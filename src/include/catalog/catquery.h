@@ -125,7 +125,6 @@ Oid			 caql_getoid_plus(cqContext *pCtx0, int *pFetchcount,
 
 cqContext	*caql_beginscan(cqContext *pCtx, cq_list *pcql);
 HeapTuple	 caql_getnext(cqContext *pCtx);
-HeapTuple	 caql_getprev(cqContext *pCtx);
 /* XXX XXX: endscan must specify if hold or release locks */
 void		 caql_endscan(cqContext *pCtx);
 

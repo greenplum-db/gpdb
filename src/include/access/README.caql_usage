@@ -59,9 +59,7 @@ BY clause immediately precedes the FOR UPDATE (or terminates the
 SELECT statement if FOR UPDATE is not specified).  CaQL also supports
 GreaterThan/LessThan comparison in the WHERE clause for this case, eg
 <,>,<=,>=.  In the current implementation, ordering requires the
-existence of a matching index.  Note that SQL-style
-ASCENDING/DESCENDING is not necessary: clients use caql_getnext() or
-caql_getprev() to ascend or descend as they fetch tuples.
+existence of a matching index.  Only forward scans are supported.
 
 Sample Usage
 ============

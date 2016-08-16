@@ -537,46 +537,6 @@ HeapTuple caql_getnext(cqContext *pCtx)
 }
 
 /* ----------------------------------------------------------------
- * caql_getprev()
- * NOTE: similar to caql_getnext(), but backwards.  
- * Usage is rare and potentially dangerous.  
- * The scankey should be set to point to the *last* key, not the 
- * first, typically using COLNAME <= BINDVALUE, but this assumes
- * a unique index.  (with a non-unique index the beginscan could
- * potentially position at the *start* of a group of duplicates,
- * not the end)
- * ----------------------------------------------------------------
- */
-HeapTuple caql_getprev(cqContext *pCtx)
-{
-	HeapTuple tuple;
-	/* set EOF when get invalid tuple */
-
-	if (pCtx->cq_EOF)
-		return (NULL);
-
-	if (!pCtx->cq_usesyscache)
-	{
-		tuple = systable_getprev(pCtx->cq_sysScan); 
-		pCtx->cq_EOF = !(HeapTupleIsValid(tuple));
-	}
-	else
-	{
-		Insist(0); /* XXX XXX: illegal ? */
-		/* syscache is always 0 or 1 entry */
-		tuple = SearchSysCacheKeyArray(pCtx->cq_cacheId, 
-									   pCtx->cq_NumKeys, 
-									   pCtx->cq_cacheKeys);
-		
-		pCtx->cq_EOF	 = true;  /* at EOF always, because only 0 or 1 */
-	}
-
-	pCtx->cq_lasttup = tuple; /* need this for ReleaseSysCache */
-
-	return (tuple);
-}
-
-/* ----------------------------------------------------------------
  * caql_endscan()
  * free all resources associated with the scan, including tuples,
  * tables and locks.

@@ -1872,23 +1872,39 @@ static void
 parruleord_open_gap(Oid partid, int2 level, Oid parent, int2 ruleord,
 					int stopkey, bool closegap)
 {
+	Relation	rel;
+	Relation	irel;
 	HeapTuple tuple;
-	cqContext	*pcqCtx;
+	ScanKeyData scankey[3];
+	IndexScanDesc sd;
 
-	/* XXX XXX: should be an ORDER BY DESC */
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_partition_rule "
-				" WHERE paroid = :1 "
-				" AND parparentrule = :2 "
-				" AND parruleord <= :3 "
-				" ORDER BY paroid, parparentrule, parruleord "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(partid),
-				ObjectIdGetDatum(parent),
-				Int16GetDatum(ruleord)));
+	/*---
+	 * This is equivalent to:
+	 * SELECT * FROM pg_partition_rule
+	 * WHERE paroid = :1
+	 * AND parparentrule = :2
+	 * AND parruleord <= :3
+	 * ORDER BY parruleord DESC
+	 * FOR UPDATE
+	 *
+	 * Note that the attribute numbers below are attribute numbers
+	 * of the index, rather than the table.
+	 *---
+	 */
+	rel = heap_open(PartitionRuleRelationId, RowExclusiveLock);
+	irel = index_open(PartitionRuleParoidParparentruleParruleordIndexId, RowExclusiveLock);
 
-	while (HeapTupleIsValid(tuple = caql_getprev(pcqCtx)))
+	ScanKeyInit(&scankey[0], 1,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(partid));
+	ScanKeyInit(&scankey[1], 2,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(parent));
+	ScanKeyInit(&scankey[2], 3,
+				BTLessEqualStrategyNumber, F_INT2LE,
+				Int16GetDatum(ruleord));
+	sd = index_beginscan(rel, irel, SnapshotNow, 3, scankey);
+	while (HeapTupleIsValid(tuple = index_getnext(sd, BackwardScanDirection)))
 	{
 		int old_ruleord;
 		Form_pg_partition_rule rule_desc;
@@ -1903,12 +1919,17 @@ parruleord_open_gap(Oid partid, int2 level, Oid parent, int2 ruleord,
 		old_ruleord = rule_desc->parruleord;
 		closegap ? rule_desc->parruleord-- : rule_desc->parruleord++;
 
-		caql_update_current(pcqCtx, tuple);
+		simple_heap_update(rel, &tuple->t_self, tuple);
+		CatalogUpdateIndexes(rel, tuple);
+
+		heap_freetuple(tuple);
 
 		if (old_ruleord <= stopkey)
 			break;
 	}
-	caql_endscan(pcqCtx);
+	index_endscan(sd);
+	heap_close(irel, RowExclusiveLock);
+	heap_close(rel, RowExclusiveLock);
 
 } /* end parruleord_open_gap */
 
