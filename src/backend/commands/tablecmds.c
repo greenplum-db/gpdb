@@ -12509,16 +12509,10 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 				foreach(lc, ldistro)
 				{
 					char *colName = strVal((Value *)lfirst(lc));
-					cqContext	*attcqCtx;
 					HeapTuple tuple;
-
-					attcqCtx = caql_getattname_scan(NULL, 
-									RelationGetRelid(rel), 
-									colName);
-	
-					tuple = caql_get_current(attcqCtx);
-
 					AttrNumber	attnum;
+
+					tuple = SearchSysCacheAttName(RelationGetRelid(rel), colName);
 
 					if (list_member(cols, lfirst(lc)))
 							ereport(ERROR,
@@ -12545,7 +12539,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 
 					policy->attrs[policy->nattrs++] = attnum;
 
-					caql_endscan(attcqCtx);
+					ReleaseSysCache(tuple);
 					cols = lappend(cols, lfirst(lc));
 				} /* end foreach */
 

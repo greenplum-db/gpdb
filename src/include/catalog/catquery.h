@@ -143,28 +143,6 @@ void		 caql_endscan(cqContext *pCtx);
  */
 Datum caql_getattr(cqContext *pCtx, AttrNumber attnum, bool *isnull);
 
-/* equivalent of SearchSysCacheCopyAttName - return copy of the tuple
- * describing a column of a table  
- */
-HeapTuple caql_getattname(cqContext *pCtx, Oid relid, const char *attname);
-
-/* same as SearchSysCacheAttName - return a scan where the tuple is
- * *already* fetched, so use caql_get_current (not getnext!) to get
- * the tuple, and endscan to free the context
- */
-cqContext *caql_getattname_scan(cqContext *pCtx, 
-								Oid relid, const char *attname);
-
-/*
- * adapted from original lsyscache.c/get_attnum()
- *
- *		Given the relation id and the attribute name,
- *		return the "attnum" field from the attribute relation.
- *
- *		Returns InvalidAttrNumber if the attr doesn't exist (or is dropped).
- */
-AttrNumber caql_getattnumber(Oid relid, const char *attname);
-
 /* return the specified Name or Text column of the first tuple 
    (and set the fetchcount or isnull if specified)
 */

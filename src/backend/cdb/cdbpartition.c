@@ -7958,15 +7958,12 @@ bool can_implement_dist_on_part(Relation rel, List *dist_cnames)
 		HeapTuple tuple;
 		Node *item = lfirst(lc);
 		bool ok = false;
-		cqContext	*pcqCtx;
 
 		if ( !(item && IsA(item, String)) )
 			return false;
 
 		cname = strVal((Value *)item);
-		pcqCtx = caql_getattname_scan(NULL, RelationGetRelid(rel), cname);
-		tuple = caql_get_current(pcqCtx);
-
+		tuple = SearchSysCacheAttName(RelationGetRelid(rel), cname);
 		if (!HeapTupleIsValid(tuple))
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_COLUMN),
@@ -7976,7 +7973,8 @@ bool can_implement_dist_on_part(Relation rel, List *dist_cnames)
 
 		attnum = ((Form_pg_attribute) GETSTRUCT(tuple))->attnum;
 		ok = attnum == rel->rd_cdbpolicy->attrs[i++];
-		caql_endscan(pcqCtx);
+
+		ReleaseSysCache(tuple);
 
 		if ( ! ok )
 			return false;
