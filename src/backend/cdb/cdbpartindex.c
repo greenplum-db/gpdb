@@ -550,9 +550,6 @@ recordIndexesOnLeafPart(PartitionIndexNode **pNodePtr,
 			Oid rootOid,
 			Relation indexRel)
 {
-	HeapTuple 			tuple; 
-	cqContext 			*pcqCtx;
-	cqContext 			cqc;
 	char 				*partIndexHashKey;
 	bool 				foundPartIndexHash;
 	bool 				foundLogicalIndexHash;
@@ -561,38 +558,38 @@ recordIndexesOnLeafPart(PartitionIndexNode **pNodePtr,
 	PartitionIndexHashEntry 	*partIndexHashEntry;
 	LogicalIndexInfoHashEntry	*logicalIndexInfoHashEntry;
 	PartitionIndexNode		*pNode = *pNodePtr;
-	
+	List		   *indexoidlist;
+	ListCell	   *lc;
+
 	Relation partRel = heap_open(partOid, AccessShareLock);
 
 	char relstorage = partRel->rd_rel->relstorage;
 
 	heap_close(partRel, AccessShareLock);
 
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), indexRel),
-			cql("SELECT * FROM pg_index "
-				" WHERE indrelid = :1",
-			ObjectIdGetDatum(partOid)));
-
 	/* fetch each index on part */
-	while (HeapTupleIsValid(tuple = caql_getnext(pcqCtx)))
+	indexoidlist = RelationGetIndexList(partRel);
+	foreach(lc, indexoidlist)
 	{
-		Form_pg_index indForm = (Form_pg_index) GETSTRUCT(tuple);
-
+		Oid			indexoid = lfirst_oid(lc);
 		LogicalIndexType indType = INDTYPE_BITMAP;
+		Relation indRel;
+
+		/*
+		 * We're holding a lock on the table. We assume that's enough to
+		 * prevent concurrent DDL on the index.
+		 */
+		indRel = index_open(indexoid, NoLock);
+
 		/* for AO and AOCO tables we assume the index is bitmap, for heap partitions
 		 * look up the access method from the catalog
 		 */
 		if (RELSTORAGE_HEAP == relstorage)
 		{
-			
-			Relation indRel = RelationIdGetRelation(indForm->indexrelid);
-			Assert(NULL != indRel); 
 			if (BTREE_AM_OID == indRel->rd_rel->relam)
 			{
 				indType = INDTYPE_BTREE;
 			}
-			RelationClose(indRel);
 		}
 
 		/* 
@@ -614,12 +611,13 @@ recordIndexesOnLeafPart(PartitionIndexNode **pNodePtr,
 			heap_close(rootRel, AccessShareLock);
 		}
 
-		
 		/* populate index info structure */
-		ii = populateIndexInfo(tuple, indForm);
-			
+		ii = populateIndexInfo(indRel->rd_indextuple, indRel->rd_index);
+
+		index_close(indRel, NoLock);
+
 		/* construct hash key for the index */
-		partIndexHashKey = constructIndexHashKey(partOid, rootOid, tuple, attmap, ii, indType);
+		partIndexHashKey = constructIndexHashKey(partOid, rootOid, indRel->rd_indextuple, attmap, ii, indType);
 
 		/* lookup PartitionIndexHash table */
 		partIndexHashEntry = (PartitionIndexHashEntry *)hash_search(PartitionIndexHash,
@@ -648,15 +646,15 @@ recordIndexesOnLeafPart(PartitionIndexNode **pNodePtr,
 				 * we should not find the entry in the logical index hash as this is the first
 				 * time we are seeing it
 				 */
-                		ereport(ERROR,
-                                	(errcode(ERRCODE_INTERNAL_ERROR),
-                                 	errmsg("error during BuildLogicalIndexInfo. Found indexrelid \"%d\" in hash",
-                                                indForm->indexrelid
-                                        )));
+				ereport(ERROR,
+						(errcode(ERRCODE_INTERNAL_ERROR),
+						 errmsg("error during BuildLogicalIndexInfo. Found indexrelid \"%d\" in hash",
+								indexoid
+							 )));
 			}
 
 			logicalIndexInfoHashEntry->logicalIndexId = partIndexHashEntry->logicalIndexId;
-			logicalIndexInfoHashEntry->logicalIndexOid = indForm->indexrelid;
+			logicalIndexInfoHashEntry->logicalIndexOid = indexoid;
 			logicalIndexInfoHashEntry->ii = ii;
 			logicalIndexInfoHashEntry->partList = NIL;
 			logicalIndexInfoHashEntry->defaultPartList = NIL;
@@ -676,8 +674,6 @@ recordIndexesOnLeafPart(PartitionIndexNode **pNodePtr,
 		/* update the PartitionIndexNode -> index bitmap */
 		pNode->index = bms_add_member(pNode->index, partIndexHashEntry->logicalIndexId);
 	}
-	
-	caql_endscan(pcqCtx);
 }
 
 /*
