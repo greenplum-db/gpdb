@@ -18,7 +18,7 @@
 using std::string;
 using std::stringstream;
 
-GPWriter::GPWriter(const string& url) {
+GPWriter::GPWriter(const string& url, string fmt) : format(fmt) {
     string file = S3UrlUtility::replaceSchemaFromURL(url, s3ext_encryption);
     constructWriterParams(file);
     restfulServicePtr = &restfulService;
@@ -83,13 +83,14 @@ string GPWriter::constructKeyName(const string& url) {
     sha256_hex(randomData, out_hash_hex);
 
     stringstream ss;
-    ss << url << s3ext_segid << out_hash_hex + SHA256_DIGEST_STRING_LENGTH - 8 - 1 << ".data";
+    ss << url << s3ext_segid << out_hash_hex + SHA256_DIGEST_STRING_LENGTH - 8 - 1 << '.'
+       << this->format;
 
     return ss.str();
 }
 
 // invoked by s3_export(), need to be exception safe
-GPWriter* writer_init(const char* url_with_options) {
+GPWriter* writer_init(const char* url_with_options, const char* format) {
     GPWriter* writer = NULL;
     s3extErrorMessage.clear();
 
@@ -119,7 +120,7 @@ GPWriter* writer_init(const char* url_with_options) {
 
         InitRemoteLog();
 
-        writer = new GPWriter(url);
+        writer = new GPWriter(url, format);
         if (writer == NULL) {
             return NULL;
         }

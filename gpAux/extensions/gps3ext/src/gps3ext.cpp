@@ -7,15 +7,18 @@
 #include <openssl/err.h>
 #include <pthread.h>
 
+extern "C" {
 #include "postgres.h"
 
 #include "access/extprotocol.h"
+#include "catalog/pg_exttable.h"
 #include "catalog/pg_proc.h"
 #include "fmgr.h"
 #include "funcapi.h"
 #include "utils/array.h"
 #include "utils/builtins.h"
 #include "utils/memutils.h"
+}
 
 #include "gpreader.h"
 #include "gpwriter.h"
@@ -33,6 +36,22 @@ PG_FUNCTION_INFO_V1(s3_import);
 extern "C" {
 Datum s3_export(PG_FUNCTION_ARGS);
 Datum s3_import(PG_FUNCTION_ARGS);
+}
+
+/*
+ * Detect data format
+ * used to set file extension on S3 in gpwriter.
+ */
+const char *get_format_str(FunctionCallInfo fcinfo) {
+    Relation rel = EXTPROTOCOL_GET_RELATION(fcinfo);
+    ExtTableEntry *exttbl = GetExtTableEntry(rel->rd_id);
+    char fmtcode = exttbl->fmtcode;
+
+    if (fmttype_is_text(fmtcode)) return "txt";
+    if (fmttype_is_csv(fmtcode)) return "csv";
+    if (fmttype_is_avro(fmtcode)) return "avro";
+    if (fmttype_is_parquet(fmtcode)) return "parquet";
+    return S3_DEFAULT_FORMAT;
 }
 
 /*
@@ -117,10 +136,11 @@ Datum s3_export(PG_FUNCTION_ARGS) {
     /* first call. do any desired init */
     if (gpwriter == NULL) {
         const char *url_with_options = EXTPROTOCOL_GET_URL(fcinfo);
+        const char *format = get_format_str(fcinfo);
 
         thread_setup();
 
-        gpwriter = writer_init(url_with_options);
+        gpwriter = writer_init(url_with_options, format);
         if (!gpwriter) {
             ereport(ERROR, (0, errmsg("Failed to init S3 extension, segid = %d, "
                                       "segnum = %d, please check your "

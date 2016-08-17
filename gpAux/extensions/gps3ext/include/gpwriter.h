@@ -7,9 +7,11 @@
 #include "s3key_writer.h"
 #include "writer.h"
 
+#define S3_DEFAULT_FORMAT "data"
+
 class GPWriter : public Writer {
    public:
-    GPWriter(const string &url);
+    GPWriter(const string &url, string fmt = S3_DEFAULT_FORMAT);
     virtual ~GPWriter() {
     }
 
@@ -43,6 +45,7 @@ class GPWriter : public Writer {
     S3Credential cred;
 
     S3KeyWriter keyWriter;
+    string format;
 
     // it links to itself by default
     // but the pointer here leaves a chance to mock it in unit test
@@ -50,7 +53,7 @@ class GPWriter : public Writer {
 };
 
 // Following 3 functions are invoked by s3_export(), need to be exception safe
-GPWriter *writer_init(const char *url_with_options);
+GPWriter *writer_init(const char *url_with_options, const char *format = S3_DEFAULT_FORMAT);
 bool writer_transfer_data(GPWriter *writer, char *data_buf, int data_len);
 bool writer_cleanup(GPWriter **writer);
 
