@@ -30,6 +30,7 @@ extern "C" {
 #include "nodes/execnodes.h"
 #include "executor/nodeAgg.h"
 #include "utils/elog.h"
+#include "utils/palloc.h"
 #include "executor/tuptable.h"
 #include "executor/executor.h"
 #include "nodes/nodes.h"
@@ -83,12 +84,19 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
   llvm::Function* llvm_ExecTargetList =
       codegen_utils->GetOrRegisterExternalFunction(ExecTargetList,
                                                    "ExecTargetList");
+  llvm::Function* llvm_MemoryContextSwitchTo =
+      codegen_utils->GetOrRegisterExternalFunction(MemoryContextSwitchTo,
+                                                   "MemoryContextSwitchTo");
 
   // Function arguments to advance_aggregates
   llvm::Value* llvm_aggstate = ArgumentByPosition(advance_aggregates_func, 0);
   llvm::Value* llvm_pergroup = ArgumentByPosition(advance_aggregates_func, 1);
   llvm::Value* llvm_mem_manager = ArgumentByPosition(advance_aggregates_func,
                                                      2);
+
+  // Generation-time constants
+  llvm::Value *llvm_tuplecontext = codegen_utils->GetConstant<MemoryContext>(
+      aggstate_->tmpcontext->ecxt_per_tuple_memory);
 
   irb->SetInsertPoint(llvm_entry_block);
 
@@ -109,14 +117,14 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
     AggStatePerAgg peraggstate = &aggstate_->peragg[aggno];
 
     if (peraggstate->numSortCols > 0) {
-      elog(DEBUG1, "We don't codegen DISTINCT and/or ORDER by case");
+      elog(INFO, "We don't codegen DISTINCT and/or ORDER by case");
       return false;
     }
 
     Aggref *aggref = peraggstate->aggref;
     if (!aggref)
     {
-      elog (DEBUG1, "We don't codegen non-aggref functions");
+      elog (INFO, "We don't codegen non-aggref functions");
       return false;
     }
 
@@ -161,6 +169,8 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
     }
 
     //oldContext = MemoryContextSwitchTo(tuplecontext);
+    llvm::Value *llvm_oldContext = irb->CreateCall(llvm_MemoryContextSwitchTo,
+                                                   {llvm_tuplecontext});
 
     // Retrieve pergroup's useful members
     llvm::Value* llvm_pergroupstate = irb->CreateGEP(
@@ -210,6 +220,9 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
 
     // }} FunctionCallInvoke
 
+    // MemoryContextSwitchTo(oldContext);
+    irb->CreateCall(llvm_MemoryContextSwitchTo, {llvm_oldContext});
+
     // }}} advance_transition_function
 
 
@@ -240,7 +253,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
 
   irb->SetInsertPoint(llvm_error_block);
 
-  elog(INFO, "An error has occurred and we are falling back");
+  codegen_utils->CreateElog(INFO, "An error has occurred and we are falling back");
 
   codegen_utils->CreateFallback<AdvanceAggregatesFn>(
       codegen_utils->GetOrRegisterExternalFunction(advance_aggregates,
