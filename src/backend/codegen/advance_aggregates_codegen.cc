@@ -137,7 +137,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
 
     if (peraggstate->evalproj->pi_isVarList)
     {
-      // TODO: call the one with the pointer from previous codegen
+      // TODO(nikos): call the one with the pointer from previous codegen
       irb->CreateCall(llvm_ExecVariableList, {
           codegen_utils->GetConstant<ProjectionInfo *>(peraggstate->evalproj),
           llvm_fcinfo_arg_1,
@@ -162,7 +162,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
     }
 
     // Fallback if attribute is NULL.
-    // TODO: (nikos) Support null attributes.
+    // TODO(nikos): Support null attributes.
     irb->CreateCondBr(irb->CreateLoad(llvm_fcinfo_argnull_1),
                       llvm_error_block /*true*/,
                       llvm_advance_transition_function_block /*false*/);
@@ -175,12 +175,11 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
     //    advance_transition_function(aggstate, peraggstate, pergroupstate,
     //                        &fcinfo, mem_manager); {{{
 
-    // TODO: Support fn_strict
-    if (peraggstate->transfn.fn_strict)
-    {
-      elog(INFO, "We do not support strict functions.");
-      return false;
-    }
+    //
+    // TODO(nikos): Currently we do not support NULL attributes. However, if we
+    // support NULL attributes and transition function is
+    // strict (transfn->fn_strict), then we have to initiate transValue,
+    // noTransvalue, transValueIsNull accordingly (see invoke_agg_trans_func).
 
     //oldContext = MemoryContextSwitchTo(tuplecontext);
     llvm::Value *llvm_oldContext = irb->CreateCall(llvm_MemoryContextSwitchTo,
@@ -226,7 +225,6 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
 
     llvm::Value *newVal = nullptr;
     pg_func_gen->GenerateCode(codegen_utils, pg_func_info, &newVal);
-
     llvm::Value *result = codegen_utils->CreateCppTypeToDatumCast(newVal);
 
     // }} FunctionCallInvoke
@@ -249,7 +247,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
 
     // Currently we do not support null attributes.
     // Thus we set transValueIsNull and noTransValue to false by default.
-    // TODO: (nikos) Support null attributes.
+    // TODO(nikos): Support null attributes.
     irb->CreateStore(codegen_utils->GetConstant<bool>(false),
                      llvm_pergroupstate_transValueIsNull);
     irb->CreateStore(codegen_utils->GetConstant<bool>(false),
