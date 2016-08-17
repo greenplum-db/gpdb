@@ -1903,6 +1903,7 @@ _SPI_execute_plan(_SPI_plan * plan, ParamListInfo paramLI,
                     {
                     	/* For log level of DEBUG4, gpmon is sent information about SPI internal queries as well */
 						Assert(plansource->query_string);
+						gpmon_qlog_query_submit(qdesc->gpmon_pkt);
 						gpmon_qlog_query_text(qdesc->gpmon_pkt,
 											  plansource->query_string,
 											  application_name,
