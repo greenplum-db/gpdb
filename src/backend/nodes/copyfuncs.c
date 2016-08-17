@@ -24,7 +24,6 @@
 #include "postgres.h"
 
 #include "access/attnum.h"
-#include "catalog/caqlparse.h"
 #include "catalog/gp_policy.h"
 #include "miscadmin.h"
 #include "nodes/plannodes.h"
@@ -4393,36 +4392,6 @@ _copyAlterTypeStmt(AlterTypeStmt *from)
 	return newnode;
 }
 
-static CaQLSelect *
-_copyCaQLSelect(const CaQLSelect *from)
-{
-	CaQLSelect *newnode = makeNode(CaQLSelect);
-
-	COPY_NODE_FIELD(targetlist);
-	COPY_STRING_FIELD(from);
-	COPY_NODE_FIELD(where);
-	COPY_NODE_FIELD(orderby);
-	COPY_SCALAR_FIELD(forupdate);
-
-	return newnode;
-}
-
-static CaQLExpr *
-_copyCaQLExpr(const CaQLExpr *from)
-{
-	CaQLExpr *newnode = makeNode(CaQLExpr);
-
-	COPY_STRING_FIELD(left);
-	COPY_STRING_FIELD(op);
-	COPY_SCALAR_FIELD(right);
-	COPY_SCALAR_FIELD(attnum);
-	COPY_SCALAR_FIELD(strategy);
-	COPY_SCALAR_FIELD(fnoid);
-	COPY_SCALAR_FIELD(typid);
-
-	return newnode;
-}
-
 /* ****************************************************************
  *					pg_list.h copy functions
  * ****************************************************************
@@ -5329,13 +5298,6 @@ copyObject(void *from)
 			break;
 		case T_DenyLoginPoint:
 			retval = _copyDenyLoginPoint(from);
-			break;
-
-		case T_CaQLSelect:
-			retval = _copyCaQLSelect(from);
-			break;
-		case T_CaQLExpr:
-			retval = _copyCaQLExpr(from);
 			break;
 
 		default:

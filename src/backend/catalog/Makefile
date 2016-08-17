@@ -26,7 +26,7 @@ OBJS = catalog.o dependency.o heap.o index.o indexing.o namespace.o aclchk.o \
        aocatalog.o $(QUICKLZ_COMPRESSION)
 
 
-SUBDIRS = caql core
+SUBDIRS = core
 
 BKIFILES = postgres.bki postgres.description postgres.shdescription
 

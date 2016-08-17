@@ -17,7 +17,6 @@
 
 #include "fmgr.h"
 #include "access/htup.h"
-#include "catalog/catquery.h"
 #include "nodes/relation.h"
 
 
