@@ -431,11 +431,9 @@ aclitemout(PG_FUNCTION_ARGS)
 {
 	AclItem    *aip = PG_GETARG_ACLITEM_P(0);
 	char	   *p;
-	char	   *prole;
 	char	   *out;
+	HeapTuple	htup;
 	unsigned	i;
-	int			fetchCount;
-	bool		bIsNull;
 
 	out = palloc(strlen("=/") +
 				 2 * N_ACL_RIGHTS +
@@ -447,19 +445,13 @@ aclitemout(PG_FUNCTION_ARGS)
 
 	if (aip->ai_grantee != ACL_ID_PUBLIC)
 	{
-		prole = caql_getcstring_plus(
-				NULL,
-				&fetchCount,
-				&bIsNull,
-				cql("SELECT rolname FROM pg_authid "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(aip->ai_grantee)));
-
-		if (fetchCount)
+		htup = SearchSysCache(AUTHOID,
+							  ObjectIdGetDatum(aip->ai_grantee),
+							  0, 0, 0);
+		if (HeapTupleIsValid(htup))
 		{
-			Assert(!bIsNull);
-			putid(p, prole);
-			pfree(prole);
+			putid(p, NameStr(((Form_pg_authid) GETSTRUCT(htup))->rolname));
+			ReleaseSysCache(htup);
 		}
 		else
 		{
@@ -483,19 +475,13 @@ aclitemout(PG_FUNCTION_ARGS)
 	*p++ = '/';
 	*p = '\0';
 
-	prole = caql_getcstring_plus(
-			NULL,
-			&fetchCount,
-			&bIsNull,
-			cql("SELECT rolname FROM pg_authid "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(aip->ai_grantor)));
-
-	if (fetchCount)
+	htup = SearchSysCache(AUTHOID,
+						  ObjectIdGetDatum(aip->ai_grantor),
+						  0, 0, 0);
+	if (HeapTupleIsValid(htup))
 	{
-		Assert(!bIsNull);
-		putid(p, prole);
-		pfree(prole);
+		putid(p, NameStr(((Form_pg_authid) GETSTRUCT(htup))->rolname));
+		ReleaseSysCache(htup);
 	}
 	else
 	{
@@ -2311,12 +2297,9 @@ convert_language_name(text *languagename)
 	langname = DatumGetCString(DirectFunctionCall1(textout,
 											 PointerGetDatum(languagename)));
 
-	oid = caql_getoid(
-			NULL,
-			cql("SELECT oid FROM pg_language "
-				" WHERE lanname = :1 ",
-				CStringGetDatum(langname)));
-
+	oid = GetSysCacheOid(LANGNAME,
+						 CStringGetDatum(langname),
+						 0, 0, 0);
 	if (!OidIsValid(oid))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -2533,12 +2516,9 @@ convert_schema_name(text *schemaname)
 	nspname = DatumGetCString(DirectFunctionCall1(textout,
 											   PointerGetDatum(schemaname)));
 
-	oid = caql_getoid(
-			NULL,
-			cql("SELECT oid FROM pg_namespace "
-				" WHERE nspname = :1 ",
-				CStringGetDatum(nspname)));
-
+	oid = GetSysCacheOid(NAMESPACENAME,
+						 CStringGetDatum(nspname),
+						 0, 0, 0);
 	if (!OidIsValid(oid))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_SCHEMA),
@@ -3038,21 +3018,15 @@ has_rolinherit(Oid roleid)
 {
 	bool		result = false;
 	HeapTuple	utup;
-	cqContext  *pcqCtx;
 
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_authid "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(roleid)));
-
-	utup = caql_getnext(pcqCtx);
-
+	utup = SearchSysCache(AUTHOID,
+						  ObjectIdGetDatum(roleid),
+						  0, 0, 0);
 	if (HeapTupleIsValid(utup))
+	{
 		result = ((Form_pg_authid) GETSTRUCT(utup))->rolinherit;
-
-	caql_endscan(pcqCtx);
-
+		ReleaseSysCache(utup);
+	}
 	return result;
 }
 

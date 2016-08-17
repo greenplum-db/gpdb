@@ -49,13 +49,6 @@
 #include "utils/fmgroids.h"
 #include "funcapi.h"
 
-static Datum
-attstatsslot_getattr(cqContext	*pcqCtx, 
-					 TupleDesc	 tupdesc,
-					 HeapTuple	 statstuple,
-					 AttrNumber	 attnum, bool *isnull);
-
-
 
 /*				---------- AMOP CACHES ----------						 */
 
@@ -3147,52 +3140,8 @@ get_attdistinct(Oid relid, AttrNumber attnum)
  * But the caller must have the correct (or at least binary-compatible)
  * type ID to pass to free_attstatsslot later.
  */
-extern bool get_attstatsslot_desc(TupleDesc tupdesc, HeapTuple statstuple,
-				 Oid atttype, int32 atttypmod,
-				 int reqkind, Oid reqop,
-				 Datum **values, int *nvalues,
-				 float4 **numbers, int *nnumbers);
-
-bool 
-get_attstatsslot(HeapTuple statstuple,
-		 Oid atttype, int32 atttypmod,
-				 int reqkind, Oid reqop,
-				 Datum **values, int *nvalues,
-				 float4 **numbers, int *nnumbers)
-{
-	return get_attstatsslot_desc(NULL, statstuple,
-			atttype, atttypmod, reqkind, reqop,
-			values, nvalues, numbers, nnumbers
-			);
-}
-
-/* get an attribute any way you can! */
-static Datum
-attstatsslot_getattr(cqContext	*pcqCtx, 
-					 TupleDesc	 tupdesc,
-					 HeapTuple	 statstuple,
-					 AttrNumber	 attnum, bool *isnull)
-{
-	Datum		val;
-
-	if (pcqCtx)
-		val = caql_getattr(pcqCtx, attnum, isnull);
-	else
-	{
-		if(tupdesc)
-			val = heap_getattr(statstuple, attnum,
-							   tupdesc, isnull);
-		else
-			val = SysCacheGetAttr(STATRELATT, statstuple,
-								  attnum,
-								  isnull);
-	}
-		
-	return val;
-}
-
 bool
-get_attstatsslot_desc(TupleDesc tupdesc, HeapTuple statstuple,
+get_attstatsslot(HeapTuple statstuple,
 				 Oid atttype, int32 atttypmod,
 				 int reqkind, Oid reqop,
 				 Datum **values, int *nvalues,
@@ -3223,12 +3172,9 @@ get_attstatsslot_desc(TupleDesc tupdesc, HeapTuple statstuple,
 		*values = NULL;
 		*nvalues = 0;
 
-		val = attstatsslot_getattr(NULL, 
-								   tupdesc, 
-								   statstuple, 
-								   Anum_pg_statistic_stavalues1 + i, 
-								   &isnull);
-
+		val = SysCacheGetAttr(STATRELATT, statstuple,
+							  Anum_pg_statistic_stavalues1 + i,
+							  &isnull);
 		if (isnull)
 			elog(ERROR, "stavalues is null");
 		statarray = DatumGetArrayTypeP(val);
@@ -3278,6 +3224,7 @@ get_attstatsslot_desc(TupleDesc tupdesc, HeapTuple statstuple,
 
 			ReleaseSysCache(typeTuple);
 		}
+
 		/*
 		 * Free statarray if it's a detoasted copy.
 		 */
@@ -3290,12 +3237,9 @@ get_attstatsslot_desc(TupleDesc tupdesc, HeapTuple statstuple,
 		*numbers = NULL;
 		*nnumbers = 0;
 
-		val = attstatsslot_getattr(NULL, 
-								   tupdesc, 
-								   statstuple, 
-								   Anum_pg_statistic_stanumbers1 + i, 
-								   &isnull);
-
+		val = SysCacheGetAttr(STATRELATT, statstuple,
+							  Anum_pg_statistic_stanumbers1 + i,
+							  &isnull);
 		if (isnull)
 			elog(ERROR, "stanumbers is null");
 		statarray = DatumGetArrayTypeP(val);
