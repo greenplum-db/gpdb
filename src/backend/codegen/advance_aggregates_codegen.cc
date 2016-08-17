@@ -81,9 +81,6 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
 
 
   // External functions
-  llvm::Function* llvm_ExecVariableList =
-      codegen_utils->GetOrRegisterExternalFunction(ExecVariableList,
-                                                   "ExecVariableList");
   llvm::Function* llvm_ExecTargetList =
       codegen_utils->GetOrRegisterExternalFunction(ExecTargetList,
                                                    "ExecTargetList");
@@ -130,7 +127,22 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
 
     if (peraggstate->evalproj->pi_isVarList)
     {
-      // TODO(nikos): call the one with the pointer from previous codegen
+      llvm::Function* llvm_ExecVariableList = nullptr;
+      if (nullptr != peraggstate->evalproj->
+          ExecVariableList_gen_info.code_generator) {
+        // Use the enrolled ExecVariableList version
+        llvm_ExecVariableList = codegen_utils->
+            GetOrRegisterExternalFunction(
+                peraggstate->evalproj->ExecVariableList_gen_info.
+                ExecVariableList_fn, "ExecVariableList"+std::to_string(aggno));
+      }
+      else
+      {
+        llvm_ExecVariableList = codegen_utils->
+            GetOrRegisterExternalFunction(
+                ExecVariableList, "ExecVariableList"+std::to_string(aggno));
+      }
+
       irb->CreateCall(llvm_ExecVariableList, {
           codegen_utils->GetConstant<ProjectionInfo *>(peraggstate->evalproj),
           llvm_arg,
