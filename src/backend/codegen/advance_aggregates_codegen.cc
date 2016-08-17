@@ -182,26 +182,20 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
         codegen_utils->GetPointerToMember(
             llvm_pergroupstate, &AggStatePerGroupData::transValueIsNull);
 
-
     // fcinfo->arg[0] = transValue;
-    // fcinfo->argnull[0] = *transValueIsNull; {{
     irb->CreateStore(irb->CreateLoad(llvm_pergroupstate_transValue),
                      llvm_fcinfo_arg_0);
+    // fcinfo->argnull[0] = *transValueIsNull;
     irb->CreateStore(irb->CreateLoad(llvm_pergroupstate_transValueIsNull),
                      llvm_fcinfo_argnull_0);
-    // }}
 
     //newVal = FunctionCallInvoke(fcinfo); {{
-
-    llvm::Value *llvm_fcinfo_arg_1_i32 = irb->
-        CreateTrunc(irb->CreateLoad(llvm_fcinfo_arg_1),
-                    codegen_utils->GetType<int32>());
 
     PGFuncGeneratorInfo pg_func_info(
         advance_aggregates_func,
         llvm_error_block,
         {irb->CreateLoad(llvm_fcinfo_arg_0),
-            codegen_utils->CreateCast<int64, int32>(llvm_fcinfo_arg_1_i32)}
+         irb->CreateLoad(llvm_fcinfo_arg_1)}
     );
 
     PGFuncGeneratorInterface* pg_func_gen = OpExprTreeGenerator::
