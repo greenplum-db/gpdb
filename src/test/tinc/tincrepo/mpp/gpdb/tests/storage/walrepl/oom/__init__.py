@@ -47,7 +47,7 @@ class OOMClass(object):
         self.standby_loc = os.path.join(os.path.split(self.mdd)[0],
                                         self.standby_dirname)
         self.standby = Standby(self.standby_loc, self.standby_port)
- 
+
     def create_standby(self):
         self.pgutil.clean_dir(self.host,self.standby_loc)
         self.gpinit.run(option = '-P %s -s %s -F pg_system:%s' % (self.standby_port, self.host, self.standby_loc))
@@ -62,7 +62,7 @@ class OOMClass(object):
         for host in config.get_hosts() :
             if host.strip() == self.host :
                 continue
-            cmd = "gpssh -h %s -e 'mkdir -p %s; scp %s/oom_malloc.so %s:%s/;scp %s/wrapper.sh %s:%s/'" % (host.strip(), builddir, builddir, host.strip(), builddir, builddir, host.strip(), builddir) 
+            cmd = "gpssh -h %s -e 'mkdir -p %s'; scp %s/oom_malloc.so %s:%s/; scp %s/wrapper.sh %s:%s/" % (host.strip(), builddir, builddir, host.strip(), builddir, builddir, host.strip(), builddir)
             self.pgutil.run(cmd)
 
     def touch_malloc(self):
