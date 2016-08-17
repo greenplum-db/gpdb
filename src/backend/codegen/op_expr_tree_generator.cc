@@ -84,6 +84,12 @@ void OpExprTreeGenerator::InitializeSupportedFunction() {
           "int4mi",
           &PGArithFuncGenerator<int32_t, int32_t, int32_t>::SubWithOverflow));
 
+  supported_function_[463] = std::unique_ptr<PGFuncGeneratorInterface>(
+      new PGGenericFuncGenerator<int64_t, int64_t>(
+          463,
+          "int8pl",
+          &PGArithFuncGenerator<int64_t, int64_t, int64_t>::AddWithOverflow));
+
   supported_function_[216] = std::unique_ptr<PGFuncGeneratorInterface>(
       new PGGenericFuncGenerator<float8, float8>(
           216,
