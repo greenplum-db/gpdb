@@ -9,8 +9,8 @@
 #include "postgres.h"
 #include "fmgr.h"
 
+#include "access/genam.h"
 #include "access/reloptions.h"
-#include "catalog/catquery.h"
 #include "catalog/pg_attribute_encoding.h"
 #include "catalog/pg_compression.h"
 #include "catalog/dependency.h"
@@ -30,31 +30,29 @@
 static void
 add_attribute_encoding_entry(Oid relid, AttrNumber attnum, Datum attoptions)
 {
+	Relation	rel;
 	Datum values[Natts_pg_attribute_encoding];
 	bool nulls[Natts_pg_attribute_encoding];
 	HeapTuple tuple;
-	cqContext	   *pcqCtx;
 	
 	Insist(attnum != InvalidAttrNumber);
-	
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("INSERT INTO pg_attribute_encoding",
-				NULL));
+
+	rel = heap_open(AttributeEncodingRelationId, RowExclusiveLock);
 
 	MemSet(nulls, 0, sizeof(nulls));
 	values[Anum_pg_attribute_encoding_attrelid - 1] = ObjectIdGetDatum(relid);
 	values[Anum_pg_attribute_encoding_attnum - 1] = Int16GetDatum(attnum);
 	values[Anum_pg_attribute_encoding_attoptions - 1] = attoptions;
 
-	tuple = caql_form_tuple(pcqCtx, values, nulls);
+	tuple = heap_form_tuple(RelationGetDescr(rel), values, nulls);
 
 	/* insert a new tuple */
-	caql_insert(pcqCtx, tuple); /* implicit update of index as well */
+	simple_heap_insert(rel, tuple);
+	CatalogUpdateIndexes(rel, tuple);
 
 	heap_freetuple(tuple);
 
-	caql_endscan(pcqCtx);
+	heap_close(rel, RowExclusiveLock);
 }
 
 /*
@@ -91,9 +89,9 @@ Datum *
 get_rel_attoptions(Oid relid, AttrNumber max_attno)
 {
 	Form_pg_attribute attform;
+	ScanKeyData skey;
+	SysScanDesc scan;
 	HeapTuple		tuple;
-	cqContext		cqc;
-	cqContext	   *pcqCtx;
 	Datum		   *dats;
 	Relation 		pgae = heap_open(AttributeEncodingRelationId,
 									 AccessShareLock);
@@ -103,13 +101,14 @@ get_rel_attoptions(Oid relid, AttrNumber max_attno)
 
 	dats = palloc0(max_attno * sizeof(Datum));
 
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), pgae),
-			cql("SELECT * FROM pg_attribute_encoding "
-				" WHERE attrelid = :1 ",
-				ObjectIdGetDatum(relid)));
+	ScanKeyInit(&skey,
+				Anum_pg_attribute_encoding_attrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+	scan = systable_beginscan(pgae, AttributeEncodingAttrelidIndexId, true,
+							  SnapshotNow, 1, &skey);
 
-	while (HeapTupleIsValid(tuple = caql_getnext(pcqCtx)))
+	while (HeapTupleIsValid(tuple = systable_getnext(scan)))
 	{
 		Form_pg_attribute_encoding a = 
 			(Form_pg_attribute_encoding)GETSTRUCT(tuple);
@@ -128,7 +127,7 @@ get_rel_attoptions(Oid relid, AttrNumber max_attno)
 									 attform->attlen);
 	}
 
-	caql_endscan(pcqCtx);
+	systable_endscan(scan);
 
 	heap_close(pgae, AccessShareLock);
 
@@ -304,11 +303,25 @@ AddRelationAttributeEncodings(Relation rel, List *attr_encodings)
 void
 RemoveAttributeEncodingsByRelid(Oid relid)
 {
-	bool 		found = false;
+	Relation	rel;
+	ScanKeyData skey;
+	SysScanDesc scan;
+	HeapTuple	tup;
 
-	found = (0 != caql_getcount(
-					 NULL,
-					 cql("DELETE FROM pg_attribute_encoding "
-						 " WHERE attrelid = :1 ",
-						 ObjectIdGetDatum(relid))));
+	rel = heap_open(AttributeEncodingRelationId, RowExclusiveLock);
+
+	ScanKeyInit(&skey,
+				Anum_pg_attribute_encoding_attrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+	scan = systable_beginscan(rel, AttributeEncodingAttrelidIndexId, true,
+							  SnapshotNow, 1, &skey);
+	while (HeapTupleIsValid(tup = systable_getnext(scan)))
+	{
+		simple_heap_delete(rel, &tup->t_self);
+	}
+
+	systable_endscan(scan);
+
+	heap_close(rel, RowExclusiveLock);
 }

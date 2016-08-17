@@ -77,7 +77,6 @@
 #include <ctype.h>
 #include <math.h>
 
-#include "catalog/catquery.h"
 #include "catalog/pg_opfamily.h"
 #include "catalog/pg_statistic.h"
 #include "catalog/pg_type.h"
@@ -3634,19 +3633,11 @@ examine_variable(PlannerInfo *root, Node *node, int varRelid,
 
 			if (ConstraintGetPrimaryKeyOf(rte->relid, var->varattno, &pkrelid, &pkattno))
 			{
-				cqContext  *relcqCtx;
 				HeapTuple	pkStatsTuple;
 
 				/* SELECT reltuples FROM pg_class */
 
-				relcqCtx = caql_beginscan(
-						NULL,
-						cql("SELECT * FROM pg_class "
-							" WHERE oid = :1 ",
-							ObjectIdGetDatum(pkrelid)));
-				
-				pkStatsTuple = caql_getnext(relcqCtx);
-
+				pkStatsTuple = SearchSysCache1(RELOID, ObjectIdGetDatum(pkrelid));
 				if (HeapTupleIsValid(pkStatsTuple)) 
 				{
 					Form_pg_class classForm = (Form_pg_class) GETSTRUCT(pkStatsTuple);
@@ -3656,7 +3647,7 @@ examine_variable(PlannerInfo *root, Node *node, int varRelid,
 					}
 				}
 
-				caql_endscan(relcqCtx);
+				ReleaseSysCache(pkStatsTuple);
 			}
 		}
 		if (rte->inh)

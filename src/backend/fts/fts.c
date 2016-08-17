@@ -17,7 +17,6 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
-#include "catalog/catquery.h"
 #include "catalog/gp_configuration.h"
 #include "catalog/gp_segment_config.h"
 #include "catalog/pg_authid.h"
@@ -857,6 +856,8 @@ probeUpdateConfig(FtsSegmentStatusChange *changes, int changeCount)
 {
 	Relation configrel;
 	Relation histrel;
+	SysScanDesc sscan;
+	ScanKeyData scankey;
 	HeapTuple configtuple;
 	HeapTuple newtuple;
 	HeapTuple histtuple;
@@ -870,7 +871,7 @@ probeUpdateConfig(FtsSegmentStatusChange *changes, int changeCount)
 	bool changelogging;
 	int i;
 	char desc[SQL_CMD_BUF_SIZE];
-	cqContext cqc_config, cqc_hist;
+
 	/*
 	 * Commit/abort transaction below will destroy
 	 * CurrentResourceOwner.  We need it for catalog reads.
@@ -883,8 +884,6 @@ probeUpdateConfig(FtsSegmentStatusChange *changes, int changeCount)
 						RowExclusiveLock);
 	configrel = heap_open(GpSegmentConfigRelationId,
 						  RowExclusiveLock);
-	caql_addrel(cqclr(&cqc_config), configrel);
-	caql_addrel(cqclr(&cqc_hist), histrel);
 
 	for (i = 0; i < changeCount; i++)
 	{
@@ -903,7 +902,6 @@ probeUpdateConfig(FtsSegmentStatusChange *changes, int changeCount)
 
 		/*
 		 * Insert new tuple into gp_configuration_history catalog.
-		 * Caql does not seem to support this table currently.
 		 */
 		histvals[Anum_gp_configuration_history_time-1] =
 				TimestampTzGetDatum(GetCurrentTimestamp());
@@ -916,22 +914,21 @@ probeUpdateConfig(FtsSegmentStatusChange *changes, int changeCount)
 				 primary ? 'p' : 'm');
 		histvals[Anum_gp_configuration_history_desc-1] =
 					CStringGetTextDatum(desc);
-		caql_beginscan(&cqc_hist,
-					   cql("INSERT INTO gp_configuration_history", NULL));
 
-		histtuple = caql_form_tuple(&cqc_hist, histvals, histnulls);
-		caql_insert(&cqc_hist, histtuple);
-		caql_endscan(&cqc_hist);
+		histtuple = heap_form_tuple(RelationGetDescr(histrel), histvals, histnulls);
+		simple_heap_insert(histrel, histtuple);
+		CatalogUpdateIndexes(histrel, histtuple);
 
 		/*
-		 * Find and update gp_segment_configuration tuple using caql.
+		 * Find and update gp_segment_configuration tuple.
 		 */
-		caql_beginscan(&cqc_config,
-					   cql("SELECT * FROM gp_segment_configuration  "
-						   "WHERE dbid = :1  FOR UPDATE ",
-						   Int16GetDatum(changes[i].dbid)));
-
-		configtuple = caql_getnext(&cqc_config);
+		ScanKeyInit(&scankey,
+					Anum_gp_segment_configuration_dbid,
+					BTEqualStrategyNumber, F_INT2EQ,
+					Int16GetDatum(changes[i].dbid));
+		sscan = systable_beginscan(configrel, GpSegmentConfigDbidIndexId,
+								   true, SnapshotNow, 1, &scankey);
+		configtuple = systable_getnext(sscan);
 		if (!HeapTupleIsValid(configtuple))
 		{
 			elog(ERROR, "FTS cannot find dbid=%d in %s", changes[i].dbid,
@@ -950,10 +947,12 @@ probeUpdateConfig(FtsSegmentStatusChange *changes, int changeCount)
 		}
 		repls[Anum_gp_segment_configuration_mode-1] = changelogging;
 
-		newtuple = caql_modify_current(&cqc_config, configvals,
-									   confignulls, repls);
-		caql_update_current(&cqc_config, newtuple);
-		caql_endscan(&cqc_config);
+		newtuple = heap_modify_tuple(configtuple, RelationGetDescr(configrel),
+									 configvals, confignulls, repls);
+		simple_heap_update(configrel, &configtuple->t_self, newtuple);
+		CatalogUpdateIndexes(configrel, newtuple);
+
+		systable_endscan(sscan);
 		pfree(newtuple);
 		/*
 		 * Update shared memory
@@ -984,22 +983,22 @@ getFailoverStrategy(char *strategy)
 {
 	Relation	strategy_rel;
 	HeapTuple	strategy_tup;
-	cqContext  *pcqCtx;
-	cqContext	cqc;
-	bool	isNull=true;
+	SysScanDesc sscan;
 
 	Assert(strategy != NULL);
 
 	strategy_rel = heap_open(GpFaultStrategyRelationId, AccessShareLock);
 
-	/* XXX XXX: only one of these? then would be getfirst... */
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), strategy_rel),
-			cql("SELECT * FROM gp_fault_strategy ", NULL));
-
-	while (HeapTupleIsValid(strategy_tup = caql_getnext(pcqCtx)))
+	/*
+	 * SELECT * FROM gp_fault_strategy
+	 *
+	 * XXX XXX: only one of these?
+	 */
+	sscan = systable_beginscan(strategy_rel, InvalidOid, false, SnapshotNow, 0, NULL);
+	while (HeapTupleIsValid(strategy_tup = systable_getnext(sscan)))
 	{
 		Datum	strategy_datum;
+		bool	isNull=true;
 
 		strategy_datum = heap_getattr(strategy_tup, Anum_gp_fault_strategy_fault_strategy, RelationGetDescr(strategy_rel), &isNull);
 
@@ -1009,7 +1008,7 @@ getFailoverStrategy(char *strategy)
 		*strategy = DatumGetChar(strategy_datum);
 	}
 
-	caql_endscan(pcqCtx);
+	systable_endscan(sscan);
 	heap_close(strategy_rel, AccessShareLock);
 	return;
 }
@@ -1104,6 +1103,8 @@ FtsMarkSegmentsInSync(CdbComponentDatabaseInfo *primary, CdbComponentDatabaseInf
 	uint8	segStatus=0;
 	Relation configrel;
 	Relation histrel;
+	ScanKeyData scankey;
+	SysScanDesc sscan;
 	HeapTuple configtuple;
 	HeapTuple newtuple;
 	HeapTuple histtuple;
@@ -1113,7 +1114,6 @@ FtsMarkSegmentsInSync(CdbComponentDatabaseInfo *primary, CdbComponentDatabaseInf
 	Datum histvals[Natts_gp_configuration_history];
 	bool histnulls[Natts_gp_configuration_history] = { false };
 	char *desc = "FTS: changed segment to insync from resync.";
-	cqContext cqc_config, cqc_hist;
 	/*
 	 * Commit/abort transaction below will destroy
 	 * CurrentResourceOwner.  We need it for catalog reads.
@@ -1135,15 +1135,15 @@ FtsMarkSegmentsInSync(CdbComponentDatabaseInfo *primary, CdbComponentDatabaseInf
 						RowExclusiveLock);
 	configrel = heap_open(GpSegmentConfigRelationId,
 						  RowExclusiveLock);
-	caql_addrel(cqclr(&cqc_config), configrel);
-	caql_addrel(cqclr(&cqc_hist), histrel);
 
 	/* update gp_segment_configuration to insync */
-	caql_beginscan(&cqc_config,
-				   cql("SELECT * FROM gp_segment_configuration  "
-					   "WHERE dbid = :1 FOR UPDATE ",
-					   Int16GetDatum(primary->dbid)));
-	configtuple = caql_getnext(&cqc_config);
+	ScanKeyInit(&scankey,
+				Anum_gp_segment_configuration_dbid,
+				BTEqualStrategyNumber, F_INT2EQ,
+				Int16GetDatum(primary->dbid));
+	sscan = systable_beginscan(configrel, GpSegmentConfigDbidIndexId,
+							   true, SnapshotNow, 1, &scankey);
+	configtuple = systable_getnext(sscan);
 	if (!HeapTupleIsValid(configtuple))
 	{
 		elog(ERROR,"FTS cannot find dbid (%d, %d) in %s", primary->dbid,
@@ -1151,41 +1151,48 @@ FtsMarkSegmentsInSync(CdbComponentDatabaseInfo *primary, CdbComponentDatabaseInf
 	}
 	configvals[Anum_gp_segment_configuration_mode-1] = CharGetDatum('s');
 	repls[Anum_gp_segment_configuration_mode-1] = true;
-	newtuple = caql_modify_current(&cqc_config, configvals, confignulls, repls);
-	caql_update_current(&cqc_config, newtuple);
-	caql_endscan(&cqc_config);
+	newtuple = heap_modify_tuple(configtuple, RelationGetDescr(configrel),
+								 configvals, confignulls, repls);
+	simple_heap_update(configrel, &configtuple->t_self, newtuple);
+	CatalogUpdateIndexes(configrel, newtuple);
 
-	caql_beginscan(&cqc_config,
-				   cql("SELECT * FROM gp_segment_configuration  "
-					   "WHERE dbid = :1 FOR UPDATE ",
-					   Int16GetDatum(mirror->dbid)));
-	configtuple = caql_getnext(&cqc_config);
+	systable_endscan(sscan);
+
+	ScanKeyInit(&scankey,
+				Anum_gp_segment_configuration_dbid,
+				BTEqualStrategyNumber, F_INT2EQ,
+				Int16GetDatum(mirror->dbid));
+	sscan = systable_beginscan(configrel, GpSegmentConfigDbidIndexId,
+							   true, SnapshotNow, 1, &scankey);
+	configtuple = systable_getnext(sscan);
 	if (!HeapTupleIsValid(configtuple))
 	{
 		elog(ERROR,"FTS cannot find dbid (%d, %d) in %s", primary->dbid,
 			 mirror->dbid, RelationGetRelationName(configrel));
 	}
-	newtuple = caql_modify_current(&cqc_config, configvals, confignulls, repls);
-	caql_update_current(&cqc_config, newtuple);
-	caql_endscan(&cqc_config);
+	newtuple = heap_modify_tuple(configtuple, RelationGetDescr(configrel),
+								 configvals, confignulls, repls);
+	simple_heap_update(configrel, &configtuple->t_self, newtuple);
+	CatalogUpdateIndexes(configrel, newtuple);
+
+	systable_endscan(sscan);
 
 	/* update configuration history */
-	caql_beginscan(&cqc_hist,
-				   cql("INSERT INTO gp_configuration_history", NULL));
-
 	histvals[Anum_gp_configuration_history_time-1] =
 			TimestampTzGetDatum(GetCurrentTimestamp());
 	histvals[Anum_gp_configuration_history_dbid-1] =
 			Int16GetDatum(primary->dbid);
 	histvals[Anum_gp_configuration_history_desc-1] =
 				CStringGetTextDatum(desc);
-	histtuple = caql_form_tuple(&cqc_hist, histvals, histnulls);
-	caql_insert(&cqc_hist, histtuple);
+	histtuple = heap_form_tuple(RelationGetDescr(histrel), histvals, histnulls);
+	simple_heap_insert(histrel, histtuple);
+	CatalogUpdateIndexes(histrel, histtuple);
+
 	histvals[Anum_gp_configuration_history_dbid-1] =
 			Int16GetDatum(mirror->dbid);
-	histtuple = caql_form_tuple(&cqc_hist, histvals, histnulls);
-	caql_insert(&cqc_hist, histtuple);
-	caql_endscan(&cqc_hist);
+	histtuple = heap_form_tuple(RelationGetDescr(histrel), histvals, histnulls);
+	simple_heap_insert(histrel, histtuple);
+	CatalogUpdateIndexes(histrel, histtuple);
 	ereport(LOG,
 			(errmsg("FTS: resynchronization of mirror (dbid=%d, content=%d) on %s:%d has completed.",
 					mirror->dbid, mirror->segindex, mirror->address, mirror->port ),

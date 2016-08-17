@@ -3323,16 +3323,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_enable_caql_logging", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Enable caql logging."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_enable_caql_logging,
-		true, NULL, NULL
-	},
-
-	{
 		{"dml_ignore_target_partition_check", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Ignores checking whether the user provided correct partition during a direct insert to a leaf partition"),
 			NULL,

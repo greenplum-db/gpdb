@@ -24,7 +24,6 @@
 #include "access/transam.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
-#include "catalog/catquery.h"
 #include "catalog/dependency.h"
 #include "catalog/heap.h"
 #include "catalog/index.h"
@@ -1138,62 +1137,33 @@ swap_relation_files(Oid r1, Oid r2, TransactionId frozenXid, bool swap_stats)
 {
 	Relation	relRelation;
 	HeapTuple	reltup1,
-			reltup2, reltup0;
+				reltup2;
 	Form_pg_class relform1,
 				relform2;
 	Oid			swaptemp;
 	char		swapchar;
+	CatalogIndexState indstate;
 	bool		isAO1, isAO2;
-	cqContext	cqc1;
-	cqContext	cqc2;
-	cqContext  *pcqCtx1;
-	cqContext  *pcqCtx2;
 
 	/* 
 	 * We need writable copies of both pg_class tuples.
 	 */
 	relRelation = heap_open(RelationRelationId, RowExclusiveLock);
 
-	/* NOTE: jic 20120925 a bit of a trick here.  Normally, to update
-	 * a single tuple, the preferred method is caql_getfirst(), which
-	 * returns a writeable copy.  However, in this case, we use
-	 * caql_beginscan() and copy it manually.  We use the caql context
-	 * for the beginscan/endscan block to update *both* tuples,
-	 * because it is cheaper than two single updates
-	 */
-	pcqCtx1 = caql_beginscan(
-			caql_addrel(cqclr(&cqc1), relRelation),
-			cql("SELECT * FROM pg_class "
-				" WHERE oid = :1 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(r1)));
-
-	reltup0 = caql_getnext(pcqCtx1); /* this is the real "current"
-									  * tuple for this context */
-
-	if (!HeapTupleIsValid(reltup0))
-		elog(ERROR, "cache lookup failed for relation %u", r1);
-
-	/* copy the tuple so we can update it */
-	reltup1 = heap_copytuple(reltup0);
-
+	reltup1 = SearchSysCacheCopy(RELOID,
+								 ObjectIdGetDatum(r1),
+								 0, 0, 0);
 	if (!HeapTupleIsValid(reltup1))
 		elog(ERROR, "cache lookup failed for relation %u", r1);
 	relform1 = (Form_pg_class) GETSTRUCT(reltup1);
 
-	pcqCtx2 = caql_addrel(cqclr(&cqc2), relRelation);
-
-	reltup2 = caql_getfirst(
-			pcqCtx2,	
-			cql("SELECT * FROM pg_class "
-				" WHERE oid = :1 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(r2)));
-
+	reltup2 = SearchSysCacheCopy(RELOID,
+								 ObjectIdGetDatum(r2),
+								 0, 0, 0);
 	if (!HeapTupleIsValid(reltup2))
 		elog(ERROR, "cache lookup failed for relation %u", r2);
 	relform2 = (Form_pg_class) GETSTRUCT(reltup2);
-	
+
 	isAO1 = (relform1->relstorage == RELSTORAGE_AOROWS ||
 			 relform1->relstorage == RELSTORAGE_AOCOLS);
 	isAO2 = (relform2->relstorage == RELSTORAGE_AOROWS ||
@@ -1294,23 +1264,15 @@ swap_relation_files(Oid r1, Oid r2, TransactionId frozenXid, bool swap_stats)
 			 relform2->reltablespace,
 			 relform2->relstorage);
 
-	/* XXX XXX: jic 20120925 don't **EVER** do this -- 
-	 * First, fake out caql and make the "current" tuple reltup2, 
-	 * then update it.  
-	 * Then restore the "current" tuple (reltup0) and update it with
-	 * the modified reltup1.  Note that if the "current" does not get
-	 * restored then the underlying ReleaseSysCache() in the
-	 * caql_endscan() could explode.
-	 */
+	/* Update the tuples in pg_class */
+	simple_heap_update(relRelation, &reltup1->t_self, reltup1);
+	simple_heap_update(relRelation, &reltup2->t_self, reltup2);
 
-	caql_get_current(pcqCtx1) = reltup2;
-	caql_update_current(pcqCtx1, reltup2);
-
-	caql_get_current(pcqCtx1) = reltup0; /* restore real "current" */
-	caql_update_current(pcqCtx1, reltup1);
-	/* and Update indexes (implicit) */
-
-	caql_endscan(pcqCtx1);
+	/* Keep system catalogs current */
+	indstate = CatalogOpenIndexes(relRelation);
+	CatalogIndexInsert(indstate, reltup1);
+	CatalogIndexInsert(indstate, reltup2);
+	CatalogCloseIndexes(indstate);
 
 	/*
 	 * If we have toast tables associated with the relations being swapped,

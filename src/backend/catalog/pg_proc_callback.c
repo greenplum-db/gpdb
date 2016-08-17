@@ -14,7 +14,6 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
-#include "catalog/catquery.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_proc_callback.h"
 #include "utils/fmgroids.h"
@@ -35,18 +34,34 @@
 void 
 deleteProcCallbacks(Oid profnoid)
 {
+	Relation	rel;
+	ScanKeyData skey;
+	SysScanDesc scan;
+	HeapTuple	tup;
+
 	Insist(OidIsValid(profnoid));
 
-	/* 
-	 * Boiler template code to loop through the index and remove all matching
-	 * rows.
+	/*
+	 * This is equivalent to:
+	 *
+	 * DELETE FROM pg_proc_callback WHERE profnoid = :1
 	 */
+	rel = heap_open(ProcCallbackRelationId, RowExclusiveLock);
 
-	(void) caql_getcount(
-		NULL,
-		cql("DELETE FROM pg_proc_callback "
-			" WHERE profnoid = :1 ",
-			ObjectIdGetDatum(profnoid)));
+	ScanKeyInit(&skey,
+				Anum_pg_proc_callback_profnoid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(profnoid));
+	scan = systable_beginscan(rel, ProcCallbackProfnoidPromethodIndexId, true,
+							  SnapshotNow, 1, &skey);
+
+	while (HeapTupleIsValid(tup = systable_getnext(scan)))
+	{
+		simple_heap_delete(rel, &tup->t_self);
+	}
+	systable_endscan(scan);
+
+	heap_close(rel, RowExclusiveLock);
 }
 
 
@@ -66,19 +81,16 @@ deleteProcCallbacks(Oid profnoid)
 void 
 addProcCallback(Oid profnoid, Oid procallback, char promethod)
 {
+	Relation	rel;
 	bool		nulls[Natts_pg_proc_callback];
 	Datum		values[Natts_pg_proc_callback];
 	HeapTuple   tup;
-	cqContext  *pcqCtx;
 	
 	Insist(OidIsValid(profnoid));
 	Insist(OidIsValid(procallback));
 
 	/* open pg_proc_callback */
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("INSERT INTO pg_proc_callback ",
-				NULL));
+	rel = heap_open(ProcCallbackRelationId, RowExclusiveLock);
 
 	/* Build the tuple and insert it */
 	nulls[Anum_pg_proc_callback_profnoid - 1]	  = false;
@@ -88,12 +100,13 @@ addProcCallback(Oid profnoid, Oid procallback, char promethod)
 	values[Anum_pg_proc_callback_procallback - 1] = ObjectIdGetDatum(procallback);
 	values[Anum_pg_proc_callback_promethod - 1]	  = CharGetDatum(promethod);
 
-	tup = caql_form_tuple(pcqCtx, values, nulls);
+	tup = heap_form_tuple(RelationGetDescr(rel), values, nulls);
 	
 	/* Insert tuple into the relation */
-	caql_insert(pcqCtx, tup);  /* implicit update of index as well */
+	simple_heap_insert(rel, tup);
+	CatalogUpdateIndexes(rel, tup);
 
-	caql_endscan(pcqCtx);
+	heap_close(rel, RowExclusiveLock);
 }
 
 
@@ -108,21 +121,46 @@ addProcCallback(Oid profnoid, Oid procallback, char promethod)
 Oid  
 lookupProcCallback(Oid profnoid, char promethod)
 {
-	Oid         result = InvalidOid;
+	Relation	rel;
+	ScanKeyData skey[2];
+	SysScanDesc scan;
+	HeapTuple	tup;
+	Oid         result;
 
 	Insist(OidIsValid(profnoid));
 
+	/* open pg_proc_callback */
+	rel = heap_open(ProcCallbackRelationId, AccessShareLock);
+
 	/* Lookup (profnoid, promethod) from index */
-
 	/* (profnoid, promethod) is guaranteed unique by the index */
+	ScanKeyInit(&skey[0],
+				Anum_pg_proc_callback_profnoid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(profnoid));
+	ScanKeyInit(&skey[1],
+				Anum_pg_proc_callback_promethod,
+				BTEqualStrategyNumber, F_CHAREQ,
+				CharGetDatum(promethod));
+	scan = systable_beginscan(rel, ProcCallbackProfnoidPromethodIndexId, true,
+							  SnapshotNow, 2, skey);
+	tup = systable_getnext(scan);
+	if (HeapTupleIsValid(tup))
+	{
+		Datum		d;
+		bool		isnull;
 
-	result = caql_getoid(
-			NULL,
-			cql("SELECT procallback FROM pg_proc_callback "
-				" WHERE profnoid = :1 "
-				" AND promethod = :2 ",
-				ObjectIdGetDatum(profnoid),
-				CharGetDatum(promethod)));
+		d = heap_getattr(tup, Anum_pg_proc_callback_procallback,
+						 RelationGetDescr(rel), &isnull);
+		Assert(!isnull);
+
+		result = DatumGetObjectId(d);
+	}
+	else
+		result = InvalidOid;
+
+	systable_endscan(scan);
+	heap_close(rel, AccessShareLock);
 
 	return result;
 }

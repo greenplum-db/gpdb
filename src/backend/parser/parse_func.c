@@ -15,7 +15,6 @@
 #include "postgres.h"
 
 #include "access/heapam.h"
-#include "catalog/catquery.h"
 #include "access/transam.h"
 #include "catalog/pg_aggregate.h"
 #include "catalog/pg_attrdef.h"
@@ -440,7 +439,6 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 		/* must be a window function call */
 		WindowRef  *winref = makeNode(WindowRef);
 		HeapTuple	tuple;	
-		cqContext  *wincqCtx;
 		
 		if (retset)
 			ereport(ERROR,
@@ -459,15 +457,7 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
          * If this is a "true" window function, rather than an aggregate
          * derived window function then it will have a tuple in pg_window
          */
-
-		wincqCtx = caql_beginscan(
-				NULL,
-				cql("SELECT * FROM pg_window "
-					" WHERE winfnoid = :1 ",
-					ObjectIdGetDatum(funcid)));
-
-		tuple = caql_getnext(wincqCtx);
-
+		tuple = SearchSysCache1(WINFNOID, ObjectIdGetDatum(funcid));
 		if (HeapTupleIsValid(tuple))
 		{
 			if (agg_filter)
@@ -484,14 +474,13 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 			 * later in transformWindowClause(). It's too early at this stage.
 			 */
 
+			ReleaseSysCache(tuple);
 		}
-		caql_endscan(wincqCtx);
-
 
 		winref->winfnoid = funcid;
 		winref->restype = rettype;
 		winref->args = fargs;
-		
+
 		{
 			/*
 			 * Find if this "over" clause has already existed. If so,
@@ -1191,7 +1180,6 @@ func_get_detail(List *funcname,
 		HeapTuple	ftup;
 		Form_pg_proc pform;
 		bool isagg = false;
-		cqContext	*procqCtx;
 		bool isnull;
 		Datum datum;
 		int pronargdefaults;
@@ -1208,14 +1196,9 @@ func_get_detail(List *funcname,
 		*nvargs = best_candidate->nvargs;
 		*true_typeids = best_candidate->args;
 
-		procqCtx = caql_beginscan(
-				NULL,
-				cql("SELECT * FROM pg_proc "
-					" WHERE oid = :1 ",
-				ObjectIdGetDatum(best_candidate->oid)));
-
-		ftup = caql_getnext(procqCtx);
-
+		ftup = SearchSysCache(PROCOID,
+							  ObjectIdGetDatum(best_candidate->oid),
+							  0, 0, 0);
 		if (!HeapTupleIsValid(ftup))	/* should not happen */
 			elog(ERROR, "cache lookup failed for function %u",
 				 best_candidate->oid);
@@ -1264,7 +1247,7 @@ func_get_detail(List *funcname,
 
 		isagg = pform->proisagg;
 
-		caql_endscan(procqCtx);
+		ReleaseSysCache(ftup);
 
 		/* 
 		 * For aggregate functions STRICTness is defined by the 
@@ -1276,16 +1259,9 @@ func_get_detail(List *funcname,
 			FmgrInfo			transfn;
 			Datum				value;
 			bool				isnull;
-			cqContext		   *aggcqCtx;
 
-			aggcqCtx = caql_beginscan(
-					NULL,
-					cql("SELECT * FROM pg_aggregate "
-						" WHERE aggfnoid = :1 ",
-						ObjectIdGetDatum(best_candidate->oid)));
-
-			ftup = caql_getnext(aggcqCtx);
-
+			ftup = SearchSysCache1(AGGFNOID,
+								   ObjectIdGetDatum(best_candidate->oid));
 			if (!HeapTupleIsValid(ftup))	/* should not happen */
 			    elog(ERROR, "cache lookup failed for aggregate %u",
 					 best_candidate->oid);
@@ -1296,14 +1272,14 @@ func_get_detail(List *funcname,
 			/* 
 			 * Check if this is an ordered aggregate - while aggordered
 			 * should never be null it comes after a variable length field
-			 * so we must access it via caql_getattr.
+			 * so we must access it via SysCacheGetAttr.
 			 */
-			value = caql_getattr(aggcqCtx, 
-								 Anum_pg_aggregate_aggordered, 
-								 &isnull);
+			value = SysCacheGetAttr(AGGFNOID, ftup,
+									Anum_pg_aggregate_aggordered,
+									&isnull);
 			*retordered = (!isnull) && DatumGetBool(value);
 
-			caql_endscan(aggcqCtx);
+			ReleaseSysCache(ftup);
 
 			return FUNCDETAIL_AGGREGATE;
 		}
@@ -1738,7 +1714,6 @@ LookupAggNameTypeNames(List *aggname, List *argtypes, bool noError)
 	Oid			oid;
 	HeapTuple	ftup;
 	Form_pg_proc pform;
-	cqContext	*pcqCtx;
 	bool		 proisagg;
 
 	argcount = list_length(argtypes);
@@ -1779,21 +1754,14 @@ LookupAggNameTypeNames(List *aggname, List *argtypes, bool noError)
 	/* Make sure it's an aggregate */
 	/* SELECT proisagg FROM pg_proc */
 
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_proc "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(oid)));
-
-	ftup = caql_getnext(pcqCtx);
-
+	ftup = SearchSysCache1(PROCOID, ObjectIdGetDatum(oid));
 	if (!HeapTupleIsValid(ftup))	/* should not happen */
 		elog(ERROR, "cache lookup failed for function %u", oid);
 	pform = (Form_pg_proc) GETSTRUCT(ftup);
 
 	proisagg = pform->proisagg;
 
-	caql_endscan(pcqCtx);
+	ReleaseSysCache(ftup);
 
 	if (!proisagg)
 	{

@@ -11,7 +11,7 @@
 #include "postgres.h"
 #include "funcapi.h"
 #include "fmgr.h"
-#include "catalog/catquery.h"
+#include "access/genam.h"
 #include "access/hash.h"
 #include "catalog/index.h"
 #include "catalog/pg_constraint.h"
@@ -25,7 +25,9 @@
 #include "optimizer/planmain.h"
 #include "parser/parse_expr.h"
 #include "utils/builtins.h"
+#include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
+#include "utils/syscache.h"
 #include "utils/memutils.h"
 
 /* initial estimate for number of logical indexes */
@@ -99,8 +101,7 @@ static LogicalIndexes * createPartsIndexResult(Oid root);
 static bool collapseIndexes(PartitionIndexNode **partitionIndexNode,
 					LogicalIndexInfoHashEntry **entry);
 static void createIndexHashTables(void);
-static IndexInfo *populateIndexInfo(cqContext *pcqCtx, HeapTuple tuple,
-					Form_pg_index indForm);
+static IndexInfo *populateIndexInfo(Relation indRel);
 static Node *mergeIntervals(Node *intervalFst, Node *intervalSnd);
 static void extractStartEndRange(Node *clause, Node **ppnodeStart, Node **ppnodeEnd);
 static void extractOpExprComponents(OpExpr *opexpr, Var **ppvar, Const **ppconst, Oid *opno);
@@ -300,8 +301,8 @@ getPartitionIndexNode(Oid rootOid,
 			List *defaultLevels)
 {
 	HeapTuple	tuple;
-	cqContext	*pcqCtx;
-	cqContext	cqc;
+	ScanKeyData scankey[3];
+	SysScanDesc sscan;
 	Relation	partRel;
 	Relation	partRuleRel;
 	Form_pg_partition partDesc;
@@ -320,16 +321,22 @@ getPartitionIndexNode(Oid rootOid,
 	 */
 	partRel = heap_open(PartitionRelationId, AccessShareLock);
 
-	tuple = caql_getfirst(
-			caql_addrel(cqclr(&cqc), partRel),
-			cql("SELECT * FROM pg_partition "
-				" WHERE parrelid = :1 "
-				" AND parlevel = :2 "
-				" AND paristemplate = :3",
-				ObjectIdGetDatum(rootOid),
-				Int16GetDatum(level),
-				BoolGetDatum(inctemplate)));
+	ScanKeyInit(&scankey[0],
+				Anum_pg_partition_parrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(rootOid));
+	ScanKeyInit(&scankey[1],
+				Anum_pg_partition_parlevel,
+				BTEqualStrategyNumber, F_INT2EQ,
+				Int16GetDatum(level));
+	ScanKeyInit(&scankey[2],
+				Anum_pg_partition_paristemplate,
+				BTEqualStrategyNumber, F_BOOLEQ,
+				BoolGetDatum(inctemplate));
 
+	sscan = systable_beginscan(partRel, PartitionParrelidParlevelParistemplateIndexId, true,
+							   SnapshotNow, 3, scankey);
+	tuple = systable_getnext(sscan);
 	if (HeapTupleIsValid(tuple))
 	{
 		parOid = HeapTupleGetOid(tuple);
@@ -346,29 +353,33 @@ getPartitionIndexNode(Oid rootOid,
 			(*n)->parrelid = (*n)->parchildrelid = partDesc->parrelid;
 			(*n)->isDefault = false;
 		}
+		systable_endscan(sscan);
 		heap_close(partRel, AccessShareLock);
 	}
 	else
 	{
+		systable_endscan(sscan);
 		heap_close(partRel, AccessShareLock);
 		return;
 	}
 
-
 	/* recurse to fill the children */
 	partRuleRel = heap_open(PartitionRuleRelationId, AccessShareLock);
 
-	pcqCtx = caql_beginscan(
-                        caql_addrel(cqclr(&cqc), partRuleRel),
-                        cql("SELECT * FROM pg_partition_rule "
-                                " WHERE paroid = :1 "
-                                " AND parparentrule = :2 ",
-                                ObjectIdGetDatum(parOid),
-                                ObjectIdGetDatum(parent)));
-
-	while (HeapTupleIsValid(tuple = caql_getnext(pcqCtx)))
-        {    
-                PartitionIndexNode *child;
+	/* SELECT * FROM pg_partition_rule WHERE paroid = :1 AND parparentrule = :2 */
+	ScanKeyInit(&scankey[0],
+				Anum_pg_partition_rule_paroid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(parOid));
+	ScanKeyInit(&scankey[1],
+				Anum_pg_partition_rule_parparentrule,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(parent));
+	sscan = systable_beginscan(partRuleRel, PartitionRuleParoidParparentruleParruleordIndexId, true,
+							   SnapshotNow, 2, scankey);
+	while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
+	{
+		PartitionIndexNode *child;
 		Form_pg_partition_rule rule_desc = (Form_pg_partition_rule)GETSTRUCT(tuple);
 	
 		child = palloc(sizeof(PartitionIndexNode));
@@ -395,7 +406,7 @@ getPartitionIndexNode(Oid rootOid,
 					&child, child->isDefault, child->defaultLevels);
 	}
 
-	caql_endscan(pcqCtx);
+	systable_endscan(sscan);
 	heap_close(partRuleRel, AccessShareLock);
 }
 
@@ -538,9 +549,6 @@ recordIndexesOnLeafPart(PartitionIndexNode **pNodePtr,
 			Oid rootOid,
 			Relation indexRel)
 {
-	HeapTuple 			tuple; 
-	cqContext 			*pcqCtx;
-	cqContext 			cqc;
 	char 				*partIndexHashKey;
 	bool 				foundPartIndexHash;
 	bool 				foundLogicalIndexHash;
@@ -549,38 +557,38 @@ recordIndexesOnLeafPart(PartitionIndexNode **pNodePtr,
 	PartitionIndexHashEntry 	*partIndexHashEntry;
 	LogicalIndexInfoHashEntry	*logicalIndexInfoHashEntry;
 	PartitionIndexNode		*pNode = *pNodePtr;
-	
+	List		   *indexoidlist;
+	ListCell	   *lc;
+
 	Relation partRel = heap_open(partOid, AccessShareLock);
 
 	char relstorage = partRel->rd_rel->relstorage;
 
 	heap_close(partRel, AccessShareLock);
 
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), indexRel),
-			cql("SELECT * FROM pg_index "
-				" WHERE indrelid = :1",
-			ObjectIdGetDatum(partOid)));
-
 	/* fetch each index on part */
-	while (HeapTupleIsValid(tuple = caql_getnext(pcqCtx)))
+	indexoidlist = RelationGetIndexList(partRel);
+	foreach(lc, indexoidlist)
 	{
-		Form_pg_index indForm = (Form_pg_index) GETSTRUCT(tuple);
-
+		Oid			indexoid = lfirst_oid(lc);
 		LogicalIndexType indType = INDTYPE_BITMAP;
+		Relation indRel;
+
+		/*
+		 * We're holding a lock on the table. We assume that's enough to
+		 * prevent concurrent DDL on the index.
+		 */
+		indRel = index_open(indexoid, NoLock);
+
 		/* for AO and AOCO tables we assume the index is bitmap, for heap partitions
 		 * look up the access method from the catalog
 		 */
 		if (RELSTORAGE_HEAP == relstorage)
 		{
-			
-			Relation indRel = RelationIdGetRelation(indForm->indexrelid);
-			Assert(NULL != indRel); 
 			if (BTREE_AM_OID == indRel->rd_rel->relam)
 			{
 				indType = INDTYPE_BTREE;
 			}
-			RelationClose(indRel);
 		}
 
 		/* 
@@ -602,12 +610,13 @@ recordIndexesOnLeafPart(PartitionIndexNode **pNodePtr,
 			heap_close(rootRel, AccessShareLock);
 		}
 
-		
 		/* populate index info structure */
-		ii = populateIndexInfo(pcqCtx, tuple, indForm);
-			
+		ii = populateIndexInfo(indRel);
+
+		index_close(indRel, NoLock);
+
 		/* construct hash key for the index */
-		partIndexHashKey = constructIndexHashKey(partOid, rootOid, tuple, attmap, ii, indType);
+		partIndexHashKey = constructIndexHashKey(partOid, rootOid, indRel->rd_indextuple, attmap, ii, indType);
 
 		/* lookup PartitionIndexHash table */
 		partIndexHashEntry = (PartitionIndexHashEntry *)hash_search(PartitionIndexHash,
@@ -636,15 +645,15 @@ recordIndexesOnLeafPart(PartitionIndexNode **pNodePtr,
 				 * we should not find the entry in the logical index hash as this is the first
 				 * time we are seeing it
 				 */
-                		ereport(ERROR,
-                                	(errcode(ERRCODE_INTERNAL_ERROR),
-                                 	errmsg("error during BuildLogicalIndexInfo. Found indexrelid \"%d\" in hash",
-                                                indForm->indexrelid
-                                        )));
+				ereport(ERROR,
+						(errcode(ERRCODE_INTERNAL_ERROR),
+						 errmsg("error during BuildLogicalIndexInfo. Found indexrelid \"%d\" in hash",
+								indexoid
+							 )));
 			}
 
 			logicalIndexInfoHashEntry->logicalIndexId = partIndexHashEntry->logicalIndexId;
-			logicalIndexInfoHashEntry->logicalIndexOid = indForm->indexrelid;
+			logicalIndexInfoHashEntry->logicalIndexOid = indexoid;
 			logicalIndexInfoHashEntry->ii = ii;
 			logicalIndexInfoHashEntry->partList = NIL;
 			logicalIndexInfoHashEntry->defaultPartList = NIL;
@@ -664,8 +673,6 @@ recordIndexesOnLeafPart(PartitionIndexNode **pNodePtr,
 		/* update the PartitionIndexNode -> index bitmap */
 		pNode->index = bms_add_member(pNode->index, partIndexHashEntry->logicalIndexId);
 	}
-	
-	caql_endscan(pcqCtx);
 }
 
 /*
@@ -802,8 +809,8 @@ static void indexParts(PartitionIndexNode **np, bool isDefault)
 static Node *
 getPartConstraints(Oid partOid, Oid rootOid, List *partKey)
 {
-	cqContext       *pcqCtx;
-	cqContext       cqc;
+	ScanKeyData scankey;
+	SysScanDesc sscan;
 	Relation        conRel;
 	HeapTuple       conTup;
 	Node            *conExpr;
@@ -827,19 +834,20 @@ getPartConstraints(Oid partOid, Oid rootOid, List *partKey)
 	/* Fetch the pg_constraint row. */
 	conRel = heap_open(ConstraintRelationId, AccessShareLock);
 
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), conRel),
-			cql("SELECT * FROM pg_constraint "
-				" WHERE conrelid = :1",
-				ObjectIdGetDatum(partOid)));
+	ScanKeyInit(&scankey,
+				Anum_pg_constraint_conrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(partOid));
+	sscan = systable_beginscan(conRel, ConstraintRelidIndexId, true,
+							   SnapshotNow, 1, &scankey);
 
 	// list of keys referenced in the found constraints
 	List *keys = NIL;
 
-	while (HeapTupleIsValid(conTup = caql_getnext(pcqCtx)))
+	while (HeapTupleIsValid(conTup = systable_getnext(sscan)))
 	{
 		/* we defer the filter on contype to here in order to take advantage of
-		 * the index on conrelid in the above CAQL query */
+		 * the index on conrelid */
 		Form_pg_constraint conEntry = (Form_pg_constraint) GETSTRUCT(conTup);
 		if (conEntry->contype != 'c')
 		{
@@ -875,7 +883,7 @@ getPartConstraints(Oid partOid, Oid rootOid, List *partKey)
 		}
 	}
 
-	caql_endscan(pcqCtx);
+	systable_endscan(sscan);
 	heap_close(conRel, AccessShareLock);
 
 	ListCell *lc = NULL;
@@ -971,14 +979,9 @@ get_relation_part_constraints(Oid rootOid, List **defaultLevels)
  *  Populate the IndexInfo structure with the information from pg_index tuple. 
  */
 static IndexInfo *
-populateIndexInfo(cqContext *pcqCtx,
-			HeapTuple indTuple,
-			Form_pg_index indForm)
+populateIndexInfo(Relation indRel)
 {
 	IndexInfo 	*ii;
-	Datum		datum;
-	bool		isnull = false;
-	char		*str;
 
  	/*  
 	 * We could just call existing BuildIndexInfo here. But BuildIndexInfo needs to open each index, 
@@ -987,34 +990,16 @@ populateIndexInfo(cqContext *pcqCtx,
 	 */
 	ii = makeNode(IndexInfo);
 
-	ii->ii_Unique = indForm->indisunique;
-	ii->ii_NumIndexAttrs = indForm->indnatts;
+	ii->ii_Unique = indRel->rd_index->indisunique;
+	ii->ii_NumIndexAttrs = indRel->rd_index->indnatts;
 
-	for (int i = 0; i < indForm->indnatts; i++)
+	for (int i = 0; i < indRel->rd_index->indnatts; i++)
 	{
-		ii->ii_KeyAttrNumbers[i] = indForm->indkey.values[i];
+		ii->ii_KeyAttrNumbers[i] = indRel->rd_index->indkey.values[i];
 	}
 
-	ii->ii_Expressions = NIL;
-	datum = caql_getattr(pcqCtx, Anum_pg_index_indexprs, &isnull);
-	if (!isnull)
-	{
-		str = TextDatumGetCString(datum);
-		ii->ii_Expressions = (List *)stringToNode(str);
-		pfree(str);
-		fix_opfuncids((Node *) ii->ii_Expressions);
-	}
-
-	isnull = false;
-	ii->ii_Predicate = NIL;
-	datum = caql_getattr(pcqCtx, Anum_pg_index_indpred, &isnull);
-	if (!isnull)
-	{
-		str = TextDatumGetCString(datum);
-		ii->ii_Predicate = (List *)stringToNode(str);
-		pfree(str);
-		fix_opfuncids((Node *) ii->ii_Predicate);
-	}
+	ii->ii_Expressions = RelationGetIndexExpressions(indRel);
+	ii->ii_Predicate = RelationGetIndexPredicate(indRel);
 
 	return ii;
 }
@@ -1169,46 +1154,39 @@ createPartsIndexResult(Oid root)
  * have to be mapped to the root.
  */
 Oid
-getPhysicalIndexRelid(LogicalIndexInfo *iInfo, Oid partOid)
+getPhysicalIndexRelid(Relation partRel, LogicalIndexInfo *iInfo)
 {
-	HeapTuple       tup;
-	cqContext       cqc;
-	cqContext       *pcqCtx;
 	Oid             resultOid = InvalidOid;
-	IndexInfo	*ii = NULL;
-	Relation	indexRelation;
 	bool		indKeyEqual;
+	List	   *indexoidlist;
+	ListCell   *lc;
+	Relation	indRel = NULL;
 
-	indexRelation = heap_open(IndexRelationId, AccessShareLock);
-
-	/* now look up pg_index using indrelid */
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), indexRelation),
-			cql("SELECT * FROM pg_index "
-				" WHERE indrelid = :1 ",
-				ObjectIdGetDatum(partOid)));
-
-	/* fetch tuples */
-	while (HeapTupleIsValid(tup = caql_getnext(pcqCtx)))
+	/* fetch each index on partition */
+	indexoidlist = RelationGetIndexList(partRel);
+	foreach(lc, indexoidlist)
 	{
-		Form_pg_index indForm = (Form_pg_index) GETSTRUCT(tup);
+		Oid			indexoid = lfirst_oid(lc);
+		Form_pg_index indForm;
 
-		if (NULL != ii)
-		{
-			pfree(ii);
-			ii = NULL;
-		}
+		if (indRel)
+			index_close(indRel, NoLock);
 
-		ii = populateIndexInfo(pcqCtx, tup, indForm);
+		/*
+		 * We're holding a lock on the table. We assume that's enough to
+		 * prevent concurrent DDL on the index.
+		 */
+		indRel = index_open(indexoid, NoLock);
+		indForm = indRel->rd_index;
 
-		if (ii->ii_NumIndexAttrs != iInfo->nColumns)
+		if (indForm->indnatts != iInfo->nColumns)
 			continue;
 
 		/* compare indKey */
 		indKeyEqual = true;
-		for (int i = 0; i < ii->ii_NumIndexAttrs; i++)
+		for (int i = 0; i < indForm->indnatts; i++)
 		{
-			if (ii->ii_KeyAttrNumbers[i] != iInfo->indexKeys[i])
+			if (indForm->indkey.values[i] != iInfo->indexKeys[i])
 			{
 				indKeyEqual = false;
 				break;
@@ -1219,32 +1197,30 @@ getPhysicalIndexRelid(LogicalIndexInfo *iInfo, Oid partOid)
 			continue;
 
 		/* compare uniqueness attribute */
-		if (iInfo->indIsUnique != ii->ii_Unique)
+		if (iInfo->indIsUnique != indForm->indisunique)
 			continue;
 
 		/* compare indPred */
-		if (!equal(iInfo->indPred, ii->ii_Predicate))
+		List *indPred = RelationGetIndexPredicate(indRel);
+		if (!equal(iInfo->indPred, indPred))
 			continue;
+		list_free(indPred);
 
 		/* compare indExprs */
-		if (equal(iInfo->indExprs, ii->ii_Expressions))
+		List *indExprs = RelationGetIndexExpressions(indRel);
+		if (equal(iInfo->indExprs, indExprs))
 		{
 			/* found matching index */
 			resultOid = indForm->indexrelid;
 			break;
 		}
+		list_free(indExprs);
 		
 		// TODO: antova - Mar 28, 2014; compare if this is a bitmap index
 	}
 
-	if (NULL != ii)
-	{
-		pfree(ii);
-		ii = NULL;
-	}
-
-	caql_endscan(pcqCtx);
-	heap_close(indexRelation, AccessShareLock);
+	if (indRel)
+		index_close(indRel, NoLock);
 
 	return resultOid;
 }
@@ -1471,33 +1447,15 @@ static void extractOpExprComponents(OpExpr *opexpr, Var **ppvar, Const **ppconst
  * LogicalIndexInfoForIndexOid
  *   construct the logical index info for a given index oid
  */
-LogicalIndexInfo *logicalIndexInfoForIndexOid(Oid rootOid, Oid indexOid)
+LogicalIndexInfo *
+logicalIndexInfoForIndexOid(Oid rootOid, Oid indexOid)
 {
-	/* fetch index from catalog */
-	Relation indexRelation = heap_open(IndexRelationId, AccessShareLock);
-	
-	cqContext cqc;
-	cqContext *pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), indexRelation),
-			cql("SELECT * FROM pg_index "
-				" WHERE indexrelid = :1 ",
-				ObjectIdGetDatum(indexOid)));
+	Relation	indRel;
 
-	HeapTuple tup = NULL;
-	
-	if (!HeapTupleIsValid(tup = caql_getnext(pcqCtx)))
-	{
-		caql_endscan(pcqCtx);
-		heap_close(indexRelation, AccessShareLock);
-		elog(ERROR, "Index not found: %u", indexOid);
-	}
-	
-	Form_pg_index indForm = (Form_pg_index) GETSTRUCT(tup);
-	IndexInfo *pindexInfo = populateIndexInfo(pcqCtx, tup, indForm);
-	Oid partOid = indForm->indrelid;
-	
-	caql_endscan(pcqCtx);
-	heap_close(indexRelation, AccessShareLock);
+	indRel = index_open(indexOid, AccessShareLock);
+
+	IndexInfo *pindexInfo = populateIndexInfo(indRel);
+	Oid partOid = indRel->rd_index->indrelid;
 
 	// remap attributes
 	Relation rootRel = heap_open(rootOid, AccessShareLock);
@@ -1542,15 +1500,13 @@ LogicalIndexInfo *logicalIndexInfoForIndexOid(Oid rootOid, Oid indexOid)
 	plogicalIndexInfo->indType = INDTYPE_BITMAP;
 	if (RELSTORAGE_HEAP == relstorage)
 	{
-		
-		Relation indRel = RelationIdGetRelation(indForm->indexrelid);
-		Assert(NULL != indRel); 
 		if (BTREE_AM_OID == indRel->rd_rel->relam)
 		{
 			plogicalIndexInfo->indType = INDTYPE_BTREE;
 		}
-		RelationClose(indRel);
 	}
-	
+
+	index_close(indRel, AccessShareLock);
+
 	return plogicalIndexInfo;
 }

@@ -20,7 +20,6 @@
 
 #include "access/genam.h"
 #include "access/sysattr.h"
-#include "catalog/catquery.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_authid.h"
@@ -7807,48 +7806,28 @@ pg_get_partition_def_worker(Oid relid, int prettyFlags, int bLeafTablename)
 static char *
 get_rule_def_common(Oid partid, int prettyFlags, int bLeafTablename)
 {
-	Relation rel;
-	cqContext	cqc;
 	HeapTuple tuple;
 	PartitionRule *rule;
 	Partition *part;
 
-	rel = heap_open(PartitionRuleRelationId, AccessShareLock);
-
-	tuple = caql_getfirst(
-			caql_addrel(cqclr(&cqc), rel),
-			cql("SELECT * FROM pg_partition_rule "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(partid)));
-
+	tuple = SearchSysCache1(PARTRULEOID,
+							ObjectIdGetDatum(partid));
 	if (!HeapTupleIsValid(tuple))
-	{
-		heap_close(rel, AccessShareLock);
 		return NULL;
-	}
 
+	rule = ruleMakePartitionRule(tuple);
 
-	rule = ruleMakePartitionRule(tuple, RelationGetDescr(rel));
-	heap_close(rel, AccessShareLock);
+	ReleaseSysCache(tuple);
 
 	/* lookup pg_partition by oid */
-	rel = heap_open(PartitionRelationId, AccessShareLock);
-
-	tuple = caql_getfirst(
-			caql_addrel(cqclr(&cqc), rel),
-			cql("SELECT * FROM pg_partition "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(rule->paroid)));
+	tuple = SearchSysCache1(PARTOID,
+							ObjectIdGetDatum(rule->paroid));
 	if (!HeapTupleIsValid(tuple))
-	{
-		heap_close(rel, AccessShareLock);
-
 		return NULL;
-	}
 
-	part = partMakePartition(tuple, RelationGetDescr(rel));
+	part = partMakePartition(tuple);
 
-	heap_close(rel, AccessShareLock);
+	ReleaseSysCache(tuple);
 
 	return partition_rule_def_worker(rule, rule->parrangestart, 
 									 rule->parrangeend, rule,

@@ -14,7 +14,6 @@
 
 /* XXX include list is speculative -- bhagenbuch */
 #include "access/heapam.h"
-#include "catalog/catquery.h"
 #include "catalog/pg_aggregate.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_operator.h"
@@ -2455,7 +2454,6 @@ initWindowFuncState(WindowState * wstate, Window * node)
 					isWin ,
 					isSet;
 		AclResult	aclresult;
-		cqContext  *pcqCtx;
 
 		refno++;				/* First one is 0 */
 
@@ -2539,13 +2537,7 @@ initWindowFuncState(WindowState * wstate, Window * node)
 						   get_func_name(winref->winfnoid));
 
 		/* Collect information about the window function's pg_proc entry. */
-		pcqCtx = caql_beginscan(
-								NULL,
-								cql("SELECT * FROM pg_proc "
-									" WHERE oid = :1 ",
-									ObjectIdGetDatum(winref->winfnoid)));
-
-		heap_tuple = caql_getnext(pcqCtx);
+		heap_tuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(winref->winfnoid));
 
 		insist_log(HeapTupleIsValid(heap_tuple),
 				   "cache lookup failed for window function proc %u",
@@ -2558,7 +2550,7 @@ initWindowFuncState(WindowState * wstate, Window * node)
 		winResType = proform->prorettype;
 		winOwner = proform->proowner;
 
-		caql_endscan(pcqCtx);
+		ReleaseSysCache(heap_tuple);
 
 		Assert(isAgg != isWin);
 		Assert(!isSet);
@@ -2595,18 +2587,10 @@ initWindowFuncState(WindowState * wstate, Window * node)
 					   *invprelimfnexpr,
 					   *prelimfnexpr;
 			Datum		textInitVal;
-			cqContext  *aggcqCtx;
 
 			Insist(winref->winlevel < wstate->numlevels);
 
-			aggcqCtx = caql_beginscan(
-									  NULL,
-									  cql("SELECT * FROM pg_aggregate "
-										  " WHERE aggfnoid = :1 ",
-										ObjectIdGetDatum(winref->winfnoid)));
-
-			agg_tuple = caql_getnext(aggcqCtx);
-
+			agg_tuple = SearchSysCache1(AGGFNOID, ObjectIdGetDatum(winref->winfnoid));
 			insist_log(HeapTupleIsValid(agg_tuple), "cache lookup failed for aggregate %u",
 					   winref->winfnoid);
 			aggform = (Form_pg_aggregate)GETSTRUCT(agg_tuple);
@@ -2687,11 +2671,11 @@ initWindowFuncState(WindowState * wstate, Window * node)
 
 			/*
 			 * initval is potentially null, so don't try to access it as a
-			 * struct field. Must do it the hard way with caql_getattr
+			 * struct field. Must do it the hard way with SysCacheGetAttr
 			 */
-			textInitVal = caql_getattr(aggcqCtx,
-									   Anum_pg_aggregate_agginitval,
-									   &funcstate->aggInitValueIsNull);
+			textInitVal = SysCacheGetAttr(AGGFNOID, agg_tuple,
+										  Anum_pg_aggregate_agginitval,
+										  &funcstate->aggInitValueIsNull);
 
 			if (funcstate->aggInitValueIsNull)
 				funcstate->aggInitValue = (Datum)0;
@@ -2716,7 +2700,7 @@ initWindowFuncState(WindowState * wstate, Window * node)
 									"input type and transition type",
 									winref->winfnoid)));
 			}
-			caql_endscan(aggcqCtx);
+			ReleaseSysCache(agg_tuple);
 
 			wrxstate->winkind = WINKIND_AGGREGATE;
 		}
@@ -2727,16 +2711,8 @@ initWindowFuncState(WindowState * wstate, Window * node)
 			Oid			windowfn_oid = InvalidOid;
 			Const	   *refptr;
 			ExprState  *xtrastate;
-			cqContext  *wincqCtx;
 
-			wincqCtx = caql_beginscan(
-									  NULL,
-									  cql("SELECT * FROM pg_window "
-										  " WHERE winfnoid = :1 ",
-										ObjectIdGetDatum(winref->winfnoid)));
-
-			win_tuple = caql_getnext(wincqCtx);
-
+			win_tuple = SearchSysCache1(WINFNOID, ObjectIdGetDatum(winref->winfnoid));
 			if (!HeapTupleIsValid(win_tuple))
 				elog(ERROR, "cache lookup failed for window function %u",
 					 winref->winfnoid);
@@ -2843,8 +2819,7 @@ initWindowFuncState(WindowState * wstate, Window * node)
 			funcstate->win_value = 0;
 			funcstate->win_value_is_null = true;
 
-			caql_endscan(wincqCtx);
-
+			ReleaseSysCache(win_tuple);
 		}
 		else
 		{
@@ -5271,7 +5246,6 @@ init_bound_frame_edge_expr(WindowFrameEdge * edge, TupleDesc desc,
 	char	   *oprname;
 	Form_pg_operator opr;
 	int32		vartypmod = desc->attrs[attnum - 1]->atttypmod;
-	cqContext  *pcqCtx;
 
 	Insist(EDGE_IS_BOUND(edge));
 
@@ -5336,19 +5310,11 @@ init_bound_frame_edge_expr(WindowFrameEdge * edge, TupleDesc desc,
 		oprname = "+";
 	}
 
-	pcqCtx = caql_beginscan(
-							NULL,
-							cql("SELECT * FROM pg_operator "
-								" WHERE oprname = :1 "
-								" AND oprleft = :2 "
-								" AND oprright = :3 "
-								" AND oprnamespace = :4 ",
-								CStringGetDatum(oprname),
-								ObjectIdGetDatum(ltype),
-								ObjectIdGetDatum(rtype),
-								ObjectIdGetDatum(PG_CATALOG_NAMESPACE)));
-
-	tup = caql_getnext(pcqCtx);
+	tup = SearchSysCache4(OPERNAMENSP,
+						  CStringGetDatum(oprname),
+						  ObjectIdGetDatum(ltype),
+						  ObjectIdGetDatum(rtype),
+						  ObjectIdGetDatum(PG_CATALOG_NAMESPACE));
 
 	/*
 	 * If we didn't find an operator, it's probably because the user has
@@ -5394,7 +5360,7 @@ init_bound_frame_edge_expr(WindowFrameEdge * edge, TupleDesc desc,
 							 false, varexpr,
 							 (Expr *)edge->val);
 		((OpExpr *) expr)->opfuncid = opr->oprcode;
-		caql_endscan(pcqCtx);
+		ReleaseSysCache(tup);
 	}
 
 	/*
@@ -5634,25 +5600,19 @@ init_frames(WindowState * wstate)
 		for (col_no = 0; col_no < ncols; col_no++)
 		{
 			Oid			sortop = level_state->sortOperators[col_no];
-			char	   *oprname;
-			int			fetchCount;
+			HeapTuple	opertup;
+			Form_pg_operator opform;
 
-			oprname = caql_getcstring_plus(
-										   NULL,
-										   &fetchCount,
-										   NULL,
-									   cql("SELECT oprname FROM pg_operator "
-										   " WHERE oid = :1 ",
-										   ObjectIdGetDatum(sortop)));
+			opertup = SearchSysCache1(OPEROID, ObjectIdGetDatum(sortop));
+			Insist(opertup);
+			opform = (Form_pg_operator) GETSTRUCT(opertup);
 
-			Insist(fetchCount);
-
-			if (strcmp(oprname, "<") == 0)
+			if (strcmp(NameStr(opform->oprname), "<") == 0)
 				level_state->col_sort_asc[col_no] = true;
 			else
 				level_state->col_sort_asc[col_no] = false;
 
-			pfree(oprname);
+			ReleaseSysCache(opertup);
 		}
 
 		/* now, initialize the actual frame */
@@ -6969,7 +6929,6 @@ lead_lag_frame_maker(PG_FUNCTION_ARGS)
 	HeapTuple	tuple;
 	Form_pg_window winform;
 	char		winkind;
-	cqContext  *pcqCtx;
 
 	if (list_length(wref->args) > 1)
 		offset = (Node *) list_nth(wref->args, 1);
@@ -6991,20 +6950,13 @@ lead_lag_frame_maker(PG_FUNCTION_ARGS)
 
 	fnoid = wref->winfnoid;
 
-	/* XXX: select winkind from pg_window */
-	pcqCtx = caql_beginscan(
-							NULL,
-							cql("SELECT * FROM pg_window "
-								" WHERE winfnoid = :1 ",
-								ObjectIdGetDatum(fnoid)));
-
-	tuple = caql_getnext(pcqCtx);
-
+	/* select winkind from pg_window */
+	tuple = SearchSysCache1(WINFNOID, ObjectIdGetDatum(fnoid));
 	if (!HeapTupleIsValid(tuple))
 		elog(ERROR, "cache lookup failed for window function %u", fnoid);
 	winform = (Form_pg_window)GETSTRUCT(tuple);
 	winkind = winform->winkind;
-	caql_endscan(pcqCtx);
+	ReleaseSysCache(tuple);
 
 	switch (winkind)
 	{

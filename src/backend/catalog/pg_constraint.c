@@ -16,7 +16,6 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
-#include "catalog/catquery.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_constraint.h"
@@ -592,18 +591,10 @@ RemoveConstraintById(Oid conId)
 char *
 GetConstraintNameByOid(Oid constraintId)
 {
-	char *result = NULL;
-	
 	if (!OidIsValid(constraintId))
 		return NULL;
-	
-	result = caql_getcstring(
-			NULL,
-			cql("SELECT conname FROM pg_constraint "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(constraintId)));
-	
-	return result;
+
+	return get_constraint_name(constraintId);
 }
 
 /*
@@ -757,21 +748,23 @@ ConstraintGetPrimaryKeyOf(Oid relid, AttrNumber attno, Oid *pkrelid, AttrNumber 
 {
 	bool		found;
 	Relation	conDesc;
+	SysScanDesc conscan;
+	ScanKeyData skey;
 	HeapTuple	tup;
-	cqContext  *pcqCtx;
-	cqContext	cqc;
 
 	conDesc = heap_open(ConstraintRelationId, AccessShareLock);
 
 	found = false;
 
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), conDesc),
-			cql("SELECT * FROM pg_constraint "
-				" WHERE conrelid = :1 ",
-				ObjectIdGetDatum(relid)));
+	ScanKeyInit(&skey,
+				Anum_pg_constraint_conrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
 
-	while (HeapTupleIsValid(tup = caql_getnext(pcqCtx)))
+	conscan = systable_beginscan(conDesc, ConstraintRelidIndexId, true,
+								 SnapshotNow, 1, &skey);
+
+	while (HeapTupleIsValid(tup = systable_getnext(conscan)))
 	{
 		Form_pg_constraint con = (Form_pg_constraint) GETSTRUCT(tup);
 		
@@ -819,8 +812,8 @@ ConstraintGetPrimaryKeyOf(Oid relid, AttrNumber attno, Oid *pkrelid, AttrNumber 
 			}
 		}
 	}
-	
-	caql_endscan(pcqCtx);
+
+	systable_endscan(conscan);
 	heap_close(conDesc, AccessShareLock);
 
 	return found;

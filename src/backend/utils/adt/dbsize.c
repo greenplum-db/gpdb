@@ -21,7 +21,6 @@
 #include "access/appendonlywriter.h"
 #include "access/aocssegfiles.h"
 #include "catalog/catalog.h"
-#include "catalog/catquery.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_appendonly_fn.h"
 #include "catalog/pg_tablespace.h"
@@ -539,14 +538,9 @@ pg_relation_size_name(PG_FUNCTION_ARGS)
 
 		AcceptInvalidationMessages();
 
-		namespaceId = caql_getoid(
-				NULL,
-				cql("SELECT oid FROM pg_namespace "
-					" WHERE nspname = :1 ",
-					CStringGetDatum(relrv->schemaname)));
-
+		namespaceId = GetSysCacheOid1(NAMESPACENAME,
+									  CStringGetDatum(relrv->schemaname));
 		relOid = get_relname_relid(relrv->relname, namespaceId);
-		
 		if (!OidIsValid(relOid))
 		{
 			size = 0;
@@ -731,12 +725,8 @@ pg_total_relation_size_name(PG_FUNCTION_ARGS)
 		 */
 		AcceptInvalidationMessages();
 
-		namespaceId = caql_getoid(
-				NULL,
-				cql("SELECT oid FROM pg_namespace "
-					" WHERE nspname = :1 ",
-					CStringGetDatum(relrv->schemaname)));
-
+		namespaceId = GetSysCacheOid1(NAMESPACENAME,
+									  CStringGetDatum(relrv->schemaname));
 		relid = get_relname_relid(relrv->relname, namespaceId);
 	}
 	else

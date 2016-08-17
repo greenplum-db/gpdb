@@ -13,7 +13,6 @@
  */
 #include "postgres.h"
 
-#include "catalog/catquery.h"
 #include "access/heapam.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_proc.h"
@@ -290,25 +289,18 @@ assign_func_result_transient_type(Oid funcid)
 	HeapTuple	tp;
 	Form_pg_proc procform;
 	TupleDesc	tupdesc;
-	cqContext  *pcqCtx;
 
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_proc "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(funcid)));
-
-	tp = caql_getnext(pcqCtx);
-
-	caql_endscan(pcqCtx);
-
+	tp = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcid));
 	if (!HeapTupleIsValid(tp))
 		elog(ERROR, "cache lookup failed for function %u", funcid);
 	procform = (Form_pg_proc) GETSTRUCT(tp);
 
 	tupdesc = build_function_result_tupdesc_t(tp);
 	if (tupdesc == NULL)
+	{
+		ReleaseSysCache(tp);
 		return;
+	}
 
 	if (resolve_polymorphic_tupdesc(tupdesc,
 									&procform->proargtypes,
@@ -318,6 +310,7 @@ assign_func_result_transient_type(Oid funcid)
 			tupdesc->tdtypmod < 0)
 			assign_record_type_typmod(tupdesc);
 	}
+	ReleaseSysCache(tp);
 }
 
 /*

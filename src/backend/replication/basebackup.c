@@ -18,10 +18,10 @@
 #include <time.h>
 
 #include "miscadmin.h"
+#include "access/genam.h"
 #include "access/xlog_internal.h"		/* for pg_start/stop_backup */
 #include "cdb/cdbvars.h"
 #include "catalog/catalog.h"
-#include "catalog/catquery.h"
 #include "catalog/pg_database.h"
 #include "catalog/pg_filespace.h"
 #include "catalog/pg_filespace_entry.h"
@@ -40,6 +40,7 @@
 #include "storage/proc.h"
 #include "utils/builtins.h"
 #include "utils/elog.h"
+#include "utils/fmgroids.h"
 #include "utils/faultinjector.h"
 #include "utils/guc.h"
 #include "utils/ps_status.h"
@@ -1041,7 +1042,9 @@ get_filespaces_to_send(basebackup_options *opt)
 {
 	List		   *filespaces;
 	Oid				txnFilespaceOID;
-	cqContext	   *ctx;
+	Relation		rel;
+	ScanKeyData		scankey;
+	SysScanDesc		sscan;
 	HeapTuple		tuple;
 	int16			standbyDbid;
 	filespaceinfo  *xlog_fi = NULL;
@@ -1057,13 +1060,20 @@ get_filespaces_to_send(basebackup_options *opt)
 	 * Scan the filespace entries for this db.
 	 */
 	standbyDbid = GetStandbyDbid();
-	ctx = caql_beginscan(NULL,
-						 cql("SELECT * FROM pg_filespace_entry "
-							 "WHERE fsedbid = :1",
-							 Int16GetDatum(GpIdentity.dbid)));
+
+	rel = heap_open(FileSpaceEntryRelationId, AccessShareLock);
+
+	/* SELECT * FROM pg_filespace_entry WHERE fsedbid = :1" */
+	ScanKeyInit(&scankey,
+				Anum_pg_filespace_entry_fsedbid,
+				BTEqualStrategyNumber, F_INT2EQ,
+				Int16GetDatum(GpIdentity.dbid));
+
+	sscan = systable_beginscan(rel, InvalidOid, false,
+							   SnapshotNow, 1, &scankey);
 
 	filespaces = NIL;
-	while (HeapTupleIsValid(tuple = caql_getnext(ctx)))
+	while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
 	{
 		Form_pg_filespace_entry pg_filespace_entry;
 		bool			isnull;
@@ -1074,9 +1084,10 @@ get_filespaces_to_send(basebackup_options *opt)
 
 		pg_filespace_entry = (Form_pg_filespace_entry) GETSTRUCT(tuple);
 		fselocation = TextDatumGetCString(
-						caql_getattr(ctx,
-									 Anum_pg_filespace_entry_fselocation,
-									 &isnull));
+			heap_getattr(tuple,
+						 Anum_pg_filespace_entry_fselocation,
+						 RelationGetDescr(rel),
+						 &isnull));
 
 		Assert(strlen(fselocation) <= MAXPGPATH);
 		Assert(!isnull);
@@ -1098,22 +1109,31 @@ get_filespaces_to_send(basebackup_options *opt)
 		 */
 		if (OidIsValid(standbyDbid))
 		{
-			cqContext cqc;
+			ScanKeyData		standby_scankey[2];
+			SysScanDesc		standby_sscan;
+			HeapTuple	standby_tuple;
 
-			HeapTuple	standby_tuple =
-				caql_getfirst(cqclr(&cqc),
-						cql("SELECT fselocation FROM pg_filespace_entry "
-							"WHERE fsefsoid = :1 AND fsedbid = :2",
-							ObjectIdGetDatum(pg_filespace_entry->fsefsoid),
-							Int16GetDatum(standbyDbid)));
+			ScanKeyInit(&standby_scankey[0],
+						Anum_pg_filespace_entry_fsefsoid,
+						BTEqualStrategyNumber, F_INT2EQ,
+						ObjectIdGetDatum(pg_filespace_entry->fsefsoid));
+			ScanKeyInit(&standby_scankey[1],
+						Anum_pg_filespace_entry_fsedbid,
+						BTEqualStrategyNumber, F_INT2EQ,
+						Int16GetDatum(standbyDbid));
+
+			standby_sscan = systable_beginscan(rel, FileSpaceEntryFsefsoidFsedbidIndexId, true,
+											   SnapshotNow, 2, standby_scankey);
+			standby_tuple = systable_getnext(standby_sscan);
 			if (!HeapTupleIsValid(standby_tuple))
 				elog(ERROR, "cache lookup failed for filespace %u",
 							pg_filespace_entry->fsefsoid);
 
 			fselocation = TextDatumGetCString(
-					caql_getattr(&cqc,
-								 Anum_pg_filespace_entry_fselocation,
-								 &isnull));
+				heap_getattr(standby_tuple,
+							 Anum_pg_filespace_entry_fselocation,
+							 RelationGetDescr(rel),
+							 &isnull));
 			Assert(strlen(fselocation) <= MAXPGPATH);
 			Assert(!isnull);
 
@@ -1128,8 +1148,7 @@ get_filespaces_to_send(basebackup_options *opt)
 			else
 				fi->standby_path = pstrdup(fselocation);
 
-			/* clean up a tuple copy returned by getfirst() */
-			heap_freetuple(standby_tuple);
+			systable_endscan(standby_sscan);
 		}
 		fi->size = opt->progress ?
 			sendDir(fselocation, strlen(fselocation), opt->exclude, true) : -1;
@@ -1162,7 +1181,7 @@ get_filespaces_to_send(basebackup_options *opt)
 	xlog_fi->xlogdir = true;
 	filespaces = lappend(filespaces, xlog_fi);
 
-	caql_endscan(ctx);
+	systable_endscan(sscan);
 
 	return filespaces;
 }

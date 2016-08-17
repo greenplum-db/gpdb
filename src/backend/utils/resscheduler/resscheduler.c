@@ -15,7 +15,6 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
-#include "catalog/catquery.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_authid.h"
 #include "catalog/pg_resqueue.h"
@@ -174,12 +173,10 @@ InitResPortalIncrementHash(void)
 void 
 InitResQueues(void)
 {
-
 	HeapTuple			tuple;
 	int					numQueues = 0;
 	bool				queuesok = true;
-	cqContext		   *pcqCtx;
-	cqContext			cqc;
+	SysScanDesc sscan;
 	
 	Assert(ResScheduler);
 
@@ -199,6 +196,7 @@ InitResQueues(void)
 	 * So, we must have obtained ResQueueRelationId and ResQueueCapabilityRelationId lock
 	 * first.
 	 */
+	/* XXX XXX: should this be rowexclusive ? */
 	Relation relResqueue = heap_open(ResQueueRelationId, AccessShareLock);
 	LockRelationOid(ResQueueCapabilityRelationId, RowExclusiveLock);
 	LWLockAcquire(ResQueueLock, LW_EXCLUSIVE);
@@ -214,14 +212,8 @@ InitResQueues(void)
 		return;
 	}
 
-	/* XXX XXX: should this be rowexclusive ? */
-	pcqCtx = caql_beginscan(
-			caql_indexOK(
-					caql_addrel(cqclr(&cqc), relResqueue),
-					false),
-			cql("SELECT * FROM pg_resqueue ", NULL));
-
-	while (HeapTupleIsValid(tuple = caql_getnext(pcqCtx)))
+	sscan = systable_beginscan(relResqueue, InvalidOid, false, SnapshotNow, 0, NULL);
+	while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
 	{
 		Form_pg_resqueue	queueform;
 		Oid					queueid;
@@ -251,7 +243,7 @@ InitResQueues(void)
 		}
 	}
 
-	caql_endscan(pcqCtx);
+	systable_endscan(sscan);
 	LWLockRelease(ResQueueLock);
 	UnlockRelationOid(ResQueueCapabilityRelationId, RowExclusiveLock);
 	heap_close(relResqueue, AccessShareLock);
@@ -871,21 +863,21 @@ ResUnLockPortal(Portal portal)
 Oid	
 GetResQueueForRole(Oid roleid)
 {
-	bool			isnull;
-	int				fetchCount;
-	Oid				queueid = InvalidOid;
+	HeapTuple	tuple;
+	bool		isnull;
+	Oid			queueid;
 
-	queueid = caql_getoid_plus(
-			NULL,
-			&fetchCount,
-			&isnull,
-			cql("SELECT rolresqueue FROM pg_authid "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(roleid)));
+	tuple = SearchSysCache1(AUTHOID, ObjectIdGetDatum(roleid));
+	if (!tuple)
+		return DEFAULTRESQUEUE_OID; /* role not found */
+
+	queueid = SysCacheGetAttr(AUTHOID, tuple, Anum_pg_authid_rolresqueue, &isnull);
 
 	/* MPP-6926: use default queue if none specified */
-	if (!OidIsValid(queueid) || !fetchCount || isnull)
+	if (!OidIsValid(queueid) || isnull)
 		queueid = DEFAULTRESQUEUE_OID;
+
+	ReleaseSysCache(tuple);
 
 	return queueid;
 	
@@ -943,13 +935,30 @@ GetResQueueId(void)
 Oid
 GetResQueueIdForName(char	*name)
 {
-	Oid					queueid = InvalidOid;
+	Relation	rel;
+	ScanKeyData scankey;
+	SysScanDesc scan;
+	HeapTuple	tuple;
+	Oid			queueid;
 
-	queueid = caql_getoid(
-			NULL,
-			cql("SELECT oid FROM pg_resqueue "
-				" WHERE rsqname = :1 ",
-				CStringGetDatum(name)));
+	rel = heap_open(ResQueueRelationId, AccessShareLock);
+
+	/* SELECT oid FROM pg_resqueue WHERE rsqname = :1 */
+	ScanKeyInit(&scankey,
+				Anum_pg_resqueue_rsqname,
+				BTEqualStrategyNumber, F_NAMEEQ,
+				CStringGetDatum(name));
+	scan = systable_beginscan(rel, ResQueueRsqnameIndexId, true,
+							  SnapshotNow, 1, &scankey);
+
+	tuple = systable_getnext(scan);
+	if (tuple)
+		queueid = HeapTupleGetOid(tuple);
+	else
+		queueid = InvalidOid;
+
+	systable_endscan(scan);
+	heap_close(rel, AccessShareLock);
 
 	return queueid;
 }

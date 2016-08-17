@@ -29,7 +29,6 @@
 #include "access/genam.h"
 #include "access/heapam.h"
 #include "access/reloptions.h"
-#include "catalog/catquery.h"
 #include "catalog/pg_compression.h"
 #include "catalog/pg_constraint.h"
 #include "catalog/dependency.h"
@@ -58,6 +57,7 @@
 #include "rewrite/rewriteManip.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
+#include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/relcache.h"
@@ -2557,7 +2557,8 @@ transformIndexStmt_recurse(IndexStmt *stmt, const char *queryString,
 			IndexStmt  *chidx;
 			Relation	partrel;
 			HeapTuple	tuple;
-			cqContext	cqc;
+			ScanKeyData scankey;
+			SysScanDesc sscan;
 			char	   *parname;
 			int2		position;
 			int4		depth;
@@ -2598,12 +2599,14 @@ transformIndexStmt_recurse(IndexStmt *stmt, const char *queryString,
 			 */
 			partrel = heap_open(PartitionRuleRelationId, AccessShareLock);
 
-			tuple = caql_getfirst(
-				caql_addrel(cqclr(&cqc), partrel),
-				cql("SELECT * FROM pg_partition_rule "
-					" WHERE parchildrelid = :1 ",
-					ObjectIdGetDatum(relid)));
-
+			/* SELECT * FROM pg_partition_rule WHERE parchildrelid = :1 */
+			ScanKeyInit(&scankey,
+						Anum_pg_partition_rule_parchildrelid,
+						BTEqualStrategyNumber, F_OIDEQ,
+						ObjectIdGetDatum(relid));
+			sscan = systable_beginscan(partrel, PartitionRuleParchildrelidIndexId,
+									   true, SnapshotNow, 1, &scankey);
+			tuple = systable_getnext(sscan);
 			Assert(HeapTupleIsValid(tuple));
 
 			name = ((Form_pg_partition_rule)GETSTRUCT(tuple))->parname;
@@ -2611,23 +2614,16 @@ transformIndexStmt_recurse(IndexStmt *stmt, const char *queryString,
 			position = ((Form_pg_partition_rule)GETSTRUCT(tuple))->parruleord;
 			paroid = ((Form_pg_partition_rule)GETSTRUCT(tuple))->paroid;
 
-			heap_freetuple(tuple);
+			systable_endscan(sscan);
 			heap_close(partrel, NoLock);
 
-			partrel = heap_open(PartitionRelationId, AccessShareLock);
-
-			tuple = caql_getfirst(
-				caql_addrel(cqclr(&cqc), partrel),
-				cql("SELECT parlevel FROM pg_partition "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(paroid)));
-
+			tuple = SearchSysCache1(PARTOID,
+									ObjectIdGetDatum(paroid));
 			Assert(HeapTupleIsValid(tuple));
 
 			depth = ((Form_pg_partition)GETSTRUCT(tuple))->parlevel + 1;
 
-			heap_freetuple(tuple);
-			heap_close(partrel, NoLock);
+			ReleaseSysCache(tuple);
 
 			heap_close(crel, NoLock);
 
@@ -3765,30 +3761,34 @@ find_crsd(char *column, List *stenc)
 List *
 TypeNameGetStorageDirective(TypeName *typname)
 {
-	HeapTuple tuple;
-	cqContext  *pcqCtx;
+	Relation	rel;
+	ScanKeyData scankey;
+	SysScanDesc sscan;
+	HeapTuple	tuple;
 	Oid			typid;
 	int32		typmod;
-	List *out = NIL;
+	List	   *out = NIL;
 
 	typid = typenameTypeId(NULL, typname, &typmod);
-	
-	/* XXX XXX: SELECT typoptions */
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_type_encoding "
-				" WHERE typid = :1 ",
-				ObjectIdGetDatum(typid)));
 
-	tuple = caql_getnext(pcqCtx);
+	rel = heap_open(TypeEncodingRelationId, AccessShareLock);
 
+	/* SELECT typoptions FROM pg_type_encoding where typid = :1 */
+	ScanKeyInit(&scankey,
+				Anum_pg_type_encoding_typid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(typid));
+	sscan = systable_beginscan(rel, TypeEncodingTypidIndexId,
+							   true, SnapshotNow, 1, &scankey);
+	tuple = systable_getnext(sscan);
 	if (HeapTupleIsValid(tuple))
 	{
 		Datum options;
 		bool isnull;
 
-		options = caql_getattr(pcqCtx, 
+		options = heap_getattr(tuple,
 							   Anum_pg_type_encoding_typoptions,
+							   RelationGetDescr(rel),
 							   &isnull);
 
 		Insist(!isnull);
@@ -3796,7 +3796,9 @@ TypeNameGetStorageDirective(TypeName *typname)
 		out = untransformRelOptions(options);
 	}
 
-	caql_endscan(pcqCtx);
+	systable_endscan(sscan);
+	heap_close(rel, AccessShareLock);
+
 	return out;
 }
 

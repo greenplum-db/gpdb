@@ -16,7 +16,6 @@
 #include "access/genam.h"
 #include "access/heapam.h"
 #include "access/xact.h"
-#include "catalog/catquery.h"
 #include "catalog/dependency.h"
 #include "catalog/heap.h"
 #include "catalog/indexing.h"
@@ -2456,18 +2455,14 @@ ExtractAuthInterpretDay(Value * day)
  * Note: caller is reponsible for checking permissions to edit the given role.
  */
 static void
-AddRoleDenials(const char *rolename, Oid roleid, List *addintervals) {
+AddRoleDenials(const char *rolename, Oid roleid, List *addintervals)
+{
 	Relation	pg_auth_time_rel;
+	TupleDesc	pg_auth_time_dsc;
 	ListCell   *intervalitem;
-	cqContext	cqc;
-	cqContext  *pcqCtx;
 
 	pg_auth_time_rel = heap_open(AuthTimeConstraintRelationId, RowExclusiveLock);
-
-	pcqCtx = caql_beginscan(
-				caql_addrel(cqclr(&cqc), pg_auth_time_rel),
-				cql("INSERT INTO pg_auth_time_constraint ",
-					NULL));
+	pg_auth_time_dsc = RelationGetDescr(pg_auth_time_rel);
 
 	foreach(intervalitem, addintervals)
 	{
@@ -2486,11 +2481,11 @@ AddRoleDenials(const char *rolename, Oid roleid, List *addintervals) {
 		new_record[Anum_pg_auth_time_constraint_end_day - 1] = Int16GetDatum(interval->end.day);
 		new_record[Anum_pg_auth_time_constraint_end_time - 1] = TimeADTGetDatum(interval->end.time);
 
-		tuple = caql_form_tuple(pcqCtx, new_record, new_record_nulls);
+		tuple = heap_form_tuple(pg_auth_time_dsc, new_record, new_record_nulls);
 		
 		/* Insert tuple into the relation */
-		caql_insert(pcqCtx, tuple); /* implicit update of index as well */
-
+		simple_heap_insert(pg_auth_time_rel, tuple);
+		CatalogUpdateIndexes(pg_auth_time_rel, tuple);
 	}
 
 	CommandCounterIncrement();
@@ -2499,7 +2494,6 @@ AddRoleDenials(const char *rolename, Oid roleid, List *addintervals) {
 	 * Close pg_auth_time_constraint, but keep lock till commit (this is important to
 	 * prevent any risk of deadlock failure while updating flat file)
 	 */
-	caql_endscan(pcqCtx);
 	heap_close(pg_auth_time_rel, NoLock);
 
 	/*
@@ -2523,24 +2517,23 @@ static void
 DelRoleDenials(const char *rolename, Oid roleid, List *dropintervals) 
 {
 	Relation    pg_auth_time_rel;
+	ScanKeyData scankey;
+	SysScanDesc sscan;
 	ListCell	*intervalitem;
 	bool		dropped_matching_interval = false; 
 
 	HeapTuple 	tmp_tuple;
-	cqContext	cqc;
-	cqContext  *pcqCtx;
 
 	pg_auth_time_rel = heap_open(AuthTimeConstraintRelationId, RowExclusiveLock);
 
-	pcqCtx = 
-			caql_beginscan(
-					caql_addrel(cqclr(&cqc), pg_auth_time_rel),
-					cql("SELECT * FROM pg_auth_time_constraint "
-						" WHERE authid = :1 "
-						" FOR UPDATE ",
-						ObjectIdGetDatum(roleid)));
+	ScanKeyInit(&scankey,
+				Anum_pg_auth_time_constraint_authid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(roleid));
+	sscan = systable_beginscan(pg_auth_time_rel, InvalidOid,
+							   false, SnapshotNow, 1, &scankey);
 
-	while (HeapTupleIsValid(tmp_tuple = caql_getnext(pcqCtx)))
+	while (HeapTupleIsValid(tmp_tuple = systable_getnext(sscan)))
 	{
 		if (dropintervals != NIL) 
 		{
@@ -2563,14 +2556,14 @@ DelRoleDenials(const char *rolename, Oid roleid, List *dropintervals)
 										DatumGetCString(DirectFunctionCall1(time_out, TimeADTGetDatum(existing->start.time))),
 										daysofweek[existing->end.day],
 										DatumGetCString(DirectFunctionCall1(time_out, TimeADTGetDatum(existing->end.time))))));
-					caql_delete_current(pcqCtx);
+					simple_heap_delete(pg_auth_time_rel, &tmp_tuple->t_self);
 					dropped_matching_interval = true;
 					break;
 				}
 			}
 		} 
 		else
-			caql_delete_current(pcqCtx);
+			simple_heap_delete(pg_auth_time_rel, &tmp_tuple->t_self);
 	}
 
 	/* if intervals were specified and none was found, raise error */
@@ -2578,7 +2571,7 @@ DelRoleDenials(const char *rolename, Oid roleid, List *dropintervals)
 		ereport(ERROR, 
 				(errmsg("cannot find matching DENY rules for \"%s\"", rolename)));
 
-	caql_endscan(pcqCtx);
+	systable_endscan(sscan);
 
 	/*
 	 * Close pg_auth_time_constraint, but keep lock till commit (this is important to

@@ -18,7 +18,6 @@
 #include "utils/relcache.h"
 #include "utils/fmgroids.h"
 #include "access/genam.h"
-#include "catalog/catquery.h"
 #include "access/htup.h"
 #include "access/heapam.h"
 
@@ -41,12 +40,13 @@ void
 InsertFastSequenceEntry(Oid objid, int64 objmod, int64 lastSequence)
 {
 	Relation gp_fastsequence_rel;
+	ScanKeyData scankey[2];
+	SysScanDesc scan;
 	TupleDesc tupleDesc;
 	int natts = 0;
 	Datum *values;
 	bool *nulls;
 	HeapTuple tuple = NULL;
-	cqContext	 cqc;
 	
 	/*
 	 * Open and lock the gp_fastsequence catalog table.
@@ -54,15 +54,19 @@ InsertFastSequenceEntry(Oid objid, int64 objmod, int64 lastSequence)
 	gp_fastsequence_rel = heap_open(FastSequenceRelationId, RowExclusiveLock);
 	tupleDesc = RelationGetDescr(gp_fastsequence_rel);
 	
-	tuple = caql_getfirst(
-			caql_addrel(cqclr(&cqc), gp_fastsequence_rel),
-			cql("SELECT * FROM gp_fastsequence "
-				" WHERE objid = :1 "
-				" AND objmod = :2 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(objid),
-				Int64GetDatum(objmod)));
+	/* SELECT * FROM gp_fastsequence WHERE objid = :1 AND objmod = :2 FOR UPDATE */
+	ScanKeyInit(&scankey[0],
+				Anum_gp_fastsequence_objid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(objid));
+	ScanKeyInit(&scankey[1],
+				Anum_gp_fastsequence_objmod,
+				BTEqualStrategyNumber, F_INT8EQ,
+				Int64GetDatum(objmod));
+	scan = systable_beginscan(gp_fastsequence_rel, FastSequenceObjidObjmodIndexId, true,
+							  SnapshotNow, 2, scankey);
 
+	tuple = systable_getnext(scan);
 	if (!HeapTupleIsValid(tuple))
 	{
 		natts = tupleDesc->natts;
@@ -89,8 +93,7 @@ InsertFastSequenceEntry(Oid objid, int64 objmod, int64 lastSequence)
 							objmod,
 							lastSequence);
 	}
-
-	heap_freetuple(tuple);
+	systable_endscan(scan);
 
 	/*
 	 * gp_fastsequence table locking for AO inserts uses bottom up approach
@@ -192,25 +195,34 @@ int64 GetFastSequences(Oid objid, int64 objmod,
 					   int64 minSequence, int64 numSequences)
 {
 	Relation gp_fastsequence_rel;
+	ScanKeyData scankey[2];
+	SysScanDesc scan;
 	TupleDesc tupleDesc;
 	HeapTuple tuple;
-	cqContext	 cqc;
 	int64 firstSequence = minSequence;
 	Datum lastSequenceDatum;
 	int64 newLastSequence;
 
 	gp_fastsequence_rel = heap_open(FastSequenceRelationId, RowExclusiveLock);
 	tupleDesc = RelationGetDescr(gp_fastsequence_rel);
-	
-	tuple = caql_getfirst(
-			caql_addrel(cqclr(&cqc), gp_fastsequence_rel),
-			cql("SELECT * FROM gp_fastsequence "
-				" WHERE objid = :1 "
-				" AND objmod = :2 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(objid),
-				Int64GetDatum(objmod)));
 
+	/*
+	 * SELECT * FROM gp_fastsequence
+	 * WHERE objid = :1 AND objmod = :2
+	 * FOR UPDATE
+	 */
+	ScanKeyInit(&scankey[0],
+				Anum_gp_fastsequence_objid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(objid));
+	ScanKeyInit(&scankey[1],
+				Anum_gp_fastsequence_objmod,
+				BTEqualStrategyNumber, F_INT8EQ,
+				Int64GetDatum(objmod));
+	scan = systable_beginscan(gp_fastsequence_rel, FastSequenceObjidObjmodIndexId, true,
+							  SnapshotNow, 2, scankey);
+
+	tuple = systable_getnext(scan);
 	if (!HeapTupleIsValid(tuple))
 	{
 		newLastSequence = firstSequence + numSequences - 1;
@@ -231,14 +243,11 @@ int64 GetFastSequences(Oid objid, int64 objmod,
 			firstSequence = DatumGetInt64(lastSequenceDatum) + 1;
 		newLastSequence = firstSequence + numSequences - 1;
 	}
-	
+
 	update_fastsequence(gp_fastsequence_rel, tuple, tupleDesc,
 						objid, objmod, newLastSequence);
 
-	if (HeapTupleIsValid(tuple))
-	{
-		heap_freetuple(tuple);
-	}
+	systable_endscan(scan);
 		
 	/* Refer to the comment at the end of InsertFastSequenceEntry. */
 	heap_close(gp_fastsequence_rel, RowExclusiveLock);
@@ -260,13 +269,29 @@ int64 GetFastSequences(Oid objid, int64 objmod,
 void
 RemoveFastSequenceEntry(Oid objid)
 {
+	Relation	rel;
+	ScanKeyData scankey;
+	SysScanDesc sscan;
+	HeapTuple	tuple;
+
 	if (!OidIsValid(objid))
 		return;
 
-	(void) caql_getcount(
-		NULL,
-		cql("DELETE FROM gp_fastsequence "
-			" WHERE objid = :1 ",
-			ObjectIdGetDatum(objid)));
+	rel = heap_open(FastSequenceRelationId, RowExclusiveLock);
 
+	ScanKeyInit(&scankey,
+				Anum_gp_fastsequence_objid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(objid));
+
+	sscan = systable_beginscan(rel, FastSequenceObjidObjmodIndexId, true,
+							   SnapshotNow, 1, &scankey);
+
+	while ((tuple = systable_getnext(sscan)) != NULL)
+	{
+		simple_heap_delete(rel, &tuple->t_self);
+	}
+
+	systable_endscan(sscan);
+	heap_close(rel, RowExclusiveLock);
 }

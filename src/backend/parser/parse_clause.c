@@ -16,7 +16,6 @@
 
 #include "postgres.h"
 
-#include "catalog/catquery.h"
 #include "access/heapam.h"
 #include "catalog/heap.h"
 #include "catalog/pg_am.h"
@@ -398,15 +397,9 @@ winref_checkspec_walker(Node *node, void *ctx)
 		{
 			HeapTuple		tuple;
 			Form_pg_window	wf;
-			cqContext	   *pcqCtx;
 
-			pcqCtx = caql_beginscan(
-					NULL,
-					cql("SELECT * FROM pg_window "
-						" WHERE winfnoid = :1 ",
-						ObjectIdGetDatum(winref->winfnoid)));
-
-			tuple = caql_getnext(pcqCtx);
+			tuple = SearchSysCache1(WINFNOID,
+									ObjectIdGetDatum(winref->winfnoid));
 
 			/*
 			 * Check only "true" window function.
@@ -428,8 +421,8 @@ winref_checkspec_walker(Node *node, void *ctx)
 							 errmsg("window function \"%s\" cannot be used with a framed window specification",
 									get_func_name(wf->winfnoid)),
 								parser_errposition(ref->pstate, winref->location)));
+				ReleaseSysCache(tuple);
 			}
-			caql_endscan(pcqCtx);
 		}
 	}
 

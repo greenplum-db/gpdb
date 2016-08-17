@@ -22,7 +22,6 @@
 #include "access/transam.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
-#include "catalog/catquery.h"
 #include "catalog/dependency.h"
 #include "catalog/heap.h"
 #include "catalog/index.h"
@@ -1490,7 +1489,7 @@ relationHasUniqueIndex(Relation rel)
 	bool		result = false;
 	List	   *indexoidlist;
 	ListCell   *indexoidscan;
-	cqContext  *pcqCtx;
+
 	/*
 	 * Get the list of index OIDs for the table from the relcache, and look up
 	 * each one in the pg_index syscache until we find one marked unique
@@ -1502,21 +1501,13 @@ relationHasUniqueIndex(Relation rel)
 		Oid			indexoid = lfirst_oid(indexoidscan);
 		HeapTuple	indexTuple;
 
-		/* XXX: select * from pg_index where indexrelid = :1 
-		   and indisunique */
-		pcqCtx = caql_beginscan(
-				NULL,
-				cql("SELECT * FROM pg_index "
-					" WHERE indexrelid = :1 ",
-					ObjectIdGetDatum(indexoid)));
-
-		indexTuple = caql_getnext(pcqCtx);
-
+		indexTuple = SearchSysCache(INDEXRELID,
+									ObjectIdGetDatum(indexoid),
+									0, 0, 0);
 		if (!HeapTupleIsValid(indexTuple))		/* should not happen */
 			elog(ERROR, "cache lookup failed for index %u", indexoid);
 		result = ((Form_pg_index) GETSTRUCT(indexTuple))->indisunique;
-
-		caql_endscan(pcqCtx);
+		ReleaseSysCache(indexTuple);
 		if (result)
 			break;
 	}
@@ -1538,7 +1529,6 @@ RemoveIndex(RangeVar *relation, DropBehavior behavior)
 	ObjectAddress object;
 	HeapTuple tuple;
 	PartStatus pstat;
-	cqContext	*pcqCtx;
 
 	indOid = RangeVarGetRelid(relation, false);
 
@@ -1552,14 +1542,8 @@ RemoveIndex(RangeVar *relation, DropBehavior behavior)
 
 	/* XXX: just an existence (count(*)) check? */
 
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_class "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(indOid)));
-
-	tuple = caql_getnext(pcqCtx);
-
+	tuple = SearchSysCache1(RELOID,
+							ObjectIdGetDatum(indOid));
 	if (!HeapTupleIsValid(tuple))
 		elog(ERROR, "index \"%s\" does not exist", relation->relname);
 
@@ -1576,7 +1560,7 @@ RemoveIndex(RangeVar *relation, DropBehavior behavior)
 	
 	pstat = rel_part_status(IndexGetRelation(indOid));
 
-	caql_endscan(pcqCtx);
+	ReleaseSysCache(tuple);
 
 	performDeletion(&object, behavior);
 	
@@ -1805,17 +1789,10 @@ ReindexTable(ReindexStmt *stmt)
 	{
 		Oid			heapOid = lfirst_oid(lc);
 		HeapTuple	tuple;
-		cqContext  *pcqCtx;
 		Form_pg_class pg_class_tuple;
 
-		pcqCtx = caql_beginscan(
-				NULL,
-				cql("SELECT * FROM pg_class "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(heapOid)));
-
-		tuple = caql_getnext(pcqCtx);
-
+		tuple = SearchSysCache1(RELOID,
+								ObjectIdGetDatum(heapOid));
 		if (!HeapTupleIsValid(tuple))		/* shouldn't happen */
 			elog(ERROR, "cache lookup failed for relation %u", heapOid);
 
@@ -1841,7 +1818,7 @@ ReindexTable(ReindexStmt *stmt)
 					 errmsg("shared table \"%s\" can only be reindexed in stand-alone mode",
 							NameStr(pg_class_tuple->relname))));
 
-		caql_endscan(pcqCtx);
+		ReleaseSysCache(tuple);
 	}
 
 	ReindexRelationList(relids);

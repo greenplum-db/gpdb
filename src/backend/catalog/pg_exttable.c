@@ -16,7 +16,6 @@
 #include "catalog/pg_type.h"
 #include "catalog/pg_proc.h"
 #include "access/genam.h"
-#include "catalog/catquery.h"
 #include "access/heapam.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
@@ -56,8 +55,6 @@ InsertExtTableEntry(Oid 	tbloid,
 	HeapTuple	pg_exttable_tuple = NULL;
 	bool		nulls[Natts_pg_exttable];
 	Datum		values[Natts_pg_exttable];
-	cqContext	cqc;
-	cqContext  *pcqCtx;
 
  	MemSet(values, 0, sizeof(values));
 	MemSet(nulls, false, sizeof(nulls));
@@ -66,11 +63,6 @@ InsertExtTableEntry(Oid 	tbloid,
      * Open and lock the pg_exttable catalog.
      */
 	pg_exttable_rel = heap_open(ExtTableRelationId, RowExclusiveLock);
-
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), pg_exttable_rel),
-			cql("INSERT INTO pg_exttable",
-				NULL));
 
 	values[Anum_pg_exttable_reloid - 1] = ObjectIdGetDatum(tbloid);
 	values[Anum_pg_exttable_fmttype - 1] = CharGetDatum(formattype);
@@ -115,13 +107,12 @@ InsertExtTableEntry(Oid 	tbloid,
 	values[Anum_pg_exttable_encoding - 1] = Int32GetDatum(encoding);
 	values[Anum_pg_exttable_writable - 1] = BoolGetDatum(iswritable);
 
-	pg_exttable_tuple = caql_form_tuple(pcqCtx, values, nulls);
+	pg_exttable_tuple = heap_form_tuple(RelationGetDescr(pg_exttable_rel), values, nulls);
 
 	/* insert a new tuple */
-	caql_insert(pcqCtx, pg_exttable_tuple); 
-	/* and Update indexes (implicit) */
+	simple_heap_insert(pg_exttable_rel, pg_exttable_tuple);
 
-	caql_endscan(pcqCtx);
+	CatalogUpdateIndexes(pg_exttable_rel, pg_exttable_tuple);
 
 	/*
      * Close the pg_exttable relcache entry without unlocking.
@@ -129,7 +120,6 @@ InsertExtTableEntry(Oid 	tbloid,
      * end of transaction.
      */
     heap_close(pg_exttable_rel, NoLock);
-
 }
 
 /*
@@ -157,8 +147,9 @@ ExtTableEntry*
 GetExtTableEntryIfExists(Oid relid)
 {
 	Relation	pg_exttable_rel;
+	ScanKeyData skey;
+	SysScanDesc scan;
 	HeapTuple	tuple;
-	cqContext	cqc;
 	ExtTableEntry *extentry;
 	Datum		locations,
 				fmtcode, 
@@ -174,15 +165,18 @@ GetExtTableEntryIfExists(Oid relid)
 
 	pg_exttable_rel = heap_open(ExtTableRelationId, RowExclusiveLock);
 
-	tuple = caql_getfirst(
-			caql_addrel(cqclr(&cqc), pg_exttable_rel),			
-			cql("SELECT * FROM pg_exttable "
-				" WHERE reloid = :1 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(relid)));
+	ScanKeyInit(&skey,
+				Anum_pg_exttable_reloid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+
+	scan = systable_beginscan(pg_exttable_rel, ExtTableReloidIndexId, true,
+							  SnapshotNow, 1, &skey);
+	tuple = systable_getnext(scan);
 
 	if (!HeapTupleIsValid(tuple))
 	{
+		systable_endscan(scan);
 		heap_close(pg_exttable_rel, RowExclusiveLock);
 		return NULL;
 	}
@@ -323,9 +317,9 @@ GetExtTableEntryIfExists(Oid relid)
 
 	
 	/* Finish up scan and close pg_exttable catalog. */
-	
+	systable_endscan(scan);
 	heap_close(pg_exttable_rel, RowExclusiveLock);
-	
+
 	return extentry;
 }
 
@@ -339,30 +333,38 @@ void
 RemoveExtTableEntry(Oid relid)
 {
 	Relation	pg_exttable_rel;
-	cqContext	cqc;
+	ScanKeyData skey;
+	SysScanDesc scan;
+	HeapTuple	tuple;
 
 	/*
 	 * now remove the pg_exttable entry
 	 */
 	pg_exttable_rel = heap_open(ExtTableRelationId, RowExclusiveLock);
 
-	if (0 == caql_getcount(
-				caql_addrel(cqclr(&cqc), pg_exttable_rel),
-				cql("DELETE FROM pg_exttable "
-					" WHERE reloid = :1 ",
-					ObjectIdGetDatum(relid))))
-	{
+	ScanKeyInit(&skey,
+				Anum_pg_exttable_reloid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+
+	scan = systable_beginscan(pg_exttable_rel, ExtTableReloidIndexId, true,
+							  SnapshotNow, 1, &skey);
+	tuple = systable_getnext(scan);
+	if (!HeapTupleIsValid(tuple))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 errmsg("external table object id \"%d\" does not exist",
 						relid)));
-	}
 
 	/*
 	 * Delete the external table entry from the catalog (pg_exttable).
 	 */
+	while (HeapTupleIsValid(tuple = systable_getnext(scan)))
+	{
+		simple_heap_delete(pg_exttable_rel, &tuple->t_self);
+	}
 
 	/* Finish up scan and close exttable catalog. */
-
+	systable_endscan(scan);
 	heap_close(pg_exttable_rel, NoLock);
 }

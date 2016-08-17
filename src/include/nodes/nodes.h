@@ -513,13 +513,6 @@ typedef enum NodeTag
     /* CDB: tags for random other stuff */
     T_CdbExplain_StatHdr = 950,             /* in cdb/cdbexplain.c */
 
-    /*
-     * TAGS FOR CAQL PARSER
-     */
-	T_CaQLSelect = 2000,
-	T_CaQLInsert,
-	T_CaQLDelete,
-	T_CaQLExpr,
 } NodeTag;
 
 /*

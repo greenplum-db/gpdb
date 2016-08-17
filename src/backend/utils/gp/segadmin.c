@@ -9,7 +9,6 @@
 #include "miscadmin.h"
 
 #include "access/xlog.h"
-#include "catalog/catquery.h"
 #include "catalog/gp_segment_config.h"
 #include "catalog/pg_filespace.h"
 #include "catalog/pg_filespace_entry.h"
@@ -101,20 +100,15 @@ get_maxdbid()
 	Relation rel = heap_open(GpSegmentConfigRelationId, AccessExclusiveLock);
 	int16 dbid = 0;
 	HeapTuple tuple;
-	cqContext	cqc;
-	cqContext  *pcqCtx;
+	SysScanDesc sscan;
 
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), rel),
-			cql("SELECT * FROM gp_segment_configuration ",
-				NULL));
-
-	while (HeapTupleIsValid(tuple = caql_getnext(pcqCtx)))
+	sscan = systable_beginscan(rel, InvalidOid, false, SnapshotNow, 0, NULL);
+	while ((tuple = systable_getnext(sscan)) != NULL)
 	{
 		dbid = Max(dbid, 
 				   ((Form_gp_segment_configuration)GETSTRUCT(tuple))->dbid);
 	}
-	caql_endscan(pcqCtx);
+	systable_endscan(sscan);
 	heap_close(rel, NoLock);
 
 	return dbid;
@@ -146,20 +140,15 @@ get_availableDbId()
 	/* scan GpSegmentConfigRelationId */
 	Relation rel = heap_open(GpSegmentConfigRelationId, AccessExclusiveLock);
 	HeapTuple tuple;
-	cqContext	cqc;
-	cqContext  *pcqCtx;
+	SysScanDesc sscan;
 
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), rel),
-			cql("SELECT * FROM gp_segment_configuration ",
-				NULL));
-
-	while (HeapTupleIsValid(tuple = caql_getnext(pcqCtx)))
+	sscan = systable_beginscan(rel, InvalidOid, false, SnapshotNow, 0, NULL);
+	while ((tuple = systable_getnext(sscan)) != NULL)
 	{
 		int32 dbid = (int32) ((Form_gp_segment_configuration)GETSTRUCT(tuple))->dbid;
 		(void) hash_search(htab, (void *) &dbid, HASH_ENTER, NULL);
 	}
-	caql_endscan(pcqCtx);
+	systable_endscan(sscan);
 
 	heap_close(rel, NoLock);
 
@@ -189,20 +178,15 @@ get_maxcontentid()
 	Relation rel = heap_open(GpSegmentConfigRelationId, AccessExclusiveLock);
 	int16 contentid = 0;
 	HeapTuple tuple;
-	cqContext	cqc;
-	cqContext  *pcqCtx;
+	SysScanDesc sscan;
 
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), rel),
-			cql("SELECT * FROM gp_segment_configuration ",
-				NULL));
-
-	while (HeapTupleIsValid(tuple = caql_getnext(pcqCtx)))
+	sscan = systable_beginscan(rel, InvalidOid, false, SnapshotNow, 0, NULL);
+	while ((tuple = systable_getnext(sscan)) != NULL)
 	{
 		contentid = Max(contentid,
 						((Form_gp_segment_configuration)GETSTRUCT(tuple))->content);
 	}
-	caql_endscan(pcqCtx);
+	systable_endscan(sscan);
 	heap_close(rel, NoLock);
 
 	return contentid;
@@ -637,14 +621,6 @@ add_segment_config(seginfo *i)
 	Datum values[Natts_gp_segment_configuration];
 	bool nulls[Natts_gp_segment_configuration];
 	HeapTuple tuple;
-	cqContext	cqc;
-	cqContext  *pcqCtx;
-
-	pcqCtx = 
-			caql_beginscan(
-					caql_addrel(cqclr(&cqc), rel),
-					cql("INSERT INTO gp_segment_configuration ",
-						NULL));
 
 	MemSet(nulls, false, sizeof(nulls));
 
@@ -672,12 +648,12 @@ add_segment_config(seginfo *i)
 
 	nulls[Anum_gp_segment_configuration_san_mounts - 1] = true;
 
-	tuple = caql_form_tuple(pcqCtx, values, nulls);
+	tuple = heap_form_tuple(RelationGetDescr(rel), values, nulls);
 
 	/* insert a new tuple */
-	caql_insert(pcqCtx, tuple); /* implicit update of index as well */
+	simple_heap_insert(rel, tuple);
+	CatalogUpdateIndexes(rel, tuple);
 
-	caql_endscan(pcqCtx);
 	heap_close(rel, NoLock);
 }
 
@@ -700,16 +676,27 @@ add_segment_config_entry(int16 pridbid, seginfo *i, ArrayType *fsmap)
 static void
 remove_segment_config(int16 dbid)
 {
-	cqContext	cqc;
 	int numDel = 0;
-	Relation rel = heap_open(GpSegmentConfigRelationId,
-							 RowExclusiveLock);
+	ScanKeyData scankey;
+	SysScanDesc sscan;
+	HeapTuple tuple;
+	Relation rel;
 
-	numDel = caql_getcount(
-			caql_addrel(cqclr(&cqc), rel),
-			cql("DELETE FROM gp_segment_configuration "
-				" WHERE dbid = :1 ",
-				Int16GetDatum(dbid)));
+	rel = heap_open(GpSegmentConfigRelationId, RowExclusiveLock);
+
+	ScanKeyInit(&scankey,
+				Anum_gp_segment_configuration_dbid,
+				BTEqualStrategyNumber, F_INT2EQ,
+				Int16GetDatum(dbid));
+
+	sscan = systable_beginscan(rel, GpSegmentConfigDbidIndexId, true,
+							   SnapshotNow, 1, &scankey);
+	while((tuple = systable_getnext(sscan)) != NULL)
+	{
+		simple_heap_delete(rel, &tuple->t_self);
+		numDel++;
+	}
+	systable_endscan(sscan);
 
 	Insist(numDel > 0);
 
@@ -1158,41 +1145,49 @@ segment_config_activate_standby(int16 standbydbid, int16 newdbid)
 	/* we use AccessExclusiveLock to prevent races */
 	Relation rel = heap_open(GpSegmentConfigRelationId, AccessExclusiveLock);
 	HeapTuple tuple;
-	cqContext	cqc;
-	cqContext  *pcqCtx;
+	ScanKeyData scankey;
+	SysScanDesc sscan;
 	int numDel = 0;
 
 	/* first, delete the old master */
-	numDel = caql_getcount(
-			caql_addrel(cqclr(&cqc), rel),
-			cql("DELETE FROM gp_segment_configuration "
-				" WHERE dbid = :1 ",
-				Int16GetDatum(newdbid)));
+	ScanKeyInit(&scankey,
+				Anum_gp_segment_configuration_dbid,
+				BTEqualStrategyNumber, F_INT2EQ,
+				Int16GetDatum(newdbid));
+	sscan = systable_beginscan(rel, GpSegmentConfigDbidIndexId, true,
+							   SnapshotNow, 1, &scankey);
+	while((tuple = systable_getnext(sscan)) != NULL)
+	{
+		simple_heap_delete(rel, &tuple->t_self);
+		numDel++;
+	}
+	systable_endscan(sscan);
 
 	if (0 == numDel)
 		elog(ERROR, "cannot find old master, dbid %i", newdbid);
 
 	/* now, set out old dbid to the new dbid */
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), rel),
-			cql("SELECT * FROM gp_segment_configuration "
-				" WHERE dbid = :1 "
-				" FOR UPDATE ",
-				Int16GetDatum(standbydbid)));
+	ScanKeyInit(&scankey,
+				Anum_gp_segment_configuration_dbid,
+				BTEqualStrategyNumber, F_INT2EQ,
+				Int16GetDatum(newdbid));
+	sscan = systable_beginscan(rel, GpSegmentConfigDbidIndexId, true,
+							   SnapshotNow, 1, &scankey);
 
-	tuple = caql_getnext(pcqCtx);
+	tuple = systable_getnext(sscan);
 
 	if (!HeapTupleIsValid(tuple))
 		elog(ERROR, "cannot find standby, dbid %i", standbydbid);
 
-	 tuple = heap_copytuple(tuple); 
+	tuple = heap_copytuple(tuple);
 	((Form_gp_segment_configuration)GETSTRUCT(tuple))->dbid = newdbid;
 	((Form_gp_segment_configuration)GETSTRUCT(tuple))->role = SEGMENT_ROLE_PRIMARY;
 	((Form_gp_segment_configuration)GETSTRUCT(tuple))->preferred_role = SEGMENT_ROLE_PRIMARY;
 
-	caql_update_current(pcqCtx, tuple); /* implicit update of index as well */
+	simple_heap_update(rel, &tuple->t_self, tuple);
+	CatalogUpdateIndexes(rel, tuple);
 
-	caql_endscan(pcqCtx);
+	systable_endscan(sscan);
 
 	heap_close(rel, NoLock);
 }
@@ -1208,32 +1203,40 @@ filespace_entry_activate_standby(int standbydbid, int newdbid)
 	 * the lock on gp_segment_configuration.
 	 */
 	Relation rel = heap_open(FileSpaceEntryRelationId, RowExclusiveLock);
+	ScanKeyData scankey;
+	SysScanDesc sscan;
 	HeapTuple tuple;
-	cqContext  *pcqCtx;
-	cqContext	cqc;
 
-	/* first, delete the old master */
-	(void) caql_getcount(
-			caql_addrel(cqclr(&cqc), rel),
-			cql("DELETE FROM pg_filespace_entry "
-				" WHERE fsedbid = :1 ",
-				Int16GetDatum(newdbid)));
+	/* First, delete the old master (no suitable index for this) */
+	ScanKeyInit(&scankey,
+				Anum_pg_filespace_entry_fsedbid,
+				BTEqualStrategyNumber, F_INT2EQ,
+				Int16GetDatum(newdbid));
+	sscan = systable_beginscan(rel, InvalidOid, false,
+							   SnapshotNow, 1, &scankey);
+	while((tuple = systable_getnext(sscan)) != NULL)
+	{
+		simple_heap_delete(rel, &tuple->t_self);
+	}
+	systable_endscan(sscan);
 
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), rel),
-			cql("SELECT * FROM pg_filespace_entry "
-				" WHERE fsedbid = :1 "
-				" FOR UPDATE ",
-				Int16GetDatum(standbydbid)));
+	/* Then, update new master */
+	ScanKeyInit(&scankey,
+				Anum_pg_filespace_entry_fsedbid,
+				BTEqualStrategyNumber, F_INT2EQ,
+				Int16GetDatum(standbydbid));
+	sscan = systable_beginscan(rel, InvalidOid, false,
+							   SnapshotNow, 1, &scankey);
 
-	while (HeapTupleIsValid(tuple = caql_getnext(pcqCtx)))
+	while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
 	{
 		tuple = heap_copytuple(tuple);
 		((Form_pg_filespace_entry)GETSTRUCT(tuple))->fsedbid = newdbid;
-		caql_update_current(pcqCtx, tuple);
+		simple_heap_update(rel, &tuple->t_self, tuple);
+		CatalogUpdateIndexes(rel, tuple);
 	}
 
-	caql_endscan(pcqCtx);
+	systable_endscan(sscan);
 	heap_close(rel, NoLock);
 }
 

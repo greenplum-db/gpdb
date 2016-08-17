@@ -1045,9 +1045,6 @@ extern int gp_workfile_type_hashjoin;
 extern bool gp_mapreduce_define;
 extern bool coredump_on_memerror;
 
-/* if catquery.c is built with the logquery option, allow caql logging */
-extern bool	gp_enable_caql_logging;
-
 /* Autostats feature for MPP-4082. */
 typedef enum
 {

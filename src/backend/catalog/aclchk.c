@@ -23,7 +23,6 @@
 #include "access/sysattr.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
-#include "catalog/catquery.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
 #include "catalog/gp_persistent.h"
@@ -1579,19 +1578,18 @@ ExecGrant_ExtProtocol(InternalGrant *istmt)
 		Datum		aclDatum;
 		Datum		trustedDatum;
 		Datum		ptcnameDatum;
-		cqContext	cqc;
-		cqContext  *pcqCtx;
+		ScanKeyData entry[1];
+		SysScanDesc scan;
 		TupleDesc	reldsc = RelationGetDescr(relation);
 
-		pcqCtx = caql_beginscan(
-				caql_addrel(cqclr(&cqc), relation),
-				cql("SELECT * FROM pg_extprotocol "
-					" WHERE oid = :1 "
-					" FOR UPDATE ",
-					ObjectIdGetDatum(ptcid)));
-
-		tuple = caql_getnext(pcqCtx);
-
+		/* There's no syscache for pg_extprotocol, so must look the hard way */
+		ScanKeyInit(&entry[0],
+					ObjectIdAttributeNumber,
+					BTEqualStrategyNumber, F_OIDEQ,
+					ObjectIdGetDatum(ptcid));
+		scan = systable_beginscan(relation, ExtprotocolOidIndexId, true,
+								  SnapshotNow, 1, entry);
+		tuple = systable_getnext(scan);
 		if (!HeapTupleIsValid(tuple))
 			elog(ERROR, "lookup failed for external protocol %u", ptcid);
 		
@@ -1687,10 +1685,13 @@ ExecGrant_ExtProtocol(InternalGrant *istmt)
 		replaces[Anum_pg_extprotocol_ptcacl - 1] = true;
 		values[Anum_pg_extprotocol_ptcacl - 1] = PointerGetDatum(new_acl);
 
-		newtuple = caql_modify_current(pcqCtx, values, nulls, replaces);
+		newtuple = heap_modify_tuple(tuple, RelationGetDescr(relation), values,
+									 nulls, replaces);
 
-		caql_update_current(pcqCtx, newtuple);
-		/* and Update indexes (implicit) */
+		simple_heap_update(relation, &newtuple->t_self, newtuple);
+
+		/* keep the catalog indexes up to date */
+		CatalogUpdateIndexes(relation, newtuple);
 
 		/* Update the shared dependency ACL info */
 		updateAclDependencies(ExtprotocolRelationId,
@@ -1699,7 +1700,7 @@ ExecGrant_ExtProtocol(InternalGrant *istmt)
 							  noldmembers, oldmembers,
 							  nnewmembers, newmembers);
 
-		caql_endscan(pcqCtx);
+		systable_endscan(scan);
 
 		pfree(new_acl);
 
@@ -2423,8 +2424,8 @@ pg_extprotocol_aclmask(Oid ptcOid, Oid roleid,
 	Acl		   *acl;
 	Oid			ownerId;
 	Relation	rel;
-	cqContext	cqc;
-	cqContext  *pcqCtx;
+	ScanKeyData scankey;
+	SysScanDesc sscan;
 
 	/* Bypass permission checks for superusers */
 	if (superuser_arg(roleid))
@@ -2432,13 +2433,12 @@ pg_extprotocol_aclmask(Oid ptcOid, Oid roleid,
 	
 	rel = heap_open(ExtprotocolRelationId, AccessShareLock);
 
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), rel), 
-			cql("SELECT * FROM pg_extprotocol "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(ptcOid)));
-
-	tuple = caql_getnext(pcqCtx);
+	ScanKeyInit(&scankey, ObjectIdAttributeNumber,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(ptcOid));
+	sscan = systable_beginscan(rel, ExtprotocolOidIndexId, true,
+							   SnapshotNow, 1, &scankey);
+	tuple = systable_getnext(sscan);
 
 	/* We assume that there can be at most one matching tuple */
 	if (!HeapTupleIsValid(tuple))
@@ -2480,7 +2480,7 @@ pg_extprotocol_aclmask(Oid ptcOid, Oid roleid,
 		pfree(acl);
 
 	/* Finish up scan and close pg_extprotocol catalog. */
-	caql_endscan(pcqCtx);	
+	systable_endscan(sscan);
 	heap_close(rel, AccessShareLock);
 
 	return result;
@@ -2790,23 +2790,33 @@ bool
 pg_filespace_ownercheck(Oid fsoid, Oid roleid)
 {
 	Oid			owner;
-	int			fetchCount = 0;
+	Relation	pg_filespace;
+	ScanKeyData entry[1];
+	SysScanDesc scan;
+	HeapTuple	fstuple;
 
 	/* Superusers bypass all permission checking. */
 	if (superuser_arg(roleid))
 		return true;
 
-	owner = caql_getoid_plus(
-			NULL,
-			&fetchCount,
-			NULL,
-			cql("SELECT fsowner FROM pg_filespace WHERE oid = :1 ",
-				ObjectIdGetDatum(fsoid)));
+	/* SELECT fsowner FROM pg_filespace WHERE oid = :1 */
+	pg_filespace = heap_open(FileSpaceRelationId, AccessShareLock);
 
-	if (0 == fetchCount)
+	ScanKeyInit(&entry[0], ObjectIdAttributeNumber,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(fsoid));
+	scan = systable_beginscan(pg_filespace, FilespaceOidIndexId, true,
+							   SnapshotNow, 1, entry);
+	fstuple = systable_getnext(scan);
+	if (!fstuple)
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 errmsg("filepace with OID %u does not exist", fsoid)));
+
+	owner = ((Form_pg_filespace) GETSTRUCT(fstuple))->fsowner;
+
+	systable_endscan(scan);
+	heap_close(pg_filespace, AccessShareLock);
 
 	return has_privs_of_role(roleid, owner);
 }
@@ -2986,35 +2996,41 @@ pg_conversion_ownercheck(Oid conv_oid, Oid roleid)
 }
 
 /*
- * Ownership check for a foreign server (specified by OID).
+ * Ownership check for an external protocol (specified by OID).
  */
 bool
 pg_extprotocol_ownercheck(Oid protOid, Oid roleid)
 {
+	Relation	pg_extprotocol;
+	ScanKeyData entry[1];
+	SysScanDesc scan;
+	HeapTuple	eptuple;
 	Oid			ownerId;
-	int			fetchCount = 0;
-	bool		isNull;
 
 	/* Superusers bypass all permission checking. */
 	if (superuser_arg(roleid))
 		return true;
 
-	ownerId = caql_getoid_plus(
-			NULL,
-			&fetchCount,
-			&isNull,
-			cql("SELECT ptcowner FROM pg_extprotocol WHERE oid = :1 ",
-				ObjectIdGetDatum(protOid)));
+	/* There's no syscache on pg_extprotocol, so must look the hard way */
+	pg_extprotocol = heap_open(ExtprotocolRelationId, AccessShareLock);
+	ScanKeyInit(&entry[0],
+				ObjectIdAttributeNumber,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(protOid));
+	scan = systable_beginscan(pg_extprotocol, ExtprotocolOidIndexId, true,
+							  SnapshotNow, 1, entry);
 
-	/* We assume that there can be at most one matching tuple */
-	if (0 == fetchCount)
-		elog(ERROR, "protocol %u could not be found", protOid);
+	eptuple = systable_getnext(scan);
 
-	/* XXX XXX: this column not null (?) */
-	if(isNull)
+	if (!HeapTupleIsValid(eptuple))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("got invalid extprotocol owner value: NULL")));	
+				 errmsg("external protocol with OID %u does not exist", protOid)));
+
+	ownerId = ((Form_pg_extprotocol) GETSTRUCT(eptuple))->ptcowner;
+
+	systable_endscan(scan);
+	heap_close(pg_extprotocol, AccessShareLock);
 
 	return has_privs_of_role(roleid, ownerId);
 }

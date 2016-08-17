@@ -10,7 +10,7 @@
 
 #include "postgres.h"
 #include "miscadmin.h"
-#include "catalog/catquery.h" 
+#include "access/genam.h"
 #include "catalog/pg_exttable.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/gp_policy.h"
@@ -104,7 +104,8 @@ GpPolicyFetch(MemoryContext mcxt, Oid tbloid)
 {
 	GpPolicy  *policy = NULL;	/* The result */
 	Relation	gp_policy_rel;
-	cqContext	cqc;
+	ScanKeyData scankey;
+	SysScanDesc scan;
 	HeapTuple	gp_policy_tuple = NULL;
 
 	/*
@@ -168,12 +169,17 @@ GpPolicyFetch(MemoryContext mcxt, Oid tbloid)
 
 	/*
 	 * Select by value of the localoid field
+	 *
+	 * SELECT * FROM gp_distribution_policy WHERE localoid = :1
 	 */
-	gp_policy_tuple = caql_getfirst(
-			caql_addrel(cqclr(&cqc), gp_policy_rel), 
-			cql("SELECT * FROM gp_distribution_policy "
-				" WHERE localoid = :1 ",
-				ObjectIdGetDatum(tbloid)));
+	ScanKeyInit(&scankey, Anum_gp_policy_localoid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(tbloid));
+
+	scan = systable_beginscan(gp_policy_rel, GpPolicyLocalOidIndexId, true,
+							  SnapshotNow, 1, &scankey);
+
+	gp_policy_tuple = systable_getnext(scan);
 
 	/*
 	 * Read first (and only) tuple
@@ -214,6 +220,7 @@ GpPolicyFetch(MemoryContext mcxt, Oid tbloid)
 	/*
 	 * Cleanup the scan and relation objects.
 	 */
+	systable_endscan(scan);
 	heap_close(gp_policy_rel, AccessShareLock);
 
 	/* Interpret absence of a valid policy row as POLICYTYPE_ENTRY */
@@ -264,8 +271,6 @@ GpPolicyStore(Oid tbloid, const GpPolicy *policy)
 
 	bool		nulls[2];
 	Datum		values[2];
-	cqContext	cqc;
-	cqContext  *pcqCtx;
 
 	Insist(policy->ptype == POLICYTYPE_PARTITIONED);
 
@@ -273,11 +278,6 @@ GpPolicyStore(Oid tbloid, const GpPolicy *policy)
      * Open and lock the gp_distribution_policy catalog.
      */
 	gp_policy_rel = heap_open(GpPolicyRelationId, RowExclusiveLock);
-
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), gp_policy_rel),
-			cql("INSERT INTO gp_distribution_policy ",
-				NULL));
 
 	/*
 	 * Convert C arrays into Postgres arrays.
@@ -307,17 +307,17 @@ GpPolicyStore(Oid tbloid, const GpPolicy *policy)
 	else
 		nulls[1] = true;
 
-	gp_policy_tuple = caql_form_tuple(pcqCtx, values, nulls);
+	gp_policy_tuple = heap_form_tuple(RelationGetDescr(gp_policy_rel), values, nulls);
 
 	/* Insert tuple into the relation */
-	caql_insert(pcqCtx, gp_policy_tuple); /* implicit update of index as well*/
+	simple_heap_insert(gp_policy_rel, gp_policy_tuple);
+	CatalogUpdateIndexes(gp_policy_rel, gp_policy_tuple);
 
 	/*
      * Close the gp_distribution_policy relcache entry without unlocking.
      * We have updated the catalog: consequently the lock must be held until
      * end of transaction.
      */
-	caql_endscan(pcqCtx);
     heap_close(gp_policy_rel, NoLock);
 }                               /* GpPolicyStore */
 
@@ -330,11 +330,9 @@ GpPolicyReplace(Oid tbloid, const GpPolicy *policy)
 {
 	Relation	gp_policy_rel;
 	HeapTuple	gp_policy_tuple = NULL;
-	cqContext	cqc;
-	cqContext  *pcqCtx;
-
+	SysScanDesc scan;
+	ScanKeyData skey;
 	ArrayType  *attrnums;
-
 	bool		nulls[2];
 	Datum		values[2];
 	bool		repl[2];
@@ -345,8 +343,6 @@ GpPolicyReplace(Oid tbloid, const GpPolicy *policy)
      * Open and lock the gp_distribution_policy catalog.
      */
 	gp_policy_rel = heap_open(GpPolicyRelationId, RowExclusiveLock);
-
-	pcqCtx = caql_addrel(cqclr(&cqc), gp_policy_rel);
 
 	/*
 	 * Convert C arrays into Postgres arrays.
@@ -383,35 +379,33 @@ GpPolicyReplace(Oid tbloid, const GpPolicy *policy)
 	/*
 	 * Select by value of the localoid field
 	 */
-	gp_policy_tuple = caql_getfirst(
-			pcqCtx,
-			cql("SELECT * FROM gp_distribution_policy "
-				" WHERE localoid = :1 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(tbloid)));
-
+	ScanKeyInit(&skey,
+				Anum_gp_policy_localoid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(tbloid));
+	scan = systable_beginscan(gp_policy_rel, GpPolicyLocalOidIndexId, true,
+							  SnapshotNow, 1, &skey);
 	/*
 	 * Read first (and only ) tuple
 	 */
-
-	if (HeapTupleIsValid(gp_policy_tuple))
+	if ((gp_policy_tuple = systable_getnext(scan)) != NULL)
 	{
-		
-		HeapTuple newtuple = caql_modify_current(pcqCtx, values,
-												 nulls, repl);
-								
-		caql_update_current(pcqCtx, newtuple); 
-		/* and Update indexes (implicit) */
+		HeapTuple newtuple = heap_modify_tuple(gp_policy_tuple,
+											   RelationGetDescr(gp_policy_rel),
+											   values, nulls, repl);
+		simple_heap_update(gp_policy_rel, &gp_policy_tuple->t_self, newtuple);
+		CatalogUpdateIndexes(gp_policy_rel, newtuple);
 
 		heap_freetuple(newtuple);
 	}
 	else
 	{
-		gp_policy_tuple = caql_form_tuple(pcqCtx, values, nulls);
-		caql_insert(pcqCtx, gp_policy_tuple);
-		/* and Update indexes (implicit) */
+		gp_policy_tuple = heap_form_tuple(gp_policy_rel->rd_att, values, nulls);
+		(void) simple_heap_insert(gp_policy_rel, gp_policy_tuple);
+		CatalogUpdateIndexes(gp_policy_rel, gp_policy_tuple);
 	}
-	
+	systable_endscan(scan);
+
 	/*
      * Close the gp_distribution_policy relcache entry without unlocking.
      * We have updated the catalog: consequently the lock must be held until
@@ -429,7 +423,9 @@ void
 GpPolicyRemove(Oid tbloid)
 {
 	Relation	gp_policy_rel;
-	cqContext	cqc;
+	ScanKeyData scankey;
+	SysScanDesc sscan;
+	HeapTuple	tuple;
 
     /*
      * Open and lock the gp_distribution_policy catalog.
@@ -437,11 +433,19 @@ GpPolicyRemove(Oid tbloid)
 	gp_policy_rel = heap_open(GpPolicyRelationId, RowExclusiveLock);
 
 	/* Delete the policy entry from the catalog. */
-	(void) caql_getcount(
-		caql_addrel(cqclr(&cqc), gp_policy_rel),
-		cql("DELETE FROM gp_distribution_policy "
-			" WHERE localoid = :1 ",
-			ObjectIdGetDatum(tbloid)));
+	ScanKeyInit(&scankey, Anum_gp_policy_localoid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(tbloid));
+
+	sscan = systable_beginscan(gp_policy_rel, GpPolicyLocalOidIndexId, true,
+							   SnapshotNow, 1, &scankey);
+
+	while ((tuple = systable_getnext(sscan)) != NULL)
+	{
+		simple_heap_delete(gp_policy_rel, &tuple->t_self);
+	}
+
+	systable_endscan(sscan);
 
 	/*
      * Close the gp_distribution_policy relcache entry without unlocking.

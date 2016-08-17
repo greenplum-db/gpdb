@@ -9,7 +9,6 @@
  */
 #include "postgres.h"
 
-#include "catalog/catquery.h"
 #include "catalog/pg_type.h"            /* INT8OID */
 #include "nodes/makefuncs.h"
 #include "optimizer/clauses.h"
@@ -1353,38 +1352,28 @@ not_null_inner_vars(Node *clause)
  * Output:
  * 	true if the attribute is non-nullable
  */
-static bool is_attribute_nonnullable(Oid relationOid, AttrNumber attrNumber)
+static bool
+is_attribute_nonnullable(Oid relationOid, AttrNumber attrNumber)
 {
-	HeapTuple			attributeTuple = NULL;
-	Form_pg_attribute 	attribute = NULL;
+	HeapTuple			attributeTuple;
+	Form_pg_attribute 	attribute;
 	bool				result = true;
-	cqContext		   *pcqCtx;
-	
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_attribute "
-				" WHERE attrelid = :1 "
-				" AND attnum = :2 ",
-				ObjectIdGetDatum(relationOid),
-				Int16GetDatum(attrNumber)));
 
-	attributeTuple = caql_getnext(pcqCtx);
-
+	attributeTuple = SearchSysCache2(ATTNUM,
+									 ObjectIdGetDatum(relationOid),
+									 Int16GetDatum(attrNumber));
 	if (!HeapTupleIsValid(attributeTuple))
-	{
-		caql_endscan(pcqCtx);
 		return false;
-	}
 
 	attribute = (Form_pg_attribute) GETSTRUCT(attributeTuple);
-	
+
 	if (attribute->attisdropped)
 		result = false;
 
 	if (!attribute->attnotnull)
 		result = false;
-	
-	caql_endscan(pcqCtx);
+
+	ReleaseSysCache(attributeTuple);
 
 	return result;
 }

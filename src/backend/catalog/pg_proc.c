@@ -17,7 +17,6 @@
 #include "access/genam.h"
 #include "access/heapam.h"
 #include "access/xact.h"
-#include "catalog/catquery.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_depend.h"
@@ -465,20 +464,27 @@ ProcedureCreate(const char *procedureName,
 		 */
 		if (OidIsValid(describeFuncOid))
 		{
+			Relation	depRel;
+			ScanKeyData key[3];
+			SysScanDesc scan;
 			HeapTuple   depTup;
-			cqContext  *pcqCtx2;
-			
+
+			depRel = heap_open(DependRelationId, RowExclusiveLock);
 
 			/* XXX XXX: SELECT COUNT(*) ... AND classid = :3, RewriteRelationId) */
-			pcqCtx2 = caql_beginscan(
-					NULL,
-					cql("SELECT * FROM pg_depend "
-						" WHERE refclassid = :1 "
-						" AND refobjid = :2 ",
-						ObjectIdGetDatum(ProcedureRelationId),
-						ObjectIdGetDatum(oldOid)));
-			
-			while (HeapTupleIsValid(depTup = caql_getnext(pcqCtx2)))
+			ScanKeyInit(&key[0],
+						Anum_pg_depend_refclassid,
+						BTEqualStrategyNumber, F_OIDEQ,
+						ObjectIdGetDatum(ProcedureRelationId));
+			ScanKeyInit(&key[1],
+						Anum_pg_depend_refobjid,
+						BTEqualStrategyNumber, F_OIDEQ,
+						ObjectIdGetDatum(oldOid));
+
+			scan = systable_beginscan(depRel, DependReferenceIndexId, true,
+									  SnapshotNow, 2, key);
+
+			while (HeapTupleIsValid(depTup = systable_getnext(scan)))
 			{
 				Form_pg_depend depData = (Form_pg_depend) GETSTRUCT(depTup);
 				if (depData->classid == RewriteRelationId)
@@ -488,7 +494,9 @@ ProcedureCreate(const char *procedureName,
 							 errmsg("cannot add DESCRIBE callback to function used in view(s)")));
 				}
 			}
-			caql_endscan(pcqCtx2);
+			systable_endscan(scan);
+
+			heap_close(depRel, RowExclusiveLock);
 		}
 
 		/* Can't change aggregate or window status, either */
