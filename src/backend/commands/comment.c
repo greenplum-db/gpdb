@@ -1567,7 +1567,7 @@ CommentResourceQueue(List *qualname, char *comment)
 	char	   *queueName;
 	HeapTuple	tuple;
 	SysScanDesc scan;
-	ScanKeyData entry[2];
+	ScanKeyData skey;
 	Oid			oid;
 
 	if (list_length(qualname) != 1)
@@ -1577,12 +1577,12 @@ CommentResourceQueue(List *qualname, char *comment)
 	queueName = strVal(linitial(qualname));
 
 	pg_resqueue = heap_open(ResQueueRelationId, AccessShareLock);
-	ScanKeyInit(&entry[1],
+	ScanKeyInit(&skey,
 				Anum_pg_resqueue_rsqname,
 				BTEqualStrategyNumber, F_NAMEEQ,
 				CStringGetDatum(queueName));
 	scan = systable_beginscan(pg_resqueue, ResQueueRsqnameIndexId, true,
-							  SnapshotNow, 1, entry);
+							  SnapshotNow, 1, &skey);
 	tuple = systable_getnext(scan);
 
 	if (!HeapTupleIsValid(tuple))

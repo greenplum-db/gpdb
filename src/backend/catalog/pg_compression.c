@@ -19,7 +19,6 @@
 #include "access/reloptions.h"
 #include "access/tupdesc.h"
 #include "access/tupmacs.h"
-#include "catalog/catquery.h"
 #include "catalog/pg_attribute_encoding.h"
 #include "catalog/pg_compression.h"
 #include "catalog/dependency.h"
@@ -102,15 +101,23 @@ GetCompressionImplementation(char *comptype)
 	PGFunction	   *funcs;
 	Form_pg_compression ctup;
 	FmgrInfo		finfo;
+	Relation	comprel;
+	ScanKeyData	scankey;
+	SysScanDesc scan;
+
+	comprel = heap_open(CompressionRelationId, AccessShareLock);
 
 	compname = comptype_to_name(comptype);
 
-	tuple = caql_getfirst(
-			NULL,
-			cql("SELECT * FROM pg_compression "
-				" WHERE compname = :1 ",
-				NameGetDatum(&compname)));
+	/* SELECT * FROM pg_compression WHERE compname = :1 */
+	ScanKeyInit(&scankey,
+				Anum_pg_compression_compname,
+				BTEqualStrategyNumber, F_NAMEEQ,
+				NameGetDatum(&compname));
 
+	scan = systable_beginscan(comprel, CompressionCompnameIndexId, true,
+							  SnapshotNow, 1, &scankey);
+	tuple = systable_getnext(scan);
 	if (!HeapTupleIsValid(tuple))
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -141,7 +148,9 @@ GetCompressionImplementation(char *comptype)
 	fmgr_info(ctup->compvalidator, &finfo);
 	funcs[COMPRESSION_VALIDATOR] = finfo.fn_addr;
 
-	pfree(tuple);
+	systable_endscan(scan);
+	heap_close(comprel, AccessShareLock);
+
 	return funcs;
 }
 

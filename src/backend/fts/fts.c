@@ -17,7 +17,6 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
-#include "catalog/catquery.h"
 #include "catalog/gp_configuration.h"
 #include "catalog/gp_segment_config.h"
 #include "catalog/pg_authid.h"
@@ -984,22 +983,22 @@ getFailoverStrategy(char *strategy)
 {
 	Relation	strategy_rel;
 	HeapTuple	strategy_tup;
-	cqContext  *pcqCtx;
-	cqContext	cqc;
-	bool	isNull=true;
+	SysScanDesc sscan;
 
 	Assert(strategy != NULL);
 
 	strategy_rel = heap_open(GpFaultStrategyRelationId, AccessShareLock);
 
-	/* XXX XXX: only one of these? then would be getfirst... */
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), strategy_rel),
-			cql("SELECT * FROM gp_fault_strategy ", NULL));
-
-	while (HeapTupleIsValid(strategy_tup = caql_getnext(pcqCtx)))
+	/*
+	 * SELECT * FROM gp_fault_strategy
+	 *
+	 * XXX XXX: only one of these?
+	 */
+	sscan = systable_beginscan(strategy_rel, InvalidOid, false, SnapshotNow, 0, NULL);
+	while (HeapTupleIsValid(strategy_tup = systable_getnext(sscan)))
 	{
 		Datum	strategy_datum;
+		bool	isNull=true;
 
 		strategy_datum = heap_getattr(strategy_tup, Anum_gp_fault_strategy_fault_strategy, RelationGetDescr(strategy_rel), &isNull);
 
@@ -1009,7 +1008,7 @@ getFailoverStrategy(char *strategy)
 		*strategy = DatumGetChar(strategy_datum);
 	}
 
-	caql_endscan(pcqCtx);
+	systable_endscan(sscan);
 	heap_close(strategy_rel, AccessShareLock);
 	return;
 }

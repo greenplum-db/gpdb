@@ -16,7 +16,6 @@
 #include "access/hash.h"
 #include "access/heapam.h"
 #include "access/reloptions.h"
-#include "catalog/catquery.h"
 #include "catalog/catalog.h"
 #include "catalog/dependency.h"
 #include "catalog/heap.h"
@@ -220,8 +219,12 @@ static List *rel_get_leaf_relids_from_rule(Oid ruleOid);
 bool
 rel_is_default_partition(Oid relid)
 {
+	Relation	partrulerel;
 	HeapTuple tuple = NULL;
 	bool parisdefault = false;
+	ScanKeyData scankey;
+	SysScanDesc sscan;
+
 	/* Though pg_partition and pg_partition_rule are only populated
 	 * on the entry database, we accept calls from QEs running a
 	 * segment, but return false.
@@ -229,14 +232,23 @@ rel_is_default_partition(Oid relid)
 	if (Gp_segment != -1)
 		return false;
 
-	tuple = caql_getfirst(NULL,
-						  cql("SELECT * FROM pg_partition_rule "
-							   " WHERE parchildrelid = :1 ",
-							   ObjectIdGetDatum(relid)));
+	partrulerel = heap_open(PartitionRuleRelationId, AccessShareLock);
+
+	ScanKeyInit(&scankey, Anum_pg_partition_rule_parchildrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+
+	sscan = systable_beginscan(partrulerel, PartitionRuleParchildrelidIndexId, true,
+							   SnapshotNow, 1, &scankey);
+	tuple = systable_getnext(sscan);
 
 	Insist(HeapTupleIsValid(tuple));
 
 	parisdefault = ((Form_pg_partition_rule)GETSTRUCT(tuple))->parisdefault;
+
+	systable_endscan(sscan);
+	heap_close(partrulerel, AccessShareLock);
+
 	return parisdefault;
 }
 
@@ -364,17 +376,24 @@ rel_partition_key_attrs(Oid relid)
 List *
 rel_partition_keys_ordered(Oid relid)
 {
-	cqContext *pcqCtx = caql_beginscan(
-							NULL,
-							cql("SELECT * FROM pg_partition "
-								" WHERE parrelid = :1 ",
-								ObjectIdGetDatum(relid)));
-
+	Relation	partrel;
+	ScanKeyData scankey;
+	SysScanDesc sscan;
 	List *levels = NIL;
 	List *keysUnordered = NIL;
 	int nlevels = 0;
 	HeapTuple tuple = NULL;
-	while (HeapTupleIsValid(tuple = caql_getnext(pcqCtx)))
+
+	partrel = heap_open(PartitionRelationId, AccessShareLock);
+
+	/* SELECT * FROM pg_partition WHERE parrelid = :1 */
+	ScanKeyInit(&scankey, Anum_pg_partition_parrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+
+	sscan = systable_beginscan(partrel, PartitionParrelidIndexId, true,
+							   SnapshotNow, 1, &scankey);
+	while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
 	{
 		Form_pg_partition p = (Form_pg_partition) GETSTRUCT(tuple);
 
@@ -393,7 +412,8 @@ rel_partition_keys_ordered(Oid relid)
 		levels = lappend_int(levels, p->parlevel);
 		keysUnordered = lappend(keysUnordered, levelkeys);
 	}
-	caql_endscan(pcqCtx);
+	systable_endscan(sscan);
+	heap_close(partrel, AccessShareLock);
 
 	if (1 == nlevels)
 	{
@@ -548,26 +568,37 @@ rel_is_leaf_partition(Oid relid)
 	Oid paroid = InvalidOid;
 	int maxdepth = 0;
 	int mylevel = 0;
-	int fetchCount = 0;
-	cqContext	 cqc;
-	cqContext	*pcqCtx;
+	Relation	partrulerel;
+	Relation	partrel;
+	ScanKeyData scankey;
+	SysScanDesc sscan;
 	Oid partitioned_rel = InvalidOid; /* OID of the root table of the
 									   * partition set
 									   */
-
 	/*
 	 * Find the pg_partition_rule entry to see if this is a child at
 	 * all and, if so, to locate the OID for the pg_partition entry.
+	 *
+	 * SELECT paroid FROM pg_partition_rule WHERE parchildrelid = :1
 	 */
-	paroid =
-			caql_getoid_plus(NULL,
-							 &fetchCount,
-							 NULL,
-							 cql("SELECT paroid FROM pg_partition_rule "
-								 " WHERE parchildrelid = :1 ",
-								 ObjectIdGetDatum(relid)));
+	partrulerel = heap_open(PartitionRuleRelationId, AccessShareLock);
 
-	if (!OidIsValid(paroid) || !fetchCount)
+	ScanKeyInit(&scankey, Anum_pg_partition_rule_parchildrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+	sscan = systable_beginscan(partrulerel, PartitionRuleParchildrelidIndexId, true,
+							   SnapshotNow, 1, &scankey);
+	tuple = systable_getnext(sscan);
+
+	if (tuple)
+		paroid = ((Form_pg_partition_rule) GETSTRUCT(tuple))->paroid;
+	else
+		paroid = InvalidOid;
+
+	systable_endscan(sscan);
+	heap_close(partrulerel, AccessShareLock);
+
+	if (!OidIsValid(paroid))
 		return false;
 
 	tuple = SearchSysCache1(PARTOID, ObjectIdGetDatum(paroid));
@@ -578,18 +609,22 @@ rel_is_leaf_partition(Oid relid)
 	partitioned_rel = ((Form_pg_partition)GETSTRUCT(tuple))->parrelid;
 	ReleaseSysCache(tuple);
 
-	pcqCtx = caql_beginscan(
-			cqclr(&cqc),
-			cql("SELECT * FROM pg_partition "
-				" WHERE parrelid = :1 ",
-				ObjectIdGetDatum(partitioned_rel)));
+
+	/* SELECT * FROM pg_partition WHERE parrelid = :1 */
+	partrel = heap_open(PartitionRelationId, AccessShareLock);
+
+	ScanKeyInit(&scankey, Anum_pg_partition_parrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(partitioned_rel));
+	sscan = systable_beginscan(partrel, PartitionParrelidIndexId, true,
+							   SnapshotNow, 1, &scankey);
 
 	/*
 	 * Of course, we could just maxdepth++ but this seems safer -- we
 	 * don't have to worry about the starting depth being 0, 1 or
 	 * something else.
 	 */
-	while (HeapTupleIsValid(tuple = caql_getnext(pcqCtx)))
+	while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
 	{
 		/* not interested in templates */
 		if (((Form_pg_partition)GETSTRUCT(tuple))->paristemplate == false)
@@ -599,7 +634,8 @@ rel_is_leaf_partition(Oid relid)
 		}
 	}
 
-	caql_endscan(pcqCtx);
+	systable_endscan(sscan);
+	heap_close(partrel, AccessShareLock);
 
 	return maxdepth == mylevel;
 }
@@ -696,22 +732,25 @@ record_constraints(Relation pgcon,
 				   PartExchangeRole xrole)
 {
 	HeapTuple	tuple;
+	Relation	conRel;
 	Oid conid;
 	char *condef;
 	ConstraintEntry *entry;
 	bool found;
 	MemoryContext oldcontext;
-	cqContext	*pcqCtx;
-	cqContext	 cqc;
+	ScanKeyData scankey;
+	SysScanDesc sscan;
 
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), pgcon),
-			cql("SELECT * FROM pg_constraint "
-				" WHERE conrelid = :1 ",
-				ObjectIdGetDatum(RelationGetRelid(rel))));
+	conRel = heap_open(ConstraintRelationId, AccessShareLock);
+
+	ScanKeyInit(&scankey, Anum_pg_constraint_conrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(RelationGetRelid(rel)));
+	sscan = systable_beginscan(conRel, ConstraintRelidIndexId, true,
+							   SnapshotNow, 1, &scankey);
 
 	/* For each constraint on rel: */
-	while (HeapTupleIsValid(tuple = caql_getnext(pcqCtx)))
+	while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
 	{
 		oldcontext = MemoryContextSwitchTo(context);
 
@@ -754,7 +793,8 @@ record_constraints(Relation pgcon,
 
 		MemoryContextSwitchTo(oldcontext);
 	}
-	caql_endscan(pcqCtx);
+	systable_endscan(sscan);
+	heap_close(conRel, AccessShareLock);
 }
 
 /* Subroutine of ATPExecPartExchange used to swap constraints on existing
@@ -1470,8 +1510,11 @@ add_partition_rule(PartitionRule *rule)
 static Oid
 get_part_oid(Oid rootrelid, int16 parlevel, bool istemplate)
 {
-	Oid paroid = InvalidOid;
-	cqContext	 cqc;
+	Relation	partrel;
+	ScanKeyData scankey[3];
+	SysScanDesc sscan;
+	HeapTuple	tuple;
+	Oid			paroid;
 
 	/* select oid
 	 * from pg_partition
@@ -1480,24 +1523,35 @@ get_part_oid(Oid rootrelid, int16 parlevel, bool istemplate)
 	 *     parlevel = :parlevel and
 	 *     paristemplate = :istemplate;
 	 */
-	Relation rel = heap_open(PartitionRelationId, AccessShareLock);
-
-	paroid = caql_getoid(
-			caql_snapshot(caql_addrel(cqclr(&cqc), rel),
-						  SnapshotSelf), /* XXX XXX: SnapshotSelf */
-			cql("SELECT oid FROM pg_partition "
-				" WHERE parrelid = :1 "
-				" AND parlevel = :2 "
-				" AND paristemplate = :3",
-				ObjectIdGetDatum(rootrelid),
-				Int16GetDatum(parlevel),
-				BoolGetDatum(istemplate)));
 
 	/* pg_partition and  pg_partition_rule are populated only on the
 	 * entry database, so our result is only meaningful there. */
 	Insist(Gp_segment == -1);
 
-	heap_close(rel, NoLock);
+	partrel = heap_open(PartitionRelationId, AccessShareLock);
+	ScanKeyInit(&scankey[0], Anum_pg_partition_parrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(rootrelid));
+	ScanKeyInit(&scankey[1], Anum_pg_partition_parlevel,
+				BTEqualStrategyNumber, F_INT2EQ,
+				Int16GetDatum(parlevel));
+	ScanKeyInit(&scankey[2], Anum_pg_partition_paristemplate,
+				BTEqualStrategyNumber, F_BOOLEQ,
+				BoolGetDatum(istemplate));
+
+	/* XXX XXX: SnapshotSelf */
+	sscan = systable_beginscan(partrel, PartitionParrelidParlevelParistemplateIndexId, true,
+							   SnapshotSelf, 3, scankey);
+
+	tuple = systable_getnext(sscan);
+
+	if (tuple)
+		paroid = HeapTupleGetOid(tuple);
+	else
+		paroid = InvalidOid;
+
+	systable_endscan(sscan);
+	heap_close(partrel, NoLock);
 
 	return paroid;
 }
@@ -1510,6 +1564,7 @@ del_part_template(Oid rootrelid, int16 parlevel, Oid parent)
 {
 	bool		istemplate = true;
 	Oid			paroid = InvalidOid;
+	ItemPointerData tid;
 	ScanKeyData	scankey[3];
 	Relation	part_rel;
 	Relation	part_rule_rel;
@@ -1540,6 +1595,9 @@ del_part_template(Oid rootrelid, int16 parlevel, Oid parent)
 		return 0;
 	}
 
+	paroid = HeapTupleGetOid(tuple);
+	tid = tuple->t_self;
+
 	/* should only be one matching template per level */
 	if (systable_getnext(sscan))
 	{
@@ -1548,9 +1606,7 @@ del_part_template(Oid rootrelid, int16 parlevel, Oid parent)
 		return 2;
 	}
 
-	paroid = HeapTupleGetOid(tuple);
-
-	simple_heap_delete(part_rel, &tuple->t_self);
+	simple_heap_delete(part_rel, &tid);
 
 	systable_endscan(sscan);
 
@@ -1776,37 +1832,43 @@ add_part_to_catalog(Oid relid, PartitionBy *pby,
 		if (!bTemplate_Only && (pby->partDepth > 0))
 		{
 			Oid			inhoid;
-			cqContext	cqc;
-			int			fetchCount = 0;
+			ScanKeyData	scankey;
+			SysScanDesc sscan;
+			HeapTuple tuple;
 
 			rel = heap_open(InheritsRelationId, AccessShareLock);
 
-			inhoid = caql_getoid_plus(
-					caql_snapshot(caql_addrel(cqclr(&cqc), rel),
-						  SnapshotAny), /* XXX XXX: SnapshotAny */
-					&fetchCount,
-					NULL,
-					cql("SELECT inhparent FROM pg_inherits "
-						" WHERE inhrelid = :1 ",
-						ObjectIdGetDatum(relid)));
+			/* SELECT inhparent FROM pg_inherits WHERE inhrelid = :1 */
+			ScanKeyInit(&scankey, Anum_pg_inherits_inhrelid,
+						BTEqualStrategyNumber, F_OIDEQ,
+						ObjectIdGetDatum(relid));
+			/* XXX XXX: SnapshotAny */
+			sscan = systable_beginscan(rel, InheritsRelidSeqnoIndexId, true,
+									   SnapshotAny, 1, &scankey);
+			tuple = systable_getnext(sscan);
+			if (!tuple)
+				elog(ERROR, "could not find pg_inherits row for rel %u", relid);
 
-			Assert(fetchCount > 0);
+			inhoid = ((Form_pg_inherits) GETSTRUCT(tuple))->inhparent;
 
+			systable_endscan(sscan);
 			heap_close(rel, NoLock);
 
 			rel = heap_open(PartitionRuleRelationId, AccessShareLock);
 
-			parentoid = caql_getoid_plus(
-					caql_snapshot(caql_addrel(cqclr(&cqc), rel),
-								  SnapshotAny), /* XXX XXX: SnapshotAny */
-					&fetchCount,
-					NULL,
-					cql("SELECT oid FROM pg_partition_rule "
-						" WHERE parchildrelid = :1 ",
-						ObjectIdGetDatum(inhoid)));
+			ScanKeyInit(&scankey, Anum_pg_partition_rule_parchildrelid,
+						BTEqualStrategyNumber, F_OIDEQ,
+						ObjectIdGetDatum(inhoid));
 
-			Assert(fetchCount > 0);
+			/* XXX XXX: SnapshotAny */
+			sscan = systable_beginscan(rel, PartitionRuleParchildrelidIndexId, true,
+									   SnapshotAny, 1, &scankey);
+			tuple = systable_getnext(sscan);
+			if (!tuple)
+				elog(ERROR, "could not find pg_partition_rule row with parchildrelid %u", relid);
+			parentoid = HeapTupleGetOid(tuple);
 
+			systable_endscan(sscan);
 			heap_close(rel, NoLock);
 		}
 		else
@@ -1815,28 +1877,42 @@ add_part_to_catalog(Oid relid, PartitionBy *pby,
 		/* we still might have to add template rules */
 		if (!add_temp && OidIsValid(parttemplid))
 		{
-			Oid			pcr;
-			cqContext	cqc;
-			int			fetchCount = 0;
+			ScanKeyData	scankey[3];
+			SysScanDesc sscan;
+			Relation	partrulerel;
+			HeapTuple	tuple;
 
-			pcr = caql_getoid_plus(
-					caql_snapshot(cqclr(&cqc),
-								  SnapshotAny), /* XXX XXX: SnapshotAny */
-					&fetchCount,
-					NULL,
-					cql("SELECT parchildrelid FROM pg_partition_rule "
-						" WHERE paroid = :1 "
-						" AND parparentrule = :2 "
-						" AND parruleord = :3 ",
-						ObjectIdGetDatum(parttemplid),
-						ObjectIdGetDatum(InvalidOid),
-						Int16GetDatum(parruleord)));
+			partrulerel = heap_open(PartitionRuleRelationId, AccessShareLock);
 
-			if (fetchCount)
-				Assert(pcr == InvalidOid);
+			/*
+			 * SELECT parchildrelid FROM pg_partition_rule
+			 * WHERE paroid = :1
+			 * AND parparentrule = :2
+			 * AND parruleord = :3
+			 */
+			ScanKeyInit(&scankey[0], Anum_pg_partition_rule_paroid,
+						BTEqualStrategyNumber, F_OIDEQ,
+						ObjectIdGetDatum(parttemplid));
+			ScanKeyInit(&scankey[1], Anum_pg_partition_rule_parparentrule,
+						BTEqualStrategyNumber, F_OIDEQ,
+						ObjectIdGetDatum(InvalidOid));
+			ScanKeyInit(&scankey[2], Anum_pg_partition_rule_parruleord,
+						BTEqualStrategyNumber, F_INT2EQ,
+						Int16GetDatum(parruleord));
+			/* XXX XXX: SnapshotAny */
+			sscan = systable_beginscan(partrulerel,
+									   PartitionRuleParoidParparentruleParruleordIndexId, true,
+									   SnapshotAny, 3, scankey);
+
+			tuple = systable_getnext(sscan);
+			if (tuple)
+			{
+				Assert(((Form_pg_partition_rule) GETSTRUCT(tuple))->parchildrelid == InvalidOid);
+			}
 			else
 				add_temp = true;
-
+			systable_endscan(sscan);
+			heap_close(partrulerel, AccessShareLock);
 		}
 
 		rule->paroid = paroid;
@@ -2166,8 +2242,8 @@ get_parts(Oid relid, int2 level, Oid parent, bool inctemplate,
 	HeapTuple tuple;
 	Relation rel;
 	List *rules = NIL;
-	cqContext	*pcqCtx;
-	cqContext	 cqc;
+	ScanKeyData scankey[3];
+	SysScanDesc sscan;
 
 	/* Though pg_partition and  pg_partition_rule are populated only
 	 * on the entry database, we accept calls from QEs running on a
@@ -2185,22 +2261,28 @@ get_parts(Oid relid, int2 level, Oid parent, bool inctemplate,
 	 */
 	rel = heap_open(PartitionRelationId, AccessShareLock);
 
-	tuple = caql_getfirst(
-			caql_addrel(cqclr(&cqc), rel),
-			cql("SELECT * FROM pg_partition "
-				" WHERE parrelid = :1 "
-				" AND parlevel = :2 "
-				" AND paristemplate = :3 ",
-				ObjectIdGetDatum(relid),
-				Int16GetDatum(level),
-				BoolGetDatum(inctemplate)));
-
+	ScanKeyInit(&scankey[0],
+				Anum_pg_partition_parrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+	ScanKeyInit(&scankey[1],
+				Anum_pg_partition_parlevel,
+				BTEqualStrategyNumber, F_INT2EQ,
+				Int16GetDatum(level));
+	ScanKeyInit(&scankey[2],
+				Anum_pg_partition_paristemplate,
+				BTEqualStrategyNumber, F_BOOLEQ,
+				BoolGetDatum(inctemplate));
+	sscan = systable_beginscan(rel, PartitionParrelidParlevelParistemplateIndexId, true,
+							   SnapshotNow, 3, scankey);
+	tuple = systable_getnext(sscan);
 	if (HeapTupleIsValid(tuple))
 	{
 		pnode = makeNode(PartitionNode);
 		pnode->part = partMakePartition(tuple);
 	}
 
+	systable_endscan(sscan);
 	heap_close(rel, AccessShareLock);
 
 	if ( ! pnode )
@@ -2216,24 +2298,28 @@ get_parts(Oid relid, int2 level, Oid parent, bool inctemplate,
 
 	if (includesubparts)
 	{
-		pcqCtx = caql_beginscan(
-				caql_addrel(cqclr(&cqc), rel),
-				cql("SELECT * FROM pg_partition_rule "
-					" WHERE paroid = :1 "
-					" AND parparentrule = :2 ",
-					ObjectIdGetDatum(pnode->part->partid),
-					ObjectIdGetDatum(parent)));
+		ScanKeyInit(&scankey[0],
+					Anum_pg_partition_rule_paroid,
+					BTEqualStrategyNumber, F_OIDEQ,
+					ObjectIdGetDatum(pnode->part->partid));
+		ScanKeyInit(&scankey[1],
+					Anum_pg_partition_rule_parparentrule,
+					BTEqualStrategyNumber, F_OIDEQ,
+					ObjectIdGetDatum(parent));
+		sscan = systable_beginscan(rel, PartitionRuleParoidParparentruleParruleordIndexId, true,
+								   SnapshotNow, 2, scankey);
 	}
 	else
 	{
-		pcqCtx = caql_beginscan(
-				caql_addrel(cqclr(&cqc), rel),
-				cql("SELECT * FROM pg_partition_rule "
-					" WHERE paroid = :1 ",
-					ObjectIdGetDatum(pnode->part->partid)));
+		ScanKeyInit(&scankey[0],
+					Anum_pg_partition_rule_paroid,
+					BTEqualStrategyNumber, F_OIDEQ,
+					ObjectIdGetDatum(pnode->part->partid));
+		sscan = systable_beginscan(rel, PartitionRuleParoidParparentruleParruleordIndexId, true,
+								   SnapshotNow, 1, scankey);
 	}
 
-	while (HeapTupleIsValid(tuple = caql_getnext(pcqCtx)))
+	while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
 	{
 		PartitionRule *rule;
 
@@ -2259,7 +2345,7 @@ get_parts(Oid relid, int2 level, Oid parent, bool inctemplate,
 	/*	Assert(inctemplate || list_length(rules) || pnode->default_part); */
 	pnode->rules = rules;
 
-	caql_endscan(pcqCtx);
+	systable_endscan(sscan);
 	heap_close(rel, AccessShareLock);
 	return pnode;
 }
@@ -2296,9 +2382,8 @@ get_partition_key_bitmapset(Oid relid)
 	Relation rel;
 	HeapTuple tuple;
 	TupleDesc tupledesc;
-	cqContext	*pcqCtx;
-	cqContext	 cqc;
-
+	ScanKeyData scankey;
+	SysScanDesc sscan;
 	Bitmapset *partition_key = NULL;
 
 	/* Reject calls from QEs running on a segment database, since
@@ -2314,25 +2399,16 @@ get_partition_key_bitmapset(Oid relid)
 	 *     not paristemplate;
 	 */
 	rel = heap_open(PartitionRelationId, AccessShareLock);
-
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), rel),
-			cql("SELECT * FROM pg_partition "
-				" WHERE parrelid = :1 ",
-				ObjectIdGetDatum(relid)));
-
-	/* XXX XXX: hmm, could we add
-	   " AND paristemplate = :2 ",
-	   ...
-	   BoolGetDatum(false)));
-
-	   Could caql use an index on parrelid even though paristemplate
-	   not in index?
-	*/
-
 	tupledesc = RelationGetDescr(rel);
 
-	while (HeapTupleIsValid(tuple = caql_getnext(pcqCtx)))
+	ScanKeyInit(&scankey,
+				Anum_pg_partition_parrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+	sscan = systable_beginscan(rel, PartitionParrelidIndexId, true,
+							   SnapshotNow, 1, &scankey);
+
+	while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
 	{
 		int i;
 		int2 natts;
@@ -2352,7 +2428,7 @@ get_partition_key_bitmapset(Oid relid)
 			partition_key = bms_add_member(partition_key, atts->values[i]);
 	}
 
-	caql_endscan(pcqCtx);
+	systable_endscan(sscan);
 	heap_close(rel, AccessShareLock);
 
 	return partition_key;
@@ -2571,8 +2647,8 @@ all_partition_relids(PartitionNode *pn)
 static Node *
 getPartConstraintsContainsKeys(Oid partOid, Oid rootOid, List *partKey)
 {
-	cqContext       *pcqCtx;
-	cqContext       cqc;
+	ScanKeyData	scankey;
+	SysScanDesc sscan;
 	Relation        conRel;
 	HeapTuple       conTup;
 	Node            *conExpr;
@@ -2596,16 +2672,16 @@ getPartConstraintsContainsKeys(Oid partOid, Oid rootOid, List *partKey)
 	/* Fetch the pg_constraint row. */
 	conRel = heap_open(ConstraintRelationId, AccessShareLock);
 
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), conRel),
-			cql("SELECT * FROM pg_constraint "
-				" WHERE conrelid = :1",
-				ObjectIdGetDatum(partOid)));
+	ScanKeyInit(&scankey, Anum_pg_constraint_conrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(partOid));
+	sscan = systable_beginscan(conRel, ConstraintRelidIndexId, true,
+							   SnapshotNow, 1, &scankey);
 
-	while (HeapTupleIsValid(conTup = caql_getnext(pcqCtx)))
+	while (HeapTupleIsValid(conTup = systable_getnext(sscan)))
 	{
 		/* we defer the filter on contype to here in order to take advantage of
-		 * the index on conrelid in the above CAQL query */
+		 * the index on conrelid in the scan */
 		Form_pg_constraint conEntry = (Form_pg_constraint) GETSTRUCT(conTup);
 		if (conEntry->contype != 'c')
 		{
@@ -2653,7 +2729,7 @@ getPartConstraintsContainsKeys(Oid partOid, Oid rootOid, List *partKey)
 	{
 		pfree(map);
 	}
-	caql_endscan(pcqCtx);
+	systable_endscan(sscan);
 	heap_close(conRel, AccessShareLock);
 
 	return result;
@@ -2974,15 +3050,27 @@ rel_get_leaf_children_relids(Oid relid)
 	}
 	else if (PART_STATUS_INTERIOR == ps)
 	{
-		HeapTuple tuple = caql_getfirst(NULL,
-								  cql("SELECT * FROM pg_partition_rule "
-									  " WHERE parchildrelid = :1 ",
-									  ObjectIdGetDatum(relid)));
+		Relation	partrulerel;
+		ScanKeyData scankey;
+		SysScanDesc sscan;
+		HeapTuple tuple;
+
+		/* SELECT * FROM pg_partition_rule WHERE parchildrelid = :1 */
+		partrulerel = heap_open(PartitionRuleRelationId, AccessShareLock);
+
+		ScanKeyInit(&scankey, Anum_pg_partition_rule_parchildrelid,
+					BTEqualStrategyNumber, F_OIDEQ,
+					ObjectIdGetDatum(relid));
+
+		sscan = systable_beginscan(partrulerel, PartitionRuleParchildrelidIndexId, true,
+								   SnapshotNow, 1, &scankey);
+		tuple = systable_getnext(sscan);
 		if (HeapTupleIsValid(tuple))
 		{
 			leaf_relids = rel_get_leaf_relids_from_rule(HeapTupleGetOid(tuple));
-			heap_freetuple(tuple);
 		}
+		systable_endscan(sscan);
+		heap_close(partrulerel, AccessShareLock);
 	}
 	else if (PART_STATUS_LEAF == ps)
 	{
@@ -3089,19 +3177,28 @@ all_prule_relids(PartitionRule *prule)
 Oid
 rel_partition_get_root(Oid relid)
 {
-	int fetchCount = 0;
+	Relation	inhrel;
+	ScanKeyData scankey;
+	SysScanDesc sscan;
+	HeapTuple	tuple;
+	Oid			masteroid;
 
-	Oid masteroid = caql_getoid_plus(NULL,
-						&fetchCount,
-						NULL,
-						cql("SELECT inhparent FROM pg_inherits "
-							" WHERE inhrelid = :1 ",
-							ObjectIdGetDatum(relid)));
+	inhrel = heap_open(InheritsRelationId, AccessShareLock);
 
-	if (!OidIsValid(masteroid))
-	{
-		return InvalidOid;
-	}
+	/* SELECT inhparent FROM pg_inherits WHERE inhrelid = :1 */
+	ScanKeyInit(&scankey, Anum_pg_inherits_inhrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+	sscan = systable_beginscan(inhrel, InheritsRelidSeqnoIndexId, true,
+							   SnapshotNow, 1, &scankey);
+	tuple = systable_getnext(sscan);
+	if (!tuple)
+		masteroid = InvalidOid;
+	else
+		masteroid = ((Form_pg_inherits) GETSTRUCT(tuple))->inhparent;
+
+	systable_endscan(sscan);
+	heap_close(inhrel, AccessShareLock);
 
 	return masteroid;
 }
@@ -3119,18 +3216,34 @@ rel_partition_get_root(Oid relid)
 Oid
 rel_partition_get_master(Oid relid)
 {
+	Relation	partrulerel;
+	ScanKeyData scankey;
+	SysScanDesc sscan;
+	HeapTuple	tuple;
 	Oid			paroid;
 	Oid			masteroid;
-	HeapTuple	tuple;
 
 	/* pg_partition and  pg_partition_rule are populated only on the
 	 * entry database, so our result is only meaningful there. */
 	Insist(Gp_segment == -1);
 
-	paroid = caql_getoid(NULL,
-						 cql("SELECT paroid FROM pg_partition_rule "
-							 " WHERE parchildrelid = :1 ",
-							 ObjectIdGetDatum(relid)));
+	partrulerel = heap_open(PartitionRuleRelationId, AccessShareLock);
+
+	/* SELECT paroid FROM pg_partition_rule WHERE parchildrelid = :1 */
+	ScanKeyInit(&scankey, Anum_pg_partition_rule_parchildrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+
+	sscan = systable_beginscan(partrulerel, PartitionRuleParchildrelidIndexId, true,
+							   SnapshotNow, 1, &scankey);
+	tuple = systable_getnext(sscan);
+	if (tuple)
+		paroid = ((Form_pg_partition_rule) GETSTRUCT(tuple))->paroid;
+	else
+		paroid = InvalidOid;
+
+	systable_endscan(sscan);
+	heap_close(partrulerel, AccessShareLock);
 
 	if (!OidIsValid(paroid))
 		return InvalidOid;
@@ -3151,35 +3264,49 @@ rel_partition_get_master(Oid relid)
  * the partition for that relation, using partition names if possible,
  * else rank or value expressions.
  */
-List *rel_get_part_path1(Oid relid)
+List *
+rel_get_part_path1(Oid relid)
 {
-	HeapTuple	 tuple;
-	Oid			 paroid		   = InvalidOid;
-	Oid			 parparentrule = InvalidOid;
-	List		*lrelid		   = NIL;
+	Relation	partrulerel;
+	ScanKeyData scankey;
+	SysScanDesc sscan;
+	HeapTuple	tuple;
+	Oid			paroid = InvalidOid;
+	Oid			parparentrule = InvalidOid;
+	List	   *lrelid		   = NIL;
 
 	/* pg_partition and  pg_partition_rule are populated only on the
 	 * entry database, so our result is only meaningful there. */
 	Insist(Gp_segment == -1);
 
-	/* use the relid of the table to find the first rule */
+	partrulerel = heap_open(PartitionRuleRelationId, AccessShareLock);
 
-	tuple = caql_getfirst(NULL,
-						  cql("SELECT * FROM pg_partition_rule "
-							  " WHERE parchildrelid = :1 ",
-							  ObjectIdGetDatum(relid)));
+	/*
+	 * Use the relid of the table to find the first rule
+	 *
+	 * SELECT paroid FROM pg_partition_rule WHERE parchildrelid = :1
+	 */
+	ScanKeyInit(&scankey, Anum_pg_partition_rule_parchildrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+	sscan = systable_beginscan(partrulerel, PartitionRuleParchildrelidIndexId, true,
+							   SnapshotNow, 1, &scankey);
+	tuple = systable_getnext(sscan);
+
 	if (HeapTupleIsValid(tuple))
 	{
 		Form_pg_partition_rule rule_desc =
-		(Form_pg_partition_rule)GETSTRUCT(tuple);
+			(Form_pg_partition_rule) GETSTRUCT(tuple);
 
 		paroid = rule_desc->paroid;
 		parparentrule = rule_desc->parparentrule;
 
 		/* prepend relid of child table to list */
 		lrelid = lcons_oid(rule_desc->parchildrelid, lrelid);
-
 	}
+
+	systable_endscan(sscan);
+	heap_close(partrulerel, AccessShareLock);
 
 	if (!OidIsValid(paroid))
 		return NIL;
@@ -7060,8 +7187,8 @@ exchange_part_rule(Oid oldrelid, Oid newrelid)
 {
 	HeapTuple	 tuple;
 	Relation	 catalogRelation;
-	cqContext	 cqc;
-	cqContext	*pcqCtx;
+	ScanKeyData	scankey;
+	SysScanDesc sscan;
 
 	/* pg_partition and  pg_partition_rule are populated only on the
 	 * entry database, so a call to this function is only meaningful
@@ -7070,18 +7197,19 @@ exchange_part_rule(Oid oldrelid, Oid newrelid)
 
 	catalogRelation = heap_open(PartitionRuleRelationId, RowExclusiveLock);
 
-	pcqCtx = caql_addrel(cqclr(&cqc), catalogRelation);
-
-	tuple = caql_getfirst(
-			pcqCtx,
-			cql("SELECT * FROM pg_partition_rule "
-				" WHERE parchildrelid = :1 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(oldrelid)));
-
+	/* SELECT * FROM pg_partition_rule WHERE parchildrelid = :1 FOR UPDATE */
+	ScanKeyInit(&scankey, Anum_pg_partition_rule_parchildrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(oldrelid));
+	sscan = systable_beginscan(catalogRelation, PartitionRuleParchildrelidIndexId, true,
+							   SnapshotNow, 1, &scankey);
+	tuple = systable_getnext(sscan);
 	if (HeapTupleIsValid(tuple))
 	{
-		((Form_pg_partition_rule)GETSTRUCT(tuple))->parchildrelid = newrelid;
+		/* make a modifiable copy */
+		tuple = heap_copytuple(tuple);
+
+		((Form_pg_partition_rule) GETSTRUCT(tuple))->parchildrelid = newrelid;
 
 		simple_heap_update(catalogRelation, &tuple->t_self, tuple);
 		CatalogUpdateIndexes(catalogRelation, tuple);
@@ -7089,6 +7217,7 @@ exchange_part_rule(Oid oldrelid, Oid newrelid)
 		heap_freetuple(tuple);
 	}
 
+	systable_endscan(sscan);
 	heap_close(catalogRelation, NoLock);
 }
 
@@ -9157,28 +9286,22 @@ remove_partition_encoding_entry(Oid paroid, AttrNumber attnum)
 static void
 remove_partition_encoding_by_key(Oid relid, AttrNumber attnum)
 {
-	HeapTuple		tup;
-	cqContext	   *pcqCtx;
-	cqContext		cqc;
+	Relation	partrel;
+	ScanKeyData scankey;
+	SysScanDesc sscan;
+	HeapTuple	tup;
 
 	/* XXX XXX: not FOR UPDATE because update a child table... */
 
-	pcqCtx = caql_beginscan(
-			cqclr(&cqc),
-			cql("SELECT * FROM pg_partition "
-				" WHERE parrelid = :1 ",
-				ObjectIdGetDatum(relid)));
+	partrel = heap_open(PartitionRelationId, AccessShareLock);
 
-	/* XXX XXX: hmm, could we add
-	   " AND paristemplate = :2 ",
-	   ...
-	   BoolGetDatum(true)));
+	ScanKeyInit(&scankey, Anum_pg_partition_parrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
 
-	   Could caql use an index on parrelid even though paristemplate
-	   not in index?
-	*/
-
-	while (HeapTupleIsValid(tup = caql_getnext(pcqCtx)))
+	sscan = systable_beginscan(partrel, PartitionParrelidIndexId, true,
+							   SnapshotNow, 1, &scankey);
+	while (HeapTupleIsValid(tup = systable_getnext(sscan)))
 	{
 		Form_pg_partition part = (Form_pg_partition)GETSTRUCT(tup);
 
@@ -9186,7 +9309,8 @@ remove_partition_encoding_by_key(Oid relid, AttrNumber attnum)
 			remove_partition_encoding_entry(HeapTupleGetOid(tup), attnum);
 	}
 
-	caql_endscan(pcqCtx);
+	systable_endscan(sscan);
+	heap_close(partrel, AccessShareLock);
 }
 
 void
@@ -9236,26 +9360,27 @@ add_template_encoding_clauses(Oid relid, Oid paroid, List *stenc)
 Datum *
 get_partition_encoding_attoptions(Relation rel, Oid paroid)
 {
-	HeapTuple		tup;
-	cqContext	   *pcqCtx;
-	cqContext		cqc;
-	Relation		pgpeenc = heap_open(PartitionEncodingRelationId,
-										RowExclusiveLock);
-	Datum		   *opts;
+	Relation	pgpeenc;
+	ScanKeyData scankey;
+	SysScanDesc sscan;
+	HeapTuple	tup;
+	Datum	   *opts;
 
+	/*
+	 * XXX XXX: should be FOR UPDATE ? why ? probably should be an
+	 * AccessShare
+	 */
+	pgpeenc  = heap_open(PartitionEncodingRelationId, RowExclusiveLock);
 
 	opts = palloc0(sizeof(Datum) * RelationGetNumberOfAttributes(rel));
 
-	/* XXX XXX: should be FOR UPDATE ? why ? probably should be an
-	 * AccessShare
-	 */
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), pgpeenc),
-			cql("SELECT * FROM pg_partition_encoding "
-				" WHERE parencoid = :1 ",
-				ObjectIdGetDatum(paroid)));
-
-	while (HeapTupleIsValid(tup = caql_getnext(pcqCtx)))
+	/* SELECT * FROM pg_partition_encoding WHERE parencoid = :1 */
+	ScanKeyInit(&scankey, Anum_pg_partition_encoding_parencoid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(paroid));
+	sscan = systable_beginscan(pgpeenc, PartitionEncodingParencoidIndexId, true,
+							   SnapshotNow, 1, &scankey);
+	while (HeapTupleIsValid(tup = systable_getnext(sscan)))
 	{
 		Datum paroptions;
 		AttrNumber attnum;
@@ -9273,7 +9398,7 @@ get_partition_encoding_attoptions(Relation rel, Oid paroid)
 		opts[attnum - 1] = datumCopy(paroptions, false, -1);
 	}
 
-	caql_endscan(pcqCtx);
+	systable_endscan(sscan);
 	heap_close(pgpeenc, RowExclusiveLock);
 
 	return opts;

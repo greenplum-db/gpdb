@@ -15,7 +15,6 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
-#include "catalog/catquery.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_authid.h"
 #include "catalog/pg_resqueue.h"
@@ -936,13 +935,30 @@ GetResQueueId(void)
 Oid
 GetResQueueIdForName(char	*name)
 {
-	Oid					queueid = InvalidOid;
+	Relation	rel;
+	ScanKeyData scankey;
+	SysScanDesc scan;
+	HeapTuple	tuple;
+	Oid			queueid;
 
-	queueid = caql_getoid(
-			NULL,
-			cql("SELECT oid FROM pg_resqueue "
-				" WHERE rsqname = :1 ",
-				CStringGetDatum(name)));
+	rel = heap_open(ResQueueRelationId, AccessShareLock);
+
+	/* SELECT oid FROM pg_resqueue WHERE rsqname = :1 */
+	ScanKeyInit(&scankey,
+				Anum_pg_resqueue_rsqname,
+				BTEqualStrategyNumber, F_NAMEEQ,
+				CStringGetDatum(name));
+	scan = systable_beginscan(rel, ResQueueRsqnameIndexId, true,
+							  SnapshotNow, 1, &scankey);
+
+	tuple = systable_getnext(scan);
+	if (tuple)
+		queueid = HeapTupleGetOid(tuple);
+	else
+		queueid = InvalidOid;
+
+	systable_endscan(scan);
+	heap_close(rel, AccessShareLock);
 
 	return queueid;
 }

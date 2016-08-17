@@ -10,7 +10,7 @@
 
 #include "postgres.h"
 #include "miscadmin.h"
-#include "catalog/catquery.h"
+#include "access/genam.h"
 #include "catalog/pg_exttable.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/gp_policy.h"
@@ -104,7 +104,8 @@ GpPolicyFetch(MemoryContext mcxt, Oid tbloid)
 {
 	GpPolicy  *policy = NULL;	/* The result */
 	Relation	gp_policy_rel;
-	cqContext	cqc;
+	ScanKeyData scankey;
+	SysScanDesc scan;
 	HeapTuple	gp_policy_tuple = NULL;
 
 	/*
@@ -168,12 +169,17 @@ GpPolicyFetch(MemoryContext mcxt, Oid tbloid)
 
 	/*
 	 * Select by value of the localoid field
+	 *
+	 * SELECT * FROM gp_distribution_policy WHERE localoid = :1
 	 */
-	gp_policy_tuple = caql_getfirst(
-			caql_addrel(cqclr(&cqc), gp_policy_rel), 
-			cql("SELECT * FROM gp_distribution_policy "
-				" WHERE localoid = :1 ",
-				ObjectIdGetDatum(tbloid)));
+	ScanKeyInit(&scankey, Anum_gp_policy_localoid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(tbloid));
+
+	scan = systable_beginscan(gp_policy_rel, GpPolicyLocalOidIndexId, true,
+							  SnapshotNow, 1, &scankey);
+
+	gp_policy_tuple = systable_getnext(scan);
 
 	/*
 	 * Read first (and only) tuple
@@ -214,6 +220,7 @@ GpPolicyFetch(MemoryContext mcxt, Oid tbloid)
 	/*
 	 * Cleanup the scan and relation objects.
 	 */
+	systable_endscan(scan);
 	heap_close(gp_policy_rel, AccessShareLock);
 
 	/* Interpret absence of a valid policy row as POLICYTYPE_ENTRY */

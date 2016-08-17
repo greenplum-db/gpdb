@@ -16,10 +16,10 @@
  */
 #include "postgres.h"
 
+#include "access/genam.h"
 #include "access/hash.h"
 #include "access/nbtree.h"
 #include "bootstrap/bootstrap.h"
-#include "catalog/catquery.h"
 #include "catalog/heap.h"                   /* SystemAttributeDefinition() */
 #include "catalog/pg_amop.h"
 #include "catalog/pg_amproc.h"
@@ -1284,19 +1284,28 @@ get_oprjoin(Oid opno)
 char *
 get_trigger_name(Oid triggerid)
 {
+	Relation	rel;
+	HeapTuple	tp;
 	char	   *result = NULL;
-	int			fetchCount;
+	ScanKeyData	scankey;
+	SysScanDesc sscan;
 
-	result = caql_getcstring_plus(
-					NULL,
-					&fetchCount,
-					NULL,
-					cql("SELECT tgname FROM pg_trigger "
-						" WHERE oid = :1 ",
-						ObjectIdGetDatum(triggerid)));
+	ScanKeyInit(&scankey, ObjectIdAttributeNumber,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(triggerid));
+	rel = heap_open(TriggerRelationId, AccessShareLock);
+	sscan = systable_beginscan(rel, TriggerOidIndexId, true,
+							   SnapshotNow, 1, &scankey);
 
-	if (!fetchCount)
-		return NULL;
+	tp = systable_getnext(sscan);
+	if (HeapTupleIsValid(tp))
+	{
+		Form_pg_trigger trigtup = (Form_pg_trigger) GETSTRUCT(tp);
+
+		result = pstrdup(NameStr(trigtup->tgname));
+	}
+	systable_endscan(sscan);
+	heap_close(rel, AccessShareLock);
 
 	return result;
 }
@@ -1308,19 +1317,24 @@ get_trigger_name(Oid triggerid)
 Oid
 get_trigger_relid(Oid triggerid)
 {
-	Oid			result;
-	int			fetchCount;
+	Relation	rel;
+	HeapTuple	tp;
+	Oid			result = InvalidOid;
+	ScanKeyData	scankey;
+	SysScanDesc sscan;
 
-	result  = caql_getoid_plus(
-			NULL,
-			&fetchCount,
-			NULL,
-			cql("SELECT tgrelid FROM pg_trigger "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(triggerid)));
+	ScanKeyInit(&scankey, ObjectIdAttributeNumber,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(triggerid));
+	rel = heap_open(TriggerRelationId, AccessShareLock);
+	sscan = systable_beginscan(rel, TriggerOidIndexId, true,
+							   SnapshotNow, 1, &scankey);
 
-	if (!fetchCount)
-		return InvalidOid;
+	tp = systable_getnext(sscan);
+	if (HeapTupleIsValid(tp))
+		result = ((Form_pg_trigger) GETSTRUCT(tp))->tgrelid;
+	systable_endscan(sscan);
+	heap_close(rel, AccessShareLock);
 
 	return result;
 }
@@ -1332,19 +1346,25 @@ get_trigger_relid(Oid triggerid)
 Oid
 get_trigger_funcid(Oid triggerid)
 {
-	Oid			result;
-	int			fetchCount;
+	Relation	rel;
+	HeapTuple	tp;
+	Oid			result = InvalidOid;
+	ScanKeyData	scankey;
+	SysScanDesc sscan;
 
-	result  = caql_getoid_plus(
-			NULL,
-			&fetchCount,
-			NULL,
-			cql("SELECT tgfoid FROM pg_trigger "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(triggerid)));
+	ScanKeyInit(&scankey, ObjectIdAttributeNumber,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(triggerid));
+	rel = heap_open(TriggerRelationId, AccessShareLock);
+	sscan = systable_beginscan(rel, TriggerOidIndexId, true,
+							   SnapshotNow, 1, &scankey);
 
-	if (!fetchCount)
-		return InvalidOid;
+	tp = systable_getnext(sscan);
+	if (HeapTupleIsValid(tp))
+		result = ((Form_pg_trigger) GETSTRUCT(tp))->tgfoid;
+
+	systable_endscan(sscan);
+	heap_close(rel, AccessShareLock);
 
 	return result;
 }
@@ -1356,24 +1376,28 @@ get_trigger_funcid(Oid triggerid)
 int32
 get_trigger_type(Oid triggerid)
 {
+	Relation	rel;
 	HeapTuple	tp;
-	cqContext  *pcqCtx;
 	int32		result = -1;
+	ScanKeyData	scankey;
+	SysScanDesc sscan;
 
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_trigger "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(triggerid)));
+	ScanKeyInit(&scankey, ObjectIdAttributeNumber,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(triggerid));
+	rel = heap_open(TriggerRelationId, AccessShareLock);
+	sscan = systable_beginscan(rel, TriggerOidIndexId, true,
+							   SnapshotNow, 1, &scankey);
 
-	tp = caql_getnext(pcqCtx);
-
+	tp = systable_getnext(sscan);
 	if (!HeapTupleIsValid(tp))
 		elog(ERROR, "cache lookup failed for trigger %u", triggerid);
 
 	result = ((Form_pg_trigger) GETSTRUCT(tp))->tgtype;
 
-	caql_endscan(pcqCtx);
+	systable_endscan(sscan);
+	heap_close(rel, AccessShareLock);
+
 	return result;
 }
 
@@ -1384,24 +1408,28 @@ get_trigger_type(Oid triggerid)
 bool
 trigger_enabled(Oid triggerid)
 {
+	Relation	rel;
 	HeapTuple	tp;
 	bool		result;
-	cqContext  *pcqCtx;
+	ScanKeyData	scankey;
+	SysScanDesc sscan;
 
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_trigger "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(triggerid)));
+	ScanKeyInit(&scankey, ObjectIdAttributeNumber,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(triggerid));
+	rel = heap_open(TriggerRelationId, AccessShareLock);
+	sscan = systable_beginscan(rel, TriggerOidIndexId, true,
+							   SnapshotNow, 1, &scankey);
 
-	tp = caql_getnext(pcqCtx);
-
+	tp = systable_getnext(sscan);
 	if (!HeapTupleIsValid(tp))
 		elog(ERROR, "cache lookup failed for trigger %u", triggerid);
 
 	result = ((Form_pg_trigger) GETSTRUCT(tp))->tgenabled;
 
-	caql_endscan(pcqCtx);
+	systable_endscan(sscan);
+	heap_close(rel, AccessShareLock);
+
 	return result;
 }
 
@@ -3647,18 +3675,27 @@ get_check_constraint_relid(Oid oidCheckconstraint)
 List *
 get_check_constraint_oids(Oid oidRel)
 {
-	List *plConstraints = NIL;
-	HeapTuple htup = NULL;
-	cqContext *pcqCtx = NULL;
+	List	   *plConstraints = NIL;
+	HeapTuple	htup;
+	Relation	conrel;
+	ScanKeyData scankey;
+	SysScanDesc sscan;
 
-	// lookup constraints for relation from the catalog table
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_constraint "
-				" WHERE conrelid = :1 ",
-				ObjectIdGetDatum(oidRel)));
+	/*
+	 * lookup constraints for relation from the catalog table
+	 *
+	 * SELECT * FROM pg_constraint WHERE conrelid = :1
+	 */
+	conrel = heap_open(ConstraintRelationId, AccessShareLock);
 
-	while (HeapTupleIsValid(htup = caql_getnext(pcqCtx)))
+	ScanKeyInit(&scankey,
+				Anum_pg_constraint_conrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(oidRel));
+	sscan = systable_beginscan(conrel, ConstraintRelidIndexId, true,
+							   SnapshotNow, 1, &scankey);
+
+	while (HeapTupleIsValid(htup = systable_getnext(sscan)))
 	{
 		Form_pg_constraint contuple = (Form_pg_constraint) GETSTRUCT(htup);
 
@@ -3671,7 +3708,8 @@ get_check_constraint_oids(Oid oidRel)
 		plConstraints = lappend_oid(plConstraints, HeapTupleGetOid(htup));
 	}
 
-	caql_endscan(pcqCtx);
+	systable_endscan(sscan);
+	heap_close(conrel, AccessShareLock);
 
 	return plConstraints;
 }
@@ -3799,9 +3837,11 @@ Oid
 get_comparison_operator(Oid oidLeft, Oid oidRight, CmpType cmpt)
 {
 	int			opstrat;
-	cqContext  *pcqCtx;
 	HeapTuple	ht;
 	Oid			result = InvalidOid;
+	Relation	pg_amop;
+	ScanKeyData scankey[4];
+	SysScanDesc sscan;
 
 	switch(cmpt)
 	{
@@ -3824,18 +3864,35 @@ get_comparison_operator(Oid oidLeft, Oid oidRight, CmpType cmpt)
 			return InvalidOid;
 	}
 
+	pg_amop = heap_open(AccessMethodOperatorRelationId, AccessShareLock);
+
+	/*
+	 * SELECT * FROM pg_amop
+	 * WHERE amoplefttype = :1 and amoprighttype = :2 and amopmethod = :3 and amopstrategy = :4
+	 */
+	ScanKeyInit(&scankey[0],
+				Anum_pg_amop_amoplefttype,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(oidLeft));
+	ScanKeyInit(&scankey[1],
+				Anum_pg_amop_amoprighttype,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(oidRight));
+	ScanKeyInit(&scankey[2],
+				Anum_pg_amop_amopmethod,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(BTREE_AM_OID));
+	ScanKeyInit(&scankey[3],
+				Anum_pg_amop_amopstrategy,
+				BTEqualStrategyNumber, F_INT2EQ,
+				Int16GetDatum(opstrat));
+
 	/* XXX: There is no index for this, so this is slow! */
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_amop "
-				" WHERE amoplefttype = :1 and amoprighttype = :2 and amopmethod = :3 and amopstrategy = :4 ",
-				ObjectIdGetDatum(oidLeft),
-				ObjectIdGetDatum(oidRight),
-				ObjectIdGetDatum(BTREE_AM_OID),
-				Int32GetDatum(opstrat)));
+	sscan = systable_beginscan(pg_amop, InvalidOid, false,
+							   SnapshotNow, 4, scankey);
 
 	/* XXX: There can be multiple results. Arbitrarily use the first one */
-	while (HeapTupleIsValid(ht = caql_getnext(pcqCtx)))
+	while (HeapTupleIsValid(ht = systable_getnext(sscan)))
 	{
 		Form_pg_amop amoptup = (Form_pg_amop) GETSTRUCT(ht);
 
@@ -3843,7 +3900,8 @@ get_comparison_operator(Oid oidLeft, Oid oidRight, CmpType cmpt)
 		break;
 	}
 
-	caql_endscan(pcqCtx);
+	systable_endscan(sscan);
+	heap_close(pg_amop, AccessShareLock);
 
 	return result;
 }

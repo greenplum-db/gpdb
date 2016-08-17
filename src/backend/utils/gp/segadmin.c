@@ -9,7 +9,6 @@
 #include "miscadmin.h"
 
 #include "access/xlog.h"
-#include "catalog/catquery.h"
 #include "catalog/gp_segment_config.h"
 #include "catalog/pg_filespace.h"
 #include "catalog/pg_filespace_entry.h"
@@ -101,20 +100,15 @@ get_maxdbid()
 	Relation rel = heap_open(GpSegmentConfigRelationId, AccessExclusiveLock);
 	int16 dbid = 0;
 	HeapTuple tuple;
-	cqContext	cqc;
-	cqContext  *pcqCtx;
+	SysScanDesc sscan;
 
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), rel),
-			cql("SELECT * FROM gp_segment_configuration ",
-				NULL));
-
-	while (HeapTupleIsValid(tuple = caql_getnext(pcqCtx)))
+	sscan = systable_beginscan(rel, InvalidOid, false, SnapshotNow, 0, NULL);
+	while ((tuple = systable_getnext(sscan)) != NULL)
 	{
 		dbid = Max(dbid, 
 				   ((Form_gp_segment_configuration)GETSTRUCT(tuple))->dbid);
 	}
-	caql_endscan(pcqCtx);
+	systable_endscan(sscan);
 	heap_close(rel, NoLock);
 
 	return dbid;
@@ -146,20 +140,15 @@ get_availableDbId()
 	/* scan GpSegmentConfigRelationId */
 	Relation rel = heap_open(GpSegmentConfigRelationId, AccessExclusiveLock);
 	HeapTuple tuple;
-	cqContext	cqc;
-	cqContext  *pcqCtx;
+	SysScanDesc sscan;
 
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), rel),
-			cql("SELECT * FROM gp_segment_configuration ",
-				NULL));
-
-	while (HeapTupleIsValid(tuple = caql_getnext(pcqCtx)))
+	sscan = systable_beginscan(rel, InvalidOid, false, SnapshotNow, 0, NULL);
+	while ((tuple = systable_getnext(sscan)) != NULL)
 	{
 		int32 dbid = (int32) ((Form_gp_segment_configuration)GETSTRUCT(tuple))->dbid;
 		(void) hash_search(htab, (void *) &dbid, HASH_ENTER, NULL);
 	}
-	caql_endscan(pcqCtx);
+	systable_endscan(sscan);
 
 	heap_close(rel, NoLock);
 
@@ -189,20 +178,15 @@ get_maxcontentid()
 	Relation rel = heap_open(GpSegmentConfigRelationId, AccessExclusiveLock);
 	int16 contentid = 0;
 	HeapTuple tuple;
-	cqContext	cqc;
-	cqContext  *pcqCtx;
+	SysScanDesc sscan;
 
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), rel),
-			cql("SELECT * FROM gp_segment_configuration ",
-				NULL));
-
-	while (HeapTupleIsValid(tuple = caql_getnext(pcqCtx)))
+	sscan = systable_beginscan(rel, InvalidOid, false, SnapshotNow, 0, NULL);
+	while ((tuple = systable_getnext(sscan)) != NULL)
 	{
 		contentid = Max(contentid,
 						((Form_gp_segment_configuration)GETSTRUCT(tuple))->content);
 	}
-	caql_endscan(pcqCtx);
+	systable_endscan(sscan);
 	heap_close(rel, NoLock);
 
 	return contentid;

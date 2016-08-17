@@ -16,7 +16,6 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
-#include "catalog/catquery.h"
 #include "catalog/dependency.h"
 #include "catalog/heap.h"
 #include "catalog/indexing.h"
@@ -61,22 +60,31 @@ static char *GetResqueueCapability(Oid queueOid, int capabilityIndex);
  * updates output and returns true if named resource found
  *
 */
-static
-bool GetResourceTypeByName(char *pNameIn, int *pTypeOut, Oid *pOidOut)
+static bool
+GetResourceTypeByName(char *pNameIn, int *pTypeOut, Oid *pOidOut)
 {
+	Relation	pg_resourcetype;
+	ScanKeyData scankey;
+	SysScanDesc sscan;
 	HeapTuple	tuple;
 	bool		bStat = false;
 
-	/* XXX XXX: maybe should be share lock, ie remove FOR UPDATE ? */
-	/* XXX XXX: only one */
+	/*
+	 * SELECT * FROM pg_resourcetype WHERE resname = :1 FOR UPDATE
+	 *
+	 * XXX XXX: maybe should be share lock, ie remove FOR UPDATE ?
+	 * XXX XXX: only one
+	 */
+	pg_resourcetype = heap_open(ResourceTypeRelationId, RowExclusiveLock);
 
-	tuple = caql_getfirst(
-			NULL,
-			cql("SELECT * FROM pg_resourcetype" 
-				" WHERE resname = :1 FOR UPDATE", 
-				CStringGetDatum(pNameIn)));
-	
+	ScanKeyInit(&scankey,
+				Anum_pg_resourcetype_resname,
+				BTEqualStrategyNumber, F_NAMEEQ,
+				CStringGetDatum(pNameIn));
+	sscan = systable_beginscan(pg_resourcetype, ResourceTypeResnameIndexId, true,
+							   SnapshotNow, 1, &scankey);
 
+	tuple = systable_getnext(sscan);
 	if (HeapTupleIsValid(tuple))
 	{
 		*pOidOut = HeapTupleGetOid(tuple);
@@ -84,6 +92,8 @@ bool GetResourceTypeByName(char *pNameIn, int *pTypeOut, Oid *pOidOut)
 				((Form_pg_resourcetype) GETSTRUCT(tuple))->restypid;
 		bStat = true;
 	}
+	systable_endscan(sscan);
+	heap_close(pg_resourcetype, RowExclusiveLock);
 
 	return (bStat);
 } /* end GetResourceTypeByName */
@@ -674,22 +684,24 @@ GetResqueueCapabilityEntry(Oid  queueid)
 {
 	List		*elems = NIL;
 	HeapTuple	 tuple;
-	cqContext	*pcqCtx;
-	cqContext	 cqc;
+	ScanKeyData scankey;
+	SysScanDesc sscan;
 	Relation	 rel;
 	TupleDesc	 tupdesc;
 
+	/* SELECT * FROM pg_resqueuecapability WHERE resqueueid = :1 */
 	rel = heap_open(ResQueueCapabilityRelationId, AccessShareLock);
 
 	tupdesc = RelationGetDescr(rel);
 
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), rel),
-			cql("SELECT * FROM pg_resqueuecapability"
-				" WHERE resqueueid = :1  ",
-				ObjectIdGetDatum(queueid)));
+	ScanKeyInit(&scankey,
+				Anum_pg_resqueuecapability_resqueueid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(queueid));
+	sscan = systable_beginscan(rel, ResQueueCapabilityResqueueidIndexId, true,
+							   SnapshotNow, 1, &scankey);
 
-	while (HeapTupleIsValid(tuple = caql_getnext(pcqCtx)))
+	while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
 	{
 		if (HeapTupleIsValid(tuple))
 		{
@@ -720,7 +732,7 @@ GetResqueueCapabilityEntry(Oid  queueid)
 			elems = lappend(elems, pentry);
 		}
 	}
-	caql_endscan(pcqCtx);
+	systable_endscan(sscan);
 
 	heap_close(rel, AccessShareLock);
 	
@@ -1621,25 +1633,41 @@ DropQueue(DropQueueStmt *stmt)
 	heap_close(pg_resqueue_rel, NoLock);
 }
 
-/**
+/*
  * Given a queue id, return its name
  */
-char *GetResqueueName(Oid resqueueOid)
+char *
+GetResqueueName(Oid resqueueOid)
 {
-	int			 fetchCount;
-	char		*result = NULL;
+	Relation	rel;
+	ScanKeyData scankey;
+	SysScanDesc sscan;
+	HeapTuple	tuple;
+	char	   *result;
 
-	result = caql_getcstring_plus(
-			NULL,
-			&fetchCount,
-			NULL,
-			cql("SELECT rsqname FROM pg_resqueue"
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(resqueueOid)));
+	/* SELECT rsqname FROM pg_resqueue WHERE oid = :1 */
+	rel = heap_open(ResQueueRelationId, AccessShareLock);
+
+	ScanKeyInit(&scankey, ObjectIdAttributeNumber,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(resqueueOid));
+
+	sscan = systable_beginscan(rel, ResQueueOidIndexId, true,
+							   SnapshotNow, 1, &scankey);
+
+	tuple = systable_getnext(sscan);
 
 	/* If we cannot find a resource queue id for any reason */
-	if (!fetchCount)
-		result = pstrdup("Unknown");	
+	if (!tuple)
+		result = pstrdup("Unknown");
+	else
+	{
+		FormData_pg_resqueue *rqform = (FormData_pg_resqueue *) GETSTRUCT(tuple);
+		result = pstrdup(NameStr(rqform->rsqname));
+	}
+
+	systable_endscan(sscan);
+	heap_close(rel, AccessShareLock);
 
 	return result;
 }

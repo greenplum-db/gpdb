@@ -36,7 +36,6 @@
 #include "access/reloptions.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
-#include "catalog/catquery.h"
 #include "catalog/catalog.h"
 #include "catalog/dependency.h"
 #include "catalog/heap.h"
@@ -2855,14 +2854,13 @@ AlterType(AlterTypeStmt *stmt)
 	TypeName	   *typname = stmt->typname;
 	Oid				typid;
 	int32			typmod;
-	cqContext	   *pcqCtx;
-	cqContext		cqc;
 	HeapTuple		tup;
 	Datum			typoptions;
 	bool			typmod_set = false;
 	List		   *encoding = NIL;
-	Relation 		pgtypeenc = heap_open(TypeEncodingRelationId,
-										  RowExclusiveLock);
+	Relation 		pgtypeenc;
+	ScanKeyData	scankey;
+	SysScanDesc scan;
 
 	/* Make a TypeName so we can use standard type lookup machinery */
 	typid = typenameTypeId(NULL, typname, &typmod);
@@ -2926,15 +2924,15 @@ AlterType(AlterTypeStmt *stmt)
 									 false,
 									 false);
 
-	pcqCtx = caql_addrel(cqclr(&cqc), pgtypeenc);
+	/* SELECT * FROM pg_type_encoding WHERE typid = :1 FOR UPDATE */
+	pgtypeenc = heap_open(TypeEncodingRelationId, RowExclusiveLock);
+	ScanKeyInit(&scankey, Anum_pg_type_encoding_typid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(typid));
+	scan = systable_beginscan(pgtypeenc, TypeEncodingTypidIndexId, true,
+							  SnapshotNow, 1, &scankey);
 
-	tup = caql_getfirst(
-			pcqCtx,
-			cql("SELECT * FROM pg_type_encoding "
-				" WHERE typid = :1 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(typid)));
-
+	tup = systable_getnext(scan);
 	if (HeapTupleIsValid(tup))
 	{
 		/* update case */
@@ -2960,6 +2958,8 @@ AlterType(AlterTypeStmt *stmt)
 	{
 		add_type_encoding(typid, typoptions);
 	}	
+	systable_endscan(scan);
+	heap_close(pgtypeenc, NoLock);
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 		CdbDispatchUtilityStatement((Node *) stmt,
@@ -2967,8 +2967,6 @@ AlterType(AlterTypeStmt *stmt)
 									DF_WITH_SNAPSHOT|
 									DF_NEED_TWO_PHASE,
 									NULL);
-
-	heap_close(pgtypeenc, NoLock);
 }
 
 /*

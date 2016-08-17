@@ -16,9 +16,11 @@
  */
 
 #include "postgres.h"
+
 #include "fmgr.h"
 #include "funcapi.h"
-#include "catalog/catquery.h"
+#include "access/genam.h"
+#include "catalog/gp_segment_config.h"
 #include "catalog/pg_type.h"
 #include "nodes/makefuncs.h"
 #include "parser/parse_oper.h"
@@ -1014,10 +1016,11 @@ makeRandomSegMap(int total_primaries, int total_to_skip)
 int16
 master_standby_dbid(void)
 {
-	int16 dbid = 0;
-	int16 contentid = -1;
-	bool bOnly;
-	HeapTuple tup;
+	int16		dbid = 0;
+	HeapTuple	tup;
+	Relation	rel;
+	ScanKeyData scankey[2];
+	SysScanDesc scan;
 
 	/*
 	 * Can only run on a master node, this restriction is due to the reliance
@@ -1026,22 +1029,35 @@ master_standby_dbid(void)
 	if (GpIdentity.segindex != MASTER_CONTENT_ID)
 		elog(ERROR, "master_standby_dbid() executed on execution segment");
 
-	tup = caql_getfirst_only(
-			NULL,
-			&bOnly,
-			cql("SELECT * FROM gp_segment_configuration "
-				" WHERE content = :1 "
-				" AND role = :2 ",
-				Int16GetDatum(contentid),
-				CharGetDatum('m')));
+	/*
+	 * SELECT * FROM gp_segment_configuration
+	 *  WHERE content = -1 AND role = 'm'
+	 */
+	rel = heap_open(GpSegmentConfigRelationId, AccessShareLock);
+	ScanKeyInit(&scankey[0],
+				Anum_gp_segment_configuration_content,
+				BTEqualStrategyNumber, F_INT2EQ,
+				Int16GetDatum(-1));
+	ScanKeyInit(&scankey[1],
+				Anum_gp_segment_configuration_role,
+				BTEqualStrategyNumber, F_CHAREQ,
+				CharGetDatum('m'));
+	/* no index */
+	scan = systable_beginscan(rel, InvalidOid, false,
+							  SnapshotNow, 2, scankey);
+
+	tup = systable_getnext(scan);
 
 	if (HeapTupleIsValid(tup))
 	{
 		dbid = ((Form_gp_segment_configuration) GETSTRUCT(tup))->dbid;
 		/* We expect a single result, assert this */
-		Assert(bOnly);
+		Assert(systable_getnext(scan) == NULL);
 	}
+
+	systable_endscan(scan);
 	/* no need to hold the lock, it's a catalog */
+	heap_close(rel, AccessShareLock);
 
 	return dbid;
 }
@@ -1049,10 +1065,10 @@ master_standby_dbid(void)
 CdbComponentDatabaseInfo *
 dbid_get_dbinfo(int16 dbid)
 {
-	HeapTuple tuple;
-	Relation rel;
-	cqContext	cqc;
-	bool bOnly;
+	HeapTuple	tuple;
+	Relation	rel;
+	ScanKeyData scankey;
+	SysScanDesc scan;
 	CdbComponentDatabaseInfo *i = NULL;
 
 	/*
@@ -1065,13 +1081,15 @@ dbid_get_dbinfo(int16 dbid)
 
 	rel = heap_open(GpSegmentConfigRelationId, AccessShareLock);
 
-	tuple = caql_getfirst_only(
-			caql_addrel(cqclr(&cqc), rel),
-			&bOnly,
-			cql("SELECT * FROM gp_segment_configuration "
-				" WHERE dbid = :1 ",
-				Int16GetDatum(dbid)));
+	/* SELECT * FROM gp_segment_configuration WHERE dbid = :1 */
+	ScanKeyInit(&scankey,
+				Anum_gp_segment_configuration_dbid,
+				BTEqualStrategyNumber, F_INT2EQ,
+				Int16GetDatum(dbid));
+	scan = systable_beginscan(rel, GpSegmentConfigDbidIndexId, true,
+							  SnapshotNow, 1, &scankey);
 
+	tuple = systable_getnext(scan);
 	if (HeapTupleIsValid(tuple))
 	{
 		Datum attr;
@@ -1162,13 +1180,14 @@ dbid_get_dbinfo(int16 dbid)
 		else
 			i->filerep_port = -1;
 
-		Assert(bOnly); /* should be only 1 */
+		Assert(systable_getnext(scan) == NULL); /* should be only 1 */
 	}
 	else
 	{
 		elog(ERROR, "could not find configuration entry for dbid %i", dbid);
 	}
 
+	systable_endscan(scan);
 	heap_close(rel, NoLock);
 
 	return i;
@@ -1183,9 +1202,11 @@ dbid_get_dbinfo(int16 dbid)
 int16
 contentid_get_dbid(int16 contentid, char role, bool getPreferredRoleNotCurrentRole)
 {
-	int16 dbid = 0;
-	bool bOnly;
-	HeapTuple tup;
+	int16		dbid = 0;
+	Relation	rel;
+	ScanKeyData scankey[2];
+	SysScanDesc scan;
+	HeapTuple	tup;
 
 	/*
 	 * Can only run on a master node, this restriction is due to the reliance
@@ -1195,37 +1216,56 @@ contentid_get_dbid(int16 contentid, char role, bool getPreferredRoleNotCurrentRo
 	if (GpIdentity.segindex != MASTER_CONTENT_ID)
 		elog(ERROR, "contentid_get_dbid() executed on execution segment");
 
+	rel = heap_open(GpSegmentConfigRelationId, AccessShareLock);
+
 	/* XXX XXX: CHECK THIS  XXX jic 2011/12/09 */
 	if (getPreferredRoleNotCurrentRole)
 	{
-		tup = caql_getfirst_only(
-				NULL,
-				&bOnly,
-				cql("SELECT * FROM gp_segment_configuration "
-					" WHERE content = :1 "
-					" AND preferred_role = :2 ",
-					Int16GetDatum(contentid),
-					CharGetDatum(role)));
+		/*
+		 * SELECT * FROM gp_segment_configuration
+		 * WHERE content = :1 AND preferred_role = :2
+		 */
+		ScanKeyInit(&scankey[0],
+					Anum_gp_segment_configuration_content,
+					BTEqualStrategyNumber, F_INT2EQ,
+					Int16GetDatum(contentid));
+		ScanKeyInit(&scankey[1],
+					Anum_gp_segment_configuration_preferred_role,
+					BTEqualStrategyNumber, F_CHAREQ,
+					CharGetDatum(role));
+		scan = systable_beginscan(rel, GpSegmentConfigContentPreferred_roleIndexId, true,
+								  SnapshotNow, 2, scankey);
 	}
 	else
 	{
-		tup = caql_getfirst_only(
-				NULL,
-				&bOnly,
-				cql("SELECT * FROM gp_segment_configuration "
-					" WHERE content = :1 "
-					" AND role = :2 ",
-					Int16GetDatum(contentid),
-					CharGetDatum(role)));
+		/*
+		 * SELECT * FROM gp_segment_configuration
+		 * WHERE content = :1 AND role = :2
+		 */
+		ScanKeyInit(&scankey[0],
+					Anum_gp_segment_configuration_content,
+					BTEqualStrategyNumber, F_INT2EQ,
+					Int16GetDatum(contentid));
+		ScanKeyInit(&scankey[1],
+					Anum_gp_segment_configuration_role,
+					BTEqualStrategyNumber, F_CHAREQ,
+					CharGetDatum(role));
+		/* no index */
+		scan = systable_beginscan(rel, InvalidOid, false,
+								  SnapshotNow, 2, scankey);
 	}
 
+	tup = systable_getnext(scan);
 	if (HeapTupleIsValid(tup))
 	{
 		dbid = ((Form_gp_segment_configuration) GETSTRUCT(tup))->dbid;
 		/* We expect a single result, assert this */
-		Assert(bOnly); /* should be only 1 */
+		Assert(systable_getnext(scan) == NULL); /* should be only 1 */
 	}
+
 	/* no need to hold the lock, it's a catalog */
+	systable_endscan(scan);
+	heap_close(rel, AccessShareLock);
 
 	return dbid;
 }
@@ -1238,10 +1278,12 @@ contentid_get_dbid(int16 contentid, char role, bool getPreferredRoleNotCurrentRo
 int16
 my_mirror_dbid(void)
 {
-	int16 dbid = 0;
-	int16 contentid = (int16)GpIdentity.segindex;
-	bool bOnly;
-	HeapTuple tup;
+	int16		dbid = 0;
+	int16		contentid = (int16)GpIdentity.segindex;
+	Relation	rel;
+	ScanKeyData scankey[2];
+	SysScanDesc scan;
+	HeapTuple	tup;
 
 	/*
 	 * Can only run on a master node, this restriction is due to the reliance
@@ -1251,22 +1293,33 @@ my_mirror_dbid(void)
 	if (GpIdentity.segindex != MASTER_CONTENT_ID)
 		elog(ERROR, "my_mirror_dbid() executed on execution segment");
 
-	tup = caql_getfirst_only(
-			NULL,
-			&bOnly,
-			cql("SELECT dbid FROM gp_segment_configuration "
-				" WHERE content = :1 "
-				" AND role = :2 ",
-				Int16GetDatum(contentid),
-				CharGetDatum('m')));
+	rel = heap_open(GpSegmentConfigRelationId, AccessShareLock);
 
+	/*
+	 * SELECT dbid FROM gp_segment_configuration
+	 * WHERE content = :1 AND role = :2
+	 */
+	ScanKeyInit(&scankey[0],
+				Anum_gp_segment_configuration_content,
+				BTEqualStrategyNumber, F_INT2EQ,
+				Int16GetDatum(contentid));
+	ScanKeyInit(&scankey[1],
+				Anum_gp_segment_configuration_role,
+				BTEqualStrategyNumber, F_CHAREQ,
+				CharGetDatum('m'));
+	/* no index */
+	scan = systable_beginscan(rel, InvalidOid, false,
+							  SnapshotNow, 2, scankey);
+	tup = systable_getnext(scan);
 	if (HeapTupleIsValid(tup))
 	{
 		dbid = ((Form_gp_segment_configuration) GETSTRUCT(tup))->dbid;
 		/* We expect a single result, assert this */
-		Assert(bOnly); /* should be only 1 */
+		Assert(systable_getnext(scan) == NULL);
 	}
 	/* no need to hold the lock, it's a catalog */
+	systable_endscan(scan);
+	heap_close(rel, AccessShareLock);
 
 	return dbid;
 }

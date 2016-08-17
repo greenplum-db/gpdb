@@ -19,7 +19,6 @@
 #include "access/nbtree.h"
 #include "access/transam.h"
 #include "catalog/catalog.h"
-#include "catalog/catquery.h"
 #include "catalog/heap.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_authid.h"
@@ -498,8 +497,7 @@ PersistentBuild_BuildDb(
 	DatabaseInfo		*info;
 	Oid					 defaultTablespace;
 	int					 t;
-	cqContext			 cqc;
-	cqContext			*pcqCtx;
+	SysScanDesc sscan;
 
 	/*
 	 * Turn this on so we don't try to fetch persistence information from
@@ -522,20 +520,14 @@ PersistentBuild_BuildDb(
 
 	/* 
 	 * If the gp_global_sequence table hasn't been populated yet then we need 
-	 * to populate it before we can procede with building the rest of the 
+	 * to populate it before we can proceed with building the rest of the
 	 * persistent tables. 
+	 *
+	 * SELECT * FROM gp_global_sequence FOR UPDATE
 	 */
 	gp_global_sequence = heap_open(GpGlobalSequenceRelationId, RowExclusiveLock);
-
-
-	pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), gp_global_sequence),
-			cql("SELECT * FROM gp_global_sequence "
-				" FOR UPDATE ",
-				NULL));
-
-	tuple = caql_getnext(pcqCtx);
-
+	sscan = systable_beginscan(gp_global_sequence, InvalidOid, false, SnapshotNow, 0, NULL);
+	tuple = systable_getnext(sscan);
 	if (!HeapTupleIsValid(tuple))
 	{
 		Datum			values[Natts_gp_global_sequence];
@@ -548,11 +540,11 @@ PersistentBuild_BuildDb(
 
 		if (!HeapTupleIsValid(tuple))
 			elog(ERROR, "failed to build global sequence tuple");
-		
+
 		for (t = 0; t < GpGlobalSequence_MaxSequenceTid; t++)
 			frozen_heap_insert(gp_global_sequence, tuple);
 	}
-	caql_endscan(pcqCtx);
+	systable_endscan(sscan);
 	heap_close(gp_global_sequence, RowExclusiveLock);
 
 	/* Lookup the information for the current database */
