@@ -168,9 +168,6 @@ static void ExecCdbTraceNode(PlanState *node, bool entry, TupleTableSlot *result
  static void
  EnrollProjInfoTargetList(PlanState* result, ProjectionInfo* ProjInfo);
 
- static void
- EnrollTransitionFunctions(AggState* aggState);
-
 /*
  * setSubplanSliceId
  *   Set the slice id info for the given subplan.
@@ -592,8 +589,9 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 			    AggStatePerAgg peraggstate = &aggstate->peragg[aggno];
 			    EnrollProjInfoTargetList(result, peraggstate->evalproj);
 			  }
-			  EnrollTransitionFunctions(aggstate);
-			}
+			  enroll_AdvanceAggregates_codegen(advance_aggregates,
+			        &aggstate->AdvanceAggregates_gen_info.AdvanceAggregates_fn,
+			        aggstate);			}
 			}
 			END_MEMORY_ACCOUNT();
 			break;
@@ -870,25 +868,6 @@ EnrollProjInfoTargetList(PlanState* result, ProjectionInfo* ProjInfo)
 #endif
 }
 
-/* ----------------------------------------------------------------
- *    EnrollTransitionFunctions
- *
- *    Enroll trasition functions to Codegen
- * ----------------------------------------------------------------
- */
-void
-EnrollTransitionFunctions(AggState* aggstate)
-{
-#ifdef USE_CODEGEN
-	if (NULL == aggstate)
-	{
-		return;
-	}
-	enroll_AdvanceAggregates_codegen(advance_aggregates,
-			&aggstate->AdvanceAggregates_gen_info.AdvanceAggregates_fn,
-			aggstate);
-#endif
-}
 
 /* ----------------------------------------------------------------
  *		ExecSliceDependencyNode
