@@ -2862,6 +2862,13 @@ describeRoles(const char *pattern, bool verbose)
 				 "        JOIN pg_catalog.pg_roles b ON (m.roleid = b.oid)\n"
 						  "        WHERE m.member = r.oid) as memberof");
 
+		/* add Greenplum specific attributes */
+		appendPQExpBufferStr(&buf, "\n, r.rolcreaterextgpfd");
+		appendPQExpBufferStr(&buf, "\n, r.rolcreaterexthttp");
+		appendPQExpBufferStr(&buf, "\n, r.rolcreatewextgpfd");
+		appendPQExpBufferStr(&buf, "\n, r.rolcreaterexthdfs");
+		appendPQExpBufferStr(&buf, "\n, r.rolcreatewexthdfs");
+
 		if (verbose && pset.sversion >= 80200)
 		{
 			appendPQExpBufferStr(&buf, "\n, pg_catalog.shobj_description(r.oid, 'pg_authid') AS description");
@@ -2923,6 +2930,25 @@ describeRoles(const char *pattern, bool verbose)
 		if (strcmp(PQgetvalue(res, i, 4), "t") == 0)
 			add_role_attribute(&buf, _("Create DB"));
 
+
+		/* output Greenplum specific attributes */
+		if (strcmp(PQgetvalue(res, i, 8), "t") == 0)
+			add_role_attribute(&buf, _("Ext gpfdist Table"));
+
+		if (strcmp(PQgetvalue(res, i, 9), "t") == 0)
+			add_role_attribute(&buf, _("Ext http Table"));
+
+		if (strcmp(PQgetvalue(res, i, 10), "t") == 0)
+			add_role_attribute(&buf, _("Wri Ext http Table"));
+
+		if (strcmp(PQgetvalue(res, i, 11), "t") == 0)
+			add_role_attribute(&buf, _("Ext hdfs Table"));
+
+		if (strcmp(PQgetvalue(res, i, 12), "t") == 0)
+			add_role_attribute(&buf, _("Wri Ext hdfs Table"));
+		/* end Greenplum specific attributes */
+
+
 		if (strcmp(PQgetvalue(res, i, 5), "t") != 0)
 			add_role_attribute(&buf, _("Cannot login"));
 
@@ -2948,7 +2974,7 @@ describeRoles(const char *pattern, bool verbose)
 		printTableAddCell(&cont, PQgetvalue(res, i, 7), false, false);
 
 		if (verbose && pset.sversion >= 80200)
-			printTableAddCell(&cont, PQgetvalue(res, i, 8), false, false);
+			printTableAddCell(&cont, PQgetvalue(res, i, 8 + 5 /* Greenplum specific attributes */), false, false);
 	}
 	termPQExpBuffer(&buf);
 
