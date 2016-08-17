@@ -76,6 +76,9 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
       "entry block", advance_aggregates_func);
   llvm::BasicBlock* llvm_error_block = codegen_utils->CreateBasicBlock(
       "error block", advance_aggregates_func);
+  llvm::BasicBlock* llvm_advance_transition_function_block = codegen_utils->CreateBasicBlock(
+      "advance_transition_function block", advance_aggregates_func);
+
 
   // External functions
   llvm::Function* llvm_ExecVariableList =
@@ -158,13 +161,24 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
       codegen_utils->CreateElog(INFO, "Variable = %d", llvm_fcinfo_arg_1);
     }
 
+    // Fallback if attribute is NULL.
+    // TODO: (nikos) Support null attributes.
+    irb->CreateCondBr(irb->CreateLoad(llvm_fcinfo_argnull_1),
+                      llvm_error_block /*true*/,
+                      llvm_advance_transition_function_block /*false*/);
+
+    // advance_transition_function block
+    // ----------
+    // We generate code for advance_transition_function.
+    irb->SetInsertPoint(llvm_advance_transition_function_block);
+
     //    advance_transition_function(aggstate, peraggstate, pergroupstate,
     //                        &fcinfo, mem_manager); {{{
 
     // TODO: Support fn_strict
     if (peraggstate->transfn.fn_strict)
     {
-      elog(DEBUG1, "We do not support strict functions.");
+      elog(INFO, "We do not support strict functions.");
       return false;
     }
 
@@ -181,6 +195,9 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
     llvm::Value* llvm_pergroupstate_transValueIsNull =
         codegen_utils->GetPointerToMember(
             llvm_pergroupstate, &AggStatePerGroupData::transValueIsNull);
+    llvm::Value* llvm_pergroupstate_noTransValue =
+        codegen_utils->GetPointerToMember(
+            llvm_pergroupstate, &AggStatePerGroupData::noTransValue);
 
     // fcinfo->arg[0] = transValue;
     irb->CreateStore(irb->CreateLoad(llvm_pergroupstate_transValue),
@@ -195,7 +212,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
         advance_aggregates_func,
         llvm_error_block,
         {irb->CreateLoad(llvm_fcinfo_arg_0),
-         irb->CreateLoad(llvm_fcinfo_arg_1)}
+            irb->CreateLoad(llvm_fcinfo_arg_1)}
     );
 
     PGFuncGeneratorInterface* pg_func_gen = OpExprTreeGenerator::
@@ -229,14 +246,14 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
     irb->CreateStore(result, llvm_pergroupstate_transValue);
     // }}}
 
-    //    *transValueIsNull = fcinfo->isnull;
-    //    if (!fcinfo->isnull)
-    //      *noTransvalue = false;    {{{
 
+    // Currently we do not support null attributes.
+    // Thus we set transValueIsNull and noTransValue to false by default.
+    // TODO: (nikos) Support null attributes.
     irb->CreateStore(codegen_utils->GetConstant<bool>(false),
                      llvm_pergroupstate_transValueIsNull);
-
-    // }}}
+    irb->CreateStore(codegen_utils->GetConstant<bool>(false),
+                     llvm_pergroupstate_noTransValue);
 
     codegen_utils->CreateElog(INFO, "transValue = %d",
                               irb->CreateLoad(llvm_pergroupstate_transValue));
