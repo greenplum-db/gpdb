@@ -91,11 +91,8 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
       codegen_utils->GetOrRegisterExternalFunction(MemoryContextSwitchTo,
                                                    "MemoryContextSwitchTo");
 
-  // Function arguments to advance_aggregates
-  llvm::Value* llvm_aggstate = ArgumentByPosition(advance_aggregates_func, 0);
+  // Function argument to advance_aggregates
   llvm::Value* llvm_pergroup = ArgumentByPosition(advance_aggregates_func, 1);
-  llvm::Value* llvm_mem_manager = ArgumentByPosition(advance_aggregates_func,
-                                                     2);
 
   // Generation-time constants
   llvm::Value *llvm_tuplecontext = codegen_utils->GetConstant<MemoryContext>(
@@ -105,15 +102,11 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
 
   codegen_utils->CreateElog(INFO, "Codegen'ed expression evaluation called!");
 
-  // Temporary variables taht replace the use of slot and FunctionInfoData
-  llvm::Value *llvm_fcinfo_arg_0 = irb->CreateAlloca(
-      codegen_utils->GetType<Datum>(), 0, "fcinfo_arg[0]");
-  llvm::Value *llvm_fcinfo_argnull_0 = irb->CreateAlloca(
-      codegen_utils->GetType<bool>(), 0, "fcinfo_argnull[0]");
-  llvm::Value *llvm_fcinfo_arg_1 = irb->CreateAlloca(
-      codegen_utils->GetType<Datum>(), 0, "fcinfo_arg[1]");
-  llvm::Value *llvm_fcinfo_argnull_1 = irb->CreateAlloca(
-      codegen_utils->GetType<bool>(), 0, "fcinfo_argnull[1]");
+  // Temporary variables that replace the use of slot and FunctionInfoData
+  llvm::Value *llvm_arg = irb->CreateAlloca(
+      codegen_utils->GetType<Datum>(), 0, "llvm_arg");
+  llvm::Value *llvm_argnull = irb->CreateAlloca(
+      codegen_utils->GetType<bool>(), 0, "llvm_argnull");
 
   for (int aggno = 0; aggno < aggstate_->numaggs; aggno++)
   {
@@ -140,30 +133,30 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
       // TODO(nikos): call the one with the pointer from previous codegen
       irb->CreateCall(llvm_ExecVariableList, {
           codegen_utils->GetConstant<ProjectionInfo *>(peraggstate->evalproj),
-          llvm_fcinfo_arg_1,
-          llvm_fcinfo_argnull_1
+          llvm_arg,
+          llvm_argnull
       });
 
       codegen_utils->CreateElog(INFO, "Variable = %d",
-                                irb->CreateLoad(llvm_fcinfo_arg_1));
+                                irb->CreateLoad(llvm_arg));
     }
     else
     {
       irb->CreateCall(llvm_ExecTargetList, {
           codegen_utils->GetConstant(peraggstate->evalproj->pi_targetlist),
           codegen_utils->GetConstant(peraggstate->evalproj->pi_exprContext),
-          llvm_fcinfo_arg_1,
-          llvm_fcinfo_argnull_1,
+          llvm_arg,
+          llvm_argnull,
           codegen_utils->GetConstant(peraggstate->evalproj->pi_itemIsDone),
           codegen_utils->GetConstant<ExprDoneCond *>(nullptr)
       });
 
-      codegen_utils->CreateElog(INFO, "Variable = %d", llvm_fcinfo_arg_1);
+      codegen_utils->CreateElog(INFO, "Variable = %d", llvm_arg);
     }
 
     // Fallback if attribute is NULL.
     // TODO(nikos): Support null attributes.
-    irb->CreateCondBr(irb->CreateLoad(llvm_fcinfo_argnull_1),
+    irb->CreateCondBr(irb->CreateLoad(llvm_argnull),
                       llvm_error_block /*true*/,
                       llvm_advance_transition_function_block /*false*/);
 
@@ -198,20 +191,12 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
         codegen_utils->GetPointerToMember(
             llvm_pergroupstate, &AggStatePerGroupData::noTransValue);
 
-    // fcinfo->arg[0] = transValue;
-    irb->CreateStore(irb->CreateLoad(llvm_pergroupstate_transValue),
-                     llvm_fcinfo_arg_0);
-    // fcinfo->argnull[0] = *transValueIsNull;
-    irb->CreateStore(irb->CreateLoad(llvm_pergroupstate_transValueIsNull),
-                     llvm_fcinfo_argnull_0);
-
     //newVal = FunctionCallInvoke(fcinfo); {{
-
     PGFuncGeneratorInfo pg_func_info(
         advance_aggregates_func,
         llvm_error_block,
-        {irb->CreateLoad(llvm_fcinfo_arg_0),
-            irb->CreateLoad(llvm_fcinfo_arg_1)}
+        {irb->CreateLoad(llvm_pergroupstate_transValue),
+            irb->CreateLoad(llvm_arg)}
     );
 
     PGFuncGeneratorInterface* pg_func_gen = OpExprTreeGenerator::
@@ -226,7 +211,6 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
     llvm::Value *newVal = nullptr;
     pg_func_gen->GenerateCode(codegen_utils, pg_func_info, &newVal);
     llvm::Value *result = codegen_utils->CreateCppTypeToDatumCast(newVal);
-
     // }} FunctionCallInvoke
 
     // MemoryContextSwitchTo(oldContext);
