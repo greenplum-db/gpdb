@@ -11,7 +11,6 @@
 #include "postgres.h"
 
 #include "access/htup.h"
-#include "catalog/catquery.h"
 #include "catalog/pg_type.h"
 #include "nodes/execnodes.h" //SliceTable
 #include "cdb/cdbmotion.h"
@@ -175,16 +174,9 @@ InitSerTupInfo(TupleDesc tupdesc, SerTupInfo * pSerInfo)
 		{
 			HeapTuple	typeTuple;
 			Form_pg_type pt;
-			cqContext	*pcqCtx;
 
-			pcqCtx = caql_beginscan(
-					NULL,
-					cql("SELECT * FROM pg_type "
-						" WHERE oid = :1 ",
-						ObjectIdGetDatum(attrInfo->atttypid)));
-
-			typeTuple = caql_getnext(pcqCtx);
-
+			typeTuple = SearchSysCache1(TYPEOID,
+										ObjectIdGetDatum(attrInfo->atttypid));
 			if (!HeapTupleIsValid(typeTuple))
 				elog(ERROR, "cache lookup failed for type %u", attrInfo->atttypid);
 			pt = (Form_pg_type) GETSTRUCT(typeTuple);
@@ -226,10 +218,9 @@ InitSerTupInfo(TupleDesc tupdesc, SerTupInfo * pSerInfo)
 				attrInfo->typrecv  = pt->typreceive;
 				attrInfo->recv_typio_param = getTypeIOParam(typeTuple);
 			}
-			
-			caql_endscan(pcqCtx);
-		}
 
+			ReleaseSysCache(typeTuple);
+		}
 		
 		fmgr_info(attrInfo->typsend, &attrInfo->send_finfo);
 

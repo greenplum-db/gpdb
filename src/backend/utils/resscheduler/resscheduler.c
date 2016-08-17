@@ -864,21 +864,21 @@ ResUnLockPortal(Portal portal)
 Oid	
 GetResQueueForRole(Oid roleid)
 {
-	bool			isnull;
-	int				fetchCount;
-	Oid				queueid = InvalidOid;
+	HeapTuple	tuple;
+	bool		isnull;
+	Oid			queueid;
 
-	queueid = caql_getoid_plus(
-			NULL,
-			&fetchCount,
-			&isnull,
-			cql("SELECT rolresqueue FROM pg_authid "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(roleid)));
+	tuple = SearchSysCache1(AUTHOID, ObjectIdGetDatum(roleid));
+	if (!tuple)
+		return DEFAULTRESQUEUE_OID; /* role not found */
+
+	queueid = SysCacheGetAttr(AUTHOID, tuple, Anum_pg_authid_rolresqueue, &isnull);
 
 	/* MPP-6926: use default queue if none specified */
-	if (!OidIsValid(queueid) || !fetchCount || isnull)
+	if (!OidIsValid(queueid) || isnull)
 		queueid = DEFAULTRESQUEUE_OID;
+
+	ReleaseSysCache(tuple);
 
 	return queueid;
 	

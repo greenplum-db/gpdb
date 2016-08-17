@@ -499,7 +499,6 @@ PersistentBuild_BuildDb(
 	Oid					 defaultTablespace;
 	int					 t;
 	cqContext			 cqc;
-	cqContext			 dbcqc;
 	cqContext			*pcqCtx;
 
 	/*
@@ -560,13 +559,7 @@ PersistentBuild_BuildDb(
 	pg_database = heap_open(DatabaseRelationId, RowExclusiveLock);
 
 	/* Fetch a copy of the tuple to scribble on */
-	tuple = caql_getfirst(			
-			caql_addrel(cqclr(&dbcqc), pg_database),
-			cql("SELECT * FROM pg_database "
-				" WHERE oid = :1 "
-				" FOR UPDATE ",
-				ObjectIdGetDatum(dbOid)));
-
+	tuple = SearchSysCacheCopy1(DATABASEOID, ObjectIdGetDatum(dbOid));
 	if (!HeapTupleIsValid(tuple))
 		elog(ERROR, "could not find tuple for database %u", dbOid);
 	form_pg_database = (Form_pg_database) GETSTRUCT(tuple);

@@ -16,7 +16,6 @@
 
 #include <ctype.h>
 
-#include "catalog/catquery.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_authid.h"
 #include "catalog/pg_auth_members.h"
@@ -692,20 +691,17 @@ aclupdate(const Acl *old_acl, const AclItem *mod_aip,
 		if (modechg == ACL_MODECHG_DEL && Gp_role == GP_ROLE_DISPATCH && objName != NULL)
 		{
 			HeapTuple tuple;
-			cqContext *pcqCtx;
 			NameData rolname;
 
 			if (mod_aip->ai_grantee != InvalidOid)
 			{
-				pcqCtx = caql_beginscan(NULL,
-									cql("SELECT * FROM pg_authid "
-										" WHERE oid = :1", ObjectIdGetDatum(mod_aip->ai_grantee)));
-				tuple = caql_getnext(pcqCtx);
-				/* to keep coverity quiet */
+				tuple = SearchSysCache(AUTHOID,
+									   ObjectIdGetDatum(mod_aip->ai_grantee),
+									   0, 0, 0);
 				if (!HeapTupleIsValid(tuple))
 					elog(ERROR, "no entry found for the grantee");
 				rolname = ((Form_pg_authid)GETSTRUCT(tuple))->rolname;
-				caql_endscan(pcqCtx);
+				ReleaseSysCache(tuple);
 			}
 
 			ereport(NOTICE,

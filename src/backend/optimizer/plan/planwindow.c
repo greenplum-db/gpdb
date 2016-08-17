@@ -15,7 +15,6 @@
  */
 #include "postgres.h"
 
-#include "catalog/catquery.h"
 #include "catalog/pg_aggregate.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_type.h"
@@ -1652,20 +1651,12 @@ lookup_window_function(RefInfo *rinfo)
 	HeapTuple	tuple;
 	Form_pg_proc proform;
 	bool isagg, iswin;
-	cqContext	*procqCtx;
 	Oid transtype = InvalidOid;
 	
 	Oid fnoid = rinfo->ref->winfnoid;
 	
 	/* pg_proc */
-	procqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_proc "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(fnoid)));
-
-	tuple = caql_getnext(procqCtx);
-
+	tuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(fnoid));
 	if (!HeapTupleIsValid(tuple))
 		elog(ERROR, "cache lookup failed for function %u", fnoid);
 	proform = (Form_pg_proc) GETSTRUCT(tuple);
@@ -1678,23 +1669,15 @@ lookup_window_function(RefInfo *rinfo)
 			(errcode(ERRCODE_SYNTAX_ERROR),
 			 errmsg("can not call ordinary function, %s, as window function", NameStr(proform->proname))));
 	}
-	caql_endscan(procqCtx);
+	ReleaseSysCache(tuple);
 	
 	Assert( isagg != iswin );
 	
 	if ( isagg )
 	{
 		Form_pg_aggregate		 aggform;
-		cqContext				*aggcqCtx;
 
-		aggcqCtx = caql_beginscan(
-				NULL,
-				cql("SELECT * FROM pg_aggregate "
-					" WHERE aggfnoid = :1 ",
-					ObjectIdGetDatum(fnoid)));
-		
-		tuple = caql_getnext(aggcqCtx);
-
+		tuple = SearchSysCache1(AGGFNOID, ObjectIdGetDatum(fnoid));
 		if (!HeapTupleIsValid(tuple))
 			elog(ERROR, "cache lookup failed for aggregate function %u", fnoid);
 		aggform = (Form_pg_aggregate) GETSTRUCT(tuple);
@@ -1706,8 +1689,8 @@ lookup_window_function(RefInfo *rinfo)
 		rinfo->hasinvprelim = (aggform->agginvprelimfn != InvalidOid);
 		transtype = aggform->aggtranstype;
 
-		caql_endscan(aggcqCtx);
-		
+		ReleaseSysCache(tuple);
+
 		/*
 		 * If the transition type is pass-by-reference, note the estimated 
 		 * size of the value itself, plus palloc overhead.
@@ -1726,16 +1709,8 @@ lookup_window_function(RefInfo *rinfo)
 	else /* iswin */
 	{
 		Form_pg_window	 winform;
-		cqContext		*wincqCtx;
 
-		wincqCtx = caql_beginscan(
-				NULL,
-				cql("SELECT * FROM pg_window "
-					" WHERE winfnoid = :1 ",
-					ObjectIdGetDatum(fnoid)));
-
-		tuple = caql_getnext(wincqCtx);
-
+		tuple = SearchSysCache1(WINFNOID, ObjectIdGetDatum(fnoid));
 		if (!HeapTupleIsValid(tuple))
 			elog(ERROR, "cache lookup failed for window function %u", fnoid);
 		winform = (Form_pg_window) GETSTRUCT(tuple);
@@ -1746,7 +1721,7 @@ lookup_window_function(RefInfo *rinfo)
 		rinfo->winfinfunc = winform->winfinfunc;		
 		rinfo->framemakerfunc = winform->winframemakerfunc;
 
-		caql_endscan(wincqCtx);
+		ReleaseSysCache(tuple);
 	}
 }
 
@@ -3940,17 +3915,9 @@ char *get_function_name(Oid proid, const char *dflt)
 	}
 	else
 	{
-		int			fetchCount;
+		result = get_func_name(proid);
 
-		result = caql_getcstring_plus(
-				NULL,
-				&fetchCount,
-				NULL,
-				cql("SELECT proname FROM pg_proc "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(proid)));
-	
-		if (!fetchCount)
+		if (result == NULL)
 			result = pstrdup(dflt);
 	}
 

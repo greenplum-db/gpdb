@@ -17,7 +17,6 @@
 
 #include "access/extprotocol.h"
 #include "access/reloptions.h"
-#include "catalog/catquery.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_exttable.h"
 #include "catalog/pg_extprotocol.h"
@@ -28,6 +27,7 @@
 #include "miscadmin.h"
 #include "utils/builtins.h"
 #include "utils/inval.h"
+#include "utils/syscache.h"
 #include "utils/uri.h"
 
 #include "cdb/cdbdisp_query.h"
@@ -161,18 +161,10 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 
 				bool		isnull;
 				Oid			userid = GetUserId();
-				cqContext  *pcqCtx;
 				HeapTuple	tuple;
 
-				pcqCtx = caql_beginscan(
-										NULL,
-										cql("SELECT * FROM pg_authid "
-											" WHERE oid = :1 "
-											" FOR UPDATE ",
-											ObjectIdGetDatum(userid)));
-
-				tuple = caql_getnext(pcqCtx);
-
+				tuple = SearchSysCache1(AUTHOID,
+										ObjectIdGetDatum(userid));
 				if (!HeapTupleIsValid(tuple))
 					ereport(ERROR,
 							(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -181,9 +173,13 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 
 				if ((uri->protocol == URI_GPFDIST || uri->protocol == URI_GPFDISTS) && iswritable)
 				{
-					Datum		d_wextgpfd = caql_getattr(pcqCtx, Anum_pg_authid_rolcreatewextgpfd,
-														  &isnull);
-					bool		createwextgpfd = (isnull ? false : DatumGetBool(d_wextgpfd));
+					Datum	 	d_wextgpfd;
+					bool		createwextgpfd;
+
+					d_wextgpfd = SysCacheGetAttr(AUTHOID, tuple,
+												 Anum_pg_authid_rolcreatewextgpfd,
+												 &isnull);
+					createwextgpfd = (isnull ? false : DatumGetBool(d_wextgpfd));
 
 					if (!createwextgpfd)
 						ereport(ERROR,
@@ -192,21 +188,28 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 				}
 				else if ((uri->protocol == URI_GPFDIST || uri->protocol == URI_GPFDISTS) && !iswritable)
 				{
-					Datum		d_rextgpfd = caql_getattr(pcqCtx, Anum_pg_authid_rolcreaterextgpfd,
-														  &isnull);
-					bool		createrextgpfd = (isnull ? false : DatumGetBool(d_rextgpfd));
+					Datum		d_rextgpfd;
+					bool		createrextgpfd;
+
+					d_rextgpfd = SysCacheGetAttr(AUTHOID, tuple,
+												 Anum_pg_authid_rolcreaterextgpfd,
+												 &isnull);
+					createrextgpfd = (isnull ? false : DatumGetBool(d_rextgpfd));
 
 					if (!createrextgpfd)
 						ereport(ERROR,
 								(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 								 errmsg("permission denied: no privilege to create a readable gpfdist(s) external table")));
-
 				}
 				else if (uri->protocol == URI_GPHDFS && iswritable)
 				{
-					Datum		d_wexthdfs = caql_getattr(pcqCtx, Anum_pg_authid_rolcreatewexthdfs,
-														  &isnull);
-					bool		createwexthdfs = (isnull ? false : DatumGetBool(d_wexthdfs));
+					Datum		d_wexthdfs;
+					bool		createwexthdfs;
+
+					d_wexthdfs = SysCacheGetAttr(AUTHOID, tuple,
+												 Anum_pg_authid_rolcreatewexthdfs,
+												 &isnull);
+					createwexthdfs = (isnull ? false : DatumGetBool(d_wexthdfs));
 
 					if (!createwexthdfs)
 						ereport(ERROR,
@@ -215,9 +218,13 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 				}
 				else if (uri->protocol == URI_GPHDFS && !iswritable)
 				{
-					Datum		d_rexthdfs = caql_getattr(pcqCtx, Anum_pg_authid_rolcreaterexthdfs,
-														  &isnull);
-					bool		createrexthdfs = (isnull ? false : DatumGetBool(d_rexthdfs));
+					Datum		d_rexthdfs;
+					bool		createrexthdfs;
+
+					d_rexthdfs = SysCacheGetAttr(AUTHOID, tuple,
+												 Anum_pg_authid_rolcreaterexthdfs,
+												 &isnull);
+					createrexthdfs = (isnull ? false : DatumGetBool(d_rexthdfs));
 
 					if (!createrexthdfs)
 						ereport(ERROR,
@@ -227,9 +234,13 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 				}
 				else if (uri->protocol == URI_HTTP && !iswritable)
 				{
-					Datum		d_exthttp = caql_getattr(pcqCtx, Anum_pg_authid_rolcreaterexthttp,
-														 &isnull);
-					bool		createrexthttp = (isnull ? false : DatumGetBool(d_exthttp));
+					Datum		d_exthttp;
+					bool		createrexthttp;
+
+					d_exthttp = SysCacheGetAttr(AUTHOID, tuple,
+												Anum_pg_authid_rolcreaterexthttp,
+												&isnull);
+					createrexthttp = (isnull ? false : DatumGetBool(d_exthttp));
 
 					if (!createrexthttp)
 						ereport(ERROR,
@@ -263,7 +274,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 								 uri->protocol, iswritable)));
 				}
 
-				caql_endscan(pcqCtx);
+				ReleaseSysCache(tuple);
 			}
 			FreeExternalTableUri(uri);
 			pfree(uri_str);

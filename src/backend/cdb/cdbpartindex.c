@@ -26,6 +26,7 @@
 #include "parser/parse_expr.h"
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
+#include "utils/syscache.h"
 #include "utils/memutils.h"
 
 /* initial estimate for number of logical indexes */
@@ -99,8 +100,7 @@ static LogicalIndexes * createPartsIndexResult(Oid root);
 static bool collapseIndexes(PartitionIndexNode **partitionIndexNode,
 					LogicalIndexInfoHashEntry **entry);
 static void createIndexHashTables(void);
-static IndexInfo *populateIndexInfo(cqContext *pcqCtx, HeapTuple tuple,
-					Form_pg_index indForm);
+static IndexInfo *populateIndexInfo(HeapTuple tuple, Form_pg_index indForm);
 static Node *mergeIntervals(Node *intervalFst, Node *intervalSnd);
 static void extractStartEndRange(Node *clause, Node **ppnodeStart, Node **ppnodeEnd);
 static void extractOpExprComponents(OpExpr *opexpr, Var **ppvar, Const **ppconst, Oid *opno);
@@ -604,7 +604,7 @@ recordIndexesOnLeafPart(PartitionIndexNode **pNodePtr,
 
 		
 		/* populate index info structure */
-		ii = populateIndexInfo(pcqCtx, tuple, indForm);
+		ii = populateIndexInfo(tuple, indForm);
 			
 		/* construct hash key for the index */
 		partIndexHashKey = constructIndexHashKey(partOid, rootOid, tuple, attmap, ii, indType);
@@ -971,9 +971,8 @@ get_relation_part_constraints(Oid rootOid, List **defaultLevels)
  *  Populate the IndexInfo structure with the information from pg_index tuple. 
  */
 static IndexInfo *
-populateIndexInfo(cqContext *pcqCtx,
-			HeapTuple indTuple,
-			Form_pg_index indForm)
+populateIndexInfo(HeapTuple indTuple,
+				  Form_pg_index indForm)
 {
 	IndexInfo 	*ii;
 	Datum		datum;
@@ -996,7 +995,7 @@ populateIndexInfo(cqContext *pcqCtx,
 	}
 
 	ii->ii_Expressions = NIL;
-	datum = caql_getattr(pcqCtx, Anum_pg_index_indexprs, &isnull);
+	datum = SysCacheGetAttr(INDEXRELID, indTuple, Anum_pg_index_indexprs, &isnull);
 	if (!isnull)
 	{
 		str = TextDatumGetCString(datum);
@@ -1007,7 +1006,7 @@ populateIndexInfo(cqContext *pcqCtx,
 
 	isnull = false;
 	ii->ii_Predicate = NIL;
-	datum = caql_getattr(pcqCtx, Anum_pg_index_indpred, &isnull);
+	datum = SysCacheGetAttr(INDEXRELID, indTuple, Anum_pg_index_indpred, &isnull);
 	if (!isnull)
 	{
 		str = TextDatumGetCString(datum);
@@ -1199,7 +1198,7 @@ getPhysicalIndexRelid(LogicalIndexInfo *iInfo, Oid partOid)
 			ii = NULL;
 		}
 
-		ii = populateIndexInfo(pcqCtx, tup, indForm);
+		ii = populateIndexInfo(tup, indForm);
 
 		if (ii->ii_NumIndexAttrs != iInfo->nColumns)
 			continue;
@@ -1471,33 +1470,25 @@ static void extractOpExprComponents(OpExpr *opexpr, Var **ppvar, Const **ppconst
  * LogicalIndexInfoForIndexOid
  *   construct the logical index info for a given index oid
  */
-LogicalIndexInfo *logicalIndexInfoForIndexOid(Oid rootOid, Oid indexOid)
+LogicalIndexInfo *
+logicalIndexInfoForIndexOid(Oid rootOid, Oid indexOid)
 {
-	/* fetch index from catalog */
-	Relation indexRelation = heap_open(IndexRelationId, AccessShareLock);
-	
-	cqContext cqc;
-	cqContext *pcqCtx = caql_beginscan(
-			caql_addrel(cqclr(&cqc), indexRelation),
-			cql("SELECT * FROM pg_index "
-				" WHERE indexrelid = :1 ",
-				ObjectIdGetDatum(indexOid)));
+	HeapTuple	tup;
 
-	HeapTuple tup = NULL;
+	/* fetch index from catalog */
+	tup = SearchSysCache1(INDEXRELID,
+						  ObjectIdGetDatum(indexOid));
 	
-	if (!HeapTupleIsValid(tup = caql_getnext(pcqCtx)))
+	if (!HeapTupleIsValid(tup))
 	{
-		caql_endscan(pcqCtx);
-		heap_close(indexRelation, AccessShareLock);
 		elog(ERROR, "Index not found: %u", indexOid);
 	}
 	
 	Form_pg_index indForm = (Form_pg_index) GETSTRUCT(tup);
-	IndexInfo *pindexInfo = populateIndexInfo(pcqCtx, tup, indForm);
+	IndexInfo *pindexInfo = populateIndexInfo(tup, indForm);
 	Oid partOid = indForm->indrelid;
-	
-	caql_endscan(pcqCtx);
-	heap_close(indexRelation, AccessShareLock);
+
+	ReleaseSysCache(tup);
 
 	// remap attributes
 	Relation rootRel = heap_open(rootOid, AccessShareLock);

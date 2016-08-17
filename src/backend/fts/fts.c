@@ -903,7 +903,6 @@ probeUpdateConfig(FtsSegmentStatusChange *changes, int changeCount)
 
 		/*
 		 * Insert new tuple into gp_configuration_history catalog.
-		 * Caql does not seem to support this table currently.
 		 */
 		histvals[Anum_gp_configuration_history_time-1] =
 				TimestampTzGetDatum(GetCurrentTimestamp());
@@ -922,7 +921,7 @@ probeUpdateConfig(FtsSegmentStatusChange *changes, int changeCount)
 		CatalogUpdateIndexes(histrel, histtuple);
 
 		/*
-		 * Find and update gp_segment_configuration tuple using caql.
+		 * Find and update gp_segment_configuration tuple.
 		 */
 		ScanKeyInit(&scankey,
 					Anum_gp_segment_configuration_dbid,

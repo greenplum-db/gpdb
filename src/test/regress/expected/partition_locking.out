@@ -243,10 +243,9 @@ select * from locktest;
  pg_class_oid_index         | AccessShareLock     | relation | master
  pg_class_relname_nsp_index | AccessShareLock     | relation | master
  pg_locks                   | AccessShareLock     | relation | master
- pg_partition               | AccessShareLock     | relation | master
  pg_partition_rule          | AccessShareLock     | relation | master
  pg_type                    | RowExclusiveLock    | relation | master
-(13 rows)
+(12 rows)
 
 commit;
 -- Force use of the index in the select and delete below. We're not interested

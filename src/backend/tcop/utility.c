@@ -19,7 +19,6 @@
 #include "access/twophase.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
-#include "catalog/catquery.h"
 #include "catalog/namespace.h"
 #include "catalog/toasting.h"
 #include "catalog/aoseg.h"
@@ -238,7 +237,6 @@ CheckDropRelStorage(RangeVar *rel, ObjectType removeType)
 	Oid			relOid;
 	HeapTuple	tuple;
 	char		relstorage;
-	cqContext	*pcqCtx;
 
 	relOid = RangeVarGetRelid(rel, true);
 	
@@ -246,18 +244,11 @@ CheckDropRelStorage(RangeVar *rel, ObjectType removeType)
 		return false;
 
 	/* Find out the relstorage */
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_class "
-				" WHERE oid = :1 ",
-				ObjectIdGetDatum(relOid)));
-
-	tuple = caql_getnext(pcqCtx);
+	tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(relOid));
 	if (!HeapTupleIsValid(tuple))
 		elog(ERROR, "cache lookup failed for relation %u", relOid);
-
 	relstorage = ((Form_pg_class) GETSTRUCT(tuple))->relstorage;
-	caql_endscan(pcqCtx);
+	ReleaseSysCache(tuple);
 
 	/* 
 	 * skip the check if it's external partition. 

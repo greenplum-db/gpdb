@@ -19,6 +19,8 @@
 #ifndef PG_OPFAMILY_H
 #define PG_OPFAMILY_H
 
+#include "catalog/genbki.h"
+
 /* ----------------
  *		postgres.h contains the system type definitions and the
  *		CATALOG(), BKI_BOOTSTRAP and DATA() sugar words so this file

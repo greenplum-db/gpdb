@@ -22,7 +22,6 @@
 #include "access/heapam.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
-#include "catalog/catquery.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_authid.h"
 #include "catalog/pg_database.h"
@@ -282,7 +281,6 @@ PerformAuthentication(Port *port)
 static void
 ProcessRoleGUC(void)
 {
-	cqContext  *pcqCtx;
 	Oid			roleId;
 	HeapTuple	roleTup;
 	Datum		datum;
@@ -292,14 +290,8 @@ ProcessRoleGUC(void)
 	roleId = GetUserId();
 	Assert(OidIsValid(roleId));
 
-	pcqCtx = caql_beginscan(
-			NULL,
-			cql("SELECT * FROM pg_authid "
-				" WHERE oid = :1",
-				ObjectIdGetDatum(roleId)));
-
-	roleTup = caql_getnext(pcqCtx);
-
+	roleTup = SearchSysCache1(AUTHOID,
+							  ObjectIdGetDatum(roleId));
 	if (!HeapTupleIsValid(roleTup))
 		ereport(FATAL,
 				(errcode(ERRCODE_INVALID_AUTHORIZATION_SPECIFICATION),
@@ -309,8 +301,8 @@ ProcessRoleGUC(void)
 	 * Set up user-specific configuration variables.  This is a good place to
 	 * do it so we don't have to read pg_authid twice during session startup.
 	 */
-	datum = caql_getattr(pcqCtx,
-						 Anum_pg_authid_rolconfig, &isnull);
+	datum = SysCacheGetAttr(AUTHNAME, roleTup,
+							Anum_pg_authid_rolconfig, &isnull);
 	if (!isnull)
 	{
 		ArrayType  *a = DatumGetArrayTypeP(datum);
@@ -323,7 +315,7 @@ ProcessRoleGUC(void)
 		ProcessGUCArray(a, PGC_SUSET, PGC_S_USER, GUC_ACTION_SET);
 	}
 
-	caql_endscan(pcqCtx);
+	ReleaseSysCache(roleTup);
 }
 
 /*

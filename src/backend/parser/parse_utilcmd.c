@@ -2614,20 +2614,13 @@ transformIndexStmt_recurse(IndexStmt *stmt, const char *queryString,
 			heap_freetuple(tuple);
 			heap_close(partrel, NoLock);
 
-			partrel = heap_open(PartitionRelationId, AccessShareLock);
-
-			tuple = caql_getfirst(
-				caql_addrel(cqclr(&cqc), partrel),
-				cql("SELECT parlevel FROM pg_partition "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(paroid)));
-
+			tuple = SearchSysCache1(PARTOID,
+									ObjectIdGetDatum(paroid));
 			Assert(HeapTupleIsValid(tuple));
 
 			depth = ((Form_pg_partition)GETSTRUCT(tuple))->parlevel + 1;
 
-			heap_freetuple(tuple);
-			heap_close(partrel, NoLock);
+			ReleaseSysCache(tuple);
 
 			heap_close(crel, NoLock);
 

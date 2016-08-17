@@ -21,7 +21,6 @@
 
 #include "access/genam.h"
 #include "access/xact.h"
-#include "catalog/catquery.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
 #include "catalog/namespace.h"
@@ -3570,13 +3569,9 @@ TempNamespaceValid(bool error_if_removed)
 		 */
 		AcceptInvalidationMessages();  /* minimize race conditions */
 
-		/* NOTE: use of syscache with caql ! */
 		/* XXX XXX: jic 20120430: is this correct - check if oid exists? */
-		myTempNamespace = caql_getoid(
-				NULL,
-				cql("SELECT oid FROM pg_namespace "
-					" WHERE oid = :1 ",
-					ObjectIdGetDatum(myTempNamespace)));
+		myTempNamespace = GetSysCacheOid1(NAMESPACEOID,
+										  ObjectIdGetDatum(myTempNamespace));
 
 		if (OidIsValid(myTempNamespace))
 			return true;

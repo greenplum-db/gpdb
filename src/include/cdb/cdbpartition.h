@@ -101,11 +101,9 @@ get_partition_attrs(PartitionNode *pn);
 extern int 
 num_partition_levels(PartitionNode *pn);
 
-extern PartitionRule *ruleMakePartitionRule(HeapTuple tuple,
-					  TupleDesc tupdesc);
+extern PartitionRule *ruleMakePartitionRule(HeapTuple tuple);
 
-extern Partition *partMakePartition(HeapTuple tuple,
-				  TupleDesc tupdesc);
+extern Partition *partMakePartition(HeapTuple tuple);
 
 extern List *
 all_partition_relids(PartitionNode *pn);
