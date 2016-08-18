@@ -19,8 +19,15 @@ using std::string;
 using std::stringstream;
 
 GPWriter::GPWriter(const string& url, string fmt) : format(fmt) {
-    string file = S3UrlUtility::replaceSchemaFromURL(url, s3ext_encryption);
-    constructWriterParams(file);
+    string replacedURL = S3UrlUtility::replaceSchemaFromURL(url, s3ext_encryption);
+
+    // construct a canonical URL string
+    // schema://domain/uri_encoded_path/
+    string encodedURL = uri_encode(replacedURL);
+    find_replace(encodedURL, "%3A%2F%2F", "://");
+    find_replace(encodedURL, "%2F", "/");
+
+    constructWriterParams(encodedURL);
     restfulServicePtr = &restfulService;
 }
 

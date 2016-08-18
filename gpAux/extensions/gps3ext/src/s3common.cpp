@@ -22,14 +22,6 @@ using std::stringstream;
 // Note: better to sort queries automatically
 // for more information refer to Amazon S3 document:
 // http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html
-static string encode_query_str(const string &query) {
-    string query_encoded = uri_encode(query);
-    find_replace(query_encoded, "%26", "&");
-    find_replace(query_encoded, "%3D", "=");
-
-    return query_encoded;
-}
-
 void SignRequestV4(const string &method, HTTPHeaders *h, const string &orig_region,
                    const string &path, const string &query, const S3Credential &cred) {
     struct tm tm_info;
@@ -55,12 +47,11 @@ void SignRequestV4(const string &method, HTTPHeaders *h, const string &orig_regi
     }
     memcpy(date_str, h->Get(X_AMZ_DATE), DATE_STR_LEN - 1);
 
-    string query_encoded = encode_query_str(query);
     stringstream canonical_str;
 
     canonical_str << method << "\n"
                   << path << "\n"
-                  << query_encoded << "\nhost:" << h->Get(HOST)
+                  << query << "\nhost:" << h->Get(HOST)
                   << "\nx-amz-content-sha256:" << h->Get(X_AMZ_CONTENT_SHA256)
                   << "\nx-amz-date:" << h->Get(X_AMZ_DATE) << "\n\n"
                   << "host;x-amz-content-sha256;x-amz-date\n"

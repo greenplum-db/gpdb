@@ -12,15 +12,15 @@ TEST(Common, SignRequestV4) {
     ASSERT_TRUE(h->Add(X_AMZ_DATE, "20150830T123600Z"));
     ASSERT_TRUE(h->Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD"));
 
-    SignRequestV4("GET", h, "us-east-1", "/where/ever",
-                  "?parameter1=whatever1&parameter2=whatever2", cred);
+    SignRequestV4("GET", h, "us-east-1", "/where/ever", "parameter1=whatever1&parameter2=whatever2",
+                  cred);
 
     EXPECT_STREQ(
         "AWS4-HMAC-SHA256 "
         "Credential=keyid/foo/20150830/us-east-1/s3/"
         "aws4_request,SignedHeaders=host;x-amz-content-sha256;x-amz-date,"
         "Signature="
-        "9f500a13e81c2dc6cb47551e416b2734e401d7b7b8f7ae99b09bccc22b81132d",
+        "bb2410787ac51cc7c41b679378d2586a557188ce2017569f5fc94a9b9bb901f8",
         h->Get(AUTHORIZATION));
 
     delete h;
@@ -113,17 +113,4 @@ TEST(Common, TruncateOptions) {
               truncate_options(string("s3://neverland.amazonaws.com secret=secret_test "
                                       "blah= accessid=\".\\!@#$%^&*()DFGHJK\" "
                                       "chunksize=3456789 KingOfTheWorld=sanpang")));
-}
-
-TEST(Common, EncodeQuery) {
-    string src1 = "This is a simple & short test.";
-    string src2 = "$ & < > ? ; # : = , \" ' ~ + %-_";
-
-    string dst1 = "This%20is%20a%20simple%20&%20short%20test.";
-    string dst2 =
-        "%24%20&%20%3C%20%3E%20%3F%20%3B%20%23%20%3A%20=%20%2C%20%22%20%27%"
-        "20~%20%2B%20%25-_";
-
-    EXPECT_EQ(dst1.c_str(), encode_query_str(src1));
-    EXPECT_EQ(dst2.c_str(), encode_query_str(src2));
 }

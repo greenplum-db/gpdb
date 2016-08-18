@@ -21,4 +21,5 @@ test: 3_02_insert_quick_shoot_wet
 test: 3_03_insert_lots_of_rows
 test: 3_04_insert_mixed_workload
 test: 3_05_insert_to_wet_from_ret
+test: 3_06_special_characters
 test: 4_01_create_invalid_wet

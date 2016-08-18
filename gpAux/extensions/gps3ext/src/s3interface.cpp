@@ -125,12 +125,16 @@ string S3Service::getUrl(const string &prefix, const string &schema, const strin
     stringstream url;
     url << schema << "://" << host << "/" << bucket;
 
+    // marker and prefix are used as the values of query parameters here
+    // so URI encode their whole string, "/" also.
     if (!marker.empty()) {
-        url << "?marker=" << marker;
+        url << "?marker=" << uri_encode(marker);
     }
 
     if (!prefix.empty()) {
-        url << (marker.empty() ? "?" : "&") << "prefix=" << prefix;
+        string encodedPrefix = prefix;
+        find_replace(encodedPrefix, "/", "%2F");
+        url << (marker.empty() ? "?" : "&") << "prefix=" << encodedPrefix;
     }
 
     return url.str();
@@ -142,26 +146,30 @@ HTTPHeaders S3Service::composeHTTPHeaders(const string &url, const string &marke
     stringstream host;
     host << "s3-" << region << ".amazonaws.com";
 
-    HTTPHeaders header;
-    header.Add(HOST, host.str());
-    header.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
+    HTTPHeaders headers;
+    headers.Add(HOST, host.str());
+    headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
 
     UrlParser p(url);
 
+    // marker and prefix are used as the values of query parameters here
+    // so URI encode their whole string, "/" also.
     stringstream query;
     if (!marker.empty()) {
-        query << "marker=" << marker;
+        query << "marker=" << uri_encode(marker);
         if (!prefix.empty()) {
             query << "&";
         }
     }
     if (!prefix.empty()) {
-        query << "prefix=" << prefix;
+        string encodedPrefix = prefix;
+        find_replace(encodedPrefix, "/", "%2F");
+        query << "prefix=" << encodedPrefix;
     }
 
-    SignRequestV4("GET", &header, region, p.getPath(), query.str(), cred);
+    SignRequestV4("GET", &headers, region, p.getPath(), query.str(), cred);
 
-    return header;
+    return headers;
 }
 
 xmlParserCtxtPtr S3Service::getXMLContext(Response &response) {

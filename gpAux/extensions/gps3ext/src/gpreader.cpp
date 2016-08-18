@@ -64,7 +64,13 @@ int thread_cleanup(void) {
 }
 
 GPReader::GPReader(const string& url) {
-    constructReaderParams(url);
+    // construct a canonical URL string
+    // schema://domain/uri_encoded_path/
+    string encodedURL = uri_encode(url);
+    find_replace(encodedURL, "%3A%2F%2F", "://");
+    find_replace(encodedURL, "%2F", "/");
+
+    constructReaderParams(encodedURL);
     restfulServicePtr = &restfulService;
 }
 

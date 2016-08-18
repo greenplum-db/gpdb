@@ -66,7 +66,13 @@ BucketContent *S3BucketReader::getNextKey() {
 
 ReaderParams S3BucketReader::getReaderParams(BucketContent *key) {
     ReaderParams params = ReaderParams();
-    params.setKeyUrl(this->getKeyURL(key->getName()));
+
+    // encode the key name but leave the "/"
+    // "/encoded_path/encoded_name"
+    string keyEncoded = uri_encode(key->getName());
+    find_replace(keyEncoded, "%2F", "/");
+
+    params.setKeyUrl(this->getKeyURL(keyEncoded));
     params.setRegion(this->region);
     params.setKeySize(key->getSize());
     params.setChunkSize(this->chunkSize);
