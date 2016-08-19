@@ -563,23 +563,6 @@ BufferAlloc(SMgrRelation smgr,
 				(flush_buffer_pages_when_evicted && (oldFlags & BM_VALID)))
 		{
 			/*
-			 * If using a nondefault strategy, and writing the buffer
-			 * would require a WAL flush, let the strategy decide whether
-			 * to go ahead and write/reuse the buffer or to choose another
-			 * victim.	We need lock to inspect the page LSN, so this
-			 * can't be done inside StrategyGetBuffer.
-			 */
-			if (strategy != NULL &&
-				XLogNeedsFlush(BufferGetLSN(buf)) &&
-				StrategyRejectBuffer(strategy, buf))
-			{
-				/* Drop lock/pin and loop around for another buffer */
-				LWLockRelease(buf->content_lock);
-				UnpinBuffer(buf, true);
-				continue;
-			}
-
-			/*
 			 * We need a share-lock on the buffer contents to write it out
 			 * (else we might write invalid data, eg because someone else is
 			 * compacting the page contents while we write).  We must use a
@@ -596,6 +579,24 @@ BufferAlloc(SMgrRelation smgr,
 			 */
 			if ( ConditionalAcquireContentLock(buf, LW_SHARED))
 			{
+				/*
+				 * If using a nondefault strategy, and writing the buffer
+				 * would require a WAL flush, let the strategy decide whether
+				 * to go ahead and write/reuse the buffer or to choose another
+				 * victim.	We need lock to inspect the page LSN, so this
+				 * can't be done inside StrategyGetBuffer.
+				 */
+				if (strategy != NULL &&
+					XLogNeedsFlush(BufferGetLSN(buf)) &&
+					StrategyRejectBuffer(strategy, buf))
+				{
+					/* Drop lock/pin and loop around for another buffer */
+					ReleaseContentLock(buf);
+					UnpinBuffer(buf, true);
+					continue;
+				}
+
+				/* OK, do the I/O */
 				FlushBuffer(buf, NULL);
 				ReleaseContentLock(buf);
 			}
