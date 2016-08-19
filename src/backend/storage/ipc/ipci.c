@@ -23,7 +23,6 @@
 #include "access/subtrans.h"
 #include "access/twophase.h"
 #include "access/distributedlog.h"
-#include "access/appendonlywriter.h"
 #include "cdb/cdbfilerep.h"
 #include "cdb/cdbfilerepprimaryack.h"
 #include "cdb/cdbfilerepprimaryrecovery.h"
@@ -137,10 +136,9 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 		size = add_size(size, BufferShmemSize());
 		size = add_size(size, LockShmemSize());
 		size = add_size(size, workfile_mgr_shmem_size());
+
 		if (Gp_role == GP_ROLE_DISPATCH)
 		{
-			size = add_size(size, AppendOnlyWriterShmemSize());
-			
 			if(ResourceScheduler)
 			{
 				size = add_size(size, ResSchedulerShmemSize());
@@ -307,12 +305,6 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 	 * Set up lock manager
 	 */
 	InitLocks();
-
-	/*
-	 * Set up append only writer
-	 */
-	if (Gp_role == GP_ROLE_DISPATCH)
-		InitAppendOnlyWriter();
 
 	PersistentFileSysObj_ShmemInit();
 	PersistentFilespace_ShmemInit();

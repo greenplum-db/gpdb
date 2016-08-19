@@ -13,10 +13,9 @@
 #include "nodes/pg_list.h"
 #include "utils/rel.h"
 
-extern void AOCSDrop(Relation aorel,
-		List* compaction_segno);
+extern void AOCSDrop(Relation aorel, int compaction_segno);
 extern void AOCSCompact(Relation aorel, 
-		List *compaction_segno_list,
+		int compaction_segno,
 		int insert_segno,
 		bool isFull);
 extern void AOCSTruncateToEOF(Relation aorel);

@@ -304,7 +304,6 @@ _outPlannedStmt(StringInfo str, PlannedStmt *node)
 	WRITE_NODE_FIELD(returningLists);
 
 	WRITE_NODE_FIELD(result_partitions);
-	WRITE_NODE_FIELD(result_aosegnos);
 	WRITE_NODE_FIELD(queryPartOids);
 	WRITE_NODE_FIELD(queryPartsMetadata);
 	WRITE_NODE_FIELD(numSelectorsPerScanId);
@@ -3139,7 +3138,6 @@ _outCopyStmt(StringInfo str, CopyStmt *node)
 	WRITE_NODE_FIELD(options);
 	WRITE_NODE_FIELD(sreh);
 	WRITE_NODE_FIELD(partitions);
-	WRITE_NODE_FIELD(ao_segnos);
 }
 
 
@@ -4120,11 +4118,6 @@ _outVacuumStmt(StringInfo str, VacuumStmt *node)
 	WRITE_NODE_FIELD(va_cols);
 	WRITE_NODE_FIELD(expanded_relids);
 	WRITE_NODE_FIELD(extra_oids);
-	WRITE_NODE_FIELD(appendonly_compaction_segno);
-	WRITE_NODE_FIELD(appendonly_compaction_insert_segno);
-	WRITE_BOOL_FIELD(appendonly_compaction_vacuum_cleanup);
-	WRITE_BOOL_FIELD(appendonly_compaction_vacuum_prepare);
-	WRITE_BOOL_FIELD(heap_truncate);
 }
 
 static void

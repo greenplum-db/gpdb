@@ -356,8 +356,6 @@ InitProcess(void)
 	MyProc->xid = InvalidTransactionId;
 	MyProc->localDistribXactData.state = LOCALDISTRIBXACT_STATE_NONE;
 	MyProc->xmin = InvalidTransactionId;
-	MyProc->serializableIsoLevel = false;
-	MyProc->inDropTransaction = false;
 	MyProc->pid = MyProcPid;
 	/* backendId, databaseId and roleId will be filled in later */
 	MyProc->backendId = InvalidBackendId;
@@ -545,8 +543,6 @@ InitAuxiliaryProcess(void)
 	MyProc->xid = InvalidTransactionId;
 	MyProc->localDistribXactData.state = LOCALDISTRIBXACT_STATE_NONE;
 	MyProc->xmin = InvalidTransactionId;
-	MyProc->serializableIsoLevel = false;
-	MyProc->inDropTransaction = false;
 	MyProc->databaseId = InvalidOid;
 	MyProc->roleId = InvalidOid;
     MyProc->mppLocalProcessSerial = 0;

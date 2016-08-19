@@ -19,6 +19,7 @@
 #include "access/aocssegfiles.h"
 #include "access/aosegfiles.h"
 #include "access/appendonlytid.h"
+#include "access/transam.h"
 #include "catalog/pg_appendonly_fn.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_proc.h"
@@ -29,6 +30,7 @@
 #include "cdb/cdbvars.h"
 #include "executor/spi.h"
 #include "nodes/makefuncs.h"
+#include "storage/procarray.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/syscache.h"
@@ -86,10 +88,9 @@ void
 InsertInitialSegnoEntry(Relation parentrel, int segno)
 {
 	Relation	pg_aoseg_rel;
-	Relation	pg_aoseg_idx;
 	TupleDesc	pg_aoseg_dsc;
-	HeapTuple	pg_aoseg_tuple = NULL;
-	int			natts = 0;
+	HeapTuple	pg_aoseg_tuple;
+	int			natts;
 	bool	   *nulls;
 	Datum	   *values;
 
@@ -104,8 +105,6 @@ InsertInitialSegnoEntry(Relation parentrel, int segno)
 	nulls = palloc(sizeof(bool) * natts);
 	values = palloc0(sizeof(Datum) * natts);
 	MemSet(nulls, false, sizeof(char) * natts);
-
-	pg_aoseg_idx = index_open(parentrel->rd_appendonly->segidxid, RowExclusiveLock);
 
 	values[Anum_pg_aoseg_segno - 1] = Int32GetDatum(segno);
 	values[Anum_pg_aoseg_tupcount - 1] = Float8GetDatum(0);
@@ -127,7 +126,6 @@ InsertInitialSegnoEntry(Relation parentrel, int segno)
 
 	heap_freetuple(pg_aoseg_tuple);
 
-	index_close(pg_aoseg_idx, RowExclusiveLock);
 	heap_close(pg_aoseg_rel, RowExclusiveLock);
 }
 
@@ -315,6 +313,105 @@ GetAllFileSegInfo(Relation parentrel,
 	return result;
 }
 
+
+/*
+ * FileSegCanBeDropped
+ *
+ * Is the given file segment ready to be dropped? It must be in AWAITING_DROP
+ * state, and the AOSeg tuple, with the awaiting-drop state, must be visible to
+ * everyone.
+ */
+bool
+FileSegCanBeDropped(Relation parentrel, int segno)
+{
+	Relation		pg_aoseg_rel;
+	Relation		pg_aoseg_idx;
+	TupleDesc		pg_aoseg_dsc;
+	HeapTuple		tuple;
+	ScanKeyData		key;
+	IndexScanDesc	aoscan;
+	int16			state;
+	bool			isNull;
+
+	/*
+	 * Check the pg_aoseg relation to be certain the ao table segment file
+	 * is there.
+	 */
+	pg_aoseg_rel = heap_open(parentrel->rd_appendonly->segrelid, AccessShareLock);
+	pg_aoseg_dsc = RelationGetDescr(pg_aoseg_rel);
+	pg_aoseg_idx = index_open(parentrel->rd_appendonly->segidxid, AccessShareLock);
+
+	/*
+	 * Setup a scan key to fetch from the index by segno.
+	 */
+	ScanKeyInit(&key,
+				(AttrNumber) Anum_pg_aoseg_segno,
+				BTEqualStrategyNumber,
+				F_OIDEQ,
+				ObjectIdGetDatum(segno));
+
+	aoscan = index_beginscan(pg_aoseg_rel, pg_aoseg_idx, SnapshotNow, 1, &key);
+
+	tuple = index_getnext(aoscan, ForwardScanDirection);
+
+	if (!HeapTupleIsValid(tuple))
+	{
+        /* This segment file does not have an entry. */
+		index_endscan(aoscan);
+		index_close(pg_aoseg_idx, AccessShareLock);
+		heap_close(pg_aoseg_rel, AccessShareLock);
+		return NULL;
+	}
+
+	/* Close the index */
+	tuple = heap_copytuple(tuple);
+	Assert(HeapTupleIsValid(tuple));
+
+	index_endscan(aoscan);
+	index_close(pg_aoseg_idx, AccessShareLock);
+
+	/* get the state */
+	state = DatumGetInt16(fastgetattr(tuple, Anum_pg_aoseg_state, pg_aoseg_dsc, &isNull));
+
+	if(isNull)
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				errmsg("got invalid state value: NULL")));
+
+	if (state != AOSEG_STATE_AWAITING_DROP)
+	{
+		heap_close(pg_aoseg_rel, AccessShareLock);
+		return false;
+	}
+
+	/*
+	 * It's in awaiting-drop state, but does everyone see it that way?
+	 *
+	 * We abuse heap_freeze_tuple() here, to determine that for us. If the tuple's
+	 * xmin can be frozen, then it's visible to everyone. We don't bother checking
+	 * the xmax; we never update or lock awaiting-drop tuples, so that shouldn't
+	 * happen. Even if it did, presumably an AO segment that's in awaiting-drop state
+	 * won't be resurrected, so even if someone updates or locks the tuple, it's
+	 * presumably still safe to drop.
+	 *
+	 * Note that we call heap_freeze_tuple() on a copy of the tuple, so this doesn't
+	 * modify the tuple on disk.
+	 */
+	(void) heap_freeze_tuple(tuple->t_data, GetOldestXmin(false, true), InvalidBuffer);
+
+	if (HeapTupleHeaderGetXmin(tuple->t_data) != FrozenTransactionId)
+	{
+		heap_close(pg_aoseg_rel, AccessShareLock);
+		return false;
+	}
+
+	/* Finish up scan and close appendonly catalog. */
+	heap_close(pg_aoseg_rel, AccessShareLock);
+
+	return true;
+}
+
+
 /*
  * The comparison routine that sorts an array of FileSegInfos
  * in the ascending order of the segment number.
@@ -469,6 +566,26 @@ SetFileSegInfoState(Relation parentrel,
 				  0,
 				 newState);
 }
+
+void
+IncrementFileSegInfoModCount(Relation parentrel,
+							 int segno)
+{
+	elogif(Debug_appendonly_print_compaction, LOG,
+		   "Increment segfile info modcount: segno %d, table '%s'",
+		   segno,
+		   RelationGetRelationName(parentrel));
+
+	UpdateFileSegInfo_internal(parentrel,
+							   segno,
+							   -1,
+							   -1,
+							   0,
+							   0,
+							   1,
+							   AOSEG_STATE_USECURRENT);
+}
+
 
 void
 ClearFileSegInfo(Relation parentrel,
@@ -825,6 +942,8 @@ UpdateFileSegInfo_internal(Relation parentrel,
 	new_tuple = heap_modify_tuple(tuple, pg_aoseg_dsc, new_record,
 								new_record_nulls, new_record_repl);
 
+	elog(LOG, "updating segno %d with XID %u to eof %d", segno, GetCurrentTransactionIdIfAny(), (int) eof);
+
 	simple_heap_update(pg_aoseg_rel, &tuple->t_self, new_tuple);
 	CatalogUpdateIndexes(pg_aoseg_rel, new_tuple);
 
@@ -1123,7 +1242,6 @@ gp_update_aorow_master_stats_internal(Relation parentrel, Snapshot appendOnlyMet
 	int 			proc;
 	int 			ret;
 	int64			total_count = 0;
-	MemoryContext 	oldcontext = CurrentMemoryContext;
 	
     Assert(RelationIsAoRows(parentrel));
 
@@ -1171,21 +1289,16 @@ gp_update_aorow_master_stats_internal(Relation parentrel, Snapshot appendOnlyMet
 			for (i = 0; i < proc; i++)
 			{
 				HeapTuple 	tuple = tuptable->vals[i];
-				FileSegInfo *fsinfo = NULL;
 				int			qe_segno;
 				int64 		qe_tupcount;
 				char 		*val_segno;
 				char 		*val_tupcount;
-				MemoryContext 	cxt_save;
 
 				/*
 				 * Get totals from QE's for a specific segment
 				 */
 				val_segno = SPI_getvalue(tuple, tupdesc, 1);
 				val_tupcount = SPI_getvalue(tuple, tupdesc, 2);
-
-				/* use our own context so that SPI won't free our stuff later */
-				cxt_save = MemoryContextSwitchTo(oldcontext);
 
 				/*
 				 * Convert to desired data type
@@ -1197,72 +1310,7 @@ gp_update_aorow_master_stats_internal(Relation parentrel, Snapshot appendOnlyMet
 
 				total_count += qe_tupcount;
 
-				/*
-				 * Get the numbers on the QD for this segment
-				 */
-
-				
-				// CONSIDER: For integrity, we should lock ALL segment files first before 
-				// executing the query.  And, the query of the segments (the SPI_execute)
-				// and the update (UpdateFileSegInfo) should be in the same transaction.
-				//
-				// If there are concurrent Append-Only inserts, we can end up with
-				// the wrong answer...
-				//
-				// NOTE: This is a transaction scope lock that must be held until commit / abort.
-				//
-				LockRelationAppendOnlySegmentFile(
-												&parentrel->rd_node,
-												qe_segno,
-												AccessExclusiveLock,
-												/* dontWait */ false);
-
-				fsinfo = GetFileSegInfo(parentrel, appendOnlyMetaDataSnapshot, qe_segno);
-				if (fsinfo == NULL)
-				{
-					InsertInitialSegnoEntry(parentrel, qe_segno);
-
-					fsinfo = NewFileSegInfo(qe_segno);
-				}
-
-				/*
-				 * check if numbers match.
-				 * NOTE: proper way is to use int8eq() but since we
-				 * don't expect any NAN's in here better do it directly
-				 */
-				if(fsinfo->total_tupcount != qe_tupcount)
-				{
-					int64 	tupcount_diff = qe_tupcount - fsinfo->total_tupcount;
-
-					elog(DEBUG3, "gp_update_ao_master_stats: updating "
-						"segno %d with tupcount %d", qe_segno,
-						(int)qe_tupcount);
-
-					/*
-					 * QD tup count !=  QE tup count. update QD count by
-					 * passing in the diff (may be negative sometimes).
-					 */
-					UpdateFileSegInfo_internal(parentrel, qe_segno, -1, -1, 
-							tupcount_diff, 0, 1, AOSEG_STATE_USECURRENT);
-				}
-				else
-					elog(DEBUG3, "gp_update_ao_master_stats: no need to "
-						"update segno %d. it is synced", qe_segno);
-
-				pfree(fsinfo);
-
-				MemoryContextSwitchTo(cxt_save);
-
-				/*
-				 * TODO: if an entry exists for this rel in the AO hash table
-				 * need to also update that entry in shared memory. Need to
-				 * figure out how to do this safely when concurrent operations
-				 * are in progress. note that if no entry exists we are ok.
-				 *
-				 * At this point this doesn't seem too urgent as we generally
-				 * only expect this function to update segno 0 only and the QD
-				 * never cares about segment 0 anyway.
-				 */
+				/* FIXME: This does nothing now.  Do we need this function at all? */
 			}
 		}
 
@@ -2156,115 +2204,77 @@ PrintPgaosegAndGprelationNodeEntries(FileSegInfo **allseginfo, int totalsegs, bo
 
 
 void
-CheckAOConsistencyWithGpRelationNode( Snapshot snapshot, Relation rel, int totalsegs, FileSegInfo ** allseginfo)
+CheckAOConsistencyWithGpRelationNode( Snapshot snapshot, Relation rel, int totalsegs, FileSegInfo **allseginfo)
 {
 	GpRelationNodeScan gpRelationNodeScan;
-	int segmentFileNum = 0;
+	int			segmentFileNum = 0;
 	ItemPointerData persistentTid;
-	int64 persistentSerialNum = 0;
-	int segmentCount = 0;
-	Relation gp_relation_node;
+	int64		persistentSerialNum = 0;
+	Relation	gp_relation_node;
+	bool	   *gprelnodeMap;
+	FileSegInfo **aosegMap;
+	int			i;
 
 	if (!gp_appendonly_verify_eof)
 	{
 		return;
 	}
 
-	/* 
-	 * gp_relation_node alway has a zero. Hence we use Max segment file number plus 1 in order
-	 * to accomodate the zero
-	 */
-	const int num_gp_relation_node_entries = AOTupleId_MaxSegmentFileNum + 1;
-	bool *segmentFileNumMap = (bool*) palloc0( sizeof(bool) * num_gp_relation_node_entries);
-	int i = 0;
-	int j = 0;
+	aosegMap = (FileSegInfo **) palloc0((AOTupleId_MaxSegmentFileNum + 1) * sizeof(FileSegInfo *));
+	gprelnodeMap = (bool *) palloc0((AOTupleId_MaxSegmentFileNum + 1) * sizeof(bool));
 
+	/* Build gprelnodeMap */
 	gp_relation_node = heap_open(GpRelationNodeRelationId, AccessShareLock);
-	GpRelationNodeBeginScan(
-					snapshot,
-					gp_relation_node,
-					rel->rd_id,
-					rel->rd_rel->relfilenode,
-					&gpRelationNodeScan);
-	while ((NULL != GpRelationNodeGetNext(
-						&gpRelationNodeScan,
-						&segmentFileNum,
-						&persistentTid,
-						&persistentSerialNum)))
+	GpRelationNodeBeginScan(snapshot,
+							gp_relation_node,
+							rel->rd_id,
+							rel->rd_rel->relfilenode,
+							&gpRelationNodeScan);
+	while (GpRelationNodeGetNext(&gpRelationNodeScan,
+								 &segmentFileNum,
+								 &persistentTid,
+								 &persistentSerialNum) != NULL)
 	{
-		if (segmentFileNumMap[segmentFileNum] != true)
-		{
-			segmentFileNumMap[segmentFileNum] = true;
-			segmentCount++;
-		}
-
-		if (segmentCount > totalsegs + 1)
-		{
-			PrintPgaosegAndGprelationNodeEntries(allseginfo, totalsegs, segmentFileNumMap);
-			elog(ERROR, "gp_relation_node (%d) has more entries than pg_aoseg (%d) for relation %s",
-				segmentCount,
-				totalsegs,
-				RelationGetRelationName(rel));
-		}
+		if (gprelnodeMap[segmentFileNum] != true)
+			gprelnodeMap[segmentFileNum] = true;
 	}
-
 	GpRelationNodeEndScan(&gpRelationNodeScan);
 	heap_close(gp_relation_node, AccessShareLock);
 
-	if (totalsegs > 0)
+	/* Build aosegMap. */
+	for (i = 0; i < totalsegs; i++)
 	{
-		if (allseginfo[0]->segno == 0)
-		{
-			i++;
-		}
+		FileSegInfo *fsinfo = allseginfo[i];
+
+		if (fsinfo->segno < 0 || fsinfo->segno > AOTupleId_MaxSegmentFileNum)
+			elog(ERROR, "invalid segno on pg_aoseg row: %d", fsinfo->segno);
+		aosegMap[fsinfo->segno] = fsinfo;
 	}
 
-	for (j = 1; j < num_gp_relation_node_entries; j++)
+	/* Check that there is a one-to-one correspondence between the two maps */
+	for (i = 0; i <= AOTupleId_MaxSegmentFileNum; i++)
 	{
-		if (segmentFileNumMap[j] == true)
+		if (aosegMap[i] && !gprelnodeMap[i] && aosegMap[i]->eof != 0)
 		{
-			while(i < totalsegs && allseginfo[i]->segno != j)
-			{
-
-				if (allseginfo[i]->eof != 0 && segmentFileNumMap[allseginfo[i]->segno] == false)
-				{
-					PrintPgaosegAndGprelationNodeEntries(allseginfo, totalsegs, segmentFileNumMap);
-					elog(ERROR, "Missing pg_aoseg entry %d in gp_relation_node for %s",
-							allseginfo[i]->segno, RelationGetRelationName(rel));
-				}
-				i++;
-			}
-
-			if (i < totalsegs && allseginfo[i]->segno == j)
-			{
-				i++;
-				continue;
-			}
-
-			if (i == totalsegs)
-			{
-				PrintPgaosegAndGprelationNodeEntries(allseginfo, totalsegs, segmentFileNumMap);
-				elog(ERROR, "Missing gp_relation_node entry %d in pg_aoseg for %s",
-							j, RelationGetRelationName(rel));
-			}
-		}
-	}
-
-	/*
-	 * Check for any extra entries in pg_aoseg which are not present in gp_relation_node
-	 */
-	while (i < totalsegs)
-	{
-		Assert(segmentFileNumMap[allseginfo[i]->segno] == false);
-		if (allseginfo[i]->eof != 0)
-		{
-			PrintPgaosegAndGprelationNodeEntries(allseginfo, totalsegs, segmentFileNumMap);
+			PrintPgaosegAndGprelationNodeEntries(allseginfo, totalsegs, gprelnodeMap);
 			elog(ERROR, "Missing pg_aoseg entry %d in gp_relation_node for %s",
-					allseginfo[i]->segno, RelationGetRelationName(rel));
+				 aosegMap[i]->segno, RelationGetRelationName(rel));
 		}
-		i++;
+
+		/*
+		 * Special case for segment 0: It's ok if the pg_aoseg entry doesn't exist.
+		 * When a new table is created, we create a gp_relation_node entry for
+		 * segment 0, and the underlying empry file, but we don't insert a row in
+		 * the AO segment table for it yet.
+		* */
+		if (!aosegMap[i] && gprelnodeMap[i] && i != 0)
+		{
+			PrintPgaosegAndGprelationNodeEntries(allseginfo, totalsegs, gprelnodeMap);
+			elog(ERROR, "Missing gp_relation_node entry %d in pg_aoseg for %s",
+				 i, RelationGetRelationName(rel));
+		}
 	}
 
-	pfree(segmentFileNumMap);
+	pfree(aosegMap);
+	pfree(gprelnodeMap);
 }
-

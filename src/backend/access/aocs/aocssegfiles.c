@@ -39,6 +39,7 @@
 #include "access/appendonlywriter.h"
 #include "cdb/cdbaocsam.h"
 #include "executor/executor.h"
+#include "storage/procarray.h"
 
 #include "utils/debugbreak.h"
 #include "funcapi.h"
@@ -227,6 +228,88 @@ GetAllAOCSFileSegInfo(Relation prel,
     heap_close(pg_aocsseg_rel, AccessShareLock);
 
 	return results;
+}
+
+/*
+ * AOCSFileSegCanBeDropped
+ *
+ * Is the given file segment ready to be dropped? It must be in AWAITING_DROP
+ * state, and the AOSeg tuple, with the awaiting-drop state, must be visible to
+ * everyone.
+ */
+bool
+AOCSFileSegCanBeDropped(Relation parentrel, int segno)
+{
+	Relation	segrel;
+	Relation	segidx;
+	TupleDesc	segdsc;
+	ScanKeyData scankey;
+	IndexScanDesc scan;
+	HeapTuple	segtup;
+	int16		state;
+	bool		isNull;
+
+	segrel = heap_open(parentrel->rd_appendonly->segrelid, AccessShareLock);
+	segdsc = RelationGetDescr(segrel);
+	segidx = index_open(parentrel->rd_appendonly->segidxid, AccessShareLock);
+
+	ScanKeyInit(&scankey, Anum_pg_aocs_segno, BTEqualStrategyNumber,
+				F_OIDEQ, Int32GetDatum(segno));
+
+	scan = index_beginscan(segrel, segidx, SnapshotNow, 1, &scankey);
+
+	segtup = index_getnext(scan, ForwardScanDirection);
+
+	if (!HeapTupleIsValid(segtup))
+	{
+		/* This segment file does not have an entry. */
+		index_endscan(scan);
+		index_close(segidx, AccessShareLock);
+		heap_close(segrel, AccessShareLock);
+		return NULL;
+	}
+
+	/* Close the index */
+	segtup = heap_copytuple(segtup);
+
+	index_endscan(scan);
+	index_close(segidx, AccessShareLock);
+
+	Assert(HeapTupleIsValid(segtup));
+
+	state = DatumGetInt16(fastgetattr(segtup, Anum_pg_aocs_state, segdsc, &isNull));
+	Assert(!isNull);
+
+	if (state != AOSEG_STATE_AWAITING_DROP)
+	{
+		heap_close(segrel, AccessShareLock);
+		return false;
+	}
+
+	/*
+	 * It's in awaiting-drop state, but does everyone see it that way?
+	 *
+	 * We abuse heap_freeze_tuple() here, to determine that for us. If the tuple's
+	 * xmin can be frozen, then it's visible to everyone. We don't bother checking
+	 * the xmax; we never update or lock awaiting-drop tuples, so that shouldn't
+	 * happen. Even if it did, presumably an AO segment that's in awaiting-drop state
+	 * won't be resurrected, so even if someone updates or locks the tuple, it's
+	 * presumably still safe to drop.
+	 *
+	 * Note that we call heap_freeze_tuple() on a copy of the tuple, so this doesn't
+	 * modify the tuple on disk.
+	 */
+	(void) heap_freeze_tuple(segtup->t_data, GetOldestXmin(false, true), InvalidBuffer);
+
+	if (HeapTupleHeaderGetXmin(segtup->t_data) != FrozenTransactionId)
+	{
+		heap_close(segrel, AccessShareLock);
+		return false;
+	}
+
+	heap_close(segrel, AccessShareLock);
+
+	return true;
 }
 
 /*

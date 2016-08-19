@@ -1516,7 +1516,6 @@ InitializeResultRelations(PlannedStmt *plannedstmt, EState *estate, CmdType oper
 		estate->es_num_result_relations = 0;
 		estate->es_result_relation_info = NULL;
 		estate->es_result_partitions = NULL;
-		estate->es_result_aosegnos = NIL;
 
 		return;
 	}
@@ -1531,7 +1530,6 @@ InitializeResultRelations(PlannedStmt *plannedstmt, EState *estate, CmdType oper
 	if (Gp_role == GP_ROLE_EXECUTE)
 	{
 		estate->es_result_partitions = plannedstmt->result_partitions;
-		estate->es_result_aosegnos = plannedstmt->result_aosegnos;
 	}
 	else
 	{
@@ -1551,25 +1549,8 @@ InitializeResultRelations(PlannedStmt *plannedstmt, EState *estate, CmdType oper
 		all_relids = lappend_oid(all_relids, relid);
 		all_relids = list_concat(all_relids,
 								 all_partition_relids(estate->es_result_partitions));
-		
-        /* 
-         * We also assign a segno for a deletion operation.
-         * That segno will later be touched to ensure a correct
-         * incremental backup.
-         */
-		estate->es_result_aosegnos = assignPerRelSegno(all_relids);
 
 		plannedstmt->result_partitions = estate->es_result_partitions;
-		plannedstmt->result_aosegnos = estate->es_result_aosegnos;
-		
-		/* Set any QD resultrels segno, just in case. The QEs set their own in ExecInsert(). */
-        int relno = 0;
-        ResultRelInfo* relinfo;
-        for (relno = 0; relno < numResultRelations; relno ++)
-        {
-            relinfo = &(resultRelInfos[relno]);
-            ResultRelInfoSetSegno(relinfo, estate->es_result_aosegnos);
-        }
 	}
 	
 	estate->es_partition_state = NULL;
@@ -2299,38 +2280,20 @@ initResultRelInfo(ResultRelInfo *resultRelInfo,
  *
  */
 void
-ResultRelInfoSetSegno(ResultRelInfo *resultRelInfo, List *mapping)
+ResultRelInfoSetSegno(ResultRelInfo *resultRelInfo)
 {
-   	ListCell *relid_to_segno;
-   	bool	  found = false;
+	if (resultRelInfo->ri_aosegno != InvalidFileSegNumber)
+		return;		/* a target was chosen already */
 
 	/* only relevant for AO relations */
 	if(!relstorage_is_ao(RelinfoGetStorage(resultRelInfo)))
 		return;
 
-	Assert(mapping);
 	Assert(resultRelInfo->ri_RelationDesc);
 
-   	/* lookup the segfile # to write into, according to my relid */
+	resultRelInfo->ri_aosegno = SetSegnoForWrite(resultRelInfo->ri_RelationDesc, NIL);
 
-   	foreach(relid_to_segno, mapping)
-   	{
-		SegfileMapNode *n = (SegfileMapNode *)lfirst(relid_to_segno);
-		Oid myrelid = RelationGetRelid(resultRelInfo->ri_RelationDesc);
-		if(n->relid == myrelid)
-		{
-			Assert(n->segno != InvalidFileSegNumber);
-			resultRelInfo->ri_aosegno = n->segno;
-
-			elogif(Debug_appendonly_print_insert, LOG,
-				"Appendonly: setting pre-assigned segno %d in result "
-				"relation with relid %d", n->segno, n->relid);
-
-			found = true;
-		}
-	}
-
-	Assert(found);
+	Assert(resultRelInfo->ri_aosegno != InvalidFileSegNumber);
 }
 
 /*
@@ -2459,63 +2422,6 @@ ExecContextForcesOids(PlanState *planstate, bool *hasoids)
 
 	return false;
 }
-
-void
-SendAOTupCounts(EState *estate)
-{
-	/*
-	 * If we're inserting into partitions, send tuple counts for
-	 * AO tables back to the QD.
-	 */
-	if (Gp_role == GP_ROLE_EXECUTE && estate->es_result_partitions)
-	{
-		StringInfoData buf;
-		ResultRelInfo *resultRelInfo;
-		int aocount = 0;
-		int i;
-
-		resultRelInfo = estate->es_result_relations;
-		for (i = 0; i < estate->es_num_result_relations; i++)
-		{
-			if (relstorage_is_ao(RelinfoGetStorage(resultRelInfo)))
-				aocount++;
-
-			resultRelInfo++;
-		}
-
-
-		if (aocount)
-		{
-			if (Debug_appendonly_print_insert)
-				ereport(LOG,(errmsg("QE sending tuple counts of %d partitioned "
-									"AO relations... ", aocount)));
-
-			pq_beginmessage(&buf, 'o');
-			pq_sendint(&buf, aocount, 4);
-
-			resultRelInfo = estate->es_result_relations;
-			for (i = 0; i < estate->es_num_result_relations; i++)
-			{
-				if (relstorage_is_ao(RelinfoGetStorage(resultRelInfo)))
-				{
-					Oid relid = RelationGetRelid(resultRelInfo->ri_RelationDesc);
-					uint64 tupcount = resultRelInfo->ri_aoprocessed;
-
-					pq_sendint(&buf, relid, 4);
-					pq_sendint64(&buf, tupcount);
-
-					if (Debug_appendonly_print_insert)
-						ereport(LOG,(errmsg("sent tupcount " INT64_FORMAT " for "
-											"relation %d", tupcount, relid)));
-
-				}
-				resultRelInfo++;
-			}
-			pq_endmessage(&buf);
-		}
-	}
-
-}
 /* ----------------------------------------------------------------
  *		ExecEndPlan
  *
@@ -2562,9 +2468,6 @@ ExecEndPlan(PlanState *planstate, EState *estate)
 	 */
 	ExecResetTupleTable(estate->es_tupleTable, false);
 
-	/* Report how many tuples we may have inserted into AO tables */
-	SendAOTupCounts(estate);
-
 	/*
 	 * close the result relation(s) if any, but hold locks until xact commit.
 	 */
@@ -2588,6 +2491,7 @@ ExecEndPlan(PlanState *planstate, EState *estate)
 				Assert(RelationIsAoCols(resultRelInfo->ri_RelationDesc));
 				aocs_delete_finish(resultRelInfo->ri_deleteDesc);
 			}
+			AORelIncrementModCount(resultRelInfo->ri_RelationDesc);
 			resultRelInfo->ri_deleteDesc = NULL;
 		}
 		if (resultRelInfo->ri_updateDesc != NULL)
@@ -2599,9 +2503,14 @@ ExecEndPlan(PlanState *planstate, EState *estate)
 				Assert(RelationIsAoCols(resultRelInfo->ri_RelationDesc));
 				aocs_update_finish(resultRelInfo->ri_updateDesc);
 			}
+			/*
+			 * No need to update modcount here, because UPDATE works like
+			 * delete+insert, and the insertion shows up in the tupcount.
+			 */
+			//AORelIncrementModCount(resultRelInfo->ri_RelationDesc);
 			resultRelInfo->ri_updateDesc = NULL;
 		}
-		
+
 		if (resultRelInfo->ri_resultSlot)
 		{
 			Assert(resultRelInfo->ri_resultSlot->tts_tupleDescriptor);
@@ -3236,7 +3145,7 @@ ExecInsert(TupleTableSlot *slot,
 		if (resultRelInfo->ri_aoInsertDesc == NULL)
 		{
 			/* Set the pre-assigned fileseg number to insert into */
-			ResultRelInfoSetSegno(resultRelInfo, estate->es_result_aosegnos);
+			ResultRelInfoSetSegno(resultRelInfo);
 
 			resultRelInfo->ri_aoInsertDesc =
 				appendonly_insert_init(resultRelationDesc,
@@ -3251,7 +3160,7 @@ ExecInsert(TupleTableSlot *slot,
 	{
 		if (resultRelInfo->ri_aocsInsertDesc == NULL)
 		{
-			ResultRelInfoSetSegno(resultRelInfo, estate->es_result_aosegnos);
+			ResultRelInfoSetSegno(resultRelInfo);
 			resultRelInfo->ri_aocsInsertDesc = aocs_insert_init(resultRelationDesc, 
 																resultRelInfo->ri_aosegno, false);
 		}
@@ -3886,7 +3795,7 @@ lreplace:;
 
 			if (resultRelInfo->ri_updateDesc == NULL)
 			{
-				ResultRelInfoSetSegno(resultRelInfo, estate->es_result_aosegnos);
+				ResultRelInfoSetSegno(resultRelInfo);
 				resultRelInfo->ri_updateDesc = (AppendOnlyUpdateDesc)
 					appendonly_update_init(resultRelationDesc, ActiveSnapshot, resultRelInfo->ri_aosegno);
 			}
@@ -3904,7 +3813,7 @@ lreplace:;
 
 			if (resultRelInfo->ri_updateDesc == NULL)
 			{
-				ResultRelInfoSetSegno(resultRelInfo, estate->es_result_aosegnos);
+				ResultRelInfoSetSegno(resultRelInfo);
 				resultRelInfo->ri_updateDesc = (AppendOnlyUpdateDesc)
 					aocs_update_init(resultRelationDesc, resultRelInfo->ri_aosegno);
 			}
@@ -5100,15 +5009,27 @@ intorel_receive(TupleTableSlot *slot, DestReceiver *self)
 		AOTupleId	aoTupleId;
 
 		if (myState->ao_insertDesc == NULL)
-			myState->ao_insertDesc = appendonly_insert_init(into_rel, RESERVED_SEGNO, false);
+		{
+			int			aosegno;
+
+			aosegno = SetSegnoForWrite(into_rel, NIL);
+			myState->ao_insertDesc = appendonly_insert_init(into_rel,
+															aosegno, false);
+		}
 
 		appendonly_insert(myState->ao_insertDesc, tuple, &tupleOid, &aoTupleId);
 		pfree(tuple);
 	}
 	else if (RelationIsAoCols(into_rel))
 	{
-		if(myState->aocs_ins == NULL)
-			myState->aocs_ins = aocs_insert_init(into_rel, RESERVED_SEGNO, false);
+		if (myState->aocs_ins == NULL)
+		{
+			int			aosegno;
+
+			aosegno = SetSegnoForWrite(into_rel, NIL);
+
+			myState->aocs_ins = aocs_insert_init(into_rel, aosegno, false);
+		}
 
 		aocs_insert(myState->aocs_ins, slot);
 	}

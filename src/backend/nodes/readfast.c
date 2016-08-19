@@ -1435,7 +1435,6 @@ _readCopyStmt(void)
 	READ_NODE_FIELD(options);
 	READ_NODE_FIELD(sreh);
 	READ_NODE_FIELD(partitions);
-	READ_NODE_FIELD(ao_segnos);
 
 	READ_DONE();
 
@@ -1501,7 +1500,6 @@ _readPlannedStmt(void)
 	READ_BITMAPSET_FIELD(rewindPlanIDs);
 	READ_NODE_FIELD(returningLists);
 	READ_NODE_FIELD(result_partitions);
-	READ_NODE_FIELD(result_aosegnos);
 	READ_NODE_FIELD(queryPartOids);
 	READ_NODE_FIELD(queryPartsMetadata);
 	READ_NODE_FIELD(numSelectorsPerScanId);

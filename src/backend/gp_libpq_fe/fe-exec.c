@@ -176,8 +176,6 @@ PQmakeEmptyPGresult(PGconn *conn, ExecStatusType status)
     result->extraslen = 0;
 	
 	result->numRejected = 0;
-	result->naotupcounts = 0;
-	result->aotupcounts = NULL;
 
 	if (conn)
 	{
@@ -621,10 +619,6 @@ PQclear(PGresult *res)
 		free(res->extras);
 	res->extraslen = 0;
 	res->extras = NULL;
-
-	if (res->aotupcounts)
-		free(res->aotupcounts);
-	res->naotupcounts = 0;
 
 	/* Free the PGresult structure itself */
 	free(res);

@@ -109,10 +109,7 @@ typedef struct VacAttrStats
 
 typedef struct VacuumStatsContext
 {
-	MemoryContext ctx;
-	Relation onerel;
 	List *updated_stats;
-	VacAttrStats **vac_stats;
 } VacuumStatsContext;
 
 /*
@@ -133,6 +130,8 @@ extern PGDLLIMPORT int default_statistics_target;		/* PGDLLIMPORT for
 														 * PostGIS */
 extern PGDLLIMPORT double analyze_relative_error;
 extern int	vacuum_freeze_min_age;
+
+extern MemoryContext vac_context;
 
 
 /* in commands/vacuum.c */
@@ -158,24 +157,17 @@ extern bool vac_is_partial_index(Relation indrel);
 extern void vacuum_delay_point(void);
 
 extern bool vacuumStatement_IsTemporary(Relation onerel);
-
-extern bool vacuumStatement_IsInAppendOnlyDropPhase(VacuumStmt *vacstmt);
-extern bool vacummStatement_IsInAppendOnlyCleanupPhase(VacuumStmt *vacstmt);
-extern bool vacuumStatement_IsInAppendOnlyPreparePhase(VacuumStmt* vacstmt);
-extern bool vacuumStatement_IsInAppendOnlyCompactionPhase(VacuumStmt* vacstmt);
-extern bool vacuumStatement_IsInAppendOnlyPseudoCompactionPhase(VacuumStmt* vacstmt);
+extern void scan_index(Relation indrel, double num_tuples, List *updated_stats, bool isfull);
 
 /* in commands/vacuumlazy.c */
 extern bool lazy_vacuum_rel(Relation onerel, VacuumStmt *vacstmt,
 				BufferAccessStrategy bstrategy, List *updated_stats);
-extern void vacuum_appendonly_rel(Relation aorel, VacuumStmt *vacstmt);
-extern void vacuum_appendonly_fill_stats(Relation aorel, Snapshot snapshot,
-										 BlockNumber *rel_pages, double *rel_tuples,
-										 bool *relhasindex);
-extern int vacuum_appendonly_indexes(Relation aoRelation, VacuumStmt *vacstmt, List* updated_stats);
-extern void vacuum_aocs_rel(Relation aorel, void *vacrelstats, bool isVacFull);
 extern void gen_oids_for_bitmaps(VacuumStmt *vacstmt, Relation onerel);
 extern List *get_oids_for_bitmap(List *all_extra_oids, Relation Irel, Relation onerel, int occurrence);
+
+/* in commands/vacuum_ao.c */
+
+extern void ao_vacuum_rel(Relation onerel, VacuumStmt *vacstmt, List *updated_stats);
 
 /* in commands/analyze.c */
 extern void analyze_rel(Oid relid, VacuumStmt *vacstmt,

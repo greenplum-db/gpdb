@@ -414,20 +414,17 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 /*
  * Performs a compaction of an append-only AOCS relation.
  *
- * In non-utility mode, all compaction segment files should be
- * marked as in-use/in-compaction in the appendonlywriter.c code.
- *
+ * The compaction segment file should be marked as in-use/in-compaction
+ * in the appendonlywriter.c code.
  */ 
 void
-AOCSDrop(Relation aorel,
-		List* compaction_segno)
+AOCSDrop(Relation aorel, int compacted_segno)
 {
 	const char* relname;
 	int total_segfiles;
 	AOCSFileSegInfo** segfile_array;
 	int i, segno;
 	LockAcquireResult acquireResult;
-	AOCSFileSegInfo* fsinfo;
 
 	Assert (Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
 	Assert (RelationIsAoCols(aorel));
@@ -444,10 +441,9 @@ AOCSDrop(Relation aorel,
 	for(i = 0 ; i < total_segfiles ; i++)
 	{
 		segno = segfile_array[i]->segno;
-		if (list_find_int(compaction_segno, segno) < 0)
-		{
+
+		if (compacted_segno != segno)
 			continue;
-		}
 
 		/*
 		 * Try to get the transaction write-lock for the Append-Only segment file.
@@ -466,11 +462,7 @@ AOCSDrop(Relation aorel,
 			continue;
 		}
 
-		/* Re-fetch under the write lock to get latest committed eof. */
-		fsinfo = GetAOCSFileSegInfo(aorel, SnapshotNow, segno);
-
-		/* drop not planned, try at least eof truncation */
-		if (fsinfo->state == AOSEG_STATE_AWAITING_DROP)
+		if (AOCSFileSegCanBeDropped(aorel, segno))
 		{
 			Assert(HasLockForSegmentFileDrop(aorel));
 			AOCSCompaction_DropSegmentFile(aorel, segno);
@@ -478,9 +470,13 @@ AOCSDrop(Relation aorel,
 		}
 		else
 		{	
+			/* drop not planned, try at least eof truncation */
+			AOCSFileSegInfo *fsinfo;
+
+			fsinfo = GetAOCSFileSegInfo(aorel, SnapshotNow, segno);
 			AOCSSegmentFileTruncateToEOF(aorel, fsinfo);
+			pfree(fsinfo);
 		}
-		pfree(fsinfo);
 	}
 
 	if (segfile_array)
@@ -494,18 +490,17 @@ AOCSDrop(Relation aorel,
 /*
  * Performs a compaction of an append-only relation in column-orientation.
  *
- * In non-utility mode, all compaction segment files should be
- * marked as in-use/in-compaction in the appendonlywriter.c code. If
- * set, the insert_segno should also be marked as in-use.
-  * When the insert segno is negative, only truncate to eof operations
+ * The compaction segment file should be marked as in-use/in-compaction in the
+ * appendonlywriter.c code. If set, the insert_segno should also be marked as
+ * in-use. When the insert segno is negative, only truncate to eof operations
  * can be executed.
  *
  * The caller is required to hold either an AccessExclusiveLock (vacuum full) 
  * or a ShareLock on the relation.
  */ 
 void
-AOCSCompact(Relation aorel, 
-		List* compaction_segno, 
+AOCSCompact(Relation aorel,
+			int compaction_segno,
 		int insert_segno,
 		bool isFull)
 {
@@ -520,6 +515,9 @@ AOCSCompact(Relation aorel,
 	Assert(RelationIsAoCols(aorel));
 	Assert (Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
 	Assert(insert_segno >= 0);
+
+	/* We cannot compact the segment file we are inserting to. */
+	Assert(compaction_segno != insert_segno);
 
 	relname = RelationGetRelationName(aorel);
 
@@ -537,15 +535,9 @@ AOCSCompact(Relation aorel,
 	for(i = 0 ; i < total_segfiles ; i++)
 	{
 		segno = segfile_array[i]->segno;
-		if (list_find_int(compaction_segno, segno) < 0)
-		{
+
+		if (compaction_segno != segno)
 			continue;
-		}
-		if (segno == insert_segno)
-		{
-			/* We cannot compact the segment file we are inserting to. */
-			continue;
-		}
 
 		/*
 		 * Try to get the transaction write-lock for the Append-Only segment file.

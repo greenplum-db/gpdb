@@ -482,7 +482,7 @@ extern void UnregisterExprContextCallback(ExprContext *econtext,
 extern ShareNodeEntry * ExecGetShareNodeEntry(EState *estate, int shareid, bool fCreate);
 
 /* ResultRelInfo and Append Only segment assignment */
-void ResultRelInfoSetSegno(ResultRelInfo *resultRelInfo, List *mapping);
+extern void ResultRelInfoSetSegno(ResultRelInfo *resultRelInfo);
 
 /* Additions for MPP Slice table utilities defined in execUtils.c */
 extern GpExecIdentity getGpExecIdentity(QueryDesc *queryDesc,
@@ -505,7 +505,5 @@ extern void tbm_reset_bitmaps(PlanState *pstate);
 extern ResultRelInfo *slot_get_partition(TupleTableSlot *slot, EState *estate);
 extern ResultRelInfo *values_get_partition(Datum *values, bool *nulls,
 										   TupleDesc desc, EState *estate);
-
-extern void SendAOTupCounts(EState *estate);
 
 #endif   /* EXECUTOR_H  */

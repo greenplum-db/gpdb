@@ -327,7 +327,6 @@ _outPlannedStmt(StringInfo str, PlannedStmt *node)
 	WRITE_NODE_FIELD(returningLists);
 
 	WRITE_NODE_FIELD(result_partitions);
-	WRITE_NODE_FIELD(result_aosegnos);
 	WRITE_NODE_FIELD(queryPartOids);
 	WRITE_NODE_FIELD(queryPartsMetadata);
 	WRITE_NODE_FIELD(numSelectorsPerScanId);

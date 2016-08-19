@@ -3751,15 +3751,6 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"max_appendonly_tables", PGC_POSTMASTER, APPENDONLY_TABLES,
-			gettext_noop("Maximum number of different (unrelated) append only tables that can participate in writing data concurrently."),
-			NULL
-		},
-		&MaxAppendOnlyTables,
-		2048, 0, INT_MAX, NULL, NULL
-	},
-
-	{
 		{"test_appendonly_version_default", PGC_USERSET, APPENDONLY_TABLES,
 			gettext_noop("Align append-only blocks to 64 bits."),
 			NULL,

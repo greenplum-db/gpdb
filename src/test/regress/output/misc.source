@@ -504,6 +504,8 @@ SELECT user_relns() AS user_relns
    ORDER BY user_relns;
                user_relns               
 ----------------------------------------
+  __gp_aocsseg_return_type
+  __gp_aoseg_return_type
  __gp_aovisimap_hidden_t
  __gp_fullname
  __gp_is_append_only
@@ -655,7 +657,7 @@ SELECT user_relns() AS user_relns
  toyemp
  usr_define_type
  varchar_tbl
-(151 rows)
+(153 rows)
 
 SELECT name(equipment(hobby_construct(text 'skywalking', text 'mer')));
  name 

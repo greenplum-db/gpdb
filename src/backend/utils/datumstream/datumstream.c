@@ -796,11 +796,12 @@ datumstreamwrite_open_file(DatumStreamWrite * ds, char *fn, int64 eof, int64 eof
 		datumstreamwrite_close_file(ds);
 
 	/*
-	 * Segment file #0 is created when the Append-Only table is created.
-	 *
-	 * Other segment files are created on-demand under transaction.
+	 * Segment file #0 is created when the Append-Only table is created,
+	 * other segment files are created on-demand under transaction. Even
+	 * segment file #0 might get deleted by a later vacuum though. So
+	 * always be prepared to create the file, when starting from EOF 0.
 	 */
-	if (segmentFileNum > 0 && eof == 0)
+	if (eof == 0)
 	{
 		AppendOnlyStorageWrite_TransactionCreateFile(
 													 &ds->ao_write,

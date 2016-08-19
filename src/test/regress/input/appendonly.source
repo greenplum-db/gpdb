@@ -37,17 +37,17 @@ CREATE TABLE tenk_ao10 (like tenk_heap) with (compresslevel=5);
 CREATE TABLE tenk_ao11 (like tenk_heap) with (blocksize=8192);
 CREATE TABLE tenk_ao12 (like tenk_heap) with (appendonly=false,blocksize=8192);
 
--------------------- 
+-- ------------------ 
 -- catalog checks
---------------------
+-- ------------------
 
 -- check pg_appendonly
 SELECT c.relname, a.blocksize, a.compresstype, a.compresslevel, a.checksum FROM pg_class c, pg_appendonly a
        WHERE c.relname LIKE 'tenk_ao%' AND c.oid=a.relid AND c.relname not like 'tenk_aocs%' ORDER BY c.relname;
 
--------------------- 
+-- ------------------ 
 -- fn needed later
---------------------
+-- ------------------
 create  or replace function aototal(relname text) returns float8 as $$
 declare
   aosegname text;
@@ -57,15 +57,31 @@ begin
 
   execute 'select relname from pg_class where oid=(select segrelid from pg_class, pg_appendonly where relname=''' || relname || ''' and relid = pg_class.oid)' into aosegname;
   if aosegname is not null then
-          execute 'select tupcount from pg_aoseg.' || aosegname into tupcount;
+          execute 'select sum(tupcount) from gp_dist_random(''pg_aoseg.' || aosegname || ''')' into tupcount;
   end if;
   return tupcount;
 end; $$ language plpgsql volatile READS SQL DATA;
 
+-- ------------------ 
+-- functions for snapshotting the current mod counts, and checking the diff vs last snapshot
+-- ------------------
+create temp table modcounts_snapshot (segment_id int, aosegno int, modcount bigint) distributed randomly;
 
--------------------- 
+create or replace function snapshot_modcounts(relname regclass) returns void as $$
+begin
+  delete from modcounts_snapshot;
+
+  insert into modcounts_snapshot select segment_id, segno, modcount from  gp_toolkit.__gp_aoseg_name(relname);
+end;
+$$ language plpgsql volatile;
+
+create or replace function diff_modcounts(relname regclass, segment_id out int, aosegno out int, modcount_diff out bigint) returns setof record as $$
+  select a.segment_id, a.segno, a.modcount - b.modcount mod_diff from gp_toolkit.__gp_aoseg_name($1) a left outer join modcounts_snapshot b on a.segment_id = b.segment_id and a.segno = b.aosegno;
+$$ language sql;
+
+-- ------------------ 
 -- supported sql
---------------------
+-- ------------------
 
 -- COPY
 COPY tenk_heap FROM '@abs_srcdir@/data/tenk.data';
@@ -130,9 +146,9 @@ SELECT count(*) FROM tenk_ao3;
 SELECT count(*) FROM tenk_ao4;
 SELECT aototal('tenk_ao1'), aototal('tenk_ao2'), aototal('tenk_ao3'), aototal('tenk_ao4');
 
--------------------- 
+-- ------------------ 
 -- transactionality
---------------------
+-- ------------------
 
 -- rollback
 BEGIN;
@@ -168,9 +184,9 @@ COMMIT;
 SELECT count(*) FROM tenk_ao1 WHERE unique1 = 12345678; -- should be 0
 SELECT count(*) FROM tenk_ao1 WHERE unique1 = 87654321; -- should be 5
 
---------------------
+-- ------------------
 -- cursors (basic)
---------------------
+-- ------------------
 BEGIN;
 
 DECLARE foo1 CURSOR FOR SELECT * FROM tenk_ao1 ORDER BY 1,2,3,4;
@@ -378,29 +394,32 @@ create rule ao_rule_delete as on update to tenk_ao5 do instead delete from tenk_
 insert into tenk_ao5(unique1, unique2) values (3, 99998889); -- should go through both rules
 select * from tenk_ao5 where unique1=1;
 
----------------------
+-- -------------------
 -- UAO
----------------------
+-- -------------------
 -- DELETE
 select count(*) from tenk_ao1;
-select count(*) from gp_toolkit.__gp_aoseg_name('tenk_ao1') where modcount > 0;
+select snapshot_modcounts('tenk_ao1');
+select count(*) from diff_modcounts('tenk_ao1') where modcount_diff > 0; --sanity check our test function
 DELETE FROM tenk_ao1 WHERE unique1 = 1;
 -- modcount after DELETE must increment to flag table should be included in
 -- incremental backup
-select count(*) from gp_toolkit.__gp_aoseg_name('tenk_ao1') where modcount > 0;
+select count(*) from diff_modcounts('tenk_ao1') where modcount_diff > 0;
 select count(*) from tenk_ao1;
 -- UPDATE
+select snapshot_modcounts('tenk_ao1');
 select count(*) from tenk_ao1 where unique2 < 0;
+select count(*) from diff_modcounts('tenk_ao1') where modcount_diff > 0; --sanity check our test function
 UPDATE tenk_ao1 SET unique2 = -unique1 WHERE unique2 <= 5;
 UPDATE tenk_ao1 SET two = 2;
 -- modcount after UPDATE must increment to flag table should be included in
 -- incremental backup
-select count(*) from gp_toolkit.__gp_aoseg_name('tenk_ao1') where modcount > 1;
+select count(*) from diff_modcounts('tenk_ao1') where modcount_diff = 0;
 select count(*) from tenk_ao1 where unique2 < 0;
 
--------------------- 
+-- ------------------ 
 -- unsupported sql 
---------------------
+-- ------------------
 -- ALTER
 ALTER TABLE tenk_ao1 RENAME TO tenk_renamed;
 ALTER TABLE tenk_renamed ADD COLUMN newcol int default 10;
@@ -410,19 +429,19 @@ ALTER TABLE tenk_renamed ADD COLUMN newcol2 int NOT NULL; -- should fail
 SELECT count(*) FROM tenk_renamed;
 ALTER TABLE tenk_renamed RENAME TO tenk_ao1;
 
---------------------
+-- ------------------
 -- system columns
---------------------
+-- ------------------
 CREATE TABLE syscoltest(a int) WITH (appendonly=true);
 INSERT INTO syscoltest VALUES(1);
 SELECT ctid FROM syscoltest;
 DROP TABLE syscoltest;
 
---------------------
+-- ------------------
 -- relation size tests -- make sure can execute without block directory, sanity checks on relative sizes
 --
 --
---------------------
+-- ------------------
 CREATE TABLE aosizetest_1(a int) WITH (appendonly=true);
 CREATE TABLE aosizetest_2(a int) WITH (appendonly=true);
 --
@@ -439,12 +458,13 @@ SELECT pg_total_relation_size('aosizetest_1') < pg_total_relation_size('aosizete
 DROP TABLE aosizetest_1;
 DROP TABLE aosizetest_2;
 
+-- Check that each row is assign a unique ctid on inserts.
 DROP TABLE IF EXISTS ao_selection;
 CREATE TABLE ao_selection (a INT, b INT) WITH (appendonly=true);
 INSERT INTO ao_selection VALUES (generate_series(1,100000), generate_series(1,10000));
-SELECT count(*) from gp_fastsequence WHERE objid IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class WHERE relname='ao_selection'));
+select count(*) from ao_selection a, ao_selection b where a.ctid::text = b.ctid::text and a.gp_segment_id = b.gp_segment_id;
 INSERT INTO ao_selection values (generate_series(1,100000), generate_series(1,10000));
-SELECT count(*) FROM gp_fastsequence WHERE objid IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class WHERE relname='ao_selection'));
+select count(*) from ao_selection a, ao_selection b where a.ctid::text = b.ctid::text and a.gp_segment_id = b.gp_segment_id;
 
 -- Check compression and distribution
 create table ao_compress_table (id int, v varchar)
@@ -466,9 +486,9 @@ insert into ao_compress_results values (pg_relation_size('ao_compress_table'), p
 
 select count(*) from (select distinct * from ao_compress_results) temp; -- should give 2 after reclaiming space
 
--------------------- 
+-- ------------------ 
 -- supported sql 
---------------------
+-- ------------------
 DROP TABLE tenk_heap;
 DROP TABLE tenk_ao1;
 DROP TABLE tenk_ao2;

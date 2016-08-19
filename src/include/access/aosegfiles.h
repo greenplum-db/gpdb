@@ -34,10 +34,10 @@
  *
  * The state AOSEG_STATE_USECURRENT is a pseudo-state that is used
  * when a state parameter in a function should not change the
- * current state.
+ * current state. It should not appear on disk.
  * AOSEG_STATE_DEFAULT is the default state. The segment file can be used for
  * insertions and compactions. The contents if the segment file 
- * is visible under the limitations  of the visimap and the eof.
+ * is visible under the limitations of the visimap and the eof.
  * AOSEG_STATE_AWAITING_DROP is used if a compaction drop transaction on that
  * segment fails because the transaction was aborted. The segment
  * cannot be used for insertions. It has the highest priority for
@@ -80,11 +80,6 @@ typedef enum FileSegInfoState
                25, 10000, 0, 0, false, false, RELKIND_RELATION, RELSTORAGE_HEAP, Natts_pg_aoseg, \
                0, 0, 0, 0, 0, false, false, false, false, FirstNormalTransactionId, {0}, {{{'\0','\0','\0','\0'},{'\0'}}}
 
-
-/*
- * GUC variables
- */
-extern int MaxAppendOnlyTables;		/* Max # of tables */
 
 /*
  * Descriptor of a single AO relation file segment.
@@ -171,6 +166,8 @@ GetAllFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int *
 extern FileSegInfo **
 GetAllFileSegInfo_pg_aoseg_rel(char *relationName, Relation pg_aoseg_rel, Snapshot appendOnlyMetaDataSnapshot, int *totalsegs);
 
+extern bool FileSegCanBeDropped(Relation parentrel, int segno);
+
 extern void UpdateFileSegInfo(Relation parentrel,
 				  int segno,
 				  int64 eof,
@@ -182,6 +179,7 @@ extern void UpdateFileSegInfo(Relation parentrel,
 
 extern void ClearFileSegInfo(Relation parentrel, int segno, FileSegInfoState newState);
 extern void SetFileSegInfoState(Relation parentrel, int segno, FileSegInfoState newState);
+extern void IncrementFileSegInfoModCount(Relation parentrel, int segno);
 extern FileSegTotals *
 GetSegFilesTotals(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot);
 

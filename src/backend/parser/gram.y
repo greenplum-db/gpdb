@@ -3195,7 +3195,6 @@ CopyStmt:	COPY opt_binary qualified_name opt_column_list opt_oids
 					n->filename = $7;
 					n->sreh = $11;
 					n->partitions = NULL;
-					n->ao_segnos = NIL;
 					n->options = NIL;
 					n->skip_ext_partition = $12;
 					
@@ -3221,7 +3220,6 @@ CopyStmt:	COPY opt_binary qualified_name opt_column_list opt_oids
 					n->filename = $4;
 					n->options = $6;
 					n->partitions = NULL;
-					n->ao_segnos = NIL;
 					n->skip_ext_partition = false;
 					$$ = (Node *)n;
 				}

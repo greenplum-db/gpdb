@@ -147,6 +147,7 @@ extern AOCSFileSegInfo *GetAOCSFileSegInfo(Relation prel,
 extern AOCSFileSegInfo **GetAllAOCSFileSegInfo(Relation prel,
 					  Snapshot appendOnlyMetaDataSnapshot, 
 					  int *totalseg);
+extern bool AOCSFileSegCanBeDropped(Relation parentrel, int segno);
 
 extern AOCSFileSegInfo **
 GetAllAOCSFileSegInfo_pg_aocsseg_rel(

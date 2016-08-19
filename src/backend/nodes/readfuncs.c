@@ -2846,12 +2846,6 @@ _readVacuumStmt(void)
 	READ_NODE_FIELD(expanded_relids);
 	READ_NODE_FIELD(extra_oids);
 
-	READ_NODE_FIELD(appendonly_compaction_segno);
-	READ_NODE_FIELD(appendonly_compaction_insert_segno);
-	READ_BOOL_FIELD(appendonly_compaction_vacuum_cleanup);
-	READ_BOOL_FIELD(appendonly_compaction_vacuum_prepare);
-	READ_BOOL_FIELD(heap_truncate);
-
 	READ_DONE();
 }
 

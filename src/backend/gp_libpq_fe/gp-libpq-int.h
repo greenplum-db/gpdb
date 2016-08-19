@@ -196,9 +196,6 @@ struct pg_result
 
 	/* GPDB: number of rows rejected in SREH (protocol message 'j') */
 	int			numRejected;
-	/* GPDB: number of processed tuples for each AO partition */
-	int			naotupcounts;
-	PQaoRelTupCount *aotupcounts;
 };
 
 /* PGAsyncStatusType defines the state of the query-execution state machine */

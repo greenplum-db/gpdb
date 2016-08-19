@@ -156,10 +156,6 @@ struct PGPROC
 	uint32		combocid_map_count; /* how many entries in the map ? */
 
 	int queryCommandId; /* command_id for the running query */
-
-	bool serializableIsoLevel; /* true if proc has serializable isolation level set */
-
-	bool inDropTransaction; /* true if proc is in vacuum drop transaction */
 };
 
 /* NOTE: "typedef struct PGPROC PGPROC" appears in storage/lock.h. */
