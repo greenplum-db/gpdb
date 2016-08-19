@@ -2864,8 +2864,8 @@ describeRoles(const char *pattern, bool verbose)
 
 		/* add Greenplum specific attributes */
 		appendPQExpBufferStr(&buf, "\n, r.rolcreaterextgpfd");
-		appendPQExpBufferStr(&buf, "\n, r.rolcreaterexthttp");
 		appendPQExpBufferStr(&buf, "\n, r.rolcreatewextgpfd");
+		appendPQExpBufferStr(&buf, "\n, r.rolcreaterexthttp");
 		appendPQExpBufferStr(&buf, "\n, r.rolcreaterexthdfs");
 		appendPQExpBufferStr(&buf, "\n, r.rolcreatewexthdfs");
 
@@ -2936,10 +2936,10 @@ describeRoles(const char *pattern, bool verbose)
 			add_role_attribute(&buf, _("Ext gpfdist Table"));
 
 		if (strcmp(PQgetvalue(res, i, 9), "t") == 0)
-			add_role_attribute(&buf, _("Ext http Table"));
+			add_role_attribute(&buf, _("Wri Ext gpfdist Table"));
 
 		if (strcmp(PQgetvalue(res, i, 10), "t") == 0)
-			add_role_attribute(&buf, _("Wri Ext http Table"));
+			add_role_attribute(&buf, _("Ext http Table"));
 
 		if (strcmp(PQgetvalue(res, i, 11), "t") == 0)
 			add_role_attribute(&buf, _("Ext hdfs Table"));
