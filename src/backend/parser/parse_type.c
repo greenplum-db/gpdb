@@ -420,7 +420,7 @@ TypeNameListToString(List *typenames)
 }
 
 /* return a Type structure, given a type id */
-/* NB: caller must ReleaseType the type tuple when done with it */
+/* NB: caller must ReleaseSysCache the type tuple when done with it */
 Type
 typeidType(Oid id)
 {

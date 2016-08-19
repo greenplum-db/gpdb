@@ -341,7 +341,7 @@ transformWindowFrameEdge(ParseState *pstate, WindowFrameEdge *e,
 								 parser_errposition(pstate, con->location)));
 
 					ReleaseOperator(tup);
-					ReleaseType(typ);
+					ReleaseSysCache(typ);
 				}
 			}
 		}

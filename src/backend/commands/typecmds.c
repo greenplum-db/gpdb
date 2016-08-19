@@ -1002,7 +1002,7 @@ DefineDomain(CreateDomainStmt *stmt)
 	/*
 	 * Now we can clean up.
 	 */
-	ReleaseType(typeTup);
+	ReleaseSysCache(typeTup);
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{

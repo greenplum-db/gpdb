@@ -1499,7 +1499,7 @@ make_partition_rules(ParseState *pstate,
 						pgtype = (Form_pg_type) GETSTRUCT(typ);
 						dat = OidFunctionCall1(pgtype->typoutput, c->constvalue);
 
-						ReleaseType(typ);
+						ReleaseSysCache(typ);
 						val = makeString(DatumGetCString(dat));
 						aconst->val = *val;
 						aconst->location = -1;
@@ -1809,7 +1809,7 @@ make_partition_rules(ParseState *pstate,
 						val = makeString(DatumGetCString(dat));
 						aconst->val = *val;
 						aconst->location = -1;
-						ReleaseType(typ);
+						ReleaseSysCache(typ);
 
 						pValConst = aconst;
 					}
@@ -2949,7 +2949,7 @@ flatten_partition_val(Node *node, Oid target_type)
 		bool		typbyval = ((Form_pg_type) GETSTRUCT(typ))->typbyval;
 		bool		isnull;
 
-		ReleaseType(typ);
+		ReleaseSysCache(typ);
 
 		curtyp = exprType(node);
 		Assert(OidIsValid(curtyp));
@@ -3185,7 +3185,7 @@ preprocess_range_spec(partValidationState *vstate)
 							int4		typmod =
 							((Form_pg_type) GETSTRUCT(newetyp))->typtypmod;
 
-							ReleaseType(newetyp);
+							ReleaseSysCache(newetyp);
 
 							/* we need to coerce */
 							e = coerce_partition_value(e,
@@ -3721,7 +3721,7 @@ partition_range_every(ParseState *pstate, PartitionBy *pBy, List *coltypes,
 				typ = typeidType(restypid);
 				c = makeConst(restypid, -1, typeLen(typ), res, false,
 							  typeByVal(typ));
-				ReleaseType(typ);
+				ReleaseSysCache(typ);
 
 				/*
 				 * n1t + (...) NOTE: order is important because several useful
@@ -3738,7 +3738,7 @@ partition_range_every(ParseState *pstate, PartitionBy *pBy, List *coltypes,
 				typ = typeidType(restypid);
 				newend = makeConst(restypid, -1, typeLen(typ), res, false,
 								   typeByVal(typ));
-				ReleaseType(typ);
+				ReleaseSysCache(typ);
 
 				/*----------
 				 * Now we must detect a few conditions.
@@ -3788,7 +3788,7 @@ partition_range_every(ParseState *pstate, PartitionBy *pBy, List *coltypes,
 					typ = typeidType(test_typid);
 					tmpconst = makeConst(test_typid, -1, typeLen(typ), uncast,
 										 false, typeByVal(typ));
-					ReleaseType(typ);
+					ReleaseSysCache(typ);
 
 					iseq = eval_basic_opexpr(NULL, opreq, (Node *) tmpconst,
 											 (Node *) newend, NULL, NULL,
@@ -4620,11 +4620,11 @@ eval_basic_opexpr(ParseState *pstate, List *oprname, Node *leftarg,
 
 				c = makeConst(opexpr->opresulttype, -1, typeLen(typ), res,
 							  isnull, typeByVal(typ));
-				ReleaseType(typ);
+				ReleaseSysCache(typ);
 
 				typ = typeidType(*restypid);
 				typmod = ((Form_pg_type) GETSTRUCT(typ))->typtypmod;
-				ReleaseType(typ);
+				ReleaseSysCache(typ);
 
 				e = (Expr *) coerce_type(NULL, (Node *) c, opexpr->opresulttype,
 										 *restypid, typmod,
@@ -4659,7 +4659,7 @@ eval_basic_opexpr(ParseState *pstate, List *oprname, Node *leftarg,
 			*typlen = len;
 		}
 
-		ReleaseType(typ);
+		ReleaseSysCache(typ);
 	}
 	else
 	{

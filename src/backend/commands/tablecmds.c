@@ -6266,7 +6266,7 @@ ATExecAddColumn(AlteredTableInfo *tab, Relation rel,
 	attribute->attislocal = colDef->is_local;
 	attribute->attinhcount = colDef->inhcount;
 
-	ReleaseType(typeTuple);
+	ReleaseSysCache(typeTuple);
 
 	simple_heap_insert(attrdesc, attributeTuple);
 
@@ -8920,7 +8920,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	attTup->attalign = tform->typalign;
 	attTup->attstorage = tform->typstorage;
 
-	ReleaseType(typeTuple);
+	ReleaseSysCache(typeTuple);
 
 	simple_heap_update(attrelation, &heapTup->t_self, heapTup);
 
@@ -12090,7 +12090,7 @@ prebuild_temp_table(Relation rel, RangeVar *tmpname, List *distro, List *opts,
 				typstr = typeTypeName(typ);
 				tname->names = list_make2(makeString(nspname),
 										  makeString(typstr));
-				ReleaseType(typ);
+				ReleaseSysCache(typ);
 				tname->typemod = att->atttypmod;
 
 				/*

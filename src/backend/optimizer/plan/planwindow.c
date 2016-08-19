@@ -1314,7 +1314,7 @@ static bool validateBound(Node *node, bool is_rows)
 				 errmsg("%s parameter cannot be negative", is_rows ? "ROWS" : "RANGE")));
 	
 	ReleaseOperator(tup);
-	ReleaseType(typ);
+	ReleaseSysCache(typ);
 	
 	return TRUE;
 }

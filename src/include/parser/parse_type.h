@@ -19,8 +19,6 @@
 
 typedef HeapTuple Type;
 
-#define ReleaseType(fmw) ReleaseSysCache((fmw))
-
 extern Type LookupTypeName(ParseState *pstate, const TypeName *typename,
 			   int32 *typmod_p);
 extern Type typenameType(ParseState *pstate, const TypeName *typename,

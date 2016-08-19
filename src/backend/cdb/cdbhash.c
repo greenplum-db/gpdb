@@ -693,7 +693,7 @@ typeIsArrayType(Oid typeoid)
 		typeform->typinput == F_ARRAY_IN)
 		res = true;
 
-	ReleaseType(tup);
+	ReleaseSysCache(tup);
 	return res;
 }
 
@@ -709,7 +709,7 @@ typeIsEnumType(Oid typeoid)
 	if (typeform->typtype == 'e' && typeform->typinput == F_ENUM_IN)
 		res = true;
 
-	ReleaseType(tup);
+	ReleaseSysCache(tup);
 	return res;
 }
 

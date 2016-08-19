@@ -272,7 +272,7 @@ coerce_type(ParseState *pstate, Node *node,
 									  targetTypeId,
 									  cformat, location, false, false);
 
-		ReleaseType(targetType);
+		ReleaseSysCache(targetType);
 
 		return result;
 	}
@@ -2467,7 +2467,7 @@ find_typmod_coercion_function(Oid typeId,
 		typeId = typeForm->typelem;
 		result = COERCION_PATH_ARRAYCOERCE;
 	}
-	ReleaseType(targetType);
+	ReleaseSysCache(targetType);
 
 	/* Look in pg_cast */
 	tuple = SearchSysCache(CASTSOURCETARGET,
