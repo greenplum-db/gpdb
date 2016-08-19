@@ -1129,7 +1129,7 @@ with my_sum(total) as (select sum(value) from with_test1),
      my_sum(group_total) as (select sum(value) from with_test1 group by i)
 select *
 from my_sum;
-ERROR:  query name "my_sum" in WITH clause must not be specified more than once
+ERROR:  WITH query name "my_sum" specified more than once
 LINE 2:      my_sum(group_total) as (select sum(value) from with_tes...
              ^
 -- INTO clause

@@ -61,13 +61,11 @@ transformWithClause(ParseState *pstate, WithClause *withClause)
 			CommonTableExpr *cte2 = (CommonTableExpr *) lfirst(rest);
 
 			if (strcmp(cte->ctename, cte2->ctename) == 0)
-			{
 				ereport(ERROR,
 						(errcode(ERRCODE_DUPLICATE_ALIAS),
-						 errmsg("query name \"%s\" in WITH clause must not be specified more than once",
-								cte2->ctename),
+					errmsg("WITH query name \"%s\" specified more than once",
+						   cte2->ctename),
 						 parser_errposition(pstate, cte2->location)));
-			}
 		}
 
 		cte->cterecursive = false;
