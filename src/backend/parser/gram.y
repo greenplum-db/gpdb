@@ -12086,6 +12086,7 @@ case_expr:	CASE case_arg when_clause_list case_default END_P
 					c->arg = (Expr *) $2;
 					c->args = $3;
 					c->defresult = (Expr *) $4;
+					c->location = @1;
 					$$ = (Node *)c;
 				}
 		;
@@ -12102,6 +12103,7 @@ when_clause:
 					CaseWhen *w = makeNode(CaseWhen);
 					w->expr = (Expr *) $2;
 					w->result = (Expr *) $4;
+					w->location = @1;
 					$$ = (Node *)w;
 				}
 			;

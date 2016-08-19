@@ -1910,6 +1910,7 @@ transformCoalesceExpr(ParseState *pstate, CoalesceExpr *c)
 	}
 
 	newc->args = newcoercedargs;
+	newc->location = c->location;
 	return (Node *) newc;
 }
 
@@ -1948,6 +1949,7 @@ transformMinMaxExpr(ParseState *pstate, MinMaxExpr *m)
 	}
 
 	newm->args = newcoercedargs;
+	newm->location = m->location;
 	return (Node *) newm;
 }
 
