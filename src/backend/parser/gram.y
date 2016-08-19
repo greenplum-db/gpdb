@@ -576,7 +576,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 
 	ERRORS EVERY EXCHANGE EXCLUDE
 
-	FIELDS FILESPACE FILL FILTER FOLLOWING FORMAT FORMATTER
+	FIELDS FILESPACE FILL FILTER FOLLOWING FORMAT
 
 	GROUP_ID GROUPING
 
@@ -586,11 +586,11 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 
 	LIST LOG_P
 
-	MASTER MEDIAN MERGE MIRROR MISSING MODIFIES MODIFY
+	MASTER MEDIAN MERGE MISSING MODIFIES MODIFY
 
 	NEWLINE NOCREATEEXTTABLE NOOVERCOMMIT
 
-	OPTIONS ORDERED OTHERS OVER OVERCOMMIT
+	ORDERED OTHERS OVER OVERCOMMIT
 
 	PARTITION PARTITIONS PASSING PERCENT PERCENTILE_CONT PERCENTILE_DISC
 	PRECEDING PROTOCOL
@@ -600,7 +600,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 	RANDOMLY RANGE READABLE READS RECURSIVE REF REJECT_P RESOURCE
 	ROLLUP ROOTPARTITION
 
-	SCATTER SEGMENT SERVER SETS SPLIT SQL SUBPARTITION SUBPARTITIONS
+	SCATTER SEGMENT SETS SPLIT SQL SUBPARTITION SUBPARTITIONS
 
 	THRESHOLD TIES
 
@@ -608,7 +608,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 
 	VALIDATION VARIADIC
 
-	WEB WINDOW WITHIN WRAPPER WRITABLE
+	WEB WINDOW WITHIN WRITABLE
 
 	XMLEXISTS
 
@@ -736,7 +736,6 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 			%nonassoc FIRST_P
 			%nonassoc FORCE
 			%nonassoc FORMAT
-			%nonassoc FORMATTER
 			%nonassoc FORWARD
 			%nonassoc FUNCTION
 			%nonassoc GLOBAL
@@ -782,7 +781,6 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 			%nonassoc MERGE
 			%nonassoc MINUTE_P
 			%nonassoc MINVALUE
-			%nonassoc MIRROR
 			%nonassoc MISSING
 			%nonassoc MODE
 			%nonassoc MODIFIES
@@ -810,7 +808,6 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 			%nonassoc OF
 			%nonassoc OIDS
 			%nonassoc OPTION
-			%nonassoc OPTIONS
 			%nonassoc OTHERS
 			%nonassoc OVER
 			%nonassoc OVERCOMMIT
@@ -861,7 +858,6 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 			%nonassoc SEGMENT
 			%nonassoc SEQUENCE
 			%nonassoc SERIALIZABLE
-			%nonassoc SERVER
 			%nonassoc SESSION
 			%nonassoc SHARE
 			%nonassoc SHOW
@@ -911,7 +907,6 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 			%nonassoc WITHIN
 			%nonassoc WITHOUT
 			%nonassoc WORK
-			%nonassoc WRAPPER
 			%nonassoc WRITABLE
 			%nonassoc WRITE
 			%nonassoc YEAR_P
@@ -12722,7 +12717,6 @@ unreserved_keyword:
 			| FIRST_P
 			| FORCE
 			| FORMAT
-			| FORMATTER
 			| FORWARD
 			| FUNCTION
 			| GLOBAL
@@ -12772,7 +12766,6 @@ unreserved_keyword:
 			| MERGE
 			| MINUTE_P
 			| MINVALUE
-			| MIRROR
 			| MISSING
 			| MODE
 			| MODIFIES
@@ -12801,7 +12794,6 @@ unreserved_keyword:
 			| OIDS
 			| OPERATOR
 			| OPTION
-			| OPTIONS
 			| ORDERED
 			| OTHERS
 			| OVER
@@ -12860,7 +12852,6 @@ unreserved_keyword:
 			| SEGMENT
 			| SEQUENCE
 			| SERIALIZABLE
-			| SERVER
 			| SESSION
 			| SET
 			| SHARE
@@ -12913,7 +12904,6 @@ unreserved_keyword:
 			| WITHIN
 			| WITHOUT
 			| WORK
-			| WRAPPER
 			| WRITABLE
 			| WRITE
 			| XML_P
@@ -13022,7 +13012,6 @@ PartitionIdentKeyword: ABORT_P
 			| FIRST_P
 			| FORCE
 			| FORMAT
-			| FORMATTER
 			| FORWARD
 			| FUNCTION
 			| GLOBAL
@@ -13066,7 +13055,6 @@ PartitionIdentKeyword: ABORT_P
 			| MAXVALUE
 			| MERGE
 			| MINVALUE
-			| MIRROR
 			| MISSING
 			| MODE
 			| MODIFIES
