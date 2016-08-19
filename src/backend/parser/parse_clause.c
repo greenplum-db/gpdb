@@ -1517,9 +1517,9 @@ transformFromClauseItem(ParseState *pstate, Node *n,
 		 *
 		 * Note: expandRTE returns new lists, safe for me to modify
 		 */
-		expandRTE(l_rte, l_rtindex, 0, false, -1,
+		expandRTE(l_rte, l_rtindex, 0, -1, false,
 				  &l_colnames, &l_colvars);
-		expandRTE(r_rte, r_rtindex, 0, false, -1,
+		expandRTE(r_rte, r_rtindex, 0, -1, false,
 				  &r_colnames, &r_colvars);
 
 		/*
