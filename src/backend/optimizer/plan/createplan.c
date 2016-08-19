@@ -254,8 +254,7 @@ create_subplan(PlannerInfo *root, Path *best_path)
         case T_Motion:
             plan = create_motion_plan(root, (CdbMotionPath *)best_path);
             break;
-        default:
-            Assert(false);
+		default:
 			elog(ERROR, "unrecognized node type: %d",
 				 (int) best_path->pathtype);
 			plan = NULL;		/* keep compiler quiet */
@@ -267,8 +266,7 @@ create_subplan(PlannerInfo *root, Path *best_path)
         plan->dispatch = DISPATCH_PARALLEL;
 
 	return plan;
-}                               /* create_subplan */
-
+}
 
 /*
  * create_scan_plan
@@ -726,6 +724,7 @@ create_append_plan(PlannerInfo *root, AppendPath *best_path)
 	}
 
 	plan = make_append(subplans, false, tlist);
+
 	return (Plan *) plan;
 }
 

@@ -58,7 +58,7 @@ static Node *transformAExprIn(ParseState *pstate, A_Expr *a);
 static Node *transformFuncCall(ParseState *pstate, FuncCall *fn);
 static Node *transformSubLink(ParseState *pstate, SubLink *sublink);
 static Node *transformArrayExpr(ParseState *pstate, A_ArrayExpr *a,
-                                  Oid array_type, Oid element_type, int32 typmod);
+				   Oid array_type, Oid element_type, int32 typmod);
 static Node *transformRowExpr(ParseState *pstate, RowExpr *r);
 static Node *transformTableValueExpr(ParseState *pstate, TableValueExpr *t);
 static Node *transformCoalesceExpr(ParseState *pstate, CoalesceExpr *c);
@@ -112,11 +112,6 @@ static char *percentileFuncString(PercentileExpr *p, Oid *argtypes, int arglen,
  * another, such as A_Const => Const; we just do nothing when handed
  * a Const.  More care is needed for node types that are used as both
  * input and output of transformExpr; see SubLink for example.
- *
- * CDB: On return, pstate->breadcrumb.node points to the original 'expr' node.
- * This is intended to provide a default cursor location in case an error is
- * reported during further processing of the result, such as conversion to a
- * target type.
  */
 Node *
 transformExpr(ParseState *pstate, Node *expr)
@@ -163,10 +158,10 @@ transformExpr(ParseState *pstate, Node *expr)
 				break;
 			}
 
-        case T_A_ArrayExpr:
-            result = transformArrayExpr(pstate, (A_ArrayExpr *) expr,
-                                        InvalidOid, InvalidOid, -1);
-            break;
+		case T_A_ArrayExpr:
+			result = transformArrayExpr(pstate, (A_ArrayExpr *) expr,
+										InvalidOid, InvalidOid, -1);
+			break;
 
 		case T_TypeCast:
 			{
@@ -174,19 +169,20 @@ transformExpr(ParseState *pstate, Node *expr)
 				Node	   *arg = NULL;
 
 				/*
-				* If the subject of the typecast is an ARRAY[] construct
-				* and the target type is an array type, we invoke
-				* transformArrayExpr() directly so that we can pass down
-				* the type information. This avoids some cases where
-				* transformArrayExpr() might not infer the correct type
-				*/
+				 * If the subject of the typecast is an ARRAY[] construct and
+				 * the target type is an array type, we invoke
+				 * transformArrayExpr() directly so that we can pass down the
+				 * type information.  This avoids some cases where
+				 * transformArrayExpr() might not infer the correct type.
+				 */
 				if (IsA(tc->arg, A_ArrayExpr))
 				{
-					Oid	targetType;
-					Oid	elementType;
-					int32	targetTypmod;
+					Oid			targetType;
+					Oid			elementType;
+					int32		targetTypmod;
 
-					targetType = typenameTypeId(pstate, tc->typname, &targetTypmod);
+					targetType = typenameTypeId(pstate, tc->typname,
+												&targetTypmod);
 
 					elementType = get_element_type(targetType);
 					if (OidIsValid(elementType))
@@ -259,7 +255,6 @@ transformExpr(ParseState *pstate, Node *expr)
 		case T_FuncCall:
 			result = transformFuncCall(pstate, (FuncCall *) expr);
 			break;
-
 
 		case T_SubLink:
 			result = transformSubLink(pstate, (SubLink *) expr);
@@ -1527,7 +1522,6 @@ transformSubLink(ParseState *pstate, SubLink *sublink)
 		return result;
 
 	pstate->p_hasSubLinks = true;
-
 	qtree = parse_sub_analyze(sublink->subselect, pstate);
 
 	/*
@@ -1651,9 +1645,16 @@ transformSubLink(ParseState *pstate, SubLink *sublink)
 	return result;
 }
 
+/*
+ * transformArrayExpr
+ *
+ * If the caller specifies the target type, the resulting array will
+ * be of exactly that type.  Otherwise we try to infer a common type
+ * for the elements using select_common_type().
+ */
 static Node *
 transformArrayExpr(ParseState *pstate, A_ArrayExpr *a,
-                   Oid array_type, Oid element_type, int32 typmod)
+				   Oid array_type, Oid element_type, int32 typmod)
 {
 	ArrayExpr  *newa = makeNode(ArrayExpr);
 	List	   *newelems = NIL;
@@ -1669,7 +1670,7 @@ transformArrayExpr(ParseState *pstate, A_ArrayExpr *a,
 	 * Assume that the array is one-dimensional unless we find an array-type
 	 * element expression.
 	 */
-    newa->multidims = false;
+	newa->multidims = false;
 	foreach(element, a->elements)
 	{
 		Node	   *e = (Node *) lfirst(element);
@@ -1683,10 +1684,10 @@ transformArrayExpr(ParseState *pstate, A_ArrayExpr *a,
 		if (IsA(e, A_ArrayExpr))
 		{
 			newe = transformArrayExpr(pstate,
-									 (A_ArrayExpr *) e,
-									 array_type,
-									 element_type,
-									 typmod);
+									  (A_ArrayExpr *) e,
+									  array_type,
+									  element_type,
+									  typmod);
 			newe_type = exprType(newe);
 			/* we certainly have an array here */
 			Assert(array_type == InvalidOid || array_type == newe_type);
@@ -1768,7 +1769,6 @@ transformArrayExpr(ParseState *pstate, A_ArrayExpr *a,
 	 * elements, then the elements are implicitly coerced to the common type.
 	 * This is consistent with other uses of select_common_type().
 	 */
-
 	foreach(element, newelems)
 	{
 		Node	   *e = (Node *) lfirst(element);
@@ -1781,8 +1781,8 @@ transformArrayExpr(ParseState *pstate, A_ArrayExpr *a,
 										 coerce_type,
 										 typmod,
 										 COERCION_EXPLICIT,
-										 COERCE_EXPLICIT_CAST,-1);
-		
+										 COERCE_EXPLICIT_CAST,
+										 -1);
 			if (newe == NULL)
 				ereport(ERROR,
 						(errcode(ERRCODE_CANNOT_COERCE),
@@ -2119,7 +2119,8 @@ transformXmlSerialize(ParseState *pstate, XmlSerialize *xs)
 	 */
 	result = coerce_to_target_type(pstate, (Node *) xexpr,
 								   TEXTOID, targetType, targetTypmod,
-								   COERCION_IMPLICIT, COERCE_IMPLICIT_CAST,
+								   COERCION_IMPLICIT,
+								   COERCE_IMPLICIT_CAST,
 								   xexpr->location);
 	if (result == NULL)
 		ereport(ERROR,
@@ -2242,7 +2243,8 @@ transformWholeRowRef(ParseState *pstate, char *schemaname, char *relname,
 							   &sublevels_up);
 
 	if (rte == NULL)
-		rte = addImplicitRTE(pstate, makeRangeVar(schemaname, relname, location));
+		rte = addImplicitRTE(pstate,
+							 makeRangeVar(schemaname, relname, location));
 
 	vnum = RTERangeTablePosn(pstate, rte, &sublevels_up);
 
@@ -3449,7 +3451,8 @@ make_row_distinct_op(ParseState *pstate, List *opname,
 			result = cmp;
 		else
 			result = (Node *) makeBoolExpr(OR_EXPR,
-										   list_make2(result, cmp), location);
+										   list_make2(result, cmp),
+										   location);
 	}
 
 	if (result == NULL)

@@ -1372,6 +1372,7 @@ coerce_to_specific_type(ParseState *pstate, Node *node,
 	return node;
 }
 
+
 /* select_common_type()
  *		Determine the common supertype of a list of input expression types.
  *		This is used for determining the output type of CASE and UNION

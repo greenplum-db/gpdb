@@ -560,7 +560,7 @@ static struct config_bool ConfigureNamesBool[] =
 		{"constraint_exclusion", PGC_USERSET, QUERY_TUNING_OTHER,
 			gettext_noop("Enables the planner to use constraints to optimize queries."),
 			gettext_noop("Child table scans will be skipped if their "
-						 "constraints guarantee that no rows match the query."),
+					   "constraints guarantee that no rows match the query."),
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&constraint_exclusion,
@@ -1453,7 +1453,7 @@ static struct config_int ConfigureNamesInt[] =
 	{
 		{"max_prepared_transactions", PGC_POSTMASTER, RESOURCES,
 			gettext_noop("Sets the maximum number of simultaneously prepared transactions."),
-            NULL
+			NULL
 		},
 		&max_prepared_xacts,
 		50, 1, 1000, NULL, NULL
@@ -1780,7 +1780,7 @@ static struct config_int ConfigureNamesInt[] =
 			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
 		},
 		&autovacuum_freeze_max_age,
-		200000000, 1000, 2000000000, NULL, NULL
+		200000000, 100000000, 2000000000, NULL, NULL
 	},
 	{
 		/* see max_connections */
@@ -1977,7 +1977,7 @@ static struct config_real ConfigureNamesReal[] =
 	{
 		{"geqo_selection_bias", PGC_USERSET, DEFUNCT_OPTIONS,
 			gettext_noop("Unused. Syntax check only for PostgreSQL compatibility."),
-            NULL,
+			NULL,
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&defunct_double,
@@ -2203,7 +2203,7 @@ static struct config_string ConfigureNamesString[] =
 		{"default_transaction_isolation", PGC_USERSET, CLIENT_CONN_STATEMENT,
 			gettext_noop("Sets the transaction isolation level of each new transaction."),
 			gettext_noop("Each SQL transaction has an isolation level, which "
-						 "can be either \"read uncommitted\", \"read committed\", \"repeatable read\", or \"serializable\"."),
+						 "can be either \"read uncommitted\", \"read committed\", \"repeatable read\", or \"serializable\".")
 		},
 		&default_iso_level_string,
 		"read committed", assign_defaultxactisolevel, NULL
@@ -2644,7 +2644,7 @@ static struct config_string ConfigureNamesString[] =
 		&external_pid_file,
 		NULL, assign_canonical_path, NULL
 	},
-			
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, NULL, NULL, NULL
@@ -3504,7 +3504,7 @@ InitializeGUCOptions(void)
 bool
 SelectConfigFiles(const char *userDoption, const char *progname)
 {
-	char	   *configdir = NULL;
+	char	   *configdir;
 	char	   *fname;
 	struct stat stat_buf;
 
@@ -4384,9 +4384,9 @@ parse_int(const char *value, int *result, int flags, const char **hintmsg)
 
 
 /*
- * Try to parse value as a floating point constant in the usual
- * format.	If the value parsed okay return true, else false.  If
- * result is not NULL, return the semantic value there.
+ * Try to parse value as a floating point number in the usual format.
+ * If the string parses okay, return true, else false.
+ * If okay and result is not NULL, return the value in *result.
  */
 static bool
 parse_real(const char *value, double *result)
@@ -5501,8 +5501,6 @@ ExtractSetVariableArgs(VariableSetStmt *stmt)
 			return NULL;
 	}
 }
-
-
 
 /*
  * SetPGVariable - SET command exported as an easily-C-callable function.
@@ -6798,6 +6796,7 @@ ParseLongOption(const char *string, char **name, char **value)
 			*cp = '_';
 }
 
+
 /*
  * Handle options fetched from pg_database.datconfig, pg_authid.rolconfig,
  * pg_proc.proconfig, etc.	Caller must specify proper context/source/action.
@@ -7087,6 +7086,7 @@ GUCArrayReset(ArrayType *array)
 
 	return newarray;
 }
+
 
 /*
  * assign_hook and show_hook subroutines

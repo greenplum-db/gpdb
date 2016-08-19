@@ -66,7 +66,7 @@ static void reduce_outer_joins_pass2(Node *jtnode,
 						 Relids nonnullable_rels);
 static void fix_in_clause_relids(List *in_info_list, int varno,
 					 Relids subrelids);
-static void fix_append_rel_relids(List *append_rel_list, Index varno,
+static void fix_append_rel_relids(List *append_rel_list, int varno,
 					  Relids subrelids);
 static Node *find_jointree_node_for_rel(Node *jtnode, int relid);
 
@@ -1215,7 +1215,7 @@ fix_in_clause_relids(List *in_info_list, int varno, Relids subrelids)
  * We assume we may modify the AppendRelInfo nodes in-place.
  */
 static void
-fix_append_rel_relids(List *append_rel_list, Index varno, Relids subrelids)
+fix_append_rel_relids(List *append_rel_list, int varno, Relids subrelids)
 {
 	ListCell   *l;
 	int			subvarno = -1;

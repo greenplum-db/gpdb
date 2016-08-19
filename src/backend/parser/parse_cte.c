@@ -6,11 +6,11 @@
  */
 #include "postgres.h"
 
+#include "parser/analyze.h"
 #include "parser/parse_node.h"
 #include "parser/parse_cte.h"
 #include "parser/parse_expr.h"
 #include "parser/parse_relation.h"
-#include "parser/analyze.h"
 #include "nodes/parsenodes.h"
 #include "nodes/nodeFuncs.h"
 
@@ -29,6 +29,8 @@ static void analyzeCTETargetList(ParseState *pstate, CommonTableExpr *cte, List 
 List *
 transformWithClause(ParseState *pstate, WithClause *withClause)
 {
+	ListCell   *lc;
+
 	if (withClause == NULL)
 		return NULL;
 	
@@ -44,22 +46,19 @@ transformWithClause(ParseState *pstate, WithClause *withClause)
 	Assert(pstate->p_future_ctes == NIL);
 
 	/*
-	 * Check if CTE list in the WITH clause contains duplicate query names.
-	 * If so, error out.
+	 * For either type of WITH, there must not be duplicate CTE names in the
+	 * list.  Check this right away so we needn't worry later.
 	 *
 	 * Also, initialize other variables in CommonTableExpr.
 	 */
-	ListCell *lc;
-	foreach (lc, withClause->ctes)
+	foreach(lc, withClause->ctes)
 	{
-		CommonTableExpr *cte = (CommonTableExpr *)lfirst(lc);
+		CommonTableExpr *cte = (CommonTableExpr *) lfirst(lc);
+		ListCell   *rest;
 
-		ListCell *lc2;
-		for_each_cell (lc2, lnext(lc))
+		for_each_cell(rest, lnext(lc))
 		{
-			CommonTableExpr *cte2 = (CommonTableExpr *)lfirst(lc2);
-			Assert(cte != NULL && cte2 != NULL &&
-				   cte->ctename != NULL && cte2->ctename != NULL);
+			CommonTableExpr *cte2 = (CommonTableExpr *) lfirst(rest);
 
 			if (strcmp(cte->ctename, cte2->ctename) == 0)
 			{
@@ -69,7 +68,6 @@ transformWithClause(ParseState *pstate, WithClause *withClause)
 								cte2->ctename),
 						 parser_errposition(pstate, cte2->location)));
 			}
-			
 		}
 
 		cte->cterecursive = false;
@@ -154,14 +152,16 @@ GetCTEForRTE(ParseState *pstate, RangeTblEntry *rte, int rtelevelsup)
 static void
 analyzeCTE(ParseState *pstate, CommonTableExpr *cte)
 {
+	Query	   *query;
+
 	Assert(cte != NULL);
 	Assert(cte->ctequery != NULL);
 	Assert(!IsA(cte->ctequery, Query));
 
-	Query *query = parse_sub_analyze(cte->ctequery, pstate);
-	Assert(IsA(query, Query));
+	query = parse_sub_analyze(cte->ctequery, pstate);
+	cte->ctequery = (Node *) query;
 
-	cte->ctequery = (Node *)query;
+	Assert(IsA(query, Query));
 
 	/* Check if the query is what we expected. */
 	if (!IsA(query, Query))
@@ -226,27 +226,29 @@ reportDuplicateNames(const char *queryName, List *names)
 static void
 analyzeCTETargetList(ParseState *pstate, CommonTableExpr *cte, List *tlist)
 {
+	int			numaliases;
+	int			varattno;
+	ListCell   *tlistitem;
+
+	/* Not done already ... */
 	Assert(cte->ctecolnames == NIL);
 
 	/*
-	 * We need to determine column names, types, and typmods.  The alias
-	 * column names override anything coming from the query itself.  (Note:
-	 * the SQL spec says that the alias list must be empty or exactly as long
-	 * as the output column set. Also, the alias can not have the same name.
-	 * We report errors if this is not the case.)
-	 * 
+	 * We need to determine column names and types.  The alias column names
+	 * override anything coming from the query itself.  (Note: the SQL spec
+	 * says that the alias list must be empty or exactly as long as the output
+	 * column set. Also, the alias can not have the same name. We report
+	 * errors if this is not the case.)
 	 */
 	cte->ctecolnames = copyObject(cte->aliascolnames);
 	cte->ctecoltypes = cte->ctecoltypmods = NIL;
-	int numaliases = list_length(cte->aliascolnames);
-
-	int varattno = 0;
-	ListCell *tlistitem;
+	numaliases = list_length(cte->aliascolnames);
+	varattno = 0;
 	foreach(tlistitem, tlist)
 	{
 		TargetEntry *te = (TargetEntry *) lfirst(tlistitem);
-		Oid	coltype;
-		int32 coltypmod;
+		Oid			coltype;
+		int32		coltypmod;
 
 		if (te->resjunk)
 			continue;
@@ -254,6 +256,8 @@ analyzeCTETargetList(ParseState *pstate, CommonTableExpr *cte, List *tlist)
 		Assert(varattno == te->resno);
 		if (varattno > numaliases)
 		{
+			char	   *attrname;
+
 			if (numaliases > 0)
 			{
 				ereport(ERROR,
@@ -261,8 +265,6 @@ analyzeCTETargetList(ParseState *pstate, CommonTableExpr *cte, List *tlist)
 						 errmsg(ERRMSG_GP_WITH_COLUMNS_MISMATCH, cte->ctename),
 						 parser_errposition(pstate, cte->location)));
 			}
-			
-			char *attrname;
 
 			attrname = pstrdup(te->resname);
 			cte->ctecolnames = lappend(cte->ctecolnames, makeString(attrname));

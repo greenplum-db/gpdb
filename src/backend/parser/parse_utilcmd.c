@@ -2461,7 +2461,6 @@ transformFKConstraints(ParseState *pstate, CreateStmtContext *cxt,
 	}
 }
 
-
 /*
  * transformIndexStmt - parse analysis for CREATE INDEX
  *
@@ -3521,6 +3520,10 @@ transformCreateSchemaStmt(CreateSchemaStmt *stmt)
 	return result;
 }
 
+/*
+ * setSchemaName
+ *		Set or check schema name in an element of a CREATE SCHEMA command
+ */
 static void
 setSchemaName(char *context_schema, char **stmt_schema_name)
 {

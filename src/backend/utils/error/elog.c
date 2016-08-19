@@ -187,6 +187,7 @@ static int	recursion_depth = 0;	/* to detect actual recursion */
 static char formatted_start_time[FORMATTED_TS_LEN];
 static char formatted_log_time[FORMATTED_TS_LEN];
 
+
 /* Macro for checking errordata_stack_depth is reasonable */
 #define CHECK_STACK_DEPTH() \
 	do { \
@@ -196,6 +197,7 @@ static char formatted_log_time[FORMATTED_TS_LEN];
 			ereport(ERROR, (errmsg_internal("errstart was not called"))); \
 		} \
 	} while (0)
+
 
 static void cdb_tidy_message(ErrorData *edata);
 static void log_line_prefix(StringInfo buf);
@@ -2424,7 +2426,7 @@ log_line_prefix(StringInfo buf)
 				if (MyProcPort)
 				{
 					const char *psdisp;
-					int		displen;
+					int			displen;
 
 					psdisp = get_ps_display(&displen);
 					appendBinaryStringInfo(buf, psdisp, displen);
@@ -2698,7 +2700,7 @@ write_csvlog(ErrorData *edata)
 		psdisp = get_ps_display(&displen);
 		appendBinaryStringInfo(&msgbuf, psdisp, displen);
 		appendCSVLiteral(&buf, msgbuf.data);
-	
+
 		pfree(msgbuf.data);
 	}
 	appendStringInfoChar(&buf, ',');
@@ -3485,9 +3487,9 @@ write_message_to_server_log(int elevel,
 static void
 send_message_to_server_log(ErrorData *edata)
 {
-	StringInfoData  buf;
-	StringInfoData  prefix;
-	int			 nc;
+	StringInfoData buf;
+	StringInfoData prefix;
+	int			nc;
 
 	AssertImply(mainthread() != 0, mythread() == mainthread());
 

@@ -367,12 +367,15 @@ analyze_requires_snapshot(Node *parseTree)
 			break;
 
 		case T_ExplainStmt:
-			/* yes, because it's analyzed just like SELECT */
+			/*
+			 * We only need a snapshot in varparams case, but it doesn't seem
+			 * worth complicating this function's API to distinguish that.
+			 */
 			result = true;
 			break;
 
 		default:
-			/* other utility statements don't have any active parse analysis */
+			/* utility statements don't have any active parse analysis */
 			result = false;
 			break;
 	}
@@ -2842,6 +2845,7 @@ transformReturningList(ParseState *pstate, List *returningList)
 	return rlist;
 }
 #endif
+
 
 /*
  * transformDeclareCursorStmt -

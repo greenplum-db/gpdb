@@ -87,6 +87,7 @@ static bool IsForInput;
 /* local state for LockBufferForCleanup */
 static volatile BufferDesc *PinCountWaitBuf = NULL;
 
+
 static Buffer ReadBuffer_common(SMgrRelation reln, bool isLocalBuf,
 				  bool isTemp, BlockNumber blockNum, bool zeroPage,
 				  BufferAccessStrategy strategy,
@@ -101,11 +102,9 @@ static bool StartBufferIO(volatile BufferDesc *buf, bool forInput);
 static void TerminateBufferIO(volatile BufferDesc *buf, bool clear_dirty,
 				  int set_flag_bits);
 static void buffer_write_error_callback(void *arg);
-
 static volatile BufferDesc *BufferAlloc(SMgrRelation reln, BlockNumber blockNum,
 			BufferAccessStrategy strategy,
 			bool *foundPtr);
-
 static void FlushBuffer(volatile BufferDesc *buf, SMgrRelation reln);
 static void AtProcExit_Buffers(int code, Datum arg);
 
@@ -1215,7 +1214,6 @@ BufferSync(int flags)
 	/* Make sure we can handle the pin inside SyncOneBuffer */
 	ResourceOwnerEnlargeBuffers(CurrentResourceOwner);
 
-
 	/*
 	 * Loop over all buffers, and mark the ones that need to be written with
 	 * BM_CHECKPOINT_NEEDED.  Count them as we go (num_to_write), so that we
@@ -1664,7 +1662,7 @@ SyncOneBuffer(int buf_id, bool skip_recently_used)
 
 		return result;
 	}
-	
+
 	/*
 	 * Pin it, share-lock it, write it.  (FlushBuffer will do nothing if the
 	 * buffer is clean by the time we've locked it.)
@@ -2116,12 +2114,12 @@ RelationTruncate(Relation rel, BlockNumber nblocks, bool markPersistentAsPhysica
  * --------------------------------------------------------------------
  */
 void
-DropRelFileNodeBuffers(RelFileNode rnode, bool isLocalBuf,
+DropRelFileNodeBuffers(RelFileNode rnode, bool istemp,
 					   BlockNumber firstDelBlock)
 {
 	int			i;
 
-	if (isLocalBuf) /*CDB*/
+	if (istemp)
 	{
 		DropRelFileNodeLocalBuffers(rnode, firstDelBlock);
 		return;
@@ -2400,7 +2398,6 @@ ReleaseBuffer(Buffer buffer)
 	else
 		UnpinBuffer(bufHdr, false);
 }
-
 
 /*
  * UnlockReleaseBuffer -- release the content lock and pin on a buffer

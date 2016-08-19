@@ -621,6 +621,7 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	return result;
 }
 
+
 /*--------------------
  * subquery_planner
  *	  Invokes the planner on a subquery.  We recurse to here for each
@@ -696,7 +697,7 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
     /* CDB: Stash current query level's relids before pulling up subqueries. */
     root->currlevel_relids = get_relids_in_jointree((Node *)parse->jointree);
 
-    /*
+	/*
 	 * Look for IN clauses at the top level of WHERE, and transform them into
 	 * joins.  Note that this step only handles IN clauses originally at top
 	 * level of WHERE; if we pull up any subqueries in the next step, their
@@ -949,7 +950,7 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 	 * initPlan list and extParam/allParam sets for plan nodes, and attach the
 	 * initPlans to the top plan node.
 	 */
-	if (list_length(glob->subplans) != num_old_subplans || 
+	if (list_length(glob->subplans) != num_old_subplans ||
 		root->query_level > 1)
 	{
 		Assert(root->parse == parse); /* GPDP isn't always careful about this. */
@@ -2162,7 +2163,8 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		{
 			result_plan = (Plan *) make_sort_from_pathkeys(root,
 														   result_plan,
-														   sort_pathkeys, limit_tuples, false);
+														   sort_pathkeys,
+														   limit_tuples, false);
 			if (result_plan == NULL)
 				elog(ERROR, "could not find sort pathkeys in result target list");
 			current_pathkeys = sort_pathkeys;

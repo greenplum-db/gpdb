@@ -1997,15 +1997,14 @@ eval_const_expressions_mutator(Node *node,
 	if (IsA(node, FuncExpr))
 	{
 		FuncExpr   *expr = (FuncExpr *) node;
+		List	   *args;
+		Expr	   *simple;
+		FuncExpr   *newexpr;
 
 		if (!context->transform_functions_returning_composite_values && type_is_rowtype(expr->funcresulttype))
 		{
 			return copyObject(expr);
 		}
-
-		List	   *args = NIL;
-		Expr	   *simple = NULL;
-		FuncExpr   *newexpr = NULL;
 
 		/*
 		 * Reduce constants in the FuncExpr's arguments.  We know args is
@@ -3238,15 +3237,15 @@ static List *
 add_function_defaults(List *args, Oid result_type, HeapTuple func_tuple)
 {
 	Form_pg_proc funcform = (Form_pg_proc) GETSTRUCT(func_tuple);
-	Datum       proargdefaults;
-	bool        isnull;
-	char       *str;
-	List       *defaults;
-	int         ndelete;
-	int         nargs;
-	Oid         actual_arg_types[FUNC_MAX_ARGS];
-	Oid         declared_arg_types[FUNC_MAX_ARGS];
-	Oid         rettype;
+	Datum		proargdefaults;
+	bool		isnull;
+	char	   *str;
+	List	   *defaults;
+	int			ndelete;
+	int			nargs;
+	Oid			actual_arg_types[FUNC_MAX_ARGS];
+	Oid			declared_arg_types[FUNC_MAX_ARGS];
+	Oid			rettype;
 	ListCell   *lc;
 
 	/* The error cases here shouldn't happen, but check anyway */

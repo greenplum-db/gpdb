@@ -72,7 +72,8 @@ static void set_tablefunction_pathlist(PlannerInfo *root, RelOptInfo *rel,
 										RangeTblEntry *rte);
 static void set_values_pathlist(PlannerInfo *root, RelOptInfo *rel,
 					RangeTblEntry *rte);
-static void set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte);
+static void set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel,
+				 RangeTblEntry *rte);
 static RelOptInfo *make_rel_from_joinlist(PlannerInfo *root, List *joinlist);
 static Query *push_down_restrict(PlannerInfo *root, RelOptInfo *rel,
 				   RangeTblEntry *rte, Index rti,  Query *subquery);
