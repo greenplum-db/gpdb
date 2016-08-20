@@ -126,3 +126,33 @@ CREATE TYPE compfoo as (f1 int, f2 text);
 DROP TYPE compfoo;
 RESET SESSION AUTHORIZATION;
 DROP USER user_bob;
+-- Check if motion layer correctly errors out in the absence of send/receive functions
+CREATE TYPE incomplete_type;
+CREATE FUNCTION incomplete_type_in(cstring)
+   RETURNS incomplete_type
+   AS 'textin'
+   LANGUAGE internal IMMUTABLE STRICT;
+NOTICE:  return type incomplete_type is only a shell
+CREATE FUNCTION incomplete_type_out(incomplete_type)
+   RETURNS cstring
+   AS 'textout'
+   LANGUAGE internal IMMUTABLE STRICT;
+NOTICE:  argument type incomplete_type is only a shell
+CREATE TYPE incomplete_type (
+   internallength = variable,
+   input = incomplete_type_in,
+   output = incomplete_type_out,
+   alignment = double,
+   storage = EXTENDED,
+   default = 'zippo'
+);
+CREATE TABLE table_with_incomplete_type (id int, incomplete incomplete_type);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO table_with_incomplete_type(id, incomplete) VALUES(1, repeat('abcde', 1000000)::incomplete_type);
+ERROR:  No send function available for type incomplete_type. Motion requires send function  (seg0 slice1 127.0.0.1:25432 pid=81043)
+CONTEXT:  SQL statement "select Ta.id, Ta.incomplete from public.table_with_incomplete_type as Ta  limit 7500 "
+drop table table_with_incomplete_type;
+drop type incomplete_type cascade; 
+NOTICE:  drop cascades to function incomplete_type_out(incomplete_type)
+NOTICE:  drop cascades to function incomplete_type_in(cstring)
