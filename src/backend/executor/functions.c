@@ -501,7 +501,7 @@ postquel_getnext(execution_state *es, SQLFunctionCachePtr fcache)
 {
 	TupleTableSlot *result;
 	Snapshot	saveActiveSnapshot;
-	long		count;
+	volatile uint64		count;
 
 	/* Make our snapshot the active one for any called functions */
 	saveActiveSnapshot = ActiveSnapshot;
@@ -534,9 +534,9 @@ postquel_getnext(execution_state *es, SQLFunctionCachePtr fcache)
 				es->qd->operation == CMD_SELECT &&
 				es->qd->plannedstmt->utilityStmt == NULL &&
 				es->qd->plannedstmt->intoClause == NULL)
-				count = 1L;
+				count = 1;
 			else
-				count = 0L;
+				count = 0;
 
 			result = ExecutorRun(es->qd, ForwardScanDirection, count);
 		}

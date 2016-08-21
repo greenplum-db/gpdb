@@ -1723,7 +1723,7 @@ exec_stmt_fors(PLpgSQL_execstate *estate, PLpgSQL_stmt_fors *stmt)
 	bool		found = false;
 	int			rc = PLPGSQL_RC_OK;
 	int			i;
-	int			n;
+	uint64			n;
 
 	/*
 	 * Determine if we assign to a record or a row
@@ -2641,14 +2641,14 @@ exec_stmt_execsql(PLpgSQL_execstate *estate,
 	}
 
 	/* All variants should save result info for GET DIAGNOSTICS */
-	estate->eval_processed = SPI_processed64;
+	estate->eval_processed = SPI_processed;
 	estate->eval_lastoid = SPI_lastoid;
 
 	/* Process INTO if present */
 	if (stmt->into)
 	{
 		SPITupleTable *tuptab = SPI_tuptable;
-		uint32		n = SPI_processed;
+		uint64		n = SPI_processed;
 		PLpgSQL_rec *rec = NULL;
 		PLpgSQL_row *row = NULL;
 
@@ -2818,7 +2818,7 @@ exec_stmt_dynexecute(PLpgSQL_execstate *estate,
 	if (stmt->into)
 	{
 		SPITupleTable *tuptab = SPI_tuptable;
-		uint32		n = SPI_processed;
+		uint64		n = SPI_processed;
 		PLpgSQL_rec *rec = NULL;
 		PLpgSQL_row *row = NULL;
 
@@ -2896,7 +2896,7 @@ exec_stmt_dynfors(PLpgSQL_execstate *estate, PLpgSQL_stmt_dynfors *stmt)
 	PLpgSQL_rec *rec = NULL;
 	PLpgSQL_row *row = NULL;
 	SPITupleTable *tuptab;
-	int			n;
+	uint64			n;
 	SPIPlanPtr	plan;
 	Portal		portal;
 	bool		found = false;
@@ -2974,7 +2974,7 @@ exec_stmt_dynfors(PLpgSQL_execstate *estate, PLpgSQL_stmt_dynfors *stmt)
 	 */
 	while (n > 0)
 	{
-		int			i;
+		uint64		i;
 
 		for (i = 0; i < n; i++)
 		{

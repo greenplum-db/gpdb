@@ -3143,7 +3143,7 @@ static PyObject *PLy_spi_prepare(PyObject *, PyObject *);
 static PyObject *PLy_spi_execute(PyObject *, PyObject *);
 static PyObject *PLy_spi_execute_query(char *query, long limit);
 static PyObject *PLy_spi_execute_plan(PyObject *, PyObject *, long);
-static PyObject *PLy_spi_execute_fetch_result(SPITupleTable *, int, int);
+static PyObject *PLy_spi_execute_fetch_result(SPITupleTable *, uint64, int);
 
 //static PyObject *PLy_quote_literal(PyObject *self, PyObject *args);
 //static PyObject *PLy_quote_nullable(PyObject *self, PyObject *args);
@@ -3975,7 +3975,7 @@ PLy_spi_execute_query(char *query, long limit)
 }
 
 static PyObject *
-PLy_spi_execute_fetch_result(SPITupleTable *tuptable, int rows, int status)
+PLy_spi_execute_fetch_result(SPITupleTable *tuptable, uint64 rows, int status)
 {
 	PLyResultObject *result;
 	volatile MemoryContext oldcontext;
@@ -3987,14 +3987,16 @@ PLy_spi_execute_fetch_result(SPITupleTable *tuptable, int rows, int status)
 	if (status > 0 && tuptable == NULL)
 	{
 		Py_DECREF(result->nrows);
+		/* rows is 64 bit, Python Integer holds sys.maxint = 2^63 - 1 */
 		result->nrows = PyInt_FromLong(rows);
 	}
 	else if (status > 0 && tuptable != NULL)
 	{
 		PLyTypeInfo args;
-		int			i;
+		uint64			i;
 
 		Py_DECREF(result->nrows);
+		/* rows is 64 bit, Python Integer holds sys.maxint = 2^63 - 1 */
 		result->nrows = PyInt_FromLong(rows);
 		PLy_typeinfo_init(&args);
 

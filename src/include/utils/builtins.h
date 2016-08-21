@@ -1265,4 +1265,6 @@ extern Datum enable_xform(PG_FUNCTION_ARGS);
 /* Optimizer's version */
 extern Datum gp_opt_version(PG_FUNCTION_ARGS);
 
+extern uint64 pg_strtouint64(const char *str, char **endptr, int base);
+
 #endif   /* BUILTINS_H */
