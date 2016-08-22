@@ -1,0 +1,100 @@
+--
+-- Test extended \du flags
+--
+-- https://github.com/greenplum-db/gpdb/issues/1028
+--
+-- Problem: the cluster can be initialized with any Unix user
+--          therefore create specific test roles here, and only
+--          test the \du output for this role, also drop them afterwards
+CREATE ROLE test_psql_du_1 WITH SUPERUSER;
+\du test_psql_du_1
+                    List of roles
+   Role name    |       Attributes        | Member of 
+----------------+-------------------------+-----------
+ test_psql_du_1 | Superuser, Cannot login | {}
+
+DROP ROLE test_psql_du_1;
+CREATE ROLE test_psql_du_2 WITH SUPERUSER CREATEDB CREATEROLE CREATEEXTTABLE LOGIN CONNECTION LIMIT 5;
+\du test_psql_du_2
+                                   List of roles
+   Role name    |                      Attributes                      | Member of 
+----------------+------------------------------------------------------+-----------
+ test_psql_du_2 | Superuser, Create role, Create DB, Ext gpfdist Table | {}
+                : 5 connections                                          
+
+DROP ROLE test_psql_du_2;
+-- pg_catalog.pg_roles.rolcreaterextgpfd
+CREATE ROLE test_psql_du_e1 WITH SUPERUSER CREATEEXTTABLE (type = 'readable', protocol = 'gpfdist');
+\du test_psql_du_e1
+                              List of roles
+    Role name    |                 Attributes                 | Member of 
+-----------------+--------------------------------------------+-----------
+ test_psql_du_e1 | Superuser, Ext gpfdist Table, Cannot login | {}
+
+DROP ROLE test_psql_du_e1;
+CREATE ROLE test_psql_du_e2 WITH SUPERUSER CREATEEXTTABLE (type = 'readable', protocol = 'gpfdists');
+\du test_psql_du_e2
+                              List of roles
+    Role name    |                 Attributes                 | Member of 
+-----------------+--------------------------------------------+-----------
+ test_psql_du_e2 | Superuser, Ext gpfdist Table, Cannot login | {}
+
+DROP ROLE test_psql_du_e2;
+-- pg_catalog.pg_roles.rolcreatewextgpfd
+CREATE ROLE test_psql_du_e3 WITH SUPERUSER CREATEEXTTABLE (type = 'writable', protocol = 'gpfdist');
+\du test_psql_du_e3
+                                List of roles
+    Role name    |                   Attributes                   | Member of 
+-----------------+------------------------------------------------+-----------
+ test_psql_du_e3 | Superuser, Wri Ext gpfdist Table, Cannot login | {}
+
+DROP ROLE test_psql_du_e3;
+CREATE ROLE test_psql_du_e4 WITH SUPERUSER CREATEEXTTABLE (type = 'writable', protocol = 'gpfdists');
+\du test_psql_du_e4
+                                List of roles
+    Role name    |                   Attributes                   | Member of 
+-----------------+------------------------------------------------+-----------
+ test_psql_du_e4 | Superuser, Wri Ext gpfdist Table, Cannot login | {}
+
+DROP ROLE test_psql_du_e4;
+-- pg_catalog.pg_roles.rolcreaterexthttp
+CREATE ROLE test_psql_du_e5 WITH SUPERUSER CREATEEXTTABLE (type = 'readable', protocol = 'http');
+\du test_psql_du_e5
+                             List of roles
+    Role name    |               Attributes                | Member of 
+-----------------+-----------------------------------------+-----------
+ test_psql_du_e5 | Superuser, Ext http Table, Cannot login | {}
+
+DROP ROLE test_psql_du_e5;
+-- does dot exist
+CREATE ROLE test_psql_du_e6 WITH SUPERUSER CREATEEXTTABLE (type = 'writable', protocol = 'http');
+ERROR:  invalid CREATEEXTTABLE specification. writable http external tables do not exist
+\du test_psql_du_e6
+           List of roles
+ Role name | Attributes | Member of 
+-----------+------------+-----------
+
+DROP ROLE test_psql_du_e6;
+ERROR:  role "test_psql_du_e6" does not exist
+-- pg_catalog.pg_roles.rolcreaterexthdfs
+CREATE ROLE test_psql_du_e7 WITH SUPERUSER CREATEEXTTABLE (type = 'readable', protocol = 'gphdfs');
+WARNING:  GRANT/REVOKE on gphdfs is deprecated
+HINT:  Issue the GRANT or REVOKE on the protocol itself
+\du test_psql_du_e7
+                             List of roles
+    Role name    |               Attributes                | Member of 
+-----------------+-----------------------------------------+-----------
+ test_psql_du_e7 | Superuser, Ext hdfs Table, Cannot login | {}
+
+DROP ROLE test_psql_du_e7;
+-- pg_catalog.pg_roles.rolcreatewexthdfs
+CREATE ROLE test_psql_du_e8 WITH SUPERUSER CREATEEXTTABLE (type = 'writable', protocol = 'gphdfs');
+WARNING:  GRANT/REVOKE on gphdfs is deprecated
+HINT:  Issue the GRANT or REVOKE on the protocol itself
+\du test_psql_du_e8
+                               List of roles
+    Role name    |                 Attributes                  | Member of 
+-----------------+---------------------------------------------+-----------
+ test_psql_du_e8 | Superuser, Wri Ext hdfs Table, Cannot login | {}
+
+DROP ROLE test_psql_du_e8;
