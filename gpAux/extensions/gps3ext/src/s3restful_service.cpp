@@ -39,7 +39,7 @@ size_t RESTfulServiceWriteFuncCallback(char *ptr, size_t size, size_t nmemb, voi
     return realsize;
 }
 
-// curl's write function callback, used only by DELETE request when query is canceled.
+// cURL's write function callback, only used by DELETE request when query is canceled.
 // It shouldn't be interrupted by QueryCancelPending.
 size_t RESTfulServiceAbortFuncCallback(char *ptr, size_t size, size_t nmemb, void *userp) {
     size_t realsize = size * nmemb;
@@ -409,8 +409,7 @@ Response S3RESTfulService::deleteRequest(const string &url, HTTPHeaders &headers
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
 
         // 2XX are successful response. Here we deal with 200 (OK) 204 (no content), and 206
-        // (partial content)
-        // firstly.
+        // (partial content) firstly.
         if (isSuccessfulResponse(responseCode)) {
             response.setStatus(RESPONSE_OK);
             response.setMessage("Success");

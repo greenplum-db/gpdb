@@ -50,7 +50,7 @@ class S(BaseHTTPRequestHandler):
 
     def do_DELETE(self):
         # Just bounce the request back
-        print "----- SOMETHING WAS DELETE ------"
+        print "----- SOMETHING WAS DELETED ------"
         print self.headers
         length = int(self.headers['Content-Length'])
         # content = self.rfile.read(length)

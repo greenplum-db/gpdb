@@ -28,7 +28,7 @@ class S3KeyWriter : public Writer {
     // write() attempts to write up to count bytes from the buffer.
     // Always return 0 if EOF, no matter how many times it's invoked. Throw exception if encounters
     // errors.
-    virtual uint64_t write(char* buf, uint64_t count);
+    virtual uint64_t write(const char* buf, uint64_t count);
 
     // This should be reentrant, has no side effects when called multiple times.
     virtual void close();
@@ -40,7 +40,7 @@ class S3KeyWriter : public Writer {
    protected:
     void flushBuffer();
     void completeKeyWriting();
-    void checkQueryCancel();
+    void checkQueryCancelSignal();
 
     WriterBuffer buffer;
     S3Interface* s3interface;

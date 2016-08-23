@@ -2,6 +2,7 @@
 
 #include "decompress_reader.cpp"
 #include "gtest/gtest.h"
+#include "s3macros.h"
 
 using std::vector;
 
@@ -59,6 +60,9 @@ class DecompressReaderTest : public testing::Test {
    protected:
     // Remember that SetUp() is run immediately before a test starts.
     virtual void SetUp() {
+        // reset to default, because some tests will modify it
+        S3_ZIP_DECOMPRESS_CHUNKSIZE = S3_ZIP_DEFAULT_CHUNKSIZE;
+
         // need to setup upstreamReader before open.
         this->bufReader.setChunkSize(1024 * 1024 * 64);
         decompressReader.setReader(&bufReader);
@@ -68,6 +72,9 @@ class DecompressReaderTest : public testing::Test {
     // TearDown() is invoked immediately after a test finishes.
     virtual void TearDown() {
         decompressReader.close();
+
+        // reset to default, because some tests will modify it
+        S3_ZIP_DECOMPRESS_CHUNKSIZE = S3_ZIP_DEFAULT_CHUNKSIZE;
     }
 
     void setBufReaderByRawData(const void *input, int len) {
@@ -149,10 +156,10 @@ TEST_F(DecompressReaderTest, AbleToDecompressWithSmallReadBuffer) {
     //      output buffer is smaller than chunk size (16 bytes).
 
     // resize to 32 for 'in' and 'out' buffer
-    S3_ZIP_CHUNKSIZE = 32;
-    decompressReader.resizeDecompressReaderBuffer(S3_ZIP_CHUNKSIZE);
+    S3_ZIP_DECOMPRESS_CHUNKSIZE = 32;
+    decompressReader.resizeDecompressReaderBuffer(S3_ZIP_DECOMPRESS_CHUNKSIZE);
 
-    char hello[S3_ZIP_CHUNKSIZE + 2];
+    char hello[S3_ZIP_DECOMPRESS_CHUNKSIZE + 2];
     memset((void *)hello, 'A', sizeof(hello));
     hello[sizeof(hello) - 1] = '\0';
 
@@ -174,8 +181,8 @@ TEST_F(DecompressReaderTest, AbleToDecompressWithSmallInternalReaderBuffer) {
     //      output buffer is smaller than chunk size (9 bytes).
 
     // resize to 32 for 'in' and 'out' buffer
-    S3_ZIP_CHUNKSIZE = 10;
-    decompressReader.resizeDecompressReaderBuffer(S3_ZIP_CHUNKSIZE);
+    S3_ZIP_DECOMPRESS_CHUNKSIZE = 10;
+    decompressReader.resizeDecompressReaderBuffer(S3_ZIP_DECOMPRESS_CHUNKSIZE);
 
     char hello[34];  // compress 34 'A' will produce 12 compressed bytes.
     memset((void *)hello, 'A', sizeof(hello));
@@ -192,8 +199,8 @@ TEST_F(DecompressReaderTest, AbleToDecompressWithSmallInternalReaderBuffer) {
 }
 
 TEST_F(DecompressReaderTest, ReadFromOffsetForEachCall) {
-    S3_ZIP_CHUNKSIZE = 128;
-    decompressReader.resizeDecompressReaderBuffer(S3_ZIP_CHUNKSIZE);
+    S3_ZIP_DECOMPRESS_CHUNKSIZE = 128;
+    decompressReader.resizeDecompressReaderBuffer(S3_ZIP_DECOMPRESS_CHUNKSIZE);
 
     // Bigger chunk size, smaller read buffer from caller. Need read from offset for each call.
     char hello[] = "abcdefghigklmnopqrstuvwxyz";
@@ -218,10 +225,10 @@ TEST_F(DecompressReaderTest, AbleToDecompressWithAlignedLargeReadBuffer) {
 
     // resize to 8 for 'in' and 'out' buffer
 
-    S3_ZIP_CHUNKSIZE = 8;
-    decompressReader.resizeDecompressReaderBuffer(S3_ZIP_CHUNKSIZE);
+    S3_ZIP_DECOMPRESS_CHUNKSIZE = 8;
+    decompressReader.resizeDecompressReaderBuffer(S3_ZIP_DECOMPRESS_CHUNKSIZE);
 
-    char hello[S3_ZIP_CHUNKSIZE * 2 + 2];
+    char hello[S3_ZIP_DECOMPRESS_CHUNKSIZE * 2 + 2];
     memset((void *)hello, 'A', sizeof(hello));
     hello[sizeof(hello) - 1] = '\0';
 
@@ -239,16 +246,16 @@ TEST_F(DecompressReaderTest, AbleToDecompressWithUnalignedLargeReadBuffer) {
     // Test case for: optimal buffer size fill after decompression
     // We need to make sure that we are filling the decompression
     // buffer fully before asking for a new chunck from the read buffer
-    S3_ZIP_CHUNKSIZE = 8;
-    decompressReader.resizeDecompressReaderBuffer(S3_ZIP_CHUNKSIZE);
+    S3_ZIP_DECOMPRESS_CHUNKSIZE = 8;
+    decompressReader.resizeDecompressReaderBuffer(S3_ZIP_DECOMPRESS_CHUNKSIZE);
 
-    char hello[S3_ZIP_CHUNKSIZE * 6 + 2];
+    char hello[S3_ZIP_DECOMPRESS_CHUNKSIZE * 6 + 2];
     memset((void *)hello, 'A', sizeof(hello));
     hello[sizeof(hello) - 1] = '\0';
 
     setBufReaderByRawData(hello, sizeof(hello));
 
-    char outputBuffer[S3_ZIP_CHUNKSIZE * 6 + 4];
+    char outputBuffer[S3_ZIP_DECOMPRESS_CHUNKSIZE * 6 + 4];
 
     uint32_t expectedLen[] = {8, 8, 8, 8, 8, 8, 2, 0};
     for (uint32_t i = 0; i < sizeof(expectedLen) / sizeof(uint32_t); i++) {
@@ -257,8 +264,8 @@ TEST_F(DecompressReaderTest, AbleToDecompressWithUnalignedLargeReadBuffer) {
 }
 
 TEST_F(DecompressReaderTest, AbleToDecompressWithLargeReadBufferWithDecompressableString) {
-    S3_ZIP_CHUNKSIZE = 8;
-    decompressReader.resizeDecompressReaderBuffer(S3_ZIP_CHUNKSIZE);
+    S3_ZIP_DECOMPRESS_CHUNKSIZE = 8;
+    decompressReader.resizeDecompressReaderBuffer(S3_ZIP_DECOMPRESS_CHUNKSIZE);
 
     // Smaller chunk size, bigger read buffer from caller. Need composite multiple chunks.
     char hello[] = "abcdefghigklmnopqrstuvwxyz";  // 26+1 bytes
@@ -278,8 +285,8 @@ TEST_F(DecompressReaderTest, AbleToDecompressWithLargeReadBufferWithDecompressab
 }
 
 TEST_F(DecompressReaderTest, AbleToDecompressWithSmartLargeReadBufferWithDecompressableString) {
-    S3_ZIP_CHUNKSIZE = 7;
-    decompressReader.resizeDecompressReaderBuffer(S3_ZIP_CHUNKSIZE);
+    S3_ZIP_DECOMPRESS_CHUNKSIZE = 7;
+    decompressReader.resizeDecompressReaderBuffer(S3_ZIP_DECOMPRESS_CHUNKSIZE);
 
     // Smaller chunk size, bigger read buffer from caller. Need composite multiple chunks.
     char hello[] = "abcdefghigklmnopqrstuvwxyz";  // 26+1 bytes
@@ -300,8 +307,8 @@ TEST_F(DecompressReaderTest, AbleToDecompressWithSmartLargeReadBufferWithDecompr
 }
 
 TEST_F(DecompressReaderTest, AbleToDecompressWithIncorrectEncodedStream) {
-    S3_ZIP_CHUNKSIZE = 128;
-    decompressReader.resizeDecompressReaderBuffer(S3_ZIP_CHUNKSIZE);
+    S3_ZIP_DECOMPRESS_CHUNKSIZE = 128;
+    decompressReader.resizeDecompressReaderBuffer(S3_ZIP_DECOMPRESS_CHUNKSIZE);
 
     // set an incorrect encoding stream to Mock directly.
     // it will produce 'Z_DATA_ERROR' when decompressing

@@ -114,8 +114,6 @@ void S3BucketReader::close() {
     if (!this->keyList.contents.empty()) {
         this->keyList.contents.clear();
     }
-
-    return;
 }
 
 string S3BucketReader::getKeyURL(const string &key) {

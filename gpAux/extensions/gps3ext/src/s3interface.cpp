@@ -492,7 +492,6 @@ string S3Service::uploadPartOfData(vector<uint8_t> &data, const string &keyUrl,
     urlWithQuery << keyUrl << "?partNumber=" << partNumber << "&uploadId=" << uploadId;
 
     Response resp = this->putResponseWithRetries(urlWithQuery.str(), headers, params, data);
-
     if (resp.getStatus() == RESPONSE_OK) {
         string headers(resp.getRawHeaders().begin(), resp.getRawHeaders().end());
 

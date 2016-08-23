@@ -4,7 +4,7 @@
 #include <string.h>
 #include <string>
 
-#include "s3key_writer.h"
+#include "s3common_writer.h"
 #include "writer.h"
 
 #define S3_DEFAULT_FORMAT "data"
@@ -20,7 +20,7 @@ class GPWriter : public Writer {
     // write() attempts to write up to count bytes from the buffer.
     // Always return 0 if EOF, no matter how many times it's invoked. Throw exception if encounters
     // errors.
-    virtual uint64_t write(char *buf, uint64_t count);
+    virtual uint64_t write(const char *buf, uint64_t count);
 
     // This should be reentrant, has no side effects when called multiple times.
     virtual void close();
@@ -39,13 +39,12 @@ class GPWriter : public Writer {
     string genUniqueKeyName(const string &url);
 
    protected:
+    string format;
     WriterParams params;
     S3RESTfulService restfulService;
     S3Service s3service;
     S3Credential cred;
-
-    S3KeyWriter keyWriter;
-    string format;
+    S3CommonWriter commonWriter;
 
     // it links to itself by default
     // but the pointer here leaves a chance to mock it in unit test

@@ -9,7 +9,7 @@
 using std::string;
 using std::stringstream;
 
-#define BUFFER_LEN 1024
+#define PRINTOUT_BUFFER_LEN 1024
 
 extern void StringAppendPrintf(std::string *output, const char *format, ...);
 
@@ -39,8 +39,8 @@ extern void StringAppendPrintf(std::string *output, const char *format, ...);
 
 inline void VStringAppendPrintf(string *output, const char *format, va_list argp) {
     CHECK_OR_DIE(output);
-    char buffer[BUFFER_LEN];
-    vsnprintf(buffer, BUFFER_LEN, format, argp);
+    char buffer[PRINTOUT_BUFFER_LEN];
+    vsnprintf(buffer, sizeof(buffer), format, argp);
     output->append(buffer);
 }
 
@@ -50,5 +50,20 @@ inline void StringAppendPrintf(string *output, const char *format, ...) {
     VStringAppendPrintf(output, format, argp);
     va_end(argp);
 }
+
+// chunk size for compression/decompression
+//    declare them here so UT tests can access each as well
+extern uint64_t S3_ZIP_DECOMPRESS_CHUNKSIZE;
+extern uint64_t S3_ZIP_COMPRESS_CHUNKSIZE;
+
+#define S3_ZIP_DEFAULT_CHUNKSIZE (1024 * 1024 * 2)
+
+// For deflate, windowBits can be greater than 15 for optional gzip encoding. Add 16 to windowBits
+// to write a simple gzip header and trailer around the compressed data instead of a zlib wrapper.
+#define S3_DEFLATE_WINDOWSBITS (MAX_WBITS + 16)
+
+// For inflate, windowBits can be greater than 15 for optional gzip decoding. Add 32 to windowBits
+// to enable zlib and gzip decoding with automatic header detection.
+#define S3_INFLATE_WINDOWSBITS (MAX_WBITS + 16 + 16)
 
 #endif

@@ -17,14 +17,14 @@ enum ResponseStatus {
     RESPONSE_OK,     // everything is OK
     RESPONSE_FAIL,   // curl failed (i.e., the status is not CURLE_OK)
     RESPONSE_ERROR,  // server error (server return code is not 200)
-    RESPONSE_ABORT,  // the query has been abort by user
+    RESPONSE_ABORT,  // the query has been aborted by user
 };
 
 typedef long ResponseCode;
 #define HeadResponseFail -1
 
 // 2XX are successful response.
-// Here we deal with 200 (OK), 204 (no content) and 206 (partial content) currently.
+// Here we deal with 200 (OK), 204 (no content) and 206 (partial content) currently,
 // 204 is for DELETE request.
 //   We may move this function to RESTfulService() in future
 inline bool isSuccessfulResponse(ResponseCode code) {

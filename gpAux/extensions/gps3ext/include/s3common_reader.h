@@ -21,6 +21,7 @@ class S3CommonReader : public Reader {
     // This should be reentrant, has no side effects when called multiple times.
     virtual void close();
 
+    // Used by Mock, DO NOT call it in other places.
     void setS3service(S3Interface* s3service) {
         this->s3service = s3service;
     }

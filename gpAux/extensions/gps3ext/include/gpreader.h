@@ -36,7 +36,6 @@ class GPReader : public Reader {
    protected:
     S3BucketReader bucketReader;
     S3CommonReader commonReader;
-    DecompressReader uncomressReader;
     S3RESTfulService restfulService;
 
     S3Service s3service;

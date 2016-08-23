@@ -50,5 +50,8 @@ extern struct sockaddr_in s3ext_logserveraddr;
 extern int32_t s3ext_low_speed_limit;
 extern int32_t s3ext_low_speed_time;
 
+// whether to compress data before uploading
+extern bool s3ext_autocompress;
+
 // not thread safe!! call it only once.
 bool InitConfig(const string &path, const string section);

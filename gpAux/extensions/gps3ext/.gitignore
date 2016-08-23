@@ -63,4 +63,13 @@ source_replaced
 *.diffs
 
 .idea
+
+*.sln
+*.suo
+*.vcxproj
+*.vcxproj.user
+*.filters
+*.VC.db
+*.VC.opendb
+
 CMakeLists.txt

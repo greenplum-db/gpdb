@@ -47,16 +47,16 @@ void GPWriter::constructWriterParams(const string& url) {
 void GPWriter::open(const WriterParams& params) {
     this->s3service.setRESTfulService(this->restfulServicePtr);
     this->params.setKeyUrl(this->genUniqueKeyName(this->params.getBaseUrl()));
-    this->keyWriter.setS3interface(&this->s3service);
-    this->keyWriter.open(this->params);
+    this->commonWriter.setS3service(&this->s3service);
+    this->commonWriter.open(this->params);
 }
 
-uint64_t GPWriter::write(char* buf, uint64_t count) {
-    return this->keyWriter.write(buf, count);
+uint64_t GPWriter::write(const char* buf, uint64_t count) {
+    return this->commonWriter.write(buf, count);
 }
 
 void GPWriter::close() {
-    this->keyWriter.close();
+    this->commonWriter.close();
 }
 
 string GPWriter::genUniqueKeyName(const string& url) {
@@ -127,7 +127,8 @@ GPWriter* writer_init(const char* url_with_options, const char* format) {
 
         InitRemoteLog();
 
-        writer = new GPWriter(url, format);
+        string extName = s3ext_autocompress ? string(format) + ".gz" : format;
+        writer = new GPWriter(url, extName);
         if (writer == NULL) {
             return NULL;
         }
