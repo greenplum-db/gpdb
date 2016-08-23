@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# coding: utf-8 
+# coding: utf-8
 
 import os, sys
 import unittest2 as unittest
@@ -7,14 +7,14 @@ from gppylib import gplog
 from mock import patch
 from gppylib.mainUtils import ExceptionNoStackTraceNeeded
 from gprestore_filter import get_table_schema_set, extract_schema, extract_table, \
-                            process_data, get_table_info, process_schema, check_valid_schema, check_valid_table, \
+                            process_data, get_table_info, process_schema, check_valid_schema, check_valid_relname, \
                             check_dropped_table, get_table_from_alter_table
 
 
 logger = gplog.get_unittest_logger()
 
 class GpRestoreFilterTestCase(unittest.TestCase):
- 
+
     def test_get_table_schema_set00(self):
         fname = os.path.join(os.getcwd(), 'test1')
         with open(fname, 'w') as fd:
@@ -37,7 +37,7 @@ class GpRestoreFilterTestCase(unittest.TestCase):
             get_table_schema_set(fname)
 
         os.remove(fname)
-    
+
     def test_get_table_schema_set02(self):
         fname = os.path.join(os.getcwd(), 'test1')
         with open(fname, 'w') as fd:
@@ -48,7 +48,7 @@ class GpRestoreFilterTestCase(unittest.TestCase):
         self.assertEquals(tb, set())
 
         os.remove(fname)
-        
+
     def test_extract_schema00(self):
         line = 'SET search_path = pepper, pg_catalog;'
         schema = extract_schema(line)
@@ -170,8 +170,8 @@ COPY ao_table (column1, column2, column3) FROM stdin;
         self.assertEquals(results, expected_out)
         os.remove(in_name)
         os.remove(out_name)
-        
-       
+
+
 
     def test_process_data01(self):
 
@@ -339,8 +339,8 @@ COPY ao_part_table_comp_1_prt_p1_2_prt_1 (column1, column2, column3) FROM stdin;
         self.assertEquals(results, expected_out)
         os.remove(in_name)
         os.remove(out_name)
-        
-       
+
+
     def test_process_data03(self):
 
         test_case_buf = """
@@ -354,7 +354,7 @@ COPY ao_table (column1, column2, column3) FROM stdin;
 \.
 """
         expected_out = ''
-        
+
         in_name = os.path.join(os.getcwd(), 'infile')
         out_name = os.path.join(os.getcwd(), 'outfile')
         with open(in_name, 'w') as fd:
@@ -372,8 +372,8 @@ COPY ao_table (column1, column2, column3) FROM stdin;
         self.assertEquals(results, expected_out)
         os.remove(in_name)
         os.remove(out_name)
-        
- 
+
+
     def test_process_data04(self):
 
         test_case_buf = """
@@ -471,7 +471,7 @@ SET search_path = pepper, pg_catalog;
         self.assertEquals(results, expected_out)
         os.remove(in_name)
         os.remove(out_name)
-              
+
     def test_process_data_multi_byte_char(self):
 
         test_case_buf = """SET search_path = public, pg_catalog;
@@ -516,7 +516,7 @@ COPY "测试" (column1, column2, column3) FROM stdin;
         self.assertEquals(results, expected_out)
         os.remove(in_name)
         os.remove(out_name)
-    
+
     def test_get_table_info00(self):
         line = ''
         (name, type, schema) = get_table_info(line, '-- Name: ')
@@ -555,11 +555,11 @@ SET search_path = public, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: ao_part_table; Type: TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table; Type: TABLE; Schema: public; Owner: dcddev; Tablespace:
 --
 
 --
--- Name: heap_table1; Type: TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: heap_table1; Type: TABLE; Schema: public; Owner: dcddev; Tablespace:
 --
 
 CREATE TABLE heap_table1 (
@@ -575,7 +575,7 @@ CREATE TABLE heap_table1 (
         outfile = '/tmp/test_schema.out'
         with open(infile, 'w') as fd:
             fd.write(test_case_buf)
-            
+
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
                 process_schema(dump_schemas, dump_tables, fdin, fdout, None)
@@ -593,7 +593,7 @@ SET search_path = public, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: heap_table1; Type: TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: heap_table1; Type: TABLE; Schema: public; Owner: dcddev; Tablespace:
 --
 
 CREATE TABLE heap_table1 (
@@ -605,7 +605,7 @@ CREATE TABLE heap_table1 (
         with open(outfile, 'r') as fd:
             results = fd.read()
         self.assertEquals(results, expected_out)
-        
+
         os.remove(infile)
         os.remove(outfile)
 
@@ -634,11 +634,11 @@ SET search_path = public, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: ao_part_table; Type: TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table; Type: TABLE; Schema: public; Owner: dcddev; Tablespace:
 --
 
 --
--- Name: heap_table; Type: TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: heap_table; Type: TABLE; Schema: public; Owner: dcddev; Tablespace:
 --
 
 CREATE TABLE heap_table (
@@ -654,7 +654,7 @@ CREATE TABLE heap_table (
         outfile = '/tmp/test_schema.out'
         with open(infile, 'w') as fd:
             fd.write(test_case_buf)
-            
+
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
                 process_schema(dump_schemas, dump_tables, fdin, fdout, None)
@@ -674,7 +674,7 @@ SET search_path = public, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: heap_table; Type: TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: heap_table; Type: TABLE; Schema: public; Owner: dcddev; Tablespace:
 --
 
 CREATE TABLE heap_table (
@@ -686,7 +686,7 @@ CREATE TABLE heap_table (
         with open(outfile, 'r') as fd:
             results = fd.read()
         self.assertEquals(results, expected_out)
-        
+
         os.remove(infile)
         os.remove(outfile)
 
@@ -715,11 +715,11 @@ SET search_path = public, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: ao_part_table; Type: TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table; Type: TABLE; Schema: public; Owner: dcddev; Tablespace:
 --
 
 --
--- Name: heap_table1; Type: TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: heap_table1; Type: TABLE; Schema: public; Owner: dcddev; Tablespace:
 --
 
 CREATE TABLE heap_table1 (
@@ -735,7 +735,7 @@ CREATE TABLE heap_table1 (
         outfile = '/tmp/test_schema.out'
         with open(infile, 'w') as fd:
             fd.write(test_case_buf)
-            
+
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
                 process_schema(dump_schemas, dump_tables, fdin, fdout, None)
@@ -759,7 +759,7 @@ SET default_tablespace = '';
         with open(outfile, 'r') as fd:
             results = fd.read()
         self.assertEquals(results, expected_out)
-        
+
         os.remove(infile)
         os.remove(outfile)
 
@@ -788,11 +788,11 @@ SET search_path = public, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: ao_part_table; Type: TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table; Type: TABLE; Schema: public; Owner: dcddev; Tablespace:
 --
 
 --
--- Name: heap_table1; Type: TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: heap_table1; Type: TABLE; Schema: public; Owner: dcddev; Tablespace:
 --
 
 CREATE TABLE heap_table1 (
@@ -808,7 +808,7 @@ CREATE TABLE heap_table1 (
         outfile = '/tmp/test_schema.out'
         with open(infile, 'w') as fd:
             fd.write(test_case_buf)
-            
+
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
                 process_schema(dump_schemas, dump_tables, fdin, fdout, None)
@@ -828,7 +828,7 @@ SET search_path = public, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: heap_table1; Type: TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: heap_table1; Type: TABLE; Schema: public; Owner: dcddev; Tablespace:
 --
 
 CREATE TABLE heap_table1 (
@@ -840,7 +840,7 @@ CREATE TABLE heap_table1 (
         with open(outfile, 'r') as fd:
             results = fd.read()
         self.assertEquals(results, expected_out)
-        
+
         os.remove(infile)
         os.remove(outfile)
 
@@ -869,11 +869,11 @@ SET search_path = public, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: ao_part_table; Type: TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table; Type: TABLE; Schema: public; Owner: dcddev; Tablespace:
 --
 
 --
--- Name: heap_table1; Type: TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: heap_table1; Type: TABLE; Schema: public; Owner: dcddev; Tablespace:
 --
 
 CREATE TABLE heap_table1 (
@@ -889,7 +889,7 @@ CREATE TABLE heap_table1 (
         outfile = '/tmp/test_schema.out'
         with open(infile, 'w') as fd:
             fd.write(test_case_buf)
-            
+
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
                 process_schema(dump_schemas, dump_tables, fdin, fdout, None)
@@ -909,7 +909,7 @@ SET search_path = public, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: heap_table1; Type: TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: heap_table1; Type: TABLE; Schema: public; Owner: dcddev; Tablespace:
 --
 
 CREATE TABLE heap_table1 (
@@ -921,7 +921,7 @@ CREATE TABLE heap_table1 (
         with open(outfile, 'r') as fd:
             results = fd.read()
         self.assertEquals(results, expected_out)
-        
+
         os.remove(infile)
         os.remove(outfile)
 
@@ -950,14 +950,14 @@ SET search_path = public, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: public; Owner: dcddev; Tablespace:
 --
 
 ALTER TABLE ONLY public.ao_part_table
     ADD CONSTRAINT constraint_name PRIMARY KEY (name);
 
 --
--- Name: heap_table1; Type: TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: heap_table1; Type: TABLE; Schema: public; Owner: dcddev; Tablespace:
 --
 
 CREATE TABLE heap_table1 (
@@ -973,7 +973,7 @@ CREATE TABLE heap_table1 (
         outfile = '/tmp/test_schema.out'
         with open(infile, 'w') as fd:
             fd.write(test_case_buf)
-            
+
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
                 process_schema(dump_schemas, dump_tables, fdin, fdout, None)
@@ -993,12 +993,12 @@ SET search_path = public, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: public; Owner: dcddev; Tablespace:
 ALTER TABLE ONLY public.ao_part_table
     ADD CONSTRAINT constraint_name PRIMARY KEY (name);
 
 --
--- Name: heap_table1; Type: TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: heap_table1; Type: TABLE; Schema: public; Owner: dcddev; Tablespace:
 --
 
 CREATE TABLE heap_table1 (
@@ -1010,7 +1010,7 @@ CREATE TABLE heap_table1 (
         with open(outfile, 'r') as fd:
             results = fd.read()
         self.assertEquals(results, expected_out)
-        
+
         os.remove(infile)
         os.remove(outfile)
 
@@ -1039,14 +1039,14 @@ SET search_path = public, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: public; Owner: dcddev; Tablespace:
 --
 
 ALTER TABLE ONLY public.ao_part_table
     ADD CONSTRAINT constraint_name PRIMARY KEY (name);
 
 --
--- Name: heap_table1; Type: TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: heap_table1; Type: TABLE; Schema: public; Owner: dcddev; Tablespace:
 --
 
 CREATE TABLE heap_table1 (
@@ -1062,7 +1062,7 @@ CREATE TABLE heap_table1 (
         outfile = '/tmp/test_schema.out'
         with open(infile, 'w') as fd:
             fd.write(test_case_buf)
-            
+
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
                 process_schema(dump_schemas, dump_tables, fdin, fdout, None)
@@ -1082,7 +1082,7 @@ SET search_path = public, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: heap_table1; Type: TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: heap_table1; Type: TABLE; Schema: public; Owner: dcddev; Tablespace:
 --
 
 CREATE TABLE heap_table1 (
@@ -1094,7 +1094,7 @@ CREATE TABLE heap_table1 (
         with open(outfile, 'r') as fd:
             results = fd.read()
         self.assertEquals(results, expected_out)
-        
+
         os.remove(infile)
         os.remove(outfile)
 
@@ -1123,14 +1123,14 @@ SET search_path = public, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: public; Owner: dcddev; Tablespace:
 --
 
 ALTER TABLE ONLY public.ao_part_table
     ADD CONSTRAINT constraint_name PRIMARY KEY (name);
 
 --
--- Data: ao_part_table; Type: TABLE DATA; Schema: public; Owner: dcddev; Tablespace: 
+-- Data: ao_part_table; Type: TABLE DATA; Schema: public; Owner: dcddev; Tablespace:
 --
 
 COPY ao_part_table from stdin;
@@ -1150,7 +1150,7 @@ COPY ao_part_table from stdin;
         outfile = '/tmp/test_schema.out'
         with open(infile, 'w') as fd:
             fd.write(test_case_buf)
-            
+
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
                 process_schema(dump_schemas, dump_tables, fdin, fdout, None)
@@ -1170,12 +1170,12 @@ SET search_path = public, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: public; Owner: dcddev; Tablespace:
 ALTER TABLE ONLY public.ao_part_table
     ADD CONSTRAINT constraint_name PRIMARY KEY (name);
 
 --
--- Data: ao_part_table; Type: TABLE DATA; Schema: public; Owner: dcddev; Tablespace: 
+-- Data: ao_part_table; Type: TABLE DATA; Schema: public; Owner: dcddev; Tablespace:
 --
 
 COPY ao_part_table from stdin;
@@ -1191,7 +1191,7 @@ COPY ao_part_table from stdin;
         with open(outfile, 'r') as fd:
             results = fd.read()
         self.assertEquals(results, expected_out)
-        
+
         os.remove(infile)
         os.remove(outfile)
 
@@ -1220,14 +1220,14 @@ SET search_path = public, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: public; Owner: dcddev; Tablespace:
 --
 
 ALTER TABLE ONLY public.ao_part_table
     ADD CONSTRAINT constraint_name PRIMARY KEY (name);
 
 --
--- Data: ao_part_table; Type: TABLE DATA; Schema: public; Owner: dcddev; Tablespace: 
+-- Data: ao_part_table; Type: TABLE DATA; Schema: public; Owner: dcddev; Tablespace:
 --
 
 COPY ao_part_table from stdin;
@@ -1247,7 +1247,7 @@ COPY ao_part_table from stdin;
         outfile = '/tmp/test_schema.out'
         with open(infile, 'w') as fd:
             fd.write(test_case_buf)
-            
+
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
                 process_schema(dump_schemas, dump_tables, fdin, fdout, None)
@@ -1267,12 +1267,12 @@ SET search_path = public, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: public; Owner: dcddev; Tablespace:
 ALTER TABLE ONLY public.ao_part_table
     ADD CONSTRAINT constraint_name PRIMARY KEY (name);
 
 --
--- Data: ao_part_table; Type: TABLE DATA; Schema: public; Owner: dcddev; Tablespace: 
+-- Data: ao_part_table; Type: TABLE DATA; Schema: public; Owner: dcddev; Tablespace:
 --
 
 COPY ao_part_table from stdin;
@@ -1288,7 +1288,7 @@ COPY ao_part_table from stdin;
         with open(outfile, 'r') as fd:
             results = fd.read()
         self.assertEquals(results, expected_out)
-        
+
         os.remove(infile)
         os.remove(outfile)
 
@@ -1317,14 +1317,14 @@ SET search_path = public, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: public; Owner: dcddev; Tablespace:
 --
 
 ALTER TABLE ONLY public.ao_part_table
     ADD CONSTRAINT constraint_name PRIMARY KEY (name);
 
 --
--- Name: ao_part_table; Type: EXTERNAL TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table; Type: EXTERNAL TABLE; Schema: public; Owner: dcddev; Tablespace:
 --
 
 CREATE TABLE ao_part_table (
@@ -1340,7 +1340,7 @@ CREATE TABLE ao_part_table (
         outfile = '/tmp/test_schema.out'
         with open(infile, 'w') as fd:
             fd.write(test_case_buf)
-            
+
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
                 process_schema(dump_schemas, dump_tables, fdin, fdout, None)
@@ -1360,12 +1360,12 @@ SET search_path = public, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: public; Owner: dcddev; Tablespace:
 ALTER TABLE ONLY public.ao_part_table
     ADD CONSTRAINT constraint_name PRIMARY KEY (name);
 
 --
--- Name: ao_part_table; Type: EXTERNAL TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table; Type: EXTERNAL TABLE; Schema: public; Owner: dcddev; Tablespace:
 --
 
 CREATE TABLE ao_part_table (
@@ -1377,110 +1377,182 @@ CREATE TABLE ao_part_table (
         with open(outfile, 'r') as fd:
             results = fd.read()
         self.assertEquals(results, expected_out)
-        
+
         os.remove(infile)
         os.remove(outfile)
 
-    def test_process_schema_function_functions_and_views(self):
+    def test_process_schema_matching_view_function_seq(self):
         test_case_buf = """--
--- Greenplum Database database dump
---
-
-SET statement_timeout = 0;
-SET client_encoding = 'UTF8';
-SET standard_conforming_strings = off;
-SET check_function_bodies = false;
-SET client_min_messages = warning;
-SET escape_string_warning = off;
-
-SET default_with_oids = false;
-
---
--- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: dcddev
+-- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: gpadmin
 --
 
 COMMENT ON SCHEMA public IS 'Standard public schema';
 
+--
+-- Name: s1; Type: SCHEMA; Schema: -; Owner: gpadmin
+--
+
+CREATE SCHEMA s1;
+
+ALTER SCHEMA s1 OWNER TO gpadmin;
+
 SET search_path = public, pg_catalog;
 
-SET default_tablespace = '';
-
 --
--- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: table1; Type: TABLE; Schema: public; Owner: gpadmin; Tablespace:
 --
 
-ALTER TABLE ONLY public.ao_part_table
-    ADD CONSTRAINT constraint_name PRIMARY KEY (name);
+CREATE TABLE table1 (
+    i integer,
+    j text
+) DISTRIBUTED BY (i);
+;
+
+ALTER TABLE public.table1 OWNER TO gpadmin;
 
 --
--- Name: ao_part_table_view; Type: VIEW; Schema: public; Owner: dcddev; Tablespace: 
--- 
-CREATE VIEW ao_part_table_view as SELECT * FROM ao_part_table;
+-- Name: view1; Type: VIEW; Schema: public; Owner: gpadmin
+--
+
+CREATE VIEW view1 AS SELECT * FROM table1;
+
+ALTER TABLE public.view1 OWNER TO gpadmin;
+
+SET search_path = s1, pg_catalog;
 
 --
--- Name: user_defined_function; Type: FUNCTION; Schema: public; Owner: dcddev; Tablespace: 
--- 
+-- Name: t1; Type: TABLE; Schema: s1; Owner: gpadmin; Tablespace:
+--
+
+CREATE TABLE t1 (
+    c1 integer,
+    c2 text,
+    c3 date
+) DISTRIBUTED BY (c1);
+;
+
+ALTER TABLE s1.t1 OWNER TO gpadmin;
+
+--
+-- Name: v1; Type: VIEW; Schema: s1; Owner: gpadmin
+--
+
+CREATE VIEW v1 AS
+    SELECT t1.c1, t1.c2 FROM t1;
+
+ALTER TABLE s1.v1 OWNER TO gpadmin;
+
+--
+-- Name: user_defined_function; Type: FUNCTION; Schema: s1; Owner: gpadmin; Tablespace:
+--
+
 CREATE FUNCTION user_defined_function as $$
 print 'Hello, World'
 $$ LANGUAGE as plpgsql;
 
 --
--- Name: ao_part_table; Type: EXTERNAL TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table; Type: EXTERNAL TABLE; Schema: s1; Owner: gpadmin; Tablespace:
 --
 
 CREATE TABLE ao_part_table (
     column1 integer,
     column2 character varying(20),
     column3 date
-) DISTRIBUTED BY (column1); with (appendonly=true)"""
+) DISTRIBUTED BY (column1); with (appendonly=true)
 
-        dump_schemas = ['public']
-        dump_tables = [('public', 'ao_part_table')]
+--
+-- Name: id_seq; Type: SEQUENCE; Schema: s1; Owner: gpadmin
+--
 
-        infile = '/tmp/test_schema.in'
-        outfile = '/tmp/test_schema.out'
-        with open(infile, 'w') as fd:
+CREATE SEQUENCE id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MAXVALUE
+    NO MINVALUE
+    CACHE 1;
+
+
+ALTER TABLE s1.id_seq OWNER TO gpadmin;"""
+
+        in_name = '/tmp/infile'
+        out_name = '/tmp/outfile'
+        with open(in_name, 'w') as fd:
             fd.write(test_case_buf)
-            
-        with open(infile, 'r') as fdin:
-            with open(outfile, 'w') as fdout:
-                process_schema(dump_schemas, dump_tables, fdin, fdout, None)
 
-        expected_out = """SET statement_timeout = 0;
-SET client_encoding = 'UTF8';
-SET standard_conforming_strings = off;
-SET check_function_bodies = false;
-SET client_min_messages = warning;
-SET escape_string_warning = off;
+        schema_level_restore_list=['s1']
+        with open(out_name, 'w') as fdout:
+            with open(in_name, 'r') as fdin:
+                process_schema(None, None, fdin, fdout, schema_level_restore_list=['s1'])
 
-SET default_with_oids = false;
+        with open(out_name, 'r') as fd:
+            results = fd.read()
+
+
+        expected_out = """-- Name: s1; Type: SCHEMA; Schema: -; Owner: gpadmin
+--
+
+CREATE SCHEMA s1;
+
+ALTER SCHEMA s1 OWNER TO gpadmin;
+
+SET search_path = s1, pg_catalog;
 
 --
-SET search_path = public, pg_catalog;
+-- Name: t1; Type: TABLE; Schema: s1; Owner: gpadmin; Tablespace:
+--
 
-SET default_tablespace = '';
+CREATE TABLE t1 (
+    c1 integer,
+    c2 text,
+    c3 date
+) DISTRIBUTED BY (c1);
+;
+
+ALTER TABLE s1.t1 OWNER TO gpadmin;
 
 --
--- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: public; Owner: dcddev; Tablespace: 
-ALTER TABLE ONLY public.ao_part_table
-    ADD CONSTRAINT constraint_name PRIMARY KEY (name);
+-- Name: v1; Type: VIEW; Schema: s1; Owner: gpadmin
+--
+
+CREATE VIEW v1 AS
+    SELECT t1.c1, t1.c2 FROM t1;
+
+ALTER TABLE s1.v1 OWNER TO gpadmin;
 
 --
--- Name: ao_part_table; Type: EXTERNAL TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: user_defined_function; Type: FUNCTION; Schema: s1; Owner: gpadmin; Tablespace:
+--
+
+CREATE FUNCTION user_defined_function as $$
+print 'Hello, World'
+$$ LANGUAGE as plpgsql;
+
+--
+-- Name: ao_part_table; Type: EXTERNAL TABLE; Schema: s1; Owner: gpadmin; Tablespace:
 --
 
 CREATE TABLE ao_part_table (
     column1 integer,
     column2 character varying(20),
     column3 date
-) DISTRIBUTED BY (column1); with (appendonly=true)"""
+) DISTRIBUTED BY (column1); with (appendonly=true)
 
-        with open(outfile, 'r') as fd:
-            results = fd.read()
+--
+-- Name: id_seq; Type: SEQUENCE; Schema: s1; Owner: gpadmin
+--
+
+CREATE SEQUENCE id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MAXVALUE
+    NO MINVALUE
+    CACHE 1;
+
+
+ALTER TABLE s1.id_seq OWNER TO gpadmin;"""
+
         self.assertEquals(results, expected_out)
-        
-        os.remove(infile)
-        os.remove(outfile)
+
 
     def test_process_schema_function_empty_fitler_list(self):
         test_case_buf = """--
@@ -1507,26 +1579,26 @@ SET search_path = public, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: public; Owner: dcddev; Tablespace:
 --
 
 ALTER TABLE ONLY public.ao_part_table
     ADD CONSTRAINT constraint_name PRIMARY KEY (name);
 
 --
--- Name: ao_part_table_view; Type: VIEW; Schema: public; Owner: dcddev; Tablespace: 
--- 
+-- Name: ao_part_table_view; Type: VIEW; Schema: public; Owner: dcddev; Tablespace:
+--
 CREATE VIEW ao_part_table_view as SELECT * FROM ao_part_table;
 
 --
--- Name: user_defined_function; Type: FUNCTION; Schema: public; Owner: dcddev; Tablespace: 
--- 
+-- Name: user_defined_function; Type: FUNCTION; Schema: public; Owner: dcddev; Tablespace:
+--
 CREATE FUNCTION user_defined_function as $$
 print 'Hello, World'
 $$ LANGUAGE as plpgsql;
 
 --
--- Name: ao_part_table; Type: EXTERNAL TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table; Type: EXTERNAL TABLE; Schema: public; Owner: dcddev; Tablespace:
 --
 
 CREATE TABLE ao_part_table (
@@ -1542,7 +1614,7 @@ CREATE TABLE ao_part_table (
         outfile = '/tmp/test_schema.out'
         with open(infile, 'w') as fd:
             fd.write(test_case_buf)
-            
+
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
                 process_schema(dump_schemas, dump_tables, fdin, fdout, None)
@@ -1565,7 +1637,7 @@ SET default_tablespace = '';
         with open(outfile, 'r') as fd:
             results = fd.read()
         self.assertEquals(results, expected_out)
-        
+
         os.remove(infile)
         os.remove(outfile)
 
@@ -1594,14 +1666,14 @@ SET search_path = public, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: public; Owner: dcddev; Tablespace:
 --
 
 ALTER TABLE ONLY public.ao_part_table
     ADD CONSTRAINT constraint_name PRIMARY KEY (name);
 
 --
--- Name: ao_part_table; Type: EXTERNAL TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table; Type: EXTERNAL TABLE; Schema: public; Owner: dcddev; Tablespace:
 --
 
 CREATE TABLE ao_part_table (
@@ -1617,7 +1689,7 @@ CREATE TABLE ao_part_table (
         outfile = '/tmp/test_schema.out'
         with open(infile, 'w') as fd:
             fd.write(test_case_buf)
-            
+
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
                 process_schema(dump_schemas, dump_tables, fdin, fdout, None)
@@ -1635,12 +1707,12 @@ SET default_with_oids = false;
 SET default_tablespace = '';
 
 --
-""" 
+"""
 
         with open(outfile, 'r') as fd:
             results = fd.read()
         self.assertEquals(results, expected_out)
-        
+
         os.remove(infile)
         os.remove(outfile)
 
@@ -1667,7 +1739,7 @@ COMMENT ON SCHEMA public IS 'Standard public schema';
 SET search_path = some_schema, pg_catalog;
 
 --
--- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: some_schema; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: some_schema; Owner: dcddev; Tablespace:
 --
 
 ALTER TABLE ONLY public.ao_part_table
@@ -1679,7 +1751,7 @@ SET search_path = public, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: ao_part_table; Type: EXTERNAL TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table; Type: EXTERNAL TABLE; Schema: public; Owner: dcddev; Tablespace:
 --
 
 CREATE TABLE ao_part_table (
@@ -1695,7 +1767,7 @@ CREATE TABLE ao_part_table (
         outfile = '/tmp/test_schema.out'
         with open(infile, 'w') as fd:
             fd.write(test_case_buf)
-            
+
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
                 process_schema(dump_schemas, dump_tables, fdin, fdout, None)
@@ -1715,7 +1787,7 @@ SET search_path = public, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: ao_part_table; Type: EXTERNAL TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table; Type: EXTERNAL TABLE; Schema: public; Owner: dcddev; Tablespace:
 --
 
 CREATE TABLE ao_part_table (
@@ -1723,19 +1795,19 @@ CREATE TABLE ao_part_table (
     column2 character varying(20),
     column3 date
 ) DISTRIBUTED BY (column1); with (appendonly=true)"""
- 
+
 
         with open(outfile, 'r') as fd:
             results = fd.read()
         self.assertEquals(results, expected_out)
-        
+
         os.remove(infile)
         os.remove(outfile)
 
     def test_check_valid_schema01(self):
         dump_schemas = set(['schema1', 'schema2'])
         name = 'schema1'
-        output = check_valid_schema(name, dump_schemas) 
+        output = check_valid_schema(name, dump_schemas)
         self.assertEquals(output, True)
 
     def test_check_valid_schema02(self):
@@ -1756,25 +1828,25 @@ CREATE TABLE ao_part_table (
         output = check_valid_schema(name, dump_schemas)
         self.assertEquals(output, False)
 
-    def test_check_valid_table01(self):
+    def test_check_valid_relname01(self):
         dump_tables = [('public', 'ao_part_table')]
         name = 'ao_part_table'
         schema = 'public'
-        output = check_valid_table(schema, name, dump_tables)
+        output = check_valid_relname(schema, name, dump_tables)
         self.assertEquals(output, True)
 
-    def test_check_valid_table02(self):
+    def test_check_valid_relname02(self):
         dump_tables = [('public', 'ao_part_table')]
         name = 'ao_part_table'
         schema = 'pepper'
-        output = check_valid_table(schema, name, dump_tables)
+        output = check_valid_relname(schema, name, dump_tables)
         self.assertEquals(output, False)
 
-    def test_check_valid_table03(self):
+    def test_check_valid_relname03(self):
         dump_tables = [('public', 'ao_part_table')]
         name = 'co_part_table'
         schema = 'public'
-        output = check_valid_table(schema, name, dump_tables)
+        output = check_valid_relname(schema, name, dump_tables)
         self.assertEquals(output, False)
 
     def test_process_schema_function_drop_table(self):
@@ -1804,7 +1876,7 @@ COMMENT ON SCHEMA public IS 'Standard public schema';
 SET search_path = some_schema, pg_catalog;
 
 --
--- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: some_schema; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: some_schema; Owner: dcddev; Tablespace:
 --
 
 ALTER TABLE ONLY some_schema.ao_part_table
@@ -1816,7 +1888,7 @@ SET search_path = public, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: ao_part_table; Type: TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table; Type: TABLE; Schema: public; Owner: dcddev; Tablespace:
 --
 
 CREATE TABLE ao_part_table (
@@ -1832,7 +1904,7 @@ CREATE TABLE ao_part_table (
         outfile = '/tmp/test_schema.out'
         with open(infile, 'w') as fd:
             fd.write(test_case_buf)
-            
+
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
                 process_schema(dump_schemas, dump_tables, fdin, fdout, None)
@@ -1852,7 +1924,7 @@ SET search_path = public, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: ao_part_table; Type: TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table; Type: TABLE; Schema: public; Owner: dcddev; Tablespace:
 --
 
 CREATE TABLE ao_part_table (
@@ -1860,7 +1932,7 @@ CREATE TABLE ao_part_table (
     column2 character varying(20),
     column3 date
 ) DISTRIBUTED BY (column1); with (appendonly=true)"""
- 
+
 
         with open(outfile, 'r') as fd:
             results = fd.read()
@@ -1998,7 +2070,7 @@ COMMENT ON SCHEMA public IS 'Standard public schema';
 SET search_path = some_schema, pg_catalog;
 
 --
--- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: some_schema; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table_constraint; Type: CONSTRAINT; Schema: some_schema; Owner: dcddev; Tablespace:
 --
 
 ALTER TABLE ONLY some_schema.ao_part_table
@@ -2010,7 +2082,7 @@ SET search_path = public, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: ao_part_table; Type: EXTERNAL TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table; Type: EXTERNAL TABLE; Schema: public; Owner: dcddev; Tablespace:
 --
 
 CREATE TABLE ao_part_table (
@@ -2026,7 +2098,7 @@ CREATE TABLE ao_part_table (
         outfile = '/tmp/test_schema.out'
         with open(infile, 'w') as fd:
             fd.write(test_case_buf)
-            
+
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
                 process_schema(dump_schemas, dump_tables, fdin, fdout, None)
@@ -2046,7 +2118,7 @@ SET search_path = public, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: ao_part_table; Type: EXTERNAL TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table; Type: EXTERNAL TABLE; Schema: public; Owner: dcddev; Tablespace:
 --
 
 CREATE TABLE ao_part_table (
@@ -2054,12 +2126,12 @@ CREATE TABLE ao_part_table (
     column2 character varying(20),
     column3 date
 ) DISTRIBUTED BY (column1); with (appendonly=true)"""
- 
+
 
         with open(outfile, 'r') as fd:
             results = fd.read()
         self.assertEquals(results, expected_out)
-      
+
 
     def test_process_schema_single_table(self):
         test_case_buf = """--
@@ -2141,7 +2213,7 @@ SET search_path = user_schema_a, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: user_table; Type: TABLE; Schema: user_schema_a; Owner: user_role_b; Tablespace: 
+-- Name: user_table; Type: TABLE; Schema: user_schema_a; Owner: user_role_b; Tablespace:
 --
 
 CREATE TABLE user_table (
@@ -2155,7 +2227,7 @@ ALTER TABLE user_schema_a.user_table OWNER TO user_role_b;
 SET search_path = user_schema_b, pg_catalog;
 
 --
--- Name: test_table; Type: TABLE; Schema: user_schema_b; Owner: dcddev; Tablespace: 
+-- Name: test_table; Type: TABLE; Schema: user_schema_b; Owner: dcddev; Tablespace:
 --
 
 CREATE TABLE test_table (
@@ -2168,7 +2240,7 @@ ALTER TABLE user_schema_b.test_table OWNER TO dcddev;
 SET search_path = user_schema_c, pg_catalog;
 
 --
--- Name: test_table; Type: TABLE; Schema: user_schema_c; Owner: user_role_b; Tablespace: 
+-- Name: test_table; Type: TABLE; Schema: user_schema_c; Owner: user_role_b; Tablespace:
 --
 
 CREATE TABLE test_table (
@@ -2181,7 +2253,7 @@ ALTER TABLE user_schema_c.test_table OWNER TO user_role_b;
 SET search_path = user_schema_d, pg_catalog;
 
 --
--- Name: test_table; Type: TABLE; Schema: user_schema_d; Owner: dcddev; Tablespace: 
+-- Name: test_table; Type: TABLE; Schema: user_schema_d; Owner: dcddev; Tablespace:
 --
 
 CREATE TABLE test_table (
@@ -2194,7 +2266,7 @@ ALTER TABLE user_schema_d.test_table OWNER TO dcddev;
 SET search_path = user_schema_e, pg_catalog;
 
 --
--- Name: test_table; Type: TABLE; Schema: user_schema_e; Owner: dcddev; Tablespace: 
+-- Name: test_table; Type: TABLE; Schema: user_schema_e; Owner: dcddev; Tablespace:
 --
 
 CREATE TABLE test_table (
@@ -2304,7 +2376,7 @@ GRANT ALL ON TABLE user_table TO user_role_b;
         outfile = '/tmp/test_schema.out'
         with open(infile, 'w') as fd:
             fd.write(test_case_buf)
-            
+
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
                 process_schema(dump_schemas, dump_tables, fdin, fdout, None)
@@ -2342,7 +2414,7 @@ SET search_path = user_schema_a, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: user_table; Type: TABLE; Schema: user_schema_a; Owner: user_role_b; Tablespace: 
+-- Name: user_table; Type: TABLE; Schema: user_schema_a; Owner: user_role_b; Tablespace:
 --
 
 CREATE TABLE user_table (
@@ -2356,7 +2428,7 @@ ALTER TABLE user_schema_a.user_table OWNER TO user_role_b;
 SET search_path = user_schema_e, pg_catalog;
 
 --
--- Name: test_table; Type: TABLE; Schema: user_schema_e; Owner: dcddev; Tablespace: 
+-- Name: test_table; Type: TABLE; Schema: user_schema_e; Owner: dcddev; Tablespace:
 --
 
 CREATE TABLE test_table (
@@ -2406,7 +2478,7 @@ GRANT ALL ON TABLE user_table TO user_role_b;
         with open(outfile, 'r') as fd:
             results = fd.read()
         self.assertEquals(results, expected_out)
-        
+
         os.remove(infile)
         os.remove(outfile)
 
@@ -2416,20 +2488,20 @@ GRANT ALL ON TABLE user_table TO user_role_b;
         drop_table_expr = 'DROP TABLE '
         output = check_dropped_table(line, dump_tables, None, drop_table_expr)
         self.assertTrue(output)
-  
+
     def test_check_dropped_table01(self):
         line = 'DROP TABLE public.ao_part_table;'
         dump_tables = [('pepper', 'ao_part_table')]
         drop_table_expr = 'DROP TABLE '
         output = check_dropped_table(line, dump_tables, None, drop_table_expr)
-        self.assertFalse(output) 
+        self.assertFalse(output)
 
     def test_check_dropped_table02(self):
         line = 'DROP TABLE public.ao_part_table;'
         dump_tables = [('public', 'ao_table')]
         drop_table_expr = 'DROP TABLE '
         output = check_dropped_table(line, dump_tables, None, drop_table_expr)
-        self.assertFalse(output) 
+        self.assertFalse(output)
 
     def test_process_schema_foreign_table(self):
         test_case_buf = """--
@@ -2441,7 +2513,7 @@ SET search_path = public, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: ao_part_table; Type: FOREIGN TABLE; Schema: public; Owner: dcddev; Tablespace: 
+-- Name: ao_part_table; Type: FOREIGN TABLE; Schema: public; Owner: dcddev; Tablespace:
 --
 
 CREATE FOREIGN TABLE ao_part_table (
@@ -2457,7 +2529,7 @@ CREATE FOREIGN TABLE ao_part_table (
         outfile = '/tmp/test_schema.out'
         with open(infile, 'w') as fd:
             fd.write(test_case_buf)
-            
+
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
                 process_schema(dump_schemas, dump_tables, fdin, fdout, None)
@@ -2527,7 +2599,7 @@ SET search_path = user_schema_a, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: user_table; Type: TABLE; Schema: user_schema_a; Owner: user_role_b; Tablespace: 
+-- Name: user_table; Type: TABLE; Schema: user_schema_a; Owner: user_role_b; Tablespace:
 --
 
 CREATE TABLE user_table (
@@ -2541,7 +2613,7 @@ ALTER TABLE user_schema_a.user_table OWNER TO user_role_b;
 SET search_path = user_schema_b, pg_catalog;
 
 --
--- Name: test_table; Type: TABLE; Schema: user_schema_b; Owner: dcddev; Tablespace: 
+-- Name: test_table; Type: TABLE; Schema: user_schema_b; Owner: dcddev; Tablespace:
 --
 
 CREATE TABLE test_table (
@@ -2621,7 +2693,7 @@ GRANT ALL ON TABLE user_table TO user_role_b;
         outfile = '/tmp/test_schema.out'
         with open(infile, 'w') as fd:
             fd.write(test_case_buf)
-     
+
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
                 process_schema(dump_schemas, dump_tables, fdin, fdout, None)
@@ -2650,7 +2722,7 @@ SET search_path = user_schema_a, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: user_table; Type: TABLE; Schema: user_schema_a; Owner: user_role_b; Tablespace: 
+-- Name: user_table; Type: TABLE; Schema: user_schema_a; Owner: user_role_b; Tablespace:
 --
 
 CREATE TABLE user_table (
@@ -2726,7 +2798,7 @@ ALTER FUNCTION plpgsql_validator(oid) OWNER TO dcddev;
 SET search_path = "测试_schema", pg_catalog;
 
 --
--- Name: 测试; Type: TABLE; Schema: 测试_schema; Owner: user_role_b; Tablespace: 
+-- Name: 测试; Type: TABLE; Schema: 测试_schema; Owner: user_role_b; Tablespace:
 --
 
 CREATE TABLE "测试" (
@@ -2786,7 +2858,7 @@ GRANT ALL ON TABLE "测试" TO user_role_b;
         outfile = '/tmp/test_schema.out'
         with open(infile, 'w') as fd:
             fd.write(test_case_buf)
-     
+
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
                 process_schema(dump_schemas, dump_tables, fdin, fdout, None)
@@ -2813,7 +2885,7 @@ ALTER SCHEMA "测试_schema" OWNER TO user_role_a;
 SET search_path = "测试_schema", pg_catalog;
 
 --
--- Name: 测试; Type: TABLE; Schema: 测试_schema; Owner: user_role_b; Tablespace: 
+-- Name: 测试; Type: TABLE; Schema: 测试_schema; Owner: user_role_b; Tablespace:
 --
 
 CREATE TABLE "测试" (
@@ -2889,7 +2961,7 @@ ALTER FUNCTION plpgsql_validator(oid) OWNER TO dcddev;
 SET search_path = "Áá_schema", pg_catalog;
 
 --
--- Name: Áá; Type: TABLE; Schema: Áá_schema; Owner: user_role_b; Tablespace: 
+-- Name: Áá; Type: TABLE; Schema: Áá_schema; Owner: user_role_b; Tablespace:
 --
 
 CREATE TABLE "Áá" (
@@ -2949,7 +3021,7 @@ GRANT ALL ON TABLE "Áá" TO user_role_b;
         outfile = '/tmp/test_schema.out'
         with open(infile, 'w') as fd:
             fd.write(test_case_buf)
-     
+
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
                 process_schema(dump_schemas, dump_tables, fdin, fdout, None)
@@ -2976,7 +3048,7 @@ ALTER SCHEMA "Áá_schema" OWNER TO user_role_a;
 SET search_path = "Áá_schema", pg_catalog;
 
 --
--- Name: Áá; Type: TABLE; Schema: Áá_schema; Owner: user_role_b; Tablespace: 
+-- Name: Áá; Type: TABLE; Schema: Áá_schema; Owner: user_role_b; Tablespace:
 --
 
 CREATE TABLE "Áá" (
@@ -3052,7 +3124,7 @@ ALTER FUNCTION plpgsql_validator(oid) OWNER TO dcddev;
 SET search_path = "Ж_schema", pg_catalog;
 
 --
--- Name: Ж; Type: TABLE; Schema: Ж_schema; Owner: user_role_b; Tablespace: 
+-- Name: Ж; Type: TABLE; Schema: Ж_schema; Owner: user_role_b; Tablespace:
 --
 
 CREATE TABLE "Ж" (
@@ -3112,7 +3184,7 @@ GRANT ALL ON TABLE "Ж" TO user_role_b;
         outfile = '/tmp/test_schema.out'
         with open(infile, 'w') as fd:
             fd.write(test_case_buf)
-     
+
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
                 process_schema(dump_schemas, dump_tables, fdin, fdout, None)
@@ -3139,7 +3211,7 @@ ALTER SCHEMA "Ж_schema" OWNER TO user_role_a;
 SET search_path = "Ж_schema", pg_catalog;
 
 --
--- Name: Ж; Type: TABLE; Schema: Ж_schema; Owner: user_role_b; Tablespace: 
+-- Name: Ж; Type: TABLE; Schema: Ж_schema; Owner: user_role_b; Tablespace:
 --
 
 CREATE TABLE "Ж" (

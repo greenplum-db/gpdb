@@ -3553,6 +3553,18 @@ Feature: Validate command line arguments
         Then gpdbrestore should return a return code of 0
         And verify that there are "2190" tuples in "bkdb" for table "public.foo4"
 
+    Scenario: Schema level restore with gpdbrestore -S option for views, sequences, and functions
+        Given the test is initialized
+        And the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/schema_level_test_workload.sql template1"
+        When the user runs command "gpcrondump -a -x schema_level_test_db"
+        Then gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored
+        When the user runs "gpdbrestore -S s1 -a -e" with the stored timestamp
+        Then gpdbrestore should return a return code of 0
+        And verify that sequence "id_seq" exists in schema "s1" and database "schema_level_test_db"
+        And verify that view "v1" exists in schema "s1" and database "schema_level_test_db"
+        And verify that function "increment(integer)" exists in schema "s1" and database "schema_level_test_db"
+        And verify that table "apples" exists in schema "s1" and database "schema_level_test_db"
 
     # THIS SHOULD BE THE LAST TEST
     @backupfire
