@@ -96,7 +96,8 @@ void printTemplate() {
         "chunksize = 67108864\n"
         "low_speed_limit = 10240\n"
         "low_speed_time = 60\n"
-        "encryption = true\n");
+        "encryption = true\n"
+        "autocompress = true\n");
 }
 
 void printBucketContents(const ListBucketResult &result) {

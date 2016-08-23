@@ -19,8 +19,8 @@ void S3KeyWriter::open(const WriterParams &params) {
 }
 
 // write() attempts to write up to count bytes from the buffer.
-// Always return 0 if EOF, no matter how many times it's invoked. Throw exception if encounters
-// errors.
+// Always return 0 if EOF, no matter how many times it's invoked.
+// Throw exception if encounters errors.
 uint64_t S3KeyWriter::write(const char *buf, uint64_t count) {
     CHECK_OR_DIE(buf != NULL);
     this->checkQueryCancelSignal();
@@ -67,10 +67,9 @@ void S3KeyWriter::flushBuffer() {
 
         this->buffer.clear();
 
-        // Most time query is canceled during uploadPartOfData,
-        // This is the first chance to cancel and clean up upload.
-        // Otherwise GPDB will call with LAST_CALL but QueryCancelPending is set to false,
-        // and we can't detect query cancel signal in S3KeyWriter::close().
+        // Most time query is canceled during uploadPartOfData. This is the first chance to cancel
+        // and clean up upload. Otherwise GPDB will call with LAST_CALL but QueryCancelPending is
+        // set to false, and we can't detect query cancel signal in S3KeyWriter::close().
         this->checkQueryCancelSignal();
     }
 }

@@ -22,6 +22,7 @@ class MockWriter : public Writer {
     }
 
     virtual void close() {
+        // Do not clean it, so we can verify the result in UT tests.
         // this->data.clear();
     }
 

@@ -29,11 +29,6 @@ class MockS3InterfaceForCompressionWrite : public MockS3Interface {
         return this->dataMap.size();
     }
 
-    bool mockCheckKeyExistence(const string& keyUrl, const string& region,
-                               const S3Credential& cred) {
-        return false;
-    }
-
     string mockGetUploadId(const string& keyUrl, const string& region, const S3Credential& cred) {
         return this->uploadID;
     }
@@ -105,6 +100,9 @@ class S3CommonWriteTest : public ::testing::Test, public S3CommonWriter {
     Byte* out;
 };
 
+// We need to mock uploadPartOfData() and completeMultiPart() in GZip mode,
+// because even an empty string will produce 20+ bytes for GZip header and trailer,
+// and then in open() may flush those data into S3KeyWriter.
 TEST_F(S3CommonWriteTest, UsingGZip) {
     s3ext_autocompress = true;
 
@@ -127,6 +125,7 @@ TEST_F(S3CommonWriteTest, UsingGZip) {
     ASSERT_TRUE(NULL != dynamic_cast<CompressWriter*>(this->upstreamWriter));
 }
 
+// We need not to mock uploadPartOfData() and completeMultiPart() in plain mode,
 TEST_F(S3CommonWriteTest, UsingPlain) {
     s3ext_autocompress = false;
 
@@ -146,10 +145,6 @@ TEST_F(S3CommonWriteTest, UsingPlain) {
 TEST_F(S3CommonWriteTest, WritePlainData) {
     s3ext_autocompress = false;
 
-    //    EXPECT_CALL(mockS3Interface, checkKeyExistence(_, _, _))
-    //        .WillOnce(
-    //            Invoke(&mockS3Interface,
-    //            &MockS3InterfaceForCompressionWrite::mockCheckKeyExistence));
     EXPECT_CALL(mockS3Interface, getUploadId(_, _, _))
         .WillOnce(Invoke(&mockS3Interface, &MockS3InterfaceForCompressionWrite::mockGetUploadId));
     EXPECT_CALL(mockS3Interface, uploadPartOfData(_, _, _, _, _, _))

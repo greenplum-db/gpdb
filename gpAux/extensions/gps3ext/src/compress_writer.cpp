@@ -42,7 +42,7 @@ uint64_t CompressWriter::write(const char* buf, uint64_t count) {
         return 0;
     }
 
-    // we assume data block from GPDB is always smaller than gzip chunkbuffer
+    // we assume data block from upper layer is always smaller than gzip chunkbuffer
     CHECK_OR_DIE_MSG(count < S3_ZIP_COMPRESS_CHUNKSIZE,
                      "Data size " PRIu64 " is larger than S3_ZIP_COMPRESS_CHUNKSIZE", count);
 
