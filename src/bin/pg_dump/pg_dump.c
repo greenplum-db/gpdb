@@ -2447,6 +2447,8 @@ makeTableDataInfo(DumpOptions *dopt, TableInfo *tbinfo, bool oids)
 
 	if (tbinfo->relkind == RELKIND_MATVIEW)
 		tdinfo->dobj.objType = DO_REFRESH_MATVIEW;
+	else if (tbinfo->relkind == RELKIND_SEQUENCE)
+		tdinfo->dobj.objType = DO_SEQUENCE_SET;
 	else
 		tdinfo->dobj.objType = DO_TABLE_DATA;
 
@@ -9291,14 +9293,13 @@ dumpDumpableObject(Archive *fout, DumpableObject *dobj)
 			if (!postDataSchemaOnly)
 			dumpCast(fout, (CastInfo *) dobj);
 			break;
+		case DO_SEQUENCE_SET:
+			if (!postDataSchemaOnly)
+			dumpSequenceData(fout, (TableDataInfo *) dobj);
+			break;
 		case DO_TABLE_DATA:
 			if (!postDataSchemaOnly)
-			{
-				if (((TableDataInfo *) dobj)->tdtable->relkind == RELKIND_SEQUENCE)
-					dumpSequenceData(fout, (TableDataInfo *) dobj);
-				else
-					dumpTableData(fout, (TableDataInfo *) dobj);
-			}
+			dumpTableData(fout, (TableDataInfo *) dobj);
 			break;
 		case DO_DUMMY_TYPE:
 			/* table rowtypes and array types are never dumped separately */
@@ -17934,6 +17935,7 @@ addBoundaryDependencies(DumpableObject **dobjs, int numObjs,
 				addObjectDependency(preDataBound, dobj->dumpId);
 				break;
 			case DO_TABLE_DATA:
+			case DO_SEQUENCE_SET:
 			case DO_BLOB_DATA:
 				/* Data objects: must come between the boundaries */
 				addObjectDependency(dobj, preDataBound->dumpId);

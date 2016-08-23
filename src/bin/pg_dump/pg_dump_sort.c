@@ -103,14 +103,15 @@ static const int newObjectTypePriority[] =
 	11,							/* DO_CONVERSION */
 	18,							/* DO_TABLE */
 	20,							/* DO_ATTRDEF */
-	27,							/* DO_INDEX */
-	28,							/* DO_RULE */
-	29,							/* DO_TRIGGER */
-	26,							/* DO_CONSTRAINT */
-	30,							/* DO_FK_CONSTRAINT */
+	28,							/* DO_INDEX */
+	29,							/* DO_RULE */
+	30,							/* DO_TRIGGER */
+	27,							/* DO_CONSTRAINT */
+	31,							/* DO_FK_CONSTRAINT */
 	2,							/* DO_PROCLANG */
 	10,							/* DO_CAST */
 	23,							/* DO_TABLE_DATA */
+	24,							/* DO_SEQUENCE_SET */
 	19,							/* DO_DUMMY_TYPE */
 	12,							/* DO_TSPARSER */
 	14,							/* DO_TSDICT */
@@ -1448,6 +1449,11 @@ describeDumpableObject(DumpableObject *obj, char *buf, int bufsize)
 		case DO_TABLE_DATA:
 			snprintf(buf, bufsize,
 					 "TABLE DATA %s  (ID %d OID %u)",
+					 obj->name, obj->dumpId, obj->catId.oid);
+			return;
+		case DO_SEQUENCE_SET:
+			snprintf(buf, bufsize,
+					 "SEQUENCE SET %s  (ID %d OID %u)",
 					 obj->name, obj->dumpId, obj->catId.oid);
 			return;
 		case DO_DUMMY_TYPE:
