@@ -883,7 +883,7 @@ main(int argc, char **argv)
 #ifdef USE_DDBOOST
 	if (dd_boost_enabled)
 	{
-		/* The storage unit is created by the gpcrondump.py, before all the agents are executed */
+		/* The storage unit is created by the gpcrondump, before all the agents are executed */
 		/* Hence it is always false here														*/
 		/* remote is always false when doing backup to primary DDR */
 		int err = DD_ERR_NONE;

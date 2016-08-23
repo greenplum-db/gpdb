@@ -255,56 +255,6 @@ class Gppkg:
 
         return gppkg
 
-class LocalCommand(Operation):
-    '''
-    DEPRECATED
-
-    TODO: AK: Eliminate this. Replace invocations with Command(...).run(validateAfter = True)
-    '''
-
-    def __init__(self, cmd_str, echo = False):
-        self.cmd_str = cmd_str
-        self.echo = echo
-
-    def execute(self):
-
-        logger.debug(self.cmd_str)
-        cmd = Command(name = 'LocalCommand', cmdStr = self.cmd_str)
-        cmd.run(validateAfter = True)
-        if self.echo:
-            echo_str = cmd.get_results().stdout.strip()
-            if echo_str:
-                logger.info(echo_str)
-        return cmd.get_results()
-
-class RemoteCommand(Operation):
-    """
-    DEPRECATED
-
-    TODO: AK: Rename as GpSsh, like GpScp below. 
-    """
-
-    def __init__(self, cmd_str, host_list):
-        self.cmd_str = cmd_str
-        self.host_list = host_list
-        self.pool = None
-       
-    def execute(self):
-       
-        logger.debug(self.cmd_str)
-
-        # Create Worker pool
-        # and add commands to it
-        self.pool = WorkerPool()
-
-        for host in self.host_list:
-            cmd = Command(name = 'Remote Command', cmdStr = self.cmd_str, ctxt = REMOTE, remoteHost = host)
-            self.pool.addCommand(cmd)
-        self.pool.join()
-        
-        #This will raise ExecutionError exception if even a single command fails
-        self.pool.check_results()
-
 class ListPackages(Operation):
     '''  
         Lists all the packages present in 

@@ -34,18 +34,14 @@ run_operator_tests.pl   -  ???
 
 List of Management Scripts Written in Bash
 ------------------------------------------
-bin/gpcheckos.bash      -  Like gpcheckos, but in bash
 bin/gpcrondump          -  Dumps a database 
 bin/gpdbrestore         -  Restores a database dumped from gpcrondump
 bin/gpinitsystem        -  Creates a new Greenplum Database
 bin/gpload              -  Sets env variables and calls gpload.py
-bin/gpprintdbsizes      -  Removed in 4.0
-bin/gprebuildsystem     -  Deprecated in 3.4
 
 
 List of Management Scripts Written in Python (no libraries)
 -----------------------------------------------------------
-bin/gpdetective         -  Removed in 4.3.5.1.
 bin/gpload.py           -  Loads data into a Greenplum Database
 bin/gpmigrator          -  Upgrades from previous versions
 bin/gpsys1              -  Print system information on a host  (???)
@@ -55,7 +51,6 @@ List of Management Scripts Written in Python (gpmlib - old libraries)
 ---------------------------------------------------------------------
 bin/gpaddmirrors        -  Adds mirrors to an array (needs rewrite)
 bin/gprecoverseg        -  Recovers a failed segment (needs rewrite)
-bin/gpchecknet          -  Checks network performance
 bin/gpcheckperf         -  Checks the hardware for Greenplum Database
 bin/gpscp               -  Copies files to many hosts
 bin/gpssh               -  Remote shell to many hosts
@@ -66,7 +61,6 @@ List of Management Scripts Written in Python (gppylib - current libraries)
 --------------------------------------------------------------------------
 bin/gpactivatestandby   -  Activates the Standby Master
 bin/gpaddconfig         -  Edits postgresql.conf file for all segments
-bin/gpcheckos           -  Check operating system settings
 bin/gpdeletesystem      -  Deletes a Greenplum Database
 bin/gpexpand            -  Adds additional segments to a Greenplum Database
 bin/gpfilespace         -  Adds a filespace to a Greenplum Database (partial use of libraries)
@@ -83,9 +77,6 @@ sbin/gpsegcopy          -  Helper script for gpexpand
 sbin/gpsegstart.py      -  Helper script for gpstart
 sbin/gpsegstop.py       -  Helper script for gpstop
 sbin/gpsegtoprimaryormirror.py  - Helper script for failover
-sbin/gpstandbystart.sh  -  Removed in 4.0
-sbin/gpage.py           -  Removed in 4.0 due to query prioritization
-sbin/gpsuspend.py       -  Unused Helper script for ???  (unused)
 
 
 Overview of gppylib
@@ -102,15 +93,6 @@ gparray.py
    |
    +-  GpArray   - Configuartion information for a Greenplum Database
          \-  Contains mulptile GpSegment objects
-
-gpcheckos.py     - Old dead code?  Not called by gpcheckos.
-stringUtil.py    - weird gpcheckos foo ???
-commands/gpcheckosUnix.py - commands for gpcheckos
-gpcheckosCmd.py  - Should move to commands/gp.py
-gpcheckosDa.py   - ???
-gpcheckosXml.py  - Should be modified to be less gpcheckos specific
-  |
-  +- GpXml       - mostly generic XML file wrapper
 
 gphostcache.py   
   |

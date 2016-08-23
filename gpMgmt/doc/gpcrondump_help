@@ -18,7 +18,7 @@ gpcrondump -x database_name
      [ -c  [ --cleanup-date yyyymmdd  |  --cleanup-total n ] ]
      [-z] [-r] [-f <free_space_percent>] [-b] [-h] [-H] [-j | -k]
      [-g] [-G] [-C] [-d <master_data_directory>] [-B <parallel_processes>] 
-     [-a] [-q] [-y <reportfile>] [-l <logfile_directory>]
+     [-a] [-q] [-l <logfile_directory>]
      [--email-file <path_to_file> ] [-v]
      { [-E encoding] [--inserts | --column-inserts] [--oids]
      [--no-owner | --use-set-session-authorization] 
@@ -831,17 +831,6 @@ OPTIONS
 
  Required. The name of the Greenplum database to dump. Specify multiple times for 
  multiple databases. 
-
-
--y <reportfile> 
-
- This option is deprecated and will be removed in a future release. If 
- specified, a warning message is returned stating that the -y option is 
- deprecated. 
-
- Specifies the full path name where a copy of the backup job log file is 
- placed on the master host. The job log file is created in the master 
- data directory or if running remotely, the current working directory. 
 
 
 -z (no compression) 

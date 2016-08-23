@@ -925,7 +925,6 @@ PVK_SCRIPTS = \
 	bin/generate_load_tpch.pl	\
 	bin/gpscp			\
 	bin/gpssh			\
-	bin/gpcheckos			\
 	bin/gpcheckperf			\
 	bin/run_operator_tests.pl	\
 	$(NULL)
@@ -960,9 +959,8 @@ SET_VERSION_SCRIPTS = \
 	bin/gpactivatestandby \
 	bin/gpaddmirrors \
 	bin/gpbitmapreindex \
-	bin/gpcheckos \
 	bin/gpcheckperf \
-	bin/gpcrondump.py \
+	bin/gpcrondump \
 	bin/gpdbrestore \
 	bin/gpdeletesystem \
 	bin/gpexpand \
@@ -974,12 +972,9 @@ SET_VERSION_SCRIPTS = \
 	bin/gpmigrator \
 	bin/gpmigrator_mirror \
 	bin/gpmovemirrors \
-	bin/gprebuildsystem \
 	bin/gprecoverseg \
 	bin/gpreload \
 	bin/gpscp \
-	bin/gpsizecalc \
-	bin/gpskew \
 	bin/gpssh \
 	bin/gpssh-exkeys \
 	bin/gpstart \
@@ -989,7 +984,6 @@ SET_VERSION_SCRIPTS = \
 	bin/lib/gpcheckcat \
 	sbin/gpaddconfig.py \
 	sbin/gpchangeuserpassword \
-	sbin/gpcheck_hostdump \
 	sbin/gpcleansegmentdir.py \
 	sbin/gpfixuserlimts \
 	sbin/gpgetstatususingtransition.py \
@@ -998,7 +992,6 @@ SET_VERSION_SCRIPTS = \
 	sbin/gpsegstop.py \
 	sbin/gpsegtoprimaryormirror.py \
 	sbin/gpsetdbid.py \
-	sbin/gpsuspend.py \
 	sbin/gpupgrademirror.py \
 	lib/python/gppylib/programs/clsAddMirrors.py \
 	lib/python/gppylib/programs/clsHostCacheLookup.py \
@@ -1007,7 +1000,6 @@ SET_VERSION_SCRIPTS = \
 	lib/python/gppylib/programs/clsSystemState.py \
 	lib/python/gppylib/programs/gppkg.py \
 	lib/python/gppylib/programs/kill.py \
-	lib/python/gppylib/programs/verify.py \
 	lib/python/gppylib/mainUtils.py \
 	$(NULL)
 
@@ -1135,8 +1127,6 @@ endif
 	rm -rf $(INSTLOC)/bin/lib/.p4ignore
 	rm -rf $(INSTLOC)/bin/src
 	rm -f $(INSTLOC)/bin/gpchecksubnetcfg
-	echo "`date` -- INFO: Removing $(INSTLOC)/bin/gpexpandsystem"
-	rm -f $(INSTLOC)/bin/gpexpandsystem
 	rm -rf $(INSTLOC)/bin/gppylib
 	find $(INSTLOC)/lib/python/gppylib -name test -type d | xargs rm -rf
 
