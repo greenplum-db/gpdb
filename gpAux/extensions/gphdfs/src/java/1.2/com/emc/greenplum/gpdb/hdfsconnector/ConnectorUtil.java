@@ -100,6 +100,7 @@ public class ConnectorUtil
 		String jaasConf = System.getenv("GPHOME") + "/lib/hadoop/jaas.conf";
 		System.setProperty("java.security.auth.login.config", jaasConf);
 		Boolean kinitDisabled = conf.getBoolean(HADOOP_DISABLE_KINIT, false);
+		Exception ex = null;
 
 		/*
 			Attempt to find the TGT from the users ticket cache and check if its a valid TGT
@@ -139,18 +140,21 @@ public class ConnectorUtil
 					break;
 				}
 			}
-		} catch (LoginException | InterruptedException e) {
-			if ( kinitDisabled ) {
-				SecurityUtil.login(conf,HADOOP_SECURITY_USER_KEYTAB_FILE,HADOOP_SECURITY_USERNAME);
-				return;
-			}
-			/* if kinit is not disabled then do nothing because we will request a new TGT and update the ticket cache
-			* regardless if login or kinit refresh failed initially
-			*/
+		} catch (LoginException e) {
+		    ex = e;
+		} catch (InterruptedException e) {
+		    ex = e;
 		}
-
-		// fail back to securityutil if kinit is disabled
-		if ( kinitDisabled ) { // login from keytab
+		/*
+		 * Fail back to securityutil if kinit is disabled.  If
+		 * kinit is not disabled then do nothing because we
+		 * will request a new TGT and update the ticket cache
+		 * regardless if login or kinit refresh failed
+		 * initially.
+		 */
+		if ( kinitDisabled &&
+		     (ex == null || ex instanceof LoginException ||
+		      ex instanceof InterruptedException) ) { // login from keytab
 			SecurityUtil.login(conf,HADOOP_SECURITY_USER_KEYTAB_FILE,HADOOP_SECURITY_USERNAME);
 			return;
 		}
