@@ -170,6 +170,7 @@ dumpOptionsFromRestoreOptions(RestoreOptions *ropt)
 	dopt->no_security_labels = ropt->no_security_labels;
 	dopt->lockWaitTimeout = ropt->lockWaitTimeout;
 	dopt->include_everything = ropt->include_everything;
+	dopt->sequence_data = ropt->sequence_data;
 
 	return dopt;
 }
@@ -3001,7 +3002,8 @@ _tocEntryRequired(TocEntry *te, teSection curSection, ArchiveHandle *AH)
 		 * other information should be generated in binary-upgrade mode (not
 		 * the actual data).
 		 */
-		if (!(ropt->binary_upgrade &&
+		if (!(ropt->sequence_data && strcmp(te->desc, "SEQUENCE SET") == 0) &&
+			!(ropt->binary_upgrade &&
 			  (strcmp(te->desc, "BLOB") == 0 ||
 			   (strcmp(te->desc, "ACL") == 0 &&
 				strncmp(te->tag, "LARGE OBJECT ", 13) == 0) ||
