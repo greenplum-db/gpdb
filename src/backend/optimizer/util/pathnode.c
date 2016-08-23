@@ -1604,15 +1604,9 @@ create_result_path(List *quals)
 	pathnode->path.startup_cost = 0;
 	pathnode->path.total_cost = cpu_tuple_cost;
 
-	pathnode->quals = quals;
-
-	/* Ideally should define cost_result(), but I'm too lazy */
-	pathnode->path.startup_cost = 0;
-	pathnode->path.total_cost = cpu_tuple_cost;
-
-        CdbPathLocus_MakeGeneral(&pathnode->path.locus);
-        pathnode->path.motionHazard = false;
-        pathnode->path.rescannable = true;
+	CdbPathLocus_MakeGeneral(&pathnode->path.locus);
+	pathnode->path.motionHazard = false;
+	pathnode->path.rescannable = true;
 
 	/*
 	 * In theory we should include the qual eval cost as well, but at present
