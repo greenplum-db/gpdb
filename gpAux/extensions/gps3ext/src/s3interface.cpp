@@ -49,7 +49,7 @@ Response S3Service::getResponseWithRetries(const string &url, HTTPHeaders &heade
     while (retries--) {
         // declare response here to leverage RVO (Return Value Optimization)
         Response response = this->restfulService->get(url, headers, params);
-        if (response.isSuccess() || (retries == 0)) {
+        if (response.isSuccess() || (retries == 0) || QueryCancelPending) {
             return response;
         };
 
@@ -66,7 +66,7 @@ Response S3Service::putResponseWithRetries(const string &url, HTTPHeaders &heade
     while (retries--) {
         // declare response here to leverage RVO (Return Value Optimization)
         Response response = this->restfulService->put(url, headers, params, data);
-        if (response.isSuccess() || (retries == 0)) {
+        if (response.isSuccess() || (retries == 0) || QueryCancelPending) {
             return response;
         };
 
@@ -83,7 +83,7 @@ Response S3Service::postResponseWithRetries(const string &url, HTTPHeaders &head
     while (retries--) {
         // declare response here to leverage RVO (Return Value Optimization)
         Response response = this->restfulService->post(url, headers, params, data);
-        if (response.isSuccess() || (retries == 0)) {
+        if (response.isSuccess() || (retries == 0) || QueryCancelPending) {
             return response;
         };
 
@@ -109,7 +109,7 @@ ResponseCode S3Service::headResponseWithRetries(const string &url, HTTPHeaders &
 
     while (retries--) {
         response = this->restfulService->head(url, headers, params);
-        if (!isHeadResponseCodeNeedRetry(response) || (retries == 0)) {
+        if (!isHeadResponseCodeNeedRetry(response) || (retries == 0) || QueryCancelPending) {
             return response;
         };
 
@@ -492,6 +492,7 @@ string S3Service::uploadPartOfData(vector<uint8_t> &data, const string &keyUrl,
     urlWithQuery << keyUrl << "?partNumber=" << partNumber << "&uploadId=" << uploadId;
 
     Response resp = this->putResponseWithRetries(urlWithQuery.str(), headers, params, data);
+
     if (resp.getStatus() == RESPONSE_OK) {
         string headers(resp.getRawHeaders().begin(), resp.getRawHeaders().end());
 
@@ -508,6 +509,8 @@ string S3Service::uploadPartOfData(vector<uint8_t> &data, const string &keyUrl,
         if (!s3msg.getMessage().empty()) {
             S3ERROR("Amazon S3 returns error \"%s\"", s3msg.getMessage().c_str());
         }
+    } else if (resp.getStatus() == RESPONSE_ABORT) {
+        return "";
     }
 
     // getStatus == RESPONSE_ERROR || RESPONSE_FAIL
@@ -557,6 +560,49 @@ bool S3Service::completeMultiPart(const string &keyUrl, const string &region,
     string bodyString = body.str();
     Response resp = this->postResponseWithRetries(
         urlWithQuery.str(), headers, params, vector<uint8_t>(bodyString.begin(), bodyString.end()));
+
+    if (resp.getStatus() == RESPONSE_OK) {
+        return true;
+    } else if (resp.getStatus() == RESPONSE_ERROR) {
+        S3MessageParser s3msg(resp);
+
+        if (!s3msg.getMessage().empty()) {
+            S3ERROR("Amazon S3 returns error \"%s\"", s3msg.getMessage().c_str());
+        }
+    } else if (resp.getStatus() == RESPONSE_ABORT) {
+        return false;
+    }
+
+    // getStatus == RESPONSE_ERROR || RESPONSE_FAIL
+    S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
+            resp.getMessage().c_str());
+    CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", keyUrl.c_str(),
+                     resp.getMessage().c_str());
+
+    return false;
+}
+
+bool S3Service::abortUpload(const string &keyUrl, const string &region, const S3Credential &cred,
+                            const string &uploadId) {
+    HTTPHeaders headers;
+    map<string, string> params;
+    UrlParser parser(keyUrl);
+    stringstream queryString;
+
+    headers.Add(HOST, parser.getHost());
+    headers.Add(CONTENTTYPE, "text/plain");
+    headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
+    headers.Add(CONTENTLENGTH, "0");
+
+    queryString << "uploadId=" << uploadId;
+
+    // DELETE /ObjectName?uploadId=UploadId HTTP/1.1
+    SignRequestV4("DELETE", &headers, region, parser.getPath(), queryString.str(), cred);
+
+    stringstream urlWithQuery;
+    urlWithQuery << keyUrl << "?uploadId=" << uploadId;
+
+    Response resp = this->restfulService->deleteRequest(urlWithQuery.str(), headers, params);
 
     if (resp.getStatus() == RESPONSE_OK) {
         return true;

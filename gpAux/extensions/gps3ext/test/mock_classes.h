@@ -38,6 +38,10 @@ class MockS3Interface : public S3Interface {
 
     MOCK_METHOD5(completeMultiPart, bool(const string& keyUrl, const string& region, const S3Credential& cred,
                            const string& uploadId, const vector<string>& etagArray));
+
+    MOCK_METHOD4(abortUpload, bool(const string &keyUrl, const string &region, const S3Credential &cred,
+                 const string &uploadId));
+
 };
 
 class MockS3RESTfulService : public S3RESTfulService {
@@ -53,6 +57,9 @@ class MockS3RESTfulService : public S3RESTfulService {
 
     MOCK_METHOD4(post, Response(const string &url, HTTPHeaders &headers,
                                 const map<string, string> &params,const vector<uint8_t> &data));
+
+    MOCK_METHOD3(deleteRequest, Response(const string &url, HTTPHeaders &headers,
+            const map<string, string> &params));
 };
 
 class XMLGenerator {

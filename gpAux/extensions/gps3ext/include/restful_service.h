@@ -17,17 +17,18 @@ enum ResponseStatus {
     RESPONSE_OK,     // everything is OK
     RESPONSE_FAIL,   // curl failed (i.e., the status is not CURLE_OK)
     RESPONSE_ERROR,  // server error (server return code is not 200)
+    RESPONSE_ABORT,  // the query has been abort by user
 };
 
 typedef long ResponseCode;
 #define HeadResponseFail -1
 
 // 2XX are successful response.
-// Here we deal with 200 (OK) and 206 (partial content) currently.
-//
+// Here we deal with 200 (OK), 204 (no content) and 206 (partial content) currently.
+// 204 is for DELETE request.
 //   We may move this function to RESTfulService() in future
 inline bool isSuccessfulResponse(ResponseCode code) {
-    return (code == 200 || code == 206);
+    return (code == 200 || code == 206 || code == 204);
 }
 
 struct UploadData {
@@ -136,6 +137,9 @@ class RESTfulService {
 
     virtual ResponseCode head(const string& url, HTTPHeaders& headers,
                               const map<string, string>& params) = 0;
+
+    virtual Response deleteRequest(const string& url, HTTPHeaders& headers,
+                                   const map<string, string>& params) = 0;
 };
 
 #endif /* INCLUDE_RESTFUL_SERVICE_H_ */

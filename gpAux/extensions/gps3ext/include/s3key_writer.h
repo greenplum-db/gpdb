@@ -16,7 +16,7 @@ using std::string;
 
 class WriterBuffer : public vector<uint8_t> {};
 
-class S3KeyWriter : Writer {
+class S3KeyWriter : public Writer {
    public:
     S3KeyWriter() : s3interface(NULL), chunkSize(0) {
     }
@@ -40,6 +40,7 @@ class S3KeyWriter : Writer {
    protected:
     void flushBuffer();
     void completeKeyWriting();
+    void checkQueryCancel();
 
     WriterBuffer buffer;
     S3Interface* s3interface;

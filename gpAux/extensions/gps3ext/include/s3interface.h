@@ -118,6 +118,11 @@ class S3Interface {
                                    const vector<string>& etagArray) {
         throw std::runtime_error("Default implementation must not be called.");
     }
+
+    virtual bool abortUpload(const string& keyUrl, const string& region, const S3Credential& cred,
+                             const string& uploadId) {
+        throw std::runtime_error("Default implementation must not be called.");
+    }
 };
 
 class S3Service : public S3Interface {
@@ -163,6 +168,9 @@ class S3Service : public S3Interface {
 
     bool completeMultiPart(const string& keyUrl, const string& region, const S3Credential& cred,
                            const string& uploadId, const vector<string>& etagArray);
+
+    bool abortUpload(const string& keyUrl, const string& region, const S3Credential& cred,
+                     const string& uploadId);
 
    private:
     string getUrl(const string& prefix, const string& schema, const string& host,

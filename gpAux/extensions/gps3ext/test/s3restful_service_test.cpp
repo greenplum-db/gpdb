@@ -348,3 +348,19 @@ TEST(S3RESTfulService, DISABLED_PostToDummyServerWithData) {
     EXPECT_EQ(RESPONSE_OK, resp.getStatus());
     EXPECT_TRUE(compareVector(data, resp.getRawData()));
 }
+
+/* Run './bin/dummyHTTPServer.py' before enabling this test */
+TEST(S3RESTfulService, DISABLED_DeleteToDummyServerWithData) {
+    HTTPHeaders headers;
+    map<string, string> params;
+    string url;
+    S3RESTfulService service;
+
+    headers.Add(CONTENTTYPE, "text/plain");
+    headers.Add(CONTENTLENGTH, "0");
+
+    url = "http://localhost:8553";
+
+    Response resp = service.deleteRequest(url, headers, params);
+    EXPECT_EQ(RESPONSE_OK, resp.getStatus());
+}

@@ -48,6 +48,15 @@ class S(BaseHTTPRequestHandler):
         self._set_headers(length)
         self.wfile.write(content)
 
+    def do_DELETE(self):
+        # Just bounce the request back
+        print "----- SOMETHING WAS DELETE ------"
+        print self.headers
+        length = int(self.headers['Content-Length'])
+        # content = self.rfile.read(length)
+        self._set_headers(length)
+        self.wfile.write("")
+
 def run(server_class=HTTPServer, handler_class=S, port=8553):
 	server_address = ('', port)
 	handler_class.protocol_version = 'HTTP/1.1'

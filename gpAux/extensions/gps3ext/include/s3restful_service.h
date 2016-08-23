@@ -17,6 +17,9 @@ class S3RESTfulService : public RESTfulService {
 
     Response post(const string& url, HTTPHeaders& headers, const map<string, string>& params,
                   const vector<uint8_t>& data);
+
+    Response deleteRequest(const string& url, HTTPHeaders& headers,
+                           const map<string, string>& params);
 };
 
 #endif /* INCLUDE_S3RESTFUL_SERVICE_H_ */

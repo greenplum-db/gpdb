@@ -150,3 +150,39 @@ TEST_F(S3KeyWriterTest, TestUploadContent) {
     // Buffer is not empty, close() will upload remaining data in buffer.
     this->close();
 }
+
+TEST_F(S3KeyWriterTest, TestWriteAbortInWriting) {
+    testParams.setChunkSize(0x100);
+
+    char data[0x100];
+    EXPECT_CALL(this->mocks3interface, getUploadId(_, _, _)).WillOnce(Return("uploadid1"));
+    EXPECT_CALL(this->mocks3interface, abortUpload(_, _, _, _)).WillOnce(Return(true));
+
+    this->open(testParams);
+    QueryCancelPending = true;
+
+    EXPECT_THROW(this->write(data, 0x80), std::runtime_error);
+
+    QueryCancelPending = false;
+}
+
+TEST_F(S3KeyWriterTest, TestWriteAbortInClosing) {
+    testParams.setChunkSize(0x100);
+
+    char data[0x100];
+    EXPECT_CALL(this->mocks3interface, getUploadId(_, _, _)).WillOnce(Return("uploadid1"));
+    EXPECT_CALL(this->mocks3interface, uploadPartOfData(_, _, _, _, 1, "uploadid1"))
+        .WillOnce(Invoke(MockUploadPartOfData(0x80)));
+    EXPECT_CALL(this->mocks3interface, abortUpload(_, _, _, _)).WillOnce(Return(true));
+
+    this->open(testParams);
+    ASSERT_EQ(0x80, this->write(data, 0x80));
+
+    // Buffer have little space, will uploadData and clear buffer.
+    ASSERT_EQ(0x81, this->write(data, 0x81));
+
+    QueryCancelPending = true;
+    // Buffer is not empty, close() will upload remaining data in buffer.
+    EXPECT_THROW(this->close(), std::runtime_error);
+    QueryCancelPending = false;
+}

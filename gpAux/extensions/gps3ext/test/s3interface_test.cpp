@@ -667,16 +667,24 @@ TEST_F(S3ServiceTest, uploadPartOfDataErrorResponse) {
         std::runtime_error);
 }
 
+TEST_F(S3ServiceTest, uploadPartOfDataAbortResponse) {
+    vector<uint8_t> raw;
+    raw.resize(100);
+    Response response(RESPONSE_ABORT, raw);
+    EXPECT_CALL(mockRestfulService, put(_, _, _, _)).WillRepeatedly(Return(response));
+
+    EXPECT_EQ("", this->uploadPartOfData(
+                      raw, "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region,
+                      cred, 11, "xyz"));
+}
+
 TEST_F(S3ServiceTest, completeMultiPartRoutine) {
     vector<uint8_t> raw;
     raw.resize(100);
     Response response(RESPONSE_OK, raw);
     EXPECT_CALL(mockRestfulService, post(_, _, _, _)).WillOnce(Return(response));
 
-    vector<string> etagArray;
-
-    etagArray.push_back("\"abc\"");
-    etagArray.push_back("\"def\"");
+    vector<string> etagArray = {"\"abc\"", "\"def\""};
 
     EXPECT_TRUE(
         this->completeMultiPart("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
@@ -689,10 +697,7 @@ TEST_F(S3ServiceTest, completeMultiPartFailedResponse) {
     Response response(RESPONSE_FAIL, raw);
     EXPECT_CALL(mockRestfulService, post(_, _, _, _)).WillRepeatedly(Return(response));
 
-    vector<string> etagArray;
-
-    etagArray.push_back("\"abc\"");
-    etagArray.push_back("\"def\"");
+    vector<string> etagArray = {"\"abc\"", "\"def\""};
 
     EXPECT_THROW(
         this->completeMultiPart("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
@@ -718,13 +723,67 @@ TEST_F(S3ServiceTest, completeMultiPartErrorResponse) {
 
     EXPECT_CALL(mockRestfulService, post(_, _, _, _)).WillRepeatedly(Return(response));
 
-    vector<string> etagArray;
-
-    etagArray.push_back("\"abc\"");
-    etagArray.push_back("\"def\"");
+    vector<string> etagArray = {"\"abc\"", "\"def\""};
 
     EXPECT_THROW(
         this->completeMultiPart("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
                                 region, cred, "xyz", etagArray),
         std::runtime_error);
+}
+
+TEST_F(S3ServiceTest, completeMultiPartAbortResponse) {
+    vector<uint8_t> raw;
+    raw.resize(100);
+    Response response(RESPONSE_ABORT, raw);
+    EXPECT_CALL(mockRestfulService, post(_, _, _, _)).WillRepeatedly(Return(response));
+
+    vector<string> etagArray = {"\"abc\"", "\"def\""};
+
+    EXPECT_FALSE(
+        this->completeMultiPart("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
+                                region, cred, "xyz", etagArray));
+}
+
+TEST_F(S3ServiceTest, abortUploadRoutine) {
+    vector<uint8_t> raw;
+    raw.resize(100);
+    Response response(RESPONSE_OK, raw);
+    EXPECT_CALL(mockRestfulService, deleteRequest(_, _, _)).WillOnce(Return(response));
+
+    EXPECT_TRUE(this->abortUpload("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
+                                  region, cred, "xyz"));
+}
+
+TEST_F(S3ServiceTest, abortUploadFailedResponse) {
+    vector<uint8_t> raw;
+    raw.resize(100);
+    Response response(RESPONSE_FAIL, raw);
+    EXPECT_CALL(mockRestfulService, deleteRequest(_, _, _)).WillRepeatedly(Return(response));
+
+    EXPECT_THROW(this->abortUpload("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
+                                   region, cred, "xyz"),
+                 std::runtime_error);
+}
+
+TEST_F(S3ServiceTest, abortUploadErrorResponse) {
+    uint8_t xml[] =
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+        "<Error>"
+        "<Code>PermanentRedirect</Code>"
+        "<Message>The bucket you are attempting to access must be addressed "
+        "using the specified endpoint. "
+        "Please send all future requests to this endpoint.</Message>"
+        "<Bucket>foo</Bucket><Endpoint>s3.amazonaws.com</Endpoint>"
+        "<RequestId>27DD9B7004AF83E3</RequestId>"
+        "<HostId>NL3pyGvn+FajhQLKz/"
+        "hXUzV1VnFbbwNjUQsqWeFiDANkV4EVkh8Kpq5NNAi27P7XDhoA9M9Xhg0=</HostId>"
+        "</Error>";
+    vector<uint8_t> raw(xml, xml + sizeof(xml) - 1);
+    Response response(RESPONSE_ERROR, raw);
+
+    EXPECT_CALL(mockRestfulService, deleteRequest(_, _, _)).WillRepeatedly(Return(response));
+
+    EXPECT_THROW(this->abortUpload("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
+                                   region, cred, "xyz"),
+                 std::runtime_error);
 }

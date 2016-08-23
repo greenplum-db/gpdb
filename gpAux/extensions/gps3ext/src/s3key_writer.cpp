@@ -23,6 +23,7 @@ void S3KeyWriter::open(const WriterParams &params) {
 // errors.
 uint64_t S3KeyWriter::write(char *buf, uint64_t count) {
     CHECK_OR_DIE(buf != NULL);
+    this->checkQueryCancel();
 
     // GPDB issues 64K- block every time and chunkSize is 8MB+
     if (count > this->chunkSize) {
@@ -41,8 +42,19 @@ uint64_t S3KeyWriter::write(char *buf, uint64_t count) {
 
 // This should be reentrant, has no side effects when called multiple times.
 void S3KeyWriter::close() {
+    this->checkQueryCancel();
+
     if (!this->uploadId.empty()) {
         this->completeKeyWriting();
+    }
+}
+
+void S3KeyWriter::checkQueryCancel() {
+    if (QueryCancelPending && !this->uploadId.empty()) {
+        this->s3interface->abortUpload(this->url, this->region, this->cred, this->uploadId);
+        this->etagList.clear();
+        this->uploadId.clear();
+        CHECK_OR_DIE_MSG(false, "%s", "Upload is interrupted by user");
     }
 }
 
@@ -54,6 +66,12 @@ void S3KeyWriter::flushBuffer() {
         etagList.push_back(etag);
 
         this->buffer.clear();
+
+        // most time query is canceled during uploadPartOfData,
+        // this is the first chance to cancel and clean up upload.
+        // Otherwise GPDB will call with LAST_CALL but QueryCancelPending is set to false.
+        // and we can't detect query cancel in S3KeyWriter::close.
+        this->checkQueryCancel();
     }
 }
 
