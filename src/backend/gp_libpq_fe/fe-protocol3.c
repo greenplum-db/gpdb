@@ -171,9 +171,6 @@ pqParseInput3(PGconn *conn)
 			if (pqGetInt(&(conn->motion_listener), 4, conn))
 				return;
 
-			if (pqGetInt64(&(conn->mop_high_watermark), conn))
-				return;
-
 			if (pqGetInt(&version_len, 4, conn))
 				return;
 
@@ -188,6 +185,11 @@ pqParseInput3(PGconn *conn)
 				return;
 
 			if (pqGetnchar(conn->qe_version, version_len, conn))
+				return;
+		}
+		else if (id == 'k')
+		{
+			if (pqGetInt64(&(conn->mop_high_watermark), conn))
 				return;
 		}
 		else if (conn->asyncStatus != PGASYNC_BUSY)

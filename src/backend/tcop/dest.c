@@ -169,8 +169,6 @@ EndCommand(const char *commandTag, CommandDest dest)
 			 */
 			if (Gp_role == GP_ROLE_EXECUTE)
 			{
-				sendQEDetails();
-
 				pq_beginmessage(&buf, 'C');
 				pq_send_ascii_string(&buf, commandTag);
 				pq_endmessage(&buf);
@@ -252,7 +250,9 @@ ReadyForQuery(CommandDest dest)
 
 				if (Gp_role == GP_ROLE_EXECUTE)
 				{
-					sendQEDetails();
+					pq_beginmessage(&buf, 'k');
+					pq_sendint64(&buf, VmemTracker_GetMaxReservedVmemBytes());
+					pq_endmessage(&buf);
 				}
 
 				pq_beginmessage(&buf, 'Z');
@@ -286,7 +286,6 @@ sendQEDetails(void)
 
 	pq_beginmessage(&buf, 'w');
 	pq_sendint(&buf, (int32) Gp_listener_port, sizeof(int32));			
-	pq_sendint64(&buf, VmemTracker_GetMaxReservedVmemBytes());
 	pq_sendint(&buf, sizeof(PG_VERSION_STR), sizeof(int32));
 	pq_sendbytes(&buf, PG_VERSION_STR, sizeof(PG_VERSION_STR));
 	pq_endmessage(&buf);
