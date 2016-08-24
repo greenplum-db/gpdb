@@ -5984,6 +5984,9 @@ ExecCleanTargetListLength(List *targetlist)
  * of *isDone = ExprMultipleResult signifies a set element, and a return
  * of *isDone = ExprEndResult signifies end of the set of tuple.
  */
+#ifndef USE_CODEGEN
+static
+#endif
 bool
 ExecTargetList(List *targetlist,
 			   ExprContext *econtext,

@@ -65,7 +65,7 @@ typedef Datum (*SlotGetAttrFn) (struct TupleTableSlot *slot, int attnum, bool *i
 #define init_codegen()
 #define call_ExecVariableList(projInfo, values, isnull) ExecVariableList(projInfo, values, isnull)
 #define enroll_ExecVariableList_codegen(regular_func, ptr_to_chosen_func, proj_info, slot)
-#define #define call_AdvanceAggregates(aggstate, pergroup, mem_manager) advance_aggregates(aggstate, pergroup, mem_manager)
+#define call_AdvanceAggregates(aggstate, pergroup, mem_manager) advance_aggregates(aggstate, pergroup, mem_manager)
 #define enroll_AdvanceAggregates_codegen(regular_func, ptr_to_chosen_func, aggstate)
 #else
 
@@ -262,8 +262,8 @@ AdvanceAggregatesCodegenEnroll(AdvanceAggregatesFn regular_func_ptr,
 
 #define enroll_AdvanceAggregates_codegen(regular_func, ptr_to_regular_func_ptr, aggstate) \
 		aggstate->AdvanceAggregates_gen_info.code_generator = AdvanceAggregatesCodegenEnroll( \
-        regular_func, ptr_to_regular_func_ptr, aggstate); \
-        Assert(aggstate->AdvanceAggregates_gen_info.AdvanceAggregates_fn == regular_func); \
+				regular_func, ptr_to_regular_func_ptr, aggstate); \
+				Assert(aggstate->AdvanceAggregates_gen_info.AdvanceAggregates_fn == regular_func); \
 
 #endif //USE_CODEGEN
 

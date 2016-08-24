@@ -90,11 +90,11 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
   codegen_utils->CreateElog(DEBUG1, "Codegen'ed advance_aggregates called!");
 #endif
 
-  // Temporary variables that replace the use of slot and FunctionInfoData
-  llvm::Value *llvm_arg = irb->CreateAlloca(
-      codegen_utils->GetType<Datum>(), 0, "llvm_arg");
-  llvm::Value *llvm_argnull = irb->CreateAlloca(
-      codegen_utils->GetType<bool>(), 0, "llvm_argnull");
+  // Since we do not support ordered functions, we do not need to store
+  // the value of the variables, which are used as input to the aggregate
+  // function, in a slot. Instead we simply store them in a stuck variable.
+  llvm::Value *llvm_arg = irb->CreateAlloca(codegen_utils->GetType<Datum>());
+  llvm::Value *llvm_argnull = irb->CreateAlloca(codegen_utils->GetType<bool>());
 
   for (int aggno = 0; aggno < aggstate_->numaggs; aggno++)
   {
@@ -178,13 +178,13 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
     // Retrieve pergroup's useful members
     llvm::Value* llvm_pergroupstate = irb->CreateGEP(
         llvm_pergroup, {codegen_utils->GetConstant(aggno)});
-    llvm::Value* llvm_pergroupstate_transValue =
+    llvm::Value* llvm_pergroupstate_transValue_ptr =
         codegen_utils->GetPointerToMember(
             llvm_pergroupstate, &AggStatePerGroupData::transValue);
-    llvm::Value* llvm_pergroupstate_transValueIsNull =
+    llvm::Value* llvm_pergroupstate_transValueIsNull_ptr =
         codegen_utils->GetPointerToMember(
             llvm_pergroupstate, &AggStatePerGroupData::transValueIsNull);
-    llvm::Value* llvm_pergroupstate_noTransValue =
+    llvm::Value* llvm_pergroupstate_noTransValue_ptr =
         codegen_utils->GetPointerToMember(
             llvm_pergroupstate, &AggStatePerGroupData::noTransValue);
 
@@ -194,10 +194,12 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
     }
 
     // FunctionCallInvoke(fcinfo); {{
+    // We do not need to use a FunctionCallInfoData struct, since the supported
+    // aggregate functions are simple enough.
     PGFuncGeneratorInfo pg_func_info(
         advance_aggregates_func,
         fallback_block,
-        {irb->CreateLoad(llvm_pergroupstate_transValue),
+        {irb->CreateLoad(llvm_pergroupstate_transValue_ptr),
             irb->CreateLoad(llvm_arg)}
     );
 
@@ -210,7 +212,14 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
     }
 
     llvm::Value *newVal = nullptr;
-    pg_func_gen->GenerateCode(codegen_utils, pg_func_info, &newVal);
+    bool isGenerated = pg_func_gen->GenerateCode(codegen_utils,
+                                                 pg_func_info, &newVal);
+    if(!isGenerated) {
+      elog(DEBUG1, "Function with oid = %d was not generated successfully!",
+           peraggstate->transfn.fn_oid);
+      return false;
+    }
+
     llvm::Value *result = codegen_utils->CreateCppTypeToDatumCast(newVal);
     // }} FunctionCallInvoke
 
@@ -220,15 +229,15 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
     // }}} advance_transition_function
 
     // pergroupstate->transValue = newval
-    irb->CreateStore(result, llvm_pergroupstate_transValue);
+    irb->CreateStore(result, llvm_pergroupstate_transValue_ptr);
 
     // Currently we do not support null attributes.
     // Thus we set transValueIsNull and noTransValue to false by default.
     // TODO(nikos): Support null attributes.
     irb->CreateStore(codegen_utils->GetConstant<bool>(false),
-                     llvm_pergroupstate_transValueIsNull);
+                     llvm_pergroupstate_transValueIsNull_ptr);
     irb->CreateStore(codegen_utils->GetConstant<bool>(false),
-                     llvm_pergroupstate_noTransValue);
+                     llvm_pergroupstate_noTransValue_ptr);
 
   } // End of for loop
 
