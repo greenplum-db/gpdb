@@ -34,7 +34,7 @@ CHECK_CASES=(
 # huge files
 "s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/hugefile/airlinedata1.csv f5811ad92c994f1d6913d5338575fe38"
 "s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/gzipped_normal2/ a930794bc885bccf6eed45bd40367a7d"
-"s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/5120files/ 71277a7004842241191cc65146be24f6"
+"s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/2001files/ 38c18f5ddf9ef68fef9ef9842c2aa180"
 )
 
 for ((i=0; i<${#CHECK_CASES[@]}; i++))

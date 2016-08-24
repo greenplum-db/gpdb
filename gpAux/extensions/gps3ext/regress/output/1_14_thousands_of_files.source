@@ -6,11 +6,11 @@ CREATE PROTOCOL s3 (
 DROP EXTERNAL TABLE s3regress;
 ERROR:  table "s3regress" does not exist
 CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high float,
-        low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/5120files/ config=@config_file@') FORMAT 'csv';
+        low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/2001files/ config=@config_file@') FORMAT 'csv';
 SELECT count(*) count, round(sum(open)) sum, round(avg(open)) avg FROM s3regress;
- count  |   sum    | avg 
---------+----------+-----
- 655360 | 23302752 |  36
+ count  |   sum   | avg 
+--------+---------+-----
+ 256128 | 9107189 |  36
 (1 row)
 
 DROP EXTERNAL TABLE s3regress;
