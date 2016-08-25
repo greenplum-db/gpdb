@@ -200,7 +200,8 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
 
     // Retrieve pergroup's useful members
     llvm::Value* llvm_pergroupstate = irb->CreateGEP(
-        llvm_pergroup_arg, {codegen_utils->GetConstant(aggno)});
+        llvm_pergroup_arg, {codegen_utils->GetConstant(
+            sizeof(AggStatePerGroupData) * aggno)});
     llvm::Value* llvm_pergroupstate_transValue_ptr =
         codegen_utils->GetPointerToMember(
             llvm_pergroupstate, &AggStatePerGroupData::transValue);
