@@ -238,9 +238,6 @@ struct CursorICHistoryTable
  */
 #define MAIN_THREAD_COND_TIMEOUT (250000)
 
-/* Turn on/off UDP signal (on by default for Mac OS) */
-/* #define IC_USE_PTHREAD_SYNCHRONIZATION */
-
 /*
  *  Used for synchronization between main thread (receiver) and background thread.
  *
@@ -382,34 +379,6 @@ struct SendControlInfo
  */
 static SendControlInfo snd_control_info;
 
-#if defined(__darwin__) && !defined(IC_USE_PTHREAD_SYNCHRONIZATION)
-/*
- * UDPSignal
- * 		The udp interconnect specific implementation of timeout wait/signal mechanism.
- * 		(Only used for MacOS X to avoid the bug in MacOS X 10.6.x: MPP-9910).
- * 		More details are available in the functions to implement UDPSignal.
- */
-typedef struct UDPSignal UDPSignal;
-struct UDPSignal
-{
-	/* We often use the address of a pthread condition variable as signal/condition id. */
-	void	*sigId;
-
-	/* The udp socket fd to implement the mechanism. */
-	int		fd;
-
-	/* The port. */
-	int32	port;
-
-	/* The UDP socket address family */
-	int 	txFamily;
-
-	/* Address info. */
-	struct sockaddr_storage peer;
-	socklen_t peer_len;
-};
-#endif
-
 /*
  * ICGlobalControlInfo
  *
@@ -464,11 +433,6 @@ struct ICGlobalControlInfo
 
 	/* Used by main thread to ask the background thread to exit. */
 	uint32 shutdown;
-
-#if defined(__darwin__) && !defined(IC_USE_PTHREAD_SYNCHRONIZATION)
-	UDPSignal usig;
-#endif
-
 };
 
 /*
@@ -800,16 +764,6 @@ static inline void logPkt(char *prefix, icpkthdr *pkt);
 static void aggregateStatistics(ChunkTransportStateEntry *pEntry);
 
 static inline bool pollAcks(ChunkTransportState *transportStates, int fd, int timeout);
-
-
-#if defined(__darwin__) && !defined(IC_USE_PTHREAD_SYNCHRONIZATION)
-static int udpSignalTimeoutWait(UDPSignal *sig, pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *ts);
-static bool udpSignalPoll(UDPSignal *sig, int timeout);
-static bool udpSignalGet(UDPSignal *sig);
-static void setupUDPSignal(UDPSignal *sig);
-static void destroyUDPSignal(UDPSignal *sig);
-static void udpSignal(UDPSignal *sig);
-#endif
 
 /* #define TRANSFER_PROTOCOL_STATS */
 
@@ -1409,10 +1363,6 @@ InitMotionUDPIFC(int *listenerSocketFd, uint16 *listenerPort)
 	 */
 	setupUDPListeningSocket(listenerSocketFd, listenerPort, &txFamily);
 
-#if defined(__darwin__) && !defined(IC_USE_PTHREAD_SYNCHRONIZATION)
-	setupUDPSignal(&ic_control_info.usig);
-#endif
-
 	/* Initialize receive control data. */
 	resetMainThreadWaiting(&rx_control_info.mainWaitingState);
 
@@ -1506,10 +1456,6 @@ CleanupMotionUDPIFC(void)
 
 	MemoryContextDelete(ic_control_info.memContext);
 
-#if defined(__darwin__) && !defined(IC_USE_PTHREAD_SYNCHRONIZATION)
-	destroyUDPSignal(&ic_control_info.usig);
-#endif
-
 #ifdef USE_ASSERT_CHECKING
 	/*
 	 * Check malloc times, in Interconnect part, memory are carefully released in tear down
@@ -1533,33 +1479,21 @@ static bool
 waitOnCondition(int timeout_us, pthread_cond_t *cond, pthread_mutex_t *mutex)
 {
 	struct timespec ts;
+	struct timeval tv;
 	int wait;
 
 	Assert(timeout_us >= 0);
-	/*
-	 * MPP-9910: pthread_cond_timedwait appears to be broken in OS X 10.6.x "Snow Leopard"
-	 * Let's use a different timewait function that works better on OS X (and is simpler
-	 * because it uses relative time)
-	 */
-#ifdef __darwin__
-	ts.tv_sec = 0;
-	ts.tv_nsec = 1000 * timeout_us;
-#else
-	{
-		struct timeval tv;
 
-		gettimeofday(&tv, NULL);
-		ts.tv_sec = tv.tv_sec;
-		/*	leave in ms for this */
-		ts.tv_nsec = (tv.tv_usec + timeout_us);
-		if (ts.tv_nsec >= 1000000)
-		{
-			ts.tv_sec++;
-			ts.tv_nsec -= 1000000;
-		}
-		ts.tv_nsec *= 1000; /* convert usec to nsec */
+	gettimeofday(&tv, NULL);
+	ts.tv_sec = tv.tv_sec;
+	/*	leave in ms for this */
+	ts.tv_nsec = (tv.tv_usec + timeout_us);
+	if (ts.tv_nsec >= 1000000)
+	{
+		ts.tv_sec++;
+		ts.tv_nsec -= 1000000;
 	}
-#endif
+	ts.tv_nsec *= 1000; /* convert usec to nsec */
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
 	{
@@ -1578,15 +1512,7 @@ waitOnCondition(int timeout_us, pthread_cond_t *cond, pthread_mutex_t *mutex)
 	 *
 	 */
 
-#if defined(__darwin__)
-#if (defined(IC_USE_PTHREAD_SYNCHRONIZATION))
-	wait = pthread_cond_timedwait_relative_np(cond, mutex, &ts);
-#else
-	wait = udpSignalTimeoutWait(&ic_control_info.usig, cond, mutex, &ts);
-#endif
-#else
 	wait = pthread_cond_timedwait(cond, mutex, &ts);
-#endif
 
 	if (wait == ETIMEDOUT)
 	{
@@ -2648,249 +2574,6 @@ getSndBuffer(MotionConn *conn)
 
 	return ret;
 }
-
-/*
- *  The udp interconnect specific implementation of timeout wait/signal mechanism.
- *  (Only for MacOS X)
- *
- * The introduction of this is due to the bug in pthread_cond_wait/pthread_cond_timedwait_relative_np
- * on MacOS X. (MPP-9910).
- *
- * The implementation of the signal mechanism is based on UDP protocol. Waiting thread is polling on
- * a UDP socket, and wakes up thread will send a signal id to the socket when the condition is met.
- *
- * Due to the reliability of UDP protocol (packet loss, duplicate, interrupted system calls, error
- * return of system calls...), the waiting thread should:
- *
- * 1) check the condition again when it is waken up
- * 2) when the time wait return with timeout, it should check the condition again.
- *
- * It is not necessary to implement a retransmit/ack mechanism because the local socket is relatively
- * reliable and the communication load is light.
- *
- * ##NOTE: This implementation is specific for UDP interconnect use, and it is not portable. Developers
- * should pay attention to add another condition variable.
- */
-
-#if defined(__darwin__) && !defined(IC_USE_PTHREAD_SYNCHRONIZATION)
-/*
- * udpSignalTimeoutWait
- * 		Timeout wait implementation on Mac.
- *
- * Return 0 on success (condition met) and return ETIMEOUT on timeout/other errors.
- *
- * Note that this implementation is UDP interconnect specific and not for general usage.
- * It depends on the udp socket built in InitMotionUDP.
- *
- * Can only be used in Main thread.
- *
- */
-static int
-udpSignalTimeoutWait(UDPSignal *sig, pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *ts)
-{
-	Assert(sig != NULL && mutex != NULL && ts != NULL);
-
-	int timeout = ts->tv_nsec/1000/1000;
-
-	Assert(timeout >= 0);
-
-	pthread_mutex_unlock(mutex);
-
-	sig->sigId = (void *)cond;
-	bool ret = ETIMEDOUT;
-	if (udpSignalPoll(sig, timeout))
-	{
-		if (udpSignalGet(sig))
-			ret = 0;
-	}
-	sig->sigId = NULL;
-	pthread_mutex_lock(mutex);
-	return ret;
-}
-
-/*
- * udpSignal
- *
- * The udp interconnect specific implementation of pthread_cond_signal.
- *
- */
-static void
-udpSignal(UDPSignal *sig)
-{
-	int n;
-	char buf[16];
-
-#ifdef USE_ASSERT_CHECKING
-	int percent = gp_udpic_dropacks_percent > 0 ? 1 : 0;
-	if (testmode_inject_fault(percent))
-	{
-	#ifdef AMS_VERBOSE_LOGGING
-		write_log("THROW SIGNAL with value %p", sig->sigId);
-	#endif
-		return;
-	}
-#endif
-
-xmit_retry:
-
-	*((void **)buf) = sig->sigId;
-	n = sendto(sig->fd, buf, sizeof(sig->sigId), 0,
-			   (struct sockaddr *)&sig->peer, sig->peer_len);
-
-	if (n < 0)
-	{
-		if (errno == EINTR)
-			goto xmit_retry;
-
-		if (errno == EAGAIN) /* no space ? not an error. */
-			return;
-
-		/* Error case, this may happen in both main thread and background thread,
-		 * treat it like in background thread. Finally, main thread will find this error.
-		 */
-		write_log("udpsignal failed fd %d: got error %d errno %d signal %p", sig->fd, n, errno, sig->sigId);
-		setRxThreadError(errno);
-		return;
-		/* not reached */
-	}
-
-	if (n != sizeof(int))
-		write_log("udpsignal failed fd %d: got error %d errno %d signal %p", sig->fd, n, errno, sig->sigId);
-
-}
-
-/*
- * setupUDPSignal
- * 		Setup the socket needed by the signal.
- *
- * Can only be used in Main thread.
- */
-static void
-setupUDPSignal(UDPSignal *sig)
-{
-	Assert(sig != NULL);
-
-	uint16 port;
-	setupUDPListeningSocket(&sig->fd, &port, &sig->txFamily);
-	sig->port = port;
-	getSockAddr(&sig->peer, &sig->peer_len, "127.0.0.1", port);
-	sig->sigId = NULL;
-	Assert(sig->peer.ss_family == AF_INET || sig->peer.ss_family == AF_INET6);
-}
-
-/*
- * destroyUDPSignal
- * 		Destroy the signal.
- *
- * Can only be used in Main thread.
- */
-static void
-destroyUDPSignal(UDPSignal *sig)
-{
-	Assert(sig != NULL);
-
-	if (sig->fd >= 0)
-		closesocket(sig->fd);
-	sig->sigId = NULL;
-	sig->fd = -1;
-	sig->port = 0;
-}
-
-/*
- * udpSignalGet
- * 		Try to get the signal from the socket.
- *
- * Note: Can only be called from main thread.
- */
-static bool
-udpSignalGet(UDPSignal *sig)
-{
-	int n;
-
-#define SIGNAL_BUFFER_SIZE 16
-	struct sockaddr_storage peer;
-	socklen_t peerlen;
-	char buf[SIGNAL_BUFFER_SIZE];
-
-	for (;;)
-	{
-		/* ready to read on our socket ? */
-		peerlen = sizeof(peer);
-		n = recvfrom(sig->fd, buf, SIGNAL_BUFFER_SIZE, 0, (struct sockaddr *)&peer, &peerlen);
-
-		if (n < 0)
-		{
-			/* had nothing to read. */
-			if (errno == EWOULDBLOCK)
-				return false;
-
-			if (errno == EINTR)
-				continue;
-
-			elog(ERROR, "Interconnect error: getting signal from socket buffer failed.");
-
-			/* not reached. */
-			return false;
-		}
-
-		if (n != sizeof(sig->sigId))
-		{
-			continue;
-		}
-
-		if (*((void **)buf) == sig->sigId)
-		{
-		#ifdef AMS_VERBOSE_LOGGING
-			write_log("Get signal %p", *((void **)buf));
-		#endif
-			return true;
-		}
-	}
-	return false;
-}
-
-/*
- * udpSignalPoll
- * 		Timeout (in ms) polling of signal packets.
- *
- *
- * Note: Can only be called from main thread.
- */
-static bool
-udpSignalPoll(UDPSignal *sig, int timeout)
-{
-	struct pollfd nfd;
-	int n;
-
-	nfd.fd = sig->fd;
-	nfd.events = POLLIN;
-
-	n = poll(&nfd, 1, timeout);
-
-	if (n < 0)
-	{
-		if (errno == EINTR)
-			return false;
-
-		elog(ERROR, "Interconnect error: signal polling failed.");
-		/* not reached */
-	}
-
-	/* timeout */
-	if (n == 0)
-	{
-		return false;
-	}
-
-	/* got some signal in the buffer. */
-	if (n == 1 && (nfd.events & POLLIN))
-	{
-		return true;
-	}
-
-	return false;
-}
-#endif
 
 
 /*
@@ -6232,11 +5915,7 @@ handleDataPacket(MotionConn *conn, icpkthdr *pkt, struct sockaddr_storage *peer,
 			rx_control_info.mainWaitingState.reachRoute = conn->route;
 		}
 		/* WAKE MAIN THREAD HERE */
-#if defined(__darwin__) && !defined(IC_USE_PTHREAD_SYNCHRONIZATION)
-		udpSignal(&ic_control_info.usig);
-#else
 		pthread_cond_signal(&ic_control_info.cond);
-#endif
 	}
 
 	return true;
