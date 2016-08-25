@@ -1,14 +1,6 @@
-CREATE OR REPLACE FUNCTION read_from_s3() RETURNS integer AS
-        '$libdir/gps3ext.so', 's3_import' LANGUAGE C STABLE;
-CREATE PROTOCOL s3 (
-        readfunc = read_from_s3
-);
-DROP EXTERNAL TABLE s3regress;
-ERROR:  table "s3regress" does not exist
-CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high float,
+CREATE READABLE EXTERNAL TABLE s3regress_invalid_header (date text, time text, open float, high float,
 	low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/csv_with_header/ config=@config_file@') format 'csv';
-SELECT count(*) FROM s3regress;
+SELECT count(*) FROM s3regress_invalid_header;
 ERROR:  invalid input syntax for type double precision: "open"  (seg0 slice1 ip-172-31-2-196.us-west-2.compute.internal:40000 pid=23220)
-DETAIL:  External table s3regress, line 1 of s3://s3-us-west-2.amazonaws.com/@read_prefix@/csv_with_header/ config=@config_file@, column open
-DROP EXTERNAL TABLE s3regress;
-DROP PROTOCOL s3;
+DETAIL:  External table s3regress_invalid_header, line 1 of s3://s3-us-west-2.amazonaws.com/@read_prefix@/csv_with_header/ config=@config_file@, column open
+DROP EXTERNAL TABLE s3regress_invalid_header;

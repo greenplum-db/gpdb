@@ -47,9 +47,9 @@ map<char, string> parseCommandLineArgs(int argc, char *argv[]) {
             case 'u':
                 if (optarg == NULL) {
                     optionPairs[opt] = "";
-                } else if (optind + 1 == argc) {
-                    optionPairs['f'] = optarg;
-                    optionPairs['u'] = argv[optind];
+                } else if (optind + 1 == argc) { // has two option values
+                    optionPairs['f'] = optarg; // value of option file
+                    optionPairs['u'] = argv[optind]; // value of option url
                 } else {
                     fprintf(stderr, "Failed. Invalid arguments for -u, please check.\n\n");
                     printUsage(stderr);

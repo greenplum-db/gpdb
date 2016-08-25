@@ -1,11 +1,3 @@
-CREATE OR REPLACE FUNCTION write_to_s3() RETURNS integer AS
-        '$libdir/gps3ext.so', 's3_export' LANGUAGE C STABLE;
-CREATE PROTOCOL s3 (
-        writefunc = write_to_s3
-);
-DROP EXTERNAL TABLE s3regress;
-ERROR:  table "s3regress" does not exist
-CREATE WRITABLE EXTERNAL TABLE s3regress (date text, time text, open float, high float,
+CREATE WRITABLE EXTERNAL TABLE s3regress_create_wet (date text, time text, open float, high float,
         low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/create/ config=@config_file@') FORMAT 'csv';
-DROP EXTERNAL TABLE s3regress;
-DROP PROTOCOL s3;
+DROP EXTERNAL TABLE s3regress_create_wet;

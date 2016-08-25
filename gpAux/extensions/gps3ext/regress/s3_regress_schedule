@@ -1,28 +1,12 @@
-test: 1_01_normal
-test: 1_02_log_error
-test: 1_03_bad_data
-test: 1_04_empty_prefix
-test: 1_05_one_line
-test: 1_06_1correct_1wrong
-test: 1_07_huge_bad_data
-test: 1_08_huge_correct_data
-test: 1_09_partition
-test: 1_10_all_regions
-test: 1_11_gzipped_data
-test: 1_12_no_prefix
-test: 1_13_parallel1 1_13_parallel2
-test: 1_14_thousands_of_files
-test: 2_01_invalid_syntax
-test: 2_02_invalid_region
-test: 2_03_invalid_config
-test: 2_04_invalid_header
-test: 3_01_create_wet
-test: 3_02_insert_quick_shoot_wet
-test: 3_03_insert_lots_of_rows
-test: 3_04_insert_mixed_workload
-test: 3_05_insert_to_wet_from_ret
-test: 3_06_special_characters
-test: 3_07_write_lots_of_files
-test: 3_08_join_query_wet_local_tbl
-test: 4_01_create_invalid_wet
-test: 4_02_wet_with_mixed_format
+test: 0_00_prepare_s3_protocol
+
+# tens of seconds
+test: 1_01_normal 1_02_log_error 1_10_all_regions 1_11_gzipped_data 1_12_no_prefix 1_13_parallel1 1_13_parallel2 1_09_partition
+
+# ~ 1s
+test: 1_03_bad_data 1_04_empty_prefix 1_05_one_line 1_06_1correct_1wrong 2_01_invalid_syntax 2_02_invalid_region 2_03_invalid_config 2_04_invalid_header 3_01_create_wet 3_02_insert_quick_shoot_wet 4_01_create_invalid_wet
+
+# heavy loads, > 100s
+test: 1_07_huge_bad_data 1_08_huge_correct_data 1_14_thousands_of_files 3_03_insert_lots_of_rows 3_07_write_lots_of_files 3_04_insert_mixed_workload 3_05_insert_to_wet_from_ret 3_06_special_characters 3_08_join_query_wet_local_tbl 4_02_wet_with_mixed_format
+
+test: 9_99_clean_s3_protocol

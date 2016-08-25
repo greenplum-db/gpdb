@@ -1,21 +1,6 @@
--- start_ignore
-CREATE FUNCTION read_from_s3() RETURNS integer AS
-        '$libdir/gps3ext.so', 's3_import' LANGUAGE C STABLE;
-
-CREATE PROTOCOL s3 (
-        readfunc = read_from_s3
-);
--- end_ignore
-
-DROP EXTERNAL TABLE parallel1;
-
 CREATE READABLE EXTERNAL TABLE parallel1 (date text, time text, open float, high float,
         low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/ config=@config_file@') FORMAT 'csv';
 
 SELECT count(*) count, round(sum(open)) sum, round(avg(open)) avg FROM parallel1;
 
 DROP EXTERNAL TABLE parallel1;
-
--- start_ignore
-DROP PROTOCOL s3;
--- end_ignore

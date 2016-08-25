@@ -1,13 +1,6 @@
-CREATE OR REPLACE FUNCTION read_from_s3() RETURNS integer AS
-        '$libdir/gps3ext.so', 's3_import' LANGUAGE C STABLE;
-CREATE PROTOCOL s3 (
-        readfunc = read_from_s3
-);
-DROP EXTERNAL TABLE s3regress;
-ERROR:  table "s3regress" does not exist
-CREATE READABLE EXTERNAL TABLE s3regress (date text, time text, open float, high float,
+CREATE READABLE EXTERNAL TABLE s3regress_1r_1w (date text, time text, open float, high float,
 	low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/1correct1wrong/ config=@config_file@') format 'csv' LOG ERRORS SEGMENT REJECT LIMIT 5;
-SELECT count(*) FROM s3regress;
+SELECT count(*) FROM s3regress_1r_1w;
 NOTICE:  Found 1 data formatting errors (1 or more input rows). Rejected related input data.
  count 
 -------
@@ -15,12 +8,11 @@ NOTICE:  Found 1 data formatting errors (1 or more input rows). Rejected related
 (1 row)
 
 -- start_ignore
-SELECT gp_read_error_log('s3regress');
+SELECT gp_read_error_log('s3regress_1r_1w');
                                                                                                                           gp_read_error_log                                                                                                                          
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- ("Thu Jul 14 23:21:17.915597 2016 PDT",s3regress,"s3://s3-us-west-2.amazonaws.com/@read_prefix@/1correct1wrong/ config=@config_file@",2,,"extra data after last expected column","whatever,09/28/2009,09:10:37,35.6,35.29,35.75,150,wherever",)
+ ("Thu Jul 14 23:21:17.915597 2016 PDT",s3regress_1r_1w,"s3://s3-us-west-2.amazonaws.com/@read_prefix@/1correct1wrong/ config=@config_file@",2,,"extra data after last expected column","whatever,09/28/2009,09:10:37,35.6,35.29,35.75,150,wherever",)
 (1 row)
 
 -- end_ignore
-DROP EXTERNAL TABLE s3regress;
-DROP PROTOCOL s3;
+DROP EXTERNAL TABLE s3regress_1r_1w;
