@@ -7,6 +7,7 @@ write_prefix := s3test\.pivotal\.io\/regress\/s3write\/$(shell date +%Y%m%d)-$(s
 
 installcheck:
 	@echo "The sub-directory for this test instance is: $(write_prefix)"
+	@rm -rf source_replaced
 	@mkdir -p source_replaced
 	@cp -rf input source_replaced/input
 	@cp -rf output source_replaced/output

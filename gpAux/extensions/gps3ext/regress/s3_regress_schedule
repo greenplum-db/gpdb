@@ -22,4 +22,7 @@ test: 3_03_insert_lots_of_rows
 test: 3_04_insert_mixed_workload
 test: 3_05_insert_to_wet_from_ret
 test: 3_06_special_characters
+test: 3_07_write_lots_of_files
+test: 3_08_join_query_wet_local_tbl
 test: 4_01_create_invalid_wet
+test: 4_02_wet_with_mixed_format
