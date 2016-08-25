@@ -44,7 +44,7 @@ uint64_t CompressWriter::write(const char* buf, uint64_t count) {
 
     // we assume data block from upper layer is always smaller than gzip chunkbuffer
     CHECK_OR_DIE_MSG(count < S3_ZIP_COMPRESS_CHUNKSIZE,
-                     "Data size " PRIu64 " is larger than S3_ZIP_COMPRESS_CHUNKSIZE", count);
+                     "Data size %" PRIu64 " is larger than S3_ZIP_COMPRESS_CHUNKSIZE", count);
 
     this->zstream.next_in = (Byte*)buf;
     this->zstream.avail_in = count;

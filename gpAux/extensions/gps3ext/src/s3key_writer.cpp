@@ -29,8 +29,9 @@ uint64_t S3KeyWriter::write(const char *buf, uint64_t count) {
 
     // GPDB issues 64K- block every time and chunkSize is 8MB+
     if (count > this->chunkSize) {
-        S3ERROR(PRIu64 " is larger than chunkSize " PRIu64, count, this->chunkSize);
-        CHECK_OR_DIE_MSG(false, PRIu64 " is larger than chunkSize " PRIu64, count, this->chunkSize);
+        S3ERROR("%" PRIu64 " is larger than chunkSize %" PRIu64, count, this->chunkSize);
+        CHECK_OR_DIE_MSG(false, "%" PRIu64 " is larger than chunkSize %" PRIu64, count,
+                         this->chunkSize);
     }
 
     if ((this->buffer.size() + count) > this->chunkSize) {
