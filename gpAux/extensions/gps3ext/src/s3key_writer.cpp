@@ -16,6 +16,8 @@ void S3KeyWriter::open(const WriterParams &params) {
 
     this->uploadId = this->s3interface->getUploadId(this->url, this->region, this->cred);
     CHECK_OR_DIE_MSG(!this->uploadId.empty(), "%s", "Failed to get upload id");
+
+    S3DEBUG("key: %s, upload id: %s", this->url.c_str(), this->uploadId.c_str());
 }
 
 // write() attempts to write up to count bytes from the buffer.
@@ -54,7 +56,7 @@ void S3KeyWriter::checkQueryCancelSignal() {
         this->s3interface->abortUpload(this->url, this->region, this->cred, this->uploadId);
         this->etagList.clear();
         this->uploadId.clear();
-        CHECK_OR_DIE_MSG(false, "%s", "Upload is interrupted by user");
+        CHECK_OR_DIE_MSG(false, "%s", "Uploading is interrupted by user");
     }
 }
 
@@ -64,6 +66,8 @@ void S3KeyWriter::flushBuffer() {
             buffer, this->url, this->region, this->cred, etagList.size() + 1, this->uploadId);
 
         etagList.push_back(etag);
+
+        S3DEBUG("Uploaded one part to S3, eTag: %s", etag.c_str());
 
         this->buffer.clear();
 
@@ -82,6 +86,8 @@ void S3KeyWriter::completeKeyWriting() {
         this->s3interface->completeMultiPart(this->url, this->region, this->cred, this->uploadId,
                                              etagList);
     }
+
+    S3DEBUG("Segment %d has finished uploading \"%s\"", s3ext_segid, this->url.c_str());
 
     this->etagList.clear();
     this->uploadId.clear();

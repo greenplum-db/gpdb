@@ -77,7 +77,7 @@ bool InitConfig(const string& conf_path, const string section = "default") {
     string content = s3cfg->Get(section.c_str(), "loglevel", "WARNING");
     s3ext_loglevel = getLogLevel(content.c_str());
 
-#ifndef S3_CHK_CFG
+#ifndef S3_STANDALONE_CHECKCLOUD
     content = s3cfg->Get(section.c_str(), "logtype", "INTERNAL");
     s3ext_logtype = getLogType(content.c_str());
 
