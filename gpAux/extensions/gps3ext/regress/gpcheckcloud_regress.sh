@@ -12,8 +12,8 @@ MD5SUM_SMALL=`cat /tmp/gpcheckcloud.small |openssl md5 |cut -d ' ' -f 2`
 MD5SUM_LARGE=`cat /tmp/gpcheckcloud.large |openssl md5 |cut -d ' ' -f 2`
 
 echo "Uploading data..."
-$GPCHECKCLOUD -u "s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/s3write/$RANDOM_PREFIX/small/ config=/home/gpadmin/s3.conf" -f /tmp/gpcheckcloud.small
-$GPCHECKCLOUD -u "s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/s3write/$RANDOM_PREFIX/large/ config=/home/gpadmin/s3.conf" -f /tmp/gpcheckcloud.large
+$GPCHECKCLOUD -u /tmp/gpcheckcloud.small "s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/s3write/$RANDOM_PREFIX/small/ config=/home/gpadmin/s3.conf"
+$GPCHECKCLOUD -u /tmp/gpcheckcloud.large "s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/s3write/$RANDOM_PREFIX/large/ config=/home/gpadmin/s3.conf"
 
 echo "Downloading and checking hashsum..."
 CHECK_CASES=(

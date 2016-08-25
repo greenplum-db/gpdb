@@ -16,8 +16,8 @@ void printUsage(FILE *stream) {
             "config=path_to_config_file\", to check the configuration.\n"
             "       gpcheckcloud -d \"s3://endpoint/bucket/prefix "
             "config=path_to_config_file\", to download and output to stdout.\n"
-            "       gpcheckcloud -u \"s3://endpoint/bucket/prefix "
-            "config=path_to_config_file\" -f \"/path/to/file\", to upload a file to S3.\n"
+            "       gpcheckcloud -u \"/path/to/file\" \"s3://endpoint/bucket/prefix "
+            "config=path_to_config_file\", to upload a file to S3.\n"
             "       gpcheckcloud -t, to show the config template.\n"
             "       gpcheckcloud -h, to show this help.\n");
 }
@@ -27,18 +27,16 @@ map<char, string> parseCommandLineArgs(int argc, char *argv[]) {
     int opt = 0;
     map<char, string> optionPairs;
 
-    while ((opt = getopt(argc, argv, "c:d:u:f:ht")) != -1) {
+    while ((opt = getopt(argc, argv, "c:d:u:ht")) != -1) {
         switch (opt) {
             case 'c':
             case 'd':
-            case 'u':
-            case 'f':
             case 'h':
             case 't':
                 if (optarg == NULL) {
                     optionPairs[opt] = "";
                 } else if (optarg[0] == '-') {
-                    fprintf(stderr, "Failed. Invalid argument for -%c: '%s'\n\n", opt, optarg);
+                    fprintf(stderr, "Failed. Invalid argument for -%c: '%s'.\n\n", opt, optarg);
                     printUsage(stderr);
                     exit(EXIT_FAILURE);
                 } else {
@@ -46,6 +44,19 @@ map<char, string> parseCommandLineArgs(int argc, char *argv[]) {
                 }
 
                 break;
+            case 'u':
+                if (optarg == NULL) {
+                    optionPairs[opt] = "";
+                } else if (optind + 1 == argc) {
+                    optionPairs['f'] = optarg;
+                    optionPairs['u'] = argv[optind];
+                } else {
+                    fprintf(stderr, "Failed. Invalid arguments for -u, please check.\n\n");
+                    printUsage(stderr);
+                    exit(EXIT_FAILURE);
+                }
+                break;
+
             default:  // '?'
                 printUsage(stderr);
                 exit(EXIT_FAILURE);
@@ -62,7 +73,7 @@ void validateCommandLineArgs(map<char, string> &optionPairs) {
     if ((count == 2) && (optionPairs.size() == 2)) {
         return;
     } else if (count == 1) {
-        fprintf(stderr, "Failed. Option \'-u\' must work with \'-f\'\n\n");
+        fprintf(stderr, "Failed. Option \'-u\' must work with \'-f\'.\n\n");
         printUsage(stderr);
         exit(EXIT_FAILURE);
     }
