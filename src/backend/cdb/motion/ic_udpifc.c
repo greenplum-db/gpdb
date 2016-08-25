@@ -670,7 +670,6 @@ static void putRxBufferAndSendAck(MotionConn *conn, AckSendParam *param);
 static inline void putRxBufferToFreeList(RxBufferPool *p, icpkthdr *buf);
 static inline icpkthdr *getRxBufferFromFreeList(RxBufferPool *p);
 static icpkthdr *getRxBuffer(RxBufferPool *p);
-static void initRxBufferPool(RxBufferPool *p);
 
 /* ICBufferList functions. */
 static inline void icBufferListInitHeadLink(ICBufferLink *link);
@@ -1372,7 +1371,10 @@ InitMotionUDPIFC(int *listenerSocketFd, uint16 *listenerPort)
 	rx_control_info.lastTornIcId = 0;
 	initCursorICHistoryTable(&rx_control_info.cursorHistoryTable);
 
-	initRxBufferPool(&rx_buffer_pool);
+	/* Initialize receive buffer pool */
+	rx_buffer_pool.count = 0;
+	rx_buffer_pool.maxCount = 1;
+	rx_buffer_pool.freeList = NULL;
 
 	/* Initialize send control data */
 	snd_control_info.cwnd = 0;
@@ -1962,19 +1964,6 @@ MlPutRxBufferIFC(ChunkTransportState *transportStates, int motNodeID, int route)
 	if (param.msg.len != 0)
 		sendAckWithParam(&param);
 }
-
-/*
- * initRxBufferPool
- * 		Initialize receive buffer pool.
- */
-static void
-initRxBufferPool(RxBufferPool *p)
-{
-	p->count = 0;
-	p->maxCount = 1;
-	p->freeList = NULL;
-}
-
 
 /*
  * getRxBuffer
