@@ -1505,13 +1505,12 @@ waitOnCondition(int timeout_us, pthread_cond_t *cond, pthread_mutex_t *mutex)
 
 
 	/*
-	 * interrupts may occurs when we are waiting. the interrupt handler
+	 * Interrupts may occur when we are waiting. The interrupt handler
 	 * only set some flags. Only when interrupt checking function is called,
 	 * the interrupts are handled.
 	 *
 	 * We should pay attention to the fact that in elog/erreport/write_log,
 	 * interrupts are checked.
-	 *
 	 */
 
 	wait = pthread_cond_timedwait(cond, mutex, &ts);
