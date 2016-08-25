@@ -62,12 +62,15 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
   // BasicBlock of function entry.
   llvm::BasicBlock* entry_block = codegen_utils->CreateBasicBlock(
       "entry block", advance_aggregates_func);
+  llvm::BasicBlock* aggstate_check_block = codegen_utils->CreateBasicBlock(
+      "aggstate check block", advance_aggregates_func);
+  llvm::BasicBlock* implementation_block = codegen_utils->CreateBasicBlock(
+      "implementation block", advance_aggregates_func);
   llvm::BasicBlock* fallback_block = codegen_utils->CreateBasicBlock(
       "fallback block", advance_aggregates_func);
   llvm::BasicBlock* advance_transition_function_block = codegen_utils->
       CreateBasicBlock("advance_transition_function block",
                        advance_aggregates_func);
-
 
   // External functions
   llvm::Function* llvm_ExecTargetList =
@@ -78,9 +81,13 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
                                                    "MemoryContextSwitchTo");
 
   // Function argument to advance_aggregates
-  llvm::Value* llvm_pergroup = ArgumentByPosition(advance_aggregates_func, 1);
+  llvm::Value* llvm_aggstate_arg = ArgumentByPosition(
+      advance_aggregates_func, 0);
+  llvm::Value* llvm_pergroup_arg = ArgumentByPosition(
+      advance_aggregates_func, 1);
 
   // Generation-time constants
+  llvm::Value* llvm_aggstate = codegen_utils->GetConstant(aggstate_);
   llvm::Value *llvm_tuplecontext = codegen_utils->GetConstant<MemoryContext>(
       aggstate_->tmpcontext->ecxt_per_tuple_memory);
 
@@ -89,6 +96,24 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
 #ifdef CODEGEN_DEBUG
   codegen_utils->CreateElog(DEBUG1, "Codegen'ed advance_aggregates called!");
 #endif
+
+  irb->CreateBr(aggstate_check_block);
+
+  // aggstate_check block
+  // We ensure that everything is fine and we do not need to fall back.
+  // ----------
+  irb->SetInsertPoint(aggstate_check_block);
+
+  // Compare aggstate given during code generation and the one passed
+  // in as an argument to advance_aggregates
+  irb->CreateCondBr(
+      irb->CreateICmpEQ(llvm_aggstate, llvm_aggstate_arg),
+      implementation_block /* true */,
+      fallback_block /* false */);
+
+  // implementation block
+  // ----------
+  irb->SetInsertPoint(implementation_block);
 
   // Since we do not support ordered functions, we do not need to store
   // the value of the variables, which are used as input to the aggregate
@@ -165,11 +190,9 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
 
     // advance_transition_function {{{
 
-    // TODO(nikos): Currently we do not support NULL attributes. However, if we
-    // support NULL attributes and transition function is strict, then we might
-    // have to initiate transValue, noTransvalue, and transValueIsNull
-    // accordingly (see invoke_agg_trans_func).
-    // In case of SUM, we do not have to support this.
+    // TODO(nikos): Current implementation does not support NULL attributes.
+    // Instead it errors out. Thus we do not need to check and implement the
+    // case that transition function is strict.
 
     //oldContext = MemoryContextSwitchTo(tuplecontext);
     llvm::Value *llvm_oldContext = irb->CreateCall(llvm_MemoryContextSwitchTo,
@@ -177,7 +200,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
 
     // Retrieve pergroup's useful members
     llvm::Value* llvm_pergroupstate = irb->CreateGEP(
-        llvm_pergroup, {codegen_utils->GetConstant(aggno)});
+        llvm_pergroup_arg, {codegen_utils->GetConstant(aggno)});
     llvm::Value* llvm_pergroupstate_transValue_ptr =
         codegen_utils->GetPointerToMember(
             llvm_pergroupstate, &AggStatePerGroupData::transValue);

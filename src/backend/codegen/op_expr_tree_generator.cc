@@ -148,9 +148,8 @@ bool OpExprTreeGenerator::VerifyAndCreateExprTree(
 
   OpExpr* op_expr = reinterpret_cast<OpExpr*>(expr_state->expr);
   expr_tree->reset(nullptr);
-  CodeGenFuncMap::iterator itr =  supported_function_.find(op_expr->opfuncid);
-  if (itr == supported_function_.end()) {
-    // Operators are stored in pg_proc table. See postgres.bki for more details.
+  PGFuncGeneratorInterface* pg_func_gen = GetPGFuncGenerator(op_expr->opfuncid);
+  if (nullptr == pg_func_gen) {
     elog(DEBUG1, "Unsupported operator %d.", op_expr->opfuncid);
     return false;
   }
@@ -159,7 +158,7 @@ bool OpExprTreeGenerator::VerifyAndCreateExprTree(
   assert(nullptr != arguments);
   // In ExecEvalFuncArgs
   assert(list_length(arguments) ==
-        static_cast<int>(itr->second->GetTotalArgCount()));
+        static_cast<int>(pg_func_gen->GetTotalArgCount()));
 
   ListCell   *arg = nullptr;
   bool supported_tree = true;
