@@ -1943,12 +1943,6 @@ while getopts ":v'?'aiqe:c:l:-:p:m:h:on:s:P:F:b:!DB:SI:O:" opt
 				- ) # Long options ...
 					NAME=${OPTARG%%=*}
 					VAL=${OPTARG#*=}
-					# Check if we are missing the long option value.  Currently all
-					# long options require a value so we can just do the check once.
-					if [ x"$NAME" == x"$VAL" ]; then
-						LOG_MSG "[FATAL]:-Missing value for option $NAME" 1;
-						USAGE;
-					fi
 					case $NAME in
 						"max_connections" ) MASTER_MAX_CONNECT=$VAL ;;
 						"shared_buffers"  ) NEW_BUFFERS=$VAL ;;
@@ -1960,8 +1954,15 @@ while getopts ":v'?'aiqe:c:l:-:p:m:h:on:s:P:F:b:!DB:SI:O:" opt
 						"lc-monetary"     ) LCMONETARY=$VAL ;;
 						"lc-numeric"      ) LCNUMERIC=$VAL ;;
 						"lc-time"         ) LCTIME=$VAL ;;
-						* ) USAGE ;;
+						* ) LOG_MSG "[ERROR]:-Unknown option $NAME" 1; USAGE ;;
 					esac
+
+					# Check if we are missing the long option value.  Currently all
+					# long options require a value so we can just do the check once.
+					if [ x"$NAME" == x"$VAL" ]; then
+						LOG_MSG "[FATAL]:-Missing value for option $NAME" 1;
+						USAGE;
+					fi
 					;;
 				* ) USAGE ;;
 		esac
