@@ -340,6 +340,8 @@ check_response(URL_FILE *file, int *rc, const char **response_string, bool do_cl
 		}
 		else
 		{
+			const char *http_response = pstrdup(file->u.curl.http_response);
+
 			/* we need to sleep 1 sec to avoid this condition:
 			   1- seg X gets an error message from gpfdist
 			   2- seg Y gets a 500 error
@@ -353,7 +355,7 @@ check_response(URL_FILE *file, int *rc, const char **response_string, bool do_cl
 
 			elog(ERROR, "http response code %ld from gpfdist (%s): %s",
 				 response_code, url_dup,
-				 file->u.curl.http_response ? file->u.curl.http_response : "?");
+				 http_response ? http_response : "?");
 		}
 		pfree(url_dup);
 		pfree(effective_url_dup);
@@ -1175,7 +1177,7 @@ url_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, int *respons
 
 		if (sz < 0)
 		{
-			const char* url_cpy = pstrdup(file->url);
+			const char *url_cpy = pstrdup(file->url);
 			
 			url_fclose(file, false, pstate->cur_relname);
 			elog(ERROR, "illegal URL: %s", url_cpy);
@@ -1593,9 +1595,10 @@ url_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, int *respons
 
 			if (CURLE_OK != (e = curl_easy_setopt(file->u.curl.handle, CURLOPT_POSTFIELDSIZE, 0)))
 			{
+				const char *curl_url = pstrdup(file->u.curl.curl_url);
 				url_fclose(file, false, pstate->cur_relname);
 				elog(ERROR, "internal error: curl_easy_setopt CURLOPT_POSTFIELDSIZE %s error (%d - %s)",
-					 file->u.curl.curl_url,
+					 curl_url,
 					 e, curl_easy_strerror(e));
 			}
 
@@ -1603,10 +1606,12 @@ url_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, int *respons
 			if ( gp_curl_easy_perform_backoff_and_check_response(file)) {
 				file->seq_number++;
 			} else {
+				int64 seq_number = file->seq_number;
+				const char *curl_url = pstrdup(file->u.curl.curl_url);
 				url_fclose(file, false, pstate->cur_relname);
 				elog(ERROR, "error when sending OPEN request (SEQ:" INT64_FORMAT ") to gpfdist %s. error (%d - %s)",
-					 file->seq_number,
-					 file->u.curl.curl_url,
+					 seq_number,
+					 curl_url,
 					 e, curl_easy_strerror(e));
 				return NULL;
 			}
