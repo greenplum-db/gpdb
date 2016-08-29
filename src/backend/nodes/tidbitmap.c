@@ -1251,13 +1251,13 @@ tbm_stream_free(StreamNode *self)
         tbm_set_instrument(tbm, NULL);
     }
 
-	/*
-	 * A reference to the plan is kept in the BitmapIndexScanState
-	 * so this is a no-op for now.
-	 */
-	tbm_free(tbm);
-	pfree(op);
-	pfree(self);
+    if (op) {
+        self->opaque = NULL;
+        tbm_free(tbm);
+        pfree(op);
+    }
+
+    pfree(self);
 }
 
 static void

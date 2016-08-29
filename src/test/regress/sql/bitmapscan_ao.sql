@@ -151,6 +151,27 @@ and c1.language = 'ZHS') bar,
 foo
 WHERE foo.fid = bar.flex_value_set_id;
 
+-- double free mixed bitmap indexes (StreamBitmap with HashBitmap)
+CREATE TABLE bmcrash (
+    btree_col2 date DEFAULT now(),
+    bitmap_col text NOT NULL,
+    btree_col1 character varying(50) NOT NULL,
+    dist_col serial
+)
+WITH (appendonly=true, compresslevel=5, compresstype=zlib) DISTRIBUTED BY (dist_col);
+
+CREATE INDEX bm_idx ON bmcrash USING bitmap (bitmap_col);
+CREATE INDEX bt_idx ON bmcrash USING btree (btree_col1);
+CREATE INDEX bt_idx_2 ON bmcrash USING btree (btree_col2);
+
+INSERT INTO bmcrash (btree_col2, bitmap_col, btree_col1)
+SELECT date '2015-01-01' + (i % (365 * 2)), i % 1000, 'abcdefg' || (i% 1000)
+from generate_series(1,10000) as i;
+
+select count(1) from bmcrash where bitmap_col = '999' AND btree_col1 = 'abcdefg999';
+select count(1) from bmcrash where bitmap_col = '999' OR btree_col1 = 'abcdefg999';
+select count(1) from bmcrash where bitmap_col = '999' OR btree_col1 = 'abcdefg999' AND btree_col2 = '2015-01-01';
+select count(1) from bmcrash where bitmap_col = '999' AND btree_col1 = 'abcdefg999' OR btree_col2 = '2015-01-01';
 
 -- start_ignore
 drop schema bm_ao cascade;
