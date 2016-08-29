@@ -170,6 +170,9 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
   llvm::Function* llvm_ExecTargetList =
       codegen_utils->GetOrRegisterExternalFunction(ExecTargetList,
                                                    "ExecTargetList");
+  llvm::Function* llvm_ExecVariableList =
+      codegen_utils->GetOrRegisterExternalFunction(ExecVariableList,
+                                                   "ExecVariableList");
 
   // Function argument to advance_aggregates
   llvm::Value* llvm_aggstate_arg = ArgumentByPosition(
@@ -232,27 +235,10 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
 
     if (peraggstate->evalproj->pi_isVarList)
     {
-      llvm::Function* llvm_ExecVariableList = nullptr;
-      if (nullptr != peraggstate->evalproj->
-          ExecVariableList_gen_info.code_generator) {
-        // Use the enrolled ExecVariableList version
-        llvm_ExecVariableList = codegen_utils->
-            GetOrRegisterExternalFunction(
-                peraggstate->evalproj->ExecVariableList_gen_info.
-                ExecVariableList_fn, "ExecVariableList"+std::to_string(aggno));
-      }
-      else
-      {
-        llvm_ExecVariableList = codegen_utils->
-            GetOrRegisterExternalFunction(
-                ExecVariableList, "ExecVariableList"+std::to_string(aggno));
-      }
-
       irb->CreateCall(llvm_ExecVariableList, {
           codegen_utils->GetConstant<ProjectionInfo *>(peraggstate->evalproj),
           llvm_arg,
-          llvm_argnull
-      });
+          llvm_argnull});
     }
     else
     {
@@ -262,8 +248,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
           llvm_arg,
           llvm_argnull,
           codegen_utils->GetConstant(peraggstate->evalproj->pi_itemIsDone),
-          codegen_utils->GetConstant<ExprDoneCond *>(nullptr)
-      });
+          codegen_utils->GetConstant<ExprDoneCond *>(nullptr)});
     }
 
     // Generate the code of each aggregate function in a different block.
