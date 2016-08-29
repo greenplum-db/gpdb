@@ -68,9 +68,6 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
       "implementation block", advance_aggregates_func);
   llvm::BasicBlock* fallback_block = codegen_utils->CreateBasicBlock(
       "fallback block", advance_aggregates_func);
-  llvm::BasicBlock* advance_transition_function_block = codegen_utils->
-      CreateBasicBlock("advance_transition_function block",
-                       advance_aggregates_func);
 
   // External functions
   llvm::Function* llvm_ExecTargetList =
@@ -176,6 +173,10 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
           codegen_utils->GetConstant<ExprDoneCond *>(nullptr)
       });
     }
+
+    llvm::BasicBlock* advance_transition_function_block = codegen_utils->
+        CreateBasicBlock("advance_transition_function block",
+                         advance_aggregates_func);
 
     // Fall-back if attribute is NULL.
     // TODO(nikos): Support null attributes.
