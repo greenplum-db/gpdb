@@ -72,6 +72,29 @@ class AdvanceAggregatesCodegen: public BaseCodegen<AdvanceAggregatesFn> {
    **/
   bool GenerateAdvanceAggregates(gpcodegen::GpCodegenUtils* codegen_utils);
 
+  /**
+   * @brief Generates runtime code that implements advance_transition_function.
+   * It is called by GenerateAdvanceAggregates to generate code for a given
+   * aggregate function.
+   *
+   * @param codegen_utils Utility to ease the code generation process.
+   * @param llvm_pergroup_arg LLVM pointer to pergroup argument of regular
+   *        advance_aggregates
+   * @param aggno ith aggregate function
+   * @param advance_aggregates_func LLVM function pointer to the code generated
+   *        advance_aggregate function
+   * @param fallback_block Falling back LLVM block
+   *
+   * @return true on successful generation; false otherwise.
+   */
+  bool GenerateAdvanceTransitionFunction(
+      gpcodegen::GpCodegenUtils* codegen_utils,
+      llvm::Value* llvm_pergroup_arg,
+      int aggno,
+      llvm::Function* advance_aggregates_func,
+      llvm::BasicBlock* fallback_block,
+      llvm::Value *llvm_arg);
+
 };
 
 /** @} */

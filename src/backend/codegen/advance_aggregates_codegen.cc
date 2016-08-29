@@ -46,6 +46,103 @@ AdvanceAggregatesCodegen::AdvanceAggregatesCodegen(
               aggstate_(aggstate) {
 }
 
+bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
+    gpcodegen::GpCodegenUtils* codegen_utils,
+    llvm::Value* llvm_pergroup_arg,
+    int aggno,
+    llvm::Function* advance_aggregates_func,
+    llvm::BasicBlock* fallback_block,
+    llvm::Value *llvm_arg) {
+
+  auto irb = codegen_utils->ir_builder();
+  AggStatePerAgg peraggstate = &aggstate_->peragg[aggno];
+
+  // External functions
+  llvm::Function* llvm_MemoryContextSwitchTo =
+      codegen_utils->GetOrRegisterExternalFunction(MemoryContextSwitchTo,
+                                                   "MemoryContextSwitchTo");
+
+  // Generation-time constants
+  llvm::Value *llvm_tuplecontext = codegen_utils->GetConstant<MemoryContext>(
+      aggstate_->tmpcontext->ecxt_per_tuple_memory);
+
+  // TODO(nikos): Current implementation does not support NULL attributes.
+  // Instead it errors out. Thus we do not need to check and implement the
+  // case that transition function is strict.
+
+  //oldContext = MemoryContextSwitchTo(tuplecontext);
+  llvm::Value *llvm_oldContext = irb->CreateCall(llvm_MemoryContextSwitchTo,
+                                                 {llvm_tuplecontext});
+
+  // Retrieve pergroup's useful members
+  llvm::Value* llvm_pergroupstate = irb->CreateGEP(
+      llvm_pergroup_arg, {codegen_utils->GetConstant(
+          sizeof(AggStatePerGroupData) * aggno)});
+  llvm::Value* llvm_pergroupstate_transValue_ptr =
+      codegen_utils->GetPointerToMember(
+          llvm_pergroupstate, &AggStatePerGroupData::transValue);
+  llvm::Value* llvm_pergroupstate_transValueIsNull_ptr =
+      codegen_utils->GetPointerToMember(
+          llvm_pergroupstate, &AggStatePerGroupData::transValueIsNull);
+  llvm::Value* llvm_pergroupstate_noTransValue_ptr =
+      codegen_utils->GetPointerToMember(
+          llvm_pergroupstate, &AggStatePerGroupData::noTransValue);
+
+  if (!peraggstate->transtypeByVal) {
+    elog(DEBUG1, "We do not support pass-by-ref datatypes.");
+    return false;
+  }
+
+  // FunctionCallInvoke(fcinfo); {{
+  // We do not need to use a FunctionCallInfoData struct, since the supported
+  // aggregate functions are simple enough.
+  gpcodegen::PGFuncGeneratorInfo pg_func_info(
+      advance_aggregates_func,
+      fallback_block,
+      {irb->CreateLoad(llvm_pergroupstate_transValue_ptr),
+          irb->CreateLoad(llvm_arg)}
+  );
+
+  gpcodegen::PGFuncGeneratorInterface* pg_func_gen =
+      gpcodegen::OpExprTreeGenerator::GetPGFuncGenerator(
+          peraggstate->transfn.fn_oid);
+  if (nullptr == pg_func_gen) {
+    elog(DEBUG1, "We do not support built-in function with oid = %d",
+         peraggstate->transfn.fn_oid);
+    return false;
+  }
+
+  llvm::Value *newVal = nullptr;
+  bool isGenerated = pg_func_gen->GenerateCode(codegen_utils,
+                                               pg_func_info, &newVal);
+  if(!isGenerated) {
+    elog(DEBUG1, "Function with oid = %d was not generated successfully!",
+         peraggstate->transfn.fn_oid);
+    return false;
+  }
+
+  llvm::Value *result = codegen_utils->CreateCppTypeToDatumCast(newVal);
+  // }} FunctionCallInvoke
+
+  // MemoryContextSwitchTo(oldContext);
+  irb->CreateCall(llvm_MemoryContextSwitchTo, {llvm_oldContext});
+
+  // }}} advance_transition_function
+
+  // pergroupstate->transValue = newval
+  irb->CreateStore(result, llvm_pergroupstate_transValue_ptr);
+
+  // Currently we do not support null attributes.
+  // Thus we set transValueIsNull and noTransValue to false by default.
+  // TODO(nikos): Support null attributes.
+  irb->CreateStore(codegen_utils->GetConstant<bool>(false),
+                   llvm_pergroupstate_transValueIsNull_ptr);
+  irb->CreateStore(codegen_utils->GetConstant<bool>(false),
+                   llvm_pergroupstate_noTransValue_ptr);
+
+  return true;
+}
+
 bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
     gpcodegen::GpCodegenUtils* codegen_utils) {
 
@@ -73,9 +170,6 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
   llvm::Function* llvm_ExecTargetList =
       codegen_utils->GetOrRegisterExternalFunction(ExecTargetList,
                                                    "ExecTargetList");
-  llvm::Function* llvm_MemoryContextSwitchTo =
-      codegen_utils->GetOrRegisterExternalFunction(MemoryContextSwitchTo,
-                                                   "MemoryContextSwitchTo");
 
   // Function argument to advance_aggregates
   llvm::Value* llvm_aggstate_arg = ArgumentByPosition(
@@ -85,8 +179,6 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
 
   // Generation-time constants
   llvm::Value* llvm_aggstate = codegen_utils->GetConstant(aggstate_);
-  llvm::Value *llvm_tuplecontext = codegen_utils->GetConstant<MemoryContext>(
-      aggstate_->tmpcontext->ecxt_per_tuple_memory);
 
   irb->SetInsertPoint(entry_block);
 
@@ -174,6 +266,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
       });
     }
 
+    // Generate the code of each aggregate function in a different block.
     llvm::BasicBlock* advance_transition_function_block = codegen_utils->
         CreateBasicBlock("advance_transition_function block",
                          advance_aggregates_func);
@@ -189,80 +282,11 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
     // We generate code for advance_transition_function.
     irb->SetInsertPoint(advance_transition_function_block);
 
-    // advance_transition_function {{{
-
-    // TODO(nikos): Current implementation does not support NULL attributes.
-    // Instead it errors out. Thus we do not need to check and implement the
-    // case that transition function is strict.
-
-    //oldContext = MemoryContextSwitchTo(tuplecontext);
-    llvm::Value *llvm_oldContext = irb->CreateCall(llvm_MemoryContextSwitchTo,
-                                                   {llvm_tuplecontext});
-
-    // Retrieve pergroup's useful members
-    llvm::Value* llvm_pergroupstate = irb->CreateGEP(
-        llvm_pergroup_arg, {codegen_utils->GetConstant(
-            sizeof(AggStatePerGroupData) * aggno)});
-    llvm::Value* llvm_pergroupstate_transValue_ptr =
-        codegen_utils->GetPointerToMember(
-            llvm_pergroupstate, &AggStatePerGroupData::transValue);
-    llvm::Value* llvm_pergroupstate_transValueIsNull_ptr =
-        codegen_utils->GetPointerToMember(
-            llvm_pergroupstate, &AggStatePerGroupData::transValueIsNull);
-    llvm::Value* llvm_pergroupstate_noTransValue_ptr =
-        codegen_utils->GetPointerToMember(
-            llvm_pergroupstate, &AggStatePerGroupData::noTransValue);
-
-    if (!peraggstate->transtypeByVal) {
-      elog(DEBUG1, "We do not support pass-by-ref datatypes.");
+    bool isGenerated = GenerateAdvanceTransitionFunction(
+        codegen_utils, llvm_pergroup_arg, aggno, advance_aggregates_func,
+        fallback_block, llvm_arg);
+    if (!isGenerated)
       return false;
-    }
-
-    // FunctionCallInvoke(fcinfo); {{
-    // We do not need to use a FunctionCallInfoData struct, since the supported
-    // aggregate functions are simple enough.
-    PGFuncGeneratorInfo pg_func_info(
-        advance_aggregates_func,
-        fallback_block,
-        {irb->CreateLoad(llvm_pergroupstate_transValue_ptr),
-            irb->CreateLoad(llvm_arg)}
-    );
-
-    PGFuncGeneratorInterface* pg_func_gen =
-        OpExprTreeGenerator::GetPGFuncGenerator(peraggstate->transfn.fn_oid);
-    if (nullptr == pg_func_gen) {
-      elog(DEBUG1, "We do not support built-in function with oid = %d",
-           peraggstate->transfn.fn_oid);
-      return false;
-    }
-
-    llvm::Value *newVal = nullptr;
-    bool isGenerated = pg_func_gen->GenerateCode(codegen_utils,
-                                                 pg_func_info, &newVal);
-    if(!isGenerated) {
-      elog(DEBUG1, "Function with oid = %d was not generated successfully!",
-           peraggstate->transfn.fn_oid);
-      return false;
-    }
-
-    llvm::Value *result = codegen_utils->CreateCppTypeToDatumCast(newVal);
-    // }} FunctionCallInvoke
-
-    // MemoryContextSwitchTo(oldContext);
-    irb->CreateCall(llvm_MemoryContextSwitchTo, {llvm_oldContext});
-
-    // }}} advance_transition_function
-
-    // pergroupstate->transValue = newval
-    irb->CreateStore(result, llvm_pergroupstate_transValue_ptr);
-
-    // Currently we do not support null attributes.
-    // Thus we set transValueIsNull and noTransValue to false by default.
-    // TODO(nikos): Support null attributes.
-    irb->CreateStore(codegen_utils->GetConstant<bool>(false),
-                     llvm_pergroupstate_transValueIsNull_ptr);
-    irb->CreateStore(codegen_utils->GetConstant<bool>(false),
-                     llvm_pergroupstate_noTransValue_ptr);
 
   } // End of for loop
 
