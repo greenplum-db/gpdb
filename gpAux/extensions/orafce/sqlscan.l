@@ -51,9 +51,6 @@ extern PGDLLIMPORT const int	NumScanKeywords;
 #define ScanKeywordLookupArgs
 #endif
 
-#undef fprintf
-#define fprintf(file, fmt, msg)  ereport(ERROR, (errmsg_internal("%s", msg)))
-
 static int		xcdepth = 0;	/* depth of nesting in slash-star comments */
 static char    *dolqstart;      /* current $foo$ quote start string */
 static bool extended_string = false;
@@ -62,8 +59,15 @@ static bool extended_string = false;
 /* No reason to constrain amount of data slurped */
 #define YY_READ_BUF_SIZE 16777216
 
-/* Avoid exit() on fatal scanner errors (a bit ugly -- see yy_fatal_error) */
-#define fprintf(file, fmt, msg)  ereport(ERROR, (errmsg_internal("%s", msg)))
+/*
+ * Avoid exit() on fatal scanner errors (a bit ugly -- see yy_fatal_error)
+ * The "0;" part of the macro is a horrible hack required since yy_fatal_error
+ * casts the fprintf() call to (void) which causes a compiler error on the
+ * do { .. } while(0); construction in the ereport macro expansion.
+ */
+#undef fprintf
+#define fprintf(file, fmt, msg)  0; ereport(ERROR, (errmsg_internal("%s", msg)))
+
 
 /* Handles to the buffer that the lexer uses internally */
 
