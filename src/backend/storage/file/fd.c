@@ -1163,9 +1163,9 @@ FileRead(File file, char *buffer, int amount)
 			   VfdCache[file].seekPos, amount, buffer));
 
 	if (Debug_filerep_print)
-		(elog(LOG, "FileRead: %d (%s) " INT64_FORMAT " %d %p",
+		elog(LOG, "FileRead: %d (%s) " INT64_FORMAT " %d %p",
 			  file, VfdCache[file].fileName,
-			  VfdCache[file].seekPos, amount, buffer));
+			  VfdCache[file].seekPos, amount, buffer);
 
 	returnCode = FileAccess(file);
 	if (returnCode < 0)

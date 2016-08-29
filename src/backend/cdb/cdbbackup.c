@@ -704,7 +704,7 @@ gp_backup_launch__(PG_FUNCTION_ARGS)
 	}
 #endif
 
-	elog(LOG, "gp_dump_agent command line: %s", pszCmdLine),
+	elog(LOG, "gp_dump_agent command line: %s", pszCmdLine);
 
 
 	/* Fork off gp_dump_agent	*/
@@ -932,7 +932,7 @@ gp_backup_launch__(PG_FUNCTION_ARGS)
 	}
 #endif
 
-		elog(LOG, "gp_dump_agent command line : %s", pszCmdLine),
+		elog(LOG, "gp_dump_agent command line : %s", pszCmdLine);
 
 #ifdef _WIN32
 		exit(1);
