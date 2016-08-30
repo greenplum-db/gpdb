@@ -662,15 +662,15 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttr(
   // Note: We collect error code information, based on the block from which we
   // fall back, and log it for debugging purposes.
   irb->SetInsertPoint(fallback_block);
-  llvm::PHINode* llvm_error = irb->CreatePHI(codegen_utils->GetType<int>(), 4);
-  llvm_error->addIncoming(codegen_utils->GetConstant(0),
+  llvm::PHINode* llvm_error = irb->CreatePHI(codegen_utils->GetType<char *>(), 2);
+  llvm_error->addIncoming(codegen_utils->GetConstant("slot check failed"),
       slot_check_block);
-  llvm_error->addIncoming(codegen_utils->GetConstant(1),
+  llvm_error->addIncoming(codegen_utils->GetConstant("tuple check failed"),
       heap_tuple_check_block);
 
   codegen_utils->CreateElog(
       DEBUG1,
-      "Falling back to regular slot_getattr, reason = %d",
+      "Falling back to regular slot_getattr, reason = %s",
       llvm_error);
 
   codegen_utils->CreateFallback<SlotGetAttrFn>(
