@@ -18,10 +18,14 @@ class WriterBuffer : public vector<uint8_t> {};
 
 class S3KeyWriter : public Writer {
    public:
-    S3KeyWriter() : s3interface(NULL), chunkSize(0) {
+    S3KeyWriter() : s3interface(NULL), chunkSize(0), partNumber(0), activeThreads(0) {
+        pthread_mutex_init(&this->mutex, NULL);
+        pthread_cond_init(&this->cv, NULL);
     }
     virtual ~S3KeyWriter() {
         this->close();
+        pthread_mutex_destroy(&this->mutex);
+        pthread_cond_destroy(&this->cv);
     }
     virtual void open(const WriterParams& params);
 
@@ -38,6 +42,8 @@ class S3KeyWriter : public Writer {
     }
 
    protected:
+    static void* writerThread(void* p);
+
     void flushBuffer();
     void completeKeyWriting();
     void checkQueryCancelSignal();
@@ -49,10 +55,29 @@ class S3KeyWriter : public Writer {
     string region;
 
     string uploadId;
-    vector<string> etagList;
+    map<uint64_t, string> etagList;
 
     uint64_t chunkSize;
     S3Credential cred;
+
+    vector<pthread_t> threadList;
+    pthread_mutex_t mutex;
+    pthread_cond_t cv;
+    uint64_t partNumber;
+    uint64_t activeThreads;
+};
+
+class UniqueLock {
+   public:
+    UniqueLock(pthread_mutex_t* m) : mutex(m) {
+        pthread_mutex_lock(this->mutex);
+    }
+    ~UniqueLock() {
+        pthread_mutex_unlock(this->mutex);
+    }
+
+   private:
+    pthread_mutex_t* mutex;
 };
 
 #endif /* INCLUDE_S3KEY_WRITER_H_ */

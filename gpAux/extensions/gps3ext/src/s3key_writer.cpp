@@ -3,7 +3,7 @@
 
 #include "s3key_writer.h"
 
-void S3KeyWriter::open(const WriterParams &params) {
+void S3KeyWriter::open(const WriterParams& params) {
     this->url = params.getKeyUrl();
     this->region = params.getRegion();
     this->cred = params.getCred();
@@ -23,7 +23,7 @@ void S3KeyWriter::open(const WriterParams &params) {
 // write() attempts to write up to count bytes from the buffer.
 // Always return 0 if EOF, no matter how many times it's invoked.
 // Throw exception if encounters errors.
-uint64_t S3KeyWriter::write(const char *buf, uint64_t count) {
+uint64_t S3KeyWriter::write(const char* buf, uint64_t count) {
     CHECK_OR_DIE(buf != NULL);
     this->checkQueryCancelSignal();
 
@@ -54,28 +54,82 @@ void S3KeyWriter::close() {
 
 void S3KeyWriter::checkQueryCancelSignal() {
     if (QueryCancelPending && !this->uploadId.empty()) {
+        // wait for all threads to complete
+        for (size_t i = 0; i < threadList.size(); i++) {
+            pthread_join(threadList[i], NULL);
+        }
+        this->threadList.clear();
+
+        S3DEBUG("Start aborting multipart uploading (uploadID: %s, %lu parts uploaded)",
+                this->uploadId.c_str(), this->etagList.size());
         this->s3interface->abortUpload(this->url, this->region, this->cred, this->uploadId);
+        S3DEBUG("Finished aborting multipart uploading (uploadID: %s)", this->uploadId.c_str());
+
         this->etagList.clear();
         this->uploadId.clear();
         CHECK_OR_DIE_MSG(false, "%s", "Uploading is interrupted by user");
     }
 }
 
+struct ThreadParams {
+    S3KeyWriter* keyWriter;
+    WriterBuffer data;
+    uint64_t currentNumber;
+};
+
+void* S3KeyWriter::writerThread(void* p) {
+    ThreadParams* pack = (ThreadParams*)p;
+    S3KeyWriter* writer = pack->keyWriter;
+
+    try {
+        S3DEBUG("Upload thread start: %p, part number: %" PRIu64 ", data size: %" PRIu64,
+                pthread_self(), pack->currentNumber, pack->data.size());
+        string etag = writer->s3interface->uploadPartOfData(pack->data, writer->url, writer->region,
+                                                            writer->cred, pack->currentNumber,
+                                                            writer->uploadId);
+
+        // when unique_lock destructs it will automatically unlock the mutex.
+        UniqueLock threadLock(&writer->mutex);
+
+        // etag is empty if the query is cancelled by user.
+        if (!etag.empty()) {
+            writer->etagList[pack->currentNumber] = etag;
+        }
+        writer->activeThreads--;
+        pthread_cond_broadcast(&writer->cv);
+        S3DEBUG("Upload part finish: %p, eTag: %s, part number: %" PRIu64, pthread_self(),
+                etag.c_str(), pack->currentNumber);
+    } catch (std::exception& e) {
+        S3ERROR("Upload thread error: %s", e.what());
+    }
+
+    delete pack;
+    return NULL;
+}
+
 void S3KeyWriter::flushBuffer() {
     if (!this->buffer.empty()) {
-        string etag = this->s3interface->uploadPartOfData(
-            buffer, this->url, this->region, this->cred, etagList.size() + 1, this->uploadId);
-
-        etagList.push_back(etag);
-
-        S3DEBUG("Uploaded one part to S3, eTag: %s", etag.c_str());
-
-        this->buffer.clear();
+        UniqueLock queueLock(&this->mutex);
+        while (this->activeThreads >= (uint64_t)s3ext_threadnum) {
+            pthread_cond_wait(&this->cv, &this->mutex);
+        }
 
         // Most time query is canceled during uploadPartOfData. This is the first chance to cancel
         // and clean up upload. Otherwise GPDB will call with LAST_CALL but QueryCancelPending is
         // set to false, and we can't detect query cancel signal in S3KeyWriter::close().
         this->checkQueryCancelSignal();
+
+        this->activeThreads++;
+
+        pthread_t thread;
+        ThreadParams* params = new ThreadParams();
+        params->keyWriter = this;
+        params->data = std::move(this->buffer);
+        params->currentNumber = ++this->partNumber;
+        pthread_create(&thread, NULL, writerThread, params);
+        threadList.emplace_back(thread);
+
+        this->buffer.clear();
     }
 }
 
@@ -83,9 +137,27 @@ void S3KeyWriter::completeKeyWriting() {
     // make sure the buffer is clear
     this->flushBuffer();
 
+    // wait for all threads to complete
+    for (size_t i = 0; i < threadList.size(); i++) {
+        pthread_join(threadList[i], NULL);
+    }
+    this->threadList.clear();
+
+    this->checkQueryCancelSignal();
+
+    vector<string> etags;
+    // it is equivalent to foreach(e in etagList) push_back(e.second);
+    // transform(etagList.begin(), etagList.end(), etags.begin(),
+    //          [](std::pair<const uint64_t, string>& p) { return p.second; });
+    etags.reserve(etagList.size());
+
+    for (map<uint64_t, string>::iterator i = etagList.begin(); i != etagList.end(); i++) {
+        etags.push_back(i->second);
+    }
+
     if (!this->etagList.empty() && !this->uploadId.empty()) {
         this->s3interface->completeMultiPart(this->url, this->region, this->cred, this->uploadId,
-                                             etagList);
+                                             etags);
     }
 
     S3DEBUG("Segment %d has finished uploading \"%s\"", s3ext_segid, this->url.c_str());

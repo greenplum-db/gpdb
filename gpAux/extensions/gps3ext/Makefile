@@ -38,6 +38,7 @@ lint:
 	cppcheck -v --enable=warning src/*.cpp bin/gpcheckcloud/*.cpp test/*.cpp include/*.h
 
 format:
+	@-dos2unix src/*.cpp bin/gpcheckcloud/*.cpp test/*.cpp include/*.h &>/dev/null
 	@-clang-format --version \
 		| grep -q 'clang-format version 3.9.0' \
 		&& clang-format -style="{BasedOnStyle: Google, IndentWidth: 4, ColumnLimit: 100, AllowShortFunctionsOnASingleLine: None}" -i src/*.cpp bin/gpcheckcloud/*.cpp test/*.cpp include/*.h \

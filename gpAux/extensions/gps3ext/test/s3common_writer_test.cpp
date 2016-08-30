@@ -15,7 +15,13 @@ using ::testing::_;
 
 class MockS3InterfaceForCompressionWrite : public MockS3Interface {
    public:
-    MockS3InterfaceForCompressionWrite(){};
+    MockS3InterfaceForCompressionWrite() {
+        pthread_mutex_init(&this->lock, NULL);
+    };
+
+    ~MockS3InterfaceForCompressionWrite() {
+        pthread_mutex_destroy(&this->lock);
+    }
 
     const uint8_t* getRawData() const {
         return this->data.data();
@@ -36,6 +42,7 @@ class MockS3InterfaceForCompressionWrite : public MockS3Interface {
     string mockUploadPartOfData(vector<uint8_t>& data, const string& keyUrl, const string& region,
                                 const S3Credential& cred, uint64_t partNumber,
                                 const string& uploadId) {
+        UniqueLock uniqueLock(&this->lock);
         this->dataMap[partNumber] = data;
         return this->uploadID;
     }
@@ -50,6 +57,7 @@ class MockS3InterfaceForCompressionWrite : public MockS3Interface {
     }
 
    private:
+    pthread_mutex_t lock;
     vector<uint8_t> data;
     map<uint64_t, vector<uint8_t>> dataMap;
     const string uploadID = "I_am_an_uploadID";
