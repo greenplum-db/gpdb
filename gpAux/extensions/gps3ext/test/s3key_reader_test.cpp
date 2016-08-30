@@ -14,6 +14,11 @@ using ::testing::_;
 
 volatile bool QueryCancelPending = false;
 
+// As we cannot catch 'IsAbortInProgress()' in UT, so here consider QueryCancelPending only
+bool queryCancelIsAbortInProgress(void) {
+    return QueryCancelPending;
+}
+
 // ================== S3KeyReaderTest ===================
 class S3KeyReaderTest : public testing::Test, public S3KeyReader {
    protected:

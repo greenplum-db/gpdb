@@ -29,7 +29,7 @@ S3RESTfulService::~S3RESTfulService() {
 
 // curl's write function callback.
 size_t RESTfulServiceWriteFuncCallback(char *ptr, size_t size, size_t nmemb, void *userp) {
-    if (QueryCancelPending) {
+    if (queryCancelIsAbortInProgress()) {
         return -1;
     }
 
@@ -50,7 +50,7 @@ size_t RESTfulServiceAbortFuncCallback(char *ptr, size_t size, size_t nmemb, voi
 
 // curl's headers write function callback.
 size_t RESTfulServiceHeadersWriteFuncCallback(char *ptr, size_t size, size_t nmemb, void *userp) {
-    if (QueryCancelPending) {
+    if (queryCancelIsAbortInProgress()) {
         return -1;
     }
 
@@ -62,7 +62,7 @@ size_t RESTfulServiceHeadersWriteFuncCallback(char *ptr, size_t size, size_t nme
 
 // curl's reading function callback.
 size_t RESTfulServiceReadFuncCallback(char *ptr, size_t size, size_t nmemb, void *userp) {
-    if (QueryCancelPending) {
+    if (queryCancelIsAbortInProgress()) {
         return -1;
     }
 
@@ -195,7 +195,7 @@ Response S3RESTfulService::put(const string &url, HTTPHeaders &headers,
     if (res != CURLE_OK) {
         S3ERROR("curl_easy_perform() failed: %s", curl_easy_strerror(res));
 
-        if (QueryCancelPending) {
+        if (queryCancelIsAbortInProgress()) {
             response.setStatus(RESPONSE_ABORT);
             response.setMessage("Query cancelled by user");
         } else {
@@ -273,7 +273,7 @@ Response S3RESTfulService::post(const string &url, HTTPHeaders &headers,
     if (res != CURLE_OK) {
         S3ERROR("curl_easy_perform() failed: %s", curl_easy_strerror(res));
 
-        if (QueryCancelPending) {
+        if (queryCancelIsAbortInProgress()) {
             response.setStatus(RESPONSE_ABORT);
             response.setMessage("Query cancelled by user");
         } else {

@@ -3,7 +3,9 @@
 
 #include "s3key_writer.h"
 
-void S3KeyWriter::open(const WriterParams& params) {
+extern bool queryCancelIsAbortInProgress(void);
+
+void S3KeyWriter::open(const WriterParams &params) {
     this->url = params.getKeyUrl();
     this->region = params.getRegion();
     this->cred = params.getCred();
@@ -53,7 +55,7 @@ void S3KeyWriter::close() {
 }
 
 void S3KeyWriter::checkQueryCancelSignal() {
-    if (QueryCancelPending && !this->uploadId.empty()) {
+    if (queryCancelIsAbortInProgress() && !this->uploadId.empty()) {
         // wait for all threads to complete
         for (size_t i = 0; i < threadList.size(); i++) {
             pthread_join(threadList[i], NULL);

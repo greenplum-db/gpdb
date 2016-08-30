@@ -63,7 +63,8 @@ uint64_t ChunkBuffer::read(char* buf, uint64_t len) {
     // s3_import() every time calls ChunkBuffer->Read() only once, otherwise(as we did in
     // downstreamReader->read() for decompression feature before), first call sets buffer to
     // ReadyToFill, second call hangs.
-    CHECK_OR_DIE_MSG(!QueryCancelPending, "%s", "ChunkBuffer reading is interrupted by user");
+    CHECK_OR_DIE_MSG(!queryCancelIsAbortInProgress(), "%s",
+                     "ChunkBuffer reading is interrupted by user");
 
     pthread_mutex_lock(&this->statusMutex);
     while (this->status != ReadyToRead) {
@@ -158,7 +159,7 @@ void* DownloadThreadFunc(void* data) {
     uint64_t filledSize = 0;
     S3DEBUG("Downloading thread starts");
     do {
-        if (QueryCancelPending) {
+        if (queryCancelIsAbortInProgress()) {
             S3INFO("Downloading thread is interrupted by user");
 
             // error is shared between all chunks, so all chunks will stop.

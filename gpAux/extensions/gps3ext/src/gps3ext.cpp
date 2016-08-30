@@ -11,6 +11,7 @@ extern "C" {
 #include "postgres.h"
 
 #include "access/extprotocol.h"
+#include "access/xact.h"
 #include "catalog/pg_exttable.h"
 #include "catalog/pg_proc.h"
 #include "fmgr.h"
@@ -36,6 +37,17 @@ PG_FUNCTION_INFO_V1(s3_import);
 extern "C" {
 Datum s3_export(PG_FUNCTION_ARGS);
 Datum s3_import(PG_FUNCTION_ARGS);
+}
+
+/*
+ * To detect the query interruption event (triggered by user), we should
+ * consider both QueryCancelPending variable and transaction status. Here
+ * QueryCancelPending is not sufficient because it will be reset before the
+ * extprotocol last call, then it is hard to distinguish normal exit/finish
+ * from abnormal transaction abort.
+ */
+bool queryCancelIsAbortInProgress(void) {
+    return QueryCancelPending || IsAbortInProgress();
 }
 
 /*

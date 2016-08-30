@@ -49,7 +49,7 @@ Response S3Service::getResponseWithRetries(const string &url, HTTPHeaders &heade
     while (retries--) {
         // declare response here to leverage RVO (Return Value Optimization)
         Response response = this->restfulService->get(url, headers, params);
-        if (response.isSuccess() || (retries == 0) || QueryCancelPending) {
+        if (response.isSuccess() || (retries == 0) || queryCancelIsAbortInProgress()) {
             return response;
         };
 
@@ -66,7 +66,7 @@ Response S3Service::putResponseWithRetries(const string &url, HTTPHeaders &heade
     while (retries--) {
         // declare response here to leverage RVO (Return Value Optimization)
         Response response = this->restfulService->put(url, headers, params, data);
-        if (response.isSuccess() || (retries == 0) || QueryCancelPending) {
+        if (response.isSuccess() || (retries == 0) || queryCancelIsAbortInProgress()) {
             return response;
         };
 
@@ -83,7 +83,7 @@ Response S3Service::postResponseWithRetries(const string &url, HTTPHeaders &head
     while (retries--) {
         // declare response here to leverage RVO (Return Value Optimization)
         Response response = this->restfulService->post(url, headers, params, data);
-        if (response.isSuccess() || (retries == 0) || QueryCancelPending) {
+        if (response.isSuccess() || (retries == 0) || queryCancelIsAbortInProgress()) {
             return response;
         };
 
@@ -109,7 +109,8 @@ ResponseCode S3Service::headResponseWithRetries(const string &url, HTTPHeaders &
 
     while (retries--) {
         response = this->restfulService->head(url, headers, params);
-        if (!isHeadResponseCodeNeedRetry(response) || (retries == 0) || QueryCancelPending) {
+        if (!isHeadResponseCodeNeedRetry(response) || (retries == 0) ||
+            queryCancelIsAbortInProgress()) {
             return response;
         };
 
