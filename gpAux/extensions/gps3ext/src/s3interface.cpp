@@ -351,14 +351,13 @@ uint64_t S3Service::fetchData(uint64_t offset, vector<uint8_t> &data, uint64_t l
 
     Response resp = this->getResponseWithRetries(sourceUrl, headers, params);
     if (resp.getStatus() == RESPONSE_OK) {
-        data = resp.moveDataBuffer();
+        data.swap(resp.getRawData());
         if (data.size() != len) {
             S3ERROR("%s", "Response is not fully received.");
             CHECK_OR_DIE_MSG(false, "%s", "Response is not fully received.");
         }
 
         return data.size();
-
     } else if (resp.getStatus() == RESPONSE_ERROR) {
         S3MessageParser s3msg(resp);
 

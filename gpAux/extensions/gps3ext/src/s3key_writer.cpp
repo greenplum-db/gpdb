@@ -124,7 +124,7 @@ void S3KeyWriter::flushBuffer() {
         pthread_t thread;
         ThreadParams* params = new ThreadParams();
         params->keyWriter = this;
-        params->data = std::move(this->buffer);
+        params->data.swap(this->buffer);
         params->currentNumber = ++this->partNumber;
         pthread_create(&thread, NULL, writerThread, params);
         threadList.emplace_back(thread);

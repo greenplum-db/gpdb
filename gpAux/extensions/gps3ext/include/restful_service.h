@@ -59,10 +59,6 @@ class Response {
         return headersBuffer;
     }
 
-    vector<uint8_t>&& moveHeadersBuffer() {
-        return std::move(headersBuffer);
-    }
-
     void appendHeadersBuffer(char* ptr, size_t size) {
         // Fix Eclipse warning
         headersBuffer.insert(headersBuffer.end(), ptr, ptr + size);
@@ -78,10 +74,6 @@ class Response {
 
     const vector<uint8_t>& getRawData() const {
         return dataBuffer;
-    }
-
-    vector<uint8_t>&& moveDataBuffer() {
-        return std::move(dataBuffer);
     }
 
     void appendDataBuffer(char* ptr, size_t size) {

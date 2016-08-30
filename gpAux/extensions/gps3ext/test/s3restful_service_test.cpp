@@ -35,7 +35,7 @@ TEST(S3RESTfulService, GetWithEmptyHeader) {
 
     EXPECT_EQ(RESPONSE_OK, resp.getStatus());
     EXPECT_EQ("Success", resp.getMessage());
-    EXPECT_EQ(true, resp.moveDataBuffer().size() > 10000);
+    EXPECT_EQ(true, resp.getRawData().size() > 10000);
 }
 
 TEST(S3RESTfulService, GetWithoutURL) {
