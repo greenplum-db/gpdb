@@ -36,10 +36,11 @@ class AdvanceAggregatesCodegen: public BaseCodegen<AdvanceAggregatesFn> {
    *        function or the corresponding regular version.
    *
    **/
-  explicit AdvanceAggregatesCodegen(CodegenManager* manager,
-                                    AdvanceAggregatesFn regular_func_ptr,
-                                    AdvanceAggregatesFn* ptr_to_regular_func_ptr,
-                                    AggState *aggstate);
+  explicit AdvanceAggregatesCodegen(
+      CodegenManager* manager,
+      AdvanceAggregatesFn regular_func_ptr,
+      AdvanceAggregatesFn* ptr_to_regular_func_ptr,
+      AggState *aggstate);
 
   virtual ~AdvanceAggregatesCodegen() = default;
 
@@ -95,7 +96,6 @@ class AdvanceAggregatesCodegen: public BaseCodegen<AdvanceAggregatesFn> {
       llvm::Function* advance_aggregates_func,
       llvm::BasicBlock* error_block,
       llvm::Value *llvm_arg);
-
 };
 
 /** @} */

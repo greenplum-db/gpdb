@@ -70,7 +70,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
   // Instead it errors out. Thus we do not need to check and implement the
   // case that transition function is strict.
 
-  //oldContext = MemoryContextSwitchTo(tuplecontext);
+  // oldContext = MemoryContextSwitchTo(tuplecontext);
   llvm::Value *llvm_oldContext = irb->CreateCall(llvm_MemoryContextSwitchTo,
                                                  {llvm_tuplecontext});
 
@@ -100,8 +100,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
       advance_aggregates_func,
       error_block,
       {irb->CreateLoad(llvm_pergroupstate_transValue_ptr),
-          irb->CreateLoad(llvm_arg)}
-  );
+          irb->CreateLoad(llvm_arg)});
 
   gpcodegen::PGFuncGeneratorInterface* pg_func_gen =
       gpcodegen::OpExprTreeGenerator::GetPGFuncGenerator(
@@ -115,7 +114,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
   llvm::Value *newVal = nullptr;
   bool isGenerated = pg_func_gen->GenerateCode(codegen_utils,
                                                pg_func_info, &newVal);
-  if(!isGenerated) {
+  if (!isGenerated) {
     elog(DEBUG1, "Function with oid = %d was not generated successfully!",
          peraggstate->transfn.fn_oid);
     return false;
@@ -213,8 +212,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
   llvm::Value *llvm_arg = irb->CreateAlloca(codegen_utils->GetType<Datum>());
   llvm::Value *llvm_argnull = irb->CreateAlloca(codegen_utils->GetType<bool>());
 
-  for (int aggno = 0; aggno < aggstate_->numaggs; aggno++)
-  {
+  for (int aggno = 0; aggno < aggstate_->numaggs; aggno++) {
     AggStatePerAgg peraggstate = &aggstate_->peragg[aggno];
 
     if (peraggstate->numSortCols > 0) {
@@ -223,9 +221,8 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
     }
 
     Aggref *aggref = peraggstate->aggref;
-    if (!aggref)
-    {
-      elog (DEBUG1, "We don't codegen non-aggref functions");
+    if (!aggref) {
+      elog(DEBUG1, "We don't codegen non-aggref functions");
       return false;
     }
 
@@ -233,15 +230,12 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
     Assert(nargs == peraggstate->numArguments);
     Assert(peraggstate->evalproj);
 
-    if (peraggstate->evalproj->pi_isVarList)
-    {
+    if (peraggstate->evalproj->pi_isVarList) {
       irb->CreateCall(llvm_ExecVariableList, {
           codegen_utils->GetConstant<ProjectionInfo *>(peraggstate->evalproj),
           llvm_arg,
           llvm_argnull});
-    }
-    else
-    {
+    } else {
       irb->CreateCall(llvm_ExecTargetList, {
           codegen_utils->GetConstant(peraggstate->evalproj->pi_targetlist),
           codegen_utils->GetConstant(peraggstate->evalproj->pi_exprContext),
@@ -272,8 +266,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
         error_block, llvm_arg);
     if (!isGenerated)
       return false;
-
-  } // End of for loop
+  }  // End of for loop
 
   irb->CreateRetVoid();
 
