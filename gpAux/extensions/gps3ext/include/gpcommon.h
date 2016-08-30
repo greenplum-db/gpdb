@@ -7,7 +7,7 @@
 
 // GPDB's global variable
 extern volatile bool QueryCancelPending;
-extern bool queryCancelIsAbortInProgress(void);
+extern bool S3QueryIsAbortInProgress(void);
 
 // TODO change to functions getgpsegmentId() and getgpsegmentCount()
 typedef int32_t int32;

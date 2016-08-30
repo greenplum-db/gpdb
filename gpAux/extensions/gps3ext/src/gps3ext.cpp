@@ -46,7 +46,7 @@ Datum s3_import(PG_FUNCTION_ARGS);
  * extprotocol last call, then it is hard to distinguish normal exit/finish
  * from abnormal transaction abort.
  */
-bool queryCancelIsAbortInProgress(void) {
+bool S3QueryIsAbortInProgress(void) {
     return QueryCancelPending || IsAbortInProgress();
 }
 

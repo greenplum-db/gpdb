@@ -15,7 +15,7 @@ using ::testing::_;
 volatile bool QueryCancelPending = false;
 
 // As we cannot catch 'IsAbortInProgress()' in UT, so here consider QueryCancelPending only
-bool queryCancelIsAbortInProgress(void) {
+bool S3QueryIsAbortInProgress(void) {
     return QueryCancelPending;
 }
 

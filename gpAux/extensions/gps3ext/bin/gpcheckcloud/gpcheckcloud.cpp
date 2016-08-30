@@ -11,9 +11,10 @@ using std::stringstream;
 volatile bool QueryCancelPending = false;
 
 // As we cannot catch 'IsAbortInProgress()' in UT, so here consider QueryCancelPending only
-bool queryCancelIsAbortInProgress(void) {
+bool S3QueryIsAbortInProgress(void) {
     return QueryCancelPending;
 }
+
 void printUsage(FILE *stream) {
     fprintf(stream,
             "Usage: gpcheckcloud -c \"s3://endpoint/bucket/prefix "
