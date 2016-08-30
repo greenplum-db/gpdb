@@ -83,7 +83,8 @@ class AdvanceAggregatesCodegen: public BaseCodegen<AdvanceAggregatesFn> {
    * @param aggno ith aggregate function
    * @param advance_aggregates_func LLVM function pointer to the code generated
    *        advance_aggregate function
-   * @param fallback_block Falling back LLVM block
+   * @param error_block LLVM block for treating errors
+   * @param llvm_arg argument of aggregate function
    *
    * @return true on successful generation; false otherwise.
    */
@@ -92,7 +93,7 @@ class AdvanceAggregatesCodegen: public BaseCodegen<AdvanceAggregatesFn> {
       llvm::Value* llvm_pergroup_arg,
       int aggno,
       llvm::Function* advance_aggregates_func,
-      llvm::BasicBlock* fallback_block,
+      llvm::BasicBlock* error_block,
       llvm::Value *llvm_arg);
 
 };

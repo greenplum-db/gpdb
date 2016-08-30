@@ -51,7 +51,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
     llvm::Value* llvm_pergroup_arg,
     int aggno,
     llvm::Function* advance_aggregates_func,
-    llvm::BasicBlock* fallback_block,
+    llvm::BasicBlock* error_block,
     llvm::Value *llvm_arg) {
 
   auto irb = codegen_utils->ir_builder();
@@ -98,7 +98,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
   // aggregate functions are simple enough.
   gpcodegen::PGFuncGeneratorInfo pg_func_info(
       advance_aggregates_func,
-      fallback_block,
+      error_block,
       {irb->CreateLoad(llvm_pergroupstate_transValue_ptr),
           irb->CreateLoad(llvm_arg)}
   );
@@ -163,8 +163,8 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
       "aggstate check block", advance_aggregates_func);
   llvm::BasicBlock* implementation_block = codegen_utils->CreateBasicBlock(
       "implementation block", advance_aggregates_func);
-  llvm::BasicBlock* fallback_block = codegen_utils->CreateBasicBlock(
-      "fallback block", advance_aggregates_func);
+  llvm::BasicBlock* error_block = codegen_utils->CreateBasicBlock(
+      "error block", advance_aggregates_func);
 
   // External functions
   llvm::Function* llvm_ExecTargetList =
@@ -201,7 +201,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
   irb->CreateCondBr(
       irb->CreateICmpEQ(llvm_aggstate, llvm_aggstate_arg),
       implementation_block /* true */,
-      fallback_block /* false */);
+      error_block /* false */);
 
   // implementation block
   // ----------
@@ -256,10 +256,10 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
         CreateBasicBlock("advance_transition_function block",
                          advance_aggregates_func);
 
-    // Fall-back if attribute is NULL.
+    // Error out if attribute is NULL.
     // TODO(nikos): Support null attributes.
     irb->CreateCondBr(irb->CreateLoad(llvm_argnull),
-                      fallback_block /*true*/,
+                      error_block /*true*/,
                       advance_transition_function_block /*false*/);
 
     // advance_transition_function block
@@ -269,7 +269,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
 
     bool isGenerated = GenerateAdvanceTransitionFunction(
         codegen_utils, llvm_pergroup_arg, aggno, advance_aggregates_func,
-        fallback_block, llvm_arg);
+        error_block, llvm_arg);
     if (!isGenerated)
       return false;
 
@@ -277,17 +277,14 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
 
   irb->CreateRetVoid();
 
-  // Fall back block
+  // Error block
   // ---------------
-  irb->SetInsertPoint(fallback_block);
+  irb->SetInsertPoint(error_block);
 
-  codegen_utils->CreateElog(DEBUG1,
-                            "Falling back to regular advance_aggregates");
+  codegen_utils->CreateElog(ERROR, "Codegened advance_aggregates: possible "
+      "reasons include overflow, null attributes, use of different aggstate.");
 
-  codegen_utils->CreateFallback<AdvanceAggregatesFn>(
-      codegen_utils->GetOrRegisterExternalFunction(advance_aggregates,
-                                                   "advance_aggregates"),
-                                                   advance_aggregates_func);
+  irb->CreateRetVoid();
 
   return true;
 }
