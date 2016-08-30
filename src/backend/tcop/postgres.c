@@ -4634,7 +4634,12 @@ PostgresMain(int argc, char *argv[],
 
 	/* Also send GPDB QE-backend startup info (motion listener, version). */
 	if (Gp_role == GP_ROLE_EXECUTE)
-		sendQEDetails();
+	{
+#ifdef FAULT_INJECTOR
+		if (SIMPLE_FAULT_INJECTOR(SendQEDetailsInitBackend) != FaultInjectorTypeSkip)
+#endif
+			sendQEDetails();
+	}
 
 	/* Welcome banner for standalone case */
 	if (whereToSendOutput == DestDebug)

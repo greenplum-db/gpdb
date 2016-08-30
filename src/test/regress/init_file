@@ -117,4 +117,7 @@ s/Table "pg_temp_\d+.temp/Table "pg_temp_#####/
 # Mask out Log & timestamp for orca message that has feature not supported.
 m/^LOG.*\"Feature/
 s/^LOG.*\"Feature/\"Feature/
+
+m/^DETAIL:  Internal error: No motion listener port (seg\d.*:.*)/
+s/^DETAIL:  Internal error: No motion listener port (seg\d.*:.*)//
 -- end_matchsubs

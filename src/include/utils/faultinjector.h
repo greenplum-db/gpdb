@@ -208,6 +208,8 @@ typedef enum FaultInjectorIdentifier_e {
 	OptTaskAllocateStringBuffer,
 	OptRelcacheTranslatorCatalogAccess,
 
+	SendQEDetailsInitBackend,
+
 	/* INSERT has to be done before that line */
 	FaultInjectorIdMax,
 	

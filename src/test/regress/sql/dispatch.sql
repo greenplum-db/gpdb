@@ -34,4 +34,25 @@ DROP TABLE "my table";
 
 -- Clean up
 \c regression
-DROP DATABASE "dispatch test db"
+DROP DATABASE "dispatch test db";
+
+--
+-- test QD will report failure if QE fails to send its motion_listener back
+-- during backend initialization
+--
+
+-- start_ignore
+\! gpfaultinjector -f send_qe_details_init_backend -y reset -s 2
+-- inject a 'skip' fault before QE sends its motion_listener
+\! gpfaultinjector -f send_qe_details_init_backend -y skip -s 2 -o 0
+-- end_ignore
+
+-- terminate exiting QEs first
+\c
+-- verify failure will be reported
+SELECT 1 FROM gp_dist_random('gp_id');
+
+-- reset fault injector
+-- start_ignore
+\! gpfaultinjector -f send_qe_details_init_backend -y reset -s 2
+-- end_ignore
