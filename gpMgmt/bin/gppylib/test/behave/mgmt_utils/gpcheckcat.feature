@@ -243,7 +243,6 @@ Feature: gpcheckcat tests
           | catalog_name                | catalog_oid_key | table_name |
           | pg_attribute                | attrelid        | index_table |
           | pg_index                    | indrelid        | index_table |
-          | pg_constraint               | conrelid        | index_table |
           | pg_appendonly               | relid           | ao_table   |
 
     @foreignkey_full_master
@@ -261,7 +260,6 @@ Feature: gpcheckcat tests
           | catalog_name                | catalog_oid_key | table_name |
           | pg_attribute                | attrelid        | index_table |
           | pg_index                    | indrelid        | index_table |
-          | pg_constraint               | conrelid        | index_table |
           | pg_appendonly               | relid           | ao_table   |
 
     @foreignkey_type

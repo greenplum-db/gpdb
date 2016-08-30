@@ -112,7 +112,7 @@ class GpCheckCatTestCase(GpTestCase):
     @patch('gpcheckcat_modules.foreign_key_check.log_literal')
     def test_checkTableForeignKey__returns_correct_join_query(self, log_literal_mock, fk_query_left_join_mock, fk_query_full_join_mock):
         #cat_tables_to_validate = set(['pg_attribute','gp_distribution_policy','pg_appendonly','pg_constraint','pg_index','pg_type','pg_window'])
-        cat_tables_to_validate = set(['pg_attribute', 'pg_appendonly','pg_constraint','pg_index','pg_type','pg_window'])
+        cat_tables_to_validate = set(['pg_attribute', 'pg_appendonly', 'pg_index','pg_type','pg_window'])
 
         foreign_key_mock_calls = []
         foreign_key_mock_calls_left = []
