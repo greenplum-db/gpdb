@@ -162,8 +162,12 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
       "aggstate check block", advance_aggregates_func);
   llvm::BasicBlock* implementation_block = codegen_utils->CreateBasicBlock(
       "implementation block", advance_aggregates_func);
-  llvm::BasicBlock* error_block = codegen_utils->CreateBasicBlock(
-      "error block", advance_aggregates_func);
+  llvm::BasicBlock* error_aggstate_block = codegen_utils->CreateBasicBlock(
+      "error aggstate block", advance_aggregates_func);
+  llvm::BasicBlock* overflow_block = codegen_utils->CreateBasicBlock(
+      "overflow block", advance_aggregates_func);
+  llvm::BasicBlock* null_attribute_block = codegen_utils->CreateBasicBlock(
+      "null attribute block", advance_aggregates_func);
 
   // External functions
   llvm::Function* llvm_ExecTargetList =
@@ -200,7 +204,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
   irb->CreateCondBr(
       irb->CreateICmpEQ(llvm_aggstate, llvm_aggstate_arg),
       implementation_block /* true */,
-      error_block /* false */);
+      error_aggstate_block /* false */);
 
   // implementation block
   // ----------
@@ -213,6 +217,18 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
   llvm::Value *llvm_argnull = irb->CreateAlloca(codegen_utils->GetType<bool>());
 
   for (int aggno = 0; aggno < aggstate_->numaggs; aggno++) {
+    // Generate the code of each aggregate function in a different block.
+    llvm::BasicBlock* advance_aggregate_block = codegen_utils->
+        CreateBasicBlock("advance_aggregate_block_aggno_"
+            + std::to_string(aggno), advance_aggregates_func);
+
+    irb->CreateBr(advance_aggregate_block);
+
+    // advance_aggregate block
+    // ----------
+    // We generate code for advance_transition_function.
+    irb->SetInsertPoint(advance_aggregate_block);
+
     AggStatePerAgg peraggstate = &aggstate_->peragg[aggno];
 
     if (peraggstate->numSortCols > 0) {
@@ -245,15 +261,14 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
           codegen_utils->GetConstant<ExprDoneCond *>(nullptr)});
     }
 
-    // Generate the code of each aggregate function in a different block.
     llvm::BasicBlock* advance_transition_function_block = codegen_utils->
-        CreateBasicBlock("advance_transition_function block",
-                         advance_aggregates_func);
+        CreateBasicBlock("advance_transition_function_block_aggno_"
+            + std::to_string(aggno), advance_aggregates_func);
 
     // Error out if attribute is NULL.
     // TODO(nikos): Support null attributes.
     irb->CreateCondBr(irb->CreateLoad(llvm_argnull),
-                      error_block /*true*/,
+                      null_attribute_block /*true*/,
                       advance_transition_function_block /*false*/);
 
     // advance_transition_function block
@@ -263,20 +278,35 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
 
     bool isGenerated = GenerateAdvanceTransitionFunction(
         codegen_utils, llvm_pergroup_arg, aggno, advance_aggregates_func,
-        error_block, llvm_arg);
+        overflow_block, llvm_arg);
     if (!isGenerated)
       return false;
   }  // End of for loop
 
   irb->CreateRetVoid();
 
-  // Error block
+  // Error aggstate block
   // ---------------
-  irb->SetInsertPoint(error_block);
+  irb->SetInsertPoint(error_aggstate_block);
 
-  codegen_utils->CreateElog(ERROR, "Codegened advance_aggregates: possible "
-      "reasons include overflow, null attributes, use of different aggstate.");
+  codegen_utils->CreateElog(ERROR, "Codegened advance_aggregates: "
+      "use of different aggstate.");
 
+  irb->CreateRetVoid();
+
+  // NULL attribute block
+  // ---------------
+  irb->SetInsertPoint(null_attribute_block);
+
+  codegen_utils->CreateElog(ERROR, "Codegened advance_aggregates: "
+      "NULL attributes are not supported.");
+
+  irb->CreateRetVoid();
+
+  // Overflow block
+  // ---------------
+  irb->SetInsertPoint(overflow_block);
+  // We error out during the execution of built-in function.
   irb->CreateRetVoid();
 
   return true;
