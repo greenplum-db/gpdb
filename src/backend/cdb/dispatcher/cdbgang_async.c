@@ -148,9 +148,9 @@ create_gang_retry:
 				{
 					case PGRES_POLLING_OK:
 						cdbconn_doConnectComplete(segdbDesc);
-						if (segdbDesc->motionListener == -1)
+						if (segdbDesc->motionListener == -1 || segdbDesc->motionListener == 0)
 							ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-									errmsg("failed to create gang on one or more segments"),
+									errmsg("failed to acquire resources on one or more segments"),
 									errdetail("Internal error: No motion listener port (%s)", segdbDesc->whoami)));
 						successful_connections++;
 						break;
