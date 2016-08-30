@@ -1,0 +1,18 @@
+-- test logging of gang management
+SET gp_log_gang = 'debug';
+
+-- test INFO raised from segments with various kinds of fields
+CREATE OR REPLACE FUNCTION udf_raise_info() RETURNS BOOL
+AS '@abs_builddir@/regress@DLSUFFIX@', 'gangRaiseInfo' LANGUAGE C;
+
+SELECT udf_raise_info() FROM gp_dist_random('gp_id') WHERE gp_segment_id = 0;
+
+-- terminate connections to all segments
+\c
+
+-- test brutal exit of session can correctly clean up all QEs
+-- start and finish a new session
+\! psql regression -f @abs_builddir@/sql/gang_mgmt_helper.sql
+
+-- verify all QEs of the exited session have gone, expect to return nothing
+SELECT sess_id FROM tmp_sess_id, (SELECT get_segment_qe_session_ids() FROM gp_dist_random('gp_id')) sessions WHERE tmp_sess_id.sess_id = sessions.get_segment_qe_session_ids;

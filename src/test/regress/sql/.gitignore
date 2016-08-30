@@ -27,3 +27,4 @@ external_table.sql
 largeobject.sql
 qp_gist_indexes2.sql
 qp_regexp.sql
+gang_mgmt.sql

@@ -1,0 +1,40 @@
+-- test logging of gang management
+SET gp_log_gang = 'debug';
+-- test INFO raised from segments with various kinds of fields
+CREATE OR REPLACE FUNCTION udf_raise_info() RETURNS BOOL
+AS '@abs_srcdir@/regress.so', 'gangRaiseInfo' LANGUAGE C;
+SELECT udf_raise_info() FROM gp_dist_random('gp_id') WHERE gp_segment_id = 0;
+INFO:  testing hook function MPPnoticeReceiver  (seg0 slice1 127.0.0.1:10000 pid=9647)
+DETAIL:  this test aims at covering code paths not hit before
+HINT:  no special hint
+CONTEXT:  PL/C function defined in regress.c
+ udf_raise_info 
+----------------
+ t
+(1 row)
+
+-- terminate connections to all segments
+\c
+-- test brutal exit of session can correctly clean up all QEs
+-- start and finish a new session
+\! psql regression -f @abs_srcdir@/sql/gang_mgmt_helper.sql
+psql:@abs_srcdir@/sql/gang_mgmt_helper.sql:5: NOTICE:  table "tmp_sess_id" does not exist, skipping
+DROP TABLE
+psql:@abs_srcdir@/sql/gang_mgmt_helper.sql:6: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'sess_id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT 1
+CREATE FUNCTION
+BEGIN
+DECLARE CURSOR
+SET
+psql:@abs_srcdir@/sql/gang_mgmt_helper.sql:18: FATAL:  User fault injection raised fatal (faultinject.c:130)
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+psql:@abs_srcdir@/sql/gang_mgmt_helper.sql:18: connection to server was lost
+-- verify all QEs of the exited session have gone, expect to return nothing
+SELECT sess_id FROM tmp_sess_id, (SELECT get_segment_qe_session_ids() FROM gp_dist_random('gp_id')) sessions WHERE tmp_sess_id.sess_id = sessions.get_segment_qe_session_ids;
+ sess_id 
+---------
+(0 rows)
+

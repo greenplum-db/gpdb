@@ -71,6 +71,9 @@ extern Datum checkResourceQueueMemoryLimits(PG_FUNCTION_ARGS);
 
 extern Datum checkRelationAfterInvalidation(PG_FUNCTION_ARGS);
 
+/* Gang management test support */
+extern Datum gangRaiseInfo(PG_FUNCTION_ARGS);
+
 /*
  * test_atomic_ops was backported from 9.5. This prototype doesn't appear
  * in the upstream version, because the PG_FUNCTION_INFO_V1() macro includes
@@ -2410,6 +2413,26 @@ checkRelationAfterInvalidation(PG_FUNCTION_ARGS)
 
 	PG_RETURN_BOOL(true);
 }
+
+/*
+ * Helper function to raise an INFO with options including DETAIL, HINT
+ * From PostgreSQL 8.4, we can do this in plpgsql by RAISE statement, but now we
+ * use PL/C.
+ */
+PG_FUNCTION_INFO_V1(gangRaiseInfo);
+Datum
+gangRaiseInfo(PG_FUNCTION_ARGS)
+{
+	ereport(INFO,
+			(errmsg("testing hook function MPPnoticeReceiver"),
+			 errdetail("this test aims at covering code paths not hit before"),
+			 errhint("no special hint"),
+			 errcontext("PL/C function defined in regress.c"),
+			 errposition(0)));
+
+	PG_RETURN_BOOL(true);
+}
+
 
 #ifndef PG_HAVE_ATOMIC_FLAG_SIMULATION
 static void
