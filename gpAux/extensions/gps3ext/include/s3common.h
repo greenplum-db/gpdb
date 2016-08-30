@@ -23,8 +23,6 @@ struct S3Credential {
     string secret;
 };
 
-enum Method { GET, PUT, POST, DELETE, HEAD };
-
 void SignRequestV4(const string& method, HTTPHeaders* h, const string& orig_region,
                    const string& path, const string& query, const S3Credential& cred);
 

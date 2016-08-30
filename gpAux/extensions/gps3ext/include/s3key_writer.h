@@ -42,7 +42,7 @@ class S3KeyWriter : public Writer {
     }
 
    protected:
-    static void* writerThread(void* p);
+    static void* UploadThreadFunc(void* p);
 
     void flushBuffer();
     void completeKeyWriting();

@@ -40,7 +40,7 @@ size_t RESTfulServiceWriteFuncCallback(char *ptr, size_t size, size_t nmemb, voi
 }
 
 // cURL's write function callback, only used by DELETE request when query is canceled.
-// It shouldn't be interrupted by QueryCancelPending.
+// It shouldn't be interrupted.
 size_t RESTfulServiceAbortFuncCallback(char *ptr, size_t size, size_t nmemb, void *userp) {
     size_t realsize = size * nmemb;
     Response *resp = (Response *)userp;

@@ -77,33 +77,33 @@ struct ThreadParams {
     uint64_t currentNumber;
 };
 
-void* S3KeyWriter::writerThread(void* p) {
-    ThreadParams* pack = (ThreadParams*)p;
-    S3KeyWriter* writer = pack->keyWriter;
+void* S3KeyWriter::UploadThreadFunc(void* data) {
+    ThreadParams* params = (ThreadParams*)data;
+    S3KeyWriter* writer = params->keyWriter;
 
     try {
         S3DEBUG("Upload thread start: %p, part number: %" PRIu64 ", data size: %" PRIu64,
-                pthread_self(), pack->currentNumber, pack->data.size());
-        string etag = writer->s3interface->uploadPartOfData(pack->data, writer->url, writer->region,
-                                                            writer->cred, pack->currentNumber,
-                                                            writer->uploadId);
+                pthread_self(), params->currentNumber, params->data.size());
+        string etag = writer->s3interface->uploadPartOfData(
+            params->data, writer->url, writer->region, writer->cred, params->currentNumber,
+            writer->uploadId);
 
         // when unique_lock destructs it will automatically unlock the mutex.
         UniqueLock threadLock(&writer->mutex);
 
         // etag is empty if the query is cancelled by user.
         if (!etag.empty()) {
-            writer->etagList[pack->currentNumber] = etag;
+            writer->etagList[params->currentNumber] = etag;
         }
         writer->activeThreads--;
         pthread_cond_broadcast(&writer->cv);
         S3DEBUG("Upload part finish: %p, eTag: %s, part number: %" PRIu64, pthread_self(),
-                etag.c_str(), pack->currentNumber);
+                etag.c_str(), params->currentNumber);
     } catch (std::exception& e) {
         S3ERROR("Upload thread error: %s", e.what());
     }
 
-    delete pack;
+    delete params;
     return NULL;
 }
 
@@ -114,20 +114,19 @@ void S3KeyWriter::flushBuffer() {
             pthread_cond_wait(&this->cv, &this->mutex);
         }
 
-        // Most time query is canceled during uploadPartOfData. This is the first chance to cancel
-        // and clean up upload. Otherwise GPDB will call with LAST_CALL but QueryCancelPending is
-        // set to false, and we can't detect query cancel signal in S3KeyWriter::close().
+        // Most time query is canceled during uploadPartOfData(). This is the first chance to cancel
+        // and clean up upload.
         this->checkQueryCancelSignal();
 
         this->activeThreads++;
 
-        pthread_t thread;
+        pthread_t writerThread;
         ThreadParams* params = new ThreadParams();
         params->keyWriter = this;
         params->data.swap(this->buffer);
         params->currentNumber = ++this->partNumber;
-        pthread_create(&thread, NULL, writerThread, params);
-        threadList.emplace_back(thread);
+        pthread_create(&writerThread, NULL, UploadThreadFunc, params);
+        threadList.emplace_back(writerThread);
 
         this->buffer.clear();
     }

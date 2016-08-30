@@ -59,10 +59,9 @@ ChunkBuffer& ChunkBuffer::operator=(const ChunkBuffer& other) {
 // that's why it checks if leftLen is larger than *or equal to* len below[1], provides a chance ret
 // is 0, which is smaller than len. Otherwise, other functions won't know when to read next buffer.
 uint64_t ChunkBuffer::read(char* buf, uint64_t len) {
-    // QueryCancelPending stops s3_import(), this check is not needed if
-    // s3_import() every time calls ChunkBuffer->Read() only once, otherwise(as we did in
-    // downstreamReader->read() for decompression feature before), first call sets buffer to
-    // ReadyToFill, second call hangs.
+    // GPDB abort signal stops s3_import(), this check is not needed if s3_import() every time calls
+    // ChunkBuffer->Read() only once, otherwise(as we did in downstreamReader->read() for
+    // decompression feature before), first call sets buffer to ReadyToFill, second call hangs.
     CHECK_OR_DIE_MSG(!S3QueryIsAbortInProgress(), "%s",
                      "ChunkBuffer reading is interrupted by user");
 
