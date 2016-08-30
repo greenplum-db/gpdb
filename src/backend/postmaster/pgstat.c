@@ -3059,6 +3059,7 @@ pgstat_write_statsfile(bool permanent)
 	PgStat_StatDBEntry *dbentry;
 	PgStat_StatTabEntry *tabentry;
 	PgStat_StatFuncEntry *funcentry;
+	PgStat_StatQueueEntry *queueentry;
 	FILE	   *fpout;
 	int32		format_id;
 	const char *tmpfile = permanent ? PGSTAT_STAT_PERMANENT_TMPFILE : pgstat_stat_tmpname;
@@ -3131,6 +3132,16 @@ pgstat_write_statsfile(bool permanent)
 		 * Mark the end of this DB
 		 */
 		fputc('d', fpout);
+	}
+
+	/*
+	 * Walk through resource queue stats.
+	 */
+	hash_seq_init(&fstat, pgStatQueueHash);
+	while ((queueentry = (PgStat_StatQueueEntry *) hash_seq_search(&fstat)) != NULL)
+	{
+		fputc('Q', fpout);
+		fwrite(queueentry, sizeof(PgStat_StatQueueEntry), 1, fpout);
 	}
 
 	/*
