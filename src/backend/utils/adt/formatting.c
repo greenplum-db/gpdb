@@ -90,6 +90,7 @@
 #include "utils/numeric.h"
 #include "utils/pg_locale.h"
 #include "mb/pg_wchar.h"
+#include "fmgr.h"
 
 #ifndef _
 #define _(x)	gettext(x)
@@ -3293,6 +3294,52 @@ to_date(PG_FUNCTION_ARGS)
 						text_to_cstring(date_txt))));
 
 	result = date2j(tm.tm_year, tm.tm_mon, tm.tm_mday) - POSTGRES_EPOCH_JDATE;
+
+	PG_RETURN_DATEADT(result);
+}
+
+/* ----------
+ * TO_DATE_VALID
+ *	Make Date from date_str which is formated at argument 'fmt'
+ *	Validate the input date afterwards
+ *
+ *	The resulting date is made a string again, and compared to
+ *	the input - only if both dates match, it was a valid date
+ *	in the beginning
+ * ----------
+ */
+Datum
+to_date_valid(PG_FUNCTION_ARGS)
+{
+	text		*date_txt = PG_GETARG_TEXT_P(0);
+	text		*fmt = PG_GETARG_TEXT_P(1);
+	Datum		result;
+	Datum		validate;
+	Datum		result_out;
+	Datum		validate_in;
+
+	/* call the original to_date() function and receive the result */
+	result = DirectFunctionCall2(to_date, PointerGetDatum(date_txt), PointerGetDatum(fmt));
+
+	/* transform the date back to a timestamp, and then a string, using the original format */
+	result_out = DirectFunctionCall1(date_out, result);
+	validate_in = DirectFunctionCall3(timestamp_in, result_out, ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
+
+	/* compare the two dates */
+
+	/* same check as in timestamp_to_char(), except that DirectFunctionCall2() will raise an error if NULL */
+	if ((VARSIZE(fmt) - VARHDRSZ) <= 0 || TIMESTAMP_NOT_FINITE(DatumGetTimestamp(validate_in)))
+		PG_RETURN_NULL();
+
+	validate = DirectFunctionCall2(timestamp_to_char, validate_in, PointerGetDatum(fmt));
+	/* DirectFunctionCall2() will raise an error if the result is NULL, no need to handle it here */
+	if (DatumGetBool(DirectFunctionCall2(textne, PointerGetDatum((text *)validate), PointerGetDatum(date_txt))))
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+				 errmsg("date out of range: \"%s\"",
+						text_to_cstring(date_txt))));
+	}
 
 	PG_RETURN_DATEADT(result);
 }
