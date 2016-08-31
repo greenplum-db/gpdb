@@ -1079,7 +1079,7 @@ Feature: Validate command line arguments
         And the row "1, 0, 999999999999998, 999999999999998, 0, 0" is inserted into "public.tuple_count_table" in "bkdb"
         And the row "2, 0, 1, 1, 0, 0" is inserted into "public.tuple_count_table" in "bkdb"
         When the method get_partition_state is executed on table "public.tuple_count_table" in "bkdb" for ao table "testschema.t1"
-        Then the get_partition_state result should contain "testschema, t1, 999999999999999"
+        Then the get_partition_state result should contain "testschema,t1,999999999999999"
 
     Scenario: Test gpcrondump dump deletion only (-o option)
         Given the test is initialized
@@ -1435,7 +1435,7 @@ Feature: Validate command line arguments
         When the user truncates "public.ao_index_table" tables in "bkdb"
         And the user runs "gpdbrestore -T ao_index_table -a" with the stored timestamp
         And gpdbrestore should return a return code of 2
-        Then gpdbrestore should print No schema name supplied to stdout
+        Then gpdbrestore should print ao_index_table is not in the format schema.table to stdout
 
     Scenario: Full backup with gpdbrestore -T for DB with FUNCTION having DROP SQL
         Given the test is initialized
@@ -1862,7 +1862,7 @@ Feature: Validate command line arguments
         And verify that the "filter" file in " " dir contains "public.ao_index_table"
         And verify that the "filter" file in " " dir contains "public.heap_table"
         And table "public.ao_index_table" is assumed to be in dirty state in "bkdb"
-        When the user runs "gpcrondump -x bkdb --prefix=foo --incremental  < gppylib/test/behave/mgmt_utils/steps/data/yes.txt"
+        When the user runs "gpcrondump -x bkdb --prefix=foo --incremental -v < gppylib/test/behave/mgmt_utils/steps/data/yes.txt"
         Then gpcrondump should return a return code of 0
         And gpcrondump should print Filtering tables using: to stdout
         And gpcrondump should print Prefix                        = foo to stdout
@@ -3018,63 +3018,64 @@ Feature: Validate command line arguments
         And the directory "/tmp/special_table_data.out" is removed or does not exist
         And the user runs command "dropdb " DB\`~@#\$%^&*()_-+[{]}|\\;: \\'/?><;1 ""
 
-    Scenario: Funny characters in the table name or schema name for gpcrondump
+    @spl_char
+    @spl_char_2
+    Scenario: gpcrondump can handle period, comma, tab, newline, and exclamation point
         Given the test is initialized
         And the database "testdb" does not exist
         And database "testdb" exists
         And the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/special_chars/funny_char.sql testdb"
         When the user runs command "gpcrondump -a -x testdb"
+        Then gpcrondump should return a return code of 0
+        When the user runs command "gpcrondump -a -x testdb -t Schema\t,1.Table\n!1"
         Then gpcrondump should return a return code of 2
-        And gpcrondump should print Name has an invalid character "\\t" "\\n" "!" "," "." to stdout
-        When the user runs command "gpcrondump -a -x testdb -t Schema\\t,1.Table\\n\!1"
-        Then gpcrondump should return a return code of 2
-        And gpcrondump should print Name has an invalid character "\\t" "\\n" "!" "," "." to stdout
-        When the user runs command "gpcrondump -a -x testdb -T Schema\\t,1.Table\\n\!1"
-        Then gpcrondump should return a return code of 2
-        And gpcrondump should print Name has an invalid character "\\t" "\\n" "!" "," "." to stdout
-        When the user runs command "gpcrondump -a -x testdb -s Schema\\t,1"
-        Then gpcrondump should return a return code of 2
-        And gpcrondump should print Name has an invalid character "\\t" "\\n" "!" "," "." to stdout
-        When the user runs command "gpcrondump -a -x testdb -S Schema\\t,1"
-        Then gpcrondump should return a return code of 2
-        And gpcrondump should print Name has an invalid character "\\t" "\\n" "!" "," "." to stdout
-        When the user runs command "gpcrondump -a -x testdb --table-file gppylib/test/behave/mgmt_utils/steps/data/special_chars/funny_char_table.txt"
-        Then gpcrondump should return a return code of 2
-        And gpcrondump should print Name has an invalid character "\\t" "\\n" "!" "," "." to stdout
-        When the user runs command "gpcrondump -a -x testdb --exclude-table-file gppylib/test/behave/mgmt_utils/steps/data/special_chars/funny_char_table.txt"
-        Then gpcrondump should return a return code of 2
-        And gpcrondump should print Name has an invalid character "\\t" "\\n" "!" "," "." to stdout
+        When the user runs command "gpcrondump -a -x testdb -t "Schema\t,1.Table\n!1""
+        Then gpcrondump should return a return code of 0
+        When the user runs command "gpcrondump -a -x testdb -T "Schema\\t,1.Table\\n!1""
+        Then gpcrondump should return a return code of 0
+        When the user runs command "gpcrondump -a -x testdb -s "Schema\\t,1""
+        Then gpcrondump should return a return code of 0
+        When the user runs command "gpcrondump -a -x testdb -S "Schema\\t,1""
+        Then gpcrondump should return a return code of 0
         When the user runs command "gpcrondump -a -x testdb --schema-file gppylib/test/behave/mgmt_utils/steps/data/special_chars/funny_char_schema.txt"
-        Then gpcrondump should return a return code of 2
-        And gpcrondump should print Name has an invalid character "\\t" "\\n" "!" "," "." to stdout
+        Then gpcrondump should return a return code of 0
         When the user runs command "gpcrondump -a -x testdb --exclude-schema-file gppylib/test/behave/mgmt_utils/steps/data/special_chars/funny_char_schema.txt"
-        Then gpcrondump should return a return code of 2
-        And gpcrondump should print Name has an invalid character "\\t" "\\n" "!" "," "." to stdout
+        Then gpcrondump should return a return code of 0
+        When the user runs command "gpcrondump -a -x testdb --table-file gppylib/test/behave/mgmt_utils/steps/data/special_chars/funny_char_table.txt"
+        Then gpcrondump should return a return code of 0
+        When the user runs command "gpcrondump -a -x testdb --exclude-table-file gppylib/test/behave/mgmt_utils/steps/data/special_chars/funny_char_table.txt"
+        Then gpcrondump should return a return code of 0
 
-    Scenario: Funny characters in the table name or schema name for gpdbrestore
+    @spl_char
+    @spl_char_3
+    Scenario: gpdbrestore can handle period, comma, tab, newline, and exclamation point
         Given the test is initialized
         And database "testdb" exists
+        And the user runs "psql -c 'create schema "A\\t\\n.,!1"' testdb"
         And there is a "heap" table "public.table1" in "testdb" with data
+        And there is a "heap" table "public."!,\\t\\n.1"" in "testdb" with data
+        And there is a "heap" table ""A\\t\\n.,!1".table1" in "testdb" with data
         When the user runs command "gpcrondump -a -x testdb"
         And the timestamp from gpcrondump is stored
         When the user runs gpdbrestore with the stored timestamp and options "--table-file gppylib/test/behave/mgmt_utils/steps/data/special_chars/funny_char_table.txt"
         Then gpdbrestore should return a return code of 2
-        And gpdbrestore should print Name has an invalid character to stdout
-        When the user runs gpdbrestore with the stored timestamp and options "-T pub\\t\\nlic.!,\\t\\n.1"
+        And gpdbrestore should print public.funny\\\\n\\\\t!. is not in the format schema.table to stdout
+        When the user runs gpdbrestore with the stored timestamp and options "-T public.!,\\t\\n.1"
         Then gpdbrestore should return a return code of 2
-        And gpdbrestore should print Name has an invalid character to stdout
+        And gpdbrestore should print public.!,\\t\\n.1 is not in the format schema.table to stdout
+        When the user runs gpdbrestore with the stored timestamp and options "-T public.\"!,\\\\t\\\\n.1\""
+        Then gpdbrestore should return a return code of 0
         When the user runs gpdbrestore with the stored timestamp and options "--redirect A\\t\\n.,!1"
         Then gpdbrestore should return a return code of 2
         And gpdbrestore should print Name has an invalid character to stdout
-        When the user runs command "gpdbrestore -s "A\\t\\n.,!1""
+        When the user runs command "gpdbrestore -s "A\\\\t\\\\n.,!1""
         Then gpdbrestore should return a return code of 2
         And gpdbrestore should print Name has an invalid character to stdout
-        When the user runs gpdbrestore with the stored timestamp and options "-T public.table1 --change-schema A\\t\\n.,!1"
-        Then gpdbrestore should return a return code of 2
-        And gpdbrestore should print Name has an invalid character to stdout
-        When the user runs gpdbrestore with the stored timestamp and options "-S A\\t\\n.,!1"
-        Then gpdbrestore should return a return code of 2
-        And gpdbrestore should print Name has an invalid character to stdout
+		And the user runs "psql -c 'create schema "A\\t\\n.,!1"' testdb"
+        When the user runs gpdbrestore with the stored timestamp and options "-T public.table1 --change-schema A\\\\t\\\\n.,!1" without -e option
+        Then gpdbrestore should return a return code of 0
+        When the user runs gpdbrestore with the stored timestamp and options "-S A\\\\t\\\\n.,!1"
+        Then gpdbrestore should return a return code of 0
 
     Scenario: gpcrondump with -T option where table name, schema name and database name contains special character
         Given the test is initialized
@@ -3468,6 +3469,7 @@ Feature: Validate command line arguments
         And verify that there are "365" tuples in "bkdb" for table "testschema.ao_foo_1_prt_p2_2_prt_3"
         And verify that there are "2190" tuples in "bkdb" for table "schema_ao.ao_index_table"
         And verify that there are "0" tuples in "bkdb" for table "schema_ao.ao_part_table"
+
     Scenario: Restore with --redirect option should not rely on existance of dumped database
         Given the test is initialized
         When the user runs "gpcrondump -a -x bkdb"

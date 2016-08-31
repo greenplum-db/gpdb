@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 from gppylib.gpparseopts import OptParser, OptChecker
-from gppylib.operations.backup_utils import split_fqn, checkAndRemoveEnclosingDoubleQuote, removeEscapingDoubleQuoteInSQLString,\
-                                            escapeDoubleQuoteInSQLString 
+from gppylib.operations.backup_utils import checkAndRemoveEnclosingDoubleQuote, removeEscapingDoubleQuoteInSQLString,\
+                                            escapeDoubleQuoteInSQLString, tablename_to_tuple, csv_string_to_list
 import re
 import os
 import sys
@@ -64,30 +64,14 @@ def get_table_from_alter_table(line, alter_expr):
     double quoted already in dump file.
     """
 
-    dot_separator_idx = line.find('.')
-    last_double_quote_idx = line.rfind('"')
-
-    has_schema_table_fmt = True if dot_separator_idx != -1 else False
-    has_special_chars = True if last_double_quote_idx != -1 else False
-
-    if not has_schema_table_fmt and not has_special_chars:
-        return line[len(alter_expr):].split()[0]
-    elif has_schema_table_fmt and not has_special_chars:
-        full_table_name = line[len(alter_expr):].split()[0]
-        _, table = split_fqn(full_table_name)
-        return table
-    elif not has_schema_table_fmt and has_special_chars:
-        return line[len(alter_expr) + 1 : last_double_quote_idx + 1]
+    owner_expr_idx = line.find(" OWNER TO")
+    table_str = line[len(alter_expr)+1:owner_expr_idx]
+    tablename = csv_string_to_list(table_str, delimiter='.', terminator='')
+    if len(tablename) == 2:
+        _, table = tablename
     else:
-        if dot_separator_idx < last_double_quote_idx:
-            # table name is double quoted
-            full_table_name = line[len(alter_expr) : last_double_quote_idx + 1]
-        else:
-            # only schema name double quoted
-            ending_space_idx = line.find(' ', dot_separator_idx)
-            full_table_name = line[len(alter_expr) : ending_space_idx]
-        _, table = split_fqn(full_table_name)
-        return table
+        table = tablename[0]
+    return table
 
 def find_all_expr_start(line, expr):
     """
@@ -201,8 +185,6 @@ def process_schema(dump_schemas, dump_tables, fdin, fdout, change_schema=None, s
                     tablename = get_table_from_alter_table(line, alter_table_only_expr)
                 else:
                     tablename = get_table_from_alter_table(line, alter_table_expr)
-                tablename = checkAndRemoveEnclosingDoubleQuote(tablename)
-                tablename = removeEscapingDoubleQuoteInSQLString(tablename, False)
                 output = check_valid_table(schema, tablename, dump_tables, schema_level_restore_list)
                 if output:
                     if line_buff:
@@ -243,7 +225,7 @@ def get_table_schema_set(filename):
         contents = fd.read()
         tables = contents.splitlines()
         for t in tables:
-            schema, table = split_fqn(t)
+            schema, table = tablename_to_tuple(t)
             dump_tables.add((schema, table))
             dump_schemas.add(schema)
     return (dump_schemas, dump_tables)
@@ -283,9 +265,7 @@ def check_dropped_table(line, dump_tables, schema_level_restore_list, drop_table
     check if table to drop is valid (can be dropped from schema level restore)
     """
     temp = line[len(drop_table_expr):].strip()[:-1]
-    (schema, table) = split_fqn(temp)
-    schema = removeEscapingDoubleQuoteInSQLString(checkAndRemoveEnclosingDoubleQuote(schema), False) 
-    table = removeEscapingDoubleQuoteInSQLString(checkAndRemoveEnclosingDoubleQuote(table), False) 
+    (schema, table) = tablename_to_tuple(temp)
     if (schema_level_restore_list and schema in schema_level_restore_list) or ((schema, table) in dump_tables):
         return True
     return False

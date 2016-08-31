@@ -97,6 +97,11 @@ class GpdbRestore(Operation):
 
         if self.context.table_file:
             self.context.restore_tables = get_restore_tables_from_table_file(self.context.table_file)
+        else:
+            restore_tables = []
+            for table in self.context.restore_tables:
+                restore_tables.append(tablename_to_tuple(table))
+            self.context.restore_tables = restore_tables
 
         if self.context.db_host_path:
             # MPP-13617
@@ -202,7 +207,6 @@ class GpdbRestore(Operation):
             restore_type = "Full Database"
 
         if self.context.change_schema:
-            check_funny_chars_in_names(self.context.change_schema, is_full_qualified_name = False)
             if not self.context.redirected_restore_db and not check_schema_exists(self.context.change_schema, self.context.restore_db):
                 raise Exception('Cannot restore tables to schema %s: schema does not exist' % self.context.change_schema)
             elif self.context.redirected_restore_db and not check_schema_exists(self.context.change_schema, self.context.redirected_restore_db):
@@ -259,7 +263,7 @@ class GpdbRestore(Operation):
             logger.info("Table restore list")
             logger.info("------------------------------------------")
             for restore_table in self.context.restore_tables:
-                logger.info("Table                      = %s" % restore_table)
+                logger.info("Table                      = %s" % tuple_to_tablename(restore_table))
             if self.table_counts:
                 logger.info("------------------------------------------")
                 logger.warn("Following tables have non-zero row counts %s" % WARN_MARK)

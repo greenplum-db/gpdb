@@ -9,7 +9,7 @@ import unittest2 as unittest
 from gppylib.commands.base import CommandResult
 from gppylib.operations.backup_utils import *
 
-from mock import patch, MagicMock, Mock
+from mock import call, mock_open, patch, MagicMock, Mock
 from optparse import Values
 
 class BackupUtilsTestCase(unittest.TestCase):
@@ -568,11 +568,11 @@ class BackupUtilsTestCase(unittest.TestCase):
         self.assertEquals(result, '20160125140013')
 
     def test_create_temp_file_with_tables_default(self):
-        dirty_tables = ['public.t1', 'public.t2', 'testschema.t3']
+        dirty_tables = [['public', 't1'], ['public', 't2'], ['testschema', 't3']]
         dirty_file = create_temp_file_with_tables(dirty_tables)
         self.assertTrue(os.path.basename(dirty_file).startswith('table_list'))
         self.assertTrue(os.path.exists(dirty_file))
-        content = get_lines_from_file(dirty_file)
+        content = get_lines_from_csv_file(dirty_file)
         self.assertEqual(dirty_tables, content)
         os.remove(dirty_file)
 
@@ -586,7 +586,7 @@ class BackupUtilsTestCase(unittest.TestCase):
         os.remove(dirty_file)
 
     def test_create_temp_file_from_list_nonstandard_name(self):
-        dirty_tables = ['public.t1', 'public.t2', 'testschema.t3']
+        dirty_tables = ['public', 'tempschema', 'testschema']
         dirty_file = create_temp_file_from_list(dirty_tables, 'dirty_hackup_list_')
         self.assertTrue(os.path.basename(dirty_file).startswith('dirty_hackup_list'))
         self.assertTrue(os.path.exists(dirty_file))
@@ -661,8 +661,8 @@ class BackupUtilsTestCase(unittest.TestCase):
     @patch('pygresql.pgdb.pgdbCursor.fetchall', return_value=[['public', 'tl1'], ['public', 'tl2']])
     def test_expand_partition_tables_default(self, mock1, mock2, mock3):
         dbname = 'foo'
-        restore_tables = ['public.t1', 'public.t2']
-        expected_output = ['public.tl1', 'public.tl2', 'public.t2']
+        restore_tables = [('public', 't1'), ('public', 't2')]
+        expected_output = [('public', 'tl1'), ('public', 'tl2'), ('public', 't2')]
         result = expand_partition_tables(dbname, restore_tables)
         self.assertEqual(result.sort(), expected_output.sort())
 
@@ -671,33 +671,17 @@ class BackupUtilsTestCase(unittest.TestCase):
     @patch('pygresql.pgdb.pgdbCursor.fetchall', return_value=[])
     def test_expand_partition_tables_no_change(self, mock1, mock2, mock3):
         dbname = 'foo'
-        restore_tables = ['public.t1', 'public.t2']
-        expected_output = ['public.t1', 'public.t2']
+        restore_tables = [('public', 't1'), ('public', 't2')]
+        expected_output = [('public', 't1'), ('public', 't2')]
         result = expand_partition_tables(dbname, restore_tables)
         self.assertEqual(result.sort(), expected_output.sort())
 
-    def test_populate_filter_tables_all_part_tables(self):
-        table = 'public.t1'
-        rows = [['public', 't1'], ['public', 't2'], ['public', 't3']]
-        non_partition_tables = []
-        partition_leaves = []
-        self.assertEqual(populate_filter_tables(table, rows, non_partition_tables, partition_leaves),
-                            (([], ['public.t1', 'public.t2', 'public.t3'])))
-
-    def test_populate_filter_tables_no_part_tables(self):
-        table = 'public.t1'
-        rows = []
-        non_partition_tables = []
-        partition_leaves = []
-        self.assertEqual(populate_filter_tables(table, rows, non_partition_tables, partition_leaves),
-                            ((['public.t1'], [])))
-
-    @patch('gppylib.operations.backup_utils.expand_partition_tables', return_value=['public.t1_p1', 'public.t1_p2', 'public.t1_p3', 'public.t2', 'public.t3'])
+    @patch('gppylib.operations.backup_utils.expand_partition_tables', return_value=[('public', 't1_p1'), ('public', 't1_p2'), ('public', 't1_p3'), ('public', 't2'), ('public', 't3')])
     def test_expand_partitions_and_populate_filter_file_part_tables(self, mock):
         dbname = 'bkdb'
-        partition_list = ['public.t1', 'public.t2', 'public.t3']
+        partition_list = [('public', 't1'), ('public', 't2'), ('public', 't3')]
         file_prefix = 'include_dump_tables_file'
-        expected_output = ['public.t2', 'public.t3', 'public.t1', 'public.t1_p1', 'public.t1_p2', 'public.t1_p3']
+        expected_output = [('public', 't2'), ('public', 't3'), ('public', 't1'), ('public', 't1_p1'), ('public', 't1_p2'), ('public', 't1_p3')]
         result = expand_partitions_and_populate_filter_file(dbname, partition_list, file_prefix)
         self.assertTrue(os.path.basename(result).startswith(file_prefix))
         self.assertTrue(os.path.exists(result))
@@ -705,10 +689,10 @@ class BackupUtilsTestCase(unittest.TestCase):
         self.assertEqual(contents.sort(), expected_output.sort())
         os.remove(result)
 
-    @patch('gppylib.operations.backup_utils.expand_partition_tables', return_value=['public.t1', 'public.t2', 'public.t3'])
+    @patch('gppylib.operations.backup_utils.expand_partition_tables', return_value=[('public', 't1'), ('public', 't2'), ('public', 't3')])
     def test_expand_partitions_and_populate_filter_file_no_part_tables(self, mock):
         dbname = 'bkdb'
-        partition_list = ['public.t1', 'public.t2', 'public.t3']
+        partition_list = [('public', 't1'), ('public', 't2'), ('public', 't3')]
         file_prefix = 'exclude_dump_tables_file'
         result = expand_partitions_and_populate_filter_file(dbname, partition_list, file_prefix)
         self.assertTrue(os.path.basename(result).startswith(file_prefix))
@@ -765,26 +749,26 @@ class BackupUtilsTestCase(unittest.TestCase):
         self.assertEqual(expected, indices)
 
     def test_list_to_quoted_string_default(self):
-        input = ['public.ao_table', 'public.co_table']
-        expected = "'public.ao_table', 'public.co_table'"
+        input = [('public', 'ao_table'), ('public', 'co_table')]
+        expected = "('public','ao_table'), ('public','co_table')"
         output = list_to_quoted_string(input)
         self.assertEqual(expected, output)
 
     def test_list_to_quoted_string_whitespace(self):
-        input = ['   public.ao_table', 'public.co_table   ']
-        expected = "'   public.ao_table', 'public.co_table   '"
+        input = [('   public', 'ao_table'), ('public', 'co_table   ')]
+        expected = "('   public','ao_table'), ('public','co_table   ')"
         output = list_to_quoted_string(input)
         self.assertEqual(expected, output)
 
     def test_list_to_quoted_string_one_table(self):
-        input = ['public.ao_table']
-        expected = "'public.ao_table'"
+        input = [('public', 'ao_table')]
+        expected = "('public','ao_table')"
         output = list_to_quoted_string(input)
         self.assertEqual(expected, output)
 
     def test_list_to_quoted_string_no_tables(self):
         input = []
-        expected = "''"
+        expected = '()'
         output = list_to_quoted_string(input)
         self.assertEqual(expected, output)
 
@@ -1141,3 +1125,272 @@ class BackupUtilsTestCase(unittest.TestCase):
                 context = Context()
         finally:
             os.environ['MASTER_DATA_DIRECTORY'] = old_mdd
+
+    def test_tablename_list_to_tuple_list_default(self):
+        table_list = ['public.foo', 'public.bar']
+        expected = [['public', 'foo'], ['public', 'bar']]
+        results = tablename_list_to_tuple_list(table_list)
+        self.assertEqual(expected, results)
+
+    def test_tablename_list_to_tuple_list_no_schemas(self):
+        table_list = ['foo', 'public.bar']
+        with self.assertRaisesRegexp(Exception, "not in the format schema.table"):
+            results = tablename_list_to_tuple_list(table_list)
+
+    def test_tablename_list_to_tuple_list_too_many_tokens(self):
+        table_list = ['testdb.public.foo', 'public.bar']
+        with self.assertRaisesRegexp(Exception, "not in the format schema.table"):
+            results = tablename_list_to_tuple_list(table_list)
+
+    def test_tablename_list_to_tuple_list_bad_format(self):
+        table_list = ['public,foo', 'public.bar']
+        with self.assertRaisesRegexp(Exception, "not in the format schema.table"):
+            results = tablename_list_to_tuple_list(table_list)
+
+    def test_tablename_list_to_tuple_list_empty_list(self):
+        results = tablename_list_to_tuple_list([])
+        self.assertEqual([], results)
+
+    def test_tablename_list_to_tuple_list_special_chars(self):
+        table_list = ['public."foo!$""\t\n,."', 'public.bar']
+        expected = [['public', 'foo!$"\t\n,.'], ['public', 'bar']]
+        results = tablename_list_to_tuple_list(table_list)
+        self.assertEqual(expected, results)
+
+    def test_list_to_csv_string_default(self):
+        table_list = ['public', 'foo']
+        expected = 'public,foo\n'
+        results = list_to_csv_string(table_list)
+        self.assertEqual(expected, results)
+
+    def test_list_to_csv_string_more_items(self):
+        table_list = ['testdb', 'public', 'foo']
+        expected = 'testdb,public,foo\n'
+        results = list_to_csv_string(table_list)
+        self.assertEqual(expected, results)
+
+    def test_list_to_csv_string_different_delimiter(self):
+        table_list = ['public', 'foo']
+        expected = 'public.foo\n'
+        results = list_to_csv_string(table_list, delimiter='.')
+        self.assertEqual(expected, results)
+
+    def test_list_to_csv_string_different_terminator(self):
+        table_list = ['public', 'foo']
+        expected = 'public,foo'
+        results = list_to_csv_string(table_list, terminator='')
+        self.assertEqual(expected, results)
+
+    def test_list_to_csv_string_empty_list(self):
+        results = list_to_csv_string([])
+        self.assertEqual('\n', results)
+
+    def test_list_to_csv_string_special_chars(self):
+        table_list = ['public', 'foo!$"\t\n,.']
+        expected = 'public,"foo!$""\t\n,."\n'
+        results = list_to_csv_string(table_list)
+        self.assertEqual(expected, results)
+
+    def test_list_to_csv_string_special_chars_no_delimiter_or_terminator_or_quotechar(self):
+        table_list = ['public', 'foo!$\t.']
+        expected = 'public,foo!$\t.\n'
+        results = list_to_csv_string(table_list)
+        self.assertEqual(expected, results)
+
+    def test_csv_string_to_list_default(self):
+        csv_string = 'public,foo\n'
+        expected = ['public', 'foo']
+        results = csv_string_to_list(csv_string)
+        self.assertEqual(expected, results)
+
+    def test_csv_string_to_list_more_tokens(self):
+        csv_string = 'testdb,public,foo\n'
+        expected = ['testdb', 'public', 'foo']
+        results = csv_string_to_list(csv_string)
+        self.assertEqual(expected, results)
+
+    def test_csv_string_to_list_wrong_delimiter(self):
+        csv_string = 'public.foo\n'
+        expected = ['public.foo']
+        results = csv_string_to_list(csv_string)
+        self.assertEqual(expected, results)
+
+    def test_csv_string_to_list_no_terminator(self):
+        csv_string = 'public,foo'
+        expected = ['public', 'foo']
+        results = csv_string_to_list(csv_string)
+        self.assertEqual(expected, results)
+
+    def test_csv_string_to_list_empty_string(self):
+        results = csv_string_to_list('')
+        self.assertEqual([], results)
+
+    def test_csv_string_to_list_special_chars(self):
+        csv_string = 'public,"foo!$""\t\n,."\n'
+        expected = ['public', 'foo!$"\t\n,.']
+        results = csv_string_to_list(csv_string)
+        self.assertEqual(expected, results)
+
+    def test_list_to_csv_string_special_chars_no_delimiter_or_terminator_or_quotechar(self):
+        csv_string = 'public,foo!$\t.\n'
+        expected = ['public', 'foo!$\t.']
+        results = csv_string_to_list(csv_string)
+        self.assertEqual(expected, results)
+
+    def test_tuple_to_tablename_default(self):
+        tuple = ['public', 'foo']
+        expected = 'public.foo'
+        results = tuple_to_tablename(tuple)
+        self.assertEqual(expected, results)
+
+    def test_tuple_to_tablename_no_schemas(self):
+        tuple = ['foo']
+        with self.assertRaisesRegexp(Exception, 'not in the format schema.table'):
+            results = tuple_to_tablename(tuple)
+
+    def test_tuple_to_tablename_too_long(self):
+        tuple = ['testdb', 'public', 'foo']
+        with self.assertRaisesRegexp(Exception, 'not in the format schema.table'):
+            results = tuple_to_tablename(tuple)
+
+    def test_tuple_to_tablename_empty_list(self):
+        tuple = []
+        with self.assertRaisesRegexp(Exception, 'not in the format schema.table'):
+            results = tuple_to_tablename(tuple)
+
+    def test_tuple_to_tablename_special_chars(self):
+        tuple = ['public', 'foo!$\t\n,.']
+        expected = 'public."foo!$\t\n,."'
+        results = tuple_to_tablename(tuple)
+        self.assertEqual(expected, results)
+
+    def test_tablename_to_tuple_default(self):
+        tablename = 'public.foo'
+        expected = ['public', 'foo']
+        results = tablename_to_tuple(tablename)
+        self.assertEqual(expected, results)
+
+    def test_tablename_to_tuple_no_schemas(self):
+        tablename = 'foo'
+        with self.assertRaisesRegexp(Exception, 'not in the format schema.table'):
+            results = tablename_to_tuple(tablename)
+
+    def test_tablename_to_tuple_bad_format(self):
+        tablename = 'public,foo'
+        with self.assertRaisesRegexp(Exception, 'not in the format schema.table'):
+            results = tablename_to_tuple(tablename)
+
+    def test_tablename_to_tuple_empty_string(self):
+        tablename = ''
+        with self.assertRaisesRegexp(Exception, 'not in the format schema.table'):
+            results = tablename_to_tuple(tablename)
+
+    def test_tablename_to_tuple_special_chars(self):
+        tablename = 'public."foo!$\t\n,."'
+        expected = ['public', 'foo!$\t\n,.']
+        results = tablename_to_tuple(tablename)
+        self.assertEqual(expected, results)
+
+    def test_get_lines_from_csv_file_default(self):
+        lines = ['public.foo\n', 'public.bar\n']
+        filename = '/tmp/testfile'
+        write_lines_to_file(filename, lines)
+        expected = [['public', 'foo'], ['public', 'bar']]
+        results = get_lines_from_csv_file(filename)
+        self.assertEqual(expected, results)
+        os.remove(filename)
+
+    def test_get_lines_from_csv_file_different_delimiter(self):
+        lines = ['public,foo\n', 'public,bar\n']
+        filename = '/tmp/testfile'
+        write_lines_to_file(filename, lines)
+        expected = [['public', 'foo'], ['public', 'bar']]
+        results = get_lines_from_csv_file(filename, delimiter=',')
+        self.assertEqual(expected, results)
+        os.remove(filename)
+
+    def test_get_lines_from_csv_file_empty_file(self):
+        filename = '/tmp/testfile'
+        open(filename, 'a').close()
+        results = get_lines_from_csv_file(filename)
+        self.assertEqual([], results)
+        os.remove(filename)
+
+    def test_get_lines_from_csv_file_nonexistent_file(self):
+        filename = '/tmp/testfile'
+        with self.assertRaisesRegexp(Exception, "No such file or directory"):
+            results = get_lines_from_csv_file(filename)
+
+    def test_get_lines_from_csv_file_special_chars(self):
+        lines = ['public."foo!$\t\n,."\n', 'public.bar\n']
+        filename = '/tmp/testfile'
+        write_lines_to_file(filename, lines)
+        expected = [['public', 'foo!$\t\n,.'], ['public', 'bar']]
+        results = get_lines_from_csv_file(filename)
+        self.assertEqual(expected, results)
+        os.remove(filename)
+
+    @patch('gppylib.operations.backup_utils.get_lines_from_dd_file', return_value=['public.foo', 'public.bar'])
+    def test_get_lines_from_csv_file_ddboost(self, mock1):
+        fake_context = Mock()
+        fake_context.ddboost = True
+        filename = '/tmp/testfile'
+        expected = [['public', 'foo'], ['public', 'bar']]
+        results = get_lines_from_csv_file(filename, fake_context)
+        self.assertEqual(expected, results)
+
+    def test_write_lines_to_csv_file_default(self):
+        lines= [['public', 'foo'], ['public', 'bar']]
+        filename = '/tmp/testfile'
+        m = mock_open()
+        with patch('__builtin__.open', m, create=True):
+            write_lines_to_csv_file(filename, lines)
+            result = m()
+            self.assertEqual(len(lines), len(result.write.call_args_list))
+            for i in range(len(lines)):
+                table = "%s.%s\n" % tuple(lines[i])
+                self.assertEqual(call(table), result.write.call_args_list[i])
+
+    def test_write_lines_to_csv_file_different_delimiter(self):
+        lines= [['public', 'foo'], ['public', 'bar']]
+        filename = '/tmp/testfile'
+        m = mock_open()
+        with patch('__builtin__.open', m, create=True):
+            write_lines_to_csv_file(filename, lines, delimiter=',')
+            result = m()
+            self.assertEqual(len(lines), len(result.write.call_args_list))
+            for i in range(len(lines)):
+                table = "%s,%s\n" % tuple(lines[i])
+                self.assertEqual(call(table), result.write.call_args_list[i])
+
+    def test_write_lines_to_csv_file_empty_list(self):
+        lines= []
+        filename = '/tmp/testfile'
+        m = mock_open()
+        with patch('__builtin__.open', m, create=True):
+            write_lines_to_csv_file(filename, lines)
+            result = m()
+            self.assertEqual(0, len(result.write.call_args_list))
+
+    def test_write_lines_to_csv_file_special_chars(self):
+        lines= [['public', 'foo!$\t\n,.'], ['public', 'bar']]
+        expected = [call('public."foo!$\t\n,."\n'), call('public.bar\n')]
+        filename = '/tmp/testfile'
+        m = mock_open()
+        with patch('__builtin__.open', m, create=True):
+            write_lines_to_csv_file(filename, lines)
+            result = m()
+            self.assertEqual(len(lines), len(result.write.call_args_list))
+            self.assertEqual(expected, result.write.call_args_list)
+
+    def test_write_lines_to_csv_file_always_quote(self):
+        lines= [['public', 'foo!$\t\n,.'], ['public', 'bar']]
+        filename = '/tmp/testfile'
+        m = mock_open()
+        with patch('__builtin__.open', m, create=True):
+            write_lines_to_csv_file(filename, lines, alwaysquote=True)
+            result = m()
+            self.assertEqual(len(lines), len(result.write.call_args_list))
+            for i in range(len(lines)):
+                table = '"%s"."%s"\n' % tuple(lines[i])
+                self.assertEqual(call(table), result.write.call_args_list[i])

@@ -33,7 +33,7 @@ class GpRestoreFilterTestCase(unittest.TestCase):
             fd.write('publicao1\n')
             fd.write(' pepper.ao2   \n')
 
-        with self.assertRaisesRegexp(Exception, "need more than 1 value to unpack"):
+        with self.assertRaisesRegexp(Exception, "not in the format schema.table"):
             get_table_schema_set(fname)
 
         os.remove(fname)
@@ -91,13 +91,13 @@ class GpRestoreFilterTestCase(unittest.TestCase):
         line = 'ALTER TABLE "Foo#$1"."Tab#$_1" OWNER TO gpadmin;'
         alter_expr = "ALTER TABLE"
         res = get_table_from_alter_table(line, alter_expr)
-        self.assertEqual(res, '"Tab#$_1"')
+        self.assertEqual(res, 'Tab#$_1')
 
-    def test_get_table_from_alter_table_with_specialchar(self):
+    def test_get_table_from_alter_table_with_specialchar_and_quotes(self):
         line = 'ALTER TABLE "T a""b#$_1" OWNER TO gpadmin;'
         alter_expr = "ALTER TABLE"
         res = get_table_from_alter_table(line, alter_expr)
-        self.assertEqual(res, '"T a""b#$_1"')
+        self.assertEqual(res, 'T a"b#$_1')
 
     def test_get_table_from_alter_table_with_specialchar_and_double_quoted_schema(self):
         line = 'ALTER TABLE "schema1".table1 OWNER TO gpadmin;'

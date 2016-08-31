@@ -1,1 +1,1 @@
-public.funny\\n\\t\!.
+public."funny\n\t!."

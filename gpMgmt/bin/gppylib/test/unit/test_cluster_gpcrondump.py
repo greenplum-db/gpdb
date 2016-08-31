@@ -346,7 +346,7 @@ class GpcrondumpTestCase(unittest.TestCase):
 
     @patch('gpcrondump.validate_current_timestamp')
     @patch('gpcrondump.get_lines_from_file', return_value=['public'])
-    @patch('gpcrondump.get_user_table_list_for_schema', return_value=['public', 'table1', 'public', 'table2'])
+    @patch('gpcrondump.get_user_table_list_for_schema', return_value=[['public', 'table1'], ['public', 'table2']])
     def test_schema_filter_36(self, mock1, mock2, mock3):
         gpcd = GpCronDump(self.options, None)
         with patch('__builtin__.open', mock_open(), create=True):
@@ -590,7 +590,7 @@ class GpcrondumpTestCase(unittest.TestCase):
 
     @patch('gpcrondump.validate_current_timestamp')
     @patch('gpcrondump.expand_partitions_and_populate_filter_file', return_value='/tmp/exclude_dump_tables_file')
-    @patch('gpcrondump.get_lines_from_file', return_value=['public.t1', 'public.t2'])
+    @patch('gpcrondump.get_lines_from_csv_file', return_value=[['public', 't1'], ['public', 't2']])
     @patch('gppylib.operations.backup_utils.Context.get_master_port')
     def test_get_include_exclude_for_dump_database04(self, mock1, mock2, mock3, mock4):
         self.options.masterDataDirectory = '/tmp/foobar'
@@ -613,25 +613,6 @@ class GpcrondumpTestCase(unittest.TestCase):
         dbname = 'foo'
         (inc, exc) = gpcd.get_include_exclude_for_dump_database(dirtyfile, dbname)
         self.assertTrue(exc.startswith('/tmp/exclude_dump_tables_file'))
-
-    @patch('gpcrondump.validate_current_timestamp')
-    @patch('gpcrondump.GpCronDump._get_table_names_from_partition_list', side_effect = [['public.aot1', 'public.aot2'], ['public.cot1', 'public.cot2']])
-    def test_verify_tablenames_default(self, mock1, mock2):
-        cron = GpCronDump(self.options, None)
-        ao_partition_list = ['public, aot1, 2190', 'public, aot2, 3190']
-        co_partition_list = ['public, cot1, 2190', 'public, cot2, 3190']
-        heap_partition_list = ['public.heapt1', 'public.heapt2']
-        cron._verify_tablenames(ao_partition_list, co_partition_list, heap_partition_list) #Should not raise an exception
-
-    @patch('gpcrondump.validate_current_timestamp')
-    @patch('gpcrondump.GpCronDump._get_table_names_from_partition_list', side_effect = [['public.aot1:asd', 'public.aot2'], ['public.cot1', 'public.cot2:asd']])
-    def test_verify_tablenames_bad_chars(self, mock1, mock2):
-        cron = GpCronDump(self.options, None)
-        ao_partition_list = ['public, aot1!asd, 2190', 'public, aot2, 3190']
-        co_partition_list = ['public, cot1, 2190', 'public, cot2\nasd, 3190']
-        heap_partition_list = ['public, heapt1, 2190', 'public, heapt2!asdasd , 3190']
-        with self.assertRaisesRegexp(Exception, ''):
-            cron._verify_tablenames(ao_partition_list, co_partition_list, heap_partition_list)
 
     @patch('gpcrondump.validate_current_timestamp')
     def test_options_inserts_with_incremental(self, mock):
@@ -657,7 +638,7 @@ class GpcrondumpTestCase(unittest.TestCase):
     @patch('gpcrondump.validate_current_timestamp')
     def test_get_table_names_from_partition_list_00(self, mock1):
         cron = GpCronDump(self.options, None)
-        partition_list = ['public, aot1, 2190', 'public, aot2:aot, 3190']
+        partition_list = ['public,aot1,2190', 'public,aot2:aot,3190']
         expected_output = ['public.aot1', 'public.aot2:aot']
         result = cron._get_table_names_from_partition_list(partition_list)
         self.assertEqual(result, expected_output)

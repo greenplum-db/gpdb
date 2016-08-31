@@ -128,12 +128,12 @@ def get_include_schema_list_from_exclude_schema(context, exclude_schema_list):
 
 def get_ao_partition_state(context):
     ao_partition_info = get_ao_partition_list(context)
-    ao_partition_list = get_partition_state(context, 'pg_aoseg', ao_partition_info)
+    ao_partition_list = get_partition_state_tuples(context, 'pg_aoseg', ao_partition_info)
     return ao_partition_list
 
 def get_co_partition_state(context):
     co_partition_info = get_co_partition_list(context)
-    co_partition_list = get_partition_state(context, 'pg_aoseg', co_partition_info)
+    co_partition_list = get_partition_state_tuples(context, 'pg_aoseg', co_partition_info)
     return co_partition_list
 
 def validate_modcount(schema, tablename, cnt):
@@ -193,9 +193,7 @@ def get_partition_state(context, catalog_schema, partition_info):
     representation doesn't handle schema or table names with commas.
     """
     tuples = get_partition_state_tuples(context, catalog_schema, partition_info)
-
-    # Don't put space after comma, which can mess up with the space in schema and table name
-    return map((lambda x: '%s, %s, %s' % x), tuples)
+    return [list_to_csv_string(tuple, terminator='') for tuple in tuples]
 
 def get_tables_with_dirty_metadata(context, cur_pgstatoperations):
     last_dump_timestamp = get_last_dump_timestamp(context)
@@ -224,23 +222,22 @@ def get_last_state(context, table_type):
             if not os.path.exists(last_state_filename):
                 restore_file_with_nbu(context, path=last_state_filename)
 
-    return get_lines_from_file(last_state_filename)
+    return get_lines_from_csv_file(last_state_filename, delimiter=',')
 
 def compare_metadata(old_pgstatoperations, cur_pgstatoperations):
-    diffs = set()
+    diffs = []
     for operation in cur_pgstatoperations:
-        toks = operation.split(',')
+        toks = csv_string_to_list(operation)
         if len(toks) != 6:
             raise Exception('Wrong number of tokens in last_operation data for current backup: "%s"' % operation)
         if (toks[2], toks[3]) not in old_pgstatoperations or old_pgstatoperations[(toks[2], toks[3])] != operation:
-            tname = '%s.%s' % (toks[0], toks[1])
-            diffs.add(tname)
+            diffs.append(toks[0:2])
     return diffs
 
 def get_pgstatlastoperations_dict(last_operations):
     last_operations_dict = {}
     for operation in last_operations:
-        toks = operation.split(',')
+        toks = csv_string_to_list(operation)
         if len(toks) != 6:
             raise Exception('Wrong number of tokens in last_operation data for last backup: "%s"' % operation)
         last_operations_dict[(toks[2], toks[3])] = operation
@@ -272,23 +269,18 @@ def get_last_dump_timestamp(context):
 def create_partition_dict(partition_list):
     table_dict = dict()
     for partition in partition_list:
-        # As of version 4.3.8.0, gpcrondump supports spaces in schema name (field[0]) and table name (field[1])
-        # so we explicitly split on "comma followed by space" instead of just commas since we can't strip() the string
-        fields = partition.split(', ')
-        if len(fields) != 3:
+        if len(partition) != 3:
             raise Exception('Invalid state file format %s' % partition)
-        if fields[2].startswith(' '):
-            fields = [x for x in fields]
-        key = '%s.%s' % (fields[0], fields[1])
-        table_dict[key] = fields[2]
+        key = tuple_to_tablename(partition[0:2])
+        table_dict[key] = partition[2]
 
     return table_dict
 
 def compare_dict(last_dict, curr_dict):
-    diffkeys = set()
+    diffkeys = []
     for k in curr_dict:
         if k not in last_dict or (curr_dict[k] != last_dict[k]):
-            diffkeys.add(k)
+            diffkeys.append(tablename_to_tuple(k))
     return diffkeys
 
 def get_filename_from_filetype(context, table_type, timestamp=None):
@@ -303,7 +295,7 @@ def get_filename_from_filetype(context, table_type, timestamp=None):
 def write_state_file(context, table_type, partition_list):
     filename = get_filename_from_filetype(context, table_type, None)
 
-    write_lines_to_file(filename, partition_list)
+    write_lines_to_csv_file(filename, partition_list, delimiter=',')
 
     if context.ddboost:
         copy_file_to_dd(context, filename)
@@ -314,22 +306,25 @@ def get_dirty_tables(context, ao_partition_list, co_partition_list, last_operati
     dirty_ao_tables = get_dirty_partition_tables(context, 'ao', ao_partition_list)
     dirty_co_tables = get_dirty_partition_tables(context, 'co', co_partition_list)
     dirty_metadata_set = get_tables_with_dirty_metadata(context, last_operation_data)
-    logger.info("%s" % list(dirty_heap_tables | dirty_ao_tables | dirty_co_tables | dirty_metadata_set))
+    #logger.info("heap %s\nao %s\nco %s\nmetadata%s" % (dirty_heap_tables, dirty_ao_tables, dirty_co_tables, dirty_metadata_set))
 
-    return list(dirty_heap_tables | dirty_ao_tables | dirty_co_tables | dirty_metadata_set)
+    dirty = []
+    for table in dirty_heap_tables + dirty_ao_tables + dirty_co_tables + dirty_metadata_set:
+        if table not in dirty:
+            dirty.append(table)
+    return dirty
 
 def get_dirty_heap_tables(context):
-    dirty_tables = set()
+    dirty_tables = []
     qresult = get_heap_partition_list(context)
     for row in qresult:
         if len(row) != 3:
             raise Exception("Heap tables query returned rows with unexpected number of columns %d" % len(row))
-        tname = '%s.%s' % (row[1], row[2])
-        dirty_tables.add(tname)
+        dirty_tables.append(row[1:3])
     return dirty_tables
 
 def write_dirty_file_to_temp(dirty_tables):
-    return create_temp_file_from_list(dirty_tables, 'dirty_backup_list_')
+    return create_temp_csv_file_from_list(dirty_tables, 'dirty_backup_list_')
 
 def write_dirty_file(context, dirty_tables, timestamp=None):
     if dirty_tables is None:
@@ -338,7 +333,7 @@ def write_dirty_file(context, dirty_tables, timestamp=None):
         timestamp = context.timestamp
 
     dirty_list_file = context.generate_filename("dirty_table", timestamp)
-    write_lines_to_file(dirty_list_file, dirty_tables)
+    write_lines_to_csv_file(dirty_list_file, dirty_tables)
 
     if context.ddboost:
         copy_file_to_dd(context, dirty_list_file)
@@ -381,7 +376,7 @@ def get_last_operation_data(context):
     for row in rows:
         if len(row) != 6:
             raise Exception("Invalid return from query in get_last_operation_data: % cols" % (len(row)))
-        line = "%s,%s,%d,%s,%s,%s" % (row[0], row[1], row[2], row[3], row[4], row[5])
+        line = list_to_csv_string(row, terminator='')
         data.append(line)
     return data
 
@@ -399,7 +394,7 @@ def write_partition_list_file(context, timestamp=None):
         for line in lines_to_write:
             if len(line) != 3:
                 raise Exception('Invalid results from query to get all tables: [%s]' % (','.join(line)))
-            partition_list.append("%s.%s" % (line[1], line[2]))
+            partition_list.append(tuple_to_tablename(line[1:3]))
 
         write_lines_to_file(partition_list_file_name, partition_list)
 
@@ -426,17 +421,21 @@ def update_filter_file(context):
     filter_filename = get_filter_file(context)
     if context.netbackup_service_host:
         restore_file_with_nbu(context, path=filter_filename)
-    filter_tables = get_lines_from_file(filter_filename)
-    tables_sql = "SELECT DISTINCT schemaname||'.'||tablename FROM pg_partitions"
-    partitions_sql = "SELECT schemaname||'.'||partitiontablename FROM pg_partitions WHERE schemaname||'.'||tablename='%s';"
+    filter_tables = get_lines_from_csv_file(filter_filename)
+    tables_sql = "SELECT DISTINCT schemaname, tablename FROM pg_partitions"
+    partitions_sql = "SELECT partitionschemaname, partitiontablename FROM pg_partitions WHERE schemaname='%s' AND tablename='%s';"
     table_list = execute_sql(tables_sql, context.master_port, context.dump_database)
 
-    for table in table_list:
-        if table[0] in filter_tables:
-            partitions_list = execute_sql(partitions_sql % table[0], context.master_port, context.dump_database)
-            filter_tables.extend([x[0] for x in partitions_list])
+    for table_tuple in table_list:
+        if table_tuple in filter_tables:
+            partitions_list = execute_sql(partitions_sql % tuple(table_tuple), context.master_port, context.dump_database)
+            filter_tables.extend(partitions_list)
 
-    write_lines_to_file(filter_filename, list(set(filter_tables)))
+    filtered_list = []
+    for table in filter_tables:
+        if table not in filtered_list:
+            filtered_list.append(table)
+    write_lines_to_csv_file(filter_filename, filtered_list)
     if context.netbackup_service_host:
         backup_file_with_nbu(context, path=filter_filename)
 
@@ -465,13 +464,13 @@ def get_filter_file(context):
 def update_filter_file_with_dirty_list(filter_file, dirty_tables):
     filter_list = []
     if filter_file:
-        filter_list = get_lines_from_file(filter_file)
+        filter_list = get_lines_from_csv_file(filter_file)
 
         for table in dirty_tables:
             if table not in filter_list:
                 filter_list.append(table)
 
-        write_lines_to_file(filter_file, filter_list)
+        write_lines_to_csv_file(filter_file, filter_list)
 
 def filter_dirty_tables(context, dirty_tables):
     if context.netbackup_service_host is None:
@@ -483,15 +482,19 @@ def filter_dirty_tables(context, dirty_tables):
             timestamp = FULL_DUMP_TS_WITH_NBU
 
     schema_filename = context.generate_filename("schema", timestamp=timestamp)
+    if os.path.exists(schema_filename):
+        filter_schemas = True
+        schemas_to_filter = get_lines_from_file(schema_filename)
+    else:
+        filter_schemas = False
     filter_file = get_filter_file(context)
     if filter_file:
-        tables_to_filter = get_lines_from_file(filter_file)
+        tables_to_filter = get_lines_from_csv_file(filter_file)
         dirty_copy = dirty_tables[:]
         for table in dirty_copy:
             if table not in tables_to_filter:
-                if os.path.exists(schema_filename):
-                    schemas_to_filter = get_lines_from_file(schema_filename)
-                    table_schema = split_fqn(table)[0]
+                if filter_schemas:
+                    table_schema = table[0]
                     if table_schema not in schemas_to_filter:
                         dirty_tables.remove(table)
                 else:
@@ -501,7 +504,7 @@ def filter_dirty_tables(context, dirty_tables):
     # Any newly added partition to the schema's in schema file is added to the
     # filter file for it to be backed up.
     # Newly added partition can be obtained from dirty table list file.
-    if os.path.exists(schema_filename):
+    if filter_schemas:
         update_filter_file_with_dirty_list(filter_file, dirty_tables)
 
     return dirty_tables
@@ -537,9 +540,7 @@ class DumpDatabase(Operation):
             self.create_filter_file()
 
         # Format sql strings for all schema and table names
-        self.context.include_dump_tables_file = formatSQLString(rel_file=self.context.include_dump_tables_file, isTableName=True)
-        self.context.exclude_dump_tables_file = formatSQLString(rel_file=self.context.exclude_dump_tables_file, isTableName=True)
-        self.context.schema_file = formatSQLString(rel_file=self.context.schema_file, isTableName=False)
+        self.context.schema_file = formatSQLString(self.context.schema_file)
 
         if self.context.incremental and self.context.dump_prefix and get_filter_file(self.context):
             filtered_dump_line = self.create_filtered_dump_string()
@@ -575,14 +576,13 @@ class DumpDatabase(Operation):
             if self.context.netbackup_service_host:
                 backup_file_with_nbu(self.context, path=filter_name)
         elif self.context.exclude_dump_tables_file:
-            filters = get_lines_from_file(self.context.exclude_dump_tables_file)
+            filters = get_lines_from_csv_file(self.context.exclude_dump_tables_file)
             partitions = get_user_table_list(self.context)
             tables = []
             for p in partitions:
-                tablename = '%s.%s' % (p[0], p[1])
-                if tablename not in filters:
-                    tables.append(tablename)
-            write_lines_to_file(filter_name, tables)
+                if p not in filters:
+                    tables.append(p)
+            write_lines_to_csv_file(filter_name, tables)
             if self.context.netbackup_service_host:
                 backup_file_with_nbu(self.context, path=filter_name)
         logger.info('Creating filter file: %s' % filter_name)
@@ -642,16 +642,18 @@ class DumpDatabase(Operation):
         db_name = shellEscape(self.context.dump_database)
         dump_line += " %s" % checkAndAddEnclosingDoubleQuote(db_name)
         for dump_table in self.context.include_dump_tables:
-            schema, table = dump_table.split('.')
+            schema, table = tablename_to_tuple(dump_table)
             dump_line += " --table=\"\\\"%s\\\"\".\"\\\"%s\\\"\"" % (schema, table)
             #dump_line += " --table=\"%s\".\"%s\"" % (schema, table)
         for dump_table in self.context.exclude_dump_tables:
-            schema, table = dump_table.split('.')
+            schema, table = tablename_to_tuple(dump_table)
             dump_line += " --exclude-table=\"\\\"%s\\\"\".\"\\\"%s\\\"\"" % (schema, table)
             #dump_line += " --exclude-table=\"%s\".\"%s\"" % (schema, table)
         if self.context.include_dump_tables_file and not self.context.schema_file:
+            quote_csv_file(self.context.include_dump_tables_file)
             dump_line += " --table-file=%s" % self.context.include_dump_tables_file
         if self.context.exclude_dump_tables_file:
+            quote_csv_file(self.context.exclude_dump_tables_file)
             dump_line += " --exclude-table-file=%s" % self.context.exclude_dump_tables_file
         if self.context.schema_file:
             dump_line += " --schema-file=%s" % self.context.schema_file
@@ -1065,23 +1067,20 @@ class ValidateIncludeTargets(Operation):
             include_file = open(self.context.include_dump_tables_file, 'rU')
             if not include_file:
                 raise ExceptionNoStackTraceNeeded("Can't open file %s" % self.context.include_dump_tables_file)
-            for line in include_file:
-                dump_tables.append(line.strip('\n'))
-            include_file.close()
+            dump_tables = get_lines_from_csv_file(self.context.include_dump_tables_file)
 
         for dump_table in dump_tables:
-            if '.' not in dump_table:
-                raise ExceptionNoStackTraceNeeded("No schema name supplied for table %s" % dump_table)
-            if dump_table.startswith('pg_temp_'):
+            tablename = tuple_to_tablename(dump_table)
+            schema, table = dump_table
+            if schema.startswith('pg_temp_'):
                 continue
-            schema, table = split_fqn(dump_table)
             exists = CheckTableExists(self.context, schema, table).run()
             if not exists:
-                raise ExceptionNoStackTraceNeeded("Table %s does not exist in %s database" % (dump_table, self.context.dump_database))
+                raise ExceptionNoStackTraceNeeded("Table %s does not exist in %s database" % (tablename, self.context.dump_database))
             if self.context.dump_schema:
                 for dump_schema in self.context.dump_schema:
                     if dump_schema != schema:
-                        raise ExceptionNoStackTraceNeeded("Schema name %s not same as schema on %s" % (dump_schema, dump_table))
+                        raise ExceptionNoStackTraceNeeded("Schema name %s not same as schema on %s" % (dump_schema, tablename))
 
 class ValidateExcludeTargets(Operation):
     def __init__(self, context):
@@ -1098,21 +1097,18 @@ class ValidateExcludeTargets(Operation):
             exclude_file = open(self.context.exclude_dump_tables_file, 'rU')
             if not exclude_file:
                 raise ExceptionNoStackTraceNeeded("Can't open file %s" % self.context.exclude_dump_tables_file)
-            for line in exclude_file:
-                dump_tables.append(line.strip('\n'))
-            exclude_file.close()
+            dump_tables = get_lines_from_csv_file(self.context.exclude_dump_tables_file)
 
         for dump_table in dump_tables:
-            if '.' not in dump_table:
-                raise ExceptionNoStackTraceNeeded("No schema name supplied for exclude table %s" % dump_table)
-            schema, table = split_fqn(dump_table)
+            tablename = tuple_to_tablename(dump_table)
+            schema, table = dump_table
             exists = CheckTableExists(self.context, schema, table).run()
             if exists:
                 if self.context.dump_schema:
                     for dump_schema in self.context.dump_schema:
                         if dump_schema != schema:
                             logger.info("Adding table %s to exclude list" % dump_table)
-                            rebuild_excludes.append(dump_table)
+                            rebuild_excludes.append((schema, table))
                         else:
                             logger.warn("Schema dump request and exclude table %s in that schema, ignoring" % dump_table)
             else:
@@ -1162,9 +1158,9 @@ class CheckTableExists(Operation):
         self.schema = schema
         self.table = table
         if CheckTableExists.all_tables is None:
-            CheckTableExists.all_tables = set()
+            CheckTableExists.all_tables = []
             for (schema, table) in get_user_table_list(context):
-                CheckTableExists.all_tables.add((schema, table))
+                CheckTableExists.all_tables.append((schema, table))
 
     def execute(self):
         if (self.schema, self.table) in CheckTableExists.all_tables:
@@ -1196,7 +1192,7 @@ class UpdateHistoryTable(Operation):
         self.pseudo_exit_status = pseudo_exit_status
 
     def execute(self):
-        schema, table = split_fqn(UpdateHistoryTable.HISTORY_TABLE)
+        schema, table = "public", "gpcrondump_history"
         exists = CheckTableExists(self.context, schema, table).run()
         if not exists:
             conn = None
@@ -1527,26 +1523,26 @@ class DumpStats(Operation):
 
         include_tables = []
         if self.context.exclude_dump_tables_file:
-            exclude_tables = get_lines_from_file(self.context.exclude_dump_tables_file)
+            exclude_tables = get_lines_from_csv_file(self.context.exclude_dump_tables_file)
             user_tables = get_user_table_list(self.context)
-            tables = []
+            include_tables = []
             for table in user_tables:
-                tables.append("%s.%s" % (table[0], table[1]))
-            include_tables = list(set(tables) - set(exclude_tables))
+                if table not in exclude_tables:
+                    include_tables.append(table)
         elif self.context.include_dump_tables_file:
-            include_tables = get_lines_from_file(self.context.include_dump_tables_file)
+            include_tables = get_lines_from_csv_file(self.context.include_dump_tables_file)
         elif self.context.schema_file:
             include_schemas = get_lines_from_file(self.context.schema_file)
             for schema in include_schemas:
                 user_tables = get_user_table_list_for_schema(self.context, schema)
                 tables = []
                 for table in user_tables:
-                    tables.append("%s.%s" % (table[0], table[1]))
+                    tables.append(table)
                 include_tables.extend(tables)
         else:
             user_tables = get_user_table_list(self.context)
             for table in user_tables:
-                include_tables.append("%s.%s" % (table[0], table[1]))
+                include_tables.append(table)
 
         with open(self.stats_filename, "w") as outfile:
             outfile.write("""--
@@ -1571,9 +1567,7 @@ set allow_system_table_mods="DML";
             cmd.run(validateAfter=True)
 
     def dump_table(self, table):
-        schemaname, tablename = table.split(".")
-        schemaname = checkAndRemoveEnclosingDoubleQuote(schemaname)
-        tablename = checkAndRemoveEnclosingDoubleQuote(tablename)
+        schemaname, tablename = table
         tuples_query = """SELECT pgc.relname, pgn.nspname, pgc.relpages, pgc.reltuples
                           FROM pg_class pgc, pg_namespace pgn
                           WHERE pgc.relnamespace = pgn.oid

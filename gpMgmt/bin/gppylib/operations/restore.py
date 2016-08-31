@@ -39,23 +39,22 @@ def update_ao_stat_func(conn, ao_schema, ao_table, counter, batch_size):
         conn.commit()
 
 def generate_restored_tables(results, restored_tables, restored_schema, restore_all):
-    restored_ao_tables = set()
+    restored_ao_tables = []
 
-    for (tbl, sch) in results:
+    for (sch, tbl) in results:
         if restore_all:
-            restored_ao_tables.add((sch, tbl))
+            restored_ao_tables.append([sch, tbl])
         elif sch in restored_schema:
-            restored_ao_tables.add((sch, tbl))
+            restored_ao_tables.append([sch, tbl])
         else:
-            tblname = '%s.%s' % (sch, tbl)
-            if tblname in restored_tables:
-                restored_ao_tables.add((sch, tbl))
+            if [sch, tbl] in restored_tables and [sch, tbl] not in restored_ao_tables:
+                restored_ao_tables.append([sch, tbl])
 
     return restored_ao_tables
 
 def update_ao_statistics(context, restored_tables, restored_schema=[], restore_all=False):
     # Restored schema is different from restored tables as restored schema updates all tables within that schema.
-    qry = """SELECT c.relname,n.nspname
+    qry = """SELECT n.nspname,c.relname
              FROM pg_class c, pg_namespace n
              WHERE c.relnamespace=n.oid
                  AND (c.relstorage='a' OR c.relstorage='c')"""
@@ -82,7 +81,7 @@ def get_restore_tables_from_table_file(table_file):
     if not os.path.isfile(table_file):
         raise Exception('Table file does not exist "%s"' % table_file)
 
-    return get_lines_from_file(table_file)
+    return get_lines_from_csv_file(table_file)
 
 def get_incremental_restore_timestamps(context):
     inc_file = context.generate_filename("increments", timestamp=context.full_dump_timestamp)
@@ -97,13 +96,12 @@ def get_incremental_restore_timestamps(context):
 
 def get_partition_list(context):
     partition_list_file = context.generate_filename("partition_list")
-    partition_list = get_lines_from_file(partition_list_file)
-    partition_list = [split_fqn(p) for p in partition_list]
+    partition_list = get_lines_from_csv_file(partition_list_file)
     return partition_list
 
 def get_dirty_table_file_contents(context, timestamp):
     dirty_list_file = context.generate_filename("dirty_table", timestamp=timestamp)
-    return get_lines_from_file(dirty_list_file)
+    return get_lines_from_csv_file(dirty_list_file)
 
 def create_plan_file_contents(context, table_set_from_metadata_file, incremental_restore_timestamps, full_timestamp):
     restore_set = {}
@@ -119,8 +117,8 @@ def create_plan_file_contents(context, table_set_from_metadata_file, incremental
 
     restore_set[full_timestamp] = []
     if len(table_set_from_metadata_file) != 0:
-        for table in table_set_from_metadata_file:
-            restore_set[full_timestamp].append(table)
+        for dt in table_set_from_metadata_file:
+            restore_set[full_timestamp].append(dt)
 
     return restore_set
 
@@ -132,8 +130,11 @@ def write_to_plan_file(plan_file_contents, plan_file):
 
     lines_to_write = []
     for ts in sorted_plan_file_contents:
-        tables_str = ','.join(plan_file_contents[ts])
-        lines_to_write.append(ts + ':' + tables_str)
+        tables_to_write = []
+        for table_tuple in plan_file_contents[ts]:
+            table = tuple_to_tablename(table_tuple)
+            tables_to_write.append(table)
+        lines_to_write.append(ts + ':' + list_to_csv_string(tables_to_write, terminator=''))
 
     write_lines_to_file(plan_file, lines_to_write)
 
@@ -142,11 +143,9 @@ def write_to_plan_file(plan_file_contents, plan_file):
 def create_restore_plan(context):
     dump_tables = get_partition_list(context)
 
-    table_set_from_metadata_file = [schema + '.' + table for schema, table in dump_tables]
-
     incremental_restore_timestamps = get_incremental_restore_timestamps(context)
 
-    plan_file_contents = create_plan_file_contents(context, table_set_from_metadata_file,
+    plan_file_contents = create_plan_file_contents(context, dump_tables,
                                                    incremental_restore_timestamps,
                                                    full_timestamp=context.full_dump_timestamp)
 
@@ -192,8 +191,15 @@ def get_plan_file_contents(context):
             raise Exception('Invalid plan file format')
         # timestamp is of length 14, don't split by ':' in case table name contains ':'
         # don't strip white space on table_list, schema and table name may contain white space
-        ts, table_list = line[:14], line[15:]
-        plan_file_items.append((ts.strip(), table_list))
+        ts, table_csv = line[:14], line[15:]
+        tuple_list = []
+        table_list = csv_string_to_list(table_csv)
+        if not table_list:
+            continue
+        for table in table_list:
+            table_tuple = tablename_to_tuple(table)
+            tuple_list.append(table_tuple)
+        plan_file_items.append((ts.strip(), tuple_list))
     return plan_file_items
 
 def get_restore_table_list(table_list, restore_tables):
@@ -203,12 +209,8 @@ def get_restore_table_list(table_list, restore_tables):
     if restore_tables is None or len(restore_tables) == 0:
         restore_list = table_list
     else:
-        for restore_table in restore_tables:
-            schema, table = split_fqn(restore_table)
-            restore_table_set.add((schema, table))
         for tbl in table_list:
-            schema, table = split_fqn(tbl)
-            if (schema, table) in restore_table_set:
+            if tbl in restore_tables:
                 restore_list.append(tbl)
 
     if restore_list == []:
@@ -225,24 +227,20 @@ def validate_restore_tables_list(plan_file_contents, restore_tables, restore_sch
     if restore_tables is None:
         return
 
-    table_set = set()
-    comp_set = set()
+    table_set = []
 
-    for ts, table in plan_file_contents:
-        tables = table.split(',')
-        for table in tables:
-            table_set.add(table)
+    for ts, table_list in plan_file_contents:
+        for table in table_list:
+            table_set.append(table)
 
     invalid_tables = []
     for table in restore_tables:
-        schema_name, table_name = split_fqn(table)
+        schema_name, table_name = table
         if restore_schemas and schema_name in restore_schemas:
             continue
         else:
-            comp_set.add(table)
-            if not comp_set.issubset(table_set):
+            if not table in table_set:
                 invalid_tables.append(table)
-                comp_set.remove(table)
 
     if invalid_tables != []:
         raise Exception('Invalid tables for -T option: The following tables were not found in plan file : "%s"' % (invalid_tables))
@@ -383,7 +381,7 @@ class RestoreDatabase(Operation):
             self._restore_stats()
 
         self.tmp_files = [table_filter_file, change_schema_file, schema_level_restore_file]
-        self.cleanup_files_on_segments()
+        #self.cleanup_files_on_segments()
 
     def _process_result(self, cmd):
         res = cmd.get_results()
@@ -432,13 +430,10 @@ class RestoreDatabase(Operation):
                         analyze_list.extend(self.get_full_tables_in_schema(conn, schemaname))
                 else:
                     for restore_table in self.context.restore_tables:
-                        schemaname, tablename = split_fqn(restore_table)
+                        schemaname, tablename = restore_table
                         if self.context.change_schema:
-                            schema = escapeDoubleQuoteInSQLString(self.context.change_schema)
-                        else:
-                            schema = escapeDoubleQuoteInSQLString(schemaname)
-                        table = escapeDoubleQuoteInSQLString(tablename)
-                        restore_table = '%s.%s' % (schema, table)
+                            schemaname = self.context.change_schema
+                        restore_table = tuple_to_tablename([schemaname, tablename])
                         analyze_list.append(restore_table)
 
                 for tbl in analyze_list:
@@ -524,7 +519,7 @@ class RestoreDatabase(Operation):
         for (ts, table_list) in plan_file_items:
             if table_list:
                 restore_data = True
-                table_file = get_restore_table_list(table_list.strip('\n').split(','), self.context.restore_tables)
+                table_file = get_restore_table_list(table_list, self.context.restore_tables)
                 if table_file is None:
                     continue
                 cmd = _build_gpdbrestore_cmd_line(self.context, ts, table_file)
@@ -584,8 +579,9 @@ class RestoreDatabase(Operation):
                 for line in infile:
                     matches = search(table_pattern, line)
                     if matches:
-                        tablename = '%s.%s' % (matches.group(1), matches.group(2))
-                        if len(self.context.restore_tables) == 0 or tablename in self.context.restore_tables:
+                        schema, table = matches.group(1), matches.group(2)
+                        tablename = tuple_to_tablename((schema, table))
+                        if len(self.context.restore_tables) == 0 or [schema,table] in self.context.restore_tables:
                             try:
                                 new_oid = relids[tablename]
                                 print_toggle = True
@@ -866,21 +862,20 @@ class RestoreDatabase(Operation):
                     truncate_list.extend(self.get_full_tables_in_schema(conn, schemaname))
             else:
                 for restore_table in self.context.restore_tables:
-                    schemaname, tablename = split_fqn(restore_table)
+                    schema, table = restore_table
                     check_table_exists_qry = """SELECT EXISTS (
                                                        SELECT 1
                                                        FROM pg_catalog.pg_class c
                                                        JOIN pg_catalog.pg_namespace n on n.oid = c.relnamespace
-                                                       WHERE n.nspname = '%s' and c.relname = '%s')""" % (pg.escape_string(schemaname),
-                                                                                                          pg.escape_string(tablename))
+                                                       WHERE n.nspname = '%s' and c.relname = '%s')""" % (pg.escape_string(schema),
+                                                                                                          pg.escape_string(table))
                     exists_result = execSQLForSingleton(conn, check_table_exists_qry)
                     if exists_result:
-                        schema = escapeDoubleQuoteInSQLString(schemaname)
-                        table = escapeDoubleQuoteInSQLString(tablename)
-                        truncate_table = '%s.%s' % (schema, table)
+                        truncate_table = tuple_to_tablename([schema, table])
                         truncate_list.append(truncate_table)
                     else:
-                        logger.warning("Skipping truncate of %s.%s because the relation does not exist." % (self.context.restore_db, restore_table))
+                        logger.warning("Skipping truncate of %s.%s because the relation does not exist." % (self.context.restore_db, \
+                                tuple_to_tablename(restore_table)))
 
             for table in truncate_list:
                 try:
@@ -961,23 +956,17 @@ def check_table_name_format_and_duplicate(table_list, restore_schemas=None):
     """
 
     restore_table_list = []
-    table_set = set()
-
-    # validate special characters
-    check_funny_chars_in_names(restore_schemas, is_full_qualified_name = False)
-    check_funny_chars_in_names(table_list)
 
     # validate schemas
     if restore_schemas:
         restore_schemas = list(set(restore_schemas))
 
     for restore_table in table_list:
-        if '.' not in restore_table:
-            raise Exception("No schema name supplied for %s, removing from list of tables to restore" % restore_table)
-        schema, table = split_fqn(restore_table)
+        if len(restore_table) != 2:
+            raise Exception("%s is not in the format schema.table" % '.'.join(restore_table))
+        schema, table = restore_table
         # schema level restore will be handled before specific table restore, treat as duplicate
-        if not ((restore_schemas and schema in restore_schemas) or (schema, table) in table_set):
-            table_set.add((schema, table))
+        if not ((restore_schemas and schema in restore_schemas) or restore_table in restore_table_list):
             restore_table_list.append(restore_table)
 
     return restore_table_list, restore_schemas
@@ -985,7 +974,7 @@ def check_table_name_format_and_duplicate(table_list, restore_schemas=None):
 def validate_tablenames_exist_in_dump_file(restore_tables, dumped_tables):
     unmatched_table_names = []
     if dumped_tables:
-        dumped_table_names = [schema + '.' + table for (schema, table, _) in dumped_tables]
+        dumped_table_names = [[schema, table] for (schema, table, _) in dumped_tables]
         for table in restore_tables:
             if table not in dumped_table_names:
                 unmatched_table_names.append(table)
@@ -993,7 +982,8 @@ def validate_tablenames_exist_in_dump_file(restore_tables, dumped_tables):
         raise Exception('No dumped tables to restore.')
 
     if len(unmatched_table_names) > 0:
-        raise Exception("Tables %s not found in backup" % unmatched_table_names)
+        err_table_list = [tuple_to_tablename(t) for t in unmatched_table_names]
+        raise Exception("Tables %s not found in backup" % err_table_list)
 
 class CopyPostData(Operation):
     ''' Copy _post_data when using fake timestamp.

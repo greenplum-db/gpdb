@@ -585,7 +585,7 @@ class GpCronDump(Operation):
         for schema in dump_schemas:
             tables = get_user_table_list_for_schema(self.context, schema)
             for table in tables:
-                table_name = table[0] + "." + table[1]
+                table_name = tuple_to_tablename(table)
                 table_list.append(table_name)
         return create_temp_file_from_list(table_list, 'include_dump_tables_file')
 
@@ -607,25 +607,24 @@ class GpCronDump(Operation):
             self.context.include_dump_tables = get_lines_from_file(self.context.include_dump_tables_file)
 
         if self.context.include_dump_tables:
+            self.context.include_dump_tables = tablename_list_to_tuple_list(self.context.include_dump_tables)
             dump_tables_without_pg_temp = []
-            for table in self.context.include_dump_tables:
-                if table.startswith('pg_temp_'):
+            for (schema, table) in self.context.include_dump_tables:
+                if schema.startswith('pg_temp_'):
                     continue
-                dump_tables_without_pg_temp.append(table)
-            include_file = expand_partitions_and_populate_filter_file(dbname,
-                                                                      dump_tables_without_pg_temp,
-                                                                      'include_dump_tables_file')
+                dump_tables_without_pg_temp.append([schema, table])
+            self.context.include_dump_tables = dump_tables_without_pg_temp
+            include_file = expand_partitions_and_populate_filter_file(dbname, self.context.include_dump_tables, 'include_dump_tables_file')
             self.context.include_dump_tables = []
 
         if self.context.exclude_dump_tables:
+            self.context.exclude_dump_tables = tablename_list_to_tuple_list(self.context.exclude_dump_tables)
             exclude_file = expand_partitions_and_populate_filter_file(dbname, self.context.exclude_dump_tables, 'exclude_dump_tables_file')
             self.context.exclude_dump_tables = []
 
         if self.context.exclude_dump_tables_file:
-            exclude_tables = get_lines_from_file(self.context.exclude_dump_tables_file)
-            exclude_file = expand_partitions_and_populate_filter_file(dbname,
-                                                                      exclude_tables,
-                                                                      'exclude_dump_tables_file')
+            exclude_tables = get_lines_from_csv_file(self.context.exclude_dump_tables_file)
+            exclude_file = expand_partitions_and_populate_filter_file(dbname, exclude_tables, 'exclude_dump_tables_file')
 
         return (include_file, exclude_file)
 
@@ -764,8 +763,6 @@ class GpCronDump(Operation):
                 co_partition_list = get_co_partition_state(self.context)
                 heap_partitions = get_dirty_heap_tables(self.context)
                 last_operation_list = get_last_operation_data(self.context)
-
-                self._verify_tablenames(ao_partition_list, co_partition_list, heap_partitions)
 
                 dirty_partitions = None
                 dirty_file = None
@@ -1065,31 +1062,20 @@ class GpCronDump(Operation):
             logger.info('No filter file found for database %s and prefix %s.' % (db, self.context.dump_prefix[:-1]))
             logger.info('All tables in %s will be included in the dump.' % db)
             return
-        tables = get_lines_from_file(filter_filename)
+        tables = get_lines_from_csv_file(filter_filename)
         logger.info('Filtering %s for the following tables:' % db)
         for table in tables:
-            logger.info('%s' % table)
+            logger.info('%s' % tuple_to_tablename(table))
 
     def _get_table_names_from_partition_list(self, partition_list):
         tablenames = []
         for part in partition_list:
-            fields = part.split(',')
+            fields = csv_string_to_list(part)
             if len(fields) != 3:
                 raise Exception('Invalid partition entry "%s"' % part)
-            tname = '%s.%s' % (fields[0].strip(), fields[1].strip())
+            tname = tuple_to_tablename(fields[0:2])
             tablenames.append(tname)
         return tablenames
-
-    def _verify_tablenames(self, ao_partition_list, co_partition_list, heap_partitions):
-        tablenames = []
-
-        tablenames.extend(self._get_table_names_from_partition_list(ao_partition_list))
-        tablenames.extend(self._get_table_names_from_partition_list(co_partition_list))
-        tablenames.extend(heap_partitions)
-
-        tablenames = set(tablenames)
-
-        check_funny_chars_in_names(tablenames)
 
     def _prompt_continue(self):
         logger.info("---------------------------------------------------")

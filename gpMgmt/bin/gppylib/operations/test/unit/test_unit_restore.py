@@ -77,9 +77,9 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
     def test_multitry_createdb_default(self, mock):
         self.restore._multitry_createdb()
 
-    @patch('gppylib.operations.restore.get_partition_list', return_value=[('public', 't1'), ('public', 't2'), ('public', 't3')])
+    @patch('gppylib.operations.restore.get_partition_list', return_value=[['public', 't1'], ['public', 't2'], ['public', 't3']])
     @patch('gppylib.operations.restore.get_incremental_restore_timestamps', return_value=['20160101010101', '20160101010111'])
-    @patch('gppylib.operations.restore.get_dirty_table_file_contents', return_value=['public.t1', 'public.t2'])
+    @patch('gppylib.operations.restore.get_dirty_table_file_contents', return_value=[['public', 't1'], ['public', 't2']])
     def test_create_restore_plan_default(self, mock1, mock2, mock3):
         expected = ["20160101010111:", "20160101010101:public.t1,public.t2", "20160101000000:public.t3"]
         self.context.full_dump_timestamp = '20160101000000'
@@ -92,7 +92,7 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
                 self.assertEqual(call(expected[i]+'\n'), result.write.call_args_list[i])
 
     @patch('gppylib.operations.restore.get_incremental_restore_timestamps', return_value=['20160101010101', '20160101010111'])
-    @patch('gppylib.operations.restore.get_dirty_table_file_contents', return_value=['public.t1', 'public.t2'])
+    @patch('gppylib.operations.restore.get_dirty_table_file_contents', return_value=[['public', 't1'], ['public', 't2']])
     def test_create_restore_plan_empty_list(self, mock1, mock2):
         expected = ["20160101010111:", "20160101010101:", "20160101000000:"]
         self.context.full_dump_timestamp = '20160101000000'
@@ -107,7 +107,7 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
     @patch('gppylib.operations.restore.get_partition_list', return_value=[])
     @patch('gppylib.operations.restore.get_full_timestamp_for_incremental', return_value='20120101000000')
     @patch('gppylib.operations.restore.get_incremental_restore_timestamps', return_value=['20160101010101', '20160101010111'])
-    @patch('gppylib.operations.restore.get_dirty_table_file_contents', return_value=['public.t1', 'public.t2'])
+    @patch('gppylib.operations.restore.get_dirty_table_file_contents', return_value=[['public', 't1'], ['public', 't2']])
     @patch('gppylib.operations.restore.create_plan_file_contents')
     def test_create_restore_plan_empty_list_with_nbu(self, mock1, mock2, mock3, mock4, mock5):
         self.context.netbackup_service_host = 'mdw'
@@ -139,24 +139,24 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
         increments = get_incremental_restore_timestamps(self.context)
         self.assertEqual(increments, [])
 
-    @patch('gppylib.operations.restore.get_lines_from_file', side_effect=[['public.t1'], ['public.t1', 'public.t2', 'public.t3'], ['public.t2', 'public.t4']])
+    @patch('gppylib.operations.restore.get_lines_from_csv_file', side_effect=[[['public', 't1']], [['public', 't1'], ['public', 't2'], ['public', 't3']], [['public', 't2'], ['public', 't4']]])
     def test_create_plan_file_contents_with_file(self, mock):
-        table_set_from_metadata_file = ['public.t1', 'public.t2', 'public.t3', 'public.t4']
+        table_set_from_metadata_file = [['public', 't1'], ['public', 't2'], ['public', 't3'], ['public', 't4']]
         incremental_restore_timestamps = ['20160101010113', '20160101010101', '20160101010111']
         latest_full_timestamp = '20160101010110'
-        expected_output = {'20160101010113': ['public.t1'], '20160101010101': ['public.t2', 'public.t3'], '20160101010111': ['public.t4'], '20160101010110': []}
+        expected_output = {'20160101010113': [['public', 't1']], '20160101010101': [['public', 't2'], ['public', 't3']], '20160101010111': [['public', 't4']], '20160101010110': []}
         file_contents = create_plan_file_contents(self.context, table_set_from_metadata_file, incremental_restore_timestamps, latest_full_timestamp)
         self.assertEqual(file_contents, expected_output)
 
     def test_create_plan_file_contents_no_file(self):
-        table_set_from_metadata_file = ['public.t1', 'public.t2', 'public.t3', 'public.t4']
+        table_set_from_metadata_file = [['public', 't1'], ['public', 't2'], ['public', 't3'], ['public', 't4']]
         incremental_restore_timestamps = []
         latest_full_timestamp = '20160101010110'
-        expected_output = {'20160101010110': ['public.t1', 'public.t2', 'public.t3', 'public.t4']}
+        expected_output = {'20160101010110': [['public', 't1'], ['public', 't2'], ['public', 't3'], ['public', 't4']]}
         file_contents = create_plan_file_contents(self.context, table_set_from_metadata_file, incremental_restore_timestamps, latest_full_timestamp)
         self.assertEqual(file_contents, expected_output)
 
-    @patch('gppylib.operations.restore.get_lines_from_file', side_effect=[['public.t1'], ['public.t1', 'public.t2', 'public.t3'], ['public.t2', 'public.t4']])
+    @patch('gppylib.operations.restore.get_lines_from_csv_file', side_effect=[[['public', 't1']], [['public', 't1'], ['public', 't2'], ['public', 't3']], [['public', 't2'], ['public', 't4']]])
     def test_create_plan_file_contents_no_metadata(self, mock):
         table_set_from_metadata_file = []
         incremental_restore_timestamps = ['20160101010113', '20160101010101', '20160101010111']
@@ -165,7 +165,7 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
         file_contents = create_plan_file_contents(self.context, table_set_from_metadata_file, incremental_restore_timestamps, latest_full_timestamp)
         self.assertEqual(file_contents, expected_output)
 
-    @patch('gppylib.operations.restore.get_lines_from_file', side_effect=[['public.t1'], ['public.t1', 'public.t2', 'public.t3'], ['public.t2', 'public.t4']])
+    @patch('gppylib.operations.restore.get_lines_from_csv_file', side_effect=[[['public', 't1']], [['public', 't1'], ['public', 't2'], ['public', 't3']], [['public', 't2'], ['public', 't4']]])
     @patch('gppylib.operations.restore.restore_file_with_nbu')
     def test_create_plan_file_contents_with_nbu(self, mock1, mock2):
         self.context.netbackup_service_host = 'mdw'
@@ -180,9 +180,9 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
     @patch('gppylib.operations.restore.write_lines_to_file')
     def test_write_to_plan_file_default(self, mock1):
         plan_file = 'blah'
-        plan_file_contents = {'20160101010113': ['public.t1'],
-                              '20160101010101': ['public.t2', 'public.t3'],
-                              '20160101010111': ['public.t4']}
+        plan_file_contents = {'20160101010113': [['public', 't1']],
+                              '20160101010101': [['public', 't2'], ['public', 't3']],
+                              '20160101010111': [['public', 't4']]}
 
         expected_output = ['20160101010113:public.t1',
                            '20160101010111:public.t4',
@@ -206,12 +206,12 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
         with self.assertRaisesRegexp(Exception, 'Invalid plan file .*'):
             write_to_plan_file(plan_file_contents, plan_file)
 
-    @patch('gppylib.operations.restore.get_lines_from_file', return_value=['public.t1', 'public.t2'])
+    @patch('gppylib.operations.restore.get_lines_from_csv_file', return_value=[['public', 't1'], ['public', 't2']])
     def test_get_partition_list_default(self, mock):
         partition_list = get_partition_list(self.context)
-        self.assertEqual(partition_list, [('public', 't1'), ('public', 't2')])
+        self.assertEqual(partition_list, [['public', 't1'], ['public', 't2']])
 
-    @patch('gppylib.operations.restore.get_lines_from_file', return_value=[])
+    @patch('gppylib.operations.restore.get_lines_from_csv_file', return_value=[])
     def test_get_partition_list_no_partitions(self, mock):
         partition_list = get_partition_list(self.context)
         self.assertEqual(partition_list, [])
@@ -554,9 +554,9 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
     @patch('gppylib.operations.restore.execSQL')
     @patch('gppylib.operations.restore.execSQLForSingleton', return_value='t')
     def test_truncate_restore_tables_restore_tables(self, mock1, mock2, mock3, mock4):
-        self.context.restore_tables = ['public.ao1', 'testschema.heap1']
+        self.context.restore_tables = [['public', 'ao1'], ['testschema', 'heap1']]
         self.restore.truncate_restore_tables()
-        calls = [call(ANY,'Truncate "public"."ao1"'), call(ANY,'Truncate "testschema"."heap1"')]
+        calls = [call(ANY,'Truncate public.ao1'), call(ANY,'Truncate testschema.heap1')]
         mock2.assert_has_calls(calls)
 
     @patch('gppylib.operations.restore.socket.gethostname', return_value='host')
@@ -718,10 +718,10 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
             get_plan_file_contents(self.context)
 
     @patch('gppylib.operations.backup_utils.Context.generate_filename', return_value='foo')
-    @patch('gppylib.operations.restore.get_lines_from_file', return_value=['20160101010101:t1,t2', '20160101010111:t3,t4', '20160101121210:t5,t6,t7'])
+    @patch('gppylib.operations.restore.get_lines_from_file', return_value=['20160101010101:public.t1,public.t2', '20160101010111:public.t3,public.t4', '20160101121210:public.t5,public.t6,public.t7'])
     @patch('os.path.isfile', return_value=True)
     def test_get_plan_file_contents_default(self, mock1, mock2, mock3):
-        expected_output = [('20160101010101','t1,t2'), ('20160101010111','t3,t4'), ('20160101121210','t5,t6,t7')]
+        expected_output = [('20160101010101',[['public', 't1'], ['public', 't2']]), ('20160101010111',[['public', 't3'], ['public', 't4']]), ('20160101121210',[['public', 't5'], ['public', 't6'], ['public', 't7']])]
         output = get_plan_file_contents(self.context)
         self.assertEqual(output, expected_output)
 
@@ -732,7 +732,7 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
         with self.assertRaisesRegexp(Exception, 'Invalid plan file format'):
             get_plan_file_contents(self.context)
 
-    @patch('gppylib.operations.restore.get_plan_file_contents', return_value=[('20160101010101', 't1,t2'), ('20160101010111', 't3,t4'), ('20160101121210', 't5,t6,t7')])
+    @patch('gppylib.operations.restore.get_plan_file_contents', return_value=[('20160101010101', [['public', 't1'], ['public', 't2']]), ('20160101010111', [['public', 't3'], ['public', 't4']]), ('20160101121210', [['public', 't5'], ['public', 't6'], ['public', 't7']])])
     @patch('gppylib.operations.restore.Command.run')
     @patch('gppylib.operations.restore.update_ao_statistics')
     def test_restore_incremental_data_only_default(self, mock1, mock2, mock3):
@@ -760,37 +760,38 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
     @patch('gppylib.operations.restore.get_all_segment_addresses', return_value=['host1'])
     @patch('gppylib.operations.restore.scp_file_to_hosts')
     def test_create_filter_file_default(self, m1, m2):
-        self.context.restore_tables = ['public.ao1', 'testschema.heap1']
+        self.context.restore_tables = [['public', 'ao1'], ['testschema', 'heap1']]
         m = mock_open()
         with patch('tempfile.NamedTemporaryFile', m, create=True):
             fname = self.restore.create_filter_file()
             result = m()
             self.assertEqual(len(self.context.restore_tables), len(result.write.call_args_list))
             for i in range(len(self.context.restore_tables)):
-                self.assertEqual(call(self.context.restore_tables[i]+'\n'), result.write.call_args_list[i])
+                table = "%s.%s\n" % tuple(self.context.restore_tables[i])
+                self.assertEqual(call(table), result.write.call_args_list[i])
 
-    @patch('gppylib.operations.restore.get_lines_from_file', return_value = ['public.t1', 'public.t2', 'public.t3'])
+    @patch('gppylib.operations.restore.get_lines_from_csv_file', return_value = [['public', 't1'], ['public', 't2'], ['public', 't3']])
     @patch('os.path.isfile', return_value = True)
     def test_get_restore_tables_from_table_file_default(self, mock1, mock2):
         table_file = '/foo'
-        expected_result = ['public.t1', 'public.t2', 'public.t3']
+        expected_result = [['public', 't1'], ['public', 't2'], ['public', 't3']]
         result = get_restore_tables_from_table_file(table_file)
         self.assertEqual(expected_result, result)
 
     @patch('os.path.isfile', return_value = False)
     def test_get_restore_tables_from_table_file_no_file(self, mock):
         table_file = '/foo'
-        expected_result = ['public.t1', 'public.t2', 'public.t3']
+        expected_result = [['public', 't1'], ['public', 't2'], ['public', 't3']]
         with self.assertRaisesRegexp(Exception, 'Table file does not exist'):
             result = get_restore_tables_from_table_file(table_file)
 
     def test_check_table_name_format_and_duplicate_missing_schema(self):
-        table_list = ['publicao1', 'public.ao2']
-        with self.assertRaisesRegexp(Exception, 'No schema name supplied'):
+        table_list = [['publicao1'], ['public', 'ao2']]
+        with self.assertRaisesRegexp(Exception, 'publicao1 is not in the format schema.table'):
             check_table_name_format_and_duplicate(table_list, None)
 
     def test_check_table_name_format_and_duplicate_default(self):
-        table_list = ['public.ao1', 'public.ao2']
+        table_list = [['public', 'ao1'], ['public', 'ao2']]
         check_table_name_format_and_duplicate(table_list, [])
 
     def test_check_table_name_format_and_duplicate_no_tables(self):
@@ -799,47 +800,48 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
         check_table_name_format_and_duplicate(table_list, schema_list)
 
     def test_check_table_name_format_and_duplicate_duplicate_tables(self):
-        table_list = ['public.ao1', 'public.ao1']
+        table_list = [['public', 'ao1'], ['public', 'ao1']]
         resolved_list, _ = check_table_name_format_and_duplicate(table_list, [])
-        self.assertEqual(resolved_list, ['public.ao1'])
+        self.assertEqual(resolved_list, [['public', 'ao1']])
 
     def test_check_table_name_format_and_duplicate_funny_chars(self):
-        table_list = [' `"@#$%^&( )_|:;<>?/-+={}[]*1Aa . `"@#$%^&( )_|:;<>?/-+={}[]*1Aa ', 'schema.ao1']
+        table_list = [[' `"@#$%^&( )_|:;<>?/-+={}[]*1Aa ', ' `"@#$%^&( )_|:;<>?/-+={}[]*1Aa '], ['schema', 'ao1']]
         schema_list = ['schema']
         resolved_table_list, resolved_schema_list = check_table_name_format_and_duplicate(table_list, schema_list)
-        self.assertEqual(resolved_table_list, [' `"@#$%^&( )_|:;<>?/-+={}[]*1Aa . `"@#$%^&( )_|:;<>?/-+={}[]*1Aa '])
+        self.assertEqual(resolved_table_list, [[' `"@#$%^&( )_|:;<>?/-+={}[]*1Aa ', ' `"@#$%^&( )_|:;<>?/-+={}[]*1Aa ']])
         self.assertEqual(resolved_schema_list, ['schema'])
 
     def test_validate_tablenames_exist_in_dump_file_no_tables(self):
         dumped_tables = []
-        table_list = ['schema.ao']
+        table_list = [['schema', 'ao']]
         with self.assertRaisesRegexp(Exception, 'No dumped tables to restore.'):
             validate_tablenames_exist_in_dump_file(table_list, dumped_tables)
 
     def test_validate_tablenames_exist_in_dump_file_one_table(self):
         dumped_tables = [('schema', 'ao', 'gpadmin')]
-        table_list = ['schema.ao']
+        table_list = [['schema', 'ao']]
         validate_tablenames_exist_in_dump_file(table_list, dumped_tables)
 
     def test_validate_tablenames_exist_in_dump_file_nonexistent_table(self):
         dumped_tables = [('schema', 'ao', 'gpadmin')]
-        table_list = ['schema.ao', 'schema.co']
+        table_list = [['schema', 'ao'], ['schema', 'co']]
         with self.assertRaisesRegexp(Exception, "Tables \['schema.co'\] not found in backup"):
             validate_tablenames_exist_in_dump_file(table_list, dumped_tables)
 
     def test_get_restore_table_list_default(self):
-        table_list = ['public.ao_table', 'public.ao_table2', 'public.co_table', 'public.heap_table']
-        restore_tables = ['public.ao_table2', 'public.co_table']
+        table_list = [['public', 'ao_table'], ['public', 'ao_table2'], ['public', 'co_table'], ['public', 'heap_table']]
+        restore_tables = [['public', 'ao_table2'], ['public', 'co_table']]
         m = mock_open()
         with patch('tempfile.NamedTemporaryFile', m, create=True):
             result = get_restore_table_list(table_list, restore_tables)
             result = m()
             self.assertEqual(len(restore_tables), len(result.write.call_args_list))
             for i in range(len(restore_tables)):
-                self.assertEqual(call(restore_tables[i]+'\n'), result.write.call_args_list[i])
+                table = "%s.%s\n" % tuple(restore_tables[i])
+                self.assertEqual(call(table), result.write.call_args_list[i])
 
     def test_get_restore_table_list_no_restore_tables(self):
-        table_list = ['public.ao_table', 'public.ao_table2', 'public.co_table', 'public.heap_table']
+        table_list = [['public', 'ao_table'], ['public', 'ao_table2'], ['public', 'co_table'], ['public', 'heap_table']]
         restore_tables = None
         m = mock_open()
         with patch('tempfile.NamedTemporaryFile', m, create=True):
@@ -847,28 +849,30 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
             result = m()
             self.assertEqual(len(table_list), len(result.write.call_args_list))
             for i in range(len(table_list)):
-                self.assertEqual(call(table_list[i]+'\n'), result.write.call_args_list[i])
+                table = "%s.%s\n" % tuple(table_list[i])
+                self.assertEqual(call(table), result.write.call_args_list[i])
 
     def test_get_restore_table_list_extra_restore_tables(self):
-        table_list = ['public.ao_table', 'public.ao_table2', 'public.co_table', 'public.heap_table']
-        restore_tables = ['public.ao_table2', 'public.co_table', 'public.ao_table3']
-        expected = ['public.ao_table2', 'public.co_table']
+        table_list = [['public', 'ao_table'], ['public', 'ao_table2'], ['public', 'co_table'], ['public', 'heap_table']]
+        restore_tables = [['public', 'ao_table2'], ['public', 'co_table'], ['public', 'ao_table3']]
+        expected = [['public', 'ao_table2'], ['public', 'co_table']]
         m = mock_open()
         with patch('tempfile.NamedTemporaryFile', m, create=True):
             result = get_restore_table_list(table_list, restore_tables)
             result = m()
             self.assertEqual(len(expected), len(result.write.call_args_list))
             for i in range(len(expected)):
-                self.assertEqual(call(expected[i]+'\n'), result.write.call_args_list[i])
+                table = "%s.%s\n" % tuple(expected[i])
+                self.assertEqual(call(table), result.write.call_args_list[i])
 
     def test_validate_restore_tables_list_default(self):
-        plan_file_contents = [('20160101121213', 'public.t1'), ('20160101010101', 'public.t2,public.t3'), ('20160101010101', 'public.t4')]
-        restore_tables = ['public.t1', 'public.t2']
+        plan_file_contents = [('20160101121213', [['public', 't1']]), ('20160101010101', [['public', 't2'], ['public', 't3']]), ('20160101010101', [['public', 't4']])]
+        restore_tables = [['public', 't1'], ['public', 't2']]
         validate_restore_tables_list(plan_file_contents, restore_tables)
 
     def test_validate_restore_tables_list_invalid_tables(self):
-        plan_file_contents = [('20160101121213', 'public.t1'), ('20160101010101', 'public.t2,public.t3'), ('20160101010101', 'public.t4')]
-        restore_tables = ['public.t5', 'public.t2']
+        plan_file_contents = [('20160101121213', [['public', 't1']]), ('20160101010101', [['public', 't2'], ['public', 't3']]), ('20160101010101', [['public', 't4']])]
+        restore_tables = [['public', 't5'], ['public', 't2']]
         with self.assertRaisesRegexp(Exception, 'Invalid tables for -T option: The following tables were not found in plan file'):
             validate_restore_tables_list(plan_file_contents, restore_tables)
 
@@ -941,33 +945,33 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
         restored_tables = []
         update_ao_statistics(self.context, restored_tables)
 
-        update_ao_statistics(self.context, restored_tables=['public.t1'], restored_schema=[], restore_all=False)
+        update_ao_statistics(self.context, restored_tables=[['public', 't1']], restored_schema=[], restore_all=False)
         update_ao_statistics(self.context, restored_tables=[], restored_schema=['public'], restore_all=False)
         update_ao_statistics(self.context, restored_tables=[], restored_schema=[], restore_all=True)
 
     def test_generate_restored_tables_no_table(self):
-        results = [['t1','public'], ['t2', 'public'], ['foo', 'bar']]
+        results = [['public','t1'], ['public','t2'], ['foo', 'bar']]
 
         tables = generate_restored_tables(results, restored_tables=[], restored_schema=[], restore_all=False)
-        self.assertEqual(tables, set())
+        self.assertEqual(tables, [])
 
     def test_generate_restored_tables_specified_table(self):
-        results = [['t1','public'], ['t2', 'public'], ['foo', 'bar']]
+        results = [['public','t1'], ['public','t2'], ['foo', 'bar']]
 
-        tables = generate_restored_tables(results, restored_tables=['public.t1'], restored_schema=[], restore_all=False)
-        self.assertEqual(tables, set([('public','t1')]))
+        tables = generate_restored_tables(results, restored_tables=[['public', 't1']], restored_schema=[], restore_all=False)
+        self.assertEqual(tables, [['public','t1']])
 
     def test_generate_restored_tables_specified_schema(self):
-        results = [['t1','public'], ['t2', 'public'], ['foo', 'bar']]
+        results = [['public','t1'], ['public','t2'], ['foo', 'bar']]
 
         tables = generate_restored_tables(results, restored_tables=[], restored_schema=['public'], restore_all=False)
-        self.assertEqual(tables, set([('public','t1'), ('public', 't2')]))
+        self.assertEqual(tables, [['public','t1'], ['public', 't2']])
 
     def test_generate_restored_tables_full_restore(self):
-        results = [['t1','public'], ['t2', 'public'], ['foo', 'bar']]
+        results = [['public','t1'], ['public','t2'], ['foo', 'bar']]
 
         tables = generate_restored_tables(results, restored_tables=[], restored_schema=[], restore_all=True)
-        self.assertEqual(tables, set([('public','t1'), ('public', 't2'), ('bar', 'foo')]))
+        self.assertEqual(tables, [['public','t1'], ['public', 't2'], ['foo', 'bar']])
 
     @patch('gppylib.operations.restore.dbconn.connect')
     @patch('gppylib.db.dbconn.execSQLForSingleton', return_value=5)
@@ -983,28 +987,28 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
     @patch('gppylib.operations.backup_utils.dbconn.connect')
     @patch('gppylib.operations.restore.execSQL')
     def test_analyze_restore_tables_default(self, mock1, mock2, mock3):
-        self.context.restore_tables = ['public.t1', 'public.t2']
+        self.context.restore_tables = [['public', 't1'], ['public', 't2']]
         self.restore._analyze_restore_tables()
 
     @patch('gppylib.operations.restore.execSQL', side_effect=Exception('analyze failed'))
     @patch('gppylib.operations.backup_utils.dbconn.DbURL')
     @patch('gppylib.operations.backup_utils.dbconn.connect')
     def test_analyze_restore_tables_analyze_failed(self, mock1, mock2, mock3):
-        self.context.restore_tables = ['public.t1', 'public.t2']
+        self.context.restore_tables = [['public', 't1'], ['public', 't2']]
         self.assertRaises(Exception, self.restore._analyze_restore_tables)
 
     @patch('gppylib.operations.backup_utils.execSQL')
     @patch('gppylib.operations.backup_utils.dbconn.DbURL', side_effect=Exception('Failed'))
     @patch('gppylib.operations.backup_utils.dbconn.connect')
     def test_analyze_restore_tables_connection_failed(self, mock1, mock2, mock3):
-        self.context.restore_tables = ['public.t1', 'public.t2']
+        self.context.restore_tables = [['public', 't1'], ['public', 't2']]
         self.assertRaises(Exception, self.restore._analyze_restore_tables)
 
     @patch('gppylib.operations.backup_utils.dbconn.DbURL')
     @patch('gppylib.operations.backup_utils.dbconn.connect')
     @patch('gppylib.operations.restore.execSQL')
     def test_analyze_restore_tables_three_batches(self, mock1, mock2, mock3):
-        self.context.restore_tables = ['public.t%d' % i for i in range(3002)]
+        self.context.restore_tables = [tablename_to_tuple('public.t%d' % i) for i in range(3002)]
         expected_batch_count = 3
         batch_count = self.restore._analyze_restore_tables()
         self.assertEqual(batch_count, expected_batch_count)
@@ -1013,7 +1017,7 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
     @patch('gppylib.operations.backup_utils.dbconn.connect')
     @patch('gppylib.operations.backup_utils.dbconn.execSQL')
     def test_analyze_restore_tables_change_schema(self, mock1, mock2, mock3):
-        self.context.restore_tables = ['public.t1', 'public.t2']
+        self.context.restore_tables = [['public', 't1'], ['public', 't2']]
         self.context.change_schema = 'newschema'
         self.restore._analyze_restore_tables()
 
@@ -1022,8 +1026,8 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
     @patch('gppylib.operations.backup_utils.dbconn.connect')
     def test_analyze_restore_tables_execSQL_failed(self, mock1, mock2, mock3):
         self.context.restore_db = 'db1'
-        self.context.restore_tables = ['public.t1', 'public.t2']
-        self.assertRaisesRegexp(Exception, 'Issue with \'ANALYZE\' of restored table \'"public"."t1"\' in \'db1\' database', self.restore._analyze_restore_tables)
+        self.context.restore_tables = [['public', 't1'], ['public', 't2']]
+        self.assertRaisesRegexp(Exception, 'Issue with \'ANALYZE\' of restored table \'public.t1\' in \'db1\' database', self.restore._analyze_restore_tables)
 
     @patch('os.path.exists', side_effect=[True, False])
     def test_validate_metadata_file_with_compression_exists(self, mock):

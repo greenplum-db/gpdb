@@ -1,7 +1,9 @@
+import csv
 import fnmatch
 import glob
 import os
 import re
+import StringIO
 import tempfile
 from datetime import datetime
 from gppylib import gplog
@@ -169,37 +171,31 @@ class Context(Values, object):
 
 def expand_partitions_and_populate_filter_file(dbname, partition_list, file_prefix):
     expanded_partitions = expand_partition_tables(dbname, partition_list)
-    dump_partition_list = list(set(expanded_partitions + partition_list))
-    return create_temp_file_from_list(dump_partition_list, file_prefix)
-
-def populate_filter_tables(table, rows, non_partition_tables, partition_leaves):
-    if not rows:
-        non_partition_tables.append(table)
-    else:
-        for (schema_name, partition_leaf_name) in rows:
-            partition_leaf = schema_name.strip() + '.' + partition_leaf_name.strip()
-            partition_leaves.append(partition_leaf)
-    return (non_partition_tables, partition_leaves)
+    dump_partition_list = []
+    for pt in expanded_partitions + partition_list:
+        if pt not in dump_partition_list:
+            dump_partition_list.append(pt)
+    return create_temp_csv_file_from_list(dump_partition_list, file_prefix)
 
 def get_all_parent_tables(dbname):
-    SQL = "SELECT DISTINCT (schemaname || '.' || tablename) FROM pg_partitions"
+    SQL = "SELECT DISTINCT schemaname, tablename FROM pg_partitions"
     data = []
     with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
         curs = dbconn.execSQL(conn, SQL)
         data = curs.fetchall()
-    return set([d[0] for d in data])
+    return data
 
 def list_to_quoted_string(filter_tables):
-    filter_string = "'" + "', '".join([pg.escape_string(t) for t in filter_tables]) + "'"
+    filter_string = "(" + "), (".join(["'%s','%s'" % (pg.escape_string(s), pg.escape_string(t)) for (s,t) in filter_tables]) + ")"
     return filter_string
 
-def convert_parents_to_leafs(dbname, parents):
+def convert_parents_to_leaves(dbname, parents):
     partition_leaves_sql = """
-                           SELECT x.partitionschemaname || '.' || x.partitiontablename
+                           SELECT x.partitionschemaname, x.partitiontablename
                            FROM (
                                 SELECT distinct schemaname, tablename, partitionschemaname, partitiontablename, partitionlevel
                                 FROM pg_partitions
-                                WHERE schemaname || '.' || tablename in (%s)
+                                WHERE (schemaname, tablename) in (%s)
                                 ) as X,
                            (SELECT schemaname, tablename maxtable, max(partitionlevel) maxlevel
                             FROM pg_partitions
@@ -214,7 +210,7 @@ def convert_parents_to_leafs(dbname, parents):
     partition_sql = partition_leaves_sql % list_to_quoted_string(parents)
     curs = dbconn.execSQL(conn, partition_sql)
     rows = curs.fetchall()
-    return [r[0] for r in rows]
+    return rows 
 
 
 #input: list of tables to be filtered
@@ -229,6 +225,7 @@ def expand_partition_tables(dbname, filter_tables):
 
     all_parent_tables = get_all_parent_tables(dbname)
     for table in filter_tables:
+        table = list(table)
         if table in all_parent_tables:
             parent_tables.append(table)
         else:
@@ -238,7 +235,7 @@ def expand_partition_tables(dbname, filter_tables):
 
     local_batch_size = 1000
     for (s, e) in get_batch_from_list(len(parent_tables), local_batch_size):
-        tmp = convert_parents_to_leafs(dbname, parent_tables[s:e])
+        tmp = convert_parents_to_leaves(dbname, parent_tables[s:e])
         expanded_list += tmp
 
     return expanded_list
@@ -265,8 +262,25 @@ def create_temp_file_from_list(entries, prefix):
 
     return tmp_file_name
 
+def create_temp_csv_file_from_list(entries, prefix):
+    """
+    When writing the entries into temp file, don't do any strip as there might be
+    white space in schema name and table name.
+    """
+    if len(entries) == 0:
+        return None
+
+    fd = tempfile.NamedTemporaryFile(mode='w', prefix=prefix, delete=False)
+    writer = csv.writer(fd, delimiter='.', quotechar='"', lineterminator='\n')
+    for entry in entries:
+        writer.writerow(entry)
+    tmp_file_name = fd.name
+    fd.close()
+
+    return tmp_file_name
+
 def create_temp_file_with_tables(table_list):
-    return create_temp_file_from_list(table_list, 'table_list_')
+    return create_temp_csv_file_from_list(table_list, 'table_list_')
 
 def create_temp_file_with_schemas(schema_list):
     return create_temp_file_from_list(schema_list, 'schema_file_')
@@ -453,6 +467,74 @@ def write_lines_to_file(filename, lines):
     with open(filename, 'w') as fp:
         for line in lines:
             fp.write("%s\n" % line.strip('\n'))
+
+# Takes a list of "schema.table" strings and turns it into a list of ("schema", "table") tuples
+def tablename_list_to_tuple_list(table_list):
+    content = []
+    tables = "\n".join(table_list)
+    sio = StringIO.StringIO(tables)
+    try:
+        reader = csv.reader(sio, delimiter = '.', quotechar = '"')
+        for row in reader:
+            if row and len(row) != 2:
+                raise Exception("%s is not in the format schema.table" % ".".join(row))
+            content.append(row)
+        return content
+    finally:
+        sio.close()
+
+def list_to_csv_string(items, delimiter=',', terminator='\n'):
+    csv_string = StringIO.StringIO()
+    try:
+        writer = csv.writer(csv_string, delimiter=delimiter, quotechar='"', lineterminator=terminator)
+        writer.writerow(items)
+        return csv_string.getvalue()
+    finally:
+        csv_string.close()
+
+# Should only be used for single-line strings, e.g. 'schema.table'
+def csv_string_to_list(line, delimiter=',', terminator='\n'):
+    sio = StringIO.StringIO(line)
+    try:
+        tokens = []
+        reader = csv.reader(sio, delimiter=delimiter, quotechar='"', lineterminator=terminator)
+        for token in reader:
+            tokens.append(token)
+        if tokens and isinstance(tokens, list):
+            tokens = tokens[0]
+        return tokens
+    finally:
+        sio.close()
+
+def tuple_to_tablename(table_tuple):
+    if len(table_tuple) != 2:
+        raise Exception("%s is not in the format schema.table" % ".".join(table_tuple))
+    return list_to_csv_string(table_tuple, delimiter='.', terminator='')
+
+def tablename_to_tuple(tuple):
+    table_tuple = csv_string_to_list(tuple, delimiter='.', terminator='')
+    if len(table_tuple) != 2:
+        raise Exception("%s is not in the format schema.table" % ".".join(table_tuple))
+    return table_tuple
+
+def get_lines_from_csv_file(fname, context=None, delimiter='.'):
+    content = []
+    if context and context.ddboost:
+        contents = get_lines_from_dd_file(fname, context.ddboost_storage_unit)
+        return tablename_list_to_tuple_list(contents)
+    else:
+        with open(fname) as fd:
+            reader = csv.reader(fd, delimiter=delimiter, quotechar='"')
+            for row in reader:
+                content.append(row)
+        return content
+
+def write_lines_to_csv_file(filename, lines, delimiter='.', alwaysquote=False):
+    with open(filename, 'w') as fp:
+        should_quote = csv.QUOTE_ALL if alwaysquote else csv.QUOTE_MINIMAL
+        writer = csv.writer(fp, delimiter=delimiter, quotechar='"', lineterminator='\n', quoting=should_quote)
+        for line in lines:
+            writer.writerow(line)
 
 def verify_lines_in_file(fname, expected):
     lines = get_lines_from_file(fname)
@@ -828,39 +910,34 @@ def removeEscapingDoubleQuoteInSQLString(string, forceDoubleQuote=True):
         string = '"' + string + '"'
     return string
 
-def formatSQLString(rel_file, isTableName=False):
+def quote_special_chars_in_table_list(table_list):
+    new_list = []
+    for schema, table in table_list:
+        if not re.match('^[\w_-]+$', schema):
+            schema = checkAndAddEnclosingDoubleQuote(schema)
+        if not re.match('^[\w_-]+$', table):
+            table = checkAndAddEnclosingDoubleQuote(table)
+        new_list.append([schema, table])
+    return new_list
+
+def formatSQLString(rel_file):
     """
-    Read the full qualified schema or table name, do a split
-    if each item is a table name into schema and table,
-    escape the double quote inside the name properly.
+    Read the schema name and escape the double quote inside the name properly.
     """
     relnames = []
     if rel_file and os.path.exists(rel_file):
         with open(rel_file, 'r') as fr:
             lines = fr.read().strip('\n').split('\n')
             for line in lines:
-                if isTableName:
-                    schema, table = split_fqn(line)
-                    schema = escapeDoubleQuoteInSQLString(schema)
-                    table = escapeDoubleQuoteInSQLString(table)
-                    relnames.append(schema + '.' + table)
-                else:
                     schema = escapeDoubleQuoteInSQLString(line)
                     relnames.append(schema)
         if len(relnames) > 0:
             write_lines_to_file(rel_file, relnames)
             return rel_file
 
-def split_fqn(fqn_name):
-    """
-    Split full qualified table name into schema and table by separator '.',
-    """
-    try:
-        schema, table = fqn_name.split('.')
-    except Exception as e:
-        logger.error("Failed to split name %s into schema and table, please check the format is schema.table" % fqn_name)
-        raise Exception('%s' % str(e))
-    return schema, table
+def quote_csv_file(filename):
+    lines = get_lines_from_csv_file(filename)
+    write_lines_to_csv_file(filename, lines, alwaysquote=True)
 
 def remove_file_on_segments(context, filename):
     addresses = get_all_segment_addresses(context.master_port)

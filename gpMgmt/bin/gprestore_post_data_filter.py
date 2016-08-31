@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 from gppylib.gpparseopts import OptParser, OptChecker
-from gppylib.operations.backup_utils import split_fqn, checkAndRemoveEnclosingDoubleQuote, removeEscapingDoubleQuoteInSQLString, \
-                                            escapeDoubleQuoteInSQLString
+from gppylib.operations.backup_utils import checkAndRemoveEnclosingDoubleQuote, removeEscapingDoubleQuoteInSQLString, \
+                                            escapeDoubleQuoteInSQLString, tablename_to_tuple
 import re
 import sys
 import os
@@ -146,7 +146,7 @@ def check_table(schema, line, search_str, dump_tables, schema_level_restore_list
                 table = line[start:].split()[0]
             elif has_schema_table_fmt and not has_special_chars:
                 full_table_name = line[start:].split()[0]
-                _, table = split_fqn(full_table_name)
+                _, table = tablename_to_tuple(full_table_name)
             elif not has_schema_table_fmt and has_special_chars:
                 table = line[start : last_double_quote_idx + 1]
             else:
@@ -157,7 +157,7 @@ def check_table(schema, line, search_str, dump_tables, schema_level_restore_list
                     # only schema name double quoted
                     ending_space_idx = line.find(' ', dot_separator_idx)
                     full_table_name = line[start : ending_space_idx]
-                _, table = split_fqn(full_table_name)
+                _, table = tablename_to_tuple(full_table_name)
 
             table = checkAndRemoveEnclosingDoubleQuote(table)
             table = removeEscapingDoubleQuoteInSQLString(table, False)
@@ -183,7 +183,7 @@ def get_table_schema_set(filename):
         contents = fd.read()
         tables = contents.splitlines()
         for t in tables:
-            schema, table = split_fqn(t)
+            schema, table = tablename_to_tuple(t)
             dump_tables.add((schema, table))
             dump_schemas.add(schema)
     return (dump_schemas, dump_tables)

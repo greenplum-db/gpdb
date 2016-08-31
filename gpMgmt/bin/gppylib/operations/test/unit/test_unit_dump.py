@@ -33,7 +33,7 @@ class DumpTestCase(unittest.TestCase):
 
     @patch('gppylib.operations.dump.get_heap_partition_list', return_value=[['123', 'public', 't4'], ['123', 'public', 't5'], ['123', 'testschema', 't6']])
     def test_get_dirty_heap_tables_default(self, mock1):
-        expected_output = set(['public.t4', 'public.t5', 'testschema.t6'])
+        expected_output = [['public', 't4'], ['public', 't5'], ['testschema', 't6']]
         dirty_table_list = get_dirty_heap_tables(self.context)
         self.assertEqual(dirty_table_list, expected_output)
 
@@ -43,18 +43,19 @@ class DumpTestCase(unittest.TestCase):
             dirty_table_list = get_dirty_heap_tables(self.context)
 
     def test_write_dirty_file_default(self):
-        dirty_tables = ['t1', 't2', 't3']
+        dirty_tables = [['public','t1'], ['public','t2'], ['public','t3']]
         m = mock_open()
         with patch('__builtin__.open', m, create=True):
             tmpfilename = write_dirty_file(self.context, dirty_tables)
             result = m()
             self.assertEqual(len(dirty_tables), len(result.write.call_args_list))
             for i in range(len(dirty_tables)):
-                self.assertEqual(call(dirty_tables[i]+'\n'), result.write.call_args_list[i])
+                table = "%s.%s\n" % tuple(dirty_tables[i])
+                self.assertEqual(call(table), result.write.call_args_list[i])
 
     @patch('gppylib.operations.backup_utils.Context.generate_filename', return_value='test_dirty_filename')
     def test_write_dirty_file_timestamp(self, mock1):
-        dirty_tables = ['t1', 't2', 't3']
+        dirty_tables = [['public','t1'], ['public','t2'], ['public','t3']]
         timestamp = '20160101010101'
         m = mock_open()
         with patch('__builtin__.open', m, create=True):
@@ -63,7 +64,8 @@ class DumpTestCase(unittest.TestCase):
             result = m()
             self.assertEqual(len(dirty_tables), len(result.write.call_args_list))
             for i in range(len(dirty_tables)):
-                self.assertEqual(call(dirty_tables[i]+'\n'), result.write.call_args_list[i])
+                table = "%s.%s\n" % tuple(dirty_tables[i])
+                self.assertEqual(call(table), result.write.call_args_list[i])
 
     def test_write_dirty_file_no_list(self):
         dirty_tables = None
@@ -175,8 +177,8 @@ class DumpTestCase(unittest.TestCase):
                 result = m()
                 self.assertEqual(len(part_list), len(result.write.call_args_list))
                 for i in range(len(part_list)):
-                    expected = "%s.%s\n" % (part_list[i][1], part_list[i][2])
-                    self.assertEqual(call(expected), result.write.call_args_list[i])
+                    table = "%s.%s\n" % tuple(part_list[i][1:3])
+                    self.assertEqual(call(table), result.write.call_args_list[i])
 
     @patch('gppylib.operations.dump.get_partition_list', return_value=[['t1', 'foo', 'koo'], ['public', 't2'], ['public', 't3']])
     @patch('gppylib.operations.dump.get_filter_file', return_value=None)
@@ -208,7 +210,7 @@ class DumpTestCase(unittest.TestCase):
     @patch('gppylib.operations.dump.execSQLForSingleton', return_value='100')
     def test_get_partition_state_default(self, mock1, mock2, mock3):
         partition_info = [(123, 'testschema', 't1', 4444), (234, 'testschema', 't2', 5555)]
-        expected_output = ['testschema, t1, 100', 'testschema, t2, 100']
+        expected_output = ['testschema,t1,100', 'testschema,t2,100']
         result = get_partition_state(self.context, 'pg_aoseg', partition_info)
         self.assertEqual(result, expected_output)
 
@@ -233,10 +235,8 @@ class DumpTestCase(unittest.TestCase):
     @patch('gppylib.operations.dump.dbconn.connect')
     @patch('gppylib.operations.dump.execSQLForSingleton', return_value='100')
     def test_get_partition_state_many_partition(self, mock1, mock2, mock3):
-        master_port=5432
-        dbname='testdb'
         partition_info = [(123, 'testschema', 't1', 4444), (234, 'testschema', 't2', 5555)] * 1000
-        expected_output = ['testschema, t1, 100', 'testschema, t2, 100'] * 1000
+        expected_output = ['testschema,t1,100', 'testschema,t2,100'] * 1000
         result = get_partition_state(self.context, 'pg_aoseg', partition_info)
         self.assertEqual(result, expected_output)
 
@@ -263,14 +263,15 @@ class DumpTestCase(unittest.TestCase):
     @patch('gppylib.operations.dump.get_filename_from_filetype', return_value='/tmp/db_dumps/20160101/gp_dump_20160101010101')
     def test_write_state_file_default(self, mock1):
         table_type = 'ao'
-        part_list = ['testschema, t1, 100', 'testschema, t2, 100']
+        part_list = [['testschema', 't1', '100'], ['testschema', 't2', '100']]
         m = mock_open()
         with patch('__builtin__.open', m, create=True):
             write_state_file(self.context, table_type, part_list)
             result = m()
             self.assertEqual(len(part_list), len(result.write.call_args_list))
             for i in range(len(part_list)):
-                self.assertEqual(call(part_list[i]+'\n'), result.write.call_args_list[i])
+                table = "%s,%s,%s\n" % tuple(part_list[i])
+                self.assertEqual(call(table), result.write.call_args_list[i])
 
     @patch('gppylib.operations.dump.execute_sql', return_value=[['public', 'ao_table', 123, 'CREATE', 'table', '2012: 1'], ['testschema', 'co_table', 333, 'TRUNCATE', '', '2033 :1 - 111']])
     def test_get_last_operation_data_default(self, mock):
@@ -291,10 +292,10 @@ class DumpTestCase(unittest.TestCase):
 
     @patch('gppylib.operations.dump.get_last_dump_timestamp', return_value='20160101121212')
     @patch('gppylib.operations.dump.os.path.isfile', return_value=True)
-    @patch('gppylib.operations.dump.get_lines_from_file', return_value=['testschema, t1, 100', 'testschema, t2, 100'])
+    @patch('gppylib.operations.dump.get_lines_from_csv_file', return_value=[['testschema', 't1', '100'], ['testschema', 't2', '100']])
     def test_get_last_state_default(self, mock1, mock2, mock3):
         table_type = 'ao'
-        expected_output = ['testschema, t1, 100', 'testschema, t2, 100']
+        expected_output = [['testschema', 't1', '100'], ['testschema', 't2', '100']]
         output = get_last_state(self.context, table_type)
         self.assertEqual(output, expected_output)
 
@@ -308,7 +309,7 @@ class DumpTestCase(unittest.TestCase):
 
     @patch('gppylib.operations.dump.get_last_dump_timestamp', return_value='20160101121212')
     @patch('gppylib.operations.dump.os.path.isfile', return_value=True)
-    @patch('gppylib.operations.dump.get_lines_from_file', return_value=[])
+    @patch('gppylib.operations.dump.get_lines_from_csv_file', return_value=[])
     def test_get_last_state_empty_file(self, mock1, mock2, mock3):
         table_type = 'ao'
         output = get_last_state(self.context, table_type)
@@ -316,7 +317,7 @@ class DumpTestCase(unittest.TestCase):
 
     @patch('gppylib.operations.dump.get_last_dump_timestamp', return_value='20160101121212')
     @patch('gppylib.operations.dump.os.path.isfile', return_value=True)
-    @patch('gppylib.operations.dump.get_lines_from_file', return_value=[])
+    @patch('gppylib.operations.dump.get_lines_from_csv_file', return_value=[])
     @patch('gppylib.operations.dump.check_file_dumped_with_nbu', return_value=True)
     @patch('gppylib.operations.dump.restore_file_with_nbu')
     def test_get_last_state_nbu(self, mock1, mock2, mock3, mock4, mock5):
@@ -329,33 +330,33 @@ class DumpTestCase(unittest.TestCase):
     def test_compare_dict_different(self):
         last_dict = {'testschema.t1':'100', 'testschema.t2':'200'}
         curr_dict = {'testschema.t1':'200', 'testschema.t2':'200'}
-        expected_output = set(['testschema.t1'])
+        expected_output = [['testschema', 't1']]
         result = compare_dict(last_dict, curr_dict)
         self.assertEqual(result, expected_output)
 
     def test_compare_dict_extra(self):
         last_dict = {'testschema.t1':'100', 'testschema.t2':'200', 'testschema.t3':'300'}
         curr_dict = {'testschema.t1':'100', 'testschema.t2':'100'}
-        expected_output = set(['testschema.t2'])
+        expected_output = [['testschema', 't2']]
         result = compare_dict(last_dict, curr_dict)
         self.assertEqual(result, expected_output)
 
     def test_compare_dict_missing(self):
         last_dict = {'testschema.t1':'100', 'testschema.t2':'200'}
         curr_dict = {'testschema.t1':'100', 'testschema.t2':'200', 'testschema.t3':'300'}
-        expected_output = set(['testschema.t3'])
+        expected_output = [['testschema', 't3']]
         result = compare_dict(last_dict, curr_dict)
         self.assertEqual(result, expected_output)
 
     def test_compare_dict_identical(self):
         last_dict = {'testschema.t1':'100', 'testschema.t2':'200'}
         curr_dict = {'testschema.t1':'100', 'testschema.t2':'200'}
-        expected_output = set([])
+        expected_output = []
         result = compare_dict(last_dict, curr_dict)
         self.assertEqual(result, expected_output)
 
     def test_create_partition_dict_default(self):
-        partition_list = ['testschema, t1, 100', 'testschema, t2, 200']
+        partition_list = [('testschema', 't1', '100'), ('testschema', 't2', '200')]
         expected_output = {'testschema.t1':'100', 'testschema.t2':'200'}
         result = create_partition_dict(partition_list)
         self.assertEqual(result, expected_output)
@@ -446,25 +447,25 @@ class DumpTestCase(unittest.TestCase):
         old_metadata = {('1234', 'ALTER'): 'public,t1,1234,ALTER,,201601011212:101010'}
         cur_metadata = ['public,t1,1234,ALTER,,201601011212:101010']
         dirty_tables = compare_metadata(old_metadata, cur_metadata)
-        self.assertEquals(dirty_tables, set())
+        self.assertEquals(dirty_tables, [])
 
     def test_compare_metadata_different_keyword(self):
         old_metadata = {('1234', 'ALTER'): 'public,t1,1234,ALTER,,201601011212:101010'}
         cur_metadata = ['public,t1,1234,TRUNCATE,,201601011212:101010']
         dirty_tables = compare_metadata(old_metadata, cur_metadata)
-        self.assertEquals(dirty_tables, set(['public.t1']))
+        self.assertEquals(dirty_tables, [['public', 't1']])
 
     def test_compare_metadata_different_timestamp(self):
         old_metadata = {('1234', 'ALTER'): 'public,t1,1234,ALTER,,201601011212:101010'}
         cur_metadata = ['public,t1,1234,ALTER,,201601011212:102510']
         dirty_tables = compare_metadata(old_metadata, cur_metadata)
-        self.assertEquals(dirty_tables, set(['public.t1']))
+        self.assertEquals(dirty_tables, [['public', 't1']])
 
     def test_compare_metadata_duplicate_input(self):
         old_metadata = {('1234', 'ALTER'): 'public,t1,1234,ALTER,,201601011212:101010'}
         cur_metadata = ['public,t1,1234,ALTER,,201601011212:101010','public,t1,1234,TRUNCATE,,201601011212:101010']
         dirty_tables = compare_metadata(old_metadata, cur_metadata)
-        self.assertEquals(dirty_tables, set(['public.t1']))
+        self.assertEquals(dirty_tables, [['public', 't1']])
 
     def test_compare_metadata_invalid_input(self):
         old_metadata = {('1234', 'ALTER'): 'public,t1,1234,ALTER,,201601011212:101010'}
@@ -476,7 +477,7 @@ class DumpTestCase(unittest.TestCase):
     @patch('gppylib.operations.dump.get_lines_from_file', return_value=[])
     @patch('gppylib.operations.dump.get_latest_full_dump_timestamp', return_value='20160101000000')
     def test_get_tables_with_dirty_metadata_empty(self, mock1, mock2, mock3):
-        expected_output = set()
+        expected_output = []
         full_timestamp = '20160101010101'
         cur_pgstatoperations = []
         dirty_tables = get_tables_with_dirty_metadata(self.context, cur_pgstatoperations)
@@ -486,7 +487,7 @@ class DumpTestCase(unittest.TestCase):
     @patch('gppylib.operations.dump.get_lines_from_file', return_value=['public,t1,1234,ALTER,CHANGE COLUMN,201601011212:102510', 'testschema,t2,2234,TRUNCATE,,201601011213:102510'])
     @patch('gppylib.operations.dump.get_latest_full_dump_timestamp', return_value='20160101000000')
     def test_get_tables_with_dirty_metadata_default(self, mock1, mock2, mock3):
-        expected_output = set()
+        expected_output = []
         cur_pgstatoperations = ['public,t1,1234,ALTER,CHANGE COLUMN,201601011212:102510', 'testschema,t2,2234,TRUNCATE,,201601011213:102510']
         dirty_tables = get_tables_with_dirty_metadata(self.context, cur_pgstatoperations)
         self.assertEqual(dirty_tables, expected_output)
@@ -495,7 +496,7 @@ class DumpTestCase(unittest.TestCase):
     @patch('gppylib.operations.dump.get_lines_from_file', return_value=['public,t1,1234,ALTER,CHANGE COLUMN,201601011212:102510', 'testschema,t2,2234,TRUNCATE,,201601011213:102511'])
     @patch('gppylib.operations.dump.get_latest_full_dump_timestamp', return_value='20160101000000')
     def test_get_tables_with_dirty_metadata_changed_table(self, mock1, mock2, mock3):
-        expected_output = set(['testschema.t2'])
+        expected_output = [['testschema', 't2']]
         cur_pgstatoperations = ['public,t1,1234,ALTER,CHANGE COLUMN,201601011212:102510', 'testschema,t2,2234,TRUNCATE,,201601011213:102510']
         dirty_tables = get_tables_with_dirty_metadata(self.context, cur_pgstatoperations)
         self.assertEqual(dirty_tables, expected_output)
@@ -504,7 +505,7 @@ class DumpTestCase(unittest.TestCase):
     @patch('gppylib.operations.dump.get_lines_from_file', return_value=['testschema,t1,2234,TRUNCATE,,201601011213:102510', 'testschema,t2,2234,TRUNCATE,,201601011213:102510'])
     @patch('gppylib.operations.dump.get_latest_full_dump_timestamp', return_value='20160101000000')
     def test_get_tables_with_dirty_metadata_extras(self, mock1, mock2, mock3):
-        expected_output = set(['testschema.t2', 'public.t3'])
+        expected_output = [['testschema', 't2'], ['public', 't3']]
         full_timestamp = '20160101010101'
         cur_pgstatoperations = ['testschema,t2,1234,ALTER,CHANGE COLUMN,201601011212:102510',
                                 'testschema,t2,2234,TRUNCATE,,201601011213:102510',
@@ -517,7 +518,7 @@ class DumpTestCase(unittest.TestCase):
     @patch('gppylib.operations.dump.get_lines_from_file', return_value=['testschema,t1,1234,ALTER,CHANGE COLUMN,201601011212:102510', 'testschema,t2,2234,TRUNCATE,,201601011213:102510'])
     @patch('gppylib.operations.dump.get_latest_full_dump_timestamp', return_value='20160101000000')
     def test_get_tables_with_dirty_metadata_different_schema(self, mock1, mock2, mock3):
-        expected_output = set(['public.t1'])
+        expected_output = [['public', 't1']]
         cur_pgstatoperations = ['public,t1,1234,ALTER,CHANGE COLUMN,201601011212:102510', 'testschema,t2,2234,TRUNCATE,,201601011213:102510']
         dirty_tables = get_tables_with_dirty_metadata(self.context, cur_pgstatoperations)
         self.assertEqual(dirty_tables, expected_output)
@@ -526,40 +527,40 @@ class DumpTestCase(unittest.TestCase):
     @patch('gppylib.operations.dump.get_lines_from_file', return_value=['testschema,t1,1234,ALTER,CHANGE COLUMN,201601011212:102510', 'testschema,t2,2234,TRUNCATE,,201601011213:102510'])
     @patch('gppylib.operations.dump.restore_file_with_nbu')
     def test_get_tables_with_dirty_metadata_nbu(self, mock1, mock2, mock3):
-        expected_output = set(['public.t1'])
+        expected_output = [['public', 't1']]
         cur_pgstatoperations = ['public,t1,1234,ALTER,CHANGE COLUMN,201601011212:102510', 'testschema,t2,2234,TRUNCATE,,201601011213:102510']
         self.context.netbackup_service_host = "mdw"
         self.context.netbackup_block_size = "1024"
         dirty_tables = get_tables_with_dirty_metadata(self.context, cur_pgstatoperations)
         self.assertEqual(dirty_tables, expected_output)
 
-    @patch('gppylib.operations.dump.get_last_state', return_value=['testschema, t1, 100', 'testschema, t2, 200'])
+    @patch('gppylib.operations.dump.get_last_state', return_value=[('testschema', 't1', '100'), ('testschema', 't2', '200')])
     def test_get_dirty_partition_tables_default(self, mock1):
         table_type = 'ao'
-        curr_state_partition_list = ['testschema, t3, 300', 'testschema, t1, 200']
-        expected_output = set(['testschema.t3', 'testschema.t1'])
+        curr_state_partition_list = [('testschema', 't3', '300'), ('testschema', 't1', '200')]
+        expected_output = [['testschema', 't1'], ['testschema', 't3']]
         result = get_dirty_partition_tables(self.context, table_type, curr_state_partition_list)
         self.assertEqual(result, expected_output)
 
-    @patch('gppylib.operations.dump.get_last_state', return_value=['testschema, t1, 100', 'testschema, t2, 200'])
+    @patch('gppylib.operations.dump.get_last_state', return_value=[('testschema', 't1', '100'), ('testschema', 't2', '200')])
     def test_get_dirty_partition_tables_nbu(self, mock1):
         table_type = 'ao'
-        curr_state_partition_list = ['testschema, t3, 300', 'testschema, t1, 200']
+        curr_state_partition_list = [['testschema', 't3', '300'], ['testschema', 't1', '200']]
         self.context.netbackup_service_host = "mdw"
         self.context.netbackup_block_size = "1024"
-        expected_output = set(['testschema.t3', 'testschema.t1'])
+        expected_output = [['testschema', 't1'], ['testschema', 't3']]
         result = get_dirty_partition_tables(self.context, table_type, curr_state_partition_list)
         self.assertEqual(result, expected_output)
 
-    @patch('gppylib.operations.dump.get_dirty_heap_tables', return_value=set(['public.heap_table1']))
-    @patch('gppylib.operations.dump.get_dirty_partition_tables', side_effect=[set(['public,ao_t1,100', 'public,ao_t2,100']), set(['public,co_t1,100', 'public,co_t2,100'])])
-    @patch('gppylib.operations.dump.get_tables_with_dirty_metadata', return_value=set(['public,ao_t3,1234,CREATE,,20160101101010', 'public,co_t3,2345,VACCUM,,20160101101010', 'public,ao_t1,1234,CREATE,,20160101101010']))
+    @patch('gppylib.operations.dump.get_dirty_heap_tables', return_value=[('public', 'heap_table1')])
+    @patch('gppylib.operations.dump.get_dirty_partition_tables', side_effect=[['public,ao_t1,100', 'public,ao_t2,100'], ['public,co_t1,100', 'public,co_t2,100']])
+    @patch('gppylib.operations.dump.get_tables_with_dirty_metadata', return_value=['public,ao_t3,1234,CREATE,,20160101101010', 'public,co_t3,2345,VACCUM,,20160101101010', 'public,ao_t1,1234,CREATE,,20160101101010'])
     def test_get_dirty_tables(self, mock1, mock2, mock3):
         ao_partition_list = []
         co_partition_list = []
         last_operation_data = []
         dirty_tables = get_dirty_tables(self.context, ao_partition_list, co_partition_list, last_operation_data)
-        expected_output = ['public.heap_table1', 'public.ao_t1', 'public.ao_t2', 'public.co_t1', 'public.co_t2', 'public.ao_t3', 'public.co_t3']
+        expected_output = [('public', 'heap_table1'), ('public', 'ao_t1'), ('public', 'ao_t2'), ('public', 'co_t1'), ('public', 'co_t2'), ('public', 'ao_t3'), ('public', 'co_t3')]
         self.assertEqual(dirty_tables.sort(), expected_output.sort())
 
     @patch('gppylib.operations.dump.get_latest_report_timestamp', return_value = '20160101010100')
@@ -646,20 +647,23 @@ class DumpTestCase(unittest.TestCase):
             expected_output = """gp_dump -p 5432 -U gpadmin --gp-d=/data/master/p1/db_dumps/20160101 --gp-r=/data/master/p1/db_dumps/20160101 --gp-s=p --gp-k=20160101010101 --no-lock --gp-c --no-expand-children -n "\\"testschema\\"" "testdb" --schema-file=/tmp/schema_file"""
             self.assertEquals(output, expected_output)
 
-    def test_create_dump_string_without_incremental(self):
+    @patch('gppylib.operations.backup_utils.get_lines_from_csv_file', return_value=[])
+    def test_create_dump_string_without_incremental(self, mock1):
         with patch.dict(os.environ, {'LOGNAME':'gpadmin'}):
             output = self.dumper.create_dump_string()
             expected_output = """gp_dump -p 5432 -U gpadmin --gp-d=/data/master/p1/db_dumps/20160101 --gp-r=/data/master/p1/db_dumps/20160101 --gp-s=p --gp-k=20160101010101 --no-lock --gp-c --no-expand-children -n "\\"testschema\\"" "testdb" --table-file=/tmp/table_list.txt"""
             self.assertEquals(output, expected_output)
 
-    def test_create_dump_string_with_prefix(self):
+    @patch('gppylib.operations.backup_utils.get_lines_from_csv_file', return_value=[])
+    def test_create_dump_string_with_prefix(self, mock1):
         self.context.dump_prefix = 'foo_'
         with patch.dict(os.environ, {'LOGNAME':'gpadmin'}):
             output = self.dumper.create_dump_string()
             expected_output = """gp_dump -p 5432 -U gpadmin --gp-d=/data/master/p1/db_dumps/20160101 --gp-r=/data/master/p1/db_dumps/20160101 --gp-s=p --gp-k=20160101010101 --no-lock --gp-c --prefix=foo_ --no-expand-children -n "\\"testschema\\"" "testdb" --table-file=/tmp/table_list.txt"""
             self.assertEquals(output, expected_output)
 
-    def test_create_dump_string_with_include_file(self):
+    @patch('gppylib.operations.backup_utils.get_lines_from_csv_file', return_value=['bar'])
+    def test_create_dump_string_with_include_file(self, mock1):
         self.context.dump_prefix = 'metro_'
         self.context.include_dump_tables_file = 'bar'
         with patch.dict(os.environ, {'LOGNAME':'gpadmin'}):
@@ -667,7 +671,8 @@ class DumpTestCase(unittest.TestCase):
             expected_output = """gp_dump -p 5432 -U gpadmin --gp-d=/data/master/p1/db_dumps/20160101 --gp-r=/data/master/p1/db_dumps/20160101 --gp-s=p --gp-k=20160101010101 --no-lock --gp-c --prefix=metro_ --no-expand-children -n "\\"testschema\\"" "testdb" --table-file=%s""" % self.context.include_dump_tables_file
             self.assertEquals(output, expected_output)
 
-    def test_create_dump_string_with_no_file_args(self):
+    @patch('gppylib.operations.backup_utils.get_lines_from_csv_file', return_value=[])
+    def test_create_dump_string_with_no_file_args(self, mock1):
         self.context.dump_prefix = 'metro_'
         self.context.include_dump_tables_file = None
         with patch.dict(os.environ, {'LOGNAME':'gpadmin'}):
@@ -675,7 +680,8 @@ class DumpTestCase(unittest.TestCase):
             expected_output = """gp_dump -p 5432 -U gpadmin --gp-d=/data/master/p1/db_dumps/20160101 --gp-r=/data/master/p1/db_dumps/20160101 --gp-s=p --gp-k=20160101010101 --no-lock --gp-c --prefix=metro_ --no-expand-children -n "\\"testschema\\"" "testdb\""""
             self.assertEquals(output, expected_output)
 
-    def test_create_dump_string_with_netbackup_params(self):
+    @patch('gppylib.operations.backup_utils.get_lines_from_csv_file', return_value=[])
+    def test_create_dump_string_with_netbackup_params(self, mock1):
         self.context.include_dump_tables_file = None
         self.context.netbackup_service_host = "mdw"
         self.context.netbackup_policy = "test_policy"
@@ -718,67 +724,70 @@ class DumpTestCase(unittest.TestCase):
 
     def test_update_filter_file_with_dirty_list_default(self):
         filter_file = '/tmp/foo'
-        dirty_tables = ['public.t1', 'public.t2']
-        expected_output = ['public.t1', 'public.t2']
+        dirty_tables = [('public', 't1'), ('public', 't2')]
+        expected_output = [('public', 't1'), ('public', 't2')]
         m = mock_open()
         with patch('__builtin__.open', m, create=True):
             update_filter_file_with_dirty_list(filter_file, dirty_tables)
             result = m()
             self.assertEqual(len(dirty_tables), len(result.write.call_args_list))
             for i in range(len(dirty_tables)):
-                self.assertEqual(call(dirty_tables[i]+'\n'), result.write.call_args_list[i])
+                table = "%s.%s\n" % dirty_tables[i]
+                self.assertEqual(call(table), result.write.call_args_list[i])
 
-    @patch('gppylib.operations.backup_utils.get_lines_from_file', return_value=['public.t1', 'public.t2'])
+    @patch('gppylib.operations.backup_utils.get_lines_from_file', return_value=[('public', 't1'), ('public', 't2')])
     def test_update_filter_file_with_dirty_list_duplicates(self, mock1):
         filter_file = '/tmp/foo'
-        dirty_tables = ['public.t2']
-        expected_output = ['public.t1', 'public.t2']
+        dirty_tables = [('public', 't2')]
+        expected_output = [('public', 't1'), ('public', 't2')]
         m = mock_open()
         with patch('__builtin__.open', m, create=True):
             update_filter_file_with_dirty_list(filter_file, dirty_tables)
             result = m()
             self.assertEqual(len(dirty_tables), len(result.write.call_args_list))
             for i in range(len(dirty_tables)):
-                self.assertEqual(call(dirty_tables[i]+'\n'), result.write.call_args_list[i])
+                table = "%s.%s\n" % dirty_tables[i]
+                self.assertEqual(call(table), result.write.call_args_list[i])
 
     def test_update_filter_file_with_dirty_list_empty_file(self):
         filter_file = '/tmp/foo'
-        dirty_tables = ['public.t1', 'public.t2']
-        expected_output = ['public.t1', 'public.t2']
+        dirty_tables = [('public', 't1'), ('public', 't2')]
+        expected_output = [('public', 't1'), ('public', 't2')]
         m = mock_open()
         with patch('__builtin__.open', m, create=True):
             update_filter_file_with_dirty_list(filter_file, dirty_tables)
             result = m()
             self.assertEqual(len(dirty_tables), len(result.write.call_args_list))
             for i in range(len(dirty_tables)):
-                self.assertEqual(call(dirty_tables[i]+'\n'), result.write.call_args_list[i])
+                table = "%s.%s\n" % dirty_tables[i]
+                self.assertEqual(call(table), result.write.call_args_list[i])
 
-    @patch('gppylib.operations.dump.get_lines_from_file', return_value=['public.t1', 'testschema.t2'])
+    @patch('gppylib.operations.dump.get_lines_from_csv_file', return_value=[('public', 't1'), ('testschema', 't2')])
     @patch('gppylib.operations.dump.get_latest_full_dump_timestamp', return_value='20130101010101')
     @patch('gppylib.operations.dump.get_filter_file', return_value='/foo/metro_gp_dump_20130101010101_filter')
     @patch('gppylib.operations.dump.get_latest_full_ts_with_nbu', return_value='20130101010101')
     def test_filter_dirty_tables_with_filter(self, mock1, mock2, mock3, mock4):
-        dirty_tables = ['public.t1', 'public.t2', 'testschema.t1', 'testschema.t2']
-        expected_output = ['public.t1', 'testschema.t2']
+        dirty_tables = [('public', 't1'), ('public', 't2'), ('testschema', 't1'), ('testschema', 't2')]
+        expected_output = [('public', 't1'), ('testschema', 't2')]
         self.context.netbackup_service_host = 'mdw'
         self.assertEquals(sorted(expected_output), sorted(filter_dirty_tables(self.context, dirty_tables)))
 
-    @patch('gppylib.operations.dump.get_lines_from_file', return_value=['public.t1', 'testschema.t2'])
+    @patch('gppylib.operations.dump.get_lines_from_csv_file', return_value=[('public', 't1'), ('testschema', 't2')])
     @patch('gppylib.operations.dump.get_filter_file', return_value='/foo/metro_gp_dump_20130101010101_filter')
     @patch('gppylib.operations.dump.get_latest_full_ts_with_nbu', return_value='20130101010101')
     @patch('gppylib.operations.dump.get_latest_full_dump_timestamp', return_value='20130101010101')
     def test_filter_dirty_tables_with_filter_with_nbu(self, mock1, mock2, mock3, mock4):
         self.context.netbackup_service_host = "mdw"
         self.context.netbackup_block_size = "1024"
-        dirty_tables = ['public.t1', 'public.t2', 'testschema.t1', 'testschema.t2']
-        expected_output = ['public.t1', 'testschema.t2']
+        dirty_tables = [('public', 't1'), ('public', 't2'), ('testschema', 't1'), ('testschema', 't2')]
+        expected_output = [('public', 't1'), ('testschema', 't2')]
         self.assertEquals(sorted(expected_output), sorted(filter_dirty_tables(self.context, dirty_tables)))
 
-    @patch('gppylib.operations.dump.get_lines_from_file', return_value=['public.t1', 'testschema.t2'])
+    @patch('gppylib.operations.dump.get_lines_from_csv_file', return_value=[('public', 't1'), ('testschema', 't2')])
     @patch('gppylib.operations.dump.get_latest_full_dump_timestamp', return_value='20130101010101')
     @patch('gppylib.operations.dump.get_filter_file', return_value=None)
     def test_filter_dirty_tables_without_filter(self, mock1, mock2, mock3):
-        dirty_tables = ['public.t1', 'public.t2', 'testschema.t1', 'testschema.t2']
+        dirty_tables = [('public', 't1'), ('public', 't2'), ('testschema', 't1'), ('testschema', 't2')]
         self.assertEquals(sorted(dirty_tables), sorted(filter_dirty_tables(self.context, dirty_tables)))
 
     @patch('gppylib.operations.dump.get_filter_file', return_value='/tmp/db_dumps/20160101/foo_gp_dump_01234567891234_filter')
@@ -808,12 +817,11 @@ class DumpTestCase(unittest.TestCase):
 
     @patch('os.path.isfile', return_value=True)
     @patch('gppylib.operations.dump.get_filter_file', return_value = '/tmp/update_test')
-    @patch('gppylib.operations.dump.get_lines_from_file', return_value = ['public.heap_table1','public.ao_part_table','public.ao_part_table_1_prt_p1'])
-    @patch('gppylib.operations.dump.execute_sql', side_effect = [ [['public.ao_part_table']], [['public.ao_part_table_1_prt_p1'], ['public.ao_part_table_1_prt_p2']] ])
+    @patch('gppylib.operations.dump.get_lines_from_csv_file', return_value = [['public', 'heap_table1'], ['public', 'ao_part_table'], ['public', 'ao_part_table_1_prt_p1']])
+    @patch('gppylib.operations.dump.execute_sql', side_effect = [ [['public', 'ao_part_table']], [['public', 'ao_part_table_1_prt_p1'], ['public', 'ao_part_table_1_prt_p2']] ])
     def test_update_filter_file_default(self, mock1, mock2, mock3, mock4):
         filter_filename = '/tmp/update_test'
-        contents = ['public.heap_table1','public.ao_part_table','public.ao_part_table_1_prt_p1']
-        expected_result = ['public.heap_table1','public.ao_part_table','public.ao_part_table_1_prt_p1', 'public.ao_part_table_1_prt_p2']
+        expected_result = [['public', 'heap_table1'], ['public', 'ao_part_table'], ['public', 'ao_part_table_1_prt_p1'], ['public', 'ao_part_table_1_prt_p2']]
         m = mock_open()
         with patch('__builtin__.open', m, create=True):
             update_filter_file(self.context)
@@ -822,22 +830,22 @@ class DumpTestCase(unittest.TestCase):
             expected = sorted(expected_result)
             output = sorted(result.write.call_args_list)
             for i in range(len(expected)):
-                self.assertEqual(call(expected[i]+'\n'), output[i])
+                table = "%s.%s\n" % tuple(expected[i])
+                self.assertEqual(call(table), output[i])
 
     @patch('os.path.isfile', return_value=True)
     @patch('gppylib.operations.dump.get_filter_file', return_value = '/tmp/update_test')
-    @patch('gppylib.operations.dump.get_lines_from_file', return_value = ['public.heap_table1','public.ao_part_table','public.ao_part_table_1_prt_p1'])
-    @patch('gppylib.operations.dump.execute_sql', side_effect = [ [['public.ao_part_table']], [['public.ao_part_table_1_prt_p1'], ['public.ao_part_table_1_prt_p2']] ])
+    @patch('gppylib.operations.dump.get_lines_from_csv_file', return_value = [['public', 'heap_table1'], ['public', 'ao_part_table'], ['public', 'ao_part_table_1_prt_p1']])
+    @patch('gppylib.operations.dump.execute_sql', side_effect = [ [['public', 'ao_part_table']], [['public', 'ao_part_table_1_prt_p1'], ['public', 'ao_part_table_1_prt_p2']] ])
     @patch('gppylib.operations.dump.restore_file_with_nbu')
     @patch('gppylib.operations.dump.backup_file_with_nbu')
-    def test_update_filter_file_default_with_nbu(self, mock1, mock2, mock3, mock4, mock5, mock6):
+    def test_update_filter_file_with_nbu(self, mock1, mock2, mock3, mock4, mock5, mock6):
         filter_filename = '/tmp/update_test'
         self.context.netbackup_service_host = "mdw"
         self.context.netbackup_policy = "nbu_policy"
         self.context.netbackup_schedule = "nbu_schedule"
         self.context.netbackup_block_size = "1024"
-        contents = ['public.heap_table1','public.ao_part_table','public.ao_part_table_1_prt_p1']
-        expected_result = ['public.heap_table1','public.ao_part_table','public.ao_part_table_1_prt_p1', 'public.ao_part_table_1_prt_p2']
+        expected_result = [['public', 'heap_table1'], ['public', 'ao_part_table'], ['public', 'ao_part_table_1_prt_p1'], ['public', 'ao_part_table_1_prt_p2']]
         m = mock_open()
         with patch('__builtin__.open', m, create=True):
             update_filter_file(self.context)
@@ -846,7 +854,8 @@ class DumpTestCase(unittest.TestCase):
             expected = sorted(expected_result)
             output = sorted(result.write.call_args_list)
             for i in range(len(expected)):
-                self.assertEqual(call(expected[i]+'\n'), output[i])
+                table = "%s.%s\n" % tuple(expected[i])
+                self.assertEqual(call(table), output[i])
 
     @patch('gppylib.operations.dump.backup_file_with_nbu')
     def test_backup_state_files_with_nbu_default(self, mock):

@@ -1551,7 +1551,7 @@ def impl(context, elem):
         raise Exception('get_partition_state returned more results than expected "%s"' % context.partition_list_res)
 
     if elem not in context.partition_list_res:
-        raise Exception('Expected text "%s" not found in partition list returned by get_partition_state "%s"' % (elem, context.partition_list_res))
+        raise Exception('Expected result "%s" not found in partition list returned by get_partition_state "%s"' % (elem, part_list))
 
 @given('older backup directories "{dirlist}" exists')
 @when('older backup directories "{dirlist}" exists')
