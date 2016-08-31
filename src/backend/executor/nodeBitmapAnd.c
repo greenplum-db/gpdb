@@ -214,7 +214,7 @@ MultiExecBitmapAnd(BitmapAndState *node)
    			else
 	   			node->bitmap = subresult;
 		}
-	}
+	} // end for loop over nplans
 
 	/* must provide our own instrumentation support */
 	if (node->ps.instrument)
