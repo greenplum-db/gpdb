@@ -5637,7 +5637,7 @@ assign_optimizer_log_failure(const char *val, bool assign, GucSource source)
 static const char*
 assign_codegen_optimization_level(const char *val, bool assign, GucSource source) {
 #ifndef USE_CODEGEN
-	if (val)
+	if (val && pg_strcasecmp(val, "default") != 0)
 		ereport(ERROR,
 			(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				errmsg("Code generation is not supported by this build")));
