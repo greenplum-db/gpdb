@@ -1,6 +1,8 @@
+#include <signal.h>
 #include <map>
 #include <sstream>
 #include <string>
+#include <string.h> /* strsignal() */
 
 #include "gpcheckcloud.h"
 
@@ -13,6 +15,19 @@ volatile bool QueryCancelPending = false;
 // As we cannot catch 'IsAbortInProgress()' in UT, so here consider QueryCancelPending only
 bool S3QueryIsAbortInProgress(void) {
     return QueryCancelPending;
+}
+
+static void handleAbortSignal(int signum) {
+    fprintf(stderr, "Interrupted by user (%s), exiting...\n\n", strsignal(signum));
+    QueryCancelPending = true;
+}
+
+void registerSignalHandler() {
+    signal(SIGHUP, handleAbortSignal);
+    signal(SIGABRT, handleAbortSignal);
+    signal(SIGTERM, handleAbortSignal);
+    signal(SIGINT, handleAbortSignal);
+    signal(SIGTSTP, handleAbortSignal);
 }
 
 void printUsage(FILE *stream) {
@@ -178,7 +193,7 @@ bool downloadS3(const char *urlWithOptions) {
         }
 
         fwrite(data_buf, (size_t)data_len, 1, stdout);
-    } while (data_len);
+    } while (data_len && !S3QueryIsAbortInProgress());
 
     reader_cleanup(&reader);
 
@@ -221,7 +236,7 @@ bool uploadS3(const char *urlWithOptions, const char *fileToUpload) {
                 ret = false;
                 break;
             }
-        } while (read_len == data_len);
+        } while (read_len == data_len && !S3QueryIsAbortInProgress());
 
         if (ferror(fd)) {
             ret = false;
@@ -247,6 +262,9 @@ int main(int argc, char *argv[]) {
         printUsage(stderr);
         exit(EXIT_FAILURE);
     }
+
+    /* Prepare to receive interrupts */
+    registerSignalHandler();
 
     map<char, string> optionPairs = parseCommandLineArgs(argc, argv);
 
@@ -278,7 +296,8 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if (ret) {
+    // Abort should not print the failed info
+    if (ret || S3QueryIsAbortInProgress()) {
         exit(EXIT_SUCCESS);
     } else {
         fprintf(stderr, "Failed. Please check the arguments and configuration file.\n\n");

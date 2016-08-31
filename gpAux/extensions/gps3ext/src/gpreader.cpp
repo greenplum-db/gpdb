@@ -162,8 +162,15 @@ GPReader* reader_init(const char* url_with_options) {
         if (reader != NULL) {
             delete reader;
         }
-        S3ERROR("reader_init caught an exception: %s", e.what());
-        s3extErrorMessage = e.what();
+
+        if (S3QueryIsAbortInProgress()) {
+            S3ERROR("reader_init caught an exception: %s", "Downloading is interrupted by user");
+            s3extErrorMessage = "Downloading is interrupted by user";
+        } else {
+            S3ERROR("reader_init caught an exception: %s", e.what());
+            s3extErrorMessage = e.what();
+        }
+
         return NULL;
     }
 }
@@ -180,8 +187,15 @@ bool reader_transfer_data(GPReader* reader, char* data_buf, int& data_len) {
         // sure read_len <= data_len here, hence truncation will never happen
         data_len = (int)read_len;
     } catch (std::exception& e) {
-        S3ERROR("reader_transfer_data caught an exception: %s", e.what());
-        s3extErrorMessage = e.what();
+        if (S3QueryIsAbortInProgress()) {
+            S3ERROR("reader_transfer_data caught an exception: %s",
+                    "Downloading is interrupted by user");
+            s3extErrorMessage = "Downloading is interrupted by user";
+        } else {
+            S3ERROR("reader_transfer_data caught an exception: %s", e.what());
+            s3extErrorMessage = e.what();
+        }
+
         return false;
     }
 
@@ -200,8 +214,14 @@ bool reader_cleanup(GPReader** reader) {
             result = false;
         }
     } catch (std::exception& e) {
-        S3ERROR("reader_cleanup caught an exception: %s", e.what());
-        s3extErrorMessage = e.what();
+        if (S3QueryIsAbortInProgress()) {
+            S3ERROR("reader_cleanup caught an exception: %s", "Downloading is interrupted by user");
+            s3extErrorMessage = "Downloading is interrupted by user";
+        } else {
+            S3ERROR("reader_cleanup caught an exception: %s", e.what());
+            s3extErrorMessage = e.what();
+        }
+
         result = false;
     }
 

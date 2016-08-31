@@ -45,8 +45,6 @@ uint64_t S3KeyWriter::write(const char* buf, uint64_t count) {
 
 // This should be reentrant, has no side effects when called multiple times.
 void S3KeyWriter::close() {
-    this->checkQueryCancelSignal();
-
     if (!this->uploadId.empty()) {
         this->completeKeyWriting();
     }
@@ -54,11 +52,17 @@ void S3KeyWriter::close() {
 
 void S3KeyWriter::checkQueryCancelSignal() {
     if (S3QueryIsAbortInProgress() && !this->uploadId.empty()) {
+        // to avoid dead-lock when other upload threads hold the lock
+        pthread_mutex_unlock(&this->mutex);
+
         // wait for all threads to complete
         for (size_t i = 0; i < threadList.size(); i++) {
             pthread_join(threadList[i], NULL);
         }
         this->threadList.clear();
+
+        // to avoid double unlock as other parts may lock it
+        pthread_mutex_lock(&this->mutex);
 
         S3DEBUG("Start aborting multipart uploading (uploadID: %s, %lu parts uploaded)",
                 this->uploadId.c_str(), this->etagList.size());
