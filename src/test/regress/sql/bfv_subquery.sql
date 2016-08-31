@@ -229,4 +229,23 @@ FROM t_coalesce_count_subquery;
 drop table if exists t_coalesce_count_subquery;
 drop table if exists t_coalesce_count_subquery_empty;
 drop table if exists t_coalesce_count_subquery_empty2;
+-- start_ignore
+drop table if exists t_outer;
+drop table if exists t_inner;
+
+create table t_outer (a oid, b tid);
+create table t_inner (c int);
+-- end_ignore
+SET enable_nestloop=off;
+SET enable_hashjoin=off;
+set enable_mergejoin = on;
+select * from t_outer where t_outer.b not in (select ctid from t_inner);
+
+RESET enable_nestloop;
+RESET enable_hashjoin;
+RESET enable_mergejoin;
+
+-- start_ignore
+drop table if exists t_outer;
+drop table if exists t_inner;
 -- end_ignore
