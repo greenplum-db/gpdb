@@ -1011,10 +1011,10 @@ DATA(insert OID = 3477 (  "/"	   PGNSP PGUID b f f 195 195 195 0	0	 complex_div 
 DATA(insert OID = 3478 (  "^"	   PGNSP PGUID b f f 195 195 195 0	0	 complex_power 	- -));
 DATA(insert OID = 3479 (  "|/"	   PGNSP PGUID l f f 0   195 195 0	0	 complex_sqrt 	- -));
 DATA(insert OID = 3480 (  "||/"	   PGNSP PGUID l f f 0   195 195 0	0	 complex_cbrt	- -));
-DATA(insert OID = 3481 (  "<"	   PGNSP PGUID b f f 195 195 16 3482 3484 complex_lt  scalarltsel scalarltjoinsel));
-DATA(insert OID = 3482 (  ">"	   PGNSP PGUID b f f 195 195 16 3481 3483 complex_gt  scalargtsel scalargtjoinsel));
-DATA(insert OID = 3483 (  "<="	   PGNSP PGUID b f f 195 195 16 3484 3482 complex_lte  scalarltsel scalarltjoinsel));
-DATA(insert OID = 3484 (  ">="	   PGNSP PGUID b f f 195 195 16 3483 3481 complex_gte  scalargtsel scalargtjoinsel));
+DATA(insert OID = 3481 (  "<<"	   PGNSP PGUID b f f 195 195 16 3482 3484 complex_lt  scalarltsel scalarltjoinsel));
+DATA(insert OID = 3482 (  ">>"	   PGNSP PGUID b f f 195 195 16 3481 3483 complex_gt  scalargtsel scalargtjoinsel));
+DATA(insert OID = 3483 (  "<<="	   PGNSP PGUID b f f 195 195 16 3484 3482 complex_lte  scalarltsel scalarltjoinsel));
+DATA(insert OID = 3484 (  ">>="	   PGNSP PGUID b f f 195 195 16 3483 3481 complex_gte  scalargtsel scalargtjoinsel));
 
 DATA(insert OID = 7095 (  "/"    PGNSP PGUID b f f 1186  1186 701          0  0 interval_interval_div - - ));
 DATA(insert OID = 7096 (  "%"    PGNSP PGUID b f f 1186  1186 1186         0  0 interval_interval_mod - - ));
