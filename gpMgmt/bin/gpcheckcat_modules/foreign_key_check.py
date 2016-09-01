@@ -14,14 +14,6 @@ class ForeignKeyCheck:
         self.query_filters['pg_appendonly.relid'] = "(relstorage='a' or relstorage='c')"
         self.query_filters['pg_attribute.attrelid'] = "true"
         self.query_filters["pg_index.indexrelid"] = "(relkind='i')"
-        # NOTE: due to pg_class limitations where some flags (relhaspkey) are maintained lazily (updates are not enforced).
-        # there is no good way to create a one to one mapping between pg_class
-        # and pg_constraint. So, commenting it out for now
-#        self.query_filters['pg_constraint.conrelid'] = "((relchecks>0 or relhaspkey='t') and relkind = 'r')"
-#        self.query_filters['gp_distribution_policy.localoid'] = """(relnamespace not in(select oid from pg_namespace where nspname ~ 'pg_')
-#                                                           and relnamespace not in(select oid from pg_namespace where nspname ~ 'gp_')
-#                                                           and relnamespace!=(select oid from pg_namespace where nspname='information_schema')
-#                                                           and relkind='r' and (relstorage='a' or relstorage='h' or relstorage='c'))"""
 
     def runCheck(self, tables, autoCast):
         foreign_key_issues = dict()
