@@ -1,4 +1,4 @@
-# coding: utf-8 
+# coding: utf-8
 
 import os
 import socket
@@ -24,7 +24,7 @@ len_start_comment_expr = len(comment_start_expr)
 def impl(context, table_name, lock_mode, conn, dbname):
     query = "begin; lock table %s in %s" % (table_name, lock_mode)
     conn = dbconn.connect(dbconn.DbURL(dbname=dbname)) # todo not truthful about using conn parameter
-    dbconn.execSQL(conn, query) 
+    dbconn.execSQL(conn, query)
     context.conn = conn
 
 @when('the user runs the query "{query}" in database "{dbname}" in a worker pool "{poolname}" as soon as pg_class is locked')
@@ -48,7 +48,7 @@ def impl(context, cmd, poolname):
         context.pool = {}
     context.pool[poolname] = pool
     context.cmd = cmd
- 
+
 class on_unlock(Command):
     def __init__(self, query, dbname):
         self.dbname = dbname
@@ -119,23 +119,23 @@ def impl(context, tablename, dbname, poolname):
     if not hasattr(context, 'pool'):
         context.pool = {}
     context.pool[poolname] = pool
-    
+
 
 @given('the user closes the connection "{conn_name}"')
 @when('the user closes the connection "{conn_name}"')
 @then('the user closes the connection "{conn_name}"')
 def impl(context, conn_name):
     query = """ROLLBACK;"""
-    dbconn.execSQL(context.conn, query) 
+    dbconn.execSQL(context.conn, query)
     context.conn.close()
 
 @given('verify that "{backup_pg}" has no lock on the pg_class table in "{dbname}"')
 @when('verify that "{backup_pg}" has no lock on the pg_class table in "{dbname}"')
 @then('verify that "{backup_pg}" has no lock on the pg_class table in "{dbname}"')
 def impl(context, backup_pg, dbname):
-    query = """select count(*) 
-             from pg_locks 
-             where relation in (select oid from pg_class where relname='pg_class') 
+    query = """select count(*)
+             from pg_locks
+             where relation in (select oid from pg_class where relname='pg_class')
                    and locktype='relation' and mode='ExclusiveLock'"""
 
     row_count = getRows(dbname, query)[0][0]
@@ -232,7 +232,7 @@ def get_comment_keys(line):
         schema = tokens[2].split(':')[0].strip()
     except:
         return (None, None, None)
-    return (name, type, schema) 
+    return (name, type, schema)
 
 def get_comment_values(line):
     try:
@@ -243,7 +243,7 @@ def get_comment_values(line):
         schema = tokens[2].split(':')[1].strip()
     except:
         return (None, None, None)
-    return (name, type, schema) 
+    return (name, type, schema)
 
 @given('{command} should print {out_msg} to stdout {num} times')
 @when('{command} should print {out_msg} to stdout {num} times')
@@ -456,3 +456,14 @@ def impl(context, dbname, expected_owner):
         actual_owner = dbconn.execSQLForSingleton(conn, query)
     if actual_owner != expected_owner:
         raise Exception("Database %s has owner %s when it should have owner %s" % (dbname, actual_owner, expected_owner))
+
+@then('verify that {obj} "{objname}" exists in schema "{schemaname}" and database "{dbname}"')
+def impl(context, obj, objname, schemaname, dbname):
+    if obj == 'function':
+        cmd_sql = "select exists(select '%s.%s'::regprocedure)" % (schemaname, objname)
+    else:
+        cmd_sql = "select exists(select * from pg_class where relname='%s' and relnamespace=(select oid from pg_namespace where nspname='%s'))" % (objname, schemaname)
+    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+        exists = dbconn.execSQLForSingletonRow(conn, cmd_sql)
+        if exists[0] is not True:
+            raise Exception("The %s '%s' does not exists in schema '%s' and database '%s' " % (obj, objname, schemaname, dbname) )
