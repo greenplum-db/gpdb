@@ -52,7 +52,7 @@ static const bool gpdb_exec_ddl(PGconn* conn, const char* ddl_query)
 	PQclear(result);
 	if (errmsg)
 	{
-		gpmon_warning(FLINE, "failed to execut query '%s': %s\n", ddl_query, errmsg);
+		gpmon_warning(FLINE, "failed to execute query '%s': %s\n", ddl_query, errmsg);
 	}
 	return errmsg == NULL;
 }
@@ -1400,7 +1400,7 @@ static void get_alert_log_tail_files(apr_array_header_t *tail_files, apr_pool_t 
 	apr_status_t status = apr_dir_open(&dir, GPMON_LOG, pool);
 	if (status != APR_SUCCESS)
 	{
-		gpmon_warningx(FLINE, status, "failed openning directory:%s", GPMON_LOG);
+		gpmon_warningx(FLINE, status, "failed opening directory:%s", GPMON_LOG);
 		return;
 	}
 
@@ -1413,7 +1413,7 @@ static void get_alert_log_tail_files(apr_array_header_t *tail_files, apr_pool_t 
 			void *file_slot = apr_array_push(tail_files);
 			if (! file_slot)
 			{
-	    	    gpmon_warningx(FLINE, 0, "failded getting alert tail log:%s due to out of memory", dirent.name);
+				gpmon_warningx(FLINE, 0, "failed getting alert tail log:%s due to out of memory", dirent.name);
 				continue;
 			}
 			(*(const char**)file_slot) = apr_pstrcat(pool, GPMON_LOG, "/", dirent.name, NULL);
@@ -1438,7 +1438,7 @@ void gpdb_import_alert_log(apr_pool_t *pool)
 	apr_status_t status = truncate_file(dst_file, pool);
 	if (status != APR_SUCCESS)
 	{
-	    gpmon_warningx(FLINE, 0, "failded truncate stage file:%s", dst_file);
+	    gpmon_warningx(FLINE, 0, "failed truncating stage file:%s", dst_file);
 	    return;
 	}
 
@@ -1451,7 +1451,7 @@ void gpdb_import_alert_log(apr_pool_t *pool)
 		if (!success_file_slot)
 		{
 			gpmon_warningx(
-				FLINE, 0, "failded appending file:%s to stage file:%s due to out of memory",
+				FLINE, 0, "failed appending file:%s to stage file:%s due to out of memory",
 				filename, dst_file);
 			continue;
 		}
@@ -1663,7 +1663,7 @@ static bool get_encoding_from_result(PGresult	*result,
 		}
 		else
 		{
-			gpmon_warning(FLINE, "GPDB bad encoding:%d\n", *encoding_num);
+			gpmon_warning(FLINE, "GPDB bad encoding: %d\n", *encoding_num);
 			return false;
 		}
 	}
@@ -1692,7 +1692,7 @@ static bool gpdb_get_server_encoding(PGconn	*conn,
 
 	if (errmsg != NULL)
 	{
-		gpmon_warning(FLINE, "gpdb error %s\n\tquery: %s\n", errmsg, query);
+		gpmon_warning(FLINE, "GPDB error %s\n\tquery: %s\n", errmsg, query);
 		ret = false;
 	}
 	else
@@ -1766,7 +1766,7 @@ static bool recreate_alert_tables_if_needed(PGconn *conn, const char *owner)
 														 &encoding_num);
 	if (!success_get_encoding)
 	{
-		gpmon_warning(FLINE, "gpdb failed to get server encoding.\n");
+		gpmon_warning(FLINE, "GPDB failed to get server encoding.\n");
 		return false;
 	}
 
@@ -1801,7 +1801,7 @@ static bool gpdb_get_gpperfmon_owner(PGconn *conn, char *owner, size_t owner_len
 
 	if (errmsg != NULL)
 	{
-		gpmon_warning(FLINE, "gpdb error %s\n\tquery: %s\n", errmsg, query);
+		gpmon_warning(FLINE, "GPDB error %s\n\tquery: %s\n", errmsg, query);
 		ret = false;
 	}
 	else
