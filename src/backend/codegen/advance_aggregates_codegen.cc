@@ -52,7 +52,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
     int aggno,
     llvm::Function* advance_aggregates_func,
     llvm::BasicBlock* error_block,
-    llvm::Value *llvm_arg) {
+    llvm::Value *llvm_in_arg_ptr) {
 
   auto irb = codegen_utils->ir_builder();
   AggStatePerAgg peraggstate = &aggstate_->peragg[aggno];
@@ -100,7 +100,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
       advance_aggregates_func,
       error_block,
       {irb->CreateLoad(llvm_pergroupstate_transValue_ptr),
-          irb->CreateLoad(llvm_arg)});
+          irb->CreateLoad(llvm_in_arg_ptr)});
 
   gpcodegen::PGFuncGeneratorInterface* pg_func_gen =
       gpcodegen::OpExprTreeGenerator::GetPGFuncGenerator(
@@ -158,8 +158,6 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
   // BasicBlock of function entry.
   llvm::BasicBlock* entry_block = codegen_utils->CreateBasicBlock(
       "entry block", advance_aggregates_func);
-  llvm::BasicBlock* aggstate_check_block = codegen_utils->CreateBasicBlock(
-      "aggstate check block", advance_aggregates_func);
   llvm::BasicBlock* implementation_block = codegen_utils->CreateBasicBlock(
       "implementation block", advance_aggregates_func);
   llvm::BasicBlock* error_aggstate_block = codegen_utils->CreateBasicBlock(
@@ -186,18 +184,13 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
   // Generation-time constants
   llvm::Value* llvm_aggstate = codegen_utils->GetConstant(aggstate_);
 
+  // entry block
+  // ----------
   irb->SetInsertPoint(entry_block);
 
 #ifdef CODEGEN_DEBUG
   codegen_utils->CreateElog(DEBUG1, "Codegen'ed advance_aggregates called!");
 #endif
-
-  irb->CreateBr(aggstate_check_block);
-
-  // aggstate_check block
-  // We ensure that everything is fine and we do not need to fall back.
-  // ----------
-  irb->SetInsertPoint(aggstate_check_block);
 
   // Compare aggstate given during code generation and the one passed
   // in as an argument to advance_aggregates
@@ -213,8 +206,10 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
   // Since we do not support ordered functions, we do not need to store
   // the value of the variables, which are used as input to the aggregate
   // function, in a slot. Instead we simply store them in a stuck variable.
-  llvm::Value *llvm_arg = irb->CreateAlloca(codegen_utils->GetType<Datum>());
-  llvm::Value *llvm_argnull = irb->CreateAlloca(codegen_utils->GetType<bool>());
+  llvm::Value *llvm_in_arg_ptr = irb->CreateAlloca(
+      codegen_utils->GetType<Datum>());
+  llvm::Value *llvm_in_argnull_ptr = irb->CreateAlloca(
+      codegen_utils->GetType<bool>());
 
   for (int aggno = 0; aggno < aggstate_->numaggs; aggno++) {
     // Generate the code of each aggregate function in a different block.
@@ -232,7 +227,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
     AggStatePerAgg peraggstate = &aggstate_->peragg[aggno];
 
     if (peraggstate->numSortCols > 0) {
-      elog(DEBUG1, "We don't codegen DISTINCT and/or ORDER by case");
+      elog(DEBUG1, "We don't codegen DISTINCT and/or ORDER BY case");
       return false;
     }
 
@@ -243,20 +238,20 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
     }
 
     int nargs = list_length(aggref->args);
-    Assert(nargs == peraggstate->numArguments);
-    Assert(peraggstate->evalproj);
+    assert(nargs == peraggstate->numArguments);
+    assert(peraggstate->evalproj);
 
     if (peraggstate->evalproj->pi_isVarList) {
       irb->CreateCall(llvm_ExecVariableList, {
           codegen_utils->GetConstant<ProjectionInfo *>(peraggstate->evalproj),
-          llvm_arg,
-          llvm_argnull});
+          llvm_in_arg_ptr,
+          llvm_in_argnull_ptr});
     } else {
       irb->CreateCall(llvm_ExecTargetList, {
           codegen_utils->GetConstant(peraggstate->evalproj->pi_targetlist),
           codegen_utils->GetConstant(peraggstate->evalproj->pi_exprContext),
-          llvm_arg,
-          llvm_argnull,
+          llvm_in_arg_ptr,
+          llvm_in_argnull_ptr,
           codegen_utils->GetConstant(peraggstate->evalproj->pi_itemIsDone),
           codegen_utils->GetConstant<ExprDoneCond *>(nullptr)});
     }
@@ -267,7 +262,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
 
     // Error out if attribute is NULL.
     // TODO(nikos): Support null attributes.
-    irb->CreateCondBr(irb->CreateLoad(llvm_argnull),
+    irb->CreateCondBr(irb->CreateLoad(llvm_in_argnull_ptr),
                       null_attribute_block /*true*/,
                       advance_transition_function_block /*false*/);
 
@@ -278,7 +273,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
 
     bool isGenerated = GenerateAdvanceTransitionFunction(
         codegen_utils, llvm_pergroup_arg, aggno, advance_aggregates_func,
-        overflow_block, llvm_arg);
+        overflow_block, llvm_in_arg_ptr);
     if (!isGenerated)
       return false;
   }  // End of for loop
