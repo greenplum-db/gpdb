@@ -72,11 +72,23 @@ void OpExprTreeGenerator::InitializeSupportedFunction() {
           "int4pl",
           &PGArithFuncGenerator<int32_t, int32_t, int32_t>::AddWithOverflow));
 
+  supported_function_[1841] = std::unique_ptr<PGFuncGeneratorInterface>(
+      new PGGenericFuncGenerator<int64_t, int32_t>(
+          1841,
+          "int4_sum",
+          &PGArithFuncGenerator<int64_t, int64_t, int32_t>::AddWithOverflow));
+
   supported_function_[181] = std::unique_ptr<PGFuncGeneratorInterface>(
       new PGGenericFuncGenerator<int32_t, int32_t>(
           181,
           "int4mi",
           &PGArithFuncGenerator<int32_t, int32_t, int32_t>::SubWithOverflow));
+
+  supported_function_[463] = std::unique_ptr<PGFuncGeneratorInterface>(
+      new PGGenericFuncGenerator<int64_t, int64_t>(
+          463,
+          "int8pl",
+          &PGArithFuncGenerator<int64_t, int64_t, int64_t>::AddWithOverflow));
 
   supported_function_[216] = std::unique_ptr<PGFuncGeneratorInterface>(
       new PGGenericFuncGenerator<float8, float8>(
@@ -107,6 +119,16 @@ void OpExprTreeGenerator::InitializeSupportedFunction() {
           &PGDateFuncGenerator::DateLETimestamp));
 }
 
+PGFuncGeneratorInterface* OpExprTreeGenerator::GetPGFuncGenerator(
+      unsigned int oid) {
+  InitializeSupportedFunction();
+  auto itr = supported_function_.find(oid);
+  if (itr == supported_function_.end()) {
+    return nullptr;
+  }
+  return itr->second.get();
+}
+
 OpExprTreeGenerator::OpExprTreeGenerator(
     const ExprState* expr_state,
     std::vector<
@@ -126,9 +148,8 @@ bool OpExprTreeGenerator::VerifyAndCreateExprTree(
 
   OpExpr* op_expr = reinterpret_cast<OpExpr*>(expr_state->expr);
   expr_tree->reset(nullptr);
-  CodeGenFuncMap::iterator itr =  supported_function_.find(op_expr->opfuncid);
-  if (itr == supported_function_.end()) {
-    // Operators are stored in pg_proc table. See postgres.bki for more details.
+  PGFuncGeneratorInterface* pg_func_gen = GetPGFuncGenerator(op_expr->opfuncid);
+  if (nullptr == pg_func_gen) {
     elog(DEBUG1, "Unsupported operator %d.", op_expr->opfuncid);
     return false;
   }
@@ -137,7 +158,7 @@ bool OpExprTreeGenerator::VerifyAndCreateExprTree(
   assert(nullptr != arguments);
   // In ExecEvalFuncArgs
   assert(list_length(arguments) ==
-        static_cast<int>(itr->second->GetTotalArgCount()));
+        static_cast<int>(pg_func_gen->GetTotalArgCount()));
 
   ListCell   *arg = nullptr;
   bool supported_tree = true;

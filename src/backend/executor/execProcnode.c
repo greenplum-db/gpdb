@@ -589,7 +589,9 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 			    AggStatePerAgg peraggstate = &aggstate->peragg[aggno];
 			    EnrollProjInfoTargetList(result, peraggstate->evalproj);
 			  }
-			}
+			  enroll_AdvanceAggregates_codegen(advance_aggregates,
+			        &aggstate->AdvanceAggregates_gen_info.AdvanceAggregates_fn,
+			        aggstate);			}
 			}
 			END_MEMORY_ACCOUNT();
 			break;

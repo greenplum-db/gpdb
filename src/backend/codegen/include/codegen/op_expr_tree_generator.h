@@ -45,6 +45,16 @@ class OpExprTreeGenerator : public ExprTreeGenerator {
         ExprTreeGeneratorInfo* gen_info,
         std::unique_ptr<ExprTreeGenerator>* expr_tree);
 
+  /**
+   * @brief Checks if a built-in function can be code generated.
+   *
+   * @param oid The oid of the function.
+   * @return If function is supported, then returns a pointer to the
+   * PGFuncGeneratorInterface of the function; nullptr otherwise.
+   **/
+  static gpcodegen::PGFuncGeneratorInterface* GetPGFuncGenerator(
+      unsigned int oid);
+
   bool GenerateCode(gpcodegen::GpCodegenUtils* codegen_utils,
                     const ExprTreeGeneratorInfo& gen_info,
                     llvm::Value* llvm_isnull_ptr,
