@@ -6129,6 +6129,13 @@ StartupXLOG_InProduction(void)
 						oldestActiveXID,
 						ShmemVariableCache->nextXid);
 
+	/* also initialize latestCompletedXid, to nextXid - 1 */
+	ShmemVariableCache->latestCompletedXid = ShmemVariableCache->nextXid;
+	TransactionIdRetreat(ShmemVariableCache->latestCompletedXid);
+	elog(LOG, "latest completed transaction id is %u and next transaction id is %u",
+		ShmemVariableCache->latestCompletedXid,
+		ShmemVariableCache->nextXid);
+
 	/* Reload shared-memory state for prepared transactions */
 	RecoverPreparedTransactions();
 
@@ -6723,10 +6730,6 @@ StartupXLOG(void)
 	MultiXactSetNextMXact(checkPoint.nextMulti, checkPoint.nextMultiOffset);
 	XLogCtl->ckptXidEpoch = checkPoint.nextXidEpoch;
 	XLogCtl->ckptXid = checkPoint.nextXid;
-
-	/* also initialize latestCompletedXid, to nextXid - 1 */
-	ShmemVariableCache->latestCompletedXid = ShmemVariableCache->nextXid;
-	TransactionIdRetreat(ShmemVariableCache->latestCompletedXid);
 
 	/*
 	 * We must replay WAL entries using the same TimeLineID they were created
