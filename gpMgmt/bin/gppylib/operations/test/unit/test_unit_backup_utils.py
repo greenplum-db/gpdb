@@ -6,8 +6,10 @@
 import os
 import shutil
 import unittest2 as unittest
+from gppylib.gparray import GpArray, GpDB
 from gppylib.commands.base import CommandResult
 from gppylib.operations.backup_utils import *
+from . import setup_fake_gparray
 
 from mock import patch, MagicMock, Mock
 from optparse import Values
@@ -15,139 +17,68 @@ from optparse import Values
 class BackupUtilsTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.context = Context()
-        self.context.master_datadir = '/data'
-        self.context.timestamp = '20160101010101'
-        self.netbackup_filepath = "/tmp/db_dumps/foo"
+        with patch('gppylib.gparray.GpArray.initFromCatalog', return_value=setup_fake_gparray()):
+            self.context = Context()
+            self.context.master_datadir = '/data/master'
+            self.context.timestamp = '20160101010101'
+            self.netbackup_filepath = "/tmp/db_dumps/foo"
 
-    def test_generate_filename_schema(self):
-        expected_output = '/data/db_dumps/20160101/gp_dump_20160101010101_schema'
-        output = self.context.generate_filename("schema")
+    def test_generate_filename_dump_master_old_format(self):
+        expected_output = '/data/master/db_dumps/20160101/gp_dump_1_1_20160101010101.gz'
+        output = self.context.generate_filename("dump", use_old_format=True)
         self.assertEquals(output, expected_output)
 
-    def test_generate_filename_report(self):
-        expected_output = '/data/db_dumps/20160101/gp_dump_20160101010101.rpt'
-        output = self.context.generate_filename("report")
+    def test_generate_filename_dump_segment_old_format(self):
+        dbid = 3
+        expected_output = '/data/primary1/db_dumps/20160101/gp_dump_0_3_20160101010101.gz'
+        output = self.context.generate_filename("dump", dbid=dbid, use_old_format=True)
         self.assertEquals(output, expected_output)
 
-    def test_generate_filename_increments(self):
-        expected_output = '/data/db_dumps/20160101/gp_dump_20160101010101_increments'
-        output = self.context.generate_filename("increments")
-        self.assertEquals(output, expected_output)
-
-    def test_generate_filename_last_operation(self):
-        expected_output = '/data/db_dumps/20160101/gp_dump_20160101010101_last_operation'
-        output = self.context.generate_filename("last_operation")
-        self.assertEquals(output, expected_output)
-
-    def test_generate_filename_dirty_table(self):
-        expected_output = '/data/db_dumps/20160101/gp_dump_20160101010101_dirty_list'
-        output = self.context.generate_filename("dirty_table")
-        self.assertEquals(output, expected_output)
-
-    def test_generate_filename_plan(self):
-        expected_output = '/data/db_dumps/20160101/gp_restore_20160101010101_plan'
-        output = self.context.generate_filename("plan")
-        self.assertEquals(output, expected_output)
-
-    def test_generate_filename_metadata(self):
-        expected_output = '/data/db_dumps/20160101/gp_dump_1_1_20160101010101.gz'
-        output = self.context.generate_filename("metadata")
-        self.assertEquals(output, expected_output)
-
-    def test_generate_filename_postdata(self):
-        expected_output = '/data/db_dumps/20160101/gp_dump_1_1_20160101010101_post_data.gz'
-        output = self.context.generate_filename("postdata")
-        self.assertEquals(output, expected_output)
-
-    def test_generate_filename_partition_list(self):
-        expected_output = '/data/db_dumps/20160101/gp_dump_20160101010101_table_list'
-        output = self.context.generate_filename("partition_list")
-        self.assertEquals(output, expected_output)
-
-    def test_generate_filename_ao(self):
-        expected_output = '/data/db_dumps/20160101/gp_dump_20160101010101_ao_state_file'
-        output = self.context.generate_filename("ao")
-        self.assertEquals(output, expected_output)
-
-    def test_generate_filename_co_(self):
-        expected_output = '/data/db_dumps/20160101/gp_dump_20160101010101_co_state_file'
-        output = self.context.generate_filename("co")
-        self.assertEquals(output, expected_output)
-
-    def test_generate_filename_files(self):
-        expected_output = '/data/db_dumps/20160101/gp_dump_20160101010101_regular_files'
-        output = self.context.generate_filename("files")
-        self.assertEquals(output, expected_output)
-
-    def test_generate_filename_pipes(self):
-        expected_output = '/data/db_dumps/20160101/gp_dump_20160101010101_pipes'
-        output = self.context.generate_filename("pipes")
-        self.assertEquals(output, expected_output)
-
-    def test_generate_filename_master_config(self):
-        expected_output = '/data/db_dumps/20160101/gp_master_config_files_20160101010101.tar'
-        output = self.context.generate_filename("master_config")
-        self.assertEquals(output, expected_output)
-
-    def test_generate_filename_segment_config(self):
-        dbid = 2
-        expected_output = '/data/db_dumps/20160101/gp_segment_config_files_0_2_20160101010101.tar'
-        output = self.context.generate_filename("segment_config", dbid=dbid)
-        self.assertEquals(output, expected_output)
-
-    def test_generate_filename_filter(self):
-        expected_output = '/data/db_dumps/20160101/gp_dump_20160101010101_filter'
-        output = self.context.generate_filename("filter")
-        self.assertEquals(output, expected_output)
-
-    def test_generate_filename_cgenerate(self):
-        expected_output = '/data/db_dumps/20160101/gp_cdatabase_1_1_20160101010101'
-        output = self.context.generate_filename("cdatabase")
-        self.assertEquals(output, expected_output)
-
-    def test_generate_filename_status_master(self):
-        expected_output = '/data/db_dumps/20160101/gp_dump_status_1_1_20160101010101'
-        output = self.context.generate_filename("status")
-        self.assertEquals(output, expected_output)
-
-    def test_generate_filename_status_segment(self):
-        dbid = 2
-        expected_output = '/data/db_dumps/20160101/gp_dump_status_0_2_20160101010101'
-        output = self.context.generate_filename("status", dbid=dbid)
-        self.assertEquals(output, expected_output)
-
-    def test_generate_filename_global(self):
-        expected_output = '/data/db_dumps/20160101/gp_global_1_1_20160101010101'
-        output = self.context.generate_filename("global")
-        self.assertEquals(output, expected_output)
-
-    def test_generate_filename_stats(self):
-        expected_output = '/data/db_dumps/20160101/gp_statistics_1_1_20160101010101'
-        output = self.context.generate_filename("stats")
-        self.assertEquals(output, expected_output)
-
-    def test_generate_filename_dump_master(self):
-        expected_output = '/data/db_dumps/20160101/gp_dump_1_1_20160101010101.gz'
+    def test_generate_filename_dump_master_new_format(self):
+        expected_output = '/data/master/db_dumps/20160101/gp_dump_-1_1_20160101010101.gz'
         output = self.context.generate_filename("dump")
         self.assertEquals(output, expected_output)
 
-    def test_generate_filename_dump_segment(self):
-        dbid = 2
-        expected_output = '/data/db_dumps/20160101/gp_dump_0_2_20160101010101.gz'
+    def test_generate_filename_dump_segment_new_format(self):
+        dbid = 3
+        expected_output = '/data/primary1/db_dumps/20160101/gp_dump_1_3_20160101010101.gz'
         output = self.context.generate_filename("dump", dbid=dbid)
         self.assertEquals(output, expected_output)
 
+    def test_generate_filename_content_master_new_format(self):
+        expected_output = '/data/master/db_dumps/20160101/gp_dump_-1_*_20160101010101.gz'
+        output = self.context.generate_filename("dump", content=-1)
+        self.assertEquals(output, expected_output)
+
+    def test_generate_filename_content_segment_new_format(self):
+        content = 1
+        expected_output = '/data/master/db_dumps/20160101/gp_dump_1_*_20160101010101.gz'
+        output = self.context.generate_filename("dump", content=content)
+        self.assertEquals(output, expected_output)
+
+    def test_generate_filename_content_master_old_format(self):
+        expected_output = '/data/master/db_dumps/20160101/gp_dump_1_[1]_20160101010101.gz'
+        self.context.use_old_filename_format = True
+        output = self.context.generate_filename("dump", content=-1)
+        self.assertEquals(output, expected_output)
+
+    def test_generate_filename_content_segment_old_format(self):
+        content = 1
+        expected_output = '/data/master/db_dumps/20160101/gp_dump_0_[3|5]_20160101010101.gz'
+        self.context.use_old_filename_format = True
+        output = self.context.generate_filename("dump", content=content)
+        self.assertEquals(output, expected_output)
+
     def test_generate_filename_different_backup_dir(self):
-        self.context.backup_dir = '/datadomain'
-        expected_output = '/datadomain/db_dumps/20160101/gp_dump_20160101010101_schema'
+        self.context.backup_dir = '/data/masterdomain'
+        expected_output = '/data/masterdomain/db_dumps/20160101/gp_dump_20160101010101_schema'
         output = self.context.generate_filename("schema")
         self.assertEquals(output, expected_output)
 
     def test_generate_filename_no_mdd(self):
         self.context.master_datadir = None
-        self.context.backup_dir = '/datadomain'
-        expected_output = '/datadomain/db_dumps/20160101/gp_dump_20160101010101_schema'
+        self.context.backup_dir = '/data/masterdomain'
+        expected_output = '/data/masterdomain/db_dumps/20160101/gp_dump_20160101010101_schema'
         output = self.context.generate_filename("schema")
         self.assertEquals(output, expected_output)
 
@@ -213,55 +144,139 @@ class BackupUtilsTestCase(unittest.TestCase):
 
     def test_generate_filename_with_timestamp(self):
         ts = '20150101010101'
-        expected_output = '/data/db_dumps/20150101/gp_dump_20150101010101_increments'
+        expected_output = '/data/master/db_dumps/20150101/gp_dump_20150101010101_increments'
         output = self.context.generate_filename("increments", timestamp=ts)
         self.assertEquals(output, expected_output)
 
     def test_generate_filename_with_ddboost(self):
         self.context.ddboost = True
         self.context.backup_dir = "/tmp"
-        expected_output = '/data/db_dumps/20160101/gp_dump_20160101010101_increments'
+        expected_output = '/data/master/db_dumps/20160101/gp_dump_20160101010101_increments'
         output = self.context.generate_filename("increments")
         self.assertEquals(output, expected_output)
 
-    def test_convert_report_filename_to_cdatabase_filename(self):
-        report_file = '/data/db_dumps/20160101/gp_dump_20160101010101.rpt'
-        expected_output = '/data/db_dumps/20160101/gp_cdatabase_1_1_20160101010101'
+    @patch('gppylib.operations.backup_utils.Context.get_dump_dirs', return_value=['/tmp/db_dumps/20160101'])
+    @patch('os.path.exists', side_effect=[True, False])
+    def test_is_timestamp_in_old_format_new(self, mock1, mock2):
+        self.assertFalse(self.context.is_timestamp_in_old_format())
+
+    @patch('gppylib.operations.backup_utils.Context.get_dump_dirs', return_value=['/tmp/db_dumps/20160101'])
+    @patch('os.path.exists', side_effect=[False, True])
+    def test_is_timestamp_in_old_format_old(self, mock1, mock2):
+        self.assertTrue(self.context.is_timestamp_in_old_format())
+
+    @patch('gppylib.operations.backup_utils.Context.get_dump_dirs', return_value=['/tmp/db_dumps/20160101'])
+    @patch('os.path.exists', side_effect=[False, True])
+    def test_is_timestamp_in_old_format_no_file(self, mock1, mock2):
+        self.assertTrue(self.context.is_timestamp_in_old_format())
+
+    @patch('gppylib.operations.backup_utils.Context.get_dump_dirs', return_value=[''])
+    def test_is_timestamp_in_old_format_no_dir(self, mock1):
+        self.assertFalse(self.context.is_timestamp_in_old_format())
+
+    @patch('glob.glob', return_value=['/data/master/db_dumps/20160101/gp_dump_-1_1_20160101010101.gz'])
+    def test_get_filename_for_content_master_exists(self, mock1):
+        filename = get_filename_for_content(self.context, "metadata", -1)
+        self.assertEquals(filename, '/data/master/db_dumps/20160101/gp_dump_-1_1_20160101010101.gz')
+
+    @patch('glob.glob', return_value=[])
+    def test_get_filename_for_content_master_doesnt_exist(self, mock1):
+        filename = get_filename_for_content(self.context, "metadata", -1)
+        self.assertEquals(filename, None)
+
+    @patch('gppylib.operations.backup_utils.Command.run')
+    def test_get_filename_for_content_segment_exists(self, mock1):
+        cmd_mock = Mock()
+        cmd_mock.rc = 0
+        cmd_mock.stdout = '/data/master/db_dumps/20160101/gp_dump_1_3_20160101010101.gz'
+        cmd = Mock()
+        with patch('gppylib.operations.dump.Command.get_results', return_value=cmd_mock):
+            filename = get_filename_for_content(self.context, "metadata", 3, '/data/master', 'remoteHost')
+            self.assertEquals(filename, '/data/master/db_dumps/20160101/gp_dump_1_3_20160101010101.gz')
+
+    @patch('gppylib.operations.backup_utils.Command.run')
+    def test_get_filename_for_content_segment_doesnt_exist(self, mock1):
+        cmd_mock = Mock()
+        cmd_mock.rc = 1
+        cmd_mock.stdout = ''
+        cmd = Mock()
+        with patch('gppylib.operations.dump.Command.get_results', return_value=cmd_mock):
+            filename = get_filename_for_content(self.context, "metadata", 3, '/data/master', 'remoteHost')
+            self.assertEquals(filename, None)
+
+    @patch('gppylib.operations.backup_utils.Command.run')
+    def test_get_filename_for_content_segment_bad_dir(self, mock1):
+        cmd_mock = Mock()
+        cmd_mock.rc = 0
+        cmd_mock.stdout = ''
+        cmd = Mock()
+        with patch('gppylib.operations.dump.Command.get_results', return_value=cmd_mock):
+            filename = get_filename_for_content(self.context, "metadata", 3, '/tmp', 'remoteHost')
+            self.assertEquals(filename, None)
+
+    def test_get_filename_for_content_segment_remote_dir_no_host(self):
+        with self.assertRaisesRegexp(Exception, 'Must supply name of remote host to check for metadata file'):
+            filename = get_filename_for_content(self.context, "metadata", 3, '/data/master')
+
+    @patch('gppylib.operations.backup_utils.get_lines_from_file', return_value=['BackupFile /data/master/db_dumps/20160101/gp_dump_1_1_20160101010101.gz: Succeeded'])
+    def test_convert_report_filename_to_cdatabase_filename_old_format(self, mock1):
+        report_file = '/data/master/db_dumps/20160101/gp_dump_20160101010101.rpt'
+        expected_output = '/data/master/db_dumps/20160101/gp_cdatabase_1_1_20160101010101'
         cdatabase_file = convert_report_filename_to_cdatabase_filename(self.context, report_file)
         self.assertEquals(expected_output, cdatabase_file)
+
+    @patch('gppylib.operations.backup_utils.get_lines_from_file', return_value=['BackupFile /data/master/db_dumps/20160101/gp_dump_-1_1_20160101010101.gz: Succeeded'])
+    def test_convert_report_filename_to_cdatabase_filename_new_format(self, mock1):
+        report_file = '/data/master/db_dumps/20160101/gp_dump_20160101010101.rpt'
+        expected_output = '/data/master/db_dumps/20160101/gp_cdatabase_-1_1_20160101010101'
+        cdatabase_file = convert_report_filename_to_cdatabase_filename(self.context, report_file)
+        self.assertEquals(expected_output, cdatabase_file)
+
+    @patch('gppylib.operations.backup_utils.get_lines_from_file', return_value=[''])
+    def test_convert_report_filename_to_cdatabase_filename_empty_file(self, mock1):
+        report_file = '/data/master/db_dumps/20160101/gp_dump_20160101010101.rpt'
+        expected_output = '/data/master/db_dumps/20160101/gp_cdatabase_-1_1_20160101010101'
+        cdatabase_file = convert_report_filename_to_cdatabase_filename(self.context, report_file)
+        self.assertEquals(expected_output, cdatabase_file)
+
+    def test_convert_report_filename_to_cdatabase_filename_no_report_file(self):
+        report_file = '/data/master/db_dumps/20160101/gp_dump_20160101010101.rpt'
+        expected_output = '/data/master/db_dumps/20160101/gp_cdatabase_-1_1_20160101010101'
+        with self.assertRaisesRegexp(Exception, "No such file or directory"):
+            cdatabase_file = convert_report_filename_to_cdatabase_filename(self.context, report_file)
 
     @patch('gppylib.operations.backup_utils.get_lines_from_file', return_value=['--', '-- Database creation', '--', '', "CREATE DATABASE bkdb WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = dcddev;"])
     def test_check_cdatabase_exists_default(self, mock):
         self.context.dump_database = 'bkdb'
-        report_file = '/data/db_dumps/20160101/gp_dump_20160101010101.rpt'
+        report_file = '/data/master/db_dumps/20160101/gp_dump_20160101010101.rpt'
         result = check_cdatabase_exists(self.context, report_file)
         self.assertTrue(result)
 
     @patch('gppylib.operations.backup_utils.get_lines_from_file', return_value=['--', '-- Database creation', '--', '', "CREATE DATABASE fullbkdb WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = dcddev;"])
     def test_check_cdatabase_exists_bad_dbname(self, mock):
         self.context.dump_database = 'bkdb'
-        report_file = '/data/db_dumps/20160101/gp_dump_20160101010101.rpt'
+        report_file = '/data/master/db_dumps/20160101/gp_dump_20160101010101.rpt'
         result = check_cdatabase_exists(self.context, report_file)
         self.assertFalse(result)
 
     @patch('gppylib.operations.backup_utils.get_lines_from_file', return_value=['--', '-- Database creation', '--', '', "CREATE bkdb WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = dcddev;"])
     def test_check_cdatabase_exists_no_database(self, mock):
         self.context.dump_database = 'bkdb'
-        report_file = '/data/db_dumps/20160101/gp_dump_20160101010101.rpt'
+        report_file = '/data/master/db_dumps/20160101/gp_dump_20160101010101.rpt'
         result = check_cdatabase_exists(self.context, report_file)
         self.assertFalse(result)
 
     @patch('gppylib.operations.backup_utils.get_lines_from_file', return_value=[])
     def test_check_cdatabase_exists_empty_file(self, mock):
         self.context.dump_database = 'bkdb'
-        report_file = '/data/db_dumps/20160101/gp_dump_20160101010101.rpt'
+        report_file = '/data/master/db_dumps/20160101/gp_dump_20160101010101.rpt'
         result = check_cdatabase_exists(self.context, report_file)
         self.assertFalse(result)
 
     @patch('gppylib.operations.backup_utils.get_lines_from_file', return_value=['--', '-- Database creation', '--', '', 'CREATE DATABASE'])
     def test_check_cdatabase_exists_no_dbname(self, mock):
         self.context.dump_database = 'bkdb'
-        report_file = '/data/db_dumps/20160101/gp_dump_20160101010101.rpt'
+        report_file = '/data/master/db_dumps/20160101/gp_dump_20160101010101.rpt'
         result = check_cdatabase_exists(self.context, report_file)
         self.assertFalse(result)
 
@@ -269,13 +284,13 @@ class BackupUtilsTestCase(unittest.TestCase):
     @patch('gppylib.operations.dump.Command.get_results', return_value=CommandResult(0, "CREATE DATABASE", "", True, False))
     def test_check_cdatabase_exists_command_result(self, mock1, mock2):
         self.context.dump_database = 'bkdb'
-        report_file = '/data/db_dumps/20160101/gp_dump_20160101010101.rpt'
+        report_file = '/data/master/db_dumps/20160101/gp_dump_20160101010101.rpt'
         self.context.ddboost = True
         result = check_cdatabase_exists(self.context, report_file)
         self.assertFalse(result)
 
     def test_get_backup_dir_default(self):
-        expected = '/data/db_dumps/20160101'
+        expected = '/data/master/db_dumps/20160101'
         result = self.context.get_backup_dir()
         self.assertTrue(result, expected)
 
@@ -446,7 +461,7 @@ class BackupUtilsTestCase(unittest.TestCase):
     def test_get_dump_dirs_single(self, mock, mock1):
         self.context.backup_dir = '/tmp'
         expected_output = ['/tmp/db_dumps/20161212']
-        ddir = get_dump_dirs(self.context)
+        ddir = self.context.get_dump_dirs()
         self.assertEqual(ddir, expected_output)
 
     @patch('os.path.isdir', return_value=True)
@@ -454,56 +469,56 @@ class BackupUtilsTestCase(unittest.TestCase):
     def test_get_dump_dirs_multiple(self, mock, mock1):
         self.context.backup_dir = '/tmp'
         expected_output = ['20161212', '20161213', '20161214']
-        ddir = get_dump_dirs(self.context)
+        ddir = self.context.get_dump_dirs()
         self.assertEqual(ddir.sort(), expected_output.sort())
 
     @patch('os.path.isdir', return_value=True)
     @patch('os.listdir', return_value=[])
     def test_get_dump_dirs_empty(self, mock, mock2):
         self.context.backup_dir = '/tmp'
-        self.assertEquals([], get_dump_dirs(self.context))
+        self.assertEquals([], self.context.get_dump_dirs())
 
     @patch('os.path.isdir', return_value=True)
     @patch('os.listdir', return_value=['2016120a', '201612121', 'abcde'])
     def test_get_dump_dirs_bad_dirs(self, mock, mock2):
         self.context.backup_dir = '/tmp'
-        self.assertEquals([], get_dump_dirs(self.context))
+        self.assertEquals([], self.context.get_dump_dirs())
 
     @patch('os.listdir', return_value=['11111111', '20161201']) # Second file shouldn't be picked up, pretend it's a file
     @patch('os.path.isdir', side_effect=[True, True, False]) # First value verifies dump dir exists, second and third are for the respective date dirs above
     def test_get_dump_dirs_file_not_dir(self, mock, mock2):
         self.context.backup_dir = '/tmp'
         expected_output = ['/tmp/db_dumps/11111111']
-        ddir = get_dump_dirs(self.context)
+        ddir = self.context.get_dump_dirs()
         self.assertEqual(ddir, expected_output)
 
-    @patch('gppylib.operations.backup_utils.get_dump_dirs', return_value=['20161212', '20161213', '20161214'])
-    @patch('os.listdir', return_value=['gp_cdatabase_1_1_20161212111111', 'gp_dump_20161212000000.rpt', 'gp_cdatabase_1_1_20161212000001'])
+    @patch('gppylib.operations.backup_utils.Context.get_dump_dirs', return_value=['20161212', '20161213', '20161214'])
+    @patch('os.listdir', return_value=['gp_cdatabase_-1_1_20161212111111', 'gp_dump_20161212000000.rpt', 'gp_cdatabase_-1_1_20161212000001'])
     @patch('gppylib.operations.backup_utils.get_full_ts_from_report_file', return_value=['000000'])
     def test_get_latest_full_dump_timestamp_default(self, mock1, mock2, mock3):
         expected_output = ['000000']
         ts = get_latest_full_dump_timestamp(self.context)
         self.assertEqual(ts, expected_output)
 
-    @patch('gppylib.operations.backup_utils.get_dump_dirs', return_value=[])
+    @patch('gppylib.operations.backup_utils.Context.get_dump_dirs', return_value=[])
     def test_get_latest_full_dump_timestamp_no_full(self, mock1):
         with self.assertRaisesRegexp(Exception, 'No full backup found for incremental'):
             get_latest_full_dump_timestamp(self.context)
 
-    @patch('gppylib.operations.backup_utils.get_dump_dirs', return_value=['20161212', '20161213', '20161214'])
-    @patch('os.listdir', return_value=['gp_cdatabase_1_1_2016121211111', 'gp_cdatabase_1_1_201612120000010', 'gp_cdatabase_1_1_2016121a111111'])
+    @patch('gppylib.operations.backup_utils.Context.get_dump_dirs', return_value=['20161212', '20161213', '20161214'])
+    @patch('os.listdir', return_value=['gp_cdatabase_-1_1_2016121211111', 'gp_cdatabase_-1_1_201612120000010', 'gp_cdatabase_-1_1_2016121a111111'])
     def test_get_latest_full_dump_timestamp_bad_timestamp(self, mock1, mock2):
         with self.assertRaisesRegexp(Exception, 'No full backup found for incremental'):
             ts = get_latest_full_dump_timestamp(self.context)
 
-    @patch('gppylib.operations.backup_utils.get_dump_dirs', return_value=['20161212', '20161213', '20161214'])
-    @patch('os.listdir', return_value=['gp_cdatabase_1_1_20161212111111', 'gp_dump_20161212000000.rpt.bk', 'gp_cdatabase_1_1_20161212000001'])
+    @patch('gppylib.operations.backup_utils.Context.get_dump_dirs', return_value=['20161212', '20161213', '20161214'])
+    @patch('os.listdir', return_value=['gp_cdatabase_-1_1_20161212111111', 'gp_dump_20161212000000.rpt.bk', 'gp_cdatabase_-1_1_20161212000001'])
     def test_get_latest_full_dump_timestamp_no_report_file(self, mock1, mock2):
         with self.assertRaisesRegexp(Exception, 'No full backup found for incremental'):
             ts = get_latest_full_dump_timestamp(self.context)
 
     def test_generate_filename_with_ddboost(self):
-        expected_output = '/data/backup/DCA-35/20160101/gp_dump_20160101010101_last_operation'
+        expected_output = '/data/master/backup/DCA-35/20160101/gp_dump_20160101010101_last_operation'
         self.context.ddboost = True
         self.context.dump_dir = 'backup/DCA-35'
         output = self.context.generate_filename("last_operation")
@@ -515,28 +530,28 @@ class BackupUtilsTestCase(unittest.TestCase):
         output = self.context.generate_filename("ao")
         self.assertEqual(output, expected_output)
 
-    @patch('gppylib.operations.backup_utils.get_dump_dirs', return_value=['20160930'])
+    @patch('gppylib.operations.backup_utils.Context.get_dump_dirs', return_value=['20160930'])
     @patch('gppylib.operations.backup_utils.get_latest_report_in_dir', return_value='20160930093000')
     def test_get_latest_report_timestamp_default(self, mock1, mock2):
         self.context.backup_dir = '/foo'
         result = get_latest_report_timestamp(self.context)
         self.assertEquals(result, '20160930093000')
 
-    @patch('gppylib.operations.backup_utils.get_dump_dirs', return_value=[])
+    @patch('gppylib.operations.backup_utils.Context.get_dump_dirs', return_value=[])
     @patch('gppylib.operations.backup_utils.get_latest_report_in_dir', return_value=[])
     def test_get_latest_report_timestamp_no_dirs(self, mock1, mock2):
         self.context.backup_dir = '/foo'
         result = get_latest_report_timestamp(self.context)
         self.assertEquals(result, None)
 
-    @patch('gppylib.operations.backup_utils.get_dump_dirs', return_value=['20160930'])
+    @patch('gppylib.operations.backup_utils.Context.get_dump_dirs', return_value=['20160930'])
     @patch('gppylib.operations.backup_utils.get_latest_report_in_dir', return_value=None)
     def test_get_latest_report_timestamp_no_report_file(self, mock1, mock2):
         self.context.backup_dir = '/foo'
         result = get_latest_report_timestamp(self.context)
         self.assertEquals(result, None)
 
-    @patch('gppylib.operations.backup_utils.get_dump_dirs', return_value=['20160930', '20160929'])
+    @patch('gppylib.operations.backup_utils.Context.get_dump_dirs', return_value=['20160930', '20160929'])
     @patch('gppylib.operations.backup_utils.get_latest_report_in_dir', side_effect=[None, '20160929093000'])
     def test_get_latest_report_timestamp_multiple_dirs(self, mock1, mock2):
         self.context.backup_dir = '/foo'
@@ -604,12 +619,12 @@ class BackupUtilsTestCase(unittest.TestCase):
         os.remove(dirty_file)
 
     def test_get_timestamp_from_increments_filename_default(self):
-        fname = '/data/foo/db_dumps/20130207/gp_dump_20130207133000_increments'
+        fname = '/data/master/foo/db_dumps/20130207/gp_dump_20130207133000_increments'
         ts = get_timestamp_from_increments_filename(fname, self.context.dump_prefix)
         self.assertEquals(ts, '20130207133000')
 
     def test_get_timestamp_from_increments_filename_bad_file(self):
-        fname = '/data/foo/db_dumps/20130207/gpdump_20130207133000_increments'
+        fname = '/data/master/foo/db_dumps/20130207/gpdump_20130207133000_increments'
         with self.assertRaisesRegexp(Exception, 'Invalid increments file'):
             get_timestamp_from_increments_filename(fname, self.context.dump_prefix)
 
@@ -790,13 +805,13 @@ class BackupUtilsTestCase(unittest.TestCase):
 
     def test_generate_filename_with_prefix(self):
         self.context.dump_prefix = 'foo_'
-        expected_output = '/data/db_dumps/20160101/%sgp_dump_20160101010101.rpt' % self.context.dump_prefix
+        expected_output = '/data/master/db_dumps/20160101/%sgp_dump_20160101010101.rpt' % self.context.dump_prefix
         output = self.context.generate_filename("report")
         self.assertEquals(output, expected_output)
 
     def test_generate_filename_with_prefix_and_ddboost(self):
         self.context.dump_prefix = 'foo_'
-        expected_output = '/data/backup/DCA-35/20160101/%sgp_dump_20160101010101.rpt' % self.context.dump_prefix
+        expected_output = '/data/master/backup/DCA-35/20160101/%sgp_dump_20160101010101.rpt' % self.context.dump_prefix
         self.context.ddboost = True
         self.context.dump_dir = 'backup/DCA-35'
         output = self.context.generate_filename("report")
@@ -841,8 +856,8 @@ class BackupUtilsTestCase(unittest.TestCase):
         with self.assertRaisesRegexp(Exception, "Could not locate full backup associated with timestamp '20160101010101'. Either increments file or full backup is missing."):
             get_full_timestamp_for_incremental(self.context)
 
-    @patch('gppylib.operations.backup_utils.get_dump_dirs', return_value=['20161212', '20161213', '20161214'])
-    @patch('os.listdir', return_value=['foo_gp_cdatabase_1_1_20161212111111', 'foo_gp_dump_20161212000000.rpt', 'foo_gp_cdatabase_1_1_20161212000001'])
+    @patch('gppylib.operations.backup_utils.Context.get_dump_dirs', return_value=['20161212', '20161213', '20161214'])
+    @patch('os.listdir', return_value=['foo_gp_cdatabase_-1_1_20161212111111', 'foo_gp_dump_20161212000000.rpt', 'foo_gp_cdatabase_-1_1_20161212000001'])
     @patch('gppylib.operations.backup_utils.get_full_ts_from_report_file', return_value=['000000'])
     def test_get_latest_full_dump_timestamp_with_prefix_multiple_files(self, mock1, mock2, mock3):
         expected_output = ['000000']
@@ -850,18 +865,42 @@ class BackupUtilsTestCase(unittest.TestCase):
         ts = get_latest_full_dump_timestamp(self.context)
         self.assertEqual(ts, expected_output)
 
-    @patch('gppylib.operations.backup_utils.get_dump_dirs', return_value=[])
+    @patch('gppylib.operations.backup_utils.Context.get_dump_dirs', return_value=[])
     def test_get_latest_full_dump_timestamp_with_prefix_no_backup(self, mock1):
         self.context.dump_prefix = 'foo_'
         with self.assertRaisesRegexp(Exception, 'No full backup found for incremental'):
             get_latest_full_dump_timestamp(self.context)
 
-    def test_convert_report_filename_to_cdatabase_filename_with_prefix_default(self):
-        report_file = '/data/db_dumps/20160101/bar_gp_dump_20160101010101.rpt'
-        expected_output = '/data/db_dumps/20160101/bar_gp_cdatabase_1_1_20160101010101'
+    @patch('gppylib.operations.backup_utils.get_lines_from_file', return_value=['BackupFile /data/master/db_dumps/20160101/bar_gp_dump_1_1_20160101010101.gz: Succeeded'])
+    def test_convert_report_filename_to_cdatabase_filename_with_prefix_old_format(self, mock):
+        report_file = '/data/master/db_dumps/20160101/bar_gp_dump_20160101010101.rpt'
+        expected_output = '/data/master/db_dumps/20160101/bar_gp_cdatabase_1_1_20160101010101'
         self.context.dump_prefix = 'bar_'
         cdatabase_file = convert_report_filename_to_cdatabase_filename(self.context, report_file)
         self.assertEquals(expected_output, cdatabase_file)
+
+    @patch('gppylib.operations.backup_utils.get_lines_from_file', return_value=['BackupFile /data/master/db_dumps/20160101/bar_gp_dump_-1_1_20160101010101.gz: Succeeded'])
+    def test_convert_report_filename_to_cdatabase_filename_with_prefix_new_format(self, mock):
+        report_file = '/data/master/db_dumps/20160101/bar_gp_dump_20160101010101.rpt'
+        expected_output = '/data/master/db_dumps/20160101/bar_gp_cdatabase_-1_1_20160101010101'
+        self.context.dump_prefix = 'bar_'
+        cdatabase_file = convert_report_filename_to_cdatabase_filename(self.context, report_file)
+        self.assertEquals(expected_output, cdatabase_file)
+
+    @patch('gppylib.operations.backup_utils.get_lines_from_file', return_value=[''])
+    def test_convert_report_filename_to_cdatabase_filename_with_prefix_empty_file(self, mock):
+        report_file = '/data/master/db_dumps/20160101/bar_gp_dump_20160101010101.rpt'
+        expected_output = '/data/master/db_dumps/20160101/bar_gp_cdatabase_-1_1_20160101010101'
+        self.context.dump_prefix = 'bar_'
+        cdatabase_file = convert_report_filename_to_cdatabase_filename(self.context, report_file)
+        self.assertEquals(expected_output, cdatabase_file)
+
+    def test_convert_report_filename_to_cdatabase_filename_with_prefix_no_report_file(self):
+        report_file = '/data/master/db_dumps/20160101/bar_gp_dump_20160101010101.rpt'
+        expected_output = '/data/master/db_dumps/20160101/bar_gp_cdatabase_-1_1_20160101010101'
+        self.context.dump_prefix = 'bar_'
+        with self.assertRaisesRegexp(Exception, "No such file or directory"):
+            cdatabase_file = convert_report_filename_to_cdatabase_filename(self.context, report_file)
 
     @patch('gppylib.operations.backup_utils.Command.run')
     def test_backup_file_with_nbu_default(self, mock1):
@@ -1058,7 +1097,7 @@ class BackupUtilsTestCase(unittest.TestCase):
         self.assertEquals(result, expected_output)
 
     @patch('gppylib.operations.backup_utils.Command.run')
-    @patch('gppylib.operations.backup_utils.Command.get_results', return_value=CommandResult(0, "/data/gp_dump_20160701000000.rpt\n", "", True, False))
+    @patch('gppylib.operations.backup_utils.Command.get_results', return_value=CommandResult(0, "/data/master/gp_dump_20160701000000.rpt\n", "", True, False))
     @patch('gppylib.operations.backup_utils.restore_file_with_nbu')
     @patch('gppylib.operations.backup_utils.get_full_ts_from_report_file', return_value='20160701000000')
     def test_get_latest_full_ts_with_nbu_default(self, mock1, mock2, mock3, mock4):
@@ -1069,7 +1108,7 @@ class BackupUtilsTestCase(unittest.TestCase):
         self.assertEquals(result, expected_output)
 
     @patch('gppylib.operations.backup_utils.Command.run')
-    @patch('gppylib.operations.backup_utils.Command.get_results', return_value=CommandResult(0, "/data/gp_dump_20160701000000.rpt\n", "", True, False))
+    @patch('gppylib.operations.backup_utils.Command.get_results', return_value=CommandResult(0, "/data/master/gp_dump_20160701000000.rpt\n", "", True, False))
     @patch('gppylib.operations.backup_utils.restore_file_with_nbu')
     @patch('gppylib.operations.backup_utils.get_full_ts_from_report_file', return_value=None)
     def test_get_latest_full_ts_with_nbu_no_full(self, mock1, mock2, mock3, mock4):

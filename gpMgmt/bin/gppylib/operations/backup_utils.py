@@ -21,12 +21,12 @@ logger = gplog.get_default_logger()
 
 class Context(Values, object):
     filename_dict = {
-        "ao": ("dump", "_ao_state_file"), "cdatabase": ("cdatabase_1_1", ""), "co": ("dump", "_co_state_file"), "dirty_table": ("dump", "_dirty_list"),
-        "dump": ("dump_%d_%d", ""), "files": ("dump", "_regular_files"), "filter": ("dump", "_filter"), "global": ("global_1_1", ""),
+        "ao": ("dump", "_ao_state_file"), "cdatabase": ("cdatabase_%d_%s", ""), "co": ("dump", "_co_state_file"), "dirty_table": ("dump", "_dirty_list"),
+        "dump": ("dump_%d_%s", ""), "files": ("dump", "_regular_files"), "filter": ("dump", "_filter"), "global": ("global_%d_%s", ""),
         "increments": ("dump", "_increments"), "last_operation": ("dump", "_last_operation"), "master_config": ("master_config_files", ".tar"),
-        "metadata": ("dump_1_1", ""), "partition_list": ("dump", "_table_list"), "pipes": ("dump", "_pipes"), "plan": ("restore", "_plan"),
-        "postdata": ("dump_1_1", "_post_data"), "report": ("dump", ".rpt"), "schema": ("dump", "_schema"), "segment_config": ("segment_config_files_%d_%d", ".tar"),
-        "stats": ("statistics_1_1", ""), "status": ("dump_status_%d_%d", ""),
+        "metadata": ("dump_%d_%s", ""), "partition_list": ("dump", "_table_list"), "pipes": ("dump", "_pipes"), "plan": ("restore", "_plan"),
+        "postdata": ("dump_%d_%s", "_post_data"), "report": ("dump", ".rpt"), "schema": ("dump", "_schema"), "segment_config": ("segment_config_files_%d_%s", ".tar"),
+        "stats": ("statistics_%d_%s", ""), "status": ("dump_status_%d_%s", ""),
     }
     defaults = {
         "backup_dir": None, "batch_default": 64, "change_schema": None, "cleanup_date": None, "cleanup_total": None, "clear_catalog_dumps": False,
@@ -65,45 +65,110 @@ class Context(Values, object):
         if self.netbackup_keyword and (len(self.netbackup_keyword) > 100):
             raise Exception('NetBackup Keyword provided has more than max limit (100) characters. Cannot proceed with backup.')
 
+        self.gparray = GpArray.initFromCatalog(dbconn.DbURL(dbname="template1", port=self.master_port), utility=True)
+        self.use_old_filename_format = False # Use new filename format by default
+        self.content_map = self.setup_content_map()
+
     def get_master_port(self):
         pgconf_dict = pgconf.readfile(self.master_datadir + "/postgresql.conf")
         return pgconf_dict.int('port')
 
-    def generate_filename(self, filetype, dbid=1, timestamp=None, directory=None):
+    def setup_content_map(self):
+        content_map = {}
+        for seg in self.gparray.getDbList():
+            content_map[seg.dbid] = seg.content
+        return content_map
+
+    # "Old format" filename format: <prefix>gp_<infix>_<1 if master|0 if segment>_<dbid>_<timestamp><suffix>
+    # "New format" filename format: <prefix>gp_<infix>_<content>_<dbid>_<timestamp><suffix>
+    # The "content" parameter is used to generate a filename pattern for finding files of that content id, not a single filename
+    def generate_filename(self, filetype, dbid=1, content=None, timestamp=None, directory=None, use_old_format=None):
         if timestamp is None:
             timestamp = self.timestamp
+
         if directory:
             use_dir = directory
         else:
-            use_dir = self.get_backup_dir(timestamp)
+            if dbid == 1:
+                use_dir = self.get_backup_dir(timestamp)
+            else:
+                use_dir = self.get_backup_dir(timestamp, segment_dir=self.datadir_for_dbid(dbid))
+
+        if use_old_format is not None:
+            use_old_format = use_old_format
+        else:
+            use_old_format = self.use_old_filename_format
+
         format_str =  "%s/%sgp_%s_%s%s" % (use_dir, self.dump_prefix, "%s", timestamp, "%s")
         filename = format_str % (self.filename_dict[filetype][0], self.filename_dict[filetype][1])
-        if "%d" in filename:
-            if dbid == 1:
-                filename = filename % (1, 1)
+        if "%d_%s" in filename:
+            if use_old_format:
+                if content is not None: # Doesn't use "if not content" because 0 is a valid content id
+                    dbids = ["%d" % id for id in self.content_map if self.content_map[id] == content]
+                    filename = filename % (1 if content == -1 else 0, "[%s]" % ("|".join(dbids)))
+                elif dbid == 1:
+                    filename = filename % (1, 1)
+                else:
+                    filename = filename % (0, dbid)
             else:
-                filename = filename % (0, dbid)
+                if content is not None:
+                    filename = filename % (content, "*")
+                elif dbid == 1:
+                    filename = filename % (-1, 1)
+                else:
+                    content = self.content_map[dbid]
+                    filename = filename % (content, dbid)
         if self.compress and filetype in ["metadata", "dump", "postdata"]:
             filename += ".gz"
         return filename
 
-    def generate_prefix(self, filetype, dbid=1, timestamp=None):
+    def generate_prefix(self, filetype, dbid=1, content=None, timestamp=None, use_old_format=None):
         if timestamp is None:
             timestamp = self.timestamp
         format_str =  "%sgp_%s_" % (self.dump_prefix, "%s")
         filename = format_str % (self.filename_dict[filetype][0])
         if "%d" in filename:
-            if dbid == 1:
-                filename = filename % (1, 1)
+            if use_old_format:
+                if dbid == 1:
+                    filename = filename % (1, 1)
+                else:
+                    filename = filename % (0, dbid)
             else:
-                filename = filename % (0, dbid)
+                if content is not None:
+                    filename = filename % (content, "*")
+                elif dbid == 1:
+                    filename = filename % (-1, 1)
+                else:
+                    content = self.content_map[dbid]
         return filename
 
-    def get_backup_dir(self, timestamp=None, directory=None):
-        if directory is not None:
-            use_dir = directory
-        elif self.backup_dir and not self.ddboost:
+    def datadir_for_dbid(self, dbid):
+        for seg in self.gparray.getDbList():
+            if seg.getSegmentDbId() == dbid:
+                return seg.getSegmentDataDirectory()
+        raise Exception("Segment with dbid %d not found" % dbid)
+
+    def get_current_primaries(self):
+        return [seg for seg in self.gparray.getDbList() if seg.isSegmentPrimary(current_role=True)]
+
+    def is_timestamp_in_old_format(self, timestamp=None):
+        if not timestamp:
+            timestamp = self.timestamp
+        dump_dirs = self.get_dump_dirs()
+        for dump_dir in dump_dirs:
+            new_name = self.generate_filename("dump", timestamp=timestamp, directory=dump_dir, use_old_format=False)
+            old_name = self.generate_filename("dump", timestamp=timestamp, directory=dump_dir, use_old_format=True)
+            if os.path.exists(new_name):
+                return False
+            elif os.path.exists(old_name):
+                return True
+        return False
+
+    def get_backup_dir(self, timestamp=None, segment_dir=None):
+        if self.backup_dir and not self.ddboost:
             use_dir = self.backup_dir
+        elif segment_dir is not None:
+            use_dir = segment_dir
         elif self.master_datadir:
             use_dir = self.master_datadir
         else:
@@ -166,6 +231,45 @@ class Context(Values, object):
         self.timestamp = timestamp_key
         self.db_date_dir = "%4d%02d%02d" % (year, month, day)
         self.timestamp_object = datetime(year, month, day, hours, minutes, seconds)
+
+    def get_dump_dirs(self):
+        use_dir = self.get_backup_root()
+        dump_path = os.path.join(use_dir, self.dump_dir)
+
+        if not os.path.isdir(dump_path):
+            return []
+
+        initial_list = os.listdir(dump_path)
+        initial_list = fnmatch.filter(initial_list, '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]')
+
+        dirnames = []
+        for d in initial_list:
+            pth = os.path.join(dump_path, d)
+            if os.path.isdir(pth):
+                dirnames.append(pth)
+
+        if len(dirnames) == 0:
+            return []
+        dirnames = sorted(dirnames, key=lambda x: int(os.path.basename(x)), reverse=True)
+        return dirnames
+
+
+def get_filename_for_content(context, filetype, content, remote_directory=None, host=None):
+    filetype_glob = context.generate_filename(filetype, content=content, directory=remote_directory)
+    if remote_directory:
+        if not host:
+            raise Exception("Must supply name of remote host to check for %s file" % filetype)
+        cmd = Command(name = "Find file of type %s for content %d on host %s" % (filetype, content, host),
+                cmdStr = 'python -c "import glob; print glob.glob(\'%s\')[0]"' % filetype_glob, ctxt = REMOTE, remoteHost = host)
+        cmd.run()
+        if cmd.get_results().rc == 0 and cmd.get_results().stdout:
+            return cmd.get_results().stdout
+        return None
+    else:
+        filenames = glob.glob(filetype_glob)
+        if filenames and len(filenames):
+            return filenames[0]
+        return None
 
 def expand_partitions_and_populate_filter_file(dbname, partition_list, file_prefix):
     expanded_partitions = expand_partition_tables(dbname, partition_list)
@@ -289,13 +393,18 @@ def check_successful_dump(report_file_contents):
 
 # raise exception for bad data
 def convert_report_filename_to_cdatabase_filename(context, report_file):
-    (dirname, fname) = os.path.split(report_file)
-    timestamp = fname[-18:-4]
-
+    timestamp = report_file[-18:-4]
     ddboost_parent_dir = None
     if context.ddboost:
-        ddboost_parent_dir = context.get_backup_dir(directory='')
-    return context.generate_filename("cdatabase", timestamp=timestamp, directory=ddboost_parent_dir)
+        ddboost_parent_dir = context.get_backup_dir(segment_dir='')
+    report_contents = get_lines_from_file(report_file)
+    old_metadata = context.generate_filename("metadata", timestamp=timestamp, use_old_format=True)
+    old_format = False
+    for line in report_contents:
+        if old_metadata in line:
+            old_format = True
+            break
+    return context.generate_filename("cdatabase", timestamp=timestamp, use_old_format=old_format, directory=ddboost_parent_dir)
 
 def get_lines_from_dd_file(filename, ddboost_storage_unit):
     cmdStr = 'gpddboost --readFile --from-file=%s' % filename
@@ -481,38 +590,8 @@ def execute_sql(query, master_port, dbname):
     cursor = execSQL(conn, query)
     return cursor.fetchall()
 
-def generate_master_status_prefix(dump_prefix):
-    return '%sgp_dump_status_1_1_' % (dump_prefix)
-
-def generate_seg_dbdump_prefix(dump_prefix):
-    return '%sgp_dump_0_' % (dump_prefix)
-
-def generate_seg_status_prefix(dump_prefix):
-    return '%sgp_dump_status_0_' % (dump_prefix)
-
-def get_dump_dirs(context):
-    use_dir = context.get_backup_root()
-    dump_path = os.path.join(use_dir, context.dump_dir)
-
-    if not os.path.isdir(dump_path):
-        return []
-
-    initial_list = os.listdir(dump_path)
-    initial_list = fnmatch.filter(initial_list, '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]')
-
-    dirnames = []
-    for d in initial_list:
-        pth = os.path.join(dump_path, d)
-        if os.path.isdir(pth):
-            dirnames.append(pth)
-
-    if len(dirnames) == 0:
-        return []
-    dirnames = sorted(dirnames, key=lambda x: int(os.path.basename(x)), reverse=True)
-    return dirnames
-
 def get_latest_report_timestamp(context):
-    dump_dirs = get_dump_dirs(context)
+    dump_dirs = context.get_dump_dirs()
 
     for d in dump_dirs:
         latest = get_latest_report_in_dir(d, context.dump_prefix)
@@ -571,8 +650,7 @@ def get_full_timestamp_for_incremental(context):
 
 # backup_dir will be either MDD or some other directory depending on call
 def get_latest_full_dump_timestamp(context):
-    backup_dir = context.get_backup_root()
-    dump_dirs = get_dump_dirs(context)
+    dump_dirs = context.get_dump_dirs()
 
     for dump_dir in dump_dirs:
         files = sorted(os.listdir(dump_dir))
@@ -598,9 +676,8 @@ def get_latest_full_dump_timestamp(context):
 
     raise Exception('No full backup found for incremental')
 
-def get_all_segment_addresses(master_port):
-    gparray = GpArray.initFromCatalog(dbconn.DbURL(port=master_port), utility=True)
-    addresses = [seg.getSegmentAddress() for seg in gparray.getDbList() if seg.isSegmentPrimary(current_role=True)]
+def get_all_segment_addresses(context):
+    addresses = [seg.getSegmentAddress() for seg in context.gparray.getDbList() if seg.isSegmentPrimary(current_role=True)]
     return list(set(addresses))
 
 def scp_file_to_hosts(host_list, filename, batch_default):
@@ -706,7 +783,7 @@ def restore_file_with_nbu(context, filetype=None, path=None, dbid=1, hostname=No
 
 def check_file_dumped_with_nbu(context, filetype=None, path=None, dbid=1, hostname=None):
     if filetype and path:
-        raise Exception("Cannot supply both a file type and a file path toeck_file_dumped_with_nbu")
+        raise Exception("Cannot supply both a file type and a file path to check_file_dumped_with_nbu")
     if filetype is None and path is None:
         raise Exception("Cannot call check_file_dumped_with_nbu with no type or path argument")
     if filetype:
@@ -863,7 +940,7 @@ def split_fqn(fqn_name):
     return schema, table
 
 def remove_file_on_segments(context, filename):
-    addresses = get_all_segment_addresses(context.master_port)
+    addresses = get_all_segment_addresses(context)
 
     try:
         cmd = 'rm -f %s' % filename

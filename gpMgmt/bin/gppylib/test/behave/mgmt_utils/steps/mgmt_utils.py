@@ -410,7 +410,7 @@ def impl(context, command, options):
     elif bnr_tool == 'gp_restore':
         command_str = "%s %s --gp-k %s --gp-d db_dumps/%s --gp-r db_dumps/%s" % (command, options, context.backup_timestamp, context.backup_timestamp[0:8], context.backup_timestamp[0:8])
     elif bnr_tool == 'gp_restore_agent':
-        command_str = "%s %s --gp-k %s --gp-d db_dumps/%s -p %s -U %s --target-host localhost --target-port %s db_dumps/%s/gp_dump_1_1_%s_post_data.gz" % (command, options, ts, ts[0:8], port, user, port, ts[0:8], ts)
+        command_str = "%s %s --gp-k %s --gp-d db_dumps/%s -p %s -U %s --target-host localhost --target-port %s db_dumps/%s/gp_dump_-1_1_%s_post_data.gz" % (command, options, ts, ts[0:8], port, user, port, ts[0:8], ts)
 
     run_valgrind_command(context, command_str, "valgrind_suppression.txt")
 
@@ -435,7 +435,7 @@ def impl(context, command, options, suppressions_file):
     elif bnr_tool == 'gp_restore':
         command_str = "%s %s --gp-k %s --gp-d db_dumps/%s --gp-r db_dumps/%s --netbackup-service-host %s" % (command, options, context.backup_timestamp, context.backup_timestamp[0:8], context.backup_timestamp[0:8], netbackup_service_host)
     elif bnr_tool == 'gp_restore_agent':
-        command_str = "%s %s --gp-k %s --gp-d db_dumps/%s -p %s -U %s --target-host localhost --target-port %s db_dumps/%s/gp_dump_1_1_%s_post_data.gz --netbackup-service-host %s" % (command, options, ts, ts[0:8], port, user, port, ts[0:8], ts, netbackup_service_host)
+        command_str = "%s %s --gp-k %s --gp-d db_dumps/%s -p %s -U %s --target-host localhost --target-port %s db_dumps/%s/gp_dump_-1_1_%s_post_data.gz --netbackup-service-host %s" % (command, options, ts, ts[0:8], port, user, port, ts[0:8], ts, netbackup_service_host)
     else:
         command_str = "%s %s" % (command, options)
 
@@ -793,7 +793,7 @@ def impl(context, dbname, backup_dir):
 @when('the user runs gp_restore with the the stored timestamp and subdir for metadata only in "{dbname}"')
 @then('the user runs gp_restore with the the stored timestamp and subdir for metadata only in "{dbname}"')
 def impl(context, dbname):
-    command = 'gp_restore -i --gp-k %s --gp-d db_dumps/%s --gp-i --gp-r db_dumps/%s --gp-l=p -d %s --gp-c -s db_dumps/%s/gp_dump_1_1_%s.gz' % \
+    command = 'gp_restore -i --gp-k %s --gp-d db_dumps/%s --gp-i --gp-r db_dumps/%s --gp-l=p -d %s --gp-c -s db_dumps/%s/gp_dump_-1_1_%s.gz' % \
                             (context.backup_timestamp, context.backup_subdir, context.backup_subdir, dbname, context.backup_subdir, context.backup_timestamp)
     run_gpcommand(context, command)
 
@@ -1062,17 +1062,17 @@ def verify_file_contents(context, file_type, file_dir, text_find, should_contain
     elif file_type == 'report':
         fn = '%sgp_dump_%s.rpt' % (context.dump_prefix, context.backup_timestamp)
     elif file_type == 'status':
-        fn = '%sgp_dump_status_1_1_%s' % (context.dump_prefix, context.backup_timestamp)
+        fn = '%sgp_dump_status_-1_1_%s' % (context.dump_prefix, context.backup_timestamp)
     elif file_type == 'filter':
         fn = '%sgp_dump_%s_filter' % (context.dump_prefix, context.backup_timestamp)
     elif file_type == "statistics":
-        fn = '%sgp_statistics_1_1_%s' % (context.dump_prefix, context.backup_timestamp)
+        fn = '%sgp_statistics_-1_1_%s' % (context.dump_prefix, context.backup_timestamp)
     elif file_type == 'schema':
         fn = '%sgp_dump_%s_schema' % (context.dump_prefix, context.backup_timestamp)
     elif file_type == 'cdatabase':
-        fn = '%sgp_cdatabase_1_1_%s' % (context.dump_prefix, context.backup_timestamp)
+        fn = '%sgp_cdatabase_-1_1_%s' % (context.dump_prefix, context.backup_timestamp)
     elif file_type == 'dump':
-        fn = '%sgp_dump_1_1_%s.gz' % (context.dump_prefix, context.backup_timestamp)
+        fn = '%sgp_dump_-1_1_%s.gz' % (context.dump_prefix, context.backup_timestamp)
 
     subdirectory = context.backup_timestamp[0:8]
 
@@ -1137,11 +1137,10 @@ def impl(context, dbname):
                 dump_dir = os.path.join(context.backup_dir, 'db_dumps', '%s' % (context.timestamp_key[0:8]))
             else:
                 dump_dir = os.path.join(master_data_dir, 'db_dumps', '%s' % (context.timestamp_key[0:8]))
-
-            master_dump_files = ['%s/gp_dump_1_1_%s' % (dump_dir, context.timestamp_key),
-                                 '%s/gp_dump_status_1_1_%s'  % (dump_dir, context.timestamp_key),
-                                 '%s/gp_cdatabase_1_1_%s' % (dump_dir, context.timestamp_key),
-                                 '%s/gp_dump_1_1_%s_post_data' % (dump_dir, context.timestamp_key)]
+            master_dump_files = ['%s/gp_dump_-1_1_%s' % (dump_dir, context.timestamp_key),
+                                 '%s/gp_dump_status_-1_1_%s'  % (dump_dir, context.timestamp_key),
+                                 '%s/gp_cdatabase_-1_1_%s' % (dump_dir, context.timestamp_key),
+                                 '%s/gp_dump_-1_1_%s_post_data' % (dump_dir, context.timestamp_key)]
 
             for dump_file in master_dump_files:
                 cmd = Command('check for dump files', 'ls -1 %s | wc -l' % (dump_file))
@@ -1283,7 +1282,7 @@ def impl(context, filetype, dir):
     elif filetype == "plan":
         filename = 'gp_restore_%s_plan' % context.backup_timestamp
     elif filetype == "global":
-        filename = 'gp_global_1_1_%s' % context.backup_timestamp
+        filename = 'gp_global_-1_1_%s' % context.backup_timestamp
     elif filetype == "report":
         filename = 'gp_dump_%s.rpt' % context.backup_timestamp
     else:
@@ -1309,9 +1308,9 @@ def impl(context, filetype, dir):
     elif filetype == "plan":
         filename = 'gp_restore_%s_plan' % context.backup_timestamp
     elif filetype == "global":
-        filename = 'gp_global_1_1_%s' % context.backup_timestamp
+        filename = 'gp_global_-1_1_%s' % context.backup_timestamp
     elif filetype == "statistics":
-        filename = 'gp_statistics_1_1_%s' % context.backup_timestamp
+        filename = 'gp_statistics_-1_1_%s' % context.backup_timestamp
     elif filetype == 'pipes':
         filename = 'gp_dump_%s_pipes' % context.backup_timestamp
     elif filetype == 'regular_files':
@@ -2360,11 +2359,11 @@ def impl(context, file_type, directory, options):
     reg_file_count = 6
 
     pipes_pattern_list = ['gp_dump_.*_%s.*(?:\.gz)?' % context.backup_timestamp]
-    regular_pattern_list = ['gp_cdatabase_1_1_%s' % context.backup_timestamp, 'gp_dump_%s.*' % context.backup_timestamp, 'gp_dump_status_1_1_%s' % context.backup_timestamp]
+    regular_pattern_list = ['gp_cdatabase_-1_1_%s' % context.backup_timestamp, 'gp_dump_%s.*' % context.backup_timestamp, 'gp_dump_status_-1_1_%s' % context.backup_timestamp]
 
     if '-G' in option_list:
         pipe_file_count += 1
-        pipes_pattern_list += ['gp_global_1_1_%s' % context.backup_timestamp]
+        pipes_pattern_list += ['gp_global_-1_1_%s' % context.backup_timestamp]
     if '-g' in option_list:
         pipe_file_count += get_num_segments(primary=True, mirror=False, master=True, standby=False)
         pipes_pattern_list += ['gp_master_config_files_%s.*' % context.backup_timestamp, 'gp_segment_config_files_.*_.*_%s.*' % context.backup_timestamp]
@@ -3958,3 +3957,40 @@ def impl(context, seg):
         context.mirror_segdbname = mirror_segs[0].getSegmentHostName()
         context.mirror_datadir = mirror_segs[0].getSegmentDataDirectory()
         context.mirror_port = mirror_segs[0].getSegmentPort()
+
+@when('the backup files for the stored timestamp are in the old format')
+@then('the backup files for the stored timestamp are in the old format')
+def impl(context):
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+    primary_segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary() or seg.isSegmentMaster()]
+    timestamp = context.full_backup_timestamp
+    master_dump_dir = gparray.master.getSegmentDataDirectory()
+
+    for ps in primary_segs:
+        dump_dir = os.path.join(ps.getSegmentDataDirectory(), 'db_dumps', timestamp[0:8])
+        segdbId = ps.getSegmentDbId()
+        segcid = ps.getSegmentContentId()
+        segdbname = ps.getSegmentHostName()
+        new_format = "%s_%s" % (segcid, segdbId)
+        old_format = "%s_%s" % (1 if ps.isSegmentMaster() else 0, segdbId)
+
+        rename_files_to_older_format = """ ssh {segdbname} 'if [ -d "{dump_dir}" ]; then for i in `ls {dump_dir}/*{new_format}_{timestamp}* | xargs`; do
+                                           old_format=${{i/{new_format}/{old_format}}}
+                                           if [ ! -f $old_format ]; then mv $i $old_format; fi ;
+                                           done; fi;'
+                                       """.format(segdbname=segdbname,
+                                                  dump_dir=dump_dir,
+                                                  new_format=new_format,
+                                                  old_format=old_format,
+                                                  timestamp=timestamp)
+
+        run_command(context, rename_files_to_older_format)
+
+        if context.exception:
+            raise context.exception
+
+        #replace new format with old format on master directory report file
+        master_report_file = os.path.join(master_dump_dir, 'db_dumps', timestamp[0:8], 'gp_dump_%s.rpt' % timestamp)
+        change_report_file_content = "sed -i 's|%s|%s|' %s" % (new_format, old_format, master_report_file)
+
+        run_command(context, change_report_file_content)

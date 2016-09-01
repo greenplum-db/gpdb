@@ -168,6 +168,7 @@ static int	plainText = 0;
 static int	g_role = 0;
 static char *g_CDBDumpInfo = NULL;
 static char *g_CDBDumpKey = NULL;
+static int	g_contentID = 0;
 static int	g_dbID = 0;
 static char *g_CDBPassThroughCredentials = NULL;
 static pthread_t g_main_tid = (pthread_t) 0;
@@ -722,7 +723,7 @@ main(int argc, char **argv)
 
 			case 1:				/* MPP Dump Info Format is Key_role_dbid */
 				g_CDBDumpInfo = pg_strdup(optarg);
-				if (!ParseCDBDumpInfo((char *) progname, g_CDBDumpInfo, &g_CDBDumpKey, &g_role, &g_dbID, &g_CDBPassThroughCredentials))
+				if (!ParseCDBDumpInfo((char *) progname, g_CDBDumpInfo, &g_CDBDumpKey, &g_role, &g_contentID, &g_dbID, &g_CDBPassThroughCredentials))
 					exit(1);
 				break;
 
@@ -1341,7 +1342,7 @@ skipalldata:
 
 		fileFormat = 'f';	/*dump post schema data into local file first*/
 
-		char *postDumpFileName = formPostDumpFilePathName(g_pszCDBOutputDirectory, g_CDBDumpKey, g_role, g_dbID);
+		char *postDumpFileName = formPostDumpFilePathName(g_pszCDBOutputDirectory, g_CDBDumpKey, g_contentID, g_dbID);
 
 		g_fout = makeArchive(postDumpFileName);
 
@@ -8220,7 +8221,7 @@ dumpDatabaseDefinition()
 	/* MPP addition end */
 
 	pszBackupFileName = formCDatabaseFilePathName(g_pszCDBOutputDirectory,
-											   g_CDBDumpKey, g_role, g_dbID);
+											   g_CDBDumpKey, g_contentID, g_dbID);
 
 	/*
 	 * Make sure we can create this file before we spin off sh cause we don't
@@ -8338,7 +8339,7 @@ dumpDatabaseDefinitionToDDBoost()
 	/* MPP addition end */
 
 	pszBackupFileName = formCDatabaseFilePathName(g_pszDDBoostDir,
-								   g_CDBDumpKey, g_role, g_dbID);
+								   g_CDBDumpKey, g_contentID, g_dbID);
 
 	/*
 	 * Make sure we can create this file before we spin off sh cause we don't

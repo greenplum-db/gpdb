@@ -13,11 +13,13 @@ from gppylib.operations.restore import *
 from gppylib.operations.restore import _build_gpdbrestore_cmd_line
 from gppylib.mainUtils import ExceptionNoStackTraceNeeded
 from mock import patch, MagicMock, Mock, mock_open, call, ANY
+from . import setup_fake_gparray
 
 class RestoreTestCase(unittest.TestCase):
 
     def setUp(self):
-        context = Context()
+        with patch('gppylib.gparray.GpArray.initFromCatalog', return_value=setup_fake_gparray()):
+            context = Context()
         context.restore_db='testdb'
         context.include_dump_tables_file='/tmp/table_list.txt'
         context.master_datadir='/data/master/p1'
@@ -874,7 +876,7 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
 
     @patch('os.path.exists', return_value=False)
     def test_restore_global_no_file(self, mock):
-        with self.assertRaisesRegexp(Exception, 'Unable to locate global file /data/master/p1/db_dumps/20160101/gp_global_1_1_20160101010101 in dump set'):
+        with self.assertRaisesRegexp(Exception, 'Unable to locate global file /data/master/p1/db_dumps/20160101/gp_global_-1_1_20160101010101 in dump set'):
             self.restore._restore_global(self.context)
 
     @patch('os.path.exists', return_value=True)
@@ -1025,27 +1027,35 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
         self.context.restore_tables = ['public.t1', 'public.t2']
         self.assertRaisesRegexp(Exception, 'Issue with \'ANALYZE\' of restored table \'"public"."t1"\' in \'db1\' database', self.restore._analyze_restore_tables)
 
-    @patch('os.path.exists', side_effect=[True, False])
-    def test_validate_metadata_file_with_compression_exists(self, mock):
-        compressed_file = 'compressed_file.gz'
-        self.assertTrue(self.validate_timestamp.validate_metadata_file(compressed_file))
+    @patch('glob.glob', side_effect=[ ['compressed_file.gz'], [None]])
+    @patch('gppylib.operations.backup_utils.Context.is_timestamp_in_old_format', return_value=False)
+    @patch('gppylib.operations.backup_utils.Context.generate_filename', return_value='compressed_file.gz')
+    def test_validate_metadata_file_with_compression_exists(self, mock1, mock2, mock3):
+        self.validate_timestamp.validate_metadata_file()
+        self.assertTrue(self.validate_timestamp.context.compress)
+        self.assertFalse(self.validate_timestamp.context.use_old_filename_format)
 
-    @patch('os.path.exists', side_effect=[False, False])
-    def test_validate_metadata_file_with_compression_doesnt_exists(self, mock):
-        compressed_file = 'compressed_file.gz'
+    @patch('glob.glob', side_effect=[None, None])
+    @patch('gppylib.operations.backup_utils.Context.is_timestamp_in_old_format', return_value=False)
+    @patch('gppylib.operations.backup_utils.Context.generate_filename', side_effect=['compressed_file.gz', 'compressed_file', 'compressed_file'])
+    def test_validate_metadata_file_with_compression_doesnt_exist(self, mock1, mock2, mock3):
         with self.assertRaisesRegexp(ExceptionNoStackTraceNeeded, 'Unable to find compressed_file or compressed_file.gz'):
-            self.validate_timestamp.validate_metadata_file(compressed_file)
+            self.validate_timestamp.validate_metadata_file()
 
-    @patch('os.path.exists', side_effect=[False, True])
-    def test_validate_metadata_file_without_compression_exists(self, mock):
-        compressed_file = 'compressed_file.gz'
-        self.assertFalse(self.validate_timestamp.validate_metadata_file(compressed_file))
+    @patch('glob.glob', side_effect=[None, "compressed_file"])
+    @patch('gppylib.operations.backup_utils.Context.is_timestamp_in_old_format', return_value=False)
+    @patch('gppylib.operations.backup_utils.Context.generate_filename', return_value='compressed_file')
+    def test_validate_metadata_file_without_compression_exists(self, mock1, mock2, mock3):
+        self.validate_timestamp.validate_metadata_file()
+        self.assertFalse(self.validate_timestamp.context.compress)
+        self.assertFalse(self.validate_timestamp.context.use_old_filename_format)
 
-    @patch('os.path.exists', side_effect=[False, False])
-    def test_validate_metadata_file_without_compression_doesnt_exist(self, mock):
-        compressed_file = 'compressed_file.gz'
+    @patch('glob.glob', side_effect=[None, None])
+    @patch('gppylib.operations.backup_utils.Context.is_timestamp_in_old_format', return_value=False)
+    @patch('gppylib.operations.backup_utils.Context.generate_filename', return_value='compressed_file')
+    def test_validate_metadata_file_without_compression_doesnt_exist(self, mock1, mock2, mock3):
         with self.assertRaisesRegexp(ExceptionNoStackTraceNeeded, 'Unable to find compressed_file or compressed_file.gz'):
-            self.validate_timestamp.validate_metadata_file(compressed_file)
+            self.validate_timestamp.validate_metadata_file()
 
     @patch('gppylib.operations.restore.restore_file_with_nbu')
     def test_restore_state_files_with_nbu_default(self, mock1):
@@ -1129,22 +1139,8 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
             from gppylib.commands.base import REMOTE
             cmd.assert_called_with("restoring metadata files to segment", cmdStr, ctxt=REMOTE, remoteHost="sdw")
 
-    class MyMock(MagicMock):
-        def __init__(self, num_segs):
-            super(MagicMock, self).__init__()
-            self.mock_segs = []
-            for i in range(num_segs):
-                self.mock_segs.append(Mock())
-
-        def getSegmentList(self):
-            for id, seg in enumerate(self.mock_segs):
-                seg.get_active_primary.getSegmentHostName.return_value = Mock()
-                seg.get_primary_dbid.return_value = id + 2
-            return self.mock_segs
-
-    @patch('gppylib.operations.dump.GpArray.initFromCatalog', return_value=MyMock(1))
     @patch('gppylib.gparray.GpDB.getSegmentHostName', return_value='sdw')
-    def test_restore_config_files_with_nbu_single_segment(self, mock1, mock2):
+    def test_restore_config_files_with_nbu_default(self, mock1):
         with patch('gppylib.operations.restore.restore_file_with_nbu', side_effect=my_counter) as nbu_mock:
             global i
             i = 0
@@ -1155,31 +1151,11 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
             restore_config_files_with_nbu(self.context)
             args, _ = nbu_mock.call_args_list[0]
             self.assertEqual(args[1], "master_config")
-            for id, seg in enumerate(mock2.mock_segs):
+            for id, seg in enumerate(mock1.mock_segs):
                 self.assertEqual(seg.get_active_primary.call_count, 1)
                 self.assertEqual(seg.get_primary_dbid.call_count, 1)
                 args, _ = nbu_mock.call_args_list[id]
-                self.assertEqual(args, ("segment_config", id+2, "sdw"))
-            self.assertEqual(i, 2)
-
-    @patch('gppylib.operations.dump.GpArray.initFromCatalog', return_value=MyMock(3))
-    @patch('gppylib.gparray.GpDB.getSegmentHostName', return_value='sdw')
-    def test_restore_config_files_with_nbu_multiple_segments(self, mock1, mock2):
-        with patch('gppylib.operations.restore.restore_file_with_nbu', side_effect=my_counter) as nbu_mock:
-            global i
-            i = 0
-            self.context.netbackup_service_host = "mdw"
-            self.context.netbackup_policy = "test_policy"
-            self.context.netbackup_schedule = "test_schedule"
-
-            restore_config_files_with_nbu(self.context)
-            args, _ = nbu_mock.call_args_list[0]
-            self.assertEqual(args[1], "master_config")
-            for id, seg in enumerate(mock2.mock_segs):
-                self.assertEqual(seg.get_active_primary.call_count, 1)
-                self.assertEqual(seg.get_primary_dbid.call_count, 1)
-                args, _ = nbu_mock.call_args_list[id]
-            self.assertEqual(i, 4)
+            self.assertEqual(i, 3)
 
 if __name__ == '__main__':
     unittest.main()

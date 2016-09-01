@@ -326,11 +326,8 @@ class GpCronDump(Operation):
                 if schema in CATALOG_SCHEMA:
                     raise Exception("can not exclude catalog schema '%s' in schema file '%s'" % (schema, self.context.exclude_schema_file))
 
-    def getGpArray(self):
-        return GpArray.initFromCatalog(dbconn.DbURL(port=self.context.master_port), utility=True)
-
-    def getHostSet(self, gparray):
-        hostlist = gparray.get_hostlist(includeMaster=True)
+    def getHostSet(self):
+        hostlist = self.context.gparray.get_hostlist(includeMaster=True)
         hostset = Set(hostlist)
         return hostset
 
@@ -669,7 +666,7 @@ class GpCronDump(Operation):
                 if not self.context.ddboost_remote and not self.context.ddboost_backupdir:
                     raise ExceptionNoStackTraceNeeded("--ddboost-backupdir must be specified when configuring local Data Domain.")
                 self.validateUserName(userName=self.context.ddboost_user)
-                hostset = self.getHostSet(self.getGpArray())
+                hostset = self.getHostSet()
                 p = getpass()
                 self.validatePassword(password=p)
                 self.createDDBoostConfig(hostset, p)
@@ -679,7 +676,7 @@ class GpCronDump(Operation):
 
         if self.context.ddboost_config_remove:
             if self.only_ddboost_options():
-                hostset = self.getHostSet(self.getGpArray())
+                hostset = self.getHostSet()
                 # The username and the password must be at least 2 characters long, so we just use 2 spaces for each
                 self.removeDDBoostConfig(hostset)
                 return 0
@@ -1004,13 +1001,10 @@ class GpCronDump(Operation):
         pipe_list = []
         master_pipe_list = ['metadata', 'postdata']
 
-        mdd = self.context.master_datadir
         for segdb in segdbs:
-            self.context.master_datadir = segdb.getSegmentDataDirectory()
             pipe_list.append('%s:%s' % (segdb.getSegmentHostName(), self.context.generate_filename("dump", dbid=segdb.getSegmentDbId())))
             if self.context.dump_config:
                 pipe_list.append('%s:%s' % (segdb.getSegmentHostName(), self.context.generate_filename("segment_config", dbid=segdb.getSegmentDbId())))
-        self.context.master_datadir = mdd
 
         pipe_list.append('%s:%s' % (master.getSegmentHostName(), self.context.generate_filename("metadata")))
         pipe_list.append('%s:%s' % (master.getSegmentHostName(), self.context.generate_filename("postdata")))
@@ -1040,11 +1034,11 @@ class GpCronDump(Operation):
 
 
     def _list_backup_files(self):
-        gparray = self.getGpArray()
-        segdbs = [segdb for segdb in gparray.getDbList() if segdb.isSegmentPrimary()]
+        segdbs = self.context.get_current_primaries()
 
-        pipe_list = self._get_pipes_file_list(gparray.master, segdbs)
-        file_list = self._get_files_file_list(gparray.master)
+        self.context.old_filename_format = self.context.is_timestamp_in_old_format()
+        pipe_list = self._get_pipes_file_list(self.context.gparray.master, segdbs)
+        file_list = self._get_files_file_list(self.context.gparray.master)
 
         pipes_list_fname = self.context.generate_filename("pipes")
         files_list_fname = self.context.generate_filename("files")

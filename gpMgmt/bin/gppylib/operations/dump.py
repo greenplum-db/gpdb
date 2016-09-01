@@ -314,7 +314,6 @@ def get_dirty_tables(context, ao_partition_list, co_partition_list, last_operati
     dirty_ao_tables = get_dirty_partition_tables(context, 'ao', ao_partition_list)
     dirty_co_tables = get_dirty_partition_tables(context, 'co', co_partition_list)
     dirty_metadata_set = get_tables_with_dirty_metadata(context, last_operation_data)
-    logger.info("%s" % list(dirty_heap_tables | dirty_ao_tables | dirty_co_tables | dirty_metadata_set))
 
     return list(dirty_heap_tables | dirty_ao_tables | dirty_co_tables | dirty_metadata_set)
 
@@ -337,7 +336,7 @@ def write_dirty_file(context, dirty_tables, timestamp=None):
     if not timestamp:
         timestamp = context.timestamp
 
-    dirty_list_file = context.generate_filename("dirty_table", timestamp)
+    dirty_list_file = context.generate_filename("dirty_table", timestamp=timestamp)
     write_lines_to_file(dirty_list_file, dirty_tables)
 
     if context.ddboost:
@@ -450,7 +449,8 @@ def get_filter_file(context):
             timestamp = FULL_DUMP_TS_WITH_NBU
         if timestamp is None:
             raise Exception("No full backup timestamp found for given NetBackup server.")
-    filter_file = context.generate_filename("filter", timestamp=timestamp)
+    old_format = context.is_timestamp_in_old_format(timestamp)
+    filter_file = context.generate_filename("filter", timestamp=timestamp, use_old_format=old_format)
     if context.netbackup_service_host is None:
         if os.path.isfile(filter_file):
             return filter_file
@@ -517,13 +517,9 @@ def backup_config_files_with_nbu(context):
     backup_file_with_nbu(context, "master_config")
 
     #backing up segment config files
-    gparray = GpArray.initFromCatalog(dbconn.DbURL(port=context.master_port), utility=True)
-    segments = gparray.getSegmentList()
-    for segment in segments:
-        seg = segment.get_active_primary()
-        context.master_datadir = seg.getSegmentDataDirectory()
-        host = seg.getSegmentHostName()
-        backup_file_with_nbu(context, "segment_config", dbid=segment.get_primary_dbid(), hostname=host)
+    primaries = context.get_current_primaries()
+    for seg in primaries:
+        backup_file_with_nbu(context, "segment_config", dbid=seg.getSegmentDbId(), hostname=seg.getSegmentHostName())
 
 class DumpDatabase(Operation):
     def __init__(self, context):
@@ -715,7 +711,7 @@ class CreateIncrementsFile(Operation):
             ts = ts.strip()
             if not ts:
                 continue
-            fn = context.generate_filename("report", ts)
+            fn = context.generate_filename("report", timestamp=ts)
             ts_in_rpt = None
             try:
                 ts_in_rpt = get_incremental_ts_from_report_file(context, fn)
@@ -772,17 +768,11 @@ class PostDumpDatabase(Operation):
 
         # Perform similar checks for primary segments
         operations = []
-        gparray = GpArray.initFromCatalog(dbconn.DbURL(port=self.context.master_port), utility=True)
-        segments = gparray.getSegmentList()
-        mdd = self.context.master_datadir
-        for segment in segments:
-            seg = segment.get_active_primary()
-            self.context.master_datadir = seg.getSegmentDataDirectory()
-            # If we're backing up the mirror of a failed-over primary, use the primary's dbid, not the mirror's
-            status_file = self.context.generate_filename("status", segment.get_primary_dbid(), timestamp)
-            dump_file = self.context.generate_filename("dump", segment.get_primary_dbid(), timestamp)
+        primaries = self.context.get_current_primaries()
+        for seg in primaries:
+            status_file = self.context.generate_filename("status", timestamp=timestamp, dbid=seg.getSegmentDbId())
+            dump_file = self.context.generate_filename("dump", timestamp=timestamp, dbid=seg.getSegmentDbId())
             operations.append(RemoteOperation(PostDumpSegment(self.context, status_file, dump_file), seg.getSegmentHostName()))
-        self.context.master_datadir = mdd
 
         ParallelOperation(operations, self.context.batch_default).run()
 
@@ -882,8 +872,7 @@ class ValidateDiskSpace(Operation):
 
     def execute(self):
         operations = []
-        gparray = GpArray.initFromCatalog(dbconn.DbURL(port=self.context.master_port), utility=True)
-        segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary(current_role=True)]
+        segs = self.context.get_current_primaries()
         for seg in segs:
             operations.append(RemoteOperation(ValidateSegDiskSpace(self.context,
                                                                    datadir = seg.getSegmentDataDirectory(),
@@ -981,8 +970,7 @@ class ValidateAllDumpDirs(Operation):
 
         # Check backup target on segments (either master_datadir or backup_dir, if present)
         operations = []
-        gparray = GpArray.initFromCatalog(dbconn.DbURL(port=self.context.master_port), utility=True)
-        segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary(current_role=True)]
+        segs = self.context.get_current_primaries()
         for seg in segs:
             directory = self.context.backup_dir if self.context.backup_dir else seg.getSegmentDataDirectory()
             operations.append(RemoteOperation(ValidateDumpDirs(directory, self.context), seg.getSegmentHostName()))
@@ -1177,8 +1165,7 @@ class ValidateCluster(Operation):
         self.context = context
 
     def execute(self):
-        gparray = GpArray.initFromCatalog(dbconn.DbURL(port=self.context.master_port), utility=True)
-        failed_segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary(current_role=True) and seg.isSegmentDown()]
+        failed_segs = [seg for seg in self.context.gparray.getDbList() if seg.isSegmentPrimary(current_role=True) and seg.isSegmentDown()]
         if len(failed_segs) != 0:
             logger.warn("Failed primary segment instances detected")
             failed_dbids = [seg.getSegmentDbid() for seg in failed_segs]
@@ -1243,9 +1230,8 @@ class DumpGlobal(Operation):
                 self.create_pgdump_command_line()).run(validateAfter=True)
 
         if self.context.ddboost:
-            global_backup_file = self.context.generate_filename("global", timestamp=self.timestamp)
-            abspath = global_backup_file
-            relpath = global_backup_file[global_backup_file.index(self.context.dump_dir):]
+            abspath = self.context.generate_filename("global", timestamp=self.timestamp)
+            relpath = abspath[abspath.index(self.context.dump_dir):]
             logger.debug('Copying %s to DDBoost' % abspath)
             cmdStr = 'gpddboost --copyToDDBoost --from-file=%s --to-file=%s' % (abspath, relpath)
             if self.context.ddboost_storage_unit:
@@ -1254,7 +1240,7 @@ class DumpGlobal(Operation):
             cmd.run(validateAfter=True)
 
     def create_pgdump_command_line(self):
-        return "pg_dumpall -p %s -g --gp-syntax > %s" % (self.context.master_port, self.context.generate_filename("global", self.timestamp))
+        return "pg_dumpall -p %s -g --gp-syntax > %s" % (self.context.master_port, self.context.generate_filename("global", timestamp=self.timestamp))
 
 class DumpConfig(Operation):
     # TODO: Should we really just give up if one of the tars fails?
@@ -1282,13 +1268,9 @@ class DumpConfig(Operation):
             rc = res.rc
 
         logger.info("Dumping segment config files")
-        gparray = GpArray.initFromCatalog(dbconn.DbURL(port=self.context.master_port), utility=True)
-        segments = gparray.getSegmentList()
-        mdd = self.context.master_datadir
-        for segment in segments:
-            seg = segment.get_active_primary()
-            self.context.master_datadir = seg.getSegmentDataDirectory()
-            config_backup_file = self.context.generate_filename("segment_config", dbid=segment.get_primary_dbid())
+        primaries = self.context.get_current_primaries()
+        for seg in primaries:
+            config_backup_file = self.context.generate_filename("segment_config", dbid=seg.getSegmentDbId())
             host = seg.getSegmentHostName()
             Command("Dumping segment config files",
                     "tar cf %s %s/*.conf" % (config_backup_file, seg.getSegmentDataDirectory()),
@@ -1310,7 +1292,6 @@ class DumpConfig(Operation):
                 if res.rc != 0:
                     logger.error("DDBoost command to copy segment config file failed. %s" % res.printResult())
                 rc = rc + res.rc
-        self.context.master_datadir = mdd
         if self.context.ddboost:
             return {"exit_status": rc, "timestamp": self.context.timestamp}
 
@@ -1323,8 +1304,7 @@ class DeleteCurrentDump(Operation):
             DeleteCurrentSegDump(self.context, self.context.master_datadir).run()
         except OSError, e:
             logger.warn("Error encountered during deletion of %s on master" % self.context.timestamp)
-        gparray = GpArray.initFromCatalog(dbconn.DbURL(port=self.context.master_port), utility=True)
-        segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary(current_role=True)]
+        segs = self.context.get_current_primaries()
         for seg in segs:
             try:
                 RemoteOperation(DeleteCurrentSegDump(self.context.timestamp, seg.getSegmentDataDirectory()),
@@ -1408,8 +1388,7 @@ class DeleteOldestDumps(Operation):
                 return
             delete_old_dates.append(self.context.cleanup_date)
 
-        gparray = GpArray.initFromCatalog(dbconn.DbURL(port=self.context.master_port), utility=True)
-        primaries = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary(current_role=True)]
+        primaries = self.context.get_current_primaries()
         for old_date in delete_old_dates:
             # Remove the directories on DDBoost only. This will avoid the problem
             # where we might accidently end up deleting local backup files, but

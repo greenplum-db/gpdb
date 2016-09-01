@@ -219,7 +219,7 @@ def impl(context, target):
             fd.close()
 
 def __get_dump_metadata_path(context, dump_dir):
-    filename = "gp_dump_1_1_%s.gz" % context.backup_timestamp
+    filename = "gp_dump_-1_1_%s.gz" % context.backup_timestamp
     metadata_path = os.path.join(dump_dir, "db_dumps", context.backup_timestamp[0:8], filename)
     return metadata_path
 

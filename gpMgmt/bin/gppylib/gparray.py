@@ -762,17 +762,6 @@ class Segment:
                 return False
         return True
 
-    def get_active_primary(self):
-        if self.primaryDB.isSegmentPrimary(current_role=True):
-            return self.primaryDB
-        else:
-            for mirror in self.mirrorDBs:
-                if mirror.isSegmentPrimary(current_role=True):
-                    return mirror
-
-    def get_primary_dbid(self):
-        return self.primaryDB.getSegmentDbId()
-
 # --------------------------------------------------------------------
 # --------------------------------------------------------------------
 class SegmentRow():

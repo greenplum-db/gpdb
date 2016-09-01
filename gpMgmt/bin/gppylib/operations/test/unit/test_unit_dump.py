@@ -7,24 +7,27 @@ import shutil
 import time
 import unittest2 as unittest
 from datetime import datetime
+from gppylib.gparray import GpArray, GpDB
 from gppylib.commands.base import Command, CommandResult
 from gppylib.operations.backup_utils import *
 from gppylib.operations.dump import *
 from mock import patch, MagicMock, Mock, mock_open, call
+from . import setup_fake_gparray
 
 class DumpTestCase(unittest.TestCase):
 
     @patch('gppylib.operations.backup_utils.Context.get_master_port', return_value = 5432)
-    def setUp(self, mock):
-        context = Context()
-        context.dump_database='testdb'
-        context.dump_schema='testschema'
-        context.include_dump_tables_file='/tmp/table_list.txt'
-        context.master_datadir=context.backup_dir='/data/master/p1'
-        context.batch_default=None
-        context.timestamp_key = '20160101010101'
-        context.generate_dump_timestamp()
-        context.schema_file = None
+    def setUp(self, mock1):
+        with patch('gppylib.gparray.GpArray.initFromCatalog', return_value=setup_fake_gparray()):
+            context = Context()
+            context.dump_database='testdb'
+            context.dump_schema='testschema'
+            context.include_dump_tables_file='/tmp/table_list.txt'
+            context.master_datadir=context.backup_dir='/data/master'
+            context.batch_default=None
+            context.timestamp_key = '20160101010101'
+            context.generate_dump_timestamp()
+            context.schema_file = None
 
         self.context = context
         self.dumper = DumpDatabase(self.context)
@@ -59,7 +62,12 @@ class DumpTestCase(unittest.TestCase):
         m = mock_open()
         with patch('__builtin__.open', m, create=True):
             tmpfilename = write_dirty_file(self.context, dirty_tables, timestamp)
-            mock1.assert_called_with("dirty_table", timestamp)
+            mock1.assert_called_with("dirty_table", timestamp=timestamp)
+            result = m()
+            self.assertEqual(len(dirty_tables), len(result.write.call_args_list))
+            for i in range(len(dirty_tables)):
+                self.assertEqual(call(dirty_tables[i]+'\n'), result.write.call_args_list[i])
+
             result = m()
             self.assertEqual(len(dirty_tables), len(result.write.call_args_list))
             for i in range(len(dirty_tables)):
@@ -103,7 +111,7 @@ class DumpTestCase(unittest.TestCase):
     @patch('gppylib.operations.dump.CreateIncrementsFile.validate_increments_file')
     def test_CreateIncrementsFile_init(self, mock1, mock2, mock3):
         obj = CreateIncrementsFile(self.context)
-        self.assertEquals(obj.increments_filename, '/data/master/p1/db_dumps/20160101/gp_dump_20160101000000_increments')
+        self.assertEquals(obj.increments_filename, '/data/master/db_dumps/20160101/gp_dump_20160101000000_increments')
 
     @patch('os.path.isfile', return_value=True)
     @patch('gppylib.operations.dump.get_latest_full_dump_timestamp', return_value='20160101000000')
@@ -200,6 +208,7 @@ class DumpTestCase(unittest.TestCase):
     @patch('gppylib.operations.dump.Command.get_results', return_value=CommandResult(0, "", "", True, False))
     @patch('gppylib.operations.dump.DumpDatabase.create_filter_file')
     def test_execute_default(self, mock1, mock2, mock3, mock4):
+        self.context.include_dump_tables_file = ''
         self.dumper.execute()
         # should not raise any exceptions
 
@@ -235,18 +244,18 @@ class DumpTestCase(unittest.TestCase):
     def test_get_partition_state_many_partition(self, mock1, mock2, mock3):
         master_port=5432
         dbname='testdb'
-        partition_info = [(123, 'testschema', 't1', 4444), (234, 'testschema', 't2', 5555)] * 1000
-        expected_output = ['testschema, t1, 100', 'testschema, t2, 100'] * 1000
+        partition_info = [(123, 'testschema', 't1', 4444), (234, 'testschema', 't2', 5555)] * 1
+        expected_output = ['testschema, t1, 100', 'testschema, t2, 100'] * 1
         result = get_partition_state(self.context, 'pg_aoseg', partition_info)
         self.assertEqual(result, expected_output)
 
     def test_get_filename_from_filetype_ao(self):
-        expected_output = '/data/master/p1/db_dumps/20160101/gp_dump_20160101010101_ao_state_file'
+        expected_output = '/data/master/db_dumps/20160101/gp_dump_20160101010101_ao_state_file'
         result = get_filename_from_filetype(self.context, "ao", self.context.timestamp)
         self.assertEqual(result, expected_output)
 
     def test_get_filename_from_filetype_co(self):
-        expected_output = '/data/master/p1/db_dumps/20160101/gp_dump_20160101010101_co_state_file'
+        expected_output = '/data/master/db_dumps/20160101/gp_dump_20160101010101_co_state_file'
         result = get_filename_from_filetype(self.context, "co", self.context.timestamp)
         self.assertEqual(result, expected_output)
 
@@ -636,27 +645,27 @@ class DumpTestCase(unittest.TestCase):
         self.context.schema_file = '/tmp/schema_file '
         with patch.dict(os.environ, {'LOGNAME':'gpadmin'}):
             output = self.dumper.create_dump_string()
-            expected_output = """gp_dump -p 5432 -U gpadmin --gp-d=/data/master/p1/db_dumps/20160101 --gp-r=/data/master/p1/db_dumps/20160101 --gp-s=p --gp-k=20160101010101 --no-lock --gp-c --prefix=foo_ --no-expand-children -n "\\"testschema\\"" "testdb" --schema-file=/tmp/schema_file """
+            expected_output = """gp_dump -p 5432 -U gpadmin --gp-d=/data/master/db_dumps/20160101 --gp-r=/data/master/db_dumps/20160101 --gp-s=p --gp-k=20160101010101 --no-lock --gp-c --prefix=foo_ --no-expand-children -n "\\"testschema\\"" "testdb" --schema-file=/tmp/schema_file """
             self.assertEquals(output, expected_output)
 
     def test_create_dump_string_default(self):
         self.context.schema_file = '/tmp/schema_file'
         with patch.dict(os.environ, {'LOGNAME':'gpadmin'}):
             output = self.dumper.create_dump_string()
-            expected_output = """gp_dump -p 5432 -U gpadmin --gp-d=/data/master/p1/db_dumps/20160101 --gp-r=/data/master/p1/db_dumps/20160101 --gp-s=p --gp-k=20160101010101 --no-lock --gp-c --no-expand-children -n "\\"testschema\\"" "testdb" --schema-file=/tmp/schema_file"""
+            expected_output = """gp_dump -p 5432 -U gpadmin --gp-d=/data/master/db_dumps/20160101 --gp-r=/data/master/db_dumps/20160101 --gp-s=p --gp-k=20160101010101 --no-lock --gp-c --no-expand-children -n "\\"testschema\\"" "testdb" --schema-file=/tmp/schema_file"""
             self.assertEquals(output, expected_output)
 
     def test_create_dump_string_without_incremental(self):
         with patch.dict(os.environ, {'LOGNAME':'gpadmin'}):
             output = self.dumper.create_dump_string()
-            expected_output = """gp_dump -p 5432 -U gpadmin --gp-d=/data/master/p1/db_dumps/20160101 --gp-r=/data/master/p1/db_dumps/20160101 --gp-s=p --gp-k=20160101010101 --no-lock --gp-c --no-expand-children -n "\\"testschema\\"" "testdb" --table-file=/tmp/table_list.txt"""
+            expected_output = """gp_dump -p 5432 -U gpadmin --gp-d=/data/master/db_dumps/20160101 --gp-r=/data/master/db_dumps/20160101 --gp-s=p --gp-k=20160101010101 --no-lock --gp-c --no-expand-children -n "\\"testschema\\"" "testdb" --table-file=/tmp/table_list.txt"""
             self.assertEquals(output, expected_output)
 
     def test_create_dump_string_with_prefix(self):
         self.context.dump_prefix = 'foo_'
         with patch.dict(os.environ, {'LOGNAME':'gpadmin'}):
             output = self.dumper.create_dump_string()
-            expected_output = """gp_dump -p 5432 -U gpadmin --gp-d=/data/master/p1/db_dumps/20160101 --gp-r=/data/master/p1/db_dumps/20160101 --gp-s=p --gp-k=20160101010101 --no-lock --gp-c --prefix=foo_ --no-expand-children -n "\\"testschema\\"" "testdb" --table-file=/tmp/table_list.txt"""
+            expected_output = """gp_dump -p 5432 -U gpadmin --gp-d=/data/master/db_dumps/20160101 --gp-r=/data/master/db_dumps/20160101 --gp-s=p --gp-k=20160101010101 --no-lock --gp-c --prefix=foo_ --no-expand-children -n "\\"testschema\\"" "testdb" --table-file=/tmp/table_list.txt"""
             self.assertEquals(output, expected_output)
 
     def test_create_dump_string_with_include_file(self):
@@ -664,7 +673,7 @@ class DumpTestCase(unittest.TestCase):
         self.context.include_dump_tables_file = 'bar'
         with patch.dict(os.environ, {'LOGNAME':'gpadmin'}):
             output = self.dumper.create_dump_string()
-            expected_output = """gp_dump -p 5432 -U gpadmin --gp-d=/data/master/p1/db_dumps/20160101 --gp-r=/data/master/p1/db_dumps/20160101 --gp-s=p --gp-k=20160101010101 --no-lock --gp-c --prefix=metro_ --no-expand-children -n "\\"testschema\\"" "testdb" --table-file=%s""" % self.context.include_dump_tables_file
+            expected_output = """gp_dump -p 5432 -U gpadmin --gp-d=/data/master/db_dumps/20160101 --gp-r=/data/master/db_dumps/20160101 --gp-s=p --gp-k=20160101010101 --no-lock --gp-c --prefix=metro_ --no-expand-children -n "\\"testschema\\"" "testdb" --table-file=%s""" % self.context.include_dump_tables_file
             self.assertEquals(output, expected_output)
 
     def test_create_dump_string_with_no_file_args(self):
@@ -672,7 +681,7 @@ class DumpTestCase(unittest.TestCase):
         self.context.include_dump_tables_file = None
         with patch.dict(os.environ, {'LOGNAME':'gpadmin'}):
             output = self.dumper.create_dump_string()
-            expected_output = """gp_dump -p 5432 -U gpadmin --gp-d=/data/master/p1/db_dumps/20160101 --gp-r=/data/master/p1/db_dumps/20160101 --gp-s=p --gp-k=20160101010101 --no-lock --gp-c --prefix=metro_ --no-expand-children -n "\\"testschema\\"" "testdb\""""
+            expected_output = """gp_dump -p 5432 -U gpadmin --gp-d=/data/master/db_dumps/20160101 --gp-r=/data/master/db_dumps/20160101 --gp-s=p --gp-k=20160101010101 --no-lock --gp-c --prefix=metro_ --no-expand-children -n "\\"testschema\\"" "testdb\""""
             self.assertEquals(output, expected_output)
 
     def test_create_dump_string_with_netbackup_params(self):
@@ -682,11 +691,11 @@ class DumpTestCase(unittest.TestCase):
         self.context.netbackup_schedule = "test_schedule"
         with patch.dict(os.environ, {'LOGNAME':'gpadmin'}):
             output = self.dumper.create_dump_string()
-            expected_output = """gp_dump -p 5432 -U gpadmin --gp-d=/data/master/p1/db_dumps/20160101 --gp-r=/data/master/p1/db_dumps/20160101 --gp-s=p --gp-k=20160101010101 --no-lock --gp-c --no-expand-children -n "\\"testschema\\"" "testdb" --netbackup-service-host=mdw --netbackup-policy=test_policy --netbackup-schedule=test_schedule"""
+            expected_output = """gp_dump -p 5432 -U gpadmin --gp-d=/data/master/db_dumps/20160101 --gp-r=/data/master/db_dumps/20160101 --gp-s=p --gp-k=20160101010101 --no-lock --gp-c --no-expand-children -n "\\"testschema\\"" "testdb" --netbackup-service-host=mdw --netbackup-policy=test_policy --netbackup-schedule=test_schedule"""
             self.assertEquals(output, expected_output)
 
     def test_get_backup_dir_with_master_data_dir(self):
-        self.assertEquals('/data/master/p1/db_dumps/20160101', self.context.get_backup_dir())
+        self.assertEquals('/data/master/db_dumps/20160101', self.context.get_backup_dir())
 
     def test_get_backup_dir_with_backup_dir(self):
         self.context.backup_dir = '/tmp'
@@ -696,7 +705,7 @@ class DumpTestCase(unittest.TestCase):
     @patch('os.path.isfile', return_value=True)
     def test_get_filter_file_file_exists(self, mock1, mock2):
         self.context.dump_prefix = 'foo_'
-        expected_output = '/data/master/p1/db_dumps/20160101/foo_gp_dump_20160101010101_filter'
+        expected_output = '/data/master/db_dumps/20160101/foo_gp_dump_20160101010101_filter'
         self.assertEquals(expected_output, get_filter_file(self.context))
 
     @patch('os.path.isfile', return_value=False)
@@ -708,7 +717,7 @@ class DumpTestCase(unittest.TestCase):
         self.context.dump_prefix = 'foo_'
         self.context.netbackup_block_size = "1024"
         self.context.netbackup_service_host = "mdw"
-        expected_output = '/data/master/p1/db_dumps/20160101/foo_gp_dump_20160101010101_filter'
+        expected_output = '/data/master/db_dumps/20160101/foo_gp_dump_20160101010101_filter'
         self.assertEquals(expected_output, get_filter_file(self.context))
 
     @patch('gppylib.operations.dump.get_latest_full_dump_timestamp', return_value='20160101010101')
@@ -786,7 +795,7 @@ class DumpTestCase(unittest.TestCase):
         self.context.dump_prefix = 'foo_'
         with patch.dict(os.environ, {'LOGNAME':'gpadmin'}):
             output = self.dumper.create_filtered_dump_string()
-            expected_output = """gp_dump -p 5432 -U gpadmin --gp-d=/data/master/p1/db_dumps/20160101 --gp-r=/data/master/p1/db_dumps/20160101 --gp-s=p --gp-k=20160101010101 --no-lock --gp-c --prefix=foo_ --no-expand-children -n "\\"testschema\\"" "testdb" --table-file=/tmp/table_list.txt --incremental-filter=/tmp/db_dumps/20160101/foo_gp_dump_01234567891234_filter"""
+            expected_output = """gp_dump -p 5432 -U gpadmin --gp-d=/data/master/db_dumps/20160101 --gp-r=/data/master/db_dumps/20160101 --gp-s=p --gp-k=20160101010101 --no-lock --gp-c --prefix=foo_ --no-expand-children -n "\\"testschema\\"" "testdb" --table-file=/tmp/table_list.txt --incremental-filter=/tmp/db_dumps/20160101/foo_gp_dump_01234567891234_filter"""
             self.assertEquals(output, expected_output)
 
     @patch('gppylib.operations.dump.Command.get_results', return_value=CommandResult(0, "", "", True, False))
@@ -794,14 +803,14 @@ class DumpTestCase(unittest.TestCase):
     def test_perform_dump_normal(self, mock1, mock2):
         self.context.dump_prefix = 'foo_'
         title = 'Dump process'
-        dump_line = """gp_dump -p 5432 -U gpadmin --gp-d=/data/master/p1/db_dumps/20160101 --gp-r=/data/master/p1/db_dumps/20160101 --gp-s=p --gp-k=01234567891234 --no-lock --gp-c --prefix=foo_ --no-expand-children -n "\\"testschema\\"" "testdb" --table-file=/tmp/table_list.txt"""
+        dump_line = """gp_dump -p 5432 -U gpadmin --gp-d=/data/master/db_dumps/20160101 --gp-r=/data/master/db_dumps/20160101 --gp-s=p --gp-k=01234567891234 --no-lock --gp-c --prefix=foo_ --no-expand-children -n "\\"testschema\\"" "testdb" --table-file=/tmp/table_list.txt"""
         (start, end, rc) = self.dumper.perform_dump(title, dump_line)
         self.assertNotEqual(start, None)
         self.assertNotEqual(end, None)
         self.assertEquals(rc, 0)
 
     def test_create_pgdump_command_line(self):
-        global_file_name = '/data/master/p1/db_dumps/20160101/gp_global_1_1_20160101010101'
+        global_file_name = '/data/master/db_dumps/20160101/gp_global_-1_1_20160101010101'
         expected_output = "pg_dumpall -p 5432 -g --gp-syntax > %s" % global_file_name
         output = self.dump_globals.create_pgdump_command_line()
         self.assertEquals(output, expected_output)
@@ -870,9 +879,8 @@ class DumpTestCase(unittest.TestCase):
                 seg.get_primary_dbid.return_value = id + 2
             return self.mock_segs
 
-    @patch('gppylib.operations.dump.GpArray.initFromCatalog', return_value=MyMock(1))
     @patch('gppylib.gparray.GpDB.getSegmentHostName', return_value='sdw')
-    def test_backup_config_files_with_nbu_single_segment(self, mock1, mock2):
+    def test_backup_config_files_with_nbu_default(self, mock1):
         with patch('gppylib.operations.dump.backup_file_with_nbu', side_effect=my_counter) as nbu_mock:
             global i
             i = 0
@@ -883,32 +891,12 @@ class DumpTestCase(unittest.TestCase):
             backup_config_files_with_nbu(self.context)
             args, _ = nbu_mock.call_args_list[0]
             self.assertEqual(args[1], "master_config")
-            for id, seg in enumerate(mock2.mock_segs):
+            for id, seg in enumerate(mock1.mock_segs):
                 self.assertEqual(seg.get_active_primary.call_count, 1)
                 self.assertEqual(seg.get_primary_dbid.call_count, 1)
                 args, _ = nbu_mock.call_args_list[id]
                 self.assertEqual(args, ("segment_config", id+2, "sdw"))
-            self.assertEqual(i, 2)
-
-    @patch('gppylib.operations.dump.GpArray.initFromCatalog', return_value=MyMock(3))
-    @patch('gppylib.gparray.GpDB.getSegmentHostName', return_value='sdw')
-    def test_backup_config_files_with_nbu_multiple_segments(self, mock1, mock2):
-        with patch('gppylib.operations.dump.backup_file_with_nbu', side_effect=my_counter) as nbu_mock:
-            global i
-            i = 0
-            self.context.netbackup_service_host = "mdw"
-            self.context.netbackup_policy = "test_policy"
-            self.context.netbackup_schedule = "test_schedule"
-
-            backup_config_files_with_nbu(self.context)
-            args, _ = nbu_mock.call_args_list[0]
-            self.assertEqual(args[1], "master_config")
-            for id, seg in enumerate(mock2.mock_segs):
-                self.assertEqual(seg.get_active_primary.call_count, 1)
-                self.assertEqual(seg.get_primary_dbid.call_count, 1)
-                args, _ = nbu_mock.call_args_list[id]
-                self.assertEqual(args, ("segment_config", id+2, "sdw"))
-            self.assertEqual(i, 4)
+            self.assertEqual(i, 3)
 
     @patch('gppylib.operations.backup_utils.Context.generate_filename', return_value='foo_schema')
     @patch('gppylib.commands.base.Command.run')

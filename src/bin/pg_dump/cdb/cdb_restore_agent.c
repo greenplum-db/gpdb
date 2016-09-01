@@ -117,6 +117,7 @@ static bool bCompUsed = false;	/* de-compression is used */
 static char *g_compPg = NULL;	/* de-compression program with full path */
 static char *g_gpdumpInfo = NULL;
 static char *g_gpdumpKey = NULL;
+static int	g_sourceContentID= 0;
 static int	g_sourceDBID = 0;
 static int	g_targetDBID = 0;
 static char *g_targetHost = NULL;
@@ -407,7 +408,7 @@ main(int argc, char **argv)
 			case 3:				/* --gp-k MPP Dump Info Format is
 								 * Key_s-dbid_s-role_t-dbid */
 				g_gpdumpInfo = strdup(optarg);
-				if (!ParseCDBDumpInfo(progname, g_gpdumpInfo, &g_gpdumpKey, &g_role, &g_sourceDBID, &g_MPPPassThroughCredentials))
+				if (!ParseCDBDumpInfo(progname, g_gpdumpInfo, &g_gpdumpKey, &g_role, &g_sourceContentID, &g_sourceDBID, &g_MPPPassThroughCredentials))
 				{
 					exit(1);
 				}
@@ -1236,14 +1237,14 @@ monitorThreadProc(void *arg __attribute__((unused)))
 		if(pollResult < 0)
 		{
 			mpp_err_msg(logError, progname, "poll failed for backup key %s, instid %d, segid %d failed\n",
-						g_gpdumpKey, g_role, g_sourceDBID);
+						g_gpdumpKey, g_sourceContentID, g_sourceDBID);
 			bGotCancelRequest = true;
 		}
 
 		if (PQstatus(g_conn_status) == CONNECTION_BAD)
 		{
 			mpp_err_msg(logError, progname, "Status Connection went down for backup key %s, instid %d, segid %d\n",
-						g_gpdumpKey, g_role, g_sourceDBID);
+						g_gpdumpKey, g_sourceContentID, g_sourceDBID);
 			bGotCancelRequest = true;
 		}
 
@@ -1271,7 +1272,7 @@ monitorThreadProc(void *arg __attribute__((unused)))
 		if (bGotCancelRequest)
 		{
 			mpp_err_msg(logInfo, progname, "Notification received that we need to cancel for backup key %s, instid %d, segid %d failed\n",
-						g_gpdumpKey, g_role, g_sourceDBID);
+						g_gpdumpKey, g_sourceContentID, g_sourceDBID);
 
 			pthread_kill(g_main_tid, SIGINT);
 		}
@@ -1587,7 +1588,7 @@ static char *formDDBoostFileName(char *pszBackupKey, bool isPostData, char *dd_b
         char    *pszBackupFileName;
 	char 	*dir_name = "db_dumps";		/* default directory */
 
-        instid = g_role;           		/* dispatch node */
+        instid = g_sourceContentID;
         segid = g_sourceDBID;
 
        	memset(szFileNamePrefix, 0, (1+PATH_NAME_MAX));

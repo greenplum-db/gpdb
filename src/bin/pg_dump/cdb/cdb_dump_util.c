@@ -450,7 +450,7 @@ MakeString(const char *fmt,...)
  * based on the format convention key_contextid_dbid_credentials
  */
 bool
-ParseCDBDumpInfo(const char *progName, char *pszCDBDumpInfo, char **ppCDBDumpKey, int *pContentID, int *pDbID, char **ppCDBPassThroughCredentials)
+ParseCDBDumpInfo(const char *progName, char *pszCDBDumpInfo, char **ppCDBDumpKey, int *pRole, int *pContentID, int *pDbID, char **ppCDBPassThroughCredentials)
 {
 	int			rtn;
 
@@ -458,7 +458,7 @@ ParseCDBDumpInfo(const char *progName, char *pszCDBDumpInfo, char **ppCDBDumpKey
 
 	regex_t		rCDBDumpInfo;
 
-	if (0 != regcomp(&rCDBDumpInfo, "([0-9]+)_([0-9]+)_([0-9]+)_([^[:space:]]*)", REG_EXTENDED))
+	if (0 != regcomp(&rCDBDumpInfo, "([0-9]+)_(-?[0-9]+)_([0-9]+)_([^[:space:]]*)", REG_EXTENDED))
 	{
 		mpp_err_msg_cache("ERROR", progName, "Error compiling regular expression for parsing CDB Dump Info\n");
 		return false;
@@ -490,6 +490,8 @@ ParseCDBDumpInfo(const char *progName, char *pszCDBDumpInfo, char **ppCDBDumpKey
 	*pContentID = GetMatchInt(&matches[2], pszCDBDumpInfo);
 
 	*pDbID = GetMatchInt(&matches[3], pszCDBDumpInfo);
+
+	*pRole = (*pDbID == 1) ? 1 : 0;
 
 	*ppCDBPassThroughCredentials = GetMatchString(&matches[4], pszCDBDumpInfo);
 	if (*ppCDBPassThroughCredentials == NULL)

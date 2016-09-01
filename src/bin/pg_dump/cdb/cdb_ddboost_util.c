@@ -2456,10 +2456,10 @@ cleanup:
 int
 isFileToBeCopied(const char *filename)
 {
-	if (strstr(filename, "gp_global_1_1_"))
+	if (strstr(filename, "gp_global_"))
 		return 1;
 
-	if (strstr(filename, "gp_cdatabase_1_1_"))
+	if (strstr(filename, "gp_cdatabase_"))
 		return 1;
 
 	if (strstr(filename, "_post_data"))

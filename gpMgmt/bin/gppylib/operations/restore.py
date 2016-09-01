@@ -256,13 +256,9 @@ def restore_state_files_with_nbu(context):
 def restore_config_files_with_nbu(context):
     restore_file_with_nbu(context, "master_config")
 
-    gparray = GpArray.initFromCatalog(dbconn.DbURL(port=context.master_port), utility=True)
-    segments = gparray.getSegmentList()
-    for segment in segments:
-        seg = segment.get_active_primary()
-        seg_dump_dir = context.get_backup_dir(directory=seg.getSegmentDataDirectory())
-        seg_config_filename = context.generate_filename("segment_config", dbid=segment.get_primary_dbid(),
-                                                        directory=seg_dump_dir)
+    primaries = context.get_current_primaries()
+    for seg in primaries:
+        seg_config_filename = context.generate_filename("segment_config", dbid=seg.getSegmentDbId())
         seg_host = seg.getSegmentHostName()
         restore_file_with_nbu(context, path=seg_config_filename, hostname=seg_host)
 
@@ -480,7 +476,7 @@ class RestoreDatabase(Operation):
 
         schema_level_restore_file = create_temp_file_with_schemas(list(self.context.restore_schemas))
 
-        addresses = get_all_segment_addresses(self.context.master_port)
+        addresses = get_all_segment_addresses(self.context)
 
         scp_file_to_hosts(addresses, schema_level_restore_file, self.context.batch_default)
 
@@ -494,7 +490,7 @@ class RestoreDatabase(Operation):
 
         change_schema_file = create_temp_file_with_schemas(schema_list)
 
-        addresses = get_all_segment_addresses(self.context.master_port)
+        addresses = get_all_segment_addresses(self.context)
 
         scp_file_to_hosts(addresses, change_schema_file, self.context.batch_default)
 
@@ -506,7 +502,7 @@ class RestoreDatabase(Operation):
 
         table_filter_file = create_temp_file_with_tables(self.context.restore_tables)
 
-        addresses = get_all_segment_addresses(self.context.master_port)
+        addresses = get_all_segment_addresses(self.context)
 
         scp_file_to_hosts(addresses, table_filter_file, self.context.batch_default)
 
@@ -897,17 +893,35 @@ class ValidateTimestamp(Operation):
     def __init__(self, context):
         self.context = context
 
-    def validate_metadata_file(self, compressed_file):
+    def validate_metadata_file(self):
+        self.context.compress = True
         if self.context.netbackup_service_host:
             logger.info('Backup for given timestamp was performed using NetBackup. Querying NetBackup server to check for the dump file.')
-            compress = check_file_dumped_with_nbu(self.context, path=compressed_file)
+            self.context.use_old_filename_format = False
+            compressed_new = check_file_dumped_with_nbu(self.context, "metadata")
+            if not compressed_new:
+                self.context.use_old_filename_format = True
+                compressed_old = check_file_dumped_with_nbu(self.context, "metadata")
+                if not compressed_old:
+                    self.context.compress = False
+                    uncompressed_old = check_file_dumped_with_nbu(self.context, "metadata")
+                    if not uncompressed_old:
+                        self.context.use_old_filename_format = False
+                        uncompressed_new = check_file_dumped_with_nbu(self.context, "metadata")
+                        if not uncompressed_new:
+                            filename = self.context.generate_filename("metadata")
+                            raise ExceptionNoStackTraceNeeded('Unable to find metadata file for timestamp %s in NetBackup. Skipping restore.' % self.context.timestamp)
         else:
-            compress = os.path.exists(compressed_file)
-            if not compress:
-                uncompressed_file = compressed_file[:compressed_file.index('.gz')]
-                if not os.path.exists(uncompressed_file):
-                    raise ExceptionNoStackTraceNeeded('Unable to find {ucfile} or {ucfile}.gz. Skipping restore.'.format(ucfile=uncompressed_file))
-        return compress
+            filetype = "postdata" if self.context.ddboost else "metadata"
+            self.context.use_old_filename_format = self.context.is_timestamp_in_old_format()
+            compressed_file = get_filename_for_content(self.context, filetype, -1)
+            if not compressed_file:
+                self.context.compress = False
+                self.context.use_old_filename_format = self.context.is_timestamp_in_old_format()
+                uncompressed_file = get_filename_for_content(self.context, filetype, -1)
+                if not uncompressed_file and not self.context.ddboost:
+                    filename = self.context.generate_filename(filetype)
+                    raise ExceptionNoStackTraceNeeded('Unable to find {ucfile} or {ucfile}.gz. Skipping restore.'.format(ucfile=filename))
 
     def validate_timestamp_format(self):
         if not self.context.timestamp:
@@ -920,17 +934,14 @@ class ValidateTimestamp(Operation):
 
     def execute(self):
         self.validate_timestamp_format()
-        createdb_file = self.context.generate_filename("cdatabase")
-        if not CheckFile(createdb_file).run():
-            raise ExceptionNoStackTraceNeeded("Dump file '%s' does not exist on Master" % createdb_file)
+        self.validate_metadata_file()
+        createdb_file = get_filename_for_content(self.context, "cdatabase", -1)
+        if not createdb_file:
+            new_name = self.context.generate_filename("cdatabase", use_old_format=False)
+            old_name = self.context.generate_filename("cdatabase", use_old_format=True)
+            raise ExceptionNoStackTraceNeeded("Could not find file %s or file %s on Master" % (new_name, old_name))
         restore_db = GetDbName(createdb_file).run()
-        if not self.context.ddboost:
-            compressed_file = self.context.generate_filename("metadata")
-            compress = self.validate_metadata_file(compressed_file)
-        else:
-            compressed_file = self.context.generate_filename("postdata")
-            compress = CheckFile(compressed_file).run()
-        return (self.context.timestamp, restore_db, compress)
+        return (self.context.timestamp, restore_db, self.context.compress, self.context.use_old_filename_format)
 
 class ValidateSegments(Operation):
     def __init__(self, context):
@@ -938,22 +949,17 @@ class ValidateSegments(Operation):
 
     def execute(self):
         """ TODO: Improve with grouping by host and ParallelOperation dispatch. """
-        gparray = GpArray.initFromCatalog(dbconn.DbURL(port=self.context.master_port, dbname='template1'), utility=True)
-        primaries = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary(current_role=True)]
-        mdd = self.context.master_datadir
+        primaries = self.context.get_current_primaries()
         for seg in primaries:
             if seg.isSegmentDown():
                 """ Why must every Segment function have the word Segment in it ?! """
                 raise ExceptionNoStackTraceNeeded("Host %s dir %s dbid %d marked as invalid" % (seg.getSegmentHostName(), seg.getSegmentDataDirectory(), seg.getSegmentDbId()))
 
-            self.context.master_datadir = seg.getSegmentDataDirectory()
             if self.context.netbackup_service_host is None:
-                host = seg.getSegmentHostName()
-                path = self.context.generate_filename("dump", dbid=seg.getSegmentDbId())
-                exists = CheckRemotePath(path, host).run()
-                if not exists:
-                    raise ExceptionNoStackTraceNeeded("No dump file on %s at %s" % (seg.getSegmentHostName(), path))
-        self.context.master_datadir = mdd
+                remote_file = get_filename_for_content(self.context, "dump", seg.getSegmentContentId(),
+                                                       self.context.get_backup_dir(segment_dir=seg.getSegmentDataDirectory()), seg.getSegmentHostName())
+                if not remote_file:
+                    raise ExceptionNoStackTraceNeeded("No dump file on %s in %s" % (seg.getSegmentHostName(), seg.getSegmentDataDirectory()))
 
 def check_table_name_format_and_duplicate(table_list, restore_schemas=None):
     """
@@ -1006,7 +1012,7 @@ class CopyPostData(Operation):
     def execute(self):
          # Build master _post_data file:
         real_post_data = self.context.generate_filename("postdata")
-        fake_post_data = self.context.generate_filename("postdata", self.fake_timestamp)
+        fake_post_data = self.context.generate_filename("postdata", timestamp=self.fake_timestamp)
         shutil.copy(real_post_data, fake_post_data)
 
 class GetDbName(Operation):
@@ -1039,14 +1045,13 @@ class RecoverRemoteDumps(Operation):
         self.context = context
 
     def execute(self):
-        gparray = GpArray.initFromCatalog(dbconn.DbURL(port=self.context.master_port), utility=True)
         from_host, from_path = self.host, self.path
         logger.info("Commencing remote database dump file recovery process, please wait...")
-        segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary(current_role=True) or seg.isSegmentMaster()]
+        segs = [seg for seg in self.context.gparray.getDbList() if seg.isSegmentPrimary(current_role=True) or seg.isSegmentMaster()]
         self.pool = WorkerPool(numWorkers=min(len(segs), self.context.batch_default))
         for seg in segs:
             to_host = seg.getSegmentHostName()
-            to_path = os.path.join(seg.getSegmentDataDirectory(), self.context.dump_dir, self.context.timestamp[0:8])
+            to_path = self.context.get_backup_dir(segment_dir=seg.getSegmentDataDirectory())
 
             if seg.isSegmentMaster():
                 from_file = self.context.generate_filename("metadata")
@@ -1137,7 +1142,7 @@ class GetDDboostDumpTablesOperation(GetDumpTablesOperation):
     def execute(self):
         # We want to make sure that directory is empty so that we can grab the ddboost directory value
         # with the timestamp
-        ddboost_parent_dir = self.context.get_backup_dir(directory='')
+        ddboost_parent_dir = self.context.get_backup_dir(segment_dir='')
         ddboost_cmdStr = 'gpddboost --readFile --from-file=%s' % self.context.generate_filename("dump", directory=ddboost_parent_dir)
 
         if self.context.ddboost_storage_unit:

@@ -130,8 +130,6 @@ class GpdbRestore(Operation):
         else:
             self.interactive = options.interactive
 
-        self.gparray = None
-
         try:
             if self.context.report_status_dir:
                 check_dir_writable(self.context.report_status_dir)
@@ -162,8 +160,6 @@ class GpdbRestore(Operation):
                 cmdline += ' --ddboost-storage-unit %s' % self.context.ddboost_storage_unit
             cmd = Command('DDBoost sync', cmdline)
             cmd.run(validateAfter=True)
-
-        self.gparray = GpArray.initFromCatalog(dbconn.DbURL(port=self.context.master_port, dbname='template1'), utility=True)
 
         if self.context.netbackup_service_host:
             logger.info("Restoring metadata files with NetBackup")
@@ -332,8 +328,8 @@ class GpdbRestore(Operation):
         """
         Checking cluster status, no primary should be down.
         """
-        fault_action = self.gparray.getFaultStrategy()
-        primaries = [seg for seg in self.gparray.getDbList() if seg.isSegmentPrimary(current_role=True)]
+        fault_action = self.context.gparray.getFaultStrategy()
+        primaries = self.context.get_current_primaries()
         fail_count = len([seg for seg in primaries if seg.isSegmentDown()])
 
         if fault_action == 'readonly' and fail_count != 0:
@@ -351,16 +347,19 @@ class GpdbRestore(Operation):
         """
 
         if self.context.timestamp:
-            (restore_timestamp, restore_db, compress) = ValidateTimestamp(self.context).run()
+            (restore_timestamp, restore_db, compress, old_format) = ValidateTimestamp(self.context).run()
             self.context.timestamp = restore_timestamp
             self.context.restore_db = restore_db
             self.context.compress = compress
-        elif self.context.db_date_dir:
-            self._validate_db_date_dir()
-        elif self.context.db_host_path:
-            self._validate_db_host_path()
-        elif self.search_for_dbname:
-            self._search_for_latest()
+            self.context.use_old_filename_format = old_format
+        else:
+            self.context.use_old_filename_format = self.context.is_timestamp_in_old_format()
+            if self.context.db_date_dir:
+                self._validate_db_date_dir()
+            elif self.context.db_host_path:
+                self._validate_db_host_path()
+            elif self.search_for_dbname:
+                self._search_for_latest()
 
         if not self.context.drop_db and not self.context.redirected_restore_db:
             dburl = dbconn.DbURL(port=self.context.master_port)
