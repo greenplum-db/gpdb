@@ -1,0 +1,55 @@
+CREATE TEMP TABLE s3write_mixedlenrows_temp (id serial, content text);
+CREATE WRITABLE EXTERNAL TABLE s3write_mixedlenrows_write (id serial, content text)
+		LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/mixedlenrows/ config=@config_file@') FORMAT 'csv';
+
+-- PREPARE --
+-------------
+
+-- Pangram: 'Pack my box with five dozen liquor jugs.' 40 chars, 32 letters
+-- Total 40KB
+INSERT INTO s3write_mixedlenrows_temp VALUES (DEFAULT,
+	repeat('Pack my box with five dozen liquor jugs.', 1024 ));
+
+-- Total 1MB
+INSERT INTO s3write_mixedlenrows_temp VALUES (DEFAULT,
+	repeat('Pack my box with five dozen liquor jugs.', 1024 * 25 ));
+
+-- Total 40MB, bigger than chunksize (default is 16MB in tests)
+INSERT INTO s3write_mixedlenrows_temp VALUES (DEFAULT,
+	repeat('Pack my box with five dozen liquor jugs.', 1024 * 1024));
+
+-- Total 40KB
+INSERT INTO s3write_mixedlenrows_temp VALUES (DEFAULT,
+	repeat('Pack my box with five dozen liquor jugs.', 1024 ));
+
+-- Total 1MB
+INSERT INTO s3write_mixedlenrows_temp VALUES (DEFAULT,
+	repeat('Pack my box with five dozen liquor jugs.', 1024 * 25 ));
+
+-- Total 40KB
+INSERT INTO s3write_mixedlenrows_temp VALUES (DEFAULT,
+	repeat('Pack my box with five dozen liquor jugs.', 1024 ));
+
+-- Total 10MB, smaller than chunksize (default is 16MB in tests)
+INSERT INTO s3write_mixedlenrows_temp VALUES (DEFAULT,
+	repeat('Pack my box with five dozen liquor jugs.', 1024 * 25 * 10));
+
+
+-- WRITE OUT --
+---------------
+
+INSERT INTO s3write_mixedlenrows_write 
+	SELECT * FROM s3write_mixedlenrows_temp;
+
+
+-- VERIFY IT --
+---------------
+
+
+CREATE READABLE EXTERNAL TABLE s3write_mixedlenrows_read (id serial, content text)
+		LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/mixedlenrows/ config=@config_file@') FORMAT 'csv';
+
+SELECT count(*) FROM s3write_mixedlenrows_read;
+
+DROP EXTERNAL TABLE IF EXISTS s3write_mixedlenrows_write;
+DROP EXTERNAL TABLE IF EXISTS s3write_mixedlenrows_read;

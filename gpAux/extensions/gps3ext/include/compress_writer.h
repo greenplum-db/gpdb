@@ -15,8 +15,8 @@ class CompressWriter : public Writer {
     virtual void open(const WriterParams &params);
 
     // write() attempts to write up to count bytes from the buffer.
-    // Always return 0 if EOF, no matter how many times it's invoked. Throw exception if encounters
-    // errors.
+    // If 'count' is larger than Zip chunk-buffer, it invokes writeOneChunk()
+    // repeatedly to finish upload. Throw exception if encounters errors.
     virtual uint64_t write(const char *buf, uint64_t count);
 
     // This should be reentrant, has no side effects when called multiple times.
@@ -26,6 +26,7 @@ class CompressWriter : public Writer {
 
    private:
     void flush();
+    uint64_t writeOneChunk(const char *buf, uint64_t count);
 
     Writer *writer;
 

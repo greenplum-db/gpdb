@@ -37,27 +37,53 @@ void CompressWriter::open(const WriterParams& params) {
     this->isClosed = false;
 }
 
-uint64_t CompressWriter::write(const char* buf, uint64_t count) {
+uint64_t CompressWriter::writeOneChunk(const char* buf, uint64_t count) {
+    // Defensive code
     if (buf == NULL || count == 0) {
         return 0;
     }
 
-    // we assume data block from upper layer is always smaller than gzip chunkbuffer
-    CHECK_OR_DIE_MSG(count < S3_ZIP_COMPRESS_CHUNKSIZE,
-                     "Data size %" PRIu64 " is larger than S3_ZIP_COMPRESS_CHUNKSIZE", count);
-
     this->zstream.next_in = (Byte*)buf;
     this->zstream.avail_in = count;
 
-    int status = deflate(&this->zstream, Z_NO_FLUSH);
-    if (status < 0 && status != Z_BUF_ERROR) {
-        deflateEnd(&this->zstream);
-        CHECK_OR_DIE_MSG(false, "Failed to compress data: %d, %s", status, this->zstream.msg);
-    }
+    int status;
+    do {
+        status = deflate(&this->zstream, Z_NO_FLUSH);
+        if (status < 0 && status != Z_BUF_ERROR) {
+            deflateEnd(&this->zstream);
+            CHECK_OR_DIE_MSG(false, "Failed to compress data: %d, %s", status, this->zstream.msg);
+        }
 
-    this->flush();
+        this->flush();
+
+        // output buffer is same size to input buffer, most cases data
+        // is smaller after compressed. But if this->zstream.avail_in > 0,
+        // then data is larger after compressed and some input data is pending.
+        // For example if compress already compressed data, we will encounter
+        // this case. So we need to loop here.
+
+    } while (status == Z_OK && this->zstream.avail_in > 0);
 
     return count;
+}
+
+uint64_t CompressWriter::write(const char* buf, uint64_t count) {
+    // Defensive code
+    if (buf == NULL || count == 0) {
+        return 0;
+    }
+
+    uint64_t ret = 0;
+
+    for (uint64_t i = 0; i < count / S3_ZIP_COMPRESS_CHUNKSIZE; i++) {
+        ret += this->writeOneChunk(buf + ret, S3_ZIP_COMPRESS_CHUNKSIZE);
+    }
+
+    if (ret < count) {
+        ret += this->writeOneChunk(buf + ret, count - ret);
+    }
+
+    return ret;
 }
 
 void CompressWriter::close() {

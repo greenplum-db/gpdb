@@ -20,25 +20,26 @@ void S3KeyWriter::open(const WriterParams& params) {
     S3DEBUG("key: %s, upload id: %s", this->url.c_str(), this->uploadId.c_str());
 }
 
-// write() attempts to write up to count bytes from the buffer.
-// Always return 0 if EOF, no matter how many times it's invoked.
-// Throw exception if encounters errors.
+// write() first fills up the data buffer before flush it out
 uint64_t S3KeyWriter::write(const char* buf, uint64_t count) {
+    // Defensive code
     CHECK_OR_DIE(buf != NULL);
     this->checkQueryCancelSignal();
 
-    // GPDB issues 64K- block every time and chunkSize is 8MB+
-    if (count > this->chunkSize) {
-        S3ERROR("%" PRIu64 " is larger than chunkSize %" PRIu64, count, this->chunkSize);
-        CHECK_OR_DIE_MSG(false, "%" PRIu64 " is larger than chunkSize %" PRIu64, count,
-                         this->chunkSize);
-    }
+    uint64_t offset = 0;
+    while (offset < count) {
+        uint64_t bufferRemain = this->chunkSize - this->buffer.size();
+        uint64_t dataRemain = count - offset;
+        uint64_t dataToBuffer = bufferRemain < dataRemain ? bufferRemain : dataRemain;
 
-    if ((this->buffer.size() + count) > this->chunkSize) {
-        flushBuffer();
-    }
+        this->buffer.insert(this->buffer.end(), buf + offset, buf + offset + dataToBuffer);
 
-    this->buffer.insert(this->buffer.end(), buf, buf + count);
+        if (this->buffer.size() == this->chunkSize) {
+            this->flushBuffer();
+        }
+
+        offset += dataToBuffer;
+    }
 
     return count;
 }
@@ -165,6 +166,7 @@ void S3KeyWriter::completeKeyWriting() {
 
     S3DEBUG("Segment %d has finished uploading \"%s\"", s3ext_segid, this->url.c_str());
 
+    this->buffer.clear();
     this->etagList.clear();
     this->uploadId.clear();
 }

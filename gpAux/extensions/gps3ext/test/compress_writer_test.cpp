@@ -1,3 +1,4 @@
+#include <string>
 #include <vector>
 
 #include "compress_writer.cpp"
@@ -5,6 +6,7 @@
 #include "s3macros.h"
 
 using std::vector;
+using std::string;
 
 class MockWriter : public Writer {
    public:
@@ -60,6 +62,10 @@ class CompressWriterTest : public testing::Test {
     }
 
     void simpleUncompress(const char *input, uint64_t len) {
+        this->coreUncompress((Byte *)input, len, this->out, S3_ZIP_COMPRESS_CHUNKSIZE);
+    }
+
+    void coreUncompress(Byte *input, uint64_t len, Byte *output, uint64_t out_len) {
         z_stream zstream;
 
         // allocate inflate state for zlib
@@ -71,9 +77,9 @@ class CompressWriterTest : public testing::Test {
         CHECK_OR_DIE_MSG(ret == Z_OK, "%s", "failed to initialize zlib library");
 
         zstream.avail_in = len;
-        zstream.next_in = (Byte *)input;
-        zstream.next_out = this->out;
-        zstream.avail_out = S3_ZIP_DECOMPRESS_CHUNKSIZE;
+        zstream.next_in = input;
+        zstream.next_out = output;
+        zstream.avail_out = out_len;
 
         ret = inflate(&zstream, Z_FULL_FLUSH);
 
@@ -141,6 +147,7 @@ TEST_F(CompressWriterTest, AbleToCompressOneSmallString) {
 TEST_F(CompressWriterTest, AbleToWriteServeralTimesBeforeClose) {
     unsigned int i, times = 100;
 
+    // 44 chars
     const char input[] = "The quick brown fox jumps over the lazy dog";
 
     for (i = 0; i < times; i++) {
@@ -157,7 +164,56 @@ TEST_F(CompressWriterTest, AbleToWriteServeralTimesBeforeClose) {
 }
 
 TEST_F(CompressWriterTest, AbleToWriteLargerThanCompressChunkSize) {
-    char *input = new char[S3_ZIP_COMPRESS_CHUNKSIZE + 1];
+    const char pangram[] = "The quick brown fox jumps over the lazy dog";
+    unsigned int times = S3_ZIP_COMPRESS_CHUNKSIZE / (sizeof(pangram) - 1) + 1;
+    string input;
+    for (unsigned int i = 0; i < times; i++) input.append(pangram);
 
-    EXPECT_THROW(compressWriter.write(input, S3_ZIP_COMPRESS_CHUNKSIZE + 1), std::runtime_error);
+    compressWriter.write(input.c_str(), input.length());
+    compressWriter.close();
+
+    Byte *result = new Byte[input.length() + 1];
+    this->coreUncompress((Byte *)writer.getRawData(), writer.getDataSize(), result,
+                         input.length() + 1);
+
+    EXPECT_TRUE(memcmp(input.c_str(), result, input.length()) == 0);
+
+    delete result;
+}
+
+#include <memory>
+#include <random>
+// Compress compressed data may generate larger output than input after GZIP compression.
+TEST_F(CompressWriterTest, CompressCompressedData) {
+    std::random_device rd;
+    std::default_random_engine re(rd());
+
+    // 25 is an empirical number to trigger the corner case.
+    size_t dataLen = S3_ZIP_COMPRESS_CHUNKSIZE * 25;
+    size_t charLen = dataLen * 4;
+    unsigned int *data = new unsigned int[dataLen];
+
+    for (size_t i = 0; i < dataLen; i += 4) {
+        data[i] = re();
+    }
+
+    compressWriter.write((const char *)data, charLen);
+    compressWriter.close();
+
+    vector<char> compressedData;
+    for (size_t i = 0; i < 3; i++) {
+        compressWriter.open(this->params);
+
+        compressedData.swap(writer.getRawDataVector());
+        writer.getRawDataVector().clear();
+
+        compressWriter.write((const char *)compressedData.data(), compressedData.size());
+        compressWriter.close();
+    }
+
+    std::unique_ptr<Byte> result(new Byte[compressedData.size()]);
+    this->coreUncompress((Byte *)writer.getRawData(), writer.getDataSize(), result.get(),
+                         compressedData.size());
+
+    EXPECT_TRUE(memcmp(compressedData.data(), result.get(), compressedData.size()) == 0);
 }

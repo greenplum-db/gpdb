@@ -84,13 +84,18 @@ TEST_F(S3KeyWriterTest, TestSmallWrite) {
     this->close();
 }
 
-TEST_F(S3KeyWriterTest, TestSmallChunkSize) {
+TEST_F(S3KeyWriterTest, TestChunkSizeSmallerThanInput) {
     testParams.setChunkSize(0x100);
     EXPECT_CALL(mocks3interface, getUploadId(_, _, _)).WillOnce(Return("uploadId"));
+    EXPECT_CALL(mocks3interface, uploadPartOfData(_, _, _, _, _, _))
+        .WillOnce(Return("\"etag1\""))
+        .WillOnce(Return("\"etag2\""));
+    EXPECT_CALL(this->mocks3interface, completeMultiPart(_, _, _, _, _)).WillOnce(Return(true));
 
     char data[0x101];
     this->open(testParams);
-    EXPECT_THROW(this->write(data, sizeof(data)), std::runtime_error);
+    EXPECT_EQ(sizeof(data), this->write(data, sizeof(data)));
+    this->close();
 }
 
 class MockUploadPartOfData {
@@ -118,9 +123,9 @@ TEST_F(S3KeyWriterTest, TestBufferedWrite) {
     char data[0x100];
     EXPECT_CALL(this->mocks3interface, getUploadId(_, _, _)).WillOnce(Return("uploadid1"));
     EXPECT_CALL(this->mocks3interface, uploadPartOfData(_, _, _, _, 1, "uploadid1"))
-        .WillOnce(Invoke(MockUploadPartOfData(0x80)));
+        .WillOnce(Invoke(MockUploadPartOfData(0x100)));
     EXPECT_CALL(this->mocks3interface, uploadPartOfData(_, _, _, _, 2, "uploadid1"))
-        .WillOnce(Invoke(MockUploadPartOfData(0x81)));
+        .WillOnce(Invoke(MockUploadPartOfData(0x1)));
     EXPECT_CALL(this->mocks3interface, completeMultiPart(_, _, _, _, _)).WillOnce(Return(true));
 
     this->open(testParams);
@@ -172,7 +177,7 @@ TEST_F(S3KeyWriterTest, TestWriteAbortInClosing) {
     char data[0x100];
     EXPECT_CALL(this->mocks3interface, getUploadId(_, _, _)).WillOnce(Return("uploadid1"));
     EXPECT_CALL(this->mocks3interface, uploadPartOfData(_, _, _, _, 1, "uploadid1"))
-        .WillOnce(Invoke(MockUploadPartOfData(0x80)));
+        .WillOnce(Invoke(MockUploadPartOfData(0x100)));
     EXPECT_CALL(this->mocks3interface, abortUpload(_, _, _, _)).WillOnce(Return(true));
 
     this->open(testParams);
