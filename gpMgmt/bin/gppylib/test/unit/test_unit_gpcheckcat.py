@@ -233,9 +233,10 @@ class GpCheckCatTestCase(GpTestCase):
     @patch('gpcheckcat.checkTableMissingEntry')
     def test_runCheckCatname__for_checkForeignKey(self, mock1, mock2, mock3):
         self.subject.checkForeignKey = Mock()
-        cat_table_obj = Mock()
-        mock3.getCatalogTable = cat_table_obj
-        self.subject.getCatObj = cat_table_obj
+        gpcat_class_mock = Mock(spec=['getCatalogTable'])
+        cat_obj_mock = Mock()
+        self.subject.getCatObj = gpcat_class_mock
+        self.subject.getCatObj.return_value = cat_obj_mock
         primaries = [dict(hostname='host0', port=123, id=1, address='123', datadir='dir', content=-1, dbid=0, isprimary='t')]
 
         for i in range(1, 50):
@@ -250,7 +251,7 @@ class GpCheckCatTestCase(GpTestCase):
             self.subject.main()
 
         self.subject.getCatObj.assert_called_once_with(' pg_class')
-        self.subject.checkForeignKey.assert_called_once_with(cat_table_obj)
+        self.subject.checkForeignKey.assert_called_once_with([cat_obj_mock])
 
     ####################### PRIVATE METHODS #######################
 
