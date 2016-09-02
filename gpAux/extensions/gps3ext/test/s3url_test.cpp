@@ -1,6 +1,5 @@
 #include "s3url.cpp"
 #include "gtest/gtest.h"
-#include "s3macros.h"
 
 TEST(UrlParser, Routine) {
     UrlParser p("https://www.google.com/search?sclient=psy-ab&site=&source=hp");

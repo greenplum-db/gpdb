@@ -1,5 +1,4 @@
 #include "s3common_reader.h"
-#include "s3macros.h"
 
 void S3CommonReader::open(const S3Params &params) {
     this->keyReader.setS3interface(s3service);

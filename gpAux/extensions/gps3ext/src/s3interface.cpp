@@ -1,23 +1,4 @@
-#include <unistd.h>
-#include <algorithm>
-#include <iostream>
-#include <sstream>
-
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
-
-#include <libxml/parser.h>
-#include <libxml/tree.h>
-
-#include "s3http_headers.h"
-#include "s3key_reader.h"
-#include "s3log.h"
-#include "s3macros.h"
-#include "s3url.h"
-#include "s3utils.h"
-
 #include "s3interface.h"
-using std::stringstream;
 
 // use destructor ~XMLContextHolder() to do the cleanup
 class XMLContextHolder {

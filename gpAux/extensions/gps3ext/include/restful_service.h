@@ -1,17 +1,12 @@
 #ifndef INCLUDE_RESTFUL_SERVICE_H_
 #define INCLUDE_RESTFUL_SERVICE_H_
 
-#include <map>
-#include <string>
-#include <vector>
-
-#include <stdint.h>
-
+#include "gpcommon.h"
+#include "s3common_headers.h"
 #include "s3http_headers.h"
-
-using std::string;
-using std::vector;
-using std::map;
+#include "s3log.h"
+#include "s3macros.h"
+#include "s3params.h"
 
 enum ResponseStatus {
     RESPONSE_OK,     // everything is OK

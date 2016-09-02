@@ -1,32 +1,4 @@
-#include <algorithm>
-#include <cstdarg>
-#include <cstdio>
-#include <cstring>
-#include <iomanip>
-#include <sstream>
-#include <string>
-
-#include <arpa/inet.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <time.h>
-#include <unistd.h>
-
-#include <curl/curl.h>
-#include <openssl/bio.h>
-#include <openssl/buffer.h>
-#include <openssl/des.h>
-#include <openssl/evp.h>
-#include <openssl/hmac.h>
-#include <openssl/sha.h>
-
 #include "s3utils.h"
-
-using std::string;
 
 #ifndef S3_STANDALONE
 extern "C" {

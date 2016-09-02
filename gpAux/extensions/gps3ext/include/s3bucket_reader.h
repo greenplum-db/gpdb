@@ -1,13 +1,10 @@
 #ifndef __S3_BUCKET_READER__
 #define __S3_BUCKET_READER__
 
-#include <string>
-
 #include "reader.h"
+#include "s3common.h"
+#include "s3common_headers.h"
 #include "s3interface.h"
-#include "s3key_reader.h"
-
-using std::string;
 
 // S3BucketReader read multiple files in a bucket.
 class S3BucketReader : public Reader {

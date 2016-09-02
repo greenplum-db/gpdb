@@ -1,12 +1,9 @@
 #ifndef __S3_LOG_H__
 #define __S3_LOG_H__
 
-#include <cstdarg>
-#include <cstdio>
-
-#include <pthread.h>
-
+#include "s3common_headers.h"
 #include "s3conf.h"
+#include "s3macros.h"
 
 // log level
 enum LOGLEVEL { EXT_FATAL, EXT_ERROR, EXT_WARNING, EXT_INFO, EXT_DEBUG };

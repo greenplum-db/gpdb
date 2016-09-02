@@ -1,8 +1,6 @@
 #include "s3utils.cpp"
 #include "gtest/gtest.h"
-
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
+#include "ini.cpp"
 
 TEST(Utils, simplecurl) {
     CURL *c = CreateCurlHandler(NULL);

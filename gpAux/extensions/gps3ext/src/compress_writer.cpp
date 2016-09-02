@@ -1,10 +1,4 @@
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
-#include <string.h>
-
 #include "compress_writer.h"
-#include "s3log.h"
-#include "s3macros.h"
 
 uint64_t S3_ZIP_COMPRESS_CHUNKSIZE = S3_ZIP_DEFAULT_CHUNKSIZE;
 

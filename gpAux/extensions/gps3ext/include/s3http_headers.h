@@ -1,16 +1,7 @@
 #ifndef __S3_HTTP_HEADERS_H__
 #define __S3_HTTP_HEADERS_H__
 
-#include <map>
-#include <set>
-#include <string>
-
-#include <curl/curl.h>
-
-#include "http_parser.h"
-#include "s3log.h"
-
-using std::string;
+#include "s3common_headers.h"
 
 enum HeaderField {
     HOST,

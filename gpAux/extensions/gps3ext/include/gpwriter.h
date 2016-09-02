@@ -1,10 +1,11 @@
 #ifndef INCLUDE_GPWRITER_H_
 #define INCLUDE_GPWRITER_H_
 
-#include <string.h>
-#include <string>
-
+#include "s3common_headers.h"
 #include "s3common_writer.h"
+#include "s3interface.h"
+#include "s3restful_service.h"
+#include "s3utils.h"
 #include "writer.h"
 
 #define S3_DEFAULT_FORMAT "data"

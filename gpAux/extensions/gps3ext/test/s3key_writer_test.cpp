@@ -1,9 +1,7 @@
+#include "s3key_writer.cpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-
 #include "mock_classes.h"
-#include "s3key_writer.cpp"
-#include "s3params.h"
 
 using ::testing::AtLeast;
 using ::testing::AtMost;

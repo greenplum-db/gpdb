@@ -1,13 +1,4 @@
-#include <string>
-#include <vector>
-
 #include "compress_writer.cpp"
-#include "gtest/gtest.h"
-#include "s3macros.h"
-
-using std::vector;
-using std::string;
-
 #include <memory>
 #include <random>
 #include "gtest/gtest.h"

@@ -1,6 +1,5 @@
 #include "s3conf.cpp"
 #include "gtest/gtest.h"
-#include "ini.cpp"
 
 TEST(Config, NonExistFile) {
     S3Params params;

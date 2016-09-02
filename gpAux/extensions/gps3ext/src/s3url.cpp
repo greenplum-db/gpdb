@@ -1,20 +1,4 @@
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <sstream>
-
-#include <map>
-#include <string>
-
-#include "http_parser.h"
-
-#include "s3log.h"
-#include "s3macros.h"
 #include "s3url.h"
-#include "s3utils.h"
-
-using std::string;
-using std::stringstream;
 
 UrlParser::UrlParser(const string &url) {
     CHECK_ARG_OR_DIE(!url.empty());

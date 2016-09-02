@@ -1,23 +1,20 @@
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-
-#include <iostream>
-#include <map>
-#include <sstream>
-#include <string>
-
-#include <openssl/err.h>
-#include <openssl/sha.h>
-
 #include "s3common.h"
-#include "s3conf.h"
-#include "s3http_headers.h"
-#include "s3macros.h"
-#include "s3utils.h"
 
-using std::string;
-using std::stringstream;
+string s3extErrorMessage;
+
+void CheckEssentialConfig(const S3Params &params) {
+    if (params.getCred().accessID.empty()) {
+        CHECK_OR_DIE_MSG(false, "%s", "\"FATAL: access id not set\"");
+    }
+
+    if (params.getCred().secret.empty()) {
+        CHECK_OR_DIE_MSG(false, "%s", "\"FATAL: secret id not set\"");
+    }
+
+    if (s3ext_segnum <= 0) {
+        CHECK_OR_DIE_MSG(false, "%s", "\"FATAL: segment info is invalid\"");
+    }
+}
 
 // Note: better to sort queries automatically
 // for more information refer to Amazon S3 document:

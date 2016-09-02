@@ -3,14 +3,10 @@
 
 #include "gmock/gmock.h"
 
+#include "s3common_headers.h"
 #include "s3common.h"
 #include "s3interface.h"
 #include "s3restful_service.h"
-
-#include <string>
-#include <sstream>
-using std::string;
-using std::stringstream;
 
 class MockS3Interface : public S3Interface {
    public:

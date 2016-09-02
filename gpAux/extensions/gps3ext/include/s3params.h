@@ -1,8 +1,6 @@
 #ifndef __S3_PARAMS_H__
 #define __S3_PARAMS_H__
 
-#include <string>
-
 #include "s3common.h"
 #include "s3common_headers.h"
 

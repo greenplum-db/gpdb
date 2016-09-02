@@ -2,7 +2,9 @@
 #define INCLUDE_S3COMMON_WRITER_H_
 
 #include "compress_writer.h"
+#include "s3common_headers.h"
 #include "s3key_writer.h"
+#include "s3url.h"
 
 class S3CommonWriter : public Writer {
    public:

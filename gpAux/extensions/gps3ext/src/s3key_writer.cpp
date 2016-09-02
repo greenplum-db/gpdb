@@ -1,6 +1,3 @@
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
-
 #include "s3key_writer.h"
 
 void S3KeyWriter::open(const S3Params& params) {

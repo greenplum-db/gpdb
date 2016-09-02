@@ -1,19 +1,4 @@
-#include <map>
-#include <string>
-
-#include <unistd.h>
-#define __STDC_FORMAT_MACROS
-#include <curl/curl.h>
-#include <inttypes.h>
-#include <string.h>
-
-#include "gpcommon.h"
-#include "s3http_headers.h"
-#include "s3log.h"
-#include "s3macros.h"
 #include "s3restful_service.h"
-
-using namespace std;
 
 S3RESTfulService::S3RESTfulService() {
     // This function is not thread safe, must NOT call it when any other

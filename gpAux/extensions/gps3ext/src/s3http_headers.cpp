@@ -1,19 +1,4 @@
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <sstream>
-
-#include <iostream>
-#include <map>
-#include <sstream>
-#include <string>
-
-#include "s3conf.h"
 #include "s3http_headers.h"
-#include "s3utils.h"
-
-using std::string;
-using std::stringstream;
 
 HTTPHeaders::HTTPHeaders() {
     this->header_list = NULL;

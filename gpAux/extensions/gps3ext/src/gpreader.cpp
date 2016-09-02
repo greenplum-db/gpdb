@@ -1,17 +1,4 @@
-#include <openssl/crypto.h>
-#include <pthread.h>
-#include <sstream>
-#include <string>
-
-#include "gpcommon.h"
 #include "gpreader.h"
-
-#include "s3conf.h"
-#include "s3log.h"
-#include "s3macros.h"
-#include "s3utils.h"
-
-string s3extErrorMessage;
 
 // Thread related functions, called only by gpreader and gpcheckcloud
 #define MUTEX_TYPE pthread_mutex_t
@@ -97,20 +84,6 @@ uint64_t GPReader::read(char* buf, uint64_t count) {
 // This should be reentrant, has no side effects when called multiple times.
 void GPReader::close() {
     this->bucketReader.close();
-}
-
-void CheckEssentialConfig() {
-    if (s3ext_accessid.empty()) {
-        CHECK_OR_DIE_MSG(false, "%s", "\"FATAL: access id not set\"");
-    }
-
-    if (s3ext_secret.empty()) {
-        CHECK_OR_DIE_MSG(false, "%s", "\"FATAL: secret id not set\"");
-    }
-
-    if ((s3ext_segnum == -1) || (s3ext_segid == -1)) {
-        CHECK_OR_DIE_MSG(false, "%s", "\"FATAL: segment id is invalid\"");
-    }
 }
 
 // invoked by s3_import(), need to be exception safe

@@ -1,12 +1,6 @@
 // Required by building CPP dynamic library via Makefile of GPDB.
 #define PGDLLIMPORT "C"
 
-#include <signal.h>
-#include <cstdlib>
-
-#include <openssl/err.h>
-#include <pthread.h>
-
 extern "C" {
 #include "postgres.h"
 
@@ -23,11 +17,6 @@ extern "C" {
 
 #include "gpreader.h"
 #include "gpwriter.h"
-
-#include "s3common.h"
-#include "s3conf.h"
-#include "s3log.h"
-#include "s3utils.h"
 
 /* Do the module magic dance */
 PG_MODULE_MAGIC;

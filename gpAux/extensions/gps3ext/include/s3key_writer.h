@@ -1,18 +1,9 @@
 #ifndef INCLUDE_S3KEY_WRITER_H_
 #define INCLUDE_S3KEY_WRITER_H_
 
-#include "s3common.h"
+#include "s3common_headers.h"
 #include "s3interface.h"
-#include "s3macros.h"
-#include "s3restful_service.h"
-#include "s3url.h"
 #include "writer.h"
-
-#include <string>
-#include <vector>
-
-using std::vector;
-using std::string;
 
 class WriterBuffer : public vector<uint8_t> {};
 

@@ -1,20 +1,7 @@
 #ifndef __S3_UTILS_H__
 #define __S3_UTILS_H__
 
-#include <stdint.h>
-#include <sys/types.h>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <string>
-
-#include <openssl/md5.h>
-#include <openssl/sha.h>
-
-#include "ini.h"
-#include "s3log.h"
-
-using std::string;
+#include "s3common_headers.h"
 
 #define MD5_DIGEST_STRING_LENGTH 17
 #define SHA_DIGEST_STRING_LENGTH 41

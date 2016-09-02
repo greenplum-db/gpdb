@@ -1,6 +1,7 @@
-#ifndef __GP_EXT_READER_H__
-#define __GP_EXT_READER_H__
+#ifndef __S3_READER_H__
+#define __S3_READER_H__
 
+#include "s3common_headers.h"
 #include "s3params.h"
 
 class Reader {

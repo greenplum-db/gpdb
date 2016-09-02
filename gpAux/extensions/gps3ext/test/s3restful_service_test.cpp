@@ -1,13 +1,5 @@
-#include <algorithm>
-#include <fstream>
-#include <iostream>
-#include <vector>
-
-#include "gtest/gtest.h"
-#include "s3http_headers.h"
 #include "s3restful_service.cpp"
-
-using namespace std;
+#include "gtest/gtest.h"
 
 TEST(S3RESTfulService, GetWithWrongHeader) {
     HTTPHeaders headers;

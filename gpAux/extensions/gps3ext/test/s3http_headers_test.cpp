@@ -1,5 +1,4 @@
 #include "s3http_headers.cpp"
-#include <limits.h>
 #include "gtest/gtest.h"
 
 TEST(Common, GetFieldString) {

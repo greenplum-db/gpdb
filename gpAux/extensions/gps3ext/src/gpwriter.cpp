@@ -1,19 +1,5 @@
-#include <fcntl.h>
-#include <openssl/crypto.h>
-#include <pthread.h>
-#include <sstream>
-#include <string>
-
-#include "gpcommon.h"
-#include "gpreader.h"
 #include "gpwriter.h"
 
-#include "s3common.h"
-#include "s3conf.h"
-#include "s3log.h"
-#include "s3macros.h"
-#include "s3url.h"
-#include "s3utils.h"
 GPWriter::GPWriter(const S3Params& params, const string& url, string fmt)
     : format(fmt), s3service(params) {
     this->params = params;

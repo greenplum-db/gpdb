@@ -1,12 +1,4 @@
-#include <algorithm>
-
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
-#include <string.h>
-
 #include "decompress_reader.h"
-#include "s3log.h"
-#include "s3macros.h"
 
 uint64_t S3_ZIP_DECOMPRESS_CHUNKSIZE = S3_ZIP_DEFAULT_CHUNKSIZE;
 

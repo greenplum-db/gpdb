@@ -1,13 +1,11 @@
 #ifndef INCLUDE_S3INTERFACE_H_
 #define INCLUDE_S3INTERFACE_H_
 
-// need to include stdexcept to use std::runtime_error
-#include <stdexcept>
-
-#include <libxml/parser.h>
-#include <libxml/tree.h>
-
-#include "restful_service.h"
+#include "gpcommon.h"
+#include "s3common_headers.h"
+#include "s3log.h"
+#include "s3restful_service.h"
+#include "s3url.h"
 
 #define S3_MAGIC_BYTES_NUM 4
 

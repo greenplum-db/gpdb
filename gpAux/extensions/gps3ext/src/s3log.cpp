@@ -1,22 +1,6 @@
-#include <arpa/inet.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <sys/un.h>
-#include <unistd.h>
-#include <cstdarg>
-#include <cstdio>
-#include <cstring>
-#include <memory>
-#include <string>
-
-#include "s3conf.h"
 #include "s3log.h"
-#include "s3macros.h"
-#include "s3utils.h"
+
+#include <arpa/inet.h>
 
 #define MAX_MESSAGE_LINE_LENGTH 1024
 

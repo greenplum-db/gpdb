@@ -1,15 +1,14 @@
-#ifndef __GP_READER__
-#define __GP_READER__
-
-#include <string>
+#ifndef __GP_READER_H__
+#define __GP_READER_H__
 
 #include "reader.h"
 #include "s3bucket_reader.h"
+#include "s3common_headers.h"
 #include "s3common_reader.h"
 #include "s3interface.h"
-#include "s3key_reader.h"
-
-extern string s3extErrorMessage;
+#include "s3log.h"
+#include "s3macros.h"
+#include "s3utils.h"
 
 class GPReader : public Reader {
    public:
@@ -45,8 +44,6 @@ class GPReader : public Reader {
     // but the pointer here leaves a chance to mock it in unit test
     S3RESTfulService *restfulServicePtr;
 };
-
-void CheckEssentialConfig();
 
 // Following 3 functions are invoked by s3_import(), need to be exception safe
 GPReader *reader_init(const char *url_with_options);

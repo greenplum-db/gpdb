@@ -1,8 +1,11 @@
 #ifndef INCLUDE_DECOMPRESS_READER_H_
 #define INCLUDE_DECOMPRESS_READER_H_
 
-#include <zlib.h>
 #include "reader.h"
+#include "s3common_headers.h"
+#include "s3log.h"
+#include "s3macros.h"
+#include "s3params.h"
 
 // 2MB by default
 extern uint64_t S3_ZIP_DECOMPRESS_CHUNKSIZE;

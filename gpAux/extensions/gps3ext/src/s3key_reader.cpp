@@ -1,9 +1,3 @@
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
-#include <string.h>
-
-#include "s3common.h"
-#include "s3interface.h"
 #include "s3key_reader.h"
 
 // Return (offset, length) of next chunk to download,

@@ -1,11 +1,7 @@
 #include "s3common_writer.cpp"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "mock_classes.h"
-#include "s3macros.h"
-
-#include <map>
-#include <vector>
-using std::vector;
 
 using ::testing::AtLeast;
 using ::testing::Return;

@@ -1,13 +1,7 @@
 #ifndef __S3_MACROS_H__
 #define __S3_MACROS_H__
 
-#include <cstdarg>
-#include <sstream>
-#include <stdexcept>
-#include <string>
-
-using std::string;
-using std::stringstream;
+#include "s3common_headers.h"
 
 #define PRINTOUT_BUFFER_LEN 1024
 

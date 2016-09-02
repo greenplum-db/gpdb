@@ -2,6 +2,7 @@
 #define INCLUDE_S3COMMON_READER_H_
 
 #include "decompress_reader.h"
+#include "s3common_headers.h"
 #include "s3key_reader.h"
 
 class S3CommonReader : public Reader {

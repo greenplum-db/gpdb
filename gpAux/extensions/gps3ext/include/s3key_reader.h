@@ -1,20 +1,9 @@
 #ifndef INCLUDE_S3KEY_READER_H_
 #define INCLUDE_S3KEY_READER_H_
 
-#include <string>
-using std::string;
-
 #include "reader.h"
-#include "s3common.h"
+#include "s3common_headers.h"
 #include "s3interface.h"
-#include "s3macros.h"
-#include "s3restful_service.h"
-#include "s3url.h"
-
-#include <vector>
-
-using std::vector;
-using std::stringstream;
 
 struct Range {
     uint64_t offset;

@@ -1,27 +1,20 @@
 #ifndef __S3_COMMON_H__
 #define __S3_COMMON_H__
 
-#include <map>
-#include <string>
-
-#include "gpcommon.h"
-#include "http_parser.h"
+#include "s3common_headers.h"
+#include "s3conf.h"
 #include "s3http_headers.h"
-#include "s3log.h"
+#include "s3macros.h"
+#include "s3utils.h"
+
+struct S3Credential;
+
+extern string s3extErrorMessage;
+
+void CheckEssentialConfig(const S3Params& params);
 
 #define DATE_STR_LEN 9
 #define TIME_STAMP_STR_LEN 17
-
-using std::string;
-
-struct S3Credential {
-    bool operator==(const S3Credential& other) const {
-        return this->accessID == other.accessID && this->secret == other.secret;
-    }
-
-    string accessID;
-    string secret;
-};
 
 void SignRequestV4(const string& method, HTTPHeaders* h, const string& orig_region,
                    const string& path, const string& query, const S3Credential& cred);

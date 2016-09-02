@@ -1,6 +1,11 @@
-#include <string>
-using std::string;
+#ifndef __S3_CONF_H__
+#define __S3_CONF_H__
 
+#include "gpcommon.h"
+#include "s3common_headers.h"
+#include "s3log.h"
+#include "s3params.h"
+#include "s3utils.h"
 
 // segment id
 extern int32_t s3ext_segid;

@@ -1,7 +1,9 @@
 #ifndef INCLUDE_COMPRESS_WRITER_H_
 #define INCLUDE_COMPRESS_WRITER_H_
 
-#include <zlib.h>
+#include "s3common_headers.h"
+#include "s3log.h"
+#include "s3macros.h"
 #include "writer.h"
 
 // 2MB by default

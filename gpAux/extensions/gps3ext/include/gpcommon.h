@@ -1,9 +1,7 @@
-#ifndef __GP_S3EXT_H_
-#define __GP_S3EXT_H_
-#include <string>
+#ifndef __GP_COMMON_H
+#define __GP_COMMON_H
 
-#include <signal.h>
-#include <sys/types.h>
+#include "s3common_headers.h"
 
 // GPDB's global variable
 extern volatile bool QueryCancelPending;

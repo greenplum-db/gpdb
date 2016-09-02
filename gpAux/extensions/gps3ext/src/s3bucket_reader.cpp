@@ -1,21 +1,4 @@
-#include <sstream>
-#include <string>
-
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
-
-#include "reader.h"
 #include "s3bucket_reader.h"
-#include "s3common.h"
-#include "s3conf.h"
-#include "s3log.h"
-#include "s3macros.h"
-#include "s3params.h"
-#include "s3url.h"
-#include "s3utils.h"
-
-using std::string;
-using std::stringstream;
 
 S3BucketReader::S3BucketReader() : Reader() {
     this->keyIndex = -1;

@@ -2,6 +2,7 @@
 #define INCLUDE_S3RESTFUL_SERVICE_H_
 
 #include "restful_service.h"
+#include "s3common_headers.h"
 
 class S3RESTfulService : public RESTfulService {
    public:

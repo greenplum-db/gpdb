@@ -1,9 +1,7 @@
+#include "s3common_reader.cpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-
-#include "decompress_reader.h"
 #include "mock_classes.h"
-#include "s3common_reader.cpp"
 
 using ::testing::AtLeast;
 using ::testing::Return;

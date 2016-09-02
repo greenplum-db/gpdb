@@ -1,14 +1,4 @@
-#include <signal.h>
-#include <map>
-#include <sstream>
-#include <string>
-#include <string.h> /* strsignal() */
-
 #include "gpcheckcloud.h"
-
-using std::map;
-using std::string;
-using std::stringstream;
 
 volatile bool QueryCancelPending = false;
 

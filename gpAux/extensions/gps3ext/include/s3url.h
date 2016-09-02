@@ -1,7 +1,9 @@
 #ifndef __S3_URL_H__
 #define __S3_URL_H__
 
-#include "http_parser.h"
+#include "s3common_headers.h"
+#include "s3macros.h"
+#include "s3utils.h"
 
 class UrlParser {
    public:

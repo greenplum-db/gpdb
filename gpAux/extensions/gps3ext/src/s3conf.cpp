@@ -1,31 +1,12 @@
-#include <cstdarg>
-#include <cstdio>
-#include <cstring>
-#include <sstream>
-#include <string>
+#include "s3conf.h"
 
 #include <arpa/inet.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <sys/un.h>
-#include <unistd.h>
-
-#include "gpcommon.h"
-#include "s3conf.h"
-#include "s3log.h"
-#include "s3utils.h"
 
 #ifndef S3_STANDALONE
 extern "C" {
 void write_log(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
 }
 #endif
-
-using std::string;
-using std::stringstream;
 
 // configurable parameters
 int32_t s3ext_segid = -1;

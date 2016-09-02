@@ -1,10 +1,5 @@
-#include <vector>
-
 #include "decompress_reader.cpp"
 #include "gtest/gtest.h"
-#include "s3macros.h"
-
-using std::vector;
 
 class MockBufferReader : public Reader {
    public:

@@ -1,5 +1,4 @@
 #include "s3common_writer.h"
-#include "s3macros.h"
 
 void S3CommonWriter::open(const S3Params& params) {
     this->keyWriter.setS3interface(this->s3service);
