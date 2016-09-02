@@ -46,7 +46,8 @@ class S3ServiceTest : public testing::Test, public S3Service {
         return Response(RESPONSE_OK, gen->toXML());
     }
 
-    S3Credential cred;
+    S3Params params;
+
     string schema;
     string region;
     string bucket;
@@ -61,27 +62,25 @@ class S3ServiceTest : public testing::Test, public S3Service {
 TEST_F(S3ServiceTest, GetResponseWithZeroRetry) {
     string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
     HTTPHeaders headers;
-    map<string, string> params;
-    EXPECT_EQ(RESPONSE_FAIL, this->getResponseWithRetries(url, headers, params, 0).getStatus());
+
+    EXPECT_EQ(RESPONSE_FAIL, this->getResponseWithRetries(url, headers, 0).getStatus());
 }
 
 TEST_F(S3ServiceTest, GetResponseWithTwoRetries) {
     string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
     HTTPHeaders headers;
-    map<string, string> params;
 
     EXPECT_CALL(mockRestfulService, get(_, _, _))
         .Times(2)
         .WillOnce(Return(response))
         .WillOnce(Return(response));
 
-    EXPECT_EQ(RESPONSE_FAIL, this->getResponseWithRetries(url, headers, params, 2).getStatus());
+    EXPECT_EQ(RESPONSE_FAIL, this->getResponseWithRetries(url, headers, 2).getStatus());
 }
 
 TEST_F(S3ServiceTest, GetResponseWithRetriesAndSuccess) {
     string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
     HTTPHeaders headers;
-    map<string, string> params;
 
     Response responseSuccess;
     responseSuccess.setStatus(RESPONSE_OK);
@@ -91,22 +90,21 @@ TEST_F(S3ServiceTest, GetResponseWithRetriesAndSuccess) {
         .WillOnce(Return(response))
         .WillOnce(Return(responseSuccess));
 
-    EXPECT_EQ(RESPONSE_OK, this->getResponseWithRetries(url, headers, params).getStatus());
+    EXPECT_EQ(RESPONSE_OK, this->getResponseWithRetries(url, headers).getStatus());
 }
 
 TEST_F(S3ServiceTest, PutResponseWithZeroRetry) {
     string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
     HTTPHeaders headers;
-    map<string, string> params;
+
     vector<uint8_t> data;
-    EXPECT_EQ(RESPONSE_FAIL,
-              this->putResponseWithRetries(url, headers, params, data, 0).getStatus());
+    EXPECT_EQ(RESPONSE_FAIL, this->putResponseWithRetries(url, headers, data, 0).getStatus());
 }
 
 TEST_F(S3ServiceTest, PutResponseWithTwoRetries) {
     string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
     HTTPHeaders headers;
-    map<string, string> params;
+
     vector<uint8_t> data;
 
     EXPECT_CALL(mockRestfulService, put(_, _, _, _))
@@ -114,14 +112,13 @@ TEST_F(S3ServiceTest, PutResponseWithTwoRetries) {
         .WillOnce(Return(response))
         .WillOnce(Return(response));
 
-    EXPECT_EQ(RESPONSE_FAIL,
-              this->putResponseWithRetries(url, headers, params, data, 2).getStatus());
+    EXPECT_EQ(RESPONSE_FAIL, this->putResponseWithRetries(url, headers, data, 2).getStatus());
 }
 
 TEST_F(S3ServiceTest, PutResponseWithRetriesAndSuccess) {
     string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
     HTTPHeaders headers;
-    map<string, string> params;
+
     vector<uint8_t> data;
 
     Response responseSuccess;
@@ -132,20 +129,19 @@ TEST_F(S3ServiceTest, PutResponseWithRetriesAndSuccess) {
         .WillOnce(Return(response))
         .WillOnce(Return(responseSuccess));
 
-    EXPECT_EQ(RESPONSE_OK, this->putResponseWithRetries(url, headers, params, data).getStatus());
+    EXPECT_EQ(RESPONSE_OK, this->putResponseWithRetries(url, headers, data).getStatus());
 }
 
 TEST_F(S3ServiceTest, HeadResponseWithZeroRetry) {
     string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
     HTTPHeaders headers;
-    map<string, string> params;
-    EXPECT_EQ(HeadResponseFail, this->headResponseWithRetries(url, headers, params, 0));
+
+    EXPECT_EQ(HeadResponseFail, this->headResponseWithRetries(url, headers, 0));
 }
 
 TEST_F(S3ServiceTest, HeadResponseWithRetriesAndFail) {
     string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
     HTTPHeaders headers;
-    map<string, string> params;
 
     EXPECT_CALL(mockRestfulService, head(_, _, _))
         .Times(S3_REQUEST_MAX_RETRIES)
@@ -153,36 +149,32 @@ TEST_F(S3ServiceTest, HeadResponseWithRetriesAndFail) {
         .WillOnce(Return(HeadResponseFail))
         .WillOnce(Return(HeadResponseFail));
 
-    EXPECT_EQ(HeadResponseFail, this->headResponseWithRetries(url, headers, params));
+    EXPECT_EQ(HeadResponseFail, this->headResponseWithRetries(url, headers));
 }
 
 TEST_F(S3ServiceTest, HeadResponseWithRetriesAndSuccess) {
     string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
     HTTPHeaders headers;
-    map<string, string> params;
 
     EXPECT_CALL(mockRestfulService, head(_, _, _))
         .Times(2)
         .WillOnce(Return(HeadResponseFail))
         .WillOnce(Return(404));
 
-    EXPECT_EQ(404, this->headResponseWithRetries(url, headers, params));
+    EXPECT_EQ(404, this->headResponseWithRetries(url, headers));
 }
 
 TEST_F(S3ServiceTest, PostResponseWithZeroRetry) {
     string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
     HTTPHeaders headers;
-    map<string, string> params;
     vector<uint8_t> data;
 
-    EXPECT_EQ(RESPONSE_FAIL,
-              this->postResponseWithRetries(url, headers, params, data, 0).getStatus());
+    EXPECT_EQ(RESPONSE_FAIL, this->postResponseWithRetries(url, headers, data, 0).getStatus());
 }
 
 TEST_F(S3ServiceTest, PostResponseWithTwoRetries) {
     string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
     HTTPHeaders headers;
-    map<string, string> params;
     vector<uint8_t> data;
 
     EXPECT_CALL(mockRestfulService, post(_, _, _, _))
@@ -190,14 +182,12 @@ TEST_F(S3ServiceTest, PostResponseWithTwoRetries) {
         .WillOnce(Return(response))
         .WillOnce(Return(response));
 
-    EXPECT_EQ(RESPONSE_FAIL,
-              this->postResponseWithRetries(url, headers, params, data, 2).getStatus());
+    EXPECT_EQ(RESPONSE_FAIL, this->postResponseWithRetries(url, headers, data, 2).getStatus());
 }
 
 TEST_F(S3ServiceTest, PostResponseWithRetriesAndSuccess) {
     string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
     HTTPHeaders headers;
-    map<string, string> params;
     vector<uint8_t> data;
 
     Response responseSuccess;
@@ -208,18 +198,18 @@ TEST_F(S3ServiceTest, PostResponseWithRetriesAndSuccess) {
         .WillOnce(Return(response))
         .WillOnce(Return(responseSuccess));
 
-    EXPECT_EQ(RESPONSE_OK, this->postResponseWithRetries(url, headers, params, data).getStatus());
+    EXPECT_EQ(RESPONSE_OK, this->postResponseWithRetries(url, headers, data).getStatus());
 }
 
 TEST_F(S3ServiceTest, ListBucketThrowExceptionWhenBucketStringIsEmpty) {
     // here is a memory leak because we haven't defined ~S3ServiceTest() to clean up.
-    EXPECT_THROW(result = this->listBucket("", "", "", "", cred), std::runtime_error);
+    EXPECT_THROW(result = this->listBucket("", "", "", ""), std::runtime_error);
 }
 
 TEST_F(S3ServiceTest, ListBucketWithWrongRegion) {
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillRepeatedly(Return(response));
 
-    EXPECT_THROW(this->listBucket(schema, "nonexist", "", "", cred), std::runtime_error);
+    EXPECT_THROW(this->listBucket(schema, "nonexist", "", ""), std::runtime_error);
 }
 
 TEST_F(S3ServiceTest, ListBucketWithWrongBucketName) {
@@ -240,7 +230,7 @@ TEST_F(S3ServiceTest, ListBucketWithWrongBucketName) {
 
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillRepeatedly(Return(response));
 
-    EXPECT_THROW(this->listBucket(schema, "us-west-2", "foo/bar", "", cred), std::runtime_error);
+    EXPECT_THROW(this->listBucket(schema, "us-west-2", "foo/bar", ""), std::runtime_error);
 }
 
 TEST_F(S3ServiceTest, ListBucketWithNormalBucket) {
@@ -256,16 +246,16 @@ TEST_F(S3ServiceTest, ListBucketWithNormalBucket) {
 
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
 
-    result = this->listBucket(schema, "us-west-2", "s3test.pivotal.io", "threebytes/", cred);
-    EXPECT_EQ(1, result.contents.size());
+    result = this->listBucket(schema, "us-west-2", "s3test.pivotal.io", "threebytes/");
+    EXPECT_EQ((uint64_t)1, result.contents.size());
 }
 
 TEST_F(S3ServiceTest, ListBucketWithBucketWith1000Keys) {
     EXPECT_CALL(mockRestfulService, get(_, _, _))
         .WillOnce(Return(this->buildListBucketResponse(1000, false)));
 
-    result = this->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/", cred);
-    EXPECT_EQ(1000, result.contents.size());
+    result = this->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/");
+    EXPECT_EQ((uint64_t)1000, result.contents.size());
 }
 
 TEST_F(S3ServiceTest, ListBucketWithBucketWith1001Keys) {
@@ -273,8 +263,8 @@ TEST_F(S3ServiceTest, ListBucketWithBucketWith1001Keys) {
         .WillOnce(Return(this->buildListBucketResponse(1000, true)))
         .WillOnce(Return(this->buildListBucketResponse(1, false)));
 
-    result = this->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/", cred);
-    EXPECT_EQ(1001, result.contents.size());
+    result = this->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/");
+    EXPECT_EQ((uint64_t)1001, result.contents.size());
 }
 
 TEST_F(S3ServiceTest, ListBucketWithBucketWithMoreThan1000Keys) {
@@ -286,8 +276,8 @@ TEST_F(S3ServiceTest, ListBucketWithBucketWithMoreThan1000Keys) {
         .WillOnce(Return(this->buildListBucketResponse(1000, true)))
         .WillOnce(Return(this->buildListBucketResponse(120, false)));
 
-    result = this->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/", cred);
-    EXPECT_EQ(5120, result.contents.size());
+    result = this->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/");
+    EXPECT_EQ((uint64_t)5120, result.contents.size());
 }
 
 TEST_F(S3ServiceTest, ListBucketWithBucketWithTruncatedResponse) {
@@ -298,7 +288,7 @@ TEST_F(S3ServiceTest, ListBucketWithBucketWithTruncatedResponse) {
         .WillOnce(Return(this->buildListBucketResponse(1000, true)))
         .WillRepeatedly(Return(EmptyResponse));
 
-    EXPECT_THROW(this->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/", cred),
+    EXPECT_THROW(this->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/"),
                  std::runtime_error);
 }
 
@@ -308,31 +298,31 @@ TEST_F(S3ServiceTest, ListBucketWithBucketWithZeroSizedKeys) {
         .WillOnce(Return(this->buildListBucketResponse(1000, true)))
         .WillOnce(Return(this->buildListBucketResponse(120, false, 8)));
 
-    result = this->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/", cred);
-    EXPECT_EQ(1120, result.contents.size());
+    result = this->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/");
+    EXPECT_EQ((uint64_t)1120, result.contents.size());
 }
 
 TEST_F(S3ServiceTest, ListBucketWithEmptyBucket) {
     EXPECT_CALL(mockRestfulService, get(_, _, _))
         .WillOnce(Return(this->buildListBucketResponse(0, false, 0)));
 
-    result = this->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/", cred);
+    result = this->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/");
 
-    EXPECT_EQ(0, result.contents.size());
+    EXPECT_EQ((uint64_t)0, result.contents.size());
 }
 
 TEST_F(S3ServiceTest, ListBucketWithAllZeroedFilesBucket) {
     EXPECT_CALL(mockRestfulService, get(_, _, _))
         .WillOnce(Return(this->buildListBucketResponse(0, false, 2)));
 
-    result = this->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/", cred);
-    EXPECT_EQ(0, result.contents.size());
+    result = this->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/");
+    EXPECT_EQ((uint64_t)0, result.contents.size());
 }
 
 TEST_F(S3ServiceTest, ListBucketWithErrorResponse) {
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillRepeatedly(Return(response));
 
-    EXPECT_THROW(this->listBucket(schema, "nonexist", "s3test.pivotal.io", "s3files/", cred),
+    EXPECT_THROW(this->listBucket(schema, "nonexist", "s3test.pivotal.io", "s3files/"),
                  std::runtime_error);
 }
 
@@ -343,7 +333,7 @@ TEST_F(S3ServiceTest, ListBucketWithErrorReturnedXML) {
 
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillRepeatedly(Return(response));
 
-    EXPECT_THROW(this->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/", cred),
+    EXPECT_THROW(this->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/"),
                  std::runtime_error);
 }
 
@@ -354,7 +344,7 @@ TEST_F(S3ServiceTest, ListBucketWithNonRootXML) {
 
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillRepeatedly(Return(response));
 
-    EXPECT_THROW(this->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/", cred),
+    EXPECT_THROW(this->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/"),
                  std::runtime_error);
 }
 
@@ -372,13 +362,12 @@ TEST_F(S3ServiceTest, fetchDataRoutine) {
 
     vector<uint8_t> buffer;
 
-    uint64_t len = this->fetchData(0, buffer, 100,
-                                   "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
-                                   region, cred);
+    uint64_t len = this->fetchData(
+        0, buffer, 100, "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region);
 
     EXPECT_EQ(buffer.size(), raw.size());
     EXPECT_EQ(0, memcmp(buffer.data(), raw.data(), 100));
-    EXPECT_EQ(100, len);
+    EXPECT_EQ((uint64_t)100, len);
 }
 
 TEST_F(S3ServiceTest, fetchDataErrorResponse) {
@@ -389,10 +378,10 @@ TEST_F(S3ServiceTest, fetchDataErrorResponse) {
 
     vector<uint8_t> buffer;
 
-    EXPECT_THROW(this->fetchData(0, buffer, 100,
-                                 "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
-                                 region, cred),
-                 std::runtime_error);
+    EXPECT_THROW(
+        this->fetchData(0, buffer, 100,
+                        "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region),
+        std::runtime_error);
 }
 
 TEST_F(S3ServiceTest, fetchDataFailedResponse) {
@@ -403,10 +392,10 @@ TEST_F(S3ServiceTest, fetchDataFailedResponse) {
 
     vector<uint8_t> buffer;
 
-    EXPECT_THROW(this->fetchData(0, buffer, 100,
-                                 "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
-                                 region, cred),
-                 std::runtime_error);
+    EXPECT_THROW(
+        this->fetchData(0, buffer, 100,
+                        "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region),
+        std::runtime_error);
 }
 
 TEST_F(S3ServiceTest, fetchDataPartialResponse) {
@@ -416,10 +405,10 @@ TEST_F(S3ServiceTest, fetchDataPartialResponse) {
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
     vector<uint8_t> buffer;
 
-    EXPECT_THROW(this->fetchData(0, buffer, 100,
-                                 "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
-                                 region, cred),
-                 std::runtime_error);
+    EXPECT_THROW(
+        this->fetchData(0, buffer, 100,
+                        "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region),
+        std::runtime_error);
 }
 
 TEST_F(S3ServiceTest, checkSmallFile) {
@@ -432,7 +421,7 @@ TEST_F(S3ServiceTest, checkSmallFile) {
 
     EXPECT_EQ(S3_COMPRESSION_PLAIN,
               this->checkCompressionType(
-                  "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region, cred));
+                  "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region));
 }
 
 TEST_F(S3ServiceTest, checkItsGzipCompressed) {
@@ -445,7 +434,7 @@ TEST_F(S3ServiceTest, checkItsGzipCompressed) {
 
     EXPECT_EQ(S3_COMPRESSION_GZIP,
               this->checkCompressionType(
-                  "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region, cred));
+                  "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region));
 }
 
 TEST_F(S3ServiceTest, checkItsNotCompressed) {
@@ -458,7 +447,7 @@ TEST_F(S3ServiceTest, checkItsNotCompressed) {
 
     EXPECT_EQ(S3_COMPRESSION_PLAIN,
               this->checkCompressionType(
-                  "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region, cred));
+                  "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region));
 }
 
 TEST_F(S3ServiceTest, checkCompreesionTypeWithResponseError) {
@@ -480,7 +469,7 @@ TEST_F(S3ServiceTest, checkCompreesionTypeWithResponseError) {
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillRepeatedly(Return(response));
 
     EXPECT_THROW(this->checkCompressionType(
-                     "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region, cred),
+                     "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region),
                  std::runtime_error);
 }
 
@@ -503,10 +492,10 @@ TEST_F(S3ServiceTest, fetchDataWithResponseError) {
 
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillRepeatedly(Return(response));
 
-    EXPECT_THROW(this->fetchData(0, buffer, 128,
-                                 "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
-                                 region, cred),
-                 std::runtime_error);
+    EXPECT_THROW(
+        this->fetchData(0, buffer, 128,
+                        "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region),
+        std::runtime_error);
 }
 
 TEST_F(S3ServiceTest, HeadResponseWithHeadResponseFail) {
@@ -516,7 +505,7 @@ TEST_F(S3ServiceTest, HeadResponseWithHeadResponseFail) {
         .Times(3)
         .WillRepeatedly(Return(HeadResponseFail));
 
-    EXPECT_FALSE(this->checkKeyExistence(url, this->region, this->cred));
+    EXPECT_FALSE(this->checkKeyExistence(url, this->region));
 }
 
 TEST_F(S3ServiceTest, HeadResponse200) {
@@ -524,7 +513,7 @@ TEST_F(S3ServiceTest, HeadResponse200) {
 
     EXPECT_CALL(mockRestfulService, head(_, _, _)).WillOnce(Return(200));
 
-    EXPECT_TRUE(this->checkKeyExistence(url, this->region, this->cred));
+    EXPECT_TRUE(this->checkKeyExistence(url, this->region));
 }
 
 TEST_F(S3ServiceTest, HeadResponse206) {
@@ -532,7 +521,7 @@ TEST_F(S3ServiceTest, HeadResponse206) {
 
     EXPECT_CALL(mockRestfulService, head(_, _, _)).WillOnce(Return(206));
 
-    EXPECT_TRUE(this->checkKeyExistence(url, this->region, this->cred));
+    EXPECT_TRUE(this->checkKeyExistence(url, this->region));
 }
 
 TEST_F(S3ServiceTest, HeadResponse404) {
@@ -540,7 +529,7 @@ TEST_F(S3ServiceTest, HeadResponse404) {
 
     EXPECT_CALL(mockRestfulService, head(_, _, _)).WillOnce(Return(404));
 
-    EXPECT_FALSE(this->checkKeyExistence(url, this->region, this->cred));
+    EXPECT_FALSE(this->checkKeyExistence(url, this->region));
 }
 
 TEST_F(S3ServiceTest, HeadResponse403) {
@@ -548,7 +537,7 @@ TEST_F(S3ServiceTest, HeadResponse403) {
 
     EXPECT_CALL(mockRestfulService, head(_, _, _)).WillOnce(Return(403));
 
-    EXPECT_FALSE(this->checkKeyExistence(url, this->region, this->cred));
+    EXPECT_FALSE(this->checkKeyExistence(url, this->region));
 }
 
 TEST_F(S3ServiceTest, getUploadIdRoutine) {
@@ -565,9 +554,9 @@ TEST_F(S3ServiceTest, getUploadIdRoutine) {
 
     EXPECT_CALL(mockRestfulService, post(_, _, _, vector<uint8_t>())).WillOnce(Return(response));
 
-    EXPECT_EQ("VXBsb2FkIElEIGZvciA2aWWpbmcncyBteS1tb3ZpZS5tMnRzIHVwbG9hZA",
-              this->getUploadId("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
-                                region, cred));
+    EXPECT_EQ(
+        "VXBsb2FkIElEIGZvciA2aWWpbmcncyBteS1tb3ZpZS5tMnRzIHVwbG9hZA",
+        this->getUploadId("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region));
 }
 
 TEST_F(S3ServiceTest, getUploadIdFailedResponse) {
@@ -578,9 +567,9 @@ TEST_F(S3ServiceTest, getUploadIdFailedResponse) {
     EXPECT_CALL(mockRestfulService, post(_, _, _, vector<uint8_t>()))
         .WillRepeatedly(Return(response));
 
-    EXPECT_THROW(this->getUploadId("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
-                                   region, cred),
-                 std::runtime_error);
+    EXPECT_THROW(
+        this->getUploadId("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region),
+        std::runtime_error);
 }
 
 TEST_F(S3ServiceTest, getUploadIdErrorResponse) {
@@ -602,9 +591,9 @@ TEST_F(S3ServiceTest, getUploadIdErrorResponse) {
     EXPECT_CALL(mockRestfulService, post(_, _, _, vector<uint8_t>()))
         .WillRepeatedly(Return(response));
 
-    EXPECT_THROW(this->getUploadId("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
-                                   region, cred),
-                 std::runtime_error);
+    EXPECT_THROW(
+        this->getUploadId("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region),
+        std::runtime_error);
 }
 
 TEST_F(S3ServiceTest, uploadPartOfDataRoutine) {
@@ -628,7 +617,7 @@ TEST_F(S3ServiceTest, uploadPartOfDataRoutine) {
     EXPECT_EQ(
         "\"b54357faf0632cce46e942fa68356b38\"",
         this->uploadPartOfData(raw, "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
-                               region, cred, 11, "xyz"));
+                               region, 11, "xyz"));
 }
 
 TEST_F(S3ServiceTest, uploadPartOfDataFailedResponse) {
@@ -639,7 +628,7 @@ TEST_F(S3ServiceTest, uploadPartOfDataFailedResponse) {
 
     EXPECT_THROW(
         this->uploadPartOfData(raw, "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
-                               region, cred, 11, "xyz"),
+                               region, 11, "xyz"),
         std::runtime_error);
 }
 
@@ -663,7 +652,7 @@ TEST_F(S3ServiceTest, uploadPartOfDataErrorResponse) {
 
     EXPECT_THROW(
         this->uploadPartOfData(raw, "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
-                               region, cred, 11, "xyz"),
+                               region, 11, "xyz"),
         std::runtime_error);
 }
 
@@ -675,7 +664,7 @@ TEST_F(S3ServiceTest, uploadPartOfDataAbortResponse) {
 
     EXPECT_EQ("", this->uploadPartOfData(
                       raw, "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region,
-                      cred, 11, "xyz"));
+                      11, "xyz"));
 }
 
 TEST_F(S3ServiceTest, completeMultiPartRoutine) {
@@ -686,9 +675,8 @@ TEST_F(S3ServiceTest, completeMultiPartRoutine) {
 
     vector<string> etagArray = {"\"abc\"", "\"def\""};
 
-    EXPECT_TRUE(
-        this->completeMultiPart("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
-                                region, cred, "xyz", etagArray));
+    EXPECT_TRUE(this->completeMultiPart(
+        "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region, "xyz", etagArray));
 }
 
 TEST_F(S3ServiceTest, completeMultiPartFailedResponse) {
@@ -701,7 +689,7 @@ TEST_F(S3ServiceTest, completeMultiPartFailedResponse) {
 
     EXPECT_THROW(
         this->completeMultiPart("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
-                                region, cred, "xyz", etagArray),
+                                region, "xyz", etagArray),
         std::runtime_error);
 }
 
@@ -727,7 +715,7 @@ TEST_F(S3ServiceTest, completeMultiPartErrorResponse) {
 
     EXPECT_THROW(
         this->completeMultiPart("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
-                                region, cred, "xyz", etagArray),
+                                region, "xyz", etagArray),
         std::runtime_error);
 }
 
@@ -739,9 +727,8 @@ TEST_F(S3ServiceTest, completeMultiPartAbortResponse) {
 
     vector<string> etagArray = {"\"abc\"", "\"def\""};
 
-    EXPECT_FALSE(
-        this->completeMultiPart("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
-                                region, cred, "xyz", etagArray));
+    EXPECT_FALSE(this->completeMultiPart(
+        "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region, "xyz", etagArray));
 }
 
 TEST_F(S3ServiceTest, abortUploadRoutine) {
@@ -751,7 +738,7 @@ TEST_F(S3ServiceTest, abortUploadRoutine) {
     EXPECT_CALL(mockRestfulService, deleteRequest(_, _, _)).WillOnce(Return(response));
 
     EXPECT_TRUE(this->abortUpload("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
-                                  region, cred, "xyz"));
+                                  region, "xyz"));
 }
 
 TEST_F(S3ServiceTest, abortUploadFailedResponse) {
@@ -761,7 +748,7 @@ TEST_F(S3ServiceTest, abortUploadFailedResponse) {
     EXPECT_CALL(mockRestfulService, deleteRequest(_, _, _)).WillRepeatedly(Return(response));
 
     EXPECT_THROW(this->abortUpload("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
-                                   region, cred, "xyz"),
+                                   region, "xyz"),
                  std::runtime_error);
 }
 
@@ -784,6 +771,6 @@ TEST_F(S3ServiceTest, abortUploadErrorResponse) {
     EXPECT_CALL(mockRestfulService, deleteRequest(_, _, _)).WillRepeatedly(Return(response));
 
     EXPECT_THROW(this->abortUpload("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
-                                   region, cred, "xyz"),
+                                   region, "xyz"),
                  std::runtime_error);
 }

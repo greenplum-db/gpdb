@@ -28,32 +28,18 @@ using std::string;
 using std::stringstream;
 
 // configurable parameters
-int32_t s3ext_loglevel = -1;
-int32_t s3ext_threadnum = -1;
-int32_t s3ext_chunksize = -1;
-int32_t s3ext_logtype = -1;
-int32_t s3ext_logserverport = -1;
-
-int32_t s3ext_low_speed_limit = -1;
-int32_t s3ext_low_speed_time = -1;
-
-string s3ext_logserverhost;
-string s3ext_accessid;
-string s3ext_secret;
-string s3ext_token;
-
-bool s3ext_encryption = true;
-bool s3ext_debug_curl = false;
-bool s3ext_autocompress = true;
-
 int32_t s3ext_segid = -1;
 int32_t s3ext_segnum = -1;
 
+string s3ext_logserverhost;
+int32_t s3ext_loglevel = -1;
+int32_t s3ext_logtype = -1;
+int32_t s3ext_logserverport = -1;
 int32_t s3ext_logsock_udp = -1;
 struct sockaddr_in s3ext_logserveraddr;
 
 // not thread safe
-bool InitConfig(const string& conf_path, const string section = "default") {
+bool InitConfig(S3Params& params, const string& conf_path, const string section = "default") {
     if (conf_path == "") {
 #ifndef S3_STANDALONE
         write_log("Config file is not specified\n");
@@ -81,13 +67,12 @@ bool InitConfig(const string& conf_path, const string section = "default") {
     content = s3cfg->Get(section.c_str(), "logtype", "INTERNAL");
     s3ext_logtype = getLogType(content.c_str());
 
-    content = s3cfg->Get(section.c_str(), "debug_curl", "false");
-    s3ext_debug_curl = to_bool(content);
+    params.setDebugCurl(to_bool(s3cfg->Get(section.c_str(), "debug_curl", "false")));
 #endif
 
-    s3ext_accessid = s3cfg->Get(section.c_str(), "accessid", "");
-    s3ext_secret = s3cfg->Get(section.c_str(), "secret", "");
-    s3ext_token = s3cfg->Get(section.c_str(), "token", "");
+    params.setCred(s3cfg->Get(section.c_str(), "accessid", ""),
+                   s3cfg->Get(section.c_str(), "secret", ""),
+                   s3cfg->Get(section.c_str(), "token", ""));
 
     s3ext_logserverhost = s3cfg->Get(section.c_str(), "logserverhost", "127.0.0.1");
 
@@ -96,53 +81,56 @@ bool InitConfig(const string& conf_path, const string section = "default") {
         s3ext_logserverport = 1111;
     }
 
-    ret = s3cfg->Scan(section.c_str(), "threadnum", "%d", &s3ext_threadnum);
+    int32_t scannedValue;
+    ret = s3cfg->Scan(section.c_str(), "threadnum", "%d", &scannedValue);
     if (!ret) {
         S3INFO("The thread number is set to default value 4");
-        s3ext_threadnum = 4;
-    }
-    if (s3ext_threadnum > 8) {
+        params.setNumOfChunks(4);
+    } else if (scannedValue > 8) {
         S3INFO("The given thread number is too big, use max value 8");
-        s3ext_threadnum = 8;
-    }
-    if (s3ext_threadnum < 1) {
+        params.setNumOfChunks(8);
+    } else if (scannedValue < 1) {
         S3INFO("The given thread number is too small, use min value 1");
-        s3ext_threadnum = 1;
+        params.setNumOfChunks(1);
+    } else {
+        params.setNumOfChunks(scannedValue);
     }
 
-    ret = s3cfg->Scan(section.c_str(), "chunksize", "%d", &s3ext_chunksize);
+    ret = s3cfg->Scan(section.c_str(), "chunksize", "%d", &scannedValue);
     if (!ret) {
         S3INFO("The chunksize is set to default value 64MB");
-        s3ext_chunksize = 64 * 1024 * 1024;
-    }
-    if (s3ext_chunksize > 128 * 1024 * 1024) {
+        params.setChunkSize(64 * 1024 * 1024);
+    } else if (scannedValue > 128 * 1024 * 1024) {
         S3INFO("The given chunksize is too large, use max value 128MB");
-        s3ext_chunksize = 128 * 1024 * 1024;
-    }
-    if (s3ext_chunksize < 8 * 1024 * 1024) {
+        params.setChunkSize(128 * 1024 * 1024);
+    } else if (scannedValue < 8 * 1024 * 1024) {
         // multipart uploading requires the chunksize larger than 5MB(only the last part to upload
         // could be smaller than 5MB)
         S3INFO("The given chunksize is too small, use min value 8MB");
-        s3ext_chunksize = 8 * 1024 * 1024;
+        params.setChunkSize(8 * 1024 * 1024);
+    } else {
+        params.setChunkSize(scannedValue);
     }
 
-    ret = s3cfg->Scan(section.c_str(), "low_speed_limit", "%d", &s3ext_low_speed_limit);
+    ret = s3cfg->Scan(section.c_str(), "low_speed_limit", "%d", &scannedValue);
     if (!ret) {
         S3INFO("The low_speed_limit is set to default value %d bytes/s", 10240);
-        s3ext_low_speed_limit = 10240;
+        params.setLowSpeedLimit(10240);
+    } else {
+        params.setLowSpeedLimit(scannedValue);
     }
 
-    ret = s3cfg->Scan(section.c_str(), "low_speed_time", "%d", &s3ext_low_speed_time);
+    ret = s3cfg->Scan(section.c_str(), "low_speed_time", "%d", &scannedValue);
     if (!ret) {
         S3INFO("The low_speed_time is set to default value %d seconds", 60);
-        s3ext_low_speed_time = 60;
+        params.setLowSpeedTime(60);
+    } else {
+        params.setLowSpeedTime(scannedValue);
     }
 
-    content = s3cfg->Get(section.c_str(), "encryption", "true");
-    s3ext_encryption = to_bool(content);
+    params.setEncryption(to_bool(s3cfg->Get(section.c_str(), "encryption", "true")));
 
-    content = s3cfg->Get(section.c_str(), "autocompress", "true");
-    s3ext_autocompress = to_bool(content);
+    params.setAutoCompress(to_bool(s3cfg->Get(section.c_str(), "autocompress", "true")));
 
 #ifdef S3_STANDALONE
     s3ext_segid = 0;

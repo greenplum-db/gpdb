@@ -14,12 +14,11 @@
 #include "s3macros.h"
 #include "s3url.h"
 #include "s3utils.h"
+GPWriter::GPWriter(const S3Params& params, const string& url, string fmt)
+    : format(fmt), s3service(params) {
+    this->params = params;
 
-using std::string;
-using std::stringstream;
-
-GPWriter::GPWriter(const string& url, string fmt) : format(fmt) {
-    string replacedURL = S3UrlUtility::replaceSchemaFromURL(url, s3ext_encryption);
+    string replacedURL = S3UrlUtility::replaceSchemaFromURL(url, this->params.isEncryption());
 
     // construct a canonical URL string
     // schema://domain/uri_encoded_path/
@@ -27,24 +26,16 @@ GPWriter::GPWriter(const string& url, string fmt) : format(fmt) {
     find_replace(encodedURL, "%3A%2F%2F", "://");
     find_replace(encodedURL, "%2F", "/");
 
-    constructWriterParams(encodedURL);
+    constructS3Params(encodedURL);
     restfulServicePtr = &restfulService;
 }
 
-void GPWriter::constructWriterParams(const string& url) {
+void GPWriter::constructS3Params(const string& url) {
     this->params.setBaseUrl(url);
-    this->params.setSegId(s3ext_segid);
-    this->params.setSegNum(s3ext_segnum);
-    this->params.setNumOfChunks(s3ext_threadnum);
-    this->params.setChunkSize(s3ext_chunksize);
     this->params.setRegion(S3UrlUtility::getRegionFromURL(url));
-
-    this->cred.accessID = s3ext_accessid;
-    this->cred.secret = s3ext_secret;
-    this->params.setCred(this->cred);
 }
 
-void GPWriter::open(const WriterParams& params) {
+void GPWriter::open(const S3Params& params) {
     this->s3service.setRESTfulService(this->restfulServicePtr);
     this->params.setKeyUrl(this->genUniqueKeyName(this->params.getBaseUrl()));
     this->commonWriter.setS3service(&this->s3service);
@@ -64,8 +55,7 @@ string GPWriter::genUniqueKeyName(const string& url) {
 
     do {
         keyName = this->constructKeyName(url);
-    } while (this->s3service.checkKeyExistence(keyName, this->params.getRegion(),
-                                               this->params.getCred()));
+    } while (this->s3service.checkKeyExistence(keyName, this->params.getRegion()));
 
     return keyName;
 }
@@ -119,21 +109,21 @@ GPWriter* writer_init(const char* url_with_options, const char* format) {
             config_path = "s3/s3.conf";
         }
 
-        if (!InitConfig(config_path, "default")) {
+        S3Params params;
+        if (!InitConfig(params, config_path, "default")) {
             return NULL;
         }
 
-        CheckEssentialConfig();
+        CheckEssentialConfig(params);
 
         InitRemoteLog();
 
-        string extName = s3ext_autocompress ? string(format) + ".gz" : format;
-        writer = new GPWriter(url, extName);
+        string extName = params.isAutoCompress() ? string(format) + ".gz" : format;
+        writer = new GPWriter(params, url, extName);
         if (writer == NULL) {
             return NULL;
         }
 
-        WriterParams params;
         writer->open(params);
         return writer;
 

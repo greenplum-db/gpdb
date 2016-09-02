@@ -16,7 +16,7 @@ CompressWriter::~CompressWriter() {
     delete this->out;
 }
 
-void CompressWriter::open(const WriterParams& params) {
+void CompressWriter::open(const S3Params& params) {
     this->zstream.zalloc = Z_NULL;
     this->zstream.zfree = Z_NULL;
     this->zstream.opaque = Z_NULL;
@@ -57,12 +57,10 @@ uint64_t CompressWriter::writeOneChunk(const char* buf, uint64_t count) {
         this->flush();
 
         // output buffer is same size to input buffer, most cases data
-        // is smaller after compressed. But if this->zstream.avail_in > 0,
-        // then data is larger after compressed and some input data is pending.
-        // For example if compress already compressed data, we will encounter
-        // this case. So we need to loop here.
-
-    } while (status == Z_OK && this->zstream.avail_in > 0);
+        // is smaller after compressed. But if this->zstream.avail_in > 0 after deflate(), then data
+        // is larger after compressed and some input data is pending. For example when compressing a
+        // chunk that is already compressed, we will encounter this case. So we need to loop here.
+    } while (status == Z_OK && (this->zstream.avail_in > 0));
 
     return count;
 }
@@ -73,17 +71,17 @@ uint64_t CompressWriter::write(const char* buf, uint64_t count) {
         return 0;
     }
 
-    uint64_t ret = 0;
+    uint64_t writtenLen = 0;
 
-    for (uint64_t i = 0; i < count / S3_ZIP_COMPRESS_CHUNKSIZE; i++) {
-        ret += this->writeOneChunk(buf + ret, S3_ZIP_COMPRESS_CHUNKSIZE);
+    for (uint64_t i = 0; i < (count / S3_ZIP_COMPRESS_CHUNKSIZE); i++) {
+        writtenLen += this->writeOneChunk(buf + writtenLen, S3_ZIP_COMPRESS_CHUNKSIZE);
     }
 
-    if (ret < count) {
-        ret += this->writeOneChunk(buf + ret, count - ret);
+    if (writtenLen < count) {
+        writtenLen += this->writeOneChunk(buf + writtenLen, count - writtenLen);
     }
 
-    return ret;
+    return writtenLen;
 }
 
 void CompressWriter::close() {

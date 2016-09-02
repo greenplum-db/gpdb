@@ -23,12 +23,6 @@ S3BucketReader::S3BucketReader() : Reader() {
     this->s3interface = NULL;
     this->upstreamReader = NULL;
 
-    this->numOfChunks = 0;
-    this->chunkSize = -1;
-
-    this->segId = -1;
-    this->segNum = -1;
-
     this->needNewReader = true;
 }
 
@@ -36,26 +30,21 @@ S3BucketReader::~S3BucketReader() {
     this->close();
 }
 
-void S3BucketReader::open(const ReaderParams &params) {
-    this->url = params.getBaseUrl();
-    this->segId = params.getSegId();
-    this->segNum = params.getSegNum();
-    this->cred = params.getCred();
-    this->chunkSize = params.getChunkSize();
-    this->numOfChunks = params.getNumOfChunks();
+void S3BucketReader::open(const S3Params &params) {
+    this->params = params;
 
     this->parseURL();
 
     CHECK_OR_DIE(this->s3interface != NULL);
 
-    this->keyList = this->s3interface->listBucket(this->schema, this->region, this->bucket,
-                                                  this->prefix, this->cred);
+    this->keyList =
+        this->s3interface->listBucket(this->schema, this->region, this->bucket, this->prefix);
 
     return;
 }
 
 BucketContent *S3BucketReader::getNextKey() {
-    this->keyIndex = (this->keyIndex == (uint64_t)-1) ? this->segId : this->keyIndex + this->segNum;
+    this->keyIndex = (this->keyIndex == (uint64_t)-1) ? s3ext_segid : this->keyIndex + s3ext_segnum;
 
     if (this->keyIndex >= this->keyList.contents.size()) {
         return NULL;
@@ -64,23 +53,20 @@ BucketContent *S3BucketReader::getNextKey() {
     return &this->keyList.contents[this->keyIndex];
 }
 
-ReaderParams S3BucketReader::getReaderParams(BucketContent *key) {
-    ReaderParams params = ReaderParams();
+S3Params S3BucketReader::constructReaderParams(BucketContent *key) {
+    S3Params readerParams = this->params;
 
     // encode the key name but leave the "/"
     // "/encoded_path/encoded_name"
     string keyEncoded = uri_encode(key->getName());
     find_replace(keyEncoded, "%2F", "/");
 
-    params.setKeyUrl(this->getKeyURL(keyEncoded));
-    params.setRegion(this->region);
-    params.setKeySize(key->getSize());
-    params.setChunkSize(this->chunkSize);
-    params.setNumOfChunks(this->numOfChunks);
-    params.setCred(this->cred);
+    readerParams.setKeyUrl(this->getKeyURL(keyEncoded));
+    readerParams.setRegion(this->region);
+    readerParams.setKeySize(key->getSize());
 
-    S3DEBUG("key: %s, size: %" PRIu64, params.getKeyUrl().c_str(), params.getKeySize());
-    return params;
+    S3DEBUG("key: %s, size: %" PRIu64, readerParams.getKeyUrl().c_str(), readerParams.getKeySize());
+    return readerParams;
 }
 
 uint64_t S3BucketReader::read(char *buf, uint64_t count) {
@@ -90,11 +76,11 @@ uint64_t S3BucketReader::read(char *buf, uint64_t count) {
         if (this->needNewReader) {
             BucketContent *key = this->getNextKey();
             if (key == NULL) {
-                S3DEBUG("Read finished for segment: %d", this->segId);
+                S3DEBUG("Read finished for segment: %d", s3ext_segid);
                 return 0;
             }
 
-            this->upstreamReader->open(getReaderParams(key));
+            this->upstreamReader->open(constructReaderParams(key));
             this->needNewReader = false;
         }
 
@@ -125,11 +111,11 @@ string S3BucketReader::getKeyURL(const string &key) {
 }
 
 void S3BucketReader::parseURL() {
-    this->schema = s3ext_encryption ? "https" : "http";
-    this->region = S3UrlUtility::getRegionFromURL(this->url);
-    this->bucket = S3UrlUtility::getBucketFromURL(this->url);
-    this->prefix = S3UrlUtility::getPrefixFromURL(this->url);
+    this->schema = this->params.isEncryption() ? "https" : "http";
+    this->region = S3UrlUtility::getRegionFromURL(this->params.getBaseUrl());
+    this->bucket = S3UrlUtility::getBucketFromURL(this->params.getBaseUrl());
+    this->prefix = S3UrlUtility::getPrefixFromURL(this->params.getBaseUrl());
 
     bool ok = !(this->schema.empty() || this->region.empty() || this->bucket.empty());
-    CHECK_OR_DIE_MSG(ok, "'%s' is not valid", this->url.c_str());
+    CHECK_OR_DIE_MSG(ok, "'%s' is not valid", this->params.getBaseUrl().c_str());
 }

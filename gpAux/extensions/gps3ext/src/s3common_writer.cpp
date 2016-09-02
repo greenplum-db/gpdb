@@ -1,10 +1,10 @@
 #include "s3common_writer.h"
 #include "s3macros.h"
 
-void S3CommonWriter::open(const WriterParams& params) {
+void S3CommonWriter::open(const S3Params& params) {
     this->keyWriter.setS3interface(this->s3service);
 
-    if (s3ext_autocompress) {
+    if (params.isAutoCompress()) {
         this->upstreamWriter = &this->compressWriter;
         this->compressWriter.setWriter(&this->keyWriter);
     } else {

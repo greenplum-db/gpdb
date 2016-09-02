@@ -14,12 +14,13 @@ TEST(Utils, simplecurl) {
 
 TEST(Utils, nth) {
     const char *teststr = "aaabbbcccaaatttaaa";
-    EXPECT_EQ(find_Nth(teststr, 0, "aaa"), -1);
-    EXPECT_EQ(find_Nth(teststr, 1, "aaa"), 0);
-    EXPECT_EQ(find_Nth(teststr, 2, "aaa"), 9);
-    EXPECT_EQ(find_Nth(teststr, 3, "aaa"), 15);
-    EXPECT_EQ(find_Nth(teststr, 1, "abc"), -1);
-    EXPECT_EQ(find_Nth(teststr, 1, ""), 0);
+
+    EXPECT_EQ((uint64_t)-1, find_Nth(teststr, 0, "aaa"));
+    EXPECT_EQ((uint64_t)0, find_Nth(teststr, 1, "aaa"));
+    EXPECT_EQ((uint64_t)9, find_Nth(teststr, 2, "aaa"));
+    EXPECT_EQ((uint64_t)15, find_Nth(teststr, 3, "aaa"));
+    EXPECT_EQ((uint64_t)-1, find_Nth(teststr, 1, "abc"));
+    EXPECT_EQ((uint64_t)0, find_Nth(teststr, 1, ""));
 }
 
 #define MD5TESTSTRING "abcdefghijklmnopqrstuvwxyz\n"
@@ -84,10 +85,10 @@ TEST(Utils, Config) {
 
     uint64_t value = 0;
     EXPECT_TRUE(c.Scan("configtest", "config2", "%" PRIu64, &value));
-    EXPECT_EQ(value, 12345);
+    EXPECT_EQ((uint64_t)12345, value);
 
     EXPECT_TRUE(c.Scan("configtest", "config4", "%" PRIu64, &value));
-    EXPECT_EQ(value, 123);
+    EXPECT_EQ((uint64_t)123, value);
 
     EXPECT_FALSE(c.Scan("configtest", "config7", "%" PRIu64, &value));
     EXPECT_FALSE(c.Scan("", "config7", "%" PRIu64, &value));

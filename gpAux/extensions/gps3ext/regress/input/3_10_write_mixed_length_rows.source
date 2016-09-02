@@ -34,17 +34,15 @@ INSERT INTO s3write_mixedlenrows_temp VALUES (DEFAULT,
 INSERT INTO s3write_mixedlenrows_temp VALUES (DEFAULT,
 	repeat('Pack my box with five dozen liquor jugs.', 1024 * 25 * 10));
 
-
 -- WRITE OUT --
 ---------------
 
-INSERT INTO s3write_mixedlenrows_write 
+INSERT INTO s3write_mixedlenrows_write
 	SELECT * FROM s3write_mixedlenrows_temp;
 
 
 -- VERIFY IT --
 ---------------
-
 
 CREATE READABLE EXTERNAL TABLE s3write_mixedlenrows_read (id serial, content text)
 		LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/mixedlenrows/ config=@config_file@') FORMAT 'csv';

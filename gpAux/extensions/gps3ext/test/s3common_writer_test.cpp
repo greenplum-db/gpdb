@@ -35,20 +35,19 @@ class MockS3InterfaceForCompressionWrite : public MockS3Interface {
         return this->dataMap.size();
     }
 
-    string mockGetUploadId(const string& keyUrl, const string& region, const S3Credential& cred) {
+    string mockGetUploadId(const string& keyUrl, const string& region) {
         return this->uploadID;
     }
 
     string mockUploadPartOfData(vector<uint8_t>& data, const string& keyUrl, const string& region,
-                                const S3Credential& cred, uint64_t partNumber,
-                                const string& uploadId) {
+                                uint64_t partNumber, const string& uploadId) {
         UniqueLock uniqueLock(&this->lock);
         this->dataMap[partNumber] = data;
         return this->uploadID;
     }
 
-    bool mockCompleteMultiPart(const string& keyUrl, const string& region, const S3Credential& cred,
-                               const string& uploadId, const vector<string>& etagArray) {
+    bool mockCompleteMultiPart(const string& keyUrl, const string& region, const string& uploadId,
+                               const vector<string>& etagArray) {
         map<uint64_t, vector<uint8_t>>::iterator it;
         for (it = this->dataMap.begin(); it != this->dataMap.end(); it++) {
             this->data.insert(this->data.end(), it->second.begin(), it->second.end());
@@ -112,18 +111,17 @@ class S3CommonWriteTest : public ::testing::Test, public S3CommonWriter {
 // because even an empty string will produce 20+ bytes for GZip header and trailer,
 // and then in open() may flush those data into S3KeyWriter.
 TEST_F(S3CommonWriteTest, UsingGZip) {
-    s3ext_autocompress = true;
-
-    EXPECT_CALL(mockS3Interface, getUploadId(_, _, _))
+    EXPECT_CALL(mockS3Interface, getUploadId(_, _))
         .WillOnce(Invoke(&mockS3Interface, &MockS3InterfaceForCompressionWrite::mockGetUploadId));
-    EXPECT_CALL(mockS3Interface, uploadPartOfData(_, _, _, _, _, _))
+    EXPECT_CALL(mockS3Interface, uploadPartOfData(_, _, _, _, _))
         .WillOnce(
             Invoke(&mockS3Interface, &MockS3InterfaceForCompressionWrite::mockUploadPartOfData));
-    EXPECT_CALL(mockS3Interface, completeMultiPart(_, _, _, _, _))
+    EXPECT_CALL(mockS3Interface, completeMultiPart(_, _, _, _))
         .WillOnce(
             Invoke(&mockS3Interface, &MockS3InterfaceForCompressionWrite::mockCompleteMultiPart));
 
-    WriterParams params;
+    S3Params params;
+    params.setAutoCompress(true);
     params.setNumOfChunks(1);
     params.setChunkSize(S3_ZIP_COMPRESS_CHUNKSIZE + 1);
 
@@ -135,12 +133,11 @@ TEST_F(S3CommonWriteTest, UsingGZip) {
 
 // We need not to mock uploadPartOfData() and completeMultiPart() in plain mode,
 TEST_F(S3CommonWriteTest, UsingPlain) {
-    s3ext_autocompress = false;
-
-    EXPECT_CALL(mockS3Interface, getUploadId(_, _, _))
+    EXPECT_CALL(mockS3Interface, getUploadId(_, _))
         .WillOnce(Invoke(&mockS3Interface, &MockS3InterfaceForCompressionWrite::mockGetUploadId));
 
-    WriterParams params;
+    S3Params params;
+    params.setAutoCompress(false);
     params.setNumOfChunks(1);
     params.setChunkSize(S3_ZIP_COMPRESS_CHUNKSIZE + 1);
 
@@ -151,18 +148,17 @@ TEST_F(S3CommonWriteTest, UsingPlain) {
 }
 
 TEST_F(S3CommonWriteTest, WritePlainData) {
-    s3ext_autocompress = false;
-
-    EXPECT_CALL(mockS3Interface, getUploadId(_, _, _))
+    EXPECT_CALL(mockS3Interface, getUploadId(_, _))
         .WillOnce(Invoke(&mockS3Interface, &MockS3InterfaceForCompressionWrite::mockGetUploadId));
-    EXPECT_CALL(mockS3Interface, uploadPartOfData(_, _, _, _, _, _))
+    EXPECT_CALL(mockS3Interface, uploadPartOfData(_, _, _, _, _))
         .WillOnce(
             Invoke(&mockS3Interface, &MockS3InterfaceForCompressionWrite::mockUploadPartOfData));
-    EXPECT_CALL(mockS3Interface, completeMultiPart(_, _, _, _, _))
+    EXPECT_CALL(mockS3Interface, completeMultiPart(_, _, _, _))
         .WillOnce(
             Invoke(&mockS3Interface, &MockS3InterfaceForCompressionWrite::mockCompleteMultiPart));
 
-    WriterParams params;
+    S3Params params;
+    params.setAutoCompress(false);
     params.setNumOfChunks(1);
     params.setChunkSize(S3_ZIP_COMPRESS_CHUNKSIZE + 1);
 
@@ -177,18 +173,17 @@ TEST_F(S3CommonWriteTest, WritePlainData) {
 }
 
 TEST_F(S3CommonWriteTest, WriteGZipData) {
-    s3ext_autocompress = true;
-
-    EXPECT_CALL(mockS3Interface, getUploadId(_, _, _))
+    EXPECT_CALL(mockS3Interface, getUploadId(_, _))
         .WillOnce(Invoke(&mockS3Interface, &MockS3InterfaceForCompressionWrite::mockGetUploadId));
-    EXPECT_CALL(mockS3Interface, uploadPartOfData(_, _, _, _, _, _))
+    EXPECT_CALL(mockS3Interface, uploadPartOfData(_, _, _, _, _))
         .WillOnce(
             Invoke(&mockS3Interface, &MockS3InterfaceForCompressionWrite::mockUploadPartOfData));
-    EXPECT_CALL(mockS3Interface, completeMultiPart(_, _, _, _, _))
+    EXPECT_CALL(mockS3Interface, completeMultiPart(_, _, _, _))
         .WillOnce(
             Invoke(&mockS3Interface, &MockS3InterfaceForCompressionWrite::mockCompleteMultiPart));
 
-    WriterParams params;
+    S3Params params;
+    params.setAutoCompress(true);
     params.setNumOfChunks(1);
     params.setChunkSize(S3_ZIP_COMPRESS_CHUNKSIZE + 1);
 
@@ -205,19 +200,18 @@ TEST_F(S3CommonWriteTest, WriteGZipData) {
 }
 
 TEST_F(S3CommonWriteTest, WriteGZipDataMultipleTimes) {
-    s3ext_autocompress = true;
-
-    EXPECT_CALL(mockS3Interface, getUploadId(_, _, _))
+    EXPECT_CALL(mockS3Interface, getUploadId(_, _))
         .WillRepeatedly(
             Invoke(&mockS3Interface, &MockS3InterfaceForCompressionWrite::mockGetUploadId));
-    EXPECT_CALL(mockS3Interface, uploadPartOfData(_, _, _, _, _, _))
+    EXPECT_CALL(mockS3Interface, uploadPartOfData(_, _, _, _, _))
         .WillRepeatedly(
             Invoke(&mockS3Interface, &MockS3InterfaceForCompressionWrite::mockUploadPartOfData));
-    EXPECT_CALL(mockS3Interface, completeMultiPart(_, _, _, _, _))
+    EXPECT_CALL(mockS3Interface, completeMultiPart(_, _, _, _))
         .WillRepeatedly(
             Invoke(&mockS3Interface, &MockS3InterfaceForCompressionWrite::mockCompleteMultiPart));
 
-    WriterParams params;
+    S3Params params;
+    params.setAutoCompress(true);
     params.setNumOfChunks(1);
     params.setChunkSize(S3_ZIP_COMPRESS_CHUNKSIZE + 1);
 

@@ -13,11 +13,11 @@ extern string s3extErrorMessage;
 
 class GPReader : public Reader {
    public:
-    GPReader(const string &url);
+    GPReader(const S3Params &params, const string &url);
     virtual ~GPReader() {
     }
 
-    virtual void open(const ReaderParams &params);
+    virtual void open(const S3Params &params);
 
     // read() attempts to read up to count bytes into the buffer.
     // Return 0 if EOF. Throw exception if encounters errors.
@@ -31,7 +31,7 @@ class GPReader : public Reader {
     }
 
    private:
-    void constructReaderParams(const string &url);
+    void constructS3Params(const string &url);
 
    protected:
     S3BucketReader bucketReader;
@@ -39,8 +39,7 @@ class GPReader : public Reader {
     S3RESTfulService restfulService;
 
     S3Service s3service;
-    ReaderParams params;
-    S3Credential cred;
+    S3Params params;
 
     // it links to itself by default
     // but the pointer here leaves a chance to mock it in unit test

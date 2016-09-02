@@ -12,7 +12,7 @@ class DecompressReader : public Reader {
     DecompressReader();
     virtual ~DecompressReader();
 
-    virtual void open(const ReaderParams &params);
+    virtual void open(const S3Params &params);
 
     // read() attempts to read up to count bytes into the buffer.
     // Return 0 if EOF. Throw exception if encounters errors.

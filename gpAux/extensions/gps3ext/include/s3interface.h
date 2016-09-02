@@ -81,46 +81,39 @@ class S3Interface {
 
     // It is caller's responsibility to free returned memory.
     virtual ListBucketResult listBucket(const string& schema, const string& region,
-                                        const string& bucket, const string& prefix,
-                                        const S3Credential& cred) {
+                                        const string& bucket, const string& prefix) {
         throw std::runtime_error("Default implementation must not be called.");
     }
 
     virtual uint64_t fetchData(uint64_t offset, vector<uint8_t>& data, uint64_t len,
-                               const string& sourceUrl, const string& region,
-                               const S3Credential& cred) {
+                               const string& sourceUrl, const string& region) {
         throw std::runtime_error("Default implementation must not be called.");
     }
 
-    virtual S3CompressionType checkCompressionType(const string& keyUrl, const string& region,
-                                                   const S3Credential& cred) {
+    virtual S3CompressionType checkCompressionType(const string& keyUrl, const string& region) {
         throw std::runtime_error("Default implementation must not be called.");
     }
 
-    virtual bool checkKeyExistence(const string& keyUrl, const string& region,
-                                   const S3Credential& cred) {
+    virtual bool checkKeyExistence(const string& keyUrl, const string& region) {
         throw std::runtime_error("Default implementation must not be called.");
     }
 
-    virtual string getUploadId(const string& keyUrl, const string& region,
-                               const S3Credential& cred) {
+    virtual string getUploadId(const string& keyUrl, const string& region) {
         throw std::runtime_error("Default implementation must not be called.");
     }
 
     virtual string uploadPartOfData(vector<uint8_t>& data, const string& keyUrl,
-                                    const string& region, const S3Credential& cred,
-                                    uint64_t partNumber, const string& uploadId) {
+                                    const string& region, uint64_t partNumber,
+                                    const string& uploadId) {
         throw std::runtime_error("Default implementation must not be called.");
     }
 
     virtual bool completeMultiPart(const string& keyUrl, const string& region,
-                                   const S3Credential& cred, const string& uploadId,
-                                   const vector<string>& etagArray) {
+                                   const string& uploadId, const vector<string>& etagArray) {
         throw std::runtime_error("Default implementation must not be called.");
     }
 
-    virtual bool abortUpload(const string& keyUrl, const string& region, const S3Credential& cred,
-                             const string& uploadId) {
+    virtual bool abortUpload(const string& keyUrl, const string& region, const string& uploadId) {
         throw std::runtime_error("Default implementation must not be called.");
     }
 };
@@ -128,17 +121,18 @@ class S3Interface {
 class S3Service : public S3Interface {
    public:
     S3Service();
+    S3Service(const S3Params& params);
     virtual ~S3Service();
+
     ListBucketResult listBucket(const string& schema, const string& region, const string& bucket,
-                                const string& prefix, const S3Credential& cred);
+                                const string& prefix);
 
     uint64_t fetchData(uint64_t offset, vector<uint8_t>& data, uint64_t len,
-                       const string& sourceUrl, const string& region, const S3Credential& cred);
+                       const string& sourceUrl, const string& region);
 
-    S3CompressionType checkCompressionType(const string& keyUrl, const string& region,
-                                           const S3Credential& cred);
+    S3CompressionType checkCompressionType(const string& keyUrl, const string& region);
 
-    bool checkKeyExistence(const string& keyUrl, const string& region, const S3Credential& cred);
+    bool checkKeyExistence(const string& keyUrl, const string& region);
 
     void setRESTfulService(RESTfulService* restfullService) {
         this->restfulService = restfullService;
@@ -146,31 +140,27 @@ class S3Service : public S3Interface {
 
    protected:
     Response getResponseWithRetries(const string& url, HTTPHeaders& headers,
-                                    const map<string, string>& params,
                                     uint64_t retries = S3_REQUEST_MAX_RETRIES);
 
-    Response putResponseWithRetries(const string& url, HTTPHeaders& headers,
-                                    const map<string, string>& params, vector<uint8_t>& data,
+    Response putResponseWithRetries(const string& url, HTTPHeaders& headers, vector<uint8_t>& data,
                                     uint64_t retries = S3_REQUEST_MAX_RETRIES);
 
     Response postResponseWithRetries(const string& url, HTTPHeaders& headers,
-                                     const map<string, string>& params, const vector<uint8_t>& data,
+                                     const vector<uint8_t>& data,
                                      uint64_t retries = S3_REQUEST_MAX_RETRIES);
 
     ResponseCode headResponseWithRetries(const string& url, HTTPHeaders& headers,
-                                         const map<string, string>& params,
                                          uint64_t retries = S3_REQUEST_MAX_RETRIES);
 
-    string getUploadId(const string& keyUrl, const string& region, const S3Credential& cred);
+    string getUploadId(const string& keyUrl, const string& region);
 
     string uploadPartOfData(vector<uint8_t>& data, const string& keyUrl, const string& region,
-                            const S3Credential& cred, uint64_t partNumber, const string& uploadId);
+                            uint64_t partNumber, const string& uploadId);
 
-    bool completeMultiPart(const string& keyUrl, const string& region, const S3Credential& cred,
-                           const string& uploadId, const vector<string>& etagArray);
+    bool completeMultiPart(const string& keyUrl, const string& region, const string& uploadId,
+                           const vector<string>& etagArray);
 
-    bool abortUpload(const string& keyUrl, const string& region, const S3Credential& cred,
-                     const string& uploadId);
+    bool abortUpload(const string& keyUrl, const string& region, const string& uploadId);
 
    private:
     string getUrl(const string& prefix, const string& schema, const string& host,
@@ -179,10 +169,10 @@ class S3Service : public S3Interface {
     bool parseBucketXML(ListBucketResult* result, xmlParserCtxtPtr xmlcontext, string& marker);
 
     Response getBucketResponse(const string& region, const string& url, const string& prefix,
-                               const S3Credential& cred, const string& marker);
+                               const string& marker);
 
     HTTPHeaders composeHTTPHeaders(const string& url, const string& marker, const string& prefix,
-                                   const string& region, const S3Credential& cred);
+                                   const string& region);
 
     xmlParserCtxtPtr getXMLContext(Response& response);
 
@@ -192,6 +182,7 @@ class S3Service : public S3Interface {
 
    private:
     RESTfulService* restfulService;
+    S3Params params;
 };
 
 #endif /* INCLUDE_S3INTERFACE_H_ */

@@ -87,8 +87,7 @@ size_t RESTfulServiceReadFuncCallback(char *ptr, size_t size, size_t nmemb, void
 //
 // This method does not care about response format, caller need to handle
 // response format accordingly.
-Response S3RESTfulService::get(const string &url, HTTPHeaders &headers,
-                               const map<string, string> &params) {
+Response S3RESTfulService::get(const string &url, HTTPHeaders &headers, const S3Params &params) {
     Response response;
 
     CURL *curl = curl_easy_init();
@@ -104,15 +103,10 @@ Response S3RESTfulService::get(const string &url, HTTPHeaders &headers,
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, RESTfulServiceWriteFuncCallback);
 
     // consider low speed as timeout
-    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, s3ext_low_speed_limit);
-    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, s3ext_low_speed_time);
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, params.getLowSpeedLimit());
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, params.getLowSpeedTime());
 
-    map<string, string>::const_iterator iter = params.find("debug");
-    if (iter != params.end() && iter->second == "true") {
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-    }
-
-    if (s3ext_debug_curl) {
+    if (params.isDebugCurl()) {
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
     }
 
@@ -150,8 +144,8 @@ Response S3RESTfulService::get(const string &url, HTTPHeaders &headers,
     return response;
 }
 
-Response S3RESTfulService::put(const string &url, HTTPHeaders &headers,
-                               const map<string, string> &params, const vector<uint8_t> &data) {
+Response S3RESTfulService::put(const string &url, HTTPHeaders &headers, const S3Params &params,
+                               const vector<uint8_t> &data) {
     Response response;
 
     CURL *curl = curl_easy_init();
@@ -178,15 +172,10 @@ Response S3RESTfulService::put(const string &url, HTTPHeaders &headers,
     curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, RESTfulServiceHeadersWriteFuncCallback);
 
     // consider low speed as timeout
-    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, s3ext_low_speed_limit);
-    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, s3ext_low_speed_time);
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, params.getLowSpeedLimit());
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, params.getLowSpeedTime());
 
-    map<string, string>::const_iterator iter = params.find("debug");
-    if (iter != params.end() && iter->second == "true") {
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-    }
-
-    if (s3ext_debug_curl) {
+    if (params.isDebugCurl()) {
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
     }
 
@@ -231,8 +220,8 @@ Response S3RESTfulService::put(const string &url, HTTPHeaders &headers,
     return response;
 }
 
-Response S3RESTfulService::post(const string &url, HTTPHeaders &headers,
-                                const map<string, string> &params, const vector<uint8_t> &data) {
+Response S3RESTfulService::post(const string &url, HTTPHeaders &headers, const S3Params &params,
+                                const vector<uint8_t> &data) {
     Response response;
 
     CURL *curl = curl_easy_init();
@@ -256,15 +245,10 @@ Response S3RESTfulService::post(const string &url, HTTPHeaders &headers,
     curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)data.size());
 
     // consider low speed as timeout
-    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, s3ext_low_speed_limit);
-    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, s3ext_low_speed_time);
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, params.getLowSpeedLimit());
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, params.getLowSpeedTime());
 
-    map<string, string>::const_iterator iter = params.find("debug");
-    if (iter != params.end() && iter->second == "true") {
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-    }
-
-    if (s3ext_debug_curl) {
+    if (params.isDebugCurl()) {
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
     }
 
@@ -315,7 +299,7 @@ Response S3RESTfulService::post(const string &url, HTTPHeaders &headers,
 // Currently, this method only return the HTTP code, will be extended if needed in the future
 // implementation.
 ResponseCode S3RESTfulService::head(const string &url, HTTPHeaders &headers,
-                                    const map<string, string> &params) {
+                                    const S3Params &params) {
     ResponseCode responseCode = HeadResponseFail;
 
     CURL *curl = curl_easy_init();
@@ -331,12 +315,7 @@ ResponseCode S3RESTfulService::head(const string &url, HTTPHeaders &headers,
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "HEAD");
     curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
 
-    map<string, string>::const_iterator iter = params.find("debug");
-    if (iter != params.end() && iter->second == "true") {
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-    }
-
-    if (s3ext_debug_curl) {
+    if (params.isDebugCurl()) {
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
     }
 
@@ -356,7 +335,7 @@ ResponseCode S3RESTfulService::head(const string &url, HTTPHeaders &headers,
 }
 
 Response S3RESTfulService::deleteRequest(const string &url, HTTPHeaders &headers,
-                                         const map<string, string> &params) {
+                                         const S3Params &params) {
     Response response;
 
     CURL *curl = curl_easy_init();
@@ -382,15 +361,10 @@ Response S3RESTfulService::deleteRequest(const string &url, HTTPHeaders &headers
     curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)data.size());
 
     // consider low speed as timeout
-    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, s3ext_low_speed_limit);
-    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, s3ext_low_speed_time);
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, params.getLowSpeedLimit());
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, params.getLowSpeedTime());
 
-    map<string, string>::const_iterator iter = params.find("debug");
-    if (iter != params.end() && iter->second == "true") {
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-    }
-
-    if (s3ext_debug_curl) {
+    if (params.isDebugCurl()) {
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
     }
 

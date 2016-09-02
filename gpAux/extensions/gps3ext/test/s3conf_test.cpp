@@ -3,25 +3,27 @@
 #include "ini.cpp"
 
 TEST(Config, NonExistFile) {
-    bool ret = InitConfig("notexist/path/s3test.conf");
+    S3Params params;
+    bool ret = InitConfig(params, "notexist/path/s3test.conf");
 
     EXPECT_FALSE(ret);
 }
 
 TEST(Config, Basic) {
-    InitConfig("data/s3test.conf", "default");
+    S3Params params;
+    InitConfig(params, "data/s3test.conf", "default");
 
-    EXPECT_EQ("secret_test", s3ext_secret);
-    EXPECT_EQ("accessid_test", s3ext_accessid);
-    EXPECT_EQ("ABCDEFGabcdefg", s3ext_token);
+    EXPECT_EQ("secret_test", params.getCred().secret);
+    EXPECT_EQ("accessid_test", params.getCred().accessID);
+    EXPECT_EQ("ABCDEFGabcdefg", params.getCred().token);
 
 #ifdef S3_STANDALONE
     EXPECT_EQ(0, s3ext_segid);
     EXPECT_EQ(1, s3ext_segnum);
 #endif
 
-    EXPECT_EQ(6, s3ext_threadnum);
-    EXPECT_EQ(64 * 1024 * 1024 + 1, s3ext_chunksize);
+    EXPECT_EQ((uint64_t)6, params.getNumOfChunks());
+    EXPECT_EQ((uint64_t)(64 * 1024 * 1024 + 1), params.getChunkSize());
 
     EXPECT_EQ(EXT_INFO, s3ext_loglevel);
     EXPECT_EQ(STDERR_LOG, s3ext_logtype);
@@ -29,42 +31,47 @@ TEST(Config, Basic) {
     EXPECT_EQ(1111, s3ext_logserverport);
     EXPECT_EQ("127.0.0.1", s3ext_logserverhost);
 
-    EXPECT_EQ(1024, s3ext_low_speed_limit);
-    EXPECT_EQ(600, s3ext_low_speed_time);
+    EXPECT_EQ((uint64_t)1024, params.getLowSpeedLimit());
+    EXPECT_EQ((uint64_t)600, params.getLowSpeedTime());
 
-    EXPECT_TRUE(s3ext_encryption);
-    EXPECT_FALSE(s3ext_debug_curl);
+    EXPECT_TRUE(params.isEncryption());
+    EXPECT_FALSE(params.isDebugCurl());
 }
 
 TEST(Config, SpecialSectionValues) {
-    InitConfig("data/s3test.conf", "special_over");
+    S3Params params;
+    InitConfig(params, "data/s3test.conf", "special_over");
 
-    EXPECT_EQ(8, s3ext_threadnum);
-    EXPECT_EQ(128 * 1024 * 1024, s3ext_chunksize);
-    EXPECT_EQ(10240, s3ext_low_speed_limit);
-    EXPECT_EQ(60, s3ext_low_speed_time);
+    EXPECT_EQ((uint64_t)8, params.getNumOfChunks());
+    EXPECT_EQ((uint64_t)(128 * 1024 * 1024), params.getChunkSize());
 
-    EXPECT_TRUE(s3ext_encryption);
-    EXPECT_FALSE(s3ext_debug_curl);
+    EXPECT_EQ((uint64_t)10240, params.getLowSpeedLimit());
+    EXPECT_EQ((uint64_t)60, params.getLowSpeedTime());
+
+    EXPECT_TRUE(params.isEncryption());
+    EXPECT_FALSE(params.isDebugCurl());
 }
 
 TEST(Config, SpecialSectionLowValues) {
-    InitConfig("data/s3test.conf", "special_low");
+    S3Params params;
+    InitConfig(params, "data/s3test.conf", "special_low");
 
-    EXPECT_EQ(1, s3ext_threadnum);
-    EXPECT_EQ(8 * 1024 * 1024, s3ext_chunksize);
+    EXPECT_EQ((uint64_t)1, params.getNumOfChunks());
+    EXPECT_EQ((uint64_t)(8 * 1024 * 1024), params.getChunkSize());
 }
 
 TEST(Config, SpecialSectionWrongKeyName) {
-    InitConfig("data/s3test.conf", "special_wrongkeyname");
+    S3Params params;
+    InitConfig(params, "data/s3test.conf", "special_wrongkeyname");
 
-    EXPECT_EQ(4, s3ext_threadnum);
-    EXPECT_EQ(64 * 1024 * 1024, s3ext_chunksize);
+    EXPECT_EQ((uint64_t)4, params.getNumOfChunks());
+    EXPECT_EQ((uint64_t)(64 * 1024 * 1024), params.getChunkSize());
 }
 
 TEST(Config, SpecialSwitches) {
-    InitConfig("data/s3test.conf", "special_switches");
+    S3Params params;
+    InitConfig(params, "data/s3test.conf", "special_switches");
 
-    EXPECT_FALSE(s3ext_encryption);
-    EXPECT_TRUE(s3ext_debug_curl);
+    EXPECT_FALSE(params.isEncryption());
+    EXPECT_TRUE(params.isDebugCurl());
 }

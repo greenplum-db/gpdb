@@ -13,7 +13,7 @@ class MockBufferReader : public Reader {
         this->chunkSize = 0;
     }
 
-    void open(const ReaderParams &params) {
+    void open(const S3Params &params) {
     }
     void close() {
     }
@@ -89,7 +89,7 @@ class DecompressReaderTest : public testing::Test {
     }
 
     DecompressReader decompressReader;
-    ReaderParams params;
+    S3Params params;
     MockBufferReader bufReader;
     Byte compressionBuff[10000];
 };
@@ -103,7 +103,7 @@ TEST_F(DecompressReaderTest, AbleToDecompressEmptyData) {
     char buf[10000];
     uint64_t count = decompressReader.read(buf, sizeof(buf));
 
-    EXPECT_EQ(0, count);
+    EXPECT_EQ((uint64_t)0, count);
 }
 
 TEST_F(DecompressReaderTest, AbleToDecompressSmallCompressedData) {
@@ -139,13 +139,13 @@ TEST_F(DecompressReaderTest, AbleToDecompressFragmentalCompressedData) {
     while (offset < sizeof(hello)) {
         uint64_t count = decompressReader.read(buf + offset, sizeof(buf));
 
-        ASSERT_NE(count, 0);
+        ASSERT_NE(count, (uint64_t)0);
         offset += count;
     }
 
     uint64_t count = decompressReader.read(buf + offset, sizeof(buf));
 
-    EXPECT_EQ(0, count);
+    EXPECT_EQ((uint64_t)0, count);
     EXPECT_EQ(0, strncmp(hello, buf, count));
 }
 
@@ -209,11 +209,11 @@ TEST_F(DecompressReaderTest, ReadFromOffsetForEachCall) {
     char outputBuffer[4];
 
     uint64_t count = decompressReader.read(outputBuffer, sizeof(outputBuffer));
-    EXPECT_EQ(4, count);
+    EXPECT_EQ((uint64_t)4, count);
 
     // read 2nd 16 bytes
     count = decompressReader.read(outputBuffer, sizeof(outputBuffer));
-    EXPECT_EQ(4, count);
+    EXPECT_EQ((uint64_t)4, count);
     EXPECT_TRUE(strncmp("efgh", outputBuffer, count) == 0);
 }
 

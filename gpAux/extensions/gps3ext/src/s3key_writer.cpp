@@ -3,21 +3,19 @@
 
 #include "s3key_writer.h"
 
-void S3KeyWriter::open(const WriterParams& params) {
-    this->url = params.getKeyUrl();
-    this->region = params.getRegion();
-    this->cred = params.getCred();
-    this->chunkSize = params.getChunkSize();
+void S3KeyWriter::open(const S3Params& params) {
+    this->params = params;
 
     CHECK_OR_DIE_MSG(this->s3interface != NULL, "%s", "s3interface must not be NULL");
-    CHECK_OR_DIE_MSG(this->chunkSize > 0, "%s", "chunkSize must not be zero");
+    CHECK_OR_DIE_MSG(this->params.getChunkSize() > 0, "%s", "chunkSize must not be zero");
 
-    buffer.reserve(this->chunkSize);
+    buffer.reserve(this->params.getChunkSize());
 
-    this->uploadId = this->s3interface->getUploadId(this->url, this->region, this->cred);
+    this->uploadId =
+        this->s3interface->getUploadId(this->params.getKeyUrl(), this->params.getRegion());
     CHECK_OR_DIE_MSG(!this->uploadId.empty(), "%s", "Failed to get upload id");
 
-    S3DEBUG("key: %s, upload id: %s", this->url.c_str(), this->uploadId.c_str());
+    S3DEBUG("key: %s, upload id: %s", this->params.getKeyUrl().c_str(), this->uploadId.c_str());
 }
 
 // write() first fills up the data buffer before flush it out
@@ -28,13 +26,13 @@ uint64_t S3KeyWriter::write(const char* buf, uint64_t count) {
 
     uint64_t offset = 0;
     while (offset < count) {
-        uint64_t bufferRemain = this->chunkSize - this->buffer.size();
-        uint64_t dataRemain = count - offset;
-        uint64_t dataToBuffer = bufferRemain < dataRemain ? bufferRemain : dataRemain;
+        uint64_t bufferRemaining = this->params.getChunkSize() - this->buffer.size();
+        uint64_t dataRemaining = count - offset;
+        uint64_t dataToBuffer = bufferRemaining < dataRemaining ? bufferRemaining : dataRemaining;
 
         this->buffer.insert(this->buffer.end(), buf + offset, buf + offset + dataToBuffer);
 
-        if (this->buffer.size() == this->chunkSize) {
+        if (this->buffer.size() == this->params.getChunkSize()) {
             this->flushBuffer();
         }
 
@@ -67,7 +65,8 @@ void S3KeyWriter::checkQueryCancelSignal() {
 
         S3DEBUG("Start aborting multipart uploading (uploadID: %s, %lu parts uploaded)",
                 this->uploadId.c_str(), this->etagList.size());
-        this->s3interface->abortUpload(this->url, this->region, this->cred, this->uploadId);
+        this->s3interface->abortUpload(this->params.getKeyUrl(), this->params.getRegion(),
+                                       this->uploadId);
         S3DEBUG("Finished aborting multipart uploading (uploadID: %s)", this->uploadId.c_str());
 
         this->etagList.clear();
@@ -90,8 +89,8 @@ void* S3KeyWriter::UploadThreadFunc(void* data) {
         S3DEBUG("Upload thread start: %p, part number: %" PRIu64 ", data size: %" PRIu64,
                 pthread_self(), params->currentNumber, params->data.size());
         string etag = writer->s3interface->uploadPartOfData(
-            params->data, writer->url, writer->region, writer->cred, params->currentNumber,
-            writer->uploadId);
+            params->data, writer->params.getKeyUrl(), writer->params.getRegion(),
+            params->currentNumber, writer->uploadId);
 
         // when unique_lock destructs it will automatically unlock the mutex.
         UniqueLock threadLock(&writer->mutex);
@@ -115,7 +114,7 @@ void* S3KeyWriter::UploadThreadFunc(void* data) {
 void S3KeyWriter::flushBuffer() {
     if (!this->buffer.empty()) {
         UniqueLock queueLock(&this->mutex);
-        while (this->activeThreads >= (uint64_t)s3ext_threadnum) {
+        while (this->activeThreads >= this->params.getNumOfChunks()) {
             pthread_cond_wait(&this->cv, &this->mutex);
         }
 
@@ -160,11 +159,12 @@ void S3KeyWriter::completeKeyWriting() {
     }
 
     if (!this->etagList.empty() && !this->uploadId.empty()) {
-        this->s3interface->completeMultiPart(this->url, this->region, this->cred, this->uploadId,
-                                             etags);
+        this->s3interface->completeMultiPart(this->params.getKeyUrl(), this->params.getRegion(),
+                                             this->uploadId, etags);
     }
 
-    S3DEBUG("Segment %d has finished uploading \"%s\"", s3ext_segid, this->url.c_str());
+    S3DEBUG("Segment %d has finished uploading \"%s\"", s3ext_segid,
+            this->params.getKeyUrl().c_str());
 
     this->buffer.clear();
     this->etagList.clear();

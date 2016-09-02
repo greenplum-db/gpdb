@@ -3,7 +3,7 @@
 #include "http_parser.cpp"
 
 TEST(Common, SignRequestV4) {
-    S3Credential cred = {"keyid/foo", "secret/bar"};
+    S3Credential cred = {"keyid/foo", "secret/bar", ""};
 
     HTTPHeaders *h = new HTTPHeaders();
     ASSERT_NE((void *)NULL, h);

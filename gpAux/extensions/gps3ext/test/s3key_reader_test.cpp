@@ -33,7 +33,7 @@ class S3KeyReaderTest : public testing::Test, public S3KeyReader {
         this->close();
     }
 
-    ReaderParams params;
+    S3Params params;
     char buffer[256];
 
     MockS3Interface s3interface;
@@ -44,31 +44,31 @@ TEST(OffsetMgr, simple) {
     o.setKeySize(4096);
     o.setChunkSize(1000);
 
-    EXPECT_EQ(1000, o.getChunkSize());
-    EXPECT_EQ(4096, o.getKeySize());
+    EXPECT_EQ((uint64_t)1000, o.getChunkSize());
+    EXPECT_EQ((uint64_t)4096, o.getKeySize());
 
     Range r = o.getNextOffset();
-    EXPECT_EQ(r.offset, 0);
-    EXPECT_EQ(r.length, 1000);
+    EXPECT_EQ((uint64_t)0, r.offset);
+    EXPECT_EQ((uint64_t)1000, r.length);
 
     r = o.getNextOffset();
-    EXPECT_EQ(r.offset, 1000);
-    EXPECT_EQ(r.length, 1000);
+    EXPECT_EQ((uint64_t)1000, r.offset);
+    EXPECT_EQ((uint64_t)1000, r.length);
 
     r = o.getNextOffset();
-    EXPECT_EQ(r.offset, 2000);
-    EXPECT_EQ(r.length, 1000);
+    EXPECT_EQ((uint64_t)2000, r.offset);
+    EXPECT_EQ((uint64_t)1000, r.length);
 
     r = o.getNextOffset();
-    EXPECT_EQ(r.offset, 3000);
-    EXPECT_EQ(r.length, 1000);
+    EXPECT_EQ((uint64_t)3000, r.offset);
+    EXPECT_EQ((uint64_t)1000, r.length);
 
     r = o.getNextOffset();
-    EXPECT_EQ(r.offset, 4000);
-    EXPECT_EQ(r.length, 96);
+    EXPECT_EQ((uint64_t)4000, r.offset);
+    EXPECT_EQ((uint64_t)96, r.length);
 
-    EXPECT_EQ(1000, o.getChunkSize());
-    EXPECT_EQ(4096, o.getKeySize());
+    EXPECT_EQ((uint64_t)1000, o.getChunkSize());
+    EXPECT_EQ((uint64_t)4096, o.getKeySize());
 }
 
 TEST(OffsetMgr, KeySizeSmallerThanChunkSize) {
@@ -76,20 +76,20 @@ TEST(OffsetMgr, KeySizeSmallerThanChunkSize) {
     o.setKeySize(127);
     o.setChunkSize(1000);
 
-    EXPECT_EQ(1000, o.getChunkSize());
-    EXPECT_EQ(127, o.getKeySize());
+    EXPECT_EQ((uint64_t)1000, o.getChunkSize());
+    EXPECT_EQ((uint64_t)127, o.getKeySize());
 
     Range r = o.getNextOffset();
-    EXPECT_EQ(r.offset, 0);
-    EXPECT_EQ(r.length, 127);
+    EXPECT_EQ((uint64_t)0, r.offset);
+    EXPECT_EQ((uint64_t)127, r.length);
 
     r = o.getNextOffset();
-    EXPECT_EQ(r.offset, 127);
-    EXPECT_EQ(r.length, 0);
+    EXPECT_EQ((uint64_t)127, r.offset);
+    EXPECT_EQ((uint64_t)0, r.length);
 
     r = o.getNextOffset();
-    EXPECT_EQ(r.offset, 127);
-    EXPECT_EQ(r.length, 0);
+    EXPECT_EQ((uint64_t)127, r.offset);
+    EXPECT_EQ((uint64_t)0, r.length);
 }
 
 TEST(OffsetMgr, KeySizeEqualToChunkSize) {
@@ -97,20 +97,20 @@ TEST(OffsetMgr, KeySizeEqualToChunkSize) {
     o.setKeySize(127);
     o.setChunkSize(127);
 
-    EXPECT_EQ(127, o.getChunkSize());
-    EXPECT_EQ(127, o.getKeySize());
+    EXPECT_EQ((uint64_t)127, o.getChunkSize());
+    EXPECT_EQ((uint64_t)127, o.getKeySize());
 
     Range r = o.getNextOffset();
-    EXPECT_EQ(r.offset, 0);
-    EXPECT_EQ(r.length, 127);
+    EXPECT_EQ((uint64_t)0, r.offset);
+    EXPECT_EQ((uint64_t)127, r.length);
 
     r = o.getNextOffset();
-    EXPECT_EQ(r.offset, 127);
-    EXPECT_EQ(r.length, 0);
+    EXPECT_EQ((uint64_t)127, r.offset);
+    EXPECT_EQ((uint64_t)0, r.length);
 
     r = o.getNextOffset();
-    EXPECT_EQ(r.offset, 127);
-    EXPECT_EQ(r.length, 0);
+    EXPECT_EQ((uint64_t)127, r.offset);
+    EXPECT_EQ((uint64_t)0, r.length);
 }
 
 TEST(OffsetMgr, KeySizeIsDevidedByChunkSize) {
@@ -118,36 +118,36 @@ TEST(OffsetMgr, KeySizeIsDevidedByChunkSize) {
     o.setKeySize(635);
     o.setChunkSize(127);
 
-    EXPECT_EQ(127, o.getChunkSize());
-    EXPECT_EQ(635, o.getKeySize());
+    EXPECT_EQ((uint64_t)127, o.getChunkSize());
+    EXPECT_EQ((uint64_t)635, o.getKeySize());
 
     Range r = o.getNextOffset();
-    EXPECT_EQ(r.offset, 0);
-    EXPECT_EQ(r.length, 127);
+    EXPECT_EQ((uint64_t)0, r.offset);
+    EXPECT_EQ((uint64_t)127, r.length);
 
     r = o.getNextOffset();
-    EXPECT_EQ(r.offset, 127);
-    EXPECT_EQ(r.length, 127);
+    EXPECT_EQ((uint64_t)127, r.offset);
+    EXPECT_EQ((uint64_t)127, r.length);
 
     r = o.getNextOffset();
-    EXPECT_EQ(r.offset, 254);
-    EXPECT_EQ(r.length, 127);
+    EXPECT_EQ((uint64_t)254, r.offset);
+    EXPECT_EQ((uint64_t)127, r.length);
 
     r = o.getNextOffset();
-    EXPECT_EQ(r.offset, 381);
-    EXPECT_EQ(r.length, 127);
+    EXPECT_EQ((uint64_t)381, r.offset);
+    EXPECT_EQ((uint64_t)127, r.length);
 
     r = o.getNextOffset();
-    EXPECT_EQ(r.offset, 508);
-    EXPECT_EQ(r.length, 127);
+    EXPECT_EQ((uint64_t)508, r.offset);
+    EXPECT_EQ((uint64_t)127, r.length);
 
     r = o.getNextOffset();
-    EXPECT_EQ(r.offset, 635);
-    EXPECT_EQ(r.length, 0);
+    EXPECT_EQ((uint64_t)635, r.offset);
+    EXPECT_EQ((uint64_t)0, r.length);
 
     r = o.getNextOffset();
-    EXPECT_EQ(r.offset, 635);
-    EXPECT_EQ(r.length, 0);
+    EXPECT_EQ((uint64_t)635, r.offset);
+    EXPECT_EQ((uint64_t)0, r.length);
 }
 
 TEST(OffsetMgr, KeySizeIsZero) {
@@ -155,20 +155,20 @@ TEST(OffsetMgr, KeySizeIsZero) {
     o.setKeySize(0);
     o.setChunkSize(1000);
 
-    EXPECT_EQ(1000, o.getChunkSize());
-    EXPECT_EQ(0, o.getKeySize());
+    EXPECT_EQ((uint64_t)1000, o.getChunkSize());
+    EXPECT_EQ((uint64_t)0, o.getKeySize());
 
     Range r = o.getNextOffset();
-    EXPECT_EQ(r.offset, 0);
-    EXPECT_EQ(r.length, 0);
+    EXPECT_EQ((uint64_t)0, r.offset);
+    EXPECT_EQ((uint64_t)0, r.length);
 
     r = o.getNextOffset();
-    EXPECT_EQ(r.offset, 0);
-    EXPECT_EQ(r.length, 0);
+    EXPECT_EQ((uint64_t)0, r.offset);
+    EXPECT_EQ((uint64_t)0, r.length);
 
     r = o.getNextOffset();
-    EXPECT_EQ(r.offset, 0);
-    EXPECT_EQ(r.length, 0);
+    EXPECT_EQ((uint64_t)0, r.offset);
+    EXPECT_EQ((uint64_t)0, r.length);
 }
 
 TEST(OffsetMgr, reset) {
@@ -176,22 +176,22 @@ TEST(OffsetMgr, reset) {
     o.setKeySize(4096);
     o.setChunkSize(1000);
 
-    EXPECT_EQ(1000, o.getChunkSize());
-    EXPECT_EQ(4096, o.getKeySize());
+    EXPECT_EQ((uint64_t)1000, o.getChunkSize());
+    EXPECT_EQ((uint64_t)4096, o.getKeySize());
 
     Range r = o.getNextOffset();
-    EXPECT_EQ(r.offset, 0);
-    EXPECT_EQ(r.length, 1000);
+    EXPECT_EQ((uint64_t)0, r.offset);
+    EXPECT_EQ((uint64_t)1000, r.length);
 
     r = o.getNextOffset();
-    EXPECT_EQ(r.offset, 1000);
-    EXPECT_EQ(r.length, 1000);
+    EXPECT_EQ((uint64_t)1000, r.offset);
+    EXPECT_EQ((uint64_t)1000, r.length);
 
     o.reset();
 
-    EXPECT_EQ(0, o.getChunkSize());
-    EXPECT_EQ(0, o.getKeySize());
-    EXPECT_EQ(0, o.getCurPos());
+    EXPECT_EQ((uint64_t)0, o.getChunkSize());
+    EXPECT_EQ((uint64_t)0, o.getKeySize());
+    EXPECT_EQ((uint64_t)0, o.getCurPos());
 }
 
 TEST_F(S3KeyReaderTest, OpenWithZeroChunk) {
@@ -214,7 +214,7 @@ class MockFetchData {
     }
 
     uint64_t operator()(uint64_t offset, vector<uint8_t> &data, uint64_t len,
-                        const string &sourceUrl, const string &region, const S3Credential &cred) {
+                        const string &sourceUrl, const string &region) {
         data = std::move(chunkData);
         return retnLen;
     }
@@ -230,13 +230,12 @@ TEST_F(S3KeyReaderTest, ReadWithSingleChunk) {
     params.setKeySize(255);
     params.setChunkSize(8192);
 
-    EXPECT_CALL(s3interface, fetchData(_, _, _, _, _, _))
-        .WillOnce(Invoke(MockFetchData(255, 8192)));
+    EXPECT_CALL(s3interface, fetchData(_, _, _, _, _)).WillOnce(Invoke(MockFetchData(255, 8192)));
 
     this->open(params);
 
-    EXPECT_EQ(255, this->read(buffer, 64 * 1024));
-    EXPECT_EQ(0, this->read(buffer, 64 * 1024));
+    EXPECT_EQ((uint64_t)255, this->read(buffer, 64 * 1024));
+    EXPECT_EQ((uint64_t)0, this->read(buffer, 64 * 1024));
 }
 
 TEST_F(S3KeyReaderTest, ReadWithSingleChunkNormalCase) {
@@ -246,7 +245,7 @@ TEST_F(S3KeyReaderTest, ReadWithSingleChunkNormalCase) {
     params.setKeySize(255);
     params.setChunkSize(64);
 
-    EXPECT_CALL(s3interface, fetchData(_, _, _, _, _, _))
+    EXPECT_CALL(s3interface, fetchData(_, _, _, _, _))
         .WillOnce(Invoke(MockFetchData(64, 64)))
         .WillOnce(Invoke(MockFetchData(64, 64)))
         .WillOnce(Invoke(MockFetchData(64, 64)))
@@ -254,15 +253,15 @@ TEST_F(S3KeyReaderTest, ReadWithSingleChunkNormalCase) {
 
     this->open(params);
 
-    EXPECT_EQ(32, this->read(buffer, 32));
-    EXPECT_EQ(32, this->read(buffer, 32));
-    EXPECT_EQ(32, this->read(buffer, 32));
-    EXPECT_EQ(32, this->read(buffer, 32));
-    EXPECT_EQ(32, this->read(buffer, 32));
-    EXPECT_EQ(32, this->read(buffer, 32));
-    EXPECT_EQ(32, this->read(buffer, 32));
-    EXPECT_EQ(31, this->read(buffer, 32));
-    EXPECT_EQ(0, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)32, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)32, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)32, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)32, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)32, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)32, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)32, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)0, this->read(buffer, 32));
 }
 
 TEST_F(S3KeyReaderTest, ReadWithSmallBuffer) {
@@ -271,16 +270,15 @@ TEST_F(S3KeyReaderTest, ReadWithSmallBuffer) {
     params.setKeySize(255);
     params.setChunkSize(8192);
 
-    EXPECT_CALL(s3interface, fetchData(_, _, _, _, _, _))
-        .WillOnce(Invoke(MockFetchData(255, 8192)));
+    EXPECT_CALL(s3interface, fetchData(_, _, _, _, _)).WillOnce(Invoke(MockFetchData(255, 8192)));
 
     this->open(params);
 
-    EXPECT_EQ(64, this->read(buffer, 64));
-    EXPECT_EQ(64, this->read(buffer, 64));
-    EXPECT_EQ(64, this->read(buffer, 64));
-    EXPECT_EQ(63, this->read(buffer, 64));
-    EXPECT_EQ(0, this->read(buffer, 64));
+    EXPECT_EQ((uint64_t)64, this->read(buffer, 64));
+    EXPECT_EQ((uint64_t)64, this->read(buffer, 64));
+    EXPECT_EQ((uint64_t)64, this->read(buffer, 64));
+    EXPECT_EQ((uint64_t)63, this->read(buffer, 64));
+    EXPECT_EQ((uint64_t)0, this->read(buffer, 64));
 }
 
 TEST_F(S3KeyReaderTest, CloseWithoutFinishReading) {
@@ -289,15 +287,14 @@ TEST_F(S3KeyReaderTest, CloseWithoutFinishReading) {
     params.setKeySize(255);
     params.setChunkSize(8192);
 
-    EXPECT_CALL(s3interface, fetchData(_, _, _, _, _, _))
-        .WillOnce(Invoke(MockFetchData(255, 8192)));
+    EXPECT_CALL(s3interface, fetchData(_, _, _, _, _)).WillOnce(Invoke(MockFetchData(255, 8192)));
 
     // expect data fetched in 64,64,64,63,0 bulks
     //   when close it before finish, should have no problem
     this->open(params);
 
-    EXPECT_EQ(64, this->read(buffer, 64));
-    EXPECT_EQ(64, this->read(buffer, 64));
+    EXPECT_EQ((uint64_t)64, this->read(buffer, 64));
+    EXPECT_EQ((uint64_t)64, this->read(buffer, 64));
 }
 
 TEST_F(S3KeyReaderTest, ResetByInvokingClose) {
@@ -306,24 +303,23 @@ TEST_F(S3KeyReaderTest, ResetByInvokingClose) {
     params.setKeySize(255);
     params.setChunkSize(8192);
 
-    EXPECT_CALL(s3interface, fetchData(_, _, _, _, _, _))
-        .WillOnce(Invoke(MockFetchData(255, 8192)));
+    EXPECT_CALL(s3interface, fetchData(_, _, _, _, _)).WillOnce(Invoke(MockFetchData(255, 8192)));
 
     this->open(params);
 
-    EXPECT_EQ(64, this->read(buffer, 64));
-    EXPECT_EQ(64, this->read(buffer, 64));
-    EXPECT_EQ(64, this->read(buffer, 64));
-    EXPECT_EQ(63, this->read(buffer, 64));
-    EXPECT_EQ(0, this->read(buffer, 64));
+    EXPECT_EQ((uint64_t)64, this->read(buffer, 64));
+    EXPECT_EQ((uint64_t)64, this->read(buffer, 64));
+    EXPECT_EQ((uint64_t)64, this->read(buffer, 64));
+    EXPECT_EQ((uint64_t)63, this->read(buffer, 64));
+    EXPECT_EQ((uint64_t)0, this->read(buffer, 64));
 
     this->close();
 
     EXPECT_TRUE(this->getThreads().empty());
     EXPECT_TRUE(this->getChunkBuffers().empty());
 
-    EXPECT_EQ(0, this->getCurReadingChunk());
-    EXPECT_EQ(0, this->getTransferredKeyLen());
+    EXPECT_EQ((uint64_t)0, this->getCurReadingChunk());
+    EXPECT_EQ((uint64_t)0, this->getTransferredKeyLen());
     EXPECT_FALSE(this->isSharedError());
 }
 
@@ -333,12 +329,12 @@ TEST_F(S3KeyReaderTest, ReadWithSmallKeySize) {
     params.setKeySize(2);
     params.setChunkSize(8192);
 
-    EXPECT_CALL(s3interface, fetchData(_, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(2, 8192)));
+    EXPECT_CALL(s3interface, fetchData(_, _, _, _, _)).WillOnce(Invoke(MockFetchData(2, 8192)));
 
     this->open(params);
 
-    EXPECT_EQ(2, this->read(buffer, 64));
-    EXPECT_EQ(0, this->read(buffer, 64));
+    EXPECT_EQ((uint64_t)2, this->read(buffer, 64));
+    EXPECT_EQ((uint64_t)0, this->read(buffer, 64));
 }
 
 TEST_F(S3KeyReaderTest, ReadWithSmallChunk) {
@@ -347,7 +343,7 @@ TEST_F(S3KeyReaderTest, ReadWithSmallChunk) {
     params.setKeySize(255);
     params.setChunkSize(64);
 
-    EXPECT_CALL(s3interface, fetchData(_, _, _, _, _, _))
+    EXPECT_CALL(s3interface, fetchData(_, _, _, _, _))
         .WillOnce(Invoke(MockFetchData(64, 64)))
         .WillOnce(Invoke(MockFetchData(64, 64)))
         .WillOnce(Invoke(MockFetchData(64, 64)))
@@ -355,11 +351,11 @@ TEST_F(S3KeyReaderTest, ReadWithSmallChunk) {
 
     this->open(params);
 
-    EXPECT_EQ(64, this->read(buffer, 64));
-    EXPECT_EQ(64, this->read(buffer, 64));
-    EXPECT_EQ(64, this->read(buffer, 64));
-    EXPECT_EQ(63, this->read(buffer, 64));
-    EXPECT_EQ(0, this->read(buffer, 64));
+    EXPECT_EQ((uint64_t)64, this->read(buffer, 64));
+    EXPECT_EQ((uint64_t)64, this->read(buffer, 64));
+    EXPECT_EQ((uint64_t)64, this->read(buffer, 64));
+    EXPECT_EQ((uint64_t)63, this->read(buffer, 64));
+    EXPECT_EQ((uint64_t)0, this->read(buffer, 64));
 }
 
 TEST_F(S3KeyReaderTest, ReadWithSmallChunkDividedKeySize) {
@@ -368,7 +364,7 @@ TEST_F(S3KeyReaderTest, ReadWithSmallChunkDividedKeySize) {
     params.setKeySize(256);
     params.setChunkSize(64);
 
-    EXPECT_CALL(s3interface, fetchData(_, _, _, _, _, _))
+    EXPECT_CALL(s3interface, fetchData(_, _, _, _, _))
         .WillOnce(Invoke(MockFetchData(64, 64)))
         .WillOnce(Invoke(MockFetchData(64, 64)))
         .WillOnce(Invoke(MockFetchData(64, 64)))
@@ -376,11 +372,11 @@ TEST_F(S3KeyReaderTest, ReadWithSmallChunkDividedKeySize) {
 
     this->open(params);
 
-    EXPECT_EQ(64, this->read(buffer, 64));
-    EXPECT_EQ(64, this->read(buffer, 64));
-    EXPECT_EQ(64, this->read(buffer, 64));
-    EXPECT_EQ(64, this->read(buffer, 64));
-    EXPECT_EQ(0, this->read(buffer, 64));
+    EXPECT_EQ((uint64_t)64, this->read(buffer, 64));
+    EXPECT_EQ((uint64_t)64, this->read(buffer, 64));
+    EXPECT_EQ((uint64_t)64, this->read(buffer, 64));
+    EXPECT_EQ((uint64_t)64, this->read(buffer, 64));
+    EXPECT_EQ((uint64_t)0, this->read(buffer, 64));
 }
 
 TEST_F(S3KeyReaderTest, ReadWithChunkLargerThanReadBufferAndKeySize) {
@@ -389,13 +385,12 @@ TEST_F(S3KeyReaderTest, ReadWithChunkLargerThanReadBufferAndKeySize) {
     params.setKeySize(255);
     params.setChunkSize(8192);
 
-    EXPECT_CALL(s3interface, fetchData(_, _, _, _, _, _))
-        .WillOnce(Invoke(MockFetchData(255, 8192)));
+    EXPECT_CALL(s3interface, fetchData(_, _, _, _, _)).WillOnce(Invoke(MockFetchData(255, 8192)));
 
     this->open(params);
 
-    EXPECT_EQ(255, this->read(buffer, 255));
-    EXPECT_EQ(0, this->read(buffer, 255));
+    EXPECT_EQ((uint64_t)255, this->read(buffer, 255));
+    EXPECT_EQ((uint64_t)0, this->read(buffer, 255));
 }
 
 TEST_F(S3KeyReaderTest, ReadWithKeyLargerThanChunkSize) {
@@ -404,7 +399,7 @@ TEST_F(S3KeyReaderTest, ReadWithKeyLargerThanChunkSize) {
     params.setKeySize(1024);
     params.setChunkSize(255);
 
-    EXPECT_CALL(s3interface, fetchData(_, _, _, _, _, _))
+    EXPECT_CALL(s3interface, fetchData(_, _, _, _, _))
         .WillOnce(Invoke(MockFetchData(255, 255)))
         .WillOnce(Invoke(MockFetchData(255, 255)))
         .WillOnce(Invoke(MockFetchData(255, 255)))
@@ -413,12 +408,12 @@ TEST_F(S3KeyReaderTest, ReadWithKeyLargerThanChunkSize) {
 
     this->open(params);
 
-    EXPECT_EQ(255, this->read(buffer, 255));
-    EXPECT_EQ(255, this->read(buffer, 255));
-    EXPECT_EQ(255, this->read(buffer, 255));
-    EXPECT_EQ(255, this->read(buffer, 255));
-    EXPECT_EQ(4, this->read(buffer, 255));
-    EXPECT_EQ(0, this->read(buffer, 255));
+    EXPECT_EQ((uint64_t)255, this->read(buffer, 255));
+    EXPECT_EQ((uint64_t)255, this->read(buffer, 255));
+    EXPECT_EQ((uint64_t)255, this->read(buffer, 255));
+    EXPECT_EQ((uint64_t)255, this->read(buffer, 255));
+    EXPECT_EQ((uint64_t)4, this->read(buffer, 255));
+    EXPECT_EQ((uint64_t)0, this->read(buffer, 255));
 }
 
 TEST_F(S3KeyReaderTest, ReadWithSameKeyChunkReadSize) {
@@ -427,12 +422,12 @@ TEST_F(S3KeyReaderTest, ReadWithSameKeyChunkReadSize) {
     params.setKeySize(255);
     params.setChunkSize(255);
 
-    EXPECT_CALL(s3interface, fetchData(_, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(255, 255)));
+    EXPECT_CALL(s3interface, fetchData(_, _, _, _, _)).WillOnce(Invoke(MockFetchData(255, 255)));
 
     this->open(params);
 
-    EXPECT_EQ(255, this->read(buffer, 255));
-    EXPECT_EQ(0, this->read(buffer, 255));
+    EXPECT_EQ((uint64_t)255, this->read(buffer, 255));
+    EXPECT_EQ((uint64_t)0, this->read(buffer, 255));
 }
 
 TEST_F(S3KeyReaderTest, MTReadWith2Chunks) {
@@ -441,22 +436,22 @@ TEST_F(S3KeyReaderTest, MTReadWith2Chunks) {
     params.setKeySize(255);
     params.setChunkSize(64);
 
-    EXPECT_CALL(s3interface, fetchData(0, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3interface, fetchData(64, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3interface, fetchData(128, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3interface, fetchData(192, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(63, 64)));
+    EXPECT_CALL(s3interface, fetchData(0, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3interface, fetchData(64, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3interface, fetchData(128, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3interface, fetchData(192, _, _, _, _)).WillOnce(Invoke(MockFetchData(63, 64)));
 
     this->open(params);
 
-    EXPECT_EQ(32, this->read(buffer, 32));
-    EXPECT_EQ(32, this->read(buffer, 32));
-    EXPECT_EQ(32, this->read(buffer, 32));
-    EXPECT_EQ(32, this->read(buffer, 32));
-    EXPECT_EQ(32, this->read(buffer, 32));
-    EXPECT_EQ(32, this->read(buffer, 32));
-    EXPECT_EQ(32, this->read(buffer, 32));
-    EXPECT_EQ(31, this->read(buffer, 32));
-    EXPECT_EQ(0, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)32, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)32, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)32, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)32, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)32, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)32, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)32, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)0, this->read(buffer, 32));
 }
 
 TEST_F(S3KeyReaderTest, MTReadWithRedundantChunks) {
@@ -465,22 +460,22 @@ TEST_F(S3KeyReaderTest, MTReadWithRedundantChunks) {
     params.setKeySize(255);
     params.setChunkSize(64);
 
-    EXPECT_CALL(s3interface, fetchData(0, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3interface, fetchData(64, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3interface, fetchData(128, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3interface, fetchData(192, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(63, 64)));
+    EXPECT_CALL(s3interface, fetchData(0, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3interface, fetchData(64, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3interface, fetchData(128, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3interface, fetchData(192, _, _, _, _)).WillOnce(Invoke(MockFetchData(63, 64)));
 
     this->open(params);
 
-    EXPECT_EQ(32, this->read(buffer, 32));
-    EXPECT_EQ(32, this->read(buffer, 32));
-    EXPECT_EQ(32, this->read(buffer, 32));
-    EXPECT_EQ(32, this->read(buffer, 32));
-    EXPECT_EQ(32, this->read(buffer, 32));
-    EXPECT_EQ(32, this->read(buffer, 32));
-    EXPECT_EQ(32, this->read(buffer, 32));
-    EXPECT_EQ(31, this->read(buffer, 32));
-    EXPECT_EQ(0, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)32, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)32, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)32, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)32, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)32, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)32, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)32, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)0, this->read(buffer, 32));
 }
 
 TEST_F(S3KeyReaderTest, MTReadWithReusedAndUnreusedChunks) {
@@ -489,22 +484,22 @@ TEST_F(S3KeyReaderTest, MTReadWithReusedAndUnreusedChunks) {
     params.setKeySize(255);
     params.setChunkSize(64);
 
-    EXPECT_CALL(s3interface, fetchData(0, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3interface, fetchData(64, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3interface, fetchData(128, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3interface, fetchData(192, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(63, 64)));
+    EXPECT_CALL(s3interface, fetchData(0, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3interface, fetchData(64, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3interface, fetchData(128, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3interface, fetchData(192, _, _, _, _)).WillOnce(Invoke(MockFetchData(63, 64)));
 
     this->open(params);
 
-    EXPECT_EQ(32, this->read(buffer, 32));
-    EXPECT_EQ(32, this->read(buffer, 32));
-    EXPECT_EQ(32, this->read(buffer, 32));
-    EXPECT_EQ(32, this->read(buffer, 32));
-    EXPECT_EQ(32, this->read(buffer, 32));
-    EXPECT_EQ(32, this->read(buffer, 32));
-    EXPECT_EQ(32, this->read(buffer, 32));
-    EXPECT_EQ(31, this->read(buffer, 32));
-    EXPECT_EQ(0, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)32, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)32, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)32, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)32, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)32, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)32, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)32, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 32));
+    EXPECT_EQ((uint64_t)0, this->read(buffer, 32));
 }
 
 TEST_F(S3KeyReaderTest, MTReadWithChunksSmallerThanReadBuffer) {
@@ -513,18 +508,18 @@ TEST_F(S3KeyReaderTest, MTReadWithChunksSmallerThanReadBuffer) {
     params.setKeySize(255);
     params.setChunkSize(64);
 
-    EXPECT_CALL(s3interface, fetchData(0, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3interface, fetchData(64, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3interface, fetchData(128, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3interface, fetchData(192, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(63, 64)));
+    EXPECT_CALL(s3interface, fetchData(0, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3interface, fetchData(64, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3interface, fetchData(128, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3interface, fetchData(192, _, _, _, _)).WillOnce(Invoke(MockFetchData(63, 64)));
 
     this->open(params);
 
-    EXPECT_EQ(64, this->read(buffer, 127));
-    EXPECT_EQ(64, this->read(buffer, 127));
-    EXPECT_EQ(64, this->read(buffer, 127));
-    EXPECT_EQ(63, this->read(buffer, 127));
-    EXPECT_EQ(0, this->read(buffer, 127));
+    EXPECT_EQ((uint64_t)64, this->read(buffer, 127));
+    EXPECT_EQ((uint64_t)64, this->read(buffer, 127));
+    EXPECT_EQ((uint64_t)64, this->read(buffer, 127));
+    EXPECT_EQ((uint64_t)63, this->read(buffer, 127));
+    EXPECT_EQ((uint64_t)0, this->read(buffer, 127));
 }
 
 TEST_F(S3KeyReaderTest, MTReadWithFragmentalReadRequests) {
@@ -533,26 +528,26 @@ TEST_F(S3KeyReaderTest, MTReadWithFragmentalReadRequests) {
     params.setKeySize(255);
     params.setChunkSize(64);
 
-    EXPECT_CALL(s3interface, fetchData(0, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3interface, fetchData(64, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3interface, fetchData(128, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3interface, fetchData(192, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(63, 64)));
+    EXPECT_CALL(s3interface, fetchData(0, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3interface, fetchData(64, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3interface, fetchData(128, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3interface, fetchData(192, _, _, _, _)).WillOnce(Invoke(MockFetchData(63, 64)));
 
     this->open(params);
 
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(2, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(2, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(2, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(1, this->read(buffer, 31));
-    EXPECT_EQ(0, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)2, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)2, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)2, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)1, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)0, this->read(buffer, 31));
 }
 
 TEST_F(S3KeyReaderTest, MTReadWithHundredsOfThreads) {
@@ -561,60 +556,60 @@ TEST_F(S3KeyReaderTest, MTReadWithHundredsOfThreads) {
     params.setKeySize(1024);
     params.setChunkSize(64);
 
-    EXPECT_CALL(s3interface, fetchData(_, _, _, _, _, _))
+    EXPECT_CALL(s3interface, fetchData(_, _, _, _, _))
         .WillRepeatedly(Invoke(MockFetchData(64, 64)));
 
     this->open(params);
 
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(2, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(2, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(2, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(2, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(2, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(2, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(2, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(2, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(2, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(2, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(2, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(2, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(2, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(2, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(2, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(2, this->read(buffer, 31));
-    EXPECT_EQ(0, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)2, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)2, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)2, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)2, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)2, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)2, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)2, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)2, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)2, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)2, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)2, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)2, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)2, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)2, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)2, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)2, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)0, this->read(buffer, 31));
 }
 
 TEST_F(S3KeyReaderTest, MTReadWithFetchDataError) {
@@ -623,10 +618,10 @@ TEST_F(S3KeyReaderTest, MTReadWithFetchDataError) {
     params.setKeySize(255);
     params.setChunkSize(64);
 
-    EXPECT_CALL(s3interface, fetchData(0, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3interface, fetchData(64, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3interface, fetchData(128, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(-1, 64)));
-    EXPECT_CALL(s3interface, fetchData(192, _, _, _, _, _))
+    EXPECT_CALL(s3interface, fetchData(0, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3interface, fetchData(64, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3interface, fetchData(128, _, _, _, _)).WillOnce(Invoke(MockFetchData(-1, 64)));
+    EXPECT_CALL(s3interface, fetchData(192, _, _, _, _))
         .Times(AtMost(1))
         .WillOnce(Invoke(MockFetchData(63, 64)));
 
@@ -652,10 +647,10 @@ TEST_F(S3KeyReaderTest, MTReadWithUnexpectedFetchData) {
     params.setKeySize(255);
     params.setChunkSize(64);
 
-    EXPECT_CALL(s3interface, fetchData(0, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3interface, fetchData(64, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3interface, fetchData(128, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(42, 64)));
-    EXPECT_CALL(s3interface, fetchData(192, _, _, _, _, _))
+    EXPECT_CALL(s3interface, fetchData(0, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3interface, fetchData(64, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3interface, fetchData(128, _, _, _, _)).WillOnce(Invoke(MockFetchData(42, 64)));
+    EXPECT_CALL(s3interface, fetchData(192, _, _, _, _))
         .Times(AtMost(1))
         .WillOnce(Invoke(MockFetchData(63, 64)));
 
@@ -681,10 +676,10 @@ TEST_F(S3KeyReaderTest, MTReadWithUnexpectedFetchDataAtSecondRound) {
     params.setKeySize(255);
     params.setChunkSize(64);
 
-    EXPECT_CALL(s3interface, fetchData(0, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3interface, fetchData(64, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3interface, fetchData(128, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(42, 64)));
-    EXPECT_CALL(s3interface, fetchData(192, _, _, _, _, _))
+    EXPECT_CALL(s3interface, fetchData(0, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3interface, fetchData(64, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3interface, fetchData(128, _, _, _, _)).WillOnce(Invoke(MockFetchData(42, 64)));
+    EXPECT_CALL(s3interface, fetchData(192, _, _, _, _))
         .Times(AtMost(1))
         .WillOnce(Invoke(MockFetchData(63, 64)));
 
@@ -710,20 +705,20 @@ TEST_F(S3KeyReaderTest, MTReadWithGPDBCancel) {
     params.setKeySize(255);
     params.setChunkSize(64);
 
-    EXPECT_CALL(s3interface, fetchData(0, _, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3interface, fetchData(64, _, _, _, _, _))
+    EXPECT_CALL(s3interface, fetchData(0, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
+    EXPECT_CALL(s3interface, fetchData(64, _, _, _, _))
         .Times(AtMost(1))
         .WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3interface, fetchData(128, _, _, _, _, _))
+    EXPECT_CALL(s3interface, fetchData(128, _, _, _, _))
         .Times(AtMost(1))
         .WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3interface, fetchData(192, _, _, _, _, _))
+    EXPECT_CALL(s3interface, fetchData(192, _, _, _, _))
         .Times(AtMost(1))
         .WillOnce(Invoke(MockFetchData(63, 64)));
 
     this->open(params);
 
-    EXPECT_EQ(64, this->read(buffer, 127));
+    EXPECT_EQ((uint64_t)64, this->read(buffer, 127));
     QueryCancelPending = true;
 
     // Note for coverage test, due to multithread execution, in this test case
@@ -742,20 +737,20 @@ TEST_F(S3KeyReaderTest, MTReadWithHundredsOfThreadsAndSignalCancel) {
     params.setKeySize(1024);
     params.setChunkSize(64);
 
-    EXPECT_CALL(s3interface, fetchData(_, _, _, _, _, _))
+    EXPECT_CALL(s3interface, fetchData(_, _, _, _, _))
         .WillRepeatedly(Invoke(MockFetchData(64, 64)));
 
     this->open(params);
 
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(2, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(2, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(31, this->read(buffer, 31));
-    EXPECT_EQ(2, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)2, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)2, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)31, this->read(buffer, 31));
+    EXPECT_EQ((uint64_t)2, this->read(buffer, 31));
 
     QueryCancelPending = true;
 

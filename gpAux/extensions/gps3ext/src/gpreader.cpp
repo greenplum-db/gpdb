@@ -63,30 +63,24 @@ int thread_cleanup(void) {
     return 1;
 }
 
-GPReader::GPReader(const string& url) {
+GPReader::GPReader(const S3Params& params, const string& url) : s3service(params) {
+    this->params = params;
+
     // construct a canonical URL string
     // schema://domain/uri_encoded_path/
     string encodedURL = uri_encode(url);
     find_replace(encodedURL, "%3A%2F%2F", "://");
     find_replace(encodedURL, "%2F", "/");
 
-    constructReaderParams(encodedURL);
+    constructS3Params(encodedURL);
     restfulServicePtr = &restfulService;
 }
 
-void GPReader::constructReaderParams(const string& url) {
+void GPReader::constructS3Params(const string& url) {
     this->params.setBaseUrl(url);
-    this->params.setSegId(s3ext_segid);
-    this->params.setSegNum(s3ext_segnum);
-    this->params.setNumOfChunks(s3ext_threadnum);
-    this->params.setChunkSize(s3ext_chunksize);
-
-    this->cred.accessID = s3ext_accessid;
-    this->cred.secret = s3ext_secret;
-    this->params.setCred(this->cred);
 }
 
-void GPReader::open(const ReaderParams& params) {
+void GPReader::open(const S3Params& params) {
     this->s3service.setRESTfulService(this->restfulServicePtr);
     this->bucketReader.setS3interface(&this->s3service);
     this->bucketReader.setUpstreamReader(&this->commonReader);
@@ -141,20 +135,20 @@ GPReader* reader_init(const char* url_with_options) {
             config_path = "s3/s3.conf";
         }
 
-        if (!InitConfig(config_path, "default")) {
+        S3Params params;
+        if (!InitConfig(params, config_path, "default")) {
             return NULL;
         }
 
-        CheckEssentialConfig();
+        CheckEssentialConfig(params);
 
         InitRemoteLog();
 
-        reader = new GPReader(url);
+        reader = new GPReader(params, url);
         if (reader == NULL) {
             return NULL;
         }
 
-        ReaderParams params;
         reader->open(params);
         return reader;
 

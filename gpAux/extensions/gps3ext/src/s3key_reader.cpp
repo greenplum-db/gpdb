@@ -123,9 +123,9 @@ uint64_t ChunkBuffer::fill() {
 
     if (leftLen != 0) {
         try {
-            readLen = this->s3interface->fetchData(
-                offset, this->chunkData, leftLen, this->sourceUrl,
-                this->sharedKeyReader.getRegion(), this->sharedKeyReader.getCredential());
+            readLen =
+                this->s3interface->fetchData(offset, this->chunkData, leftLen, this->sourceUrl,
+                                             this->sharedKeyReader.getRegion());
         } catch (std::exception& e) {
             S3DEBUG("Failed to fetch expected data from S3");
             this->setSharedError(true, e.what());
@@ -187,7 +187,7 @@ void* DownloadThreadFunc(void* data) {
     return NULL;
 }
 
-void S3KeyReader::open(const ReaderParams& params) {
+void S3KeyReader::open(const S3Params& params) {
     CHECK_OR_DIE_MSG(this->s3interface != NULL, "%s", "s3interface must not be NULL");
 
     this->sharedError = false;
@@ -197,7 +197,6 @@ void S3KeyReader::open(const ReaderParams& params) {
     CHECK_OR_DIE_MSG(this->numOfChunks > 0, "%s", "numOfChunks must not be zero");
 
     this->region = params.getRegion();
-    this->credential = params.getCred();
 
     this->offsetMgr.setKeySize(params.getKeySize());
     this->offsetMgr.setChunkSize(params.getChunkSize());

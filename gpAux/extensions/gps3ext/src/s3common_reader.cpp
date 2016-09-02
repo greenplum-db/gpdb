@@ -1,11 +1,11 @@
 #include "s3common_reader.h"
 #include "s3macros.h"
 
-void S3CommonReader::open(const ReaderParams &params) {
+void S3CommonReader::open(const S3Params &params) {
     this->keyReader.setS3interface(s3service);
 
     S3CompressionType compressionType =
-        s3service->checkCompressionType(params.getKeyUrl(), params.getRegion(), params.getCred());
+        s3service->checkCompressionType(params.getKeyUrl(), params.getRegion());
 
     switch (compressionType) {
         case S3_COMPRESSION_GZIP:

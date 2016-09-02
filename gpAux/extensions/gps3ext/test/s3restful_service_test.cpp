@@ -11,7 +11,7 @@ using namespace std;
 
 TEST(S3RESTfulService, GetWithWrongHeader) {
     HTTPHeaders headers;
-    map<string, string> params;
+    S3Params params;
     S3RESTfulService service;
 
     string url = "https://www.bing.com/";
@@ -25,7 +25,7 @@ TEST(S3RESTfulService, GetWithWrongHeader) {
 
 TEST(S3RESTfulService, GetWithEmptyHeader) {
     HTTPHeaders headers;
-    map<string, string> params;
+    S3Params params;
     string url;
     S3RESTfulService service;
 
@@ -40,7 +40,7 @@ TEST(S3RESTfulService, GetWithEmptyHeader) {
 
 TEST(S3RESTfulService, GetWithoutURL) {
     HTTPHeaders headers;
-    map<string, string> params;
+    S3Params params;
     string url;
     S3RESTfulService service;
 
@@ -53,7 +53,7 @@ TEST(S3RESTfulService, GetWithoutURL) {
 
 TEST(S3RESTfulService, GetWithWrongURL) {
     HTTPHeaders headers;
-    map<string, string> params;
+    S3Params params;
     string url;
     S3RESTfulService service;
 
@@ -66,8 +66,8 @@ TEST(S3RESTfulService, GetWithWrongURL) {
 
 TEST(S3RESTfulService, GetWithoutURLWithDebugParam) {
     HTTPHeaders headers;
-    map<string, string> params;
-    params["debug"] = "true";
+    S3Params params;
+    params.setDebugCurl(true);
 
     string url;
     S3RESTfulService service;
@@ -81,7 +81,7 @@ TEST(S3RESTfulService, GetWithoutURLWithDebugParam) {
 
 TEST(S3RESTfulService, PutWithoutURL) {
     HTTPHeaders headers;
-    map<string, string> params;
+    S3Params params;
     string url;
     S3RESTfulService service;
     vector<uint8_t> data;
@@ -95,7 +95,7 @@ TEST(S3RESTfulService, PutWithoutURL) {
 
 TEST(S3RESTfulService, PutToServerWithBlindPutService) {
     HTTPHeaders headers;
-    map<string, string> params;
+    S3Params params;
     string url;
     S3RESTfulService service;
 
@@ -113,7 +113,7 @@ TEST(S3RESTfulService, PutToServerWithBlindPutService) {
 
 TEST(S3RESTfulService, PutToServerWith404Page) {
     HTTPHeaders headers;
-    map<string, string> params;
+    S3Params params;
     string url;
     S3RESTfulService service;
 
@@ -132,8 +132,8 @@ TEST(S3RESTfulService, PutToServerWith404Page) {
 
 TEST(S3RESTfulService, PutWithoutURLWithDebugParam) {
     HTTPHeaders headers;
-    map<string, string> params;
-    params["debug"] = "true";
+    S3Params params;
+    params.setDebugCurl(true);
 
     string url;
     S3RESTfulService service;
@@ -164,7 +164,7 @@ bool compareVector(const vector<T>& a, const vector<T>& b) {
 /* Run './bin/dummyHTTPServer.py' before enabling this test */
 TEST(S3RESTfulService, DISABLED_PutToDummyServer) {
     HTTPHeaders headers;
-    map<string, string> params;
+    S3Params params;
     string url;
     S3RESTfulService service;
 
@@ -185,7 +185,7 @@ TEST(S3RESTfulService, DISABLED_PutToDummyServer) {
 
 TEST(S3RESTfulService, HeadWithoutURL) {
     HTTPHeaders headers;
-    map<string, string> params;
+    S3Params params;
     string url;
     S3RESTfulService service;
 
@@ -196,8 +196,8 @@ TEST(S3RESTfulService, HeadWithoutURL) {
 
 TEST(S3RESTfulService, HeadWithCorrectURLAndDebugParam) {
     HTTPHeaders headers;
-    map<string, string> params;
-    params["debug"] = "true";
+    S3Params params;
+    params.setDebugCurl(true);
 
     string url;
     S3RESTfulService service;
@@ -211,7 +211,7 @@ TEST(S3RESTfulService, HeadWithCorrectURLAndDebugParam) {
 
 TEST(S3RESTfulService, HeadWithWrongURL) {
     HTTPHeaders headers;
-    map<string, string> params;
+    S3Params params;
     string url;
     S3RESTfulService service;
 
@@ -224,7 +224,7 @@ TEST(S3RESTfulService, HeadWithWrongURL) {
 
 TEST(S3RESTfulService, HeadWithCorrectURL) {
     HTTPHeaders headers;
-    map<string, string> params;
+    S3Params params;
     string url;
     S3RESTfulService service;
 
@@ -237,7 +237,7 @@ TEST(S3RESTfulService, HeadWithCorrectURL) {
 
 TEST(S3RESTfulService, PostWithoutURL) {
     HTTPHeaders headers;
-    map<string, string> params;
+    S3Params params;
     string url;
     S3RESTfulService service;
 
@@ -250,8 +250,9 @@ TEST(S3RESTfulService, PostWithoutURL) {
 
 TEST(S3RESTfulService, PostToServerWithBlindPutServiceAndDebugParam) {
     HTTPHeaders headers;
-    map<string, string> params;
-    params["debug"] = "true";
+    S3Params params;
+    params.setDebugCurl(true);
+
     string url;
     S3RESTfulService service;
 
@@ -265,7 +266,7 @@ TEST(S3RESTfulService, PostToServerWithBlindPutServiceAndDebugParam) {
 
 TEST(S3RESTfulService, PostToServerWithBlindPutService) {
     HTTPHeaders headers;
-    map<string, string> params;
+    S3Params params;
     string url;
     S3RESTfulService service;
 
@@ -279,7 +280,7 @@ TEST(S3RESTfulService, PostToServerWithBlindPutService) {
 
 TEST(S3RESTfulService, PostToServerWith404Page) {
     HTTPHeaders headers;
-    map<string, string> params;
+    S3Params params;
     string url;
     S3RESTfulService service;
 
@@ -294,7 +295,7 @@ TEST(S3RESTfulService, PostToServerWith404Page) {
 
 TEST(S3RESTfulService, PostToServerWithData) {
     HTTPHeaders headers;
-    map<string, string> params;
+    S3Params params;
     string url;
     S3RESTfulService service;
 
@@ -316,7 +317,7 @@ TEST(S3RESTfulService, PostToServerWithData) {
 /* Run './bin/dummyHTTPServer.py' before enabling this test */
 TEST(S3RESTfulService, DISABLED_PostToDummyServer) {
     HTTPHeaders headers;
-    map<string, string> params;
+    S3Params params;
     string url;
     S3RESTfulService service;
 
@@ -330,7 +331,7 @@ TEST(S3RESTfulService, DISABLED_PostToDummyServer) {
 /* Run './bin/dummyHTTPServer.py' before enabling this test */
 TEST(S3RESTfulService, DISABLED_PostToDummyServerWithData) {
     HTTPHeaders headers;
-    map<string, string> params;
+    S3Params params;
     string url;
     S3RESTfulService service;
 
@@ -352,7 +353,7 @@ TEST(S3RESTfulService, DISABLED_PostToDummyServerWithData) {
 /* Run './bin/dummyHTTPServer.py' before enabling this test */
 TEST(S3RESTfulService, DISABLED_DeleteToDummyServerWithData) {
     HTTPHeaders headers;
-    map<string, string> params;
+    S3Params params;
     string url;
     S3RESTfulService service;
 

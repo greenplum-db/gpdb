@@ -15,7 +15,7 @@ class S3BucketReader : public Reader {
     S3BucketReader();
     virtual ~S3BucketReader();
 
-    void open(const ReaderParams &params);
+    void open(const S3Params &params);
     uint64_t read(char *buf, uint64_t count);
     void close();
 
@@ -29,7 +29,7 @@ class S3BucketReader : public Reader {
 
     void parseURL();
     void parseURL(const string &url) {
-        this->url = url;
+        this->params.setBaseUrl(url);
         parseURL();
     };
 
@@ -52,18 +52,13 @@ class S3BucketReader : public Reader {
     string getKeyURL(const string &key);
 
    private:
-    uint64_t segId;   // segment id
-    uint64_t segNum;  // total number of segments
-    uint64_t chunkSize;
-    uint64_t numOfChunks;
+    S3Params params;
 
-    string url;
     string schema;
     string region;
     string bucket;
     string prefix;
 
-    S3Credential cred;
     S3Interface *s3interface;
 
     // upstreamReader is where we get data from.
@@ -74,7 +69,7 @@ class S3BucketReader : public Reader {
     uint64_t keyIndex;         // BucketContent index of keylist->contents.
 
     BucketContent *getNextKey();
-    ReaderParams getReaderParams(BucketContent *key);
+    S3Params constructReaderParams(BucketContent *key);
 };
 
 #endif

@@ -12,7 +12,7 @@ class S3CommonReader : public Reader {
     virtual ~S3CommonReader() {
     }
 
-    virtual void open(const ReaderParams& params);
+    virtual void open(const S3Params& params);
 
     // read() attempts to read up to count bytes into the buffer.
     // Return 0 if EOF. Throw exception if encounters errors.

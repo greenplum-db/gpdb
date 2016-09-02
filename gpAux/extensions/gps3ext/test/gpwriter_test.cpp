@@ -12,8 +12,9 @@ using ::testing::_;
 
 class MockGPWriter : public GPWriter {
    public:
-    MockGPWriter(const string& urlWithOptions, S3RESTfulService* mockService)
-        : GPWriter(urlWithOptions) {
+    MockGPWriter(const S3Params& params, const string& urlWithOptions,
+                 S3RESTfulService* mockService)
+        : GPWriter(params, urlWithOptions) {
         restfulServicePtr = mockService;
     }
 };
@@ -21,11 +22,12 @@ class MockGPWriter : public GPWriter {
 class GPWriterTest : public testing::Test {
    protected:
     virtual void SetUp() {
-        InitConfig("data/s3test.conf", "default");
+        InitConfig(this->params, "data/s3test.conf", "default");
     }
     virtual void TearDown() {
     }
 
+    S3Params params;
     MockS3Interface mocks3interface;
 };
 
@@ -33,7 +35,7 @@ TEST_F(GPWriterTest, ConstructKeyName) {
     string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal";
 
     MockS3RESTfulService mockRestfulService;
-    MockGPWriter gpwriter(url, &mockRestfulService);
+    MockGPWriter gpwriter(this->params, url, &mockRestfulService);
     EXPECT_CALL(mockRestfulService, head(_, _, _)).WillOnce(Return(404));
 
     uint8_t xml[] =
@@ -49,18 +51,17 @@ TEST_F(GPWriterTest, ConstructKeyName) {
 
     EXPECT_CALL(mockRestfulService, post(_, _, _, vector<uint8_t>())).WillOnce(Return(response));
 
-    WriterParams params;
-    gpwriter.open(params);
+    gpwriter.open(this->params);
 
     // "0"+".data"'s length is 6
-    EXPECT_EQ(8, gpwriter.getKeyToUpload().length() - url.length() - 6);
+    EXPECT_EQ((uint64_t)8, gpwriter.getKeyToUpload().length() - url.length() - 6);
 }
 
 TEST_F(GPWriterTest, GenerateUniqueKeyName) {
     string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal";
 
     MockS3RESTfulService mockRestfulService;
-    MockGPWriter gpwriter(url, &mockRestfulService);
+    MockGPWriter gpwriter(this->params, url, &mockRestfulService);
     EXPECT_CALL(mockRestfulService, head(_, _, _)).Times(AtLeast(1)).WillRepeatedly(Return(404));
 
     uint8_t xml[] =
@@ -78,11 +79,10 @@ TEST_F(GPWriterTest, GenerateUniqueKeyName) {
         .WillOnce(Return(response))
         .WillOnce(Return(response));
 
-    WriterParams params;
     params.setKeyUrl(url);
-    gpwriter.open(params);
+    gpwriter.open(this->params);
 
-    MockGPWriter gpwriter2(url, &mockRestfulService);
+    MockGPWriter gpwriter2(this->params, url, &mockRestfulService);
     EXPECT_CALL(mockRestfulService, head(gpwriter.getKeyToUpload(), _, _))
         .Times(AtMost(1))
         .WillOnce(Return(200));
@@ -95,7 +95,7 @@ TEST_F(GPWriterTest, GenerateUniqueKeyName) {
 TEST_F(GPWriterTest, ReGenerateKeyName) {
     string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal";
     MockS3RESTfulService mockRestfulService;
-    MockGPWriter gpwriter(url, &mockRestfulService);
+    MockGPWriter gpwriter(this->params, url, &mockRestfulService);
 
     EXPECT_CALL(mockRestfulService, head(_, _, _)).WillOnce(Return(200)).WillOnce(Return(404));
 
@@ -112,9 +112,8 @@ TEST_F(GPWriterTest, ReGenerateKeyName) {
 
     EXPECT_CALL(mockRestfulService, post(_, _, _, vector<uint8_t>())).WillOnce(Return(response));
 
-    WriterParams params;
     params.setKeyUrl(url);
-    gpwriter.open(params);
+    gpwriter.open(this->params);
 
     // expect the restfulService->head() was called twice
 }

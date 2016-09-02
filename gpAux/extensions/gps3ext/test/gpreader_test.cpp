@@ -11,8 +11,9 @@ using ::testing::_;
 
 class MockGPReader : public GPReader {
    public:
-    MockGPReader(const string& urlWithOptions, S3RESTfulService* mockService)
-        : GPReader(urlWithOptions) {
+    MockGPReader(const S3Params& params, const string& urlWithOptions,
+                 S3RESTfulService* mockService)
+        : GPReader(params, urlWithOptions) {
         restfulServicePtr = mockService;
     }
 
@@ -24,25 +25,27 @@ class MockGPReader : public GPReader {
 class GPReaderTest : public testing::Test {
    protected:
     virtual void SetUp() {
-        InitConfig("data/s3test.conf", "default");
+        InitConfig(this->params, "data/s3test.conf", "default");
     }
     virtual void TearDown() {
     }
+
+    S3Params params;
 };
 
 TEST_F(GPReaderTest, Construct) {
     string url = "s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal";
-    GPReader gpreader(url);
+    GPReader gpreader(this->params, url);
 
-    EXPECT_EQ("secret_test", s3ext_secret);
-    EXPECT_EQ("accessid_test", s3ext_accessid);
-    EXPECT_EQ("ABCDEFGabcdefg", s3ext_token);
+    EXPECT_EQ("secret_test", this->params.getCred().secret);
+    EXPECT_EQ("accessid_test", this->params.getCred().accessID);
+    EXPECT_EQ("ABCDEFGabcdefg", this->params.getCred().token);
 }
 
 TEST_F(GPReaderTest, Open) {
     string url = "s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal";
     MockS3RESTfulService mockRestfulService;
-    MockGPReader gpreader(url, &mockRestfulService);
+    MockGPReader gpreader(this->params, url, &mockRestfulService);
 
     XMLGenerator generator;
     XMLGenerator* gen = &generator;
@@ -56,19 +59,18 @@ TEST_F(GPReaderTest, Open) {
 
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
 
-    ReaderParams params;
-    gpreader.open(params);
+    gpreader.open(this->params);
 
     const ListBucketResult& keyList = gpreader.getBucketReader().getKeyList();
-    EXPECT_EQ(1, keyList.contents.size());
+    EXPECT_EQ((uint64_t)1, keyList.contents.size());
     EXPECT_EQ("threebytes/threebytes", keyList.contents[0].getName());
-    EXPECT_EQ(3, keyList.contents[0].getSize());
+    EXPECT_EQ((uint64_t)3, keyList.contents[0].getSize());
 }
 
 TEST_F(GPReaderTest, Close) {
     string url = "s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal";
     MockS3RESTfulService mockRestfulService;
-    MockGPReader gpreader(url, &mockRestfulService);
+    MockGPReader gpreader(this->params, url, &mockRestfulService);
 
     XMLGenerator generator;
     XMLGenerator* gen = &generator;
@@ -82,11 +84,10 @@ TEST_F(GPReaderTest, Close) {
 
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillOnce(Return(response));
 
-    ReaderParams params;
-    gpreader.open(params);
+    gpreader.open(this->params);
 
     const ListBucketResult& keyList = gpreader.getBucketReader().getKeyList();
-    EXPECT_EQ(1, keyList.contents.size());
+    EXPECT_EQ((uint64_t)1, keyList.contents.size());
 
     gpreader.close();
     EXPECT_TRUE(keyList.contents.empty());
@@ -95,7 +96,7 @@ TEST_F(GPReaderTest, Close) {
 TEST_F(GPReaderTest, ReadSmallData) {
     string url = "s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal";
     MockS3RESTfulService mockRestfulService;
-    MockGPReader gpreader(url, &mockRestfulService);
+    MockGPReader gpreader(this->params, url, &mockRestfulService);
 
     XMLGenerator generator;
     XMLGenerator* gen = &generator;
@@ -124,19 +125,18 @@ TEST_F(GPReaderTest, ReadSmallData) {
         // whole file content
         .WillOnce(Return(keyReaderResponse));
 
-    ReaderParams params;
-    gpreader.open(params);
+    gpreader.open(this->params);
 
     const ListBucketResult& keyList = gpreader.getBucketReader().getKeyList();
-    EXPECT_EQ(1, keyList.contents.size());
+    EXPECT_EQ((uint64_t)1, keyList.contents.size());
     EXPECT_EQ("threebytes/threebytes", keyList.contents[0].getName());
-    EXPECT_EQ(3, keyList.contents[0].getSize());
+    EXPECT_EQ((uint64_t)3, keyList.contents[0].getSize());
 
     char buffer[64];
-    EXPECT_EQ(3, gpreader.read(buffer, sizeof(buffer)));
+    EXPECT_EQ((uint64_t)3, gpreader.read(buffer, sizeof(buffer)));
     EXPECT_EQ(0, memcmp(buffer, keyContent.data(), 3));
 
-    EXPECT_EQ(0, gpreader.read(buffer, sizeof(buffer)));
+    EXPECT_EQ((uint64_t)0, gpreader.read(buffer, sizeof(buffer)));
 }
 
 // We need to mock the Get() to fulfill unordered GET request.
@@ -150,7 +150,7 @@ class MockS3RESTfulServiceForMultiThreads : public MockS3RESTfulService {
         }
     }
 
-    Response mockGet(const string& url, HTTPHeaders& headers, const map<string, string>& params) {
+    Response mockGet(const string& url, HTTPHeaders& headers, const S3Params& params) {
         string range = headers.Get(RANGE);
         size_t index = range.find("=");
         string rangeNumber = range.substr(index + 1);
@@ -184,7 +184,7 @@ class MockS3RESTfulServiceForMultiThreads : public MockS3RESTfulService {
 };
 
 TEST_F(GPReaderTest, ReadHugeData) {
-    InitConfig("data/s3test.conf", "smallchunk");
+    InitConfig(this->params, "data/s3test.conf", "smallchunk");
     string url = "s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal";
 
     // We don't know the chunksize before we load_config()
@@ -193,7 +193,7 @@ TEST_F(GPReaderTest, ReadHugeData) {
     uint64_t totalData = 1024 * 1024 * 128;
 
     MockS3RESTfulServiceForMultiThreads mockRestfulService(totalData);
-    MockGPReader gpreader(url, &mockRestfulService);
+    MockGPReader gpreader(this->params, url, &mockRestfulService);
 
     XMLGenerator generator;
     XMLGenerator* gen = &generator;
@@ -210,12 +210,11 @@ TEST_F(GPReaderTest, ReadHugeData) {
         .WillOnce(Return(listBucketResponse))
         .WillRepeatedly(Invoke(&mockRestfulService, &MockS3RESTfulServiceForMultiThreads::mockGet));
 
-    ReaderParams params;
-    gpreader.open(params);
+    gpreader.open(this->params);
 
     // compare the data size
     const ListBucketResult& keyList = gpreader.getBucketReader().getKeyList();
-    EXPECT_EQ(1, keyList.contents.size());
+    EXPECT_EQ((uint64_t)1, keyList.contents.size());
     EXPECT_EQ("bigdata/bigdata", keyList.contents[0].getName());
     EXPECT_EQ(totalData, keyList.contents[0].getSize());
 
@@ -228,36 +227,34 @@ TEST_F(GPReaderTest, ReadHugeData) {
     }
 
     // Guarantee the last call
-    EXPECT_EQ(0, gpreader.read(buffer, sizeof(buffer)));
+    EXPECT_EQ((uint64_t)0, gpreader.read(buffer, sizeof(buffer)));
 }
 
 TEST_F(GPReaderTest, ReadFromEmptyURL) {
     string url;
     MockS3RESTfulService mockRestfulService;
-    MockGPReader gpreader(url, &mockRestfulService);
+    MockGPReader gpreader(this->params, url, &mockRestfulService);
 
     // an exception should be throwed in parseURL()
     //    with message "'' is not valid"
-    ReaderParams params;
-    EXPECT_THROW(gpreader.open(params), std::runtime_error);
+    EXPECT_THROW(gpreader.open(this->params), std::runtime_error);
 }
 
 TEST_F(GPReaderTest, ReadFromInvalidURL) {
     string url = "s3://";
 
     MockS3RESTfulService mockRestfulService;
-    MockGPReader gpreader(url, &mockRestfulService);
+    MockGPReader gpreader(this->params, url, &mockRestfulService);
 
     // an exception should be throwed in parseURL()
     //    with message "'s3://' is not valid,"
-    ReaderParams params;
-    EXPECT_THROW(gpreader.open(params), std::runtime_error);
+    EXPECT_THROW(gpreader.open(this->params), std::runtime_error);
 }
 
 TEST_F(GPReaderTest, ReadAndGetFailedListBucketResponse) {
     string url = "s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal";
     MockS3RESTfulService mockRestfulService;
-    MockGPReader gpreader(url, &mockRestfulService);
+    MockGPReader gpreader(this->params, url, &mockRestfulService);
 
     Response listBucketResponse(RESPONSE_FAIL, vector<uint8_t>());
     listBucketResponse.setMessage(
@@ -265,14 +262,13 @@ TEST_F(GPReaderTest, ReadAndGetFailedListBucketResponse) {
 
     EXPECT_CALL(mockRestfulService, get(_, _, _)).WillRepeatedly(Return(listBucketResponse));
 
-    ReaderParams params;
-    EXPECT_THROW(gpreader.open(params), std::runtime_error);
+    EXPECT_THROW(gpreader.open(this->params), std::runtime_error);
 }
 
 TEST_F(GPReaderTest, ReadAndGetFailedKeyReaderResponse) {
     string url = "s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal";
     MockS3RESTfulService mockRestfulService;
-    MockGPReader gpreader(url, &mockRestfulService);
+    MockGPReader gpreader(this->params, url, &mockRestfulService);
 
     XMLGenerator generator;
     XMLGenerator* gen = &generator;
@@ -292,13 +288,12 @@ TEST_F(GPReaderTest, ReadAndGetFailedKeyReaderResponse) {
         .WillOnce(Return(listBucketResponse))
         .WillOnce(Return(keyReaderResponse));
 
-    ReaderParams params;
-    gpreader.open(params);
+    gpreader.open(this->params);
 
     const ListBucketResult& keyList = gpreader.getBucketReader().getKeyList();
-    EXPECT_EQ(1, keyList.contents.size());
+    EXPECT_EQ((uint64_t)1, keyList.contents.size());
     EXPECT_EQ("threebytes/threebytes", keyList.contents[0].getName());
-    EXPECT_EQ(3, keyList.contents[0].getSize());
+    EXPECT_EQ((uint64_t)3, keyList.contents[0].getSize());
 
     char buffer[64];
     EXPECT_THROW(gpreader.read(buffer, sizeof(buffer)), std::runtime_error);
@@ -313,5 +308,5 @@ TEST(Common, ThreadFunctions) {
     thread_cleanup();
     EXPECT_EQ((void*)NULL, mutex_buf);
 
-    EXPECT_NE(0, id_function());
+    EXPECT_NE((uint64_t)0, id_function());
 }

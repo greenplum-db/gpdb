@@ -90,7 +90,7 @@ class S3KeyReader : public Reader {
         pthread_mutex_destroy(&this->mutexErrorMessage);
     }
 
-    void open(const ReaderParams& params);
+    void open(const S3Params& params);
     uint64_t read(char* buf, uint64_t count);
     void close();
 
@@ -125,10 +125,6 @@ class S3KeyReader : public Reader {
         return transferredKeyLen;
     }
 
-    const S3Credential& getCredential() const {
-        return credential;
-    }
-
     OffsetMgr& getOffsetMgr() {
         return offsetMgr;
     }
@@ -148,7 +144,6 @@ class S3KeyReader : public Reader {
     uint64_t transferredKeyLen;
     string region;
     OffsetMgr offsetMgr;
-    S3Credential credential;
 
     vector<ChunkBuffer> chunkBuffers;
     vector<pthread_t> threads;

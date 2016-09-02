@@ -8,6 +8,10 @@
 using std::vector;
 using std::string;
 
+#include <memory>
+#include <random>
+#include "gtest/gtest.h"
+
 class MockWriter : public Writer {
    public:
     MockWriter() {
@@ -15,7 +19,7 @@ class MockWriter : public Writer {
     virtual ~MockWriter() {
     }
 
-    virtual void open(const WriterParams &params) {
+    virtual void open(const S3Params &params) {
     }
 
     virtual uint64_t write(const char *buf, uint64_t count) {
@@ -90,7 +94,7 @@ class CompressWriterTest : public testing::Test {
         inflateEnd(&zstream);
     }
 
-    WriterParams params;
+    S3Params params;
     CompressWriter compressWriter;
     MockWriter writer;
 
@@ -99,7 +103,7 @@ class CompressWriterTest : public testing::Test {
 
 TEST_F(CompressWriterTest, AbleToInputNull) {
     compressWriter.write(NULL, 0);
-    EXPECT_EQ(0, writer.getDataSize());
+    EXPECT_EQ((uint64_t)0, writer.getDataSize());
 }
 
 TEST_F(CompressWriterTest, AbleToCompressEmptyData) {
@@ -165,9 +169,10 @@ TEST_F(CompressWriterTest, AbleToWriteServeralTimesBeforeClose) {
 
 TEST_F(CompressWriterTest, AbleToWriteLargerThanCompressChunkSize) {
     const char pangram[] = "The quick brown fox jumps over the lazy dog";
-    unsigned int times = S3_ZIP_COMPRESS_CHUNKSIZE / (sizeof(pangram) - 1) + 1;
+    uint64_t times = S3_ZIP_COMPRESS_CHUNKSIZE / (sizeof(pangram) - 1) + 1;
+
     string input;
-    for (unsigned int i = 0; i < times; i++) input.append(pangram);
+    for (uint64_t i = 0; i < times; i++) input.append(pangram);
 
     compressWriter.write(input.c_str(), input.length());
     compressWriter.close();
@@ -178,11 +183,9 @@ TEST_F(CompressWriterTest, AbleToWriteLargerThanCompressChunkSize) {
 
     EXPECT_TRUE(memcmp(input.c_str(), result, input.length()) == 0);
 
-    delete result;
+    delete[] result;
 }
 
-#include <memory>
-#include <random>
 // Compress compressed data may generate larger output than input after GZIP compression.
 TEST_F(CompressWriterTest, CompressCompressedData) {
     std::random_device rd;
@@ -191,7 +194,7 @@ TEST_F(CompressWriterTest, CompressCompressedData) {
     // 25 is an empirical number to trigger the corner case.
     size_t dataLen = S3_ZIP_COMPRESS_CHUNKSIZE * 25;
     size_t charLen = dataLen * 4;
-    unsigned int *data = new unsigned int[dataLen];
+    size_t *data = new size_t[dataLen];
 
     for (size_t i = 0; i < dataLen; i += 4) {
         data[i] = re();

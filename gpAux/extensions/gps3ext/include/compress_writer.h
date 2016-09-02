@@ -12,7 +12,7 @@ class CompressWriter : public Writer {
     CompressWriter();
     virtual ~CompressWriter();
 
-    virtual void open(const WriterParams &params);
+    virtual void open(const S3Params &params);
 
     // write() attempts to write up to count bytes from the buffer.
     // If 'count' is larger than Zip chunk-buffer, it invokes writeOneChunk()

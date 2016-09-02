@@ -36,7 +36,7 @@ void DecompressReader::setReader(Reader *reader) {
     this->reader = reader;
 }
 
-void DecompressReader::open(const ReaderParams &params) {
+void DecompressReader::open(const S3Params &params) {
     // allocate inflate state for zlib
     zstream.zalloc = Z_NULL;
     zstream.zfree = Z_NULL;

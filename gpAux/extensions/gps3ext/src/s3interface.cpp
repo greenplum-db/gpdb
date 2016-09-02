@@ -39,16 +39,20 @@ S3Service::S3Service() : restfulService(NULL) {
     xmlInitParser();
 }
 
+S3Service::S3Service(const S3Params &params) : restfulService(NULL), params(params) {
+    xmlInitParser();
+}
+
 S3Service::~S3Service() {
     // Cleanup function for the XML library.
     xmlCleanupParser();
 }
 
 Response S3Service::getResponseWithRetries(const string &url, HTTPHeaders &headers,
-                                           const map<string, string> &params, uint64_t retries) {
+                                           uint64_t retries) {
     while (retries--) {
         // declare response here to leverage RVO (Return Value Optimization)
-        Response response = this->restfulService->get(url, headers, params);
+        Response response = this->restfulService->get(url, headers, this->params);
         if (response.isSuccess() || (retries == 0) || S3QueryIsAbortInProgress()) {
             return response;
         };
@@ -61,11 +65,10 @@ Response S3Service::getResponseWithRetries(const string &url, HTTPHeaders &heade
 };
 
 Response S3Service::putResponseWithRetries(const string &url, HTTPHeaders &headers,
-                                           const map<string, string> &params, vector<uint8_t> &data,
-                                           uint64_t retries) {
+                                           vector<uint8_t> &data, uint64_t retries) {
     while (retries--) {
         // declare response here to leverage RVO (Return Value Optimization)
-        Response response = this->restfulService->put(url, headers, params, data);
+        Response response = this->restfulService->put(url, headers, this->params, data);
         if (response.isSuccess() || (retries == 0) || S3QueryIsAbortInProgress()) {
             return response;
         };
@@ -78,11 +81,10 @@ Response S3Service::putResponseWithRetries(const string &url, HTTPHeaders &heade
 };
 
 Response S3Service::postResponseWithRetries(const string &url, HTTPHeaders &headers,
-                                            const map<string, string> &params,
                                             const vector<uint8_t> &data, uint64_t retries) {
     while (retries--) {
         // declare response here to leverage RVO (Return Value Optimization)
-        Response response = this->restfulService->post(url, headers, params, data);
+        Response response = this->restfulService->post(url, headers, this->params, data);
         if (response.isSuccess() || (retries == 0) || S3QueryIsAbortInProgress()) {
             return response;
         };
@@ -103,12 +105,11 @@ bool S3Service::isHeadResponseCodeNeedRetry(ResponseCode code) {
 }
 
 ResponseCode S3Service::headResponseWithRetries(const string &url, HTTPHeaders &headers,
-                                                const map<string, string> &params,
                                                 uint64_t retries) {
     ResponseCode response = HeadResponseFail;
 
     while (retries--) {
-        response = this->restfulService->head(url, headers, params);
+        response = this->restfulService->head(url, headers, this->params);
         if (!isHeadResponseCodeNeedRetry(response) || (retries == 0) ||
             S3QueryIsAbortInProgress()) {
             return response;
@@ -142,8 +143,7 @@ string S3Service::getUrl(const string &prefix, const string &schema, const strin
 }
 
 HTTPHeaders S3Service::composeHTTPHeaders(const string &url, const string &marker,
-                                          const string &prefix, const string &region,
-                                          const S3Credential &cred) {
+                                          const string &prefix, const string &region) {
     stringstream host;
     host << "s3-" << region << ".amazonaws.com";
 
@@ -168,7 +168,7 @@ HTTPHeaders S3Service::composeHTTPHeaders(const string &url, const string &marke
         query << "prefix=" << encodedPrefix;
     }
 
-    SignRequestV4("GET", &headers, region, p.getPath(), query.str(), cred);
+    SignRequestV4("GET", &headers, region, p.getPath(), query.str(), this->params.getCred());
 
     return headers;
 }
@@ -188,11 +188,10 @@ xmlParserCtxtPtr S3Service::getXMLContext(Response &response) {
 // require curl 7.17 higher
 // http://docs.aws.amazon.com/AmazonS3/latest/API/RESTBucketGET.html
 Response S3Service::getBucketResponse(const string &region, const string &url, const string &prefix,
-                                      const S3Credential &cred, const string &marker) {
-    HTTPHeaders header = composeHTTPHeaders(url, marker, prefix, region, cred);
-    std::map<string, string> empty;
+                                      const string &marker) {
+    HTTPHeaders header = composeHTTPHeaders(url, marker, prefix, region);
 
-    return this->getResponseWithRetries(url, header, empty);
+    return this->getResponseWithRetries(url, header);
 }
 
 // parseBucketXML must not throw exception, otherwise result is leaked.
@@ -299,8 +298,7 @@ bool S3Service::parseBucketXML(ListBucketResult *result, xmlParserCtxtPtr xmlcon
 //
 // Caller should delete returned object.
 ListBucketResult S3Service::listBucket(const string &schema, const string &region,
-                                       const string &bucket, const string &prefix,
-                                       const S3Credential &cred) {
+                                       const string &bucket, const string &prefix) {
     stringstream host;
     host << "s3-" << region << ".amazonaws.com";
     S3DEBUG("Host url is %s", host.str().c_str());
@@ -313,7 +311,7 @@ ListBucketResult S3Service::listBucket(const string &schema, const string &regio
         // S3 requires query parameters specified alphabetically.
         string url = this->getUrl(prefix, schema, host.str(), bucket, marker);
 
-        Response response = getBucketResponse(region, url, prefix, cred, marker);
+        Response response = getBucketResponse(region, url, prefix, marker);
 
         xmlParserCtxtPtr xmlContext = getXMLContext(response);
         XMLContextHolder holder(xmlContext);
@@ -335,10 +333,8 @@ ListBucketResult S3Service::listBucket(const string &schema, const string &regio
 }
 
 uint64_t S3Service::fetchData(uint64_t offset, vector<uint8_t> &data, uint64_t len,
-                              const string &sourceUrl, const string &region,
-                              const S3Credential &cred) {
+                              const string &sourceUrl, const string &region) {
     HTTPHeaders headers;
-    map<string, string> params;
     UrlParser parser(sourceUrl);
 
     char rangeBuf[S3_RANGE_HEADER_STRING_LEN] = {0};
@@ -347,9 +343,9 @@ uint64_t S3Service::fetchData(uint64_t offset, vector<uint8_t> &data, uint64_t l
     headers.Add(RANGE, rangeBuf);
     headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
 
-    SignRequestV4("GET", &headers, region, parser.getPath(), "", cred);
+    SignRequestV4("GET", &headers, region, parser.getPath(), "", this->params.getCred());
 
-    Response resp = this->getResponseWithRetries(sourceUrl, headers, params);
+    Response resp = this->getResponseWithRetries(sourceUrl, headers);
     if (resp.getStatus() == RESPONSE_OK) {
         data.swap(resp.getRawData());
         if (data.size() != len) {
@@ -373,10 +369,8 @@ uint64_t S3Service::fetchData(uint64_t offset, vector<uint8_t> &data, uint64_t l
                      resp.getMessage().c_str());
 }
 
-S3CompressionType S3Service::checkCompressionType(const string &keyUrl, const string &region,
-                                                  const S3Credential &cred) {
+S3CompressionType S3Service::checkCompressionType(const string &keyUrl, const string &region) {
     HTTPHeaders headers;
-    map<string, string> params;
     UrlParser parser(keyUrl);
 
     char rangeBuf[S3_RANGE_HEADER_STRING_LEN] = {0};
@@ -386,9 +380,9 @@ S3CompressionType S3Service::checkCompressionType(const string &keyUrl, const st
     headers.Add(RANGE, rangeBuf);
     headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
 
-    SignRequestV4("GET", &headers, region, parser.getPath(), "", cred);
+    SignRequestV4("GET", &headers, region, parser.getPath(), "", this->params.getCred());
 
-    Response resp = this->getResponseWithRetries(keyUrl, headers, params);
+    Response resp = this->getResponseWithRetries(keyUrl, headers);
     if (resp.getStatus() == RESPONSE_OK) {
         vector<uint8_t> &responseData = resp.getRawData();
         if (responseData.size() < S3_MAGIC_BYTES_NUM) {
@@ -419,24 +413,20 @@ S3CompressionType S3Service::checkCompressionType(const string &keyUrl, const st
     return S3_COMPRESSION_PLAIN;
 }
 
-bool S3Service::checkKeyExistence(const string &keyUrl, const string &region,
-                                  const S3Credential &cred) {
+bool S3Service::checkKeyExistence(const string &keyUrl, const string &region) {
     HTTPHeaders headers;
-    map<string, string> params;
     UrlParser parser(keyUrl);
 
     headers.Add(HOST, parser.getHost());
     headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
 
-    SignRequestV4("HEAD", &headers, region, parser.getPath(), "", cred);
+    SignRequestV4("HEAD", &headers, region, parser.getPath(), "", this->params.getCred());
 
-    return isKeyExisted(headResponseWithRetries(keyUrl, headers, params));
+    return isKeyExisted(headResponseWithRetries(keyUrl, headers));
 }
 
-string S3Service::getUploadId(const string &keyUrl, const string &region,
-                              const S3Credential &cred) {
+string S3Service::getUploadId(const string &keyUrl, const string &region) {
     HTTPHeaders headers;
-    map<string, string> params;
     UrlParser parser(keyUrl);
 
     headers.Add(HOST, parser.getHost());
@@ -444,13 +434,12 @@ string S3Service::getUploadId(const string &keyUrl, const string &region,
     headers.Disable(CONTENTLENGTH);
     headers.Add(X_AMZ_CONTENT_SHA256, "UNSIGNED-PAYLOAD");
 
-    SignRequestV4("POST", &headers, region, parser.getPath(), "uploads=", cred);
+    SignRequestV4("POST", &headers, region, parser.getPath(), "uploads=", this->params.getCred());
 
     stringstream urlWithQuery;
     urlWithQuery << keyUrl << "?uploads";
 
-    Response resp =
-        this->postResponseWithRetries(urlWithQuery.str(), headers, params, vector<uint8_t>());
+    Response resp = this->postResponseWithRetries(urlWithQuery.str(), headers, vector<uint8_t>());
     S3MessageParser s3msg(resp);
 
     if (resp.getStatus() == RESPONSE_OK) {
@@ -471,10 +460,9 @@ string S3Service::getUploadId(const string &keyUrl, const string &region,
 }
 
 string S3Service::uploadPartOfData(vector<uint8_t> &data, const string &keyUrl,
-                                   const string &region, const S3Credential &cred,
-                                   uint64_t partNumber, const string &uploadId) {
+                                   const string &region, uint64_t partNumber,
+                                   const string &uploadId) {
     HTTPHeaders headers;
-    map<string, string> params;
     UrlParser parser(keyUrl);
     stringstream queryString;
 
@@ -486,12 +474,13 @@ string S3Service::uploadPartOfData(vector<uint8_t> &data, const string &keyUrl,
 
     queryString << "partNumber=" << partNumber << "&uploadId=" << uploadId;
 
-    SignRequestV4("PUT", &headers, region, parser.getPath(), queryString.str(), cred);
+    SignRequestV4("PUT", &headers, region, parser.getPath(), queryString.str(),
+                  this->params.getCred());
 
     stringstream urlWithQuery;
     urlWithQuery << keyUrl << "?partNumber=" << partNumber << "&uploadId=" << uploadId;
 
-    Response resp = this->putResponseWithRetries(urlWithQuery.str(), headers, params, data);
+    Response resp = this->putResponseWithRetries(urlWithQuery.str(), headers, data);
     if (resp.getStatus() == RESPONSE_OK) {
         string headers(resp.getRawHeaders().begin(), resp.getRawHeaders().end());
 
@@ -522,10 +511,8 @@ string S3Service::uploadPartOfData(vector<uint8_t> &data, const string &keyUrl,
 }
 
 bool S3Service::completeMultiPart(const string &keyUrl, const string &region,
-                                  const S3Credential &cred, const string &uploadId,
-                                  const vector<string> &etagArray) {
+                                  const string &uploadId, const vector<string> &etagArray) {
     HTTPHeaders headers;
-    map<string, string> params;
     UrlParser parser(keyUrl);
     stringstream queryString;
 
@@ -551,14 +538,15 @@ bool S3Service::completeMultiPart(const string &keyUrl, const string &region,
 
     queryString << "uploadId=" << uploadId;
 
-    SignRequestV4("POST", &headers, region, parser.getPath(), queryString.str(), cred);
+    SignRequestV4("POST", &headers, region, parser.getPath(), queryString.str(),
+                  this->params.getCred());
 
     stringstream urlWithQuery;
     urlWithQuery << keyUrl << "?uploadId=" << uploadId;
 
     string bodyString = body.str();
     Response resp = this->postResponseWithRetries(
-        urlWithQuery.str(), headers, params, vector<uint8_t>(bodyString.begin(), bodyString.end()));
+        urlWithQuery.str(), headers, vector<uint8_t>(bodyString.begin(), bodyString.end()));
 
     if (resp.getStatus() == RESPONSE_OK) {
         return true;
@@ -581,10 +569,8 @@ bool S3Service::completeMultiPart(const string &keyUrl, const string &region,
     return false;
 }
 
-bool S3Service::abortUpload(const string &keyUrl, const string &region, const S3Credential &cred,
-                            const string &uploadId) {
+bool S3Service::abortUpload(const string &keyUrl, const string &region, const string &uploadId) {
     HTTPHeaders headers;
-    map<string, string> params;
     UrlParser parser(keyUrl);
     stringstream queryString;
 
@@ -596,12 +582,13 @@ bool S3Service::abortUpload(const string &keyUrl, const string &region, const S3
     queryString << "uploadId=" << uploadId;
 
     // DELETE /ObjectName?uploadId=UploadId HTTP/1.1
-    SignRequestV4("DELETE", &headers, region, parser.getPath(), queryString.str(), cred);
+    SignRequestV4("DELETE", &headers, region, parser.getPath(), queryString.str(),
+                  this->params.getCred());
 
     stringstream urlWithQuery;
     urlWithQuery << keyUrl << "?uploadId=" << uploadId;
 
-    Response resp = this->restfulService->deleteRequest(urlWithQuery.str(), headers, params);
+    Response resp = this->restfulService->deleteRequest(urlWithQuery.str(), headers, this->params);
 
     if (resp.getStatus() == RESPONSE_OK) {
         return true;
