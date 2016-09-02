@@ -5,27 +5,34 @@ from gppylib.gpcatalog import *
 import re
 
 class ForeignKeyCheck:
+    """
+    PURPOSE: detect differences between foreign key and reference key values among catalogs
+    """
 
-    def __init__(self, db_connection, logger, shared_option):
-        self.shared_option = shared_option
+    def __init__(self, db_connection, logger, shared_option, autoCast):
         self.db_connection = db_connection
         self.logger = logger
+        self.shared_option = shared_option
+        self.autoCast = autoCast
         self.query_filters = dict()
         self.query_filters['pg_appendonly.relid'] = "(relstorage='a' or relstorage='c')"
         self.query_filters['pg_attribute.attrelid'] = "true"
         self.query_filters["pg_index.indexrelid"] = "(relkind='i')"
 
-    def runCheck(self, tables, autoCast):
+    def runCheck(self, tables):
         foreign_key_issues = dict()
         for cat in sorted(tables):
 
-            issues = self.checkTableForeignKey(cat, autoCast)
+            issues = self.checkTableForeignKey(cat)
             if issues:
                 foreign_key_issues[cat.getTableName()] = issues
 
         return foreign_key_issues
 
-    def checkTableForeignKey(self, cat, autoCast):
+    def checkTableForeignKey(self, cat):
+        """
+        return: list of issues in tuple (pkcatname, fields, results) format for the given catalog
+        """
         catname = cat.getTableName()
         fkeylist = cat.getForeignKeys()
         isShared = cat.isShared()
@@ -67,7 +74,7 @@ class ForeignKeyCheck:
         self.logger.info('Building %d queries to check FK constraint on table %s' % (len(fkeylist), catname))
         issue_list = list()
         for fkeydef in fkeylist:
-            castedFkey = [c + autoCast.get(coltypes[c], '') for c in fkeydef.getColumns()]
+            castedFkey = [c + self.autoCast.get(coltypes[c], '') for c in fkeydef.getColumns()]
             fkeystr = ', '.join(castedFkey)
             pkeystr = ', '.join(fkeydef.getPKey())
             pkcatname = fkeydef.getPkeyTableName()
@@ -76,6 +83,17 @@ class ForeignKeyCheck:
             # one mapping
             catname_filter = '%s.%s' % (catname, fkeydef.getColumns()[0])
 
+            # There are some catalog tables that cannot do a 1 to 1
+            # mapping to pg_class without a filter (filtering rows from pg_class)
+            # left join only detects missing entries in the left table
+            # full join will help detect for both tables
+            # The catalog tables in query_filters are
+            # critical for dropping "corrupt" user tables
+
+            # we can't do a full join if we can't map between pg_class and
+            # whatever catalog... and to be able to do the mapping, we have to
+            # ensure that we have the correct "filtering" to detect the
+            # missing entries
             if self.query_filters.has_key(catname_filter) and pkcatname == 'pg_class':
                 qry = self.get_fk_query_full_join(catname, pkcatname, fkeystr, pkeystr,
                                                   pkey_aliases, cat1pkeys=cat1_pkeys_column_rename, filter=self.query_filters[catname_filter])

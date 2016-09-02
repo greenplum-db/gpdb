@@ -12,11 +12,6 @@ class GpCheckCatTestCase(GpTestCase):
     def setUp(self):
         self.logger = Mock(spec=['log', 'info', 'debug', 'error'])
         self.db_connection = Mock(spec=['close', 'query'])
-        self.subject = ForeignKeyCheck(self.db_connection, self.logger, False)
-
-        self.full_join_cat_tables = set(['pg_attribute','gp_distribution_policy','pg_appendonly','pg_constraint','pg_index'])
-        self.foreign_key_check= Mock(spec=['runCheck'])
-        self.foreign_key_check.runCheck.return_value = []
         self.autoCast = {'regproc': '::oid',
                          'regprocedure': '::oid',
                          'regoper': '::oid',
@@ -24,6 +19,12 @@ class GpCheckCatTestCase(GpTestCase):
                          'regclass': '::oid',
                          'regtype': '::oid',
                          'int2vector': '::int2[]'}
+
+        self.subject = ForeignKeyCheck(self.db_connection, self.logger, False, self.autoCast)
+
+        self.full_join_cat_tables = set(['pg_attribute','gp_distribution_policy','pg_appendonly','pg_constraint','pg_index'])
+        self.foreign_key_check= Mock(spec=['runCheck'])
+        self.foreign_key_check.runCheck.return_value = []
         self.db_connection.query.return_value.ntuples.return_value = 2
         self.db_connection.query.return_value.listfields.return_value = ['pkey1', 'pkey2']
         self.db_connection.query.return_value.getresult.return_value = [('r1','r2'), ('r3','r4')]
@@ -99,13 +100,12 @@ class GpCheckCatTestCase(GpTestCase):
     @patch('gpcheckcat_modules.foreign_key_check.ForeignKeyCheck.checkTableForeignKey')
     def test_runCheck(self, mock):
         tables = [self._get_mock_for_catalog_table("table1"), self._get_mock_for_catalog_table("table2")]
-        self.subject.runCheck(tables, None)
-        # self.subject.checkTableForeignKey.return_value = Mock()
+        self.subject.runCheck(tables)
 
         self.assertEquals(len(self.subject.checkTableForeignKey.call_args_list), len(tables))
 
         for table in tables:
-            self.assertIn(call(table, None), self.subject.checkTableForeignKey.call_args_list)
+            self.assertIn(call(table), self.subject.checkTableForeignKey.call_args_list)
 
     @patch('gpcheckcat_modules.foreign_key_check.ForeignKeyCheck.get_fk_query_full_join')
     @patch('gpcheckcat_modules.foreign_key_check.ForeignKeyCheck.get_fk_query_left_join')
@@ -122,7 +122,7 @@ class GpCheckCatTestCase(GpTestCase):
             catalog_table_mock = self._get_mock_for_catalog_table(table_name, [foreign_key_mock_1, foreign_key_mock_2])
             col_type = self._get_col_types(table_name)
 
-            issue_list = self.subject.checkTableForeignKey(catalog_table_mock, self.autoCast)
+            issue_list = self.subject.checkTableForeignKey(catalog_table_mock)
 
             self.assertEquals(len(issue_list) , 2)
             self.assertEquals(issue_list[0], ('pg_class', ['pkey1', 'pkey2'], [('r1', 'r2'), ('r3', 'r4')]))

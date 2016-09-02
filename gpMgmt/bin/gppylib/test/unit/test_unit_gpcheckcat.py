@@ -196,7 +196,7 @@ class GpCheckCatTestCase(GpTestCase):
         self.assertFalse(self.subject.GV.checkStatus)
         self.assertTrue(self.subject.GV.foreignKeyStatus)
         self.subject.setError.assert_any_call(self.subject.ERROR_REMOVE)
-        self.foreign_key_check.runCheck.assert_called_once_with(cat_tables, ANY)
+        self.foreign_key_check.runCheck.assert_called_once_with(cat_tables)
         fast_seq_mock.assert_called_once_with(self.db_connection)
 
     @patch('gpcheckcat.processForeignKeyResult')
@@ -211,7 +211,7 @@ class GpCheckCatTestCase(GpTestCase):
         self.assertFalse(self.subject.GV.checkStatus)
         self.assertTrue(self.subject.GV.foreignKeyStatus)
         self.subject.setError.assert_any_call(self.subject.ERROR_NOREPAIR)
-        self.foreign_key_check.runCheck.assert_called_once_with(cat_tables, ANY)
+        self.foreign_key_check.runCheck.assert_called_once_with(cat_tables)
 
     @patch('gpcheckcat.processForeignKeyResult')
     def test_checkForeignKey__no_arg(self, process_foreign_key_mock):
@@ -225,7 +225,7 @@ class GpCheckCatTestCase(GpTestCase):
         self.assertFalse(self.subject.GV.checkStatus)
         self.assertTrue(self.subject.GV.foreignKeyStatus)
         self.subject.setError.assert_any_call(self.subject.ERROR_NOREPAIR)
-        self.foreign_key_check.runCheck.assert_called_once_with(cat_tables, ANY)
+        self.foreign_key_check.runCheck.assert_called_once_with(cat_tables)
 
     # Test gpcheckat -C option with checkForeignKey
     @patch('gpcheckcat.GPCatalog', return_value=Mock())
@@ -234,7 +234,8 @@ class GpCheckCatTestCase(GpTestCase):
     def test_runCheckCatname__for_checkForeignKey(self, mock1, mock2, mock3):
         self.subject.checkForeignKey = Mock()
         cat_table_obj = Mock()
-        self.subject.getCatObj = Mock()
+        mock3.getCatalogTable = cat_table_obj
+        self.subject.getCatObj = cat_table_obj
         primaries = [dict(hostname='host0', port=123, id=1, address='123', datadir='dir', content=-1, dbid=0, isprimary='t')]
 
         for i in range(1, 50):
@@ -244,12 +245,12 @@ class GpCheckCatTestCase(GpTestCase):
 
         self.subject.GV.opt['-C'] = 'pg_class'
 
-        testargs = ['gpcrondump', '-port 1', '-C pg_class']
+        testargs = ['gpcheckcat', '-port 1', '-C pg_class']
         with patch.object(sys, 'argv', testargs):
             self.subject.main()
 
-        self.assertEqual(self.subject.getCatObj.call_count, 1)
-        self.assertEqual(self.subject.checkForeignKey.call_count, 1)
+        self.subject.getCatObj.assert_called_once_with(' pg_class')
+        self.subject.checkForeignKey.assert_called_once_with(cat_table_obj)
 
     ####################### PRIVATE METHODS #######################
 

@@ -2809,8 +2809,8 @@ def checkForeignKey(cat_tables=None):
 
     db_connection = connect2(GV.cfg[1], utilityMode=False)
     try:
-        foreign_key_check = ForeignKeyCheck(db_connection, logger, GV.opt['-S'])
-        foreign_key_issues = foreign_key_check.runCheck(cat_tables, autoCast)
+        foreign_key_check = ForeignKeyCheck(db_connection, logger, GV.opt['-S'], autoCast)
+        foreign_key_issues = foreign_key_check.runCheck(cat_tables)
         if foreign_key_issues:
             GV.checkStatus = False
 
@@ -4001,9 +4001,10 @@ def processInconsistentEntryResult(catname, pknames, colname, allValues):
 # -------------------------------------------------------------------------------
 def processForeignKeyResult(catname, pkcatname, colname, allValues):
     '''
-    colname:    pg_class_relname | pg_class_relnamespace | pg_type_oid | segids
-    allValues:            test11 | 2200 | 17389 | {-1,0,1,2,3}
-                           test4 | 2200 | 17077 | {-1,0,1,2,3}
+    colname:    pg_attribute_attrelid | pg_attribute_attname | missing_catalog | present_key | pg_class_oid | segids
+    allValues:  None                  | None                 | pg_attribute    | oid         | 190683       | {-1}
+    or
+    allValues:  12344                 | foo                  | pg_class        | attrelid    | 190683       | {-1}
     '''
 
     gpObjName = pkcatname
@@ -4011,8 +4012,6 @@ def processForeignKeyResult(catname, pkcatname, colname, allValues):
     fkeytab = catname
     # The foreign keys are all entries except the last 4
     # NOTE: We can't assume the first few rows are the expected issues anymore...
-    # or change the query so that we can always assume that the first few
-    # values are the issues...
     fkeylist = [name.rsplit('_', 1)[1] for name in colname[:-4]]
 
     # This catname may not be a GPObject (e.g. pg_attribute)
@@ -4030,20 +4029,20 @@ def processForeignKeyResult(catname, pkcatname, colname, allValues):
         oid = row[len(colname) - 2]
         missing_cat = row[-4]
 
-        existing_cat = [pkcatname, fkeytab]
-        existing_cat.remove(missing_cat)
-        existing_cat = existing_cat[0]
-
         # Build fkeys dict: used to find oid of pg_class
         fkeys = dict((n, row[colname.index(catname + '_' + n)]) for n in fkeylist)
 
         # Must get third column from end since fkeylist length can vary
-        if fkeys is None:
+        if not fkeys:
             fkeys = row[-3]
 
         # We are flipping the values of the primary key and the foreign key
         # depending on the missing catalog, since we want to print out the
         # missing catalog at the front of the stderr
+        existing_cat = pkcatname
+        if missing_cat == pkcatname:
+            existing_cat = fkeytab
+
         missing_pkeys={gpColName: oid}
         existing_fkeys=fkeys
         if catname == missing_cat:
