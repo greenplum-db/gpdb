@@ -206,6 +206,22 @@ void ini_free(ini_t *ini) {
   free(ini);
 }
 
+bool ini_section_exist(ini_t *ini, const char *section) {
+  char *p = ini->data;
+  while (p < ini->end) {
+    if (*p == '[') {
+      /* Handle section */
+      char* current_section = p + 1;
+      if (!section || !strcmpci(section, current_section)) {
+        return true;
+      }
+    }
+    p = next(ini, p);
+  }
+
+  return false;
+}
+
 const char* ini_get(ini_t *ini, const char *section, const char *key) {
   const char *current_section = "";
   char *val;

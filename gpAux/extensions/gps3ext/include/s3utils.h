@@ -46,6 +46,7 @@ class Config {
     Config(const string& filename);
     Config(const char* filename);
     ~Config();
+    bool SectionExist(const string& sec);
     string Get(const string& sec, const string& key, const string& defaultvalue);
     bool Scan(const string& sec, const string& key, const char* scanfmt, void* dst);
     void* Handle() {

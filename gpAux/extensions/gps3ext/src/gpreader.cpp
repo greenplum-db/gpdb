@@ -103,14 +103,8 @@ GPReader* reader_init(const char* url_with_options) {
             return NULL;
         }
 
-        string config_path = get_opt_s3(urlWithOptions, "config");
-        if (config_path.empty()) {
-            S3ERROR("The 'config' parameter is not provided, use default value 's3/s3.conf'.");
-            config_path = "s3/s3.conf";
-        }
-
         S3Params params;
-        if (!InitConfig(params, config_path, "default")) {
+        if (!InitConfig(params, urlWithOptions)) {
             return NULL;
         }
 

@@ -19,7 +19,7 @@ void CheckEssentialConfig(const S3Params& params);
 void SignRequestV4(const string& method, HTTPHeaders* h, const string& orig_region,
                    const string& path, const string& query, const S3Credential& cred);
 
-string get_opt_s3(const string& options, const string& key);
+string getOptS3(const string& options, const string& key);
 
 string truncate_options(const string& url_with_options);
 

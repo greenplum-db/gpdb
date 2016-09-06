@@ -183,6 +183,10 @@ Config::~Config() {
     if (this->_conf) ini_free(this->_conf);
 }
 
+bool Config::SectionExist(const string &sec) {
+    return ini_section_exist(this->_conf, sec.c_str());
+}
+
 string Config::Get(const string &sec, const string &key, const string &defaultvalue) {
     string ret = defaultvalue;
     if ((key == "") || (sec == "") || (this->_conf == NULL)) return ret;

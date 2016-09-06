@@ -3,9 +3,8 @@
 
 TEST(Config, NonExistFile) {
     S3Params params;
-    bool ret = InitConfig(params, "notexist/path/s3test.conf");
 
-    EXPECT_FALSE(ret);
+    EXPECT_THROW(InitConfig(params, "notexist/path/s3test.conf", "default"), std::runtime_error);
 }
 
 TEST(Config, Basic) {
@@ -73,4 +72,14 @@ TEST(Config, SpecialSwitches) {
 
     EXPECT_FALSE(params.isEncryption());
     EXPECT_TRUE(params.isDebugCurl());
+}
+
+TEST(Config, SectionExist) {
+    Config s3cfg("data/s3test.conf");
+    EXPECT_TRUE(s3cfg.SectionExist("special_switches"));
+}
+
+TEST(Config, SectionNotExist) {
+    Config s3cfg("data/s3test.conf");
+    EXPECT_FALSE(s3cfg.SectionExist("not_exist"));
 }

@@ -1,6 +1,6 @@
 CREATE TEMP TABLE s3write_mixedlenrows_temp (id serial, content text);
 CREATE WRITABLE EXTERNAL TABLE s3write_mixedlenrows_write (id serial, content text)
-		LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/mixedlenrows/ config=@config_file@') FORMAT 'csv';
+		LOCATION('s3://s3-us-west-2.amazonaws.com/@write_prefix@/mixedlenrows/ config=@config_file@ section=no_autocompress') FORMAT 'csv';
 
 -- PREPARE --
 -------------
@@ -39,7 +39,6 @@ INSERT INTO s3write_mixedlenrows_temp VALUES (DEFAULT,
 
 INSERT INTO s3write_mixedlenrows_write
 	SELECT * FROM s3write_mixedlenrows_temp;
-
 
 -- VERIFY IT --
 ---------------

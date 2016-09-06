@@ -89,9 +89,9 @@ void SignRequestV4(const string &method, HTTPHeaders *h, const string &orig_regi
     return;
 }
 
-// get_opt_s3 returns first value according to given key.
+// getOptS3 returns first value according to given key.
 // key=value pair are separated by whitespace.
-string get_opt_s3(const string &urlWithOptions, const string &key) {
+string getOptS3(const string &urlWithOptions, const string &key) {
     string keyStr = " ";
     keyStr += key;
     keyStr += "=";

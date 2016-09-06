@@ -33,7 +33,6 @@ using std::stringstream;
 
 class S3Params;
 
-// not thread safe!! call it only once.
-bool InitConfig(S3Params &params, const string &path, const string section);
-
+bool InitConfig(S3Params &params, const string &path, const string &section);
+bool InitConfig(S3Params &params, const string &urlWithOptions);
 #endif
