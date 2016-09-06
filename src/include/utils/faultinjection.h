@@ -41,9 +41,8 @@
 /* Fault group 4: inject failure */
 #define GP_FAULT_INJECT_SEGMENT_FAILURE 300 /* inject a segment failure */
 
-#ifdef USE_TEST_UTILS
+#ifdef FAULT_INJECTOR
 extern int64 gp_fault_inject_impl(int32 reason, int64 arg); 
-extern int64 gp_mp_fault(int32 reason, int64 arg);
 
 extern bool gp_fault_inject_segment_failure;
 extern int gp_fault_inject_segment_failure_segment_id;
