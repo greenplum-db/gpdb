@@ -37,7 +37,7 @@ class GPReader : public Reader {
     S3CommonReader commonReader;
     S3RESTfulService restfulService;
 
-    S3Service s3service;
+    S3InterfaceService s3InterfaceService;
     S3Params params;
 
     // it links to itself by default

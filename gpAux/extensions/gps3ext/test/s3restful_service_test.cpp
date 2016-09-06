@@ -4,13 +4,13 @@
 TEST(S3RESTfulService, GetWithWrongHeader) {
     HTTPHeaders headers;
     S3Params params;
-    S3RESTfulService service;
+    S3RESTfulService service(params);
 
     string url = "https://www.bing.com/";
     headers.Add(HOST, url);
     headers.Add(CONTENTTYPE, "plain/text");
 
-    Response resp = service.get(url, headers, params);
+    Response resp = service.get(url, headers);
 
     EXPECT_EQ(RESPONSE_ERROR, resp.getStatus());
 }
@@ -19,11 +19,11 @@ TEST(S3RESTfulService, GetWithEmptyHeader) {
     HTTPHeaders headers;
     S3Params params;
     string url;
-    S3RESTfulService service;
+    S3RESTfulService service(params);
 
     url = "https://www.bing.com/";
 
-    Response resp = service.get(url, headers, params);
+    Response resp = service.get(url, headers);
 
     EXPECT_EQ(RESPONSE_OK, resp.getStatus());
     EXPECT_EQ("Success", resp.getMessage());
@@ -34,9 +34,9 @@ TEST(S3RESTfulService, GetWithoutURL) {
     HTTPHeaders headers;
     S3Params params;
     string url;
-    S3RESTfulService service;
+    S3RESTfulService service(params);
 
-    Response resp = service.get(url, headers, params);
+    Response resp = service.get(url, headers);
 
     EXPECT_EQ(RESPONSE_FAIL, resp.getStatus());
     EXPECT_EQ("Server connection failed: URL using bad/illegal format or missing URL",
@@ -47,11 +47,11 @@ TEST(S3RESTfulService, GetWithWrongURL) {
     HTTPHeaders headers;
     S3Params params;
     string url;
-    S3RESTfulService service;
+    S3RESTfulService service(params);
 
     url = "https://www.bing.com/pivotal.html";
 
-    Response resp = service.get(url, headers, params);
+    Response resp = service.get(url, headers);
 
     EXPECT_EQ(RESPONSE_ERROR, resp.getStatus());
 }
@@ -62,9 +62,9 @@ TEST(S3RESTfulService, GetWithoutURLWithDebugParam) {
     params.setDebugCurl(true);
 
     string url;
-    S3RESTfulService service;
+    S3RESTfulService service(params);
 
-    Response resp = service.get(url, headers, params);
+    Response resp = service.get(url, headers);
 
     EXPECT_EQ(RESPONSE_FAIL, resp.getStatus());
     EXPECT_EQ("Server connection failed: URL using bad/illegal format or missing URL",
@@ -75,10 +75,10 @@ TEST(S3RESTfulService, PutWithoutURL) {
     HTTPHeaders headers;
     S3Params params;
     string url;
-    S3RESTfulService service;
+    S3RESTfulService service(params);
     vector<uint8_t> data;
 
-    Response resp = service.put(url, headers, params, data);
+    Response resp = service.put(url, headers, data);
 
     EXPECT_EQ(RESPONSE_FAIL, resp.getStatus());
     EXPECT_EQ("Server connection failed: URL using bad/illegal format or missing URL",
@@ -89,7 +89,7 @@ TEST(S3RESTfulService, PutToServerWithBlindPutService) {
     HTTPHeaders headers;
     S3Params params;
     string url;
-    S3RESTfulService service;
+    S3RESTfulService service(params);
 
     /* data = "abcdefghij", len = 11 (including '\0') */
     vector<uint8_t> data;
@@ -98,7 +98,7 @@ TEST(S3RESTfulService, PutToServerWithBlindPutService) {
 
     url = "https://www.bing.com";
 
-    Response resp = service.put(url, headers, params, data);
+    Response resp = service.put(url, headers, data);
 
     EXPECT_EQ(RESPONSE_OK, resp.getStatus());
 }
@@ -107,7 +107,7 @@ TEST(S3RESTfulService, PutToServerWith404Page) {
     HTTPHeaders headers;
     S3Params params;
     string url;
-    S3RESTfulService service;
+    S3RESTfulService service(params);
 
     /* data = "abcdefghij", len = 11 (including '\0') */
     vector<uint8_t> data;
@@ -116,7 +116,7 @@ TEST(S3RESTfulService, PutToServerWith404Page) {
 
     url = "https://www.bing.com/pivotal.html";
 
-    Response resp = service.put(url, headers, params, data);
+    Response resp = service.put(url, headers, data);
 
     EXPECT_EQ(RESPONSE_ERROR, resp.getStatus());
     EXPECT_EQ("S3 server returned error, error code is 404", resp.getMessage());
@@ -128,10 +128,10 @@ TEST(S3RESTfulService, PutWithoutURLWithDebugParam) {
     params.setDebugCurl(true);
 
     string url;
-    S3RESTfulService service;
+    S3RESTfulService service(params);
     vector<uint8_t> data;
 
-    Response resp = service.put(url, headers, params, data);
+    Response resp = service.put(url, headers, data);
 
     EXPECT_EQ(RESPONSE_FAIL, resp.getStatus());
     EXPECT_EQ("Server connection failed: URL using bad/illegal format or missing URL",
@@ -158,7 +158,7 @@ TEST(S3RESTfulService, DISABLED_PutToDummyServer) {
     HTTPHeaders headers;
     S3Params params;
     string url;
-    S3RESTfulService service;
+    S3RESTfulService service(params);
 
     /* data = "abcdefghij", length = 11 (including '\0') */
     vector<uint8_t> data;
@@ -170,7 +170,7 @@ TEST(S3RESTfulService, DISABLED_PutToDummyServer) {
 
     url = "http://localhost:8553";
 
-    Response resp = service.put(url, headers, params, data);
+    Response resp = service.put(url, headers, data);
     EXPECT_EQ(RESPONSE_OK, resp.getStatus());
     EXPECT_TRUE(compareVector(data, resp.getRawData()));
 }
@@ -179,9 +179,9 @@ TEST(S3RESTfulService, HeadWithoutURL) {
     HTTPHeaders headers;
     S3Params params;
     string url;
-    S3RESTfulService service;
+    S3RESTfulService service(params);
 
-    ResponseCode code = service.head(url, headers, params);
+    ResponseCode code = service.head(url, headers);
 
     EXPECT_EQ(-1, code);
 }
@@ -192,11 +192,11 @@ TEST(S3RESTfulService, HeadWithCorrectURLAndDebugParam) {
     params.setDebugCurl(true);
 
     string url;
-    S3RESTfulService service;
+    S3RESTfulService service(params);
 
     url = "https://www.bing.com/";
 
-    ResponseCode code = service.head(url, headers, params);
+    ResponseCode code = service.head(url, headers);
 
     EXPECT_EQ(200, code);
 }
@@ -205,11 +205,11 @@ TEST(S3RESTfulService, HeadWithWrongURL) {
     HTTPHeaders headers;
     S3Params params;
     string url;
-    S3RESTfulService service;
+    S3RESTfulService service(params);
 
     url = "https://www.bing.com/pivotal.html";
 
-    ResponseCode code = service.head(url, headers, params);
+    ResponseCode code = service.head(url, headers);
 
     EXPECT_EQ(404, code);
 }
@@ -218,11 +218,11 @@ TEST(S3RESTfulService, HeadWithCorrectURL) {
     HTTPHeaders headers;
     S3Params params;
     string url;
-    S3RESTfulService service;
+    S3RESTfulService service(params);
 
     url = "https://www.bing.com/";
 
-    ResponseCode code = service.head(url, headers, params);
+    ResponseCode code = service.head(url, headers);
 
     EXPECT_EQ(200, code);
 }
@@ -231,9 +231,9 @@ TEST(S3RESTfulService, PostWithoutURL) {
     HTTPHeaders headers;
     S3Params params;
     string url;
-    S3RESTfulService service;
+    S3RESTfulService service(params);
 
-    Response resp = service.post(url, headers, params, vector<uint8_t>());
+    Response resp = service.post(url, headers, vector<uint8_t>());
 
     EXPECT_EQ(RESPONSE_FAIL, resp.getStatus());
     EXPECT_EQ("Server connection failed: URL using bad/illegal format or missing URL",
@@ -246,12 +246,12 @@ TEST(S3RESTfulService, PostToServerWithBlindPutServiceAndDebugParam) {
     params.setDebugCurl(true);
 
     string url;
-    S3RESTfulService service;
+    S3RESTfulService service(params);
 
     headers.Add(CONTENTLENGTH, "3");
     url = "https://www.bing.com/?abcdefghij";
 
-    Response resp = service.post(url, headers, params, vector<uint8_t>({1, 2, 3}));
+    Response resp = service.post(url, headers, vector<uint8_t>({1, 2, 3}));
 
     EXPECT_EQ(RESPONSE_OK, resp.getStatus());
 }
@@ -260,12 +260,12 @@ TEST(S3RESTfulService, PostToServerWithBlindPutService) {
     HTTPHeaders headers;
     S3Params params;
     string url;
-    S3RESTfulService service;
+    S3RESTfulService service(params);
 
     url = "https://www.bing.com/?abcdefghij";
 
     headers.Add(CONTENTLENGTH, "3");
-    Response resp = service.post(url, headers, params, vector<uint8_t>({1, 2, 3}));
+    Response resp = service.post(url, headers, vector<uint8_t>({1, 2, 3}));
 
     EXPECT_EQ(RESPONSE_OK, resp.getStatus());
 }
@@ -274,12 +274,12 @@ TEST(S3RESTfulService, PostToServerWith404Page) {
     HTTPHeaders headers;
     S3Params params;
     string url;
-    S3RESTfulService service;
+    S3RESTfulService service(params);
 
     url = "https://www.bing.com/pivotal.html/?abcdefghij";
 
     headers.Add(CONTENTLENGTH, "3");
-    Response resp = service.post(url, headers, params, vector<uint8_t>({1, 2, 3}));
+    Response resp = service.post(url, headers, vector<uint8_t>({1, 2, 3}));
 
     EXPECT_EQ(RESPONSE_ERROR, resp.getStatus());
     EXPECT_EQ("S3 server returned error, error code is 404", resp.getMessage());
@@ -289,7 +289,7 @@ TEST(S3RESTfulService, PostToServerWithData) {
     HTTPHeaders headers;
     S3Params params;
     string url;
-    S3RESTfulService service;
+    S3RESTfulService service(params);
 
     url = "https://www.bing.com";
 
@@ -301,7 +301,7 @@ TEST(S3RESTfulService, PostToServerWithData) {
     headers.Add(CONTENTTYPE, "text/plain");
     headers.Add(CONTENTLENGTH, std::to_string(data.size()));
 
-    Response resp = service.post(url, headers, params, data);
+    Response resp = service.post(url, headers, data);
 
     EXPECT_EQ(RESPONSE_OK, resp.getStatus());
 }
@@ -311,11 +311,11 @@ TEST(S3RESTfulService, DISABLED_PostToDummyServer) {
     HTTPHeaders headers;
     S3Params params;
     string url;
-    S3RESTfulService service;
+    S3RESTfulService service(params);
 
     url = "http://localhost:8553/?abcdefghij";
 
-    Response resp = service.post(url, headers, params, vector<uint8_t>());
+    Response resp = service.post(url, headers, vector<uint8_t>());
     EXPECT_EQ(RESPONSE_OK, resp.getStatus());
     EXPECT_EQ("abcdefghij", string(resp.getRawData().begin(), resp.getRawData().end()));
 }
@@ -325,7 +325,7 @@ TEST(S3RESTfulService, DISABLED_PostToDummyServerWithData) {
     HTTPHeaders headers;
     S3Params params;
     string url;
-    S3RESTfulService service;
+    S3RESTfulService service(params);
 
     /* data = "abcdefghij", length = 11 (including '\0') */
     vector<uint8_t> data;
@@ -337,7 +337,7 @@ TEST(S3RESTfulService, DISABLED_PostToDummyServerWithData) {
 
     url = "http://localhost:8553";
 
-    Response resp = service.post(url, headers, params, data);
+    Response resp = service.post(url, headers, data);
     EXPECT_EQ(RESPONSE_OK, resp.getStatus());
     EXPECT_TRUE(compareVector(data, resp.getRawData()));
 }
@@ -347,13 +347,13 @@ TEST(S3RESTfulService, DISABLED_DeleteToDummyServerWithData) {
     HTTPHeaders headers;
     S3Params params;
     string url;
-    S3RESTfulService service;
+    S3RESTfulService service(params);
 
     headers.Add(CONTENTTYPE, "text/plain");
     headers.Add(CONTENTLENGTH, "0");
 
     url = "http://localhost:8553";
 
-    Response resp = service.deleteRequest(url, headers, params);
+    Response resp = service.deleteRequest(url, headers);
     EXPECT_EQ(RESPONSE_OK, resp.getStatus());
 }

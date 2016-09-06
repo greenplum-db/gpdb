@@ -40,20 +40,19 @@ class MockS3Interface : public S3Interface {
 
 class MockS3RESTfulService : public S3RESTfulService {
    public:
-    MOCK_METHOD3(head, ResponseCode(const string &url, HTTPHeaders &headers,
-                               const S3Params &params));
+    MockS3RESTfulService(const S3Params& params):S3RESTfulService(params){}
 
-    MOCK_METHOD3(get, Response(const string &url, HTTPHeaders &headers,
-                               const S3Params &params));
+    MOCK_METHOD2(head, ResponseCode(const string &url, HTTPHeaders &headers));
 
-    MOCK_METHOD4(put, Response(const string &url, HTTPHeaders &headers,
-                               const S3Params &params, const vector<uint8_t> &data));
+    MOCK_METHOD2(get, Response(const string &url, HTTPHeaders &headers));
 
-    MOCK_METHOD4(post, Response(const string &url, HTTPHeaders &headers,
-                                const S3Params &params,const vector<uint8_t> &data));
+    MOCK_METHOD3(put, Response(const string &url, HTTPHeaders &headers,
+                               const vector<uint8_t> &data));
 
-    MOCK_METHOD3(deleteRequest, Response(const string &url, HTTPHeaders &headers,
-            const S3Params &params));
+    MOCK_METHOD3(post, Response(const string &url, HTTPHeaders &headers,
+                                const vector<uint8_t> &data));
+
+    MOCK_METHOD2(deleteRequest, Response(const string &url, HTTPHeaders &headers));
 };
 
 class XMLGenerator {

@@ -7,7 +7,7 @@
 
 class S3CommonReader : public Reader {
    public:
-    S3CommonReader() : upstreamReader(NULL), s3service(NULL) {
+    S3CommonReader() : upstreamReader(NULL), s3InterfaceService(NULL) {
     }
 
     virtual ~S3CommonReader() {
@@ -23,13 +23,13 @@ class S3CommonReader : public Reader {
     virtual void close();
 
     // Used by Mock, DO NOT call it in other places.
-    void setS3service(S3Interface* s3service) {
-        this->s3service = s3service;
+    void setS3InterfaceService(S3Interface* s3InterfaceService) {
+        this->s3InterfaceService = s3InterfaceService;
     }
 
    protected:
     Reader* upstreamReader;
-    S3Interface* s3service;
+    S3Interface* s3InterfaceService;
     S3KeyReader keyReader;
     DecompressReader decompressReader;
 };

@@ -204,7 +204,7 @@ void S3KeyReader::open(const S3Params& params) {
     }
 
     for (uint64_t i = 0; i < this->numOfChunks; i++) {
-        this->chunkBuffers[i].setS3interface(this->s3interface);
+        this->chunkBuffers[i].setS3InterfaceService(this->s3interface);
 
         pthread_t thread;
         pthread_create(&thread, NULL, DownloadThreadFunc, &this->chunkBuffers[i]);

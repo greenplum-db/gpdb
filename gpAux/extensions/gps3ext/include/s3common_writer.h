@@ -8,7 +8,7 @@
 
 class S3CommonWriter : public Writer {
    public:
-    S3CommonWriter() : upstreamWriter(NULL), s3service(NULL) {
+    S3CommonWriter() : upstreamWriter(NULL), s3InterfaceService(NULL) {
     }
 
     virtual ~S3CommonWriter() {
@@ -25,13 +25,13 @@ class S3CommonWriter : public Writer {
     virtual void close();
 
     // Used by Mock, DO NOT call it in other places.
-    void setS3service(S3Interface* s3service) {
-        this->s3service = s3service;
+    void setS3InterfaceService(S3Interface* s3InterfaceService) {
+        this->s3InterfaceService = s3InterfaceService;
     }
 
    protected:
     Writer* upstreamWriter;
-    S3Interface* s3service;
+    S3Interface* s3InterfaceService;
     S3KeyWriter keyWriter;
     CompressWriter compressWriter;
 };

@@ -1,7 +1,7 @@
 #include "s3common_writer.h"
 
 void S3CommonWriter::open(const S3Params& params) {
-    this->keyWriter.setS3interface(this->s3service);
+    this->keyWriter.setS3InterfaceService(this->s3InterfaceService);
 
     if (params.isAutoCompress()) {
         this->upstreamWriter = &this->compressWriter;

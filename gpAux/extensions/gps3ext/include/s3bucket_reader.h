@@ -16,7 +16,7 @@ class S3BucketReader : public Reader {
     uint64_t read(char *buf, uint64_t count);
     void close();
 
-    void setS3interface(S3Interface *s3) {
+    void setS3InterfaceService(S3Interface *s3) {
         this->s3interface = s3;
     }
 

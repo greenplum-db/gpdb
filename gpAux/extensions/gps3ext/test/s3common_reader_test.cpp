@@ -27,7 +27,7 @@ class S3CommonReaderTest : public ::testing::Test, public S3CommonReader {
    protected:
     // Remember that SetUp() is run immediately before a test starts.
     virtual void SetUp() {
-        this->setS3service(&mockS3Interface);
+        this->setS3InterfaceService(&mockS3Interface);
     }
 
     // TearDown() is invoked immediately after a test finishes.

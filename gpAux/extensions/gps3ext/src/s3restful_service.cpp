@@ -1,9 +1,13 @@
 #include "s3restful_service.h"
 
-S3RESTfulService::S3RESTfulService() {
+S3RESTfulService::S3RESTfulService(const S3Params &params) {
     // This function is not thread safe, must NOT call it when any other
     // threads are running, that is, do NOT put it in threads.
     curl_global_init(CURL_GLOBAL_ALL);
+
+    this->lowSpeedLimit = params.getLowSpeedLimit();
+    this->lowSpeedTime = params.getLowSpeedTime();
+    this->debugCurl = params.isDebugCurl();
 }
 
 S3RESTfulService::~S3RESTfulService() {
@@ -72,7 +76,7 @@ size_t RESTfulServiceReadFuncCallback(char *ptr, size_t size, size_t nmemb, void
 //
 // This method does not care about response format, caller need to handle
 // response format accordingly.
-Response S3RESTfulService::get(const string &url, HTTPHeaders &headers, const S3Params &params) {
+Response S3RESTfulService::get(const string &url, HTTPHeaders &headers) {
     Response response;
 
     CURL *curl = curl_easy_init();
@@ -88,10 +92,10 @@ Response S3RESTfulService::get(const string &url, HTTPHeaders &headers, const S3
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, RESTfulServiceWriteFuncCallback);
 
     // consider low speed as timeout
-    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, params.getLowSpeedLimit());
-    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, params.getLowSpeedTime());
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, this->lowSpeedLimit);
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, this->lowSpeedTime);
 
-    if (params.isDebugCurl()) {
+    if (this->debugCurl) {
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
     }
 
@@ -129,7 +133,7 @@ Response S3RESTfulService::get(const string &url, HTTPHeaders &headers, const S3
     return response;
 }
 
-Response S3RESTfulService::put(const string &url, HTTPHeaders &headers, const S3Params &params,
+Response S3RESTfulService::put(const string &url, HTTPHeaders &headers,
                                const vector<uint8_t> &data) {
     Response response;
 
@@ -157,10 +161,10 @@ Response S3RESTfulService::put(const string &url, HTTPHeaders &headers, const S3
     curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, RESTfulServiceHeadersWriteFuncCallback);
 
     // consider low speed as timeout
-    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, params.getLowSpeedLimit());
-    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, params.getLowSpeedTime());
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, this->lowSpeedLimit);
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, this->lowSpeedTime);
 
-    if (params.isDebugCurl()) {
+    if (this->debugCurl) {
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
     }
 
@@ -205,7 +209,7 @@ Response S3RESTfulService::put(const string &url, HTTPHeaders &headers, const S3
     return response;
 }
 
-Response S3RESTfulService::post(const string &url, HTTPHeaders &headers, const S3Params &params,
+Response S3RESTfulService::post(const string &url, HTTPHeaders &headers,
                                 const vector<uint8_t> &data) {
     Response response;
 
@@ -230,10 +234,10 @@ Response S3RESTfulService::post(const string &url, HTTPHeaders &headers, const S
     curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)data.size());
 
     // consider low speed as timeout
-    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, params.getLowSpeedLimit());
-    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, params.getLowSpeedTime());
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, this->lowSpeedLimit);
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, this->lowSpeedTime);
 
-    if (params.isDebugCurl()) {
+    if (this->debugCurl) {
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
     }
 
@@ -283,8 +287,7 @@ Response S3RESTfulService::post(const string &url, HTTPHeaders &headers, const S
 //
 // Currently, this method only return the HTTP code, will be extended if needed in the future
 // implementation.
-ResponseCode S3RESTfulService::head(const string &url, HTTPHeaders &headers,
-                                    const S3Params &params) {
+ResponseCode S3RESTfulService::head(const string &url, HTTPHeaders &headers) {
     ResponseCode responseCode = HeadResponseFail;
 
     CURL *curl = curl_easy_init();
@@ -300,7 +303,11 @@ ResponseCode S3RESTfulService::head(const string &url, HTTPHeaders &headers,
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "HEAD");
     curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
 
-    if (params.isDebugCurl()) {
+    // consider low speed as timeout
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, this->lowSpeedLimit);
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, this->lowSpeedTime);
+
+    if (this->debugCurl) {
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
     }
 
@@ -319,8 +326,7 @@ ResponseCode S3RESTfulService::head(const string &url, HTTPHeaders &headers,
     return responseCode;
 }
 
-Response S3RESTfulService::deleteRequest(const string &url, HTTPHeaders &headers,
-                                         const S3Params &params) {
+Response S3RESTfulService::deleteRequest(const string &url, HTTPHeaders &headers) {
     Response response;
 
     CURL *curl = curl_easy_init();
@@ -346,10 +352,10 @@ Response S3RESTfulService::deleteRequest(const string &url, HTTPHeaders &headers
     curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)data.size());
 
     // consider low speed as timeout
-    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, params.getLowSpeedLimit());
-    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, params.getLowSpeedTime());
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, this->lowSpeedLimit);
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, this->lowSpeedTime);
 
-    if (params.isDebugCurl()) {
+    if (this->debugCurl) {
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
     }
 

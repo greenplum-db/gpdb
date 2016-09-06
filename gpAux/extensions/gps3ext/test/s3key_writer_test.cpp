@@ -13,7 +13,7 @@ using ::testing::_;
 class S3KeyWriterTest : public testing::Test, public S3KeyWriter {
    protected:
     virtual void SetUp() {
-        this->setS3interface(&mocks3interface);
+        this->setS3InterfaceService(&mocks3interface);
 
         testParams.setKeyUrl("testurl");
         testParams.setRegion("testregion");

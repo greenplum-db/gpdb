@@ -62,7 +62,7 @@ class S3CommonWriteTest : public ::testing::Test, public S3CommonWriter {
    protected:
     // Remember that SetUp() is run immediately before a test starts.
     virtual void SetUp() {
-        this->setS3service(&mockS3Interface);
+        this->setS3InterfaceService(&mockS3Interface);
 
         this->out = new Byte[S3_ZIP_DECOMPRESS_CHUNKSIZE];
     }

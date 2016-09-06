@@ -22,7 +22,7 @@ class S3BucketReaderTest : public testing::Test {
     // Remember that SetUp() is run immediately before a test starts.
     virtual void SetUp() {
         bucketReader = new S3BucketReader();
-        bucketReader->setS3interface(&s3interface);
+        bucketReader->setS3InterfaceService(&s3interface);
     }
 
     // TearDown() is invoked immediately after a test finishes.
@@ -58,7 +58,7 @@ TEST_F(S3BucketReaderTest, OpenURL) {
 }
 
 TEST_F(S3BucketReaderTest, OpenThrowExceptionWhenS3InterfaceIsNULL) {
-    bucketReader->setS3interface(NULL);
+    bucketReader->setS3InterfaceService(NULL);
 
     string url = "https://s3-us-east-2.amazonaws.com/s3test.pivotal.io/whatever";
     params.setBaseUrl(url);

@@ -116,11 +116,11 @@ class S3Interface {
     }
 };
 
-class S3Service : public S3Interface {
+class S3InterfaceService : public S3Interface {
    public:
-    S3Service();
-    S3Service(const S3Params& params);
-    virtual ~S3Service();
+    S3InterfaceService();
+    S3InterfaceService(const S3Params& params);
+    virtual ~S3InterfaceService();
 
     ListBucketResult listBucket(const string& schema, const string& region, const string& bucket,
                                 const string& prefix);

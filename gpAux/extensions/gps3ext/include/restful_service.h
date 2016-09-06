@@ -113,18 +113,15 @@ class RESTfulService {
     virtual ~RESTfulService() {
     }
 
-    virtual Response get(const string& url, HTTPHeaders& headers, const S3Params& params) = 0;
+    virtual Response get(const string& url, HTTPHeaders& headers) = 0;
 
-    virtual Response put(const string& url, HTTPHeaders& headers, const S3Params& params,
-                         const vector<uint8_t>& data) = 0;
+    virtual Response put(const string& url, HTTPHeaders& headers, const vector<uint8_t>& data) = 0;
 
-    virtual Response post(const string& url, HTTPHeaders& headers, const S3Params& params,
-                          const vector<uint8_t>& data) = 0;
+    virtual Response post(const string& url, HTTPHeaders& headers, const vector<uint8_t>& data) = 0;
 
-    virtual ResponseCode head(const string& url, HTTPHeaders& headers, const S3Params& params) = 0;
+    virtual ResponseCode head(const string& url, HTTPHeaders& headers) = 0;
 
-    virtual Response deleteRequest(const string& url, HTTPHeaders& headers,
-                                   const S3Params& params) = 0;
+    virtual Response deleteRequest(const string& url, HTTPHeaders& headers) = 0;
 };
 
 #endif /* INCLUDE_RESTFUL_SERVICE_H_ */

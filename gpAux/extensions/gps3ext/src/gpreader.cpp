@@ -50,7 +50,8 @@ int thread_cleanup(void) {
     return 1;
 }
 
-GPReader::GPReader(const S3Params& params, const string& url) : s3service(params) {
+GPReader::GPReader(const S3Params& params, const string& url)
+    : restfulService(params), s3InterfaceService(params) {
     this->params = params;
 
     // construct a canonical URL string
@@ -68,10 +69,10 @@ void GPReader::constructS3Params(const string& url) {
 }
 
 void GPReader::open(const S3Params& params) {
-    this->s3service.setRESTfulService(this->restfulServicePtr);
-    this->bucketReader.setS3interface(&this->s3service);
+    this->s3InterfaceService.setRESTfulService(this->restfulServicePtr);
+    this->bucketReader.setS3InterfaceService(&this->s3InterfaceService);
     this->bucketReader.setUpstreamReader(&this->commonReader);
-    this->commonReader.setS3service(&this->s3service);
+    this->commonReader.setS3InterfaceService(&this->s3InterfaceService);
     this->bucketReader.open(this->params);
 }
 

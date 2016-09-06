@@ -23,7 +23,7 @@ class S3KeyReaderTest : public testing::Test, public S3KeyReader {
     // Remember that SetUp() is run immediately before a test starts.
     virtual void SetUp() {
         QueryCancelPending = false;
-        this->setS3interface(&s3interface);
+        this->setS3InterfaceService(&s3interface);
     }
 
     // TearDown() is invoked immediately after a test finishes.

@@ -1,7 +1,7 @@
 #include "gpwriter.h"
 
 GPWriter::GPWriter(const S3Params& params, const string& url, string fmt)
-    : format(fmt), s3service(params) {
+    : format(fmt), restfulService(params), s3InterfaceService(params) {
     this->params = params;
 
     string replacedURL = S3UrlUtility::replaceSchemaFromURL(url, this->params.isEncryption());
@@ -22,9 +22,9 @@ void GPWriter::constructS3Params(const string& url) {
 }
 
 void GPWriter::open(const S3Params& params) {
-    this->s3service.setRESTfulService(this->restfulServicePtr);
+    this->s3InterfaceService.setRESTfulService(this->restfulServicePtr);
     this->params.setKeyUrl(this->genUniqueKeyName(this->params.getBaseUrl()));
-    this->commonWriter.setS3service(&this->s3service);
+    this->commonWriter.setS3InterfaceService(&this->s3InterfaceService);
     this->commonWriter.open(this->params);
 }
 
@@ -41,7 +41,7 @@ string GPWriter::genUniqueKeyName(const string& url) {
 
     do {
         keyName = this->constructKeyName(url);
-    } while (this->s3service.checkKeyExistence(keyName, this->params.getRegion()));
+    } while (this->s3InterfaceService.checkKeyExistence(keyName, this->params.getRegion()));
 
     return keyName;
 }

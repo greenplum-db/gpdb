@@ -13,9 +13,9 @@ using ::testing::_;
 class MockGPWriter : public GPWriter {
    public:
     MockGPWriter(const S3Params& params, const string& urlWithOptions,
-                 S3RESTfulService* mockService)
+                 S3RESTfulService* mockRESTfulService)
         : GPWriter(params, urlWithOptions) {
-        restfulServicePtr = mockService;
+        restfulServicePtr = mockRESTfulService;
     }
 };
 
@@ -34,9 +34,9 @@ class GPWriterTest : public testing::Test {
 TEST_F(GPWriterTest, ConstructKeyName) {
     string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal";
 
-    MockS3RESTfulService mockRestfulService;
-    MockGPWriter gpwriter(this->params, url, &mockRestfulService);
-    EXPECT_CALL(mockRestfulService, head(_, _, _)).WillOnce(Return(404));
+    MockS3RESTfulService mockRESTfulService(this->params);
+    MockGPWriter gpwriter(this->params, url, &mockRESTfulService);
+    EXPECT_CALL(mockRESTfulService, head(_, _)).WillOnce(Return(404));
 
     uint8_t xml[] =
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
@@ -49,7 +49,7 @@ TEST_F(GPWriterTest, ConstructKeyName) {
     vector<uint8_t> raw(xml, xml + sizeof(xml) - 1);
     Response response(RESPONSE_OK, raw);
 
-    EXPECT_CALL(mockRestfulService, post(_, _, _, vector<uint8_t>())).WillOnce(Return(response));
+    EXPECT_CALL(mockRESTfulService, post(_, _, vector<uint8_t>())).WillOnce(Return(response));
 
     gpwriter.open(this->params);
 
@@ -60,9 +60,9 @@ TEST_F(GPWriterTest, ConstructKeyName) {
 TEST_F(GPWriterTest, GenerateUniqueKeyName) {
     string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal";
 
-    MockS3RESTfulService mockRestfulService;
-    MockGPWriter gpwriter(this->params, url, &mockRestfulService);
-    EXPECT_CALL(mockRestfulService, head(_, _, _)).Times(AtLeast(1)).WillRepeatedly(Return(404));
+    MockS3RESTfulService mockRESTfulService(this->params);
+    MockGPWriter gpwriter(this->params, url, &mockRESTfulService);
+    EXPECT_CALL(mockRESTfulService, head(_, _)).Times(AtLeast(1)).WillRepeatedly(Return(404));
 
     uint8_t xml[] =
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
@@ -75,15 +75,15 @@ TEST_F(GPWriterTest, GenerateUniqueKeyName) {
     vector<uint8_t> raw(xml, xml + sizeof(xml) - 1);
     Response response(RESPONSE_OK, raw);
 
-    EXPECT_CALL(mockRestfulService, post(_, _, _, vector<uint8_t>()))
+    EXPECT_CALL(mockRESTfulService, post(_, _, vector<uint8_t>()))
         .WillOnce(Return(response))
         .WillOnce(Return(response));
 
     params.setKeyUrl(url);
     gpwriter.open(this->params);
 
-    MockGPWriter gpwriter2(this->params, url, &mockRestfulService);
-    EXPECT_CALL(mockRestfulService, head(gpwriter.getKeyToUpload(), _, _))
+    MockGPWriter gpwriter2(this->params, url, &mockRESTfulService);
+    EXPECT_CALL(mockRESTfulService, head(gpwriter.getKeyToUpload(), _))
         .Times(AtMost(1))
         .WillOnce(Return(200));
 
@@ -94,10 +94,10 @@ TEST_F(GPWriterTest, GenerateUniqueKeyName) {
 
 TEST_F(GPWriterTest, ReGenerateKeyName) {
     string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal";
-    MockS3RESTfulService mockRestfulService;
-    MockGPWriter gpwriter(this->params, url, &mockRestfulService);
+    MockS3RESTfulService mockRESTfulService(this->params);
+    MockGPWriter gpwriter(this->params, url, &mockRESTfulService);
 
-    EXPECT_CALL(mockRestfulService, head(_, _, _)).WillOnce(Return(200)).WillOnce(Return(404));
+    EXPECT_CALL(mockRESTfulService, head(_, _)).WillOnce(Return(200)).WillOnce(Return(404));
 
     uint8_t xml[] =
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
@@ -110,7 +110,7 @@ TEST_F(GPWriterTest, ReGenerateKeyName) {
     vector<uint8_t> raw(xml, xml + sizeof(xml) - 1);
     Response response(RESPONSE_OK, raw);
 
-    EXPECT_CALL(mockRestfulService, post(_, _, _, vector<uint8_t>())).WillOnce(Return(response));
+    EXPECT_CALL(mockRESTfulService, post(_, _, vector<uint8_t>())).WillOnce(Return(response));
 
     params.setKeyUrl(url);
     gpwriter.open(this->params);

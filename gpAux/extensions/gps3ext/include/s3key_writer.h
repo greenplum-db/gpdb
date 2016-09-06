@@ -28,7 +28,7 @@ class S3KeyWriter : public Writer {
     // This should be reentrant, has no side effects when called multiple times.
     virtual void close();
 
-    void setS3interface(S3Interface* s3) {
+    void setS3InterfaceService(S3Interface* s3) {
         this->s3interface = s3;
     }
 

@@ -39,7 +39,7 @@ class GPWriter : public Writer {
     string format;
     S3Params params;
     S3RESTfulService restfulService;
-    S3Service s3service;
+    S3InterfaceService s3InterfaceService;
     S3CommonWriter commonWriter;
 
     // it links to itself by default
