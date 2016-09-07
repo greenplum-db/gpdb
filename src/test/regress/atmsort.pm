@@ -162,8 +162,8 @@ sub _build_match_subs
 
     my $stat = [1];
 
-     # filter out the comments and blank lines
-     $here_matchsubs =~ s/^\s*(?:#.*)?\R//gm;
+    # filter out the comments and blank lines
+    $here_matchsubs =~ s/^\s*(?:#.*)?(?:[\r\n]|\x0D\x0A)//gm;
 
     # split up the document into separate lines
     my @foo = split(/\n/, $here_matchsubs);
@@ -336,7 +336,7 @@ sub _build_match_ignores
     my $stat = [1];
 
     # filter out the comments and blank lines
-    $here_matchignores =~ s/^\s*(?:#.*)?\R//gm;
+    $here_matchignores =~ s/^\s*(?:#.*)?(?:[\r\n]|\x0D\x0A)//gm;
 
     # split up the document into separate lines
     my @matchignores_arr = split(/\n/, $here_matchignores);
