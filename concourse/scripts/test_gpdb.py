@@ -4,7 +4,7 @@ import optparse
 import subprocess
 import sys
 import shutil
-from builds import GporcaBuild, GpcodegenBuild, GporcacodegenBuild
+from builds import GpBuild, GpcodegenBuild, GporcacodegenBuild
 
 def install_gpdb(dependency_name):
     status = subprocess.call("mkdir -p /usr/local/gpdb", shell=True)
@@ -28,14 +28,16 @@ def copy_output():
 def main():
     parser = optparse.OptionParser()
     parser.add_option("--build_type", dest="build_type", default="RELEASE")
-    parser.add_option("--mode",  choices=['orca', 'codegen', 'orca_codegen'])
+    parser.add_option("--mode",  choices=['orca', 'codegen', 'orca_codegen', 'planner'])
     parser.add_option("--compiler", dest="compiler")
     parser.add_option("--cxxflags", dest="cxxflags")
     parser.add_option("--output_dir", dest="output_dir", default="install")
     parser.add_option("--gpdb_name", dest="gpdb_name")
     (options, args) = parser.parse_args()
     if options.mode == 'orca':
-        ciCommon = GporcaBuild()
+        ciCommon = GpBuild(options.mode)
+    elif options.mode == 'planner':
+        ciCommon = GpBuild(options.mode)
     elif options.mode == 'codegen':
         ciCommon = GpcodegenBuild()
     elif options.mode == 'orca_codegen':

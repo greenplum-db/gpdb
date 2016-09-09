@@ -3,9 +3,9 @@ import subprocess
 import sys
 from GpdbBuildBase import GpdbBuildBase
 
-class GporcaBuild(GpdbBuildBase):
-    def __init__(self):
-        pass
+class GpBuild(GpdbBuildBase):
+    def __init__(self, mode):
+        self.mode = 'on' if mode == 'orca' else 'off'
 
     def configure(self):
         return subprocess.call(["./configure",
@@ -30,6 +30,6 @@ class GporcaBuild(GpdbBuildBase):
             return status
         return subprocess.call([
             "runuser gpadmin -c \"source /usr/local/gpdb/greenplum_path.sh \
-            && source gpAux/gpdemo/gpdemo-env.sh && PGOPTIONS='-c optimizer=on' \
-            make installcheck-good\""], cwd="gpdb_src", shell=True)
+            && source gpAux/gpdemo/gpdemo-env.sh && PGOPTIONS='-c optimizer={0}' \
+            make installcheck-good\"".format(self.mode)], cwd="gpdb_src", shell=True)
     
