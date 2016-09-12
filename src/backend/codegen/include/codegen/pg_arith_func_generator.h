@@ -131,6 +131,35 @@ class PGArithFuncGenerator {
         pg_func_info,
         llvm_out_value);
   }
+
+  /**
+   * @brief Increase the value of a variable with check for overflow
+   *
+   * @param codegen_utils     Utility to easy code generation.
+   * @param llvm_main_func    Current function for which we are generating code
+   * @param llvm_error_block  Basic Block to jump when error happens
+   * @param llvm_args         Vector that contains the llvm argument for the
+   *                          function
+   * @param llvm_out_value    Store the results of function
+   *
+   * @return true if generation was successful otherwise return false
+   *
+   * @note  If there is overflow, it will do elog::ERROR and then jump to given
+   *        error block.
+   **/
+  static bool IncWithOverflow(gpcodegen::GpCodegenUtils* codegen_utils,
+                              const PGFuncGeneratorInfo& pg_func_info,
+                              llvm::Value** llvm_out_value) {
+    llvm::Value* llvm_err_msg = codegen_utils->GetConstant(
+        ArithOpOverFlowErrorMsg<rtype>::OverFlowErrMsg());
+    return ArithOpWithOverflow(
+        codegen_utils,
+        &gpcodegen::GpCodegenUtils::CreateIncOverflow<rtype>,
+        llvm_err_msg,
+        pg_func_info,
+        llvm_out_value);
+  }
+
   /**
    * @brief Create LLVM Sub instruction with check for overflow
    *

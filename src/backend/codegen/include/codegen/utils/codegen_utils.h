@@ -309,6 +309,18 @@ class CodegenUtils {
   llvm::Value* CreateAddOverflow(llvm::Value* arg0, llvm::Value* arg1);
 
   /**
+     * @brief Use LLVM intrinsic to increase the value of a variable by one
+     *        with overflow instruction
+     *
+     * @tparam CppType  CppType for add
+     * @param arg   Input variable
+     *
+     * @return LLVM Value as a pair of results and overflow flag.
+     **/
+  template <typename CppType>
+  llvm::Value* CreateIncOverflow(llvm::Value* arg0, llvm::Value* arg1);
+
+  /**
    * @brief Use LLVM intrinsic to create Subtract with overflow
    *        instruction
    *
@@ -1408,6 +1420,13 @@ llvm::Value* CodegenUtils::CreateAddOverflow(llvm::Value* arg0,
   return codegen_utils_detail::ArithOpMaker<CppType>::CreateAddOverflow(this,
                                                                         arg0,
                                                                         arg1);
+}
+
+template <typename CppType>
+llvm::Value* CodegenUtils::CreateIncOverflow(llvm::Value* arg0,
+                                             llvm::Value* arg1) {
+  return codegen_utils_detail::ArithOpMaker<CppType>::
+      CreateAddOverflow(this, arg0, GetConstant(1));
 }
 
 template <typename CppType>
