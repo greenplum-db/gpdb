@@ -120,19 +120,20 @@ GPReader* reader_init(const char* url_with_options) {
         reader->open(params);
         return reader;
 
-    } catch (std::exception& e) {
+    } catch (S3Exception& e) {
         if (reader != NULL) {
             delete reader;
         }
-
-        if (S3QueryIsAbortInProgress()) {
-            S3ERROR("reader_init caught an exception: %s", "Downloading is interrupted by user");
-            s3extErrorMessage = "Downloading is interrupted by user";
-        } else {
-            S3ERROR("reader_init caught an exception: %s", e.what());
-            s3extErrorMessage = e.what();
+        s3extErrorMessage =
+            "reader_init caught a " + e.getType() + " exception: " + e.getFullMessage();
+        S3ERROR("reader_init caught %s: %s", e.getType().c_str(), s3extErrorMessage.c_str());
+        return NULL;
+    } catch (...) {
+        if (reader != NULL) {
+            delete reader;
         }
-
+        S3ERROR("Caught an unexpected exception.");
+        s3extErrorMessage = "Caught an unexpected exception.";
         return NULL;
     }
 }
@@ -148,19 +149,17 @@ bool reader_transfer_data(GPReader* reader, char* data_buf, int& data_len) {
 
         // sure read_len <= data_len here, hence truncation will never happen
         data_len = (int)read_len;
-    } catch (std::exception& e) {
-        if (S3QueryIsAbortInProgress()) {
-            S3ERROR("reader_transfer_data caught an exception: %s",
-                    "Downloading is interrupted by user");
-            s3extErrorMessage = "Downloading is interrupted by user";
-        } else {
-            S3ERROR("reader_transfer_data caught an exception: %s", e.what());
-            s3extErrorMessage = e.what();
-        }
-
+    } catch (S3Exception& e) {
+        s3extErrorMessage =
+            "reader_transfer_data caught a " + e.getType() + " exception: " + e.getFullMessage();
+        S3ERROR("reader_transfer_data caught %s: %s", e.getType().c_str(),
+                s3extErrorMessage.c_str());
+        return false;
+    } catch (...) {
+        S3ERROR("Caught an unexpected exception.");
+        s3extErrorMessage = "Caught an unexpected exception.";
         return false;
     }
-
     return true;
 }
 
@@ -175,17 +174,16 @@ bool reader_cleanup(GPReader** reader) {
         } else {
             result = false;
         }
-    } catch (std::exception& e) {
-        if (S3QueryIsAbortInProgress()) {
-            S3ERROR("reader_cleanup caught an exception: %s", "Downloading is interrupted by user");
-            s3extErrorMessage = "Downloading is interrupted by user";
-        } else {
-            S3ERROR("reader_cleanup caught an exception: %s", e.what());
-            s3extErrorMessage = e.what();
-        }
+    } catch (S3Exception& e) {
+        s3extErrorMessage =
+            "reader_cleanup caught a " + e.getType() + " exception: " + e.getFullMessage();
+        S3ERROR("reader_cleanup caught %s: %s", e.getType().c_str(), s3extErrorMessage.c_str());
 
         result = false;
+    } catch (...) {
+        S3ERROR("Caught an unexpected exception.");
+        s3extErrorMessage = "Caught an unexpected exception.";
+        result = false;
     }
-
     return result;
 }

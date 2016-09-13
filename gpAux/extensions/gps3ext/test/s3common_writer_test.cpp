@@ -83,7 +83,7 @@ class S3CommonWriteTest : public ::testing::Test, public S3CommonWriter {
         zstream.opaque = Z_NULL;
 
         int ret = inflateInit2(&zstream, S3_INFLATE_WINDOWSBITS);
-        CHECK_OR_DIE_MSG(ret == Z_OK, "%s", "failed to initialize zlib library");
+        S3_CHECK_OR_DIE_MSG(ret == Z_OK, S3RuntimeError, "failed to initialize zlib library");
 
         zstream.avail_in = len;
         zstream.next_in = (Byte*)input;

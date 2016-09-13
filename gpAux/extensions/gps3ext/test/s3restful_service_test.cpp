@@ -36,11 +36,7 @@ TEST(S3RESTfulService, GetWithoutURL) {
     string url;
     S3RESTfulService service(params);
 
-    Response resp = service.get(url, headers);
-
-    EXPECT_EQ(RESPONSE_FAIL, resp.getStatus());
-    EXPECT_EQ("Server connection failed: URL using bad/illegal format or missing URL",
-              resp.getMessage());
+    EXPECT_THROW(service.get(url, headers), S3ConnectionError);
 }
 
 TEST(S3RESTfulService, GetWithWrongURL) {
@@ -64,11 +60,7 @@ TEST(S3RESTfulService, GetWithoutURLWithDebugParam) {
     string url;
     S3RESTfulService service(params);
 
-    Response resp = service.get(url, headers);
-
-    EXPECT_EQ(RESPONSE_FAIL, resp.getStatus());
-    EXPECT_EQ("Server connection failed: URL using bad/illegal format or missing URL",
-              resp.getMessage());
+    EXPECT_THROW(service.get(url, headers), S3ConnectionError);
 }
 
 TEST(S3RESTfulService, PutWithoutURL) {
@@ -78,11 +70,7 @@ TEST(S3RESTfulService, PutWithoutURL) {
     S3RESTfulService service(params);
     vector<uint8_t> data;
 
-    Response resp = service.put(url, headers, data);
-
-    EXPECT_EQ(RESPONSE_FAIL, resp.getStatus());
-    EXPECT_EQ("Server connection failed: URL using bad/illegal format or missing URL",
-              resp.getMessage());
+    EXPECT_THROW(service.put(url, headers, data), S3ConnectionError);
 }
 
 TEST(S3RESTfulService, PutToServerWithBlindPutService) {
@@ -119,7 +107,7 @@ TEST(S3RESTfulService, PutToServerWith404Page) {
     Response resp = service.put(url, headers, data);
 
     EXPECT_EQ(RESPONSE_ERROR, resp.getStatus());
-    EXPECT_EQ("S3 server returned error, error code is 404", resp.getMessage());
+    EXPECT_EQ("Server returned error, error code is 404", resp.getMessage());
 }
 
 TEST(S3RESTfulService, PutWithoutURLWithDebugParam) {
@@ -131,11 +119,7 @@ TEST(S3RESTfulService, PutWithoutURLWithDebugParam) {
     S3RESTfulService service(params);
     vector<uint8_t> data;
 
-    Response resp = service.put(url, headers, data);
-
-    EXPECT_EQ(RESPONSE_FAIL, resp.getStatus());
-    EXPECT_EQ("Server connection failed: URL using bad/illegal format or missing URL",
-              resp.getMessage());
+    EXPECT_THROW(service.put(url, headers, data), S3ConnectionError);
 }
 
 /*
@@ -181,9 +165,7 @@ TEST(S3RESTfulService, HeadWithoutURL) {
     string url;
     S3RESTfulService service(params);
 
-    ResponseCode code = service.head(url, headers);
-
-    EXPECT_EQ(-1, code);
+    EXPECT_THROW(service.head(url, headers), S3ConnectionError);
 }
 
 TEST(S3RESTfulService, HeadWithCorrectURLAndDebugParam) {
@@ -233,11 +215,7 @@ TEST(S3RESTfulService, PostWithoutURL) {
     string url;
     S3RESTfulService service(params);
 
-    Response resp = service.post(url, headers, vector<uint8_t>());
-
-    EXPECT_EQ(RESPONSE_FAIL, resp.getStatus());
-    EXPECT_EQ("Server connection failed: URL using bad/illegal format or missing URL",
-              resp.getMessage());
+    EXPECT_THROW(service.post(url, headers, vector<uint8_t>()), S3ConnectionError);
 }
 
 TEST(S3RESTfulService, PostToServerWithBlindPutServiceAndDebugParam) {
@@ -282,7 +260,7 @@ TEST(S3RESTfulService, PostToServerWith404Page) {
     Response resp = service.post(url, headers, vector<uint8_t>({1, 2, 3}));
 
     EXPECT_EQ(RESPONSE_ERROR, resp.getStatus());
-    EXPECT_EQ("S3 server returned error, error code is 404", resp.getMessage());
+    EXPECT_EQ("Server returned error, error code is 404", resp.getMessage());
 }
 
 TEST(S3RESTfulService, PostToServerWithData) {

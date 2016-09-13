@@ -43,7 +43,7 @@ void DecompressReader::open(const S3Params &params) {
 
     // with S3_INFLATE_WINDOWSBITS, it could recognize and decode both zlib and gzip stream.
     int ret = inflateInit2(&zstream, S3_INFLATE_WINDOWSBITS);
-    CHECK_OR_DIE_MSG(ret == Z_OK, "%s", "failed to initialize zlib library");
+    S3_CHECK_OR_DIE_MSG(ret == Z_OK, S3RuntimeError, "failed to initialize zlib library");
 
     this->reader->open(params);
 }
@@ -112,7 +112,8 @@ void DecompressReader::decompress() {
         S3DEBUG("Decompression finished: Z_STREAM_END.");
     } else if (status < 0 || status == Z_NEED_DICT) {
         inflateEnd(&this->zstream);
-        CHECK_OR_DIE_MSG(false, "Failed to decompress data: %d", status);
+        S3_CHECK_OR_DIE_MSG(false, S3RuntimeError, string("Failed to decompress data: ") +
+                                                       std::to_string((unsigned long long)status));
     }
 }
 

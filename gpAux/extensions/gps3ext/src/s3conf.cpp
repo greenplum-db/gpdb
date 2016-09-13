@@ -20,17 +20,17 @@ int32_t s3ext_logsock_udp = -1;
 struct sockaddr_in s3ext_logserveraddr;
 
 bool InitConfig(S3Params& params, const string& conf_path, const string& section) {
-    CHECK_OR_DIE_MSG(!conf_path.empty(), "%s", "Config file is not specified");
+    S3_CHECK_OR_DIE_MSG(!conf_path.empty(), S3RuntimeError, "Config file is not specified");
 
     Config s3cfg(conf_path);
 
-    CHECK_OR_DIE_MSG(s3cfg.Handle(), "Failed to parse config file \"%s\", or it doesn't exist",
-                     conf_path.c_str());
+    S3_CHECK_OR_DIE_MSG(s3cfg.Handle(), S3RuntimeError,
+                        "Failed to parse config file \"" + conf_path + "\", or it doesn't exist");
 
-    CHECK_OR_DIE_MSG(
-        s3cfg.SectionExist(section),
-        "Selected section \"%s\" does not exist, please check your configuration file",
-        section.c_str());
+    S3_CHECK_OR_DIE_MSG(
+        s3cfg.SectionExist(section), S3ConfigError,
+        "Selected section \"" + section + "\" does not exist, please check your configuration file",
+        section);
 
     string content = s3cfg.Get(section.c_str(), "loglevel", "WARNING");
     s3ext_loglevel = getLogLevel(content.c_str());

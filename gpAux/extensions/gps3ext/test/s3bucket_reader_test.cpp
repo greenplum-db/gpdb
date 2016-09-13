@@ -45,7 +45,7 @@ class S3BucketReaderTest : public testing::Test {
 TEST_F(S3BucketReaderTest, OpenInvalidURL) {
     string url = "https://s3-us-east-2.amazon.com/s3test.pivotal.io/whatever";
     params.setBaseUrl(url);
-    EXPECT_THROW(bucketReader->open(params), std::runtime_error);
+    EXPECT_THROW(bucketReader->open(params), S3ConfigError);
 }
 
 TEST_F(S3BucketReaderTest, OpenURL) {
@@ -62,7 +62,7 @@ TEST_F(S3BucketReaderTest, OpenThrowExceptionWhenS3InterfaceIsNULL) {
 
     string url = "https://s3-us-east-2.amazonaws.com/s3test.pivotal.io/whatever";
     params.setBaseUrl(url);
-    EXPECT_THROW(bucketReader->open(params), std::runtime_error);
+    EXPECT_THROW(bucketReader->open(params), S3RuntimeError);
 }
 
 TEST_F(S3BucketReaderTest, ParseURL_normal) {
@@ -142,7 +142,7 @@ TEST_F(S3BucketReaderTest, ParseURL_apnortheast21) {
 }
 
 TEST_F(S3BucketReaderTest, ReaderThrowExceptionWhenUpstreamReaderIsNULL) {
-    EXPECT_THROW(bucketReader->read(buf, sizeof(buf)), std::runtime_error);
+    EXPECT_THROW(bucketReader->read(buf, sizeof(buf)), S3RuntimeError);
 }
 
 TEST_F(S3BucketReaderTest, ReaderReturnZeroForEmptyBucket) {
@@ -214,11 +214,14 @@ TEST_F(S3BucketReaderTest, ReaderShouldSkipIfFileIsNotForThisSegment) {
 
     s3ext_segid = 10;
     s3ext_segnum = 16;
-    params.setBaseUrl("https://s3-us-east-2.amazonaws.com/s3test.pivotal.io/whatever");
-    bucketReader->open(params);
-    bucketReader->setUpstreamReader(&s3reader);
 
-    EXPECT_EQ((uint64_t)0, bucketReader->read(buf, sizeof(buf)));
+    S3BucketReader reader;
+    params.setBaseUrl("https://s3-us-east-2.amazonaws.com/s3test.pivotal.io/whatever");
+    reader.setUpstreamReader(&s3reader);
+    reader.setS3InterfaceService(&s3interface);
+    reader.open(params);
+
+    EXPECT_EQ((uint64_t)0, reader.read(buf, sizeof(buf)));
 }
 
 TEST_F(S3BucketReaderTest, UpstreamReaderThrowException) {
@@ -228,9 +231,7 @@ TEST_F(S3BucketReaderTest, UpstreamReaderThrowException) {
 
     EXPECT_CALL(s3interface, listBucket(_, _, _, _)).Times(1).WillOnce(Return(result));
 
-    EXPECT_CALL(s3reader, read(_, _))
-        .Times(AtLeast(1))
-        .WillRepeatedly(Throw(std::runtime_error("")));
+    EXPECT_CALL(s3reader, read(_, _)).Times(AtLeast(1)).WillRepeatedly(Throw(S3RuntimeError("")));
 
     EXPECT_CALL(s3reader, open(_)).Times(1);
     EXPECT_CALL(s3reader, close()).Times(0);
@@ -241,6 +242,6 @@ TEST_F(S3BucketReaderTest, UpstreamReaderThrowException) {
     bucketReader->open(params);
     bucketReader->setUpstreamReader(&s3reader);
 
-    EXPECT_THROW(bucketReader->read(buf, sizeof(buf)), std::runtime_error);
-    EXPECT_THROW(bucketReader->read(buf, sizeof(buf)), std::runtime_error);
+    EXPECT_THROW(bucketReader->read(buf, sizeof(buf)), S3RuntimeError);
+    EXPECT_THROW(bucketReader->read(buf, sizeof(buf)), S3RuntimeError);
 }

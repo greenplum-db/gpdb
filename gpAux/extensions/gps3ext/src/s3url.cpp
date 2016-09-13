@@ -1,15 +1,16 @@
 #include "s3url.h"
 
 UrlParser::UrlParser(const string &url) {
-    CHECK_ARG_OR_DIE(!url.empty());
+    S3_CHECK_OR_DIE_MSG(!url.empty(), S3RuntimeError, "url is null");
 
     this->fullurl = url;
 
     struct http_parser_url url_parser;
     int result =
         http_parser_parse_url(this->fullurl.c_str(), this->fullurl.length(), false, &url_parser);
-    CHECK_OR_DIE_MSG(result == 0, "Failed to parse URL %s at field %d", this->fullurl.c_str(),
-                     result);
+    S3_CHECK_OR_DIE_MSG(result == 0, S3RuntimeError,
+                        "Failed to parse URL " + this->fullurl + " at field " +
+                            std::to_string((unsigned long long)result));
 
     this->schema = extractField(&url_parser, UF_SCHEMA);
     this->host = extractField(&url_parser, UF_HOST);

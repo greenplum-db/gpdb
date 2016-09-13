@@ -312,5 +312,5 @@ TEST_F(DecompressReaderTest, AbleToDecompressWithIncorrectEncodedStream) {
 
     char outputBuffer[128] = {0};
 
-    EXPECT_THROW(decompressReader.read(outputBuffer, sizeof(outputBuffer)), std::runtime_error);
+    EXPECT_THROW(decompressReader.read(outputBuffer, sizeof(outputBuffer)), S3RuntimeError);
 }

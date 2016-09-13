@@ -23,4 +23,17 @@ string getOptS3(const string& options, const string& key);
 
 string truncate_options(const string& url_with_options);
 
+class UniqueLock {
+   public:
+    UniqueLock(pthread_mutex_t* m) : mutex(m) {
+        pthread_mutex_lock(this->mutex);
+    }
+    ~UniqueLock() {
+        pthread_mutex_unlock(this->mutex);
+    }
+
+   private:
+    pthread_mutex_t* mutex;
+};
+
 #endif  // __S3_COMMON_H__

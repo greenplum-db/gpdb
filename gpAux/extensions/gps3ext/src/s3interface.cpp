@@ -32,76 +32,102 @@ S3InterfaceService::~S3InterfaceService() {
 
 Response S3InterfaceService::getResponseWithRetries(const string &url, HTTPHeaders &headers,
                                                     uint64_t retries) {
-    while (retries--) {
-        // declare response here to leverage RVO (Return Value Optimization)
-        Response response = this->restfulService->get(url, headers);
-        if (response.isSuccess() || (retries == 0) || S3QueryIsAbortInProgress()) {
-            return response;
-        };
-
-        S3WARN("Failed to get a good response in GET from '%s', retrying ...", url.c_str());
+    string message;
+    uint64_t retry = retries;
+    while (retry--) {
+        try {
+            return this->restfulService->get(url, headers);
+        } catch (S3ConnectionError &e) {
+            message = e.getMessage();
+            if (S3QueryIsAbortInProgress()) {
+                S3_DIE_MSG(S3QueryAbort, "Uploading is interrupted by user");
+            }
+            S3WARN("Failed to get a good response in GET from '%s', retrying ...", url.c_str());
+        }
     };
 
-    // an empty response(default status is RESPONSE_FAIL) returned if retries is 0
-    return Response();
+    S3_DIE_MSG(S3FailedAfterRetry, url, retries, message);
 };
 
 Response S3InterfaceService::putResponseWithRetries(const string &url, HTTPHeaders &headers,
                                                     vector<uint8_t> &data, uint64_t retries) {
-    while (retries--) {
-        // declare response here to leverage RVO (Return Value Optimization)
-        Response response = this->restfulService->put(url, headers, data);
-        if (response.isSuccess() || (retries == 0) || S3QueryIsAbortInProgress()) {
-            return response;
-        };
-
-        S3WARN("Failed to get a good response in PUT from '%s', retrying ...", url.c_str());
+    string message;
+    uint64_t retry = retries;
+    while (retry--) {
+        try {
+            return this->restfulService->put(url, headers, data);
+        } catch (S3ConnectionError &e) {
+            message = e.getMessage();
+            if (S3QueryIsAbortInProgress()) {
+                S3_DIE_MSG(S3QueryAbort, "Uploading is interrupted by user");
+            }
+            S3WARN("Failed to get a good response in PUT from '%s', retrying ...", url.c_str());
+        }
     };
 
-    // an empty response(default status is RESPONSE_FAIL) returned if retries is 0
-    return Response();
+    S3_DIE_MSG(S3FailedAfterRetry, url, retries, message);
 };
 
 Response S3InterfaceService::postResponseWithRetries(const string &url, HTTPHeaders &headers,
                                                      const vector<uint8_t> &data,
                                                      uint64_t retries) {
-    while (retries--) {
-        // declare response here to leverage RVO (Return Value Optimization)
-        Response response = this->restfulService->post(url, headers, data);
-        if (response.isSuccess() || (retries == 0) || S3QueryIsAbortInProgress()) {
-            return response;
-        };
-
-        S3WARN("Failed to get a good response in POST from '%s', retrying ...", url.c_str());
+    string message;
+    uint64_t retry = retries;
+    while (retry--) {
+        try {
+            return this->restfulService->post(url, headers, data);
+        } catch (S3ConnectionError &e) {
+            message = e.getMessage();
+            if (S3QueryIsAbortInProgress()) {
+                S3_DIE_MSG(S3QueryAbort, "Uploading is interrupted by user");
+            }
+            S3WARN("Failed to get a good response in POST from '%s', retrying ...", url.c_str());
+        }
     };
 
-    // an empty response(default status is RESPONSE_FAIL) returned if retries is 0
-    return Response();
+    S3_DIE_MSG(S3FailedAfterRetry, url, retries, message);
 }
 
 bool S3InterfaceService::isKeyExisted(ResponseCode code) {
     return isSuccessfulResponse(code);
 }
 
-bool S3InterfaceService::isHeadResponseCodeNeedRetry(ResponseCode code) {
-    return code == HeadResponseFail;
-}
-
 ResponseCode S3InterfaceService::headResponseWithRetries(const string &url, HTTPHeaders &headers,
                                                          uint64_t retries) {
-    ResponseCode response = HeadResponseFail;
+    string message;
+    uint64_t retry = retries;
+    while (retry--) {
+        try {
+            return this->restfulService->head(url, headers);
+        } catch (S3ConnectionError &e) {
+            message = e.getMessage();
+            if (S3QueryIsAbortInProgress()) {
+                S3_DIE_MSG(S3QueryAbort, "Uploading is interrupted by user");
+            }
 
-    while (retries--) {
-        response = this->restfulService->head(url, headers);
-        if (!isHeadResponseCodeNeedRetry(response) || (retries == 0) ||
-            S3QueryIsAbortInProgress()) {
-            return response;
-        };
-
-        S3WARN("Failed to get a good response in PUT from '%s', retrying ...", url.c_str());
+            S3WARN("Failed to get a good response in PUT from '%s', retrying ...", url.c_str());
+        }
     };
 
-    return response;
+    S3_DIE_MSG(S3FailedAfterRetry, url, retries, message);
+}
+Response S3InterfaceService::deleteRequestWithRetries(const string &url, HTTPHeaders &headers,
+                                                      uint64_t retries) {
+    string message;
+    uint64_t retry = retries;
+    while (retry--) {
+        try {
+            return this->restfulService->deleteRequest(url, headers);
+        } catch (S3ConnectionError &e) {
+            message = e.getMessage();
+            if (S3QueryIsAbortInProgress()) {
+                S3_DIE_MSG(S3QueryAbort, "Uploading is interrupted by user");
+            }
+            S3WARN("Failed to get a good response in PUT from '%s', retrying ...", url.c_str());
+        }
+    };
+
+    S3_DIE_MSG(S3FailedAfterRetry, url, retries, message);
 };
 
 // S3 requires query parameters specified alphabetically.
@@ -293,19 +319,19 @@ ListBucketResult S3InterfaceService::listBucket(const string &schema, const stri
         // S3 requires query parameters specified alphabetically.
         string url = this->getUrl(prefix, schema, host.str(), bucket, marker);
 
-        Response response = getBucketResponse(region, url, prefix, marker);
+        Response resp = getBucketResponse(region, url, prefix, marker);
 
-        xmlParserCtxtPtr xmlContext = getXMLContext(response);
-        XMLContextHolder holder(xmlContext);
-
-        if (response.isSuccess()) {
+        if (resp.getStatus() == RESPONSE_OK) {
+            xmlParserCtxtPtr xmlContext = getXMLContext(resp);
+            XMLContextHolder holder(xmlContext);
             if (parseBucketXML(&result, xmlContext, marker)) {
                 continue;
             }
+        } else if (resp.getStatus() == RESPONSE_ERROR) {
+            S3MessageParser s3msg(resp);
+            S3_DIE_MSG(S3LogicError, s3msg.getCode(), s3msg.getMessage());
         } else {
-            S3MessageParser s3msg(response);
-            S3ERROR("Amazon S3 returns error \"%s\"", s3msg.getMessage().c_str());
-            CHECK_OR_DIE_MSG(false, "Amazon S3 returns error \"%s\"", s3msg.getMessage().c_str());
+            S3_DIE_MSG(S3RuntimeError, "unexpected response status");
         }
 
         return result;
@@ -330,25 +356,14 @@ uint64_t S3InterfaceService::fetchData(uint64_t offset, vector<uint8_t> &data, u
     Response resp = this->getResponseWithRetries(sourceUrl, headers);
     if (resp.getStatus() == RESPONSE_OK) {
         data.swap(resp.getRawData());
-        if (data.size() != len) {
-            S3ERROR("%s", "Response is not fully received.");
-            CHECK_OR_DIE_MSG(false, "%s", "Response is not fully received.");
-        }
-
+        S3_CHECK_OR_DIE_MSG(data.size() == len, S3PartialResponseError, len, data.size());
         return data.size();
     } else if (resp.getStatus() == RESPONSE_ERROR) {
         S3MessageParser s3msg(resp);
-
-        if (!s3msg.getMessage().empty()) {
-            S3ERROR("Amazon S3 returns error \"%s\"", s3msg.getMessage().c_str());
-        }
+        S3_DIE_MSG(S3LogicError, s3msg.getCode(), s3msg.getMessage());
+    } else {
+        S3_DIE_MSG(S3RuntimeError, "unexpected response status");
     }
-
-    // getStatus == RESPONSE_ERROR || RESPONSE_FAIL
-    S3ERROR("Failed to request: %s, Response message: %s", sourceUrl.c_str(),
-            resp.getMessage().c_str());
-    CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", sourceUrl.c_str(),
-                     resp.getMessage().c_str());
 }
 
 S3CompressionType S3InterfaceService::checkCompressionType(const string &keyUrl,
@@ -372,25 +387,17 @@ S3CompressionType S3InterfaceService::checkCompressionType(const string &keyUrl,
             return S3_COMPRESSION_PLAIN;
         }
 
-        CHECK_OR_DIE_MSG(responseData.size() == S3_MAGIC_BYTES_NUM, "%s",
-                         "Response is not fully received.");
+        S3_CHECK_OR_DIE_MSG(responseData.size() == S3_MAGIC_BYTES_NUM, S3PartialResponseError,
+                            S3_MAGIC_BYTES_NUM, responseData.size());
 
         if ((responseData[0] == 0x1f) && (responseData[1] == 0x8b)) {
             return S3_COMPRESSION_GZIP;
         }
     } else if (resp.getStatus() == RESPONSE_ERROR) {
         S3MessageParser s3msg(resp);
-
-        if (!s3msg.getMessage().empty()) {
-            S3ERROR("Amazon S3 returns error \"%s\"", s3msg.getMessage().c_str());
-        }
-
-        S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
-                resp.getMessage().c_str());
-        CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", keyUrl.c_str(),
-                         resp.getMessage().c_str());
-    } else if (resp.getStatus() == RESPONSE_FAIL) {
-        return S3_COMPRESSION_PLAIN;
+        S3_DIE_MSG(S3LogicError, s3msg.getCode(), s3msg.getMessage());
+    } else {
+        S3_DIE_MSG(S3RuntimeError, "unexpected response status");
     }
 
     return S3_COMPRESSION_PLAIN;
@@ -428,18 +435,11 @@ string S3InterfaceService::getUploadId(const string &keyUrl, const string &regio
     if (resp.getStatus() == RESPONSE_OK) {
         return s3msg.parseS3Tag("UploadId");
     } else if (resp.getStatus() == RESPONSE_ERROR) {
-        if (!s3msg.getMessage().empty()) {
-            S3ERROR("Amazon S3 returns error \"%s\"", s3msg.getMessage().c_str());
-        }
+        S3MessageParser s3msg(resp);
+        S3_DIE_MSG(S3LogicError, s3msg.getCode(), s3msg.getMessage());
+    } else {
+        S3_DIE_MSG(S3RuntimeError, "unexpected response status");
     }
-
-    // getStatus == RESPONSE_ERROR || RESPONSE_FAIL
-    S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
-            resp.getMessage().c_str());
-    CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", keyUrl.c_str(),
-                     resp.getMessage().c_str());
-
-    return "";
 }
 
 string S3InterfaceService::uploadPartOfData(vector<uint8_t> &data, const string &keyUrl,
@@ -476,21 +476,10 @@ string S3InterfaceService::uploadPartOfData(vector<uint8_t> &data, const string 
         return etagToEnd.substr(0, etagStrLen);
     } else if (resp.getStatus() == RESPONSE_ERROR) {
         S3MessageParser s3msg(resp);
-
-        if (!s3msg.getMessage().empty()) {
-            S3ERROR("Amazon S3 returns error \"%s\"", s3msg.getMessage().c_str());
-        }
-    } else if (resp.getStatus() == RESPONSE_ABORT) {
-        return "";
+        S3_DIE_MSG(S3LogicError, s3msg.getCode(), s3msg.getMessage());
+    } else {
+        S3_DIE_MSG(S3RuntimeError, "unexpected response status");
     }
-
-    // getStatus == RESPONSE_ERROR || RESPONSE_FAIL
-    S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
-            resp.getMessage().c_str());
-    CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", keyUrl.c_str(),
-                     resp.getMessage().c_str());
-
-    return "";
 }
 
 bool S3InterfaceService::completeMultiPart(const string &keyUrl, const string &region,
@@ -536,21 +525,10 @@ bool S3InterfaceService::completeMultiPart(const string &keyUrl, const string &r
         return true;
     } else if (resp.getStatus() == RESPONSE_ERROR) {
         S3MessageParser s3msg(resp);
-
-        if (!s3msg.getMessage().empty()) {
-            S3ERROR("Amazon S3 returns error \"%s\"", s3msg.getMessage().c_str());
-        }
-    } else if (resp.getStatus() == RESPONSE_ABORT) {
-        return false;
+        S3_DIE_MSG(S3LogicError, s3msg.getCode(), s3msg.getMessage());
+    } else {
+        S3_DIE_MSG(S3RuntimeError, "unexpected response status");
     }
-
-    // getStatus == RESPONSE_ERROR || RESPONSE_FAIL
-    S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
-            resp.getMessage().c_str());
-    CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", keyUrl.c_str(),
-                     resp.getMessage().c_str());
-
-    return false;
 }
 
 bool S3InterfaceService::abortUpload(const string &keyUrl, const string &region,
@@ -573,28 +551,16 @@ bool S3InterfaceService::abortUpload(const string &keyUrl, const string &region,
     stringstream urlWithQuery;
     urlWithQuery << keyUrl << "?uploadId=" << uploadId;
 
-    Response resp = this->restfulService->deleteRequest(urlWithQuery.str(), headers);
+    Response resp = this->deleteRequestWithRetries(urlWithQuery.str(), headers);
 
     if (resp.getStatus() == RESPONSE_OK) {
         return true;
     } else if (resp.getStatus() == RESPONSE_ERROR) {
         S3MessageParser s3msg(resp);
-
-        if (!s3msg.getMessage().empty()) {
-            S3ERROR("Amazon S3 returns error \"%s\"", s3msg.getMessage().c_str());
-        }
+        S3_DIE_MSG(S3LogicError, s3msg.getCode(), s3msg.getMessage());
+    } else {
+        S3_DIE_MSG(S3RuntimeError, "unexpected response status");
     }
-
-    // getStatus == RESPONSE_ERROR || RESPONSE_FAIL
-    S3ERROR("Failed to request: %s, Response message: %s", keyUrl.c_str(),
-            resp.getMessage().c_str());
-    CHECK_OR_DIE_MSG(false, "Failed to request: %s, Response message: %s", keyUrl.c_str(),
-                     resp.getMessage().c_str());
-
-    return false;
-}
-
-ListBucketResult::~ListBucketResult() {
 }
 
 S3MessageParser::S3MessageParser(const Response &resp) {

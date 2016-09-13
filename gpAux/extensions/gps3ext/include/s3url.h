@@ -2,6 +2,7 @@
 #define __S3_URL_H__
 
 #include "s3common_headers.h"
+#include "s3exception.h"
 #include "s3macros.h"
 #include "s3utils.h"
 

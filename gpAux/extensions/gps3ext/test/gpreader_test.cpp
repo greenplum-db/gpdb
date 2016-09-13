@@ -238,7 +238,7 @@ TEST_F(GPReaderTest, ReadFromEmptyURL) {
 
     // an exception should be throwed in parseURL()
     //    with message "'' is not valid"
-    EXPECT_THROW(gpreader.open(this->params), std::runtime_error);
+    EXPECT_THROW(gpreader.open(this->params), S3ConfigError);
 }
 
 TEST_F(GPReaderTest, ReadFromInvalidURL) {
@@ -249,7 +249,7 @@ TEST_F(GPReaderTest, ReadFromInvalidURL) {
 
     // an exception should be throwed in parseURL()
     //    with message "'s3://' is not valid,"
-    EXPECT_THROW(gpreader.open(this->params), std::runtime_error);
+    EXPECT_THROW(gpreader.open(this->params), S3ConfigError);
 }
 
 TEST_F(GPReaderTest, ReadAndGetFailedListBucketResponse) {
@@ -257,13 +257,9 @@ TEST_F(GPReaderTest, ReadAndGetFailedListBucketResponse) {
     MockS3RESTfulService mockRESTfulService(this->params);
     MockGPReader gpreader(this->params, url, &mockRESTfulService);
 
-    Response listBucketResponse(RESPONSE_FAIL, vector<uint8_t>());
-    listBucketResponse.setMessage(
-        "Mocked error in test 'GPReader.ReadAndGetFailedListBucketResponse'");
+    EXPECT_CALL(mockRESTfulService, get(_, _)).WillRepeatedly(Throw(S3FailedAfterRetry("", 3, "")));
 
-    EXPECT_CALL(mockRESTfulService, get(_, _)).WillRepeatedly(Return(listBucketResponse));
-
-    EXPECT_THROW(gpreader.open(this->params), std::runtime_error);
+    EXPECT_THROW(gpreader.open(this->params), S3FailedAfterRetry);
 }
 
 TEST_F(GPReaderTest, ReadAndGetFailedKeyReaderResponse) {
@@ -281,13 +277,9 @@ TEST_F(GPReaderTest, ReadAndGetFailedKeyReaderResponse) {
 
     Response listBucketResponse(RESPONSE_OK, gen->toXML());
 
-    Response keyReaderResponse(RESPONSE_FAIL, vector<uint8_t>());
-    keyReaderResponse.setMessage(
-        "Mocked error in test 'GPReader.ReadAndGetFailedKeyReaderResponse'");
-
     EXPECT_CALL(mockRESTfulService, get(_, _))
         .WillOnce(Return(listBucketResponse))
-        .WillOnce(Return(keyReaderResponse));
+        .WillRepeatedly(Throw(S3FailedAfterRetry("", 3, "")));
 
     gpreader.open(this->params);
 
@@ -297,7 +289,7 @@ TEST_F(GPReaderTest, ReadAndGetFailedKeyReaderResponse) {
     EXPECT_EQ((uint64_t)3, keyList.contents[0].getSize());
 
     char buffer[64];
-    EXPECT_THROW(gpreader.read(buffer, sizeof(buffer)), std::runtime_error);
+    EXPECT_THROW(gpreader.read(buffer, sizeof(buffer)), S3FailedAfterRetry);
 }
 
 // thread functions test with local variables

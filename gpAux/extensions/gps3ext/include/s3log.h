@@ -3,6 +3,7 @@
 
 #include "s3common_headers.h"
 #include "s3conf.h"
+#include "s3exception.h"
 #include "s3macros.h"
 
 // log level

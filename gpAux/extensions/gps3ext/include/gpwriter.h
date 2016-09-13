@@ -3,6 +3,7 @@
 
 #include "s3common_headers.h"
 #include "s3common_writer.h"
+#include "s3exception.h"
 #include "s3interface.h"
 #include "s3restful_service.h"
 #include "s3utils.h"

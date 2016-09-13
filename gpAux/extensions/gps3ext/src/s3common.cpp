@@ -4,15 +4,15 @@ string s3extErrorMessage;
 
 void CheckEssentialConfig(const S3Params &params) {
     if (params.getCred().accessID.empty()) {
-        CHECK_OR_DIE_MSG(false, "%s", "\"FATAL: access id not set\"");
+        S3_CHECK_OR_DIE_MSG(false, S3ConfigError, "\"FATAL: access id not set\"", "accessid");
     }
 
     if (params.getCred().secret.empty()) {
-        CHECK_OR_DIE_MSG(false, "%s", "\"FATAL: secret id not set\"");
+        S3_CHECK_OR_DIE_MSG(false, S3ConfigError, "\"FATAL: secret id not set\"", "secret");
     }
 
     if (s3ext_segnum <= 0) {
-        CHECK_OR_DIE_MSG(false, "%s", "\"FATAL: segment info is invalid\"");
+        S3_CHECK_OR_DIE_MSG(false, S3ConfigError, "\"FATAL: segment info is invalid\"", "segment");
     }
 }
 

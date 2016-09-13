@@ -58,7 +58,6 @@ class S3InterfaceServiceTest : public testing::Test, public S3InterfaceService {
     string prefix;
 
     MockS3RESTfulService mockRESTfulService;
-    Response response;
 
     ListBucketResult result;
 };
@@ -67,7 +66,7 @@ TEST_F(S3InterfaceServiceTest, GetResponseWithZeroRetry) {
     string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
     HTTPHeaders headers;
 
-    EXPECT_EQ(RESPONSE_FAIL, this->getResponseWithRetries(url, headers, 0).getStatus());
+    EXPECT_THROW(this->getResponseWithRetries(url, headers, 0), S3FailedAfterRetry);
 }
 
 TEST_F(S3InterfaceServiceTest, GetResponseWithTwoRetries) {
@@ -76,23 +75,20 @@ TEST_F(S3InterfaceServiceTest, GetResponseWithTwoRetries) {
 
     EXPECT_CALL(mockRESTfulService, get(_, _))
         .Times(2)
-        .WillOnce(Return(response))
-        .WillOnce(Return(response));
+        .WillOnce(Throw(S3ConnectionError("")))
+        .WillOnce(Throw(S3ConnectionError("")));
 
-    EXPECT_EQ(RESPONSE_FAIL, this->getResponseWithRetries(url, headers, 2).getStatus());
+    EXPECT_THROW(this->getResponseWithRetries(url, headers, 2), S3FailedAfterRetry);
 }
 
 TEST_F(S3InterfaceServiceTest, GetResponseWithRetriesAndSuccess) {
     string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
     HTTPHeaders headers;
 
-    Response responseSuccess;
-    responseSuccess.setStatus(RESPONSE_OK);
-
     EXPECT_CALL(mockRESTfulService, get(_, _))
         .Times(2)
-        .WillOnce(Return(response))
-        .WillOnce(Return(responseSuccess));
+        .WillOnce(Throw(S3ConnectionError("")))
+        .WillOnce(Return(Response(RESPONSE_OK)));
 
     EXPECT_EQ(RESPONSE_OK, this->getResponseWithRetries(url, headers).getStatus());
 }
@@ -102,7 +98,7 @@ TEST_F(S3InterfaceServiceTest, PutResponseWithZeroRetry) {
     HTTPHeaders headers;
 
     vector<uint8_t> data;
-    EXPECT_EQ(RESPONSE_FAIL, this->putResponseWithRetries(url, headers, data, 0).getStatus());
+    EXPECT_THROW(this->putResponseWithRetries(url, headers, data, 0), S3FailedAfterRetry);
 }
 
 TEST_F(S3InterfaceServiceTest, PutResponseWithTwoRetries) {
@@ -113,10 +109,10 @@ TEST_F(S3InterfaceServiceTest, PutResponseWithTwoRetries) {
 
     EXPECT_CALL(mockRESTfulService, put(_, _, _))
         .Times(2)
-        .WillOnce(Return(response))
-        .WillOnce(Return(response));
+        .WillOnce(Throw(S3ConnectionError("")))
+        .WillOnce(Throw(S3ConnectionError("")));
 
-    EXPECT_EQ(RESPONSE_FAIL, this->putResponseWithRetries(url, headers, data, 2).getStatus());
+    EXPECT_THROW(this->putResponseWithRetries(url, headers, data, 2), S3FailedAfterRetry);
 }
 
 TEST_F(S3InterfaceServiceTest, PutResponseWithRetriesAndSuccess) {
@@ -125,13 +121,10 @@ TEST_F(S3InterfaceServiceTest, PutResponseWithRetriesAndSuccess) {
 
     vector<uint8_t> data;
 
-    Response responseSuccess;
-    responseSuccess.setStatus(RESPONSE_OK);
-
     EXPECT_CALL(mockRESTfulService, put(_, _, _))
         .Times(2)
-        .WillOnce(Return(response))
-        .WillOnce(Return(responseSuccess));
+        .WillOnce(Throw(S3ConnectionError("")))
+        .WillOnce(Return(Response(RESPONSE_OK)));
 
     EXPECT_EQ(RESPONSE_OK, this->putResponseWithRetries(url, headers, data).getStatus());
 }
@@ -140,7 +133,7 @@ TEST_F(S3InterfaceServiceTest, HeadResponseWithZeroRetry) {
     string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
     HTTPHeaders headers;
 
-    EXPECT_EQ(HeadResponseFail, this->headResponseWithRetries(url, headers, 0));
+    EXPECT_THROW(this->headResponseWithRetries(url, headers, 0), S3FailedAfterRetry);
 }
 
 TEST_F(S3InterfaceServiceTest, HeadResponseWithRetriesAndFail) {
@@ -149,11 +142,11 @@ TEST_F(S3InterfaceServiceTest, HeadResponseWithRetriesAndFail) {
 
     EXPECT_CALL(mockRESTfulService, head(_, _))
         .Times(S3_REQUEST_MAX_RETRIES)
-        .WillOnce(Return(HeadResponseFail))
-        .WillOnce(Return(HeadResponseFail))
-        .WillOnce(Return(HeadResponseFail));
+        .WillOnce(Throw(S3ConnectionError("")))
+        .WillOnce(Throw(S3ConnectionError("")))
+        .WillOnce(Throw(S3ConnectionError("")));
 
-    EXPECT_EQ(HeadResponseFail, this->headResponseWithRetries(url, headers));
+    EXPECT_THROW(this->headResponseWithRetries(url, headers), S3FailedAfterRetry);
 }
 
 TEST_F(S3InterfaceServiceTest, HeadResponseWithRetriesAndSuccess) {
@@ -162,7 +155,7 @@ TEST_F(S3InterfaceServiceTest, HeadResponseWithRetriesAndSuccess) {
 
     EXPECT_CALL(mockRESTfulService, head(_, _))
         .Times(2)
-        .WillOnce(Return(HeadResponseFail))
+        .WillOnce(Throw(S3ConnectionError("")))
         .WillOnce(Return(404));
 
     EXPECT_EQ(404, this->headResponseWithRetries(url, headers));
@@ -173,7 +166,7 @@ TEST_F(S3InterfaceServiceTest, PostResponseWithZeroRetry) {
     HTTPHeaders headers;
     vector<uint8_t> data;
 
-    EXPECT_EQ(RESPONSE_FAIL, this->postResponseWithRetries(url, headers, data, 0).getStatus());
+    EXPECT_THROW(this->postResponseWithRetries(url, headers, data, 0), S3FailedAfterRetry);
 }
 
 TEST_F(S3InterfaceServiceTest, PostResponseWithTwoRetries) {
@@ -183,10 +176,10 @@ TEST_F(S3InterfaceServiceTest, PostResponseWithTwoRetries) {
 
     EXPECT_CALL(mockRESTfulService, post(_, _, _))
         .Times(2)
-        .WillOnce(Return(response))
-        .WillOnce(Return(response));
+        .WillOnce(Throw(S3ConnectionError("")))
+        .WillOnce(Throw(S3ConnectionError("")));
 
-    EXPECT_EQ(RESPONSE_FAIL, this->postResponseWithRetries(url, headers, data, 2).getStatus());
+    EXPECT_THROW(this->postResponseWithRetries(url, headers, data, 2), S3FailedAfterRetry);
 }
 
 TEST_F(S3InterfaceServiceTest, PostResponseWithRetriesAndSuccess) {
@@ -194,25 +187,22 @@ TEST_F(S3InterfaceServiceTest, PostResponseWithRetriesAndSuccess) {
     HTTPHeaders headers;
     vector<uint8_t> data;
 
-    Response responseSuccess;
-    responseSuccess.setStatus(RESPONSE_OK);
-
     EXPECT_CALL(mockRESTfulService, post(_, _, _))
         .Times(2)
-        .WillOnce(Return(response))
-        .WillOnce(Return(responseSuccess));
+        .WillOnce(Throw(S3ConnectionError("")))
+        .WillOnce(Return(Response(RESPONSE_OK)));
 
     EXPECT_EQ(RESPONSE_OK, this->postResponseWithRetries(url, headers, data).getStatus());
 }
 
 TEST_F(S3InterfaceServiceTest, ListBucketThrowExceptionWhenBucketStringIsEmpty) {
-    EXPECT_THROW(result = this->listBucket("", "", "", ""), std::runtime_error);
+    EXPECT_THROW(result = this->listBucket("", "", "", ""), S3RuntimeError);
 }
 
 TEST_F(S3InterfaceServiceTest, ListBucketWithWrongRegion) {
-    EXPECT_CALL(mockRESTfulService, get(_, _)).WillRepeatedly(Return(response));
+    EXPECT_CALL(mockRESTfulService, get(_, _)).WillRepeatedly(Throw(S3ConnectionError("")));
 
-    EXPECT_THROW(this->listBucket(schema, "nonexist", "", ""), std::runtime_error);
+    EXPECT_THROW(this->listBucket(schema, "nonexist", "", ""), S3FailedAfterRetry);
 }
 
 TEST_F(S3InterfaceServiceTest, ListBucketWithWrongBucketName) {
@@ -233,7 +223,7 @@ TEST_F(S3InterfaceServiceTest, ListBucketWithWrongBucketName) {
 
     EXPECT_CALL(mockRESTfulService, get(_, _)).WillRepeatedly(Return(response));
 
-    EXPECT_THROW(this->listBucket(schema, "us-west-2", "foo/bar", ""), std::runtime_error);
+    EXPECT_THROW(this->listBucket(schema, "us-west-2", "foo/bar", ""), S3LogicError);
 }
 
 TEST_F(S3InterfaceServiceTest, ListBucketWithNormalBucket) {
@@ -284,15 +274,13 @@ TEST_F(S3InterfaceServiceTest, ListBucketWithBucketWithMoreThan1000Keys) {
 }
 
 TEST_F(S3InterfaceServiceTest, ListBucketWithBucketWithTruncatedResponse) {
-    Response EmptyResponse;
-
     EXPECT_CALL(mockRESTfulService, get(_, _))
         .WillOnce(Return(this->buildListBucketResponse(1000, true)))
         .WillOnce(Return(this->buildListBucketResponse(1000, true)))
-        .WillRepeatedly(Return(EmptyResponse));
+        .WillRepeatedly(Throw(S3ConnectionError("")));
 
     EXPECT_THROW(this->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/"),
-                 std::runtime_error);
+                 S3FailedAfterRetry);
 }
 
 TEST_F(S3InterfaceServiceTest, ListBucketWithBucketWithZeroSizedKeys) {
@@ -323,10 +311,10 @@ TEST_F(S3InterfaceServiceTest, ListBucketWithAllZeroedFilesBucket) {
 }
 
 TEST_F(S3InterfaceServiceTest, ListBucketWithErrorResponse) {
-    EXPECT_CALL(mockRESTfulService, get(_, _)).WillRepeatedly(Return(response));
+    EXPECT_CALL(mockRESTfulService, get(_, _)).WillRepeatedly(Throw(S3ConnectionError("")));
 
     EXPECT_THROW(this->listBucket(schema, "nonexist", "s3test.pivotal.io", "s3files/"),
-                 std::runtime_error);
+                 S3FailedAfterRetry);
 }
 
 TEST_F(S3InterfaceServiceTest, ListBucketWithErrorReturnedXML) {
@@ -337,7 +325,7 @@ TEST_F(S3InterfaceServiceTest, ListBucketWithErrorReturnedXML) {
     EXPECT_CALL(mockRESTfulService, get(_, _)).WillRepeatedly(Return(response));
 
     EXPECT_THROW(this->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/"),
-                 std::runtime_error);
+                 S3LogicError);
 }
 
 TEST_F(S3InterfaceServiceTest, ListBucketWithNonRootXML) {
@@ -348,7 +336,7 @@ TEST_F(S3InterfaceServiceTest, ListBucketWithNonRootXML) {
     EXPECT_CALL(mockRESTfulService, get(_, _)).WillRepeatedly(Return(response));
 
     EXPECT_THROW(this->listBucket(schema, "us-west-2", "s3test.pivotal.io", "s3files/"),
-                 std::runtime_error);
+                 S3LogicError);
 }
 
 TEST_F(S3InterfaceServiceTest, fetchDataRoutine) {
@@ -384,21 +372,20 @@ TEST_F(S3InterfaceServiceTest, fetchDataErrorResponse) {
     EXPECT_THROW(
         this->fetchData(0, buffer, 100,
                         "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region),
-        std::runtime_error);
+        S3LogicError);
 }
 
 TEST_F(S3InterfaceServiceTest, fetchDataFailedResponse) {
     vector<uint8_t> raw;
     raw.resize(100);
-    Response response(RESPONSE_FAIL, raw);
-    EXPECT_CALL(mockRESTfulService, get(_, _)).WillRepeatedly(Return(response));
+    EXPECT_CALL(mockRESTfulService, get(_, _)).WillRepeatedly(Throw(S3ConnectionError("")));
 
     vector<uint8_t> buffer;
 
     EXPECT_THROW(
         this->fetchData(0, buffer, 100,
                         "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region),
-        std::runtime_error);
+        S3FailedAfterRetry);
 }
 
 TEST_F(S3InterfaceServiceTest, fetchDataPartialResponse) {
@@ -411,7 +398,7 @@ TEST_F(S3InterfaceServiceTest, fetchDataPartialResponse) {
     EXPECT_THROW(
         this->fetchData(0, buffer, 100,
                         "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region),
-        std::runtime_error);
+        S3PartialResponseError);
 }
 
 TEST_F(S3InterfaceServiceTest, checkSmallFile) {
@@ -473,7 +460,7 @@ TEST_F(S3InterfaceServiceTest, checkCompreesionTypeWithResponseError) {
 
     EXPECT_THROW(this->checkCompressionType(
                      "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region),
-                 std::runtime_error);
+                 S3LogicError);
 }
 
 TEST_F(S3InterfaceServiceTest, fetchDataWithResponseError) {
@@ -498,15 +485,17 @@ TEST_F(S3InterfaceServiceTest, fetchDataWithResponseError) {
     EXPECT_THROW(
         this->fetchData(0, buffer, 128,
                         "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region),
-        std::runtime_error);
+        S3LogicError);
 }
 
 TEST_F(S3InterfaceServiceTest, HeadResponseWithHeadResponseFail) {
     string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever";
 
-    EXPECT_CALL(mockRESTfulService, head(_, _)).Times(3).WillRepeatedly(Return(HeadResponseFail));
+    EXPECT_CALL(mockRESTfulService, head(_, _))
+        .Times(3)
+        .WillRepeatedly(Throw(S3ConnectionError("")));
 
-    EXPECT_FALSE(this->checkKeyExistence(url, this->region));
+    EXPECT_THROW(this->checkKeyExistence(url, this->region), S3FailedAfterRetry);
 }
 
 TEST_F(S3InterfaceServiceTest, HeadResponse200) {
@@ -563,13 +552,13 @@ TEST_F(S3InterfaceServiceTest, getUploadIdRoutine) {
 TEST_F(S3InterfaceServiceTest, getUploadIdFailedResponse) {
     vector<uint8_t> raw;
     raw.resize(100);
-    Response response(RESPONSE_FAIL, raw);
 
-    EXPECT_CALL(mockRESTfulService, post(_, _, vector<uint8_t>())).WillRepeatedly(Return(response));
+    EXPECT_CALL(mockRESTfulService, post(_, _, vector<uint8_t>()))
+        .WillRepeatedly(Throw(S3ConnectionError("")));
 
     EXPECT_THROW(
         this->getUploadId("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region),
-        std::runtime_error);
+        S3FailedAfterRetry);
 }
 
 TEST_F(S3InterfaceServiceTest, getUploadIdErrorResponse) {
@@ -592,7 +581,7 @@ TEST_F(S3InterfaceServiceTest, getUploadIdErrorResponse) {
 
     EXPECT_THROW(
         this->getUploadId("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region),
-        std::runtime_error);
+        S3LogicError);
 }
 
 TEST_F(S3InterfaceServiceTest, uploadPartOfDataRoutine) {
@@ -622,13 +611,12 @@ TEST_F(S3InterfaceServiceTest, uploadPartOfDataRoutine) {
 TEST_F(S3InterfaceServiceTest, uploadPartOfDataFailedResponse) {
     vector<uint8_t> raw;
     raw.resize(100);
-    Response response(RESPONSE_FAIL, raw);
-    EXPECT_CALL(mockRESTfulService, put(_, _, _)).WillRepeatedly(Return(response));
+    EXPECT_CALL(mockRESTfulService, put(_, _, _)).WillRepeatedly(Throw(S3ConnectionError("")));
 
     EXPECT_THROW(
         this->uploadPartOfData(raw, "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
                                region, 11, "xyz"),
-        std::runtime_error);
+        S3FailedAfterRetry);
 }
 
 TEST_F(S3InterfaceServiceTest, uploadPartOfDataErrorResponse) {
@@ -652,18 +640,19 @@ TEST_F(S3InterfaceServiceTest, uploadPartOfDataErrorResponse) {
     EXPECT_THROW(
         this->uploadPartOfData(raw, "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
                                region, 11, "xyz"),
-        std::runtime_error);
+        S3LogicError);
 }
 
 TEST_F(S3InterfaceServiceTest, uploadPartOfDataAbortResponse) {
     vector<uint8_t> raw;
     raw.resize(100);
-    Response response(RESPONSE_ABORT, raw);
-    EXPECT_CALL(mockRESTfulService, put(_, _, _)).WillRepeatedly(Return(response));
 
-    EXPECT_EQ("", this->uploadPartOfData(
-                      raw, "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region,
-                      11, "xyz"));
+    EXPECT_CALL(mockRESTfulService, put(_, _, _)).WillRepeatedly(Throw(S3QueryAbort()));
+
+    EXPECT_THROW(
+        this->uploadPartOfData(raw, "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
+                               region, 11, "xyz"),
+        S3QueryAbort);
 }
 
 TEST_F(S3InterfaceServiceTest, completeMultiPartRoutine) {
@@ -681,15 +670,14 @@ TEST_F(S3InterfaceServiceTest, completeMultiPartRoutine) {
 TEST_F(S3InterfaceServiceTest, completeMultiPartFailedResponse) {
     vector<uint8_t> raw;
     raw.resize(100);
-    Response response(RESPONSE_FAIL, raw);
-    EXPECT_CALL(mockRESTfulService, post(_, _, _)).WillRepeatedly(Return(response));
+    EXPECT_CALL(mockRESTfulService, post(_, _, _)).WillRepeatedly(Throw(S3ConnectionError("")));
 
     vector<string> etagArray = {"\"abc\"", "\"def\""};
 
     EXPECT_THROW(
         this->completeMultiPart("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
                                 region, "xyz", etagArray),
-        std::runtime_error);
+        S3FailedAfterRetry);
 }
 
 TEST_F(S3InterfaceServiceTest, completeMultiPartErrorResponse) {
@@ -715,19 +703,21 @@ TEST_F(S3InterfaceServiceTest, completeMultiPartErrorResponse) {
     EXPECT_THROW(
         this->completeMultiPart("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
                                 region, "xyz", etagArray),
-        std::runtime_error);
+        S3LogicError);
 }
 
 TEST_F(S3InterfaceServiceTest, completeMultiPartAbortResponse) {
     vector<uint8_t> raw;
     raw.resize(100);
-    Response response(RESPONSE_ABORT, raw);
-    EXPECT_CALL(mockRESTfulService, post(_, _, _)).WillRepeatedly(Return(response));
+
+    EXPECT_CALL(mockRESTfulService, post(_, _, _)).WillRepeatedly(Throw(S3QueryAbort()));
 
     vector<string> etagArray = {"\"abc\"", "\"def\""};
 
-    EXPECT_FALSE(this->completeMultiPart(
-        "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever", region, "xyz", etagArray));
+    EXPECT_THROW(
+        this->completeMultiPart("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
+                                region, "xyz", etagArray),
+        S3QueryAbort);
 }
 
 TEST_F(S3InterfaceServiceTest, abortUploadRoutine) {
@@ -743,12 +733,12 @@ TEST_F(S3InterfaceServiceTest, abortUploadRoutine) {
 TEST_F(S3InterfaceServiceTest, abortUploadFailedResponse) {
     vector<uint8_t> raw;
     raw.resize(100);
-    Response response(RESPONSE_FAIL, raw);
-    EXPECT_CALL(mockRESTfulService, deleteRequest(_, _)).WillRepeatedly(Return(response));
+    EXPECT_CALL(mockRESTfulService, deleteRequest(_, _))
+        .WillRepeatedly(Throw(S3ConnectionError("")));
 
     EXPECT_THROW(this->abortUpload("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
                                    region, "xyz"),
-                 std::runtime_error);
+                 S3FailedAfterRetry);
 }
 
 TEST_F(S3InterfaceServiceTest, abortUploadErrorResponse) {
@@ -771,5 +761,5 @@ TEST_F(S3InterfaceServiceTest, abortUploadErrorResponse) {
 
     EXPECT_THROW(this->abortUpload("https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/whatever",
                                    region, "xyz"),
-                 std::runtime_error);
+                 S3LogicError);
 }

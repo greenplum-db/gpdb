@@ -3,6 +3,7 @@
 
 #include "gpcommon.h"
 #include "s3common_headers.h"
+#include "s3exception.h"
 #include "s3log.h"
 #include "s3restful_service.h"
 #include "s3url.h"
@@ -48,8 +49,6 @@ struct ListBucketResult {
     string Name;
     string Prefix;
     vector<BucketContent> contents;
-
-    ~ListBucketResult();
 };
 
 class S3MessageParser {
@@ -80,39 +79,39 @@ class S3Interface {
     // It is caller's responsibility to free returned memory.
     virtual ListBucketResult listBucket(const string& schema, const string& region,
                                         const string& bucket, const string& prefix) {
-        throw std::runtime_error("Default implementation must not be called.");
+        throw S3RuntimeError("Default implementation must not be called.");
     }
 
     virtual uint64_t fetchData(uint64_t offset, vector<uint8_t>& data, uint64_t len,
                                const string& sourceUrl, const string& region) {
-        throw std::runtime_error("Default implementation must not be called.");
+        throw S3RuntimeError("Default implementation must not be called.");
     }
 
     virtual S3CompressionType checkCompressionType(const string& keyUrl, const string& region) {
-        throw std::runtime_error("Default implementation must not be called.");
+        throw S3RuntimeError("Default implementation must not be called.");
     }
 
     virtual bool checkKeyExistence(const string& keyUrl, const string& region) {
-        throw std::runtime_error("Default implementation must not be called.");
+        throw S3RuntimeError("Default implementation must not be called.");
     }
 
     virtual string getUploadId(const string& keyUrl, const string& region) {
-        throw std::runtime_error("Default implementation must not be called.");
+        throw S3RuntimeError("Default implementation must not be called.");
     }
 
     virtual string uploadPartOfData(vector<uint8_t>& data, const string& keyUrl,
                                     const string& region, uint64_t partNumber,
                                     const string& uploadId) {
-        throw std::runtime_error("Default implementation must not be called.");
+        throw S3RuntimeError("Default implementation must not be called.");
     }
 
     virtual bool completeMultiPart(const string& keyUrl, const string& region,
                                    const string& uploadId, const vector<string>& etagArray) {
-        throw std::runtime_error("Default implementation must not be called.");
+        throw S3RuntimeError("Default implementation must not be called.");
     }
 
     virtual bool abortUpload(const string& keyUrl, const string& region, const string& uploadId) {
-        throw std::runtime_error("Default implementation must not be called.");
+        throw S3RuntimeError("Default implementation must not be called.");
     }
 };
 
@@ -149,6 +148,9 @@ class S3InterfaceService : public S3Interface {
 
     ResponseCode headResponseWithRetries(const string& url, HTTPHeaders& headers,
                                          uint64_t retries = S3_REQUEST_MAX_RETRIES);
+
+    Response deleteRequestWithRetries(const string& url, HTTPHeaders& headers,
+                                      uint64_t retries = S3_REQUEST_MAX_RETRIES);
 
     string getUploadId(const string& keyUrl, const string& region);
 

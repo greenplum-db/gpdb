@@ -33,7 +33,7 @@ TEST_F(S3KeyWriterTest, TestEmptyParams) {
     S3Params params;
 
     // zero chunk size causes exception
-    EXPECT_THROW(this->open(params), std::runtime_error);
+    EXPECT_THROW(this->open(params), S3RuntimeError);
 }
 
 TEST_F(S3KeyWriterTest, TestValidParams) {
@@ -49,7 +49,7 @@ TEST_F(S3KeyWriterTest, TestEmptyWrite) {
 
     this->open(testParams);
 
-    EXPECT_THROW(this->write(NULL, 0), std::runtime_error);
+    EXPECT_THROW(this->write(NULL, 0), S3RuntimeError);
 }
 
 TEST_F(S3KeyWriterTest, TestZeroWrite) {
@@ -161,7 +161,7 @@ TEST_F(S3KeyWriterTest, TestWriteAbortInWriting) {
     this->open(testParams);
     QueryCancelPending = true;
 
-    EXPECT_THROW(this->write(data, 0x80), std::runtime_error);
+    EXPECT_THROW(this->write(data, 0x80), S3QueryAbort);
 
     QueryCancelPending = false;
 }
@@ -183,6 +183,6 @@ TEST_F(S3KeyWriterTest, TestWriteAbortInClosing) {
 
     QueryCancelPending = true;
     // Buffer is not empty, close() will upload remaining data in buffer.
-    EXPECT_THROW(this->close(), std::runtime_error);
+    EXPECT_THROW(this->close(), S3QueryAbort);
     QueryCancelPending = false;
 }

@@ -4,7 +4,7 @@
 TEST(Config, NonExistFile) {
     S3Params params;
 
-    EXPECT_THROW(InitConfig(params, "notexist/path/s3test.conf", "default"), std::runtime_error);
+    EXPECT_THROW(InitConfig(params, "notexist/path/s3test.conf", "default"), S3RuntimeError);
 }
 
 TEST(Config, Basic) {

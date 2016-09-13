@@ -1,0 +1,156 @@
+#ifndef __S3_EXCEPTION_H__
+#define __S3_EXCEPTION_H__
+
+#include "s3common_headers.h"
+
+class S3Exception {
+   public:
+    string file;
+    uint64_t line;
+    string func;
+    S3Exception() : line(0) {}
+
+    virtual ~S3Exception() {
+    }
+    virtual string getMessage() {
+        return "";
+    }
+    virtual string getFullMessage() {
+        std::stringstream errorMessage;
+        errorMessage << this->getMessage() << ", Function: " << this->func
+                     << ", File: " << this->file << "(" << this->line << "). ";
+        return errorMessage.str();
+    }
+    virtual string getType() {
+        return "S3Exception";
+    }
+};
+
+// HTTP request failed.
+class S3ConnectionError : public S3Exception {
+   public:
+    S3ConnectionError(const string& msg) : message(msg) {
+    }
+    virtual ~S3ConnectionError() {
+    }
+    virtual string getMessage() {
+        return "Server connection failed: " + message;
+    }
+    virtual string getType() {
+        return "S3ConnectionError";
+    }
+
+    string message;
+};
+
+class S3FailedAfterRetry : public S3Exception {
+   public:
+    S3FailedAfterRetry(const string& url, uint64_t times, string msg)
+        : requestUrl(url), retryTimes(times), message(msg) {
+    }
+    virtual ~S3FailedAfterRetry() {
+    }
+    virtual string getMessage() {
+        return "Request failed after " + std::to_string((unsigned long long)retryTimes) +
+               " attempts. Message: " + message;
+    }
+    virtual string getType() {
+        return "S3FailedAfterRetry";
+    }
+    string requestUrl;
+    uint64_t retryTimes;
+    string message;
+};
+
+// HTTP request success, but the data received is not completed.
+class S3PartialResponseError : public S3Exception {
+   public:
+    S3PartialResponseError(uint64_t expected, uint64_t received)
+        : expectedLength(expected), receivedLength(received) {
+    }
+    virtual ~S3PartialResponseError() {
+    }
+    virtual string getMessage() {
+        return "Response is not fully received. Expected: " +
+               std::to_string((unsigned long long)expectedLength) + ", actual received: " +
+               std::to_string((unsigned long long)receivedLength);
+    }
+    virtual string getType() {
+        return "S3PartialResponseError";
+    }
+
+    uint64_t expectedLength;
+    uint64_t receivedLength;
+};
+
+// User press control + C or transaction is aborted.
+class S3QueryAbort : public S3Exception {
+   public:
+    S3QueryAbort() {
+    }
+    S3QueryAbort(const string& msg) {
+    }
+    virtual ~S3QueryAbort() {
+    }
+    virtual string getMessage() {
+        return "Query is aborted either by user or GPDB";
+    }
+
+    virtual string getType() {
+        return "S3QueryAbort";
+    }
+};
+
+// Used for AWS S3 errors (e.g. 403, 404)
+class S3LogicError : public S3Exception {
+   public:
+    S3LogicError(string code, string msg) : message(msg), awscode(code) {
+    }
+    virtual ~S3LogicError() {
+    }
+    virtual string getMessage() {
+        return "AWS returns error " + awscode + " : " + message;
+    }
+
+    virtual string getType() {
+        return "S3LogicError";
+    }
+
+    string message;
+    string awscode;
+};
+
+class S3RuntimeError : public S3Exception {
+   public:
+    S3RuntimeError(const string& msg) : message(msg) {
+    }
+    virtual ~S3RuntimeError() {
+    }
+    virtual string getMessage() {
+        return "Unexpected error: " + message;
+    }
+
+    virtual string getType() {
+        return "S3RuntimeError";
+    }
+
+    string message;
+};
+
+class S3ConfigError : public S3Exception {
+   public:
+    S3ConfigError(const string& msg, const string& field) : message(msg) {
+    }
+    virtual ~S3ConfigError() {
+    }
+    virtual string getMessage() {
+        return message;
+    }
+    virtual string getType() {
+        return "S3ConfigError";
+    }
+
+    string message;
+};
+
+#endif

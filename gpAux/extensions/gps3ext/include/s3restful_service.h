@@ -1,8 +1,15 @@
 #ifndef INCLUDE_S3RESTFUL_SERVICE_H_
 #define INCLUDE_S3RESTFUL_SERVICE_H_
 
+#include "gpcommon.h"
 #include "restful_service.h"
 #include "s3common_headers.h"
+#include "s3common_headers.h"
+#include "s3exception.h"
+#include "s3http_headers.h"
+#include "s3log.h"
+#include "s3macros.h"
+#include "s3params.h"
 
 class S3RESTfulService : public RESTfulService {
    public:

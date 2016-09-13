@@ -3,6 +3,7 @@
 
 #include "decompress_reader.h"
 #include "s3common_headers.h"
+#include "s3exception.h"
 #include "s3key_reader.h"
 
 class S3CommonReader : public Reader {

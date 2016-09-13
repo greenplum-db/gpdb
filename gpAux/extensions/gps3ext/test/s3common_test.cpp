@@ -4,16 +4,16 @@
 
 TEST(Common, CheckEssentialConfig) {
     S3Params params;
-    EXPECT_THROW(CheckEssentialConfig(params), std::runtime_error);
+    EXPECT_THROW(CheckEssentialConfig(params), S3ConfigError);
 
     S3Credential cred1 = {"keyid/foo", "", ""};
     params.setCred(cred1);
-    EXPECT_THROW(CheckEssentialConfig(params), std::runtime_error);
+    EXPECT_THROW(CheckEssentialConfig(params), S3ConfigError);
 
     S3Credential cred2 = {"keyid/foo", "secret/bar", ""};
     params.setCred(cred2);
     s3ext_segnum = 0;
-    EXPECT_THROW(CheckEssentialConfig(params), std::runtime_error);
+    EXPECT_THROW(CheckEssentialConfig(params), S3ConfigError);
 
     s3ext_segnum = 1;
 }

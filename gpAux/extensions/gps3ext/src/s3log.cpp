@@ -55,7 +55,8 @@ void InitRemoteLog() {
     }
 
     s3ext_logsock_udp = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    CHECK_OR_DIE_MSG(s3ext_logsock_udp != -1, "Failed to create socket: %s", strerror(errno));
+    S3_CHECK_OR_DIE_MSG(s3ext_logsock_udp != -1, S3RuntimeError,
+                        string("Failed to create socket: ") + strerror(errno));
 
     memset(&s3ext_logserveraddr, 0, sizeof(struct sockaddr_in));
     s3ext_logserveraddr.sin_family = AF_INET;

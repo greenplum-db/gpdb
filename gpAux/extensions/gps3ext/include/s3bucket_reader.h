@@ -4,6 +4,7 @@
 #include "reader.h"
 #include "s3common.h"
 #include "s3common_headers.h"
+#include "s3exception.h"
 #include "s3interface.h"
 
 // S3BucketReader read multiple files in a bucket.
@@ -65,8 +66,8 @@ class S3BucketReader : public Reader {
     ListBucketResult keyList;  // List of matched keys/files.
     uint64_t keyIndex;         // BucketContent index of keylist->contents.
 
-    BucketContent *getNextKey();
-    S3Params constructReaderParams(BucketContent *key);
+    BucketContent &getNextKey();
+    S3Params constructReaderParams(BucketContent &key);
 };
 
 #endif

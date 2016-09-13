@@ -1,18 +1,11 @@
 #ifndef INCLUDE_RESTFUL_SERVICE_H_
 #define INCLUDE_RESTFUL_SERVICE_H_
 
-#include "gpcommon.h"
-#include "s3common_headers.h"
-#include "s3http_headers.h"
-#include "s3log.h"
-#include "s3macros.h"
-#include "s3params.h"
+class HTTPHeaders;
 
 enum ResponseStatus {
-    RESPONSE_OK,     // everything is OK
-    RESPONSE_FAIL,   // curl failed (i.e., the status is not CURLE_OK)
-    RESPONSE_ERROR,  // server error (server return code is not 200)
-    RESPONSE_ABORT,  // the query has been aborted by user
+    RESPONSE_OK,    // everything is OK
+    RESPONSE_ERROR  // server error (server return code is not 2XX)
 };
 
 typedef long ResponseCode;
@@ -36,7 +29,7 @@ struct UploadData {
 
 class Response {
    public:
-    Response() : status(RESPONSE_FAIL) {
+    Response(ResponseStatus status) : status(status) {
     }
     Response(ResponseStatus status, const vector<uint8_t>& dataBuffer)
         : status(status), dataBuffer(dataBuffer) {
@@ -44,6 +37,19 @@ class Response {
     Response(ResponseStatus status, const vector<uint8_t>& headersBuffer,
              const vector<uint8_t>& dataBuffer)
         : status(status), headersBuffer(headersBuffer), dataBuffer(dataBuffer) {
+    }
+
+    void FillResponse(ResponseCode responseCode) {
+        if (isSuccessfulResponse(responseCode)) {
+            this->setStatus(RESPONSE_OK);
+            this->setMessage("Success");
+        } else {  // Server error, set status to RESPONSE_ERROR
+            stringstream sstr;
+            sstr << "Server returned error, error code is " << responseCode;
+
+            this->setStatus(RESPONSE_ERROR);
+            this->setMessage(sstr.str());
+        }
     }
 
     bool isSuccess() {
@@ -60,7 +66,8 @@ class Response {
     }
 
     void clearHeadersBuffer() {
-        headersBuffer = vector<uint8_t>();
+        vector<uint8_t> emptyHeaders;
+        headersBuffer.swap(emptyHeaders);
     }
 
     vector<uint8_t>& getRawData() {
@@ -78,8 +85,11 @@ class Response {
 
     void clearBuffers() {
         // don't use vector.clear() because it may not be able to release memory.
-        dataBuffer = vector<uint8_t>();
-        headersBuffer = vector<uint8_t>();
+        vector<uint8_t> emptyData;
+        dataBuffer.swap(emptyData);
+
+        vector<uint8_t> emptyHeaders;
+        headersBuffer.swap(emptyHeaders);
     }
 
     const string& getMessage() const {

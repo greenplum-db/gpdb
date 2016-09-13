@@ -195,7 +195,7 @@ TEST(OffsetMgr, reset) {
 TEST_F(S3KeyReaderTest, OpenWithZeroChunk) {
     params.setNumOfChunks(0);
 
-    EXPECT_THROW(this->open(params), std::runtime_error);
+    EXPECT_THROW(this->open(params), S3RuntimeError);
 }
 
 // Mock function object of fetchData
@@ -618,10 +618,11 @@ TEST_F(S3KeyReaderTest, MTReadWithFetchDataError) {
 
     EXPECT_CALL(s3interface, fetchData(0, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
     EXPECT_CALL(s3interface, fetchData(64, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3interface, fetchData(128, _, _, _, _)).WillOnce(Invoke(MockFetchData(-1, 64)));
+    EXPECT_CALL(s3interface, fetchData(128, _, _, _, _))
+        .WillOnce(Throw(S3FailedAfterRetry("", 1, "")));
     EXPECT_CALL(s3interface, fetchData(192, _, _, _, _))
         .Times(AtMost(1))
-        .WillOnce(Invoke(MockFetchData(63, 64)));
+        .WillOnce(Throw(S3FailedAfterRetry("", 1, "")));
 
     this->open(params);
 
@@ -635,8 +636,8 @@ TEST_F(S3KeyReaderTest, MTReadWithFetchDataError) {
     } catch (...) {
     }
 
-    EXPECT_THROW(this->read(buffer, 127), std::runtime_error);
-    EXPECT_THROW(this->read(buffer, 127), std::runtime_error);
+    EXPECT_THROW(this->read(buffer, 127), S3FailedAfterRetry);
+    EXPECT_THROW(this->read(buffer, 127), S3FailedAfterRetry);
 }
 
 TEST_F(S3KeyReaderTest, MTReadWithUnexpectedFetchData) {
@@ -647,7 +648,8 @@ TEST_F(S3KeyReaderTest, MTReadWithUnexpectedFetchData) {
 
     EXPECT_CALL(s3interface, fetchData(0, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
     EXPECT_CALL(s3interface, fetchData(64, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3interface, fetchData(128, _, _, _, _)).WillOnce(Invoke(MockFetchData(42, 64)));
+    EXPECT_CALL(s3interface, fetchData(128, _, _, _, _))
+        .WillOnce(Throw(S3PartialResponseError(63, 64)));
     EXPECT_CALL(s3interface, fetchData(192, _, _, _, _))
         .Times(AtMost(1))
         .WillOnce(Invoke(MockFetchData(63, 64)));
@@ -664,8 +666,8 @@ TEST_F(S3KeyReaderTest, MTReadWithUnexpectedFetchData) {
     } catch (...) {
     }
 
-    EXPECT_THROW(this->read(buffer, 127), std::runtime_error);
-    EXPECT_THROW(this->read(buffer, 127), std::runtime_error);
+    EXPECT_THROW(this->read(buffer, 127), S3PartialResponseError);
+    EXPECT_THROW(this->read(buffer, 127), S3PartialResponseError);
 }
 
 TEST_F(S3KeyReaderTest, MTReadWithUnexpectedFetchDataAtSecondRound) {
@@ -676,7 +678,8 @@ TEST_F(S3KeyReaderTest, MTReadWithUnexpectedFetchDataAtSecondRound) {
 
     EXPECT_CALL(s3interface, fetchData(0, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
     EXPECT_CALL(s3interface, fetchData(64, _, _, _, _)).WillOnce(Invoke(MockFetchData(64, 64)));
-    EXPECT_CALL(s3interface, fetchData(128, _, _, _, _)).WillOnce(Invoke(MockFetchData(42, 64)));
+    EXPECT_CALL(s3interface, fetchData(128, _, _, _, _))
+        .WillOnce(Throw(S3PartialResponseError(63, 64)));
     EXPECT_CALL(s3interface, fetchData(192, _, _, _, _))
         .Times(AtMost(1))
         .WillOnce(Invoke(MockFetchData(63, 64)));
@@ -693,8 +696,8 @@ TEST_F(S3KeyReaderTest, MTReadWithUnexpectedFetchDataAtSecondRound) {
     } catch (...) {
     }
 
-    EXPECT_THROW(this->read(buffer, 127), std::runtime_error);
-    EXPECT_THROW(this->read(buffer, 127), std::runtime_error);
+    EXPECT_THROW(this->read(buffer, 127), S3PartialResponseError);
+    EXPECT_THROW(this->read(buffer, 127), S3PartialResponseError);
 }
 
 TEST_F(S3KeyReaderTest, MTReadWithGPDBCancel) {
@@ -723,7 +726,7 @@ TEST_F(S3KeyReaderTest, MTReadWithGPDBCancel) {
     // QueryCancelPending may or may not be hit in DownloadThreadFunc,
     // QueryCancelPending in ChunkBuffer::read will always be hit and throw.
 
-    EXPECT_THROW(this->read(buffer, 127), std::runtime_error);
+    EXPECT_THROW(this->read(buffer, 127), S3QueryAbort);
 
     // be careful to reset it, otherwise following tests will suck.
     QueryCancelPending = false;
@@ -752,7 +755,7 @@ TEST_F(S3KeyReaderTest, MTReadWithHundredsOfThreadsAndSignalCancel) {
 
     QueryCancelPending = true;
 
-    EXPECT_THROW(this->read(buffer, 31), std::runtime_error);
+    EXPECT_THROW(this->read(buffer, 31), S3QueryAbort);
 
     // be careful to reset it, otherwise following tests will suck.
     QueryCancelPending = false;

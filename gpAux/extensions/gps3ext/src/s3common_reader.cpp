@@ -15,7 +15,7 @@ void S3CommonReader::open(const S3Params &params) {
             this->upstreamReader = &this->keyReader;
             break;
         default:
-            CHECK_OR_DIE_MSG(false, "%s", "unknown file type");
+            S3_CHECK_OR_DIE_MSG(false, S3RuntimeError, "unknown file type");
     };
 
     this->upstreamReader->open(params);

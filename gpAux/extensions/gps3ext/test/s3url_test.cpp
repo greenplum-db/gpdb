@@ -22,9 +22,9 @@ TEST(UrlParser, LongURL) {
 }
 
 TEST(UrlParser, InvalidURL) {
-    EXPECT_THROW(new UrlParser(string()), std::runtime_error);
+    EXPECT_THROW(new UrlParser(string()), S3RuntimeError);
 
-    EXPECT_THROW(new UrlParser("abc\\:"), std::runtime_error);
+    EXPECT_THROW(new UrlParser("abc\\:"), S3RuntimeError);
 }
 
 TEST(UrlParser, EmptyField) {

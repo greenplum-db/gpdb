@@ -107,12 +107,20 @@ GPWriter* writer_init(const char* url_with_options, const char* format) {
         writer->open(params);
         return writer;
 
-    } catch (std::exception& e) {
+    } catch (S3Exception& e) {
         if (writer != NULL) {
             delete writer;
         }
-        S3ERROR("writer_init caught an exception: %s", e.what());
-        s3extErrorMessage = e.what();
+        s3extErrorMessage =
+            "writer_init caught a " + e.getType() + " exception: " + e.getFullMessage();
+        S3ERROR("writer_init caught %s: %s", e.getType().c_str(), s3extErrorMessage.c_str());
+        return NULL;
+    } catch (...) {
+        if (writer != NULL) {
+            delete writer;
+        }
+        S3ERROR("Caught an unexpected exception.");
+        s3extErrorMessage = "Caught an unexpected exception.";
         return NULL;
     }
 }
@@ -126,11 +134,17 @@ bool writer_transfer_data(GPWriter* writer, char* data_buf, int data_len) {
 
         uint64_t write_len = writer->write(data_buf, data_len);
 
-        CHECK_OR_DIE_MSG(write_len == (uint64_t)data_len, "%s",
-                         "Failed to upload the data completely.");
-    } catch (std::exception& e) {
-        S3ERROR("writer_transfer_data caught an exception: %s", e.what());
-        s3extErrorMessage = e.what();
+        S3_CHECK_OR_DIE_MSG(write_len == (uint64_t)data_len, S3RuntimeError,
+                            "Failed to upload the data completely.");
+    } catch (S3Exception& e) {
+        s3extErrorMessage =
+            "writer_transfer_data caught a " + e.getType() + " exception: " + e.getFullMessage();
+        S3ERROR("writer_transfer_data caught %s: %s", e.getType().c_str(),
+                s3extErrorMessage.c_str());
+        return false;
+    } catch (...) {
+        S3ERROR("Caught an unexpected exception.");
+        s3extErrorMessage = "Caught an unexpected exception.";
         return false;
     }
 
@@ -148,9 +162,14 @@ bool writer_cleanup(GPWriter** writer) {
         } else {
             result = false;
         }
-    } catch (std::exception& e) {
-        S3ERROR("writer_cleanup caught an exception: %s", e.what());
-        s3extErrorMessage = e.what();
+    } catch (S3Exception& e) {
+        s3extErrorMessage =
+            "writer_cleanup caught a " + e.getType() + " exception: " + e.getFullMessage();
+        S3ERROR("writer_cleanup caught %s: %s", e.getType().c_str(), s3extErrorMessage.c_str());
+        result = false;
+    } catch (...) {
+        S3ERROR("Caught an unexpected exception.");
+        s3extErrorMessage = "Caught an unexpected exception.";
         result = false;
     }
 

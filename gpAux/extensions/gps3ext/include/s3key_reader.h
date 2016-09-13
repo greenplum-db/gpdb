@@ -3,6 +3,7 @@
 
 #include "reader.h"
 #include "s3common_headers.h"
+#include "s3exception.h"
 #include "s3interface.h"
 
 struct Range {
@@ -99,9 +100,21 @@ class S3KeyReader : public Reader {
         return sharedError;
     }
 
-    void setSharedError(bool sharedError, string message) {
+    void setSharedError(bool sharedError) {
         pthread_mutex_lock(&this->mutexErrorMessage);
-        this->sharedErrorMessage = message;
+        this->sharedException = std::current_exception();
+        this->sharedError = sharedError;
+        pthread_mutex_unlock(&this->mutexErrorMessage);
+    }
+
+    template <typename E>
+    void setSharedError(bool sharedError, const E& e) {
+        pthread_mutex_lock(&this->mutexErrorMessage);
+        try {
+            throw e;
+        } catch (...) {
+            this->sharedException = std::current_exception();
+        }
         this->sharedError = sharedError;
         pthread_mutex_unlock(&this->mutexErrorMessage);
     }
@@ -126,7 +139,10 @@ class S3KeyReader : public Reader {
     pthread_mutex_t mutexErrorMessage;
 
     bool sharedError;
-    string sharedErrorMessage;
+
+    // exception_ptr is used to store exception object
+    // and share across threads.
+    std::exception_ptr sharedException;
 
     uint64_t numOfChunks;
     uint64_t curReadingChunk;
@@ -181,8 +197,13 @@ class ChunkBuffer {
         return status;
     }
 
-    void setSharedError(bool sharedError, string message) {
-        this->sharedKeyReader.setSharedError(sharedError, message);
+    void setSharedError(bool sharedError) {
+        this->sharedKeyReader.setSharedError(sharedError);
+    }
+
+    template <typename E>
+    void setSharedError(bool sharedError, const E& e) {
+        this->sharedKeyReader.setSharedError(sharedError, e);
     }
 
    protected:

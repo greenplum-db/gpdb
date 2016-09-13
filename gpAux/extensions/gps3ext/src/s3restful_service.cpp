@@ -71,82 +71,68 @@ size_t RESTfulServiceReadFuncCallback(char *ptr, size_t size, size_t nmemb, void
     return copiedItemNum;
 }
 
+struct CURLWrapper {
+    CURLWrapper(const string &url, curl_slist *headers, uint64_t lowSpeedLimit,
+                uint64_t lowSpeedTime, bool debugCurl) {
+        curl = curl_easy_init();
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+        curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1L);
+        curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+        curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, lowSpeedLimit);
+        curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, lowSpeedTime);
+
+        if (debugCurl) {
+            curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+        }
+    }
+    ~CURLWrapper() {
+        curl_easy_cleanup(curl);
+    }
+    CURL *curl;
+};
+
 // get() will execute HTTP GET RESTful API with given url/headers/params,
 // and return raw response content.
 //
 // This method does not care about response format, caller need to handle
 // response format accordingly.
 Response S3RESTfulService::get(const string &url, HTTPHeaders &headers) {
-    Response response;
-
-    CURL *curl = curl_easy_init();
-    CHECK_OR_DIE_MSG(curl != NULL, "%s", "Failed to create curl handler");
+    Response response(RESPONSE_ERROR);
 
     headers.CreateList();
+    CURLWrapper wrapper(url, headers.GetList(), this->lowSpeedLimit, this->lowSpeedTime,
+                        this->debugCurl);
+    CURL *curl = wrapper.curl;
 
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1L);
-    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.GetList());
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, RESTfulServiceWriteFuncCallback);
-
-    // consider low speed as timeout
-    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, this->lowSpeedLimit);
-    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, this->lowSpeedTime);
-
-    if (this->debugCurl) {
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-    }
 
     CURLcode res = curl_easy_perform(curl);
 
     if (res != CURLE_OK) {
-        S3ERROR("curl_easy_perform() failed: %s", curl_easy_strerror(res));
-
-        response.clearBuffers();
-        response.setStatus(RESPONSE_FAIL);
-        response.setMessage(string("Server connection failed: ").append(curl_easy_strerror(res)));
+        S3_DIE_MSG(S3ConnectionError, curl_easy_strerror(res));
 
     } else {
         long responseCode;
         // Get the HTTP response status code from HTTP header
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
 
-        // 2XX are successful response. Here we deal with 200 (OK) and 206 (partial content)
-        // firstly.
-        if (isSuccessfulResponse(responseCode)) {
-            response.setStatus(RESPONSE_OK);
-            response.setMessage("Success");
-        } else {  // Server error, set status to RESPONSE_ERROR
-            stringstream sstr;
-
-            sstr << "S3 server returned error, error code is " << responseCode;
-            response.setStatus(RESPONSE_ERROR);
-            response.setMessage(sstr.str());
-        }
+        response.FillResponse(responseCode);
     }
-
-    curl_easy_cleanup(curl);
-    headers.FreeList();
 
     return response;
 }
 
 Response S3RESTfulService::put(const string &url, HTTPHeaders &headers,
                                const vector<uint8_t> &data) {
-    Response response;
-
-    CURL *curl = curl_easy_init();
-    CHECK_OR_DIE_MSG(curl != NULL, "%s", "Failed to create curl handler");
+    Response response(RESPONSE_ERROR);
 
     headers.CreateList();
+    CURLWrapper wrapper(url, headers.GetList(), this->lowSpeedLimit, this->lowSpeedTime,
+                        this->debugCurl);
+    CURL *curl = wrapper.curl;
 
-    /* options for downloading */
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1L);
-    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.GetList());
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, RESTfulServiceWriteFuncCallback);
 
@@ -160,69 +146,30 @@ Response S3RESTfulService::put(const string &url, HTTPHeaders &headers,
     curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *)&response);
     curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, RESTfulServiceHeadersWriteFuncCallback);
 
-    // consider low speed as timeout
-    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, this->lowSpeedLimit);
-    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, this->lowSpeedTime);
-
-    if (this->debugCurl) {
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-    }
-
     CURLcode res = curl_easy_perform(curl);
 
     if (res != CURLE_OK) {
-        S3ERROR("curl_easy_perform() failed: %s", curl_easy_strerror(res));
-
-        if (S3QueryIsAbortInProgress()) {
-            response.setStatus(RESPONSE_ABORT);
-            response.setMessage("Query cancelled by user");
-        } else {
-            response.setStatus(RESPONSE_FAIL);
-            response.setMessage(
-                string("Server connection failed: ").append(curl_easy_strerror(res)));
-        }
-
-        response.clearBuffers();
-
+        S3_DIE_MSG(S3ConnectionError, curl_easy_strerror(res));
     } else {
         long responseCode;
         // Get the HTTP response status code from HTTP header
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
 
-        // 2XX are successful response. Here we deal with 200 (OK) and 206 (partial content)
-        // firstly.
-        if (isSuccessfulResponse(responseCode)) {
-            response.setStatus(RESPONSE_OK);
-            response.setMessage("Success");
-        } else {  // Server error, set status to RESPONSE_ERROR
-            stringstream sstr;
-
-            sstr << "S3 server returned error, error code is " << responseCode;
-            response.setStatus(RESPONSE_ERROR);
-            response.setMessage(sstr.str());
-        }
+        response.FillResponse(responseCode);
     }
-
-    curl_easy_cleanup(curl);
-    headers.FreeList();
 
     return response;
 }
 
 Response S3RESTfulService::post(const string &url, HTTPHeaders &headers,
                                 const vector<uint8_t> &data) {
-    Response response;
-
-    CURL *curl = curl_easy_init();
-    CHECK_OR_DIE_MSG(curl != NULL, "%s", "Failed to create curl handler");
+    Response response(RESPONSE_ERROR);
 
     headers.CreateList();
+    CURLWrapper wrapper(url, headers.GetList(), this->lowSpeedLimit, this->lowSpeedTime,
+                        this->debugCurl);
+    CURL *curl = wrapper.curl;
 
-    /* options for downloading */
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1L);
-    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.GetList());
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, RESTfulServiceWriteFuncCallback);
 
@@ -233,51 +180,17 @@ Response S3RESTfulService::post(const string &url, HTTPHeaders &headers,
     curl_easy_setopt(curl, CURLOPT_READFUNCTION, RESTfulServiceReadFuncCallback);
     curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)data.size());
 
-    // consider low speed as timeout
-    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, this->lowSpeedLimit);
-    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, this->lowSpeedTime);
-
-    if (this->debugCurl) {
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-    }
-
     CURLcode res = curl_easy_perform(curl);
 
     if (res != CURLE_OK) {
-        S3ERROR("curl_easy_perform() failed: %s", curl_easy_strerror(res));
-
-        if (S3QueryIsAbortInProgress()) {
-            response.setStatus(RESPONSE_ABORT);
-            response.setMessage("Query cancelled by user");
-        } else {
-            response.setStatus(RESPONSE_FAIL);
-            response.setMessage(
-                string("Server connection failed: ").append(curl_easy_strerror(res)));
-        }
-
-        response.clearBuffers();
-
+        S3_DIE_MSG(S3ConnectionError, curl_easy_strerror(res));
     } else {
         long responseCode;
         // Get the HTTP response status code from HTTP header
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
 
-        // 2XX are successful response. Here we deal with 200 (OK) and 206 (partial content)
-        // firstly.
-        if (isSuccessfulResponse(responseCode)) {
-            response.setStatus(RESPONSE_OK);
-            response.setMessage("Success");
-        } else {  // Server error, set status to RESPONSE_ERROR
-            stringstream sstr;
-
-            sstr << "S3 server returned error, error code is " << responseCode;
-            response.setStatus(RESPONSE_ERROR);
-            response.setMessage(sstr.str());
-        }
+        response.FillResponse(responseCode);
     }
-
-    curl_easy_cleanup(curl);
-    headers.FreeList();
 
     return response;
 }
@@ -290,55 +203,34 @@ Response S3RESTfulService::post(const string &url, HTTPHeaders &headers,
 ResponseCode S3RESTfulService::head(const string &url, HTTPHeaders &headers) {
     ResponseCode responseCode = HeadResponseFail;
 
-    CURL *curl = curl_easy_init();
-    CHECK_OR_DIE_MSG(curl != NULL, "%s", "Failed to create curl handler");
-
     headers.CreateList();
-
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1L);
-    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.GetList());
+    CURLWrapper wrapper(url, headers.GetList(), this->lowSpeedLimit, this->lowSpeedTime,
+                        this->debugCurl);
+    CURL *curl = wrapper.curl;
 
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "HEAD");
     curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
 
-    // consider low speed as timeout
-    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, this->lowSpeedLimit);
-    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, this->lowSpeedTime);
-
-    if (this->debugCurl) {
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-    }
-
     CURLcode res = curl_easy_perform(curl);
 
     if (res != CURLE_OK) {
-        S3ERROR("curl_easy_perform() failed: %s", curl_easy_strerror(res));
+        S3_DIE_MSG(S3ConnectionError, curl_easy_strerror(res));
     } else {
         // Get the HTTP response status code from HTTP header
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
     }
 
-    curl_easy_cleanup(curl);
-    headers.FreeList();
-
     return responseCode;
 }
 
 Response S3RESTfulService::deleteRequest(const string &url, HTTPHeaders &headers) {
-    Response response;
-
-    CURL *curl = curl_easy_init();
-    CHECK_OR_DIE_MSG(curl != NULL, "%s", "Failed to create curl handler");
+    Response response(RESPONSE_ERROR);
 
     headers.CreateList();
+    CURLWrapper wrapper(url, headers.GetList(), this->lowSpeedLimit, this->lowSpeedTime,
+                        this->debugCurl);
+    CURL *curl = wrapper.curl;
 
-    /* options for downloading */
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1L);
-    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers.GetList());
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, RESTfulServiceAbortFuncCallback);
 
@@ -351,44 +243,16 @@ Response S3RESTfulService::deleteRequest(const string &url, HTTPHeaders &headers
     curl_easy_setopt(curl, CURLOPT_READFUNCTION, RESTfulServiceReadFuncCallback);
     curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)data.size());
 
-    // consider low speed as timeout
-    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, this->lowSpeedLimit);
-    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, this->lowSpeedTime);
-
-    if (this->debugCurl) {
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-    }
-
     CURLcode res = curl_easy_perform(curl);
 
     if (res != CURLE_OK) {
-        S3ERROR("curl_easy_perform() failed: %s", curl_easy_strerror(res));
-
-        response.clearBuffers();
-        response.setStatus(RESPONSE_FAIL);
-        response.setMessage(string("Server connection failed: ").append(curl_easy_strerror(res)));
-
+        S3_DIE_MSG(S3ConnectionError, curl_easy_strerror(res));
     } else {
         long responseCode;
         // Get the HTTP response status code from HTTP header
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
-
-        // 2XX are successful response. Here we deal with 200 (OK) 204 (no content), and 206
-        // (partial content) firstly.
-        if (isSuccessfulResponse(responseCode)) {
-            response.setStatus(RESPONSE_OK);
-            response.setMessage("Success");
-        } else {  // Server error, set status to RESPONSE_ERROR
-            stringstream sstr;
-
-            sstr << "S3 server returned error, error code is " << responseCode;
-            response.setStatus(RESPONSE_ERROR);
-            response.setMessage(sstr.str());
-        }
+        response.FillResponse(responseCode);
     }
-
-    curl_easy_cleanup(curl);
-    headers.FreeList();
 
     return response;
 }

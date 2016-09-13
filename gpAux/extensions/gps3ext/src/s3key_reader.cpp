@@ -56,9 +56,7 @@ uint64_t ChunkBuffer::read(char* buf, uint64_t len) {
     // GPDB abort signal stops s3_import(), this check is not needed if s3_import() every time calls
     // ChunkBuffer->Read() only once, otherwise(as we did in downstreamReader->read() for
     // decompression feature before), first call sets buffer to ReadyToFill, second call hangs.
-    CHECK_OR_DIE_MSG(!S3QueryIsAbortInProgress(), "%s",
-                     "ChunkBuffer reading is interrupted by user");
-
+    S3_CHECK_OR_DIE_MSG(!S3QueryIsAbortInProgress(), S3QueryAbort, "");
     pthread_mutex_lock(&this->statusMutex);
     while (this->status != ReadyToRead) {
         pthread_cond_wait(&this->statusCondVar, &this->statusMutex);
@@ -86,7 +84,8 @@ uint64_t ChunkBuffer::read(char* buf, uint64_t len) {
 
         if (!this->isEOF()) {
             // Release chunkData memory to reduce consumption.
-            this->chunkData = vector<uint8_t>();
+            vector<uint8_t> empty;
+            this->chunkData.swap(empty);
 
             this->status = ReadyToFill;
 
@@ -105,7 +104,8 @@ uint64_t ChunkBuffer::read(char* buf, uint64_t len) {
 
 // returning uint64_t(-1) means error
 uint64_t ChunkBuffer::fill() {
-    pthread_mutex_lock(&this->statusMutex);
+    UniqueLock statusLock(&this->statusMutex);
+
     while (this->status != ReadyToFill) {
         pthread_cond_wait(&this->statusCondVar, &this->statusMutex);
     }
@@ -120,16 +120,15 @@ uint64_t ChunkBuffer::fill() {
             readLen =
                 this->s3interface->fetchData(offset, this->chunkData, leftLen, this->sourceUrl,
                                              this->sharedKeyReader.getRegion());
-        } catch (std::exception& e) {
+            if (readLen != leftLen) {
+                S3DEBUG("Failed to fetch expected data from S3");
+                this->setSharedError(true, S3PartialResponseError(leftLen, readLen));
+            } else {
+                S3DEBUG("Got %" PRIu64 " bytes from S3", readLen);
+            }
+        } catch (S3Exception& e) {
             S3DEBUG("Failed to fetch expected data from S3");
-            this->setSharedError(true, e.what());
-        }
-
-        if (readLen != leftLen) {
-            S3DEBUG("Failed to fetch expected data from S3");
-            this->setSharedError(true, "Failed to fetch expected data from S3");
-        } else {
-            S3DEBUG("Got %" PRIu64 " bytes from S3", readLen);
+            this->setSharedError(true);
         }
     }
 
@@ -141,7 +140,6 @@ uint64_t ChunkBuffer::fill() {
 
     this->status = ReadyToRead;
     pthread_cond_signal(&this->statusCondVar);
-    pthread_mutex_unlock(&this->statusMutex);
 
     return (this->isError()) ? -1 : readLen;
 }
@@ -156,7 +154,7 @@ void* DownloadThreadFunc(void* data) {
             S3INFO("Downloading thread is interrupted by user");
 
             // error is shared between all chunks, so all chunks will stop.
-            buffer->setSharedError(true, "Downloading thread is interrupted by user");
+            buffer->setSharedError(true, S3QueryAbort("Downloading thread is interrupted by user"));
 
             // have to unlock ChunkBuffer::read in some certain conditions, for instance, status is
             // not ReadyToRead, and read() is waiting for signal stat_cond.
@@ -182,20 +180,20 @@ void* DownloadThreadFunc(void* data) {
 }
 
 void S3KeyReader::open(const S3Params& params) {
-    CHECK_OR_DIE_MSG(this->s3interface != NULL, "%s", "s3interface must not be NULL");
+    S3_CHECK_OR_DIE_MSG(this->s3interface != NULL, S3RuntimeError, "s3interface must not be NULL");
 
     this->sharedError = false;
-    this->sharedErrorMessage.clear();
 
     this->numOfChunks = params.getNumOfChunks();
-    CHECK_OR_DIE_MSG(this->numOfChunks > 0, "%s", "numOfChunks must not be zero");
+    S3_CHECK_OR_DIE_MSG(this->numOfChunks > 0, S3RuntimeError, "numOfChunks must not be zero");
 
     this->region = params.getRegion();
 
     this->offsetMgr.setKeySize(params.getKeySize());
     this->offsetMgr.setChunkSize(params.getChunkSize());
 
-    CHECK_OR_DIE_MSG(params.getChunkSize() > 0, "%s", "chunk size must be greater than zero");
+    S3_CHECK_OR_DIE_MSG(params.getChunkSize() > 0, S3RuntimeError,
+                        "chunk size must be greater than zero");
 
     this->chunkBuffers.reserve(this->numOfChunks);
 
@@ -228,15 +226,17 @@ uint64_t S3KeyReader::read(char* buf, uint64_t count) {
 
         readLen = buffer.read(buf, count);
 
-        CHECK_OR_DIE_MSG(!this->sharedError, "%s", this->sharedErrorMessage.c_str());
+        if (this->isSharedError()) {
+            std::rethrow_exception(this->sharedException);
+        }
 
         this->transferredKeyLen += readLen;
 
         if (readLen < count) {
             this->curReadingChunk++;
-            CHECK_OR_DIE_MSG(!buffer.isError(), "%s", "Error occurs while downloading, skip");
         }
 
+        count -= readLen;
         // retry to confirm whether thread reading is finished or chunk size is
         // divisible by get()'s buffer size
     } while (readLen == 0);

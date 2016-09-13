@@ -3,14 +3,15 @@
 void S3KeyWriter::open(const S3Params& params) {
     this->params = params;
 
-    CHECK_OR_DIE_MSG(this->s3interface != NULL, "%s", "s3interface must not be NULL");
-    CHECK_OR_DIE_MSG(this->params.getChunkSize() > 0, "%s", "chunkSize must not be zero");
+    S3_CHECK_OR_DIE_MSG(this->s3interface != NULL, S3RuntimeError, "s3interface must not be NULL");
+    S3_CHECK_OR_DIE_MSG(this->params.getChunkSize() > 0, S3RuntimeError,
+                        "chunkSize must not be zero");
 
     buffer.reserve(this->params.getChunkSize());
 
     this->uploadId =
         this->s3interface->getUploadId(this->params.getKeyUrl(), this->params.getRegion());
-    CHECK_OR_DIE_MSG(!this->uploadId.empty(), "%s", "Failed to get upload id");
+    S3_CHECK_OR_DIE_MSG(!this->uploadId.empty(), S3RuntimeError, "Failed to get upload id");
 
     S3DEBUG("key: %s, upload id: %s", this->params.getKeyUrl().c_str(), this->uploadId.c_str());
 }
@@ -18,11 +19,15 @@ void S3KeyWriter::open(const S3Params& params) {
 // write() first fills up the data buffer before flush it out
 uint64_t S3KeyWriter::write(const char* buf, uint64_t count) {
     // Defensive code
-    CHECK_OR_DIE(buf != NULL);
+    S3_CHECK_OR_DIE_MSG(buf != NULL, S3RuntimeError, "Buffer is NULL");
     this->checkQueryCancelSignal();
 
     uint64_t offset = 0;
     while (offset < count) {
+        if (sharedError) {
+            std::rethrow_exception(sharedException);
+        }
+
         uint64_t bufferRemaining = this->params.getChunkSize() - this->buffer.size();
         uint64_t dataRemaining = count - offset;
         uint64_t dataToBuffer = bufferRemaining < dataRemaining ? bufferRemaining : dataRemaining;
@@ -68,7 +73,8 @@ void S3KeyWriter::checkQueryCancelSignal() {
 
         this->etagList.clear();
         this->uploadId.clear();
-        CHECK_OR_DIE_MSG(false, "%s", "Uploading is interrupted by user");
+
+        S3_DIE_MSG(S3QueryAbort, "Uploading is interrupted by user");
     }
 }
 
@@ -100,8 +106,11 @@ void* S3KeyWriter::UploadThreadFunc(void* data) {
         pthread_cond_broadcast(&writer->cv);
         S3DEBUG("Upload part finish: %p, eTag: %s, part number: %" PRIu64, pthread_self(),
                 etag.c_str(), params->currentNumber);
-    } catch (std::exception& e) {
-        S3ERROR("Upload thread error: %s", e.what());
+    } catch (S3Exception& e) {
+        S3ERROR("Upload thread error: %s", e.getMessage().c_str());
+        UniqueLock exceptLock(&writer->exceptionMutex);
+        writer->sharedError = true;
+        writer->sharedException = std::current_exception();
     }
 
     delete params;
