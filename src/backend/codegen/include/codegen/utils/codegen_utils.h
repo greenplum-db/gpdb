@@ -1426,7 +1426,7 @@ template <typename CppType>
 llvm::Value* CodegenUtils::CreateIncOverflow(llvm::Value* arg0,
                                              llvm::Value* arg1) {
   return codegen_utils_detail::ArithOpMaker<CppType>::
-      CreateAddOverflow(this, arg0, GetConstant(1));
+      CreateAddOverflow(this, arg0, GetConstant<CppType>(1));
 }
 
 template <typename CppType>

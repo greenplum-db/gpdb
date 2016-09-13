@@ -298,7 +298,10 @@ InitScanStateRelationDetails(ScanState *scanState, Plan *plan, EState *estate)
 	ExecAssignScanProjectionInfo(scanState);
 
 	ProjectionInfo *projInfo = scanState->ps.ps_ProjInfo;
-	if (NULL != projInfo && projInfo->pi_isVarList){
+	if (NULL != projInfo &&
+	    projInfo->pi_isVarList &&
+	    NULL != projInfo->pi_targetlist)
+	{
 		enroll_ExecVariableList_codegen(ExecVariableList,
 				&projInfo->ExecVariableList_gen_info.ExecVariableList_fn, projInfo, scanState->ss_ScanTupleSlot);
 	}
