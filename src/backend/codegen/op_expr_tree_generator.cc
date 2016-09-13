@@ -94,16 +94,16 @@ void OpExprTreeGenerator::InitializeSupportedFunction() {
           &PGArithFuncGenerator<int64_t, int64_t, int64_t>::AddWithOverflow));
 
   supported_function_[1219] = std::unique_ptr<PGFuncGeneratorInterface>(
-      new PGGenericFuncGenerator<int64_t, int64_t, int64_t>(
+      new PGGenericFuncGenerator<int64_t, int64_t>(
           1219,
           "int8inc",
-          &PGArithFuncGenerator<int64_t, int64_t, int64_t>::IncWithOverflow));
+          &PGArithUnaryFuncGenerator<int64_t, int64_t>::IncWithOverflow));
 
   supported_function_[2803] = std::unique_ptr<PGFuncGeneratorInterface>(
-      new PGGenericFuncGenerator<int64_t, int64_t, int64_t>(
+      new PGGenericFuncGenerator<int64_t, int64_t>(
           2803,
           "int8inc",
-          &PGArithFuncGenerator<int64_t, int64_t, int64_t>::IncWithOverflow));
+          &PGArithUnaryFuncGenerator<int64_t, int64_t>::IncWithOverflow));
 
   supported_function_[216] = std::unique_ptr<PGFuncGeneratorInterface>(
       new PGGenericFuncGenerator<float8, float8, float8>(
