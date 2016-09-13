@@ -85,8 +85,6 @@ void SignRequestV4(const string &method, HTTPHeaders *h, const string &orig_regi
                      << ",Signature=" << signature_hex;
 
     h->Add(AUTHORIZATION, signature_header.str());
-
-    return;
 }
 
 // getOptS3 returns first value according to given key.

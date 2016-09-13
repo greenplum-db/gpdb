@@ -8,7 +8,8 @@ class S3Exception {
     string file;
     uint64_t line;
     string func;
-    S3Exception() : line(0) {}
+    S3Exception() : line(0) {
+    }
 
     virtual ~S3Exception() {
     }

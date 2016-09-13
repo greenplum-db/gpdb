@@ -203,7 +203,6 @@ Response S3InterfaceService::getBucketResponse(const string &region, const strin
     return this->getResponseWithRetries(url, header);
 }
 
-// parseBucketXML must not throw exception, otherwise result is leaked.
 bool S3InterfaceService::parseBucketXML(ListBucketResult *result, xmlParserCtxtPtr xmlcontext,
                                         string &marker) {
     if ((result == NULL) || (xmlcontext == NULL)) {
@@ -315,7 +314,8 @@ ListBucketResult S3InterfaceService::listBucket(const string &schema, const stri
     ListBucketResult result;
 
     string marker = "";
-    do {  // To get next set(up to 1000) keys in one iteration.
+    do {
+        // To get next set(up to 1000) keys in one iteration.
         // S3 requires query parameters specified alphabetically.
         string url = this->getUrl(prefix, schema, host.str(), bucket, marker);
 

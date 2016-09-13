@@ -22,8 +22,6 @@ void S3BucketReader::open(const S3Params& params) {
 
     this->keyList =
         this->s3interface->listBucket(this->schema, this->region, this->bucket, this->prefix);
-
-    return;
 }
 
 BucketContent& S3BucketReader::getNextKey() {

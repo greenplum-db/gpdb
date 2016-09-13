@@ -34,9 +34,21 @@ Datum s3_import(PG_FUNCTION_ARGS);
  * QueryCancelPending is not sufficient because it will be reset before the
  * extprotocol last call, then it is hard to distinguish normal exit/finish
  * from abnormal transaction abort.
+ *
+ * IsAbortInProgress() can also be reset by GPDB while downloading file, we
+ * must save the state
  */
+static bool queryCancelFlag = false;
 bool S3QueryIsAbortInProgress(void) {
-    return QueryCancelPending || IsAbortInProgress();
+    bool queryIsBeingCancelled = QueryCancelPending || IsAbortInProgress();
+
+    // We need a thread-safe way to query and set queryCancelFlag.
+    // queryCancelFlag is set to TRUE for the first time when cancel signal is
+    // detected. If cancel signal is already captured, value will not be
+    // swapped and queryIsCancelledAlready is true.
+    bool queryIsCancelledAlready = !__sync_bool_compare_and_swap(&queryCancelFlag, false, queryIsBeingCancelled);
+
+    return queryIsBeingCancelled || queryIsCancelledAlready;
 }
 
 /*
@@ -77,12 +89,12 @@ Datum s3_import(PG_FUNCTION_ARGS) {
         }
 
         EXTPROTOCOL_SET_USER_CTX(fcinfo, NULL);
-
         PG_RETURN_INT32(0);
     }
 
     /* first call. do any desired init */
     if (gpreader == NULL) {
+        queryCancelFlag = false;
         const char *url_with_options = EXTPROTOCOL_GET_URL(fcinfo);
 
         thread_setup();
@@ -130,12 +142,12 @@ Datum s3_export(PG_FUNCTION_ARGS) {
         }
 
         EXTPROTOCOL_SET_USER_CTX(fcinfo, NULL);
-
         PG_RETURN_INT32(0);
     }
 
     /* first call. do any desired init */
     if (gpwriter == NULL) {
+        queryCancelFlag = false;
         const char *url_with_options = EXTPROTOCOL_GET_URL(fcinfo);
         const char *format = get_format_str(fcinfo);
 

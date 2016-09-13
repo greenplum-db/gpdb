@@ -208,8 +208,6 @@ void S3KeyReader::open(const S3Params& params) {
         pthread_create(&thread, NULL, DownloadThreadFunc, &this->chunkBuffers[i]);
         this->threads.push_back(thread);
     }
-
-    return;
 }
 
 uint64_t S3KeyReader::read(char* buf, uint64_t count) {
@@ -263,6 +261,4 @@ void S3KeyReader::close() {
     }
 
     this->reset();
-
-    return;
 }
