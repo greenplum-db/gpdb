@@ -31,6 +31,14 @@
 #include "miscadmin.h"
 #include "utils/gp_atomic.h"
 
+#define DISPATCH_WAIT_TIMEOUT_MSEC 2000
+
+/*
+ * Ideally, we should set timeout to zero to cancel QEs as soon as possible,
+ * but considering the cost of sending cancel signal is high, we want to process
+ * as many finishing QEs as possible before cancelling
+ */
+#define DISPATCH_WAIT_CANCEL_TIMEOUT_MSEC 100
 
 typedef struct CdbDispatchCmdAsync
 {
@@ -102,10 +110,10 @@ checkDispatchResult(CdbDispatcherState *ds,
 static bool processResults(CdbDispatchResult * dispatchResult);
 
 static void
-checkConnectionsForCancel(CdbDispatchCmdAsync* pParms);
+signalQEs(CdbDispatchCmdAsync* pParms);
 
 static void
-finishupFailedConnections(CdbDispatchCmdAsync * pParms);
+checkSegmentAlive(CdbDispatchCmdAsync * pParms);
 
 static void
 handlePollSuccess(CdbDispatchCmdAsync* pParms, struct pollfd *fds);
@@ -248,11 +256,14 @@ checkDispatchResult(CdbDispatcherState *ds,
 					 bool wait)
 {
 	CdbDispatchCmdAsync *pParms = (CdbDispatchCmdAsync*)ds->dispatchParams;
+	CdbDispatchResults *meleeResults = ds->primaryResults;
 	SegmentDatabaseDescriptor *segdbDesc;
 	CdbDispatchResult *dispatchResult;
 	int	i;
 	int db_count = 0;
 	int	timeoutCounter = 0;
+	int timeout = 0;
+	bool sentSignal = false;
 	struct pollfd *fds;
 
 	db_count = pParms->dispatchCount;
@@ -274,6 +285,15 @@ checkDispatchResult(CdbDispatcherState *ds,
 		 */
 		if (proc_exit_inprogress)
 			break;
+
+		/*
+		 *  escalate waitMode to cancel if:
+		 *	 - user interrupt has occurred,
+		 *	 - or an error has been reported by any QE,
+		 *	 - in case the caller wants cancelOnError
+		 */
+		if ((InterruptPending || meleeResults->errcode) && meleeResults->cancelOnError)
+			pParms->waitMode = DISPATCH_WAIT_CANCEL;
 
 		/*
 		 * Which QEs are still running and could send results to us?
@@ -316,9 +336,22 @@ checkDispatchResult(CdbDispatcherState *ds,
 			break;
 
 		/*
-		 * Wait for results from QEs. Block here until input is available.
+		 * Wait for results from QEs
+		 *
+		 * Don't wait if:
+		 *  - this is called from interconnect to check if there's any error.
+		 * 
+		 * Lower the timeout if:
+		 *  - we need send signal to QEs. 
 		 */
-		n = poll(fds, nfds, wait ? DISPATCH_WAIT_TIMEOUT_SEC * 1000 : 0);
+		if (!wait)
+			timeout = 0;
+		else if (pParms->waitMode == DISPATCH_WAIT_NONE || sentSignal)
+			timeout = DISPATCH_WAIT_TIMEOUT_MSEC;
+		else
+			timeout = DISPATCH_WAIT_CANCEL_TIMEOUT_MSEC;
+
+		n = poll(fds, nfds, timeout);
 
 		/* poll returns with an error, including one due to an interrupted call */
 		if (n < 0)
@@ -328,8 +361,14 @@ checkDispatchResult(CdbDispatcherState *ds,
 				continue;
 
 			elog(LOG, "handlePollError poll() failed; errno=%d", sock_errno);
-			checkConnectionsForCancel(pParms);
-			finishupFailedConnections(pParms);
+
+			if (pParms->waitMode != DISPATCH_WAIT_NONE)
+			{
+				signalQEs(pParms);
+				sentSignal = true;
+			}
+			else
+				checkSegmentAlive(pParms);
 		}
 		/* If the time limit expires, poll() returns 0 */
 		else if (n == 0)
@@ -337,10 +376,14 @@ checkDispatchResult(CdbDispatcherState *ds,
 			if (!wait)
 				break;
 
-			checkConnectionsForCancel(pParms);
-			if (timeoutCounter++ > 30)
+			if (pParms->waitMode != DISPATCH_WAIT_NONE)
 			{
-				finishupFailedConnections(pParms);
+				signalQEs(pParms);
+				sentSignal = true;
+			} 
+			else if (timeoutCounter++ > 30)
+			{
+				checkSegmentAlive(pParms);
 				timeoutCounter = 0;
 			}
 		}
@@ -497,64 +540,40 @@ handlePollSuccess(CdbDispatchCmdAsync* pParms,
  * Send finish or cancel signal to QEs if needed.
  */
 static void
-checkConnectionsForCancel(CdbDispatchCmdAsync* pParms)
+signalQEs(CdbDispatchCmdAsync* pParms)
 {
 	int i;
+	DispatchWaitMode waitMode = pParms->waitMode;
 
 	for (i = 0; i < pParms->dispatchCount; i++)
 	{
-		DispatchWaitMode waitMode;
+		char errbuf[256];
+		bool sent = false;
 		CdbDispatchResult *dispatchResult = pParms->dispatchResultPtrArray[i];
 		Assert(dispatchResult != NULL);
 		SegmentDatabaseDescriptor *segdbDesc = dispatchResult->segdbDesc;
-		CdbDispatchResults *meleeResults = dispatchResult->meleeResults;
 
 		/*
-		 * Already finished with this QE?
-		 */
-		if (!dispatchResult->stillRunning)
-			continue;
-
-		waitMode = DISPATCH_WAIT_NONE;
-		/*
-		 * Send query finish to this QE if QD is already done.
-		 */
-		if (pParms->waitMode == DISPATCH_WAIT_FINISH)
-			waitMode = DISPATCH_WAIT_FINISH;
-
-		/*
-		 * However, escalate it to cancel if:
-		 *	 - user interrupt has occurred,
-		 *	 - or I'm told to send cancel,
-		 *	 - or an error has been reported by another QE,
-		 *	 - in case the caller wants cancelOnError and it was not canceled
-		 */
-		if ((InterruptPending || pParms->waitMode == DISPATCH_WAIT_CANCEL || meleeResults->errcode) &&
-			(meleeResults->cancelOnError && !dispatchResult->wasCanceled))
-			waitMode = DISPATCH_WAIT_CANCEL;
-
-		/*
-		 * Finally, don't send the signal if
-		 *	 - no action needed (NONE)
+		 * Don't send the signal if
+		 *	 - QE is finished or canceled
 		 *	 - the signal was already sent
 		 *	 - connection is dead
 		 */
-		if (waitMode != DISPATCH_WAIT_NONE &&
-			waitMode != dispatchResult->sentSignal &&
-			!cdbconn_isBadConnection(segdbDesc))
-		{
-			char errbuf[256];
-			bool sent;
 
-			memset(errbuf, 0, sizeof(errbuf));
+		if (!dispatchResult->stillRunning ||
+			dispatchResult->wasCanceled ||
+			waitMode == dispatchResult->sentSignal ||
+			cdbconn_isBadConnection(segdbDesc))
+			continue;
 
-			sent = cdbconn_signalQE(segdbDesc, errbuf, waitMode == DISPATCH_WAIT_CANCEL);
-			if (sent)
-				dispatchResult->sentSignal = waitMode;
-			else if (Debug_cancel_print || gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
-				elog(LOG, "Unable to cancel: %s",
-					 strlen(errbuf) == 0 ? "cannot allocate PGCancel" : errbuf);
-		}
+		memset(errbuf, 0, sizeof(errbuf));
+
+		sent = cdbconn_signalQE(segdbDesc, errbuf, waitMode == DISPATCH_WAIT_CANCEL);
+		if (sent)
+			dispatchResult->sentSignal = waitMode;
+		else if (Debug_cancel_print || gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
+			elog(LOG, "Unable to cancel: %s",
+				 strlen(errbuf) == 0 ? "cannot allocate PGCancel" : errbuf);
 	}
 }
 
@@ -564,7 +583,7 @@ checkConnectionsForCancel(CdbDispatchCmdAsync* pParms)
  * Issue a FTS probe every 1 minute.
  */
 static void
-finishupFailedConnections(CdbDispatchCmdAsync * pParms)
+checkSegmentAlive(CdbDispatchCmdAsync * pParms)
 {
 	int i;
 	bool forceScan = true;

@@ -57,8 +57,6 @@ typedef struct DispatcherInternalFuncs
 			int sliceIndex, CdbDispatchDirectDesc *direct);
 }DispatcherInternalFuncs;
 
-#define DISPATCH_WAIT_TIMEOUT_SEC 2
-
 /*--------------------------------------------------------------------*/
 /*
  * cdbdisp_dispatchToGang:
