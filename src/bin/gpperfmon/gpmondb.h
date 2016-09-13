@@ -1,9 +1,29 @@
 #ifndef GPMONDB_H
 #define GPMONDB_H
 
+#include "libpq-fe.h"
 #include "apr_general.h"
 #include "apr_md5.h"
 #include "apr_hash.h"
+
+struct hostinfo_holder_t
+{
+	addressinfo_holder_t* addressinfo_head;
+	addressinfo_holder_t* addressinfo_tail;
+	apr_uint32_t address_count;
+
+	char* datadir;
+	char* smon_dir;
+	char* hostname;
+	int is_master;
+	int is_hdm;
+	int is_hdw;
+	int is_hbw;
+	int is_hdc;
+	int is_etl;
+};
+
+APR_DECLARE(int) gpdb_exec_search_for_at_least_one_row(const char* QUERY, PGconn* persistant_conn);
 
 /**
  * Validate the the gpperfmon database is correct and
@@ -86,7 +106,7 @@ APR_DECLARE (apr_status_t) gpdb_truncate_tail_files(apr_pool_t* pool);
 
 APR_DECLARE (apr_status_t) gpdb_harvest_one(const char* table);
 
-APR_DECLARE (apr_status_t) gpdb_harvest_healthdata();
+APR_DECLARE (apr_status_t) gpdb_harvest_healthdata(void);
 
 APR_DECLARE (apr_status_t) remove_segid_constraint(void);
 

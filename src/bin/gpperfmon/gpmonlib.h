@@ -75,9 +75,6 @@ extern int gpsmon_fatalx(const char* fline, int e, const char* fmt, ...);
 /* convert packets to host order */
 extern apr_status_t gpmon_ntohpkt(apr_int32_t magic, apr_int16_t version, apr_int16_t pkttype);
 
-/* get the size of the union packet for smon_to_mon packets*/
-inline size_t get_size_by_pkttype_smon_to_mmon(apr_int16_t pkttype);
-
 /* strings */
 extern char* gpmon_trim(char* s);
 
@@ -270,17 +267,53 @@ struct snmp_module_params_t
 double subtractTimeOfDay(struct timeval* begin, struct timeval* end);
 
 
-/* Set header*/
-inline void gp_smon_to_mmon_set_header(gp_smon_to_mmon_packet_t* pkt, apr_int16_t pkttype);
-
 unsigned int gpdb_getnode_number_metrics(PerfmonNodeType type);
 const char* gpdb_getnodename(PerfmonNodeType type);
 const char* gpdb_getnodestatus(PerfmonNodeStatus status);
 apr_status_t gpdb_getnode_metricinfo(PerfmonNodeType type, apr_byte_t metricnum, const char** name, const char** unit);
-apr_status_t gpdb_debug_string_lookup_table();
+apr_status_t gpdb_debug_string_lookup_table(void);
 apr_status_t apr_pool_create_alloc(apr_pool_t ** newpool, apr_pool_t *parent);
 void gpdb_get_single_string_from_query(const char* QUERY, char** resultstring, apr_pool_t* pool);
 int snmp_report(host_t* tab, int tabsz);
 apr_status_t gpmmon_init_snmp(snmp_module_params_t* params);
 bool is_healthmon_running_separately();
+
+/* Set header*/
+inline void
+gp_smon_to_mmon_set_header(gp_smon_to_mmon_packet_t* pkt, apr_int16_t pkttype)
+{
+	pkt->header.pkttype = pkttype;
+	pkt->header.magic = GPMON_MAGIC;
+	pkt->header.version = GPMON_PACKET_VERSION;
+	return;
+}
+
+/* get the size of the union packet for smon_to_mon packets*/
+inline size_t
+get_size_by_pkttype_smon_to_mmon(apr_int16_t pkttype)
+{
+	switch (pkttype) {
+		case GPMON_PKTTYPE_HELLO:
+			return(sizeof(gpmon_hello_t));
+		case GPMON_PKTTYPE_METRICS:
+			return(sizeof(gpmon_metrics_t));
+		case GPMON_PKTTYPE_QLOG:
+			return(sizeof(gpmon_qlog_t));
+		case GPMON_PKTTYPE_QEXEC:
+			return(sizeof(qexec_packet_t));
+		case GPMON_PKTTYPE_SEGINFO:
+			return(sizeof(gpmon_seginfo_t));
+		case GPMON_PKTTYPE_FILEREP:
+			return(sizeof(gpmon_filerepinfo_t));
+		case GPMON_PKTTYPE_QUERY_HOST_METRICS:
+			return(sizeof(gpmon_qlog_t));
+		case GPMON_PKTTYPE_FSINFO:
+			return(sizeof(gpmon_fsinfo_t));
+		case GPMON_PKTTYPE_QUERYSEG:
+			return(sizeof(gpmon_query_seginfo_t));
+	}
+
+	return 0;
+}
+
 #endif /* GPMONLIB_H */

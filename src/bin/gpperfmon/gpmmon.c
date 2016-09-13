@@ -26,6 +26,7 @@
 #include "gpmonlib.h"
 #include "gpmon/gpmon.h"
 #include "gpmon_agg.h"
+#include "gpmmon.h"
 #include "gpmondb.h"
 #include "apr_getopt.h"
 #include <event.h>
@@ -107,9 +108,6 @@ sigset_t blocksig;
 /* Temporary global memory to store the qexec line upon a receive until it is copied into a mmon_qexec_t struct; only use in main receive thread*/
 char	qexec_mmon_temp_line[QEXEC_MAX_ROW_BUF_SIZE];
 
-extern int gpdb_exec_search_for_at_least_one_row(const char* QUERY, PGconn* persistant_conn);
-
-
 /* Function defs */
 static int read_conf_file(char *conffile);
 static void gethostlist();
@@ -117,10 +115,15 @@ static void getconfig(void);
 static apr_status_t sendpkt(int sock, const gp_smon_to_mmon_packet_t* pkt);
 static apr_status_t recvpkt(int sock, gp_smon_to_mmon_packet_t* pkt, bool loop_until_all_recv);
 
+static void update_mmonlog_filename(void);
+static char * get_ip_for_host(char* host, bool* returnParamIsIpv6);
+static time_t compute_next_dump_to_file(void);
+static void populate_smdw_aliases(host_t* host);
 
 #define MMON_LOG_FILENAME_SIZE (MAXPATHLEN+1)
 char mmon_log_filename[MMON_LOG_FILENAME_SIZE];
-void update_mmonlog_filename()
+static void
+update_mmonlog_filename(void)
 {
 		time_t stamp = time(NULL);
 		struct tm* tm = gmtime(&stamp);
@@ -845,7 +848,8 @@ static void* message_main(apr_thread_t* thread_, void* arg_)
 	return APR_SUCCESS;
 }
 
-time_t compute_next_dump_to_file()
+static time_t
+compute_next_dump_to_file(void)
 {
 	time_t current_time = time(NULL);
 	return (current_time - (current_time % opt.q) + opt.q);
@@ -1610,7 +1614,8 @@ int main(int argc, const char* const argv[])
 	return 0;
 }
 
-void populate_smdw_aliases(host_t* host)
+static void
+populate_smdw_aliases(host_t* host)
 {
 	char* saveptr;
 	char* token;
@@ -1646,7 +1651,8 @@ void populate_smdw_aliases(host_t* host)
 
 // returnParamIsIpv6 will be set to true for IPv6 addresses
 // the actual IP address string is returned from the function
-char* get_ip_for_host(char* host, bool* returnParamIsIpv6)
+static char *
+get_ip_for_host(char* host, bool* returnParamIsIpv6)
 {
 	char * ipstr;
 	int			ret;
