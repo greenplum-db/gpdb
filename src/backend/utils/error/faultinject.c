@@ -111,7 +111,7 @@ gp_fault_inject_impl(int32 reason, int64 arg)
 	switch(reason)
 	{
 		case GP_FAULT_USER_SEGV:
-			*(int *) 0 = 1234;
+			*(volatile int *) 0 = 1234;
 			break;
 		case GP_FAULT_USER_LEAK:
 			palloc(arg);
@@ -160,13 +160,13 @@ gp_fault_inject_impl(int32 reason, int64 arg)
 
 		case GP_FAULT_USER_SEGV_CRITICAL:
 			START_CRIT_SECTION();
-			*(int *) 0 = 1234;
+			*(volatile int *) 0 = 1234;
 			END_CRIT_SECTION();
 			break;
 
 		case GP_FAULT_USER_SEGV_LWLOCK:
 			LWLockAcquire(WALInsertLock, LW_EXCLUSIVE);
-			*(int *) 0 = 1234;
+			*(volatile int *) 0 = 1234;
 			break;
  	
 		case GP_FAULT_USER_OPEN_MANY_FILES:
