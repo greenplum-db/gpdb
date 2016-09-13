@@ -227,6 +227,13 @@ PGAC_ARG_BOOL(enable, gpfdist, yes,
 AC_SUBST(enable_gpfdist)
 
 #
+# gpperfmon
+#
+PGAC_ARG_BOOL(enable, gpperfmon, no,
+             [  --enable-gpperfmon      build with gpperfmon])
+AC_SUBST(enable_gpperfmon)
+
+#
 # --enable-debug adds -g to compiler flags
 #
 PGAC_ARG_BOOL(enable, debug, no,
@@ -944,12 +951,13 @@ PGAC_ARG_BOOL(with, libcurl, yes,
 AC_SUBST(with_libcurl)
 
 #
-# libapr. Used for gpfdist.
+# libapr. Used for gpfdist and gpperfmon
 #
 PGAC_ARG_REQ(with, apr-config,
              [  --with-apr-config=PATH  path to apr-1-config utility])
 AC_SUBST(with_apr_config)
-
+PGAC_ARG_REQ(with, apu-config,
+             [  --with-apu-config=PATH  path to apu-1-config utility])
 #
 # Elf
 #
@@ -1149,7 +1157,7 @@ if test "$with_krb5" = yes ; then
 fi
 
 if test "$enable_gpfdist" = yes ; then
-  GPAC_PATH_APR_1_CONFIG
+  GPAC_PATH_APX_1_CONFIG
   # If the 'apr-1-config --link-ld' produced correct output, -lapr-1 is already
   # in LIBS, hence AC_SEARCH_LIBS rather than AC_CHECK_LIB. (and the autoconf
   # manual recommends always using AC_SEARCH_LIBS rather than AC_CHECK_LIB
@@ -1162,6 +1170,22 @@ if test "$enable_gpfdist" = yes ; then
   AC_SEARCH_LIBS(yaml_parser_initialize, [yaml], [have_yaml=yes], [AC_MSG_WARN([libyaml is not found. disabling transformations for gpfdist.])])
   LIBS="$_LIBS"
   AC_SUBST(have_yaml)
+fi
+
+if test "$enable_gpperfmon" = yes ; then
+  GPAC_PATH_APX_1_CONFIG
+  # If the 'apr-1-config --link-ld' produced correct output, -lapr-1 is already
+  # in LIBS, hence AC_SEARCH_LIBS rather than AC_CHECK_LIB. (and the autoconf
+  # manual recommends always using AC_SEARCH_LIBS rather than AC_CHECK_LIB
+  # anyway)
+  _LIBS="$LIBS"
+  LIBS="$LIBS $apr_link_ld_libs"
+  AC_SEARCH_LIBS(apr_getopt_long, [apr-1], [], [AC_MSG_ERROR([libapr-1 is required for gpperfmon])])
+  AC_SEARCH_LIBS(event_add, [event], [], [AC_MSG_ERROR([libevent is required for gpperfmon])])
+  if test "$enable_snmp" != yes ; then
+    AC_MSG_ERROR([snmp is required for gpperfmon])
+  fi
+  AC_SEARCH_LIBS(sigar_open, [sigar], [], [AC_MSG_ERROR([libsigar is required for gpperfmon])])
 fi
 
 if test "$with_openssl" = yes ; then
@@ -1321,6 +1345,16 @@ if test "$enable_gpfdist" = yes; then
   ac_save_CPPFLAGS=$CPPFLAGS
   CPPFLAGS="$apr_includes $CPPFLAGS"
   AC_CHECK_HEADERS(apr_getopt.h, [], [AC_MSG_ERROR(['header file <apr_getopt.h> is required for gpfdist'])])
+  CPPFLAGS=$ac_save_CPPFLAGS
+fi
+
+if test "$enable_gpperfmon" = yes; then
+  AC_CHECK_HEADERS(event.h, [], [AC_MSG_ERROR([header file <event.h> is required for gpperfmon])])
+  AC_CHECK_HEADERS(sigar.h, [], [AC_MSG_ERROR([header file <sigar.h> is required for gpperfmon])])
+
+  ac_save_CPPFLAGS=$CPPFLAGS
+  CPPFLAGS="$apr_includes $CPPFLAGS"
+  AC_CHECK_HEADERS(apr_getopt.h, [], [AC_MSG_ERROR(['header file <apr_getopt.h> is required for gpperfmon'])])
   CPPFLAGS=$ac_save_CPPFLAGS
 fi
 
