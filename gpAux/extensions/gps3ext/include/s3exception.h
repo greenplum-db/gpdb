@@ -94,7 +94,7 @@ class S3QueryAbort : public S3Exception {
     virtual ~S3QueryAbort() {
     }
     virtual string getMessage() {
-        return "Query is aborted either by user or GPDB";
+        return "Query is aborted";
     }
 
     virtual string getType() {

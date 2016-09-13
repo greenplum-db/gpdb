@@ -4,7 +4,6 @@
 #include "gpcommon.h"
 #include "restful_service.h"
 #include "s3common_headers.h"
-#include "s3common_headers.h"
 #include "s3exception.h"
 #include "s3http_headers.h"
 #include "s3log.h"
