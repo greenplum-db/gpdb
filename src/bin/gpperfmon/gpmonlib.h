@@ -9,9 +9,6 @@
 #include "event.h"
 #include "gpmon/gpmon.h"
 
-#ifdef USE_CONNECTEMC
-#include "emcconnect/api.h"
-#else
 typedef enum EmcConnectSeverity
 {
 	EMC_CONNECT_SEVERITY_UNKNOWN = 0,
@@ -25,8 +22,6 @@ typedef enum EmcConnectModeType_t
 {
     EMCCONNECT_MODE_TYPE_OFF = 0,
 } EmcConnectModeType_t;
-
-#endif
 
 #define BATCH 8
 #define DEFAULT_GPMMON_LOGDIR "gpperfmon/logs"

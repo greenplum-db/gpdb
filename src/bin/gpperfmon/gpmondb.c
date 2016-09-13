@@ -19,14 +19,12 @@
 
 #define GPDB_CONNECTION_STRING "dbname='" GPMON_DB "' user='" GPMON_DBUSER "' connect_timeout='30'"
 
-#ifdef USE_CONNECTEMC
-int find_token_in_config_string(char* buffer, char**result, const char* token);
-#else
-int find_token_in_config_string(char* buffer, char**result, const char* token)
+static int find_token_in_config_string(char* buffer, char**result, const char* token);
+
+static int find_token_in_config_string(char* buffer, char**result, const char* token)
 {
 	return 1;
 }
-#endif
 
 // assumes a valid connection already exists
 static const char* gpdb_exec_only(PGconn* conn, PGresult** pres, const char* query)
