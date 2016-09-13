@@ -1,69 +1,66 @@
-SHELL=/bin/bash
+#-------------------------------------------------------------------------
+#
+# Makefile for src/bin/gpperfmon
+#
+# Copyright (c) 2016, Pivotal Inc.
+#
+# src/bin/gpperfmon/Makefile
+#
+#-------------------------------------------------------------------------
 
-default: all
+PGFILEDESC = "gpperfmon"
 
-BLD_TOP=$(shell echo `pwd`/../../../)
-include $(BLD_TOP)/Makefile.global
-include $(BLD_TOP)/Makefile.thirdparty
+subdir = src/bin/gpperfmon
+top_builddir = ../../..
+include $(top_builddir)/src/Makefile.global
 
-EXT_DIR=$(BLD_TOP)/ext/$(BLD_ARCH)/
-LIBPQ_DIR=$(BLD_TOP)/../src/interfaces/libpq/
+GPMMON_OBJS = gpmmon.o gpmondb.o gpmonlib.o gpmon_agg.o
+GPSMON_OBJS = gpsmon.o gpmonlib.o
 
-osx105_x86_COPT=-Wl,-search_paths_first
-CC=$(strip $(BLD_CC) $(BLD_CFLAGS))
-COPT=$($(BLD_ARCH)_COPT)
-OPT=-g -O3 -Wall
-ifneq ($(CUSTOM_COPT),)
-	COPT=$(CUSTOM_COPT)
+ifneq ($(enable_snmp), no)
+override LDFLAGS += -lnetsnmp
+GPMMON_OBJS += gpmon_snmp.o
 endif
 
-ifneq "$(findstring $(BLD_ARCH),rhel5_x86_64 rhel6_x86_64)" ""
-GPMMON_SNMP_OBJ=gpmon_snmp.o
-CONNECTEMCLIB += -lemcconnect
-endif
+all: gpmmon gpsmon
 
-GPMMON_OBJS=gpmmon.o gpmondb.o gpmonlib.o gpmon_agg.o $(GPMMON_SNMP_OBJ)
-
-GPSMON_OBJS=gpsmon.o gpmonlib.o
-SIGTEST_OBJS=sigartest.o
-SNMPTEST_OBJS=snmptest.o
-
-INCS=-I$(EXT_DIR)/include -I$(EXT_DIR)/include/apr-1 -I$(BLD_TOP)/../src/include -I$(LIBPQ_DIR)
-LIBS=-L$(EXT_DIR)/lib -laprutil-1 -lapr-1 -levent $$($(EXT_DIR)/bin/apu-1-config --libs) $$($(EXT_DIR)/bin/apr-1-config --libs) 
-GPSMON_LIBS=
-GPMMON_LIBS=-L$(LIBPQ_DIR) -lpq -lm -lsnmp $(CONNECTEMCLIB)
-CFLAGS=$(OPT) $$($(EXT_DIR)/bin/apr-1-config --cflags) -Werror -Wall
-CPPFLAGS=$$($(EXT_DIR)/bin/apr-1-config --cppflags) -D$(BLD_ARCH)
-
-ifeq "$(findstring osx,$(BLD_ARCH))" "osx"
-	GPSMON_LIBS=-framework CoreServices -framework IOKit
-	SIGTEST_LIBS=-framework CoreServices -framework IOKit
-endif
-
-ifeq (sol,$(findstring sol,$(BLD_ARCH)))
-	GPSMON_LIBS+=-lkstat
-endif
-
-GPSMON_LIBS+= -lm -lsigar
-SIGTEST_LIBS+= -lsigar
-SNMPTEST_LIBS+= -lsnmp
-
-all: gpsmon gpmmon
-
-gpsmon: $(GPSMON_OBJS)
-	$(CC) -o gpsmon $(COPT) $(GPSMON_OBJS) $(LIBS) $(GPSMON_LIBS)
+CFLAGS += $(apr_cflags) $(apr_includes) -I$(libpq_srcdir)
+LDFLAGS +=  -levent
 
 gpmmon: $(GPMMON_OBJS)
-	$(CC) -o gpmmon $(COPT) $(GPMMON_OBJS) $(LIBS) $(GPMMON_LIBS)
+	$(CC) $(CFLAGS) $(GPMMON_OBJS) $(libpq_pgport) $(apu_link_ld_libs) $(apr_link_ld_libs) -levent $(LDFLAGS) -o $@$(X)
 
-sigartest: $(SIGTEST_OBJS)
-	$(CC) -o sigartest $(COPT) $(SIGTEST_OBJS) $(LIBS) $(GPSMON_LIBS)
+gpsmon: $(GPSMON_OBJS)
+	$(CC) $(CFLAGS) $(GPSMON_OBJS) $(libpq_pgport) $(apu_link_ld_libs) $(apr_link_ld_libs) -lsigar -lm $(LDFLAGS) -o $@$(X)
 
-snmptest: $(SNMPTEST_OBJS)
-	$(CC) -o snmptest $(COPT) $(SNMPTEST_OBJS) $(LIBS) $(SNMPTEST_LIBS)
+snmptest: snmptest.o
+	$(CC) $(CFLAGS) snmptest.o -o $@$(X) -lnetsnmp
 
-%.o: %.c
-	$(CC) $(INCS) $(CPPFLAGS) $(CFLAGS) $(COPT) -o $@ -c $<
+sigartest: sigartest.o
+	$(CC) $(CFLAGS) sigartest.o -o $@$(X) -lsigar
 
-clean:
-	rm -rf *.o gpmmon gpsmon sigartest
+install: all installdirs
+	$(INSTALL_PROGRAM) gpmmon$(X) '$(DESTDIR)$(bindir)/gpmmon$(X)'
+	$(INSTALL_PROGRAM) gpsmon$(X) '$(DESTDIR)$(bindir)/gpsmon$(X)'
+	$(INSTALL_PROGRAM) gpperfmon '$(DESTDIR)$(bindir)/gpperfmon'
+	$(INSTALL_PROGRAM) gpperfmon.py '$(DESTDIR)$(bindir)/gpperfmon.py'
+	$(INSTALL_PROGRAM) gpmon_catqrynow.py '$(DESTDIR)$(bindir)/gpmon_catqrynow.py'
+	$(INSTALL_PROGRAM) gpperfmoncat.sh '$(DESTDIR)$(bindir)/gpperfmoncat.sh'
+	$(INSTALL_DATA) gpperfmon3.sql '$(DESTDIR)$(libdir)a/gpperfmon/gpperfmon3.sql'
+	$(INSTALL_DATA) gpperfmon4.sql '$(DESTDIR)$(libdir)a/gpperfmon/gpperfmon4.sql'
+	$(INSTALL_DATA) gpperfmon41.sql '$(DESTDIR)$(libdir)a/gpperfmon/gpperfmon41.sql'
+	$(INSTALL_DATA) gpperfmon42.sql '$(DESTDIR)$(libdir)a/gpperfmon/gpperfmon42.sql'
+	$(INSTALL_DATA) gpperfmonC.sql '$(DESTDIR)$(libdir)a/gpperfmon/gpperfmonC.sql'
+
+installdirs:
+	$(MKDIR_P) '$(DESTDIR)$(bindir)'
+	$(MKDIR_P) '$(DESTDIR)$(libdir)/gpperfmon'
+
+uninstall:
+	rm -f '$(DESTDIR)$(bindir)/gpmmon$(X)'
+	rm -f '$(DESTDIR)$(bindir)/gpsmon$(X)'
+	rm -f '$(DESTDIR)$(bindir)/gpperfmon'
+	rm -f '$(DESTDIR)$(bindir)/gpperfmon.py'
+
+clean distclean maintainer-clean:
+	rm -f $(GPSMON_OBJS) $(GPMMON_OBJS) gpsmon$(X) gpmmon$(X) snmptest.o snmptest$(X)
