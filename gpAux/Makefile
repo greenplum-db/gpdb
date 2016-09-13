@@ -35,7 +35,7 @@ all : devel
 .PHONY : autoconf
 
 # Internal functions which are invoked by other rules within this makefile
-.PHONY : groupSession mkgpfdist mkgpperfmon copydocs mgmtcopy copylibs copyoptimizerlibs
+.PHONY : groupSession mkgpfdist copydocs mgmtcopy copylibs copyoptimizerlibs
 .PHONY : greenplum_path RECONFIG HOMEDEP GPROOTDEP GPROOTDEP GPROOTFAIL
 .PHONY : gccVersionCheck clients loaders connectivity gppkg
 
@@ -372,7 +372,6 @@ define BUILD_STEPS
 	#@$(MAKE) mgmtcopy INSTLOC=$(INSTLOC)
 	@$(MAKE) mkpgbouncer INSTLOC=$(INSTLOC) BUILDDIR=$(BUILDDIR)
 	@$(MAKE) mkpgbench INSTLOC=$(INSTLOC) BUILDDIR=$(BUILDDIR)
-	@$(MAKE) mkgpperfmon INSTLOC=$(INSTLOC) BUILDDIR=$(BUILDDIR)
 	@$(MAKE) mkplatform INSTLOC=$(INSTLOC)
 	if [ "$(findstring $(BLD_ARCH),$(SERVER_PLATFORMS))" != "" ]; then \
 	  $(MAKE) mkgphdfs INSTLOC=$(INSTLOC) && \
@@ -1048,19 +1047,6 @@ else
 	@cd extensions/pgbouncer/source && ./configure --with-libevent=$(BLD_TOP)/ext/$(BLD_ARCH) --prefix=$(INSTLOC) --enable-evdns
 	$(MAKE) -C extensions/pgbouncer/source install
 endif
-
-mkgpperfmon:
-	@cd $(GPPERFMON) && $(MAKE) BUILDDIR=$(BUILDDIR)
-	cp -p gpperfmon/src/gpmon/gpmmon gpperfmon/src/gpmon/gpsmon $(INSTLOC)/bin
-	cp -p gpperfmon/src/gpmon/gpperfmoncat.sh $(INSTLOC)/bin
-	cp -p gpperfmon/src/gpmon/gpmon_catqrynow.py $(INSTLOC)/sbin
-	cp -p gpperfmon/src/gpmon/gpperfmon_install $(INSTLOC)/bin
-	mkdir -p $(INSTLOC)/lib/gpperfmon
-	cp -p gpperfmon/src/gpmon/gpperfmon3.sql $(INSTLOC)/lib/gpperfmon
-	cp -p gpperfmon/src/gpmon/gpperfmon4.sql $(INSTLOC)/lib/gpperfmon
-	cp -p gpperfmon/src/gpmon/gpperfmon41.sql $(INSTLOC)/lib/gpperfmon
-	cp -p gpperfmon/src/gpmon/gpperfmon42.sql $(INSTLOC)/lib/gpperfmon
-	cp -p gpperfmon/src/gpmon/gpperfmonC.sql $(INSTLOC)/lib/gpperfmon
 
 mkplatform:
 	@cd $(PLATFORM) && $(MAKE)
