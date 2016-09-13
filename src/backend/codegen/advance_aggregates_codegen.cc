@@ -157,15 +157,15 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
 
   // BasicBlock of function entry.
   llvm::BasicBlock* entry_block = codegen_utils->CreateBasicBlock(
-      "entry block", advance_aggregates_func);
+      "entry_block", advance_aggregates_func);
   llvm::BasicBlock* implementation_block = codegen_utils->CreateBasicBlock(
-      "implementation block", advance_aggregates_func);
+      "implementation_block", advance_aggregates_func);
   llvm::BasicBlock* error_aggstate_block = codegen_utils->CreateBasicBlock(
-      "error aggstate block", advance_aggregates_func);
+      "error_aggstate_block", advance_aggregates_func);
   llvm::BasicBlock* overflow_block = codegen_utils->CreateBasicBlock(
-      "overflow block", advance_aggregates_func);
+      "overflow_block", advance_aggregates_func);
   llvm::BasicBlock* null_attribute_block = codegen_utils->CreateBasicBlock(
-      "null attribute block", advance_aggregates_func);
+      "null_attribute_block", advance_aggregates_func);
 
   // External functions
   llvm::Function* llvm_ExecTargetList =
