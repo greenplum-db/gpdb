@@ -1193,6 +1193,12 @@ Feature: Validate command line arguments
         Then gpcrondump should return a return code of 0
         Then verify that there is no table "public.gpcrondump_history" in "bkdb"
 
+    Scenario: Verify the gpcrondump -H and -h option can not be specified together with DDBoost
+        Given the test is initialized
+        When the user runs "gpcrondump -a -x bkdb -H -h --ddboost"
+        Then gpcrondump should return a return code of 2
+        And gpcrondump should print -H option cannot be selected with -h option to stdout
+
     @backupfire
     Scenario: Verify gpdbrestore -s option works with full backup
         Given the test is initialized

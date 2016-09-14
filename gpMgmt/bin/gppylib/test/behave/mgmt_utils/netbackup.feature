@@ -373,6 +373,23 @@ Feature: NetBackup Integration with GPDB
         And verify that the table "gpcrondump_history" in "bkdb" has dump info for the stored timestamp
 
     @nbupartI
+    Scenario: Verify the gpcrondump -H option should not create history table
+        Given the test is initialized
+        And the netbackup params have been parsed
+        And there is a "ao" table "public.ao_table" in "bkdb" with data
+        When the user runs "gpcrondump -a -x bkdb -H" using netbackup
+        Then gpcrondump should return a return code of 0
+        Then verify that there is no table "public.gpcrondump_history" in "bkdb"
+
+    @nbupartI
+    Scenario: Verify the gpcrondump -H and -h option can not be specified together
+        Given the test is initialized
+        And the netbackup params have been parsed
+        When the user runs "gpcrondump -a -x bkdb -H -h" using netbackup
+        Then gpcrondump should return a return code of 2
+        And gpcrondump should print -H option cannot be selected with -h option to stdout
+
+    @nbupartI
     Scenario: gpdbrestore -u option with full backup timestamp
         Given the test is initialized
         And the netbackup params have been parsed

@@ -52,10 +52,11 @@ class GpCronDump(Operation):
         if args:
             logger.warn("please note that some of the arguments (%s) aren't valid and will be ignored.", args)
 
+        sys_args = sys.argv[1:]
         self.context = Context(options)
-        self.options_list = " ".join(sys.argv[1:])
+        self.options_list = " ".join(sys_args)
 
-        if "-h" in self.options_list and "-H" in self.options_list:
+        if "-h" in sys_args and "-H" in sys_args:
             raise Exception("-H option cannot be selected with -h option. ")
 
         self.interactive = options.interactive
