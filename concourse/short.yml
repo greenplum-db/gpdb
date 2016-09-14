@@ -1,0 +1,44 @@
+resource_types:
+- name: pull-request
+  type: docker-image
+  source:
+    repository: xinzweb/pr
+resources:
+- name: repo
+  type: pull-request
+  source:
+    repo: greenplum-db/gpdb
+    access_token: {{gpdb_access_token}}
+    private_key: {{gpdb_deploy_key}}
+jobs:
+- name: test pull request
+  plan:
+  - get: repo
+    version: every
+    trigger: true
+  - put: repo
+    params:
+      path: repo
+      status: pending
+  - task: do something with git
+    config:
+      platform: linux
+      image: docker:///concourse/git-resource
+      run:
+        path: sh
+        args:
+        - -c
+        - cd repo && git --no-pager show
+      inputs:
+      - name: repo
+        path: ""
+    on_success:
+      put: repo
+      params:
+        path: repo
+        status: success
+    on_failure:
+      put: repo
+      params:
+        path: repo
+        status: failure

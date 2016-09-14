@@ -1,10 +1,19 @@
+resource_types:
+- name: pull-request
+  type: docker-image
+  source:
+    repository: xinzweb/pr
+
 resources:
   - name: gpdb_src
-    type: git
+    type: pull-request
     source:
-      uri: https://github.com/greenplum-db/gpdb
-      branch: master
-
+      repo: greenplum-db/gpdb
+      access_token: {{gpdb_access_token}}
+      private_key: {{gpdb_deploy_key}}
+      git-config:
+      - name: fetch.recurseSubmodules
+        value: false
   - name: gpos_github_release
     type: github-release
     source:
@@ -70,19 +79,43 @@ jobs:
               - bin_orca_centos5_release.tar.gz
         - get: bin_xerces
         - get: gpdb_src
-          params:
-            submodules: none
+          version: every
           trigger: true
+        - put: gpdb_src
+          params:
+            path: gpdb_src
+            status: pending
       - task: build_with_orca
         file: gpdb_src/concourse/build_with_orca.yml
         input_mapping:
           bin_orca: orca_github_release
           bin_gpos: gpos_github_release
+        on_success:
+          put: gpdb_src
+          params:
+            path: gpdb_src
+            status: pending
+        on_failure:
+          put: gpdb_src
+          params:
+            path: gpdb_src
+            status: failure
       - task: package_tarball
         file: gpdb_src/concourse/package_tarball.yml
+        on_success:
+          put: gpdb_src
+          params:
+            path: gpdb_src
+            status: pending
+        on_failure:
+          put: gpdb_src
+          params:
+            path: gpdb_src
+            status: failure
       - put: bin_gpdb
         params:
           file: package_tarball/bin_gpdb.tar.gz
+
 
   - name: icg
     plan:
@@ -111,12 +144,21 @@ jobs:
             - build_with_orca
           params:
             submodules: none
+        - put: gpdb_src
+          params:
+            path: gpdb_src
+            status: pending
       - task: icg
         file: gpdb_src/concourse/test_with_orca.yml
         input_mapping:
           bin_orca: orca_github_release
           bin_gpos: gpos_github_release
         timeout: 2h30m
+        on_success:
+          put: gpdb_src
+          params:
+            path: gpdb_src
+            status: success
         on_failure:
           aggregate:
           - put: regression_diffs
@@ -125,3 +167,7 @@ jobs:
           - put: regression_out
             params:
               from: icg_output/regression.out
+          - put: gpdb_src
+            params:
+              path: gpdb_src
+              status: failure
