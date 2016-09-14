@@ -1,0 +1,19 @@
+platform: linux
+image_resource:
+  type: docker-image
+inputs:
+  - name: gpdb_src
+outputs:
+  - name: gpdb_artifacts
+  - name: sync_tools_gpdb
+run:
+  path: gpdb_src/ci/concourse/scripts/compile_gpdb.bash
+params:
+  TARGET_OS:
+  TARGET_OS_VERSION:
+  BLD_TARGETS:
+  OUTPUT_ARTIFACT_DIR: gpdb_artifacts
+  IVYREPO_HOST:
+  IVYREPO_REALM:
+  IVYREPO_USER:
+  IVYREPO_PASSWD:

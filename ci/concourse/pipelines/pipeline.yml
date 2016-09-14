@@ -1,0 +1,84 @@
+## ======================================================================
+## groups
+## ======================================================================
+
+groups:
+- name: all
+  jobs:
+  - compile_gpdb_centos6
+- name: CentOS/RHEL
+  jobs:
+  - compile_gpdb_centos6
+
+## ======================================================================
+## resources
+## ======================================================================
+
+resources:
+- name: gpdb_src
+  type: git
+  source:
+    branch: {{gpdb-git-branch}}
+    private_key: {{gpdb-git-key}}
+    uri: {{gpdb-git-remote}}
+
+
+- name: centos67-java7-gpdb-dev-image
+  type: docker-image
+  source:
+    repository: pivotaldata/centos67-java7-gpdb-dev-image
+    username: {{docker_username}}
+    password: {{docker_password}}
+
+- name: bin_gpdb_centos
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: bin_gpdb_centos/bin_gpdb.tar.gz
+
+- name: sync_tools_gpdb_centos
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: sync_tools_gpdb_centos/sync_tools_gpdb.tar.gz
+
+
+## ======================================================================
+## jobs
+## ======================================================================
+
+# Stage 1: Build and C Unit Tests
+
+jobs:
+
+- name: compile_gpdb_centos6
+  public: true
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      trigger: true
+    - get: centos67-java7-gpdb-dev-image
+  - task: compile_gpdb
+    file: gpdb_src/ci/concourse/compile_gpdb.yml
+    image: centos67-java7-gpdb-dev-image
+    params:
+      IVYREPO_HOST: {{ivyrepo_host}}
+      IVYREPO_REALM: {{ivyrepo_realm}}
+      IVYREPO_USER: {{ivyrepo_user}}
+      IVYREPO_PASSWD: {{ivyrepo_passwd}}
+      TARGET_OS: centos
+      TARGET_OS_VERSION: 6
+      BLD_TARGETS: ""
+  - aggregate:
+    - put: bin_gpdb_centos
+      params:
+        file: gpdb_artifacts/bin_gpdb.tar.gz
+    - put: sync_tools_gpdb_centos
+      params:
+        file: sync_tools_gpdb/sync_tools_gpdb.tar.gz
