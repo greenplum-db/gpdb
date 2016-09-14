@@ -313,7 +313,7 @@ class CodegenUtils {
      *        with overflow instruction
      *
      * @tparam CppType  CppType for add
-     * @param arg   Input variable
+     * @param arg       Input variable
      *
      * @return LLVM Value as a pair of results and overflow flag.
      **/

@@ -53,7 +53,6 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
   auto irb = codegen_utils->ir_builder();
   AggStatePerAgg peraggstate = &aggstate_->peragg[aggno];
 
-
   // External functions
   llvm::Function* llvm_MemoryContextSwitchTo =
       codegen_utils->GetOrRegisterExternalFunction(MemoryContextSwitchTo,
@@ -104,7 +103,6 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
          peraggstate->transfn.fn_oid);
     return false;
   }
-
 
   llvm::Value *newVal = nullptr;
   bool isGenerated = pg_func_gen->GenerateCode(codegen_utils,
@@ -225,13 +223,15 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
     }
 
     assert(peraggstate->evalproj);
-    // TODO: why -1 ??
+    // Number of attributes to be retrieved. This is one less than
+    // number of arguments of the transition function, since the transition
+    // value is passed as the first argument to the transition function.
     int nargs = peraggstate->transfn.fn_nargs - 1;
+    assert(nargs >= 0);
 
     // Since we do not support ordered functions, we do not need to store
     // the value of the variables, which are used as input to the aggregate
-    // function, in a slot. Instead we simply store them in a stuck variable.
-    // TODO why -1 ??
+    // function, in a slot.
     llvm::Value* llvm_in_args_ptr = irb->CreateAlloca(
         codegen_utils->GetType<Datum>(),
         codegen_utils->GetConstant(nargs));
@@ -243,7 +243,10 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
         CreateBasicBlock("advance_transition_function_block_aggno_"
             + std::to_string(aggno), advance_aggregates_func);
 
-    // TODO add comment: this is different from advance_aggregates
+    // Although the (nargs > 0) check does not exist in the regular
+    // advance_aggregates, the calls to ExecVariableList and
+    // ExecTargetList becomes a no-op when it is true.
+    // So we can avoid the call all together.
     if (nargs > 0) {
       if (peraggstate->evalproj->pi_isVarList) {
         irb->CreateCall(llvm_ExecVariableList, {
@@ -260,22 +263,36 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
             codegen_utils->GetConstant<ExprDoneCond *>(nullptr)});
       }
 
-      // Error out if attribute is NULL.
+      // Error out if there is a NULL attribute.
       // TODO(nikos): Support null attributes.
-      // FIXME: This really should be a GEP
-      irb->CreateCondBr(irb->CreateLoad(llvm_in_isnulls_ptr),
-                        null_attribute_block /*true*/,
-                        advance_transition_function_block /*false*/);
-    } else {
-      irb->CreateBr(advance_transition_function_block);
+      llvm::BasicBlock* null_check_block_0 = codegen_utils->CreateBasicBlock(
+          "null_check_arg0", advance_aggregates_func);
+      irb->CreateBr(null_check_block_0);
+      irb->SetInsertPoint(null_check_block_0);
+
+      for (int i=0; i < nargs; ++i) {
+        llvm::BasicBlock* next_block = codegen_utils->CreateBasicBlock(
+            "null_check_arg" + std::to_string(i+1), advance_aggregates_func);
+        llvm::Value* llvm_in_isnull_ptr = irb->CreateInBoundsGEP(
+            codegen_utils->GetType<bool>(),
+            llvm_in_isnulls_ptr,
+            codegen_utils->GetConstant(i));
+        irb->CreateCondBr(irb->CreateLoad(llvm_in_isnull_ptr),
+                          null_attribute_block /*true*/,
+                          next_block /*false*/);
+        irb->SetInsertPoint(next_block);
+      }
     }
+
+    irb->CreateBr(advance_transition_function_block);
 
     // advance_transition_function block
     // ----------
     // We generate code for advance_transition_function.
     irb->SetInsertPoint(advance_transition_function_block);
 
-    // TODO : extra space for transition function
+    // Collect input arguments and the transition value in a vector.
+    // The transition value is stored at the first position.
     std::vector<llvm::Value*> llvm_in_args(nargs+1);
     for (int i=0; i < nargs; ++i) {
       llvm_in_args[i+1] = irb->CreateLoad(

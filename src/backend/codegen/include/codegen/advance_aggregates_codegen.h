@@ -15,7 +15,6 @@
 
 #include "codegen/base_codegen.h"
 #include "codegen/codegen_wrapper.h"
-
 #include "codegen/pg_func_generator_interface.h"
 
 namespace gpcodegen {
