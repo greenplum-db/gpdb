@@ -16,6 +16,8 @@
 #include "codegen/base_codegen.h"
 #include "codegen/codegen_wrapper.h"
 
+#include "codegen/pg_func_generator_interface.h"
+
 namespace gpcodegen {
 
 /** \addtogroup gpcodegen
@@ -93,9 +95,7 @@ class AdvanceAggregatesCodegen: public BaseCodegen<AdvanceAggregatesFn> {
       gpcodegen::GpCodegenUtils* codegen_utils,
       llvm::Value* llvm_pergroup_arg,
       int aggno,
-      llvm::Function* advance_aggregates_func,
-      llvm::BasicBlock* error_block,
-      llvm::Value *llvm_arg);
+      gpcodegen::PGFuncGeneratorInfo& pg_func_info);
 };
 
 /** @} */

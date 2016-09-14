@@ -318,7 +318,7 @@ class CodegenUtils {
      * @return LLVM Value as a pair of results and overflow flag.
      **/
   template <typename CppType>
-  llvm::Value* CreateIncOverflow(llvm::Value* arg0, llvm::Value* arg1);
+  llvm::Value* CreateIncOverflow(llvm::Value* arg);
 
   /**
    * @brief Use LLVM intrinsic to create Subtract with overflow
@@ -1423,10 +1423,9 @@ llvm::Value* CodegenUtils::CreateAddOverflow(llvm::Value* arg0,
 }
 
 template <typename CppType>
-llvm::Value* CodegenUtils::CreateIncOverflow(llvm::Value* arg0,
-                                             llvm::Value* arg1) {
+llvm::Value* CodegenUtils::CreateIncOverflow(llvm::Value* arg) {
   return codegen_utils_detail::ArithOpMaker<CppType>::
-      CreateAddOverflow(this, arg0, GetConstant<CppType>(1));
+      CreateAddOverflow(this, arg, GetConstant<CppType>(1));
 }
 
 template <typename CppType>
