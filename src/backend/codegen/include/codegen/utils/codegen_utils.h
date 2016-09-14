@@ -1486,6 +1486,7 @@ class CastMaker<
     assert(nullptr != value);
     assert(nullptr != value->getType());
     assert(value->getType()->isIntegerTy());
+    assert(nullptr != llvm_dest_type);
     assert(llvm_dest_type->isIntegerTy());
   }
 };
@@ -1515,6 +1516,7 @@ class CastMaker<
     assert(nullptr != value);
     assert(nullptr != value->getType());
     assert(value->getType()->isIntegerTy());
+    assert(nullptr != llvm_dest_type);
     assert(llvm_dest_type->isIntegerTy());
   }
 };
@@ -1543,6 +1545,7 @@ class CastMaker<
       assert(nullptr != value->getType());
       assert(value->getType()->isFloatTy() ||
              value->getType()->isDoubleTy());
+      assert(nullptr != llvm_dest_type);
       assert(llvm_dest_type->isFloatTy());
     }
 };
@@ -1571,6 +1574,7 @@ class CastMaker<
     assert(nullptr != value->getType());
     assert(value->getType()->isFloatTy() ||
            value->getType()->isDoubleTy());
+    assert(nullptr != llvm_dest_type);
     assert(llvm_dest_type->isDoubleTy());
   }
 };
