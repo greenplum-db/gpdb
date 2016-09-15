@@ -115,6 +115,16 @@ jobs:
       params:
         file: sync_tools_gpdb/sync_tools_gpdb.tar.gz
 
+- name: compile_gpdb_custom_config_centos6
+  public: true
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      trigger: true
+    - get: centos67-java7-gpdb-dev-image
+  - task: compile_gpdb
+    file: gpdb_src/ci/concourse/compile_gpdb_custom_config.yml
+    image: centos67-java7-gpdb-dev-image
 
 # Stage 2: Packaging
 
