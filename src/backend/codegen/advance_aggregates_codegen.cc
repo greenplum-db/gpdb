@@ -90,8 +90,8 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
     return false;
   }
 
-  assert(nullptr != peraggstate->aggref &&
-         pg_func_info.llvm_args.size() == 1 +
+  assert(nullptr != peraggstate->aggref);
+  assert(pg_func_info.llvm_args.size() == 1 +
              list_length(peraggstate->aggref->args));
   pg_func_info.llvm_args[0] = irb->CreateLoad(llvm_pergroupstate_transValue_ptr);
 
