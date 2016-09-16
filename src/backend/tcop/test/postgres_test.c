@@ -3,7 +3,41 @@
 #include <setjmp.h>
 #include "cmockery.h"
 
+#include "postgres.h"
+
+/*
+ * Mock PG_RE_THROW, because we are not using real elog.o.
+ * The closest mockery is to call siglongjmp().
+ */
+#define PG_RE_THROW() siglongjmp(*PG_exception_stack, 1)
+
+#define errfinish errfinish_impl
+int errfinish_impl(int dummy __attribute__((unused)),...)
+{
+	PG_RE_THROW();
+	return 0;
+}
+
 #include "../postgres.c"
+
+#define EXPECT_EREPORT(LOG_LEVEL)     \
+	expect_any(errmsg, fmt); \
+	will_be_called(errmsg); \
+	expect_any(errcode, sqlerrcode); \
+	will_be_called(errcode); \
+	expect_value(errstart, elevel, (LOG_LEVEL)); \
+	expect_any(errstart, filename); \
+	expect_any(errstart, lineno); \
+	expect_any(errstart, funcname); \
+	expect_any(errstart, domain); \
+	if (LOG_LEVEL < ERROR) \
+	{ \
+		will_return(errstart, false); \
+	} \
+    else \
+    { \
+		will_return(errstart, true);\
+    } \
 
 const char *progname = "postgres";
 
@@ -59,14 +93,6 @@ test__IsTransactionExitStmt__IsQuery(void **state)
 void
 test__ProcessInterrupts__ClientConnectionLost(void **state)
 {
-	/* Mocking errstart -- expect an ereport(FATAL) to be called */
-	expect_value(errstart, elevel, FATAL);
-	expect_any(errstart, filename);
-	expect_any(errstart, lineno);
-	expect_any(errstart, funcname);
-	expect_any(errstart, domain);
-	will_return(errstart, false);
-
 	will_be_called(DisableNotifyInterrupt);
 	will_be_called(DisableCatchupInterrupt);
 
@@ -80,8 +106,18 @@ test__ProcessInterrupts__ClientConnectionLost(void **state)
 	ClientConnectionLost = 1;
 	whereToSendOutput = DestDebug;
 
-	/* Run function under test */
-	ProcessInterrupts();
+	EXPECT_EREPORT(FATAL);
+
+	PG_TRY();
+	{
+		/* Run function under test */
+		ProcessInterrupts();
+		assert_true(false);
+	}
+	PG_CATCH();
+	{
+	}
+	PG_END_TRY();
 
 	assert_true(whereToSendOutput == DestNone);
 	assert_false(QueryCancelPending);
@@ -135,18 +171,21 @@ test__ProcessInterrupts__DoingCommandRead(void **state)
 	expect_any(elog_finish, fmt);
 	will_be_called(elog_finish);
 
-	/* Mock up errstart */
-	expect_value(errstart, elevel, ERROR);
-	expect_any(errstart, filename);
-	expect_any(errstart, lineno);
-	expect_any(errstart, funcname);
-	expect_any(errstart, domain);
-	will_return(errstart, false);
-
 	will_be_called(DisableNotifyInterrupt);
 	will_be_called(DisableCatchupInterrupt);
 
-	ProcessInterrupts();
+	EXPECT_EREPORT(ERROR);
+
+	PG_TRY();
+	{
+		/* Run function under test */
+		ProcessInterrupts();
+		assert_true(false);
+	}
+	PG_CATCH();
+	{
+	}
+	PG_END_TRY();
 
 	assert_false(QueryCancelPending);
 	assert_false(ImmediateInterruptOK);
