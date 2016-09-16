@@ -4,7 +4,7 @@
  *
  * Copyright (c) 2005-2009, Greenplum inc
  *
- * $Id: //cdb2/private/cpedrotti/main/cdb-pg/src/include/postmaster/permfon.h#1 $
+ * src/include/postmaster/perfmon.h
  *
  *-------------------------------------------------------------------------
  */

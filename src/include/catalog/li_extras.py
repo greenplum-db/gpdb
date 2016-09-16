@@ -348,7 +348,7 @@ COMMENT ON FUNCTION @gpupgradeschemaname@.linear_interpolate(
         ) 
     IS '{desc}';""" 
     
-    result = ['-- for cdb-pg/src/test/regress/data/upgradeXX/upg2_catupgrade_XXX.sql.in', '']
+    result = ['-- for src/test/regress/data/upgradeXX/upg2_catupgrade_XXX.sql.in', '']
     
     upg_1 = ' '.join([x.strip() for x in upgrade_1.split('\n')])
     upg_2 = ' '.join([x.strip() for x in upgrade_2.split('\n')])

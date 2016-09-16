@@ -11,7 +11,7 @@ established a basic trust in the small units themselves, c) it serves as
 documentation about the expected behavior, d) enables easier code reuse because 
 code is already tested via two different code paths [Wikipedia].
 
-The unit test code is stored in cdb-pg/src/test/unit. The directory contains the 
+The unit test code is stored in src/test/unit. The directory contains the
 modified cmockery library, all mock source files currently in use (mock) and a 
 directory test, which contains all test code.
 

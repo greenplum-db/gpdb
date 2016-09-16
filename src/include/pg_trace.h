@@ -46,7 +46,7 @@
 enum 
 {
 	/* Postgres dtrace family, 1 to 999,999 */
-	/* See cdb-pg/src/backend/utils/probes.d */
+	/* See src/backend/utils/probes.d */
 	transaction__start  = 1, 
 	transaction__commit,
 	transaction__abort,

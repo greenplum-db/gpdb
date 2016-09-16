@@ -7,16 +7,16 @@ that will expose the backend function, fn_be() as a built_in function,
 the following steps are needed.
 
 1. Get an unused OID by running the script unused_oids located in
-   cdb-pg/src/include/catalog/unused_oids. Claim an unused OID. For eg, for our
+   src/include/catalog/unused_oids. Claim an unused OID. For eg, for our
    example we are claiming 5075.
 
-2. Add the new function definition in cdb-pg/src/include/catalog/pg_proc.sql.
+2. Add the new function definition in src/include/catalog/pg_proc.sql.
    An example function definition: 
    	CREATE FUNCTION fn_sql(int4, int4) RETURNS bool LANGUAGE 
   		internal VOLATILE NO SQL AS 'fn_be' 
 		WITH (OID=5075, DESCRIPTION="Description of the function");
 
-3. Run the following command in cdb-pg/src/include/catalog:
+3. Run the following command in src/include/catalog:
 
    $ perl catullus.pl -procdef pg_proc.sql -prochdr pg_proc_gp.h
 
@@ -24,10 +24,10 @@ the following steps are needed.
   DATA statement for the fn_sql function definition.
 
   For more information on catullus.pl, please refer to 
-  cdb-pg/src/include/catalog/README.modifying_catalogs.
+  src/include/catalog/README.modifying_catalogs.
 
 4. Since the catalogs are being modified, the catalog number in
-   cdb-pg/src/include/catalog/catversion.h should be bumped up. This is to 
+   src/include/catalog/catversion.h should be bumped up. This is to
    indicate an initdb is required so the version number in the backend matches
    the version number on disk.
  

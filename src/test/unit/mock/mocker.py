@@ -121,7 +121,7 @@ class MockFile(object):
         self.outname = self.output_filename()
 
     def output_filename(self):
-        """outname is cdb-pg/src/test/unit/mock/backend/{path}/{stem}_mock.c
+        """outname is src/test/unit/mock/backend/{path}/{stem}_mock.c
         """
         src_dir = self.options.src_dir
         relpath = os.path.relpath(self.cfile.path, src_dir)

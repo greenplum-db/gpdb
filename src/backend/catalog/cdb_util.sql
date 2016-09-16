@@ -1,15 +1,8 @@
 -- --------------------------------------------------------------------
 --
--- cdb_schema.sql
+-- cdb_util.sql
 --
--- Define mpp administrative schema and several SQL functions to aid 
--- in maintaining the mpp administrative schema.  
---
--- This is version 2 of the schema.
---
--- TODO Error checking is rudimentary and needs improvment.
---
--- $Id: //cdb2/main/cdb-pg/src/backend/catalog/cdb_schema.in#31 $
+-- src/backend/catalog/cdb_util.sql
 --
 -- --------------------------------------------------------------------
 

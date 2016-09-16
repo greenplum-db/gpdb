@@ -1,12 +1,12 @@
 /*-------------------------------------------------------------------------
  *
  * url.h
- * routines for external table access to urls.
- * to the qExec processes.
+ *    routines for external table access to urls.
+ *    to the qExec processes.
  *
  * Copyright (c) 2005-2008, Greenplum inc
  *
- * $Id: //cdb2/main/cdb-pg/src/include/cdb/cdbdisp.h#78 $
+ * src/include/access/url.h
  *
  *-------------------------------------------------------------------------
  */

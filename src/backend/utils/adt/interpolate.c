@@ -257,8 +257,8 @@ linterp_abscissa(PG_FUNCTION_ARGS, bool *p_eq_bounds, bool *p_eq_abscissas)
 		PG_RETURN_T(result);
 	}
  *
- * The Python script cdb-pg/src/include/catalog/li_extras.py generates
- * declarations appropriate for cdb-pg/src/include/catalog/pg_proc.sql 
+ * The Python script src/include/catalog/li_extras.py generates
+ * declarations appropriate for src/include/catalog/pg_proc.sql
  * and the upgrade script upg2_catupgrade_XXX.sql as well as human-
  * readable and terse regression tests for make installcheck.
  */
