@@ -38,5 +38,9 @@ ifeq ($(enable_gpfdist), yes)
 DIRS+=gpfdist
 endif
 
+ifeq ($(enable_gpperfmon), yes)
+DIRS+=gpperfmon
+endif
+
 all install installdirs uninstall distprep clean distclean maintainer-clean:
 	@for dir in $(DIRS); do $(MAKE) -C $$dir $@ || exit; done

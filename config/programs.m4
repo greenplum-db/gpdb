@@ -257,10 +257,10 @@ fi
 ]) # GPAC_PATH_CMAKE
 
 
-# GPAC_PATH_APR_1_CONFIG
+# GPAC_PATH_APX_1_CONFIG
 # ----------------------
-# Check for apr-1-config, used by gpfdist
-AC_DEFUN([GPAC_PATH_APR_1_CONFIG],
+# Check for apr-1-config and apu-1-config, used by gpfdist and gpperfmon
+AC_DEFUN([GPAC_PATH_APX_1_CONFIG],
 [
 if test x"$with_apr_config" != x; then
   APR_1_CONFIG=$with_apr_config
@@ -268,22 +268,35 @@ fi
 if test -z "$APR_1_CONFIG"; then
   AC_PATH_PROGS(APR_1_CONFIG, apr-1-config)
 fi
+if test x"$with_apu_config" != x; then
+  APU_1_CONFIG=$with_apu_config
+fi
+if test -z "$APU_1_CONFIG"; then
+  AC_PATH_PROGS(APU_1_CONFIG, apu-1-config)
+fi
 
-if test -n "$APR_1_CONFIG"; then
+if test -n "$APR_1_CONFIG" && test -n "$APU_1_CONFIG"; then
   gpac_apr_1_config_version=`$APR_1_CONFIG --version 2>/dev/null | sed q`
   if test -z "$gpac_apr_1_config_version"; then
-    AC_MSG_ERROR([apr-1-config is required for gpfdist, unable to identify version])
+    AC_MSG_ERROR([apr-1-config is required for your requested configuration, unable to identify version])
   fi
   AC_MSG_NOTICE([using apr-1-config $gpac_apr_1_config_version])
+  gpac_apu_1_config_version=`$APU_1_CONFIG --version 2>/dev/null | sed q`
+  if test -z "$gpac_apu_1_config_version"; then
+    AC_MSG_ERROR([apu-1-config is required for your requested configuration, unable to identify version])
+  fi
+  AC_MSG_NOTICE([using apu-1-config $gpac_apu_1_config_version])
   apr_includes=`"$APR_1_CONFIG" --includes`
   apr_link_ld_libs=`"$APR_1_CONFIG" --link-ld --libs`
   apr_cflags=`"$APR_1_CONFIG" --cflags`
   apr_cppflags=`"$APR_1_CONFIG" --cppflags`
+  apu_link_ld_libs=`"$APU_1_CONFIG" --link-ld --libs`
   AC_SUBST(apr_includes)
   AC_SUBST(apr_link_ld_libs)
   AC_SUBST(apr_cflags)
   AC_SUBST(apr_cppflags)
+  AC_SUBST(apu_link_ld_libs)
 else
   AC_MSG_ERROR([apr-1-config is required for gpfdist, unable to find binary])
 fi
-]) # GPAC_PATH_APR_1_CONFIG
+]) # GPAC_PATH_APX_1_CONFIG

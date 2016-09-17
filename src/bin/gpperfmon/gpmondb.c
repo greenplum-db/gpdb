@@ -19,14 +19,29 @@
 
 #define GPDB_CONNECTION_STRING "dbname='" GPMON_DB "' user='" GPMON_DBUSER "' connect_timeout='30'"
 
-#ifdef USE_CONNECTEMC
-int find_token_in_config_string(char* buffer, char**result, const char* token);
-#else
-int find_token_in_config_string(char* buffer, char**result, const char* token)
+static int find_token_in_config_string(char* buffer, char**result, const char* token);
+
+static int find_token_in_config_string(char* buffer, char**result, const char* token)
 {
 	return 1;
 }
-#endif
+
+typedef apr_status_t eachtablefunc(const char* tbl, apr_pool_t*, PGconn*);
+typedef apr_status_t eachtablefuncwithopt(const char* tbl, apr_pool_t*, PGconn*, mmon_options_t*);
+
+/* Function prototypes */
+static apr_status_t call_for_each_table(eachtablefunc func, apr_pool_t* pool, PGconn* conn);
+static apr_status_t call_for_each_table_with_opt(eachtablefuncwithopt func, apr_pool_t* pool, PGconn* conn, mmon_options_t *opt);
+static void upgrade_log_alert_table_distributed_key(PGconn* conn);
+static apr_status_t truncate_tail_file(const char* tbl, apr_pool_t* pool, PGconn* conn);
+static apr_status_t empty_harvest_file(const char* tbl, apr_pool_t* pool, PGconn* conn);
+static int get_appliance_hosts_and_add_to_hosts(apr_pool_t* tmp_pool, apr_hash_t* htab);
+static int get_hadoop_hosts_and_add_to_hosts(apr_pool_t* tmp_pool, apr_hash_t* htab, mmon_options_t* opt);
+static void process_line_in_hadoop_cluster_info(apr_pool_t* tmp_pool, apr_hash_t* htab, char* line, char* smon_bin_location, char* smon_log_location);
+static void initializeHostInfoDataWithAddress(struct hostinfo_holder_t* holder, char* address, int firstAddress);
+static void initializeHostInfoDataFromFileEntry(apr_pool_t* tmp_pool, struct hostinfo_holder_t* holder, char* primary_hostname, char* hostEntry, int hostType, char* smon_bin_dir, char* smon_log_dir);
+static void process_line_in_devices_cnf(apr_pool_t* tmp_pool, apr_hash_t* htab, char* line);
+static apr_status_t truncate_file(char* fn, apr_pool_t* pool);
 
 // assumes a valid connection already exists
 static const char* gpdb_exec_only(PGconn* conn, PGresult** pres, const char* query)
@@ -76,7 +91,8 @@ static const char* gpdb_exec(PGconn** pconn, PGresult** pres, const char* query)
 // persistant_conn is optional if you are already holding an open connectionconn
 // return 1 if more than 0 rows are returned from query
 // return 0 if zero rows are returned from query
-int gpdb_exec_search_for_at_least_one_row(const char* QUERY, PGconn* persistant_conn)
+int
+gpdb_exec_search_for_at_least_one_row(const char* QUERY, PGconn* persistant_conn)
 {
 	PGconn* conn = 0;
 	PGresult* result = 0;
@@ -279,27 +295,8 @@ int gpdb_get_gpmon_port(void)
 }
 
 
-struct hostinfo_holder_t
-{
-	addressinfo_holder_t* addressinfo_head;
-	addressinfo_holder_t* addressinfo_tail;
-	apr_uint32_t address_count;
-
-	char* datadir;
-	char* smon_dir;
-	char* hostname;
-	int is_master;
-	int is_hdm;
-	int is_hdw;
-	int is_hbw;
-	int is_hdc;
-	int is_etl;
-};
-
-
-
-
-void initializeHostInfoDataWithAddress(struct hostinfo_holder_t* holder, char* address, int firstAddress)
+static void
+initializeHostInfoDataWithAddress(struct hostinfo_holder_t* holder, char* address, int firstAddress)
 {
 	// USE permenant memory to store this data
 
@@ -320,7 +317,8 @@ void initializeHostInfoDataWithAddress(struct hostinfo_holder_t* holder, char* a
 	}
 }
 
-void initializeHostInfoDataFromFileEntry(apr_pool_t* tmp_pool, struct hostinfo_holder_t* holder,
+static void
+initializeHostInfoDataFromFileEntry(apr_pool_t* tmp_pool, struct hostinfo_holder_t* holder,
 		char* primary_hostname, char* hostEntry, int hostType, char* smon_bin_dir, char* smon_log_dir)
 {
 	holder->hostname = apr_pstrdup(tmp_pool, primary_hostname);
@@ -381,8 +379,8 @@ void initializeHostInfoDataFromFileEntry(apr_pool_t* tmp_pool, struct hostinfo_h
 	}
 }
 
-
-void process_line_in_devices_cnf(apr_pool_t* tmp_pool, apr_hash_t* htab, char* line)
+static void
+process_line_in_devices_cnf(apr_pool_t* tmp_pool, apr_hash_t* htab, char* line)
 {
 	if (!line)
 	{
@@ -502,7 +500,8 @@ void process_line_in_devices_cnf(apr_pool_t* tmp_pool, apr_hash_t* htab, char* l
 }
 
 
-void process_line_in_hadoop_cluster_info(apr_pool_t* tmp_pool, apr_hash_t* htab, char* line, char* smon_bin_location, char* smon_log_location)
+static void
+process_line_in_hadoop_cluster_info(apr_pool_t* tmp_pool, apr_hash_t* htab, char* line, char* smon_bin_location, char* smon_log_location)
 {
 	if (!line)
 	{
@@ -596,7 +595,8 @@ void process_line_in_hadoop_cluster_info(apr_pool_t* tmp_pool, apr_hash_t* htab,
 }
 
 //Return 1 if not an appliance and 0 if an appliance
-int get_appliance_hosts_and_add_to_hosts(apr_pool_t* tmp_pool, apr_hash_t* htab)
+static int
+get_appliance_hosts_and_add_to_hosts(apr_pool_t* tmp_pool, apr_hash_t* htab)
 {
 	// open devices.cnf and then start reading the data
 	// populate all relevant hosts: Spidey0001, Spidey0002, EtlHost
@@ -630,7 +630,8 @@ int get_appliance_hosts_and_add_to_hosts(apr_pool_t* tmp_pool, apr_hash_t* htab)
 }
 
 //Return 1 if not a hadoop software only cluster and 0 it is a hadoop software only cluster
-int get_hadoop_hosts_and_add_to_hosts(apr_pool_t* tmp_pool, apr_hash_t* htab, mmon_options_t* opt)
+static int
+get_hadoop_hosts_and_add_to_hosts(apr_pool_t* tmp_pool, apr_hash_t* htab, mmon_options_t* opt)
 {
 	if (!opt->smon_hadoop_swonly_binfile)
 	{
@@ -1174,9 +1175,8 @@ apr_status_t gpdb_harvest_one(const char* table)
 	return harvest(table, NULL, NULL);
 }
 
-
-
-apr_status_t truncate_file(char* fn, apr_pool_t* pool)
+static apr_status_t
+truncate_file(char* fn, apr_pool_t* pool)
 {
 	apr_file_t *fp = NULL;
 	apr_status_t status;
@@ -1253,12 +1253,11 @@ static apr_status_t append_to_harvest(const char* tbl, apr_pool_t* pool, PGconn*
 	return status;
 }
 
-typedef apr_status_t eachtablefunc(const char* tbl, apr_pool_t*, PGconn*);
-typedef apr_status_t eachtablefuncwithopt(const char* tbl, apr_pool_t*, PGconn*, mmon_options_t*);
 
 char* all_tables[] = { "system", "queries", "iterators", "database", "segment", "filerep", "diskspace" };
 
-apr_status_t call_for_each_table(eachtablefunc func, apr_pool_t* pool, PGconn* conn)
+static apr_status_t
+call_for_each_table(eachtablefunc func, apr_pool_t* pool, PGconn* conn)
 {
 	apr_status_t status = APR_SUCCESS;
 	apr_status_t r;
@@ -1277,7 +1276,8 @@ apr_status_t call_for_each_table(eachtablefunc func, apr_pool_t* pool, PGconn* c
 	return status;
 }
 
-apr_status_t call_for_each_table_with_opt(eachtablefuncwithopt func, apr_pool_t* pool, PGconn* conn, mmon_options_t *opt)
+static apr_status_t
+call_for_each_table_with_opt(eachtablefuncwithopt func, apr_pool_t* pool, PGconn* conn, mmon_options_t *opt)
 {
 	apr_status_t status = APR_SUCCESS;
 	apr_status_t r;
@@ -1309,7 +1309,8 @@ apr_status_t gpdb_copy_stage_to_harvest_files(apr_pool_t* pool)
 }
 
 /* truncate _tail files */
-apr_status_t empty_harvest_file(const char* tbl, apr_pool_t* pool, PGconn* conn)
+static apr_status_t
+empty_harvest_file(const char* tbl, apr_pool_t* pool, PGconn* conn)
 {
 	char fn[PATH_MAX];
 	snprintf(fn, PATH_MAX, "%s_%s_tail.dat", GPMON_DIR, tbl);
@@ -1317,7 +1318,8 @@ apr_status_t empty_harvest_file(const char* tbl, apr_pool_t* pool, PGconn* conn)
 }
 
 /* truncate tail files */
-apr_status_t truncate_tail_file(const char* tbl, apr_pool_t* pool, PGconn* conn)
+static apr_status_t
+truncate_tail_file(const char* tbl, apr_pool_t* pool, PGconn* conn)
 {
 	char fn[PATH_MAX];
 	snprintf(fn, PATH_MAX, "%s%s_tail.dat", GPMON_DIR, tbl);
@@ -1843,7 +1845,8 @@ static void gpdb_change_alert_table_owner(PGconn *conn, const char *owner)
 /*
  * Upgrade: alter distributed key of log_alert_history from logsegment to logtime
  */
-void upgrade_log_alert_table_distributed_key(PGconn* conn)
+static void
+upgrade_log_alert_table_distributed_key(PGconn* conn)
 {
 	if (conn == NULL)
 	{

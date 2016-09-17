@@ -8,6 +8,7 @@
 #include "apr_strings.h"
 #include "gpmon/gpmon.h"
 #include "gpmon_agg.h"
+#include "gpmmon.h"
 #include "gpmondb.h"
 #include <stdio.h>
 #include <stdlib.h>

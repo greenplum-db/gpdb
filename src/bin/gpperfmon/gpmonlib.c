@@ -32,41 +32,6 @@ extern apr_thread_mutex_t *logfile_mutex;
 #define META_LEN 100
 #define READ_BUF_SIZE 100
 
-inline void gp_smon_to_mmon_set_header(gp_smon_to_mmon_packet_t* pkt, apr_int16_t pkttype)
-{
-	pkt->header.pkttype = pkttype;
-	pkt->header.magic = GPMON_MAGIC;
-	pkt->header.version = GPMON_PACKET_VERSION;
-	return;
-}
-
-/*Helper function to get the size of the union packet*/
-inline size_t get_size_by_pkttype_smon_to_mmon(apr_int16_t pkttype)
-{
-	switch (pkttype) {
-		case GPMON_PKTTYPE_HELLO:
-			return(sizeof(gpmon_hello_t));
-		case GPMON_PKTTYPE_METRICS:
-			return(sizeof(gpmon_metrics_t));
-		case GPMON_PKTTYPE_QLOG:
-			return(sizeof(gpmon_qlog_t));
-		case GPMON_PKTTYPE_QEXEC:
-			return(sizeof(qexec_packet_t));
-		case GPMON_PKTTYPE_SEGINFO:
-			return(sizeof(gpmon_seginfo_t));
-		case GPMON_PKTTYPE_FILEREP:
-			return(sizeof(gpmon_filerepinfo_t));
-		case GPMON_PKTTYPE_QUERY_HOST_METRICS:
-			return(sizeof(gpmon_qlog_t));
-		case GPMON_PKTTYPE_FSINFO:
-			return(sizeof(gpmon_fsinfo_t));
-		case GPMON_PKTTYPE_QUERYSEG:
-			return(sizeof(gpmon_query_seginfo_t));
-	}
-
-	return 0;
-}
-
 apr_status_t gpmon_ntohpkt(apr_int32_t magic, apr_int16_t version, apr_int16_t pkttype)
 {
 	static apr_int64_t last_err_sec = 0;
@@ -1040,7 +1005,8 @@ QenodeNamesDescriptor nodetype_string_lookup[PMNT_MAXIMUM_ENUM] =
 
 /* this is a debug function to validate the string lookup table datastructures
    it should be run one time only at startup */
-apr_status_t gpdb_debug_string_lookup_table()
+apr_status_t
+gpdb_debug_string_lookup_table(void)
 {
 	int i;
 	for (i = PMNT_Invalid + 1; i < PMNT_MAXIMUM_ENUM; ++i)
