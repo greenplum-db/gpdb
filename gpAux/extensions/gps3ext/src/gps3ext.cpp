@@ -46,7 +46,8 @@ bool S3QueryIsAbortInProgress(void) {
     // queryCancelFlag is set to TRUE for the first time when cancel signal is
     // detected. If cancel signal is already captured, value will not be
     // swapped and queryIsCancelledAlready is true.
-    bool queryIsCancelledAlready = !__sync_bool_compare_and_swap(&queryCancelFlag, false, queryIsBeingCancelled);
+    bool queryIsCancelledAlready =
+        !__sync_bool_compare_and_swap(&queryCancelFlag, false, queryIsBeingCancelled);
 
     return queryIsBeingCancelled || queryIsCancelledAlready;
 }

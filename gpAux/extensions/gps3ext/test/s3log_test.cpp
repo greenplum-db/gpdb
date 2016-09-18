@@ -35,3 +35,11 @@ TEST(Logger, getstr) {
     EXPECT_EQ(STDERR_LOG, getLogType(""));
     EXPECT_EQ(STDERR_LOG, getLogType(NULL));
 }
+
+TEST(Logger, getstrCaseInsensitive) {
+    EXPECT_EQ(EXT_DEBUG, getLogLevel("DeBug"));
+    EXPECT_EQ(EXT_ERROR, getLogLevel("error"));
+
+    EXPECT_EQ(INTERNAL_LOG, getLogType("Internal"));
+    EXPECT_EQ(REMOTE_LOG, getLogType("reMOTE"));
+}

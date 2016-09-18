@@ -18,7 +18,7 @@ struct ini_t {
 };
 
 /* Case insensitive string compare */
-static int strcmpci(const char *a, const char *b) {
+int strcmpci(const char *a, const char *b) {
   for (;;) {
     int d = tolower(*a) - tolower(*b);
     if (d != 0 || !*a) {

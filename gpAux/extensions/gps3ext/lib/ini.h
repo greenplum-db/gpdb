@@ -19,4 +19,6 @@ const char* ini_get(ini_t *ini, const char *section, const char *key);
 int         ini_sget(ini_t *ini, const char *section, const char *value,
                      const char *scanfmt, void *dst);
 
+int strcmpci(const char *a, const char *b);
+
 #endif

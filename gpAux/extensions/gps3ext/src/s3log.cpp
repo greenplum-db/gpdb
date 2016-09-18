@@ -68,16 +68,16 @@ void InitRemoteLog() {
 
 LOGTYPE getLogType(const char* v) {
     if (!v) return STDERR_LOG;
-    if (strcmp(v, "REMOTE") == 0) return REMOTE_LOG;
-    if (strcmp(v, "INTERNAL") == 0) return INTERNAL_LOG;
+    if (strcmpci(v, "REMOTE") == 0) return REMOTE_LOG;
+    if (strcmpci(v, "INTERNAL") == 0) return INTERNAL_LOG;
     return STDERR_LOG;
 }
 
 LOGLEVEL getLogLevel(const char* v) {
     if (!v) return EXT_FATAL;
-    if (strcmp(v, "DEBUG") == 0) return EXT_DEBUG;
-    if (strcmp(v, "WARNING") == 0) return EXT_WARNING;
-    if (strcmp(v, "INFO") == 0) return EXT_INFO;
-    if (strcmp(v, "ERROR") == 0) return EXT_ERROR;
+    if (strcmpci(v, "DEBUG") == 0) return EXT_DEBUG;
+    if (strcmpci(v, "WARNING") == 0) return EXT_WARNING;
+    if (strcmpci(v, "INFO") == 0) return EXT_INFO;
+    if (strcmpci(v, "ERROR") == 0) return EXT_ERROR;
     return EXT_FATAL;
 }
