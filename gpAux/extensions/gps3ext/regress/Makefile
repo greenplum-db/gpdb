@@ -1,5 +1,5 @@
-top_builddir ?= $(shell cd ../../../.. && pwd)
-include $(top_builddir)/src/Makefile.global
+top_builddir = $(shell cd ../../../.. && pwd)
+pgxs_dir = $(top_builddir)
 
 config_file := \/home\/gpadmin\/s3\.conf
 read_prefix := s3test\.pivotal\.io\/regress
@@ -14,7 +14,8 @@ installcheck:
 	@cp -rf output source_replaced/output
 	@perl -p -i -e 's/\@config_file\@/$(config_file)/;s/\@read_prefix\@/$(read_prefix)/;s/\@write_prefix\@/$(write_prefix)/' source_replaced/input/*.source
 	@perl -p -i -e 's/\@config_file\@/$(config_file)/;s/\@read_prefix\@/$(read_prefix)/;s/\@write_prefix\@/$(write_prefix)/' source_replaced/output/*.source
-	-$(top_builddir)/src/test/regress/pg_regress --psqldir=$$GPHOME/bin/ --schedule=s3_regress_schedule --init-file=$(top_builddir)/src/test/regress/init_file --srcdir=source_replaced --inputdir=source_replaced --outputdir=.
+	@perl -p -i -e 's/-- end_matchsubs/\nm\/\\(\.\*\\.cpp:\\d\+\\)\/\ns\/\\(\.\*\\.cpp:\\d\+\\)\/\/\n-- end_matchsubs/' $(top_builddir)/src/test/regress/init_file
+	-$(pgxs_dir)/src/test/regress/pg_regress --psqldir=$$GPHOME/bin/ --schedule=s3_regress_schedule --init-file=$(top_builddir)/src/test/regress/init_file --srcdir=source_replaced --inputdir=source_replaced --outputdir=.
 	@echo "Regression ends:" `date` ]
 
 clean:
