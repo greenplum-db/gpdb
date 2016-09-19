@@ -27,6 +27,7 @@
 #define ALLOW_MemoryContextFreeImpl
 #define ALLOW_CharGetDatum
 #define ALLOW_list_head
+#define ALLOW_abort
 
 #include "postgres.h"
 #include "utils/array.h"

@@ -13,6 +13,8 @@
 //
 //---------------------------------------------------------------------------
 
+#define ALLOW_abort
+
 #include "gpopt/CGPOptimizer.h"
 #include "gpopt/utils/COptTasks.h"
 

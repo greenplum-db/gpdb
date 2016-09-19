@@ -177,6 +177,7 @@
 #define ALLOW_has_subclass
 #define ALLOW_cdbhash_const
 #define ALLOW_cdbhash_const_list
+#define ALLOW_abort
 
 #define ALLOW_ExecCheckRTPerms
 #define ALLOW_evaluate_expr
