@@ -9,7 +9,6 @@ create or replace view locktest as
 select coalesce(
   case when relname like 'pg_toast%index' then 'toast index'
        when relname like 'pg_toast%' then 'toast table'
-       when relname like 'pg_aoseg%index' then 'aoseg index'
        when relname like 'pg_aoseg%' then 'aoseg table'
        else relname end, 'dropped table'),
   mode,
@@ -141,7 +140,6 @@ insert into g values(1), (2), (3);
 select * from locktest;
           coalesce          |        mode         |         locktype         |    node    
 ----------------------------+---------------------+--------------------------+------------
- aoseg index                | AccessShareLock     | relation                 | n segments
  aoseg table                | AccessShareLock     | relation                 | n segments
  aoseg table                | AccessShareLock     | relation                 | n segments
  aoseg table                | AccessShareLock     | relation                 | n segments
@@ -165,7 +163,7 @@ select * from locktest;
  pg_class_oid_index         | AccessShareLock     | relation                 | master
  pg_class_relname_nsp_index | AccessShareLock     | relation                 | master
  pg_locks                   | AccessShareLock     | relation                 | master
-(24 rows)
+(23 rows)
 
 commit;
 -- drop
@@ -185,8 +183,6 @@ select * from locktest;
  dropped table              | AccessExclusiveLock | relation | master
  dropped table              | AccessExclusiveLock | relation | master
  dropped table              | AccessExclusiveLock | relation | n segments
- dropped table              | AccessExclusiveLock | relation | master
- dropped table              | AccessExclusiveLock | relation | n segments
  dropped table              | AccessExclusiveLock | relation | n segments
  gp_distribution_policy     | RowExclusiveLock    | relation | n segments
  gp_distribution_policy     | RowExclusiveLock    | relation | master
@@ -202,7 +198,7 @@ select * from locktest;
  pg_partition               | RowExclusiveLock    | relation | master
  pg_partition_rule          | RowExclusiveLock    | relation | master
  pg_type                    | RowExclusiveLock    | relation | master
-(28 rows)
+(26 rows)
 
 commit;
 -- Indexing

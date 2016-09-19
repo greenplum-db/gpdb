@@ -677,7 +677,6 @@ _readTableOidInfo(void)
 	READ_OID_FIELD(toastIndexOid);
 	READ_OID_FIELD(toastComptypeOid);
 	READ_OID_FIELD(aosegOid);
-	READ_OID_FIELD(aosegIndexOid);
 	READ_OID_FIELD(aosegComptypeOid);
 	READ_OID_FIELD(aovisimapOid);
 	READ_OID_FIELD(aovisimapIndexOid);
@@ -947,7 +946,6 @@ _readAlterTableStmt(void)
 			READ_OID_FIELD(oidInfo[m].toastIndexOid);
 			READ_OID_FIELD(oidInfo[m].toastComptypeOid);
 			READ_OID_FIELD(oidInfo[m].aosegOid);
-			READ_OID_FIELD(oidInfo[m].aosegIndexOid);
 			READ_OID_FIELD(oidInfo[m].aosegComptypeOid);
 			READ_OID_FIELD(oidInfo[m].aovisimapOid);
 			READ_OID_FIELD(oidInfo[m].aovisimapIndexOid);
@@ -2185,7 +2183,6 @@ _readCreateStmt(void)
 	READ_OID_FIELD(oidInfo.toastIndexOid);
 	READ_OID_FIELD(oidInfo.toastComptypeOid);
 	READ_OID_FIELD(oidInfo.aosegOid);
-	READ_OID_FIELD(oidInfo.aosegIndexOid);
 	READ_OID_FIELD(oidInfo.aosegComptypeOid);
 	READ_OID_FIELD(oidInfo.aovisimapOid);
 	READ_OID_FIELD(oidInfo.aovisimapIndexOid);
@@ -2441,7 +2438,6 @@ _readClusterStmt(void)
 	READ_OID_FIELD(oidInfo.toastIndexOid);
 	READ_OID_FIELD(oidInfo.toastComptypeOid);
 	READ_OID_FIELD(oidInfo.aosegOid);
-	READ_OID_FIELD(oidInfo.aosegIndexOid);
 	READ_OID_FIELD(oidInfo.aosegComptypeOid);
 	READ_OID_FIELD(oidInfo.aovisimapOid);
 	READ_OID_FIELD(oidInfo.aovisimapIndexOid);

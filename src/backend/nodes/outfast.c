@@ -718,7 +718,6 @@ _outCreateStmt(StringInfo str, CreateStmt *node)
 	WRITE_OID_FIELD(oidInfo.toastIndexOid);
 	WRITE_OID_FIELD(oidInfo.toastComptypeOid);
 	WRITE_OID_FIELD(oidInfo.aosegOid);
-	WRITE_OID_FIELD(oidInfo.aosegIndexOid);
 	WRITE_OID_FIELD(oidInfo.aosegComptypeOid);
 	WRITE_OID_FIELD(oidInfo.aovisimapOid);
 	WRITE_OID_FIELD(oidInfo.aovisimapIndexOid);

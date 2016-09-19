@@ -27,7 +27,6 @@ CATALOG(pg_appendonly,6105) BKI_WITHOUT_OIDS
 	NameData		compresstype;		/* the compressor used (zlib, or quicklz) */
     bool            columnstore;        /* true if orientation is column */ 
     Oid             segrelid;           /* OID of aoseg table; 0 if none */
-    Oid             segidxid;           /* if aoseg table, OID of segno index */
     Oid             blkdirrelid;        /* OID of aoblkdir table; 0 if none */
     Oid             blkdiridxid;        /* if aoblkdir table, OID of aoblkdir index */
     int4            version;            /* version of MemTuples and block layout for this table */
@@ -52,7 +51,7 @@ FOREIGN_KEY(relid REFERENCES pg_class(oid));
 */
 typedef FormData_pg_appendonly *Form_pg_appendonly;
 
-#define Natts_pg_appendonly					14
+#define Natts_pg_appendonly					13
 #define Anum_pg_appendonly_relid			1
 #define Anum_pg_appendonly_blocksize		2
 #define Anum_pg_appendonly_safefswritesize	3
@@ -61,12 +60,11 @@ typedef FormData_pg_appendonly *Form_pg_appendonly;
 #define Anum_pg_appendonly_compresstype		6
 #define Anum_pg_appendonly_columnstore      7
 #define Anum_pg_appendonly_segrelid         8
-#define Anum_pg_appendonly_segidxid         9
-#define Anum_pg_appendonly_blkdirrelid      10
-#define Anum_pg_appendonly_blkdiridxid      11
-#define Anum_pg_appendonly_version          12
-#define Anum_pg_appendonly_visimaprelid      13
-#define Anum_pg_appendonly_visimapidxid      14
+#define Anum_pg_appendonly_blkdirrelid      9
+#define Anum_pg_appendonly_blkdiridxid      10
+#define Anum_pg_appendonly_version          11
+#define Anum_pg_appendonly_visimaprelid     12
+#define Anum_pg_appendonly_visimapidxid     13
 
 /*
  * pg_appendonly table values for FormData_pg_attribute.
@@ -83,7 +81,6 @@ typedef FormData_pg_appendonly *Form_pg_appendonly;
 { AppendOnlyRelationId, {"compresstype"},			19, -1, NAMEDATALEN, 6, 0, -1, -1, false, 'p', 'c', true, false, false, true, 0 }, \
 { AppendOnlyRelationId, {"columnstore"},			16, -1, 1, 7, 0, -1, -1, true, 'p', 'c', false, false, false, true, 0 }, \
 { AppendOnlyRelationId, {"segrelid"},				26, -1, 4, 8, 0, -1, -1, true, 'p', 'i', false, false, false, true, 0 }, \
-{ AppendOnlyRelationId, {"segidxid"},				26, -1, 4, 9, 0, -1, -1, true, 'p', 'i', false, false, false, true, 0 }, \
 { AppendOnlyRelationId, {"blkdirrelid"},			26, -1, 4, 10, 0, -1, -1, true, 'p', 'i', false, false, false, true, 0 }, \
 { AppendOnlyRelationId, {"blkdiridxid"},			26, -1, 4, 11, 0, -1, -1, true, 'p', 'i', false, false, false, true, 0 }, \
 { AppendOnlyRelationId, {"version"},				23, -1, 4, 12, 0, -1, -1, true, 'p', 'i', false, false, false, true, 0 }, \

@@ -155,7 +155,6 @@ _equalTableOidInfo(TableOidInfo *a, TableOidInfo *b)
 	COMPARE_SCALAR_FIELD(toastIndexOid);
 	COMPARE_SCALAR_FIELD(toastComptypeOid);
 	COMPARE_SCALAR_FIELD(aosegOid);
-	COMPARE_SCALAR_FIELD(aosegIndexOid);
 	COMPARE_SCALAR_FIELD(aosegComptypeOid);
 	COMPARE_SCALAR_FIELD(aovisimapOid);
 	COMPARE_SCALAR_FIELD(aovisimapIndexOid);
@@ -1117,7 +1116,6 @@ _equalClusterStmt(ClusterStmt *a, ClusterStmt *b)
 	COMPARE_SCALAR_FIELD(oidInfo.toastOid);
 	COMPARE_SCALAR_FIELD(oidInfo.toastIndexOid);
 	COMPARE_SCALAR_FIELD(oidInfo.aosegOid);
-	COMPARE_SCALAR_FIELD(oidInfo.aosegIndexOid);
 	COMPARE_SCALAR_FIELD(oidInfo.aoblkdirOid);
 	COMPARE_SCALAR_FIELD(oidInfo.aoblkdirIndexOid);
 	COMPARE_SCALAR_FIELD(oidInfo.aovisimapOid);

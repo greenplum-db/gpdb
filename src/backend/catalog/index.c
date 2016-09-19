@@ -1724,27 +1724,6 @@ index_build(Relation heapRelation,
 					   RelationGetRelid(indexRelation) : InvalidOid,
 					   stats->heap_tuples);
 
-#if 0
-	/*
-	 * Update an AO segment or block directory index oid
-	 */
-	switch(heapRelation->rd_rel->relkind)
-	{
-		case RELKIND_AOSEGMENTS:
-			UpdateAppendOnlyEntryIdxid(RelationGetRelid(heapRelation),
-									   Anum_pg_appendonly_segidxid,
-									   RelationGetRelid(indexRelation));
-			break;
-		case RELKIND_AOBLOCKDIR:
-			UpdateAppendOnlyEntryIdxid(RelationGetRelid(heapRelation),
-									   Anum_pg_appendonly_blkdiridxid,
-									   RelationGetRelid(indexRelation));
-			break;
-		default:
-			/* do nothing */
-	}
-#endif
-
 	index_update_stats(indexRelation,
 					   false,
 					   false,
@@ -2412,7 +2391,7 @@ IndexBuildAppendOnlyColScan(Relation parentRelation,
 	proj = palloc0(parentRelation->rd_att->natts * sizeof(bool));
 
 	GetAppendOnlyEntryAuxOids(RelationGetRelid(parentRelation), SnapshotNow,
-							  NULL, NULL,
+							  NULL,
 							  &blkdirrelid, &blkdiridxid,
 							  NULL, NULL);
 
@@ -3530,7 +3509,7 @@ reindex_relation(Oid relid,
 	/* Obtain the aoseg_relid and aoblkdir_relid if the relation is an AO table. */
 	if ((aoseg_too || aoblkdir_too || aovisimap_too) && relIsAO)
 		GetAppendOnlyEntryAuxOids(relid, SnapshotNow,
-								  &aoseg_relid, NULL, 
+								  &aoseg_relid,
 								  &aoblkdir_relid, NULL,
 								  &aovisimap_relid, NULL);
 

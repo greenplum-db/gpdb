@@ -982,7 +982,6 @@ ProcessUtility(Node *parsetree,
 															  cstmt->is_part_child);
 							AlterTableCreateAoSegTableWithOid(relOid,
 															  cstmt->oidInfo.aosegOid,
-															  cstmt->oidInfo.aosegIndexOid,
 															  &(cstmt->oidInfo.aosegComptypeOid),
 															  cstmt->is_part_child);
 

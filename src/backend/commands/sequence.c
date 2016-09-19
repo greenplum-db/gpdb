@@ -399,7 +399,6 @@ DefineSequence(CreateSeqStmt *seq)
 	stmt->oidInfo.toastOid = 0;
 	stmt->oidInfo.toastIndexOid = 0;
 	stmt->oidInfo.aosegOid = 0;
-	stmt->oidInfo.aosegIndexOid = 0;
 	stmt->oidInfo.aoblkdirOid = 0;
 	stmt->oidInfo.aoblkdirIndexOid = 0;
 	stmt->oidInfo.aovisimapOid = 0;

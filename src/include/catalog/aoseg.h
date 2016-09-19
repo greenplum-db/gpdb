@@ -15,8 +15,8 @@
 /*
  * aoseg.c prototypes
  */
-extern void AlterTableCreateAoSegTableWithOid(Oid relOid, Oid newOid,
-											  Oid newIndexOid,
+extern void AlterTableCreateAoSegTableWithOid(Oid relOid,
+											  Oid newOid,
 											  Oid *comptypeOid,
 											  bool is_part_child);
 

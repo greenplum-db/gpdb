@@ -22,13 +22,12 @@
 
 
 void
-AlterTableCreateAoSegTableWithOid(Oid relOid, Oid newOid, Oid newIndexOid,
+AlterTableCreateAoSegTableWithOid(Oid relOid, Oid newOid,
 								  Oid * comptypeOid, bool is_part_child)
 {
 	TupleDesc	tupdesc;
 	Relation	rel;
 	const char *prefix;
-	IndexInfo  *indexInfo;
 	Oid			classObjectId[1];
 	int16		coloptions[1];
 
@@ -144,23 +143,13 @@ AlterTableCreateAoSegTableWithOid(Oid relOid, Oid newOid, Oid newIndexOid,
 		return;
 	}
 
-	indexInfo = makeNode(IndexInfo);
-	indexInfo->ii_NumIndexAttrs = 1;
-	indexInfo->ii_KeyAttrNumbers[0] = 1;
-	indexInfo->ii_Expressions = NIL;
-	indexInfo->ii_ExpressionsState = NIL;
-	indexInfo->ii_Predicate = NIL;
-	indexInfo->ii_PredicateState = NIL;
-	indexInfo->ii_Unique = true;
-	indexInfo->ii_Concurrent = false;
-
 	classObjectId[0] = INT4_BTREE_OPS_OID;
 
 	coloptions[0] = 0;
 
 	(void) CreateAOAuxiliaryTable(rel, prefix, RELKIND_AOSEGMENTS,
-								  newOid, newIndexOid, comptypeOid,
-								  tupdesc, indexInfo, classObjectId, coloptions);
+								  newOid, InvalidOid, comptypeOid,
+								  tupdesc, NULL, classObjectId, coloptions);
 
 	heap_close(rel, NoLock);
 }

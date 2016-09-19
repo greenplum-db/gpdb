@@ -1652,7 +1652,7 @@ aocol_compression_ratio_internal(Relation parentrel)
 	Oid segrelid = InvalidOid;
 
 	GetAppendOnlyEntryAuxOids(RelationGetRelid(parentrel), SnapshotNow,
-							  &segrelid, NULL, NULL, NULL, NULL, NULL);
+							  &segrelid, NULL, NULL, NULL, NULL);
 	Assert(OidIsValid(segrelid));
 
 	/*

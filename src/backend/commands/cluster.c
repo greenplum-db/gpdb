@@ -716,7 +716,6 @@ make_new_heap(Oid OIDOldHeap, const char *NewName, Oid NewTableSpace,
 	Oid 		tOid = InvalidOid;
 	Oid			tiOid = InvalidOid;
 	Oid			aOid = InvalidOid;
-	Oid			aiOid = InvalidOid;
 	Oid			*comptypeOid = NULL;
 	Oid			*comptypeArrayOid = NULL;
 	Oid         blkdirOid = InvalidOid;
@@ -756,7 +755,6 @@ make_new_heap(Oid OIDOldHeap, const char *NewName, Oid NewTableSpace,
 	tiOid = oidInfo->toastIndexOid;
 	toastComptypeOid = &oidInfo->toastComptypeOid;
 	aOid = oidInfo->aosegOid;
-	aiOid = oidInfo->aosegIndexOid;
 	aosegComptypeOid = &oidInfo->aosegComptypeOid;
 	comptypeOid = &oidInfo->comptypeOid;
 	comptypeArrayOid = &oidInfo->comptypeArrayOid;
@@ -828,7 +826,7 @@ make_new_heap(Oid OIDOldHeap, const char *NewName, Oid NewTableSpace,
 	 */
 	AlterTableCreateToastTableWithOid(OIDNewHeap, tOid, tiOid,
 									  toastComptypeOid, is_part);
-	AlterTableCreateAoSegTableWithOid(OIDNewHeap, aOid, aiOid,
+	AlterTableCreateAoSegTableWithOid(OIDNewHeap, aOid,
 									  aosegComptypeOid, is_part);
 	AlterTableCreateAoVisimapTableWithOid(OIDNewHeap, visimapOid, visimapIndexOid,
 				aovisimapComptypeOid, is_part);
@@ -1418,8 +1416,6 @@ void populate_oidInfo(TableOidInfo *oidInfo, Oid TableSpace, bool relisshared,
 				GetNewRelFileNode(TableSpace, relisshared,  pg_class_desc);
 			oidInfo->aosegOid = 
 				GetNewRelFileNode(TableSpace, relisshared,  pg_class_desc);
-			oidInfo->aosegIndexOid = 
-				GetNewRelFileNode(TableSpace, relisshared,  pg_class_desc);
 			oidInfo->aoblkdirOid = 
 				GetNewRelFileNode(TableSpace, relisshared,  pg_class_desc);
 			oidInfo->aoblkdirIndexOid = 
@@ -1464,7 +1460,6 @@ void populate_oidInfo(TableOidInfo *oidInfo, Oid TableSpace, bool relisshared,
 				oidInfo->toastOid == 0 ||
 				oidInfo->toastIndexOid == 0 ||
 				oidInfo->aosegOid == 0 ||
-				oidInfo->aosegIndexOid == 0 ||
 				oidInfo->aoblkdirOid == 0 ||
 				oidInfo->aoblkdirIndexOid == 0 ||
 				oidInfo->aovisimapOid == 0 ||

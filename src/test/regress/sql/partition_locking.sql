@@ -10,7 +10,6 @@ create or replace view locktest as
 select coalesce(
   case when relname like 'pg_toast%index' then 'toast index'
        when relname like 'pg_toast%' then 'toast table'
-       when relname like 'pg_aoseg%index' then 'aoseg index'
        when relname like 'pg_aoseg%' then 'aoseg table'
        else relname end, 'dropped table'),
   mode,

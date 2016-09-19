@@ -583,7 +583,6 @@ DefineRelation(CreateStmt *stmt, char relkind, char relstorage)
 		Oid 		comptypeOid = InvalidOid;
 		Oid         comptypeArrayOid = InvalidOid;
 		Oid			toastIndexId = InvalidOid;
-		Oid			aosegIndexId = InvalidOid;
 		Oid			aoblkdirIndexId = InvalidOid;
 		Oid         aosegComptypeOid = InvalidOid;
 		Oid         aoblkdirComptypeOid = InvalidOid;
@@ -618,7 +617,6 @@ DefineRelation(CreateStmt *stmt, char relkind, char relstorage)
 		toastIndexId        = GetNewRelFileNode(tablespaceId, false,  pg_class_desc);
 		toastComptypeOid    = GetNewRelFileNode(tablespaceId, false,  pg_type_desc);
 		aosegRelationId     = GetNewRelFileNode(tablespaceId, false,  pg_class_desc);
-		aosegIndexId        = GetNewRelFileNode(tablespaceId, false,  pg_class_desc);
 		aoblkdirRelationId  = GetNewRelFileNode(tablespaceId, false,  pg_class_desc);
 		aoblkdirIndexId     = GetNewRelFileNode(tablespaceId, false,  pg_class_desc);
 		aosegComptypeOid    = GetNewRelFileNode(tablespaceId, false,  pg_type_desc);
@@ -636,7 +634,6 @@ DefineRelation(CreateStmt *stmt, char relkind, char relstorage)
 		stmt->oidInfo.toastIndexOid = toastIndexId;
 		stmt->oidInfo.toastComptypeOid = toastComptypeOid;
 		stmt->oidInfo.aosegOid = aosegRelationId;
-		stmt->oidInfo.aosegIndexOid = aosegIndexId;
 		stmt->oidInfo.aosegComptypeOid = aosegComptypeOid;
 		stmt->oidInfo.aoblkdirOid = aoblkdirRelationId;
 		stmt->oidInfo.aoblkdirIndexOid = aoblkdirIndexId;
@@ -667,7 +664,6 @@ DefineRelation(CreateStmt *stmt, char relkind, char relstorage)
 		stmt->oidInfo.toastOid = InvalidOid;
 		stmt->oidInfo.toastIndexOid = InvalidOid;
 		stmt->oidInfo.aosegOid = InvalidOid;
-		stmt->oidInfo.aosegIndexOid = InvalidOid;
 		stmt->oidInfo.aoblkdirOid = InvalidOid;
 		stmt->oidInfo.aoblkdirIndexOid = InvalidOid;
 		stmt->oidInfo.aovisimapOid = InvalidOid;
@@ -1270,7 +1266,7 @@ ExecuteTruncate(TruncateStmt *stmt)
 			if (RelationIsAoRows(rel) ||
 				RelationIsAoCols(rel))
 				GetAppendOnlyEntryAuxOids(heap_relid, SnapshotNow,
-										  &aoseg_relid, NULL,
+										  &aoseg_relid,
 										  &aoblkdir_relid, NULL,
 										  &aovisimap_relid, NULL);
 
@@ -1423,7 +1419,7 @@ ExecuteTruncate(TruncateStmt *stmt)
 
 			if (RelationIsAoRows(rel) || RelationIsAoCols(rel))
 				GetAppendOnlyEntryAuxOids(heap_relid, SnapshotNow,
-										  &aoseg_relid, NULL,
+										  &aoseg_relid,
 										  &aoblkdir_relid, NULL,
 										  &aovisimap_relid, NULL);
 
@@ -9348,7 +9344,7 @@ ATExecChangeOwner(Oid relationOid, Oid newOwnerId, bool recursing)
 				Oid segrelid, blkdirrelid;
 				Oid visimap_relid;
 				GetAppendOnlyEntryAuxOids(relationOid, SnapshotNow,
-										  &segrelid, NULL,
+										  &segrelid,
 										  &blkdirrelid, NULL,
 										  &visimap_relid, NULL);
 				
@@ -9978,13 +9974,12 @@ ATExecSetTableSpace_AppendOnly(
 	if (Debug_persistent_print)
 		elog(Persistent_DebugPrintLevel(), 
 			 "ALTER TABLE SET TABLESPACE: pg_appendonly entry for Append-Only %u/%u/%u, "
-			 "segrelid %u, segidxid %u, "
+			 "segrelid %u, "
 			 "persistent TID %s",
 			 rel->rd_node.spcNode,
 			 rel->rd_node.dbNode,
 			 rel->rd_node.relNode,
 			 rel->rd_appendonly->segrelid,
-			 rel->rd_appendonly->segidxid,
 			 ItemPointerToString(&oldPersistentTid));
 
 	/*
@@ -10428,7 +10423,6 @@ ATExecSetTableSpace(Oid tableOid, Oid newTableSpace, TableOidInfo *oidInfo)
 	Oid			reltoastrelid = InvalidOid;
 	Oid			reltoastidxid = InvalidOid;
 	Oid			relaosegrelid = InvalidOid;
-	Oid			relaosegidxid = InvalidOid;
 	Oid			relaoblkdirrelid = InvalidOid;
 	Oid			relaoblkdiridxid = InvalidOid;
 	Oid         relaovisimaprelid = InvalidOid;
@@ -10464,7 +10458,7 @@ ATExecSetTableSpace(Oid tableOid, Oid newTableSpace, TableOidInfo *oidInfo)
 	/* Get the ao sub objects */
 	if (RelationIsAoRows(rel) || RelationIsAoCols(rel))
 		GetAppendOnlyEntryAuxOids(tableOid, SnapshotNow,
-								  &relaosegrelid, &relaosegidxid,
+								  &relaosegrelid,
 								  &relaoblkdirrelid, &relaoblkdiridxid,
 								  &relaovisimaprelid, &relaovisimapidxid);
 
@@ -10490,9 +10484,6 @@ ATExecSetTableSpace(Oid tableOid, Oid newTableSpace, TableOidInfo *oidInfo)
 	if (OidIsValid(relaosegrelid))
 		ATExecSetTableSpace_Relation(relaosegrelid, newTableSpace,
 									 oidInfo->aosegOid);
-	if (OidIsValid(relaosegidxid))
-		ATExecSetTableSpace_Relation(relaosegidxid, newTableSpace,
-									 oidInfo->aosegIndexOid);
 	if (OidIsValid(relaoblkdirrelid))
 		ATExecSetTableSpace_Relation(relaoblkdirrelid, newTableSpace,
 									 oidInfo->aoblkdirOid);
@@ -10518,12 +10509,6 @@ ATExecSetTableSpace(Oid tableOid, Oid newTableSpace, TableOidInfo *oidInfo)
 		Assert(!relaosegrelid);
 		ATExecSetTableSpace_Relation(relbmrelid, newTableSpace,
 									 oidInfo->aosegOid);
-	}
-	if (OidIsValid(relbmidxid))
-	{
-		Assert(!relaosegidxid);
-		ATExecSetTableSpace_Relation(relbmidxid, newTableSpace,
-									 oidInfo->aosegIndexOid);
 	}
 
 	/* MPP-6929: metadata tracking */

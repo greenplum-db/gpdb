@@ -43,7 +43,6 @@ InsertAppendOnlyEntry(Oid relid,
                       bool columnstore,
 					  char* compresstype,
 					  Oid segrelid,
-					  Oid segidxid,
 					  Oid blkdirrelid,
 					  Oid blkdiridxid,
 					  Oid visimaprelid,
@@ -77,7 +76,6 @@ InsertAppendOnlyEntry(Oid relid,
 	values[Anum_pg_appendonly_compresstype - 1] = NameGetDatum(&compresstype_name);
 	values[Anum_pg_appendonly_columnstore - 1] = BoolGetDatum(columnstore);
 	values[Anum_pg_appendonly_segrelid - 1] = ObjectIdGetDatum(segrelid);
-	values[Anum_pg_appendonly_segidxid - 1] = ObjectIdGetDatum(segidxid);
 	values[Anum_pg_appendonly_blkdirrelid - 1] = ObjectIdGetDatum(blkdirrelid);
 	values[Anum_pg_appendonly_blkdiridxid - 1] = ObjectIdGetDatum(blkdiridxid);
 	values[Anum_pg_appendonly_visimaprelid - 1] = ObjectIdGetDatum(visimaprelid);
@@ -117,7 +115,6 @@ void
 GetAppendOnlyEntryAuxOids(Oid relid,
 						  Snapshot appendOnlyMetaDataSnapshot,
 						  Oid *segrelid,
-						  Oid *segidxid,
 						  Oid *blkdirrelid,
 						  Oid *blkdiridxid,
 						  Oid *visimaprelid,
@@ -166,22 +163,7 @@ GetAppendOnlyEntryAuxOids(Oid relid,
 		
 		*segrelid = DatumGetObjectId(auxOid);
 	}
-	
-	if (segidxid != NULL)
-	{
-		auxOid = heap_getattr(tuple,
-							  Anum_pg_appendonly_segidxid,
-							  tupDesc,
-							  &isNull);
-		Assert(!isNull);
-		if(isNull)
-			ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("got invalid segidxid value: NULL")));	
-		
-		*segidxid = DatumGetObjectId(auxOid);
-	}
-	
+
 	if (blkdirrelid != NULL)
 	{
 		auxOid = heap_getattr(tuple,
@@ -253,7 +235,6 @@ GetAppendOnlyEntryAuxOids(Oid relid,
 void
 UpdateAppendOnlyEntryAuxOids(Oid relid,
 							 Oid newSegrelid,
-							 Oid newSegidxid,
 							 Oid newBlkdirrelid,
 							 Oid newBlkdiridxid,
 							 Oid newVisimaprelid,
@@ -296,13 +277,7 @@ UpdateAppendOnlyEntryAuxOids(Oid relid,
 		replace[Anum_pg_appendonly_segrelid - 1] = true;
 		newValues[Anum_pg_appendonly_segrelid - 1] = newSegrelid;
 	}
-	
-	if (OidIsValid(newSegidxid))
-	{
-		replace[Anum_pg_appendonly_segidxid - 1] = true;
-		newValues[Anum_pg_appendonly_segidxid - 1] = newSegidxid;
-	}
-	
+
 	if (OidIsValid(newBlkdirrelid))
 	{
 		replace[Anum_pg_appendonly_blkdirrelid - 1] = true;

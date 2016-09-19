@@ -499,7 +499,6 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 			intoOidInfo->toastIndexOid = GetNewRelFileNode(reltablespace, false, pg_class_desc);
 			intoOidInfo->toastComptypeOid = GetNewRelFileNode(reltablespace, false, pg_type_desc);
 			intoOidInfo->aosegOid = GetNewRelFileNode(reltablespace, false, pg_class_desc);
-			intoOidInfo->aosegIndexOid = GetNewRelFileNode(reltablespace, false, pg_class_desc);
 			intoOidInfo->aosegComptypeOid = GetNewRelFileNode(reltablespace, false, pg_type_desc);
 			intoOidInfo->aoblkdirOid = GetNewRelFileNode(reltablespace, false, pg_class_desc);
 			intoOidInfo->aoblkdirIndexOid = GetNewRelFileNode(reltablespace, false, pg_class_desc);
@@ -4875,7 +4874,6 @@ OpenIntoRel(QueryDesc *queryDesc)
 									  false);
 	AlterTableCreateAoSegTableWithOid(intoRelationId,
 									  intoOidInfo->aosegOid,
-									  intoOidInfo->aosegIndexOid,
 									  &intoOidInfo->aosegComptypeOid,
 									  false);
 	AlterTableCreateAoVisimapTableWithOid(intoRelationId,

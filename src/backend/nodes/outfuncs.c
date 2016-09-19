@@ -1152,7 +1152,6 @@ _outTableOidInfo(StringInfo str, TableOidInfo *node)
 	WRITE_OID_FIELD(toastIndexOid);
 	WRITE_OID_FIELD(toastComptypeOid);
 	WRITE_OID_FIELD(aosegOid);
-	WRITE_OID_FIELD(aosegIndexOid);
 	WRITE_OID_FIELD(aosegComptypeOid);
 	WRITE_OID_FIELD(aovisimapOid);
 	WRITE_OID_FIELD(aovisimapIndexOid);
@@ -2290,7 +2289,6 @@ _outCreateStmt(StringInfo str, CreateStmt *node)
 	WRITE_OID_FIELD(oidInfo.toastIndexOid);
 	WRITE_OID_FIELD(oidInfo.toastComptypeOid);
 	WRITE_OID_FIELD(oidInfo.aosegOid);
-	WRITE_OID_FIELD(oidInfo.aosegIndexOid);
 	WRITE_OID_FIELD(oidInfo.aosegComptypeOid);
 	WRITE_OID_FIELD(oidInfo.aovisimapOid);
 	WRITE_OID_FIELD(oidInfo.aovisimapIndexOid);
@@ -2495,7 +2493,6 @@ _outAlterTableStmt(StringInfo str, AlterTableStmt *node)
 		WRITE_OID_FIELD(oidInfo[m].toastIndexOid);
 		WRITE_OID_FIELD(oidInfo[m].toastComptypeOid);
 		WRITE_OID_FIELD(oidInfo[m].aosegOid);
-		WRITE_OID_FIELD(oidInfo[m].aosegIndexOid);
 		WRITE_OID_FIELD(oidInfo[m].aosegComptypeOid);
 		WRITE_OID_FIELD(oidInfo[m].aovisimapOid);
 		WRITE_OID_FIELD(oidInfo[m].aovisimapIndexOid);
@@ -2692,7 +2689,6 @@ _outClusterStmt(StringInfo str, ClusterStmt *node)
 	WRITE_OID_FIELD(oidInfo.toastIndexOid);
 	WRITE_OID_FIELD(oidInfo.toastComptypeOid);
 	WRITE_OID_FIELD(oidInfo.aosegOid);
-	WRITE_OID_FIELD(oidInfo.aosegIndexOid);
 	WRITE_OID_FIELD(oidInfo.aosegComptypeOid);
 	WRITE_OID_FIELD(oidInfo.aovisimapOid);
 	WRITE_OID_FIELD(oidInfo.aovisimapIndexOid);

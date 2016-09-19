@@ -1562,7 +1562,7 @@ get_ao_distribution_oid(PG_FUNCTION_ARGS)
 							RelationGetRelationName(parentrel))));
 
 		GetAppendOnlyEntryAuxOids(RelationGetRelid(parentrel), SnapshotNow,
-								  &segrelid, NULL, NULL, NULL, NULL, NULL);
+								  &segrelid, NULL, NULL, NULL, NULL);
 		Assert(OidIsValid(segrelid));
 		
 		/*
@@ -1750,7 +1750,7 @@ get_ao_distribution_name(PG_FUNCTION_ARGS)
 		
 		GetAppendOnlyEntryAuxOids(RelationGetRelid(parentrel), SnapshotNow,
 								  &segrelid,
-								  NULL, NULL, NULL, NULL, NULL);
+								  NULL, NULL, NULL, NULL);
 		Assert(OidIsValid(segrelid));
 
 		/*
@@ -1927,7 +1927,7 @@ aorow_compression_ratio_internal(Relation parentrel)
 
 	GetAppendOnlyEntryAuxOids(RelationGetRelid(parentrel), SnapshotNow,
 							  &segrelid,
-							  NULL, NULL, NULL, NULL, NULL);
+							  NULL, NULL, NULL, NULL);
 	Assert(OidIsValid(segrelid));
 
 	/*

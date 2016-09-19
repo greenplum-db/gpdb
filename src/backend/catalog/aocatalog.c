@@ -44,7 +44,7 @@ CreateAOAuxiliaryTable(
 	char aoauxiliary_idxname[NAMEDATALEN];
 	bool shared_relation;
 	Oid relOid, aoauxiliary_relid = InvalidOid;
-	Oid aoauxiliary_idxid;
+	Oid aoauxiliary_idxid = InvalidOid;
 	ObjectAddress baseobject;
 	ObjectAddress aoauxiliaryobject;
 
@@ -52,8 +52,9 @@ CreateAOAuxiliaryTable(
 	Assert(RelationIsAoRows(rel) || RelationIsAoCols(rel));
 	Assert(auxiliaryNamePrefix);
 	Assert(tupledesc);
-	Assert(indexInfo);
 	Assert(classObjectId);
+	if (relkind != RELKIND_AOSEGMENTS)
+		Assert(indexInfo);
 
 	shared_relation = rel->rd_rel->relisshared;
 	/*
@@ -71,16 +72,16 @@ CreateAOAuxiliaryTable(
 	switch(relkind)
 	{
 		case RELKIND_AOVISIMAP:
-			GetAppendOnlyEntryAuxOids(relOid, SnapshotNow, NULL, NULL,
+			GetAppendOnlyEntryAuxOids(relOid, SnapshotNow, NULL,
 				NULL, NULL, &aoauxiliary_relid, &aoauxiliary_idxid);
 			break;
 		case RELKIND_AOBLOCKDIR:
-			GetAppendOnlyEntryAuxOids(relOid, SnapshotNow, NULL, NULL,
+			GetAppendOnlyEntryAuxOids(relOid, SnapshotNow, NULL,
 				&aoauxiliary_relid, &aoauxiliary_idxid, NULL, NULL);
 			break;
 		case RELKIND_AOSEGMENTS:
 			GetAppendOnlyEntryAuxOids(relOid, SnapshotNow,
-				&aoauxiliary_relid, &aoauxiliary_idxid,
+				&aoauxiliary_relid,
 				NULL, NULL, NULL, NULL);
 			break;
 		default:
@@ -134,20 +135,24 @@ CreateAOAuxiliaryTable(
 	/* Make this table visible, else index creation will fail */
 	CommandCounterIncrement();
 
-	aoauxiliary_idxid = index_create(aoauxiliaryOid,
-									 aoauxiliary_idxname,
-									 aoauxiliaryIndexOid,
-									 indexInfo,
-									 BTREE_AM_OID,
-									 rel->rd_rel->reltablespace,
-									 classObjectId, coloptions, (Datum) 0,
-									 true, false, (Oid *) NULL, true, false,
-									 false, NULL);
+	if (relkind != RELKIND_AOSEGMENTS)
+	{
+		aoauxiliary_idxid = index_create(aoauxiliaryOid,
+										 aoauxiliary_idxname,
+										 aoauxiliaryIndexOid,
+										 indexInfo,
+										 BTREE_AM_OID,
+										 rel->rd_rel->reltablespace,
+										 classObjectId, coloptions, (Datum) 0,
+										 true, false, (Oid *) NULL, true, false,
+										 false, NULL);
 
-	/* Unlock target table -- no one can see it */
-	UnlockRelationOid(aoauxiliaryOid, ShareLock);
-	/* Unlock the index -- no one can see it anyway */
-	UnlockRelationOid(aoauxiliaryIndexOid, AccessExclusiveLock);
+		/* Unlock target table -- no one can see it */
+		UnlockRelationOid(aoauxiliaryOid, ShareLock);
+
+		/* Unlock the index -- no one can see it anyway */
+		UnlockRelationOid(aoauxiliaryIndexOid, AccessExclusiveLock);
+	}
 
 	/*
 	 * Store the auxiliary table's OID in the parent relation's pg_appendonly row.
@@ -156,18 +161,18 @@ CreateAOAuxiliaryTable(
 	switch (relkind)
 	{
 		case RELKIND_AOVISIMAP:
-			UpdateAppendOnlyEntryAuxOids(relOid, InvalidOid, InvalidOid,
+			UpdateAppendOnlyEntryAuxOids(relOid, InvalidOid,
 								 InvalidOid, InvalidOid,
 								 aoauxiliary_relid, aoauxiliary_idxid);
 			break;
 		case RELKIND_AOBLOCKDIR:
-			UpdateAppendOnlyEntryAuxOids(relOid, InvalidOid, InvalidOid,
+			UpdateAppendOnlyEntryAuxOids(relOid, InvalidOid,
 								 aoauxiliary_relid, aoauxiliary_idxid,
 								 InvalidOid, InvalidOid);
 			break;
 		case RELKIND_AOSEGMENTS:
 			UpdateAppendOnlyEntryAuxOids(relOid,
-								 aoauxiliary_relid, aoauxiliary_idxid,
+								 aoauxiliary_relid,
 								 InvalidOid, InvalidOid,
 								 InvalidOid, InvalidOid);
 			break;

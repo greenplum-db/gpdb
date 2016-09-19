@@ -1975,7 +1975,7 @@ vacuum_rel(Relation onerel, VacuumStmt *vacstmt, LOCKMODE lmode, List *updated_s
 	if (RelationIsAoRows(onerel) || RelationIsAoCols(onerel))
 	{
 		GetAppendOnlyEntryAuxOids(RelationGetRelid(onerel), SnapshotNow,
-								  &aoseg_relid, NULL,
+								  &aoseg_relid,
 								  &aoblkdir_relid, NULL,
 								  &aovisimap_relid, NULL);
 		vacstmt->appendonly_relation_empty =

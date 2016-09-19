@@ -1281,7 +1281,6 @@ _copyTableOidInfo(TableOidInfo *from)
 	COPY_SCALAR_FIELD(toastIndexOid);
 	COPY_SCALAR_FIELD(toastComptypeOid);
 	COPY_SCALAR_FIELD(aosegOid);
-	COPY_SCALAR_FIELD(aosegIndexOid);
 	COPY_SCALAR_FIELD(aosegComptypeOid);
 	COPY_SCALAR_FIELD(aovisimapOid);
 	COPY_SCALAR_FIELD(aovisimapIndexOid);
@@ -2904,7 +2903,6 @@ _copyAlterTableStmt(AlterTableStmt *from)
 			COPY_SCALAR_FIELD(oidInfo[m].toastIndexOid);
 			COPY_SCALAR_FIELD(oidInfo[m].toastComptypeOid);
 			COPY_SCALAR_FIELD(oidInfo[m].aosegOid);
-			COPY_SCALAR_FIELD(oidInfo[m].aosegIndexOid);
 			COPY_SCALAR_FIELD(oidInfo[m].aosegComptypeOid);
 			COPY_SCALAR_FIELD(oidInfo[m].aovisimapOid);
 			COPY_SCALAR_FIELD(oidInfo[m].aovisimapIndexOid);
