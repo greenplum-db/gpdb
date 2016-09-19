@@ -571,7 +571,7 @@ static void* conm_main(apr_thread_t* thread_, void* arg_)
 			}
 		}
 
-		if (1 == (loop % 16))
+		if (CONM_LOOP_LAUNCH_FRAME == (loop % CONM_INTERVAL))
 		{
 
 			// for any broken connection, start gpsmon
@@ -621,15 +621,22 @@ static void* conm_main(apr_thread_t* thread_, void* arg_)
 					}
 					ignore_qexec_packet = opt.ignore_qexec_packet;
 
+					char kill_gpsmon[line_size];
+					memset(kill_gpsmon, 0, line_size);
+					if (h->connect_timeout == GPSMON_TIMEOUT_RESTART)
+					{
+						snprintf(kill_gpsmon, line_size, "netstat -tulnp | grep %d | grep %s | awk \"{print \\$7}\" | awk -F/ \"{print \\$1}\" | xargs kill -9;", ax.port, "gpsmon");
+					}
+
 					if (h->smon_bin_location) { //if this if filled, then use it as the directory for smon istead of the default
 						snprintf(line, line_size, "ssh -v -o 'BatchMode yes' -o 'StrictHostKeyChecking no'"
-								" %s 'echo -e \"%" APR_INT64_T_FMT "\\n\\n\" | %s -m %" FMT64 " %s -t %" FMT64 " -l %s%s -v %d %s%d' 2>&1",
-								active_hostname, ax.signature, h->smon_bin_location, opt.max_log_size, ignore_qexec_packet_opt, smon_terminate_timeout, ptr_smon_log_location, ptr_smon_log_location_suffix, opt.v,
+								" %s '%s echo -e \"%" APR_INT64_T_FMT "\\n\\n\" | %s -m %" FMT64 " %s -t %" FMT64 " -l %s%s -v %d %s%d' 2>&1",
+								active_hostname, kill_gpsmon, ax.signature, h->smon_bin_location, opt.max_log_size, ignore_qexec_packet_opt, smon_terminate_timeout, ptr_smon_log_location, ptr_smon_log_location_suffix, opt.v,
 								((opt.iterator_aggregate)?"-a ":""), ax.port);
 					} else {
 						snprintf(line, line_size, "ssh -v -o 'BatchMode yes' -o 'StrictHostKeyChecking no'"
-								" %s 'echo -e \"%" APR_INT64_T_FMT "\\n\\n\" | %s/bin/gpsmon -m %" FMT64 " %s -t %" FMT64 " -l %s%s -v %d %s%d' 2>&1",
-								active_hostname, ax.signature, ax.gphome, opt.max_log_size, ignore_qexec_packet_opt, smon_terminate_timeout, ptr_smon_log_location, ptr_smon_log_location_suffix, opt.v,
+								" %s '%s echo -e \"%" APR_INT64_T_FMT "\\n\\n\" | %s/bin/gpsmon -m %" FMT64 " %s -t %" FMT64 " -l %s%s -v %d %s%d' 2>&1",
+								active_hostname, kill_gpsmon, ax.signature, ax.gphome, opt.max_log_size, ignore_qexec_packet_opt, smon_terminate_timeout, ptr_smon_log_location, ptr_smon_log_location_suffix, opt.v,
 								((opt.iterator_aggregate)?"-a ":""), ax.port);
 					}
 
@@ -665,12 +672,27 @@ static void* conm_main(apr_thread_t* thread_, void* arg_)
 			}
 		}
 
-		// for any broken connection, try connect
-		if (9 == (loop % 16))
+		// for any broken/timeout connection, try connect
+		bool try_connect_normal = (CONM_LOOP_BROKEN_FRAME == (loop % CONM_INTERVAL));
+		bool try_connect_hang = (CONM_LOOP_HANG_FRAME == (loop % CONM_INTERVAL));
+		if (try_connect_normal || try_connect_hang)
 		{
 			for (i = 0; i < count_broken; i++)
 			{
 				host_t* h = &tab[broken[i]];
+				if(GPSMON_TIMEOUT_DETECTED == h->connect_timeout) {
+					/* In next loop will begin to restart and reconnect gpsmon */
+					apr_thread_mutex_lock(h->mutex);
+					h->connect_timeout = GPSMON_TIMEOUT_RESTART;
+					apr_thread_mutex_unlock(h->mutex);
+					continue;
+				}
+				if(GPSMON_TIMEOUT_NONE == h->connect_timeout && !try_connect_normal) {
+					continue;
+				}
+				if(GPSMON_TIMEOUT_RESTART == h->connect_timeout && !try_connect_hang) {
+					continue;
+				}
 				SOCKET sock = 0;
 				char* active_hostname = get_connection_hostname(h);
 				char* active_ip = get_connection_ip(h);
@@ -681,6 +703,26 @@ static void* conm_main(apr_thread_t* thread_, void* arg_)
 				{
 					gpmon_warningx(FLINE, 0, "cannot connect to %s (%s:%d)",
 							active_hostname, active_ip, ax.port);
+					if (ETIMEDOUT == e) /* connection timeout */
+					{
+						if (GPSMON_TIMEOUT_RESTART == h->connect_timeout)
+						{
+							gpmon_warning(FLINE, "Tried restart gpsmon but still can't connect %s, maybe blocked by firewall or other process occupied the port", active_hostname);
+						}
+						else if (GPSMON_TIMEOUT_NONE == h->connect_timeout)
+						{
+							/* Mark the host as timeout, push it behind normal host */
+							apr_thread_mutex_lock(h->mutex);
+							h->connect_timeout = GPSMON_TIMEOUT_DETECTED;
+							apr_thread_mutex_unlock(h->mutex);
+						}
+					}
+					else
+					{
+						apr_thread_mutex_lock(h->mutex);
+						h->connect_timeout = GPSMON_TIMEOUT_NONE;
+						apr_thread_mutex_unlock(h->mutex);
+					}
 					continue;
 				}
 				/* connected - set it to valid */
@@ -689,6 +731,7 @@ static void* conm_main(apr_thread_t* thread_, void* arg_)
 				h->sock = sock;
 				h->event = 0;
 				h->eflag = 0;
+				h->connect_timeout = GPSMON_TIMEOUT_NONE;
 				apr_thread_mutex_unlock(h->mutex);
 			}
 		}

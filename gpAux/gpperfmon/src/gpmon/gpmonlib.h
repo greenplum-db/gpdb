@@ -182,6 +182,14 @@ struct multi_interface_holder_t
 	unsigned int counter;
 };
 
+#define CONM_INTERVAL (16)
+#define CONM_LOOP_LAUNCH_FRAME (1)
+#define CONM_LOOP_BROKEN_FRAME (9)
+#define CONM_LOOP_HANG_FRAME   (12)
+
+#define GPSMON_TIMEOUT_NONE     (0)
+#define GPSMON_TIMEOUT_RESTART  (1)
+#define GPSMON_TIMEOUT_DETECTED (2)
 
 /* segment host */ 
 typedef struct host_t
@@ -211,6 +219,7 @@ typedef struct host_t
 	unsigned char is_hdc;
 	unsigned char is_etl; 
 	char ever_connected; /* set to non-zero after first connection attempt */
+	char connect_timeout;
 } host_t;
 
 #define QEXEC_MAX_ROW_BUF_SIZE (2048)
