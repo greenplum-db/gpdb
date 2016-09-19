@@ -53,17 +53,15 @@ TEST(Utils, sha256hmac) {
     EXPECT_STREQ("f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8", hash_str);
 }
 
-TEST(Utils, ConfigNull) {
-    Config c1(NULL);
+TEST(Utils, ConfigEmpty) {
     uint64_t value = 0;
+
+    Config c1("");
     EXPECT_FALSE(c1.Scan("configtest", "config7", "%" PRIu64, &value));
 
-    Config c2("");
-    EXPECT_FALSE(c2.Scan("configtest", "config7", "%" PRIu64, &value));
-
     string str;
-    Config c3(str);
-    EXPECT_FALSE(c3.Scan("configtest", "config7", "%" PRIu64, &value));
+    Config c2(str);
+    EXPECT_FALSE(c2.Scan("configtest", "config7", "%" PRIu64, &value));
 }
 
 TEST(Utils, Config) {

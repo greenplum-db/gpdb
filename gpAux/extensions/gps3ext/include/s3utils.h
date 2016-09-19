@@ -2,6 +2,7 @@
 #define __S3_UTILS_H__
 
 #include "s3common_headers.h"
+#include "s3log.h"
 
 #define MD5_DIGEST_STRING_LENGTH 17
 #define SHA_DIGEST_STRING_LENGTH 41
@@ -44,7 +45,6 @@ class MD5Calc {
 class Config {
    public:
     Config(const string& filename);
-    Config(const char* filename);
     ~Config();
     bool SectionExist(const string& sec);
     string Get(const string& sec, const string& key, const string& defaultvalue);

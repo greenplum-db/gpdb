@@ -13,23 +13,33 @@ int32_t s3ext_segid = -1;
 int32_t s3ext_segnum = -1;
 
 string s3ext_logserverhost;
-int32_t s3ext_loglevel = -1;
-int32_t s3ext_logtype = -1;
+int32_t s3ext_loglevel = EXT_WARNING;
+int32_t s3ext_logtype = INTERNAL_LOG;
 int32_t s3ext_logserverport = -1;
 int32_t s3ext_logsock_udp = -1;
 struct sockaddr_in s3ext_logserveraddr;
 
 bool InitConfig(S3Params& params, const string& conf_path, const string& section) {
+// initialize segment related info before loading config file, otherwise, if
+// it throws during parsing, segid and segnum values will be undefined.
+#ifdef S3_STANDALONE
+    s3ext_segid = 0;
+    s3ext_segnum = 1;
+#else
+    s3ext_segid = GpIdentity.segindex;
+    s3ext_segnum = GpIdentity.numsegments;
+#endif
+
     S3_CHECK_OR_DIE_MSG(!conf_path.empty(), S3RuntimeError, "Config file is not specified");
 
     Config s3cfg(conf_path);
 
     S3_CHECK_OR_DIE_MSG(s3cfg.Handle(), S3RuntimeError,
-                        "Failed to parse config file \"" + conf_path + "\", or it doesn't exist");
+                        "Failed to parse config file '" + conf_path + "', or it doesn't exist");
 
     S3_CHECK_OR_DIE_MSG(
         s3cfg.SectionExist(section), S3ConfigError,
-        "Selected section \"" + section + "\" does not exist, please check your configuration file",
+        "Selected section '" + section + "' does not exist, please check your configuration file",
         section);
 
     string content = s3cfg.Get(section.c_str(), "loglevel", "WARNING");
@@ -104,21 +114,13 @@ bool InitConfig(S3Params& params, const string& conf_path, const string& section
 
     params.setAutoCompress(to_bool(s3cfg.Get(section.c_str(), "autocompress", "true")));
 
-#ifdef S3_STANDALONE
-    s3ext_segid = 0;
-    s3ext_segnum = 1;
-#else
-    s3ext_segid = GpIdentity.segindex;
-    s3ext_segnum = GpIdentity.numsegments;
-#endif
-
     return true;
 }
 
 bool InitConfig(S3Params& params, const string& urlWithOptions) {
     string configPath = getOptS3(urlWithOptions, "config");
     if (configPath.empty()) {
-        S3ERROR("The 'config' parameter is not provided, use default value 's3/s3.conf'.");
+        S3WARN("The 'config' parameter is not provided, use default value 's3/s3.conf'.");
         configPath = "s3/s3.conf";
     }
 

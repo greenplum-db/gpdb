@@ -165,16 +165,9 @@ Config::Config(const string &filename) : _conf(NULL) {
     if (!filename.empty()) this->_conf = ini_load(filename.c_str());
     if (this->_conf == NULL) {
 #ifndef S3_STANDALONE
-        write_log("Failed to load config file\n");
-#endif
-    }
-}
-
-Config::Config(const char *filename) : _conf(NULL) {
-    if (filename != NULL) this->_conf = ini_load(filename);
-    if (this->_conf == NULL) {
-#ifndef S3_STANDALONE
-        write_log("Failed to load configuration file\n");
+        write_log("Failed to load config file:'%s'\n", filename.c_str());
+#else
+        S3ERROR("Failed to load config file:'%s'", filename.c_str());
 #endif
     }
 }

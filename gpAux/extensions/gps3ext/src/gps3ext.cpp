@@ -102,8 +102,8 @@ Datum s3_import(PG_FUNCTION_ARGS) {
 
         gpreader = reader_init(url_with_options);
         if (!gpreader) {
-            ereport(ERROR, (0, errmsg("Failed to init S3 extension, segid = %d, "
-                                      "segnum = %d, please check your "
+            ereport(ERROR, (0, errmsg("Failed to init S3 extension (segid = %d, "
+                                      "segnum = %d), please check your "
                                       "configurations and network connection: %s",
                                       s3ext_segid, s3ext_segnum, s3extErrorMessage.c_str())));
         }
@@ -156,8 +156,8 @@ Datum s3_export(PG_FUNCTION_ARGS) {
 
         gpwriter = writer_init(url_with_options, format);
         if (!gpwriter) {
-            ereport(ERROR, (0, errmsg("Failed to init S3 extension, segid = %d, "
-                                      "segnum = %d, please check your "
+            ereport(ERROR, (0, errmsg("Failed to init S3 extension (segid = %d, "
+                                      "segnum = %d), please check your "
                                       "configurations and network connection: %s",
                                       s3ext_segid, s3ext_segnum, s3extErrorMessage.c_str())));
         }
