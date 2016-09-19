@@ -6,7 +6,7 @@ DEBUG_S3_SYMBOL = y
 
 # Flags
 PG_LIBS += $(COMMON_LINK_OPTIONS)
-PG_CPPFLAGS += $(COMMON_CPP_FLAGS) -I../../include -I../../lib -DS3_STANDALONE -DS3_STANDALONE_CHECKCLOUD
+PG_CPPFLAGS += $(COMMON_CPP_FLAGS) -I../../include -I../../lib -I$(libpq_srcdir) -I$(libpq_srcdir)/postgresql/server/utils -DS3_STANDALONE -DS3_STANDALONE_CHECKCLOUD
 
 ifeq ($(DEBUG_S3_SYMBOL),y)
 	PG_CPPFLAGS += -g
