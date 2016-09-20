@@ -62,8 +62,6 @@ class Context(Values, object):
         if not self.output_options: self.output_options = []
         if not self.dump_schema: self.dump_schema = []
         if not self.exclude_dump_schema: self.exclude_dump_schema = []
-        if self.netbackup_keyword and (len(self.netbackup_keyword) > 100):
-            raise Exception('NetBackup Keyword provided has more than max limit (100) characters. Cannot proceed with backup.')
 
     def get_master_port(self):
         pgconf_dict = pgconf.readfile(self.master_datadir + "/postgresql.conf")
@@ -903,3 +901,10 @@ def get_table_info(line):
         tblspace_start.append(None)
     owner = temp[owner_start[0] + len(OWNER_EXPR) : tblspace_start[0]]
     return (name, type, schema, owner)
+
+def validate_netbackup_params(param_dict):
+    max_len = 127
+    for label, param in param_dict.items():
+        if param and len(param) > max_len:
+            raise Exception("Netbackup {0} ({1}) exceeds the maximum length of {2} characters".format(label, param, max_len))
+    

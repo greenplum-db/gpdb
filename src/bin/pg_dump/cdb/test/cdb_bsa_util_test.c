@@ -25,7 +25,7 @@ int ferror(FILE *stream) {
 }
 
 /* Mock of BSAInit function. */
-int BSAInit(BSA_Handle *bsaHandlePtr, BSA_SecurityToken *tokenPtr, 
+int BSAInit(BSA_Handle *bsaHandlePtr, BSA_SecurityToken *tokenPtr,
 			BSA_ObjectOwner *objectOwnerPtr, char **environmentPtr) {
 	return (int)mock();
 }
@@ -282,18 +282,109 @@ test_initBSADumpSession14(void **state)
 	assert_true(result == 0);
 }
 
+
 void
-test_initBSADumpSession15(void **state)
+test_initBSADumpSession_servicehost_len_too_long(void **state)
+{
+	int result = 0;
+	char* bsaServiceHost = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa129";
+	char* nbbsaPolicy = "test_policy";
+	char* nbbsaSchedule = "test_schedule";
+	char* nbbsaKeyword = NULL;
+	result = initBSADumpSession(bsaServiceHost, nbbsaPolicy, nbbsaSchedule, nbbsaKeyword);
+	assert_true(result == -1);
+}
+
+void
+test_initBSADumpSession_policy_len_too_long(void **state)
+{
+	int result = 0;
+	char* bsaServiceHost = "mdw";
+	char* nbbsaPolicy = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa129";
+	char* nbbsaSchedule = "test_schedule";
+	char* nbbsaKeyword = NULL;
+	result = initBSADumpSession(bsaServiceHost, nbbsaPolicy, nbbsaSchedule, nbbsaKeyword);
+	assert_true(result == -1);
+}
+void
+test_initBSADumpSession_schedule_len_too_long(void **state)
+{
+	int result = 0;
+	char* bsaServiceHost = "mdw";
+	char* nbbsaPolicy = "test_policy";
+	char* nbbsaSchedule = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa129";
+	char* nbbsaKeyword = NULL;
+	result = initBSADumpSession(bsaServiceHost, nbbsaPolicy, nbbsaSchedule, nbbsaKeyword);
+	assert_true(result == -1);
+}
+
+void
+test_initBSADumpSession_keyword_len_too_long(void **state)
 {
 	int result = 0;
 	char* bsaServiceHost = "mdw";
 	char* nbbsaPolicy = "test_policy";
 	char* nbbsaSchedule = "test_schedule";
-	char* nbbsaKeyword = "Aaaaaaaaaabbbbbbbbbbaaaaaaaaaabbbbbbbbbbaaaaaaaaaabbbbbbbbbbaaaaaaaaaabbbbbbbbbbaaaaaaaaaabbbbbbbbbbcccccc";
+	char* nbbsaKeyword = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa129";
 	result = initBSADumpSession(bsaServiceHost, nbbsaPolicy, nbbsaSchedule, nbbsaKeyword);
 	assert_true(result == -1);
 }
 
+void
+test_initBSADumpSession_servicehost_len_ok(void **state)
+{
+	int result = -1;
+	char* bsaServiceHost = "netbackup-service-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa127";
+	char* nbbsaPolicy = "test_policy";
+	char* nbbsaSchedule = "test_schedule";
+	char* nbbsaKeyword = " ";
+	will_return(BSAInit, BSA_RC_SUCCESS);
+	will_return(BSABeginTxn, BSA_RC_SUCCESS);
+	result = initBSADumpSession(bsaServiceHost, nbbsaPolicy, nbbsaSchedule, nbbsaKeyword);
+	assert_true(result == 0);
+}
+
+void
+test_initBSADumpSession_policy_len_ok(void **state)
+{
+	int result = -1;
+	char* bsaServiceHost = "mdw";
+	char* nbbsaPolicy = "netbackup-policy-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa127";
+	char* nbbsaSchedule = "test_schedule";
+	char* nbbsaKeyword = " ";
+	will_return(BSAInit, BSA_RC_SUCCESS);
+	will_return(BSABeginTxn, BSA_RC_SUCCESS);
+	result = initBSADumpSession(bsaServiceHost, nbbsaPolicy, nbbsaSchedule, nbbsaKeyword);
+	assert_true(result == 0);
+}
+
+void
+test_initBSADumpSession_schedule_len_ok(void **state)
+{
+	int result = -1;
+	char* bsaServiceHost = "mdw";
+	char* nbbsaPolicy = "test_policy";
+	char* nbbsaSchedule = "netbackup-schedule-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa127";
+	char* nbbsaKeyword = " ";
+	will_return(BSAInit, BSA_RC_SUCCESS);
+	will_return(BSABeginTxn, BSA_RC_SUCCESS);
+	result = initBSADumpSession(bsaServiceHost, nbbsaPolicy, nbbsaSchedule, nbbsaKeyword);
+	assert_true(result == 0);
+}
+
+void
+test_initBSADumpSession_keyword_len_ok(void **state)
+{
+	int result = -1;
+	char* bsaServiceHost = "mdw";
+	char* nbbsaPolicy = "test_policy";
+	char* nbbsaSchedule = "test_schedule";
+	char* nbbsaKeyword = "netbackup-keyword-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa127";
+	will_return(BSAInit, BSA_RC_SUCCESS);
+	will_return(BSABeginTxn, BSA_RC_SUCCESS);
+	result = initBSADumpSession(bsaServiceHost, nbbsaPolicy, nbbsaSchedule, nbbsaKeyword);
+	assert_true(result == 0);
+}
 /* Unit tests for createBSADumpObject() function */
 
 void
@@ -704,6 +795,26 @@ test_initBSARestoreSession12(void **state)
 	will_return(BSATerminate, BSA_RC_SUCCESS);
 	result = initBSARestoreSession(bsaServiceHost);
 	assert_true(result == -1);
+}
+
+void
+test_initBSARestoreSession_servicehost_len_too_long(void **state)
+{
+	int result = 0;
+	char* bsaServiceHost = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa129";
+	result = initBSARestoreSession(bsaServiceHost);
+	assert_true(result == -1);
+}
+
+void
+test_initBSARestoreSession_servicehost_len_ok(void **state)
+{
+	int result = -1;
+	char* bsaServiceHost = "netbackup-service-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa127";
+	will_return(BSAInit, BSA_RC_SUCCESS);
+	will_return(BSABeginTxn, BSA_RC_SUCCESS);
+	result = initBSARestoreSession(bsaServiceHost);
+	assert_true(result == 0);
 }
 
 /* Unit tests for getBSARestoreObject() function */
@@ -1408,8 +1519,8 @@ test_deleteBSAObjects11(void **state)
 	assert_true(result == -1);
 }
 
-int 
-main(int argc, char* argv[]) 
+int
+main(int argc, char* argv[])
 {
 	cmockery_parse_arguments(argc, argv);
 
@@ -1428,7 +1539,14 @@ main(int argc, char* argv[])
 			unit_test(test_initBSADumpSession12),
 			unit_test(test_initBSADumpSession13),
 			unit_test(test_initBSADumpSession14),
-			unit_test(test_initBSADumpSession15),
+			unit_test(test_initBSADumpSession_servicehost_len_too_long),
+			unit_test(test_initBSADumpSession_policy_len_too_long),
+			unit_test(test_initBSADumpSession_schedule_len_too_long),
+			unit_test(test_initBSADumpSession_keyword_len_too_long),
+			unit_test(test_initBSADumpSession_servicehost_len_ok),
+			unit_test(test_initBSADumpSession_policy_len_ok),
+			unit_test(test_initBSADumpSession_schedule_len_ok),
+			unit_test(test_initBSADumpSession_keyword_len_ok),
 			unit_test(test_createBSADumpObject1),
 			unit_test(test_createBSADumpObject2),
 			unit_test(test_createBSADumpObject3),
@@ -1465,6 +1583,8 @@ main(int argc, char* argv[])
 			unit_test(test_initBSARestoreSession10),
 			unit_test(test_initBSARestoreSession11),
 			unit_test(test_initBSARestoreSession12),
+			unit_test(test_initBSARestoreSession_servicehost_len_too_long),
+			unit_test(test_initBSARestoreSession_servicehost_len_ok),
 			unit_test(test_getBSARestoreObject1),
 			unit_test(test_getBSARestoreObject2),
 			unit_test(test_getBSARestoreObject3),
@@ -1536,6 +1656,6 @@ int main(int argc, char *argv[])
 	/* TODO: change printf() to mpp_err_msg() */
 	printf("\ngp_bsa_dump_agent is not supported on this platform\n\n");
 	return 0;
-}	
+}
 
 #endif

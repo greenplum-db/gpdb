@@ -11,6 +11,7 @@
 
 #include "cdb_bsa_util.h"
 
+int setNetbackupParam(char **envxPtr, char *label, char *nbbsaParam, int *retCode);
 /************* BSA variables ************/
 BSA_Handle				BsaHandle;
 BSA_ObjectOwner			BsaObjectOwner;
@@ -29,39 +30,54 @@ int						status;
 char					*restore_location;
 int						total_bytes = 0;
 int 					i = 0;
+int  NBU_LABEL_LEN = 20;
+int  NBU_MAX_PARAM_LEN = 127;
 
 
 /* Dump related functions used to backup data to NetBackup */
+
+int setNetbackupParam(char **envxPtr, char *label, char *nbbsaParam, int *retCode)
+{
+	if(nbbsaParam)
+	{
+		if (strlen(nbbsaParam) > NBU_MAX_PARAM_LEN)
+		{
+			mpp_err_msg("ERROR", "gp_bsa_dump_agent", "%s provided has more than max limit (%d) characters. Cannot proceed with backup. \n", label, NBU_MAX_PARAM_LEN);
+			*retCode = -1;
+			return -1;
+		}
+		snprintf(*envxPtr, (1 + strlen(label) + 1 + strlen(nbbsaParam)), "%s=%s", label, nbbsaParam);
+	}
+	else
+	{
+		*envxPtr = NULL;
+	}
+	return 0;
+}
 
 int initBSADumpSession(char *bsaServiceHost, char *nbbsaPolicy, char *nbbsaSchedule, char *nbbsaKeyword)
 {
 
 	/* Allocate memory for the XBSA environment variable array. */
 	for(i = 0; i<5; i++){
-		envx[i] = malloc(40);
+		envx[i] = malloc(NBU_LABEL_LEN + NBU_MAX_PARAM_LEN);
 		if(envx[i] == NULL){
 			mpp_err_msg("ERROR", "gp_bsa_dump_agent", "Failed to allocate memory for NetBackup BSA enviroment variables\n");
 			return -1;
 		}
-		memset(envx[i], 0x00, 40);
+		memset(envx[i], 0x00, NBU_LABEL_LEN + NBU_MAX_PARAM_LEN);
 	}
 
 	/* Populate the XBSA environment variables for this session. */
+	int retCode = 0;
+	setNetbackupParam(&envx[1], "BSA_SERVICE_HOST", bsaServiceHost, &retCode);
+	setNetbackupParam(&envx[2], "NBBSA_POLICY", nbbsaPolicy, &retCode);
+	setNetbackupParam(&envx[3], "NBBSA_SCHEDULE", nbbsaSchedule, &retCode);
+	setNetbackupParam(&envx[4], "NBBSA_KEYWORD",  nbbsaKeyword, &retCode);
+	if (retCode == -1)
+		return -1;
+
 	strncpy(envx[0], "BSA_API_VERSION=1.1.0", (1 + strlen("BSA_API_VERSION=1.1.0")));
-	snprintf(envx[1], (1 + strlen("BSA_SERVICE_HOST=") + strlen(bsaServiceHost)), "BSA_SERVICE_HOST=%s", bsaServiceHost);
-	snprintf(envx[2], (1 + strlen("NBBSA_POLICY=") + strlen(nbbsaPolicy)), "NBBSA_POLICY=%s", nbbsaPolicy);
-	snprintf(envx[3], (1 + strlen("NBBSA_SCHEDULE=") + strlen(nbbsaSchedule)), "NBBSA_SCHEDULE=%s", nbbsaSchedule);
-	if(nbbsaKeyword)
-	{
-		if (strlen(nbbsaKeyword) > 100)
-		{
-			mpp_err_msg("ERROR", "gp_bsa_dump_agent", "NetBackup Keyword provided has more than max limit (100) characters. Cannot proceed with backup.\n");
-			return -1;
-		}
-		snprintf(envx[4], (1 + strlen("NBBSA_KEYWORD=") + strlen(nbbsaKeyword)), "NBBSA_KEYWORD=%s", nbbsaKeyword);
-	}
-	else
-		envx[4] = NULL;
 
 	envx[5] = NULL;
 
@@ -228,17 +244,21 @@ int initBSARestoreSession(char *bsaServiceHost)
 {
 	/* Allocate memory for the XBSA environment variable array. */
 	for(i=0; i<2; i++){
-		envx[i] = malloc(40);
+		envx[i] = malloc(NBU_LABEL_LEN + NBU_MAX_PARAM_LEN);
 		if(envx[i] == NULL){
 			mpp_err_msg("ERROR", "gp_bsa_restore_agent", "Failed to allocate memory for NetBackup BSA environment variables\n");
 			return -1;
 		}
-		memset(envx[i], 0x00, 40);
+		memset(envx[i], 0x00, NBU_LABEL_LEN + NBU_MAX_PARAM_LEN);
 	}
 
 	/* Populate the XBSA environment variables for this session. */
+	int retCode = 0;
+	setNetbackupParam(&envx[1], "BSA_SERVICE_HOST", bsaServiceHost, &retCode);
+	if (retCode == -1)
+		return -1;
+
 	strncpy(envx[0], "BSA_API_VERSION=1.1.0", (1 + strlen("BSA_API_VERSION=1.1.0")));
-	snprintf(envx[1], (1 + strlen("BSA_SERVICE_HOST=") + strlen(bsaServiceHost)), "BSA_SERVICE_HOST=%s", bsaServiceHost);
 	envx[2] = NULL;
 
 	/* The NetBackup XBSA Interface does not use the security token. */

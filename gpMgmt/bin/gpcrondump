@@ -138,6 +138,9 @@ class GpCronDump(Operation):
             if not self.context.netbackup_schedule:
                 raise Exception("NetBackup schedule name (--netbackup-schedule) param should be provided in order to use NetBackup")
 
+        param_dict = {'Service Hostname':self.context.netbackup_service_host, 'Policy Name':self.context.netbackup_policy, 'Schedule Name':self.context.netbackup_schedule, 'Keyword':self.context.netbackup_keyword}
+        validate_netbackup_params(param_dict)
+
         if self.context.ddboost and self.context.netbackup_service_host:
             raise Exception('--ddboost is not supported with NetBackup')
 

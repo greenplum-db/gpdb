@@ -119,6 +119,9 @@ class GpdbRestore(Operation):
         if self.context.list_tables and self.context.netbackup_service_host:
             raise Exception('-L is not supported with NetBackup.')
 
+        if self.context.netbackup_service_host:
+            validate_netbackup_params({'Service Hostname':self.context.netbackup_service_host})
+
         if self.context.redirected_restore_db:
             check_funny_chars_in_names(self.context.redirected_restore_db, is_full_qualified_name = False)
 
