@@ -360,6 +360,7 @@ struct gpmon_filerepinfo_t
 
 struct gpmon_hello_t {
     apr_int64_t signature;
+    apr_int32_t pid; /* pid of gpsmon */
 };
 
 

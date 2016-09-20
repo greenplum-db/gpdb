@@ -220,6 +220,7 @@ typedef struct host_t
 	unsigned char is_etl; 
 	char ever_connected; /* set to non-zero after first connection attempt */
 	char connect_timeout;
+	apr_int32_t pid;
 } host_t;
 
 #define QEXEC_MAX_ROW_BUF_SIZE (2048)

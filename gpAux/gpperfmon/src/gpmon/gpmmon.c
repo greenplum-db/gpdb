@@ -432,7 +432,7 @@ static void* event_main(apr_thread_t* thread_, void* arg_)
 }
 
 
-static apr_status_t conm_connect(SOCKET* retsock, const char* ipstr, int port, bool ipv6)
+static apr_status_t conm_connect(SOCKET* retsock, apr_int32_t* retpid, const char* ipstr, int port, bool ipv6)
 {
 	struct sockaddr_in sa;
 	struct sockaddr_in6 sa6;
@@ -521,6 +521,9 @@ static apr_status_t conm_connect(SOCKET* retsock, const char* ipstr, int port, b
 		goto bail;
 	}
 
+	/* on successful connect, save pid of gpsmon for killing it in case of hang */
+	*retpid = pkt.u.hello.pid;
+
 	*retsock = sock;
 	return 0;
 
@@ -585,7 +588,7 @@ static void* conm_main(apr_thread_t* thread_, void* arg_)
 				const char* ptr_smon_log_location;
 				const char* ptr_smon_log_location_suffix;
 
-				const int line_size = 1024;
+				const int line_size = 2048;
 				char line[line_size];
 				memset(fp, 0, sizeof(fp));
 				for (j = 0; j < 8 && i < count_broken; j++, i++)
@@ -621,11 +624,16 @@ static void* conm_main(apr_thread_t* thread_, void* arg_)
 					}
 					ignore_qexec_packet = opt.ignore_qexec_packet;
 
-					char kill_gpsmon[line_size];
-					memset(kill_gpsmon, 0, line_size);
-					if (h->connect_timeout == GPSMON_TIMEOUT_RESTART)
+					const int kill_cmd_size = 1024;
+					char kill_gpsmon[kill_cmd_size];
+					memset(kill_gpsmon, 0, kill_cmd_size);
+					if (h->connect_timeout == GPSMON_TIMEOUT_RESTART && h->pid > 0)
 					{
-						snprintf(kill_gpsmon, line_size, "netstat -tulnp | grep %d | grep %s | awk \"{print \\$7}\" | awk -F/ \"{print \\$1}\" | xargs kill -9;", ax.port, "gpsmon");
+						snprintf(kill_gpsmon, kill_cmd_size, "kill -9 %d;", h->pid);
+						apr_thread_mutex_lock(h->mutex);
+						h->pid = 0; /* don't try kill gpsmon repeatly */
+						h->connect_timeout = GPSMON_TIMEOUT_NONE; /* try reconnect immediately */
+						apr_thread_mutex_unlock(h->mutex);
 					}
 
 					if (h->smon_bin_location) { //if this if filled, then use it as the directory for smon istead of the default
@@ -680,34 +688,38 @@ static void* conm_main(apr_thread_t* thread_, void* arg_)
 			for (i = 0; i < count_broken; i++)
 			{
 				host_t* h = &tab[broken[i]];
-				if(GPSMON_TIMEOUT_DETECTED == h->connect_timeout) {
+				if(GPSMON_TIMEOUT_DETECTED == h->connect_timeout)
+				{
 					/* In next loop will begin to restart and reconnect gpsmon */
 					apr_thread_mutex_lock(h->mutex);
 					h->connect_timeout = GPSMON_TIMEOUT_RESTART;
 					apr_thread_mutex_unlock(h->mutex);
 					continue;
 				}
-				if(GPSMON_TIMEOUT_NONE == h->connect_timeout && !try_connect_normal) {
+				if(GPSMON_TIMEOUT_NONE == h->connect_timeout && !try_connect_normal)
+				{
 					continue;
 				}
-				if(GPSMON_TIMEOUT_RESTART == h->connect_timeout && !try_connect_hang) {
+				if(GPSMON_TIMEOUT_RESTART == h->connect_timeout && !try_connect_hang)
+				{
 					continue;
 				}
 				SOCKET sock = 0;
+				apr_int32_t gpsmon_pid = 0;
 				char* active_hostname = get_connection_hostname(h);
 				char* active_ip = get_connection_ip(h);
 				bool ipv6 = get_connection_ipv6_status(h);
 
 				TR1(("connecting to %s (%s:%d)\n", active_hostname, active_ip, ax.port));
-				if (0 != (e = conm_connect(&sock, active_ip, ax.port, ipv6)))
+				if (0 != (e = conm_connect(&sock, &gpsmon_pid, active_ip, ax.port, ipv6)))
 				{
 					gpmon_warningx(FLINE, 0, "cannot connect to %s (%s:%d)",
 							active_hostname, active_ip, ax.port);
-					if (ETIMEDOUT == e) /* connection timeout */
+					if (APR_ETIMEDOUT == e) /* connection timeout */
 					{
 						if (GPSMON_TIMEOUT_RESTART == h->connect_timeout)
 						{
-							gpmon_warning(FLINE, "Tried restart gpsmon but still can't connect %s, maybe blocked by firewall or other process occupied the port", active_hostname);
+							gpmon_warning(FLINE, "Failed to reconnect gpsmon on %d, maybe network isolation or other process occupied the port", active_hostname);
 						}
 						else if (GPSMON_TIMEOUT_NONE == h->connect_timeout)
 						{
@@ -726,12 +738,13 @@ static void* conm_main(apr_thread_t* thread_, void* arg_)
 					continue;
 				}
 				/* connected - set it to valid */
-				TR1(("connected to %s (%s:%d)\n", active_hostname, active_ip, ax.port));
+				TR1(("connected to %s (%s:%d), pid %d\n", active_hostname, active_ip, ax.port, gpsmon_pid));
 				apr_thread_mutex_lock(h->mutex);
 				h->sock = sock;
 				h->event = 0;
 				h->eflag = 0;
 				h->connect_timeout = GPSMON_TIMEOUT_NONE;
+				h->pid = gpsmon_pid;
 				apr_thread_mutex_unlock(h->mutex);
 			}
 		}

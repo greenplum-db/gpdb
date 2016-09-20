@@ -1350,6 +1350,7 @@ static void gx_accept(SOCKET sock, short event, void* arg)
 	}
 
 	/* echo the hello */
+	pkt.u.hello.pid = getpid();
 	TR2(("accepted pkt.magic = %x\n", (int) pkt.header.magic));
 	send_smon_to_mon_pkt(nsock, &pkt);
 
