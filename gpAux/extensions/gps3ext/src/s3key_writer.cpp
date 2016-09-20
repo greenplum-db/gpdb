@@ -111,6 +111,10 @@ void* S3KeyWriter::UploadThreadFunc(void* data) {
         UniqueLock exceptLock(&writer->exceptionMutex);
         writer->sharedError = true;
         writer->sharedException = std::current_exception();
+
+        // notify the flushBuffer, otherwise it will be locked when trying to create a new thread.
+        writer->activeThreads--;
+        pthread_cond_broadcast(&writer->cv);
     }
 
     delete params;
