@@ -19,6 +19,64 @@ int32_t s3ext_logserverport = -1;
 int32_t s3ext_logsock_udp = -1;
 struct sockaddr_in s3ext_logserveraddr;
 
+typedef void (S3Params::*setFunction)(uint64_t);
+
+struct SetValueFunction {
+    virtual void setValue(int64_t value) = 0;
+    void operator()(int64_t value) {
+        this->setValue(value);
+    }
+};
+
+struct S3ParamSetFunction : SetValueFunction {
+    S3ParamSetFunction(S3Params& params, setFunction func) : params(params), func(func) {
+    }
+
+    virtual void setValue(int64_t value) {
+        (params.*func)(value);
+    }
+
+    S3Params& params;
+    setFunction func;
+};
+
+struct GlobalSetFunction : SetValueFunction {
+    GlobalSetFunction(int32_t& globalValue) : globalValue(globalValue) {
+    }
+
+    virtual void setValue(int64_t value) {
+        globalValue = value;
+    }
+
+    int32_t& globalValue;
+};
+
+// Scan an integer config value with given range. If scan failed, use default value instead.
+void SafeScanValue(const char* varName, Config& s3cfg, const string& section,
+                   SetValueFunction&& set, int64_t defaultValue, int64_t minValue,
+                   int64_t maxValue) {
+    int64_t scannedValue = 0;
+
+    // Here we use %12lld to truncate long number string, because configure value
+    // has type of int32_t, who has the range [-2^31, 2^31-1] (10-digit number)
+    bool isSuccess = s3cfg.Scan(section.c_str(), varName, "%12lld", &scannedValue);
+
+    if (!isSuccess) {
+        S3INFO("The %s is set to default value %lld", varName, defaultValue);
+        scannedValue = defaultValue;
+    } else if (scannedValue > maxValue) {
+        S3INFO("The given %s (%lld) is too big, use max value %lld", varName, scannedValue,
+               maxValue);
+        scannedValue = maxValue;
+    } else if (scannedValue < minValue) {
+        S3INFO("The given %s (%lld) is too small, use min value %lld", varName, scannedValue,
+               minValue);
+        scannedValue = minValue;
+    }
+
+    set(scannedValue);
+}
+
 bool InitConfig(S3Params& params, const string& conf_path, const string& section) {
 // initialize segment related info before loading config file, otherwise, if
 // it throws during parsing, segid and segnum values will be undefined.
@@ -58,57 +116,20 @@ bool InitConfig(S3Params& params, const string& conf_path, const string& section
 
     s3ext_logserverhost = s3cfg.Get(section.c_str(), "logserverhost", "127.0.0.1");
 
-    bool ret = s3cfg.Scan(section.c_str(), "logserverport", "%d", &s3ext_logserverport);
-    if (!ret) {
-        s3ext_logserverport = 1111;
-    }
+    SafeScanValue("logserverport", s3cfg, section, GlobalSetFunction(s3ext_logserverport), 1111, 1,
+                  65535);
 
-    int32_t scannedValue;
-    ret = s3cfg.Scan(section.c_str(), "threadnum", "%d", &scannedValue);
-    if (!ret) {
-        S3INFO("The thread number is set to default value 4");
-        params.setNumOfChunks(4);
-    } else if (scannedValue > 8) {
-        S3INFO("The given thread number is too big, use max value 8");
-        params.setNumOfChunks(8);
-    } else if (scannedValue < 1) {
-        S3INFO("The given thread number is too small, use min value 1");
-        params.setNumOfChunks(1);
-    } else {
-        params.setNumOfChunks(scannedValue);
-    }
+    SafeScanValue("threadnum", s3cfg, section,
+                  S3ParamSetFunction(params, &S3Params::setNumOfChunks), 4, 1, 8);
 
-    ret = s3cfg.Scan(section.c_str(), "chunksize", "%d", &scannedValue);
-    if (!ret) {
-        S3INFO("The chunksize is set to default value 64MB");
-        params.setChunkSize(64 * 1024 * 1024);
-    } else if (scannedValue > 128 * 1024 * 1024) {
-        S3INFO("The given chunksize is too large, use max value 128MB");
-        params.setChunkSize(128 * 1024 * 1024);
-    } else if (scannedValue < 8 * 1024 * 1024) {
-        // multipart uploading requires the chunksize larger than 5MB(only the last part to upload
-        // could be smaller than 5MB)
-        S3INFO("The given chunksize is too small, use min value 8MB");
-        params.setChunkSize(8 * 1024 * 1024);
-    } else {
-        params.setChunkSize(scannedValue);
-    }
+    SafeScanValue("chunksize", s3cfg, section, S3ParamSetFunction(params, &S3Params::setChunkSize),
+                  64 * 1024 * 1024, 8 * 1024 * 1024, 128 * 1024 * 1024);
 
-    ret = s3cfg.Scan(section.c_str(), "low_speed_limit", "%d", &scannedValue);
-    if (!ret) {
-        S3INFO("The low_speed_limit is set to default value %d bytes/s", 10240);
-        params.setLowSpeedLimit(10240);
-    } else {
-        params.setLowSpeedLimit(scannedValue);
-    }
+    SafeScanValue("low_speed_limit", s3cfg, section,
+                  S3ParamSetFunction(params, &S3Params::setLowSpeedLimit), 10240, 0, INT_MAX);
 
-    ret = s3cfg.Scan(section.c_str(), "low_speed_time", "%d", &scannedValue);
-    if (!ret) {
-        S3INFO("The low_speed_time is set to default value %d seconds", 60);
-        params.setLowSpeedTime(60);
-    } else {
-        params.setLowSpeedTime(scannedValue);
-    }
+    SafeScanValue("low_speed_time", s3cfg, section,
+                  S3ParamSetFunction(params, &S3Params::setLowSpeedTime), 60, 0, INT_MAX);
 
     params.setEncryption(to_bool(s3cfg.Get(section.c_str(), "encryption", "true")));
 
