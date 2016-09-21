@@ -43,7 +43,7 @@ gpfdist$(EXE_EXT): $(OBJS)
 	$(CC) $(LDFLAGS) $(CFLAGS) $(OBJS) $(LDLIBS) -o $@
 
 install: all
-	$(INSTALL) gpfdist$(EXE_EXT) $(prefix)/bin
+	$(INSTALL) gpfdist$(EXE_EXT) $(DESTDIR)$(prefix)/bin
 
 installcheck:
 	$(MAKE) -C regress installcheck

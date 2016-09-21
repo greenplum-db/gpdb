@@ -39,6 +39,7 @@ using distutils to install Python programs.
 version = "4.0"
 
 import sys
+import os
 
 if not (2, 2) < sys.version_info[:2] < (3, 0):
     raise Exception("PyGreSQL %s requires a Python 2 version"
@@ -62,7 +63,7 @@ def pg_config(s):
         raise Exception("pg_config tool is not available.")
     if not d:
         raise Exception("Could not get %s information." % s)
-    return d
+    return os.environ['DESTDIR']+d
 
 def mk_include():
     """Create a temporary local include directory.
