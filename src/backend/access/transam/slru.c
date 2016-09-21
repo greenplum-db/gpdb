@@ -1493,6 +1493,7 @@ SlruVerifyDirectoryChecksum(char *fullDirName)
 {
 	char checksumFilePath[MAXPGPATH];
 	char md5[SLRU_MD5_BUFLEN] = {0};
+	int retval = STATUS_OK;
 
 	snprintf(checksumFilePath, sizeof(checksumFilePath), "%s/%s", fullDirName,
 			 SLRU_CHECKSUM_FILENAME);
@@ -1503,11 +1504,24 @@ SlruVerifyDirectoryChecksum(char *fullDirName)
 	 * support can diff the checksum files at the primary and the mirror to see
 	 * which file(s) were not in sync.
 	 */
-	return 	FileRepPrimary_MirrorStartChecksum(
-				FileRep_GetFlatFileIdentifier(fullDirName, SLRU_CHECKSUM_FILENAME)) ||
-			SlruCreateChecksumFile(fullDirName) ||
-			SlruComputeChecksum(checksumFilePath, md5) ||
-			FileRepPrimary_MirrorVerifyDirectoryChecksum(
+	retval = FileRepPrimary_MirrorStartChecksum(
+		FileRep_GetFlatFileIdentifier(fullDirName, SLRU_CHECKSUM_FILENAME));
+
+	if (retval != STATUS_OK)
+		return retval;
+
+	retval = SlruCreateChecksumFile(fullDirName);
+
+	if (retval != STATUS_OK)
+		return retval;
+
+
+	retval = SlruComputeChecksum(checksumFilePath, md5);
+
+	if (retval != STATUS_OK)
+		return retval;
+
+	return FileRepPrimary_MirrorVerifyDirectoryChecksum(
 				FileRep_GetFlatFileIdentifier(fullDirName, SLRU_CHECKSUM_FILENAME), md5);
 }
 
@@ -1524,7 +1538,7 @@ SlruCreateChecksumFile(const char *fullDirName)
 	char		   filePath[MAXPGPATH];
 	char		   checksumFilePath[MAXPGPATH];
 	File		   checksumFileHandle = 0;
-	int			   retval = 0;
+	int			   retval = STATUS_OK;
 	char		   buf[SLRU_CKSUM_LINE_LEN];
 
 	snprintf(checksumFilePath, sizeof(checksumFilePath), "%s/%s", fullDirName,
@@ -1537,15 +1551,14 @@ SlruCreateChecksumFile(const char *fullDirName)
 		ereport(WARNING,
 				(errcode_for_file_access(),
 				 errmsg("could not open file \"%s\": %m", checksumFilePath)));
-		retval = STATUS_ERROR;
-		goto cleanup;
+		return STATUS_ERROR;
 	}
 
 	slruDir = AllocateDir(fullDirName);
 	if (!slruDir)
 	{
-		retval = STATUS_ERROR;
-		goto cleanup;
+		FileClose(checksumFileHandle);
+		return STATUS_ERROR;
 	}
 
 	while ((dirEntry = ReadDir(slruDir, fullDirName)) != NULL)
@@ -1560,32 +1573,30 @@ SlruCreateChecksumFile(const char *fullDirName)
 
 			if (SlruComputeChecksum(filePath, md5) < 0)
 			{
-				ereport(LOG,
+				ereport(WARNING,
 						(errmsg("could not compute checksum for file %s: %m",
 								filePath)));
 				retval = STATUS_ERROR;
-				goto cleanup;
+				break;
+
 			}
 
 			snprintf(buf, sizeof(buf), "%s: %s\n", fileName, md5);
 
 			if (FileWrite(checksumFileHandle, buf, strlen(buf)) < 0)
 			{
-				ereport(LOG,
+				ereport(WARNING,
 						(errmsg("could not write to checksum file %s: %m",
 								checksumFilePath)));
 				retval = STATUS_ERROR;
-				goto cleanup;
+				break;
+
 			}
 		}
 	}
 
-cleanup:
-	if (slruDir)
-		FreeDir(slruDir);
-
-	if (checksumFileHandle > 0)
-		FileClose(checksumFileHandle);
+	FreeDir(slruDir);
+	FileClose(checksumFileHandle);
 
 	return retval;
 }
@@ -1608,34 +1619,31 @@ static int
 SlruComputeChecksum(char *filePath, char *md5)
 {
 	File fileHandle = 0;
-	int  retval = 0;
+	int  retval = STATUS_OK;
 	char buf[BLCKSZ * SLRU_PAGES_PER_SEGMENT];
 	int  bytesRead;
 
 	fileHandle = PathNameOpenFile(filePath, O_RDONLY | PG_BINARY, S_IRUSR);
 	if (fileHandle < 0)
 	{
-		ereport(LOG,
+		ereport(WARNING,
 				(errcode_for_file_access(),
 				 errmsg("could not open file %s: %m", filePath)));
-		retval = STATUS_ERROR;
-	}
-	else
-	{
-		bytesRead = FileRead(fileHandle, buf, sizeof(buf));
-		if (bytesRead >= 0)
-			pg_md5_hash(buf, bytesRead, md5);
-		else
-		{
-			ereport(LOG,
-					(errcode_for_file_access(),
-					 errmsg("could not read file %s: %m", filePath)));
-			retval = STATUS_ERROR;
-		}
+		return STATUS_ERROR;
 	}
 
-	if (fileHandle > 0)
-		FileClose(fileHandle);
+	bytesRead = FileRead(fileHandle, buf, sizeof(buf));
+	if (bytesRead >= 0)
+		pg_md5_hash(buf, bytesRead, md5);
+	else
+	{
+		ereport(WARNING,
+				(errcode_for_file_access(),
+				 errmsg("could not read file %s: %m", filePath)));
+		retval = STATUS_ERROR;
+	}
+
+	FileClose(fileHandle);
 
 	return retval;
 }
@@ -1675,8 +1683,13 @@ SlruCopyDirectory(char *dirName, char *fullDirName)
 		}
 	}
 
-	elog(LOG, "completed recovering %d files for directory %s", counter,
-		 dirName);
+	if (retval == 0)
+		elog(LOG, "completed recovering %d files for directory %s", counter,
+			 dirName);
+	else
+		elog(WARNING,
+			 "could not copy all the files for directory %s (files copied: %d)",
+			 dirName, counter);
 
 	FreeDir(slruDir);
 
@@ -1686,10 +1699,11 @@ SlruCopyDirectory(char *dirName, char *fullDirName)
 /*
  * This function is called from the mirror to compute the checksum of the
  * mirror's checksum file and compare the mirror's checksum with that of the
- * primary (variable 'md5').
+ * primary (variable 'primaryMd5').
  */
 int
-SlruMirrorVerifyDirectoryChecksum(char *dirName, char *checksumFile, char *md5)
+SlruMirrorVerifyDirectoryChecksum(char *dirName, char *checksumFile,
+								  char *primaryMd5)
 {
 	int  retval = STATUS_OK;
 	char mirrorMd5[SLRU_MD5_BUFLEN] = {0};
@@ -1699,20 +1713,18 @@ SlruMirrorVerifyDirectoryChecksum(char *dirName, char *checksumFile, char *md5)
 
 	if (SlruComputeChecksum(filePath, mirrorMd5) < 0)
 	{
-		ereport(LOG,
+		ereport(WARNING,
 				(errmsg("could not compute checksum for file %s/%s: %m",
 						dirName, filePath)));
 		retval = STATUS_ERROR;
 	}
-	else
+	else if (memcmp(primaryMd5, mirrorMd5, sizeof(mirrorMd5)))
 	{
-		if (memcmp(md5, mirrorMd5, sizeof(mirrorMd5)))
-		{
-			ereport(LOG,
-					(errmsg("checksum mismatch for file: %s/%s",
-							dirName, checksumFile)));
-			retval = STATUS_ERROR;
-		}
+		ereport(WARNING,
+				(errmsg("checksum mismatch for file: %s/%s",
+						dirName, checksumFile)));
+		retval = STATUS_ERROR;
 	}
+
 	return retval;
 }

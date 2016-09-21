@@ -57,37 +57,40 @@ class FilerepTestCase(MPPTestCase):
     def sleep(self, seconds=60):
         time.sleep(seconds)
 
-    def create_file_in_mirr_datadir(self, content, filename):
-        dbid = self.config.get_dbid(content=content, seg_role='m')
+    def create_file_in_datadir(self, content, role, filename):
+        dbid = self.config.get_dbid(content=content, seg_role=role)
         host, datadir = self.config.get_host_and_datadir_of_segment(dbid=dbid)
         file_path = os.path.join(datadir, filename)
         cmd = Command('create a file', 'touch %s' % file_path, ctxt=REMOTE, remoteHost=host)
         cmd.run(validateAfter=True)
 
-    def remove_file_in_mirr_datadir(self, content, filename):
-        dbid = self.config.get_dbid(content=content, seg_role='m')
+    def remove_file_in_datadir(self, content, role, filename):
+        dbid = self.config.get_dbid(content=content, seg_role=role)
         host, datadir = self.config.get_host_and_datadir_of_segment(dbid=dbid)
         file_path = os.path.join(datadir, filename)
         cmd = Command('remove a file', 'rm %s' % file_path, ctxt=REMOTE, remoteHost=host)
         cmd.run(validateAfter=True)
 
-    def get_timestamp_of_file_in_mirr_datadir(self, content, filename):
-        dbid = self.config.get_dbid(content=content, seg_role='m')
+    def get_timestamp_of_file_in_datadir(self, content, role, filename):
+        dbid = self.config.get_dbid(content=content, seg_role=role)
         host, datadir = self.config.get_host_and_datadir_of_segment(dbid=dbid)
         file_path = os.path.join(datadir, filename)
-        cmd = Command('check timestamp', "ls -l %s" %
+        cmd = Command('check timestamp', "stat -s %s" %
                       file_path, ctxt=REMOTE, remoteHost=host)
         cmd.run(validateAfter=True)
         res = cmd.get_results().stdout.strip()
-        return ''.join(res.split()[5:8])
+        m = re.search('st_mtime=(\d+)', res)
+        timestamp = None
+        if m:
+            timestamp = m.group(1)
+        return timestamp
 
-    def verify_timestamp_newer(self, content, filename1, filename2):
-        ts1 = datetime.datetime.strptime(
-              self.get_timestamp_of_file_in_mirr_datadir(content, filename1), '%b%d%H:%M')
-        ts2 = datetime.datetime.strptime(
-              self.get_timestamp_of_file_in_mirr_datadir(content, filename2), '%b%d%H:%M')
-        if ts1 <= ts2:
-            raise Exception('Timestamp of %s not newer than %s' % (filename1, filename2))
+    def verify_file_exists(self, content, role, filename):
+        dbid = self.config.get_dbid(content=content, seg_role=role)
+        host, datadir = self.config.get_host_and_datadir_of_segment(dbid=dbid)
+        file_path = os.path.join(datadir, filename)
+        cmd = Command('check if file exists', 'ls %s' % file_path, ctxt=REMOTE, remoteHost=host)
+        cmd.run(validateAfter=True)
 
     def handle_ext_cases(self,file):
         """

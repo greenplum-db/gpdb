@@ -2067,7 +2067,7 @@ FileRepMirror_RunConsumer(void)
 				if (Debug_filerep_print)
 				{
 					ereport(LOG,
-						(errmsg("mirror beginning checksum comparison, dir: %s, cksumfile: %s",
+						(errmsg("mirror beginning checksum comparison, dir: %s, checksum file: %s",
 								fileRepMessageHeader->fileRepIdentifier.fileRepFlatFileIdentifier.directorySimpleName,
 								fileRepMessageHeader->fileRepIdentifier.fileRepFlatFileIdentifier.fileSimpleName)));
 				}

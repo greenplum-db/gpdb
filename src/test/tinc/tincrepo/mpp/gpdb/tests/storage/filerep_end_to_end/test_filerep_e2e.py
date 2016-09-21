@@ -89,29 +89,36 @@ class FilerepE2EScenarioTestCase(ScenarioTestCase, MPPTestCase):
     def test_full_primary(self):
         self.do_test('full', 'primary')
 
-    def test_flat_file_resync(self):
+    def test_flat_file_resync_on_checksum_mismatch(self):
 
+        filename = 'pg_distributedlog/FFFF'
         # This should cause the md5 check to fail and trigger a resync of the flat files
-        test_case1 = []
-        test_case1.append(("mpp.gpdb.tests.storage.filerep_end_to_end.FilerepTestCase.create_file_in_mirr_datadir", [0, 'pg_distributedlog/FFFF']))
-        self.test_case_scenario.append(test_case1)
+        self.filerep.create_file_in_datadir(0, 'p', filename)
 
-        test_case1 = []
-        test_case1.append("mpp.gpdb.tests.storage.filerep_end_to_end.FilerepTestCase.sleep")
-        self.test_case_scenario.append(test_case1)
+        try:
+            self.filerep.stop_start_validate()
+            self.filerep.verify_file_exists(0, 'm', filename)
+        finally:
+            self.filerep.remove_file_in_datadir(0, 'p', filename)
+            self.filerep.remove_file_in_datadir(0, 'm', filename)
 
-        test_case1 = []
-        test_case1.append("mpp.gpdb.tests.storage.filerep_end_to_end.FilerepTestCase.stop_start_validate")
-        self.test_case_scenario.append(test_case1)
+    def test_flat_file_resync_on_checksum_match(self):
 
-        test_case1 = []
-        test_case1.append(("mpp.gpdb.tests.storage.filerep_end_to_end.FilerepTestCase.verify_timestamp_newer", [0, 'pg_distributedlog/0000', 'pg_distributedlog/FFFF']))
-        self.test_case_scenario.append(test_case1)
+        filename = 'pg_distributedlog/FFFF'
 
-        test_case1 = []
-        test_case1.append(("mpp.gpdb.tests.storage.filerep_end_to_end.FilerepTestCase.remove_file_in_mirr_datadir", [0, 'pg_distributedlog/FFFF']))
-        self.test_case_scenario.append(test_case1)
+        self.filerep.create_file_in_datadir(0, 'p', filename)
+        self.filerep.create_file_in_datadir(0, 'm', filename)
 
+        try:
+            timestamp_before_restart = self.filerep.get_timestamp_of_file_in_datadir(0, 'm', filename)
+            self.filerep.stop_start_validate()
+            timestamp_after_restart = self.filerep.get_timestamp_of_file_in_datadir(0, 'm', filename)
+            if timestamp_before_restart != timestamp_after_restart:
+                raise Exception('File %s transferred after restart. timestamp before restart (%s), timestamp after restart (%s)' %
+                                filename, timestamp_before_restart, timestamp_after_restart)
+        finally:
+            self.filerep.remove_file_in_datadir(0, 'p', filename)
+            self.filerep.remove_file_in_datadir(0, 'm', filename)
 
     def do_test(self,rec_mode,fail_type):
         '''
