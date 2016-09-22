@@ -2,6 +2,7 @@
 
 # Based on install_hawq_toolchain.bash in Pivotal-DataFabric/ci-infrastructure repo
 
+set -euxo pipefail
 setup_ssh_for_user() {
   local user="${1}"
   local home_dir
@@ -33,7 +34,8 @@ ssh_keyscan_for_user() {
 
 transfer_ownership() {
   chown -R gpadmin:gpadmin gpdb_src
-  chown -R gpadmin:gpadmin /usr/local/gpdb
+  chown -R gpadmin:gpadmin /usr/local/greenplum-db-devel
+  chown -R gpadmin:gpadmin /home/gpadmin
 }
 
 setup_gpadmin_user() {
