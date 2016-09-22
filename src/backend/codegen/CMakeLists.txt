@@ -130,12 +130,28 @@ endif()
 find_package(Clang REQUIRED)
 include_directories(${CLANG_INCLUDE_DIRS})
 
+set(GPCODEGEN_SRC
+    codegen_interface.cc
+    codegen_manager.cc
+    const_expr_tree_generator.cc
+    exec_variable_list_codegen.cc
+    slot_getattr_codegen.cc
+    exec_eval_expr_codegen.cc
+    expr_tree_generator.cc
+    op_expr_tree_generator.cc
+    pg_date_func_generator.cc
+    var_expr_tree_generator.cc
+    advance_aggregates_codegen.cc
+)
+
 # Core codegen library.
 add_library(gpcodegen SHARED
             utils/clang_compiler.cc
             utils/codegen_utils.cc
             utils/gp_codegen_utils.cc
+            ${GPCODEGEN_SRC}
             ${codegen_tmpfile_sources})
+
 if(APPLE)
   set(WL_START_GROUP "")
   set(WL_END_GROUP "")
@@ -144,7 +160,16 @@ else()
   set(WL_END_GROUP "-Wl,--end-group")
 endif()
 
-target_link_libraries(gpcodegen ${WL_START_GROUP} ${CLANG_LIBRARIES} ${WL_END_GROUP})
+#  By default, the Darwin linker throws an error if there are any undefined
+#  references in a dynamic library. Instead, it should wait till it's linked
+#  back with the postgres binary.
+if(APPLE)
+  set(WL_UNDEFINED_DYNLOOKUP "-Wl,-undefined -Wl,dynamic_lookup")
+else()
+  set(WL_UNDEFINED_DYNLOOKUP "")
+endif()
+
+target_link_libraries(gpcodegen ${WL_START_GROUP} ${CLANG_LIBRARIES} ${WL_END_GROUP} ${WL_UNDEFINED_DYNLOOKUP})
 if (MONOLITHIC_LLVM_LIBRARY)
   target_link_libraries(gpcodegen ${LLVM_MONOLITHIC_LIBRARIES})
 else()
@@ -167,27 +192,12 @@ set_target_properties(
     INSTALL_NAME_DIR ${full_install_name_dir}
     MACOSX_RPATH ON)
 
-set(GPCODEGEN_SRC
-    codegen_interface.cc
-    codegen_manager.cc
-    codegen_wrapper.cc
-    const_expr_tree_generator.cc
-    exec_variable_list_codegen.cc
-    slot_getattr_codegen.cc
-    exec_eval_expr_codegen.cc
-    expr_tree_generator.cc
-    op_expr_tree_generator.cc
-    pg_date_func_generator.cc
-    var_expr_tree_generator.cc
-    advance_aggregates_codegen.cc
-)
-
 # Integrate with GPDB build system. 
 # Here we compile all the GPDB code generators, and link them incrementally
 # with the gpcodegen shared library to create a binary SUBSYS.o as expected by
 # GPDB make system. We invoke the linker with -nostdlib since we don't really
 # want to create a full executable.
-add_executable(SUBSYS.o ${GPCODEGEN_SRC})
+add_executable(SUBSYS.o codegen_wrapper.cc)
 set_target_properties(SUBSYS.o
     PROPERTIES
     LINK_FLAGS "-Wl,-r -nostdlib")
