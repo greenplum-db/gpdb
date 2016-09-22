@@ -95,6 +95,8 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
+      passed:
+      - build_gpdb_planner
       params:
         submodules: none
     - get: bin_gpdb_planner
@@ -150,6 +152,8 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
+      passed:
+      - build_gpdb_orca
       params:
         submodules: none
     - get: bin_gpdb_orca
