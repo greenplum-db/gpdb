@@ -56,6 +56,18 @@ resources:
     secret_access_key: {{aws-secret-access-key}}
     regexp: bin_xerces_centos(6).tar.gz
 
+- name: orca
+  type: github-release
+  source:
+    user: greenplum-db
+    repository: gporca
+
+- name: gpos
+  type: github-release
+  source:
+    user: greenplum-db
+    repository: gpos
+
 ########
 # JOBS #
 ########
@@ -112,8 +124,17 @@ jobs:
         submodules: none
       trigger: true
     - get: bin_xerces
-  - task: prepare_orca_dependencies
-    file: gpdb_src/concourse/prepare_orca_dependencies.yml
+    - get: bin_orca
+      resource: orca
+      params:
+        globs:
+        - bin_orca_centos5_release.tar.gz
+    - get: bin_gpos
+      resource: gpos
+      params:
+        globs:
+        - bin_gpos_centos5_release.tar.gz
+
   - task: build_with_orca_and_codegen
     file: gpdb_src/concourse/build_with_orca_and_codegen.yml
     output_mapping: {bin_gpdb: bin_gpdb_orca}
