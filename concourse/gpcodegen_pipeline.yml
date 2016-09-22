@@ -12,15 +12,6 @@ resources:
       - concourse/*
     uri: https://github.com/greenplum-db/gpdb.git
 
-- name: bin_gpdb_planner
-  type: s3
-  source:
-    access_key_id: {{aws-access-key-id}}
-    bucket: gporca-concourse-bucket
-    region_name: us-west-2
-    secret_access_key: {{aws-secret-access-key}}
-    versioned_file: bin_gpdb_with_codegen_centos6.tar.gz
-
 - name: bin_gpdb_orca
   type: s3
   source:
@@ -72,39 +63,22 @@ resources:
 # JOBS #
 ########
 jobs:
-- name: build_gpdb_planner
-  max_in_flight: 1
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      params:
-        submodules: none
-      trigger: true
-  - task: build_with_codegen
-    file: gpdb_src/concourse/build_with_codegen.yml
-    output_mapping: {bin_gpdb: bin_gpdb_planner}
-  - task: package_tarball
-    input_mapping: {bin_gpdb: bin_gpdb_planner}
-    file: gpdb_src/concourse/package_tarball.yml
-  - put: bin_gpdb_planner
-    params:
-      from: package_tarball/bin_gpdb.tar.gz
-
 - name: gpdb_icg_planner
   max_in_flight: 1
   plan:
   - aggregate:
     - get: gpdb_src
       passed:
-      - build_gpdb_planner
+      - build_gpdb_orca
       params:
         submodules: none
-    - get: bin_gpdb_planner
+    - get: bin_gpdb_orca
       passed:
-      - build_gpdb_planner
+      - build_gpdb_orca
       trigger: true
   - task: test_gpdb
-    input_mapping: {bin_gpdb: bin_gpdb_planner}
+    input_mapping:
+      bin_gpdb: bin_gpdb_orca
     file: gpdb_src/concourse/test_with_codegen.yml
     timeout: 1h30m
     on_failure:
