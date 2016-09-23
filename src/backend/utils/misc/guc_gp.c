@@ -549,6 +549,7 @@ double		optimizer_damping_factor_groupby;
 int			optimizer_segments;
 int			optimizer_join_arity_for_associativity_commutativity;
 int         optimizer_array_expansion_threshold;
+int         optimizer_join_order_threshold;
 bool		optimizer_analyze_root_partition;
 bool		optimizer_analyze_midlevel_partition;
 bool		optimizer_enable_constant_expression_evaluation;
@@ -4635,6 +4636,15 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&optimizer_array_expansion_threshold,
 		25, 0, INT_MAX, NULL, NULL
+	},
+
+	{
+		{"optimizer_join_order_threshold", PGC_USERSET, QUERY_TUNING_METHOD,
+			gettext_noop("Maximum number of join children to use dynamic programming based join ordering algorithm."),
+			NULL
+		},
+		&optimizer_join_order_threshold,
+		10, 0, INT_MAX, NULL, NULL
 	},
 
 	{
