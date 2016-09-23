@@ -61,19 +61,24 @@ if (COMPILER_HAS_WNO_C99_EXTENSIONS)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-register")
 endif()
 
-# Turn on the CODEGEN_DEBUG flag if this is a debug build.
+macro (ADD_DEBUG_COMPILE_DEFINITION SYMBOL)
 if (CMAKE_MAJOR_VERSION GREATER 2)
   cmake_policy(SET CMP0043 NEW)
   set_property(
     DIRECTORY
-    APPEND PROPERTY COMPILE_DEFINITIONS $<$<CONFIG:Debug>:CODEGEN_DEBUG>
+    APPEND PROPERTY COMPILE_DEFINITIONS $<$<CONFIG:Debug>:${SYMBOL}>
   )
 else()
   set_property(
     DIRECTORY
-    APPEND PROPERTY COMPILE_DEFINITIONS_DEBUG CODEGEN_DEBUG
+    APPEND PROPERTY COMPILE_DEFINITIONS_DEBUG ${SYMBOL}
   )
 endif()
+endmacro()
+
+# Turn on the CODEGEN_DEBUG flag if this is a debug build.
+ADD_DEBUG_COMPILE_DEFINITION(CODEGEN_DEBUG)
+
 
 # Check for POSIX I/O syscalls needed by TemporaryFile.
 include(CheckCXXSymbolExists)
@@ -149,6 +154,7 @@ add_library(gpcodegen SHARED
             utils/clang_compiler.cc
             utils/codegen_utils.cc
             utils/gp_codegen_utils.cc
+            utils/gpassert.cc
             ${GPCODEGEN_SRC}
             ${codegen_tmpfile_sources})
 
@@ -184,6 +190,42 @@ else()
                                   irreader linker mc mcjit native objcarcopts
                                   option passes support target)
   target_link_libraries(gpcodegen ${WL_START_GROUP} ${codegen_llvm_libs} ${WL_END_GROUP})
+endif()
+
+# This macro checks to see if the given C symbol is defined in the given LIBRARY. A library with
+# an appropriate name is searched for in the LIBPATH. VARIABLE is set to true if the symbol is
+# found defined as a type in (T in the output of nm) in the library, or set false otherwise.
+macro(CHECK_SYMBOL_DEFINED LIBRARY CSYMBOL LIBPATH VARIABLE)
+	find_library(LIBLOCATION ${LIBRARY} ${LIBPATH})
+	if(LIBLOCATION STREQUAL "LIBLOCATION-NOTFOUND")
+		message(FATAL_ERROR "${LIBRARY} not found in ${LIBPATH}.")
+	endif()
+	find_program(NM_BIN "nm")
+	execute_process(COMMAND ${NM_BIN} ${LIBLOCATION}
+                  COMMAND grep "T"  # Symbol is defined
+                  COMMAND grep ${CSYMBOL}
+                  RESULT_VARIABLE RETURN_CODE
+                  OUTPUT_QUIET)
+  if(${RETURN_CODE} EQUAL 0) # One or more lines were selected
+		set(VARIBLE true)
+  elseif(${RETURN_CODE} EQUAL 1) # No lines were selected.
+		set(VARIBLE false)
+	else()
+		message(FATAL_ERROR "Attempted to determine it ${CSYMBOL} is defined in ${LIBLOCATION} "
+					  "but the execution failed. Return code = ${RETURN_CODE}")
+  endif()
+endmacro()
+
+if(CMAKE_BUILD_TYPE STREQUAL Debug)
+	CHECK_SYMBOL_DEFINED(LLVMSupport "__assert_rtn" ${LLVM_LIBRARY_DIRS} LLVM_ASSERT_REDEFINED)
+	if (LLVM_ASSERT_REDEFINED)
+		message(WARNING
+            "Found __assert_rtn redefined in LLVM libraries. "
+            "Disabled GPDB codegen assert handling. "
+            "To enable this, rebuild LLVM libraries with -DLLVM_ENABLE_CRASH_OVERRIDES=off.")
+  else()
+    ADD_DEBUG_COMPILE_DEFINITION(CODEGEN_GPDB_ASSERT_HANDLING)
+	endif()
 endif()
 
 get_filename_component(full_install_name_dir "${CMAKE_INSTALL_PREFIX}/lib" ABSOLUTE)
