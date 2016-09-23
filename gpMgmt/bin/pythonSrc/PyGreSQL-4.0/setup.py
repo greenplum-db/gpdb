@@ -63,7 +63,7 @@ def pg_config(s):
         raise Exception("pg_config tool is not available.")
     if not d:
         raise Exception("Could not get %s information." % s)
-    return os.environ['DESTDIR']+d
+    return os.getenv('DESTDIR','')+d
 
 def mk_include():
     """Create a temporary local include directory.
