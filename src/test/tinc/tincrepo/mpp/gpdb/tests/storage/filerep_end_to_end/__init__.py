@@ -75,15 +75,11 @@ class FilerepTestCase(MPPTestCase):
         dbid = self.config.get_dbid(content=content, seg_role=role)
         host, datadir = self.config.get_host_and_datadir_of_segment(dbid=dbid)
         file_path = os.path.join(datadir, filename)
-        cmd = Command('check timestamp', "stat -s %s" %
+        cmd = Command('check timestamp', """ python -c "import os; print os.stat('%s').st_mtime" """ %
                       file_path, ctxt=REMOTE, remoteHost=host)
         cmd.run(validateAfter=True)
         res = cmd.get_results().stdout.strip()
-        m = re.search('st_mtime=(\d+)', res)
-        timestamp = None
-        if m:
-            timestamp = m.group(1)
-        return timestamp
+        return res
 
     def verify_file_exists(self, content, role, filename):
         dbid = self.config.get_dbid(content=content, seg_role=role)

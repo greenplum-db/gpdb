@@ -1508,7 +1508,12 @@ SlruVerifyDirectoryChecksum(char *fullDirName)
 		FileRep_GetFlatFileIdentifier(fullDirName, SLRU_CHECKSUM_FILENAME));
 
 	if (retval != STATUS_OK)
+	{
+		ereport(WARNING,
+				(errmsg("FileRepPrimary_MirrorStartChecksum() returned: %d",
+						retval)));
 		return retval;
+	}
 
 	retval = SlruCreateChecksumFile(fullDirName);
 
@@ -1521,8 +1526,15 @@ SlruVerifyDirectoryChecksum(char *fullDirName)
 	if (retval != STATUS_OK)
 		return retval;
 
-	return FileRepPrimary_MirrorVerifyDirectoryChecksum(
+	retval = FileRepPrimary_MirrorVerifyDirectoryChecksum(
 				FileRep_GetFlatFileIdentifier(fullDirName, SLRU_CHECKSUM_FILENAME), md5);
+
+	if (retval != STATUS_OK)
+		ereport(WARNING,
+				(errmsg("FileRepPrimary_MirrorVerifyDirectoryChecksum() returned: %d",
+						retval)));
+
+	return retval;
 }
 
 /*
