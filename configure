@@ -4235,7 +4235,7 @@ unset CFLAGS
 # If the user specifies something in the environment, that is used.
 # else:  If the template file set something, that is used.
 # else:  If coverage was enabled, don't set anything.
-# else:  If the compiler is GCC, then we use -O3.
+# else:  If the compiler is GCC, then we use -O2.
 # else:  If the compiler is something else, then we use -O, unless debugging.
 
 if test "$ac_env_CFLAGS_set" = set; then
@@ -4245,7 +4245,7 @@ elif test "${CFLAGS+set}" = set; then
 elif test "$enable_coverage" = yes; then
   : # no optimization by default
 elif test "$GCC" = yes; then
-  CFLAGS="-O3"
+  CFLAGS="-O2"
 else
   # if the user selected debug mode, don't use -O
   if test "$enable_debug" != yes; then
