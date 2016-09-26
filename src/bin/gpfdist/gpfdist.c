@@ -677,10 +677,10 @@ static void parse_command_line(int argc, const char* const argv[],
 	}
 
 	if (!is_valid_timeout(opt.t))
-		usage_error("Error: -t timeout must be between 2 and 600, or 0 for no timeout", 0);
+		usage_error("Error: -t timeout must be between 2 and 7200, or 0 for no timeout", 0);
 
 	if (!is_valid_session_timeout(opt.w))
-		usage_error("Error: -w timeout must be between 1 and 600, or 0 for no timeout", 0);
+		usage_error("Error: -w timeout must be between 1 and 7200, or 0 for no timeout", 0);
 
 	/* validate max row length */
     if (! ((GPFDIST_MAX_LINE_LOWER_LIMIT <= opt.m) && (opt.m <= GPFDIST_MAX_LINE_UPPER_LIMIT)))

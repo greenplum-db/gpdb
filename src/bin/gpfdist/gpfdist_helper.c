@@ -6,7 +6,7 @@ bool is_valid_timeout(int timeout_val)
 		return false;
 	else if (timeout_val == 1)
 		return false;
-	else if (timeout_val > 600)
+	else if (timeout_val > 7200)
 		return false;
 	else
 		return true;
@@ -17,7 +17,7 @@ bool is_valid_session_timeout(int timeout_val)
 {
 	if (timeout_val < 0)
 		return false;
-	else if (timeout_val > 600)
+	else if (timeout_val > 7200)
 		return false;
 	else
 		return true;
