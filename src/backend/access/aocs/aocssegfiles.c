@@ -1647,7 +1647,6 @@ aocol_compression_ratio_internal(Relation parentrel)
 	int64			eof_uncompressed = 0;
 	float8			compress_ratio = -1; /* the default, meaning "not available" */
 
-	MemoryContext	oldcontext = CurrentMemoryContext;
 	Oid segrelid = InvalidOid;
 
 	GetAppendOnlyEntryAuxOids(RelationGetRelid(parentrel), SnapshotNow,
@@ -1691,7 +1690,6 @@ aocol_compression_ratio_internal(Relation parentrel)
 		ret = SPI_execute(sqlstmt.data, false, 0);
 		proc = SPI_processed;
 
-
 		if (ret > 0 && SPI_tuptable != NULL)
 		{
 			TupleDesc		tupdesc = SPI_tuptable->tupdesc;
@@ -1702,7 +1700,6 @@ aocol_compression_ratio_internal(Relation parentrel)
 			Datum			vpinfoDatum;
 			AOCSVPInfo		*vpinfo;
 			int				j;
-			MemoryContext	cxt_save;
 
 			for (i = 0; i < proc; i++)
 			{
@@ -1727,29 +1724,15 @@ aocol_compression_ratio_internal(Relation parentrel)
 				}
 			}
 
-			/* use our own context so that SPI won't free our stuff later */
-			cxt_save = MemoryContextSwitchTo(oldcontext);
-
 			/* guard against division by zero */
 			if (eof > 0)
 			{
-				char  buf[8];
-
 				/* calculate the compression ratio */
-				float8 compress_ratio_raw = 
-						((float8)eof_uncompressed) /
-												((float8)eof);
+				compress_ratio = (float8) eof_uncompressed / (float8) eof;
 
 				/* format to 2 digits past the decimal point */
-				sprintf(buf, "%.2f", compress_ratio_raw);
-
-				/* format to 2 digit decimal precision */
-				compress_ratio = DatumGetFloat8(DirectFunctionCall1(float8in,
-												CStringGetDatum(buf)));
+				compress_ratio = round(compress_ratio * 100.0) / 100.0;
 			}
-
-			MemoryContextSwitchTo(cxt_save);
-
 		}
 
 		connected = false;
