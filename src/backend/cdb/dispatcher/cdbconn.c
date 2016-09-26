@@ -623,6 +623,8 @@ void setQEIdentifier(SegmentDatabaseDescriptor *segdbDesc,
 	if (segdbDesc->backendPid != 0)
 		appendStringInfo(&string, " pid=%d", segdbDesc->backendPid);
 
+	if (segdbDesc->whoami != NULL)
+		pfree(segdbDesc->whoami);
 	segdbDesc->whoami = string.data;
 	MemoryContextSwitchTo(oldContext);
 }
