@@ -2045,12 +2045,9 @@ FileRepMirror_RunConsumer(void)
 			case FileRepOperationStartSlruChecksum:
 				Assert(fileRepMessageHeader->fileRepRelationType == FileRepRelationTypeFlatFile);
 
-				if (Debug_filerep_print)
-				{
-					ereport(LOG,
+				ereport(LOG,
 						(errmsg("mirror beginning SLRU checksum file creation, dir: %s",
 								fileRepMessageHeader->fileRepIdentifier.fileRepFlatFileIdentifier.directorySimpleName)));
-				}
 
 				if (SlruCreateChecksumFile(
 						fileRepMessageHeader->fileRepIdentifier.fileRepFlatFileIdentifier.directorySimpleName) < 0)
@@ -2064,13 +2061,10 @@ FileRepMirror_RunConsumer(void)
 			case FileRepOperationVerifySlruDirectoryChecksum:
 				Assert(fileRepMessageHeader->fileRepRelationType == FileRepRelationTypeFlatFile);
 
-				if (Debug_filerep_print)
-				{
-					ereport(LOG,
+				ereport(LOG,
 						(errmsg("mirror beginning checksum comparison, dir: %s, checksum file: %s",
 								fileRepMessageHeader->fileRepIdentifier.fileRepFlatFileIdentifier.directorySimpleName,
 								fileRepMessageHeader->fileRepIdentifier.fileRepFlatFileIdentifier.fileSimpleName)));
-				}
 
 				if (SlruMirrorVerifyDirectoryChecksum(
 						fileRepMessageHeader->fileRepIdentifier.fileRepFlatFileIdentifier.directorySimpleName,

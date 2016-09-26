@@ -113,9 +113,9 @@ class FilerepE2EScenarioTestCase(ScenarioTestCase, MPPTestCase):
             timestamp_before_restart = self.filerep.get_timestamp_of_file_in_datadir(0, 'm', filename)
             self.filerep.stop_start_validate()
             timestamp_after_restart = self.filerep.get_timestamp_of_file_in_datadir(0, 'm', filename)
-            if timestamp_before_restart != timestamp_after_restart:
-                raise Exception('File %s transferred after restart. timestamp before restart (%s), timestamp after restart (%s)' %
-                                filename, timestamp_before_restart, timestamp_after_restart)
+            self.assertEqual(timestamp_before_restart, timestamp_after_restart,
+                             'File %s transferred after restart. timestamp before restart (%s), timestamp after restart (%s)' %
+                              (filename, timestamp_before_restart, timestamp_after_restart))
         finally:
             self.filerep.remove_file_in_datadir(0, 'p', filename)
             self.filerep.remove_file_in_datadir(0, 'm', filename)

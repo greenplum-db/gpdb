@@ -85,7 +85,7 @@ class FilerepTestCase(MPPTestCase):
         dbid = self.config.get_dbid(content=content, seg_role=role)
         host, datadir = self.config.get_host_and_datadir_of_segment(dbid=dbid)
         file_path = os.path.join(datadir, filename)
-        cmd = Command('check if file exists', 'ls %s' % file_path, ctxt=REMOTE, remoteHost=host)
+        cmd = Command('check if file exists', 'test -f %s' % file_path, ctxt=REMOTE, remoteHost=host)
         cmd.run(validateAfter=True)
 
     def handle_ext_cases(self,file):
