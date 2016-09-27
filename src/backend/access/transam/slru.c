@@ -1473,8 +1473,8 @@ SlruRecoverMirrorDir(char *dirName)
 	retval = SlruVerifyDirectoryChecksum(fullDirName);
 
 	/*
-	 * If any of the checksums mismatched, we will copy all files in the
-	 * directory from the primary to the mirror
+	 * If checksum mismatch, copy all files in the directory from the
+	 * primary to the mirror.
 	 */
 	if (retval != STATUS_OK)
 		retval = SlruCopyDirectory(dirName, fullDirName);
