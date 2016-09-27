@@ -99,9 +99,14 @@ static void move_to_ready_list(TocEntry *pending_list, TocEntry *ready_list,
 static TocEntry *get_next_work_item(ArchiveHandle *AH,
 				   TocEntry *ready_list,
 				   ParallelState *pstate);
-static void mark_work_done(ArchiveHandle *AH, TocEntry *ready_list,
-			   int worker, int status,
-			   ParallelState *pstate);
+static void mark_dump_job_done(ArchiveHandle *AH,
+				   TocEntry *te,
+				   int status,
+				   void *callback_data);
+static void mark_restore_job_done(ArchiveHandle *AH,
+					  TocEntry *te,
+					  int status,
+					  void *callback_data);
 static void fix_dependencies(ArchiveHandle *AH);
 static bool has_lock_conflicts(TocEntry *te1, TocEntry *te2);
 static void repoint_table_dependencies(ArchiveHandle *AH);
@@ -2478,8 +2483,8 @@ WriteDataChunks(ArchiveHandle *AH, ParallelState *pstate)
 			 * If we are in a parallel backup, then we are always the master
 			 * process.  Dispatch each data-transfer job to a worker.
 			 */
-			EnsureIdleWorker(AH, pstate);
-			DispatchJobForTocEntry(AH, pstate, te, ACT_DUMP);
+			DispatchJobForTocEntry(AH, pstate, te, ACT_DUMP,
+								   mark_dump_job_done, NULL);
 		}
 		else
 			WriteDataChunksForTocEntry(AH, te);
@@ -2488,8 +2493,31 @@ WriteDataChunks(ArchiveHandle *AH, ParallelState *pstate)
 	/*
 	 * If parallel, wait for workers to finish.
 	 */
-	EnsureWorkersFinished(AH, pstate);
+	if (pstate && pstate->numWorkers > 1)
+		WaitForWorkers(AH, pstate, WFW_ALL_IDLE);
 }
+
+
+/*
+ * Callback function that's invoked in the master process after a step has
+ * been parallel dumped.
+ *
+ * We don't need to do anything except check for worker failure.
+ */
+static void
+mark_dump_job_done(ArchiveHandle *AH,
+				   TocEntry *te,
+				   int status,
+				   void *callback_data)
+{
+	ahlog(AH, 1, "finished item %d %s %s\n",
+		  te->dumpId, te->desc, te->tag);
+
+	if (status != 0)
+		exit_horribly(modulename, "worker process failed: exit code %d\n",
+					  status);
+}
+
 
 void
 WriteDataChunksForTocEntry(ArchiveHandle *AH, TocEntry *te)
@@ -2888,9 +2916,9 @@ _tocEntryRequired(TocEntry *te, teSection curSection, ArchiveHandle *AH)
 			return 0;
 	}
 
-	if (ropt->schemaExcludeNames.head != NULL
-		&& te->namespace
-		&& simple_string_list_member(&ropt->schemaExcludeNames, te->namespace))
+	if (ropt->schemaExcludeNames.head != NULL &&
+		te->namespace &&
+		simple_string_list_member(&ropt->schemaExcludeNames, te->namespace))
 		return 0;
 
 	if (ropt->selTypes)
@@ -4084,7 +4112,8 @@ restore_toc_entries_parallel(ArchiveHandle *AH, ParallelState *pstate,
 			/* Remove it from ready_list, and dispatch to some worker */
 			par_list_remove(next_work_item);
 
-			DispatchJobForTocEntry(AH, pstate, next_work_item, ACT_RESTORE);
+			DispatchJobForTocEntry(AH, pstate, next_work_item, ACT_RESTORE,
+								   mark_restore_job_done, &ready_list);
 		}
 		else if (IsEveryWorkerIdle(pstate))
 		{
@@ -4110,49 +4139,21 @@ restore_toc_entries_parallel(ArchiveHandle *AH, ParallelState *pstate,
 			 */
 		}
 
-		for (;;)
-		{
-			int			nTerm = 0;
-			int			ret_child;
-			int			work_status;
-
-			/*
-			 * In order to reduce dependencies as soon as possible and
-			 * especially to reap the status of workers who are working on
-			 * items that pending items depend on, we do a non-blocking check
-			 * for ended workers first.
-			 *
-			 * However, if we do not have any other work items currently that
-			 * workers can work on, we do not busy-loop here but instead
-			 * really wait for at least one worker to terminate. Hence we call
-			 * ListenToWorkers(..., ..., do_wait = true) in this case.
-			 */
-			ListenToWorkers(AH, pstate, !next_work_item);
-
-			while ((ret_child = ReapWorkerStatus(pstate, &work_status)) != NO_SLOT)
-			{
-				nTerm++;
-				mark_work_done(AH, &ready_list, ret_child, work_status, pstate);
-			}
-
-			/*
-			 * We need to make sure that we have an idle worker before
-			 * re-running the loop. If nTerm > 0 we already have that (quick
-			 * check).
-			 */
-			if (nTerm > 0)
-				break;
-
-			/* if nobody terminated, explicitly check for an idle worker */
-			if (GetIdleWorker(pstate) != NO_SLOT)
-				break;
-
-			/*
-			 * If we have no idle worker, read the result of one or more
-			 * workers and loop the loop to call ReapWorkerStatus() on them.
-			 */
-			ListenToWorkers(AH, pstate, true);
-		}
+		/*
+		 * Before dispatching another job, check to see if anything has
+		 * finished.  We should check every time through the loop so as to
+		 * reduce dependencies as soon as possible.  If we were unable to
+		 * dispatch any job this time through, wait until some worker finishes
+		 * (and, hopefully, unblocks some pending item).  If we did dispatch
+		 * something, continue as soon as there's at least one idle worker.
+		 * Note that in either case, there's guaranteed to be at least one
+		 * idle worker when we return to the top of the loop.  This ensures we
+		 * won't block inside DispatchJobForTocEntry, which would be
+		 * undesirable: we'd rather postpone dispatching until we see what's
+		 * been unblocked by finished jobs.
+		 */
+		WaitForWorkers(AH, pstate,
+					   next_work_item ? WFW_ONE_IDLE : WFW_GOT_STATUS);
 	}
 
 	/* There should now be nothing in ready_list. */
@@ -4322,9 +4323,11 @@ get_next_work_item(ArchiveHandle *AH, TocEntry *ready_list,
 		int			count = 0;
 
 		for (k = 0; k < pstate->numWorkers; k++)
-			if (pstate->parallelSlot[k].args->te != NULL &&
-				pstate->parallelSlot[k].args->te->section == SECTION_DATA)
+		{
+			if (pstate->parallelSlot[k].workerStatus == WRKR_WORKING &&
+				pstate->parallelSlot[k].te->section == SECTION_DATA)
 				count++;
+		}
 		if (pstate->numWorkers == 0 || count * 4 < pstate->numWorkers)
 			pref_non_data = false;
 	}
@@ -4341,13 +4344,13 @@ get_next_work_item(ArchiveHandle *AH, TocEntry *ready_list,
 		 * that a currently running item also needs lock on, or vice versa. If
 		 * so, we don't want to schedule them together.
 		 */
-		for (i = 0; i < pstate->numWorkers && !conflicts; i++)
+		for (i = 0; i < pstate->numWorkers; i++)
 		{
 			TocEntry   *running_te;
 
 			if (pstate->parallelSlot[i].workerStatus != WRKR_WORKING)
 				continue;
-			running_te = pstate->parallelSlot[i].args->te;
+			running_te = pstate->parallelSlot[i].te;
 
 			if (has_lock_conflicts(te, running_te) ||
 				has_lock_conflicts(running_te, te))
@@ -4388,10 +4391,8 @@ get_next_work_item(ArchiveHandle *AH, TocEntry *ready_list,
  * our work is finished, the master process will assign us a new work item.
  */
 int
-parallel_restore(ParallelArgs *args)
+parallel_restore(ArchiveHandle *AH, TocEntry *te)
 {
-	ArchiveHandle *AH = args->AH;
-	TocEntry   *te = args->te;
 	int			status;
 
 	Assert(AH->connection != NULL);
@@ -4407,22 +4408,18 @@ parallel_restore(ParallelArgs *args)
 
 
 /*
- * Housekeeping to be done after a step has been parallel restored.
+ * Callback function that's invoked in the master process after a step has
+ * been parallel restored.
  *
- * Clear the appropriate slot, free all the extra memory we allocated,
- * update status, and reduce the dependency count of any dependent items.
+ * Update status and reduce the dependency count of any dependent items.
  */
 static void
-mark_work_done(ArchiveHandle *AH, TocEntry *ready_list,
-			   int worker, int status,
-			   ParallelState *pstate)
+mark_restore_job_done(ArchiveHandle *AH,
+					  TocEntry *te,
+					  int status,
+					  void *callback_data)
 {
-	TocEntry   *te = NULL;
-
-	te = pstate->parallelSlot[worker].args->te;
-
-	if (te == NULL)
-		exit_horribly(modulename, "could not find slot of finished worker\n");
+	TocEntry   *ready_list = (TocEntry *) callback_data;
 
 	ahlog(AH, 1, "finished item %d %s %s\n",
 		  te->dumpId, te->desc, te->tag);
