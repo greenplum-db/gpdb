@@ -26,21 +26,9 @@
 #define ALLOW_pfree
 #define ALLOW_MemoryContextFreeImpl
 #define ALLOW_CharGetDatum
+#define ALLOW_list_head
 
 #include "postgres.h"
-#include "naucrates/md/CMDIdCast.h"
-#include "naucrates/md/CMDIdScCmp.h"
-
-#include "naucrates/dxl/gpdb_types.h"
-
-#include "naucrates/md/CMDCastGPDB.h"
-#include "naucrates/md/CMDScCmpGPDB.h"
-
-#include "gpopt/translate/CTranslatorUtils.h"
-#include "gpopt/translate/CTranslatorRelcacheToDXL.h"
-#include "gpopt/translate/CTranslatorScalarToDXL.h"
-#include "gpopt/mdcache/CMDAccessor.h"
-
 #include "utils/array.h"
 #include "utils/rel.h"
 #include "utils/relcache.h"
@@ -59,6 +47,19 @@
 #include "catalog/namespace.h"
 #include "catalog/pg_statistic.h"
 
+#include "naucrates/md/CMDIdCast.h"
+#include "naucrates/md/CMDIdScCmp.h"
+
+#include "naucrates/dxl/gpdb_types.h"
+
+#include "naucrates/md/CMDCastGPDB.h"
+#include "naucrates/md/CMDScCmpGPDB.h"
+
+#include "gpopt/translate/CTranslatorUtils.h"
+#include "gpopt/translate/CTranslatorRelcacheToDXL.h"
+#include "gpopt/translate/CTranslatorScalarToDXL.h"
+#include "gpopt/mdcache/CMDAccessor.h"
+
 #undef ALLOW_DatumGetPointer
 #undef ALLOW_ntohl
 #undef ALLOW_memset
@@ -72,6 +73,7 @@
 #undef ALLOW_pfree
 #undef ALLOW_MemoryContextAllocImpl
 #undef ALLOW_MemoryContextFreeImpl
+#undef ALLOW_list_head
 
 #include "gpos/base.h"
 #include "gpos/error/CException.h"

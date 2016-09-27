@@ -15,17 +15,17 @@
 
 #define ALLOW_isnan
 #include "postgres.h"
-#include "gpopt/translate/CTranslatorScalarToDXL.h"
-#include "gpopt/translate/CTranslatorQueryToDXL.h"
-#include "gpopt/translate/CTranslatorUtils.h"
-#include "gpopt/translate/CCTEListEntry.h"
-
 #include "nodes/plannodes.h"
 #include "nodes/parsenodes.h"
 #include "nodes/primnodes.h"
 #include "utils/datum.h"
 #include "utils/date.h"
 #include "utils/numeric.h"
+
+#include "gpopt/translate/CTranslatorScalarToDXL.h"
+#include "gpopt/translate/CTranslatorQueryToDXL.h"
+#include "gpopt/translate/CTranslatorUtils.h"
+#include "gpopt/translate/CCTEListEntry.h"
 
 #include "gpos/base.h"
 #include "gpos/common/CAutoP.h"

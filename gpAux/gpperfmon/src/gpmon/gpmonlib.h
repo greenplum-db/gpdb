@@ -81,7 +81,7 @@ extern int gpsmon_fatalx(const char* fline, int e, const char* fmt, ...);
 extern apr_status_t gpmon_ntohpkt(apr_int32_t magic, apr_int16_t version, apr_int16_t pkttype);
 
 /* get the size of the union packet for smon_to_mon packets*/
-inline size_t get_size_by_pkttype_smon_to_mmon(apr_int16_t pkttype);
+extern size_t get_size_by_pkttype_smon_to_mmon(apr_int16_t pkttype);
 
 /* strings */
 extern char* gpmon_trim(char* s);
@@ -286,7 +286,7 @@ double subtractTimeOfDay(struct timeval* begin, struct timeval* end);
 
 
 /* Set header*/
-inline void gp_smon_to_mmon_set_header(gp_smon_to_mmon_packet_t* pkt, apr_int16_t pkttype);
+extern void gp_smon_to_mmon_set_header(gp_smon_to_mmon_packet_t* pkt, apr_int16_t pkttype);
 
 unsigned int gpdb_getnode_number_metrics(PerfmonNodeType type);
 const char* gpdb_getnodename(PerfmonNodeType type);
