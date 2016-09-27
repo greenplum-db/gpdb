@@ -8,10 +8,18 @@ extern "C" {
 // be built with -DLLVM_ENABLE_CRASH_OVERRIDES=off
 //
 // (Refer http://lists.llvm.org/pipermail/llvm-commits/Week-of-Mon-20130826/186121.html)
+#ifdef __APPLE__
 void __assert_rtn(const char *func,
                   const char *file,
                   int line,
                   const char *expr) {
+#elif __linux__
+void __assert_fail(const char * expr,
+                   const char * file,
+                   unsigned int line,
+                   const char * func) {
+#endif
+
   if (!func) {
     func = "";
   }

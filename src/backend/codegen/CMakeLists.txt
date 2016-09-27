@@ -216,11 +216,17 @@ macro(CHECK_SYMBOL_DEFINED LIBRARY CSYMBOL LIBPATH VARIABLE)
   endif()
 endmacro()
 
+if(APPLE)
+  set(ASSERT_FUNCTION_TO_OVERRIDE "__assert_rtn")
+elseif(UNIX)
+  set(ASSERT_FUNCTION_TO_OVERRIDE "__assert_fail")
+endif()
+
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
-	CHECK_SYMBOL_DEFINED(LLVMSupport "__assert_rtn" ${LLVM_LIBRARY_DIRS} LLVM_ASSERT_REDEFINED)
+  CHECK_SYMBOL_DEFINED(LLVMSupport ${ASSERT_FUNCTION_TO_OVERRIDE} ${LLVM_LIBRARY_DIRS} LLVM_ASSERT_REDEFINED)
 	if (LLVM_ASSERT_REDEFINED)
 		message(WARNING
-            "Found __assert_rtn redefined in LLVM libraries. "
+            "Found ${ASSERT_FUNCTION_TO_OVERRIDE} redefined in LLVM libraries. "
             "Disabled GPDB codegen assert handling. "
             "To enable this, rebuild LLVM libraries with -DLLVM_ENABLE_CRASH_OVERRIDES=off.")
   else()
