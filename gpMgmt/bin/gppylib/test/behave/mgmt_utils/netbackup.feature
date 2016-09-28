@@ -168,7 +168,6 @@ Feature: NetBackup Integration with GPDB
         And verify that the data of "2" tables in "bkdb" is validated after restore
 
     @nbupartI
-    @foo2
     Scenario: Test netbackup parameter lengths for full backup and restore (<=127 and >127)
         Given the test is initialized
         And the netbackup params have been parsed

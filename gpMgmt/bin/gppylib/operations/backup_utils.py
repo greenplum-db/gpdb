@@ -904,7 +904,7 @@ def get_table_info(line):
 
 def validate_netbackup_params(param_dict):
     max_len = 127
-    for label, param in param_dict.items():
+    for label, param in param_dict.iteritems():
         if param and len(param) > max_len:
             raise Exception("Netbackup {0} ({1}) exceeds the maximum length of {2} characters".format(label, param, max_len))
     

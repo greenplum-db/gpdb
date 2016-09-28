@@ -287,7 +287,8 @@ void
 test_initBSADumpSession_servicehost_len_too_long(void **state)
 {
 	int result = 0;
-	char* bsaServiceHost = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa129";
+	char bsaServiceHost[130] = "";
+	memset(bsaServiceHost, 'a', 129);
 	char* nbbsaPolicy = "test_policy";
 	char* nbbsaSchedule = "test_schedule";
 	char* nbbsaKeyword = NULL;
@@ -300,7 +301,8 @@ test_initBSADumpSession_policy_len_too_long(void **state)
 {
 	int result = 0;
 	char* bsaServiceHost = "mdw";
-	char* nbbsaPolicy = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa129";
+	char nbbsaPolicy[130] = "";
+	memset(nbbsaPolicy, 'a', 129);
 	char* nbbsaSchedule = "test_schedule";
 	char* nbbsaKeyword = NULL;
 	result = initBSADumpSession(bsaServiceHost, nbbsaPolicy, nbbsaSchedule, nbbsaKeyword);
@@ -312,7 +314,8 @@ test_initBSADumpSession_schedule_len_too_long(void **state)
 	int result = 0;
 	char* bsaServiceHost = "mdw";
 	char* nbbsaPolicy = "test_policy";
-	char* nbbsaSchedule = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa129";
+	char nbbsaSchedule[130] = "";
+	memset(nbbsaSchedule, 'a', 129);
 	char* nbbsaKeyword = NULL;
 	result = initBSADumpSession(bsaServiceHost, nbbsaPolicy, nbbsaSchedule, nbbsaKeyword);
 	assert_true(result == -1);
@@ -325,7 +328,8 @@ test_initBSADumpSession_keyword_len_too_long(void **state)
 	char* bsaServiceHost = "mdw";
 	char* nbbsaPolicy = "test_policy";
 	char* nbbsaSchedule = "test_schedule";
-	char* nbbsaKeyword = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa129";
+	char nbbsaKeyword[130] = "";
+	memset(nbbsaKeyword, 'a', 129);
 	result = initBSADumpSession(bsaServiceHost, nbbsaPolicy, nbbsaSchedule, nbbsaKeyword);
 	assert_true(result == -1);
 }
@@ -334,7 +338,8 @@ void
 test_initBSADumpSession_servicehost_len_ok(void **state)
 {
 	int result = -1;
-	char* bsaServiceHost = "netbackup-service-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa127";
+	char bsaServiceHost[128] = "";
+	memset(bsaServiceHost, 'a', 127);
 	char* nbbsaPolicy = "test_policy";
 	char* nbbsaSchedule = "test_schedule";
 	char* nbbsaKeyword = " ";
@@ -349,7 +354,8 @@ test_initBSADumpSession_policy_len_ok(void **state)
 {
 	int result = -1;
 	char* bsaServiceHost = "mdw";
-	char* nbbsaPolicy = "netbackup-policy-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa127";
+	char nbbsaPolicy[128] = "";
+	memset(nbbsaPolicy, 'a', 127);
 	char* nbbsaSchedule = "test_schedule";
 	char* nbbsaKeyword = " ";
 	will_return(BSAInit, BSA_RC_SUCCESS);
@@ -364,7 +370,8 @@ test_initBSADumpSession_schedule_len_ok(void **state)
 	int result = -1;
 	char* bsaServiceHost = "mdw";
 	char* nbbsaPolicy = "test_policy";
-	char* nbbsaSchedule = "netbackup-schedule-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa127";
+	char nbbsaSchedule[128] = "";
+	memset(nbbsaSchedule, 'a', 127);
 	char* nbbsaKeyword = " ";
 	will_return(BSAInit, BSA_RC_SUCCESS);
 	will_return(BSABeginTxn, BSA_RC_SUCCESS);
@@ -379,7 +386,8 @@ test_initBSADumpSession_keyword_len_ok(void **state)
 	char* bsaServiceHost = "mdw";
 	char* nbbsaPolicy = "test_policy";
 	char* nbbsaSchedule = "test_schedule";
-	char* nbbsaKeyword = "netbackup-keyword-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa127";
+	char nbbsaKeyword[128] = "";
+	memset(nbbsaKeyword, 'a', 127);
 	will_return(BSAInit, BSA_RC_SUCCESS);
 	will_return(BSABeginTxn, BSA_RC_SUCCESS);
 	result = initBSADumpSession(bsaServiceHost, nbbsaPolicy, nbbsaSchedule, nbbsaKeyword);
@@ -801,7 +809,8 @@ void
 test_initBSARestoreSession_servicehost_len_too_long(void **state)
 {
 	int result = 0;
-	char* bsaServiceHost = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa129";
+	char bsaServiceHost[130] = "";
+	memset(bsaServiceHost, 'a', 129);
 	result = initBSARestoreSession(bsaServiceHost);
 	assert_true(result == -1);
 }
@@ -810,7 +819,8 @@ void
 test_initBSARestoreSession_servicehost_len_ok(void **state)
 {
 	int result = -1;
-	char* bsaServiceHost = "netbackup-service-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa127";
+	char bsaServiceHost[128] = "";
+	memset(bsaServiceHost, 'a', 127);
 	will_return(BSAInit, BSA_RC_SUCCESS);
 	will_return(BSABeginTxn, BSA_RC_SUCCESS);
 	result = initBSARestoreSession(bsaServiceHost);
