@@ -135,27 +135,26 @@ endif()
 find_package(Clang REQUIRED)
 include_directories(${CLANG_INCLUDE_DIRS})
 
-set(GPCODEGEN_SRC
-    codegen_interface.cc
-    codegen_manager.cc
-    const_expr_tree_generator.cc
-    exec_variable_list_codegen.cc
-    slot_getattr_codegen.cc
-    exec_eval_expr_codegen.cc
-    expr_tree_generator.cc
-    op_expr_tree_generator.cc
-    pg_date_func_generator.cc
-    var_expr_tree_generator.cc
-    advance_aggregates_codegen.cc
-)
-
 # Core codegen library.
+# This builds all the codegen-related C++ sources into one library
 add_library(gpcodegen SHARED
             utils/clang_compiler.cc
             utils/codegen_utils.cc
             utils/gp_codegen_utils.cc
             utils/gpassert.cc
-            ${GPCODEGEN_SRC}
+
+            codegen_interface.cc
+            codegen_manager.cc
+            const_expr_tree_generator.cc
+            exec_variable_list_codegen.cc
+            slot_getattr_codegen.cc
+            exec_eval_expr_codegen.cc
+            expr_tree_generator.cc
+            op_expr_tree_generator.cc
+            pg_date_func_generator.cc
+            var_expr_tree_generator.cc
+            advance_aggregates_codegen.cc
+
             ${codegen_tmpfile_sources})
 
 if(APPLE)
@@ -211,7 +210,7 @@ macro(CHECK_SYMBOL_DEFINED LIBRARY CSYMBOL LIBPATH VARIABLE)
   elseif(${RETURN_CODE} EQUAL 1) # No lines were selected.
 		set(VARIBLE false)
 	else()
-		message(FATAL_ERROR "Attempted to determine it ${CSYMBOL} is defined in ${LIBLOCATION} "
+		message(FATAL_ERROR "Attempted to determine if ${CSYMBOL} is defined in ${LIBLOCATION} "
 					  "but the execution failed. Return code = ${RETURN_CODE}")
   endif()
 endmacro()
@@ -241,10 +240,10 @@ set_target_properties(
     MACOSX_RPATH ON)
 
 # Integrate with GPDB build system. 
-# Here we compile all the GPDB code generators, and link them incrementally
-# with the gpcodegen shared library to create a binary SUBSYS.o as expected by
-# GPDB make system. We invoke the linker with -nostdlib since we don't really
-# want to create a full executable.
+# Here we compile the GPDB wrappers and link it with the gpcodegen shared
+# library to create a binary SUBSYS.o as expected by GPDB make system.  We
+# invoke the linker with -nostdlib since we don't really want to create a full
+# executable.
 add_executable(SUBSYS.o codegen_wrapper.cc)
 set_target_properties(SUBSYS.o
     PROPERTIES
@@ -315,7 +314,7 @@ function(add_cmockery_gtest TEST_NAME TEST_SOURCES)
 
     add_executable(${TEST_NAME} EXCLUDE_FROM_ALL 
         ${TEST_SOURCES}
-        ${GPCODEGEN_SRC}
+        codegen_wrapper.cc
         ${FILES_TO_LINK} 
         ${MOCK_OBJS} 
         ${CMOCKERY_OBJS}
