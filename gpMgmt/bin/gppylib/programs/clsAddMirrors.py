@@ -36,9 +36,16 @@ def validateFlexibleHeadersListAllFilespaces(configFileLabel, gpArray, fileData)
     """
     Verify that every filespace in the gpArray has exactly one entry in the flexible headers of fileData
     """
+    if not fileData:
+        return
+
+    flexibleHeaders = fileData.getFlexibleHeaders()
+    if not flexibleHeaders:
+        return
+
     filespaceNameToFilespace = dict([ (fs.getName(), fs) for fs in gpArray.getFilespaces(False)])
     specifiedFilespaces = {}
-    for fsName in fileData.getFlexibleHeaders():
+    for fsName in flexibleHeaders:
         if fsName not in filespaceNameToFilespace:
             raise Exception('%s refers to filespace that does not exist: "%s"' % (configFileLabel, fsName))
         if fsName in specifiedFilespaces:
