@@ -267,9 +267,9 @@ SET(GTEST_DIR ../../../gpAux/extensions/gtest)
 add_subdirectory(${GTEST_DIR} ${CMAKE_BINARY_DIR}/gtest EXCLUDE_FROM_ALL)
 enable_testing()
 
-SET (TEST_LIB_INC_DIRECTORIES
-${TOP_SRC_DIR}/src/test/unit/cmockery
-${GTEST_DIR}/include)
+set(TEST_LIB_INC_DIRECTORIES
+    ${TOP_SRC_DIR}/src/test/unit/cmockery
+    ${GTEST_DIR}/include)
 			
 function(prepend_path var prefix)
    SET(listVar "")
@@ -279,17 +279,6 @@ function(prepend_path var prefix)
    SET(${var} "${listVar}" PARENT_SCOPE)
 endfunction(prepend_path)
 
-function(add_simple_gtest TEST_NAME TEST_SRC)
-    add_executable(${TEST_NAME} EXCLUDE_FROM_ALL ${TEST_SRC})
-	target_include_directories(${TEST_NAME} PUBLIC ${TEST_LIB_INC_DIRECTORIES})
-    target_link_libraries(${TEST_NAME} gpcodegen gtest)
-    add_test(${TEST_NAME} ${TEST_NAME})
-    add_dependencies(check ${TEST_NAME})
-endfunction(add_simple_gtest)
-
-add_simple_gtest(clang_compiler_unittest.t tests/clang_compiler_unittest.cc)
-add_simple_gtest(codegen_utils_unittest.t tests/codegen_utils_unittest.cc)
-add_simple_gtest(instance_method_wrappers_unittest.t tests/instance_method_wrappers_unittest.cc)
 
 # Usage add_cmock_gtest ${TEST_NAME} ${TEST_SOURCES} ${MOCK_DIR}/hello_mock.o ${MOCK_DIR}/world_mock.o)
 function(add_cmockery_gtest TEST_NAME TEST_SOURCES)
@@ -367,14 +356,25 @@ if(EXISTS ${TXT_OBJFILE})
 endif()
 
 # Add CMockery tests
+# All tests must be linked with postgres, even if they don't need the cmockery
+# framework  since libgpcodegen may now have references to postgres symbols.
+#
+# Usage add_cmock_gtest ${TEST_NAME} ${TEST_SOURCES} ${MOCK_DIR}/hello_mock.o ${MOCK_DIR}/world_mock.o)
 if(EXISTS ${TXT_OBJFILE})
     add_cmockery_gtest(codegen_framework_unittest.t 
         tests/codegen_framework_unittest.cc
-        ${MOCK_DIR}/backend/postmaster/postmaster_mock.o
     )
     add_cmockery_gtest(codegen_pg_func_generator_unittest.t 
         tests/codegen_pg_func_generator_unittest.cc
-        ${MOCK_DIR}/backend/postmaster/postmaster_mock.o
+    )
+    add_cmockery_gtest(clang_compiler_unittest.t
+        tests/clang_compiler_unittest.cc
+    )
+    add_cmockery_gtest(instance_method_wrappers_unittest.t
+        tests/instance_method_wrappers_unittest.cc
+    )
+    add_cmockery_gtest(codegen_utils_unittest.t
+        tests/codegen_utils_unittest.cc
     )
 endif()
 
