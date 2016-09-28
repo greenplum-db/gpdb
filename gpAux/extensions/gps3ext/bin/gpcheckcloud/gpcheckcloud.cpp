@@ -2,9 +2,12 @@
 
 volatile bool QueryCancelPending = false;
 
-// As we cannot catch 'IsAbortInProgress()' in UT, so here consider QueryCancelPending only
+// As we can't catch 'IsAbortInProgress()' in UT, so here consider QueryCancelPending only
 bool S3QueryIsAbortInProgress(void) {
     return QueryCancelPending;
+}
+
+void MaskThreadSignals() {
 }
 
 static void handleAbortSignal(int signum) {

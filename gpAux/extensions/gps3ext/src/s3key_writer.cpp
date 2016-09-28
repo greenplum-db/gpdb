@@ -85,6 +85,8 @@ struct ThreadParams {
 };
 
 void* S3KeyWriter::UploadThreadFunc(void* data) {
+    MaskThreadSignals();
+
     ThreadParams* params = (ThreadParams*)data;
     S3KeyWriter* writer = params->keyWriter;
 

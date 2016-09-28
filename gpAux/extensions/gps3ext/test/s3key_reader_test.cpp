@@ -17,6 +17,9 @@ bool S3QueryIsAbortInProgress(void) {
     return QueryCancelPending;
 }
 
+void MaskThreadSignals() {
+}
+
 // ================== S3KeyReaderTest ===================
 class S3KeyReaderTest : public testing::Test, public S3KeyReader {
    protected:

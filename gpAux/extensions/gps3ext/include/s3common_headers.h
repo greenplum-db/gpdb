@@ -36,4 +36,6 @@ class S3Params;
 
 bool InitConfig(S3Params &params, const string &path, const string &section);
 bool InitConfig(S3Params &params, const string &urlWithOptions);
+
+void MaskThreadSignals();
 #endif

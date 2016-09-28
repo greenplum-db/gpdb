@@ -53,10 +53,36 @@ bool S3QueryIsAbortInProgress(void) {
 }
 
 /*
+ * Set up the thread signal mask, we don't want to run our signal handlers
+ * in downloading and uploading threads.
+ */
+void MaskThreadSignals() {
+    sigset_t sigs;
+
+    if (pthread_equal(main_tid, pthread_self())) {
+        S3ERROR("thread_mask is called from main thread!");
+        return;
+    }
+
+    sigemptyset(&sigs);
+
+    /* make our thread to ignore these signals (which should allow that they be
+     * delivered to the main thread) */
+    sigaddset(&sigs, SIGHUP);
+    sigaddset(&sigs, SIGINT);
+    sigaddset(&sigs, SIGTERM);
+    sigaddset(&sigs, SIGALRM);
+    sigaddset(&sigs, SIGUSR1);
+    sigaddset(&sigs, SIGUSR2);
+
+    pthread_sigmask(SIG_BLOCK, &sigs, NULL);
+}
+
+/*
  * Detect data format
  * used to set file extension on S3 in gpwriter.
  */
-const char *get_format_str(FunctionCallInfo fcinfo) {
+static const char *getFormatStr(FunctionCallInfo fcinfo) {
     Relation rel = EXTPROTOCOL_GET_RELATION(fcinfo);
     ExtTableEntry *exttbl = GetExtTableEntry(rel->rd_id);
     char fmtcode = exttbl->fmtcode;
@@ -150,7 +176,7 @@ Datum s3_export(PG_FUNCTION_ARGS) {
     if (gpwriter == NULL) {
         queryCancelFlag = false;
         const char *url_with_options = EXTPROTOCOL_GET_URL(fcinfo);
-        const char *format = get_format_str(fcinfo);
+        const char *format = getFormatStr(fcinfo);
 
         thread_setup();
 
