@@ -279,15 +279,18 @@ class GpRecoverSegmentProgram:
 
         segs = []
         segs_in_change_tracking_disabled = []
-        for i in range(len(failedSegments)):
-            if (not self.__options.forceFullResynchronization and
-                peersForFailedSegments[i].getSegmentDbId() in segmentStates and
-                self.check_segment_change_tracking_disabled_state(segmentStates[peersForFailedSegments.getSegmentDbId()])):
+        for index, failedSegment in enumerate(failedSegments):
+            peerForFailedSegment = peersForFailedSegments[index]
 
-                segs_in_change_tracking_disabled.append(peersForFailedSegments.getSegmentDbId())
+            peerForFailedSegmentDbId = peerForFailedSegment.getSegmentDbId()
+            if (not self.__options.forceFullResynchronization and
+                        peerForFailedSegmentDbId in segmentStates and
+                    self.check_segment_change_tracking_disabled_state(segmentStates[peerForFailedSegmentDbId])):
+
+                segs_in_change_tracking_disabled.append(peerForFailedSegmentDbId)
             else:
-                segs.append( GpMirrorToBuild(failedSegments[i], peersForFailedSegments[i], failoverSegments[i], \
-                             self.__options.forceFullResynchronization))
+                segs.append( GpMirrorToBuild(failedSegment, peerForFailedSegment, failoverSegments[index], \
+                                             self.__options.forceFullResynchronization))
 
         self._output_segments_in_change_tracking_disabled(segs_in_change_tracking_disabled)
 
@@ -296,6 +299,7 @@ class GpRecoverSegmentProgram:
     def findAndValidatePeersForFailedSegments(self, gpArray, failedSegments):
         dbIdToPeerMap = gpArray.getDbIdToPeerMap()
         peersForFailedSegments = [ dbIdToPeerMap.get(seg.getSegmentDbId()) for seg in failedSegments]
+
         for i in range(len(failedSegments)):
             peer = peersForFailedSegments[i]
             if peer is None:

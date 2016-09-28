@@ -71,6 +71,22 @@ Feature: gprecoverseg tests
         Then gprecoverseg should return a return code of 0
         And all the segments are running
 
+    Scenario: gprecoverseg with -i and -o option
+        Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And the information of a "mirror" segment on a remote host is saved
+        And user runs the command "gpfaultinjector  -f filerep_consumer  -m async -y fault" with the saved "mirror" segment option
+        Then the saved mirror segment is marked down in config
+        And the saved mirror segment process is still running on that host
+        And user can start transactions
+        When the user runs "gprecoverseg -o failedSegmentFile"
+        Then gprecoverseg should return a return code of 0
+        Then gprecoverseg should print Configuration file output to failedSegmentFile successfully to stdout
+        When the user runs "gprecoverseg -i failedSegmentFile -a"
+        Then gprecoverseg should return a return code of 0
+        Then gprecoverseg should print 1 segment\(s\) to recover to stdout
+
     Scenario: gprecoverseg fails on corrupted change tracking logs, must run full recovery
         Given the database is running
         And the database "gptest1" does not exist
@@ -95,3 +111,20 @@ Feature: gprecoverseg tests
         Then all the segments are running
         And the segments are synchronized
         And user runs the command "gpfaultinjector -y reset -f change_tracking_disable" with the saved "primary" segment option
+
+    Scenario: gprecoverseg should not throw exception for empty input file
+        Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And the information of a "mirror" segment on a remote host is saved
+        And user runs the command "gpfaultinjector  -f filerep_consumer  -m async -y fault" with the saved "mirror" segment option
+        Then the saved mirror segment is marked down in config
+        And the saved mirror segment process is still running on that host
+        And user can start transactions
+        When the user runs command "touch /tmp/empty_file"
+        When the user runs "gprecoverseg -i /tmp/empty_file -a"
+        Then gprecoverseg should return a return code of 0
+        Then gprecoverseg should print No segments to recover to stdout
+        When the user runs "gprecoverseg -a -F"
+        Then all the segments are running
+        And the segments are synchronized
