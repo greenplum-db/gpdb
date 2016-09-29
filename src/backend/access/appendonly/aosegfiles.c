@@ -31,6 +31,7 @@
 #include "nodes/makefuncs.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
+#include "utils/int8.h"
 #include "utils/syscache.h"
 #include "utils/fmgroids.h"
 #include "utils/numeric.h"
@@ -1922,9 +1923,7 @@ aorow_compression_ratio_internal(Relation parentrel)
 	int 			proc;
 	int 			ret;
 	float8			compress_ratio = -1; /* the default, meaning "not available" */
-
-	MemoryContext 	oldcontext = CurrentMemoryContext;
-	Oid segrelid = InvalidOid;
+	Oid				segrelid = InvalidOid;
 
 	GetAppendOnlyEntryAuxOids(RelationGetRelid(parentrel), SnapshotNow,
 							  &segrelid,
@@ -1966,57 +1965,38 @@ aorow_compression_ratio_internal(Relation parentrel)
 		ret = SPI_execute(sqlstmt.data, false, 0);
 		proc = SPI_processed;
 
-
 		if (ret > 0 && SPI_tuptable != NULL)
 		{
 			TupleDesc 		tupdesc = SPI_tuptable->tupdesc;
-			SPITupleTable*	tuptable = SPI_tuptable;
+			SPITupleTable  *tuptable = SPI_tuptable;
 			HeapTuple 		tuple = tuptable->vals[0];
-			char*			val_eof;
-			char*			val_eof_uncomp;
-			MemoryContext 	cxt_save;
+			int64			eof;
+			int64			eof_uncomp;
 
 			/* we expect only 1 tuple */
 			Assert(proc == 1);
 
-			/* Get totals from QE's */
-			val_eof = SPI_getvalue(tuple, tupdesc, 1);
-			val_eof_uncomp = SPI_getvalue(tuple, tupdesc, 2);
-
-			/* use our own context so that SPI won't free our stuff later */
-			cxt_save = MemoryContextSwitchTo(oldcontext);
-
 			/*
-			 * Calculate the compression ratio. but do it only if the uncomp
-			 * value is not NULL. In older tables, that were created before
-			 * GPDB 3.3 the upgrade process will leave a NULL in new aoseg
-			 * table eofuncompressed column, and in that case we return -1
-			 * to indicate "ratio N/A" (set by default at declare time).
+			 * Get totals from QE's and calculate the compression ratio. but do
+			 * it only if the uncomp value is not NULL. In older tables, that
+			 * were created before GPDB 3.3 the upgrade process will leave a
+			 * NULL in new aoseg table eofuncompressed column, and in that case
+			 * we return -1 to indicate "ratio N/A" (set by default at declare
+			 * time).
 			 */
-			if(val_eof_uncomp != NULL && val_eof != NULL)
+			if (scanint8(SPI_getvalue(tuple, tupdesc, 1), true, &eof) &&
+				scanint8(SPI_getvalue(tuple, tupdesc, 2), true, &eof_uncomp))
 			{
-				int64 eof = DatumGetInt64(DirectFunctionCall1(int8in, CStringGetDatum(val_eof)));
-				int64 eof_uncomp = DatumGetInt64(DirectFunctionCall1(int8in, CStringGetDatum(val_eof_uncomp)));
-
 				/* guard against division by zero */
 				if (eof > 0)
 				{
-					char  buf[8];
-
 					/* calculate the compression ratio */
-					float8 compress_ratio_raw = ((float8) eof_uncomp) / ((float8) eof);
-
-					/* format to 2 digits past the decimal point */
-					snprintf(buf, 8, "%.2f", compress_ratio_raw);
+					compress_ratio = (float8) eof_uncomp / (float8) eof;
 
 					/* format to 2 digit decimal precision */
-					compress_ratio = DatumGetFloat8(DirectFunctionCall1(float8in,
-													CStringGetDatum(buf)));
+					compress_ratio = round(compress_ratio * 100.0) / 100.0;
 				}
 			}
-
-			MemoryContextSwitchTo(cxt_save);
-
 		}
 
 		connected = false;
