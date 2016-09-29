@@ -146,10 +146,11 @@ adjust_size_temp_file_new(workfile_set *work_set, int64 size)
 	AssertImply((NULL != work_set), work_set->size == 0);
 	AssertImply((NULL != work_set), work_set->in_progress_size >= size);
 
-	if (NULL != work_set)
-	{
-		work_set->in_progress_size -= size;
-	}
+	/*
+	 * Decrement the size with work_set->in_progress_size or
+	 * used_segspace_not_in_workfile_set
+	 */
+	workfile_set_update_in_progress_size(work_set, -size);
 
 	WorkfileDiskspace_Commit(0 /* commit_bytes */, size, true /* update_query_size */);
 	elog(gp_workfile_caching_loglevel, "closed and deleted temp file, subtracted size " INT64_FORMAT " from disk space", size);

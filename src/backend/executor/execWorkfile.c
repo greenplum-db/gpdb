@@ -20,6 +20,8 @@
 #include "utils/workfile_mgr.h"
 #include "utils/memutils.h"
 
+#include "utils/faultinjector.h"
+
 /*
  * Number of temporary files opened during the current session;
  * this is used in generation of unique tempfile names.
@@ -218,6 +220,8 @@ ExecWorkFile_Write(ExecWorkFile *workfile,
 	Assert(workfile != NULL);
 	uint64 bytes;
 
+	SIMPLE_FAULT_INJECTOR(WorkfileWriteFail);
+
 	if (data == NULL || size == 0)
 	{
 		return false;
@@ -258,7 +262,7 @@ ExecWorkFile_Write(ExecWorkFile *workfile,
 			workfile->size = new_size;
 
 			WorkfileDiskspace_Commit( (new_size - current_size), size, true /* update_query_size */);
-			workfile_update_in_progress_size(workfile, new_size - current_size);
+			workfile_set_update_in_progress_size(workfile->work_set, new_size - current_size);
 
 			if (bytes != size)
 			{
@@ -287,7 +291,7 @@ ExecWorkFile_Write(ExecWorkFile *workfile,
 			{
 				WorkfileDiskspace_Commit(size, size, true /* update_query_size */);
 			}
-			workfile_update_in_progress_size(workfile, size);
+			workfile_set_update_in_progress_size(workfile->work_set, size);
 
 			break;
 		default:
@@ -553,7 +557,7 @@ ExecWorkFile_Seek(ExecWorkFile *workfile, uint64 offset, int whence)
 	if (additional_size > 0)
 	{
 		WorkfileDiskspace_Commit(additional_size, additional_size, true /* update_query_size */);
-		workfile_update_in_progress_size(workfile, additional_size);
+		workfile_set_update_in_progress_size(workfile->work_set, additional_size);
 	}
 
 	return result;
@@ -717,7 +721,7 @@ ExecWorkFile_AdjustBFZSize(ExecWorkFile *workfile, int64 file_size)
 		 */
 		Assert(bfz_file->compression_index > 0 || WorkfileDiskspace_IsFull());
 		WorkfileDiskspace_Commit(file_size, workfile->size, true /* update_query_size */);
-		workfile_update_in_progress_size(workfile, file_size - workfile->size);
+		workfile_set_update_in_progress_size(workfile->work_set, file_size - workfile->size);
 		workfile->size = file_size;
 
 	}
@@ -748,7 +752,7 @@ ExecWorkFile_AdjustBFZSize(ExecWorkFile *workfile, int64 file_size)
 			}
 
 			WorkfileDiskspace_Commit(extra_bytes, extra_bytes, true /* update_query_size */);
-			workfile_update_in_progress_size(workfile, extra_bytes);
+			workfile_set_update_in_progress_size(workfile->work_set, extra_bytes);
 			workfile->size = file_size;
 		}
 	}

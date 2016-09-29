@@ -29,9 +29,11 @@ test: indexjoin as_alias regex_gp gpparams with_clause transient_types gang_mgmt
 # dispatch should always run seperately from other cases.
 test: dispatch
 
-# 'segspace' relies on the segment spill space to be 0, and uses fault injectors
-# so it needs to be in a group by itself
+# This test will change the gp_workfile_limit_per_segment and will need to restart the DB.
+# It will also use faultinjector - so it needs to be in a group by itself.
+test: segspace_setup
 test: segspace
+test: segspace_cleanup
 
 # 'query_finish_pending' sets QueryFinishPending flag to true during query execution using fault injectors
 # so it needs to be in a group by itself

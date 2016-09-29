@@ -134,7 +134,7 @@ void workfile_mgr_cache_init(void);
 void workfile_mgr_mark_complete(workfile_set *work_set);
 Cache *workfile_mgr_get_cache(void);
 int32 workfile_mgr_clear_cache(int seg_id);
-void workfile_update_in_progress_size(ExecWorkFile *workfile, int64 size);
+void workfile_set_update_in_progress_size(workfile_set *work_set, int64 size);
 
 /* Workfile File operations */
 ExecWorkFile *workfile_mgr_create_file(workfile_set *work_set);

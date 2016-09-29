@@ -1,40 +1,14 @@
 --
 -- Tests the spill files disk space accounting mechanism
--- 
--- create view to read the segspace value
-DROP VIEW IF EXISTS segspace_view_gp_workfile_segspace;
-NOTICE:  view "segspace_view_gp_workfile_segspace" does not exist, skipping
-DROP FUNCTION IF EXISTS segspace_view_gp_workfile_segspace_f();
-NOTICE:  function segspace_view_gp_workfile_segspace_f() does not exist, skipping
-DROP VIEW IF EXISTS segspace_view_gp_workfile_mgr_reset_segspace;
-NOTICE:  view "segspace_view_gp_workfile_mgr_reset_segspace" does not exist, skipping
-DROP FUNCTION IF EXISTS segspace_view_gp_workfile_mgr_reset_segspace_f();
-NOTICE:  function segspace_view_gp_workfile_mgr_reset_segspace_f() does not exist, skipping
-CREATE FUNCTION segspace_view_gp_workfile_segspace_f()
-RETURNS SETOF record
-AS '$libdir/gp_workfile_mgr', 'gp_workfile_mgr_used_diskspace'
-LANGUAGE C IMMUTABLE;
-CREATE VIEW segspace_view_gp_workfile_segspace AS
-SELECT C.*
-FROM gp_toolkit.__gp_localid, segspace_view_gp_workfile_segspace_f() AS C (
-segid int,
-size bigint
-)
-UNION ALL
-SELECT C.*
-FROM gp_toolkit.__gp_masterid, segspace_view_gp_workfile_segspace_f() AS C (
-segid int,
-size bigint
-);
--- create helper UDF to reset the segpsace variable
-CREATE FUNCTION segspace_view_gp_workfile_mgr_reset_segspace_f()
-RETURNS SETOF bigint
-AS '$libdir/gp_workfile_mgr', 'gp_workfile_mgr_reset_segspace'
-LANGUAGE C IMMUTABLE;
-CREATE VIEW segspace_view_gp_workfile_mgr_reset_segspace AS
-SELECT * FROM gp_toolkit.__gp_localid, segspace_view_gp_workfile_mgr_reset_segspace_f()
-UNION ALL
-SELECT * FROM gp_toolkit.__gp_masterid, segspace_view_gp_workfile_mgr_reset_segspace_f();
+--
+-- check segspace before test
+reset statement_mem;
+select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
+ max | min 
+-----+-----
+   0 |   0
+(1 row)
+
 --- create and populate the table
 DROP TABLE IF EXISTS segspace_test_hj_skew;
 NOTICE:  table "segspace_test_hj_skew" does not exist, skipping
@@ -49,15 +23,6 @@ INSERT INTO segspace_test_hj_skew SELECT i,i,i,i,i,i,i,i FROM
 	(select generate_series(1, nsegments * 100000) as i from 
 	(select count(*) as nsegments from gp_segment_configuration where role='p' and content >= 0) foo) bar;
 ANALYZE segspace_test_hj_skew;
--- reset the segspace value
--- start_ignore
-select count(*) > 0 from segspace_view_gp_workfile_mgr_reset_segspace;
- ?column? 
-----------
- t
-(1 row)
-
--- end_ignore
 --
 --  Testing that query cancelation during spilling updates the accounting
 --
@@ -65,19 +30,7 @@ select count(*) > 0 from segspace_view_gp_workfile_mgr_reset_segspace;
 -- enable the fault injector
 --start_ignore
 \! gpfaultinjector -f exec_hashjoin_new_batch -y reset --seg_dbid 2
-20160114:11:07:01:010849 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y reset --seg_dbid 2
-20160114:11:07:01:010849 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
-20160114:11:07:01:010849 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Obtaining Segment details from master...
-20160114:11:07:01:010849 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on 1 segment(s)
-20160114:11:07:01:010849 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on gcaragea-mbp.local:/data/gp-data/gp.GPDB-MAIN/primary/gp0:content=0:dbid=2:mode=s:status=u
-20160114:11:07:01:010849 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-DONE
 \! gpfaultinjector -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
-20160114:11:07:01:010862 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
-20160114:11:07:02:010862 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
-20160114:11:07:02:010862 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Obtaining Segment details from master...
-20160114:11:07:02:010862 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on 1 segment(s)
-20160114:11:07:02:010862 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on gcaragea-mbp.local:/data/gp-data/gp.GPDB-MAIN/primary/gp0:content=0:dbid=2:mode=s:status=u
-20160114:11:07:02:010862 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-DONE
 --end_ignore
 set gp_workfile_type_hashjoin=buffile;
 set statement_mem=2048;
@@ -85,34 +38,35 @@ set gp_autostats_mode = none;
 set gp_hashjoin_metadata_memory_percent=0;
 begin;
 SELECT t1.* FROM segspace_test_hj_skew AS t1, segspace_test_hj_skew AS t2 WHERE t1.i1=t2.i2;
-ERROR:  canceling MPP operation  (seg0 slice2 gcaragea-mbp.local:40070 pid=48717)
+ERROR:  canceling MPP operation  (seg0 slice2 127.0.0.1:25432 pid=26876)
+rollback;
+-- check used segspace after test
+select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
+ max | min 
+-----+-----
+   0 |   0
+(1 row)
+
+-- Run the test without fault injection
+begin;
+-- Doing select count so output file doesn't have 75000 rows.
+select count(*) from 
+(SELECT t1.* FROM segspace_test_hj_skew AS t1, segspace_test_hj_skew AS t2 WHERE t1.i1=t2.i2) temp;
+ count  
+--------
+ 750000
+(1 row)
+
 rollback;
 -- check used segspace after test
 reset statement_mem;
-select max(size) from segspace_view_gp_workfile_segspace;
- max 
------
-   0
+select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
+ max | min 
+-----+-----
+   0 |   0
 (1 row)
 
 ------------ Interrupting INSERT INTO query that spills -------------------
--- enable the fault injector
---start_ignore
-\! gpfaultinjector -f exec_hashjoin_new_batch -y reset --seg_dbid 2
-20160114:11:07:03:010881 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y reset --seg_dbid 2
-20160114:11:07:03:010881 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
-20160114:11:07:03:010881 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Obtaining Segment details from master...
-20160114:11:07:03:010881 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on 1 segment(s)
-20160114:11:07:03:010881 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on gcaragea-mbp.local:/data/gp-data/gp.GPDB-MAIN/primary/gp0:content=0:dbid=2:mode=s:status=u
-20160114:11:07:03:010881 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-DONE
-\! gpfaultinjector -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
-20160114:11:07:03:010893 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
-20160114:11:07:03:010893 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
-20160114:11:07:03:010893 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Obtaining Segment details from master...
-20160114:11:07:03:010893 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on 1 segment(s)
-20160114:11:07:03:010893 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on gcaragea-mbp.local:/data/gp-data/gp.GPDB-MAIN/primary/gp0:content=0:dbid=2:mode=s:status=u
-20160114:11:07:03:010893 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-DONE
---end_ignore
 drop table if exists segspace_t1_created;
 NOTICE:  table "segspace_t1_created" does not exist, skipping
 create table segspace_t1_created (i1 int, i2 int, i3 int, i4 int, i5 int, i6 int, i7 int, i8 int) DISTRIBUTED BY (i1);
@@ -120,68 +74,260 @@ set gp_workfile_type_hashjoin=buffile;
 set statement_mem=2048;
 set gp_autostats_mode = none;
 set gp_hashjoin_metadata_memory_percent=0;
+-- enable the fault injector
+--start_ignore
+\! gpfaultinjector -f exec_hashjoin_new_batch -y reset --seg_dbid 2
+\! gpfaultinjector -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
+--end_ignore
 begin;
 insert into segspace_t1_created
 SELECT t1.* FROM segspace_test_hj_skew AS t1, segspace_test_hj_skew AS t2 WHERE t1.i1=t2.i2;
-ERROR:  canceling MPP operation  (seg0 gcaragea-mbp.local:40070 pid=48717)
+ERROR:  canceling MPP operation  (seg0 127.0.0.1:25432 pid=26876)
+rollback;
+-- check used segspace after test
+select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
+ max | min 
+-----+-----
+   0 |   0
+(1 row)
+
+-- Run the test without fault injection
+begin;
+insert into segspace_t1_created
+SELECT t1.* FROM segspace_test_hj_skew AS t1, segspace_test_hj_skew AS t2 WHERE t1.i1=t2.i2;
 rollback;
 -- check used segspace after test
 reset statement_mem;
-select max(size) from segspace_view_gp_workfile_segspace;
- max 
------
-   0
+select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
+ max | min 
+-----+-----
+   0 |   0
 (1 row)
 
 --start_ignore
 drop table if exists segspace_t1_created;
 --end_ignore
 ------------ Interrupting CREATE TABLE AS query that spills -------------------
--- enable the fault injector
---start_ignore
-\! gpfaultinjector -f exec_hashjoin_new_batch -y reset --seg_dbid 2
-20160114:11:07:04:010909 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y reset --seg_dbid 2
-20160114:11:07:04:010909 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
-20160114:11:07:04:010909 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Obtaining Segment details from master...
-20160114:11:07:04:010909 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on 1 segment(s)
-20160114:11:07:04:010909 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on gcaragea-mbp.local:/data/gp-data/gp.GPDB-MAIN/primary/gp0:content=0:dbid=2:mode=s:status=u
-20160114:11:07:04:010909 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-DONE
-\! gpfaultinjector -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
-20160114:11:07:04:010921 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
-20160114:11:07:04:010921 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
-20160114:11:07:04:010921 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Obtaining Segment details from master...
-20160114:11:07:04:010921 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on 1 segment(s)
-20160114:11:07:04:010921 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-Injecting fault on gcaragea-mbp.local:/data/gp-data/gp.GPDB-MAIN/primary/gp0:content=0:dbid=2:mode=s:status=u
-20160114:11:07:04:010921 gpfaultinjector:gcaragea-mbp:gcaragea-[INFO]:-DONE
---end_ignore
 drop table if exists segspace_t1_created;
 NOTICE:  table "segspace_t1_created" does not exist, skipping
 set gp_workfile_type_hashjoin=buffile;
 set statement_mem=2048;
 set gp_autostats_mode = none;
 set gp_hashjoin_metadata_memory_percent=0;
+-- enable the fault injector
+--start_ignore
+\! gpfaultinjector -f exec_hashjoin_new_batch -y reset --seg_dbid 2
+\! gpfaultinjector -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
+--end_ignore
 begin;
 create table segspace_t1_created AS
 SELECT t1.* FROM segspace_test_hj_skew AS t1, segspace_test_hj_skew AS t2 WHERE t1.i1=t2.i2;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'i1' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-ERROR:  canceling MPP operation  (seg0 gcaragea-mbp.local:40070 pid=48717)
+ERROR:  canceling MPP operation  (seg0 127.0.0.1:25432 pid=26876)
+rollback;
+-- check used segspace after test
+select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
+ max | min 
+-----+-----
+   0 |   0
+(1 row)
+
+-- Run the test without fault injection
+begin;
+create table segspace_t1_created AS
+SELECT t1.* FROM segspace_test_hj_skew AS t1, segspace_test_hj_skew AS t2 WHERE t1.i1=t2.i2;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'i1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 rollback;
 -- check used segspace after test
 reset statement_mem;
-select max(size) from segspace_view_gp_workfile_segspace;
- max 
------
-   0
+select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
+ max | min 
+-----+-----
+   0 |   0
 (1 row)
 
--- Disable faultinjectors
+------------ workfile_limit_per_segment leak check during ERROR on UPDATE with CTE and MK_SORT -------------------
+drop table if exists testsisc;
+NOTICE:  table "testsisc" does not exist, skipping
+drop table if exists foo;
+NOTICE:  table "foo" does not exist, skipping
+create table testsisc (i1 int, i2 int, i3 int, i4 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into testsisc select i, i % 1000, i % 100000, i % 75 from
+	(select generate_series(1, nsegments * 100000) as i from
+	(select count(*) as nsegments from gp_segment_configuration where role='p' and content >= 0) foo) bar;
+create table foo (i int, j int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+set statement_mem=1024; -- 1mb for 3 segment to get leak.
+set gp_resqueue_print_operator_memory_limits=on;
+set gp_enable_mk_sort=on;
+set gp_cte_sharing=on;
+-- enable the fault injector
 --start_ignore
-\! gpfaultinjector -f exec_hashjoin_new_batch -y reset --seg_dbid 2
-20160621:09:04:08:041223 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y reset --seg_dbid 2
-20160621:09:04:08:041223 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
-20160621:09:04:08:041223 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Obtaining Segment details from master...
-20160621:09:04:08:041223 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on 1 segment(s)
-20160621:09:04:08:041223 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on nikos-mac:/Users/narmenatzoglou/gitdev/gpdb/github_updated/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0:content=0:dbid=2:mode=s:status=u
-20160621:09:04:08:041223 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+\! gpfaultinjector -f workfile_write_failure -y reset --seg_dbid 2
+\! gpfaultinjector -f workfile_write_failure -y error --seg_dbid 2
 --end_ignore
+-- LEAK in UPDATE: update with sisc xslice sort
+update foo set j=m.cc1 from (
+  with ctesisc as
+    (select * from testsisc order by i2)
+  select t1.i1 as cc1, t1.i2 as cc2
+  from ctesisc as t1, ctesisc as t2
+  where t1.i1 = t2.i2 ) as m;
+ERROR:  fault triggered, fault name:'workfile_write_failure' fault type:'error' (faultinjector.c:685)  (seg0 slice3 127.0.0.1:25432 pid=26908)
+select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
+ max | min 
+-----+-----
+   0 |   0
+(1 row)
+
+-- Run the test without fault injection
+-- LEAK in UPDATE: update with sisc xslice sort
+update foo set j=m.cc1 from (
+  with ctesisc as
+    (select * from testsisc order by i2)
+  select t1.i1 as cc1, t1.i2 as cc2
+  from ctesisc as t1, ctesisc as t2
+  where t1.i1 = t2.i2 ) as m;
+  
+select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
+ max | min 
+-----+-----
+   0 |   0
+(1 row)
+
+reset statement_mem;
+reset gp_resqueue_print_operator_memory_limits;
+reset gp_enable_mk_sort;
+reset gp_cte_sharing;
+------------ workfile_limit_per_segment leak check during ERROR on DELETE with APPEND-ONLY table -------------------
+drop table if exists testsisc;
+drop table if exists foo;
+create table testsisc (i1 int, i2 int, i3 int, i4 int) WITH (appendonly=true, compresstype=zlib) ;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into testsisc select i, i % 1000, i % 100000, i % 75 from
+    (select generate_series(1, nsegments * 100000) as i from
+	(select count(*) as nsegments from gp_segment_configuration where role='p' and content >= 0) foo) bar;
+create table foo (i int, j int) WITH (appendonly=true, compresstype=zlib);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into foo select i, i % 1000 from
+    (select generate_series(1, nsegments * 100000) as i from
+	(select count(*) as nsegments from gp_segment_configuration where role='p' and content >= 0) foo) bar;
+set statement_mem=1024; -- 1mb for 3 segment to get leak.
+-- enable the fault injector
+--start_ignore
+\! gpfaultinjector -f workfile_write_failure -y reset --seg_dbid 2
+\! gpfaultinjector -f workfile_write_failure -y error --seg_dbid 2
+--end_ignore
+-- LEAK in DELETE with APPEND ONLY tables
+delete from testsisc using (
+  select *
+  from foo
+) src  where testsisc.i1 = src.i;
+ERROR:  fault triggered, fault name:'workfile_write_failure' fault type:'error' (faultinjector.c:685)  (seg0 127.0.0.1:25432 pid=26876)
+select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
+ max | min 
+-----+-----
+   0 |   0
+(1 row)
+
+-- Run the test without fault injection
+-- LEAK in DELETE with APPEND ONLY tables
+delete from testsisc using (
+  select *
+  from foo
+) src  where testsisc.i1 = src.i;
+reset statement_mem;
+select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
+ max | min 
+-----+-----
+   0 |   0
+(1 row)
+
+------------ workfile_limit_per_segment leak check during UPDATE of SORT -------------------
+drop table if exists testsort;
+NOTICE:  table "testsort" does not exist, skipping
+create table testsort (i1 int, i2 int, i3 int, i4 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into testsort select i, i % 1000, i % 100000, i % 75 from generate_series(0,1000000) i;
+set statement_mem="1MB";
+set gp_enable_mk_sort=off;
+drop table if exists foo;
+create table foo (c int, d int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- enable the fault injector
+--start_ignore
+\! gpfaultinjector -f workfile_write_failure -y reset --seg_dbid 2
+\! gpfaultinjector -f workfile_write_failure -y error --seg_dbid 2
+--end_ignore
+-- expect to see leak if we hit error
+update foo set d = i1 from (select i1,i2 from testsort order by i2) x;
+ERROR:  fault triggered, fault name:'workfile_write_failure' fault type:'error' (faultinjector.c:685)  (seg0 slice1 127.0.0.1:25432 pid=27014)
+-- check counter leak
+select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
+ max | min 
+-----+-----
+   0 |   0
+(1 row)
+
+-- Run the test without fault injection
+-- expect to see leak if we hit error
+update foo set d = i1 from (select i1,i2 from testsort order by i2) x;
+-- check counter leak
+select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
+ max | min 
+-----+-----
+   0 |   0
+(1 row)
+
+------------ workfile_limit_per_segment leak check during UPDATE of SHARE_SORT_XSLICE -------------------
+drop table if exists testsisc;
+create table testsisc (i1 int, i2 int, i3 int, i4 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into testsisc select i, i % 1000, i % 100000, i % 75 from generate_series(0,1000000) i;
+set statement_mem="1MB";
+set gp_enable_mk_sort=off;
+set gp_cte_sharing=on;
+drop table if exists foo;
+create table foo (c int, d int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- expect to see leak if we hit error
+-- enable the fault injector
+--start_ignore
+\! gpfaultinjector -f workfile_write_failure -y reset --seg_dbid 2
+\! gpfaultinjector -f workfile_write_failure -y error --seg_dbid 2
+--end_ignore
+update foo set d = i1 from (with ctesisc as (select * from testsisc order by i2)
+select * from
+(select count(*) from ctesisc) x(a), ctesisc
+where x.a = ctesisc.i1) y;
+ERROR:  fault triggered, fault name:'workfile_write_failure' fault type:'error' (faultinjector.c:685)  (seg0 slice1 127.0.0.1:25432 pid=26908)
+-- check counter leak
+select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
+ max | min 
+-----+-----
+   0 |   0
+(1 row)
+
+-- Run the test without fault injection
+update foo set d = i1 from (with ctesisc as (select * from testsisc order by i2)
+select * from
+(select count(*) from ctesisc) x(a), ctesisc
+where x.a = ctesisc.i1) y;
+-- check counter leak
+select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
+ max | min 
+-----+-----
+   0 |   0
+(1 row)
+
