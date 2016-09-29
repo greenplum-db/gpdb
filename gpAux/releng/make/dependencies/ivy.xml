@@ -25,7 +25,7 @@
       <dependency org="xerces"          name="xerces-c"        rev="3.1.1-p1"       conf="osx106_x86->osx106_x86_32;rhel5_x86_64->rhel5_x86_64;rhel6_x86_64->rhel5_x86_64;suse10_x86_64->suse10_x86_64;suse11_x86_64->suse10_x86_64" />
       <dependency org="OpenSSL"         name="openssl"         rev="0.9.8zg"        conf="osx106_x86->osx105_x86;aix5_ppc_32->aix5_ppc_32;aix5_ppc_64->aix5_ppc_64;hpux_ia64->hpux_ia64;rhel5_x86_32->rhel5_x86_32;rhel5_x86_64->rhel5_x86_64;rhel6_x86_64->rhel5_x86_64;sol10_x86_32->sol10_x86_32;sol10_x86_64->sol10_x86_64;sol10_sparc_32->sol10_sparc_32;sol10_sparc_64->sol10_sparc_64;suse10_x86_64->suse10_x86_64;suse11_x86_64->suse10_x86_64" />
       <dependency org="emc"             name="DDBoostSDK"      rev="3.0.0.3-446710" conf="rhel5_x86_64->rhel5_x86_64;rhel6_x86_64->rhel5_x86_64" />
-      <dependency org="gnu"             name="libstdc"         rev="6.0.13"         conf="osx106_x86->osx106_x86;rhel5_x86_64->rhel5_x86_64;rhel6_x86_64->rhel5_x86_64;suse10_x86_64->suse10_x86_64;sol10_x86_64->sol10_x86_64;suse11_x86_64->suse10_x86_64" />
+      <dependency org="gnu"             name="libstdc"         rev="6.0.22"         conf="rhel6_x86_64->rhel6_x86_64;suse11_x86_64->suse11_x86_64;sol10_x86_64->sol10_x86_64" />
       <dependency org="third-party"     name="ext"             rev="1.1"            conf="win32->win32" />
       <dependency org="third-party"     name="ext"             rev="2.0"            conf="aix5_ppc_32->aix5_ppc_32;aix5_ppc_64->aix5_ppc_64;hpux_ia64->hpux_ia64;rhel4_x86_32->rhel4_x86_32;rhel4_x86_64->rhel4_x86_64;rhel5_x86_32->rhel5_x86_32;rhel6_x86_64->rhel5_x86_64;sol10_x86_32->sol10_x86_32;sol10_sparc_32->sol10_sparc_32;sol10_sparc_64->sol10_sparc_64;sol10_x86_64->sol10_x86_64" />
       <dependency org="third-party"     name="ext"             rev="2.4"            conf="rhel5_x86_64->rhel5_x86_64;rhel6_x86_64->rhel5_x86_64;suse10_x86_64->suse10_x86_64;suse11_x86_64->suse10_x86_64" />
@@ -49,7 +49,6 @@
       <dependency org="net-snmp"        name="net-snmp"        rev="5.5"            conf="osx106_x86->osx106_x86" />
       <dependency org="xmlsoft"         name="libxml2"         rev="2.7.8"          conf="osx106_x86->osx106_x86" />
       <dependency org="xmlsoft"         name="libxslt"         rev="1.1.24"         conf="osx106_x86->osx109_x86_32" />
-      <dependency org="zlib"            name="zlib"            rev="1.2.3"          conf="osx106_x86->osx106_x86" />
       <dependency org="Samba"           name="ccache"          rev="3.2.3"          conf="osx106_x86->osx106_x86;rhel5_x86_64->rhel5_x86_64;rhel6_x86_64->rhel5_x86_64;suse10_x86_64->suse10_x86_64;suse11_x86_64->suse10_x86_64" />
     </dependencies>
 </ivy-module>
