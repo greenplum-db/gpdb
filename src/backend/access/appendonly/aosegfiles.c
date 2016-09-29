@@ -146,6 +146,7 @@ GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segn
 	TupleDesc		pg_aoseg_dsc;
 	HeapScanDesc	aoscan;
 	HeapTuple		tuple = NULL;
+	HeapTuple		fstuple = NULL;
 	int				tuple_segno = InvalidFileSegNumber;
 	bool			isNull;
 	FileSegInfo 	*fsinfo;
@@ -157,9 +158,9 @@ GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segn
 	pg_aoseg_rel = heap_open(parentrel->rd_appendonly->segrelid, AccessShareLock);
 	pg_aoseg_dsc = RelationGetDescr(pg_aoseg_rel);
 
-	/* Do heap scan and break when we reach our segno. */
+	/* Do heap scan on pg_aoseg relation */
 	aoscan = heap_beginscan(pg_aoseg_rel, appendOnlyMetaDataSnapshot, 0, NULL);
-	while (segno != tuple_segno && (tuple = heap_getnext(aoscan, ForwardScanDirection)) != NULL)
+	while ((tuple = heap_getnext(aoscan, ForwardScanDirection)) != NULL)
 	{
 		tuple_segno = DatumGetInt32(fastgetattr(tuple, Anum_pg_aoseg_segno, pg_aoseg_dsc, &isNull));
 		if (isNull)
@@ -167,9 +168,29 @@ GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segn
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
 					 errmsg("got invalid segno value NULL for tid %s",
 							ItemPointerToString(&tuple->t_self))));
+
+		/* Check for duplicate aoseg entries with the same segno */
+		if (segno == tuple_segno)
+		{
+			if (fstuple != NULL)
+				ereport(ERROR,
+						(errcode(ERRCODE_INTERNAL_ERROR),
+						 errmsg("found two entries in pg_aoseg.%s with segno %d: "
+								"(ctid %s with eof " INT64_FORMAT ") and (ctid %s with eof " INT64_FORMAT ")",
+								pg_aoseg_rel->rd_rel->relname.data,
+								segno,
+								ItemPointerToString(&fstuple->t_self),
+								DatumGetInt64(
+										fastgetattr(fstuple, Anum_pg_aoseg_eof, pg_aoseg_dsc, &isNull)),
+								ItemPointerToString2(&tuple->t_self),
+								DatumGetInt64(
+										fastgetattr(tuple, Anum_pg_aoseg_eof, pg_aoseg_dsc, &isNull)))));
+			else
+				fstuple = heap_copytuple(tuple);
+		}
 	}
 
-	if (!HeapTupleIsValid(tuple))
+	if (!HeapTupleIsValid(fstuple))
 	{
 		/* This segment file does not have an entry. */
 		heap_endscan(aoscan);
@@ -181,7 +202,7 @@ GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segn
 
 	/* get the eof */
 	fsinfo->eof = DatumGetInt64(
-			fastgetattr(tuple, Anum_pg_aoseg_eof, pg_aoseg_dsc, &isNull));
+			fastgetattr(fstuple, Anum_pg_aoseg_eof, pg_aoseg_dsc, &isNull));
 
 	if(isNull)
 		ereport(ERROR,
@@ -196,7 +217,7 @@ GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segn
 
 	/* get the tupcount */
 	fsinfo->total_tupcount = DatumGetInt64(
-			fastgetattr(tuple, Anum_pg_aoseg_tupcount, pg_aoseg_dsc, &isNull));
+			fastgetattr(fstuple, Anum_pg_aoseg_tupcount, pg_aoseg_dsc, &isNull));
 
 	if(isNull)
 		ereport(ERROR,
@@ -205,7 +226,7 @@ GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segn
 
 	/* get the varblock count */
 	fsinfo->varblockcount = DatumGetInt64(
-			fastgetattr(tuple, Anum_pg_aoseg_varblockcount, pg_aoseg_dsc, &isNull));
+			fastgetattr(fstuple, Anum_pg_aoseg_varblockcount, pg_aoseg_dsc, &isNull));
 
 	if(isNull)
 		ereport(ERROR,
@@ -214,7 +235,7 @@ GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segn
 	
 	/* get the modcount */
 	fsinfo->modcount = DatumGetInt64(
-			fastgetattr(tuple, Anum_pg_aoseg_modcount, pg_aoseg_dsc, &isNull));
+			fastgetattr(fstuple, Anum_pg_aoseg_modcount, pg_aoseg_dsc, &isNull));
 
 	if(isNull)
 		ereport(ERROR,
@@ -223,7 +244,7 @@ GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segn
 
 	/* get the state */
 	fsinfo->state = DatumGetInt16(
-			fastgetattr(tuple, Anum_pg_aoseg_state, pg_aoseg_dsc, &isNull));
+			fastgetattr(fstuple, Anum_pg_aoseg_state, pg_aoseg_dsc, &isNull));
 
 	if(isNull)
 		ereport(ERROR,
@@ -232,7 +253,7 @@ GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segn
 
 	/* get the uncompressed eof */
 	fsinfo->eof_uncompressed = DatumGetInt64(
-			fastgetattr(tuple, Anum_pg_aoseg_eofuncompressed, pg_aoseg_dsc, &isNull));
+			fastgetattr(fstuple, Anum_pg_aoseg_eofuncompressed, pg_aoseg_dsc, &isNull));
 	if(isNull)
 	{
 		/*
@@ -245,6 +266,7 @@ GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segn
 	fsinfo->segno = segno;
 
 	/* Finish up scan and close appendonly catalog. */
+	heap_freetuple(fstuple);
 	heap_endscan(aoscan);
 	heap_close(pg_aoseg_rel, AccessShareLock);
 

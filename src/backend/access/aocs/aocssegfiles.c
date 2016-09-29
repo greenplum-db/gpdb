@@ -126,6 +126,7 @@ GetAOCSFileSegInfo(Relation			prel,
 	TupleDesc tupdesc;
 	HeapScanDesc scan;
 	HeapTuple segtup = NULL;
+	HeapTuple fssegtup = NULL;
 	int tuple_segno = InvalidFileSegNumber;
 	AOCSFileSegInfo *seginfo;
 	Datum *d;
@@ -137,7 +138,7 @@ GetAOCSFileSegInfo(Relation			prel,
 
 	/* Scan aoseg relation for tuple. */
 	scan = heap_beginscan(segrel, appendOnlyMetaDataSnapshot, 0, NULL);
-	while (segno != tuple_segno && (segtup = heap_getnext(scan, ForwardScanDirection)) != NULL)
+	while ((segtup = heap_getnext(scan, ForwardScanDirection)) != NULL)
 	{
 		tuple_segno = DatumGetInt32(fastgetattr(segtup, Anum_pg_aocs_segno, tupdesc, &isNull));
 		if (isNull)
@@ -145,9 +146,24 @@ GetAOCSFileSegInfo(Relation			prel,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
 					 errmsg("got invalid segno value NULL for tid %s",
 							ItemPointerToString(&segtup->t_self))));
+
+		if (segno == tuple_segno)
+		{
+			/* Check for duplicate aoseg entries with the same segno */
+			if (fssegtup != NULL)
+				ereport(ERROR,
+						(errcode(ERRCODE_INTERNAL_ERROR),
+						 errmsg("found two entries in pg_aoseg.%s with segno %d: ctid %s and ctid %s",
+								segrel->rd_rel->relname.data,
+								segno,
+								ItemPointerToString(&fssegtup->t_self),
+								ItemPointerToString2(&segtup->t_self))));
+			else
+				fssegtup = heap_copytuple(segtup);
+		}
 	}
 
-	if(!HeapTupleIsValid(segtup))
+	if(!HeapTupleIsValid(fssegtup))
 	{
 		/* This segment file does not have an entry. */
 		heap_endscan(scan);
@@ -160,7 +176,7 @@ GetAOCSFileSegInfo(Relation			prel,
 	d = (Datum *) palloc(sizeof(Datum) * Natts_pg_aocsseg);
 	null = (bool *) palloc(sizeof(bool) * Natts_pg_aocsseg); 
 
-	heap_deform_tuple(segtup, tupdesc, d, null);
+	heap_deform_tuple(fssegtup, tupdesc, d, null);
 
 	Assert(!null[Anum_pg_aocs_segno - 1]);
 	Assert(DatumGetInt32(d[Anum_pg_aocs_segno - 1] == segno));
@@ -192,6 +208,7 @@ GetAOCSFileSegInfo(Relation			prel,
 	pfree(d);
 	pfree(null);
 
+	heap_freetuple(fssegtup);
 	heap_endscan(scan);
 	heap_close(segrel, AccessShareLock);
 
