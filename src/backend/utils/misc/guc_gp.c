@@ -4116,7 +4116,7 @@ struct config_int ConfigureNamesInt_gp[] =
 			GUC_UNIT_S
 		},
 		&gp_fts_probe_timeout,
-		20, 0, INT_MAX, NULL, NULL
+		20, 0, 3600, NULL, NULL
 	},
 
 	{
@@ -4126,7 +4126,7 @@ struct config_int ConfigureNamesInt_gp[] =
 			GUC_UNIT_S
 		},
 		&gp_fts_probe_interval,
-		60, 10, INT_MAX, NULL, NULL
+		60, 10, 3600, NULL, NULL
 	},
 
 	{
