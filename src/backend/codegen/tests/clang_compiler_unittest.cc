@@ -329,10 +329,6 @@ TEST_F(ClangCompilerTest, GetLiteralConstantTest) {
   CheckGetLiteralConstant(UInt16Enum::kCaseC,
                           "static_cast<unsigned short>(2u)");
 
-  // Floats and doubles (using hex-float literals to avoid rounding errors).
-  CheckGetLiteralConstant(0x1.123efp-10f, "0x1.123ef00000000p-10f");
-  CheckGetLiteralConstant(0x1.123456789abcdp+999, "0x1.123456789abcdp+999");
-
   // Pointer literals.
   CheckGetLiteralConstant(nullptr, "nullptr");
   CheckGetLiteralConstant(static_cast<void*>(nullptr),
