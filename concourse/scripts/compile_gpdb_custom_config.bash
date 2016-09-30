@@ -7,6 +7,7 @@ CWDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 function prep_env_for_centos() {
   export JAVA_HOME=/usr/lib/jvm/java-1.6.0-openjdk-1.6.0.39.x86_64
   export PATH=${JAVA_HOME}/bin:${PATH}
+  source /opt/gcc_env.sh
   install_system_deps
 }
 
@@ -45,7 +46,8 @@ function install_system_deps() {
 
 function build_gpdb() {
   pushd gpdb_src
-    ./configure --enable-mapreduce --with-perl --with-libxml --with-python --disable-gpfdist --prefix=${GREENPLUM_INSTALL_DIR}
+    ./configure --enable-mapreduce --with-perl --with-libxml --with-python --disable-gpfdist \
+        --prefix=${GREENPLUM_INSTALL_DIR} --enable-codegen --with-codegen-prefix=/opt/llvm-3.7.1
     make
     make install
   popd

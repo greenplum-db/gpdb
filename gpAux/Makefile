@@ -176,7 +176,7 @@ else
 APR_CONFIG=--with-apr-config=$(BLD_THIRDPARTY_BIN_DIR)/apr-1-config
 endif
 
-CODEGEN_CONFIG=--disable-codegen --with-codegen-prefix=/opt/llvm-3.7.1
+CODEGEN_CONFIG=--enable-codegen --with-codegen-prefix=/opt/llvm-3.7.1
 
 win32_CONFIGFLAGS=--with-gssapi --without-libcurl $(APR_CONFIG)
 sol10_x86_64_CONFIGFLAGS=--enable-snmp --with-libxml $(APR_CONFIG)

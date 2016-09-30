@@ -11,10 +11,10 @@ resources:
     uri: {{gpdb-git-remote}}
 
 
-- name: centos67-java7-gpdb-dev-image
+- name: centos67-gpdb-gcc6-llvm-image
   type: docker-image
   source:
-    repository: pivotaldata/centos67-java7-gpdb-dev-image
+    repository: pivotaldata/centos67-gpdb-gcc6-llvm-image
     username: {{docker_username}}
     password: {{docker_password}}
 
@@ -94,10 +94,10 @@ jobs:
   - aggregate:
     - get: gpdb_src
       trigger: true
-    - get: centos67-java7-gpdb-dev-image
+    - get: centos67-gpdb-gcc6-llvm-image
   - task: compile_gpdb
     file: gpdb_src/concourse/compile_gpdb.yml
-    image: centos67-java7-gpdb-dev-image
+    image: centos67-gpdb-gcc6-llvm-image
     params:
       IVYREPO_HOST: {{ivyrepo_host}}
       IVYREPO_REALM: {{ivyrepo_realm}}
@@ -120,10 +120,10 @@ jobs:
   - aggregate:
     - get: gpdb_src
       trigger: true
-    - get: centos67-java7-gpdb-dev-image
+    - get: centos67-gpdb-gcc6-llvm-image
   - task: compile_gpdb
     file: gpdb_src/concourse/compile_gpdb_custom_config.yml
-    image: centos67-java7-gpdb-dev-image
+    image: centos67-gpdb-gcc6-llvm-image
 
 # Stage 2: IC Tests
 - name: icg_planner_centos6
@@ -138,10 +138,10 @@ jobs:
       resource: bin_gpdb_centos
       passed: [compile_gpdb_centos6]
       trigger: true
-    - get: centos67-java7-gpdb-dev-image
+    - get: centos67-gpdb-gcc6-llvm-image
   - task: ic_gpdb
     file: gpdb_src/concourse/ic_gpdb.yml
-    image: centos67-java7-gpdb-dev-image
+    image: centos67-gpdb-gcc6-llvm-image
     params:
       MAKE_TEST_COMMAND: installcheck-good
       BLDWRAP_POSTGRES_CONF_ADDONS: ""
@@ -158,16 +158,16 @@ jobs:
       resource: bin_gpdb_centos
       passed: [icg_planner_centos6]
       trigger: true
-    - get: centos67-java7-gpdb-dev-image
+    - get: centos67-gpdb-gcc6-llvm-image
   - task: separate_qautils_files_for_rc
     file: gpdb_src/concourse/separate_qautils_files_for_rc.yml
-    image: centos67-java7-gpdb-dev-image
+    image: centos67-gpdb-gcc6-llvm-image
     params:
       QAUTILS_TARBALL: rc_bin_gpdb/QAUtils-rhel6-x86_64.tar.gz
   - aggregate:
     - task: gpdb_rc_packaging_centos
       file: gpdb_src/concourse/gpdb_packaging.yml
-      image: centos67-java7-gpdb-dev-image
+      image: centos67-gpdb-gcc6-llvm-image
       input_mapping:
         bin_gpdb: rc_bin_gpdb
       output_mapping:
@@ -178,7 +178,7 @@ jobs:
         ADD_README_INSTALL: true
     - task: gpdb_appliance_rhel6_rc_packaging
       file: gpdb_src/concourse/gpdb_packaging.yml
-      image: centos67-java7-gpdb-dev-image
+      image: centos67-gpdb-gcc6-llvm-image
       input_mapping:
         bin_gpdb: rc_bin_gpdb
       output_mapping:

@@ -18,7 +18,7 @@ function prep_env_for_centos() {
     6)
       BLDARCH=rhel6_x86_64
       export JAVA_HOME=/usr/lib/jvm/java-1.7.0-openjdk.x86_64
-
+      source /opt/gcc_env.sh
       # This is necessesary to build gphdfs.
       # It should be removed once the build image has this included.
       yum install -y ant-junit
@@ -62,6 +62,9 @@ function generate_build_number() {
 function make_sync_tools() {
   pushd gpdb_src/gpAux
     make IVYREPO_HOST=${IVYREPO_HOST} IVYREPO_REALM="${IVYREPO_REALM}" IVYREPO_USER=${IVYREPO_USER} IVYREPO_PASSWD=${IVYREPO_PASSWD} sync_tools
+    # Codegen fails to compile with the zlib downloaded from
+    # artifacts.  The native zlib on CentOS6 is good enough.
+    find ext -name 'libz.*' -exec rm -f {} \;
     tar -czf ../../sync_tools_gpdb/sync_tools_gpdb.tar.gz ext
   popd
 }

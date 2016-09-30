@@ -23,6 +23,7 @@ function install_sync_tools() {
 }
 
 function configure() {
+  source /opt/gcc_env.sh
   pushd gpdb_src
       ./configure --prefix=/usr/local/greenplum-db-devel
   popd
