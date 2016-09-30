@@ -259,26 +259,30 @@ AORelCreateHashEntry(Oid relid)
 		aoHashEntry->relsegfiles[i].total_tupcount = 0;
 		aoHashEntry->relsegfiles[i].tupsadded = 0;
 		aoHashEntry->relsegfiles[i].aborted = false;
+		aoHashEntry->relsegfiles[i].formatversion = AORelationVersion_GetLatest();
 	}
 
 	/*
-	 * update the tupcount of each 'segment' file in the append
-	 * only hash according to tupcounts in the pg_aoseg table.
+	 * update the tupcount and formatVersion of each 'segment' file in the append
+	 * only hash according to the information in the pg_aoseg table.
 	 */
 	for (i = 0 ; i < total_segfiles; i++)
 	{
 		int segno;
 		int64 total_tupcount;
+		int16 formatversion;
 		if (allfsinfo)
 		{
 			segno = allfsinfo[i]->segno;
 			total_tupcount = allfsinfo[i]->total_tupcount;
+			formatversion = allfsinfo[i]->formatversion;
 		}
 		else
 		{
 			Assert(aocsallfsinfo);
 			segno = aocsallfsinfo[i]->segno;
 			total_tupcount = aocsallfsinfo[i]->total_tupcount;
+			formatversion = aocsallfsinfo[i]->formatversion;
 		}
 
 		if (awaiting_drop[segno])
@@ -289,6 +293,7 @@ AORelCreateHashEntry(Oid relid)
 			aoHashEntry->relsegfiles[segno].state = AWAITING_DROP_READY;
 		}
 		aoHashEntry->relsegfiles[segno].total_tupcount = total_tupcount;
+		aoHashEntry->relsegfiles[segno].formatversion = formatversion;
 	}
 
 	/* record the fact that another hash entry is now taken */
@@ -1001,9 +1006,10 @@ SetSegnoForCompactionInsert(Relation rel,
 			list_find_int(compactedSegmentFileList, i) >= 0;
 
 		if (segfilestat->total_tupcount < min_tupcount &&
-				segfilestat->state == AVAILABLE && 
-				!usedByConcurrentTransaction(segfilestat, i) &&
-				!in_compaction_list)
+			segfilestat->state == AVAILABLE &&
+			segfilestat->formatversion == AORelationVersion_GetLatest() &&
+			!usedByConcurrentTransaction(segfilestat, i) &&
+			!in_compaction_list)
 		{
 			min_tupcount = segfilestat->total_tupcount;
 			usesegno = i;
@@ -1141,8 +1147,10 @@ SetSegnoForWrite(Relation rel, int existingsegno)
 
 				if(!segfilestat->isfull)
 				{
-					if(segfilestat->state == AVAILABLE && !segno_chosen &&
-					   !usedByConcurrentTransaction(segfilestat, i))
+					if (segfilestat->state == AVAILABLE &&
+						segfilestat->formatversion == AORelationVersion_GetLatest() &&
+						!segno_chosen &&
+						!usedByConcurrentTransaction(segfilestat, i))
 					{
 						/*
 						 * this segno is avaiable and not full. use it.

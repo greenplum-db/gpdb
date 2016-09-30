@@ -11,13 +11,14 @@
 #include "access/aosegfiles.h"
 #include "utils/tqual.h"
 
-#define Natts_pg_aocsseg 6
+#define Natts_pg_aocsseg 7
 #define Anum_pg_aocs_segno 1
 #define Anum_pg_aocs_tupcount 2
 #define Anum_pg_aocs_varblockcount 3
 #define Anum_pg_aocs_vpinfo 4
 #define Anum_pg_aocs_modcount 5
-#define Anum_pg_aocs_state 6
+#define Anum_pg_aocs_formatversion 6
+#define Anum_pg_aocs_state 7
 
 
 /*
@@ -32,7 +33,8 @@
 { -1, {"varblockcount"},		20, -1, 8, 3, 0, -1, -1, true, 'p', 'd', false, false, false, true, 0 }, \
 { -1, {"vpinfo"},				17, -1, -1, 4, 0, -1, -1, false, 'x', 'i', false, false, false, true, 0 }, \
 { -1, {"modcount"},				20, -1, 8, 5, 0, -1, -1, true, 'p', 'i', false, false, false, true, 0 }, \
-{ -1, {"state"}, 				 21, -1, 2, 6, 0, -1, -1, true, 'p', 'i', false, false, false, true, 0 }
+{ -1, {"formatversion"},		21, -1, 2, 6, 0, -1, -1, true, 'p', 's', false, false, false, true, 0 }, \
+{ -1, {"state"}, 				 21, -1, 2, 7, 0, -1, -1, true, 'p', 's', false, false, false, true, 0 }
 
 /*
  * pg_aoseg_nnnnnn table values for FormData_pg_class.
@@ -49,7 +51,7 @@ typedef struct AOCSVPInfoEntry
         int64 eof;
         int64 eof_uncompressed;
 } AOCSVPInfoEntry;
-        
+
 typedef struct AOCSVPInfo
 {
         /* total len.  Have to be the very first */ 
@@ -103,6 +105,8 @@ typedef struct AOCSFileSegInfo
 	 * The state is only maintained on the segments.
 	 */
 	FileSegInfoState state;
+
+	int16		formatversion;
 
 	/* Must be last */
 	AOCSVPInfo vpinfo;

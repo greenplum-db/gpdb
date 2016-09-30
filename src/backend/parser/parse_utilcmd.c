@@ -1325,7 +1325,7 @@ transformDistributedBy(ParseState *pstate, CreateStmtContext *cxt,
 	 * utility mode creates can't have a policy.  Only the QD can have policies
 	 *
 	 */
-	if (Gp_role != GP_ROLE_DISPATCH)
+	if (Gp_role != GP_ROLE_DISPATCH && !IsBinaryUpgrade)
 	{
 		*policyp = NULL;
 		return;

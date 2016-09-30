@@ -353,11 +353,8 @@ init_datumstream_info(
 					  bool checksum,
 					  int32 safeFSWriteSize,
 					  int32 maxsz,
-					  AORelationVersion version,
 					  Form_pg_attribute attr)
 {
-	AORelationVersion_CheckValid(version);
-
 	init_datumstream_typeinfo(
 							  typeInfo,
 							  attr);
@@ -376,7 +373,6 @@ init_datumstream_info(
 	ao_attr->compress = false;
 	ao_attr->compressType = NULL;
 	ao_attr->compressLevel = 0;
-	ao_attr->version = version;
 
 	*datumStreamVersion = DatumStreamVersion_Original;
 
@@ -486,7 +482,6 @@ create_datumstreamwrite(
 						bool checksum,
 						int32 safeFSWriteSize,
 						int32 maxsz,
-						AORelationVersion version,
 						Form_pg_attribute attr,
 						char *relname,
 						char *title)
@@ -513,7 +508,6 @@ create_datumstreamwrite(
 						  checksum,
 						  safeFSWriteSize,
 						  maxsz,
-						  version,
 						  attr);
 
 	compressionFunctions = NULL;
@@ -629,7 +623,6 @@ create_datumstreamread(
 					   bool checksum,
 					   int32 safeFSWriteSize,
 					   int32 maxsz,
-					   AORelationVersion version,
 					   Form_pg_attribute attr,
 					   char *relname,
 					   char *title)
@@ -653,7 +646,6 @@ create_datumstreamread(
 						  checksum,
 						  safeFSWriteSize,
 						  maxsz,
-						  version,
 						  attr);
 
 	compressionFunctions = NULL;
@@ -783,7 +775,7 @@ destroy_datumstreamread(DatumStreamRead * ds)
 
 
 void
-datumstreamwrite_open_file(DatumStreamWrite * ds, char *fn, int64 eof, int64 eofUncompressed, RelFileNode relFileNode, int32 segmentFileNum)
+datumstreamwrite_open_file(DatumStreamWrite * ds, char *fn, int64 eof, int64 eofUncompressed, RelFileNode relFileNode, int32 segmentFileNum, int version)
 {
 	ItemPointerData persistentTid;
 	int64 persistentSerialNum;
@@ -855,9 +847,9 @@ datumstreamwrite_open_file(DatumStreamWrite * ds, char *fn, int64 eof, int64 eof
 	/*
 	 * Open the existing file for write.
 	 */
-	AppendOnlyStorageWrite_OpenFile(
-									&ds->ao_write,
+	AppendOnlyStorageWrite_OpenFile(&ds->ao_write,
 									fn,
+									version,
 									eof,
 									eofUncompressed,
 									&relFileNode,
@@ -869,7 +861,7 @@ datumstreamwrite_open_file(DatumStreamWrite * ds, char *fn, int64 eof, int64 eof
 }
 
 void
-datumstreamread_open_file(DatumStreamRead * ds, char *fn, int64 eof, int64 eofUncompressed, RelFileNode relFileNode, int32 segmentFileNum)
+datumstreamread_open_file(DatumStreamRead * ds, char *fn, int64 eof, int64 eofUncompressed, RelFileNode relFileNode, int32 segmentFileNum, int version)
 {
 	ds->eof = eof;
 	ds->eofUncompress = eofUncompressed;
@@ -877,7 +869,7 @@ datumstreamread_open_file(DatumStreamRead * ds, char *fn, int64 eof, int64 eofUn
 	if (ds->need_close_file)
 		datumstreamread_close_file(ds);
 
-	AppendOnlyStorageRead_OpenFile(&ds->ao_read, fn, ds->eof);
+	AppendOnlyStorageRead_OpenFile(&ds->ao_read, fn, version, ds->eof);
 
 	ds->need_close_file = true;
 }

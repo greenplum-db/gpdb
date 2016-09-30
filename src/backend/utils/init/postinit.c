@@ -707,6 +707,16 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	}
 
 	/*
+	 * Binary upgrades only allowed super-user connections
+	 */
+	if (IsBinaryUpgrade && !am_superuser)
+	{
+		ereport(FATAL,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				 errmsg("must be superuser to connect in binary upgrade mode")));
+	}
+
+	/*
 	 * Check a normal user hasn't connected to a superuser reserved slot.
 	 */
 	if (!am_superuser &&

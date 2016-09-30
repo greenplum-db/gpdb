@@ -451,6 +451,11 @@ PostgreSQL documentation
    locations.
   </para>
 
+  <para>
+   <application>pg_dump</application> also supports a
+   <literal>--binary-upgrade</> option for upgrade utility usage.
+  </para>
+
  </refsect1>
 
 

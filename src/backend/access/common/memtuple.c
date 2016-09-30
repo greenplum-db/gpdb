@@ -443,8 +443,7 @@ static uint32 compute_memtuple_size_using_bind(
 		int nullbit_extra,
 		uint32 *nullsaves,
 		MemTupleBindingCols *colbind,
-		TupleDesc tupdesc,
-		bool use_null_saves_aligned)
+		TupleDesc tupdesc)
 {
 	uint32 data_length = colbind->var_start; 
 	int i;
@@ -466,14 +465,7 @@ static uint32 compute_memtuple_size_using_bind(
 				Assert(bind->len_aligned >= 0);
 				Assert(bind->len_aligned >= bind->len);
 
-				if (use_null_saves_aligned)
-				{
-					len = bind->len_aligned;
-				}
-				else
-				{
-					len = bind->len;
-				}
+				len = bind->len_aligned;
 
 				*nullsaves += len;
 				data_length -= len;
@@ -510,15 +502,15 @@ static uint32 compute_memtuple_size_using_bind(
 /* Compute the memtuple size. 
  * nullsave is an output param
  */
-uint32 compute_memtuple_size(MemTupleBinding *pbind, Datum *values, bool *isnull, bool hasnull, uint32 *nullsaves, bool use_null_saves_aligned)
+uint32 compute_memtuple_size(MemTupleBinding *pbind, Datum *values, bool *isnull, bool hasnull, uint32 *nullsaves)
 {
 	uint32 ret_len = 0;
-	ret_len = compute_memtuple_size_using_bind(values, isnull, hasnull, pbind->null_bitmap_extra_size, nullsaves, &pbind->bind, pbind->tupdesc, use_null_saves_aligned);
+	ret_len = compute_memtuple_size_using_bind(values, isnull, hasnull, pbind->null_bitmap_extra_size, nullsaves, &pbind->bind, pbind->tupdesc);
 
 	if(ret_len <= MEMTUPLE_LEN_FITSHORT) 
 		return ret_len;
 
-	ret_len = compute_memtuple_size_using_bind(values, isnull, hasnull, pbind->null_bitmap_extra_size, nullsaves, &pbind->large_bind, pbind->tupdesc, use_null_saves_aligned);
+	ret_len = compute_memtuple_size_using_bind(values, isnull, hasnull, pbind->null_bitmap_extra_size, nullsaves, &pbind->large_bind, pbind->tupdesc);
 	Assert(ret_len > MEMTUPLE_LEN_FITSHORT);
 
 	return ret_len;
@@ -557,15 +549,13 @@ static inline int memtuple_get_nullp_len(MemTuple mtup __attribute__((unused)), 
 
 
 /* form a memtuple from values and isnull, to a prespecified buffer */
-static
-MemTuple memtuple_form_to_align(
+MemTuple memtuple_form_to(
 		MemTupleBinding *pbind,
 		Datum *values,
 		bool *isnull,
 		MemTuple mtup,
 		uint32 *destlen,
-		bool inline_toast,
-		bool use_null_saves_aligned)
+		bool inline_toast)
 {
 	bool hasnull = false;
 	bool hasext = false;
@@ -641,7 +631,7 @@ MemTuple memtuple_form_to_align(
 	}
 
 	/* compute needed length */
-	len = compute_memtuple_size(pbind, values, isnull, hasnull, &null_save_len, use_null_saves_aligned);
+	len = compute_memtuple_size(pbind, values, isnull, hasnull, &null_save_len);
 	colbind = (len <= MEMTUPLE_LEN_FITSHORT) ? &pbind->bind : &pbind->large_bind;
 
 	if(!destlen)
@@ -745,15 +735,7 @@ MemTuple memtuple_form_to_align(
 
 		Assert(bind->offset != 0);
 
-		short *null_saves = NULL;
-		if (use_null_saves_aligned)
-		{
-			null_saves = colbind->null_saves_aligned;
-		}
-		else
-		{
-			null_saves = colbind->null_saves;
-		}
+		short *null_saves = colbind->null_saves_aligned;
 		Assert(null_saves);
 
 		/* Not null */
@@ -881,18 +863,6 @@ MemTuple memtuple_form_to_align(
 	return mtup;
 }
 
-/* form a memtuple from values and isnull, to a prespecified buffer */
-MemTuple memtuple_form_to(
-		MemTupleBinding *pbind,
-		Datum *values,
-		bool *isnull,
-		MemTuple mtup,
-		uint32 *destlen,
-		bool inline_toast)
-{
-	return memtuple_form_to_align(pbind, values, isnull, mtup, destlen, inline_toast, true /* aligned */);
-}
-
 bool memtuple_attisnull(MemTuple mtup, MemTupleBinding *pbind, int attnum)
 {
 	MemTupleBindingCols *colbind = memtuple_get_islarge(mtup, pbind) ? &pbind->large_bind : &pbind->bind;
@@ -992,6 +962,22 @@ static void memtuple_get_values(MemTuple mtup, MemTupleBinding *pbind, Datum *da
 void memtuple_deform(MemTuple mtup, MemTupleBinding *pbind, Datum *datum, bool *isnull)
 {
 	memtuple_get_values(mtup, pbind, datum, isnull, true /* aligned */);
+}
+
+
+/*
+ * Deform a memtuple with old binding alignment.
+ *
+ * We assume that the 'mtup' was created using null_saves, where the
+ * binding length is not aligned to the following binding's alignment. In
+ * this case, we create an "upgraded" clone using null_saves_aligned, which
+ * uses properly aligned binding length.
+ */
+void
+memtuple_deform_misaligned(MemTuple mtup, MemTupleBinding *pbind,
+						   Datum *datum, bool *isnull)
+{
+	memtuple_get_values(mtup, pbind, datum, isnull, false /* aligned */);
 }
 
 /*
@@ -1094,53 +1080,4 @@ bool memtuple_has_misaligned_attribute(MemTuple mtup, MemTupleBinding *pbind)
 	}
 
 	return false;
-}
-
-/*
- *	Create a clone of a memtuple with complementary binding alignment.
- *
- *	If use_null_saves_aligned is true, we assume that the memtuple was
- *	created using null_saves, where the binding length is not aligned to the
- *	following binding's alignment. In this case, we create an "upgraded" clone
- *	using null_saves_aligned, which uses properly aligned binding length. The
- *	opposite happens when use_null_saves_aligned is false, i.e. we create a
- *	"downgraded" clone using the possibly misaligned bindings.
- */
-MemTuple memtuple_aligned_clone(MemTuple mtup, MemTupleBinding *pbind, bool use_null_saves_aligned)
-{
-	Assert(memtuple_has_misaligned_attribute(mtup, pbind));
-
-	MemTuple newtuple = NULL;
-
-	const int attr_count = pbind->tupdesc->natts;
-	const bool use_dynamic_alloc = (attr_count > MAX_ATTR_COUNT_STATIC_ALLOC);
-
-	Datum values_static_alloc[MAX_ATTR_COUNT_STATIC_ALLOC];
-	bool is_null_static_alloc[MAX_ATTR_COUNT_STATIC_ALLOC];
-
-	Datum *values = values_static_alloc;
-	bool *isnull = is_null_static_alloc;
-
-	if (use_dynamic_alloc)
-	{
-		values = (Datum *) palloc(attr_count * sizeof(Datum));
-		isnull = (bool *) palloc(attr_count * sizeof(bool));
-	}
-
-	Assert(values);
-	Assert(isnull);
-
-	/* get attribute values using complementary alignment */
-	memtuple_get_values(mtup, pbind, values, isnull, !use_null_saves_aligned);
-
-	/* create the new memtuple using target alignment */
-	newtuple = memtuple_form_to_align(pbind, values, isnull, NULL, NULL, false, use_null_saves_aligned);
-
-	if (use_dynamic_alloc)
-	{
-		pfree(values);
-		pfree(isnull);
-	}
-
-	return newtuple;
 }

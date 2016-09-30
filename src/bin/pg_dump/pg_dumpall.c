@@ -97,8 +97,10 @@ main(int argc, char *argv[])
 	const char *std_strings;
 	int			c,
 				ret;
+	int			binary_upgrade = 0;
 
-	static struct option long_options[] = {
+	struct option long_options[] = {
+		{"binary-upgrade", no_argument, &binary_upgrade, 1},	/* not documented */
 		{"data-only", no_argument, NULL, 'a'},
 		{"clean", no_argument, NULL, 'c'},
 		{"inserts", no_argument, NULL, 'd'},
@@ -357,6 +359,8 @@ main(int argc, char *argv[])
 	}
 
 	/* Add long options to the pg_dump argument list */
+	if (binary_upgrade)
+		appendPQExpBuffer(pgdumpopts, " --binary-upgrade");
 	if (disable_dollar_quoting)
 		appendPQExpBuffer(pgdumpopts, " --disable-dollar-quoting");
 	if (disable_triggers)

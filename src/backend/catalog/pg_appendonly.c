@@ -83,8 +83,6 @@ InsertAppendOnlyEntry(Oid relid,
 	values[Anum_pg_appendonly_visimaprelid - 1] = ObjectIdGetDatum(visimaprelid);
 	values[Anum_pg_appendonly_visimapidxid - 1] = ObjectIdGetDatum(visimapidxid);
 
-	values[Anum_pg_appendonly_version - 1] = test_appendonly_version_default;
-	
 	/*
 	 * form the tuple and insert it
 	 */

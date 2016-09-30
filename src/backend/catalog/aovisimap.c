@@ -22,6 +22,11 @@
 #include "nodes/makefuncs.h"
 #include "utils/guc.h"
 
+/* Potentially set by contrib/pg_upgrade_support functions */
+Oid			binary_upgrade_next_aovisimap_pg_class_oid = InvalidOid;
+Oid			binary_upgrade_next_aovisimap_index_pg_class_oid = InvalidOid;
+Oid			binary_upgrade_next_aovisimap_pg_type_oid = InvalidOid;
+
 void
 AlterTableCreateAoVisimapTableWithOid(Oid relOid, Oid newOid, Oid newIndexOid,
 									  Oid * comptypeOid, bool is_part_child)
@@ -93,6 +98,26 @@ AlterTableCreateAoVisimapTableWithOid(Oid relOid, Oid newOid, Oid newIndexOid,
 
 	coloptions[0] = 0;
 	coloptions[1] = 0;
+
+	/* Use binary-upgrade override for pg_class.oid and pg_type.oid, if supplied. */
+	if (IsBinaryUpgrade && OidIsValid(binary_upgrade_next_aovisimap_pg_class_oid))
+	{
+		Assert(newOid == InvalidOid);
+		newOid = binary_upgrade_next_aovisimap_pg_class_oid;
+		binary_upgrade_next_aovisimap_pg_class_oid = InvalidOid;
+	}
+	if (IsBinaryUpgrade && OidIsValid(binary_upgrade_next_aovisimap_index_pg_class_oid))
+	{
+		Assert(newIndexOid == InvalidOid);
+		newIndexOid = binary_upgrade_next_aovisimap_index_pg_class_oid;
+		binary_upgrade_next_aovisimap_index_pg_class_oid = InvalidOid;
+	}
+	if (IsBinaryUpgrade && OidIsValid(binary_upgrade_next_aovisimap_pg_type_oid))
+	{
+		Assert(*comptypeOid == InvalidOid);
+		*comptypeOid = binary_upgrade_next_aovisimap_pg_type_oid;
+		binary_upgrade_next_aovisimap_pg_type_oid = InvalidOid;
+	}
 
 	(void) CreateAOAuxiliaryTable(rel,
 								  "pg_aovisimap",

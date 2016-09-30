@@ -9,6 +9,7 @@
 #ifndef CDBAPPENDONLYSTORAGEWRITE_H
 #define CDBAPPENDONLYSTORAGEWRITE_H
 
+#include "catalog/pg_appendonly.h"
 #include "catalog/pg_compression.h"
 #include "cdb/cdbappendonlystorage.h"
 #include "cdb/cdbappendonlystoragelayer.h"
@@ -39,6 +40,11 @@ typedef struct AppendOnlyStorageWrite
 	 * The large write length given to the BufferedAppend module.
 	 */
 	int32		largeWriteLen;
+
+	/*
+	 * Version number indicating the AO table format version to write in.
+	 */
+	AORelationVersion formatVersion;
 
 	/*
 	 * Name of the relation to use in system logging and error messages.
@@ -181,6 +187,7 @@ extern void AppendOnlyStorageWrite_TransactionCreateFile(AppendOnlyStorageWrite 
 											 int64 *persistentSerialNum);
 extern void AppendOnlyStorageWrite_OpenFile(AppendOnlyStorageWrite *storageWrite,
 								char *filePathName,
+								int version,
 								int64 logicalEof,
 								int64 fileLen_uncompressed,
 								RelFileNode *relFileNode,

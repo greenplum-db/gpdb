@@ -4067,7 +4067,7 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
 	 * postmaster/postmaster.c (the option sets should not conflict) and with
 	 * the common help() function in main/main.c.
 	 */
-	while ((flag = getopt(argc, argv, "A:B:b:C:c:D:d:EeFf:h:ijk:m:lN:nOo:Pp:r:S:sTt:Uv:W:x:y:z:-:")) != -1)
+	while ((flag = getopt(argc, argv, "A:B:bc:D:d:EeFf:h:ijk:m:lN:nOo:Pp:r:S:sTt:Uv:W:x:y:-:")) != -1)
 	{
 		switch (flag)
 		{
@@ -4079,13 +4079,10 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
 				SetConfigOption("shared_buffers", optarg, ctx, gucsource);
 				break;
 
-            case 'b':
-                SetConfigOption("gp_dbid", optarg, ctx, gucsource);
-                break;
-
-            case 'C':
-                SetConfigOption("gp_contentid", optarg, ctx, gucsource);
-                break;
+			case 'b':
+				/* Undocumented flag used for binary upgrades */
+				IsBinaryUpgrade = true;
+				break;
 
 			case 'D':
 				if (secure)
@@ -4269,10 +4266,6 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
 			case 'x': /* standby master dbid */
 				SetConfigOption("gp_standby_dbid", optarg, ctx, gucsource);
 				break;
-            case 'z':
-                SetConfigOption("gp_num_contents_in_cluster", 
-								optarg, ctx, gucsource);
-                break;
 
 			default:
 				errs++;

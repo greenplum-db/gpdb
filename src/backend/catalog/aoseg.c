@@ -20,6 +20,10 @@
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
 
+/* Potentially set by contrib/pg_upgrade_support functions */
+Oid			binary_upgrade_next_aosegments_pg_class_oid = InvalidOid;
+Oid			binary_upgrade_next_aosegments_index_pg_class_oid = InvalidOid;
+Oid			binary_upgrade_next_aosegments_pg_type_oid = InvalidOid;
 
 void
 AlterTableCreateAoSegTableWithOid(Oid relOid, Oid newOid, Oid newIndexOid,
@@ -47,7 +51,7 @@ AlterTableCreateAoSegTableWithOid(Oid relOid, Oid newOid, Oid newIndexOid,
 		prefix = "pg_aoseg";
 
 		/* this is pretty painful...  need a tuple descriptor */
-		tupdesc = CreateTemplateTupleDesc(7, false);
+		tupdesc = CreateTemplateTupleDesc(8, false);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 1,
 						"segno",
 						INT4OID,
@@ -73,6 +77,10 @@ AlterTableCreateAoSegTableWithOid(Oid relOid, Oid newOid, Oid newIndexOid,
 						INT8OID,
 						-1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 7,
+						"formatversion",
+						INT2OID,
+						-1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 8,
 						"state",
 						INT2OID,
 						-1, 0);
@@ -111,7 +119,7 @@ AlterTableCreateAoSegTableWithOid(Oid relOid, Oid newOid, Oid newIndexOid,
 		 * state (smallint)         -- state of the segment file
 		 */
 
-		tupdesc = CreateTemplateTupleDesc(6, false);
+		tupdesc = CreateTemplateTupleDesc(7, false);
 
 		TupleDescInitEntry(tupdesc, (AttrNumber) 1,
 						   "segno",
@@ -134,6 +142,10 @@ AlterTableCreateAoSegTableWithOid(Oid relOid, Oid newOid, Oid newIndexOid,
 						INT8OID,
 						-1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 6,
+						   "formatversion",
+						   INT2OID,
+						   -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 7,
 						   "state",
 						   INT2OID,
 						   -1, 0);
@@ -157,6 +169,26 @@ AlterTableCreateAoSegTableWithOid(Oid relOid, Oid newOid, Oid newIndexOid,
 	classObjectId[0] = INT4_BTREE_OPS_OID;
 
 	coloptions[0] = 0;
+
+	/* Use binary-upgrade override for pg_class.oid and pg_type.oid, if supplied. */
+	if (IsBinaryUpgrade && OidIsValid(binary_upgrade_next_aosegments_pg_class_oid))
+	{
+		Assert(newOid == InvalidOid);
+		newOid = binary_upgrade_next_aosegments_pg_class_oid;
+		binary_upgrade_next_aosegments_pg_class_oid = InvalidOid;
+	}
+	if (IsBinaryUpgrade && OidIsValid(binary_upgrade_next_aosegments_index_pg_class_oid))
+	{
+		Assert(newIndexOid == InvalidOid);
+		newIndexOid = binary_upgrade_next_aosegments_index_pg_class_oid;
+		binary_upgrade_next_aosegments_index_pg_class_oid = InvalidOid;
+	}
+	if (IsBinaryUpgrade && OidIsValid(binary_upgrade_next_aosegments_pg_type_oid))
+	{
+		Assert(*comptypeOid == InvalidOid);
+		*comptypeOid = binary_upgrade_next_aosegments_pg_type_oid;
+		binary_upgrade_next_aosegments_pg_type_oid = InvalidOid;
+	}
 
 	(void) CreateAOAuxiliaryTable(rel, prefix, RELKIND_AOSEGMENTS,
 								  newOid, newIndexOid, comptypeOid,

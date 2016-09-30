@@ -70,6 +70,8 @@ NewFileSegInfo(int segno)
 	fsinfo = (FileSegInfo *) palloc0(sizeof(FileSegInfo));
 	fsinfo->segno = segno;
 	fsinfo->state = AOSEG_STATE_DEFAULT;
+	/* New segments are always created in the latest format */
+	fsinfo->formatversion = AORelationVersion_GetLatest();
 
 	return fsinfo;
 }
@@ -93,6 +95,10 @@ InsertInitialSegnoEntry(Relation parentrel, int segno)
 	int			natts = 0;
 	bool	   *nulls;
 	Datum	   *values;
+	int16		formatVersion;
+
+	/* New segments are always created in the latest format */
+	formatVersion = AORelationVersion_GetLatest();
 
 	InsertFastSequenceEntry(parentrel->rd_appendonly->segrelid,
 							(int64)segno,
@@ -114,6 +120,7 @@ InsertInitialSegnoEntry(Relation parentrel, int segno)
 	values[Anum_pg_aoseg_eof - 1] = Int64GetDatum(0);
 	values[Anum_pg_aoseg_eofuncompressed - 1] = Int64GetDatum(0);
 	values[Anum_pg_aoseg_modcount - 1] = Int64GetDatum(0);
+	values[Anum_pg_aoseg_formatversion - 1] = Int16GetDatum(formatVersion);
 	values[Anum_pg_aoseg_state - 1] = Int16GetDatum(AOSEG_STATE_DEFAULT);
 
 	/*
@@ -148,14 +155,13 @@ InsertInitialSegnoEntry(Relation parentrel, int segno)
 FileSegInfo *
 GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segno)
 {
-
 	Relation		pg_aoseg_rel;
 	Relation		pg_aoseg_idx;
 	TupleDesc		pg_aoseg_dsc;
 	HeapTuple		tuple;
 	ScanKeyData		key;
 	IndexScanDesc	aoscan;
-	Datum			eof, eof_uncompressed, tupcount, varbcount, modcount, state;
+	Datum			eof, eof_uncompressed, tupcount, varbcount, modcount, formatversion, state;
 	bool			isNull;
 	FileSegInfo 	*fsinfo;
 
@@ -231,6 +237,14 @@ GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segn
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				errmsg("got invalid modcount value: NULL")));
 
+	/* get the file format version number */
+	formatversion = fastgetattr(tuple, Anum_pg_aoseg_formatversion, pg_aoseg_dsc, &isNull);
+
+	if(isNull)
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				errmsg("got invalid state value: NULL")));
+
 	/* get the state */
 	state = fastgetattr(tuple, Anum_pg_aoseg_state, pg_aoseg_dsc, &isNull);
 
@@ -265,6 +279,7 @@ GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segn
 	fsinfo->total_tupcount = DatumGetInt64(tupcount);
 	fsinfo->varblockcount = DatumGetInt64(varbcount);
 	fsinfo->modcount = DatumGetInt64(modcount);
+	fsinfo->formatversion = DatumGetInt16(formatversion);
 	fsinfo->state = DatumGetInt16(state);
 
 	if (fsinfo->eof < 0)
@@ -353,6 +368,7 @@ GetAllFileSegInfo_pg_aoseg_rel(char *relationName,
 					tupcount,
 					varblockcount,
 					modcount,
+					formatversion,
 					state;
 	bool			isNull;
 	pg_aoseg_dsc = RelationGetDescr(pg_aoseg_rel);
@@ -399,6 +415,11 @@ GetAllFileSegInfo_pg_aoseg_rel(char *relationName,
 
 		modcount = fastgetattr(tuple, Anum_pg_aoseg_modcount, pg_aoseg_dsc, &isNull);
 		oneseginfo->modcount += DatumGetInt64(modcount);
+
+		formatversion = fastgetattr(tuple, Anum_pg_aoseg_formatversion, pg_aoseg_dsc, &isNull);
+		Assert(!isNull || appendOnlyMetaDataSnapshot == SnapshotAny);
+		if (!isNull)
+			oneseginfo->formatversion = (int64)DatumGetInt16(formatversion);
 
 		state = fastgetattr(tuple, Anum_pg_aoseg_state, pg_aoseg_dsc, &isNull);
 		Assert(!isNull || appendOnlyMetaDataSnapshot == SnapshotAny);
@@ -541,6 +562,11 @@ ClearFileSegInfo(Relation parentrel,
 	new_record_repl[Anum_pg_aoseg_varblockcount - 1] = true;
 	new_record[Anum_pg_aoseg_eofuncompressed - 1] = Int64GetDatum(0);
 	new_record_repl[Anum_pg_aoseg_eofuncompressed - 1] = true;
+
+	/* When the segment is later recreated, it will be in new format */
+	new_record[Anum_pg_aoseg_formatversion - 1] = Int16GetDatum(AORelationVersion_GetLatest());
+	new_record_repl[Anum_pg_aoseg_formatversion - 1] = true;
+
 	/* We do not reset the modcount here */
 
 	if (newState > 0)
@@ -967,7 +993,7 @@ gp_aoseg_history(PG_FUNCTION_ARGS)
 		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 
 		/* build tupdesc for result tuples */
-		tupdesc = CreateTemplateTupleDesc(17, false);
+		tupdesc = CreateTemplateTupleDesc(18, false);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "gp_tid",
 						   TIDOID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "gp_xmin",
@@ -1000,7 +1026,9 @@ gp_aoseg_history(PG_FUNCTION_ARGS)
 						   INT8OID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 16, "modcount",
 						   INT8OID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 17, "state",
+		TupleDescInitEntry(tupdesc, (AttrNumber) 17, "formatversion",
+						   INT2OID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 18, "state",
 						   INT2OID, -1, 0);
 
 		funcctx->tuple_desc = BlessTupleDesc(tupdesc);
@@ -1049,8 +1077,8 @@ gp_aoseg_history(PG_FUNCTION_ARGS)
 	 */
 	while (true)
 	{
-		Datum		values[17];
-		bool		nulls[17];
+		Datum		values[18];
+		bool		nulls[18];
 		HeapTuple	tuple;
 		Datum		result;
 
@@ -1079,7 +1107,8 @@ gp_aoseg_history(PG_FUNCTION_ARGS)
 		values[13] = Int64GetDatum(aoSegfile->eof);
 		values[14] = Int64GetDatum(aoSegfile->eof_uncompressed);
 		values[15] = Int64GetDatum(aoSegfile->modcount);
-		values[16] = Int16GetDatum(aoSegfile->state);
+		values[16] = Int16GetDatum(aoSegfile->formatversion);
+		values[17] = Int16GetDatum(aoSegfile->state);
 
 		tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
 		result = HeapTupleGetDatum(tuple);
@@ -1312,7 +1341,7 @@ gp_aoseg_name(PG_FUNCTION_ARGS)
 		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 
 		/* build tupdesc for result tuples */
-		tupdesc = CreateTemplateTupleDesc(7, false);
+		tupdesc = CreateTemplateTupleDesc(8, false);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "segno",
 						   INT4OID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "eof",
@@ -1325,7 +1354,9 @@ gp_aoseg_name(PG_FUNCTION_ARGS)
 						   INT8OID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 6, "modcount",
 						   INT8OID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 7, "state",
+		TupleDescInitEntry(tupdesc, (AttrNumber) 7, "formatversion",
+						   INT2OID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 8, "state",
 						   INT2OID, -1, 0);
 
 		funcctx->tuple_desc = BlessTupleDesc(tupdesc);
@@ -1373,8 +1404,8 @@ gp_aoseg_name(PG_FUNCTION_ARGS)
 	 */
 	while (true)
 	{
-		Datum		values[7];
-		bool		nulls[7];
+		Datum		values[8];
+		bool		nulls[8];
 		HeapTuple	tuple;
 		Datum		result;
 
@@ -1399,7 +1430,8 @@ gp_aoseg_name(PG_FUNCTION_ARGS)
 		values[3] = Int64GetDatum(aoSegfile->varblockcount);
 		values[4] = Int64GetDatum(aoSegfile->eof_uncompressed);
 		values[5] = Int64GetDatum(aoSegfile->modcount);
-		values[6] = Int16GetDatum(aoSegfile->state);
+		values[6] = Int64GetDatum(aoSegfile->formatversion);
+		values[7] = Int16GetDatum(aoSegfile->state);
 
 		tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
 		result = HeapTupleGetDatum(tuple);
