@@ -11,8 +11,8 @@ Feature: gprecoverseg tests
         When the user runs "gprecoverseg -ra"
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should not print Unhandled exception in thread started by <bound method Worker.__bootstrap to stdout
-         
-    Scenario: Pid corresponds to a non postgres process 
+
+    Scenario: Pid corresponds to a non postgres process
         Given the database is running
         and all the segments are running
         And the segments are synchronized
@@ -23,7 +23,7 @@ Feature: gprecoverseg tests
         And the background pid is killed on "primary" segment
         And we run a sample background script to generate a pid on "primary" segment
         And we generate the postmaster.pid file with the background pid on "primary" segment
-        And the user runs "gprecoverseg -a" 
+        And the user runs "gprecoverseg -a"
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should not print Unhandled exception in thread started by <bound method Worker.__bootstrap to stdout
         And gprecoverseg should print Skipping to stop segment.* on host.* since it is not a postgres process to stdout
@@ -36,7 +36,7 @@ Feature: gprecoverseg tests
         And the backup pid file is deleted on "primary" segment
         And the background pid is killed on "primary" segment
 
-    Scenario: Pid does not correspond to any running process 
+    Scenario: Pid does not correspond to any running process
         Given the database is running
         And all the segments are running
         And the segments are synchronized
@@ -144,5 +144,24 @@ Feature: gprecoverseg tests
         Then verify that segment with content "1" is recovered
         Then delete extra tid persistent table entries on cid "0"
         When the user runs "gprecoverseg -a -F"
+        Then all the segments are running
+        And the segments are synchronized
+
+    Scenario: gprecoverseg -r should not hang when some segments are not yet synchronized
+        Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And the information of a "mirror" segment on any host is saved
+        When user kills a mirror process with the saved information
+        And wait until the mirror is down
+        When the user runs "gprecoverseg -F -a"
+        Then gprecoverseg should return a return code of 0
+        Given at least one segment is resynchronized
+        When the user runs "gprecoverseg -r -a"
+        Then gprecoverseg should print Some segments are not yet synchronized to stdout
+        Then gprecoverseg should return a return code of 2
+        And the segments are synchronized
+        When the user runs "gprecoverseg -r -a"
+        Then gprecoverseg should return a return code of 0
         Then all the segments are running
         And the segments are synchronized

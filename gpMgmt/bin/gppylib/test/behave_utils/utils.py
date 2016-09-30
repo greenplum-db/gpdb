@@ -14,7 +14,7 @@ import yaml
 from gppylib.commands.base import Command, ExecutionError, REMOTE
 from gppylib.commands.gp import chk_local_db_running
 from gppylib.db import dbconn
-from gppylib.gparray import GpArray, MODE_SYNCHRONIZED
+from gppylib.gparray import GpArray, MODE_SYNCHRONIZED, MODE_RESYNCHRONIZATION
 from gppylib.operations.backup_utils import pg, escapeDoubleQuoteInSQLString
 
 PARTITION_START_DATE = '2010-01-01'
@@ -768,6 +768,14 @@ def are_segments_synchronized():
         if seg.mode != MODE_SYNCHRONIZED:
             return False 
     return True
+
+def is_any_segment_resynchronized():
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+    segments = gparray.getDbList()
+    for seg in segments:
+        if seg.mode == MODE_RESYNCHRONIZATION:
+            return True
+    return False
 
 def get_distribution_policy(dbname):
     filename = dbname.strip() + "_dist_policy_backup"

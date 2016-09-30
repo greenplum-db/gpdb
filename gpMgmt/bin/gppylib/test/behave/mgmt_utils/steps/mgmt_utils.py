@@ -513,6 +513,21 @@ def impl(context):
 
     raise Exception('segments are not in sync after %d seconds' % (times * sleeptime))
 
+@when('at least one segment is resynchronized')
+@then('at least one segment is resynchronized')
+@given('at least one segment is resynchronized')
+def impl(context):
+
+    times = 30
+    sleeptime = 10
+
+    for i in range(times):
+        if is_any_segment_resynchronized():
+            return
+        time.sleep(sleeptime)
+
+    raise Exception('segments are not in resync after %d seconds' % (times * sleeptime))
+
 @when('table "{table_list}" is assumed to be in dirty state in "{dbname}"')
 @then('table "{table_list}" is assumed to be in dirty state in "{dbname}"')
 @given('table "{table_list}" is assumed to be in dirty state in "{dbname}"')
@@ -2759,6 +2774,7 @@ def impl(context, filename, path):
         raise Exception('file "%s" is not exist' % fullpath)
 
 @given('waiting "{second}" seconds')
+@when('waiting "{second}" seconds')
 @then('waiting "{second}" seconds')
 def impl(context, second):
     time.sleep(float(second))
@@ -3916,7 +3932,7 @@ def impl(_):
 
 @when('user kills a mirror process with the saved information')
 def impl(context):
-    cmdStr = "ps ux | grep 'mirror process' | grep %s  | awk '{print $2}'" % context.mirror_port
+    cmdStr = "ps ux | grep '[m]irror process' | grep %s  | awk '{print $2}'" % context.mirror_port
     cmd=Command(name='get mirror pid: %s' % cmdStr, cmdStr=cmdStr)
     cmd.run()
     pid = cmd.get_stdout_lines()[0]
@@ -3937,6 +3953,8 @@ def impl(context):
     cmd.run(validateAfter=True)
 
 @when('wait until the mirror is down')
+@then('wait until the mirror is down')
+@given('wait until the mirror is down')
 def impl(context):
     qry = "select status from gp_segment_configuration where dbid='%s' and status='d' " % context.mirror_segdbId
     start_time = current_time = datetime.now()
@@ -3944,7 +3962,7 @@ def impl(context):
         row_count = len(getRows('template1', qry))
         if row_count == 1:
             break
-        sleep(5)
+        time.sleep(5)
         current_time = datetime.now()
 
 @when('run gppersistent_rebuild with the saved content id')
