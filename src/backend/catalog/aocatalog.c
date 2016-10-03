@@ -135,6 +135,7 @@ CreateAOAuxiliaryTable(
 	/* Make this table visible, else index creation will fail */
 	CommandCounterIncrement();
 
+	/* Create an index on AO auxiliary tables (like visimap) except for pg_aoseg table */
 	if (relkind != RELKIND_AOSEGMENTS)
 	{
 		aoauxiliary_idxid = index_create(aoauxiliaryOid,
