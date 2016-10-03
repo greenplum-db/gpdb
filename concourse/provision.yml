@@ -9,4 +9,4 @@ run:
   args:
     - -l
     - -c
-    - gpdb_src/concourse/scripts/perf_provision.sh
+    - gpdb_src/concourse/scripts/perf/provision.sh

@@ -2,7 +2,7 @@
 
 set -e -u
 
-source $(dirname "$0")/perf_common.sh
+source $(dirname "$0")/common.sh
 
 main() {
   INSTANCE_IDS=($(cat instance_ids/instance_ids.txt))

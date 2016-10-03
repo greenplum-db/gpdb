@@ -5,7 +5,7 @@ resources:
 - name: gpdb_src
   type: git
   source:
-    branch: master 
+    branch: master
     uri: https://github.com/greenplum-db/gpdb
 
 - name: instance_ids

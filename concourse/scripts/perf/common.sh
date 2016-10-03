@@ -9,6 +9,17 @@ remote_run() {
   ssh -i "${KEYFILE}" -t -t ${SSH_USER}@${IP} "${@:2}"
 }
 
+remote_run_script() {
+  local IP="$1"
+  local USER="$2"
+  local EXPORTS="$3"
+  local KEYFILE="${AWS_KEYPAIR}.pem"
+  local SCRIPT_BODY=$(printf "%q" "${EXPORTS}; $(cat $4)")
+
+  ssh -i "${KEYFILE}" -t -t ${SSH_USER}@${IP} "sudo -u ${USER} bash -c ${SCRIPT_BODY}"
+}
+
+
 error() {
   echo >&2 "$@"
   exit 1
@@ -36,6 +47,20 @@ check_config() {
   log "RETRIES=${RETRIES}"
 
   log "=============================="
+}
+
+wait_until_sshable() {
+  IP=$1
+
+  local i
+  for i in $(seq "${RETRIES}"); do
+    if nc -z -v "${IP}" 22; then
+      return
+    fi
+    sleep $WAIT
+  done
+
+  error "Timed out waiting for ${IP} to come online."
 }
 
 wait_until_status() {

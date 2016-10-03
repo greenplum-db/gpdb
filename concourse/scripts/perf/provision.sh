@@ -2,7 +2,7 @@
 
 set -e -u
 
-source $(dirname "$0")/perf_common.sh
+source $(dirname "$0")/common.sh
 
 main() {
   check_config
@@ -11,11 +11,24 @@ main() {
   run_instances
   print_addresses
 
-  log "Provision complete\n\n"
+  local SCRIPTS=(prepare_kernel.sh prepare_security.sh prepare_network.sh)
 
-  # For demonstration only - the next story should remove these lines
+  local exports="HOST=perfhost PRIVATE_IP=${PRIVATE_IP}"
   local PRIVATE_IP=$(ec2-describe-instances --show-empty-fields ${INSTANCE_IDS} | grep INSTANCE | cut -f18) # Extract private IP
-  remote_run ${PRIVATE_IP} "echo 'Connected to VM!' && hostname"
+  for SCRIPT in "${SCRIPTS[@]}"; do
+    remote_run_script ${PRIVATE_IP} root "${exports}" "$(dirname "$0")/${SCRIPT}"
+  done
+
+  log "Restarting instance to apply all settings..."
+  ec2-reboot-instances ${INSTANCE_IDS}
+  wait_until_sshable ${PRIVATE_IP}
+
+  local exports+=" VERIFY=1"
+  for SCRIPT in "${SCRIPTS[@]}"; do
+    remote_run_script ${PRIVATE_IP} root "${exports}" "$(dirname "$0")/${SCRIPT}"
+  done
+
+  log "Provision complete\n\n"
 }
 
 check_tools() {
