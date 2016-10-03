@@ -73,6 +73,18 @@
 #include "cdb/cdbmirroredfilesysobj.h"
 #include "cdb/cdbpersistentfilesysobj.h"
 
+/* Potentially set by contrib/pg_upgrade_support functions */
+Oid			binary_upgrade_next_index_pg_class_oid = InvalidOid;
+Oid			binary_upgrade_next_toast_index_pg_class_oid = InvalidOid;
+
+/*
+ * binary_upgrade_next_aosegments_index_pg_class_oid,
+ * binary_upgrade_next_aoblockdir_index_pg_class_oid, and
+ * binary_upgrade_next_aovisimap_index_pg_class_oid are defined in aoseg.c, aoblockdir.c and
+ * aovisimap.c, respectively. They are handled in by upper level functions, in those files,
+ * rather than here.
+ */
+
 /* state info for validate_index bulkdelete callback */
 typedef struct
 {
@@ -537,6 +549,7 @@ index_create(Oid heapRelationId,
 	Oid			namespaceId;
 	int			i;
 	LOCKMODE	heap_lockmode;
+	char		relkind;
 
 	pg_class = heap_open(RelationRelationId, RowExclusiveLock);
 
@@ -552,7 +565,7 @@ index_create(Oid heapRelationId,
 	 */
 	heap_lockmode = (concurrent ? ShareUpdateExclusiveLock : ShareLock);
 	heapRelation = heap_open(heapRelationId, heap_lockmode);
-
+	relkind = heapRelation->rd_rel->relkind;
 
 	/*
 	 * The index will be in the same namespace as its parent table, and is
@@ -633,13 +646,37 @@ index_create(Oid heapRelationId,
 	 * collide with either pg_class OIDs or existing physical files.
 	 */
 	if (!OidIsValid(indexRelationId))
-		indexRelationId = GetNewRelFileNode(tableSpaceId, shared_relation,
-											pg_class);
-	else
-		if (IsUnderPostmaster)
+	{
+		/*
+		 * Use binary-upgrade override for pg_class.oid/relfilenode, if
+		 * supplied.
+		 */
+		char		relkind = heapRelation->rd_rel->relkind;
+
+		if (IsBinaryUpgrade &&
+			relkind == RELKIND_RELATION &&
+			OidIsValid(binary_upgrade_next_index_pg_class_oid))
 		{
-			CheckNewRelFileNodeIsOk(indexRelationId, tableSpaceId, shared_relation, pg_class);
+			indexRelationId = binary_upgrade_next_index_pg_class_oid;
+			binary_upgrade_next_index_pg_class_oid = InvalidOid;
 		}
+		else if (IsBinaryUpgrade &&
+				 relkind == RELKIND_TOASTVALUE &&
+				 OidIsValid(binary_upgrade_next_toast_index_pg_class_oid))
+		{
+			indexRelationId = binary_upgrade_next_toast_index_pg_class_oid;
+			binary_upgrade_next_toast_index_pg_class_oid = InvalidOid;
+		}
+		else
+		{
+			indexRelationId = GetNewRelFileNode(tableSpaceId, shared_relation,
+												pg_class);
+		}
+	}
+	else if (IsUnderPostmaster)
+	{
+		CheckNewRelFileNodeIsOk(indexRelationId, tableSpaceId, shared_relation, pg_class);
+	}
 
 	/*
 	 * create the index relation's relcache entry and physical disk file. (If

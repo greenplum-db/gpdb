@@ -116,11 +116,6 @@ typedef struct AppendOnlyStorageAttributes
 			 * When 0, do no zero pad.
 			 */
 
-	int					version;
-			/*
-			 * Version of the MemTuple and block layout for this AO table.
-			 */
-
 } AppendOnlyStorageAttributes;
 
 /*

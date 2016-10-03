@@ -47,6 +47,7 @@ get_raw_page(PG_FUNCTION_ARGS)
 	bytea	   *raw_page;
 	char	   *raw_page_data;
 	Buffer		buf;
+	MIRROREDLOCK_BUFMGR_DECLARE;
 
 	if (!superuser())
 		ereport(ERROR,
@@ -87,6 +88,9 @@ get_raw_page(PG_FUNCTION_ARGS)
 	SET_VARSIZE(raw_page, BLCKSZ + VARHDRSZ);
 	raw_page_data = VARDATA(raw_page);
 
+	// -------- MirroredLock ----------
+	MIRROREDLOCK_BUFMGR_LOCK;
+
 	/* Take a verbatim copy of the page */
 
 	buf = ReadBuffer(rel, blkno);
@@ -96,6 +100,9 @@ get_raw_page(PG_FUNCTION_ARGS)
 
 	LockBuffer(buf, BUFFER_LOCK_UNLOCK);
 	ReleaseBuffer(buf);
+
+	MIRROREDLOCK_BUFMGR_UNLOCK;
+	// -------- MirroredLock ----------
 
 	relation_close(rel, AccessShareLock);
 

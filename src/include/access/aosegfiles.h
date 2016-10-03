@@ -14,14 +14,15 @@
 #include "utils/tqual.h"
 #include "catalog/pg_appendonly.h"
 
-#define Natts_pg_aoseg					7
+#define Natts_pg_aoseg					8
 #define Anum_pg_aoseg_segno				1
 #define Anum_pg_aoseg_eof				2
 #define Anum_pg_aoseg_tupcount			3
 #define Anum_pg_aoseg_varblockcount		4
 #define Anum_pg_aoseg_eofuncompressed	5
 #define Anum_pg_aoseg_modcount          6
-#define Anum_pg_aoseg_state             7
+#define Anum_pg_aoseg_formatversion     7
+#define Anum_pg_aoseg_state             8
 
 #define InvalidFileSegNumber			-1
 #define InvalidUncompressedEof			-1
@@ -69,7 +70,8 @@ typedef enum FileSegInfoState
 { -1, {"varblockcount"},		 20, -1, 8, 4, 0, -1, -1, true, 'p', 'd', false, false, false, true, 0 }, \
 { -1, {"eofuncompressed"},		 20, -1, 8, 5, 0, -1, -1, true, 'p', 'd', false, false, false, true, 0 }, \
 { -1, {"modcount"}, 			 20, -1, 8, 6, 0, -1, -1, true, 'p', 'i', false, false, false, true, 0 }, \
-{ -1, {"state"}, 				 21, -1, 2, 6, 0, -1, -1, true, 'p', 'i', false, false, false, true, 0 }
+{ -1, {"formatversion"},		 21, -1, 2, 7, 0, -1, -1, true, 'p', 's', false, false, false, true, 0 }, \
+{ -1, {"state"}, 				 21, -1, 2, 8, 0, -1, -1, true, 'p', 's', false, false, false, true, 0 }
 
 /*
  * pg_aoseg_nnnnnn table values for FormData_pg_class.
@@ -100,7 +102,7 @@ typedef struct FileSegInfo
 	int64 total_tupcount;	
 
 	/* total number of varblocks in this fileseg */	
-	int64 varblockcount;	
+	int64 varblockcount;
 	
 	/*
 	 * Number of data modification operations
@@ -113,6 +115,9 @@ typedef struct FileSegInfo
 	/* what would have been the eof if we didn't 
 	   compress this rel (= eof if no compression) */
 	int64 eof_uncompressed;
+
+	/* File format version number */
+	int16		formatversion;
 
 	/* 
      * state of the segno.

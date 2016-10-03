@@ -541,7 +541,7 @@ static int compute_dest_tuplen(TupleDesc tupdesc, MemTupleBinding *pbind, bool h
 	if(pbind) 
 	{
 		uint32 nullsave_dummy;
-		return (int) compute_memtuple_size(pbind, d, isnull, hasnull, &nullsave_dummy, true /* aligned */);
+		return (int) compute_memtuple_size(pbind, d, isnull, hasnull, &nullsave_dummy);
 	}
 
 	return heap_compute_data_size(tupdesc, d, isnull);

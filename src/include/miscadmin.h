@@ -197,6 +197,7 @@ do { \
 extern pid_t PostmasterPid;
 extern bool IsPostmasterEnvironment;
 extern PGDLLIMPORT bool IsUnderPostmaster;
+extern bool IsBinaryUpgrade;
 
 extern bool ExitOnAnyError;
 

@@ -9,6 +9,7 @@
 #ifndef CDBAPPENDONLYSTORAGEREAD_H
 #define CDBAPPENDONLYSTORAGEREAD_H
 
+#include "catalog/pg_appendonly.h"
 #include "catalog/pg_compression.h"
 #include "cdb/cdbappendonlystorage.h"
 #include "cdb/cdbappendonlystoragelayer.h"
@@ -150,6 +151,11 @@ typedef struct AppendOnlyStorageRead
 	int64		logicalEof;
 
 	/*
+	 * Version number indicating the AO table format version to read in.
+	 */
+	int			formatVersion;
+
+	/*
 	 * The minimum block header length based on the checkum attribute. Does
 	 * not include optional header data (e.g. firstRowNum).
 	 */
@@ -191,9 +197,9 @@ extern char *AppendOnlyStorageRead_SegmentFileName(AppendOnlyStorageRead *storag
 extern void AppendOnlyStorageRead_FinishSession(AppendOnlyStorageRead *storageRead);
 
 extern void AppendOnlyStorageRead_OpenFile(AppendOnlyStorageRead *storageRead,
-							   char *filePathName, int64 logicalEof);
+							   char *filePathName, int version, int64 logicalEof);
 extern bool AppendOnlyStorageRead_TryOpenFile(AppendOnlyStorageRead *storageRead,
-								  char *filePathName, int64 logicalEof);
+								  char *filePathName, int version, int64 logicalEof);
 extern void AppendOnlyStorageRead_SetTemporaryRange(AppendOnlyStorageRead *storageRead,
 							   int64 beginFileOffset, int64 afterFileOffset);
 extern void AppendOnlyStorageRead_CloseFile(AppendOnlyStorageRead *storageRead);

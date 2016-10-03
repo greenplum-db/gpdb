@@ -33,6 +33,8 @@
 
 #include "cdb/cdbvars.h"
 
+Oid binary_upgrade_next_pg_type_oid = InvalidOid;
+
 /*
  * Record a type's default encoding clause in the catalog.
  */
@@ -150,6 +152,13 @@ TypeShellMake(const char *typeName, Oid typeNamespace, Oid ownerId,
 	 * create a new type tuple
 	 */
 	tup = heap_form_tuple(tupDesc, values, nulls);
+
+	/* Use binary-upgrade override for pg_type.oid, if supplied. */
+	if (IsBinaryUpgrade && OidIsValid(binary_upgrade_next_pg_type_oid))
+	{
+		HeapTupleSetOid(tup, binary_upgrade_next_pg_type_oid);
+		binary_upgrade_next_pg_type_oid = InvalidOid;
+	}
 
 	/*
 	 * MPP: If we are on the QEs, we need to use the same Oid as the QD used
@@ -386,10 +395,18 @@ TypeCreateWithOptions(Oid newTypeOid,
 							 values,
 							 nulls);
 
-		/* Force the OID if requested by caller, else heap_insert does it */
+		/* Force the OID if requested by caller */
 		if (OidIsValid(newTypeOid))
 			HeapTupleSetOid(tup, newTypeOid);
-		else if (Gp_role == GP_ROLE_EXECUTE) elog(ERROR," newtypeOid NULL");
+		else if (Gp_role == GP_ROLE_EXECUTE)
+			elog(ERROR," newtypeOid NULL");
+		/* Use binary-upgrade override for pg_type.oid, if supplied. */
+		else if (IsBinaryUpgrade && OidIsValid(binary_upgrade_next_pg_type_oid))
+		{
+			HeapTupleSetOid(tup, binary_upgrade_next_pg_type_oid);
+			binary_upgrade_next_pg_type_oid = InvalidOid;
+		}
+		/* else allow system to assign oid */
 
 		typeObjectId = simple_heap_insert(pg_type_desc, tup);
 	}

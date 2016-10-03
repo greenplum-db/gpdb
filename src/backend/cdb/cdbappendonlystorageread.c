@@ -125,6 +125,7 @@ AppendOnlyStorageRead_Init(AppendOnlyStorageRead *storageRead,
 		   storageRead->largeReadLen);
 
 	storageRead->file = -1;
+	storageRead->formatVersion = -1;
 
 	MemoryContextSwitchTo(oldMemoryContext);
 
@@ -251,6 +252,7 @@ AppendOnlyStorageRead_DoOpenFile(AppendOnlyStorageRead *storageRead,
  *
  * file			- The open file.
  * filePathName - name of the segment file to open.
+ * version		- AO table format version the file is in.
  * logicalEof	- snapshot version of the EOF value to use as the read end
  *				  of the segment file.
  */
@@ -258,12 +260,14 @@ static void
 AppendOnlyStorageRead_FinishOpenFile(AppendOnlyStorageRead *storageRead,
 									 File file,
 									 char *filePathName,
+									 int version,
 									 int64 logicalEof)
-
 {
 	int64		seekResult;
 	MemoryContext oldMemoryContext;
 	int			segmentFileNameLen;
+
+	AORelationVersion_CheckValid(version);
 
 	/*
 	 * Seek to the beginning of the file.
@@ -282,6 +286,7 @@ AppendOnlyStorageRead_FinishOpenFile(AppendOnlyStorageRead *storageRead,
 	}
 
 	storageRead->file = file;
+	storageRead->formatVersion = version;
 
 	/*
 	 * When reading multiple segment files, we throw away the old segment file
@@ -315,12 +320,14 @@ AppendOnlyStorageRead_FinishOpenFile(AppendOnlyStorageRead *storageRead,
  * read location given the logical EOF.
  *
  * filePathName - name of the segment file to open.
+ * version		- AO table format version the file is in.
  * logicalEof	- snapshot version of the EOF value to use as the read end
  *				  of the segment file.
  */
 void
 AppendOnlyStorageRead_OpenFile(AppendOnlyStorageRead *storageRead,
 							   char *filePathName,
+							   int version,
 							   int64 logicalEof)
 {
 	File		file;
@@ -355,6 +362,7 @@ AppendOnlyStorageRead_OpenFile(AppendOnlyStorageRead *storageRead,
 	AppendOnlyStorageRead_FinishOpenFile(storageRead,
 										 file,
 										 filePathName,
+										 version,
 										 logicalEof);
 }
 
@@ -365,12 +373,14 @@ AppendOnlyStorageRead_OpenFile(AppendOnlyStorageRead *storageRead,
  * the logical EOF.
  *
  * filePathName - name of the segment file to open
+ * version		- AO table format version the file is in.
  * logicalEof	- snapshot version of the EOF value to use as the read end of
  *				  the segment file.
  */
 bool
 AppendOnlyStorageRead_TryOpenFile(AppendOnlyStorageRead *storageRead,
 								  char *filePathName,
+								  int version,
 								  int64 logicalEof)
 {
 	File		file;
@@ -388,6 +398,7 @@ AppendOnlyStorageRead_TryOpenFile(AppendOnlyStorageRead *storageRead,
 	AppendOnlyStorageRead_FinishOpenFile(storageRead,
 										 file,
 										 filePathName,
+										 version,
 										 logicalEof);
 
 	return true;
@@ -412,6 +423,7 @@ AppendOnlyStorageRead_SetTemporaryRange(AppendOnlyStorageRead *storageRead,
 {
 	Assert(storageRead->isActive);
 	Assert(storageRead->file != -1);
+	Assert(storageRead->formatVersion != -1);
 	Assert(beginFileOffset >= 0);
 	Assert(beginFileOffset <= storageRead->logicalEof);
 	Assert(afterFileOffset >= 0);
@@ -439,6 +451,7 @@ AppendOnlyStorageRead_CloseFile(AppendOnlyStorageRead *storageRead)
 	FileClose(storageRead->file);
 
 	storageRead->file = -1;
+	storageRead->formatVersion = -1;
 
 	storageRead->logicalEof = INT64CONST(0);
 
@@ -715,7 +728,7 @@ AppendOnlyStorageRead_StorageContentHeaderStr(AppendOnlyStorageRead *storageRead
 	return AppendOnlyStorageFormat_BlockHeaderStr(
 												  header,
 									 storageRead->storageAttributes.checksum,
-									 storageRead->storageAttributes.version);
+												  storageRead->formatVersion);
 }
 
 /*
@@ -749,7 +762,7 @@ AppendOnlyStorageRead_LogBlockHeader(AppendOnlyStorageRead *storageRead,
 	blockHeaderStr =
 		AppendOnlyStorageFormat_SmallContentHeaderStr(header,
 									 storageRead->storageAttributes.checksum,
-									 storageRead->storageAttributes.version);
+									 storageRead->formatVersion);
 	ereport(LOG,
 			(errmsg("%s. %s",
 					contextStr,
@@ -896,7 +909,7 @@ AppendOnlyStorageRead_ReadNextBlock(AppendOnlyStorageRead *storageRead)
 				 &storageRead->current.uncompressedLen,
 				 &storageRead->current.executorBlockKind,
 				 &storageRead->current.hasFirstRowNum,
-				 storageRead->storageAttributes.version,
+				 storageRead->formatVersion,
 				 &storageRead->current.firstRowNum,
 				 &storageRead->current.rowCount,
 				 &storageRead->current.isCompressed,
@@ -951,7 +964,7 @@ AppendOnlyStorageRead_ReadNextBlock(AppendOnlyStorageRead *storageRead)
 				 &storageRead->current.uncompressedLen,
 				 &storageRead->current.executorBlockKind,
 				 &storageRead->current.hasFirstRowNum,
-				 storageRead->storageAttributes.version,
+				 storageRead->formatVersion,
 				 &storageRead->current.firstRowNum,
 				 &storageRead->current.rowCount
 				);
@@ -980,7 +993,7 @@ AppendOnlyStorageRead_ReadNextBlock(AppendOnlyStorageRead *storageRead)
 				 &storageRead->current.uncompressedLen,
 				 &storageRead->current.executorBlockKind,
 				 &storageRead->current.hasFirstRowNum,
-				 storageRead->storageAttributes.version,
+				 storageRead->formatVersion,
 				 &storageRead->current.firstRowNum,
 				 &storageRead->current.rowCount,
 				 &storageRead->current.isCompressed,

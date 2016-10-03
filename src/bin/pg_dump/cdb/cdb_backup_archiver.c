@@ -182,7 +182,8 @@ RestoreArchive(Archive *AHX, RestoreOptions *ropt)
 
 		ConnectDatabase(AHX, ropt->dbname,
 						ropt->pghost, ropt->pgport, ropt->username,
-						ropt->promptPassword);
+						ropt->promptPassword,
+						false);
 
 		/*
 		 * If we're talking to the DB directly, don't send comments since they

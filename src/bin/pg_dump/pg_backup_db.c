@@ -151,7 +151,7 @@ _connectDB(ArchiveHandle *AH, const char *reqdb, const char *requser)
 
 	do
 	{
-#define PARAMS_ARRAY_SIZE	7
+#define PARAMS_ARRAY_SIZE	8
 		const char **keywords = malloc(PARAMS_ARRAY_SIZE * sizeof(*keywords));
 		const char **values = malloc(PARAMS_ARRAY_SIZE * sizeof(*values));
 
@@ -235,7 +235,8 @@ ConnectDatabase(Archive *AHX,
 				const char *pghost,
 				const char *pgport,
 				const char *username,
-				enum trivalue prompt_password)
+				enum trivalue prompt_password,
+				bool binary_upgrade)
 {
 	ArchiveHandle *AH = (ArchiveHandle *) AHX;
 	char	   *password = AH->savedPassword;
@@ -258,7 +259,7 @@ ConnectDatabase(Archive *AHX,
 	 */
 	do
 	{
-#define PARAMS_ARRAY_SIZE	7
+#define PARAMS_ARRAY_SIZE	8
 		const char **keywords = malloc(PARAMS_ARRAY_SIZE * sizeof(*keywords));
 		const char **values = malloc(PARAMS_ARRAY_SIZE * sizeof(*values));
 
@@ -277,8 +278,18 @@ ConnectDatabase(Archive *AHX,
 		values[4] = dbname;
 		keywords[5] = "fallback_application_name";
 		values[5] = progname;
-		keywords[6] = NULL;
-		values[6] = NULL;
+		if (binary_upgrade)
+		{
+			keywords[6] = "options";
+			values[6] = "-c gp_session_role=utility";
+			keywords[7] = NULL;
+			values[7] = NULL;
+		}
+		else
+		{
+			keywords[6] = NULL;
+			values[6] = NULL;
+		}
 
 		new_pass = false;
 		AH->connection = PQconnectdbParams(keywords, values, true);

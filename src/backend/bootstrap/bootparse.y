@@ -271,6 +271,7 @@ Boot_CreateStmt:
 													  PG_CATALOG_NAMESPACE,
 													  $3 ? GLOBALTABLESPACE_OID : 0,
 													  $6,
+													  typid,
 													  BOOTSTRAP_SUPERUSERID,
 													  tupdesc,
 													  /* relam */ InvalidOid,
@@ -285,7 +286,7 @@ Boot_CreateStmt:
 													  (Datum) 0,
 													  true,
 													  /* valid_opts */ false,
-													  &typid,
+													  NULL,
 													  &typarrayid,
 						 					  		  /* persistentTid */ NULL,
 						 					  		  /* persistentSerialNum */ NULL);

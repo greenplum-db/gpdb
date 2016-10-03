@@ -45,6 +45,9 @@
 #include "cdb/cdbsrlz.h"
 #include "cdb/cdbvars.h"
 
+/* Potentially set by contrib/pg_upgrade_support functions */
+Oid			binary_upgrade_next_pg_authid_oid = InvalidOid;
+
 
 typedef struct genericPair
 {
@@ -498,8 +501,24 @@ CreateRole(CreateRoleStmt *stmt)
 	tuple = heap_form_tuple(pg_authid_dsc, new_record, new_record_nulls);
 
 	if (stmt->roleOid != InvalidOid)
+	{
 		/* force tuple to have the desired OID */
 		HeapTupleSetOid(tuple, stmt->roleOid);
+	}
+
+	/*
+	 * pg_largeobject_metadata contains pg_authid.oid's, so we use the
+	 * binary-upgrade override, if specified.
+	 *
+	 * In GPDB, until we merge with 9.0, this isn't needed for pg_largeobject,
+	 * but just to keep the user OIDs the same between the master and the
+	 * segments.
+	 */
+	if (IsBinaryUpgrade && OidIsValid(binary_upgrade_next_pg_authid_oid))
+	{
+		HeapTupleSetOid(tuple, binary_upgrade_next_pg_authid_oid);
+		binary_upgrade_next_pg_authid_oid = InvalidOid;
+	}
 	
 	/*
 	 * Insert new record in the pg_authid table

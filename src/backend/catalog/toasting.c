@@ -33,6 +33,11 @@
 #include "utils/syscache.h"
 #include "utils/guc.h"
 
+/* Potentially set by contrib/pg_upgrade_support functions */
+extern Oid	binary_upgrade_next_toast_pg_class_oid;
+
+Oid			binary_upgrade_next_toast_pg_type_oid = InvalidOid;
+
 static bool create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 							   Oid *comptypeOid, bool is_part_child);
 
@@ -117,6 +122,7 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 	Relation	class_rel;
 	Oid			toast_relid;
 	Oid			toast_idxid;
+	Oid			toast_typid = InvalidOid;
 	Oid			namespaceid;
 	char		toast_relname[NAMEDATALEN];
 	char		toast_idxname[NAMEDATALEN];
@@ -135,7 +141,9 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 	/*
 	 * Check to see whether the table actually needs a TOAST table.
 	 */
-	if (!RelationNeedsToastTable(rel))
+	if (!RelationNeedsToastTable(rel) &&
+		(!IsBinaryUpgrade ||
+		 !OidIsValid(binary_upgrade_next_toast_pg_class_oid)))
 		return false;
 
 	/*
@@ -196,10 +204,21 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 	 * table?  Or maybe some toast-specific reloptions?
 	 */
 	Oid unusedTypArrayOid = InvalidOid;
+
+	/* Use binary-upgrade override for pg_type.oid, if supplied. */
+	if (IsBinaryUpgrade && OidIsValid(binary_upgrade_next_toast_pg_type_oid))
+	{
+		toast_typid = binary_upgrade_next_toast_pg_type_oid;
+		binary_upgrade_next_toast_pg_type_oid = InvalidOid;
+	}
+	else if (comptypeOid)
+		toast_typid = *comptypeOid;
+
 	toast_relid = heap_create_with_catalog(toast_relname,
 										   namespaceid,
 										   rel->rd_rel->reltablespace,
 										   toastOid,
+										   toast_typid,
 										   rel->rd_rel->relowner,
 										   tupdesc,
 										   /* relam */ InvalidOid,

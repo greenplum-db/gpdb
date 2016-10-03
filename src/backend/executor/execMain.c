@@ -4835,6 +4835,7 @@ OpenIntoRel(QueryDesc *queryDesc)
 											  namespaceId,
 											  tablespaceId,
 											  intoOid,			/* MPP */
+											  intoComptypeOid, 	/* MPP */
 											  GetUserId(),
 											  tupdesc,
 											  /* relam */ InvalidOid,

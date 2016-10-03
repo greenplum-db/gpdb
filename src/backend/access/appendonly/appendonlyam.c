@@ -61,6 +61,7 @@
 #include "pgstat.h"
 #include "storage/procarray.h"
 #include "storage/gp_compress.h"
+#include "utils/datum.h"
 #include "utils/inval.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
@@ -201,6 +202,7 @@ SetNextFileSegForRead(AppendOnlyScanDesc scan)
 	Relation		reln = scan->aos_rd;
 	int				segno = -1;
 	int64			eof = 0;
+	int				formatversion = -1;
 	bool			finished_all_files = true; /* assume */
 	int32			fileSegNo;
 
@@ -276,6 +278,7 @@ SetNextFileSegForRead(AppendOnlyScanDesc scan)
 		/* still have more segment files to read. get info of the next one */
 		FileSegInfo *fsinfo = scan->aos_segfile_arr[scan->aos_segfiles_processed];
 		segno = fsinfo->segno;
+		formatversion = fsinfo->formatversion;
 		eof = (int64)fsinfo->eof;
 
 		scan->aos_segfiles_processed++;
@@ -344,6 +347,7 @@ SetNextFileSegForRead(AppendOnlyScanDesc scan)
 	AppendOnlyStorageRead_OpenFile(
 						&scan->storageRead,
 						scan->aos_filenamepath,
+						formatversion,
 						eof);
 
 	AppendOnlyExecutionReadBlock_SetSegmentFileNum(
@@ -435,7 +439,7 @@ errdetail_appendonly_insert_block_header(AppendOnlyInsertDesc aoInsertDesc)
 
 	usingChecksum = aoInsertDesc->usingChecksum;
 
-	return errdetail_appendonly_storage_content_header(header, usingChecksum, aoInsertDesc->storageAttributes.version);
+	return errdetail_appendonly_storage_content_header(header, usingChecksum, aoInsertDesc->storageWrite.formatVersion);
 }
 
 /*
@@ -593,6 +597,7 @@ SetCurrentFileSegForWrite(AppendOnlyInsertDesc aoInsertDesc)
 	AppendOnlyStorageWrite_OpenFile(
 							&aoInsertDesc->storageWrite,
 							aoInsertDesc->appendFilePathName,
+							aoInsertDesc->fsInfo->formatversion,
 							eof,
 							eof_uncompressed,
 							&aoInsertDesc->aoi_rel->rd_node,
@@ -931,14 +936,9 @@ AppendOnlyExecutorReadBlock_Init(
 	oldcontext = MemoryContextSwitchTo(memoryContext);
 	executorReadBlock->uncompressedBuffer = (uint8 *) palloc(usableBlockSize * sizeof(uint8));
 
-	executorReadBlock->mt_bind = create_memtuple_binding(RelationGetDescr(relation));
-
-	ItemPointerSet(&executorReadBlock->cdb_fake_ctid, 0, 0);
-
 	executorReadBlock->storageRead = storageRead;
 
 	MemoryContextSwitchTo(oldcontext);
-
 }
 
 /*
@@ -954,10 +954,10 @@ AppendOnlyExecutorReadBlock_Finish(
 		executorReadBlock->uncompressedBuffer = NULL;
 	}
 
-	if (executorReadBlock->mt_bind)
+	if (executorReadBlock->numericAtts)
 	{
-		destroy_memtuple_binding(executorReadBlock->mt_bind);
-		executorReadBlock->mt_bind = NULL;
+		pfree(executorReadBlock->numericAtts);
+		executorReadBlock->numericAtts = NULL;
 	}
 }
 
@@ -966,6 +966,134 @@ AppendOnlyExecutorReadBlock_ResetCounts(
 	AppendOnlyExecutorReadBlock		*executorReadBlock)
 {
 	executorReadBlock->totalRowsScannned = 0;
+}
+
+/*
+ * Given a tuple in 'formatversion', convert it to a format that is
+ * understood by the rest of the system.
+ */
+static MemTuple
+upgrade_tuple(AppendOnlyExecutorReadBlock *executorReadBlock,
+			  MemTuple mtup, MemTupleBinding *pbind, int formatversion, bool *shouldFree)
+{
+	TupleDesc	tupdesc = pbind->tupdesc;
+	const int	natts = tupdesc->natts;
+	MemTuple	newtuple;
+	int			i;
+
+	static Datum *values = NULL;
+	static bool *isnull = NULL;
+	static int nallocated = 0;
+
+	bool		convert_alignment = false;
+	bool		convert_numerics = false;
+
+	/*
+	 * MPP-7372: If the AO table was created before the fix for this issue, it may
+	 * contain tuples with misaligned bindings. Here we check if the stored memtuple
+	 * is problematic and then create a clone of the tuple with properly aligned
+	 * bindings to be used by the executor.
+	 */
+	if (formatversion < AORelationVersion_Aligned64bit &&
+		memtuple_has_misaligned_attribute(mtup, pbind))
+		convert_alignment = true;
+
+	if (formatversion < AORelationVersion_PG83)
+	{
+		/*
+		 * On first call, figure out which columns are numerics, or domains
+		 * over numerics.
+		 */
+		if (executorReadBlock->numericAtts == NULL)
+		{
+			int			n;
+
+			executorReadBlock->numericAtts = (int *) palloc(natts * sizeof(int));
+
+			n = 0;
+			for (i = 0; i < natts; i++)
+			{
+				Oid			typeoid;
+
+				typeoid = getBaseType(tupdesc->attrs[i]->atttypid);
+				if (typeoid == NUMERICOID)
+					executorReadBlock->numericAtts[n++] = i;
+			}
+			executorReadBlock->numNumericAtts = n;
+		}
+
+		/* If there were any numeric columns, we need to conver them. */
+		if (executorReadBlock->numNumericAtts > 0)
+			convert_numerics = true;
+	}
+
+	if (!convert_alignment && !convert_numerics)
+	{
+		/* No conversion required. Return the original tuple unmodified. */
+		*shouldFree = false;
+		return mtup;
+	}
+
+	/* Conversion is needed. */
+
+	/* enlarge the arrays if needed */
+	if (natts > nallocated)
+	{
+		if (values)
+			pfree(values);
+		if (isnull)
+			pfree(values);
+		values = (Datum *) MemoryContextAlloc(TopMemoryContext, natts * sizeof(Datum));
+		isnull = (bool *) MemoryContextAlloc(TopMemoryContext, natts * sizeof(bool));
+		nallocated = natts;
+	}
+
+	if (convert_alignment)
+	{
+		/* get attribute values form mis-aligned tuple */
+		memtuple_deform_misaligned(mtup, pbind, values, isnull);
+		/* Form a new, properly-aligned, tuple */
+		newtuple = memtuple_form_to(pbind, values, isnull, NULL, NULL, true);
+	}
+	else
+	{
+		/*
+		 * make a modifiable copy
+		 */
+		newtuple = memtuple_copy_to(mtup, pbind, NULL, NULL);
+	}
+
+	/*
+	 * NOTE: we do this *after* creating the new tuple, so that we can
+	 * modify the new, copied, tuple in-place.
+	 */
+	if (convert_numerics)
+	{
+		int			i;
+
+		/*
+		 * Get pointers to the datums within the tuple
+		 */
+		memtuple_deform(newtuple, pbind, values, isnull);
+
+		for (i = 0; i < executorReadBlock->numNumericAtts; i++)
+		{
+			/*
+			 * Before PostgreSQL 8.3, the n_weight and n_sign_dscale fields
+			 * were the other way 'round. Swap them.
+			 */
+			Datum		datum = values[executorReadBlock->numericAtts[i]];
+			char	   *numericdata = VARDATA_ANY(DatumGetPointer(datum));
+			uint16		tmp;
+
+			memcpy(&tmp, &numericdata[0], 2);
+			memcpy(&numericdata[0], &numericdata[2], 2);
+			memcpy(&numericdata[2], &tmp, 2);
+		}
+	}
+
+	*shouldFree = true;
+	return newtuple;
 }
 
 static bool
@@ -979,38 +1107,25 @@ AppendOnlyExecutorReadBlock_ProcessTuple(
 	TupleTableSlot 					*slot)
 {
 	bool	valid = true;	// Assume for HeapKeyTestUsingSlot define.
-	AOTupleId *aoTupleId = (AOTupleId*)&executorReadBlock->cdb_fake_ctid;
+	ItemPointerData	fake_ctid;
+	AOTupleId *aoTupleId = (AOTupleId*)&fake_ctid;
+	int			formatVersion = executorReadBlock->storageRead->formatVersion;
+
+	AORelationVersion_CheckValid(formatVersion);
 
 	AOTupleIdInit_Init(aoTupleId);
 	AOTupleIdInit_segmentFileNum(aoTupleId, executorReadBlock->segmentFileNum);
 	AOTupleIdInit_rowNum(aoTupleId, rowNum);
 
-	if(slot)
+	if (slot)
 	{
-		/*
-		 * MPP-7372: If the AO table was created before the fix for this issue, it may
-		 * contain tuples with misaligned bindings. Here we check if the stored memtuple
-		 * is problematic and then create a clone of the tuple with properly aligned
-		 * bindings to be used by the executor.
-		 */
-		if (!IsAOBlockAndMemtupleAlignmentFixed(executorReadBlock->storageRead->storageAttributes.version) &&
-			memtuple_has_misaligned_attribute(tuple, slot->tts_mt_bind))
-		{
-			/*
-			 * Create a properly aligned clone of the memtuple.
-			 * We p'alloc memory for the clone, so the slot is
-			 * responsible for releasing the allocated memory.
-			 */
-			tuple = memtuple_aligned_clone(tuple, slot->tts_mt_bind, true /* upgrade */);
-			Assert(tuple);
-			ExecStoreMinimalTuple(tuple, slot, true /* shouldFree */);
-		}
-		else
-		{
-			ExecStoreMinimalTuple(tuple, slot, false);
-		}
+		bool		shouldFree = false;
 
-		slot_set_ctid(slot, &(executorReadBlock->cdb_fake_ctid));
+		/* If the tuple is not in the latest format, convert it */
+		if (formatVersion < AORelationVersion_GetLatest())
+			tuple = upgrade_tuple(executorReadBlock, tuple, slot->tts_mt_bind, formatVersion, &shouldFree);
+		ExecStoreMinimalTuple(tuple, slot, shouldFree);
+		slot_set_ctid(slot, &fake_ctid);
 	}
 
 
@@ -1025,7 +1140,7 @@ AppendOnlyExecutorReadBlock_ProcessTuple(
 		     AppendOnlyStorageRead_RelationName(executorReadBlock->storageRead),
 		     AOTupleIdToString(aoTupleId),
 		     tupleLen,
-		     memtuple_get_size(tuple, executorReadBlock->mt_bind),
+		     memtuple_get_size(tuple, slot->tts_mt_bind),
 		     executorReadBlock->headerOffsetInFile);
 
 	return valid;
@@ -1604,9 +1719,6 @@ appendonly_beginrangescan_internal(Relation relation,
 	attr->compressLevel     = relation->rd_appendonly->compresslevel;
 	attr->checksum			= relation->rd_appendonly->checksum;
 	attr->safeFSWriteSize	= relation->rd_appendonly->safefswritesize;
-	attr->version			= relation->rd_appendonly->version;
-
-	AORelationVersion_CheckValid(attr->version);
 
 	/*
 	 * Adding a NOTOAST table attribute in 3.3.3 would require a catalog change,
@@ -1869,6 +1981,7 @@ openFetchSegmentFile(
 	if (!AppendOnlyStorageRead_TryOpenFile(
 						&aoFetchDesc->storageRead,
 						aoFetchDesc->segmentFileName,
+						fsInfo->formatversion,
 						logicalEof))
 		return false;
 
@@ -2146,9 +2259,6 @@ appendonly_fetch_init(
 	attr->compressLevel = relation->rd_appendonly->compresslevel;
 	attr->checksum			= relation->rd_appendonly->checksum;
 	attr->safeFSWriteSize	= relation->rd_appendonly->safefswritesize;
-	attr->version			= relation->rd_appendonly->version;
-
-	AORelationVersion_CheckValid(attr->version);
 
 	aoFetchDesc->usableBlockSize =
 				AppendOnlyStorage_GetUsableBlockSize(relation->rd_appendonly->blocksize);
@@ -2603,10 +2713,6 @@ appendonly_insert_init(Relation rel, int segno, bool update_mode)
 	StringInfoData titleBuf;
 
 	/*
-	 * Get the pg_appendonly information for this table
-	 */
-
-	/*
 	 * allocate and initialize the insert descriptor
 	 */
 	aoInsertDesc  = (AppendOnlyInsertDesc) palloc0(sizeof(AppendOnlyInsertDescData));
@@ -2665,9 +2771,6 @@ appendonly_insert_init(Relation rel, int segno, bool update_mode)
 	attr->compressLevel	= rel->rd_appendonly->compresslevel;
 	attr->checksum			= rel->rd_appendonly->checksum;
 	attr->safeFSWriteSize	= rel->rd_appendonly->safefswritesize;
-	attr->version			= rel->rd_appendonly->version;
-
-	AORelationVersion_CheckValid(attr->version);
 
 	fns = get_funcs_for_compression(NameStr(rel->rd_appendonly->compresstype));
 
@@ -2876,25 +2979,6 @@ appendonly_insert_init(Relation rel, int segno, bool update_mode)
 												true, true);
 	else
 		tup = instup;
-
-	/*
-	 * MPP-7372: If the AO table was created before the fix for this issue, it may contain
-	 * tuples with misaligned bindings. Here we check if the memtuple to be stored is
-	 * problematic and then create a clone of the tuple with the old (misaligned) bindings
-	 * to preserve consistency.
-	 */
-	if (!IsAOBlockAndMemtupleAlignmentFixed(aoInsertDesc->storageAttributes.version) &&
-		memtuple_has_misaligned_attribute(tup, aoInsertDesc->mt_bind))
-	{
-		/* Create a clone of the memtuple using misaligned bindings. */
-		MemTuple tuple = memtuple_aligned_clone(tup, aoInsertDesc->mt_bind, false /* downgrade */);
-		Assert(tuple);
-		if(tup != instup)
-		{
-			pfree(tup);
-		}
-		tup = tuple;
-	}
 
 	/*
 	 * get space to insert our next item (tuple)

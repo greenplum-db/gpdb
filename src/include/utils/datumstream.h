@@ -235,7 +235,6 @@ extern DatumStreamWrite *create_datumstreamwrite(
 						bool checksum,
 						int32 safeFSWriteSize,
 						int32 maxsz,
-						AORelationVersion version,
 						Form_pg_attribute attr,
 						char *relname,
 						char *title);
@@ -246,7 +245,6 @@ extern DatumStreamRead *create_datumstreamread(
 					   bool checksum,
 					   int32 safeFSWriteSize,
 					   int32 maxsz,
-					   AORelationVersion version,
 					   Form_pg_attribute attr,
 					   char *relname,
 					   char *title);
@@ -257,7 +255,8 @@ extern void datumstreamwrite_open_file(
 						   int64 eof,
 						   int64 eofUncompressed,
 						   RelFileNode relFileNode,
-						   int32 segmentFileNum);
+						   int32 segmentFileNum,
+						   int version);
 
 extern void datumstreamread_open_file(
 						  DatumStreamRead * ds,
@@ -265,7 +264,8 @@ extern void datumstreamread_open_file(
 						  int64 eof,
 						  int64 eofUncompressed,
 						  RelFileNode relFileNode,
-						  int32 segmentFileNum);
+						  int32 segmentFileNum,
+						  int version);
 
 extern void datumstreamwrite_close_file(DatumStreamWrite * ds);
 extern void datumstreamread_close_file(DatumStreamRead * ds);

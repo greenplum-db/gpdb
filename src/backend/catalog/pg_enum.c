@@ -18,6 +18,9 @@
 #include "catalog/catalog.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_enum.h"
+#include "catalog/pg_type.h"
+#include "storage/lmgr.h"
+#include "miscadmin.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 
@@ -166,7 +169,7 @@ EnumValuesDelete(Oid enumTypeOid)
 }
 
 
-/* qsort comparison function */
+/* qsort comparison function for oids */
 static int
 oid_cmp(const void *p1, const void *p2)
 {

@@ -82,6 +82,18 @@
 
 #include "utils/guc.h"
 
+
+/* Potentially set by contrib/pg_upgrade_support functions */
+Oid			binary_upgrade_next_heap_pg_class_oid = InvalidOid;
+Oid			binary_upgrade_next_toast_pg_class_oid = InvalidOid;
+/*
+ * binary_upgrade_next_aosegments_pg_class_oid,
+ * binary_upgrade_next_aoblockdir_pg_class_oid, and
+ * binary_upgrade_next_aovisimap_pg_class_oid are defined in aoseg.c, aoblockdir.c and
+ * aovisimap.c, respectively. They are handled in by upper level functions, in those files,
+ * rather than here.
+ */
+
 static void MetaTrackAddUpdInternal(Oid			classid,
 									Oid			objoid,
 									Oid			relowner,
@@ -99,12 +111,12 @@ static void AddNewRelationTuple(Relation pg_class_desc,
 					char relkind,
 					char relstorage,
 					Datum reloptions);
-static Oid AddNewRelationType(Oid new_type_oid,
-				   const char *typeName,
+static Oid AddNewRelationType(const char *typeName,
 				   Oid typeNamespace,
 				   Oid new_rel_oid,
 				   char new_rel_kind,
 				   Oid ownerid,
+				   Oid new_row_type,
 				   Oid new_array_type);
 static void RelationRemoveInheritance(Oid relid);
 static Oid StoreRelCheck(Relation rel, char *ccname, char *ccbin, Oid conoid);
@@ -112,6 +124,7 @@ static Node* cookConstraint (ParseState *pstate,
 							 Node 		*raw_constraint,
 							 char		*relname);
 static List *insert_ordered_unique_oid(List *list, Oid datum);
+
 
 /* ----------------------------------------------------------------
  *				XXX UGLY HARD CODED BADNESS FOLLOWS XXX
@@ -1190,16 +1203,16 @@ AddNewRelationTuple(Relation pg_class_desc,
  * --------------------------------
  */
 static Oid
-AddNewRelationType(Oid new_type_oid,
-				   const char *typeName,
+AddNewRelationType(const char *typeName,
 				   Oid typeNamespace,
 				   Oid new_rel_oid,
 				   char new_rel_kind,
 				   Oid ownerid,
+				   Oid new_row_type,
 				   Oid new_array_type)
 {
 	return
-		TypeCreate(new_type_oid,	/* can have a predetermined OID in bootstrap */
+		TypeCreate(new_row_type,	/* optional predetermined OID */
 				   typeName,		/* type name */
 				   typeNamespace,	/* type namespace */
 				   new_rel_oid, 	/* relation oid */
@@ -1382,6 +1395,7 @@ heap_create_with_catalog(const char *relname,
 						 Oid relnamespace,
 						 Oid reltablespace,
 						 Oid relid,
+						 Oid reltypeid,
 						 Oid ownerid,
 						 TupleDesc tupdesc,
 						 Oid relam,
@@ -1420,8 +1434,7 @@ heap_create_with_catalog(const char *relname,
 	 * knows what it is.
 	 */
 	rowtype_already_exists =
-		(IsBootstrapProcessingMode() &&
-		 (PointerIsValid(comptypeOid) && OidIsValid(*comptypeOid)));
+		(IsBootstrapProcessingMode() && OidIsValid(reltypeid));
 
 	if (PointerIsValid(comptypeArrayOid))
 	{
@@ -1541,14 +1554,39 @@ heap_create_with_catalog(const char *relname,
 	 * collide with either pg_class OIDs or existing physical files.
 	 */
 	if (!OidIsValid(relid))
-		relid = GetNewRelFileNode(reltablespace, shared_relation,
-								  pg_class_desc);
-	else
-		if (IsUnderPostmaster)
+	{
+		/*
+		 * Use binary-upgrade override for pg_class.oid/relfilenode, if
+		 * supplied.
+		 */
+		if (IsBinaryUpgrade &&
+			OidIsValid(binary_upgrade_next_heap_pg_class_oid) &&
+			(relkind == RELKIND_RELATION || relkind == RELKIND_SEQUENCE ||
+			 relkind == RELKIND_VIEW || relkind == RELKIND_COMPOSITE_TYPE))
 		{
-			CheckNewRelFileNodeIsOk(relid, reltablespace, shared_relation,
-									pg_class_desc);
+			relid = binary_upgrade_next_heap_pg_class_oid;
+			binary_upgrade_next_heap_pg_class_oid = InvalidOid;
 		}
+		else if (IsBinaryUpgrade &&
+				 OidIsValid(binary_upgrade_next_toast_pg_class_oid) &&
+				 relkind == RELKIND_TOASTVALUE)
+		{
+			relid = binary_upgrade_next_toast_pg_class_oid;
+			binary_upgrade_next_toast_pg_class_oid = InvalidOid;
+		}
+		/*
+		 * AO segment, blockdir, and visimap tables are handled in upper level,
+		 * see AlterTableCreateAoSegTableWithOid() and friends
+		 */
+		else
+			relid = GetNewRelFileNode(reltablespace, shared_relation,
+									  pg_class_desc);
+	}
+	else if (IsUnderPostmaster)
+	{
+		CheckNewRelFileNodeIsOk(relid, reltablespace, shared_relation,
+								pg_class_desc);
+	}
 
 	/*
 	 * Create the relcache entry (mostly dummy at this point) and the physical
@@ -1605,13 +1643,7 @@ heap_create_with_catalog(const char *relname,
 							  relkind == RELKIND_COMPOSITE_TYPE) &&
 		relnamespace != PG_BITMAPINDEX_NAMESPACE &&
 		!OidIsValid(new_array_oid))
-	{
-		/* OK, so pre-assign a type OID for the array type */
-		Relation	pg_type = heap_open(TypeRelationId, AccessShareLock);
-
-		new_array_oid = GetNewOid(pg_type);
-		heap_close(pg_type, AccessShareLock);
-	}
+		new_array_oid = AssignTypeArrayOid();
 
 	/*
 	 * Since defining a relation also defines a complex type, we add a new
@@ -1622,15 +1654,15 @@ heap_create_with_catalog(const char *relname,
 	 * we checked for a duplicate name above.
 	 */
 	if (rowtype_already_exists)
-		new_type_oid = *comptypeOid;
+		new_type_oid = reltypeid;
 	else
 	{
-		new_type_oid = AddNewRelationType(comptypeOid ? *comptypeOid : InvalidOid,
-										  relname,
+		new_type_oid = AddNewRelationType(relname,
 										  relnamespace,
 										  relid,
 										  relkind,
 										  ownerid,
+										  reltypeid,
 										  new_array_oid);
 		if (comptypeOid)
 			*comptypeOid = new_type_oid;
@@ -1778,8 +1810,7 @@ heap_create_with_catalog(const char *relname,
      * key column list in the gp_distribution_policy catalog and attach a
      * copy to the relcache entry.
      */
-    if (policy &&
-        Gp_role == GP_ROLE_DISPATCH)
+    if (policy && (Gp_role == GP_ROLE_DISPATCH || IsBinaryUpgrade))
     {
         Assert(relkind == RELKIND_RELATION);
         new_rel_desc->rd_cdbpolicy = GpPolicyCopy(GetMemoryChunkContext(new_rel_desc), policy);

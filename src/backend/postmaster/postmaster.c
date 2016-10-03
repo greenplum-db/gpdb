@@ -855,7 +855,7 @@ PostmasterMain(int argc, char *argv[])
 	 * tcop/postgres.c (the option sets should not conflict) and with the
 	 * common help() function in main/main.c.
 	 */
-	while ((opt = getopt(argc, argv, "A:b:B:C:c:D:d:EeFf:h:ijk:lN:mM:nOo:Pp:r:S:sTt:UW:yx:z:-:")) != -1)
+	while ((opt = getopt(argc, argv, "A:B:bc:D:d:EeFf:h:ijk:lN:mM:nOo:Pp:r:S:sTt:UW:yx:-:")) != -1)
 	{
 		switch (opt)
 		{
@@ -867,13 +867,10 @@ PostmasterMain(int argc, char *argv[])
 				SetConfigOption("shared_buffers", optarg, PGC_POSTMASTER, PGC_S_ARGV);
 				break;
 
-            case 'b':
-                SetConfigOption("gp_dbid", optarg, PGC_POSTMASTER, PGC_S_ARGV);
-                break;
-
-            case 'C':
-                SetConfigOption("gp_contentid", optarg, PGC_POSTMASTER, PGC_S_ARGV);
-                break;
+			case 'b':
+				/* Undocumented flag used for binary upgrades */
+				IsBinaryUpgrade = true;
+				break;
 
 			case 'D':
 				userDoption = optarg;
@@ -1077,9 +1074,6 @@ PostmasterMain(int argc, char *argv[])
 			case 'x': /* standby master dbid */
 				SetConfigOption("gp_standby_dbid", optarg, PGC_POSTMASTER, PGC_S_ARGV);
 				break;
-            case 'z':
-                SetConfigOption("gp_num_contents_in_cluster", optarg, PGC_POSTMASTER, PGC_S_ARGV);
-                break;
 
 			default:
 				write_stderr("Try \"%s --help\" for more information.\n",
@@ -2511,7 +2505,7 @@ ServerLoop(void)
 			}
 
 			/* If we have lost the autovacuum launcher, try to start a new one */
-			if (AutoVacPID == 0 &&
+			if (!IsBinaryUpgrade && AutoVacPID == 0 &&
 				(AutoVacuumingActive() || start_autovac_launcher) &&
 				pmState == PM_RUN)
 			{
