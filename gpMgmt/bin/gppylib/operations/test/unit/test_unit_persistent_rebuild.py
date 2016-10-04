@@ -961,6 +961,13 @@ class RebuildTableTestCase(unittest.TestCase):
     def setUp(self):
         self.rebuild_table = RebuildTable(dbid_info=None)
 
+    def test_initializer_captures_values(self):
+        self.rebuild_table = RebuildTable(dbid_info="abcd", has_mirrors="efg", batch_size=123, backup_dir=456)
+        self.assertEquals("abcd",self.rebuild_table.dbid_info)
+        self.assertEquals("efg",self.rebuild_table.has_mirrors)
+        self.assertEquals(123,self.rebuild_table.batch_size)
+        self.assertEquals(456,self.rebuild_table.backup_dir)
+
     def test_get_valid_dbids(self):
         content_ids = [1, 2]
         expected = [0, 1]

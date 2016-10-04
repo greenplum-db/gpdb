@@ -905,7 +905,7 @@ class RebuildTable:
     def __init__(self, dbid_info, has_mirrors=False, batch_size=DEFAULT_BATCH_SIZE, backup_dir=None):
         self.gparray = None
         self.dbid_info = dbid_info
-        self.has_mirrors = False
+        self.has_mirrors = has_mirrors
         self.batch_size = batch_size
         self.backup_dir = backup_dir
         self.pool = None
