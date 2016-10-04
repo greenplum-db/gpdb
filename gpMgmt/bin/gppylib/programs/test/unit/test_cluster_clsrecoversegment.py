@@ -124,6 +124,34 @@ class GpRecoverSegmentProgramTestCase(unittest.TestCase):
             gprecover_prog._check_segment_state_for_connection(confProvider)
 
     @patch('gppylib.commands.base.Command.get_results')
+    def test_check_segment_state_ready_for_recovery_ignores_initial_stdout_warnings(self, mock_results):
+        options = Mock()
+        gprecover_prog = GpRecoverSegmentProgram(options)
+        gprecover_prog.logger.info = Mock()
+        mock_results.return_value = CommandResult(0, '', 'Warning: Permanently added "a4eb06fc188f,172.17.0.2" (RSA) to the list of \nmode: PrimarySegment\nsegmentState: ChangeTrackingDisabled\ndataState: InChangeTracking\n', False, True)
+        segment_mock = Mock()
+        segment_mock.isSegmentQD.return_value = False
+        segment_mock.isSegmentModeInChangeLogging.return_value = True
+        segment_mock.getSegmentHostName.return_value = 'foo1'
+        segment_mock.getSegmentDataDirectory.return_value = 'bar'
+        segment_mock.getSegmentPort.return_value = 5555
+        segment_mock.getSegmentDbId.return_value = 2
+        segment_mock.getSegmentRole.return_value = 'p'
+        segment_mock.getSegmentMode.return_value = 'c'
+
+        segmentList = [segment_mock]
+        dbsMap = {2:segment_mock}
+
+        mock_pool= Mock()
+        mock_pool.addCommand = Mock()
+        mock_pool.join = Mock()
+        gprecover_prog._GpRecoverSegmentProgram__pool = mock_pool
+
+        segmentStates = gprecover_prog.check_segment_state_ready_for_recovery(segmentList, dbsMap)
+        self.assertEquals(segmentStates, {2: 'ChangeTrackingDisabled'})
+        gprecover_prog.logger.info.assert_called_once_with('Warning: Permanently added "a4eb06fc188f,172.17.0.2" (RSA) to the list of ')
+
+    @patch('gppylib.commands.base.Command.get_results')
     def test_check_segment_state_ready_for_recovery_with_segment_in_change_tracking_disabled(self, mock_results):
         options = Mock()
         mock_results.return_value = CommandResult(0, '', 'mode: PrimarySegment\nsegmentState: ChangeTrackingDisabled\ndataState: InChangeTracking\n', False, True)

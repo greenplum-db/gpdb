@@ -1266,6 +1266,8 @@ class GpRecoverSegmentProgram:
             dataState    = None
             try:
                 lines = str(cmd.get_results().stderr).split("\n")
+                while not lines[0].startswith('mode: '):
+                    logger.info(lines.pop(0))
                 mode         = lines[0].split(": ")[1].strip()
                 segmentState = lines[1].split(": ")[1].strip()
                 dataState    = lines[2].split(": ")[1].strip()
