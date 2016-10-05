@@ -30,6 +30,7 @@ function gen_env(){
 		    exit 1
 		}
 		source /usr/local/greenplum-db-devel/greenplum_path.sh
+		source /opt/gcc_env.sh
 		cd "\${1}/gpdb_src/gpAux"
 		source gpdemo/gpdemo-env.sh
 		make ${MAKE_TEST_COMMAND}

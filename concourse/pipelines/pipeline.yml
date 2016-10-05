@@ -147,6 +147,69 @@ jobs:
       BLDWRAP_POSTGRES_CONF_ADDONS: ""
       TEST_OS: centos
 
+- name: icg_gporca_centos6
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [compile_gpdb_centos6]
+    - get: sync_tools_gpdb_centos
+      resource: sync_tools_gpdb_centos
+      passed: [compile_gpdb_centos6]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos
+      passed: [compile_gpdb_centos6]
+      trigger: true
+    - get: centos67-gpdb-gcc6-llvm-image
+  - task: ic_gpdb
+    file: gpdb_src/concourse/ic_gpdb.yml
+    image: centos67-gpdb-gcc6-llvm-image
+    params:
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-good
+      BLDWRAP_POSTGRES_CONF_ADDONS: ""
+      TEST_OS: centos
+
+- name: icg_planner_codegen_centos6
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [compile_gpdb_centos6]
+    - get: sync_tools_gpdb_centos
+      resource: sync_tools_gpdb_centos
+      passed: [compile_gpdb_centos6]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos
+      passed: [compile_gpdb_centos6]
+      trigger: true
+    - get: centos67-gpdb-gcc6-llvm-image
+  - task: ic_gpdb
+    file: gpdb_src/concourse/ic_gpdb.yml
+    image: centos67-gpdb-gcc6-llvm-image
+    params:
+      MAKE_TEST_COMMAND: PGOPTIONS='-c codegen=on' installcheck-good
+      BLDWRAP_POSTGRES_CONF_ADDONS: ""
+      TEST_OS: centos
+
+- name: icg_gporca_codegen_centos6
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [compile_gpdb_centos6]
+    - get: sync_tools_gpdb_centos
+      resource: sync_tools_gpdb_centos
+      passed: [compile_gpdb_centos6]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos
+      passed: [compile_gpdb_centos6]
+      trigger: true
+    - get: centos67-gpdb-gcc6-llvm-image
+  - task: ic_gpdb
+    file: gpdb_src/concourse/ic_gpdb.yml
+    image: centos67-gpdb-gcc6-llvm-image
+    params:
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on -c codegen=on' installcheck-good
+      BLDWRAP_POSTGRES_CONF_ADDONS: ""
+      TEST_OS: centos
+
 # Stage 3: Packaging
 
 - name: gpdb_rc_packaging_centos
