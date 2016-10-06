@@ -210,16 +210,100 @@ jobs:
       BLDWRAP_POSTGRES_CONF_ADDONS: ""
       TEST_OS: centos
 
+- name: icb_planner_centos6
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [icg_planner_centos6]
+    - get: sync_tools_gpdb_centos
+      resource: sync_tools_gpdb_centos
+      passed: [icg_planner_centos6]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos
+      passed: [icg_planner_centos6]
+      trigger: true
+    - get: centos67-gpdb-gcc6-llvm-image
+  - task: ic_gpdb
+    file: gpdb_src/concourse/ic_gpdb.yml
+    image: centos67-gpdb-gcc6-llvm-image
+    params:
+      MAKE_TEST_COMMAND: installcheck-bugbuster
+      BLDWRAP_POSTGRES_CONF_ADDONS: ""
+      TEST_OS: centos
+
+- name: icb_gporca_centos6
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [icg_gporca_centos6]
+    - get: sync_tools_gpdb_centos
+      resource: sync_tools_gpdb_centos
+      passed: [icg_gporca_centos6]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos
+      passed: [icg_gporca_centos6]
+      trigger: true
+    - get: centos67-gpdb-gcc6-llvm-image
+  - task: ic_gpdb
+    file: gpdb_src/concourse/ic_gpdb.yml
+    image: centos67-gpdb-gcc6-llvm-image
+    params:
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-bugbuster
+      BLDWRAP_POSTGRES_CONF_ADDONS: ""
+      TEST_OS: centos
+
+- name: icb_planner_codegen_centos6
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [icg_planner_codegen_centos6]
+    - get: sync_tools_gpdb_centos
+      resource: sync_tools_gpdb_centos
+      passed: [icg_planner_codegen_centos6]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos
+      passed: [icg_planner_codegen_centos6]
+      trigger: true
+    - get: centos67-gpdb-gcc6-llvm-image
+  - task: ic_gpdb
+    file: gpdb_src/concourse/ic_gpdb.yml
+    image: centos67-gpdb-gcc6-llvm-image
+    params:
+      MAKE_TEST_COMMAND: PGOPTIONS='-c codegen=on' installcheck-bugbuster
+      BLDWRAP_POSTGRES_CONF_ADDONS: ""
+      TEST_OS: centos
+
+- name: icb_gporca_codegen_centos6
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [icg_gporca_codegen_centos6]
+    - get: sync_tools_gpdb_centos
+      resource: sync_tools_gpdb_centos
+      passed: [icg_gporca_codegen_centos6]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos
+      passed: [icg_gporca_codegen_centos6]
+      trigger: true
+    - get: centos67-gpdb-gcc6-llvm-image
+  - task: ic_gpdb
+    file: gpdb_src/concourse/ic_gpdb.yml
+    image: centos67-gpdb-gcc6-llvm-image
+    params:
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on -c codegen=on' installcheck-bugbuster
+      BLDWRAP_POSTGRES_CONF_ADDONS: ""
+      TEST_OS: centos
+
 # Stage 3: Packaging
 
 - name: gpdb_rc_packaging_centos
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [icg_planner_centos6]
+      passed: [icb_planner_centos6, icb_gporca_centos6, icb_planner_codegen_centos6, icb_gporca_codegen_centos6]
     - get: bin_gpdb
       resource: bin_gpdb_centos
-      passed: [icg_planner_centos6]
+      passed: [icb_planner_centos6, icb_gporca_centos6, icb_planner_codegen_centos6, icb_gporca_codegen_centos6]
       trigger: true
     - get: centos67-gpdb-gcc6-llvm-image
   - task: separate_qautils_files_for_rc
