@@ -128,3 +128,21 @@ Feature: gprecoverseg tests
         When the user runs "gprecoverseg -a -F"
         Then all the segments are running
         And the segments are synchronized
+
+    Scenario: gprecoverseg does not recover segments with persistent rebuild inconsistencies
+        Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And user runs the command "gpfaultinjector  -f filerep_consumer  -m async -y fault" on segment "0"
+        And user runs the command "gpfaultinjector  -f filerep_consumer  -m async -y fault" on segment "1"
+        Then the mirror with content id "0" is marked down in config
+        Then the mirror with content id "1" is marked down in config
+        And segment with content "0" has persistent tables that were rebuilt with mirrors disabled
+        When the user runs "gprecoverseg -a"
+        Then gprecoverseg should return a return code of 0
+        Then verify that segment with content "0" is not recovered
+        Then verify that segment with content "1" is recovered
+        Then delete extra tid persistent table entries on cid "0"
+        When the user runs "gprecoverseg -a -F"
+        Then all the segments are running
+        And the segments are synchronized
