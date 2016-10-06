@@ -267,9 +267,8 @@ end_heap_rewrite(RewriteState state)
 	if (state->rs_buffer_valid)
 	{
 		if (state->rs_use_wal)
-			log_newpage(&state->rs_new_rel->rd_node,
-						state->rs_blockno,
-						state->rs_buffer);
+			log_newpage_rel(state->rs_new_rel,state->rs_blockno, state->rs_buffer);
+
 		RelationOpenSmgr(state->rs_new_rel);
 		smgrextend(state->rs_new_rel->rd_smgr, state->rs_blockno,
 				   (char *) state->rs_buffer, true);
@@ -604,9 +603,7 @@ raw_heap_insert(RewriteState state, HeapTuple tup)
 
 			/* XLOG stuff */
 			if (state->rs_use_wal)
-				log_newpage(&state->rs_new_rel->rd_node,
-							state->rs_blockno,
-							page);
+				log_newpage_rel(state->rs_new_rel, state->rs_blockno, page);
 
 			/*
 			 * Now write the page. We say isTemp = true even if it's not a

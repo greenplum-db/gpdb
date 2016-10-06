@@ -289,7 +289,7 @@ _bt_blwritepage(BTWriteState *wstate, Page page, BlockNumber blkno)
 	if (wstate->btws_use_wal)
 	{
 		/* We use the heap NEWPAGE record type for this */
-		log_newpage(&wstate->index->rd_node, blkno, page);
+		log_newpage_rel(wstate->index, blkno, page);
 	}
 
 	else
@@ -322,7 +322,7 @@ _bt_blwritepage(BTWriteState *wstate, Page page, BlockNumber blkno)
 		// -------- MirroredLock ----------
 	}
 
-	
+
 	// -------- MirroredLock ----------
 	// UNDONE: Unfortunately, I think we write temp relations to the mirror...
 	LWLockAcquire(MirroredLock, LW_SHARED);

@@ -308,7 +308,14 @@ extern XLogRecPtr log_heap_clean(Relation reln, Buffer buffer,
 extern XLogRecPtr log_heap_freeze(Relation reln, Buffer buffer,
 				TransactionId cutoff_xid,
 				OffsetNumber *offsets, int offcnt);
-extern XLogRecPtr log_newpage(RelFileNode *rnode, BlockNumber blk, Page page);
+
+extern XLogRecPtr log_newpage_rel(Relation rel, BlockNumber blkno,
+								  Page page);
+
+extern XLogRecPtr log_newpage_relFileNode(RelFileNode *relFileNode,
+										  BlockNumber blkno, Page page,
+										  ItemPointer persistentTid,
+										  int64 persistentSerialNum);
 
 /* in common/heaptuple.c */
 extern Size heap_compute_data_size(TupleDesc tupleDesc,

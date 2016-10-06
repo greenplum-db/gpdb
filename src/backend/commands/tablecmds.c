@@ -10593,7 +10593,10 @@ copy_buffer_pool_data(Relation rel, SMgrRelation dst,
 
 		/* XLOG stuff */
 		if (useWal)
-			log_newpage(&dst->smgr_rnode, blkno, page);
+		{
+			log_newpage_relFileNode(&dst->smgr_rnode, blkno, page, persistentTid,
+						persistentSerialNum);
+		}
 
 		// -------- MirroredLock ----------
 		LWLockAcquire(MirroredLock, LW_SHARED);

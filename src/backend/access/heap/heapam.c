@@ -4926,6 +4926,7 @@ log_heap_move(Relation reln, Buffer oldbuf, ItemPointerData from,
 	return log_heap_update(reln, oldbuf, from, newbuf, newtup, true);
 }
 
+
 /*
  * Perform XLogInsert of a HEAP_NEWPAGE record to WAL. Caller is responsible
  * for writing the page to disk after calling this routine.
@@ -4937,9 +4938,34 @@ log_heap_move(Relation reln, Buffer oldbuf, ItemPointerData from,
  *
  * Note: the NEWPAGE log record is used for both heaps and indexes, so do
  * not do anything that assumes we are touching a heap.
+ *
+ * Note: This is an internal function that is called from the interface
+ * functions log_newpage_rel() and log_newpage_relFileNode().  See usage notes
+ * for these functions to determine when to call which.
+ *
+ * PARAMETERS
+ *   rel   - relation for which new page creation is logged.
+ *           This should be passed as NULL if relFileNode, persistentTid, and
+ *   		 persistentSerialNum are not NULL/zero.
+ *
+ *   blkno - location of new page
+ *
+ *	 page  - new page
+ *
+ *	 The following paramters are ignored if the first parameter rel is not
+ *	 NULL.
+ *
+ *	 relFileNode         - physical node information for the relation
+ *
+ *	 persistentTid       - Tid for the relation in gp_persistent_relation_node
+ *
+ *	 persistentSerialNum - LSN for the relation in gp_peristent_relation_node
+ *
  */
-XLogRecPtr
-log_newpage(RelFileNode *rnode, BlockNumber blkno, Page page)
+static XLogRecPtr
+log_newpage_internal(Relation rel, BlockNumber blkno, Page page,
+					 RelFileNode *relFileNode, ItemPointer persistentTid,
+					 int64 persistentSerialNum)
 {
 	xl_heap_newpage xlrec;
 	XLogRecPtr	recptr;
@@ -4948,7 +4974,15 @@ log_newpage(RelFileNode *rnode, BlockNumber blkno, Page page)
 	/* NO ELOG(ERROR) from here till newpage op is logged */
 	START_CRIT_SECTION();
 
-	xlrec.heapnode.node = *rnode;
+	if (rel)
+		xl_heapnode_set(&xlrec.heapnode, rel);
+	else
+	{
+		xlrec.heapnode.node = *relFileNode;
+		xlrec.heapnode.persistentTid = *persistentTid;
+		xlrec.heapnode.persistentSerialNum = persistentSerialNum;
+	}
+
 	xlrec.blkno = blkno;
 
 	rdata[0].data = (char *) &xlrec;
@@ -4977,6 +5011,33 @@ log_newpage(RelFileNode *rnode, BlockNumber blkno, Page page)
 
 	return recptr;
 }
+
+
+/*
+ * This is a wrapper over log_newpage_internal() to be used when the Relation
+ * object contains the persistentTid and persistentSerialNum.
+ */
+XLogRecPtr
+log_newpage_rel(Relation rel, BlockNumber blkno, Page page)
+{
+	return log_newpage_internal(rel, blkno, page, NULL, NULL, 0);
+}
+
+
+/*
+ * This is a wrapper over log_newpage_internal to be used when we don't have a
+ * Relation object available with persistentTid and persistentSerialNum.  In
+ * which case, the persistentTid and persistentSerialNum are explicitly passed
+ * along with the relFileNode for the relation.
+ */
+XLogRecPtr
+log_newpage_relFileNode(RelFileNode *relFileNode, BlockNumber blkno, Page page,
+						ItemPointer persistentTid, int64 persistentSerialNum)
+{
+	return log_newpage_internal(NULL, blkno, page, relFileNode, persistentTid,
+								persistentSerialNum);
+}
+
 
 /*
  * Handles CLEAN and CLEAN_MOVE record types
