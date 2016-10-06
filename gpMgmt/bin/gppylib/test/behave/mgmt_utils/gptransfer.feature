@@ -2203,6 +2203,16 @@ Feature: gptransfer tests
         Then gptransfer should return a return code of 0
         And verify that gptransfer is in order of "input_file" when partition transfer is "True"
 
+    @distribution_key
+    Scenario: gptransfer is run with distribution key that has upper case characters
+        Given the database is running
+        And database "gptest" exists
+        And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/distribution_test.sql -d gptest"
+        And the user runs "gptransfer -t gptest.public.caps -t gptest.public.caps_with_dquote -t gptest.public.caps_with_dquote2 -t gptest.public.caps_with_dquote3 -t gptest.public.caps_with_dquote4 -t gptest.public.caps_with_squote -t gptest.public.randomkey --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --truncate -a"
+        Then gptransfer should return a return code of 0
+
+
     @gptransfer_help
     Scenario: use gptransfer --help with another gptransfer process already running.
         Given the database is running

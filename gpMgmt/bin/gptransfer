@@ -44,10 +44,11 @@ try:
     from gppylib.commands.gp import get_gphome
     from gppylib.db import dbconn
     from gppylib.db.dbconn import connect, DbURL, execSQL, \
-        execSQLForSingletonRow
+        execSQLForSingletonRow, UnexpectedRowsError
     from gppylib.db.catalog import getUserDatabaseList, doesSchemaExist, dropSchemaIfExist
     from gppylib.gparray import GpArray
     from gppylib.userinput import ask_yesno
+    from gppylib.operations.backup_utils import escapeDoubleQuoteInSQLString
     from pygresql.pg import DB
     from pygresql import pg
 except ImportError, import_exception:
@@ -1667,8 +1668,17 @@ GROUP BY nspname, relname;''' % (self._table_pair.source.schema,
                                  self._table_pair.source.table)
         try:
             row = execSQLForSingletonRow(self._src_conn, sql)
-            return 'DISTRIBUTED BY (%s)' % row[0]
-        except:
+            # NOTE: ideally, we can use pg.escape_identifier for this part, but
+            # that is introducted in pygresql 4.1 and we are in 4.0
+            quoted_column_name = escapeDoubleQuoteInSQLString(row[0], forceDoubleQuote=False)
+            return '''DISTRIBUTED BY ("%s")''' % quoted_column_name
+        # NOTE: execSQLForSingletonRow will raise if it doesn't find at least 1
+        # row. This is expected to happen if the table is DISTRIBUTED RANDOMLY
+        except UnexpectedRowsError:
+            return 'DISTRIBUTED RANDOMLY'
+        except Exception as e:
+            logger.warn('unable to determine distribution policy for "%s" using '
+                        'distributed randomly instead.\nmessage: %s' % (self._table_pair.dest, str(e)))
             return 'DISTRIBUTED RANDOMLY'
 
     def _create_target_table(self):
