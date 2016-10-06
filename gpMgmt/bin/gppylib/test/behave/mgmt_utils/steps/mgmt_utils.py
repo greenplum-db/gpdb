@@ -3977,3 +3977,13 @@ def impl(context, table_name, db_name):
     with dbconn.connect(dbconn.DbURL(dbname=db_name)) as conn:
         dbconn.execSQL(conn, index_qry)
         conn.commit()
+
+@given('verify that mirror_existence_state of segment "{segc_id}" is "{mirror_existence_state}"')
+@when('verify that mirror_existence_state of segment "{segc_id}" is "{mirror_existence_state}"')
+@then('verify that mirror_existence_state of segment "{segc_id}" is "{mirror_existence_state}"')
+def impl(context, segc_id, mirror_existence_state):
+    with dbconn.connect(dbconn.DbURL(dbname='template1')) as conn:
+        sql = """SELECT mirror_existence_state from gp_dist_random('gp_persistent_relation_node') where gp_segment_id=%s group by 1;""" % segc_id
+        cluster_state = dbconn.execSQL(conn, sql).fetchone()
+        if cluster_state[0] != int(mirror_existence_state):
+            raise Exception("mirror_existence_state of segment %s is %s. Expected %s." % (segc_id, cluster_state[0], mirror_existence_state))
