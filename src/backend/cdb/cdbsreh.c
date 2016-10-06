@@ -890,10 +890,11 @@ ErrorLogDelete(Oid databaseId, Oid relationId)
 
 	if (!OidIsValid(relationId))
 	{
-		DIR	   *dir;
-		struct dirent *de;
-		char   *dirpath = ErrorLogDir;
-		char	prefix[MAXPGPATH];
+		DIR			   *dir;
+		struct dirent  *de;
+		char   		   *dirpath = ErrorLogDir;
+		char			prefix[MAXPGPATH];
+		int				len;
 
 		if (OidIsValid(databaseId))
 			snprintf(prefix, sizeof(prefix), "%u_", databaseId);
@@ -918,8 +919,16 @@ ErrorLogDelete(Oid databaseId, Oid relationId)
 			 */
 			if (!OidIsValid(databaseId))
 			{
+				len = snprintf(filename, MAXPGPATH, "%s/%s", dirpath, de->d_name);
+				if (len >= (MAXPGPATH - 1))
+				{
+					ereport(WARNING,
+						(errcode(ERRCODE_GP_INTERNAL_ERROR),
+						(errmsg("log filename truncation on \"%s\", unable to delete error log",
+								de->d_name))));
+					continue;
+				}
 				LWLockAcquire(ErrorLogLock, LW_EXCLUSIVE);
-				sprintf(filename, "%s/%s", dirpath, de->d_name);
 				unlink(filename);
 				LWLockRelease(ErrorLogLock);
 				continue;
