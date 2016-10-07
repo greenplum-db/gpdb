@@ -1066,10 +1066,9 @@ CTranslatorRelcacheToDXL::Pmdindex
 
 	// extract the position of the key columns
 	DrgPul *pdrgpulKeyCols = GPOS_NEW(pmp) DrgPul(pmp);
-	ULONG ulKeys = pgIndex->indnatts;
-	for (ULONG ul = 0; ul < ulKeys; ul++)
+	for (USINT ui = 0; ui < pgIndex->indnatts; ui++)
 	{
-		INT iAttno = pgIndex->indkey.values[ul];
+		INT iAttno = pgIndex->indkey.values[ui];
 		GPOS_ASSERT(0 != iAttno && "Index expressions not supported");
 
 		pdrgpulKeyCols->Append(GPOS_NEW(pmp) ULONG(UlPosition(iAttno, pul)));
