@@ -13,10 +13,9 @@ master_data_dir = os.environ.get('MASTER_DATA_DIRECTORY')
 def impl(context, ver):
     hosts = set(get_all_hostnames_as_list(context, 'template1'))
     gphome = os.environ.get('GPHOME')
-    if ver == '7.5':
-        cpCmd = 'cp -f %s/lib/nbu75/lib/* %s/lib/' % (gphome, gphome)
-    elif ver == '7.1':
-        cpCmd = 'cp -f %s/lib/nbu71/lib/* %s/lib/' % (gphome, gphome)
+    ver = ver.replace('.', '')
+    cpCmd = 'cp -f {gphome}/lib/nbu{ver}/lib/* {gphome}/lib/'.format(gphome=gphome,
+                                                                     ver=ver)
 
     for host in hosts:
         cmd = Command(name='Copy NBU lib files',

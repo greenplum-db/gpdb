@@ -1,6 +1,10 @@
 @netbackup
 Feature: NetBackup Integration with GPDB
 
+    @nbusetup76
+    Scenario: Setup to load NBU libraries
+        Given the NetBackup "7.6" libraries are loaded
+
     @nbusetup75
     Scenario: Setup to load NBU libraries
         Given the NetBackup "7.5" libraries are loaded
