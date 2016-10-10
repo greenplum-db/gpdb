@@ -1,0 +1,38 @@
+\echo -- start_ignore
+-- start_ignore
+drop  external table time_heap;
+ERROR:  table "time_heap" does not exist
+drop  external table time_writehdfs;
+ERROR:  table "time_writehdfs" does not exist
+drop  external table time_readhdfs;
+ERROR:  table "time_readhdfs" does not exist
+\echo -- end_ignore
+-- end_ignore
+create readable external table time_heap(datatype_time varchar,x_time bigint, col1_time time,col2_time time, col3_time time, col4_time time, col5_time time, col6_time time, col7_time time, col8_time time, col9_time time, nullcol_time time) location ('gphdfs://10.152.10.234:8020/plaintext/time.txt')format 'TEXT';
+create writable external table time_writehdfs(like time_heap) location ('gphdfs://10.152.10.234:8020/extwrite/time')format 'custom' (formatter='gphdfs_export');
+NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+create readable external table time_readhdfs(like time_heap) location ('gphdfs://10.152.10.234:8020/extwrite/time') format 'custom' (formatter='gphdfs_import');
+select count(*) from time_heap;
+ count 
+-------
+  5000
+(1 row)
+
+insert into time_writehdfs select * from time_heap;
+select count(*) from time_readhdfs;
+ count 
+-------
+  5000
+(1 row)
+
+(select * from time_heap except select * from time_readhdfs) union (select * from time_readhdfs except select * from time_heap);
+ datatype_time | x_time | col1_time | col2_time | col3_time | col4_time | col5_time | col6_time | col7_time | col8_time | col9_time | nullcol_time 
+---------------+--------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+--------------
+(0 rows)
+
+--start_ignore
+\!/usr/hdp/2.3.2.0-2950/hadoop/bin/hadoop fs -rm -r /mapreduce/*
+rm: `/mapreduce/*': No such file or directory
+\!/usr/hdp/2.3.2.0-2950/hadoop/bin/hadoop fs -rm -r /mapred/*
+rm: `/mapred/*': No such file or directory
+--end_ignore

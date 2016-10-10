@@ -1,0 +1,15 @@
+\echo -- start_ignore
+drop  external table boolean_heap;
+drop  external table boolean_writehdfs;
+drop  external table boolean_readhdfs;
+\echo -- end_ignore
+
+create readable external table boolean_heap(datatype_boolean varchar, x_boolean bigint, col1_boolean boolean, nullcol_boolean boolean) location ('gphdfs://%HDFSaddr%/plaintext/boolean.txt')format 'TEXT';
+create writable external table boolean_writehdfs(like boolean_heap) location ('gphdfs://%HDFSaddr%/extwrite/boolean')format 'custom' (formatter='gphdfs_export');
+create readable external table boolean_readhdfs(like boolean_heap) location ('gphdfs://%HDFSaddr%/extwrite/boolean') format 'custom' (formatter='gphdfs_import');
+
+select count(*) from boolean_heap;
+insert into boolean_writehdfs select * from boolean_heap;
+select count(*) from boolean_readhdfs;
+
+(select * from boolean_heap except select * from boolean_readhdfs) union (select * from boolean_readhdfs except select * from boolean_heap);

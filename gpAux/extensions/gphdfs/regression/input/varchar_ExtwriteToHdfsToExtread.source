@@ -1,0 +1,41 @@
+\echo --start_ignore
+drop external table varchar_heap;
+drop external table varchar_writehdfs;
+drop external table varchar_verification_mapreduce;
+drop external table varchar_verification_mapred;
+drop external table varchar_verification_blockcomp_mapreduce;
+drop external table varchar_verification_blockcomp_mapred;
+drop external table varchar_verification_recordcomp_mapreduce;
+drop external table varchar_verification_recordcomp_mapred;
+\echo --end_ignore
+
+create readable external table varchar_heap(
+datatype_varchar varchar,x_varchar bigint, col1_varchar varchar,col2_varchar varchar, nullcol_varchar varchar
+) location ('gpfdist://%localhost%:%gpfdistPort%/varchar.txt')format 'TEXT';
+
+create writable external table varchar_writehdfs(like varchar_heap) location ('gphdfs://%HADOOP_HOST%/extwrite/varchar')format 'custom' (formatter='gphdfs_export');
+insert into varchar_writehdfs select * from varchar_heap;
+
+\echo --start_ignore
+\!%cmdstr% -DcompressionType=none javaclasses/TestHadoopIntegration mapreduce Mapreduce_mapper_GPDB_INOUT /extwrite/varchar /mapreduce/varchar_gpdb/ 
+\!%cmdstr% -DcompressionType=none javaclasses/TestHadoopIntegration mapred Mapred_mapper_GPDB_INOUT /extwrite/varchar /mapred/varchar_gpdb/
+\!%cmdstr% -DcompressionType=block javaclasses/TestHadoopIntegration mapreduce Mapreduce_mapper_GPDB_INOUT /extwrite/varchar /mapreduce/blockcomp/varchar_gpdb/
+\!%cmdstr% -DcompressionType=block javaclasses/TestHadoopIntegration mapred Mapred_mapper_GPDB_INOUT /extwrite/varchar /mapred/blockcomp/varchar_gpdb/
+\!%cmdstr% -DcompressionType=record javaclasses/TestHadoopIntegration mapreduce Mapreduce_mapper_GPDB_INOUT /extwrite/varchar /mapreduce/recordcomp/varchar_gpdb/
+\!%cmdstr% -DcompressionType=record javaclasses/TestHadoopIntegration mapred Mapred_mapper_GPDB_INOUT /extwrite/varchar /mapred/recordcomp/varchar_gpdb/
+\echo --end_ignore
+
+
+create readable external table varchar_verification_mapreduce(like varchar_heap) location ('gphdfs://%HADOOP_HOST%/mapreduce/varchar_gpdb/')format 'custom' (formatter='gphdfs_import');
+create readable external table varchar_verification_mapred(like varchar_heap) location ('gphdfs://%HADOOP_HOST%/mapred/varchar_gpdb/')format 'custom' (formatter='gphdfs_import');
+create readable external table varchar_verification_blockcomp_mapreduce(like varchar_heap) location ('gphdfs://%HADOOP_HOST%/mapreduce/blockcomp/varchar_gpdb/')format 'custom' (formatter='gphdfs_import');
+create readable external table varchar_verification_blockcomp_mapred(like varchar_heap) location ('gphdfs://%HADOOP_HOST%/mapred/blockcomp/varchar_gpdb/')format 'custom' (formatter='gphdfs_import');
+create readable external table varchar_verification_recordcomp_mapreduce(like varchar_heap) location ('gphdfs://%HADOOP_HOST%/mapreduce/recordcomp/varchar_gpdb/')format 'custom' (formatter='gphdfs_import');
+create readable external table varchar_verification_recordcomp_mapred(like varchar_heap) location ('gphdfs://%HADOOP_HOST%/mapred/recordcomp/varchar_gpdb/')format 'custom' (formatter='gphdfs_import');
+
+(select * from varchar_verification_mapreduce except select * from varchar_verification_mapred) union (select * from varchar_verification_mapred except select * from varchar_verification_mapreduce);
+(select * from varchar_verification_blockcomp_mapreduce except select * from varchar_verification_blockcomp_mapred) union (select * from varchar_verification_blockcomp_mapred except select * from varchar_verification_blockcomp_mapreduce);
+(select * from varchar_verification_recordcomp_mapreduce except select * from varchar_verification_recordcomp_mapred) union (select * from varchar_verification_recordcomp_mapred except select * from varchar_verification_recordcomp_mapreduce);
+(select * from varchar_verification_recordcomp_mapreduce except select * from varchar_verification_blockcomp_mapreduce) union (select * from varchar_verification_blockcomp_mapreduce except select * from varchar_verification_recordcomp_mapreduce);
+(select * from varchar_verification_recordcomp_mapreduce except select * from varchar_verification_mapreduce) union (select * from varchar_verification_mapreduce except select * from varchar_verification_recordcomp_mapreduce);
+(select * from varchar_verification_recordcomp_mapreduce except select * from varchar_heap) union (select * from varchar_heap except select * from varchar_verification_recordcomp_mapreduce);

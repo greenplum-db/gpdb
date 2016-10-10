@@ -1,0 +1,38 @@
+\echo -- start_ignore
+-- start_ignore
+drop  external table real_heap;
+ERROR:  table "real_heap" does not exist
+drop  external table real_writehdfs;
+ERROR:  table "real_writehdfs" does not exist
+drop  external table real_readhdfs;
+ERROR:  table "real_readhdfs" does not exist
+\echo -- end_ignore
+-- end_ignore
+create readable external table real_heap(datatype_real varchar,x_real bigint, max_real real, min_real real, pi_real real, piX_real real, nullcol_real real) location ('gphdfs://10.152.10.234:8020/plaintext/real.txt')format 'TEXT';
+create writable external table real_writehdfs(like real_heap) location ('gphdfs://10.152.10.234:8020/extwrite/real')format 'custom' (formatter='gphdfs_export');
+NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+create readable external table real_readhdfs(like real_heap) location ('gphdfs://10.152.10.234:8020/extwrite/real') format 'custom' (formatter='gphdfs_import');
+select count(*) from real_heap;
+ count 
+-------
+  5000
+(1 row)
+
+insert into real_writehdfs select * from real_heap;
+select count(*) from real_readhdfs;
+ count 
+-------
+  5000
+(1 row)
+
+(select * from real_heap except select * from real_readhdfs) union (select * from real_readhdfs except select * from real_heap);
+ datatype_real | x_real | max_real | min_real | pi_real | pix_real | nullcol_real 
+---------------+--------+----------+----------+---------+----------+--------------
+(0 rows)
+
+--start_ignore
+\!/usr/hdp/2.3.2.0-2950/hadoop/bin/hadoop fs -rm -r /mapreduce/*
+rm: `/mapreduce/*': No such file or directory
+\!/usr/hdp/2.3.2.0-2950/hadoop/bin/hadoop fs -rm -r /mapred/*
+rm: `/mapred/*': No such file or directory
+--end_ignore

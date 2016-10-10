@@ -1,0 +1,51 @@
+-- start_ignore
+drop  external table all_heap;
+ERROR:  table "all_heap" does not exist
+drop  external table all_writehdfs;
+ERROR:  table "all_writehdfs" does not exist
+drop  external table all_readhdfs;
+ERROR:  table "all_readhdfs" does not exist
+-- end_ignore
+create readable external table all_heap(
+datatype_all varchar,xcount_bigint bigint,
+col1_time time,col2_time time, col3_time time, col4_time time, col5_time time, col6_time time, col7_time time, col8_time time, col9_time time, nullcol_time time,
+col1_timestamp timestamp,col2_timestamp timestamp, col3_timestamp timestamp, nullcol_timestamp timestamp,
+col1_date date,col2_date date, col3_date date, col4_date date, col5_date date, col6_date date, col7_date date, nullcol_date date,
+max_bigint bigint, min_bigint bigint, x_bigint bigint, reverse_bigint bigint, increment_bigint bigint, nullcol_bigint bigint,
+max_int int, min_int int, x_int int, reverse_int int, increment_int int, nullcol_int int,
+max_smallint smallint, min_smallint smallint, x_smallint smallint, reverse_smallint smallint, increment_smallint smallint, nullcol_smallint smallint,
+max_real real, min_real real, pi_real real, piX_real real, nullcol_real real,
+max_float float, min_float float, pi_float float, piX_float float, nullcol_float float,
+col1_boolean boolean, nullcol_boolean boolean,
+col1_bpchar bpchar,col2_bpchar bpchar, nullcol_bpchar bpchar,
+col1_varchar varchar,col2_varchar varchar, nullcol_varchar varchar,
+max_numeric numeric, min_numeric numeric, x_numeric numeric, reverse_numeric numeric, increment_numeric numeric, nullcol_numeric numeric,
+col1_text text,col2_text text, nullcol_text text
+) location ('gphdfs://10.152.10.234:8020/plaintext/all_20.txt')format 'TEXT';
+create writable external table all_writehdfs(like all_heap) location ('gphdfs://10.152.10.234:8020/extwrite/all_20')format 'custom' (formatter='gphdfs_export');
+NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+create readable external table all_readhdfs(like all_heap) location ('gphdfs://10.152.10.234:8020/extwrite/all_20') format 'custom' (formatter='gphdfs_import');
+select count(*) from all_heap;
+ count  
+--------
+ 100000
+(1 row)
+
+insert into all_writehdfs select * from all_heap;
+select count(*) from all_readhdfs;
+ count  
+--------
+ 100000
+(1 row)
+
+(select * from all_heap except select * from all_readhdfs) union (select * from all_readhdfs except select * from all_heap);
+ datatype_all | xcount_bigint | col1_time | col2_time | col3_time | col4_time | col5_time | col6_time | col7_time | col8_time | col9_time | nullcol_time | col1_timestamp | col2_timestamp | col3_timestamp | nullcol_timestamp | col1_date | col2_date | col3_date | col4_date | col5_date | col6_date | col7_date | nullcol_date | max_bigint | min_bigint | x_bigint | reverse_bigint | increment_bigint | nullcol_bigint | max_int | min_int | x_int | reverse_int | increment_int | nullcol_int | max_smallint | min_smallint | x_smallint | reverse_smallint | increment_smallint | nullcol_smallint | max_real | min_real | pi_real | pix_real | nullcol_real | max_float | min_float | pi_float | pix_float | nullcol_float | col1_boolean | nullcol_boolean | col1_bpchar | col2_bpchar | nullcol_bpchar | col1_varchar | col2_varchar | nullcol_varchar | max_numeric | min_numeric | x_numeric | reverse_numeric | increment_numeric | nullcol_numeric | col1_text | col2_text | nullcol_text 
+--------------+---------------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+--------------+----------------+----------------+----------------+-------------------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+--------------+------------+------------+----------+----------------+------------------+----------------+---------+---------+-------+-------------+---------------+-------------+--------------+--------------+------------+------------------+--------------------+------------------+----------+----------+---------+----------+--------------+-----------+-----------+----------+-----------+---------------+--------------+-----------------+-------------+-------------+----------------+--------------+--------------+-----------------+-------------+-------------+-----------+-----------------+-------------------+-----------------+-----------+-----------+--------------
+(0 rows)
+
+--start_ignore
+\!/usr/hdp/2.3.2.0-2950/hadoop/bin/hadoop fs -rm -r /mapreduce/*
+rm: `/mapreduce/*': No such file or directory
+\!/usr/hdp/2.3.2.0-2950/hadoop/bin/hadoop fs -rm -r /mapred/*
+rm: `/mapred/*': No such file or directory
+--end_ignore

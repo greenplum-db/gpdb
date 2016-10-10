@@ -1,0 +1,16 @@
+SELECT proname, prolang,proisstrict,provolatile,pronargs,prorettype,prosrc,proacl FROM pg_proc where proname like '%hdfs%' order by proname;
+     proname     | prolang | proisstrict | provolatile | pronargs | prorettype |            prosrc            | proacl 
+-----------------+---------+-------------+-------------+----------+------------+------------------------------+--------
+ gphdfs_export   |      13 | f           | s           |        1 |         17 | gphdfsformatter_export       | 
+ gphdfs_import   |      13 | f           | s           |        0 |       2249 | gphdfsformatter_import       | 
+ gphdfs_read     |      13 | f           | s           |        0 |         23 | gphdfsprotocol_import        | 
+ gphdfs_validate |      13 | f           | s           |        0 |       2278 | gphdfsprotocol_validate_urls | 
+ gphdfs_write    |      13 | f           | s           |        0 |         23 | gphdfsprotocol_export        | 
+(5 rows)
+
+--start_ignore
+\!/usr/hdp/2.3.2.0-2950/hadoop/bin/hadoop fs -rm -r /mapreduce/*
+rm: `/mapreduce/*': No such file or directory
+\!/usr/hdp/2.3.2.0-2950/hadoop/bin/hadoop fs -rm -r /mapred/*
+rm: `/mapred/*': No such file or directory
+--end_ignore

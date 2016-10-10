@@ -1,0 +1,834 @@
+\echo --start_ignore
+--start_ignore
+drop external table all_heap;
+drop external table all_readhdfs_mapreduce;
+ERROR:  table "all_readhdfs_mapreduce" does not exist
+drop external table all_readhdfs_mapred;
+ERROR:  table "all_readhdfs_mapred" does not exist
+drop external table all_readhdfs_mapreduce_blockcomp;
+ERROR:  table "all_readhdfs_mapreduce_blockcomp" does not exist
+drop external table all_readhdfs_mapreduce_recordcomp;
+ERROR:  table "all_readhdfs_mapreduce_recordcomp" does not exist
+drop external table all_readhdfs_mapred_blockcomp;
+ERROR:  table "all_readhdfs_mapred_blockcomp" does not exist
+drop external table all_readhdfs_mapred_recordcomp;
+ERROR:  table "all_readhdfs_mapred_recordcomp" does not exist
+\echo --end_ignore
+--end_ignore
+create readable external table all_heap(
+datatype_all varchar, xcount_all bigint,
+col1_time time,col2_time time, col3_time time, col4_time time, col5_time time, col6_time time, col7_time time, col8_time time, col9_time time, nullcol_time time,
+col1_timestamp timestamp,col2_timestamp timestamp, col3_timestamp timestamp, nullcol_timestamp timestamp,
+col1_date date,col2_date date, col3_date date, col4_date date, col5_date date, col6_date date, col7_date date, nullcol_date date,
+max_bigint bigint, min_bigint bigint, x_bigint bigint, reverse_bigint bigint, increment_bigint bigint, nullcol_bigint bigint,
+max_int int, min_int int, x_int int, reverse_int int, increment_int int, nullcol_int int,
+max_smallint smallint, min_smallint smallint, x_smallint smallint, reverse_smallint smallint, increment_smallint smallint, nullcol_smallint smallint,
+max_real real, min_real real, pi_real real, piX_real real, nullcol_real real,
+max_float float, min_float float, pi_float float, piX_float float, nullcol_float float,
+col1_boolean boolean, nullcol_boolean boolean,
+col1_varchar varchar,col2_varchar varchar, nullcol_varchar varchar,
+col1_bpchar bpchar,col2_bpchar bpchar, nullcol_bpchar bpchar,
+max_numeric numeric, min_numeric numeric, x_numeric numeric, reverse_numeric numeric, increment_numeric numeric, nullcol_numeric numeric,
+col1_text text,col2_text text, nullcol_text text
+) location ('gphdfs://10.152.10.234:8020/plaintext/all.txt')format 'TEXT'(ESCAPE  'OFF');
+\!/home/gpadmin/gpdb/gpAux/extensions/gphdfs/regression/runcmd -DcompressionType=none javaclasses/TestHadoopIntegration mapreduce Mapreduce_mapper_TextIn /plaintext/all.txt /mapreduce/all 
+16/09/29 23:55:46 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS
+16/09/29 23:55:47 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+16/09/29 23:55:49 INFO Configuration.deprecation: session.id is deprecated. Instead, use dfs.metrics.session-id
+16/09/29 23:55:49 INFO jvm.JvmMetrics: Initializing JVM Metrics with processName=JobTracker, sessionId=
+16/09/29 23:55:49 WARN mapreduce.JobResourceUploader: Hadoop command-line option parsing not performed. Implement the Tool interface and execute your application with ToolRunner to remedy this.
+16/09/29 23:55:49 INFO input.FileInputFormat: Total input paths to process : 1
+16/09/29 23:55:49 INFO mapreduce.JobSubmitter: number of splits:1
+16/09/29 23:55:49 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS
+16/09/29 23:55:49 INFO Configuration.deprecation: mapred.job.reduce.memory.mb is deprecated. Instead, use mapreduce.reduce.memory.mb
+16/09/29 23:55:49 INFO Configuration.deprecation: mapred.job.tracker is deprecated. Instead, use mapreduce.jobtracker.address
+16/09/29 23:55:49 INFO Configuration.deprecation: mapred.job.map.memory.mb is deprecated. Instead, use mapreduce.map.memory.mb
+16/09/29 23:55:49 INFO mapreduce.JobSubmitter: Submitting tokens for job: job_local1323924505_0001
+16/09/29 23:55:50 INFO mapreduce.Job: The url to track the job: http://localhost:8080/
+16/09/29 23:55:50 INFO mapreduce.Job: Running job: job_local1323924505_0001
+16/09/29 23:55:50 INFO mapred.LocalJobRunner: OutputCommitter set in config null
+16/09/29 23:55:50 INFO output.FileOutputCommitter: File Output Committer Algorithm version is 1
+16/09/29 23:55:50 INFO mapred.LocalJobRunner: OutputCommitter is org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter
+16/09/29 23:55:50 INFO mapred.LocalJobRunner: Waiting for map tasks
+16/09/29 23:55:50 INFO mapred.LocalJobRunner: Starting task: attempt_local1323924505_0001_m_000000_0
+16/09/29 23:55:50 INFO output.FileOutputCommitter: File Output Committer Algorithm version is 1
+16/09/29 23:55:50 INFO mapred.Task:  Using ResourceCalculatorProcessTree : [ ]
+16/09/29 23:55:50 INFO mapred.MapTask: Processing split: hdfs://10.152.10.234:8020/plaintext/all.txt:0+6727873
+16/09/29 23:55:50 INFO mapred.MapTask: (EQUATOR) 0 kvi 26214396(104857584)
+16/09/29 23:55:50 INFO mapred.MapTask: mapreduce.task.io.sort.mb: 100
+16/09/29 23:55:50 INFO mapred.MapTask: soft limit at 83886080
+16/09/29 23:55:50 INFO mapred.MapTask: bufstart = 0; bufvoid = 104857600
+16/09/29 23:55:50 INFO mapred.MapTask: kvstart = 26214396; length = 6553600
+16/09/29 23:55:50 INFO mapred.MapTask: Map output collector class = org.apache.hadoop.mapred.MapTask$MapOutputBuffer
+16/09/29 23:55:51 INFO mapreduce.Job: Job job_local1323924505_0001 running in uber mode : false
+16/09/29 23:55:51 INFO mapreduce.Job:  map 0% reduce 0%
+16/09/29 23:55:51 INFO mapred.LocalJobRunner: 
+16/09/29 23:55:51 INFO mapred.MapTask: Starting flush of map output
+16/09/29 23:55:51 INFO mapred.MapTask: Spilling map output
+16/09/29 23:55:51 INFO mapred.MapTask: bufstart = 0; bufend = 7074920; bufvoid = 104857600
+16/09/29 23:55:51 INFO mapred.MapTask: kvstart = 26214396(104857584); kvend = 26194400(104777600); length = 19997/6553600
+16/09/29 23:55:52 INFO mapred.MapTask: Finished spill 0
+16/09/29 23:55:52 INFO mapred.Task: Task:attempt_local1323924505_0001_m_000000_0 is done. And is in the process of committing
+16/09/29 23:55:52 INFO mapred.LocalJobRunner: map
+16/09/29 23:55:52 INFO mapred.Task: Task 'attempt_local1323924505_0001_m_000000_0' done.
+16/09/29 23:55:52 INFO mapred.LocalJobRunner: Finishing task: attempt_local1323924505_0001_m_000000_0
+16/09/29 23:55:52 INFO mapred.LocalJobRunner: map task executor complete.
+16/09/29 23:55:52 INFO mapred.LocalJobRunner: Waiting for reduce tasks
+16/09/29 23:55:52 INFO mapred.LocalJobRunner: Starting task: attempt_local1323924505_0001_r_000000_0
+16/09/29 23:55:52 INFO output.FileOutputCommitter: File Output Committer Algorithm version is 1
+16/09/29 23:55:52 INFO mapred.Task:  Using ResourceCalculatorProcessTree : [ ]
+16/09/29 23:55:52 INFO mapred.ReduceTask: Using ShuffleConsumerPlugin: org.apache.hadoop.mapreduce.task.reduce.Shuffle@cdd7bee
+16/09/29 23:55:52 INFO reduce.MergeManagerImpl: MergerManager: memoryLimit=472560416, maxSingleShuffleLimit=118140104, mergeThreshold=311889888, ioSortFactor=10, memToMemMergeOutputsThreshold=10
+16/09/29 23:55:52 INFO reduce.EventFetcher: attempt_local1323924505_0001_r_000000_0 Thread started: EventFetcher for fetching Map Completion Events
+16/09/29 23:55:52 INFO reduce.LocalFetcher: localfetcher#1 about to shuffle output of map attempt_local1323924505_0001_m_000000_0 decomp: 7094922 len: 7094926 to MEMORY
+16/09/29 23:55:52 INFO reduce.InMemoryMapOutput: Read 7094922 bytes from map-output for attempt_local1323924505_0001_m_000000_0
+16/09/29 23:55:52 INFO reduce.MergeManagerImpl: closeInMemoryFile -> map-output of size: 7094922, inMemoryMapOutputs.size() -> 1, commitMemory -> 0, usedMemory ->7094922
+16/09/29 23:55:52 INFO reduce.EventFetcher: EventFetcher is interrupted.. Returning
+16/09/29 23:55:52 INFO mapred.LocalJobRunner: 1 / 1 copied.
+16/09/29 23:55:52 INFO reduce.MergeManagerImpl: finalMerge called with 1 in-memory map-outputs and 0 on-disk map-outputs
+16/09/29 23:55:52 INFO mapred.Merger: Merging 1 sorted segments
+16/09/29 23:55:52 INFO mapred.Merger: Down to the last merge-pass, with 1 segments left of total size: 7094910 bytes
+16/09/29 23:55:52 INFO mapreduce.Job:  map 100% reduce 0%
+16/09/29 23:55:52 INFO reduce.MergeManagerImpl: Merged 1 segments, 7094922 bytes to disk to satisfy reduce memory limit
+16/09/29 23:55:52 INFO reduce.MergeManagerImpl: Merging 1 files, 7094926 bytes from disk
+16/09/29 23:55:52 INFO reduce.MergeManagerImpl: Merging 0 segments, 0 bytes from memory into reduce
+16/09/29 23:55:52 INFO mapred.Merger: Merging 1 sorted segments
+16/09/29 23:55:52 INFO mapred.Merger: Down to the last merge-pass, with 1 segments left of total size: 7094910 bytes
+16/09/29 23:55:52 INFO mapred.LocalJobRunner: 1 / 1 copied.
+16/09/29 23:55:52 INFO Configuration.deprecation: mapred.skip.on is deprecated. Instead, use mapreduce.job.skiprecords
+16/09/29 23:55:53 INFO mapred.Task: Task:attempt_local1323924505_0001_r_000000_0 is done. And is in the process of committing
+16/09/29 23:55:53 INFO mapred.LocalJobRunner: 1 / 1 copied.
+16/09/29 23:55:53 INFO mapred.Task: Task attempt_local1323924505_0001_r_000000_0 is allowed to commit now
+16/09/29 23:55:53 INFO output.FileOutputCommitter: Saved output of task 'attempt_local1323924505_0001_r_000000_0' to hdfs://10.152.10.234:8020/mapreduce/all/_temporary/0/task_local1323924505_0001_r_000000
+16/09/29 23:55:53 INFO mapred.LocalJobRunner: reduce > reduce
+16/09/29 23:55:53 INFO mapred.Task: Task 'attempt_local1323924505_0001_r_000000_0' done.
+16/09/29 23:55:53 INFO mapred.LocalJobRunner: Finishing task: attempt_local1323924505_0001_r_000000_0
+16/09/29 23:55:53 INFO mapred.LocalJobRunner: reduce task executor complete.
+16/09/29 23:55:54 INFO mapreduce.Job:  map 100% reduce 100%
+16/09/29 23:55:54 INFO mapreduce.Job: Job job_local1323924505_0001 completed successfully
+16/09/29 23:55:54 INFO mapreduce.Job: Counters: 35
+	File System Counters
+		FILE: Number of bytes read=14227420
+		FILE: Number of bytes written=21884598
+		FILE: Number of read operations=0
+		FILE: Number of large read operations=0
+		FILE: Number of write operations=0
+		HDFS: Number of bytes read=13455746
+		HDFS: Number of bytes written=7165006
+		HDFS: Number of read operations=13
+		HDFS: Number of large read operations=0
+		HDFS: Number of write operations=4
+	Map-Reduce Framework
+		Map input records=5000
+		Map output records=5000
+		Map output bytes=7074920
+		Map output materialized bytes=7094926
+		Input split bytes=108
+		Combine input records=0
+		Combine output records=0
+		Reduce input groups=1
+		Reduce shuffle bytes=7094926
+		Reduce input records=5000
+		Reduce output records=5000
+		Spilled Records=10000
+		Shuffled Maps =1
+		Failed Shuffles=0
+		Merged Map outputs=1
+		GC time elapsed (ms)=123
+		Total committed heap usage (bytes)=269623296
+	Shuffle Errors
+		BAD_ID=0
+		CONNECTION=0
+		IO_ERROR=0
+		WRONG_LENGTH=0
+		WRONG_MAP=0
+		WRONG_REDUCE=0
+	File Input Format Counters 
+		Bytes Read=6727873
+	File Output Format Counters 
+		Bytes Written=7165006
+create readable external table all_readhdfs_mapreduce(like all_heap) location ('gphdfs://10.152.10.234:8020/mapreduce/all')format 'custom' (formatter='gphdfs_import');
+\!/home/gpadmin/gpdb/gpAux/extensions/gphdfs/regression/runcmd -DcompressionType=none javaclasses/TestHadoopIntegration mapred Mapred_mapper_TextIn /plaintext/all.txt /mapred/all
+16/09/29 23:55:55 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS
+16/09/29 23:55:55 INFO Configuration.deprecation: mapred.job.tracker is deprecated. Instead, use mapreduce.jobtracker.address
+16/09/29 23:55:55 INFO Configuration.deprecation: mapred.job.map.memory.mb is deprecated. Instead, use mapreduce.map.memory.mb
+16/09/29 23:55:55 INFO Configuration.deprecation: mapred.job.reduce.memory.mb is deprecated. Instead, use mapreduce.reduce.memory.mb
+16/09/29 23:55:56 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+16/09/29 23:55:57 INFO Configuration.deprecation: session.id is deprecated. Instead, use dfs.metrics.session-id
+16/09/29 23:55:57 INFO jvm.JvmMetrics: Initializing JVM Metrics with processName=JobTracker, sessionId=
+16/09/29 23:55:57 INFO jvm.JvmMetrics: Cannot initialize JVM Metrics with processName=JobTracker, sessionId= - already initialized
+16/09/29 23:55:57 WARN mapreduce.JobResourceUploader: Hadoop command-line option parsing not performed. Implement the Tool interface and execute your application with ToolRunner to remedy this.
+16/09/29 23:55:57 INFO mapred.FileInputFormat: Total input paths to process : 1
+16/09/29 23:55:58 INFO mapreduce.JobSubmitter: number of splits:1
+16/09/29 23:55:58 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS
+16/09/29 23:55:58 INFO mapreduce.JobSubmitter: Submitting tokens for job: job_local2078338552_0001
+16/09/29 23:55:59 INFO mapreduce.Job: The url to track the job: http://localhost:8080/
+16/09/29 23:55:59 INFO mapreduce.Job: Running job: job_local2078338552_0001
+16/09/29 23:55:59 INFO mapred.LocalJobRunner: OutputCommitter set in config null
+16/09/29 23:55:59 INFO mapred.LocalJobRunner: OutputCommitter is org.apache.hadoop.mapred.FileOutputCommitter
+16/09/29 23:55:59 INFO output.FileOutputCommitter: File Output Committer Algorithm version is 1
+16/09/29 23:55:59 INFO mapred.LocalJobRunner: Waiting for map tasks
+16/09/29 23:55:59 INFO mapred.LocalJobRunner: Starting task: attempt_local2078338552_0001_m_000000_0
+16/09/29 23:55:59 INFO output.FileOutputCommitter: File Output Committer Algorithm version is 1
+16/09/29 23:55:59 INFO mapred.Task:  Using ResourceCalculatorProcessTree : [ ]
+16/09/29 23:55:59 INFO mapred.MapTask: Processing split: hdfs://10.152.10.234:8020/plaintext/all.txt:0+6727873
+16/09/29 23:55:59 INFO mapred.MapTask: numReduceTasks: 1
+16/09/29 23:55:59 INFO mapred.MapTask: (EQUATOR) 0 kvi 26214396(104857584)
+16/09/29 23:55:59 INFO mapred.MapTask: mapreduce.task.io.sort.mb: 100
+16/09/29 23:55:59 INFO mapred.MapTask: soft limit at 83886080
+16/09/29 23:55:59 INFO mapred.MapTask: bufstart = 0; bufvoid = 104857600
+16/09/29 23:55:59 INFO mapred.MapTask: kvstart = 26214396; length = 6553600
+16/09/29 23:55:59 INFO mapred.MapTask: Map output collector class = org.apache.hadoop.mapred.MapTask$MapOutputBuffer
+16/09/29 23:56:00 INFO mapreduce.Job: Job job_local2078338552_0001 running in uber mode : false
+16/09/29 23:56:00 INFO mapreduce.Job:  map 0% reduce 0%
+16/09/29 23:56:00 INFO mapred.LocalJobRunner: 
+16/09/29 23:56:00 INFO mapred.MapTask: Starting flush of map output
+16/09/29 23:56:00 INFO mapred.MapTask: Spilling map output
+16/09/29 23:56:00 INFO mapred.MapTask: bufstart = 0; bufend = 7074920; bufvoid = 104857600
+16/09/29 23:56:00 INFO mapred.MapTask: kvstart = 26214396(104857584); kvend = 26194400(104777600); length = 19997/6553600
+16/09/29 23:56:00 INFO mapred.MapTask: Finished spill 0
+16/09/29 23:56:00 INFO mapred.Task: Task:attempt_local2078338552_0001_m_000000_0 is done. And is in the process of committing
+16/09/29 23:56:00 INFO mapred.LocalJobRunner: hdfs://10.152.10.234:8020/plaintext/all.txt:0+6727873
+16/09/29 23:56:00 INFO mapred.Task: Task 'attempt_local2078338552_0001_m_000000_0' done.
+16/09/29 23:56:00 INFO mapred.LocalJobRunner: Finishing task: attempt_local2078338552_0001_m_000000_0
+16/09/29 23:56:00 INFO mapred.LocalJobRunner: map task executor complete.
+16/09/29 23:56:00 INFO mapred.LocalJobRunner: Waiting for reduce tasks
+16/09/29 23:56:00 INFO mapred.LocalJobRunner: Starting task: attempt_local2078338552_0001_r_000000_0
+16/09/29 23:56:00 INFO output.FileOutputCommitter: File Output Committer Algorithm version is 1
+16/09/29 23:56:00 INFO mapred.Task:  Using ResourceCalculatorProcessTree : [ ]
+16/09/29 23:56:00 INFO mapred.ReduceTask: Using ShuffleConsumerPlugin: org.apache.hadoop.mapreduce.task.reduce.Shuffle@63b550b5
+16/09/29 23:56:00 INFO reduce.MergeManagerImpl: MergerManager: memoryLimit=472560416, maxSingleShuffleLimit=118140104, mergeThreshold=311889888, ioSortFactor=10, memToMemMergeOutputsThreshold=10
+16/09/29 23:56:00 INFO reduce.EventFetcher: attempt_local2078338552_0001_r_000000_0 Thread started: EventFetcher for fetching Map Completion Events
+16/09/29 23:56:00 INFO reduce.LocalFetcher: localfetcher#1 about to shuffle output of map attempt_local2078338552_0001_m_000000_0 decomp: 7094922 len: 7094926 to MEMORY
+16/09/29 23:56:00 INFO reduce.InMemoryMapOutput: Read 7094922 bytes from map-output for attempt_local2078338552_0001_m_000000_0
+16/09/29 23:56:00 INFO reduce.MergeManagerImpl: closeInMemoryFile -> map-output of size: 7094922, inMemoryMapOutputs.size() -> 1, commitMemory -> 0, usedMemory ->7094922
+16/09/29 23:56:00 INFO reduce.EventFetcher: EventFetcher is interrupted.. Returning
+16/09/29 23:56:00 INFO mapred.LocalJobRunner: 1 / 1 copied.
+16/09/29 23:56:00 INFO reduce.MergeManagerImpl: finalMerge called with 1 in-memory map-outputs and 0 on-disk map-outputs
+16/09/29 23:56:00 INFO mapred.Merger: Merging 1 sorted segments
+16/09/29 23:56:00 INFO mapred.Merger: Down to the last merge-pass, with 1 segments left of total size: 7094910 bytes
+16/09/29 23:56:01 INFO reduce.MergeManagerImpl: Merged 1 segments, 7094922 bytes to disk to satisfy reduce memory limit
+16/09/29 23:56:01 INFO reduce.MergeManagerImpl: Merging 1 files, 7094926 bytes from disk
+16/09/29 23:56:01 INFO reduce.MergeManagerImpl: Merging 0 segments, 0 bytes from memory into reduce
+16/09/29 23:56:01 INFO mapred.Merger: Merging 1 sorted segments
+16/09/29 23:56:01 INFO mapred.Merger: Down to the last merge-pass, with 1 segments left of total size: 7094910 bytes
+16/09/29 23:56:01 INFO mapred.LocalJobRunner: 1 / 1 copied.
+16/09/29 23:56:01 INFO mapreduce.Job:  map 100% reduce 0%
+16/09/29 23:56:02 INFO mapred.Task: Task:attempt_local2078338552_0001_r_000000_0 is done. And is in the process of committing
+16/09/29 23:56:02 INFO mapred.LocalJobRunner: 1 / 1 copied.
+16/09/29 23:56:02 INFO mapred.Task: Task attempt_local2078338552_0001_r_000000_0 is allowed to commit now
+16/09/29 23:56:02 INFO output.FileOutputCommitter: Saved output of task 'attempt_local2078338552_0001_r_000000_0' to hdfs://10.152.10.234:8020/mapred/all/_temporary/0/task_local2078338552_0001_r_000000
+16/09/29 23:56:02 INFO mapred.LocalJobRunner: reduce > reduce
+16/09/29 23:56:02 INFO mapred.Task: Task 'attempt_local2078338552_0001_r_000000_0' done.
+16/09/29 23:56:02 INFO mapred.LocalJobRunner: Finishing task: attempt_local2078338552_0001_r_000000_0
+16/09/29 23:56:02 INFO mapred.LocalJobRunner: reduce task executor complete.
+16/09/29 23:56:03 INFO mapreduce.Job:  map 100% reduce 100%
+16/09/29 23:56:03 INFO mapreduce.Job: Job job_local2078338552_0001 completed successfully
+16/09/29 23:56:03 INFO mapreduce.Job: Counters: 35
+	File System Counters
+		FILE: Number of bytes read=14227394
+		FILE: Number of bytes written=21884492
+		FILE: Number of read operations=0
+		FILE: Number of large read operations=0
+		FILE: Number of write operations=0
+		HDFS: Number of bytes read=13455746
+		HDFS: Number of bytes written=7165006
+		HDFS: Number of read operations=13
+		HDFS: Number of large read operations=0
+		HDFS: Number of write operations=4
+	Map-Reduce Framework
+		Map input records=5000
+		Map output records=5000
+		Map output bytes=7074920
+		Map output materialized bytes=7094926
+		Input split bytes=95
+		Combine input records=0
+		Combine output records=0
+		Reduce input groups=1
+		Reduce shuffle bytes=7094926
+		Reduce input records=5000
+		Reduce output records=5000
+		Spilled Records=10000
+		Shuffled Maps =1
+		Failed Shuffles=0
+		Merged Map outputs=1
+		GC time elapsed (ms)=85
+		Total committed heap usage (bytes)=269623296
+	Shuffle Errors
+		BAD_ID=0
+		CONNECTION=0
+		IO_ERROR=0
+		WRONG_LENGTH=0
+		WRONG_MAP=0
+		WRONG_REDUCE=0
+	File Input Format Counters 
+		Bytes Read=6727873
+	File Output Format Counters 
+		Bytes Written=7165006
+create readable external table all_readhdfs_mapred(like all_readhdfs_mapreduce) location ('gphdfs://10.152.10.234:8020/mapred/all')format 'custom' (formatter='gphdfs_import');
+select count(*) from all_readhdfs_mapreduce;
+ count 
+-------
+  5000
+(1 row)
+
+select count(*) from all_readhdfs_mapred;
+ count 
+-------
+  5000
+(1 row)
+
+select * from all_readhdfs_mapreduce order by xcount_all limit 10;
+                                                                                                                                                                                                                 datatype_all                                                                                                                                                                                                                 | xcount_all | col1_time | col2_time  | col3_time | col4_time | col5_time  | col6_time | col7_time | col8_time | col9_time | nullcol_time |      col1_timestamp      |      col2_timestamp      |      col3_timestamp      | nullcol_timestamp | col1_date  | col2_date  | col3_date  | col4_date  | col5_date  | col6_date  |   col7_date   | nullcol_date |     max_bigint      |      min_bigint      | x_bigint |   reverse_bigint    |   increment_bigint   | nullcol_bigint |  max_int   |   min_int   | x_int | reverse_int | increment_int | nullcol_int | max_smallint | min_smallint | x_smallint | reverse_smallint | increment_smallint | nullcol_smallint |  max_real   |   min_real   | pi_real | pix_real | nullcol_real |     max_float      |      min_float      |   pi_float    |   pix_float   | nullcol_float | col1_boolean | nullcol_boolean | col1_varchar |           col2_varchar           | nullcol_varchar | col1_bpchar |           col2_bpchar            | nullcol_bpchar |      max_numeric       |       min_numeric       | x_numeric |    reverse_numeric     |    increment_numeric    | nullcol_numeric | col1_text |            col2_text             | nullcol_text 
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------+-----------+------------+-----------+-----------+------------+-----------+-----------+-----------+-----------+--------------+--------------------------+--------------------------+--------------------------+-------------------+------------+------------+------------+------------+------------+------------+---------------+--------------+---------------------+----------------------+----------+---------------------+----------------------+----------------+------------+-------------+-------+-------------+---------------+-------------+--------------+--------------+------------+------------------+--------------------+------------------+-------------+--------------+---------+----------+--------------+--------------------+---------------------+---------------+---------------+---------------+--------------+-----------------+--------------+----------------------------------+-----------------+-------------+----------------------------------+----------------+------------------------+-------------------------+-----------+------------------------+-------------------------+-----------------+-----------+----------------------------------+--------------
+ time,time,time,time,time,time,time,time,time,time,timestamp,timestamp,timestamp,timestamp,date,date,date,date,date,date,date,date,bigint,bigint,bigint,bigint,bigint,bigint,int,int,int,int,int,int,smallint,smallint,smallint,smallint,smallint,smallint,real,real,real,real,real,float,float,float,float,float,boolean,boolean,varchar,varchar,varchar,bpchar,bpchar,bpchar,numeric,numeric,numeric,numeric,numeric,numeric,text,text,text |          0 | 00:00:00  | 00:00:00   | 00:00:00  | 00:00:00  | 00:00:00   | 00:00:00  | 00:00:00  | 00:00:00  | 00:00:00  |              | Mon Jan 01 00:00:00 0001 | Mon Jan 01 00:00:00 0001 | Mon Jan 01 00:00:00 0001 |                   | 01-01-0001 | 01-01-0001 | 01-01-0001 | 01-01-0001 | 01-01-0001 | 01-01-0001 | 01-01-0001 BC |              | 9223372036854775807 | -9223372036854775808 |        0 | 9223372036854775807 | -9223372036854775808 |                | 2147483647 | -2147483648 |     0 |  2147483647 |   -2147483648 |             |        32767 |       -32768 |          0 |            32767 |             -32768 |                  | 3.40282e+38 | -3.40282e+38 | 3.14286 |        0 |              | 1.79769313486e+308 | -1.79769313486e+308 | 3.14285714286 |             0 |               | t            |                 | 0            |                                  |                 | 0           |                                  |                | 9223372036854775807000 | -9223372036854775808000 |         0 | 9223372036854775807000 | -9223372036854775808000 |                 | 0         |                                  | 
+ time,time,time,time,time,time,time,time,time,time,timestamp,timestamp,timestamp,timestamp,date,date,date,date,date,date,date,date,bigint,bigint,bigint,bigint,bigint,bigint,int,int,int,int,int,int,smallint,smallint,smallint,smallint,smallint,smallint,real,real,real,real,real,float,float,float,float,float,boolean,boolean,varchar,varchar,varchar,bpchar,bpchar,bpchar,numeric,numeric,numeric,numeric,numeric,numeric,text,text,text |          1 | 01:01:01  | 01:01:01.1 | 01:01:01  | 13:01:00  | 01:01:01.1 | 01:01:01  | 01:01:00  | 01:01:01  | 01:01:01  |              | Sat Feb 02 01:01:01 0002 | Sat Feb 02 01:01:01 0002 | Wed Jan 02 01:01:01 0002 |                   | 02-02-0002 | 01-02-0002 | 02-02-0002 | 01-02-0002 | 01-02-0002 | 01-02-0002 | 01-02-0002 BC |              | 9223372036854775807 | -9223372036854775808 |        1 | 9223372036854775806 | -9223372036854775807 |                | 2147483647 | -2147483648 |     1 |  2147483646 |   -2147483647 |             |        32767 |       -32768 |          1 |            32766 |             -32767 |                  | 3.40282e+38 | -3.40282e+38 | 3.14286 |  3.14286 |              | 1.79769313486e+308 | -1.79769313486e+308 | 3.14285714286 | 3.14285714286 |               | f            |                 | 1            | \x01                             |                 | 1           | \x01                             |                | 9223372036854775807000 | -9223372036854775808000 |         1 | 9223372036854775806999 | -9223372036854775807999 |                 | 1         | \x01                             | 
+ time,time,time,time,time,time,time,time,time,time,timestamp,timestamp,timestamp,timestamp,date,date,date,date,date,date,date,date,bigint,bigint,bigint,bigint,bigint,bigint,int,int,int,int,int,int,smallint,smallint,smallint,smallint,smallint,smallint,real,real,real,real,real,float,float,float,float,float,boolean,boolean,varchar,varchar,varchar,bpchar,bpchar,bpchar,numeric,numeric,numeric,numeric,numeric,numeric,text,text,text |          2 | 02:02:02  | 02:02:02.2 | 02:02:02  | 02:02:00  | 02:02:02.2 | 02:02:02  | 02:02:00  | 02:02:02  | 02:02:02  |              | Mon Mar 03 02:02:02 0003 | Mon Mar 03 02:02:02 0003 | Mon Feb 03 02:02:02 0003 |                   | 03-03-0003 | 02-03-0003 | 03-03-0003 | 02-03-0003 | 02-03-0003 | 02-03-0003 | 02-03-0003 BC |              | 9223372036854775807 | -9223372036854775808 |        2 | 9223372036854775805 | -9223372036854775806 |                | 2147483647 | -2147483648 |     2 |  2147483645 |   -2147483646 |             |        32767 |       -32768 |          2 |            32765 |             -32766 |                  | 3.40282e+38 | -3.40282e+38 | 3.14286 |  6.28571 |              | 1.79769313486e+308 | -1.79769313486e+308 | 3.14285714286 | 6.28571428571 |               | t            |                 | 2            | \x02\x02                         |                 | 2           | \x02\x02                         |                | 9223372036854775807000 | -9223372036854775808000 |         2 | 9223372036854775806998 | -9223372036854775807998 |                 | 2         | \x02\x02                         | 
+ time,time,time,time,time,time,time,time,time,time,timestamp,timestamp,timestamp,timestamp,date,date,date,date,date,date,date,date,bigint,bigint,bigint,bigint,bigint,bigint,int,int,int,int,int,int,smallint,smallint,smallint,smallint,smallint,smallint,real,real,real,real,real,float,float,float,float,float,boolean,boolean,varchar,varchar,varchar,bpchar,bpchar,bpchar,numeric,numeric,numeric,numeric,numeric,numeric,text,text,text |          3 | 03:03:03  | 03:03:03.3 | 03:03:03  | 15:03:00  | 03:03:03.3 | 03:03:03  | 03:03:00  | 03:03:03  | 03:03:03  |              | Sun Apr 04 03:03:03 0004 | Sun Apr 04 03:03:03 0004 | Wed Feb 04 03:03:03 0004 |                   | 04-04-0004 | 02-04-0004 | 04-04-0004 | 02-04-0004 | 02-04-0004 | 02-04-0004 | 02-04-0004 BC |              | 9223372036854775807 | -9223372036854775808 |        3 | 9223372036854775804 | -9223372036854775805 |                | 2147483647 | -2147483648 |     3 |  2147483644 |   -2147483645 |             |        32767 |       -32768 |          3 |            32764 |             -32765 |                  | 3.40282e+38 | -3.40282e+38 | 3.14286 |  9.42857 |              | 1.79769313486e+308 | -1.79769313486e+308 | 3.14285714286 | 9.42857142857 |               | f            |                 | 3            | \x03\x03\x03                     |                 | 3           | \x03\x03\x03                     |                | 9223372036854775807000 | -9223372036854775808000 |         3 | 9223372036854775806997 | -9223372036854775807997 |                 | 3         | \x03\x03\x03                     | 
+ time,time,time,time,time,time,time,time,time,time,timestamp,timestamp,timestamp,timestamp,date,date,date,date,date,date,date,date,bigint,bigint,bigint,bigint,bigint,bigint,int,int,int,int,int,int,smallint,smallint,smallint,smallint,smallint,smallint,real,real,real,real,real,float,float,float,float,float,boolean,boolean,varchar,varchar,varchar,bpchar,bpchar,bpchar,numeric,numeric,numeric,numeric,numeric,numeric,text,text,text |          4 | 04:04:04  | 04:04:04.4 | 04:04:04  | 04:04:00  | 04:04:04.4 | 04:04:04  | 04:04:00  | 04:04:04  | 04:04:04  |              | Thu May 05 04:04:04 0005 | Thu May 05 04:04:04 0005 | Sat Mar 05 04:04:04 0005 |                   | 05-05-0005 | 03-05-0005 | 05-05-0005 | 03-05-0005 | 03-05-0005 | 03-05-0005 | 03-05-0005 BC |              | 9223372036854775807 | -9223372036854775808 |        4 | 9223372036854775803 | -9223372036854775804 |                | 2147483647 | -2147483648 |     4 |  2147483643 |   -2147483644 |             |        32767 |       -32768 |          4 |            32763 |             -32764 |                  | 3.40282e+38 | -3.40282e+38 | 3.14286 |  12.5714 |              | 1.79769313486e+308 | -1.79769313486e+308 | 3.14285714286 | 12.5714285714 |               | t            |                 | 4            | \x04\x04\x04\x04                 |                 | 4           | \x04\x04\x04\x04                 |                | 9223372036854775807000 | -9223372036854775808000 |         4 | 9223372036854775806996 | -9223372036854775807996 |                 | 4         | \x04\x04\x04\x04                 | 
+ time,time,time,time,time,time,time,time,time,time,timestamp,timestamp,timestamp,timestamp,date,date,date,date,date,date,date,date,bigint,bigint,bigint,bigint,bigint,bigint,int,int,int,int,int,int,smallint,smallint,smallint,smallint,smallint,smallint,real,real,real,real,real,float,float,float,float,float,boolean,boolean,varchar,varchar,varchar,bpchar,bpchar,bpchar,numeric,numeric,numeric,numeric,numeric,numeric,text,text,text |          5 | 05:05:05  | 05:05:05.5 | 05:05:05  | 17:05:00  | 05:05:05.5 | 05:05:05  | 05:05:00  | 05:05:05  | 05:05:05  |              | Tue Jun 06 05:05:05 0006 | Tue Jun 06 05:05:05 0006 | Mon Mar 06 05:05:05 0006 |                   | 06-06-0006 | 03-06-0006 | 06-06-0006 | 03-06-0006 | 03-06-0006 | 03-06-0006 | 03-06-0006 BC |              | 9223372036854775807 | -9223372036854775808 |        5 | 9223372036854775802 | -9223372036854775803 |                | 2147483647 | -2147483648 |     5 |  2147483642 |   -2147483643 |             |        32767 |       -32768 |          5 |            32762 |             -32763 |                  | 3.40282e+38 | -3.40282e+38 | 3.14286 |  15.7143 |              | 1.79769313486e+308 | -1.79769313486e+308 | 3.14285714286 | 15.7142857143 |               | f            |                 | 5            | \x05\x05\x05\x05\x05             |                 | 5           | \x05\x05\x05\x05\x05             |                | 9223372036854775807000 | -9223372036854775808000 |         5 | 9223372036854775806995 | -9223372036854775807995 |                 | 5         | \x05\x05\x05\x05\x05             | 
+ time,time,time,time,time,time,time,time,time,time,timestamp,timestamp,timestamp,timestamp,date,date,date,date,date,date,date,date,bigint,bigint,bigint,bigint,bigint,bigint,int,int,int,int,int,int,smallint,smallint,smallint,smallint,smallint,smallint,real,real,real,real,real,float,float,float,float,float,boolean,boolean,varchar,varchar,varchar,bpchar,bpchar,bpchar,numeric,numeric,numeric,numeric,numeric,numeric,text,text,text |          6 | 06:06:06  | 06:06:06.6 | 06:06:06  | 06:06:00  | 06:06:06.6 | 06:06:06  | 06:06:00  | 06:06:06  | 06:06:06  |              | Sat Jul 07 06:06:06 0007 | Sat Jul 07 06:06:06 0007 | Sat Apr 07 06:06:06 0007 |                   | 07-07-0007 | 04-07-0007 | 07-07-0007 | 04-07-0007 | 04-07-0007 | 04-07-0007 | 04-07-0007 BC |              | 9223372036854775807 | -9223372036854775808 |        6 | 9223372036854775801 | -9223372036854775802 |                | 2147483647 | -2147483648 |     6 |  2147483641 |   -2147483642 |             |        32767 |       -32768 |          6 |            32761 |             -32762 |                  | 3.40282e+38 | -3.40282e+38 | 3.14286 |  18.8571 |              | 1.79769313486e+308 | -1.79769313486e+308 | 3.14285714286 | 18.8571428571 |               | t            |                 | 6            | \x06\x06\x06\x06\x06\x06         |                 | 6           | \x06\x06\x06\x06\x06\x06         |                | 9223372036854775807000 | -9223372036854775808000 |         6 | 9223372036854775806994 | -9223372036854775807994 |                 | 6         | \x06\x06\x06\x06\x06\x06         | 
+ time,time,time,time,time,time,time,time,time,time,timestamp,timestamp,timestamp,timestamp,date,date,date,date,date,date,date,date,bigint,bigint,bigint,bigint,bigint,bigint,int,int,int,int,int,int,smallint,smallint,smallint,smallint,smallint,smallint,real,real,real,real,real,float,float,float,float,float,boolean,boolean,varchar,varchar,varchar,bpchar,bpchar,bpchar,numeric,numeric,numeric,numeric,numeric,numeric,text,text,text |          7 | 07:07:07  | 07:07:07.7 | 07:07:07  | 19:07:00  | 07:07:07.7 | 07:07:07  | 07:07:00  | 07:07:07  | 07:07:07  |              | Fri Aug 08 07:07:07 0008 | Fri Aug 08 07:07:07 0008 | Tue Apr 08 07:07:07 0008 |                   | 08-08-0008 | 04-08-0008 | 08-08-0008 | 04-08-0008 | 04-08-0008 | 04-08-0008 | 04-08-0008 BC |              | 9223372036854775807 | -9223372036854775808 |        7 | 9223372036854775800 | -9223372036854775801 |                | 2147483647 | -2147483648 |     7 |  2147483640 |   -2147483641 |             |        32767 |       -32768 |          7 |            32760 |             -32761 |                  | 3.40282e+38 | -3.40282e+38 | 3.14286 |       22 |              | 1.79769313486e+308 | -1.79769313486e+308 | 3.14285714286 |            22 |               | f            |                 | 7            | \x07\x07\x07\x07\x07\x07\x07     |                 | 7           | \x07\x07\x07\x07\x07\x07\x07     |                | 9223372036854775807000 | -9223372036854775808000 |         7 | 9223372036854775806993 | -9223372036854775807993 |                 | 7         | \x07\x07\x07\x07\x07\x07\x07     | 
+ time,time,time,time,time,time,time,time,time,time,timestamp,timestamp,timestamp,timestamp,date,date,date,date,date,date,date,date,bigint,bigint,bigint,bigint,bigint,bigint,int,int,int,int,int,int,smallint,smallint,smallint,smallint,smallint,smallint,real,real,real,real,real,float,float,float,float,float,boolean,boolean,varchar,varchar,varchar,bpchar,bpchar,bpchar,numeric,numeric,numeric,numeric,numeric,numeric,text,text,text |          8 | 08:08:08  | 08:08:08.8 | 08:08:08  | 08:08:00  | 08:08:08.8 | 08:08:08  | 08:08:00  | 08:08:08  | 08:08:08  |              | Wed Sep 09 08:08:08 0009 | Wed Sep 09 08:08:08 0009 | Sat May 09 08:08:08 0009 |                   | 09-09-0009 | 05-09-0009 | 09-09-0009 | 05-09-0009 | 05-09-0009 | 05-09-0009 | 05-09-0009 BC |              | 9223372036854775807 | -9223372036854775808 |        8 | 9223372036854775799 | -9223372036854775800 |                | 2147483647 | -2147483648 |     8 |  2147483639 |   -2147483640 |             |        32767 |       -32768 |          8 |            32759 |             -32760 |                  | 3.40282e+38 | -3.40282e+38 | 3.14286 |  25.1429 |              | 1.79769313486e+308 | -1.79769313486e+308 | 3.14285714286 | 25.1428571429 |               | t            |                 | 8            | \x08\x08\x08\x08\x08\x08\x08\x08 |                 | 8           | \x08\x08\x08\x08\x08\x08\x08\x08 |                | 9223372036854775807000 | -9223372036854775808000 |         8 | 9223372036854775806992 | -9223372036854775807992 |                 | 8         | \x08\x08\x08\x08\x08\x08\x08\x08 | 
+ time,time,time,time,time,time,time,time,time,time,timestamp,timestamp,timestamp,timestamp,date,date,date,date,date,date,date,date,bigint,bigint,bigint,bigint,bigint,bigint,int,int,int,int,int,int,smallint,smallint,smallint,smallint,smallint,smallint,real,real,real,real,real,float,float,float,float,float,boolean,boolean,varchar,varchar,varchar,bpchar,bpchar,bpchar,numeric,numeric,numeric,numeric,numeric,numeric,text,text,text |          9 | 09:09:09  | 09:09:09.9 | 09:09:09  | 21:09:00  | 09:09:09.9 | 09:09:09  | 09:09:00  | 09:09:09  | 09:09:09  |              | Sun Oct 10 09:09:09 0010 | Sun Oct 10 09:09:09 0010 | Mon May 10 09:09:09 0010 |                   | 10-10-0010 | 05-10-0010 | 10-10-0010 | 05-10-0010 | 05-10-0010 | 05-10-0010 | 05-10-0010 BC |              | 9223372036854775807 | -9223372036854775808 |        9 | 9223372036854775798 | -9223372036854775799 |                | 2147483647 | -2147483648 |     9 |  2147483638 |   -2147483639 |             |        32767 |       -32768 |          9 |            32758 |             -32759 |                  | 3.40282e+38 | -3.40282e+38 | 3.14286 |  28.2857 |              | 1.79769313486e+308 | -1.79769313486e+308 | 3.14285714286 | 28.2857142857 |               | f            |                 | 9            | skip                             |                 | 9           | skip                             |                | 9223372036854775807000 | -9223372036854775808000 |         9 | 9223372036854775806991 | -9223372036854775807991 |                 | 9         | skip                             | 
+(10 rows)
+
+select * from all_readhdfs_mapred order by xcount_all limit 10;
+                                                                                                                                                                                                                 datatype_all                                                                                                                                                                                                                 | xcount_all | col1_time | col2_time  | col3_time | col4_time | col5_time  | col6_time | col7_time | col8_time | col9_time | nullcol_time |      col1_timestamp      |      col2_timestamp      |      col3_timestamp      | nullcol_timestamp | col1_date  | col2_date  | col3_date  | col4_date  | col5_date  | col6_date  |   col7_date   | nullcol_date |     max_bigint      |      min_bigint      | x_bigint |   reverse_bigint    |   increment_bigint   | nullcol_bigint |  max_int   |   min_int   | x_int | reverse_int | increment_int | nullcol_int | max_smallint | min_smallint | x_smallint | reverse_smallint | increment_smallint | nullcol_smallint |  max_real   |   min_real   | pi_real | pix_real | nullcol_real |     max_float      |      min_float      |   pi_float    |   pix_float   | nullcol_float | col1_boolean | nullcol_boolean | col1_varchar |           col2_varchar           | nullcol_varchar | col1_bpchar |           col2_bpchar            | nullcol_bpchar |      max_numeric       |       min_numeric       | x_numeric |    reverse_numeric     |    increment_numeric    | nullcol_numeric | col1_text |            col2_text             | nullcol_text 
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+------------+-----------+------------+-----------+-----------+------------+-----------+-----------+-----------+-----------+--------------+--------------------------+--------------------------+--------------------------+-------------------+------------+------------+------------+------------+------------+------------+---------------+--------------+---------------------+----------------------+----------+---------------------+----------------------+----------------+------------+-------------+-------+-------------+---------------+-------------+--------------+--------------+------------+------------------+--------------------+------------------+-------------+--------------+---------+----------+--------------+--------------------+---------------------+---------------+---------------+---------------+--------------+-----------------+--------------+----------------------------------+-----------------+-------------+----------------------------------+----------------+------------------------+-------------------------+-----------+------------------------+-------------------------+-----------------+-----------+----------------------------------+--------------
+ time,time,time,time,time,time,time,time,time,time,timestamp,timestamp,timestamp,timestamp,date,date,date,date,date,date,date,date,bigint,bigint,bigint,bigint,bigint,bigint,int,int,int,int,int,int,smallint,smallint,smallint,smallint,smallint,smallint,real,real,real,real,real,float,float,float,float,float,boolean,boolean,varchar,varchar,varchar,bpchar,bpchar,bpchar,numeric,numeric,numeric,numeric,numeric,numeric,text,text,text |          0 | 00:00:00  | 00:00:00   | 00:00:00  | 00:00:00  | 00:00:00   | 00:00:00  | 00:00:00  | 00:00:00  | 00:00:00  |              | Mon Jan 01 00:00:00 0001 | Mon Jan 01 00:00:00 0001 | Mon Jan 01 00:00:00 0001 |                   | 01-01-0001 | 01-01-0001 | 01-01-0001 | 01-01-0001 | 01-01-0001 | 01-01-0001 | 01-01-0001 BC |              | 9223372036854775807 | -9223372036854775808 |        0 | 9223372036854775807 | -9223372036854775808 |                | 2147483647 | -2147483648 |     0 |  2147483647 |   -2147483648 |             |        32767 |       -32768 |          0 |            32767 |             -32768 |                  | 3.40282e+38 | -3.40282e+38 | 3.14286 |        0 |              | 1.79769313486e+308 | -1.79769313486e+308 | 3.14285714286 |             0 |               | t            |                 | 0            |                                  |                 | 0           |                                  |                | 9223372036854775807000 | -9223372036854775808000 |         0 | 9223372036854775807000 | -9223372036854775808000 |                 | 0         |                                  | 
+ time,time,time,time,time,time,time,time,time,time,timestamp,timestamp,timestamp,timestamp,date,date,date,date,date,date,date,date,bigint,bigint,bigint,bigint,bigint,bigint,int,int,int,int,int,int,smallint,smallint,smallint,smallint,smallint,smallint,real,real,real,real,real,float,float,float,float,float,boolean,boolean,varchar,varchar,varchar,bpchar,bpchar,bpchar,numeric,numeric,numeric,numeric,numeric,numeric,text,text,text |          1 | 01:01:01  | 01:01:01.1 | 01:01:01  | 13:01:00  | 01:01:01.1 | 01:01:01  | 01:01:00  | 01:01:01  | 01:01:01  |              | Sat Feb 02 01:01:01 0002 | Sat Feb 02 01:01:01 0002 | Wed Jan 02 01:01:01 0002 |                   | 02-02-0002 | 01-02-0002 | 02-02-0002 | 01-02-0002 | 01-02-0002 | 01-02-0002 | 01-02-0002 BC |              | 9223372036854775807 | -9223372036854775808 |        1 | 9223372036854775806 | -9223372036854775807 |                | 2147483647 | -2147483648 |     1 |  2147483646 |   -2147483647 |             |        32767 |       -32768 |          1 |            32766 |             -32767 |                  | 3.40282e+38 | -3.40282e+38 | 3.14286 |  3.14286 |              | 1.79769313486e+308 | -1.79769313486e+308 | 3.14285714286 | 3.14285714286 |               | f            |                 | 1            | \x01                             |                 | 1           | \x01                             |                | 9223372036854775807000 | -9223372036854775808000 |         1 | 9223372036854775806999 | -9223372036854775807999 |                 | 1         | \x01                             | 
+ time,time,time,time,time,time,time,time,time,time,timestamp,timestamp,timestamp,timestamp,date,date,date,date,date,date,date,date,bigint,bigint,bigint,bigint,bigint,bigint,int,int,int,int,int,int,smallint,smallint,smallint,smallint,smallint,smallint,real,real,real,real,real,float,float,float,float,float,boolean,boolean,varchar,varchar,varchar,bpchar,bpchar,bpchar,numeric,numeric,numeric,numeric,numeric,numeric,text,text,text |          2 | 02:02:02  | 02:02:02.2 | 02:02:02  | 02:02:00  | 02:02:02.2 | 02:02:02  | 02:02:00  | 02:02:02  | 02:02:02  |              | Mon Mar 03 02:02:02 0003 | Mon Mar 03 02:02:02 0003 | Mon Feb 03 02:02:02 0003 |                   | 03-03-0003 | 02-03-0003 | 03-03-0003 | 02-03-0003 | 02-03-0003 | 02-03-0003 | 02-03-0003 BC |              | 9223372036854775807 | -9223372036854775808 |        2 | 9223372036854775805 | -9223372036854775806 |                | 2147483647 | -2147483648 |     2 |  2147483645 |   -2147483646 |             |        32767 |       -32768 |          2 |            32765 |             -32766 |                  | 3.40282e+38 | -3.40282e+38 | 3.14286 |  6.28571 |              | 1.79769313486e+308 | -1.79769313486e+308 | 3.14285714286 | 6.28571428571 |               | t            |                 | 2            | \x02\x02                         |                 | 2           | \x02\x02                         |                | 9223372036854775807000 | -9223372036854775808000 |         2 | 9223372036854775806998 | -9223372036854775807998 |                 | 2         | \x02\x02                         | 
+ time,time,time,time,time,time,time,time,time,time,timestamp,timestamp,timestamp,timestamp,date,date,date,date,date,date,date,date,bigint,bigint,bigint,bigint,bigint,bigint,int,int,int,int,int,int,smallint,smallint,smallint,smallint,smallint,smallint,real,real,real,real,real,float,float,float,float,float,boolean,boolean,varchar,varchar,varchar,bpchar,bpchar,bpchar,numeric,numeric,numeric,numeric,numeric,numeric,text,text,text |          3 | 03:03:03  | 03:03:03.3 | 03:03:03  | 15:03:00  | 03:03:03.3 | 03:03:03  | 03:03:00  | 03:03:03  | 03:03:03  |              | Sun Apr 04 03:03:03 0004 | Sun Apr 04 03:03:03 0004 | Wed Feb 04 03:03:03 0004 |                   | 04-04-0004 | 02-04-0004 | 04-04-0004 | 02-04-0004 | 02-04-0004 | 02-04-0004 | 02-04-0004 BC |              | 9223372036854775807 | -9223372036854775808 |        3 | 9223372036854775804 | -9223372036854775805 |                | 2147483647 | -2147483648 |     3 |  2147483644 |   -2147483645 |             |        32767 |       -32768 |          3 |            32764 |             -32765 |                  | 3.40282e+38 | -3.40282e+38 | 3.14286 |  9.42857 |              | 1.79769313486e+308 | -1.79769313486e+308 | 3.14285714286 | 9.42857142857 |               | f            |                 | 3            | \x03\x03\x03                     |                 | 3           | \x03\x03\x03                     |                | 9223372036854775807000 | -9223372036854775808000 |         3 | 9223372036854775806997 | -9223372036854775807997 |                 | 3         | \x03\x03\x03                     | 
+ time,time,time,time,time,time,time,time,time,time,timestamp,timestamp,timestamp,timestamp,date,date,date,date,date,date,date,date,bigint,bigint,bigint,bigint,bigint,bigint,int,int,int,int,int,int,smallint,smallint,smallint,smallint,smallint,smallint,real,real,real,real,real,float,float,float,float,float,boolean,boolean,varchar,varchar,varchar,bpchar,bpchar,bpchar,numeric,numeric,numeric,numeric,numeric,numeric,text,text,text |          4 | 04:04:04  | 04:04:04.4 | 04:04:04  | 04:04:00  | 04:04:04.4 | 04:04:04  | 04:04:00  | 04:04:04  | 04:04:04  |              | Thu May 05 04:04:04 0005 | Thu May 05 04:04:04 0005 | Sat Mar 05 04:04:04 0005 |                   | 05-05-0005 | 03-05-0005 | 05-05-0005 | 03-05-0005 | 03-05-0005 | 03-05-0005 | 03-05-0005 BC |              | 9223372036854775807 | -9223372036854775808 |        4 | 9223372036854775803 | -9223372036854775804 |                | 2147483647 | -2147483648 |     4 |  2147483643 |   -2147483644 |             |        32767 |       -32768 |          4 |            32763 |             -32764 |                  | 3.40282e+38 | -3.40282e+38 | 3.14286 |  12.5714 |              | 1.79769313486e+308 | -1.79769313486e+308 | 3.14285714286 | 12.5714285714 |               | t            |                 | 4            | \x04\x04\x04\x04                 |                 | 4           | \x04\x04\x04\x04                 |                | 9223372036854775807000 | -9223372036854775808000 |         4 | 9223372036854775806996 | -9223372036854775807996 |                 | 4         | \x04\x04\x04\x04                 | 
+ time,time,time,time,time,time,time,time,time,time,timestamp,timestamp,timestamp,timestamp,date,date,date,date,date,date,date,date,bigint,bigint,bigint,bigint,bigint,bigint,int,int,int,int,int,int,smallint,smallint,smallint,smallint,smallint,smallint,real,real,real,real,real,float,float,float,float,float,boolean,boolean,varchar,varchar,varchar,bpchar,bpchar,bpchar,numeric,numeric,numeric,numeric,numeric,numeric,text,text,text |          5 | 05:05:05  | 05:05:05.5 | 05:05:05  | 17:05:00  | 05:05:05.5 | 05:05:05  | 05:05:00  | 05:05:05  | 05:05:05  |              | Tue Jun 06 05:05:05 0006 | Tue Jun 06 05:05:05 0006 | Mon Mar 06 05:05:05 0006 |                   | 06-06-0006 | 03-06-0006 | 06-06-0006 | 03-06-0006 | 03-06-0006 | 03-06-0006 | 03-06-0006 BC |              | 9223372036854775807 | -9223372036854775808 |        5 | 9223372036854775802 | -9223372036854775803 |                | 2147483647 | -2147483648 |     5 |  2147483642 |   -2147483643 |             |        32767 |       -32768 |          5 |            32762 |             -32763 |                  | 3.40282e+38 | -3.40282e+38 | 3.14286 |  15.7143 |              | 1.79769313486e+308 | -1.79769313486e+308 | 3.14285714286 | 15.7142857143 |               | f            |                 | 5            | \x05\x05\x05\x05\x05             |                 | 5           | \x05\x05\x05\x05\x05             |                | 9223372036854775807000 | -9223372036854775808000 |         5 | 9223372036854775806995 | -9223372036854775807995 |                 | 5         | \x05\x05\x05\x05\x05             | 
+ time,time,time,time,time,time,time,time,time,time,timestamp,timestamp,timestamp,timestamp,date,date,date,date,date,date,date,date,bigint,bigint,bigint,bigint,bigint,bigint,int,int,int,int,int,int,smallint,smallint,smallint,smallint,smallint,smallint,real,real,real,real,real,float,float,float,float,float,boolean,boolean,varchar,varchar,varchar,bpchar,bpchar,bpchar,numeric,numeric,numeric,numeric,numeric,numeric,text,text,text |          6 | 06:06:06  | 06:06:06.6 | 06:06:06  | 06:06:00  | 06:06:06.6 | 06:06:06  | 06:06:00  | 06:06:06  | 06:06:06  |              | Sat Jul 07 06:06:06 0007 | Sat Jul 07 06:06:06 0007 | Sat Apr 07 06:06:06 0007 |                   | 07-07-0007 | 04-07-0007 | 07-07-0007 | 04-07-0007 | 04-07-0007 | 04-07-0007 | 04-07-0007 BC |              | 9223372036854775807 | -9223372036854775808 |        6 | 9223372036854775801 | -9223372036854775802 |                | 2147483647 | -2147483648 |     6 |  2147483641 |   -2147483642 |             |        32767 |       -32768 |          6 |            32761 |             -32762 |                  | 3.40282e+38 | -3.40282e+38 | 3.14286 |  18.8571 |              | 1.79769313486e+308 | -1.79769313486e+308 | 3.14285714286 | 18.8571428571 |               | t            |                 | 6            | \x06\x06\x06\x06\x06\x06         |                 | 6           | \x06\x06\x06\x06\x06\x06         |                | 9223372036854775807000 | -9223372036854775808000 |         6 | 9223372036854775806994 | -9223372036854775807994 |                 | 6         | \x06\x06\x06\x06\x06\x06         | 
+ time,time,time,time,time,time,time,time,time,time,timestamp,timestamp,timestamp,timestamp,date,date,date,date,date,date,date,date,bigint,bigint,bigint,bigint,bigint,bigint,int,int,int,int,int,int,smallint,smallint,smallint,smallint,smallint,smallint,real,real,real,real,real,float,float,float,float,float,boolean,boolean,varchar,varchar,varchar,bpchar,bpchar,bpchar,numeric,numeric,numeric,numeric,numeric,numeric,text,text,text |          7 | 07:07:07  | 07:07:07.7 | 07:07:07  | 19:07:00  | 07:07:07.7 | 07:07:07  | 07:07:00  | 07:07:07  | 07:07:07  |              | Fri Aug 08 07:07:07 0008 | Fri Aug 08 07:07:07 0008 | Tue Apr 08 07:07:07 0008 |                   | 08-08-0008 | 04-08-0008 | 08-08-0008 | 04-08-0008 | 04-08-0008 | 04-08-0008 | 04-08-0008 BC |              | 9223372036854775807 | -9223372036854775808 |        7 | 9223372036854775800 | -9223372036854775801 |                | 2147483647 | -2147483648 |     7 |  2147483640 |   -2147483641 |             |        32767 |       -32768 |          7 |            32760 |             -32761 |                  | 3.40282e+38 | -3.40282e+38 | 3.14286 |       22 |              | 1.79769313486e+308 | -1.79769313486e+308 | 3.14285714286 |            22 |               | f            |                 | 7            | \x07\x07\x07\x07\x07\x07\x07     |                 | 7           | \x07\x07\x07\x07\x07\x07\x07     |                | 9223372036854775807000 | -9223372036854775808000 |         7 | 9223372036854775806993 | -9223372036854775807993 |                 | 7         | \x07\x07\x07\x07\x07\x07\x07     | 
+ time,time,time,time,time,time,time,time,time,time,timestamp,timestamp,timestamp,timestamp,date,date,date,date,date,date,date,date,bigint,bigint,bigint,bigint,bigint,bigint,int,int,int,int,int,int,smallint,smallint,smallint,smallint,smallint,smallint,real,real,real,real,real,float,float,float,float,float,boolean,boolean,varchar,varchar,varchar,bpchar,bpchar,bpchar,numeric,numeric,numeric,numeric,numeric,numeric,text,text,text |          8 | 08:08:08  | 08:08:08.8 | 08:08:08  | 08:08:00  | 08:08:08.8 | 08:08:08  | 08:08:00  | 08:08:08  | 08:08:08  |              | Wed Sep 09 08:08:08 0009 | Wed Sep 09 08:08:08 0009 | Sat May 09 08:08:08 0009 |                   | 09-09-0009 | 05-09-0009 | 09-09-0009 | 05-09-0009 | 05-09-0009 | 05-09-0009 | 05-09-0009 BC |              | 9223372036854775807 | -9223372036854775808 |        8 | 9223372036854775799 | -9223372036854775800 |                | 2147483647 | -2147483648 |     8 |  2147483639 |   -2147483640 |             |        32767 |       -32768 |          8 |            32759 |             -32760 |                  | 3.40282e+38 | -3.40282e+38 | 3.14286 |  25.1429 |              | 1.79769313486e+308 | -1.79769313486e+308 | 3.14285714286 | 25.1428571429 |               | t            |                 | 8            | \x08\x08\x08\x08\x08\x08\x08\x08 |                 | 8           | \x08\x08\x08\x08\x08\x08\x08\x08 |                | 9223372036854775807000 | -9223372036854775808000 |         8 | 9223372036854775806992 | -9223372036854775807992 |                 | 8         | \x08\x08\x08\x08\x08\x08\x08\x08 | 
+ time,time,time,time,time,time,time,time,time,time,timestamp,timestamp,timestamp,timestamp,date,date,date,date,date,date,date,date,bigint,bigint,bigint,bigint,bigint,bigint,int,int,int,int,int,int,smallint,smallint,smallint,smallint,smallint,smallint,real,real,real,real,real,float,float,float,float,float,boolean,boolean,varchar,varchar,varchar,bpchar,bpchar,bpchar,numeric,numeric,numeric,numeric,numeric,numeric,text,text,text |          9 | 09:09:09  | 09:09:09.9 | 09:09:09  | 21:09:00  | 09:09:09.9 | 09:09:09  | 09:09:00  | 09:09:09  | 09:09:09  |              | Sun Oct 10 09:09:09 0010 | Sun Oct 10 09:09:09 0010 | Mon May 10 09:09:09 0010 |                   | 10-10-0010 | 05-10-0010 | 10-10-0010 | 05-10-0010 | 05-10-0010 | 05-10-0010 | 05-10-0010 BC |              | 9223372036854775807 | -9223372036854775808 |        9 | 9223372036854775798 | -9223372036854775799 |                | 2147483647 | -2147483648 |     9 |  2147483638 |   -2147483639 |             |        32767 |       -32768 |          9 |            32758 |             -32759 |                  | 3.40282e+38 | -3.40282e+38 | 3.14286 |  28.2857 |              | 1.79769313486e+308 | -1.79769313486e+308 | 3.14285714286 | 28.2857142857 |               | f            |                 | 9            | skip                             |                 | 9           | skip                             |                | 9223372036854775807000 | -9223372036854775808000 |         9 | 9223372036854775806991 | -9223372036854775807991 |                 | 9         | skip                             | 
+(10 rows)
+
+(select * from all_readhdfs_mapreduce except select * from all_readhdfs_mapred) union (select * from all_readhdfs_mapred except select * from all_readhdfs_mapreduce);
+ datatype_all | xcount_all | col1_time | col2_time | col3_time | col4_time | col5_time | col6_time | col7_time | col8_time | col9_time | nullcol_time | col1_timestamp | col2_timestamp | col3_timestamp | nullcol_timestamp | col1_date | col2_date | col3_date | col4_date | col5_date | col6_date | col7_date | nullcol_date | max_bigint | min_bigint | x_bigint | reverse_bigint | increment_bigint | nullcol_bigint | max_int | min_int | x_int | reverse_int | increment_int | nullcol_int | max_smallint | min_smallint | x_smallint | reverse_smallint | increment_smallint | nullcol_smallint | max_real | min_real | pi_real | pix_real | nullcol_real | max_float | min_float | pi_float | pix_float | nullcol_float | col1_boolean | nullcol_boolean | col1_varchar | col2_varchar | nullcol_varchar | col1_bpchar | col2_bpchar | nullcol_bpchar | max_numeric | min_numeric | x_numeric | reverse_numeric | increment_numeric | nullcol_numeric | col1_text | col2_text | nullcol_text 
+--------------+------------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+--------------+----------------+----------------+----------------+-------------------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+--------------+------------+------------+----------+----------------+------------------+----------------+---------+---------+-------+-------------+---------------+-------------+--------------+--------------+------------+------------------+--------------------+------------------+----------+----------+---------+----------+--------------+-----------+-----------+----------+-----------+---------------+--------------+-----------------+--------------+--------------+-----------------+-------------+-------------+----------------+-------------+-------------+-----------+-----------------+-------------------+-----------------+-----------+-----------+--------------
+(0 rows)
+
+\!/home/gpadmin/gpdb/gpAux/extensions/gphdfs/regression/runcmd -DcompressionType=block javaclasses/TestHadoopIntegration mapreduce Mapreduce_mapper_TextIn /plaintext/all.txt /mapreduce/blockcomp/all
+16/09/29 23:57:21 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS
+16/09/29 23:57:22 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+16/09/29 23:57:23 INFO Configuration.deprecation: session.id is deprecated. Instead, use dfs.metrics.session-id
+16/09/29 23:57:23 INFO jvm.JvmMetrics: Initializing JVM Metrics with processName=JobTracker, sessionId=
+16/09/29 23:57:23 WARN mapreduce.JobResourceUploader: Hadoop command-line option parsing not performed. Implement the Tool interface and execute your application with ToolRunner to remedy this.
+16/09/29 23:57:23 INFO input.FileInputFormat: Total input paths to process : 1
+16/09/29 23:57:23 INFO mapreduce.JobSubmitter: number of splits:1
+16/09/29 23:57:23 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS
+16/09/29 23:57:23 INFO Configuration.deprecation: mapred.job.reduce.memory.mb is deprecated. Instead, use mapreduce.reduce.memory.mb
+16/09/29 23:57:23 INFO Configuration.deprecation: mapred.job.tracker is deprecated. Instead, use mapreduce.jobtracker.address
+16/09/29 23:57:23 INFO Configuration.deprecation: mapred.job.map.memory.mb is deprecated. Instead, use mapreduce.map.memory.mb
+16/09/29 23:57:24 INFO mapreduce.JobSubmitter: Submitting tokens for job: job_local650890294_0001
+16/09/29 23:57:24 INFO mapreduce.Job: The url to track the job: http://localhost:8080/
+16/09/29 23:57:24 INFO mapreduce.Job: Running job: job_local650890294_0001
+16/09/29 23:57:24 INFO mapred.LocalJobRunner: OutputCommitter set in config null
+16/09/29 23:57:24 INFO output.FileOutputCommitter: File Output Committer Algorithm version is 1
+16/09/29 23:57:24 INFO mapred.LocalJobRunner: OutputCommitter is org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter
+16/09/29 23:57:25 INFO mapred.LocalJobRunner: Waiting for map tasks
+16/09/29 23:57:25 INFO mapred.LocalJobRunner: Starting task: attempt_local650890294_0001_m_000000_0
+16/09/29 23:57:25 INFO output.FileOutputCommitter: File Output Committer Algorithm version is 1
+16/09/29 23:57:25 INFO mapred.Task:  Using ResourceCalculatorProcessTree : [ ]
+16/09/29 23:57:25 INFO mapred.MapTask: Processing split: hdfs://10.152.10.234:8020/plaintext/all.txt:0+6727873
+16/09/29 23:57:25 INFO mapred.MapTask: (EQUATOR) 0 kvi 26214396(104857584)
+16/09/29 23:57:25 INFO mapred.MapTask: mapreduce.task.io.sort.mb: 100
+16/09/29 23:57:25 INFO mapred.MapTask: soft limit at 83886080
+16/09/29 23:57:25 INFO mapred.MapTask: bufstart = 0; bufvoid = 104857600
+16/09/29 23:57:25 INFO mapred.MapTask: kvstart = 26214396; length = 6553600
+16/09/29 23:57:25 INFO mapred.MapTask: Map output collector class = org.apache.hadoop.mapred.MapTask$MapOutputBuffer
+16/09/29 23:57:25 INFO mapreduce.Job: Job job_local650890294_0001 running in uber mode : false
+16/09/29 23:57:25 INFO mapreduce.Job:  map 0% reduce 0%
+16/09/29 23:57:26 INFO mapred.LocalJobRunner: 
+16/09/29 23:57:26 INFO mapred.MapTask: Starting flush of map output
+16/09/29 23:57:26 INFO mapred.MapTask: Spilling map output
+16/09/29 23:57:26 INFO mapred.MapTask: bufstart = 0; bufend = 7074920; bufvoid = 104857600
+16/09/29 23:57:26 INFO mapred.MapTask: kvstart = 26214396(104857584); kvend = 26194400(104777600); length = 19997/6553600
+16/09/29 23:57:26 INFO mapred.MapTask: Finished spill 0
+16/09/29 23:57:26 INFO mapred.Task: Task:attempt_local650890294_0001_m_000000_0 is done. And is in the process of committing
+16/09/29 23:57:26 INFO mapred.LocalJobRunner: map
+16/09/29 23:57:26 INFO mapred.Task: Task 'attempt_local650890294_0001_m_000000_0' done.
+16/09/29 23:57:26 INFO mapred.LocalJobRunner: Finishing task: attempt_local650890294_0001_m_000000_0
+16/09/29 23:57:26 INFO mapred.LocalJobRunner: map task executor complete.
+16/09/29 23:57:26 INFO mapred.LocalJobRunner: Waiting for reduce tasks
+16/09/29 23:57:26 INFO mapred.LocalJobRunner: Starting task: attempt_local650890294_0001_r_000000_0
+16/09/29 23:57:26 INFO output.FileOutputCommitter: File Output Committer Algorithm version is 1
+16/09/29 23:57:26 INFO mapred.Task:  Using ResourceCalculatorProcessTree : [ ]
+16/09/29 23:57:26 INFO mapred.ReduceTask: Using ShuffleConsumerPlugin: org.apache.hadoop.mapreduce.task.reduce.Shuffle@8e0191d
+16/09/29 23:57:26 INFO reduce.MergeManagerImpl: MergerManager: memoryLimit=472560416, maxSingleShuffleLimit=118140104, mergeThreshold=311889888, ioSortFactor=10, memToMemMergeOutputsThreshold=10
+16/09/29 23:57:26 INFO reduce.EventFetcher: attempt_local650890294_0001_r_000000_0 Thread started: EventFetcher for fetching Map Completion Events
+16/09/29 23:57:26 INFO reduce.LocalFetcher: localfetcher#1 about to shuffle output of map attempt_local650890294_0001_m_000000_0 decomp: 7094922 len: 7094926 to MEMORY
+16/09/29 23:57:26 INFO reduce.InMemoryMapOutput: Read 7094922 bytes from map-output for attempt_local650890294_0001_m_000000_0
+16/09/29 23:57:26 INFO reduce.MergeManagerImpl: closeInMemoryFile -> map-output of size: 7094922, inMemoryMapOutputs.size() -> 1, commitMemory -> 0, usedMemory ->7094922
+16/09/29 23:57:26 INFO reduce.EventFetcher: EventFetcher is interrupted.. Returning
+16/09/29 23:57:26 INFO mapred.LocalJobRunner: 1 / 1 copied.
+16/09/29 23:57:26 INFO reduce.MergeManagerImpl: finalMerge called with 1 in-memory map-outputs and 0 on-disk map-outputs
+16/09/29 23:57:26 INFO mapred.Merger: Merging 1 sorted segments
+16/09/29 23:57:26 INFO mapred.Merger: Down to the last merge-pass, with 1 segments left of total size: 7094910 bytes
+16/09/29 23:57:26 INFO mapreduce.Job:  map 100% reduce 0%
+16/09/29 23:57:26 INFO reduce.MergeManagerImpl: Merged 1 segments, 7094922 bytes to disk to satisfy reduce memory limit
+16/09/29 23:57:26 INFO reduce.MergeManagerImpl: Merging 1 files, 7094926 bytes from disk
+16/09/29 23:57:26 INFO reduce.MergeManagerImpl: Merging 0 segments, 0 bytes from memory into reduce
+16/09/29 23:57:26 INFO mapred.Merger: Merging 1 sorted segments
+16/09/29 23:57:26 INFO mapred.Merger: Down to the last merge-pass, with 1 segments left of total size: 7094910 bytes
+16/09/29 23:57:26 INFO mapred.LocalJobRunner: 1 / 1 copied.
+16/09/29 23:57:27 INFO compress.CodecPool: Got brand-new compressor [.deflate]
+16/09/29 23:57:27 INFO Configuration.deprecation: mapred.skip.on is deprecated. Instead, use mapreduce.job.skiprecords
+16/09/29 23:57:28 INFO mapred.Task: Task:attempt_local650890294_0001_r_000000_0 is done. And is in the process of committing
+16/09/29 23:57:28 INFO mapred.LocalJobRunner: 1 / 1 copied.
+16/09/29 23:57:28 INFO mapred.Task: Task attempt_local650890294_0001_r_000000_0 is allowed to commit now
+16/09/29 23:57:28 INFO output.FileOutputCommitter: Saved output of task 'attempt_local650890294_0001_r_000000_0' to hdfs://10.152.10.234:8020/mapreduce/blockcomp/all/_temporary/0/task_local650890294_0001_r_000000
+16/09/29 23:57:28 INFO mapred.LocalJobRunner: reduce > reduce
+16/09/29 23:57:28 INFO mapred.Task: Task 'attempt_local650890294_0001_r_000000_0' done.
+16/09/29 23:57:28 INFO mapred.LocalJobRunner: Finishing task: attempt_local650890294_0001_r_000000_0
+16/09/29 23:57:28 INFO mapred.LocalJobRunner: reduce task executor complete.
+16/09/29 23:57:28 INFO mapreduce.Job:  map 100% reduce 100%
+16/09/29 23:57:28 INFO mapreduce.Job: Job job_local650890294_0001 completed successfully
+16/09/29 23:57:28 INFO mapreduce.Job: Counters: 35
+	File System Counters
+		FILE: Number of bytes read=14227420
+		FILE: Number of bytes written=21881598
+		FILE: Number of read operations=0
+		FILE: Number of large read operations=0
+		FILE: Number of write operations=0
+		HDFS: Number of bytes read=13455746
+		HDFS: Number of bytes written=883793
+		HDFS: Number of read operations=13
+		HDFS: Number of large read operations=0
+		HDFS: Number of write operations=4
+	Map-Reduce Framework
+		Map input records=5000
+		Map output records=5000
+		Map output bytes=7074920
+		Map output materialized bytes=7094926
+		Input split bytes=108
+		Combine input records=0
+		Combine output records=0
+		Reduce input groups=1
+		Reduce shuffle bytes=7094926
+		Reduce input records=5000
+		Reduce output records=5000
+		Spilled Records=10000
+		Shuffled Maps =1
+		Failed Shuffles=0
+		Merged Map outputs=1
+		GC time elapsed (ms)=125
+		Total committed heap usage (bytes)=269623296
+	Shuffle Errors
+		BAD_ID=0
+		CONNECTION=0
+		IO_ERROR=0
+		WRONG_LENGTH=0
+		WRONG_MAP=0
+		WRONG_REDUCE=0
+	File Input Format Counters 
+		Bytes Read=6727873
+	File Output Format Counters 
+		Bytes Written=883793
+create readable external table all_readhdfs_mapreduce_blockcomp(like all_readhdfs_mapreduce) location ('gphdfs://10.152.10.234:8020/mapreduce/blockcomp/all')format 'custom' (formatter='gphdfs_import');
+\!/home/gpadmin/gpdb/gpAux/extensions/gphdfs/regression/runcmd -DcompressionType=block javaclasses/TestHadoopIntegration mapred Mapred_mapper_TextIn /plaintext/all.txt /mapred/blockcomp/all
+16/09/29 23:57:30 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS
+16/09/29 23:57:30 INFO Configuration.deprecation: mapred.job.tracker is deprecated. Instead, use mapreduce.jobtracker.address
+16/09/29 23:57:30 INFO Configuration.deprecation: mapred.job.map.memory.mb is deprecated. Instead, use mapreduce.map.memory.mb
+16/09/29 23:57:30 INFO Configuration.deprecation: mapred.job.reduce.memory.mb is deprecated. Instead, use mapreduce.reduce.memory.mb
+16/09/29 23:57:31 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+16/09/29 23:57:32 INFO Configuration.deprecation: session.id is deprecated. Instead, use dfs.metrics.session-id
+16/09/29 23:57:32 INFO jvm.JvmMetrics: Initializing JVM Metrics with processName=JobTracker, sessionId=
+16/09/29 23:57:32 INFO jvm.JvmMetrics: Cannot initialize JVM Metrics with processName=JobTracker, sessionId= - already initialized
+16/09/29 23:57:32 WARN mapreduce.JobResourceUploader: Hadoop command-line option parsing not performed. Implement the Tool interface and execute your application with ToolRunner to remedy this.
+16/09/29 23:57:32 INFO mapred.FileInputFormat: Total input paths to process : 1
+16/09/29 23:57:32 INFO mapreduce.JobSubmitter: number of splits:1
+16/09/29 23:57:32 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS
+16/09/29 23:57:32 INFO mapreduce.JobSubmitter: Submitting tokens for job: job_local2058369747_0001
+16/09/29 23:57:33 INFO mapreduce.Job: The url to track the job: http://localhost:8080/
+16/09/29 23:57:33 INFO mapred.LocalJobRunner: OutputCommitter set in config null
+16/09/29 23:57:33 INFO mapreduce.Job: Running job: job_local2058369747_0001
+16/09/29 23:57:33 INFO mapred.LocalJobRunner: OutputCommitter is org.apache.hadoop.mapred.FileOutputCommitter
+16/09/29 23:57:33 INFO output.FileOutputCommitter: File Output Committer Algorithm version is 1
+16/09/29 23:57:33 INFO mapred.LocalJobRunner: Waiting for map tasks
+16/09/29 23:57:33 INFO mapred.LocalJobRunner: Starting task: attempt_local2058369747_0001_m_000000_0
+16/09/29 23:57:33 INFO output.FileOutputCommitter: File Output Committer Algorithm version is 1
+16/09/29 23:57:33 INFO mapred.Task:  Using ResourceCalculatorProcessTree : [ ]
+16/09/29 23:57:33 INFO mapred.MapTask: Processing split: hdfs://10.152.10.234:8020/plaintext/all.txt:0+6727873
+16/09/29 23:57:33 INFO mapred.MapTask: numReduceTasks: 1
+16/09/29 23:57:34 INFO mapred.MapTask: (EQUATOR) 0 kvi 26214396(104857584)
+16/09/29 23:57:34 INFO mapred.MapTask: mapreduce.task.io.sort.mb: 100
+16/09/29 23:57:34 INFO mapred.MapTask: soft limit at 83886080
+16/09/29 23:57:34 INFO mapred.MapTask: bufstart = 0; bufvoid = 104857600
+16/09/29 23:57:34 INFO mapred.MapTask: kvstart = 26214396; length = 6553600
+16/09/29 23:57:34 INFO mapred.MapTask: Map output collector class = org.apache.hadoop.mapred.MapTask$MapOutputBuffer
+16/09/29 23:57:34 INFO mapreduce.Job: Job job_local2058369747_0001 running in uber mode : false
+16/09/29 23:57:34 INFO mapreduce.Job:  map 0% reduce 0%
+16/09/29 23:57:35 INFO mapred.LocalJobRunner: 
+16/09/29 23:57:35 INFO mapred.MapTask: Starting flush of map output
+16/09/29 23:57:35 INFO mapred.MapTask: Spilling map output
+16/09/29 23:57:35 INFO mapred.MapTask: bufstart = 0; bufend = 7074920; bufvoid = 104857600
+16/09/29 23:57:35 INFO mapred.MapTask: kvstart = 26214396(104857584); kvend = 26194400(104777600); length = 19997/6553600
+16/09/29 23:57:35 INFO mapred.MapTask: Finished spill 0
+16/09/29 23:57:35 INFO mapred.Task: Task:attempt_local2058369747_0001_m_000000_0 is done. And is in the process of committing
+16/09/29 23:57:35 INFO mapred.LocalJobRunner: hdfs://10.152.10.234:8020/plaintext/all.txt:0+6727873
+16/09/29 23:57:35 INFO mapred.Task: Task 'attempt_local2058369747_0001_m_000000_0' done.
+16/09/29 23:57:35 INFO mapred.LocalJobRunner: Finishing task: attempt_local2058369747_0001_m_000000_0
+16/09/29 23:57:35 INFO mapred.LocalJobRunner: map task executor complete.
+16/09/29 23:57:35 INFO mapred.LocalJobRunner: Waiting for reduce tasks
+16/09/29 23:57:35 INFO mapred.LocalJobRunner: Starting task: attempt_local2058369747_0001_r_000000_0
+16/09/29 23:57:35 INFO output.FileOutputCommitter: File Output Committer Algorithm version is 1
+16/09/29 23:57:35 INFO mapred.Task:  Using ResourceCalculatorProcessTree : [ ]
+16/09/29 23:57:35 INFO mapred.ReduceTask: Using ShuffleConsumerPlugin: org.apache.hadoop.mapreduce.task.reduce.Shuffle@506208e4
+16/09/29 23:57:35 INFO reduce.MergeManagerImpl: MergerManager: memoryLimit=472560416, maxSingleShuffleLimit=118140104, mergeThreshold=311889888, ioSortFactor=10, memToMemMergeOutputsThreshold=10
+16/09/29 23:57:35 INFO reduce.EventFetcher: attempt_local2058369747_0001_r_000000_0 Thread started: EventFetcher for fetching Map Completion Events
+16/09/29 23:57:35 INFO reduce.LocalFetcher: localfetcher#1 about to shuffle output of map attempt_local2058369747_0001_m_000000_0 decomp: 7094922 len: 7094926 to MEMORY
+16/09/29 23:57:35 INFO reduce.InMemoryMapOutput: Read 7094922 bytes from map-output for attempt_local2058369747_0001_m_000000_0
+16/09/29 23:57:35 INFO reduce.MergeManagerImpl: closeInMemoryFile -> map-output of size: 7094922, inMemoryMapOutputs.size() -> 1, commitMemory -> 0, usedMemory ->7094922
+16/09/29 23:57:35 INFO reduce.EventFetcher: EventFetcher is interrupted.. Returning
+16/09/29 23:57:35 INFO mapred.LocalJobRunner: 1 / 1 copied.
+16/09/29 23:57:35 INFO reduce.MergeManagerImpl: finalMerge called with 1 in-memory map-outputs and 0 on-disk map-outputs
+16/09/29 23:57:35 INFO mapred.Merger: Merging 1 sorted segments
+16/09/29 23:57:35 INFO mapred.Merger: Down to the last merge-pass, with 1 segments left of total size: 7094910 bytes
+16/09/29 23:57:35 INFO mapreduce.Job:  map 100% reduce 0%
+16/09/29 23:57:35 INFO reduce.MergeManagerImpl: Merged 1 segments, 7094922 bytes to disk to satisfy reduce memory limit
+16/09/29 23:57:35 INFO reduce.MergeManagerImpl: Merging 1 files, 7094926 bytes from disk
+16/09/29 23:57:35 INFO reduce.MergeManagerImpl: Merging 0 segments, 0 bytes from memory into reduce
+16/09/29 23:57:35 INFO mapred.Merger: Merging 1 sorted segments
+16/09/29 23:57:35 INFO mapred.Merger: Down to the last merge-pass, with 1 segments left of total size: 7094910 bytes
+16/09/29 23:57:35 INFO mapred.LocalJobRunner: 1 / 1 copied.
+16/09/29 23:57:35 INFO compress.CodecPool: Got brand-new compressor [.deflate]
+16/09/29 23:57:36 INFO mapred.Task: Task:attempt_local2058369747_0001_r_000000_0 is done. And is in the process of committing
+16/09/29 23:57:36 INFO mapred.LocalJobRunner: 1 / 1 copied.
+16/09/29 23:57:36 INFO mapred.Task: Task attempt_local2058369747_0001_r_000000_0 is allowed to commit now
+16/09/29 23:57:36 INFO output.FileOutputCommitter: Saved output of task 'attempt_local2058369747_0001_r_000000_0' to hdfs://10.152.10.234:8020/mapred/blockcomp/all/_temporary/0/task_local2058369747_0001_r_000000
+16/09/29 23:57:36 INFO mapred.LocalJobRunner: reduce > reduce
+16/09/29 23:57:36 INFO mapred.Task: Task 'attempt_local2058369747_0001_r_000000_0' done.
+16/09/29 23:57:36 INFO mapred.LocalJobRunner: Finishing task: attempt_local2058369747_0001_r_000000_0
+16/09/29 23:57:36 INFO mapred.LocalJobRunner: reduce task executor complete.
+16/09/29 23:57:37 INFO mapreduce.Job:  map 100% reduce 100%
+16/09/29 23:57:37 INFO mapreduce.Job: Job job_local2058369747_0001 completed successfully
+16/09/29 23:57:37 INFO mapreduce.Job: Counters: 35
+	File System Counters
+		FILE: Number of bytes read=14227394
+		FILE: Number of bytes written=21884500
+		FILE: Number of read operations=0
+		FILE: Number of large read operations=0
+		FILE: Number of write operations=0
+		HDFS: Number of bytes read=13455746
+		HDFS: Number of bytes written=883793
+		HDFS: Number of read operations=13
+		HDFS: Number of large read operations=0
+		HDFS: Number of write operations=4
+	Map-Reduce Framework
+		Map input records=5000
+		Map output records=5000
+		Map output bytes=7074920
+		Map output materialized bytes=7094926
+		Input split bytes=95
+		Combine input records=0
+		Combine output records=0
+		Reduce input groups=1
+		Reduce shuffle bytes=7094926
+		Reduce input records=5000
+		Reduce output records=5000
+		Spilled Records=10000
+		Shuffled Maps =1
+		Failed Shuffles=0
+		Merged Map outputs=1
+		GC time elapsed (ms)=109
+		Total committed heap usage (bytes)=269623296
+	Shuffle Errors
+		BAD_ID=0
+		CONNECTION=0
+		IO_ERROR=0
+		WRONG_LENGTH=0
+		WRONG_MAP=0
+		WRONG_REDUCE=0
+	File Input Format Counters 
+		Bytes Read=6727873
+	File Output Format Counters 
+		Bytes Written=883793
+create readable external table all_readhdfs_mapred_blockcomp(like all_readhdfs_mapreduce) location ('gphdfs://10.152.10.234:8020/mapred/blockcomp/all')format 'custom' (formatter='gphdfs_import');
+(select * from all_readhdfs_mapreduce_blockcomp except select * from all_readhdfs_mapred_blockcomp) union (select * from all_readhdfs_mapred_blockcomp except select * from all_readhdfs_mapreduce_blockcomp);
+ datatype_all | xcount_all | col1_time | col2_time | col3_time | col4_time | col5_time | col6_time | col7_time | col8_time | col9_time | nullcol_time | col1_timestamp | col2_timestamp | col3_timestamp | nullcol_timestamp | col1_date | col2_date | col3_date | col4_date | col5_date | col6_date | col7_date | nullcol_date | max_bigint | min_bigint | x_bigint | reverse_bigint | increment_bigint | nullcol_bigint | max_int | min_int | x_int | reverse_int | increment_int | nullcol_int | max_smallint | min_smallint | x_smallint | reverse_smallint | increment_smallint | nullcol_smallint | max_real | min_real | pi_real | pix_real | nullcol_real | max_float | min_float | pi_float | pix_float | nullcol_float | col1_boolean | nullcol_boolean | col1_varchar | col2_varchar | nullcol_varchar | col1_bpchar | col2_bpchar | nullcol_bpchar | max_numeric | min_numeric | x_numeric | reverse_numeric | increment_numeric | nullcol_numeric | col1_text | col2_text | nullcol_text 
+--------------+------------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+--------------+----------------+----------------+----------------+-------------------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+--------------+------------+------------+----------+----------------+------------------+----------------+---------+---------+-------+-------------+---------------+-------------+--------------+--------------+------------+------------------+--------------------+------------------+----------+----------+---------+----------+--------------+-----------+-----------+----------+-----------+---------------+--------------+-----------------+--------------+--------------+-----------------+-------------+-------------+----------------+-------------+-------------+-----------+-----------------+-------------------+-----------------+-----------+-----------+--------------
+(0 rows)
+
+\!/home/gpadmin/gpdb/gpAux/extensions/gphdfs/regression/runcmd -DcompressionType=record javaclasses/TestHadoopIntegration mapreduce Mapreduce_mapper_TextIn /plaintext/all.txt /mapreduce/recordcomp/all
+16/09/29 23:58:19 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS
+16/09/29 23:58:20 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+16/09/29 23:58:21 INFO Configuration.deprecation: session.id is deprecated. Instead, use dfs.metrics.session-id
+16/09/29 23:58:21 INFO jvm.JvmMetrics: Initializing JVM Metrics with processName=JobTracker, sessionId=
+16/09/29 23:58:21 WARN mapreduce.JobResourceUploader: Hadoop command-line option parsing not performed. Implement the Tool interface and execute your application with ToolRunner to remedy this.
+16/09/29 23:58:21 INFO input.FileInputFormat: Total input paths to process : 1
+16/09/29 23:58:22 INFO mapreduce.JobSubmitter: number of splits:1
+16/09/29 23:58:22 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS
+16/09/29 23:58:22 INFO Configuration.deprecation: mapred.job.reduce.memory.mb is deprecated. Instead, use mapreduce.reduce.memory.mb
+16/09/29 23:58:22 INFO Configuration.deprecation: mapred.job.tracker is deprecated. Instead, use mapreduce.jobtracker.address
+16/09/29 23:58:22 INFO Configuration.deprecation: mapred.job.map.memory.mb is deprecated. Instead, use mapreduce.map.memory.mb
+16/09/29 23:58:22 INFO mapreduce.JobSubmitter: Submitting tokens for job: job_local716485268_0001
+16/09/29 23:58:23 INFO mapreduce.Job: The url to track the job: http://localhost:8080/
+16/09/29 23:58:23 INFO mapreduce.Job: Running job: job_local716485268_0001
+16/09/29 23:58:23 INFO mapred.LocalJobRunner: OutputCommitter set in config null
+16/09/29 23:58:23 INFO output.FileOutputCommitter: File Output Committer Algorithm version is 1
+16/09/29 23:58:23 INFO mapred.LocalJobRunner: OutputCommitter is org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter
+16/09/29 23:58:23 INFO mapred.LocalJobRunner: Waiting for map tasks
+16/09/29 23:58:23 INFO mapred.LocalJobRunner: Starting task: attempt_local716485268_0001_m_000000_0
+16/09/29 23:58:23 INFO output.FileOutputCommitter: File Output Committer Algorithm version is 1
+16/09/29 23:58:23 INFO mapred.Task:  Using ResourceCalculatorProcessTree : [ ]
+16/09/29 23:58:23 INFO mapred.MapTask: Processing split: hdfs://10.152.10.234:8020/plaintext/all.txt:0+6727873
+16/09/29 23:58:23 INFO mapred.MapTask: (EQUATOR) 0 kvi 26214396(104857584)
+16/09/29 23:58:23 INFO mapred.MapTask: mapreduce.task.io.sort.mb: 100
+16/09/29 23:58:23 INFO mapred.MapTask: soft limit at 83886080
+16/09/29 23:58:23 INFO mapred.MapTask: bufstart = 0; bufvoid = 104857600
+16/09/29 23:58:23 INFO mapred.MapTask: kvstart = 26214396; length = 6553600
+16/09/29 23:58:23 INFO mapred.MapTask: Map output collector class = org.apache.hadoop.mapred.MapTask$MapOutputBuffer
+16/09/29 23:58:24 INFO mapreduce.Job: Job job_local716485268_0001 running in uber mode : false
+16/09/29 23:58:24 INFO mapreduce.Job:  map 0% reduce 0%
+16/09/29 23:58:24 INFO mapred.LocalJobRunner: 
+16/09/29 23:58:24 INFO mapred.MapTask: Starting flush of map output
+16/09/29 23:58:24 INFO mapred.MapTask: Spilling map output
+16/09/29 23:58:24 INFO mapred.MapTask: bufstart = 0; bufend = 7074920; bufvoid = 104857600
+16/09/29 23:58:24 INFO mapred.MapTask: kvstart = 26214396(104857584); kvend = 26194400(104777600); length = 19997/6553600
+16/09/29 23:58:24 INFO mapred.MapTask: Finished spill 0
+16/09/29 23:58:24 INFO mapred.Task: Task:attempt_local716485268_0001_m_000000_0 is done. And is in the process of committing
+16/09/29 23:58:24 INFO mapred.LocalJobRunner: map
+16/09/29 23:58:24 INFO mapred.Task: Task 'attempt_local716485268_0001_m_000000_0' done.
+16/09/29 23:58:24 INFO mapred.LocalJobRunner: Finishing task: attempt_local716485268_0001_m_000000_0
+16/09/29 23:58:24 INFO mapred.LocalJobRunner: map task executor complete.
+16/09/29 23:58:24 INFO mapred.LocalJobRunner: Waiting for reduce tasks
+16/09/29 23:58:24 INFO mapred.LocalJobRunner: Starting task: attempt_local716485268_0001_r_000000_0
+16/09/29 23:58:24 INFO output.FileOutputCommitter: File Output Committer Algorithm version is 1
+16/09/29 23:58:24 INFO mapred.Task:  Using ResourceCalculatorProcessTree : [ ]
+16/09/29 23:58:24 INFO mapred.ReduceTask: Using ShuffleConsumerPlugin: org.apache.hadoop.mapreduce.task.reduce.Shuffle@670c6402
+16/09/29 23:58:24 INFO reduce.MergeManagerImpl: MergerManager: memoryLimit=472560416, maxSingleShuffleLimit=118140104, mergeThreshold=311889888, ioSortFactor=10, memToMemMergeOutputsThreshold=10
+16/09/29 23:58:24 INFO reduce.EventFetcher: attempt_local716485268_0001_r_000000_0 Thread started: EventFetcher for fetching Map Completion Events
+16/09/29 23:58:24 INFO reduce.LocalFetcher: localfetcher#1 about to shuffle output of map attempt_local716485268_0001_m_000000_0 decomp: 7094922 len: 7094926 to MEMORY
+16/09/29 23:58:24 INFO reduce.InMemoryMapOutput: Read 7094922 bytes from map-output for attempt_local716485268_0001_m_000000_0
+16/09/29 23:58:24 INFO reduce.MergeManagerImpl: closeInMemoryFile -> map-output of size: 7094922, inMemoryMapOutputs.size() -> 1, commitMemory -> 0, usedMemory ->7094922
+16/09/29 23:58:24 INFO reduce.EventFetcher: EventFetcher is interrupted.. Returning
+16/09/29 23:58:24 INFO mapred.LocalJobRunner: 1 / 1 copied.
+16/09/29 23:58:24 INFO reduce.MergeManagerImpl: finalMerge called with 1 in-memory map-outputs and 0 on-disk map-outputs
+16/09/29 23:58:24 INFO mapred.Merger: Merging 1 sorted segments
+16/09/29 23:58:24 INFO mapred.Merger: Down to the last merge-pass, with 1 segments left of total size: 7094910 bytes
+16/09/29 23:58:25 INFO reduce.MergeManagerImpl: Merged 1 segments, 7094922 bytes to disk to satisfy reduce memory limit
+16/09/29 23:58:25 INFO reduce.MergeManagerImpl: Merging 1 files, 7094926 bytes from disk
+16/09/29 23:58:25 INFO reduce.MergeManagerImpl: Merging 0 segments, 0 bytes from memory into reduce
+16/09/29 23:58:25 INFO mapred.Merger: Merging 1 sorted segments
+16/09/29 23:58:25 INFO mapred.Merger: Down to the last merge-pass, with 1 segments left of total size: 7094910 bytes
+16/09/29 23:58:25 INFO mapred.LocalJobRunner: 1 / 1 copied.
+16/09/29 23:58:25 INFO mapreduce.Job:  map 100% reduce 0%
+16/09/29 23:58:25 INFO compress.CodecPool: Got brand-new compressor [.deflate]
+16/09/29 23:58:25 INFO Configuration.deprecation: mapred.skip.on is deprecated. Instead, use mapreduce.job.skiprecords
+16/09/29 23:58:26 INFO mapred.Task: Task:attempt_local716485268_0001_r_000000_0 is done. And is in the process of committing
+16/09/29 23:58:26 INFO mapred.LocalJobRunner: 1 / 1 copied.
+16/09/29 23:58:26 INFO mapred.Task: Task attempt_local716485268_0001_r_000000_0 is allowed to commit now
+16/09/29 23:58:26 INFO output.FileOutputCommitter: Saved output of task 'attempt_local716485268_0001_r_000000_0' to hdfs://10.152.10.234:8020/mapreduce/recordcomp/all/_temporary/0/task_local716485268_0001_r_000000
+16/09/29 23:58:26 INFO mapred.LocalJobRunner: reduce > reduce
+16/09/29 23:58:26 INFO mapred.Task: Task 'attempt_local716485268_0001_r_000000_0' done.
+16/09/29 23:58:26 INFO mapred.LocalJobRunner: Finishing task: attempt_local716485268_0001_r_000000_0
+16/09/29 23:58:26 INFO mapred.LocalJobRunner: reduce task executor complete.
+16/09/29 23:58:27 INFO mapreduce.Job:  map 100% reduce 100%
+16/09/29 23:58:27 INFO mapreduce.Job: Job job_local716485268_0001 completed successfully
+16/09/29 23:58:27 INFO mapreduce.Job: Counters: 35
+	File System Counters
+		FILE: Number of bytes read=14227420
+		FILE: Number of bytes written=21881606
+		FILE: Number of read operations=0
+		FILE: Number of large read operations=0
+		FILE: Number of write operations=0
+		HDFS: Number of bytes read=13455746
+		HDFS: Number of bytes written=2191205
+		HDFS: Number of read operations=13
+		HDFS: Number of large read operations=0
+		HDFS: Number of write operations=4
+	Map-Reduce Framework
+		Map input records=5000
+		Map output records=5000
+		Map output bytes=7074920
+		Map output materialized bytes=7094926
+		Input split bytes=108
+		Combine input records=0
+		Combine output records=0
+		Reduce input groups=1
+		Reduce shuffle bytes=7094926
+		Reduce input records=5000
+		Reduce output records=5000
+		Spilled Records=10000
+		Shuffled Maps =1
+		Failed Shuffles=0
+		Merged Map outputs=1
+		GC time elapsed (ms)=119
+		Total committed heap usage (bytes)=269623296
+	Shuffle Errors
+		BAD_ID=0
+		CONNECTION=0
+		IO_ERROR=0
+		WRONG_LENGTH=0
+		WRONG_MAP=0
+		WRONG_REDUCE=0
+	File Input Format Counters 
+		Bytes Read=6727873
+	File Output Format Counters 
+		Bytes Written=2191205
+create readable external table all_readhdfs_mapreduce_recordcomp(like all_readhdfs_mapreduce) location ('gphdfs://10.152.10.234:8020/mapreduce/recordcomp/all')format 'custom' (formatter='gphdfs_import');
+\!/home/gpadmin/gpdb/gpAux/extensions/gphdfs/regression/runcmd -DcompressionType=record javaclasses/TestHadoopIntegration mapred Mapred_mapper_TextIn /plaintext/all.txt /mapred/recordcomp/all
+16/09/29 23:58:28 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS
+16/09/29 23:58:28 INFO Configuration.deprecation: mapred.job.tracker is deprecated. Instead, use mapreduce.jobtracker.address
+16/09/29 23:58:28 INFO Configuration.deprecation: mapred.job.map.memory.mb is deprecated. Instead, use mapreduce.map.memory.mb
+16/09/29 23:58:28 INFO Configuration.deprecation: mapred.job.reduce.memory.mb is deprecated. Instead, use mapreduce.reduce.memory.mb
+16/09/29 23:58:29 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+16/09/29 23:58:30 INFO Configuration.deprecation: session.id is deprecated. Instead, use dfs.metrics.session-id
+16/09/29 23:58:30 INFO jvm.JvmMetrics: Initializing JVM Metrics with processName=JobTracker, sessionId=
+16/09/29 23:58:30 INFO jvm.JvmMetrics: Cannot initialize JVM Metrics with processName=JobTracker, sessionId= - already initialized
+16/09/29 23:58:30 WARN mapreduce.JobResourceUploader: Hadoop command-line option parsing not performed. Implement the Tool interface and execute your application with ToolRunner to remedy this.
+16/09/29 23:58:30 INFO mapred.FileInputFormat: Total input paths to process : 1
+16/09/29 23:58:30 INFO mapreduce.JobSubmitter: number of splits:1
+16/09/29 23:58:30 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS
+16/09/29 23:58:31 INFO mapreduce.JobSubmitter: Submitting tokens for job: job_local619301080_0001
+16/09/29 23:58:31 INFO mapreduce.Job: The url to track the job: http://localhost:8080/
+16/09/29 23:58:31 INFO mapreduce.Job: Running job: job_local619301080_0001
+16/09/29 23:58:31 INFO mapred.LocalJobRunner: OutputCommitter set in config null
+16/09/29 23:58:31 INFO mapred.LocalJobRunner: OutputCommitter is org.apache.hadoop.mapred.FileOutputCommitter
+16/09/29 23:58:31 INFO output.FileOutputCommitter: File Output Committer Algorithm version is 1
+16/09/29 23:58:31 INFO mapred.LocalJobRunner: Waiting for map tasks
+16/09/29 23:58:31 INFO mapred.LocalJobRunner: Starting task: attempt_local619301080_0001_m_000000_0
+16/09/29 23:58:32 INFO output.FileOutputCommitter: File Output Committer Algorithm version is 1
+16/09/29 23:58:32 INFO mapred.Task:  Using ResourceCalculatorProcessTree : [ ]
+16/09/29 23:58:32 INFO mapred.MapTask: Processing split: hdfs://10.152.10.234:8020/plaintext/all.txt:0+6727873
+16/09/29 23:58:32 INFO mapred.MapTask: numReduceTasks: 1
+16/09/29 23:58:32 INFO mapred.MapTask: (EQUATOR) 0 kvi 26214396(104857584)
+16/09/29 23:58:32 INFO mapred.MapTask: mapreduce.task.io.sort.mb: 100
+16/09/29 23:58:32 INFO mapred.MapTask: soft limit at 83886080
+16/09/29 23:58:32 INFO mapred.MapTask: bufstart = 0; bufvoid = 104857600
+16/09/29 23:58:32 INFO mapred.MapTask: kvstart = 26214396; length = 6553600
+16/09/29 23:58:32 INFO mapred.MapTask: Map output collector class = org.apache.hadoop.mapred.MapTask$MapOutputBuffer
+16/09/29 23:58:32 INFO mapreduce.Job: Job job_local619301080_0001 running in uber mode : false
+16/09/29 23:58:32 INFO mapreduce.Job:  map 0% reduce 0%
+16/09/29 23:58:33 INFO mapred.LocalJobRunner: 
+16/09/29 23:58:33 INFO mapred.MapTask: Starting flush of map output
+16/09/29 23:58:33 INFO mapred.MapTask: Spilling map output
+16/09/29 23:58:33 INFO mapred.MapTask: bufstart = 0; bufend = 7074920; bufvoid = 104857600
+16/09/29 23:58:33 INFO mapred.MapTask: kvstart = 26214396(104857584); kvend = 26194400(104777600); length = 19997/6553600
+16/09/29 23:58:33 INFO mapred.MapTask: Finished spill 0
+16/09/29 23:58:33 INFO mapred.Task: Task:attempt_local619301080_0001_m_000000_0 is done. And is in the process of committing
+16/09/29 23:58:33 INFO mapred.LocalJobRunner: hdfs://10.152.10.234:8020/plaintext/all.txt:0+6727873
+16/09/29 23:58:33 INFO mapred.Task: Task 'attempt_local619301080_0001_m_000000_0' done.
+16/09/29 23:58:33 INFO mapred.LocalJobRunner: Finishing task: attempt_local619301080_0001_m_000000_0
+16/09/29 23:58:33 INFO mapred.LocalJobRunner: map task executor complete.
+16/09/29 23:58:33 INFO mapred.LocalJobRunner: Waiting for reduce tasks
+16/09/29 23:58:33 INFO mapred.LocalJobRunner: Starting task: attempt_local619301080_0001_r_000000_0
+16/09/29 23:58:33 INFO output.FileOutputCommitter: File Output Committer Algorithm version is 1
+16/09/29 23:58:33 INFO mapred.Task:  Using ResourceCalculatorProcessTree : [ ]
+16/09/29 23:58:33 INFO mapred.ReduceTask: Using ShuffleConsumerPlugin: org.apache.hadoop.mapreduce.task.reduce.Shuffle@688b6a2c
+16/09/29 23:58:33 INFO reduce.MergeManagerImpl: MergerManager: memoryLimit=472560416, maxSingleShuffleLimit=118140104, mergeThreshold=311889888, ioSortFactor=10, memToMemMergeOutputsThreshold=10
+16/09/29 23:58:33 INFO reduce.EventFetcher: attempt_local619301080_0001_r_000000_0 Thread started: EventFetcher for fetching Map Completion Events
+16/09/29 23:58:33 INFO reduce.LocalFetcher: localfetcher#1 about to shuffle output of map attempt_local619301080_0001_m_000000_0 decomp: 7094922 len: 7094926 to MEMORY
+16/09/29 23:58:33 INFO reduce.InMemoryMapOutput: Read 7094922 bytes from map-output for attempt_local619301080_0001_m_000000_0
+16/09/29 23:58:33 INFO reduce.MergeManagerImpl: closeInMemoryFile -> map-output of size: 7094922, inMemoryMapOutputs.size() -> 1, commitMemory -> 0, usedMemory ->7094922
+16/09/29 23:58:33 INFO reduce.EventFetcher: EventFetcher is interrupted.. Returning
+16/09/29 23:58:33 INFO mapred.LocalJobRunner: 1 / 1 copied.
+16/09/29 23:58:33 INFO reduce.MergeManagerImpl: finalMerge called with 1 in-memory map-outputs and 0 on-disk map-outputs
+16/09/29 23:58:33 INFO mapred.Merger: Merging 1 sorted segments
+16/09/29 23:58:33 INFO mapred.Merger: Down to the last merge-pass, with 1 segments left of total size: 7094910 bytes
+16/09/29 23:58:33 INFO reduce.MergeManagerImpl: Merged 1 segments, 7094922 bytes to disk to satisfy reduce memory limit
+16/09/29 23:58:33 INFO reduce.MergeManagerImpl: Merging 1 files, 7094926 bytes from disk
+16/09/29 23:58:33 INFO reduce.MergeManagerImpl: Merging 0 segments, 0 bytes from memory into reduce
+16/09/29 23:58:33 INFO mapred.Merger: Merging 1 sorted segments
+16/09/29 23:58:33 INFO mapred.Merger: Down to the last merge-pass, with 1 segments left of total size: 7094910 bytes
+16/09/29 23:58:33 INFO mapred.LocalJobRunner: 1 / 1 copied.
+16/09/29 23:58:33 INFO mapreduce.Job:  map 100% reduce 0%
+16/09/29 23:58:33 INFO compress.CodecPool: Got brand-new compressor [.deflate]
+16/09/29 23:58:35 INFO mapred.Task: Task:attempt_local619301080_0001_r_000000_0 is done. And is in the process of committing
+16/09/29 23:58:35 INFO mapred.LocalJobRunner: 1 / 1 copied.
+16/09/29 23:58:35 INFO mapred.Task: Task attempt_local619301080_0001_r_000000_0 is allowed to commit now
+16/09/29 23:58:35 INFO output.FileOutputCommitter: Saved output of task 'attempt_local619301080_0001_r_000000_0' to hdfs://10.152.10.234:8020/mapred/recordcomp/all/_temporary/0/task_local619301080_0001_r_000000
+16/09/29 23:58:35 INFO mapred.LocalJobRunner: reduce > reduce
+16/09/29 23:58:35 INFO mapred.Task: Task 'attempt_local619301080_0001_r_000000_0' done.
+16/09/29 23:58:35 INFO mapred.LocalJobRunner: Finishing task: attempt_local619301080_0001_r_000000_0
+16/09/29 23:58:35 INFO mapred.LocalJobRunner: reduce task executor complete.
+16/09/29 23:58:35 INFO mapreduce.Job:  map 100% reduce 100%
+16/09/29 23:58:35 INFO mapreduce.Job: Job job_local619301080_0001 completed successfully
+16/09/29 23:58:35 INFO mapreduce.Job: Counters: 35
+	File System Counters
+		FILE: Number of bytes read=14227394
+		FILE: Number of bytes written=21881500
+		FILE: Number of read operations=0
+		FILE: Number of large read operations=0
+		FILE: Number of write operations=0
+		HDFS: Number of bytes read=13455746
+		HDFS: Number of bytes written=2191205
+		HDFS: Number of read operations=13
+		HDFS: Number of large read operations=0
+		HDFS: Number of write operations=4
+	Map-Reduce Framework
+		Map input records=5000
+		Map output records=5000
+		Map output bytes=7074920
+		Map output materialized bytes=7094926
+		Input split bytes=95
+		Combine input records=0
+		Combine output records=0
+		Reduce input groups=1
+		Reduce shuffle bytes=7094926
+		Reduce input records=5000
+		Reduce output records=5000
+		Spilled Records=10000
+		Shuffled Maps =1
+		Failed Shuffles=0
+		Merged Map outputs=1
+		GC time elapsed (ms)=89
+		Total committed heap usage (bytes)=269623296
+	Shuffle Errors
+		BAD_ID=0
+		CONNECTION=0
+		IO_ERROR=0
+		WRONG_LENGTH=0
+		WRONG_MAP=0
+		WRONG_REDUCE=0
+	File Input Format Counters 
+		Bytes Read=6727873
+	File Output Format Counters 
+		Bytes Written=2191205
+create readable external table all_readhdfs_mapred_recordcomp(like all_readhdfs_mapreduce) location ('gphdfs://10.152.10.234:8020/mapred/recordcomp/all')format 'custom' (formatter='gphdfs_import');
+(select * from all_readhdfs_mapreduce_recordcomp except select * from all_readhdfs_mapred_recordcomp) union (select * from all_readhdfs_mapred_recordcomp except select * from all_readhdfs_mapreduce_recordcomp);
+ datatype_all | xcount_all | col1_time | col2_time | col3_time | col4_time | col5_time | col6_time | col7_time | col8_time | col9_time | nullcol_time | col1_timestamp | col2_timestamp | col3_timestamp | nullcol_timestamp | col1_date | col2_date | col3_date | col4_date | col5_date | col6_date | col7_date | nullcol_date | max_bigint | min_bigint | x_bigint | reverse_bigint | increment_bigint | nullcol_bigint | max_int | min_int | x_int | reverse_int | increment_int | nullcol_int | max_smallint | min_smallint | x_smallint | reverse_smallint | increment_smallint | nullcol_smallint | max_real | min_real | pi_real | pix_real | nullcol_real | max_float | min_float | pi_float | pix_float | nullcol_float | col1_boolean | nullcol_boolean | col1_varchar | col2_varchar | nullcol_varchar | col1_bpchar | col2_bpchar | nullcol_bpchar | max_numeric | min_numeric | x_numeric | reverse_numeric | increment_numeric | nullcol_numeric | col1_text | col2_text | nullcol_text 
+--------------+------------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+--------------+----------------+----------------+----------------+-------------------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+--------------+------------+------------+----------+----------------+------------------+----------------+---------+---------+-------+-------------+---------------+-------------+--------------+--------------+------------+------------------+--------------------+------------------+----------+----------+---------+----------+--------------+-----------+-----------+----------+-----------+---------------+--------------+-----------------+--------------+--------------+-----------------+-------------+-------------+----------------+-------------+-------------+-----------+-----------------+-------------------+-----------------+-----------+-----------+--------------
+(0 rows)
+
+(select * from all_readhdfs_mapreduce_recordcomp except select * from all_readhdfs_mapred_blockcomp) union (select * from all_readhdfs_mapred_blockcomp except select * from all_readhdfs_mapreduce_recordcomp);
+ datatype_all | xcount_all | col1_time | col2_time | col3_time | col4_time | col5_time | col6_time | col7_time | col8_time | col9_time | nullcol_time | col1_timestamp | col2_timestamp | col3_timestamp | nullcol_timestamp | col1_date | col2_date | col3_date | col4_date | col5_date | col6_date | col7_date | nullcol_date | max_bigint | min_bigint | x_bigint | reverse_bigint | increment_bigint | nullcol_bigint | max_int | min_int | x_int | reverse_int | increment_int | nullcol_int | max_smallint | min_smallint | x_smallint | reverse_smallint | increment_smallint | nullcol_smallint | max_real | min_real | pi_real | pix_real | nullcol_real | max_float | min_float | pi_float | pix_float | nullcol_float | col1_boolean | nullcol_boolean | col1_varchar | col2_varchar | nullcol_varchar | col1_bpchar | col2_bpchar | nullcol_bpchar | max_numeric | min_numeric | x_numeric | reverse_numeric | increment_numeric | nullcol_numeric | col1_text | col2_text | nullcol_text 
+--------------+------------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+--------------+----------------+----------------+----------------+-------------------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+--------------+------------+------------+----------+----------------+------------------+----------------+---------+---------+-------+-------------+---------------+-------------+--------------+--------------+------------+------------------+--------------------+------------------+----------+----------+---------+----------+--------------+-----------+-----------+----------+-----------+---------------+--------------+-----------------+--------------+--------------+-----------------+-------------+-------------+----------------+-------------+-------------+-----------+-----------------+-------------------+-----------------+-----------+-----------+--------------
+(0 rows)
+
+(select * from all_readhdfs_mapreduce except select * from all_readhdfs_mapred_recordcomp) union (select * from all_readhdfs_mapred_recordcomp except select * from all_readhdfs_mapreduce);
+ datatype_all | xcount_all | col1_time | col2_time | col3_time | col4_time | col5_time | col6_time | col7_time | col8_time | col9_time | nullcol_time | col1_timestamp | col2_timestamp | col3_timestamp | nullcol_timestamp | col1_date | col2_date | col3_date | col4_date | col5_date | col6_date | col7_date | nullcol_date | max_bigint | min_bigint | x_bigint | reverse_bigint | increment_bigint | nullcol_bigint | max_int | min_int | x_int | reverse_int | increment_int | nullcol_int | max_smallint | min_smallint | x_smallint | reverse_smallint | increment_smallint | nullcol_smallint | max_real | min_real | pi_real | pix_real | nullcol_real | max_float | min_float | pi_float | pix_float | nullcol_float | col1_boolean | nullcol_boolean | col1_varchar | col2_varchar | nullcol_varchar | col1_bpchar | col2_bpchar | nullcol_bpchar | max_numeric | min_numeric | x_numeric | reverse_numeric | increment_numeric | nullcol_numeric | col1_text | col2_text | nullcol_text 
+--------------+------------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+--------------+----------------+----------------+----------------+-------------------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+--------------+------------+------------+----------+----------------+------------------+----------------+---------+---------+-------+-------------+---------------+-------------+--------------+--------------+------------+------------------+--------------------+------------------+----------+----------+---------+----------+--------------+-----------+-----------+----------+-----------+---------------+--------------+-----------------+--------------+--------------+-----------------+-------------+-------------+----------------+-------------+-------------+-----------+-----------------+-------------------+-----------------+-----------+-----------+--------------
+(0 rows)
+
+(select * from all_readhdfs_mapreduce except select * from all_heap) union (select * from all_heap except select * from all_readhdfs_mapreduce);
+ datatype_all | xcount_all | col1_time | col2_time | col3_time | col4_time | col5_time | col6_time | col7_time | col8_time | col9_time | nullcol_time | col1_timestamp | col2_timestamp | col3_timestamp | nullcol_timestamp | col1_date | col2_date | col3_date | col4_date | col5_date | col6_date | col7_date | nullcol_date | max_bigint | min_bigint | x_bigint | reverse_bigint | increment_bigint | nullcol_bigint | max_int | min_int | x_int | reverse_int | increment_int | nullcol_int | max_smallint | min_smallint | x_smallint | reverse_smallint | increment_smallint | nullcol_smallint | max_real | min_real | pi_real | pix_real | nullcol_real | max_float | min_float | pi_float | pix_float | nullcol_float | col1_boolean | nullcol_boolean | col1_varchar | col2_varchar | nullcol_varchar | col1_bpchar | col2_bpchar | nullcol_bpchar | max_numeric | min_numeric | x_numeric | reverse_numeric | increment_numeric | nullcol_numeric | col1_text | col2_text | nullcol_text 
+--------------+------------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+--------------+----------------+----------------+----------------+-------------------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+--------------+------------+------------+----------+----------------+------------------+----------------+---------+---------+-------+-------------+---------------+-------------+--------------+--------------+------------+------------------+--------------------+------------------+----------+----------+---------+----------+--------------+-----------+-----------+----------+-----------+---------------+--------------+-----------------+--------------+--------------+-----------------+-------------+-------------+----------------+-------------+-------------+-----------+-----------------+-------------------+-----------------+-----------+-----------+--------------
+(0 rows)
+
+--start_ignore
+\!/usr/hdp/2.3.2.0-2950/hadoop/bin/hadoop fs -rm -r /mapreduce/all
+16/09/30 00:01:23 INFO fs.TrashPolicyDefault: Namenode trash configuration: Deletion interval = 360 minutes, Emptier interval = 0 minutes.
+Moved: 'hdfs://10.152.10.234:8020/mapreduce/all' to trash at: hdfs://10.152.10.234:8020/user/hdfs/.Trash/Current
+\!/usr/hdp/2.3.2.0-2950/hadoop/bin/hadoop fs -rm -r /mapred/all
+16/09/30 00:01:26 INFO fs.TrashPolicyDefault: Namenode trash configuration: Deletion interval = 360 minutes, Emptier interval = 0 minutes.
+Moved: 'hdfs://10.152.10.234:8020/mapred/all' to trash at: hdfs://10.152.10.234:8020/user/hdfs/.Trash/Current
+--end_ignore
+--start_ignore
+\!/usr/hdp/2.3.2.0-2950/hadoop/bin/hadoop fs -rm -r /mapreduce/*
+16/09/30 00:01:30 INFO fs.TrashPolicyDefault: Namenode trash configuration: Deletion interval = 360 minutes, Emptier interval = 0 minutes.
+Moved: 'hdfs://10.152.10.234:8020/mapreduce/blockcomp' to trash at: hdfs://10.152.10.234:8020/user/hdfs/.Trash/Current
+16/09/30 00:01:30 INFO fs.TrashPolicyDefault: Namenode trash configuration: Deletion interval = 360 minutes, Emptier interval = 0 minutes.
+Moved: 'hdfs://10.152.10.234:8020/mapreduce/recordcomp' to trash at: hdfs://10.152.10.234:8020/user/hdfs/.Trash/Current
+\!/usr/hdp/2.3.2.0-2950/hadoop/bin/hadoop fs -rm -r /mapred/*
+16/09/30 00:01:33 INFO fs.TrashPolicyDefault: Namenode trash configuration: Deletion interval = 360 minutes, Emptier interval = 0 minutes.
+Moved: 'hdfs://10.152.10.234:8020/mapred/blockcomp' to trash at: hdfs://10.152.10.234:8020/user/hdfs/.Trash/Current
+16/09/30 00:01:33 INFO fs.TrashPolicyDefault: Namenode trash configuration: Deletion interval = 360 minutes, Emptier interval = 0 minutes.
+Moved: 'hdfs://10.152.10.234:8020/mapred/recordcomp' to trash at: hdfs://10.152.10.234:8020/user/hdfs/.Trash/Current
+--end_ignore

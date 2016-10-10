@@ -1,0 +1,52 @@
+\echo --start_ignore
+--start_ignore
+drop external table domaintype_write_error;
+ERROR:  table "domaintype_write_error" does not exist
+drop external table domaintype_write;
+ERROR:  table "domaintype_write" does not exist
+drop external table readcty;
+ERROR:  table "readcty" does not exist
+drop table errortable;
+ERROR:  table "errortable" does not exist
+drop domain country_code CASCADE;
+ERROR:  type "country_code" does not exist
+\echo --end_ignore
+--end_ignore
+CREATE DOMAIN country_code char(2) NOT NULL;
+create writable external table domaintype_write(id INT4, country country_code)location ('gphdfs://10.152.10.234:8020/extwrite/domainDataType')format 'custom' (formatter='gphdfs_export');
+insert into domaintype_write values (1,'US');
+insert into domaintype_write values (2,'CH');
+insert into domaintype_write values (3,'HK');
+create readable external table readcty(id INT4, country country_code)location ('gphdfs://10.152.10.234:8020/extwrite/domainDataType')format 'custom' (formatter='gphdfs_import') log errors into errortable segment reject limit 100;
+NOTICE:  Error table "errortable" does not exist. Auto generating an error table with the same name
+select * from readcty order by id;
+ id | country 
+----+---------
+  1 | US
+  2 | CH
+  3 | HK
+(3 rows)
+
+create writable external table domaintype_write_error(id INT4, text text)location ('gphdfs://10.152.10.234:8020/extwrite/domainDataType')format 'custom' (formatter='gphdfs_export');
+insert into domaintype_write_error values (3,'aaa');
+select * from readcty order by id;
+NOTICE:  Found 1 data formatting errors (1 or more input rows). Rejected related input data.
+ id | country 
+----+---------
+  1 | US
+  2 | CH
+  3 | HK
+(3 rows)
+
+select relname,linenum,bytenum,errmsg,rawdata,rawbytes from errortable;
+ relname | linenum | bytenum |                errmsg                | rawdata | rawbytes 
+---------+---------+---------+--------------------------------------+---------+----------
+ readcty |         |         | value too long for type character(2) |         | 
+(1 row)
+
+--start_ignore
+\!/usr/hdp/2.3.2.0-2950/hadoop/bin/hadoop fs -rm -r /mapreduce/*
+rm: `/mapreduce/*': No such file or directory
+\!/usr/hdp/2.3.2.0-2950/hadoop/bin/hadoop fs -rm -r /mapred/*
+rm: `/mapred/*': No such file or directory
+--end_ignore

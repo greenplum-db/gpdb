@@ -1,0 +1,38 @@
+\echo -- start_ignore
+-- start_ignore
+drop  external table varchar_heap;
+ERROR:  table "varchar_heap" does not exist
+drop  external table varchar_writehdfs;
+ERROR:  table "varchar_writehdfs" does not exist
+drop  external table varchar_readhdfs;
+ERROR:  table "varchar_readhdfs" does not exist
+\echo -- end_ignore
+-- end_ignore
+create readable external table varchar_heap(datatype_varchar varchar,x_varchar bigint, col1_varchar varchar,col2_varchar varchar, nullcol_varchar varchar) location ('gphdfs://10.152.10.234:8020/plaintext/varchar.txt')format 'TEXT';
+create writable external table varchar_writehdfs(like varchar_heap) location ('gphdfs://10.152.10.234:8020/extwrite/varchar')format 'custom' (formatter='gphdfs_export');
+NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+create readable external table varchar_readhdfs(like varchar_heap) location ('gphdfs://10.152.10.234:8020/extwrite/varchar') format 'custom' (formatter='gphdfs_import');
+select count(*) from varchar_heap;
+ count 
+-------
+  5000
+(1 row)
+
+insert into varchar_writehdfs select * from varchar_heap;
+select count(*) from varchar_readhdfs;
+ count 
+-------
+  5000
+(1 row)
+
+(select * from varchar_heap except select * from varchar_readhdfs) union (select * from varchar_readhdfs except select * from varchar_heap);
+ datatype_varchar | x_varchar | col1_varchar | col2_varchar | nullcol_varchar 
+------------------+-----------+--------------+--------------+-----------------
+(0 rows)
+
+--start_ignore
+\!/usr/hdp/2.3.2.0-2950/hadoop/bin/hadoop fs -rm -r /mapreduce/*
+rm: `/mapreduce/*': No such file or directory
+\!/usr/hdp/2.3.2.0-2950/hadoop/bin/hadoop fs -rm -r /mapred/*
+rm: `/mapred/*': No such file or directory
+--end_ignore

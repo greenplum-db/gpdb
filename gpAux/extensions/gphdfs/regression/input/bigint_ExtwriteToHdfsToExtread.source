@@ -1,0 +1,42 @@
+\echo --start_ignore
+drop external table bigint_heap;
+drop external table bigint_writehdfs;
+drop external table bigint_verification_mapreduce;
+drop external table bigint_verification_mapred;
+drop external table bigint_verification_blockcomp_mapreduce;
+drop external table bigint_verification_blockcomp_mapred;
+drop external table bigint_verification_recordcomp_mapreduce;
+drop external table bigint_verification_recordcomp_mapred;
+\echo --end_ignore
+
+create readable external table bigint_heap(
+datatype_bigint varchar,xcount_bigint bigint, max_bigint bigint, min_bigint bigint, x_bigint bigint, reverse_bigint bigint, increment_bigint bigint, nullcol_bigint bigint
+--datatype_bigint varchar,xcount_bigint bigint, max_bigint bigint, min_bigint bigint, x_bigint bigint, reverse_bigint bigint, increment_bigint bigint
+) location ('gpfdist://%localhost%:%gpfdistPort%/bigint.txt')format 'TEXT';
+
+create writable external table bigint_writehdfs(like bigint_heap) location ('gphdfs://%HADOOP_HOST%/extwrite/bigint')format 'custom' (formatter='gphdfs_export');
+insert into bigint_writehdfs select * from bigint_heap;
+
+\!%cmdstr% -DcompressionType=none javaclasses/TestHadoopIntegration mapreduce Mapreduce_mapper_GPDB_INOUT /extwrite/bigint /mapreduce/bigint_gpdb/ >/dev/null
+\!%cmdstr% -DcompressionType=none javaclasses/TestHadoopIntegration mapred Mapred_mapper_GPDB_INOUT /extwrite/bigint /mapred/bigint_gpdb/ >/dev/null
+\!%cmdstr% -DcompressionType=block javaclasses/TestHadoopIntegration mapreduce Mapreduce_mapper_GPDB_INOUT /extwrite/bigint /mapreduce/blockcomp/bigint_gpdb/ >/dev/null
+\!%cmdstr% -DcompressionType=block javaclasses/TestHadoopIntegration mapred Mapred_mapper_GPDB_INOUT /extwrite/bigint /mapred/blockcomp/bigint_gpdb/ >/dev/null 
+\!%cmdstr% -DcompressionType=record javaclasses/TestHadoopIntegration mapreduce Mapreduce_mapper_GPDB_INOUT /extwrite/bigint /mapreduce/recordcomp/bigint_gpdb/ >/dev/null
+\!%cmdstr% -DcompressionType=record javaclasses/TestHadoopIntegration mapred Mapred_mapper_GPDB_INOUT /extwrite/bigint /mapred/recordcomp/bigint_gpdb/ >/dev/null
+
+create readable external table bigint_verification_mapreduce(like bigint_heap) location ('gphdfs://%HADOOP_HOST%/mapreduce/bigint_gpdb/')format 'custom' (formatter='gphdfs_import');
+create readable external table bigint_verification_mapred(like bigint_heap) location ('gphdfs://%HADOOP_HOST%/mapred/bigint_gpdb/')format 'custom' (formatter='gphdfs_import');
+create readable external table bigint_verification_blockcomp_mapreduce(like bigint_heap) location ('gphdfs://%HADOOP_HOST%/mapreduce/blockcomp/bigint_gpdb/')format 'custom' (formatter='gphdfs_import');
+create readable external table bigint_verification_blockcomp_mapred(like bigint_heap) location ('gphdfs://%HADOOP_HOST%/mapred/blockcomp/bigint_gpdb/')format 'custom' (formatter='gphdfs_import');
+create readable external table bigint_verification_recordcomp_mapreduce(like bigint_heap) location ('gphdfs://%HADOOP_HOST%/mapreduce/recordcomp/bigint_gpdb/')format 'custom' (formatter='gphdfs_import');
+create readable external table bigint_verification_recordcomp_mapred(like bigint_heap) location ('gphdfs://%HADOOP_HOST%/mapred/recordcomp/bigint_gpdb/')format 'custom' (formatter='gphdfs_import');
+
+(select * from bigint_verification_mapreduce except select * from bigint_verification_mapred) union (select * from bigint_verification_mapred except select * from bigint_verification_mapreduce);
+(select * from bigint_verification_blockcomp_mapreduce except select * from bigint_verification_blockcomp_mapred) union (select * from bigint_verification_blockcomp_mapred except select * from bigint_verification_blockcomp_mapreduce);
+(select * from bigint_verification_recordcomp_mapreduce except select * from bigint_verification_recordcomp_mapred) union (select * from bigint_verification_recordcomp_mapred except select * from bigint_verification_recordcomp_mapreduce);
+(select * from bigint_verification_recordcomp_mapreduce except select * from bigint_verification_blockcomp_mapreduce) union (select * from bigint_verification_blockcomp_mapreduce except select * from bigint_verification_recordcomp_mapreduce);
+(select * from bigint_verification_recordcomp_mapreduce except select * from bigint_verification_mapreduce) union (select * from bigint_verification_mapreduce except select * from bigint_verification_recordcomp_mapreduce);
+(select * from bigint_verification_recordcomp_mapreduce except select * from bigint_heap) union (select * from bigint_heap except select * from bigint_verification_recordcomp_mapreduce);
+
+
+

@@ -1,0 +1,32 @@
+\echo --start_ignore
+--start_ignore
+drop external table writeudt;
+ERROR:  table "writeudt" does not exist
+drop external table readudt;
+ERROR:  table "readudt" does not exist
+drop type mytype CASCADE;
+ERROR:  type "mytype" does not exist
+\echo --end_ignore
+--end_ignore
+CREATE TYPE mytype AS (f1 int, f2 text);
+create writable external table writeudt (id bigint, composit mytype) location ('gphdfs://10.152.10.234:8020/extwrite/udt')FORMAT 'custom' (formatter='gphdfs_export');
+insert into writeudt values (0, (1,'test') );
+insert into writeudt values (1,  (2, '') );
+insert into writeudt values (2, (3, null) );
+insert into writeudt values (3, (12345, 'composittype'));
+create readable external table readudt (id bigint, composit mytype) location ('gphdfs://10.152.10.234:8020/extwrite/udt')FORMAT 'custom' (formatter='gphdfs_import');
+select * from readudt order by id;
+ id |       composit       
+----+----------------------
+  0 | (1,test)
+  1 | (2,"")
+  2 | (3,)
+  3 | (12345,composittype)
+(4 rows)
+
+--start_ignore
+\!/usr/hdp/2.3.2.0-2950/hadoop/bin/hadoop fs -rm -r /mapreduce/*
+rm: `/mapreduce/*': No such file or directory
+\!/usr/hdp/2.3.2.0-2950/hadoop/bin/hadoop fs -rm -r /mapred/*
+rm: `/mapred/*': No such file or directory
+--end_ignore

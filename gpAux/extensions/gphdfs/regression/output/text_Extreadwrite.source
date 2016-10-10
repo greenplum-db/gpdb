@@ -1,0 +1,38 @@
+\echo -- start_ignore
+-- start_ignore
+drop  external table text_heap;
+ERROR:  table "text_heap" does not exist
+drop  external table text_writehdfs;
+ERROR:  table "text_writehdfs" does not exist
+drop  external table text_readhdfs;
+ERROR:  table "text_readhdfs" does not exist
+\echo -- end_ignore
+-- end_ignore
+create readable external table text_heap(datatype_text text,x_text bigint, col1_text text,col2_text text, nullcol_text text) location ('gphdfs://10.152.10.234:8020/plaintext/text.txt')format 'TEXT';
+create writable external table text_writehdfs(like text_heap) location ('gphdfs://10.152.10.234:8020/extwrite/text')format 'custom' (formatter='gphdfs_export');
+NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+create readable external table text_readhdfs(like text_heap) location ('gphdfs://10.152.10.234:8020/extwrite/text') format 'custom' (formatter='gphdfs_import');
+select count(*) from text_heap;
+ count 
+-------
+  5000
+(1 row)
+
+insert into text_writehdfs select * from text_heap;
+select count(*) from text_readhdfs;
+ count 
+-------
+  5000
+(1 row)
+
+(select * from text_heap except select * from text_readhdfs) union (select * from text_readhdfs except select * from text_heap);
+ datatype_text | x_text | col1_text | col2_text | nullcol_text 
+---------------+--------+-----------+-----------+--------------
+(0 rows)
+
+--start_ignore
+\!/usr/hdp/2.3.2.0-2950/hadoop/bin/hadoop fs -rm -r /mapreduce/*
+rm: `/mapreduce/*': No such file or directory
+\!/usr/hdp/2.3.2.0-2950/hadoop/bin/hadoop fs -rm -r /mapred/*
+rm: `/mapred/*': No such file or directory
+--end_ignore

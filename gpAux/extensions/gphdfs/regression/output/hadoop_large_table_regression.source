@@ -1,0 +1,33 @@
+\echo '-- start_ignore'
+-- start_ignore
+DROP EXTERNAL TABLE IF EXISTS large_table;
+NOTICE:  table "large_table" does not exist, skipping
+\echo '-- end_ignore'
+-- end_ignore
+CREATE READABLE EXTERNAL TABLE large_table (
+    id BIGINT,
+    hex VARCHAR,
+    num_recipes BIGINT,
+    borland BIGINT,
+    glibc BIGINT,
+    apple_carbon BIGINT,
+    vax BIGINT,
+    java BIGINT
+)
+LOCATION ('gphdfs://10.152.10.234:8020/plaintext/random_with_seed_1.largetxt')
+FORMAT 'TEXT';
+\! echo $(date +%s) > /home/gpadmin/gpdb/gpAux/extensions/gphdfs/regression/source_replaced/input/gp_large_file_log
+SELECT count(*) FROM large_table;
+  count   
+----------
+ 10000000
+(1 row)
+
+-- Calculate and save elapsed time
+\! echo $(( $(date +%s) - $(cat /home/gpadmin/gpdb/gpAux/extensions/gphdfs/regression/source_replaced/input/gp_large_file_log) )) > /home/gpadmin/gpdb/gpAux/extensions/gphdfs/regression/source_replaced/input/gp_large_file_log
+--start_ignore
+\!/usr/hdp/2.3.2.0-2950/hadoop/bin/hadoop fs -rm -r /mapreduce/*
+rm: `/mapreduce/*': No such file or directory
+\!/usr/hdp/2.3.2.0-2950/hadoop/bin/hadoop fs -rm -r /mapred/*
+rm: `/mapred/*': No such file or directory
+--end_ignore

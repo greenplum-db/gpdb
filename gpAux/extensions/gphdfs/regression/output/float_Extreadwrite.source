@@ -1,0 +1,38 @@
+\echo -- start_ignore
+-- start_ignore
+drop  external table float_heap;
+ERROR:  table "float_heap" does not exist
+drop  external table float_writehdfs;
+ERROR:  table "float_writehdfs" does not exist
+drop  external table float_readhdfs;
+ERROR:  table "float_readhdfs" does not exist
+\echo -- end_ignore
+-- end_ignore
+create readable external table float_heap(datatype_float varchar, x_float bigint, max_float float, min_float float, pi_float float, piX_float float, nullcol_float float) location ('gphdfs://10.152.10.234:8020/plaintext/float.txt')format 'TEXT';
+create writable external table float_writehdfs(like float_heap) location ('gphdfs://10.152.10.234:8020/extwrite/float')format 'custom' (formatter='gphdfs_export');
+NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+create readable external table float_readhdfs(like float_heap) location ('gphdfs://10.152.10.234:8020/extwrite/float') format 'custom' (formatter='gphdfs_import');
+select count(*) from float_heap;
+ count 
+-------
+  5000
+(1 row)
+
+insert into float_writehdfs select * from float_heap;
+select count(*) from float_readhdfs;
+ count 
+-------
+  5000
+(1 row)
+
+(select * from float_heap except select * from float_readhdfs) union (select * from float_readhdfs except select * from float_heap);
+ datatype_float | x_float | max_float | min_float | pi_float | pix_float | nullcol_float 
+----------------+---------+-----------+-----------+----------+-----------+---------------
+(0 rows)
+
+--start_ignore
+\!/usr/hdp/2.3.2.0-2950/hadoop/bin/hadoop fs -rm -r /mapreduce/*
+rm: `/mapreduce/*': No such file or directory
+\!/usr/hdp/2.3.2.0-2950/hadoop/bin/hadoop fs -rm -r /mapred/*
+rm: `/mapred/*': No such file or directory
+--end_ignore

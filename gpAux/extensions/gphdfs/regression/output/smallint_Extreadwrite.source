@@ -1,0 +1,38 @@
+\echo -- start_ignore
+-- start_ignore
+drop  external table smallint_heap;
+ERROR:  table "smallint_heap" does not exist
+drop  external table smallint_writehdfs;
+ERROR:  table "smallint_writehdfs" does not exist
+drop  external table smallint_readhdfs;
+ERROR:  table "smallint_readhdfs" does not exist
+\echo -- end_ignore
+-- end_ignore
+create readable external table smallint_heap(datatype_smallint varchar, xcount_smallint bigint, max_smallint smallint, min_smallint smallint, x_smallint smallint, reverse_smallint smallint, increment_smallint smallint, nullcol_smallint smallint) location ('gphdfs://10.152.10.234:8020/plaintext/smallint.txt')format 'TEXT';
+create writable external table smallint_writehdfs(like smallint_heap) location ('gphdfs://10.152.10.234:8020/extwrite/smallint')format 'custom' (formatter='gphdfs_export');
+NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
+create readable external table smallint_readhdfs(like smallint_heap) location ('gphdfs://10.152.10.234:8020/extwrite/smallint') format 'custom' (formatter='gphdfs_import');
+select count(*) from smallint_heap;
+ count 
+-------
+  5000
+(1 row)
+
+insert into smallint_writehdfs select * from smallint_heap;
+select count(*) from smallint_readhdfs;
+ count 
+-------
+  5000
+(1 row)
+
+(select * from smallint_heap except select * from smallint_readhdfs) union (select * from smallint_readhdfs except select * from smallint_heap);
+ datatype_smallint | xcount_smallint | max_smallint | min_smallint | x_smallint | reverse_smallint | increment_smallint | nullcol_smallint 
+-------------------+-----------------+--------------+--------------+------------+------------------+--------------------+------------------
+(0 rows)
+
+--start_ignore
+\!/usr/hdp/2.3.2.0-2950/hadoop/bin/hadoop fs -rm -r /mapreduce/*
+rm: `/mapreduce/*': No such file or directory
+\!/usr/hdp/2.3.2.0-2950/hadoop/bin/hadoop fs -rm -r /mapred/*
+rm: `/mapred/*': No such file or directory
+--end_ignore
