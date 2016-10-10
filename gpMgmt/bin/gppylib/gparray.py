@@ -23,7 +23,7 @@ from gppylib    import gplog
 from gppylib.db import dbconn
 from gppylib.gpversion import GpVersion
 from gppylib.commands.unix import *
-
+import os
 
 SYSTEM_FILESPACE = 3052        # oid of the system filespace
 
@@ -2583,5 +2583,16 @@ def get_session_ids(master_port):
         conn.close()
 
 
+def get_gparray_from_config():
+    # imports below, when moved to the top, seem to cause an import error in a unit test because of dependency issue
+    from gppylib.system import configurationInterface
+    from gppylib.system import configurationImplGpdb
+    from gppylib.system.environment import GpMasterEnvironment
+    master_data_dir = os.environ['MASTER_DATA_DIRECTORY']
+    gpEnv = GpMasterEnvironment(master_data_dir, False)
+    configurationInterface.registerConfigurationProvider(
+        configurationImplGpdb.GpConfigurationProviderUsingGpdbCatalog())
+    confProvider = configurationInterface.getConfigurationProvider().initializeProvider(gpEnv.getMasterPort())
+    return confProvider.loadSystemConfig(useUtilityMode=True)
 
 # === EOF ====

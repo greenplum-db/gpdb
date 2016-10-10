@@ -35,6 +35,7 @@ try:
     from gpcheckcat_modules.leaked_schema_dropper import LeakedSchemaDropper
     from gpcheckcat_modules.repair import Repair
     from gpcheckcat_modules.foreign_key_check import ForeignKeyCheck
+    from gpcheckcat_modules.mirror_matching_check import MirrorMatchingCheck
 
 
 except ImportError, e:
@@ -2924,6 +2925,18 @@ def checkTableMissingEntry(cat):
         myprint('  Execution error: ' + str(e))
         myprint(qry)
 
+def checkMirroringMatching():
+    # check that PT rebuild has not left behind mismatched mirroring states in the segments
+    db_connection = connect2(GV.cfg[1], utilityMode=True)
+    try:
+        mismatched_segments = MirrorMatchingCheck().run_check(db_connection, logger)
+        if len(mismatched_segments) > 0:
+            GV.checkStatus = False
+            setError(ERROR_NOREPAIR)
+    except Exception as ex:
+        setError(ERROR_NOREPAIR)
+        GV.checkStatus = False
+        myprint('  Execution error: ' + str(ex))
 
 # -------------------------------------------------------------------------------
 def missingEntryQuery(max_content, catname, pkey, castedPkey):
@@ -3494,6 +3507,14 @@ all_checks = {
             "fn": lambda: checkDuplicatePersistentEntry(),
             "version": 'main',
             "order": 15,
+            "online": True
+        },
+    "mirroring_matching":
+        {
+            "description": "Check that configured mirroring and segments' mirroring agree",
+            "fn": lambda: checkMirroringMatching(),
+            "version": 'main',
+            "order": 16,
             "online": True
         }
 }

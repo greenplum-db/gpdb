@@ -7,15 +7,26 @@
 
 """ Unittesting for gplog module
 """
-import unittest2 as unittest
+import os
 
-from gppylib.gparray import GpArray, GpDB, createSegmentRows
+from gppylib.gparray import GpArray, GpDB, createSegmentRows, FAULT_STRATEGY_NONE, get_gparray_from_config
 from gppylib import gplog
+from gp_unittest import *
+from mock import patch, Mock
+from gppylib.system.configurationInterface import GpConfigurationProvider
 
 logger = gplog.get_unittest_logger()
 
-class MyTestCase(unittest.TestCase):
-    def test_spreadmirror_layout(self):
+class GpArrayTestCase(GpTestCase):
+    # todo move to top
+    def setUp(self):
+        self.gpConfigMock = Mock()
+        self.apply_patches([
+            patch('os.environ', new={}),
+            patch('gppylib.system.configurationImplGpdb.GpConfigurationProviderUsingGpdbCatalog', return_value=self.gpConfigMock),
+        ])
+
+def test_spreadmirror_layout(self):
         """ Basic spread mirroring """
         mirror_type = 'spread'
         primary_portbase = 5000
@@ -45,31 +56,32 @@ class MyTestCase(unittest.TestCase):
         
         #now we have enough
         hostlist.append('host3')
-        self._validate_array(self.setup_gparray(hostlist, interface_list, primary_list, primary_portbase, mirror_type,
-                               mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase))
+        self._validate_array(self._setup_gparray(hostlist, interface_list, primary_list, primary_portbase, mirror_type,
+                                                 mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase))
         
         
         #enough
         hostlist = ['host1', 'host2', 'host3']
         primary_list = ['/db1', '/db2']
         mirror_list = ['/mir1', '/mir2']
-        self._validate_array(self.setup_gparray(hostlist, interface_list, primary_list, primary_portbase, mirror_type,
-                               mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase))
+        self._validate_array(self._setup_gparray(hostlist, interface_list, primary_list, primary_portbase, mirror_type,
+                                                 mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase))
 
         #typical thumper
         hostlist = ['sdw1', 'sdw2', 'sdw3', 'sdw4', 'sdw5']
         primary_list = ['/dbfast1', '/dbfast2', '/dbfast3', '/dbfast4']
         mirror_list = ['/dbfast1/mirror', '/dbfast2/mirror', '/dbfast3/mirror', '/dbfast4/mirror']
-        self._validate_array(self.setup_gparray(hostlist, interface_list, primary_list, primary_portbase, mirror_type,
-                               mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase))
+        self._validate_array(self._setup_gparray(hostlist, interface_list, primary_list, primary_portbase, mirror_type,
+                                                 mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase))
 
         #typical Thor
         hostlist = ['sdw1', 'sdw2', 'sdw3', 'sdw4', 'sdw5', 'sdw6', 'sdw7', 'sdw8', 'sdw9']
         primary_list = ['/dbfast1', '/dbfast2', '/dbfast3', '/dbfast4', '/dbfast5', '/dbfast6', '/dbfast7', '/dbfast8']
         mirror_list = ['/dbfast1/mirror', '/dbfast2/mirror', '/dbfast3/mirror', '/dbfast4/mirror',
                        '/dbfast5/mirror', '/dbfast6/mirror', '/dbfast7/mirror', '/dbfast8/mirror']
-        self._validate_array(self.setup_gparray(hostlist, interface_list, primary_list, primary_portbase, mirror_type,
-                               mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase))
+        self._validate_array(self._setup_gparray(hostlist, interface_list, primary_list, primary_portbase, mirror_type,
+                                                 mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase))
+
 
     def test_groupmirror_layout(self):
         """ Basic group mirroring """
@@ -105,16 +117,17 @@ class MyTestCase(unittest.TestCase):
         hostlist = ['sdw1', 'sdw2', 'sdw3', 'sdw4', 'sdw5']
         primary_list = ['/dbfast1', '/dbfast2', '/dbfast3', '/dbfast4']
         mirror_list = ['/dbfast1/mirror', '/dbfast2/mirror', '/dbfast3/mirror', '/dbfast4/mirror']
-        self._validate_array(self.setup_gparray(hostlist, interface_list, primary_list, primary_portbase, mirror_type,
-                               mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase))
+        self._validate_array(self._setup_gparray(hostlist, interface_list, primary_list, primary_portbase, mirror_type,
+                                                 mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase))
 
         #typical Thor
         hostlist = ['sdw1', 'sdw2', 'sdw3', 'sdw4', 'sdw5', 'sdw6', 'sdw7', 'sdw8', 'sdw9']
         primary_list = ['/dbfast1', '/dbfast2', '/dbfast3', '/dbfast4', '/dbfast5', '/dbfast6', '/dbfast7', '/dbfast8']
         mirror_list = ['/dbfast1/mirror', '/dbfast2/mirror', '/dbfast3/mirror', '/dbfast4/mirror',
                        '/dbfast5/mirror', '/dbfast6/mirror', '/dbfast7/mirror', '/dbfast8/mirror']
-        self._validate_array(self.setup_gparray(hostlist, interface_list, primary_list, primary_portbase, mirror_type,
-                               mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase))
+        self._validate_array(self._setup_gparray(hostlist, interface_list, primary_list, primary_portbase, mirror_type,
+                                                 mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase))
+
 
     def test_get_segment_list(self):
         mirror_type = 'grouped'
@@ -129,8 +142,8 @@ class MyTestCase(unittest.TestCase):
         primary_list = ['/dbfast1', '/dbfast2', '/dbfast3', '/dbfast4']
         mirror_list = ['/dbfast1/mirror', '/dbfast2/mirror', '/dbfast3/mirror', '/dbfast4/mirror']
 
-        gparray = self.setup_gparray(hostlist, interface_list, primary_list, primary_portbase, mirror_type,
-                               mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase)
+        gparray = self._setup_gparray(hostlist, interface_list, primary_list, primary_portbase, mirror_type,
+                                      mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase)
         self._validate_array(gparray)
 
         # test without expansion segments
@@ -147,9 +160,31 @@ class MyTestCase(unittest.TestCase):
                                     'p' if convert_bool(row.isprimary) else 'm', row.host, row.address, row.port, row.fulldir, row.prPort)
         self._validate_get_segment_list(gparray, hostlist, expansion_hosts, primary_list)
 
+
+    @patch('gppylib.system.configurationInterface.getConfigurationProvider')
+    @patch('gppylib.system.environment.GpMasterEnvironment', return_value=Mock(), autospec=True)
+    def test_get_gparray_from_config(self, gpMasterEnvironmentMock, getConfigProviderFunctionMock):
+        os.environ['MASTER_DATA_DIRECTORY'] = "MY_TEST_DIR"
+        configProviderMock = Mock(spec=GpConfigurationProvider)
+        getConfigProviderFunctionMock.return_value = configProviderMock
+        configProviderMock.initializeProvider.return_value = configProviderMock
+        gpArrayMock = Mock(spec=GpArray)
+        gpArrayMock.getFaultStrategy.return_value = FAULT_STRATEGY_NONE
+        configProviderMock.loadSystemConfig.return_value = gpArrayMock
+        gpMasterEnvironmentMock.return_value.getMasterPort.return_value = 123456
+
+        gpArray = get_gparray_from_config()
+
+        self.assertEquals(gpArray.getFaultStrategy(), FAULT_STRATEGY_NONE)
+        gpMasterEnvironmentMock.assert_called_once_with("MY_TEST_DIR", False)
+        getConfigProviderFunctionMock.assert_any_call()
+        configProviderMock.initializeProvider.assert_called_once_with(123456)
+        configProviderMock.loadSystemConfig.assert_called_once_with(useUtilityMode=True)
+
+
 #------------------------------- non-test helpers --------------------------------
-    def setup_gparray(self, hostlist, interface_list, primary_list, primary_portbase, mirror_type, 
-                          mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase):
+    def _setup_gparray(self, hostlist, interface_list, primary_list, primary_portbase, mirror_type,
+                       mirror_list, mirror_portbase, dir_prefix, primary_replication_portbase, mirror_replication_portbase):
         master = GpDB(content = -1,
                     preferred_role = 'p',
                     dbid = 0,
@@ -231,4 +266,4 @@ def convert_bool(val):
 
 #------------------------------- Mainline --------------------------------
 if __name__ == '__main__':
-    unittest.main()
+    run_tests()
