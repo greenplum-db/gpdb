@@ -140,10 +140,10 @@ class GpRecoverSegmentProgram:
 
         # now one for each failure
         for mirror in mirrorBuilder.getMirrorsToBuild():
-            str = ""
+            output_str = ""
             seg  = mirror.getFailedSegment()
             addr = canonicalize_address( seg.getSegmentAddress() )
-            str += ('%s:%d:%s' % ( addr, seg.getSegmentPort(), seg.getSegmentDataDirectory()))
+            output_str += ('%s:%d:%s' % ( addr, seg.getSegmentPort(), seg.getSegmentDataDirectory()))
 
             seg = mirror.getFailoverSegment()
             if seg is not None:
@@ -158,12 +158,12 @@ class GpRecoverSegmentProgram:
                     assert path is not None   # checking consistency should have been done earlier, but doublecheck here
                     filespaceValues.append(":" + path)
 
-                str += ' '
+                output_str += ' '
                 addr = canonicalize_address( seg.getSegmentAddress() )
-                str += ('%s:%d:%d:%s%s' % (addr, seg.getSegmentPort(), seg.getSegmentReplicationPort(), seg.getSegmentDataDirectory(),
+                output_str += ('%s:%d:%d:%s%s' % (addr, seg.getSegmentPort(), seg.getSegmentReplicationPort(), seg.getSegmentDataDirectory(),
                         "".join(filespaceValues)))
 
-            lines.append(str)
+            lines.append(output_str)
         writeLinesToFile(fileName, lines)
 
     def getRecoveryActionsFromConfigFile(self, gpArray):
@@ -195,7 +195,7 @@ class GpRecoverSegmentProgram:
 
         allAddresses = [row.getFixedValuesMap()["newAddress"] for row in fileData.getRows()
                                                 if "newAddress" in row.getFixedValuesMap()]
-        allNoneArr = [None for a in allAddresses]
+        allNoneArr = [None] * len(allAddresses)
         interfaceLookup = GpInterfaceToHostNameCache(self.__pool, allAddresses, allNoneArr)
 
         failedSegments = []
@@ -309,7 +309,7 @@ class GpRecoverSegmentProgram:
                         (peer.getSegmentContentId(), getProgramName()))
         return peersForFailedSegments
 
-    def __outputSpareDataDirectoryFile( self, gpEnv, gpArray, outputFile):
+    def __outputSpareDataDirectoryFile(self, gpArray, outputFile):
         lines=[fs.getName() + "=enterFilespacePath" for fs in gpArray.getFilespaces()]
         lines.sort()
         utils.writeLinesToFile(outputFile, lines)
@@ -354,7 +354,7 @@ class GpRecoverSegmentProgram:
                             (len(fsOidToPath), len(filespaceNameToFilespace)))
         return fsOidToPath
 
-    def __applySpareDirectoryMapToSegment( self, gpEnv, gpArray, spareDirectoryMap, segment):
+    def __applySpareDirectoryMapToSegment( self, gpEnv, spareDirectoryMap, segment):
         gpPrefix = gp_utils.get_gp_prefix(gpEnv.getMasterDataDir())
         if not gpPrefix:
             gpPrefix = 'gp'
@@ -490,7 +490,7 @@ class GpRecoverSegmentProgram:
                 # these two lines make it so that failoverSegment points to the object that is registered in gparray
                 failoverSegment = failedSegment
                 failedSegment = failoverSegment.copy()
-                self.__applySpareDirectoryMapToSegment( gpEnv, gpArray, spareDirectoryMap, failoverSegment)
+                self.__applySpareDirectoryMapToSegment( gpEnv, spareDirectoryMap, failoverSegment)
                 # we're failing over to different location on same host so we don't need to assign new ports
 
             if (not forceFull and liveSegment.getSegmentDbId() in segmentStates and
@@ -711,15 +711,8 @@ class GpRecoverSegmentProgram:
 
     def SanFailback_mountpoint(self, mp_id, mp_dict):
         active = mp_dict['active']
-        type = mp_dict['type']
 
-        if active == 'm':
-            oldhost = mp_dict['primaryhost']
-            old_mp = mp_dict['primarymountpoint']
-
-            newhost = mp_dict['mirrorhost']
-            new_mp = mp_dict['mirrormountpoint']
-        else:
+        if active !='m':
             # failback unnecessary ?
             self.logger.info('Not failback required for mount id %d primary is active!' % mp_id)
             return 0
@@ -758,7 +751,7 @@ class GpRecoverSegmentProgram:
             # introspect outcomes
             for operation in operations:
                 operation.get_ret()
-        except Exception, e:
+        except:
             logger.exception('Syncing of Greenplum Database extensions has failed.')
             logger.warning('Please run gppkg --clean after successful segment recovery.')
 
@@ -773,17 +766,13 @@ class GpRecoverSegmentProgram:
             self.logger.info('Recovery type              = Pool Host')
             for h in self.__options.newRecoverHosts:
                 self.logger.info('Pool host for recovery     = %s' % h)
-            type_text = 'Pool    '
         elif self.__options.spareDataDirectoryFile is not None:
             self.logger.info('Recovery type              = Pool Directory')
             self.logger.info('Mirror pool directory file = %s' % self.__options.spareDataDirectoryFile)
-            type_text = 'Pool dir'
         elif self.__options.rebalanceSegments:
             self.logger.info('Recovery type              = Rebalance')
-            type_text = 'Rebalance segments'
         else:
             self.logger.info('Recovery type              = Standard')
-            type_text = 'Failed  '
 
         if self.__options.rebalanceSegments:
             i = 1
@@ -799,8 +788,6 @@ class GpRecoverSegmentProgram:
                 tabLog.outputTable()
                 i+=1                
         else:
-            count = 0
-            # self.logger.info('Recovery parallel batch value = %d' % opt['-B'])
             i = 0
             total = len(mirrorBuilder.getMirrorsToBuild())
             for toRecover in mirrorBuilder.getMirrorsToBuild():
@@ -1271,7 +1258,7 @@ class GpRecoverSegmentProgram:
                 mode         = lines[0].split(": ")[1].strip()
                 segmentState = lines[1].split(": ")[1].strip()
                 dataState    = lines[2].split(": ")[1].strip()
-            except Exception, e:
+            except:
                 self.logger.warning("Problem getting Segment state dbid = %s, results = %s." % (str(dbid), str(cmd.get_results().stderr)))
                 continue
 
@@ -1335,14 +1322,15 @@ class GpRecoverSegmentProgram:
         # We have phys-rep/filerep mirrors.
 
         if self.__options.outputSpareDataDirectoryFile is not None:
-            self.__outputSpareDataDirectoryFile(gpEnv, gpArray, self.__options.outputSpareDataDirectoryFile)
+            self.__outputSpareDataDirectoryFile(gpArray, self.__options.outputSpareDataDirectoryFile)
             return 0
 
         if self.__options.newRecoverHosts is not None:
             try:
                 uniqueHosts = []
-                [uniqueHosts.append(h.strip()) for h in self.__options.newRecoverHosts.split(',') \
-                    if h.strip() not in uniqueHosts ]
+                for h in self.__options.newRecoverHosts.split(','):
+                    if h.strip() not in uniqueHosts:
+                        uniqueHosts.append(h.strip())
                 self.__options.newRecoverHosts = uniqueHosts
             except Exception, ex:
                 raise ProgramArgumentValidationException(\
