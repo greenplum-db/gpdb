@@ -1677,7 +1677,7 @@ GROUP BY nspname, relname;''' % (self._table_pair.source.schema,
         except UnexpectedRowsError:
             return 'DISTRIBUTED RANDOMLY'
         except Exception as e:
-            logger.warn('unable to determine distribution policy for "%s" using '
+            logger.warn('Unable to determine distribution policy for "%s". Using '
                         'distributed randomly instead.\nmessage: %s' % (self._table_pair.dest, str(e)))
             return 'DISTRIBUTED RANDOMLY'
 
