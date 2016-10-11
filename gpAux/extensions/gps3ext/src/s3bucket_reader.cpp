@@ -3,7 +3,7 @@
 S3BucketReader::S3BucketReader() : Reader() {
     this->keyIndex = s3ext_segid;
 
-    this->s3interface = NULL;
+    this->s3Interface = NULL;
     this->upstreamReader = NULL;
 
     this->needNewReader = true;
@@ -16,12 +16,12 @@ S3BucketReader::~S3BucketReader() {
 void S3BucketReader::open(const S3Params& params) {
     this->params = params;
 
-    S3_CHECK_OR_DIE_MSG(this->s3interface != NULL, S3RuntimeError, "s3interface is NULL");
+    S3_CHECK_OR_DIE(this->s3Interface != NULL, S3RuntimeError, "s3Interface is NULL");
 
     this->parseURL();
 
     this->keyList =
-        this->s3interface->listBucket(this->schema, this->region, this->bucket, this->prefix);
+        this->s3Interface->listBucket(this->schema, this->region, this->bucket, this->prefix);
 }
 
 BucketContent& S3BucketReader::getNextKey() {
@@ -47,7 +47,7 @@ S3Params S3BucketReader::constructReaderParams(BucketContent& key) {
 }
 
 uint64_t S3BucketReader::read(char* buf, uint64_t count) {
-    S3_CHECK_OR_DIE_MSG(this->upstreamReader != NULL, S3RuntimeError, "upstreamReader is NULL");
+    S3_CHECK_OR_DIE(this->upstreamReader != NULL, S3RuntimeError, "upstreamReader is NULL");
 
     while (true) {
         if (this->needNewReader) {
@@ -74,6 +74,11 @@ uint64_t S3BucketReader::read(char* buf, uint64_t count) {
 }
 
 void S3BucketReader::close() {
+    if (this->upstreamReader != NULL) {
+        this->upstreamReader->close();
+        this->upstreamReader = NULL;
+    }
+
     if (!this->keyList.contents.empty()) {
         this->keyList.contents.clear();
     }
@@ -94,6 +99,6 @@ void S3BucketReader::parseURL() {
     this->prefix = S3UrlUtility::getPrefixFromURL(this->params.getBaseUrl());
 
     bool ok = !(this->schema.empty() || this->region.empty() || this->bucket.empty());
-    S3_CHECK_OR_DIE_MSG(ok, S3ConfigError, this->params.getBaseUrl() + " is not valid",
-                        this->params.getBaseUrl());
+    S3_CHECK_OR_DIE(ok, S3ConfigError, this->params.getBaseUrl() + " is not valid",
+                    this->params.getBaseUrl());
 }

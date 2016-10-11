@@ -12,6 +12,7 @@ class S3CommonWriter : public Writer {
     }
 
     virtual ~S3CommonWriter() {
+        this->close();
     }
 
     virtual void open(const S3Params& params);

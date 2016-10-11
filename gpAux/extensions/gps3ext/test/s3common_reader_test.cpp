@@ -14,13 +14,13 @@ class MockS3InterfaceForCompressionRead : public MockS3Interface {
     void setData(Byte *rawData, uLong len) {
         data.insert(data.begin(), rawData, rawData + len);
     }
-    uint64_t mockFetchData(uint64_t offset, vector<uint8_t> &data, uint64_t len,
+    uint64_t mockFetchData(uint64_t offset, S3VectorUInt8 &data, uint64_t len,
                            const string &sourceUrl, const string &region) {
         data = std::move(this->data);
         return data.size();
     }
 
-    vector<uint8_t> data;
+    S3VectorUInt8 data;
 };
 
 class S3CommonReaderTest : public ::testing::Test, public S3CommonReader {

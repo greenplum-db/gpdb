@@ -2,11 +2,12 @@
 
 uint64_t S3_ZIP_COMPRESS_CHUNKSIZE = S3_ZIP_DEFAULT_CHUNKSIZE;
 
-CompressWriter::CompressWriter() : writer(NULL), isClosed(false) {
+CompressWriter::CompressWriter() : writer(NULL), isClosed(true) {
     this->out = new char[S3_ZIP_COMPRESS_CHUNKSIZE];
 }
 
 CompressWriter::~CompressWriter() {
+    this->close();
     delete this->out;
 }
 
@@ -19,17 +20,18 @@ void CompressWriter::open(const S3Params& params) {
     int ret = deflateInit2(&this->zstream, Z_DEFAULT_COMPRESSION, Z_DEFLATED,
                            S3_DEFLATE_WINDOWSBITS, 8, Z_DEFAULT_STRATEGY);
 
+    this->isClosed = false;
+
     // init them here to get ready for both writer() and close()
     this->zstream.next_in = NULL;
     this->zstream.avail_in = 0;
     this->zstream.next_out = (Byte*)this->out;
     this->zstream.avail_out = S3_ZIP_COMPRESS_CHUNKSIZE;
 
-    S3_CHECK_OR_DIE_MSG(ret == Z_OK, S3RuntimeError,
-                        string("Failed to initialize zlib library: ") + this->zstream.msg);
+    S3_CHECK_OR_DIE(ret == Z_OK, S3RuntimeError,
+                    string("Failed to initialize zlib library: ") + this->zstream.msg);
 
     this->writer->open(params);
-    this->isClosed = false;
 }
 
 uint64_t CompressWriter::writeOneChunk(const char* buf, uint64_t count) {
@@ -46,10 +48,9 @@ uint64_t CompressWriter::writeOneChunk(const char* buf, uint64_t count) {
         status = deflate(&this->zstream, Z_NO_FLUSH);
         if (status < 0 && status != Z_BUF_ERROR) {
             deflateEnd(&this->zstream);
-            S3_CHECK_OR_DIE_MSG(false, S3RuntimeError,
-                                string("Failed to compress data: ") +
-                                    std::to_string((unsigned long long)status) + ", " +
-                                    this->zstream.msg);
+            S3_CHECK_OR_DIE(false, S3RuntimeError, string("Failed to compress data: ") +
+                                                       std::to_string((unsigned long long)status) +
+                                                       ", " + this->zstream.msg);
         }
 
         this->flush();
@@ -96,9 +97,9 @@ void CompressWriter::close() {
     deflateEnd(&this->zstream);
 
     if (status != Z_STREAM_END) {
-        S3_CHECK_OR_DIE_MSG(false, S3RuntimeError, string("Failed to compress data: ") +
-                                                       std::to_string((unsigned long long)status) +
-                                                       ", " + this->zstream.msg);
+        S3_CHECK_OR_DIE(false, S3RuntimeError, string("Failed to compress data: ") +
+                                                   std::to_string((unsigned long long)status) +
+                                                   ", " + this->zstream.msg);
     }
 
     S3DEBUG("Compression finished: Z_STREAM_END.");

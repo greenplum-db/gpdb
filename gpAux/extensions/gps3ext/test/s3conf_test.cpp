@@ -83,3 +83,19 @@ TEST(Config, SectionNotExist) {
     Config s3cfg("data/s3test.conf");
     EXPECT_FALSE(s3cfg.SectionExist("not_exist"));
 }
+
+TEST(Common, CheckEssentialConfig) {
+    S3Params params;
+    EXPECT_THROW(CheckEssentialConfig(params), S3ConfigError);
+
+    S3Credential cred1 = {"keyid/foo", "", ""};
+    params.setCred(cred1);
+    EXPECT_THROW(CheckEssentialConfig(params), S3ConfigError);
+
+    S3Credential cred2 = {"keyid/foo", "secret/bar", ""};
+    params.setCred(cred2);
+    s3ext_segnum = 0;
+    EXPECT_THROW(CheckEssentialConfig(params), S3ConfigError);
+
+    s3ext_segnum = 1;
+}

@@ -1,19 +1,8 @@
 #ifndef __S3_PARAMS_H__
 #define __S3_PARAMS_H__
 
-#include "s3common.h"
 #include "s3common_headers.h"
-
-struct S3Credential {
-    bool operator==(const S3Credential& other) const {
-        return this->accessID == other.accessID && this->secret == other.secret &&
-               this->token == other.token;
-    }
-
-    string accessID;
-    string secret;
-    string token;
-};
+#include "s3memory_mgmt.h"
 
 class S3Params {
    public:
@@ -124,6 +113,10 @@ class S3Params {
         this->autoCompress = autoCompress;
     }
 
+    const S3MemoryContext& getMemoryContext() const {
+        return memoryContext;
+    }
+
    private:
     string baseUrl;  // original url to read/write.
 
@@ -142,6 +135,15 @@ class S3Params {
     bool encryption;    // HTTP or HTTPS
     bool debugCurl;     // debug curl or not
     bool autoCompress;  // whether to compress data before uploading
+
+    S3MemoryContext memoryContext;
 };
+
+inline void PrepareS3MemContext(const S3Params& params) {
+    S3MemoryContext& memoryContext = const_cast<S3MemoryContext&>(params.getMemoryContext());
+
+    // We need one more chunk of memory for writer to prepare data to upload.
+    memoryContext.prepare(params.getChunkSize(), params.getNumOfChunks() + 1);
+}
 
 #endif

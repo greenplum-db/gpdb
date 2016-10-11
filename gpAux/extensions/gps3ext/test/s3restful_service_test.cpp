@@ -68,7 +68,7 @@ TEST(S3RESTfulService, PutWithoutURL) {
     S3Params params;
     string url;
     S3RESTfulService service(params);
-    vector<uint8_t> data;
+    S3VectorUInt8 data;
 
     EXPECT_THROW(service.put(url, headers, data), S3ConnectionError);
 }
@@ -80,7 +80,7 @@ TEST(S3RESTfulService, PutToServerWithBlindPutService) {
     S3RESTfulService service(params);
 
     /* data = "abcdefghij", len = 11 (including '\0') */
-    vector<uint8_t> data;
+    S3VectorUInt8 data;
     for (int i = 0; i < 10; i++) data.push_back('a' + i);
     data.push_back(0);
 
@@ -98,7 +98,7 @@ TEST(S3RESTfulService, PutToServerWith404Page) {
     S3RESTfulService service(params);
 
     /* data = "abcdefghij", len = 11 (including '\0') */
-    vector<uint8_t> data;
+    S3VectorUInt8 data;
     for (int i = 0; i < 10; i++) data.push_back('a' + i);
     data.push_back(0);
 
@@ -117,7 +117,7 @@ TEST(S3RESTfulService, PutWithoutURLWithDebugParam) {
 
     string url;
     S3RESTfulService service(params);
-    vector<uint8_t> data;
+    S3VectorUInt8 data;
 
     EXPECT_THROW(service.put(url, headers, data), S3ConnectionError);
 }
@@ -126,8 +126,8 @@ TEST(S3RESTfulService, PutWithoutURLWithDebugParam) {
  * The reason we define our vector-compare function is because:
  *   we may suffer from the Segment fault error when using std::equal() for comparison
  */
-template <typename T>
-bool compareVector(const vector<T>& a, const vector<T>& b) {
+template <typename T, typename A, typename B>
+bool compareVector(const vector<T, A>& a, const vector<T, B>& b) {
     if (a.size() != b.size()) return false;
 
     for (size_t i = 0; i < a.size(); i++) {
@@ -145,7 +145,7 @@ TEST(S3RESTfulService, DISABLED_PutToDummyServer) {
     S3RESTfulService service(params);
 
     /* data = "abcdefghij", length = 11 (including '\0') */
-    vector<uint8_t> data;
+    S3VectorUInt8 data;
     for (int i = 0; i < 10; i++) data.push_back('a' + i);
     data.push_back(0);
 

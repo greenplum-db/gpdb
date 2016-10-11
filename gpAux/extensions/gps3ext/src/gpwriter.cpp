@@ -1,9 +1,8 @@
 #include "gpwriter.h"
+#include "s3memory_mgmt.h"
 
 GPWriter::GPWriter(const S3Params& params, const string& url, string fmt)
-    : format(fmt), restfulService(params), s3InterfaceService(params) {
-    this->params = params;
-
+    : format(fmt), params(params), restfulService(this->params), s3InterfaceService(this->params) {
     string replacedURL = S3UrlUtility::replaceSchemaFromURL(url, this->params.isEncryption());
 
     // construct a canonical URL string
@@ -83,7 +82,7 @@ GPWriter* writer_init(const char* url_with_options, const char* format) {
         }
 
         string urlWithOptions(url_with_options);
-        string url = truncate_options(urlWithOptions);
+        string url = truncateOptions(urlWithOptions);
 
         if (url.empty()) {
             return NULL;
@@ -97,6 +96,9 @@ GPWriter* writer_init(const char* url_with_options, const char* format) {
         CheckEssentialConfig(params);
 
         InitRemoteLog();
+
+        // Prepare memory to be used for thread chunk buffer.
+        PrepareS3MemContext(params);
 
         string extName = params.isAutoCompress() ? string(format) + ".gz" : format;
         writer = new GPWriter(params, url, extName);
@@ -134,8 +136,8 @@ bool writer_transfer_data(GPWriter* writer, char* data_buf, int data_len) {
 
         uint64_t write_len = writer->write(data_buf, data_len);
 
-        S3_CHECK_OR_DIE_MSG(write_len == (uint64_t)data_len, S3RuntimeError,
-                            "Failed to upload the data completely.");
+        S3_CHECK_OR_DIE(write_len == (uint64_t)data_len, S3RuntimeError,
+                        "Failed to upload the data completely.");
     } catch (S3Exception& e) {
         s3extErrorMessage =
             "writer_transfer_data caught a " + e.getType() + " exception: " + e.getFullMessage();

@@ -2,7 +2,6 @@
 #define __S3_BUCKET_READER__
 
 #include "reader.h"
-#include "s3common.h"
 #include "s3common_headers.h"
 #include "s3exception.h"
 #include "s3interface.h"
@@ -18,7 +17,7 @@ class S3BucketReader : public Reader {
     void close();
 
     void setS3InterfaceService(S3Interface *s3) {
-        this->s3interface = s3;
+        this->s3Interface = s3;
     }
 
     void setUpstreamReader(Reader *reader) {
@@ -57,7 +56,7 @@ class S3BucketReader : public Reader {
     string bucket;
     string prefix;
 
-    S3Interface *s3interface;
+    S3Interface *s3Interface;
 
     // upstreamReader is where we get data from.
     Reader *upstreamReader;

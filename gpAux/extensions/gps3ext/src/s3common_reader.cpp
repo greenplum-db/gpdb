@@ -15,7 +15,7 @@ void S3CommonReader::open(const S3Params &params) {
             this->upstreamReader = &this->keyReader;
             break;
         default:
-            S3_CHECK_OR_DIE_MSG(false, S3RuntimeError, "unknown file type");
+            S3_CHECK_OR_DIE(false, S3RuntimeError, "unknown file type");
     };
 
     this->upstreamReader->open(params);
@@ -29,5 +29,8 @@ uint64_t S3CommonReader::read(char *buf, uint64_t count) {
 
 // This should be reentrant, has no side effects when called multiple times.
 void S3CommonReader::close() {
-    this->upstreamReader->close();
+    if (this->upstreamReader != NULL) {
+        this->upstreamReader->close();
+        this->upstreamReader = NULL;
+    }
 }

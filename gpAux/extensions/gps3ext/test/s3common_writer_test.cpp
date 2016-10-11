@@ -35,7 +35,7 @@ class MockS3InterfaceForCompressionWrite : public MockS3Interface {
         return this->uploadID;
     }
 
-    string mockUploadPartOfData(vector<uint8_t>& data, const string& keyUrl, const string& region,
+    string mockUploadPartOfData(S3VectorUInt8& data, const string& keyUrl, const string& region,
                                 uint64_t partNumber, const string& uploadId) {
         UniqueLock uniqueLock(&this->lock);
         this->dataMap[partNumber] = data;
@@ -44,7 +44,7 @@ class MockS3InterfaceForCompressionWrite : public MockS3Interface {
 
     bool mockCompleteMultiPart(const string& keyUrl, const string& region, const string& uploadId,
                                const vector<string>& etagArray) {
-        map<uint64_t, vector<uint8_t>>::iterator it;
+        map<uint64_t, S3VectorUInt8>::iterator it;
         for (it = this->dataMap.begin(); it != this->dataMap.end(); it++) {
             this->data.insert(this->data.end(), it->second.begin(), it->second.end());
         }
@@ -54,7 +54,7 @@ class MockS3InterfaceForCompressionWrite : public MockS3Interface {
    private:
     pthread_mutex_t lock;
     vector<uint8_t> data;
-    map<uint64_t, vector<uint8_t>> dataMap;
+    map<uint64_t, S3VectorUInt8> dataMap;
     const string uploadID = "I_am_an_uploadID";
 };
 
@@ -83,7 +83,7 @@ class S3CommonWriteTest : public ::testing::Test, public S3CommonWriter {
         zstream.opaque = Z_NULL;
 
         int ret = inflateInit2(&zstream, S3_INFLATE_WINDOWSBITS);
-        S3_CHECK_OR_DIE_MSG(ret == Z_OK, S3RuntimeError, "failed to initialize zlib library");
+        S3_CHECK_OR_DIE(ret == Z_OK, S3RuntimeError, "failed to initialize zlib library");
 
         zstream.avail_in = len;
         zstream.next_in = (Byte*)input;

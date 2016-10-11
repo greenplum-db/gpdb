@@ -1,6 +1,8 @@
 #ifndef INCLUDE_RESTFUL_SERVICE_H_
 #define INCLUDE_RESTFUL_SERVICE_H_
 
+#include "s3memory_mgmt.h"
+
 class HTTPHeaders;
 
 enum ResponseStatus {
@@ -20,22 +22,26 @@ inline bool isSuccessfulResponse(ResponseCode code) {
 }
 
 struct UploadData {
-    UploadData(const vector<uint8_t>& buff) : buffer(buff), currentPosition(0) {
+    UploadData(const S3VectorUInt8& buff) : buffer(buff), currentPosition(0) {
     }
 
-    const vector<uint8_t>& buffer;
+    const S3VectorUInt8& buffer;
     uint64_t currentPosition;
 };
 
 class Response {
    public:
-    Response(ResponseStatus status) : status(status) {
+    explicit Response(ResponseStatus status) : status(status) {
     }
-    Response(ResponseStatus status, const vector<uint8_t>& dataBuffer)
+    explicit Response(ResponseStatus status, S3MemoryContext& context)
+        : status(status), dataBuffer(context) {
+    }
+
+    explicit Response(ResponseStatus status, const vector<uint8_t>& dataBuffer)
         : status(status), dataBuffer(dataBuffer) {
     }
-    Response(ResponseStatus status, const vector<uint8_t>& headersBuffer,
-             const vector<uint8_t>& dataBuffer)
+    explicit Response(ResponseStatus status, const vector<uint8_t>& headersBuffer,
+                      const S3VectorUInt8& dataBuffer)
         : status(status), headersBuffer(headersBuffer), dataBuffer(dataBuffer) {
     }
 
@@ -70,11 +76,11 @@ class Response {
         headersBuffer.swap(emptyHeaders);
     }
 
-    vector<uint8_t>& getRawData() {
+    S3VectorUInt8& getRawData() {
         return dataBuffer;
     }
 
-    const vector<uint8_t>& getRawData() const {
+    const S3VectorUInt8& getRawData() const {
         return dataBuffer;
     }
 
@@ -84,9 +90,7 @@ class Response {
     }
 
     void clearBuffers() {
-        // don't use vector.clear() because it may not be able to release memory.
-        vector<uint8_t> emptyData;
-        dataBuffer.swap(emptyData);
+        dataBuffer.release();
 
         vector<uint8_t> emptyHeaders;
         headersBuffer.swap(emptyHeaders);
@@ -113,7 +117,7 @@ class Response {
     ResponseStatus status;
     string message;
     vector<uint8_t> headersBuffer;
-    vector<uint8_t> dataBuffer;
+    S3VectorUInt8 dataBuffer;
 };
 
 class RESTfulService {
@@ -125,7 +129,7 @@ class RESTfulService {
 
     virtual Response get(const string& url, HTTPHeaders& headers) = 0;
 
-    virtual Response put(const string& url, HTTPHeaders& headers, const vector<uint8_t>& data) = 0;
+    virtual Response put(const string& url, HTTPHeaders& headers, const S3VectorUInt8& data) = 0;
 
     virtual Response post(const string& url, HTTPHeaders& headers, const vector<uint8_t>& data) = 0;
 

@@ -1,5 +1,7 @@
 #include "gpcheckcloud.h"
 
+string s3extErrorMessage;
+
 volatile bool QueryCancelPending = false;
 
 // As we can't catch 'IsAbortInProgress()' in UT, so here consider QueryCancelPending only
@@ -8,6 +10,14 @@ bool S3QueryIsAbortInProgress(void) {
 }
 
 void MaskThreadSignals() {
+}
+
+void *S3Alloc(size_t size) {
+    return malloc(size);
+}
+
+void S3Free(void *p) {
+    free(p);
 }
 
 static void handleAbortSignal(int signum) {

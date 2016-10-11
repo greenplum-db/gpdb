@@ -154,4 +154,38 @@ class S3ConfigError : public S3Exception {
     string message;
 };
 
+class S3MemoryOverLimit : public S3Exception {
+   public:
+    S3MemoryOverLimit(uint64_t limit, uint64_t allocSize) : limit(limit), allocSize(allocSize) {
+    }
+    virtual ~S3MemoryOverLimit() {
+    }
+    virtual string getMessage() {
+        return "Memory allocation is over limit, requested: " +
+               std::to_string((unsigned long long)allocSize) + ", limit: " +
+               std::to_string((unsigned long long)limit);
+    }
+    virtual string getType() {
+        return "S3MemoryOverLimit";
+    }
+
+    uint64_t limit;
+    uint64_t allocSize;
+};
+
+class S3AllocationError : public S3Exception {
+   public:
+    S3AllocationError(uint64_t allocSize) : allocSize(allocSize) {
+    }
+    virtual ~S3AllocationError() {
+    }
+    virtual string getMessage() {
+        return "S3Alloc failed";
+    }
+    virtual string getType() {
+        return "S3AllocationError";
+    }
+
+    uint64_t allocSize;
+};
 #endif

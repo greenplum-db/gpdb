@@ -1,6 +1,7 @@
 #include "s3restful_service.h"
 
-S3RESTfulService::S3RESTfulService(const S3Params &params) {
+S3RESTfulService::S3RESTfulService(const S3Params &params)
+    : s3MemContext(const_cast<S3MemoryContext &>(params.getMemoryContext())) {
     // This function is not thread safe, must NOT call it when any other
     // threads are running, that is, do NOT put it in threads.
     curl_global_init(CURL_GLOBAL_ALL);
@@ -8,6 +9,7 @@ S3RESTfulService::S3RESTfulService(const S3Params &params) {
     this->lowSpeedLimit = params.getLowSpeedLimit();
     this->lowSpeedTime = params.getLowSpeedTime();
     this->debugCurl = params.isDebugCurl();
+    this->chunkBufferSize = params.getChunkSize();
 }
 
 S3RESTfulService::~S3RESTfulService() {
@@ -19,7 +21,7 @@ S3RESTfulService::~S3RESTfulService() {
 // curl's write function callback.
 size_t RESTfulServiceWriteFuncCallback(char *ptr, size_t size, size_t nmemb, void *userp) {
     if (S3QueryIsAbortInProgress()) {
-        return -1;
+        return 0;
     }
 
     size_t realsize = size * nmemb;
@@ -40,7 +42,7 @@ size_t RESTfulServiceAbortFuncCallback(char *ptr, size_t size, size_t nmemb, voi
 // curl's headers write function callback.
 size_t RESTfulServiceHeadersWriteFuncCallback(char *ptr, size_t size, size_t nmemb, void *userp) {
     if (S3QueryIsAbortInProgress()) {
-        return -1;
+        return 0;
     }
 
     size_t realsize = size * nmemb;
@@ -52,7 +54,7 @@ size_t RESTfulServiceHeadersWriteFuncCallback(char *ptr, size_t size, size_t nme
 // curl's reading function callback.
 size_t RESTfulServiceReadFuncCallback(char *ptr, size_t size, size_t nmemb, void *userp) {
     if (S3QueryIsAbortInProgress()) {
-        return -1;
+        return CURL_READFUNC_ABORT;
     }
 
     UploadData *data = (UploadData *)userp;
@@ -98,7 +100,8 @@ struct CURLWrapper {
 // This method does not care about response format, caller need to handle
 // response format accordingly.
 Response S3RESTfulService::get(const string &url, HTTPHeaders &headers) {
-    Response response(RESPONSE_ERROR);
+    Response response(RESPONSE_ERROR, this->s3MemContext);
+    response.getRawData().reserve(this->chunkBufferSize);
 
     headers.CreateList();
     CURLWrapper wrapper(url, headers.GetList(), this->lowSpeedLimit, this->lowSpeedTime,
@@ -111,8 +114,7 @@ Response S3RESTfulService::get(const string &url, HTTPHeaders &headers) {
     CURLcode res = curl_easy_perform(curl);
 
     if (res != CURLE_OK) {
-        S3_DIE_MSG(S3ConnectionError, curl_easy_strerror(res));
-
+        S3_DIE(S3ConnectionError, curl_easy_strerror(res));
     } else {
         long responseCode;
         // Get the HTTP response status code from HTTP header
@@ -124,8 +126,7 @@ Response S3RESTfulService::get(const string &url, HTTPHeaders &headers) {
     return response;
 }
 
-Response S3RESTfulService::put(const string &url, HTTPHeaders &headers,
-                               const vector<uint8_t> &data) {
+Response S3RESTfulService::put(const string &url, HTTPHeaders &headers, const S3VectorUInt8 &data) {
     Response response(RESPONSE_ERROR);
 
     headers.CreateList();
@@ -149,7 +150,7 @@ Response S3RESTfulService::put(const string &url, HTTPHeaders &headers,
     CURLcode res = curl_easy_perform(curl);
 
     if (res != CURLE_OK) {
-        S3_DIE_MSG(S3ConnectionError, curl_easy_strerror(res));
+        S3_DIE(S3ConnectionError, curl_easy_strerror(res));
     } else {
         long responseCode;
         // Get the HTTP response status code from HTTP header
@@ -174,8 +175,8 @@ Response S3RESTfulService::post(const string &url, HTTPHeaders &headers,
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, RESTfulServiceWriteFuncCallback);
 
     curl_easy_setopt(curl, CURLOPT_POST, 1L);
-
-    UploadData uploadData(data);
+    S3VectorUInt8 s3data(data);
+    UploadData uploadData(s3data);
     curl_easy_setopt(curl, CURLOPT_READDATA, (void *)&uploadData);
     curl_easy_setopt(curl, CURLOPT_READFUNCTION, RESTfulServiceReadFuncCallback);
     curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)data.size());
@@ -183,7 +184,7 @@ Response S3RESTfulService::post(const string &url, HTTPHeaders &headers,
     CURLcode res = curl_easy_perform(curl);
 
     if (res != CURLE_OK) {
-        S3_DIE_MSG(S3ConnectionError, curl_easy_strerror(res));
+        S3_DIE(S3ConnectionError, curl_easy_strerror(res));
     } else {
         long responseCode;
         // Get the HTTP response status code from HTTP header
@@ -214,7 +215,7 @@ ResponseCode S3RESTfulService::head(const string &url, HTTPHeaders &headers) {
     CURLcode res = curl_easy_perform(curl);
 
     if (res != CURLE_OK) {
-        S3_DIE_MSG(S3ConnectionError, curl_easy_strerror(res));
+        S3_DIE(S3ConnectionError, curl_easy_strerror(res));
     } else {
         // Get the HTTP response status code from HTTP header
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
@@ -236,8 +237,7 @@ Response S3RESTfulService::deleteRequest(const string &url, HTTPHeaders &headers
 
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
 
-    vector<uint8_t> data;
-
+    S3VectorUInt8 data;
     UploadData uploadData(data);
     curl_easy_setopt(curl, CURLOPT_READDATA, (void *)&uploadData);
     curl_easy_setopt(curl, CURLOPT_READFUNCTION, RESTfulServiceReadFuncCallback);
@@ -246,7 +246,7 @@ Response S3RESTfulService::deleteRequest(const string &url, HTTPHeaders &headers
     CURLcode res = curl_easy_perform(curl);
 
     if (res != CURLE_OK) {
-        S3_DIE_MSG(S3ConnectionError, curl_easy_strerror(res));
+        S3_DIE(S3ConnectionError, curl_easy_strerror(res));
     } else {
         long responseCode;
         // Get the HTTP response status code from HTTP header

@@ -3,9 +3,9 @@
 
 #include "s3common_headers.h"
 #include "s3common_writer.h"
-#include "s3exception.h"
 #include "s3interface.h"
-#include "s3restful_service.h"
+#include "s3log.h"
+#include "s3macros.h"
 #include "s3utils.h"
 #include "writer.h"
 
@@ -15,6 +15,7 @@ class GPWriter : public Writer {
    public:
     GPWriter(const S3Params &params, const string &url, string fmt = S3_DEFAULT_FORMAT);
     virtual ~GPWriter() {
+        this->close();
     }
 
     virtual void open(const S3Params &params);

@@ -1,4 +1,5 @@
 #include "gpreader.h"
+#include "s3memory_mgmt.h"
 
 // Thread related functions, called only by gpreader and gpcheckcloud
 #define MUTEX_TYPE pthread_mutex_t
@@ -51,9 +52,7 @@ int thread_cleanup(void) {
 }
 
 GPReader::GPReader(const S3Params& params, const string& url)
-    : restfulService(params), s3InterfaceService(params) {
-    this->params = params;
-
+    : params(params), restfulService(this->params), s3InterfaceService(this->params) {
     // construct a canonical URL string
     // schema://domain/uri_encoded_path/
     string encodedURL = uri_encode(url);
@@ -97,7 +96,7 @@ GPReader* reader_init(const char* url_with_options) {
         }
 
         string urlWithOptions(url_with_options);
-        string url = truncate_options(urlWithOptions);
+        string url = truncateOptions(urlWithOptions);
 
         if (url.empty()) {
             return NULL;
@@ -111,6 +110,9 @@ GPReader* reader_init(const char* url_with_options) {
         CheckEssentialConfig(params);
 
         InitRemoteLog();
+
+        // Prepare memory to be used for thread chunk buffer.
+        PrepareS3MemContext(params);
 
         reader = new GPReader(params, url);
         if (reader == NULL) {

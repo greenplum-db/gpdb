@@ -41,10 +41,6 @@ struct BucketContent {
     uint64_t size;
 };
 
-// To avoid double delete and core dump, always use new to create
-// ListBucketResult object,
-// unless we upgrade to c++11. Reason is we delete ListBucketResult in close()
-// explicitly.
 struct ListBucketResult {
     string Name;
     string Prefix;
@@ -76,43 +72,26 @@ class S3Interface {
     virtual ~S3Interface() {
     }
 
-    // It is caller's responsibility to free returned memory.
     virtual ListBucketResult listBucket(const string& schema, const string& region,
-                                        const string& bucket, const string& prefix) {
-        throw S3RuntimeError("Default implementation must not be called.");
-    }
+                                        const string& bucket, const string& prefix) = 0;
 
-    virtual uint64_t fetchData(uint64_t offset, vector<uint8_t>& data, uint64_t len,
-                               const string& sourceUrl, const string& region) {
-        throw S3RuntimeError("Default implementation must not be called.");
-    }
+    virtual uint64_t fetchData(uint64_t offset, S3VectorUInt8& data, uint64_t len,
+                               const string& sourceUrl, const string& region) = 0;
 
-    virtual S3CompressionType checkCompressionType(const string& keyUrl, const string& region) {
-        throw S3RuntimeError("Default implementation must not be called.");
-    }
+    virtual S3CompressionType checkCompressionType(const string& keyUrl, const string& region) = 0;
 
-    virtual bool checkKeyExistence(const string& keyUrl, const string& region) {
-        throw S3RuntimeError("Default implementation must not be called.");
-    }
+    virtual bool checkKeyExistence(const string& keyUrl, const string& region) = 0;
 
-    virtual string getUploadId(const string& keyUrl, const string& region) {
-        throw S3RuntimeError("Default implementation must not be called.");
-    }
+    virtual string getUploadId(const string& keyUrl, const string& region) = 0;
 
-    virtual string uploadPartOfData(vector<uint8_t>& data, const string& keyUrl,
-                                    const string& region, uint64_t partNumber,
-                                    const string& uploadId) {
-        throw S3RuntimeError("Default implementation must not be called.");
-    }
+    virtual string uploadPartOfData(S3VectorUInt8& data, const string& keyUrl, const string& region,
+                                    uint64_t partNumber, const string& uploadId) = 0;
 
     virtual bool completeMultiPart(const string& keyUrl, const string& region,
-                                   const string& uploadId, const vector<string>& etagArray) {
-        throw S3RuntimeError("Default implementation must not be called.");
-    }
+                                   const string& uploadId, const vector<string>& etagArray) = 0;
 
-    virtual bool abortUpload(const string& keyUrl, const string& region, const string& uploadId) {
-        throw S3RuntimeError("Default implementation must not be called.");
-    }
+    virtual bool abortUpload(const string& keyUrl, const string& region,
+                             const string& uploadId) = 0;
 };
 
 class S3InterfaceService : public S3Interface {
@@ -124,8 +103,8 @@ class S3InterfaceService : public S3Interface {
     ListBucketResult listBucket(const string& schema, const string& region, const string& bucket,
                                 const string& prefix);
 
-    uint64_t fetchData(uint64_t offset, vector<uint8_t>& data, uint64_t len,
-                       const string& sourceUrl, const string& region);
+    uint64_t fetchData(uint64_t offset, S3VectorUInt8& data, uint64_t len, const string& sourceUrl,
+                       const string& region);
 
     S3CompressionType checkCompressionType(const string& keyUrl, const string& region);
 
@@ -139,7 +118,7 @@ class S3InterfaceService : public S3Interface {
     Response getResponseWithRetries(const string& url, HTTPHeaders& headers,
                                     uint64_t retries = S3_REQUEST_MAX_RETRIES);
 
-    Response putResponseWithRetries(const string& url, HTTPHeaders& headers, vector<uint8_t>& data,
+    Response putResponseWithRetries(const string& url, HTTPHeaders& headers, S3VectorUInt8& data,
                                     uint64_t retries = S3_REQUEST_MAX_RETRIES);
 
     Response postResponseWithRetries(const string& url, HTTPHeaders& headers,
@@ -154,7 +133,7 @@ class S3InterfaceService : public S3Interface {
 
     string getUploadId(const string& keyUrl, const string& region);
 
-    string uploadPartOfData(vector<uint8_t>& data, const string& keyUrl, const string& region,
+    string uploadPartOfData(S3VectorUInt8& data, const string& keyUrl, const string& region,
                             uint64_t partNumber, const string& uploadId);
 
     bool completeMultiPart(const string& keyUrl, const string& region, const string& uploadId,

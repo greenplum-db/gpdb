@@ -3,15 +3,14 @@
 void S3KeyWriter::open(const S3Params& params) {
     this->params = params;
 
-    S3_CHECK_OR_DIE_MSG(this->s3interface != NULL, S3RuntimeError, "s3interface must not be NULL");
-    S3_CHECK_OR_DIE_MSG(this->params.getChunkSize() > 0, S3RuntimeError,
-                        "chunkSize must not be zero");
+    S3_CHECK_OR_DIE(this->s3Interface != NULL, S3RuntimeError, "s3Interface must not be NULL");
+    S3_CHECK_OR_DIE(this->params.getChunkSize() > 0, S3RuntimeError, "chunkSize must not be zero");
 
     buffer.reserve(this->params.getChunkSize());
 
     this->uploadId =
-        this->s3interface->getUploadId(this->params.getKeyUrl(), this->params.getRegion());
-    S3_CHECK_OR_DIE_MSG(!this->uploadId.empty(), S3RuntimeError, "Failed to get upload id");
+        this->s3Interface->getUploadId(this->params.getKeyUrl(), this->params.getRegion());
+    S3_CHECK_OR_DIE(!this->uploadId.empty(), S3RuntimeError, "Failed to get upload id");
 
     S3DEBUG("key: %s, upload id: %s", this->params.getKeyUrl().c_str(), this->uploadId.c_str());
 }
@@ -19,7 +18,7 @@ void S3KeyWriter::open(const S3Params& params) {
 // write() first fills up the data buffer before flush it out
 uint64_t S3KeyWriter::write(const char* buf, uint64_t count) {
     // Defensive code
-    S3_CHECK_OR_DIE_MSG(buf != NULL, S3RuntimeError, "Buffer is NULL");
+    S3_CHECK_OR_DIE(buf != NULL, S3RuntimeError, "Buffer is NULL");
     this->checkQueryCancelSignal();
 
     uint64_t offset = 0;
@@ -67,20 +66,20 @@ void S3KeyWriter::checkQueryCancelSignal() {
 
         S3DEBUG("Start aborting multipart uploading (uploadID: %s, %lu parts uploaded)",
                 this->uploadId.c_str(), this->etagList.size());
-        this->s3interface->abortUpload(this->params.getKeyUrl(), this->params.getRegion(),
+        this->s3Interface->abortUpload(this->params.getKeyUrl(), this->params.getRegion(),
                                        this->uploadId);
         S3DEBUG("Finished aborting multipart uploading (uploadID: %s)", this->uploadId.c_str());
 
         this->etagList.clear();
         this->uploadId.clear();
 
-        S3_DIE_MSG(S3QueryAbort, "Uploading is interrupted by user");
+        S3_DIE(S3QueryAbort, "Uploading is interrupted");
     }
 }
 
 struct ThreadParams {
     S3KeyWriter* keyWriter;
-    WriterBuffer data;
+    S3VectorUInt8 data;
     uint64_t currentNumber;
 };
 
@@ -93,7 +92,7 @@ void* S3KeyWriter::UploadThreadFunc(void* data) {
     try {
         S3DEBUG("Upload thread start: %p, part number: %" PRIu64 ", data size: %" PRIu64,
                 pthread_self(), params->currentNumber, params->data.size());
-        string etag = writer->s3interface->uploadPartOfData(
+        string etag = writer->s3Interface->uploadPartOfData(
             params->data, writer->params.getKeyUrl(), writer->params.getRegion(),
             params->currentNumber, writer->uploadId);
 
@@ -144,7 +143,7 @@ void S3KeyWriter::flushBuffer() {
         pthread_create(&writerThread, NULL, UploadThreadFunc, params);
         threadList.emplace_back(writerThread);
 
-        this->buffer.clear();
+        this->buffer.reserve(this->params.getChunkSize());
     }
 }
 
@@ -171,7 +170,7 @@ void S3KeyWriter::completeKeyWriting() {
     }
 
     if (!this->etagList.empty() && !this->uploadId.empty()) {
-        this->s3interface->completeMultiPart(this->params.getKeyUrl(), this->params.getRegion(),
+        this->s3Interface->completeMultiPart(this->params.getKeyUrl(), this->params.getRegion(),
                                              this->uploadId, etags);
     }
 

@@ -28,6 +28,8 @@ Datum s3_export(PG_FUNCTION_ARGS);
 Datum s3_import(PG_FUNCTION_ARGS);
 }
 
+string s3extErrorMessage;
+
 /*
  * To detect the query interruption event (triggered by user), we should
  * consider both QueryCancelPending variable and transaction status. Here
@@ -50,6 +52,21 @@ bool S3QueryIsAbortInProgress(void) {
         !__sync_bool_compare_and_swap(&queryCancelFlag, false, queryIsBeingCancelled);
 
     return queryIsBeingCancelled || queryIsCancelledAlready;
+}
+
+void *S3Alloc(size_t size) {
+    return palloc(size);
+}
+
+/*
+ * MemoryContext will be free automatically when query is completed or aborted.
+ * So no need to call pfree() again unless it is really needed inside query execution.
+ * Otherwise might free already cleaned memory context for failed query.
+ *
+ * Currently download/upload buffer are using memory from MemoryContext.
+ */
+void S3Free(void *p) {
+    // pfree(p);
 }
 
 /*
@@ -108,12 +125,12 @@ Datum s3_import(PG_FUNCTION_ARGS) {
 
     /* last call. destroy reader */
     if (EXTPROTOCOL_IS_LAST_CALL(fcinfo)) {
-        thread_cleanup();
-
         if (!reader_cleanup(&gpreader)) {
             ereport(ERROR,
                     (0, errmsg("Failed to cleanup S3 extension: %s", s3extErrorMessage.c_str())));
         }
+
+        thread_cleanup();
 
         EXTPROTOCOL_SET_USER_CTX(fcinfo, NULL);
         PG_RETURN_INT32(0);
@@ -161,12 +178,12 @@ Datum s3_export(PG_FUNCTION_ARGS) {
 
     /* last call. destroy writer */
     if (EXTPROTOCOL_IS_LAST_CALL(fcinfo)) {
-        thread_cleanup();
-
         if (!writer_cleanup(&gpwriter)) {
             ereport(ERROR,
                     (0, errmsg("Failed to cleanup S3 extension: %s", s3extErrorMessage.c_str())));
         }
+
+        thread_cleanup();
 
         EXTPROTOCOL_SET_USER_CTX(fcinfo, NULL);
         PG_RETURN_INT32(0);

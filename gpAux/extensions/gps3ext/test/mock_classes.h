@@ -4,7 +4,6 @@
 #include "gmock/gmock.h"
 
 #include "s3common_headers.h"
-#include "s3common.h"
 #include "s3interface.h"
 #include "s3restful_service.h"
 
@@ -15,11 +14,8 @@ class MockS3Interface : public S3Interface {
                                    const string& prefix));
 
     MOCK_METHOD5(fetchData,
-                 uint64_t(uint64_t offset, vector<uint8_t>& data, uint64_t len, const string &sourceUrl,
+                 uint64_t(uint64_t offset, S3VectorUInt8& data, uint64_t len, const string &sourceUrl,
                           const string &region));
-
-    MOCK_METHOD3(uploadData, uint64_t(vector<uint8_t>& data, const string& keyUrl,
-                                const string& region));
 
     MOCK_METHOD2(checkCompressionType, S3CompressionType(const string& keyUrl, const string& region));
 
@@ -27,7 +23,7 @@ class MockS3Interface : public S3Interface {
 
     MOCK_METHOD2(getUploadId, string(const string& keyUrl, const string& region));
 
-    MOCK_METHOD5(uploadPartOfData, string(vector<uint8_t>& data, const string& keyUrl, const string& region,
+    MOCK_METHOD5(uploadPartOfData, string(S3VectorUInt8& data, const string& keyUrl, const string& region,
                             uint64_t partNumber, const string& uploadId));
 
     MOCK_METHOD4(completeMultiPart, bool(const string& keyUrl, const string& region,
@@ -47,7 +43,7 @@ class MockS3RESTfulService : public S3RESTfulService {
     MOCK_METHOD2(get, Response(const string &url, HTTPHeaders &headers));
 
     MOCK_METHOD3(put, Response(const string &url, HTTPHeaders &headers,
-                               const vector<uint8_t> &data));
+                               const S3VectorUInt8 &data));
 
     MOCK_METHOD3(post, Response(const string &url, HTTPHeaders &headers,
                                 const vector<uint8_t> &data));

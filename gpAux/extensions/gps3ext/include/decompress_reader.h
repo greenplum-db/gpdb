@@ -4,7 +4,6 @@
 #include "reader.h"
 #include "s3common_headers.h"
 #include "s3exception.h"
-#include "s3log.h"
 #include "s3macros.h"
 #include "s3params.h"
 
@@ -43,6 +42,8 @@ class DecompressReader : public Reader {
     char *in;            // Input buffer for decompression.
     char *out;           // Output buffer for decompression.
     uint64_t outOffset;  // Next position to read in out buffer.
+
+    bool isClosed;
 };
 
 #endif /* INCLUDE_DECOMPRESS_READER_H_ */

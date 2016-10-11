@@ -5,6 +5,7 @@
 #include "gpwriter.h"
 #include "s3common_headers.h"
 #include "s3interface.h"
+#include "s3memory_mgmt.h"
 
 #define BUF_SIZE 64 * 1024
 

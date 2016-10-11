@@ -28,11 +28,13 @@ class GPWriterTest : public testing::Test {
     }
 
     S3Params params;
-    MockS3Interface mocks3interface;
+    MockS3Interface mockS3Interface;
 };
 
 TEST_F(GPWriterTest, ConstructKeyName) {
     string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal";
+
+    this->params.setAutoCompress(false);
 
     MockS3RESTfulService mockRESTfulService(this->params);
     MockGPWriter gpwriter(this->params, url, &mockRESTfulService);
@@ -59,6 +61,8 @@ TEST_F(GPWriterTest, ConstructKeyName) {
 
 TEST_F(GPWriterTest, GenerateUniqueKeyName) {
     string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal";
+
+    this->params.setAutoCompress(false);
 
     MockS3RESTfulService mockRESTfulService(this->params);
     MockGPWriter gpwriter(this->params, url, &mockRESTfulService);
@@ -94,6 +98,9 @@ TEST_F(GPWriterTest, GenerateUniqueKeyName) {
 
 TEST_F(GPWriterTest, ReGenerateKeyName) {
     string url = "https://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal";
+
+    this->params.setAutoCompress(false);
+
     MockS3RESTfulService mockRESTfulService(this->params);
     MockGPWriter gpwriter(this->params, url, &mockRESTfulService);
 

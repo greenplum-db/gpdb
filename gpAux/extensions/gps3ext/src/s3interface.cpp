@@ -40,17 +40,17 @@ Response S3InterfaceService::getResponseWithRetries(const string &url, HTTPHeade
         } catch (S3ConnectionError &e) {
             message = e.getMessage();
             if (S3QueryIsAbortInProgress()) {
-                S3_DIE_MSG(S3QueryAbort, "Uploading is interrupted by user");
+                S3_DIE(S3QueryAbort, "Downloading is interrupted");
             }
             S3WARN("Failed to get a good response in GET from '%s', retrying ...", url.c_str());
         }
     };
 
-    S3_DIE_MSG(S3FailedAfterRetry, url, retries, message);
+    S3_DIE(S3FailedAfterRetry, url, retries, message);
 };
 
 Response S3InterfaceService::putResponseWithRetries(const string &url, HTTPHeaders &headers,
-                                                    vector<uint8_t> &data, uint64_t retries) {
+                                                    S3VectorUInt8 &data, uint64_t retries) {
     string message;
     uint64_t retry = retries;
     while (retry--) {
@@ -59,13 +59,13 @@ Response S3InterfaceService::putResponseWithRetries(const string &url, HTTPHeade
         } catch (S3ConnectionError &e) {
             message = e.getMessage();
             if (S3QueryIsAbortInProgress()) {
-                S3_DIE_MSG(S3QueryAbort, "Uploading is interrupted by user");
+                S3_DIE(S3QueryAbort, "Uploading is interrupted");
             }
             S3WARN("Failed to get a good response in PUT from '%s', retrying ...", url.c_str());
         }
     };
 
-    S3_DIE_MSG(S3FailedAfterRetry, url, retries, message);
+    S3_DIE(S3FailedAfterRetry, url, retries, message);
 };
 
 Response S3InterfaceService::postResponseWithRetries(const string &url, HTTPHeaders &headers,
@@ -79,13 +79,13 @@ Response S3InterfaceService::postResponseWithRetries(const string &url, HTTPHead
         } catch (S3ConnectionError &e) {
             message = e.getMessage();
             if (S3QueryIsAbortInProgress()) {
-                S3_DIE_MSG(S3QueryAbort, "Uploading is interrupted by user");
+                S3_DIE(S3QueryAbort, "Uploading is interrupted");
             }
             S3WARN("Failed to get a good response in POST from '%s', retrying ...", url.c_str());
         }
     };
 
-    S3_DIE_MSG(S3FailedAfterRetry, url, retries, message);
+    S3_DIE(S3FailedAfterRetry, url, retries, message);
 }
 
 bool S3InterfaceService::isKeyExisted(ResponseCode code) {
@@ -102,14 +102,14 @@ ResponseCode S3InterfaceService::headResponseWithRetries(const string &url, HTTP
         } catch (S3ConnectionError &e) {
             message = e.getMessage();
             if (S3QueryIsAbortInProgress()) {
-                S3_DIE_MSG(S3QueryAbort, "Uploading is interrupted by user");
+                S3_DIE(S3QueryAbort, "Uploading is interrupted");
             }
 
             S3WARN("Failed to get a good response in PUT from '%s', retrying ...", url.c_str());
         }
     };
 
-    S3_DIE_MSG(S3FailedAfterRetry, url, retries, message);
+    S3_DIE(S3FailedAfterRetry, url, retries, message);
 }
 Response S3InterfaceService::deleteRequestWithRetries(const string &url, HTTPHeaders &headers,
                                                       uint64_t retries) {
@@ -121,13 +121,13 @@ Response S3InterfaceService::deleteRequestWithRetries(const string &url, HTTPHea
         } catch (S3ConnectionError &e) {
             message = e.getMessage();
             if (S3QueryIsAbortInProgress()) {
-                S3_DIE_MSG(S3QueryAbort, "Uploading is interrupted by user");
+                S3_DIE(S3QueryAbort, "Uploading is interrupted");
             }
             S3WARN("Failed to get a good response in PUT from '%s', retrying ...", url.c_str());
         }
     };
 
-    S3_DIE_MSG(S3FailedAfterRetry, url, retries, message);
+    S3_DIE(S3FailedAfterRetry, url, retries, message);
 };
 
 // S3 requires query parameters specified alphabetically.
@@ -329,9 +329,9 @@ ListBucketResult S3InterfaceService::listBucket(const string &schema, const stri
             }
         } else if (resp.getStatus() == RESPONSE_ERROR) {
             S3MessageParser s3msg(resp);
-            S3_DIE_MSG(S3LogicError, s3msg.getCode(), s3msg.getMessage());
+            S3_DIE(S3LogicError, s3msg.getCode(), s3msg.getMessage());
         } else {
-            S3_DIE_MSG(S3RuntimeError, "unexpected response status");
+            S3_DIE(S3RuntimeError, "unexpected response status");
         }
 
         return result;
@@ -340,7 +340,7 @@ ListBucketResult S3InterfaceService::listBucket(const string &schema, const stri
     return result;
 }
 
-uint64_t S3InterfaceService::fetchData(uint64_t offset, vector<uint8_t> &data, uint64_t len,
+uint64_t S3InterfaceService::fetchData(uint64_t offset, S3VectorUInt8 &data, uint64_t len,
                                        const string &sourceUrl, const string &region) {
     HTTPHeaders headers;
     UrlParser parser(sourceUrl);
@@ -356,13 +356,13 @@ uint64_t S3InterfaceService::fetchData(uint64_t offset, vector<uint8_t> &data, u
     Response resp = this->getResponseWithRetries(sourceUrl, headers);
     if (resp.getStatus() == RESPONSE_OK) {
         data.swap(resp.getRawData());
-        S3_CHECK_OR_DIE_MSG(data.size() == len, S3PartialResponseError, len, data.size());
+        S3_CHECK_OR_DIE(data.size() == len, S3PartialResponseError, len, data.size());
         return data.size();
     } else if (resp.getStatus() == RESPONSE_ERROR) {
         S3MessageParser s3msg(resp);
-        S3_DIE_MSG(S3LogicError, s3msg.getCode(), s3msg.getMessage());
+        S3_DIE(S3LogicError, s3msg.getCode(), s3msg.getMessage());
     } else {
-        S3_DIE_MSG(S3RuntimeError, "unexpected response status");
+        S3_DIE(S3RuntimeError, "unexpected response status");
     }
 }
 
@@ -382,22 +382,22 @@ S3CompressionType S3InterfaceService::checkCompressionType(const string &keyUrl,
 
     Response resp = this->getResponseWithRetries(keyUrl, headers);
     if (resp.getStatus() == RESPONSE_OK) {
-        vector<uint8_t> &responseData = resp.getRawData();
+        S3VectorUInt8 &responseData = resp.getRawData();
         if (responseData.size() < S3_MAGIC_BYTES_NUM) {
             return S3_COMPRESSION_PLAIN;
         }
 
-        S3_CHECK_OR_DIE_MSG(responseData.size() == S3_MAGIC_BYTES_NUM, S3PartialResponseError,
-                            S3_MAGIC_BYTES_NUM, responseData.size());
+        S3_CHECK_OR_DIE(responseData.size() == S3_MAGIC_BYTES_NUM, S3PartialResponseError,
+                        S3_MAGIC_BYTES_NUM, responseData.size());
 
         if ((responseData[0] == 0x1f) && (responseData[1] == 0x8b)) {
             return S3_COMPRESSION_GZIP;
         }
     } else if (resp.getStatus() == RESPONSE_ERROR) {
         S3MessageParser s3msg(resp);
-        S3_DIE_MSG(S3LogicError, s3msg.getCode(), s3msg.getMessage());
+        S3_DIE(S3LogicError, s3msg.getCode(), s3msg.getMessage());
     } else {
-        S3_DIE_MSG(S3RuntimeError, "unexpected response status");
+        S3_DIE(S3RuntimeError, "unexpected response status");
     }
 
     return S3_COMPRESSION_PLAIN;
@@ -436,13 +436,13 @@ string S3InterfaceService::getUploadId(const string &keyUrl, const string &regio
         return s3msg.parseS3Tag("UploadId");
     } else if (resp.getStatus() == RESPONSE_ERROR) {
         S3MessageParser s3msg(resp);
-        S3_DIE_MSG(S3LogicError, s3msg.getCode(), s3msg.getMessage());
+        S3_DIE(S3LogicError, s3msg.getCode(), s3msg.getMessage());
     } else {
-        S3_DIE_MSG(S3RuntimeError, "unexpected response status");
+        S3_DIE(S3RuntimeError, "unexpected response status");
     }
 }
 
-string S3InterfaceService::uploadPartOfData(vector<uint8_t> &data, const string &keyUrl,
+string S3InterfaceService::uploadPartOfData(S3VectorUInt8 &data, const string &keyUrl,
                                             const string &region, uint64_t partNumber,
                                             const string &uploadId) {
     HTTPHeaders headers;
@@ -476,9 +476,9 @@ string S3InterfaceService::uploadPartOfData(vector<uint8_t> &data, const string 
         return etagToEnd.substr(0, etagStrLen);
     } else if (resp.getStatus() == RESPONSE_ERROR) {
         S3MessageParser s3msg(resp);
-        S3_DIE_MSG(S3LogicError, s3msg.getCode(), s3msg.getMessage());
+        S3_DIE(S3LogicError, s3msg.getCode(), s3msg.getMessage());
     } else {
-        S3_DIE_MSG(S3RuntimeError, "unexpected response status");
+        S3_DIE(S3RuntimeError, "unexpected response status");
     }
 }
 
@@ -525,9 +525,9 @@ bool S3InterfaceService::completeMultiPart(const string &keyUrl, const string &r
         return true;
     } else if (resp.getStatus() == RESPONSE_ERROR) {
         S3MessageParser s3msg(resp);
-        S3_DIE_MSG(S3LogicError, s3msg.getCode(), s3msg.getMessage());
+        S3_DIE(S3LogicError, s3msg.getCode(), s3msg.getMessage());
     } else {
-        S3_DIE_MSG(S3RuntimeError, "unexpected response status");
+        S3_DIE(S3RuntimeError, "unexpected response status");
     }
 }
 
@@ -557,9 +557,9 @@ bool S3InterfaceService::abortUpload(const string &keyUrl, const string &region,
         return true;
     } else if (resp.getStatus() == RESPONSE_ERROR) {
         S3MessageParser s3msg(resp);
-        S3_DIE_MSG(S3LogicError, s3msg.getCode(), s3msg.getMessage());
+        S3_DIE(S3LogicError, s3msg.getCode(), s3msg.getMessage());
     } else {
-        S3_DIE_MSG(S3RuntimeError, "unexpected response status");
+        S3_DIE(S3RuntimeError, "unexpected response status");
     }
 }
 

@@ -19,7 +19,7 @@ class S3RESTfulService : public RESTfulService {
 
     Response get(const string& url, HTTPHeaders& headers);
 
-    Response put(const string& url, HTTPHeaders& headers, const vector<uint8_t>& data);
+    Response put(const string& url, HTTPHeaders& headers, const S3VectorUInt8& data);
 
     Response post(const string& url, HTTPHeaders& headers, const vector<uint8_t>& data);
 
@@ -29,6 +29,8 @@ class S3RESTfulService : public RESTfulService {
     uint64_t lowSpeedLimit;
     uint64_t lowSpeedTime;
     bool debugCurl;
+    uint64_t chunkBufferSize;
+    S3MemoryContext& s3MemContext;
 };
 
 #endif /* INCLUDE_S3RESTFUL_SERVICE_H_ */

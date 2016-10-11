@@ -1,4 +1,7 @@
 #include "s3conf.h"
+#include "s3macros.h"
+#include "s3params.h"
+#include "s3utils.h"
 
 #include <arpa/inet.h>
 
@@ -88,14 +91,14 @@ bool InitConfig(S3Params& params, const string& conf_path, const string& section
     s3ext_segnum = GpIdentity.numsegments;
 #endif
 
-    S3_CHECK_OR_DIE_MSG(!conf_path.empty(), S3RuntimeError, "Config file is not specified");
+    S3_CHECK_OR_DIE(!conf_path.empty(), S3RuntimeError, "Config file is not specified");
 
     Config s3cfg(conf_path);
 
-    S3_CHECK_OR_DIE_MSG(s3cfg.Handle(), S3RuntimeError,
-                        "Failed to parse config file '" + conf_path + "', or it doesn't exist");
+    S3_CHECK_OR_DIE(s3cfg.Handle(), S3RuntimeError,
+                    "Failed to parse config file '" + conf_path + "', or it doesn't exist");
 
-    S3_CHECK_OR_DIE_MSG(
+    S3_CHECK_OR_DIE(
         s3cfg.SectionExist(section), S3ConfigError,
         "Selected section '" + section + "' does not exist, please check your configuration file",
         section);
@@ -151,4 +154,18 @@ bool InitConfig(S3Params& params, const string& urlWithOptions) {
     }
 
     return InitConfig(params, configPath, configSection);
+}
+
+void CheckEssentialConfig(const S3Params& params) {
+    if (params.getCred().accessID.empty()) {
+        S3_CHECK_OR_DIE(false, S3ConfigError, "\"FATAL: access id not set\"", "accessid");
+    }
+
+    if (params.getCred().secret.empty()) {
+        S3_CHECK_OR_DIE(false, S3ConfigError, "\"FATAL: secret id not set\"", "secret");
+    }
+
+    if (s3ext_segnum <= 0) {
+        S3_CHECK_OR_DIE(false, S3ConfigError, "\"FATAL: segment info is invalid\"", "segment");
+    }
 }

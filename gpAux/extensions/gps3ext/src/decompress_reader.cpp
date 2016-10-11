@@ -2,7 +2,7 @@
 
 uint64_t S3_ZIP_DECOMPRESS_CHUNKSIZE = S3_ZIP_DEFAULT_CHUNKSIZE;
 
-DecompressReader::DecompressReader() {
+DecompressReader::DecompressReader() : isClosed(true) {
     this->reader = NULL;
     this->in = new char[S3_ZIP_DECOMPRESS_CHUNKSIZE];
     this->out = new char[S3_ZIP_DECOMPRESS_CHUNKSIZE];
@@ -10,6 +10,8 @@ DecompressReader::DecompressReader() {
 }
 
 DecompressReader::~DecompressReader() {
+    this->close();
+
     delete this->in;
     delete this->out;
 }
@@ -43,7 +45,9 @@ void DecompressReader::open(const S3Params &params) {
 
     // with S3_INFLATE_WINDOWSBITS, it could recognize and decode both zlib and gzip stream.
     int ret = inflateInit2(&zstream, S3_INFLATE_WINDOWSBITS);
-    S3_CHECK_OR_DIE_MSG(ret == Z_OK, S3RuntimeError, "failed to initialize zlib library");
+    S3_CHECK_OR_DIE(ret == Z_OK, S3RuntimeError, "failed to initialize zlib library");
+
+    this->isClosed = false;
 
     this->reader->open(params);
 }
@@ -112,12 +116,15 @@ void DecompressReader::decompress() {
         S3DEBUG("Decompression finished: Z_STREAM_END.");
     } else if (status < 0 || status == Z_NEED_DICT) {
         inflateEnd(&this->zstream);
-        S3_CHECK_OR_DIE_MSG(false, S3RuntimeError, string("Failed to decompress data: ") +
-                                                       std::to_string((unsigned long long)status));
+        S3_CHECK_OR_DIE(false, S3RuntimeError, string("Failed to decompress data: ") +
+                                                   std::to_string((unsigned long long)status));
     }
 }
 
 void DecompressReader::close() {
-    inflateEnd(&zstream);
-    this->reader->close();
+    if (!this->isClosed) {
+        inflateEnd(&zstream);
+        this->reader->close();
+        this->isClosed = true;
+    }
 }

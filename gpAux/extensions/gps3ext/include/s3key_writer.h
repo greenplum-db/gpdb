@@ -10,7 +10,7 @@ class WriterBuffer : public vector<uint8_t> {};
 
 class S3KeyWriter : public Writer {
    public:
-    S3KeyWriter() : sharedError(false), s3interface(NULL), partNumber(0), activeThreads(0) {
+    S3KeyWriter() : sharedError(false), s3Interface(NULL), partNumber(0), activeThreads(0) {
         pthread_mutex_init(&this->mutex, NULL);
         pthread_cond_init(&this->cv, NULL);
         pthread_mutex_init(&this->exceptionMutex, NULL);
@@ -32,7 +32,7 @@ class S3KeyWriter : public Writer {
     virtual void close();
 
     void setS3InterfaceService(S3Interface* s3) {
-        this->s3interface = s3;
+        this->s3Interface = s3;
     }
 
    protected:
@@ -46,8 +46,8 @@ class S3KeyWriter : public Writer {
     std::exception_ptr sharedException;
     pthread_mutex_t exceptionMutex;
 
-    WriterBuffer buffer;
-    S3Interface* s3interface;
+    S3VectorUInt8 buffer;
+    S3Interface* s3Interface;
 
     string uploadId;
     map<uint64_t, string> etagList;

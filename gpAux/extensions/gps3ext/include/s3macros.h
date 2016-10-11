@@ -6,19 +6,19 @@
 
 #define PRINTOUT_BUFFER_LEN 1024
 
-#define S3_CHECK_OR_DIE_MSG(_condition, _type, _args...) \
+#define S3_CHECK_OR_DIE(_condition, _type, _args...)     \
     do {                                                 \
         if (!(_condition)) {                             \
-            _type except(_args);                         \
-            except.file = __FILE__;                      \
-            except.line = __LINE__;                      \
-            except.func = __func__;                      \
-            S3ERROR("%s", except.getMessage().c_str());  \
-            throw except;                                \
+            _type _except(_args);                        \
+            _except.file = __FILE__;                     \
+            _except.line = __LINE__;                     \
+            _except.func = __func__;                     \
+            S3ERROR("%s", _except.getMessage().c_str()); \
+            throw _except;                               \
         }                                                \
     } while (false)
 
-#define S3_DIE_MSG(_type, _args...) S3_CHECK_OR_DIE_MSG(false, _type, _args)
+#define S3_DIE(_type, _args...) S3_CHECK_OR_DIE(false, _type, _args)
 
 // chunk size for compression/decompression
 //    declare them here so UT tests can access each as well

@@ -2,6 +2,7 @@
 #define __S3_UTILS_H__
 
 #include "s3common_headers.h"
+#include "s3http_headers.h"
 #include "s3log.h"
 
 #define MD5_DIGEST_STRING_LENGTH 17
@@ -64,5 +65,12 @@ string uri_encode(const string& src);
 string uri_decode(const string& src);
 
 void find_replace(string& str, const string& find, const string& replace);
+
+void SignRequestV4(const string& method, HTTPHeaders* h, const string& orig_region,
+                   const string& path, const string& query, const S3Credential& cred);
+
+string getOptS3(const string& options, const string& key);
+
+string truncateOptions(const string& url_with_options);
 
 #endif  // __S3_UTILS_H__

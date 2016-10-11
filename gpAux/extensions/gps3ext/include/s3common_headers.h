@@ -32,10 +32,39 @@ using std::stringstream;
 #include "http_parser.h"
 #include "ini.h"
 
+#define DATE_STR_LEN 9
+#define TIME_STAMP_STR_LEN 17
+
 class S3Params;
 
-bool InitConfig(S3Params &params, const string &path, const string &section);
+extern string s3extErrorMessage;
+
+class UniqueLock {
+   public:
+    UniqueLock(pthread_mutex_t *m) : mutex(m) {
+        pthread_mutex_lock(this->mutex);
+    }
+    ~UniqueLock() {
+        pthread_mutex_unlock(this->mutex);
+    }
+
+   private:
+    pthread_mutex_t *mutex;
+};
+
+struct S3Credential {
+    bool operator==(const S3Credential &other) const {
+        return this->accessID == other.accessID && this->secret == other.secret &&
+               this->token == other.token;
+    }
+
+    string accessID;
+    string secret;
+    string token;
+};
+
 bool InitConfig(S3Params &params, const string &urlWithOptions);
+bool InitConfig(S3Params &params, const string &path, const string &section);
 
 void MaskThreadSignals();
 #endif

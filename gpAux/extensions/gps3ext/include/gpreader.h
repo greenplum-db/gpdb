@@ -14,6 +14,7 @@ class GPReader : public Reader {
    public:
     GPReader(const S3Params &params, const string &url);
     virtual ~GPReader() {
+        this->close();
     }
 
     virtual void open(const S3Params &params);
@@ -33,12 +34,12 @@ class GPReader : public Reader {
     void constructS3Params(const string &url);
 
    protected:
+    S3Params params;
     S3BucketReader bucketReader;
     S3CommonReader commonReader;
     S3RESTfulService restfulService;
 
     S3InterfaceService s3InterfaceService;
-    S3Params params;
 
     // it links to itself by default
     // but the pointer here leaves a chance to mock it in unit test

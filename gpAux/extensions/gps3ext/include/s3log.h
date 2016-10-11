@@ -4,7 +4,6 @@
 #include "s3common_headers.h"
 #include "s3conf.h"
 #include "s3exception.h"
-#include "s3macros.h"
 
 // log level
 enum LOGLEVEL { EXT_FATAL, EXT_ERROR, EXT_WARNING, EXT_INFO, EXT_DEBUG };

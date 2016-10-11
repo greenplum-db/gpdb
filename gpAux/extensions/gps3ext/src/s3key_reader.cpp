@@ -22,7 +22,7 @@ Range OffsetMgr::getNextOffset() {
 
 ChunkBuffer::ChunkBuffer(const string& url, S3KeyReader& reader)
     : sourceUrl(url), offsetMgr(reader.getOffsetMgr()), sharedKeyReader(reader) {
-    s3interface = NULL;
+    s3Interface = NULL;
     Range range = offsetMgr.getNextOffset();
     curFileOffset = range.offset;
     chunkDataSize = range.length;
@@ -56,17 +56,15 @@ uint64_t ChunkBuffer::read(char* buf, uint64_t len) {
     // GPDB abort signal stops s3_import(), this check is not needed if s3_import() every time calls
     // ChunkBuffer->Read() only once, otherwise(as we did in downstreamReader->read() for
     // decompression feature before), first call sets buffer to ReadyToFill, second call hangs.
-    S3_CHECK_OR_DIE_MSG(!S3QueryIsAbortInProgress(), S3QueryAbort, "");
-    pthread_mutex_lock(&this->statusMutex);
+    S3_CHECK_OR_DIE(!S3QueryIsAbortInProgress(), S3QueryAbort, "");
+
+    UniqueLock statusLock(&this->statusMutex);
     while (this->status != ReadyToRead) {
         pthread_cond_wait(&this->statusCondVar, &this->statusMutex);
     }
 
     // Error is shared between all chunks.
     if (this->isError()) {
-        pthread_mutex_unlock(&this->statusMutex);
-        // Don't throw here. Other chunks will set the shared error message,
-        // it will be handled by S3KeyReader.
         return 0;
     }
 
@@ -84,8 +82,7 @@ uint64_t ChunkBuffer::read(char* buf, uint64_t len) {
 
         if (!this->isEOF()) {
             // Release chunkData memory to reduce consumption.
-            vector<uint8_t> empty;
-            this->chunkData.swap(empty);
+            this->chunkData.release();
 
             this->status = ReadyToFill;
 
@@ -96,8 +93,6 @@ uint64_t ChunkBuffer::read(char* buf, uint64_t len) {
             pthread_cond_signal(&this->statusCondVar);
         }
     }
-
-    pthread_mutex_unlock(&this->statusMutex);
 
     return lenToRead;
 }
@@ -110,6 +105,13 @@ uint64_t ChunkBuffer::fill() {
         pthread_cond_wait(&this->statusCondVar, &this->statusMutex);
     }
 
+    if (S3QueryIsAbortInProgress() || this->isError()) {
+        this->setSharedError(true);
+        this->status = ReadyToRead;
+        pthread_cond_signal(&this->statusCondVar);
+        return -1;
+    }
+
     uint64_t offset = this->curFileOffset;
     uint64_t leftLen = this->chunkDataSize;
 
@@ -118,7 +120,7 @@ uint64_t ChunkBuffer::fill() {
     if (leftLen != 0) {
         try {
             readLen =
-                this->s3interface->fetchData(offset, this->chunkData, leftLen, this->sourceUrl,
+                this->s3Interface->fetchData(offset, this->chunkData, leftLen, this->sourceUrl,
                                              this->sharedKeyReader.getRegion());
             if (readLen != leftLen) {
                 S3DEBUG("Failed to fetch expected data from S3");
@@ -153,10 +155,10 @@ void* DownloadThreadFunc(void* data) {
     S3DEBUG("Downloading thread starts");
     do {
         if (S3QueryIsAbortInProgress()) {
-            S3INFO("Downloading thread is interrupted by user");
+            S3INFO("Downloading thread is interrupted");
 
             // error is shared between all chunks, so all chunks will stop.
-            buffer->setSharedError(true, S3QueryAbort("Downloading thread is interrupted by user"));
+            buffer->setSharedError(true, S3QueryAbort("Downloading thread is interrupted"));
 
             // have to unlock ChunkBuffer::read in some certain conditions, for instance, status is
             // not ReadyToRead, and read() is waiting for signal stat_cond.
@@ -182,20 +184,20 @@ void* DownloadThreadFunc(void* data) {
 }
 
 void S3KeyReader::open(const S3Params& params) {
-    S3_CHECK_OR_DIE_MSG(this->s3interface != NULL, S3RuntimeError, "s3interface must not be NULL");
+    S3_CHECK_OR_DIE(this->s3Interface != NULL, S3RuntimeError, "s3Interface must not be NULL");
 
     this->sharedError = false;
 
     this->numOfChunks = params.getNumOfChunks();
-    S3_CHECK_OR_DIE_MSG(this->numOfChunks > 0, S3RuntimeError, "numOfChunks must not be zero");
+    S3_CHECK_OR_DIE(this->numOfChunks > 0, S3RuntimeError, "numOfChunks must not be zero");
 
     this->region = params.getRegion();
 
     this->offsetMgr.setKeySize(params.getKeySize());
     this->offsetMgr.setChunkSize(params.getChunkSize());
 
-    S3_CHECK_OR_DIE_MSG(params.getChunkSize() > 0, S3RuntimeError,
-                        "chunk size must be greater than zero");
+    S3_CHECK_OR_DIE(params.getChunkSize() > 0, S3RuntimeError,
+                    "chunk size must be greater than zero");
 
     this->chunkBuffers.reserve(this->numOfChunks);
 
@@ -204,7 +206,7 @@ void S3KeyReader::open(const S3Params& params) {
     }
 
     for (uint64_t i = 0; i < this->numOfChunks; i++) {
-        this->chunkBuffers[i].setS3InterfaceService(this->s3interface);
+        this->chunkBuffers[i].setS3InterfaceService(this->s3Interface);
 
         pthread_t thread;
         pthread_create(&thread, NULL, DownloadThreadFunc, &this->chunkBuffers[i]);
@@ -227,7 +229,11 @@ uint64_t S3KeyReader::read(char* buf, uint64_t count) {
         readLen = buffer.read(buf, count);
 
         if (this->isSharedError()) {
-            std::rethrow_exception(this->sharedException);
+            if (this->sharedException != NULL) {
+                std::rethrow_exception(this->sharedException);
+            } else {
+                throw S3RuntimeError("Unexpected runtime error, sharedException is NULL");
+            }
         }
 
         this->transferredKeyLen += readLen;
@@ -257,9 +263,25 @@ void S3KeyReader::reset() {
 }
 
 void S3KeyReader::close() {
+    // to interupt downlading thread, we must: (check ChunkBuffer::fill())
+    // 1. set condition to ReadyToFill and signal conditional_variable.
+    // 2. set the shared error status to prevent download thread from continuing.
+    this->sharedError = true;
+
+    for (uint64_t i = 0; i < this->chunkBuffers.size(); i++) {
+        UniqueLock lock(this->chunkBuffers[i].getStatMutex());
+        this->chunkBuffers[i].setStatus(ReadyToFill);
+        pthread_cond_signal(this->chunkBuffers[i].getStatCond());
+    }
+
     for (uint64_t i = 0; i < this->threads.size(); i++) {
-        pthread_cancel(this->threads[i]);
+        if (this->threads[i] == 0) {
+            continue;
+        }
+
         pthread_join(this->threads[i], NULL);
+
+        this->threads[i] = 0;
     }
 
     this->reset();
