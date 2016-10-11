@@ -21,7 +21,7 @@ from gppylib.mainUtils import *
 
 from optparse import Option, OptionGroup, OptionParser, OptionValueError, SUPPRESS_USAGE
 import os, sys, getopt, socket, StringIO, signal, time
-from gppylib import gparray, gplog, pgconf, userinput, utils 
+from gppylib import gparray, gplog, pgconf, userinput, utils
 from gppylib.util import gp_utils
 from gppylib.commands import base, gp, pg, unix
 from gppylib.db import catalog, dbconn
@@ -40,7 +40,7 @@ from gppylib.utils import ParsedConfigFile, ParsedConfigFileRow, writeLinesToFil
         normalizeAndValidateInputPath, TableLogger
 from gppylib.gphostcache import GpInterfaceToHostNameCache
 from gppylib.operations.utils import ParallelOperation
-from gppylib.operations.package import SyncPackages 
+from gppylib.operations.package import SyncPackages
 
 import gppylib.commands.gp
 
@@ -187,7 +187,7 @@ class GpRecoverSegmentProgram:
                     fixed, flexible = parse_gprecoverseg_line(filename, lineno, line, fslist)
                     rows.append( ParsedConfigFileRow(fixed, flexible, line) )
         fileData = ParsedConfigFile(fslist, rows)
-        
+
         # validate fileData
         #
         validateFlexibleHeadersListAllFilespaces("Segment recovery config", gpArray, fileData)
@@ -354,7 +354,7 @@ class GpRecoverSegmentProgram:
                             (len(fsOidToPath), len(filespaceNameToFilespace)))
         return fsOidToPath
 
-    def __applySpareDirectoryMapToSegment( self, gpEnv, spareDirectoryMap, segment):
+    def __applySpareDirectoryMapToSegment(self, gpEnv, spareDirectoryMap, segment):
         gpPrefix = gp_utils.get_gp_prefix(gpEnv.getMasterDataDir())
         if not gpPrefix:
             gpPrefix = 'gp'
@@ -382,17 +382,17 @@ class GpRecoverSegmentProgram:
         recoverAddressMap = {}
         recoverHostMap = {}
         interfaceHostnameWarnings = []
-        
+
         # Check if the array is a "standard" array
         (isStandardArray, _ignore) = gpArray.isStandardArray()
-        
+
         recoverHostIdx = 0
-        
+
         if self.__options.newRecoverHosts and len(self.__options.newRecoverHosts) > 0:
             for seg in failedSegments:
                 segAddress = seg.getSegmentAddress()
                 segHostname = seg.getSegmentHostName()
-                
+
                 # Haven't seen this hostname before so we put it on a new host
                 if not recoverHostMap.has_key(segHostname):
                     try:
@@ -407,12 +407,12 @@ class GpRecoverSegmentProgram:
                     # We have a standard array configuration, so we'll try to use the same
                     # interface naming convention.  If this doesn't work, we'll correct it
                     # below on name lookup
-                    segInterface = segAddress[segAddress.rfind('-'):] 
+                    segInterface = segAddress[segAddress.rfind('-'):]
                     destAddress = recoverHostMap[segHostname] + segInterface
                     destHostname = recoverHostMap[segHostname]
                 else:
-                    # Non standard configuration so we won't make assumptions on 
-                    # naming.  Instead we'll use the hostname passed in for both 
+                    # Non standard configuration so we won't make assumptions on
+                    # naming.  Instead we'll use the hostname passed in for both
                     # hostname and address and flag for warning later.
                     destAddress = recoverHostMap[segHostname]
                     destHostname = recoverHostMap[segHostname]
@@ -424,7 +424,7 @@ class GpRecoverSegmentProgram:
             # sure they are resolvable.
             interfaces = [address for (_ignore, address) in recoverAddressMap.values()]
             interfaceLookup = GpInterfaceToHostNameCache(self.__pool, interfaces, [None] * len(interfaces))
-            
+
             for key in recoverAddressMap.keys():
                 (newHostname, newAddress) = recoverAddressMap[key]
                 try:
@@ -438,7 +438,7 @@ class GpRecoverSegmentProgram:
                     # that we generated.
                     interfaceHostnameWarnings.append("Lookup of %s failed.  Using %s for both hostname and address." % (newAddress, newHostname))
                     newAddress = newHostname
-                    
+
                 # if we've updated the address to use the hostname because of lookup failure
                 # make sure the hostname is resolvable and up
                 if newHostname == newAddress:
@@ -446,15 +446,15 @@ class GpRecoverSegmentProgram:
                         unix.Ping.local("ping new hostname", newHostname)
                     except:
                         raise Exception("Ping of host %s failed." % newHostname)
-                    
+
                 # Save changes in map
                 recoverAddressMap[key] = (newHostname, newAddress)
-                
+
             if len(self.__options.newRecoverHosts) != recoverHostIdx:
                 interfaceHostnameWarnings.append("The following recovery hosts were not needed:")
                 for h in self.__options.newRecoverHosts[recoverHostIdx:]:
                     interfaceHostnameWarnings.append("\t%s" % h)
-        
+
         spareDirectoryMap = None
         if self.__options.spareDataDirectoryFile is not None:
             spareDirectoryMap = self.__readSpareDirectoryMap(gpArray, self.__options.spareDataDirectoryFile)
@@ -490,7 +490,7 @@ class GpRecoverSegmentProgram:
                 # these two lines make it so that failoverSegment points to the object that is registered in gparray
                 failoverSegment = failedSegment
                 failedSegment = failoverSegment.copy()
-                self.__applySpareDirectoryMapToSegment( gpEnv, spareDirectoryMap, failoverSegment)
+                self.__applySpareDirectoryMapToSegment(gpEnv, spareDirectoryMap, failoverSegment)
                 # we're failing over to different location on same host so we don't need to assign new ports
 
             if (not forceFull and liveSegment.getSegmentDbId() in segmentStates and
@@ -518,7 +518,7 @@ class GpRecoverSegmentProgram:
         return False
 
     # San-failback is handled separately from the Filerep-recovery operations.
-    # 
+    #
     # I need to walk through results returned by shell commands digging for information
     # this isn't as easy as I'd like.
     def SanFailback(self, array_config, gpEnv):
@@ -584,7 +584,7 @@ class GpRecoverSegmentProgram:
         # 5 Move mountpoints
         #   For each recoverable seg, walk its mountlist.
         # 5a
-        #   unmount on failover host.            
+        #   unmount on failover host.
         # 5b
         #   reconnect to primary.
         # 5c
@@ -686,7 +686,7 @@ class GpRecoverSegmentProgram:
             if conn:
                 conn.close()
 
-        # N - 1 
+        # N - 1
         # Stop GPDB-admin-mode
         e = os.system('gpstop -m -d %s' % (os.environ.get('MASTER_DATA_DIRECTORY')))
         ok = not e
@@ -712,7 +712,7 @@ class GpRecoverSegmentProgram:
     def SanFailback_mountpoint(self, mp_id, mp_dict):
         active = mp_dict['active']
 
-        if active !='m':
+        if active != 'm':
             # failback unnecessary ?
             self.logger.info('Not failback required for mount id %d primary is active!' % mp_id)
             return 0
@@ -722,7 +722,7 @@ class GpRecoverSegmentProgram:
         command = 'gp_mount_agent --agent -u -t %c -a %c -p %s -d %s -m %s -q %s -e %s -n %s' % (mp_dict['type'], mp_dict['active'],
                                                                                                  mp_dict['primaryhost'], mp_dict['primarydevice'], mp_dict['primarymountpoint'],
                                                                                                  mp_dict['mirrorhost'], mp_dict['mirrordevice'], mp_dict['mirrormountpoint'])
-                                                                                         
+
         self.logger.debug('gp_mount_agent command is \'%s\'' % command)
 
         e = os.system(command)
@@ -742,7 +742,7 @@ class GpRecoverSegmentProgram:
             return self.getRecoveryActionsFromConfiguration(gpEnv, gpArray)
 
     def syncPackages(self, new_hosts):
-        # The design decision here is to squash any exceptions resulting from the 
+        # The design decision here is to squash any exceptions resulting from the
         # synchronization of packages. We should *not* disturb the user's attempts to recover.
         try:
             logger.info('Syncing Greenplum Database extensions')
@@ -784,9 +784,9 @@ class GpRecoverSegmentProgram:
                 self.logger.info('---------------------------------------------------------')
                 programIoUtils.appendSegmentInfoForOutput("Unbalanced", gpArray, toRebalance, tabLog)
                 tabLog.info(["Balanced role", "= Primary" if toRebalance.preferred_role == 'p' else "= Mirror"])
-                tabLog.info(["Current role", "= Primary" if toRebalance.role == 'p' else "= Mirror"])                
+                tabLog.info(["Current role", "= Primary" if toRebalance.role == 'p' else "= Mirror"])
                 tabLog.outputTable()
-                i+=1                
+                i+=1
         else:
             i = 0
             total = len(mirrorBuilder.getMirrorsToBuild())
@@ -794,20 +794,20 @@ class GpRecoverSegmentProgram:
                 self.logger.info('---------------------------------------------------------')
                 self.logger.info('Recovery %d of %d' % (i+1, total))
                 self.logger.info('---------------------------------------------------------')
-    
+
                 tabLog = TableLogger()
-    
+
                 syncMode = "Full" if toRecover.isFullSynchronization() else "Incremental"
                 tabLog.info(["Synchronization mode", "= " + syncMode])
                 programIoUtils.appendSegmentInfoForOutput("Failed", gpArray, toRecover.getFailedSegment(), tabLog)
                 programIoUtils.appendSegmentInfoForOutput("Recovery Source", gpArray, toRecover.getLiveSegment(), tabLog)
-    
+
                 if toRecover.getFailoverSegment() is not None:
                     programIoUtils.appendSegmentInfoForOutput("Recovery Target", gpArray, toRecover.getFailoverSegment(), tabLog)
                 else:
                     tabLog.info(["Recovery Target", "= in-place"])
                 tabLog.outputTable()
-    
+
                 i = i + 1
 
         self.logger.info('---------------------------------------------------------')
@@ -838,14 +838,14 @@ class GpRecoverSegmentProgram:
                     res.append("Segment is being recovered to the same host as its primary: "
                             "primary %s    failover target: %s"
                             % (self.__getSimpleSegmentLabel(src), self.__getSimpleSegmentLabel(dest)))
-        
+
         for warning in mirrorBuilder.getAdditionalWarnings():
             res.append(warning)
-        
+
         return res
 
     def _get_dblist(self):
-        #template0 does not accept any connections so we exclude it 
+        #template0 does not accept any connections so we exclude it
         with dbconn.connect(dbconn.DbURL()) as conn:
             res = dbconn.execSQL(conn, "SELECT datname FROM PG_DATABASE WHERE datname != 'template0'")
         return res.fetchall()
@@ -856,12 +856,12 @@ class GpRecoverSegmentProgram:
         # Checks on FILESPACE
         qname = 'gp_persistent_filespace_node  <=> pg_filespace'
         query = """
-        SELECT  coalesce(f.oid, p.filespace_oid) as filespace_oid, 
+        SELECT  coalesce(f.oid, p.filespace_oid) as filespace_oid,
                 f.fsname as "filespace"
-        FROM (SELECT * FROM gp_persistent_filespace_node 
-              WHERE persistent_state = 2) p 
-        FULL OUTER JOIN (SELECT oid, fsname FROM pg_filespace 
-                         WHERE oid != 3052) f 
+        FROM (SELECT * FROM gp_persistent_filespace_node
+              WHERE persistent_state = 2) p
+        FULL OUTER JOIN (SELECT oid, fsname FROM pg_filespace
+                         WHERE oid != 3052) f
         ON (p.filespace_oid = f.oid)
         WHERE  (p.filespace_oid is NULL OR f.oid is NULL)
         """
@@ -869,7 +869,7 @@ class GpRecoverSegmentProgram:
 
         qname = 'gp_persistent_filespace_node  <=> gp_global_sequence'
         query = """
-        SELECT  p.filespace_oid, f.fsname as "filespace", 
+        SELECT  p.filespace_oid, f.fsname as "filespace",
                 case when p.persistent_state = 0 then 'free'
                      when p.persistent_state = 1 then 'create pending'
                      when p.persistent_state = 2 then 'created'
@@ -890,9 +890,9 @@ class GpRecoverSegmentProgram:
         query = """
         SELECT coalesce(d.oid, p.database_oid) as database_oid,
                d.datname as database
-        FROM (SELECT * FROM gp_persistent_database_node 
+        FROM (SELECT * FROM gp_persistent_database_node
               WHERE persistent_state = 2) p
-        FULL OUTER JOIN pg_database d 
+        FULL OUTER JOIN pg_database d
         ON (d.oid = p.database_oid)
         WHERE (d.datname is null or p.database_oid is null)
         """
@@ -900,11 +900,11 @@ class GpRecoverSegmentProgram:
 
         qname = 'gp_persistent_database_node   <=> pg_tablespace'
         query = """
-        SELECT  coalesce(t.oid, p.database_oid) as database_oid, 
+        SELECT  coalesce(t.oid, p.database_oid) as database_oid,
                 t.spcname as tablespace
-        FROM (SELECT * FROM gp_persistent_database_node 
+        FROM (SELECT * FROM gp_persistent_database_node
               WHERE persistent_state = 2) p
-        LEFT OUTER JOIN (SELECT oid, spcname FROM pg_tablespace 
+        LEFT OUTER JOIN (SELECT oid, spcname FROM pg_tablespace
                        WHERE oid != 1664) t
         ON (t.oid = p.tablespace_oid)
         WHERE  t.spcname is null
@@ -929,14 +929,14 @@ class GpRecoverSegmentProgram:
         WHERE   s.ctid = '(0,2)' and p.persistent_serial_num > s.sequence_num
         """
         queries.append([qname, query])
-    
+
         # Checks on TABLESPACE
         qname = 'gp_persistent_tablespace_node <=> pg_tablespace'
         query = """
-        SELECT  coalesce(t.oid, p.tablespace_oid) as tablespace_oid, 
+        SELECT  coalesce(t.oid, p.tablespace_oid) as tablespace_oid,
                 t.spcname as tablespace
-        FROM (SELECT * FROM gp_persistent_tablespace_node 
-              WHERE persistent_state = 2) p 
+        FROM (SELECT * FROM gp_persistent_tablespace_node
+              WHERE persistent_state = 2) p
         FULL OUTER JOIN (
              SELECT oid, spcname FROM pg_tablespace WHERE oid not in (1663, 1664)
              ) t ON (t.oid = p.tablespace_oid)
@@ -947,9 +947,9 @@ class GpRecoverSegmentProgram:
         qname = 'gp_persistent_tablespace_node <=> pg_filespace'
         query = """
         SELECT  p.filespace_oid, f.fsname as "filespace"
-        FROM (SELECT * FROM gp_persistent_tablespace_node 
+        FROM (SELECT * FROM gp_persistent_tablespace_node
               WHERE persistent_state = 2) p
-        LEFT OUTER JOIN pg_filespace f 
+        LEFT OUTER JOIN pg_filespace f
         ON (f.oid = p.filespace_oid)
         WHERE  f.fsname is null
         """
@@ -973,21 +973,21 @@ class GpRecoverSegmentProgram:
         WHERE   s.ctid = '(0,3)' and p.persistent_serial_num > s.sequence_num
         """
         queries.append([qname, query])
-    
+
         # Checks on RELATION
         qname = 'gp_persistent_relation_node   <=> pg_tablespace'
         query = """
         SELECT  distinct p.tablespace_oid
         FROM (SELECT *
-              FROM gp_persistent_relation_node 
-              WHERE persistent_state = 2 
+              FROM gp_persistent_relation_node
+              WHERE persistent_state = 2
               AND database_oid in (
                   SELECT oid
-                  FROM pg_database 
+                  FROM pg_database
                   WHERE datname = current_database()
                   UNION ALL
                   SELECT 0)) p
-        LEFT OUTER JOIN pg_tablespace t 
+        LEFT OUTER JOIN pg_tablespace t
         ON (t.oid = p.tablespace_oid)
         WHERE  t.oid is null
         """
@@ -998,8 +998,8 @@ class GpRecoverSegmentProgram:
         SELECT  datname, oid, count(*)
         FROM (
                 SELECT  d.datname as datname, p.database_oid as oid
-                FROM (SELECT * 
-                      FROM gp_persistent_relation_node 
+                FROM (SELECT *
+                      FROM gp_persistent_relation_node
                       WHERE database_oid != 0 AND persistent_state = 2
                      ) p
                 full outer join pg_database d ON (d.oid = p.database_oid)
@@ -1025,12 +1025,12 @@ class GpRecoverSegmentProgram:
         FULL OUTER JOIN gp_relation_node r
         ON (p.relfilenode_oid = r.relfilenode_oid and
             p.segment_file_num = r.segment_file_num)
-        WHERE  (p.relfilenode_oid is NULL OR 
-                r.relfilenode_oid is NULL OR 
+        WHERE  (p.relfilenode_oid is NULL OR
+                r.relfilenode_oid is NULL OR
                 p.ctid != r.persistent_tid)
         """
         queries.append([qname, query])
-    
+
         qname = 'gp_persistent_relation_node   <=> pg_class'
         query = """
         SELECT  coalesce(p.relfilenode_oid, c.relfilenode) as relfilenode,
@@ -1046,7 +1046,7 @@ class GpRecoverSegmentProgram:
         ) p
         FULL OUTER JOIN (
             SELECT  n.nspname, c.relname, c.relfilenode, c.relstorage, c.relkind
-            FROM  pg_class c 
+            FROM  pg_class c
             LEFT OUTER JOIN pg_namespace n ON (c.relnamespace = n.oid)
             WHERE  c.relstorage not in ('v', 'x', 'f')
         ) c ON (p.relfilenode_oid = c.relfilenode)
@@ -1057,7 +1057,7 @@ class GpRecoverSegmentProgram:
         qname = 'gp_persistent_relation_node   <=> gp_global_sequence'
         query = """
         SELECT  p.tablespace_oid, p.database_oid, p.relfilenode_oid,
-                p.segment_file_num, 
+                p.segment_file_num,
                 case when p.persistent_state = 0 then 'free'
                      when p.persistent_state = 1 then 'create pending'
                      when p.persistent_state = 2 then 'created'
@@ -1092,14 +1092,14 @@ class GpRecoverSegmentProgram:
         FULL OUTER JOIN (
                SELECT p.*, c.relkind, c.relstorage
                FROM   gp_persistent_relation_node_check() p
-               LEFT OUTER JOIN pg_class c 
+               LEFT OUTER JOIN pg_class c
                ON (p.relfilenode_oid = c.relfilenode)
                WHERE (p.segment_file_num = 0 or c.relstorage != 'h')
         ) b ON (a.tablespace_oid   = b.tablespace_oid    and
                a.database_oid     = b.database_oid      and
                a.relfilenode_oid  = b.relfilenode_oid   and
                a.segment_file_num = b.segment_file_num)
-        WHERE (a.relfilenode_oid is null OR 
+        WHERE (a.relfilenode_oid is null OR
 	          (a.persistent_state = 2 and b.relfilenode_oid is null))  and
               coalesce(a.database_oid, b.database_oid) in (
         SELECT oid
@@ -1116,9 +1116,9 @@ class GpRecoverSegmentProgram:
         qname = 'pg_database                   <=> filesystem'
         query = """
         SELECT tablespace_oid, database_oid, count(*)
-        FROM   gp_persistent_relation_node_check() p 
-        LEFT OUTER JOIN pg_database d 
-        ON (p.database_oid = d.oid) 
+        FROM   gp_persistent_relation_node_check() p
+        LEFT OUTER JOIN pg_database d
+        ON (p.database_oid = d.oid)
         WHERE  d.oid is null and database_oid != 0
         GROUP BY tablespace_oid, database_oid;
         """
@@ -1127,7 +1127,7 @@ class GpRecoverSegmentProgram:
         qname = 'check for duplicate persistent table entries'
         query = """
           SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
-          
+
           -- distribute catalog table from master, so that we can avoid to gather
           CREATE TEMPORARY TABLE _tmp_master ON COMMIT DROP AS
               SELECT gp_segment_id segid, tablespace_oid, database_oid, relfilenode_oid, segment_file_num, mirror_existence_state FROM gp_persistent_relation_node;
@@ -1136,16 +1136,16 @@ class GpRecoverSegmentProgram:
               SELECT segid, tablespace_oid, database_oid, relfilenode_oid, segment_file_num, count(*) as total
               FROM (
                    select segid, tablespace_oid, database_oid, relfilenode_oid, segment_file_num from _tmp_master
-                   where mirror_existence_state != 6 
+                   where mirror_existence_state != 6
                    union all
-                   select gp_segment_id as segid, tablespace_oid, database_oid, relfilenode_oid, segment_file_num from gp_dist_random('gp_persistent_relation_node') 
-                   where mirror_existence_state != 6 
-              ) all_segments 
+                   select gp_segment_id as segid, tablespace_oid, database_oid, relfilenode_oid, segment_file_num from gp_dist_random('gp_persistent_relation_node')
+                   where mirror_existence_state != 6
+              ) all_segments
                 LEFT OUTER JOIN pg_database d ON (all_segments.database_oid = d.oid)
               WHERE d.datname = '{dbname}'
-              GROUP BY segid, tablespace_oid, database_oid, relfilenode_oid, segment_file_num 
+              GROUP BY segid, tablespace_oid, database_oid, relfilenode_oid, segment_file_num
               HAVING count(*) > 1
-          ) rowresult 
+          ) rowresult
           GROUP BY tablespace_oid, database_oid, relfilenode_oid, segment_file_num, total
         """
 
@@ -1193,14 +1193,14 @@ class GpRecoverSegmentProgram:
                                               remoteHost=seg.getSegmentHostName())
             self.__pool.addCommand(cmd)
         self.__pool.join()
-  
+
         for item in self.__pool.getCompletedItems():
             result = item.get_results()
             if 'segmentState: Ready' not in result.stderr and 'segmentState: ChangeTrackingDisabled' not in result.stderr:
                 raise Exception('Not ready to connect to database %s' % result.stderr)
 
     """
-    When a primary segment goes down and its mirror has not yet failed over to Change Tracking, 
+    When a primary segment goes down and its mirror has not yet failed over to Change Tracking,
     If we try to start a transaction it will fail. This results in the python scripts which try
     to run queries return a confusing error message. The solution here is to use gp_primarymirror
     to check the status of all the primary segments and make sure they are in "Ready" state. If
@@ -1208,7 +1208,7 @@ class GpRecoverSegmentProgram:
     """
     def _check_database_connection(self, confProvider):
         retry = 0
-        MAX_RETRIES = 5 
+        MAX_RETRIES = 5
         while retry < MAX_RETRIES:
             try:
                 self._check_segment_state_for_connection(confProvider)
@@ -1372,17 +1372,17 @@ class GpRecoverSegmentProgram:
             # Make sure we have work to do
             if len(gpArray.get_unbalanced_segdbs()) == 0:
                 self.logger.info("No segments are running in their non-preferred role and need to be rebalanced.")
-            else:           
+            else:
                 self.displayRecovery(mirrorBuilder, gpArray)
-                
+
                 if self.__options.interactive:
                     self.logger.warn("This operation will cancel queries that are currently executing.")
                     self.logger.warn("Connections to the database however will not be interrupted.")
                     if not userinput.ask_yesno(None, "\nContinue with segment rebalance procedure", 'N'):
                         raise UserAbortedException()
-                
+
                 mirrorBuilder.rebalance()
-                
+
                 self.logger.info("******************************************************************")
                 self.logger.info("The rebalance operation has completed successfully.")
                 self.logger.info("There is a resynchronization running in the background to bring all")
@@ -1390,7 +1390,7 @@ class GpRecoverSegmentProgram:
                 self.logger.info("")
                 self.logger.info("Use gpstate -e to check the resynchronization progress.")
                 self.logger.info("******************************************************************")
-            
+
         elif len(mirrorBuilder.getMirrorsToBuild()) == 0 and not mirrorsUnableToBuild:
             self.logger.info('No segments to recover')
         else:
@@ -1410,7 +1410,7 @@ class GpRecoverSegmentProgram:
                 self.syncPackages(new_hosts)
 
             mirrorBuilder.buildMirrors("recover", gpEnv, gpArray )
-            
+
             confProvider.sendPgElogFromMaster("Recovery of %d segment(s) has been started." % \
                     len(mirrorBuilder.getMirrorsToBuild()), True)
 
@@ -1429,7 +1429,7 @@ class GpRecoverSegmentProgram:
     def cleanup(self):
         if self.__pool:
             self.__pool.haltWork()    # \  MPP-13489, CR-2572
-            self.__pool.joinWorkers() #  > all three of these appear necessary 
+            self.__pool.joinWorkers() #  > all three of these appear necessary
             self.__pool.join()        # /  see MPP-12633, CR-2252 as well
 
     #-------------------------------------------------------------------------
@@ -1453,7 +1453,7 @@ class GpRecoverSegmentProgram:
         addTo = OptionGroup(parser, "Recovery Source Options")
         parser.add_option_group(addTo)
         addTo.add_option("-i", None, type="string",
-                            dest="recoveryConfigFile", 
+                            dest="recoveryConfigFile",
                             metavar="<configFile>",
                             help="Recovery configuration file")
         addTo.add_option("-o", None,
@@ -1502,12 +1502,12 @@ class GpRecoverSegmentProgram:
             raise ProgramArgumentValidationException(\
                             "too many arguments: only options may be specified", True)
         return GpRecoverSegmentProgram(options)
-    
-        
+
+
     @staticmethod
     def mainOptions():
         """
-        The dictionary this method returns instructs the simple_main framework 
+        The dictionary this method returns instructs the simple_main framework
         to check for a gprecoverseg.pid file under MASTER_DATA_DIRECTORY to
         prevent the customer from trying to run more than one instance of
         gprecoverseg at the same time.
