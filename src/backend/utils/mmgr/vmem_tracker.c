@@ -184,6 +184,17 @@ VmemTracker_ResetMaxVmemReserved()
 	maxVmemChunksTracked = trackedVmemChunks;
 }
 
+/* Checks */
+static void
+VmemTracker_CheckForPendingCancellation()
+{
+  if (InterruptPending)
+  {
+    /* ProcessInterrupts should check for InterruptHoldoffCount and CritSectionCount */
+    ProcessInterrupts();
+  }
+}
+
 /*
  * Reserve 'num_chunks_to_reserve' number of chunks for current process. The
  * reservation is validated against segment level vmem quota.
@@ -495,6 +506,8 @@ VmemTracker_ReserveVmem(int64 newlyRequestedBytes)
 		 */
 		trackedBytes -= newlyRequestedBytes;
 		RedZoneHandler_DetectRunawaySession();
+		VmemTracker_CheckForPendingCancellation();
+
 		/*
 		 * Redo, as we returned from VmemTracker_TerminateRunawayQuery and
 		 * we are successfully reserving this vmem
