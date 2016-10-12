@@ -7,5 +7,5 @@ GP_HADOOP_TARGET_VERSION=%GP_HADOOP_TARGET_VERSION%
 HADOOP_PORT=%HADOOP_PORT%
 export JAVA_HOME=%JAVA_HOME%
 export PATH=$PATH:$HADOOP_HOME/sbin:$HADOOP_HOME/bin
-HADOOP_HOME=$GPDB_HADOOP_HOME  source ${GPHOME}/lib/hadoop/hadoop_env.sh; 
-java -cp .:$CLASSPATH:${GPHOME}/lib/hadoop/${GP_HADOOP_TARGET_VERSION}-gnet-1.2.0.0.jar:%WORKDIR%/legacy/maptest.jar -Dhdfshost=%HADOOP_HOST% -Ddatanodeport=%HADOOP_PORT% -Djobtrackerhost=%HADOOP_HOST% -Djobtrackerport=%HADOOP_PORT% "$@" 
+HADOOP_HOME=$GPDB_HADOOP_HOME  source ${GPHOME}/lib/hadoop/hadoop_env.sh;
+java -cp .:$CLASSPATH:${GPHOME}/lib/hadoop/${GP_HADOOP_TARGET_VERSION}-gnet-1.2.0.0.jar:%WORKDIR%/legacy/maptest.jar -Dhdfshost=%HADOOP_HOST% -Ddatanodeport=%HADOOP_PORT% -Djobtrackerhost=%HADOOP_HOST% -Djobtrackerport=%HADOOP_PORT% "$@"

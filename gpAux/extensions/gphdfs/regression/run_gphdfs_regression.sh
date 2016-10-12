@@ -17,8 +17,6 @@ rm -rf $CURDIR/source_replaced/
 mkdir -p $CURDIR/source_replaced/input
 mkdir -p $CURDIR/source_replaced/output
 
-
-
 cp $CURDIR/input/*.source $CURDIR/source_replaced/input/
 cp $CURDIR/output/*.source $CURDIR/source_replaced/output/
 
@@ -48,7 +46,6 @@ export HADOOP_USER_NAME=hdfs
 $HADOOPCMD fs -rm -r /extwrite/* || echo ""
 $HADOOPCMD fs -rm -r /mapreduce/* || echo ""
 $HADOOPCMD fs -rm -r /mapred/* || echo ""
+
 #${PGREGRESS} --psqldir=$GPHOME/bin/ --init-file=$CURDIR/init_file --schedule=$CURDIR/gphdfs_regress_schedule  --srcdir=$CURDIR/source_replaced --inputdir=$CURDIR/source_replaced --outputdir=$CURDIR/source_replaced
-
 ${PGREGRESS} --psqldir=$GPHOME/bin/ --init-file=$CURDIR/init_file --schedule=$CURDIR/limited_schedule --srcdir=$CURDIR/source_replaced --inputdir=$CURDIR/source_replaced --outputdir=$CURDIR/source_replaced
-

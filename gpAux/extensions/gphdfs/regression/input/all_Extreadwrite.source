@@ -31,4 +31,3 @@ insert into all_writehdfs select * from all_heap;
 select count(*) from all_readhdfs;
 
 (select * from all_heap except select * from all_readhdfs) union (select * from all_readhdfs except select * from all_heap);
-
