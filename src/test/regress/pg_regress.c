@@ -2035,25 +2035,33 @@ trim_white_space(char *str)
 }
 
 /*
- * Check whether the optimizer is on or off, and set the global
+ * @brief Check whether a feature (i.e., optimizer or codegen) is on or off.
+ * If the input feature is optimizer, then set the global
  * variable "optimizer_enabled" accordingly.
+ *
+ * @param feature_name Name of the feature to be checked (i.e., optimizer or codegen)
+ * @param on_msg Message to be printed when the feature is enabled
+ * @param off_msg Message to be printed when the feature is disabled
+ * @return true if the feature is enabled; false otherwise
  */
-static void
-check_optimizer_status(void)
+static bool
+check_feature_status(char *feature_name, char *on_msg, char *off_msg)
 {
 	char psql_cmd[MAXPGPATH];
 	char statusfilename[MAXPGPATH];
 	char line[1024];
+	bool isEnabled = false;
 
-	header(_("checking optimizer status"));
+	header(_("checking %s status"), feature_name);
 
-	snprintf(statusfilename, sizeof(statusfilename), SYSTEMQUOTE "%s/optimizer_status.out" SYSTEMQUOTE, outputdir);
+	snprintf(statusfilename, sizeof(statusfilename), SYSTEMQUOTE "%s/%s_status.out" SYSTEMQUOTE, outputdir, feature_name);
 
 	snprintf(psql_cmd, sizeof(psql_cmd),
-			 SYSTEMQUOTE "\"%s%spsql\" -X -c \"show optimizer;\" -o \"%s\" -d \"postgres\"" SYSTEMQUOTE,
-			 psqldir ? psqldir : "",
-			 psqldir ? "/" : "",
-			 statusfilename);
+			SYSTEMQUOTE "\"%s%spsql\" -X -c \"show %s;\" -o \"%s\" -d \"postgres\"" SYSTEMQUOTE,
+			psqldir ? psqldir : "",
+			psqldir ? "/" : "",
+			feature_name,
+			statusfilename);
 
 	if (system(psql_cmd) != 0)
 	{
@@ -2073,20 +2081,20 @@ check_optimizer_status(void)
 		char *trimmed = trim_white_space(line);
 		if (strncmp(trimmed, "on", 2) == 0)
 		{
-			optimizer_enabled = true;
-			status(_("Optimizer enabled. Using optimizer answer files whenever possible"));
+			status(_(on_msg));
+			isEnabled = true;
 			break;
 		}
 
 		if (strncmp(trimmed, "off", 3) == 0)
 		{
-			optimizer_enabled = false;
-			status(_("Optimizer disabled. Using planner answer files"));
+			status(_(off_msg));
 			break;
 		}
 	}
 	status_end();
 	fclose(statusfile);
+	return isEnabled;
 }
 
 static void
@@ -2478,7 +2486,14 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 	/*
 	 * Find out if optimizer is on or off
 	 */
-	check_optimizer_status();
+	optimizer_enabled = check_feature_status("optimizer",
+			"Optimizer enabled. Using optimizer answer files whenever possible",
+			"Optimizer disabled. Using planner answer files");
+
+	/*
+	 * Find out if codegen is on or off
+	 */
+	check_feature_status("codegen", "Codegen enabled", "Codegen disabled");
 
 	/*
 	 * Ready to run the tests
