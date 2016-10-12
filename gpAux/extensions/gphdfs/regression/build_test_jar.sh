@@ -2,6 +2,7 @@
 
 unset HADOOP_HOME
 CURDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+GP_HADOOP_TARGET_VERSION=cdh4.1
 
 export JAVA_HOME=/usr/lib/jvm/java-1.7.0-openjdk.x86_64
 
@@ -15,5 +16,5 @@ fi
 source $GPHOME/lib/hadoop/hadoop_env.sh; 
 
 cd $CURDIR/legacy;
-javac -cp .:$CLASSPATH:$GPHOME/lib/hadoop/gphd-2.0.2-gnet-1.2.0.0.jar javaclasses/*.java
+javac -cp .:$CLASSPATH:$GPHOME/lib/hadoop/${GP_HADOOP_TARGET_VERSION}-gnet-1.2.0.0.jar javaclasses/*.java
 jar cf maptest.jar javaclasses/*.class
