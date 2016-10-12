@@ -214,34 +214,34 @@ class GpRecoverSegmentProgramTestCase(unittest.TestCase):
         assert not gprecover_prog.logger.warn.called
 
     @patch('pygresql.pgdb.pgdbCursor.fetchall', return_value=[[3], [1]])
-    def test_is_segment_mirrored_with_PT_inconsistency_persistent_mirrors_disabled(self, mock_sql):
+    def test_is_segment_mirror_state_mismatched_cluster_mirroring_enabled_segment_mirroring_disabled(self, mock_sql):
         options = Mock()
         gprecover_prog = GpRecoverSegmentProgram(options)
         gparray_mock = Mock()
         gparray_mock.getFaultStrategy.return_value = gparray.FAULT_STRATEGY_FILE_REPLICATION
         segment_mock = Mock()
         segment_mock.getSegmentContentId.return_value = 0
-        result = gprecover_prog.is_segment_mirrored_with_PT_inconsistency(gparray_mock, segment_mock)
+        result = gprecover_prog.is_segment_mirror_state_mismatched(gparray_mock, segment_mock)
         self.assertTrue(result)
 
     @patch('pygresql.pgdb.pgdbCursor.fetchall', return_value=[[3]])
-    def test_is_segment_mirrored_with_PT_inconsistency_persistent_mirrors_enabled(self, mock_sql):
+    def test_is_segment_mirror_state_mismatched_cluster_and_segments_mirroring_enabled(self, mock_sql):
         options = Mock()
         gprecover_prog = GpRecoverSegmentProgram(options)
         gparray_mock = Mock()
         gparray_mock.getFaultStrategy.return_value = gparray.FAULT_STRATEGY_FILE_REPLICATION
         segment_mock = Mock()
         segment_mock.getSegmentContentId.return_value = 0
-        result = gprecover_prog.is_segment_mirrored_with_PT_inconsistency(gparray_mock, segment_mock)
+        result = gprecover_prog.is_segment_mirror_state_mismatched(gparray_mock, segment_mock)
         self.assertFalse(result)
 
     @patch('pygresql.pgdb.pgdbCursor.fetchall', return_value=[[1]])
-    def test_is_segment_mirrored_with_PT_inconsistency_no_mirrors(self, mock_sql):
+    def test_is_segment_mirror_state_mismatched_cluster_and_segments_mirroring_disabled(self, mock_sql):
         options = Mock()
         gprecover_prog = GpRecoverSegmentProgram(options)
         gparray_mock = Mock()
         gparray_mock.getFaultStrategy.return_value = gparray.FAULT_STRATEGY_NONE
         segment_mock = Mock()
         segment_mock.getSegmentDbId.return_value = 0
-        result = gprecover_prog.is_segment_mirrored_with_PT_inconsistency(gparray_mock, segment_mock)
+        result = gprecover_prog.is_segment_mirror_state_mismatched(gparray_mock, segment_mock)
         self.assertFalse(result)

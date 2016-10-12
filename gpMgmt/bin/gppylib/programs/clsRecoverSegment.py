@@ -284,7 +284,7 @@ class GpRecoverSegmentProgram:
             peerForFailedSegment = peersForFailedSegments[index]
 
             peerForFailedSegmentDbId = peerForFailedSegment.getSegmentDbId()
-            if self.is_segment_mirrored_with_PT_inconsistency(gpArray, peerForFailedSegment):
+            if self.is_segment_mirror_state_mismatched(gpArray, peerForFailedSegment):
                 segs_with_persistent_mirroring_disabled.append(peerForFailedSegmentDbId)
             elif (not self.__options.forceFullResynchronization and
                         peerForFailedSegmentDbId in segmentStates and
@@ -498,7 +498,7 @@ class GpRecoverSegmentProgram:
                 self.__applySpareDirectoryMapToSegment( gpEnv, gpArray, spareDirectoryMap, failoverSegment)
                 # we're failing over to different location on same host so we don't need to assign new ports
 
-            if self.is_segment_mirrored_with_PT_inconsistency(gpArray, liveSegment):
+            if self.is_segment_mirror_state_mismatched(gpArray, liveSegment):
                 segs_with_persistent_mirroring_disabled.append(liveSegment.getSegmentDbId())
 
             elif (not forceFull and liveSegment.getSegmentDbId() in segmentStates and
@@ -518,7 +518,7 @@ class GpRecoverSegmentProgram:
     def _output_segments_in_change_tracking_disabled(self, segs_in_change_tracking_disabled=None):
         if segs_in_change_tracking_disabled:
             self.logger.warn('Segments with dbid %s in change tracking disabled state, need to run recoverseg with -F option.' %
-                            (' ,'.join(str(id) for id in segs_in_change_tracking_disabled)))
+                            (' ,'.join(str(seg_id) for seg_id in segs_in_change_tracking_disabled)))
 
     def check_segment_change_tracking_disabled_state(self, segmentState):
         if segmentState == gparray.SEGMENT_STATE_CHANGE_TRACKING_DISABLED:
@@ -528,9 +528,9 @@ class GpRecoverSegmentProgram:
     def _output_segments_with_persistent_mirroring_disabled(self, segs_persistent_mirroring_disabled=None):
         if segs_persistent_mirroring_disabled:
             self.logger.warn('Segments with dbid %s not recovered; persistent mirroring state is disabled.' %
-                            (', '.join(str(id) for id in segs_persistent_mirroring_disabled)))
+                            (', '.join(str(seg_id) for seg_id in segs_persistent_mirroring_disabled)))
 
-    def is_segment_mirrored_with_PT_inconsistency(self, gpArray, segment):
+    def is_segment_mirror_state_mismatched(self, gpArray, segment):
         if gpArray.getFaultStrategy() == gparray.FAULT_STRATEGY_FILE_REPLICATION: # Determines whether cluster has mirrors
             with dbconn.connect(dbconn.DbURL()) as conn:
                 res = dbconn.execSQL(conn, "SELECT mirror_existence_state from gp_dist_random('gp_persistent_relation_node') where gp_segment_id=%s group by 1;" % segment.getSegmentContentId()).fetchall()
