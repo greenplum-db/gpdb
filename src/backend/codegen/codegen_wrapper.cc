@@ -107,6 +107,11 @@ slot_getattr_regular(TupleTableSlot *slot, int attnum, bool *isnull) {
   return slot_getattr(slot, attnum, isnull);
 }
 
+int
+att_align_nominal_regular(int cur_offset, char attalign) {
+  return att_align_nominal(cur_offset, attalign);
+}
+
 void* ExecVariableListCodegenEnroll(
     ExecVariableListFn regular_func_ptr,
     ExecVariableListFn* ptr_to_chosen_func_ptr,

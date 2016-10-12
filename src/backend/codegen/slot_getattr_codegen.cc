@@ -195,6 +195,9 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttr(
   llvm::Function* llvm_slot_deform_tuple =
       codegen_utils->GetOrRegisterExternalFunction(slot_deform_tuple,
                                                    "slot_deform_tuple");
+  llvm::Function* llvm_att_align_nominal =
+      codegen_utils->GetOrRegisterExternalFunction(att_align_nominal_regular,
+                                                   "att_align_nominal");
 
   // Generation-time constants
   llvm::Value* llvm_slot = codegen_utils->GetConstant(slot);
@@ -363,7 +366,11 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttr(
   llvm::Value* llvm_tuple_data_ptr = irb->CreateInBoundsGEP(
       llvm_heaptuple_t_data, {llvm_heaptuple_t_data_t_hoff});
 
-  int off = 0;
+  // int off = 0;
+  llvm::Value* llvm_off_ptr = irb->CreateAlloca(
+      codegen_utils->GetType<int>(), nullptr, "off");
+  irb->CreateStore(codegen_utils->GetConstant<int>(0), llvm_off_ptr);
+
   TupleDesc tupleDesc = slot->tts_tupleDescriptor;
   Form_pg_attribute* att = tupleDesc->attrs;
 
@@ -500,12 +507,16 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttr(
       irb->SetInsertPoint(is_not_null_block);
     }  // End of if ( !thisatt->attnotnull )
 
-    off = att_align_nominal(off, thisatt->attalign);
+    // off = att_align_nominal(off, thisatt->attalign);
+    irb->CreateStore(irb->CreateCall(
+        llvm_att_align_nominal, {irb->CreateLoad(llvm_off_ptr),
+            codegen_utils->GetConstant<char>(thisatt->attalign)}),
+                     llvm_off_ptr);
 
     // values[attnum] = fetchatt(thisatt, tp + off) {{{
     llvm::Value* llvm_next_t_data_ptr =
         irb->CreateInBoundsGEP(llvm_tuple_data_ptr,
-                               {codegen_utils->GetConstant(off)});
+                               {irb->CreateLoad(llvm_off_ptr)});
 
     llvm::Value* llvm_colVal = nullptr;
     if (thisatt->attbyval) {
@@ -560,10 +571,15 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttr(
         llvm_next_isnull_ptr);
     // }}} End of isnull[attnum] = false;
 
+    // off += thisatt->attlen;
+    irb->CreateStore(irb->CreateAdd(
+        irb->CreateLoad(llvm_off_ptr),
+        codegen_utils->GetConstant<int>(thisatt->attlen)),
+                     llvm_off_ptr);
+
     // Jump to next attribute
     irb->CreateBr(next_attribute_block);
 
-    off += thisatt->attlen;
     // Process next attribute
     attribute_block = next_attribute_block;
   }  // end for
@@ -588,8 +604,8 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttr(
       codegen_utils->GetPointerToMember(
           llvm_slot, &TupleTableSlot::PRIVATE_tts_off);
   irb->CreateStore(
-      codegen_utils->GetConstant<long>(off),  // NOLINT(runtime/int)
-      llvm_slot_PRIVATE_tts_off_ptr);
+      codegen_utils->CreateCast<long, int>(  // NOLINT(runtime/int)
+          irb->CreateLoad(llvm_off_ptr)), llvm_slot_PRIVATE_tts_off_ptr);
 
   // slot->PRIVATE_tts_nvalid = attnum;
   irb->CreateStore(codegen_utils->GetConstant(attnum),

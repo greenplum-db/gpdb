@@ -168,6 +168,12 @@ Datum
 slot_getattr_regular(struct TupleTableSlot *slot, int attnum, bool *isnull);
 
 /*
+ * Wrapper function for att_align_nominal.
+ */
+int
+att_align_nominal_regular(int cur_offset, char attalign);
+
+/*
  * returns the pointer to the ExecVariableList
  */
 void*
