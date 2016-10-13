@@ -751,31 +751,31 @@ select concat(NULL, 'b') = 'b';
  t
 (1 row)
 
-select concat('a', 2) = 'a2';
+select concat('a', 2::text) = 'a2';
  ?column? 
 ----------
  t
 (1 row)
 
-select concat(1, 'b') = '1b';
+select concat(1::text, 'b') = '1b';
  ?column? 
 ----------
  t
 (1 row)
 
-select concat(1, 2) = '12';
+select concat(1::text, 2::text) = '12';
  ?column? 
 ----------
  t
 (1 row)
 
-select concat(1, NULL) = '1';
+select concat(1::text, NULL) = '1';
  ?column? 
 ----------
  t
 (1 row)
 
-select concat(NULL, 2) = '2';
+select concat(NULL, 2::text) = '2';
  ?column? 
 ----------
  t
