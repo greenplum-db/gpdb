@@ -1,6 +1,5 @@
-#!/bin/bash -x
+#!/bin/bash -e
 
-set -e
 if [ -z ${GPHOME+x} ]; then echo "GPHOME is unset";exit 1 ; fi
 export GP_HADOOP_TARGET_VERSION=cdh4.1
 export HADOOP_HOST=10.152.10.234
