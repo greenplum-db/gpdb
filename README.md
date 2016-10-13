@@ -215,7 +215,7 @@ make installcheck-bugbuster
 ## Development with Docker
 
 We provide a docker image with all dependencies required to compile and test
-GPDB. You can view the dependency dockerfile at `./docker/base/Dockerfile`.
+GPDB. You can view the dependency dockerfile at `./src/tools/docker/base/Dockerfile`.
 The image is hosted on docker hub at `pivotaldata/gpdb-devel`. This docker
 image is currently under heavy development.
 
@@ -286,4 +286,4 @@ Known issues:
 For Greenplum Database documentation, please check online docs:
 http://gpdb.docs.pivotal.io
 
-There is also a Vagrant-based quickstart guide for developers in `vagrant/README.md`.
+There is also a Vagrant-based quickstart guide for developers in `src/tools/vagrant/README.md`.
