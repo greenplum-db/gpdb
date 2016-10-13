@@ -89,8 +89,7 @@ static volatile BufferDesc *PinCountWaitBuf = NULL;
 
 static Buffer ReadBuffer_common(SMgrRelation reln, bool isLocalBuf,
 				  bool isTemp, BlockNumber blockNum, bool zeroPage,
-				  BufferAccessStrategy strategy,
-				  const char *relErrMsgString, bool *pHit);
+				  BufferAccessStrategy strategy, bool *pHit);
 static bool PinBuffer(volatile BufferDesc *buf, BufferAccessStrategy strategy);
 static void PinBuffer_Locked(volatile BufferDesc *buf);
 static void UnpinBuffer(volatile BufferDesc *buf, bool fixOwner);
@@ -194,7 +193,6 @@ ReadBuffer(Relation reln, BlockNumber blockNum)
 									 blockNum,
 									 false, /* zeroPage */
 									 NULL, /* strategy */
-									 RelationGetRelationName(reln),
 									 &isHit);
 
 	if (isHit)
@@ -207,7 +205,7 @@ ReadBuffer(Relation reln, BlockNumber blockNum)
  * Read Buffer for pages to be Resynced
  */
 Buffer
-ReadBuffer_Resync(SMgrRelation reln, BlockNumber blockNum, const char *relidstr)
+ReadBuffer_Resync(SMgrRelation reln, BlockNumber blockNum)
 {
 	bool		isHit;
 
@@ -217,7 +215,6 @@ ReadBuffer_Resync(SMgrRelation reln, BlockNumber blockNum, const char *relidstr)
 							 blockNum,
 							 false, /* zeroPage */
 							 NULL,	/* strategy */
-							 relidstr,
 							 &isHit);
 }
 
@@ -243,7 +240,6 @@ ReadBuffer_common(SMgrRelation reln,
 				  BlockNumber blockNum,
 				  bool zeroPage,
 				  BufferAccessStrategy strategy,
-				  const char *relErrMsgString,
 				  bool *pHit)
 {
 		//MIRROREDLOCK_BUFMGR_DECLARE;
@@ -322,8 +318,8 @@ ReadBuffer_common(SMgrRelation reln,
 		bufBlock = isLocalBuf ? LocalBufHdrGetBlock(bufHdr) : BufHdrGetBlock(bufHdr);
 		if (!PageIsNew((PageHeader) bufBlock))
 			ereport(ERROR,
-					(errmsg("unexpected data beyond EOF in block %u of relation \"%s\"",
-							blockNum, relErrMsgString),
+					(errmsg("unexpected data beyond EOF in block %u of relation %s",
+							blockNum, relpath(reln->smgr_rnode)),
 					 errhint("This has been seen to occur with buggy kernels; consider updating your system.")));
 
 		/*
@@ -397,15 +393,15 @@ ReadBuffer_common(SMgrRelation reln,
 			{
 				ereport(WARNING,
 						(errcode(ERRCODE_DATA_CORRUPTED),
-						 errmsg("invalid page header in block %u of relation \"%s\"; zeroing out page",
-								blockNum, relErrMsgString)));
+						 errmsg("invalid page header in block %u of relation %s; zeroing out page",
+								blockNum, relpath(reln->smgr_rnode))));
 				MemSet((char *) bufBlock, 0, BLCKSZ);
 			}
 			else
 				ereport(ERROR,
 						(errcode(ERRCODE_DATA_CORRUPTED),
-				 errmsg("invalid page header in block %u of relation \"%s\"",
-						blockNum, relErrMsgString),
+				 errmsg("invalid page header in block %u of relation %s",
+						blockNum, relpath(reln->smgr_rnode)),
 				 errSendAlert(true)));
 		}
 	}
@@ -941,7 +937,6 @@ ReadBufferWithStrategy(Relation reln, BlockNumber blockNum,
 									 blockNum,
 									 false, /* zeroPage */
 									 strategy,
-									 RelationGetRelationName(reln),
 									 &isHit);
 
 	if (isHit)
@@ -979,7 +974,6 @@ ReadOrZeroBuffer(Relation reln, BlockNumber blockNum)
 									 blockNum,
 									 true, /* zeroPage */
 									 NULL, /* strategy */
-									 RelationGetRelationName(reln),
 									 &isHit);
 
 	if (isHit)

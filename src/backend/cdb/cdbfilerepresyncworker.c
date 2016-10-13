@@ -249,7 +249,7 @@ FileRepPrimary_ResyncWrite(FileRepResyncHashEntry_s	*entry)
 #endif				
 						
 						FileRepResync_SetReadBufferRequest();
-						buf = ReadBuffer_Resync(smgr_relation, blkno, relidstr);
+						buf = ReadBuffer_Resync(smgr_relation, blkno);
 						FileRepResync_ResetReadBufferRequest();
 						
 						LockBuffer(buf, BUFFER_LOCK_EXCLUSIVE);
@@ -617,8 +617,7 @@ FileRepPrimary_ResyncBufferPoolIncrementalWrite(ChangeTrackingRequest *request)
 				/* allow flushing buffers from buffer pool during scan */
 				FileRepResync_SetReadBufferRequest();
 				buf = ReadBuffer_Resync(smgr_relation,
-										result->entries[ii].block_num,
-										relidstr);
+										result->entries[ii].block_num);
 				FileRepResync_ResetReadBufferRequest();
 				
 				Assert(result->entries[ii].block_num < numBlocks);

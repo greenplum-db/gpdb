@@ -293,8 +293,7 @@ extern Buffer ReadBuffer(Relation reln, BlockNumber blockNum);
 extern Buffer ReadBufferWithStrategy(Relation reln, BlockNumber blockNum,
 					   BufferAccessStrategy strategy);
 extern Buffer ReadOrZeroBuffer(Relation reln, BlockNumber blockNum);
-extern Buffer ReadBuffer_Resync(SMgrRelation reln, BlockNumber blockNum,
-				  const char *relidstr);
+extern Buffer ReadBuffer_Resync(SMgrRelation reln, BlockNumber blockNum);
 
 extern void ReleaseBuffer(Buffer buffer);
 extern void UnlockReleaseBuffer(Buffer buffer);
