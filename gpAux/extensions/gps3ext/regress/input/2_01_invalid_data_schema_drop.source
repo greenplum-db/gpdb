@@ -1,0 +1,1 @@
+DROP EXTERNAL TABLE s3regress_invalid_data_schema;

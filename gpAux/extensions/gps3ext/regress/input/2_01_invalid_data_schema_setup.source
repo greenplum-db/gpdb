@@ -1,0 +1,2 @@
+CREATE READABLE EXTERNAL TABLE s3regress_invalid_data_schema (date float, time float, open float, high float,
+	low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/xac config=@config_file@') format 'csv';

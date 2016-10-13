@@ -1,0 +1,3 @@
+SELECT count(*) FROM s3regress_invalid_data_schema;
+ERROR:  invalid input syntax for type double precision: "05/18/2010"  (seg0 slice1 ip-172-31-2-196.us-west-2.compute.internal:40000 pid=23076)
+DETAIL:  External table s3regress_invalid_data_schema, line 1 of s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/xac config=@config_file@, column date

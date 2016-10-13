@@ -1,0 +1,13 @@
+CREATE READABLE EXTERNAL TABLE s3read_invalid_sub_query_read (date float, time float, open float, high float,
+        low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/ config=@config_file@') FORMAT 'csv';
+CREATE TEMP TABLE s3read_local_invalid_sub_query (date float, time float, open float, high float, low float, volume int) DISTRIBUTED RANDOMLY;
+INSERT INTO s3read_local_invalid_sub_query SELECT * FROM s3read_invalid_sub_query_read;
+ERROR:  invalid input syntax for type double precision: "02/16/2010"  (seg1 slice1 mdw:10001 pid=790)
+DETAIL:  External table s3read_invalid_sub_query_read, line 1 of s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/ config=@config_file@, column date
+SELECT count(*) FROM s3read_local_invalid_sub_query;
+ count 
+-------
+     0
+(1 row)
+
+DROP EXTERNAL TABLE IF EXISTS s3read_invalid_sub_query_read;

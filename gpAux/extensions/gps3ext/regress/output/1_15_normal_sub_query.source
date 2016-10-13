@@ -1,0 +1,11 @@
+CREATE READABLE EXTERNAL TABLE s3read_normal_sub_query_read (date text, time text, open float, high float,
+        low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/ config=@config_file@') FORMAT 'csv';
+CREATE TEMP TABLE s3read_local_normal_sub_query (date text, time text, open float, high float, low float, volume int) DISTRIBUTED RANDOMLY;
+INSERT INTO s3read_local_normal_sub_query SELECT * FROM s3read_normal_sub_query_read;
+SELECT count(*) FROM s3read_local_normal_sub_query;
+  count   
+----------
+ 31033039
+(1 row)
+
+DROP EXTERNAL TABLE IF EXISTS s3read_normal_sub_query_read;
