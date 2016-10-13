@@ -129,7 +129,8 @@ def dump_query(connectionInfo, query_file):
     with open(toolkit_sql, 'w') as toolkit_f:
         toolkit_f.write(query)
 
-    query_cmd = "psql %s --pset footer -Atq -h %s -p %s -U %s -f %s" % (db, host, port, user, toolkit_sql)
+    # disable .psqlrc to prevent unexpected timing and format output
+    query_cmd = "psql %s --pset footer --no-psqlrc -Atq -h %s -p %s -U %s -f %s" % (db, host, port, user, toolkit_sql)
     print query_cmd
 
     p = subprocess.Popen(query_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=os.environ)
