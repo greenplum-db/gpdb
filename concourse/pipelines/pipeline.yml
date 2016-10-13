@@ -143,7 +143,7 @@ jobs:
     file: gpdb_src/concourse/ic_gpdb.yml
     image: centos67-gpdb-gcc6-llvm-image
     params:
-      MAKE_TEST_COMMAND: installcheck-good
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off -c codegen=off' installcheck-good
       BLDWRAP_POSTGRES_CONF_ADDONS: ""
       TEST_OS: centos
 
@@ -164,7 +164,7 @@ jobs:
     file: gpdb_src/concourse/ic_gpdb.yml
     image: centos67-gpdb-gcc6-llvm-image
     params:
-      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-good
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on -c codegen=off' installcheck-good
       BLDWRAP_POSTGRES_CONF_ADDONS: ""
       TEST_OS: centos
 
@@ -185,7 +185,7 @@ jobs:
     file: gpdb_src/concourse/ic_gpdb.yml
     image: centos67-gpdb-gcc6-llvm-image
     params:
-      MAKE_TEST_COMMAND: PGOPTIONS='-c codegen=on' installcheck-good
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off -c codegen=on' installcheck-good
       BLDWRAP_POSTGRES_CONF_ADDONS: ""
       TEST_OS: centos
 
@@ -227,7 +227,7 @@ jobs:
     file: gpdb_src/concourse/ic_gpdb.yml
     image: centos67-gpdb-gcc6-llvm-image
     params:
-      MAKE_TEST_COMMAND: installcheck-bugbuster
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off -c codegen=off' installcheck-bugbuster
       BLDWRAP_POSTGRES_CONF_ADDONS: ""
       TEST_OS: centos
 
@@ -248,7 +248,7 @@ jobs:
     file: gpdb_src/concourse/ic_gpdb.yml
     image: centos67-gpdb-gcc6-llvm-image
     params:
-      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-bugbuster
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on -c codegen=off' installcheck-bugbuster
       BLDWRAP_POSTGRES_CONF_ADDONS: ""
       TEST_OS: centos
 
@@ -269,7 +269,7 @@ jobs:
     file: gpdb_src/concourse/ic_gpdb.yml
     image: centos67-gpdb-gcc6-llvm-image
     params:
-      MAKE_TEST_COMMAND: PGOPTIONS='-c codegen=on' installcheck-bugbuster
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off -c codegen=on' installcheck-bugbuster
       BLDWRAP_POSTGRES_CONF_ADDONS: ""
       TEST_OS: centos
 
