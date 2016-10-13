@@ -46,5 +46,8 @@ $HADOOPCMD fs -rm -r /extwrite/* || echo ""
 $HADOOPCMD fs -rm -r /mapreduce/* || echo ""
 $HADOOPCMD fs -rm -r /mapred/* || echo ""
 
-#${PGREGRESS} --psqldir=$GPHOME/bin/ --init-file=$CURDIR/init_file --schedule=$CURDIR/gphdfs_regress_schedule  --srcdir=$CURDIR/source_replaced --inputdir=$CURDIR/source_replaced --outputdir=$CURDIR/source_replaced
-${PGREGRESS} --psqldir=$GPHOME/bin/ --init-file=$CURDIR/init_file --schedule=$CURDIR/limited_schedule --srcdir=$CURDIR/source_replaced --inputdir=$CURDIR/source_replaced --outputdir=$CURDIR/source_replaced
+# limited_schedule
+#${PGREGRESS} --psqldir=$GPHOME/bin/ --init-file=$CURDIR/init_file --schedule=$CURDIR/limited_schedule --srcdir=$CURDIR/source_replaced --inputdir=$CURDIR/source_replaced --outputdir=.
+
+# gphdfs_regress_schedule
+${PGREGRESS} --psqldir=$GPHOME/bin/ --init-file=$CURDIR/init_file --schedule=$CURDIR/gphdfs_regress_schedule  --srcdir=$CURDIR/source_replaced --inputdir=$CURDIR/source_replaced --outputdir=.
