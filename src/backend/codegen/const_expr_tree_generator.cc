@@ -52,11 +52,18 @@ ConstExprTreeGenerator::ConstExprTreeGenerator(const ExprState* expr_state) :
 
 bool ConstExprTreeGenerator::GenerateCode(GpCodegenUtils* codegen_utils,
                                           const ExprTreeGeneratorInfo& gen_info,
-                                          llvm::Value* llvm_isnull_ptr,
+                                          llvm::Value* const llvm_isnull_ptr,
                                           llvm::Value** llvm_out_value) {
   assert(nullptr != llvm_out_value);
+  assert(nullptr != llvm_isnull_ptr);
+  auto irb = codegen_utils->ir_builder();
   Const* const_expr = reinterpret_cast<Const*>(expr_state()->expr);
   // const_expr->constvalue is a datum
   *llvm_out_value = codegen_utils->GetConstant(const_expr->constvalue);
+  // *isNull = con->constisnull;
+  irb->CreateStore(
+      codegen_utils->GetConstant<bool>(const_expr->constisnull),
+      llvm_isnull_ptr);
+
   return true;
 }

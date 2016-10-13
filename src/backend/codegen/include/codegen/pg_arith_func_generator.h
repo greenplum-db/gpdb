@@ -134,6 +134,140 @@ class PGArithFuncGenerator {
   }
 
   /**
+   * @brief Create LLVM instructions to check if arguments are NULL.
+   *
+   * @param codegen_utils      Utility for easy code generation.
+   * @param pg_func_info       Details for pgfunc generation
+   * @param llvm_out_value_ptr Store location for the result
+   * @param llvm_is_set_ptr    Pointer to flag that shows if a value has been
+   *                           assigned to the contents of llvm_out_value_ptr
+   *
+   * @return true if generation was successful otherwise return false
+   *
+   * @note  It is used only if built-in function is not strict.
+   **/
+  static bool CheckNull(gpcodegen::GpCodegenUtils* codegen_utils,
+                              const PGFuncGeneratorInfo& pg_func_info,
+                              llvm::Value* llvm_out_value_ptr,
+                              llvm::Value* llvm_is_set_ptr) {
+    assert(nullptr != codegen_utils);
+    assert(nullptr != llvm_out_value_ptr);
+    assert(nullptr != llvm_is_set_ptr);
+    auto irb = codegen_utils->ir_builder();
+
+    // Entry block that shows that clearly shows the beginning of CheckNull
+    llvm::BasicBlock* entry_block = codegen_utils->CreateBasicBlock(
+        "CheckNull_entry_block", pg_func_info.llvm_main_func);
+    // Block that includes instructions in case that arg0 is null
+    llvm::BasicBlock* arg0_is_null_block = codegen_utils->
+        CreateBasicBlock("CheckNull_arg0_is_null_block",
+                         pg_func_info.llvm_main_func);
+    // Block that includes instructions in case that arg0 is not null
+    llvm::BasicBlock* arg0_is_not_null_block = codegen_utils->
+        CreateBasicBlock("CheckNull_arg0_is_not_null_block",
+                         pg_func_info.llvm_main_func);
+    // Block that includes instructions in case that arg1 is null
+    llvm::BasicBlock* arg1_is_null_block = codegen_utils->
+        CreateBasicBlock("CheckNull_arg1_is_null_block",
+                         pg_func_info.llvm_main_func);
+    // Block that includes instructions in case that arg1 is not null
+    llvm::BasicBlock* arg1_is_not_null_block = codegen_utils->
+        CreateBasicBlock("CheckNull_arg1_is_not_null_block",
+                         pg_func_info.llvm_main_func);
+    // Block that includes instructions in case that there is a null argument
+    llvm::BasicBlock* return_null_block = codegen_utils->CreateBasicBlock(
+        "CheckNull_return_null_block", pg_func_info.llvm_main_func);
+    // All CheckNull blocks create branch to continue_block (final block)
+    llvm::BasicBlock* continue_block = codegen_utils->CreateBasicBlock(
+        "CheckNull_continue_block", pg_func_info.llvm_main_func);
+    irb->CreateBr(entry_block);
+
+    // entry_block
+    // -----------
+    // Generate code that examines if arg0 is null
+    irb->SetInsertPoint(entry_block);
+    // if (PG_ARGISNULL(0))
+    irb->CreateCondBr(pg_func_info.llvm_args_isNull[0],
+        arg0_is_null_block /* true */,
+        arg0_is_not_null_block /* false */);
+
+    // arg0_is_null_block
+    // ------------------
+    // arg0 is NULL, so examine if arg1 is NULL too.
+    irb->SetInsertPoint(arg0_is_null_block);
+    // if (PG_ARGISNULL(1))
+    irb->CreateCondBr(pg_func_info.llvm_args_isNull[1],
+                      return_null_block /* true */,
+                      arg1_is_not_null_block /* false */);
+
+    // return_null_block
+    // -----------------
+    // Generate code for PG_RETURN_NULL()
+    irb->SetInsertPoint(return_null_block);
+    // fcinfo->isnull = true;
+    irb->CreateStore(codegen_utils->GetConstant<bool>(true),
+                     pg_func_info.llvm_isNull_ptr);
+    // similar to: return (Datum) 0
+    irb->CreateStore(codegen_utils->GetConstant<Datum>(0),
+                     llvm_out_value_ptr);
+    // set the content of llvm_is_set_ptr to true, so that we do not need to
+    // execute the code of non-strict built-in function
+    irb->CreateStore(codegen_utils->GetConstant<bool>(true),
+                     llvm_is_set_ptr);
+    irb->CreateBr(continue_block);
+
+    // arg1_is_not_null_block
+    // ----------------------
+    // In this case, arg0 is NULL and arg1 is not NULL.
+    irb->SetInsertPoint(arg1_is_not_null_block);
+    // val = (int64) PG_GETARG_INT32(1)
+    // PG_RETURN_INT64(val)
+    irb->CreateStore(codegen_utils->CreateCast<int64, int32>(
+        codegen_utils->CreateCast<int32, Arg1>(pg_func_info.llvm_args[1])),
+                     llvm_out_value_ptr);
+    // set the content of llvm_is_set_ptr to true, so that we do not need to
+    // execute the code of non-strict built-in function
+    irb->CreateStore(codegen_utils->GetConstant<bool>(true),
+                     llvm_is_set_ptr);
+    irb->CreateBr(continue_block);
+
+    // arg0_is_not_null_block
+    // ----------------------
+    // arg0 is not null, examine if arg1 is null
+    // If both arguments are not NULL, then just continue and execute the
+    // generated code of the built-in function
+    irb->SetInsertPoint(arg0_is_not_null_block);
+    // if (PG_ARGISNULL(1))
+    irb->CreateCondBr(pg_func_info.llvm_args_isNull[1],
+                      arg1_is_null_block,
+                      continue_block);
+
+    // arg1_is_null_block
+    // ------------------
+    // arg0 is not NULL, but arg1 is NULL
+    // Generate code for PG_RETURN_INT64(val), where val = arg0
+    irb->SetInsertPoint(arg1_is_null_block);
+
+    irb->CreateStore(codegen_utils->CreateCast<int64, Arg0>(
+        pg_func_info.llvm_args[0]),
+                     llvm_out_value_ptr);
+    // set the content of llvm_is_set_ptr to true, so that we do not need to
+    // execute the code of non-strict built-in function
+    irb->CreateStore(codegen_utils->GetConstant<bool>(true),
+                         llvm_is_set_ptr);
+    irb->CreateBr(continue_block);
+
+    // continue_block
+    // --------------
+    // Continue with the rest of the generated code
+    irb->SetInsertPoint(continue_block);
+
+    return true;
+  }
+
+
+
+  /**
    * @brief Create LLVM Sub instruction with check for overflow
    *
    * @param codegen_utils     Utility to easy code generation.
@@ -213,6 +347,28 @@ class PGArithUnaryFuncGenerator {
                                    llvm::Value* llvm_error_msg,
                                    const PGFuncGeneratorInfo& pg_func_info,
                                    llvm::Value** llvm_out_value);
+
+  /**
+   * @brief Dummy function that does not perform any actions
+   *
+   * @param codegen_utils      Utility for easy code generation.
+   * @param pg_func_info       Details for pgfunc generation
+   * @param llvm_out_value_ptr Store location for the result
+   * @param llvm_is_set_ptr    Pointer to flag that shows if a value has been
+   *                           assigned to the contents of llvm_out_value_ptr
+   *
+   * @return true if generation was successful otherwise return false
+   *
+   * @note  It is passed as an argument to PGGenericFuncGenerator, when a
+   *        a built-in function is not strict and it does not perform
+   *        any nullity checks.
+   **/
+  static bool DoNothing(gpcodegen::GpCodegenUtils* codegen_utils,
+                        const PGFuncGeneratorInfo& pg_func_info,
+                        llvm::Value* llvm_out_value_ptr,
+                        llvm::Value* llvm_out_value_is_set_ptr) {
+    return true;
+  }
 };
 
 /**

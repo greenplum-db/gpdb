@@ -59,9 +59,10 @@ VarExprTreeGenerator::VarExprTreeGenerator(const ExprState* expr_state) :
 
 bool VarExprTreeGenerator::GenerateCode(GpCodegenUtils* codegen_utils,
                                         const ExprTreeGeneratorInfo& gen_info,
-                                        llvm::Value* llvm_isnull_ptr,
+                                        llvm::Value* const llvm_isnull_ptr,
                                         llvm::Value** llvm_out_value) {
   assert(nullptr != llvm_out_value);
+  assert(nullptr != llvm_isnull_ptr);
   *llvm_out_value = nullptr;
   Var* var_expr = reinterpret_cast<Var*>(expr_state()->expr);
   int attnum = var_expr->varattno;
@@ -99,6 +100,6 @@ bool VarExprTreeGenerator::GenerateCode(GpCodegenUtils* codegen_utils,
       gen_info.llvm_slot_getattr_func, {
           llvm_slot,
           llvm_variable_varattno,
-          llvm_isnull_ptr /* TODO: Fix isNull */ });
+          llvm_isnull_ptr});
   return true;
 }

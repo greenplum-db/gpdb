@@ -40,13 +40,24 @@ struct PGFuncGeneratorInfo {
   // This can be updated while generating the code.
   std::vector<llvm::Value*> llvm_args;
 
+  // Store whether arguments are NULL or not.
+  // This can be updated while generating the code.
+  std::vector<llvm::Value*> llvm_args_isNull;
+
+  // Records if result is NULL
+  llvm::Value* llvm_isNull_ptr;
+
   PGFuncGeneratorInfo(
     llvm::Function* llvm_main_func,
     llvm::BasicBlock* llvm_error_block,
-    const std::vector<llvm::Value*>& llvm_args) :
+    const std::vector<llvm::Value*>& llvm_args,
+    const std::vector<llvm::Value*>& llvm_args_isNull,
+    llvm::Value* llvm_isNull_ptr) :
       llvm_main_func(llvm_main_func),
       llvm_error_block(llvm_error_block),
-      llvm_args(llvm_args) {
+      llvm_args(llvm_args),
+      llvm_args_isNull(llvm_args_isNull),
+      llvm_isNull_ptr(llvm_isNull_ptr){
   }
 };
 
@@ -66,6 +77,11 @@ class PGFuncGeneratorInterface {
    * @return Total number of arguments for the function.
    **/
   virtual size_t GetTotalArgCount() = 0;
+
+  /**
+   * @return True if function is strict; false otherwise.
+   */
+  virtual bool IsStrict() = 0;
 
   /**
    * @brief Generate the code for Greenplum function.

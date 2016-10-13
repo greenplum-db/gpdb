@@ -269,3 +269,10 @@ SELECT DATE_TRUNC('CENTURY', DATE '0055-08-10 BC'); -- 0100-01-01 BC
 SELECT DATE_TRUNC('DECADE', DATE '1993-12-25'); -- 1990-01-01
 SELECT DATE_TRUNC('DECADE', DATE '0004-12-25'); -- 0001-01-01 BC
 SELECT DATE_TRUNC('DECADE', DATE '0002-12-31 BC'); -- 0011-01-01 BC
+
+-- check behavior when values are NULL
+create table date_null (a int4, b date);
+insert into date_null values (1, '1957-04-09');
+insert into date_null values (2, NULL);
+select a from date_null where b <= date '1957-04-10';
+select a from date_null where b <= date '1957-04-10' - interval '90' day;
