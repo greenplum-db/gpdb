@@ -4928,64 +4928,39 @@ log_heap_move(Relation reln, Buffer oldbuf, ItemPointerData from,
 
 
 /*
- * Perform XLogInsert of a HEAP_NEWPAGE record to WAL. Caller is responsible
- * for writing the page to disk after calling this routine.
+ * Insert HEAP_NEWPAGE record into XLOG.  Caller is responsible for
+ * providing a xl_heap_newpage record with valid persistent TID,
+ * persistent serial number and relfilenode set.
  *
  * Note: all current callers build pages in private memory and write them
  * directly to smgr, rather than using bufmgr.	Therefore there is no need
  * to pass a buffer ID to XLogInsert, nor to perform MarkBufferDirty within
  * the critical section.
  *
- * Note: the NEWPAGE log record is used for both heaps and indexes, so do
+ * Note: the NEWPAGE log record is used for both heap and indexes, so do
  * not do anything that assumes we are touching a heap.
- *
- * Note: This is an internal function that is called from the interface
- * functions log_newpage_rel() and log_newpage_relFileNode().  See usage notes
- * for these functions to determine when to call which.
- *
- * PARAMETERS
- *   rel   - relation for which new page creation is logged.
- *           This should be passed as NULL if relFileNode, persistentTid, and
- *   		 persistentSerialNum are not NULL/zero.
- *
- *   blkno - location of new page
- *
- *	 page  - new page
- *
- *	 The following paramters are ignored if the first parameter rel is not
- *	 NULL.
- *
- *	 relFileNode         - physical node information for the relation
- *
- *	 persistentTid       - Tid for the relation in gp_persistent_relation_node
- *
- *	 persistentSerialNum - LSN for the relation in gp_peristent_relation_node
  *
  */
 static XLogRecPtr
-log_newpage_internal(Relation rel, BlockNumber blkno, Page page,
-					 RelFileNode *relFileNode, ItemPointer persistentTid,
-					 int64 persistentSerialNum)
+log_newpage_internal(xl_heap_newpage *xlrec, BlockNumber blkno, Page page)
+
 {
-	xl_heap_newpage xlrec;
-	XLogRecPtr	recptr;
+	XLogRecPtr  recptr;
 	XLogRecData rdata[2];
+
+	Assert(!RelFileNode_IsEmpty(&xlrec->heapnode.node));
+	if (!IsBootstrapProcessingMode() && !gp_before_persistence_work)
+	{
+		Assert(ItemPointerIsValid(&xlrec->heapnode.persistentTid));
+		Assert(xlrec->heapnode.persistentSerialNum);
+	}
 
 	/* NO ELOG(ERROR) from here till newpage op is logged */
 	START_CRIT_SECTION();
 
-	if (rel)
-		xl_heapnode_set(&xlrec.heapnode, rel);
-	else
-	{
-		xlrec.heapnode.node = *relFileNode;
-		xlrec.heapnode.persistentTid = *persistentTid;
-		xlrec.heapnode.persistentSerialNum = persistentSerialNum;
-	}
+	xlrec->blkno = blkno;
 
-	xlrec.blkno = blkno;
-
-	rdata[0].data = (char *) &xlrec;
+	rdata[0].data = (char *) xlrec;
 	rdata[0].len = SizeOfHeapNewpage;
 	rdata[0].buffer = InvalidBuffer;
 	rdata[0].next = &(rdata[1]);
@@ -5020,7 +4995,9 @@ log_newpage_internal(Relation rel, BlockNumber blkno, Page page,
 XLogRecPtr
 log_newpage_rel(Relation rel, BlockNumber blkno, Page page)
 {
-	return log_newpage_internal(rel, blkno, page, NULL, NULL, 0);
+	xl_heap_newpage xlrec;
+	xl_heapnode_set(&xlrec.heapnode, rel);
+	return log_newpage_internal(&xlrec, blkno, page);
 }
 
 
@@ -5034,8 +5011,11 @@ XLogRecPtr
 log_newpage_relFileNode(RelFileNode *relFileNode, BlockNumber blkno, Page page,
 						ItemPointer persistentTid, int64 persistentSerialNum)
 {
-	return log_newpage_internal(NULL, blkno, page, relFileNode, persistentTid,
-								persistentSerialNum);
+	xl_heap_newpage xlrec;
+	xlrec.heapnode.node = *relFileNode;
+	xlrec.heapnode.persistentTid = *persistentTid;
+	xlrec.heapnode.persistentSerialNum = persistentSerialNum;
+	return log_newpage_internal(&xlrec, blkno, page);
 }
 
 
