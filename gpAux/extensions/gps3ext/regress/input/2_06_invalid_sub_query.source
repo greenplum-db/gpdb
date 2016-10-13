@@ -1,5 +1,5 @@
 CREATE READABLE EXTERNAL TABLE s3read_invalid_sub_query_read (date float, time float, open float, high float,
-        low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/ config=@config_file@') FORMAT 'csv';
+        low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/normal/xac config=@config_file@') FORMAT 'csv';
 
 CREATE TEMP TABLE s3read_local_invalid_sub_query (date float, time float, open float, high float, low float, volume int) DISTRIBUTED RANDOMLY;
 
