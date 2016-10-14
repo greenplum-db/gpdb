@@ -186,6 +186,19 @@ cdbCopyStart(CdbCopy *c, char *copyCmd)
 }
 
 /*
+ * sends data to a copy command on all segments.
+ */
+void
+cdbCopySendDataToAll(CdbCopy *c, const char *buffer, int nbytes)
+{
+	Gang *gp = c->primary_writer;
+	for (int i = 0; i < gp->size; ++i) {
+		int seg = gp->db_descriptors[i].segindex;
+		cdbCopySendData(c, seg, buffer, nbytes);
+	}
+}
+
+/*
  * sends data to a copy command on a specific segment (usually
  * the hash result of the data value).
  */

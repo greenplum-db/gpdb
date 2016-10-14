@@ -78,6 +78,8 @@ typedef struct
 	CopyState	cstate;			/* CopyStateData for the command */
 } DR_copy;
 
+static const char BinarySignature[11] = "PGCOPY\n\377\r\n\0";
+
 /* non-export function prototypes */
 static void DoCopyTo(CopyState cstate);
 extern void CopyToDispatch(CopyState cstate);
@@ -91,6 +93,10 @@ static void CopyAttributeOutCSV(CopyState cstate, char *string,
 static bool DetectLineEnd(CopyState cstate, size_t bytesread  __attribute__((unused)));
 static void CopyReadAttributesTextNoDelim(CopyState cstate, bool *nulls,
 										  int num_phys_attrs, int attnum);
+static Datum CopyReadBinaryAttribute(CopyState cstate,
+									 int column_no, FmgrInfo *flinfo,
+									 Oid typioparam, int32 typmod,
+									 bool *isnull, bool skip_parsing);
 
 /* Low-level communications functions */
 static void SendCopyBegin(CopyState cstate);
@@ -100,6 +106,13 @@ static void CopySendData(CopyState cstate, const void *databuf, int datasize);
 static void CopySendString(CopyState cstate, const char *str);
 static void CopySendChar(CopyState cstate, char c);
 static int	CopyGetData(CopyState cstate, void *databuf, int datasize);
+
+static void CopySendInt16(CopyState cstate, int16 val);
+static void CopySendInt32(CopyState cstate, int32 val);
+static bool CopyGetInt16(CopyState cstate, int16 *val);
+static bool CopyGetInt32(CopyState cstate, int32 *val);
+static bool CopyGetInt64(CopyState cstate, int64 *val);
+
 
 /* byte scaning utils */
 static char *scanTextLine(CopyState cstate, const char *s, char c, size_t len);
@@ -282,7 +295,7 @@ SendCopyBegin(CopyState cstate)
 		/* new way */
 		StringInfoData buf;
 		int			natts = list_length(cstate->attnumlist);
-		int16		format = 0;
+		int16		format = (cstate->binary ? 1 : 0);
 		int			i;
 
 		pq_beginmessage(&buf, 'H');
@@ -319,7 +332,7 @@ ReceiveCopyBegin(CopyState cstate)
 		/* new way */
 		StringInfoData buf;
 		int			natts = list_length(cstate->attnumlist);
-		int16		format = 0;
+		int16		format = (cstate->binary ? 1 : 0);
 		int			i;
 
 		pq_beginmessage(&buf, 'G');
@@ -421,12 +434,15 @@ CopySendEndOfRow(CopyState cstate)
 	switch (cstate->copy_dest)
 	{
 		case COPY_FILE:
+			if (!cstate->binary)
+			{
 			/* Default line termination depends on platform */
 #ifndef WIN32
 			CopySendChar(cstate, '\n');
 #else
 			CopySendString(cstate, "\r\n");
 #endif
+			}
 
 			(void) fwrite(fe_msgbuf->data, fe_msgbuf->len,
 						  1, cstate->copy_file);
@@ -437,6 +453,7 @@ CopySendEndOfRow(CopyState cstate)
 				break;
 		case COPY_OLD_FE:
 			/* The FE/BE protocol uses \n as newline for all platforms */
+			if (!cstate->binary)
 			CopySendChar(cstate, '\n');
 
 			if (pq_putbytes(fe_msgbuf->data, fe_msgbuf->len))
@@ -449,6 +466,7 @@ CopySendEndOfRow(CopyState cstate)
 				break;
 		case COPY_NEW_FE:
 			/* The FE/BE protocol uses \n as newline for all platforms */
+			if (!cstate->binary)
 			CopySendChar(cstate, '\n');
 
 			/* Dump the accumulated row as one CopyData message */
@@ -623,6 +641,86 @@ CopyGetData(CopyState cstate, void *databuf, int datasize)
 	
 	return bytesread;
 }
+
+/*
+ * CopySendInt32 sends an int32 in network byte order
+ */
+static void
+CopySendInt32(CopyState cstate, int32 val)
+{
+	uint32		buf;
+
+	buf = htonl((uint32) val);
+	CopySendData(cstate, &buf, sizeof(buf));
+}
+
+/*
+ * CopyGetInt32 reads an int32 that appears in network byte order
+ *
+ * Returns true if OK, false if EOF
+ */
+static bool
+CopyGetInt32(CopyState cstate, int32 *val)
+{
+	uint32		buf;
+
+	if (CopyGetData(cstate, &buf, sizeof(buf)) != sizeof(buf))
+	{
+		*val = 0;				/* suppress compiler warning */
+		return false;
+	}
+	*val = (int32) ntohl(buf);
+	return true;
+}
+
+/*
+ * CopyGetInt64 reads an int64 that appears in network byte order
+ *
+ * Returns true if OK, false if EOF
+ */
+static bool
+CopyGetInt64(CopyState cstate, int64 *val)
+{
+	uint64		buf;
+
+	if (CopyGetData(cstate, &buf, sizeof(buf)) != sizeof(buf))
+	{
+		*val = 0;				/* suppress compiler warning */
+		return false;
+	}
+	*val = (int64) ntohll(buf);
+	return true;
+}
+
+/*
+ * CopySendInt16 sends an int16 in network byte order
+ */
+static void
+CopySendInt16(CopyState cstate, int16 val)
+{
+	uint16		buf;
+
+	buf = htons((uint16) val);
+	CopySendData(cstate, &buf, sizeof(buf));
+}
+
+/*
+ * CopyGetInt16 reads an int16 that appears in network byte order
+ */
+static bool
+CopyGetInt16(CopyState cstate, int16 *val)
+{
+	uint16		buf;
+
+	if (CopyGetData(cstate, &buf, sizeof(buf)) != sizeof(buf))
+	{
+		*val = 0;				/* suppress compiler warning */
+		return false;
+	}
+	*val = (int16) ntohs(buf);
+	return true;
+}
+
 
 /*
  * ValidateControlChars
@@ -915,9 +1013,11 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 
 		if (strcmp(defel->defname, "binary") == 0)
 		{
+			if (cstate->binary)
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("BINARY is not supported")));
+						 errmsg("conflicting or redundant options")));
+			cstate->binary = intVal(defel->arg);
 		}
 		else if (strcmp(defel->defname, "oids") == 0)
 		{
@@ -1022,6 +1122,27 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 	}
 
 	/* Set defaults */
+
+	/* Check for incompatible options */
+	if (cstate->binary && cstate->delim)
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("cannot specify DELIMITER in BINARY mode")));
+
+	if (cstate->binary && cstate->header_line)
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("cannot specify HEADER in BINARY mode")));
+
+	if (cstate->binary && cstate->csv_mode)
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("cannot specify CSV in BINARY mode")));
+
+	if (cstate->binary && cstate->null_print)
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("cannot specify NULL in BINARY mode")));
 
 	cstate->err_loc_type = ROWNUM_ORIGINAL;
 	cstate->eol_type = EOL_UNKNOWN;
@@ -1763,6 +1884,10 @@ static void CopyToCreateDispatchCommand(CopyState cstate,
 	if (cstate->oids)
 		appendStringInfo(cdbcopy_cmd, " OIDS");
 
+	if (cstate->binary)
+		appendStringInfo(cdbcopy_cmd, " BINARY");
+	else
+	{
 	appendStringInfo(cdbcopy_cmd, " DELIMITER AS E'%s'", escape_quotes(cstate->delim));
 	appendStringInfo(cdbcopy_cmd, " NULL AS E'%s'", escape_quotes(cstate->null_print));
 
@@ -1795,7 +1920,7 @@ static void CopyToCreateDispatchCommand(CopyState cstate,
 
 		/* do NOT include HEADER. Header row is created by dispatcher COPY */
 	}
-
+	}
 }
 
 
@@ -1876,6 +2001,23 @@ CopyToDispatch(CopyState cstate)
 	}
 	PG_END_TRY();
 
+	if (cstate->binary)
+	{
+		/* Generate header for a binary copy */
+		int32		tmp;
+
+		/* Signature */
+		CopySendData(cstate, (char *) BinarySignature, 11);
+		/* Flags field */
+		tmp = 0;
+		if (cstate->oids)
+			tmp |= (1 << 16);
+		CopySendInt32(cstate, tmp);
+		/* No header extension */
+		tmp = 0;
+		CopySendInt32(cstate, tmp);
+	}
+
 	/* if a header has been requested send the line */
 	if (cstate->header_line)
 	{
@@ -1952,6 +2094,14 @@ CopyToDispatch(CopyState cstate)
 		}
 	}
 
+	if (cstate->binary)
+	{
+		/* Generate trailer for a binary copy */
+		CopySendInt16(cstate, -1);
+		/* Need to flush out the trailer */
+		CopySendEndOfRow(cstate);
+	}
+
 	/* we can throw the error now if QueryCancelPending was set previously */
 	CHECK_FOR_INTERRUPTS();
 
@@ -2026,6 +2176,11 @@ CopyTo(CopyState cstate)
 		Oid			out_func_oid;
 		bool		isvarlena;
 
+		if (cstate->binary)
+			getTypeBinaryOutputInfo(attr[attnum - 1]->atttypid,
+									&out_func_oid,
+									&isvarlena);
+		else
 		getTypeOutputInfo(attr[attnum - 1]->atttypid,
 						  &out_func_oid,
 						  &isvarlena);
@@ -2054,6 +2209,28 @@ CopyTo(CopyState cstate)
 														cstate->client_encoding,
 														cstate->enc_conversion_proc);
 
+	if (cstate->binary)
+	{
+		/* binary header should not be sent in execute mode. */
+		if (Gp_role != GP_ROLE_EXECUTE)
+		{
+			/* Generate header for a binary copy */
+			int32		tmp;
+
+			/* Signature */
+			CopySendData(cstate, (char *) BinarySignature, 11);
+			/* Flags field */
+			tmp = 0;
+			if (cstate->oids)
+				tmp |= (1 << 16);
+			CopySendInt32(cstate, tmp);
+			/* No header extension */
+			tmp = 0;
+			CopySendInt32(cstate, tmp);
+		}
+	}
+	else
+	{
 	/* if a header has been requested send the line */
 	if (cstate->header_line)
 	{
@@ -2079,6 +2256,7 @@ CopyTo(CopyState cstate)
 
 			CopySendEndOfRow(cstate);
 		}
+	}
 	}
 
 	if (cstate->rel)
@@ -2113,9 +2291,15 @@ CopyTo(CopyState cstate)
 				Oid			out_func_oid;
 				bool		isvarlena;
 
+				if (cstate->binary)
+					getTypeBinaryOutputInfo(attr[attnum - 1]->atttypid,
+											&out_func_oid,
+											&isvarlena);
+				else
 				getTypeOutputInfo(attr[attnum - 1]->atttypid,
 								  &out_func_oid,
 								  &isvarlena);
+
 				fmgr_info(out_func_oid, &cstate->out_functions[attnum - 1]);
 			}
 
@@ -2231,6 +2415,15 @@ CopyTo(CopyState cstate)
 		ExecutorRun(cstate->queryDesc, ForwardScanDirection, 0L);
 	}
 
+	/* binary trailer should not be sent in execute mode. */
+	if (cstate->binary && Gp_role != GP_ROLE_EXECUTE)
+	{
+		/* Generate trailer for a binary copy */
+		CopySendInt16(cstate, -1);
+		/* Need to flush out the trailer */
+		CopySendEndOfRow(cstate);
+	}
+
 	MemoryContextDelete(cstate->rowcontext);
 }
 
@@ -2257,6 +2450,20 @@ CopyOneRowTo(CopyState cstate, Oid tupleOid, Datum *values, bool *isnulls)
 	MemoryContextReset(cstate->rowcontext);
 	oldcontext = MemoryContextSwitchTo(cstate->rowcontext);
 
+	if (cstate->binary)
+	{
+		/* Binary per-tuple header */
+		CopySendInt16(cstate, list_length(cstate->attnumlist));
+		/* Send OID if wanted --- note attnumlist doesn't include it */
+		if (cstate->oids)
+		{
+			/* Hack --- assume Oid is same size as int32 */
+			CopySendInt32(cstate, sizeof(int32));
+			CopySendInt32(cstate, tupleOid);
+		}
+	}
+	else
+	{
 	/* Text format has no per-tuple header, but send OID if wanted */
 	/* Assume digits don't need any quoting or encoding conversion */
 	if (cstate->oids)
@@ -2266,6 +2473,7 @@ CopyOneRowTo(CopyState cstate, Oid tupleOid, Datum *values, bool *isnulls)
 		CopySendString(cstate, string);
 		need_delim = true;
 	}
+	}
 
 	foreach(cur, cstate->attnumlist)
 	{
@@ -2274,17 +2482,24 @@ CopyOneRowTo(CopyState cstate, Oid tupleOid, Datum *values, bool *isnulls)
 		bool		isnull = isnulls[attnum-1];
 		Datum		value = values[attnum-1];
 
+		if (!cstate->binary)
+		{
 		if (need_delim)
 			CopySendChar(cstate, cstate->delim[0]);
-
 		need_delim = true;
+		}
 
 		if (isnull)
 		{
+			if (!cstate->binary)
 			CopySendString(cstate, cstate->null_print_client);
+			else
+				CopySendInt32(cstate, -1);
 		}
 		else
 		{
+			if (!cstate->binary)
+			{
 			char		quotec = cstate->quote ? cstate->quote[0] : '\0';
 
 			/* int2out or int4out ? */
@@ -2339,6 +2554,17 @@ CopyOneRowTo(CopyState cstate, Oid tupleOid, Datum *values, bool *isnulls)
 					CopyAttributeOutText(cstate, string);
 			}
 		}
+			else
+			{
+				bytea	   *outputbytes;
+
+				outputbytes = SendFunctionCall(&out_functions[attnum - 1],
+											   value);
+				CopySendInt32(cstate, VARSIZE(outputbytes) - VARHDRSZ);
+				CopySendData(cstate, VARDATA(outputbytes),
+							 VARSIZE(outputbytes) - VARHDRSZ);
+			}
+		}
 	}
 
 	/*
@@ -2365,7 +2591,7 @@ CopyOneRowTo(CopyState cstate, Oid tupleOid, Datum *values, bool *isnulls)
  * always change filename to STDIN, we may pre-evaluate constant values or
  * functions on the QD and send them to the QE with an extended column list.
  */
-static void CopyFromCreateDispatchCommand(CopyState cstate,
+static int CopyFromCreateDispatchCommand(CopyState cstate,
 										  StringInfo cdbcopy_cmd,
 										  GpPolicy  *policy,
 										  AttrNumber	num_phys_attrs,
@@ -2447,6 +2673,7 @@ static void CopyFromCreateDispatchCommand(CopyState cstate,
 			if(add_to_list)
 			{
 				/* We don't add dropped attributes */
+				/* XXXX: this check seems unnecessary given how CopyFromDispatch constructs defmap */
 				if (attr[defmap[i]]->attisdropped)
 					continue;
 
@@ -2479,6 +2706,12 @@ static void CopyFromCreateDispatchCommand(CopyState cstate,
 	if (cstate->oids)
 		appendStringInfo(cdbcopy_cmd, " OIDS");
 
+	if (cstate->binary)
+	{
+		appendStringInfo(cdbcopy_cmd, " BINARY");
+	}
+	else
+	{
 	appendStringInfo(cdbcopy_cmd, " DELIMITER AS E'%s'", escape_quotes(cstate->delim));
 	appendStringInfo(cdbcopy_cmd, " NULL AS E'%s'", escape_quotes(cstate->null_print));
 
@@ -2517,6 +2750,7 @@ static void CopyFromCreateDispatchCommand(CopyState cstate,
 		}
 		/* do NOT include HEADER. Header row is "swallowed" by dispatcher COPY */
 	}
+	}
 
 	if (cstate->fill_missing)
 		appendStringInfo(cdbcopy_cmd, " FILL MISSING FIELDS");
@@ -2533,6 +2767,7 @@ static void CopyFromCreateDispatchCommand(CopyState cstate,
 						 cstate->cdbsreh->rejectlimit, (cstate->cdbsreh->is_limit_in_rows ? "ROWS" : "PERCENT"));
 	}
 
+	return extra_attr_count;
 }
 
 /*
@@ -2547,8 +2782,10 @@ CopyFromDispatch(CopyState cstate)
 				attr_count,
 				num_defaults;
 	FmgrInfo   *in_functions;
+	FmgrInfo	oid_in_function;
 	FmgrInfo   *out_functions; /* for handling defaults in Greenplum Database */
 	Oid		   *typioparams;
+	Oid			oid_typioparam;
 	int			attnum;
 	int			i;
 	int			p_index;
@@ -2696,6 +2933,10 @@ CopyFromDispatch(CopyState cstate)
 			continue;
 
 		/* Fetch the input function and typioparam info */
+		if (cstate->binary)
+			getTypeBinaryInputInfo(attr[attnum - 1]->atttypid,
+								   &in_func_oid, &typioparams[attnum - 1]);
+		else
 		getTypeInputInfo(attr[attnum - 1]->atttypid,
 						 &in_func_oid, &typioparams[attnum - 1]);
 		fmgr_info(in_func_oid, &in_functions[attnum - 1]);
@@ -2705,6 +2946,11 @@ CopyFromDispatch(CopyState cstate)
 		 * for handling default functions on the dispatcher COPY, if
 		 * there are any.
 		 */
+		if (cstate->binary)
+			getTypeBinaryOutputInfo(attr[attnum - 1]->atttypid,
+									&out_func_oid,
+									&isvarlena[attnum - 1]);
+		else
 		getTypeOutputInfo(attr[attnum - 1]->atttypid,
 						  &out_func_oid,
 						  &isvarlena[attnum - 1]);
@@ -2789,7 +3035,6 @@ CopyFromDispatch(CopyState cstate)
 		i = 0;
 		foreach(lc, cols)
 			policy->attrs[i++] = lfirst_int(lc);
-
 	}
 	else
 	{
@@ -2839,7 +3084,7 @@ CopyFromDispatch(CopyState cstate)
 	initStringInfo(&cdbcopy_cmd);
 
 	/* store the COPY command string in cdbcopy_cmd */
-	CopyFromCreateDispatchCommand(cstate,
+	int extra_attr_count = CopyFromCreateDispatchCommand(cstate,
 								  &cdbcopy_cmd,
 								  policy,
 								  num_phys_attrs,
@@ -2887,6 +3132,41 @@ CopyFromDispatch(CopyState cstate)
 			}
 
 			i++;
+		}
+	}
+
+	/* init partition routing data structure */
+	if (estate->es_result_partitions)
+	{
+		PartitionNode *n = estate->es_result_partitions;
+		MemoryContext cxt_save;
+
+		List *pattnums = get_partition_attrs(n);
+		ListCell *lc;
+		int ii = 0;
+
+		cxt_save = MemoryContextSwitchTo(oldcontext);
+
+		part_values = palloc0(num_phys_attrs * sizeof(Datum));
+		part_attr_types = palloc(num_phys_attrs * sizeof(Oid));
+		part_typio = palloc(num_phys_attrs * sizeof(Oid));
+		part_infuncs =
+			palloc(num_phys_attrs * sizeof(FmgrInfo));
+		part_attnum = palloc(num_phys_attrs *
+							 sizeof(AttrNumber));
+		part_attnums = list_length(pattnums);
+		MemoryContextSwitchTo(cxt_save);
+
+		foreach(lc, pattnums)
+		{
+			AttrNumber attnum = (AttrNumber)lfirst_int(lc);
+			Oid in_func_oid;
+
+			getTypeInputInfo(attr[attnum - 1]->atttypid,
+							 &in_func_oid,
+							 &part_typio[attnum - 1]);
+			fmgr_info(in_func_oid, &part_infuncs[attnum - 1]);
+			part_attnum[ii++] = attnum;
 		}
 	}
 
@@ -2942,7 +3222,62 @@ CopyFromDispatch(CopyState cstate)
 	 */
 	//ExecBSInsertTriggers(estate, resultRelInfo);
 
-	file_has_oids = cstate->oids;	/* must rely on user to tell us this... */
+	if (!cstate->binary)
+		file_has_oids = cstate->oids;	/* must rely on user to tell us... */
+	else
+	{
+		/* Read and verify binary header */
+		char		readSig[11];
+		int32		tmp_flags, tmp_extension;
+		int32		tmp;
+
+		/* Signature */
+		if (CopyGetData(cstate, readSig, 11) != 11 ||
+			memcmp(readSig, BinarySignature, 11) != 0)
+			ereport(ERROR,
+					(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
+					 errmsg("COPY file signature not recognized")));
+		/* Flags field */
+		if (!CopyGetInt32(cstate, &tmp_flags))
+			ereport(ERROR,
+					(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
+					 errmsg("invalid COPY file header (missing flags)")));
+		file_has_oids = (tmp_flags & (1 << 16)) != 0;
+		tmp = tmp_flags & ~(1 << 16);
+		if ((tmp >> 16) != 0)
+			ereport(ERROR,
+					(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
+				 errmsg("unrecognized critical flags in COPY file header")));
+		/* Header extension length */
+		if (!CopyGetInt32(cstate, &tmp_extension) ||
+			tmp_extension < 0)
+			ereport(ERROR,
+					(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
+					 errmsg("invalid COPY file header (missing length)")));
+		/* Skip extension header, if present */
+		while (tmp_extension-- > 0)
+		{
+			if (CopyGetData(cstate, readSig, 1) != 1)
+				ereport(ERROR,
+						(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
+						 errmsg("invalid COPY file header (wrong length)")));
+		}
+
+		/* Send binary header to all segments */
+		uint32 buf;
+		cdbCopySendDataToAll(cdbCopy, (char *) BinarySignature, 11);
+		buf = htonl((uint32) tmp_flags);
+		cdbCopySendDataToAll(cdbCopy, (char *) &buf, 4);
+		buf = htonl((uint32) 0);
+		cdbCopySendDataToAll(cdbCopy, (char *) &buf, 4);
+	}
+
+	if (file_has_oids && cstate->binary)
+	{
+		getTypeBinaryInputInfo(OIDOID,
+							   &in_func_oid, &oid_typioparam);
+		fmgr_info(in_func_oid, &oid_in_function);
+	}
 
 	values = (Datum *) palloc(num_phys_attrs * sizeof(Datum));
 	nulls = (bool *) palloc(num_phys_attrs * sizeof(bool));
@@ -2961,6 +3296,8 @@ CopyFromDispatch(CopyState cstate)
 	{
 		size_t		bytesread = 0;
 
+		if (!cstate->binary)
+		{
 		/* read a chunk of data into the buffer */
 		PG_TRY();
 		{
@@ -2984,6 +3321,7 @@ CopyFromDispatch(CopyState cstate)
 		/* set buffer pointers to beginning of the buffer */
 		cstate->begloc = cstate->raw_buf;
 		cstate->raw_buf_index = 0;
+		}
 
 		/*
 		 * continue if some bytes were read or if we didn't reach EOF. if we
@@ -3067,6 +3405,8 @@ CopyFromDispatch(CopyState cstate)
 				/* Get the line number of the first line of this data row */
 				original_lineno_for_qe = cstate->cur_lineno + 1;
 
+				if (!cstate->binary)
+				{
 				PG_TRY();
 				{
 					/* Actually read the line into memory here */
@@ -3181,18 +3521,28 @@ CopyFromDispatch(CopyState cstate)
 						QD_GOTO_NEXT_ROW;
 					}
 				}
-
+				}
+				else
+				{
+					/*
+					 * Binary mode, not doing anything here;
+					 * Deferring "line" segmenting and parsing to next code block.
+					 */
+				}
 
 				PG_TRY();
 				{
 					/*
 					 * parse and convert the data line attributes.
 					 */
+					if (!cstate->binary)
+					{
 					if (cstate->csv_mode)
 						CopyReadAttributesCSV(cstate, nulls, attr_offsets, num_phys_attrs, attr);
 					else
 						CopyReadAttributesText(cstate, nulls, attr_offsets, num_phys_attrs, attr);
 
+						/* Parse only partition attributes */
 					attr_get_key(cstate, cdbCopy,
 								 original_lineno_for_qe,
 								 target_seg,
@@ -3200,6 +3550,115 @@ CopyFromDispatch(CopyState cstate)
 								 attr, attr_offsets, nulls,
 							   	 in_functions, typioparams,
 								 values);
+					}
+					else
+					{
+						/* binary */
+						int16		fld_count;
+						int32		fld_size;
+						char buffer[20];
+						ListCell   *cur;
+
+						resetStringInfo(&cstate->line_buf);
+
+						if (!CopyGetInt16(cstate, &fld_count) ||
+							fld_count == -1)
+						{
+							no_more_data = true;
+							break;
+						}
+
+						cstate->cur_lineno++;
+
+						/*
+						 * copy to line_buf
+						*/
+						uint16 fld_count_be = htons((uint16) fld_count + extra_attr_count);
+						appendBinaryStringInfo(&cstate->line_buf, &fld_count_be, 2);
+
+						if (fld_count != attr_count)
+							ereport(ERROR,
+									(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
+									 errmsg("QE: line %s: row field count is %d, expected %d",
+									 		linenumber_atoi(buffer, cstate->cur_lineno),
+											(int) fld_count, attr_count)));
+
+						if (file_has_oids)
+						{
+							cstate->cur_attname = "oid";
+							loaded_oid =
+								DatumGetObjectId(CopyReadBinaryAttribute(cstate,
+																		 0,
+																		 &oid_in_function,
+																		 oid_typioparam,
+																		 -1,
+																		 &isnull,
+																		 false));
+							fld_size = isnull ? -1 : cstate->attribute_buf.len;
+							uint32 fld_size_be = htonl((uint32) fld_size);
+							appendBinaryStringInfo(&cstate->line_buf,
+												   &fld_size_be,
+												   4);
+							if (!isnull)
+								appendBinaryStringInfo(&cstate->line_buf,
+													   cstate->attribute_buf.data,
+													   cstate->attribute_buf.len);
+							if (isnull || loaded_oid == InvalidOid)
+								ereport(ERROR,
+										(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
+										 errmsg("invalid OID in COPY data")));
+							cstate->cur_attname = NULL;
+						}
+
+						i = 0;
+						AttrNumber p_index;
+						foreach(cur, cstate->attnumlist)
+						{
+							int			attnum = lfirst_int(cur);
+							int			m = attnum - 1;
+
+							cstate->cur_attname = NameStr(attr[m]->attname);
+							i++;
+
+							bool skip_parsing = true;
+							/* using same logic as the two invocations of attr_get_key */
+							for (p_index = 0; p_index < p_nattrs; p_index++)
+							{
+								if (attnum == policy->attrs[p_index])
+								{
+									skip_parsing = false;
+									break;
+								}
+							}
+							if (skip_parsing && part_attnums > 0) {
+								for (p_index = 0; p_index < p_nattrs; p_index++) {
+									if (attnum == part_attnum[p_index])
+									{
+										skip_parsing = false;
+										break;
+									}
+								}
+							}
+							values[m] = CopyReadBinaryAttribute(cstate,
+																i,
+																&in_functions[m],
+																typioparams[m],
+																attr[m]->atttypmod,
+																&isnull,
+																skip_parsing);
+							fld_size = isnull ? -1 : cstate->attribute_buf.len;
+							uint32 fld_size_be = htonl((uint32) fld_size);
+							appendBinaryStringInfo(&cstate->line_buf,
+												   &fld_size_be,
+												   4);
+							if (!isnull)
+								appendBinaryStringInfo(&cstate->line_buf,
+													   cstate->attribute_buf.data,
+													   cstate->attribute_buf.len);
+							nulls[m] = isnull;
+							cstate->cur_attname = NULL;
+						}
+					}
 
 					/*
 					 * Now compute defaults for only:
@@ -3208,6 +3667,10 @@ CopyFromDispatch(CopyState cstate)
 					 * (such as a function) that is, of course, if these columns
 					 * not provided by the input data.
 					 * Anything not processed here or above will remain NULL.
+					 *
+					 * These are fields in addition to those specified in the original COPY command.
+					 * They are computed by QD here and fed to the QEs.
+					 * See same logic and comments in CopyFromCreateDispatchCommand
 					 */
 					for (i = 0; i < num_defaults; i++)
 					{
@@ -3228,11 +3691,13 @@ CopyFromDispatch(CopyState cstate)
 
 						if(compute_default)
 						{
-							char *string;
-
 							values[defmap[i]] = ExecEvalExpr(defexprs[i], econtext,
 															 &isnull, NULL);
 
+							/* Extend line_buf for the QDs */
+							if (!cstate->binary)
+							{
+								char *string;
 							/*
 							 * prepare to concatinate next value:
 							 * remove eol characters from end of line buf
@@ -3266,47 +3731,49 @@ CopyFromDispatch(CopyState cstate)
 							/* re-add the eol characters */
 							concatenateEol(cstate);
 						}
+							else
+							{
+								/* binary format */
+								if (isnull) {
+									uint32 fld_size_be = htonl((uint32) -1);
+									appendBinaryStringInfo(&cstate->line_buf,
+														   &fld_size_be,
+														   4);
+								} else {
+									bytea	   *outputbytes;
+									outputbytes = SendFunctionCall(&out_functions[defmap[i]],
+																   FunctionCall3(&out_functions[defmap[i]],
+																		   		 values[defmap[i]],
+																		   		 ObjectIdGetDatum(typioparams[defmap[i]]),
+																		   		 Int32GetDatum(attr[defmap[i]]->atttypmod)));
+									int32 fld_size = VARSIZE(outputbytes) - VARHDRSZ;
+									uint32 fld_size_be = htonl((uint32) fld_size);
+									appendBinaryStringInfo(&cstate->line_buf,
+														   &fld_size_be,
+														   4);
+									appendBinaryStringInfo(&cstate->line_buf,
+														   VARDATA(outputbytes),
+														   fld_size);
+								}
+							}
+						}
 
 					}
 
 					/* lock partition */
 					if (estate->es_result_partitions)
 					{
-						PartitionNode *n = estate->es_result_partitions;
-						MemoryContext cxt_save;
-						/* lazily initialised */
-						if (part_values == NULL)
-						{
-							List *pattnums = get_partition_attrs(n);
-							ListCell *lc;
-							int ii = 0;
+						Datum *values_for_partition;
 
-							cxt_save = MemoryContextSwitchTo(oldcontext);
-
-							part_values = palloc0(num_phys_attrs * sizeof(Datum));
-							part_attr_types = palloc(num_phys_attrs * sizeof(Oid));
-							part_typio = palloc(num_phys_attrs * sizeof(Oid));
-							part_infuncs =
-								palloc(num_phys_attrs * sizeof(FmgrInfo));
-							part_attnum = palloc(num_phys_attrs *
-												 sizeof(AttrNumber));
-							part_attnums = list_length(pattnums);
-							MemoryContextSwitchTo(cxt_save);
-
-							foreach(lc, pattnums)
+						if (!cstate->binary)
 							{
-								AttrNumber attnum = (AttrNumber)lfirst_int(lc);
-								Oid in_func_oid;
-
-								getTypeInputInfo(attr[attnum - 1]->atttypid,
-												 &in_func_oid,
-												 &part_typio[attnum - 1]);
-								fmgr_info(in_func_oid, &part_infuncs[attnum - 1]);
-								part_attnum[ii++] = attnum;
-							}
-						}
+							/*
+							 * Text/CSV: Ensure we parse all partition attrs.
+							 * Q: Wouldn't this potentially reparse values (and miss defaults)?
+							 *    Why not merge with the other attr_get_key call
+							 *    (replace part_values with values)?
+							 */
 						MemSet(part_values, 0, num_phys_attrs * sizeof(Datum));
-
 						attr_get_key(cstate, cdbCopy,
 									 original_lineno_for_qe,
 									 target_seg,
@@ -3315,11 +3782,20 @@ CopyFromDispatch(CopyState cstate)
 									 attr, attr_offsets, nulls,
 									 part_infuncs, part_typio,
 									 part_values);
+							values_for_partition = part_values;
+						}
+						else
+						{
+							/*
+							 * Binary: We've made sure to parse partition attrs above.
+							 */
+							values_for_partition = values;
+						}
 
 						/* values_get_partition() calls palloc() */
-						cxt_save = MemoryContextSwitchTo(oldcontext);
+						MemoryContext cxt_save = MemoryContextSwitchTo(oldcontext);
 
-						resultRelInfo = values_get_partition(part_values,
+						resultRelInfo = values_get_partition(values_for_partition,
 															 nulls,
 															 tupDesc, estate);
 
@@ -3392,6 +3868,9 @@ CopyFromDispatch(CopyState cstate)
 				}
 				PG_END_TRY();
 
+				if (no_more_data)
+					break;
+
 				if(cur_row_rejected)
 				{
 					ErrorIfRejectLimitReached(cstate->cdbsreh, cdbCopy);
@@ -3409,6 +3888,11 @@ CopyFromDispatch(CopyState cstate)
 				 * database executors. Data row will not be inserted locally.
 				 */
 				Assert(PointerIsValid(part_hash));
+				/* Assert does not activate in production build */
+				if (!part_hash)
+				{
+					elog(FATAL, "Bad part_hash: %p", part_hash);
+				}
 				cdbhashinit(part_hash);
 
 				for (i = 0; i < part_p_nattrs; i++)
@@ -3438,7 +3922,11 @@ CopyFromDispatch(CopyState cstate)
 				/*
 				 * Send data row to all databases for this segment.
 				 * Also send the original row number with the data.
-				 * modify the data to look like:
+				 */
+				if (!cstate->binary)
+				{
+					/*
+					 * Text/CSV: modify the data to look like:
 				 *    "<lineno>^<linebuf_converted>^<data>"
 				 */
 				appendStringInfo(&line_buf_with_lineno, "%d%c%d%c%s",
@@ -3447,13 +3935,27 @@ CopyFromDispatch(CopyState cstate)
 								 cstate->line_buf_converted, \
 								 COPY_METADATA_DELIM, \
 								 cstate->line_buf.data);
+				}
+				else
+				{
+					/*
+					 * Binary: modify the data to look like:
+					 *    "<lineno:int64><data:bytes>"
+					 */
+					uint64 lineno = htonll((uint64) original_lineno_for_qe);
+					appendBinaryStringInfo(&line_buf_with_lineno,
+										   &lineno,
+										   sizeof(lineno));
+					appendBinaryStringInfo(&line_buf_with_lineno,
+										   cstate->line_buf.data,
+										   cstate->line_buf.len);
+				}
 				
 				/* send modified data */
 				cdbCopySendData(cdbCopy,
 								target_seg,
 								line_buf_with_lineno.data,
 								line_buf_with_lineno.len);
-
 				RESET_LINEBUF_WITH_LINENO;
 
 				cstate->processed++;
@@ -3659,7 +4161,9 @@ CopyFrom(CopyState cstate)
 				attr_count,
 				num_defaults;
 	FmgrInfo   *in_functions;
+	FmgrInfo	oid_in_function;
 	Oid		   *typioparams;
+	Oid			oid_typioparam;
 	int			attnum;
 	int			i;
 	Oid			in_func_oid;
@@ -3778,8 +4282,13 @@ CopyFrom(CopyState cstate)
 			continue;
 
 		/* Fetch the input function and typioparam info */
+		if (cstate->binary)
+			getTypeBinaryInputInfo(attr[attnum - 1]->atttypid,
+								   &in_func_oid, &typioparams[attnum - 1]);
+		else
 		getTypeInputInfo(attr[attnum - 1]->atttypid,
 						 &in_func_oid, &typioparams[attnum - 1]);
+
 		fmgr_info(in_func_oid, &in_functions[attnum - 1]);
 
 		/* Get default info if needed */
@@ -3814,7 +4323,53 @@ CopyFrom(CopyState cstate)
 	 */
 	ExecBSInsertTriggers(estate, resultRelInfo);
 
+	if (!cstate->binary)
 	file_has_oids = cstate->oids;	/* must rely on user to tell us this... */
+	else
+	{
+		/* Read and verify binary header */
+		char		readSig[11];
+		int32		tmp;
+
+		/* Signature */
+		if (CopyGetData(cstate, readSig, 11) != 11 ||
+			memcmp(readSig, BinarySignature, 11) != 0)
+			ereport(ERROR,
+					(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
+					 errmsg("COPY file signature not recognized")));
+		/* Flags field */
+		if (!CopyGetInt32(cstate, &tmp))
+			ereport(ERROR,
+					(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
+					 errmsg("invalid COPY file header (missing flags)")));
+		file_has_oids = (tmp & (1 << 16)) != 0;
+		tmp &= ~(1 << 16);
+		if ((tmp >> 16) != 0)
+			ereport(ERROR,
+					(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
+				 errmsg("unrecognized critical flags in COPY file header")));
+		/* Header extension length */
+		if (!CopyGetInt32(cstate, &tmp) ||
+			tmp < 0)
+			ereport(ERROR,
+					(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
+					 errmsg("invalid COPY file header (missing length)")));
+		/* Skip extension header, if present */
+		while (tmp-- > 0)
+		{
+			if (CopyGetData(cstate, readSig, 1) != 1)
+				ereport(ERROR,
+						(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
+						 errmsg("invalid COPY file header (wrong length)")));
+		}
+	}
+
+	if (file_has_oids && cstate->binary)
+	{
+		getTypeBinaryInputInfo(OIDOID,
+							   &in_func_oid, &oid_typioparam);
+		fmgr_info(in_func_oid, &oid_in_function);
+	}
 
 	baseValues = (Datum *) palloc(num_phys_attrs * sizeof(Datum));
 	baseNulls = (bool *) palloc(num_phys_attrs * sizeof(bool));
@@ -3840,6 +4395,8 @@ CopyFrom(CopyState cstate)
 	{
 		size_t		bytesread = 0;
 
+		if (!cstate->binary)
+		{
 		/* read a chunk of data into the buffer */
 		bytesread = CopyGetData(cstate, cstate->raw_buf, RAW_BUF_SIZE);
 		cstate->raw_buf_done = false;
@@ -3847,6 +4404,7 @@ CopyFrom(CopyState cstate)
 		/* set buffer pointers to beginning of the buffer */
 		cstate->begloc = cstate->raw_buf;
 		cstate->raw_buf_index = 0;
+		}
 
 		/*
 		 * continue if some bytes were read or if we didn't reach EOF. if we
@@ -3887,6 +4445,8 @@ CopyFrom(CopyState cstate)
 				/* reset attribute pointers */
 				MemSet(attr_offsets, 0, num_phys_attrs * sizeof(int));
 
+				if (!cstate->binary)
+				{
 				PG_TRY();
 				{
 					/* Actually read the line into memory here */
@@ -4033,6 +4593,94 @@ CopyFrom(CopyState cstate)
 						baseNulls[m] = isnull;
 						cstate->cur_attname = NULL;
 					}
+					}
+					PG_CATCH();
+					{
+						COPY_HANDLE_ERROR; /* SREH */
+					}
+					PG_END_TRY();
+
+					if(cur_row_rejected)
+					{
+						ErrorIfRejectLimitReached(cstate->cdbsreh, cdbCopy);
+						QE_GOTO_NEXT_ROW;
+					}
+				}
+				else
+				{
+					/* binary */
+					if (cstate->err_loc_type == ROWNUM_EMBEDDED)
+					{
+						/**
+						* Incoming data format:
+						*     <original_line_num:uint64><data for this row:bytes>
+						* We consume "original_line_num" before parsing the data.
+						* See also CopyExtractRowMetaData(cstate) for text/csv formats.
+						*/
+						int64 line_num;
+						if (!CopyGetInt64(cstate, &line_num))
+						{
+							no_more_data = true;
+							break;
+						}
+						cstate->cur_lineno = line_num;
+					}
+
+					int16		fld_count;
+					ListCell   *cur;
+					char buffer[20];
+
+					if (!CopyGetInt16(cstate, &fld_count) ||
+						fld_count == -1)
+					{
+						no_more_data = true;
+						break;
+					}
+
+					if (fld_count != attr_count)
+						ereport(ERROR,
+								(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
+								 errmsg("QD: line %s: row field count is %d, expected %d",
+								 		linenumber_atoi(buffer, cstate->cur_lineno),
+										(int) fld_count, attr_count)));
+
+					if (file_has_oids)
+					{
+						cstate->cur_attname = "oid";
+						loaded_oid =
+							DatumGetObjectId(CopyReadBinaryAttribute(cstate,
+																	 0,
+																	 &oid_in_function,
+																	 oid_typioparam,
+																	 -1,
+																	 &isnull,
+																	 false));
+						if (isnull || loaded_oid == InvalidOid)
+							ereport(ERROR,
+									(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
+									 errmsg("invalid OID in COPY data")));
+						cstate->cur_attname = NULL;
+					}
+
+					i = 0;
+					foreach(cur, cstate->attnumlist)
+					{
+						int			attnum = lfirst_int(cur);
+						int			m = attnum - 1;
+
+						cstate->cur_attname = NameStr(attr[m]->attname);
+						i++;
+						baseValues[m] = CopyReadBinaryAttribute(cstate,
+															i,
+															&in_functions[m],
+															typioparams[m],
+															attr[m]->atttypmod,
+															&isnull,
+															false);
+						baseNulls[m] = isnull;
+						cstate->cur_attname = NULL;
+					}
+				}
 
 					/*
 					 * Now compute and insert any defaults available for the columns
@@ -4047,18 +4695,6 @@ CopyFrom(CopyState cstate)
 						if (!isnull)
 							baseNulls[defmap[i]] = false;
 					}
-				}
-				PG_CATCH();
-				{
-					COPY_HANDLE_ERROR; /* SREH */
-				}
-				PG_END_TRY();
-
-				if(cur_row_rejected)
-				{
-					ErrorIfRejectLimitReached(cstate->cdbsreh, cdbCopy);
-					QE_GOTO_NEXT_ROW;
-				}
 
 				/*
 				 * We might create a ResultRelInfo which needs to persist
@@ -5738,6 +6374,63 @@ CopyReadOidAttr(CopyState cstate, bool *isnull)
 }
 
 /*
+ * Read a binary attribute.
+ * skip_parsing is a hack for CopyFromDispatch (so we don't parse unneeded fields)
+ */
+static Datum
+CopyReadBinaryAttribute(CopyState cstate,
+						int column_no, FmgrInfo *flinfo,
+						Oid typioparam, int32 typmod,
+						bool *isnull, bool skip_parsing)
+{
+	int32		fld_size;
+	Datum		result = 0;
+
+	if (!CopyGetInt32(cstate, &fld_size))
+		ereport(ERROR,
+				(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
+				 errmsg("unexpected EOF in COPY data")));
+	if (fld_size == -1)
+	{
+		*isnull = true;
+		return ReceiveFunctionCall(flinfo, NULL, typioparam, typmod);
+	}
+	if (fld_size < 0)
+		ereport(ERROR,
+				(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
+				 errmsg("invalid field size")));
+
+	/* reset attribute_buf to empty, and load raw data in it */
+	resetStringInfo(&cstate->attribute_buf);
+
+	enlargeStringInfo(&cstate->attribute_buf, fld_size);
+	if (CopyGetData(cstate, cstate->attribute_buf.data,
+					fld_size) != fld_size)
+		ereport(ERROR,
+				(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
+				 errmsg("unexpected EOF in COPY data")));
+
+	cstate->attribute_buf.len = fld_size;
+	cstate->attribute_buf.data[fld_size] = '\0';
+
+	if (!skip_parsing)
+	{
+		/* Call the column type's binary input converter */
+		result = ReceiveFunctionCall(flinfo, &cstate->attribute_buf,
+									 typioparam, typmod);
+
+		/* Trouble if it didn't eat the whole buffer */
+		if (cstate->attribute_buf.cursor != cstate->attribute_buf.len)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_BINARY_REPRESENTATION),
+					 errmsg("incorrect binary data format")));
+	}
+
+	*isnull = false;
+	return result;
+}
+
+/*
  * Send text representation of one attribute, with conversion and escaping
  */
 #define DUMPSOFAR() \
@@ -6187,6 +6880,21 @@ copy_in_error_callback(void *arg)
 	if (cstate->error_on_executor)
 		return;
 
+	if (cstate->binary)
+	{
+		/* can't usefully display the data */
+		if (cstate->cur_attname)
+			errcontext("COPY %s, line %s, column %s",
+					   cstate->cur_relname,
+					   linenumber_atoi(buffer, cstate->cur_lineno),
+					   cstate->cur_attname);
+		else
+			errcontext("COPY %s, line %s",
+					   cstate->cur_relname,
+					   linenumber_atoi(buffer, cstate->cur_lineno));
+	}
+	else
+	{
 	if (cstate->cur_attname)
 	{
 		/* error is relevant to a particular column */
@@ -6231,6 +6939,7 @@ copy_in_error_callback(void *arg)
 					   linenumber_atoi(buffer, cstate->cur_lineno));
 		}
 	}
+}
 }
 
 /*

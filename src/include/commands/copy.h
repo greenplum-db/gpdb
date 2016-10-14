@@ -139,6 +139,7 @@ typedef struct CopyStateData
 	char	   *filename;		/* filename, or NULL for STDIN/STDOUT */
 	bool		custom;			/* custom format? */
 	bool		oids;			/* include OIDs? */
+	bool        binary;         /* binary format */
 	bool		csv_mode;		/* Comma Separated Value format? */
 	bool		header_line;	/* CSV header line? */
 	char	   *null_print;		/* NULL marker string (server encoding!) */
@@ -250,6 +251,9 @@ typedef CopyStateData *CopyState;
 
 #define ISOCTAL(c) (((c) >= '0') && ((c) <= '7'))
 #define OCTVALUE(c) ((c) - '0')
+
+#define htonll(x) ((1==htonl(1)) ? (x) : ((uint64_t)htonl((x) & 0xFFFFFFFF) << 32) | htonl((x) >> 32))
+#define ntohll(x) ((1==ntohl(1)) ? (x) : ((uint64_t)ntohl((x) & 0xFFFFFFFF) << 32) | ntohl((x) >> 32))
 
 extern void ValidateControlChars(bool copy, bool load, bool csv_mode, char *delim,
 								 char *null_print, char *quote, char *escape,
