@@ -4928,9 +4928,9 @@ log_heap_move(Relation reln, Buffer oldbuf, ItemPointerData from,
 
 
 /*
- * Insert HEAP_NEWPAGE record into XLOG.  Caller is responsible for
- * providing a xl_heap_newpage record with valid persistent TID,
- * persistent serial number and relfilenode set.
+ * Insert HEAP_NEWPAGE record into XLOG.  Caller is responsible for providing a
+ * xl_heap_newpage record with valid blkno, persistent TID, persistent serial
+ * number, and relfilenode set.
  *
  * Note: all current callers build pages in private memory and write them
  * directly to smgr, rather than using bufmgr.	Therefore there is no need
@@ -4942,13 +4942,14 @@ log_heap_move(Relation reln, Buffer oldbuf, ItemPointerData from,
  *
  */
 static XLogRecPtr
-log_newpage_internal(xl_heap_newpage *xlrec, BlockNumber blkno, Page page)
+log_newpage_internal(xl_heap_newpage *xlrec, Page page)
 
 {
 	XLogRecPtr  recptr;
 	XLogRecData rdata[2];
 
 	Assert(!RelFileNode_IsEmpty(&xlrec->heapnode.node));
+	Assert(BlockNumberIsValid(xlrec->blkno));
 	if (!IsBootstrapProcessingMode() && !gp_before_persistence_work)
 	{
 		Assert(ItemPointerIsValid(&xlrec->heapnode.persistentTid));
@@ -4957,8 +4958,6 @@ log_newpage_internal(xl_heap_newpage *xlrec, BlockNumber blkno, Page page)
 
 	/* NO ELOG(ERROR) from here till newpage op is logged */
 	START_CRIT_SECTION();
-
-	xlrec->blkno = blkno;
 
 	rdata[0].data = (char *) xlrec;
 	rdata[0].len = SizeOfHeapNewpage;
@@ -4997,7 +4996,8 @@ log_newpage_rel(Relation rel, BlockNumber blkno, Page page)
 {
 	xl_heap_newpage xlrec;
 	xl_heapnode_set(&xlrec.heapnode, rel);
-	return log_newpage_internal(&xlrec, blkno, page);
+	xlrec.blkno = blkno;
+	return log_newpage_internal(&xlrec, page);
 }
 
 
@@ -5015,7 +5015,8 @@ log_newpage_relFileNode(RelFileNode *relFileNode, BlockNumber blkno, Page page,
 	xlrec.heapnode.node = *relFileNode;
 	xlrec.heapnode.persistentTid = *persistentTid;
 	xlrec.heapnode.persistentSerialNum = persistentSerialNum;
-	return log_newpage_internal(&xlrec, blkno, page);
+	xlrec.blkno = blkno;
+	return log_newpage_internal(&xlrec, page);
 }
 
 
