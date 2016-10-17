@@ -29,12 +29,12 @@ class ReindexPgClass(TINCTestCase):
 
     def __init__(self, methodName):
         super(ReindexPgClass, self).__init__(methodName)
-
+        self.dbname = None
 
     def test_reindex_pg_class(self):
         tinctest.logger.info("create checkpoint")
         results = {'rc':0, 'stdout':'', 'stderr':''}
-        PSQL.run_sql_command("checkpoint", results=results)
+        PSQL.run_sql_command("checkpoint", results=results, dbname=self.dbname)
         assert results['rc'] == 0, results['stderr']
 
         tinctest.logger.info("inject fault to skip checkpoints")
@@ -50,7 +50,8 @@ class ReindexPgClass(TINCTestCase):
         tinctest.logger.info(cmd.get_results().printResult())
 
         tinctest.logger.info("reindex pg_class indexes")
-        assert PSQL.run_sql_file(local_path('reindex_pg_class.sql'))
+        assert PSQL.run_sql_file(local_path('reindex_pg_class.sql'),
+                                 dbname=self.dbname)
 
         tinctest.logger.info("shutdown immediate")
         cmd = Command("shutdown immediate", "gpstop -ai")
@@ -64,6 +65,16 @@ class ReindexPgClass(TINCTestCase):
 
         tinctest.logger.info("validate recovery succeeded")
         results = {'rc':0, 'stdout':'', 'stderr':''}
-        PSQL.run_sql_command("DROP TABLE reindex_pg_class_test", results=results)
+        PSQL.run_sql_command("DROP TABLE reindex_pg_class_test",
+                             results=results, dbname=self.dbname)
         assert results['rc'] == 0, results['stderr']
 
+    def test_reindex_pg_class_template1(self):
+        """Test that relcache does not contain stale refilenodes after
+        crash recovery.
+
+        This used to happen before we started deleting relcache init
+        file at the end of crash recovery pass 2.
+        """
+        self.dbname = "template1"
+        self.test_reindex_pg_class()

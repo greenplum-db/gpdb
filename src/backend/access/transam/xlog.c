@@ -11327,6 +11327,19 @@ StartupProcessMain(int passNum)
 		if (passNum == 2)
 		{
 			StartupXLOG_Pass2();
+			/*
+			 * The cache init file created by
+			 * RelationCacheInitializePhase3() contains critical
+			 * relations and index entries from template1 database.
+			 * XLOG replay in pass 3 may invalidate these entries,
+			 * e.g. redo records for reindex operation on a system
+			 * table in template1.  Therefore, delete the file now
+			 * and let pass 4 rebuild it.  Note that pass 3 does not
+			 * need relcache to operate as it uses resource manager
+			 * redo (rm_redo()) methods to replay xlog rather than
+			 * regular access methods.
+			 */
+			RelationCacheInitFileRemove();
 		}
 		else
 		{
