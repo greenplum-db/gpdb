@@ -65,6 +65,7 @@
 #include "storage/fd.h"
 #include "storage/smgr.h"
 #include "utils/builtins.h"
+#include "utils/faultinjector.h"
 #include "utils/fmgroids.h"
 #include "utils/inval.h"
 #include "utils/memutils.h"
@@ -4325,6 +4326,8 @@ load_relcache_init_file(bool shared)
 				nailed_indexes,
 				magic;
 	int			i;
+
+	SIMPLE_FAULT_INJECTOR(LoadRelcacheInitFile);
 
 	if (shared)
 		snprintf(initfilename, sizeof(initfilename), "global/%s",
