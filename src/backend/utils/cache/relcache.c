@@ -3413,14 +3413,14 @@ RelationCacheInitializePhase3(void)
 							AttributeRelationId);
 		load_critical_index(IndexRelidIndexId,
 							IndexRelationId);
-		load_critical_index(OpclassOidIndexId,
-							OperatorClassRelationId);
 		load_critical_index(AccessMethodStrategyIndexId,
 							AccessMethodOperatorRelationId);
 		load_critical_index(OpclassOidIndexId,
 							OperatorClassRelationId);
 		load_critical_index(AccessMethodProcedureIndexId,
 							AccessMethodProcedureRelationId);
+		load_critical_index(OperatorOidIndexId,
+							OperatorRelationId);
 		load_critical_index(RewriteRelRulenameIndexId,
 							RewriteRelationId);
 		load_critical_index(TriggerRelidNameIndexId,
