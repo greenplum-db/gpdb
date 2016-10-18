@@ -9,7 +9,6 @@
 
 $GPHOME/bin/gpperfmon_install --enable --port 49999 > /dev/null
 gpconfig -c gpperfmon_port -v 49999 --masteronly
-gpconfig -c gp_gpperfmon_print_packet_info -v on --skipvalidation
 gpconfig -c gp_enable_gpperfmon -v on
 
 cat >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf <<EOF
