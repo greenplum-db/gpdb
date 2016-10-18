@@ -160,32 +160,32 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 insert into tmp_pg_class select * from pg_class;
 insert into hdfsformatter_out select * from tmp_pg_class;
 insert into tmp_in select * from hdfsformatter_in;
-select relname, relnamespace, reltype, relowner, relam, relfilenode, reltablespace, reltoastrelid, reltoastidxid, relaosegrelid, relaosegidxid,
+select relname, relnamespace, reltype, relowner, relam, relfilenode, reltablespace, reltoastrelid, reltoastidxid,
  relhasindex, relisshared, relkind, relstorage, relnatts, relchecks, reltriggers,
  relukeys, relfkeys, relrefs, relhasoids, relhaspkey, relhasrules, relhassubclass, reloptions
 from tmp_in
 except
-select relname, relnamespace, reltype, relowner, relam, relfilenode, reltablespace, reltoastrelid, reltoastidxid, relaosegrelid, relaosegidxid,
+select relname, relnamespace, reltype, relowner, relam, relfilenode, reltablespace, reltoastrelid, reltoastidxid,
  relhasindex, relisshared, relkind, relstorage, relnatts, relchecks, reltriggers,
  relukeys, relfkeys, relrefs, relhasoids, relhaspkey, relhasrules, relhassubclass, reloptions
 from tmp_pg_class;
- relname | relnamespace | reltype | relowner | relam | relfilenode | reltablespace | reltoastrelid | reltoastidxid | relaosegrelid | relaosegidxid | relhasindex | relisshared | relkind | relstorage | relnatts | relchecks | reltriggers | relukeys | relfkeys | relrefs | relhasoids | relhaspkey | relhasrules | relhassubclass | reloptions 
----------+--------------+---------+----------+-------+-------------+---------------+---------------+---------------+---------------+---------------+-------------+-------------+---------+------------+----------+-----------+-------------+----------+----------+---------+------------+------------+-------------+----------------+------------
+ relname | relnamespace | reltype | relowner | relam | relfilenode | reltablespace | reltoastrelid | reltoastidxid | relhasindex | relisshared | relkind | relstorage | relnatts | relchecks | reltriggers | relukeys | relfkeys | relrefs | relhasoids | relhaspkey | relhasrules | relhassubclass | reloptions 
+---------+--------------+---------+----------+-------+-------------+---------------+---------------+---------------+-------------+-------------+---------+------------+----------+-----------+-------------+----------+----------+---------+------------+------------+-------------+----------------+------------
 (0 rows)
 
 select relname, relnamespace, reltype, relowner, relam, relfilenode, reltablespace,
- relpages, reltoastrelid, reltoastidxid, relaosegrelid, relaosegidxid,
+ relpages, reltoastrelid, reltoastidxid,
  relhasindex, relisshared, relkind, relstorage, relnatts, relchecks, reltriggers,
  relukeys, relfkeys, relrefs, relhasoids, relhaspkey, relhasrules, relhassubclass, reloptions
 from tmp_pg_class
 except
 select relname, relnamespace, reltype, relowner, relam, relfilenode, reltablespace,
- relpages, reltoastrelid, reltoastidxid, relaosegrelid, relaosegidxid,
+ relpages, reltoastrelid, reltoastidxid,
  relhasindex, relisshared, relkind, relstorage, relnatts, relchecks, reltriggers,
  relukeys, relfkeys, relrefs, relhasoids, relhaspkey, relhasrules, relhassubclass, reloptions
 from tmp_in;
- relname | relnamespace | reltype | relowner | relam | relfilenode | reltablespace | relpages | reltoastrelid | reltoastidxid | relaosegrelid | relaosegidxid | relhasindex | relisshared | relkind | relstorage | relnatts | relchecks | reltriggers | relukeys | relfkeys | relrefs | relhasoids | relhaspkey | relhasrules | relhassubclass | reloptions 
----------+--------------+---------+----------+-------+-------------+---------------+----------+---------------+---------------+---------------+---------------+-------------+-------------+---------+------------+----------+-----------+-------------+----------+----------+---------+------------+------------+-------------+----------------+------------
+ relname | relnamespace | reltype | relowner | relam | relfilenode | reltablespace | relpages | reltoastrelid | reltoastidxid | relhasindex | relisshared | relkind | relstorage | relnatts | relchecks | reltriggers | relukeys | relfkeys | relrefs | relhasoids | relhaspkey | relhasrules | relhassubclass | reloptions 
+---------+--------------+---------+----------+-------+-------------+---------------+----------+---------------+---------------+-------------+-------------+---------+------------+----------+-----------+-------------+----------+----------+---------+------------+------------+-------------+----------------+------------
 (0 rows)
 
 drop external table hdfsformatter_out;
@@ -255,7 +255,7 @@ CREATE  EXTERNAL WEB TABLE example_in(like test1)
 execute 'cat $GP_SEG_DATADIR/hdfsfile.corrupt'
  FORMAT 'CUSTOM' (formatter='gphdfs_import');
 select * from example_in except select * from test1;
-ERROR:  unexpected end of file  (seg2 slice1 rh55-qavm35:40002 pid=19998)
+ERROR:  unexpected end of file  (seg0 slice2 10.254.0.42:25432 pid=70983) (cdbdisp.c:220)
 DETAIL:  External table example_in
 --
 -- Test 4: Negative test (type mismatch)
@@ -284,14 +284,14 @@ CREATE  EXTERNAL WEB TABLE example_in(a boolean)
 execute 'cat $GP_SEG_DATADIR/hdfsfile.out'
  FORMAT 'CUSTOM' (formatter='gphdfs_import');
 select * from example_in;
-ERROR:  input data column 1 of type "int8" did not match the external table definition  (seg1 slice1 rh55-qavm35:40001 pid=19945)
+ERROR:  input data column 1 of type "int8" did not match the external table definition  (seg0 slice1 10.254.0.42:25432 pid=70969) (cdbdisp.c:220)
 DETAIL:  External table example_in
 drop external web table example_in;
 CREATE  EXTERNAL WEB TABLE example_in(a1 int, a boolean)
 execute 'cat $GP_SEG_DATADIR/hdfsfile.out'
  FORMAT 'CUSTOM' (formatter='gphdfs_import');
 select * from example_in;
-ERROR:  input data column count (1) did not match the external table definition  (seg1 slice1 rh55-qavm35:40001 pid=19945)
+ERROR:  input data column count (1) did not match the external table definition  (seg0 slice1 10.254.0.42:25432 pid=70969) (cdbdisp.c:220)
 DETAIL:  External table example_in
 --
 -- Test 5: gphdfs protocol (just declare an external table)

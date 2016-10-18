@@ -146,24 +146,24 @@ insert into tmp_pg_class select * from pg_class;
 insert into hdfsformatter_out select * from tmp_pg_class;
 insert into tmp_in select * from hdfsformatter_in;
 
-select relname, relnamespace, reltype, relowner, relam, relfilenode, reltablespace, reltoastrelid, reltoastidxid, relaosegrelid, relaosegidxid,
+select relname, relnamespace, reltype, relowner, relam, relfilenode, reltablespace, reltoastrelid, reltoastidxid,
  relhasindex, relisshared, relkind, relstorage, relnatts, relchecks, reltriggers,
  relukeys, relfkeys, relrefs, relhasoids, relhaspkey, relhasrules, relhassubclass, reloptions
 from tmp_in
 except
-select relname, relnamespace, reltype, relowner, relam, relfilenode, reltablespace, reltoastrelid, reltoastidxid, relaosegrelid, relaosegidxid,
+select relname, relnamespace, reltype, relowner, relam, relfilenode, reltablespace, reltoastrelid, reltoastidxid,
  relhasindex, relisshared, relkind, relstorage, relnatts, relchecks, reltriggers,
  relukeys, relfkeys, relrefs, relhasoids, relhaspkey, relhasrules, relhassubclass, reloptions
 from tmp_pg_class;
 
 select relname, relnamespace, reltype, relowner, relam, relfilenode, reltablespace,
- relpages, reltoastrelid, reltoastidxid, relaosegrelid, relaosegidxid,
+ relpages, reltoastrelid, reltoastidxid,
  relhasindex, relisshared, relkind, relstorage, relnatts, relchecks, reltriggers,
  relukeys, relfkeys, relrefs, relhasoids, relhaspkey, relhasrules, relhassubclass, reloptions
 from tmp_pg_class
 except
 select relname, relnamespace, reltype, relowner, relam, relfilenode, reltablespace,
- relpages, reltoastrelid, reltoastidxid, relaosegrelid, relaosegidxid,
+ relpages, reltoastrelid, reltoastidxid,
  relhasindex, relisshared, relkind, relstorage, relnatts, relchecks, reltriggers,
  relukeys, relfkeys, relrefs, relhasoids, relhaspkey, relhasrules, relhassubclass, reloptions
 from tmp_in;
