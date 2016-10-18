@@ -213,6 +213,7 @@ typedef enum FaultInjectorIdentifier_e {
 	ProcessStartupPacketFault,
 	QuickDie,
 	AfterOneSliceDispatched,
+	LoadRelcacheInitFile,
 
 	/* INSERT has to be done before that line */
 	FaultInjectorIdMax,

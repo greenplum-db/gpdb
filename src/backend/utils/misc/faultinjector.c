@@ -321,6 +321,8 @@ FaultInjectorIdentifierEnumToString[] = {
 		/* inject fault in quickdie*/
 	_("after_one_slice_dispatched"),
 		/* inject fault in cdbdisp_dispatchX*/
+	_("load_relcache_init_file"),
+		/* inject fault at the beginning of load_relcache_init_file */
 	_("not recognized"),
 };
 
