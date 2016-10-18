@@ -1,0 +1,168 @@
+## ======================================================================
+## resources
+## ======================================================================
+
+resource_types:
+  - name: pull-request
+    type: docker-image
+    source:
+      repository: pivotaldata/pr-resource
+
+  - name: pull-request-with-submodule
+    type: docker-image
+    source:
+      repository: jtarchie/pr
+
+resources:
+  - name: gpdb_pr
+    type: pull-request
+    source:
+      repo: greenplum-db/gpdb
+      access_token: {{gpdb-git-access-token}}
+
+  - name: gpdb_pr_with_submodule
+    type: pull-request-with-submodule
+    source:
+      repo: greenplum-db/gpdb
+      private_key: {{gpdb-git-key}}
+
+  - name: centos67-gpdb-gcc6-llvm-image
+    type: docker-image
+    source:
+      repository: pivotaldata/centos67-gpdb-gcc6-llvm-image
+      username: {{docker_username}}
+      password: {{docker_password}}
+
+  - name: sync_tools_gpdb_centos
+    type: s3
+    source:
+      access_key_id: {{bucket-access-key-id}}
+      bucket: {{bucket-name}}
+      region_name: {{aws-region}}
+      secret_access_key: {{bucket-secret-access-key}}
+      versioned_file: sync_tools_gpdb/sync_tools_gpdb.tar.gz
+
+  - name: bin_gpdb_centos
+    type: s3
+    source:
+      access_key_id: {{bucket-access-key-id}}
+      bucket: {{bucket-name}}
+      region_name: {{aws-region}}
+      secret_access_key: {{bucket-secret-access-key}}
+      versioned_file: bin_gpdb_centos/bin_gpdb.tar.gz
+
+  - name: regression_diffs
+    type: s3
+    source:
+       access_key_id: {{bucket-access-key-id}}
+       bucket: {{bucket-name}}
+       region_name: {{aws-region}}
+       secret_access_key: {{bucket-secret-access-key}}
+       versioned_file: regression.diffs
+
+  - name: regression_out
+    type: s3
+    source:
+       access_key_id: {{bucket-access-key-id}}
+       bucket: {{bucket-name}}
+       region_name: {{aws-region}}
+       secret_access_key: {{bucket-secret-access-key}}
+       versioned_file: regression.out
+
+
+jobs:
+  - name: compile_gpdb_centos6
+    plan:
+    - aggregate:
+      - get: gpdb_pr_with_submodule
+        trigger: true
+      - get: centos67-gpdb-gcc6-llvm-image
+    - put: gpdb_pr_with_submodule
+      params:
+        path: gpdb_pr_with_submodule
+        status: pending
+    - task: compile_gpdb
+      file: gpdb_pr_with_submodule/concourse/compile_gpdb.yml
+      image: centos67-gpdb-gcc6-llvm-image
+      input_mapping:
+        gpdb_src: gpdb_pr_with_submodule
+      params:
+        IVYREPO_HOST: {{ivyrepo_host}}
+        IVYREPO_REALM: {{ivyrepo_realm}}
+        IVYREPO_USER: {{ivyrepo_user}}
+        IVYREPO_PASSWD: {{ivyrepo_passwd}}
+        TARGET_OS: centos
+        TARGET_OS_VERSION: 6
+        BLD_TARGETS: ""
+      on_failure:
+        put: gpdb_pr_with_submodule
+        params:
+          path: gpdb_pr_with_submodule
+          status: failure
+    - aggregate:
+      - put: bin_gpdb_centos
+        params:
+          file: gpdb_pr_artifacts/bin_gpdb.tar.gz
+      - put: sync_tools_gpdb_centos
+        params:
+          file: gpdb_pr_sync_tools_gpdb/sync_tools_gpdb.tar.gz
+
+  - name: compile_gpdb_custom_config_centos6
+    public: true
+    plan:
+    - aggregate:
+      - get: gpdb_pr
+        trigger: true
+      - get: centos67-gpdb-gcc6-llvm-image
+    - task: compile_gpdb
+      file: gpdb_pr/concourse/compile_gpdb_custom_config.yml
+      image: centos67-gpdb-gcc6-llvm-image
+      input_mapping:
+        gpdb_src: gpdb_pr
+      on_failure:
+        put: gpdb_pr
+        params:
+          path: gpdb_pr
+          status: failure
+
+  # Stage 2: IC Tests
+  - name: icg_planner_centos6
+    plan:
+    - aggregate:
+      - get: gpdb_pr_with_submodule
+        passed: [compile_gpdb_centos6]
+      - get: sync_tools_gpdb_centos
+        resource: sync_tools_gpdb_centos
+        passed: [compile_gpdb_centos6]
+      - get: bin_gpdb
+        resource: bin_gpdb_centos
+        passed: [compile_gpdb_centos6]
+        trigger: true
+      - get: centos67-gpdb-gcc6-llvm-image
+    - task: ic_gpdb
+      file: gpdb_pr_with_submodule/concourse/ic_gpdb.yml
+      image: centos67-gpdb-gcc6-llvm-image
+      input_mapping:
+        gpdb_src: gpdb_pr_with_submodule
+      params:
+        MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off -c codegen=off' installcheck-good
+        BLDWRAP_POSTGRES_CONF_ADDONS: ""
+        TEST_OS: centos
+      timeout: 2h30m
+      on_success:
+        put: gpdb_pr_with_submodule
+        params:
+          path: gpdb_pr_with_submodule
+          status: success
+      on_failure:
+        aggregate:
+        - put: regression_diffs
+          params:
+            from: gpdb_pr_icg_output/regression.diffs
+        - put: regression_out
+          params:
+            from: gpdb_pr_icg_output/regression.out
+        - put: gpdb_pr_with_submodule
+          params:
+            path: gpdb_pr_with_submodule
+            status: failure
