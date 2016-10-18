@@ -387,9 +387,14 @@ class IsVersionCompatible(Operation):
             logger.error('%s requires Greenplum Database version %s' % (gppkg.pkgname, required_gpdb_version))
             return False
 
-        if not 'orca' in gppkg.version and ".".join(map(str,gpdb_version.version)) >= '4.3.5':
-            logger.error('Greenplum Database requires orca version of %s' % (gppkg.pkg))
-            return False
+        # last bumped version (4.3.5.0)
+        orca_compatible_minor_version = 40305
+        gpdb_magic_num = self._convert_to_magic_number_version(gpdb_version)
+
+        if 'orca' not in gppkg.version and \
+           gpdb_magic_num >= orca_compatible_minor_version:
+                logger.error('Greenplum Database requires orca version of %s' % (gppkg.pkg))
+                return False
 
         return True
 
@@ -399,13 +404,26 @@ class IsVersionCompatible(Operation):
             Returns a string consisting of the major
             release version
         '''
-
         logger.debug('_get_gpdb_version')
         self.gphome = gp.get_gphome()
         version = gp.GpVersion.local('local GP software version check', self.gphome)
         gpdb_version = GpVersion(version.strip())
         return gpdb_version
 
+    def _convert_to_magic_number_version(self, gpversion_obj):
+        '''
+            Converts GPDB version to the GPDB magic number
+            Returns an int consisting of the major and minor release version
+        '''
+        logger.debug('_convert_to_magic_number_version')
+
+        ver_list = gpversion_obj.version
+
+        # The generation of the magic version number (GP_VERSION_NUM) is
+        # retreived from our configure.in file
+        magic_num = "%d%02d%02d" % (ver_list[0], ver_list[1],
+                                    ver_list[2] if len(ver_list) > 2 else 0)
+        return int(magic_num)
 
 
 class ValidateInstallPackage(Operation):
