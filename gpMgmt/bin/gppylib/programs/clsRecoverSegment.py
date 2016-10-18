@@ -284,7 +284,7 @@ class GpRecoverSegmentProgram:
             peerForFailedSegment = peersForFailedSegments[index]
 
             peerForFailedSegmentDbId = peerForFailedSegment.getSegmentDbId()
-            if self.is_segment_mirror_state_mismatched(gpArray, peerForFailedSegment):
+            if not self.__options.forceFullResynchronization and self.is_segment_mirror_state_mismatched(gpArray, peerForFailedSegment):
                 segs_with_persistent_mirroring_disabled.append(peerForFailedSegmentDbId)
             elif (not self.__options.forceFullResynchronization and
                         peerForFailedSegmentDbId in segmentStates and
@@ -498,7 +498,7 @@ class GpRecoverSegmentProgram:
                 self.__applySpareDirectoryMapToSegment(gpEnv, spareDirectoryMap, failoverSegment)
                 # we're failing over to different location on same host so we don't need to assign new ports
 
-            if self.is_segment_mirror_state_mismatched(gpArray, liveSegment):
+            if not forceFull and self.is_segment_mirror_state_mismatched(gpArray, liveSegment):
                 segs_with_persistent_mirroring_disabled.append(liveSegment.getSegmentDbId())
 
             elif (not forceFull and liveSegment.getSegmentDbId() in segmentStates and
