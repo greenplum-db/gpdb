@@ -42,7 +42,7 @@ declare -a TABLESQD=(segment_configuration pgdatabase version_at_initdb)
 #***********************************************************
 declare -a PORTS=(5432 10001 10002 10003)
 ((PORT_MIN=0))
-((PORT_MAX=3))
+((PORT_MAX=$NUM_PRIMARY_MIRROR_PAIRS))
 
 if [ -z $MASTER_DEMO_PORT ] ; then
     echo "set MASTER_DEMO_PORT"

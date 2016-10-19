@@ -6,37 +6,22 @@
 
 DATADIRS=${DATADIRS:-`pwd`/datadirs}
 QDDIR=$DATADIRS/qddir
-
 SEG_PREFIX=demoDataDir
 
-declare -a DIRVEC=($DATADIRS/dbfast1 \
-                   $DATADIRS/dbfast2 \
-                   $DATADIRS/dbfast3 )
-
-declare -a DIRVEC_MIRROR=($DATADIRS/dbfast_mirror1 \
-                          $DATADIRS/dbfast_mirror2 \
-                          $DATADIRS/dbfast_mirror3 )
-
 # ======================================================================
-# DATABASE PORTS
+# Database Ports
 # ======================================================================
 
-declare -a DEMO_SEG_PORTS=(`expr $DEMO_PORT_BASE`      \
-                           `expr $DEMO_PORT_BASE + 1`  \
-                           `expr $DEMO_PORT_BASE + 2`  \
-                           `expr $DEMO_PORT_BASE + 3`  \
-                           `expr $DEMO_PORT_BASE + 4`  \
-                           `expr $DEMO_PORT_BASE + 5`  \
-                           `expr $DEMO_PORT_BASE + 6`  \
-                           `expr $DEMO_PORT_BASE + 7`  \
-                           `expr $DEMO_PORT_BASE + 8`  \
-                           `expr $DEMO_PORT_BASE + 9`  \
-                           `expr $DEMO_PORT_BASE + 10` \
-                           `expr $DEMO_PORT_BASE + 11` )
+# Note there are 2 ports per segment (postmaster port + replication_port)
+for (( i=0; i<`expr 4 \* $NUM_PRIMARY_MIRROR_PAIRS`; i++ )); do
+  PORT_NUM=`expr $DEMO_PORT_BASE + $i`
+  DEMO_SEG_PORTS_LIST="$DEMO_SEG_PORTS_LIST $PORT_NUM"
+done
+DEMO_SEG_PORTS_LIST=${DEMO_SEG_PORTS_LIST#* }
 
-#******************************************************************************
+# ======================================================================
 # Functions
-#******************************************************************************
+# ======================================================================
 
 checkDemoConfig(){
     echo "----------------------------------------------------------------------"
@@ -57,7 +42,9 @@ checkDemoConfig(){
         return 1
     fi
 
-    for PORT_NUM in ${DEMO_SEG_PORTS[@]}; do
+    for (( i=0; i<`expr 4 \* $NUM_PRIMARY_MIRROR_PAIRS`; i++ )); do
+	PORT_NUM=`expr $DEMO_PORT_BASE + $i`
+
         echo "  Segment port check .. : ${PORT_NUM}"
         PORT_FILE="/tmp/.s.PGSQL.${PORT_NUM}"
         if [ -f ${PORT_FILE} -o -S ${PORT_FILE} ] ; then 
@@ -167,14 +154,14 @@ cat <<-EOF
 	----------------------------------------------------------------------
 
 	  This is a demo of the Greenplum Database system.  We will create
-	  a cluster installation with master and 6 segment instances
-	  (3 primary & 3 mirror).
+	  a cluster installation with master and `expr 2 \* ${NUM_PRIMARY_MIRROR_PAIRS}` segment instances
+	  (${NUM_PRIMARY_MIRROR_PAIRS} primary & ${NUM_PRIMARY_MIRROR_PAIRS} mirror).
 
 	    GPHOME ................. : ${GPHOME}
-	    MASTER_DATA_DIRECTORY .. : $QDDIR/${SEG_PREFIX}-1
+	    MASTER_DATA_DIRECTORY .. : ${QDDIR}/${SEG_PREFIX}-1
 
 	    MASTER PORT (PGPORT) ... : ${MASTER_DEMO_PORT}
-	    SEGMENT PORTS .......... : ${DEMO_SEG_PORTS[@]}
+	    SEGMENT PORTS .......... : ${DEMO_SEG_PORTS_LIST}
 
 	  NOTE(s):
 
@@ -210,12 +197,18 @@ mkdir $DATADIRS
 mkdir $QDDIR
 mkdir $DATADIRS/gpAdminLogs
 
-for dir in ${DIRVEC[@]} ${DIRVEC_MIRROR[@]}
+for (( i=1; i<=$NUM_PRIMARY_MIRROR_PAIRS; i++ ))
 do
-  if [ ! -d $dir ]; then
-    mkdir $dir
-  fi
+  PRIMARY_DIR=$DATADIRS/dbfast$i
+  mkdir -p $PRIMARY_DIR
+  PRIMARY_DIRS_LIST="$PRIMARY_DIRS_LIST $PRIMARY_DIR"
+
+  MIRROR_DIR=$DATADIRS/dbfast_mirror$i
+  mkdir -p $MIRROR_DIR
+  MIRROR_DIRS_LIST="$MIRROR_DIRS_LIST $MIRROR_DIR"
 done
+PRIMARY_DIRS_LIST=${PRIMARY_DIRS_LIST#* }
+MIRROR_DIRS_LIST=${MIRROR_DIRS_LIST#* }
 
 #*****************************************************************************************
 # Host configuration
@@ -258,7 +251,7 @@ cat >> $CLUSTER_CONFIG <<-EOF
 	
 	# Array of data locations for each hosts Segment Instances, the number of directories in this array will
 	# set the number of segment instances per host
-	declare -a DATA_DIRECTORY=(${DIRVEC[@]})
+	declare -a DATA_DIRECTORY=(${PRIMARY_DIRS_LIST})
 	
 	# Name of host on which to setup the QD
 	MASTER_HOSTNAME=$LOCALHOST
@@ -284,12 +277,12 @@ cat >> $CLUSTER_CONFIG <<-EOF
 
 	# Array of mirror data locations for each hosts Segment Instances, the number of directories in this array will
 	# set the number of segment instances per host
-	declare -a MIRROR_DATA_DIRECTORY=(${DIRVEC_MIRROR[@]})
+	declare -a MIRROR_DATA_DIRECTORY=(${MIRROR_DIRS_LIST})
 	
-	MIRROR_PORT_BASE=`expr $DEMO_PORT_BASE + 3`
+	MIRROR_PORT_BASE=`expr $DEMO_PORT_BASE + $NUM_PRIMARY_MIRROR_PAIRS`
 
-	REPLICATION_PORT_BASE=`expr $DEMO_PORT_BASE + 6`
-	MIRROR_REPLICATION_PORT_BASE=`expr $DEMO_PORT_BASE + 9`
+	REPLICATION_PORT_BASE=`expr $DEMO_PORT_BASE + 2 \* $NUM_PRIMARY_MIRROR_PAIRS`
+	MIRROR_REPLICATION_PORT_BASE=`expr $DEMO_PORT_BASE + 3 \* $NUM_PRIMARY_MIRROR_PAIRS`
 EOF
 
 cat >> $CLUSTER_CONFIG <<-EOF
@@ -303,12 +296,16 @@ cat >> $CLUSTER_CONFIG <<-EOF
 	export TRUSTED_SHELL
 EOF
 
+if [ -z "${DEFAULT_QD_MAX_CONNECT}" ]; then
+   DEFAULT_QD_MAX_CONNECT=25
+fi
+
 cat >> $CLUSTER_CONFIG <<-EOF
 
 	# Keep max_connection settings to reasonable values for
 	# installcheck good execution.
 
-	DEFAULT_QD_MAX_CONNECT=25
+	DEFAULT_QD_MAX_CONNECT=$DEFAULT_QD_MAX_CONNECT
 	QE_CONNECT_FACTOR=5
 
 EOF
