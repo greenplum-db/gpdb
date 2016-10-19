@@ -30,7 +30,7 @@ resources:
       bucket: {{bucket-name}}
       region_name: {{aws-region}}
       secret_access_key: {{bucket-secret-access-key}}
-      versioned_file: sync_tools_gpdb/sync_tools_gpdb.tar.gz
+      versioned_file: gpdb_pr/sync_tools_gpdb/sync_tools_gpdb.tar.gz
 
   - name: bin_gpdb_centos
     type: s3
@@ -39,27 +39,8 @@ resources:
       bucket: {{bucket-name}}
       region_name: {{aws-region}}
       secret_access_key: {{bucket-secret-access-key}}
-      versioned_file: gpdb_artifacts/bin_gpdb.tar.gz
-
-  - name: regression_diffs
-    type: s3
-    source:
-       access_key_id: {{bucket-access-key-id}}
-       bucket: {{bucket-name}}
-       region_name: {{aws-region}}
-       secret_access_key: {{bucket-secret-access-key}}
-       versioned_file: regression.diffs
-
-  - name: regression_out
-    type: s3
-    source:
-       access_key_id: {{bucket-access-key-id}}
-       bucket: {{bucket-name}}
-       region_name: {{aws-region}}
-       secret_access_key: {{bucket-secret-access-key}}
-       versioned_file: regression.out
-
-
+      versioned_file: gpdb_pr/gpdb_artifacts/bin_gpdb.tar.gz
+  
 jobs:
   - name: compile_gpdb_centos6
     plan:
@@ -145,14 +126,7 @@ jobs:
           path: gpdb_pr
           status: success
       on_failure:
-        aggregate:
-        - put: regression_diffs
-          params:
-            from: gpdb_pr_icg_output/regression.diffs
-        - put: regression_out
-          params:
-            from: gpdb_pr_icg_output/regression.out
-        - put: gpdb_pr
-          params:
-            path: gpdb_pr
-            status: failure
+        put: gpdb_pr
+        params:
+          path: gpdb_pr
+          status: failure
