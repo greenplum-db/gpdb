@@ -78,53 +78,60 @@ class ForeignKeyCheck:
             fkeystr = ', '.join(castedFkey)
             pkeystr = ', '.join(fkeydef.getPKey())
             pkcatname = fkeydef.getPkeyTableName()
-
-            # This has to be a result of 1 because foreign key will be a one to
-            # one mapping
             catname_filter = '%s.%s' % (catname, fkeydef.getColumns()[0])
 
-            # There are some catalog tables that cannot do a 1 to 1
-            # mapping to pg_class without a filter (filtering rows from pg_class)
-            # left join only detects missing entries in the left table
-            # full join will help detect for both tables
-            # The catalog tables in query_filters are
-            # critical for dropping "corrupt" user tables
-
-            # we can't do a full join if we can't map between pg_class and
-            # whatever catalog... and to be able to do the mapping, we have to
-            # ensure that we have the correct "filtering" to detect the
-            # missing entries
-            if self.query_filters.has_key(catname_filter) and pkcatname == 'pg_class':
+            #
+            # You might think that to validate foreign keys, we'd just validate a 1-to-1 mapping
+            # between the two sides (e.g. between pg_class and a catalog).
+            # However, there are some situations when duplicates are allowed.
+            #
+            # When duplicates are allowed on just one side of the comparison, we do 1-to-many query
+            # with a left-outer-join, and complain about anything missing on the right.
+            # When a 1-to-1 mapping is required on both sides, we do a full join
+            # and complain about anything missing on either side.
+            #
+            # In the full join case, we are explicitly talking about pg_class vs. catalog, and
+            # we use a filter to select only the entries of interest in pg_class
+            # using a very specific filtering condition, since the full join would otherwise contain
+            # unwanted entries from pg_class.
+            #
+            can_use_full_join = self.query_filters.has_key(catname_filter) and pkcatname == 'pg_class'
+            if can_use_full_join:
                 qry = self.get_fk_query_full_join(catname, pkcatname, fkeystr, pkeystr,
                                                   pkey_aliases, cat1pkeys=cat1_pkeys_column_rename, filter=self.query_filters[catname_filter])
             else:
                 qry = self.get_fk_query_left_join(catname, pkcatname, fkeystr, pkeystr, pkey_aliases, cat1_pkeys_column_rename)
 
-            # Execute the query
-            try:
-                curs = self.db_connection.query(qry)
-                nrows = curs.ntuples()
+            issue_list += self._validate_relation(catname, fkeystr, pkcatname, pkeystr, qry)
 
-                if nrows == 0:
-                    self.logger.info('[OK] Foreign key check for %s(%s) referencing %s(%s)' %
-                                (catname, fkeystr, pkcatname, pkeystr))
-                else:
-                    self.logger.info('[FAIL] Foreign key check for %s(%s) referencing %s(%s)' %
-                                (catname, fkeystr, pkcatname, pkeystr))
-                    self.logger.error('  %s has %d issue(s): entry has NULL reference of %s(%s)' %
-                                 (catname, nrows, pkcatname, pkeystr))
+        return issue_list
 
-                    fields = curs.listfields()
-                    log_literal(self.logger, logging.ERROR, "    " + " | ".join(fields))
-                    for row in curs.getresult():
-                        log_literal(self.logger, logging.ERROR, "    " + " | ".join(map(str, row)))
-                    results = curs.getresult()
-                    issue_list.append((pkcatname, fields, results))
+    def _validate_relation(self, catname, fkeystr, pkcatname, pkeystr, qry):
+        issue_list = []
+        try:
+            curs = self.db_connection.query(qry)
+            nrows = curs.ntuples()
 
-            except Exception as e:
-                    err_msg = '[ERROR] executing: Foreign key check for catalog table {0}. Query : \n {1}\n'.format(catname, qry)
-                    err_msg += str(e)
-                    raise Exception(err_msg)
+            if nrows == 0:
+                self.logger.info('[OK] Foreign key check for %s(%s) referencing %s(%s)' %
+                                 (catname, fkeystr, pkcatname, pkeystr))
+            else:
+                self.logger.info('[FAIL] Foreign key check for %s(%s) referencing %s(%s)' %
+                                 (catname, fkeystr, pkcatname, pkeystr))
+                self.logger.error('  %s has %d issue(s): entry has NULL reference of %s(%s)' %
+                                  (catname, nrows, pkcatname, pkeystr))
+
+                fields = curs.listfields()
+                log_literal(self.logger, logging.ERROR, "    " + " | ".join(fields))
+                for row in curs.getresult():
+                    log_literal(self.logger, logging.ERROR, "    " + " | ".join(map(str, row)))
+                results = curs.getresult()
+                issue_list.append((pkcatname, fields, results))
+
+        except Exception as e:
+            err_msg = '[ERROR] executing: Foreign key check for catalog table {0}. Query : \n {1}\n'.format(catname, qry)
+            err_msg += str(e)
+            raise Exception(err_msg)
 
         return issue_list
 
