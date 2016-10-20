@@ -2,6 +2,5 @@ pg_regress
 results
 yml
 current_good_schedule
-optimizer_status.out
 regression.diffs
 regression.out

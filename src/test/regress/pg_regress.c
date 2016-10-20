@@ -2045,28 +2045,30 @@ trim_white_space(char *str)
  * @return true if the feature is enabled; false otherwise
  */
 static bool
-check_feature_status(char *feature_name, char *on_msg, char *off_msg)
+check_feature_status(const char *feature_name, const char *on_msg, const char *off_msg)
 {
 	char psql_cmd[MAXPGPATH];
 	char statusfilename[MAXPGPATH];
 	char line[1024];
 	bool isEnabled = false;
+	int len;
 
 	header(_("checking %s status"), feature_name);
 
 	snprintf(statusfilename, sizeof(statusfilename), SYSTEMQUOTE "%s/%s_status.out" SYSTEMQUOTE, outputdir, feature_name);
 
-	snprintf(psql_cmd, sizeof(psql_cmd),
-			SYSTEMQUOTE "\"%s%spsql\" -X -c \"show %s;\" -o \"%s\" -d \"postgres\"" SYSTEMQUOTE,
+	len = snprintf(psql_cmd, sizeof(psql_cmd),
+			SYSTEMQUOTE "\"%s%spsql\" -X -t -c \"show %s;\" -o \"%s\" -d \"postgres\"" SYSTEMQUOTE,
 			psqldir ? psqldir : "",
 			psqldir ? "/" : "",
 			feature_name,
 			statusfilename);
 
-	if (system(psql_cmd) != 0)
-	{
+	if (len >= sizeof(psql_cmd))
 		exit_nicely(2);
-	}
+
+	if (system(psql_cmd) != 0)
+		exit_nicely(2);
 
 	FILE *statusfile = fopen(statusfilename, "r");
 	if (!statusfile)
@@ -2094,6 +2096,7 @@ check_feature_status(char *feature_name, char *on_msg, char *off_msg)
 	}
 	status_end();
 	fclose(statusfile);
+	unlink(statusfilename);
 	return isEnabled;
 }
 
