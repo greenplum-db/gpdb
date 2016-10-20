@@ -98,10 +98,10 @@ set log_min_messages to DEBUG;
 -- Case 1.1
 -- A segment in recovery mode, writer gang retry gp_gang_creation_retry_count times and finally success
 
--- set maximun retry time to 60 seconds, this should be long enough for segment
+-- set maximun retry time to 120 seconds, this should be long enough for segment
 -- recovery back. otherwise it should be bug somewhere
 set gp_gang_creation_retry_count to 120;
-set gp_gang_creation_retry_timer to 500;
+set gp_gang_creation_retry_timer to 1000;
 
 select cleanupAllGangs();
 
