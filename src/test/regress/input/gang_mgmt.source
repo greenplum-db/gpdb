@@ -14,5 +14,11 @@ SELECT udf_raise_info() FROM gp_dist_random('gp_id') WHERE gp_segment_id = 0;
 -- start and finish a new session
 \! psql regression -f @abs_builddir@/sql/gang_mgmt_helper.sql
 
+-- sleep 1 second to wait all QEs to exit, since QE exit in this situation is an
+-- asynchronous procedure, 1 second may not guarantee they have exited in
+-- extreme poor performant machines, but we have no better solution now, and this
+-- test case is pretty necessary, so...
+select pg_sleep(1);
+
 -- verify all QEs of the exited session have gone, expect to return nothing
 SELECT sess_id FROM tmp_sess_id, (SELECT get_segment_qe_session_ids() FROM gp_dist_random('gp_id')) sessions WHERE tmp_sess_id.sess_id = sessions.get_segment_qe_session_ids;
