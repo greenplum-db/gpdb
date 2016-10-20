@@ -2083,14 +2083,14 @@ check_feature_status(const char *feature_name, const char *on_msg, const char *o
 		char *trimmed = trim_white_space(line);
 		if (strncmp(trimmed, "on", 2) == 0)
 		{
-			status(_(on_msg));
+			status(_("%s"), on_msg);
 			isEnabled = true;
 			break;
 		}
 
 		if (strncmp(trimmed, "off", 3) == 0)
 		{
-			status(_(off_msg));
+			status(_("%s"), off_msg);
 			break;
 		}
 	}
