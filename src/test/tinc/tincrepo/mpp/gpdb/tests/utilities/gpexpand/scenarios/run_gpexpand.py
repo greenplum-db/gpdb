@@ -101,6 +101,8 @@ class GpExpandTests(MPPTestCase):
                 found_uni_idx_msg = True
 
         if found_uni_idx_msg == False:
+            tinctest.logger.error("stdout from failed index in expand command: %s" % results.stdout)
+            tinctest.logger.error("stderr from failed index in expand command: %s" % results.stderr)
             self.fail("Message for unique indexes not printed during gpexpand")
 
         with open(outfile, 'w') as output_file:

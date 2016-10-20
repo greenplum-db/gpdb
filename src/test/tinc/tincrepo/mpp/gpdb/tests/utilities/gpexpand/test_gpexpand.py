@@ -264,6 +264,9 @@ class GPExpandTestCase(MPPTestCase, ScenarioTestCase):
         # Doing this in setUp to not impact test construction.
         self.hosts = get_gpexpand_hosts()
 
+        mdd = os.path.join(self.testcase_master_dir, 'gpseg-1')
+        os.environ["MASTER_DATA_DIRECTORY"] = mdd
+
         #initial config has master on HOST1 and segments on HOST2 and HOST3.
         #If we choose to add only segments ie self.number_of_expansion_hosts == 0, in the interview process we say use HOST1 and HOST2
         #if we choose to add expansion hosts ,ie self.number_of_expansion_hosts == 2, in the interview process we say use HOST3 and HOST4
@@ -277,9 +280,6 @@ class GPExpandTestCase(MPPTestCase, ScenarioTestCase):
             self._do_gpinitstandby()
         if self.use_filespaces:
             tinctest.logger.info("Setting filespaces")
-            mdd = os.path.join(self.testcase_master_dir, 'gpseg-1')
-            self.org_mdd = os.environ.get("MASTER_DATA_DIRECTORY")
-            os.environ["MASTER_DATA_DIRECTORY"]=mdd
             gpfs=Gpfilespace()
             gpfs.create_filespace('expand_filespace')
 
@@ -563,6 +563,7 @@ class GPExpandTestCase(MPPTestCase, ScenarioTestCase):
                                               "use_parallel_expansion": self.use_parallel_expansion,
                                               "number_of_parallel_table_redistributed": self.number_of_parallel_table_redistributed, 
                                               "dbname": os.environ.get('PGDATABASE'),
+                                              "output_dir": self.testcase_out_dir,
                                               "validate": True}))
                 run_tests_in_parallel.append(('%s.scenarios.run_gpexpand.GpExpandTests.check_number_of_parallel_tables_expanded' %self.package_name,
                                              {"number_of_parallel_table_redistributed": self.number_of_parallel_table_redistributed}))
