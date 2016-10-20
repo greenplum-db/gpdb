@@ -26,7 +26,7 @@ class GpArrayTestCase(GpTestCase):
             patch('gppylib.system.configurationImplGpdb.GpConfigurationProviderUsingGpdbCatalog', return_value=self.gpConfigMock),
         ])
 
-def test_spreadmirror_layout(self):
+    def test_spreadmirror_layout(self):
         """ Basic spread mirroring """
         mirror_type = 'spread'
         primary_portbase = 5000

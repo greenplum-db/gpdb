@@ -263,7 +263,6 @@ class GpCheckCatTestCase(GpTestCase):
             mirrorMatchingCheckMock.assert_called_once_with(self.db_connection, self.subject.logger)
             self.assertTrue(self.subject.GV.checkStatus)
             self.assertEqual(self.subject.setError.call_count, 0)
-            self.db_connection.close.assert_called_once_with()
 
     def test_mirror_matching_failure_sets_status_and_error(self):
         with patch('gpcheckcat_modules.mirror_matching_check.MirrorMatchingCheck.run_check') as mirrorMatchingCheckMock:
@@ -274,7 +273,6 @@ class GpCheckCatTestCase(GpTestCase):
             mirrorMatchingCheckMock.assert_called_once_with(self.db_connection, self.subject.logger)
             self.assertFalse(self.subject.GV.checkStatus)
             self.subject.setError.assert_called_once_with(self.subject.ERROR_NOREPAIR)
-            self.db_connection.close.assert_called_once_with()
 
     def test_mirror_matching_exception(self):
         self.subject.logger.info.side_effect = Exception('Boom!')
@@ -285,7 +283,6 @@ class GpCheckCatTestCase(GpTestCase):
         self.assertIn("  Execution error: Boom!", log_messages)
         self.assertFalse(self.subject.GV.checkStatus)
         self.subject.setError.assert_called_once_with(self.subject.ERROR_NOREPAIR)
-        self.db_connection.close.assert_called_once_with()
 
     ####################### PRIVATE METHODS #######################
 
