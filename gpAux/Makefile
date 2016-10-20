@@ -1064,8 +1064,6 @@ mkplatform:
 	@cd $(PLATFORM) && $(MAKE)
 	cp -p platform/gpnetbench/gpnetbenchServer $(INSTLOC)/bin/lib
 	cp -p platform/gpnetbench/gpnetbenchClient $(INSTLOC)/bin/lib
-	mkdir -p $(INSTLOC)/etc
-	cp -p platform/gpcheck/gpcheck.cnf $(INSTLOC)/etc/
 
 copydocs :
 	@if [ ! -d $($INSTLOC)/docs ] ; then mkdir -p $(INSTLOC)/docs; fi
