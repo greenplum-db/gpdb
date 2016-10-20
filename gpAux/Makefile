@@ -1336,7 +1336,7 @@ bouncer:
 
 installcheck-good :
 	@if [ ! -f $(ISCONFIG) ]; then echo "not configured, cannot check"; exit 1; fi
-	@cd $(BUILDDIR)/src/test/regress && $(MAKE) installcheck-good
+	@#cd $(BUILDDIR)/src/test/regress && $(MAKE) installcheck-good
 	@#cd $(BUILDDIR)/src/test/regress && $(MAKE) testbouncer
 	@cd extensions && $(MAKE) installcheck
 
