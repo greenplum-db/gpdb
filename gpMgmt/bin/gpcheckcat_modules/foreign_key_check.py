@@ -81,18 +81,20 @@ class ForeignKeyCheck:
             catname_filter = '%s.%s' % (catname, fkeydef.getColumns()[0])
 
             #
-            # You might think that to validate foreign keys, we'd just validate a 1-to-1 mapping
-            # between the two sides (e.g. between pg_class and a catalog).
-            # However, there are some situations when duplicates are allowed.
+            # The goal of this check is to validate foreign keys, which are associations between two tables.
+            # We want to find a missing foreign key entry or a missing reference key entry when comparing
+            # two tables that are supposed to have references to one another, either bidirectionally, where
+            # both tables know about the other, or unidirectionally where one side of the comparison expects
+            # the other to know about it.
             #
-            # When duplicates are allowed on just one side of the comparison, we do 1-to-many query
-            # with a left-outer-join, and complain about anything missing on the right.
-            # When a 1-to-1 mapping is required on both sides, we do a full join
-            # and complain about anything missing on either side.
+            # When both sides of a comparison demand a reference on the other side,
+            # we can do a full join to look for missing entries. In cases where the association (foreign key) is
+            # unidirectional, we validate only one side of the comparison,
+            # using a left outer join to look for missing entries on only one side of the comparison.
             #
-            # In the full join case, we are explicitly talking about pg_class vs. catalog, and
-            # we use a filter to select only the entries of interest in pg_class
-            # using a very specific filtering condition, since the full join would otherwise contain
+            # In the full-join case, we are explicitly talking about pg_class vs. catalog, and
+            # we use a filter to select only the entries of interest in pg_class--the entries that
+            # are foreign keys--using a very specific filtering condition, since the full join would otherwise contain
             # unwanted entries from pg_class.
             #
             can_use_full_join = self.query_filters.has_key(catname_filter) and pkcatname == 'pg_class'
