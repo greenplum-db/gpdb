@@ -18,14 +18,6 @@
 	path = gpAux/extensions/postgis-2.0.3/source
 	url = git@github.com:greenplum-db/postgis.git
 	branch = master
-[submodule "gpAux/addon"]
-	path = gpAux/addon
-	url = git@github.com:greenplum-db/gpaddon.git
-	branch = master
-[submodule "gpAux/extensions/gp_filedump"]
-	path = gpAux/extensions/gp_filedump
-	url = git@github.com:greenplum-db/gp_filedump.git
-	branch = master
 [submodule "gpMgmt/bin/pythonSrc/ext"]
 	path = gpMgmt/bin/pythonSrc/ext
 	url = git@github.com:greenplum-db/pythonsrc-ext.git
