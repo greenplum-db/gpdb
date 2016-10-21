@@ -628,3 +628,4 @@ SELECT * FROM FLOATS ORDER BY a;
                 1e-309
                 1e-308
 (16 rows)
+
