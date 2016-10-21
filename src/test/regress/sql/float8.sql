@@ -274,14 +274,3 @@ TRUNCATE FLOATS;
 COPY FLOATS FROM '/tmp/floats';
 
 SELECT * FROM FLOATS ORDER BY a;
-
--- check behavior when values are NULL
-create table float8_null (a float8, b float8, c float8);
-insert into float8_null values (1, NULL, NULL);
-select a from float8_null where b <=a;
-select a from float8_null where b*a <=0;
-select a from float8_null where b*c <=0;
-select a+b from float8_null;
-select b+c from float8_null;
-select a-b from float8_null;
-select b-c from float8_null;

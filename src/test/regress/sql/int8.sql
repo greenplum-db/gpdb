@@ -77,14 +77,3 @@ SELECT (-9223372036854775808)::int8 % (-1)::int8;
 SELECT (-9223372036854775808)::int8 * (-1)::int4;
 SELECT (-9223372036854775808)::int8 / (-1)::int4;
 SELECT (-9223372036854775808)::int8 % (-1)::int4;
-
--- check behavior when values are NULL
-create table int8_null (a int8, b int8, c int8);
-insert into int8_null values (1, NULL, NULL);
-select a from int8_null where b <=a;
-select a from int8_null where b*a <=0;
-select a from int8_null where b*c <=0;
-select a+b from int8_null;
-select b+c from int8_null;
-select a-b from int8_null;
-select b-c from int8_null;

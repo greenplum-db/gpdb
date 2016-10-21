@@ -133,14 +133,3 @@ SELECT (-2147483648)::int4 % (-1)::int4;
 SELECT (-2147483648)::int4 * (-1)::int2;
 SELECT (-2147483648)::int4 / (-1)::int2;
 SELECT (-2147483648)::int4 % (-1)::int2;
-
--- check behavior when values are NULL
-create table int4_null (a int4, b int4, c int4);
-insert into int4_null values (1, NULL, NULL);
-select a from int4_null where b <=a;
-select a from int4_null where b*a <=0;
-select a from int4_null where b*c <=0;
-select a+b from int4_null;
-select b+c from int4_null;
-select a-b from int4_null;
-select b-c from int4_null;
