@@ -128,6 +128,8 @@ typedef bool (*PGCheckNullFuncGeneratorFn)(
  *
  * @param codegen_utils      Utility for easy code generation
  * @param pg_func_info       Details for pgfunc generation
+ * @param first_arg_index    Avoid nullity checks for the arguments located
+ *                           before this index
  * @param entry_block        Block that checks arguments' nullity
  * @param null_block         Block that returns 0
  * @param generation_block   Block that implements the built-in function
@@ -138,6 +140,7 @@ typedef bool (*PGCheckNullFuncGeneratorFn)(
  **/
 static inline bool GenerateStrictLogic(gpcodegen::GpCodegenUtils* codegen_utils,
                                 const PGFuncGeneratorInfo& pg_func_info,
+                                int first_arg_index,
                                 llvm::BasicBlock* entry_block,
                                 llvm::BasicBlock* null_block,
                                 llvm::BasicBlock* generation_block) {
@@ -151,7 +154,7 @@ static inline bool GenerateStrictLogic(gpcodegen::GpCodegenUtils* codegen_utils,
       nullptr, "llvm_there_is_null_arg_ptr");
   irb->CreateStore(codegen_utils->GetConstant<bool>(false),
                    llvm_there_is_null_arg_ptr);
-  for (int i = 0; i < pg_func_info.llvm_args_isNull.size(); ++i) {
+  for (int i = first_arg_index; i < pg_func_info.llvm_args_isNull.size(); ++i) {
     irb->CreateStore(
         irb->CreateOr(pg_func_info.llvm_args_isNull[i],
                       irb->CreateLoad(llvm_there_is_null_arg_ptr)),
@@ -258,6 +261,7 @@ class PGIRBuilderFuncGenerator
     // Checks if there is a NULL argument. If yes then go to
     // null_argument_block; generate_function_block otherwise.
     bool isGenerated = GenerateStrictLogic(codegen_utils, pg_func_info,
+                                           0 /* examine all arguments*/,
                                            strict_logic_entry_block,
                                            null_argument_block,
                                            generate_function_block);
@@ -461,6 +465,7 @@ class PGGenericFuncGenerator : public  PGFuncGeneratorInterface {
       // Checks if there is a NULL argument. If yes then go to
       // null_argument_block; generate_function_block otherwise.
       bool isGenerated = GenerateStrictLogic(codegen_utils, pg_func_info,
+                                             0 /* examine all arguments*/,
                                              strict_logic_entry_block,
                                              null_argument_block,
                                              generate_function_block);

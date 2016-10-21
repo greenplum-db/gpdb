@@ -49,27 +49,25 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
     gpcodegen::GpCodegenUtils* codegen_utils,
     llvm::Value* llvm_pergroup_arg,
     int aggno,
-    gpcodegen::PGFuncGeneratorInfo* pg_func_info) {
+    gpcodegen::PGFuncGeneratorInfo* pg_func_info,
+    llvm::Value* llvm_mem_manager_arg) {
   assert(nullptr != pg_func_info);
   auto irb = codegen_utils->ir_builder();
   AggStatePerAgg peraggstate = &aggstate_->peragg[aggno];
+  assert(nullptr != peraggstate);
+  llvm::Value *newVal = nullptr;
 
   // External functions
   llvm::Function* llvm_MemoryContextSwitchTo =
       codegen_utils->GetOrRegisterExternalFunction(MemoryContextSwitchTo,
                                                    "MemoryContextSwitchTo");
+  llvm::Function* llvm_datumCopyWithMemManager =
+      codegen_utils->GetOrRegisterExternalFunction(datumCopyWithMemManager,
+                                                   "datumCopyWithMemManager");
 
   // Generation-time constants
   llvm::Value *llvm_tuplecontext = codegen_utils->GetConstant<MemoryContext>(
       aggstate_->tmpcontext->ecxt_per_tuple_memory);
-
-  // TODO(nikos): Current implementation does not support NULL attributes.
-  // Instead it errors out. Thus we do not need to check and implement the
-  // case that transition function is strict.
-
-  // oldContext = MemoryContextSwitchTo(tuplecontext);
-  llvm::Value *llvm_oldContext = irb->CreateCall(llvm_MemoryContextSwitchTo,
-                                                 {llvm_tuplecontext});
 
   // Retrieve pergroup's useful members
   llvm::Value* llvm_pergroupstate = irb->CreateGEP(
@@ -85,7 +83,6 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
       codegen_utils->GetPointerToMember(
           llvm_pergroupstate, &AggStatePerGroupData::noTransValue);
 
-  assert(nullptr != peraggstate);
   if (!peraggstate->transtypeByVal) {
     elog(DEBUG1, "We do not support pass-by-ref datatypes.");
     return false;
@@ -93,7 +90,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
 
   assert(nullptr != peraggstate->aggref);
   assert(pg_func_info->llvm_args.size() == 1 +
-             list_length(peraggstate->aggref->args));
+         list_length(peraggstate->aggref->args));
   // Initialize llvm_args[0] to transValue.
   pg_func_info->llvm_args[0] = irb->CreateLoad(
       llvm_pergroupstate_transValue_ptr);
@@ -101,6 +98,115 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
   pg_func_info->llvm_args_isNull[0] = irb->CreateLoad(
       llvm_pergroupstate_transValueIsNull_ptr);
 
+  // If transfn is strict then we have to implement the checks appeared in
+  // invoke_agg_trans_func. This block contains the code of advance_aggregates
+  // after invoke_agg_trans_func's invocation.
+  llvm::BasicBlock* continue_advance_aggregate_block = codegen_utils->
+      CreateBasicBlock("continue_advance_aggregate_block",
+                       pg_func_info->llvm_main_func);
+
+  // If transition function is strict then check i) if there are null arguments
+  // ii) if transition value is null, and iii) if transvalue has been set
+  if (peraggstate->transfn.fn_strict) {
+    // Block that contains the checks for null arguments
+    llvm::BasicBlock* strict_check_for_null_args_block = codegen_utils->
+        CreateBasicBlock("strict_check_for_null_args_block",
+                         pg_func_info->llvm_main_func);
+    // Block that checks if transvalue has been set
+    llvm::BasicBlock* strict_check_noTransValue_block = codegen_utils->
+        CreateBasicBlock("strict_check_noTransValue_block",
+                         pg_func_info->llvm_main_func);
+    // Block that contains instructions that will be executed when function
+    // is strict and transvalue has not be set before.
+    llvm::BasicBlock* strict_set_transvalue_block = codegen_utils->
+        CreateBasicBlock("strict_set_transvalue_block",
+                         pg_func_info->llvm_main_func);
+    // Block that checks if transvalue is null
+    llvm::BasicBlock* strict_check_transvalueisNull_block = codegen_utils->
+        CreateBasicBlock("strict_check_transvalueisNull_block",
+                         pg_func_info->llvm_main_func);
+    // Block that implements transfn
+    llvm::BasicBlock* generate_transfn_block = codegen_utils->
+        CreateBasicBlock("generate_transfn_block",
+                         pg_func_info->llvm_main_func);
+
+    irb->CreateBr(strict_check_for_null_args_block);
+
+    // strict_check_for_null_args_block
+    // --------------------------------
+    // Checks if there is a NULL argument. If yes then go to
+    // null_argument_block; generate_function_block otherwise.
+    //For a strict transfn, nothing happens when there's a NULL input;
+    // we just keep the prior transValue.
+    GenerateStrictLogic(codegen_utils, *pg_func_info,
+                        1 /* do not examine transvalue*/,
+                        strict_check_for_null_args_block,
+                        continue_advance_aggregate_block,
+                        strict_check_noTransValue_block);
+
+    // strict_check_noTransValue_block
+    // ------------------------------
+    // Check if transvalue has been set
+    irb->SetInsertPoint(strict_check_noTransValue_block);
+    irb->CreateCondBr(irb->CreateLoad(llvm_pergroupstate_noTransValue_ptr),
+                      strict_set_transvalue_block /*true*/,
+                      strict_check_transvalueisNull_block /*false*/);
+
+    // strict_set_transvalue_block
+    // ---------------------------
+    // transValue has not been initialized. This is the first non-NULL input
+    // value. We use it as the initial value for transValue.
+    // We must copy the datum into aggcontext if it is pass-by-ref.
+    // We do not need to pfree the old transValue, since it's NULL.
+    irb->SetInsertPoint(strict_set_transvalue_block);
+    // newVal = datumCopyWithMemManager(transValue, fcinfo->arg[1],
+    //      transtypeByVal, transtypeLen, mem_manager); {{{
+    // Make sure that fcinfo->arg[1] (= llvm_args[1]) has been initialized {{
+    llvm::Value* llvm_arg1_ptr = irb->CreateAlloca(
+        codegen_utils->GetType<Datum>(), nullptr, "llvm_arg1_ptr");
+    if (pg_func_info->llvm_args.size() > 1) {
+      irb->CreateStore(pg_func_info->llvm_args[1], llvm_arg1_ptr);
+    } else {
+      // transfn uses the transvalue only (e.g., int8inc)
+      irb->CreateStore(codegen_utils->GetConstant<Datum>(0), llvm_arg1_ptr);
+    }
+    // }}
+    newVal = irb->CreateCall(
+        llvm_datumCopyWithMemManager,
+        {irb->CreateLoad(llvm_pergroupstate_transValue_ptr),
+            irb->CreateLoad(llvm_arg1_ptr),
+            codegen_utils->GetConstant<bool>(peraggstate->transtypeByVal),
+            codegen_utils->GetConstant<int>((int) peraggstate->transtypeLen),
+            llvm_mem_manager_arg});
+    irb->CreateStore(newVal, llvm_pergroupstate_transValue_ptr);
+    // }}} newVal = datumCopyWithMemManager(...)
+    // *transValueIsNull = false;
+    irb->CreateStore(codegen_utils->GetConstant<bool>(false),
+                     llvm_pergroupstate_transValueIsNull_ptr);
+    // *noTransvalue = false;
+    irb->CreateStore(codegen_utils->GetConstant<bool>(false),
+                     llvm_pergroupstate_noTransValue_ptr);
+    irb->CreateBr(continue_advance_aggregate_block);
+
+    // strict_check_transvalueisNull_block
+    // -----------------------------------
+    // Check if transvalue is null.
+    // Don't call a strict function with NULL inputs.
+    irb->SetInsertPoint(strict_check_transvalueisNull_block);
+    irb->CreateCondBr(irb->CreateLoad(llvm_pergroupstate_transValueIsNull_ptr),
+                      continue_advance_aggregate_block /*true*/,
+                      generate_transfn_block /*false*/);
+
+    // generate_transfn_block
+    // ----------------------
+    // Generate code that implements transfn
+    irb->SetInsertPoint(generate_transfn_block);
+  }
+  // If transfn is strict, then this code is included in generate_transfn_block;
+  // in advance_transition_function_block otherwise.
+  // oldContext = MemoryContextSwitchTo(tuplecontext);
+  llvm::Value *llvm_oldContext = irb->CreateCall(llvm_MemoryContextSwitchTo,
+                                                 {llvm_tuplecontext});
   gpcodegen::PGFuncGeneratorInterface* pg_func_gen =
       gpcodegen::OpExprTreeGenerator::GetPGFuncGenerator(
           peraggstate->transfn.fn_oid);
@@ -109,8 +215,6 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
          peraggstate->transfn.fn_oid);
     return false;
   }
-
-  llvm::Value *newVal = nullptr;
   bool isGenerated =
       pg_func_gen->GenerateCode(codegen_utils, *pg_func_info, &newVal,
                                 llvm_pergroupstate_transValueIsNull_ptr);
@@ -119,25 +223,47 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
          peraggstate->transfn.fn_oid);
     return false;
   }
-
-  llvm::Value *result = codegen_utils->CreateCppTypeToDatumCast(newVal);
-  // }} FunctionCallInvoke
-
-  // MemoryContextSwitchTo(oldContext);
-  irb->CreateCall(llvm_MemoryContextSwitchTo, {llvm_oldContext});
-
-  // }}} advance_transition_function
-
   // pergroupstate->transValue = newval
-  irb->CreateStore(result, llvm_pergroupstate_transValue_ptr);
+  irb->CreateStore(codegen_utils->CreateCppTypeToDatumCast(newVal),
+                   llvm_pergroupstate_transValue_ptr);
+  // We do not need to set *transValueIsNull = fcinfo->isnull, since
+  // transValueIsNull is passed as argument to pg_func_gen->GenerateCode
 
-  // Currently we do not support null attributes.
-  // Thus we set transValueIsNull and noTransValue to false by default.
-  // TODO(nikos): Support null attributes.
-  irb->CreateStore(codegen_utils->GetConstant<bool>(false),
-                   llvm_pergroupstate_transValueIsNull_ptr);
+  // if (!fcinfo->isnull)
+  //     *noTransvalue = false;
+  // MemoryContextSwitchTo(oldContext); {{{
+  llvm::BasicBlock* set_noTransvalue_block = codegen_utils->
+      CreateBasicBlock("set_noTransvalue_block",
+                       pg_func_info->llvm_main_func);
+  llvm::BasicBlock* switch_memory_context_block = codegen_utils->
+      CreateBasicBlock("switch_memory_context_block",
+                       pg_func_info->llvm_main_func);
+  irb->CreateCondBr(irb->CreateLoad(llvm_pergroupstate_transValueIsNull_ptr),
+                    switch_memory_context_block /*true*/,
+                    set_noTransvalue_block /*false*/);
+
+  // set_noTransvalue_block
+  // ----------------------
+  // Set noTransValue to false when transValue is not null
+  irb->SetInsertPoint(set_noTransvalue_block);
   irb->CreateStore(codegen_utils->GetConstant<bool>(false),
                    llvm_pergroupstate_noTransValue_ptr);
+  irb->CreateBr(switch_memory_context_block);
+
+  // switch_memory_context_block
+  // ---------------------------
+  // Switch to old memory context before you generate code for the rest of the
+  // transition functions
+  irb->SetInsertPoint(switch_memory_context_block);
+  // MemoryContextSwitchTo(oldContext);
+  irb->CreateCall(llvm_MemoryContextSwitchTo, {llvm_oldContext});
+  irb->CreateBr(continue_advance_aggregate_block);
+  // }}} if (!fcinfo->isnull) ...
+
+  // continue_advance_aggregate_block
+  // --------------------------------
+  // Continue with the rest code in advance_aggregates
+  irb->SetInsertPoint(continue_advance_aggregate_block);
 
   return true;
 }
@@ -164,8 +290,6 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
       "error_aggstate_block", advance_aggregates_func);
   llvm::BasicBlock* overflow_block = codegen_utils->CreateBasicBlock(
       "overflow_block", advance_aggregates_func);
-  llvm::BasicBlock* null_attribute_block = codegen_utils->CreateBasicBlock(
-      "null_attribute_block", advance_aggregates_func);
 
   // External functions
   llvm::Function* llvm_ExecTargetList =
@@ -180,6 +304,8 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
       advance_aggregates_func, 0);
   llvm::Value* llvm_pergroup_arg = ArgumentByPosition(
       advance_aggregates_func, 1);
+  llvm::Value* llvm_mem_manager_arg = ArgumentByPosition(
+      advance_aggregates_func, 2);
 
   // Generation-time constants
   llvm::Value* llvm_aggstate = codegen_utils->GetConstant(aggstate_);
@@ -269,26 +395,6 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
             codegen_utils->GetConstant(peraggstate->evalproj->pi_itemIsDone),
             codegen_utils->GetConstant<ExprDoneCond *>(nullptr)});
       }
-
-      // Error out if there is a NULL attribute.
-      // TODO(nikos): Support null attributes.
-      llvm::BasicBlock* null_check_block_0 = codegen_utils->CreateBasicBlock(
-          "null_check_arg0", advance_aggregates_func);
-      irb->CreateBr(null_check_block_0);
-      irb->SetInsertPoint(null_check_block_0);
-
-      for (int i=0; i < nargs; ++i) {
-        llvm::BasicBlock* next_block = codegen_utils->CreateBasicBlock(
-            "null_check_arg" + std::to_string(i+1), advance_aggregates_func);
-        llvm::Value* llvm_in_isnull_ptr = irb->CreateInBoundsGEP(
-            codegen_utils->GetType<bool>(),
-            llvm_in_isnulls_ptr,
-            codegen_utils->GetConstant(i));
-        irb->CreateCondBr(irb->CreateLoad(llvm_in_isnull_ptr),
-                          null_attribute_block /*true*/,
-                          next_block /*false*/);
-        irb->SetInsertPoint(next_block);
-      }
     }
 
     irb->CreateBr(advance_transition_function_block);
@@ -322,7 +428,8 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
         llvm_in_args_isNull);
 
     bool isGenerated = GenerateAdvanceTransitionFunction(
-        codegen_utils, llvm_pergroup_arg, aggno, &pg_func_info);
+        codegen_utils, llvm_pergroup_arg, aggno,
+        &pg_func_info, llvm_mem_manager_arg);
     if (!isGenerated)
       return false;
   }  // End of for loop
@@ -335,15 +442,6 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
 
   codegen_utils->CreateElog(ERROR, "Codegened advance_aggregates: "
       "use of different aggstate.");
-
-  irb->CreateRetVoid();
-
-  // NULL attribute block
-  // ---------------
-  irb->SetInsertPoint(null_attribute_block);
-
-  codegen_utils->CreateElog(ERROR, "Codegened advance_aggregates: "
-      "NULL attributes are not supported.");
 
   irb->CreateRetVoid();
 
