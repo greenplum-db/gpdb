@@ -229,6 +229,8 @@ class PGArithFuncGenerator {
     // execute the code of non-strict built-in function
     irb->CreateStore(codegen_utils->GetConstant<bool>(true),
                      llvm_is_set_ptr);
+    irb->CreateStore(codegen_utils->GetConstant<bool>(false),
+                     pg_func_info.llvm_isNull_ptr);
     irb->CreateBr(continue_block);
 
     // arg0_is_not_null_block
@@ -255,6 +257,8 @@ class PGArithFuncGenerator {
     // execute the code of non-strict built-in function
     irb->CreateStore(codegen_utils->GetConstant<bool>(true),
                          llvm_is_set_ptr);
+    irb->CreateStore(codegen_utils->GetConstant<bool>(false),
+                         pg_func_info.llvm_isNull_ptr);
     irb->CreateBr(continue_block);
 
     // continue_block
