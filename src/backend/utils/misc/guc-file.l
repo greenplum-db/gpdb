@@ -148,9 +148,6 @@ ProcessConfigFile(GucContext context)
 	const char *envvar;
 	int			i;
 
-	bool error = false;
-	const char* ConfFileWithError = ConfigFileName;
-
 	Assert(context == PGC_POSTMASTER || context == PGC_SIGHUP);
 
 	if (context == PGC_SIGHUP)
@@ -262,14 +259,7 @@ ProcessConfigFile(GucContext context)
 
 		if (!set_config_option(item->name, item->value, context,
 							   PGC_S_FILE, GUC_ACTION_SET, false))
-		{
-			/* 
-			 * If we fail to set one guc, we abort the process of updating other
-			 * gucs. Depending on the context, we may also abort the postmaster.
-			 */
-			error = true;
 			goto cleanup_list;
-		}
 	}
 
 	/*
@@ -350,18 +340,6 @@ ProcessConfigFile(GucContext context)
 	free_name_value_list(head);
 	if (cvc)
 		free(cvc);
-		
-	if (error)
-	{
-    	/* During postmaster startup, any error is fatal */
-    	if (context == PGC_POSTMASTER)
-    	{
-      		ereport(ERROR,
-          		(errcode(ERRCODE_CONFIG_FILE_ERROR),
-           		errmsg("configuration file \"%s\" contains errors",
-              	ConfFileWithError)));
-    	}
-  	}
 }
 
 /*
