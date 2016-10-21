@@ -4478,7 +4478,7 @@ set_config_option(const char *name, const char *value,
 	int			elevel;
 	bool		makeDefault;
 
-	if (context == PGC_SIGHUP || context == PGC_POSTMASTER || source == PGC_S_DEFAULT)
+	if (context == PGC_SIGHUP || source == PGC_S_DEFAULT)
 	{
 		/*
 		 * To avoid cluttering the log, only the postmaster bleats loudly
