@@ -342,6 +342,24 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 			{
 			result = (PlanState *) ExecInitTableScan((TableScan *) node,
 													 estate, eflags);
+
+			/*
+			 * Enroll ExecVariableList in codegen_manager
+			 */
+			if (NULL != result)
+			{
+				ScanState *scanState = (ScanState *) result;
+				ProjectionInfo *projInfo = result->ps_ProjInfo;
+				if (NULL != projInfo &&
+					NULL != scanState &&
+					projInfo->pi_isVarList &&
+					NULL != projInfo->pi_targetlist)
+				{
+					enroll_ExecVariableList_codegen(ExecVariableList,
+							&projInfo->ExecVariableList_gen_info.ExecVariableList_fn, projInfo, scanState->ss_ScanTupleSlot);
+				}
+			}
+
 			/*
 			 * Enroll targetlist & quals' expression evaluation functions
 			 * in codegen_manager
