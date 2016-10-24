@@ -97,7 +97,7 @@ mkplr:
 mkorafce:
 	PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C orafce install USE_PGXS=1
 
-installcheck: mkorafce
+installcheck:
 	if [ -d "$(ext_dir)" ]; then \
 		PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C orafce installcheck USE_PGXS=1 && \
 		PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C gphdfs installcheck USE_PGXS=1 ; \

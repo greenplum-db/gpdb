@@ -19,7 +19,7 @@
 -- *********************************************************************
 
 -- start_ignore
-\i orafunc.sql
+\i @bindir@/../share/postgresql/contrib/orafunc.sql
 -- end_ignore
 
 set search_path = oracompat;
@@ -170,6 +170,6 @@ SELECT dump('2008-10-10'::timestamp) ~ E'^Typ=1114 Len=8: \\d+(,\\d+){7}$' AS t;
 RESET DATESTYLE;
 
 -- start_ignore
-\i @abs_srcdir@/../../../contrib/orafce/uninstall_orafunc.sql
+\i @bindir@/../share/postgresql/contrib/uninstall_orafunc.sql
 -- end_ignore
 
