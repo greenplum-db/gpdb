@@ -4357,7 +4357,6 @@ PostgresMain(int argc, char *argv[],
 	StringInfoData input_message;
 	sigjmp_buf local_sigjmp_buf;
 	volatile bool send_ready_for_query = true;
-	int topErrLevel;
 
 	MemoryAccountIdType postgresMainMemoryAccountId = MEMORY_OWNER_TYPE_Undefined;
 	
@@ -4753,16 +4752,6 @@ PostgresMain(int argc, char *argv[],
 
 		if (am_walsender)
 			WalSndErrorCleanup();
-
-		topErrLevel = elog_getelevel();
-		if (topErrLevel <= ERROR)
-		{
-			/*
-			 * Let's see if the DTM has phase 2 retry work.
-			 */
-			if (Gp_role == GP_ROLE_DISPATCH)
-				doDtxPhase2Retry();
-		}
 
 		/*
 		 * Now return to normal top-level context and clear ErrorContext for

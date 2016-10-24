@@ -150,15 +150,6 @@ EndCommand(const char *commandTag, CommandDest dest)
 {
 	StringInfoData buf;
 
-	if (Gp_role == GP_ROLE_DISPATCH)
-	{
-		/*
-		 * Just before a successful reply, let's see if the DTM has
-		 * phase 2 retry work.
-		 */
-		doDtxPhase2Retry();
-	}
-	
 	switch (dest)
 	{
 		case DestRemote:

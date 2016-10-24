@@ -61,7 +61,7 @@ class mpp23395(MPPTestCase):
         # Should be zero.
         self.assertEqual(results.stdout.strip(), '0')
 
-    def run_sequence(self, sql, fault, fault_type, segid):
+    def run_sequence(self, sql, fault, fault_type, segid, should_panic=True):
         (ok,out) = self.util.inject_fault(f=fault, y=fault_type, seg_id=segid);
         if not ok:
            raise Exception("Fault dtm_broadcast_commit_prepared injection failed")
@@ -73,8 +73,11 @@ class mpp23395(MPPTestCase):
 
         self.check_no_dangling_prepared_transaction()
 
-	if "PANIC" not in results.stderr:
+	if "PANIC" not in results.stderr and should_panic:
             raise Exception("Fault %s type %s (on segid: %d) did not cause the master reset" % (fault, fault_type, segid))
+
+	if "PANIC" in results.stderr and not should_panic:
+            raise Exception("Fault %s type %s (on segid: %d) caused a PANIC. dtx two phase retry failed" % (fault, fault_type, segid))
 
     def test_mpp23395(self):
         """
@@ -111,6 +114,7 @@ class mpp23395(MPPTestCase):
 
         # Scenario 3: FAULT during Create Table on segment, COMMIT case
         sql = '''
+        SET dtx_phase2_retry_count = 1;
         SET debug_dtm_action_target = "protocol";
         SET debug_dtm_action_protocol = "commit_prepared";
         SET debug_dtm_action_segment = 0;
@@ -121,6 +125,7 @@ class mpp23395(MPPTestCase):
 
         # Scenario 4: FAULT during Drop Table on segment, COMMIT case
         sql = '''
+        SET dtx_phase2_retry_count = 1;
         SET debug_dtm_action_target = "protocol";
         SET debug_dtm_action_protocol = "commit_prepared";
         SET debug_dtm_action_segment = 0;
@@ -165,6 +170,35 @@ class mpp23395(MPPTestCase):
         PSQL.run_sql_command("""
         DROP TABLE mpp23395;
           """)
+
+
+        # Scenario 7: FAULT during Create Table on segment, COMMIT case, succeeds on second retry
+        sql = '''
+        DROP TABLE IF EXISTS mpp23395;
+        SET debug_dtm_action_target = "protocol";
+        SET debug_dtm_action_protocol = "commit_prepared";
+        SET debug_dtm_action_segment = 0;
+        SET debug_dtm_action = "fail_begin_command";
+        CREATE TABLE mpp23395(a int);
+        '''
+        self.run_sequence(sql, 'twophase_transaction_commit_prepared', 'error', 2, False);
+
+        # QE panics after writing prepare xlog record.  This should cause
+        # master to broadcast abort but QEs handle the abort in
+        # DTX_CONTEXT_LOCAL_ONLY context.
+        sql = '''
+        DROP TABLE IF EXISTS mpp23395;
+        CREATE TABLE mpp23395(a int);
+        INSERT INTO mpp23395 VALUES(1), (2), (3);
+        BEGIN;
+        SET debug_abort_after_segment_prepared = true;
+        DELETE FROM mpp23395;
+        COMMIT;
+        '''
+
+        # No prepared transactions should remain lingering
+        PSQL.run_sql_command(sql)
+        self.check_no_dangling_prepared_transaction()
 
         dbstate = DbStateClass('run_validation')
         dbstate.check_catalog()

@@ -255,6 +255,7 @@ extern bool gp_crash_recovery_suppress_ao_eof;
 extern bool gp_create_table_random_default_distribution;
 extern bool gp_allow_non_uniform_partitioning_ddl;
 extern bool gp_enable_exchange_default_partition;
+extern int  dtx_phase2_retry_count;
 
 /* WAL replication debug gucs */
 extern bool debug_walrepl_snd;

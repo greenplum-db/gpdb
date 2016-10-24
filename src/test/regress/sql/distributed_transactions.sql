@@ -19,8 +19,21 @@
 -- We want to have an error between the point where all segments are prepared and our decision 
 -- to write the Distributed Commit record.
 --
+
+-- start_ignore
+BEGIN;
+DROP TABLE IF EXISTS distxact1_1;
+DROP TABLE IF EXISTS distxact1_2;
+DROP TABLE IF EXISTS distxact1_3;
+DROP TABLE IF EXISTS distxact1_4;
+CREATE TABLE distxact1_1 (a int) DISTRIBUTED BY (a);
+CREATE TABLE distxact1_2 (a int) DISTRIBUTED BY (a);
+CREATE TABLE distxact1_3 (a int) DISTRIBUTED BY (a);
+CREATE TABLE distxact1_4 (a int) DISTRIBUTED BY (a);
+COMMIT;
+-- end_ignore
+
 SET optimizer_disable_missing_stats_collection=true;
-CREATE TABLE distxact1_1 (a int);
 BEGIN;
 INSERT INTO distxact1_1 VALUES (1);
 INSERT INTO distxact1_1 VALUES (2);
@@ -35,13 +48,11 @@ COMMIT;
 RESET debug_abort_after_distributed_prepared;
 
 SELECT * FROM distxact1_1;
-DROP TABLE distxact1_1;
 
 --
 -- We want to have an error during the prepare which will cause a Abort-Some-Prepared broadcast 
 -- to cleanup.
 --
-CREATE TABLE distxact1_2 (a int);
 BEGIN;
 INSERT INTO distxact1_2 VALUES (21);
 INSERT INTO distxact1_2 VALUES (22);
@@ -60,14 +71,11 @@ RESET debug_dtm_action_target;
 RESET debug_dtm_action_protocol;
 
 SELECT * FROM distxact1_2;
-DROP TABLE distxact1_2;
-
 
 --
 -- We want to have an error during the commit-prepared broadcast which will cause a
 -- Retry-Commit-Prepared broadcast to cleanup.
 --
-CREATE TABLE distxact1_3 (a int);
 BEGIN;
 INSERT INTO distxact1_3 VALUES (31);
 INSERT INTO distxact1_3 VALUES (32);
@@ -82,7 +90,6 @@ SET debug_dtm_action_target = "protocol";
 SET debug_dtm_action_protocol = "commit_prepared";
 COMMIT;
 SELECT * FROM distxact1_3;
-DROP TABLE distxact1_3;
 RESET debug_dtm_action;
 RESET debug_dtm_action_target;
 RESET debug_dtm_action_protocol;
@@ -91,7 +98,6 @@ RESET debug_dtm_action_protocol;
 -- VARIANT of we want to have an error between the point where all segments are prepared and our decision 
 -- to write the Distributed Commit record.  Cause problem during abort-prepared broadcast.  
 --
-CREATE TABLE distxact1_4 (a int);
 BEGIN;
 INSERT INTO distxact1_4 VALUES (41);
 INSERT INTO distxact1_4 VALUES (42);
@@ -107,7 +113,6 @@ SET debug_dtm_action_target = "protocol";
 SET debug_dtm_action_protocol = "abort_prepared";
 COMMIT;
 SELECT * FROM distxact1_4;
-DROP TABLE distxact1_4;
 RESET debug_abort_after_distributed_prepared;
 RESET debug_dtm_action;
 RESET debug_dtm_action_target;
@@ -285,6 +290,9 @@ drop table if exists dtmcurse_bar;
 
 -- Test distribute transaction if 'COMMIT/END' is included in a multi-queries command.
 \! psql postgres -c "begin;end; create table dtx_test1(c1 int); drop table dtx_test1;"
+
+-- Test two phase commit for extended query
+\! ./twophase_pqexecparams dbname=regression
 
 --
 -- Subtransactions with partition table DDLs.

@@ -358,7 +358,6 @@ extern void performDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 					int flags,
 					const char *loggingStr, const char *gid, 
 					DistributedTransactionId gxid, DtxContextInfo *contextInfo);
-extern void doDtxPhase2Retry(void);
 extern void UtilityModeFindOrCreateDtmRedoFile(void);
 extern void UtilityModeCloseDtmRedoFile(void);
 extern void PleaseDebugMe(char *caller);
