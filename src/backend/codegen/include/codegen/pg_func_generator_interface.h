@@ -44,20 +44,15 @@ struct PGFuncGeneratorInfo {
   // This can be updated while generating the code.
   std::vector<llvm::Value*> llvm_args_isNull;
 
-  // Records if result is NULL
-  llvm::Value* llvm_isNull_ptr;
-
   PGFuncGeneratorInfo(
     llvm::Function* llvm_main_func,
     llvm::BasicBlock* llvm_error_block,
     const std::vector<llvm::Value*>& llvm_args,
-    const std::vector<llvm::Value*>& llvm_args_isNull,
-    llvm::Value* llvm_isNull_ptr) :
+    const std::vector<llvm::Value*>& llvm_args_isNull) :
       llvm_main_func(llvm_main_func),
       llvm_error_block(llvm_error_block),
       llvm_args(llvm_args),
-      llvm_args_isNull(llvm_args_isNull),
-      llvm_isNull_ptr(llvm_isNull_ptr){
+      llvm_args_isNull(llvm_args_isNull) {
   }
 };
 
@@ -96,6 +91,7 @@ class PGFuncGeneratorInterface {
    **/
   virtual bool GenerateCode(gpcodegen::GpCodegenUtils* codegen_utils,
                             const PGFuncGeneratorInfo& pg_gen_info,
+                            llvm::Value* const llvm_isnull_ptr,
                             llvm::Value** llvm_out_value) = 0;
 };
 

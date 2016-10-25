@@ -92,8 +92,6 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
   }
 
   assert(nullptr != peraggstate->aggref);
-  // *transValueIsNull = fcinfo->isnull;
-  pg_func_info->llvm_isNull_ptr = llvm_pergroupstate_transValueIsNull_ptr;
   assert(pg_func_info->llvm_args.size() == 1 +
              list_length(peraggstate->aggref->args));
   // Initialize llvm_args[0] to transValue.
@@ -102,7 +100,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
   // Initialize llvm_in_args_isNull[0] to transValueIsNull.
   // fcinfo->argnull[0] = *transValueIsNull;
   pg_func_info->llvm_args_isNull[0] = irb->CreateLoad(
-      pg_func_info->llvm_isNull_ptr);
+      llvm_pergroupstate_transValueIsNull_ptr);
 
   gpcodegen::PGFuncGeneratorInterface* pg_func_gen =
       gpcodegen::OpExprTreeGenerator::GetPGFuncGenerator(
@@ -114,8 +112,10 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
   }
 
   llvm::Value *newVal = nullptr;
-  bool isGenerated = pg_func_gen->GenerateCode(codegen_utils,
-                                               *pg_func_info, &newVal);
+  bool isGenerated =
+      pg_func_gen->GenerateCode(codegen_utils, *pg_func_info,
+                                llvm_pergroupstate_transValueIsNull_ptr,
+                                &newVal);
   if (!isGenerated) {
     elog(DEBUG1, "Function with oid = %d was not generated successfully!",
          peraggstate->transfn.fn_oid);
@@ -321,8 +321,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
         advance_aggregates_func,
         overflow_block,
         llvm_in_args,
-        llvm_in_args_isNull,
-        nullptr /*isNull*/);  // will be set to transValueIsNull
+        llvm_in_args_isNull);
 
     bool isGenerated = GenerateAdvanceTransitionFunction(
         codegen_utils, llvm_pergroup_arg, aggno, &pg_func_info);

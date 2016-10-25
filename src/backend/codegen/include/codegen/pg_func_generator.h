@@ -117,6 +117,7 @@ typedef bool (*PGCheckNullFuncGeneratorFn)(
     gpcodegen::GpCodegenUtils* codegen_utils,
     const PGFuncGeneratorInfo& pg_func_info,
     llvm::Value* llvm_out_value_ptr,
+    llvm::Value* const llvm_isnull_ptr,
     llvm::Value* llvm_is_set_ptr);
 
 /**
@@ -212,6 +213,7 @@ class PGIRBuilderFuncGenerator
 
   bool GenerateCode(gpcodegen::GpCodegenUtils* codegen_utils,
                     const PGFuncGeneratorInfo& pg_func_info,
+                    llvm::Value* const llvm_isnull_ptr,
                     llvm::Value** llvm_out_value) final {
     assert(nullptr != llvm_out_value);
     assert(nullptr != codegen_utils);
@@ -287,7 +289,7 @@ class PGIRBuilderFuncGenerator
     // *isNull = true;
     irb->CreateStore(
         codegen_utils->GetConstant<bool>(true),
-        pg_func_info.llvm_isNull_ptr);
+        llvm_isnull_ptr);
     llvm::Value* zero_value = codegen_utils->GetConstant<ReturnType>(0);
     irb->CreateBr(set_llvm_out_value_block);
 
@@ -360,6 +362,7 @@ class PGGenericFuncGenerator : public  PGFuncGeneratorInterface {
 
   bool GenerateCode(gpcodegen::GpCodegenUtils* codegen_utils,
                     const PGFuncGeneratorInfo& pg_func_info,
+                    llvm::Value* const llvm_isnull_ptr,
                     llvm::Value** llvm_out_value) final {
     assert(nullptr != codegen_utils);
     assert(nullptr != llvm_out_value);
@@ -375,8 +378,7 @@ class PGGenericFuncGenerator : public  PGFuncGeneratorInterface {
     PGFuncGeneratorInfo pg_processed_func_info(pg_func_info.llvm_main_func,
                                                pg_func_info.llvm_error_block,
                                                llvm_preproc_args,
-                                               pg_func_info.llvm_args_isNull,
-                                               pg_func_info.llvm_isNull_ptr);
+                                               pg_func_info.llvm_args_isNull);
 
     // Block that is the entry point to built-in function's generated code
     llvm::BasicBlock* generate_function_block = codegen_utils->
@@ -426,6 +428,7 @@ class PGGenericFuncGenerator : public  PGFuncGeneratorInterface {
       this->check_null_func_ptr_(codegen_utils,
                                  pg_processed_func_info,
                                  llvm_check_null_value_ptr,
+                                 llvm_isnull_ptr,
                                  llvm_is_set_ptr);
       // Keep track of the last created block during the check for NULL
       // attributes. This will be used as an incoming edge to the phi node.
@@ -469,7 +472,7 @@ class PGGenericFuncGenerator : public  PGFuncGeneratorInterface {
       // *isNull = true;
       irb->CreateStore(
           codegen_utils->GetConstant<bool>(true),
-          pg_func_info.llvm_isNull_ptr);
+          llvm_isnull_ptr);
       llvm_check_null_tmp_value = codegen_utils->GetConstant<ReturnType>(0);
       irb->CreateBr(set_llvm_out_value_block);
     }

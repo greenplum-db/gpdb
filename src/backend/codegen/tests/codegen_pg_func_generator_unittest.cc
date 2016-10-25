@@ -204,10 +204,10 @@ TEST_F(CodegenPGFuncGeneratorTest,
           codegen_utils_->GetType<bool>(), nullptr, "isNull");
     irb->CreateStore(codegen_utils_->GetConstant<bool>(false), llvm_isNull);
     PGFuncGeneratorInfo pg_gen_info(sum_fn, error_block, args,
-        args_isNull, llvm_isNull);
+        args_isNull);
 
   EXPECT_TRUE(generator->GenerateCode(codegen_utils_.get(),
-                                      pg_gen_info, &result));
+                                      pg_gen_info, llvm_isNull, &result));
   irb->CreateRet(result);
 
   irb->SetInsertPoint(error_block);
@@ -268,10 +268,10 @@ TEST_F(CodegenPGFuncGeneratorTest,
       codegen_utils_->GetType<bool>(), nullptr, "isNull");
   irb->CreateStore(codegen_utils_->GetConstant<bool>(false), llvm_isNull);
   PGFuncGeneratorInfo pg_gen_info(double_add_fn, error_block, args,
-                                  args_isNull, llvm_isNull);
+                                  args_isNull);
 
   EXPECT_TRUE(generator->GenerateCode(codegen_utils_.get(),
-                                      pg_gen_info, &result));
+                                      pg_gen_info, llvm_isNull, &result));
   irb->CreateRet(result);
 
   irb->SetInsertPoint(error_block);
@@ -349,10 +349,11 @@ TEST_F(CodegenPGFuncGeneratorTest, PGGenericFuncGeneratorOneArgTest) {
   std::vector<llvm::Value*> args_isNull = {codegen_utils_->
       GetConstant<bool>(false)};  // dummy
   PGFuncGeneratorInfo pg_gen_info(add_one_fn, error_block, args,
-                                  args_isNull, llvm_isNull);
+                                  args_isNull);
 
   EXPECT_TRUE(generator->GenerateCode(codegen_utils_.get(),
                                       pg_gen_info,
+                                      llvm_isNull,
                                       &result));
   irb->CreateRet(result);
 

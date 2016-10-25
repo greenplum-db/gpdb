@@ -138,6 +138,7 @@ class PGArithFuncGenerator {
    *
    * @param codegen_utils      Utility for easy code generation.
    * @param pg_func_info       Details for pgfunc generation
+   * @param llvm_isnull_ptr    Records if result is NULL
    * @param llvm_out_value_ptr Store location for the result
    * @param llvm_is_set_ptr    Pointer to flag that shows if a value has been
    *                           assigned to the contents of llvm_out_value_ptr
@@ -149,9 +150,10 @@ class PGArithFuncGenerator {
    *        function that checks for NULL arguments.
    **/
   static bool CheckNull(gpcodegen::GpCodegenUtils* codegen_utils,
-                              const PGFuncGeneratorInfo& pg_func_info,
-                              llvm::Value* llvm_out_value_ptr,
-                              llvm::Value* llvm_is_set_ptr) {
+                        const PGFuncGeneratorInfo& pg_func_info,
+                        llvm::Value* llvm_out_value_ptr,
+                        llvm::Value* const llvm_isnull_ptr,
+                        llvm::Value* llvm_is_set_ptr) {
     assert(nullptr != codegen_utils);
     assert(nullptr != llvm_out_value_ptr);
     assert(nullptr != llvm_is_set_ptr);
@@ -212,7 +214,7 @@ class PGArithFuncGenerator {
     irb->SetInsertPoint(return_null_block);
     // fcinfo->isnull = true;
     irb->CreateStore(codegen_utils->GetConstant<bool>(true),
-                     pg_func_info.llvm_isNull_ptr);
+                     llvm_isnull_ptr);
     // similar to: return (Datum) 0
     irb->CreateStore(codegen_utils->GetConstant<rtype>(0),
                      llvm_out_value_ptr);
@@ -236,7 +238,7 @@ class PGArithFuncGenerator {
     irb->CreateStore(codegen_utils->GetConstant<bool>(true),
                      llvm_is_set_ptr);
     irb->CreateStore(codegen_utils->GetConstant<bool>(false),
-                     pg_func_info.llvm_isNull_ptr);
+                     llvm_isnull_ptr);
     irb->CreateBr(continue_block);
 
     // arg0_is_not_null_block
@@ -264,7 +266,7 @@ class PGArithFuncGenerator {
     irb->CreateStore(codegen_utils->GetConstant<bool>(true),
                          llvm_is_set_ptr);
     irb->CreateStore(codegen_utils->GetConstant<bool>(false),
-                         pg_func_info.llvm_isNull_ptr);
+                     llvm_isnull_ptr);
     irb->CreateBr(continue_block);
 
     // continue_block
@@ -376,6 +378,7 @@ class PGArithUnaryFuncGenerator {
   static bool DoNothing(gpcodegen::GpCodegenUtils* codegen_utils,
                         const PGFuncGeneratorInfo& pg_func_info,
                         llvm::Value* llvm_out_value_ptr,
+                        llvm::Value* const llvm_isnull_ptr,
                         llvm::Value* llvm_out_value_is_set_ptr) {
     return true;
   }
