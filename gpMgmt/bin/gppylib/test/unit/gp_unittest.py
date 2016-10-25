@@ -19,6 +19,17 @@ class GpTestCase(unittest.TestCase):
         [p.stop() for p in self.patches]
         self.mock_objs = []
 
+def add_setup(setup=None, teardown=None):
+    """decorate test functions to add additional setup/teardown contexts"""
+    def decorate_function(test):
+        def wrapper(self):
+            if setup:
+                setup(self)
+            test(self)
+            if teardown:
+                teardown(self)
+        return wrapper
+    return decorate_function
 
 # hide unittest dependencies here
 def run_tests():

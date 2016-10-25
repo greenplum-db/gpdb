@@ -828,7 +828,7 @@ def drop_existing_schema_on_system(host, port, user, schema, databases=None):
         conn = connect(url)
         schema_exists = dropSchemaIfExist(conn, schema)
         conn.close()
-        if schema_exists:
+        if schema_exists: # todo this smells like an error since it can exit early. Please investigate
             return True
 
 # --------------------------------------------------------------------------
@@ -3632,16 +3632,16 @@ class GpTransfer(object):
             self._check_leaf_partition_set(table_pair)
 
             if not self._has_same_column_types(table_pair):
-                raise Exception('Source paritition table %s has different column layout or types from '
+                raise Exception('Source partition table %s has different column layout or types from '
                                 'destination partition table %s' % (str(table_pair.source), str(table_pair.dest)))        
             if not self._has_same_partition_criteria(table_pair):
-                raise Exception('Source paritition table %s has different partition criteria from '
+                raise Exception('Source partition table %s has different partition criteria from '
                                 'destination table %s' % (str(table_pair.source), str(table_pair.dest)))
 
     def _has_same_column_types(self, table_pair):
-        '''
-        Colums at the same ordinal_position of two partition tables need to be of same type
-        '''
+        """
+        Columns at the same ordinal_position of two partition tables need to be of same type
+        """
         src_tbl_columns = self._get_table_columns(table_pair.source, self._options.source_host, self._options.source_port, self._options.source_user)
         dest_tbl_columns = self._get_table_columns(table_pair.dest, self._options.dest_host, self._options.dest_port, self._options.dest_user)
 
@@ -3694,7 +3694,7 @@ class GpTransfer(object):
         logger.debug('Verifying that partition table transfer pair has same partition criteria')
         source_dest_info = 'source partition table %s and destination partition table %s' % (str(table_pair.source), str(table_pair.dest))
         if not self._has_same_partition_levels(table_pair):
-            logger.error('Max levels of partition is not same between %s' % source_dest_info)
+            logger.error('Max level of partition is not same between %s' % source_dest_info)
             return False
         if not self._has_same_partition_type_and_key_columns(table_pair):
             logger.error('Partition type or key is different between %s' % source_dest_info)
@@ -3722,7 +3722,10 @@ class GpTransfer(object):
             return True
         src_schema, src_table = self._get_parentpartable(src_db, src_schema, src_table, self._options.source_host, self._options.source_port, self._options.source_user)
         dest_schema, dest_table = self._get_parentpartable(dest_db, dest_schema, dest_table, self._options.dest_host, self._options.dest_port, self._options.dest_user)
-        return self._has_same_parent_partition_value(level - 1, src_db, src_schema, src_table, dest_db, dest_schema, dest_table)
+        result = self._has_same_parent_partition_value(level - 1, src_db, src_schema, src_table, dest_db, dest_schema, dest_table)
+        if not result:
+            logger.error("Partitions have different parents at level: %d" % (level - 1))
+        return result
 
     def _get_parentpartable(self, db, schema, table, host, port, user):
         """
@@ -3784,14 +3787,16 @@ class GpTransfer(object):
         for level_key in source_partition_column_info:
             if source_partition_column_info[level_key]['parkind'] != dest_partition_column_info[level_key]['parkind']:
                 logger.error('Partition type is different at level %s between %s' % (level_key, source_dest_info))
+                return False
             if source_partition_column_info[level_key]['parnatts'] != dest_partition_column_info[level_key]['parnatts']:
                 logger.error('Number of partition columns is different at level %s between %s' % (level_key, source_dest_info))
+                return False
 
             # this handles multi column partition, sort them before compare, in case same partition columns but in random order
             source_paratts = [att.strip() for att in source_partition_column_info[level_key]['paratts'].split(' ')]
             dest_paratts = [att.strip() for att in dest_partition_column_info[level_key]['paratts'].split(' ')]
             if sorted(source_paratts) != sorted(dest_paratts):
-                logger.error('Partition column attributes is different at level %s between %s' % 
+                logger.error('Partition column attributes are different at level %s between %s' %
                             (level_key, source_dest_info))
                 return False
         return True
