@@ -241,9 +241,6 @@ class PGIRBuilderFuncGenerator
       llvm::BasicBlock* func_generation_last_block = irb->GetInsertBlock();
       assert(llvm_func_tmp_value->getType() ==
           codegen_utils->GetType<ReturnType>());
-      // convert return type to Datum
-      llvm_func_tmp_value = codegen_utils->
-          CreateCppTypeToDatumCast(llvm_func_tmp_value);
       irb->CreateBr(set_llvm_out_value_block);
 
       // null_argument_block
@@ -254,7 +251,7 @@ class PGIRBuilderFuncGenerator
       irb->CreateStore(
           codegen_utils->GetConstant<bool>(true),
           pg_func_info.llvm_isNull_ptr);
-      llvm::Value* zero_value = codegen_utils->GetConstant<Datum>(0);
+      llvm::Value* zero_value = codegen_utils->GetConstant<ReturnType>(0);
       irb->CreateBr(set_llvm_out_value_block);
 
       // set_llvm_out_value_block
@@ -269,7 +266,6 @@ class PGIRBuilderFuncGenerator
                                           func_generation_last_block);
       *llvm_out_value = llvm_out_value_phinode;
 
-      assert((*llvm_out_value)->getType() == codegen_utils->GetType<Datum>());
       return true;
     }
   }
@@ -401,6 +397,8 @@ class PGGenericFuncGenerator : public  PGFuncGeneratorInterface {
       // Temporary value of llvm_out_value after check for NULLs
       llvm_check_null_tmp_value =
           irb->CreateLoad(llvm_check_null_value_ptr);
+      assert(llvm_check_null_tmp_value->getType() ==
+    		  codegen_utils->GetType<ReturnType>());
       irb->CreateCondBr(irb->CreateLoad(llvm_is_set_ptr),
                         set_llvm_out_value_block /* true */,
                         generate_function_block /* false */);
@@ -444,7 +442,7 @@ class PGGenericFuncGenerator : public  PGFuncGeneratorInterface {
       irb->CreateStore(
           codegen_utils->GetConstant<bool>(true),
           pg_func_info.llvm_isNull_ptr);
-      llvm_check_null_tmp_value = codegen_utils->GetConstant<Datum>(0);
+      llvm_check_null_tmp_value = codegen_utils->GetConstant<ReturnType>(0);
       irb->CreateBr(set_llvm_out_value_block);
     }
 
@@ -464,8 +462,6 @@ class PGGenericFuncGenerator : public  PGFuncGeneratorInterface {
     llvm::BasicBlock* func_generation_last_block = irb->GetInsertBlock();
     assert(llvm_func_generation_tmp_value->getType() ==
            codegen_utils->GetType<ReturnType>());
-    llvm_func_generation_tmp_value =
-        codegen_utils->CreateCppTypeToDatumCast(llvm_func_generation_tmp_value);
     irb->CreateBr(set_llvm_out_value_block);
 
     // set_llvm_out_value_block
@@ -473,14 +469,12 @@ class PGGenericFuncGenerator : public  PGFuncGeneratorInterface {
     // Create the phi node and set the value of llvm_out_value accordingly
     irb->SetInsertPoint(set_llvm_out_value_block);
     llvm::PHINode* llvm_out_value_phinode = irb->CreatePHI(
-        codegen_utils->GetType<Datum>(), 2);
+        codegen_utils->GetType<ReturnType>(), 2);
     llvm_out_value_phinode->addIncoming(llvm_check_null_tmp_value,
                                         null_argument_block);
     llvm_out_value_phinode->addIncoming(llvm_func_generation_tmp_value,
                                         func_generation_last_block);
     *llvm_out_value = llvm_out_value_phinode;
-
-    assert((*llvm_out_value)->getType() == codegen_utils->GetType<Datum>());
     return true;
   }
 

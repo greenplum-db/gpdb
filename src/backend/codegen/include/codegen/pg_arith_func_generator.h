@@ -153,6 +153,8 @@ class PGArithFuncGenerator {
     assert(nullptr != codegen_utils);
     assert(nullptr != llvm_out_value_ptr);
     assert(nullptr != llvm_is_set_ptr);
+    assert(codegen_utils->GetType<rtype>() ==
+    		codegen_utils->GetType<int64_t>());
     auto irb = codegen_utils->ir_builder();
 
     // Entry block that shows that clearly shows the beginning of CheckNull
@@ -208,7 +210,7 @@ class PGArithFuncGenerator {
     irb->CreateStore(codegen_utils->GetConstant<bool>(true),
                      pg_func_info.llvm_isNull_ptr);
     // similar to: return (Datum) 0
-    irb->CreateStore(codegen_utils->GetConstant<Datum>(0),
+    irb->CreateStore(codegen_utils->GetConstant<rtype>(0),
                      llvm_out_value_ptr);
     // set the content of llvm_is_set_ptr to true, so that we do not need to
     // execute the code of non-strict built-in function
@@ -222,7 +224,7 @@ class PGArithFuncGenerator {
     irb->SetInsertPoint(arg1_is_not_null_block);
     // val = (int64) PG_GETARG_INT32(1)
     // PG_RETURN_INT64(val)
-    irb->CreateStore(codegen_utils->CreateCast<int64, int32>(
+    irb->CreateStore(codegen_utils->CreateCast<rtype, int32>(
         codegen_utils->CreateCast<int32, Arg1>(pg_func_info.llvm_args[1])),
                      llvm_out_value_ptr);
     // set the content of llvm_is_set_ptr to true, so that we do not need to
@@ -250,7 +252,7 @@ class PGArithFuncGenerator {
     // Generate code for PG_RETURN_INT64(val), where val = arg0
     irb->SetInsertPoint(arg1_is_null_block);
 
-    irb->CreateStore(codegen_utils->CreateCast<int64, Arg0>(
+    irb->CreateStore(codegen_utils->CreateCast<rtype, Arg0>(
         pg_func_info.llvm_args[0]),
                      llvm_out_value_ptr);
     // set the content of llvm_is_set_ptr to true, so that we do not need to
