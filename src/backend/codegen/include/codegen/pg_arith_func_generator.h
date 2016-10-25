@@ -145,6 +145,8 @@ class PGArithFuncGenerator {
    * @return true if generation was successful otherwise return false
    *
    * @note  It is used only if built-in function is not strict.
+   *        This function implements the first part of int4_sum built-in
+   *        function that checks for NULL arguments.
    **/
   static bool CheckNull(gpcodegen::GpCodegenUtils* codegen_utils,
                               const PGFuncGeneratorInfo& pg_func_info,
@@ -155,6 +157,8 @@ class PGArithFuncGenerator {
     assert(nullptr != llvm_is_set_ptr);
     assert(codegen_utils->GetType<rtype>() ==
     		codegen_utils->GetType<int64_t>());
+    assert(pg_func_info.llvm_args.size() > 1);
+    assert(pg_func_info.llvm_args_isNull.size() > 1);
     auto irb = codegen_utils->ir_builder();
 
     // Entry block that shows that clearly shows the beginning of CheckNull

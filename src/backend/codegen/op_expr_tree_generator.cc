@@ -230,7 +230,7 @@ bool OpExprTreeGenerator::VerifyAndCreateExprTree(
 
 bool OpExprTreeGenerator::GenerateCode(GpCodegenUtils* codegen_utils,
                                        const ExprTreeGeneratorInfo& gen_info,
-                                       llvm::Value* llvm_isnull_ptr,
+                                       llvm::Value* const llvm_isnull_ptr,
                                        llvm::Value** llvm_out_value) {
   assert(nullptr != llvm_out_value);
   *llvm_out_value = nullptr;
@@ -258,21 +258,21 @@ bool OpExprTreeGenerator::GenerateCode(GpCodegenUtils* codegen_utils,
   std::vector<llvm::Value*> llvm_arguments;
   std::vector<llvm::Value*> llvm_arguments_isNull;
   for (auto& arg : arguments_) {
-    llvm::Value* llvm_arg_isNull_ptr = irb->CreateAlloca(
+    llvm::Value* llvm_arg_isnull_ptr = irb->CreateAlloca(
         codegen_utils->GetType<bool>(), nullptr, "isNull");
     irb->CreateStore(codegen_utils->GetConstant<bool>(false),
-                     llvm_arg_isNull_ptr);
+                     llvm_arg_isnull_ptr);
 
     llvm::Value* llvm_arg = nullptr;
     arg_generated &= arg->GenerateCode(codegen_utils,
                                        gen_info,
-                                       llvm_arg_isNull_ptr,
+                                       llvm_arg_isnull_ptr,
                                        &llvm_arg);
     if (!arg_generated) {
       return false;
     }
     llvm_arguments.push_back(llvm_arg);
-    llvm_arguments_isNull.push_back(irb->CreateLoad(llvm_arg_isNull_ptr));
+    llvm_arguments_isNull.push_back(irb->CreateLoad(llvm_arg_isnull_ptr));
   }
   llvm::Value* llvm_op_value = nullptr;
   PGFuncGeneratorInfo pg_func_info(gen_info.llvm_main_func,

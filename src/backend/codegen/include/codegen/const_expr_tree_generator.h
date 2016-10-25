@@ -34,7 +34,7 @@ class ConstExprTreeGenerator : public ExprTreeGenerator {
 
   bool GenerateCode(gpcodegen::GpCodegenUtils* codegen_utils,
                     const ExprTreeGeneratorInfo& gen_info,
-                    llvm::Value* llvm_isnull_ptr,
+                    llvm::Value* const llvm_isnull_ptr,
                     llvm::Value** llvm_out_value) final;
 
  protected:
