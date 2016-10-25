@@ -1902,9 +1902,14 @@ url_ferror(URL_FILE *file, int bytesread, char *ebuf, int ebuflen)
 			if(ret == true && ebuflen > 0 && ebuf != NULL)
 			{
 				nread = piperead(file->u.exec.pipes[EXEC_ERR_P], ebuf, ebuflen);
-			
+
 				if(nread != -1)
-					ebuf[nread] = 0;
+				{
+					if (nread == ebuflen)
+						ebuf[nread - 1] = 0;
+					else
+						ebuf[nread] = 0;
+				}
 				else
 					strncpy(ebuf,"error string unavailable due to read error",ebuflen-1);
 			}
