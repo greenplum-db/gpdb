@@ -511,7 +511,7 @@ VmemTracker_ReserveVmem(int64 newlyRequestedBytes)
 		 * on CHECK_FOR_INTERRUPTS(). In a sense, this is a lightweight CHECK_FOR_INTERRUPTS
 		 * as we don't execute BackoffBackendTick() and some runaway detection code.
 		 */
-		if (InterruptPending)
+		if (vmem_process_interrupt && InterruptPending)
 		{
 			/* ProcessInterrupts should check for InterruptHoldoffCount and CritSectionCount */
 			ProcessInterrupts();

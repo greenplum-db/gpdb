@@ -293,6 +293,7 @@ extern int ddboost_buf_size;
 
 extern bool gp_cancel_query_print_log;
 extern int gp_cancel_query_delay_time;
+extern bool vmem_process_interrupt;
 
 extern bool gp_partitioning_dynamic_selection_log;
 extern int gp_max_partition_level;

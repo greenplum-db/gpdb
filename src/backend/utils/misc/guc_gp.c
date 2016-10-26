@@ -413,6 +413,7 @@ static char *gp_test_deadlock_hazard_report_level_str;
 /* query cancellation GUC */
 bool		gp_cancel_query_print_log;
 int			gp_cancel_query_delay_time;
+bool		vmem_process_interrupt = false;
 
 /* partitioning GUC */
 bool		gp_partitioning_dynamic_selection_log;
@@ -3394,6 +3395,17 @@ struct config_bool ConfigureNamesBool_gp[] =
 #endif
 		assign_codegen, NULL
 	},
+
+	{
+		{"vmem_process_interrupt", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Checks for interrupts before reserving VMEM"),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
+		},
+		&vmem_process_interrupt,
+		false, NULL, NULL
+	},
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, false, NULL, NULL
