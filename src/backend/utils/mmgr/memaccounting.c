@@ -591,7 +591,11 @@ AddToShortLivingAccountArray(MemoryAccount *newAccount)
 static void
 InitializeMemoryAccount(MemoryAccount *newAccount, long maxLimit, MemoryOwnerType ownerType, MemoryAccountIdType parentAccountId)
 {
-	Assert(ownerType != MEMORY_OWNER_TYPE_Undefined && ownerType < MEMORY_OWNER_TYPE_EXECUTOR_END);
+	/*
+	 * MEMORY_OWNER_TYPE_EXECUTOR_END is set to the last valid executor account type.
+	 * I.e., it is inclusive in the valid values of ownerType
+	 */
+	Assert(ownerType != MEMORY_OWNER_TYPE_Undefined && ownerType <= MEMORY_OWNER_TYPE_EXECUTOR_END);
 
 	newAccount->ownerType = ownerType;
 
