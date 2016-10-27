@@ -113,9 +113,8 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
 
   llvm::Value *newVal = nullptr;
   bool isGenerated =
-      pg_func_gen->GenerateCode(codegen_utils, *pg_func_info,
-                                llvm_pergroupstate_transValueIsNull_ptr,
-                                &newVal);
+      pg_func_gen->GenerateCode(codegen_utils, *pg_func_info, &newVal,
+                                llvm_pergroupstate_transValueIsNull_ptr);
   if (!isGenerated) {
     elog(DEBUG1, "Function with oid = %d was not generated successfully!",
          peraggstate->transfn.fn_oid);

@@ -152,8 +152,8 @@ class PGArithFuncGenerator {
   static bool CheckNull(gpcodegen::GpCodegenUtils* codegen_utils,
                         const PGFuncGeneratorInfo& pg_func_info,
                         llvm::Value* llvm_out_value_ptr,
-                        llvm::Value* const llvm_isnull_ptr,
-                        llvm::Value* llvm_is_set_ptr) {
+                        llvm::Value* llvm_is_set_ptr,
+                        llvm::Value* const llvm_isnull_ptr) {
     assert(nullptr != codegen_utils);
     assert(nullptr != llvm_out_value_ptr);
     assert(nullptr != llvm_is_set_ptr);
@@ -378,8 +378,8 @@ class PGArithUnaryFuncGenerator {
   static bool DoNothing(gpcodegen::GpCodegenUtils* codegen_utils,
                         const PGFuncGeneratorInfo& pg_func_info,
                         llvm::Value* llvm_out_value_ptr,
-                        llvm::Value* const llvm_isnull_ptr,
-                        llvm::Value* llvm_out_value_is_set_ptr) {
+                        llvm::Value* llvm_out_value_is_set_ptr,
+                        llvm::Value* const llvm_isnull_ptr) {
     return true;
   }
 };

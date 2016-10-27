@@ -52,8 +52,8 @@ ConstExprTreeGenerator::ConstExprTreeGenerator(const ExprState* expr_state) :
 
 bool ConstExprTreeGenerator::GenerateCode(GpCodegenUtils* codegen_utils,
                                           const ExprTreeGeneratorInfo& gen_info,
-                                          llvm::Value* const llvm_isnull_ptr,
-                                          llvm::Value** llvm_out_value) {
+                                          llvm::Value** llvm_out_value,
+                                          llvm::Value* const llvm_isnull_ptr) {
   assert(nullptr != llvm_out_value);
   assert(nullptr != llvm_isnull_ptr);
   auto irb = codegen_utils->ir_builder();

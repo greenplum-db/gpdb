@@ -207,7 +207,7 @@ TEST_F(CodegenPGFuncGeneratorTest,
         args_isNull);
 
   EXPECT_TRUE(generator->GenerateCode(codegen_utils_.get(),
-                                      pg_gen_info, llvm_isNull, &result));
+                                      pg_gen_info, &result, llvm_isNull));
   irb->CreateRet(result);
 
   irb->SetInsertPoint(error_block);
@@ -271,7 +271,7 @@ TEST_F(CodegenPGFuncGeneratorTest,
                                   args_isNull);
 
   EXPECT_TRUE(generator->GenerateCode(codegen_utils_.get(),
-                                      pg_gen_info, llvm_isNull, &result));
+                                      pg_gen_info, &result, llvm_isNull));
   irb->CreateRet(result);
 
   irb->SetInsertPoint(error_block);
@@ -353,8 +353,8 @@ TEST_F(CodegenPGFuncGeneratorTest, PGGenericFuncGeneratorOneArgTest) {
 
   EXPECT_TRUE(generator->GenerateCode(codegen_utils_.get(),
                                       pg_gen_info,
-                                      llvm_isNull,
-                                      &result));
+                                      &result,
+                                      llvm_isNull));
   irb->CreateRet(result);
 
   irb->SetInsertPoint(error_block);

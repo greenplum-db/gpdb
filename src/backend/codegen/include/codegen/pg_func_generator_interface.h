@@ -91,8 +91,8 @@ class PGFuncGeneratorInterface {
    **/
   virtual bool GenerateCode(gpcodegen::GpCodegenUtils* codegen_utils,
                             const PGFuncGeneratorInfo& pg_gen_info,
-                            llvm::Value* const llvm_isnull_ptr,
-                            llvm::Value** llvm_out_value) = 0;
+                            llvm::Value** llvm_out_value,
+                            llvm::Value* const llvm_isnull_ptr) = 0;
 };
 
 /** @} */

@@ -160,8 +160,8 @@ bool ExecEvalExprCodegen::GenerateExecEvalExpr(
   llvm::Value* value = nullptr;
   bool is_generated = expr_tree_generator_->GenerateCode(codegen_utils,
                                                         gen_info_,
-                                                        llvm_isnull_arg,
-                                                        &value);
+                                                        &value,
+                                                        llvm_isnull_arg);
   if (!is_generated ||
       nullptr == value) {
     return false;

@@ -119,8 +119,8 @@ class ExprTreeGenerator {
    **/
   virtual bool GenerateCode(gpcodegen::GpCodegenUtils* codegen_utils,
                             const ExprTreeGeneratorInfo& gen_info,
-                            llvm::Value* const llvm_isnull_ptr,
-                            llvm::Value** value) = 0;
+                            llvm::Value** value,
+                            llvm::Value* const llvm_isnull_ptr) = 0;
 
 
   /**

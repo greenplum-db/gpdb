@@ -230,8 +230,8 @@ bool OpExprTreeGenerator::VerifyAndCreateExprTree(
 
 bool OpExprTreeGenerator::GenerateCode(GpCodegenUtils* codegen_utils,
                                        const ExprTreeGeneratorInfo& gen_info,
-                                       llvm::Value* const llvm_isnull_ptr,
-                                       llvm::Value** llvm_out_value) {
+                                       llvm::Value** llvm_out_value,
+                                       llvm::Value* const llvm_isnull_ptr) {
   assert(nullptr != llvm_out_value);
   *llvm_out_value = nullptr;
   OpExpr* op_expr = reinterpret_cast<OpExpr*>(expr_state()->expr);
@@ -266,8 +266,8 @@ bool OpExprTreeGenerator::GenerateCode(GpCodegenUtils* codegen_utils,
     llvm::Value* llvm_arg = nullptr;
     arg_generated &= arg->GenerateCode(codegen_utils,
                                        gen_info,
-                                       llvm_arg_isnull_ptr,
-                                       &llvm_arg);
+                                       &llvm_arg,
+                                       llvm_arg_isnull_ptr);
     if (!arg_generated) {
       return false;
     }
@@ -282,8 +282,8 @@ bool OpExprTreeGenerator::GenerateCode(GpCodegenUtils* codegen_utils,
 
   bool retval = pg_func_interface->GenerateCode(codegen_utils,
                                                 pg_func_info,
-                                                llvm_isnull_ptr,
-                                                &llvm_op_value);
+                                                &llvm_op_value,
+                                                llvm_isnull_ptr);
 
   // convert return type to Datum
   *llvm_out_value = codegen_utils->CreateCppTypeToDatumCast(llvm_op_value);

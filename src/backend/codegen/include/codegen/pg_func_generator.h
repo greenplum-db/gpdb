@@ -117,8 +117,8 @@ typedef bool (*PGCheckNullFuncGeneratorFn)(
     gpcodegen::GpCodegenUtils* codegen_utils,
     const PGFuncGeneratorInfo& pg_func_info,
     llvm::Value* llvm_out_value_ptr,
-    llvm::Value* const llvm_isnull_ptr,
-    llvm::Value* llvm_is_set_ptr);
+    llvm::Value* llvm_is_set_ptr,
+    llvm::Value* const llvm_isnull_ptr);
 
 /**
  * @brief Create LLVM instructions to check if there are NULL arguments.
@@ -213,8 +213,8 @@ class PGIRBuilderFuncGenerator
 
   bool GenerateCode(gpcodegen::GpCodegenUtils* codegen_utils,
                     const PGFuncGeneratorInfo& pg_func_info,
-                    llvm::Value* const llvm_isnull_ptr,
-                    llvm::Value** llvm_out_value) final {
+                    llvm::Value** llvm_out_value,
+                    llvm::Value* const llvm_isnull_ptr) final {
     assert(nullptr != llvm_out_value);
     assert(nullptr != codegen_utils);
     std::vector<llvm::Value*> llvm_preproc_args;
@@ -362,8 +362,8 @@ class PGGenericFuncGenerator : public  PGFuncGeneratorInterface {
 
   bool GenerateCode(gpcodegen::GpCodegenUtils* codegen_utils,
                     const PGFuncGeneratorInfo& pg_func_info,
-                    llvm::Value* const llvm_isnull_ptr,
-                    llvm::Value** llvm_out_value) final {
+                    llvm::Value** llvm_out_value,
+                    llvm::Value* const llvm_isnull_ptr) final {
     assert(nullptr != codegen_utils);
     assert(nullptr != llvm_out_value);
     auto irb = codegen_utils->ir_builder();
