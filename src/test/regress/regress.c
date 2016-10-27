@@ -93,6 +93,9 @@ extern Datum numBackendsOnSegment(PG_FUNCTION_ARGS);
  */
 extern Datum test_atomic_ops(PG_FUNCTION_ARGS);
 
+extern Datum udf_setenv(PG_FUNCTION_ARGS);
+extern Datum udf_unsetenv(PG_FUNCTION_ARGS);
+
 #ifdef PG_MODULE_MAGIC
 PG_MODULE_MAGIC;
 #endif
@@ -2716,4 +2719,25 @@ test_atomic_ops(PG_FUNCTION_ARGS)
 #endif
 
 	PG_RETURN_BOOL(true);
+}
+
+PG_FUNCTION_INFO_V1(udf_setenv);
+Datum
+udf_setenv(PG_FUNCTION_ARGS)
+{
+	const char *name = (const char *) PG_GETARG_CSTRING(0);
+	const char *value = (const char *) PG_GETARG_CSTRING(1);
+	int ret = setenv(name, value, 1);
+
+	PG_RETURN_BOOL(ret == 0);
+}
+
+
+PG_FUNCTION_INFO_V1(udf_unsetenv);
+Datum
+udf_unsetenv(PG_FUNCTION_ARGS)
+{
+	const char *name = (const char *) PG_GETARG_CSTRING(0);
+	int ret = unsetenv(name);
+	PG_RETURN_BOOL(ret == 0);
 }

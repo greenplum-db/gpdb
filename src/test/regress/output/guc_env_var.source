@@ -1,0 +1,49 @@
+--
+-- test environment variables on QD would not effect GUCs on segments
+--
+drop table if exists guc_env_tbl;
+NOTICE:  table "guc_env_tbl" does not exist, skipping
+create table guc_env_tbl (d date);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'd' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into guc_env_tbl values ('1401-01-01');
+-- pg_regress framework would set this to 'Postgres'
+show datestyle;
+   DateStyle
+---------------
+ Postgres, MDY
+(1 row)
+
+select CASE WHEN d::text < 10::text THEN 1 ELSE 2 END from guc_env_tbl;
+ case
+------
+    1
+(1 row)
+
+-- ensure no Gang is reused
+set gp_vmem_idle_resource_timeout = 1;
+create or replace function udf_setenv(cstring, cstring) returns bool as
+'@abs_srcdir@/regress.so', 'udf_setenv' LANGUAGE C;
+create or replace function udf_unsetenv(cstring) returns bool as
+'@abs_srcdir@/regress.so', 'udf_unsetenv' LANGUAGE C;
+-- set QD environment variable
+select udf_setenv('PGDATESTYLE', 'ISO, YMD');
+ udf_setenv
+------------
+ t
+(1 row)
+
+-- sleep to ensure the existing Gang has been destroyed
+\! sleep 0.5
+select CASE WHEN d::text < 10::text THEN 1 ELSE 2 END from guc_env_tbl;
+ case
+------
+    1
+(1 row)
+
+select udf_unsetenv('PGDATESTYLE');
+ udf_unsetenv
+--------------
+ t
+(1 row)
+
