@@ -120,7 +120,6 @@ MemoryAccounting_ConvertIdToAccount(MemoryAccountIdType id)
 static inline bool
 MemoryAccounting_Allocate(MemoryAccountIdType memoryAccountId, Size allocatedSize)
 {
-	Assert(MemoryAccounting_IsLiveAccount(memoryAccountId));
 	MemoryAccount* memoryAccount = MemoryAccounting_ConvertIdToAccount(memoryAccountId);
 
 	Assert(memoryAccount->allocated + allocatedSize >=
