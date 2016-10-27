@@ -33,6 +33,13 @@ bool ExprTreeGenerator::VerifyAndCreateExprTree(
   assert(nullptr != expr_state &&
          nullptr != expr_state->expr &&
          nullptr != expr_tree);
+
+  if (expr_state->type != T_FuncExprState &&
+      expr_state->type != T_ExprState) {
+    elog(DEBUG1, "Input expression state type (%d) is not supported",
+         expr_state->type);
+    return false;
+  }
   expr_tree->reset(nullptr);
   bool supported_expr_tree = false;
   switch (nodeTag(expr_state->expr)) {
