@@ -190,7 +190,8 @@ TEST_F(CodegenPGFuncGeneratorTest,
           1841,
           "int4_sum",
           &PGArithFuncGenerator<int64_t, int64_t, int32_t>::AddWithOverflow,
-          &PGArithFuncGenerator<int64_t, int64_t, int32_t>::CheckNull,
+          &PGArithFuncGenerator<int64_t, int64_t, int32_t>::
+          CreateArgumentNullChecks,
           false));
 
   llvm::Value* result;

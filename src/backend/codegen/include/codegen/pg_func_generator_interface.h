@@ -81,11 +81,10 @@ class PGFuncGeneratorInterface {
   /**
    * @brief Generate the code for Greenplum function.
    *
-   * @param codegen_utils     Utility to easy code generation.
-   * @param llvm_main_func    Current function for which we are generating code
-   * @param llvm_error_block  Basic Block to jump when error happens
-   * @param llvm_args         Vector of llvm arguments for the function
-   * @param llvm_out_value    Store the results of function
+   * @param codegen_utils   Utility to easy code generation.
+   * @param pg_gen_info     Information needed for generating the function.
+   * @param llvm_out_value  Store the results of function
+   * @param llvm_isnull_ptr Set to true if result is null
    *
    * @return true when it generated successfully otherwise it return false.
    **/

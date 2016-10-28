@@ -149,7 +149,7 @@ class PGArithFuncGenerator {
    *        This function implements the first part of int4_sum built-in
    *        function that checks for NULL arguments.
    **/
-  static bool CheckNull(gpcodegen::GpCodegenUtils* codegen_utils,
+  static bool CreateArgumentNullChecks(gpcodegen::GpCodegenUtils* codegen_utils,
                         const PGFuncGeneratorInfo& pg_func_info,
                         llvm::Value* llvm_out_value_ptr,
                         llvm::Value* llvm_is_set_ptr,
@@ -157,10 +157,8 @@ class PGArithFuncGenerator {
     assert(nullptr != codegen_utils);
     assert(nullptr != llvm_out_value_ptr);
     assert(nullptr != llvm_is_set_ptr);
-    assert(codegen_utils->GetType<rtype>() ==
-    		codegen_utils->GetType<int64_t>());
-    assert(pg_func_info.llvm_args.size() > 1);
-    assert(pg_func_info.llvm_args_isNull.size() > 1);
+    assert(pg_func_info.llvm_args.size() ==
+        pg_func_info.llvm_args_isNull.size());
     auto irb = codegen_utils->ir_builder();
 
     // Entry block that shows that clearly shows the beginning of CheckNull
@@ -230,9 +228,8 @@ class PGArithFuncGenerator {
     irb->SetInsertPoint(arg1_is_not_null_block);
     // val = (int64) PG_GETARG_INT32(1)
     // PG_RETURN_INT64(val)
-    irb->CreateStore(codegen_utils->CreateCast<rtype, int32>(
-        codegen_utils->CreateCast<int32, Arg1>(pg_func_info.llvm_args[1])),
-                     llvm_out_value_ptr);
+    irb->CreateStore(codegen_utils->CreateCast<rtype, Arg1>(
+        pg_func_info.llvm_args[1]), llvm_out_value_ptr);
     // set the content of llvm_is_set_ptr to true, so that we do not need to
     // execute the code of non-strict built-in function
     irb->CreateStore(codegen_utils->GetConstant<bool>(true),
@@ -359,29 +356,6 @@ class PGArithUnaryFuncGenerator {
                                    llvm::Value* llvm_error_msg,
                                    const PGFuncGeneratorInfo& pg_func_info,
                                    llvm::Value** llvm_out_value);
-
-  /**
-   * @brief Dummy function that does not perform any actions
-   *
-   * @param codegen_utils      Utility for easy code generation.
-   * @param pg_func_info       Details for pgfunc generation
-   * @param llvm_out_value_ptr Store location for the result
-   * @param llvm_is_set_ptr    Pointer to flag that shows if a value has been
-   *                           assigned to the contents of llvm_out_value_ptr
-   *
-   * @return true if generation was successful otherwise return false
-   *
-   * @note  It is passed as an argument to PGGenericFuncGenerator, when a
-   *        a built-in function is not strict and it does not perform
-   *        any nullity checks.
-   **/
-  static bool DoNothing(gpcodegen::GpCodegenUtils* codegen_utils,
-                        const PGFuncGeneratorInfo& pg_func_info,
-                        llvm::Value* llvm_out_value_ptr,
-                        llvm::Value* llvm_out_value_is_set_ptr,
-                        llvm::Value* const llvm_isnull_ptr) {
-    return true;
-  }
 };
 
 /**

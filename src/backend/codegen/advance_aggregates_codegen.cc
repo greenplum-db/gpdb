@@ -97,7 +97,6 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
   // Initialize llvm_args[0] to transValue.
   pg_func_info->llvm_args[0] = irb->CreateLoad(
       llvm_pergroupstate_transValue_ptr);
-  // Initialize llvm_in_args_isNull[0] to transValueIsNull.
   // fcinfo->argnull[0] = *transValueIsNull;
   pg_func_info->llvm_args_isNull[0] = irb->CreateLoad(
       llvm_pergroupstate_transValueIsNull_ptr);

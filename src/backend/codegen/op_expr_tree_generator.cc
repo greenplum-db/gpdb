@@ -87,7 +87,8 @@ void OpExprTreeGenerator::InitializeSupportedFunction() {
           1841,
           "int4_sum",
           &PGArithFuncGenerator<int64_t, int64_t, int32_t>::AddWithOverflow,
-          &PGArithFuncGenerator<int64_t, int64_t, int32_t>::CheckNull,
+          &PGArithFuncGenerator<int64_t, int64_t, int32_t>::
+          CreateArgumentNullChecks,
           false));
 
   supported_function_[181] = std::unique_ptr<PGFuncGeneratorInterface>(
@@ -115,13 +116,12 @@ void OpExprTreeGenerator::InitializeSupportedFunction() {
           true));
 
   // int8inc is not strict, but it does not check if there are NULL attributes.
-  // Thus we pass a dummy function (DoNothing) instead of checking for NULLs.
   supported_function_[2803] = std::unique_ptr<PGFuncGeneratorInterface>(
       new PGGenericFuncGenerator<int64_t, int64_t>(
           2803,
           "int8inc",
           &PGArithUnaryFuncGenerator<int64_t, int64_t>::IncWithOverflow,
-          &PGArithUnaryFuncGenerator<int64_t, int64_t>::DoNothing,
+          nullptr,
           false));
 
   supported_function_[216] = std::unique_ptr<PGFuncGeneratorInterface>(

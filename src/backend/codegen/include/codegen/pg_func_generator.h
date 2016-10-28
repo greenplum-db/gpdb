@@ -187,15 +187,16 @@ class PGIRBuilderFuncGenerator
    * @param pg_func_oid   Greenplum function Oid
    * @param pg_func_name  Greenplum function name
    * @param mem_func_ptr  IRBuilder member function pointer
+   * @param is_strict     Records if built-in function is strict
    **/
   PGIRBuilderFuncGenerator(int pg_func_oid,
                            const std::string& pg_func_name,
                            IRBuilderFuncPtrType mem_func_ptr,
-                           bool pg_func_strict)
+                           bool is_strict)
   : pg_func_oid_(pg_func_oid),
     pg_func_name_(pg_func_name),
     func_ptr_(mem_func_ptr),
-    pg_func_strict_(pg_func_strict) {
+    is_strict_(is_strict) {
   }
 
   std::string GetName() final {
@@ -208,7 +209,7 @@ class PGIRBuilderFuncGenerator
   }
 
   bool IsStrict() final {
-    return pg_func_strict_;
+    return is_strict_;
   }
 
   bool GenerateCode(gpcodegen::GpCodegenUtils* codegen_utils,
@@ -290,7 +291,7 @@ class PGIRBuilderFuncGenerator
     irb->CreateStore(
         codegen_utils->GetConstant<bool>(true),
         llvm_isnull_ptr);
-    llvm::Value* zero_value = codegen_utils->GetConstant<ReturnType>(0);
+    llvm::Value* llvm_zero = codegen_utils->GetConstant<ReturnType>(0);
     irb->CreateBr(set_llvm_out_value_block);
 
     // set_llvm_out_value_block
@@ -299,7 +300,7 @@ class PGIRBuilderFuncGenerator
     irb->SetInsertPoint(set_llvm_out_value_block);
     llvm::PHINode* llvm_out_value_phinode = irb->CreatePHI(
         codegen_utils->GetType<ReturnType>(), 2);
-    llvm_out_value_phinode->addIncoming(zero_value,
+    llvm_out_value_phinode->addIncoming(llvm_zero,
                                         null_argument_block);
     llvm_out_value_phinode->addIncoming(llvm_func_tmp_value,
                                         func_generation_last_block);
@@ -312,7 +313,7 @@ class PGIRBuilderFuncGenerator
   int pg_func_oid_;
   std::string pg_func_name_;
   IRBuilderFuncPtrType func_ptr_;
-  bool pg_func_strict_;
+  bool is_strict_;
 };
 
 /**
@@ -334,18 +335,18 @@ class PGGenericFuncGenerator : public  PGFuncGeneratorInterface {
    * @param func_ptr            function pointer to static function
    * @param check_null_func_ptr function pointer to static function that
    *                            generates code for nullity checks
-   * @param pg_func_strict      records if function is strict
+   * @param is_strict           Records if built-in function is strict
    **/
   PGGenericFuncGenerator(int pg_func_oid,
                          const std::string& pg_func_name,
                          PGFuncGeneratorFn func_ptr,
                          PGCheckNullFuncGeneratorFn check_null_func_ptr,
-                         bool pg_func_strict)
+                         bool is_strict)
   : pg_func_oid_(pg_func_oid),
     pg_func_name_(pg_func_name),
     func_ptr_(func_ptr),
     check_null_func_ptr_(check_null_func_ptr),
-    pg_func_strict_(pg_func_strict) {
+    is_strict_(is_strict) {
   }
 
   std::string GetName() final {
@@ -357,7 +358,7 @@ class PGGenericFuncGenerator : public  PGFuncGeneratorInterface {
   }
 
   bool IsStrict() final {
-    return pg_func_strict_;
+    return is_strict_;
   }
 
   bool GenerateCode(gpcodegen::GpCodegenUtils* codegen_utils,
@@ -399,48 +400,51 @@ class PGGenericFuncGenerator : public  PGFuncGeneratorInterface {
     // The generation of functions's code along with the set of llvm_out
     // value happens after the if...else statements for both scenarios.
     if (!IsStrict()) {
-      // If function is not strict then we have to generate code that examines
-      // if there are NULL arguments and acts accordingly.
-      assert(nullptr != check_null_func_ptr_);
-      // Block that is the entry point to generated code that examine if there
-      // are NULL arguments
-      llvm::BasicBlock* non_strict_logic_entry_block = codegen_utils->
-          CreateBasicBlock("non_strict_logic_entry_block",
-                           pg_func_info.llvm_main_func);
-      irb->CreateBr(non_strict_logic_entry_block);
+      if (nullptr != check_null_func_ptr_) {
+        // Block that is the entry point to generated code that examine if there
+        // are NULL arguments
+        llvm::BasicBlock* non_strict_logic_entry_block = codegen_utils->
+            CreateBasicBlock("non_strict_logic_entry_block",
+                             pg_func_info.llvm_main_func);
+        irb->CreateBr(non_strict_logic_entry_block);
 
-      // non_strict_logic_entry_block
-      // -------------------------
-      // Generate check for NULL arguments logic
-      irb->SetInsertPoint(non_strict_logic_entry_block);
-      // This variable will tell us if we set the llvm_out_value during
-      // the check for NULL attributes.
-      llvm::Value* llvm_is_set_ptr = irb->CreateAlloca(
-          codegen_utils->GetType<bool>(), nullptr, "llvm_is_set_ptr");
-      // Initially, set it to false
-      irb->CreateStore(codegen_utils->GetConstant<bool>(false),
-                       llvm_is_set_ptr);
-      // Pointer to the temporary value of llvm_out_value after check for NULLs
-      llvm::Value* llvm_check_null_value_ptr = irb->CreateAlloca(
-          codegen_utils->GetType<Datum>(), nullptr,
-          "llvm_check_null_value_ptr");
-      // Invoke CheckNulls function
-      this->check_null_func_ptr_(codegen_utils,
-                                 pg_processed_func_info,
-                                 llvm_check_null_value_ptr,
-                                 llvm_isnull_ptr,
-                                 llvm_is_set_ptr);
-      // Keep track of the last created block during the check for NULL
-      // attributes. This will be used as an incoming edge to the phi node.
-      null_argument_block = irb->GetInsertBlock();
-      // Temporary value of llvm_out_value after check for NULLs
-      llvm_check_null_tmp_value =
-          irb->CreateLoad(llvm_check_null_value_ptr);
-      assert(llvm_check_null_tmp_value->getType() ==
-    		  codegen_utils->GetType<ReturnType>());
-      irb->CreateCondBr(irb->CreateLoad(llvm_is_set_ptr),
-                        set_llvm_out_value_block /* true */,
-                        generate_function_block /* false */);
+        // non_strict_logic_entry_block
+        // -------------------------
+        // Generate check for NULL arguments logic
+        irb->SetInsertPoint(non_strict_logic_entry_block);
+        // This variable will tell us if we set the llvm_out_value during
+        // the check for NULL attributes.
+        llvm::Value* llvm_is_set_ptr = irb->CreateAlloca(
+            codegen_utils->GetType<bool>(), nullptr, "llvm_is_set_ptr");
+        // Initially, set it to false
+        irb->CreateStore(codegen_utils->GetConstant<bool>(false),
+                         llvm_is_set_ptr);
+        // Pointer to the temporary value of llvm_out_value after check for NULLs
+        llvm::Value* llvm_check_null_value_ptr = irb->CreateAlloca(
+            codegen_utils->GetType<Datum>(), nullptr,
+            "llvm_check_null_value_ptr");
+        // Invoke CheckNulls function
+        this->check_null_func_ptr_(codegen_utils,
+                                   pg_processed_func_info,
+                                   llvm_check_null_value_ptr,
+                                   llvm_isnull_ptr,
+                                   llvm_is_set_ptr);
+        // Keep track of the last created block during the check for NULL
+        // attributes. This will be used as an incoming edge to the phi node.
+        null_argument_block = irb->GetInsertBlock();
+        // Temporary value of llvm_out_value after check for NULLs
+        llvm_check_null_tmp_value =
+            irb->CreateLoad(llvm_check_null_value_ptr);
+        assert(llvm_check_null_tmp_value->getType() ==
+            codegen_utils->GetType<ReturnType>());
+        irb->CreateCondBr(irb->CreateLoad(llvm_is_set_ptr),
+                          set_llvm_out_value_block /* true */,
+                          generate_function_block /* false */);
+      } else {
+        // check_null_func_ptr_ is null, so we do not need to generate logic
+        // for examining if there are null arguments.
+        irb->CreateBr(generate_function_block);
+      }
     } else {
       // Block that will be the entry point of the implementation of argument
       // checks for strict built-in functions.
@@ -499,10 +503,18 @@ class PGGenericFuncGenerator : public  PGFuncGeneratorInterface {
     // ------------------------
     // Create the phi node and set the value of llvm_out_value accordingly
     irb->SetInsertPoint(set_llvm_out_value_block);
-    llvm::PHINode* llvm_out_value_phinode = irb->CreatePHI(
-        codegen_utils->GetType<ReturnType>(), 2);
-    llvm_out_value_phinode->addIncoming(llvm_check_null_tmp_value,
-                                        null_argument_block);
+    llvm::PHINode* llvm_out_value_phinode;
+    if (IsStrict() || nullptr != check_null_func_ptr_) {
+      // we do not generate null_argument_block for non-strict functions
+      // where check_null_func_ptr_ == nullptr
+      llvm_out_value_phinode = irb->CreatePHI(
+          codegen_utils->GetType<ReturnType>(), 2);
+      llvm_out_value_phinode->addIncoming(llvm_check_null_tmp_value,
+                                          null_argument_block);
+    } else {
+      llvm_out_value_phinode = irb->CreatePHI(
+                codegen_utils->GetType<ReturnType>(), 1);
+    }
     llvm_out_value_phinode->addIncoming(llvm_func_generation_tmp_value,
                                         func_generation_last_block);
     *llvm_out_value = llvm_out_value_phinode;
@@ -514,7 +526,7 @@ class PGGenericFuncGenerator : public  PGFuncGeneratorInterface {
   const std::string& pg_func_name_;
   PGFuncGeneratorFn func_ptr_;
   PGCheckNullFuncGeneratorFn check_null_func_ptr_;
-  bool pg_func_strict_;
+  bool is_strict_;
 };
 
 
