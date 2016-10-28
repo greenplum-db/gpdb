@@ -419,7 +419,7 @@ class PGGenericFuncGenerator : public  PGFuncGeneratorInterface {
         // Initially, set it to false
         irb->CreateStore(codegen_utils->GetConstant<bool>(false),
                          llvm_is_set_ptr);
-        // Pointer to the temporary value of llvm_out_value after check for NULLs
+        // Pointer to temporary value of llvm_out_value after check for NULLs
         llvm::Value* llvm_check_null_value_ptr = irb->CreateAlloca(
             codegen_utils->GetType<Datum>(), nullptr,
             "llvm_check_null_value_ptr");
@@ -427,8 +427,8 @@ class PGGenericFuncGenerator : public  PGFuncGeneratorInterface {
         this->check_null_func_ptr_(codegen_utils,
                                    pg_processed_func_info,
                                    llvm_check_null_value_ptr,
-                                   llvm_isnull_ptr,
-                                   llvm_is_set_ptr);
+                                   llvm_is_set_ptr,
+                                   llvm_isnull_ptr);
         // Keep track of the last created block during the check for NULL
         // attributes. This will be used as an incoming edge to the phi node.
         null_argument_block = irb->GetInsertBlock();
