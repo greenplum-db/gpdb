@@ -144,7 +144,7 @@ main(int argc, char **argv)
 	int num_retries = 20;
 	int transition_timeout = 3600;  /* 1 hour */
 	
-	char opt;
+	int opt;
 
 	char msgBuffer[SEGMENT_MSG_BUF_SIZE];
 	char *msg = NULL;
