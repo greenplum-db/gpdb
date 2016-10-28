@@ -318,7 +318,7 @@ main(int argc, char **argv)
 	}
 
 	 /* check for errors while building the message */
-	if ( msg == NULL )
+	if (msg == NULL || msgLen >= sizeof(msgBuffer))
 	{
 		return TRANS_ERRCODE_ERROR_READING_INPUT;
 	}
