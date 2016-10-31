@@ -684,7 +684,7 @@ where
 order by
 	s_name;select  'tpch21',
 	s_name, 
-	count(distinct(l1.l_orderkey||l1.l_linenumber)) as numwait 
+	count(distinct(l1.l_orderkey::text||l1.l_linenumber::text)) as numwait 
 from 
 	supplier, 
 	orders, 
@@ -1526,7 +1526,7 @@ where
 order by
 	s_name;select  'tpch21',
 	s_name, 
-	count(distinct(l1.l_orderkey||l1.l_linenumber)) as numwait 
+	count(distinct(l1.l_orderkey::text||l1.l_linenumber::text)) as numwait 
 from 
 	supplier, 
 	orders, 
@@ -2367,7 +2367,7 @@ where
 order by
 	s_name;select  'tpch21',
 	s_name, 
-	count(distinct(l1.l_orderkey||l1.l_linenumber)) as numwait 
+	count(distinct(l1.l_orderkey::text||l1.l_linenumber::text)) as numwait 
 from 
 	supplier, 
 	orders, 

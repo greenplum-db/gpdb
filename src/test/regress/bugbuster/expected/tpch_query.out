@@ -2022,7 +2022,7 @@ order by
 (6 rows)
 
 	s_name, 
-	count(distinct(l1.l_orderkey||l1.l_linenumber)) as numwait 
+	count(distinct(l1.l_orderkey::text||l1.l_linenumber::text)) as numwait 
 from 
 	supplier, 
 	orders, 
@@ -4808,7 +4808,7 @@ order by
 (6 rows)
 
 	s_name, 
-	count(distinct(l1.l_orderkey||l1.l_linenumber)) as numwait 
+	count(distinct(l1.l_orderkey::text||l1.l_linenumber::text)) as numwait 
 from 
 	supplier, 
 	orders, 
@@ -7594,7 +7594,7 @@ order by
 (6 rows)
 
 	s_name, 
-	count(distinct(l1.l_orderkey||l1.l_linenumber)) as numwait 
+	count(distinct(l1.l_orderkey::text||l1.l_linenumber::text)) as numwait 
 from 
 	supplier, 
 	orders, 
