@@ -155,8 +155,8 @@ NOTICE:  CREATE TABLE will create implicit sequence "co_crtb_with_strg_dir_and_c
  a32    | date                        |                                                                                  | plain    | zlib             | 1                 | 1048576    | 
  a33    | real                        |                                                                                  | plain    | zlib             | 1                 | 1048576    | 
  a34    | money                       |                                                                                  | plain    | zlib             | 1                 | 32768      | 
- a35    | cidr                        |                                                                                  | plain    | rle_type         | 1                 | 65536      | 
- a36    | inet                        |                                                                                  | plain    | zlib             | 1                 | 1048576    | 
+ a35    | cidr                        |                                                                                  | main     | rle_type         | 1                 | 65536      | 
+ a36    | inet                        |                                                                                  | main     | zlib             | 1                 | 1048576    | 
  a37    | time without time zone      |                                                                                  | plain    | zlib             | 1                 | 1048576    | 
  a38    | text                        |                                                                                  | extended | zlib             | 1                 | 32768      | 
  a39    | bit(1)                      |                                                                                  | extended | rle_type         | 1                 | 65536      | 
@@ -420,8 +420,8 @@ NOTICE:  CREATE TABLE will create partition "co_cr_sub_partzlib8192_1_uncompr_1_
  a32    | date                        |                                                                       | plain    | zlib             | 1                 | 8192       | 
  a33    | real                        |                                                                       | plain    | zlib             | 1                 | 8192       | 
  a34    | money                       |                                                                       | plain    | zlib             | 1                 | 8192       | 
- a35    | cidr                        |                                                                       | plain    | zlib             | 1                 | 8192       | 
- a36    | inet                        |                                                                       | plain    | zlib             | 1                 | 8192       | 
+ a35    | cidr                        |                                                                       | main     | zlib             | 1                 | 8192       | 
+ a36    | inet                        |                                                                       | main     | zlib             | 1                 | 8192       | 
  a37    | time without time zone      |                                                                       | plain    | zlib             | 1                 | 8192       | 
  a38    | text                        |                                                                       | extended | zlib             | 1                 | 8192       | 
  a39    | bit(1)                      |                                                                       | extended | zlib             | 1                 | 8192       | 
@@ -546,8 +546,8 @@ NOTICE:  CREATE TABLE will create partition "co_cr_sub_partzlib8192_1_1_prt_new_
  a32    | date                        |                                                                       | plain    | none             | 0                 | 32768      | 
  a33    | real                        |                                                                       | plain    | none             | 0                 | 32768      | 
  a34    | money                       |                                                                       | plain    | none             | 0                 | 32768      | 
- a35    | cidr                        |                                                                       | plain    | none             | 0                 | 32768      | 
- a36    | inet                        |                                                                       | plain    | none             | 0                 | 32768      | 
+ a35    | cidr                        |                                                                       | main     | none             | 0                 | 32768      | 
+ a36    | inet                        |                                                                       | main     | none             | 0                 | 32768      | 
  a37    | time without time zone      |                                                                       | plain    | none             | 0                 | 32768      | 
  a38    | text                        |                                                                       | extended | none             | 0                 | 32768      | 
  a39    | bit(1)                      |                                                                       | extended | none             | 0                 | 32768      | 
@@ -611,8 +611,8 @@ NOTICE:  CREATE TABLE will create partition "co_cr_sub_partzlib8192_1_1_prt_df_p
  a32    | date                        |                                                                       | plain    | none             | 0                 | 32768      | 
  a33    | real                        |                                                                       | plain    | none             | 0                 | 32768      | 
  a34    | money                       |                                                                       | plain    | none             | 0                 | 32768      | 
- a35    | cidr                        |                                                                       | plain    | none             | 0                 | 32768      | 
- a36    | inet                        |                                                                       | plain    | none             | 0                 | 32768      | 
+ a35    | cidr                        |                                                                       | main     | none             | 0                 | 32768      | 
+ a36    | inet                        |                                                                       | main     | none             | 0                 | 32768      | 
  a37    | time without time zone      |                                                                       | plain    | none             | 0                 | 32768      | 
  a38    | text                        |                                                                       | extended | none             | 0                 | 32768      | 
  a39    | bit(1)                      |                                                                       | extended | none             | 0                 | 32768      | 
@@ -687,8 +687,8 @@ NOTICE:  exchanged partition "sp1" of partition for rank 1 of relation "co_cr_su
  a32    | date                        |                                                                            | plain    | zlib             | 1                 | 32768      | 
  a33    | real                        |                                                                            | plain    | zlib             | 1                 | 32768      | 
  a34    | money                       |                                                                            | plain    | zlib             | 1                 | 32768      | 
- a35    | cidr                        |                                                                            | plain    | zlib             | 1                 | 32768      | 
- a36    | inet                        |                                                                            | plain    | zlib             | 1                 | 32768      | 
+ a35    | cidr                        |                                                                            | main     | zlib             | 1                 | 32768      | 
+ a36    | inet                        |                                                                            | main     | zlib             | 1                 | 32768      | 
  a37    | time without time zone      |                                                                            | plain    | zlib             | 1                 | 32768      | 
  a38    | text                        |                                                                            | extended | zlib             | 1                 | 32768      | 
  a39    | bit(1)                      |                                                                            | extended | zlib             | 1                 | 32768      | 
@@ -887,8 +887,8 @@ NOTICE:  CREATE TABLE will create partition "co_cr_sub_partzlib8192_1_2_uncompr_
  a32    | date                        |                                                                         | plain    | zlib             | 1                 | 8192       | 
  a33    | real                        |                                                                         | plain    | zlib             | 1                 | 8192       | 
  a34    | money                       |                                                                         | plain    | zlib             | 1                 | 8192       | 
- a35    | cidr                        |                                                                         | plain    | zlib             | 1                 | 8192       | 
- a36    | inet                        |                                                                         | plain    | zlib             | 1                 | 8192       | 
+ a35    | cidr                        |                                                                         | main     | zlib             | 1                 | 8192       | 
+ a36    | inet                        |                                                                         | main     | zlib             | 1                 | 8192       | 
  a37    | time without time zone      |                                                                         | plain    | zlib             | 1                 | 8192       | 
  a38    | text                        |                                                                         | extended | zlib             | 1                 | 8192       | 
  a39    | bit(1)                      |                                                                         | extended | zlib             | 1                 | 8192       | 
@@ -1016,8 +1016,8 @@ NOTICE:  CREATE TABLE will create partition "co_cr_sub_partzlib8192_1_2_1_prt_ne
  a32    | date                        |                                                                         | plain    | none             | 0                 | 32768      | 
  a33    | real                        |                                                                         | plain    | none             | 0                 | 32768      | 
  a34    | money                       |                                                                         | plain    | none             | 0                 | 32768      | 
- a35    | cidr                        |                                                                         | plain    | none             | 0                 | 32768      | 
- a36    | inet                        |                                                                         | plain    | none             | 0                 | 32768      | 
+ a35    | cidr                        |                                                                         | main     | none             | 0                 | 32768      | 
+ a36    | inet                        |                                                                         | main     | none             | 0                 | 32768      | 
  a37    | time without time zone      |                                                                         | plain    | none             | 0                 | 32768      | 
  a38    | text                        |                                                                         | extended | none             | 0                 | 32768      | 
  a39    | bit(1)                      |                                                                         | extended | none             | 0                 | 32768      | 
@@ -1084,8 +1084,8 @@ NOTICE:  CREATE TABLE will create partition "co_cr_sub_partzlib8192_1_2_1_prt_df
  a32    | date                        |                                                                         | plain    | none             | 0                 | 32768      | 
  a33    | real                        |                                                                         | plain    | none             | 0                 | 32768      | 
  a34    | money                       |                                                                         | plain    | none             | 0                 | 32768      | 
- a35    | cidr                        |                                                                         | plain    | none             | 0                 | 32768      | 
- a36    | inet                        |                                                                         | plain    | none             | 0                 | 32768      | 
+ a35    | cidr                        |                                                                         | main     | none             | 0                 | 32768      | 
+ a36    | inet                        |                                                                         | main     | none             | 0                 | 32768      | 
  a37    | time without time zone      |                                                                         | plain    | none             | 0                 | 32768      | 
  a38    | text                        |                                                                         | extended | none             | 0                 | 32768      | 
  a39    | bit(1)                      |                                                                         | extended | none             | 0                 | 32768      | 
@@ -1159,8 +1159,8 @@ Alter table co_cr_sub_partzlib8192_1_2 alter partition p2 exchange partition FOR
  a32    | date                        |                                                                              | plain    | zlib             | 1                 | 32768      | 
  a33    | real                        |                                                                              | plain    | zlib             | 1                 | 32768      | 
  a34    | money                       |                                                                              | plain    | zlib             | 1                 | 32768      | 
- a35    | cidr                        |                                                                              | plain    | zlib             | 1                 | 32768      | 
- a36    | inet                        |                                                                              | plain    | zlib             | 1                 | 32768      | 
+ a35    | cidr                        |                                                                              | main     | zlib             | 1                 | 32768      | 
+ a36    | inet                        |                                                                              | main     | zlib             | 1                 | 32768      | 
  a37    | time without time zone      |                                                                              | plain    | zlib             | 1                 | 32768      | 
  a38    | text                        |                                                                              | extended | zlib             | 1                 | 32768      | 
  a39    | bit(1)                      |                                                                              | extended | zlib             | 1                 | 32768      | 
@@ -1219,8 +1219,8 @@ NOTICE:  CREATE TABLE will create partition "co_cr_sub_partzlib8192_1_2_1_prt_p1
  a32    | date                        |                                                                         | plain    | zlib             | 1                 | 8192       | 
  a33    | real                        |                                                                         | plain    | zlib             | 1                 | 8192       | 
  a34    | money                       |                                                                         | plain    | zlib             | 1                 | 8192       | 
- a35    | cidr                        |                                                                         | plain    | zlib             | 1                 | 8192       | 
- a36    | inet                        |                                                                         | plain    | zlib             | 1                 | 8192       | 
+ a35    | cidr                        |                                                                         | main     | zlib             | 1                 | 8192       | 
+ a36    | inet                        |                                                                         | main     | zlib             | 1                 | 8192       | 
  a37    | time without time zone      |                                                                         | plain    | zlib             | 1                 | 8192       | 
  a38    | text                        |                                                                         | extended | zlib             | 1                 | 8192       | 
  a39    | bit(1)                      |                                                                         | extended | zlib             | 1                 | 8192       | 
@@ -1440,8 +1440,8 @@ NOTICE:  CREATE TABLE will create partition "co_wt_sub_partrle_type8192_1_uncomp
  a32    | date                        |                                                                           | plain    | rle_type         | 1                 | 8192       | 
  a33    | real                        |                                                                           | plain    | rle_type         | 1                 | 8192       | 
  a34    | money                       |                                                                           | plain    | rle_type         | 1                 | 8192       | 
- a35    | cidr                        |                                                                           | plain    | rle_type         | 1                 | 8192       | 
- a36    | inet                        |                                                                           | plain    | rle_type         | 1                 | 8192       | 
+ a35    | cidr                        |                                                                           | main     | rle_type         | 1                 | 8192       | 
+ a36    | inet                        |                                                                           | main     | rle_type         | 1                 | 8192       | 
  a37    | time without time zone      |                                                                           | plain    | rle_type         | 1                 | 8192       | 
  a38    | text                        |                                                                           | extended | rle_type         | 1                 | 8192       | 
  a39    | bit(1)                      |                                                                           | extended | rle_type         | 1                 | 8192       | 
@@ -1563,8 +1563,8 @@ NOTICE:  CREATE TABLE will create partition "co_wt_sub_partrle_type8192_1_1_prt_
  a32    | date                        |                                                                           | plain    | zlib             | 1                 | 32768      | 
  a33    | real                        |                                                                           | plain    | zlib             | 1                 | 32768      | 
  a34    | money                       |                                                                           | plain    | zlib             | 1                 | 32768      | 
- a35    | cidr                        |                                                                           | plain    | zlib             | 1                 | 32768      | 
- a36    | inet                        |                                                                           | plain    | zlib             | 1                 | 32768      | 
+ a35    | cidr                        |                                                                           | main     | zlib             | 1                 | 32768      | 
+ a36    | inet                        |                                                                           | main     | zlib             | 1                 | 32768      | 
  a37    | time without time zone      |                                                                           | plain    | zlib             | 1                 | 32768      | 
  a38    | text                        |                                                                           | extended | zlib             | 1                 | 32768      | 
  a39    | bit(1)                      |                                                                           | extended | zlib             | 1                 | 32768      | 
@@ -1628,8 +1628,8 @@ NOTICE:  CREATE TABLE will create partition "co_wt_sub_partrle_type8192_1_1_prt_
  a32    | date                        |                                                                           | plain    | rle_type         | 1                 | 8192       | 
  a33    | real                        |                                                                           | plain    | rle_type         | 1                 | 8192       | 
  a34    | money                       |                                                                           | plain    | rle_type         | 1                 | 8192       | 
- a35    | cidr                        |                                                                           | plain    | rle_type         | 1                 | 8192       | 
- a36    | inet                        |                                                                           | plain    | rle_type         | 1                 | 8192       | 
+ a35    | cidr                        |                                                                           | main     | rle_type         | 1                 | 8192       | 
+ a36    | inet                        |                                                                           | main     | rle_type         | 1                 | 8192       | 
  a37    | time without time zone      |                                                                           | plain    | rle_type         | 1                 | 8192       | 
  a38    | text                        |                                                                           | extended | rle_type         | 1                 | 8192       | 
  a39    | bit(1)                      |                                                                           | extended | rle_type         | 1                 | 8192       | 
@@ -1704,8 +1704,8 @@ NOTICE:  exchanged partition "sp1" of partition for rank 1 of relation "co_wt_su
  a32    | date                        |                                                                                | plain    | zlib             | 1                 | 32768      | 
  a33    | real                        |                                                                                | plain    | zlib             | 1                 | 32768      | 
  a34    | money                       |                                                                                | plain    | zlib             | 1                 | 32768      | 
- a35    | cidr                        |                                                                                | plain    | zlib             | 1                 | 32768      | 
- a36    | inet                        |                                                                                | plain    | zlib             | 1                 | 32768      | 
+ a35    | cidr                        |                                                                                | main     | zlib             | 1                 | 32768      | 
+ a36    | inet                        |                                                                                | main     | zlib             | 1                 | 32768      | 
  a37    | time without time zone      |                                                                                | plain    | zlib             | 1                 | 32768      | 
  a38    | text                        |                                                                                | extended | zlib             | 1                 | 32768      | 
  a39    | bit(1)                      |                                                                                | extended | zlib             | 1                 | 32768      | 
@@ -1901,8 +1901,8 @@ NOTICE:  CREATE TABLE will create partition "co_wt_sub_partrle_type8192_1_2_unco
  a32    | date                        |                                                                             | plain    | rle_type         | 1                 | 8192       | 
  a33    | real                        |                                                                             | plain    | rle_type         | 1                 | 8192       | 
  a34    | money                       |                                                                             | plain    | rle_type         | 1                 | 8192       | 
- a35    | cidr                        |                                                                             | plain    | rle_type         | 1                 | 8192       | 
- a36    | inet                        |                                                                             | plain    | rle_type         | 1                 | 8192       | 
+ a35    | cidr                        |                                                                             | main     | rle_type         | 1                 | 8192       | 
+ a36    | inet                        |                                                                             | main     | rle_type         | 1                 | 8192       | 
  a37    | time without time zone      |                                                                             | plain    | rle_type         | 1                 | 8192       | 
  a38    | text                        |                                                                             | extended | rle_type         | 1                 | 8192       | 
  a39    | bit(1)                      |                                                                             | extended | rle_type         | 1                 | 8192       | 
@@ -2027,8 +2027,8 @@ NOTICE:  CREATE TABLE will create partition "co_wt_sub_partrle_type8192_1_2_1_pr
  a32    | date                        |                                                                             | plain    | rle_type         | 1                 | 8192       | 
  a33    | real                        |                                                                             | plain    | rle_type         | 1                 | 8192       | 
  a34    | money                       |                                                                             | plain    | rle_type         | 1                 | 8192       | 
- a35    | cidr                        |                                                                             | plain    | rle_type         | 1                 | 8192       | 
- a36    | inet                        |                                                                             | plain    | rle_type         | 1                 | 8192       | 
+ a35    | cidr                        |                                                                             | main     | rle_type         | 1                 | 8192       | 
+ a36    | inet                        |                                                                             | main     | rle_type         | 1                 | 8192       | 
  a37    | time without time zone      |                                                                             | plain    | rle_type         | 1                 | 8192       | 
  a38    | text                        |                                                                             | extended | rle_type         | 1                 | 8192       | 
  a39    | bit(1)                      |                                                                             | extended | rle_type         | 1                 | 8192       | 
@@ -2095,8 +2095,8 @@ NOTICE:  CREATE TABLE will create partition "co_wt_sub_partrle_type8192_1_2_1_pr
  a32    | date                        |                                                                             | plain    | rle_type         | 1                 | 8192       | 
  a33    | real                        |                                                                             | plain    | rle_type         | 1                 | 8192       | 
  a34    | money                       |                                                                             | plain    | rle_type         | 1                 | 8192       | 
- a35    | cidr                        |                                                                             | plain    | rle_type         | 1                 | 8192       | 
- a36    | inet                        |                                                                             | plain    | rle_type         | 1                 | 8192       | 
+ a35    | cidr                        |                                                                             | main     | rle_type         | 1                 | 8192       | 
+ a36    | inet                        |                                                                             | main     | rle_type         | 1                 | 8192       | 
  a37    | time without time zone      |                                                                             | plain    | rle_type         | 1                 | 8192       | 
  a38    | text                        |                                                                             | extended | rle_type         | 1                 | 8192       | 
  a39    | bit(1)                      |                                                                             | extended | rle_type         | 1                 | 8192       | 
@@ -2170,8 +2170,8 @@ Alter table co_wt_sub_partrle_type8192_1_2 alter partition p1 exchange partition
  a32    | date                        |                                                                                  | plain    | zlib             | 1                 | 32768      | 
  a33    | real                        |                                                                                  | plain    | zlib             | 1                 | 32768      | 
  a34    | money                       |                                                                                  | plain    | zlib             | 1                 | 32768      | 
- a35    | cidr                        |                                                                                  | plain    | zlib             | 1                 | 32768      | 
- a36    | inet                        |                                                                                  | plain    | zlib             | 1                 | 32768      | 
+ a35    | cidr                        |                                                                                  | main     | zlib             | 1                 | 32768      | 
+ a36    | inet                        |                                                                                  | main     | zlib             | 1                 | 32768      | 
  a37    | time without time zone      |                                                                                  | plain    | zlib             | 1                 | 32768      | 
  a38    | text                        |                                                                                  | extended | zlib             | 1                 | 32768      | 
  a39    | bit(1)                      |                                                                                  | extended | zlib             | 1                 | 32768      | 
@@ -2230,8 +2230,8 @@ NOTICE:  CREATE TABLE will create partition "co_wt_sub_partrle_type8192_1_2_1_pr
  a32    | date                        |                                                                             | plain    | rle_type         | 1                 | 8192       | 
  a33    | real                        |                                                                             | plain    | rle_type         | 1                 | 8192       | 
  a34    | money                       |                                                                             | plain    | rle_type         | 1                 | 8192       | 
- a35    | cidr                        |                                                                             | plain    | rle_type         | 1                 | 8192       | 
- a36    | inet                        |                                                                             | plain    | rle_type         | 1                 | 8192       | 
+ a35    | cidr                        |                                                                             | main     | rle_type         | 1                 | 8192       | 
+ a36    | inet                        |                                                                             | main     | rle_type         | 1                 | 8192       | 
  a37    | time without time zone      |                                                                             | plain    | rle_type         | 1                 | 8192       | 
  a38    | text                        |                                                                             | extended | rle_type         | 1                 | 8192       | 
  a39    | bit(1)                      |                                                                             | extended | rle_type         | 1                 | 8192       | 
@@ -2451,8 +2451,8 @@ NOTICE:  CREATE TABLE will create partition "ao_wt_sub_partzlib8192_5_uncompr_1_
  a32    | date                        |                                                                       | plain    | 
  a33    | real                        |                                                                       | plain    | 
  a34    | money                       |                                                                       | plain    | 
- a35    | cidr                        |                                                                       | plain    | 
- a36    | inet                        |                                                                       | plain    | 
+ a35    | cidr                        |                                                                       | main     | 
+ a36    | inet                        |                                                                       | main     | 
  a37    | time without time zone      |                                                                       | plain    | 
  a38    | text                        |                                                                       | extended | 
  a39    | bit(1)                      |                                                                       | extended | 
@@ -2577,8 +2577,8 @@ NOTICE:  CREATE TABLE will create partition "ao_wt_sub_partzlib8192_5_1_prt_new_
  a32    | date                        |                                                                       | plain    | zlib             | 1                 | 32768      | 
  a33    | real                        |                                                                       | plain    | zlib             | 1                 | 32768      | 
  a34    | money                       |                                                                       | plain    | zlib             | 1                 | 32768      | 
- a35    | cidr                        |                                                                       | plain    | zlib             | 1                 | 32768      | 
- a36    | inet                        |                                                                       | plain    | zlib             | 1                 | 32768      | 
+ a35    | cidr                        |                                                                       | main     | zlib             | 1                 | 32768      | 
+ a36    | inet                        |                                                                       | main     | zlib             | 1                 | 32768      | 
  a37    | time without time zone      |                                                                       | plain    | zlib             | 1                 | 32768      | 
  a38    | text                        |                                                                       | extended | zlib             | 1                 | 32768      | 
  a39    | bit(1)                      |                                                                       | extended | zlib             | 1                 | 32768      | 
@@ -2642,8 +2642,8 @@ NOTICE:  CREATE TABLE will create partition "ao_wt_sub_partzlib8192_5_1_prt_df_p
  a32    | date                        |                                                                       | plain    | 
  a33    | real                        |                                                                       | plain    | 
  a34    | money                       |                                                                       | plain    | 
- a35    | cidr                        |                                                                       | plain    | 
- a36    | inet                        |                                                                       | plain    | 
+ a35    | cidr                        |                                                                       | main     | 
+ a36    | inet                        |                                                                       | main     | 
  a37    | time without time zone      |                                                                       | plain    | 
  a38    | text                        |                                                                       | extended | 
  a39    | bit(1)                      |                                                                       | extended | 
@@ -2721,8 +2721,8 @@ NOTICE:  exchanged partition "sp1" of partition for rank 1 of relation "ao_wt_su
  a32    | date                        |                                                                            | plain    | 
  a33    | real                        |                                                                            | plain    | 
  a34    | money                       |                                                                            | plain    | 
- a35    | cidr                        |                                                                            | plain    | 
- a36    | inet                        |                                                                            | plain    | 
+ a35    | cidr                        |                                                                            | main     | 
+ a36    | inet                        |                                                                            | main     | 
  a37    | time without time zone      |                                                                            | plain    | 
  a38    | text                        |                                                                            | extended | 
  a39    | bit(1)                      |                                                                            | extended | 
@@ -2921,8 +2921,8 @@ NOTICE:  CREATE TABLE will create partition "ao_wt_sub_partzlib8192_5_2_uncompr_
  a32    | date                        |                                                                         | plain    | 
  a33    | real                        |                                                                         | plain    | 
  a34    | money                       |                                                                         | plain    | 
- a35    | cidr                        |                                                                         | plain    | 
- a36    | inet                        |                                                                         | plain    | 
+ a35    | cidr                        |                                                                         | main     | 
+ a36    | inet                        |                                                                         | main     | 
  a37    | time without time zone      |                                                                         | plain    | 
  a38    | text                        |                                                                         | extended | 
  a39    | bit(1)                      |                                                                         | extended | 
@@ -3050,8 +3050,8 @@ NOTICE:  CREATE TABLE will create partition "ao_wt_sub_partzlib8192_5_2_1_prt_ne
  a32    | date                        |                                                                         | plain    | 
  a33    | real                        |                                                                         | plain    | 
  a34    | money                       |                                                                         | plain    | 
- a35    | cidr                        |                                                                         | plain    | 
- a36    | inet                        |                                                                         | plain    | 
+ a35    | cidr                        |                                                                         | main     | 
+ a36    | inet                        |                                                                         | main     | 
  a37    | time without time zone      |                                                                         | plain    | 
  a38    | text                        |                                                                         | extended | 
  a39    | bit(1)                      |                                                                         | extended | 
@@ -3121,8 +3121,8 @@ NOTICE:  CREATE TABLE will create partition "ao_wt_sub_partzlib8192_5_2_1_prt_df
  a32    | date                        |                                                                         | plain    | 
  a33    | real                        |                                                                         | plain    | 
  a34    | money                       |                                                                         | plain    | 
- a35    | cidr                        |                                                                         | plain    | 
- a36    | inet                        |                                                                         | plain    | 
+ a35    | cidr                        |                                                                         | main     | 
+ a36    | inet                        |                                                                         | main     | 
  a37    | time without time zone      |                                                                         | plain    | 
  a38    | text                        |                                                                         | extended | 
  a39    | bit(1)                      |                                                                         | extended | 
@@ -3199,8 +3199,8 @@ Alter table ao_wt_sub_partzlib8192_5_2 alter partition p1 exchange partition FOR
  a32    | date                        |                                                                              | plain    | 
  a33    | real                        |                                                                              | plain    | 
  a34    | money                       |                                                                              | plain    | 
- a35    | cidr                        |                                                                              | plain    | 
- a36    | inet                        |                                                                              | plain    | 
+ a35    | cidr                        |                                                                              | main     | 
+ a36    | inet                        |                                                                              | main     | 
  a37    | time without time zone      |                                                                              | plain    | 
  a38    | text                        |                                                                              | extended | 
  a39    | bit(1)                      |                                                                              | extended | 
@@ -3262,8 +3262,8 @@ NOTICE:  CREATE TABLE will create partition "ao_wt_sub_partzlib8192_5_2_1_prt_p2
  a32    | date                        |                                                                         | plain    | 
  a33    | real                        |                                                                         | plain    | 
  a34    | money                       |                                                                         | plain    | 
- a35    | cidr                        |                                                                         | plain    | 
- a36    | inet                        |                                                                         | plain    | 
+ a35    | cidr                        |                                                                         | main     | 
+ a36    | inet                        |                                                                         | main     | 
  a37    | time without time zone      |                                                                         | plain    | 
  a38    | text                        |                                                                         | extended | 
  a39    | bit(1)                      |                                                                         | extended | 
@@ -3410,8 +3410,8 @@ NOTICE:  CREATE TABLE will create implicit sequence "ao_crtb_with_row_zlib_8192_
  a32    | date                        |                                                                           | plain    | 
  a33    | real                        |                                                                           | plain    | 
  a34    | money                       |                                                                           | plain    | 
- a35    | cidr                        |                                                                           | plain    | 
- a36    | inet                        |                                                                           | plain    | 
+ a35    | cidr                        |                                                                           | main     | 
+ a36    | inet                        |                                                                           | main     | 
  a37    | time without time zone      |                                                                           | plain    | 
  a38    | text                        |                                                                           | extended | 
  a39    | bit(1)                      |                                                                           | extended | 

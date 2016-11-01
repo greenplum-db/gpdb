@@ -3349,8 +3349,8 @@ NOTICE:  CREATE TABLE will create partition "co_compr_part_2_1_prt_5_2_prt_sp2" 
  a32    | date                        |                                                              | plain    | rle_type         | 4                 | 32768      | 
  a33    | real                        |                                                              | plain    | rle_type         | 4                 | 32768      | 
  a34    | money                       |                                                              | plain    | rle_type         | 4                 | 32768      | 
- a35    | cidr                        |                                                              | plain    | rle_type         | 4                 | 32768      | 
- a36    | inet                        |                                                              | plain    | rle_type         | 4                 | 32768      | 
+ a35    | cidr                        |                                                              | main     | rle_type         | 4                 | 32768      | 
+ a36    | inet                        |                                                              | main     | rle_type         | 4                 | 32768      | 
  a37    | time without time zone      |                                                              | plain    | rle_type         | 4                 | 32768      | 
  a38    | text                        |                                                              | extended | rle_type         | 4                 | 32768      | 
  a39    | bit(1)                      |                                                              | extended | rle_type         | 4                 | 32768      | 
@@ -3421,8 +3421,8 @@ NOTICE:  CREATE TABLE will create partition "co_compr_part_2_1_prt_new_p_2_prt_d
  a32    | date                        |                                                              | plain    | none             | 0                 | 32768      | 
  a33    | real                        |                                                              | plain    | none             | 0                 | 32768      | 
  a34    | money                       |                                                              | plain    | none             | 0                 | 32768      | 
- a35    | cidr                        |                                                              | plain    | none             | 0                 | 32768      | 
- a36    | inet                        |                                                              | plain    | none             | 0                 | 32768      | 
+ a35    | cidr                        |                                                              | main     | none             | 0                 | 32768      | 
+ a36    | inet                        |                                                              | main     | none             | 0                 | 32768      | 
  a37    | time without time zone      |                                                              | plain    | none             | 0                 | 32768      | 
  a38    | text                        |                                                              | extended | none             | 0                 | 32768      | 
  a39    | bit(1)                      |                                                              | extended | none             | 0                 | 32768      | 
@@ -3483,8 +3483,8 @@ NOTICE:  CREATE TABLE will create partition "co_compr_part_2_1_prt_df_p_2_prt_df
  a32    | date                        |                                                              | plain    | none             | 0                 | 32768      | 
  a33    | real                        |                                                              | plain    | none             | 0                 | 32768      | 
  a34    | money                       |                                                              | plain    | none             | 0                 | 32768      | 
- a35    | cidr                        |                                                              | plain    | none             | 0                 | 32768      | 
- a36    | inet                        |                                                              | plain    | none             | 0                 | 32768      | 
+ a35    | cidr                        |                                                              | main     | none             | 0                 | 32768      | 
+ a36    | inet                        |                                                              | main     | none             | 0                 | 32768      | 
  a37    | time without time zone      |                                                              | plain    | none             | 0                 | 32768      | 
  a38    | text                        |                                                              | extended | none             | 0                 | 32768      | 
  a39    | bit(1)                      |                                                              | extended | none             | 0                 | 32768      | 
@@ -4069,8 +4069,8 @@ CREATE INDEX co_compr_zlib_with_idx_btree ON co_compr_zlib_with(a9);
  a32    | date                        |                                                                 | plain    | zlib             | 1                 | 32768      | 
  a33    | real                        |                                                                 | plain    | zlib             | 1                 | 32768      | 
  a34    | money                       |                                                                 | plain    | zlib             | 1                 | 32768      | 
- a35    | cidr                        |                                                                 | plain    | zlib             | 1                 | 32768      | 
- a36    | inet                        |                                                                 | plain    | zlib             | 1                 | 32768      | 
+ a35    | cidr                        |                                                                 | main     | zlib             | 1                 | 32768      | 
+ a36    | inet                        |                                                                 | main     | zlib             | 1                 | 32768      | 
  a37    | time without time zone      |                                                                 | plain    | zlib             | 1                 | 32768      | 
  a38    | text                        |                                                                 | extended | zlib             | 1                 | 32768      | 
  a39    | bit(1)                      |                                                                 | extended | zlib             | 1                 | 32768      | 
@@ -4228,8 +4228,8 @@ CREATE INDEX co_compr_zlib_with_idx_btree ON co_compr_zlib_with(a9);
  a32    | date                        |                                                                 | plain    | zlib             | 1                 | 32768      | 
  a33    | real                        |                                                                 | plain    | zlib             | 1                 | 32768      | 
  a34    | money                       |                                                                 | plain    | zlib             | 1                 | 32768      | 
- a35    | cidr                        |                                                                 | plain    | zlib             | 1                 | 32768      | 
- a36    | inet                        |                                                                 | plain    | zlib             | 1                 | 32768      | 
+ a35    | cidr                        |                                                                 | main     | zlib             | 1                 | 32768      | 
+ a36    | inet                        |                                                                 | main     | zlib             | 1                 | 32768      | 
  a37    | time without time zone      |                                                                 | plain    | zlib             | 1                 | 32768      | 
  a38    | text                        |                                                                 | extended | zlib             | 1                 | 32768      | 
  a39    | bit(1)                      |                                                                 | extended | zlib             | 1                 | 32768      | 
