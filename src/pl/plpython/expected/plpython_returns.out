@@ -878,6 +878,180 @@ SELECT * FROM test_return_circle(E'"test\\0"');
 ERROR:  could not convert Python object into cstring: Python string representation appears to contain null bytes
 CONTEXT:  while creating return value
 PL/Python function "test_return_circle"
+--
+-- Case 5: Return array of integers
+--
+-- Test returning arrays of fixed-width elements from PL/Python functions
+--
+-- From Python None
+SELECT test_return_array_int('None');
+ test_return_array_int 
+-----------------------
+ 
+(1 row)
+
+SELECT * FROM test_return_array_int('None');
+ test_return_array_int 
+-----------------------
+ 
+(1 row)
+
+-- From Python empty list
+SELECT test_return_array_int('[]');
+ test_return_array_int 
+-----------------------
+ {}
+(1 row)
+
+SELECT * FROM test_return_array_int('[]');
+test_return_array_int 
+-----------------------
+{}
+(1 row)
+
+-- From Python non-empty list
+SELECT test_return_array_int('[1,2]');
+ test_return_array_int 
+-----------------------
+ {1,2}
+(1 row)
+
+SELECT * FROM test_return_array_int('[1,2]');
+ test_return_array_int 
+-----------------------
+ {1,2}
+(1 row)
+
+-- From Python multiple lists
+SELECT test_return_array_int('[[1,2,3],[4,5,6]]');
+ test_return_array_int 
+-----------------------
+ {{1,2,3},{4,5,6}}
+(1 row)
+
+SELECT * FROM test_return_array_int('[[1,2,3],[4,5,6]]');
+ test_return_array_int 
+-----------------------
+ {{1,2,3},{4,5,6}}
+(1 row)
+
+-- Error conditions
+-- Multi-dimensional array with non-fixed dimension sizes
+SELECT test_return_array_int('[[1,2,3],[1,2]]');
+ERROR:  Multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 2 while expected 3 (plpython.c:4865)
+CONTEXT:  while creating return value
+PL/Python function "test_return_array_int"
+SELECT * FROM test_return_array_int('[[1,2,3],[1,2]]');
+ERROR:  Multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 2 while expected 3 (plpython.c:4865)
+CONTEXT:  while creating return value
+PL/Python function "test_return_array_int"
+-- Multi-dimensional array with mix of arrays and atomic elements
+SELECT test_return_array_int('[[1,2,3],[1,[2,3],[4,5]]]');
+ERROR:  invalid input syntax for integer: "[2, 3]"
+CONTEXT:  while creating return value
+PL/Python function "test_return_array_int"
+SELECT * FROM test_return_array_int('[[1,2,3],[1,[2,3],[4,5]]]');
+ERROR:  invalid input syntax for integer: "[2, 3]"
+CONTEXT:  while creating return value
+PL/Python function "test_return_array_int"
+-- Multi-dimensional array with missing dimensions
+SELECT test_return_array_int('[[1,2,3],None,[4,5,6]]');
+ERROR:  Multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length -1 while expected 3 (plpython.c:4865)
+DETAIL:  TypeError: object of type 'NoneType' has no len()
+CONTEXT:  while creating return value
+PL/Python function "test_return_array_int"
+SELECT * FROM test_return_array_int('[[1,2,3],None,[4,5,6]]');
+ERROR:  Multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length -1 while expected 3 (plpython.c:4865)
+DETAIL:  TypeError: object of type 'NoneType' has no len()
+CONTEXT:  while creating return value
+PL/Python function "test_return_array_int"
+--
+-- Case 5: Return array of texts
+--
+-- Test returning arrays of variable-width elements from PL/Python functions
+--
+-- From Python None
+SELECT test_return_array_text('None');
+ test_return_array_text 
+------------------------
+ 
+(1 row)
+
+SELECT * FROM test_return_array_text('None');
+ test_return_array_text 
+------------------------
+ 
+(1 row)
+
+-- From Python empty list
+SELECT test_return_array_text('[]');
+ test_return_array_text 
+------------------------
+ {}
+(1 row)
+
+SELECT * FROM test_return_array_text('[]');
+test_return_array_text 
+------------------------
+{}
+(1 row)
+
+-- From Python non-empty list
+SELECT test_return_array_text('["abc","def"]');
+ test_return_array_text 
+------------------------
+ {abc,def}
+(1 row)
+
+SELECT * FROM test_return_array_text('["abc","def"]');
+ test_return_array_text 
+------------------------
+ {abc,def}
+(1 row)
+
+-- From Python multiple lists
+SELECT test_return_array_text('[["a","bcd","ef"],[None,"gh","ijklm"]]');
+    test_return_array_text    
+------------------------------
+ {{a,bcd,ef},{NULL,gh,ijklm}}
+(1 row)
+
+SELECT * FROM test_return_array_text('[["a","bcd","ef"],[None,"gh","ijklm"]]');
+    test_return_array_text    
+------------------------------
+ {{a,bcd,ef},{NULL,gh,ijklm}}
+(1 row)
+
+-- Error conditions
+-- Multi-dimensional array with non-fixed dimension sizes
+SELECT test_return_array_text('[["a","bcd","ef"],[None,"gh","ijklm","ERROR"]]');
+ERROR:  Multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 4 while expected 3 (plpython.c:4865)
+CONTEXT:  while creating return value
+PL/Python function "test_return_array_text"
+SELECT * FROM test_return_array_text('[["a","bcd","ef"],[None,"gh","ijklm","ERROR"]]');
+ERROR:  Multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 4 while expected 3 (plpython.c:4865)
+CONTEXT:  while creating return value
+PL/Python function "test_return_array_text"
+-- Multi-dimensional array with mix of arrays and atomic elements
+SELECT test_return_array_text('[[["a"],"b"],["c",["d","e"]]]');
+ERROR:  Multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 2 while expected 1 (plpython.c:4865)
+CONTEXT:  while creating return value
+PL/Python function "test_return_array_text"
+SELECT * FROM test_return_array_text('[[["a"],"b"],["c",["d","e"]]]');
+ERROR:  Multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 2 while expected 1 (plpython.c:4865)
+CONTEXT:  while creating return value
+PL/Python function "test_return_array_text"
+-- Multi-dimensional array with missing dimensions
+SELECT test_return_array_text('[["abc","def"],None,["ghij","k"]]');
+ERROR:  Multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length -1 while expected 2 (plpython.c:4865)
+DETAIL:  TypeError: object of type 'NoneType' has no len()
+CONTEXT:  while creating return value
+PL/Python function "test_return_array_text"
+SELECT * FROM test_return_array_text('[["abc","def"],None,["ghij","k"]]');
+ERROR:  Multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length -1 while expected 2 (plpython.c:4865)
+DETAIL:  TypeError: object of type 'NoneType' has no len()
+CONTEXT:  while creating return value
+PL/Python function "test_return_array_text"
 -- ===================================================
 -- TEST 2:  RETURN VALUE TESTING - SETOF scalar values
 -- ===================================================

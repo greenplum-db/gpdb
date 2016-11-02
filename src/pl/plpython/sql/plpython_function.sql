@@ -576,6 +576,9 @@ CREATE FUNCTION test_type_conversion_float8(x float8) returns float8 AS $$ retur
 CREATE FUNCTION test_type_conversion_numeric(x numeric) returns numeric AS $$ return x $$ language plpythonu;
 CREATE FUNCTION test_type_conversion_text(x text) returns text AS $$ return x $$ language plpythonu;
 CREATE FUNCTION test_type_conversion_bytea(x bytea) returns bytea AS $$ return x $$ language plpythonu;
+CREATE FUNCTION test_type_conversion_array_int4(x int4[]) RETURNS int4[] AS $$ return x $$ LANGUAGE plpythonu;
+CREATE FUNCTION test_type_conversion_array_numeric(x numeric[]) returns numeric[] AS $$ return x $$ language plpythonu;
+CREATE FUNCTION test_type_conversion_array_text(x text[]) RETURNS text[] AS $$ return x $$ LANGUAGE plpythonu;
 CREATE FUNCTION test_type_marshal() returns bytea AS $$ 
 import marshal
 return marshal.dumps('hello world')
@@ -608,6 +611,16 @@ RETURNS bytea AS $$
 $$ language plpythonu;
 CREATE FUNCTION test_return_circle(s text) 
 RETURNS circle AS $$
+  exec('y = ' + s)
+  return y
+$$ language plpythonu;
+CREATE FUNCTION test_return_array_int(s text) 
+RETURNS int[] AS $$
+  exec('y = ' + s)
+  return y
+$$ language plpythonu;
+CREATE FUNCTION test_return_array_text(s text) 
+RETURNS text[] AS $$
   exec('y = ' + s)
   return y
 $$ language plpythonu;
