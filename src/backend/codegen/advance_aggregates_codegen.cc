@@ -113,8 +113,8 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
         CreateBasicBlock("strict_check_for_null_args_block",
                          pg_func_info->llvm_main_func);
     // Block that checks if transvalue has been set
-    llvm::BasicBlock* strict_check_noTransValue_block = codegen_utils->
-        CreateBasicBlock("strict_check_noTransValue_block",
+    llvm::BasicBlock* strict_check_notransValue_block = codegen_utils->
+        CreateBasicBlock("strict_check_notransValue_block",
                          pg_func_info->llvm_main_func);
     // Block that contains instructions that will be executed when function
     // is strict and transvalue has not be set before.
@@ -142,12 +142,12 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
                         1 /* do not examine transvalue*/,
                         strict_check_for_null_args_block,
                         continue_advance_aggregate_block,
-                        strict_check_noTransValue_block);
+                        strict_check_notransValue_block);
 
     // strict_check_noTransValue_block
     // ------------------------------
     // Check if transvalue has been set
-    irb->SetInsertPoint(strict_check_noTransValue_block);
+    irb->SetInsertPoint(strict_check_notransValue_block);
     irb->CreateCondBr(irb->CreateLoad(llvm_pergroupstate_noTransValue_ptr),
                       strict_set_transvalue_block /*true*/,
                       strict_check_transvalueisNull_block /*false*/);
@@ -176,7 +176,8 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
         {irb->CreateLoad(llvm_pergroupstate_transValue_ptr),
             irb->CreateLoad(llvm_arg1_ptr),
             codegen_utils->GetConstant<bool>(peraggstate->transtypeByVal),
-            codegen_utils->GetConstant<int>((int) peraggstate->transtypeLen),
+            codegen_utils->GetConstant<int>(
+                static_cast<int>(peraggstate->transtypeLen)),
             llvm_mem_manager_arg});
     irb->CreateStore(newVal, llvm_pergroupstate_transValue_ptr);
     // }}} newVal = datumCopyWithMemManager(...)
@@ -228,6 +229,11 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
                    llvm_pergroupstate_transValue_ptr);
   // We do not need to set *transValueIsNull = fcinfo->isnull, since
   // transValueIsNull is passed as argument to pg_func_gen->GenerateCode
+
+  // We do not implement the code below, because we do not support
+  // pass-by-ref datatypes
+  // if (!transtypeByVal &&
+  //         DatumGetPointer(newVal) != DatumGetPointer(transValue))
 
   // if (!fcinfo->isnull)
   //     *noTransvalue = false;
