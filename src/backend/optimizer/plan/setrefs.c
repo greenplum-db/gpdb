@@ -1201,22 +1201,7 @@ fix_scan_expr(PlannerGlobal *glob, Node *node, int rtoffset)
 	context.glob = glob;
 	context.rtoffset = rtoffset;
 
-	if (rtoffset != 0)
-	{
-		return fix_scan_expr_mutator(node, &context);
-	}
-	else
-	{
-		/*
-		 * If rtoffset == 0, we don't need to change any Vars, which makes
-		 * it OK to just scribble on the input node tree instead of copying
-		 * (since the only change, filling in any unset opfuncid fields,
-		 * is harmless).  This saves just enough cycles to be noticeable on
-		 * trivial queries.
-		 */
-		(void) fix_scan_expr_walker(node, &context);
-		return node;
-	}
+	return fix_scan_expr_mutator(node, &context);
 }
 
 static Node *
