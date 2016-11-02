@@ -136,7 +136,7 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceTransitionFunction(
     // --------------------------------
     // Checks if there is a NULL argument. If yes then go to
     // null_argument_block; generate_function_block otherwise.
-    //For a strict transfn, nothing happens when there's a NULL input;
+    // For a strict transfn, nothing happens when there's a NULL input;
     // we just keep the prior transValue.
     GenerateStrictLogic(codegen_utils, *pg_func_info,
                         1 /* do not examine transvalue*/,
