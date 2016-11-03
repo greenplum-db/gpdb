@@ -350,6 +350,7 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 				ScanState *scanState = (ScanState *) result;
 				ProjectionInfo *projInfo = result->ps_ProjInfo;
 				if (NULL != scanState &&
+				    scanState->tableType == TableTypeHeap &&
 				    NULL != projInfo &&
 				    projInfo->pi_isVarList &&
 				    NULL != projInfo->pi_targetlist)
