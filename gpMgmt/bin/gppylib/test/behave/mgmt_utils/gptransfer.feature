@@ -1982,7 +1982,7 @@ Feature: gptransfer tests
         And there is a file "input_file" with tables "gptest.public.employee_1_prt_boys, gptest.public.employee_1_prt_boys"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -a"
         Then gptransfer should return a return code of 2
-        And gptransfer should print Partition column attributes are different to stdout
+        And gptransfer should print Number of partition columns is different to stdout
 
     @partition_transfer
     @prt_transfer_26

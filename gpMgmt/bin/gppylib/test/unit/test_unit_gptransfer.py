@@ -37,7 +37,7 @@ class GpTransfer(GpTestCase):
             patch("gppylib.commands.unix.FileDirExists.remote", return_value=True)
         ])
 
-    # We have a GIGANTIC class that uses 31 arguments, so pre-setting this
+        # We have a GIGANTIC class that uses 31 arguments, so pre-setting this
         # here
         self.GpTransferCommand_args = dict(
             name='foo',
@@ -307,8 +307,6 @@ class GpTransfer(GpTestCase):
             self.subject.GpTransfer(Mock(**options), [])
 
         log_messages = [args[0][0] for args in self.subject.logger.error.call_args_list]
-        #self.assertIn("One of the subpartition table is a default partition", log_messages[0])
-        #self.assertIn("Partition value is different in the partition hierarchy between", log_messages[1])
         self.assertIn("List partition value is different between", log_messages[0])
         self.assertIn("Partition value is different in the partition hierarchy between", log_messages[1])
 
