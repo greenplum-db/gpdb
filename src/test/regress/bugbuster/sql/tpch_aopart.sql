@@ -299,7 +299,7 @@ select 'TPCH QUERY 20',s_name,s_address
         where g.l_partkey = ps_partkey and g.l_suppkey = ps_suppkey and ps_availqty > 0.5*g.qty_sum and ps_partkey in (select p_partkey
               from aopart_part where p_name like 'forest%' )) and s_nationkey = n_nationkey and n_name = 'CANADA' order by s_name;
 
-select 'TPCH QUERY 21',s_name, count( distinct (l1.l_orderkey||l1.l_linenumber)) as numwait
+select 'TPCH QUERY 21',s_name, count( distinct (l1.l_orderkey::text || l1.l_linenumber::text)) as numwait
     from aopart_supplier, aopart_orders, aopart_nation, aopart_lineitem l1 left join aopart_lineitem l2 on (l2.l_orderkey = l1.l_orderkey
          and l2.l_suppkey <> l1.l_suppkey) left join (
         select l3.l_orderkey,l3.l_suppkey

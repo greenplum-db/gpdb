@@ -1567,7 +1567,7 @@ select 'TPCH QUERY 20',s_name,s_address
  TPCH QUERY 20 | Supplier#000000013        | HK71HQyWoqRWOX8GI FpgAifW,2PoH
 (1 row)
 
-select 'TPCH QUERY 21',s_name, count( distinct (l1.l_orderkey||l1.l_linenumber)) as numwait
+select 'TPCH QUERY 21',s_name, count( distinct (l1.l_orderkey::text || l1.l_linenumber::text)) as numwait
     from aopart_supplier, aopart_orders, aopart_nation, aopart_lineitem l1 left join aopart_lineitem l2 on (l2.l_orderkey = l1.l_orderkey
          and l2.l_suppkey <> l1.l_suppkey) left join (
         select l3.l_orderkey,l3.l_suppkey
