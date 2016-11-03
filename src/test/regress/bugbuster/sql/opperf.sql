@@ -36,7 +36,7 @@ select * from opperfscale;
 select max(l_partkey) from lineitem;
 -- Scan test2:
 -- select several columns from lineitem
-select max(length(l_linenumber) + length(l_linestatus) + length(l_comment))
+select max(length(l_linenumber::text) + length(l_linestatus) + length(l_comment))
 from lineitem;
 
 -- Sort test 1: 
