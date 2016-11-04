@@ -942,7 +942,7 @@ ProcessUtility(Node *parsetree,
 							{
 								case RELKIND_VIEW:
 								case RELKIND_COMPOSITE_TYPE:
-									Assert(relStorage = RELSTORAGE_VIRTUAL);
+									Assert(relStorage == RELSTORAGE_VIRTUAL);
 									break;
 								default:
 									Assert(relStorage == RELSTORAGE_HEAP ||

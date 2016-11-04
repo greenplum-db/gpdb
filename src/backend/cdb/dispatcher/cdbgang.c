@@ -289,7 +289,7 @@ isPrimaryWriterGangAlive(void)
 	int size = primaryWriterGang->size;
 	int i = 0;
 
-	Assert(size = getgpsegmentCount());
+	Assert(size == getgpsegmentCount());
 
 	for (i = 0; i < size; i++)
 	{
