@@ -250,16 +250,22 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttr(
   // -------------------------
 
   irb->SetInsertPoint(virtual_tuple_check_block);
-  // (slot->PRIVATE_tts_flags & TTS_VIRTUAL) != 0
   llvm::Value* llvm_slot_PRIVATE_tts_flags_ptr =
       codegen_utils->GetPointerToMember(
           llvm_slot, &TupleTableSlot::PRIVATE_tts_flags);
-  llvm::Value* llvm_tuple_is_virtual = irb->CreateICmpNE(
+  // (slot->PRIVATE_tts_flags & TTS_VIRTUAL) != 0 (= TupHasVirtualTuple(slot))
+  llvm::Value* llvm_tuple_is_virtual_1 = irb->CreateICmpNE(
       irb->CreateAnd(
           irb->CreateLoad(llvm_slot_PRIVATE_tts_flags_ptr),
           codegen_utils->GetConstant(TTS_VIRTUAL)),
           codegen_utils->GetConstant(0));
-
+  // slot->PRIVATE_tts_nvalid >= attnum
+  llvm::Value* llvm_tuple_is_virtual_2 = irb->
+      CreateICmpSGE(irb->CreateLoad(llvm_slot_PRIVATE_tts_nvalid_ptr),
+                    llvm_attnum_arg);
+  // TupHasVirtualTuple(slot) && slot->PRIVATE_tts_nvalid >= attnum
+  llvm::Value* llvm_tuple_is_virtual = irb->CreateAnd(llvm_tuple_is_virtual_1,
+                                                      llvm_tuple_is_virtual_2);
   // If it is indeed a virtual tuple, we must have already deformed this tuple,
   // so go straight to returning the contained values
   irb->CreateCondBr(
