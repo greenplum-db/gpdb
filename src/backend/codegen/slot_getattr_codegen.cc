@@ -213,9 +213,9 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttr(
 
   irb->SetInsertPoint(entry_block);
 #ifdef CODEGEN_DEBUG
-  codegen_utils->CreateElog(
-      DEBUG1,
-      "Codegen'ed slot_getattr called!");
+  EXPAND_CREATE_ELOG(codegen_utils,
+                     DEBUG1,
+                     "Codegen'ed slot_getattr called!");
 #endif
   // Retrieve slot's PRIVATE variables
   llvm::Value* llvm_slot_PRIVATE_tts_isnull /* bool* */ =
@@ -701,10 +701,10 @@ bool SlotGetAttrCodegen::GenerateSlotGetAttr(
   llvm_error->addIncoming(codegen_utils->GetConstant("tuple check failed"),
       heap_tuple_check_block);
 
-  codegen_utils->CreateElog(
-      DEBUG1,
-      "Falling back to regular slot_getattr, reason = %s",
-      llvm_error);
+  EXPAND_CREATE_ELOG(codegen_utils,
+                     DEBUG1,
+                     "Falling back to regular slot_getattr, reason = %s",
+                     llvm_error);
 
   codegen_utils->CreateFallback<SlotGetAttrFn>(
       codegen_utils->GetOrRegisterExternalFunction(slot_getattr_regular,

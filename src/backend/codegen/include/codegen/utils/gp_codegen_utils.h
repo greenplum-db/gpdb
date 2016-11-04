@@ -25,6 +25,11 @@ extern "C" {
 #include "utils/elog.h"
 }
 
+#define EXPAND_CREATE_ELOG(codegen_utils, elevel, ...)  \
+  codegen_utils->CreateElog(__FILE__, __LINE__, PG_FUNCNAME_MACRO, \
+                            elevel, __VA_ARGS__)
+
+
 namespace gpcodegen {
 
 class GpCodegenUtils : public CodegenUtils {
@@ -50,18 +55,21 @@ class GpCodegenUtils : public CodegenUtils {
    *          straight out of the compiled module back to the last location in GPDB
    *          that setjump was called.
    *
+   * @param file_name   name of the file from which CreateElog is called
+   * @param lineno      number of the line in the file from which CreateElog is called
+   * @param func_name   name of the function that calls CreateElog
    * @param llvm_elevel llvm::Value pointer to an integer representing the error level
    * @param llvm_fmt    llvm::Value pointer to the format string
    * @tparam args       llvm::Value pointers to arguments to elog()
    */
   template<typename... V>
   void CreateElog(
-      llvm::Value* llvm_elevel,
-      llvm::Value* llvm_fmt,
+      const char* file_name,
+      int lineno,
+      const char* func_name,
+      int elevel,
+      const char* fmt,
       const V ... args ) {
-    assert(NULL != llvm_elevel);
-    assert(NULL != llvm_fmt);
-
     llvm::Function* llvm_elog_start =
         GetOrRegisterExternalFunction(elog_start, "elog_start");
     llvm::Function* llvm_elog_finish =
@@ -69,38 +77,16 @@ class GpCodegenUtils : public CodegenUtils {
 
     ir_builder()->CreateCall(
         llvm_elog_start, {
-            GetConstant(""),   // Filename
-            GetConstant(0),    // line number
-            GetConstant("")    // function name
-        });
+            GetConstant(file_name),   // Filename
+            GetConstant(lineno),    // line number
+            GetConstant(func_name)    // function name
+    });
     ir_builder()->CreateCall(
         llvm_elog_finish, {
-            llvm_elevel,
-            llvm_fmt,
+            GetConstant(elevel),
+            GetConstant(fmt),
             args...
-        });
-  }
-
-  /*
-   * @brief Create LLVM instructions to call elog_start() and elog_finish().
-   *        A convenient alternative that automatically converts an integer elevel and
-   *        format string to LLVM constants.
-   *
-   * @warning This method does not create instructions for any sort of exception
-   *          handling. In the case that elog throws an error, the code with jump
-   *          straight out of the compiled module back to the last location in GPDB
-   *          that setjump was called.
-   *
-   * @param elevel Integer representing the error level
-   * @param fmt    Format string
-   * @tparam args  llvm::Value pointers to arguments to elog()
-   */
-  template<typename... V>
-    void CreateElog(
-        int elevel,
-        const char* fmt,
-        const V ... args ) {
-    CreateElog(GetConstant(elevel), GetConstant(fmt), args...);
+    });
   }
 
   /**

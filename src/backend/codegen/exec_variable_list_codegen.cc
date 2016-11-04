@@ -164,9 +164,9 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
   // -----------
   irb->SetInsertPoint(entry_block);
 #ifdef CODEGEN_DEBUG
-  codegen_utils->CreateElog(
-      DEBUG1,
-      "Codegen'ed ExecVariableList called!");
+  EXPAND_CREATE_ELOG(codegen_utils,
+                     DEBUG1,
+                     "Codegen'ed ExecVariableList called!");
 #endif
   irb->CreateBr(slot_check_block);
 
@@ -249,9 +249,9 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
   // Fall back Block
   // ---------------
   irb->SetInsertPoint(fallback_block);
-  codegen_utils->CreateElog(
-      DEBUG1,
-      "Falling back to regular ExecVariableList");
+  EXPAND_CREATE_ELOG(codegen_utils,
+                     DEBUG1,
+                     "Falling back to regular ExecVariableList");
 
   codegen_utils->CreateFallback<ExecVariableListFn>(
       codegen_utils->GetOrRegisterExternalFunction(ExecVariableList,

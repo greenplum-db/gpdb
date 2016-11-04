@@ -321,7 +321,8 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
   irb->SetInsertPoint(entry_block);
 
 #ifdef CODEGEN_DEBUG
-  codegen_utils->CreateElog(DEBUG1, "Codegen'ed advance_aggregates called!");
+  EXPAND_CREATE_ELOG(codegen_utils, DEBUG1,
+                     "Codegen'ed advance_aggregates called!");
 #endif
 
   // Compare aggstate given during code generation and the one passed
@@ -446,8 +447,8 @@ bool AdvanceAggregatesCodegen::GenerateAdvanceAggregates(
   // ---------------
   irb->SetInsertPoint(error_aggstate_block);
 
-  codegen_utils->CreateElog(ERROR, "Codegened advance_aggregates: "
-      "use of different aggstate.");
+  EXPAND_CREATE_ELOG(codegen_utils, ERROR, "Codegened advance_aggregates: "
+                     "use of different aggstate.");
 
   irb->CreateRetVoid();
 
