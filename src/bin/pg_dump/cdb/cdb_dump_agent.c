@@ -313,6 +313,18 @@ static int createDDBoostDir(ddp_conn_desc_t ddp_conn, char *ddboost_storage_unit
 static int updateArchiveWithDDFile(ArchiveHandle *AH, char *g_pszDDBoostFile, const char *g_pszDDBoostDir);
 #endif
 
+/*Commvault variables */
+static char *commvault_proxy_host = NULL,
+                *commvault_proxy_port = NULL,
+                *commvault_clientid = NULL,
+                *commvault_jobid = NULL,
+                *commvault_appid = NULL,
+                *commvault_apptype = NULL,
+                *commvault_jobtoken = NULL,
+                *commvault_logfile = NULL,
+                *commvault_iomode = NULL;
+                *commvault_debuglevel = NULL;
+
 /*
  * If GPDB version is 4.3, pg_proc has prodataaccess column.
  */
@@ -525,6 +537,17 @@ main(int argc, char **argv)
 		{"netbackup-schedule", required_argument, NULL, 13},
 		{"netbackup-block-size", required_argument, NULL, 14},
 		{"netbackup-keyword", required_argument, NULL, 15},
+                {"cv-proxy-host", required_argument, NULL, 19},
+                {"cv-proxy-port", required_argument, NULL, 20},
+                {"cv-jobtoken", required_argument, NULL, 21},
+                {"cv-appid", required_argument, NULL, 22},
+                {"cv-jobid", required_argument, NULL, 23},
+                {"cv-apptype", required_argument, NULL, 24},
+                {"cv-logfile", required_argument, NULL, 25},
+                {"cv-clientid", required_argument, NULL, 26},
+                {"cv-iomode", required_argument, NULL, 27},
+                {"cv-debuglvl", required_argument, NULL, 28},
+
 		{"no-lock", no_argument, NULL, 16},
 		{"schema-file", required_argument, NULL, 17},
 		{NULL, 0, NULL, 0}
@@ -785,6 +808,39 @@ main(int argc, char **argv)
 				break;
 			case 15:
 				break;
+                        /* Begin Commvault inputs */
+                        case 19:
+                                commvault_proxy_host = pg_strdup(optarg);
+                                break;
+                        case 20:
+                                commvault_proxy_port = pg_strdup(optarg);
+                                break;
+                        case 21:
+                                commvault_jobtoken = pg_strdup(optarg);
+                                break;
+                        case 22:
+                                commvault_appid = pg_strdup(optarg);
+                                break;
+                        case 23:
+                                commvault_jobid = pg_strdup(optarg);
+                                break;
+                        case 24:
+                                commvault_apptype = pg_strdup(optarg);
+                                break;
+                        case 25:
+                                commvault_logfile = pg_strdup(optarg);
+                                break;
+                        case 26:
+                                commvault_clientid = pg_strdup(optarg);
+                                break;
+                        case 27:
+                                commvault_iomode = pg_strdup(optarg);
+                                break;
+                        case 28:
+                                commvault_debuglevel = pg_strdup(optarg);
+                                break;
+                        /* End Commvault Inputs */
+
 			case 16:
 				no_lock = true;
 				break;

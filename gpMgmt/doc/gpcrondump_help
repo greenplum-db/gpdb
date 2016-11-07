@@ -30,7 +30,11 @@ gpcrondump -x database_name
      --netbackup-policy <netbackup_policy> 
      --netbackup-schedule <netbackup_schedule> 
      [--netbackup-block-size <size> ] 
-     [--netbackup-keyword <keyword> ] } }
+     [--netbackup-keyword <keyword> ] } |
+     { [--cv-clientname <commvault_client_name>
+     --cv-instance <commvault_client_instance>
+     --cv-proxy-host <commvault_proxy_host>
+     [--cv-proxy-port <commvault_proxy_host_port>] } }
 
 gpcrondump --ddboost-host <ddboost_hostname>
      [--ddboost-host ddboost_hostname ... ]
@@ -91,6 +95,15 @@ restoring with NetBackup.
 
 
 **********************
+Commvault
+**********************
+
+gpcrondump can schedule Commvault backup and restore operations with
+Commvault's OpenBackup client. See the Commvault documentation for
+information on backing up and restoring with Commvault.
+
+
+**********************
 Return Codes
 **********************
 
@@ -129,14 +142,14 @@ send email.
 Limitations
 **********************
 
-* NetBackup is not compatible with DDBoost. Both NetBackup and DDBoost 
-  cannot be used in a single back up operation. 
+* Commvault, NetBackup, and DDBoost are not compatible with one another.
+  Only one of the services can be used in a single back up operation. 
 
 * For incremental back up sets, a full backup and associated incremental 
   backups, the backup set must be on a single device. For example, a 
   backup set must all be on a file system. The backup set cannot have some 
   backups on the local file system and others on a Data Domain system or a 
-  NetBackup system. 
+  NetBackup system or a Commvault system. 
 
 
 *****************************************************
@@ -237,6 +250,34 @@ OPTIONS
  If --incremental is specified, this option is not supported. 
 
 
+--cv-clientname
+
+ The name of the Commvault distributed client to associate the backup to.
+ Commvault options are not supported if DDBoost or NetBackup options are
+ specified.
+
+
+--cv-instance
+
+ The name of the Greenplum instance configured for the Commvault client.
+ Commvault options are not supported if DDBoost or NetBackup options are
+ specified.
+
+
+--cv-proxy-host
+
+ The hostname or IP address of the Commvault client to be used as the
+ proxy for the backup. Commvault options are not supported if DDBoost
+ or NetBackup options are specified.
+
+
+--cv-proxy-port
+
+ The IP port used to communicate with Commvault services on the proxy
+ host. Default is 8400. Commvault options are not supported if DDBoost
+ or NetBackup options are specified.
+
+
 -d <master_data_directory> 
 
  The master host data directory. If not specified, the value set for 
@@ -301,8 +342,8 @@ OPTIONS
  NOTE: The -b, -c, -f, -G, -g, -R, and -u options change if --ddboost is 
  specified. See the options for details. 
 
- The DDBoost backup options are not supported if the NetBackup options 
- are specified. 
+ The DDBoost backup options are not supported if the Commvault or NetBackup
+ options are specified. 
 
 
 --ddboost-host ddboost_hostname
@@ -581,7 +622,7 @@ OPTIONS
 
  Specify the block size of data being transferred to the Symantec 
  NetBackup server. The default is 512 bytes. NetBackup options are not 
- supported if DDBoost backup options are specified.
+ supported if Commvault or DDBoost backup options are specified.
 
 
 --netbackup-keyword <keyword>
@@ -594,29 +635,29 @@ OPTIONS
  The minimum length is 1 character, and the maximum length is 100 
  characters. 
 
- NetBackup options are not supported if DDBoost backup options are 
- specified.
+ NetBackup options are not supported if Commvault or DDBoost backup
+ options are specified.
 
 
 --netbackup-service-host netbackup_server 
 
  The NetBackup master server that Greenplum Database connects to when 
- backing up to NetBackup. NetBackup options are not supported if DDBoost 
- backup options are specified. 
+ backing up to NetBackup. NetBackup options are not supported if Commvault
+ or DDBoost backup options are specified. 
 
 
 --netbackup-policy <netbackup_policy> 
 
  The name of the NetBackup policy created for backing up Greenplum 
- Database. NetBackup options are not supported if DDBoost backup options 
- are specified.. 
+ Database. NetBackup options are not supported if Commvault or DDBoost
+ backup options are specified.. 
 
 
 --netbackup-schedule <netbackup_schedule> 
 
  The name of the NetBackup schedule created for backing up Greenplum 
- Database. NetBackup options are not supported if DDBoost backup options 
- are specified. 
+ Database. NetBackup options are not supported if Commvault or DDBoost
+ backup options are specified. 
 
  
 --no-owner 
@@ -949,7 +990,15 @@ NetBackup server.
     --netbackup-policy=gpdb_cust --netbackup-schedule=gpdb_backup 
     --netbackup-block-size=1024
 
- 
+
+This command backs up the database mydatabase with Commvault distributed
+client cvgreenplum, instance prod, and Commvault backup client cvproxy
+listening on port 8410.
+
+  gpcrondump -x mydatabase --cv-clientname cvgreenplum 
+    --cv-instance prod --cv-proxy-host cvproxy --cv-proxy-port 8410
+
+
 *****************************************************
 SEE ALSO
 *****************************************************

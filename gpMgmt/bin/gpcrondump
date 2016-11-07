@@ -11,9 +11,12 @@ import socket
 import stat
 import sys
 import time
+import fcntl
+
 from datetime import datetime
 from optparse import OptionGroup
 from sets import Set
+from Queue import Queue
 
 try:
     import gpmfr
@@ -21,6 +24,8 @@ try:
     import yaml
     from collections import defaultdict
     from getpass import getpass
+
+    from gppylib.CvContext import CvContext
     from gppylib import gplog
     from gppylib import pgconf
     from gppylib import userinput
@@ -52,6 +57,9 @@ class GpCronDump(Operation):
         if args:
             logger.warn("please note that some of the arguments (%s) aren't valid and will be ignored.", args)
 
+
+
+
         sys_args = sys.argv[1:]
         self.context = Context(options)
         self.options_list = " ".join(sys_args)
@@ -74,6 +82,7 @@ class GpCronDump(Operation):
 
         # TODO: if action is 'append', wouldn't you expect a lack of input to result in [], as opposed to None?
         if not self.context.ddboost_hosts: self.context.ddboost_hosts = []
+
 
         if len(self.context.dump_databases) > 0:
             self.context.dump_database = self.context.dump_databases[0]
@@ -138,16 +147,64 @@ class GpCronDump(Operation):
             if not self.context.netbackup_schedule:
                 raise Exception("NetBackup schedule name (--netbackup-schedule) param should be provided in order to use NetBackup")
 
+        # Commvault params check
+        if self.context.cv_clientname or self.context.cv_instance or self.context.cv_proxy_host or self.context.cv_proxy_port or self.context.cv_proxy_file:
+            if self.context.cv_clientname is None or self.context.cv_instance is None:
+                raise Exception("Commvault client name (--cv-clientname) and instance name (--cv-instance) must both be provided in order to use Commvault")
+            if self.context.cv_proxy_file is not None:
+                if not (os.path.isfile(self.context.cv_proxy_file)):
+                    raise Exception("The specified Commvault proxy configuration file does not exist")
+            elif not self.context.cv_proxy_host:
+                raise Exception("Commvault proxy client (--cv-proxy-client) or configuration file (--cv-proxy-file) must be specified")
+
+        if self.context.netbackup_service_host and self.cv_clientname:
+            raise Exception("Commvault and NetBackup cannot be used together in the same backup")
+
         param_dict = {'Service Hostname':self.context.netbackup_service_host, 'Policy Name':self.context.netbackup_policy, 'Schedule Name':self.context.netbackup_schedule, 'Keyword':self.context.netbackup_keyword}
         validate_netbackup_params(param_dict)
 
-        if self.context.ddboost and self.context.netbackup_service_host:
-            raise Exception('--ddboost is not supported with NetBackup')
+        if self.context.ddboost and (self.context.netbackup_service_host or self.context.cv_clientname):
+            raise Exception('--ddboost is not supported with Commvault or NetBackup')
 
         self.replicate = options.replicate
         self.max_streams = options.max_streams
         self.quiet = options.quiet
         self.verbose = options.verbose
+        
+        # Get CV context if Commvault is being used
+        if self.context.cv_clientname is not None:
+            #-- Queue shared between main thread and CV thread
+            self.cv_context = CvContext(self.context.cv_clientname, self.context.cv_instance, self.context.cv_proxy_host, self.context.cv_proxy_port, self.context.cv_proxy_file, cv_dbname=self.context.dump_databases[0], incremental=self.context.incremental, verbose=options.verbose, debuglevel=self.context.cv_debuglvl)
+            self.orig_dump_prefix = self.context.dump_prefix
+            if self.orig_dump_prefix:
+                self.context.dump_prefix = "cv%s_%s" % (self.context.dump_databases[0], self.orig_dump_prefix)
+            else:
+                self.context.dump_prefix = "cv%s_" % self.context.dump_databases[0]
+        else:
+            self.cv_context = None
+
+        if self.cv_context is not None:
+            # Wait for CV thread to get the CV context
+            cv_context_timeout = 0
+            while cv_context_timeout < 10: # +++++ total 5 mins timeout  for getting cv context?
+                try:
+                    logger.debug('Waiting for CV backup context ...')
+                    self.cv_context.queue.get(timeout=30)
+                    break;
+                except:
+                    cv_context_timeout = cv_context_timeout+1;
+                    #-- Check if the CVBkpRstWrapper controller is Alive
+                    if self.cv_context.processHandle.poll():
+                        raise Exception('CVBkpRstWrapper is NOT Alive. Exiting gpcrondump ...')
+                        #return self.cv_context.cv_exit()
+                pass;
+            if cv_context_timeout >= 10:
+                raise Exception('Timed out. Failed to receive CV context. Exiting gpcrondump ...')
+                #return self.cv_context.cv_exit()
+            logger.info('Received CV context [clientId:%s,instanceId:%s,appId:%s,backupsetId:%s,jobId:%s,jobtoken:%s]' % (self.cv_context.cv_clientid, self.cv_context.cv_instanceid, self.cv_context.cv_appid, self.cv_context.cv_backupsetid, self.cv_context.cv_job_id, self.cv_context.cv_job_token))
+            #-- for incremental jobs get the metadata files from all the backups in the current cycle.
+            if self.context.incremental:
+                self.cv_context.get_backup_files(0,self.context.dump_databases[0])
 
         # disk space checks
         if self.context.free_space_percent and self.context.ddboost:
@@ -302,13 +359,14 @@ class GpCronDump(Operation):
         if self.context.include_schema_file or self.context.dump_schema or self.context.exclude_schema_file or self.context.exclude_dump_schema:
             self.validate_dump_schema()
 
-
         if self.context.incremental:
             self.context.generate_dump_timestamp()
-            if not self.context.netbackup_service_host:
+            if not self.context.netbackup_service_host and not self.cv_context:
                 self.context.full_dump_timestamp = get_latest_full_dump_timestamp(self.context)
-            else:
+            elif self.context.netbackup_service_host:
                 self.context.full_dump_timestamp = get_latest_full_ts_with_nbu(self.context)
+            elif self.cv_context:
+                self.context.full_dump_timestamp = get_latest_full_ts_with_cv(self.cv_context, self.context)
 
     def validate_dump_schema(self):
         if self.context.dump_schema:
@@ -739,7 +797,7 @@ class GpCronDump(Operation):
                 return 0
             if self.list_filter_tables:
                 db = self.context.dump_database
-                self._list_filter_tables(db, get_filter_file(self.context))
+                self._list_filter_tables(db, get_filter_file(self.context, self.cv_context))
                 return 0
 
             validate_current_timestamp(self.context)
@@ -775,9 +833,9 @@ class GpCronDump(Operation):
                 dirty_file = None
                 if self.context.incremental:
                     dirty_partitions = get_dirty_tables(self.context, ao_partition_list, co_partition_list, last_operation_list)
-                    if self.context.dump_prefix and get_filter_file(self.context):
-                        update_filter_file(self.context)
-                    dirty_partitions = filter_dirty_tables(self.context, dirty_partitions)
+                    if self.context.dump_prefix and get_filter_file(self.context, self.cv_context):
+                        update_filter_file(self.context, cv_context=self.cv_context)
+                    dirty_partitions = filter_dirty_tables(self.context, dirty_partitions, cv_context=self.cv_context)
                     dirty_file = write_dirty_file_to_temp(dirty_partitions)
 
                 self.generate_schema_list_file()
@@ -788,9 +846,9 @@ class GpCronDump(Operation):
                 if self.context.schema_file and not self.context.incremental:
                     self.context.include_dump_tables_file = self.generate_include_table_list_from_schema_file()
 
-                dump_outcome = DumpDatabase(self.context).run()
+                dump_outcome = DumpDatabase(self.context, self.cv_context).run()
 
-                post_dump_outcome = PostDumpDatabase(self.context, timestamp_start = dump_outcome['timestamp_start']).run()
+                post_dump_outcome = PostDumpDatabase(self.context, timestamp_start = dump_outcome['timestamp_start'], cv_context=self.cv_context).run()
 
                 if self.context.dump_stats:
                     if current_exit_status == 0:
@@ -849,7 +907,7 @@ class GpCronDump(Operation):
                         logger.info('non-zero exit status from gp_dump, skipping generation of increments file')
                     else:
                         # if this fails, it raises an exception and bombs out RC and to the screen
-                        CreateIncrementsFile(self.context).run()
+                        CreateIncrementsFile(self.context, self.cv_context).run()
                         if self.context.ddboost:
                             backup_file_with_ddboost(self.context, "increments", timestamp=self.context.full_dump_timestamp)
 
@@ -857,6 +915,12 @@ class GpCronDump(Operation):
                         if self.context.netbackup_service_host:
                             backup_file_with_nbu(self.context, "increments", timestamp=self.context.full_dump_timestamp)
                             backup_file_with_nbu(self.context, "partition_list")
+                        if self.cv_context:
+                            backup_file_with_cv(self.cv_context, self.context, "increments", timestamp=self.context.full_dump_timestamp)
+                            backup_file_with_cv(self.cv_context, self.context, "partition_list")
+
+                if self.cv_context:
+                    backup_file_with_cv(self.cv_context, self.context, path="%s/%s*%s*" % (self.context.get_backup_dir(self.context.timestamp), self.context.dump_prefix, self.context.timestamp))
 
             finally:
                 thread_stop.set()
@@ -885,6 +949,8 @@ class GpCronDump(Operation):
                     DumpGlobal(self.context, timestamp = post_dump_outcome['timestamp']).run()
                     if self.context.netbackup_service_host and self.context.netbackup_policy and self.context.netbackup_schedule:
                         backup_file_with_nbu(self.context, "global")
+                    if self.cv_context:
+                        backup_file_with_cv(self.cv_context, self.context, "global")
                 else:
                     logger.info("Skipping global dump due to issues during post-dump checks.")
 
@@ -943,6 +1009,9 @@ class GpCronDump(Operation):
             config_outcome = DumpConfig(self.context).run()
             if self.context.netbackup_service_host and self.context.netbackup_policy and self.context.netbackup_schedule:
                 backup_config_files_with_nbu(self.context)
+            
+            if self.cv_context:
+                backup_config_files_with_cv(self.cv_context, self.context)
 
             for dump_db_info in dump_db_info_list:
                 self._send_email(dump_db_info['dbname'], dump_db_info['exit_status'], dump_db_info['start_time'], dump_outcome['time_end'])
@@ -976,6 +1045,10 @@ class GpCronDump(Operation):
 
         if self.context.post_script:
             self._run_program()
+
+        if self.cv_context:
+            self.cv_context.cv_jobstatus = final_exit_status
+            self.cv_context.cv_exit()
 
         if final_exit_status == 0:
             os._exit(0)
@@ -1419,6 +1492,24 @@ def create_parser():
     incrOpt = OptionGroup(parser, "Incremental")
     incrOpt.add_option('--incremental', action='store_true', dest='incremental', default=False, help='Dump incremental backup.')
     parser.add_option_group(incrOpt)
+
+    # CommVault option(s)
+    cvOpt = OptionGroup(parser, "CommVault")
+    cvOpt.add_option('--cv-clientname', dest='cv_clientname', metavar="<Commvault client name>",
+                     help="Commvault client name")
+    cvOpt.add_option('--cv-instance', dest='cv_instance', metavar="<Greenplum instance name>",
+                     help="Greenplum instance name")
+    cvOpt.add_option('--cv-proxy-host', dest='cv_proxy_host', metavar="<Commvault proxy host name",
+                     help="Commvault proxy host name")
+    cvOpt.add_option('--cv-proxy-port', dest='cv_proxy_port', metavar="<Commvault proxy host port>",
+                     help="Commvault proxy host port")
+    cvOpt.add_option('--cv-proxy-file', dest='cv_proxy_file', metavar="<Commvault proxy config file>",
+                     help="Commvault proxy configuration file")
+    cvOpt.add_option('--cv-param-file', dest='cv_param_file', metavar="<Commvault parameter file>",
+                     help="Commvault parameter configuration file")
+    cvOpt.add_option('--cv-debuglvl', dest='cv_debuglvl', metavar="<Commvault debug level>",
+                     help="Commvault debug level")
+    parser.add_option_group(cvOpt)
 
     # NetBackup option(s)
     nbuOpt = OptionGroup(parser, "NetBackup")

@@ -93,6 +93,19 @@ static char *netbackup_schedule = NULL;
 static char *netbackup_block_size = NULL;
 static char *netbackup_keyword = NULL;
 
+/*Commvault variables */
+static char *commvault_proxy_host = NULL,
+                *commvault_proxy_port = NULL,
+                *commvault_clientid = NULL,
+                *commvault_jobid = NULL,
+                *commvault_appid = NULL,
+                *commvault_apptype = NULL,
+                *commvault_jobtoken = NULL,
+                *commvault_logfile = NULL,
+		*commvault_iomode = NULL;
+		*commvault_debuglevel = NULL;
+
+
 char		g_comment_start[10];
 char		g_comment_end[10];
 static bool bForcePassword = false;
@@ -844,6 +857,16 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 		{"netbackup-block-size", required_argument, NULL, 18},
 		{"netbackup-keyword", required_argument, NULL, 19},
 		{"schema-file", required_argument, NULL, 20},
+		{"cv-proxy-host", required_argument, NULL, 22},
+		{"cv-proxy-port", required_argument, NULL, 23},
+		{"cv-jobtoken", required_argument, NULL, 24},
+		{"cv-appid", required_argument, NULL, 25},
+		{"cv-jobid", required_argument, NULL, 26},
+		{"cv-apptype", required_argument, NULL, 27},
+		{"cv-logfile", required_argument, NULL, 28},
+		{"cv-clientid", required_argument, NULL, 29},
+		{"cv-iomode", required_argument, NULL, 30},
+		{"cv-debuglvl", required_argument, NULL, 31},
 
 		{NULL, 0, NULL, 0}
 	};
@@ -923,7 +946,6 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 		else
 			strcat(pInputOpts->pszCmdLineParms, argv[i]);
 	}
-
 
 	while ((c = getopt_long(argc, argv, "acdDE:h:in:N:oOp:RsS:t:T:U:vWxX:",
 							long_options, &optindex)) != -1)
@@ -1250,6 +1272,48 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 				netbackup_keyword = pg_strdup(optarg);
 				pInputOpts->pszPassThroughParms = addPassThroughLongParm("netbackup-keyword", netbackup_keyword, pInputOpts->pszPassThroughParms);
 				break;
+			/* Begin Commvault inputs */
+			case 22:
+				commvault_proxy_host = pg_strdup(optarg);
+				pInputOpts->pszPassThroughParms = addPassThroughLongParm("cv-proxy-host", commvault_proxy_host, pInputOpts->pszPassThroughParms);
+				break;
+			case 23:
+				commvault_proxy_port = pg_strdup(optarg);
+				pInputOpts->pszPassThroughParms = addPassThroughLongParm("cv-proxy-port", commvault_proxy_port, pInputOpts->pszPassThroughParms);
+				break;
+			case 24:
+				commvault_jobtoken = pg_strdup(optarg);
+				pInputOpts->pszPassThroughParms = addPassThroughLongParm("cv-jobtoken", commvault_jobtoken, pInputOpts->pszPassThroughParms);
+				break;
+			case 25:
+				commvault_appid = pg_strdup(optarg);
+				pInputOpts->pszPassThroughParms = addPassThroughLongParm("cv-appid", commvault_appid, pInputOpts->pszPassThroughParms);
+				break;
+			case 26:
+				commvault_jobid = pg_strdup(optarg);
+				pInputOpts->pszPassThroughParms = addPassThroughLongParm("cv-jobid", commvault_jobid, pInputOpts->pszPassThroughParms);
+				break;
+			case 27:
+				commvault_apptype = pg_strdup(optarg);
+				pInputOpts->pszPassThroughParms = addPassThroughLongParm("cv-apptype", commvault_apptype, pInputOpts->pszPassThroughParms);
+				break;
+			case 28:
+				commvault_logfile = pg_strdup(optarg);
+				pInputOpts->pszPassThroughParms = addPassThroughLongParm("cv-logfile", commvault_logfile, pInputOpts->pszPassThroughParms);
+				break;
+			case 29:
+				commvault_clientid = pg_strdup(optarg);
+				pInputOpts->pszPassThroughParms = addPassThroughLongParm("cv-clientid", commvault_clientid, pInputOpts->pszPassThroughParms);
+				break;
+			case 30:
+				commvault_iomode = pg_strdup(optarg);
+				pInputOpts->pszPassThroughParms = addPassThroughLongParm("cv-iomode", commvault_iomode, pInputOpts->pszPassThroughParms);
+				break;
+			case 31:
+				commvault_debuglevel = pg_strdup(optarg);
+				pInputOpts->pszPassThroughParms = addPassThroughLongParm("cv-debuglvl", commvault_debuglevel, pInputOpts->pszPassThroughParms);
+				break;
+			/* End Commvault Inputs */
 			case 20:
 				/* schema-file option */
 				if (schemaFileName != NULL)
@@ -2086,6 +2150,7 @@ threadProc(void *arg)
 	if (pSegDB->pszDBPswd != NULL && *pSegDB->pszDBPswd != '\0')
 		pszPassThroughCredentials = DataToBase64(pSegDB->pszDBPswd, strlen(pSegDB->pszDBPswd));
 
+	
 	/* form an gp_backup_launch statement */
 
 	/*

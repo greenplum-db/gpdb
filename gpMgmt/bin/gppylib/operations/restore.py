@@ -105,12 +105,14 @@ def get_dirty_table_file_contents(context, timestamp):
     dirty_list_file = context.generate_filename("dirty_table", timestamp=timestamp)
     return get_lines_from_file(dirty_list_file)
 
-def create_plan_file_contents(context, table_set_from_metadata_file, incremental_restore_timestamps, full_timestamp):
+def create_plan_file_contents(context, table_set_from_metadata_file, incremental_restore_timestamps, full_timestamp, cv_context=None):
     restore_set = {}
     for ts in incremental_restore_timestamps:
         restore_set[ts] = []
         if context.netbackup_service_host:
             restore_file_with_nbu(context, "dirty_table", timestamp=ts)
+        if cv_context:
+            restore_file_with_cv(cv_context, context, "dirty_table", timestamp=ts)
         dirty_tables = get_dirty_table_file_contents(context, ts)
         for dt in dirty_tables:
             if dt in table_set_from_metadata_file:
@@ -139,7 +141,7 @@ def write_to_plan_file(plan_file_contents, plan_file):
 
     return lines_to_write
 
-def create_restore_plan(context):
+def create_restore_plan(context, cv_context=None):
     dump_tables = get_partition_list(context)
 
     table_set_from_metadata_file = [schema + '.' + table for schema, table in dump_tables]
@@ -148,7 +150,7 @@ def create_restore_plan(context):
 
     plan_file_contents = create_plan_file_contents(context, table_set_from_metadata_file,
                                                    incremental_restore_timestamps,
-                                                   full_timestamp=context.full_dump_timestamp)
+                                                   full_timestamp=context.full_dump_timestamp, cv_context=cv_context)
 
     plan_file = context.generate_filename("plan")
 
@@ -266,7 +268,26 @@ def restore_config_files_with_nbu(context):
         seg_host = seg.getSegmentHostName()
         restore_file_with_nbu(context, path=seg_config_filename, hostname=seg_host)
 
-def _build_gpdbrestore_cmd_line(context, ts, table_file):
+#Commvault related functions
+def restore_state_files_with_cv(cv_context, context):
+    restore_file_with_cv(cv_context, context, "ao")
+    restore_file_with_cv(cv_context, context, "co")
+    restore_file_with_cv(cv_context, context, "last_operation")
+
+def restore_config_files_with_cv(cv_context, context):
+    restore_file_with_cv(cv_context, context, "master_config")
+
+    gparray = GpArray.initFromCatalog(dbconn.DbURL(port=context.master_port), utility=True)
+    segments = gparray.getSegmentList()
+    for segment in segments:
+        seg = segment.get_active_primary()
+        seg_dump_dir = context.get_backup_dir(directory=seg.getSegmentDataDirectory())
+        seg_config_filename = context.generate_filename("segment_config", dbid=segment.get_primary_dbid(),
+                                                        directory=seg_dump_dir)
+        seg_host = seg.getSegmentHostName()
+        restore_file_with_cv(cv_context, context, path=seg_config_filename, hostname=seg_host)
+
+def _build_gpdbrestore_cmd_line(context, ts, table_file, cv_context=None):
     cmd = 'gpdbrestore -t %s --table-file %s -a -v --noplan --noanalyze --noaostats --no-validate-table-name' % (ts, table_file)
     if context.backup_dir:
         cmd += " -u %s" % context.backup_dir
@@ -284,14 +305,17 @@ def _build_gpdbrestore_cmd_line(context, ts, table_file):
         cmd += " --netbackup-service-host=%s" % context.netbackup_service_host
     if context.netbackup_block_size:
         cmd += " --netbackup-block-size=%s" % context.netbackup_block_size
+    if cv_context:
+        cmd += " --cv-clientname=%s --cv-instance=%s --cv-proxy-host=%s --cv-proxy-port=%s --cv-debuglvl %s " % (cv_context.cv_clientname, cv_context.cv_instance, cv_context.cv_proxy_host, cv_context.cv_proxy_port, cv_context.cv_debuglvl)
     if context.change_schema:
         cmd += " --change-schema=%s" % context.change_schema
 
     return cmd
 
 class RestoreDatabase(Operation):
-    def __init__(self, context):
+    def __init__(self, context, cv_context=None):
         self.context = context
+        self.cv_context = cv_context
 
     def execute(self):
         if self.context.redirected_restore_db:
@@ -301,7 +325,7 @@ class RestoreDatabase(Operation):
             self.truncate_restore_tables()
 
         if not self.context.ddboost:
-            ValidateSegments(self.context).run()
+            ValidateSegments(self.context, self.cv_context).run()
 
         if self.context.redirected_restore_db and not self.context.drop_db:
             self.create_database_if_not_exists()
@@ -527,7 +551,7 @@ class RestoreDatabase(Operation):
                 table_file = get_restore_table_list(table_list.strip('\n').split(','), self.context.restore_tables)
                 if table_file is None:
                     continue
-                cmd = _build_gpdbrestore_cmd_line(self.context, ts, table_file)
+                cmd = _build_gpdbrestore_cmd_line(self.context, ts, table_file, cv_context=self.cv_context)
                 logger.info('Invoking commandline: %s' % cmd)
                 Command('Invoking gpdbrestore', cmd).run(validateAfter=True)
                 table_files.append(table_file)
@@ -700,7 +724,7 @@ class RestoreDatabase(Operation):
                 return False
         return True
 
-    def create_restore_string(self, table_filter_file, full_restore_with_filter, change_schema_file=None, schema_level_restore_file=None):
+    def create_restore_string(self, table_filter_file, full_restore_with_filter, change_schema_file=None, schema_level_restore_file=None, cv_context=None):
         user = getpass.getuser()
         hostname = socket.gethostname()    # TODO: can this just be localhost? bash was using `hostname`
         path = self.context.get_gpd_path()
@@ -740,6 +764,8 @@ class RestoreDatabase(Operation):
             restore_line += " --netbackup-service-host=%s" % self.context.netbackup_service_host
         if self.context.netbackup_block_size:
             restore_line += " --netbackup-block-size=%s" % self.context.netbackup_block_size
+        if self.cv_context:
+	    restore_line += " --cv-clientid %s --cv-appid %s --cv-instance=%s --cv-proxy-host=%s --cv-proxy-port=%s  --cv-apptype Q_DISTRIBUTED_IDA --cv-jobid 0 --cv-jobtoken 0 --cv-debuglvl %s " % (self.cv_context.cv_clientid, self.cv_context.cv_appid, self.cv_context.cv_instance, self.cv_context.cv_proxy_host, self.cv_context.cv_proxy_port, self.cv_context.cv_debuglvl)
         if change_schema_file:
             restore_line += " --change-schema-file=%s" % change_schema_file
         if schema_level_restore_file:
@@ -747,7 +773,7 @@ class RestoreDatabase(Operation):
 
         return restore_line
 
-    def create_post_data_schema_only_restore_string(self, table_filter_file, full_restore_with_filter, change_schema_file=None, schema_level_restore_file=None):
+    def create_post_data_schema_only_restore_string(self, table_filter_file, full_restore_with_filter, change_schema_file=None, schema_level_restore_file=None, cv_context=None):
         user = getpass.getuser()
         hostname = socket.gethostname()    # TODO: can this just be localhost? bash was using `hostname`
         path = self.context.get_gpd_path()
@@ -787,10 +813,12 @@ class RestoreDatabase(Operation):
             restore_line += " --netbackup-service-host=%s" % self.context.netbackup_service_host
         if self.context.netbackup_block_size:
             restore_line += " --netbackup-block-size=%s" % self.context.netbackup_block_size
+        if self.cv_context:
+	    restore_line += " --cv-clientid %s --cv-apptype Q_DISTRIBUTED_IDA --cv-appid %s --cv-instance %s --cv-proxy-host=%s --cv-proxy-port=%s --cv-logfile=%s --cv-jobid 0 --cv-jobtoken 0 --cv-debuglvl %s " % (self.cv_context.cv_clientid,self.cv_context.cv_appid, self.cv_context.cv_instance, self.cv_context.cv_proxy_host, self.cv_context.cv_proxy_port, self.cv_context.cv_logfile, self.cv_context.cv_debuglvl)
 
         return restore_line
 
-    def create_schema_only_restore_string(self, table_filter_file, full_restore_with_filter, change_schema_file=None, schema_level_restore_file=None):
+    def create_schema_only_restore_string(self, table_filter_file, full_restore_with_filter, change_schema_file=None, schema_level_restore_file=None, cv_context=None):
         metadata_filename = self.context.generate_filename("metadata")
         user = getpass.getuser()
         hostname = socket.gethostname()    # TODO: can this just be localhost? bash was using `hostname`
@@ -827,6 +855,8 @@ class RestoreDatabase(Operation):
             restore_line += " --netbackup-service-host=%s" % self.context.netbackup_service_host
         if self.context.netbackup_block_size:
             restore_line += " --netbackup-block-size=%s" % self.context.netbackup_block_size
+        if self.cv_context:
+	    restore_line += " --cv-clientid %s --cv-apptype Q_DISTRIBUTED_IDA --cv-appid %s --cv-instance %s --cv-proxy-host=%s --cv-proxy-port=%s --cv-logfile=%s --cv-jobid 0 --cv-jobtoken 0 --cv-debuglvl %s " % (self.cv_context.cv_clientid,self.cv_context.cv_appid, self.cv_context.cv_instance, self.cv_context.cv_proxy_host, self.cv_context.cv_proxy_port, self.cv_context.cv_logfile, self.cv_context.cv_debuglvl)
         if change_schema_file:
             restore_line += " --change-schema-file=%s" % change_schema_file
         if schema_level_restore_file:
@@ -894,13 +924,17 @@ class RestoreDatabase(Operation):
             raise Exception("Failure from truncating tables, %s" % (str(e).replace('\n', '')))
 
 class ValidateTimestamp(Operation):
-    def __init__(self, context):
+    def __init__(self, context, cv_context=None):
         self.context = context
+        self.cv_context = cv_context
 
     def validate_metadata_file(self, compressed_file):
         if self.context.netbackup_service_host:
             logger.info('Backup for given timestamp was performed using NetBackup. Querying NetBackup server to check for the dump file.')
             compress = check_file_dumped_with_nbu(self.context, path=compressed_file)
+        elif self.cv_context:
+            logger.info('Backup for given timestamp was performed using Commvault. Querying Commserve to check for the dump file.')
+            compress = check_file_dumped_with_cv(self.cv_context, self.context, path=compressed_file)
         else:
             compress = os.path.exists(compressed_file)
             if not compress:
@@ -933,8 +967,9 @@ class ValidateTimestamp(Operation):
         return (self.context.timestamp, restore_db, compress)
 
 class ValidateSegments(Operation):
-    def __init__(self, context):
+    def __init__(self, context, cv_context=None):
         self.context = context
+        self.cv_context = cv_context
 
     def execute(self):
         """ TODO: Improve with grouping by host and ParallelOperation dispatch. """
@@ -947,7 +982,7 @@ class ValidateSegments(Operation):
                 raise ExceptionNoStackTraceNeeded("Host %s dir %s dbid %d marked as invalid" % (seg.getSegmentHostName(), seg.getSegmentDataDirectory(), seg.getSegmentDbId()))
 
             self.context.master_datadir = seg.getSegmentDataDirectory()
-            if self.context.netbackup_service_host is None:
+            if self.context.netbackup_service_host is None and self.cv_context is None:
                 host = seg.getSegmentHostName()
                 path = self.context.generate_filename("dump", dbid=seg.getSegmentDbId())
                 exists = CheckRemotePath(path, host).run()
@@ -1168,6 +1203,23 @@ class GetNetBackupDumpTablesOperation(GetDumpTablesOperation):
         ret = self.extract_dumped_tables(line_list)
         return ret
 
+class GetCommvaultDumpTablesOperation(GetDumpTablesOperation):
+    def __init__(self, context, cv_context):
+        self.context = context
+        self.cv_context = cv_context
+        super(GetCommvaultDumpTablesOperation, self).__init__(context)
+
+    def execute(self):
+        cv_cmdStr = 'CVBkpRstWrapper -restore --cv-proxy-host %s --cv-proxy-port %s --cv-appid %s --cv-apptype Q_DISTRIBUTED_IDA --cv-clientid %s --cv-debuglvl %s --cv-filename \"%s\"' % (self.cv_context.cv_proxy_host, self.cv_context.cv_proxy_port, self.cv_context.cv_appid, self.cv_context.cv_clientid, self.cv_context.cv_debuglvl, self.context.generate_filename("dump"))
+        cmdStr = cv_cmdStr + self.gunzip_maybe + self.grep_cmdStr
+
+        cmd = Command('Commvault copy of master dump file', cmdStr)
+        cmd.run(validateAfter=True)
+        line_list = cmd.get_results().stdout.splitlines()
+
+        ret = self.extract_dumped_tables(line_list)
+        return ret
+
 class GetLocalDumpTablesOperation(GetDumpTablesOperation):
     def __init__(self, context):
         self.context = context
@@ -1206,8 +1258,9 @@ class GetRemoteDumpTablesOperation(GetDumpTablesOperation):
         return self.extract_dumped_tables(line_list)
 
 class GetDumpTables():
-    def __init__(self, context, remote_host=None):
+    def __init__(self, context, remote_host=None, cv_context=None):
         self.context = context
+        self.cv_context = cv_context
         self.remote_hostname = remote_host
 
     def get_dump_tables(self):
@@ -1215,6 +1268,8 @@ class GetDumpTables():
             get_dump_table_cmd = GetDDboostDumpTablesOperation(self.context)
         elif self.context.netbackup_service_host:
             get_dump_table_cmd = GetNetBackupDumpTablesOperation(self.context)
+        elif self.cv_context:
+            get_dump_table_cmd = GetCommvaultDumpTablesOperation(self.context, self.cv_context)
         elif self.remote_hostname:
             get_dump_table_cmd = GetRemoteDumpTablesOperation(self.context, self.remote_hostname)
         else:

@@ -8,16 +8,19 @@ import fnmatch
 import os
 import stat
 import sys
+import fcntl
 from optparse import OptionGroup, OptionValueError, SUPPRESS_HELP
 from pygresql import pg
 
 try:
     import gpmfr
+    import threading
     from tempfile import mkstemp
 
     from gppylib import gplog
     from gppylib import pgconf
     from gppylib import userinput
+    from gppylib.CvContext import CvContext
     from gppylib.commands.base import Command
     from gppylib.commands.gp import Scp
     from gppylib.commands.unix import Ping
@@ -98,6 +101,7 @@ class GpdbRestore(Operation):
         if self.context.table_file:
             self.context.restore_tables = get_restore_tables_from_table_file(self.context.table_file)
 
+
         if self.context.db_host_path:
             # MPP-13617
             m = re.match(RE1, self.context.db_host_path)
@@ -121,6 +125,19 @@ class GpdbRestore(Operation):
 
         if self.context.netbackup_service_host:
             validate_netbackup_params({'Service Hostname':self.context.netbackup_service_host})
+
+        # Commvault params check
+        if self.context.cv_clientname or self.context.cv_instance or self.context.cv_proxy_host or self.context.cv_proxy_port or self.context.cv_proxy_file:
+            if self.context.cv_clientname is None or self.context.cv_instance is None:
+                raise Exception('Commvault client and instance names must both be provided')
+            if self.context.cv_proxy_file is not None:
+                if not (os.path.isfile(self.context.cv_proxy_file)):
+                    raise Exception('Specified Commvault proxy configuration file does not exist')
+            elif not self.context.cv_proxy_host:
+                raise Exception('Commvault proxy client or configuration must be specified')
+
+        if self.context.netbackup_service_host and self.context.cv_clientname:
+            raise Exception('Cannot specify Commvault and Netbackup options together')
 
         if self.context.redirected_restore_db:
             check_funny_chars_in_names(self.context.redirected_restore_db, is_full_qualified_name = False)
@@ -148,6 +165,8 @@ class GpdbRestore(Operation):
         if self.context.ddboost:
             if self.context.netbackup_service_host:
                 raise Exception('--ddboost option is not supported with NetBackup')
+            if self.context.cv_clientname:
+                raise Exception('--ddbost option is not supported with Commvault')
 
             if self.context.db_host_path:
                 raise ExceptionNoStackTraceNeeded("-R cannot be used with DDBoost parameters.")
@@ -168,6 +187,32 @@ class GpdbRestore(Operation):
 
         self.gparray = GpArray.initFromCatalog(dbconn.DbURL(port=self.context.master_port, dbname='template1'), utility=True)
 
+        # Get CV context if Commvault is being used
+        if self.context.cv_clientname is not None:
+            #-- Queue shared between main thread and CV thread
+            self.cv_context = CvContext(self.context.cv_clientname, self.context.cv_instance, self.context.cv_proxy_host, self.context.cv_proxy_port, self.context.cv_proxy_file, cv_jobType='RESTORE', verbose=True, debuglevel=self.context.cv_debuglvl)
+        else:
+            self.cv_context = None
+
+        if self.cv_context is not None:
+            # Wait for Commvault server for restore context
+            cv_context_timeout = 0
+            logger.info('Querying Commvault server for restore context')
+            while cv_context_timeout < 60: # +++++ 60secs timeout  for getting cv context?
+                try:
+                    self.cv_context.queue.get(timeout=5)
+                    break
+                except:
+                    cv_context_timeout = cv_context_timeout + 5
+                pass;
+            if cv_context_timeout >= 60:
+                logger.info('Timed out. Failed to receive restore context. Exiting...')
+                os._exit(1)
+            if self.context.timestamp:
+                self.cv_context.get_backup_files(timestamp=self.context.timestamp)
+            else:
+                self.context.timestamp = self.cv_context.get_backup_files(0, self.search_for_dbname)
+
         if self.context.netbackup_service_host:
             logger.info("Restoring metadata files with NetBackup")
             restore_state_files_with_nbu(self.context)
@@ -179,6 +224,19 @@ class GpdbRestore(Operation):
                 restore_file_with_nbu(self.context, "global")
             if check_file_dumped_with_nbu(self.context, "stats"):
                 restore_file_with_nbu(self.context, "stats")
+        elif self.cv_context:
+            logger.info("Restoring metadata files with Commvault")
+            if self.cv_context.cv_prefix:
+                self.context.dump_prefix = self.cv_context.cv_prefix
+            restore_state_files_with_cv(self.cv_context, self.context)
+            restore_file_with_cv(self.cv_context, self.context, "report")
+            restore_file_with_cv(self.cv_context, self.context, "cdatabase")
+            if check_file_dumped_with_cv(self.cv_context, self.context, "master_config"):
+                restore_config_files_with_cv(self.cv_context, self.context)
+            if check_file_dumped_with_cv(self.cv_context, self.context, "global"):
+                restore_file_with_cv(self.cv_context, self.context, "global")
+            if check_file_dumped_with_cv(self.cv_context, self.context, "stats"):
+                restore_file_with_cv(self.cv_context, self.context, "stats")
 
         self._gather_dump_info()
 
@@ -229,18 +287,23 @@ class GpdbRestore(Operation):
 
         if is_incremental_restore(self.context) and not self.context.no_plan:
 
-            self.context.full_dump_timestamp = get_full_timestamp_for_incremental(self.context)
+            self.context.full_dump_timestamp = get_full_timestamp_for_incremental(self.context, self.cv_context)
             if self.context.netbackup_service_host:
                 restore_file_with_nbu(self.context, filetype="partition_list")
                 restore_file_with_nbu(self.context, filetype="increments",
                                       timestamp=self.context.full_dump_timestamp)
+            if self.cv_context:
+                restore_file_with_cv(self.cv_context, self.context, filetype="partition_list")
+                restore_file_with_cv(self.cv_context, self.context, filetype="increments",
+                                     timestamp=self.context.full_dump_timestamp)
 
-            plan_file = create_restore_plan(self.context)
+            plan_file = create_restore_plan(self.context, self.cv_context)
+
 
             if self.context.list_backup and self.context.timestamp:
                 return self._list_backup_timestamps(plan_file)
 
-        RestoreDatabase(self.context).run()
+        RestoreDatabase(self.context, self.cv_context).run()
 
         if self.context.no_analyze and not self.context.restore_stats:
             logger.warn('--------------------------------------------------------------------------------------------------')
@@ -313,7 +376,8 @@ class GpdbRestore(Operation):
         logger.info("------------------------------------------")
 
     def _list_dump_tables(self):
-        dump_tables = GetDumpTables(self.context).get_dump_tables()
+        dump_tables = GetDumpTables(self.context, self.cv_context).get_dump_tables()
+
 
         logger.info("--------------------------------------------------------------------")
         logger.info("List of database tables for dump file with time stamp %s" % self.context.timestamp)
@@ -354,7 +418,7 @@ class GpdbRestore(Operation):
         """
 
         if self.context.timestamp:
-            (restore_timestamp, restore_db, compress) = ValidateTimestamp(self.context).run()
+            (restore_timestamp, restore_db, compress) = ValidateTimestamp(self.context, self.cv_context).run()
             self.context.timestamp = restore_timestamp
             self.context.restore_db = restore_db
             self.context.compress = compress
@@ -385,6 +449,7 @@ class GpdbRestore(Operation):
         else:
             self.context.dump_host = self.context.db_host_path[0]
 
+
         self.table_counts = table_counts
 
     def validate_tablename_from_filtering_options(self):
@@ -401,7 +466,7 @@ class GpdbRestore(Operation):
             if not is_remote_service and stat.S_ISFIFO(os.stat(self.context.generate_filename("dump")).st_mode):
                 logger.warn('Skipping validation of tables in dump file due to the use of named pipes')
             else:
-                dumped_tables = GetDumpTables(self.context).get_dump_tables()
+                dumped_tables = GetDumpTables(self.context, self.cv_context).get_dump_tables()
                 validate_tablenames_exist_in_dump_file(self.context.restore_tables, dumped_tables)
 
     def _validate_db_date_dir(self):
@@ -464,6 +529,7 @@ class GpdbRestore(Operation):
         os.remove(filename)
 
         self.context.compress = CheckRemoteFile(srcFile, host).run()
+
 
     def _search_for_latest(self):
         logger.info("Scanning Master host for latest dump file set for database %s" % self.search_for_dbname)
@@ -617,6 +683,25 @@ def create_parser():
     nbuOpt.add_option('--netbackup-block-size', dest='netbackup_block_size', metavar="<block size>",
                       help="NetBackup data transfer block size")
     parser.add_option_group(nbuOpt)
+
+    # For CommVault Restore
+    cvOpt = OptionGroup(parser, "CommVault")
+    cvOpt.add_option('--cv-clientname', dest='cv_clientname', metavar="<Commvault client name>",
+                     help="Commvault client name")
+    cvOpt.add_option('--cv-instance', dest='cv_instance', metavar="<Greenplum instance name>",
+                     help="Greenplum instance name")
+    cvOpt.add_option('--cv-proxy-host', dest='cv_proxy_host', metavar="<Commvault proxy host name",
+                     help="Commvault proxy host name")
+    cvOpt.add_option('--cv-proxy-port', dest='cv_proxy_port', metavar="<Commvault proxy host port>",
+                     help="Commvault proxy host port")
+    cvOpt.add_option('--cv-proxy-file', dest='cv_proxy_file', metavar="<Commvault proxy config file>",
+                     help="Commvault proxy configuration file")
+    cvOpt.add_option('--cv-param-file', dest='cv_param_file', metavar="<Commvault parameter file>",
+                     help="Commvault parameter configuration file")
+    cvOpt.add_option('--cv-debuglvl', dest='cv_debuglvl', metavar="<Commvault debug level>",
+                     help="Commvault debug level")
+    parser.add_option_group(cvOpt)
+
 
     # For DDBoost Restore
     ddOpt = OptionGroup(parser, "DDBoost")

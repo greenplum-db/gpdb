@@ -1140,6 +1140,100 @@ formSegmentPsqlCommandLine(char** retVal, const char* inputFileSpec, bool compUs
 	strcat(pszCmdLine, " | ");
 	strcat(pszCmdLine, psqlPg);
 }
+/* Build command line for CV gp_restore_agent */
+void
+formSegmentPsqlCVCommandLine(char** retVal, const char* inputFileSpec, bool compUsed, const char* compProg,
+                                                        const char* filter_script, const char* table_filter_file,
+                                                        int role, const char* psqlPg, const char* catPg,
+                                                        const char* gpCVRestorePg, const char* cvproxyhost, const char* cvproxyport, const char* cvjobid, const char*cvjobtoken,const char* cvguid, const char* cvclientid, const char*cvapptype, const char* cvappid, const char* cvdebuglvl, const char* change_schema_file, const char *schema_level_file, int postDataSchema)
+{
+        char* pszCmdLine = *retVal;
+        if (compUsed)
+        {
+                if (gpCVRestorePg)
+                {
+                        strncpy(pszCmdLine, gpCVRestorePg, (1 + strlen(gpCVRestorePg)));
+                        strncat(pszCmdLine, " -restore ", strlen(" -restore "));
+                        strncat(pszCmdLine, " --cv-proxy-host ", strlen(" --cv-proxy-host "));
+                        strncat(pszCmdLine, cvproxyhost, strlen(cvproxyhost));
+                        strncat(pszCmdLine, " --cv-proxy-port ", strlen(" --cv-proxy-port "));
+                        strncat(pszCmdLine, cvproxyport, strlen(cvproxyport));
+                        strncat(pszCmdLine, " --cv-jobid ", strlen(" --cv-jobid "));
+                        strncat(pszCmdLine, cvjobid, strlen(cvjobid));
+                        strncat(pszCmdLine, " --cv-jobtoken ", strlen(" --cv-jobtoken "));
+                        strncat(pszCmdLine, cvjobtoken, strlen(cvjobtoken));
+                        strncat(pszCmdLine, " --cv-guid ", strlen(" --cv-guid "));
+                        strncat(pszCmdLine, cvguid, strlen(cvguid));
+                        strncat(pszCmdLine, " --cv-appid ", strlen(" --cv-appid "));
+                        strncat(pszCmdLine, cvappid, strlen(cvappid));
+                        strncat(pszCmdLine, " --cv-clientid ", strlen(" --cv-clientid "));
+                        strncat(pszCmdLine, cvclientid, strlen(cvclientid));
+                        strncat(pszCmdLine, " --cv-apptype ", strlen(" --cv-apptype "));
+                        strncat(pszCmdLine, cvapptype, strlen(cvapptype));
+                        strncat(pszCmdLine, " --cv-debuglvl ", strlen(" --cv-debuglvl "));
+                        strncat(pszCmdLine, cvdebuglvl, strlen(cvdebuglvl));
+                        strncat(pszCmdLine, " --cv-filename ", strlen(" --cv-filename "));
+                        strncat(pszCmdLine, inputFileSpec, strlen(inputFileSpec));
+                        strncat(pszCmdLine, " --cv-iomode ", strlen(" --cv-iomode "));
+                        strncat(pszCmdLine, "stdout", strlen("stdout"));
+                        strncat(pszCmdLine, " | ", strlen(" | "));
+                        strncat(pszCmdLine, compProg, strlen(compProg));        /* add compression program */
+                }
+                else
+                {
+                        strcpy(pszCmdLine, catPg);      /* add 'cat' command */
+                        strcat(pszCmdLine, " ");
+                        strcat(pszCmdLine, inputFileSpec);
+                        strcat(pszCmdLine, " | ");
+                        strcat(pszCmdLine, compProg);
+                }
+        }
+        else
+        {
+                if (gpCVRestorePg)
+                {
+                        strncpy(pszCmdLine, gpCVRestorePg, (1 + strlen(gpCVRestorePg)));
+                        strncat(pszCmdLine, " -restore ", strlen(" -restore "));
+                        strncat(pszCmdLine, " --cv-proxy-host ", strlen(" --cv-proxy-host "));
+                        strncat(pszCmdLine, cvproxyhost, strlen(cvproxyhost));
+                        strncat(pszCmdLine, " --cv-proxy-port ", strlen(" --cv-proxy-port "));
+                        strncat(pszCmdLine, cvproxyport, strlen(cvproxyport));
+                        strncat(pszCmdLine, " --cv-jobid ", strlen(" --cv-jobid "));
+                        strncat(pszCmdLine, cvjobid, strlen(cvjobid));
+                        strncat(pszCmdLine, " --cv-jobtoken ", strlen(" --cv-jobtoken "));
+                        strncat(pszCmdLine, cvjobtoken, strlen(cvjobtoken));
+                        strncat(pszCmdLine, " --cv-guid ", strlen(" --cv-guid "));
+                        strncat(pszCmdLine, cvguid, strlen(cvguid));
+                        strncat(pszCmdLine, " --cv-appid ", strlen(" --cv-appid "));
+                        strncat(pszCmdLine, cvappid, strlen(cvappid));
+                        strncat(pszCmdLine, " --cv-clientid ", strlen(" --cv-clientid "));
+                        strncat(pszCmdLine, cvclientid, strlen(cvclientid));
+                        strncat(pszCmdLine, " --cv-apptype ", strlen(" --cv-apptype "));
+                        strncat(pszCmdLine, cvapptype, strlen(cvapptype));
+                        strncat(pszCmdLine, " --cv-debuglvl ", strlen(" --cv-debuglvl "));
+                        strncat(pszCmdLine, cvdebuglvl, strlen(cvdebuglvl));
+                        strncat(pszCmdLine, " --cv-filename ", strlen(" --cv-filename "));
+                        strncat(pszCmdLine, inputFileSpec, strlen(inputFileSpec));
+                        strncat(pszCmdLine, " --cv-iomode ", strlen(" --cv-iomode "));
+                        strncat(pszCmdLine, "stdout", strlen("stdout"));
+                }
+                else
+                {
+                        strcpy(pszCmdLine, catPg);
+                        strcat(pszCmdLine, " ");
+                        strcat(pszCmdLine, inputFileSpec);
+                }
+        }
+        if(postDataSchema)
+                formPostDataFilterCommandLine(&pszCmdLine, filter_script, table_filter_file, change_schema_file, schema_level_file);
+        else
+                formFilterCommandLine(&pszCmdLine, filter_script, table_filter_file, role, change_schema_file, schema_level_file);
+
+        strcat(pszCmdLine, " | ");
+        strcat(pszCmdLine, psqlPg);
+}
+
+
 
 /* Build command line with gprestore_filter.py and its passed through parameters */
 void

@@ -60,6 +60,7 @@ static char* parse_prefix_from_params(char *params);
 static char* parse_status_from_params(char *params);
 static char* parse_option_from_params(char *params, char *option);
 static char *queryNBUBackupFilePathName(char *netbackupServiceHost, char *netbackupRestoreFileName);
+static char *queryCVBackupVersionGuid(const char*commvault_proxy_host,const char* commvault_proxy_port, const char*commvault_appid, const char*commvault_apptype, const char*commvault_clientid, char* CVRestoreFilePath);
 static char *shellEscape(const char *shellArg, PQExpBuffer escapeBuf, bool addQuote);
 
 
@@ -93,6 +94,28 @@ static char *netbackup_service_host = NULL,
 static int netbackup_enabled = 0;
 static char *gpNBUDumpPg = NULL;
 static char *gpNBUQueryPg = NULL;
+
+
+/* Commvault variables */
+#define CV_BKPRST_PROGRAM "CVBkpRstWrapper"
+static char *commvault_proxy_host = NULL, 
+	 	*commvault_proxy_port = NULL,
+		*commvault_clientid = NULL,
+		*commvault_jobid = NULL,
+		*commvault_appid = NULL,
+		*commvault_apptype = NULL,
+		*commvault_jobtoken = NULL,
+		*commvault_logfile = NULL,
+		*commvault_instancename = NULL,
+		*commvault_bkplevel = NULL,
+		*commvault_guid = NULL,
+		*commvault_instanceid = NULL,
+		*commvault_backupsetid = NULL,
+		*commvault_debuglevel = NULL;
+		
+static int commvault_enabled = 0;
+static char *gpCVDumpPg = NULL;
+
 
 typedef enum backup_file_type
 {
@@ -157,7 +180,6 @@ char* parse_option_from_params(char *params, char *option)
       }
       return ptr;
    }
-
    free(temp);
    return NULL;
 }
@@ -172,6 +194,7 @@ PG_FUNCTION_INFO_V1(gp_backup_launch__);
 Datum
 gp_backup_launch__(PG_FUNCTION_ARGS)
 {
+
 	/* Fetch the parameters from the argument list. */
 	char	   *pszBackupDirectory = "./";
 	char	   *pszBackupKey = "";
@@ -237,6 +260,23 @@ gp_backup_launch__(PG_FUNCTION_ARGS)
 	netbackup_block_size = parse_option_from_params(pszPassThroughParameters, "--netbackup-block-size");
 	netbackup_keyword = parse_option_from_params(pszPassThroughParameters, "--netbackup-keyword");
 
+
+	commvault_proxy_host = parse_option_from_params(pszPassThroughParameters, "--cv-proxy-host");
+	commvault_proxy_port = parse_option_from_params(pszPassThroughParameters, "--cv-proxy-port");
+	commvault_jobid = parse_option_from_params(pszPassThroughParameters, "--cv-jobid");
+	commvault_jobtoken = parse_option_from_params(pszPassThroughParameters, "--cv-jobtoken");
+	commvault_appid = parse_option_from_params(pszPassThroughParameters, "--cv-appid");
+	commvault_apptype = parse_option_from_params(pszPassThroughParameters, "--cv-apptype");
+	commvault_logfile = parse_option_from_params(pszPassThroughParameters, "--cv-logfile");
+	commvault_clientid = parse_option_from_params(pszPassThroughParameters, "--cv-clientid");
+	commvault_instanceid = parse_option_from_params(pszPassThroughParameters, "--cv-instanceId");
+	commvault_backupsetid = parse_option_from_params(pszPassThroughParameters, "--cv-backupsetId");
+	commvault_debuglevel = parse_option_from_params(pszPassThroughParameters, "--cv-debuglvl");
+	if(strstr(pszPassThroughParameters, "--incremental"))
+		commvault_bkplevel = "INCR";
+	else
+		commvault_bkplevel = "FULL";
+	
 	/*
 	 * if BackupDirectory is relative, make it absolute based on the directory
 	 * where the database resides
@@ -311,6 +351,24 @@ gp_backup_launch__(PG_FUNCTION_ARGS)
 		}
 	}
 
+	/* Test if commvault openbackup program exists */
+	if (strstr(pszPassThroughParameters,"--cv-proxy-host") != NULL)
+	{
+		commvault_enabled = 1;
+	}
+
+	if (commvault_enabled)
+	{
+		gpCVDumpPg = testProgramExists(CV_BKPRST_PROGRAM);
+		if (gpCVDumpPg == NULL)
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
+					errmsg("%s not found in PGPATH or PATH (PGPATH: %s | PATH:  %s)",
+					CV_BKPRST_PROGRAM, getenv("PGPATH"), getenv("PATH")),
+					errhint("Restart the server and try again")));
+		}
+	}	
 	PQExpBuffer escapeBuf = createPQExpBuffer();
 
 	pszDBName = NULL;
@@ -552,6 +610,35 @@ gp_backup_launch__(PG_FUNCTION_ARGS)
 		}
 	}
 
+	if (commvault_enabled)
+	{
+		len += strlen(gpCVDumpPg) + 2
+			+ strlen(" -backup  ")
+			+ strlen(" --cv-bkplvl ")
+			+ strlen(commvault_bkplevel) + 2
+			+ strlen(" --cv-iomode ")
+			+ strlen("stdin") + 2
+			+ strlen(" --cv-proxy-host ")
+			+ strlen(commvault_proxy_host) + 2
+			+ strlen(" --cv-proxy-port ")
+			+ strlen(commvault_proxy_port) + 2
+			+ strlen(" --cv-jobid ")
+			+ strlen(commvault_jobid) + 2
+			+ strlen(" --cv-jobtoken ")
+			+ strlen(commvault_jobtoken) + 2
+			+ strlen(" --cv-appid ")
+			+ strlen(commvault_appid) + 2
+			+ strlen(" --cv-apptype ")
+			+ strlen(commvault_apptype) + 2
+			+ strlen(" --cv-logfile ")
+			+ strlen(commvault_logfile) + 2
+			+ strlen(" --cv-clientid ")
+			+ strlen(commvault_clientid) + 2
+			+ strlen(" --cv-debuglvl ")
+			+ strlen(commvault_debuglevel) + 2
+			+ strlen(" --cv-filename ")
+			+ strlen(pszBackupFileName) + 2;
+	}
 	/* if user selected a compression program */
 	if (pszCompressionProgram[0] != '\0')
 	{
@@ -582,6 +669,25 @@ gp_backup_launch__(PG_FUNCTION_ARGS)
                                 port, pszUserName, pszPassThroughParameters, pszDataOption, pszDBName,
                                 pszStatusFileName, gpDDBoostCmdLine);
         	}
+	}
+	else if (commvault_enabled)
+	{
+		if (pszCompressionProgram[0] != '\0')
+		{
+sprintf(pszCmdLine, "%s --gp-k %s --gp-d %s -p %d -U %s %s %s %s 2> %s | %s -f | %s -backup --cv-bkplvl %s --cv-iomode %s --cv-proxy-host %s --cv-proxy-port %s --cv-jobtoken %s --cv-appid %s --cv-jobid %s --cv-apptype %s --cv-clientid %s --cv-logile %s --cv-debuglvl %s --cv-filename %s ",
+					bkPg, pszKeyParm, pszBackupDirectory,
+					port, pszUserName, pszPassThroughParameters, pszDataOption, pszDBName,
+					pszStatusFileName, compPg, gpCVDumpPg, commvault_bkplevel, "stdin", commvault_proxy_host,
+                                                commvault_proxy_port, commvault_jobtoken, commvault_appid, commvault_jobid, commvault_apptype, commvault_clientid, commvault_logfile,commvault_debuglevel, pszBackupFileName);
+		}
+		else
+		{
+sprintf(pszCmdLine, "%s --gp-k %s --gp-d %s -p %d -U %s %s %s %s 2> %s | %s -backup --cv-bkplvl %s --cv-iomode %s --cv-proxy-host %s --cv-proxy-port %s --cv-jobtoken %s --cv-appid %s --cv-jobid %s --cv-apptype %s --cv-clientid %s --cv-logile %s --cv-debuglvl %s --cv-filename %s",
+					bkPg, pszKeyParm, pszBackupDirectory,
+					port, pszUserName, pszPassThroughParameters, pszDataOption, pszDBName,
+					pszStatusFileName,  gpCVDumpPg, commvault_bkplevel, "stdin" , commvault_proxy_host,
+                                                commvault_proxy_port, commvault_jobtoken, commvault_appid, commvault_jobid, commvault_apptype, commvault_clientid,commvault_logfile,commvault_debuglevel, pszBackupFileName);
+		}
 	}
 	else if (netbackup_enabled)
 	{
@@ -642,7 +748,31 @@ gp_backup_launch__(PG_FUNCTION_ARGS)
 		}
 	}
 #else
-	if (netbackup_enabled)
+	if (commvault_enabled)
+	{
+		if (pszCompressionProgram[0] != '\0')
+		{
+			/* gp_dump_agent + options, pipe into compression program, direct
+			 * stdout to backup file and stderr to status file */
+			sprintf(pszCmdLine, "%s --gp-k %s --gp-d %s -p %d -U %s %s %s %s 2> %s | %s -f | %s -backup --cv-bkplvl %s --cv-iomode %s --cv-proxy-host %s --cv-proxy-port %s --cv-jobtoken %s --cv-appid %s --cv-jobid %s --cv-apptype %s --cv-clientid %s --cv-logile %s --cv-debuglvl %s --cv-filename %s",
+					bkPg, pszKeyParm, pszBackupDirectory,
+					port, pszUserName, pszPassThroughParameters, pszDataOption, pszDBName,
+					pszStatusFileName, compPg, gpCVDumpPg, commvault_bkplevel, "stdin",commvault_proxy_host,
+                                        commvault_proxy_port, commvault_jobtoken, commvault_appid, commvault_jobid, 
+					commvault_apptype, commvault_clientid,commvault_logfile,commvault_debuglevel, pszBackupFileName);
+
+		}
+		else
+		{
+			sprintf(pszCmdLine, "%s --gp-k %s --gp-d %s -p %d -U %s %s %s %s 2> %s | %s -backup --cv-bkplvl %s  --cv-iomode %s --cv-proxy-host %s --cv-proxy-port %s --cv-jobtoken %s --cv-appid %s --cv-jobid %s --cv-apptype %s --cv-clientid %s --cv-logile %s --cv-debuglvl %s --cv-filename %s",
+					bkPg, pszKeyParm, pszBackupDirectory,
+					port, pszUserName, pszPassThroughParameters, pszDataOption, pszDBName,
+					pszStatusFileName,  gpCVDumpPg, commvault_bkplevel, "stdin", commvault_proxy_host,
+                                        commvault_proxy_port, commvault_jobtoken, commvault_appid, 
+					commvault_jobid, commvault_apptype, commvault_clientid,commvault_logfile,commvault_debuglevel, pszBackupFileName);
+		}
+	}
+	else if (netbackup_enabled)
 	{
 		if (pszCompressionProgram[0] != '\0')
 		{
@@ -830,6 +960,21 @@ gp_backup_launch__(PG_FUNCTION_ARGS)
 				snprintf(pszCmdLine, newlen, "cat %s | %s", pszTempBackupFileName, gpDDBoostCmdLine);
 			}
 		}
+		else if (commvault_enabled)
+		{
+			if (pszCompressionProgram[0] != '\0')
+			{
+				snprintf(pszCmdLine, newlen, "cat %s | %s -f | %s -backup --cv-bkplvl %s --cv-iomode %s --cv-proxy-host %s --cv-proxy-port %s --cv-jobtoken %s --cv-appid %s --cv-jobid %s --cv-apptype %s  --cv-clientid %s --cv-logile %s --cv-debuglvl %s  --cv-filename %s",
+						pszTempBackupFileName, compPg, gpCVDumpPg, commvault_bkplevel, "stdin",commvault_proxy_host,
+						commvault_proxy_port, commvault_jobtoken, commvault_appid, commvault_jobid, commvault_apptype, commvault_clientid,commvault_logfile,commvault_debuglevel, pszBackupFileName);
+			}
+			else
+			{
+				snprintf(pszCmdLine, newlen, "cat %s | %s -backup --cv-bkplvl %s  --cv-iomode %s --cv-proxy-host %s --cv-proxy-port %s --cv-jobtoken %s --cv-appid %s --cv-jobid %s --cv-apptype %s --cv-clientid %s --cv-logile %s --cv-debuglvl %s  --cv-filename %s",
+						pszTempBackupFileName, gpCVDumpPg, commvault_bkplevel, "stdin",commvault_proxy_host,
+						commvault_proxy_port, commvault_jobtoken, commvault_appid, commvault_jobid, commvault_apptype, commvault_clientid,commvault_logfile, commvault_debuglevel, pszBackupFileName);
+			}
+		}
 		else if (netbackup_enabled)
 		{
 			if (pszCompressionProgram[0] != '\0')
@@ -881,7 +1026,22 @@ gp_backup_launch__(PG_FUNCTION_ARGS)
 			}
 		}
 #else
-	if (netbackup_enabled)
+	if (commvault_enabled)
+	{
+		if (pszCompressionProgram[0] != '\0')
+		{
+				snprintf(pszCmdLine, newlen, "cat %s | %s -f | %s -backup --cv-bkplvl %s  --cv-iomode %s --cv-proxy-host %s --cv-proxy-port %s --cv-jobtoken %s --cv-appid %s --cv-jobid %s --cv-apptype %s --cv-clientid %s --cv-logile %s --cv-debuglvl %s --cv-filename %s",
+						pszTempBackupFileName, compPg, gpCVDumpPg, commvault_bkplevel,"stdin", commvault_proxy_host,
+						commvault_proxy_port, commvault_jobtoken, commvault_appid, commvault_jobid, commvault_apptype, commvault_clientid,commvault_logfile,commvault_debuglevel, pszBackupFileName);
+		}
+		else
+		{
+				snprintf(pszCmdLine, newlen, "cat %s | %s -backup --cv-bkplvl %s  --cv-iomode %s --cv-proxy-host %s --cv-proxy-port %s --cv-jobtoken %s --cv-appid %s --cv-jobid %s --cv-apptype %s --cv-clientid %s --cv-logile %s --cv-debuglvl %s --cv-filename %s",
+						pszTempBackupFileName, gpCVDumpPg, commvault_bkplevel, "stdin",commvault_proxy_host,
+						commvault_proxy_port, commvault_jobtoken, commvault_appid, commvault_jobid, commvault_apptype, commvault_clientid,commvault_logfile, commvault_debuglevel, pszBackupFileName);
+		}
+	}
+	else if (netbackup_enabled)
 	{
 		if (pszCompressionProgram[0] != '\0')
 		{
@@ -1020,8 +1180,7 @@ gp_restore_launch__(PG_FUNCTION_ARGS)
 	char       *mkdirStr = NULL;
 	int        err = 0;
 	
-#endif	
-
+#endif
 	postDataSchemaOnly = false;
 	verifyGpIdentityIsSet();
 	instid = (GpIdentity.segindex == -1) ? 1 : 0;		/* dispatch node */
@@ -1063,6 +1222,21 @@ gp_restore_launch__(PG_FUNCTION_ARGS)
 	netbackup_service_host = parse_option_from_params(pszPassThroughParameters, "--netbackup-service-host");
 	netbackup_block_size = parse_option_from_params(pszPassThroughParameters, "--netbackup-block-size");
 
+        commvault_proxy_host = parse_option_from_params(pszPassThroughParameters, "--cv-proxy-host");
+        commvault_proxy_port = parse_option_from_params(pszPassThroughParameters, "--cv-proxy-port");
+        commvault_jobid = parse_option_from_params(pszPassThroughParameters, "--cv-jobid");
+        commvault_jobtoken = parse_option_from_params(pszPassThroughParameters, "--cv-jobtoken");
+        commvault_appid = parse_option_from_params(pszPassThroughParameters, "--cv-appid");
+        commvault_apptype = parse_option_from_params(pszPassThroughParameters, "--cv-apptype");
+        commvault_logfile = parse_option_from_params(pszPassThroughParameters, "--cv-logfile");
+        commvault_clientid = parse_option_from_params(pszPassThroughParameters, "--cv-clientid");
+        commvault_instancename = parse_option_from_params(pszPassThroughParameters, "--cv-instance");
+	commvault_debuglevel = parse_option_from_params(pszPassThroughParameters, "--cv-debuglvl");
+        if(strstr(pszPassThroughParameters, "--incremental"))
+                commvault_bkplevel = "INCR";
+        else
+                commvault_bkplevel = "FULL";
+
 	/*
 	 * if BackupDirectory is relative, make it absolute based on the directory
 	 * where the database resides
@@ -1083,6 +1257,36 @@ gp_restore_launch__(PG_FUNCTION_ARGS)
 	/* Form backup file path name */
 	pszBackupFileName = formBackupFilePathName(pszBackupDirectory, pszBackupKey, is_decompress, postDataSchemaOnly, NULL);
 	pszStatusFileName = formStatusFilePathName(statusDirectory, pszBackupKey, false);
+
+        /* Test if commvault openbackup program exists */
+        if (strstr(pszPassThroughParameters,"--cv-proxy-host") != NULL)
+        {
+                commvault_enabled = 1;
+        }
+
+        if (commvault_enabled)
+        {
+                gpCVDumpPg = testProgramExists(CV_BKPRST_PROGRAM);
+                if (gpCVDumpPg == NULL)
+                {
+                        ereport(ERROR,
+                                        (errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
+                                        errmsg("%s not found in PGPATH or PATH (PGPATH: %s | PATH:  %s)",
+                                        CV_BKPRST_PROGRAM, getenv("PGPATH"), getenv("PATH")),
+                                        errhint("Restart the server and try again")));
+                }
+		elog(INFO, "Querying backup file path on Commvault server: %s\n", pszBackupFileName);
+		commvault_guid = queryCVBackupVersionGuid(commvault_proxy_host, commvault_proxy_port, commvault_appid, commvault_apptype, commvault_clientid, pszBackupFileName);
+
+		if (commvault_guid == NULL)
+		{
+			ereport(ERROR,
+				(errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
+				errmsg("Attempt to restore dbid %d failed. Query to Commvault server for file %s failed."
+				"The CommVault server is not running or the given file was not backed up using Commvault",
+				target_dbid, pszBackupFileName)));
+		}
+        }
 
 	if (strstr(pszPassThroughParameters,"--netbackup-service-host") != NULL)
 	{
@@ -1153,6 +1357,20 @@ gp_restore_launch__(PG_FUNCTION_ARGS)
 						(errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
 						errmsg("Attempt to restore dbid %d failed. Query to NetBackup server for file %s failed."
 						"The NetBackup server is not running or the given file was not backed up using NetBackup.",
+						target_dbid, pszBackupFileName)));
+				}
+			}
+			else if (commvault_enabled)
+			{
+				elog(INFO, "Querying backup file path on Commvault server: %s\n", pszBackupFileName);
+				commvault_guid = queryCVBackupVersionGuid(commvault_proxy_host, commvault_proxy_port, commvault_appid, commvault_apptype, commvault_clientid, pszBackupFileName);
+
+				if (commvault_guid == NULL)
+				{
+					ereport(ERROR,
+						(errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
+						errmsg("Attempt to restore dbid %d failed. Query to Commvault server for file %s failed."
+						"The CommVault server is not running or the given file was not backed up using Commvault",
 						target_dbid, pszBackupFileName)));
 				}
 			}
@@ -1291,6 +1509,10 @@ gp_restore_launch__(PG_FUNCTION_ARGS)
 				+ strlen(netbackup_block_size);
 		}
 	}
+        if (commvault_enabled)
+        {
+                len +=  strlen(" --cv-guid  ") + strlen(commvault_guid);
+	}
 
 	/*
 	 * if compression was requested with --gp-c
@@ -1328,6 +1550,14 @@ gp_restore_launch__(PG_FUNCTION_ARGS)
 				strncat(pszCmdLine, netbackup_block_size, strlen(netbackup_block_size));
 			}
 		}
+		else if (commvault_enabled)
+		{
+                        sprintf(pszCmdLine, "%s --gp-c %s --gp-k %s  --gp-d %s %s -p %d -U %s %s --cv-guid %s %s -d %s %s %s %s 2>&2",
+                                bkPg, compPg, pszKeyParm, pszBackupDirectory, pszOnErrorStop, port, pszUserName,
+                                pszPassThroughParameters, commvault_guid, pszPassThroughTargetInfo, pszDBName, pszBackupFileName,
+                                postDataSchemaOnly ? "2>>" : "2>", pszStatusFileName);
+
+		}
 		else
 		{
 			sprintf(pszCmdLine, "%s --gp-c %s --gp-k %s --gp-d %s %s -p %d -U %s %s %s -d %s %s %s %s 2>&2",
@@ -1348,6 +1578,15 @@ gp_restore_launch__(PG_FUNCTION_ARGS)
 				strncat(pszCmdLine, netbackup_block_size, strlen(netbackup_block_size));
 			}
 		}
+                else if (commvault_enabled)
+                {
+                        sprintf(pszCmdLine, "%s --gp-c %s --gp-k %s  --gp-d %s %s -p %d -U %s %s --cv-guid %s %s -d %s %s %s %s 2>&2",
+                                bkPg, compPg, pszKeyParm, pszBackupDirectory, pszOnErrorStop, port, pszUserName,
+                                pszPassThroughParameters, commvault_guid, pszPassThroughTargetInfo, pszDBName, pszBackupFileName,
+                                postDataSchemaOnly ? "2>>" : "2>", pszStatusFileName);
+
+                }
+
 		else
 		{
 			sprintf(pszCmdLine, "%s --gp-c %s --gp-k %s --gp-d %s %s -p %d -U %s %s %s -d %s %s %s %s 2>&2",
@@ -1385,6 +1624,15 @@ gp_restore_launch__(PG_FUNCTION_ARGS)
 				strncat(pszCmdLine, netbackup_block_size, strlen(netbackup_block_size));
 			}
 		}
+                else if (commvault_enabled)
+                {
+                        sprintf(pszCmdLine, "%s --gp-k %s  --gp-d %s %s -p %d -U %s %s --cv-guid %s %s -d %s %s %s %s 2>&2",
+                                bkPg, pszKeyParm, pszBackupDirectory, pszOnErrorStop, port, pszUserName,
+                                pszPassThroughParameters, commvault_guid, pszPassThroughTargetInfo, pszDBName, pszBackupFileName,
+                                postDataSchemaOnly ? "2>>" : "2>", pszStatusFileName);
+
+                }
+
 		else
 		{
 			sprintf(pszCmdLine, "%s --gp-k %s --gp-d %s %s -p %d -U %s %s %s -d %s %s %s %s 2>&2",
@@ -1406,6 +1654,15 @@ gp_restore_launch__(PG_FUNCTION_ARGS)
 				strncat(pszCmdLine, netbackup_block_size, strlen(netbackup_block_size));
 			}
 		}
+                else if (commvault_enabled)
+                {
+                        sprintf(pszCmdLine, "%s --gp-k %s  --gp-d %s %s -p %d -U %s %s --cv-guid %s %s -d %s %s %s %s 2>&2",
+                                bkPg,  pszKeyParm, pszBackupDirectory, pszOnErrorStop, port, pszUserName,
+                                pszPassThroughParameters, commvault_guid, pszPassThroughTargetInfo, pszDBName, pszBackupFileName,
+                                postDataSchemaOnly ? "2>>" : "2>", pszStatusFileName);
+
+                }
+
 		else
 		{
 			sprintf(pszCmdLine, "%s --gp-k %s --gp-d %s %s -p %d -U %s %s %s -d %s %s %s %s 2>&2",
@@ -1419,7 +1676,7 @@ gp_restore_launch__(PG_FUNCTION_ARGS)
 		elog(LOG, "gp_restore_agent command line: %s\n", pszCmdLine);
 
 		/* This execs a shell that runs the gp_restore_agent program  */
-			execl("/bin/sh", "sh", "-c", pszCmdLine, NULL);
+		execl("/bin/sh", "sh", "-c", pszCmdLine, NULL);
 
 		ereport(ERROR,
 				(errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
@@ -2025,6 +2282,88 @@ queryNBUBackupFilePathName(char *netbackupServiceHost, char *netbackupRestoreFil
    }
 
    return queryResultFileName;
+}
+
+
+static char * queryCVBackupVersionGuid(const char*commvault_proxy_host,const char* commvault_proxy_port, const char*commvault_appid, const char*commvault_apptype, const char*commvault_clientid, char* CVRestoreFilePath)
+{
+   char cmd[4*1024];
+   char resBuff[10*1024];
+   char *queryCVGuid;
+   // ALlocate atleast path length
+   queryCVGuid= (char *) palloc(sizeof(char) * (1024*10));
+   if (queryCVGuid == NULL)
+   {
+       ereport(ERROR, (errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
+                       errmsg("Error while allocating memory for filename"),
+                       errhint("Error while querying Commvault server for backup file %s. Failed to allocate memory", CVRestoreFilePath)));
+       return NULL;
+   }
+	
+   memset(queryCVGuid, '\0', (1024*10));
+   memset(cmd, '\0', 4*1024);
+   memset(resBuff, '\0', 10*1024);
+
+   char *filename = strrchr(CVRestoreFilePath,'/');
+
+   if (filename)
+   {
+	   filename++;
+	   sprintf(cmd, "%s -query --cv-proxy-host %s --cv-proxy-port %s --cv-appid %s --cv-apptype %s --cv-clientid %s --cv-filename \"*%s\" --cv-search-allcycles 1 ", CV_BKPRST_PROGRAM, commvault_proxy_host, commvault_proxy_port, commvault_appid, commvault_apptype, commvault_clientid, filename );
+	   elog(INFO, "Querying Commvault for backup filename cmd=[%s]",cmd);
+	   FILE *fp = popen(cmd, "r");
+	   if (fp == NULL){
+	       ereport(ERROR, (errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
+			       errmsg("Error querying restore filename to Commvault server"),
+			       errhint("Commvault server is not running or restore file: %s has not been backed up to the Commvault server errno=%d", CVRestoreFilePath, errno)));
+	       return NULL;
+	   }
+	   // filepath:objectguid:versionguid:cyclefromtime:cycletotime:commcellid:subclientid < --- each line in query output
+	   while(fgets(resBuff, 10*1024 , fp) != NULL)
+	   {
+		 // taking out the newline char
+		  resBuff[strlen(resBuff)-1]= '\0';
+		  char * pch;
+		  int tokensCnt = 0;
+		  pch = strtok (resBuff,":");
+		  if(pch != NULL)
+		  {
+			// if file path matches 
+			if(strcmp(pch,  CVRestoreFilePath) == 0)
+			{
+				// expand the remaining tokens
+				while (pch != NULL)
+				{
+					tokensCnt++;
+					if (tokensCnt == 3)
+					{
+						// Found the versionguid for the given file path
+						strcpy(queryCVGuid, pch);
+						break;
+					}
+					pch = strtok (NULL, ":");
+				}
+				break;
+			}
+		  }
+	   }
+
+	   if (pclose(fp) != 0)
+	   {
+	       ereport(ERROR, (errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
+			       errmsg("Error querying restore filename to Commvault server"),
+			       errhint("2Commvault server not running or restore file: %s has not been backed up to the Commvault server", CVRestoreFilePath)));
+	       return NULL;
+	   }
+	   elog(INFO, "Found CV versionGuid=[%s] for restore file=[%s]",queryCVGuid, CVRestoreFilePath);
+   }
+   if(queryCVGuid[0] == '\0')
+   {
+	free(queryCVGuid);
+	queryCVGuid = NULL;
+   }
+	
+   return queryCVGuid;
 }
 
 /* formThrottleCmd(char *pszBackupFileName, int directIO_read_chunk_mb, bool bIsThrottlingEnabled) returns char*
