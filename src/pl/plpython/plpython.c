@@ -404,6 +404,8 @@ static PyObject *PLyLong_FromInt64(PLyDatumToOb *arg, Datum d);
 static PyObject *PLyBytes_FromBytea(PLyDatumToOb *arg, Datum d);
 static PyObject *PLyString_FromDatum(PLyDatumToOb *arg, Datum d);
 static PyObject *PLyList_FromArray(PLyDatumToOb *arg, Datum d);
+static PyObject *PLyList_FromArray_recurse(PLyDatumToOb *elm, int *dims, int ndim, int dim,
+						  char **dataptr_p, bits8 **bitmap_p, int *bitmask_p);
 
 static PyObject *PLyDict_FromTuple(PLyTypeInfo *, HeapTuple, TupleDesc);
 
@@ -411,7 +413,10 @@ static Datum PLyObject_ToBool(PLyObToDatum *, int32, PyObject *);
 static Datum PLyObject_ToBytea(PLyObToDatum *, int32, PyObject *);
 static Datum PLyObject_ToComposite(PLyObToDatum *, int32, PyObject *);
 static Datum PLyObject_ToDatum(PLyObToDatum *, int32, PyObject *);
-static Datum PLySequence_ToArray(PLyObToDatum *, int32, PyObject *);
+static Datum PLySequence_ToArray(PLyObToDatum *arg, int32 typmod, PyObject *plrv);
+static void PLySequence_ToArray_recurse(PLyObToDatum *elm, PyObject *list,
+							int *dims, int ndim, int dim,
+							Datum *elems, bool *nulls, int *currelem);
 
 static HeapTuple PLyObject_ToTuple(PLyTypeInfo *, TupleDesc, PyObject *);
 static HeapTuple PLyMapping_ToTuple(PLyTypeInfo *, TupleDesc, PyObject *);
@@ -2325,24 +2330,25 @@ PLy_output_datum_func2(PLyObToDatum *arg, HeapTuple typeTup)
 	 * Select a conversion function to convert Python objects to PostgreSQL
 	 * datums.	Most data types can go through the generic function.
 	 */
-	switch (getBaseType(element_type ? element_type : arg->typoid))
-	{
-		case BOOLOID:
-			arg->func = PLyObject_ToBool;
-			break;
-		case BYTEAOID:
-			arg->func = PLyObject_ToBytea;
-			break;
-		default:
-			arg->func = PLyObject_ToDatum;
-			break;
-	}
-
 	/* Composite types need their own input routine, though */
 	if (typeStruct->typtype == TYPTYPE_COMPOSITE)
 	{
 		arg->func = PLyObject_ToComposite;
 	}
+	else
+		switch (getBaseType(element_type ? element_type : arg->typoid))
+		{
+			case BOOLOID:
+				arg->func = PLyObject_ToBool;
+				break;
+			case BYTEAOID:
+				arg->func = PLyObject_ToBytea;
+				break;
+			default:
+				arg->func = PLyObject_ToDatum;
+				break;
+		}
+
 
 	if (element_type)
 	{
@@ -2350,11 +2356,7 @@ PLy_output_datum_func2(PLyObToDatum *arg, HeapTuple typeTup)
 		Oid			funcid;
 
 		if (type_is_rowtype(element_type))
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("PL/Python functions cannot return type %s",
-							format_type_be(arg->typoid)),
-					 errdetail("PL/Python does not support conversion to arrays of row types.")));
+			arg->func = PLyObject_ToComposite;
 
 		arg->elm = PLy_malloc0(sizeof(*arg->elm));
 		arg->elm->func = arg->func;
@@ -2552,59 +2554,104 @@ PLyList_FromArray(PLyDatumToOb *arg, Datum d)
 {
 	ArrayType  *array = DatumGetArrayTypeP(d);
 	PLyDatumToOb *elm = arg->elm;
-	PyObject   *list;
-	int			length;
-	int			lbound;
-	int			i;
-	char		*dataptr;
-	bits8		*bitmap;
+	int			ndim;
+	int		   *dims;
+	char	   *dataptr;
+	bits8	   *bitmap;
 	int			bitmask;
 
 	if (ARR_NDIM(array) == 0)
 		return PyList_New(0);
 
-	if (ARR_NDIM(array) != 1)
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			  errmsg("cannot convert multidimensional array to Python list"),
-			  errdetail("PL/Python only supports one-dimensional arrays.")));
+	/* Array dimensions and left bounds */
+	ndim = ARR_NDIM(array);
+	dims = ARR_DIMS(array);
+	Assert(ndim < MAXDIM);
 
-	length = ARR_DIMS(array)[0];
-	lbound = ARR_LBOUND(array)[0];
-	list = PyList_New(length);
-
+	/*
+	 * We iterate the SQL array in the physical order it's stored in the
+	 * datum. For example, for a 3-dimensional array the order of iteration would
+	 * be the following: [0,0,0] elements through [0,0,k], then [0,1,0] through
+	 * [0,1,k] till [0,m,k], then [1,0,0] through [1,0,k] till [1,m,k], and so on.
+	 *
+	 * In Python, there are no multi-dimensional lists as such, but they are
+	 * represented as a list of lists. So a 3-d array of [n,m,k] elements is a
+	 * list of n m-element arrays, each element of which is k-element array.
+	 * PLyList_FromArray_recurse() builds the Python list for a single
+	 * dimension, and recurses for the next inner dimension.
+	 */
 	dataptr = ARR_DATA_PTR(array);
 	bitmap = ARR_NULLBITMAP(array);
 	bitmask = 1;
 
-	for (i = 0; i < length; i++)
+	return PLyList_FromArray_recurse(elm, dims, ndim, 0,
+									 &dataptr, &bitmap, &bitmask);
+}
+
+static PyObject *
+PLyList_FromArray_recurse(PLyDatumToOb *elm, int *dims, int ndim, int dim,
+						  char **dataptr_p, bits8 **bitmap_p, int *bitmask_p)
+{
+	int			i;
+	PyObject   *list;
+
+	list = PyList_New(dims[dim]);
+
+	if (dim < ndim - 1)
 	{
-		/* Get source element, checking for NULL */
-		if (bitmap && (*bitmap & bitmask) == 0)
+		/* Outer dimension. Recurse for each inner slice. */
+		for (i = 0; i < dims[dim]; i++)
 		{
-			Py_INCREF(Py_None);
-			PyList_SET_ITEM(list, i, Py_None);
-		}
-		else
-		{
-			Datum		itemvalue;
+			PyObject   *sublist;
 
-			itemvalue = fetch_att(dataptr, elm->typbyval, elm->typlen);
-			PyList_SET_ITEM(list, i, elm->func(elm, itemvalue));
-			dataptr = att_addlength_pointer(dataptr, elm->typlen, dataptr);
-			dataptr = (char *) att_align_nominal(dataptr, elm->typalign);
+			sublist = PLyList_FromArray_recurse(elm, dims, ndim, dim + 1,
+											 dataptr_p, bitmap_p, bitmask_p);
+			PyList_SET_ITEM(list, i, sublist);
 		}
+	}
+	else
+	{
+		/*
+		 * Innermost dimension. Fill the list with the values from the array
+		 * for this slice.
+		 */
+		char	   *dataptr = *dataptr_p;
+		bits8	   *bitmap = *bitmap_p;
+		int			bitmask = *bitmask_p;
 
-		/* advance bitmap pointer if any */
-		if (bitmap)
+		for (i = 0; i < dims[dim]; i++)
 		{
-			bitmask <<= 1;
-			if (bitmask == 0x100 /* (1<<8) */)
+			/* checking for NULL */
+			if (bitmap && (*bitmap & bitmask) == 0)
 			{
-				bitmap++;
-				bitmask = 1;
+				Py_INCREF(Py_None);
+				PyList_SET_ITEM(list, i, Py_None);
+			}
+			else
+			{
+				Datum		itemvalue;
+
+				itemvalue = fetch_att(dataptr, elm->typbyval, elm->typlen);
+				PyList_SET_ITEM(list, i, elm->func(elm, itemvalue));
+				dataptr = att_addlength_pointer(dataptr, elm->typlen, dataptr);
+				dataptr = (char *) att_align_nominal(dataptr, elm->typalign);
+			}
+
+			/* advance bitmap pointer if any */
+			if (bitmap)
+			{
+				bitmask <<= 1;
+				if (bitmask == 0x100 /* (1<<8) */ )
+				{
+					bitmap++;
+					bitmask = 1;
+				}
 			}
 		}
+
+		*dataptr_p = dataptr;
+		*bitmap_p = bitmap;
+		*bitmask_p = bitmask;
 	}
 
 	return list;
@@ -2855,41 +2902,156 @@ PLySequence_ToArray(PLyObToDatum *arg, int32 typmod, PyObject *plrv)
 	int			i;
 	Datum	   *elems;
 	bool	   *nulls;
-	int			len;
-	int			lbs;
+	int64		len;
+	int			ndim;
+	int			dims[MAXDIM];
+	int			lbs[MAXDIM];
+	int			currelem;
+	Datum		rv;
+	PyObject   *pyptr = plrv;
+	PyObject   *next;
 
 	Assert(plrv != Py_None);
 
-	if (!PySequence_Check(plrv))
-		PLy_elog(ERROR, "return value of function with array return type is not a Python sequence");
+	/*
+	 * Determine the number of dimensions, and their sizes.
+	 */
+	ndim = 0;
+	len = 1;
 
-	len = PySequence_Length(plrv);
-	elems = palloc(sizeof(*elems) * len);
-	nulls = palloc(sizeof(*nulls) * len);
+	Py_INCREF(plrv);
 
-	for (i = 0; i < len; i++)
+	for (;;)
 	{
-		PyObject   *obj = PySequence_GetItem(plrv, i);
+		if (!PyList_Check(pyptr))
+			break;
 
-		if (obj == Py_None)
-			nulls[i] = true;
-		else
+		if (ndim == MAXDIM)
+			PLy_elog(ERROR, "number of array dimensions exceeds the maximum allowed (%d)", MAXDIM);
+
+		dims[ndim] = PySequence_Length(pyptr);
+		if (dims[ndim] < 0)
+			PLy_elog(ERROR, "cannot determine sequence length for function return value");
+
+		if (dims[ndim] > MaxAllocSize)
+			PLy_elog(ERROR, "array size exceeds the maximum allowed");
+
+		len *= dims[ndim];
+		if (len > MaxAllocSize)
+			PLy_elog(ERROR, "array size exceeds the maximum allowed");
+
+		if (dims[ndim] == 0)
 		{
-			nulls[i] = false;
-
-			/*
-			 * We don't support arrays of row types yet, so the first argument
-			 * can be NULL.
-			 */
-			elems[i] = arg->elm->func(arg->elm, -1, obj);
+			/* empty sequence */
+			break;
 		}
-		Py_XDECREF(obj);
+
+		ndim++;
+
+		next = PySequence_GetItem(pyptr, 0);
+		Py_XDECREF(pyptr);
+		pyptr = next;
+	}
+	Py_XDECREF(pyptr);
+
+	/*
+	 * Check for zero dimensions. This happens if the object is a tuple or a
+	 * string, rather than a list, or is not a sequence at all. We don't map
+	 * tuples or strings to arrays in general, but in the first level, be
+	 * lenient, for historical reasons. So if the object is a sequence of any
+	 * kind, treat it as a one-dimensional array.
+	 */
+	if (ndim == 0)
+	{
+		if (!PySequence_Check(plrv))
+			PLy_elog(ERROR, "return value of function with array return type is not a Python sequence");
+
+		ndim = 1;
+		len = dims[0] = PySequence_Length(plrv);
 	}
 
-	lbs = 1;
-	array = construct_md_array(elems, nulls, 1, &len, &lbs,
-							   get_element_type(arg->typoid), arg->elm->typlen, arg->elm->typbyval, arg->elm->typalign);
-	return PointerGetDatum(array);
+	/*
+	 * Traverse the Python lists, in depth-first order, and collect all the
+	 * elements at the bottom level into 'elems'/'nulls' arrays.
+	 */
+	elems = palloc(sizeof(Datum) * len);
+	nulls = palloc(sizeof(bool) * len);
+	currelem = 0;
+	PLySequence_ToArray_recurse(arg->elm, plrv,
+								dims, ndim, 0,
+								elems, nulls, &currelem);
+
+	for (i = 0; i < ndim; i++)
+		lbs[i] = 1;
+
+	array = construct_md_array(elems,
+							   nulls,
+							   ndim,
+							   dims,
+							   lbs,
+							   get_base_element_type(arg->typoid),
+							   arg->elm->typlen,
+							   arg->elm->typbyval,
+							   arg->elm->typalign);
+
+	/*
+	 * If the result type is a domain of array, the resulting array must be
+	 * checked.
+	 */
+	rv = PointerGetDatum(array);
+	//if (get_typtype(arg->typoid) == TYPTYPE_DOMAIN)
+		//domain_check(rv, false, arg->typoid, &arg->typfunc.fn_extra, arg->typfunc.fn_mcxt);
+	return rv;
+}
+
+/*
+ * Helper function for PLySequence_ToArray. Traverse a Python list of lists in
+ * depth-first order, storing the elements in 'elems'.
+ */
+static void
+PLySequence_ToArray_recurse(PLyObToDatum *elm, PyObject *list,
+							int *dims, int ndim, int dim,
+							Datum *elems, bool *nulls, int *currelem)
+{
+	int			i;
+
+	if (PySequence_Length(list) != dims[dim])
+		PLy_elog(ERROR,
+				 "multidimensional arrays must have array expressions with matching dimensions. "
+				 "PL/Python function return value has sequence length %d while expected %d",
+				 (int) PySequence_Length(list), dims[dim]);
+
+	if (dim < ndim - 1)
+	{
+		for (i = 0; i < dims[dim]; i++)
+		{
+			PyObject   *sublist = PySequence_GetItem(list, i);
+
+			PLySequence_ToArray_recurse(elm, sublist, dims, ndim, dim + 1,
+										elems, nulls, currelem);
+			Py_XDECREF(sublist);
+		}
+	}
+	else
+	{
+		for (i = 0; i < dims[dim]; i++)
+		{
+			PyObject   *obj = PySequence_GetItem(list, i);
+
+			if (obj == Py_None)
+			{
+				nulls[*currelem] = true;
+				elems[*currelem] = (Datum) 0;
+			}
+			else
+			{
+				nulls[*currelem] = false;
+				elems[*currelem] = elm->func(elm, -1, obj);
+			}
+			Py_XDECREF(obj);
+			(*currelem)++;
+		}
+	}
 }
 
 static HeapTuple
@@ -2959,8 +3121,41 @@ PLyMapping_ToTuple(PLyTypeInfo *info, TupleDesc desc, PyObject *mapping)
 
 	return tuple;
 }
+#ifdef XXX
+static HeapTuple
+PLyString_ToComposite(PLyTypeInfo *info, TupleDesc desc, PyObject *string)
+{
+	Datum		result;
+	HeapTuple	typeTup;
+	PLyTypeInfo locinfo;
+	PLyExecutionContext *exec_ctx = PLy_current_execution_context();
+	MemoryContext cxt;
 
+	/* Create a dummy PLyTypeInfo */
+	cxt = AllocSetContextCreate(CurrentMemoryContext,
+								"PL/Python temp context",
+								ALLOCSET_DEFAULT_SIZES);
+	MemSet(&locinfo, 0, sizeof(PLyTypeInfo));
+	PLy_typeinfo_init(&locinfo, cxt);
 
+	typeTup = SearchSysCache1(TYPEOID, ObjectIdGetDatum(desc->tdtypeid));
+	if (!HeapTupleIsValid(typeTup))
+		elog(ERROR, "cache lookup failed for type %u", desc->tdtypeid);
+
+	PLy_output_datum_func2(&locinfo.out.d, locinfo.mcxt, typeTup,
+						   exec_ctx->curr_proc->langid,
+						   exec_ctx->curr_proc->trftypes);
+
+	ReleaseSysCache(typeTup);
+
+	result = PLyObject_ToDatum(&locinfo.out.d, desc->tdtypmod, string);
+
+	MemoryContextDelete(cxt);
+
+	return result;
+}
+
+#endif
 static HeapTuple
 PLySequence_ToTuple(PLyTypeInfo *info, TupleDesc desc, PyObject *sequence)
 {
