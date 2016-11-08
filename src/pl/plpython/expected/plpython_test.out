@@ -182,7 +182,7 @@ NOTICE:  notice
 CONTEXT:  PL/Python function "elog_test"
 WARNING:  warning
 CONTEXT:  PL/Python function "elog_test"
-ERROR:  plpy.Error: error (plpython.c:4652)
+ERROR:  plpy.Error: error (plpython.c:4928)
 CONTEXT:  Traceback (most recent call last):
   PL/Python function "elog_test", line 10, in <module>
     plpy.error('error')
@@ -243,12 +243,12 @@ SELECT test_param_names1(1,'text');
 SELECT test_param_names2(users) from users;
                              test_param_names2                              
 ----------------------------------------------------------------------------
- {'lname': 'doe', 'username': 'johnd', 'userid': 2, 'fname': 'john'}
- {'lname': 'smith', 'username': 'slash', 'userid': 4, 'fname': 'rick'}
- {'lname': 'darwin', 'username': 'beagle', 'userid': 6, 'fname': 'charles'}
  {'lname': 'doe', 'username': 'j_doe', 'userid': 1, 'fname': 'jane'}
+ {'lname': 'doe', 'username': 'johnd', 'userid': 2, 'fname': 'john'}
  {'lname': 'doe', 'username': 'w_doe', 'userid': 3, 'fname': 'willem'}
+ {'lname': 'smith', 'username': 'slash', 'userid': 4, 'fname': 'rick'}
  {'lname': 'smith', 'username': 'w_smith', 'userid': 5, 'fname': 'willem'}
+ {'lname': 'darwin', 'username': 'beagle', 'userid': 6, 'fname': 'charles'}
 (6 rows)
 
 SELECT test_param_names3(1);
@@ -600,182 +600,30 @@ SELECT * FROM test_inout_params('test_in');
  test_in_inout
 (1 row)
 
-SELECT * FROM test_type_conversion_bool(true);
- test_type_conversion_bool 
----------------------------
- t
-(1 row)
-
-SELECT * FROM test_type_conversion_bool(false);
- test_type_conversion_bool 
----------------------------
- f
-(1 row)
-
-SELECT * FROM test_type_conversion_bool(null);
- test_type_conversion_bool 
----------------------------
- 
-(1 row)
-
-SELECT * FROM test_type_conversion_char('a');
- test_type_conversion_char 
----------------------------
- a
-(1 row)
-
-SELECT * FROM test_type_conversion_char(null);
- test_type_conversion_char 
----------------------------
- 
-(1 row)
-
-SELECT * FROM test_type_conversion_int2(100::int2);
- test_type_conversion_int2 
----------------------------
-                       100
-(1 row)
-
-SELECT * FROM test_type_conversion_int2(null);
- test_type_conversion_int2 
----------------------------
-                          
-(1 row)
-
-SELECT * FROM test_type_conversion_int4(100);
- test_type_conversion_int4 
----------------------------
-                       100
-(1 row)
-
-SELECT * FROM test_type_conversion_int4(null);
- test_type_conversion_int4 
----------------------------
-                          
-(1 row)
-
-SELECT * FROM test_type_conversion_int8(100);
- test_type_conversion_int8 
----------------------------
-                       100
-(1 row)
-
-SELECT * FROM test_type_conversion_int8(null);
- test_type_conversion_int8 
----------------------------
-                          
-(1 row)
-
-SELECT * FROM test_type_conversion_float4(100);
- test_type_conversion_float4 
------------------------------
-                         100
-(1 row)
-
-SELECT * FROM test_type_conversion_float4(null);
- test_type_conversion_float4 
------------------------------
-                            
-(1 row)
-
-SELECT * FROM test_type_conversion_float8(100);
- test_type_conversion_float8 
------------------------------
-                         100
-(1 row)
-
-SELECT * FROM test_type_conversion_float8(null);
- test_type_conversion_float8 
------------------------------
-                            
-(1 row)
-
-SELECT * FROM test_type_conversion_numeric(100);
- test_type_conversion_numeric 
-------------------------------
-                        100.0
-(1 row)
-
-SELECT * FROM test_type_conversion_numeric(null);
- test_type_conversion_numeric 
-------------------------------
-                             
-(1 row)
-
-SELECT * FROM test_type_conversion_text('hello world');
- test_type_conversion_text 
----------------------------
- hello world
-(1 row)
-
-SELECT * FROM test_type_conversion_text(null);
- test_type_conversion_text 
----------------------------
- 
-(1 row)
-
-SELECT * FROM test_type_conversion_bytea('hello world');
- test_type_conversion_bytea 
-----------------------------
- hello world
-(1 row)
-
-SELECT * FROM test_type_conversion_bytea(null);
- test_type_conversion_bytea 
-----------------------------
- 
-(1 row)
-
 -- 1-dimensional arrays
-SELECT * FROM test_type_conversion_array_int4(array[1,2,null,3,4]::int4[]);
- test_type_conversion_array_int4 
----------------------------------
- {1,2,NULL,3,4}
-(1 row)
-
-SELECT * FROM test_type_conversion_array_int4(null);
- test_type_conversion_array_int4 
----------------------------------
- 
-(1 row)
-
 SELECT * FROM test_type_conversion_array_numeric(array[null,1.23,2.34,3.45,null]::numeric[]);
  test_type_conversion_array_numeric 
 ------------------------------------
  {NULL,1.23,2.34,3.45,NULL}
 (1 row)
 
-SELECT * FROM test_type_conversion_array_text(array['abc','def','ghij',null]::text[]);
- test_type_conversion_array_text 
----------------------------------
- {abc,def,ghij,NULL}
-(1 row)
-
-SELECT * FROM test_type_conversion_array_text(null);
- test_type_conversion_array_text 
----------------------------------
- 
-(1 row)
-
 -- Multi-dimensional arrays
 SELECT a, array_dims(a) FROM test_type_conversion_array_int4(array[
         array[1,2,3,4], array[5,null,7,8], array[null,null,11,12]
     ]::int4[]) as a;
-                     a                      | array_dims 
---------------------------------------------+------------
- {{1,2,3,4},{5,NULL,7,8},{NULL,NULL,11,12}} | [1:3][1:4]
-(1 row)
-
+ERROR:  function test_type_conversion_array_int4(integer[]) does not exist
+LINE 1: SELECT a, array_dims(a) FROM test_type_conversion_array_int4...
+                                     ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 SELECT a, array_dims(a) FROM test_type_conversion_array_int4(array[
     array[ array[1,2,3,4], array[5,null,7,8], array[null,null,11,12] ],
     array[ array[13,null,15,16], array[17,18,19,20], array[null,null,23,null] ],
     array[ array[25,26,27,null], array[29,null,null,32], array[null,null,null,null] ]
     ]::int4[]) as a;
-                                                                             a                                                                              |   array_dims    
-------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------
- {{{1,2,3,4},{5,NULL,7,8},{NULL,NULL,11,12}},{{13,NULL,15,16},{17,18,19,20},{NULL,NULL,23,NULL}},{{25,26,27,NULL},{29,NULL,NULL,32},{NULL,NULL,NULL,NULL}}} | [1:3][1:3][1:4]
-(1 row)
-
+ERROR:  function test_type_conversion_array_int4(integer[]) does not exist
+LINE 1: SELECT a, array_dims(a) FROM test_type_conversion_array_int4...
+                                     ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 SELECT a, array_dims(a) FROM test_type_conversion_array_numeric(array[
         array[null,1.23,2.34,3.45,null],
         array[4.56,5.67,null,null,6.78]
@@ -790,11 +638,10 @@ SELECT a, array_dims(a) FROM test_type_conversion_array_text(array[
         array[null,'kl','mnopq','rst'],
         array['uvw','',null,'xyz']
     ]::text[]) as a;
-                              a                              | array_dims 
--------------------------------------------------------------+------------
- {{abc,def,ghij,NULL},{NULL,kl,mnopq,rst},{uvw,"",NULL,xyz}} | [1:3][1:4]
-(1 row)
-
+ERROR:  function test_type_conversion_array_text(text[]) does not exist
+LINE 1: SELECT a, array_dims(a) FROM test_type_conversion_array_text...
+                                     ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 SELECT a, array_dims(a) FROM test_type_conversion_array_text(array[
         array[ array['abc','def','ghij',null],
                array[null,'kl','mnopq','rst'],
@@ -803,17 +650,10 @@ SELECT a, array_dims(a) FROM test_type_conversion_array_text(array[
                array[null,'HIJK','LMN','OPQR'],
                array['STUV','WXYZ',null,null] ]
     ]::text[]) as a;
-                                                              a                                                              |   array_dims    
------------------------------------------------------------------------------------------------------------------------------+-----------------
- {{{abc,def,ghij,NULL},{NULL,kl,mnopq,rst},{uvw,"",NULL,xyz}},{{A,BCD,NULL,EFG},{NULL,HIJK,LMN,OPQR},{STUV,WXYZ,NULL,NULL}}} | [1:2][1:3][1:4]
-(1 row)
-
-SELECT test_type_unmarshal(x) FROM test_type_marshal() x;
- test_type_unmarshal 
----------------------
- hello world
-(1 row)
-
+ERROR:  function test_type_conversion_array_text(text[]) does not exist
+LINE 1: SELECT a, array_dims(a) FROM test_type_conversion_array_text...
+                                     ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 SELECT (split(10)).*; 
  a  | b  
 ----+----
