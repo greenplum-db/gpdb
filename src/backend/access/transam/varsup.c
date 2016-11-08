@@ -389,3 +389,55 @@ GetNewObjectId(void)
 
 	return result;
 }
+
+/*
+ * To avoid clashes on pg_class.relfilenode, we keep track of which
+ * OIDs have recently been used for a relfilenode. PostgreSQL doesn't
+ * need this, as they rely on the monotonicity of GetNewObjectId(),
+ * with checks for already-used relfilenodes in GetNewRelFileNode(),
+ * but that's not enough in GPDB. In a GPDB segment node, we try to use
+ * a table's OID as its relfilenode like in PostgreSQL, but because the
+ * OIDs are generated in the master node, it's possible that
+ * GetNewRelFileNode() chooses a value that has just been assigned for
+ * a different table in the master. To work around that, we have a
+ * small cache of values that have recently been used for relfilenodes,
+ * and refrain from choosing them again.
+ *
+ * If the given OID has recently been used as a relfilenode, returns
+ * false. Otherwise returns true, and marks the OID as used, so that
+ * subsequent calls with the same OID will return false.
+ *
+ * We use a small cache of 100 OIDs (NUM_RECENT_RELFILENODES). This is
+ * not bulletproof, but is good enough in practice to close the race
+ * condition. It is not enough by itself to ensure that a relfilenode
+ * value is unique, you still need to also check that there's no
+ * file in the data directory with the same name.
+ */
+bool
+UseOidForRelFileNode(Oid oid)
+{
+	int			i;
+	int			next;
+
+	LWLockAcquire(OidGenLock, LW_EXCLUSIVE);
+
+	for (i = 0; i < NUM_RECENT_RELFILENODES; i++)
+	{
+		if (ShmemVariableCache->recentRelfilenodes[i] == oid)
+		{
+			/* Already used. Not cool. */
+			LWLockRelease(OidGenLock);
+			return false;
+		}
+	}
+
+	next = ShmemVariableCache->nextRecentRelfilenode;
+	ShmemVariableCache->recentRelfilenodes[next] = oid;
+	if (++next >= NUM_RECENT_RELFILENODES)
+		next = 0;
+	ShmemVariableCache->nextRecentRelfilenode = next;
+
+	LWLockRelease(OidGenLock);
+
+	return true;
+}

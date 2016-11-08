@@ -527,35 +527,6 @@ GetPreassignedOidForType(Oid namespaceOid, const char *typname)
 	return oid;
 }
 
-/*
- * Get a pre-assigned relfilenode (not OID!) for a relation.
- */
-Oid
-GetPreassignedRelfilenodeForRelation(Oid relid)
-{
-	OidAssignment searchkey;
-	Oid			oid;
-
-	memset(&searchkey, 0, sizeof(OidAssignment));
-	searchkey.catalog = RelationRelationId;
-	searchkey.keyOid2 = relid;
-
-	/*
-	 * At least VACUUM of a bitmap index, is implemented by reindexing, which
-	 * allocates a new relfilenode. The reindexing is done only if there were
-	 * any dead tuples, so it might fire on some segments but not others, and
-	 * never on the master. So don't insist that there are no requests for new
-	 * relfilenodes in segments. AFAICS there's nothing that strictly requires
-	 * matching relfilenodes across segments, but if there are, we'll to
-	 * revisit this (perhaps by fixing whatever currently requires them to
-	 * match, to not require that).
-	 */
-	if ((oid = GetPreassignedOid(&searchkey)) == InvalidOid)
-		elog(DEBUG1, "no pre-assigned relfilenode for relation %u", relid);
-	return oid;
-}
-
-
 
 /* ----------------------------------------------------------------
  * Functions for use in the master node.
@@ -600,35 +571,6 @@ AddDispatchOidFromTuple(Relation catalogrel, HeapTuple tuple)
 		 assignment.namespaceOid,
 		 assignment.objname ? assignment.objname : "",
 		 assignment.oid);
-#endif
-}
-
-/*
- * Remember a newly assigned relfilenode, for a given relation.
- */
-void
-AddDispatchRelfilenodeForRelation(Oid relid, Oid relfilenode)
-{
-	OidAssignment *assignment;
-	MemoryContext oldcontext;
-
-	if (Gp_role == GP_ROLE_EXECUTE || IsBootstrapProcessingMode())
-		return;
-
-	oldcontext = MemoryContextSwitchTo(TopTransactionContext);
-
-	assignment = makeNode(OidAssignment);
-	assignment->catalog = RelationRelationId;
-	assignment->keyOid2 = relid;
-
-	assignment->oid = relfilenode;
-	dispatch_oids = lappend(dispatch_oids, assignment);
-
-	MemoryContextSwitchTo(oldcontext);
-
-#ifdef OID_DISPATCH_DEBUG
-	elog(NOTICE, "adding relfilenode assignment: relid %u: %u",
-		 relid, relfilenode);
 #endif
 }
 

@@ -3064,6 +3064,7 @@ RelationBuildLocalRelation(const char *relname,
 	int			i;
 	bool		has_not_null;
 	bool		nailit;
+	Oid			relfilenode;
 
 	AssertArg(natts >= 0);
 
@@ -3196,8 +3197,12 @@ RelationBuildLocalRelation(const char *relname,
 
 	/*
 	 * Insert relation physical and logical identifiers (OIDs) into the right
-	 * places.	Note that the physical ID (relfilenode) is initially the same
-	 * as the logical ID (OID).
+	 * places.
+	 *
+	 * In PostgreSQL, the physical ID (relfilenode) is initially the same
+	 * as the logical ID (OID). In GPDB, the table's logical OID is allocated
+	 * in the master, and might already be in use as a relfilenode of an
+	 * existing relation in a segment.
 	 */
 	rel->rd_rel->relisshared = shared_relation;
 
@@ -3206,7 +3211,18 @@ RelationBuildLocalRelation(const char *relname,
 	for (i = 0; i < natts; i++)
 		rel->rd_att->attrs[i]->attrelid = relid;
 
-	rel->rd_rel->relfilenode = relid;
+	if (Gp_role != GP_ROLE_EXECUTE ||
+		CheckNewRelFileNodeIsOk(relid, reltablespace, shared_relation))
+	{
+		relfilenode = relid;
+	}
+	else
+	{
+		/* FIXME: should we pass pg_class here? */
+		relfilenode = GetNewRelFileNode(reltablespace, shared_relation, NULL);
+	}
+	rel->rd_rel->relfilenode = relfilenode;
+
 	rel->rd_rel->reltablespace = reltablespace;
 
 	RelationInitLockInfo(rel);	/* see lmgr.c */

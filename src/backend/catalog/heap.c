@@ -1576,6 +1576,9 @@ heap_create_with_catalog(const char *relname,
 	 *
 	 * The OID will be the relfilenode as well, so make sure it doesn't
 	 * collide with either pg_class OIDs or existing physical files.
+	 *
+	 * (In GPDB, heap_create can choose a different relfilenode, in a QE node,
+	 * if the one we choose is already in use.)
 	 */
 	if (!OidIsValid(relid) && Gp_role == GP_ROLE_EXECUTE)
 		relid = GetPreassignedOidForRelation(relnamespace, relname);
@@ -1583,12 +1586,6 @@ heap_create_with_catalog(const char *relname,
 	if (!OidIsValid(relid))
 		relid = GetNewRelFileNode(reltablespace, shared_relation,
 								  pg_class_desc);
-	else
-		if (IsUnderPostmaster)
-		{
-			CheckNewRelFileNodeIsOk(relid, reltablespace, shared_relation,
-									pg_class_desc);
-		}
 
 	/*
 	 * Create the relcache entry (mostly dummy at this point) and the physical

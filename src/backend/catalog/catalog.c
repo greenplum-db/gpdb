@@ -925,6 +925,9 @@ GetNewRelFileNode(Oid reltablespace, bool relisshared, Relation pg_class)
 		else
 			rnode.relNode = GetNewObjectId();
 
+		if (!UseOidForRelFileNode(rnode.relNode))
+			continue;
+
 		/* Check for existing file of same name */
 		rpath = relpath(rnode);
 		fd = BasicOpenFile(rpath, O_RDONLY | PG_BINARY, 0);
@@ -957,20 +960,24 @@ GetNewRelFileNode(Oid reltablespace, bool relisshared, Relation pg_class)
 	if (Gp_role == GP_ROLE_EXECUTE)
 		Insist(!PointerIsValid(pg_class));
 
-	elog(DEBUG1, "Calling GetNewRelFileNode in %s mode %s pg_class. "
-		 "New relOid = %d", 
+	elog(DEBUG1, "Calling GetNewRelFileNode in %s mode %s pg_class. New relOid = %d",
 		 (Gp_role == GP_ROLE_EXECUTE ? "execute" :
 		  Gp_role == GP_ROLE_UTILITY ? "utility" :
 		  "dispatch"), pg_class ? "with" : "without",
-		 rnode.relNode );
+		 rnode.relNode);
 
 	return rnode.relNode;
 }
 
-
+/*
+ * Can the given OID be used as pg_class.relfilenode?
+ *
+ * As a side-effect, advances OID counter to the given OID and remembers
+ * that the OID has been used as a relfilenode, so that the same value
+ * doesn't get chosen again.
+ */
 bool
-CheckNewRelFileNodeIsOk(Oid newOid, Oid reltablespace, bool relisshared, 
-						Relation pg_class)
+CheckNewRelFileNodeIsOk(Oid newOid, Oid reltablespace, bool relisshared)
 {
 	RelFileNode rnode;
 	char	   *rpath;
@@ -978,50 +985,30 @@ CheckNewRelFileNodeIsOk(Oid newOid, Oid reltablespace, bool relisshared,
 	bool		collides;
 	SnapshotData SnapshotDirty;
 
+	/*
+	 * Advance our current OID counter with the given value, to keep
+	 * the counter roughly in sync across all nodes. This ensures
+	 * that a GetNewRelFileNode() call after this will not choose the
+	 * same OID, and won't have to loop excessively to retry. That
+	 * still leaves a race condition, if GetNewRelFileNode() is called
+	 * just before CheckNewRelFileNodeIsOk() - UseOidForRelFileNode()
+	 * is called to plug that.
+	 *
+	 * FIXME: handle OID wraparound gracefully.
+	 */
+	while(GetNewObjectId() < newOid);
+
+	if (!UseOidForRelFileNode(newOid))
+		return false;
+
 	InitDirtySnapshot(SnapshotDirty);
-
-	if (pg_class)
-	{
-		Oid			oidIndex;
-		Relation	indexrel;
-		IndexScanDesc scan;
-		ScanKeyData key;
-	
-		Assert(!IsBootstrapProcessingMode());
-		Assert(pg_class->rd_rel->relhasoids);
-	
-		/* The relcache will cache the identity of the OID index for us */
-		oidIndex = RelationGetOidIndex(pg_class);
-	
-		Assert(OidIsValid(oidIndex));
-		
-		indexrel = index_open(oidIndex, AccessShareLock);
-		
-		ScanKeyInit(&key,
-					(AttrNumber) 1,
-					BTEqualStrategyNumber, F_OIDEQ,
-					ObjectIdGetDatum(newOid));
-
-		scan = index_beginscan(pg_class, indexrel, &SnapshotDirty, 1, &key);
-
-		collides = HeapTupleIsValid(index_getnext(scan, ForwardScanDirection));
-
-		index_endscan(scan);
-		
-		index_close(indexrel, AccessShareLock);
-		
-		if (collides)
-			elog(ERROR, "relfilenode %d already in use in \"pg_class\"",
-				 newOid);	
-		
-	}
 
 	/* This should match RelationInitPhysicalAddr */
 	rnode.spcNode = reltablespace ? reltablespace : MyDatabaseTableSpace;
 	rnode.dbNode = relisshared ? InvalidOid : MyDatabaseId;
-	
+
 	rnode.relNode = newOid;
-	
+
 	/* Check for existing file of same name */
 	rpath = relpath(rnode);
 	fd = BasicOpenFile(rpath, O_RDONLY | PG_BINARY, 0);
@@ -1036,11 +1023,13 @@ CheckNewRelFileNodeIsOk(Oid newOid, Oid reltablespace, bool relisshared,
 		collides = false;
 
 	pfree(rpath);
-	
-	if (collides && !relisshared)
-		elog(ERROR, "oid %d already in use", newOid);	
 
-	while(GetNewObjectId() < newOid);
+	elog(DEBUG1, "Called CheckNewRelFileNodeIsOk in %s mode for %u / %u / %u. "
+		 "collides = %s",
+		 (Gp_role == GP_ROLE_EXECUTE ? "execute" :
+		  Gp_role == GP_ROLE_UTILITY ? "utility" :
+		  "dispatch"), newOid, reltablespace, relisshared,
+		 collides ? "true" : "false");
 
 	return !collides;
 }

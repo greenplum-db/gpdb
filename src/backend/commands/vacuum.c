@@ -1204,10 +1204,9 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 		 */
 		if (Gp_role == GP_ROLE_DISPATCH)
 		{
-			int 		i, j, nindexes;
+			int 		i, nindexes;
 			bool 		has_bitmap = false;
 			Relation   *i_rel = NULL;
-			Oid			newrelfilenode;
 
 			stats_context.ctx = vac_context;
 			stats_context.onerel = onerel;
@@ -1219,24 +1218,10 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 			{
 				for (i = 0; i < nindexes; i++)
 				{
-					if (!RelationIsBitmapIndex(i_rel[i]))
-						continue;
-
-					has_bitmap = true;
-
-					/*
-					 * bitmap indexes require extra relfilenodes during vacuum,
-					 * the exact number is unknown so we err on the side of
-					 * caution. See comment on NUM_EXTRA_OIDS_FOR_BITMAP for
-					 * more information.
-					 */
-					for (j = 0; j < NUM_EXTRA_OIDS_FOR_BITMAP; j++)
+					if (RelationIsBitmapIndex(i_rel[i]))
 					{
-						newrelfilenode = GetNewRelFileNode(i_rel[i]->rd_rel->reltablespace,
-														   i_rel[i]->rd_rel->relisshared,
-														   NULL);
-						AddDispatchRelfilenodeForRelation(RelationGetRelid(i_rel[i]),
-														  newrelfilenode);
+						has_bitmap = true;
+						break;
 					}
 				}
 			}

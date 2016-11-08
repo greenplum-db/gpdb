@@ -209,7 +209,7 @@ typedef struct
 	Oid			namespaceOid;	/* namespace OID for most objects */
 	Oid			keyOid2;		/* 2nd key OID field, meaning depends on object type */
 
-	Oid			oid;			/* OID (or relfilenode) to assign */
+	Oid			oid;			/* OID to assign */
 
 } OidAssignment;
 

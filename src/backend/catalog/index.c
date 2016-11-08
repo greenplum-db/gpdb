@@ -628,23 +628,18 @@ index_create(Oid heapRelationId,
 	 *
 	 * The OID will be the relfilenode as well, so make sure it doesn't
 	 * collide with either pg_class OIDs or existing physical files.
+	 *
+	 * (In GPDB, heap_create can choose a different relfilenode, in a QE node,
+	 * if the one we choose is already in use.)
 	 */
 	if (!OidIsValid(indexRelationId))
 	{
 		if (Gp_role == GP_ROLE_EXECUTE)
-		{
 			indexRelationId = GetPreassignedOidForRelation(namespaceId, indexRelationName);
-			CheckNewRelFileNodeIsOk(indexRelationId, tableSpaceId, shared_relation, pg_class);
-		}
 		else
 			indexRelationId = GetNewRelFileNode(tableSpaceId, shared_relation,
 												pg_class);
 	}
-	else
-		if (IsUnderPostmaster)
-		{
-			CheckNewRelFileNodeIsOk(indexRelationId, tableSpaceId, shared_relation, pg_class);
-		}
 
 	/*
 	 * create the index relation's relcache entry and physical disk file. (If
@@ -1422,7 +1417,7 @@ index_update_stats(Relation rel, bool hasindex, bool isprimary,
 void
 setNewRelfilenode(Relation relation, TransactionId freezeXid)
 {
-	Oid			newrelfilenode = InvalidOid;
+	Oid			newrelfilenode;
 	RelFileNode newrnode;
 	SMgrRelation srel;
 	Relation	pg_class;
@@ -1445,26 +1440,10 @@ setNewRelfilenode(Relation relation, TransactionId freezeXid)
 			freezeXid == InvalidTransactionId) ||
 		   TransactionIdIsNormal(freezeXid));
 
-	if (Gp_role == GP_ROLE_EXECUTE)
-		newrelfilenode = GetPreassignedRelfilenodeForRelation(RelationGetRelid(relation));
-
-	if (newrelfilenode == InvalidOid)
-	{
-		/* Allocate a new relfilenode */
-		newrelfilenode = GetNewRelFileNode(relation->rd_rel->reltablespace,
-										   relation->rd_rel->relisshared,
-										   NULL);
-
-		AddDispatchRelfilenodeForRelation(RelationGetRelid(relation), newrelfilenode);
-	}
-	else
-	{
-		CheckNewRelFileNodeIsOk(newrelfilenode, relation->rd_rel->reltablespace,
-								relation->rd_rel->relisshared, NULL);
-
-		elog(DEBUG3, "setNewRelfilenodeToOid called.  newrelfilenode = %d",
-			 newrelfilenode);
-	}
+	/* Allocate a new relfilenode */
+	newrelfilenode = GetNewRelFileNode(relation->rd_rel->reltablespace,
+									   relation->rd_rel->relisshared,
+									   NULL);
 
 	/*
 	 * Find the pg_class tuple for the given relation.	This is not used
