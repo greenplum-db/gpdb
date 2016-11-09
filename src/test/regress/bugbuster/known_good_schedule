@@ -8,8 +8,7 @@ test: wrkloadadmin
 ignore: jdbc
 test: spi
 test: security
-ignore: view
-test: load_tpch xpath
+test: load_tpch view xpath
 # these tests depend on load_tpch
 test: tpch_query tpch_aopart hashagg gpsort
 test: mpp-11333
