@@ -68,9 +68,11 @@ function make_sync_tools() {
     # downloaded from artifacts in order to use the native zlib.
     find ext -name 'libz.*' -exec rm -f {} \;
     tar -czf ../../sync_tools_gpdb/sync_tools_gpdb.tar.gz ext
-  popd
-}
 
+  popd
+
+  cp -R gpaddon_src gpdb_src/gpAux/addon
+}
 
 function build_gpdb() {
   pushd gpdb_src/gpAux

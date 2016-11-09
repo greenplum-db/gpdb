@@ -10,6 +10,13 @@ resources:
     private_key: {{gpdb-git-key}}
     uri: {{gpdb-git-remote}}
 
+- name: gpaddon_src
+  type: git
+  source:
+    branch: {{gpaddon-git-branch}}
+    private_key: {{gpdb-git-key}}
+    uri: {{gpaddon-git-remote}}
+
 - name: centos67-gpdb-gcc6-llvm-image
   type: docker-image
   source:
@@ -100,6 +107,9 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
+      tags: ["worker-one"]
+      trigger: true
+    - get: gpaddon_src
       tags: ["worker-one"]
       trigger: true
     - get: centos67-gpdb-gcc6-llvm-image
