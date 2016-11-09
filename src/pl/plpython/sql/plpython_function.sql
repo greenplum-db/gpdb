@@ -566,24 +566,6 @@ CREATE FUNCTION test_inout_params(first inout text) AS $$
 return first + '_inout';
 $$ LANGUAGE plpythonu;
 
-CREATE FUNCTION test_type_conversion_bool(x bool) returns bool AS $$ return x $$ language plpythonu;
-CREATE FUNCTION test_type_conversion_char(x char) returns char AS $$ return x $$ language plpythonu;
-CREATE FUNCTION test_type_conversion_int2(x int2) returns int2 AS $$ return x $$ language plpythonu;
-CREATE FUNCTION test_type_conversion_int4(x int4) returns int4 AS $$ return x $$ language plpythonu;
-CREATE FUNCTION test_type_conversion_int8(x int8) returns int8 AS $$ return x $$ language plpythonu;
-CREATE FUNCTION test_type_conversion_float4(x float4) returns float4 AS $$ return x $$ language plpythonu;
-CREATE FUNCTION test_type_conversion_float8(x float8) returns float8 AS $$ return x $$ language plpythonu;
-CREATE FUNCTION test_type_conversion_numeric(x numeric) returns numeric AS $$ return x $$ language plpythonu;
-CREATE FUNCTION test_type_conversion_text(x text) returns text AS $$ return x $$ language plpythonu;
-CREATE FUNCTION test_type_conversion_bytea(x bytea) returns bytea AS $$ return x $$ language plpythonu;
-CREATE FUNCTION test_type_marshal() returns bytea AS $$ 
-import marshal
-return marshal.dumps('hello world')
-$$ language plpythonu;
-CREATE FUNCTION test_type_unmarshal(x bytea) returns text AS $$
-import marshal
-return marshal.loads(x)
-$$ language plpythonu;
 
 -- RETURN value testing
 CREATE FUNCTION test_return_void(s text) 
@@ -608,6 +590,16 @@ RETURNS bytea AS $$
 $$ language plpythonu;
 CREATE FUNCTION test_return_circle(s text) 
 RETURNS circle AS $$
+  exec('y = ' + s)
+  return y
+$$ language plpythonu;
+CREATE FUNCTION test_return_array_int(s text) 
+RETURNS int[] AS $$
+  exec('y = ' + s)
+  return y
+$$ language plpythonu;
+CREATE FUNCTION test_return_array_text(s text) 
+RETURNS text[] AS $$
   exec('y = ' + s)
   return y
 $$ language plpythonu;

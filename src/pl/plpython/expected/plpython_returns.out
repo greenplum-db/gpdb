@@ -483,14 +483,14 @@ PL/Python function "test_return_text"
 SELECT test_return_text(
     E'1; exec("class Foo:\\n  def __str__(self): return None"); y = Foo()'
 );
-ERROR:  could not create string representation of Python object (plpython.c:4699)
+ERROR:  could not create string representation of Python object (plpython.c:4928)
 DETAIL:  TypeError: __str__ returned non-string (type NoneType)
 CONTEXT:  while creating return value
 PL/Python function "test_return_text"
 SELECT * FROM test_return_text(
     E'1; exec("class Foo:\\n  def __str__(self): return None"); y = Foo()'
 );
-ERROR:  could not create string representation of Python object (plpython.c:4699)
+ERROR:  could not create string representation of Python object (plpython.c:4928)
 DETAIL:  TypeError: __str__ returned non-string (type NoneType)
 CONTEXT:  while creating return value
 PL/Python function "test_return_text"
@@ -710,24 +710,24 @@ FROM gp_single_row;
 SELECT test_return_bytea(
     E'1; exec("class Foo:\\n  def __str__(self): return None"); y = Foo()'
 );
-ERROR:  could not create bytes representation of Python object (plpython.c:4699)
+ERROR:  could not create bytes representation of Python object (plpython.c:4928)
 DETAIL:  TypeError: __str__ returned non-string (type NoneType)
 CONTEXT:  while creating return value
 PL/Python function "test_return_bytea"
 SELECT * FROM test_return_bytea(
     E'1; exec("class Foo:\\n  def __str__(self): return None"); y = Foo()'
 );
-ERROR:  could not create bytes representation of Python object (plpython.c:4699)
+ERROR:  could not create bytes representation of Python object (plpython.c:4928)
 DETAIL:  TypeError: __str__ returned non-string (type NoneType)
 CONTEXT:  while creating return value
 PL/Python function "test_return_bytea"
 SELECT test_return_bytea(
     E'1; exec("class Foo:\\n  def __str__(self): return None"); y = Foo()'
 ) FROM gp_single_row;
-ERROR:  could not create bytes representation of Python object (plpython.c:4699)  (seg0 slice1 gxymac.local:40000 pid=35336) (cdbdisp.c:1462)
+ERROR:  could not create bytes representation of Python object (plpython.c:4928)  (seg0 slice1 192.168.1.138:25432 pid=43982)
 DETAIL:  
-	 TypeError: __str__ returned non-string (type NoneType)
-	 while creating return value
+TypeError: __str__ returned non-string (type NoneType)
+while creating return value
 PL/Python function "test_return_bytea"
 --
 -- Case 5: Return Circle
@@ -878,6 +878,180 @@ SELECT * FROM test_return_circle(E'"test\\0"');
 ERROR:  could not convert Python object into cstring: Python string representation appears to contain null bytes
 CONTEXT:  while creating return value
 PL/Python function "test_return_circle"
+--
+-- Case 5: Return array of integers
+--
+-- Test returning arrays of fixed-width elements from PL/Python functions
+--
+-- From Python None
+SELECT test_return_array_int('None');
+ test_return_array_int 
+-----------------------
+ 
+(1 row)
+
+SELECT * FROM test_return_array_int('None');
+ test_return_array_int 
+-----------------------
+ 
+(1 row)
+
+-- From Python empty list
+SELECT test_return_array_int('[]');
+ test_return_array_int 
+-----------------------
+ {}
+(1 row)
+
+SELECT * FROM test_return_array_int('[]');
+ test_return_array_int 
+-----------------------
+ {}
+(1 row)
+
+-- From Python non-empty list
+SELECT test_return_array_int('[1,2]');
+ test_return_array_int 
+-----------------------
+ {1,2}
+(1 row)
+
+SELECT * FROM test_return_array_int('[1,2]');
+ test_return_array_int 
+-----------------------
+ {1,2}
+(1 row)
+
+-- From Python multiple lists
+SELECT test_return_array_int('[[1,2,3],[4,5,6]]');
+ test_return_array_int 
+-----------------------
+ {{1,2,3},{4,5,6}}
+(1 row)
+
+SELECT * FROM test_return_array_int('[[1,2,3],[4,5,6]]');
+ test_return_array_int 
+-----------------------
+ {{1,2,3},{4,5,6}}
+(1 row)
+
+-- Error conditions
+-- Multi-dimensional array with non-fixed dimension sizes
+SELECT test_return_array_int('[[1,2,3],[1,2]]');
+ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 2 while expected 3 (plpython.c:4928)
+CONTEXT:  while creating return value
+PL/Python function "test_return_array_int"
+SELECT * FROM test_return_array_int('[[1,2,3],[1,2]]');
+ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 2 while expected 3 (plpython.c:4928)
+CONTEXT:  while creating return value
+PL/Python function "test_return_array_int"
+-- Multi-dimensional array with mix of arrays and atomic elements
+SELECT test_return_array_int('[[1,2,3],[1,[2,3],[4,5]]]');
+ERROR:  invalid input syntax for integer: "[2, 3]"
+CONTEXT:  while creating return value
+PL/Python function "test_return_array_int"
+SELECT * FROM test_return_array_int('[[1,2,3],[1,[2,3],[4,5]]]');
+ERROR:  invalid input syntax for integer: "[2, 3]"
+CONTEXT:  while creating return value
+PL/Python function "test_return_array_int"
+-- Multi-dimensional array with missing dimensions
+SELECT test_return_array_int('[[1,2,3],None,[4,5,6]]');
+ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length -1 while expected 3 (plpython.c:4928)
+DETAIL:  TypeError: object of type 'NoneType' has no len()
+CONTEXT:  while creating return value
+PL/Python function "test_return_array_int"
+SELECT * FROM test_return_array_int('[[1,2,3],None,[4,5,6]]');
+ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length -1 while expected 3 (plpython.c:4928)
+DETAIL:  TypeError: object of type 'NoneType' has no len()
+CONTEXT:  while creating return value
+PL/Python function "test_return_array_int"
+--
+-- Case 5: Return array of texts
+--
+-- Test returning arrays of variable-width elements from PL/Python functions
+--
+-- From Python None
+SELECT test_return_array_text('None');
+ test_return_array_text 
+------------------------
+ 
+(1 row)
+
+SELECT * FROM test_return_array_text('None');
+ test_return_array_text 
+------------------------
+ 
+(1 row)
+
+-- From Python empty list
+SELECT test_return_array_text('[]');
+ test_return_array_text 
+------------------------
+ {}
+(1 row)
+
+SELECT * FROM test_return_array_text('[]');
+ test_return_array_text 
+------------------------
+ {}
+(1 row)
+
+-- From Python non-empty list
+SELECT test_return_array_text('["abc","def"]');
+ test_return_array_text 
+------------------------
+ {abc,def}
+(1 row)
+
+SELECT * FROM test_return_array_text('["abc","def"]');
+ test_return_array_text 
+------------------------
+ {abc,def}
+(1 row)
+
+-- From Python multiple lists
+SELECT test_return_array_text('[["a","bcd","ef"],[None,"gh","ijklm"]]');
+    test_return_array_text    
+------------------------------
+ {{a,bcd,ef},{NULL,gh,ijklm}}
+(1 row)
+
+SELECT * FROM test_return_array_text('[["a","bcd","ef"],[None,"gh","ijklm"]]');
+    test_return_array_text    
+------------------------------
+ {{a,bcd,ef},{NULL,gh,ijklm}}
+(1 row)
+
+-- Error conditions
+-- Multi-dimensional array with non-fixed dimension sizes
+SELECT test_return_array_text('[["a","bcd","ef"],[None,"gh","ijklm","ERROR"]]');
+ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 4 while expected 3 (plpython.c:4928)
+CONTEXT:  while creating return value
+PL/Python function "test_return_array_text"
+SELECT * FROM test_return_array_text('[["a","bcd","ef"],[None,"gh","ijklm","ERROR"]]');
+ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 4 while expected 3 (plpython.c:4928)
+CONTEXT:  while creating return value
+PL/Python function "test_return_array_text"
+-- Multi-dimensional array with mix of arrays and atomic elements
+SELECT test_return_array_text('[[["a"],"b"],["c",["d","e"]]]');
+ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 2 while expected 1 (plpython.c:4928)
+CONTEXT:  while creating return value
+PL/Python function "test_return_array_text"
+SELECT * FROM test_return_array_text('[[["a"],"b"],["c",["d","e"]]]');
+ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length 2 while expected 1 (plpython.c:4928)
+CONTEXT:  while creating return value
+PL/Python function "test_return_array_text"
+-- Multi-dimensional array with missing dimensions
+SELECT test_return_array_text('[["abc","def"],None,["ghij","k"]]');
+ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length -1 while expected 2 (plpython.c:4928)
+DETAIL:  TypeError: object of type 'NoneType' has no len()
+CONTEXT:  while creating return value
+PL/Python function "test_return_array_text"
+SELECT * FROM test_return_array_text('[["abc","def"],None,["ghij","k"]]');
+ERROR:  multidimensional arrays must have array expressions with matching dimensions. PL/Python function return value has sequence length -1 while expected 2 (plpython.c:4928)
+DETAIL:  TypeError: object of type 'NoneType' has no len()
+CONTEXT:  while creating return value
+PL/Python function "test_return_array_text"
 -- ===================================================
 -- TEST 2:  RETURN VALUE TESTING - SETOF scalar values
 -- ===================================================
@@ -2050,7 +2224,7 @@ SELECT test_return_table_record('{"first": "value", "second": 4, "third": "ignor
 (1 row)
 
 SELECT * FROM test_return_table_record('{"first": "value", "second": 4}, "third": "ignored"}');
-ERROR:  SyntaxError: invalid syntax (<string>, line 1) (plpython.c:4699)
+ERROR:  SyntaxError: invalid syntax (<string>, line 1) (plpython.c:4928)
 CONTEXT:  Traceback (most recent call last):
   PL/Python function "test_return_table_record", line 2, in <module>
     exec('y = ' + s)
@@ -2078,9 +2252,9 @@ CONTEXT:  while creating return value
 PL/Python function "test_return_setof_type_record"
 SELECT test_return_setof_type_record('[]')
 FROM gp_single_row;
-ERROR:  length of returned sequence did not match number of columns in row  (seg0 slice1 gxymac.local:40000 pid=35336)
+ERROR:  length of returned sequence did not match number of columns in row  (seg0 slice1 192.168.1.138:25432 pid=43982)
 DETAIL:  
-	 while creating return value
+while creating return value
 PL/Python function "test_return_setof_type_record"
 SELECT (test_return_setof_type_record('[]')).*;
 ERROR:  length of returned sequence did not match number of columns in row
@@ -2088,9 +2262,9 @@ CONTEXT:  while creating return value
 PL/Python function "test_return_setof_type_record"
 SELECT (test_return_setof_type_record('[]')).*
 FROM gp_single_row;
-ERROR:  length of returned sequence did not match number of columns in row  (seg0 slice1 gxymac.local:40000 pid=35336)
+ERROR:  length of returned sequence did not match number of columns in row  (seg0 slice1 192.168.1.138:25432 pid=43982)
 DETAIL:  
-	 while creating return value
+while creating return value
 PL/Python function "test_return_setof_type_record"
 -- From Python List
 SELECT test_return_setof_type_record('[ ("value", 4), {"first": "test", "second": 2} ]');
@@ -2103,9 +2277,9 @@ CONTEXT:  while creating return value
 PL/Python function "test_return_setof_type_record"
 SELECT test_return_setof_type_record('[ ("value", 4), {"first": "test", "second": 2} ]')
 FROM gp_single_row;
-ERROR:  invalid input syntax for integer: "{'second': 2, 'first': 'test'}"  (seg0 slice1 gxymac.local:40000 pid=35336)
+ERROR:  invalid input syntax for integer: "{'second': 2, 'first': 'test'}"  (seg0 slice1 192.168.1.138:25432 pid=43982)
 DETAIL:  
-	 while creating return value
+while creating return value
 PL/Python function "test_return_setof_type_record"
 SELECT (test_return_setof_type_record('[ ("value", 4), {"first": "test", "second": 2} ]')).*;
 ERROR:  invalid input syntax for integer: "{'second': 2, 'first': 'test'}"
@@ -2113,9 +2287,9 @@ CONTEXT:  while creating return value
 PL/Python function "test_return_setof_type_record"
 SELECT (test_return_setof_type_record('[ ("value", 4), {"first": "test", "second": 2} ]')).*
 FROM gp_single_row;
-ERROR:  invalid input syntax for integer: "{'second': 2, 'first': 'test'}"  (seg0 slice1 gxymac.local:40000 pid=35336)
+ERROR:  invalid input syntax for integer: "{'second': 2, 'first': 'test'}"  (seg0 slice1 192.168.1.138:25432 pid=43982)
 DETAIL:  
-	 while creating return value
+while creating return value
 PL/Python function "test_return_setof_type_record"
 -- Error conditions
 -- [ERROR] From Python None
@@ -2236,7 +2410,7 @@ ERROR:  length of returned sequence did not match number of columns in row
 CONTEXT:  while creating return value
 PL/Python function "test_return_setof_type_record"
 SELECT * FROM test_return_setof_type_record('[{"first": "value", "second": 4}, "third": "ignored"}]');
-ERROR:  SyntaxError: invalid syntax (<string>, line 1) (plpython.c:4699)
+ERROR:  SyntaxError: invalid syntax (<string>, line 1) (plpython.c:4928)
 CONTEXT:  Traceback (most recent call last):
   PL/Python function "test_return_setof_type_record", line 2, in <module>
     exec('y = ' + s)
@@ -2255,9 +2429,9 @@ CONTEXT:  while creating return value
 PL/Python function "test_return_setof_table_record"
 SELECT test_return_setof_table_record('[]')
 FROM gp_single_row;
-ERROR:  length of returned sequence did not match number of columns in row  (seg0 slice1 gxymac.local:40000 pid=35336)
+ERROR:  length of returned sequence did not match number of columns in row  (seg0 slice1 192.168.1.138:25432 pid=43982)
 DETAIL:  
-	 while creating return value
+while creating return value
 PL/Python function "test_return_setof_table_record"
 SELECT (test_return_setof_table_record('[]')).*;
 ERROR:  length of returned sequence did not match number of columns in row
@@ -2265,9 +2439,9 @@ CONTEXT:  while creating return value
 PL/Python function "test_return_setof_table_record"
 SELECT (test_return_setof_table_record('[]')).*
 FROM gp_single_row;
-ERROR:  length of returned sequence did not match number of columns in row  (seg0 slice1 gxymac.local:40000 pid=35336)
+ERROR:  length of returned sequence did not match number of columns in row  (seg0 slice1 192.168.1.138:25432 pid=43982)
 DETAIL:  
-	 while creating return value
+while creating return value
 PL/Python function "test_return_setof_table_record"
 -- From Python List
 SELECT test_return_setof_table_record('[ None, ("value", 4), {"first": "test", "second": 2} ]');
@@ -2280,9 +2454,9 @@ CONTEXT:  while creating return value
 PL/Python function "test_return_setof_table_record"
 SELECT test_return_setof_table_record('[ None, ("value", 4), {"first": "test", "second": 2} ]')
 FROM gp_single_row;
-ERROR:  length of returned sequence did not match number of columns in row  (seg0 slice1 gxymac.local:40000 pid=35336)
+ERROR:  length of returned sequence did not match number of columns in row  (seg0 slice1 192.168.1.138:25432 pid=43982)
 DETAIL:  
-	 while creating return value
+while creating return value
 PL/Python function "test_return_setof_table_record"
 SELECT (test_return_setof_table_record('[ None, ("value", 4), {"first": "test", "second": 2} ]')).*;
 ERROR:  length of returned sequence did not match number of columns in row
@@ -2290,9 +2464,9 @@ CONTEXT:  while creating return value
 PL/Python function "test_return_setof_table_record"
 SELECT (test_return_setof_table_record('[ None, ("value", 4), {"first": "test", "second": 2} ]')).*
 FROM gp_single_row;
-ERROR:  length of returned sequence did not match number of columns in row  (seg0 slice1 gxymac.local:40000 pid=35336)
+ERROR:  length of returned sequence did not match number of columns in row  (seg0 slice1 192.168.1.138:25432 pid=43982)
 DETAIL:  
-	 while creating return value
+while creating return value
 PL/Python function "test_return_setof_table_record"
 -- Error conditions
 -- [ERROR] From Python None
@@ -2413,7 +2587,7 @@ ERROR:  length of returned sequence did not match number of columns in row
 CONTEXT:  while creating return value
 PL/Python function "test_return_setof_table_record"
 SELECT * FROM test_return_setof_table_record('[{"first": "value", "second": 4}, "third": "ignored"}]');
-ERROR:  SyntaxError: invalid syntax (<string>, line 1) (plpython.c:4699)
+ERROR:  SyntaxError: invalid syntax (<string>, line 1) (plpython.c:4928)
 CONTEXT:  Traceback (most recent call last):
   PL/Python function "test_return_setof_table_record", line 2, in <module>
     exec('y = ' + s)
@@ -2626,14 +2800,14 @@ PL/Python function "test_return_out_text"
 SELECT test_return_out_text(
     E'1; exec("class Foo:\\n  def __str__(self): return None"); y = Foo()'
 );
-ERROR:  could not create string representation of Python object (plpython.c:4699)
+ERROR:  could not create string representation of Python object (plpython.c:4928)
 DETAIL:  TypeError: __str__ returned non-string (type NoneType)
 CONTEXT:  while creating return value
 PL/Python function "test_return_out_text"
 SELECT * FROM test_return_out_text(
     E'1; exec("class Foo:\\n  def __str__(self): return None"); y = Foo()'
 );
-ERROR:  could not create string representation of Python object (plpython.c:4699)
+ERROR:  could not create string representation of Python object (plpython.c:4928)
 DETAIL:  TypeError: __str__ returned non-string (type NoneType)
 CONTEXT:  while creating return value
 PL/Python function "test_return_out_text"
@@ -2655,9 +2829,9 @@ SELECT * FROM test_return_out_record('None');
 
 SELECT test_return_out_record('None') 
 FROM gp_single_row;
-test_return_out_record 
+ test_return_out_record 
 ------------------------
-
+ 
 (1 row)
 
 SELECT (test_return_out_record('None')).*;
@@ -2688,9 +2862,9 @@ SELECT * FROM test_return_out_record('("value", 4)');
 
 SELECT test_return_out_record('("value", 4)')
 FROM gp_single_row;
-test_return_out_record 
+ test_return_out_record 
 ------------------------
-(value,4)
+ (value,4)
 (1 row)
 
 SELECT (test_return_out_record('("value", 4)')).*;
@@ -2721,9 +2895,9 @@ SELECT * FROM test_return_out_record('["value", 4]');
 
 SELECT test_return_out_record('["value", 4]')
 FROM gp_single_row;
-test_return_out_record 
+ test_return_out_record 
 ------------------------
-(value,4)
+ (value,4)
 (1 row)
 
 SELECT (test_return_out_record('["value", 4]')).*;
@@ -2754,9 +2928,9 @@ SELECT * FROM test_return_out_record('{"first": "value", "second": 4}');
 
 SELECT test_return_out_record('{"first": "value", "second": 4}')
 FROM gp_single_row;
-test_return_out_record 
+ test_return_out_record 
 ------------------------
-(value,4)
+ (value,4)
 (1 row)
 
 SELECT (test_return_out_record('{"first": "value", "second": 4}')).*;
@@ -3024,7 +3198,7 @@ SELECT * FROM test_return_out_setof_record('[]');
 
 SELECT test_return_out_setof_record('[]')
 FROM gp_single_row;
-test_return_out_setof_record 
+ test_return_out_setof_record 
 ------------------------------
 (0 rows)
 
@@ -3056,10 +3230,10 @@ SELECT * FROM test_return_out_setof_record('[ ("value", 4), {"first": "test", "s
 
 SELECT test_return_out_setof_record('[ ("value", 4), {"first": "test", "second": 2} ]')
 FROM gp_single_row;
-test_return_out_setof_record 
+ test_return_out_setof_record 
 ------------------------------
-(value,4)
-(test,2)
+ (value,4)
+ (test,2)
 (2 rows)
 
 SELECT (test_return_out_setof_record('[ ("value", 4), {"first": "test", "second": 2} ]')).*;
@@ -3183,7 +3357,7 @@ SELECT test_return_out_setof_record('[{"first": "value", "second": 4, "third": "
 (1 row)
 
 SELECT * FROM test_return_out_setof_record('[{"first": "value", "second": 4}, "third": "ignored"}]');
-ERROR:  SyntaxError: invalid syntax (<string>, line 1) (plpython.c:4699)
+ERROR:  SyntaxError: invalid syntax (<string>, line 1) (plpython.c:4928)
 CONTEXT:  Traceback (most recent call last):
   PL/Python function "test_return_out_setof_record", line 2, in <module>
     exec('y = ' + s)
@@ -3217,7 +3391,7 @@ SELECT * FROM test_return_table('[]');
 
 SELECT test_return_table('[]')
 FROM gp_single_row;
-test_return_table 
+ test_return_table 
 -------------------
 (0 rows)
 
@@ -3249,11 +3423,11 @@ SELECT * FROM test_return_table('[ ("value", 4), {"first": "test", "second": 2} 
 
 SELECT test_return_table('[ None, ("value", 4), {"first": "test", "second": 2} ]')
 FROM gp_single_row;
-test_return_table 
+ test_return_table 
 -------------------
-
-(value,4)
-(test,2)
+ 
+ (value,4)
+ (test,2)
 (3 rows)
 
 SELECT (test_return_table('[ ("value", 4), {"first": "test", "second": 2} ]')).*;

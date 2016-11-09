@@ -166,29 +166,6 @@ SELECT * FROM test_in_out_params('test_in');
 SELECT * FROM test_in_out_params_multi('test_in');
 SELECT * FROM test_inout_params('test_in');
 
-SELECT * FROM test_type_conversion_bool(true);
-SELECT * FROM test_type_conversion_bool(false);
-SELECT * FROM test_type_conversion_bool(null);
-SELECT * FROM test_type_conversion_char('a');
-SELECT * FROM test_type_conversion_char(null);
-SELECT * FROM test_type_conversion_int2(100::int2);
-SELECT * FROM test_type_conversion_int2(null);
-SELECT * FROM test_type_conversion_int4(100);
-SELECT * FROM test_type_conversion_int4(null);
-SELECT * FROM test_type_conversion_int8(100);
-SELECT * FROM test_type_conversion_int8(null);
-SELECT * FROM test_type_conversion_float4(100);
-SELECT * FROM test_type_conversion_float4(null);
-SELECT * FROM test_type_conversion_float8(100);
-SELECT * FROM test_type_conversion_float8(null);
-SELECT * FROM test_type_conversion_numeric(100);
-SELECT * FROM test_type_conversion_numeric(null);
-SELECT * FROM test_type_conversion_text('hello world');
-SELECT * FROM test_type_conversion_text(null);
-SELECT * FROM test_type_conversion_bytea('hello world');
-SELECT * FROM test_type_conversion_bytea(null);
-SELECT test_type_unmarshal(x) FROM test_type_marshal() x;
-
 SELECT (split(10)).*; 
 
 SELECT * FROM split(100); 

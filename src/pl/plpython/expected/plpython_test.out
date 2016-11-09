@@ -182,7 +182,7 @@ NOTICE:  notice
 CONTEXT:  PL/Python function "elog_test"
 WARNING:  warning
 CONTEXT:  PL/Python function "elog_test"
-ERROR:  plpy.Error: error (plpython.c:4652)
+ERROR:  plpy.Error: error (plpython.c:4955)
 CONTEXT:  Traceback (most recent call last):
   PL/Python function "elog_test", line 10, in <module>
     plpy.error('error')
@@ -243,12 +243,12 @@ SELECT test_param_names1(1,'text');
 SELECT test_param_names2(users) from users;
                              test_param_names2                              
 ----------------------------------------------------------------------------
- {'lname': 'doe', 'username': 'johnd', 'userid': 2, 'fname': 'john'}
+ {'lname': 'doe', 'username': 'w_doe', 'userid': 3, 'fname': 'willem'}
  {'lname': 'smith', 'username': 'slash', 'userid': 4, 'fname': 'rick'}
+ {'lname': 'smith', 'username': 'w_smith', 'userid': 5, 'fname': 'willem'}
  {'lname': 'darwin', 'username': 'beagle', 'userid': 6, 'fname': 'charles'}
  {'lname': 'doe', 'username': 'j_doe', 'userid': 1, 'fname': 'jane'}
- {'lname': 'doe', 'username': 'w_doe', 'userid': 3, 'fname': 'willem'}
- {'lname': 'smith', 'username': 'w_smith', 'userid': 5, 'fname': 'willem'}
+ {'lname': 'doe', 'username': 'johnd', 'userid': 2, 'fname': 'john'}
 (6 rows)
 
 SELECT test_param_names3(1);
@@ -598,138 +598,6 @@ SELECT * FROM test_inout_params('test_in');
      first     
 ---------------
  test_in_inout
-(1 row)
-
-SELECT * FROM test_type_conversion_bool(true);
- test_type_conversion_bool 
----------------------------
- t
-(1 row)
-
-SELECT * FROM test_type_conversion_bool(false);
- test_type_conversion_bool 
----------------------------
- f
-(1 row)
-
-SELECT * FROM test_type_conversion_bool(null);
- test_type_conversion_bool 
----------------------------
- 
-(1 row)
-
-SELECT * FROM test_type_conversion_char('a');
- test_type_conversion_char 
----------------------------
- a
-(1 row)
-
-SELECT * FROM test_type_conversion_char(null);
- test_type_conversion_char 
----------------------------
- 
-(1 row)
-
-SELECT * FROM test_type_conversion_int2(100::int2);
- test_type_conversion_int2 
----------------------------
-                       100
-(1 row)
-
-SELECT * FROM test_type_conversion_int2(null);
- test_type_conversion_int2 
----------------------------
-                          
-(1 row)
-
-SELECT * FROM test_type_conversion_int4(100);
- test_type_conversion_int4 
----------------------------
-                       100
-(1 row)
-
-SELECT * FROM test_type_conversion_int4(null);
- test_type_conversion_int4 
----------------------------
-                          
-(1 row)
-
-SELECT * FROM test_type_conversion_int8(100);
- test_type_conversion_int8 
----------------------------
-                       100
-(1 row)
-
-SELECT * FROM test_type_conversion_int8(null);
- test_type_conversion_int8 
----------------------------
-                          
-(1 row)
-
-SELECT * FROM test_type_conversion_float4(100);
- test_type_conversion_float4 
------------------------------
-                         100
-(1 row)
-
-SELECT * FROM test_type_conversion_float4(null);
- test_type_conversion_float4 
------------------------------
-                            
-(1 row)
-
-SELECT * FROM test_type_conversion_float8(100);
- test_type_conversion_float8 
------------------------------
-                         100
-(1 row)
-
-SELECT * FROM test_type_conversion_float8(null);
- test_type_conversion_float8 
------------------------------
-                            
-(1 row)
-
-SELECT * FROM test_type_conversion_numeric(100);
- test_type_conversion_numeric 
-------------------------------
-                        100.0
-(1 row)
-
-SELECT * FROM test_type_conversion_numeric(null);
- test_type_conversion_numeric 
-------------------------------
-                             
-(1 row)
-
-SELECT * FROM test_type_conversion_text('hello world');
- test_type_conversion_text 
----------------------------
- hello world
-(1 row)
-
-SELECT * FROM test_type_conversion_text(null);
- test_type_conversion_text 
----------------------------
- 
-(1 row)
-
-SELECT * FROM test_type_conversion_bytea('hello world');
- test_type_conversion_bytea 
-----------------------------
- hello world
-(1 row)
-
-SELECT * FROM test_type_conversion_bytea(null);
- test_type_conversion_bytea 
-----------------------------
- 
-(1 row)
-
-SELECT test_type_unmarshal(x) FROM test_type_marshal() x;
- test_type_unmarshal 
----------------------
- hello world
 (1 row)
 
 SELECT (split(10)).*; 

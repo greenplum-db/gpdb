@@ -356,6 +356,77 @@ SELECT * FROM test_return_circle('{None: None}');
 SELECT test_return_circle(E'"test\\0"');
 SELECT * FROM test_return_circle(E'"test\\0"');
 
+--
+-- Case 5: Return array of integers
+--
+-- Test returning arrays of fixed-width elements from PL/Python functions
+--
+
+-- From Python None
+SELECT test_return_array_int('None');
+SELECT * FROM test_return_array_int('None');
+
+-- From Python empty list
+SELECT test_return_array_int('[]');
+SELECT * FROM test_return_array_int('[]');
+
+-- From Python non-empty list
+SELECT test_return_array_int('[1,2]');
+SELECT * FROM test_return_array_int('[1,2]');
+
+-- From Python multiple lists
+SELECT test_return_array_int('[[1,2,3],[4,5,6]]');
+SELECT * FROM test_return_array_int('[[1,2,3],[4,5,6]]');
+
+-- Error conditions
+
+-- Multi-dimensional array with non-fixed dimension sizes
+SELECT test_return_array_int('[[1,2,3],[1,2]]');
+SELECT * FROM test_return_array_int('[[1,2,3],[1,2]]');
+
+-- Multi-dimensional array with mix of arrays and atomic elements
+SELECT test_return_array_int('[[1,2,3],[1,[2,3],[4,5]]]');
+SELECT * FROM test_return_array_int('[[1,2,3],[1,[2,3],[4,5]]]');
+
+-- Multi-dimensional array with missing dimensions
+SELECT test_return_array_int('[[1,2,3],None,[4,5,6]]');
+SELECT * FROM test_return_array_int('[[1,2,3],None,[4,5,6]]');
+
+--
+-- Case 5: Return array of texts
+--
+-- Test returning arrays of variable-width elements from PL/Python functions
+--
+
+-- From Python None
+SELECT test_return_array_text('None');
+SELECT * FROM test_return_array_text('None');
+
+-- From Python empty list
+SELECT test_return_array_text('[]');
+SELECT * FROM test_return_array_text('[]');
+
+-- From Python non-empty list
+SELECT test_return_array_text('["abc","def"]');
+SELECT * FROM test_return_array_text('["abc","def"]');
+
+-- From Python multiple lists
+SELECT test_return_array_text('[["a","bcd","ef"],[None,"gh","ijklm"]]');
+SELECT * FROM test_return_array_text('[["a","bcd","ef"],[None,"gh","ijklm"]]');
+
+-- Error conditions
+
+-- Multi-dimensional array with non-fixed dimension sizes
+SELECT test_return_array_text('[["a","bcd","ef"],[None,"gh","ijklm","ERROR"]]');
+SELECT * FROM test_return_array_text('[["a","bcd","ef"],[None,"gh","ijklm","ERROR"]]');
+
+-- Multi-dimensional array with mix of arrays and atomic elements
+SELECT test_return_array_text('[[["a"],"b"],["c",["d","e"]]]');
+SELECT * FROM test_return_array_text('[[["a"],"b"],["c",["d","e"]]]');
+
+-- Multi-dimensional array with missing dimensions
+SELECT test_return_array_text('[["abc","def"],None,["ghij","k"]]');
+SELECT * FROM test_return_array_text('[["abc","def"],None,["ghij","k"]]');
 
 -- ===================================================
 -- TEST 2:  RETURN VALUE TESTING - SETOF scalar values
