@@ -105,6 +105,7 @@ typedef int Py_ssize_t;
 #include "access/transam.h"
 #include "access/xact.h"
 #include "utils/builtins.h"
+#include "utils/fmgroids.h"
 #include "utils/hsearch.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
@@ -166,7 +167,7 @@ typedef union PLyTypeInput
 
 struct PLyObToDatum;
 typedef Datum (*PLyObToDatumFunc) (struct PLyObToDatum *, int32 typmod,
-											   PyObject *);
+											   PyObject *, bool inarray);
 
 typedef struct PLyObToDatum
 {
@@ -409,20 +410,21 @@ static PyObject *PLyList_FromArray_recurse(PLyDatumToOb *elm, int *dims, int ndi
 
 static PyObject *PLyDict_FromTuple(PLyTypeInfo *, HeapTuple, TupleDesc);
 
-static Datum PLyObject_ToBool(PLyObToDatum *, int32, PyObject *);
-static Datum PLyObject_ToBytea(PLyObToDatum *, int32, PyObject *);
-static Datum PLyObject_ToComposite(PLyObToDatum *, int32, PyObject *);
-static Datum PLyObject_ToDatum(PLyObToDatum *, int32, PyObject *);
-static Datum PLySequence_ToArray(PLyObToDatum *arg, int32 typmod, PyObject *plrv);
+static Datum PLyObject_ToBool(PLyObToDatum *, int32, PyObject *, bool inarray);
+static Datum PLyObject_ToBytea(PLyObToDatum *, int32, PyObject *, bool inarray);
+static Datum PLyObject_ToComposite(PLyObToDatum *, int32, PyObject *, bool inarray);
+static Datum PLyObject_ToDatum(PLyObToDatum *, int32, PyObject *, bool inarray);
+static Datum PLySequence_ToArray(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inarray);
 static void PLySequence_ToArray_recurse(PLyObToDatum *elm, PyObject *list,
 							int *dims, int ndim, int dim,
 							Datum *elems, bool *nulls, int *currelem);
 
-static HeapTuple PLyObject_ToTuple(PLyTypeInfo *, TupleDesc, PyObject *);
+static HeapTuple PLyObject_ToTuple(PLyTypeInfo *, TupleDesc, PyObject *, bool inarray);
 static HeapTuple PLyMapping_ToTuple(PLyTypeInfo *, TupleDesc, PyObject *);
-static HeapTuple PLySequence_ToTuple(PLyTypeInfo *, TupleDesc, PyObject *);
-static HeapTuple PLyGenericObject_ToTuple(PLyTypeInfo *, TupleDesc, PyObject *);
+static HeapTuple PLySequence_ToTuple(PLyTypeInfo *, TupleDesc, PyObject *, bool inarray);
+static HeapTuple PLyGenericObject_ToTuple(PLyTypeInfo *, TupleDesc, PyObject *, bool inarray);
 
+static char *PLyObject_AsString(PyObject *plrv);
 /*
  * Currently active plpython function
  */
@@ -854,7 +856,7 @@ PLy_modify_tuple(PLyProcedure *proc, PyObject *pltd, TriggerData *tdata,
 
 				modvalues[i] = (att->func) (att,
 											tupdesc->attrs[atti]->atttypmod,
-											plval);
+											plval, false );
 				modnulls[i] = ' ';
 			}
 			else
@@ -1300,7 +1302,7 @@ PLy_function_handler(FunctionCallInfo fcinfo, PLyProcedure *proc)
 			desc = lookup_rowtype_tupdesc(proc->result.out.d.typoid,
 										  proc->result.out.d.typmod);
 
-			tuple = PLyObject_ToTuple(&proc->result, desc, plrv);
+			tuple = PLyObject_ToTuple(&proc->result, desc, plrv, false);
 
 			if (tuple != NULL)
 			{
@@ -1316,7 +1318,7 @@ PLy_function_handler(FunctionCallInfo fcinfo, PLyProcedure *proc)
 		else
 		{
 			fcinfo->isnull = false;
-			rv = (proc->result.out.d.func) (&proc->result.out.d, -1, plrv);
+			rv = (proc->result.out.d.func) (&proc->result.out.d, -1, plrv, false);
 		}
 	}
 	PG_CATCH();
@@ -2713,19 +2715,19 @@ PLyDict_FromTuple(PLyTypeInfo *info, HeapTuple tuple, TupleDesc desc)
  *	has __getattr__ support.
  */
 static HeapTuple
-PLyObject_ToTuple(PLyTypeInfo *info, TupleDesc desc, PyObject *plrv)
+PLyObject_ToTuple(PLyTypeInfo *info, TupleDesc desc, PyObject *plrv, bool innarray)
 {
 	HeapTuple	tuple;
 
 	if (PySequence_Check(plrv))
 		/* composite type as sequence (tuple, list etc) */
-		tuple = PLySequence_ToTuple(info, desc, plrv);
+		tuple = PLySequence_ToTuple(info, desc, plrv, false);
 	else if (PyMapping_Check(plrv))
 		/* composite type as mapping (currently only dict) */
 		tuple = PLyMapping_ToTuple(info, desc, plrv);
 	else
 		/* returned as smth, must provide method __getattr__(name) */
-		tuple = PLyGenericObject_ToTuple(info, desc, plrv);
+		tuple = PLyGenericObject_ToTuple(info, desc, plrv, false);
 
 	return tuple;
 }
@@ -2737,7 +2739,7 @@ PLyObject_ToTuple(PLyTypeInfo *info, TupleDesc desc, PyObject *plrv)
  * type can parse.
  */
 static Datum
-PLyObject_ToBool(PLyObToDatum *arg, int32 typmod, PyObject *plrv)
+PLyObject_ToBool(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inarray)
 {
 	Datum		rv;
 
@@ -2756,7 +2758,7 @@ PLyObject_ToBool(PLyObToDatum *arg, int32 typmod, PyObject *plrv)
  * with embedded nulls.  And it's faster this way.
  */
 static Datum
-PLyObject_ToBytea(PLyObToDatum *arg, int32 typmod, PyObject *plrv)
+PLyObject_ToBytea(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool innarray)
 {
 	PyObject   *volatile plrv_so = NULL;
 	Datum		rv;
@@ -2800,7 +2802,7 @@ PLyObject_ToBytea(PLyObToDatum *arg, int32 typmod, PyObject *plrv)
  * for obtaining PostgreSQL tuples.
  */
 static Datum
-PLyObject_ToComposite(PLyObToDatum *arg, int32 typmod, PyObject *plrv)
+PLyObject_ToComposite(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inarray)
 {
 	HeapTuple	tuple = NULL;
 	Datum		rv;
@@ -2824,7 +2826,7 @@ PLyObject_ToComposite(PLyObToDatum *arg, int32 typmod, PyObject *plrv)
 	 * that info instead of looking it up every time a tuple is returned from
 	 * the function.
 	 */
-	tuple = PLyObject_ToTuple(&info, desc, plrv);
+	tuple = PLyObject_ToTuple(&info, desc, plrv, false);
 
 	PLy_typeinfo_dealloc(&info);
 
@@ -2836,21 +2838,31 @@ PLyObject_ToComposite(PLyObToDatum *arg, int32 typmod, PyObject *plrv)
 	return rv;
 }
 
-
 /*
- * Generic conversion function: Convert PyObject to cstring and
- * cstring into PostgreSQL type.
+ * Convert Python object to C string in server encoding.
  */
-static Datum
-PLyObject_ToDatum(PLyObToDatum *arg, int32 typmod, PyObject *plrv)
+static char *
+PLyObject_AsString(PyObject *plrv)
 {
-	PyObject   *volatile plrv_bo = NULL;
-	Datum		rv;
-
-	Assert(plrv != Py_None);
+	PyObject   *plrv_bo;
+	char	   *plrv_sc;
+	size_t		plen;
+	size_t		slen;
 
 	if (PyUnicode_Check(plrv))
 		plrv_bo = PLyUnicode_Bytes(plrv);
+	else if (PyFloat_Check(plrv))
+	{
+		/* use repr() for floats, str() is lossy */
+#if PY_MAJOR_VERSION >= 3
+		PyObject   *s = PyObject_Repr(plrv);
+
+		plrv_bo = PLyUnicode_Bytes(s);
+		Py_XDECREF(s);
+#else
+		plrv_bo = PyObject_Repr(plrv);
+#endif
+	}
 	else
 	{
 #if PY_MAJOR_VERSION >= 3
@@ -2865,38 +2877,84 @@ PLyObject_ToDatum(PLyObToDatum *arg, int32 typmod, PyObject *plrv)
 	if (!plrv_bo)
 		PLy_elog(ERROR, "could not create string representation of Python object");
 
-	PG_TRY();
-	{
-		char	   *plrv_sc = PyBytes_AsString(plrv_bo);
-		size_t		plen = PyBytes_Size(plrv_bo);
-		size_t		slen = strlen(plrv_sc);
-
-		if (slen < plen)
-			ereport(ERROR,
-					(errcode(ERRCODE_DATATYPE_MISMATCH),
-					 errmsg("could not convert Python object into cstring: Python string representation appears to contain null bytes")));
-		else if (slen > plen)
-			elog(ERROR, "could not convert Python object into cstring: Python string longer than reported length");
-		pg_verifymbstr(plrv_sc, slen, false);
-		rv = InputFunctionCall(&arg->typfunc,
-							   plrv_sc,
-							   arg->typioparam,
-							   typmod);
-	}
-	PG_CATCH();
-	{
-		Py_XDECREF(plrv_bo);
-		PG_RE_THROW();
-	}
-	PG_END_TRY();
+	plrv_sc = pstrdup(PyBytes_AsString(plrv_bo));
+	plen = PyBytes_Size(plrv_bo);
+	slen = strlen(plrv_sc);
 
 	Py_XDECREF(plrv_bo);
 
-	return rv;
+	if (slen < plen)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATATYPE_MISMATCH),
+				 errmsg("could not convert Python object into cstring: Python string representation appears to contain null bytes")));
+	else if (slen > plen)
+		elog(ERROR, "could not convert Python object into cstring: Python string longer than reported length");
+	pg_verifymbstr(plrv_sc, slen, false);
+
+	return plrv_sc;
+}
+
+/*
+ * Generic conversion function: Convert PyObject to cstring and
+ * cstring into PostgreSQL type.
+ */
+static Datum
+PLyObject_ToDatum(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inarray)
+{
+	char	   *str;
+
+	Assert(plrv != Py_None);
+
+	str = PLyObject_AsString(plrv);
+
+	/*
+	 * If we are parsing a composite type within an array, and the string
+	 * isn't a valid record literal, there's a high chance that the function
+	 * did something like:
+	 *
+	 * CREATE FUNCTION .. RETURNS comptype[] AS $$ return [['foo', 'bar']] $$
+	 * LANGUAGE plpython;
+	 *
+	 * Before PostgreSQL 10, that was interpreted as a single-dimensional
+	 * array, containing record ('foo', 'bar'). PostgreSQL 10 added support
+	 * for multi-dimensional arrays, and it is now interpreted as a
+	 * two-dimensional array, containing two records, 'foo', and 'bar'.
+	 * record_in() will throw an error, because "foo" is not a valid record
+	 * literal.
+	 *
+	 * To make that less confusing to users who are upgrading from older
+	 * versions, try to give a hint in the typical instances of that. If we are
+	 * parsing an array of composite types, and we see a string literal that
+	 * is not a valid record literal, give a hint. We only want to give the
+	 * hint in the narrow case of a malformed string literal, not any error
+	 * from record_in(), so check for that case here specifically.
+	 *
+	 * This check better match the one in record_in(), so that we don't forbid
+	 * literals that are actually valid!
+	 */
+	if (inarray && arg->typfunc.fn_oid == F_RECORD_IN)
+	{
+		char	   *ptr = str;
+
+		/* Allow leading whitespace */
+		while (*ptr && isspace((unsigned char) *ptr))
+			ptr++;
+		if (*ptr++ != '(')
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
+					 errmsg("malformed record literal: \"%s\"", str),
+					 errdetail("Missing left parenthesis."),
+					 errhint("To return a composite type in an array, return the composite type as a Python tuple, e.g. \"[('foo')]\"")));
+	}
+
+	return InputFunctionCall(&arg->typfunc,
+							 str,
+							 arg->typioparam,
+							 typmod);
 }
 
 static Datum
-PLySequence_ToArray(PLyObToDatum *arg, int32 typmod, PyObject *plrv)
+PLySequence_ToArray(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inarray)
 {
 	ArrayType  *array;
 	int			i;
@@ -3046,7 +3104,7 @@ PLySequence_ToArray_recurse(PLyObToDatum *elm, PyObject *list,
 			else
 			{
 				nulls[*currelem] = false;
-				elems[*currelem] = elm->func(elm, -1, obj);
+				elems[*currelem] = elm->func(elm, -1, obj, false);
 			}
 			Py_XDECREF(obj);
 			(*currelem)++;
@@ -3093,7 +3151,7 @@ PLyMapping_ToTuple(PLyTypeInfo *info, TupleDesc desc, PyObject *mapping)
 			}
 			else if (value)
 			{
-				values[i] = (att->func) (att, -1, value);
+				values[i] = (att->func) (att, -1, value, false);
 				nulls[i] = false;
 			}
 			else
@@ -3121,43 +3179,9 @@ PLyMapping_ToTuple(PLyTypeInfo *info, TupleDesc desc, PyObject *mapping)
 
 	return tuple;
 }
-#ifdef XXX
+
 static HeapTuple
-PLyString_ToComposite(PLyTypeInfo *info, TupleDesc desc, PyObject *string)
-{
-	Datum		result;
-	HeapTuple	typeTup;
-	PLyTypeInfo locinfo;
-	PLyExecutionContext *exec_ctx = PLy_current_execution_context();
-	MemoryContext cxt;
-
-	/* Create a dummy PLyTypeInfo */
-	cxt = AllocSetContextCreate(CurrentMemoryContext,
-								"PL/Python temp context",
-								ALLOCSET_DEFAULT_SIZES);
-	MemSet(&locinfo, 0, sizeof(PLyTypeInfo));
-	PLy_typeinfo_init(&locinfo, cxt);
-
-	typeTup = SearchSysCache1(TYPEOID, ObjectIdGetDatum(desc->tdtypeid));
-	if (!HeapTupleIsValid(typeTup))
-		elog(ERROR, "cache lookup failed for type %u", desc->tdtypeid);
-
-	PLy_output_datum_func2(&locinfo.out.d, locinfo.mcxt, typeTup,
-						   exec_ctx->curr_proc->langid,
-						   exec_ctx->curr_proc->trftypes);
-
-	ReleaseSysCache(typeTup);
-
-	result = PLyObject_ToDatum(&locinfo.out.d, desc->tdtypmod, string);
-
-	MemoryContextDelete(cxt);
-
-	return result;
-}
-
-#endif
-static HeapTuple
-PLySequence_ToTuple(PLyTypeInfo *info, TupleDesc desc, PyObject *sequence)
+PLySequence_ToTuple(PLyTypeInfo *info, TupleDesc desc, PyObject *sequence, bool inarray)
 {
 	HeapTuple	tuple;
 	Datum	   *values;
@@ -3212,7 +3236,7 @@ PLySequence_ToTuple(PLyTypeInfo *info, TupleDesc desc, PyObject *sequence)
 			}
 			else if (value)
 			{
-				values[i] = (att->func) (att, -1, value);
+				values[i] = (att->func) (att, -1, value, false);
 				nulls[i] = false;
 			}
 
@@ -3239,7 +3263,7 @@ PLySequence_ToTuple(PLyTypeInfo *info, TupleDesc desc, PyObject *sequence)
 
 
 static HeapTuple
-PLyGenericObject_ToTuple(PLyTypeInfo *info, TupleDesc desc, PyObject *object)
+PLyGenericObject_ToTuple(PLyTypeInfo *info, TupleDesc desc, PyObject *object, bool inarray)
 {
 	HeapTuple	tuple;
 	Datum	   *values;
@@ -3275,7 +3299,7 @@ PLyGenericObject_ToTuple(PLyTypeInfo *info, TupleDesc desc, PyObject *object)
 			}
 			else if (value)
 			{
-				values[i] = (att->func) (att, -1, value);
+				values[i] = (att->func) (att, -1, value, false);
 				nulls[i] = false;
 			}
 			else
@@ -3978,7 +4002,7 @@ PLy_spi_execute_plan(PyObject *ob, PyObject *list, long limit)
 					plan->values[j] =
 						plan->args[j].out.d.func(&(plan->args[j].out.d),
 												 -1,
-												 elem);
+												 elem, false);
 				}
 				PG_CATCH();
 				{
