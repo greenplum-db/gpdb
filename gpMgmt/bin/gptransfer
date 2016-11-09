@@ -3644,28 +3644,16 @@ class GpTransfer(object):
         """
         src_tbl_columns = self._get_table_columns(table_pair.source, self._options.source_host, self._options.source_port, self._options.source_user)
         dest_tbl_columns = self._get_table_columns(table_pair.dest, self._options.dest_host, self._options.dest_port, self._options.dest_user)
-
-        if len(src_tbl_columns) != len(dest_tbl_columns):
-            return False
-        for ordinal_pos in src_tbl_columns:
-            if (ordinal_pos not in dest_tbl_columns) or (src_tbl_columns[ordinal_pos] != dest_tbl_columns[ordinal_pos]):
-                return False
-        return True
+        return src_tbl_columns == dest_tbl_columns
 
     def _get_table_columns(self, tbl, host, port, user):
-        column_types = dict()
-        get_columns_sql = ''' select ordinal_position, is_nullable, data_type, character_maximum_length,
+        get_columns_sql = ''' select is_nullable, data_type, character_maximum_length,
                              character_octet_length, numeric_precision, numeric_precision_radix, numeric_scale,
                              datetime_precision, interval_type, udt_name from information_schema.columns
-                             where table_schema = '%s' and table_name = '%s';''' % (pg.escape_string(tbl.schema), pg.escape_string(tbl.table))
+                             where table_schema = '%s' and table_name = '%s' order by ordinal_position asc;''' % (pg.escape_string(tbl.schema), pg.escape_string(tbl.table))
         with dbconn.connect(dbconn.DbURL(host, port, tbl.database, user)) as conn:
             cursor = execSQL(conn, get_columns_sql)
-            for row in cursor:
-                column_attrs = list()
-                ordinal_pos = row[0]
-                column_attrs.extend(row[1:])
-                column_types[ordinal_pos] = column_attrs
-        return column_types
+        return list(cursor.fetchall())
 
 
     def _has_same_partition_levels(self, table_pair):

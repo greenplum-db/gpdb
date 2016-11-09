@@ -189,7 +189,7 @@ class GpTransfer(GpTestCase):
         options = self.setup_partition_validation()
 
         additional = {
-            "select ordinal_position, is_nullable, data_type, character_maximum_length,": [[1, "t", "my_data_type", 255, 16, 1024, 1024, 1, 1024, "my_interval_type", "my_udt_name"],
+            "select is_nullable, data_type, character_maximum_length,": [["t", "my_data_type", 255, 16, 1024, 1024, 1, 1024, "my_interval_type", "my_udt_name"],
                                                                                            [2, "t", "my_data_type", 255, 16, 1024, 1024, 1, 1024, "my_interval_type", "my_udt_name"]],
         }
         self.cursor.side_effect = CursorSideEffect(additional).cursor_side_effect
@@ -201,7 +201,7 @@ class GpTransfer(GpTestCase):
         options = self.setup_partition_validation()
 
         additional = {
-            "select ordinal_position, is_nullable, data_type, character_maximum_length,": [[1, "t", "my_new_data_type", 255, 16, 1024, 1024, 1, 1024, "my_interval_type", "my_udt_name"]],
+            "select is_nullable, data_type, character_maximum_length,": [["t", "my_new_data_type", 255, 16, 1024, 1024, 1, 1024, "my_interval_type", "my_udt_name"]],
         }
         self.cursor.side_effect = CursorSideEffect(additional).cursor_side_effect
 
@@ -383,7 +383,7 @@ class CursorSideEffect:
         self.first_values = {
             "n.nspname, c.relname, c.relstorage": [["public", "my_table", ""]],
             "select relname from pg_class r": ["my_relname"],
-            "select ordinal_position, is_nullable, data_type, character_maximum_length,": [[1, "t", "my_data_type", 255, 16, 1024, 1024, 1, 1024, "my_interval_type", "my_udt_name"]],
+            "select is_nullable, data_type, character_maximum_length,": [["t", "my_data_type", 255, 16, 1024, 1024, 1, 1024, "my_interval_type", "my_udt_name"]],
             "select parkind, parlevel, parnatts, paratts": [["my_parkind", 1, "my_parnatts", "my_paratts"]],
             "SELECT fsname FROM pg_catalog.pg_filespace": ["public"],
         }
@@ -418,6 +418,9 @@ class FakeCursor:
 
     def close(self):
         pass
+
+    def fetchall(self):
+        return self.list
 
 class SingletonSideEffect:
     def __init__(self, additional=None, multi_list=None):
