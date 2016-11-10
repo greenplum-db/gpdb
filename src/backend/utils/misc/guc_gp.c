@@ -5294,7 +5294,7 @@ struct config_string ConfigureNamesString_gp[] =
 
 	{
 		{"gp_email_smtp_server", PGC_SUSET, LOGGING,
-			gettext_noop("Sets the SMTP server and port used to send e-mail alerts."),
+			gettext_noop("Sets the SMTP server and port used to send email alerts."),
 			NULL,
 			GUC_SUPERUSER_ONLY
 		},
@@ -5321,7 +5321,7 @@ struct config_string ConfigureNamesString_gp[] =
 	},
 	{
 		{"gp_email_from", PGC_SUSET, LOGGING,
-			gettext_noop("Sets email address of the sender of email alerts (our e-mail id)."),
+			gettext_noop("Sets email address of the sender of email alerts (our email id)."),
 			NULL,
 			GUC_SUPERUSER_ONLY
 		},
@@ -5330,7 +5330,7 @@ struct config_string ConfigureNamesString_gp[] =
 	},
 	{
 		{"gp_email_to", PGC_SUSET, LOGGING,
-			gettext_noop("Sets email address(es) to send alerts to.  Maybe be multiple email addresses."),
+			gettext_noop("Sets email address(es) to send alerts to.  May be multiple email addresses separated by semi-colon."),
 			NULL,
 			GUC_SUPERUSER_ONLY | GUC_LIST_INPUT
 		},
