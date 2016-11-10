@@ -12,6 +12,10 @@ function echo_expected_env_variables() {
 
 function _main() {
   echo_expected_env_variables
+
+  # Copy gpaddon into addon to ensure the availability of all the installer scripts
+  cp -R gpaddon_src gpdb_src/gpAux/addon
+
   local installer_bin
   installer_bin=$( echo "$INSTALLER_ZIP" | sed "s/.zip/.bin/" | xargs basename)
 

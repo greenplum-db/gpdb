@@ -70,8 +70,6 @@ function make_sync_tools() {
     tar -czf ../../sync_tools_gpdb/sync_tools_gpdb.tar.gz ext
 
   popd
-
-  cp -R gpaddon_src gpdb_src/gpAux/addon
 }
 
 function build_gpdb() {
