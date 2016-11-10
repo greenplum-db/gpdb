@@ -397,7 +397,7 @@ jobs:
       tags: ["worker-three"]
       passed: [icb_planner_centos6, icb_gporca_centos6, icb_planner_codegen_centos6, icb_gporca_codegen_centos6]
     - get: gpaddon_src
-      tags: ["worker-one"]
+      tags: ["worker-three"]
       passed: [icb_planner_centos6, icb_gporca_centos6, icb_planner_codegen_centos6, icb_gporca_codegen_centos6]
       trigger: true
     - get: bin_gpdb
