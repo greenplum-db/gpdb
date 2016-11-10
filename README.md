@@ -274,7 +274,7 @@ Known issues:
 ## Contributing
 
 If you have not previously done so, please fill out and
-submit the https://cla.pivotal.io/sign/greenplum[Contributor License Agreement].
+submit the [Contributor License Agreement](https://cla.pivotal.io/sign/greenplum).
 
 ## Glossary
 
