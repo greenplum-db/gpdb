@@ -2266,72 +2266,6 @@ UpdateXmaxHintBits(HeapTupleHeader tuple, Buffer buffer, TransactionId xid, Rela
 	}
 }
 
-
-/*
- * MUST BE CALLED IN CRITICAL SECTION!
- */
-static void
-heap_log_tuple_insert(Relation rel, Buffer buffer, HeapTuple tup, bool isFrozen)
-{
-	xl_heap_insert xlrec;
-	xl_heap_header xlhdr;
-	XLogRecPtr	recptr;
-	XLogRecData rdata[3];
-	Page		page = BufferGetPage(buffer);
-	uint8		info = XLOG_HEAP_INSERT;
-
-	Assert(CritSectionCount > 0);
-
-	xl_heaptid_set(&xlrec.target, rel, &tup->t_self);
-	rdata[0].data = (char *) &xlrec;
-	rdata[0].len = SizeOfHeapInsert;
-	rdata[0].buffer = InvalidBuffer;
-	rdata[0].next = &(rdata[1]);
-
-	xlhdr.t_infomask2 = tup->t_data->t_infomask2;
-	xlhdr.t_infomask = tup->t_data->t_infomask;
-	xlhdr.t_hoff = tup->t_data->t_hoff;
-
-	/*
-	 * note we mark rdata[1] as belonging to buffer; if XLogInsert decides
-	 * to write the whole page to the xlog, we don't need to store
-	 * xl_heap_header in the xlog.
-	 */
-	rdata[1].data = (char *) &xlhdr;
-	rdata[1].len = SizeOfHeapHeader;
-	rdata[1].buffer = buffer;
-	rdata[1].buffer_std = true;
-	rdata[1].next = &(rdata[2]);
-
-	/* PG73FORMAT: write bitmap [+ padding] [+ oid] + data */
-	rdata[2].data = (char *) tup->t_data + offsetof(HeapTupleHeaderData, t_bits);
-	rdata[2].len = tup->t_len - offsetof(HeapTupleHeaderData, t_bits);
-	rdata[2].buffer = buffer;
-	rdata[2].buffer_std = true;
-	rdata[2].next = NULL;
-
-	/*
-	 * If this is the single and first tuple on page, we can reinit the
-	 * page instead of restoring the whole thing.  Set flag, and hide
-	 * buffer references from XLogInsert.
-	 */
-	if (ItemPointerGetOffsetNumber(&(tup->t_self)) == FirstOffsetNumber &&
-		PageGetMaxOffsetNumber(page) == FirstOffsetNumber)
-	{
-		info |= XLOG_HEAP_INIT_PAGE;
-		rdata[1].buffer = rdata[2].buffer = InvalidBuffer;
-	}
-
-	if (!isFrozen)
-		recptr = XLogInsert(RM_HEAP_ID, info, rdata);
-	else
-		recptr = XLogInsert_OverrideXid(RM_HEAP_ID, info, rdata, FrozenTransactionId);
-
-	PageSetLSN(page, recptr);
-	PageSetTLI(page, ThisTimeLineID);
-}
-
-
 /*
  *	heap_insert		- insert tuple into a heap
  *
@@ -2467,7 +2401,60 @@ heap_insert(Relation relation, HeapTuple tup, CommandId cid,
 	/* XLOG stuff */
 	if (use_wal && !relation->rd_istemp)
 	{
-		heap_log_tuple_insert(relation, buffer, heaptup, isFrozen);
+		xl_heap_insert xlrec;
+		xl_heap_header xlhdr;
+		XLogRecPtr	recptr;
+		XLogRecData rdata[3];
+		Page		page = BufferGetPage(buffer);
+		uint8		info = XLOG_HEAP_INSERT;
+
+		xl_heaptid_set(&xlrec.target, relation, &heaptup->t_self);
+		rdata[0].data = (char *) &xlrec;
+		rdata[0].len = SizeOfHeapInsert;
+		rdata[0].buffer = InvalidBuffer;
+		rdata[0].next = &(rdata[1]);
+
+		xlhdr.t_infomask2 = heaptup->t_data->t_infomask2;
+		xlhdr.t_infomask = heaptup->t_data->t_infomask;
+		xlhdr.t_hoff = heaptup->t_data->t_hoff;
+
+		/*
+		 * note we mark rdata[1] as belonging to buffer; if XLogInsert decides
+		 * to write the whole page to the xlog, we don't need to store
+		 * xl_heap_header in the xlog.
+		 */
+		rdata[1].data = (char *) &xlhdr;
+		rdata[1].len = SizeOfHeapHeader;
+		rdata[1].buffer = buffer;
+		rdata[1].buffer_std = true;
+		rdata[1].next = &(rdata[2]);
+
+		/* PG73FORMAT: write bitmap [+ padding] [+ oid] + data */
+		rdata[2].data = (char *) heaptup->t_data + offsetof(HeapTupleHeaderData, t_bits);
+		rdata[2].len = heaptup->t_len - offsetof(HeapTupleHeaderData, t_bits);
+		rdata[2].buffer = buffer;
+		rdata[2].buffer_std = true;
+		rdata[2].next = NULL;
+
+		/*
+		 * If this is the single and first tuple on page, we can reinit the
+		 * page instead of restoring the whole thing.  Set flag, and hide
+		 * buffer references from XLogInsert.
+		 */
+		if (ItemPointerGetOffsetNumber(&(heaptup->t_self)) == FirstOffsetNumber &&
+			PageGetMaxOffsetNumber(page) == FirstOffsetNumber)
+		{
+			info |= XLOG_HEAP_INIT_PAGE;
+			rdata[1].buffer = rdata[2].buffer = InvalidBuffer;
+		}
+
+		if (!isFrozen)
+			recptr = XLogInsert(RM_HEAP_ID, info, rdata);
+		else
+			recptr = XLogInsert_OverrideXid(RM_HEAP_ID, info, rdata, FrozenTransactionId);
+
+		PageSetLSN(page, recptr);
+		PageSetTLI(page, ThisTimeLineID);
 	}
 
 	END_CRIT_SECTION();
