@@ -35,7 +35,7 @@ all : devel
 .PHONY : autoconf
 
 # Internal functions which are invoked by other rules within this makefile
-.PHONY : groupSession mkgpfdist mkgpperfmon copydocs mgmtcopy copylibs copyoptimizerlibs
+.PHONY : mkgpfdist mkgpperfmon copydocs mgmtcopy copylibs copyoptimizerlibs
 .PHONY : greenplum_path RECONFIG HOMEDEP GPROOTDEP GPROOTDEP GPROOTFAIL
 .PHONY : gccVersionCheck clients loaders connectivity gppkg
 
@@ -282,37 +282,6 @@ Release/GNUmakefile : $(GPPGDIR)/configure  env.sh
                       --with-docdir=$(INSTLOC)/doc          \
                       --mandir=$(INSTLOC)/man
 
-## ======================================================================
-## Generate json catalog file
-##
-## Requirement:
-##   This tidycat.pl utility has a perl JSON package dependency.  You'll
-##   need to ensure you have this setup in your enviroment to execute
-##   this process.
-##
-## Here are the basic steps:
-##
-##   1) A "configure" must have been run.  This is required so
-##      GP_MAJORVERSION can be retrieved from the
-##      src/include/pg_config.h and used to create the
-##      json file name (eg. 4.2.json).
-##   2) (manual) p4 edit gpMgmt/bin/gppylib/data/<version>.json
-##   3) make gen_json_cat
-##   4) (manual file generation review) p4 diff gpMgmt/bin/gppylib/data/<version>.json
-##   5) (manual) p4 submit "Regenerate Json catalog file." gpMgmt/bin/gppylib/data/<version>.json
-## ======================================================================
-
-gen_json_cat:
-	@if [ ! -f $(ISCONFIG) ]; then echo ""; echo "FATAL: The cdb-pg environment has not been configured.  Thus we cannot attempt to generate json catalog file."; echo ""; exit 1; fi
-	@JASON_CAT=gpMgmt/bin/gppylib/data/`grep GP_MAJORVERSION ../src/include/pg_config.h | sed 's/.*"\(.*\)"/\1/g' `.json; \
-	if [ ! -w $$JASON_CAT ]; then echo ""; echo "FATAL: The json cat file is not writable ($$JASON_CAT).  Have you performed a p4 edit $$JASON_CAT operation?"; echo ""; exit 1; fi; \
-	cd $(BLD_TOP)/../src/include/catalog; \
-	perl tidycat.pl -dd $(BLD_TOP)/$$JASON_CAT -df json *.h; \
-	if [ $$? != 0 ]; then echo ""; echo "FATAL: json cat file generation failed."; echo ""; exit 1; fi; \
-	echo "To manually review and submit the updated json cat file, run:"; \
-	echo "  p4 diff $$JASON_CAT"; \
-	echo "  p4 submit -d \"Regenerate Json catalog file. [JIRA: MPP-XXXX]\" $$JASON_CAT"; \
-
 #---------------------------------------------------------------------
 # autoconf
 #---------------------------------------------------------------------
@@ -352,7 +321,6 @@ define BUILD_STEPS
 	@rm -rf $(INSTLOC)
 	cd $(BUILDDIR) && $(MAKE) $(parallelexec_opts) install
 	#@$(MAKE) greenplum_path INSTLOC=$(INSTLOC)
-	#@$(MAKE) groupSession INSTLOC=$(INSTLOC)
 	@$(MAKE) mkdbgen INSTLOC=$(INSTLOC)
 	#@$(MAKE) mgmtcopy INSTLOC=$(INSTLOC)
 	@$(MAKE) mkpgbouncer INSTLOC=$(INSTLOC) BUILDDIR=$(BUILDDIR)
@@ -997,9 +965,6 @@ set_scripts_version :
 #---------------------------------------------------------------------
 # Internal functions
 #---------------------------------------------------------------------
-
-groupSession:
-	@cd $(GPMGMT)/bin && $(MAKE)
 
 mkgpfdist:
 	@cd extensions && $(MAKE) mkgpfdist OPT="$(INSTCFLAGS)" INSTLOC=$(INSTLOC)
