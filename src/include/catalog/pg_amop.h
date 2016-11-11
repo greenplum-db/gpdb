@@ -442,7 +442,7 @@ DATA(insert (	2095   25 25 5 f 2318	403 ));
 
 DATA(insert (	2097   1042 1042 1 f 2326	403 ));
 DATA(insert (	2097   1042 1042 2 f 2327	403 ));
-DATA(insert (	2097   1042 1042 3 f 7076	403 ));
+DATA(insert (	2097   1042 1042 3 f 2328	403 ));
 DATA(insert (	2097   1042 1042 4 f 2329	403 ));
 DATA(insert (	2097   1042 1042 5 f 2330	403 ));
 
@@ -570,7 +570,7 @@ DATA(insert (	2228   703 703 1 f	566 405 ));
 /* text_pattern_ops */
 DATA(insert (	2229   25 25 1 f 2316	405 ));
 /* bpchar_pattern_ops */
-DATA(insert (	2231   1042 1042 1 f 7076	405 ));
+DATA(insert (	2231   1042 1042 1 f 2328	405 ));
 /* name_pattern_ops */
 DATA(insert (	2232   19 19 1 f 2334	405 ));
 /* aclitem_ops */
@@ -1073,7 +1073,7 @@ DATA(insert (	3042	25 25 5 f 2318 3013 ));
  */
 DATA(insert (	3044	1042 1042 1 f 2326 3013 ));
 DATA(insert (	3044	1042 1042 2 f 2327 3013 ));
-DATA(insert (	3044	1042 1042 3 f 7076 3013 ));
+DATA(insert (	3044	1042 1042 3 f 2328 3013 ));
 DATA(insert (	3044	1042 1042 4 f 2329 3013 ));
 DATA(insert (	3044	1042 1042 5 f 2330 3013 ));
 
