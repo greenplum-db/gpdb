@@ -2727,24 +2727,24 @@ ExecutePlan(EState *estate,
 	/*
 	 * Process BEFORE EACH STATEMENT triggers
 	 */
-	if (Gp_role != GP_ROLE_EXECUTE || Gp_is_writer)
+if (Gp_role != GP_ROLE_EXECUTE || Gp_is_writer)
+{
+	switch (operation)
 	{
-		switch (operation)
-		{
-			case CMD_UPDATE:
-				ExecBSUpdateTriggers(estate, estate->es_result_relation_info);
-				break;
-			case CMD_DELETE:
-				ExecBSDeleteTriggers(estate, estate->es_result_relation_info);
-				break;
-			case CMD_INSERT:
-				ExecBSInsertTriggers(estate, estate->es_result_relation_info);
-				break;
-			default:
-				/* do nothing */
-				break;
-		}
+		case CMD_UPDATE:
+			ExecBSUpdateTriggers(estate, estate->es_result_relation_info);
+			break;
+		case CMD_DELETE:
+			ExecBSDeleteTriggers(estate, estate->es_result_relation_info);
+			break;
+		case CMD_INSERT:
+			ExecBSInsertTriggers(estate, estate->es_result_relation_info);
+			break;
+		default:
+			/* do nothing */
+			break;
 	}
+}
 
 	/*
 	 * Make sure slice dependencies are met
@@ -2754,6 +2754,7 @@ ExecutePlan(EState *estate,
 	/*
 	 * Loop until we've processed the proper number of tuples from the plan.
 	 */
+
 	for (;;)
 	{
 		/* Reset the per-output-tuple exprcontext */
@@ -2782,181 +2783,179 @@ lnext:	;
 			break;
 		}
 
-		if (estate->es_plannedstmt->planGen == PLANGEN_PLANNER ||
-				operation == CMD_SELECT)
+		/* ORCA plans of UPDATES/DELETES/INSERTS are handled elsewhere. */
+		if (estate->es_plannedstmt->planGen != PLANGEN_PLANNER && operation != CMD_SELECT)
+			goto executed;
+
+		slot = planSlot;
+
+		/*
+		 * If we have a junk filter, then project a new tuple with the junk
+		 * removed.
+		 *
+		 * Store this new "clean" tuple in the junkfilter's resultSlot.
+		 * (Formerly, we stored it back over the "dirty" tuple, which is WRONG
+		 * because that tuple slot has the wrong descriptor.)
+		 *
+		 * But first, extract all the junk information we need.
+		 */
+		if ((junkfilter = estate->es_junkFilter) != NULL)
 		{
-			slot = planSlot;
-
 			/*
-			 * If we have a junk filter, then project a new tuple with the junk
-			 * removed.
-			 *
-			 * Store this new "clean" tuple in the junkfilter's resultSlot.
-			 * (Formerly, we stored it back over the "dirty" tuple, which is WRONG
-			 * because that tuple slot has the wrong descriptor.)
-			 *
-			 * But first, extract all the junk information we need.
+			 * Process any FOR UPDATE or FOR SHARE locking requested.
 			 */
-			if ((junkfilter = estate->es_junkFilter) != NULL)
+			if (estate->es_rowMarks != NIL)
 			{
-				Datum		datum;
-				bool		isNull;
+				ListCell   *l;
 
-				/*
-				 * Process any FOR UPDATE or FOR SHARE locking requested.
-				 */
-				if (estate->es_rowMarks != NIL)
+		lmark:	;
+				foreach(l, estate->es_rowMarks)
 				{
-					ListCell   *l;
-
-			lmark:	;
-					foreach(l, estate->es_rowMarks)
-					{
-						ExecRowMark *erm = lfirst(l);
-						HeapTupleData tuple;
-						Buffer		buffer;
-						ItemPointerData update_ctid;
-						TransactionId update_xmax;
-						TupleTableSlot *newSlot;
-						LockTupleMode lockmode;
-						HTSU_Result test;
-
-						/* CDB: CTIDs were not fetched for distributed relation. */
-						Relation relation = erm->relation;
-						if (relation->rd_cdbpolicy &&
-							relation->rd_cdbpolicy->ptype == POLICYTYPE_PARTITIONED)
-							continue;
-
-						datum = ExecGetJunkAttribute(slot,
-													 erm->ctidAttNo,
-													 &isNull);
-						/* shouldn't ever get a null result... */
-						if (isNull)
-							elog(ERROR, "ctid is NULL");
-
-						tuple.t_self = *((ItemPointer) DatumGetPointer(datum));
-
-						if (erm->forUpdate)
-							lockmode = LockTupleExclusive;
-						else
-							lockmode = LockTupleShared;
-
-						test = heap_lock_tuple(erm->relation, &tuple, &buffer,
-											   &update_ctid, &update_xmax,
-											   estate->es_output_cid,
-											   lockmode,
-											   (erm->noWait ? LockTupleNoWait : LockTupleWait));
-						ReleaseBuffer(buffer);
-						switch (test)
-						{
-							case HeapTupleSelfUpdated:
-								/* treat it as deleted; do not process */
-								goto lnext;
-
-							case HeapTupleMayBeUpdated:
-								break;
-
-							case HeapTupleUpdated:
-								if (IsXactIsoLevelSerializable)
-									ereport(ERROR,
-									 (errcode(ERRCODE_T_R_SERIALIZATION_FAILURE),
-									  errmsg("could not serialize access due to concurrent update")));
-								if (!ItemPointerEquals(&update_ctid,
-													   &tuple.t_self))
-								{
-									/* updated, so look at updated version */
-									newSlot = EvalPlanQual(estate,
-														   erm->rti,
-														   &update_ctid,
-														   update_xmax);
-									if (!TupIsNull(newSlot))
-									{
-										slot = planSlot = newSlot;
-										estate->es_useEvalPlan = true;
-										goto lmark;
-									}
-								}
-
-								/*
-								 * if tuple was deleted or PlanQual failed for
-								 * updated tuple - we must not return this tuple!
-								 */
-								goto lnext;
-
-							default:
-								elog(ERROR, "unrecognized heap_lock_tuple status: %u",
-									 test);
-								return NULL;
-						}
-					}
-				}
-
-				/*
-				 * extract the 'ctid' junk attribute.
-				 */
-				if (operation == CMD_UPDATE || operation == CMD_DELETE)
-				{
+					ExecRowMark *erm = lfirst(l);
 					Datum		datum;
 					bool		isNull;
+					HeapTupleData tuple;
+					Buffer		buffer;
+					ItemPointerData update_ctid;
+					TransactionId update_xmax;
+					TupleTableSlot *newSlot;
+					LockTupleMode lockmode;
+					HTSU_Result test;
 
-					datum = ExecGetJunkAttribute(slot, junkfilter->jf_junkAttNo,
+					/* CDB: CTIDs were not fetched for distributed relation. */
+					Relation relation = erm->relation;
+					if (relation->rd_cdbpolicy &&
+						relation->rd_cdbpolicy->ptype == POLICYTYPE_PARTITIONED)
+						continue;
+
+					datum = ExecGetJunkAttribute(slot,
+												 erm->ctidAttNo,
 												 &isNull);
 					/* shouldn't ever get a null result... */
 					if (isNull)
 						elog(ERROR, "ctid is NULL");
 
-					tupleid = (ItemPointer) DatumGetPointer(datum);
-					tuple_ctid = *tupleid;	/* make sure we don't free the ctid!! */
-					tupleid = &tuple_ctid;
+					tuple.t_self = *((ItemPointer) DatumGetPointer(datum));
+
+					if (erm->forUpdate)
+						lockmode = LockTupleExclusive;
+					else
+						lockmode = LockTupleShared;
+
+					test = heap_lock_tuple(erm->relation, &tuple, &buffer,
+										   &update_ctid, &update_xmax,
+										   estate->es_output_cid,
+										   lockmode,
+										   (erm->noWait ? LockTupleNoWait : LockTupleWait));
+					ReleaseBuffer(buffer);
+					switch (test)
+					{
+						case HeapTupleSelfUpdated:
+							/* treat it as deleted; do not process */
+							goto lnext;
+
+						case HeapTupleMayBeUpdated:
+							break;
+
+						case HeapTupleUpdated:
+							if (IsXactIsoLevelSerializable)
+								ereport(ERROR,
+								 (errcode(ERRCODE_T_R_SERIALIZATION_FAILURE),
+								  errmsg("could not serialize access due to concurrent update")));
+							if (!ItemPointerEquals(&update_ctid,
+												   &tuple.t_self))
+							{
+								/* updated, so look at updated version */
+								newSlot = EvalPlanQual(estate,
+													   erm->rti,
+													   &update_ctid,
+													   update_xmax);
+								if (!TupIsNull(newSlot))
+								{
+									slot = planSlot = newSlot;
+									estate->es_useEvalPlan = true;
+									goto lmark;
+								}
+							}
+
+							/*
+							 * if tuple was deleted or PlanQual failed for
+							 * updated tuple - we must not return this tuple!
+							 */
+							goto lnext;
+
+						default:
+							elog(ERROR, "unrecognized heap_lock_tuple status: %u",
+								 test);
+							return NULL;
+					}
 				}
-
-				/*
-				 * Create a new "clean" tuple with all junk attributes removed. We
-				 * don't need to do this for DELETE, however (there will in fact
-				 * be no non-junk attributes in a DELETE!)
-				 */
-				if (operation != CMD_DELETE)
-					slot = ExecFilterJunk(junkfilter, slot);
-			}
-
-			if (operation != CMD_SELECT && Gp_role == GP_ROLE_EXECUTE && !Gp_is_writer)
-			{
-				elog(LOG,"INSERT/UPDATE/DELETE must be executed by a writer segworker group");
-				Insist(false);
 			}
 
 			/*
-			* Based on the operation, a tuple is either
-			* returned it to the user (SELECT) or inserted, deleted, or updated.
-			*/
-			switch (operation)
+			 * extract the 'ctid' junk attribute.
+			 */
+			if (operation == CMD_UPDATE || operation == CMD_DELETE)
 			{
-					case CMD_SELECT:
-						ExecSelect(slot, dest, estate);
-						result = slot;
-						break;
+				Datum		datum;
+				bool		isNull;
 
-					case CMD_INSERT:
-						ExecInsert(slot, dest, estate, PLANGEN_PLANNER, false /* isUpdate */);
-						result = NULL;
-						break;
+				datum = ExecGetJunkAttribute(slot, junkfilter->jf_junkAttNo,
+											 &isNull);
+				/* shouldn't ever get a null result... */
+				if (isNull)
+					elog(ERROR, "ctid is NULL");
 
-					case CMD_DELETE:
-						ExecDelete(tupleid, planSlot, dest, estate, PLANGEN_PLANNER, false /* isUpdate */);
-						result = NULL;
-						break;
-
-					case CMD_UPDATE:
-						ExecUpdate(slot, tupleid, planSlot, dest, estate);
-						result = NULL;
-						break;
-
-					default:
-						elog(ERROR, "unrecognized operation code: %d",
-							 (int) operation);
-						result = NULL;
-						break;
+				tupleid = (ItemPointer) DatumGetPointer(datum);
+				tuple_ctid = *tupleid;	/* make sure we don't free the ctid!! */
+				tupleid = &tuple_ctid;
 			}
+
+			/*
+			 * Create a new "clean" tuple with all junk attributes removed. We
+			 * don't need to do this for DELETE, however (there will in fact
+			 * be no non-junk attributes in a DELETE!)
+			 */
+			if (operation != CMD_DELETE)
+				slot = ExecFilterJunk(junkfilter, slot);
+		}
+
+		if (operation != CMD_SELECT && Gp_role == GP_ROLE_EXECUTE && !Gp_is_writer)
+		{
+			elog(ERROR, "INSERT/UPDATE/DELETE must be executed by a writer segworker group");
+		}
+
+		/*
+		 * Based on the operation, a tuple is either
+		 * returned it to the user (SELECT) or inserted, deleted, or updated.
+		 */
+		switch (operation)
+		{
+			case CMD_SELECT:
+				ExecSelect(slot, dest, estate);
+				result = slot;
+				break;
+
+			case CMD_INSERT:
+				ExecInsert(slot, dest, estate, PLANGEN_PLANNER, false /* isUpdate */);
+				result = NULL;
+				break;
+
+			case CMD_DELETE:
+				ExecDelete(tupleid, planSlot, dest, estate, PLANGEN_PLANNER, false /* isUpdate */);
+				result = NULL;
+				break;
+
+			case CMD_UPDATE:
+				ExecUpdate(slot, tupleid, planSlot, dest, estate);
+				result = NULL;
+				break;
+
+			default:
+				elog(ERROR, "unrecognized operation code: %d",
+					 (int) operation);
+				result = NULL;
+				break;
 		}
 
 		/*
@@ -2964,6 +2963,7 @@ lnext:	;
 		 * quit, else loop again and process more tuples.  Zero numberTuples
 		 * means no limit.
 		 */
+	executed:
 		current_tuple_count++;
 		if (numberTuples && numberTuples == current_tuple_count)
 			break;
@@ -2972,24 +2972,24 @@ lnext:	;
 	/*
 	 * Process AFTER EACH STATEMENT triggers
 	 */
-	if (Gp_role != GP_ROLE_EXECUTE || Gp_is_writer)
+if (Gp_role != GP_ROLE_EXECUTE || Gp_is_writer)
+{
+	switch (operation)
 	{
-		switch (operation)
-		{
-			case CMD_UPDATE:
-				ExecASUpdateTriggers(estate, estate->es_result_relation_info);
-				break;
-			case CMD_DELETE:
-				ExecASDeleteTriggers(estate, estate->es_result_relation_info);
-				break;
-			case CMD_INSERT:
-				ExecASInsertTriggers(estate, estate->es_result_relation_info);
-				break;
-			default:
-				/* do nothing */
-				break;
-		}
+		case CMD_UPDATE:
+			ExecASUpdateTriggers(estate, estate->es_result_relation_info);
+			break;
+		case CMD_DELETE:
+			ExecASDeleteTriggers(estate, estate->es_result_relation_info);
+			break;
+		case CMD_INSERT:
+			ExecASInsertTriggers(estate, estate->es_result_relation_info);
+			break;
+		default:
+			/* do nothing */
+			break;
 	}
+}
 
 	/*
 	 * here, result is either a slot containing a tuple in the case of a
@@ -3015,11 +3015,10 @@ ExecSelect(TupleTableSlot *slot,
 	(estate->es_processed)++;
 }
 
-
 /* ----------------------------------------------------------------
  *		ExecInsert
  *
- *		INSERTs have to add the tuple into
+ *		INSERTs are trickier.. we have to insert the tuple into
  *		the base relation and insert appropriate tuples into the
  *		index relations.
  *		Insert can be part of an update operation when
@@ -4690,7 +4689,6 @@ OpenIntoRel(QueryDesc *queryDesc)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
 				 errmsg("ON COMMIT can only be used on temporary tables")));
-	
 
 	/*
 	 * Security check: disallow creating temp tables from security-restricted
