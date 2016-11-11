@@ -167,7 +167,7 @@ ExecSetOp(SetOpState *node)
 						0 : (node->numLeft - node->numRight);
 					break;
 				default:
-					insist_log(false, "unrecognized set op: %d",
+					elog(ERROR, "unrecognized set op: %d",
 						 (int) plannode->cmd);
 					break;
 			}

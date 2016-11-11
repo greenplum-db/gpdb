@@ -487,7 +487,7 @@ ExecInitNestLoop(NestLoop *node, EState *estate, int eflags)
 								 ExecGetResultType(innerPlanState(nlstate)));
 			break;
 		default:
-			insist_log(false, "unrecognized join type: %d",
+			elog(ERROR, "unrecognized join type: %d",
 				 (int) node->join.jointype);
 	}
 

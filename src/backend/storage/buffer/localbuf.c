@@ -198,7 +198,8 @@ LocalBufferAlloc(SMgrRelation smgr, BlockNumber blockNum, bool *foundPtr)
 		hresult = (LocalBufferLookupEnt *)
 			hash_search(LocalBufHash, (void *) &bufHdr->tag,
 						HASH_REMOVE, NULL);
-		insist_log(hresult, "local buffer hash table corrupted");
+		if (!hresult)			/* shouldn't happen */
+			elog(ERROR, "local buffer hash table corrupted");
 		/* mark buffer invalid just in case hash insert fails */
 		CLEAR_BUFFERTAG(bufHdr->tag);
 		bufHdr->flags &= ~(BM_VALID | BM_TAG_VALID);
@@ -206,7 +207,8 @@ LocalBufferAlloc(SMgrRelation smgr, BlockNumber blockNum, bool *foundPtr)
 
 	hresult = (LocalBufferLookupEnt *)
 		hash_search(LocalBufHash, (void *) &newTag, HASH_ENTER, &found);
-	insist_log(!found, "local buffer hash table corrupted");
+	if (found)					/* shouldn't happen */
+		elog(ERROR, "local buffer hash table corrupted");
 	hresult->id = b;
 
 	/*
@@ -281,7 +283,8 @@ DropRelFileNodeLocalBuffers(RelFileNode rnode, BlockNumber firstDelBlock)
 			hresult = (LocalBufferLookupEnt *)
 				hash_search(LocalBufHash, (void *) &bufHdr->tag,
 							HASH_REMOVE, NULL);
-			insist_log(hresult, "local buffer hash table corrupted");
+			if (!hresult)		/* shouldn't happen */
+				elog(ERROR, "local buffer hash table corrupted");
 			/* Mark buffer invalid */
 			CLEAR_BUFFERTAG(bufHdr->tag);
 			bufHdr->flags = 0;
@@ -339,7 +342,8 @@ InitLocalBuffers(void)
 							   &info,
 							   HASH_ELEM | HASH_FUNCTION);
 
-	insist_log(LocalBufHash, "could not initialize local buffer hash table");
+	if (!LocalBufHash)
+		elog(ERROR, "could not initialize local buffer hash table");
 
 	/* Initialization done, mark buffers allocated */
 	NLocBuffer = nbufs;

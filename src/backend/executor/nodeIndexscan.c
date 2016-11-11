@@ -36,6 +36,7 @@
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 
+
 /*
  * Initialize the index scan descriptor if it is not initialized.
  */
@@ -805,7 +806,7 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 
 			if (!(IsA(leftop, Var) &&
 				  var_is_rel((Var *) leftop)))
-				insist_log(false,"indexqual doesn't have key on left side");
+				elog(ERROR, "indexqual doesn't have key on left side");
 
 			varattno = ((Var *) leftop)->varattno;
 
@@ -882,7 +883,7 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 
 				if (!(IsA(leftop, Var) &&
 					  var_is_rel((Var *) leftop)))
-					insist_log(false,"indexqual doesn't have key on left side");
+					elog(ERROR, "indexqual doesn't have key on left side");
 
 				varattno = ((Var *) leftop)->varattno;
 
@@ -923,13 +924,14 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 
 				if (index->rd_rel->relam != BTREE_AM_OID ||
 					varattno < 1 || varattno > index->rd_index->indnatts)
-					insist_log(false, "bogus RowCompare index qualification");
+					elog(ERROR, "bogus RowCompare index qualification");
 				opfamily = index->rd_opfamily[varattno - 1];
 
 				get_op_opfamily_properties(opno, opfamily,
 										   &op_strategy, &op_lefttype, &op_righttype, &op_recheck);
 
-				insist_log(op_strategy == rc->rctype, "RowCompare index qualification contains wrong operator");
+				if (op_strategy != rc->rctype)
+					elog(ERROR, "RowCompare index qualification contains wrong operator");
 
 				opfuncid = get_opfamily_proc(opfamily, op_lefttype, op_righttype, BTORDER_PROC);
 
@@ -980,7 +982,7 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 
 			if (!(IsA(leftop, Var) &&
 				  var_is_rel((Var *) leftop)))
-				insist_log(false,"indexqual doesn't have key on left side");
+				elog(ERROR, "indexqual doesn't have key on left side");
 
 			varattno = ((Var *) leftop)->varattno;
 
@@ -1044,7 +1046,7 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 								   (Datum) 0);	/* constant */
 		}
 		else
-			insist_log(false, "unsupported indexqual type: %d",
+			elog(ERROR, "unsupported indexqual type: %d",
 				 (int) nodeTag(clause));
 	}
 
@@ -1073,7 +1075,7 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 		*numArrayKeys = n_array_keys;
 	}
 	else if (n_array_keys != 0)
-		insist_log(false, "ScalarArrayOpExpr index qual found where not allowed");
+		elog(ERROR, "ScalarArrayOpExpr index qual found where not allowed");
 }
 
 int

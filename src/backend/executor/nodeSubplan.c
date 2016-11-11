@@ -72,7 +72,8 @@ ExecSubPlan(SubPlanState *node,
 	if (isDone)
 		*isDone = ExprSingleResult;
 
-	insist_log(subplan->setParam == NIL, "cannot set parent parameters from subquery");
+	if (subplan->setParam != NIL)
+		elog(ERROR, "cannot set parent params from subquery");
 
 	/* Remember that we're recursing into a sub-plan */
 	node->planstate->state->currentSubplanLevel++;
@@ -828,7 +829,7 @@ ExecInitSubPlan(SubPlan *subplan, PlanState *parent)
 		else
 		{
 			/* shouldn't see anything else in a hashable subplan */
-			insist_log(false, "unrecognized testexpr type: %d",
+			elog(ERROR, "unrecognized testexpr type: %d",
 				 (int) nodeTag(sstate->testexpr->expr));
 			oplist = NIL;		/* keep compiler quiet */
 		}
@@ -1294,12 +1295,12 @@ ExecReScanSetParamPlan(SubPlanState *node, PlanState *parent)
 	ListCell   *l;
 
 	/* sanity checks */
-	insist_log(subplan->parParam == NIL,
-			"direct correlated subquery unsupported as initplan");
-	insist_log(subplan->setParam != NIL,
-			"setParam list of initplan is empty");
-	insist_log(!bms_is_empty(planstate->plan->extParam),
-		"extParam set of initplan is empty");
+	if (subplan->parParam != NIL)
+		elog(ERROR, "direct correlated subquery unsupported as initplan");
+	if (subplan->setParam == NIL)
+		elog(ERROR, "setParam list of initplan is empty");
+	if (bms_is_empty(planstate->plan->extParam))
+		elog(ERROR, "extParam set of initplan is empty");
 
 	/*
 	 * Don't actually re-scan: ExecSetParamPlan does it if needed.

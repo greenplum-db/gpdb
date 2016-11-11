@@ -122,7 +122,7 @@ SPI_connect(void)
 	if (_SPI_stack == NULL)
 	{
 		if (_SPI_connected != -1 || _SPI_stack_depth != 0)
-			insist_log(false, "SPI stack corrupted");
+			elog(ERROR, "SPI stack corrupted");
 		newdepth = 16;
 		_SPI_stack = (_SPI_connection *)
 			MemoryContextAlloc(TopTransactionContext,
@@ -132,7 +132,7 @@ SPI_connect(void)
 	else
 	{
 		if (_SPI_stack_depth <= 0 || _SPI_stack_depth <= _SPI_connected)
-			insist_log(false, "SPI stack corrupted");
+			elog(ERROR, "SPI stack corrupted");
 		if (_SPI_stack_depth == _SPI_connected + 1)
 		{
 			newdepth = _SPI_stack_depth * 2;
@@ -649,7 +649,7 @@ SPI_copytuple(HeapTuple tuple)
 	if (_SPI_curid + 1 == _SPI_connected)		/* connected */
 	{
 		if (_SPI_current != &(_SPI_stack[_SPI_curid + 1]))
-			insist_log(false, "SPI stack corrupted");
+			elog(ERROR, "SPI stack corrupted");
 		oldcxt = MemoryContextSwitchTo(_SPI_current->savedcxt);
 	}
 
@@ -681,7 +681,7 @@ SPI_returntuple(HeapTuple tuple, TupleDesc tupdesc)
 	if (_SPI_curid + 1 == _SPI_connected)		/* connected */
 	{
 		if (_SPI_current != &(_SPI_stack[_SPI_curid + 1]))
-			insist_log(false, "SPI stack corrupted");
+			elog(ERROR, "SPI stack corrupted");
 		oldcxt = MemoryContextSwitchTo(_SPI_current->savedcxt);
 	}
 
@@ -718,7 +718,7 @@ SPI_modifytuple(Relation rel, HeapTuple tuple, int natts, int *attnum,
 	if (_SPI_curid + 1 == _SPI_connected)		/* connected */
 	{
 		if (_SPI_current != &(_SPI_stack[_SPI_curid + 1]))
-			insist_log(false, "SPI stack corrupted");
+			elog(ERROR, "SPI stack corrupted");
 		oldcxt = MemoryContextSwitchTo(_SPI_current->savedcxt);
 	}
 	SPI_result = 0;
@@ -948,7 +948,7 @@ SPI_palloc(Size size)
 	if (_SPI_curid + 1 == _SPI_connected)		/* connected */
 	{
 		if (_SPI_current != &(_SPI_stack[_SPI_curid + 1]))
-			insist_log(false, "SPI stack corrupted");
+			elog(ERROR, "SPI stack corrupted");
 		oldcxt = MemoryContextSwitchTo(_SPI_current->savedcxt);
 	}
 
@@ -1375,7 +1375,8 @@ SPI_scroll_cursor_move(Portal portal, FetchDirection direction, long count)
 void
 SPI_cursor_close(Portal portal)
 {
-	insist_log(PortalIsValid(portal), "invalid portal in SPI cursor operation");
+	if (!PortalIsValid(portal))
+		elog(ERROR, "invalid portal in SPI cursor operation");
 
 	PortalDrop(portal, false);
 }
@@ -1575,12 +1576,12 @@ spi_dest_startup(DestReceiver *self, int operation, TupleDesc typeinfo)
 	 * _SPI_connected
 	 */
 	if (_SPI_curid != _SPI_connected || _SPI_connected < 0)
-		insist_log(false, "improper call to spi_dest_startup");
+		elog(ERROR, "improper call to spi_dest_startup");
 	if (_SPI_current != &(_SPI_stack[_SPI_curid]))
-		insist_log(false, "SPI stack corrupted");
+		elog(ERROR, "SPI stack corrupted");
 
 	if (_SPI_current->tuptable != NULL)
-		insist_log(false, "improper call to spi_dest_startup");
+		elog(ERROR, "improper call to spi_dest_startup");
 
 	oldcxt = _SPI_procmem();	/* switch to procedure memory context */
 
@@ -1617,13 +1618,13 @@ spi_printtup(TupleTableSlot *slot, DestReceiver *self)
 	 * _SPI_connected
 	 */
 	if (_SPI_curid != _SPI_connected || _SPI_connected < 0)
-		insist_log(false, "improper call to spi_printtup");
+		elog(ERROR, "improper call to spi_printtup");
 	if (_SPI_current != &(_SPI_stack[_SPI_curid]))
-		insist_log(false, "SPI stack corrupted");
+		elog(ERROR, "SPI stack corrupted");
 
 	tuptable = _SPI_current->tuptable;
 	if (tuptable == NULL)
-		insist_log(false, "improper call to spi_printtup");
+		elog(ERROR, "improper call to spi_printtup");
 
 	oldcxt = MemoryContextSwitchTo(tuptable->tuptabcxt);
 
@@ -2321,15 +2322,13 @@ _SPI_cursor_operation(Portal portal, FetchDirection direction, long count,
 {
 	int64		nfetched;
 
-	elog(DEBUG1, "SPI_cursor_operation");
-
 	/* Check that the portal is valid */
 	if (!PortalIsValid(portal))
-		insist_log(false, "invalid portal in SPI cursor operation");
+		elog(ERROR, "invalid portal in SPI cursor operation");
 
 	/* Push the SPI stack */
 	if (_SPI_begin_call(true) < 0)
-		insist_log(false, "SPI cursor operation called while not connected");
+		elog(ERROR, "SPI cursor operation called while not connected");
 
 	/* Reset the SPI result (note we deliberately don't touch lastoid) */
 	SPI_processed64 = 0;
@@ -2355,7 +2354,7 @@ _SPI_cursor_operation(Portal portal, FetchDirection direction, long count,
 	_SPI_current->processed = nfetched;
 
 	if (dest->mydest == DestSPI && _SPI_checktuples())
-		insist_log(false, "consistency check on SPI tuple count failed");
+		elog(ERROR, "consistency check on SPI tuple count failed");
 
 	/* Put the result into place for access by caller */
 	SPI_processed64 = _SPI_current->processed;
@@ -2392,7 +2391,8 @@ _SPI_begin_call(bool execmem)
 	if (_SPI_curid + 1 != _SPI_connected)
 		return SPI_ERROR_UNCONNECTED;
 	_SPI_curid++;
-	insist_log(_SPI_current == &(_SPI_stack[_SPI_curid]), "SPI stack corrupted");
+	if (_SPI_current != &(_SPI_stack[_SPI_curid]))
+		elog(ERROR, "SPI stack corrupted");
 
 	if (execmem)				/* switch to the Executor memory context */
 		_SPI_execmem();

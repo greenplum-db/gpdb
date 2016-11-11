@@ -230,7 +230,8 @@ MJExamineQuals(List *mergeclauses,
 					ok = true;
 				}
 			}
-			insist_log(ok, "mergejoin clause is not an OpExpr");
+			if (!ok)
+				elog(ERROR, "mergejoin clause is not an OpExpr");
 		}
 
 		/*
@@ -1173,7 +1174,7 @@ ExecMergeJoin(MergeJoinState *node)
 					 * ----------------
 					 */
 					if (compareResult <= 0 && !((MergeJoin*)node->js.ps.plan)->unique_outer)
-						insist_log(false, "Mergejoin: compareResult > 0, bad plan ?");
+						elog(ERROR, "Mergejoin: compareResult > 0, bad plan ?");
 					innerTupleSlot = node->mj_InnerTupleSlot;
 
 					/* reload comparison data for current inner */
@@ -1524,7 +1525,7 @@ ExecMergeJoin(MergeJoinState *node)
 				 * broken state value?
 				 */
 			default:
-				insist_log(false, "unrecognized mergejoin state: %d",
+				elog(ERROR, "unrecognized mergejoin state: %d",
 					 (int) node->mj_JoinState);
 		}
 	}
@@ -1675,10 +1676,10 @@ ExecInitMergeJoin(MergeJoin *node, EState *estate, int eflags)
 						 errmsg("FULL JOIN is only supported with merge-joinable join conditions")));
 			break;
 		case JOIN_LASJ_NOTIN:
-			insist_log(false, "join type not supported");
+			elog(ERROR, "join type not supported");
 			break;
 		default:
-			insist_log(false, "unrecognized join type: %d",
+			elog(ERROR, "unrecognized join type: %d",
 				 (int) node->join.jointype);
 	}
 
@@ -1821,7 +1822,7 @@ initGpmonPktForMergeJoin(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *esta
 				type = PMNT_MergeUniqueInnerJoin;
 				break;
 			case JOIN_LASJ_NOTIN:
-				insist_log(false, "Join type not supported");
+				elog(ERROR, "Join type not supported");
 				break;
 		}
 
