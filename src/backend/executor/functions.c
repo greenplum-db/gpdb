@@ -39,6 +39,7 @@
 #include "cdb/memquota.h"
 #include "postmaster/autostats.h"
 
+
 /*
  * We have an execution_state record for each query in a function.	Each
  * record contains a plantree for its query.  If the query is currently in
@@ -246,7 +247,6 @@ init_sql_fcache(FmgrInfo *finfo)
 	List	   *queryTree_list;
 	Datum		tmp;
 	bool		isNull;
-	ListCell * list_item;
 
 	fcache = (SQLFunctionCachePtr) palloc0(sizeof(SQLFunctionCache));
 
@@ -333,7 +333,6 @@ init_sql_fcache(FmgrInfo *finfo)
 	 * Parse and rewrite the queries in the function text.
 	 */
 	queryTree_list = pg_parse_and_rewrite(fcache->src, argOidVect, nargs);
-	
 
 	/*
 	 * If we have only SELECT statements with no FROM clauses, we should
@@ -350,7 +349,9 @@ init_sql_fcache(FmgrInfo *finfo)
 	 */
 	if (Gp_role == GP_ROLE_EXECUTE)
 	{
-		bool canRunLocal = true;
+		bool		canRunLocal = true;
+		ListCell   *list_item;
+
 		foreach(list_item, queryTree_list)
 		{
 			Node	   *parsetree = (Node *) lfirst(list_item);
@@ -365,7 +366,7 @@ init_sql_fcache(FmgrInfo *finfo)
 				break;
 			}		
 		}
-		
+
 		if (!canRunLocal)
 		{
 			if (procedureStruct->provolatile == PROVOLATILE_VOLATILE)
@@ -459,15 +460,12 @@ postquel_start(execution_state *es, SQLFunctionCachePtr fcache)
 			es->qd->gpmon_pkt = NULL;
 		}
 	}
-	
 	else
-	{
 		es->qd = CreateUtilityQueryDesc(es->stmt,
 										fcache->src,
 										snapshot,
 										None_Receiver,
 										fcache->paramLI);
-	}
 
 	/* We assume we don't need to set up ActiveSnapshot for ExecutorStart */
 
@@ -658,7 +656,7 @@ postquel_execute(execution_state *es,
 		 */
 		postquel_end(es);
 		fcinfo->isnull = true;
-		return 0;
+		return (Datum) NULL;
 	}
 
 	/*
@@ -1194,10 +1192,10 @@ check_sql_fn_retval(Oid func_id, Oid rettype, List *queryTreeList,
 			 * what the caller expects will happen at runtime.
 			 */
 			if (junkFilter)
-			  {
-			    TupleDesc cleanTupType = ExecCleanTypeFromTL(tlist, false /* hasoid */);
-			    *junkFilter = ExecInitJunkFilter(tlist, cleanTupType, NULL);
-			  }
+			{
+				TupleDesc cleanTupType = ExecCleanTypeFromTL(tlist, false /* hasoid */);
+				*junkFilter = ExecInitJunkFilter(tlist, cleanTupType, NULL);
+			}
 			return true;
 		}
 		Assert(tupdesc);

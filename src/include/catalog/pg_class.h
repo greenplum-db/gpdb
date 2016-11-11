@@ -101,7 +101,6 @@ FOREIGN_KEY(reltoastidxid REFERENCES pg_class(oid));
  */
 typedef FormData_pg_class *Form_pg_class;
 
-
 /* ----------------
  *		compiler constants for pg_class
  * ----------------
@@ -137,7 +136,6 @@ typedef FormData_pg_class *Form_pg_class;
 #define Anum_pg_class_relacl			27
 #define Anum_pg_class_reloptions		28
 
-
 /* ----------------
  *		initial contents of pg_class
  *
@@ -172,15 +170,15 @@ DATA(insert OID = 3250    ( nb_classification PGNSP 3251 PGUID 0 3250 0 0 0 0 0 
 
 
 
-#define		  RELKIND_INDEX		  'i'		/* secondary index */
-#define		  RELKIND_RELATION	  'r'		/* ordinary cataloged heap */
-#define		  RELKIND_SEQUENCE	  'S'		/* SEQUENCE relation */
+#define		  RELKIND_INDEX			  'i'		/* secondary index */
+#define		  RELKIND_RELATION		  'r'		/* ordinary cataloged heap */
+#define		  RELKIND_SEQUENCE		  'S'		/* SEQUENCE relation */
 #define		  RELKIND_UNCATALOGED	  'u'		/* temporary heap */
 #define		  RELKIND_TOASTVALUE	  't'		/* moved off huge values */
 #define		  RELKIND_AOSEGMENTS	  'o'		/* AO segment files and eof's */
 #define		  RELKIND_AOBLOCKDIR	  'b'		/* AO block directory */
-#define       RELKIND_AOVISIMAP       'm'       /* AO visibility map */
-#define		  RELKIND_VIEW		  'v'		/* view */
+#define		  RELKIND_AOVISIMAP		  'm'		/* AO visibility map */
+#define		  RELKIND_VIEW			  'v'		/* view */
 #define		  RELKIND_COMPOSITE_TYPE  'c'		/* composite type */
 
 /*

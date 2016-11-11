@@ -88,10 +88,10 @@
  */
 #include "postgres.h"
 
-#include "funcapi.h"
 #include "access/heapam.h"
 #include "access/htup.h"
 #include "access/tuptoaster.h"
+#include "funcapi.h"
 #include "catalog/pg_type.h"
 #include "executor/executor.h"
 #include "parser/parse_expr.h"
@@ -103,6 +103,7 @@
 
 static TupleDesc ExecTypeFromTLInternal(List *targetList,
 					   bool hasoid, bool skipjunk);
+
 
 /* ----------------------------------------------------------------
  *				  tuple table create/delete functions
@@ -279,7 +280,6 @@ ExecDropSingleTupleTableSlot(TupleTableSlot *slot)
  *		a reference.
  * --------------------------------
  */
-
 void
 ExecSetSlotDescriptor(TupleTableSlot *slot,		/* slot to change */
 					  TupleDesc tupdesc)		/* new tuple descriptor */

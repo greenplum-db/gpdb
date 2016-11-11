@@ -167,7 +167,7 @@ IndexNext(IndexScanState *node)
 		 * pointers onto disk pages and must not be pfree()'d.
 		 */
 		ExecStoreHeapTuple(tuple,	/* tuple to store */
-				slot,	/* slot to store in */
+					   slot,	/* slot to store in */
 					   scandesc->xs_cbuf,		/* buffer containing tuple */
 					   false);	/* don't pfree */
 
@@ -653,6 +653,7 @@ ExecInitIndexScan(IndexScan *node, EState *estate, int eflags)
 	return indexstate;
 }
 
+
 /*
  * ExecIndexBuildScanKeys
  *		Build the index scan keys from the index qualification expressions
@@ -928,12 +929,18 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 				opfamily = index->rd_opfamily[varattno - 1];
 
 				get_op_opfamily_properties(opno, opfamily,
-										   &op_strategy, &op_lefttype, &op_righttype, &op_recheck);
+										   &op_strategy,
+										   &op_lefttype,
+										   &op_righttype,
+										   &op_recheck);
 
 				if (op_strategy != rc->rctype)
 					elog(ERROR, "RowCompare index qualification contains wrong operator");
 
-				opfuncid = get_opfamily_proc(opfamily, op_lefttype, op_righttype, BTORDER_PROC);
+				opfuncid = get_opfamily_proc(opfamily,
+											 op_lefttype,
+											 op_righttype,
+											 BTORDER_PROC);
 
 				/*
 				 * initialize the subsidiary scan key's fields appropriately

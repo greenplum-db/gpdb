@@ -131,6 +131,7 @@ bool		trace_sort = false;
 bool		optimize_bounded_sort = true;
 #endif
 
+
 /*
  * The objects we actually sort are SortTuple structs.	These contain
  * a pointer to the tuple proper (might be a MinimalTuple or IndexTuple),
@@ -296,11 +297,10 @@ struct Tuplesortstate
 	 * SORTEDONTAPE, the array is not used.
 	 */
 	SortTuple  *memtuples;		/* array of SortTuple structs */
-	long		memtupcount;	/* number of tuples currently present */
-	long		tuparraysize;		/* allocated length of memtuples array */
+	int			memtupcount;	/* number of tuples currently present */
+	int			memtupsize;		/* allocated length of memtuples array */
 	int64		memtupLIMIT;	/* LIMIT of memtuples array */ /*CDB*/
 	bool		memtupblimited; /* true when hit the limit */
-	int64  		dumpcount;	    /* count of dumps */ /*CDB*/
 	int64  		discardcount;   /* count of discards */ /*CDB*/
 	int64  		totalNumTuples;    /* count of all input tuples */ /*CDB*/
 	bool		noduplicates;   /* discard duplicate rows if true *//* CDB */
@@ -484,6 +484,7 @@ FREEMEM(Tuplesortstate *state, int amt)
  * a lot better than what we were doing before 7.3.
  */
 
+
 static Tuplesortstate *tuplesort_begin_common(int workMem, bool randomAccess, bool allocmemtuple);
 static void puttuple_common(Tuplesortstate *state, SortTuple *tuple);
 static void inittapes(Tuplesortstate *state, const char* rwfile_prefix);
@@ -588,10 +589,9 @@ tuplesort_begin_common(int workMem, bool randomAccess, bool allocmemtuple)
 	state->tapeset = NULL;
 
 	state->memtupcount = 0;
-	state->tuparraysize = 1024;	/* initial guess */
+	state->memtupsize = 1024;	/* initial guess */
 	state->memtupLIMIT = 0; /*CDB*/
 	state->memtupblimited = false;
-	state->dumpcount    = 0; /*CDB*/
 	state->discardcount = 0; /*CDB*/
 	state->totalNumTuples  = 0; /*CDB*/
 	state->mppsortflags = 0;   /* special sort flags*//* CDB */
@@ -600,7 +600,7 @@ tuplesort_begin_common(int workMem, bool randomAccess, bool allocmemtuple)
 
 	if(allocmemtuple)
 	{
-		state->memtuples = (SortTuple *) palloc(state->tuparraysize * sizeof(SortTuple));
+		state->memtuples = (SortTuple *) palloc(state->memtupsize * sizeof(SortTuple));
 		USEMEM(state, GetMemoryChunkSpace(state->memtuples));
 
 		/* workMem must be large enough for the minimal memtuples array */
@@ -958,6 +958,9 @@ tuplesort_set_bound(Tuplesortstate *state, int64 bound)
 void
 tuplesort_end(Tuplesortstate *state)
 {
+	/* context swap probably not needed, but let's be safe */
+	MemoryContext oldcontext = MemoryContextSwitchTo(state->sortcontext);
+
 	long		spaceUsed;
 
 	if (state->tapeset)
@@ -992,6 +995,8 @@ tuplesort_end(Tuplesortstate *state)
 			elog(LOG, "internal sort ended, %ld KB used: %s",
 				 spaceUsed, pg_rusage_show(&state->ru_start));
 	}
+
+	MemoryContextSwitchTo(oldcontext);
 
 	/*
 	 * Free the per-sort memory context, thereby releasing all working memory,
@@ -1075,21 +1080,21 @@ grow_memtuples(Tuplesortstate *state)
 	 * enough to force palloc to treat it as a separate chunk, so this
 	 * assumption should be good.  But let's check it.)
 	 */
-	if (state->availMem <= (long) (state->tuparraysize * sizeof(SortTuple)))
+	if (state->availMem <= (long) (state->memtupsize * sizeof(SortTuple)))
 		return false;
 
 	/*
 	 * On a 64-bit machine, allowedMem could be high enough to get us into
 	 * trouble with MaxAllocSize, too.
 	 */
-	if ((Size) (state->tuparraysize * 2) >= MaxAllocSize / sizeof(SortTuple))
+	if ((Size) (state->memtupsize * 2) >= MaxAllocSize / sizeof(SortTuple))
 		return false;
 
 	FREEMEM(state, GetMemoryChunkSpace(state->memtuples));
-	state->tuparraysize *= 2;
+	state->memtupsize *= 2;
 	state->memtuples = (SortTuple *)
 		repalloc(state->memtuples,
-				 state->tuparraysize * sizeof(SortTuple));
+				 state->memtupsize * sizeof(SortTuple));
 	USEMEM(state, GetMemoryChunkSpace(state->memtuples));
 	if (LACKMEM(state))
 		elog(ERROR, "unexpected out-of-memory situation during sort");
@@ -1199,10 +1204,10 @@ puttuple_common(Tuplesortstate *state, SortTuple *tuple)
 			 * room to store the incoming tuple, and then we'll switch to
 			 * tape-based operation.
 			 */
-			if (state->memtupcount >= state->tuparraysize - 1)
+			if (state->memtupcount >= state->memtupsize - 1)
 			{
 				(void) grow_memtuples(state);
-				Assert(state->memtupcount < state->tuparraysize);
+				Assert(state->memtupcount < state->memtupsize);
 			}
 
 			if (do_standardsort)
@@ -1263,7 +1268,7 @@ puttuple_common(Tuplesortstate *state, SortTuple *tuple)
 			{
 #ifdef TRACE_SORT
 				if (trace_sort)
-					elog(LOG, "switching to bounded heapsort at %ld tuples: %s",
+					elog(LOG, "switching to bounded heapsort at %d tuples: %s",
 						 state->memtupcount,
 						 pg_rusage_show(&state->ru_start));
 #endif
@@ -1274,7 +1279,7 @@ puttuple_common(Tuplesortstate *state, SortTuple *tuple)
 			/*
 			 * Done if we still fit in available memory and have array slots.
 			 */
-			if (state->memtupcount < state->tuparraysize && !LACKMEM(state))
+			if (state->memtupcount < state->memtupsize && !LACKMEM(state))
 				return;
 
 			state->memUsedBeforeSpill = MemoryContextGetPeakSpace(state->sortcontext);
@@ -1361,22 +1366,6 @@ tuplesort_performsort(Tuplesortstate *state)
 
 	switch (state->status)
 	{
-		case TSS_BOUNDED:
-
-			/*
-			 * We were able to accumulate all the tuples required for output
-			 * in memory, using a heap to eliminate excess tuples.	Now we
-			 * have to transform the heap to a properly-sorted array.
-			 */
-			sort_bounded_heap(state);
-			state->pos.current = 0;
-			state->pos.eof_reached = false;
-			state->pos.markpos.tapepos.blkNum = 0L; 
-			state->pos.markpos.tapepos.offset = 0;
-			state->pos.markpos_eof = false;
-			state->status = TSS_SORTEDINMEM;
-			break;
-
 		case TSS_INITIAL:
 			if(!is_sortstate_rwfile(state))
 			{
@@ -1403,6 +1392,22 @@ tuplesort_performsort(Tuplesortstate *state)
 				inittapes(state, state->pfile_rwfile_prefix);
 				/* fall through */
 			}
+
+		case TSS_BOUNDED:
+
+			/*
+			 * We were able to accumulate all the tuples required for output
+			 * in memory, using a heap to eliminate excess tuples.	Now we
+			 * have to transform the heap to a properly-sorted array.
+			 */
+			sort_bounded_heap(state);
+			state->pos.current = 0;
+			state->pos.eof_reached = false;
+			state->pos.markpos.tapepos.blkNum = 0L; 
+			state->pos.markpos.tapepos.offset = 0;
+			state->pos.markpos_eof = false;
+			state->status = TSS_SORTEDINMEM;
+			break;
 
 		case TSS_BUILDRUNS:
 
@@ -1789,7 +1794,7 @@ inittapes(Tuplesortstate *state, const char* rwfile_prefix)
 	 * we'd not have room for merge heap plus preread.  It seems unlikely that
 	 * this case would ever occur, but be safe.
 	 */
-	maxTapes = Min(maxTapes, state->tuparraysize / 2);
+	maxTapes = Min(maxTapes, state->memtupsize / 2);
 /* XXX XXX: with losers, only need 1x slots because we don't need a merge heap */
 
 	state->maxTapes = maxTapes;
@@ -2198,7 +2203,7 @@ beginmerge(Tuplesortstate *state)
 	 * share of preread space.
 	 */
 	Assert(activeTapes > 0);
-	slotsPerTape = (state->tuparraysize - state->mergefirstfree) / activeTapes;
+	slotsPerTape = (state->memtupsize - state->mergefirstfree) / activeTapes;
 	Assert(slotsPerTape > 0);
 	spacePerTape = state->availMem / activeTapes;
 	for (srcTape = 0; srcTape < state->maxTapes; srcTape++)
@@ -2316,7 +2321,7 @@ mergeprereadone(Tuplesortstate *state, int srcTape)
 		else
 		{
 			tupIndex = state->mergefirstfree++;
-			Assert(tupIndex < state->tuparraysize);
+			Assert(tupIndex < state->memtupsize);
 		}
 		state->mergeavailslots[srcTape]--;
 		/* store tuple, append to list for its tape */
@@ -2360,7 +2365,7 @@ dumptuples(Tuplesortstate *state, bool alltuples)
 
 	while (alltuples ||
 		   (LACKMEM(state) && state->memtupcount > 1) ||
-		   state->memtupcount >= state->tuparraysize)
+		   state->memtupcount >= state->memtupsize)
 	{
 		/* ShareInput or sort: The sort may sort nothing, we still
 		 * need to handle it here 
@@ -2414,8 +2419,6 @@ dumptuples(Tuplesortstate *state, bool alltuples)
 			selectnewtape(state);
 		}
 	}
-
-	if (bDumped) state->dumpcount++;
 
 	/* CDB: Accumulate total size of spilled tuples. */
 	spilledBytes = state->availMem - spilledBytes;
@@ -2475,8 +2478,8 @@ tuplesort_rescan_pos(Tuplesortstate *state, TuplesortPos *pos)
 /*
  * tuplesort_rescan		- rewind and replay the scan
  */
-
-void tuplesort_rescan(Tuplesortstate *state)
+void
+tuplesort_rescan(Tuplesortstate *state)
 {
 	tuplesort_rescan_pos(state, &state->pos);
 }
@@ -2511,7 +2514,7 @@ tuplesort_markpos_pos(Tuplesortstate *state, TuplesortPos *pos)
 
 	MemoryContextSwitchTo(oldcontext);
 }
-void 
+void
 tuplesort_markpos(Tuplesortstate *state)
 {
 	tuplesort_markpos_pos(state, &state->pos);
@@ -2552,7 +2555,7 @@ tuplesort_restorepos_pos(Tuplesortstate *state, TuplesortPos *pos)
 
 	MemoryContextSwitchTo(oldcontext);
 }
-void 
+void
 tuplesort_restorepos(Tuplesortstate *state)
 {
 	tuplesort_restorepos_pos(state, &state->pos);
@@ -2749,7 +2752,7 @@ tuplesort_heap_insert(Tuplesortstate *state, SortTuple *tuple,
 	tuple->tupindex = tupleindex;
 
 	memtuples = state->memtuples;
-	Assert(state->memtupcount < state->tuparraysize);
+	Assert(state->memtupcount < state->memtupsize);
 
 	/*
 	 * Sift-up the new entry, per Knuth 5.2.3 exercise 16. Note that Knuth is
@@ -2802,7 +2805,7 @@ tuplesort_sorted_insert(Tuplesortstate *state, SortTuple *tuple,
 	tuple->tupindex = tupleindex;
 
 	memtuples = state->memtuples;
-	Assert(state->memtupcount < state->tuparraysize);
+	Assert(state->memtupcount < state->memtupsize);
 
 	/* compare to the last value first */
 	comparestat = 
@@ -3004,9 +3007,8 @@ getlen(Tuplesortstate *state, TuplesortPos *pos, LogicalTape *lt, bool eofOK)
 	Assert(lt);
 	readSize = LogicalTapeRead(state->tapeset, lt, (void *)&len, sizeof(len));
 
-	if(readSize != sizeof(len))
+	if (readSize != sizeof(len))
 	{
-		Assert(!"Catch me");
 		elog(ERROR, "unexpected end of tape");
 	}
 
@@ -3224,7 +3226,8 @@ writetup_heap(Tuplesortstate *state, LogicalTape *lt, SortTuple *stup)
 }
 
 static void
-readtup_heap(Tuplesortstate *state, TuplesortPos *pos, SortTuple *stup, LogicalTape *lt, uint32 len)
+readtup_heap(Tuplesortstate *state, TuplesortPos *pos, SortTuple *stup,
+			 LogicalTape *lt, uint32 len)
 {
 	uint32 tuplen;
 	size_t readSize;
@@ -3419,11 +3422,14 @@ writetup_index(Tuplesortstate *state, LogicalTape *lt, SortTuple *stup)
 
 	tuplen = IndexTupleSize(tuple) + sizeof(tuplen);
 
-	LogicalTapeWrite(state->tapeset, lt, (void *) &tuplen, sizeof(tuplen));
-	LogicalTapeWrite(state->tapeset, lt, (void *) tuple, IndexTupleSize(tuple));
+	LogicalTapeWrite(state->tapeset, lt,
+					 (void *) &tuplen, sizeof(tuplen));
+	LogicalTapeWrite(state->tapeset, lt,
+					 (void *) tuple, IndexTupleSize(tuple));
 
 	if (state->randomAccess)	/* need trailing length word? */
-		LogicalTapeWrite(state->tapeset, lt, (void *) &tuplen, sizeof(tuplen));
+		LogicalTapeWrite(state->tapeset, lt,
+						 (void *) &tuplen, sizeof(tuplen));
 
 	FREEMEM(state, GetMemoryChunkSpace(tuple));
 	pfree(tuple);
@@ -3522,11 +3528,14 @@ writetup_datum(Tuplesortstate *state, LogicalTape *lt, SortTuple *stup)
 
 	writtenlen = tuplen + sizeof(unsigned int);
 
-	LogicalTapeWrite(state->tapeset, lt, (void *) &writtenlen, sizeof(writtenlen));
-	LogicalTapeWrite(state->tapeset, lt, waddr, tuplen);
+	LogicalTapeWrite(state->tapeset, lt,
+					 (void *) &writtenlen, sizeof(writtenlen));
+	LogicalTapeWrite(state->tapeset, lt,
+					 waddr, tuplen);
 
 	if (state->randomAccess)	/* need trailing length word? */
-		LogicalTapeWrite(state->tapeset, lt, (void *) &writtenlen, sizeof(writtenlen));
+		LogicalTapeWrite(state->tapeset, lt,
+						 (void *) &writtenlen, sizeof(writtenlen));
 
 	if (stup->tuple)
 	{

@@ -408,7 +408,7 @@ advance_transition_function(AggState *aggstate,
 }
 
 Datum
-invoke_agg_trans_func(FmgrInfo *transfn, int numargs, Datum transValue,
+invoke_agg_trans_func(FmgrInfo *transfn, int numArguments, Datum transValue,
 					  bool *noTransvalue, bool *transValueIsNull,
 					  bool transtypeByVal, int16 transtypeLen, 
 					  FunctionCallInfoData *fcinfo, void *funcctx,
@@ -425,7 +425,7 @@ invoke_agg_trans_func(FmgrInfo *transfn, int numargs, Datum transValue,
 		 * For a strict transfn, nothing happens when there's a NULL input; we
 		 * just keep the prior transValue.
 		 */
-		for (i = 1; i <= numargs; i++)
+		for (i = 1; i <= numArguments; i++)
 		{
 			if (fcinfo->argnull[i])
 				return transValue;
@@ -469,7 +469,7 @@ invoke_agg_trans_func(FmgrInfo *transfn, int numargs, Datum transValue,
 	 * OK to call the transition function
 	 */
 	InitFunctionCallInfoData(*fcinfo, transfn,
-							 numargs + 1,
+							 numArguments + 1,
 							 (void *) funcctx, NULL);
 	fcinfo->arg[0] = transValue;
 	fcinfo->argnull[0] = *transValueIsNull;
@@ -660,25 +660,25 @@ process_ordered_aggregate_single(AggState *aggstate,
 	Datum	   *newVal;
 	bool	   *isNull;
 	FunctionCallInfoData fcinfo;
-	
+
 	Assert(peraggstate->numInputs == 1);
-	
+
 	if(gp_enable_mk_sort)
 		tuplesort_performsort_mk((Tuplesortstate_mk *) peraggstate->sortstate);
 	else
 		tuplesort_performsort((Tuplesortstate *) peraggstate->sortstate);
-	
+
 	/* Load the column into argument 1 (arg 0 will be transition value) */
-	
+
 	newVal = fcinfo.arg + 1;
 	isNull = fcinfo.argnull + 1;
-	
+
 	/*
 	 * Note: if input type is pass-by-ref, the datums returned by the sort are
 	 * freshly palloc'd in the per-query context, so we must be careful to
 	 * pfree them when they are no longer needed.
 	 */
-	
+
 	while (
 		   gp_enable_mk_sort ? 
 		   tuplesort_getdatum_mk((Tuplesortstate_mk *)peraggstate->sortstate, true, newVal, isNull)
@@ -723,7 +723,7 @@ process_ordered_aggregate_single(AggState *aggstate,
 			oldIsNull = *isNull;
 			haveOldVal = true;
 		}
-		
+
 		MemoryContextSwitchTo(oldContext);
 	}
 	
@@ -888,7 +888,7 @@ static Bitmapset *
 find_unaggregated_cols(AggState *aggstate)
 {
 	Agg		   *node = (Agg *) aggstate->ss.ps.plan;
-	Bitmapset *colnos;
+	Bitmapset  *colnos;
 
 	colnos = NULL;
 	(void) find_unaggregated_cols_walker((Node *) node->plan.targetlist,
@@ -920,29 +920,29 @@ find_unaggregated_cols_walker(Node *node, Bitmapset **colnos)
 }
 
 /*
- * Create a list of the tuple columns that actually need to be stored
- * in hashtable entries.  The incoming tuples from the child plan node
- * will contain grouping columns, other columns referenced in our
- * targetlist and qual, columns used to compute the aggregate functions,
- * and perhaps just junk columns we don't use at all.  Only columns of the
- * first two types need to be stored in the hashtable, and getting rid of
- * the others can make the table entries significantly smaller.  To avoid
- * messing up Var numbering, we keep the same tuple descriptor for
- * hashtable entries as the incoming tuples have, but set unwanted columns
- * to NULL in the tuples that go into the table.
+ * Create a list of the tuple columns that actually need to be stored in
+ * hashtable entries.  The incoming tuples from the child plan node will
+ * contain grouping columns, other columns referenced in our targetlist and
+ * qual, columns used to compute the aggregate functions, and perhaps just
+ * junk columns we don't use at all.  Only columns of the first two types
+ * need to be stored in the hashtable, and getting rid of the others can
+ * make the table entries significantly smaller.  To avoid messing up Var
+ * numbering, we keep the same tuple descriptor for hashtable entries as the
+ * incoming tuples have, but set unwanted columns to NULL in the tuples that
+ * go into the table.
  *
- * To eliminate duplicates, we build a bitmapset of the needed columns,
- * then convert it to an integer list (cheaper to scan at runtime).
- * The list is in decreasing order so that the first entry is the largest;
+ * To eliminate duplicates, we build a bitmapset of the needed columns, then
+ * convert it to an integer list (cheaper to scan at runtime). The list is
+ * in decreasing order so that the first entry is the largest;
  * lookup_hash_entry depends on this to use slot_getsomeattrs correctly.
  *
- * Note: at present, searching the tlist/qual is not really necessary
- * since the parser should disallow any unaggregated references to
- * ungrouped columns.  However, the search will be needed when we add
- * support for SQL99 semantics that allow use of "functionally dependent"
- * columns that haven't been explicitly grouped by.
+ * Note: at present, searching the tlist/qual is not really necessary since
+ * the parser should disallow any unaggregated references to ungrouped
+ * columns.  However, the search will be needed when we add support for
+ * SQL99 semantics that allow use of "functionally dependent" columns that
+ * haven't been explicitly grouped by.
  */
-List *
+static List *
 find_hash_columns(AggState *aggstate)
 {
 	Agg		   *node = (Agg *) aggstate->ss.ps.plan;
@@ -963,7 +963,6 @@ find_hash_columns(AggState *aggstate)
 
 	return collist;
 }
-
 
 /*
  * Estimate per-hash-table-entry overhead for the planner.

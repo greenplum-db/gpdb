@@ -31,7 +31,6 @@
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbtm.h"
 #include "cdb/ml_ipc.h"
-#include "lib/stringinfo.h"
 #include "nodes/makefuncs.h"
 #include "optimizer/clauses.h"
 #include "utils/array.h"
@@ -469,7 +468,11 @@ buildSubPlanHash(SubPlanState *node, ExprContext *econtext)
 	 * If it's not necessary to distinguish FALSE and UNKNOWN, then we don't
 	 * need to store subplan output rows that contain NULL.
 	 */
-	ExecEagerFreeSubPlan(node);
+	MemoryContextReset(node->hashtablecxt);
+	node->hashtable = NULL;
+	node->hashnulls = NULL;
+	node->havehashrows = false;
+	node->havenullrows = false;
 
 	nbuckets = (int) ceil(planstate->plan->plan_rows);
 	if (nbuckets < 1)
@@ -966,7 +969,7 @@ ExecSetParamPlan(SubPlanState *node, ExprContext *econtext, QueryDesc *queryDesc
 	SubPlan    *subplan = (SubPlan *) node->xprstate.expr;
 	PlanState  *planstate = node->planstate;
 	SubLinkType subLinkType = subplan->subLinkType;
-	MemoryContext oldcontext = CurrentMemoryContext;
+	MemoryContext oldcontext;
 	TupleTableSlot *slot;
 	ListCell   *l;
 	bool		found = false;
@@ -998,278 +1001,273 @@ ExecSetParamPlan(SubPlanState *node, ExprContext *econtext, QueryDesc *queryDesc
 	 * This cleans up the asynchronous commands running through the threads launched from
 	 * CdbDispatchCommand.
 	 */
-	PG_TRY();
-	{
-		if (shouldDispatch)
-		{			
-			needDtxTwoPhase = isCurrentDtxTwoPhase();
-
-			/*
-			 * This call returns after launching the threads that send the
-             * command to the appropriate segdbs.  It does not wait for them
-             * to finish unless an error is detected before all are dispatched.
-			 */
-			CdbDispatchPlan(queryDesc, needDtxTwoPhase, true, queryDesc->estate->dispatcherState);
-
-			/*
-			 * Set up the interconnect for execution of the initplan root slice.
-			 */
-			shouldTeardownInterconnect = true;
-			Assert(!(queryDesc->estate->interconnect_context));
-			SetupInterconnect(queryDesc->estate);
-			Assert((queryDesc->estate->interconnect_context));
-
-			ExecUpdateTransportState(planstate, queryDesc->estate->interconnect_context);
-
-			/*
-			 * MPP-7504/MPP-7448: the pre-dispatch function evaluator
-			 * may mess up our snapshot-sync mechanism. So we've
-			 * called verify_shared_snapshot() down in the dispatcher.
-			 */
-			if (queryDesc->extended_query)
-			{
-				/*
-				 * We rewind the segmateSync value since the InitPlan can
-				 * share the same value with its parent plan. See MPP-4504.
-				 */
-				DtxContextInfo_RewindSegmateSync();
-			}
-		}
+PG_TRY();
+{
+	if (shouldDispatch)
+	{			
+		needDtxTwoPhase = isCurrentDtxTwoPhase();
 
 		/*
-		 * Must switch to per-query memory context.
+		 * This call returns after launching the threads that send the
+		 * command to the appropriate segdbs.  It does not wait for them
+		 * to finish unless an error is detected before all are dispatched.
 		 */
-		oldcontext = MemoryContextSwitchTo(econtext->ecxt_per_query_memory);
+		CdbDispatchPlan(queryDesc, needDtxTwoPhase, true, queryDesc->estate->dispatcherState);
 
-		if (subLinkType == ANY_SUBLINK ||
-			subLinkType == ALL_SUBLINK)
-			elog(ERROR, "ANY/ALL subselect unsupported as initplan");
+		/*
+		 * Set up the interconnect for execution of the initplan root slice.
+		 */
+		shouldTeardownInterconnect = true;
+		Assert(!(queryDesc->estate->interconnect_context));
+		SetupInterconnect(queryDesc->estate);
+		Assert((queryDesc->estate->interconnect_context));
 
-	    /*
-	     * By definition, an initplan has no parameters from our query level, but
-	     * it could have some from an outer level.	Rescan it if needed.
-	     */
-		if (planstate->chgParam != NULL)
-			ExecReScan(planstate, NULL);
+		ExecUpdateTransportState(planstate, queryDesc->estate->interconnect_context);
 
-		for (slot = ExecProcNode(planstate);
-			 !TupIsNull(slot);
-			 slot = ExecProcNode(planstate))
+		/*
+		 * MPP-7504/MPP-7448: the pre-dispatch function evaluator
+		 * may mess up our snapshot-sync mechanism. So we've
+		 * called verify_shared_snapshot() down in the dispatcher.
+		 */
+		if (queryDesc->extended_query)
 		{
-			int			i = 1;
+			/*
+			 * We rewind the segmateSync value since the InitPlan can
+			 * share the same value with its parent plan. See MPP-4504.
+			 */
+			DtxContextInfo_RewindSegmateSync();
+		}
+	}
 
-			if (subLinkType == EXISTS_SUBLINK || subLinkType == NOT_EXISTS_SUBLINK)
-			{
-				/* There can be only one param... */
-				int			paramid = linitial_int(subplan->setParam);
-				ParamExecData *prm = &(econtext->ecxt_param_exec_vals[paramid]);
+	/*
+	 * Must switch to per-query memory context.
+	 */
+	oldcontext = MemoryContextSwitchTo(econtext->ecxt_per_query_memory);
 
-				prm->execPlan = NULL;
-				bool val = true;
-				if (subLinkType == NOT_EXISTS_SUBLINK)
-				{
-					val = false;
-				}
-				prm->value = BoolGetDatum(val);
-				prm->isnull = false;
-				found = true;
+	if (subLinkType == ANY_SUBLINK ||
+		subLinkType == ALL_SUBLINK)
+		elog(ERROR, "ANY/ALL subselect unsupported as initplan");
 
-				if (shouldDispatch)
-				{
-					/* Tell MPP we're done with this plan. */
-					ExecSquelchNode(planstate);
-				}
+	/*
+	 * By definition, an initplan has no parameters from our query level, but
+	 * it could have some from an outer level.	Rescan it if needed.
+	 */
+	if (planstate->chgParam != NULL)
+		ExecReScan(planstate, NULL);
 
-				break;
-			}
+	for (slot = ExecProcNode(planstate);
+		 !TupIsNull(slot);
+		 slot = ExecProcNode(planstate))
+	{
+		int			i = 1;
 
-			if (subLinkType == ARRAY_SUBLINK)
-			{
-				Datum		dvalue;
-				bool		disnull;
+		if (subLinkType == EXISTS_SUBLINK || subLinkType == NOT_EXISTS_SUBLINK)
+		{
+			/* There can be only one param... */
+			int			paramid = linitial_int(subplan->setParam);
+			ParamExecData *prm = &(econtext->ecxt_param_exec_vals[paramid]);
 
-				found = true;
-				/* stash away current value */
-			    Assert(subplan->firstColType == slot->tts_tupleDescriptor->attrs[0]->atttypid);
-				dvalue = slot_getattr(slot, 1, &disnull);
-				astate = accumArrayResult(astate, dvalue, disnull,
-									  subplan->firstColType, oldcontext);
-				/* keep scanning subplan to collect all values */
-				continue;
-			}
-
-			if (found &&
-				(subLinkType == EXPR_SUBLINK ||
-				 subLinkType == ROWCOMPARE_SUBLINK))
-				ereport(ERROR,
-						(errcode(ERRCODE_CARDINALITY_VIOLATION),
-						 errmsg("more than one row returned by a subquery used as an expression")));
-
+			prm->execPlan = NULL;
+			if (subLinkType == NOT_EXISTS_SUBLINK)
+				prm->value = BoolGetDatum(false);
+			else
+				prm->value = BoolGetDatum(true);
+			prm->isnull = false;
 			found = true;
 
-			/*
-		 	 * We need to copy the subplan's tuple into our own context, in case
-		 	 * any of the params are pass-by-ref type --- the pointers stored in
-		 	 * the param structs will point at this copied tuple! node->curTuple
-		 	 * keeps track of the copied tuple for eventual freeing.
-			 */
-			if (node->curTuple)
-				pfree(node->curTuple);
-			node->curTuple = ExecCopySlotMemTuple(slot);
+			if (shouldDispatch)
+			{
+				/* Tell MPP we're done with this plan. */
+				ExecSquelchNode(planstate);
+			}
 
-			/*
-			 * Now set all the setParam params from the columns of the tuple
-			 */
+			break;
+		}
+
+		if (subLinkType == ARRAY_SUBLINK)
+		{
+			Datum		dvalue;
+			bool		disnull;
+
+			found = true;
+			/* stash away current value */
+			Assert(subplan->firstColType == slot->tts_tupleDescriptor->attrs[0]->atttypid);
+			dvalue = slot_getattr(slot, 1, &disnull);
+			astate = accumArrayResult(astate, dvalue, disnull,
+									  subplan->firstColType, oldcontext);
+			/* keep scanning subplan to collect all values */
+			continue;
+		}
+
+		if (found &&
+			(subLinkType == EXPR_SUBLINK ||
+			 subLinkType == ROWCOMPARE_SUBLINK))
+			ereport(ERROR,
+					(errcode(ERRCODE_CARDINALITY_VIOLATION),
+					 errmsg("more than one row returned by a subquery used as an expression")));
+
+		found = true;
+
+		/*
+		 * We need to copy the subplan's tuple into our own context, in case
+		 * any of the params are pass-by-ref type --- the pointers stored in
+		 * the param structs will point at this copied tuple! node->curTuple
+		 * keeps track of the copied tuple for eventual freeing.
+		 */
+		if (node->curTuple)
+			pfree(node->curTuple);
+		node->curTuple = ExecCopySlotMemTuple(slot);
+
+		/*
+		 * Now set all the setParam params from the columns of the tuple
+		 */
+		foreach(l, subplan->setParam)
+		{
+			int			paramid = lfirst_int(l);
+			ParamExecData *prm = &(econtext->ecxt_param_exec_vals[paramid]);
+
+			prm->execPlan = NULL;
+			prm->value = memtuple_getattr(node->curTuple, slot->tts_mt_bind, i, &(prm->isnull));
+			i++;
+		}
+	}
+
+	if (!found)
+	{
+		if (subLinkType == EXISTS_SUBLINK || subLinkType == NOT_EXISTS_SUBLINK)
+		{
+			/* There can be only one param... */
+			int			paramid = linitial_int(subplan->setParam);
+			ParamExecData *prm = &(econtext->ecxt_param_exec_vals[paramid]);
+
+			prm->execPlan = NULL;
+			if (subLinkType == NOT_EXISTS_SUBLINK)
+				prm->value = BoolGetDatum(true);
+			else
+				prm->value = BoolGetDatum(false);
+			prm->isnull = false;
+		}
+		else
+		{
 			foreach(l, subplan->setParam)
 			{
 				int			paramid = lfirst_int(l);
 				ParamExecData *prm = &(econtext->ecxt_param_exec_vals[paramid]);
 
 				prm->execPlan = NULL;
-				prm->value = memtuple_getattr(node->curTuple, slot->tts_mt_bind, i, &(prm->isnull));
-				i++;
+				prm->value = (Datum) 0;
+				prm->isnull = true;
 			}
 		}
-
-		if (!found)
-		{
-			if (subLinkType == EXISTS_SUBLINK || subLinkType == NOT_EXISTS_SUBLINK)
-			{
-				/* There can be only one param... */
-				int			paramid = linitial_int(subplan->setParam);
-				ParamExecData *prm = &(econtext->ecxt_param_exec_vals[paramid]);
-
-				prm->execPlan = NULL;
-				bool val = false;
-                                if (subLinkType == NOT_EXISTS_SUBLINK)
-                                {
-                                        val = true;
-                                }
-				prm->value = BoolGetDatum(val);
-				prm->isnull = false;
-			}
-			else
-			{
-				foreach(l, subplan->setParam)
-				{
-					int			paramid = lfirst_int(l);
-					ParamExecData *prm = &(econtext->ecxt_param_exec_vals[paramid]);
-
-					prm->execPlan = NULL;
-					prm->value = (Datum) 0;
-					prm->isnull = true;
-				}
-			}
-		}
-		else if (subLinkType == ARRAY_SUBLINK)
-		{
-			/* There can be only one param... */
-			int			paramid = linitial_int(subplan->setParam);
-			ParamExecData *prm = &(econtext->ecxt_param_exec_vals[paramid]);
-
-			Assert(astate != NULL);
-			prm->execPlan = NULL;
-			/* We build the result in query context so it won't disappear */
-			prm->value = makeArrayResult(astate, econtext->ecxt_per_query_memory);
-			prm->isnull = false;
-		}
-
-        /*
-         * If we dispatched to QEs, wait for completion and check for errors.
-         */
-        if (shouldDispatch && 
-			queryDesc && queryDesc->estate &&
-			queryDesc->estate->dispatcherState &&
-			queryDesc->estate->dispatcherState->primaryResults)
-        {
-            /* If EXPLAIN ANALYZE, collect execution stats from qExecs. */
-            if (planstate->instrument)
-            {
-                /* Wait for all gangs to finish. */
-				CdbCheckDispatchResult(queryDesc->estate->dispatcherState,
-									   DISPATCH_WAIT_NONE);
-
-                /* Jam stats into subplan's Instrumentation nodes. */
-                explainRecvStats = true;
-                cdbexplain_recvExecStats(planstate,
-                                         queryDesc->estate->dispatcherState->primaryResults,
-                                         LocallyExecutingSliceIndex(queryDesc->estate),
-                                         econtext->ecxt_estate->showstatctx);
-            }
-
-            /*
-             * Wait for all gangs to finish.  Check and free the results.
-             * If the dispatcher or any QE had an error, report it and
-             * exit to our error handler (below) via PG_THROW.
-             */
-            cdbdisp_finishCommand(queryDesc->estate->dispatcherState);
-        }
-
-		/* teardown the sequence server */
-		TeardownSequenceServer();
-		
-        /* Clean up the interconnect. */
-        if (shouldTeardownInterconnect)
-        {
-        	shouldTeardownInterconnect = false;
-
-	        TeardownInterconnect(queryDesc->estate->interconnect_context, 
-								 queryDesc->estate->motionlayer_context,
-								 false); /* following success on QD */
-			queryDesc->estate->interconnect_context = NULL;
-		}
-    }
-	PG_CATCH();
-	{
-
-        /* If EXPLAIN ANALYZE, collect local and distributed execution stats. */
-        if (planstate->instrument)
-        {
-            cdbexplain_localExecStats(planstate, econtext->ecxt_estate->showstatctx);
-            if (!explainRecvStats &&
-				shouldDispatch)
-            {
-				Assert(queryDesc != NULL &&
-					   queryDesc->estate != NULL);
-                /* Wait for all gangs to finish.  Cancel slowpokes. */
-				CdbCheckDispatchResult(queryDesc->estate->dispatcherState,
-									   DISPATCH_WAIT_CANCEL);
-
-                cdbexplain_recvExecStats(planstate,
-                                         queryDesc->estate->dispatcherState->primaryResults,
-                                         LocallyExecutingSliceIndex(queryDesc->estate),
-                                         econtext->ecxt_estate->showstatctx);
-            }
-        }
-
-        /* Restore memory high-water mark for root slice of main query. */
-        MemoryContextSetPeakSpace(planstate->state->es_query_cxt, savepeakspace);
-
-        /*
-		 * Request any commands still executing on qExecs to stop.
-		 * Wait for them to finish and clean up the dispatching structures.
-         * Replace current error info with QE error info if more interesting.
-		 */
-        if (shouldDispatch && queryDesc && queryDesc->estate && queryDesc->estate->dispatcherState && queryDesc->estate->dispatcherState->primaryResults)
-			CdbDispatchHandleError(queryDesc->estate->dispatcherState);
-		
-		/* teardown the sequence server */
-		TeardownSequenceServer();
-		
-        /*
-         * Clean up the interconnect.
-         * CDB TODO: Is this needed following failure on QD?
-         */
-        if (shouldTeardownInterconnect)
-		{
-			TeardownInterconnect(queryDesc->estate->interconnect_context,
-								 queryDesc->estate->motionlayer_context,
-								 true);
-			queryDesc->estate->interconnect_context = NULL;
-		}
-		PG_RE_THROW();
 	}
-	PG_END_TRY();
+	else if (subLinkType == ARRAY_SUBLINK)
+	{
+		/* There can be only one param... */
+		int			paramid = linitial_int(subplan->setParam);
+		ParamExecData *prm = &(econtext->ecxt_param_exec_vals[paramid]);
+
+		Assert(astate != NULL);
+		prm->execPlan = NULL;
+		/* We build the result in query context so it won't disappear */
+		prm->value = makeArrayResult(astate, econtext->ecxt_per_query_memory);
+		prm->isnull = false;
+	}
+
+	/*
+	 * If we dispatched to QEs, wait for completion and check for errors.
+	 */
+	if (shouldDispatch && 
+		queryDesc && queryDesc->estate &&
+		queryDesc->estate->dispatcherState &&
+		queryDesc->estate->dispatcherState->primaryResults)
+	{
+		/* If EXPLAIN ANALYZE, collect execution stats from qExecs. */
+		if (planstate->instrument)
+		{
+			/* Wait for all gangs to finish. */
+			CdbCheckDispatchResult(queryDesc->estate->dispatcherState,
+								   DISPATCH_WAIT_NONE);
+
+			/* Jam stats into subplan's Instrumentation nodes. */
+			explainRecvStats = true;
+			cdbexplain_recvExecStats(planstate,
+									 queryDesc->estate->dispatcherState->primaryResults,
+									 LocallyExecutingSliceIndex(queryDesc->estate),
+									 econtext->ecxt_estate->showstatctx);
+		}
+
+		/*
+		 * Wait for all gangs to finish.  Check and free the results.
+		 * If the dispatcher or any QE had an error, report it and
+		 * exit to our error handler (below) via PG_THROW.
+		 */
+		cdbdisp_finishCommand(queryDesc->estate->dispatcherState);
+	}
+
+	/* teardown the sequence server */
+	TeardownSequenceServer();
+		
+	/* Clean up the interconnect. */
+	if (shouldTeardownInterconnect)
+	{
+		shouldTeardownInterconnect = false;
+
+		TeardownInterconnect(queryDesc->estate->interconnect_context, 
+							 queryDesc->estate->motionlayer_context,
+							 false); /* following success on QD */
+		queryDesc->estate->interconnect_context = NULL;
+	}
+}
+PG_CATCH();
+{
+	/* If EXPLAIN ANALYZE, collect local and distributed execution stats. */
+	if (planstate->instrument)
+	{
+		cdbexplain_localExecStats(planstate, econtext->ecxt_estate->showstatctx);
+		if (!explainRecvStats &&
+			shouldDispatch)
+		{
+			Assert(queryDesc != NULL &&
+				   queryDesc->estate != NULL);
+			/* Wait for all gangs to finish.  Cancel slowpokes. */
+			CdbCheckDispatchResult(queryDesc->estate->dispatcherState,
+								   DISPATCH_WAIT_CANCEL);
+
+			cdbexplain_recvExecStats(planstate,
+									 queryDesc->estate->dispatcherState->primaryResults,
+									 LocallyExecutingSliceIndex(queryDesc->estate),
+									 econtext->ecxt_estate->showstatctx);
+		}
+	}
+
+	/* Restore memory high-water mark for root slice of main query. */
+	MemoryContextSetPeakSpace(planstate->state->es_query_cxt, savepeakspace);
+
+	/*
+	 * Request any commands still executing on qExecs to stop.
+	 * Wait for them to finish and clean up the dispatching structures.
+	 * Replace current error info with QE error info if more interesting.
+	 */
+	if (shouldDispatch && queryDesc && queryDesc->estate && queryDesc->estate->dispatcherState && queryDesc->estate->dispatcherState->primaryResults)
+		CdbDispatchHandleError(queryDesc->estate->dispatcherState);
+		
+	/* teardown the sequence server */
+	TeardownSequenceServer();
+		
+	/*
+	 * Clean up the interconnect.
+	 * CDB TODO: Is this needed following failure on QD?
+	 */
+	if (shouldTeardownInterconnect)
+	{
+		TeardownInterconnect(queryDesc->estate->interconnect_context,
+							 queryDesc->estate->motionlayer_context,
+							 true);
+		queryDesc->estate->interconnect_context = NULL;
+	}
+	PG_RE_THROW();
+}
+PG_END_TRY();
 
 	planstate->state->currentSubplanLevel--;
 
@@ -1317,15 +1315,4 @@ ExecReScanSetParamPlan(SubPlanState *node, PlanState *parent)
 		prm->execPlan = node;
 		parent->chgParam = bms_add_member(parent->chgParam, paramid);
 	}
-}
-
-void
-ExecEagerFreeSubPlan(SubPlanState *node)
-{
-	Assert(node->hashtablecxt != NULL);
-	MemoryContextReset(node->hashtablecxt);
-	node->hashtable = NULL;
-	node->hashnulls = NULL;
-	node->havehashrows = false;
-	node->havenullrows = false;
 }
