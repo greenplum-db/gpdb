@@ -199,7 +199,7 @@ initscan(HeapScanDesc scan, ScanKey key, bool is_rescan)
  * which tuples on the page are visible.
  */
 static void
-heapgetpage(HeapScanDesc scan, BlockNumber page, bool backward)
+heapgetpage(HeapScanDesc scan, BlockNumber page)
 {
 	Buffer		buffer;
 	Snapshot	snapshot;
@@ -370,7 +370,7 @@ heapgettup(HeapScanDesc scan,
 				return;
 			}
 			page = scan->rs_startblock; /* first page */
-			heapgetpage(scan, page, ScanDirectionIsForward(dir));
+			heapgetpage(scan, page);
 			lineoff = FirstOffsetNumber;		/* first offnum */
 			scan->rs_inited = true;
 		}
@@ -420,7 +420,7 @@ heapgettup(HeapScanDesc scan,
 				page = scan->rs_startblock - 1;
 			else
 				page = scan->rs_nblocks - 1;
-			heapgetpage(scan, page, ScanDirectionIsBackward(dir));
+			heapgetpage(scan, page);
 		}
 		else
 		{
@@ -465,7 +465,7 @@ heapgettup(HeapScanDesc scan,
 
 		page = ItemPointerGetBlockNumber(&(tuple->t_self));
 		if (page != scan->rs_cblock)
-			heapgetpage(scan, page, ScanDirectionIsBackward(dir));
+			heapgetpage(scan, page);
 
 		/* Since the tuple was previously fetched, needn't lock page here */
 		dp = (Page) BufferGetPage(scan->rs_cbuf);
@@ -598,7 +598,7 @@ heapgettup(HeapScanDesc scan,
 		// -------- MirroredLock ----------
 		MIRROREDLOCK_BUFMGR_LOCK;
 		
-		heapgetpage(scan, page, ScanDirectionIsBackward(dir));
+		heapgetpage(scan, page);
 
 		LockBuffer(scan->rs_cbuf, BUFFER_LOCK_SHARE);
 
@@ -676,7 +676,7 @@ heapgettup_pagemode(HeapScanDesc scan,
 			}
 
 			page = scan->rs_startblock; /* first page */
-			heapgetpage(scan, page, ScanDirectionIsForward(dir));
+			heapgetpage(scan, page);
 			lineindex = 0;
 			scan->rs_inited = true;
 		}
@@ -723,7 +723,7 @@ heapgettup_pagemode(HeapScanDesc scan,
 				page = scan->rs_startblock - 1;
 			else
 				page = scan->rs_nblocks - 1;
-			heapgetpage(scan, page, ScanDirectionIsBackward(dir));
+			heapgetpage(scan, page);
 		}
 		else
 		{
@@ -765,7 +765,7 @@ heapgettup_pagemode(HeapScanDesc scan,
 
 		page = ItemPointerGetBlockNumber(&(tuple->t_self));
 		if (page != scan->rs_cblock)
-			heapgetpage(scan, page, ScanDirectionIsBackward(dir));
+			heapgetpage(scan, page);
 
 		/* Since the tuple was previously fetched, needn't lock page here */
 		
@@ -897,11 +897,8 @@ heapgettup_pagemode(HeapScanDesc scan,
 
 		// -------- MirroredLock ----------
 		MIRROREDLOCK_BUFMGR_LOCK;
-		
-		if (backward)
-			heapgetpage(scan, page, ScanDirectionIsBackward(dir));
-		else
-			heapgetpage(scan, page, ScanDirectionIsForward(dir));
+
+		heapgetpage(scan, page);
 
 		dp = (Page) BufferGetPage(scan->rs_cbuf);
 		lines = scan->rs_ntuples;
