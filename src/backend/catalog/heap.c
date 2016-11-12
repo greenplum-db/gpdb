@@ -1200,33 +1200,33 @@ AddNewRelationType(const char *typeName,
 {
 	return
 		TypeCreate(InvalidOid,	/* no predetermined OID */
-				   typeName,		/* type name */
-				   typeNamespace,	/* type namespace */
-				   new_rel_oid, 	/* relation oid */
+				   typeName,	/* type name */
+				   typeNamespace,		/* type namespace */
+				   new_rel_oid, /* relation oid */
 				   new_rel_kind,	/* relation kind */
-				   ownerid,			/* owner's ID */
-				   -1,				/* internal size (varlena) */
-				   'c',				/* type-type (complex) */
-				   DEFAULT_TYPDELIM,/* default array delimiter */
-				   F_RECORD_IN,		/* input procedure */
+				   ownerid,		/* owner's ID */
+				   -1,			/* internal size (varlena) */
+				   'c',			/* type-type (complex) */
+				   DEFAULT_TYPDELIM,	/* default array delimiter */
+				   F_RECORD_IN, /* input procedure */
 				   F_RECORD_OUT,	/* output procedure */
-				   F_RECORD_RECV,	/* receive procedure */
-				   F_RECORD_SEND,	/* send procedure */
-				   InvalidOid,		/* typmodin procedure - none */
-				   InvalidOid,		/* typmodout procedure - none */
-				   InvalidOid,		/* analyze procedure - default */
-				   InvalidOid,		/* array element type - irrelevant */
-				   false,			/* this is not an array type */
-				   new_array_type,	/* array type if any */
-				   InvalidOid,		/* domain base type - irrelevant */
-				   NULL,			/* default value - none */
-				   NULL,			/* default binary representation */
-				   false,			/* passed by reference */
-				   'd',				/* alignment - must be the largest! */
-				   'x',				/* fully TOASTable */
-				   -1,				/* typmod */
-				   0,				/* array dimensions for typBaseType */
-				   false);			/* Type NOT NULL */
+				   F_RECORD_RECV,		/* receive procedure */
+				   F_RECORD_SEND,		/* send procedure */
+				   InvalidOid,	/* typmodin procedure - none */
+				   InvalidOid,	/* typmodout procedure - none */
+				   InvalidOid,	/* analyze procedure - default */
+				   InvalidOid,	/* array element type - irrelevant */
+				   false,		/* this is not an array type */
+				   new_array_type,		/* array type if any */
+				   InvalidOid,	/* domain base type - irrelevant */
+				   NULL,		/* default value - none */
+				   NULL,		/* default binary representation */
+				   false,		/* passed by reference */
+				   'd',			/* alignment - must be the largest! */
+				   'x',			/* fully TOASTable */
+				   -1,			/* typmod */
+				   0,			/* array dimensions for typBaseType */
+				   false);		/* Type NOT NULL */
 }
 
 void

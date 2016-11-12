@@ -563,38 +563,6 @@ typedef NameData *Name;
  */
 #define endof(array)	(&(array)[lengthof(array)])
 
-/*
- * SIZEOF_FIELD
- *		Size of a field within a structure/union.
- */
-#define SIZEOF_FIELD(type, field)   (sizeof(((type *)0)->field))
-
-/*
- * Sizing variably-sized structures
- *
- * In a struct whose last field is an array of variable size, what is the
- * greatest number of elements such that the structure fits in a given
- * number of bytes?  How much memory should be allocated for the structure?
- *
- * The variably-sized field should be declared as an array of at least one 
- * element, e.g.
- *      struct s { int hdr; int vararray[1]; };
- *
- * Number of elements to make the structure fit in 256 bytes:
- *      #define s_vararray_length (VARELEMENTS_TO_FIT(256, s, vararray))
- *
- * Number of bytes to allocate for the structure, assuming the number of
- * elements in the variably-sized array is 's_vararray_length':
- *      #define sizeof_s (SIZEOF_VARSTRUCT(s_vararray_length, s, vararray))
- */
-#define VARELEMENTS_TO_FIT(sizewanted, structure, vararray) \
-            ( (sizewanted - offsetof(structure, vararray)) \
-                / SIZEOF_FIELD(structure, vararray[0]) )
-#define SIZEOF_VARSTRUCT(numberofelements, structure, vararray) \
-            ( offsetof(structure, vararray) \
-                + (numberofelements) * SIZEOF_FIELD(structure, vararray[0]) )
-
-
 /* ----------------
  * Alignment macros: align a length or address appropriately for a given type.
  * The fooALIGN() macros round up to a multiple of the required alignment,

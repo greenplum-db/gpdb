@@ -676,8 +676,8 @@ ExecGrant_Relation(InternalGrant *istmt)
 		bool		isNull;
 		AclMode		avail_goptions;
 		AclMode		this_privileges;
-		Acl			*old_acl;
-		Acl			*new_acl;
+		Acl		   *old_acl;
+		Acl		   *new_acl;
 		Oid			grantorId;
 		Oid			ownerId	 = InvalidOid;
 		HeapTuple	tuple;

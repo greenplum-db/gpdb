@@ -44,7 +44,7 @@ typedef struct TMGXACT_CHECKPOINT
 }	TMGXACT_CHECKPOINT;
 
 #define TMGXACT_CHECKPOINT_BYTES(committedCount) \
-    (SIZEOF_VARSTRUCT(committedCount, TMGXACT_CHECKPOINT, committedGxactArray))
+	(offsetof(TMGXACT_CHECKPOINT, committedGxactArray) + sizeof(TMGXACT_LOG) * (committedCount))
 
 
 /* From "cdb/cdbexplain.h" */

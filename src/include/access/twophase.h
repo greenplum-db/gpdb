@@ -46,10 +46,8 @@ typedef struct prepared_transaction_agg_state
   prpt_map maps[0]; /* variable length */
 } prepared_transaction_agg_state;
 
-
-
 #define PREPARED_TRANSACTION_CHECKPOINT_BYTES(count) \
-  (SIZEOF_VARSTRUCT(count, prepared_transaction_agg_state, maps))
+	(offsetof(prepared_transaction_agg_state, maps) + sizeof(prpt_map) * (count))
 
 
 /*

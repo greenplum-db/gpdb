@@ -45,7 +45,7 @@
 BitmapOrState *
 ExecInitBitmapOr(BitmapOr *node, EState *estate, int eflags)
 {
-	BitmapOrState *bitmaporstate;
+	BitmapOrState *bitmaporstate = makeNode(BitmapOrState);
 	PlanState **bitmapplanstates;
 	int			nplans;
 	int			i;
@@ -54,8 +54,6 @@ ExecInitBitmapOr(BitmapOr *node, EState *estate, int eflags)
 
 	/* check for unsupported flags */
 	Assert(!(eflags & (EXEC_FLAG_BACKWARD | EXEC_FLAG_MARK)));
-
-	bitmaporstate = makeNode(BitmapOrState);
 
 	/*
 	 * Set up empty vector of subplan states
@@ -208,7 +206,7 @@ MultiExecBitmapOr(BitmapOrState *node)
 
 	/* must provide our own instrumentation support */
 	if (node->ps.instrument)
-        InstrStopNode(node->ps.instrument, node->bitmap ? 1 : 0);
+		InstrStopNode(node->ps.instrument, node->bitmap ? 1 : 0);
 
 	return node->bitmap;
 }

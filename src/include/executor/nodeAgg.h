@@ -177,8 +177,6 @@ extern void
 advance_aggregates(AggState *aggstate, AggStatePerGroup pergroup,
 				   MemoryManagerContainer *mem_manager);
 
-extern List *find_hash_columns(AggState *aggstate);
-
 extern Oid resolve_polymorphic_transtype(Oid aggtranstype, Oid aggfnoid,
 										 Oid *inputTypes);
 
