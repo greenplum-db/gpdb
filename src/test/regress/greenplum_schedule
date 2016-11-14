@@ -105,12 +105,6 @@ test: qp_olap_group
 
 ignore: tpch500GB_orca
 
-# XXX: This test depends on libgpoptudfs library, which includes ORCA helper
-# functions from src/backend/gpopt/utils/funcs.cpp. But those functions are
-# built into the backend directly, so what's the point of that? Anyhow, the
-# test is disabled for now..
-#test: orca_udfs
-
 # Tests for "compaction", i.e. VACUUM, of updatable append-only tables
 test: uao_compaction/full uao_compaction/outdated_partialindex uao_compaction/drop_column_update uao_compaction/eof_truncate uao_compaction/basic uao_compaction/outdatedindex uao_compaction/update_toast uao_compaction/outdatedindex_abort uao_compaction/delete_toast uao_compaction/alter_table_analyze uao_compaction/full_eof_truncate uao_compaction/full_threshold
 # TODO find why these tests fail in parallel, for now keeping them sequential
