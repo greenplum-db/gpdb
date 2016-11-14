@@ -53,47 +53,11 @@ XERCES_VER  = $(shell grep "\"xerces-c\""    $(GREP_SED_VAR))
 LIBGPOS_VER = $(shell grep "\"libgpos\""     $(GREP_SED_VAR))
 OPTIMIZER_VER = $(shell grep "\"optimizer\"" $(GREP_SED_VAR))
 
-LIBSTDC++_VER = $(shell grep "\"libstdc\""   $(GREP_SED_VAR))
-
 XERCES = $(BLD_TOP)/ext/$(BLD_ARCH)
 XERCES_LIBDIR = $(XERCES)/lib
 
 LIBGPOS = $(BLD_TOP)/ext/$(BLD_ARCH)/libgpos
 LIBGPOS_LIBDIR = $(LIBGPOS)/$(OBJDIR_DEFAULT)
-
-LIBSTDC++_BASEDIR = $(BLD_TOP)/ext/$(BLD_ARCH)
-
-ifeq (Darwin, $(UNAME))
-LIBSTDC++_LIBDIR = $(LIBSTDC++_BASEDIR)/lib
-endif
-
-ifeq "$(BLD_ARCH)" "rhel5_x86_32"
-LIBSTDC++_LIBDIR = $(LIBSTDC++_BASEDIR)/lib
-endif
-
-ifeq "$(BLD_ARCH)" "rhel6_x86_64"
-LIBSTDC++_LIBDIR = $(LIBSTDC++_BASEDIR)/lib64
-endif
-
-ifeq "$(BLD_ARCH)" "rhel7_x86_64"
-LIBSTDC++_LIBDIR = $(LIBSTDC++_BASEDIR)/lib64
-endif
-
-ifeq "$(BLD_ARCH)" "suse10_x86_64"
-LIBSTDC++_LIBDIR = $(LIBSTDC++_BASEDIR)/lib64
-endif
-
-ifeq "$(BLD_ARCH)" "suse11_x86_64"
-LIBSTDC++_LIBDIR = $(LIBSTDC++_BASEDIR)/lib64
-endif
-
-ifeq "$(BLD_ARCH)" "sol10_x86_32"
-LIBSTDC++_LIBDIR = $(LIBSTDC++_BASEDIR)/lib
-endif
-
-ifeq "$(BLD_ARCH)" "sol10_x86_64"
-LIBSTDC++_LIBDIR = $(LIBSTDC++_BASEDIR)/lib/amd64
-endif
 
 
 ## ---------------------------------------
