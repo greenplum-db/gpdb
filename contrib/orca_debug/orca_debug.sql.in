@@ -1,0 +1,46 @@
+create schema gpoptutils;
+
+create or replace function gpoptutils.DumpPlanToFile(text, text) returns int as 'MODULE_PATHNAME', 'DumpPlanToFile' language c strict;
+
+create or replace function gpoptutils.RestorePlanFromFile(text) returns text as 'MODULE_PATHNAME', 'RestorePlanFromFile' language c strict;
+
+--create or replace function gpoptutils.DumpPlanDXL(text) returns text as 'MODULE_PATHNAME', 'DumpPlanDXL' language c strict;
+
+--create or replace function gpoptutils.DumpPlanToDXLFile(text, text) returns int as 'MODULE_PATHNAME', 'DumpPlanToDXLFile' language c strict;
+
+create or replace function gpoptutils.RestorePlanDXL(text) returns text as 'MODULE_PATHNAME', 'RestorePlanDXL' language c strict;
+
+create or replace function gpoptutils.RestorePlanFromDXLFile(text) returns text as 'MODULE_PATHNAME', 'RestorePlanFromDXLFile' language c strict;
+
+create or replace function gpoptutils.DumpQuery(text) returns bytea as 'MODULE_PATHNAME', 'DumpQuery' language c strict;
+
+create or replace function gpoptutils.DumpQueryToFile(text, text) returns int as 'MODULE_PATHNAME', 'DumpQueryToFile' language c strict;
+
+create or replace function gpoptutils.RestoreQueryFromFile(text) returns text as 'MODULE_PATHNAME', 'RestoreQueryFromFile' language c strict;
+
+create or replace function gpoptutils.DumpQueryDXL(text) returns text as 'MODULE_PATHNAME', 'DumpQueryDXL' language c strict;
+
+create or replace function gpoptutils.DumpQueryToDXLFile(text, text) returns int as 'MODULE_PATHNAME', 'DumpQueryToDXLFile' language c strict;
+
+create or replace function gpoptutils.DumpQueryFromFileToDXLFile(text, text) returns int as 'MODULE_PATHNAME', 'DumpQueryFromFileToDXLFile' language c strict;
+
+--create or replace function gpoptutils.RestoreQueryDXL(text) returns text as 'MODULE_PATHNAME', 'RestoreQueryDXL' language c strict;
+
+--create or replace function gpoptutils.RestoreQueryFromDXLFile(text) returns text as 'MODULE_PATHNAME', 'RestoreQueryFromDXLFile' language c strict;
+
+create or replace function gpoptutils.Optimize(text) returns text as 'MODULE_PATHNAME', 'Optimize' language c strict;
+
+create or replace function gpoptutils.DumpMDObjDXL(Oid) returns text as 'MODULE_PATHNAME', 'DumpMDObjDXL' language c strict;
+
+create or replace function gpoptutils.DumpCatalogDXL(text) returns int as 'MODULE_PATHNAME', 'DumpCatalogDXL' language c strict;
+
+create or replace function gpoptutils.DumpRelStatsDXL(Oid) returns text as 'MODULE_PATHNAME', 'DumpRelStatsDXL' language c strict;
+
+create or replace function gpoptutils.DumpMDCastDXL(Oid, Oid) returns text as 'MODULE_PATHNAME', 'DumpMDCastDXL' language c strict;
+
+create or replace function gpoptutils.DumpMDScCmpDXL(Oid, Oid, text) returns text as 'MODULE_PATHNAME', 'DumpMDScCmpDXL' language c strict;
+
+-- These are used by the regression tests.
+--create function gpoptutils.EvalExprFromDXLFile(text) returns text as 'MODULE_PATHNAME', 'EvalExprFromDXLFile' language c strict;
+--create function gpoptutils.OptimizeMinidumpFromFile(text) returns text as 'MODULE_PATHNAME', 'OptimizeMinidumpFromFile' language c strict;
+--create function gpoptutils.ExecuteMinidumpFromFile(text) returns text as 'MODULE_PATHNAME', 'ExecuteMinidumpFromFile' language c strict;

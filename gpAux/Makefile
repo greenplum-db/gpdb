@@ -35,7 +35,7 @@ all : devel
 .PHONY : autoconf
 
 # Internal functions which are invoked by other rules within this makefile
-.PHONY : groupSession mkgpfdist mkgpperfmon copydocs mgmtcopy copylibs copyoptimizerlibs
+.PHONY : groupSession mkgpfdist mkgpperfmon copydocs mgmtcopy copylibs
 .PHONY : greenplum_path RECONFIG HOMEDEP GPROOTDEP GPROOTDEP GPROOTFAIL
 .PHONY : gccVersionCheck clients loaders connectivity gppkg
 
@@ -372,10 +372,6 @@ define BUILD_STEPS
 	@$(MAKE) set_scripts_version INSTLOC=$(CONNECTIVITYINSTLOC)
 	@$(MAKE) loaders INSTLOC=$(INSTLOC) LOADERSINSTLOC=$(LOADERSINSTLOC)
 	@$(MAKE) set_scripts_version INSTLOC=$(LOADERSINSTLOC)
-	## NOTE: The copyoptimizerlibs taret must be called after the
-	## clients and connectivity targets (above) so as to keep the
-	## optimizer libs out of their respective distributions.
-	@$(MAKE) copyoptimizerlibs INSTLOC=$(INSTLOC)
 	@$(MAKE) set_scripts_version INSTLOC=$(CLIENTINSTLOC)
 	@$(MAKE) copylicense INSTLOC=$(INSTLOC) \
                          CLIENTINSTLOC=$(CLIENTINSTLOC) \
@@ -1214,27 +1210,6 @@ endif
 ifeq "$(BLD_ARCH)" "win32"
 	# Copy kfw dlls
 	cp -rp $(BLD_TOP)/ext/win32/kfw-3-2-2/lib/*dll $(INSTLOC)/lib/
-endif
-
-## ----------------------------------------------------------------------
-## Copy Optimizer (orca) specific libraries to INSTLOC.  It must be
-## called after the clients and connectivity targets have been
-## executed to populate their respective installation directories.
-## The clients and connectivity targets copy the entire contents of
-## the db libs directory.  There is no need to copy the optimizer
-## files and thus it has been broken out into it's own target.
-## ----------------------------------------------------------------------
-
-copyoptimizerlibs :
-ifneq "$(BLD_GPDB_BUILDSET)" "partial"
-ifeq "$(ORCA_CONFIG)" "--enable-orca"
-	cd $(LIBSTDC++_LIBDIR); tar cvf - * | (cd $(INSTLOC)/lib; tar xfp -)
-
-	# Create GP Optimizer UDFs library  
-	echo "Create GP Optimizer UDFs library";
-	rm -f $(INSTLOC)/lib/libgpoptudf.$(LDSFX);
-	g++ $(GPOPT_UDF_FLAGS) -L$(INSTLOC)/lib -lgpos -lnaucrates -lgpdbcost -lgpopt -o $(INSTLOC)/lib/libgpoptudf.$(LDSFX)  ./../src/backend/gpopt/utils/funcs.o ;
-endif
 endif
 
 greenplum_path:
