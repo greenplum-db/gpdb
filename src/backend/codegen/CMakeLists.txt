@@ -313,7 +313,7 @@ function(add_cmockery_gtest TEST_NAME TEST_SOURCES)
     )
     target_include_directories(${TEST_NAME} PUBLIC ${TEST_LIB_INC_DIRECTORIES})
     # Bring these from $ENV{LIBS}
-    target_link_libraries(${TEST_NAME} "-ldl -lnetsnmp -lpam -lxml2 -lpgport -lbz2 -lrt -lssl -lcrypto -lkrb5 -lcom_err -lgssapi_krb5 -lz -lldap -lreadline -lcrypt -lm -lcurl -L${CMAKE_INSTALL_PREFIX}/lib -L../../port -lpgport_srv" gpcodegen gtest)
+    target_link_libraries(${TEST_NAME} "-ldl -lpgport -lrt -lcom_err -lm -L${CMAKE_INSTALL_PREFIX}/lib -L../../port -lpgport_srv" gpcodegen gtest)
     add_test(${TEST_NAME} ${TEST_NAME})
     add_dependencies(check ${TEST_NAME})
 endfunction(add_cmockery_gtest)
