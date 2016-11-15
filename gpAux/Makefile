@@ -22,7 +22,7 @@ all : devel
 .PHONY : check installcheck installcheck-parallel
 
 # Targets for running regression tests
-.PHONY : installcheck-good installcheck-optfunctional installcheck-olaptest installcheck-bugbuster
+.PHONY : installcheck-good installcheck-optfunctional installcheck-bugbuster
 
 # The pvk target builds a subset of the GPDB package that includes just the
 # tools used to verify the configuration of a set of GPDB servers.
@@ -1248,10 +1248,6 @@ installcheck-parallel :
 	@if [ ! -f $(ISCONFIG) ]; then echo "not configured, cannot check"; exit 1; fi
 	@cd $(BUILDDIR)/src/test/regress && $(MAKE) installcheck-parallel
 	@cd extensions && $(MAKE) installcheck
-
-installcheck-olaptest :
-	@if [ ! -f $(ISCONFIG) ]; then echo "not configured, cannot check"; exit 1; fi
-	@cd $(BUILDDIR)/src/test/regress && $(MAKE) installcheck-olaptest
 
 installcheck-bugbuster :
 	@if [ ! -f $(ISCONFIG) ]; then echo "not configured, cannot check"; exit 1; fi
