@@ -2,17 +2,10 @@
  * Copyright (c) 2015 Pivotal Inc. All Rights Reserved
  *
  * ---------------------------------------------------------------------
- *
- * The dynamically linked library created from this source can be reference by
- * creating a function in psql that references it. For example,
- *
- * CREATE FUNCTION gp_dump_query_oids(text)
- *	RETURNS text
- *	AS '$libdir/gpoptutils', 'gp_dump_query_oids'
- *	LANGUAGE C STRICT;
  */
-#include "postgres_fe.h"
 #include "postgres.h"
+
+#include "postgres_fe.h"
 #include "funcapi.h"
 #include "utils/builtins.h"
 #include "rewrite/rewriteHandler.h"
@@ -22,7 +15,6 @@
 
 Datum gp_dump_query_oids(PG_FUNCTION_ARGS);
 
-PG_MODULE_MAGIC;
 PG_FUNCTION_INFO_V1(gp_dump_query_oids);
 
 static void

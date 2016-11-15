@@ -54,7 +54,7 @@ Feature: Dump minimum database objects that is related to the query
     Scenario: Query parse error with wrong syntax query
       Given the file "/tmp/in.sql" exists and contains "delete * from t1"
       When the user runs "minirepro minireprodb -q /tmp/in.sql -f /tmp/out.sql"
-      Then minirepro error should contain Error when executing function gp_toolkit.gp_dump_query_oids
+      Then minirepro error should contain Error when executing function gp_dump_query_oids
 
     @minirepro_core
     Scenario: Dump database objects related with select query
