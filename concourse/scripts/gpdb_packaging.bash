@@ -8,13 +8,19 @@ function echo_expected_env_variables() {
   echo "$INSTALL_SCRIPT_SRC"
   echo "$GPDB_TARGZ"
   echo "$INSTALLER_ZIP"
+  echo "$GPDB_SRC"
 }
 
 function _main() {
   echo_expected_env_variables
 
   # Copy gpaddon into addon to ensure the availability of all the installer scripts
-  cp -R gpaddon_src gpdb_src/gpAux/addon
+  if [ -z "$GPDB_SRC" ]
+  then
+	  cp -R gpaddon_src gpdb_src/gpAux/addon
+  else
+	  cp -R gpaddon_src $GPDB_SRC/gpAux/addon
+  fi
 
   local installer_bin
   installer_bin=$( echo "$INSTALLER_ZIP" | sed "s/.zip/.bin/" | xargs basename)
