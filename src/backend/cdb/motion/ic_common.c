@@ -919,7 +919,10 @@ SendDummyPacket(void)
 		if (!pg_set_noblock(sockfd))
 		{
 			if (sockfd >= 0)
+			{
 				closesocket(sockfd);
+				sockfd = -1;
+			}
 			continue;
 		}
 		break;
@@ -961,7 +964,7 @@ SendDummyPacket(void)
 	}
 
 	pg_freeaddrinfo_all(hint.ai_family, addrs);
-	close(sockfd);
+	closesocket(sockfd);
 	return;
 
 send_error:
@@ -972,7 +975,7 @@ send_error:
 	}
 	if (sockfd != -1)
 	{
-		close(sockfd);
+		closesocket(sockfd);
 	}
 	return;
 }

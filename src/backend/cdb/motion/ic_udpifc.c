@@ -1245,7 +1245,10 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 		if (!pg_set_noblock(fd))
 		{
 			if (fd >= 0)
+			{
 				closesocket(fd);
+				fd = -1;
+			}
 			continue;
 		}
 
@@ -1258,7 +1261,10 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 		}
 
 		if (fd >= 0)
+		{
 			closesocket(fd);
+			fd = -1;
+		}
 	}
 
 	if (rp == NULL)
