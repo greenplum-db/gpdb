@@ -65,7 +65,7 @@ CreateGangFunc pCreateGangFuncThreaded = createGang_thread;
 static Gang *
 createGang_thread(GangType type, int gang_id, int size, int content)
 {
-	Gang *newGangDefinition;
+	Gang *newGangDefinition = NULL;
 	SegmentDatabaseDescriptor *segdbDesc = NULL;
 	DoConnectParms *doConnectParmsAr = NULL;
 	DoConnectParms *pParms = NULL;
@@ -100,9 +100,12 @@ createGang_thread(GangType type, int gang_id, int size, int content)
 	initPQExpBuffer(&create_gang_error);
 
 create_gang_retry:
-	/* If we're in a retry, we may need to reset our initial state, a bit */
-	newGangDefinition = NULL;
-	doConnectParmsAr = NULL;
+	/*
+	 * If we're in a retry, we may need to reset our initial state a bit. We
+	 * also want to ensure that all resources have been released.
+	 */
+	Assert(newGangDefinition == NULL);
+	Assert(doConnectParmsAr == NULL);
 	successful_connections = 0;
 	in_recovery_mode_count = 0;
 	threadCount = 0;
