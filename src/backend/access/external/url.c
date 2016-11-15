@@ -1846,7 +1846,13 @@ url_fclose(URL_FILE *file, bool failOnError, const char *relname)
 			break;
     }
 
-    free(file);
+	/*
+	 * If failOnError is true then we won't reach here due to previous calls to
+	 * ereport(), but static analysers might not pick that up so make the
+	 * intention explicit to avoid warnings for double free().
+	 */
+	if (!failOnError && file)
+		free(file);
 
     return ret;
 }
