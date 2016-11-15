@@ -223,7 +223,7 @@ create_gang_retry:
 		{
 			/*
 			 * Retry for non-writer gangs is meaningless because
-			 * writer gang must has gone when QE is in recovery mode
+			 * writer gang must be gone when QE is in recovery mode
 			 */
 			DisconnectAndDestroyGang(newGangDefinition);
 			newGangDefinition = NULL;
@@ -237,7 +237,7 @@ create_gang_retry:
 			goto create_gang_retry;
 		}
 
-		appendPQExpBuffer(&create_gang_error, "segments is in recovery mode\n");
+		appendPQExpBuffer(&create_gang_error, "segments are in recovery mode\n");
 	}
 	
 exit:

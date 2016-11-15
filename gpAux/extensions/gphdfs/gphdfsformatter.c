@@ -548,7 +548,7 @@ gphdfsformatter_import(PG_FUNCTION_ARGS)
 	 * forward and then raise the error. But then, the framework will still
 	 * call the formatter the function again. Now, the formatter function will
 	 * be provided with a zero length data buffer. In this case, we should not
-	 * raise an error again, but simply retruns "NEED MORE DATA". This is how
+	 * raise an error again, but simply returns "NEED MORE DATA". This is how
 	 * the formatter framework works.
 	 */
 	if (remaining == 0 && FORMATTER_GET_SAW_EOF(fcinfo))

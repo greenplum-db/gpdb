@@ -880,14 +880,15 @@ SendDummyPacket(void)
 	struct addrinfo* addrs = NULL;
 	struct addrinfo* rp = NULL;
 	struct addrinfo hint;
-	uint16 udp_listenner;
+	uint16 udp_listener;
 	char	port_str[32] = {0};
 	char* dummy_pkt = "stop it";
+
 	/*
-	* Get address info from interconnect udp listenner port
-	*/
-	udp_listenner = Gp_listener_port;
-	snprintf(port_str, sizeof(port_str), "%d", udp_listenner);
+	 * Get address info from interconnect udp listener port
+	 */
+	udp_listener = Gp_listener_port;
+	snprintf(port_str, sizeof(port_str), "%d", udp_listener);
 
 	MemSet(&hint, 0, sizeof(hint));
 	hint.ai_socktype = SOCK_DGRAM;

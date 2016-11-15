@@ -6146,7 +6146,7 @@ rxThreadFunc(void *arg)
 		/* pthread_yield(); */
 	}
 
-	/* Before retrun, we release the packet. */
+	/* Before return, we release the packet. */
 	if (pkt)
 	{
 		pthread_mutex_lock(&ic_control_info.lock);
