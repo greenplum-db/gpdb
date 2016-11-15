@@ -1531,7 +1531,7 @@ buffile_large_file_test(void)
 	}
 	elog(LOG, "Running sub-test: Reading record %s", filename->data);
 
-	char *buffer= buffer = palloc(nchars * sizeof(char));
+	char *buffer = palloc(nchars * sizeof(char));
 
 	BufFileSeek(bfile,  (int64) ((int64)test_entry * (int64) nchars), SEEK_SET);
 
@@ -1624,7 +1624,7 @@ logicaltape_test(void)
 
 	/* Set target LogicalTape */
 	work_tape = LogicalTapeSetGetTape(tape_set, test_tape);
-	char *buffer= buffer = palloc(nchars * sizeof(char));
+	char *buffer = palloc(nchars * sizeof(char));
 
 	elog(LOG, "Running sub-test: Freeze LogicalTape");
 	LogicalTapeFreeze(tape_set, work_tape);
