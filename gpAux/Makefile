@@ -133,8 +133,8 @@ GPPKG_PLATFORMS=rhel5_x86_64 rhel7_x86_64 rhel6_x86_64 suse10_x86_64 suse11_x86_
 # Compiler options
 #---------------------------------------------------------------------
 
-OPTFLAGS="$(strip $(BLD_CFLAGS) -O3 -fargument-noalias-global -fno-omit-frame-pointer $(COPTX) -g $(TRACE_GCC_FLAG))"
-PROFFLAGS="$(strip $(BLD_CFLAGS) -O3 -fargument-noalias-global -fno-omit-frame-pointer $(COPTX) -g $(TRACE_GCC_FLAG))"
+OPTFLAGS="$(strip $(BLD_CFLAGS) -O3 -fargument-noalias-global -fno-omit-frame-pointer -g)"
+PROFFLAGS="$(strip $(BLD_CFLAGS) -O3 -fargument-noalias-global -fno-omit-frame-pointer -g)"
 
 ifeq (on, ${GPDBGOPT})
 CFLAGS_OPT=-O1 -fno-omit-frame-pointer
@@ -148,7 +148,7 @@ else
 DEBUG_CFLAGS_OPT=-g3
 endif
 
-DEBUGFLAGS="$(strip $(BLD_CFLAGS) $(CFLAGS_OPT) $(DEBUG_CFLAGS_OPT) $(TRACE_GCC_FLAG))"
+DEBUGFLAGS="$(strip $(BLD_CFLAGS) $(CFLAGS_OPT) $(DEBUG_CFLAGS_OPT))"
 
 #---------------------------------------------------------------------
 # configure
@@ -180,7 +180,7 @@ osx106_x86_CONFIGFLAGS=--enable-snmp ${ORCA_CONFIG} ${CODEGEN_CONFIG} --with-lib
 
 BLD_CONFIGFLAGS=$($(BLD_ARCH)_CONFIGFLAGS)
 
-CONFIGFLAGS=$(strip $(BLD_CONFIGFLAGS) --with-pgport=$(DEFPORT) --with-libedit-preferred $(TRACE_CFG_FLAG) $(BLD_DEPLOYMENT_SETTING)) 
+CONFIGFLAGS=$(strip $(BLD_CONFIGFLAGS) --with-pgport=$(DEFPORT) --with-libedit-preferred $(BLD_DEPLOYMENT_SETTING))
 
 # PL/Python does not compile on Tiger, skipping it on AIX
 ifneq "$(findstring $(BLD_ARCH),aix5_ppc_64 aix5_ppc_32)" ""
