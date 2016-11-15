@@ -1,14 +1,33 @@
 import imp
 import os
+import re
+import tempfile
+
+import shutil
 from mock import *
 from gp_unittest import *
 from gparray import GpDB, GpArray
 from gppylib.db.dbconn import UnexpectedRowsError
 from pygresql import pgdb
 
+cursor_keys = dict(
+    normal_tables=re.compile(".*n\.nspname, c\.relname, c\.relstorage.*c\.oid NOT IN \( SELECT parchildrelid.*"),
+    partition_tables=re.compile(".*n\.nspname, c\.relname, c\.relstorage(?!.*SELECT parchildrelid).*"),
+    relations=re.compile(".*select relname from pg_class r.*"),
+    table_info=re.compile(".*select is_nullable, data_type, character_maximum_length,.*"),
+    partition_info=re.compile(".*select parkind, parlevel, parnatts, paratts.*"),
+    schema_name=re.compile(".*SELECT fsname FROM pg_catalog.pg_filespace.*"),
+    create_schema=re.compile(".*CREATE SCHEMA.*")
+)
 
 class GpTransfer(GpTestCase):
+    TEMP_DIR =  "/tmp/test_unit_gptransfer"
+
+
     def setUp(self):
+        if not os.path.exists(self.TEMP_DIR):
+            os.makedirs(self.TEMP_DIR)
+
         # because gptransfer does not have a .py extension,
         # we have to use imp to import it
         # if we had a gptransfer.py, this is equivalent to:
@@ -19,22 +38,30 @@ class GpTransfer(GpTestCase):
         self.subject.logger = Mock(spec=['log', 'warn', 'info', 'debug', 'error', 'warning'])
         self.gparray = self.createGpArrayWith2Primary2Mirrors()
 
-        self.db_connection = MagicMock(spec=["__exit__", "close", "__enter__"])
+        self.db_connection = MagicMock()
+        # TODO: We should be using a spec here, but I haven't been able to narrow down exactly which call is causing an attribute error when using the spec.
+        # The error is occuring because we don't mock out every possible SQL command, and some get swallowed (which is fine so far), but to fully support specs
+        # we need to go through and mock all the SQL calls
+        # self.db_connection = MagicMock(spec=["__exit__", "close", "__enter__", "commit", "rollback"])
         self.cursor = MagicMock(spec=pgdb.pgdbCursor)
+
         self.db_singleton = Mock()
+        self.workerpool = MagicMock()
+        self.workerpool.work_queue.qsize.return_value = 0
 
         self.apply_patches([
-            patch('os.environ', new={}),
+            patch('os.environ', new={"GPHOME": "my_gp_home"}),
             patch('gppylib.operations.dump.GpArray.initFromCatalog', return_value=self.gparray),
             patch('gptransfer.connect', return_value=self.db_connection),
-            patch('gptransfer.getUserDatabaseList', return_value=[["my_first_database"],["my_second_database"]]),
+            patch('gptransfer.getUserDatabaseList', return_value=[["my_first_database"], ["my_second_database"]]),
             patch('gppylib.db.dbconn.connect', return_value=self.db_connection),
-            patch('gptransfer.WorkerPool', return_value=Mock()),
-            patch('gptransfer.doesSchemaExist', return_value=True),
+            patch('gptransfer.WorkerPool', return_value=self.workerpool),
+            patch('gptransfer.doesSchemaExist', return_value=False),
             patch('gptransfer.dropSchemaIfExist'),
             patch('gptransfer.execSQL', new=self.cursor),
             patch('gptransfer.execSQLForSingletonRow', new=self.db_singleton),
-            patch("gppylib.commands.unix.FileDirExists.remote", return_value=True)
+            patch("gppylib.commands.unix.FileDirExists.remote", return_value=True),
+            patch("gptransfer.wait_for_pool", return_value=([], []))
         ])
 
         # We have a GIGANTIC class that uses 31 arguments, so pre-setting this
@@ -91,13 +118,14 @@ class GpTransfer(GpTestCase):
             format='CSV',
             full=False,
             input_file=None,
-            interactive=True,
+            interactive=False,
             last_port=-1,
             logfileDirectory=None,
             max_gpfdist_instances=1,
             max_line_length=10485760,
             no_final_count_validation=False,
             partition_transfer=False,
+            pt_non_pt_target=False,
             quiet=None,
             quote='\x01',
             schema_only=False,
@@ -115,6 +143,10 @@ class GpTransfer(GpTestCase):
             wait_time=3,
             work_base_dir='/home/gpadmin/',
         )
+
+    def tearDown(self):
+        pass
+        # shutil.rmtree(self.TEMP_DIR)
 
     @patch('gptransfer.TableValidatorFactory', return_value=Mock())
     @patch('gptransfer.execSQLForSingletonRow', side_effect=[['MYDATE'],
@@ -145,8 +177,7 @@ class GpTransfer(GpTestCase):
 
     @patch('gptransfer.TableValidatorFactory', return_value=Mock())
     @patch('gptransfer.execSQLForSingletonRow',
-           side_effect=[UnexpectedRowsError(1, 0, "sql foo"),
-                        ""])
+           side_effect=[UnexpectedRowsError(1, 0, "sql foo"), ""])
     def test__get_distributed_randomly(self, mock1, mock2):
         gptransfer = self.subject
         cmd_args = self.GpTransferCommand_args
@@ -168,47 +199,279 @@ class GpTransfer(GpTestCase):
         self.assertEqual(1, len(self.subject.logger.method_calls))
         self.assertEqual(expected_distribution, result_distribution)
 
-    def test__validates_good_partition(self):
-        options = self.setup_partition_validation()
-        self.cursor.side_effect = CursorSideEffect().cursor_side_effect
+    def test__normal_transfer_no_tables_does_nothing_but_log(self):
+        options = self.setup_normal_to_normal_validation()
+        with open(options["input_file"], "w") as src_map_file:
+            src_map_file.write("my_first_database.public.nonexistent_table")
+        with self.assertRaises(SystemExit):
+            self.subject.GpTransfer(Mock(**options), [])
+        log_messages = self.get_info_messages()
+        self.assertIn("Found no tables to transfer.", log_messages[-1])
+
+    def test__normal_transfer_with_tables_validates(self):
+        options = self.setup_normal_to_normal_validation()
 
         self.subject.GpTransfer(Mock(**options), [])
 
-    def test__validate_bad_partition_not_leaf(self):
-        options = self.setup_partition_validation()
+        log_messages = self.get_info_messages()
+        self.assertIn("Validating transfer table set...", log_messages)
 
+    def test__normal_transfer_when_destination_table_already_exists_fails(self):
+        options = self.setup_normal_to_normal_validation()
         additional = {
-            "select relname from pg_class r": ["many", "relations"],
+            cursor_keys["normal_tables"]: [["public", "my_normal_table", ""]],
         }
-        self.cursor.side_effect = CursorSideEffect(additional).cursor_side_effect
-
-        with self.assertRaisesRegexp(Exception, "Destination table "):
+        self.cursor.side_effect = CursorSideEffect(additional=additional).cursor_side_effect
+        with self.assertRaisesRegexp(Exception, "Table my_first_database.public.my_normal_table exists in database my_first_database"):
             self.subject.GpTransfer(Mock(**options), [])
 
-    def test__validate_bad_partition_different_number_columns(self):
+    def test__normal_transfer_when_input_file_bad_format_comma_fails(self):
+        options = self.setup_normal_to_normal_validation()
+        with open(options["input_file"], "w") as src_map_file:
+            src_map_file.write("my_first_database.public.my_table, my_second_database.public.my_table")
+        self.cursor.side_effect = CursorSideEffect().cursor_side_effect
+
+        with self.assertRaisesRegexp(Exception, "Destination tables \(comma separated\) are only allowed for partition tables"):
+            self.subject.GpTransfer(Mock(**options), [])
+
+    @patch('gptransfer.CountTableValidator.accumulate', side_effect=Exception('BOOM'))
+    def test__final_count_validation_when_throws_should_raises_exception(self, mock1):
+        options = self.setup_normal_to_normal_validation()
+        with self.assertRaisesRegexp(Exception, "Final count validation failed"):
+            self.subject.GpTransfer(Mock(**options), []).run()
+
+    def test__final_count_invalid_one_src_one_dest_table_logs_error(self):
+        options = self.setup_normal_to_normal_validation()
+        additional = {
+            "SELECT count(*) FROM": [3]
+        }
+        self.db_singleton.side_effect = SingletonSideEffect(additional).singleton_side_effect
+
+        self.subject.GpTransfer(Mock(**options), []).run()
+
+        self.assertIn("Validation failed for %s", self.get_error_logging())
+
+    def test__partition_to_partition_final_count_invalid_one_src_one_dest_table_logs_warning(self):
+        options = self.setup_partition_validation()
+        additional = {
+            "SELECT count(*) FROM": [3]
+        }
+        self.db_singleton.side_effect = SingletonSideEffect(additional).singleton_side_effect
+
+        self.subject.GpTransfer(Mock(**options), []).run()
+
+        self.assertIn("Validation failed for %s", self.get_warnings())
+
+    def test__partition_to_partition_when_invalid_final_counts_should_warn(self):
+        options = self.setup_partition_validation()
+        with open(options["input_file"], "w") as src_map_file:
+            src_map_file.write(
+                "my_first_database.public.my_table_partition1, my_first_database.public.my_table_partition1\n"
+                "my_first_database.public.my_table_partition2")
+
+        additional = {
+            cursor_keys["partition_tables"]: [["public", "my_table_partition1", ""],
+                                              ["public", "my_table_partition2", ""]],
+        }
+        cursor_side_effect = CursorSideEffect(additional=additional)
+        self.cursor.side_effect = cursor_side_effect.cursor_side_effect
+
+        multi = {
+            "SELECT count(*) FROM": [[12], [10]]
+        }
+        self.db_singleton.side_effect = SingletonSideEffect(multi_list=multi).singleton_side_effect
+
+        self.subject.GpTransfer(Mock(**options), []).run()
+
+        self.assertIn("Validation failed for %s", self.get_warnings())
+
+    def test__partition_to_partition_when_valid_final_counts_mult_src_same_dest_table_succeeds(self):
+        options = self.setup_partition_validation()
+        with open(options["input_file"], "w") as src_map_file:
+            src_map_file.write(
+                "my_first_database.public.my_table_partition1, my_first_database.public.my_table_partition1\n"
+                "my_first_database.public.my_table_partition2")
+
+        additional = {
+            cursor_keys["partition_tables"]: [["public", "my_table_partition1", ""],
+                                              ["public", "my_table_partition2", ""]],
+        }
+        cursor_side_effect = CursorSideEffect(additional=additional)
+        self.cursor.side_effect = cursor_side_effect.cursor_side_effect
+
+        self.subject.GpTransfer(Mock(**options), []).run()
+
+        self.assertIn("Validation of %s successful", self.get_info_messages())
+
+    def test__partition_to_normal_table_succeeds(self):
+        options = self.setup_partition_to_normal_validation()
+
+        # simulate that dest normal table has 0 rows to begin with and 20 when finished
+        multi = {
+            "SELECT count(*) FROM": [[20], [0]]
+        }
+        self.db_singleton.side_effect = SingletonSideEffect(multi_list=multi).singleton_side_effect
+
+        self.subject.GpTransfer(Mock(**options), []).run()
+
+        self.assertNotIn("Validation failed for %s", self.get_warnings())
+        self.assertIn("Validation of %s successful", self.get_info_messages())
+
+    def test__final_count_validation_same_counts_src_dest_passes(self):
+        options = self.setup_normal_to_normal_validation()
+
+        self.subject.GpTransfer(Mock(**options), []).run()
+
+        self.assertIn("Validation of %s successful", self.get_info_messages())
+
+    def test__validates_good_partition(self):
+        options = self.setup_partition_validation()
+
+        self.subject.GpTransfer(Mock(**options), [])
+
+        self.assertIn("Validating partition table transfer set...", self.get_info_messages())
+
+    def test__partition_to_nonexistent_partition_fails(self):
+        options = self.setup_partition_validation()
+        with open(options["input_file"], "w") as src_map_file:
+            src_map_file.write(
+                "my_first_database.public.my_table_partition1, my_first_database.public.my_table_partition2")
+        self.cursor.side_effect = CursorSideEffect().cursor_side_effect
+
+        with self.assertRaisesRegexp(Exception, "does not exist in destination database"):
+            self.subject.GpTransfer(Mock(**options), [])
+
+    def test__partition_to_nonexistent_normal_table_fails(self):
+        options = self.setup_partition_to_normal_validation()
+        with open(options["input_file"], "w") as src_map_file:
+            src_map_file.write("my_first_database.public.my_table_partition1, my_first_database.public.does_not_exist")
+        self.cursor.side_effect = CursorSideEffect().cursor_side_effect
+
+        with self.assertRaisesRegexp(Exception, "does not exist in destination database"):
+            self.subject.GpTransfer(Mock(**options), [])
+
+    def test__partition_to_multiple_same_partition_tables_fails(self):
+        options = self.setup_partition_validation()
+        with open(options["input_file"], "w") as src_map_file:
+            src_map_file.write(
+                "my_first_database.public.my_table_partition1\nmy_first_database.public.my_table_partition3, my_first_database.public.my_table_partition1")
+
+        cursor_side_effect = CursorSideEffect()
+        cursor_side_effect.first_values[cursor_keys["partition_tables"]] = [["public", "my_table_partition1", ""],
+                                                                            ["public", "my_table_partition3", ""]]
+        self.cursor.side_effect = cursor_side_effect.cursor_side_effect
+        with self.assertRaisesRegexp(Exception, "Multiple tables map to"):
+            self.subject.GpTransfer(Mock(**options), [])
+
+    def test__partition_to_nonpartition_table_with_different_columns_fails(self):
+        options = self.setup_partition_to_normal_validation()
+        with open(options["input_file"], "w") as src_map_file:
+            src_map_file.write("my_first_database.public.my_table_partition1, my_first_database.public.my_normal_table")
+
+        additional = {
+            cursor_keys["normal_tables"]: [["public", "my_normal_table", ""]],
+            cursor_keys['table_info']: [
+                [1, "t", "my_new_data_type", 255, 16, 1024, 1024, 1, 1024, "my_interval_type", "my_udt_name"]],
+        }
+        cursor_side_effect = CursorSideEffect(additional=additional)
+        cursor_side_effect.first_values[cursor_keys["partition_tables"]] = [["public", "my_table_partition1", ""]]
+        self.cursor.side_effect = cursor_side_effect.cursor_side_effect
+        with self.assertRaisesRegexp(Exception, "has different column layout or types"):
+            self.subject.GpTransfer(Mock(**options), [])
+
+    def test__multiple_partitions_to_same_normal_table_succeeds(self):
+        options = self.setup_partition_to_normal_validation()
+        with open(options["input_file"], "w") as src_map_file:
+            src_map_file.write(
+                "my_first_database.public.my_table_partition1, my_first_database.public.my_normal_table\nmy_first_database.public.my_table_partition2, my_first_database.public.my_normal_table")
+
+        additional = {
+            cursor_keys["normal_tables"]: [["public", "my_normal_table", ""]],
+        }
+        cursor_side_effect = CursorSideEffect(additional=additional)
+        cursor_side_effect.first_values[cursor_keys["partition_tables"]] = [["public", "my_table_partition1", ""],
+                                                                            ["public", "my_table_partition2", ""]]
+        self.cursor.side_effect = cursor_side_effect.cursor_side_effect
+
+        class SingletonSideEffectWithIterativeReturns(SingletonSideEffect):
+            def __init__(self):
+                SingletonSideEffect.__init__(self)
+                self.values["SELECT count(*) FROM public.my_normal_table"] = [[[30, 15, 15]]]
+                self.counters["SELECT count(*) FROM public.my_normal_table"] = 0
+
+            def singleton_side_effect(self, *args):
+                for key in self.values.keys():
+                    for arg in args:
+                        if key in arg:
+                            value_list = self.values[key]
+                            result = value_list[self.counters[key] % len(value_list)]
+                            if any(isinstance(i, list) for i in value_list):
+                                result = result[self.counters[key] % len(value_list)]
+                            self.counters[key] += 1
+                            return result
+                return None
+        self.db_singleton.side_effect = SingletonSideEffectWithIterativeReturns().singleton_side_effect
+
+        self.subject.GpTransfer(Mock(**options), []).run()
+
+        self.assertNotIn("Validation failed for %s", self.get_warnings())
+        self.assertIn("Validation of %s successful", self.get_info_messages())
+
+    def test__partition_to_multiple_same_nonpartition_tables_with_truncate_fails(self):
+        options = self.setup_partition_to_normal_validation()
+        options.update(truncate=True)
+        with open(options["input_file"], "w") as src_map_file:
+            src_map_file.write(
+                "my_first_database.public.my_table_partition1, my_first_database.public.my_normal_table\n"
+                "my_first_database.public.my_table_partition2, my_first_database.public.my_normal_table")
+
+        additional = {
+            cursor_keys["normal_tables"]: [["public", "my_normal_table", ""]],
+        }
+        cursor_side_effect = CursorSideEffect(additional=additional)
+        cursor_side_effect.first_values[cursor_keys["partition_tables"]] = [["public", "my_table_partition1", ""],
+                                                                            ["public", "my_table_partition2", ""]]
+        self.cursor.side_effect = cursor_side_effect.cursor_side_effect
+
+        with self.assertRaisesRegexp(Exception, "--truncate is not allowed with option --partition-transfer-non-partition-target"):
+            self.subject.GpTransfer(Mock(**options), [])
+
+    def test__validate_bad_partition_source_not_leaf_fails(self):
+        options = self.setup_partition_validation()
+
+        cursor_side_effect = CursorSideEffect()
+        cursor_side_effect.first_values[cursor_keys['relations']] = ["my_relname1", "my_relname2"]
+        self.cursor.side_effect = cursor_side_effect.cursor_side_effect
+
+        with self.assertRaisesRegexp(Exception, "Source table "):
+            self.subject.GpTransfer(Mock(**options), [])
+
+    def test__validate_bad_partition_different_number_columns_fails(self):
         options = self.setup_partition_validation()
 
         additional = {
-            "select is_nullable, data_type, character_maximum_length,": [["t", "my_data_type", 255, 16, 1024, 1024, 1, 1024, "my_interval_type", "my_udt_name"],
-                                                                                           [2, "t", "my_data_type", 255, 16, 1024, 1024, 1, 1024, "my_interval_type", "my_udt_name"]],
+            cursor_keys['table_info']: [
+                ["t", "my_data_type", 255, 16, 1024, 1024, 1, 1024, "my_interval_type", "my_udt_name"],
+                ["t", "my_data_type", 255, 16, 1024, 1024, 1, 1024, "my_interval_type", "my_udt_name"]],
         }
         self.cursor.side_effect = CursorSideEffect(additional).cursor_side_effect
 
         with self.assertRaisesRegexp(Exception, "has different column layout or types"):
             self.subject.GpTransfer(Mock(**options), [])
 
-    def test__validate_bad_partition_different_column_type(self):
+    def test__validate_bad_partition_different_column_type_fails(self):
         options = self.setup_partition_validation()
 
         additional = {
-            "select is_nullable, data_type, character_maximum_length,": [["t", "my_new_data_type", 255, 16, 1024, 1024, 1, 1024, "my_interval_type", "my_udt_name"]],
+            cursor_keys['table_info']: [
+                ["t", "my_new_data_type", 255, 16, 1024, 1024, 1, 1024, "my_interval_type", "my_udt_name"]],
         }
         self.cursor.side_effect = CursorSideEffect(additional).cursor_side_effect
 
         with self.assertRaisesRegexp(Exception, "has different column layout or types"):
             self.subject.GpTransfer(Mock(**options), [])
 
-    def test__validate_bad_partition_different_max_levels(self):
+    def test__validate_bad_partition_different_max_levels_fails(self):
         options = self.setup_partition_validation()
 
         additional = {
@@ -219,59 +482,59 @@ class GpTransfer(GpTestCase):
         with self.assertRaisesRegexp(Exception, "has different partition criteria from destination table"):
             self.subject.GpTransfer(Mock(**options), [])
 
-        log_messages = [args[0][0] for args in self.subject.logger.error.call_args_list]
+        log_messages = self.get_error_logging()
         self.assertIn("Max level of partition is not same between", log_messages[0])
 
-    def test__validate_bad_partition_different_values_of_attributes(self):
+    def test__validate_bad_partition_different_values_of_attributes_fails(self):
         options = self.setup_partition_validation()
 
         additional = {
-            "select parkind, parlevel, parnatts, paratts": [["my_parkind", 1, 1, "3 4"]],
+            cursor_keys['partition_info']: [["my_parkind", 1, "my_parnatts", "3 4"]],
         }
         self.cursor.side_effect = CursorSideEffect(additional).cursor_side_effect
 
         with self.assertRaisesRegexp(Exception, "has different partition criteria from destination table"):
             self.subject.GpTransfer(Mock(**options), [])
 
-        log_messages = [args[0][0] for args in self.subject.logger.error.call_args_list]
+        log_messages = self.get_error_logging()
         self.assertIn("Partition type or key is different between", log_messages[1])
         self.assertIn("Partition column attributes are different at level", log_messages[0])
 
-    def test__validate_bad_partition_different_parent_kind(self):
+    def test__validate_bad_partition_different_parent_kind_fails(self):
         options = self.setup_partition_validation()
 
         additional = {
-            "select parkind, parlevel, parnatts, paratts": [["different_parkind", 1, 1, "1"]],
+            cursor_keys['partition_info']: [["different_parkind", 1, "my_parnatts", "my_paratts"]],
         }
         self.cursor.side_effect = CursorSideEffect(additional).cursor_side_effect
 
         with self.assertRaisesRegexp(Exception, "has different partition criteria from destination table"):
             self.subject.GpTransfer(Mock(**options), [])
 
-        log_messages = [args[0][0] for args in self.subject.logger.error.call_args_list]
+        log_messages = self.get_error_logging()
         self.assertIn("Partition type or key is different between", log_messages[1])
         self.assertIn("Partition type is different at level", log_messages[0])
 
-    def test__validate_bad_partition_different_number_of_attributes(self):
+    def test__validate_bad_partition_different_number_of_attributes_fails(self):
         options = self.setup_partition_validation()
 
         additional = {
-            "select parkind, parlevel, parnatts, paratts": [["my_parkind", 1, 2, "1"]],
+            cursor_keys['partition_info']: [["my_parkind", 1, 2, "my_paratts"]],
         }
         self.cursor.side_effect = CursorSideEffect(additional).cursor_side_effect
 
         with self.assertRaisesRegexp(Exception, "has different partition criteria from destination table"):
             self.subject.GpTransfer(Mock(**options), [])
 
-        log_messages = [args[0][0] for args in self.subject.logger.error.call_args_list]
+        log_messages = self.get_error_logging()
         self.assertIn("Partition type or key is different between", log_messages[1])
         self.assertIn("Number of partition columns is different at level ", log_messages[0])
 
-    def test__validate_bad_partition_different_partition_values(self):
+    def test__validate_bad_partition_different_partition_values_fails(self):
         options = self.setup_partition_validation()
 
         additional = {
-            "select n.nspname, c.relname": [["not_public", "not_my_table", ""],["public", "my_table", ""]],
+            "select n.nspname, c.relname": [["not_public", "not_my_table", ""], ["public", "my_table_partition1", ""]],
             "select parisdefault, parruleord, parrangestartincl,": ["t", "1", "t", "t", 100, 10, "", ""],
         }
         self.db_singleton.side_effect = SingletonSideEffect(additional).singleton_side_effect
@@ -279,11 +542,11 @@ class GpTransfer(GpTestCase):
         with self.assertRaisesRegexp(Exception, "has different partition criteria from destination table"):
             self.subject.GpTransfer(Mock(**options), [])
 
-        log_messages = [args[0][0] for args in self.subject.logger.error.call_args_list]
+        log_messages = self.get_error_logging()
         self.assertIn("One of the subpartition table is a default partition", log_messages[0])
         self.assertIn("Partition value is different in the partition hierarchy between", log_messages[1])
 
-    def test__validate_bad_partition_unknown_type(self):
+    def test__validate_bad_partition_unknown_type_fails(self):
         options = self.setup_partition_validation()
         my_singleton = SingletonSideEffect()
         my_singleton.values["select partitiontype"] = ["unknown"]
@@ -292,7 +555,7 @@ class GpTransfer(GpTestCase):
         with self.assertRaisesRegexp(Exception, "Unknown partitioning type "):
             self.subject.GpTransfer(Mock(**options), [])
 
-    def test__validate_bad_partition_different_list_values(self):
+    def test__validate_bad_partition_different_list_values_fails(self):
         options = self.setup_partition_validation()
 
         additional = {
@@ -306,21 +569,27 @@ class GpTransfer(GpTestCase):
         with self.assertRaisesRegexp(Exception, "has different partition criteria from destination table"):
             self.subject.GpTransfer(Mock(**options), [])
 
-        log_messages = [args[0][0] for args in self.subject.logger.error.call_args_list]
+        log_messages = self.get_error_logging()
         self.assertIn("List partition value is different between", log_messages[0])
         self.assertIn("Partition value is different in the partition hierarchy between", log_messages[1])
 
-    def test__validate_bad_partition_different_range_values(self):
-        self.run_range_partition_value({"select parisdefault, parruleord, parrangestartincl,": ["f", "1", "f", "t", 100, 10, "", "different"]})
-        self.run_range_partition_value({"select parisdefault, parruleord, parrangestartincl,": ["f", "1", "t", "f", 999, 10, "", "different"]})
-        self.run_range_partition_value({"select parisdefault, parruleord, parrangestartincl,": ["f", "1", "t", "t", 100, 999, "", "different"]})
-        self.run_range_partition_value({"select parisdefault, parruleord, parrangestartincl,": ["f", "1", "t", "t", 100, 10, 999, "different"]})
+    def test__validate_bad_partition_different_range_values_fails(self):
+        self.run_range_partition_value(
+            {"select parisdefault, parruleord, parrangestartincl,": ["f", "1", "f", "t", 100, 10, "", "different"]})
+        self.run_range_partition_value(
+            {"select parisdefault, parruleord, parrangestartincl,": ["f", "1", "t", "f", 999, 10, "", "different"]})
+        self.run_range_partition_value(
+            {"select parisdefault, parruleord, parrangestartincl,": ["f", "1", "t", "t", 100, 999, "", "different"]})
+        self.run_range_partition_value(
+            {"select parisdefault, parruleord, parrangestartincl,": ["f", "1", "t", "t", 100, 10, 999, "different"]})
 
-    def test__validate_bad_partition_different_parent_partition(self):
+    def test__validate_bad_partition_different_parent_partition_fails(self):
         options = self.setup_partition_validation()
 
         multi = {
-            "select parisdefault, parruleord, parrangestartincl,": [["f", "1", "t", "t", 100, 10, "", ""], ["f", "1", "t", "t", 100, 10, "", ""], ["f", "1", "t", "t", 999, 10, "", ""]],
+            "select parisdefault, parruleord, parrangestartincl,": [["f", "1", "t", "t", 100, 10, "", ""],
+                                                                    ["f", "1", "t", "t", 100, 10, "", ""],
+                                                                    ["f", "1", "t", "t", 999, 10, "", ""]],
         }
         singleton_side_effect = SingletonSideEffect(multi_list=multi)
         self.db_singleton.side_effect = singleton_side_effect.singleton_side_effect
@@ -328,48 +597,135 @@ class GpTransfer(GpTestCase):
         with self.assertRaisesRegexp(Exception, "has different partition criteria from destination table"):
             self.subject.GpTransfer(Mock(**options), [])
 
-        log_messages = [args[0][0] for args in self.subject.logger.error.call_args_list]
-        self.assertIn("Range partition value is different between source partition table", log_messages[0])
-        self.assertIn("Partitions have different parents at level", log_messages[1])
+        error_messages = self.get_error_logging()
+        self.assertIn("Range partition value is different between source partition table", error_messages[0])
+        self.assertIn("Partitions have different parents at level", error_messages[1])
 
+    def test__validate_pt_non_pt_target_with_validator__fails(self):
+        options = self.setup_partition_to_normal_validation()
+        options['validator'] = "MD5"
 
-####################################################################################################################
-        # End of tests, start of private methods/objects
-####################################################################################################################
+        with self.assertRaisesRegexp(Exception, "--partition-transfer-non-partition-target option cannot be used with --validate option"):
+            self.subject.GpTransfer(Mock(**options), [])
+
+    def test__validate_pt_non_pt_target_with_partition_transfer__fails(self):
+        options = self.setup_partition_to_normal_validation()
+        options['partition_transfer'] = True
+
+        with self.assertRaisesRegexp(Exception, "--partition-transfer option cannot be used with --partition-transfer-non-partition-target option"):
+            self.subject.GpTransfer(Mock(**options), [])
+
+    def test__validate_pt_non_pt_target_without_input_file__fails(self):
+        options = self.setup_partition_to_normal_validation()
+        options['input_file'] = None
+
+        with self.assertRaisesRegexp(Exception, "--partition-transfer-non-partition-target option must be used with -f option"):
+            self.subject.GpTransfer(Mock(**options), [])
+
+    def test__validate_pt_non_pt_target_with_databases__fails(self):
+        options = self.setup_partition_to_normal_validation()
+        options['databases'] = ['db1']
+
+        with self.assertRaisesRegexp(Exception, "--partition-transfer-non-partition-target option cannot be used with -d option"):
+            self.subject.GpTransfer(Mock(**options), [])
+
+    def test__validate_pt_non_pt_target_with_dest_databases__fails(self):
+        options = self.setup_partition_to_normal_validation()
+        options['dest_database'] = ['db1']
+
+        with self.assertRaisesRegexp(Exception, "--partition-transfer-non-partition-target option cannot be used with --dest-database option"):
+            self.subject.GpTransfer(Mock(**options), [])
+
+    def test__validate_pt_non_pt_target_with_drop__fails(self):
+        options = self.setup_partition_to_normal_validation()
+        options['drop'] = True
+
+        with self.assertRaisesRegexp(Exception, "--partition-transfer-non-partition-target option cannot be used with --drop option"):
+            self.subject.GpTransfer(Mock(**options), [])
+
+    def test__validate_pt_non_pt_target_with_tables__fails(self):
+        options = self.setup_partition_to_normal_validation()
+        options['tables'] = ['public.table1']
+
+        with self.assertRaisesRegexp(Exception, "--partition-transfer-non-partition-target option cannot be used with -t option"):
+            self.subject.GpTransfer(Mock(**options), [])
+
+    def test__validate_pt_non_pt_target_with_schema_only__fails(self):
+        options = self.setup_partition_to_normal_validation()
+        options['schema_only'] = True
+
+        with self.assertRaisesRegexp(Exception, "--partition-transfer-non-partition-target option cannot be used with --schema-only option"):
+            self.subject.GpTransfer(Mock(**options), [])
+
+    def test__validate_pt_non_pt_target_with_full__fails(self):
+        options = self.setup_partition_to_normal_validation()
+        options['full'] = True
+
+        with self.assertRaisesRegexp(Exception, "--partition-transfer-non-partition-target option cannot be used with --full option"):
+            self.subject.GpTransfer(Mock(**options), [])
+
+    def test__validate_pt_non_pt_target_with_exclude_input_file__fails(self):
+        options = self.setup_partition_to_normal_validation()
+        options['exclude_input_file'] = tempfile.NamedTemporaryFile(dir=self.TEMP_DIR, delete=False)
+
+        with self.assertRaisesRegexp(Exception, "--partition-transfer-non-partition-target option cannot be used with any exclude table option"):
+            self.subject.GpTransfer(Mock(**options), [])
+
+    def test__validate_pt_non_pt_target_with_exclude_tables__fails(self):
+        options = self.setup_partition_to_normal_validation()
+        options['exclude_tables'] = ['public.table1']
+
+        with self.assertRaisesRegexp(Exception, "--partition-transfer-non-partition-target option cannot be used with any exclude table option"):
+            self.subject.GpTransfer(Mock(**options), [])
+
+    ####################################################################################################################
+    # End of tests, start of private methods/objects
+    ####################################################################################################################
+
+    def get_error_logging(self):
+        return [args[0][0] for args in self.subject.logger.error.call_args_list]
+
+    def get_info_messages(self):
+        return [args[0][0] for args in self.subject.logger.info.call_args_list]
+
+    def get_warnings(self):
+        return [args[0][0] for args in self.subject.logger.warning.call_args_list]
 
     def run_range_partition_value(self, additional):
         options = self.setup_partition_validation()
         self.db_singleton.side_effect = SingletonSideEffect(additional).singleton_side_effect
         with self.assertRaisesRegexp(Exception, "has different partition criteria from destination table"):
             self.subject.GpTransfer(Mock(**options), [])
-        log_messages = [args[0][0] for args in self.subject.logger.error.call_args_list]
+        log_messages = self.get_error_logging()
         self.assertIn("Range partition value is different between", log_messages[0])
         self.assertIn("Partition value is different in the partition hierarchy between", log_messages[1])
 
     def createGpArrayWith2Primary2Mirrors(self):
-        master = GpDB.initFromString("1|-1|p|p|s|u|mdw|mdw|5432|None|/data/master||/data/master/base/10899,/data/master/base/1,/data/master/base/10898,/data/master/base/25780,/data/master/base/34782")
-        primary0 = GpDB.initFromString("2|0|p|p|s|u|sdw1|sdw1|40000|41000|/data/primary0||/data/primary0/base/10899,/data/primary0/base/1,/data/primary0/base/10898,/data/primary0/base/25780,/data/primary0/base/34782")
-        primary1 = GpDB.initFromString("3|1|p|p|s|u|sdw2|sdw2|40001|41001|/data/primary1||/data/primary1/base/10899,/data/primary1/base/1,/data/primary1/base/10898,/data/primary1/base/25780,/data/primary1/base/34782")
-        mirror0 = GpDB.initFromString("4|0|m|m|s|u|sdw2|sdw2|50000|51000|/data/mirror0||/data/mirror0/base/10899,/data/mirror0/base/1,/data/mirror0/base/10898,/data/mirror0/base/25780,/data/mirror0/base/34782")
-        mirror1 = GpDB.initFromString("5|1|m|m|s|u|sdw1|sdw1|50001|51001|/data/mirror1||/data/mirror1/base/10899,/data/mirror1/base/1,/data/mirror1/base/10898,/data/mirror1/base/25780,/data/mirror1/base/34782")
+        master = GpDB.initFromString(
+            "1|-1|p|p|s|u|mdw|mdw|5432|None|/data/master||/data/master/base/10899,/data/master/base/1,/data/master/base/10898,/data/master/base/25780,/data/master/base/34782")
+        primary0 = GpDB.initFromString(
+            "2|0|p|p|s|u|sdw1|sdw1|40000|41000|/data/primary0||/data/primary0/base/10899,/data/primary0/base/1,/data/primary0/base/10898,/data/primary0/base/25780,/data/primary0/base/34782")
+        primary1 = GpDB.initFromString(
+            "3|1|p|p|s|u|sdw2|sdw2|40001|41001|/data/primary1||/data/primary1/base/10899,/data/primary1/base/1,/data/primary1/base/10898,/data/primary1/base/25780,/data/primary1/base/34782")
+        mirror0 = GpDB.initFromString(
+            "4|0|m|m|s|u|sdw2|sdw2|50000|51000|/data/mirror0||/data/mirror0/base/10899,/data/mirror0/base/1,/data/mirror0/base/10898,/data/mirror0/base/25780,/data/mirror0/base/34782")
+        mirror1 = GpDB.initFromString(
+            "5|1|m|m|s|u|sdw1|sdw1|50001|51001|/data/mirror1||/data/mirror1/base/10899,/data/mirror1/base/1,/data/mirror1/base/10898,/data/mirror1/base/25780,/data/mirror1/base/34782")
         return GpArray([master, primary0, primary1, mirror0, mirror1])
 
     def setup_partition_validation(self):
-        os.environ["GPHOME"] = "my_gp_home"
-        SOURCE_MAP_FILENAME = "/tmp/gptransfer_test_source_map"
-        with open(SOURCE_MAP_FILENAME, "w") as src_map_file:
-            src_map_file.write("sdw1,12700\nsdw2,12700")
-        INPUT_FILENAME = "/tmp/gptransfer_test"
-        with open(INPUT_FILENAME, "w") as input_file:
-            input_file.write("my_first_database.public.my_table")
+        source_map_filename = tempfile.NamedTemporaryFile(dir=self.TEMP_DIR, delete=False)
+        source_map_filename.write("sdw1,12700\nsdw2,12700")
+        input_filename = tempfile.NamedTemporaryFile(dir=self.TEMP_DIR, delete=False)
+        input_filename.write("my_first_database.public.my_table_partition1")
         self.cursor.side_effect = CursorSideEffect().cursor_side_effect
         self.db_singleton.side_effect = SingletonSideEffect().singleton_side_effect
         options = {}
         options.update(self.GpTransfer_options_defaults)
         options.update(
             partition_transfer=True,
-            input_file=INPUT_FILENAME,
-            source_map_file=SOURCE_MAP_FILENAME,
+            input_file=input_filename.name,
+            source_map_file=source_map_filename.name,
             base_port=15432,
             max_line_length=32768,
             work_base_dir="/tmp",
@@ -378,15 +734,73 @@ class GpTransfer(GpTestCase):
         )
         return options
 
+    def setup_partition_to_normal_validation(self):
+        source_map_filename = tempfile.NamedTemporaryFile(dir=self.TEMP_DIR, delete=False)
+        source_map_filename.write("sdw1,12700\nsdw2,12700")
+        input_filename = tempfile.NamedTemporaryFile(dir=self.TEMP_DIR, delete=False)
+        input_filename.write("my_first_database.public.my_table_partition1, "
+                             "my_second_database.public.my_normal_table")
+
+        additional = {
+            cursor_keys['relations']: ["my_relname", "another_rel"],
+        }
+        self.cursor.side_effect = CursorSideEffect(additional=additional).cursor_side_effect
+
+        self.db_singleton.side_effect = SingletonSideEffect().singleton_side_effect
+        options = {}
+        options.update(self.GpTransfer_options_defaults)
+        options.update(
+            pt_non_pt_target=True,
+            input_file=input_filename.name,
+            source_map_file=source_map_filename.name,
+            base_port=15432,
+            max_line_length=32768,
+            work_base_dir="/tmp",
+            source_port=45432,
+            dest_port=15432,
+        )
+        return options
+
+    def setup_normal_to_normal_validation(self):
+        source_map_filename = tempfile.NamedTemporaryFile(dir=self.TEMP_DIR, delete=False)
+        source_map_filename.write("sdw1,12700\nsdw2,12700")
+        source_map_filename.flush()
+        input_filename = tempfile.NamedTemporaryFile(dir=self.TEMP_DIR, delete=False)
+        input_filename.write("my_first_database.public.my_normal_table")
+        input_filename.flush()
+        additional = {
+            cursor_keys["normal_tables"]: [["public", "my_normal1_table", ""]],
+        }
+        cursor_side_effect = CursorSideEffect(additional=additional)
+        cursor_side_effect.second_values["normal_tables"] = [[]]
+        self.cursor.side_effect = cursor_side_effect.cursor_side_effect
+
+        self.db_singleton.side_effect = SingletonSideEffect().singleton_side_effect
+        options = {}
+        options.update(self.GpTransfer_options_defaults)
+        options.update(
+            input_file=input_filename.name,
+            source_map_file=source_map_filename.name,
+            base_port=15432,
+            max_line_length=32768,
+            work_base_dir="/tmp",
+            source_port=45432,
+            dest_port=15432,
+        )
+        return options
+
+
 class CursorSideEffect:
     def __init__(self, additional=None):
         self.first_values = {
-            "n.nspname, c.relname, c.relstorage": [["public", "my_table", ""]],
-            "select relname from pg_class r": ["my_relname"],
-            "select is_nullable, data_type, character_maximum_length,": [["t", "my_data_type", 255, 16, 1024, 1024, 1, 1024, "my_interval_type", "my_udt_name"]],
-            "select parkind, parlevel, parnatts, paratts": [["my_parkind", 1, 1, "1"]],
-            "SELECT fsname FROM pg_catalog.pg_filespace": ["public"],
-            "select ordinal_position from": [[1]],
+            cursor_keys["normal_tables"]: [["public", "my_normal_table", ""]],
+            cursor_keys["partition_tables"]: [["public", "my_table_partition1", ""]],
+            cursor_keys['relations']: ["my_relname"],
+            cursor_keys['table_info']: [
+                ["t", "my_data_type", 255, 16, 1024, 1024, 1, 1024, "my_interval_type", "my_udt_name"]],
+            cursor_keys['partition_info']: [["my_parkind", 1, "my_parnatts", "my_paratts"]],
+            cursor_keys['schema_name']: ["public"],
+            cursor_keys['create_schema']: ["my_schema"],
         }
         self.counters = dict((key, 0) for key in self.first_values.keys())
         self.second_values = self.first_values.copy()
@@ -396,7 +810,8 @@ class CursorSideEffect:
     def cursor_side_effect(self, *args):
         for key in self.first_values.keys():
             for arg in args[1:]:
-                if key in arg:
+                arg_oneline = " ".join(arg.split("\n"))
+                if key.search(arg_oneline):
                     if self.has_called(key):
                         return FakeCursor(self.second_values[key])
                     return FakeCursor(self.first_values[key])
@@ -423,15 +838,17 @@ class FakeCursor:
     def fetchall(self):
         return self.list
 
+# Represents partition info
 class SingletonSideEffect:
     def __init__(self, additional=None, multi_list=None):
         self.values = {
-                "select partitiontype": ["range"],
-                "select max(p1.partitionlevel)": [1],
-                "select schemaname, tablename from pg_catalog.pg_partitions": ["public", "my_table"],
-                "select c.oid": ["oid1", "oid1"],
-                "select parisdefault, parruleord, parrangestartincl,": ["f", "1", "t", "t", 100, 10, "", ""],
-                "select n.nspname, c.relname": ["public", "my_table"]
+            "select partitiontype": ["range"],
+            "select max(p1.partitionlevel)": [1],
+            "select schemaname, tablename from pg_catalog.pg_partitions": ["public", "my_table_partition1"],
+            "select c.oid": ["oid1", "oid1"],
+            "select parisdefault, parruleord, parrangestartincl,": ["f", "1", "t", "t", 100, 10, "", ""],
+            "select n.nspname, c.relname": ["public", "my_table_partition1"],
+            "SELECT count(*) FROM": [20]
         }
 
         self.counters = dict((key, 0) for key in self.values.keys())
