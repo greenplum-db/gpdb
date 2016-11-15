@@ -935,14 +935,14 @@ SendDummyPacket(void)
 	}
 
 	/*
-	* Send a dummy package to the interconnect listener, try 10 times
-	*/
+	 * Send a dummy package to the interconnect listener, try 10 times
+	 */
 	int counter = 0;
 	while (counter < 10)
 	{
 		counter++;
 		ret = sendto(sockfd, dummy_pkt, strlen(dummy_pkt), 0, rp->ai_addr, rp->ai_addrlen);
-		if(ret < 0)
+		if (ret < 0)
 		{
 			if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
 			{
