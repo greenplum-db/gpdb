@@ -292,7 +292,7 @@ def convert_report_filename_to_cdatabase_filename(context, report_file):
 
     ddboost_parent_dir = None
     if context.ddboost:
-        ddboost_parent_dir = context.get_backup_dir(directory='')
+        ddboost_parent_dir = context.get_backup_dir(timestamp=timestamp, directory='')
     return context.generate_filename("cdatabase", timestamp=timestamp, directory=ddboost_parent_dir)
 
 def get_lines_from_dd_file(filename, ddboost_storage_unit):

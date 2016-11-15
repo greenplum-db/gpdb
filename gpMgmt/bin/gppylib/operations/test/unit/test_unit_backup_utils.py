@@ -230,6 +230,22 @@ class BackupUtilsTestCase(unittest.TestCase):
         cdatabase_file = convert_report_filename_to_cdatabase_filename(self.context, report_file)
         self.assertEquals(expected_output, cdatabase_file)
 
+    def test_convert_report_filename_to_cdatabase_filename_with_prefix_default(self):
+        report_file = '/data/db_dumps/20160101/bar_gp_dump_20160101010101.rpt'
+        expected_output = '/data/db_dumps/20160101/bar_gp_cdatabase_1_1_20160101010101'
+        self.context.dump_prefix = 'bar_'
+        cdatabase_file = convert_report_filename_to_cdatabase_filename(self.context, report_file)
+        self.assertEquals(expected_output, cdatabase_file)
+
+    def test_convert_report_filename_to_cdatabase_filename_ddboost_with_earlier_date(self):
+        # use the date from the file to calculate the directory,
+        # not the current date
+        report_file = '/data/db_dumps/20080101/gp_dump_20080101010101.rpt'
+        expected_output = '/db_dumps/20080101/gp_cdatabase_1_1_20080101010101' #path in data domain
+        self.context.ddboost = True
+        cdatabase_file = convert_report_filename_to_cdatabase_filename(self.context, report_file)
+        self.assertEquals(expected_output, cdatabase_file)
+
     @patch('gppylib.operations.backup_utils.get_lines_from_file', return_value=['--', '-- Database creation', '--', '', "CREATE DATABASE bkdb WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = dcddev;"])
     def test_check_cdatabase_exists_default(self, mock):
         self.context.dump_database = 'bkdb'
@@ -855,13 +871,6 @@ class BackupUtilsTestCase(unittest.TestCase):
         self.context.dump_prefix = 'foo_'
         with self.assertRaisesRegexp(Exception, 'No full backup found for incremental'):
             get_latest_full_dump_timestamp(self.context)
-
-    def test_convert_report_filename_to_cdatabase_filename_with_prefix_default(self):
-        report_file = '/data/db_dumps/20160101/bar_gp_dump_20160101010101.rpt'
-        expected_output = '/data/db_dumps/20160101/bar_gp_cdatabase_1_1_20160101010101'
-        self.context.dump_prefix = 'bar_'
-        cdatabase_file = convert_report_filename_to_cdatabase_filename(self.context, report_file)
-        self.assertEquals(expected_output, cdatabase_file)
 
     @patch('gppylib.operations.backup_utils.Command.run')
     def test_backup_file_with_nbu_default(self, mock1):
