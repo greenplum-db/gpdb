@@ -16,9 +16,6 @@ all : devel
 # (release builds)
 .PHONY : dist dist_prof 
 
-# Targets which refresh files via rsync before building
-.PHONY : dbg opt both
-
 # Targets recognized by the PostgreSQL makefile (GNUmakefile)
 .PHONY : all install installdirs uninstall distprep
 .PHONY : clean distclean maintainer-clean
@@ -426,20 +423,6 @@ env.sh:
 ifneq "$(PERL_DIR)" ""
 	echo "export PERL5LIB=$(PERL_DIR)/lib/site_perl/5.12.4/x86_64-linux:$(PERL_DIR)/lib/site_perl/5.12.4:$(PERL_DIR)/lib/5.12.4/x86_64-linux:$(PERL_DIR)/lib/5.12.4" >> env.sh
 endif
-
-#---------------------------------------------------------------------
-# rsync + build
-#---------------------------------------------------------------------
-
-both : dbg opt ;
-
-dbg:
-	rsync -rlvt --exclude=devel*/ --exclude=dist*/ --exclude=LOG.* ./ devel$(BLD_BITS)/
-	cd devel$(BLD_BITS) && $(MAKE) BLD_HOME=`pwd` PG_LANG=true devel
-
-opt:
-	rsync -rlvt --exclude=devel*/ --exclude=dist*/ --exclude=LOG.* ./ dist$(BLD_BITS)/
-	cd dist$(BLD_BITS) && $(MAKE) GPROOT=`pwd` PG_LANG=true dist
 
 #---------------------------------------------------------------------
 # Development builds
