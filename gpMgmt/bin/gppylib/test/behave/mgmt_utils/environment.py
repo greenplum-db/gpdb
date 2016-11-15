@@ -55,9 +55,6 @@ def before_feature(context, feature):
         create_database(context, minirepro_db)
         context.conn = dbconn.connect(dbconn.DbURL(dbname=minirepro_db))
         context.dbname = minirepro_db
-        dbconn.execSQL(context.conn, "CREATE OR REPLACE FUNCTION gp_toolkit.gp_dump_query_oids(text) " \
-        "RETURNS text AS '$libdir/gpoptutils', 'gp_dump_query_oids' LANGUAGE C IMMUTABLE;")
-        dbconn.execSQL(context.conn, 'GRANT EXECUTE ON FUNCTION gp_toolkit.gp_dump_query_oids(text) TO public')
         dbconn.execSQL(context.conn, 'create table t1(a integer, b integer)')
         dbconn.execSQL(context.conn, 'create table t2(c integer, d integer)')
         dbconn.execSQL(context.conn, 'create table t3(e integer, f integer)')

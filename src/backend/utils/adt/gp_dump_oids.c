@@ -2,17 +2,10 @@
  * Copyright (c) 2015 Pivotal Inc. All Rights Reserved
  *
  * ---------------------------------------------------------------------
- *
- * The dynamically linked library created from this source can be reference by
- * creating a function in psql that references it. For example,
- *
- * CREATE FUNCTION gp_dump_query_oids(text)
- *	RETURNS text
- *	AS '$libdir/gpoptutils', 'gp_dump_query_oids'
- *	LANGUAGE C STRICT;
  */
-#include "postgres_fe.h"
 #include "postgres.h"
+
+#include "postgres_fe.h"
 #include "funcapi.h"
 #include "utils/builtins.h"
 #include "rewrite/rewriteHandler.h"
@@ -22,7 +15,6 @@
 
 Datum gp_dump_query_oids(PG_FUNCTION_ARGS);
 
-PG_MODULE_MAGIC;
 PG_FUNCTION_INFO_V1(gp_dump_query_oids);
 
 static void
@@ -83,50 +75,60 @@ traverseQueryOids
 Datum
 gp_dump_query_oids(PG_FUNCTION_ARGS)
 {
-	char *sqlText = text_to_cstring(PG_GETARG_TEXT_P(0));
-	List *queryList = pg_parse_and_rewrite(sqlText, NULL, 0);
-	ListCell *plc;
-	
-	StringInfoData relbuf, funcbuf;
+	char	   *sqlText = text_to_cstring(PG_GETARG_TEXT_P(0));
+	List	   *queryList;
+	List	   *expanded_queryList = NIL;
+	ListCell   *lc;
+	HASHCTL		ctl;
+	HTAB	   *relhtab;
+	HTAB	   *funchtab;
+	StringInfoData relbuf,
+				funcbuf;
+	StringInfoData str;
+
+	memset(&ctl, 0, sizeof(HASHCTL));
+	ctl.keysize = sizeof(Oid);
+	ctl.entrysize = sizeof(Oid);
+	ctl.hash = oid_hash;
+
+	relhtab = hash_create("relid hash table", 100, &ctl, HASH_ELEM | HASH_FUNCTION);
+	funchtab = hash_create("funcid hash table", 100, &ctl, HASH_ELEM | HASH_FUNCTION);
+
+	/*
+	 * Traverse through the query list. For EXPLAIN statements, the query list contains
+	 * an ExplainStmt with the raw parse tree of the actual query. Analyze the explained
+	 * queries instead of the ExplainStmt iteself.
+	 */
+	queryList = pg_parse_and_rewrite(sqlText, NULL, 0);
+	foreach(lc, queryList)
+	{
+		Query	   *query = (Query *) lfirst(lc);
+
+		if (query->commandType == CMD_UTILITY && IsA(query->utilityStmt, ExplainStmt))
+		{
+			ExplainStmt *estmt = (ExplainStmt *) query->utilityStmt;
+			List	   *l;
+
+			l = pg_analyze_and_rewrite(estmt->query, sqlText, NULL, 0);
+
+			expanded_queryList = list_concat(expanded_queryList, l);
+		}
+		else
+			expanded_queryList = lappend(expanded_queryList, query);
+	}
+
+	/* Then scan each Query and scrape any relation and function OIDs */
 	initStringInfo(&relbuf);
 	initStringInfo(&funcbuf);
-	
-	typedef struct OidHashEntry
-	{
-		Oid key;
-		bool value;
-	} OidHashEntry;
-	HASHCTL ctl;
-	ctl.keysize = sizeof(Oid);
-	ctl.entrysize = sizeof(OidHashEntry);
-	ctl.hash = oid_hash;
-	HTAB *relhtab = hash_create("relid hash table", 100, &ctl, HASH_ELEM | HASH_FUNCTION);
-	HTAB *funchtab = hash_create("funcid hash table", 100, &ctl, HASH_ELEM | HASH_FUNCTION);
-	
-	foreach(plc, queryList)
-	{
-		Query *query = (Query *) lfirst(plc);
-		if (CMD_UTILITY == query->commandType && T_ExplainStmt == query->utilityStmt->type)
-		{
-			Query *queryExplain = ((ExplainStmt *)query->utilityStmt)->query;
-			List *queryTree = QueryRewrite(queryExplain);
-			Assert(1 == list_length(queryTree));
-			query = (Query *) lfirst(list_head(queryTree));
-		}
-		traverseQueryOids(query, relhtab, &relbuf, funchtab, &funcbuf);
-	}
-	
-	hash_destroy(relhtab);
-	hash_destroy(funchtab);
 
-	StringInfoData str;
+	foreach(lc, expanded_queryList)
+	{
+		traverseQueryOids((Query *) lfirst(lc), relhtab, &relbuf, funchtab, &funcbuf);
+	}
+
+	/* Construct the final output */
 	initStringInfo(&str);
 	appendStringInfo(&str, "{\"relids\": \"%s\", \"funcids\": \"%s\"}", relbuf.data, funcbuf.data);
 
-	text *result = cstring_to_text(str.data);
-	pfree(relbuf.data);
-	pfree(funcbuf.data);
-	pfree(str.data);
-
-	PG_RETURN_TEXT_P(result);
+	PG_RETURN_TEXT_P(cstring_to_text(str.data));
 }

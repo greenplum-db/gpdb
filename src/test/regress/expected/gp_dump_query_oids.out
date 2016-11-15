@@ -1,0 +1,33 @@
+-- Test the built-in gp_dump_query function.
+SELECT gp_dump_query_oids('SELECT 123');
+      gp_dump_query_oids       
+-------------------------------
+ {"relids": "", "funcids": ""}
+(1 row)
+
+SELECT gp_dump_query_oids('SELECT * FROM pg_proc');
+        gp_dump_query_oids         
+-----------------------------------
+ {"relids": "1255", "funcids": ""}
+(1 row)
+
+SELECT gp_dump_query_oids('SELECT length(proname) FROM pg_proc');
+            gp_dump_query_oids             
+-------------------------------------------
+ {"relids": "1255", "funcids": "1317,406"}
+(1 row)
+
+-- with EXPLAIN
+SELECT gp_dump_query_oids('explain SELECT length(proname) FROM pg_proc');
+            gp_dump_query_oids             
+-------------------------------------------
+ {"relids": "1255", "funcids": "1317,406"}
+(1 row)
+
+-- with a multi-query statement
+SELECT gp_dump_query_oids('SELECT length(proname) FROM pg_proc; SELECT abs(relpages) FROM pg_class');
+                 gp_dump_query_oids                  
+-----------------------------------------------------
+ {"relids": "1255,1259", "funcids": "1317,406,1397"}
+(1 row)
+
