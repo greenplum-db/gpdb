@@ -15,8 +15,6 @@ drop role "geography" ;
 drop role "ISO_ro_1";
 drop role "iso123" ;
 
-drop GROUP prachgrp;
-
 DROP RESOURCE QUEUE db_resque2;
 DROP RESOURCE QUEUE DB_RESque3;
 DROP RESOURCE QUEUE DB_RESQUE4;
@@ -145,17 +143,6 @@ set optimizer_disable_missing_stats_collection = on;
     CREATE SEQUENCE serial123 START 101;
 
 
---Create indexes
-
-    create table empl1(id integer,empname varchar,sal integer) distributed randomly;
-    insert into empl1 values (50001,'mohit',1000);
-    insert into empl1 values (50002,'lalit',2000);
-    insert into empl1 select i,i||'_'||repeat('text',100),i from generate_series(1,100)i;
-
-    create index empl_idx ON empl1(id) ;
-    select count(*) from empl1;
-    --drop table empl1;
-
 --REINDEX bitmap index : Note: create bitmap index then vacuum leads to corrupted bitmap
 
     create table bm_test (i int, j int) distributed randomly;
@@ -181,11 +168,6 @@ set optimizer_disable_missing_stats_collection = on;
     CLUSTER clusterindex on table2; 
     drop index clusterindex;
 
---Create Group
-    \echo -- start_ignore
-    create GROUP prachgrp; 
-    --drop GROUP prachgrp;
-    \echo -- end_ignore
 --Create Domain
     
     create DOMAIN country_code1 char(2) NOT NULL;
@@ -630,22 +612,6 @@ timestamp|{OPEXPR :opno 2064 :opfuncid 0 :opresulttype 16 :opretset false :args 
 timestamptz|{OPEXPR :opno 1324 :opfuncid 0 :opresulttype 16 :opretset false :args ({COERCETODOMAINVALUE :typeId 1184 :typeMod -1} {CONST :consttype 1184 :constlen 8 :constbyval false :constisnull false :constvalue 8 [ -64 -59 114 -95 -5 -56 0 0 ]})}|{OPEXPR :opno 1324 :opfuncid 0 :opresulttype 16 :opretset false :args ({COERCETODOMAINVALUE :typeId 1184 :typeMod -1} {CONST :consttype 1184 :constlen 8 :constbyval true :constisnull false :constvalue 8 [ -64 -59 114 -95 -5 -56 0 0 ]})}
 \.
 
-create view ugtest1 as select oid, sum(reltuples) from pg_class group by 1
-  having(sum(reltuples) > 100) order by 2;
-
-create view ugtest2 as select 10000000000000 as a,
-'2007-01-01 11:11:11'::timestamp as b,
-'2007-01-01 11:11:11 PST'::timestamptz as c,
-'200000.0000'::float4 as d,
-'2000.00000000'::float8 as e,
-123 as f;
-
-create view ugtest3 as select * from pg_database limit 5;
-
-create view ugtest4 as select relname, length(relname) from pg_class
-where oid in (select distinct oid from pg_attribute);
-
-create view ugtest5 as select array[ '100000000000000'::int8 ] as test;
 --Alter table
 
 --Rename Table
@@ -1699,13 +1665,6 @@ CREATE OR REPLACE FUNCTION add(integer, integer) RETURNS integer
     LANGUAGE SQL CONTAINS SQL
     STABLE 
     RETURNS NULL ON NULL INPUT; 
-CREATE OR REPLACE FUNCTION increment(i integer) RETURNS 
-integer AS $$ 
-        BEGIN 
-                RETURN i + 1; 
-        END; 
-$$ LANGUAGE plpgsql NO SQL
-VOLATILE; 
 
 
 CREATE FUNCTION dup(in int, out f1 int, out f2 text) 
@@ -3805,45 +3764,8 @@ CREATE TABLE col_check_constraint  (
 INSERT into col_check_constraint  values (100,'text1');
 INSERT into col_check_constraint  values (200,'text2');
 INSERT into col_check_constraint  values (300,'text3');
---Drop tables and functions
-Drop table if exists srf_t1;
-Drop table if exists srf_t2;
-Drop table if exists srf_t3;
-Drop function if exists srf_vect();
 
 --Set Returning Functions
-
-create table srf_t1 (i int, t text);
-insert into srf_t1 select i % 10, (i % 10)::text  from generate_series(1, 100) i;
-create index srf_t1_idx on srf_t1 using bitmap (i);
-select count(*) from srf_t1 where i=1;
-
-
-create table srf_t2 (i int, j int, k int) distributed by (k);
-create index srf_t2_i_idx on srf_t2 using bitmap(i);
-insert into srf_t2 select 1,
-case when (i % (16 * 16 + 8)) = 0 then 2  else 1 end, 1
-from generate_series(1, 16 * 16 * 16) i;
-select count(*) from srf_t2 where i = 1;
-select count(*) from srf_t2 where j = 2;
-
-
-create table srf_t3 (i int, j int, k int) distributed by (k);
-create index srf_t3_i_idx on srf_t3 using bitmap(i);
-insert into srf_t3 select i, 1, 1 from
-generate_series(1, 8250 * 8) g, generate_series(1, 2) as i;
-
-insert into srf_t3 select 17, 1, 1 from generate_series(1, 16 * 16) i;
-insert into srf_t3 values(17, 2, 1);
-
-insert into srf_t3 select 17, 1, 1 from generate_series(1, 16 * 16) i;
-
-insert into srf_t3 select i, 1, 1 from
-generate_series(1, 8250 * 8) g, generate_series(1, 2) i;
-select count(*) from srf_t3 where i = 1;
-select count(*) from srf_t3 where i = 17;
-
-
 create function srf_vect() returns void as $proc$
 <<lbl>>declare a integer; b varchar; c varchar; r record;
 begin
@@ -3928,8 +3850,6 @@ DROP USER test_user_1;
 DROP USER db_user13;
 DROP USER testuser;
 
-DROP GROUP prachgrp; 
-DROP GROUP prachgrp; 
 DROP GROUP db_grp1;
 DROP GROUP db_user_grp1;
 DROP GROUP db_group1;
