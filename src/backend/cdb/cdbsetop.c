@@ -53,7 +53,6 @@ GpSetOpType choose_setop_type(List *planlist)
 	bool ok_general = TRUE;
 	bool ok_partitioned = TRUE;
 	bool ok_replicated = TRUE;
-	bool ok_single_qd = TRUE;
 	bool ok_single_qe = TRUE;
 	bool has_partitioned = FALSE;
 	
@@ -100,10 +99,8 @@ GpSetOpType choose_setop_type(List *planlist)
 		return PSETOP_PARALLEL_PARTITIONED;
 	else if ( ok_single_qe )
 		return PSETOP_SEQUENTIAL_QE;
-	else if ( ok_single_qd )
-		return PSETOP_SEQUENTIAL_QD;
-	
-	return PSETOP_NONE;
+
+	return PSETOP_SEQUENTIAL_QD;
 }
 
 
