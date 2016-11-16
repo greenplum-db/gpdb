@@ -1,21 +1,8 @@
 \echo -- start_ignore
-drop database db_test_bed;
-drop database db_tobe_vacuum;
-drop database db_tobe_vacuum_analyze;
-drop database db_test;
-drop database ao_db;
-drop database partition_db;
 drop database vacuum_data_db;
 drop database unvacuum_data_db;
 drop database "TEST_DB";
 drop database "TEST_db";
-drop database alter_table_db;
-drop database cancel_trans;
-drop database ao_table_drop_col1;
-drop database ao_table_drop_col2;
-drop database ao_table_drop_col3;
-drop database co_db;
-drop database co_table_drop_col3;
 
 DROP USER "MAIN_USER";
 DROP USER "sub_user" ;
@@ -105,8 +92,6 @@ DROP ROLE admin ;
 --
 \echo -- end_ignore
 set optimizer_disable_missing_stats_collection = on;
-create database ao_db;
-CREATE DATABASE db_test_bed;
 
 --
 \c regression
@@ -194,7 +179,7 @@ CREATE DATABASE db_test_bed;
                                                                     
  create index clusterindex on table2(col1);
     CLUSTER clusterindex on table2; 
-    --drop index clusterindex;
+    drop index clusterindex;
 
 --Create Group
     \echo -- start_ignore
@@ -215,7 +200,6 @@ create rule one as on insert to bar_rule_ao do instead update foo_rule_ao set a=
 create rule two as on insert to bar_rule_ao do instead delete from foo_rule_ao where a=1;
 
 --Create User
-\echo -- start_ignore
 
 --with uppercase
     create user "MAIN_USER" login password 'MAIN_USER';
@@ -257,7 +241,6 @@ create rule two as on insert to bar_rule_ao do instead delete from foo_rule_ao w
 
     create role "iso123" login password 'iso123';
     --drop role "iso123" ;
-   \echo  -- end_ignore
 --Create schema
     
 --with uppercase
@@ -293,8 +276,6 @@ create rule two as on insert to bar_rule_ao do instead delete from foo_rule_ao w
     --drop database "TEST_db";
 
 --
-
-\c regression
 
 
 --Table with all data types
@@ -438,7 +419,7 @@ CREATE LOCAL TEMP TABLE on_commit1 (
 --Table Creation using Create Table As (CTAS) with both the new tables columns being explicitly or implicitly created
 
 
-    CREATE TABLE test_table(
+    CREATE TABLE test_table4(
     text_col text,
     bigint_col bigint,
     char_vary_col character varying(30),
@@ -453,19 +434,19 @@ CREATE LOCAL TEMP TABLE on_commit1 (
     date_column date,
     col_set_default numeric)DISTRIBUTED RANDOMLY;
 
-insert into test_table values ('0_zero', 0, '0_zero', 0, 0, 0, '{0}', 0, 0, '2004-10-19 10:23:54', '2004-10-19 10:23:54+02', '1-1-2000',0);
-    insert into test_table values ('1_zero', 1, '1_zero', 1, 1, 1, '{1}', 1, 1, '2005-10-19 10:23:54', '2005-10-19 10:23:54+02', '1-1-2001',1);
-    insert into test_table values ('2_zero', 2, '2_zero', 2, 2, 2, '{2}', 2, 2, '2006-10-19 10:23:54', '2006-10-19 10:23:54+02', '1-1-2002',2);
-    insert into test_table select i||'_'||repeat('text',100),i,i||'_'||repeat('text',3),i,i,i,'{3}',i,i,'2006-10-19 10:23:54', '2006-10-19 10:23:54+02', '1-1-2002',i from generate_series(3,100)i;
+insert into test_table4 values ('0_zero', 0, '0_zero', 0, 0, 0, '{0}', 0, 0, '2004-10-19 10:23:54', '2004-10-19 10:23:54+02', '1-1-2000',0);
+insert into test_table4 values ('1_zero', 1, '1_zero', 1, 1, 1, '{1}', 1, 1, '2005-10-19 10:23:54', '2005-10-19 10:23:54+02', '1-1-2001',1);
+insert into test_table4 values ('2_zero', 2, '2_zero', 2, 2, 2, '{2}', 2, 2, '2006-10-19 10:23:54', '2006-10-19 10:23:54+02', '1-1-2002',2);
+insert into test_table4 select i||'_'||repeat('text',100),i,i||'_'||repeat('text',3),i,i,i,'{3}',i,i,'2006-10-19 10:23:54', '2006-10-19 10:23:54+02', '1-1-2002',i from generate_series(3,100)i;
     
-CREATE TABLE ctas_table1 AS SELECT * FROM test_table;
-CREATE TABLE ctas_table2 AS SELECT text_col,bigint_col,char_vary_col,numeric_col FROM test_table;
+CREATE TABLE ctas_table1 AS SELECT * FROM test_table4;
+CREATE TABLE ctas_table2 AS SELECT text_col,bigint_col,char_vary_col,numeric_col FROM test_table4;
     
     
 --Create Table and then Select Into / Insert
     
 
-    CREATE TABLE test_table2(
+    CREATE TABLE test_table5(
     int_array_col int[],
     before_rename_col int4, 
     change_datatype_col numeric,
@@ -474,7 +455,7 @@ CREATE TABLE ctas_table2 AS SELECT text_col,bigint_col,char_vary_col,numeric_col
     date_column date
 ) DISTRIBUTED RANDOMLY;
     
-insert into test_table2(int_array_col ,    before_rename_col ,    change_datatype_col ,    a_ts_without ,b_ts_with ,date_column)(select    int_array_col ,    before_rename_col ,    change_datatype_col ,    a_ts_without ,b_ts_with ,date_column from test_table);
+insert into test_table5(int_array_col ,    before_rename_col ,    change_datatype_col ,    a_ts_without ,b_ts_with ,date_column)(select    int_array_col ,    before_rename_col ,    change_datatype_col ,    a_ts_without ,b_ts_with ,date_column from test_table4);
 
 
 --Toast Table
@@ -667,20 +648,7 @@ where oid in (select distinct oid from pg_attribute);
 create view ugtest5 as select array[ '100000000000000'::int8 ] as test;
 --Alter table
 
-create database alter_table_db;
-\c alter_table_db
-
 --Rename Table
-
-          CREATE TABLE table_name(
-          col_text text,
-          col_numeric numeric
-          ) DISTRIBUTED RANDOMLY;
-
-    	insert into table_name values ('0_zero',0);
-    	insert into table_name values ('1_one',1);
-    	insert into table_name values ('2_two',2);
-        insert into table_name select i||'_'||repeat('text',100),i from generate_series(1,100)i;
 
           ALTER TABLE table_name RENAME TO table_new_name;
 
@@ -888,19 +856,6 @@ create database alter_table_db;
 
 --SET WITHOUT OIDS
 
-          CREATE TABLE table_with_oid (
-          text_col text,
-          bigint_col bigint,
-          char_vary_col character varying(30),
-          numeric_col numeric
-          ) WITH OIDS DISTRIBUTED RANDOMLY;
-\echo -- start_ignore
-          insert into table_with_oid values ('0_zero', 0, '0_zero', 0);
-          insert into table_with_oid values ('1_zero', 1, '1_zero', 1);
-          insert into table_with_oid values ('2_zero', 2, '2_zero', 2);
-          insert into table_with_oid select i||'_'||repeat('text',100),i,i||'_'||repeat('text',5),i from generate_series(3,100)i;
-
-\echo -- end_ignore
           ALTER TABLE table_with_oid SET WITHOUT OIDS;
 
 --SET & RESET ( storage_parameter = value , ... )
@@ -1007,10 +962,6 @@ create database alter_table_db;
 --TODO - drop column from partitioned table
 
 --Defining Multi-level Partitions
-
-create database partition_db;
-\c partition_db
-
  
 CREATE TABLE sales (trans_id int, date date, amount 
 decimal(9,2), region text) 
@@ -1469,8 +1420,7 @@ CREATE EXTERNAL TABLE ext_table1 (
 ENCODING 'UTF8';
 DROP EXTERNAL TABLE ext_table1;
 
-CREATE DATABASE cancel_trans;
-\c cancel_trans
+\c regression
 
 CREATE TABLE employee(ID int,name varchar(10),salary real,start_date date,city varchar(10),region char(1));
 
@@ -1528,7 +1478,7 @@ ROLLBACK;
 
 
 BEGIN;
-    CREATE TABLE test_drop_column(
+    CREATE TABLE test_drop_column_2(
     toast_col text,
     bigint_col bigint,
     char_vary_col character varying(30),
@@ -1544,33 +1494,33 @@ BEGIN;
     col_with_default_text character varying(30) DEFAULT 'test1'
     ) distributed by (col_with_constraint);
 
-    insert into test_drop_column values ('0_zero', 0, '0_zero', 0, 0, 0, '{0}', 0, '2004-10-19 10:23:54', '2004-10-19 10:23:54+02', '1-1-2000',0);
-    insert into test_drop_column values ('1_zero', 1, '1_zero', 1, 1, 1, '{1}', 1, '2005-10-19 10:23:54', '2005-10-19 10:23:54+02', '1-1-2001',1);
-    insert into test_drop_column values ('2_zero', 2, '2_zero', 2, 2, 2, '{2}', 2, '2006-10-19 10:23:54', '2006-10-19 10:23:54+02', '1-1-2002',2);
-    insert into test_drop_column select i||'_'||repeat('text',100),i,i||'_'||repeat('text',3),i,i,i,'{3}',i,'2006-10-19 10:23:54', '2006-10-19 10:23:54+02', '1-1-2002',i,i||'_'||repeat('text',3) from generate_series(3,500)i;
+    insert into test_drop_column_2 values ('0_zero', 0, '0_zero', 0, 0, 0, '{0}', 0, '2004-10-19 10:23:54', '2004-10-19 10:23:54+02', '1-1-2000',0);
+    insert into test_drop_column_2 values ('1_zero', 1, '1_zero', 1, 1, 1, '{1}', 1, '2005-10-19 10:23:54', '2005-10-19 10:23:54+02', '1-1-2001',1);
+    insert into test_drop_column_2 values ('2_zero', 2, '2_zero', 2, 2, 2, '{2}', 2, '2006-10-19 10:23:54', '2006-10-19 10:23:54+02', '1-1-2002',2);
+    insert into test_drop_column_2 select i||'_'||repeat('text',100),i,i||'_'||repeat('text',3),i,i,i,'{3}',i,'2006-10-19 10:23:54', '2006-10-19 10:23:54+02', '1-1-2002',i,i||'_'||repeat('text',3) from generate_series(3,500)i;
 
 --drop toast column
 
-    ALTER TABLE test_drop_column DROP COLUMN toast_col ;
+    ALTER TABLE test_drop_column_2 DROP COLUMN toast_col ;
 
 --drop non toast column
 
-    ALTER TABLE test_drop_column DROP COLUMN non_toast_col ;
+    ALTER TABLE test_drop_column_2 DROP COLUMN non_toast_col ;
 
 --drop default
 
-    ALTER TABLE test_drop_column ALTER COLUMN col_with_default_text DROP DEFAULT;
+    ALTER TABLE test_drop_column_2 ALTER COLUMN col_with_default_text DROP DEFAULT;
 
-    ALTER TABLE test_drop_column ALTER COLUMN col_with_default_text SET DEFAULT 'test1';
+    ALTER TABLE test_drop_column_2 ALTER COLUMN col_with_default_text SET DEFAULT 'test1';
 
-    ALTER TABLE test_drop_column ADD COLUMN added_col character varying(30);
+    ALTER TABLE test_drop_column_2 ADD COLUMN added_col character varying(30);
 
-    ALTER TABLE test_drop_column RENAME COLUMN bigint_col TO after_rename_col; 
+    ALTER TABLE test_drop_column_2 RENAME COLUMN bigint_col TO after_rename_col; 
 
-    ALTER TABLE test_drop_column ALTER COLUMN numeric_col SET NOT NULL; 
+    ALTER TABLE test_drop_column_2 ALTER COLUMN numeric_col SET NOT NULL; 
 
 ROLLBACK;
-\c db_test_bed
+
 CREATE RESOURCE QUEUE db_resque1 ACTIVE THRESHOLD 2 COST THRESHOLD 2000.00;
 CREATE RESOURCE QUEUE db_resque2 COST THRESHOLD 3000.00 OVERCOMMIT;
 CREATE RESOURCE QUEUE DB_RESque3 COST THRESHOLD 2000.0 NOOVERCOMMIT;
@@ -1581,7 +1531,6 @@ ALTER RESOURCE QUEUE db_resque2 COST THRESHOLD 300.00 NOOVERCOMMIT;
 ALTER RESOURCE QUEUE DB_RESque3 COST THRESHOLD 200.0 OVERCOMMIT;
 ALTER RESOURCE QUEUE DB_RESQUE4 ACTIVE THRESHOLD 5  IGNORE THRESHOLD  500.0;
 
-\c db_test_bed
 CREATE ROLE db_role1 WITH SUPERUSER CREATEDB  INHERIT LOGIN CONNECTION LIMIT  1 ENCRYPTED PASSWORD 'passwd';
 CREATE ROLE db_role2 WITH NOSUPERUSER NOCREATEDB  NOINHERIT NOLOGIN  UNENCRYPTED PASSWORD 'passwd';
 CREATE ROLE db_role3 WITH NOCREATEROLE NOCREATEUSER;
@@ -1609,7 +1558,7 @@ ALTER ROLE db_role8 RENAME TO new_role8;
 CREATE SCHEMA db_schema1;
 ALTER ROLE db_role9 SET search_path TO db_schema1;
 ALTER ROLE db_role9 RESET search_path ;
-\c db_test_bed
+
 CREATE USER db_user1 WITH SUPERUSER CREATEDB  INHERIT LOGIN CONNECTION LIMIT  1 ENCRYPTED PASSWORD 'passwd';
 CREATE USER db_user2 WITH NOSUPERUSER NOCREATEDB  NOINHERIT NOLOGIN  UNENCRYPTED PASSWORD 'passwd';
 CREATE USER db_user3 WITH NOCREATEROLE NOCREATEUSER;
@@ -1638,7 +1587,7 @@ ALTER USER db_user8 RENAME TO new_user8;
 CREATE SCHEMA db_schema2;
 ALTER USER db_user9 SET search_path TO db_schema2;
 ALTER USER db_user9 RESET search_path ;
-\c db_test_bed
+
 CREATE ROLE grp_role1;
 CREATE ROLE grp_role2;
 CREATE GROUP db_group1 WITH SUPERUSER CREATEDB  INHERIT LOGIN CONNECTION LIMIT  1 ENCRYPTED PASSWORD 'passwd';
@@ -1661,7 +1610,7 @@ ALTER GROUP db_grp12 ADD USER test_user_1;
 ALTER GROUP db_grp12 DROP USER test_user_1;
 ALTER GROUP db_grp12 RENAME TO new_db_grp12;
 ALTER GROUP new_db_grp12 RENAME TO db_grp12;
-\c db_test_bed
+
 CREATE TABLE test_emp (ename varchar(20),eno int,salary int,ssn int,gender char(1)) distributed by (ename,eno,gender);
 
 CREATE UNIQUE INDEX eno_idx ON test_emp (eno);
@@ -1672,7 +1621,7 @@ CREATE  INDEX ename_idx ON test_emp  (ename) WITH (fillfactor =80);
 ALTER INDEX gender_bmp_idx RENAME TO new_gender_bmp_idx;
 ALTER INDEX ename_idx SET (fillfactor =100);
 ALTER INDEX ename_idx RESET (fillfactor) ;
-\c db_test_bed
+
 CREATE TEMPORARY SEQUENCE  db_seq1 START WITH 101;
 CREATE TEMP SEQUENCE  db_seq2 START 101;
 CREATE SEQUENCE db_seq3  INCREMENT BY 2 MINVALUE 1 MAXVALUE  100;
@@ -1695,7 +1644,6 @@ ALTER SEQUENCE db_seq6 SET SCHEMA db_schema9;
 ALTER SEQUENCE db_seq7  OWNED BY test_tbl.col2;
 ALTER SEQUENCE db_seq7  OWNED BY NONE;
 
-\c db_test_bed
 
 -- MPP-8466: set this GUC so that we can create database with latin8 encoding
 -- 20100412: Ngoc
@@ -1714,19 +1662,19 @@ ALTER DATABASE new_db_name1 RENAME TO db_name1;
 
 CREATE SCHEMA myschema;
 ALTER DATABASE db_name1 SET search_path TO myschema, public, pg_catalog;
-\echo -- start_ignore
 ALTER DATABASE db_name1 RESET search_path;
-\echo -- end_ignore
-\c db_test_bed
+
 CREATE USER db_user13;
 CREATE DATABASE db_schema_test owner db_user13;
-\c  db_schema_test
+\c db_schema_test
 CREATE SCHEMA db_schema5 AUTHORIZATION db_user13 ;
 CREATE SCHEMA AUTHORIZATION db_user13;
 
 ALTER SCHEMA db_user13 RENAME TO db_schema6;
 ALTER SCHEMA  db_schema6 OWNER TO db_user13;
-\c db_test_bed
+
+\c regression
+
 CREATE DOMAIN domain_us_zip_code AS TEXT CHECK ( VALUE ~ E'\\d{5}$' OR VALUE ~ E'\\d{5}-\\d{4}$');
 CREATE DOMAIN domain_1 AS int DEFAULT 1 CONSTRAINT cons_not_null NOT NULL;
 CREATE DOMAIN domain_2 AS int CONSTRAINT cons_null NULL;
@@ -1745,7 +1693,6 @@ ALTER DOMAIN domain_3 ADD CONSTRAINT  domain_constraint3 CHECK (char_length(VALU
 ALTER DOMAIN domain_3 DROP CONSTRAINT domain_constraint3 CASCADE;
 ALTER DOMAIN domain_3 OWNER TO domain_owner;
 ALTER DOMAIN domain_3 SET SCHEMA domain_schema;
-\c db_test_bed
 
 CREATE OR REPLACE FUNCTION add(integer, integer) RETURNS integer 
     AS 'select $1 + $2;' 
@@ -1795,7 +1742,7 @@ ALTER FUNCTION dup(in int, out f1 int, out f2 text) RETURNS NULL ON NULL INPUT S
 ALTER FUNCTION dup(in int, out f1 int, out f2 text) CALLED ON NULL INPUT VOLATILE EXTERNAL SECURITY DEFINER;
 ALTER FUNCTION dup(in int, out f1 int, out f2 text) IMMUTABLE STRICT SECURITY INVOKER;
 ALTER FUNCTION dup(in int, out f1 int, out f2 text) IMMUTABLE STRICT SECURITY DEFINER;
-\c db_test_bed
+
 CREATE FUNCTION scube_accum(numeric, numeric) RETURNS 
 numeric 
     AS 'select $1 + $2 * $2 * $2' 
@@ -1843,7 +1790,7 @@ ALTER AGGREGATE scube(numeric) RENAME TO new_scube;
 ALTER AGGREGATE new_scube(numeric) RENAME TO scube;
 ALTER AGGREGATE scube(numeric) OWNER TO agg_owner;
 ALTER AGGREGATE scube(numeric) SET SCHEMA agg_schema;
-\c db_test_bed
+
 CREATE ROLE sally;
 CREATE ROLE ron;
 CREATE ROLE ken;
@@ -1868,7 +1815,6 @@ CREATE TABLE foo3 (i int, j int) DISTRIBUTED  RANDOMLY;
 ALTER TABLE foo3 OWNER TO ken;
 
 REASSIGN OWNED BY sally,ron,ken to admin;
-\c db_test_bed
     CREATE TABLE test_table(
     text_col text,
     bigint_col bigint,
@@ -1912,7 +1858,7 @@ CREATE TABLE err_table1 (cmdtime timestamp with time zone, relname text, filenam
     insert into test_table1 select i||'_'||repeat('text',100),i,i||'_'||repeat('text',3),i,i,i,'{3}',i,i,'2006-10-19 10:23:54', '2006-10-19 10:23:54+02', '1-1-2002',i from generate_series(3,100)i;
 
 
-    CREATE TABLE test_table2(
+    CREATE TABLE test_table3(
     text_col text,
     bigint_col bigint,
     char_vary_col character varying(30),
@@ -1926,28 +1872,25 @@ CREATE TABLE err_table1 (cmdtime timestamp with time zone, relname text, filenam
     b_ts_with timestamp with time zone,
     date_column date,
     col_set_default numeric) WITH OIDS DISTRIBUTED RANDOMLY;
-\echo -- start_ignore
-    insert into test_table2 values ('0_zero', 0, '0_zero', 0, 0, 0, '{0}', 0, 0, '2004-10-19 10:23:54', '2004-10-19 10:23:54+02', '1-1-2000',0);
-    insert into test_table2 values ('1_zero', 1, '1_zero', 1, 1, 1, '{1}', 1, 1, '2005-10-19 10:23:54', '2005-10-19 10:23:54+02', '1-1-2001',1);
-    insert into test_table2 values ('2_zero', 2, '2_zero', 2, 2, 2, '{2}', 2, 2, '2006-10-19 10:23:54', '2006-10-19 10:23:54+02', '1-1-2002',2);
-    insert into test_table2 select i||'_'||repeat('text',100),i,i||'_'||repeat('text',3),i,i,i,'{3}',i,i,'2006-10-19 10:23:54', '2006-10-19 10:23:54+02', '1-1-2002',i from generate_series(3,100)i;
-\echo -- end_ignore
-COPY (select * from test_table) TO 'data/test1_file_copy' WITH DELIMITER AS ',' NULL AS 'null string' ESCAPE AS E'\n' CSV HEADER QUOTE AS '"' FORCE QUOTE char_vary_col;
+    insert into test_table3 values ('0_zero', 0, '0_zero', 0, 0, 0, '{0}', 0, 0, '2004-10-19 10:23:54', '2004-10-19 10:23:54+02', '1-1-2000',0);
+    insert into test_table3 values ('1_zero', 1, '1_zero', 1, 1, 1, '{1}', 1, 1, '2005-10-19 10:23:54', '2005-10-19 10:23:54+02', '1-1-2001',1);
+    insert into test_table3 values ('2_zero', 2, '2_zero', 2, 2, 2, '{2}', 2, 2, '2006-10-19 10:23:54', '2006-10-19 10:23:54+02', '1-1-2002',2);
+    insert into test_table3 select i||'_'||repeat('text',100),i,i||'_'||repeat('text',3),i,i,i,'{3}',i,i,'2006-10-19 10:23:54', '2006-10-19 10:23:54+02', '1-1-2002',i from generate_series(3,100)i;
+COPY (select * from test_table3) TO 'data/test1_file_copy' WITH DELIMITER AS ',' NULL AS 'null string' ESCAPE AS E'\n' CSV HEADER QUOTE AS '"' FORCE QUOTE char_vary_col;
 
 
-COPY (select * from test_table) TO 'data/test1_file_copy' WITH HEADER DELIMITER AS ',' NULL AS 'null string' ESCAPE AS E'\n' CSV QUOTE AS '"' FORCE QUOTE char_vary_col;
+COPY (select * from test_table3) TO 'data/test1_file_copy' WITH HEADER DELIMITER AS ',' NULL AS 'null string' ESCAPE AS E'\n' CSV QUOTE AS '"' FORCE QUOTE char_vary_col;
 
 
-COPY test_table2(   text_col,    bigint_col,    char_vary_col,    numeric_col,    int_col,    float_col,    int_array_col,    before_rename_col,    change_datatype_col,    a_ts_without ,    b_ts_with ,    date_column,    col_set_default)
+COPY test_table3(   text_col,    bigint_col,    char_vary_col,    numeric_col,    int_col,    float_col,    int_array_col,    before_rename_col,    change_datatype_col,    a_ts_without ,    b_ts_with ,    date_column,    col_set_default)
  TO 'data/test2_file_copy' WITH OIDS  DELIMITER AS ','  NULL AS 'null string' ESCAPE AS 'OFF' ;
 
 
-COPY test_table2 (   text_col,    bigint_col,    char_vary_col,    numeric_col,    int_col,    float_col,    int_array_col,    before_rename_col,    change_datatype_col,    a_ts_without ,    b_ts_with ,    date_column,    col_set_default) FROM 'data/test1_file_copy' WITH DELIMITER AS ',' NULL AS 'null string' ESCAPE AS E'\n' CSV HEADER QUOTE AS '"' FORCE NOT NULL date_column LOG ERRORS SEGMENT REJECT LIMIT 10 ROWS  ;
+COPY test_table3 (   text_col,    bigint_col,    char_vary_col,    numeric_col,    int_col,    float_col,    int_array_col,    before_rename_col,    change_datatype_col,    a_ts_without ,    b_ts_with ,    date_column,    col_set_default) FROM 'data/test1_file_copy' WITH DELIMITER AS ',' NULL AS 'null string' ESCAPE AS E'\n' CSV HEADER QUOTE AS '"' FORCE NOT NULL date_column LOG ERRORS SEGMENT REJECT LIMIT 10 ROWS  ;
 
-COPY test_table2 (   text_col,    bigint_col,    char_vary_col,    numeric_col,    int_col,    float_col,    int_array_col,    before_rename_col,    change_datatype_col,    a_ts_without ,    b_ts_with ,    date_column,    col_set_default) FROM 'data/test2_file_copy' WITH OIDS DELIMITER AS ',' NULL AS 'null string' ESCAPE AS 'OFF' LOG ERRORS SEGMENT REJECT LIMIT 10 PERCENT  ;
+COPY test_table3 (   text_col,    bigint_col,    char_vary_col,    numeric_col,    int_col,    float_col,    int_array_col,    before_rename_col,    change_datatype_col,    a_ts_without ,    b_ts_with ,    date_column,    col_set_default) FROM 'data/test2_file_copy' WITH OIDS DELIMITER AS ',' NULL AS 'null string' ESCAPE AS 'OFF' LOG ERRORS SEGMENT REJECT LIMIT 10 PERCENT  ;
 
 
-\c db_test_bed
 CREATE OR REPLACE TEMP VIEW vista AS SELECT 'Hello World'; 
 CREATE TEMPORARY VIEW vista1 AS SELECT text 'Hello World' AS hello;
 CREATE TABLE test_emp_view (ename varchar(20),eno int,salary int,ssn int,gender char(1)) distributed by (ename,eno,gender);
@@ -2164,7 +2107,7 @@ $$ LANGUAGE plpgsql NO SQL;
 create view sch_fn_view2 as select  sch_multiply(4,5);
 
 Select * from sch_fn_view2;
-\c db_test_bed
+
 CREATE OR REPLACE FUNCTION int4(boolean)
   RETURNS int4 AS
 $BODY$
@@ -2174,12 +2117,9 @@ SELECT CASE WHEN $1 THEN 1 ELSE 0 END;
 $BODY$
   LANGUAGE 'sql' IMMUTABLE CONTAINS SQL;
 
-\echo -- start_ignore
 CREATE CAST (boolean AS int4) WITH FUNCTION int4(boolean) AS ASSIGNMENT;
 
 CREATE CAST (varchar AS text) WITHOUT FUNCTION AS IMPLICIT;
-\echo -- end_ignore
-\c ao_db
 
 -- Heap Table 
 
@@ -2282,7 +2222,6 @@ select count(*) from retail_zlib1 ;
 
 -- Adding checkpoint
 checkpoint;
-\c db_test_bed
 
 
 CREATE TABLE heap_column_with_32k(
@@ -2348,7 +2287,6 @@ insert into co_column_with_32k values ('1_zero','1_zero', 1, '1_zero', 1, 1, 1, 
 insert into co_column_with_32k values ('2_zero','2_zero', 2, '2_zero', 2, 2, 2, '{2}', 2, 2, 2, '2006-10-19 10:23:54', '2006-10-19 10:23:54+02', '1-1-2002');
 insert into co_column_with_32k select i||'_'||repeat('text',30000),i||'_'||repeat('text',30000),i,i||'_'||repeat('text',3),i,i,i,'{3}',i,i,i,'2006-10-19 10:23:54', '2006-10-19 10:23:54+02', '1-1-2002' from generate_series(3,1000)i;
 
-\c db_test_bed
 CREATE TABLE heap_table_unique_index(
 text_col text,
 bigint_col bigint,
@@ -2416,8 +2354,6 @@ insert into heap_table_bitmap_index values ('1_zero', 1, '1_zero', 1, 1, 1, '{1}
 insert into heap_table_bitmap_index values ('2_zero', 2, '2_zero', 2, 2, 2, '{2}', 2, 2, 2, '2006-10-19 10:23:54', '2006-10-19 10:23:54+02', '1-1-2002');
 insert into heap_table_bitmap_index select i||'_'||repeat('text',100),i,i||'_'||repeat('text',3),i,i,i,'{3}',i,i,i,'2006-10-19 10:23:54', '2006-10-19 10:23:54+02', '1-1-2002' from generate_series(3,100)i;
 
-\c db_test_bed
-
 CREATE TABLE AO_table_btree_index(
 text_col text,
 bigint_col bigint,
@@ -2461,8 +2397,6 @@ insert into AO_table_bitmap_index values ('0_zero', 0, '0_zero', 0, 0, 0, '{0}',
 insert into AO_table_bitmap_index values ('1_zero', 1, '1_zero', 1, 1, 1, '{1}', 1, 1, 1, '2005-10-19 10:23:54', '2005-10-19 10:23:54+02', '1-1-2001');
 insert into AO_table_bitmap_index values ('2_zero', 2, '2_zero', 2, 2, 2, '{2}', 2, 2, 2, '2006-10-19 10:23:54', '2006-10-19 10:23:54+02', '1-1-2002');
 insert into AO_table_bitmap_index select i||'_'||repeat('text',100),i,i||'_'||repeat('text',3),i,i,i,'{3}',i,i,i,'2006-10-19 10:23:54', '2006-10-19 10:23:54+02', '1-1-2002' from generate_series(3,100)i;
-
-\c db_test_bed
 
 CREATE TABLE CO_table_btree_index(
 text_col text,
@@ -4072,4 +4006,3 @@ DROP RESOURCE QUEUE resqueu3;
 DROP RESOURCE QUEUE resqueu4;
 DROP RESOURCE QUEUE grp_rsq1;
 \echo -- end_ignore
-
