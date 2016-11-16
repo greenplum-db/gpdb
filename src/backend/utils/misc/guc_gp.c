@@ -3410,7 +3410,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 		{"pljava_classpath_insecure", PGC_POSTMASTER, CUSTOM_OPTIONS,
 			gettext_noop("Allow pljava_classpath to be set by user per session"),
 			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			GUC_SUPERUSER_ONLY | GUC_NOT_IN_SAMPLE
 		},
 		&pljava_classpath_insecure,
 		false, assign_pljava_classpath_insecure, NULL
