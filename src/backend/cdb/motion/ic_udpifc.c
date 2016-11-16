@@ -1888,7 +1888,7 @@ sendStatusQueryMessage(MotionConn *conn, int fd, uint32 seq)
  * putRxBufferAndSendAck
  * 		Return a buffer and send an acknowledgment.
  *
- *  SHOULD BE CALLED WITH rx_control_info.lock *LOCKED*
+ *  SHOULD BE CALLED WITH ic_control_info.lock *LOCKED*
  */
 static void
 putRxBufferAndSendAck(MotionConn *conn, AckSendParam *param)
@@ -1977,7 +1977,7 @@ MlPutRxBufferIFC(ChunkTransportState *transportStates, int motNodeID, int route)
  * getRxBuffer
  * 		Get a receive buffer.
  *
- * SHOULD BE CALLED WITH rx_control_info.lock *LOCKED*
+ * SHOULD BE CALLED WITH ic_control_info.lock *LOCKED*
  *
  * NOTE: This function MUST NOT contain elog or ereport statements.
  * elog is NOT thread-safe.  Developers should instead use something like:
@@ -2036,7 +2036,7 @@ getRxBuffer(RxBufferPool *p)
  * putRxBufferToFreeList
  * 		Return a receive buffer to free list
  *
- *  SHOULD BE CALLED WITH rx_control_info.lock *LOCKED*
+ *  SHOULD BE CALLED WITH ic_control_info.lock *LOCKED*
  */
 static inline void
 putRxBufferToFreeList(RxBufferPool *p, icpkthdr *buf)
@@ -2050,7 +2050,7 @@ putRxBufferToFreeList(RxBufferPool *p, icpkthdr *buf)
  * getRxBufferFromFreeList
  * 		Get a receive buffer from free list
  *
- * SHOULD BE CALLED WITH rx_control_info.lock *LOCKED*
+ * SHOULD BE CALLED WITH ic_control_info.lock *LOCKED*
  *
  * NOTE: This function MUST NOT contain elog or ereport statements.
  * elog is NOT thread-safe.  Developers should instead use something like:
@@ -3612,7 +3612,7 @@ TeardownUDPIFCInterconnect(ChunkTransportState *transportStates,
  * prepareRxConnForRead
  * 		Prepare the receive connection for reading.
  *
- * MUST BE CALLED WITH rx_control_info.lock LOCKED.
+ * MUST BE CALLED WITH ic_control_info.lock LOCKED.
  */
 static void
 prepareRxConnForRead(MotionConn *conn)
@@ -3631,7 +3631,7 @@ prepareRxConnForRead(MotionConn *conn)
  * receiveChunksUDPIFC
  * 		Receive chunks from the senders
  *
- * MUST BE CALLED WITH rx_control_info.lock LOCKED.
+ * MUST BE CALLED WITH ic_control_info.lock LOCKED.
  */
 static TupleChunkListItem
 receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEntry *pEntry,
@@ -3803,7 +3803,7 @@ RecvTupleChunkFromAnyUDPIFC_Internal(MotionLayerState *mlStates,
 		return NULL;
 	}
 
-	/* receiveChunksUDPIFC() releases rx_control_info.lock as a side-effect */
+	/* receiveChunksUDPIFC() releases ic_control_info.lock as a side-effect */
 	tcItem = receiveChunksUDPIFC(transportStates, pEntry, motNodeID, srcRoute, NULL, transportStates->teardownActive);
 
 	pEntry->scanStart = *srcRoute + 1;
