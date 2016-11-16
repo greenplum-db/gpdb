@@ -4344,6 +4344,9 @@ selectHashPartition(PartitionNode *partnode, Datum *values, bool *isnull,
 	PartitionRule *rule;
 	MemoryContext oldcxt = NULL;
 
+	if (partnode->rules == NIL)
+		return NULL;
+
 	if (accessMethods && accessMethods->part_cxt)
 		oldcxt = MemoryContextSwitchTo(accessMethods->part_cxt);
 
