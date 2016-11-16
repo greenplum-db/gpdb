@@ -154,25 +154,6 @@ set optimizer_disable_missing_stats_collection = on;
     REINDEX index "public"."bm_test_j";
     --drop index  bm_test_j ;
 
---CLUSTER clusterindex on table
-
-    create table table2 (col1 int,col2 int) distributed randomly;
-    insert into table2 values (1,1);
-    insert into table2 values (2,2);
-    insert into table2 values (3,3);
-    insert into table2 values (4,4);
-    insert into table2 values (5,5);
-    insert into table2 select i,i from generate_series(6,100)i;
-                                                                    
- create index clusterindex on table2(col1);
-    CLUSTER clusterindex on table2; 
-    drop index clusterindex;
-
---Create Domain
-    
-    create DOMAIN country_code1 char(2) NOT NULL;
-   --drop DOMAIN country_code1 CASCADE;
-    
 --Create Rule
 create table foo_rule_ao (a int) with (appendonly=true);
 create table bar_rule_ao (a int);
@@ -358,45 +339,6 @@ CREATE TABLE table_like_parent4 (
    select * from table_parent;
    select * from table_child;
    \echo -- end_ignore 
---on commit
-    
-    CREATE LOCAL TEMP TABLE on_commit (
-    text_col text,
-    bigint_col bigint,
-    char_vary_col character varying(30),
-    numeric_col numeric
-    ) ON COMMIT PRESERVE ROWS
-    DISTRIBUTED RANDOMLY;
-
-    insert into on_commit values ('0_zero',0000,'0_test',0);
-    insert into on_commit values ('1_one',1111,'1_test',1);
-    insert into on_commit values ('2_two',2222,'2_test',2);
-    insert into on_commit select i||'_'||repeat('text',100),i,i||'_'||repeat('text',5),i from generate_series(1,100)i;
-
---on commit
-
-CREATE LOCAL TEMP TABLE on_commit1 (
-    text_col text,
-    bigint_col bigint,
-    char_vary_col character varying(30),
-    numeric_col numeric
-    ) ON COMMIT DELETE ROWS
-    DISTRIBUTED RANDOMLY;
-
-    insert into on_commit1 values ('0_zero',0000,'0_test',0);
-    insert into on_commit1 values ('1_one',1111,'1_test',1);
-    insert into on_commit1 values ('2_two',2222,'2_test',2);
-    insert into on_commit1 select i||'_'||repeat('text',100),i,i||'_'||repeat('text',5),i from generate_series(1,100)i;
-
---on commit
-
-    CREATE LOCAL TEMP TABLE on_commit2 (
-    text_col text,
-    bigint_col bigint,
-    char_vary_col character varying(30),
-    numeric_col numeric
-    ) ON COMMIT DROP
-    DISTRIBUTED RANDOMLY;
 
 --Table Creation using Create Table As (CTAS) with both the new tables columns being explicitly or implicitly created
 
@@ -614,26 +556,6 @@ timestamptz|{OPEXPR :opno 1324 :opfuncid 0 :opresulttype 16 :opretset false :arg
 
 --Alter table
 
---Rename Table
-
-          ALTER TABLE table_name RENAME TO table_new_name;
-
---ALTER Schema name
-
-          CREATE SCHEMA dept;
-          CREATE TABLE dept.csc(
-          stud_id int,
-          stud_name varchar(20)
-          ) DISTRIBUTED RANDOMLY;
-
-	  insert into dept.csc values ( 1,'ann');
-          insert into dept.csc values ( 2,'ben');
-          insert into dept.csc values ( 3,'sam');
-          insert into dept.csc select i,i||'_'||repeat('text',3) from generate_series(4,100)i;
-
-          CREATE SCHEMA new_dept;
-          ALTER TABLE dept.csc SET SCHEMA new_dept;
-
 --RENAME & ADD Column & ALTER column TYPE type & ALTER column SET DEFAULT expression
 
           CREATE TABLE test_alter_table(
@@ -806,20 +728,6 @@ timestamptz|{OPEXPR :opno 1324 :opfuncid 0 :opresulttype 16 :opretset false :arg
           ALTER TABLE stock DISABLE TRIGGER insert_price_change;
           ALTER TABLE stock ENABLE TRIGGER insert_price_change;
 
---CLUSTER ON index_name & SET WITHOUT CLUSTER
-
-          CREATE TABLE cluster_index_table (col1 int,col2 int) distributed randomly;
-
-          insert into cluster_index_table values (1,1);
-          insert into cluster_index_table values (2,2);
-          insert into cluster_index_table values (3,3);
-          insert into cluster_index_table values (4,4);
-          insert into cluster_index_table values (generate_series(5,100),generate_series(5,100));
-
-         create index clusterindex on cluster_index_table(col1);
-          ALTER TABLE cluster_index_table CLUSTER on clusterindex;
-          ALTER TABLE cluster_index_table SET WITHOUT CLUSTER;
-
 --SET WITHOUT OIDS
 
           ALTER TABLE table_with_oid SET WITHOUT OIDS;
@@ -888,43 +796,6 @@ timestamptz|{OPEXPR :opno 1324 :opfuncid 0 :opresulttype 16 :opretset false :arg
          -- DROP TABLE table_owner;
           -- DROP ROLE user_1;
 
---Drop column
-
-    CREATE TABLE test_drop_column(
-    toast_col text,
-    bigint_col bigint,
-    char_vary_col character varying(30),
-    numeric_col numeric,
-    int_col int4,
-    float_col float4,
-    int_array_col int[],
-    non_toast_col numeric,
-    a_ts_without timestamp without time zone,
-    b_ts_with timestamp with time zone,
-    date_column date,
-    col_with_constraint numeric UNIQUE,
-    col_with_default_text character varying(30) DEFAULT 'test1'
-    ) distributed by (col_with_constraint);
-
-    insert into test_drop_column values ('0_zero', 0, '0_zero', 0, 0, 0, '{0}', 0, '2004-10-19 10:23:54', '2004-10-19 10:23:54+02', '1-1-2000',0);
-    insert into test_drop_column values ('1_zero', 1, '1_zero', 1, 1, 1, '{1}', 1, '2005-10-19 10:23:54', '2005-10-19 10:23:54+02', '1-1-2001',1);
-    insert into test_drop_column values ('2_zero', 2, '2_zero', 2, 2, 2, '{2}', 2, '2006-10-19 10:23:54', '2006-10-19 10:23:54+02', '1-1-2002',2);
-    insert into test_drop_column select i||'_'||repeat('text',100),i,i||'_'||repeat('text',3),i,i,i,'{3}',i,'2006-10-19 10:23:54', '2006-10-19 10:23:54+02', '1-1-2002',i from generate_series(3,100)i;
-
-
-
---drop toast column
-
-    ALTER TABLE test_drop_column DROP COLUMN toast_col ;
-
---drop non toast column
-
-    ALTER TABLE test_drop_column DROP COLUMN non_toast_col ;
-
---drop default
-\echo -- start_ignore
-    ALTER TABLE test_drop_column ALTER COLUMN col_with_default_text DROP DEFAULT;
-\echo -- end_ignore
 --TODO - drop column from partitioned table
 
 --Defining Multi-level Partitions
@@ -1649,10 +1520,6 @@ CREATE DOMAIN domain_3 AS TEXT ;
 CREATE ROLE domain_owner;
 CREATE SCHEMA domain_schema;
 
-ALTER DOMAIN domain_2 SET DEFAULT 1;
-ALTER DOMAIN domain_2 DROP  DEFAULT;
-ALTER DOMAIN domain_2 SET NOT NULL;
-ALTER DOMAIN domain_2 DROP NOT NULL;
 ALTER DOMAIN domain_3 ADD CONSTRAINT  domain_constraint3 CHECK (char_length(VALUE) = 5) ;
 ALTER DOMAIN domain_3 DROP CONSTRAINT  domain_constraint3 RESTRICT;
 ALTER DOMAIN domain_3 ADD CONSTRAINT  domain_constraint3 CHECK (char_length(VALUE) = 5);
