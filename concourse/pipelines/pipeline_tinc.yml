@@ -50,7 +50,7 @@ jobs:
       trigger: true
     - get: centos67-gpdb-gcc6-llvm-image
   - task: compile_gpdb
-    file: gpdb_src/concourse/compile_gpdb.yml
+    file: gpdb_src/concourse/tasks/compile_gpdb.yml
     image: centos67-gpdb-gcc6-llvm-image
     params:
       IVYREPO_HOST: {{ivyrepo_host}}
@@ -84,7 +84,7 @@ jobs:
       trigger: true
     - get: centos67-gpdb-gcc6-llvm-image
   - task: uao_orca_both_regression
-    file: gpdb_src/concourse/tinc_gpdb.yml
+    file: gpdb_src/concourse/tasks/tinc_gpdb.yml
     image: centos67-gpdb-gcc6-llvm-image
     params:
       MAKE_TEST_COMMAND: uao_orca_both_regression
@@ -105,7 +105,7 @@ jobs:
       trigger: true
     - get: centos67-gpdb-gcc6-llvm-image
   - task: sub_transaction_limit_removal
-    file: gpdb_src/concourse/tinc_gpdb.yml
+    file: gpdb_src/concourse/tasks/tinc_gpdb.yml
     image: centos67-gpdb-gcc6-llvm-image
     params:
       MAKE_TEST_COMMAND: sub_transaction_limit_removal
@@ -128,19 +128,19 @@ jobs:
     - get: centos67-gpdb-gcc6-llvm-image
   - aggregate:
     - task: fts_transitions_part01
-      file: gpdb_src/concourse/tinc_gpdb.yml
+      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
       image: centos67-gpdb-gcc6-llvm-image
       params:
         MAKE_TEST_COMMAND: fts_transitions_part01
         TEST_OS: centos
     - task: fts_transitions_part02
-      file: gpdb_src/concourse/tinc_gpdb.yml
+      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
       image: centos67-gpdb-gcc6-llvm-image
       params:
         MAKE_TEST_COMMAND: fts_transitions_part02
         TEST_OS: centos
     - task: fts_transitions_part03
-      file: gpdb_src/concourse/tinc_gpdb.yml
+      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
       image: centos67-gpdb-gcc6-llvm-image
       params:
         MAKE_TEST_COMMAND: fts_transitions_part03
