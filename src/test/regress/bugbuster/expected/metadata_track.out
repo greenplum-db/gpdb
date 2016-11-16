@@ -813,40 +813,6 @@ drop table mdt_test_table;
 drop table mdt_ctas_table1;
 drop table mdt_ctas_table2;
 --
--- External Tables
--- create a normal heap table
-CREATE TABLE mdt_REGION_1   ( R_REGIONKEY  INTEGER NOT NULL,
-                            R_NAME       CHAR(25) NOT NULL,
-                            R_COMMENT    VARCHAR(152)) ;
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'r_regionkey' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
--- create a RET to load data into the normal heap table
-CREATE external web TABLE mdt_e_REGION  ( R_REGIONKEY  INTEGER ,
-                            R_NAME       CHAR(25) ,
-                            R_COMMENT    VARCHAR(152))
-                        execute 'bash -c "$GPHOME/bin/dbgen -b $GPHOME/bin/dists.dss -T r -s 1"'
-                        on 1 format 'text' (delimiter '|');
--- create WET with similiar schema def as the original heap table
-CREATE WRITABLE EXTERNAL TABLE mdt_wet_region ( like mdt_region_1) LOCATION ('gpfdist://10.1.2.10:8088/view/wet_region.tbl') FORMAT 'TEXT' (DELIMITER AS '|');
-NOTICE:  Table doesn't have 'distributed by' clause, defaulting to distribution columns from LIKE table
--- create a RET reading data from the file created by WET
-CREATE EXTERNAL TABLE mdt_ret_region ( like mdt_region_1) LOCATION ('gpfdist://10.1.2.10:8088/view/wet_region.tbl') FORMAT 'TEXT' (DELIMITER AS
-'|');
-CREATE external web TABLE mdt_e_SUPPLIER ( S_SUPPKEY     INTEGER ,
-                             S_NAME        CHAR(25) ,
-                             S_ADDRESS     VARCHAR(40) ,
-                             S_NATIONKEY   INTEGER ,
-                             S_PHONE       CHAR(15) ,
-                             S_ACCTBAL     DECIMAL(15,2) ,
-                             S_COMMENT     VARCHAR(101) )
-                        execute 'bash -c "$GPHOME/bin/dbgen -b $GPHOME/bin/dists.dss -T s -s 1 -N 2 -n $((GP_SEGMENT_ID + 1))"'
-                        on 2 format 'text' (delimiter '|');
-drop table mdt_REGION_1;
-drop external table mdt_e_REGION;
-drop external table mdt_wet_region;
-drop external table mdt_ret_region;
-drop external table mdt_e_SUPPLIER;
---
 --local table
     CREATE LOCAL TEMP TABLE mdt_table_local (
     text_col text,

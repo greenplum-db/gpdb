@@ -6,10 +6,6 @@
 	path = gpAux/extensions/plr/source
 	url = git@github.com:greenplum-db/plr.git
 	branch = master
-[submodule "gpAux/extensions/tpch/source"]
-	path = gpAux/extensions/tpch/source
-	url = git@github.com:greenplum-db/tpch.git
-	branch = master
 [submodule "gpAux/extensions/pgbouncer/source"]
 	path = gpAux/extensions/pgbouncer/source
 	url = git@github.com:greenplum-db/pgbouncer.git

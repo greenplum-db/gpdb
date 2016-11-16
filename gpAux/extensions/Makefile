@@ -21,7 +21,7 @@ ifneq ($(with_apr_config),yes)
 endif
 endif
 
-all: mkdbgen mkgphdfs mks3ext
+all: mkgphdfs mks3ext
 
 .PHONY:
 mapreduce:
@@ -56,7 +56,7 @@ mks3ext:
 	PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -B -C gps3ext/bin/gpcheckcloud USE_PGXS=1 install
 
 # Only include include these files when running enterprise build
-ENTERPRISE_TARGETS="mkdbgen mkgphdfs mkorafce mkplr"
+ENTERPRISE_TARGETS="mkgphdfs mkorafce mkplr"
 ifneq ($(findstring $(MAKECMDGOALS), $(ENTERPRISE_TARGETS)),)
 include $(BLD_TOP)/Makefile.global
 include $(BLD_TOP)/Makefile.thirdparty
@@ -84,10 +84,6 @@ JAVAC=${JAVA_HOME}/bin/javac
 JAVAH=${JAVA_HOME}/bin/javah
 JAR=${JAVA_HOME}/bin/jar
 JAVADOC=${JAVA_HOME}/bin/javadoc
-
-.PHONY:
-mkdbgen:
-	$(MAKE) -f Makefile.tpch INSTLOC=$(INSTLOC)
 
 .PHONY:
 mkplr:

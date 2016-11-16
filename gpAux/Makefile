@@ -318,7 +318,6 @@ define BUILD_STEPS
 	@rm -rf $(INSTLOC)
 	cd $(BUILDDIR) && $(MAKE) $(parallelexec_opts) install
 	#@$(MAKE) greenplum_path INSTLOC=$(INSTLOC)
-	@$(MAKE) mkdbgen INSTLOC=$(INSTLOC)
 	#@$(MAKE) mgmtcopy INSTLOC=$(INSTLOC)
 	@$(MAKE) mkpgbouncer INSTLOC=$(INSTLOC) BUILDDIR=$(BUILDDIR)
 	@$(MAKE) mkpgbench INSTLOC=$(INSTLOC) BUILDDIR=$(BUILDDIR)
@@ -351,7 +350,6 @@ define BUILD_STEPS
 	cd $(BUILDDIR)/src/include/ && $(MAKE) install
 	@$(MAKE) mkgpfdist INSTLOC=$(INSTLOC)
 	@$(MAKE) mkgps3ext INSTLOC=$(INSTLOC)
-	@$(MAKE) mkdbgen INSTLOC=$(INSTLOC)
 	@$(MAKE) mgmtcopy INSTLOC=$(INSTLOC)
 	@$(MAKE) copylibs INSTLOC=$(INSTLOC)
 	@$(MAKE) loaders INSTLOC=$(INSTLOC) LOADERSINSTLOC=$(LOADERSINSTLOC)
@@ -853,7 +851,6 @@ endif
 
 PVK_SCRIPTS = \
 	bin/diskqual.ksh	\
-	bin/generate_load_tpch.pl	\
 	bin/gpscp			\
 	bin/gpssh			\
 	bin/gpcheckperf			\
@@ -957,10 +954,6 @@ mkgps3ext:
 
 mkorafce:
 	@cd extensions && $(MAKE) mkorafce OPT="$(INSTCFLAGS)" INSTLOC=$(INSTLOC)
-
-mkdbgen:
-	@cd extensions && $(MAKE) mkdbgen OPT="$(INSTCFLAGS)" INSTLOC=$(INSTLOC)
-	cp extensions/tpch/source/dbgen extensions/tpch/source/dists.dss $(INSTLOC)/bin
 
 mkpgbench:
 	@cd $(BUILDDIR)/contrib/pgbench && $(MAKE) install

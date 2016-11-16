@@ -1,8 +1,5 @@
-bin/dbgen
 bin/diskqual.ksh
-bin/dists.dss
 bin/explain.pl
-bin/generate_load_tpch.pl
 bin/gpcheckmirrorseg.pl
 bin/gpdebug
 bin/gpfaultinjector
