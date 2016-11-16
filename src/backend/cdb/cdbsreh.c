@@ -557,6 +557,7 @@ ErrorLogWrite(CdbSreh *cdbsreh)
 	char		filename[MAXPGPATH];
 	FILE	   *fp;
 	pg_crc32	crc;
+	int			ret;
 
 	Assert(OidIsValid(cdbsreh->relid));
 	ErrorLogFileName(filename, MyDatabaseId, cdbsreh->relid);
@@ -568,15 +569,19 @@ ErrorLogWrite(CdbSreh *cdbsreh)
 
 	LWLockAcquire(ErrorLogLock, LW_EXCLUSIVE);
 	fp = AllocateFile(filename, "a");
-	if (!fp)
+	/*
+	 * There's no point in retrying if the file allocation error out with too
+	 * many open file descriptors, else we assume the error was due to the
+	 * target directoy not existing so try to create and retry.
+	 */
+	if (!fp && (errno != EMFILE && errno != ENFILE))
 	{
-		mkdir(ErrorLogDir, S_IRWXU);
-
-		fp = AllocateFile(filename, "a");
+		ret = mkdir(ErrorLogDir, S_IRWXU);
+		if (ret == 0)
+			fp = AllocateFile(filename, "a");
 	}
 	if (!fp)
-		ereport(ERROR,
-				(errmsg("could not open \"%s\": %m", filename)));
+		ereport(ERROR, (errmsg("could not open \"%s\": %m", filename)));
 
 	/*
 	 * format:
