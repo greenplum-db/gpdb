@@ -1,0 +1,16 @@
+CREATE OR REPLACE FUNCTION read_from_s3() RETURNS integer AS
+        '$libdir/gpcloud.so', 's3_import' LANGUAGE C STABLE;
+CREATE OR REPLACE FUNCTION write_to_s3() RETURNS integer AS
+        '$libdir/gpcloud.so', 's3_export' LANGUAGE C STABLE;
+CREATE PROTOCOL s3 (
+        readfunc = read_from_s3,
+        writefunc = write_to_s3
+);
+CREATE OR REPLACE FUNCTION read_from_gphdfs2() RETURNS integer AS
+        '$libdir/gpcloud.so', 'gphdfs2_import' LANGUAGE C STABLE;
+CREATE OR REPLACE FUNCTION write_to_gphdfs2() RETURNS integer AS
+        '$libdir/gpcloud.so', 'gphdfs2_export' LANGUAGE C STABLE;
+CREATE PROTOCOL gphdfs2 (
+        readfunc = read_from_gphdfs2,
+        writefunc = write_to_gphdfs2
+);

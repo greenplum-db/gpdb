@@ -21,7 +21,7 @@ ifneq ($(with_apr_config),yes)
 endif
 endif
 
-all: mkgphdfs mks3ext
+all: mkgphdfs mkgpcloud
 
 .PHONY:
 mapreduce:
@@ -51,9 +51,10 @@ mkgphdfs:
 		JAVA_HOME=${JAVA_HOME}
 
 .PHONY:
-mks3ext:
-	PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -B -C gps3ext USE_PGXS=1 install
-	PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -B -C gps3ext/bin/gpcheckcloud USE_PGXS=1 install
+mkgpcloud:
+	PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -B -C gpcloud USE_PGXS=1 install
+	PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -B -C gpcloud/bin/gpcheckcloud USE_PGXS=1 install
+	ln -sf $(pkglibdir)/gpcloud.so $(pkglibdir)/gps3ext.so
 
 # Only include include these files when running enterprise build
 ENTERPRISE_TARGETS="mkgphdfs mkorafce mkplr"

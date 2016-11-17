@@ -13,8 +13,8 @@ ifeq ($(DEBUG_S3_SYMBOL),y)
 endif
 
 # Targets
-MODULE_big = gps3ext
-OBJS = src/gps3ext.o lib/http_parser.o lib/ini.o $(addprefix src/,$(COMMON_OBJS))
+MODULE_big = gpcloud
+OBJS = src/gpcloud.o lib/http_parser.o lib/ini.o $(addprefix src/,$(COMMON_OBJS))
 
 # Launch
 PGXS := $(shell pg_config --pgxs)
