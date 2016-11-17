@@ -978,6 +978,44 @@ SELECT name, department, salary FROM csq_emp ea
   WHERE  salary = ANY
     (SELECT MAX(salary) FROM csq_emp eb WHERE eb.department = ea.department) order by name, department;
 
+SELECT name, department, salary FROM csq_emp ea
+  WHERE salary = 
+    (SELECT MAX(salary) FROM csq_emp eb WHERE eb.department = ea.department) order by name, department, salary;
+
+SELECT name, department, salary FROM csq_emp ea 
+  WHERE salary > 
+    (SELECT MAX(salary) FROM csq_emp eb WHERE eb.department = ea.department) order by name, department, salary;
+
+SELECT name, department, salary FROM csq_emp ea 
+  WHERE salary < 
+    (SELECT MAX(salary) FROM csq_emp eb WHERE eb.department = ea.department) order by name, department, salary;
+
+SELECT name, department, salary FROM csq_emp ea 
+  WHERE salary IN 
+    (SELECT MAX(salary) FROM csq_emp eb WHERE eb.department = ea.department) order by name, department, salary;
+
+SELECT name, department, salary FROM csq_emp ea 
+  WHERE salary NOT IN 
+    (SELECT MAX(salary) FROM csq_emp eb WHERE eb.department = ea.department) order by name, department, salary;
+
+SELECT name, department, salary FROM csq_emp ea 
+  WHERE  salary = ANY 
+    (SELECT MAX(salary) FROM csq_emp eb WHERE eb.department = ea.department) order by name, department, salary;
+
+SELECT name, department, salary FROM csq_emp ea 
+  WHERE salary = ALL 
+    (SELECT MAX(salary) FROM csq_emp eb WHERE eb.department = ea.department) order by name, department, salary;
+
+SELECT name, department, salary FROM csq_emp ea group by name, department,salary
+  HAVING avg(salary) >
+    (SELECT MAX(salary) FROM csq_emp eb WHERE eb.department = ea.department) order by name, department, salary;
+
+SELECT name, department, salary FROM csq_emp ea group by name, department,salary
+  HAVING avg(salary) > ALL
+    (SELECT salary FROM csq_emp eb WHERE eb.department = ea.department) order by name, department, salary;
+
+
+
 -- start_ignore
 drop table if exists with_test1 cascade;
 create table with_test1 (i int, t text, value int);

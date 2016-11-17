@@ -2014,6 +2014,93 @@ SELECT name, department, salary FROM csq_emp ea
  f    | adept      | 992222.00
 (2 rows)
 
+SELECT name, department, salary FROM csq_emp ea
+  WHERE salary = 
+    (SELECT MAX(salary) FROM csq_emp eb WHERE eb.department = ea.department) order by name, department, salary;
+ name | department |  salary   
+------+------------+-----------
+ c    | bdept      |  99222.00
+ f    | adept      | 992222.00
+(2 rows)
+
+SELECT name, department, salary FROM csq_emp ea 
+  WHERE salary > 
+    (SELECT MAX(salary) FROM csq_emp eb WHERE eb.department = ea.department) order by name, department, salary;
+ name | department | salary 
+------+------------+--------
+(0 rows)
+
+SELECT name, department, salary FROM csq_emp ea 
+  WHERE salary < 
+    (SELECT MAX(salary) FROM csq_emp eb WHERE eb.department = ea.department) order by name, department, salary;
+ name | department |  salary  
+------+------------+----------
+ a    | adept      | 11200.00
+ b    | adept      | 22222.00
+ d    | adept      | 23211.00
+ e    | adept      | 45222.00
+ g    | adept      | 90343.00
+ h    | adept      | 11200.00
+ i    | bdept      | 11200.00
+ j    | adept      | 11200.00
+(8 rows)
+
+SELECT name, department, salary FROM csq_emp ea 
+  WHERE salary IN 
+    (SELECT MAX(salary) FROM csq_emp eb WHERE eb.department = ea.department) order by name, department, salary;
+ name | department |  salary   
+------+------------+-----------
+ c    | bdept      |  99222.00
+ f    | adept      | 992222.00
+(2 rows)
+
+SELECT name, department, salary FROM csq_emp ea 
+  WHERE salary NOT IN 
+    (SELECT MAX(salary) FROM csq_emp eb WHERE eb.department = ea.department) order by name, department, salary;
+ name | department |  salary  
+------+------------+----------
+ a    | adept      | 11200.00
+ b    | adept      | 22222.00
+ d    | adept      | 23211.00
+ e    | adept      | 45222.00
+ g    | adept      | 90343.00
+ h    | adept      | 11200.00
+ i    | bdept      | 11200.00
+ j    | adept      | 11200.00
+(8 rows)
+
+SELECT name, department, salary FROM csq_emp ea 
+  WHERE  salary = ANY 
+    (SELECT MAX(salary) FROM csq_emp eb WHERE eb.department = ea.department) order by name, department, salary;
+ name | department |  salary   
+------+------------+-----------
+ c    | bdept      |  99222.00
+ f    | adept      | 992222.00
+(2 rows)
+
+SELECT name, department, salary FROM csq_emp ea 
+  WHERE salary = ALL 
+    (SELECT MAX(salary) FROM csq_emp eb WHERE eb.department = ea.department) order by name, department, salary;
+ name | department |  salary   
+------+------------+-----------
+ c    | bdept      |  99222.00
+ f    | adept      | 992222.00
+(2 rows)
+
+SELECT name, department, salary FROM csq_emp ea group by name, department,salary
+  HAVING avg(salary) >
+    (SELECT MAX(salary) FROM csq_emp eb WHERE eb.department = ea.department) order by name, department, salary;
+ name | department | salary 
+------+------------+--------
+(0 rows)
+
+SELECT name, department, salary FROM csq_emp ea group by name, department,salary
+  HAVING avg(salary) > ALL
+    (SELECT salary FROM csq_emp eb WHERE eb.department = ea.department) order by name, department, salary;
+ name | department | salary 
+------+------------+--------
+(0 rows)
+
 -- start_ignore
 drop table if exists with_test1 cascade;
 create table with_test1 (i int, t text, value int);
