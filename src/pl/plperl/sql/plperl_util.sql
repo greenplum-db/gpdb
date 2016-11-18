@@ -44,6 +44,17 @@ $$;
 
 select perl_decode_bytea();
 
+-- test encode_bytea
+
+create or replace function perl_encode_bytea() returns setof text language plperl as $$
+	return_next encode_bytea(undef); # generates undef warning if warnings enabled
+	return_next encode_bytea($_)
+		for q{@}, qq{@\x01@}, qq{@\x00@}, q{};
+	return undef;
+$$;
+
+select perl_encode_bytea();
+
 -- test encode_array_literal
 
 create or replace function perl_encode_array_literal() returns setof text language plperl as $$

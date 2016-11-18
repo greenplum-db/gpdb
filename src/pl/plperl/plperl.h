@@ -44,18 +44,11 @@
 #undef vsnprintf
 #endif
 
-#define list_head sys_list_head
-#define list_tail sys_list_tail
 
 /* required for perl API */
 #include "EXTERN.h"
 #include "perl.h"
 #include "XSUB.h"
-#include "ppport.h"
-
-#undef list_head
-#undef list_tail
-
 
 /* put back our snprintf and vsnprintf */
 #ifdef USE_REPL_SNPRINTF
@@ -66,18 +59,19 @@
 #undef vsnprintf
 #endif
 #ifdef __GNUC__
-#define vsnprintf(...)  pg_vsnprintf(__VA_ARGS__)
-#define snprintf(...)   pg_snprintf(__VA_ARGS__)
+#define vsnprintf(...)	pg_vsnprintf(__VA_ARGS__)
+#define snprintf(...)	pg_snprintf(__VA_ARGS__)
 #else
-#define vsnprintf       pg_vsnprintf
-#define snprintf        pg_snprintf
-#endif /* __GNUC__ */
-#endif /*  USE_REPL_SNPRINTF */
+#define vsnprintf		pg_vsnprintf
+#define snprintf		pg_snprintf
+#endif   /* __GNUC__ */
+#endif   /* USE_REPL_SNPRINTF */
 
 /* perl version and platform portability */
 #define NEED_eval_pv
 #define NEED_newRV_noinc
 #define NEED_sv_2pv_flags
+#include "ppport.h"
 
 /* perl may have a different width of "bool", don't buy it */
 #ifdef bool
@@ -89,6 +83,11 @@
 #define HeUTF8(he)			   ((HeKLEN(he) == HEf_SVKEY) ?			   \
 								SvUTF8(HeKEY_sv(he)) :				   \
 								(U32)HeKUTF8(he))
+#endif
+
+/* supply GvCV_set if it's missing - ppport.h doesn't supply it, unfortunately */
+#ifndef GvCV_set
+#define GvCV_set(gv, cv)		(GvCV(gv) = cv)
 #endif
 
 /* declare routines from plperl.c for access by .xs files */
@@ -103,9 +102,6 @@ void		plperl_spi_freeplan(char *);
 void		plperl_spi_cursor_close(char *);
 char	   *plperl_sv_to_literal(SV *, char *);
 
-/*  supply GvCV_set if it's missing - ppport.h doesn't supply it, unfortunately */
-#ifndef GvCV_set
-#define GvCV_set(gv, cv)		(GvCV(gv) = cv)
-#endif
+
 
 #endif   /* PL_PERL_H */

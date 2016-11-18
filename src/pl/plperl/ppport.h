@@ -2589,7 +2589,7 @@ else {
   eval {
     require File::Find;
     File::Find::find(sub {
-      $File$srcext)$/i
+      $File::Find::name =~ /($srcext)$/i
           and push @files, $File::Find::name;
     }, '.');
   };
@@ -7061,4 +7061,3 @@ DPPP_(my_pv_display)(pTHX_ SV *dsv, const char *pv, STRLEN cur, STRLEN len, STRL
 #endif /* _P_P_PORTABILITY_H_ */
 
 /* End of File ppport.h */
-

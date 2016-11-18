@@ -1,5 +1,5 @@
 # Makefile for PL/Perl
-# PostgreSQL: pgsql/src/pl/plperl/GNUmakefile
+# src/pl/plperl/GNUmakefile
 
 subdir = src/pl/plperl
 top_builddir = ../../..
@@ -44,8 +44,7 @@ PERLCHUNKS = plc_perlboot.pl plc_trusted.pl
 SHLIB_LINK = $(perl_embed_ldflags)
 
 REGRESS_OPTS = --dbname=$(PL_TESTDB) --load-language=plperl --load-language=plperlu
-REGRESS = plperl plperl_trigger plperl_shared plperl_elog plperl_util plperl_init plperlu plperl_array
-STRESS = plperl_stress
+REGRESS = plperl plperl_lc plperl_trigger plperl_shared plperl_elog plperl_util plperl_init plperlu plperl_array
 # if Perl can support two interpreters in one backend,
 # test plperl-and-plperlu cases
 ifneq ($(PERL),)
@@ -61,34 +60,48 @@ XSUBPPDIR = $(shell $(PERL) -e 'use List::Util qw(first); print first { -r "$$_/
 
 include $(top_srcdir)/src/Makefile.shlib
 
-plperl.o: perlchunks.h plperl_opmask.h
+plperl.o: perlchunks.h plperl_opmask.h plperl_helpers.h
 
 plperl_opmask.h: plperl_opmask.pl
+	@if [ x"$(perl_privlibexp)" = x"" ]; then echo "configure switch --with-perl was not specified."; exit 1; fi
 	$(PERL) $< $@
 
 perlchunks.h: $(PERLCHUNKS)
+	@if [ x"$(perl_privlibexp)" = x"" ]; then echo "configure switch --with-perl was not specified."; exit 1; fi
 	$(PERL) $(srcdir)/text2macro.pl --strip='^(\#.*|\s*)$$' $^ > $@
 
 all: all-lib
 
-SPI.c: SPI.xs
+SPI.c: SPI.xs plperl_helpers.h
+	@if [ x"$(perl_privlibexp)" = x"" ]; then echo "configure switch --with-perl was not specified."; exit 1; fi
 	$(PERL) $(XSUBPPDIR)/ExtUtils/xsubpp -typemap $(perl_privlibexp)/ExtUtils/typemap $< >$@
 
-Util.c: Util.xs
+Util.c: Util.xs plperl_helpers.h
+	@if [ x"$(perl_privlibexp)" = x"" ]; then echo "configure switch --with-perl was not specified."; exit 1; fi
 	$(PERL) $(XSUBPPDIR)/ExtUtils/xsubpp -typemap $(perl_privlibexp)/ExtUtils/typemap $< >$@
 
-install: all installdirs install-lib
+
+install: all install-lib install-data
 
 installdirs: installdirs-lib
+	$(MKDIR_P) '$(DESTDIR)$(datadir)/extension'
 
-uninstall: uninstall-lib
+uninstall: uninstall-lib uninstall-data
+
+install-data: installdirs
+	$(INSTALL_DATA) $(addprefix $(srcdir)/, $(DATA)) '$(DESTDIR)$(datadir)/extension/'
+
+uninstall-data:
+	rm -f $(addprefix '$(DESTDIR)$(datadir)/extension'/, $(notdir $(DATA)))
+
+.PHONY: install-data uninstall-data
+
+
+check: submake
+	$(top_builddir)/src/test/regress/pg_regress --init-file=init_file $(REGRESS_OPTS) $(REGRESS)
 
 installcheck: submake
-	$(top_builddir)/src/test/regress/pg_regress --inputdir=$(srcdir) --psqldir=$(PSQLDIR) $(REGRESS_OPTS) $(REGRESS)
-
-installcheck-stress: submake
-	$(top_builddir)/src/test/regress/pg_regress --inputdir=$(srcdir) --psqldir=$(PSQLDIR) $(REGRESS_OPTS) $(STRESS)
-
+	$(top_builddir)/src/test/regress/pg_regress --init-file=init_file $(REGRESS_OPTS) $(REGRESS)
 
 .PHONY: submake
 submake:
@@ -96,8 +109,7 @@ submake:
 
 clean distclean maintainer-clean: clean-lib
 	rm -f SPI.c Util.c $(OBJS) perlchunks.h plperl_opmask.h
-	rm -rf results
-	rm -f regression.diffs regression.out
+	rm -rf $(pg_regress_clean_files)
 
 else # can't build
 
