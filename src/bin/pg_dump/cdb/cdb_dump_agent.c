@@ -740,7 +740,13 @@ main(int argc, char **argv)
 					exit(1);
 				}
 				include_everything = false;
-                		strcpy(tableFileName, optarg);
+				if (strlcpy(tableFileName, optarg, sizeof(tableFileName)) >= sizeof(tableFileName))
+				{
+					fprintf(stderr,
+							_("%s: invalid --table-file option, filename too long\n"),
+							progname);
+					exit(1);
+				}
 				break;
 			case 4: 			/*	--exclude-table-file */
 				if (!open_file_and_append_to_list(optarg, &table_exclude_patterns, "exclude tables list"))
@@ -828,7 +834,13 @@ main(int argc, char **argv)
 			exit(1);
 		}
 		include_everything = false;
-		strncpy(tableFileName, incrementalFilter, sizeof(tableFileName));
+		if (strlcpy(tableFileName, incrementalFilter, sizeof(tableFileName)) >= sizeof(tableFileName))
+		{
+			fprintf(stderr,
+					_("%s: invalid --incremental-filter option -- filename too long\n"),
+					progname);
+			exit(1);
+		}
 	}
 
 	if (optind < (argc - 1))
