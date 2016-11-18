@@ -1516,14 +1516,15 @@ exit_nicely(void)
 
 	pszErrorMsg = MakeString("*** aborted because of error: %s\n", lastMsg);
 
-	mpp_err_msg(logError, progname, pszErrorMsg);
+	if (pszErrorMsg)
+	{
+		mpp_err_msg(logError, progname, pszErrorMsg);
+		free(pszErrorMsg);
+	}
 
 	/* Clean-up synchronization variables */
 	pthread_mutex_destroy(&MyMutex);
 	pthread_cond_destroy(&MyCondVar);
-
-	if (pszErrorMsg)
-		free(pszErrorMsg);
 
 	PQfinish(g_conn);
 	g_conn = NULL;
