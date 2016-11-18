@@ -305,6 +305,7 @@ GetMasterConnection(const char *progName,
 	{
 		mpp_err_msg_cache("ERROR", progName, "connection to database \"%s\" failed : %s",
 						  PQdb(pConn), PQerrorMessage(pConn));
+		PQfinish(pConn);
 		return (NULL);
 	}
 
