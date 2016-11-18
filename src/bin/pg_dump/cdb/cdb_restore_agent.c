@@ -72,6 +72,14 @@ int			optreset;
 
 #ifdef USE_DDBOOST
 #include "ddp_api.h"
+static void formDDBoostPsqlCommandLine(PQExpBuffer buf, const char *argv0,
+						   bool post_data, int role,
+						   const char *compProg, const char *ddp_file_name,
+						   const char *dd_boost_buf_size,
+						   const char *table_filter_file,
+						   const char *change_schema_file,
+						   const char *schema_level_file,
+						   const char *ddboost_storage_unit);
 static char *formDDBoostFileName(char *pszBackupKey, bool isPostData, char *ddBoostDir);
 static int cleanupDDSystem(void);
 
@@ -85,14 +93,8 @@ static char *DEFAULT_BACKUP_DIRECTORY = NULL;
 char *log_message_path = NULL;
 static int dd_boost_enabled = 0;
 static char *dd_boost_buf_size = NULL;
-static char *ddboostPg = NULL;
 static char *ddboost_storage_unit = NULL;
 #endif
-
-#ifndef PATH_NAME_MAX
-#define PATH_NAME_MAX 1024
-#endif
-
 
 #define DUMP_PREFIX (dump_prefix==NULL?"":dump_prefix)
 
@@ -107,12 +109,23 @@ static void psqlHandler(int signo);
 static void myHandler(int signo);
 static void *monitorThreadProc(void *arg __attribute__((unused)));
 static void _check_database_version(ArchiveHandle *AH);
-static char *testProgramExists(char *pszProgramName);
+
+static void formPsqlCommandLine(PQExpBuffer buf, const char *argv0, bool post_data, int role,
+					const char *inputFileSpec,
+					const char *compProg, const char *table_filter_file,
+					const char *netbackupServiceHost,
+					const char *netbackupBlockSize,
+					const char *change_schema_file,
+					const char *schema_level_file);
+static void formFilterCommandLine(PQExpBuffer buf, const char *argv0,
+					  bool post_data, int role,
+					  const char *table_filter_file,
+					  const char *change_schema_file,
+					  const char *schema_level_file);
 
 static bool bUsePSQL = false;
 static volatile sig_atomic_t bPSQLDone = false;
 static volatile sig_atomic_t bKillPsql = false;
-static bool bCompUsed = false;	/* de-compression is used */
 static char *g_compPg = NULL;	/* de-compression program with full path */
 static char *g_gpdumpInfo = NULL;
 static char *g_gpdumpKey = NULL;
@@ -139,7 +152,6 @@ char	   *g_LastMsg = NULL;
 
 int			g_role = ROLE_MASTER;		/* would change to ROLE_MASTER when
 										 * necessary */
-static const unsigned long MAX_COMMANDLINE_LEN = 1000000;
 static char * table_filter_file = NULL;
 static char * dump_prefix = NULL;
 /* end cdb additions */
@@ -170,10 +182,9 @@ main(int argc, char **argv)
 	StatusOp   *pOp;
 	struct sigaction act;
 	pid_t		newpid;
-	char	   *pszOnErrorStop = "-v ON_ERROR_STOP=";
 
 	/* int i; */
-	char	   *pszCmdLine;
+	PQExpBuffer	pszCmdLine;
 	int			status;
 	int			rc;
 	char	   *pszErrorMsg;
@@ -413,8 +424,6 @@ main(int argc, char **argv)
 				break;
 			case 4:				/* gp-c */
 				g_compPg = strdup(optarg);
-				bCompUsed = true;		/* backup data is coming from stdin
-										 * (piped from gunzip) */
 				break;
 			case 5:				/* target-dbid */
 				g_targetDBID = atoi(strdup(optarg));
@@ -706,60 +715,6 @@ main(int argc, char **argv)
 		}
 		else if (newpid == 0)
 		{
-			char	   *psqlPg = NULL;
-			char	   *filterScript = NULL;
-			char	   *postDataFilterScript = NULL;
-			char	   *catPg = NULL;
-			char	   *gpNBURestorePg = NULL;
-
-			pszOnErrorStop = "-v ON_ERROR_STOP=";
-
-			/* Child Process */
-			/* launch psql, wait for it to finish */
-
-			/* find psql in PATH or PGPATH */
-			if ((psqlPg = testProgramExists("psql")) == NULL)
-			{
-				mpp_err_msg(logError, progname, "psql not found in path");
-				exit(1);
-			}
-
-			if ((filterScript = testProgramExists("gprestore_filter.py")) == NULL)
-			{
-				mpp_err_msg(logError, progname, "Restore filter script not found in path");
-				exit(1);
-			}
-
-			if ((postDataFilterScript = testProgramExists("gprestore_post_data_filter.py")) == NULL)
-			{
-				mpp_err_msg(logError, progname, "Restore post data filter script not found in path");
-				exit(1);
-			}
-
-			if ((catPg = testProgramExists("cat")) == NULL)
-			{
-				mpp_err_msg(logError, progname, "cat program not found in path");
-				exit(1);
-			}
-
-			if ((gpNBURestorePg = testProgramExists("gp_bsa_restore_agent")) == NULL)
-			{
-				mpp_err_msg(logError, progname, "NetBackup restore agent \"gp_bsa_restore_agent\" not found in path");
-				exit(1);
-			}
-
-			if (bCompUsed)
-			{
-				g_compPg = formCompressionProgramString(g_compPg);
-				if (!g_compPg)
-				{
-					mpp_err_msg(logError, progname, "Could not allocate memory %s:%d", __FILE__, __LINE__);
-					exit(1);
-				}
-			}
-
-			/* backup file name */
-
 			/* TODO: use findAcceptableBackupFilePathName(...) to look for the file name
 			 *       if user invoked gp_restore_agent directly without supplying a file name.
 			 *       If the agent is invoked from gp_restore_launch, then we are ok.
@@ -769,8 +724,7 @@ main(int argc, char **argv)
 				char *rawInputFile = argv[optind];
 
 				valueBuf = createPQExpBuffer();
-				inputFileSpec = shellEscape(rawInputFile, valueBuf);
-
+				inputFileSpec = shellEscape(rawInputFile, valueBuf, false, false);
 			}
 
 			if (inputFileSpec == NULL || inputFileSpec[0] == '\0')
@@ -791,86 +745,42 @@ main(int argc, char **argv)
 				}
 			}
 
-#ifdef USE_DDBOOST
-			/* find if gpddboost is present in PATH or PGPATH */
-			if ((ddboostPg = testProgramExists("gpddboost")) == NULL)
-			{
-				mpp_err_msg(logError, progname, "gpddboost not found in path\n");
-			}
-#endif
-
-			/* add all the psql args to the command string */
-			/* Its too error prone to pre-calc the exact command line length
-			   just allocate a chunk of memory that is not likely to be exceeded. */
-
-			pszCmdLine = (char *) calloc(MAX_COMMANDLINE_LEN, 1);
+			pszCmdLine = createPQExpBuffer();
 #ifdef USE_DDBOOST
 			if (dd_boost_enabled)
 			{
-				formDDBoostPsqlCommandLine(&pszCmdLine, bCompUsed, ddboostPg, g_compPg,
-						ddp_file_name, dd_boost_buf_size,
-						postDataSchemaOnly? postDataFilterScript : filterScript,
-						table_filter_file,
-						g_role, psqlPg,
-						postDataSchemaOnly,
-						change_schema_file,
-						schema_level_file,
-						ddboost_storage_unit);
+				formDDBoostPsqlCommandLine(pszCmdLine, argv[0],
+									(postDataSchemaOnly == 1 ? true : false),
+									g_role, g_compPg, ddp_file_name,
+									dd_boost_buf_size, table_filter_file,
+									change_schema_file, schema_level_file,
+									ddboost_storage_unit);
 			}
 			else
 			{
 #endif
-				if(postDataSchemaOnly)
-				{
-					formPostDataSchemaOnlyPsqlCommandLine(&pszCmdLine, inputFileSpec, bCompUsed, g_compPg,
-							postDataFilterScript, table_filter_file, psqlPg, catPg,
-							gpNBURestorePg, netbackup_service_host, netbackup_block_size,
-							change_schema_file, schema_level_file);
-				}
-				else
-				{
-					/* Non ddboost restore */
-					formSegmentPsqlCommandLine(&pszCmdLine, inputFileSpec, bCompUsed, g_compPg,
-							filterScript, table_filter_file,
-							g_role, psqlPg, catPg,
-							gpNBURestorePg, netbackup_service_host, netbackup_block_size,
-                                                        change_schema_file, schema_level_file);
-				}
+				formPsqlCommandLine(pszCmdLine, argv[0], (postDataSchemaOnly == 1), g_role,
+									inputFileSpec, g_compPg, table_filter_file,
+									netbackup_service_host, netbackup_block_size,
+									change_schema_file, schema_level_file);
 #ifdef USE_DDBOOST
 			}
 #endif
 
-			strcat(pszCmdLine, " -h ");
-			strcat(pszCmdLine, g_targetHost);
-			strcat(pszCmdLine, " -p ");
-			strcat(pszCmdLine, g_targetPort);
-			strcat(pszCmdLine, " -U ");
-			strcat(pszCmdLine, SegDB.pszDBUser);
-
-			strcat(pszCmdLine, " -d ");
-
-			// Shell escape DBName for command line
-			SegDB.pszDBName = shellEscape(SegDB.pszDBName, escapeBuf);
-
-			// quote the DBName in case of any funy chars
-			char *quotedDBName = MakeString("\"%s\"", SegDB.pszDBName);
-			free(SegDB.pszDBName);
-			SegDB.pszDBName = quotedDBName;
-			strcat(pszCmdLine, SegDB.pszDBName);
-			strcat(pszCmdLine, " -a ");
+			appendPQExpBuffer(pszCmdLine, " -h %s -p %s -U %s -d ",
+							  g_targetHost, g_targetPort, SegDB.pszDBUser);
+			shellEscape(SegDB.pszDBName, pszCmdLine, true /* quote */, false /* reset */);
+			appendPQExpBuffer(pszCmdLine, " -a ");
 
 			if (g_bOnErrorStop)
-			{
-				strcat(pszCmdLine, " ");
-				strcat(pszCmdLine, pszOnErrorStop);
-			}
+				appendPQExpBuffer(pszCmdLine, " -v ON_ERROR_STOP=");
 
 			if (g_role == ROLE_SEGDB)
 				putenv("PGOPTIONS=-c gp_session_role=UTILITY");
 			if (g_role == ROLE_MASTER)
 				putenv("PGOPTIONS=-c gp_session_role=DISPATCH");
 
-			mpp_err_msg(logInfo, progname, "Command Line: %s\n", pszCmdLine);
+			mpp_err_msg(logInfo, progname, "Command Line: %s\n", pszCmdLine->data);
 
 			/*
 			 * Make this new process the process group leader of the children
@@ -879,10 +789,10 @@ main(int argc, char **argv)
 			 */
 			setpgid(newpid, newpid);
 
-			execl("/bin/sh", "sh", "-c", pszCmdLine, NULL);
+			execl("/bin/sh", "sh", "-c", pszCmdLine->data, NULL);
 
 			mpp_err_msg(logInfo, progname, "Error in gp_restore_agent - execl of %s with Command Line %s failed",
-						"/bin/sh", pszCmdLine);
+						"/bin/sh", pszCmdLine->data);
 
 			_exit(127);
 		}
@@ -1373,142 +1283,138 @@ _check_database_version(ArchiveHandle *AH)
 	}
 }
 
-/* testProgramExists(char* pszProgramName) returns bool
- * This runs a shell with which pszProgramName > tempfile
- * piping the output to a temp file.
- * If the file is empty, then pszProgramName didn't exist
- * on the path.
- */
-static char *
-testProgramExists(char *pszProgramName)
+/* Build command line for gp_restore_agent */
+static void
+formPsqlCommandLine(PQExpBuffer buf, const char *argv0, bool post_data, int role,
+					const char *inputFileSpec,
+					const char *compProg, const char *table_filter_file,
+					const char *netbackupServiceHost,
+					const char *netbackupBlockSize,
+					const char *change_schema_file,
+					const char *schema_level_file)
 {
-	char	   *pszProgramNameLocal;
-	char	   *p;
+	char	gpNBURestorePg[MAXPGPATH] = {'\0'};
+	char	psqlPg[MAXPGPATH] = {'\0'};
 
-	/* Now see what the length of the file is  - 0 means not there */
-	struct stat buf;
-	char	   *pszEnvPath;
-	char	   *pszPath;
-	char	   *pColon;
-	char	   *pColonNext;
-	char	   *pszTestPath;
+	if (find_other_exec(argv0, "psql", NULL, psqlPg) < 0)
+	{
+		mpp_err_msg(logError, progname, "psql not found in path");
+		exit(1);
+	}
 
-	if (pszProgramName == NULL || *pszProgramName == '\0')
-		return NULL;
+	if (netbackupServiceHost)
+	{
+		if (find_other_exec(argv0, "gp_bsa_restore_agent", NULL, gpNBURestorePg) < 0)
+		{
+			mpp_err_msg(logError, progname, "NetBackup restore agent \"gp_bsa_restore_agent\" not found in path");
+			exit(1);
+		}
+
+		appendPQExpBuffer(buf, " %s --netbackup-service-host %s --netbackup-filename %s ",
+						  gpNBURestorePg, netbackupServiceHost, inputFileSpec);
+		if (netbackupBlockSize)
+			appendPQExpBuffer(buf, " --netbackup-block-size %s ", netbackupBlockSize);
+	}
+	else
+		appendPQExpBuffer(buf, " cat %s ", inputFileSpec);
+
+	if (compProg)
+		appendPQExpBuffer(buf, " | %s -c ", compProg);
+
+	formFilterCommandLine(buf, argv0, post_data, role, table_filter_file, change_schema_file, schema_level_file);
+	appendPQExpBuffer(buf, " | %s ", psqlPg);
+}
+
+/* Build command line with gprestore_filter.py or gprestore_post_data_filter.py and its passed through parameters */
+static void
+formFilterCommandLine(PQExpBuffer buf, const char *argv0,
+					  bool post_data, int role,
+					  const char *table_filter_file,
+					  const char *change_schema_file,
+					  const char *schema_level_file)
+{
+	char	filterScript[MAXPGPATH] = {'\0'};
+
+	if (!table_filter_file && !schema_level_file)
+		return;
+
+	if (post_data)
+	{
+		if (find_other_exec(argv0, "gprestore_post_data_filter.py", NULL, filterScript) < 0)
+		{
+			mpp_err_msg(logError, progname, "Restore post data filter script not found in path");
+			exit(1);
+		}
+	}
+	else
+	{
+		if (find_other_exec(argv0, "gprestore_filter.py", NULL, filterScript) < 0)
+		{
+			mpp_err_msg(logError, progname, "Restore filter script not found in path");
+			exit(1);
+		}
+	}
+
+	appendPQExpBuffer(buf, " | %s ", filterScript);
 
 	/*
-	 * The pszProgramName might have command line arguments, so we need to
-	 * stop at the first whitespace
+	 * Add filter option for gprestore_filter.py to process schemas only (no
+	 * data) on master. This option cannot be used in conjunction with
+	 * post_data
 	 */
-	pszProgramNameLocal = malloc(strlen(pszProgramName) + 1);
-	if (pszProgramNameLocal == NULL)
-	{
-		mpp_err_msg(logError, progname, "out of memory");
-	}
+	if (role == ROLE_MASTER && !post_data)
+		appendPQExpBuffer(buf, " -m ");
 
-	strcpy(pszProgramNameLocal, pszProgramName);
+	if (table_filter_file)
+		appendPQExpBuffer(buf, " -t %s ", table_filter_file);
 
-	p = pszProgramNameLocal;
-	while (*p != '\0')
-	{
-		if (*p == ' ' || *p == '\t' || *p == '\n')
-			break;
+	if (change_schema_file)
+		appendPQExpBuffer(buf, " -c %s ", change_schema_file);
 
-		p++;
-	}
-
-	*p = '\0';
-
-	pszEnvPath = getenv("PGPATH");
-	if (pszEnvPath != NULL)
-	{
-		pszTestPath = (char *) malloc(strlen(pszEnvPath) + 1 + strlen(pszProgramNameLocal) + 1);
-		if (pszTestPath == NULL)
-		{
-			mpp_err_msg(logError, progname, "out of memory in testProgramExists");
-		}
-
-		sprintf(pszTestPath, "%s/%s", pszEnvPath, pszProgramNameLocal);
-		if (stat(pszTestPath, &buf) >= 0)
-			return pszTestPath;
-	}
-	pszEnvPath = getenv("PATH");
-	if (pszEnvPath == NULL)
-		return NULL;
-
-	pszPath = (char *) malloc(strlen(pszEnvPath) + 1);
-	if (pszPath == NULL)
-	{
-		mpp_err_msg(logError, progname, "out of memory in testProgramExists");
-	}
-
-	strcpy(pszPath, pszEnvPath);
-
-	/* Try to create each level of the hierarchy that doesn't already exist */
-	pColon = pszPath;
-
-	while (pColon != NULL && *pColon != '\0')
-	{
-		/* Find next delimiter */
-		pColonNext = strchr(pColon, ':');
-
-		if (pColonNext == pColon)
-		{
-			pColon++;
-			continue;
-		}
-
-		if (pColonNext == NULL)
-		{
-			/* See whether pszProgramName exists in subdirectory pColon */
-			pszTestPath = (char *) malloc(strlen(pColon) + 1 + strlen(pszProgramNameLocal) + 1);
-			if (pszTestPath == NULL)
-			{
-				mpp_err_msg(logError, progname, "out of memory in testProgramExists");
-			}
-
-			sprintf(pszTestPath, "%s/%s", pColon, pszProgramNameLocal);
-			if (stat(pszTestPath, &buf) >= 0)
-				return pszTestPath;
-			else
-				return NULL;
-		}
-
-		/* Temporarily end the string at the : we just found. */
-		*pColonNext = '\0';
-
-		/* See whether pszProgramName exists in subdirectory pColon */
-		pszTestPath = (char *) malloc(strlen(pColon) + 1 + strlen(pszProgramNameLocal) + 1);
-		if (pszTestPath == NULL)
-		{
-			mpp_err_msg(logError, progname, "out of memory in testProgramExists");
-		}
-
-		sprintf(pszTestPath, "%s/%s", pColon, pszProgramNameLocal);
-		if (stat(pszTestPath, &buf) >= 0)
-		{
-			*pColonNext = ':';
-			return pszTestPath;
-		}
-
-		/* Put back the colon we overwrote above. */
-		*pColonNext = ':';
-
-		/* Advance past the colon. */
-		pColon = pColonNext + 1;
-
-		/* free */
-		free(pszTestPath);
-	}
-
-	return NULL;
+	if (schema_level_file)
+		appendPQExpBuffer(buf, " -s %s ", schema_level_file);
 }
 
 #ifdef USE_DDBOOST
+
+static void
+formDDBoostPsqlCommandLine(PQExpBuffer buf, const char *argv0,
+						   bool post_data, int role,
+						   const char *compProg, const char *ddp_file_name,
+						   const char *dd_boost_buf_size,
+						   const char *table_filter_file,
+						   const char *change_schema_file,
+						   const char *schema_level_file,
+						   const char *ddboost_storage_unit)
+{
+	static char ddboostPg[MAXPGPATH] = {'\0'};
+
+	if (find_other_exec(argv0, "gpddboost", NULL, ddboostPg) < 0)
+	{
+		mpp_err_msg(logError, progname, "gpddboost not found in path\n");
+		exit(1);
+	}
+
+	appendPQExpBuffer(buf, " %s --readFile --from-file=%s%s ",
+					  ddboostPg, ddp_file_name, (compProg ? ".gz" : ""));
+
+	if (ddboost_storage_unit)
+		appendPQExpBuffer(buf, " --ddbboost-storage-unit=%s ", ddbboost_storage_unit);
+
+	appendPQExpBuffer(buf, " --dd_boost_buf_size=%s ", dd_boost_buf_size);
+
+	if (compProg)
+		appendPQExpBuffer(buf, " | %s -c ", compProg);
+
+	formFilterCommandLine(buf, post_data, role, table_filter_file, change_schema_file, schema_level_file);
+
+	appendPQExpBuffer(buf, " | psql ");
+}
+
 static char *formDDBoostFileName(char *pszBackupKey, bool isPostData, char *dd_boost_dir)
 {
         /* First form the prefix */
-        char	szFileNamePrefix[1 + PATH_NAME_MAX];
+        char	szFileNamePrefix[1 + MAXPGPATH];
         int     instid;                 	/* dispatch node */
         int     segid;
         int     len = 0;
@@ -1518,11 +1424,11 @@ static char *formDDBoostFileName(char *pszBackupKey, bool isPostData, char *dd_b
         instid = g_role;           		/* dispatch node */
         segid = g_sourceDBID;
 
-       	memset(szFileNamePrefix, 0, (1+PATH_NAME_MAX));
+       	memset(szFileNamePrefix, 0, (1+MAXPGPATH));
 	if (dd_boost_dir)
-        	snprintf(szFileNamePrefix, 1 + PATH_NAME_MAX, "%s/%sgp_dump_%d_%d_", dd_boost_dir, DUMP_PREFIX, instid, segid);
+        	snprintf(szFileNamePrefix, 1 + MAXPGPATH, "%s/%sgp_dump_%d_%d_", dd_boost_dir, DUMP_PREFIX, instid, segid);
 	else
-        	snprintf(szFileNamePrefix, 1 + PATH_NAME_MAX, "%s/%sgp_dump_%d_%d_", dir_name, DUMP_PREFIX, instid, segid);
+        	snprintf(szFileNamePrefix, 1 + MAXPGPATH, "%s/%sgp_dump_%d_%d_", dir_name, DUMP_PREFIX, instid, segid);
 
         /* Now add up the length of the pieces */
         len += strlen(szFileNamePrefix);
@@ -1530,7 +1436,7 @@ static char *formDDBoostFileName(char *pszBackupKey, bool isPostData, char *dd_b
 
 	if (isPostData)
 		len += strlen("_post_data");
-        if (len > PATH_NAME_MAX)
+        if (len > MAXPGPATH)
         {
                mpp_err_msg(logInfo, progname, "Length > MAX for filename\n");
                return NULL;

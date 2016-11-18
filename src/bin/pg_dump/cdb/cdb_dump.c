@@ -263,9 +263,9 @@ addPassThroughParm(char Parm, const char *pszValue, char *pszPassThroughParmStri
 			PQExpBuffer valueBuf = createPQExpBuffer();
 
 			if (bFirstTime)
-				pszRtn = MakeString("-%c \"%s\"", Parm, shellEscape(pszValue, valueBuf));
+				pszRtn = MakeString("-%c \"%s\"", Parm, shellEscape(pszValue, valueBuf, false, false));
 			else
-				pszRtn = MakeString("%s -%c \"%s\"", pszPassThroughParmString, Parm, shellEscape(pszValue, valueBuf));
+				pszRtn = MakeString("%s -%c \"%s\"", pszPassThroughParmString, Parm, shellEscape(pszValue, valueBuf, false, false));
 
 			destroyPQExpBuffer(valueBuf);
 		}
@@ -306,9 +306,9 @@ addPassThroughLongParm(const char *Parm, const char *pszValue, char *pszPassThro
 			PQExpBuffer valueBuf = createPQExpBuffer();
 
 			if (bFirstTime)
-				pszRtn = MakeString("--%s \"%s\"", Parm, shellEscape(pszValue, valueBuf));
+				pszRtn = MakeString("--%s \"%s\"", Parm, shellEscape(pszValue, valueBuf, false, false));
 			else
-				pszRtn = MakeString("%s --%s \"%s\"", pszPassThroughParmString, Parm, shellEscape(pszValue, valueBuf));
+				pszRtn = MakeString("%s --%s \"%s\"", pszPassThroughParmString, Parm, shellEscape(pszValue, valueBuf, false, false));
 
 			destroyPQExpBuffer(valueBuf);
 		}
@@ -1730,11 +1730,9 @@ reportBackupResults(InputOptions inputopts, ThreadParmArray *pParmAr)
 	appendPQExpBuffer(reportBuf, "Compression Program: %s\n",
 		 StringNotNull(pParm0->pOptionsData->pszCompressionProgram, "None"));
 
-	appendPQExpBuffer(reportBuf, "%s", getBackupTypeString(incremental_backup));
-	appendPQExpBuffer(reportBuf, "\n");
+	appendPQExpBuffer(reportBuf, "Backup Type: %s\n", (incremental_backup ? "Incremental" : "Full"));
 
-	appendPQExpBuffer(reportBuf, "\n");
-	appendPQExpBuffer(reportBuf, "Individual Results\n");
+	appendPQExpBuffer(reportBuf, "\nIndividual Results\n");
 
 	failCount = 0;
 	errorCount = 0;

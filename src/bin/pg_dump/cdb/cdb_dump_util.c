@@ -978,241 +978,6 @@ parseDbidSet(int *dbidset, char *dump_set)
 	return count;
 }
 
-const char*
-getBackupTypeString(bool incremental)
-{
-	if (incremental)
-	{
-		return "Backup Type: Incremental";
-	}
-	else
-	{
-		return "Backup Type: Full";
-	}
-}
-
-char*
-formCompressionProgramString(char* compPg)
-{
-	char extra[] = " -c ";
-	char* retVal = realloc(compPg, strlen(compPg) + sizeof(extra) + 2);
-	if (retVal)
-	{
-		strcat(retVal, extra);	/* decompress to stdout */
-	}
-	return retVal;
-}
-
-void
-formPostDataSchemaOnlyPsqlCommandLine(char** retVal, const char* inputFileSpec, bool compUsed, const char* compProg,
-									const char* post_data_filter_script, const char* table_filter_file,
-									const char* psqlPg, const char* catPg,
-									const char* gpNBURestorePg, const char* netbackupServiceHost, const char* netbackupBlockSize,
-									const char* change_schema_file, const char *schema_level_file)
-{
-	char* pszCmdLine = *retVal;
-	if (compUsed)
-	{
-		if (netbackupServiceHost)
-		{
-			strncpy(pszCmdLine, gpNBURestorePg, (1 + strlen(gpNBURestorePg)));
-			strncat(pszCmdLine, " --netbackup-service-host ", strlen(" --netbackup-service-host "));
-			strncat(pszCmdLine, netbackupServiceHost, strlen(netbackupServiceHost));
-			strncat(pszCmdLine, " --netbackup-filename ", strlen(" --netbackup-filename "));
-			strncat(pszCmdLine, inputFileSpec, strlen(inputFileSpec));
-			if (netbackupBlockSize)
-			{
-				strncat(pszCmdLine, " --netbackup-block-size ", strlen(" --netbackup-block-size "));
-				strncat(pszCmdLine, netbackupBlockSize, strlen(netbackupBlockSize));
-			}
-			strncat(pszCmdLine, " | ", strlen(" | "));
-			strncat(pszCmdLine, compProg, strlen(compProg));
-		}
-		else
-		{
-			strcpy(pszCmdLine, catPg);
-			strcat(pszCmdLine, " ");
-			strcat(pszCmdLine, inputFileSpec);
-			strcat(pszCmdLine, " | ");
-			strcat(pszCmdLine, compProg);
-		}
-
-		formPostDataFilterCommandLine(&pszCmdLine, post_data_filter_script, table_filter_file, change_schema_file, schema_level_file);
-
-		strcat(pszCmdLine, " | ");
-		strcat(pszCmdLine, psqlPg);
-	}
-	else
-	{
-		if (netbackupServiceHost)
-		{
-			strncpy(pszCmdLine, gpNBURestorePg, (1 + strlen(gpNBURestorePg)));
-			strncat(pszCmdLine, " --netbackup-service-host ", strlen(" --netbackup-service-host "));
-			strncat(pszCmdLine, netbackupServiceHost, strlen(netbackupServiceHost));
-			strncat(pszCmdLine, " --netbackup-filename ", strlen(" --netbackup-filename "));
-			strncat(pszCmdLine, inputFileSpec, strlen(inputFileSpec));
-			if (netbackupBlockSize)
-			{
-				strncat(pszCmdLine, " --netbackup-block-size ", strlen(" --netbackup-block-size "));
-				strncat(pszCmdLine, netbackupBlockSize, strlen(netbackupBlockSize));
-			}
-
-			formPostDataFilterCommandLine(&pszCmdLine, post_data_filter_script, table_filter_file, change_schema_file, schema_level_file);
-
-			strncat(pszCmdLine, " | ", strlen(" | "));
-			strncat(pszCmdLine, psqlPg, strlen(psqlPg));
-		}
-		else
-		{
-			strcpy(pszCmdLine, catPg);	/* add 'cat' command */
-			strcat(pszCmdLine, " ");
-			strcat(pszCmdLine, inputFileSpec);
-
-			formPostDataFilterCommandLine(&pszCmdLine, post_data_filter_script, table_filter_file, change_schema_file, schema_level_file);
-
-			strcat(pszCmdLine, " | ");
-			strcat(pszCmdLine, psqlPg);
-		}
-	}
-}
-
-
-/* Build command line for gp_restore_agent */
-void
-formSegmentPsqlCommandLine(char** retVal, const char* inputFileSpec, bool compUsed, const char* compProg,
-							const char* filter_script, const char* table_filter_file,
-							int role, const char* psqlPg, const char* catPg,
-							const char* gpNBURestorePg, const char* netbackupServiceHost, const char* netbackupBlockSize,
-							const char* change_schema_file, const char *schema_level_file)
-{
-	char* pszCmdLine = *retVal;
-	if (compUsed)
-	{
-		if (netbackupServiceHost)
-		{
-			strncpy(pszCmdLine, gpNBURestorePg, (1 + strlen(gpNBURestorePg)));
-			strncat(pszCmdLine, " --netbackup-service-host ", strlen(" --netbackup-service-host "));
-			strncat(pszCmdLine, netbackupServiceHost, strlen(netbackupServiceHost));
-			strncat(pszCmdLine, " --netbackup-filename ", strlen(" --netbackup-filename "));
-			strncat(pszCmdLine, inputFileSpec, strlen(inputFileSpec));
-			if (netbackupBlockSize)
-			{
-				strncat(pszCmdLine, " --netbackup-block-size ", strlen(" --netbackup-block-size "));
-				strncat(pszCmdLine, netbackupBlockSize, strlen(netbackupBlockSize));
-			}
-			strncat(pszCmdLine, " | ", strlen(" | "));
-			strncat(pszCmdLine, compProg, strlen(compProg));	/* add compression program */
-		}
-		else
-		{
-			strcpy(pszCmdLine, catPg);	/* add 'cat' command */
-			strcat(pszCmdLine, " ");
-			strcat(pszCmdLine, inputFileSpec);
-			strcat(pszCmdLine, " | ");
-			strcat(pszCmdLine, compProg);
-		}
-	}
-	else
-	{
-		if (netbackupServiceHost)
-		{
-			strncpy(pszCmdLine, gpNBURestorePg, (1 + strlen(gpNBURestorePg)));
-			strncat(pszCmdLine, " --netbackup-service-host ", strlen(" --netbackup-service-host "));
-			strncat(pszCmdLine, netbackupServiceHost, strlen(netbackupServiceHost));
-			strncat(pszCmdLine, " --netbackup-filename ", strlen(" --netbackup-filename "));
-			strncat(pszCmdLine, inputFileSpec, strlen(inputFileSpec));
-			if (netbackupBlockSize)
-			{
-				strncat(pszCmdLine, " --netbackup-block-size ", strlen(" --netbackup-block-size "));
-				strncat(pszCmdLine, netbackupBlockSize, strlen(netbackupBlockSize));
-			}
-		}
-		else
-		{
-			strcpy(pszCmdLine, catPg);
-			strcat(pszCmdLine, " ");
-			strcat(pszCmdLine, inputFileSpec);
-		}
-	}
-
-	formFilterCommandLine(&pszCmdLine, filter_script, table_filter_file, role, change_schema_file, schema_level_file);
-
-	strcat(pszCmdLine, " | ");
-	strcat(pszCmdLine, psqlPg);
-}
-
-/* Build command line with gprestore_filter.py and its passed through parameters */
-void
-formFilterCommandLine(char** retVal, const char* filter_script, const char* table_filter_file,
-			int role, const char* change_schema_file, const char *schema_level_file)
-{
-	char* pszCmdLine = *retVal;
-
-	if (table_filter_file || schema_level_file)
-	{
-		strcat(pszCmdLine, " | ");
-		strcat(pszCmdLine, filter_script);
-
-		/* Add filter option for gprestore_filter.py to
-		 * process schemas only (no data) on master.
-		 */
-		if (role == ROLE_MASTER)
-			strcat(pszCmdLine, " -m");
-
-		/* Add filter option with table file to filter specified tables. */
-		if (table_filter_file)
-		{
-			strcat(pszCmdLine, " -t ");
-			strcat(pszCmdLine, table_filter_file);
-		}
-		if (change_schema_file)
-		{
-			strcat(pszCmdLine, " -c ");
-			strcat(pszCmdLine, change_schema_file);
-		}
-		if (schema_level_file)
-		{
-			strcat(pszCmdLine, " -s ");
-			strcat(pszCmdLine, schema_level_file);
-		}
-	}
-}
-
-/* Build command line with gprestore_post_data_filter.py and its passed through parameters */
-void
-formPostDataFilterCommandLine(char** retVal, const char* post_data_filter_script, const char* table_filter_file,
-			const char* change_schema_file, const char *schema_level_file)
-{
-	char* pszCmdLine = *retVal;
-
-	if (table_filter_file || schema_level_file)
-	{
-		strcat(pszCmdLine, " | ");
-		strcat(pszCmdLine, post_data_filter_script);
-
-		/* Add filter option for gprestore_post_data_filter.py to
-		 * process schemas only (no data) on master.
-		 */
-
-		/* Add filter option with table file to filter specified tables. */
-		if (table_filter_file)
-		{
-			strcat(pszCmdLine, " -t ");
-			strcat(pszCmdLine, table_filter_file);
-		}
-		if (change_schema_file)
-		{
-			strcat(pszCmdLine, " -c ");
-			strcat(pszCmdLine, change_schema_file);
-		}
-		if (schema_level_file)
-		{
-			strcat(pszCmdLine, " -s ");
-			strcat(pszCmdLine, schema_level_file);
-		}
-	}
-}
-
 #ifdef USE_DDBOOST
 
 #define	NO_ERR	0
@@ -1596,48 +1361,6 @@ initDDSystem(ddp_inst_desc_t *ddp_inst, ddp_conn_desc_t *ddp_conn, ddp_client_in
 	return 0;
 }
 
-void
-formDDBoostPsqlCommandLine(char** retVal, bool compUsed, const char* ddboostPg, const char* compProg,
-							const char* ddp_file_name, const char* dd_boost_buf_size,
-							const char* filter_script, const char* table_filter_file,
-							int role, const char* psqlPg, bool postSchemaOnly,
-							const char* change_schema_file, const char *schema_level_file,
-							const char* ddboost_storage_unit)
-{
-	char* pszCmdLine = *retVal;
-
-	strcpy(pszCmdLine, ddboostPg);
-	strcat(pszCmdLine, " --readFile");
-	strcat(pszCmdLine, " --from-file=");
-	strcat(pszCmdLine, ddp_file_name);
-	if(compUsed)
-	{
-		strcat(pszCmdLine, ".gz");
-	}
-
-	if (ddboost_storage_unit)
-	{
-		strcat(pszCmdLine, " --ddboost-storage-unit=");
-		strcat(pszCmdLine, ddboost_storage_unit);
-	}
-
-	strcat(pszCmdLine, " --dd_boost_buf_size=");
-	strcat(pszCmdLine, dd_boost_buf_size);
-
-	if(compUsed)
-	{
-		strcat(pszCmdLine, " | ");
-		strcat(pszCmdLine, compProg);
-	}
-
-	if (postSchemaOnly)
-		formPostDataFilterCommandLine(&pszCmdLine, filter_script, table_filter_file, change_schema_file, schema_level_file);
-	else
-		formFilterCommandLine(&pszCmdLine, filter_script, table_filter_file, role, change_schema_file, schema_level_file);
-
-	strcat(pszCmdLine, " | ");
-	strcat(pszCmdLine, psqlPg);
-}
 
 #endif
 
@@ -1802,31 +1525,37 @@ cleanUpTable()
  * The return value of this function is the data area from excapeBuf.
  */
 char *
-shellEscape(const char *shellArg, PQExpBuffer escapeBuf)
+shellEscape(const char *shellArg, PQExpBuffer escapeBuf, bool addQuote, bool reset)
 {
-        const char *s = shellArg;
-        const char      escape = '\\';
+	const char *s = shellArg;
+	const char	escape = '\\';
 
-        resetPQExpBuffer(escapeBuf);
+	if (reset)
+		resetPQExpBuffer(escapeBuf);
 
-        /*
-         * Copy the shellArg into the escapeBuf prepending any characters
-         * requiring an escape with the escape character.
-         */
-        while (*s != '\0')
-        {
-                switch (*s)
-                {
-                        case '"':
-                        case '$':
-                        case '\\':
-                        case '`':
-                        case '!':
-                                appendPQExpBufferChar(escapeBuf, escape);
-                }
-                appendPQExpBufferChar(escapeBuf, *s);
-                s++;
-        }
+	if (addQuote)
+		appendPQExpBufferChar(escapeBuf, '\"');
+	/*
+	 * Copy the shellArg into the escapeBuf prepending any characters
+	 * requiring an escape with the escape character.
+	 */
+	while (*s != '\0')
+	{
+		switch (*s)
+		{
+			case '"':
+			case '$':
+			case '\\':
+			case '`':
+			case '!':
+				appendPQExpBufferChar(escapeBuf, escape);
+		}
+		appendPQExpBufferChar(escapeBuf, *s);
+		s++;
+	}
 
-        return escapeBuf->data;
+	if (addQuote)
+		appendPQExpBufferChar(escapeBuf, '\"');
+
+	return escapeBuf->data;
 }
