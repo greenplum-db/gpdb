@@ -107,7 +107,6 @@ static void psqlHandler(int signo);
 static void myHandler(int signo);
 static void *monitorThreadProc(void *arg __attribute__((unused)));
 static void _check_database_version(ArchiveHandle *AH);
-/* static bool execMPPCatalogFunction(PGconn* pConn); */
 static char *testProgramExists(char *pszProgramName);
 
 static bool bUsePSQL = false;
@@ -1373,77 +1372,6 @@ _check_database_version(ArchiveHandle *AH)
 		die_horribly(AH, NULL, "aborting because of version mismatch\n");
 	}
 }
-
-/*
- * execMPPCatalogFunction:
- */
-/*
-bool execMPPCatalogFunction(PGconn* pConn)
-{
-	const char* pszFunctionName		= "restore_gp_catalog";
-	const char* pszNamespaceName	= "mpp";
-	bool		bRtn				= false;
-	PQExpBuffer bufQry				= NULL;
-	PGresult*	pRes				= NULL;
-	int ntups;
-
-	bufQry = createPQExpBuffer();
-
-	appendPQExpBuffer( bufQry, "SELECT count(*) from pg_catalog.pg_proc p"
-								" inner join pg_catalog.pg_namespace n"
-								" on p.pronamespace=n.oid"
-								" where p.proname='%s'"
-								" and n.nspname='%s'",
-						pszFunctionName, pszNamespaceName );
-
-	pRes = PQexec(pConn, bufQry->data);
-	if (!pRes || PQresultStatus(pRes) != PGRES_TUPLES_OK)
-	{
-		mpp_err_msg("Query %s Command failed: %s",
-					bufQry->data, PQerrorMessage(pConn));
-		goto cleanup;
-	}
-
-	ntups = PQntuples(pRes);
-	if ( ntups == 0 )
-	{
-		mpp_err_msg("Query %s Command failed: %s",
-					bufQry->data, PQerrorMessage(pConn));
-		goto cleanup;
-	}
-
-	if ( 0 == atoi( PQgetvalue(pRes, 0, 0)))
-	{
-		mpp_err_msg("Cannot execute function %s.%s() because it does not exist",
-					pszNamespaceName, pszFunctionName );
-		goto cleanup;
-	}
-
-	PQclear(pRes);
-	resetPQExpBuffer(bufQry);
-
-	appendPQExpBuffer( bufQry, "SELECT %s.%s()",
-						pszNamespaceName, pszFunctionName );
-
-	pRes = PQexec(pConn, bufQry->data);
-	if (!pRes || PQresultStatus(pRes) != PGRES_TUPLES_OK)
-	{
-		mpp_err_msg("Cannot execute function %s.%s() because it does not exist",
-					bufQry->data, PQerrorMessage(pConn) );
-		goto cleanup;
-	}
-
-	bRtn = true;
-
-cleanup:
-	if ( pRes != NULL )
-		PQclear(pRes);
-	if ( bufQry != NULL )
-		destroyPQExpBuffer(bufQry);
-
-	return bRtn;
-}
-*/
 
 /* testProgramExists(char* pszProgramName) returns bool
  * This runs a shell with which pszProgramName > tempfile
