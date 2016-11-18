@@ -2,7 +2,7 @@ subdir=src/backend/utils/adt
 top_builddir=../../../../..
 include $(top_builddir)/src/Makefile.global
 
-TARGETS=date varlena
+TARGETS=varlena
 
 include $(top_builddir)/src/backend/mock.mk
 
