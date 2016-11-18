@@ -105,7 +105,11 @@ FileRepConnServer_CreateConnection()
 		struct timeval tv;
 		tv.tv_sec = file_rep_socket_timeout;
 		tv.tv_usec = 0;	/* Not initializing this can cause strange errors */
-		setsockopt(port->sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv,sizeof(struct timeval));
+
+		if (setsockopt(port->sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv, sizeof(struct timeval)) == -1)
+			ereport(WARNING,
+					(errcode_for_socket_access(),
+					errmsg("could not set receive timeout on socket")));
 
 		/* set TCP keep-alive parameters for FileRep connection */
 		(void) pq_setkeepalivesidle(gp_filerep_tcp_keepalives_idle, port);

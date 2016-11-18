@@ -2095,11 +2095,26 @@ static void do_accept(int fd, short event, void* arg)
 #endif
 
 	/* set keepalive, reuseaddr, and linger */
-	setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, (void*) &on, sizeof(on));
-	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (void*) &on, sizeof(on));
+	if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, (void*) &on, sizeof(on)) == -1)
+	{
+		gwarning(NULL, "Setting SO_KEEPALIVE failed");
+		closesocket(sock);
+		goto failure;
+	}
+	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (void*) &on, sizeof(on)) == -1)
+	{
+		gwarning(NULL, "Setting SO_REUSEADDR on socket failed");
+		closesocket(sock);
+		goto failure;
+	}
 	linger.l_onoff = 1;
 	linger.l_linger = 10;
-	setsockopt(sock, SOL_SOCKET, SO_LINGER, (void*) &linger, sizeof(linger));
+	if (setsockopt(sock, SOL_SOCKET, SO_LINGER, (void*) &linger, sizeof(linger)) == -1)
+	{
+		gwarning(NULL, "Setting SO_LINGER on socket failed");
+		closesocket(sock);
+		goto failure;
+	}
 
 	/* create a pool container for this socket */
 	if (apr_pool_create(&pool, gcb.pool))
@@ -2395,7 +2410,12 @@ http_setup(void)
 			 as by default handles are *not* inherited. */
 
 #endif
-			setsockopt(f, SOL_SOCKET, SO_KEEPALIVE, (void*) &on, sizeof(on));
+			if (setsockopt(f, SOL_SOCKET, SO_KEEPALIVE, (void*) &on, sizeof(on)) == -1)
+			{
+				closesocket(f);
+				gwarning(NULL, "Setting SO_KEEPALIVE on socket failed");
+				continue;
+			}
 
 			/*
 			 * We cannot use SO_REUSEADDR on win32 because it results in different
@@ -2404,11 +2424,21 @@ http_setup(void)
 			 * system.
 			 */
 #ifndef WIN32
-			setsockopt(f, SOL_SOCKET, SO_REUSEADDR, (void*) &on, sizeof(on));
+			if (setsockopt(f, SOL_SOCKET, SO_REUSEADDR, (void*) &on, sizeof(on)) == -1)
+			{
+				closesocket(f);
+				gwarning(NULL, "Setting SO_REUSEADDR on socket failed");
+				continue;
+			}
 #endif
 			linger.l_onoff = 1;
 			linger.l_linger = 5;
-			setsockopt(f, SOL_SOCKET, SO_LINGER, (void*) &linger, sizeof(linger));
+			if (setsockopt(f, SOL_SOCKET, SO_LINGER, (void*) &linger, sizeof(linger)) == -1)
+			{
+				closesocket(f);
+				gwarning(NULL, "Setting SO_LINGER on socket failed");
+				continue;
+			}
 
 			if (bind(f, rp->ai_addr, rp->ai_addrlen) != 0)
 			{
@@ -2435,7 +2465,7 @@ http_setup(void)
 				}
 
 				/* failed on bind, maybe this address family isn't supported */
-				close(f);
+				closesocket(f);
 				continue;
 			}
 
@@ -2443,7 +2473,7 @@ http_setup(void)
 			if (listen(f, opt.z))
 			{
 				int saved_errno = errno;
-				close(f);
+				closesocket(f);
 				gwarning(NULL, "listen with queue size %d on socket (%d) using port %d failed with error code (%d): %s",
 							  opt.z,
 							  (int)f,
