@@ -143,6 +143,7 @@ static pid_t postmasterPID = -1;
 
 static pgpid_t get_pgpid(void);
 static char **readfile(const char *path);
+static void free_readfile(char **optlines);
 static int start_postmaster(void);
 static void read_post_opts(void);
 
@@ -393,6 +394,24 @@ readfile(const char *path)
 }
 
 
+/*
+ * Free memory allocated for optlines through readfile()
+ */
+void
+free_readfile(char **optlines)
+{
+	int i = 0;
+
+	if (!optlines)
+		return;
+
+	while (optlines[i++])
+		free(optlines[i]);
+
+	free(optlines);
+
+	return;
+}
 
 /*
  * start/test/stop routines
@@ -565,6 +584,13 @@ test_postmaster_connection(bool do_checkpoint __attribute__((unused)))
 				strlcpy(portstr, p, Min((q - p) + 1, sizeof(portstr)));
 				/* keep looking, maybe there is another */
 			}
+
+			/*
+			 * Free the results of readfile.
+			 *
+			 * This is safe to call even if optlines is NULL.
+			 */
+			free_readfile(optlines);
 		}
 	}
 
@@ -684,6 +710,9 @@ read_post_opts(void)
 				write_stderr(_("%s: could not read file \"%s\"\n"), progname, postopts_file);
 				exit(1);
 			}
+
+			/* Free the results of readfile. */
+			free_readfile(optlines);
 		}
 		else if (optlines[0] == NULL || optlines[1] != NULL)
 		{
@@ -1139,8 +1168,13 @@ do_status(void)
 
 				optlines = readfile(postopts_file);
 				if (optlines != NULL)
+				{
 					for (; *optlines != NULL; optlines++)
 						fputs(*optlines, stdout);
+
+					/* Free the results of readfile */
+					free_readfile(optlines);
+				}
 				return;
 			}
 		}
