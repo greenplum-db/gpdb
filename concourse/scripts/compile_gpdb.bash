@@ -22,6 +22,7 @@ function prep_env_for_centos() {
       # This is necessesary to build gphdfs.
       # It should be removed once the build image has this included.
       yum install -y ant-junit
+      yum install -y moreutils
       ;;
 
     7)
@@ -31,6 +32,7 @@ function prep_env_for_centos() {
       ln -sf /usr/bin/xsubpp /usr/share/perl5/ExtUtils/xsubpp
       source /opt/gcc_env.sh
       yum install -y ant-junit
+      yum install -y moreutils
       ;;
 
     *)
@@ -130,7 +132,7 @@ function _main() {
   esac
 
   generate_build_number
-  make_sync_tools
+  make_sync_tools |ts
   # By default, only GPDB Server binary is build.
   # Use BLD_TARGETS flag with appropriate value string to generate client, loaders
   # connectors binaries
@@ -139,11 +141,11 @@ function _main() {
   else
     BLD_TARGET_OPTION=("")
   fi
-  build_gpdb "${BLD_TARGET_OPTION[@]}"
-  build_gppkg
-  unittest_check_gpdb
-  export_gpdb
-  export_gpdb_extensions
+  build_gpdb "${BLD_TARGET_OPTION[@]}" | ts
+  build_gppkg | ts
+  unittest_check_gpdb | ts
+  export_gpdb | ts
+  export_gpdb_extensions | ts
 }
 
 _main "$@"
