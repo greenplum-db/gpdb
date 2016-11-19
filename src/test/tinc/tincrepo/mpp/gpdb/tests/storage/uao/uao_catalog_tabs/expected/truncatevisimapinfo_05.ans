@@ -2,28 +2,29 @@
 ---+---+---
 (0 rows)
 
- segno | first_row_no | visimap 
--------+--------------+---------
-(0 rows)
+ count 
+-------
+     0
+(1 row)
 
  i |  j  | k  
 ---+-----+----
+ 2 | aa2 | 12
  4 | aa4 | 14
  1 | aa1 | 11
  5 | aa5 | 15
- 2 | aa2 | 12
 (4 rows)
 
- segno | first_row_no | visimap 
--------+--------------+---------
-     1 |            0 | 0
+ count 
+-------
+     1
 (1 row)
 
  i | j | k 
 ---+---+---
 (0 rows)
 
- segno | first_row_no | visimap 
--------+--------------+---------
-(0 rows)
-
+ count 
+-------
+     0
+(1 row)

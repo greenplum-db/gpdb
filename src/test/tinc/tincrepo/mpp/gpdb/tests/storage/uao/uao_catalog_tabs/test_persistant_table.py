@@ -168,7 +168,7 @@ class uao_visimap(ScenarioTestCase):
         sql_out=PSQL.run_sql_file(sql_file=sql_file, out_file=out_file,  flags='-q')
         with open(out_file, 'r') as f:
             relid = f.read()
-	aovisimap_cmd="select * from gp_dist_random('pg_aoseg.pg_aovisimap_%s');\n" % relid.strip()
+	aovisimap_cmd="select count(*) from gp_dist_random('pg_aoseg.pg_aovisimap_%s');\n" % relid.strip()
 	sql_cmd3="select * from uao_visimap_test05;\n"+aovisimap_cmd+"insert into uao_visimap_test05 select i,'aa'||i,i+10 from generate_series(1,5) as i;\ndelete from uao_visimap_test05 where i=3;\nselect * from uao_visimap_test05;\n"+aovisimap_cmd+"truncate table uao_visimap_test05;\nselect * from uao_visimap_test05;\n"+aovisimap_cmd
         with open(sql_file,'w') as f:
                 f.write(sql_cmd3);
@@ -191,7 +191,7 @@ class uao_visimap(ScenarioTestCase):
         sql_out=PSQL.run_sql_file(sql_file=sql_file, out_file=out_file,  flags='-q')
         with open(out_file, 'r') as f:
             relid = f.read()
-	aovisimap_cmd="select * from gp_dist_random('pg_aoseg.pg_aovisimap_%s');\n" % relid.strip()
+	aovisimap_cmd="select count(*) from gp_dist_random('pg_aoseg.pg_aovisimap_%s');\n" % relid.strip()
 	sql_cmd3="select * from uao_visimap_test06;\n"+aovisimap_cmd+"insert into uao_visimap_test06 select i,'aa'||i,i+10 from generate_series(1,5) as i;\ndelete from uao_visimap_test06 where i=3;\nselect * from uao_visimap_test06;\n"+aovisimap_cmd
         with open(sql_file,'w') as f:
                 f.write(sql_cmd3);
@@ -648,7 +648,7 @@ class uao_visimap(ScenarioTestCase):
         tinctest.logger.info("-------------------------------")
         tinctest.logger.info('creating UDF get_gp_aocsseg(oid)')
         tinctest.logger.info("-------------------------------\n")
-        sql_cmd1="drop function if exists get_gp_aocsseg(oid);  CREATE FUNCTION get_gp_aocsseg(oid) RETURNS TABLE ( gp_tid tid , segno integer , column_num smallint , physical_segno integer , tupcount bigint , eof bigint  , eof_uncompressed bigint  , modcount bigint, ownstate smallint ) AS '"+self.gphome+"/lib/postgresql/gp_ao_co_diagnostics.so', 'gp_aocsseg_wrapper' LANGUAGE C STRICT;"
+        sql_cmd1="drop function if exists get_gp_aocsseg(oid);  CREATE FUNCTION get_gp_aocsseg(oid) RETURNS TABLE ( gp_tid tid, segno integer, column_num smallint, physical_segno integer, tupcount bigint, eof bigint, eof_uncompressed bigint, modcount bigint, formatversion smallint, ownstate smallint ) AS '"+self.gphome+"/lib/postgresql/gp_ao_co_diagnostics.so', 'gp_aocsseg_wrapper' LANGUAGE C STRICT;"
         tinctest.logger.info(sql_cmd1+"\n")
         sql_out=PSQL.run_sql_command(sql_cmd = sql_cmd1)
         if (re.search('CREATE FUNCTION', sql_out)) is not None:
