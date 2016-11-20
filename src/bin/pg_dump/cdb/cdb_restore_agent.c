@@ -1399,14 +1399,14 @@ formDDBoostPsqlCommandLine(PQExpBuffer buf, const char *argv0,
 					  ddboostPg, ddp_file_name, (compProg ? ".gz" : ""));
 
 	if (ddboost_storage_unit)
-		appendPQExpBuffer(buf, " --ddbboost-storage-unit=%s ", ddbboost_storage_unit);
+		appendPQExpBuffer(buf, " --ddbboost-storage-unit=%s ", ddboost_storage_unit);
 
 	appendPQExpBuffer(buf, " --dd_boost_buf_size=%s ", dd_boost_buf_size);
 
 	if (compProg)
 		appendPQExpBuffer(buf, " | %s -c ", compProg);
 
-	formFilterCommandLine(buf, post_data, role, table_filter_file, change_schema_file, schema_level_file);
+	formFilterCommandLine(buf, argv0, post_data, role, table_filter_file, change_schema_file, schema_level_file);
 
 	appendPQExpBuffer(buf, " | psql ");
 }
