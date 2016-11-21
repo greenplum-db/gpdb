@@ -108,11 +108,6 @@ SELECT attr, class, (select count(distinct class) from qp_misc_jiras.tbl2859) as
 distributed by (attr);
 drop table qp_misc_jiras.tbl2859;
 drop table qp_misc_jiras.tbl2859a;
-create role tbl3068_testrole;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
-alter role tbl3068_testrole set search_path to blahblah1;
-NOTICE:  schema "blahblah1" does not exist
-drop role tbl3068_testrole;
 create view  qp_misc_jiras.tbl_2517_view  as select foo from (select 'bar' as foo) a;
 WARNING:  column "foo" has type "unknown"
 DETAIL:  Proceeding with relation creation anyway.
@@ -2874,11 +2869,6 @@ ERROR:  function currtid2 is not supported by GPDB
 -- start_ignore
 DROP TABLE qp_misc_jiras.tbl7886_foo;
 -- end_ignore
--- Resource Queue should not be created inside Transaction block the error is the expected behavior
-begin;
-CREATE RESOURCE QUEUE db_resque_new1 ACTIVE THRESHOLD 2 COST THRESHOLD 2000.00;
-ERROR:  CREATE RESOURCE QUEUE cannot run inside a transaction block
-end;
 create table qp_misc_jiras.tbl8017(x int, y int) distributed by (x);
 create index tbl8017_x on qp_misc_jiras.tbl8017(x);
 insert into qp_misc_jiras.tbl8017 select generate_series(1,100), generate_series(1,100);

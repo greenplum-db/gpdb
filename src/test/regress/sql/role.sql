@@ -47,6 +47,10 @@ SELECT gp_segment_id, rolname, array_to_string(rolconfig,',') as rolconfig
 SELECT DISTINCT 0 as gp_segment_id, rolname, array_to_string(rolconfig,',') as rolconfig
   FROM gp_dist_random('pg_authid') WHERE rolname = 'role_112911';
 
+-- Set search_path to a non-existent schema. This used to (incorrectly)
+-- print a NOTICE from each segment. (MPP-3068)
+alter role role_112911 set search_path to blahblah1;
+
 DROP ROLE role_112911;
 DROP SCHEMA common_schema;
 
