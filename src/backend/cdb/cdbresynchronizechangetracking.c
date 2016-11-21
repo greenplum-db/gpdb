@@ -1851,7 +1851,9 @@ File ChangeTracking_OpenFile(CTFType ftype)
 									 S_IRUSR | S_IWUSR);
 
 			if (file == -1)
-				elog(ERROR, "failed to open meta \"%s\" in ChangeTracking_OpenFile", path);
+				ereport(ERROR,
+						(errcode_for_file_access(),
+						errmsg("could not open file \"%s\": %m", path)));
 
 			/* 
 			 * seek to beginning of file. The meta file only has a single
@@ -1873,7 +1875,9 @@ File ChangeTracking_OpenFile(CTFType ftype)
 									 S_IRUSR | S_IWUSR);
 				
 			if (file == -1)
-				elog(ERROR, "failed to open log \"%s\" in ChangeTracking_OpenFile", path);
+				ereport(ERROR,
+						(errcode_for_file_access(),
+						errmsg("could not open file \"%s\": %m", path)));
 
 			FileSeek(file, 0, SEEK_END); 
 			break;
