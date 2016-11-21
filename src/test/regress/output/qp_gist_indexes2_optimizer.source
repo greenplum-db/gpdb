@@ -874,6 +874,7 @@ CREATE TABLE GistTable13 (
  property BOX,
  filler VARCHAR DEFAULT 'This is here just to take up space so that we use more pages of data and sequential scans take a lot more time.  Stones tinheads and mixers coming; we did it all on our own; this summer I hear the crunching; 11 dead in Ohio. Got right down to it; we were cutting us down; could have had fun but, no; left them face down dead on the ground.  How can you listen when you know?' 
  )
+ WITH (APPENDONLY=True, COMPRESSTYPE=ZLIB, COMPRESSLEVEL=1)
  DISTRIBUTED BY (id);
 -- Register a function that converts TEXT to BOX data type.
 CREATE FUNCTION TO_BOX(TEXT) RETURNS BOX AS
@@ -1430,6 +1431,7 @@ CREATE TABLE GistTable13 (
  property BOX,
  filler VARCHAR DEFAULT 'This is here just to take up space so that we use more pages of data and sequential scans take a lot more time.  Stones tinheads and mixers coming; we did it all on our own; this summer I hear the crunching; 11 dead in Ohio. Got right down to it; we were cutting us down; could have had fun but, no; left them face down dead on the ground.  How can you listen when you know?' 
  )
+ WITH (APPENDONLY=True)
  DISTRIBUTED BY (id);
 -- Register a function that converts TEXT to BOX data type.
 CREATE FUNCTION TO_BOX(TEXT) RETURNS BOX AS
@@ -1986,6 +1988,7 @@ CREATE TABLE GistTable13 (
  property BOX,
  filler VARCHAR DEFAULT 'This is here just to take up space so that we use more pages of data and sequential scans take a lot more time.  Stones tinheads and mixers coming; we did it all on our own; this summer I hear the crunching; 11 dead in Ohio. Got right down to it; we were cutting us down; could have had fun but, no; left them face down dead on the ground.  How can you listen when you know?' 
  )
+ WITH (APPENDONLY=True, ORIENTATION='column', COMPRESSTYPE=ZLIB, COMPRESSLEVEL=1)
  DISTRIBUTED BY (id);
 -- Register a function that converts TEXT to BOX data type.
 CREATE FUNCTION TO_BOX(TEXT) RETURNS BOX AS
@@ -2542,6 +2545,7 @@ CREATE TABLE GistTable13 (
  property BOX,
  filler VARCHAR DEFAULT 'This is here just to take up space so that we use more pages of data and sequential scans take a lot more time.  Stones tinheads and mixers coming; we did it all on our own; this summer I hear the crunching; 11 dead in Ohio. Got right down to it; we were cutting us down; could have had fun but, no; left them face down dead on the ground.  How can you listen when you know?' 
  )
+ WITH (APPENDONLY=True, ORIENTATION='column')
  DISTRIBUTED BY (id);
 -- Register a function that converts TEXT to BOX data type.
 CREATE FUNCTION TO_BOX(TEXT) RETURNS BOX AS

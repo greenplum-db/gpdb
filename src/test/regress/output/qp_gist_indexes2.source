@@ -874,6 +874,7 @@ CREATE TABLE GistTable13 (
  property BOX,
  filler VARCHAR DEFAULT 'This is here just to take up space so that we use more pages of data and sequential scans take a lot more time.  Stones tinheads and mixers coming; we did it all on our own; this summer I hear the crunching; 11 dead in Ohio. Got right down to it; we were cutting us down; could have had fun but, no; left them face down dead on the ground.  How can you listen when you know?' 
  )
+ WITH (APPENDONLY=True, COMPRESSTYPE=ZLIB, COMPRESSLEVEL=1)
  DISTRIBUTED BY (id);
 -- Register a function that converts TEXT to BOX data type.
 CREATE FUNCTION TO_BOX(TEXT) RETURNS BOX AS
@@ -941,14 +942,15 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                                       QUERY PLAN                                       
-----------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.27 rows=1 width=36)
-   ->  Index Scan using gistindex13 on gisttable13  (cost=0.00..200.27 rows=1 width=36)
-         Index Cond: property ~= '(999,999),(998,998)'::box
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.26..200.27 rows=1 width=36)
+   ->  Bitmap Append-Only Row-Oriented Scan on gisttable13  (cost=100.26..200.27 rows=1 width=36)
+         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         ->  Bitmap Index Scan on gistindex13  (cost=0.00..100.26 rows=1 width=0)
+               Index Cond: property ~= '(999,999),(998,998)'::box
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
-(5 rows)
+(6 rows)
 
 VACUUM GistTable13;
 ANALYZE GistTable13;
@@ -961,14 +963,15 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                                       QUERY PLAN                                       
-----------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.27 rows=1 width=36)
-   ->  Index Scan using gistindex13 on gisttable13  (cost=0.00..200.27 rows=1 width=36)
-         Index Cond: property ~= '(999,999),(998,998)'::box
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.26..200.27 rows=1 width=36)
+   ->  Bitmap Append-Only Row-Oriented Scan on gisttable13  (cost=100.26..200.27 rows=1 width=36)
+         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         ->  Bitmap Index Scan on gistindex13  (cost=0.00..100.26 rows=1 width=0)
+               Index Cond: property ~= '(999,999),(998,998)'::box
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
-(5 rows)
+(6 rows)
 
 TRUNCATE TABLE GistTable13;
 -- Add some rows.
@@ -991,14 +994,15 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                                       QUERY PLAN                                       
-----------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.27 rows=1 width=36)
-   ->  Index Scan using gistindex13 on gisttable13  (cost=0.00..200.27 rows=1 width=36)
-         Index Cond: property ~= '(999,999),(998,998)'::box
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.26..200.27 rows=1 width=36)
+   ->  Bitmap Append-Only Row-Oriented Scan on gisttable13  (cost=100.26..200.27 rows=1 width=36)
+         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         ->  Bitmap Index Scan on gistindex13  (cost=0.00..100.26 rows=1 width=0)
+               Index Cond: property ~= '(999,999),(998,998)'::box
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
-(5 rows)
+(6 rows)
 
 -- ----------------------------------------------------------------------
 -- Test: test15ReindexDropIndex.sql
@@ -1438,6 +1442,7 @@ CREATE TABLE GistTable13 (
  property BOX,
  filler VARCHAR DEFAULT 'This is here just to take up space so that we use more pages of data and sequential scans take a lot more time.  Stones tinheads and mixers coming; we did it all on our own; this summer I hear the crunching; 11 dead in Ohio. Got right down to it; we were cutting us down; could have had fun but, no; left them face down dead on the ground.  How can you listen when you know?' 
  )
+ WITH (APPENDONLY=True)
  DISTRIBUTED BY (id);
 -- Register a function that converts TEXT to BOX data type.
 CREATE FUNCTION TO_BOX(TEXT) RETURNS BOX AS
@@ -1505,14 +1510,15 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                                       QUERY PLAN                                       
-----------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.27 rows=1 width=36)
-   ->  Index Scan using gistindex13 on gisttable13  (cost=0.00..200.27 rows=1 width=36)
-         Index Cond: property ~= '(999,999),(998,998)'::box
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.26..200.27 rows=1 width=36)
+   ->  Bitmap Append-Only Row-Oriented Scan on gisttable13  (cost=100.26..200.27 rows=1 width=36)
+         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         ->  Bitmap Index Scan on gistindex13  (cost=0.00..100.26 rows=1 width=0)
+               Index Cond: property ~= '(999,999),(998,998)'::box
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
-(5 rows)
+(6 rows)
 
 VACUUM GistTable13;
 ANALYZE GistTable13;
@@ -1525,14 +1531,15 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                                       QUERY PLAN                                       
-----------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.27 rows=1 width=36)
-   ->  Index Scan using gistindex13 on gisttable13  (cost=0.00..200.27 rows=1 width=36)
-         Index Cond: property ~= '(999,999),(998,998)'::box
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.26..200.27 rows=1 width=36)
+   ->  Bitmap Append-Only Row-Oriented Scan on gisttable13  (cost=100.26..200.27 rows=1 width=36)
+         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         ->  Bitmap Index Scan on gistindex13  (cost=0.00..100.26 rows=1 width=0)
+               Index Cond: property ~= '(999,999),(998,998)'::box
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
-(5 rows)
+(6 rows)
 
 TRUNCATE TABLE GistTable13;
 -- Add some rows.
@@ -1555,14 +1562,15 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                                       QUERY PLAN                                       
-----------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.27 rows=1 width=36)
-   ->  Index Scan using gistindex13 on gisttable13  (cost=0.00..200.27 rows=1 width=36)
-         Index Cond: property ~= '(999,999),(998,998)'::box
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.26..200.27 rows=1 width=36)
+   ->  Bitmap Append-Only Row-Oriented Scan on gisttable13  (cost=100.26..200.27 rows=1 width=36)
+         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         ->  Bitmap Index Scan on gistindex13  (cost=0.00..100.26 rows=1 width=0)
+               Index Cond: property ~= '(999,999),(998,998)'::box
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
-(5 rows)
+(6 rows)
 
 -- ----------------------------------------------------------------------
 -- Test: test15ReindexDropIndex.sql
@@ -2002,6 +2010,7 @@ CREATE TABLE GistTable13 (
  property BOX,
  filler VARCHAR DEFAULT 'This is here just to take up space so that we use more pages of data and sequential scans take a lot more time.  Stones tinheads and mixers coming; we did it all on our own; this summer I hear the crunching; 11 dead in Ohio. Got right down to it; we were cutting us down; could have had fun but, no; left them face down dead on the ground.  How can you listen when you know?' 
  )
+ WITH (APPENDONLY=True, ORIENTATION='column', COMPRESSTYPE=ZLIB, COMPRESSLEVEL=1)
  DISTRIBUTED BY (id);
 -- Register a function that converts TEXT to BOX data type.
 CREATE FUNCTION TO_BOX(TEXT) RETURNS BOX AS
@@ -2069,14 +2078,15 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                                       QUERY PLAN                                       
-----------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.27 rows=1 width=36)
-   ->  Index Scan using gistindex13 on gisttable13  (cost=0.00..200.27 rows=1 width=36)
-         Index Cond: property ~= '(999,999),(998,998)'::box
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.26..200.27 rows=1 width=36)
+   ->  Bitmap Append-Only Column-Oriented Scan on gisttable13  (cost=100.26..200.27 rows=1 width=36)
+         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         ->  Bitmap Index Scan on gistindex13  (cost=0.00..100.26 rows=1 width=0)
+               Index Cond: property ~= '(999,999),(998,998)'::box
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
-(5 rows)
+(6 rows)
 
 VACUUM GistTable13;
 ANALYZE GistTable13;
@@ -2089,14 +2099,15 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                                       QUERY PLAN                                       
-----------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.27 rows=1 width=36)
-   ->  Index Scan using gistindex13 on gisttable13  (cost=0.00..200.27 rows=1 width=36)
-         Index Cond: property ~= '(999,999),(998,998)'::box
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.26..200.27 rows=1 width=36)
+   ->  Bitmap Append-Only Column-Oriented Scan on gisttable13  (cost=100.26..200.27 rows=1 width=36)
+         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         ->  Bitmap Index Scan on gistindex13  (cost=0.00..100.26 rows=1 width=0)
+               Index Cond: property ~= '(999,999),(998,998)'::box
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
-(5 rows)
+(6 rows)
 
 TRUNCATE TABLE GistTable13;
 -- Add some rows.
@@ -2119,14 +2130,15 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                                       QUERY PLAN                                       
-----------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.27 rows=1 width=36)
-   ->  Index Scan using gistindex13 on gisttable13  (cost=0.00..200.27 rows=1 width=36)
-         Index Cond: property ~= '(999,999),(998,998)'::box
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.26..200.27 rows=1 width=36)
+   ->  Bitmap Append-Only Column-Oriented Scan on gisttable13  (cost=100.26..200.27 rows=1 width=36)
+         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         ->  Bitmap Index Scan on gistindex13  (cost=0.00..100.26 rows=1 width=0)
+               Index Cond: property ~= '(999,999),(998,998)'::box
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
-(5 rows)
+(6 rows)
 
 -- ----------------------------------------------------------------------
 -- Test: test15ReindexDropIndex.sql
@@ -2566,6 +2578,7 @@ CREATE TABLE GistTable13 (
  property BOX,
  filler VARCHAR DEFAULT 'This is here just to take up space so that we use more pages of data and sequential scans take a lot more time.  Stones tinheads and mixers coming; we did it all on our own; this summer I hear the crunching; 11 dead in Ohio. Got right down to it; we were cutting us down; could have had fun but, no; left them face down dead on the ground.  How can you listen when you know?' 
  )
+ WITH (APPENDONLY=True, ORIENTATION='column')
  DISTRIBUTED BY (id);
 -- Register a function that converts TEXT to BOX data type.
 CREATE FUNCTION TO_BOX(TEXT) RETURNS BOX AS
@@ -2633,14 +2646,15 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                                       QUERY PLAN                                       
-----------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.27 rows=1 width=36)
-   ->  Index Scan using gistindex13 on gisttable13  (cost=0.00..200.27 rows=1 width=36)
-         Index Cond: property ~= '(999,999),(998,998)'::box
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.26..200.27 rows=1 width=36)
+   ->  Bitmap Append-Only Column-Oriented Scan on gisttable13  (cost=100.26..200.27 rows=1 width=36)
+         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         ->  Bitmap Index Scan on gistindex13  (cost=0.00..100.26 rows=1 width=0)
+               Index Cond: property ~= '(999,999),(998,998)'::box
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
-(5 rows)
+(6 rows)
 
 VACUUM GistTable13;
 ANALYZE GistTable13;
@@ -2653,14 +2667,15 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                                       QUERY PLAN                                       
-----------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.27 rows=1 width=36)
-   ->  Index Scan using gistindex13 on gisttable13  (cost=0.00..200.27 rows=1 width=36)
-         Index Cond: property ~= '(999,999),(998,998)'::box
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.26..200.27 rows=1 width=36)
+   ->  Bitmap Append-Only Column-Oriented Scan on gisttable13  (cost=100.26..200.27 rows=1 width=36)
+         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         ->  Bitmap Index Scan on gistindex13  (cost=0.00..100.26 rows=1 width=0)
+               Index Cond: property ~= '(999,999),(998,998)'::box
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
-(5 rows)
+(6 rows)
 
 TRUNCATE TABLE GistTable13;
 -- Add some rows.
@@ -2683,14 +2698,15 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                                       QUERY PLAN                                       
-----------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.27 rows=1 width=36)
-   ->  Index Scan using gistindex13 on gisttable13  (cost=0.00..200.27 rows=1 width=36)
-         Index Cond: property ~= '(999,999),(998,998)'::box
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=100.26..200.27 rows=1 width=36)
+   ->  Bitmap Append-Only Column-Oriented Scan on gisttable13  (cost=100.26..200.27 rows=1 width=36)
+         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         ->  Bitmap Index Scan on gistindex13  (cost=0.00..100.26 rows=1 width=0)
+               Index Cond: property ~= '(999,999),(998,998)'::box
  Settings:  enable_seqscan=off
- Optimizer status: legacy query optimizer
-(5 rows)
+(6 rows)
 
 -- ----------------------------------------------------------------------
 -- Test: test15ReindexDropIndex.sql
