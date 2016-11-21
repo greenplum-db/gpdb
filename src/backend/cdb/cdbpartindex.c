@@ -726,59 +726,59 @@ collapseIndexes(PartitionIndexNode **partitionIndexNode,
 	return exists;
 }
 
-/* 
+/*
  * indexParts
  *   Walks the tree of nodes and for each logical index that exists on the node,
  *   records the node (partition id) with the logical index in the hash.
- *   If the logical index exists on a default part, record some additional 
+ *   If the logical index exists on a default part, record some additional
  *   information to indentify the specific default part.
  *
- *   This consolidates all the information regarding the logical index in the 
+ *   This consolidates all the information regarding the logical index in the
  *   hash table. As we exit from the function we have a hash table with an entry
  *   for every logical index
  * 	logical index id -> (logicalIndexOid, IndexInfo, partList, defaultPartList)
  */
-static void indexParts(PartitionIndexNode **np, bool isDefault)
+static void
+indexParts(PartitionIndexNode **np, bool isDefault)
 {
-	LogicalIndexInfoHashEntry *entry;
-	PartitionIndexNode *n = *np;
-	bool found;
+	LogicalIndexInfoHashEntry  *entry;
+	PartitionIndexNode		   *n = *np;
+	bool						found;
+	int							x;
 
 	if (!n)
 		return;
 	
-	int x; 
 	x = bms_first_from(n->index, 0);
 	while (x >= 0)
 	{
-		entry = (LogicalIndexInfoHashEntry *)hash_search(LogicalIndexInfoHash,
-							  (void *)&x,
-							  HASH_FIND,
-						 	  &found);
+		entry = (LogicalIndexInfoHashEntry *) hash_search(LogicalIndexInfoHash,
+							  (void *)&x, HASH_FIND, &found);
 		if (!found)
 		{
-            		ereport(ERROR,
-                            	(errcode(ERRCODE_INTERNAL_ERROR),
-                             	errmsg("error during BuildLogicalIndexInfo. Indexr not found \"%d\" in hash",
-                                            x)));
+			ereport(ERROR,
+					(errcode(ERRCODE_INTERNAL_ERROR),
+					errmsg("error during BuildLogicalIndexInfo. Index not found \"%d\" in hash",
+						   x)));
 		}
 
 		if (n->isDefault || isDefault)
 		{
-			/* 
+			/*
 			 * We keep track of the default node in the PartitionIndexNode
-			 * tree, since we need to output the defaultLevels information 
+			 * tree, since we need to output the defaultLevels information
 			 * to the caller.
 			 */
 			entry->defaultPartList = lappend(entry->defaultPartList, n);
-			numIndexesOnDefaultParts++; 
+			numIndexesOnDefaultParts++;
 		}
 		else
-			/* 	
+			/*
 			 * For regular non-default parts we just track the part oid
 			 * which will be used to get the part constraint.
-			 */ 
+			 */
 			entry->partList = lappend_oid(entry->partList, n->parchildrelid);
+
 		x = bms_first_from(n->index, x + 1);
 	}
 
@@ -1225,8 +1225,10 @@ getPhysicalIndexRelid(Relation partRel, LogicalIndexInfo *iInfo)
 static void
 dumpPartsIndexInfo(PartitionIndexNode *n, int level)
 {
-	ListCell *lc; 
-	StringInfoData logicalIndexes;
+	ListCell 	   *lc;
+	StringInfoData	logicalIndexes;
+	int				x;
+
 	initStringInfo(&logicalIndexes);
 
 	if (!n)
@@ -1237,7 +1239,6 @@ dumpPartsIndexInfo(PartitionIndexNode *n, int level)
 
 	appendStringInfo(&logicalIndexes, "%d ", n->parchildrelid);
 
-	int x; 
 	x = bms_first_from(n->index, 0);
 	appendStringInfo(&logicalIndexes, "%s ", " (");
 
