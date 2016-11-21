@@ -9838,8 +9838,8 @@ xlog_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record)
 										record->xl_len,
 										&beginLoc,
 										/* errlevel */ -1,	// Suppress elog altogether on master mirroring checkpoint length checking.
-										&tablespaceCount,
 										&filespaceCount,
+										&tablespaceCount,
 										&databaseCount))
 
 				{
