@@ -2,27 +2,45 @@
 -- 
 
 SELECT relname, reltuples FROM pg_class WHERE relname = 'foo';
- foo     |  1000
+ relname | reltuples 
+---------+-----------
+ foo     |      1000
 (1 row)
+
 SELECT relname, reltuples FROM pg_class WHERE relname = 'foo_index';
- foo_index | 1000
+  relname  | reltuples 
+-----------+-----------
+ foo_index |      1000
 (1 row)
+
 DELETE FROM foo WHERE a < 100;
 DELETE 99
 SELECT relname, reltuples FROM pg_class WHERE relname = 'foo';
- foo     | 1000
+ relname | reltuples 
+---------+-----------
+ foo     |      1000
 (1 row)
+
 SELECT relname, reltuples FROM pg_class WHERE relname = 'foo_index';
- foo_index | 1000
+  relname  | reltuples 
+-----------+-----------
+ foo_index |      1000
 (1 row)
+
 UPDATE foo SET b=42 WHERE a < 200;
 UPDATE 100
 SELECT relname, reltuples FROM pg_class WHERE relname = 'foo';
- foo     | 1000
+ relname | reltuples 
+---------+-----------
+ foo     |      1000
 (1 row)
+
 SELECT relname, reltuples FROM pg_class WHERE relname = 'foo_index';
- foo_index | 1000
+  relname  | reltuples 
+-----------+-----------
+ foo_index |      1000
 (1 row)
+
 set enable_seqscan=false;
 SET
 SELECT COUNT(*) FROM foo WHERE b=42;

@@ -2,29 +2,41 @@
 -- 
 
 SELECT COUNT(*) FROM foo;
-   10
+ count 
+-------
+    10
 (1 row)
+
 DELETE FROM foo WHERE a < 4;
 DELETE 3
 SELECT COUNT(*) FROM foo;
-    7
+ count 
+-------
+     7
 (1 row)
+
 INSERT INTO foo SELECT i as a, i as b, 'hello world' as c FROM generate_series(11,20) AS i;
 INSERT 0 10
 SELECT COUNT(*) FROM foo;
-17
+ count 
+-------
+    17
 (1 row)
+
 DELETE FROM foo WHERE a = 16;
 DELETE 1
 DELETE FROM foo WHERE a = 17;
 DELETE 1
 SELECT a FROM foo WHERE a > 10;
-11
-12
-13
-14
-15
-18
-19
-20
+ a  
+----
+ 11
+ 13
+ 15
+ 19
+ 12
+ 14
+ 18
+ 20
 (8 rows)
+
