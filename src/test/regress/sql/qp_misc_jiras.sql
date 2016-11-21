@@ -816,16 +816,6 @@ select * from qp_misc_jiras.tbl6419_test where icedt::text = (select partitionra
 select * from qp_misc_jiras.tbl6419_test where '2009-12-12'::date::text = (select 'test'::text);
 drop table qp_misc_jiras.tbl6419_test;
 
--- start_matchsubs
--- m/pg_temp/
--- s/pg_temp_(\\d)+/pg_temp_xx/
--- end_matchsubs
-create temp table qp_misc_jiras_foo (a int, b text);
-
--- start_ignore
-select 'drop schema '||nspname||' cascade;' from pg_namespace where nspname like '%temp%';
--- end_ignore
-
 CREATE TABLE qp_misc_jiras.m_ccr_mthy_cr_nds_t00
 (
 cls_yymm date,
