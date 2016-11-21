@@ -240,7 +240,6 @@ typedef struct WindowContext
 /* Forward declarations (local) */
 
 static WindowContext *newWindowContext(void);
-static void deleteWindowContext(WindowContext *context);
 static void build_sortref_index(List *tlist, int *max_sortref, AttrNumber **sortref_resno);
 static void build_var_index(Query *parse, WindowContext *context);
 static int index_of_var(Var * var, WindowContext *context);
@@ -295,7 +294,6 @@ window_planner(PlannerInfo *root, double tuple_fraction, List **pathkeys_ptr)
 {
 	Query		   *parse = root->parse;
 	WindowContext  *context = newWindowContext();
-	Plan		   *result_plan = NULL;
 
 	/* Assert existence of windowing in query. */
 	Assert(parse->targetList != NIL);
@@ -368,21 +366,12 @@ window_planner(PlannerInfo *root, double tuple_fraction, List **pathkeys_ptr)
 			return plan_parallel_window_query(root, context, pathkeys_ptr);
 	}
 
-	/* TODO Check our API.
-	 *
-	 * Note: pathkeys may be an important implicit result. 
-	 */
-	
-	deleteWindowContext(context);
-	
-	if ( result_plan == NULL )
-	{
-		ereport(ERROR,
-			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			 errmsg("That windowing query is not supported yet.")));
-	}
-	
-	return result_plan;
+	/* not reached */
+	ereport(ERROR,
+			(errcode(ERRCODE_INTERNAL_ERROR),
+			 errmsg("Unsupported window query detected.")));
+
+	return NULL;
 }
 
 /* Create a palloc'd WindowContext structure for local use. */
@@ -420,62 +409,6 @@ static WindowContext *newWindowContext()
 	
 	return context;
 }
-
-/* Delete palloc'd WindowContext and owned sub-structures. */
-static void deleteWindowContext(WindowContext *context)
-{
-	ListCell *cell;
-	
-	if ( context == NULL )
-		return;
-	
-	/* no need to free upper_tlist */
-	
-	bms_free(context->upper_var_set);
-	
-	foreach( cell, context->refinfos )
-	{
-		RefInfo *ref = (RefInfo *)lfirst(cell);
-		/* no need to free actual ref */
-		bms_free(ref->varset);
-	}
-	list_free_deep(context->refinfos);
-	
-	if ( context->specinfos != NULL )
-		pfree(context->specinfos);
-	
-	if ( context->rowkey_attrs != NULL )
-		pfree(context->rowkey_attrs);
-	
-	if ( context->windowinfos != NULL )
-		pfree(context->windowinfos);
-	
-	if ( context->varattno_offsets != NULL )
-		pfree(context->varattno_offsets);
-	
-	if ( context->offset_varnos != NULL )
-		pfree(context->offset_varnos);
-	
-	if ( context->offset_upper_varattrnos != NULL )
-		pfree(context->offset_upper_varattrnos);
-	
-	if ( context->sortref_resno != NULL )
-		pfree(context->sortref_resno);
-	
-	/* TODO Clean up handling of 
-	 *   lower_tlist, 
-	 *   keyed_lower_tlist, 
-	 *   subplan, 
-	 *   subplan_pathkeys
-	 * so we know whether to free them!
-	 */
-	
-	/* don't free cur_refinfo */
-	
-	pfree(context);
-}
-
-
 
 /* Build an index structure to convert a (varno, varattno) to an integer
  * index and save it in the context.  The intended use of the index is

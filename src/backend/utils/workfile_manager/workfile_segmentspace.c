@@ -82,24 +82,13 @@ WorkfileSegspace_Reserve(int64 bytes_to_reserve)
 	{
 		return true;
 	}
-	else
-	{
-		/* We exceeded the logical limit. Revert the reserved space */
-		(void) pg_atomic_sub_fetch_u64(used_segspace, bytes_to_reserve);
 
-		workfileError = WORKFILE_ERROR_LIMIT_PER_SEGMENT;
+	/* We exceeded the logical limit. Revert the reserved space */
+	(void) pg_atomic_sub_fetch_u64(used_segspace, bytes_to_reserve);
 
-		/* Set diskfull to true to stop any further attempts to write more data */
-		WorkfileDiskspace_SetFull(true /* isFull */);
-		return false;
-	}
+	workfileError = WORKFILE_ERROR_LIMIT_PER_SEGMENT;
 
-
-	/*
-	 * We exceeded max_eviction_attempts and did not manage to reserve.
-	 * Set diskfull to true to stop any further attempts to write more data
-	 * and notify the caller.
-	 */
+	/* Set diskfull to true to stop any further attempts to write more data */
 	WorkfileDiskspace_SetFull(true /* isFull */);
 	return false;
 }
