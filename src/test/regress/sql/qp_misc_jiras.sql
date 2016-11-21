@@ -17,13 +17,6 @@ alter table qp_misc_jiras.tbl1318 alter column aa type integer using  bit_length
 drop table qp_misc_jiras.tbl1318;
 
 create table qp_misc_jiras.tbl1318(dummy integer, aa text not null);
-create index concurrently a_daa on qp_misc_jiras.tbl1318(dummy,aa);
-alter table qp_misc_jiras.tbl1318 alter column aa type integer using  bit_length(aa);
-drop index qp_misc_jiras.tbl1318_daa;
-alter table qp_misc_jiras.tbl1318 alter column aa type integer using  bit_length(aa::text);
-drop table qp_misc_jiras.tbl1318;
-
-create table qp_misc_jiras.tbl1318(dummy integer, aa text not null);
 create index tbl1318_daa on qp_misc_jiras.tbl1318 using bitmap(dummy,aa);
 alter table qp_misc_jiras.tbl1318 alter column aa type integer using  bit_length(aa);
 drop index qp_misc_jiras.tbl1318_daa;
