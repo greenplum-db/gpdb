@@ -8232,12 +8232,14 @@ formGenericFilePathName(char *keyword, char *pszBackupDirectory, char *pszBackup
 	{
 		mpp_err_msg(logWarn, progname, "Backup catalog FileName based on path %s and key %s too long",
 					pszBackupDirectory, pszBackupKey);
+		exit_nicely();
 	}
 
 	pszBackupFileName = (char *) malloc(sizeof(char) * (1 + len));
 	if (pszBackupFileName == NULL)
 	{
 		mpp_err_msg(logError, progname, "out of memory");
+		exit_nicely();
 	}
 
 	strcpy(pszBackupFileName, pszBackupDirectory);

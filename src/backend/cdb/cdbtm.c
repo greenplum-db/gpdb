@@ -2268,7 +2268,9 @@ doDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand, int flags,
 
 	for (i = 0; i < resultCount; i++)
 		PQclear(results[i]);
-	free(results);
+
+	if (results)
+		free(results);
 
 	return (numOfFailed == 0);
 }

@@ -744,42 +744,42 @@ static void indexParts(PartitionIndexNode **np, bool isDefault)
 	PartitionIndexNode *n = *np;
 	bool found;
 
-	if (n)
+	if (!n)
+		return;
+	
+	int x; 
+	x = bms_first_from(n->index, 0);
+	while (x >= 0)
 	{
-		int x; 
-		x = bms_first_from(n->index, 0);
-		while (x >= 0)
+		entry = (LogicalIndexInfoHashEntry *)hash_search(LogicalIndexInfoHash,
+							  (void *)&x,
+							  HASH_FIND,
+						 	  &found);
+		if (!found)
 		{
-			entry = (LogicalIndexInfoHashEntry *)hash_search(LogicalIndexInfoHash,
-								  (void *)&x,
-								  HASH_FIND,
-							 	  &found);
-			if (!found)
-			{
-                		ereport(ERROR,
-                                	(errcode(ERRCODE_INTERNAL_ERROR),
-                                 	errmsg("error during BuildLogicalIndexInfo. Indexr not found \"%d\" in hash",
-                                                x)));
-			}
-
-			if (n->isDefault || isDefault)
-			{
-				/* 
-				 * We keep track of the default node in the PartitionIndexNode
-				 * tree, since we need to output the defaultLevels information 
-				 * to the caller.
-				 */
-				entry->defaultPartList = lappend(entry->defaultPartList, n);
-				numIndexesOnDefaultParts++; 
-			}
-			else
-				/* 	
-				 * For regular non-default parts we just track the part oid
-				 * which will be used to get the part constraint.
-				 */ 
-				entry->partList = lappend_oid(entry->partList, n->parchildrelid);
-			x = bms_first_from(n->index, x + 1);
+            		ereport(ERROR,
+                            	(errcode(ERRCODE_INTERNAL_ERROR),
+                             	errmsg("error during BuildLogicalIndexInfo. Indexr not found \"%d\" in hash",
+                                            x)));
 		}
+
+		if (n->isDefault || isDefault)
+		{
+			/* 
+			 * We keep track of the default node in the PartitionIndexNode
+			 * tree, since we need to output the defaultLevels information 
+			 * to the caller.
+			 */
+			entry->defaultPartList = lappend(entry->defaultPartList, n);
+			numIndexesOnDefaultParts++; 
+		}
+		else
+			/* 	
+			 * For regular non-default parts we just track the part oid
+			 * which will be used to get the part constraint.
+			 */ 
+			entry->partList = lappend_oid(entry->partList, n->parchildrelid);
+		x = bms_first_from(n->index, x + 1);
 	}
 
 	if (n->children)
@@ -1229,28 +1229,27 @@ dumpPartsIndexInfo(PartitionIndexNode *n, int level)
 	StringInfoData logicalIndexes;
 	initStringInfo(&logicalIndexes);
 
-	if (n)
+	if (!n)
+		return;
+
+	for (int i = 0; i <= level; i++)
+		appendStringInfo(&logicalIndexes, "%s", "   ");
+
+	appendStringInfo(&logicalIndexes, "%d ", n->parchildrelid);
+
+	int x; 
+	x = bms_first_from(n->index, 0);
+	appendStringInfo(&logicalIndexes, "%s ", " (");
+
+	while (x >= 0)
 	{
-		for (int i = 0; i <= level; i++)
-			appendStringInfo(&logicalIndexes, "%s", "   ");
-
-		appendStringInfo(&logicalIndexes, "%d ", n->parchildrelid);
-
-		int x; 
-		x = bms_first_from(n->index, 0);
-		appendStringInfo(&logicalIndexes, "%s ", " (");
-
-		while (x >= 0)
-		{
-			appendStringInfo(&logicalIndexes, "%d ", x);
-			x = bms_first_from(n->index, x + 1);
-		}
-
-		appendStringInfo(&logicalIndexes, "%s ", " )");
-
-		elog(DEBUG5, "%s", logicalIndexes.data);
+		appendStringInfo(&logicalIndexes, "%d ", x);
+		x = bms_first_from(n->index, x + 1);
 	}
 
+	appendStringInfo(&logicalIndexes, "%s ", " )");
+
+	elog(DEBUG5, "%s", logicalIndexes.data);
 
 	if (n->children)
 	{

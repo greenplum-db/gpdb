@@ -1641,7 +1641,13 @@ reportBackupResults(InputOptions inputopts, ThreadParmArray *pParmAr)
 	SegmentDatabase *pSegDB;
 	ThreadParm *p;
 
-	if (pParmAr == NULL || pParmAr->count == 0)
+	if (pParmAr == NULL)
+	{
+		mpp_err_msg(logError, progname, "Report data missing\n");
+		return 2;
+	}
+
+	if (pParmAr->count == 0)
 	{
 		pParmAr->count = 1;		/* just use master in this case (early error) */
 		pParmAr->pData = (ThreadParm *) calloc(1, sizeof(ThreadParm));

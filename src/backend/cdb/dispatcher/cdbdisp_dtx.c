@@ -82,7 +82,7 @@ CdbDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 	CdbDispatcherState ds = {NULL, NULL, NULL};
 
 	CdbDispatchResults* pr = NULL;
-	CdbPgResults cdb_pgresults;
+	CdbPgResults cdb_pgresults = {NULL, 0};
 
 	DispatchCommandDtxProtocolParms dtxProtocolParms;
 	Gang *primaryGang;
