@@ -95,7 +95,6 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
    '( (76, 77), (76, 75), (75, 77) )', '( (76, 76), 76)' );
 
 
-
 -- ----------------------------------------------------------------------
 -- Test: test05Select.sql
 -- ----------------------------------------------------------------------
@@ -110,6 +109,67 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
  ORDER BY id;
 
+
+-- ----------------------------------------------------------------------
+-- Test: test06IllegalonAO.sql
+-- ----------------------------------------------------------------------
+
+SET enable_seqscan = FALSE;
+
+ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
+
+ALTER INDEX propertyBoxIndex RENAME TO propIndex;
+
+UPDATE GistTable1
+ SET description = 'Where''s Johnny?', bullseye = NULL
+ WHERE owner = 'James McMurtry';
+
+-- We should no longer be able to find "Levelland".
+SELECT property FROM GistTable1 
+ WHERE description = 'Levelland';
+
+ALTER INDEX propIndex SET (FILLFACTOR=50);
+
+SELECT owner FROM GistTable1 
+ WHERE property ~= '( (40, 20), (42, 25) )';
+
+REINDEX INDEX propIndex;
+
+SELECT owner FROM GistTable1 
+ WHERE property ~= '( (40, 20), (42, 25) )';
+
+-- Delete Theodore Turner
+DELETE from GistTable1 WHERE property ~= '((2000,2000), (2100, 2100))';
+
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1 
+ ORDER BY id;
+
+-- Update James McMurtry.
+UPDATE GistTable1 
+ SET owner = 'Record Company', description = 'fat profit', 
+   property = '((100,100), (200, 200))'
+ WHERE property ~= '( (1700,1900),(1500,1500) )';
+
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1 
+ ORDER BY id;
+
+ALTER INDEX propIndex RENAME TO propertyBoxIndex;
+
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1 
+ ORDER BY id;
+
+DELETE FROM GistTable1 WHERE bullseye = '( (76, 76), 76)';
+
+
+-- ----------------------------------------------------------------------
+-- Test: test07select.sql
+-- ----------------------------------------------------------------------
+
+SET enable_seqscan = FALSE;
+
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1
+ WHERE property IS NOT NULL
+ ORDER BY id;
 
 
 -- ----------------------------------------------------------------------
@@ -470,7 +530,6 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
    '( (76, 77), (76, 75), (75, 77) )', '( (76, 76), 76)' );
 
 
-
 -- ----------------------------------------------------------------------
 -- Test: test05Select.sql
 -- ----------------------------------------------------------------------
@@ -485,6 +544,67 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
  ORDER BY id;
 
+
+-- ----------------------------------------------------------------------
+-- Test: test06IllegalonAO.sql
+-- ----------------------------------------------------------------------
+
+SET enable_seqscan = FALSE;
+
+ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
+
+ALTER INDEX propertyBoxIndex RENAME TO propIndex;
+
+UPDATE GistTable1
+ SET description = 'Where''s Johnny?', bullseye = NULL
+ WHERE owner = 'James McMurtry';
+
+-- We should no longer be able to find "Levelland".
+SELECT property FROM GistTable1 
+ WHERE description = 'Levelland';
+
+ALTER INDEX propIndex SET (FILLFACTOR=50);
+
+SELECT owner FROM GistTable1 
+ WHERE property ~= '( (40, 20), (42, 25) )';
+
+REINDEX INDEX propIndex;
+
+SELECT owner FROM GistTable1 
+ WHERE property ~= '( (40, 20), (42, 25) )';
+
+-- Delete Theodore Turner
+DELETE from GistTable1 WHERE property ~= '((2000,2000), (2100, 2100))';
+
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1 
+ ORDER BY id;
+
+-- Update James McMurtry.
+UPDATE GistTable1 
+ SET owner = 'Record Company', description = 'fat profit', 
+   property = '((100,100), (200, 200))'
+ WHERE property ~= '( (1700,1900),(1500,1500) )';
+
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1 
+ ORDER BY id;
+
+ALTER INDEX propIndex RENAME TO propertyBoxIndex;
+
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1 
+ ORDER BY id;
+
+DELETE FROM GistTable1 WHERE bullseye = '( (76, 76), 76)';
+
+
+-- ----------------------------------------------------------------------
+-- Test: test07select.sql
+-- ----------------------------------------------------------------------
+
+SET enable_seqscan = FALSE;
+
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1
+ WHERE property IS NOT NULL
+ ORDER BY id;
 
 
 -- ----------------------------------------------------------------------
@@ -862,6 +982,67 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
  ORDER BY id;
 
+
+-- ----------------------------------------------------------------------
+-- Test: test06IllegalonAO.sql
+-- ----------------------------------------------------------------------
+
+SET enable_seqscan = FALSE;
+
+ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
+
+ALTER INDEX propertyBoxIndex RENAME TO propIndex;
+
+UPDATE GistTable1
+ SET description = 'Where''s Johnny?', bullseye = NULL
+ WHERE owner = 'James McMurtry';
+
+-- We should no longer be able to find "Levelland".
+SELECT property FROM GistTable1 
+ WHERE description = 'Levelland';
+
+ALTER INDEX propIndex SET (FILLFACTOR=50);
+
+SELECT owner FROM GistTable1 
+ WHERE property ~= '( (40, 20), (42, 25) )';
+
+REINDEX INDEX propIndex;
+
+SELECT owner FROM GistTable1 
+ WHERE property ~= '( (40, 20), (42, 25) )';
+
+-- Delete Theodore Turner
+DELETE from GistTable1 WHERE property ~= '((2000,2000), (2100, 2100))';
+
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1 
+ ORDER BY id;
+
+-- Update James McMurtry.
+UPDATE GistTable1 
+ SET owner = 'Record Company', description = 'fat profit', 
+   property = '((100,100), (200, 200))'
+ WHERE property ~= '( (1700,1900),(1500,1500) )';
+
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1 
+ ORDER BY id;
+
+ALTER INDEX propIndex RENAME TO propertyBoxIndex;
+
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1 
+ ORDER BY id;
+
+DELETE FROM GistTable1 WHERE bullseye = '( (76, 76), 76)';
+
+
+-- ----------------------------------------------------------------------
+-- Test: test07select.sql
+-- ----------------------------------------------------------------------
+
+SET enable_seqscan = FALSE;
+
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1
+ WHERE property IS NOT NULL
+ ORDER BY id;
 
 
 -- ----------------------------------------------------------------------
@@ -1239,6 +1420,67 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
  ORDER BY id;
 
+
+-- ----------------------------------------------------------------------
+-- Test: test06IllegalonAO.sql
+-- ----------------------------------------------------------------------
+
+SET enable_seqscan = FALSE;
+
+ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
+
+ALTER INDEX propertyBoxIndex RENAME TO propIndex;
+
+UPDATE GistTable1
+ SET description = 'Where''s Johnny?', bullseye = NULL
+ WHERE owner = 'James McMurtry';
+
+-- We should no longer be able to find "Levelland".
+SELECT property FROM GistTable1 
+ WHERE description = 'Levelland';
+
+ALTER INDEX propIndex SET (FILLFACTOR=50);
+
+SELECT owner FROM GistTable1 
+ WHERE property ~= '( (40, 20), (42, 25) )';
+
+REINDEX INDEX propIndex;
+
+SELECT owner FROM GistTable1 
+ WHERE property ~= '( (40, 20), (42, 25) )';
+
+-- Delete Theodore Turner
+DELETE from GistTable1 WHERE property ~= '((2000,2000), (2100, 2100))';
+
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1 
+ ORDER BY id;
+
+-- Update James McMurtry.
+UPDATE GistTable1 
+ SET owner = 'Record Company', description = 'fat profit', 
+   property = '((100,100), (200, 200))'
+ WHERE property ~= '( (1700,1900),(1500,1500) )';
+
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1 
+ ORDER BY id;
+
+ALTER INDEX propIndex RENAME TO propertyBoxIndex;
+
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1 
+ ORDER BY id;
+
+DELETE FROM GistTable1 WHERE bullseye = '( (76, 76), 76)';
+
+
+-- ----------------------------------------------------------------------
+-- Test: test07select.sql
+-- ----------------------------------------------------------------------
+
+SET enable_seqscan = FALSE;
+
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1
+ WHERE property IS NOT NULL
+ ORDER BY id;
 
 
 -- ----------------------------------------------------------------------
@@ -1618,6 +1860,67 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  ORDER BY id;
 
 
+-- ----------------------------------------------------------------------
+-- Test: test06IllegalonAO.sql
+-- ----------------------------------------------------------------------
+
+SET enable_seqscan = FALSE;
+
+ALTER TABLE GistTable1 CLUSTER ON propertyBoxIndex;
+
+ALTER INDEX propertyBoxIndex RENAME TO propIndex;
+
+UPDATE GistTable1
+ SET description = 'Where''s Johnny?', bullseye = NULL
+ WHERE owner = 'James McMurtry';
+
+-- We should no longer be able to find "Levelland".
+SELECT property FROM GistTable1 
+ WHERE description = 'Levelland';
+
+ALTER INDEX propIndex SET (FILLFACTOR=50);
+
+SELECT owner FROM GistTable1 
+ WHERE property ~= '( (40, 20), (42, 25) )';
+
+REINDEX INDEX propIndex;
+
+SELECT owner FROM GistTable1 
+ WHERE property ~= '( (40, 20), (42, 25) )';
+
+-- Delete Theodore Turner
+DELETE from GistTable1 WHERE property ~= '((2000,2000), (2100, 2100))';
+
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1 
+ ORDER BY id;
+
+-- Update James McMurtry.
+UPDATE GistTable1 
+ SET owner = 'Record Company', description = 'fat profit', 
+   property = '((100,100), (200, 200))'
+ WHERE property ~= '( (1700,1900),(1500,1500) )';
+
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1 
+ ORDER BY id;
+
+ALTER INDEX propIndex RENAME TO propertyBoxIndex;
+
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1 
+ ORDER BY id;
+
+DELETE FROM GistTable1 WHERE bullseye = '( (76, 76), 76)';
+
+
+-- ----------------------------------------------------------------------
+-- Test: test07select.sql
+-- ----------------------------------------------------------------------
+
+SET enable_seqscan = FALSE;
+
+SELECT id, owner, description, property, poli, bullseye FROM GistTable1
+ WHERE property IS NOT NULL
+ ORDER BY id;
+
 
 -- ----------------------------------------------------------------------
 -- Test: test10MultipleColumns.sql
@@ -1712,7 +2015,6 @@ SELECT id, property FROM GistTable1
  ORDER BY id
  ;
 -- end_ignore
-
 
 -- ----------------------------------------------------------------------
 -- Test: test13Vacuum.sql

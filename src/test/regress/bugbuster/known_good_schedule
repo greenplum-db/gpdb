@@ -12,7 +12,6 @@ test: load_tpch view xpath
 # these tests depend on load_tpch
 test: tpch_query tpch_aopart hashagg gpsort
 test: mpp-11333
-test: gist_indexes
 ignore: failover
 test: launch_oid_inconsistency
 #mpp23872: Disabling gpcheckmirrorseg as it is erroring out bugbuster on some platforms.
