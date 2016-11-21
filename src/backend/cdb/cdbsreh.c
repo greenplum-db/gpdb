@@ -569,16 +569,17 @@ ErrorLogWrite(CdbSreh *cdbsreh)
 
 	LWLockAcquire(ErrorLogLock, LW_EXCLUSIVE);
 	fp = AllocateFile(filename, "a");
-	/*
-	 * There's no point in retrying if the file allocation error out with too
-	 * many open file descriptors, else we assume the error was due to the
-	 * target directoy not existing so try to create and retry.
-	 */
-	if (!fp && (errno != EMFILE && errno != ENFILE))
+
+	if (!fp && (errno == EMFILE || errno == ENFILE))
+		ereport(ERROR, (errmsg("could not open \"%s\", too many open files: %m", filename)));
+
+	if (!fp && errno == ENOENT)
 	{
 		ret = mkdir(ErrorLogDir, S_IRWXU);
 		if (ret == 0)
 			fp = AllocateFile(filename, "a");
+		else
+			ereport(ERROR, (errmsg("could not create directory for errorlog \"%s\": %m", ErrorLogDir)));
 	}
 	if (!fp)
 		ereport(ERROR, (errmsg("could not open \"%s\": %m", filename)));
