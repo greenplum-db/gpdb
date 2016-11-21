@@ -104,10 +104,6 @@ static void ApplyExtensionUpdates(AlterExtensionStmt *stmt, Oid extensionOid,
 					  const char *initialVersion,
 					  List *updateVersions);
 
-Datum pg_available_extensions(PG_FUNCTION_ARGS);
-Datum pg_available_extension_versions(PG_FUNCTION_ARGS);
-Datum pg_extension_update_paths(PG_FUNCTION_ARGS);
-Datum pg_extension_config_dump(PG_FUNCTION_ARGS);
 
 /*
  * get_extension_oid - given an extension name, look up the OID
@@ -1179,7 +1175,7 @@ find_update_path(List *evi_list,
 /*
  * CREATE EXTENSION
  */
-Oid
+void
 CreateExtension(CreateExtensionStmt *stmt)
 {
 	DefElem    *d_schema = NULL;
@@ -1216,7 +1212,7 @@ CreateExtension(CreateExtensionStmt *stmt)
 					(errcode(ERRCODE_DUPLICATE_OBJECT),
 					 errmsg("extension \"%s\" already exists, skipping",
 							stmt->extname)));
-			return InvalidOid;
+			return;
 		}
 		else
 			ereport(ERROR,
@@ -1235,14 +1231,14 @@ CreateExtension(CreateExtensionStmt *stmt)
 				Insist(0);
 				creating_extension = false;
 				CurrentExtensionObject = InvalidOid;
-				return InvalidOid;
+				return;
 			case CREATE_EXTENSION_BEGIN:	/* Mark creating_extension flag and add pg_extension catalog tuple */
 				creating_extension = true;
 				break;
 			case CREATE_EXTENSION_END:		/* Mark creating_extension flag = false */
 				creating_extension = false;
 				CurrentExtensionObject = InvalidOid;
-				return InvalidOid;
+				return;
 			default:
 				elog(ERROR, "unrecognized create_ext_state: %d",
 						stmt->create_ext_state);
@@ -1540,8 +1536,6 @@ CreateExtension(CreateExtensionStmt *stmt)
 								 oldVersionName, versionName,
 								 requiredSchemas,
 								 schemaName, schemaOid);
-
-	return extensionOid;
 }
 
 /*
@@ -1635,9 +1629,10 @@ InsertExtensionTuple(const char *extName, Oid extOwner,
 	return extensionOid;
 }
 
+
 /*
- * RemoveExtProtocol
- *		Deletes an extension.
+ * RemoveExtension
+ *		Implements DROP EXTENSION.
  */
 void
 RemoveExtension(List *names, DropBehavior behavior, bool missing_ok)
@@ -1696,6 +1691,7 @@ RemoveExtension(List *names, DropBehavior behavior, bool missing_ok)
 	performDeletion(&object, behavior);
 }
 
+
 /*
  * Guts of extension deletion.
  *
@@ -1746,7 +1742,6 @@ RemoveExtensionById(Oid extId)
 
 	heap_close(rel, RowExclusiveLock);
 }
-
 
 /*
  * This function lists the available extensions (one row per primary control

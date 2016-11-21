@@ -24,12 +24,10 @@
  * installation script.
  */
 extern bool creating_extension;
-extern bool rds_enable_promoting_privilege;
 extern Oid	CurrentExtensionObject;
 
-extern bool find_in_string_list(const char *itemname, const char *stringlist);
 
-extern Oid	CreateExtension(CreateExtensionStmt *stmt);
+extern void CreateExtension(CreateExtensionStmt *stmt);
 
 extern void RemoveExtension(List *names, DropBehavior behavior, bool missing_ok);
 extern void RemoveExtensionById(Oid extId);
