@@ -279,13 +279,6 @@ SELECT id, property FROM GistTable1
 --         DELETE that can't be executed on AO and CO tables.
 ------------------------------------------------------------------------------
 
--- start_ignore
-DROP TABLE IF EXISTS GistTable13;
-DROP FUNCTION IF EXISTS TO_BOX(TEXT) CASCADE;
-DROP FUNCTION IF EXISTS insertIntoGistTable13(INTEGER);
-DROP FUNCTION IF EXISTS insertManyIntoGistTable13(INTEGER, INTEGER);
--- end_ignore
-
 CREATE TABLE GistTable13 (
  id INTEGER,
  property BOX,
@@ -375,11 +368,6 @@ SELECT id, property AS "ProperTee" FROM GistTable13
  WHERE property ~= '( (999,999), (998,998) )';
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-
-
--- start_ignore
-DROP TABLE IF EXISTS GistTable13;
--- end_ignore
 
 
 -- ----------------------------------------------------------------------
@@ -477,15 +465,6 @@ drop schema qp_gist_indexes2 cascade;
 create schema qp_gist_indexes2;
 set search_path to qp_gist_indexes2;
 -- end_ignore
-
--- ----------------------------------------------------------------------
--- Test: test00DropTable.sql
--- ----------------------------------------------------------------------
-
--- start_ignore
-DROP TABLE IF EXISTS GistTable1;
--- end_ignore
-
 
 -- ----------------------------------------------------------------------
 -- Test: test01create_table.sql
@@ -761,13 +740,6 @@ SELECT id, property FROM GistTable1
 --         DELETE that can't be executed on AO and CO tables.
 ------------------------------------------------------------------------------
 
--- start_ignore
-DROP TABLE IF EXISTS GistTable13;
-DROP FUNCTION IF EXISTS TO_BOX(TEXT) CASCADE;
-DROP FUNCTION IF EXISTS insertIntoGistTable13(INTEGER);
-DROP FUNCTION IF EXISTS insertManyIntoGistTable13(INTEGER, INTEGER);
--- end_ignore
-
 CREATE TABLE GistTable13 (
  id INTEGER,
  property BOX,
@@ -857,11 +829,6 @@ SELECT id, property AS "ProperTee" FROM GistTable13
  WHERE property ~= '( (999,999), (998,998) )';
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-
-
--- start_ignore
-DROP TABLE IF EXISTS GistTable13;
--- end_ignore
 
 
 -- ----------------------------------------------------------------------
@@ -960,15 +927,6 @@ drop schema qp_gist_indexes2 cascade;
 create schema qp_gist_indexes2;
 set search_path to qp_gist_indexes2;
 -- end_ignore
-
--- ----------------------------------------------------------------------
--- Test: test00DropTable.sql
--- ----------------------------------------------------------------------
-
--- start_ignore
-DROP TABLE IF EXISTS GistTable1;
--- end_ignore
-
 
 -- ----------------------------------------------------------------------
 -- Test: test01create_table.sql
@@ -1244,13 +1202,6 @@ SELECT id, property FROM GistTable1
 --         DELETE that can't be executed on AO and CO tables.
 ------------------------------------------------------------------------------
 
--- start_ignore
-DROP TABLE IF EXISTS GistTable13;
-DROP FUNCTION IF EXISTS TO_BOX(TEXT) CASCADE;
-DROP FUNCTION IF EXISTS insertIntoGistTable13(INTEGER);
-DROP FUNCTION IF EXISTS insertManyIntoGistTable13(INTEGER, INTEGER);
--- end_ignore
-
 CREATE TABLE GistTable13 (
  id INTEGER,
  property BOX,
@@ -1340,11 +1291,6 @@ SELECT id, property AS "ProperTee" FROM GistTable13
  WHERE property ~= '( (999,999), (998,998) )';
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-
-
--- start_ignore
-DROP TABLE IF EXISTS GistTable13;
--- end_ignore
 
 
 -- ----------------------------------------------------------------------
@@ -1443,15 +1389,6 @@ drop schema qp_gist_indexes2 cascade;
 create schema qp_gist_indexes2;
 set search_path to qp_gist_indexes2;
 -- end_ignore
-
--- ----------------------------------------------------------------------
--- Test: test00DropTable.sql
--- ----------------------------------------------------------------------
-
--- start_ignore
-DROP TABLE IF EXISTS GistTable1;
--- end_ignore
-
 
 -- ----------------------------------------------------------------------
 -- Test: test01create_table.sql
@@ -1727,13 +1664,6 @@ SELECT id, property FROM GistTable1
 --         DELETE that can't be executed on AO and CO tables.
 ------------------------------------------------------------------------------
 
--- start_ignore
-DROP TABLE IF EXISTS GistTable13;
-DROP FUNCTION IF EXISTS TO_BOX(TEXT) CASCADE;
-DROP FUNCTION IF EXISTS insertIntoGistTable13(INTEGER);
-DROP FUNCTION IF EXISTS insertManyIntoGistTable13(INTEGER, INTEGER);
--- end_ignore
-
 CREATE TABLE GistTable13 (
  id INTEGER,
  property BOX,
@@ -1823,11 +1753,6 @@ SELECT id, property AS "ProperTee" FROM GistTable13
  WHERE property ~= '( (999,999), (998,998) )';
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-
-
--- start_ignore
-DROP TABLE IF EXISTS GistTable13;
--- end_ignore
 
 
 -- ----------------------------------------------------------------------
@@ -1927,15 +1852,6 @@ drop schema qp_gist_indexes2 cascade;
 create schema qp_gist_indexes2;
 set search_path to qp_gist_indexes2;
 -- end_ignore
-
--- ----------------------------------------------------------------------
--- Test: test00DropTable.sql
--- ----------------------------------------------------------------------
-
--- start_ignore
-DROP TABLE IF EXISTS GistTable1;
--- end_ignore
-
 
 -- ----------------------------------------------------------------------
 -- Test: test01create_table.sql
@@ -2211,13 +2127,6 @@ SELECT id, property FROM GistTable1
 --         DELETE that can't be executed on AO and CO tables.
 ------------------------------------------------------------------------------
 
--- start_ignore
-DROP TABLE IF EXISTS GistTable13;
-DROP FUNCTION IF EXISTS TO_BOX(TEXT) CASCADE;
-DROP FUNCTION IF EXISTS insertIntoGistTable13(INTEGER);
-DROP FUNCTION IF EXISTS insertManyIntoGistTable13(INTEGER, INTEGER);
--- end_ignore
-
 CREATE TABLE GistTable13 (
  id INTEGER,
  property BOX,
@@ -2307,11 +2216,6 @@ SELECT id, property AS "ProperTee" FROM GistTable13
  WHERE property ~= '( (999,999), (998,998) )';
 EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-
-
--- start_ignore
-DROP TABLE IF EXISTS GistTable13;
--- end_ignore
 
 
 -- ----------------------------------------------------------------------

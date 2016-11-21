@@ -6,13 +6,6 @@ create schema qp_gist_indexes2;
 set search_path to qp_gist_indexes2;
 -- end_ignore
 -- ----------------------------------------------------------------------
--- Test: test00DropTable.sql
--- ----------------------------------------------------------------------
--- start_ignore
-DROP TABLE IF EXISTS GistTable1;
-NOTICE:  table "gisttable1" does not exist, skipping
--- end_ignore
--- ----------------------------------------------------------------------
 -- Test: test01create_table.sql
 -- ----------------------------------------------------------------------
 CREATE TABLE GistTable1 ( id INTEGER, owner VARCHAR, description VARCHAR, property BOX, poli POLYGON, bullseye CIRCLE, v VARCHAR, t TEXT, f FLOAT, p POINT, c CIRCLE, filler VARCHAR DEFAULT 'This is here just to take up space so that we use more pages of data and sequential scans take a lot more time.  Stones tinheads and mixers coming; we did it all on our own; this summer I hear the crunching; 11 dead in Ohio. Got right down to it; we were cutting us down; could have had fun but, no; left them face down dead on the ground.  How can you listen when you know?'
@@ -382,16 +375,6 @@ SELECT id, property FROM GistTable1
 --         tables as well as heap tables, so I removed statement(s) such as 
 --         DELETE that can't be executed on AO and CO tables.
 ------------------------------------------------------------------------------
--- start_ignore
-DROP TABLE IF EXISTS GistTable13;
-NOTICE:  table "gisttable13" does not exist, skipping
-DROP FUNCTION IF EXISTS TO_BOX(TEXT) CASCADE;
-NOTICE:  function to_box(text) does not exist, skipping
-DROP FUNCTION IF EXISTS insertIntoGistTable13(INTEGER);
-NOTICE:  function insertintogisttable13(pg_catalog.int4) does not exist, skipping
-DROP FUNCTION IF EXISTS insertManyIntoGistTable13(INTEGER, INTEGER);
-NOTICE:  function insertmanyintogisttable13(pg_catalog.int4,pg_catalog.int4) does not exist, skipping
--- end_ignore
 CREATE TABLE GistTable13 (
  id INTEGER,
  property BOX,
@@ -523,9 +506,6 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13
  Optimizer status: legacy query optimizer
 (5 rows)
 
--- start_ignore
-DROP TABLE IF EXISTS GistTable13;
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: test14Hash.sql
 -- ----------------------------------------------------------------------
@@ -664,13 +644,6 @@ NOTICE:  drop cascades to table gisttable1
 -- start_ignore
 create schema qp_gist_indexes2;
 set search_path to qp_gist_indexes2;
--- end_ignore
--- ----------------------------------------------------------------------
--- Test: test00DropTable.sql
--- ----------------------------------------------------------------------
--- start_ignore
-DROP TABLE IF EXISTS GistTable1;
-NOTICE:  table "gisttable1" does not exist, skipping
 -- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: test01create_table.sql
@@ -1051,16 +1024,6 @@ SELECT id, property FROM GistTable1
 --         tables as well as heap tables, so I removed statement(s) such as 
 --         DELETE that can't be executed on AO and CO tables.
 ------------------------------------------------------------------------------
--- start_ignore
-DROP TABLE IF EXISTS GistTable13;
-NOTICE:  table "gisttable13" does not exist, skipping
-DROP FUNCTION IF EXISTS TO_BOX(TEXT) CASCADE;
-NOTICE:  function to_box(text) does not exist, skipping
-DROP FUNCTION IF EXISTS insertIntoGistTable13(INTEGER);
-NOTICE:  function insertintogisttable13(pg_catalog.int4) does not exist, skipping
-DROP FUNCTION IF EXISTS insertManyIntoGistTable13(INTEGER, INTEGER);
-NOTICE:  function insertmanyintogisttable13(pg_catalog.int4,pg_catalog.int4) does not exist, skipping
--- end_ignore
 CREATE TABLE GistTable13 (
  id INTEGER,
  property BOX,
@@ -1192,9 +1155,6 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13
  Optimizer status: legacy query optimizer
 (5 rows)
 
--- start_ignore
-DROP TABLE IF EXISTS GistTable13;
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: test14Hash.sql
 -- ----------------------------------------------------------------------
@@ -1337,13 +1297,6 @@ NOTICE:  drop cascades to append only table gisttable1
 -- start_ignore
 create schema qp_gist_indexes2;
 set search_path to qp_gist_indexes2;
--- end_ignore
--- ----------------------------------------------------------------------
--- Test: test00DropTable.sql
--- ----------------------------------------------------------------------
--- start_ignore
-DROP TABLE IF EXISTS GistTable1;
-NOTICE:  table "gisttable1" does not exist, skipping
 -- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: test01create_table.sql
@@ -1724,16 +1677,6 @@ SELECT id, property FROM GistTable1
 --         tables as well as heap tables, so I removed statement(s) such as 
 --         DELETE that can't be executed on AO and CO tables.
 ------------------------------------------------------------------------------
--- start_ignore
-DROP TABLE IF EXISTS GistTable13;
-NOTICE:  table "gisttable13" does not exist, skipping
-DROP FUNCTION IF EXISTS TO_BOX(TEXT) CASCADE;
-NOTICE:  function to_box(text) does not exist, skipping
-DROP FUNCTION IF EXISTS insertIntoGistTable13(INTEGER);
-NOTICE:  function insertintogisttable13(pg_catalog.int4) does not exist, skipping
-DROP FUNCTION IF EXISTS insertManyIntoGistTable13(INTEGER, INTEGER);
-NOTICE:  function insertmanyintogisttable13(pg_catalog.int4,pg_catalog.int4) does not exist, skipping
--- end_ignore
 CREATE TABLE GistTable13 (
  id INTEGER,
  property BOX,
@@ -1865,9 +1808,6 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13
  Optimizer status: legacy query optimizer
 (5 rows)
 
--- start_ignore
-DROP TABLE IF EXISTS GistTable13;
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: test14Hash.sql
 -- ----------------------------------------------------------------------
@@ -2010,13 +1950,6 @@ NOTICE:  drop cascades to append only table gisttable1
 -- start_ignore
 create schema qp_gist_indexes2;
 set search_path to qp_gist_indexes2;
--- end_ignore
--- ----------------------------------------------------------------------
--- Test: test00DropTable.sql
--- ----------------------------------------------------------------------
--- start_ignore
-DROP TABLE IF EXISTS GistTable1;
-NOTICE:  table "gisttable1" does not exist, skipping
 -- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: test01create_table.sql
@@ -2397,16 +2330,6 @@ SELECT id, property FROM GistTable1
 --         tables as well as heap tables, so I removed statement(s) such as 
 --         DELETE that can't be executed on AO and CO tables.
 ------------------------------------------------------------------------------
--- start_ignore
-DROP TABLE IF EXISTS GistTable13;
-NOTICE:  table "gisttable13" does not exist, skipping
-DROP FUNCTION IF EXISTS TO_BOX(TEXT) CASCADE;
-NOTICE:  function to_box(text) does not exist, skipping
-DROP FUNCTION IF EXISTS insertIntoGistTable13(INTEGER);
-NOTICE:  function insertintogisttable13(pg_catalog.int4) does not exist, skipping
-DROP FUNCTION IF EXISTS insertManyIntoGistTable13(INTEGER, INTEGER);
-NOTICE:  function insertmanyintogisttable13(pg_catalog.int4,pg_catalog.int4) does not exist, skipping
--- end_ignore
 CREATE TABLE GistTable13 (
  id INTEGER,
  property BOX,
@@ -2538,9 +2461,6 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13
  Optimizer status: legacy query optimizer
 (5 rows)
 
--- start_ignore
-DROP TABLE IF EXISTS GistTable13;
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: test14Hash.sql
 -- ----------------------------------------------------------------------
@@ -2683,13 +2603,6 @@ NOTICE:  drop cascades to append only columnar table gisttable1
 -- start_ignore
 create schema qp_gist_indexes2;
 set search_path to qp_gist_indexes2;
--- end_ignore
--- ----------------------------------------------------------------------
--- Test: test00DropTable.sql
--- ----------------------------------------------------------------------
--- start_ignore
-DROP TABLE IF EXISTS GistTable1;
-NOTICE:  table "gisttable1" does not exist, skipping
 -- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: test01create_table.sql
@@ -3070,16 +2983,6 @@ SELECT id, property FROM GistTable1
 --         tables as well as heap tables, so I removed statement(s) such as 
 --         DELETE that can't be executed on AO and CO tables.
 ------------------------------------------------------------------------------
--- start_ignore
-DROP TABLE IF EXISTS GistTable13;
-NOTICE:  table "gisttable13" does not exist, skipping
-DROP FUNCTION IF EXISTS TO_BOX(TEXT) CASCADE;
-NOTICE:  function to_box(text) does not exist, skipping
-DROP FUNCTION IF EXISTS insertIntoGistTable13(INTEGER);
-NOTICE:  function insertintogisttable13(pg_catalog.int4) does not exist, skipping
-DROP FUNCTION IF EXISTS insertManyIntoGistTable13(INTEGER, INTEGER);
-NOTICE:  function insertmanyintogisttable13(pg_catalog.int4,pg_catalog.int4) does not exist, skipping
--- end_ignore
 CREATE TABLE GistTable13 (
  id INTEGER,
  property BOX,
@@ -3211,9 +3114,6 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13
  Optimizer status: legacy query optimizer
 (5 rows)
 
--- start_ignore
-DROP TABLE IF EXISTS GistTable13;
--- end_ignore
 -- ----------------------------------------------------------------------
 -- Test: test14Hash.sql
 -- ----------------------------------------------------------------------
