@@ -237,7 +237,7 @@ create_gang_retry:
 			goto create_gang_retry;
 		}
 
-		appendPQExpBuffer(&create_gang_error, "segments are in recovery mode\n");
+		appendPQExpBuffer(&create_gang_error, "segment(s) are in recovery mode\n");
 	}
 	
 exit:
