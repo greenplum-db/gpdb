@@ -4436,6 +4436,21 @@ xmit_retry:
 		if (errno == EAGAIN) /* no space ? not an error. */
 			return;
 
+		/*
+		 * If Linux iptables (nf_conntrack?) drops an outgoing packet, it may
+		 * return an EPERM to the application. This might be simply because
+		 * of traffic shaping or congestion, so ignore it.
+		 */
+		if (errno == EPERM)
+		{
+			ereport(LOG,
+					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+					 errmsg("Interconnect error writing an outgoing packet: %m"),
+					 errdetail("error during sendto() for Remote Connection: contentId=%d at %s",
+							   conn->remoteContentId, conn->remoteHostAndPort)));
+			return;
+		}
+
 		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 						errmsg("Interconnect error writing an outgoing packet: %m"),
 						errdetail("error during sendto() call (error:%d).\n"
