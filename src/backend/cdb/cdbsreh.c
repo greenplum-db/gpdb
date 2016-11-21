@@ -570,7 +570,7 @@ ErrorLogWrite(CdbSreh *cdbsreh)
 	LWLockAcquire(ErrorLogLock, LW_EXCLUSIVE);
 	fp = AllocateFile(filename, "a");
 
-	if (!fp && (errno == EMFILE || errno == ENFILE))
+	if (!fp && (errno == EMFILE || errno == ENFILE))
 		ereport(ERROR, (errmsg("could not open \"%s\", too many open files: %m", filename)));
 
 	if (!fp && errno == ENOENT)
