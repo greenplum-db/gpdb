@@ -5,15 +5,21 @@ SET
 alter table atsdb set with(appendonly = true, compresslevel = 3);
 ALTER TABLE
 SELECT i, j FROM atsdb;
-0|0
-1|1
-2|2
+ i | j 
+---+---
+ 1 | 1
+ 0 | 0
+ 2 | 2
 (3 rows)
+
 DELETE FROM atsdb WHERE j = 1;
 DELETE 1
 UPDATE atsdb SET i=1 WHERE j=2;
 UPDATE 1
 SELECT i, j FROM atsdb;
-0|0
-1|2
+ i | j 
+---+---
+ 0 | 0
+ 1 | 2
 (2 rows)
+

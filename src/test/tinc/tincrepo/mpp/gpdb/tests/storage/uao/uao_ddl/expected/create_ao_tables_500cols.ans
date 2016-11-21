@@ -47,8 +47,8 @@ select 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AN
  a32    | date                        |                                                              | plain    | 
  a33    | real                        |                                                              | plain    | 
  a34    | money                       |                                                              | plain    | 
- a35    | cidr                        |                                                              | plain    | 
- a36    | inet                        |                                                              | plain    | 
+ a35    | cidr                        |                                                              | main     | 
+ a36    | inet                        |                                                              | main     | 
  a37    | time without time zone      |                                                              | plain    | 
  a38    | text                        |                                                              | extended | 
  a39    | bit(1)                      |                                                              | extended | 
@@ -89,8 +89,8 @@ select 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AN
  a74    | date                        |                                                              | plain    | 
  a75    | real                        |                                                              | plain    | 
  a76    | money                       |                                                              | plain    | 
- a77    | cidr                        |                                                              | plain    | 
- a78    | inet                        |                                                              | plain    | 
+ a77    | cidr                        |                                                              | main     | 
+ a78    | inet                        |                                                              | main     | 
  a79    | time without time zone      |                                                              | plain    | 
  a80    | text                        |                                                              | extended | 
  a81    | bit(1)                      |                                                              | extended | 
@@ -131,8 +131,8 @@ select 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AN
  a116   | date                        |                                                              | plain    | 
  a117   | real                        |                                                              | plain    | 
  a118   | money                       |                                                              | plain    | 
- a119   | cidr                        |                                                              | plain    | 
- a120   | inet                        |                                                              | plain    | 
+ a119   | cidr                        |                                                              | main     | 
+ a120   | inet                        |                                                              | main     | 
  a121   | time without time zone      |                                                              | plain    | 
  a122   | text                        |                                                              | extended | 
  a123   | bit(1)                      |                                                              | extended | 
@@ -173,8 +173,8 @@ select 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AN
  a158   | date                        |                                                              | plain    | 
  a159   | real                        |                                                              | plain    | 
  a160   | money                       |                                                              | plain    | 
- a161   | cidr                        |                                                              | plain    | 
- a162   | inet                        |                                                              | plain    | 
+ a161   | cidr                        |                                                              | main     | 
+ a162   | inet                        |                                                              | main     | 
  a163   | time without time zone      |                                                              | plain    | 
  a164   | text                        |                                                              | extended | 
  a165   | bit(1)                      |                                                              | extended | 
@@ -215,8 +215,8 @@ select 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AN
  a200   | date                        |                                                              | plain    | 
  a201   | real                        |                                                              | plain    | 
  a202   | money                       |                                                              | plain    | 
- a203   | cidr                        |                                                              | plain    | 
- a204   | inet                        |                                                              | plain    | 
+ a203   | cidr                        |                                                              | main     | 
+ a204   | inet                        |                                                              | main     | 
  a205   | time without time zone      |                                                              | plain    | 
  a206   | text                        |                                                              | extended | 
  a207   | bit(1)                      |                                                              | extended | 
@@ -257,8 +257,8 @@ select 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AN
  a242   | date                        |                                                              | plain    | 
  a243   | real                        |                                                              | plain    | 
  a244   | money                       |                                                              | plain    | 
- a245   | cidr                        |                                                              | plain    | 
- a246   | inet                        |                                                              | plain    | 
+ a245   | cidr                        |                                                              | main     | 
+ a246   | inet                        |                                                              | main     | 
  a247   | time without time zone      |                                                              | plain    | 
  a248   | text                        |                                                              | extended | 
  a249   | bit(1)                      |                                                              | extended | 
@@ -299,8 +299,8 @@ select 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AN
  a284   | date                        |                                                              | plain    | 
  a285   | real                        |                                                              | plain    | 
  a286   | money                       |                                                              | plain    | 
- a287   | cidr                        |                                                              | plain    | 
- a288   | inet                        |                                                              | plain    | 
+ a287   | cidr                        |                                                              | main     | 
+ a288   | inet                        |                                                              | main     | 
  a289   | time without time zone      |                                                              | plain    | 
  a290   | text                        |                                                              | extended | 
  a291   | bit(1)                      |                                                              | extended | 
@@ -341,8 +341,8 @@ select 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AN
  a326   | date                        |                                                              | plain    | 
  a327   | real                        |                                                              | plain    | 
  a328   | money                       |                                                              | plain    | 
- a329   | cidr                        |                                                              | plain    | 
- a330   | inet                        |                                                              | plain    | 
+ a329   | cidr                        |                                                              | main     | 
+ a330   | inet                        |                                                              | main     | 
  a331   | time without time zone      |                                                              | plain    | 
  a332   | text                        |                                                              | extended | 
  a333   | bit(1)                      |                                                              | extended | 
@@ -383,8 +383,8 @@ select 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AN
  a368   | date                        |                                                              | plain    | 
  a369   | real                        |                                                              | plain    | 
  a370   | money                       |                                                              | plain    | 
- a371   | cidr                        |                                                              | plain    | 
- a372   | inet                        |                                                              | plain    | 
+ a371   | cidr                        |                                                              | main     | 
+ a372   | inet                        |                                                              | main     | 
  a373   | time without time zone      |                                                              | plain    | 
  a374   | text                        |                                                              | extended | 
  a375   | bit(1)                      |                                                              | extended | 
@@ -425,8 +425,8 @@ select 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AN
  a410   | date                        |                                                              | plain    | 
  a411   | real                        |                                                              | plain    | 
  a412   | money                       |                                                              | plain    | 
- a413   | cidr                        |                                                              | plain    | 
- a414   | inet                        |                                                              | plain    | 
+ a413   | cidr                        |                                                              | main     | 
+ a414   | inet                        |                                                              | main     | 
  a415   | time without time zone      |                                                              | plain    | 
  a416   | text                        |                                                              | extended | 
  a417   | bit(1)                      |                                                              | extended | 
@@ -467,8 +467,8 @@ select 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AN
  a452   | date                        |                                                              | plain    | 
  a453   | real                        |                                                              | plain    | 
  a454   | money                       |                                                              | plain    | 
- a455   | cidr                        |                                                              | plain    | 
- a456   | inet                        |                                                              | plain    | 
+ a455   | cidr                        |                                                              | main     | 
+ a456   | inet                        |                                                              | main     | 
  a457   | time without time zone      |                                                              | plain    | 
  a458   | text                        |                                                              | extended | 
  a459   | bit(1)                      |                                                              | extended | 
@@ -509,8 +509,8 @@ select 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AN
  a494   | date                        |                                                              | plain    | 
  a495   | real                        |                                                              | plain    | 
  a496   | money                       |                                                              | plain    | 
- a497   | cidr                        |                                                              | plain    | 
- a498   | inet                        |                                                              | plain    | 
+ a497   | cidr                        |                                                              | main     | 
+ a498   | inet                        |                                                              | main     | 
  a499   | time without time zone      |                                                              | plain    | 
  a500   | text                        |                                                              | extended | 
 Compression Type: None

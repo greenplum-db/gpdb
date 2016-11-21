@@ -93,35 +93,3 @@ select count(*) AS invisi_and_visi_tups  from uao_tab_compress_zlib9_upd ;
 select *  from uao_tab_compress_zlib9_upd order by col_int,col_text;
 
 set gp_select_invisible = false;
-
--- create select uao table with compress=QuickLZ 
-
-Drop table if exists uao_tab_compress_quicklz_upd cascade;
-CREATE TABLE uao_tab_compress_quicklz_upd (
-          col_int int,
-          col_text text,
-          col_numeric numeric)
- with (appendonly=true , COMPRESSTYPE=quicklz , COMPRESSLEVEL=1  ) ; 
-
-
-CREATE index col_int_bmp_idx_compress_upd_quicklz on uao_tab_compress_quicklz_upd using bitmap (col_int);
-
-\d+ uao_tab_compress_quicklz_upd
-select count(*) from uao_tab_compress_quicklz_upd;
-
-SELECT 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='uao_tab_compress_quicklz_upd');
-
-SELECT 1 AS compression_present from pg_appendonly WHERE compresstype='quicklz' AND compresslevel=1 AND relid=(SELECT oid  FROM pg_class WHERE relname='uao_tab_compress_quicklz_upd');
-insert into uao_tab_compress_quicklz_upd values(1,'val1',100);
-insert into uao_tab_compress_quicklz_upd values(2,'val2',200);
-insert into uao_tab_compress_quicklz_upd values(3,'val3',300);
-select *  from uao_tab_compress_quicklz_upd order by col_int,col_text;
-update uao_tab_compress_quicklz_upd set col_text=col_text||' new value' where col_int = 1;
-select *  from uao_tab_compress_quicklz_upd order by col_int,col_text;
-select count(*) AS only_visi_tups  from uao_tab_compress_quicklz_upd ;
-set gp_select_invisible = true;
-select count(*) AS invisi_and_visi_tups  from uao_tab_compress_quicklz_upd ;
-select *  from uao_tab_compress_quicklz_upd order by col_int,col_text;
-
-set gp_select_invisible = false;
-

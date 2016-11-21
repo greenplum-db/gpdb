@@ -134,8 +134,8 @@ SELECT 1  AS VisimapPresent FROM pg_appendonly WHERE visimapidxid is not NULL AN
  a32    | date                        |                                                        | plain    | 
  a33    | real                        |                                                        | plain    | 
  a34    | money                       |                                                        | plain    | 
- a35    | cidr                        |                                                        | plain    | 
- a36    | inet                        |                                                        | plain    | 
+ a35    | cidr                        |                                                        | main     | 
+ a36    | inet                        |                                                        | main     | 
  a37    | time without time zone      |                                                        | plain    | 
  a38    | text                        |                                                        | extended | 
  a39    | bit(1)                      |                                                        | extended | 

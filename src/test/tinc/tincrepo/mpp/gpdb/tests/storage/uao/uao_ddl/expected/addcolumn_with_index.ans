@@ -2,14 +2,20 @@
 -- added. Here the AO table has an index.
 -- 
 select * from mytab;
-1 | a 
-2 | b
-3 | c 
+ col1 |         name         
+------+----------------------
+    2 | b                   
+    1 | a                   
+    3 | c                   
 (3 rows)
+
 alter table mytab ADD COLUMN address varchar(30) default 'none';
 ALTER TABLE
 select * from mytab;
-1 | a | none
-2 | b | none
-3 | c | none
+ col1 |         name         | address 
+------+----------------------+---------
+    2 | b                    | none
+    1 | a                    | none
+    3 | c                    | none
 (3 rows)
+
