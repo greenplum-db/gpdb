@@ -1001,10 +1001,16 @@ OpenNamedFile(const char   *fileName,
 	char		tempfilepath[MAXPGPATH];
 	File		file;
 	int			fileFlags;
+	size_t		len;
 
 	ResourceOwnerEnlargeFiles(CurrentResourceOwner);
 
-	strncpy(tempfilepath, fileName, sizeof(tempfilepath));
+	len = strlcpy(tempfilepath, fileName, sizeof(tempfilepath));
+	if (len >= sizeof(tempfilepath))
+		ereport(ERROR,
+				(errcode_for_file_access(),
+				errmsg("requested filename too long, %lu characters, max is %d",
+				len, MAXPGPATH)));
 
 	/*
 	 * Open the file.  Note: we don't use O_EXCL, in case there is an orphaned

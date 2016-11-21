@@ -243,7 +243,8 @@ pqParseInput3(PGconn *conn)
 						if (!conn->result)
 							return;
 					}
-					strncpy(conn->result->cmdStatus, conn->workBuffer.data, CMDSTATUS_LEN);
+					strlcpy(conn->result->cmdStatus, conn->workBuffer.data,
+							CMDSTATUS_LEN);
 					conn->asyncStatus = PGASYNC_READY;
 
 					break;
@@ -504,9 +505,8 @@ pqParseInput3(PGconn *conn)
 						if (!conn->result)
 							return;
 					}
-					strncpy(conn->result->cmdStatus, conn->workBuffer.data,
+					strlcpy(conn->result->cmdStatus, conn->workBuffer.data,
 							CMDSTATUS_LEN);
-					
 					
 					if (pqGetInt(&conn->result->extraslen, 4, conn))
 						return;
