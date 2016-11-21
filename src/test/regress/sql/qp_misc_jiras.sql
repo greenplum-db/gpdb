@@ -1710,16 +1710,8 @@ create table qp_misc_jiras.tbl_7498_t3 as select * from qp_misc_jiras.tbl_7498_t
 drop table if exists qp_misc_jiras.tbl_7498_t1, qp_misc_jiras.tbl_7498_t2, qp_misc_jiras.tbl_7498_t3 cascade;
 -- end_ignore
 
-
-
-CREATE TABLE qp_misc_jiras.tbl7886_foo (ssn INT, lastName VARCHAR, junk INT) DISTRIBUTED BY (ssn);
-INSERT INTO qp_misc_jiras.tbl7886_foo VALUES (1, 'foo', 1);
-
-select currtid2('t'::text, '(0,1)'::tid);
-
--- start_ignore
-DROP TABLE qp_misc_jiras.tbl7886_foo;
--- end_ignore
+-- currtid2() is not supported in GPDB.
+select currtid2('tbl7886'::text, '(0,1)'::tid);
 
 create table qp_misc_jiras.tbl8017(x int, y int) distributed by (x);
 create index tbl8017_x on qp_misc_jiras.tbl8017(x);
