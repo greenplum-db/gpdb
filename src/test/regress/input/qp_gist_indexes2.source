@@ -3,19 +3,8 @@
 -- Test: setup.sql
 -- ----------------------------------------------------------------------
 
--- start_ignore
 create schema qp_gist_indexes2;
 set search_path to qp_gist_indexes2;
--- end_ignore
-
--- ----------------------------------------------------------------------
--- Test: test00DropTable.sql
--- ----------------------------------------------------------------------
-
--- start_ignore
-DROP TABLE IF EXISTS GistTable1;
--- end_ignore
-
 
 -- ----------------------------------------------------------------------
 -- Test: test01create_table.sql
@@ -34,14 +23,10 @@ COPY GistTable1 FROM
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: Sanity test GiST indexes.
 --     This does some simple queries that should use the index.  
 --     We can't see directly whether the index was used, but for each query 
 --     we can run "EXPLAIN" and see whether the query used the index.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 CREATE INDEX propertyBoxIndex ON GistTable1 USING Gist (property);
@@ -101,11 +86,7 @@ SELECT id, property FROM GistTable1
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: Insert more data.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 -- INSERT some more data.
@@ -120,11 +101,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: Sanity test GiST indexes.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
@@ -140,7 +117,6 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: 
 --     Test UNIQUE indexes and primary keys on geometric data types.  
 --     It turns out that columns with the geometric data types (at least 
@@ -152,9 +128,6 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 --     keys on geometric data types.  So this script is basically a negative 
 --     test that verifies that we get reasonable error messages when we try 
 --     to create unique GiST indexes or pimary keys on gemoetric data types.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 -- start_ignore
@@ -179,14 +152,10 @@ DROP TABLE IF EXISTS GistTable2;
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: 
 --     "Negative" tests.  Verify that we get reasonable error messages when 
 --     we try to do unreasonable things, such as create indexes on types that 
 --     do not support GiST (non-geometric types).
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 -- Try to create GiST indexes on non-geometric data types.
@@ -205,12 +174,8 @@ CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (c, f);
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: 
 --     Test multi-column indexes.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
@@ -242,14 +207,10 @@ SELECT id FROM GistTable1
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: Test GiST indexes with the WHERE predicate in the CREATE INDEX 
 --     statement.  This does some simple queries that should use the index.  
 --     We can't see directly whether the index was used, but for each query 
 --     we can run "EXPLAIN" and see whether the query used the index.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 -- Add another record that has NULL in the property field.
@@ -308,19 +269,14 @@ SELECT id, property FROM GistTable1
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
--- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
 -- PURPOSE:
 --     Test VACUUM on GiST indexes.
 --     Also test somewhat larger data sets than most of my other GiST index 
 --     tests.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
---     2010-04-20 mgilkey
+--
 --         This test suite is for AO (Append-Only) and CO (Column-Oriented) 
 --         tables as well as heap tables, so I removed statement(s) such as 
 --         DELETE that can't be executed on AO and CO tables.
--- end_ignore
 ------------------------------------------------------------------------------
 
 -- start_ignore
@@ -431,13 +387,9 @@ DROP TABLE IF EXISTS GistTable13;
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
--- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
 -- PURPOSE:
 --     Test that you get a reasonable error message when you try to create a 
 --     HASH index (we no longer support those).
--- AUTHOR: mgilkey
--- end_ignore
 ------------------------------------------------------------------------------
 
 -- start_ignore
@@ -464,17 +416,13 @@ DROP TABLE IF EXISTS GistTable14;
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: Sanity test GiST indexes.
 --     REINDEX
 --     DROP INDEX
--- AUTHOR: mgilkey
 -- NOTES:
 --     Although we seemingly ignore the output of the EXPLAIN statements, 
 --     elsewhere in this test we look for "Index Scan on propertyBoxIndex" 
 --     or something similar in order to verify that the index was used.
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
@@ -557,14 +505,10 @@ COPY GistTable1 FROM
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: Sanity test GiST indexes.
 --     This does some simple queries that should use the index.  
 --     We can't see directly whether the index was used, but for each query 
 --     we can run "EXPLAIN" and see whether the query used the index.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 CREATE INDEX propertyBoxIndex ON GistTable1 USING Gist (property);
@@ -624,11 +568,7 @@ SELECT id, property FROM GistTable1
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: Insert more data.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 -- INSERT some more data.
@@ -643,11 +583,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: Sanity test GiST indexes.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
@@ -663,7 +599,6 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: 
 --     Test UNIQUE indexes and primary keys on geometric data types.  
 --     It turns out that columns with the geometric data types (at least 
@@ -675,9 +610,6 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 --     keys on geometric data types.  So this script is basically a negative 
 --     test that verifies that we get reasonable error messages when we try 
 --     to create unique GiST indexes or pimary keys on gemoetric data types.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 -- start_ignore
@@ -702,14 +634,10 @@ DROP TABLE IF EXISTS GistTable2;
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: 
 --     "Negative" tests.  Verify that we get reasonable error messages when 
 --     we try to do unreasonable things, such as create indexes on types that 
 --     do not support GiST (non-geometric types).
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 -- Try to create GiST indexes on non-geometric data types.
@@ -728,12 +656,8 @@ CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (c, f);
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: 
 --     Test multi-column indexes.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
@@ -765,14 +689,10 @@ SELECT id FROM GistTable1
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: Test GiST indexes with the WHERE predicate in the CREATE INDEX 
 --     statement.  This does some simple queries that should use the index.  
 --     We can't see directly whether the index was used, but for each query 
 --     we can run "EXPLAIN" and see whether the query used the index.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 -- Add another record that has NULL in the property field.
@@ -831,19 +751,14 @@ SELECT id, property FROM GistTable1
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
--- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
 -- PURPOSE:
 --     Test VACUUM on GiST indexes.
 --     Also test somewhat larger data sets than most of my other GiST index 
 --     tests.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
---     2010-04-20 mgilkey
+--
 --         This test suite is for AO (Append-Only) and CO (Column-Oriented) 
 --         tables as well as heap tables, so I removed statement(s) such as 
 --         DELETE that can't be executed on AO and CO tables.
--- end_ignore
 ------------------------------------------------------------------------------
 
 -- start_ignore
@@ -954,13 +869,9 @@ DROP TABLE IF EXISTS GistTable13;
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
--- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
 -- PURPOSE:
 --     Test that you get a reasonable error message when you try to create a 
 --     HASH index (we no longer support those).
--- AUTHOR: mgilkey
--- end_ignore
 ------------------------------------------------------------------------------
 
 -- start_ignore
@@ -987,17 +898,13 @@ DROP TABLE IF EXISTS GistTable14;
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: Sanity test GiST indexes.
 --     REINDEX
 --     DROP INDEX
--- AUTHOR: mgilkey
 -- NOTES:
 --     Although we seemingly ignore the output of the EXPLAIN statements, 
 --     elsewhere in this test we look for "Index Scan on propertyBoxIndex" 
 --     or something similar in order to verify that the index was used.
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
@@ -1081,14 +988,10 @@ COPY GistTable1 FROM
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: Sanity test GiST indexes.
 --     This does some simple queries that should use the index.  
 --     We can't see directly whether the index was used, but for each query 
 --     we can run "EXPLAIN" and see whether the query used the index.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 CREATE INDEX propertyBoxIndex ON GistTable1 USING Gist (property);
@@ -1148,11 +1051,7 @@ SELECT id, property FROM GistTable1
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: Insert more data.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 -- INSERT some more data.
@@ -1167,11 +1066,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: Sanity test GiST indexes.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
@@ -1187,7 +1082,6 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: 
 --     Test UNIQUE indexes and primary keys on geometric data types.  
 --     It turns out that columns with the geometric data types (at least 
@@ -1199,9 +1093,6 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 --     keys on geometric data types.  So this script is basically a negative 
 --     test that verifies that we get reasonable error messages when we try 
 --     to create unique GiST indexes or pimary keys on gemoetric data types.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 -- start_ignore
@@ -1226,14 +1117,10 @@ DROP TABLE IF EXISTS GistTable2;
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: 
 --     "Negative" tests.  Verify that we get reasonable error messages when 
 --     we try to do unreasonable things, such as create indexes on types that 
 --     do not support GiST (non-geometric types).
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 -- Try to create GiST indexes on non-geometric data types.
@@ -1252,12 +1139,8 @@ CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (c, f);
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: 
 --     Test multi-column indexes.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
@@ -1289,14 +1172,10 @@ SELECT id FROM GistTable1
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: Test GiST indexes with the WHERE predicate in the CREATE INDEX 
 --     statement.  This does some simple queries that should use the index.  
 --     We can't see directly whether the index was used, but for each query 
 --     we can run "EXPLAIN" and see whether the query used the index.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 -- Add another record that has NULL in the property field.
@@ -1355,19 +1234,14 @@ SELECT id, property FROM GistTable1
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
--- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
 -- PURPOSE:
 --     Test VACUUM on GiST indexes.
 --     Also test somewhat larger data sets than most of my other GiST index 
 --     tests.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
---     2010-04-20 mgilkey
+--
 --         This test suite is for AO (Append-Only) and CO (Column-Oriented) 
 --         tables as well as heap tables, so I removed statement(s) such as 
 --         DELETE that can't be executed on AO and CO tables.
--- end_ignore
 ------------------------------------------------------------------------------
 
 -- start_ignore
@@ -1478,13 +1352,9 @@ DROP TABLE IF EXISTS GistTable13;
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
--- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
 -- PURPOSE:
 --     Test that you get a reasonable error message when you try to create a 
 --     HASH index (we no longer support those).
--- AUTHOR: mgilkey
--- end_ignore
 ------------------------------------------------------------------------------
 
 -- start_ignore
@@ -1511,17 +1381,13 @@ DROP TABLE IF EXISTS GistTable14;
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: Sanity test GiST indexes.
 --     REINDEX
 --     DROP INDEX
--- AUTHOR: mgilkey
 -- NOTES:
 --     Although we seemingly ignore the output of the EXPLAIN statements, 
 --     elsewhere in this test we look for "Index Scan on propertyBoxIndex" 
 --     or something similar in order to verify that the index was used.
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
@@ -1605,14 +1471,10 @@ COPY GistTable1 FROM
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: Sanity test GiST indexes.
 --     This does some simple queries that should use the index.  
 --     We can't see directly whether the index was used, but for each query 
 --     we can run "EXPLAIN" and see whether the query used the index.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 CREATE INDEX propertyBoxIndex ON GistTable1 USING Gist (property);
@@ -1672,11 +1534,7 @@ SELECT id, property FROM GistTable1
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: Insert more data.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 -- INSERT some more data.
@@ -1691,11 +1549,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: Sanity test GiST indexes.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
@@ -1711,7 +1565,6 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: 
 --     Test UNIQUE indexes and primary keys on geometric data types.  
 --     It turns out that columns with the geometric data types (at least 
@@ -1723,9 +1576,6 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 --     keys on geometric data types.  So this script is basically a negative 
 --     test that verifies that we get reasonable error messages when we try 
 --     to create unique GiST indexes or pimary keys on gemoetric data types.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 -- start_ignore
@@ -1750,14 +1600,10 @@ DROP TABLE IF EXISTS GistTable2;
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: 
 --     "Negative" tests.  Verify that we get reasonable error messages when 
 --     we try to do unreasonable things, such as create indexes on types that 
 --     do not support GiST (non-geometric types).
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 -- Try to create GiST indexes on non-geometric data types.
@@ -1776,12 +1622,8 @@ CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (c, f);
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: 
 --     Test multi-column indexes.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
@@ -1813,14 +1655,10 @@ SELECT id FROM GistTable1
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: Test GiST indexes with the WHERE predicate in the CREATE INDEX 
 --     statement.  This does some simple queries that should use the index.  
 --     We can't see directly whether the index was used, but for each query 
 --     we can run "EXPLAIN" and see whether the query used the index.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 -- Add another record that has NULL in the property field.
@@ -1879,19 +1717,14 @@ SELECT id, property FROM GistTable1
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
--- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
 -- PURPOSE:
 --     Test VACUUM on GiST indexes.
 --     Also test somewhat larger data sets than most of my other GiST index 
 --     tests.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
---     2010-04-20 mgilkey
+--
 --         This test suite is for AO (Append-Only) and CO (Column-Oriented) 
 --         tables as well as heap tables, so I removed statement(s) such as 
 --         DELETE that can't be executed on AO and CO tables.
--- end_ignore
 ------------------------------------------------------------------------------
 
 -- start_ignore
@@ -2002,13 +1835,9 @@ DROP TABLE IF EXISTS GistTable13;
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
--- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
 -- PURPOSE:
 --     Test that you get a reasonable error message when you try to create a 
 --     HASH index (we no longer support those).
--- AUTHOR: mgilkey
--- end_ignore
 ------------------------------------------------------------------------------
 
 -- start_ignore
@@ -2035,17 +1864,13 @@ DROP TABLE IF EXISTS GistTable14;
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: Sanity test GiST indexes.
 --     REINDEX
 --     DROP INDEX
--- AUTHOR: mgilkey
 -- NOTES:
 --     Although we seemingly ignore the output of the EXPLAIN statements, 
 --     elsewhere in this test we look for "Index Scan on propertyBoxIndex" 
 --     or something similar in order to verify that the index was used.
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
@@ -2130,14 +1955,10 @@ COPY GistTable1 FROM
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: Sanity test GiST indexes.
 --     This does some simple queries that should use the index.  
 --     We can't see directly whether the index was used, but for each query 
 --     we can run "EXPLAIN" and see whether the query used the index.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 CREATE INDEX propertyBoxIndex ON GistTable1 USING Gist (property);
@@ -2197,11 +2018,7 @@ SELECT id, property FROM GistTable1
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: Insert more data.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 -- INSERT some more data.
@@ -2216,11 +2033,7 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: Sanity test GiST indexes.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
@@ -2236,7 +2049,6 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: 
 --     Test UNIQUE indexes and primary keys on geometric data types.  
 --     It turns out that columns with the geometric data types (at least 
@@ -2248,9 +2060,6 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 --     keys on geometric data types.  So this script is basically a negative 
 --     test that verifies that we get reasonable error messages when we try 
 --     to create unique GiST indexes or pimary keys on gemoetric data types.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 -- start_ignore
@@ -2275,14 +2084,10 @@ DROP TABLE IF EXISTS GistTable2;
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: 
 --     "Negative" tests.  Verify that we get reasonable error messages when 
 --     we try to do unreasonable things, such as create indexes on types that 
 --     do not support GiST (non-geometric types).
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 -- Try to create GiST indexes on non-geometric data types.
@@ -2301,12 +2106,8 @@ CREATE INDEX ShouldNotExist ON GistTable1 USING GiST (c, f);
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: 
 --     Test multi-column indexes.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
@@ -2338,14 +2139,10 @@ SELECT id FROM GistTable1
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: Test GiST indexes with the WHERE predicate in the CREATE INDEX 
 --     statement.  This does some simple queries that should use the index.  
 --     We can't see directly whether the index was used, but for each query 
 --     we can run "EXPLAIN" and see whether the query used the index.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 -- Add another record that has NULL in the property field.
@@ -2404,19 +2201,14 @@ SELECT id, property FROM GistTable1
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
--- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
 -- PURPOSE:
 --     Test VACUUM on GiST indexes.
 --     Also test somewhat larger data sets than most of my other GiST index 
 --     tests.
--- AUTHOR: mgilkey
--- LAST MODIFIED:
---     2010-04-20 mgilkey
+--
 --         This test suite is for AO (Append-Only) and CO (Column-Oriented) 
 --         tables as well as heap tables, so I removed statement(s) such as 
 --         DELETE that can't be executed on AO and CO tables.
--- end_ignore
 ------------------------------------------------------------------------------
 
 -- start_ignore
@@ -2527,13 +2319,9 @@ DROP TABLE IF EXISTS GistTable13;
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
--- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
 -- PURPOSE:
 --     Test that you get a reasonable error message when you try to create a 
 --     HASH index (we no longer support those).
--- AUTHOR: mgilkey
--- end_ignore
 ------------------------------------------------------------------------------
 
 -- start_ignore
@@ -2560,17 +2348,13 @@ DROP TABLE IF EXISTS GistTable14;
 -- ----------------------------------------------------------------------
 
 ------------------------------------------------------------------------------
--- start_ignore
 -- PURPOSE: Sanity test GiST indexes.
 --     REINDEX
 --     DROP INDEX
--- AUTHOR: mgilkey
 -- NOTES:
 --     Although we seemingly ignore the output of the EXPLAIN statements, 
 --     elsewhere in this test we look for "Index Scan on propertyBoxIndex" 
 --     or something similar in order to verify that the index was used.
--- LAST MODIFIED:
--- end_ignore
 ------------------------------------------------------------------------------
 
 SET enable_seqscan = FALSE;
