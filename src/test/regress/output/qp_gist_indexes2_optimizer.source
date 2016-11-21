@@ -16,12 +16,12 @@ COPY GistTable1 FROM
 -- ----------------------------------------------------------------------
 -- Test: test03IndexScan.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Sanity test GiST indexes.
 --     This does some simple queries that should use the index.  
 --     We can't see directly whether the index was used, but for each query 
 --     we can run "EXPLAIN" and see whether the query used the index.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 CREATE INDEX propertyBoxIndex ON GistTable1 USING Gist (property);
 -- INSERT some more data.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
@@ -132,9 +132,9 @@ SELECT id, property FROM GistTable1
 -- ----------------------------------------------------------------------
 -- Test: test04Insert.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Insert more data.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- INSERT some more data.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
  VALUES (76, 'James McMurtry', 'Levelland', '((1500, 1500), (1700, 1900))', 
@@ -142,9 +142,9 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
 -- ----------------------------------------------------------------------
 -- Test: test05Select.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Sanity test GiST indexes.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
 SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
@@ -320,10 +320,10 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- ----------------------------------------------------------------------
 -- Test: test10MultipleColumns.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE: 
 --     Test multi-column indexes.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
 -- Insert 2 more records, but insert them with the same value for BULLSEYE.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
@@ -354,12 +354,12 @@ SELECT id FROM GistTable1
 -- ----------------------------------------------------------------------
 -- Test: test11WherePredicate.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Test GiST indexes with the WHERE predicate in the CREATE INDEX 
 --     statement.  This does some simple queries that should use the index.  
 --     We can't see directly whether the index was used, but for each query 
 --     we can run "EXPLAIN" and see whether the query used the index.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- Add another record that has NULL in the property field.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
  VALUES (77, 'S. T. "Rip" Sunset', 'Lost Vegas',NULL,
@@ -448,7 +448,7 @@ SELECT id, property FROM GistTable1
 -- ----------------------------------------------------------------------
 -- Test: test13Vacuum.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE:
 --     Test VACUUM on GiST indexes.
 --     Also test somewhat larger data sets than most of my other GiST index 
@@ -457,7 +457,7 @@ SELECT id, property FROM GistTable1
 --         This test suite is for AO (Append-Only) and CO (Column-Oriented) 
 --         tables as well as heap tables, so I removed statement(s) such as 
 --         DELETE that can't be executed on AO and CO tables.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 CREATE TABLE GistTable13 (
  id INTEGER,
  property BOX,
@@ -592,7 +592,7 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13
 -- ----------------------------------------------------------------------
 -- Test: test15ReindexDropIndex.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Sanity test GiST indexes.
 --     REINDEX
 --     DROP INDEX
@@ -600,7 +600,7 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13
 --     Although we seemingly ignore the output of the EXPLAIN statements, 
 --     elsewhere in this test we look for "Index Scan on propertyBoxIndex" 
 --     or something similar in order to verify that the index was used.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
@@ -717,12 +717,12 @@ COPY GistTable1 FROM
 -- ----------------------------------------------------------------------
 -- Test: test03IndexScan.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Sanity test GiST indexes.
 --     This does some simple queries that should use the index.  
 --     We can't see directly whether the index was used, but for each query 
 --     we can run "EXPLAIN" and see whether the query used the index.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 CREATE INDEX propertyBoxIndex ON GistTable1 USING Gist (property);
 -- INSERT some more data.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
@@ -833,9 +833,9 @@ SELECT id, property FROM GistTable1
 -- ----------------------------------------------------------------------
 -- Test: test04Insert.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Insert more data.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- INSERT some more data.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
  VALUES (76, 'James McMurtry', 'Levelland', '((1500, 1500), (1700, 1900))', 
@@ -843,9 +843,9 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
 -- ----------------------------------------------------------------------
 -- Test: test05Select.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Sanity test GiST indexes.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
 SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
@@ -1021,10 +1021,10 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- ----------------------------------------------------------------------
 -- Test: test10MultipleColumns.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE: 
 --     Test multi-column indexes.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
 -- Insert 2 more records, but insert them with the same value for BULLSEYE.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
@@ -1055,12 +1055,12 @@ SELECT id FROM GistTable1
 -- ----------------------------------------------------------------------
 -- Test: test11WherePredicate.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Test GiST indexes with the WHERE predicate in the CREATE INDEX 
 --     statement.  This does some simple queries that should use the index.  
 --     We can't see directly whether the index was used, but for each query 
 --     we can run "EXPLAIN" and see whether the query used the index.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- Add another record that has NULL in the property field.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
  VALUES (77, 'S. T. "Rip" Sunset', 'Lost Vegas',NULL,
@@ -1149,7 +1149,7 @@ SELECT id, property FROM GistTable1
 -- ----------------------------------------------------------------------
 -- Test: test13Vacuum.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE:
 --     Test VACUUM on GiST indexes.
 --     Also test somewhat larger data sets than most of my other GiST index 
@@ -1158,7 +1158,7 @@ SELECT id, property FROM GistTable1
 --         This test suite is for AO (Append-Only) and CO (Column-Oriented) 
 --         tables as well as heap tables, so I removed statement(s) such as 
 --         DELETE that can't be executed on AO and CO tables.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 CREATE TABLE GistTable13 (
  id INTEGER,
  property BOX,
@@ -1294,7 +1294,7 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13
 -- ----------------------------------------------------------------------
 -- Test: test15ReindexDropIndex.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Sanity test GiST indexes.
 --     REINDEX
 --     DROP INDEX
@@ -1302,7 +1302,7 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13
 --     Although we seemingly ignore the output of the EXPLAIN statements, 
 --     elsewhere in this test we look for "Index Scan on propertyBoxIndex" 
 --     or something similar in order to verify that the index was used.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
@@ -1419,12 +1419,12 @@ COPY GistTable1 FROM
 -- ----------------------------------------------------------------------
 -- Test: test03IndexScan.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Sanity test GiST indexes.
 --     This does some simple queries that should use the index.  
 --     We can't see directly whether the index was used, but for each query 
 --     we can run "EXPLAIN" and see whether the query used the index.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 CREATE INDEX propertyBoxIndex ON GistTable1 USING Gist (property);
 -- INSERT some more data.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
@@ -1535,9 +1535,9 @@ SELECT id, property FROM GistTable1
 -- ----------------------------------------------------------------------
 -- Test: test04Insert.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Insert more data.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- INSERT some more data.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
  VALUES (76, 'James McMurtry', 'Levelland', '((1500, 1500), (1700, 1900))', 
@@ -1545,9 +1545,9 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
 -- ----------------------------------------------------------------------
 -- Test: test05Select.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Sanity test GiST indexes.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
 SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
@@ -1723,10 +1723,10 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- ----------------------------------------------------------------------
 -- Test: test10MultipleColumns.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE: 
 --     Test multi-column indexes.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
 -- Insert 2 more records, but insert them with the same value for BULLSEYE.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
@@ -1757,12 +1757,12 @@ SELECT id FROM GistTable1
 -- ----------------------------------------------------------------------
 -- Test: test11WherePredicate.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Test GiST indexes with the WHERE predicate in the CREATE INDEX 
 --     statement.  This does some simple queries that should use the index.  
 --     We can't see directly whether the index was used, but for each query 
 --     we can run "EXPLAIN" and see whether the query used the index.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- Add another record that has NULL in the property field.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
  VALUES (77, 'S. T. "Rip" Sunset', 'Lost Vegas',NULL,
@@ -1851,7 +1851,7 @@ SELECT id, property FROM GistTable1
 -- ----------------------------------------------------------------------
 -- Test: test13Vacuum.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE:
 --     Test VACUUM on GiST indexes.
 --     Also test somewhat larger data sets than most of my other GiST index 
@@ -1860,7 +1860,7 @@ SELECT id, property FROM GistTable1
 --         This test suite is for AO (Append-Only) and CO (Column-Oriented) 
 --         tables as well as heap tables, so I removed statement(s) such as 
 --         DELETE that can't be executed on AO and CO tables.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 CREATE TABLE GistTable13 (
  id INTEGER,
  property BOX,
@@ -1996,7 +1996,7 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13
 -- ----------------------------------------------------------------------
 -- Test: test15ReindexDropIndex.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Sanity test GiST indexes.
 --     REINDEX
 --     DROP INDEX
@@ -2004,7 +2004,7 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13
 --     Although we seemingly ignore the output of the EXPLAIN statements, 
 --     elsewhere in this test we look for "Index Scan on propertyBoxIndex" 
 --     or something similar in order to verify that the index was used.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
@@ -2121,12 +2121,12 @@ COPY GistTable1 FROM
 -- ----------------------------------------------------------------------
 -- Test: test03IndexScan.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Sanity test GiST indexes.
 --     This does some simple queries that should use the index.  
 --     We can't see directly whether the index was used, but for each query 
 --     we can run "EXPLAIN" and see whether the query used the index.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 CREATE INDEX propertyBoxIndex ON GistTable1 USING Gist (property);
 -- INSERT some more data.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
@@ -2237,9 +2237,9 @@ SELECT id, property FROM GistTable1
 -- ----------------------------------------------------------------------
 -- Test: test04Insert.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Insert more data.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- INSERT some more data.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
  VALUES (76, 'James McMurtry', 'Levelland', '((1500, 1500), (1700, 1900))', 
@@ -2247,9 +2247,9 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
 -- ----------------------------------------------------------------------
 -- Test: test05Select.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Sanity test GiST indexes.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
 SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
@@ -2425,10 +2425,10 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- ----------------------------------------------------------------------
 -- Test: test10MultipleColumns.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE: 
 --     Test multi-column indexes.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
 -- Insert 2 more records, but insert them with the same value for BULLSEYE.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
@@ -2459,12 +2459,12 @@ SELECT id FROM GistTable1
 -- ----------------------------------------------------------------------
 -- Test: test11WherePredicate.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Test GiST indexes with the WHERE predicate in the CREATE INDEX 
 --     statement.  This does some simple queries that should use the index.  
 --     We can't see directly whether the index was used, but for each query 
 --     we can run "EXPLAIN" and see whether the query used the index.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- Add another record that has NULL in the property field.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
  VALUES (77, 'S. T. "Rip" Sunset', 'Lost Vegas',NULL,
@@ -2553,7 +2553,7 @@ SELECT id, property FROM GistTable1
 -- ----------------------------------------------------------------------
 -- Test: test13Vacuum.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE:
 --     Test VACUUM on GiST indexes.
 --     Also test somewhat larger data sets than most of my other GiST index 
@@ -2562,7 +2562,7 @@ SELECT id, property FROM GistTable1
 --         This test suite is for AO (Append-Only) and CO (Column-Oriented) 
 --         tables as well as heap tables, so I removed statement(s) such as 
 --         DELETE that can't be executed on AO and CO tables.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 CREATE TABLE GistTable13 (
  id INTEGER,
  property BOX,
@@ -2698,7 +2698,7 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13
 -- ----------------------------------------------------------------------
 -- Test: test15ReindexDropIndex.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Sanity test GiST indexes.
 --     REINDEX
 --     DROP INDEX
@@ -2706,7 +2706,7 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13
 --     Although we seemingly ignore the output of the EXPLAIN statements, 
 --     elsewhere in this test we look for "Index Scan on propertyBoxIndex" 
 --     or something similar in order to verify that the index was used.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
@@ -2823,12 +2823,12 @@ COPY GistTable1 FROM
 -- ----------------------------------------------------------------------
 -- Test: test03IndexScan.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Sanity test GiST indexes.
 --     This does some simple queries that should use the index.  
 --     We can't see directly whether the index was used, but for each query 
 --     we can run "EXPLAIN" and see whether the query used the index.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 CREATE INDEX propertyBoxIndex ON GistTable1 USING Gist (property);
 -- INSERT some more data.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
@@ -2939,9 +2939,9 @@ SELECT id, property FROM GistTable1
 -- ----------------------------------------------------------------------
 -- Test: test04Insert.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Insert more data.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- INSERT some more data.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
  VALUES (76, 'James McMurtry', 'Levelland', '((1500, 1500), (1700, 1900))', 
@@ -2949,9 +2949,9 @@ INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
 -- ----------------------------------------------------------------------
 -- Test: test05Select.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Sanity test GiST indexes.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
 SELECT id, owner, description, property, poli, bullseye FROM GistTable1
  WHERE property IS NOT NULL
@@ -3127,10 +3127,10 @@ SELECT id, owner, description, property, poli, bullseye FROM GistTable1
 -- ----------------------------------------------------------------------
 -- Test: test10MultipleColumns.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE: 
 --     Test multi-column indexes.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
 -- Insert 2 more records, but insert them with the same value for BULLSEYE.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye) 
@@ -3161,12 +3161,12 @@ SELECT id FROM GistTable1
 -- ----------------------------------------------------------------------
 -- Test: test11WherePredicate.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Test GiST indexes with the WHERE predicate in the CREATE INDEX 
 --     statement.  This does some simple queries that should use the index.  
 --     We can't see directly whether the index was used, but for each query 
 --     we can run "EXPLAIN" and see whether the query used the index.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- Add another record that has NULL in the property field.
 INSERT INTO GistTable1 (id, owner, description, property, poli, bullseye)
  VALUES (77, 'S. T. "Rip" Sunset', 'Lost Vegas',NULL,
@@ -3255,7 +3255,7 @@ SELECT id, property FROM GistTable1
 -- ----------------------------------------------------------------------
 -- Test: test13Vacuum.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE:
 --     Test VACUUM on GiST indexes.
 --     Also test somewhat larger data sets than most of my other GiST index 
@@ -3264,7 +3264,7 @@ SELECT id, property FROM GistTable1
 --         This test suite is for AO (Append-Only) and CO (Column-Oriented) 
 --         tables as well as heap tables, so I removed statement(s) such as 
 --         DELETE that can't be executed on AO and CO tables.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 CREATE TABLE GistTable13 (
  id INTEGER,
  property BOX,
@@ -3400,7 +3400,7 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13
 -- ----------------------------------------------------------------------
 -- Test: test15ReindexDropIndex.sql
 -- ----------------------------------------------------------------------
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 -- PURPOSE: Sanity test GiST indexes.
 --     REINDEX
 --     DROP INDEX
@@ -3408,7 +3408,7 @@ EXPLAIN SELECT id, property AS "ProperTee" FROM GistTable13
 --     Although we seemingly ignore the output of the EXPLAIN statements, 
 --     elsewhere in this test we look for "Index Scan on propertyBoxIndex" 
 --     or something similar in order to verify that the index was used.
-------------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
 SET enable_seqscan = FALSE;
 SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
