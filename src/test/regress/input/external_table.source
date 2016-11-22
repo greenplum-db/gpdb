@@ -440,6 +440,9 @@ CREATE EXTERNAL TABLE exttab_cursor_2( i int, j text )
 LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|') 
 LOG ERRORS SEGMENT REJECT LIMIT 2;
 -- Test to make sure error logs are populated when cursors are used
+-- The total number of formatting errors reported by the query is dependant on the number of rows parsed on
+-- the segments before COMMIT finishes. So mask the NOTICE by setting the client_min_messages guc to WARNING.
+set CLIENT_MIN_MESSAGES=WARNING;
 BEGIN;
 DECLARE exttab_cur1 no scroll cursor FOR
 SELECT e1.i, e2.j from exttab_cursor_1 e1 INNER JOIN exttab_cursor_1 e2 ON e1.i = e2.i
@@ -450,6 +453,7 @@ SELECT e1.i, e2.j from exttab_cursor_1 e1 INNER JOIN exttab_cursor_1 e2 ON e1.i 
 COMMIT;
 -- This should have the errors populated already
 SELECT count(*) > 0 FROM gp_read_error_log('exttab_cursor_1');
+reset CLIENT_MIN_MESSAGES;
 
 -- Fetch on external table scans with segment reject limit reached
 SELECT gp_truncate_error_log('exttab_cursor_1');
