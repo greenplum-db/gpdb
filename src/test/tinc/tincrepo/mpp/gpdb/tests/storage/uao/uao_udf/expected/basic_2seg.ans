@@ -5,16 +5,15 @@
 tid|segno|row_num
 ---+-----+-------
 (0 rows)
-2U: SELECT * FROM gp_aovisimap_entry_name('foo');
-sego|first_row_num|hiddentupcount|bitmap
-----+-------------+--------------+------
+2U: SELECT sego, first_row_num, hiddentupcount FROM gp_aovisimap_entry_name('foo');
+sego|first_row_num|hiddentupcount
+----+-------------+--------------
 (0 rows)
 2U: SELECT * FROM gp_aovisimap_hidden_info_name('foo');
 segno|hidden_tupcount|total_tupcount
 -----+---------------+--------------
 1    |0              |15            
 (1 row)
-
 DELETE FROM foo WHERE a IN (1, 2, 3, 5, 8, 13, 21);
 DELETE 7
 2U: SELECT * FROM gp_aovisimap_name('foo');
@@ -26,8 +25,10 @@ tid             |segno|row_num
 (33554432,32775)|1    |7
 (33554432,32779)|1    |11
 (5 rows)
-2U: SELECT * FROM gp_aovisimap_entry_name('foo');
-1   |0            |5             |011100010001            
+2U: SELECT sego, first_row_num, hiddentupcount FROM gp_aovisimap_entry_name('foo');
+sego|first_row_num|hiddentupcount
+----+-------------+--------------
+1   |0            |5             
 (1 row)
 2U: SELECT * FROM gp_aovisimap_hidden_info_name('foo');
 segno|hidden_tupcount|total_tupcount
@@ -49,8 +50,10 @@ tid             |segno|row_num
 (33554432,32782)|1|14
 (33554432,32783)|1|15
 (9 rows)
-2U: SELECT * FROM gp_aovisimap_entry_name('foo');
-1   |0            |9            |0111000100011111      
+2U: SELECT sego, first_row_num, hiddentupcount FROM gp_aovisimap_entry_name('foo');
+sego|first_row_num|hiddentupcount
+----+-------------+--------------
+1   |0            |9             
 (1 row)
 2U: SELECT * FROM gp_aovisimap_hidden_info_name('foo');
 segno|hidden_tupcount|total_tupcount

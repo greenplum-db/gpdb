@@ -7,10 +7,12 @@ DELETE 7
 VACUUM foo;
 VACUUM
 2U: SELECT * FROM gp_aovisimap_name('foo');
-tid             |segno|row_num
-----------------+-----+-------
+tid|segno|row_num
+---+-----+-------
 (0 rows)
 2U: SELECT * FROM gp_aovisimap_entry_name('foo');
+sego|first_row_num|hiddentupcount|bitmap
+----+-------------+--------------+------
 (0 rows)
 2U: SELECT * FROM gp_aovisimap_hidden_info_name('foo');
 segno|hidden_tupcount|total_tupcount
@@ -18,5 +20,3 @@ segno|hidden_tupcount|total_tupcount
 1    |0              |0
 2    |0              |10            
 (2 rows)
-
-
