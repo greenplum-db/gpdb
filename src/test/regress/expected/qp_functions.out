@@ -115,13 +115,6 @@ select greatest(a,b) from test order by a;
       100
 (100 rows)
 
--- start_ignore
-drop table if exists test;
-create table test (a integer, b integer);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-insert into test select a, a%25 from generate_series(1,100) a;
--- end_ignore
 select least(a,b) from test order by a;
  least 
 -------
@@ -226,24 +219,6 @@ select least(a,b) from test order by a;
     24
      0
 (100 rows)
-
--- start_ignore
-create or replace function one() returns integer as ' select 1 as result;' language sql;
--- end_ignore
-select one();
- one 
------
-   1
-(1 row)
-
--- start_ignore
-create or replace function one() returns integer as $$ select 1 as result; $$ language sql;
--- end_ignore
-select one();
- one 
------
-   1
-(1 row)
 
 -- start_ignore
 CREATE OR REPLACE FUNCTION add_em(integer, integer) RETURNS integer AS $$ SELECT $1 + $2; $$ LANGUAGE SQL;

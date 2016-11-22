@@ -12,27 +12,7 @@ insert into test select a, a%25 from generate_series(1,100) a;
 -- end_ignore
 
 select greatest(a,b) from test order by a;
-
--- start_ignore
-drop table if exists test;
-create table test (a integer, b integer);
-
-insert into test select a, a%25 from generate_series(1,100) a;
--- end_ignore
-
 select least(a,b) from test order by a;
-
--- start_ignore
-create or replace function one() returns integer as ' select 1 as result;' language sql;
--- end_ignore
-
-select one();
-
--- start_ignore
-create or replace function one() returns integer as $$ select 1 as result; $$ language sql;
--- end_ignore
-
-select one();
 
 -- start_ignore
 CREATE OR REPLACE FUNCTION add_em(integer, integer) RETURNS integer AS $$ SELECT $1 + $2; $$ LANGUAGE SQL;
