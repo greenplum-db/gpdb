@@ -10,7 +10,7 @@ SELECT COUNT(*) FROM foo WHERE a < 4;
 SET gp_select_invisible=true;
 -- Should display all tuples
 SELECT COUNT(*) FROM foo WHERE a < 4;
--- Now an interessing case where we update with gp_select_invisible active
+-- Now an interesting case where we update with gp_select_invisible active
 UPDATE foo SET b = 0 WHERE a < 5;
 -- We should not re-activate the deleted tuples
 SET gp_select_invisible=false;

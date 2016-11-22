@@ -2,18 +2,30 @@
 -- 
 
 SELECT COUNT(*) FROM foo WHERE b = 17;
-11
+ count 
+-------
+    11
 (1 row)
+
 DELETE FROM foo WHERE b = 17;
 DELETE 11
 SELECT COUNT(*) FROM foo WHERE b = 17;
-0
+ count 
+-------
+     0
 (1 row)
+
 SELECT COUNT(*) FROM foo;
-1099989
+  count  
+---------
+ 1099989
 (1 row)
+
 DELETE FROM foo WHERE b = 16 OR b = 10000 OR b = 15;
 DELETE 33
 SELECT COUNT(*) FROM foo;
-1099956
+  count  
+---------
+ 1099956
 (1 row)
+

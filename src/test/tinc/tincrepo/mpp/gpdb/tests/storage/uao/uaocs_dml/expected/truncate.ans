@@ -3,20 +3,32 @@
 -- 
 
 SELECT COUNT(*) FROM foo;
- 10
+ count 
+-------
+    10
 (1 row)
+
 DELETE FROM foo;
 DELETE 10
 SELECT COUNT(*) FROM foo;
+ count 
+-------
      0
 (1 row)
+
 TRUNCATE foo;
 TRUNCATE TABLE
 SELECT COUNT(*) FROM foo;
+ count 
+-------
      0
 (1 row)
+
 INSERT INTO foo SELECT i as a, i as b, 'hello world' as c FROM generate_series(1,10) AS i;
 INSERT 0 10
 SELECT COUNT(*) FROM foo;
+ count 
+-------
     10
 (1 row)
+

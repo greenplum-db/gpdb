@@ -2,15 +2,24 @@
 -- 
 
 SELECT COUNT(*) FROM foo;
-1000
+ count 
+-------
+  1000
 (1 row)
+
 DELETE FROM foo WHERE a < 4;
 DELETE 3
 SELECT COUNT(*) FROM foo;
-997
+ count 
+-------
+   997
 (1 row)
+
 DELETE FROM foo WHERE a < 4;
 DELETE 0
 SELECT COUNT(*) FROM foo;
-997
+ count 
+-------
+   997
 (1 row)
+

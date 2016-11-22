@@ -4,11 +4,17 @@
 UPDATE foo SET b=42 WHERE a < 10;
 UPDATE 9
 SELECT COUNT(b) FROM foo WHERE b = 42;
-10
+ count 
+-------
+    10
 (1 row)
+
 SELECT COUNT(b) FROM foo WHERE b < 10;
-0
+ count 
+-------
+     0
 (1 row)
+
 UPDATE foo SET b=1001 WHERE b < 4;
 UPDATE 0
 DELETE FROM foo WHERE a < 4;

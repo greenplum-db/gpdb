@@ -2,28 +2,40 @@
 -- 
 
 SELECT COUNT(*) FROM foo WHERE a < 4;
-    3
+ count 
+-------
+     3
 (1 row)
+
 DELETE FROM foo WHERE a < 4;
 DELETE 3
 SELECT COUNT(*) FROM foo WHERE a < 4;
+ count 
+-------
      0
 (1 row)
+
 SET gp_select_invisible=true;
 SET
 -- Should display all tuples
 SELECT COUNT(*) FROM foo WHERE a < 4;
+ count 
+-------
     3
 (1 row)
--- Now an interessing case where we update with gp_select_invisible active
+
+-- Now an interesting case where we update with gp_select_invisible active
 UPDATE foo SET b = 0 WHERE a < 5;
 UPDATE 1
 -- We should not re-activate the deleted tuples
 SET gp_select_invisible=false;
 SET
 SELECT COUNT(*) FROM foo WHERE b = 0;
+ count 
+-------
      1
 (1 row)
+
 -- Now the same re-activation test with update
 SET gp_select_invisible=true;
 SET
@@ -32,5 +44,8 @@ UPDATE 1
 SET gp_select_invisible=false;
 SET
 SELECT COUNT(*) FROM foo WHERE a = 4;
+ count 
+-------
      1
 (1 row)
+

@@ -2,13 +2,19 @@
 -- 
 
 SELECT SUM(b) FROM foo WHERE a = 17;
-187
+ sum 
+-----
+ 187
 (1 row)
-UPDATE foo SET b = 2 * b WHERE a = 17;
+
+UPDATE foo SET b = 2*b WHERE a = 17;
 UPDATE 11
 SELECT SUM(b) FROM foo WHERE a = 17;
-374
+ sum 
+-----
+ 374
 (1 row)
+
 BEGIN;
 BEGIN
 UPDATE foo SET b = 2*b WHERE a = 17;
@@ -16,17 +22,26 @@ UPDATE 11
 COMMIT;
 COMMIT
 SELECT SUM(b) FROM foo WHERE a = 17;
-748
+ sum 
+-----
+ 748
 (1 row)
+
 BEGIN;
 BEGIN
 UPDATE foo SET b = 2*b WHERE a = 17;
 UPDATE 11
 SELECT SUM(b) FROM foo WHERE a = 17;
-1496
+ sum  
+------
+ 1496
 (1 row)
+
 ROLLBACK;
 ROLLBACK
 SELECT SUM(b) FROM foo WHERE a = 17;
-748
+ sum 
+-----
+ 748
 (1 row)
+
