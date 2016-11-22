@@ -5,24 +5,32 @@
 SET enable_seqscan=false;
 SET
 SELECT relname, reltuples FROM pg_class WHERE relname = 'foo';
- foo     | 100
+relname|reltuples
+-------+---------
+foo    |100      
 (1 row)
 SELECT relname, reltuples FROM pg_class WHERE relname = 'foo_index';
- foo_index | 100
+relname  |reltuples
+---------+---------
+foo_index|100      
 (1 row)
 DELETE FROM foo WHERE a < 16;
 DELETE 15
 VACUUM FULL foo;
 VACUUM
 SELECT relname, reltuples FROM pg_class WHERE relname = 'foo';
- foo     | 85
- (1 row)
+relname|reltuples
+-------+---------
+foo    |85       
+(1 row)
 SELECT relname, reltuples FROM pg_class WHERE relname = 'foo_index';
- foo_index | 85
+relname  |reltuples
+---------+---------
+foo_index|85       
 (1 row)
 SELECT segno, tupcount,state FROM gp_aoseg_name('foo');
- segno | tupcount | state
--------+----------+-------
-     1 |        0 |     1
-     2 |       85 |     1
+segno|tupcount|state
+-----+--------+-----
+1    |0       |1    
+2    |85      |1    
 (2 rows)
