@@ -647,13 +647,6 @@ ifeq "$(INSTLOC)" ""
 INSTLOC=$(GPDIR)
 endif
 
-# define build flags for GP Optimizer UDFs library
-ifeq (Darwin, $(BLD_OS))
-	GPOPT_UDF_FLAGS := -m32 -dynamiclib -flat_namespace -undefined dynamic_lookup
-else
-	GPOPT_UDF_FLAGS := -m64 -shared
-endif
-
 VERSION:=$(shell [ -f ../VERSION ] && perl -pe 's, ,-,g' ../VERSION)
 
 ifeq "$(findstring win,$(BLD_ARCH))" "win"
