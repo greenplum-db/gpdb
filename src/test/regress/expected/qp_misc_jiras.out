@@ -2130,8 +2130,6 @@ insert into qp_misc_jiras.tbl6535_table select * from qp_misc_jiras.tbl6535_tabl
 insert into qp_misc_jiras.tbl6535_table select * from qp_misc_jiras.tbl6535_table ;
 insert into qp_misc_jiras.tbl6535_table select * from qp_misc_jiras.tbl6535_table ;
 insert into qp_misc_jiras.tbl6535_table select * from qp_misc_jiras.tbl6535_table ;
-insert into qp_misc_jiras.tbl6535_table select * from qp_misc_jiras.tbl6535_table ;
-insert into qp_misc_jiras.tbl6535_table select * from qp_misc_jiras.tbl6535_table ;
 set gp_enable_agg_distinct_pruning  = off;
 select count(distinct i), count(distinct j) from qp_misc_jiras.tbl6535_table;
  count | count 
@@ -2158,10 +2156,11 @@ ERROR:  canceling statement due to statement timeout
 drop table statement_timeout_test;
 reset statement_timeout;
 set gp_autostats_mode=none;
+-- Test for an old bug with ANALYZE (analyze code has been rewritten since).
 create table qp_misc_jiras.tbl_6934(x inet);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'x' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-insert into qp_misc_jiras.tbl_6934 select (i%200 || '.' || i%11 || '.' || i%11 || '.' || i%100)::inet from generate_series(1,4000000) i;
+insert into qp_misc_jiras.tbl_6934 select (i%200 || '.' || i%11 || '.' || i%11 || '.' || i%100)::inet from generate_series(1,40000) i;
 analyze qp_misc_jiras.tbl_6934; 
 drop table qp_misc_jiras.tbl_6934;
 create table qp_misc_jiras.tbl7286_test (i int, d date);
@@ -3855,38 +3854,31 @@ select  * from qp_misc_jiras.test_co where ctid='(33554432,32769)' and gp_segmen
  0 | 0
 (1 row)
 
--- start_ignore
--- This is to verify MPP-10856: test gp_enable_explain_allstat 
--- end_ignore
+-- This is to verify MPP-10856: test gp_enable_explain_allstat
 set gp_enable_explain_allstat=on;
-create table qp_misc_jiras.test_tbl10856 (i int, j int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-insert into qp_misc_jiras.test_tbl10856 select i, i from generate_series(0, 999999) i;
-explain analyze select count(*) from qp_misc_jiras.test_tbl10856;
-                                                                        QUERY PLAN                                                                         
------------------------------------------------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=4316.91..4316.92 rows=1 width=8)
-   Rows out:  1 rows with 70 ms to end, start offset by 0.190 ms.
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=4316.84..4316.89 rows=1 width=8)
-         Rows out:  3 rows at destination with 69 ms to first row, 70 ms to end, start offset by 0.190 ms.
-         ->  Aggregate  (cost=4316.84..4316.85 rows=1 width=8)
-               Rows out:  Avg 1.0 rows x 3 workers.  Max 1 rows (seg0) with 70 ms to end, start offset by 0.432 ms.
-               allstat: seg_firststart_total_ntuples/seg0_0.432 ms_70 ms_1/seg1_0.431 ms_68 ms_1/seg2_0.431 ms_68 ms_1//end
-               ->  Seq Scan on test_tbl10856  (cost=0.00..3526.87 rows=105329 width=0)
-                     Rows out:  Avg 333333.3 rows x 3 workers.  Max 333384 rows (seg2) with 0.027 ms to first row, 36 ms to end, start offset by 0.431 ms.
-                     allstat: seg_firststart_total_ntuples/seg0_0.432 ms_34 ms_333357/seg1_0.431 ms_33 ms_333259/seg2_0.431 ms_36 ms_333384//end
+insert into qp_misc_jiras.test_heap select i, i from generate_series(0, 99999) i;
+explain analyze select count(*) from qp_misc_jiras.test_heap;
+                                                                         QUERY PLAN                                                                         
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=1176.32..1176.33 rows=1 width=8)
+   Rows out:  1 rows with 16 ms to end, start offset by 0.333 ms.
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=1176.25..1176.30 rows=1 width=8)
+         Rows out:  3 rows at destination with 16 ms to end, start offset by 0.334 ms.
+         ->  Aggregate  (cost=1176.25..1176.26 rows=1 width=8)
+               Rows out:  Avg 1.0 rows x 3 workers.  Max 1 rows (seg0) with 15 ms to end, start offset by 0.621 ms.
+               allstat: seg_firststart_total_ntuples/seg0_0.621 ms_15 ms_1/seg1_0.621 ms_15 ms_1/seg2_0.634 ms_15 ms_1//end
+               ->  Seq Scan on test_heap  (cost=0.00..961.00 rows=28700 width=0)
+                     Rows out:  Avg 33333.7 rows x 3 workers.  Max 33350 rows (seg0) with 0.035 ms to first row, 7.878 ms to end, start offset by 0.622 ms.
+                     allstat: seg_firststart_total_ntuples/seg0_0.622 ms_7.878 ms_33350/seg1_0.622 ms_7.850 ms_33336/seg2_0.634 ms_7.866 ms_33315//end
  Slice statistics:
-   (slice0)    Executor memory: 159K bytes.
+   (slice0)    Executor memory: 382K bytes.
    (slice1)    Executor memory: 163K bytes avg x 3 workers, 163K bytes max (seg0).
  Statement statistics:
    Memory used: 128000K bytes
- Settings:  enable_bitmapscan=off; enable_groupagg=on; enable_indexscan=on; enable_seqscan=off; optimizer=off; optimizer_segments=3
- Optimizer status: legacy query optimizer
- Total runtime: 70.739 ms
-(18 rows)
+ Settings:  enable_bitmapscan=off; enable_groupagg=on; enable_indexscan=on; enable_seqscan=off; optimizer_segments=3
+ Total runtime: 15.974 ms
+(17 rows)
 
-drop table if exists qp_misc_jiras.test_tbl10856;
 -- start_ignore
 -- This is to verify MPP-8946
 -- ramans2 : Modifying queries to add filter on schema name to remove diffs in multi-node cdbfast runs

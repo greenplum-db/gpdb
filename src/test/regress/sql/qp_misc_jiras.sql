@@ -1281,9 +1281,8 @@ select count(*) from qp_misc_jiras.tbl7161_co;
 insert into qp_misc_jiras.tbl7161_co (a, b) select i, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || i from generate_series(0, 4) i;
 select count(*) from qp_misc_jiras.tbl7161_co;
 drop table qp_misc_jiras.tbl7161_co;
+
 select i, j into qp_misc_jiras.tbl6535_table from generate_series(1, 200) i, generate_series(1, 201) j;
-insert into qp_misc_jiras.tbl6535_table select * from qp_misc_jiras.tbl6535_table ;
-insert into qp_misc_jiras.tbl6535_table select * from qp_misc_jiras.tbl6535_table ;
 insert into qp_misc_jiras.tbl6535_table select * from qp_misc_jiras.tbl6535_table ;
 insert into qp_misc_jiras.tbl6535_table select * from qp_misc_jiras.tbl6535_table ;
 insert into qp_misc_jiras.tbl6535_table select * from qp_misc_jiras.tbl6535_table ;
@@ -1294,6 +1293,7 @@ select count(distinct i), count(distinct j) from qp_misc_jiras.tbl6535_table;
 set gp_enable_agg_distinct = off;
 select count(distinct i), count(distinct j) from qp_misc_jiras.tbl6535_table;
 drop table qp_misc_jiras.tbl6535_table;
+
 create table statement_timeout_test(a int, b int);
 insert into statement_timeout_test select i,i+1 from generate_series(1,10000)i;
 prepare prestmt as select * from statement_timeout_test s1, statement_timeout_test s2, statement_timeout_test s3, statement_timeout_test s4, statement_timeout_test s5;
@@ -1302,10 +1302,13 @@ execute prestmt; -- should get cancelled automatically
 drop table statement_timeout_test;
 reset statement_timeout;
 set gp_autostats_mode=none;
+
+-- Test for an old bug with ANALYZE (analyze code has been rewritten since).
 create table qp_misc_jiras.tbl_6934(x inet);
-insert into qp_misc_jiras.tbl_6934 select (i%200 || '.' || i%11 || '.' || i%11 || '.' || i%100)::inet from generate_series(1,4000000) i;
+insert into qp_misc_jiras.tbl_6934 select (i%200 || '.' || i%11 || '.' || i%11 || '.' || i%100)::inet from generate_series(1,40000) i;
 analyze qp_misc_jiras.tbl_6934; 
 drop table qp_misc_jiras.tbl_6934;
+
 create table qp_misc_jiras.tbl7286_test (i int, d date);
 insert into qp_misc_jiras.tbl7286_test select i%10, '2009/01/01'::date + (i || ' days')::interval from generate_series(0, 99999) i;
 
@@ -2379,15 +2382,11 @@ create table qp_misc_jiras.test_co (i int, j int) with (appendonly=true, orienta
 insert into qp_misc_jiras.test_co values (0, 0);
 explain select  * from qp_misc_jiras.test_co where ctid='(33554432,32769)' and gp_segment_id >= 0;
 select  * from qp_misc_jiras.test_co where ctid='(33554432,32769)' and gp_segment_id >= 0;
--- start_ignore
--- This is to verify MPP-10856: test gp_enable_explain_allstat 
--- end_ignore
 
+-- This is to verify MPP-10856: test gp_enable_explain_allstat
 set gp_enable_explain_allstat=on;
-create table qp_misc_jiras.test_tbl10856 (i int, j int);
-insert into qp_misc_jiras.test_tbl10856 select i, i from generate_series(0, 999999) i;
-explain analyze select count(*) from qp_misc_jiras.test_tbl10856;
-drop table if exists qp_misc_jiras.test_tbl10856;
+insert into qp_misc_jiras.test_heap select i, i from generate_series(0, 99999) i;
+explain analyze select count(*) from qp_misc_jiras.test_heap;
 
 -- start_ignore
 -- This is to verify MPP-8946
