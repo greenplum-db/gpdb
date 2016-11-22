@@ -1924,6 +1924,24 @@ agg_hash_next_pass(AggState *aggstate)
 	return more;
 }
 
+/* Resets all gpmon states for this agg and sends an updated gpmon packet */
+static void
+Gpmon_ResetAggHashTable(AggState* aggstate)
+{
+	Gpmon_M_Incr(GpmonPktFromAggState(aggstate), GPMON_AGG_SPILLPASS);
+	/* Reset current pass read tuples must be before current pass spill tuples */
+	Gpmon_M_Reset(GpmonPktFromAggState(aggstate),
+			GPMON_AGG_CURRSPILLPASS_READTUPLE);
+	Gpmon_M_Reset(GpmonPktFromAggState(aggstate),
+			GPMON_AGG_CURRSPILLPASS_READBYTE);
+	Gpmon_M_Reset(GpmonPktFromAggState(aggstate),
+			GPMON_AGG_CURRSPILLPASS_TUPLE);
+	Gpmon_M_Reset(GpmonPktFromAggState(aggstate), GPMON_AGG_CURRSPILLPASS_BYTE);
+	Gpmon_M_Reset(GpmonPktFromAggState(aggstate),
+			GPMON_AGG_CURRSPILLPASS_BATCH);
+	CheckSendPlanStateGpmonPkt(&aggstate->ss.ps);
+}
+
 /* Function: reset_agg_hash_table
  *
  * Clear the hash table content anchored by the bucket array.
@@ -1945,15 +1963,7 @@ void reset_agg_hash_table(AggState *aggstate)
 
 	init_agg_hash_iter(hashtable);
 
-	Gpmon_M_Incr(GpmonPktFromAggState(aggstate), GPMON_AGG_SPILLPASS);
-	/* Reset current pass read tuples much be before currentpass spill tuples */
-	Gpmon_M_Reset(GpmonPktFromAggState(aggstate), GPMON_AGG_CURRSPILLPASS_READTUPLE);
-	Gpmon_M_Reset(GpmonPktFromAggState(aggstate), GPMON_AGG_CURRSPILLPASS_READBYTE); 
-	Gpmon_M_Reset(GpmonPktFromAggState(aggstate), GPMON_AGG_CURRSPILLPASS_TUPLE);
-	Gpmon_M_Reset(GpmonPktFromAggState(aggstate), GPMON_AGG_CURRSPILLPASS_BYTE);
-	Gpmon_M_Reset(GpmonPktFromAggState(aggstate), GPMON_AGG_CURRSPILLPASS_BATCH);
-
-	CheckSendPlanStateGpmonPkt(&aggstate->ss.ps);
+	Gpmon_ResetAggHashTable(aggstate);
 }
 
 /* Function: destroy_agg_hash_table
@@ -1972,7 +1982,8 @@ void destroy_agg_hash_table(AggState *aggstate)
 			aggstate->hhashtable->num_ht_groups,
 			aggstate->hhashtable->num_tuples);
 		
-		reset_agg_hash_table(aggstate);
+		Gpmon_ResetAggHashTable(aggstate);
+		CdbCellBuf_Reset(&(aggstate->hhashtable->entry_buf));
 
 		/* destroy_batches(aggstate->hhashtable); */
 		pfree(aggstate->hhashtable->buckets);
