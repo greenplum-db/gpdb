@@ -66,6 +66,8 @@ Alter Table sto_alt_uao1_setstorage ALTER char_vary_col SET STORAGE PLAIN;
 ALTER TABLE
 insert into sto_alt_uao1_setstorage values ('6_zero', 6, '6_zero', 6, 6, '{6}', 6, 6, '2004-10-19 10:23:54', '2004-10-19 10:23:54+02', '1-1-2000',6, 'newcol');
 psql:/home/gpadmin/gpdb4/src/test/tinc/tincrepo/mpp/gpdb/tests/storage/uao/uaocs_ddl/output/alter_ao_tables_setstorage.sql:41: ERROR:  invalid input syntax for type real: "{6}"
+LINE 1: ...1_setstorage values ('6_zero', 6, '6_zero', 6, 6, '{6}', 6, ...
+                                                             ^
 select * from sto_alt_uao1_setstorage order by bigint_col;
  text_col | bigint_col | char_vary_col | numeric_col | int_col | float_col | int_array_col | before_rename_col | change_datatype_col |    a_ts_without     |       b_ts_with        | date_column | col_set_default 
 ----------+------------+---------------+-------------+---------+-----------+---------------+-------------------+---------------------+---------------------+------------------------+-------------+-----------------

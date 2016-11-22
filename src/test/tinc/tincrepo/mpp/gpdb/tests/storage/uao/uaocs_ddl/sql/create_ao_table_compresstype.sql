@@ -55,23 +55,3 @@ select count(*) from uao_tab_compress_zlib9;
 SELECT 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='uao_tab_compress_zlib9');
 
 SELECT 1 AS compression_present from pg_appendonly WHERE compresstype='zlib' AND compresslevel=9 AND relid=(SELECT oid  FROM pg_class WHERE relname='uao_tab_compress_zlib9');
-
--- create select uao table with compress=QuickLZ 
-
-Drop table if exists uao_tab_compress_quicklz cascade;
-CREATE TABLE uao_tab_compress_quicklz (
-          col_int int,
-          col_text text,
-          col_numeric numeric)
- with (appendonly=true, orientation=column , COMPRESSTYPE=quicklz , COMPRESSLEVEL=1  ) ; 
-
-insert into uao_tab_compress_quicklz select i , 'This is news of today: Deadlock between Republicans and Democrats over how best to reduce the U.S. deficit, and over what period, has blocked an agreement to allow the raising of the $14.3 trillion debt ceiling '||i, (random() * 10000000)::numeric + 10000000 from GENERATE_SERIES(10000, 19999) AS i;
-
-CREATE index col_int_bmp_idx_compress_quicklz on uao_tab_compress_quicklz using bitmap (col_int);
-
-\d+ uao_tab_compress_quicklz
-select count(*) from uao_tab_compress_quicklz;
-
-SELECT 1 AS VisimapPresent  FROM pg_appendonly WHERE visimapidxid is not NULL AND visimapidxid is not NULL AND relid=(SELECT oid FROM pg_class WHERE relname='uao_tab_compress_quicklz');
-
-SELECT 1 AS compression_present from pg_appendonly WHERE compresstype='quicklz' AND compresslevel=1 AND relid=(SELECT oid  FROM pg_class WHERE relname='uao_tab_compress_quicklz');

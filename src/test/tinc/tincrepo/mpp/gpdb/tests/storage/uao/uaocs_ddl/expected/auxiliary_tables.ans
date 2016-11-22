@@ -10,11 +10,6 @@ SELECT position('pg_aocsseg_' in relname) FROM pg_class where oid IN (SELECT seg
 ----------
         1
 (1 row)
-SELECT position('pg_aocsseg_' in relname) FROM pg_class where oid IN (SELECT segidxid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class WHERE relname='t'));
- position 
-----------
-        1
-(1 row)
 SELECT position('pg_aoblkdir_' in relname) FROM pg_class where oid IN (SELECT blkdirrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class WHERE relname='t'));
  position 
 ----------
