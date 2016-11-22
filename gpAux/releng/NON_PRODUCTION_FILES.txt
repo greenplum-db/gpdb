@@ -1,5 +1,4 @@
 bin/UPDATE_INFO
-bin/diskqual.ksh
 bin/explain.pl
 bin/gp
 bin/gpaddmirrors.py

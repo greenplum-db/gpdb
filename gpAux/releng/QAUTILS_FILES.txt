@@ -1,4 +1,3 @@
-bin/diskqual.ksh
 bin/explain.pl
 bin/gpcheckmirrorseg.pl
 bin/gpdebug

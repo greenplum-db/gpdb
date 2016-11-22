@@ -850,7 +850,6 @@ endif
 #---------------------------------------------------------------------
 
 PVK_SCRIPTS = \
-	bin/diskqual.ksh	\
 	bin/gpscp			\
 	bin/gpssh			\
 	bin/gpcheckperf			\
