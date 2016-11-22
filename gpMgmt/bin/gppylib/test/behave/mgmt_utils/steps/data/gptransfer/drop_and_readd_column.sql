@@ -1,3 +1,3 @@
 -- partition table
-ALTER TABLE employee DROP COLUMN gender;
-ALTER TABLE employee ADD COLUMN gender char(1);
+ALTER TABLE sales DROP COLUMN trans_id;
+ALTER TABLE sales ADD COLUMN trans_id int;

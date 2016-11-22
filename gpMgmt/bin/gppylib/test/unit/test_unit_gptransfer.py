@@ -360,8 +360,8 @@ class GpTransfer(GpTestCase):
         with open(SOURCE_MAP_FILENAME, "w") as src_map_file:
             src_map_file.write("sdw1,12700\nsdw2,12700")
         INPUT_FILENAME = "/tmp/gptransfer_test"
-        with open(INPUT_FILENAME, "w") as src_map_file:
-            src_map_file.write("my_first_database.public.my_table")
+        with open(INPUT_FILENAME, "w") as input_file:
+            input_file.write("my_first_database.public.my_table")
         self.cursor.side_effect = CursorSideEffect().cursor_side_effect
         self.db_singleton.side_effect = SingletonSideEffect().singleton_side_effect
         options = {}

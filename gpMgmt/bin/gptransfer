@@ -3640,7 +3640,7 @@ class GpTransfer(object):
 
     def _has_same_column_types(self, table_pair):
         """
-        Columns at the same ordinal_position of two partition tables need to be of same type
+        Columns at the same position of two partition tables need to be of same type
         """
         src_tbl_columns = self._get_table_columns(table_pair.source, self._options.source_host, self._options.source_port, self._options.source_user)
         dest_tbl_columns = self._get_table_columns(table_pair.dest, self._options.dest_host, self._options.dest_port, self._options.dest_user)
@@ -3772,6 +3772,21 @@ class GpTransfer(object):
                                                                  self._options.dest_host,
                                                                  self._options.dest_port,
                                                                  self._options.dest_user)
+
+        source_ordinal_positions = self._get_ordinal_positions_list(table_pair.source.database,
+                                                                 table_pair.source.schema,
+                                                                 table_pair.source.table,
+                                                                 self._options.source_host,
+                                                                 self._options.source_port,
+                                                                 self._options.source_user)
+
+        dest_ordinal_positions = self._get_ordinal_positions_list(table_pair.dest.database,
+                                                                 table_pair.dest.schema,
+                                                                 table_pair.dest.table,
+                                                                 self._options.dest_host,
+                                                                 self._options.dest_port,
+                                                                 self._options.dest_user)
+
         for level_key in source_partition_column_info:
             if source_partition_column_info[level_key]['parkind'] != dest_partition_column_info[level_key]['parkind']:
                 logger.error('Partition type is different at level %s between %s' % (level_key, source_dest_info))
@@ -3780,14 +3795,40 @@ class GpTransfer(object):
                 logger.error('Number of partition columns is different at level %s between %s' % (level_key, source_dest_info))
                 return False
 
-            # this handles multi column partition, sort them before compare, in case same partition columns but in random order
-            source_paratts = [att.strip() for att in source_partition_column_info[level_key]['paratts'].split(' ')]
-            dest_paratts = [att.strip() for att in dest_partition_column_info[level_key]['paratts'].split(' ')]
-            if sorted(source_paratts) != sorted(dest_paratts):
+            if not self._has_same_paratts(table_pair,
+                                     source_partition_column_info[level_key]['paratts'],
+                                     dest_partition_column_info[level_key]['paratts'],
+                                     source_ordinal_positions,
+                                     dest_ordinal_positions):
                 logger.error('Partition column attributes are different at level %s between %s' %
                             (level_key, source_dest_info))
                 return False
         return True
+
+    def _has_same_paratts(self, table_pair, source_paratts_str, dest_paratts_str, source_ordinal_positions, dest_ordinal_positions):
+        # this handles multi column partitions by sorting them before comparison, in case same partition columns are in random order
+        # we compare the index of the column within the list of ordinal positions to account for cases where
+        # actual ordinal positions may not match, but the order of the columns is the same (i.e. dropping and re-adding)
+        source_paratts = [int(att.strip()) for att in source_paratts_str.split(' ')]
+        dest_paratts = [int(att.strip()) for att in dest_paratts_str.split(' ')]
+
+        source_and_dest_paratts = zip(sorted(source_paratts), sorted(dest_paratts))
+        for source_paratt, dest_paratt in source_and_dest_paratts:
+            if source_ordinal_positions.index(source_paratt) != dest_ordinal_positions.index(dest_paratt):
+                return False
+        return True
+
+    def _get_ordinal_positions_list(self, db, schema, table, host, port, user):
+        ordinal_positions_list = []
+        ordinal_pos_sql = ''' select ordinal_position from information_schema.columns
+                              where table_schema = '%s' and table_name = '%s'
+                              order by ordinal_position ''' % (pg.escape_string(schema), pg.escape_string(table))
+        with dbconn.connect(dbconn.DbURL(host, port, db, user)) as conn:
+            cursor = execSQL(conn, ordinal_pos_sql)
+            for row in cursor:
+                ordinal_positions_list.append(row[0])
+
+        return ordinal_positions_list
 
     def _get_partition_column_info(self, db, schema, table, host, port, user):
         level_partition_info = defaultdict(dict)

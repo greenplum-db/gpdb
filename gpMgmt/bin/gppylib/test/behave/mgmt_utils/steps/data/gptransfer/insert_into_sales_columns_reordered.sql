@@ -1,0 +1,1 @@
+insert into sales values('2011-01-01', 10.1, 'asia', 1);
