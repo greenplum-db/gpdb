@@ -161,7 +161,6 @@ select count(*) from direct_test_bitmap where dt='2008-02-01';
 -- MPP-7637: partitioned table
 --
 insert into direct_test_partition values (1,'2008-01-02',1,'usa');
--- Known_opt_diff: MPP-21346
 select * from direct_test_partition where trans_id =1;
 ----------------------------------------------------------------------------------
 -- MPP-7638: range table partition
@@ -172,32 +171,20 @@ select count(*) from direct_test_range_partition where a =1;
 -- MPP-7643: various types
 --
 set optimizer_enable_constant_expression_evaluation=on;
--- Known_opt_diff: MPP-21347
 insert into direct_test_type_real values (8,8,true,8,8,'2008-08-08',8.8);
--- Known_opt_diff: MPP-21347
 insert into direct_test_type_smallint values (8,8,true,8,8,'2008-08-08',8.8);
--- Known_opt_diff: MPP-21347
 insert into direct_test_type_boolean values (8,8,true,8,8,'2008-08-08',8.8);
 insert into direct_test_type_int values (8,8,true,8,8,'2008-08-08',8.8);
--- Known_opt_diff: MPP-21347
 insert into direct_test_type_double values (8,8,true,8,8,'2008-08-08',8.8);
--- Known_opt_diff: MPP-21347
 insert into direct_test_type_date values (8,8,true,8,8,'2008-08-08',8.8);
--- Known_opt_diff: MPP-21347
 insert into direct_test_type_numeric values (8,8,true,8,8,'2008-08-08',8.8);
 reset optimizer_enable_constant_expression_evaluation;
 
--- Known_opt_diff: MPP-21346
 select * from direct_test_type_real where real1 = 8::real;
--- Known_opt_diff: MPP-21346
 select * from direct_test_type_smallint where smallint1 = 8::smallint;
--- Known_opt_diff: MPP-21346
 select * from direct_test_type_int where int1 = 8;
--- Known_opt_diff: MPP-21346
 select * from direct_test_type_double where double1 = 8;
--- Known_opt_diff: MPP-21346
 select * from direct_test_type_date where date1 = '2008-08-08';
--- Known_opt_diff: MPP-21346
 select * from direct_test_type_numeric where numeric1 = 8.8;
 ----------------------------------------------------------------------------------
 -- Prepared statements
@@ -240,7 +227,6 @@ SELECT * FROM direct_dispatch_foo WHERE id IN
 -- simple one using an expression on the variable
 SELECT * from direct_dispatch_foo WHERE id * id = 1;
 SELECT * from direct_dispatch_foo WHERE id * id = 1 OR id = 1;
--- Known_opt_diff: MPP-21346
 SELECT * from direct_dispatch_foo where id * id = 1 AND id = 1;
 
 -- init plan to see how transaction escalation happens
@@ -255,49 +241,32 @@ delete from direct_dispatch_foo where id * id = (select max(id2) from direct_dis
 -- more type tests 
 --
 -- abstime
--- Known_opt_diff: MPP-19812
 insert into direct_test_type_abstime values('2008-08-08');
--- Known_opt_diff: MPP-21346
 select 1 from direct_test_type_abstime where x = '2008-08-08';
 
--- Known_opt_diff: MPP-19812
 insert into direct_test_type_bit values('1');
--- Known_opt_diff: MPP-21346
 select * from direct_test_type_bit where x = '1';
 
--- Known_opt_diff: MPP-19812
 insert into direct_test_type_bpchar values('abs');
--- Known_opt_diff: MPP-21346
 select * from direct_test_type_bpchar where x = 'abs';
 
--- Known_opt_diff: MPP-19812
 insert into direct_test_type_bytea values('greenplum');
--- Known_opt_diff: MPP-21346
 select * from direct_test_type_bytea where x = 'greenplum';
 
--- Known_opt_diff: MPP-19812
 insert into direct_test_type_cidr values('68.44.55.111');
 -- Known_opt_diff: MPP-21346
 select * from direct_test_type_cidr where x = '68.44.55.111';
 
--- Known_opt_diff: MPP-19812
 insert into direct_test_type_inet values('68.44.55.111');
--- Known_opt_diff: MPP-21346
 select * from direct_test_type_inet where x = '68.44.55.111';
 
--- Known_opt_diff: MPP-19812
 insert into direct_test_type_macaddr values('12:34:56:78:90:ab');
--- Known_opt_diff: MPP-21346
 select * from direct_test_type_macaddr where x = '12:34:56:78:90:ab';
 
--- Known_opt_diff: MPP-19812
 insert into direct_test_type_tinterval values('["2008-08-08" "2010-10-10"]');
--- Known_opt_diff: MPP-21346
 select 1 from direct_test_type_tinterval where x = '["2008-08-08" "2010-10-10"]';
 
--- Known_opt_diff: MPP-19812
 insert into direct_test_type_varbit values('0101010');
--- Known_opt_diff: MPP-21346
 select * from direct_test_type_varbit where x = '0101010';
 
 ------------------------------------
@@ -313,11 +282,8 @@ INSERT INTO direct_test_type_int8 VALUES (1);
 
 set test_print_direct_dispatch_info=on;
 
--- Known_opt_diff: MPP-21346
 SELECT * FROM direct_test_type_int2 WHERE id = 1::int2;
--- Known_opt_diff: MPP-21346
 SELECT * FROM direct_test_type_int2 WHERE id = 1::int4;
--- Known_opt_diff: MPP-21346
 SELECT * FROM direct_test_type_int2 WHERE id = 1::int8;
 
 -- Known_opt_diff: MPP-21346
@@ -327,11 +293,8 @@ SELECT * FROM direct_test_type_int2 WHERE 1::int4 = id;
 -- Known_opt_diff: MPP-21346
 SELECT * FROM direct_test_type_int2 WHERE 1::int8 = id;
 
--- Known_opt_diff: MPP-21346
 SELECT * FROM direct_test_type_int4 WHERE id = 1::int2;
--- Known_opt_diff: MPP-21346
 SELECT * FROM direct_test_type_int4 WHERE id = 1::int4;
--- Known_opt_diff: MPP-21346
 SELECT * FROM direct_test_type_int4 WHERE id = 1::int8;
 
 -- Known_opt_diff: MPP-21346
@@ -341,11 +304,8 @@ SELECT * FROM direct_test_type_int4 WHERE 1::int4 = id;
 -- Known_opt_diff: MPP-21346
 SELECT * FROM direct_test_type_int4 WHERE 1::int8 = id;
 
--- Known_opt_diff: MPP-21346
 SELECT * FROM direct_test_type_int8 WHERE id = 1::int2;
--- Known_opt_diff: MPP-21346
 SELECT * FROM direct_test_type_int8 WHERE id = 1::int4;
--- Known_opt_diff: MPP-21346
 SELECT * FROM direct_test_type_int8 WHERE id = 1::int8;
 
 -- Known_opt_diff: MPP-21346
@@ -356,9 +316,7 @@ SELECT * FROM direct_test_type_int8 WHERE 1::int4 = id;
 SELECT * FROM direct_test_type_int8 WHERE 1::int8 = id;
 
 -- overflow test
--- Known_opt_diff: MPP-21346
 SELECT * FROM direct_test_type_int2 WHERE id = 32768::int4;
--- Known_opt_diff: MPP-21346
 SELECT * FROM direct_test_type_int2 WHERE id = -32769::int4;
 
 -- Known_opt_diff: MPP-21346
@@ -366,9 +324,7 @@ SELECT * FROM direct_test_type_int2 WHERE 32768::int4 = id;
 -- Known_opt_diff: MPP-21346
 SELECT * FROM direct_test_type_int2 WHERE -32769::int4 = id;
 
--- Known_opt_diff: MPP-21346
 SELECT * FROM direct_test_type_int2 WHERE id = 2147483648::int8;
--- Known_opt_diff: MPP-21346
 SELECT * FROM direct_test_type_int2 WHERE id = -2147483649::int8;
 -- Known_opt_diff: MPP-21346
 SELECT * FROM direct_test_type_int2 WHERE 2147483648::int8 = id;
