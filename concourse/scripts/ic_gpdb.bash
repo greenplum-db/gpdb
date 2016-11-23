@@ -11,8 +11,7 @@ function gen_env(){
 
 		function look4diffs() {
 
-		    diff_files="../src/test/regress/regression.diffs
-				../src/test/regress/bugbuster/regression.diffs"
+		    diff_files=`find .. -name regression.diffs`
 
 		    for diff_file in \${diff_files}; do
 			if [ -f "\${diff_file}" ]; then
@@ -31,8 +30,8 @@ function gen_env(){
 		}
 		source /usr/local/greenplum-db-devel/greenplum_path.sh
 		source /opt/gcc_env.sh
-		cd "\${1}/gpdb_src/gpAux"
-		source gpdemo/gpdemo-env.sh
+		cd "\${1}/gpdb_src"
+		source gpAux/gpdemo/gpdemo-env.sh
 		make ${MAKE_TEST_COMMAND}
 	EOF
 

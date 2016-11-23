@@ -139,8 +139,8 @@ jobs:
           path: gpdb_pr
           status: failure
 
-  # Stage 2: IC Tests
-  - name: icg_planner_centos6
+  # Stage 2: Run regression tests (make installcheck-world)
+  - name: icw_planner_centos6
     plan:
     - aggregate:
       - get: gpdb_pr
@@ -164,7 +164,7 @@ jobs:
       input_mapping:
         gpdb_src: gpdb_pr
       params:
-        MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off -c codegen=off' installcheck-good
+        MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off -c codegen=off' installcheck-world
         BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
         TEST_OS: centos
       timeout: 2h30m
@@ -188,11 +188,11 @@ jobs:
     - aggregate:
       - get: gpdb_pr
         tags: ["worker-three"]
-        passed: [icg_planner_centos6]
+        passed: [icw_planner_centos6]
       - get: bin_gpdb
         tags: ["worker-three"]
         resource: bin_gpdb_centos
-        passed: [icg_planner_centos6]
+        passed: [icw_planner_centos6]
         trigger: true
       - get: centos67-gpdb-gcc6-llvm-image
         tags: ["worker-three"]

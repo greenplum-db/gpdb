@@ -111,7 +111,7 @@ jobs:
         gpdb_src: gpdb_pr
 
   # Stage 2: IC Tests
-  - name: icg_planner_centos6
+  - name: icw_planner_centos6
     plan:
     - aggregate:
       - get: gpdb_pr
@@ -130,7 +130,7 @@ jobs:
       input_mapping:
         gpdb_src: gpdb_pr
       params:
-        MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off -c codegen=off' installcheck-good
+        MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off -c codegen=off' installcheck-world
         BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
         TEST_OS: centos
       timeout: 2h30m
@@ -142,11 +142,11 @@ jobs:
     plan:
     - aggregate:
       - get: gpdb_pr
-        passed: [icg_planner_centos6]
+        passed: [icw_planner_centos6]
       - get: gpaddon_src
       - get: bin_gpdb
         resource: bin_gpdb_centos
-        passed: [icg_planner_centos6]
+        passed: [icw_planner_centos6]
         trigger: true
       - get: centos67-gpdb-gcc6-llvm-image
     - task: separate_qautils_files_for_rc

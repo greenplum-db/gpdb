@@ -89,7 +89,7 @@ function build_gppkg() {
 }
 
 function unittest_check_gpdb() {
-  pushd gpdb_src/gpAux
+  pushd gpdb_src
     source $GREENPLUM_INSTALL_DIR/greenplum_path.sh
     make GPROOT=/usr/local unittest-check
   popd

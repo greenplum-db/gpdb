@@ -180,8 +180,8 @@ jobs:
       TARGET_OS_VERSION: 7
       BLD_TARGETS: ""
 
-# Stage 2: IC Tests
-- name: icg_planner_centos6
+# Stage 2: Run regression tests (make installcheck-world)
+- name: icw_planner_centos6
   serial: true
   plan:
   - aggregate:
@@ -204,11 +204,11 @@ jobs:
     image: centos67-gpdb-gcc6-llvm-image
     tags: ["worker-one"]
     params:
-      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off -c codegen=off' installcheck-good
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off -c codegen=off' installcheck-world
       BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
       TEST_OS: centos
 
-- name: icg_gporca_centos6
+- name: icw_gporca_centos6
   serial: true
   plan:
   - aggregate:
@@ -231,11 +231,11 @@ jobs:
     image: centos67-gpdb-gcc6-llvm-image
     tags: ["worker-two"]
     params:
-      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on -c codegen=off' installcheck-good
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on -c codegen=off' installcheck-world
       BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
       TEST_OS: centos
 
-- name: icg_planner_codegen_centos6
+- name: icw_planner_codegen_centos6
   serial: true
   plan:
   - aggregate:
@@ -258,11 +258,11 @@ jobs:
     image: centos67-gpdb-gcc6-llvm-image
     tags: ["worker-three"]
     params:
-      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off -c codegen=on' installcheck-good
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off -c codegen=on' installcheck-world
       BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
       TEST_OS: centos
 
-- name: icg_gporca_codegen_centos6
+- name: icw_gporca_codegen_centos6
   serial: true
   plan:
   - aggregate:
@@ -285,115 +285,7 @@ jobs:
     image: centos67-gpdb-gcc6-llvm-image
     tags: ["worker-four"]
     params:
-      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on -c codegen=on' installcheck-good
-      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
-      TEST_OS: centos
-
-- name: icb_planner_centos6
-  serial: true
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      tags: ["worker-one"]
-      passed: [icg_planner_centos6]
-    - get: sync_tools_gpdb_centos
-      tags: ["worker-one"]
-      resource: sync_tools_gpdb_centos
-      passed: [icg_planner_centos6]
-    - get: bin_gpdb
-      tags: ["worker-one"]
-      resource: bin_gpdb_centos
-      passed: [icg_planner_centos6]
-      trigger: true
-    - get: centos67-gpdb-gcc6-llvm-image
-      tags: ["worker-one"]
-  - task: ic_gpdb
-    file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: centos67-gpdb-gcc6-llvm-image
-    tags: ["worker-one"]
-    params:
-      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off -c codegen=off' installcheck-bugbuster
-      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
-      TEST_OS: centos
-
-- name: icb_gporca_centos6
-  serial: true
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      tags: ["worker-two"]
-      passed: [icg_gporca_centos6]
-    - get: sync_tools_gpdb_centos
-      tags: ["worker-two"]
-      resource: sync_tools_gpdb_centos
-      passed: [icg_gporca_centos6]
-    - get: bin_gpdb
-      tags: ["worker-two"]
-      resource: bin_gpdb_centos
-      passed: [icg_gporca_centos6]
-      trigger: true
-    - get: centos67-gpdb-gcc6-llvm-image
-      tags: ["worker-two"]
-  - task: ic_gpdb
-    file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: centos67-gpdb-gcc6-llvm-image
-    tags: ["worker-two"]
-    params:
-      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on -c codegen=off' installcheck-bugbuster
-      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
-      TEST_OS: centos
-
-- name: icb_planner_codegen_centos6
-  serial: true
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      tags: ["worker-three"]
-      passed: [icg_planner_codegen_centos6]
-    - get: sync_tools_gpdb_centos
-      tags: ["worker-three"]
-      resource: sync_tools_gpdb_centos
-      passed: [icg_planner_codegen_centos6]
-    - get: bin_gpdb
-      tags: ["worker-three"]
-      resource: bin_gpdb_centos
-      passed: [icg_planner_codegen_centos6]
-      trigger: true
-    - get: centos67-gpdb-gcc6-llvm-image
-      tags: ["worker-three"]
-  - task: ic_gpdb
-    file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: centos67-gpdb-gcc6-llvm-image
-    tags: ["worker-three"]
-    params:
-      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off -c codegen=on' installcheck-bugbuster
-      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
-      TEST_OS: centos
-
-- name: icb_gporca_codegen_centos6
-  serial: true
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      tags: ["worker-four"]
-      passed: [icg_gporca_codegen_centos6]
-    - get: sync_tools_gpdb_centos
-      tags: ["worker-four"]
-      resource: sync_tools_gpdb_centos
-      passed: [icg_gporca_codegen_centos6]
-    - get: bin_gpdb
-      tags: ["worker-four"]
-      resource: bin_gpdb_centos
-      passed: [icg_gporca_codegen_centos6]
-      trigger: true
-    - get: centos67-gpdb-gcc6-llvm-image
-      tags: ["worker-four"]
-  - task: ic_gpdb
-    file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: centos67-gpdb-gcc6-llvm-image
-    tags: ["worker-four"]
-    params:
-      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on -c codegen=on' installcheck-bugbuster
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on -c codegen=on' installcheck-world
       BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
       TEST_OS: centos
 
@@ -405,13 +297,13 @@ jobs:
   - aggregate:
     - get: gpdb_src
       tags: ["worker-three"]
-      passed: [icb_planner_centos6, icb_gporca_centos6, icb_planner_codegen_centos6, icb_gporca_codegen_centos6]
+      passed: [icw_planner_centos6, icw_gporca_centos6, icw_planner_codegen_centos6, icw_gporca_codegen_centos6]
     - get: gpaddon_src
       tags: ["worker-three"]
     - get: bin_gpdb
       tags: ["worker-three"]
       resource: bin_gpdb_centos
-      passed: [icb_planner_centos6, icb_gporca_centos6, icb_planner_codegen_centos6, icb_gporca_codegen_centos6]
+      passed: [icw_planner_centos6, icw_gporca_centos6, icw_planner_codegen_centos6, icw_gporca_codegen_centos6]
       trigger: true
     - get: centos67-gpdb-gcc6-llvm-image
       tags: ["worker-three"]

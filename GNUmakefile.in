@@ -103,11 +103,28 @@ distclean maintainer-clean:
 # Garbage from autoconf:
 	@rm -rf autom4te.cache/
 
-check: all
+# This is a top-level target that runs "all" regression test suites against
+# a running server. This is what the CI pipeline runs.
+installcheck-world:
+	$(MAKE) -C src/test installcheck-good
+	$(MAKE) -C src/test installcheck-bugbuster
+	$(MAKE) -C src/test/isolation installcheck
+	$(MAKE) -C src/pl installcheck
+	#$(MAKE) -C src/interfaces/ecpg installcheck
+	#$(MAKE) -C contrib installcheck
+	$(MAKE) -C gpAux/extensions installcheck
+	$(MAKE) -C src/bin/gpfdist installcheck
 
-check installcheck installcheck-parallel installcheck-good:
-	$(MAKE) -C src/test $@
-	$(MAKE) -C gpAux/extensions $@
+
+# Run mock tests, that don't require a running server. Arguably these should
+# be part of [install]check-world, but we treat them more like part of
+# compilation than regression testing, in the CI. But they are too heavy-weight
+# to put into "make all", either.
+.PHONY : unittest-check
+unittest-check:
+	$(MAKE) -C src/backend unittest-check
+	$(MAKE) -C src/bin unittest-check
+
 
 GNUmakefile: GNUmakefile.in $(top_builddir)/config.status
 	./config.status $@

@@ -19,10 +19,6 @@ all : devel
 # Targets recognized by the PostgreSQL makefile (GNUmakefile)
 .PHONY : all install installdirs uninstall distprep
 .PHONY : clean distclean maintainer-clean
-.PHONY : check installcheck installcheck-parallel
-
-# Targets for running regression tests
-.PHONY : installcheck-good installcheck-bugbuster
 
 # The pvk target builds a subset of the GPDB package that includes just the
 # tools used to verify the configuration of a set of GPDB servers.
@@ -361,8 +357,6 @@ endif
 
 ifeq "$(BLD_GPDB_BUILDSET)" "partial"
 define BUILD_STEPS
-	rm -f installcheck-good_SKIP
-	rm -f installcheck-bugbuster_SKIP
 	rm -rf $(INSTLOC)
 	@if [ "$(findstring win,$(BLD_ARCH))" = "win" ]; then \
 	    echo "Modifying timezone Makefile for crosscompile."; \
@@ -399,8 +393,6 @@ define BUILD_STEPS
 	  cd $(GPMGMT)/bin && $(MAKE) pygresql INSTLOC=$(INSTLOC) ; \
 	fi
 	$(MAKE) loaders INSTLOC=$(INSTLOC) LOADERSINSTLOC=$(LOADERSINSTLOC)
-	touch installcheck-good_SKIP
-	touch installcheck-bugbuster_SKIP
 endef
 endif
 
@@ -1217,28 +1209,6 @@ distprep : $(ISCONFIG)
 	@cd $(BUILDDIR) && $(MAKE) distprep
 
 #---------------------------------------------------------------------
-# Regression tests
-#---------------------------------------------------------------------
-
-bouncer:
-	@cd $(BUILDDIR)/src/test/regress && $(MAKE) testbouncer
-
-installcheck-good :
-	@if [ ! -f $(ISCONFIG) ]; then echo "not configured, cannot check"; exit 1; fi
-	@cd $(BUILDDIR)/src/test/regress && $(MAKE) installcheck-good
-	@#cd $(BUILDDIR)/src/test/regress && $(MAKE) testbouncer
-	@cd extensions && $(MAKE) installcheck
-
-installcheck-parallel :
-	@if [ ! -f $(ISCONFIG) ]; then echo "not configured, cannot check"; exit 1; fi
-	@cd $(BUILDDIR)/src/test/regress && $(MAKE) installcheck-parallel
-	@cd extensions && $(MAKE) installcheck
-
-installcheck-bugbuster :
-	@if [ ! -f $(ISCONFIG) ]; then echo "not configured, cannot check"; exit 1; fi
-	@cd $(BUILDDIR)/src/test/regress && $(MAKE) installcheck-bugbuster
-
-#---------------------------------------------------------------------
 # More internal functions
 #---------------------------------------------------------------------
 
@@ -1378,10 +1348,3 @@ else
 	done
 endif
 endif
-
-## ----------------------------------------------------------------------
-
-.PHONY : unittest-check
-unittest-check:
-	$(MAKE) -C ../src/backend unittest-check
-	$(MAKE) -C ../src/bin unittest-check
