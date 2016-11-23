@@ -1,5 +1,5 @@
 VACUUM fooaocs;
-PANIC:  fault triggered, fault name:'compaction_before_segmentfile_drop' fault type:'panic' (faultinjector.c:578)
+PANIC:  fault triggered, fault name:'compaction_before_segmentfile_drop' fault type:'panic'
 server closed the connection unexpectedly
 	This probably means the server terminated abnormally
 	before or while processing the request.

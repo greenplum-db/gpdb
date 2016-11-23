@@ -1,16 +1,16 @@
 SELECT * FROM gp_toolkit.__gp_aoseg_name('foo');
- segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | state 
--------+-----+----------+---------------+------------------+----------+-------
-     1 |   0 |       10 |             0 |                0 |        2 |     1
-     2 |   0 |        7 |             0 |                0 |        0 |     1
+ segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
+-------+-----+----------+---------------+------------------+----------+---------------+-------
+     1 |   0 |       10 |             0 |                0 |        2 |             2 |     1
+     2 |   0 |        7 |             0 |                0 |        0 |             2 |     1
 (2 rows)
 
 VACUUM foo;
 VACUUM
 SELECT * FROM gp_toolkit.__gp_aoseg_name('foo');
- segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | state 
--------+-----+----------+---------------+------------------+----------+-------
-     1 |   0 |        0 |             0 |                0 |        2 |     1
-     2 |   0 |        7 |             0 |                0 |        0 |     1
+ segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
+-------+-----+----------+---------------+------------------+----------+---------------+-------
+     1 |   0 |        0 |             0 |                0 |        2 |             2 |     1
+     2 |   0 |        7 |             0 |                0 |        0 |             2 |     1
 (2 rows)
 

@@ -1,4 +1,4 @@
-INSERT INTO foo SELECT i as a, 1 as b, 'hello world' as c FROM generate_series(1, 10) AS i;
+INSERT INTO foo SELECT i as a, 1 as b, 'hello world' as c FROM generate_series(11, 20) AS i;
 NOTICE:  Releasing segworker groups to finish aborting the transaction.
-ERROR:  fault triggered, fault name:'appendonly_insert' fault type:'panic' (faultinjector.c:584)  (seg0 gesameistd1m1.corp.emc.com:40000 pid=33553) (cdbdisp.c:1487)
-ERROR:  could not temporarily connect to one or more segments (cdbgang.c:1626)
+ERROR:  fault triggered, fault name:'appendonly_insert' fault type:'panic' (seg0 gesameistd1m1.corp.emc.com:40000 pid=33553) (cdbdisp.c:1487)
+ERROR:  could not connect to segment: initialization of segworker group failed (cdbgang.c:xxx)

@@ -1,5 +1,4 @@
 vacuum foo;
 NOTICE:  Releasing segworker groups to finish aborting the transaction.
-ERROR:  fault triggered, fault name:'compaction_before_segmentfile_drop' fault type:'panic' (faultinjector.c:584)  (seg0 gesameistd1m1.corp.emc.com:40000 pid=57727) (cdbdisp.c:1487)
-ERROR:  could not temporarily connect to one or more segments (cdbgang.c:1626)
-
+ERROR:  fault triggered, fault name:'compaction_before_segmentfile_drop' fault type:'panic' (seg0 gesameistd1m1.corp.emc.com:40000 pid=57727) (cdbdisp.c:1487)
+ERROR:  could not connect to segment: initialization of segworker group failed (cdbgang.c:260)

@@ -1,7 +1,7 @@
 VACUUM foo;
 NOTICE:  Releasing segworker groups to finish aborting the transaction.
-ERROR:  fault triggered, fault name:'compaction_before_cleanup_phase' fault type:'panic' (faultinjector.c:xxx)  (seg0 mdw:40000 pid=29304) (cdbdisp.c:xxx)
-ERROR:  could not temporarily connect to one or more segments (cdbgang.c:1626)
+ERROR:  fault triggered, fault name:'compaction_before_cleanup_phase' fault type:'panic'  (seg0 127.0.0.1:25432 pid=42599)
+ERROR:  could not connect to segment: initialization of segworker group failed (cdbgang.c:260)
 INSERT INTO foo VALUES(1, 1, 'c');
 INSERT 0 1
 SELECT a, b FROM foo order by a;
