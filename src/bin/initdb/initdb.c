@@ -2215,9 +2215,9 @@ setup_cdb_schema(void)
 				 "\"%s\" %s template1 >%s",
 				 backend_exec, backend_options,
 				 backend_output);
-
-		check_ok();
 	}
+
+	check_ok();
 }
 
 /*
