@@ -141,6 +141,9 @@ DBConnect(const char *host, const char *port, char *database, const char *user)
 			PQerrorMessage(conn));
 		exit_gracefuly(1);
 	}
+
+	if (password)
+		free(password);
 	
 	return conn;
 }
