@@ -70,6 +70,7 @@ GPLOAD:
            - sponsor: text
     - FORMAT: text
     - DELIMITER: ';'
+    - ESCAPE: 'OFF'
     - ERROR_LIMIT: 25
     - LOG_ERRORS: True 
    OUTPUT:
@@ -136,6 +137,7 @@ GPLOAD:
            - sponsor: text
     - FORMAT: text
     - DELIMITER: ';'
+    - ESCAPE: 'OFF'
     - ERROR_LIMIT: 25
     - LOG_ERRORS: True 
    OUTPUT:

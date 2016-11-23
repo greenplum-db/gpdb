@@ -9,4 +9,7 @@ SELECT * FROM customer;
 (5 rows)
 
 SELECT * FROM gp_read_error_log('ext_customer');
+ cmdtime | relname | filename | linenum | bytenum | errmsg | rawdata | rawbytes 
+---------+---------+----------+---------+---------+--------+---------+----------
 (0 rows)
+
