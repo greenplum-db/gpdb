@@ -244,7 +244,7 @@ def create_parser():
 
     general_option_group.add_option(
         '--partition-transfer-non-partition-target',
-        dest='pt_non_pt_target',
+        dest='partition_transfer_non_pt_target',
         default=False,
         action='store_true',
         help='Transfer partition tables to non-partition table if enabled, disabled by default, '
@@ -751,10 +751,10 @@ FROM
     pg_class c JOIN pg_namespace n ON (c.relnamespace=n.oid)
     JOIN pg_catalog.gp_distribution_policy p ON (c.oid = p.localoid)
 WHERE """
-    table_sql_non_partition_transfer = """c.oid NOT IN ( SELECT parchildrelid as oid FROM pg_partition_rule ) AND """
+    table_sql_filter_out_child_partitions = """c.oid NOT IN ( SELECT parchildrelid as oid FROM pg_partition_rule ) AND """
     table_sql_part2 = """ n.nspname NOT IN ('gpexpand', 'pg_bitmapindex', 'information_schema', 'gp_toolkit');"""
     all_tables_sql = table_sql_part1 + \
-                     (table_sql_non_partition_transfer if not partition_transfer else '') + \
+                     ('' if partition_transfer else table_sql_filter_out_child_partitions) + \
                      table_sql_part2
 
     all_tables = set()
@@ -2428,7 +2428,7 @@ class GpTransfer(object):
                             self._options.dest_user,
                             [db for db in self._dest_databases if db in self._all_dest_databases],
                             False,
-                            self._options.partition_transfer)
+                                self._options.partition_transfer)
         self._dest_non_partition_tables = set()
         if self._options.partition_transfer:
             self._dest_non_partition_tables = \
@@ -2473,7 +2473,7 @@ class GpTransfer(object):
         self._validate_host_map()
 
         self._validate_table_transfer_set()
-        if self._options.partition_transfer or self._options.pt_non_pt_target:
+        if self._options.partition_transfer or self._options.partition_transfer_non_pt_target:
             self._validate_partition_table_transfer_set()
 
         self._validate_filespace(self._options.source_host, self._options.source_port, self._options.source_user,
@@ -2517,7 +2517,7 @@ class GpTransfer(object):
             cmds_queued = 0
 
             self.before_dest_tables_dict = {}
-            if self._options.pt_non_pt_target:
+            if self._options.partition_transfer_non_pt_target:
                 self.before_dest_tables_dict = self.get_dest_row_count_before_transfer()
 
             for table_pair in self._table_transfer_set:
@@ -2886,7 +2886,7 @@ class GpTransfer(object):
         if self._options.input_file and not os.path.isfile(self._options.input_file):
             raise ProgramArgumentValidationException('Input file %s is not a valid file' % self._options.input_file)
 
-        if (self._options.partition_transfer and self._options.pt_non_pt_target):
+        if (self._options.partition_transfer and self._options.partition_transfer_non_pt_target):
             raise ProgramArgumentValidationException('--partition-transfer option cannot be '
                                                      'used with --partition-transfer-non-partition-target option')
 
@@ -2923,41 +2923,44 @@ class GpTransfer(object):
             raise ProgramArgumentValidationException('--partition-transfer option cannot be '
                                                      'used with --full option')
 
-        if (self._options.pt_non_pt_target and not self._options.input_file):
+        if (self._options.partition_transfer_non_pt_target and not self._options.input_file):
             raise ProgramArgumentValidationException('--partition-transfer-non-partition-target option must be '
                                                      'used with -f option')
 
-        if (self._options.pt_non_pt_target and self._options.databases):
+        if (self._options.partition_transfer_non_pt_target and self._options.databases):
             raise ProgramArgumentValidationException('--partition-transfer-non-partition-target option cannot be '
                                                      'used with -d option')
 
-        if (self._options.pt_non_pt_target and self._options.dest_database):
+        if (self._options.partition_transfer_non_pt_target and self._options.dest_database):
             raise ProgramArgumentValidationException('--partition-transfer-non-partition-target option cannot be '
                                                      'used with --dest-database option')
 
-        if (self._options.pt_non_pt_target and self._options.drop):
+        if (self._options.partition_transfer_non_pt_target and self._options.drop):
             raise ProgramArgumentValidationException('--partition-transfer-non-partition-target option cannot be used '
                                                      'with --drop option')
 
-        if (self._options.pt_non_pt_target and self._options.tables):
+        if (self._options.partition_transfer_non_pt_target and self._options.tables):
             raise ProgramArgumentValidationException('--partition-transfer-non-partition-target option cannot be used '
                                                      'with -t option')
 
-        if (self._options.pt_non_pt_target and self._options.schema_only):
+        if (self._options.partition_transfer_non_pt_target and self._options.schema_only):
             raise ProgramArgumentValidationException('--partition-transfer-non-partition-target option cannot be used '
                                                      'with --schema-only option')
 
-        if (self._options.pt_non_pt_target and (self._options.exclude_tables or self._options.exclude_input_file)):
+        if (self._options.partition_transfer_non_pt_target and (self._options.exclude_tables or self._options.exclude_input_file)):
             raise ProgramArgumentValidationException('--partition-transfer-non-partition-target option cannot be used '
                                                      'with any exclude table option')
 
-        if (self._options.pt_non_pt_target and self._options.full):
+        if (self._options.partition_transfer_non_pt_target and self._options.full):
             raise ProgramArgumentValidationException('--partition-transfer-non-partition-target option cannot be '
                                                      'used with --full option')
 
-        if (self._options.pt_non_pt_target and self._options.validator):
+        if (self._options.partition_transfer_non_pt_target and self._options.validator):
             raise ProgramArgumentValidationException('--partition-transfer-non-partition-target option cannot be '
                                                      'used with --validate option')
+
+        if self._options.truncate and self._options.partition_transfer_non_pt_target:
+            raise Exception('--truncate is not allowed with option --partition-transfer-non-partition-target')
 
         if self._options.full and (self._options.truncate or self._options.drop or
                                        self._options.skip_existing):
@@ -3127,7 +3130,7 @@ class GpTransfer(object):
             before_transfer_row_count = self.before_dest_tables_dict[dest_table] \
                 if self.before_dest_tables_dict else 0
             if (validation_count - before_transfer_row_count) != 0:
-                if self._options.partition_transfer or self._options.pt_non_pt_target:
+                if self._options.partition_transfer or self._options.partition_transfer_non_pt_target:
                     logger.warning('Validation failed for %s', dest_table)
                 else:
                     logger.error('Validation failed for %s', dest_table)
@@ -3288,7 +3291,7 @@ class GpTransfer(object):
         source_tables = list()
         # --partition-transfer will have the exact database name for each destination table,
         # not support the regexp
-        if (self._options.partition_transfer or self._options.pt_non_pt_target):
+        if (self._options.partition_transfer or self._options.partition_transfer_non_pt_target):
 
             self._src_dest_partition_table_mapping = dict()
 
@@ -3298,7 +3301,7 @@ class GpTransfer(object):
                                           self._options.source_user,
                                           self._src_databases,
                                           False,
-                                          (self._options.partition_transfer or self._options.pt_non_pt_target))
+                                          (self._options.partition_transfer or self._options.partition_transfer_non_pt_target))
 
             # filter out non-exist source tables from source databases.
             # key in dict: self._src_dest_partition_table_mapping maps to index of list: source_tables
@@ -3354,7 +3357,7 @@ class GpTransfer(object):
                                          self._options.source_user,
                                          databases_full_transfer,
                                          False,
-                                         (self._options.partition_transfer or self._options.pt_non_pt_target)):
+                                         (self._options.partition_transfer or self._options.partition_transfer_non_pt_target)):
                 source_tables.append(table)
 
             del databases[:]
@@ -3390,7 +3393,7 @@ class GpTransfer(object):
                                           self._options.source_user,
                                           databases_table_transfer,
                                           False,
-                                          (self._options.partition_transfer or self._options.pt_non_pt_target))
+                                          (self._options.partition_transfer or self._options.partition_transfer_non_pt_target))
 
             # Filter down to only the tables needed to added
             seen = set()
@@ -3603,7 +3606,7 @@ class GpTransfer(object):
 
             src_table = self._src_tables[i]
 
-            if self._options.partition_transfer or self._options.pt_non_pt_target:
+            if self._options.partition_transfer or self._options.partition_transfer_non_pt_target:
                 dest_table = self._src_dest_partition_table_mapping[i]
                 dest_db, dest_schema, dest_tbl = split_fqn(dest_table)
                 table_pair = GpTransferTablePair(src_table,
@@ -3661,11 +3664,8 @@ class GpTransfer(object):
             if not table_pair.dest.is_identifier_supported():
                 non_supported_table_name_list.append(table_pair.dest)
 
-            if self._options.truncate and self._options.pt_non_pt_target:
-                raise Exception('--truncate is not allowed with option --partition-transfer-non-partition-target')
-
             if table_pair.dest in target_tables:
-                if self._options.pt_non_pt_target:
+                if self._options.partition_transfer_non_pt_target:
                     self.multiple_same_target_set.add(table_pair.dest)
                 else:
                     raise Exception('Multiple tables map to %s.  Remove one of '
@@ -3724,7 +3724,7 @@ class GpTransfer(object):
     def _create_special_case_lists(self, table_pair, truncate_list, drop_list):
         if table_pair.dest in self._dest_tables:
             if not self._options.truncate and not self._options.drop and not \
-                    self._options.partition_transfer and not self._options.pt_non_pt_target:
+                    self._options.partition_transfer and not self._options.partition_transfer_non_pt_target:
                 raise Exception('Table %s exists in database %s.'
                                 % (table_pair.dest,
                                    table_pair.dest.database))
@@ -3738,17 +3738,25 @@ class GpTransfer(object):
         """
         validate that the table pair to transfer are actually leaf partition tables.
         validate that the pair have same layout and partition criteria.
+        validate that the destination tables are non partition table for --partition-transfer-non-partition-target
         """
 
         logger.info('Validating partition table transfer set...')
 
+        if self._options.partition_transfer_non_pt_target:
+            self._validate_partition_sources_to_a_common_dest_must_have_same_parent()
+
         for table_pair in self._table_transfer_set:
+            if table_pair.dest not in self._dest_tables:
+                current_option = "--partition-transfer" if self._options.partition_transfer else "--partition-transfer-non-partition-target"
+                looking_for = "leaf partitions" if self._options.partition_transfer else "non-partition tables"
+                error_message = 'Table %s does not exist in destination database ' \
+                                'when transferring from partition tables ' \
+                                '(filtering for destination %s because of option "%s")' % \
+                                (str(table_pair.dest), looking_for, current_option)
+                raise Exception(error_message)
 
             self._check_leaf_partition_set(table_pair)
-
-            if table_pair.dest not in self._dest_tables:
-                raise Exception('Table %s does not exist in destination database '
-                                'to transfer partition tables' % str(table_pair.dest))
 
             if not self._has_same_column_types(table_pair):
                 raise Exception('Source partition table %s has different column layout or types from '
@@ -3758,6 +3766,49 @@ class GpTransfer(object):
                 if not self._has_same_partition_criteria(table_pair):
                     raise Exception('Source partition table %s has different partition criteria from '
                                     'destination table %s' % (str(table_pair.source), str(table_pair.dest)))
+
+    def _validate_partition_sources_to_a_common_dest_must_have_same_parent(self):
+        diff_parented_sources_for_common_dest = self._get_table_pair_with_different_parent_for_common_destinations()
+        if len(diff_parented_sources_for_common_dest) > 0:
+            sources = diff_parented_sources_for_common_dest[0]["sources"]
+            dest = diff_parented_sources_for_common_dest[0]["dest"]
+            raise Exception("partition sources: %s when transferred to the "
+                            "same destination: table %s , must share the same parent" % (sources, dest))
+
+    def _get_table_pair_with_different_parent_for_common_destinations(self):
+        mismatch = list()
+        # assemble all common destinations and validate
+        all_destinations = dict()
+        for table_pair in self._table_transfer_set:
+            all_destinations.setdefault(table_pair.dest, list()).append(table_pair.source)
+
+        # when a common destination has multiple sources, validate that all come from same parent partition
+        for dest, source_list in all_destinations.iteritems():
+            if len(source_list) > 1:
+                parent_schema_previous = None
+                parent_table_previous = None
+                for source in source_list:
+                    parent_schema, parent_table = self._get_parentpartable(source.database,
+                                                                           source.schema,
+                                                                           source.table,
+                                                                           self._options.source_host,
+                                                                           self._options.source_port,
+                                                                           self._options.source_user)
+
+                    if parent_schema_previous and parent_schema_previous != parent_schema:
+                        sources = ""
+                        for source in source_list:
+                            sources += source.schema + "." + source.table + ", "
+                        mismatch.append(dict(sources=sources, dest=dest.schema + "." + dest.table))
+                    if parent_table_previous and parent_table_previous != parent_table:
+                        sources = ""
+                        for source in source_list:
+                            sources += source.schema + "." + source.table + ", "
+                        mismatch.append(dict(sources=sources, dest=dest.schema + "." + dest.table))
+                    parent_table_previous = parent_table
+                    parent_schema_previous = parent_schema
+
+        return mismatch
 
     def _has_same_column_types(self, table_pair):
         """
@@ -3919,7 +3970,7 @@ class GpTransfer(object):
                     'Number of partition columns is different at level %s between %s' % (level_key, source_dest_info))
                 return False
 
-            if not self._has_same_paratts(table_pair,
+            if not self._has_same_paratts(
                                      source_partition_column_info[level_key]['paratts'],
                                      dest_partition_column_info[level_key]['paratts'],
                                      source_ordinal_positions,
@@ -3929,8 +3980,8 @@ class GpTransfer(object):
                 return False
         return True
 
-    def _has_same_paratts(self, table_pair, source_paratts_str, dest_paratts_str, source_ordinal_positions, dest_ordinal_positions):
-        # this handles multi column partitions by sorting them before comparison, in case same partition columns are in random order
+    def _has_same_paratts(self, source_paratts_str, dest_paratts_str, source_ordinal_positions, dest_ordinal_positions):
+        # this handles multi column partitions by sorting them before comparison.
         # we compare the index of the column within the list of ordinal positions to account for cases where
         # actual ordinal positions may not match, but the order of the columns is the same (i.e. dropping and re-adding)
         source_paratts = [int(att.strip()) for att in source_paratts_str.split(' ')]

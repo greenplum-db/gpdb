@@ -1,3 +1,4 @@
+
 import imp
 import os
 import re
@@ -17,7 +18,8 @@ cursor_keys = dict(
     table_info=re.compile(".*select is_nullable, data_type, character_maximum_length,.*"),
     partition_info=re.compile(".*select parkind, parlevel, parnatts, paratts.*"),
     schema_name=re.compile(".*SELECT fsname FROM pg_catalog.pg_filespace.*"),
-    create_schema=re.compile(".*CREATE SCHEMA.*")
+    create_schema=re.compile(".*CREATE SCHEMA.*"),
+    ordinal_pos=re.compile(".*select ordinal_position from.*"),
 )
 
 class GpTransfer(GpTestCase):
@@ -125,7 +127,7 @@ class GpTransfer(GpTestCase):
             max_line_length=10485760,
             no_final_count_validation=False,
             partition_transfer=False,
-            pt_non_pt_target=False,
+            partition_transfer_non_pt_target=False,
             quiet=None,
             quote='\x01',
             schema_only=False,
@@ -145,8 +147,7 @@ class GpTransfer(GpTestCase):
         )
 
     def tearDown(self):
-        pass
-        # shutil.rmtree(self.TEMP_DIR)
+        shutil.rmtree(self.TEMP_DIR)
 
     @patch('gptransfer.TableValidatorFactory', return_value=Mock())
     @patch('gptransfer.execSQLForSingletonRow', side_effect=[['MYDATE'],
@@ -338,7 +339,9 @@ class GpTransfer(GpTestCase):
                 "my_first_database.public.my_table_partition1, my_first_database.public.my_table_partition2")
         self.cursor.side_effect = CursorSideEffect().cursor_side_effect
 
-        with self.assertRaisesRegexp(Exception, "does not exist in destination database"):
+        with self.assertRaisesRegexp(Exception, "does not exist in destination database when transferring from "
+                                                "partition tables .filtering for destination leaf partitions because "
+                                                "of option \"--partition-transfer\"."):
             self.subject.GpTransfer(Mock(**options), [])
 
     def test__partition_to_nonexistent_normal_table_fails(self):
@@ -347,7 +350,9 @@ class GpTransfer(GpTestCase):
             src_map_file.write("my_first_database.public.my_table_partition1, my_first_database.public.does_not_exist")
         self.cursor.side_effect = CursorSideEffect().cursor_side_effect
 
-        with self.assertRaisesRegexp(Exception, "does not exist in destination database"):
+        with self.assertRaisesRegexp(Exception, "does not exist in destination database when transferring from "
+                                                "partition tables .filtering for destination non-partition tables because "
+                                                "of option \"--partition-transfer-non-partition-target\"."):
             self.subject.GpTransfer(Mock(**options), [])
 
     def test__partition_to_multiple_same_partition_tables_fails(self):
@@ -417,21 +422,9 @@ class GpTransfer(GpTestCase):
         self.assertNotIn("Validation failed for %s", self.get_warnings())
         self.assertIn("Validation of %s successful", self.get_info_messages())
 
-    def test__partition_to_multiple_same_nonpartition_tables_with_truncate_fails(self):
+    def test__validate_nonpartition_tables_with_truncate_fails(self):
         options = self.setup_partition_to_normal_validation()
         options.update(truncate=True)
-        with open(options["input_file"], "w") as src_map_file:
-            src_map_file.write(
-                "my_first_database.public.my_table_partition1, my_first_database.public.my_normal_table\n"
-                "my_first_database.public.my_table_partition2, my_first_database.public.my_normal_table")
-
-        additional = {
-            cursor_keys["normal_tables"]: [["public", "my_normal_table", ""]],
-        }
-        cursor_side_effect = CursorSideEffect(additional=additional)
-        cursor_side_effect.first_values[cursor_keys["partition_tables"]] = [["public", "my_table_partition1", ""],
-                                                                            ["public", "my_table_partition2", ""]]
-        self.cursor.side_effect = cursor_side_effect.cursor_side_effect
 
         with self.assertRaisesRegexp(Exception, "--truncate is not allowed with option --partition-transfer-non-partition-target"):
             self.subject.GpTransfer(Mock(**options), [])
@@ -446,7 +439,7 @@ class GpTransfer(GpTestCase):
         with self.assertRaisesRegexp(Exception, "Source table "):
             self.subject.GpTransfer(Mock(**options), [])
 
-    def test__validate_bad_partition_different_number_columns_fails(self):
+    def test__validate_partition_when_source_and_dest_have_different_column_count_fails(self):
         options = self.setup_partition_validation()
 
         additional = {
@@ -489,7 +482,7 @@ class GpTransfer(GpTestCase):
         options = self.setup_partition_validation()
 
         additional = {
-            cursor_keys['partition_info']: [["my_parkind", 1, "my_parnatts", "3 4"]],
+            cursor_keys['partition_info']: [["my_parkind", 1, 1, "3 4"]],
         }
         self.cursor.side_effect = CursorSideEffect(additional).cursor_side_effect
 
@@ -499,6 +492,21 @@ class GpTransfer(GpTestCase):
         log_messages = self.get_error_logging()
         self.assertIn("Partition type or key is different between", log_messages[1])
         self.assertIn("Partition column attributes are different at level", log_messages[0])
+
+    def test__validate_partition_transfer_when_different_partition_attributes_fails(self):
+        options = self.setup_partition_validation()
+
+        additional = {
+            cursor_keys['partition_info']: [["my_parkind", 1, 2, "3 4"]],
+        }
+        self.cursor.side_effect = CursorSideEffect(additional).cursor_side_effect
+
+        with self.assertRaisesRegexp(Exception, "has different partition criteria from destination table"):
+            self.subject.GpTransfer(Mock(**options), [])
+
+        log_messages = self.get_error_logging()
+        self.assertIn("Partition type or key is different between", log_messages[1])
+        self.assertIn("Number of partition columns is different at level", log_messages[0])
 
     def test__validate_bad_partition_different_parent_kind_fails(self):
         options = self.setup_partition_validation()
@@ -678,6 +686,49 @@ class GpTransfer(GpTestCase):
         with self.assertRaisesRegexp(Exception, "--partition-transfer-non-partition-target option cannot be used with any exclude table option"):
             self.subject.GpTransfer(Mock(**options), [])
 
+    def test__partition_to_normal_multiple_same_dest_must_come_from_same_source_partition(self):
+        options = self.setup_partition_to_normal_validation()
+        with open(options["input_file"], "w") as src_map_file:
+            src_map_file.write(
+                "my_first_database.public.my_table_partition1, my_first_database.public.my_normal_table\nmy_first_database.public.my_table_partition2, my_first_database.public.my_normal_table")
+
+        additional = {
+            cursor_keys["normal_tables"]: [["public", "my_normal_table", ""]],
+        }
+        cursor_side_effect = CursorSideEffect(additional=additional)
+        cursor_side_effect.first_values[cursor_keys["partition_tables"]] = [["public", "my_table_partition1", ""],
+                                                                            ["public", "my_table_partition2", ""]]
+        self.cursor.side_effect = cursor_side_effect.cursor_side_effect
+
+        class SingletonSideEffectWithIterativeReturns(SingletonSideEffect):
+            def __init__(self, multi_value=None):
+                SingletonSideEffect.__init__(self, multi_list=multi_value)
+                self.values["SELECT count(*) FROM public.my_normal_table"] = [[[30, 15, 15]]]
+                self.counters["SELECT count(*) FROM public.my_normal_table"] = 0
+
+            def singleton_side_effect(self, *args):
+                for key in self.values.keys():
+                    for arg in args:
+                        if key in arg:
+                            value_list = self.values[key]
+                            result = value_list[self.counters[key] % len(value_list)]
+                            if any(isinstance(i, list) for i in value_list):
+                                result = result[self.counters[key] % len(value_list)]
+                            self.counters[key] += 1
+                            return result
+                return None
+
+        multi_value = {
+            "select n.nspname, c.relname": [["public", "my_table_partition1"], ["public", "other_parent"]]
+        }
+        self.db_singleton.side_effect = SingletonSideEffectWithIterativeReturns(multi_value=multi_value).singleton_side_effect
+
+        with self.assertRaisesRegexp(Exception, "partition sources: public.my_table_partition1, "
+                                                "public.my_table_partition2,  when transferred to "
+                                                "the same destination: table public.my_normal_table , "
+                                                "must share the same parent"):
+            self.subject.GpTransfer(Mock(**options), []).run()
+
     ####################################################################################################################
     # End of tests, start of private methods/objects
     ####################################################################################################################
@@ -750,7 +801,7 @@ class GpTransfer(GpTestCase):
         options = {}
         options.update(self.GpTransfer_options_defaults)
         options.update(
-            pt_non_pt_target=True,
+            partition_transfer_non_pt_target=True,
             input_file=input_filename.name,
             source_map_file=source_map_filename.name,
             base_port=15432,
@@ -798,9 +849,10 @@ class CursorSideEffect:
             cursor_keys['relations']: ["my_relname"],
             cursor_keys['table_info']: [
                 ["t", "my_data_type", 255, 16, 1024, 1024, 1, 1024, "my_interval_type", "my_udt_name"]],
-            cursor_keys['partition_info']: [["my_parkind", 1, "my_parnatts", "my_paratts"]],
+            cursor_keys['partition_info']: [["my_parkind", 1, 1, "1"]],
             cursor_keys['schema_name']: ["public"],
             cursor_keys['create_schema']: ["my_schema"],
+            cursor_keys['ordinal_pos']: [[1]],
         }
         self.counters = dict((key, 0) for key in self.first_values.keys())
         self.second_values = self.first_values.copy()

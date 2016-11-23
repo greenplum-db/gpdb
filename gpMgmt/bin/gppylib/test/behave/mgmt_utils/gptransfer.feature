@@ -1740,7 +1740,7 @@ Feature: gptransfer tests
         And there is a file "input_file" with tables "gptest.public.sales_1_prt_2_2_prt_2, gptest.public.sales_1_prt_p1_2_prt_1"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE"
         Then gptransfer should return a return code of 2
-        And gptransfer should print Table gptest.public.sales_1_prt_p1_2_prt_1 does not exist in destination database to transfer partition tables to stdout
+        And gptransfer should print Table gptest.public.sales_1_prt_p1_2_prt_1 does not exist in destination database when transferring from partition tables to stdout
 
     @partition_transfer
     @prt_transfer_8
@@ -1752,7 +1752,7 @@ Feature: gptransfer tests
         And there is a file "input_file" with tables "gptest.public.sales_1_prt_2_2_prt_2, gptest.nonexist_schema.sales_1_prt_p1_2_prt_1"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE"
         Then gptransfer should return a return code of 2
-        And gptransfer should print Table gptest.nonexist_schema.sales_1_prt_p1_2_prt_1 does not exist in destination database to transfer partition tables to stdout
+        And gptransfer should print Table gptest.nonexist_schema.sales_1_prt_p1_2_prt_1 does not exist in destination database when transferring from partition tables to stdout
 
     @partition_transfer
     @prt_transfer_9
@@ -1764,7 +1764,7 @@ Feature: gptransfer tests
         And there is a file "input_file" with tables "gptest.public.sales_1_prt_2_2_prt_2, gptest.public.nonexist_table"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE"
         Then gptransfer should return a return code of 2
-        And gptransfer should print Table gptest.public.nonexist_table does not exist in destination database to transfer partition tables to stdout
+        And gptransfer should print Table gptest.public.nonexist_table does not exist in destination database when transferring from partition tables to stdout
 
     @partition_transfer
     @prt_transfer_10
@@ -2226,7 +2226,7 @@ Feature: gptransfer tests
         And there is a file "input_file" with tables "gptest.public.employee_1_prt_1, gptest.public.employee_1_prt_1"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE"
         Then gptransfer should return a return code of 2
-        And gptransfer should print Source partition table gptest.public.employee_1_prt_1 has different column layout or types from destination partition table gptest.public.employee_1_prt_1 to stdout
+        And gptransfer should print Source partition table gptest.public.employee_1_prt_1 has different column layout or types from destination table gptest.public.employee_1_prt_1 to stdout
         Then the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_range_prt_1_different_prt_column.sql -d gptest"
         And the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE"
         Then gptransfer should return a return code of 2
@@ -2258,7 +2258,8 @@ Feature: gptransfer tests
         And the user waits for "gptransfer" to finish running
 
     @partition-transfer-non-partition-target
-    @prt_transfer_47
+    @partition_transfer
+    @prt_transfer_49
     Scenario: transfer multiple partition leaves to same non-partition table
         Given the database is running
         And database "gptest" exists
