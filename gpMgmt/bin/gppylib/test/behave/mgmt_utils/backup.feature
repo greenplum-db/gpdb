@@ -414,6 +414,8 @@ Feature: Validate command line arguments
         And there is a "heap" table "public.heap_table" in "bkdb" with data
         And there is a "ao" partition table "public.ao_part_table" in "bkdb" with data
         And there is a backupfile of tables "public.heap_table, public.ao_part_table" in "bkdb" exists for validation
+        And the user runs "psql -f gppylib/test/behave/mgmt_utils/steps/data/add_rules_indexes_constraints_triggers.sql bkdb"
+        Then psql should return a return code of 0
         When the user runs "gpcrondump -a -x bkdb"
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
@@ -442,6 +444,15 @@ Feature: Validate command line arguments
         And gpdbrestore should return a return code of 0
         And verify that there is a "heap" table "public.heap_table" in "bkdb" with data
         And verify that there is a "ao" table "public.ao_part_table" in "bkdb" with data
+        And verify that the "report" file in " " dir does not contain "ERROR"
+        And verify that the "status" file in " " dir does not contain "ERROR"
+        And verify that there is a constraint "check_constraint_no_domain" in "bkdb"
+        And verify that there is a constraint "check_constraint_with_domain" in "bkdb"
+        And verify that there is a constraint "unique_constraint" in "bkdb"
+        And verify that there is a constraint "foreign_key" in "bkdb"
+        And verify that there is a rule "myrule" in "bkdb"
+        And verify that there is a trigger "mytrigger" in "bkdb"
+        And verify that there is an index "my_unique_index" in "bkdb"
 
     Scenario: Metadata-only restore
         Given the test is initialized

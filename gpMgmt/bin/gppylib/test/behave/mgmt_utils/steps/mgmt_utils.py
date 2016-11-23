@@ -866,6 +866,21 @@ def impl(context, conname, dbname):
     if not check_constraint_exists(context, dbname=dbname, conname=conname):
         raise Exception("Constraint '%s' does not exist when it should" % conname)
 
+@then('verify that there is a rule "{rulename}" in "{dbname}"')
+def impl(context, rulename, dbname):
+    if not check_rule_exists(context, dbname=dbname, rulename=rulename):
+        raise Exception("Rule '%s' does not exist when it should" % rulename)
+
+@then('verify that there is a trigger "{triggername}" in "{dbname}"')
+def impl(context, triggername, dbname):
+    if not check_trigger_exists(context, dbname=dbname, triggername=triggername):
+        raise Exception("Trigger '%s' does not exist when it should" % triggername)
+
+@then('verify that there is an index "{indexname}" in "{dbname}"')
+def impl(context, indexname, dbname):
+    if not check_index_exists(context, dbname=dbname, indexname=indexname):
+        raise Exception("Index '%s' does not exist when it should" % indexname)
+
 @then('verify that there is a "{table_type}" table "{tablename}" in "{dbname}"')
 def impl(context, table_type, tablename, dbname):
     if not check_table_exists(context, dbname=dbname, table_name=tablename,table_type=table_type):

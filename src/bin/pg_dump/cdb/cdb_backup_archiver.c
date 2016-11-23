@@ -54,6 +54,7 @@ static char *replace_line_endings(const char *str);
 
 
 static void _doSetFixedOutputState(ArchiveHandle *AH);
+static void _doCreateFunctionDropConstraintsIfExists(ArchiveHandle *AH);
 static void _doSetSessionAuth(ArchiveHandle *AH, const char *user);
 static void _doSetWithOids(ArchiveHandle *AH, const bool withOids);
 static void _reconnectToDB(ArchiveHandle *AH, const char *dbname);
@@ -147,7 +148,6 @@ RestoreArchive(Archive *AHX, RestoreOptions *ropt)
 
 	AH->ropt = ropt;
 	AH->stage = STAGE_INITIALIZING;
-	
 
 	/*
 	 * Check for nonsensical option combinations.
@@ -259,6 +259,7 @@ RestoreArchive(Archive *AHX, RestoreOptions *ropt)
 	 */
 	if (ropt->dropSchema)
 	{
+	_doCreateFunctionDropConstraintsIfExists(AH);
 		for (te = AH->toc->prev; te != AH->toc; te = te->prev)
 		{
 			AH->currentTE = te;
@@ -2218,6 +2219,25 @@ _doSetFixedOutputState(ArchiveHandle *AH)
 		ahprintf(AH, "SET escape_string_warning = off;\n");
 
 	ahprintf(AH, "\n");
+}
+
+/*
+ * Create stored procedure to drop constraint if exists.
+ * There is not support for this feature before PG 9.0.
+ *
+ */
+static void
+_doCreateFunctionDropConstraintsIfExists(ArchiveHandle *AH)
+{
+	ahprintf(AH, "\ncreate or replace function pg_temp.drop_table_constraint_only_if_exists(sch text,tbl text,constr text) returns void as\n");
+	ahprintf(AH, "$$\n");
+	ahprintf(AH, "begin\n");
+	ahprintf(AH, "    EXECUTE  'ALTER TABLE ONLY '||sch||'.'||tbl||' DROP CONSTRAINT '||constr||'';\n");
+	ahprintf(AH, "    return;\n");
+	ahprintf(AH, "exception when undefined_object then\n");
+	ahprintf(AH, "    return;\n");
+	ahprintf(AH, "end;\n");
+	ahprintf(AH, "$$ language plpgsql;\n\n");
 }
 
 /*

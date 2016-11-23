@@ -395,10 +395,23 @@ def check_pl_exists(context, dbname, lan_name):
 
 def check_constraint_exists(context, dbname, conname):
     SQL = """select count(*) from pg_constraint where conname='%s';""" % conname
-    con_count = getRows(dbname, SQL)[0][0]
-    if con_count == 0:
-        return False
-    return True
+    constraint_count = getRows(dbname, SQL)[0][0]
+    return constraint_count != 0
+
+def check_rule_exists(context, dbname, rulename):
+    SQL = """select count(*) from pg_rules where rulename='%s';""" % rulename
+    rule_count = getRows(dbname, SQL)[0][0]
+    return rule_count != 0
+
+def check_trigger_exists(context, dbname, triggername):
+    SQL = """select count(*) from pg_trigger where tgname='%s';""" % triggername
+    trigger_count = getRows(dbname, SQL)[0][0]
+    return trigger_count != 0
+
+def check_index_exists(context, dbname, indexname):
+    SQL = """select count(*) from pg_class where relkind='i' and relname='%s';""" % indexname
+    index_count = getRows(dbname, SQL)[0][0]
+    return index_count != 0
 
 def drop_external_table_if_exists(context, table_name, dbname):
     if check_table_exists(context, table_name=table_name, dbname=dbname, table_type='external'):
