@@ -8620,8 +8620,11 @@ dumpExtProtocol(Archive *fout, ExtProtInfo *ptcinfo)
 
 	PQExpBuffer q;
 	PQExpBuffer delq;
+	PQExpBuffer	nsq;
+	char	   *prev_ns;
 	char	   *namecopy;
 	int			i;
+	bool		has_internal = false;
 
 	/* Skip if not to be dumped */
 	if (!ptcinfo->dobj.dump || dataOnly)
@@ -8639,6 +8642,11 @@ dumpExtProtocol(Archive *fout, ExtProtInfo *ptcinfo)
 		{
 			protoFuncs[i].dumpable = false;
 			protoFuncs[i].internal = true;
+			/*
+			 * We have at least one internal function, signal that we need the
+			 * public schema in the search_path
+			 */
+			has_internal = true;
 		}
 		else
 		{
@@ -8668,8 +8676,44 @@ dumpExtProtocol(Archive *fout, ExtProtInfo *ptcinfo)
 				protoFuncs[i].dumpable = true;
 		}
 
+	nsq = createPQExpBuffer();
 	q = createPQExpBuffer();
 	delq = createPQExpBuffer();
+
+	/*
+	 * Since the function parameters to the external protocol cannot be fully
+	 * qualified with namespace, we must ensure that we have the search_path
+	 * set with the namespaces of the referenced functions. We only need the
+	 * dump file to have the search_path so inject a SET search_path = .. ;
+	 * into the output stream instead of calling selectSourceSchema().
+	 */
+	prev_ns = NULL;
+	for (i = 0; i < FCOUNT; i++)
+	{
+		if (!protoFuncs[i].pfuncinfo || protoFuncs[i].internal)
+			continue;
+
+		if (prev_ns && strcmp(prev_ns, protoFuncs[i].pfuncinfo->dobj.namespace->dobj.name) == 0)
+			continue;
+
+		appendPQExpBuffer(nsq, "%s%s", (prev_ns ? "," : ""), protoFuncs[i].pfuncinfo->dobj.namespace->dobj.name);
+		prev_ns = protoFuncs[i].pfuncinfo->dobj.namespace->dobj.name;
+
+		/*
+		 * If we are adding public to the search_path, then we don't need to do
+		 * so again for any internal functions
+		 */
+		if (strcmp(prev_ns, "public") == 0)
+			has_internal = false;
+	}
+
+	if (prev_ns)
+	{
+		appendPQExpBuffer(q, "-- Set the search_path required to look up the functions\n");
+		appendPQExpBuffer(q, "SET search_path = %s%s;\n\n",
+						  nsq->data, (has_internal ? ", public" : ""));
+	}
+	destroyPQExpBuffer(nsq);
 
 	appendPQExpBuffer(q, "CREATE %s PROTOCOL %s (",
 			ptcinfo->ptctrusted == true ? "TRUSTED" : "",
