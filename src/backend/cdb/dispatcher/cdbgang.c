@@ -318,9 +318,6 @@ bool segment_failure_due_to_recovery(struct PQExpBufferData* error_message)
 		return false;
 
 	fatal = _("FATAL");
-	if (fatal == NULL)
-		return false;
-
 	fatal_len = strlen(fatal);
 
 	/*
