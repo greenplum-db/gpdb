@@ -155,8 +155,7 @@ GetCDBBaseTableArray(PGconn *pConn, CDBBaseTableArray *pTableAr)
 cleanup:
 	if (pRes != NULL)
 		PQclear(pRes);
-	if (pQry != NULL)
-		destroyPQExpBuffer(pQry);
+	destroyPQExpBuffer(pQry);
 
 	return bRtn;
 }
@@ -249,8 +248,7 @@ GetCDBSegmentInstanceArray(PGconn *pConn, const char *pszDBName, CDBSegmentInsta
 cleanup:
 	if (pRes != NULL)
 		PQclear(pRes);
-	if (pQry != NULL)
-		destroyPQExpBuffer(pQry);
+	destroyPQExpBuffer(pQry);
 
 	return bRtn;
 }
