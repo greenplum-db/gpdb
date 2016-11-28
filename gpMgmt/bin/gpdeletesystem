@@ -93,22 +93,18 @@ def parseargs():
 
     # check we got the -d option
     if not options.master_data_dir:
-        logger.fatal('Required option --master-data-directory is missing.')
-        parser.exit(2, None)
+        logger.info('Option -d or --master-data-directory not set. Checking environment variable MASTER_DATA_DIRECTORY')
+        env_master_data_dir = os.getenv('MASTER_DATA_DIRECTORY', None)
+        # check for environment variable MASTER_DATA_DIRECTORY
+        if not env_master_data_dir:
+            logger.fatal('Both -d parameter and MASTER_DATA_DIRECTORY environment variable are not set.')
+            logger.fatal('Required option master data directory is missing.')
+            parser.exit(2, None)
+        options.master_data_dir = env_master_data_dir
 
     # We have to normalize this path for a later comparison
     options.master_data_dir = os.path.normpath(options.master_data_dir)
 
-    # check that there isn't a conflict between -d option and MASTER_DATA_DIRECTORY env
-    env_master_data_dir = os.getenv('MASTER_DATA_DIRECTORY', None)
-    if not env_master_data_dir:
-        logger.fatal('MASTER_DATA_DIRECTORY environment variable not set.')
-        parser.exit(2, None)
-        
-    if os.path.normpath(env_master_data_dir) != options.master_data_dir:
-        logger.fatal('Current setting of MASTER_DATA_DIRECTORY not same as -d parameter.')
-        parser.exit(2, None)
-        
     # Check that master data directory exists
     if not os.path.exists(options.master_data_dir) or not os.path.isdir(options.master_data_dir):
         logger.fatal('Master data directory supplied %s does not exist' % options.master_data_dir)
