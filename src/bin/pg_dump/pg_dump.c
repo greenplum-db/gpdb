@@ -11344,44 +11344,6 @@ testExtProtocolSupport(void)
 	return isSupported;
 }
 
-/*
- * Error if any child tables were specified in an input option (-t or -T)
- */
-/* static bool isChildSelected(char opt, SimpleOidList list) */
-/* { */
-/*	PQExpBuffer			query = createPQExpBuffer(); */
-/*	PGresult			*res; */
-/*	SimpleOidListCell	*cell; */
-/*	*/
-/*	if (list.head != NULL) */
-/*	{ */
-/*		for (cell = list.head; cell; cell = cell->next) */
-/*		{ */
-/*			int numtups = 0; */
-/*			 */
-/*			appendPQExpBuffer(query, "select 1 from pg_partition_rule " */
-/*									 "where parchildrelid ='%u'::pg_catalog.oid; ",  */
-/*									  cell->val); */
-/*	*/
-/*			res = PQexec(g_conn, query->data); */
-/*			check_sql_result(res, g_conn, query->data, PGRES_TUPLES_OK); */
-/*			numtups = PQntuples(res); */
-/*			PQclear(res); */
-/*			resetPQExpBuffer(query); */
-/*	*/
-/*			if (numtups == 1) */
-/*			{ */
-/*				write_msg(NULL, "specifying child tables in -%c option is not allowed\n", opt); */
-/*				return false; */
-/*			} */
-/*		} */
-/*	} */
-/*		 */
-/*	destroyPQExpBuffer(query); */
-/*	 */
-/*	return true; */
-/* } */
-
 
 /*
  *	addDistributedBy
