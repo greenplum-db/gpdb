@@ -22,3 +22,6 @@
 	path = src/bin/gpfdist/ext
 	url = git@github.com:greenplum-db/gpfdist-ext.git
 	branch = master
+[submodule "gpAux/extensions/googletest"]
+	path = gpAux/extensions/googletest
+	url = git@github.com:google/googletest.git
