@@ -35,13 +35,13 @@ git clone https://github.com/greenplum-db/gpdb.git
 ```
 
 ##3: Setup and start the virtual machine
-Next go to the `gpdb/vagrant` directory. This directory has virtual machine
+Next go to the `gpdb/src/tools/vagrant` directory. This directory has virtual machine
 configurations for different operating systems (for now there is only one).
 Pick the distro of your choice, and `cd` to that directory. For this document,
 we will assume that you pick `centos`. So, issue the following command:
 
 ```shell
-cd gpdb/vagrant/centos
+cd gpdb/src/tools/vagrant/centos
 ```
 
 Next let us start a virtual machine using the Vagrant file in that directory.

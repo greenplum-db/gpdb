@@ -34,7 +34,7 @@ Vagrant.configure("2") do |config|
   end
 
   nfs_setting = RUBY_PLATFORM =~ /darwin/ || RUBY_PLATFORM =~ /linux/
-  config.vm.synced_folder "../..", "/gpdb",type: "nfs"
+  config.vm.synced_folder "../../../..", "/gpdb",type: "nfs"
 
   if File.file?('vagrant-local.yml')
     local_config = YAML::load_file('vagrant-local.yml')
