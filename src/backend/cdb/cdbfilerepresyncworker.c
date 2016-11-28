@@ -716,7 +716,15 @@ FileRepPrimary_ResyncBufferPoolIncrementalWrite(ChangeTrackingRequest *request)
 												 entry.fileName, 
 												 result->entries[ii].relFileNode, 
 												 0 /* segment file number is always 0 for Buffer Pool */);							 
-								 
+
+						/*
+						 * We only want to update the state with this call to
+						 * FileRepResync_UpdateEntry(), so to ensure that we
+						 * don't incur any sideeffects set the changed page
+						 * count to zero as it will only be updated to if the
+						 * hashtable entry changed page count is zero.
+						 */
+						entry.mirrorBufpoolResyncChangedPageCount = 0;
 						status = FileRepResync_UpdateEntry(&entry);
 						if (status != STATUS_OK)
 						{
