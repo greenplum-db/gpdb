@@ -170,9 +170,7 @@ int MirroredFlatFile_Open(
 		open->isActive = true;
 	}
 
-	if (dir)	
-		pfree(dir);
-
+	pfree(dir);
 	if (mirrorDir)
 		pfree(mirrorDir);
 
@@ -1042,10 +1040,6 @@ MirrorFlatFile(
 				
 		bufferLen = (Size) Min(BLCKSZ, endOffset - startOffset);
 		buffer = (char*) palloc(bufferLen);
-		if (buffer == NULL)
-			ereport(ERROR,
-					(errcode(ERRCODE_OUT_OF_MEMORY),
-					 (errmsg("Not enough shared memory for Mirroring."))));
 		
 		MemSet(buffer, 0, bufferLen);
 				
@@ -1105,10 +1099,8 @@ MirrorFlatFile(
 		MirroredFlatFile_ClosePrimary(&primaryOpen);
 	}
 
-	if (dir)
-		pfree(dir);
-	if (mirrorDir)
-		pfree(mirrorDir);	
+	pfree(dir);
+	pfree(mirrorDir);
 
 	return retval;
 }
@@ -1388,11 +1380,6 @@ PgVersionRecoverMirror(void)
 			
 			bufferLen = (Size) Min(BLCKSZ, endOffset - startOffset);
 			buffer = (char*) palloc(bufferLen);
-			if (buffer == NULL)
-				ereport(ERROR,
-						(errcode(ERRCODE_OUT_OF_MEMORY),
-						 (errmsg("not enough shared memory for mirroring"))));
-			
 			MemSet(buffer, 0, bufferLen);
 			
 			while (startOffset < endOffset) 

@@ -437,11 +437,6 @@ FileRepPrimary_ResyncWrite(FileRepResyncHashEntry_s	*entry)
 					/* AO and CO Data Store writes 64k size by default */
 					bufferLen = (Size) Min(2*BLCKSZ, endOffset - startOffset);
 					buffer = (char*) palloc(bufferLen);
-					if (buffer == NULL)
-						ereport(ERROR,
-								(errcode(ERRCODE_OUT_OF_MEMORY),
-								 (errmsg("not enough memory for resynchronization"))));
-					
 					MemSet(buffer, 0, bufferLen);
 					
 					while (startOffset < endOffset)
@@ -482,11 +477,8 @@ FileRepPrimary_ResyncWrite(FileRepResyncHashEntry_s	*entry)
 						bufferLen = (Size) Min(2*BLCKSZ, endOffset - startOffset);						
 					}
 					
-					if (buffer) 
-					{
-						pfree(buffer);
-						buffer = NULL;
-					}
+					pfree(buffer);
+					buffer = NULL;
 					
 					if (mirrorDataLossOccurred)
 						break;

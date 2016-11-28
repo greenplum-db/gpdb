@@ -9429,8 +9429,6 @@ createValueArrays(int keyAttno, Datum **values, bool **isnull)
 {
 	*values = palloc0(keyAttno * sizeof(Datum));
 	*isnull = palloc(keyAttno * sizeof(bool));
-	Assert (NULL != values);
-	Assert (NULL != isnull);
 
 	MemSet(*isnull, true, keyAttno * sizeof(bool));
 }
