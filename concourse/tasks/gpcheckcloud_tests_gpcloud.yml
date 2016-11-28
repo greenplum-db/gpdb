@@ -1,0 +1,16 @@
+platform: linux
+image_resource:
+  type: docker-image
+  source:
+    repository: pivotaldata/centos67-gpdb-gcc6-llvm-image
+    username:
+    password:
+    email:
+inputs:
+  - name: gpdb_src
+  - name: bin_gpdb
+  - name: sync_tools_gpdb_centos
+params:
+  s3conf:
+run:
+  path: gpdb_src/concourse/scripts/gpcheckcloud_tests_gpcloud.bash

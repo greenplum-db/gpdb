@@ -1,0 +1,90 @@
+## ======================================================================
+## Pipeline for GPDB gpcloud
+## ======================================================================
+
+resources:
+- name: gpdb_src
+  type: git
+  source:
+    branch: {{gpcloud-git-branch}}
+    private_key: {{gpdb-git-key}}
+    uri: {{gpcloud-git-remote}}
+- name: centos67-gpdb-gcc6-llvm-image
+  type: docker-image
+  source:
+    repository: pivotaldata/centos67-gpdb-gcc6-llvm-image
+    username: {{docker_username}}
+    password: {{docker_password}}
+- name: bin_gpdb_centos
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: bin_gpdb_centos/bin_gpdb.tar.gz
+- name: sync_tools_gpdb_centos
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: sync_tools_gpdb_centos/sync_tools_gpdb.tar.gz
+
+jobs:
+- name: unit_tests_gpcloud_centos
+  public: true
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      trigger: true
+    - get: centos67-gpdb-gcc6-llvm-image
+  - task: unit_tests_gpcloud
+    file: gpdb_src/concourse/tasks/unit_tests_gpcloud.yml
+    image: centos67-gpdb-gcc6-llvm-image
+    params:
+      TARGET_OS: centos
+      TARGET_OS_VERSION: 6
+
+- name: regression_tests_gpcloud_centos
+  public: true
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [unit_tests_gpcloud_centos]
+      trigger: true
+    - get: sync_tools_gpdb_centos
+      resource: sync_tools_gpdb_centos
+    - get: bin_gpdb
+      resource: bin_gpdb_centos
+    - get: centos67-gpdb-gcc6-llvm-image
+  - task: regression_tests_gpcloud
+    file: gpdb_src/concourse/tasks/regression_tests_gpcloud.yml
+    image: centos67-gpdb-gcc6-llvm-image
+    params:
+      s3conf: {{s3_configuration_file}}
+      TEST_OS: centos
+      TARGET_OS: centos
+      TARGET_OS_VERSION: 6
+
+- name: gpcheckcloud_tests_gpcloud_centos
+  public: true
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [unit_tests_gpcloud_centos]
+      trigger: true
+    - get: sync_tools_gpdb_centos
+      resource: sync_tools_gpdb_centos
+    - get: bin_gpdb
+      resource: bin_gpdb_centos
+    - get: centos67-gpdb-gcc6-llvm-image
+  - task: gpcheckcloud_tests_gpcloud
+    file: gpdb_src/concourse/tasks/gpcheckcloud_tests_gpcloud.yml
+    image: centos67-gpdb-gcc6-llvm-image
+    params:
+      s3conf: {{s3_configuration_file}}
+      TARGET_OS: centos
+      TARGET_OS_VERSION: 6
+

@@ -17,6 +17,7 @@ There should be seven pipelines in this directory:
 * `dev_pr_pipeline.yml` which safely mimics the `pr_pipeline.yml`, and saves an installer to the dev bucket.
 * `concourse-upgrade.yml` which uses Concourse to upgrade itself.
 * `pipeline_tinc.yml` run TINC tests against gpdb master branch.
+* `pipeline_gpcloud.yml` run gpcloud tests against developers specified branch.
 
 ##### Tasks Directory
 All task yamls should live in this directory.
@@ -29,6 +30,9 @@ Please do not create any more exceptions, and remove these as the occasion arise
 * `test_with_planner.yml` is being used by [a gporca pipeline ](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline.yml)
 * `test_with_orca.yml` is being used by [a gporca pipeline ](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline.yml)
 * `build_with_orca.yml` is being used by [a gporca pipeline ](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline.yml)
+* `gpcheckcloud_tests_gpcloud.yml` is being used by [a gpcloud pipeline ](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline_gpcloud.yml)
+* `regression_tests_gpcloud.yml` is being used by [a gpcloud pipeline ](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline_gpcloud.yml)
+* `unit_tests_gpcloud.yml` is being used by [a gpcloud pipeline ](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline_gpcloud.yml)
 
 ##### Scripts Directory
 All script files should live in this directory.
@@ -42,6 +46,9 @@ Please do not create any more exceptions, and remove these as the occasion arise
 * `builds/` is being used by [a gporca pipeline ](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline.yml)
 * `test_gpdb.py` is being used by [a gporca pipeline ](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline.yml)
 * `build_gpdb.py` is being used by [a gporca pipeline ](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline.yml)
+* `gpcheckcloud_tests_gpcloud.bash` is being used by [a gpcloud pipeline ](https://github.com/greenplum-db/gporca/blob/master/concourse/tasks/gpcheckcloud_test_gpcloud.yml)
+* `regression_tests_gpcloud.bash` is being used by [a gpcloud pipeline ](https://github.com/greenplum-db/gporca/blob/master/concourse/tasks/regression_tests_gpcloud.yml)
+* `unit_tests_gpcloud.bash` is being used by [a gpcloud pipeline ](https://github.com/greenplum-db/gporca/blob/master/concourse/tasks/unit_tests_gpcloud.yml)
 
 ### The Concourse Deployment
 There is a `gpdb` team in the [Concourse instance](http://gpdb.ci.pivotalci.info/).
