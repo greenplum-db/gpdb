@@ -27,8 +27,8 @@ DEP_FILES := $(patsubst %.o,%.d,$(TEST_OBJS))
 TEST_SRC = $(TEST_OBJS:.o=.cpp)
 -include $(DEP_FILES)
 
-GMOCK_DIR = ../../gmock
-GTEST_DIR = ../../gtest
+GMOCK_DIR = ../../googletest/googlemock
+GTEST_DIR = ../../googletest/googletest
 
 $(TEST_OBJS) gtest_main.o gtest-all.o gmock-all.o: INCLUDES += -I$(GTEST_DIR)/ -I$(GMOCK_DIR)/ -I$(GTEST_DIR)/src -I$(GMOCK_DIR)/src -I$(GTEST_DIR)/include -I$(GMOCK_DIR)/include
 
