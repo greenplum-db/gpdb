@@ -240,14 +240,9 @@ FileRepPrimary_ResyncWrite(FileRepResyncHashEntry_s	*entry)
 						XLogRecPtr	endResyncLSN = (isFullResync() ? 
 													FileRepResync_GetEndFullResyncLSN() :
 													FileRepResync_GetEndIncrResyncLSN());
-#ifdef FAULT_INJECTOR
-						FaultInjector_InjectFaultIfSet(
-													   FileRepResyncWorkerRead,
-													   DDLNotSpecified,
-													   "",	//databaseName
-													   ""); // tableName
-#endif				
-						
+
+						SIMPLE_FAULT_INJECTOR(FileRepResyncWorkerRead);
+
 						FileRepResync_SetReadBufferRequest();
 						buf = ReadBuffer_Resync(smgr_relation, blkno);
 						FileRepResync_ResetReadBufferRequest();
@@ -312,15 +307,9 @@ FileRepPrimary_ResyncWrite(FileRepResyncHashEntry_s	*entry)
 									  (char *)BufferGetBlock(buf),
 									  FALSE);
 						}
-						
-#ifdef FAULT_INJECTOR	
-						FaultInjector_InjectFaultIfSet(
-													   FileRepResyncWorker, 
-													   DDLNotSpecified,
-													   "",	// databaseName
-													   ""); // tableName
-#endif				
-						
+
+						SIMPLE_FAULT_INJECTOR(FileRepResyncWorker);
+
 						UnlockReleaseBuffer(buf);
 						
 						if (count > thresholdCount)
@@ -702,24 +691,12 @@ FileRepPrimary_ResyncBufferPoolIncrementalWrite(ChangeTrackingRequest *request)
 							  FALSE);
 				}
 
-#ifdef FAULT_INJECTOR	
-				FaultInjector_InjectFaultIfSet(
-											   FileRepResyncWorker, 
-											   DDLNotSpecified,
-											   "",	// databaseName
-											   ""); // tableName
-#endif				
-				
+				SIMPLE_FAULT_INJECTOR(FileRepResyncWorker);
+
 				UnlockReleaseBuffer(buf);
-				
-#ifdef FAULT_INJECTOR	
-				FaultInjector_InjectFaultIfSet(
-											   FileRepResyncWorker, 
-											   DDLNotSpecified,
-											   "",	// databaseName
-											   ""); // tableName
-#endif				
-		
+
+				SIMPLE_FAULT_INJECTOR(FileRepResyncWorker);
+
 	flush_check:			
 				if (((ii + 1) == result->count) ||
 					! (result->entries[ii].relFileNode.spcNode == result->entries[ii+1].relFileNode.spcNode &&
