@@ -1133,9 +1133,11 @@ AppendOnlyStorageWrite_VerifyWriteBlock(AppendOnlyStorageWrite *storageWrite,
 				Assert(storageWrite->verifyWriteCompressionState != NULL);
 
 				if (cfns == NULL)
-					decompressor = NULL;
-				else
-					decompressor = cfns[COMPRESSION_DECOMPRESS];
+					ereport(ERROR,
+							(errcode(ERRCODE_GP_INTERNAL_ERROR),
+							 errmsg("decompression information missing")));
+
+				decompressor = cfns[COMPRESSION_DECOMPRESS];
 
 				gp_decompress_new(&header[offset], //Compressed data in block.
 								  compressedLen,
