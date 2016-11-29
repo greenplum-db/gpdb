@@ -162,6 +162,7 @@ typedef struct _dumpOptions
 	int			outputClean;
 	int			outputCreateDB;
 	bool		outputBlobs;
+	bool		dontOutputBlobs;
 	int			outputNoOwner;
 	char	   *outputSuperuser;
 
