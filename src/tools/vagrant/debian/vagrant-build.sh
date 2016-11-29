@@ -1,9 +1,12 @@
 cd /gpdb
+
+sudo mkdir /usr/local/gpdb
+sudo chown vagrant:vagrant /usr/local/gpdb
 ./configure --enable-debug --with-python --with-perl --enable-mapreduce --with-libxml --prefix=/usr/local/gpdb
 
 make clean
 make -j 4
-sudo make install
+make install
 
 cd /gpdb/gpAux
 cp -rp gpdemo /home/vagrant/

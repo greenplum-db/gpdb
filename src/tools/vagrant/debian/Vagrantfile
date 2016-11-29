@@ -26,6 +26,7 @@ Vagrant.configure("2") do |config|
 
     # Assign additional cores to the guest OS.
     v.customize ["modifyvm", :id, "--cpus", cpu_count]
+    v.customize ["modifyvm", :id, "--cpuexecutioncap", "50"]
     v.customize ["modifyvm", :id, "--ioapic", "on"]
 
     # This setting makes it so that network access from inside the vagrant guest

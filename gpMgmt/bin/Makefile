@@ -65,7 +65,11 @@ pygresql:
 	fi
 
 	mkdir -p $(PYLIB_DIR)/pygresql
-	cp -r $(PYLIB_SRC)/$(PYGRESQL_DIR)/build/lib.*/* $(PYLIB_DIR)/pygresql
+	if [ `uname -s` = 'Darwin' ]; then \
+	  cp -r $(PYLIB_SRC)/$(PYGRESQL_DIR)/build/lib.macosx*/* $(PYLIB_DIR)/pygresql; \
+	else \
+	  cp -r $(PYLIB_SRC)/$(PYGRESQL_DIR)/build/lib.linux*/* $(PYLIB_DIR)/pygresql; \
+	fi
 	touch $(PYLIB_DIR)/__init__.py
 
 #
