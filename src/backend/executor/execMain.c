@@ -4810,9 +4810,9 @@ OpenIntoRel(QueryDesc *queryDesc)
 	 * CommandCounterIncrement(), so that the new tables will be visible for
 	 * insertion.
 	 */
-	AlterTableCreateToastTableWithOid(intoRelationId, false);
-	AlterTableCreateAoSegTableWithOid(intoRelationId, false);
-	AlterTableCreateAoVisimapTableWithOid(intoRelationId, false);
+	AlterTableCreateToastTable(intoRelationId, false);
+	AlterTableCreateAoSegTable(intoRelationId, false);
+	AlterTableCreateAoVisimapTable(intoRelationId, false);
 
     /* don't create AO block directory here, it'll be created when needed */
 	/*

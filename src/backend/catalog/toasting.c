@@ -47,7 +47,7 @@ static bool create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
  * to end with CommandCounterIncrement if it makes any changes.
  */
 void
-AlterTableCreateToastTableWithOid(Oid relOid, bool is_part_child)
+AlterTableCreateToastTable(Oid relOid, bool is_part_child)
 {
 	Relation	rel;
 

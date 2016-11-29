@@ -769,9 +769,9 @@ make_new_heap(Oid OIDOldHeap, const char *NewName, Oid NewTableSpace,
 	 * CommandCounterIncrement(), so that the new tables will be visible for
 	 * insertion.
 	 */
-	AlterTableCreateToastTableWithOid(OIDNewHeap, is_part);
-	AlterTableCreateAoSegTableWithOid(OIDNewHeap, is_part);
-	AlterTableCreateAoVisimapTableWithOid(OIDNewHeap, is_part);
+	AlterTableCreateToastTable(OIDNewHeap, is_part);
+	AlterTableCreateAoSegTable(OIDNewHeap, is_part);
+	AlterTableCreateAoVisimapTable(OIDNewHeap, is_part);
 
     if (createAoBlockDirectory)
 	    AlterTableCreateAoBlkdirTable(OIDNewHeap, is_part);

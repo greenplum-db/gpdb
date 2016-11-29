@@ -19,6 +19,6 @@
 #define Anum_pg_aovisimap_firstrownum   2
 #define Anum_pg_aovisimap_visimap       3
 
-extern void AlterTableCreateAoVisimapTableWithOid(Oid relOid, bool is_part_child);
+extern void AlterTableCreateAoVisimapTable(Oid relOid, bool is_part_child);
 
 #endif

@@ -3969,54 +3969,24 @@ ATRewriteCatalogs(List **wqueue)
 static void
 ATAddToastIfNeeded(List **wqueue)
 {
-
 	ListCell   *ltab;
-	int			m = 0;
-	
+
 	/*
 	 * Check to see if a toast table must be added, if we executed any
 	 * subcommands that might have added a column or changed column storage.
 	 */
 	foreach(ltab, *wqueue)
 	{
-		Oid tOid = InvalidOid;
 		AlteredTableInfo *tab = (AlteredTableInfo *) lfirst(ltab);
-		bool is_part = !rel_needs_long_lock(tab->relid);
 
 		if (tab->relkind == RELKIND_RELATION &&
 			(tab->subcmds[AT_PASS_ADD_COL] ||
 			 tab->subcmds[AT_PASS_ALTER_TYPE] ||
 			 tab->subcmds[AT_PASS_COL_ATTRS]))
 		{
-			Relation rel;
-			Oid reltablespace;
+			bool is_part = !rel_needs_long_lock(tab->relid);
 
-			/* 
-			 * Determine if we need to create a toast table.
-			 */
-			rel = heap_open(tab->relid, NoLock);
-			if (rel->rd_rel->reltoastrelid != InvalidOid)
-			{  /* Already have one */
-				heap_close(rel, NoLock);
-				continue;
-			}
-			if (!RelationNeedsToastTable(rel))
-			{  /* Don't need one */
-				heap_close(rel, NoLock);
-				continue;
-			}
-			reltablespace = rel->rd_rel->reltablespace;
-			heap_close(rel, NoLock);
-			
-			/* 
-			 * We do not currently have a toast table, but we need one.
-			 */
-
-			/* Finally create the toast table */
-			elog(DEBUG2,"Create Toast %d with Oid %u", m, tOid);
-			AlterTableCreateToastTableWithOid(tab->relid, is_part);
-			m++;
-
+			AlterTableCreateToastTable(tab->relid, is_part);
 		}
 	}
 }

@@ -22,7 +22,7 @@
 
 
 void
-AlterTableCreateAoSegTableWithOid(Oid relOid, bool is_part_child)
+AlterTableCreateAoSegTable(Oid relOid, bool is_part_child)
 {
 	TupleDesc	tupdesc;
 	Relation	rel;

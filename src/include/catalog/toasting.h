@@ -17,7 +17,7 @@
 /*
  * toasting.c prototypes
  */
-extern void AlterTableCreateToastTableWithOid(Oid relOid, bool is_part_child);
+extern void AlterTableCreateToastTable(Oid relOid, bool is_part_child);
 
 extern bool RelationNeedsToastTable(Relation rel);
 

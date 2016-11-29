@@ -980,16 +980,16 @@ ProcessUtility(Node *parsetree,
 
 						if (relKind != RELKIND_COMPOSITE_TYPE)
 						{
-							AlterTableCreateToastTableWithOid(relOid,
-															  cstmt->is_part_child);
-							AlterTableCreateAoSegTableWithOid(relOid,
-															  cstmt->is_part_child);
+							AlterTableCreateToastTable(relOid,
+													   cstmt->is_part_child);
+							AlterTableCreateAoSegTable(relOid,
+													   cstmt->is_part_child);
 
 							if (cstmt->buildAoBlkdir)
 								AlterTableCreateAoBlkdirTable(relOid, cstmt->is_part_child);
 
-							AlterTableCreateAoVisimapTableWithOid(relOid,
-																  cstmt->is_part_child);
+							AlterTableCreateAoVisimapTable(relOid,
+														   cstmt->is_part_child);
 						}
 
 						if (Gp_role == GP_ROLE_DISPATCH)
