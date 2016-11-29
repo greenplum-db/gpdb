@@ -127,7 +127,7 @@ select * from check_env;
 -- 'gpfdist' protocol
 -- --------------------------------------
 CREATE EXTERNAL WEB TABLE exttab1_gpfdist_status (x text)
-execute E'( python @bindir@/gppinggpfdist.py @hostname@:7070 2>&1 || echo) '
+execute E'( python @bindir@/lib/gppinggpfdist.py @hostname@:7070 2>&1 || echo) '
 on SEGMENT 0
 FORMAT 'text' (delimiter '|');
 CREATE EXTERNAL WEB TABLE exttab1_gpfdist_start (x text)
