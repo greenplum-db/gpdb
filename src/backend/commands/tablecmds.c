@@ -4243,27 +4243,25 @@ ATRewriteTables(List **wqueue)
 	foreach(ltab, *wqueue)
 	{
 		AlteredTableInfo *tab = (AlteredTableInfo *) lfirst(ltab);
-		Relation rel;
-		bool relisshared;
-		bool relisnailed;
+		/*
+		 * 'OldHeap' can be an AO or external table, but kept the upstream variable name
+		 * to minimize the diff.
+		 */
+		Relation	OldHeap;
 		Oid  newTableSpace;
 		Oid  oldTableSpace;
-		Oid  relNamespace;
 
 		/* We will lock the table iff we decide to actually rewrite it */
-		rel = relation_open(tab->relid, NoLock);
-		if (RelationIsExternal(rel))
+		OldHeap = relation_open(tab->relid, NoLock);
+		if (RelationIsExternal(OldHeap))
 		{
-			heap_close(rel, NoLock);
+			heap_close(OldHeap, NoLock);
 			continue;
 		}
 
-		relisshared   = rel->rd_rel->relisshared;
-		relisnailed   = rel->rd_isnailed;
-		relNamespace  = RelationGetNamespace(rel);
-		oldTableSpace = rel->rd_rel->reltablespace;
+		oldTableSpace = OldHeap->rd_rel->reltablespace;
 		newTableSpace = tab->newTableSpace ? tab->newTableSpace : oldTableSpace;
-		relstorage    = rel->rd_rel->relstorage;
+		relstorage    = OldHeap->rd_rel->relstorage;
 
 		/*
 		 * There are two cases where we will rewrite the table, for these cases
@@ -4276,22 +4274,22 @@ ATRewriteTables(List **wqueue)
 			 * relations, because we can't support changing their relfilenode
 			 * values.
 			 */
-			if (relisshared || relisnailed)
+			if (OldHeap->rd_rel->relisshared || OldHeap->rd_isnailed)
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 						 errmsg("cannot rewrite system relation \"%s\"",
-								RelationGetRelationName(rel))));
+								RelationGetRelationName(OldHeap))));
 
 			/*
 			 * Don't allow rewrite on temp tables of other backends ... their
 			 * local buffer manager is not going to cope.
 			 */
-			if (isOtherTempNamespace(relNamespace))
+			if (isOtherTempNamespace(RelationGetNamespace(OldHeap)))
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				errmsg("cannot rewrite temporary tables of other sessions")));
 		}
-		heap_close(rel, NoLock);
+		heap_close(OldHeap, NoLock);
 
 		if (tab->newvals && relstorage == RELSTORAGE_AOCOLS)
 		{
@@ -4309,8 +4307,8 @@ ATRewriteTables(List **wqueue)
 				continue;
 		}
 		/*
-		 * We only need to rewrite the table if at least one column needs to be
-		 * recomputed, or we are removing the OID column.
+		 * We only need to rewrite the table if at least one column needs to
+		 * be recomputed, or we are removing the OID column.
 		 */
 		if (tab->newvals != NIL || tab->new_dropoids)
 		{
@@ -4330,7 +4328,7 @@ ATRewriteTables(List **wqueue)
 			snprintf(NewHeapName, sizeof(NewHeapName),
 					 "pg_temp_%u", tab->relid);
 
-            List *indexIds = RelationGetIndexList(rel);
+            List *indexIds = RelationGetIndexList(OldHeap);
             OIDNewHeap = make_new_heap(tab->relid, NewHeapName, newTableSpace,
                                        list_length(indexIds) > 0);
             list_free(indexIds);
@@ -5809,15 +5807,7 @@ ATExecAddColumn(AlteredTableInfo *tab, Relation rel,
 			heap_freetuple(tuple);
 
 			/* Inform the user about the merge */
-			if (Gp_role == GP_ROLE_EXECUTE)
-			{
-				ereport(DEBUG1,
-			  (errmsg("merging definition of column \"%s\" for child \"%s\"",
-					  colDef->colname, RelationGetRelationName(rel))));
-
-			}
-			else
-			ereport(NOTICE,
+			ereport((Gp_role == GP_ROLE_EXECUTE) ? DEBUG1 : NOTICE,
 			  (errmsg("merging definition of column \"%s\" for child \"%s\"",
 					  colDef->colname, RelationGetRelationName(rel))));
 
