@@ -3167,13 +3167,12 @@ reindex_index(Oid indexId)
  *
  * Returns true if any indexes were rebuilt.  Note that a
  * CommandCounterIncrement will occur after each index rebuild.
+ *
+ * In GPDB, if 'toast_too' is true, we also reindex auxiliary AO heap
+ * tables: AO segments, AO block directory, and AO visibilitymap.
  */
 bool
-reindex_relation(Oid relid, 
-		bool toast_too, 
-		bool aoseg_too, 
-		bool aoblkdir_too,
-		bool aovisimap_too)
+reindex_relation(Oid relid, bool toast_too)
 {
 	Relation	rel;
 	Oid			toast_relid;
@@ -3266,10 +3265,10 @@ reindex_relation(Oid relid,
 	 * still hold the lock on the master table.
 	 */
 	if (toast_too && OidIsValid(toast_relid))
-		result |= reindex_relation(toast_relid, false, false, false, false);
+		result |= reindex_relation(toast_relid, false);
 
 	/* Obtain the aoseg_relid and aoblkdir_relid if the relation is an AO table. */
-	if ((aoseg_too || aoblkdir_too || aovisimap_too) && relIsAO)
+	if (toast_too && relIsAO)
 		GetAppendOnlyEntryAuxOids(relid, SnapshotNow,
 								  &aoseg_relid,
 								  &aoblkdir_relid, NULL,
@@ -3279,22 +3278,22 @@ reindex_relation(Oid relid,
 	 * If an AO rel has a secondary segment list rel, reindex that too while we
 	 * still hold the lock on the master table.
 	 */
-	if (aoseg_too && OidIsValid(aoseg_relid))
-		result |= reindex_relation(aoseg_relid, false, false, false, false);
+	if (toast_too && OidIsValid(aoseg_relid))
+		result |= reindex_relation(aoseg_relid, false);
 
 	/*
 	 * If an AO rel has a secondary block directory rel, reindex that too while we
 	 * still hold the lock on the master table.
 	 */
-	if (aoblkdir_too && OidIsValid(aoblkdir_relid))
-		result |= reindex_relation(aoblkdir_relid, false, false, false, false);
+	if (toast_too && OidIsValid(aoblkdir_relid))
+		result |= reindex_relation(aoblkdir_relid, false);
 	
 	/*
 	 * If an AO rel has a secondary visibility map rel, reindex that too while we
 	 * still hold the lock on the master table.
 	 */
-	if (aovisimap_too && OidIsValid(aovisimap_relid))
-		result |= reindex_relation(aovisimap_relid, false, false, false, false);
+	if (toast_too && OidIsValid(aovisimap_relid))
+		result |= reindex_relation(aovisimap_relid, false);
 
 	return result;
 }

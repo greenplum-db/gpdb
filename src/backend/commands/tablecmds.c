@@ -1205,7 +1205,7 @@ ExecuteTruncate(TruncateStmt *stmt)
 		/*
 		 * Reconstruct the indexes to match, and we're done.
 		 */
-		reindex_relation(heap_relid, true, true, true, true);
+		reindex_relation(heap_relid, true);
 	}
 
 	if (Gp_role == GP_ROLE_DISPATCH)
@@ -4350,7 +4350,7 @@ ATRewriteTables(List **wqueue)
 			 * which is all-new anyway).  We do not need
 			 * CommandCounterIncrement() because reindex_relation does it.
 			 */
-			reindex_relation(tab->relid, false, false, false, false);
+			reindex_relation(tab->relid, false);
 		}
 		else
 		{
@@ -12349,7 +12349,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 	}
 
 	/* now, reindex */
-	reindex_relation(tarrelid, false, false /* ao_segs ? */, false, false);
+	reindex_relation(tarrelid, false);
 
 	/* Step (g) */
 	if (Gp_role == GP_ROLE_DISPATCH)

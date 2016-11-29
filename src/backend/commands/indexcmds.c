@@ -1584,7 +1584,7 @@ ReindexRelationList(List *relids)
 			stmt->kind = OBJECT_TABLE;
 
 			/* perform reindex locally */
-			if (!reindex_relation(relid, true, true, true, true))
+			if (!reindex_relation(relid, true))
 				ereport(NOTICE,
 					(errmsg("table \"%s\" has no indexes",
 							RelationGetRelationName(rel))));
@@ -1629,7 +1629,7 @@ ReindexTable(ReindexStmt *stmt)
 	 */
 	if (Gp_role == GP_ROLE_EXECUTE)
 	{
-		reindex_relation(stmt->relid, true, true, true, true);
+		reindex_relation(stmt->relid, true);
 		return;
 	}
 

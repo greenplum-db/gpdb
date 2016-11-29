@@ -691,7 +691,7 @@ rebuild_relation(Relation OldHeap, Oid indexOid, ClusterStmt *stmt)
 	 * because the new heap won't contain any HOT chains at all, let alone
 	 * broken ones, so it can't be necessary to set indcheckxmin.
 	 */
-	reindex_relation(tableOid, false, false, false, false);
+	reindex_relation(tableOid, false);
 }
 
 /*
