@@ -809,8 +809,10 @@ TEST_F(S3KeyReaderTest, MTReadWithHundredsOfThreadsAndSignalCancel) {
 TEST(ChunkBuffer, ChunkBufferOperatorEqual) {
     string url;
     S3KeyReader reader;
-    ChunkBuffer buf1(url, reader);
-    ChunkBuffer buf2(url, reader);
+    S3MemoryContext context;
+
+    ChunkBuffer buf1(url, reader, context);
+    ChunkBuffer buf2(url, reader, context);
 
     buf1.setStatus(ReadyToRead);
     buf2.setStatus(ReadyToFill);

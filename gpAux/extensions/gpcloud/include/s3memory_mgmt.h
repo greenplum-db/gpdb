@@ -22,7 +22,9 @@ class PreAllocatedMemory {
         for (size_t i = 0; i < numOfChunk; i++) {
             chunks[i] = S3Alloc(chunkSize);
             if (chunks[i] == NULL) {
-                for (size_t j = 0; j < i; j++) S3Free(chunks[i]);
+                for (size_t j = 0; j < i; j++) {
+                    S3Free(chunks[j]);
+                }
                 S3_DIE(S3AllocationError, chunkSize);
             }
             used[i] = false;
@@ -33,7 +35,10 @@ class PreAllocatedMemory {
 
     ~PreAllocatedMemory() {
         for (size_t i = 0; i < chunks.size(); i++) {
-            S3Free(chunks[i]);
+            if (chunks[i]) {
+                S3Free(chunks[i]);
+                chunks[i] = NULL;
+            }
         }
 
         pthread_mutex_destroy(&memLock);

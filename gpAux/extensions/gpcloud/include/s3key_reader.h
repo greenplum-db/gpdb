@@ -168,7 +168,7 @@ class S3KeyReader : public Reader {
 
 class ChunkBuffer {
    public:
-    ChunkBuffer(const string& url, S3KeyReader& reader);
+    ChunkBuffer(const string& url, S3KeyReader& reader, const S3MemoryContext& context);
 
     ~ChunkBuffer();
 
@@ -235,9 +235,7 @@ class ChunkBuffer {
 
     S3VectorUInt8 chunkData;
     OffsetMgr& offsetMgr;
-
     S3Interface* s3Interface;
-
     S3KeyReader& sharedKeyReader;
 };
 
