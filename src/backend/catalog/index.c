@@ -3167,10 +3167,6 @@ reindex_index(Oid indexId)
  *
  * Returns true if any indexes were rebuilt.  Note that a
  * CommandCounterIncrement will occur after each index rebuild.
- *
- * If build_map is true, build a map of index relation OID -> new relfilenode.
- * If it is false but *oidmap is valid and we're on a QE, use the
- * new relfilenode specified in the map.
  */
 bool
 reindex_relation(Oid relid, 

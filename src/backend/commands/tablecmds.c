@@ -4349,11 +4349,6 @@ ATRewriteTables(List **wqueue)
 			 * Rebuild each index on the relation (but not the toast table,
 			 * which is all-new anyway).  We do not need
 			 * CommandCounterIncrement() because reindex_relation does it.
-			 * reindex_relation also checks for non-NULL poidmap, so we don't
-			 * need to.
-			 *	
-			 * It is not legal to reindex without dispatch of the associated
-			 * oids!
 			 */
 			reindex_relation(tab->relid, false, false, false, false);
 		}
