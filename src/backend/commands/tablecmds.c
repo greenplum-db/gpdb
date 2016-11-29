@@ -221,8 +221,8 @@ static void ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 		  bool recurse, bool recursing);
 static void ATRewriteCatalogs(List **wqueue);
 static void ATAddToastIfNeeded(List **wqueue);
-static void ATExecCmd(List **wqueue,
-					  AlteredTableInfo *tab, Relation *rel, AlterTableCmd *cmd);
+static void ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation *rel,
+		  AlterTableCmd *cmd);
 static void ATRewriteTables(List **wqueue);
 static void ATRewriteTable(AlteredTableInfo *tab, Oid OIDNewHeap);
 static void ATAocsWriteNewColumns(
@@ -1248,10 +1248,10 @@ truncate_check_rel(Relation rel)
 
 	/* Only allow truncate on regular or append-only tables */
 	if (rel->rd_rel->relkind != RELKIND_RELATION)
-			ereport(ERROR,
-					(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-					 errmsg("\"%s\" is not a table",
-							RelationGetRelationName(rel))));
+		ereport(ERROR,
+				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+				 errmsg("\"%s\" is not a table",
+						RelationGetRelationName(rel))));
 
 	if (RelationIsExternal(rel))
 		ereport(ERROR,
@@ -4025,7 +4025,8 @@ ATAddToastIfNeeded(List **wqueue)
  * ATExecCmd: dispatch a subcommand to appropriate execution routine
  */
 static void
-ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation *rel_p, AlterTableCmd *cmd)
+ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation *rel_p,
+		  AlterTableCmd *cmd)
 {
 	Relation rel = *rel_p;
 
@@ -4052,10 +4053,12 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation *rel_p, AlterTableCmd *
 			ATExecSetStorage(rel, cmd->name, cmd->def);
 			break;
 		case AT_DropColumn:		/* DROP COLUMN */
-			ATExecDropColumn(wqueue, rel, cmd->name, cmd->behavior, false, false);
+			ATExecDropColumn(wqueue, rel, cmd->name,
+							 cmd->behavior, false, false);
 			break;
 		case AT_DropColumnRecurse:		/* DROP COLUMN with recursion */
-			ATExecDropColumn(wqueue, rel, cmd->name, cmd->behavior, true, false);
+			ATExecDropColumn(wqueue, rel, cmd->name,
+							 cmd->behavior, true, false);
 			break;
 		case AT_AddIndex:		/* ADD INDEX */
 			ATExecAddIndex(tab, rel, (IndexStmt *) cmd->def, false);
@@ -4108,6 +4111,7 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation *rel_p, AlterTableCmd *
 		case AT_ResetRelOptions:		/* RESET (...) */
 			ATExecSetRelOptions(rel, (List *) cmd->def, true);
 			break;
+
 		case AT_EnableTrig:		/* ENABLE TRIGGER name */
 			ATExecEnableDisableTrigger(rel, cmd->name,
 									   TRIGGER_FIRES_ON_ORIGIN, false);
@@ -8929,7 +8933,7 @@ ATExecChangeOwner(Oid relationOid, Oid newOwnerId, bool recursing)
 		/*
 		 * Update owner dependency reference, if any.  A composite type has
 		 * none, because it's tracked for the pg_type entry instead of here;
-		 * indexes don't have their own entries either.
+		 * indexes and TOAST tables don't have their own entries either.
 		 */
 		if (tuple_class->relkind != RELKIND_COMPOSITE_TYPE &&
 			tuple_class->relkind != RELKIND_INDEX &&
@@ -15786,7 +15790,8 @@ AlterTableNamespaceInternal(Relation rel, Oid oldNspOid, Oid nspOid,
 	if (rel->rd_rel->relkind == RELKIND_RELATION)
 	{
 		AlterIndexNamespaces(classRel, rel, oldNspOid, nspOid, objsMoved);
-		AlterSeqNamespaces(classRel, rel, oldNspOid, nspOid, objsMoved, AccessExclusiveLock);
+		AlterSeqNamespaces(classRel, rel, oldNspOid, nspOid,
+						   objsMoved, AccessExclusiveLock);
 		AlterConstraintNamespaces(RelationGetRelid(rel), oldNspOid, nspOid,
 								  false, objsMoved);
 	}
@@ -15887,8 +15892,8 @@ AlterIndexNamespaces(Relation classRel, Relation rel,
 		if (!object_address_present(&thisobj, objsMoved))
 		{
 			AlterRelationNamespaceInternal(classRel, indexOid,
-			                               oldNspOid, newNspOid,
-			                               false, objsMoved);
+										   oldNspOid, newNspOid,
+										   false, objsMoved);
 			add_exact_object_address(&thisobj, objsMoved);
 		}
 	}
@@ -15909,8 +15914,8 @@ AlterSeqNamespaces(Relation classRel, Relation rel,
 				   LOCKMODE lockmode)
 {
 	Relation	depRel;
-	SysScanDesc	scan;
-	ScanKeyData	key[2];
+	SysScanDesc scan;
+	ScanKeyData key[2];
 	HeapTuple	tup;
 
 	/*
