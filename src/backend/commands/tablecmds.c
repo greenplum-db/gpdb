@@ -15,21 +15,14 @@
  */
 #include "postgres.h"
 
-#include <math.h>
-#include <fcntl.h>
-#include <locale.h>
-#include <unistd.h>
-
 #include "access/appendonlywriter.h"
 #include "access/bitmap.h"
 #include "access/genam.h"
 #include "access/hash.h"
 #include "access/heapam.h"
-#include "access/fileam.h"
 #include "access/nbtree.h"
 #include "access/reloptions.h"
 #include "access/xact.h"
-#include "access/transam.h"
 #include "catalog/catalog.h"
 #include "catalog/dependency.h"
 #include "catalog/heap.h"
@@ -44,7 +37,6 @@
 #include "catalog/pg_inherits.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_opclass.h"
-#include "catalog/pg_operator.h"
 #include "catalog/pg_tablespace.h"
 #include "catalog/pg_trigger.h"
 #include "catalog/pg_type.h"
@@ -73,7 +65,6 @@
 #include "optimizer/planner.h"
 #include "optimizer/prep.h"
 #include "parser/gramparse.h"
-#include "parser/parse_agg.h"
 #include "parser/parse_clause.h"
 #include "parser/parse_coerce.h"
 #include "parser/parse_expr.h"
@@ -103,11 +94,9 @@
 
 #include "cdb/cdbdisp.h"
 #include "cdb/cdbdisp_query.h"
-#include "cdb/cdbsrlz.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbrelsize.h"
 #include "cdb/cdboidsync.h"
-#include "cdb/cdbsreh.h"
 
 #include "cdb/cdbmirroredfilesysobj.h"
 #include "cdb/cdbmirroredbufferpool.h"
