@@ -4248,8 +4248,9 @@ ATRewriteTables(List **wqueue)
 		 * to minimize the diff.
 		 */
 		Relation	OldHeap;
-		Oid  newTableSpace;
-		Oid  oldTableSpace;
+		Oid			newTableSpace;
+		Oid 		oldTableSpace;
+		bool		hasIndexes;
 
 		/* We will lock the table iff we decide to actually rewrite it */
 		OldHeap = relation_open(tab->relid, NoLock);
@@ -4262,6 +4263,13 @@ ATRewriteTables(List **wqueue)
 		oldTableSpace = OldHeap->rd_rel->reltablespace;
 		newTableSpace = tab->newTableSpace ? tab->newTableSpace : oldTableSpace;
 		relstorage    = OldHeap->rd_rel->relstorage;
+		{
+			List	   *indexIds;
+
+			indexIds = RelationGetIndexList(OldHeap);
+			hasIndexes = (indexIds != NIL);
+            list_free(indexIds);
+		}
 
 		/*
 		 * There are two cases where we will rewrite the table, for these cases
@@ -4328,10 +4336,8 @@ ATRewriteTables(List **wqueue)
 			snprintf(NewHeapName, sizeof(NewHeapName),
 					 "pg_temp_%u", tab->relid);
 
-            List *indexIds = RelationGetIndexList(OldHeap);
             OIDNewHeap = make_new_heap(tab->relid, NewHeapName, newTableSpace,
-                                       list_length(indexIds) > 0);
-            list_free(indexIds);
+									   hasIndexes);
 
 			/*
 			 * Copy the heap data into the new table with the desired
