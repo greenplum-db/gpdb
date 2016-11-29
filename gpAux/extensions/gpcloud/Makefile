@@ -21,13 +21,13 @@ PGXS := $(shell pg_config --pgxs)
 include $(PGXS)
 
 gpcheckcloud:
-	@make -C bin/gpcheckcloud
+	@$(MAKE) -C bin/gpcheckcloud
 
 test: format
-	@make -C test test
+	@$(MAKE) -C test test
 
 coverage: format
-	@make -C test coverage
+	@$(MAKE) -C test coverage
 
 tags:
 	-ctags -R --c++-kinds=+p --fields=+ialS --extra=+q
@@ -45,9 +45,9 @@ format:
 		|| echo clang-format 4.0.0 is not found.
 
 cleanall:
-	@-make clean # incase PGXS not included
-	@-make -C bin/gpcheckcloud clean
-	@make -C test clean
+	@-$(MAKE) clean # incase PGXS not included
+	@-$(MAKE) -C bin/gpcheckcloud clean
+	@$(MAKE) -C test clean
 	rm -f *.o *.so *.a
 	rm -f *.gcov src/*.gcov src/*.gcda src/*.gcno
 	rm -f src/*.o src/*.d bin/gpcheckcloud/*.o bin/gpcheckcloud/*.d test/*.o test/*.d test/*.a lib/*.o lib/*.d
