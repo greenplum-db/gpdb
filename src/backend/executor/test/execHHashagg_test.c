@@ -126,6 +126,40 @@ test__getSpillFile__Initialize_wfile_exception(void **state)
 	assert_true(false);
 }
 
+test__destroy_agg_hash_table__leak(void **state)
+{
+	/* Dummy agg state to test for leaks */
+	AggState aggState;
+	HashAggTable *ht = palloc0(sizeof(HashAggTable));
+	aggState->hhashtable = ht;
+
+	aggState->aggcontext =
+		AllocSetContextCreate(CurrentMemoryContext,
+							  "AggContext",
+							  ALLOCSET_DEFAULT_MINSIZE,
+							  ALLOCSET_DEFAULT_INITSIZE,
+							  ALLOCSET_DEFAULT_MAXSIZE);
+
+	ht->entry_cxt = AllocSetContextCreate(aggState->aggcontext,
+			 "HashAggTableContext",
+			 ALLOCSET_DEFAULT_MINSIZE,
+			 ALLOCSET_DEFAULT_INITSIZE,
+			 ALLOCSET_DEFAULT_MAXSIZE);
+
+	ht->group_buf = mpool_create(ht->entry_cxt,
+			"GroupsAndAggs Context");
+
+	SpillSet spill_set;
+	ht->spill_set = &spill_set;
+	spill_set->num_spill_files = 2;
+	spill_set->spill_files =
+	pfree(aggstate->hhashtable->buckets);
+	pfree(aggstate->hhashtable->bloom);
+	if (aggstate->hhashtable->hashkey_buf)
+		pfree(aggstate->hhashtable->hashkey_buf);
+
+}
+
 /* ==================== main ==================== */
 int
 main(int argc, char* argv[])
