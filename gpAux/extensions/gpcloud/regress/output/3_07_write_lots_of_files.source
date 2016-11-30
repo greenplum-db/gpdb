@@ -19,7 +19,7 @@ BEGIN
                     trunc(random()::numeric, 8), trunc(random()::numeric, 8), i;
     END LOOP;
 
-    RETURN textcat(textcat('Insert ', n), ' files');
+    RETURN textcat(textcat('Insert ', n::text), ' files');
 END;
 $$ LANGUAGE 'plpgsql';
 SELECT * FROM write_lots_of_files(20);

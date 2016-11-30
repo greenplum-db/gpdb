@@ -23,7 +23,6 @@ SELECT count(*) FROM s3regress_multiple_files_with_header_line_crlf;
 -- with line terminator '\r\n' (CRLF)
 CREATE READABLE EXTERNAL TABLE s3regress_multiple_files_without_header_line_lf(date text, time text, open float, high float,
         low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/regress/csv_without_header/ config=/home/gpadmin/s3.conf') FORMAT 'csv' (NEWLINE 'LF');
-NOTICE:  HEADER means that each one of the data files has a header row.
 -- join query between a table with LF eol and the other table with CRLF eol.
 SELECT count(*) FROM s3regress_multiple_files_with_header_line_crlf crlf, s3regress_multiple_files_with_header_line_lf lf where crlf.volume = lf.volume;
  count 
