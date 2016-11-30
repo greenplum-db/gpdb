@@ -12,13 +12,12 @@ gptransfer
    { --full |
    { [-d <database1> [ -d <database2> ... ]] | 
    [-t <db.schema.table> [ -t <db1.schema1.table1> ... ]] |
-   [-f <table-file> ]
+   [-f <table-file> [--partition-transfer | --partition-transfer-non-partition-target]]
    [-T <db.schema.table> [ -T <db1.schema1.table1> ... ]]
    [-F <table-file> ] } }
    [--skip-existing | --truncate | --drop] 
    [--analyze] [--validate=<type> ] [-x] [--dry-run] 
    [--schema-only ]
-   [--partition-transfer ]
    [--no-final-count]
 
    [--source-host=<source_host> [--source-port=<source_port>] 
@@ -72,11 +71,13 @@ following types of operations:
   When you specify a destination database, the source database tables are 
   copied into the specified destination database. 
 
-  For partitioned tables, you can specify the --partition-transfer and -f
-  options to copy specific leaf child partitions of partitioned tables from
-  a source database to a destination database. The leaf child partitions are
-  the lowest level partitions of a partitioned database. If the child
-  partition is not a leaf child partition, the utility returns an error.
+  For partitioned tables, you can specify the --partition-transfer or the
+  --partitiontransfer-non-partition-target option with -f option to copy
+  specific leaf child partitions of partitioned tables from a source database.
+  The leaf child partitions are the lowest level partitions of a partitioned
+  database. For the --partition-transfer option, the destination tables are
+  leaf child partitions. For the --partition-transfer-non-partition-target
+  option, the destination tables are non-partitioned tables.
 
 If an invalid set of gptransfer options are specified, or if a specified 
 source table or database does not exist, gptransfer returns an error and 
@@ -418,6 +419,43 @@ OPTIONS
      can specify the --truncate option to truncate the table for the transfer
      operation.
 
+ --partition-transfer-non-partition-target (non-partitioned destination table)
+
+     Specify this option with the -f option to copy data from leaf child
+     partition tables of partitioned tables in a source database to non-
+     partitioned tables in a destination database. The text file specified by
+     the -f option contains a list of fully qualified leaf child partition
+     table names in the source database and non-partitioned tables names in
+     the destination database with this syntax.
+
+         src_db.src_schema.src_part_tbl, dest_db.dest_schema.dest_tbl
+
+     Wildcard characters are not supported in the fully qualified table names.
+     The destination tables must exist, and both source and destination table
+     names are required in the file. If a source table is not a leaf child 
+     partition table or a destination table is not a nonpartitioned table, the
+     utility returns an error and no data are transferred. If the source and
+     destination Greenplum Database systems are the same, you must specify a
+     destination table where at least one of the following must be different
+     between the source and destination table: db_name, schema, or table. For
+     the partitioned table in the source database and the table in the
+     destination database, the number of table columns and the order of the
+     column data types must be the same (the source and destination table 
+     column names can be different). The same destination table can be
+     specified in the file for multiple source leaf child partition tables that
+     belong to a single partitioned table. Transferring data from source leaf
+     child partition tables that belong to different partitioned tables to a
+     single nonpartitioned table is not supported.
+
+      This option is not valid with these options: -d, --dest-database, --drop,
+     -F, --full, --schema-only, -T, -t, --truncate, --validate.
+
+     Note: If the data in the source or destination table changes during a
+     transfer operation (rows are inserted or deleted), the table row count
+     validation fails due to row count mismatch.
+
+     You can specify the -x option to acquire exclusive locks on the tables
+     during a transfer operation.
 
 -F <table-file> 
 
@@ -472,8 +510,8 @@ OPTIONS
  --source-map-file option, the --dest-host option, and if necessary, the 
  other destination system options. 
 
- The --full option cannot be specified with the -t, -d, -f, or
- --partition-transfer options.
+ The --full option cannot be specified with the -t, -d, -f, 
+ --partition-transfer, or --partition-transfer-non-partition-target options.
 
  A full migration copies all database objects including, tables, indexes, 
  views, users, roles, functions, and resource queues for all user defined 
