@@ -58,7 +58,7 @@ static void spinOffThreads(PGconn *pConn, InputOptions * pInputOpts, const Segme
 			   ThreadParmArray * pParmAr);
 static void *threadProc(void *arg);
 static bool testPartitioningSupport(void);
-static bool transformPassThroughParms(InputOptions * pInputOpts);
+static void transformPassThroughParms(InputOptions * pInputOpts);
 static bool copyFilesToSegments(InputOptions * pInputOpts, SegmentDatabaseArray *segDBAr);
 static int	getRemoteVersion(void);
 static bool no_expand_children; /* Do not expand child partitions. This option is passed from gpcrondump */
@@ -193,8 +193,7 @@ main(int argc, char **argv)
 	 * make changes and verifications (if any) needed to be made before
 	 * shipping options to the agents
 	 */
-	if (!transformPassThroughParms(&inputOpts))
-		goto cleanup;
+	transformPassThroughParms(&inputOpts);
 
 	/*
 	 * Copy necessary files to segments (from --table-file / -- exclude-table-file options)
@@ -375,15 +374,13 @@ addChildrenToPassThrough(InputOptions *pInputOpts, char opt, SimpleOidList list)
 }
 
 /*
- * Any transformation of the input options that is passed down to the segdb dump
- * agents should be done in here.
+ * Any transformation of the input options that is passed down to the segdb
+ * dump agents should be done in here.
  *
- * For now, there's only a partitioning related transformation, see addChildrenToPassThrough
- * for more information.
- *
- * returns 'false' if error was reported. 'true' otherwise.
+ * For now, there's only a partitioning related transformation, see
+ * addChildrenToPassThrough for more information.
  */
-static bool
+static void
 transformPassThroughParms(InputOptions *pInputOpts)
 {
 
@@ -391,16 +388,9 @@ transformPassThroughParms(InputOptions *pInputOpts)
 
 	if (shouldExpandChildren(g_gp_supportsPartitioning, no_expand_children))
 	{
-
-/*		if(!isChildSelected('t', table_include_oids) || */
-/*		   !isChildSelected('T', table_exclude_oids)) */
-/*			return false; */
-
 		addChildrenToPassThrough(pInputOpts, 't', table_include_oids);
 		addChildrenToPassThrough(pInputOpts, 'T', table_exclude_oids);
 	}
-
-	return true;
 }
 
 /*
