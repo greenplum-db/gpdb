@@ -1993,6 +1993,12 @@ void destroy_agg_hash_table(AggState *aggstate)
 
 		closeSpillFiles(aggstate, aggstate->hhashtable->spill_set);
 
+		if (NULL != aggstate->hhashtable->spill_set)
+		{
+			pfree(aggstate->hhashtable->spill_set);
+			aggstate->hhashtable->spill_set = NULL;
+		}
+
 		if (NULL != aggstate->hhashtable->work_set)
 		{
 			workfile_mgr_close_set(aggstate->hhashtable->work_set);
