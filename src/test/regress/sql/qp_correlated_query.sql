@@ -329,6 +329,10 @@ insert into C values(2,7);
 select b from qp_csq_t1 where exists(select * from qp_csq_t2 where y=a);
 select A.i from A where exists(select B.i from B where A.i = B.i) order by A.i;
 
+-- with CTE 
+with t as (select 1) select b from qp_csq_t1 where exists(select * from qp_csq_t2 where y=a);
+with t as (select * from qp_csq_t2) select b from qp_csq_t1 where exists(select * from t where y=a);
+
 -- Not supported select A.i, B.i, C.j from A, B, C where exists (select C.j from C where C.j = A.j and exists (select C.i from C where C.i = A.i and C.i !=10)) order by A.i, B.i, C.j limit 20;
 select * from A where exists (select * from C where C.j = A.j) order by 1,2;
 select * from A where exists (select * from C,B where C.j = A.j and exists (select * from C where C.i = B.i)) order by 1,2;

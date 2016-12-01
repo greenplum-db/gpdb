@@ -28,6 +28,8 @@
 #include "lib/stringinfo.h"
 #include "cdb/cdbpullup.h"
 
+extern bool is_simple_subquery(PlannerInfo *root, Query *subquery);
+
 static Node *convert_IN_to_antijoin(PlannerInfo *root, List **rtrlist_inout, SubLink *sublink);
 
 static int	add_expr_subquery_rte(Query *parse, Query *subselect);
@@ -901,6 +903,15 @@ convert_EXISTS_to_join(PlannerInfo *root, List **rtrlist_inout, SubLink *sublink
 	 */
 	if (IsSubqueryMultiLevelCorrelated(subselect))
 		return (Node *) sublink;
+
+	/*
+	* Don't remove the sublink if we cannot pull-up the subquery
+	* later during pull_up_simple_subquery()
+	*/
+	if (!is_simple_subquery(root, subselect))
+	{
+		   return (Node *) sublink;
+	}
 
 	/*
 	 * 'LIMIT n' makes EXISTS false when n <= 0, and doesn't affect the
