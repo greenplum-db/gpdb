@@ -2881,7 +2881,7 @@ gp_write_pipe_chunk(const char *buffer, int len)
 }
 
 /*
- * Append a string (termniated by '\0') to the GpPipeProtoChunk.
+ * Append a string (terminated by '\0') to the GpPipeProtoChunk.
  *
  * If GpPipeProtoChunk does not have space for the given string,
  * this function appends enough data to fill the buffer, and

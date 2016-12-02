@@ -7288,7 +7288,7 @@ StartupXLOG(void)
 		 *   performed by this backend.
 		 *
 		 *   3. At the beginning of pass 2, we are initializing
-		 *   catlaog cache, see StartupProcessMain()
+		 *   catalog cache, see StartupProcessMain()
 		 */
 		if (IsUnderPostmaster)
 			InitCatalogCache();
@@ -11226,7 +11226,7 @@ StartupProcessMain(int passNum)
 	case 2:
 	case 4:
 		/*
-		 * NOTE: The following initialization logic was borrrowed from ftsprobe.
+		 * NOTE: The following initialization logic was borrowed from ftsprobe.
 		 */
 		SetProcessingMode(InitProcessing);
 
