@@ -4,4 +4,4 @@ image_resource:
 inputs:
   - name: gpdb_src
 run:
-  path: gpdb_src/concourse/scripts/compile_gpdb_custom_config.bash
+  path: gpdb_src/mgmt/concourse/scripts/compile_gpdb_custom_config.bash

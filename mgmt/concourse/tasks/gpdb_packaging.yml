@@ -8,7 +8,7 @@ inputs:
 outputs:
   - name: packaged_gpdb
 run:
-  path: gpdb_src/concourse/scripts/gpdb_packaging.bash
+  path: gpdb_src/mgmt/concourse/scripts/gpdb_packaging.bash
 params:
   INSTALL_SCRIPT_SRC: gpaddon/license/REPLACE_IN_PIPELINE_installer-header-foraspecificOS.sh
   GPDB_TARGZ: bin_gpdb/bin_gpdb.tar.gz

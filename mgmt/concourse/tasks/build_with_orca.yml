@@ -5,20 +5,17 @@ image_resource:
     repository: yolo/gpdbdev
     tag: centos6
 inputs:
-  - name: gpdb_src
   - name: bin_orca
   - name: bin_gpos
   - name: bin_xerces
-  - name: bin_gpdb
+  - name: gpdb_src
 outputs:
-  - name: icg_output
+  - name: bin_gpdb
 run:
-  path: gpdb_src/concourse/scripts/test_gpdb.py
+  path: gpdb_src/mgmt/concourse/scripts/build_gpdb.py
   args:
-    - --mode=planner
-    - --gpdb_name=bin_gpdb
+    - --mode=orca
+    - --output_dir=bin_gpdb/install
     - bin_orca
     - bin_gpos
     - bin_xerces
-params:
-  BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"

@@ -2,20 +2,19 @@
 ## resources
 ## ======================================================================
 
+resource_types:
+  - name: pull_request_with_submodule
+    type: docker-image
+    source:
+      repository: jtarchie/pr
+
 resources:
   - name: gpdb_pr
-    type: git
+    type: pull_request_with_submodule
     source:
-      branch: {{gpdb-git-branch}}
+      repo: greenplum-db/gpdb
+      access_token: {{gpdb-git-access-token}}
       private_key: {{gpdb-git-key}}
-      uri: {{gpdb-git-remote}}
-
-  - name: gpaddon_src
-    type: git
-    source:
-      branch: {{gpaddon-git-branch}}
-      private_key: {{gpdb-git-key}}
-      uri: {{gpaddon-git-remote}}
 
   - name: centos67-gpdb-gcc6-llvm-image
     type: docker-image
@@ -28,57 +27,72 @@ resources:
     type: s3
     source:
       access_key_id: {{bucket-access-key-id}}
-      bucket: {{dev-bucket-name}}
+      bucket: {{bucket-name}}
       region_name: {{aws-region}}
       secret_access_key: {{bucket-secret-access-key}}
       versioned_file: gpdb_pr/sync_tools_gpdb/sync_tools_gpdb.tar.gz
-
-  - name: bin_gpdb_centos
-    type: s3
-    source:
-      access_key_id: {{bucket-access-key-id}}
-      bucket: {{dev-bucket-name}}
-      region_name: {{aws-region}}
-      secret_access_key: {{bucket-secret-access-key}}
-      versioned_file: gpdb_pr/gpdb_artifacts/bin_gpdb.tar.gz
 
   - name: installer_rhel6_gpdb_rc
     type: s3
     source:
       access_key_id: {{bucket-access-key-id}}
-      bucket: {{dev-bucket-name}}
+      bucket: {{bucket-name}}
       region_name: {{aws-region}}
       secret_access_key: {{bucket-secret-access-key}}
-      versioned_file: deliverables/greenplum-db-4.3.99.0-build-1-rhel6-x86_64.zip
+      versioned_file: gpdb_pr/deliverables/greenplum-db-4.3.99.0-build-1-rhel6-x86_64.zip
 
   - name: installer_rhel6_gpdb_rc_md5
     type: s3
     source:
       access_key_id: {{bucket-access-key-id}}
-      bucket: {{dev-bucket-name}}
+      bucket: {{bucket-name}}
       region_name: {{aws-region}}
       secret_access_key: {{bucket-secret-access-key}}
-      versioned_file: deliverables/greenplum-db-4.3.99.0-build-1-rhel6-x86_64.zip.md5
+      versioned_file: gpdb_pr/deliverables/greenplum-db-4.3.99.0-build-1-rhel6-x86_64.zip.md5
 
   - name: qautils_rhel6_tarball
     type: s3
     source:
       access_key_id: {{bucket-access-key-id}}
-      bucket: {{dev-bucket-name}}
+      bucket: {{bucket-name}}
       region_name: {{aws-region}}
       secret_access_key: {{bucket-secret-access-key}}
-      versioned_file: deliverables/QAUtils-rhel6-x86_64.tar.gz
+      versioned_file: gpdb_pr/deliverables/QAUtils-rhel6-x86_64.tar.gz
+
+  - name: gpaddon_src
+    type: git
+    source:
+      branch: {{gpaddon-git-branch}}
+      private_key: {{gpdb-git-key}}
+      uri: {{gpaddon-git-remote}}
+
+  - name: bin_gpdb_centos
+    type: s3
+    source:
+      access_key_id: {{bucket-access-key-id}}
+      bucket: {{bucket-name}}
+      region_name: {{aws-region}}
+      secret_access_key: {{bucket-secret-access-key}}
+      versioned_file: gpdb_pr/gpdb_artifacts/bin_gpdb.tar.gz
 
 jobs:
   - name: compile_gpdb_centos6
     plan:
     - aggregate:
       - get: gpdb_pr
+        tags: ["worker-one"]
         trigger: true
       - get: centos67-gpdb-gcc6-llvm-image
+        tags: ["worker-one"]
+    - put: gpdb_pr
+      tags: ["worker-one"]
+      params:
+        path: gpdb_pr
+        status: pending
     - task: compile_gpdb
-      file: gpdb_pr/concourse/tasks/compile_gpdb.yml
+      file: gpdb_pr/mgmt/concourse/tasks/compile_gpdb.yml
       image: centos67-gpdb-gcc6-llvm-image
+      tags: ["worker-one"]
       input_mapping:
         gpdb_src: gpdb_pr
       params:
@@ -89,11 +103,18 @@ jobs:
         TARGET_OS: centos
         TARGET_OS_VERSION: 6
         BLD_TARGETS: ""
+      on_failure:
+        put: gpdb_pr
+        params:
+          path: gpdb_pr
+          status: failure
     - aggregate:
       - put: bin_gpdb_centos
+        tags: ["worker-one"]
         params:
           file: gpdb_artifacts/bin_gpdb.tar.gz
       - put: sync_tools_gpdb_centos
+        tags: ["worker-one"]
         params:
           file: sync_tools_gpdb/sync_tools_gpdb.tar.gz
 
@@ -102,31 +123,44 @@ jobs:
     plan:
     - aggregate:
       - get: gpdb_pr
+        tags: ["worker-two"]
         trigger: true
       - get: centos67-gpdb-gcc6-llvm-image
+        tags: ["worker-two"]
     - task: compile_gpdb
-      file: gpdb_pr/concourse/tasks/compile_gpdb_custom_config.yml
+      file: gpdb_pr/mgmt/concourse/tasks/compile_gpdb_custom_config.yml
       image: centos67-gpdb-gcc6-llvm-image
+      tags: ["worker-two"]
       input_mapping:
         gpdb_src: gpdb_pr
+      on_failure:
+        put: gpdb_pr
+        params:
+          path: gpdb_pr
+          status: failure
 
   # Stage 2: IC Tests
   - name: icg_planner_centos6
     plan:
     - aggregate:
       - get: gpdb_pr
+        tags: ["worker-pr"]
         passed: [compile_gpdb_centos6]
       - get: sync_tools_gpdb_centos
+        tags: ["worker-pr"]
         resource: sync_tools_gpdb_centos
         passed: [compile_gpdb_centos6]
       - get: bin_gpdb
+        tags: ["worker-pr"]
         resource: bin_gpdb_centos
         passed: [compile_gpdb_centos6]
         trigger: true
       - get: centos67-gpdb-gcc6-llvm-image
+        tags: ["worker-pr"]
     - task: ic_gpdb
-      file: gpdb_pr/concourse/tasks/ic_gpdb.yml
+      file: gpdb_pr/mgmt/concourse/tasks/ic_gpdb.yml
       image: centos67-gpdb-gcc6-llvm-image
+      tags: ["worker-pr"]
       input_mapping:
         gpdb_src: gpdb_pr
       params:
@@ -134,47 +168,67 @@ jobs:
         BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
         TEST_OS: centos
       timeout: 2h30m
+      on_success:
+        put: gpdb_pr
+        tags: ["worker-pr"]
+        params:
+          path: gpdb_pr
+          status: success
+      on_failure:
+        put: gpdb_pr
+        tags: ["worker-pr"]
+        params:
+          path: gpdb_pr
+          status: failure
 
   # Stage 3: Packaging
-
   - name: gpdb_rc_packaging_centos
     serial: true
     plan:
     - aggregate:
       - get: gpdb_pr
+        tags: ["worker-three"]
         passed: [icg_planner_centos6]
-      - get: gpaddon_src
       - get: bin_gpdb
+        tags: ["worker-three"]
         resource: bin_gpdb_centos
         passed: [icg_planner_centos6]
         trigger: true
       - get: centos67-gpdb-gcc6-llvm-image
+        tags: ["worker-three"]
+      - get: gpaddon_src
+        tags: ["worker-three"]
     - task: separate_qautils_files_for_rc
-      file: gpdb_src/concourse/separate_qautils_files_for_rc.yml
+      file: gpdb_pr/mgmt/concourse/tasks/separate_qautils_files_for_rc.yml
       image: centos67-gpdb-gcc6-llvm-image
+      input_mapping:
+        gpdb_src: gpdb_pr
+      tags: ["worker-three"]
       params:
         QAUTILS_TARBALL: rc_bin_gpdb/QAUtils-rhel6-x86_64.tar.gz
-    - aggregate:
-      - task: gpdb_rc_packaging_centos
-        file: gpdb_src/concourse/gpdb_packaging.yml
-        input_mapping:
-          gpdb_src: gpdb_pr
-        image: centos67-gpdb-gcc6-llvm-image
-        input_mapping:
-          bin_gpdb: rc_bin_gpdb
-        output_mapping:
-          packaged_gpdb: packaged_gpdb_rc
-        params:
-          INSTALL_SCRIPT_SRC: gpdb_src/gpAux/addon/license/installer-header-rhel-gpdb.sh
-          INSTALLER_ZIP: packaged_gpdb/greenplum-db-4.3.99.0-build-1-rhel6-x86_64.zip
-          ADD_README_INSTALL: true
+    - task: gpdb_rc_packaging_centos
+      file: gpdb_pr/mgmt/concourse/tasks/gpdb_packaging.yml
+      image: centos67-gpdb-gcc6-llvm-image
+      tags: ["worker-three"]
+      input_mapping:
+        bin_gpdb: rc_bin_gpdb
+        gpdb_src: gpdb_pr
+      output_mapping:
+        packaged_gpdb: packaged_gpdb_rc
+      params:
+        INSTALL_SCRIPT_SRC: gpdb_src/gpAux/addon/license/installer-header-rhel-gpdb.sh
+        INSTALLER_ZIP: packaged_gpdb/greenplum-db-4.3.99.0-build-1-rhel6-x86_64.zip
+        ADD_README_INSTALL: true
     - aggregate:
       - put: installer_rhel6_gpdb_rc
+        tags: ["worker-three"]
         params:
           file: packaged_gpdb_rc/greenplum-db-4.3.99.0-build-1-rhel6-x86_64.zip
       - put: installer_rhel6_gpdb_rc_md5
+        tags: ["worker-three"]
         params:
           file: packaged_gpdb_rc/greenplum-db-4.3.99.0-build-1-rhel6-x86_64.zip.md5
       - put: qautils_rhel6_tarball
+        tags: ["worker-three"]
         params:
           file: rc_bin_gpdb/QAUtils-rhel6-x86_64.tar.gz

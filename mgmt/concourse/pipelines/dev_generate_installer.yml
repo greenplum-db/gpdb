@@ -84,7 +84,7 @@ jobs:
       trigger: true
     - get: centos67-gpdb-gcc6-llvm-image
   - task: compile_gpdb
-    file: gpdb_src/concourse/tasks/compile_gpdb.yml
+    file: gpdb_src/mgmt/concourse/tasks/compile_gpdb.yml
     image: centos67-gpdb-gcc6-llvm-image
     params:
       IVYREPO_HOST: {{ivyrepo_host}}
@@ -112,13 +112,13 @@ jobs:
       trigger: true
     - get: centos67-gpdb-gcc6-llvm-image
   - task: separate_qautils_files_for_rc
-    file: gpdb_src/concourse/tasks/separate_qautils_files_for_rc.yml
+    file: gpdb_src/mgmt/concourse/tasks/separate_qautils_files_for_rc.yml
     image: centos67-gpdb-gcc6-llvm-image
     params:
       QAUTILS_TARBALL: rc_bin_gpdb/QAUtils-rhel6-x86_64.tar.gz
 
   - task: gpdb_src_tinc_packaging
-    file: gpdb_src/concourse/tasks/gpdb_src_tinc_packaging.yml
+    file: gpdb_src/mgmt/concourse/tasks/gpdb_src_tinc_packaging.yml
     image: centos67-gpdb-gcc6-llvm-image
     output_mapping:
       rc_bin_gpdb: packaged_gpdb_src_tinc
@@ -127,7 +127,7 @@ jobs:
 
   - aggregate:
     - task: gpdb_rc_packaging_centos
-      file: gpdb_src/concourse/tasks/gpdb_packaging.yml
+      file: gpdb_src/mgmt/concourse/tasks/gpdb_packaging.yml
       image: centos67-gpdb-gcc6-llvm-image
       input_mapping:
         bin_gpdb: rc_bin_gpdb

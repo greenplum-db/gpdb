@@ -13,7 +13,7 @@ inputs:
 outputs:
   - name: icg_output
 run:
-  path: gpdb_src/concourse/scripts/test_gpdb.py
+  path: gpdb_src/mgmt/concourse/scripts/test_gpdb.py
   args:
     - --mode=orca
     - --gpdb_name=bin_gpdb

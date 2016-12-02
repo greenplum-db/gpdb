@@ -16,7 +16,7 @@ def install_gpdb(dependency_name):
     return status
 
 def create_gpadmin_user():
-    status = subprocess.call("gpdb_src/concourse/scripts/setup_gpadmin_user.bash")
+    status = subprocess.call("gpdb_src/mgmt/concourse/scripts/setup_gpadmin_user.bash")
     if status:
         return status
 

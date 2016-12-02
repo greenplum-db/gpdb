@@ -40,7 +40,7 @@ function _main() {
     fi
 
     time install_gpdb
-    time ./gpdb_src/concourse/scripts/setup_gpadmin_user.bash "$TEST_OS"
+    time ./gpdb_src/mgmt/concourse/scripts/setup_gpadmin_user.bash "$TEST_OS"
 
     #set the connection limit to 250 and segment pairs to 2 for TINC tests
     export DEFAULT_QD_MAX_CONNECT=250
