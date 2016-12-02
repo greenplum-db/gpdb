@@ -67,3 +67,6 @@ fly -t gpdb set-pipeline -c /tmp/pipeline.yml -p NEW_PIPELINE_NAME
 
 ### Updating This README
 Changes should be proposed to this contract with a PR.
+
+# Triggering pulse projects
+Use `gpdb5-pulse-worker` tag to invoke the job to trigger and monitor Pulse projects 
