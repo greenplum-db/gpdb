@@ -36,7 +36,7 @@ class PulseBuildResult
     puts "\n=== Artifacts ===\n"
     @build_artifacts.each do |artifact|
       artifact_name = artifact["name"]
-      next unless (artifact_name =~ /\.log/ || artifact_name =~ /\.out/)
+      next unless (artifact_name =~ /\.log/ || artifact_name =~ /\.out/ || artifact_name =~ /output\.txt/)
 
       # convert "Test Results (results.log) into 'results.log'"
       artifact_name.gsub!(/.*\((.*)\)/) { |match| "#{$1}" }
