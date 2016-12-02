@@ -10,7 +10,7 @@ inputs:
 outputs:
   - name: package_tarball
 run:
-  path: gpdb_src/concourse/scripts/package_tarball.bash
+  path: gpdb_src/mgmt/concourse/scripts/package_tarball.bash
 params:
   src_root: bin_gpdb/install
   dst_tarball: package_tarball/bin_gpdb.tar.gz
