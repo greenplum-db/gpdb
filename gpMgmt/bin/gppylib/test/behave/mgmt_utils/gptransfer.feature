@@ -626,6 +626,8 @@ Feature: gptransfer tests
         Then gptransfer should return a return code of 2
         And gptransfer should print Invalid fully qualified table name to stdout
 
+    # this test creates an incomplete map file by *removing* the first line from the source map file.
+    # If you have only 1 segment, you will be left with an empty hosts map, and this test will fail
     @T339837
     Scenario: gptransfer incomplete map file
         Given the database is running

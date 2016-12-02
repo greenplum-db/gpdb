@@ -729,6 +729,19 @@ class GpTransfer(GpTestCase):
                                                 "must share the same parent"):
             self.subject.GpTransfer(Mock(**options), []).run()
 
+    def test__validating_transfer_with_empty_source_map_file_raises_proper_exception(self):
+        options = self.setup_partition_to_normal_validation()
+
+        source_map_filename = tempfile.NamedTemporaryFile(dir=self.TEMP_DIR, delete=False)
+        source_map_filename.write("")
+        source_map_filename.flush()
+        options.update(
+            source_map_file=source_map_filename.name
+        )
+
+        with self.assertRaisesRegexp(Exception, "No hosts in map"):
+            self.subject.GpTransfer(Mock(**options), [])
+
     ####################################################################################################################
     # End of tests, start of private methods/objects
     ####################################################################################################################

@@ -2461,6 +2461,8 @@ class GpTransfer(object):
         else:
             self._validator_class = None
 
+        self._validate_host_map()
+
         # Get number of gpfdists per source host
         source_host_count = len(self._host_map.keys())
         self._gpfdist_instance_count = \
@@ -2469,8 +2471,6 @@ class GpTransfer(object):
 
         # validate options
         self._post_validate_options()
-
-        self._validate_host_map()
 
         self._validate_table_transfer_set()
         if self._options.partition_transfer or self._options.partition_transfer_non_pt_target:
