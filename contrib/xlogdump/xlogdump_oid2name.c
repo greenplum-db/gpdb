@@ -292,7 +292,7 @@ getDbName(uint32 dbid, char *buf, size_t buflen)
 		 * in order to retrieve object names (tables, indexes, ...)
 		 * at the next step, particularly in getRelName().
 		 */
-		strncpy(dbName, buf, sizeof(dbName));
+		strlcpy(dbName, buf, sizeof(dbName));
 	}
 
 	return buf;

@@ -255,7 +255,7 @@ getSpaceName(uint32 space)
 		lastSpcOid = space;
 		if(PQntuples(res) > 0)
 		{
-			strcpy(spaceName, PQgetvalue(res, 0, 0));
+			strlcpy(spaceName, PQgetvalue(res, 0, 0), sizeof(spaceName));
 			return;
 		}
 	}
@@ -289,7 +289,7 @@ getDbName(uint32 db)
 		lastDbOid = db;
 		if(PQntuples(res) > 0)
 		{
-			strcpy(dbName, PQgetvalue(res, 0, 0));
+			strlcpy(dbName, PQgetvalue(res, 0, 0), sizeof(dbName));
 
 			// Database changed makes new connection
 			PQfinish(lastDbConn);
@@ -332,7 +332,7 @@ getRelName(uint32 relid)
 		lastRelOid = relid;
 		if(PQntuples(res) > 0)
 		{
-			strcpy(relName, PQgetvalue(res, 0, 0));
+			strlcpy(relName, PQgetvalue(res, 0, 0), sizeof(relName));
 			/* copy the oid since it could be different from relfilenode */
 			lastRelOid = (uint32) atoi(PQgetvalue(res, 0, 1));
 			return;
