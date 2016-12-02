@@ -110,7 +110,7 @@ jobs:
       trigger: true
     - get: centos67-gpdb-gcc6-llvm-image
   - task: compile_gpdb
-    file: gpdb_src/concourse/compile_gpdb.yml
+    file: gpdb_src/mgmt/concourse/compile_gpdb.yml
     image: centos67-gpdb-gcc6-llvm-image
     params:
       IVYREPO_HOST: {{ivyrepo_host}}
@@ -137,7 +137,7 @@ jobs:
       trigger: true
     - get: centos67-gpdb-gcc6-llvm-image
   - task: compile_gpdb
-    file: gpdb_src/concourse/compile_gpdb_custom_config.yml
+    file: gpdb_src/mgmt/concourse/compile_gpdb_custom_config.yml
     image: centos67-gpdb-gcc6-llvm-image
 
 - name: compile_gpdb_centos7
@@ -148,7 +148,7 @@ jobs:
       trigger: true
     - get: centos72-gpdb-gcc6-llvm-image
   - task: compile_gpdb
-    file: gpdb_src/concourse/compile_gpdb.yml
+    file: gpdb_src/mgmt/concourse/compile_gpdb.yml
     image: centos72-gpdb-gcc6-llvm-image
     params:
       IVYREPO_HOST: {{ivyrepo_host}}
@@ -175,7 +175,7 @@ jobs:
       trigger: true
     - get: centos67-gpdb-gcc6-llvm-image
   - task: ic_gpdb
-    file: gpdb_src/concourse/ic_gpdb.yml
+    file: gpdb_src/mgmt/concourse/ic_gpdb.yml
     image: centos67-gpdb-gcc6-llvm-image
     params:
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off -c codegen=off' installcheck-good
@@ -197,7 +197,7 @@ jobs:
       trigger: true
     - get: centos67-gpdb-gcc6-llvm-image
   - task: ic_gpdb
-    file: gpdb_src/concourse/ic_gpdb.yml
+    file: gpdb_src/mgmt/concourse/ic_gpdb.yml
     image: centos67-gpdb-gcc6-llvm-image
     params:
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on -c codegen=off' installcheck-good
@@ -219,7 +219,7 @@ jobs:
       trigger: true
     - get: centos67-gpdb-gcc6-llvm-image
   - task: ic_gpdb
-    file: gpdb_src/concourse/ic_gpdb.yml
+    file: gpdb_src/mgmt/concourse/ic_gpdb.yml
     image: centos67-gpdb-gcc6-llvm-image
     params:
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off -c codegen=on' installcheck-good
@@ -241,7 +241,7 @@ jobs:
       trigger: true
     - get: centos67-gpdb-gcc6-llvm-image
   - task: ic_gpdb
-    file: gpdb_src/concourse/ic_gpdb.yml
+    file: gpdb_src/mgmt/concourse/ic_gpdb.yml
     image: centos67-gpdb-gcc6-llvm-image
     params:
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on -c codegen=on' installcheck-good
@@ -263,7 +263,7 @@ jobs:
       trigger: true
     - get: centos67-gpdb-gcc6-llvm-image
   - task: ic_gpdb
-    file: gpdb_src/concourse/ic_gpdb.yml
+    file: gpdb_src/mgmt/concourse/ic_gpdb.yml
     image: centos67-gpdb-gcc6-llvm-image
     params:
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off -c codegen=off' installcheck-bugbuster
@@ -285,7 +285,7 @@ jobs:
       trigger: true
     - get: centos67-gpdb-gcc6-llvm-image
   - task: ic_gpdb
-    file: gpdb_src/concourse/ic_gpdb.yml
+    file: gpdb_src/mgmt/concourse/ic_gpdb.yml
     image: centos67-gpdb-gcc6-llvm-image
     params:
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on -c codegen=off' installcheck-bugbuster
@@ -307,7 +307,7 @@ jobs:
       trigger: true
     - get: centos67-gpdb-gcc6-llvm-image
   - task: ic_gpdb
-    file: gpdb_src/concourse/ic_gpdb.yml
+    file: gpdb_src/mgmt/concourse/ic_gpdb.yml
     image: centos67-gpdb-gcc6-llvm-image
     params:
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off -c codegen=on' installcheck-bugbuster
@@ -329,7 +329,7 @@ jobs:
       trigger: true
     - get: centos67-gpdb-gcc6-llvm-image
   - task: ic_gpdb
-    file: gpdb_src/concourse/ic_gpdb.yml
+    file: gpdb_src/mgmt/concourse/ic_gpdb.yml
     image: centos67-gpdb-gcc6-llvm-image
     params:
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on -c codegen=on' installcheck-bugbuster
@@ -351,13 +351,13 @@ jobs:
       trigger: true
     - get: centos67-gpdb-gcc6-llvm-image
   - task: separate_qautils_files_for_rc
-    file: gpdb_src/concourse/separate_qautils_files_for_rc.yml
+    file: gpdb_src/mgmt/concourse/separate_qautils_files_for_rc.yml
     image: centos67-gpdb-gcc6-llvm-image
     params:
       QAUTILS_TARBALL: rc_bin_gpdb/QAUtils-rhel6-x86_64.tar.gz
   - aggregate:
     - task: gpdb_rc_packaging_centos
-      file: gpdb_src/concourse/gpdb_packaging.yml
+      file: gpdb_src/mgmt/concourse/gpdb_packaging.yml
       image: centos67-gpdb-gcc6-llvm-image
       input_mapping:
         bin_gpdb: rc_bin_gpdb
@@ -368,7 +368,7 @@ jobs:
         INSTALLER_ZIP: packaged_gpdb/greenplum-db-4.3.99.0-build-1-rhel6-x86_64.zip
         ADD_README_INSTALL: true
     - task: gpdb_appliance_rhel6_rc_packaging
-      file: gpdb_src/concourse/gpdb_packaging.yml
+      file: gpdb_src/mgmt/concourse/gpdb_packaging.yml
       image: centos67-gpdb-gcc6-llvm-image
       input_mapping:
         bin_gpdb: rc_bin_gpdb

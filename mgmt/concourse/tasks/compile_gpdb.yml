@@ -7,7 +7,7 @@ outputs:
   - name: gpdb_artifacts
   - name: sync_tools_gpdb
 run:
-  path: gpdb_src/concourse/scripts/compile_gpdb.bash
+  path: gpdb_src/mgmt/concourse/scripts/compile_gpdb.bash
 params:
   TARGET_OS:
   TARGET_OS_VERSION:

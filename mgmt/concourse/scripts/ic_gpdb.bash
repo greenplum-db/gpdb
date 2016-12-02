@@ -40,7 +40,7 @@ function gen_env(){
 }
 
 function setup_gpadmin_user() {
-    ./gpdb_src/concourse/scripts/setup_gpadmin_user.bash "$TEST_OS"
+    ./gpdb_src/mgmt/concourse/scripts/setup_gpadmin_user.bash "$TEST_OS"
 }
 
 function _main() {
