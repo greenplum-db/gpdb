@@ -36,7 +36,7 @@ class PulseBuildResult
     puts "\n=== Artifacts ===\n"
     @build_artifacts.each do |artifact|
       artifact_name = artifact["name"]
-      next unless artifact_name =~ /\.log/
+      next unless (artifact_name =~ /\.log/ || artifact_name =~ /\.out/)
 
       # convert "Test Results (results.log) into 'results.log'"
       artifact_name.gsub!(/.*\((.*)\)/) { |match| "#{$1}" }
@@ -69,11 +69,11 @@ class PulseBuildResult
     }
     color_code = 37
     case message
-    when /\|PASS|ms ... ok/
+    when /\|PASS|Scenario:|ms ... ok/
       color_code = colors[:green]
     when /ms ... skipped|Ran \d+ tests in/
       color_code = colors[:yellow]
-    when /FAIL|Traceback|, line \d+, in/i
+    when /FAIL|Traceback|Exception:|, line \d+, in/i
       color_code = colors[:red]
     end
     "\e[#{color_code}m#{message}\e[0m"
