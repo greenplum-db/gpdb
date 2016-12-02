@@ -156,6 +156,8 @@ oid2name_to_file(const char *file)
 		{
 			fprintf(stderr, "SELECT FAILED: %s", PQerrorMessage(conn));
 			PQclear(res);
+
+			fclose(fp);
 			return false;
 		}
 
