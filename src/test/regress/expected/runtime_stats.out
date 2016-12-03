@@ -3,7 +3,6 @@
 --
 -- Examines if run-time statistics are correct.
 --
-create language plpythonu;
 -- Returns 1 if workfiles are spilled during query execution; 0 otherwise.
 create or replace function isSpilling(explain_query text) returns int as
 $$
