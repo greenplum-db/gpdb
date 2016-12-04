@@ -713,7 +713,7 @@ ERROR:  ON clause may not be used with a writable external table
 -- SELECT from WET (negative)
 --
 select * from wet_pos1;
-ERROR:  External scan error: It is not possible to read from a WRITABLE external table. Create the table as READABLE instead. (COptTasks.cpp:1289)
+ERROR:  External scan error: It is not possible to read from a WRITABLE external table. Create the table as READABLE instead. (CTranslatorDXLToPlStmt.cpp:973)
 --
 -- WET: export some data with INSERT SELECT, INSERT and COPY. 
 --
@@ -894,7 +894,7 @@ select count(*) from pg_catalog.pg_exttable where reloid in (select r.oid from p
 COPY (VALUES('1,2'),('1,2,3'),('1,'),('1')) TO '@abs_srcdir@/data/tableless.csv';
 CREATE TABLE tableless_heap(a int, b int);
 COPY tableless_heap FROM '@abs_srcdir@/data/tableless.csv' CSV LOG ERRORS SEGMENT REJECT LIMIT 10;
-NOTICE:  Found 3 data formatting errors (3 or more input rows). Rejected related input data.
+NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
 SELECT relname, linenum, errmsg FROM gp_read_error_log('tableless_heap');
     relname     | linenum |                errmsg                 
 ----------------+---------+---------------------------------------
