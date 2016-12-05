@@ -4,8 +4,8 @@
  * Copyright (c) 2008, Greenplum inc
  *
  */
-#ifndef MEM_TUP_H
-#define MEM_TUP_H
+#ifndef MEMTUP_H
+#define MEMTUP_H
 
 #include "access/tupdesc.h"
 
@@ -177,4 +177,4 @@ extern bool MemTupleHasExternal(MemTuple mtup, MemTupleBinding *pbind);
 extern bool memtuple_has_misaligned_attribute(MemTuple mtup, MemTupleBinding *pbind);
 extern MemTuple memtuple_aligned_clone(MemTuple mtup, MemTupleBinding *pbind, bool use_null_saves_aligned);
 
-#endif /* _MEM_TUP_H_ */
+#endif /* MEMTUP_H */
