@@ -9,15 +9,6 @@
 
 #include "access/tupdesc.h"
 
-/* 
- * TODO: implement this macro - equivalent
- * in functionality to the the following check
- * Assert(!(tup->t_data->t_infomask & HEAP_HASOID));
- * it's a sanity check.
- */
-#define MemTupleNoOidSpace(tuple) Assert(tuple) \
-
-
 typedef enum MemTupleBindFlag
 {
 	MTB_ByVal_Native = 1,	/* Fixed len, native (returned as datum ) */

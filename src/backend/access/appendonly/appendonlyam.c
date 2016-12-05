@@ -2889,11 +2889,6 @@ appendonly_insert_init(Relation rel, int segno, bool update_mode)
 		if (!OidIsValid(MemTupleGetOid(instup, aoInsertDesc->mt_bind)))
 			MemTupleSetOid(instup, aoInsertDesc->mt_bind, GetNewOid(relation));
 	}
-	else
-	{
-		/* check there is not space for an OID */
-		MemTupleNoOidSpace(instup);
-	}
 
 	if (aoInsertDesc->useNoToast)
 		need_toast = false;
