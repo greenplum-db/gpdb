@@ -83,14 +83,14 @@ CREATE OR REPLACE FUNCTION cleanupAllGangs() RETURNS BOOL
 AS '@abs_builddir@/regress@DLSUFFIX@', 'cleanupAllGangs' LANGUAGE C;
 
 -- check if segments has backend running
-CREATE OR REPLACE FUNCTION numBackendsOnSegment() RETURNS INTEGER
+CREATE OR REPLACE FUNCTION numBackendsOnSegment(int) RETURNS INTEGER
 AS '@abs_builddir@/regress@DLSUFFIX@', 'numBackendsOnSegment' LANGUAGE C;
 
 -- check if QD has reusable gangs
 CREATE OR REPLACE FUNCTION hasGangsExist() RETURNS BOOL
 AS '@abs_builddir@/regress@DLSUFFIX@', 'hasGangsExist' LANGUAGE C;
 
-CREATE VIEW v_hasBackendsOnSegment as select sum(numBackendsOnSegment()) > 0 from
+CREATE VIEW v_hasBackendsOnSegment as select sum(numBackendsOnSegment(10)) > 0 from
 gp_dist_random('gp_id');
 
 -- disable debug linger to get immediate feedback from FATAL errors.
@@ -156,12 +156,6 @@ select 'wait recovery finish' from gp_dist_random('gp_id');
 -- cleanup all reusable gangs 
 select cleanupAllGangs();
 
--- sleep 1 second to wait all QEs to exit, since QE exit in this situation is an
--- asynchronous procedure, 1 second may not guarantee they have exited in
--- extreme poor performant machines, but we have no better solution now, and this
--- test case is pretty necessary, so...
-select pg_sleep(1);
-
 -- expect no zombie backends left on segments 
 select * from v_hasBackendsOnSegment;
 
@@ -185,12 +179,6 @@ where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispat
 -- expect no resuable gang exist
 select * from hasGangsExist();
 
--- sleep 1 second to wait all QEs to exit, since QE exit in this situation is an
--- asynchronous procedure, 1 second may not guarantee they have exited in
--- extreme poor performant machines, but we have no better solution now, and this
--- test case is pretty necessary, so...
-select pg_sleep(1);
-
 -- expect no zombie backends left on segments.
 select * from v_hasBackendsOnSegment;
 
@@ -207,12 +195,6 @@ where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispat
 
 -- expect resuable gang exist
 select * from hasGangsExist();
-
--- sleep 1 second to wait all QEs to exit, since QE exit in this situation is an
--- asynchronous procedure, 1 second may not guarantee they have exited in
--- extreme poor performant machines, but we have no better solution now, and this
--- test case is pretty necessary, so...
-select pg_sleep(1);
 
 -- expect QEs exist.
 select * from v_hasBackendsOnSegment;
@@ -260,3 +242,22 @@ select * from dispatch_test_t1, dispatch_test_t2, dispatch_test_t3
 where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispatch_test_t3.c3;
 
 \! gpfaultinjector -q -f after_one_slice_dispatched -y reset --seg_dbid 1
+
+-- test logging of gang management
+SET gp_log_gang = 'debug';
+
+-- test INFO raised from segments with various kinds of fields
+CREATE OR REPLACE FUNCTION udf_raise_info() RETURNS BOOL
+AS '@abs_builddir@/regress@DLSUFFIX@', 'gangRaiseInfo' LANGUAGE C;
+
+SELECT udf_raise_info() FROM gp_dist_random('gp_id') WHERE gp_segment_id = 0;
+
+-- terminate connections to all segments
+\c
+
+-- test brutal exit of session can correctly clean up all QEs
+-- start and finish a new session
+\! psql regression -f @abs_builddir@/sql/dispatch_test_helper.sql
+
+-- verify all QEs of the exited session have gone, expect to return false
+select * from v_hasBackendsOnSegment;
