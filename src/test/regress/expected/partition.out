@@ -3155,15 +3155,15 @@ insert into bar_p values(1, 1);
 insert into bar_p values(5, 5);
 ERROR:  no partition for partitioning key  (seg0 slarimac:40000 pid=97899)
 drop table bar_p;
-select parrelid::regclass, * from pg_partition;
- parrelid | parrelid | parkind | parlevel | paristemplate | parnatts | paratts | parclass 
-----------+----------+---------+----------+---------------+----------+---------+----------
-(0 rows)
-
-select * from pg_partition_rule;
- paroid | parchildrelid | parparentrule | parname | parisdefault | parruleord | parrangestartincl | parrangeendincl | parrangestart | parrangeend | parrangeevery | parlistvalues | parreloptions | partemplatespace 
---------+---------------+---------------+---------+--------------+------------+-------------------+-----------------+---------------+-------------+---------------+---------------+---------------+------------------
-(0 rows)
+-- Drop should not leave anything lingering for bar_p or its
+-- subpartitions in pg_partition* catalog tables.
+select count(*) = 0 as passed from pg_partition_rule pr
+ left outer join pg_partition p on pr.paroid = p.oid
+ where p.parrelid not in (select oid from pg_class);
+ passed 
+--------
+ t
+(1 row)
 
 -- MPP-4172
 -- should fail

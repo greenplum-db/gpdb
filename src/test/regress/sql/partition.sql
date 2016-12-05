@@ -1546,8 +1546,11 @@ alter table bar_p alter partition for ('5') alter partition for ('5')
 insert into bar_p values(1, 1);
 insert into bar_p values(5, 5);
 drop table bar_p;
-select parrelid::regclass, * from pg_partition;
-select * from pg_partition_rule;
+-- Drop should not leave anything lingering for bar_p or its
+-- subpartitions in pg_partition* catalog tables.
+select count(*) = 0 as passed from pg_partition_rule pr
+ left outer join pg_partition p on pr.paroid = p.oid
+ where p.parrelid not in (select oid from pg_class);
 
 -- MPP-4172
 -- should fail
