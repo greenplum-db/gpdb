@@ -462,11 +462,11 @@ MemoryAccounting_SaveToLog()
 	/* Write the header for the subsequent lines of memory usage information */
 	write_stderr("memory: account_name, account_id, parent_account_id, quota, peak, allocated, freed, current\n");
 
-	write_stderr("memory: %s, %u, %u, " UINT64_FORMAT ", " UINT64_FORMAT ", " UINT64_FORMAT ", " UINT64_FORMAT ", " UINT64_FORMAT "\n", "Vmem",
+	write_stderr("memory: %s, %d, %d, " UINT64_FORMAT ", " UINT64_FORMAT ", " UINT64_FORMAT ", " UINT64_FORMAT ", " UINT64_FORMAT "\n", "Vmem",
 			MEMORY_STAT_TYPE_VMEM_RESERVED /* Id */, MEMORY_STAT_TYPE_VMEM_RESERVED /* Parent Id */,
 			(int64) 0 /* Quota */, vmem_reserved /* Peak */, vmem_reserved /* Allocated */, (int64) 0 /* Freed */, vmem_reserved /* Current */);
 
-	write_stderr("memory: %s, %u, %u, " UINT64_FORMAT ", " UINT64_FORMAT ", " UINT64_FORMAT ", " UINT64_FORMAT ", " UINT64_FORMAT "\n", "Peak",
+	write_stderr("memory: %s, %d, %d, " UINT64_FORMAT ", " UINT64_FORMAT ", " UINT64_FORMAT ", " UINT64_FORMAT ", " UINT64_FORMAT "\n", "Peak",
 			MEMORY_STAT_TYPE_MEMORY_ACCOUNTING_PEAK /* Id */, MEMORY_STAT_TYPE_MEMORY_ACCOUNTING_PEAK /* Parent Id */,
 			(int64) 0 /* Quota */, MemoryAccountingPeakBalance /* Peak */, MemoryAccountingPeakBalance /* Allocated */, (int64) 0 /* Freed */, MemoryAccountingPeakBalance /* Current */);
 
