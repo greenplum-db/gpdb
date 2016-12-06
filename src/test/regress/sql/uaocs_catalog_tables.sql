@@ -1,4 +1,8 @@
 -- create functions to query uaocs auxiliary tables through gp_dist_random instead of going through utility mode
+CREATE OR REPLACE FUNCTION aocsseg_live_segfiles(oid) RETURNS setof record AS $$
+  SELECT * from gp_toolkit.__gp_aocsseg($1) where state = 1;
+$$ LANGUAGE SQL;
+
 CREATE OR REPLACE FUNCTION gp_aocsseg_dist_random(
   IN relation_name text) RETURNS setof record AS $$
 DECLARE
@@ -6,7 +10,7 @@ DECLARE
   result record;
 BEGIN
   for record_text in
-      EXECUTE 'select gp_toolkit.__gp_aocsseg(''' || relation_name || '''::regclass)::text from gp_dist_random(''gp_id'');'
+      EXECUTE 'select aocsseg_live_segfiles(''' || relation_name || '''::regclass)::text from gp_dist_random(''gp_id'');'
   loop
       EXECUTE 'select a[3], a[4], a[5], a[6], a[7], a[8] from
               (select regexp_split_to_array(''' || record_text ||''', '','')) as dt(a);' into result;
