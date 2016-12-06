@@ -2473,15 +2473,26 @@ PG_FUNCTION_INFO_V1(numBackendsOnSegment);
 Datum
 numBackendsOnSegment(PG_FUNCTION_ARGS)
 {
-	int	beid;
-	int32 result = 0;
+	int beid;
+	int32 result;
+	int timeout = PG_GETARG_INT32(0);
+	if (timeout <= 0)
+		elog(ERROR, "timeout expected to be larger than 0");
 	int pid = getpid();
-	int tot_backends = pgstat_fetch_stat_numbackends();
-	for (beid = 1; beid <= tot_backends; beid++)
+	while (timeout > 0)
 	{
-		PgBackendStatus *beentry = pgstat_fetch_stat_beentry(beid);
-		if (beentry && beentry->st_procpid >0 && beentry->st_procpid != pid)
-			result++;
+		result = 0;
+		int tot_backends = pgstat_fetch_stat_numbackends();
+		for (beid = 1; beid <= tot_backends; beid++)
+		{
+			PgBackendStatus *beentry = pgstat_fetch_stat_beentry(beid);
+			if (beentry && beentry->st_procpid >0 && beentry->st_procpid != pid)
+				result++;
+		}
+		if (result == 0)
+			break;
+		sleep(1); /* 1 second */
+		timeout--;
 	}
 	
 	PG_RETURN_INT32(result);

@@ -105,12 +105,12 @@ insert into dispatch_test_t3 values (3,1,2);
 CREATE OR REPLACE FUNCTION cleanupAllGangs() RETURNS BOOL
 AS '@abs_builddir@/regress@DLSUFFIX@', 'cleanupAllGangs' LANGUAGE C;
 -- check if segments has backend running
-CREATE OR REPLACE FUNCTION numBackendsOnSegment() RETURNS INTEGER
+CREATE OR REPLACE FUNCTION numBackendsOnSegment(int) RETURNS INTEGER
 AS '@abs_builddir@/regress@DLSUFFIX@', 'numBackendsOnSegment' LANGUAGE C;
 -- check if QD has reusable gangs
 CREATE OR REPLACE FUNCTION hasGangsExist() RETURNS BOOL
 AS '@abs_builddir@/regress@DLSUFFIX@', 'hasGangsExist' LANGUAGE C;
-CREATE VIEW v_hasBackendsOnSegment as select sum(numBackendsOnSegment()) > 0 from
+CREATE VIEW v_hasBackendsOnSegment as select sum(numBackendsOnSegment(10)) > 0 from
 gp_dist_random('gp_id');
 -- disable debug linger to get immediate feedback from FATAL errors.
 set gp_debug_linger to 0;
@@ -200,16 +200,6 @@ select cleanupAllGangs();
  t
 (1 row)
 
--- sleep 1 second to wait all QEs to exit, since QE exit in this situation is an
--- asynchronous procedure, 1 second may not guarantee they have exited in
--- extreme poor performant machines, but we have no better solution now, and this
--- test case is pretty necessary, so...
-select pg_sleep(1);
- pg_sleep 
-----------
- 
-(1 row)
-
 -- expect no zombie backends left on segments 
 select * from v_hasBackendsOnSegment;
  ?column? 
@@ -250,16 +240,6 @@ select * from hasGangsExist();
  f
 (1 row)
 
--- sleep 1 second to wait all QEs to exit, since QE exit in this situation is an
--- asynchronous procedure, 1 second may not guarantee they have exited in
--- extreme poor performant machines, but we have no better solution now, and this
--- test case is pretty necessary, so...
-select pg_sleep(1);
- pg_sleep 
-----------
- 
-(1 row)
-
 -- expect no zombie backends left on segments.
 select * from v_hasBackendsOnSegment;
  ?column? 
@@ -288,16 +268,6 @@ select * from hasGangsExist();
  hasgangsexist 
 ---------------
  t
-(1 row)
-
--- sleep 1 second to wait all QEs to exit, since QE exit in this situation is an
--- asynchronous procedure, 1 second may not guarantee they have exited in
--- extreme poor performant machines, but we have no better solution now, and this
--- test case is pretty necessary, so...
-select pg_sleep(1);
- pg_sleep 
-----------
- 
 (1 row)
 
 -- expect QEs exist.
@@ -356,3 +326,38 @@ select * from dispatch_test_t1, dispatch_test_t2, dispatch_test_t3
 where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispatch_test_t3.c3;
 ERROR:  canceling statement due to user request
 \! gpfaultinjector -q -f after_one_slice_dispatched -y reset --seg_dbid 1
+-- test logging of gang management
+SET gp_log_gang = 'debug';
+-- test INFO raised from segments with various kinds of fields
+CREATE OR REPLACE FUNCTION udf_raise_info() RETURNS BOOL
+AS '@abs_builddir@/regress@DLSUFFIX@', 'gangRaiseInfo' LANGUAGE C;
+SELECT udf_raise_info() FROM gp_dist_random('gp_id') WHERE gp_segment_id = 0;
+INFO:  testing hook function MPPnoticeReceiver  (seg0 slice1 172.17.0.2:25432 pid=34013)
+DETAIL:  this test aims at covering code paths not hit before
+HINT:  no special hint
+CONTEXT:  PL/C function defined in regress.c
+ udf_raise_info 
+----------------
+ t
+(1 row)
+
+-- terminate connections to all segments
+\c
+-- test brutal exit of session can correctly clean up all QEs
+-- start and finish a new session
+\! psql regression -f @abs_builddir@/sql/dispatch_test_helper.sql
+BEGIN
+DECLARE CURSOR
+SET
+psql:@abs_builddir@/sql/dispatch_test_helper.sql:10: FATAL:  User fault injection raised fatal
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+psql:@abs_builddir@/sql/dispatch_test_helper.sql:10: connection to server was lost
+-- verify all QEs of the exited session have gone, expect to return false
+select * from v_hasBackendsOnSegment;
+ ?column? 
+----------
+ f
+(1 row)
+
