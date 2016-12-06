@@ -188,14 +188,11 @@ testbouncer: all
 installcheck-bugbuster: all
 	@echo "================================"
 	@echo "BugBuster starting ... " 
-	@echo "ALL YOUR BUGS ARE BELONG TO US FROM REGRESS!"
 	@echo "================================"
 	@grep memory_quota ./bugbuster/known_good_schedule > /dev/null; \
-	if [ $$? = 0 ]; then bugbuster/bugbuster_setup.sh; fi
 	echo $(abs_srcdir)
 	$(pg_regress_call_bb)  --psqldir=$(PSQLDIR) --schedule=./bugbuster/known_good_schedule --srcdir=$(abs_srcdir)
 	@grep memory_quota ./bugbuster/known_good_schedule > /dev/null; \
-	if [ $$? = 0 ]; then bugbuster/bugbuster_cleanup.sh; fi
 
 # old interfaces follow...
 
