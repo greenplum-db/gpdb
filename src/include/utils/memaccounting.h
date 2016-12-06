@@ -222,7 +222,7 @@ MemoryAccounting_CombinedAccountArrayToString(void *accountArrayBytes,
 extern void
 MemoryAccounting_SaveToFile(int currentSliceId);
 
-extern uint32
+extern void
 MemoryAccounting_SaveToLog(void);
 
 extern void
