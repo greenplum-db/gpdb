@@ -60,7 +60,7 @@ static char* parse_prefix_from_params(char *params);
 static char* parse_status_from_params(char *params);
 static char* parse_option_from_params(char *params, char *option);
 static char *queryNBUBackupFilePathName(char *netbackupServiceHost, char *netbackupRestoreFileName);
-static char *queryCVBackupVersionGuid(const char*commvault_proxy_host,const char* commvault_proxy_port, const char*commvault_appid, const char*commvault_apptype, const char*commvault_clientid, char* CVRestoreFilePath);
+static char *queryCVBackupVersionGuid(const char*commvault_proxy_host,const char* commvault_proxy_port, const char*commvault_appid, const char*commvault_apptype, const char*commvault_clientid, char* cvRestoreFilePath);
 static char *shellEscape(const char *shellArg, PQExpBuffer escapeBuf, bool addQuote);
 
 
@@ -2285,85 +2285,90 @@ queryNBUBackupFilePathName(char *netbackupServiceHost, char *netbackupRestoreFil
 }
 
 
-static char * queryCVBackupVersionGuid(const char*commvault_proxy_host,const char* commvault_proxy_port, const char*commvault_appid, const char*commvault_apptype, const char*commvault_clientid, char* CVRestoreFilePath)
+static char * queryCVBackupVersionGuid(const char*commvault_proxy_host,const char* commvault_proxy_port, const char*commvault_appid, const char*commvault_apptype, const char*commvault_clientid, char* cvRestoreFilePath)
 {
-   char cmd[4*1024];
-   char resBuff[10*1024];
-   char *queryCVGuid;
-   // ALlocate atleast path length
-   queryCVGuid= (char *) palloc(sizeof(char) * (1024*10));
-   if (queryCVGuid == NULL)
-   {
-       ereport(ERROR, (errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
-                       errmsg("Error while allocating memory for filename"),
-                       errhint("Error while querying Commvault server for backup file %s. Failed to allocate memory", CVRestoreFilePath)));
-       return NULL;
-   }
-	
-   memset(queryCVGuid, '\0', (1024*10));
-   memset(cmd, '\0', 4*1024);
-   memset(resBuff, '\0', 10*1024);
+	char cmd[4*1024];
+	char resBuff[10*1024];
+	char *queryCVGuid;
+	char *filename = strrchr(cvRestoreFilePath,'/');
+	char * pch = NULL;
+	int tokensCnt = 0;
+	char *th = NULL;
+	// ALlocate atleast path length
+	queryCVGuid = (char *) calloc((1024*10), sizeof(char));
+	if (queryCVGuid == NULL)
+	{
+		ereport(ERROR, (errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
+					errmsg("Error while allocating memory for filename"),
+					errhint("Error while querying Commvault server for backup file %s. Failed to allocate memory", cvRestoreFilePath)));
+		return NULL;
+	}
 
-   char *filename = strrchr(CVRestoreFilePath,'/');
+	memset(cmd, '\0', 4*1024);
+	memset(resBuff, '\0', 10*1024);
 
-   if (filename)
-   {
-	   filename++;
-	   sprintf(cmd, "%s -query --cv-proxy-host %s --cv-proxy-port %s --cv-appid %s --cv-apptype %s --cv-clientid %s --cv-filename \"*%s\" --cv-search-allcycles 1 ", CV_BKPRST_PROGRAM, commvault_proxy_host, commvault_proxy_port, commvault_appid, commvault_apptype, commvault_clientid, filename );
-	   elog(INFO, "Querying Commvault for backup filename cmd=[%s]",cmd);
-	   FILE *fp = popen(cmd, "r");
-	   if (fp == NULL){
-	       ereport(ERROR, (errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
-			       errmsg("Error querying restore filename to Commvault server"),
-			       errhint("Commvault server is not running or restore file: %s has not been backed up to the Commvault server errno=%d", CVRestoreFilePath, errno)));
-	       return NULL;
-	   }
-	   // filepath:objectguid:versionguid:cyclefromtime:cycletotime:commcellid:subclientid < --- each line in query output
-	   while(fgets(resBuff, 10*1024 , fp) != NULL)
-	   {
-		 // taking out the newline char
-		  resBuff[strlen(resBuff)-1]= '\0';
-		  char * pch;
-		  int tokensCnt = 0;
-		  pch = strtok (resBuff,":");
-		  if(pch != NULL)
-		  {
-			// if file path matches 
-			if(strcmp(pch,  CVRestoreFilePath) == 0)
+
+	if (filename)
+	{
+		filename++;
+		sprintf(cmd, "%s -query --cv-proxy-host %s --cv-proxy-port %s --cv-appid %s --cv-apptype %s --cv-clientid %s"
+			" --cv-filename \"*%s\" --cv-search-allcycles 1 ", CV_BKPRST_PROGRAM, commvault_proxy_host, 
+			commvault_proxy_port, commvault_appid, commvault_apptype, commvault_clientid, filename );
+		elog(INFO, "Querying Commvault for backup filename cmd=[%s]",cmd);
+		FILE *fp = popen(cmd, "r");
+		if (fp == NULL)
+		{
+			ereport(ERROR, (errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
+						errmsg("Error querying restore filename to Commvault server"),
+						errhint("Commvault server is not running or restore file: %s has not been backed up to the Commvault server errno=%d", cvRestoreFilePath, errno)));
+			return NULL;
+		}
+		// for each line in query output 
+		// filepath:objectguid:versionguid:cyclefromtime:cycletotime:commcellid:subclientid 
+		while(fgets(resBuff, 10*1024 , fp) != NULL)
+		{
+			tokensCnt = 0;
+			// taking out the newline char
+			resBuff[strlen(resBuff)-1]= '\0';
+			pch = strtok_r (resBuff,":", &th);
+			if(pch != NULL)
 			{
-				// expand the remaining tokens
-				while (pch != NULL)
+				// if first token matches with the restore file path 
+				if(strcmp(pch,  cvRestoreFilePath) == 0)
 				{
-					tokensCnt++;
-					if (tokensCnt == 3)
+					// expand the remaining tokens
+					while (pch != NULL)
 					{
-						// Found the versionguid for the given file path
-						strcpy(queryCVGuid, pch);
-						break;
+						tokensCnt++;
+						if (tokensCnt == 3)
+						{
+							// Found the cv_versionguid (3rd token)
+							strcpy(queryCVGuid, pch);
+							break;
+						}
+						pch = strtok_r (NULL, ":", &th);
 					}
-					pch = strtok (NULL, ":");
+					break;
 				}
-				break;
 			}
-		  }
-	   }
+		}
 
-	   if (pclose(fp) != 0)
-	   {
-	       ereport(ERROR, (errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
-			       errmsg("Error querying restore filename to Commvault server"),
-			       errhint("2Commvault server not running or restore file: %s has not been backed up to the Commvault server", CVRestoreFilePath)));
-	       return NULL;
-	   }
-	   elog(INFO, "Found CV versionGuid=[%s] for restore file=[%s]",queryCVGuid, CVRestoreFilePath);
-   }
-   if(queryCVGuid[0] == '\0')
-   {
-	free(queryCVGuid);
-	queryCVGuid = NULL;
-   }
-	
-   return queryCVGuid;
+		if (pclose(fp) != 0)
+		{
+			ereport(ERROR, (errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
+						errmsg("Error querying restore filename to Commvault server"),
+						errhint("2Commvault server not running or restore file: %s has not been backed up to the Commvault server", cvRestoreFilePath)));
+			return NULL;
+		}
+		elog(INFO, "Found CV versionGuid=[%s] for restore file=[%s]",queryCVGuid, cvRestoreFilePath);
+	}
+	if(queryCVGuid[0] == '\0')
+	{
+		free(queryCVGuid);
+		queryCVGuid = NULL;
+	}
+
+	return queryCVGuid;
 }
 
 /* formThrottleCmd(char *pszBackupFileName, int directIO_read_chunk_mb, bool bIsThrottlingEnabled) returns char*

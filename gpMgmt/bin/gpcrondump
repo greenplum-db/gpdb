@@ -57,9 +57,6 @@ class GpCronDump(Operation):
         if args:
             logger.warn("please note that some of the arguments (%s) aren't valid and will be ignored.", args)
 
-
-
-
         sys_args = sys.argv[1:]
         self.context = Context(options)
         self.options_list = " ".join(sys_args)
@@ -82,7 +79,6 @@ class GpCronDump(Operation):
 
         # TODO: if action is 'append', wouldn't you expect a lack of input to result in [], as opposed to None?
         if not self.context.ddboost_hosts: self.context.ddboost_hosts = []
-
 
         if len(self.context.dump_databases) > 0:
             self.context.dump_database = self.context.dump_databases[0]
