@@ -5304,9 +5304,13 @@ open_relation_and_check_permission(VacuumStmt *vacstmt,
 	 * My marking the drop transaction as busy before checking, the worst
 	 * thing that can happen is that both transaction see each other and
 	 * both cancel the drop.
+	 *
+	 * The upgreade deadlock is not applicable to vacuum full because
+	 * it begins with an AccessExclusive lock and doesn't need to
+	 * upgrade it.
 	 */
 
-	if (isDropTransaction)
+	if (isDropTransaction && !vacstmt->full)
 	{
 		MyProc->inDropTransaction = true;
 		if (HasDropTransaction(false))
