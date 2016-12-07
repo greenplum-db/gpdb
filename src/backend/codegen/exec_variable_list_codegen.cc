@@ -77,6 +77,9 @@ bool ExecVariableListCodegen::InitDependencies() {
       proj_info_->pi_varNumbers + list_length(proj_info_->pi_targetlist));
   slot_getattr_codegen_ = SlotGetAttrCodegen::GetCodegenInstance(
       manager(), slot_, max_attr_);
+  if (nullptr == slot_getattr_codegen_) {
+    return false;
+  }
   return true;
 }
 

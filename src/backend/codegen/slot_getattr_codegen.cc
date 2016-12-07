@@ -62,11 +62,7 @@ SlotGetAttrCodegen* SlotGetAttrCodegen::GetCodegenInstance(
     int max_attr) {
 
   // TODO(krajaraman, frahman) : Refactor so creation happens through
-  // CodegenManager::CreateAndEnrollGenerator. In that case, we don't
-  // need to do this `if` condition here.
-  if (!CodegenConfig::IsGeneratorEnabled<SlotGetAttrCodegen>()) {
-    return nullptr;
-  }
+  // CodegenManager::CreateAndEnrollGenerator.
 
   // Create an cache entry for this manager if it doesn't already exist
   auto it = codegen_cache_by_manager[manager].find(slot);
