@@ -28,19 +28,6 @@ BEGIN
   return result;
 END;
 $$ LANGUAGE plpgsql;
-CREATE OR REPLACE FUNCTION gp_aoseg_dist_random(
-  IN relid oid) RETURNS setof record AS $$
-DECLARE
-  result record;
-BEGIN
-  for result in
-      EXECUTE 'select gp_segment_id, * from gp_dist_random(''pg_aoseg.pg_aoseg_' || relid || ''');'
-  loop
-      return next result;
-  end loop;
-  return;
-END;
-$$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION gp_aotable_eof_dist_random(
   IN relation_name text) RETURNS setof record AS $$
 DECLARE
@@ -52,10 +39,9 @@ BEGIN
       EXECUTE 'select a.segno, a.tupcount, a.eofuncompressed, b.mirror_append_only_new_eof
               from gp_dist_random(''pg_aoseg.pg_aoseg_' || relid ||''') a,
               gp_dist_random(''gp_persistent_relation_node'') b
-              where a.gp_segment_id = b.gp_segment_id and a.segno = b.segment_file_num
-              and b.relfilenode_oid = ' || relid || ' and
+              where a.segno = b.segment_file_num and b.relfilenode_oid = ' || relid || ' and
               b.mirror_append_only_new_eof = a.eofuncompressed and
-              a.eofuncompressed != 0 and a.state = 1;'
+              a.eofuncompressed != 0;'
   loop
       return next result;
   end loop;
@@ -253,10 +239,7 @@ select count(*) from uao_table_tupcount_changes_after_delete;
 (1 row)
 
 vacuum full uao_table_tupcount_changes_after_delete;
-select sum(tupcount) from gp_aoseg_dist_random('uao_table_tupcount_changes_after_delete'::regclass) as
- (gp_segment_id int, segno int, eof bigint, tupcount bigint, varblockcount bigint,
-  eofuncompressed bigint, modcount bigint, formatversion smallint, state smallint)
- where state = 1;
+select sum(tupcount) from gp_toolkit.__gp_aoseg_name('uao_table_tupcount_changes_after_delete');
  sum 
 -----
    9
@@ -297,10 +280,7 @@ select count(*) from uao_table_tupcount_changes_after_update;
 (1 row)
 
 vacuum full uao_table_tupcount_changes_after_update;
-select sum(tupcount) from gp_aoseg_dist_random('uao_table_tupcount_changes_after_update'::regclass) as
- (gp_segment_id int, segno int, eof bigint, tupcount bigint, varblockcount bigint,
-  eofuncompressed bigint, modcount bigint, formatversion smallint, state smallint)
- where state = 1;
+select sum(tupcount) from gp_toolkit.__gp_aoseg_name('uao_table_tupcount_changes_after_update');
  sum 
 -----
   10
