@@ -147,10 +147,17 @@ bool ExecVariableListCodegen::GenerateExecVariableList(
 
 
   // Generate slot_getattr for attributes all the way to max_attr
-  assert(nullptr != slot_getattr_codegen_);
-  slot_getattr_codegen_->GenerateCode(codegen_utils);
-  llvm::Function* slot_getattr_func =
-      slot_getattr_codegen_->GetGeneratedFunction();
+  llvm::Function* slot_getattr_func = nullptr;
+  // If slot_getattr_codegen_ is not set or generation fails
+  // we revert to use the external slot_getattr()
+  if (nullptr == slot_getattr_codegen_ ||
+		  false == slot_getattr_codegen_->GenerateCode(codegen_utils)) {
+	  slot_getattr_func = codegen_utils->GetOrRegisterExternalFunction(
+			  slot_getattr_regular, "slot_getattr_regular");
+  } else {
+	  slot_getattr_func = slot_getattr_codegen_->GetGeneratedFunction();
+	  assert(nullptr != slot_getattr_func);
+  }
 
   // In case the above generation failed, no point in continuing since that was
   // the most crucial part of ExecVariableList code generation.
