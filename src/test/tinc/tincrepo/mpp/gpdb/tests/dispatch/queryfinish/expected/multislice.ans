@@ -72,8 +72,8 @@ select l1.l_partkey IS NOT NULL as part_is_not_null
 from skewed_lineitem l1
 inner join supplier s1 on l1.l_suppkey = s1.s_suppkey
 limit 2;
-GP_IGNORE: part_is_not_null 
-GP_IGNORE:------------------
+ part_is_not_null 
+------------------
 t
 t
 (2 rows)

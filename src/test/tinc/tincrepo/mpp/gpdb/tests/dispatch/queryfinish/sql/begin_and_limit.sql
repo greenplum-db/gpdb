@@ -50,6 +50,7 @@ with t4a as(
 )
 select a.l_skewkey, b.l_skewkey from t4a a
 inner join t4b b on a.l_skewkey = b.l_skewkey
+order by 1, 2
 limit 3;
 commit;
 
