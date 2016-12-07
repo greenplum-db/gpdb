@@ -18,6 +18,7 @@ extern bool init_codegen;
 extern bool codegen;
 extern bool codegen_validate_functions;
 extern bool codegen_exec_variable_list;
+extern bool codegen_slot_getattr;
 extern bool codegen_exec_eval_expr;
 extern bool codegen_advance_aggregate;
 // TODO(shardikar): Retire this GUC after performing experiments to find the
@@ -55,6 +56,11 @@ class CodegenConfig {
 template<>
 inline bool CodegenConfig::IsGeneratorEnabled<ExecVariableListCodegen>() {
   return codegen_exec_variable_list;
+}
+
+template<>
+inline bool CodegenConfig::IsGeneratorEnabled<SlotGetAttrCodegen>() {
+  return codegen_slot_getattr;
 }
 
 template<>

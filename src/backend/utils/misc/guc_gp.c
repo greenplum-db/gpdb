@@ -575,6 +575,7 @@ bool		init_codegen;
 bool		codegen;
 bool		codegen_validate_functions;
 bool		codegen_exec_variable_list;
+bool		codegen_slot_getattr;
 bool		codegen_exec_eval_expr;
 bool		codegen_advance_aggregate;
 int		codegen_varlen_tolerance;
@@ -3343,6 +3344,20 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
 		},
 		&codegen_exec_variable_list,
+#ifdef USE_CODEGEN
+		true,
+#else
+		false,
+#endif
+		assign_codegen, NULL
+	},
+	{
+		{"codegen_slot_getattr", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Enable codegen for slot_get_attr"),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
+		},
+		&codegen_slot_getattr,
 #ifdef USE_CODEGEN
 		true,
 #else
