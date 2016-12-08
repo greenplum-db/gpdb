@@ -150,6 +150,20 @@ static char * dump_prefix = NULL;
 static char *netbackup_service_host = NULL;
 static char *netbackup_block_size = NULL;
 
+/*Commvault variables */
+static char *commvault_proxy_host = NULL,
+                *commvault_proxy_port = NULL,
+                *commvault_clientid = NULL,
+                *commvault_jobid = NULL,
+                *commvault_appid = NULL,
+                *commvault_apptype = NULL,
+                *commvault_jobtoken = NULL,
+                *commvault_logfile = NULL,
+                *commvault_iomode = NULL,
+		*commvault_destpath = NULL,
+		*commvault_guid = NULL,
+		*commvault_instancename = NULL,
+		*commvault_debuglevel = NULL;
 static char *change_schema_file = NULL;
 static char *schema_level_file = NULL;
 
@@ -244,6 +258,20 @@ main(int argc, char **argv)
 		{"change-schema-file", required_argument, NULL, 17},
 		{"schema-level-file", required_argument, NULL, 18},
 		{"ddboost-storage-unit",required_argument, NULL, 19},
+                {"cv-proxy-host", required_argument, NULL, 20},
+                {"cv-proxy-port", required_argument, NULL, 21},
+                {"cv-jobtoken", required_argument, NULL, 22},
+                {"cv-appid", required_argument, NULL, 23},
+                {"cv-jobid", required_argument, NULL, 24},
+                {"cv-apptype", required_argument, NULL, 25},
+                {"cv-logfile", required_argument, NULL, 26},
+                {"cv-clientid", required_argument, NULL, 27},
+                {"cv-iomode", required_argument, NULL, 28},
+                {"cv-destpath", required_argument, NULL, 29},
+                {"cv-guid", required_argument, NULL, 30},
+                {"cv-instance", required_argument, NULL, 31},
+                {"cv-debuglvl", required_argument, NULL, 32},
+
 		{NULL, 0, NULL, 0}
 	};
 
@@ -464,6 +492,49 @@ main(int argc, char **argv)
 				ddboost_storage_unit = strdup(optarg);
 				break;
 #endif
+                        /* Begin Commvault inputs */
+                        case 20:
+                                commvault_proxy_host = strdup(optarg);
+                                break;
+                        case 21:
+                                commvault_proxy_port = strdup(optarg);
+                                break;
+                        case 22:
+                                commvault_jobtoken = strdup(optarg);
+                                break;
+                        case 23:
+                                commvault_appid = strdup(optarg);
+                                break;
+                        case 24:
+                                commvault_jobid = strdup(optarg);
+                                break;
+                        case 25:
+                                commvault_apptype = strdup(optarg);
+                                break;
+                        case 26:
+                                commvault_logfile = strdup(optarg);
+                                break;
+                        case 27:
+                                commvault_clientid = strdup(optarg);
+                                break;
+                        case 28:
+                                commvault_iomode = strdup(optarg);
+                                break;
+                        case 29:
+                                commvault_destpath = strdup(optarg);
+                                break;
+                        case 30:
+                                commvault_guid = strdup(optarg);
+                                break;
+                        case 31:
+                                commvault_instancename = strdup(optarg);
+                                break;
+                        case 32:
+                                commvault_debuglevel = strdup(optarg);
+                                break;
+                        /* End Commvault Inputs */
+
+
 			default:
 				fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
 				exit(1);
@@ -712,6 +783,7 @@ main(int argc, char **argv)
 			char	   *postDataFilterScript = NULL;
 			char	   *catPg = NULL;
 			char	   *gpNBURestorePg = NULL;
+			char	   *gpCVRestorePg = NULL;
 
 			pszOnErrorStop = "-v ON_ERROR_STOP=";
 
@@ -746,6 +818,11 @@ main(int argc, char **argv)
 			if ((gpNBURestorePg = testProgramExists("gp_bsa_restore_agent")) == NULL)
 			{
 				mpp_err_msg(logError, progname, "NetBackup restore agent \"gp_bsa_restore_agent\" not found in path");
+				exit(1);
+			}
+			if ((gpCVRestorePg = testProgramExists("CVBkpRstWrapper")) == NULL)
+			{
+				mpp_err_msg(logError, progname, "Commvault restore agent \"CVBkpRstWrapper\" not found in path");
 				exit(1);
 			}
 
@@ -820,22 +897,35 @@ main(int argc, char **argv)
 			}
 			else
 			{
+			
 #endif
-				if(postDataSchemaOnly)
+				if (commvault_proxy_host)
 				{
-					formPostDataSchemaOnlyPsqlCommandLine(&pszCmdLine, inputFileSpec, bCompUsed, g_compPg,
-							postDataFilterScript, table_filter_file, psqlPg, catPg,
-							gpNBURestorePg, netbackup_service_host, netbackup_block_size,
-							change_schema_file, schema_level_file);
+					formSegmentPsqlCVCommandLine(&pszCmdLine, inputFileSpec, bCompUsed, g_compPg,
+							postDataSchemaOnly?postDataFilterScript:filterScript, table_filter_file,
+							g_role, psqlPg, catPg,
+							gpCVRestorePg, commvault_proxy_host, commvault_proxy_port, commvault_jobid, commvault_jobtoken,
+commvault_guid, commvault_clientid, commvault_apptype, commvault_appid, commvault_debuglevel, change_schema_file, schema_level_file, postDataSchemaOnly);
+
 				}
 				else
 				{
-					/* Non ddboost restore */
-					formSegmentPsqlCommandLine(&pszCmdLine, inputFileSpec, bCompUsed, g_compPg,
-							filterScript, table_filter_file,
-							g_role, psqlPg, catPg,
-							gpNBURestorePg, netbackup_service_host, netbackup_block_size,
-                                                        change_schema_file, schema_level_file);
+					if(postDataSchemaOnly)
+					{
+						formPostDataSchemaOnlyPsqlCommandLine(&pszCmdLine, inputFileSpec, bCompUsed, g_compPg,
+								postDataFilterScript, table_filter_file, psqlPg, catPg,
+								gpNBURestorePg, netbackup_service_host, netbackup_block_size,
+								change_schema_file, schema_level_file);
+					}
+					else
+					{
+						/* Non ddboost restore */
+						formSegmentPsqlCommandLine(&pszCmdLine, inputFileSpec, bCompUsed, g_compPg,
+								filterScript, table_filter_file,
+								g_role, psqlPg, catPg,
+								gpNBURestorePg, netbackup_service_host, netbackup_block_size,
+								change_schema_file, schema_level_file);
+					}
 				}
 #ifdef USE_DDBOOST
 			}

@@ -306,7 +306,7 @@ def get_lines_from_dd_file(filename, ddboost_storage_unit):
     contents = cmd.get_results().stdout.splitlines()
     return contents
 
-def check_cdatabase_exists(context, report_file):
+def check_cdatabase_exists(context, report_file, cv_context=None):
     try:
         filename = convert_report_filename_to_cdatabase_filename(context, report_file)
     except Exception, err:
@@ -316,6 +316,10 @@ def check_cdatabase_exists(context, report_file):
         cdatabase_contents = get_lines_from_dd_file(filename, context.ddboost_storage_unit)
     elif context.netbackup_service_host:
         restore_file_with_nbu(context, path=filename)
+        cdatabase_contents = get_lines_from_file(filename)
+    elif cv_context:
+        if not os.path.exists(filename):
+            restore_file_with_cv(cv_context, context, path=filename)
         cdatabase_contents = get_lines_from_file(filename)
     else:
         cdatabase_contents = get_lines_from_file(filename, context)
@@ -378,13 +382,13 @@ def get_all_occurrences(substr, line):
         return None
     return [m.start() for m in re.finditer('(?=%s)' % substr, line)]
 
-def get_type_ts_from_report_file(context, report_file, backup_type):
+def get_type_ts_from_report_file(context, report_file, backup_type, cv_context=None):
     report_file_contents = get_lines_from_file(report_file)
 
     if not check_successful_dump(report_file_contents):
         return None
 
-    if not check_cdatabase_exists(context, report_file):
+    if not check_cdatabase_exists(context, report_file, cv_context=cv_context):
         return None
 
     if check_backup_type(report_file_contents, backup_type):
@@ -392,11 +396,11 @@ def get_type_ts_from_report_file(context, report_file, backup_type):
 
     return None
 
-def get_full_ts_from_report_file(context, report_file):
-    return get_type_ts_from_report_file(context, report_file, 'Full')
+def get_full_ts_from_report_file(context, report_file, cv_context=None):
+    return get_type_ts_from_report_file(context, report_file, 'Full', cv_context=cv_context)
 
-def get_incremental_ts_from_report_file(context, report_file):
-    return get_type_ts_from_report_file(context, report_file, 'Incremental')
+def get_incremental_ts_from_report_file(context, report_file, cv_context=None):
+    return get_type_ts_from_report_file(context, report_file, 'Incremental', cv_context=cv_context)
 
 def get_timestamp_val(report_file_contents):
     for line in report_file_contents:
@@ -541,10 +545,12 @@ def get_timestamp_from_increments_filename(filename, dump_prefix):
         raise Exception("Invalid increments file '%s' passed to get_timestamp_from_increments_filename" % filename)
     return parts[-2].strip()
 
-def get_full_timestamp_for_incremental(context):
+def get_full_timestamp_for_incremental(context, cv_context=None):
     full_timestamp = None
     if context.netbackup_service_host:
         full_timestamp = get_full_timestamp_for_incremental_with_nbu(context)
+    elif cv_context:
+        full_timestamp = get_full_timestamp_for_incremental_with_cv(cv_context, context)
     else:
         pattern = '%s/%s/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/%sgp_dump_[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]_increments' % \
                   (context.get_backup_root(), context.dump_dir, context.dump_prefix)
@@ -568,7 +574,7 @@ def get_full_timestamp_for_incremental(context):
     return full_timestamp
 
 # backup_dir will be either MDD or some other directory depending on call
-def get_latest_full_dump_timestamp(context):
+def get_latest_full_dump_timestamp(context, cv_context=None):
     backup_dir = context.get_backup_root()
     dump_dirs = get_dump_dirs(context)
 
@@ -589,7 +595,7 @@ def get_latest_full_dump_timestamp(context):
         for dump_report_file in dump_report_files:
             report_path = os.path.join(dump_dir, dump_report_file)
             logger.debug('Checking for latest timestamp in report file %s' % report_path)
-            timestamp = get_full_ts_from_report_file(context, report_path)
+            timestamp = get_full_ts_from_report_file(context, report_path, cv_context=cv_context)
             logger.debug('Timestamp = %s' % timestamp)
             if timestamp is not None:
                 return timestamp
@@ -768,6 +774,114 @@ def get_latest_full_ts_with_nbu(context):
             return timestamp
 
     raise Exception('No full backup found for given incremental on the specified NetBackup server')
+
+#Form and run command line to restore individual file with CV
+def backup_file_with_cv(cv_context, context, filetype=None, path=None, dbid=1, hostname=None, timestamp=None):
+    if filetype and path:
+        raise Exception("Cannot supply both a file type and a file path to backup_file_with_cv")
+    if filetype is None and path is None:
+        raise Exception("Cannot call backup_file_with_cv with no type or path argument")
+    if timestamp is None:
+        timestamp = context.timestamp
+    if filetype:
+        path = context.generate_filename(filetype, dbid=dbid, timestamp=timestamp)
+
+    if not context.incremental:
+        command_string = "CVBkpRstWrapper -backup --cv-bkplvl FULL"
+    else:
+        command_string = "CVBkpRstWrapper -backup --cv-bkplvl INCR"
+
+    command_string += " --cv-clientid %s --cv-appid %s --cv-jobid %s --cv-jobtoken %s --cv-proxy-host %s --cv-proxy-port %s --cv-apptype Q_DISTRIBUTED_IDA --cv-filename \"%s\" --cv-indexpath /db_dumps --cv-debuglvl %s" % (cv_context.cv_clientid, cv_context.cv_appid, cv_context.cv_job_id, cv_context.cv_job_token, cv_context.cv_proxy_host, cv_context.cv_proxy_port, path, cv_context.cv_debuglvl)
+
+    logger.debug("Command string inside 'backup_file_with_cv': %s\n", command_string)
+    if hostname is None:
+        Command("dumping metadata files from master", command_string).run(validateAfter=True)
+    else:
+        Command("dumping metadata files from segment", command_string, ctxt=REMOTE, remoteHost=hostname).run(validateAfter=True)
+    logger.debug("Command ran successfully\n")
+
+#Form and run command line to restore individual file with CV
+def restore_file_with_cv(cv_context, context, filetype=None, path=None, cv_destpath=None, dbid=1, hostname=None, timestamp=None):
+    if filetype and path:
+        raise Exception("Cannot supply both a file type and a file path to restore_file_with_cv")
+    if filetype is None and path is None:
+        raise Exception("Cannot call restore_file_with_cv with no type or path argument")
+    if timestamp is None:
+        timestamp = context.timestamp
+    if filetype:
+        path = context.generate_filename(filetype, dbid=dbid, timestamp=timestamp)
+
+    cv_guid = cv_context.get_file_guid(path)
+    if cv_guid:
+        #-- Restores are done by Persistent Recovery (DMR framework)
+        job_id = 0;
+        job_token = " --cv-jobtoken 0"
+        if cv_destpath is not None:
+            restore_file = cv_destpath + "/" + os.path.basename(path)
+            command_string = "CVBkpRstWrapper -restore --cv-clientid %s --cv-appid %s --cv-proxy-host %s --cv-proxy-port %s --cv-apptype Q_DISTRIBUTED_IDA --cv-jobid %s %s --cv-filename \"%s\" --cv-guid %s --cv-destpath %s --cv-debuglvl %s" % (cv_context.cv_clientid, cv_context.cv_appid, cv_context.cv_proxy_host, cv_context.cv_proxy_port, job_id, job_token, os.path.basename(path), cv_guid, cv_destpath, cv_context.cv_debuglvl)
+        else:
+            restore_file = path
+            command_string = "CVBkpRstWrapper -restore --cv-clientid %s --cv-instanceId %s --cv-backupsetId %s --cv-appid %s --cv-proxy-host %s --cv-proxy-port %s --cv-apptype Q_DISTRIBUTED_IDA --cv-jobid %s %s --cv-filename \"%s\" --cv-guid %s --cv-destpath %s --cv-debuglvl %s" % (cv_context.cv_clientid, cv_context.cv_instanceid, cv_context.cv_backupsetid, cv_context.cv_appid, cv_context.cv_proxy_host, cv_context.cv_proxy_port, job_id, job_token, os.path.basename(path), cv_guid, os.path.dirname(path), cv_context.cv_debuglvl)
+        logger.debug("Command string inside 'restore_file_with_cv': %s\n", command_string)
+        logger.debug("File to restore %s\n",restore_file)
+        if hostname is None:
+            if os.path.exists(restore_file):
+                logger.debug("Skip restore. File exists (%s)" ,restore_file)
+                return
+            Command("restoring metadata files to master", command_string).run(validateAfter=True)
+        else:
+            Command("restoring metadata files to segment", command_string, ctxt=REMOTE, remoteHost=hostname).run(validateAfter=True)
+
+    else:
+        raise Exception('No backup found for given file (%s) on CV server' % path)
+
+def check_file_dumped_with_cv(cv_context, context, filetype=None, path=None, dbid=1, hostname=None):
+    if filetype and path:
+        raise Exception("Cannot supply both a file type and a file path to check_file_dumped_with_cv")
+    if filetype is None and path is None:
+        raise Exception("Cannot call check_file_dumped_with_cv with no type or path argument")
+    if filetype:
+        path = context.generate_filename(filetype, dbid=dbid)
+    for file in cv_context._backup_file_list:
+        if os.path.basename(file) == os.path.basename(path):
+            return True
+    return False
+
+def get_full_timestamp_for_incremental_with_cv(cv_context, context):
+    for fname in cv_context._backup_file_list:
+        if "_increments" in fname:
+            destDir = context.get_backup_dir()
+            logger.debug('Restoring increments file (%s) to %s' % (os.path.basename(fname), destDir))
+            restore_file_with_cv(cv_context, context, path=fname, cv_destpath=destDir)
+            contents = get_lines_from_file(context.get_backup_root()+fname)
+            #-- if incremental timepstamp is present in the _increments file
+            #-- <prefix>gp_dump_<full TS>_increments
+            if context.timestamp in contents:
+                full_timestamp = get_timestamp_from_increments_filename(fname, context.dump_prefix)
+                return full_timestamp
+    return None
+
+def get_latest_full_ts_with_cv(cv_context, context):
+    get_rpt_files_cmd = "CVBkpRstWrapper -query --cv-proxy-host %s --cv-proxy-port %s --cv-appid %s --cv-apptype %s --cv-clientid %s --cv-logfile %s --cv-filename \"/db_dumps/*/*.rpt\" --cv-debuglvl %s" % (cv_context.cv_proxy_host, cv_context.cv_proxy_port, cv_context.cv_appid, cv_context.cv_apptype, cv_context.cv_clientid, cv_context.cv_logfile, cv_context.cv_debuglvl)
+
+    logger.debug('Querying CV server to get the list of report files backed up in the latest cycle: cmd (%s)' %(get_rpt_files_cmd))
+    cmd = Command("Query Commserve to get the list of report files backed up in the latest cycle" , get_rpt_files_cmd)
+    cmd.run(validateAfter=True)
+    files_list = cmd.get_results().stdout.split('\n')
+
+    full_timestamp = 0;
+    for line in files_list:
+        if len(line) == 0:
+            continue;
+        (fname, oguid, cvguid, commcellid, subclientid) = line.strip().split(':')
+        destDir = context.get_backup_dir()
+        logger.debug('Restoring backup report file (%s) to %s' % (os.path.basename(fname), destDir))
+        restore_file_with_cv(cv_context, context, path=fname, cv_destpath=destDir)
+        timestamp = get_full_ts_from_report_file(context, report_file=context.get_backup_root()+fname, cv_context=cv_context)
+        logger.debug('Full backup timestamp = %s from report file' %timestamp)
+        if timestamp is not None:
+            return timestamp
+    raise Exception('No full backup found for given incremental on the specified Commserve')
 
 def getRows(dbname, exec_sql):
     with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:

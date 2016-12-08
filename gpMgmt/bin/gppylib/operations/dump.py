@@ -23,6 +23,7 @@ from gppylib.operations.backup_utils import *
 logger = gplog.get_default_logger()
 
 FULL_DUMP_TS_WITH_NBU = None
+FULL_DUMP_TS_WITH_CV = None
 
 COMPRESSION_FACTOR = 12                 # TODO: Where did 12 come from?
 
@@ -197,33 +198,40 @@ def get_partition_state(context, catalog_schema, partition_info):
     # Don't put space after comma, which can mess up with the space in schema and table name
     return map((lambda x: '%s, %s, %s' % x), tuples)
 
-def get_tables_with_dirty_metadata(context, cur_pgstatoperations):
-    last_dump_timestamp = get_last_dump_timestamp(context)
+def get_tables_with_dirty_metadata(context, cur_pgstatoperations, cv_context=None):
+    last_dump_timestamp = get_last_dump_timestamp(context, cv_context=cv_context)
     old_file = context.generate_filename("last_operation", timestamp=last_dump_timestamp)
     if context.netbackup_service_host:
         restore_file_with_nbu(context, path=old_file)
+    elif cv_context:
+        restore_file_with_cv(cv_context, context, path=old_file)
+        
     old_pgstatoperations = get_lines_from_file(old_file)
     old_pgstatoperations_dict = get_pgstatlastoperations_dict(old_pgstatoperations)
     dirty_tables = compare_metadata(old_pgstatoperations_dict, cur_pgstatoperations)
     return dirty_tables
 
-def get_dirty_partition_tables(context, table_type, curr_state_partition_list):
-    last_state_partition_list = get_last_state(context, table_type)
+def get_dirty_partition_tables(context, table_type, curr_state_partition_list, cv_context=None):
+    last_state_partition_list = get_last_state(context, table_type, cv_context=cv_context)
     last_state_dict = create_partition_dict(last_state_partition_list)
     curr_state_dict = create_partition_dict(curr_state_partition_list)
     return compare_dict(last_state_dict, curr_state_dict)
 
-def get_last_state(context, table_type):
-    last_ts = get_last_dump_timestamp(context)
+def get_last_state(context, table_type, cv_context=None):
+    last_ts = get_last_dump_timestamp(context, cv_context=cv_context)
     last_state_filename = get_filename_from_filetype(context, table_type, last_ts.strip())
-    if context.netbackup_service_host is None:
+    if context.netbackup_service_host is None and cv_context is None:
         if not os.path.isfile(last_state_filename):
             raise Exception('%s state file does not exist: %s' % (table_type, last_state_filename))
-    else:
+    elif context.netbackup_service_host is None:
         if check_file_dumped_with_nbu(context, path=last_state_filename):
             if not os.path.exists(last_state_filename):
                 restore_file_with_nbu(context, path=last_state_filename)
-
+    elif cv_context:
+        if check_file_dumped_with_cv(cv_context, context, path=last_state_filename):
+            if not os.path.exists(last_state_filename):
+                restore_file_with_cv(cv_context, context, path=last_state_filename)
+            
     return get_lines_from_file(last_state_filename)
 
 def compare_metadata(old_pgstatoperations, cur_pgstatoperations):
@@ -246,19 +254,27 @@ def get_pgstatlastoperations_dict(last_operations):
         last_operations_dict[(toks[2], toks[3])] = operation
     return last_operations_dict
 
-def get_last_dump_timestamp(context):
+def get_last_dump_timestamp(context, cv_context=None):
     full_dump_timestamp = get_latest_full_dump_timestamp(context)
     increments_filename = context.generate_filename("increments", timestamp=full_dump_timestamp)
-    if context.netbackup_service_host is None:
+    if context.netbackup_service_host is None and cv_context is None:
         if not os.path.isfile(increments_filename):
             return full_dump_timestamp
-    else:
+    elif netbackup_service_host is not None:
         if check_file_dumped_with_nbu(context, path=increments_filename):
             if not os.path.exists(increments_filename):
                 logger.debug('Increments file %s was dumped with NBU, so restoring it now...' % increments_filename)
                 restore_file_with_nbu(context, "increments")
         else:
             logger.debug('Increments file %s was NOT dumped with NBU, returning full timestamp as last dump timestamp' % increments_filename)
+            return full_dump_timestamp
+    elif cv_context is not None:
+        if check_file_dumped_with_cv(cv_context, context, path=increments_filename):
+            if not os.path.exists(increments_filename):
+                logger.debug('Increments file (%s) was dumped with CV, so restoring it now...' % os.path.basename(increments_filename))
+                restore_file_with_cv(cv_context, context, path=increments_filename)
+        else:
+            logger.debug('Increments file (%s) was NOT dumped with CV, returning full timestamp as last dump timestamp' % os.path.basename(increments_filename))
             return full_dump_timestamp
 
     lines = get_lines_from_file(increments_filename)
@@ -406,6 +422,8 @@ def write_partition_list_file(context, timestamp=None):
     if context.ddboost:
         copy_file_to_dd(context, partition_list_file_name)
 
+
+
 def write_last_operation_file(context, rows):
     filename = context.generate_filename("last_operation")
     write_lines_to_file(filename, rows)
@@ -422,10 +440,12 @@ def validate_current_timestamp(context, current=None):
     if latest >= current:
         raise Exception('There is a future dated backup on the system preventing new backups')
 
-def update_filter_file(context):
+def update_filter_file(context, cv_context=None):
     filter_filename = get_filter_file(context)
     if context.netbackup_service_host:
         restore_file_with_nbu(context, path=filter_filename)
+    elif cv_context:
+        restore_file_with_cv(cv_context, context, path=filter_filename)
     filter_tables = get_lines_from_file(filter_filename)
     tables_sql = "SELECT DISTINCT schemaname||'.'||tablename FROM pg_partitions"
     partitions_sql = "SELECT schemaname||'.'||partitiontablename FROM pg_partitions WHERE schemaname||'.'||tablename='%s';"
@@ -439,26 +459,41 @@ def update_filter_file(context):
     write_lines_to_file(filter_filename, list(set(filter_tables)))
     if context.netbackup_service_host:
         backup_file_with_nbu(context, path=filter_filename)
+    elif cv_context:
+        backup_file_with_cv(cv_context, context, path=filter_filename)
 
-def get_filter_file(context):
-    if context.netbackup_service_host is None:
+def get_filter_file(context, cv_context=None):
+    if context.netbackup_service_host is None and cv_context is None:
         timestamp = get_latest_full_dump_timestamp(context)
-    else:
+    elif context.netbackup_service_host:
         if FULL_DUMP_TS_WITH_NBU is None:
             timestamp = get_latest_full_ts_with_nbu(context)
         else:
             timestamp = FULL_DUMP_TS_WITH_NBU
         if timestamp is None:
             raise Exception("No full backup timestamp found for given NetBackup server.")
+    elif cv_context:
+        if FULL_DUMP_TS_WITH_CV is None:
+            timestamp = get_latest_full_ts_with_cv(cv_context, context)
+        else:
+            timestamp = FULL_DUMP_TS_WITH_CV
+        if timestamp is None:
+            raise Exception("No full backup timestamp found for given Commserve.")
     filter_file = context.generate_filename("filter", timestamp=timestamp)
-    if context.netbackup_service_host is None:
+    if context.netbackup_service_host is None and cv_context is None:
         if os.path.isfile(filter_file):
             return filter_file
         return None
-    else:
+    elif context.netbackup_service_host:
         if check_file_dumped_with_nbu(context, path=filter_file):
             if not os.path.exists(filter_file):
                 restore_file_with_nbu(context, path=filter_file)
+            return filter_file
+        return None
+    elif cv_context:
+        if check_file_dumped_with_cv(cv_context, context, path=filter_file):
+            if not os.path.exists(filter_file):
+                restore_file_with_cv(context, path=filter_file)
             return filter_file
         return None
 
@@ -473,14 +508,19 @@ def update_filter_file_with_dirty_list(filter_file, dirty_tables):
 
         write_lines_to_file(filter_file, filter_list)
 
-def filter_dirty_tables(context, dirty_tables):
-    if context.netbackup_service_host is None:
+def filter_dirty_tables(context, dirty_tables, cv_context=None):
+    if context.netbackup_service_host is None and cv_context is None:
         timestamp = get_latest_full_dump_timestamp(context)
-    else:
+    elif context.netbackup_service_host:
         if FULL_DUMP_TS_WITH_NBU is None:
             timestamp = get_latest_full_ts_with_nbu(context)
         else:
             timestamp = FULL_DUMP_TS_WITH_NBU
+    elif cv_context:
+        if FULL_DUMP_TS_WITH_CV is None:
+            timestamp = get_latest_full_ts_with_cv(cv_context, context)
+        else:
+            timestamp = FULL_DUMP_TS_WITH_CV
 
     schema_filename = context.generate_filename("schema", timestamp=timestamp)
     filter_file = get_filter_file(context)
@@ -509,6 +549,9 @@ def filter_dirty_tables(context, dirty_tables):
 def backup_state_files_with_nbu(context):
     logger.debug("Inside backup_state_files_with_nbu\n")
 
+
+
+
     backup_file_with_nbu(context, "ao")
     backup_file_with_nbu(context, "co")
     backup_file_with_nbu(context, "last_operation")
@@ -525,9 +568,22 @@ def backup_config_files_with_nbu(context):
         host = seg.getSegmentHostName()
         backup_file_with_nbu(context, "segment_config", dbid=segment.get_primary_dbid(), hostname=host)
 
+def backup_config_files_with_cv(cv_context, context):
+    backup_file_with_cv(cv_context, context, "master_config")
+
+    #backing up segment config files
+    gparray = GpArray.initFromCatalog(dbconn.DbURL(port=context.master_port), utility=True)
+    segments = gparray.getSegmentList()
+    for segment in segments:
+        seg = segment.get_active_primary()
+        context.master_datadir = seg.getSegmentDataDirectory()
+        host = seg.getSegmentHostName()
+        backup_file_with_cv(cv_context, context, "segment_config", dbid=segment.get_primary_dbid(), hostname=host)
+
 class DumpDatabase(Operation):
-    def __init__(self, context):
+    def __init__(self, context, cv_context):
         self.context = context
+        self.cv_context = cv_context
 
     def execute(self):
         self.context.exclude_dump_tables = ValidateDumpDatabase(self.context).run()
@@ -574,6 +630,8 @@ class DumpDatabase(Operation):
             shutil.copyfile(self.context.include_dump_tables_file, filter_name)
             if self.context.netbackup_service_host:
                 backup_file_with_nbu(self.context, path=filter_name)
+            if self.cv_context:
+                backup_file_with_cv(self.cv_context, self.context, path=filter_name)
         elif self.context.exclude_dump_tables_file:
             filters = get_lines_from_file(self.context.exclude_dump_tables_file)
             partitions = get_user_table_list(self.context)
@@ -585,6 +643,8 @@ class DumpDatabase(Operation):
             write_lines_to_file(filter_name, tables)
             if self.context.netbackup_service_host:
                 backup_file_with_nbu(self.context, path=filter_name)
+            if self.cv_context:
+                backup_file_with_cv(self.cv_context, self.context, path=filter_name)
         logger.info('Creating filter file: %s' % filter_name)
 
     def create_dump_outcome(self, start, end, rc):
@@ -594,7 +654,7 @@ class DumpDatabase(Operation):
                 'exit_status': rc}
 
     def create_filtered_dump_string(self):
-        filter_filename = get_filter_file(self.context)
+        filter_filename = get_filter_file(self.context, self.cv_context)
         dump_string = self.create_dump_string()
         dump_string += ' --incremental-filter=%s' % filter_filename
         return dump_string
@@ -672,20 +732,23 @@ class DumpDatabase(Operation):
             dump_line += " --netbackup-block-size=%s" % self.context.netbackup_block_size
         if self.context.netbackup_keyword:
             dump_line += " --netbackup-keyword=%s" % self.context.netbackup_keyword
+        if self.cv_context is not None:
+            dump_line += " --cv-clientid=%s --cv-appid=%s --cv-apptype=%s --cv-proxy-host=%s --cv-proxy-port=%s --cv-logfile=%s --cv-jobid %s --cv-jobtoken %s --cv-iomode stdin --cv-debuglvl %s " % (self.cv_context.cv_clientid, self.cv_context.cv_appid, self.cv_context.cv_apptype, self.cv_context.cv_proxy_host, self.cv_context.cv_proxy_port, self.cv_context.cv_logfile, self.cv_context.cv_job_id, self.cv_context.cv_job_token, self.cv_context.cv_debuglvl)
 
         return dump_line
 
 class CreateIncrementsFile(Operation):
 
-    def __init__(self, context):
+    def __init__(self, context, cv_context):
         self.orig_lines_in_file = []
-        full_dump_timestamp = get_latest_full_dump_timestamp(context)
+        full_dump_timestamp = get_latest_full_dump_timestamp(context, cv_context)
         self.increments_filename = context.generate_filename("increments", timestamp=full_dump_timestamp)
         self.context = context
+        self.cv_context = cv_context
 
     def execute(self):
         if os.path.isfile(self.increments_filename):
-            CreateIncrementsFile.validate_increments_file(self.context, self.increments_filename)
+            CreateIncrementsFile.validate_increments_file(self.context, self.increments_filename, cv_context=self.cv_context)
             self.orig_lines_in_file = get_lines_from_file(self.increments_filename)
 
         with open(self.increments_filename, 'a+') as fd:
@@ -708,7 +771,7 @@ class CreateIncrementsFile(Operation):
         return len(newlines_in_file) + 1
 
     @staticmethod
-    def validate_increments_file(context, inc_file_name):
+    def validate_increments_file(context, inc_file_name, cv_context=None):
 
         tstamps = get_lines_from_file(inc_file_name)
         for ts in tstamps:
@@ -718,7 +781,7 @@ class CreateIncrementsFile(Operation):
             fn = context.generate_filename("report", ts)
             ts_in_rpt = None
             try:
-                ts_in_rpt = get_incremental_ts_from_report_file(context, fn)
+                ts_in_rpt = get_incremental_ts_from_report_file(context, fn, cv_context=cv_context)
             except Exception as e:
                 logger.error(str(e))
 
@@ -726,9 +789,11 @@ class CreateIncrementsFile(Operation):
                 raise Exception("Timestamp '%s' from increments file '%s' is not a valid increment" % (ts, inc_file_name))
 
 class PostDumpDatabase(Operation):
-    def __init__(self, context, timestamp_start):
+    def __init__(self, context, timestamp_start, cv_context=None):
         self.context = context
+        self.cv_context = cv_context
         self.timestamp_start = timestamp_start
+
 
     def execute(self):
         report_dir = self.context.get_backup_dir()
@@ -750,6 +815,10 @@ class PostDumpDatabase(Operation):
                     'timestamp': timestamp}
 
         if self.context.netbackup_service_host:
+            return {'exit_status': 0,               # feign success with exit_status = 0
+                    'timestamp': timestamp}
+
+        if self.cv_context:
             return {'exit_status': 0,               # feign success with exit_status = 0
                     'timestamp': timestamp}
 

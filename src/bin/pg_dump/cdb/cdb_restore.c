@@ -75,6 +75,21 @@ PQExpBuffer dump_prefix_buf = NULL;
 static char *netbackup_service_host = NULL;
 static char *netbackup_block_size = NULL;
 
+/*Commvault variables */
+static char *commvault_proxy_host = NULL,
+                *commvault_proxy_port = NULL,
+                *commvault_clientid = NULL,
+                *commvault_jobid = NULL,
+                *commvault_appid = NULL,
+                *commvault_apptype = NULL,
+                *commvault_jobtoken = NULL,
+                *commvault_logfile = NULL,
+                *commvault_iomode = NULL,
+                *commvault_destpath = NULL,
+                *commvault_guid = NULL,
+		*commvault_instancename =  NULL,
+		*commvault_debuglevel =  NULL;
+
 static char *change_schema_file = NULL;
 static char *schema_level_file = NULL;
 
@@ -380,6 +395,21 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 		{"netbackup-block-size", required_argument, NULL, 16},
 		{"change-schema-file", required_argument, NULL, 17},
 		{"schema-level-file", required_argument, NULL, 18},
+                {"cv-proxy-host", required_argument, NULL, 20},
+                {"cv-proxy-port", required_argument, NULL, 21},
+                {"cv-jobtoken", required_argument, NULL, 22},
+                {"cv-appid", required_argument, NULL, 23},
+                {"cv-jobid", required_argument, NULL, 24},
+                {"cv-apptype", required_argument, NULL, 25},
+                {"cv-logfile", required_argument, NULL, 26},
+                {"cv-clientid", required_argument, NULL, 27},
+                {"cv-iomode", required_argument, NULL, 28},
+                {"cv-destpath", required_argument, NULL, 29},
+                {"cv-guid", required_argument, NULL, 30},
+                {"cv-instance", required_argument, NULL, 31},
+                {"cv-debuglvl", required_argument, NULL, 32},
+
+
 		{NULL, 0, NULL, 0}
 	};
 
@@ -775,6 +805,60 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 				if (schema_level_file != NULL)
 					free(schema_level_file);
 				break;
+                        /* Begin Commvault inputs */
+                        case 20:
+                                commvault_proxy_host = Safe_strdup(optarg);
+                                pInputOpts->pszPassThroughParms = addPassThroughLongParm("cv-proxy-host", commvault_proxy_host, pInputOpts->pszPassThroughParms);
+                                break;
+                        case 21:
+                                commvault_proxy_port = Safe_strdup(optarg);
+                                pInputOpts->pszPassThroughParms = addPassThroughLongParm("cv-proxy-port", commvault_proxy_port, pInputOpts->pszPassThroughParms);
+                                break;
+                        case 22:
+                                commvault_jobtoken = Safe_strdup(optarg);
+                                pInputOpts->pszPassThroughParms = addPassThroughLongParm("cv-jobtoken", commvault_jobtoken, pInputOpts->pszPassThroughParms);
+                                break;
+                        case 23:
+                                commvault_appid = Safe_strdup(optarg);
+                                pInputOpts->pszPassThroughParms = addPassThroughLongParm("cv-appid", commvault_appid, pInputOpts->pszPassThroughParms);
+                                break;
+                        case 24:
+                                commvault_jobid = Safe_strdup(optarg);
+                                pInputOpts->pszPassThroughParms = addPassThroughLongParm("cv-jobid", commvault_jobid, pInputOpts->pszPassThroughParms);
+                                break;
+                        case 25:
+                                commvault_apptype = Safe_strdup(optarg);
+                                pInputOpts->pszPassThroughParms = addPassThroughLongParm("cv-apptype", commvault_apptype, pInputOpts->pszPassThroughParms);
+                                break;
+                        case 26:
+                                commvault_logfile = Safe_strdup(optarg);
+                                pInputOpts->pszPassThroughParms = addPassThroughLongParm("cv-logfile", commvault_logfile, pInputOpts->pszPassThroughParms);
+                                break;
+                        case 27:
+                                commvault_clientid = Safe_strdup(optarg);
+                                pInputOpts->pszPassThroughParms = addPassThroughLongParm("cv-clientid", commvault_clientid, pInputOpts->pszPassThroughParms);
+                                break;
+                        case 28:
+                                commvault_iomode = Safe_strdup(optarg);
+                                pInputOpts->pszPassThroughParms = addPassThroughLongParm("cv-iomode", commvault_iomode, pInputOpts->pszPassThroughParms);
+                                break;
+                        case 29:
+                                commvault_destpath = Safe_strdup(optarg);
+                                pInputOpts->pszPassThroughParms = addPassThroughLongParm("cv-destpath", commvault_destpath, pInputOpts->pszPassThroughParms);
+                                break;
+                        case 30:
+                                commvault_guid = Safe_strdup(optarg);
+                                pInputOpts->pszPassThroughParms = addPassThroughLongParm("cv-guid", commvault_guid, pInputOpts->pszPassThroughParms);
+                                break;
+                        case 31:
+                                commvault_instancename = Safe_strdup(optarg);
+                                pInputOpts->pszPassThroughParms = addPassThroughLongParm("cv-instance", commvault_instancename, pInputOpts->pszPassThroughParms);
+                                break;
+                        case 32:
+                                commvault_debuglevel = Safe_strdup(optarg);
+                                pInputOpts->pszPassThroughParms = addPassThroughLongParm("cv-debuglvl", commvault_debuglevel, pInputOpts->pszPassThroughParms);
+                                break;
+                        /* End Commvault Inputs */
 
 			default:
 				mpp_err_msg_cache(logError, progname, "Try \"%s --help\" for more information.\n", progname);
