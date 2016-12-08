@@ -1,4 +1,5 @@
 bin/UPDATE_INFO
+bin/dbgen
 bin/explain.pl
 bin/gp
 bin/gpaddmirrors.py
