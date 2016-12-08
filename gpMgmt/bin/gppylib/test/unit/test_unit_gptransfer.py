@@ -10,6 +10,7 @@ from gp_unittest import *
 from gparray import GpDB, GpArray
 from gppylib.db.dbconn import UnexpectedRowsError
 from pygresql import pgdb
+from gppylib.operations.backup_utils import escapeDoubleQuoteInSQLString
 
 cursor_keys = dict(
     normal_tables=re.compile(".*n\.nspname, c\.relname, c\.relstorage.*c\.oid NOT IN \( SELECT parchildrelid.*"),
@@ -63,7 +64,8 @@ class GpTransfer(GpTestCase):
             patch('gptransfer.execSQL', new=self.cursor),
             patch('gptransfer.execSQLForSingletonRow', new=self.db_singleton),
             patch("gppylib.commands.unix.FileDirExists.remote", return_value=True),
-            patch("gptransfer.wait_for_pool", return_value=([], []))
+            patch("gptransfer.wait_for_pool", return_value=([], [])),
+            patch("gptransfer.escapeDoubleQuoteInSQLString"),
         ])
 
         # We have a GIGANTIC class that uses 31 arguments, so pre-setting this
@@ -150,10 +152,7 @@ class GpTransfer(GpTestCase):
         shutil.rmtree(self.TEMP_DIR)
 
     @patch('gptransfer.TableValidatorFactory', return_value=Mock())
-    @patch('gptransfer.execSQLForSingletonRow', side_effect=[['MYDATE'],
-                                                             ['MY"DATE'],
-                                                             ['''MY'DATE'''],
-                                                             ['MY""DATE']])
+    @patch('gptransfer.execSQLForSingletonRow', return_value=[['foo']])
     def test__get_distributed_by_with_special_characters_on_column(self, mock1,
                                                                    mock2):
         gptransfer = self.subject
@@ -165,16 +164,11 @@ class GpTransfer(GpTestCase):
         dest_table = gptransfer.GpTransferTable(*dest_args)
         cmd_args['table_pair'] = gptransfer.GpTransferTablePair(source_table,
                                                                 dest_table)
-        table_validator = gptransfer.GpTransferCommand(**cmd_args)
 
-        expected_results = ['MYDATE',
-                            'MY""DATE',
-                            'MY\'DATE',
-                            'MY""""DATE']
-        for res in expected_results:
-            expected_distribution = '''DISTRIBUTED BY ("%s")''' % res
-            result_distribution = table_validator._get_distributed_by()
-            self.assertEqual(expected_distribution, result_distribution)
+        self.subject.escapeDoubleQuoteInSQLString.return_value='"escaped_string"'
+        table_validator = gptransfer.GpTransferCommand(**cmd_args)
+        expected_distribution = '''DISTRIBUTED BY ("escaped_string")'''
+        self.assertEqual(expected_distribution, table_validator._get_distributed_by())
 
     @patch('gptransfer.TableValidatorFactory', return_value=Mock())
     @patch('gptransfer.execSQLForSingletonRow',
@@ -398,11 +392,15 @@ class GpTransfer(GpTestCase):
                                                                             ["public", "my_table_partition2", ""]]
         self.cursor.side_effect = cursor_side_effect.cursor_side_effect
 
+        # call through to unmocked version of this function because the function gets called too many times
+        # to easily mock in this case
+        self.subject.escapeDoubleQuoteInSQLString = escapeDoubleQuoteInSQLString
+
         class SingletonSideEffectWithIterativeReturns(SingletonSideEffect):
             def __init__(self):
                 SingletonSideEffect.__init__(self)
-                self.values["SELECT count(*) FROM public.my_normal_table"] = [[[30, 15, 15]]]
-                self.counters["SELECT count(*) FROM public.my_normal_table"] = 0
+                self.values['SELECT count(*) FROM "public"."my_normal_table"'] = [[[30], [15], [15]]]
+                self.counters['SELECT count(*) FROM "public"."my_normal_table"'] = 0
 
             def singleton_side_effect(self, *args):
                 for key in self.values.keys():
@@ -741,6 +739,23 @@ class GpTransfer(GpTestCase):
 
         with self.assertRaisesRegexp(Exception, "No hosts in map"):
             self.subject.GpTransfer(Mock(**options), [])
+
+    def test__row_count_validation_escapes_schema_and_table_names(self):
+        self.subject.escapeDoubleQuoteInSQLString.side_effect = ['"escapedSchema"', '"escapedTable"', '"escapedSchema"', '"escapedTable"']
+
+        escaped_query = 'SELECT count(*) FROM "escapedSchema"."escapedTable"'
+
+        table_mock = Mock(spec=['schema','table'])
+        table_mock.schema = 'mySchema'
+        table_mock.table = 'myTable'
+        table_pair = Mock(spec=['source','dest'])
+        table_pair.source = table_mock
+        table_pair.dest = table_mock
+
+        validator = self.subject.CountTableValidator('some_work_dir', table_pair, 'fake_db_connection', 'fake_db_connection')
+        self.assertEqual(escaped_query, validator._src_sql)
+        self.assertEqual(escaped_query, validator._dest_sql)
+
 
     ####################################################################################################################
     # End of tests, start of private methods/objects

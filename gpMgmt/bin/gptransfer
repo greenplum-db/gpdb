@@ -999,8 +999,8 @@ class CountTableValidator(TableValidator):
         dest_table = table_pair.dest.table
 
         TableValidator.__init__(self, work_dir, src_conn, dest_conn,
-                                sql % (src_schema, src_table),
-                                sql % (dest_schema, dest_table))
+                                sql % (escapeDoubleQuoteInSQLString(src_schema), escapeDoubleQuoteInSQLString(src_table)),
+                                sql % (escapeDoubleQuoteInSQLString(dest_schema), escapeDoubleQuoteInSQLString(dest_table)))
 
     def init_dest_dict(self, dest_tables_dict=None, table_pair=None):
         try:
@@ -1690,8 +1690,8 @@ GROUP BY nspname, relname;''' % (self._table_pair.source.schema,
             row = execSQLForSingletonRow(self._src_conn, sql)
             # NOTE: ideally, we can use pg.escape_identifier for this part, but
             # that is introducted in pygresql 4.1 and we are in 4.0
-            quoted_column_name = escapeDoubleQuoteInSQLString(row[0], forceDoubleQuote=False)
-            return '''DISTRIBUTED BY ("%s")''' % quoted_column_name
+            quoted_column_name = escapeDoubleQuoteInSQLString(row[0])
+            return '''DISTRIBUTED BY (%s)''' % quoted_column_name
         # NOTE: execSQLForSingletonRow will raise if it doesn't find at least 1
         # row. This is expected to happen if the table is DISTRIBUTED RANDOMLY
         except UnexpectedRowsError:
@@ -3145,8 +3145,8 @@ class GpTransfer(object):
                 url = DbURL(self._options.dest_host, self._options.dest_port, table_pair.dest.database,
                             self._options.dest_user)
                 dest_conn = connect(url)
-                schemaname = pg.escape_string(table_pair.dest.schema)
-                tablename = pg.escape_string(table_pair.dest.table)
+                schemaname = escapeDoubleQuoteInSQLString(table_pair.dest.schema)
+                tablename = escapeDoubleQuoteInSQLString(table_pair.dest.table)
                 dest_sql = "SELECT count(*) FROM %s.%s" % (schemaname, tablename)
                 dest_res = execSQLForSingletonRow(dest_conn, dest_sql)[0]
                 before_dest_tables_dict[str(table_pair.dest)] = dest_res

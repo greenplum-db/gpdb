@@ -1159,3 +1159,14 @@ class BackupUtilsTestCase(GpTestCase):
         conn = Mock()
         self.assertEquals('queryResults', execute_sql_with_connection(query, conn))
         execSQL.assert_called_with(conn, query)
+
+    def test__escapeDoubleQuoteInSQLString(self):
+        self.assertEqual('MYDATE', escapeDoubleQuoteInSQLString('MYDATE', False))
+        self.assertEqual('MY""DATE', escapeDoubleQuoteInSQLString('MY"DATE', False))
+        self.assertEqual('MY\'DATE', escapeDoubleQuoteInSQLString('''MY'DATE''', False))
+        self.assertEqual('MY""""DATE', escapeDoubleQuoteInSQLString('MY""DATE', False))
+
+        self.assertEqual('"MYDATE"', escapeDoubleQuoteInSQLString('MYDATE'))
+        self.assertEqual('"MY""DATE"', escapeDoubleQuoteInSQLString('MY"DATE'))
+        self.assertEqual('"MY\'DATE"', escapeDoubleQuoteInSQLString('''MY'DATE'''))
+        self.assertEqual('"MY""""DATE"', escapeDoubleQuoteInSQLString('MY""DATE'))
