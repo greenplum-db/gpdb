@@ -162,31 +162,6 @@ extern char *DataToBase64(const char *pszIn, unsigned int InLen);
 extern char *Base64ToData(const char *pszIn, unsigned int *pOutLen);
 extern char *nextToken(register char **stringp, register const char *delim);
 extern int	parseDbidSet(int *dbidset, char *dump_set);
-extern char* formCompressionProgramString(char* compPg);
-extern void formDDBoostPsqlCommandLine(char** retVal, bool compUsed, const char* ddboostPg, const char* compProg,
-							const char* ddp_file_name, const char* dd_boost_buf_size,
-							const char* filter_script, const char* table_filter_file,
-							int role, const char* psqlPg, bool postSchemaOnly,
-							const char* change_schema_file, const char *schema_level_file,
-							const char* ddboost_storage_unit);
-
-extern void formSegmentPsqlCommandLine(char** retVal, const char* inputFileSpec,
-						bool compUsed, const char* compProg, const char* filter_script,
-						const char* table_filter_file, int role, const char* psqlPg, const char* catPg,
-                        const char* gpNBURestorePg, const char* netbackupServiceHost, const char* netbackupBlockSize,
-						const char* change_schema, const char* schema_level_file);
-
-extern void formPostDataSchemaOnlyPsqlCommandLine(char** retVal, const char* inputFileSpec,
-						bool compUsed, const char* compProg, const char* post_data_filter_script,
-                        const char* table_filter_file, const char* psqlPg, const char* catPg,
-                        const char* gpNBURestorePg, const char* netbackupServiceHost, const char* netbackupBlockSize,
-			const char* change_schema_file, const char *schema_level_file);
-
-extern void formFilterCommandLine(char** retVal, const char* filter_script, const char* table_filter_file,
-				int role, const char* change_schema_file, const char *schema_level_file);
-
-extern void formPostDataFilterCommandLine(char** retVal, const char* post_data_filter_script, const char* table_filter_file,
-					const char* change_schema_file, const char *schema_level_file);
 
 /* prototypes for hash table */
 
@@ -202,5 +177,5 @@ char getTypstorage(Oid o);
 
 int removeNode(Oid o);
 
-extern char* shellEscape(const char *shellArg, PQExpBuffer escapeBuf);
+extern char *shellEscape(const char *shellArg, PQExpBuffer escapeBuf, bool addQuote, bool reset);
 #endif   /* CDB_DUMP_UTIL_H */
