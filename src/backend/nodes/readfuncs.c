@@ -2244,6 +2244,7 @@ _readCreateExternalStmt(void)
 	READ_BOOL_FIELD(isweb);
 	READ_BOOL_FIELD(iswritable);
 	READ_NODE_FIELD(sreh);
+	READ_NODE_FIELD(extOptions);
 	READ_NODE_FIELD(encoding);
 	READ_NODE_FIELD(distributedBy);
 	local_node->policy = NULL;

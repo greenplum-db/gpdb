@@ -41,6 +41,8 @@ static char transformFormatType(char *formatname);
 static Datum transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswritable);
 static void InvokeProtocolValidation(Oid procOid, char *procName, bool iswritable, List *locs);
 
+static Datum transformExtOpts(List *extOptions);
+
 /* ----------------------------------------------------------------
 *		DefineExternalRelation
 *				Creates a new external relation.
@@ -67,6 +69,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	Oid			reloid = 0;
 	Oid			fmtErrTblOid = InvalidOid;
 	Datum		formatOptStr;
+	Datum		extOptStr;
 	Datum		locationUris = 0;
 	Datum		locationExec = 0;
 	char	   *commandString = NULL;
@@ -291,6 +294,10 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 									   createExtStmt->formatOpts,
 									   list_length(createExtStmt->tableElts),
 									   iswritable);
+    /*
+     * Parse and validate OPTION clause.
+     */
+	extOptStr = transformExtOpts(createExtStmt->extOptions);
 
 	/*
 	 * Parse single row error handling info if available
@@ -401,6 +408,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 						fmtErrTblOid,
 						encoding,
 						formatOptStr,
+//						extOptStr,
 						locationExec,
 						locationUris);
 
@@ -761,6 +769,57 @@ transformFormatType(char *formatname)
 	return result;
 }
 
+/*
+ * Transform the FORMAT options into a text field. Parse the
+ */
+static Datum
+transformExtOpts(List *extOptions)
+{
+    ListCell   *option;
+    Datum       result;
+    char       *extOptions_str = NULL;
+
+	/* options buffer */
+	StringInfoData extOptsbuf;
+	initStringInfo(&extOptsbuf);
+
+	foreach(option, extOptions)
+	{
+		DefElem    *defel = (DefElem *) lfirst(option);
+		char       *key = defel->defname;
+		char       *val = defGetString(defel);
+
+		/*
+		 * Output "<key> '<val>' ", but replace any space chars in the key
+		 * with meta char (MPP-14467)
+		 */
+		while (*key)
+		{
+		    if (*key == ' ')
+		        appendStringInfoString(&extOptsbuf, "<gpx20>");
+		    else
+		        appendStringInfoChar(&extOptsbuf, *key);
+		    key++;
+		}
+
+		appendStringInfo(&extOptsbuf, " '%s' ", val);
+	}
+
+    /* +1 leaves room for sprintf's trailing null */
+    extOptions_str = extOptsbuf.data;
+
+	//TODO: it is DEBUG info, remove it later
+	elog(WARNING, "OPTION debug info: \"%s\"", extOptions_str);
+
+    /* convert c string to text datum */
+    result = DirectFunctionCall1(textin, CStringGetDatum(extOptions_str));
+
+	/* clean up */
+    if (extOptions_str)
+        pfree(extOptions_str);
+
+	return result;
+}
 
 /*
  * Transform the FORMAT options into a text field. Parse the

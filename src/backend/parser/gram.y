@@ -227,9 +227,11 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 
 %type <list>	createdb_opt_list alterdb_opt_list copy_opt_list
 				ext_on_clause_list format_opt format_opt_list format_def_list transaction_mode_list
+				ext_option ext_option_opt ext_option_list
 				ext_opt_encoding_list create_extension_opt_list alter_extension_opt_list
 %type <defelt>	createdb_opt_item alterdb_opt_item copy_opt_item
 				ext_on_clause_item format_opt_item format_def_item transaction_mode_item
+				ext_option_item
 				ext_opt_encoding_item create_extension_opt_item alter_extension_opt_item
 
 %type <ival>	opt_lock lock_type cast_context
@@ -4604,7 +4606,7 @@ opt_with_data:
  *****************************************************************************/
 	
 CreateExternalStmt:	CREATE OptWritable EXTERNAL OptWeb OptTemp TABLE qualified_name '(' OptExtTableElementList ')' 
-					ExtTypedesc FORMAT Sconst format_opt ext_opt_encoding_list OptSingleRowErrorHandling OptDistributedBy
+					ExtTypedesc FORMAT Sconst format_opt ext_option_opt ext_opt_encoding_list OptSingleRowErrorHandling OptDistributedBy
 						{
 							CreateExternalStmt *n = makeNode(CreateExternalStmt);
 							n->iswritable = $2;
@@ -4615,9 +4617,10 @@ CreateExternalStmt:	CREATE OptWritable EXTERNAL OptWeb OptTemp TABLE qualified_n
 							n->exttypedesc = (ExtTableTypeDesc *) $11;
 							n->format = $13;
 							n->formatOpts = $14;
-							n->encoding = $15;
-							n->sreh = $16;
-							n->distributedBy = $17;
+							n->extOptions = $15;
+							n->encoding = $16;
+							n->sreh = $17;
+							n->distributedBy = $18;
 							n->policy = 0;
 							
 							/* various syntax checks for EXECUTE external table */
@@ -4797,6 +4800,34 @@ format_opt_item:
 			| NEWLINE opt_as Sconst
 			{
 				$$ = makeDefElem("newline", (Node *)makeString($3));
+			}
+			;
+
+ext_option_opt:
+			OPTION ext_option					{ $$ = $2; }
+            | /*EMPTY*/                         { $$ = NIL; }
+            ;
+
+ext_option:
+			  '(' ext_option_list ')'           { $$ = $2; }
+			| '(' ')'                           { $$ = NIL; }
+			;
+
+ext_option_list:
+			ext_option_item
+			{
+				$$ = list_make1($1);
+			}
+			| ext_option_list ',' ext_option_item
+			{
+				$$ = lappend($1, $3);
+			}
+			;
+
+ext_option_item:
+			ColId_or_Sconst opt_as Sconst
+			{
+				$$ = makeDefElem($1, (Node *)makeString($3));
 			}
 			;
 
