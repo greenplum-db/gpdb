@@ -138,11 +138,12 @@ test: uaocs_compaction/index_stats
 test: uaocs_compaction/index
 test: uaocs_compaction/drop_column
 
-# Tests for updatable ao and aocs catalog tables.  Do not add them to
-# a group that runs serializable transactions.  These tests run VACUUM
-# FULL on append-optimized tables and assume that no AWAITING_DROP
-# segfiles exist at the end of VACUUM FULL.
-test: uao_catalog_tables uaocs_catalog_tables
+# Do not add the two uao*_catalog_tables tests to a group that runs
+# serializable transactions.  They run VACUUM FULL on append-optimized
+# tables and assume that no AWAITING_DROP segfiles exist at the end of
+# VACUUM FULL.
+test: uao_catalog_tables uaocs_catalog_tables uao_ddl/blocksize uao_ddl/compresstype uao_ddl/alter_ao_part_tables_splitpartition uao_ddl/create_ao_tables uao_ddl/create_ao_table_500cols uao_ddl/alter_ao_part_exch uao_ddl/alter_ao_part_tables
+test: uao_ddl/cursor uao_ddl/alter_ao_table_owner uao_ddl/alter_ao_table_statistics uao_ddl/alter_ao_table_index uao_ddl/alter_ao_table_oid uao_ddl/alter_ao_table_setdefault uao_ddl/analyze_ao_table_every_dml uao_ddl/alter_ao_table_setstorage uao_ddl/alter_ao_table_constraint uao_ddl/alter_ao_table_col_ddl
 
 # Test psql \du output
 test: psql_gpdb_du
