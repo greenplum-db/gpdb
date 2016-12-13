@@ -192,7 +192,7 @@ class PgCtlBackendOptions(CmdArgs):
             "-p", str(port),
             "--gp_dbid="+ str(dbid),
             "--gp_num_contents_in_cluster="+ str(numcids),
-            "--silent-mode=true"
+            "--silent-mode=false"
         ])
 
     #
