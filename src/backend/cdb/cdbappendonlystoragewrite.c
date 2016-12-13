@@ -269,10 +269,12 @@ AppendOnlyStorageWrite_TransactionCreateFile(AppendOnlyStorageWrite *storageWrit
 	/*
 	 * We may or may not have a gp_relation_node entry when the EOF is 0.
 	 */
-	if (ReadGpRelationNode(relFileNode->relNode,
-						   segmentFileNum,
-						   persistentTid,
-						   persistentSerialNum))
+	if (ReadGpRelationNode(
+			(relFileNode->spcNode == MyDatabaseTableSpace) ? 0:relFileNode->spcNode,
+			relFileNode->relNode,
+			segmentFileNum,
+			persistentTid,
+			persistentSerialNum))
 	{
 		/*
 		 * UNDONE: Verify the gp_persistent_relation_node Append-Only EOFs are
@@ -296,6 +298,7 @@ AppendOnlyStorageWrite_TransactionCreateFile(AppendOnlyStorageWrite *storageWrit
 														 * currently only used
 														 * for tracing... */
 							  storageWrite->relationName,
+							  (relFileNode->spcNode == MyDatabaseTableSpace) ? 0:relFileNode->spcNode,
 							  relFileNode->relNode,
 							  segmentFileNum,
 							   /* updateIndex */ true,

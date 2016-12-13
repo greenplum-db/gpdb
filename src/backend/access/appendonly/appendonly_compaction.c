@@ -57,10 +57,11 @@ AppendOnlyCompaction_DropSegmentFile(Relation aorel,
 	int64 persistentSerialNum;
 
 	if (!ReadGpRelationNode(
-					aorel->rd_node.relNode,
-					segno,
-					&persistentTid,
-					&persistentSerialNum))
+			aorel->rd_rel->reltablespace,
+			aorel->rd_rel->relfilenode,
+			segno,
+			&persistentTid,
+			&persistentSerialNum))
 	{
 		/* There is nothing to drop */
 		return;

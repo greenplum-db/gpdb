@@ -498,10 +498,12 @@ SetCurrentFileSegForWrite(AppendOnlyInsertDesc aoInsertDesc)
 		 */
 		if (gp_appendonly_verify_eof &&
 			aoInsertDesc->cur_segno > 0 &&
-			ReadGpRelationNode(aoInsertDesc->aoi_rel->rd_node.relNode,
-							   aoInsertDesc->cur_segno,
-							   &persistentTid,
-							   &persistentSerialNum))
+			ReadGpRelationNode(
+				aoInsertDesc->aoi_rel->rd_rel->reltablespace,
+				aoInsertDesc->aoi_rel->rd_rel->relfilenode,
+				aoInsertDesc->cur_segno,
+				&persistentTid,
+				&persistentSerialNum))
 		{
 			elog(ERROR, "Found gp_relation_node entry for relation name %s, "
 			"relation Oid %u, relfilenode %u, segment file #%d "
@@ -547,19 +549,21 @@ SetCurrentFileSegForWrite(AppendOnlyInsertDesc aoInsertDesc)
 	else
 	{
 		if (!ReadGpRelationNode(
-					aoInsertDesc->aoi_rel->rd_node.relNode,
-					aoInsertDesc->cur_segno,
-					&persistentTid,
-					&persistentSerialNum))
+				aoInsertDesc->aoi_rel->rd_rel->reltablespace,
+				aoInsertDesc->aoi_rel->rd_rel->relfilenode,
+				aoInsertDesc->cur_segno,
+				&persistentTid,
+				&persistentSerialNum))
 		{
 			elog(ERROR, "Did not find gp_relation_node entry for relation name"
-						" %s, relation id %u, relfilenode %u, segment file #%d,"
+						" %s, relation id %u, tablespace %u, relfilenode %u, segment file #%d,"
 						" logical eof " INT64_FORMAT,
-						aoInsertDesc->aoi_rel->rd_rel->relname.data,
-						aoInsertDesc->aoi_rel->rd_id,
-						aoInsertDesc->aoi_rel->rd_node.relNode,
-						aoInsertDesc->cur_segno,
-						eof);
+				 aoInsertDesc->aoi_rel->rd_rel->relname.data,
+				 aoInsertDesc->aoi_rel->rd_id,
+				 aoInsertDesc->aoi_rel->rd_rel->reltablespace,
+				 aoInsertDesc->aoi_rel->rd_rel->relfilenode,
+				 aoInsertDesc->cur_segno,
+				 eof);
 		}
 	}
 

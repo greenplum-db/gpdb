@@ -520,6 +520,7 @@ DefineQueryRewrite(char *rulename,
 							SnapshotNow,
 							relNodeRelation,
 							event_relation->rd_id,
+							event_relation->rd_rel->reltablespace,
 							event_relation->rd_rel->relfilenode,
 							&gpRelationNodeScan);
 			

@@ -9525,8 +9525,6 @@ ATExecSetTableSpace_AppendOnly(
 	Relation		gp_relation_node,
 	RelFileNode		*newRelFileNode)
 {
-	Oid			oldTablespace;
-
 	char *buffer;
 
 	GpRelationNodeScan 	gpRelationNodeScan;
@@ -9549,8 +9547,6 @@ ATExecSetTableSpace_AppendOnly(
 				 */
 					
 	int segmentCount;
-
-	oldTablespace = rel->rd_rel->reltablespace ? rel->rd_rel->reltablespace : MyDatabaseTableSpace;
 
 	if (Debug_persistent_print)
 		elog(Persistent_DebugPrintLevel(), 
@@ -9589,6 +9585,7 @@ ATExecSetTableSpace_AppendOnly(
 					SnapshotNow,
 					gp_relation_node,
 					tableOid,
+					rel->rd_rel->reltablespace,
 					rel->rd_rel->relfilenode,
 					&gpRelationNodeScan);
 	segmentCount = 0;
@@ -9631,6 +9628,7 @@ ATExecSetTableSpace_AppendOnly(
 		UpdateGpRelationNodeTuple(
 							gp_relation_node,
 							tupleCopy,
+							(newRelFileNode->spcNode == MyDatabaseTableSpace) ? 0:newRelFileNode->spcNode,
 							newRelFileNode->relNode,
 							segmentFileNum,
 							&newPersistentTid,
@@ -9822,6 +9820,7 @@ ATExecSetTableSpace_BufferPool(
 	/* Fetch relation's gp_relation_node row */
 	nodeTuple = FetchGpRelationNodeTuple(
 					gp_relation_node,
+					rel->rd_rel->reltablespace,
 					rel->rd_rel->relfilenode,
 					/* segmentFileNum */ 0,
 					&oldPersistentTid,
@@ -9889,6 +9888,7 @@ ATExecSetTableSpace_BufferPool(
 	UpdateGpRelationNodeTuple(
 						gp_relation_node,
 						nodeTuple,
+						(newRelFileNode->spcNode == MyDatabaseTableSpace) ? 0:newRelFileNode->spcNode,
 						newRelFileNode->relNode,
 						/* segmentFileNum */ 0,
 						&newPersistentTid,

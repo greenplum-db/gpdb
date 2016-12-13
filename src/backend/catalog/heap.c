@@ -1234,6 +1234,7 @@ InsertGpRelationNodeTuple(
 	Relation 		gp_relation_node,
 	Oid				relationId,
 	char			*relname,
+	Oid				tablespaceOid,
 	Oid				relfilenode,
 	int32			segmentFileNum,
 	bool			updateIndex,
@@ -1269,8 +1270,15 @@ InsertGpRelationNodeTuple(
 			 persistentSerialNum,
 			 ItemPointerToString(persistentTid));
 
+	/*
+	 * gp_relation_node stores tablespaceOId in pg_class fashion, which means
+	 * defaultTablespace is represented as "0".
+	 */
+	Assert (tablespaceOid != MyDatabaseTableSpace);
+	
 	GpRelationNode_SetDatumValues(
 								values,
+								tablespaceOid,
 								relfilenode,
 								segmentFileNum,
 								/* createMirrorDataLossTrackingSessionNum */ 0,
@@ -1295,6 +1303,7 @@ void
 UpdateGpRelationNodeTuple(
 	Relation 	gp_relation_node,
 	HeapTuple 	tuple,
+	Oid         tablespaceOid,
 	Oid			relfilenode,
 	int32		segmentFileNum,
 	ItemPointer persistentTid,
@@ -1326,6 +1335,9 @@ UpdateGpRelationNodeTuple(
 	memset(repl_val, 0, sizeof(repl_val));
 	memset(repl_null, false, sizeof(repl_null));
 	memset(repl_repl, false, sizeof(repl_null));
+
+	repl_repl[Anum_gp_relation_node_tablespace_oid - 1] = true;
+	repl_val[Anum_gp_relation_node_tablespace_oid - 1] = ObjectIdGetDatum(tablespaceOid);
 
 	repl_repl[Anum_gp_relation_node_relfilenode_oid - 1] = true;
 	repl_val[Anum_gp_relation_node_relfilenode_oid - 1] = ObjectIdGetDatum(relfilenode);
@@ -1362,6 +1374,7 @@ AddNewRelationNodeTuple(
 							gp_relation_node,
 							new_rel->rd_id,
 							new_rel->rd_rel->relname.data,
+							new_rel->rd_rel->reltablespace,
 							new_rel->rd_rel->relfilenode,
 							/* segmentFileNum */ 0,
 							/* updateIndex */ true,
@@ -2323,6 +2336,7 @@ remove_gp_relation_node_and_schedule_drop(Relation rel)
 						SnapshotNow,
 						relNodeRelation,
 						rel->rd_id,
+						rel->rd_rel->reltablespace,
 						rel->rd_rel->relfilenode,
 						&gpRelationNodeScan);
 		

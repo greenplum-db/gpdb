@@ -76,6 +76,7 @@ extern void InsertGpRelationNodeTuple(
 	Relation 		gp_relation_node,
 	Oid				relationId,
 	char			*relname,
+	Oid				tablespaceOid,
 	Oid				relation,
 	int32			segmentFileNum,
 	bool			updateIndex,
@@ -84,6 +85,7 @@ extern void InsertGpRelationNodeTuple(
 extern void UpdateGpRelationNodeTuple(
 		Relation	gp_relation_node,
 		HeapTuple	tuple,
+		Oid 		tablespaceOid,
 		Oid 		relation,
 		int32		segmentFileNum,
 		ItemPointer persistentTid,

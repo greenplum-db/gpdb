@@ -20,8 +20,9 @@ typedef struct GpRelationNodeScan
 {
 	Relation	gp_relation_node;
 	Oid		relationId;
+	Oid 		tablespaceOid;
 	Oid		relfilenode;
-	ScanKeyData     scankey[1];
+	ScanKeyData     scankey[2];
 	struct SysScanDescData  *scan;
 } GpRelationNodeScan;
 
@@ -30,6 +31,7 @@ GpRelationNodeBeginScan(
 	Snapshot	snapshot,
 	Relation 	gp_relation_node,
 	Oid		relationId,
+	Oid 		tablespaceOid,
 	Oid 		relfilenode,
 	GpRelationNodeScan 	*gpRelationNodeScan);
 
@@ -46,11 +48,13 @@ GpRelationNodeEndScan(
 
 extern HeapTuple FetchGpRelationNodeTuple(
 	Relation 	gp_relation_node,
+	Oid 		tablespaceOid,
 	Oid 		relationNode,
 	int32		segmentFileNum,
 	ItemPointer	persistentTid,
 	int64		*persistentSerialNum);
 extern bool ReadGpRelationNode(
+	Oid tablespaceOid,
 	Oid 			relfilenode,
 	int32			segmentFileNum,
 	ItemPointer		persistentTid,

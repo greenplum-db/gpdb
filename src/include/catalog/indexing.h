@@ -275,7 +275,7 @@ DECLARE_UNIQUE_INDEX(pg_appendonly_relid_index, 5007, on pg_appendonly using btr
 DECLARE_UNIQUE_INDEX(gp_fastsequence_objid_objmod_index, 6067, on gp_fastsequence using btree(objid oid_ops, objmod  int8_ops));
 #define FastSequenceObjidObjmodIndexId 6067
 
-DECLARE_UNIQUE_INDEX(gp_relation_node_index, 5095, on gp_relation_node using btree(relfilenode_oid oid_ops, segment_file_num int4_ops));
+DECLARE_UNIQUE_INDEX(gp_relation_node_index, 5095, on gp_relation_node using btree(tablespace_oid oid_ops, relfilenode_oid oid_ops, segment_file_num int4_ops));
 #define GpRelationNodeOidIndexId  5095
 
 /* MPP-6929: metadata tracking */
