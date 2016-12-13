@@ -456,6 +456,7 @@ extern double optimizer_damping_factor_join;
 extern double optimizer_damping_factor_groupby;
 extern int optimizer_segments;
 extern int optimizer_join_arity_for_associativity_commutativity;
+extern int optimizer_penalize_broadcast_threshold;
 extern int optimizer_array_expansion_threshold;
 extern int optimizer_join_order_threshold;
 extern bool optimizer_analyze_root_partition;

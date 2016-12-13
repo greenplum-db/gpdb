@@ -546,6 +546,7 @@ double		optimizer_damping_factor_join;
 double		optimizer_damping_factor_groupby;
 int			optimizer_segments;
 int			optimizer_join_arity_for_associativity_commutativity;
+int			optimizer_penalize_broadcast_threshold;
 int         optimizer_array_expansion_threshold;
 int         optimizer_join_order_threshold;
 bool		optimizer_analyze_root_partition;
@@ -4701,6 +4702,16 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
+		{"optimizer_penalize_broadcast_threshold", PGC_USERSET, QUERY_TUNING_METHOD,
+			gettext_noop("Maximum number of rows of a relation that can be broadcasted without penalty."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_penalize_broadcast_threshold,
+		10000000, 0, INT_MAX, NULL, NULL
+	},
+
+	{
 		{"optimizer_mdcache_size", PGC_USERSET, RESOURCES_MEM,
 			gettext_noop("Sets the size of MDCache."),
 			NULL,
@@ -4883,6 +4894,7 @@ struct config_real ConfigureNamesReal_gp[] =
 		&gp_statistics_ndistinct_scaling_ratio_threshold,
 		0.10, 0.001, 1.0, NULL, NULL
 	},
+
 	{
 		{"gp_statistics_sampling_threshold", PGC_USERSET, STATS_ANALYZE,
 			gettext_noop("Only tables larger than this size will be sampled."),
@@ -4892,6 +4904,7 @@ struct config_real ConfigureNamesReal_gp[] =
 		&gp_statistics_sampling_threshold,
 		20000.0, 0.0, DBL_MAX, NULL, NULL
 	},
+
 	{
 		{"gp_resqueue_priority_cpucores_per_segment", PGC_POSTMASTER, RESOURCES_MGM,
 			gettext_noop("Number of processing units associated with a segment."),
