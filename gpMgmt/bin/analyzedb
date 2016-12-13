@@ -46,8 +46,8 @@ STATEFILE_DIR = 'db_analyze'
 logger = gplog.get_default_logger()
 CURR_TIME = None
 
-ANALYZE_SQL = """analyze %s"""
-ANALYZE_ROOT_SQL = """analyze rootpartition %s"""
+ANALYZE_SQL = """set statement_mem=125000; analyze %s"""
+ANALYZE_ROOT_SQL = """set statement_mem=125000; analyze rootpartition %s"""
 
 PG_PARTITIONS_SURROGATE = """
 SELECT n.nspname AS schemaname, cl.relname AS tablename, n2.nspname AS partitionschemaname, cl2.relname AS partitiontablename, cl3.relname AS parentpartitiontablename
@@ -563,7 +563,7 @@ class AnalyzeDb(Operation):
             ret.append(tup)
         return ret
 
-    
+
 
     def _write_back(self, curr_ao_state, curr_last_op, prev_ao_state, prev_last_op, heap_partitions,
                    input_col_dict, prev_col_dict, root_partition_col_dict, is_full, dirty_partitions, target_list):
