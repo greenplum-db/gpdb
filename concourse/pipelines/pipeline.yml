@@ -121,6 +121,8 @@ jobs:
     - get: gpdb_src
       tags: ["worker-one"]
       trigger: true
+    - get: gpaddon_src 
+      tags: ["worker-one"]
     - get: centos-gpdb-dev-6
       tags: ["worker-one"]
   - task: compile_gpdb
@@ -167,6 +169,8 @@ jobs:
     - get: gpdb_src
       tags: ["worker-three"]
       trigger: true
+    - get: gpaddon_src 
+      tags: ["worker-three"]
     - get: centos-gpdb-dev-7
       tags: ["worker-three"]
   - task: compile_gpdb
