@@ -346,11 +346,6 @@ bfz_create_internal(const char *fileName, bool open_existing,
 /*
  * bfz_close
  *		Close and free used resources
- *
- * If the file is missing and can't be deleted an error will be thrown, this
- * can be avoided by setting error_on_unlink to false when running bfz_close()
- * as part of a transaction abortion for example were throwing additional
- * errors should be avoided.
  */
 void
 bfz_close(bfz_t *thiz)
