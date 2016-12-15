@@ -36,7 +36,7 @@ static const struct{
     {{0}}
 };
 
-static bfz_t *bfz_create_internal(bfz_t * bfz_handle, const char *fileName, bool open_existing, bool delOnClose, int compress);
+static bfz_t *bfz_create_internal(const char *fileName, bool open_existing, bool delOnClose, int compress);
 
 int
 bfz_string_to_compression(const char *string)
@@ -232,22 +232,9 @@ read_bfz_buffer(bfz_t *bfz, char *buffer)
 bfz_t *
 bfz_create(const char *fileName, bool delOnClose, int compress)
 {
-	bfz_t *thiz = palloc0(sizeof(bfz_t));
-
-#if USE_ASSERT_CHECKING
-	bfz_t *ret_bfz =
-#endif
-	bfz_create_internal(thiz, fileName,
-			false, /* open_existing */
-			delOnClose, compress);
-
-	/*
-	 * Create_internal does not return if it fails for creating new files,
-	 * so it should never return NULL here
-	 */
-	Assert(ret_bfz == thiz);
-
-	return thiz;
+	return bfz_create_internal(fileName,
+							   false, /* open_existing */
+							   delOnClose, compress);
 }
 
 /*
@@ -257,20 +244,20 @@ bfz_create(const char *fileName, bool delOnClose, int compress)
 bfz_t *
 bfz_open(const char *fileName, bool delOnClose, int compress)
 {
-	bfz_t *new_bfz = palloc0(sizeof(bfz_t));
-	bfz_t *ret_bfz = bfz_create_internal(new_bfz, fileName,
-			true, /* open_existing */
-			delOnClose, compress);
+	bfz_t *new_bfz;
+
+	new_bfz = bfz_create_internal(fileName,
+								  true, /* open_existing */
+								  delOnClose, compress);
 
 	/* Failed to open existing file. Inform the caller */
-	if (NULL == ret_bfz)
-	{
-		pfree(new_bfz);
+	if (new_bfz == NULL)
 		return NULL;
-	}
 
-	/* Since we are opening an existing file for reading,
-	 * prepare the state for scan_begin.  */
+	/*
+	 * Since we are opening an existing file for reading,
+	 * prepare the state for scan_begin.
+	 */
 	new_bfz->mode = BFZ_MODE_FREED;
 
 	return new_bfz;
@@ -283,13 +270,13 @@ bfz_open(const char *fileName, bool delOnClose, int compress)
  * NULL if could not open existing file.
  */
 static bfz_t *
-bfz_create_internal(bfz_t *bfz_handle, const char *fileName, bool open_existing,
-		bool delOnClose, int compress)
+bfz_create_internal(const char *fileName, bool open_existing,
+					bool delOnClose, int compress)
 {
 	struct bfz_freeable_stuff *fs;
+	bfz_t *bfz_handle;
 
-	memset(bfz_handle, 0, sizeof(*bfz_handle));
-
+	bfz_handle = palloc0(sizeof(bfz_t));
 	bfz_handle->filename = pstrdup(fileName);
 
 	bfz_handle->file = OpenNamedFile(bfz_handle->filename,
@@ -304,6 +291,8 @@ bfz_create_internal(bfz_t *bfz_handle, const char *fileName, bool open_existing,
 			 * If we failed during opening an existing file, notify the caller
 			 * instead of erroring out.
 			 */
+			pfree(bfz_handle->filename);
+			pfree(bfz_handle);
 			return NULL;
 		}
 		else
