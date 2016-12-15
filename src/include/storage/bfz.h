@@ -1,7 +1,7 @@
 #ifndef BFZ_H
 #define BFZ_H
 
-#include <postgres.h>
+#include "storage/fd.h"
 
 #define BFZ_MODE_CLOSED		0
 #define BFZ_MODE_APPEND		1
@@ -39,7 +39,7 @@ struct bfz_freeable_stuff
 typedef struct bfz
 {
 	struct bfz_freeable_stuff *freeable_stuff;
-	int			fd;
+	File		file;
 	char        *filename;
 	unsigned char mode;
 	unsigned char compression_index;
@@ -75,9 +75,7 @@ extern bfz_t *bfz_create(const char *filePrefix, bool delOnClose, int compress);
 extern bfz_t *bfz_open(const char *fileName, bool delOnClose, int compress);
 extern int64 bfz_append_end(bfz_t * thiz);
 extern void bfz_scan_begin(bfz_t * thiz);
-extern void bfz_close(bfz_t * thiz, bool unreg, bool error_on_unlink);
-extern ssize_t readAndRetry(int fd, void *buffer, size_t size);
-extern ssize_t writeAndRetry(int fd, const void *buffer, size_t size);
+extern void bfz_close(bfz_t *thiz);
 
 static inline int64
 bfz_totalbytes(bfz_t * bfz)

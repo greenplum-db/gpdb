@@ -454,7 +454,7 @@ ExecWorkFile_Close(ExecWorkFile *workfile)
 				ExecWorkFile_AdjustBFZSize(workfile, file_size);
 			}
 
-			bfz_close(bfz_file, true, true);
+			bfz_close(bfz_file);
 			break;
 		default:
 			insist_log(false, "invalid work file type: %d", workfile->fileType);

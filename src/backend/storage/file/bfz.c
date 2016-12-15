@@ -1,12 +1,9 @@
 /* bfz.c */
 #include "postgres.h"
-#include <sys/stat.h>
-#include <unistd.h>
-#include <fcntl.h>
+
 #include "storage/bfz.h"
 #include "storage/fd.h"
 #include "miscadmin.h"
-#include "access/xact.h"
 
 #include "utils/memutils.h"		/* For MemoryContext stuff */
 #include "cdb/cdbvars.h"
@@ -52,24 +49,6 @@ bfz_string_to_compression(const char *string)
 			if (!pg_strcasecmp(*a, string))
 				return i;
 	return -1;
-}
-
-/*
- * bfz_close_callback
- *		Callback for register for transaction end cleanups
- *
- * If the callback is called during transaction abort we want to avoid throwing
- * another ereport().
- */
-static void
-bfz_close_callback(XactEvent event, void *arg)
-{
-	bool unlink_error = true;
-
-	if (event == XACT_EVENT_ABORT)
-		unlink_error = false;
-
-	bfz_close(arg, false, unlink_error);
 }
 
 #define BFZ_CHECKSUM_EQ(c1, c2) EQ_CRC32C(c1, c2)
@@ -253,12 +232,6 @@ read_bfz_buffer(bfz_t *bfz, char *buffer)
 bfz_t *
 bfz_create(const char *fileName, bool delOnClose, int compress)
 {
-	/*
-	 * Create bfz_t in the TopMemoryContext since this memory context
-	 * is still available when calling the transaction callback at the
-	 * time when the transaction aborts. See MPP-3396.
-	 */
-	MemoryContext oldcxt = MemoryContextSwitchTo(TopMemoryContext);
 	bfz_t *thiz = palloc0(sizeof(bfz_t));
 
 #if USE_ASSERT_CHECKING
@@ -274,8 +247,6 @@ bfz_create(const char *fileName, bool delOnClose, int compress)
 	 */
 	Assert(ret_bfz == thiz);
 
-	MemoryContextSwitchTo(oldcxt);
-
 	return thiz;
 }
 
@@ -286,12 +257,6 @@ bfz_create(const char *fileName, bool delOnClose, int compress)
 bfz_t *
 bfz_open(const char *fileName, bool delOnClose, int compress)
 {
-	/*
-	 * Create bfz_t in the TopMemoryContext since this memory context
-	 * is still available when calling the transaction callback at the
-	 * time when the transaction aborts.
-	 */
-	MemoryContext oldcxt = MemoryContextSwitchTo(TopMemoryContext);
 	bfz_t *new_bfz = palloc0(sizeof(bfz_t));
 	bfz_t *ret_bfz = bfz_create_internal(new_bfz, fileName,
 			true, /* open_existing */
@@ -308,43 +273,7 @@ bfz_open(const char *fileName, bool delOnClose, int compress)
 	 * prepare the state for scan_begin.  */
 	new_bfz->mode = BFZ_MODE_FREED;
 
-	MemoryContextSwitchTo(oldcxt);
 	return new_bfz;
-}
-
-/* Create a BFZ file. The exact file name in filePath is used */
-static bfz_t *
-bfz_open_filepath(bfz_t *bfz_handle, const char *filePath, bool open_existing)
-{
-
-	/* FIXME Create PG_TEMP_FILES_DIR (i.e. pgsql_tmp) if it doesn't exist.
-	 * Use the right prefix. */
-
-	/* Add filespace prefix to path */
-	bfz_handle->filename = palloc0(MAXPGPATH);
-
-	if (snprintf(bfz_handle->filename, MAXPGPATH, "%s/%s",
-			getCurrentTempFilePath,
-			filePath) > MAXPGPATH)
-	{
-		ereport(ERROR, (errmsg("cannot generate path %s/%s",
-				getCurrentTempFilePath,
-				filePath)));
-	}
-
-	uint32 flags = 0x0;
-
-	flags = O_RDWR;
-
-	if (!open_existing)
-	{
-		/* Creating temp file */
-		flags |= O_CREAT | O_EXCL;
-	}
-
-	bfz_handle->fd = open(bfz_handle->filename, flags, S_IRUSR | S_IWUSR);
-
-	return bfz_handle;
 }
 
 /*
@@ -361,9 +290,13 @@ bfz_create_internal(bfz_t *bfz_handle, const char *fileName, bool open_existing,
 
 	memset(bfz_handle, 0, sizeof(*bfz_handle));
 
-	bfz_open_filepath(bfz_handle, fileName, open_existing);
+	bfz_handle->filename = pstrdup(fileName);
 
-	if (bfz_handle->fd == -1)
+	bfz_handle->file = OpenNamedFile(bfz_handle->filename,
+									 !open_existing,
+									 delOnClose,
+									 true);
+	if (bfz_handle->file == -1)
 	{
 		if (open_existing)
 		{
@@ -376,12 +309,10 @@ bfz_create_internal(bfz_t *bfz_handle, const char *fileName, bool open_existing,
 		else
 		{
 			ereport(ERROR,
-					(errcode(ERRCODE_IO_ERROR),
-							errmsg("could not create temporary file %s:%m", bfz_handle->filename)));
+					(errcode_for_file_access(),
+					 errmsg("could not create temporary file %s:%m", bfz_handle->filename)));
 		}
 	}
-
-	RegisterXactCallbackOnce(bfz_close_callback, bfz_handle);
 
 	bfz_handle->mode = BFZ_MODE_APPEND;
 	bfz_handle->compression_index = compress;
@@ -406,15 +337,15 @@ bfz_create_internal(bfz_t *bfz_handle, const char *fileName, bool open_existing,
 		/* We might have opened an existing files. Set the correct number
 		 * of bytes in here.
 		 */
-		struct stat sbuf;
-		int ret = stat(bfz_handle->filename, & sbuf);
-		if (ret != 0)
-		{
+		int64 ret;
+
+		ret = FileSeek(bfz_handle->file, 0, SEEK_END);
+		if (ret < 0)
 			ereport(ERROR,
-					(errcode(ERRCODE_IO_ERROR),
-							errmsg("could not stat temporary file: %m")));
-		}
-		fs->tot_bytes = sbuf.st_size;
+					(errcode_for_file_access(),
+					 errmsg("could not seek in temporary file: %m")));
+
+		fs->tot_bytes = ret;
 	}
 
 	fs->buffer_pointer = fs->buffer;
@@ -427,42 +358,25 @@ bfz_create_internal(bfz_t *bfz_handle, const char *fileName, bool open_existing,
  * bfz_close
  *		Close and free used resources
  *
- * When unreg is set to true the callback for removing the file during end of
- * transaction will be removed to avoid attempting to delete a removed file.
  * If the file is missing and can't be deleted an error will be thrown, this
  * can be avoided by setting error_on_unlink to false when running bfz_close()
  * as part of a transaction abortion for example were throwing additional
  * errors should be avoided.
  */
 void
-bfz_close(bfz_t * thiz, bool unreg, bool error_on_unlink)
+bfz_close(bfz_t *thiz)
 {
-	if (unreg)
-		UnregisterXactCallbackOnce(bfz_close_callback, thiz);
-
 	if (thiz->freeable_stuff)
 	{
 		thiz->freeable_stuff->close_ex(thiz);
-		Assert(thiz->fd == -1);
 	}
-	else
+	if (thiz->file > 0)
 	{
-		if (thiz->fd > 0)
-		{
-			/* We already called bfz_append_end() on this file, so the fd we have is a duplicate */
-			gp_retry_close(thiz->fd);
-			thiz->fd = -1;
-		}
+		FileClose(thiz->file);
+		thiz->file = -1;
 	}
 
-	if (thiz->del_on_close && thiz->filename != NULL)
-	{
-		if (unlink(thiz->filename))
-			ereport((error_on_unlink ? ERROR : WARNING),
-					(errcode(ERRCODE_IO_ERROR),
-					errmsg("could not close temporary file %s: %m", thiz->filename)));
-		pfree(thiz->filename);
-	}
+	/* If del_on_close was used, FileClose() unlinked the file */
 
 	thiz->mode = BFZ_MODE_CLOSED;
 	pfree(thiz);
@@ -496,19 +410,14 @@ bfz_append_end(bfz_t * thiz)
 
 	tot_bytes = fs->tot_bytes;
 
-
 	/*
-	 * Duplicate file descriptor, since close_ex closes the file,
-	 * but we'll need to re-open this file for reading
+	 * Close the compressor. But we keep the underlying file open for reading
 	 */
-	int saved_fd = dup(thiz->fd);
 	fs->close_ex(thiz);
-	Assert(thiz->fd == -1);
 
-	thiz->fd = saved_fd;
 	thiz->mode = BFZ_MODE_FREED;
 
-	if ((tot_compressed = lseek(thiz->fd, 0, SEEK_END)) == -1)
+	if ((tot_compressed = FileSeek(thiz->file, 0, SEEK_END)) == -1)
 		ereport(ERROR,
 				(errcode(ERRCODE_IO_ERROR),
 				errmsg("could not seek in temporary file: %m")));
@@ -526,9 +435,8 @@ bfz_scan_begin(bfz_t * thiz)
 	struct bfz_freeable_stuff *fs;
 
 	Assert(thiz->mode == BFZ_MODE_FREED);
-	Assert(thiz->fd != -1);
 
-	if (lseek(thiz->fd, 0, SEEK_SET) == -1)
+	if (FileSeek(thiz->file, 0, SEEK_SET) == -1)
 		ereport(ERROR,
 				(errcode(ERRCODE_IO_ERROR),
 				errmsg("could not seek in temporary file: %m")));
@@ -636,32 +544,4 @@ bfz_read_ex(bfz_t * thiz, char *buffer, int size)
 		}
 	}
 	return orig_size - size;
-}
-
-ssize_t
-readAndRetry(int fd, void *buffer, size_t size)
-{
-	ssize_t		i;
-
-	do
-	{
-		i = read(fd, buffer, size);
-	}
-	while (i == -1 && errno == EINTR);
-
-	return i;
-}
-
-ssize_t
-writeAndRetry(int fd, const void *buffer, size_t size)
-{
-	ssize_t		i;
-
-	do
-	{
-		i = write(fd, buffer, size);
-	}
-	while (i == -1 && errno == EINTR);
-
-	return i;
 }

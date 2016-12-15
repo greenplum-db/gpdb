@@ -65,3 +65,58 @@ ERROR:  fault triggered, fault name:'workfile_creation_failure' fault type:'erro
 20160621:09:07:09:042201 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on nikos-mac:/Users/narmenatzoglou/gitdev/gpdb/github_updated/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0:content=0:dbid=2:mode=s:status=u
 20160621:09:07:09:042201 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
 --end_ignore
+create table t (i int, j text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into t select i, i from generate_series(1,1000000) as i;
+set gp_workfile_compress_algorithm ='zlib';
+set statement_mem='10MB';
+create or replace function FuncA()
+returns void as
+$body$
+begin
+    CREATE TEMP table TMP_Q_QR_INSTM_ANL_01 WITH(APPENDONLY=true,COMPRESSLEVEL=5,ORIENTATION=row,COMPRESSTYPE=zlib) on commit drop as
+    SELECT t1.i from t as t1 join t as t2 on t1.i = t2.i;
+EXCEPTION WHEN others THEN
+ -- do nothing
+ insert into t values(2387283, 'a');
+end
+$body$ language plpgsql;
+-- Inject fault before we close workfile in ExecHashJoinNewBatch
+--start_ignore
+\! gpfaultinjector -f workfile_hashjoin_failure -y reset --seg_dbid 2
+20161206:08:28:57:047522 gpfaultinjector:krajaraman:krajaraman-[INFO]:-Starting gpfaultinjector with args: -f workfile_hashjoin_failure -y reset --seg_dbid 2
+20161206:08:28:57:047522 gpfaultinjector:krajaraman:krajaraman-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
+20161206:08:28:57:047522 gpfaultinjector:krajaraman:krajaraman-[INFO]:-Obtaining Segment details from master...
+20161206:08:28:57:047522 gpfaultinjector:krajaraman:krajaraman-[INFO]:-Injecting fault on 1 segment(s)
+20161206:08:28:57:047522 gpfaultinjector:krajaraman:krajaraman-[INFO]:-Injecting fault on krajaraman:/Users/krajaraman/gitdev/gpdb64/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0:content=0:dbid=2:mode=s:status=u
+20161206:08:28:57:047522 gpfaultinjector:krajaraman:krajaraman-[INFO]:-DONE
+\! gpfaultinjector -f workfile_hashjoin_failure -y error --seg_dbid 2
+20161206:08:28:57:047534 gpfaultinjector:krajaraman:krajaraman-[INFO]:-Starting gpfaultinjector with args: -f workfile_hashjoin_failure -y error --seg_dbid 2
+20161206:08:28:57:047534 gpfaultinjector:krajaraman:krajaraman-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
+20161206:08:28:57:047534 gpfaultinjector:krajaraman:krajaraman-[INFO]:-Obtaining Segment details from master...
+20161206:08:28:57:047534 gpfaultinjector:krajaraman:krajaraman-[INFO]:-Injecting fault on 1 segment(s)
+20161206:08:28:57:047534 gpfaultinjector:krajaraman:krajaraman-[INFO]:-Injecting fault on krajaraman:/Users/krajaraman/gitdev/gpdb64/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0:content=0:dbid=2:mode=s:status=u
+20161206:08:28:57:047534 gpfaultinjector:krajaraman:krajaraman-[INFO]:-DONE
+--end_ignore
+select FuncA();
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CONTEXT:  SQL statement "CREATE TEMP table TMP_Q_QR_INSTM_ANL_01 WITH(APPENDONLY=true,COMPRESSLEVEL=5,ORIENTATION=row,COMPRESSTYPE=zlib) on commit drop as SELECT t1.i from t as t1 join t as t2 on t1.i = t2.i"
+PL/pgSQL function "funca" line 2 at SQL statement
+ funca 
+-------
+ 
+(1 row)
+
+drop function FuncA();
+drop table t;
+--start_ignore
+\! gpfaultinjector -f workfile_hashjoin_failure -y reset --seg_dbid 2
+20161206:08:28:59:047553 gpfaultinjector:krajaraman:krajaraman-[INFO]:-Starting gpfaultinjector with args: -f workfile_hashjoin_failure -y reset --seg_dbid 2
+20161206:08:28:59:047553 gpfaultinjector:krajaraman:krajaraman-[INFO]:-local Greenplum Version: 'postgres (Greenplum Database) 4.3.99.00 build dev'
+20161206:08:28:59:047553 gpfaultinjector:krajaraman:krajaraman-[INFO]:-Obtaining Segment details from master...
+20161206:08:28:59:047553 gpfaultinjector:krajaraman:krajaraman-[INFO]:-Injecting fault on 1 segment(s)
+20161206:08:28:59:047553 gpfaultinjector:krajaraman:krajaraman-[INFO]:-Injecting fault on krajaraman:/Users/krajaraman/gitdev/gpdb64/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0:content=0:dbid=2:mode=s:status=u
+20161206:08:28:59:047553 gpfaultinjector:krajaraman:krajaraman-[INFO]:-DONE
+--end_ignore
