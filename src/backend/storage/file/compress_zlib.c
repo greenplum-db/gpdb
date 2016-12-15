@@ -229,7 +229,11 @@ bfz_zlib_read_ex(bfz_t *thiz, char *buffer, int size)
 static voidpf
 z_alloc(voidpf a, uInt b, uInt c)
 {
-	if (b > MaxAllocSize || c > MaxAllocSize)
+	/*
+	 * zlib shouldn't allocate anything large, but better safe than sorry.
+	 */
+	if (b > MaxAllocSize || c > MaxAllocSize ||
+		(uint64) b * (uint64) c > MaxAllocSize)
 		return NULL;
 
 	return palloc(b * c);
