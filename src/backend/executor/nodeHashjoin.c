@@ -954,6 +954,13 @@ start_over:
 			hashtable->stats->batchstats[curbatch].innerfilesize =
 				ExecWorkFile_Tell64(hashtable->batches[curbatch]->innerside.workfile);
 		}
+#ifdef FAULT_INJECTOR
+		FaultInjector_InjectFaultIfSet(
+				WorkfileHashJoinFailure,
+				DDLNotSpecified,
+				"",  // databaseName
+				""); // tableName
+#endif
 		workfile_mgr_close_file(hashtable->work_set, batch->innerside.workfile);
 		batch->innerside.workfile = NULL;
 	}
