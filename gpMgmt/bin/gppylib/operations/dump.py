@@ -1,18 +1,8 @@
-import os
-import sys
 import shutil
-import tempfile
-from pygresql import pg
-from datetime import datetime
-from time import sleep
-from pygresql import pg
-from gppylib import gplog
-from gppylib.commands.base import Command, REMOTE, ExecutionError
+from gppylib.commands.base import ExecutionError
 from gppylib.commands.gp import Psql
 from gppylib.commands.unix import getUserName, findCmdInPath, curr_platform, SUNOS
-from gppylib.db import dbconn
-from gppylib.db.dbconn import execSQL, execSQLForSingleton
-from gppylib.gparray import GpArray
+from gppylib.db.dbconn import execSQLForSingleton
 from gppylib.mainUtils import ExceptionNoStackTraceNeeded
 from gppylib.utils import shellEscape
 from gppylib.operations import Operation
@@ -1525,6 +1515,40 @@ class DumpStats(Operation):
     def execute(self):
         logger.info("Commencing pg_statistic dump")
 
+        include_tables = self.get_include_tables_from_context()
+
+        self.write_stats_file_header()
+
+        dburl = dbconn.DbURL(port=self.context.master_port, dbname=self.context.dump_database)
+        conn = dbconn.connect(dburl)
+
+        for table in sorted(include_tables):
+            self.dump_table(table, conn)
+
+        conn.close()
+
+        if self.context.ddboost:
+            stats_backup_file = self.context.generate_filename("stats")
+            abspath = stats_backup_file
+            relpath = stats_backup_file[stats_backup_file.index(self.context.dump_dir):]
+            logger.debug('Copying %s to DDBoost' % abspath)
+            cmdStr = 'gpddboost'
+            if self.context.ddboost_storage_unit:
+                cmdStr +=  ' --ddboost-storage-unit=%s' % self.context.ddboost_storage_unit
+            cmdStr += ' --copyToDDBoost --from-file=%s --to-file=%s' % (abspath, relpath)
+            cmd = Command('DDBoost copy of %s' % abspath, cmdStr)
+            cmd.run(validateAfter=True)
+
+    def write_stats_file_header(self):
+        with open(self.stats_filename, "w") as outfile:
+            outfile.write("""--
+-- Allow system table modifications
+--
+set allow_system_table_mods="DML";
+
+""")
+
+    def get_include_tables_from_context(self):
         include_tables = []
         if self.context.exclude_dump_tables_file:
             exclude_tables = get_lines_from_file(self.context.exclude_dump_tables_file)
@@ -1547,30 +1571,9 @@ class DumpStats(Operation):
             user_tables = get_user_table_list(self.context)
             for table in user_tables:
                 include_tables.append("%s.%s" % (table[0], table[1]))
+        return include_tables
 
-        with open(self.stats_filename, "w") as outfile:
-            outfile.write("""--
--- Allow system table modifications
---
-set allow_system_table_mods="DML";
-
-""")
-        for table in sorted(include_tables):
-            self.dump_table(table)
-
-        if self.context.ddboost:
-            stats_backup_file = self.context.generate_filename("stats")
-            abspath = stats_backup_file
-            relpath = stats_backup_file[stats_backup_file.index(self.context.dump_dir):]
-            logger.debug('Copying %s to DDBoost' % abspath)
-            cmdStr = 'gpddboost'
-            if self.context.ddboost_storage_unit:
-                cmdStr +=  ' --ddboost-storage-unit=%s' % self.context.ddboost_storage_unit
-            cmdStr += ' --copyToDDBoost --from-file=%s --to-file=%s' % (abspath, relpath)
-            cmd = Command('DDBoost copy of %s' % abspath, cmdStr)
-            cmd.run(validateAfter=True)
-
-    def dump_table(self, table):
+    def dump_table(self, table, conn):
         schemaname, tablename = table.split(".")
         schemaname = checkAndRemoveEnclosingDoubleQuote(schemaname)
         tablename = checkAndRemoveEnclosingDoubleQuote(tablename)
@@ -1589,19 +1592,18 @@ set allow_system_table_mods="DML";
                              and pga.attnum = pgs.staattnum
                              and pga.atttypid = pgt.oid""" % (schemaname, tablename)
 
+        self.dump_tuples(tuples_query, conn)
+        self.dump_stats(stats_query, conn)
 
-        self.dump_tuples(tuples_query)
-        self.dump_stats(stats_query)
-
-    def dump_tuples(self, query):
-        rows = execute_sql(query, self.context.master_port, self.context.dump_database)
+    def dump_tuples(self, query, conn):
+        rows = execute_sql_with_connection(query, conn)
         for row in rows:
             if len(row) != 4:
                 raise Exception("Invalid return from query: Expected 4 columns, got % columns" % (len(row)))
             self.print_tuples(row)
 
-    def dump_stats(self, query):
-        rows = execute_sql(query, self.context.master_port, self.context.dump_database)
+    def dump_stats(self, query, conn):
+        rows = execute_sql_with_connection(query, conn)
         for row in rows:
             if len(row) != 25:
                 raise Exception("Invalid return from query: Expected 25 columns, got % columns" % (len(row)))

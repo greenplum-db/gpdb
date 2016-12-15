@@ -14,7 +14,6 @@ from gppylib.mainUtils import gp
 from gppylib import pgconf
 from optparse import Values
 from pygresql import pg
-from gppylib.operations.utils import DEFAULT_NUM_WORKERS
 import gzip
 
 logger = gplog.get_default_logger()
@@ -478,6 +477,9 @@ def execute_sql(query, master_port, dbname):
     conn = dbconn.connect(dburl)
     cursor = execSQL(conn, query)
     return cursor.fetchall()
+
+def execute_sql_with_connection(query, conn):
+    return execSQL(conn, query).fetchall()
 
 def generate_master_status_prefix(dump_prefix):
     return '%sgp_dump_status_1_1_' % (dump_prefix)

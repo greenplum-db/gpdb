@@ -2,15 +2,10 @@
 # Copyright (c) Greenplum Inc 2012. All Rights Reserved.
 #
 
-import os
-import shutil
-import time
 import unittest2 as unittest
-from datetime import datetime
-from gppylib.commands.base import Command, CommandResult
-from gppylib.operations.backup_utils import *
+from gppylib.commands.base import CommandResult
 from gppylib.operations.dump import *
-from mock import patch, MagicMock, Mock, mock_open, call
+from mock import patch, MagicMock, Mock, mock_open, call, ANY
 
 class DumpTestCase(unittest.TestCase):
 
@@ -1082,6 +1077,71 @@ class DumpTestCase(unittest.TestCase):
             # [0] index removes the call object,
             # [1] grabs the sql command from execSQL
             self.assertEquals(exec_sql[0][1] , expected_queries[i])
+
+    @patch('gppylib.operations.dump.DumpStats.print_tuples')
+    @patch('gppylib.operations.dump.execute_sql_with_connection', return_value=[[1]*4, [2]*4, [3]*4])
+    def test_dump_stats_writes_tuples_to_file_when_dumping_tuples(self, execute_sql_with_connection, print_tuples):
+        dump_stats = DumpStats(Mock())
+
+        db_connection = Mock()
+        dump_stats.dump_tuples('select * from foo', db_connection)
+
+        execute_sql_with_connection.assert_called_with('select * from foo', db_connection)
+        print_tuples.assert_any_call([1,1,1,1])
+        print_tuples.assert_any_call([2,2,2,2])
+        print_tuples.assert_any_call([3,3,3,3])
+
+    @patch('gppylib.operations.dump.DumpStats.print_stats')
+    @patch('gppylib.operations.dump.execute_sql_with_connection', return_value=[[1]*25, [2]*25, [3]*25])
+    def test_dump_stats_writes_stats_to_file_when_dumping_stats(self, execute_sql_with_connection, print_stats):
+        dump_stats = DumpStats(Mock())
+
+        db_connection = Mock()
+        dump_stats.dump_stats('select * from foo', db_connection)
+
+        execute_sql_with_connection.assert_called_with('select * from foo', db_connection)
+        print_stats.assert_any_call([1]*25)
+        print_stats.assert_any_call([2]*25)
+        print_stats.assert_any_call([3]*25)
+
+    @patch('gppylib.operations.dump.DumpStats.dump_tuples')
+    @patch('gppylib.operations.dump.DumpStats.dump_stats')
+    def test_dump_stats_uses_db_connection_to_dump_tables(self, dump_stats, dump_tuples):
+        db_connection = Mock()
+
+        subject = DumpStats(Mock())
+        subject.dump_table('someSchema.someTable', db_connection)
+
+        dump_stats.assert_called_with(ANY, db_connection)
+        dump_tuples.assert_called_with(ANY, db_connection)
+
+    @patch('gppylib.operations.dump.dbconn.DbURL')
+    @patch('gppylib.operations.dump.dbconn.connect')
+    def test_excute_uses_the_same_connection_for_all_queries(self, connect, DbURL):
+        DbURL.return_value = 'dburl'
+
+        db_connection = Mock()
+        connect.return_value = db_connection
+
+        fakeContext = Mock()
+        fakeContext.ddboost = False
+        fakeContext.master_port = 9999
+        fakeContext.dump_database = 'db_name'
+
+        dump_stats = DumpStats(fakeContext)
+        dump_stats.get_include_tables_from_context = Mock(return_value=['schema1.table1', 'schema2.table2'])
+        dump_stats.write_stats_file_header = Mock()
+        dump_stats.dump_table = Mock()
+
+        dump_stats.execute()
+
+        dump_stats.dump_table.assert_any_call('schema1.table1', db_connection)
+        dump_stats.dump_table.assert_any_call('schema2.table2', db_connection)
+
+        connect.assert_called_with('dburl')
+        DbURL.assert_called_with(port=9999, dbname='db_name')
+
+        db_connection.close.assert_any_call()
 
 if __name__ == '__main__':
     unittest.main()

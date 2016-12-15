@@ -3,16 +3,15 @@
 # Copyright (c) Greenplum Inc 2016. All Rights Reserved.
 #
 
-import os
-import shutil
-import unittest2 as unittest
 from gppylib.commands.base import CommandResult
 from gppylib.operations.backup_utils import *
+from gppylib.operations import backup_utils
 
-from mock import patch, MagicMock, Mock
-from optparse import Values
+from mock import patch, Mock
 
-class BackupUtilsTestCase(unittest.TestCase):
+from test.unit.gp_unittest import GpTestCase
+
+class BackupUtilsTestCase(GpTestCase):
 
     def setUp(self):
         self.context = Context()
@@ -1150,3 +1149,13 @@ class BackupUtilsTestCase(unittest.TestCase):
                 context = Context()
         finally:
             os.environ['MASTER_DATA_DIRECTORY'] = old_mdd
+
+    def test_execute_sql_with_conn(self):
+        cursor = Mock()
+        cursor.fetchall.return_value = 'queryResults'
+        backup_utils.execSQL = Mock(return_value=cursor)
+
+        query = "fake query"
+        conn = Mock()
+        self.assertEquals('queryResults', execute_sql_with_connection(query, conn))
+        backup_utils.execSQL.assert_called_with(conn, query)
