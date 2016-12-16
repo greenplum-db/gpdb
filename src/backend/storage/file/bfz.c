@@ -54,24 +54,6 @@ bfz_string_to_compression(const char *string)
 	return -1;
 }
 
-/*
- * bfz_close_callback
- *		Callback for register for transaction end cleanups
- *
- * If the callback is called during transaction abort we want to avoid throwing
- * another ereport().
- */
-static void
-bfz_close_callback(XactEvent event, void *arg)
-{
-	bool unlink_error = true;
-
-	if (event == XACT_EVENT_ABORT)
-		unlink_error = false;
-
-	bfz_close(arg, false, unlink_error);
-}
-
 #define BFZ_CHECKSUM_EQ(c1, c2) EQ_CRC32C(c1, c2)
 
 /*
@@ -376,12 +358,12 @@ bfz_create_internal(bfz_t *bfz_handle, const char *fileName, bool open_existing,
 		else
 		{
 			ereport(ERROR,
-					(errcode(ERRCODE_IO_ERROR),
+					(errcode_for_file_access(),
 							errmsg("could not create temporary file %s:%m", bfz_handle->filename)));
 		}
 	}
-
-	RegisterXactCallbackOnce(bfz_close_callback, bfz_handle);
+	ResourceOwnerEnlargeBFZFiles(CurrentResourceOwner);
+	ResourceOwnerRememberBFZFile(CurrentResourceOwner, bfz_handle);
 
 	bfz_handle->mode = BFZ_MODE_APPEND;
 	bfz_handle->compression_index = compress;
@@ -438,7 +420,7 @@ void
 bfz_close(bfz_t * thiz, bool unreg, bool error_on_unlink)
 {
 	if (unreg)
-		UnregisterXactCallbackOnce(bfz_close_callback, thiz);
+		ResourceOwnerForgetBFZFile(CurrentResourceOwner, thiz);
 
 	if (thiz->freeable_stuff)
 	{

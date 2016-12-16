@@ -383,6 +383,7 @@ class GpInjectFaultProgram:
 			      "transaction_abort_failure (inject fault to simulate transaction abort failure), " \
 			      "workfile_creation_failure (inject fault to simulate workfile creation failure), " \
 			      "workfile_write_failure (inject fault to simulate workfile write failure), " \
+                  "workfile_hashjoin_failure (inject fault before we close workfile in ExecHashJoinNewBatch), "\
 			      "update_committed_eof_in_persistent_table (inject fault before committed EOF is updated in gp_persistent_relation_node for Append Only segment files), " \
 			      "exec_simple_query_end_command (inject fault before EndCommand in exec_simple_query), " \
 			      "multi_exec_hash_large_vmem (allocate large vmem using palloc inside MultiExecHash to attempt to exceed vmem limit), " \

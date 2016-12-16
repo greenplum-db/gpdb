@@ -37,3 +37,36 @@ SELECT MAX(i1) FROM test_zlib_hagg GROUP BY i2;
 --start_ignore
 \! gpfaultinjector -f workfile_creation_failure -y reset --seg_dbid 2
 --end_ignore
+
+create table t (i int, j text);
+insert into t select i, i from generate_series(1,1000000) as i;
+
+set gp_workfile_compress_algorithm ='zlib';
+set statement_mem='10MB';
+
+create or replace function FuncA()
+returns void as
+$body$
+begin
+    CREATE TEMP table TMP_Q_QR_INSTM_ANL_01 WITH(APPENDONLY=true,COMPRESSLEVEL=5,ORIENTATION=row,COMPRESSTYPE=zlib) on commit drop as
+    SELECT t1.i from t as t1 join t as t2 on t1.i = t2.i;
+EXCEPTION WHEN others THEN
+ -- do nothing
+ insert into t values(2387283, 'a');
+end
+$body$ language plpgsql;
+
+-- Inject fault before we close workfile in ExecHashJoinNewBatch
+--start_ignore
+\! gpfaultinjector -f workfile_hashjoin_failure -y reset --seg_dbid 2
+\! gpfaultinjector -f workfile_hashjoin_failure -y error --seg_dbid 2
+--end_ignore
+
+select FuncA();
+
+drop function FuncA();
+drop table t;
+
+--start_ignore
+\! gpfaultinjector -f workfile_hashjoin_failure -y reset --seg_dbid 2
+--end_ignore

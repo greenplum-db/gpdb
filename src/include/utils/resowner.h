@@ -21,6 +21,7 @@
 
 #include "storage/buf.h"
 #include "storage/fd.h"
+#include "storage/bfz.h"
 #include "utils/catcache.h"
 #include "utils/plancache.h"
 
@@ -128,5 +129,12 @@ extern void ResourceOwnerRememberFile(ResourceOwner owner,
 						  File file);
 extern void ResourceOwnerForgetFile(ResourceOwner owner,
 						File file);
+
+/* support for BFZ file management */
+extern void ResourceOwnerEnlargeBFZFiles(ResourceOwner owner);
+extern void ResourceOwnerRememberBFZFile(ResourceOwner owner,
+						  bfz_t *bfz);
+extern void ResourceOwnerForgetBFZFile(ResourceOwner owner,
+						bfz_t *bfz);
 
 #endif   /* RESOWNER_H */
