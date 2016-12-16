@@ -22,7 +22,10 @@
 #include "utils/memutils.h"
 
 static void
-partition_propagation(List *partOids, List *scanIds, int32 selectorId);
+ResetPrevSelParts(PartitionSelectorState *partSelState);
+
+static void
+partition_propagation(PartitionSelectorState *partSelState, SelectedParts *dynamicSelParts);
 
 /* PartitionSelector Slots */
 #define PARTITIONSELECTOR_NSLOTS 1
@@ -120,7 +123,7 @@ ExecPartitionSelector(PartitionSelectorState *node)
 	if (ps->staticSelection)
 	{
 		/* propagate the part oids obtained via static partition selection */
-		partition_propagation(ps->staticPartOids, ps->staticScanIds, ps->selectorId);
+		partition_propagation(node, NULL /* No dynamically selected parts */);
 		*node->acceptedLeafPart = NULL;
 		return NULL;
 	}
@@ -164,12 +167,8 @@ ExecPartitionSelector(PartitionSelectorState *node)
 	/* partition propagation */
 	if (NULL != ps->propagationExpression)
 	{
-		partition_propagation(selparts->partOids, selparts->scanIds, ps->selectorId);
+		partition_propagation(node, selparts);
 	}
-
-	list_free(selparts->partOids);
-	list_free(selparts->scanIds);
-	pfree(selparts);
 
 	TupleTableSlot *candidateOutputSlot = NULL;
 	if (NULL != inputSlot)
@@ -256,7 +255,60 @@ ExecEndPartitionSelector(PartitionSelectorState *node)
 		ExecEndNode(outerPlanState(node));
 	}
 
+	ResetPrevSelParts(node);
 	EndPlanStateGpmonPkt(&node->ps);
+}
+
+/* ----------------------------------------------------------------
+ *		ResetPrevSelParts
+ *
+ *		Resets and frees previously selected partition list
+ *
+ * ----------------------------------------------------------------
+ */
+static void
+ResetPrevSelParts(PartitionSelectorState *partSelState)
+{
+	SelectedParts *prevSelParts = partSelState->prevSelParts;
+
+	if (NULL != prevSelParts)
+	{
+		list_free(prevSelParts->partOids);
+		list_free(prevSelParts->scanIds);
+		pfree(prevSelParts);
+
+		partSelState->prevSelParts = NULL;
+	}
+}
+
+/* ----------------------------------------------------------------
+ *		UndoPrevPropagation
+ *
+ *		Undo propagated partitions in the previous run.
+ *
+ * ----------------------------------------------------------------
+ */
+static void
+UndoPrevPropagation(PartitionSelectorState *partSelState)
+{
+	SelectedParts *prevSelParts = partSelState->prevSelParts;
+
+	if (NULL != prevSelParts)
+	{
+		int32 selectorId = ((PartitionSelector *)partSelState->ps.plan)->selectorId;
+
+		ListCell *lcOid = NULL;
+		ListCell *lcScanId = NULL;
+		forboth (lcOid, prevSelParts->partOids, lcScanId, prevSelParts->scanIds)
+		{
+			Oid partOid = lfirst_oid(lcOid);
+			int scanId = lfirst_int(lcScanId);
+
+			RemovePartSelectorForPartOid(scanId, partOid, selectorId);
+		}
+
+		ResetPrevSelParts(partSelState);
+	}
 }
 
 /* ----------------------------------------------------------------
@@ -267,8 +319,28 @@ ExecEndPartitionSelector(PartitionSelectorState *node)
  * ----------------------------------------------------------------
  */
 static void
-partition_propagation(List *partOids, List *scanIds, int32 selectorId)
+partition_propagation(PartitionSelectorState *partSelState, SelectedParts *dynamicSelParts)
 {
+	PartitionSelector *partSel = (PartitionSelector *)partSelState->ps.plan;
+	List *partOids = NULL;
+	List *scanIds = NULL;
+
+	if (NULL != dynamicSelParts)
+	{
+		UndoPrevPropagation(partSelState);
+		partSelState->prevSelParts = dynamicSelParts;
+
+		partOids = dynamicSelParts->partOids;
+		scanIds = dynamicSelParts->scanIds;
+	}
+	else if (partSel->staticSelection)
+	{
+		partOids = partSel->staticPartOids;
+		scanIds = partSel->staticScanIds;
+	}
+
+	int32 selectorId = partSel->selectorId;
+
 	Assert (list_length(partOids) == list_length(scanIds));
 
 	ListCell *lcOid = NULL;
@@ -278,9 +350,9 @@ partition_propagation(List *partOids, List *scanIds, int32 selectorId)
 		Oid partOid = lfirst_oid(lcOid);
 		int scanId = lfirst_int(lcScanId);
 
+		/* TODO: optimization to skip insertion of static parts multiple times */
 		InsertPidIntoDynamicTableScanInfo(scanId, partOid, selectorId);
 	}
 }
 
 /* EOF */
-

@@ -2656,7 +2656,7 @@ struct PartitionSelectorState
 	List *levelExprStates;                              /* ExprState for general expressions for all levels */
 	ExprState *residualPredicateExprState;              /* ExprState for evaluating residual predicate */
 	ExprState *propagationExprState;                    /* ExprState for evaluating propagation expression */
-
+	struct SelectedParts *prevSelParts;						/* Selected parts during the last run */
 };
 
 extern void initGpmonPktForResult(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);

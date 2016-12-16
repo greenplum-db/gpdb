@@ -222,6 +222,7 @@ extern Oid getPhysicalIndexRelid(Relation partRel, LogicalIndexInfo *iInfo);
 extern LogicalIndexInfo *logicalIndexInfoForIndexOid(Oid rootOid, Oid indexOid);
 
 extern void InsertPidIntoDynamicTableScanInfo(int32 index, Oid partOid, int32 selectorId);
+extern void RemovePartSelectorForPartOid(int32 index, Oid partOid, int32 selectorId);
 
 extern char *
 DebugPartitionOid(Datum *elements, int n);
