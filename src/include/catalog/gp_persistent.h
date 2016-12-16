@@ -142,9 +142,6 @@ CATALOG(gp_relation_node,5094) BKI_WITHOUT_OIDS
 	int8		persistent_serial_num;
 } FormData_gp_relation_node;
 
-/* GPDB added foreign key definitions for gpcheckcat. */
-FOREIGN_KEY(relfilenode_oid REFERENCES pg_class(oid));
-
 #define Natts_gp_relation_node							6
 #define Anum_gp_relation_node_tablespace_oid					1
 #define Anum_gp_relation_node_relfilenode_oid					2
@@ -163,11 +160,11 @@ typedef FormData_gp_relation_node *Form_gp_relation_node;
  */
 #define Schema_gp_relation_node \
 { GpRelationNodeRelationId, {"tablespace_oid"}, 									26, -1,	4, 1, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
-{ GpRelationNodeRelationId, {"relfilenode_oid"}, 									26, -1,	4, 1, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
-{ GpRelationNodeRelationId, {"segment_file_num"}, 									23, -1, 4, 2, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
-{ GpRelationNodeRelationId, {"create_mirror_data_loss_tracking_session_num"}, 		20, -1, 8, 3, 0, -1, -1, true, 'p', 'd', true, false, false, true, 0 }, \
-{ GpRelationNodeRelationId, {"persistent_tid"},										27, -1, 6, 4, 0, -1, -1, false, 'p', 's', true, false, false, true, 0 }, \
-{ GpRelationNodeRelationId, {"persistent_serial_num"},								20, -1, 8, 5, 0, -1, -1, true, 'p', 'd', true, false, false, true, 0 }
+{ GpRelationNodeRelationId, {"relfilenode_oid"}, 									26, -1,	4, 2, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
+{ GpRelationNodeRelationId, {"segment_file_num"}, 									23, -1, 4, 3, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
+{ GpRelationNodeRelationId, {"create_mirror_data_loss_tracking_session_num"}, 		20, -1, 8, 4, 0, -1, -1, true, 'p', 'd', true, false, false, true, 0 }, \
+{ GpRelationNodeRelationId, {"persistent_tid"},										27, -1, 6, 5, 0, -1, -1, false, 'p', 's', true, false, false, true, 0 }, \
+{ GpRelationNodeRelationId, {"persistent_serial_num"},								20, -1, 8, 6, 0, -1, -1, true, 'p', 'd', true, false, false, true, 0 }
 
 /*
  * gp_relation_node table values for FormData_pg_class.
@@ -191,8 +188,8 @@ typedef FormData_gp_relation_node *Form_gp_relation_node;
  */
 #define Schema_gp_relation_node_index \
 { GpRelationNodeRelationId, {"tablespace_oid"}, 	26, -1,	4, 1, 0, -1, -1, true, 'p', 'i', false, false, false, true, 0 }, \
-{ GpRelationNodeRelationId, {"relfilenode_oid"}, 	26, -1,	4, 1, 0, -1, -1, true, 'p', 'i', false, false, false, true, 0 }, \
-{ GpRelationNodeRelationId, {"segment_file_num"}, 	23, -1, 4, 2, 0, -1, -1, true, 'p', 'i', false, false, false, true, 0 },
+{ GpRelationNodeRelationId, {"relfilenode_oid"}, 	26, -1,	4, 2, 0, -1, -1, true, 'p', 'i', false, false, false, true, 0 }, \
+{ GpRelationNodeRelationId, {"segment_file_num"}, 	23, -1, 4, 3, 0, -1, -1, true, 'p', 'i', false, false, false, true, 0 },
 
 /*
  * gp_relation_node_index index values for FormData_pg_class.
