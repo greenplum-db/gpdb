@@ -255,6 +255,8 @@ FaultInjectorIdentifierEnumToString[] = {
 	  /* inject fault to simulate workfile creation failure  */
 	_("workfile_write_failure"),
 	  /* inject fault to simulate workfile write failure  */
+	_("workfile_hashjoin_failure"),
+	 /* inject fault before we close workfile in ExecHashJoinNewBatch */
 	_("update_committed_eof_in_persistent_table"),
 		/* inject fault before committed EOF is updated in gp_persistent_relation_node for Append Only segment files */
 	_("exec_simple_query_end_command"),
@@ -1186,6 +1188,7 @@ FaultInjector_NewHashEntry(
 		case AbortTransactionFail:
 		case WorkfileCreationFail:
 		case WorkfileWriteFail:
+		case WorkfileHashJoinFailure:
 		case UpdateCommittedEofInPersistentTable:
 		case ExecSortBeforeSorting:
 		case FaultDuringExecDynamicTableScan:

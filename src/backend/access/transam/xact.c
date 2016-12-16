@@ -3381,16 +3381,6 @@ CommitTransaction(void)
 	AtEOXact_UpdateFlatFiles(true);
 
 	/*
-	 * Free external resources
-	 */
-	AtEOXact_ExtTables(true);
-
-	/* Reset g_dataSourceCtx
-	 * g_dataSourceCtx is allocated in TopTransactionContext, so it's going away.
-	 */
-	AtEOXact_ResetDataSourceCtx();
-
-	/*
 	 * Prepare all QE.
 	 */
 	prepareDtxTransaction();
@@ -3582,6 +3572,16 @@ CommitTransaction(void)
 	s->curTransactionOwner = NULL;
 	CurTransactionResourceOwner = NULL;
 	TopTransactionResourceOwner = NULL;
+
+	/*
+	 * Free external resources
+	 */
+	AtEOXact_ExtTables(true);
+
+	/* Reset g_dataSourceCtx
+	 * g_dataSourceCtx is allocated in TopTransactionContext, so it's going away.
+	 */
+	AtEOXact_ResetDataSourceCtx();
 
 	AtCommit_Memory();
 
@@ -3977,12 +3977,6 @@ AbortTransaction(void)
 	 */
 	AfterTriggerEndXact(false);
 	AtAbort_Portals();
-	AtEOXact_ExtTables(false);
-
-	/* reset g_dataSourceCtx
-	 * g_dataSourceCtx is allocated in TopTransactionContext, so it's going away.
-	 */
-	AtEOXact_ResetDataSourceCtx();
 
 	AtEOXact_SharedSnapshot();
 
@@ -4091,6 +4085,14 @@ AbortTransaction(void)
 		AtEOXact_PgStat(false);
 		pgstat_report_xact_timestamp(0);
 	}
+
+	/* Free external resources */
+	AtEOXact_ExtTables(false);
+
+	/* reset g_dataSourceCtx
+	 * g_dataSourceCtx is allocated in TopTransactionContext, so it's going away.
+	 */
+	AtEOXact_ResetDataSourceCtx();
 
 	/*
 	 * Do abort to all QE. NOTE: we don't process
@@ -4905,10 +4907,6 @@ UnregisterXactCallbackOnce(XactCallback callback, void *arg)
 static void
 CallXactCallbacksOnce(XactEvent event)
 {
-	/* currently callback once should ignore prepare. */
-	if (event == XACT_EVENT_PREPARE)
-		return;
-
 	while(Xact_callbacks_once)
 	{
 		XactCallbackItem *next = Xact_callbacks_once->next;

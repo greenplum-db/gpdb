@@ -164,6 +164,7 @@ typedef enum FaultInjectorIdentifier_e {
 	AbortTransactionFail,
 	WorkfileCreationFail,
 	WorkfileWriteFail,
+	WorkfileHashJoinFailure,
 
 	UpdateCommittedEofInPersistentTable,
 
