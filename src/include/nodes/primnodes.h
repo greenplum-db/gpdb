@@ -1352,8 +1352,6 @@ typedef struct Flow
 	Oid			*sortOperators;		/* OID of operators to sort them by */
 	bool		*nullsFirst;
 
-	int			numOrderbyCols;		/* number of explicit order-by columns */
-	
 	/* If req_move is MOVEMENT_REPARTITION, these express the desired 
      * partitioning for a hash motion.  Else if flotype is FLOW_PARTITIONED,
      * this is the partitioning key.  Otherwise NIL. 

@@ -2210,12 +2210,6 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 			current_pathkeys = sort_pathkeys;
 			mark_sort_locus(result_plan);
 		}
-
-		/*
-		 * Update numOrderbyCols to length of sort_pathkeys. For cdb: decide
-		 * which sort attribute should be preserved by merge gather motion
-		 */
-		result_plan->flow->numOrderbyCols = list_length(sort_pathkeys);
 	}
 
 	/*

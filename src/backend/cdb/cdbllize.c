@@ -960,15 +960,6 @@ pull_up_Flow(Plan *plan, Plan *subplan, bool withSort)
                                                      &new_flow->sortColIdx);
 
 			/* preserve subplan sort attributes*/
-			if (new_flow->numSortCols < model_flow->numOrderbyCols)
-			{
-				new_flow->numOrderbyCols = new_flow->numSortCols;
-			}
-			else
-			{
-				new_flow->numOrderbyCols = model_flow->numOrderbyCols;
-			}
-
 		    if (new_flow->numSortCols > 0)
 			{
                 ARRAYCOPY(new_flow->sortOperators,
@@ -992,9 +983,6 @@ pull_up_Flow(Plan *plan, Plan *subplan, bool withSort)
             ARRAYCOPY(new_flow->nullsFirst,
                       model_flow->nullsFirst,
                       new_flow->numSortCols);
-
-			/* preserve subplan sort attributes*/
-            new_flow->numOrderbyCols = model_flow->numOrderbyCols;
 	    }
 	}   /* withSort */
 
