@@ -1,10 +1,10 @@
 -- @Description select into
--- 
+--
 
 DROP TABLE IF EXISTS uao_orders_into;
 DROP TABLE IF EXISTS new_uao_orders_into;
-CREATE TABLE uao_orders_into(order_id serial , customer_id integer, 
-      order_datetime timestamp, order_total numeric(10,2)) with (appendonly=true, orientation=column); 
+CREATE TABLE uao_orders_into(order_id serial , customer_id integer,
+      order_datetime timestamp, order_total numeric(10,2)) with (appendonly=true, orientation=column);
 
 INSERT INTO uao_orders_into(customer_id, order_datetime, order_total)
 VALUES (1,'2009-05-01 10:00 AM', 500),
