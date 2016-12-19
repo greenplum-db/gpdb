@@ -1762,15 +1762,6 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 				}
 			}
 
-			if (result_plan != NULL && result_plan->flow->numSortCols == 0)
-			{
-				/*
-				 * cdb_grouping_planner generated the full plan, with the the
-				 * right tlist.  And it has no sort order
-				 */
-				current_pathkeys = NIL;
-			}
-
 			if (result_plan != NULL && querynode_changed)
 			{
 				/*
