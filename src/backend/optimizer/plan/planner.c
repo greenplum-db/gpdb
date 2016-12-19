@@ -1905,9 +1905,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 					canonical_grpsets->grpset_counts != NULL &&
 					canonical_grpsets->grpset_counts[0] > 1)
 				{
-					result_plan->flow = pull_up_Flow(result_plan,
-													 result_plan->lefttree,
-												  (current_pathkeys != NIL));
+					result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
 					result_plan = add_repeat_node(result_plan,
 										 canonical_grpsets->grpset_counts[0],
 												  0);
@@ -1974,9 +1972,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 					canonical_grpsets->grpset_counts != NULL &&
 					canonical_grpsets->grpset_counts[0] > 1)
 				{
-					result_plan->flow = pull_up_Flow(result_plan,
-													 result_plan->lefttree,
-												  (current_pathkeys != NIL));
+					result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
 					result_plan = add_repeat_node(result_plan,
 										 canonical_grpsets->grpset_counts[0],
 												  0);
@@ -2072,9 +2068,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 	 * which we can obtain the distribution info.)
 	 */
 	if (!result_plan->flow)
-		result_plan->flow = pull_up_Flow(result_plan,
-										 getAnySubplan(result_plan),
-										 (current_pathkeys != NIL));
+		result_plan->flow = pull_up_Flow(result_plan, getAnySubplan(result_plan));
 
 	/*
 	 * MPP: If there's a DISTINCT clause and we're not collocated on the
@@ -2141,9 +2135,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 
 					result_plan = (Plan *) make_unique(result_plan, parse->distinctClause);
 
-					result_plan->flow = pull_up_Flow(result_plan,
-													 result_plan->lefttree,
-													 true);
+					result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
 
 					result_plan->plan_rows = numDistinct;
 
@@ -2201,6 +2193,21 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 			current_pathkeys = sort_pathkeys;
 			mark_sort_locus(result_plan);
 		}
+
+		/*
+		 * An ORDER BY doesn't make much sense, unless we bring all the data to
+		 * a single node. Otherwise it's just a partial order.
+		 */
+		if (result_plan->flow->flotype != FLOW_SINGLETON)
+		{
+			if (parse->limitCount || parse->limitOffset)
+			{
+				/* pushdown the first phase of multi-phase limit (which takes offset into account) */
+				result_plan = pushdown_preliminary_limit(result_plan, parse->limitCount, count_est, parse->limitOffset, offset_est);
+			}
+
+			result_plan = (Plan *) make_motion_gather(root, result_plan, -1, sort_pathkeys);
+		}
 	}
 
 	/*
@@ -2211,9 +2218,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		if (IsA(result_plan, Sort) &&gp_enable_sort_distinct)
 			((Sort *) result_plan)->noduplicates = true;
 		result_plan = (Plan *) make_unique(result_plan, parse->distinctClause);
-		result_plan->flow = pull_up_Flow(result_plan,
-										 result_plan->lefttree,
-										 true);
+		result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
 
 		/*
 		 * If there was grouping or aggregation, leave plan_rows as-is (ie,
@@ -2235,7 +2240,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 			result_plan = pushdown_preliminary_limit(result_plan, parse->limitCount, count_est, parse->limitOffset, offset_est);
 			
 			/* Focus on QE [merge to preserve order], prior to final LIMIT. */
-			result_plan = (Plan *) make_motion_gather_to_QE(result_plan, current_pathkeys != NIL);
+			result_plan = (Plan *) make_motion_gather_to_QE(root, result_plan, current_pathkeys);
 			result_plan->total_cost += motion_cost_per_row * result_plan->plan_rows;
 		}
 			
@@ -2254,9 +2259,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 										  parse->limitCount,
 										  offset_est,
 										  count_est);
-		result_plan->flow = pull_up_Flow(result_plan,
-										 result_plan->lefttree,
-										 true);
+		result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
 	}
 
 	Insist(result_plan->flow);
@@ -3811,9 +3814,7 @@ pushdown_preliminary_limit(Plan *plan, Node *limitCount, int64 count_est, Node *
 										  0,
 										  precount_est);
 
-		result_plan->flow = pull_up_Flow(result_plan,
-										 result_plan->lefttree,
-										 true);
+		result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
 	}
 
 	return result_plan;

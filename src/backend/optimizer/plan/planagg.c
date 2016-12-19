@@ -581,7 +581,7 @@ make_agg_subplan(PlannerInfo *root, MinMaxAggInfo *info)
 							   0, 1);
 
     /* Decorate the Limit node with a Flow node. */
-    plan->flow = pull_up_Flow(plan, plan->lefttree, false);
+    plan->flow = pull_up_Flow(plan, plan->lefttree);
 
 	/*
 	 * Convert the plan into an InitPlan, and make a Param for its result.

@@ -2143,10 +2143,7 @@ _readFlow(void)
 	READ_ENUM_FIELD(locustype, CdbLocusType);
 	READ_INT_FIELD(segindex);
 
-	READ_INT_FIELD(numSortCols);
-	READ_INT_ARRAY(sortColIdx, local_node->numSortCols, AttrNumber);
-	READ_OID_ARRAY(sortOperators, local_node->numSortCols);
-	READ_BOOL_ARRAY(nullsFirst, local_node->numSortCols);
+	//READ_NODE_FIELD(sortPathKeys);
 
 	READ_NODE_FIELD(hashExpr);
 	READ_NODE_FIELD(flow_before_req_move);

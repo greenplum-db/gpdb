@@ -1789,7 +1789,7 @@ Plan *assure_collocation_and_order(
 		/* bring to single locus */
 		if( CdbPathLocus_IsPartitioned(input_locus))
 		{
-			result_plan = (Plan *) make_motion_gather_to_QE(result_plan, (*pathkeys_ptr != NULL));
+			result_plan = (Plan *) make_motion_gather_to_QE(root, result_plan, *pathkeys_ptr);
 			result_plan->total_cost += motion_cost_per_row * result_plan->plan_rows;
 		}
 
@@ -1943,9 +1943,7 @@ static Plan *plan_trivial_window_query(PlannerInfo *root, WindowContext *context
 	 * must have a Flow node.
 	 */
 	if (!result_plan->flow)
-		result_plan->flow = pull_up_Flow(result_plan, 
-										 result_plan->lefttree, 
-										 (pathkeys != NIL));
+		result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
 
 	/* TODO Check our API.
 	 *
@@ -2357,7 +2355,7 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 					agg_plan /* now just the shared input */
 					);
 
-		agg_plan->flow = pull_up_Flow(agg_plan, agg_plan->lefttree, true);
+		agg_plan->flow = pull_up_Flow(agg_plan, agg_plan->lefttree);
 		
 		/* Later we'll package this Agg plan as the second sub-query RTE
 		 * in a fake Query representing a two-way join of Window sub-query 
@@ -2424,7 +2422,7 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 							(List*) translate_upper_vars_sequential((Node*)winfo->key_list, context), /* XXX mutate windowKeys to translate any Var nodes in frame vals. */
 							window_plan);
 							
-			window_plan->flow = pull_up_Flow(window_plan, window_plan->lefttree, true);
+			window_plan->flow = pull_up_Flow(window_plan, window_plan->lefttree);
 		}
 
 		
@@ -2650,7 +2648,7 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 		join_plan->total_cost = agg_plan->total_cost + window_plan->total_cost;
 		join_plan->total_cost += cpu_tuple_cost * join_plan->plan_rows;
 		
-		join_plan->flow = pull_up_Flow(join_plan, join_plan->righttree, true);
+		join_plan->flow = pull_up_Flow(join_plan, join_plan->righttree);
 		window_plan = join_plan;
 	}	
 
@@ -2719,9 +2717,7 @@ static Plan *plan_parallel_window_query(PlannerInfo *root, WindowContext *contex
 									  NIL, /* No ordering */
 									  subplan);
 		if (!subplan->flow)
-			subplan->flow = pull_up_Flow(subplan, 
-											 subplan->lefttree, 
-											 (pathkeys != NIL));
+			subplan->flow = pull_up_Flow(subplan, subplan->lefttree);
 	}
 	else
 	{
@@ -3242,9 +3238,7 @@ static RangeTblEntry *rte_for_coplan(
 	}
 
 	if (!new_plan->flow)
-		new_plan->flow = pull_up_Flow(new_plan, 
-				new_plan->lefttree, 
-				(subplan_pathkeys != NIL));
+		new_plan->flow = pull_up_Flow(new_plan, new_plan->lefttree);
 
 	/* Need to specify eref for messages. */
 	new_eref = makeNode(Alias);

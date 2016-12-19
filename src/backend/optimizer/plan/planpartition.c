@@ -775,7 +775,8 @@ static void AdjustVarno(PlannerInfo *root, Node *node, int offset)
 /**
  * Ensure that all rows are gathered on QD.
  */
-static Plan* GatherToQD(Plan *outerPlan)
+static Plan *
+GatherToQD(PlannerInfo *root, Plan *outerPlan)
 {
 	bool gatheredOnMaster = outerPlan->flow
 			&& outerPlan->flow->flotype == FLOW_SINGLETON
@@ -795,7 +796,7 @@ static Plan* GatherToQD(Plan *outerPlan)
 		mark_plan_strewn(outerPlan);
 	}
 
-	return (Plan *) make_motion_gather_to_QD(outerPlan, false);
+	return (Plan *) make_motion_gather_to_QD(root, outerPlan, false);
 }
 
 /**
@@ -807,7 +808,7 @@ static void ConstructInitPlan(PartitionJoinMutatorContext *ctx)
 
 	ctx->outerPlan = plan_pushdown_tlist(ctx->root, ctx->outerPlan, ctx->outerTargetList);
 
-	ctx->outerPlan = GatherToQD(ctx->outerPlan);
+	ctx->outerPlan = GatherToQD(ctx->root, ctx->outerPlan);
 
 	/* single tlist entry that is the aggregate target */
 	TargetEntry *tle = ConstructAggTLE(ctx);
@@ -830,7 +831,7 @@ static void ConstructInitPlan(PartitionJoinMutatorContext *ctx)
 					ctx->outerPlan);
 
 	/* Pull up the Flow from the subplan */
-	ctx->outerPlan->flow = pull_up_Flow(ctx->outerPlan, ctx->outerPlan->lefttree, false);
+	ctx->outerPlan->flow = pull_up_Flow(ctx->outerPlan, ctx->outerPlan->lefttree);
 
 	//elog(NOTICE, "modified outer plan is %s", nodeToString(ctx->outerPlan));
 

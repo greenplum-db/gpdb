@@ -1345,12 +1345,6 @@ typedef struct Flow
 	 * the desired segment for the resulting singleton flow.
 	 */
 	int			segindex;		/* Segment index of singleton flow. */
-	
-	/* Sort specifications. */
-	int			numSortCols;		/* number of sort key columns */
-	AttrNumber	*sortColIdx;		/* their indexes in target list */
-	Oid			*sortOperators;		/* OID of operators to sort them by */
-	bool		*nullsFirst;
 
 	/* If req_move is MOVEMENT_REPARTITION, these express the desired 
      * partitioning for a hash motion.  Else if flotype is FLOW_PARTITIONED,
