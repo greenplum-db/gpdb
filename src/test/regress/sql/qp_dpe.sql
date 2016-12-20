@@ -218,6 +218,67 @@ select count_operator('explain select * from (select count(*) over (order by a r
 select * from (select count(*) over (order by a rows between 1 preceding and 1 following), a, b from jpat)jpat inner join pat using(b);
 RESET ALL;
 
+
+-- ----------------------------------------------------------------------
+-- Test: DPE: Failure to remove unnecessary partitions
+-- ----------------------------------------------------------------------
+
+-- start_ignore
+create language plpythonu;
+create or replace function part_count(explain_query text) returns float as
+$$
+import re
+rv = plpy.execute(explain_query)
+search_text = 'Partitions scanned'
+result = 0
+for i in range(len(rv)):
+    cur_line = rv[i]['QUERY PLAN']
+    if search_text.lower() in cur_line.lower():
+        p = re.compile('.+ ([\d\.]+) \(out of (\d+)\)')
+        m = p.match(cur_line)
+        return m.group(1)
+return result
+$$
+language plpythonu;
+
+drop table if exists part;
+create table part(a int, b int)
+  with (appendonly=true, orientation=row)
+  distributed by (b)
+  partition by range (a)
+  (
+      PARTITION pfirst  END(1) INCLUSIVE,
+      PARTITION pinter  START(1) EXCLUSIVE END (2) INCLUSIVE,
+      PARTITION plast   START (2) EXCLUSIVE
+  );
+
+--First partition
+insert into part values(1, 1);
+
+--Second partition
+insert into part values(2, 1);
+
+--Third partition
+insert into part values(3, 1);
+
+drop table if exists whole;
+-- Unpartitioned
+create table whole(a int, b int)
+  with (appendonly=true, orientation=row)
+  distributed by (b);
+
+insert into whole values(1, 1);
+insert into whole values(2, 1);
+insert into whole values(3, 1);
+
+set optimizer=on;
+set optimizer_enable_broadcast_nestloop_outer_child = on;
+set optimizer_enumerate_plans=true;
+set optimizer_plan_id=2;
+-- end_ignore
+
+select part_count('explain analyze select part.a, whole.a from part join whole on part.a >= whole.a;');
+
 -- ----------------------------------------------------------------------
 -- Test: teardown.sql
 -- ----------------------------------------------------------------------
