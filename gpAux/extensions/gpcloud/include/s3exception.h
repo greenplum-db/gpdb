@@ -44,6 +44,22 @@ class S3ConnectionError : public S3Exception {
     string message;
 };
 
+class S3ResolveError : public S3Exception {
+   public:
+    S3ResolveError(const string& msg) : message(msg) {
+    }
+    virtual ~S3ResolveError() {
+    }
+    virtual string getMessage() {
+        return "Server connection failed: " + message;
+    }
+    virtual string getType() {
+        return "S3ResolveError";
+    }
+
+    string message;
+};
+
 class S3FailedAfterRetry : public S3Exception {
    public:
     S3FailedAfterRetry(const string& url, uint64_t times, string msg)

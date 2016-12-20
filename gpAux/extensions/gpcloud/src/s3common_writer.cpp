@@ -18,5 +18,7 @@ uint64_t S3CommonWriter::write(const char* buf, uint64_t count) {
 }
 
 void S3CommonWriter::close() {
-    this->upstreamWriter->close();
+    if (this->upstreamWriter != NULL) {
+        this->upstreamWriter->close();
+    }
 }

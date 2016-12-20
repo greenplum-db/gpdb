@@ -112,9 +112,12 @@ Response S3RESTfulService::get(const string &url, HTTPHeaders &headers) {
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, RESTfulServiceWriteFuncCallback);
 
     CURLcode res = curl_easy_perform(curl);
-
     if (res != CURLE_OK) {
-        S3_DIE(S3ConnectionError, curl_easy_strerror(res));
+        if (res == CURLE_COULDNT_RESOLVE_HOST) {
+            S3_DIE(S3ResolveError, curl_easy_strerror(res));
+        } else {
+            S3_DIE(S3ConnectionError, curl_easy_strerror(res));
+        }
     } else {
         long responseCode;
         // Get the HTTP response status code from HTTP header
@@ -215,7 +218,11 @@ ResponseCode S3RESTfulService::head(const string &url, HTTPHeaders &headers) {
     CURLcode res = curl_easy_perform(curl);
 
     if (res != CURLE_OK) {
-        S3_DIE(S3ConnectionError, curl_easy_strerror(res));
+        if (res == CURLE_COULDNT_RESOLVE_HOST) {
+            S3_DIE(S3ResolveError, curl_easy_strerror(res));
+        } else {
+            S3_DIE(S3ConnectionError, curl_easy_strerror(res));
+        }
     } else {
         // Get the HTTP response status code from HTTP header
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
