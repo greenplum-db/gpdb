@@ -64,6 +64,10 @@ gen_db_file_maps(migratorContext *ctx, DbInfo *old_db, DbInfo *new_db,
 			pg_log(ctx, PG_FATAL, "Mismatch of relation id: database \"%s\", old relid %d, new relid %d\n",
 				   old_db->db_name, old_rel->reloid, new_rel->reloid);
 
+		/* external tables have relfilenodes but no physical files */
+		if (old_rel->relstorage == 'x')
+			continue;
+
 		/* aoseg tables are handled by their AO table */
 		if (strcmp(new_rel->nspname, "pg_aoseg") == 0)
 			continue;
