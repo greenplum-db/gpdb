@@ -642,26 +642,6 @@ test_postmaster_connection(bool do_checkpoint __attribute__((unused)))
 #endif
 			print_msg(".");
 
-
-		/*
-		 * our connection attempt failed.
-		 * after two attempts check if the postmaster is still alive before sleeping.
-		 */
-		if (i > 1)
-		{
-			pgpid_t pid = get_pgpid();
-			if (pid == 0)				/* no pid file */
-			{
-				write_stderr(_("%s: PID file \"%s\" does not exist\n"), progname, pid_file);
-				return PQPING_NO_RESPONSE;
-			}
-			if (!postmaster_is_alive((pid_t) pid))
-			{
-				write_stderr(_("%s: postmaster pid %ld not running\n"), progname, pid);
-				return PQPING_NO_RESPONSE;
-			}
-		}
-
 		pg_usleep(1000000); /* 1 sec */
 	}
 
