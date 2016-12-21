@@ -1724,7 +1724,7 @@ appendonly_beginrangescan_internal(Relation relation,
 	else
 	{
 		attr->compress = true;
-		attr->compressType = NameStr(relation->rd_appendonly->compresstype);
+		attr->compressType = pstrdup(NameStr(relation->rd_appendonly->compresstype));
 	}
 	attr->compressLevel     = relation->rd_appendonly->compresslevel;
 	attr->checksum			= relation->rd_appendonly->checksum;
