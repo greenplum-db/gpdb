@@ -2454,11 +2454,11 @@ DATA(insert OID = 7170 ( get_ao_distribution  PGNSP PGUID 12 1 1000 0 f f f t v 
 DESCR("show append only table tuple distribution across segment databases");
 
 /* get_ao_compression_ratio(oid) => float8 */ 
-DATA(insert OID = 7171 ( get_ao_compression_ratio  PGNSP PGUID 12 1 0 0 f f f f v 1 0 701 f "26" _null_ _null_ _null_ _null_ get_ao_compression_ratio_oid _null_ _null_ _null_ r ));
+DATA(insert OID = 7171 ( get_ao_compression_ratio  PGNSP PGUID 12 1 0 0 f f t f v 1 0 701 f "26" _null_ _null_ _null_ _null_ get_ao_compression_ratio_oid _null_ _null_ _null_ r ));
 DESCR("show append only table compression ratio");
 
 /* get_ao_compression_ratio(text) => float8 */ 
-DATA(insert OID = 7172 ( get_ao_compression_ratio  PGNSP PGUID 12 1 0 0 f f f f v 1 0 701 f "25" _null_ _null_ _null_ _null_ get_ao_compression_ratio_name _null_ _null_ _null_ r ));
+DATA(insert OID = 7172 ( get_ao_compression_ratio  PGNSP PGUID 12 1 0 0 f f t f v 1 0 701 f "25" _null_ _null_ _null_ _null_ get_ao_compression_ratio_name _null_ _null_ _null_ r ));
 DESCR("show append only table compression ratio");
 
 /* gp_update_ao_master_stats(oid) => int8 */ 

@@ -2036,8 +2036,17 @@ aorow_compression_ratio_internal(Relation parentrel)
 			 * tables upgraded from GPDB 3.3 the eofuncompressed column could
 			 * contain NULL, this is fixed in more recent upgrades.
 			 */
-			if (scanint8(SPI_getvalue(tuple, tupdesc, 1), true, &eof) &&
-				scanint8(SPI_getvalue(tuple, tupdesc, 2), true, &eof_uncomp))
+			char *attr1 = SPI_getvalue(tuple, tupdesc, 1);
+			char *attr2 = SPI_getvalue(tuple, tupdesc, 2);
+
+			if (NULL == attr1 || NULL == attr2)
+			{
+				SPI_finish();
+				PG_RETURN_FLOAT8(1);
+			}
+
+			if (scanint8(attr1, true, &eof) &&
+				scanint8(attr2, true, &eof_uncomp))
 			{
 				/* guard against division by zero */
 				if (eof > 0)
