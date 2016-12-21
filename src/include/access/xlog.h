@@ -208,6 +208,12 @@ extern bool XLOG_DEBUG;
 /* These indicate the cause of a checkpoint request */
 #define CHECKPOINT_CAUSE_XLOG	0x0010	/* XLOG consumption */
 #define CHECKPOINT_CAUSE_TIME	0x0020	/* Elapsed time */
+/*
+ * This falls in two categories, affects behavior of CreateCheckPoint and also
+ * indicates request is coming from ResyncManager process to switch primary
+ * segment from resync mode to sync mode.
+ */
+#define CHECKPOINT_RESYNC_TO_INSYNC_TRANSITION 0x0040
 
 /* Checkpoint statistics */
 typedef struct CheckpointStatsData

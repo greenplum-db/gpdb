@@ -8770,6 +8770,7 @@ CreateCheckPoint(int flags)
 	uint32		_logSeg;
 	TransactionId *inCommitXids;
 	int			nInCommit;
+	bool resync_to_sync_transition = (flags & CHECKPOINT_RESYNC_TO_INSYNC_TRANSITION) != 0;
 
 	if (Debug_persistent_recovery_print)
 	  {
@@ -8784,7 +8785,7 @@ CreateCheckPoint(int flags)
 
 #ifdef FAULT_INJECTOR
 	/* During resync checkpoint has to complete otherwise segment cannot transition into Sync state */
-	if (! FileRepResync_IsTransitionFromResyncToInSync())
+	if (! resync_to_sync_transition)
 	{
 		if (FaultInjector_InjectFaultIfSet(
 										   Checkpoint,
@@ -8813,7 +8814,7 @@ CreateCheckPoint(int flags)
 	MemSet(&CheckpointStats, 0, sizeof(CheckpointStats));
 	CheckpointStats.ckpt_start_t = GetCurrentTimestamp();
 
-	if (FileRepResync_IsTransitionFromResyncToInSync())
+	if (resync_to_sync_transition)
 	{
 		LWLockAcquire(MirroredLock, LW_EXCLUSIVE);
 
@@ -8938,7 +8939,7 @@ CreateCheckPoint(int flags)
 #endif
 		{
 			LWLockRelease(WALInsertLock);
-			if (FileRepResync_IsTransitionFromResyncToInSync())
+			if (resync_to_sync_transition)
 			{
 				LWLockRelease(MirroredLock);
 			}
@@ -9310,7 +9311,7 @@ CreateCheckPoint(int flags)
 			 XLogLocationToString(&ControlFile->checkPoint),
 			 XLogLocationToString2(&checkPoint.redo));
 
-	if (FileRepResync_IsTransitionFromResyncToInSync())
+	if (resync_to_sync_transition)
 	{
 		RequestXLogSwitch();
 
