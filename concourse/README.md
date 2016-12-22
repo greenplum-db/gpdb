@@ -18,6 +18,7 @@ There should be eight pipelines in this directory:
 * `concourse-upgrade.yml` which uses Concourse to upgrade itself.
 * `pipeline_tinc.yml` run TINC tests against gpdb master branch.
 * `pipeline_gpcloud.yml` run gpcloud tests against developers specified branch.
+* `pipeline_gphdfs.yml` run gphdfs tests against developers specified branch.
 
 ##### Tasks Directory
 All task yamls should live in this directory.
@@ -33,6 +34,7 @@ Please do not create any more exceptions, and remove these as the occasion arise
 * `gpcheckcloud_tests_gpcloud.yml` is being used by [a gpcloud pipeline ](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline_gpcloud.yml)
 * `regression_tests_gpcloud.yml` is being used by [a gpcloud pipeline ](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline_gpcloud.yml)
 * `unit_tests_gpcloud.yml` is being used by [a gpcloud pipeline ](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline_gpcloud.yml)
+* `regression_tests_gphdfs.yml` is being used by [a gphdfs pipeline ](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline_gphdfs.yml)
 
 ##### Scripts Directory
 All script files should live in this directory.
@@ -49,6 +51,7 @@ Please do not create any more exceptions, and remove these as the occasion arise
 * `gpcheckcloud_tests_gpcloud.bash` is being used by [a gpcloud pipeline ](https://github.com/greenplum-db/gporca/blob/master/concourse/tasks/gpcheckcloud_test_gpcloud.yml)
 * `regression_tests_gpcloud.bash` is being used by [a gpcloud pipeline ](https://github.com/greenplum-db/gporca/blob/master/concourse/tasks/regression_tests_gpcloud.yml)
 * `unit_tests_gpcloud.bash` is being used by [a gpcloud pipeline ](https://github.com/greenplum-db/gporca/blob/master/concourse/tasks/unit_tests_gpcloud.yml)
+* `regression_tests_gphdfs.bash` is being used by [a gphdfs pipeline ](https://github.com/greenplum-db/gporca/blob/master/concourse/tasks/regression_tests_gphdfs.yml)
 
 ### The Concourse Deployment
 There is a `gpdb` team in the [Concourse instance](http://gpdb.ci.pivotalci.info/).
