@@ -32,7 +32,7 @@ COPY table [(column [, ...])] FROM {'file' | STDIN}
        [CSV [QUOTE [ AS ] 'quote'] 
             [FORCE NOT NULL column [, ...]]
        [FILL MISSING FIELDS]
-     [ [LOG ERRORS INTO error_table] [KEEP] 
+     [ [LOG ERRORS ]  
        SEGMENT REJECT LIMIT count [ROWS | PERCENT] ]
 
 COPY {table [(column [, ...])] | (query)} TO {'file' | STDOUT}
