@@ -738,6 +738,7 @@ doNotifyingCommitPrepared(void)
 	bool succeeded;
 	bool badGangs;
 	int retry = 0;
+	volatile int savedInterruptHoldoffCount;
 
 	CdbDispatchDirectDesc direct=default_dispatch_direct_desc;
 
@@ -756,6 +757,7 @@ doNotifyingCommitPrepared(void)
 			 (int)strlen(currentGxact->gid));
 
 	SIMPLE_FAULT_INJECTOR(DtmBroadcastCommitPrepared);
+	savedInterruptHoldoffCount = InterruptHoldoffCount;
 
 	PG_TRY();
 	{
@@ -766,6 +768,10 @@ doNotifyingCommitPrepared(void)
 	}
 	PG_CATCH();
 	{
+		/*
+		 * restore the previous value, which is reset to 0 in errfinish.
+		 */
+		InterruptHoldoffCount = savedInterruptHoldoffCount;
 		succeeded = false;
 	}
 	PG_END_TRY();
@@ -800,6 +806,7 @@ doNotifyingCommitPrepared(void)
 		 * not have SharedSnapshotAdd colissions.
 		 */
 		CheckForResetSession();
+		savedInterruptHoldoffCount = InterruptHoldoffCount;
 
 		PG_TRY();
 		{
@@ -811,6 +818,10 @@ doNotifyingCommitPrepared(void)
 		}
 		PG_CATCH();
 		{
+			/*
+			 * restore the previous value, which is reset to 0 in errfinish.
+			 */
+			InterruptHoldoffCount = savedInterruptHoldoffCount;
 			succeeded = false;
 		}
 		PG_END_TRY();
@@ -843,14 +854,16 @@ retryAbortPrepared(void)
 	int retry = 0;
 	bool succeeded = false;
 	bool badGangs = false;
+	volatile int savedInterruptHoldoffCount;
 
 	CdbDispatchDirectDesc direct = default_dispatch_direct_desc;
 
 	while (!succeeded && dtx_phase2_retry_count > retry++)
 	{
 		/*
-		 * We must succeed in delivering the abort to all segment instances, or any failed
-		 * segment instances must be marked INVALID.
+		 * By deallocating the gang, we will force a new gang to connect to all the
+		 * segment instances.  And, we will abort the transactions in the
+		 * segments. What's left are possibily prepared transactions.
 		 */
 		elog(NOTICE, "Releasing segworker groups to retry broadcast.");
 		DisconnectAndDestroyAllGangs(true);
@@ -860,6 +873,8 @@ retryAbortPrepared(void)
 		 * not have SharedSnapshotAdd colissions.
 		 */
 		CheckForResetSession();
+
+		savedInterruptHoldoffCount = InterruptHoldoffCount;
 
 		PG_TRY();
 		{
@@ -875,6 +890,10 @@ retryAbortPrepared(void)
 		}
 		PG_CATCH();
 		{
+			/*
+			 * restore the previous value, which is reset to 0 in errfinish.
+			 */
+			InterruptHoldoffCount = savedInterruptHoldoffCount;
 			succeeded = false;
 		}
 		PG_END_TRY();
@@ -893,6 +912,7 @@ doNotifyingAbort(void)
 {
 	bool succeeded;
 	bool badGangs;
+	volatile int savedInterruptHoldoffCount;
 
 	CdbDispatchDirectDesc direct=default_dispatch_direct_desc;
 
@@ -965,6 +985,8 @@ doNotifyingAbort(void)
 			abortString = "Abort Prepared";
 		}
 
+		savedInterruptHoldoffCount = InterruptHoldoffCount;
+
 		PG_TRY();
 		{
 			succeeded = doDispatchDtxProtocolCommand(dtxProtocolCommand, /* flags */ 0,
@@ -974,6 +996,10 @@ doNotifyingAbort(void)
 		}
 		PG_CATCH();
 		{
+			/*
+			 * restore the previous value, which is reset to 0 in errfinish.
+			 */
+			InterruptHoldoffCount = savedInterruptHoldoffCount;
 			succeeded = false;
 		}
 		PG_END_TRY();
@@ -1140,21 +1166,11 @@ rollbackDtxTransaction(void)
 	case DTX_STATE_PREPARING:
 		if (currentGxact->badPrepareGangs)
 		{
-			/*
-			 * By deallocating the gang, we will force a new gang to connect to all the
-			 * segment instances.  And, we will abort the transactions in the
-			 * segments.  What's left are possibily prepared transactions.
-			 */
-			elog(WARNING, "Releasing segworker groups since one or more segment connections failed.  This will abort the transactions in the segments that did not get prepared.");
-			DisconnectAndDestroyAllGangs(true);
-
-			/*
-			 * This call will at a minimum change the session id so we will
-			 * not have SharedSnapshotAdd colissions.
-			 */
-			CheckForResetSession();
-
 			setCurrentGxactState( DTX_STATE_RETRY_ABORT_PREPARED );
+			/*
+			 * DisconnectAndDestroyAllGangs and ResetSession happens inside
+			 * retryAbortPrepared.
+			 */
 			retryAbortPrepared();
 			releaseGxact();
 			return;
