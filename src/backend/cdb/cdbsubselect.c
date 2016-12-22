@@ -281,7 +281,14 @@ IsCorrelatedOpExpr(OpExpr *opexp, Expr **innerExpr)
 
 	/**
 	 * One of the vars must be outer, and other must be inner.
+	 *
+	 * If both sides of the condition referring to outer variable,
+	 * then fail to extract the innerExpr.
 	 */
+	if (contain_vars_of_level((Node *) e1, 1) && contain_vars_of_level((Node *) e2, 1))
+	{
+		return false;
+	}
 
 	Expr	   *tOuterExpr = NULL;
 	Expr	   *tInnerExpr = NULL;
