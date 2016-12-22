@@ -1823,7 +1823,14 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 	 * tree.  This opens files, allocates storage and leaves us ready to start
 	 * processing tuples.
 	 */
-	planstate = ExecInitNode(plannedstmt->planTree, estate, eflags);
+	if (memory_profiler_dataset_size == 9 && LocallyExecutingSliceIndex(estate) != RootSliceIndex(estate))
+	{
+		planstate = ExecInitNode(getLocalMotion(plannedstmt->planTree, LocallyExecutingSliceIndex(estate)), estate, eflags);
+	}
+	else
+	{
+		planstate = ExecInitNode(plannedstmt->planTree, estate, eflags);
+	}
 
 	queryDesc->planstate = planstate;
 

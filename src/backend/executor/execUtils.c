@@ -2260,6 +2260,12 @@ typedef struct MotionStateFinderContext
 	MotionState *motionState; /* Output */
 } MotionStateFinderContext;
 
+typedef struct MotionFinderContext
+{
+	int motionId; /* Input */
+	Motion *motion; /* Output */
+} MotionFinderContext;
+
 /**
  * Walker method that finds motion state node within a planstate tree.
  */
@@ -2286,6 +2292,27 @@ MotionStateFinderWalker(PlanState *node,
 	return CdbVisit_Walk;
 }
 
+static bool
+MotionFinderWalker(Plan *node,
+				  void *context)
+{
+	Assert(context);
+	MotionFinderContext *ctx = (MotionFinderContext *) context;
+
+	if (IsA(node, Motion))
+	{
+		Motion *m = (Motion *) node;
+		if (m->motionID == ctx->motionId)
+		{
+			ctx->motion = m;
+			return true;	/* don't visit subtree */
+		}
+	}
+
+	/* Continue walking */
+	return false;
+}
+
 /**
  * Given a slice index, find the motionstate that corresponds to this slice index. This will iterate over the planstate tree
  * to get the right node.
@@ -2301,6 +2328,18 @@ MotionState *getMotionState(struct PlanState *ps, int sliceIndex)
 	planstate_walk_node(ps, MotionStateFinderWalker, &ctx);
 	Assert(ctx.motionState != NULL);
 	return ctx.motionState;
+}
+
+Motion *getLocalMotion(Plan *planTree, int sliceIndex)
+{
+	Assert(sliceIndex > -1);
+
+	MotionFinderContext ctx;
+	ctx.motionId = sliceIndex;
+	ctx.motion = NULL;
+	plan_tree_walker(planTree, MotionFinderWalker, &ctx);
+	Assert(ctx.motion != NULL);
+	return ctx.motion;
 }
 
 /**
