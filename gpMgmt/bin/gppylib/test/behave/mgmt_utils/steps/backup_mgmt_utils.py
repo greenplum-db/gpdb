@@ -467,3 +467,11 @@ def impl(context, obj, objname, schemaname, dbname):
         exists = dbconn.execSQLForSingletonRow(conn, cmd_sql)
         if exists[0] is not True:
             raise Exception("The %s '%s' does not exists in schema '%s' and database '%s' " % (obj, objname, schemaname, dbname) )
+
+@then('verify that "{configString}" appears in the datconfig for database "{dbname}"')
+def impl(context, configString, dbname):
+    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+        query = "select datconfig from pg_database where datname in ('%s');" % dbname
+        datconfig = dbconn.execSQLForSingleton(conn, query)
+    if not datconfig or configString not in datconfig:
+        raise Exception("%s is not in the datconfig for database '%s':\n %s" % (configString, dbname, datconfig))

@@ -3583,6 +3583,24 @@ Feature: Validate command line arguments
         And verify that table "apples" exists in schema "s1" and database "schema_level_test_db"
         And the user runs command "dropdb schema_level_test_db"
 
+    Scenario: Backup a database with a custom search path
+        Given the test is initialized
+        When the user runs "psql -d bkdb -c 'alter database bkdb set search_path=''daisy'';'"
+        Then psql should return a return code of 0
+        When the user runs "psql -d bkdb -c 'alter database bkdb set optimizer=on;'"
+        Then psql should return a return code of 0
+        When the user runs "psql -d bkdb -c "alter database bkdb set gp_default_storage_options='appendonly=true,blocksize=65536';""
+        Then psql should return a return code of 0
+        When the user runs command "gpcrondump -a -x bkdb"
+        Then gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored
+        When the user runs gpdbrestore with the stored timestamp
+        Then gpdbrestore should return a return code of 0
+        And verify that "search_path=daisy" appears in the datconfig for database "bkdb"
+        And verify that "optimizer=on" appears in the datconfig for database "bkdb"
+        And verify that "appendonly=true" appears in the datconfig for database "bkdb"
+        And verify that "blocksize=65536" appears in the datconfig for database "bkdb"
+
     # THIS SHOULD BE THE LAST TEST
     @backupfire
     Scenario: cleanup for backup feature

@@ -278,6 +278,8 @@ static bool isGPDB5000OrLater(void);
 Archive *makeArchive(char *filename);
 void updateDDBoostArchive(ArchiveHandle *AH);
 char *formPostDumpFilePathName(char *pszBackupDirectory, char *pszBackupKey, int pszInstID, int pszSegID);
+static void dumpDatabaseConfig(const char *dbname, PQExpBuffer *buf);
+static void makeAlterConfigCommand(const char *arrayitem, const char *type, const char *name, PQExpBuffer *buf);
 
 /* MPP additions end */
 
@@ -1842,7 +1844,7 @@ dumpDatabase(Archive *AH)
 {
 	PQExpBuffer dbQry = createPQExpBuffer();
 	PQExpBuffer delQry = createPQExpBuffer();
-	PQExpBuffer creaQry = createPQExpBuffer();
+	PQExpBuffer createQry = createPQExpBuffer();
 	PGresult   *res;
 	int			ntups;
 	int			i_tableoid,
@@ -1909,17 +1911,17 @@ dumpDatabase(Archive *AH)
 	encoding = PQgetvalue(res, 0, i_encoding);
 	tablespace = PQgetvalue(res, 0, i_tablespace);
 
-	appendPQExpBuffer(creaQry, "CREATE DATABASE %s WITH TEMPLATE = template0",
+	appendPQExpBuffer(createQry, "CREATE DATABASE %s WITH TEMPLATE = template0",
 					  fmtId(datname));
 	if (strlen(encoding) > 0)
 	{
-		appendPQExpBuffer(creaQry, " ENCODING = ");
-		appendStringLiteralAH(creaQry, encoding, AH);
+		appendPQExpBuffer(createQry, " ENCODING = ");
+		appendStringLiteralAH(createQry, encoding, AH);
 	}
 	if (strlen(tablespace) > 0 && strcmp(tablespace, "pg_default") != 0)
-		appendPQExpBuffer(creaQry, " TABLESPACE = %s",
+		appendPQExpBuffer(createQry, " TABLESPACE = %s",
 						  fmtId(tablespace));
-	appendPQExpBuffer(creaQry, ";\n");
+	appendPQExpBuffer(createQry, ";\n");
 
 	appendPQExpBuffer(delQry, "DROP DATABASE %s;\n",
 					  fmtId(datname));
@@ -1935,7 +1937,7 @@ dumpDatabase(Archive *AH)
 				 dba,			/* Owner */
 				 false,			/* with oids */
 				 "DATABASE",	/* Desc */
-				 creaQry->data, /* Create */
+				 createQry->data, /* Create */
 				 delQry->data,	/* Del */
 				 NULL,			/* Copy */
 				 NULL,			/* Deps */
@@ -1967,7 +1969,7 @@ dumpDatabase(Archive *AH)
 
 	destroyPQExpBuffer(dbQry);
 	destroyPQExpBuffer(delQry);
-	destroyPQExpBuffer(creaQry);
+	destroyPQExpBuffer(createQry);
 }
 
 
@@ -8270,7 +8272,7 @@ dumpDatabaseDefinition()
 	FILE	   *fcat;
 	char	   *pszBackupFileName;
 	PQExpBuffer dbQry = createPQExpBuffer();
-	PQExpBuffer creaQry = createPQExpBuffer();
+	PQExpBuffer createQry = createPQExpBuffer();
 	int			ntups;
 	int			i_dba,
 				i_encoding,
@@ -8340,33 +8342,35 @@ dumpDatabaseDefinition()
 	encoding = PQgetvalue(res, 0, i_encoding);
 	tablespace = PQgetvalue(res, 0, i_tablespace);
 
-	appendPQExpBuffer(creaQry, "CREATE DATABASE %s WITH TEMPLATE = template0",
+	appendPQExpBuffer(createQry, "CREATE DATABASE %s WITH TEMPLATE = template0",
 					  fmtId(datname));
 	if (strlen(encoding) > 0)
 	{
-		appendPQExpBuffer(creaQry, " ENCODING = ");
-		appendStringLiteralConn(creaQry, encoding, g_conn);
+		appendPQExpBuffer(createQry, " ENCODING = ");
+		appendStringLiteralConn(createQry, encoding, g_conn);
 	}
 	if (strlen(dba) > 0)
 	{
-		appendPQExpBuffer(creaQry, " OWNER = %s", fmtId(dba));
+		appendPQExpBuffer(createQry, " OWNER = %s", fmtId(dba));
 	}
 
 	if (strlen(tablespace) > 0 && strcmp(tablespace, "pg_default") != 0)
-		appendPQExpBuffer(creaQry, " TABLESPACE = %s",
+		appendPQExpBuffer(createQry, " TABLESPACE = %s",
 						  fmtId(tablespace));
-	appendPQExpBuffer(creaQry, ";\n");
+	appendPQExpBuffer(createQry, ";\n");
 
-	/* write the CREATE DATABASE command to the file */
+    dumpDatabaseConfig(datname, &createQry);
+
+	/* write the CREATE DATABASE and ALTER DATABASE commands to the file */
 	if (fcat != NULL)
 	{
-		fprintf(fcat, "%s", creaQry->data);
+		fprintf(fcat, "%s", createQry->data);
 		fclose(fcat);
 	}
 
 	PQclear(res);
 	destroyPQExpBuffer(dbQry);
-	destroyPQExpBuffer(creaQry);
+	destroyPQExpBuffer(createQry);
 }
 
 #ifdef USE_DDBOOST
@@ -8382,7 +8386,7 @@ dumpDatabaseDefinitionToDDBoost()
 	PGresult   *res;
 	char	   *pszBackupFileName;
 	PQExpBuffer dbQry = createPQExpBuffer();
-	PQExpBuffer creaQry = createPQExpBuffer();
+	PQExpBuffer createQry = createPQExpBuffer();
 	int			ntups;
 	int			i_dba,
 				i_encoding,
@@ -8478,26 +8482,28 @@ dumpDatabaseDefinitionToDDBoost()
 	encoding = PQgetvalue(res, 0, i_encoding);
 	tablespace = PQgetvalue(res, 0, i_tablespace);
 
-	appendPQExpBuffer(creaQry, "CREATE DATABASE %s WITH TEMPLATE = template0",
+	appendPQExpBuffer(createQry, "CREATE DATABASE %s WITH TEMPLATE = template0",
 					  fmtId(datname));
 	if (strlen(encoding) > 0)
 	{
-		appendPQExpBuffer(creaQry, " ENCODING = ");
-		appendStringLiteralConn(creaQry, encoding, g_conn);
+		appendPQExpBuffer(createQry, " ENCODING = ");
+		appendStringLiteralConn(createQry, encoding, g_conn);
 	}
 	if (strlen(dba) > 0)
 	{
-		appendPQExpBuffer(creaQry, " OWNER = %s", dba);
+		appendPQExpBuffer(createQry, " OWNER = %s", dba);
 	}
 
 	if (strlen(tablespace) > 0 && strcmp(tablespace, "pg_default") != 0)
-		appendPQExpBuffer(creaQry, " TABLESPACE = %s",
+		appendPQExpBuffer(createQry, " TABLESPACE = %s",
 						  fmtId(tablespace));
-	appendPQExpBuffer(creaQry, ";\n");
+	appendPQExpBuffer(createQry, ";\n");
 
-	/* write the CREATE DATABASE command to the file */
-	nmemb = strlen(creaQry->data);
-	err = ddp_write(handle, creaQry->data, nmemb, offset, &ret_count);
+	dumpDatabaseConfig(datname, &createQry);
+
+	/* write the CREATE DATABASE and ALTER DATABASE commands to the file */
+	nmemb = strlen(createQry->data);
+	err = ddp_write(handle, createQry->data, nmemb, offset, &ret_count);
 	if (ret_count != nmemb)
 	{
 		mpp_err_msg(logError, progname, "write to cdatabase file failed on ddboost\n");
@@ -8507,10 +8513,77 @@ dumpDatabaseDefinitionToDDBoost()
 	ddp_close_file(handle);
 	PQclear(res);
 	destroyPQExpBuffer(dbQry);
-	destroyPQExpBuffer(creaQry);
+	destroyPQExpBuffer(createQry);
 }
 #endif
 
+/*
+ * Dump database-specific configuration such as search_path,
+ * optimizer, and gp_default_storage_options
+ */
+static void
+dumpDatabaseConfig(const char *dbname, PQExpBuffer *buf)
+{
+	int			count = 1;
+    PQExpBuffer qryBuf = createPQExpBuffer();
+
+	for (;;)
+	{
+		PGresult   *res;
+
+		printfPQExpBuffer(qryBuf, "SELECT datconfig[%d] FROM pg_database WHERE datname = ", count);
+		appendStringLiteralConn(qryBuf, dbname, g_conn);
+		appendPQExpBuffer(qryBuf, ";");
+
+		res = PQexec(g_conn, qryBuf->data);
+		if (!PQgetisnull(res, 0, 0))
+		{
+			makeAlterConfigCommand(PQgetvalue(res, 0, 0),
+								   "DATABASE", dbname, buf);
+			PQclear(res);
+			count++;
+		}
+		else
+		{
+			PQclear(res);
+			break;
+		}
+	}
+
+	destroyPQExpBuffer(qryBuf);
+}
+
+/*
+ * Helper function for dumpDatabaseConfig().
+ */
+static void
+makeAlterConfigCommand(const char *arrayitem,
+					   const char *type, const char *name, PQExpBuffer *buf)
+{
+	char	   *pos;
+	char	   *mine;
+
+	mine = strdup(arrayitem);
+	pos = strchr(mine, '=');
+	if (pos == NULL)
+		return;
+
+	*pos = 0;
+	appendPQExpBuffer(*buf, "ALTER %s %s ", type, fmtId(name));
+	appendPQExpBuffer(*buf, "SET %s TO ", fmtId(mine));
+
+	/*
+	 * Some GUC variable names are 'LIST' type and hence must not be quoted.
+	 */
+	if (pg_strcasecmp(mine, "DateStyle") == 0
+		|| pg_strcasecmp(mine, "search_path") == 0)
+		appendPQExpBuffer(*buf, "%s", pos + 1);
+	else
+		appendStringLiteralConn(*buf, pos + 1, g_conn);
+	appendPQExpBuffer(*buf, ";\n");
+
+	free(mine);
+}
 
 static int
 _parse_version(ArchiveHandle *AH, const char *versionString)
