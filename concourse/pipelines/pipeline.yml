@@ -578,10 +578,10 @@ jobs:
       PULSE_PASSWORD: {{pulse_password}}
 
 - name: QP_memory-accounting
-  serial: true
   plan:
   - aggregate:
     - get: gpdb_src
+      params: {submodules: none}
       tags: ["gpdb5-pulse-worker"]
       passed: [gpdb_rc_packaging_centos]
       trigger: true
@@ -605,7 +605,7 @@ jobs:
       qautils_tarball: qautils_rhel6_tarball
     params:
       PULSE_URL: {{pulse_url}}
-      PULSE_PROJECT_NAME: "GPDB-5-CCLE"
+      PULSE_PROJECT_NAME: "QP_memory-accounting"
       PULSE_USERNAME: {{pulse_username}}
       PULSE_PASSWORD: {{pulse_password}}
   - task: monitor_pulse
@@ -622,6 +622,7 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
+      params: {submodules: none}
       tags: ["gpdb5-pulse-worker"]
       passed: [gpdb_rc_packaging_centos]
       trigger: true
@@ -645,7 +646,7 @@ jobs:
       qautils_tarball: qautils_rhel6_tarball
     params:
       PULSE_URL: {{pulse_url}}
-      PULSE_PROJECT_NAME: "GPDB-5-CCLE"
+      PULSE_PROJECT_NAME: "QP_optimizer-functional"
       PULSE_USERNAME: {{pulse_username}}
       PULSE_PASSWORD: {{pulse_password}}
   - task: monitor_pulse
