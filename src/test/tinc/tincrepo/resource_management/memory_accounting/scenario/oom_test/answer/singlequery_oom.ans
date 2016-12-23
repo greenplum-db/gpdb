@@ -7,7 +7,7 @@
 show gp_vmem_protect_limit;
  gp_vmem_protect_limit 
 -----------------------
- 4
+ 20
 (1 row)
 
 select 1 as oom_test;

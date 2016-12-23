@@ -49,7 +49,7 @@ class OOMTestCase(MPPTestCase, ScenarioTestCase):
                     'source $GPHOME/greenplum_path.sh;gpconfig -c gp_vmem_limit_per_query -v "4MB" --skipvalidation').run(validateAfter=True)
         else:
             Command('Run gpconfig to set GUC gp_vmem_protect_limit' ,
-                    'source $GPHOME/greenplum_path.sh;gpconfig -c gp_vmem_protect_limit -m 4 -v 4').run(validateAfter=True)
+                    'source $GPHOME/greenplum_path.sh;gpconfig -c gp_vmem_protect_limit -m 20 -v 20').run(validateAfter=True)
 
         # Restart DB
         Command('Restart database for GUCs to take effect',
