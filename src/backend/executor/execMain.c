@@ -257,10 +257,14 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 	Assert(queryDesc->estate == NULL);
 	Assert(queryDesc->plannedstmt != NULL);
 
-	Assert(queryDesc->memoryAccountId == MEMORY_OWNER_TYPE_Undefined);
-	queryDesc->memoryAccountId = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_EXECUTOR);
+	PlannedStmt *plannedStmt = queryDesc->plannedstmt;
 
-	START_MEMORY_ACCOUNT(queryDesc->memoryAccountId);
+	if (MEMORY_OWNER_TYPE_Undefined == plannedStmt->memoryAccountId)
+	{
+		plannedStmt->memoryAccountId = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_EXECUTOR);
+	}
+
+	START_MEMORY_ACCOUNT(plannedStmt->memoryAccountId);
 
 	Assert(queryDesc->plannedstmt->intoPolicy == NULL
 		   || queryDesc->plannedstmt->intoPolicy->ptype == POLICYTYPE_PARTITIONED);
@@ -791,9 +795,9 @@ ExecutorRun(QueryDesc *queryDesc,
 
 	Assert(estate != NULL);
 
-	Assert(MEMORY_OWNER_TYPE_Undefined != queryDesc->memoryAccountId);
+	Assert(NULL != queryDesc->plannedstmt && MEMORY_OWNER_TYPE_Undefined != queryDesc->plannedstmt->memoryAccountId);
 
-	START_MEMORY_ACCOUNT(queryDesc->memoryAccountId);
+	START_MEMORY_ACCOUNT(queryDesc->plannedstmt->memoryAccountId);
 
 	/*
 	 * Set dynamicTableScanInfo to the one in estate, and reset its value at
@@ -991,9 +995,9 @@ ExecutorEnd(QueryDesc *queryDesc)
 
 	Assert(estate != NULL);
 
-	Assert(MEMORY_OWNER_TYPE_Undefined != queryDesc->memoryAccountId);
+	Assert(NULL != queryDesc->plannedstmt && MEMORY_OWNER_TYPE_Undefined != queryDesc->plannedstmt->memoryAccountId);
 
-	START_MEMORY_ACCOUNT(queryDesc->memoryAccountId);
+	START_MEMORY_ACCOUNT(queryDesc->plannedstmt->memoryAccountId);
 
 	if (DEBUG1 >= log_min_messages)
 	{
@@ -1153,9 +1157,9 @@ ExecutorRewind(QueryDesc *queryDesc)
 
 	Assert(estate != NULL);
 
-	Assert(MEMORY_OWNER_TYPE_Undefined != queryDesc->memoryAccountId);
+	Assert(NULL != queryDesc->plannedstmt && MEMORY_OWNER_TYPE_Undefined != queryDesc->plannedstmt->memoryAccountId);
 
-	START_MEMORY_ACCOUNT(queryDesc->memoryAccountId);
+	START_MEMORY_ACCOUNT(queryDesc->plannedstmt->memoryAccountId);
 
 	/* It's probably not sensible to rescan updating queries */
 	Assert(queryDesc->operation == CMD_SELECT);

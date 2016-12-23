@@ -153,6 +153,9 @@ typedef struct PlannedStmt
 
 	/* What is the memory reserved for this query's execution? */
 	uint64		query_mem;
+
+	/* The overall memory consumption account (i.e., outside of an operator) */
+	MemoryAccountIdType memoryAccountId;
 } PlannedStmt;
 
 /*
