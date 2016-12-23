@@ -586,7 +586,8 @@ DefineRelation(CreateStmt *stmt, char relkind, char relstorage, bool dispatch)
 	}
 	else
 	{
-		stmt->ownerid = GetUserId();
+		if (!OidIsValid(stmt->ownerid))
+			stmt->ownerid = GetUserId();
 	}
 
 	/* MPP-8405: disallow OIDS on partitioned tables */
