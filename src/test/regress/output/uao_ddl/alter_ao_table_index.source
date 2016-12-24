@@ -1,0 +1,93 @@
+create schema alter_ao_table_index_@orientation@;
+set search_path="$user",alter_ao_table_index_@orientation@,public;
+SET gp_default_storage_options='orientation=@orientation@';
+-- Tests to update AO tables with indexes.
+CREATE TABLE sto_alt_uao3_idx(
+  text_col text,
+  bigint_col bigint,
+  char_vary_col character varying(30),
+  numeric_col numeric
+  ) with(appendonly=true) DISTRIBUTED by (text_col);
+Create index sto_alt_uao3_idx_idx on sto_alt_uao3_idx(bigint_col);
+insert into sto_alt_uao3_idx values ('1_zero', 1, '1_zero', 1);
+insert into sto_alt_uao3_idx select 'abc_'||i, i, 'pqr'||i, i
+ from generate_series(1,100)i;
+select count(*) AS visible_only from sto_alt_uao3_idx;
+ visible_only 
+--------------
+          101
+(1 row)
+
+update sto_alt_uao3_idx set numeric_col = 100 where text_col = '1_zero';
+select count(*) AS visible_only from sto_alt_uao3_idx;
+ visible_only 
+--------------
+          101
+(1 row)
+
+set gp_select_invisible = true;
+select count(*) AS all_tuples from sto_alt_uao3_idx;
+ all_tuples 
+------------
+        102
+(1 row)
+
+set gp_select_invisible = false;
+-- Update indexed column
+update sto_alt_uao3_idx set bigint_col = numeric_col % 11;
+select * from sto_alt_uao3_idx where bigint_col = 11;
+ text_col | bigint_col | char_vary_col | numeric_col 
+----------+------------+---------------+-------------
+(0 rows)
+
+set gp_select_invisible = true;
+select * from sto_alt_uao3_idx where bigint_col = 11;
+ text_col | bigint_col | char_vary_col | numeric_col 
+----------+------------+---------------+-------------
+ abc_11   |         11 | pqr11         |          11
+(1 row)
+
+set gp_select_invisible = false;
+-- Alter table cluster on indexname
+Alter table sto_alt_uao3_idx cluster on sto_alt_uao3_idx_idx;
+select * from sto_alt_uao3_idx where bigint_col = 7 order by numeric_col;
+ text_col | bigint_col | char_vary_col | numeric_col 
+----------+------------+---------------+-------------
+ abc_7    |          7 | pqr7          |           7
+ abc_18   |          7 | pqr18         |          18
+ abc_29   |          7 | pqr29         |          29
+ abc_40   |          7 | pqr40         |          40
+ abc_51   |          7 | pqr51         |          51
+ abc_62   |          7 | pqr62         |          62
+ abc_73   |          7 | pqr73         |          73
+ abc_84   |          7 | pqr84         |          84
+ abc_95   |          7 | pqr95         |          95
+(9 rows)
+
+update sto_alt_uao3_idx set numeric_col = 111 where text_col = '1_zero';
+select * from sto_alt_uao3_idx where text_col = '1_zero';
+ text_col | bigint_col | char_vary_col | numeric_col 
+----------+------------+---------------+-------------
+ 1_zero   |          1 | 1_zero        |         111
+(1 row)
+
+delete from sto_alt_uao3_idx where bigint_col = 7;
+select * from sto_alt_uao3_idx where bigint_col = 7;
+ text_col | bigint_col | char_vary_col | numeric_col 
+----------+------------+---------------+-------------
+(0 rows)
+
+set gp_select_invisible = true;
+select count(*) > 200 AS passed from sto_alt_uao3_idx;
+ passed 
+--------
+ t
+(1 row)
+
+set gp_select_invisible = false;
+-- Verify that cluster is not allowed
+CLUSTER sto_alt_uao3_idx using sto_alt_uao3_idx_idx;
+ERROR:  cannot cluster append-only table "sto_alt_uao3_idx": not supported
+-- Verify that unique index is not allowed
+CREATE UNIQUE INDEX uni_index ON sto_alt_uao3_idx (text_col);
+ERROR:  append-only tables do not support unique indexes
