@@ -13,6 +13,7 @@
 #include "postgres.h"
 
 #include "catalog/pg_exttable.h"
+#include "catalog/pg_extprotocol.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_proc.h"
 #include "access/genam.h"
@@ -62,12 +63,19 @@ InsertExtTableEntry(Oid 	tbloid,
 	bool		nulls[Natts_pg_exttable];
 	Datum		values[Natts_pg_exttable];
 
- 	MemSet(values, 0, sizeof(values));
+	ObjectAddress	myself, referenced;
+	char*		location;
+	char*		protocol;
+	Size		position;
+	Datum		*elems;
+	int			nelems;
+
+	MemSet(values, 0, sizeof(values));
 	MemSet(nulls, false, sizeof(nulls));
 
-    /*
-     * Open and lock the pg_exttable catalog.
-     */
+	/*
+	 * Open and lock the pg_exttable catalog.
+	 */
 	pg_exttable_rel = heap_open(ExtTableRelationId, RowExclusiveLock);
 
 	values[Anum_pg_exttable_reloid - 1] = ObjectIdGetDatum(tbloid);
@@ -127,6 +135,38 @@ InsertExtTableEntry(Oid 	tbloid,
      * end of transaction.
      */
     heap_close(pg_exttable_rel, NoLock);
+
+	/*
+	 * Add the dependency of s3 external table
+	 */
+
+	if (locationUris != 0)
+	{
+		deconstruct_array(DatumGetArrayTypeP(locationUris),
+						  TEXTOID, -1, false, 'i',
+						  &elems, NULL, &nelems);
+
+		/*
+		 * s3 external table only reads the first location and does not support
+		 * multiple locations
+		 */
+		location = DatumGetCString(DirectFunctionCall1(textout, elems[0]));
+		position = strchr(location, ':') - location;
+		protocol = pnstrdup(location, position);
+
+		if (strcmp("s3", protocol) == 0)
+		{
+			myself.classId = RelationRelationId;
+			myself.objectId = tbloid;
+			myself.objectSubId = 0;
+
+			referenced.classId = ExtprotocolRelationId;
+			referenced.objectId = LookupExtProtocolOid(protocol, false);
+			referenced.objectSubId = 0;
+
+			recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
+		}
+	}
 }
 
 /*
