@@ -1101,6 +1101,11 @@ ExecutorEnd(QueryDesc *queryDesc)
 	}
 	END_MEMORY_ACCOUNT();
 
+	elog(WARNING, "Alien Peak: " UINT64_FORMAT, AlienExecutorMemoryAccount->peak);
+	if (gp_dump_memory_usage)
+	{
+		MemoryAccounting_SaveToFile(currentSliceId);
+	}
 	ReportOOMConsumption();
 }
 
@@ -1823,9 +1828,11 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 	 * tree.  This opens files, allocates storage and leaves us ready to start
 	 * processing tuples.
 	 */
-	if (memory_profiler_dataset_size == 9 && LocallyExecutingSliceIndex(estate) != RootSliceIndex(estate))
+	if (memory_profiler_dataset_size == 9 && Gp_segment != -1 && LocallyExecutingSliceIndex(estate) != 0  /* && LocallyExecutingSliceIndex(estate) == 1 && LocallyExecutingSliceIndex(estate) != RootSliceIndex(estate) */)
 	{
-		planstate = ExecInitNode(getLocalMotion(plannedstmt->planTree, LocallyExecutingSliceIndex(estate)), estate, eflags);
+		Motion *m = getLocalMotion(plannedstmt->planTree, LocallyExecutingSliceIndex(estate));
+		//elog(WARNING, "After: %x\n%s", m, nodeToString(m));
+		planstate = ExecInitNode(m, estate, eflags);
 	}
 	else
 	{

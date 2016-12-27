@@ -24,6 +24,8 @@ extern void InitRootSlices(QueryDesc *queryDesc);
 extern void AssignGangs(QueryDesc *queryDesc);
 extern void ReleaseGangs(QueryDesc *queryDesc);
 
+extern Motion *getLocalMotion(Plan *planTree, int sliceIndex);
+
 #ifdef USE_ASSERT_CHECKING
 struct PlannedStmt;
 extern void AssertSliceTableIsValid(SliceTable *st, struct PlannedStmt *pstmt);

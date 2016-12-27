@@ -2262,6 +2262,7 @@ typedef struct MotionStateFinderContext
 
 typedef struct MotionFinderContext
 {
+	plan_tree_base_prefix base; /* Required prefix for plan_tree_walker/mutator */
 	int motionId; /* Input */
 	Motion *motion; /* Output */
 } MotionFinderContext;
@@ -2299,6 +2300,10 @@ MotionFinderWalker(Plan *node,
 	Assert(context);
 	MotionFinderContext *ctx = (MotionFinderContext *) context;
 
+
+	if (node == NULL)
+		return false;
+
 	if (IsA(node, Motion))
 	{
 		Motion *m = (Motion *) node;
@@ -2310,7 +2315,7 @@ MotionFinderWalker(Plan *node,
 	}
 
 	/* Continue walking */
-	return false;
+	return plan_tree_walker(node, MotionFinderWalker, ctx);
 }
 
 /**
@@ -2337,8 +2342,9 @@ Motion *getLocalMotion(Plan *planTree, int sliceIndex)
 	MotionFinderContext ctx;
 	ctx.motionId = sliceIndex;
 	ctx.motion = NULL;
-	plan_tree_walker(planTree, MotionFinderWalker, &ctx);
+	MotionFinderWalker(planTree, &ctx);
 	Assert(ctx.motion != NULL);
+//	elog(WARNING, "Before: %x\n%s", ctx.motion, nodeToString(ctx.motion));
 	return ctx.motion;
 }
 
