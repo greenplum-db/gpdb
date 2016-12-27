@@ -123,7 +123,10 @@ do { \
 		}\
 	}\
 	if (InterruptPending) \
+	{\
+		write_stderr("CHECK_FOR_INTERRUPTS is triggered in %s:%d", __FILE__, __LINE__); \
 		ProcessInterrupts(); \
+	}\
 	if (gp_enable_resqueue_priority)	\
 		BackoffBackendTick(); \
 	ReportOOMConsumption(); \
@@ -133,7 +136,10 @@ do { \
 #define CHECK_FOR_INTERRUPTS() \
 do { \
 	if (InterruptPending) \
+	{\
+		write_stderr("CHECK_FOR_INTERRUPTS is triggered in %s:%d", __FILE__, __LINE__); \
 		ProcessInterrupts(); \
+	}\
 	if (gp_enable_resqueue_priority)	\
 		BackoffBackendTick(); \
 	ReportOOMConsumption(); \
@@ -148,7 +154,10 @@ do { \
 	if (UNBLOCKED_SIGNAL_QUEUE()) \
 		pgwin32_dispatch_queued_signals(); \
 	if (InterruptPending) \
+	{\
+		write_stderr("CHECK_FOR_INTERRUPTS is triggered in %s:%d", __FILE__, __LINE__); \
 		ProcessInterrupts(); \
+	}\
 } while(0)
 #endif   /* WIN32 */
 
