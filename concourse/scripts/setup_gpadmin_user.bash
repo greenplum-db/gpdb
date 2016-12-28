@@ -44,6 +44,7 @@ setup_gpadmin_user() {
   echo -e "password\npassword" | passwd gpadmin
   groupadd supergroup
   usermod -a -G supergroup gpadmin
+  usermod -a -G tty gpadmin
   setup_ssh_for_user gpadmin
   transfer_ownership
 }
