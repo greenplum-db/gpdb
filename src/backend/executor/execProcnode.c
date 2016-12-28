@@ -234,6 +234,7 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 	START_CODE_GENERATOR_MANAGER(CodegenManager);
 	{
 		if (memory_profiler_dataset_size == 9 &&
+				eflags & EXEC_FLAG_EXPLAIN_ONLY == 0 &&  /* Don't touch EXPLAIN */
 					currentSliceId >= 0 && /* Otherwise select version() crashes with a currentSliceId == -1 */
 					!(currentSliceId == 0 && estate->es_sliceTable->doInstrument) && /* Master needs all the slices when doing explain analyze */
 					!((currentSliceId == origSliceIdInPlan) ||
