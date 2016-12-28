@@ -210,8 +210,8 @@ INSERT INTO region_2 SELECT * FROM ret_region;
 INSERT 0 5
 -- compare contents of original table vs the table loaded from ret which in turn took the data which was created by wet
 select * from region_1 order by r_regionkey;
- r_regionkey |          r_name           |                                                      r_comment                                                      
--------------+---------------------------+---------------------------------------------------------------------------------------------------------------------
+ r_regionkey |          r_name           |                                                     r_comment                                                      
+-------------+---------------------------+--------------------------------------------------------------------------------------------------------------------
            0 | AFRICA                    | lar deposits. blithely final packages cajole. regular waters are final requests. regular accounts are according to 
            1 | AMERICA                   | hs use ironic, even requests. s
            2 | ASIA                      | ges. thinly even pinto beans ca
@@ -220,8 +220,8 @@ select * from region_1 order by r_regionkey;
 (5 rows)
 
 select * from region_2 order by r_regionkey;
- r_regionkey |          r_name           |                                                      r_comment                                                      
--------------+---------------------------+---------------------------------------------------------------------------------------------------------------------
+ r_regionkey |          r_name           |                                                     r_comment                                                      
+-------------+---------------------------+--------------------------------------------------------------------------------------------------------------------
            0 | AFRICA                    | lar deposits. blithely final packages cajole. regular waters are final requests. regular accounts are according to 
            1 | AMERICA                   | hs use ironic, even requests. s
            2 | ASIA                      | ges. thinly even pinto beans ca

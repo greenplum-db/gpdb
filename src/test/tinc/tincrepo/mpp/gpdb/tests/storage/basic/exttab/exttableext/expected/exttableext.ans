@@ -350,6 +350,8 @@ DROP EXTERNAL TABLE
 CREATE EXTERNAL TABLE
     insert into exttabtest_w_misspath (select * from exttabletest);
 psql:/path/sql_file:1: ERROR:  relation "exttabletest" does not exist
+LINE 1: insert into exttabtest_w_misspath (select * from exttabletes...
+                                                         ^    
 -- Test 17: Negative - invalid URL: missing protocol
     CREATE READABLE EXTERNAL TABLE exttabtest_r_missprot(like exttabtest)
         LOCATION('exttabtest.txt') 
@@ -359,11 +361,7 @@ psql:/path/sql_file:1: ERROR:  invalid URI 'exttabtest.txt' : undefined structur
     CREATE READABLE EXTERNAL TABLE exttabtest_r_invalidpath(like exttabtest)
         LOCATION('demoprot:\\exttabtest.txt') 
     FORMAT 'text';
-psql:/path/sql_file:1: WARNING:  nonstandard use of \\ in a string literal
-LINE 2:         LOCATION('demoprot:\\exttabtest.txt') 
-                         ^
-HINT:  Use the escape string syntax for backslashes, e.g., E'\\'.
-psql:/path/sql_file:1: ERROR:  invalid URI 'demoprot:\exttabtest.txt' : undefined structure
+psql:/path/sql_file:1: ERROR:  invalid URI 'demoprot:\\exttabtest.txt' : undefined structure
 -- Test 19: Negative - invalid URL: invalid protocol name
     CREATE READABLE EXTERNAL TABLE exttabtest_r_invalidprot(like exttabtest)
         LOCATION('badprotocol://exttabtest.txt') 
@@ -1054,7 +1052,7 @@ Format options: formatter 'formatter_export_s'
 External location: demoprot://exttabtest_test63
 
     \d format_r
-      External table "exttableext.format_r"
+   External table "exttableext.format_r"
  Column |         Type          | Modifiers 
 --------+-----------------------+-----------
  name   | character varying(40) | 

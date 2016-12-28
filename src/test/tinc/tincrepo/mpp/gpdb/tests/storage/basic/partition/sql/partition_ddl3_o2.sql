@@ -1037,8 +1037,6 @@ set optimizer_analyze_root_partition=on;
 create table mpp3487 (i int) partition by range (i) (start(1) end(10) every(1));
 insert into mpp3487 select i from generate_series(1, 9) i;
 vacuum analyze mpp3487;
-select unnest(string_to_array(array_to_string(most_common_vals,','),',')) from pg_stats where tablename='mpp3487' order by 1;
-select tablename,most_common_vals from pg_stats where tablename like 'mpp3487_%' order by 1;
 select  schemaname, tablename, attname, null_frac, avg_width, n_distinct, most_common_freqs, histogram_bounds, correlation from pg_stats where tablename like 'mpp3487%' order by 2;
 drop table mpp3487;
 create table mpp4892 (a char, b int, d char)
@@ -2135,7 +2133,7 @@ prepare f1(date) as select * from fact where dd < $1;
 -- force_explain
 explain execute f1('2009-01-02'::date); -- should eliminate partitions
 -- force_explain
-explain execute f1(to_date('2009-01-02'::date,'YYYY-MM-DD')); -- should eliminate partitions
+explain execute f1(to_date('2009-01-02', 'YYYY-MM-DD')); -- should eliminate partitions
 
 -- start_ignore
 drop table fact;
