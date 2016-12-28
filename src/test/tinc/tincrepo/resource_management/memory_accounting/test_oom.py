@@ -47,6 +47,9 @@ class OOMTestCase(MPPTestCase, ScenarioTestCase):
         elif self.name == 'OOMTestCase.test_07_OOM_abort_query':
             Command('Run gpconfig to set GUC gp_vmem_protect_limit' ,
                     'source $GPHOME/greenplum_path.sh;gpconfig -c gp_vmem_limit_per_query -v "4MB" --skipvalidation').run(validateAfter=True)
+        elif self.name == 'OOMTestCase.test_05_dumpusage':
+            Command('Run gpconfig to set GUC gp_vmem_protect_limit' ,
+                    'source $GPHOME/greenplum_path.sh;gpconfig -c gp_vmem_protect_limit -m 4 -v 4').run(validateAfter=True)
         else:
             Command('Run gpconfig to set GUC gp_vmem_protect_limit' ,
                     'source $GPHOME/greenplum_path.sh;gpconfig -c gp_vmem_protect_limit -m 20 -v 20').run(validateAfter=True)
