@@ -233,7 +233,20 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 
 	START_CODE_GENERATOR_MANAGER(CodegenManager);
 	{
+		if (memory_profiler_dataset_size == 9 &&
+					currentSliceId >= 0 && /* Otherwise select version() crashes with a currentSliceId == -1 */
+					!(currentSliceId == 0 && estate->es_sliceTable->doInstrument) && /* Master needs all the slices when doing explain analyze */
+					!((currentSliceId == origSliceIdInPlan) ||
+					(nodeTag(node) == T_Motion && ((Motion*)node)->motionID == currentSliceId) ||
+					(nodeTag(node) == T_Motion && ((Motion*)node)->motionID == currentSliceId - 1)))
+		{
+			return NULL;
+		}
 
+//		if (IsA(node, Motion))
+//		{
+//			elog(WARNING, "Motion ID: %d", ((Motion*)node)->motionID);
+//		}
 
 	/*
 	 * Is current plan node supposed to execute in current slice?

@@ -1101,7 +1101,7 @@ ExecutorEnd(QueryDesc *queryDesc)
 	}
 	END_MEMORY_ACCOUNT();
 
-	elog(WARNING, "Alien Peak: " UINT64_FORMAT, AlienExecutorMemoryAccount->peak);
+//	elog(WARNING, "Alien Peak: " UINT64_FORMAT, AlienExecutorMemoryAccount->peak);
 	if (gp_dump_memory_usage)
 	{
 		MemoryAccounting_SaveToFile(currentSliceId);
