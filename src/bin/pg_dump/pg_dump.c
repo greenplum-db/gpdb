@@ -2466,13 +2466,15 @@ binary_upgrade_set_type_oids_by_type_oid(Archive *fout, PQExpBuffer upgrade_buff
 																	"'%s'::text, "
 																	"'%u'::pg_catalog.oid);\n\n",
 					  type->arraytypoid, type->arraytypname, type->arraytypnsp);
+
+	destroyPQExpBuffer(upgrade_query);
 }
 
 static bool
 binary_upgrade_set_type_oids_by_rel_oid(Archive *fout, PQExpBuffer upgrade_buffer,
 										Oid pg_rel_oid, char *objname)
 {
-	PQExpBuffer upgrade_query = createPQExpBuffer();
+	PQExpBuffer upgrade_query;
 	int			ntups;
 	PGresult   *upgrade_res;
 	Oid			pg_type_oid;
@@ -2482,6 +2484,8 @@ binary_upgrade_set_type_oids_by_rel_oid(Archive *fout, PQExpBuffer upgrade_buffe
 	/* we only support old >= 8.3 for binary upgrades */
 	if (g_fout->remoteVersion >= 80300)
 		return false;
+
+	upgrade_query = createPQExpBuffer();
 
 	appendPQExpBuffer(upgrade_query,
 					  "SELECT c.reltype AS crel, t.reltype AS trel, "
@@ -2614,6 +2618,7 @@ binary_upgrade_set_type_oids_by_rel_oid(Archive *fout, PQExpBuffer upgrade_buffe
 		}
 
 		PQclear(par_res);
+		destroyPQExpBuffer(parquery);
 	}
 
 	if (!PQgetisnull(upgrade_res, 0, PQfnumber(upgrade_res, "aosegrel")))
