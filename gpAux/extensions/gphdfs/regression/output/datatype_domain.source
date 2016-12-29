@@ -17,8 +17,7 @@ create writable external table domaintype_write(id INT4, country country_code)lo
 insert into domaintype_write values (1,'US');
 insert into domaintype_write values (2,'CH');
 insert into domaintype_write values (3,'HK');
-create readable external table readcty(id INT4, country country_code)location ('gphdfs://10.152.10.234:8020/extwrite/domainDataType')format 'custom' (formatter='gphdfs_import') log errors into errortable segment reject limit 100;
-NOTICE:  Error table "errortable" does not exist. Auto generating an error table with the same name
+create readable external table readcty(id INT4, country country_code)location ('gphdfs://10.152.10.234:8020/extwrite/domainDataType')format 'custom' (formatter='gphdfs_import') log errors segment reject limit 100;
 select * from readcty order by id;
  id | country 
 ----+---------
@@ -37,12 +36,6 @@ NOTICE:  Found 1 data formatting errors (1 or more input rows). Rejected related
   2 | CH
   3 | HK
 (3 rows)
-
-select relname,linenum,bytenum,errmsg,rawdata,rawbytes from errortable;
- relname | linenum | bytenum |                errmsg                | rawdata | rawbytes 
----------+---------+---------+--------------------------------------+---------+----------
- readcty |         |         | value too long for type character(2) |         | 
-(1 row)
 
 --start_ignore
 \!/usr/hdp/2.3.2.0-2950/hadoop/bin/hadoop fs -rm -r /mapreduce/*
