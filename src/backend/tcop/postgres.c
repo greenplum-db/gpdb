@@ -3480,7 +3480,7 @@ die(SIGNAL_ARGS)
 			DisableCatchupInterrupt();
 			DisableClientWaitTimeoutInterrupt();
 			InterruptHoldoffCount--;
-			ProcessInterrupts();
+			ProcessInterrupts(__FILE__, __LINE__);
 		}
 	}
 
@@ -3538,7 +3538,7 @@ StatementCancelHandler(SIGNAL_ARGS)
 			DisableNotifyInterrupt();
 			DisableCatchupInterrupt();
 			InterruptHoldoffCount--;
-			ProcessInterrupts();
+			ProcessInterrupts(__FILE__, __LINE__);
 		}
 	}
 
@@ -3631,9 +3631,12 @@ SigHupHandler(SIGNAL_ARGS)
  * If an interrupt condition is pending, and it's safe to service it,
  * then clear the flag and accept the interrupt.  Called only when
  * InterruptPending is true.
+ *
+ * Parameters filename and lineno contain the file name and the line number where
+ * ProcessInterrupts was invoked, respectively.
  */
 void
-ProcessInterrupts(void)
+ProcessInterrupts(const char* filename, int lineno)
 {
 
 #ifdef USE_TEST_UTILS
@@ -3690,7 +3693,7 @@ ProcessInterrupts(void)
 
 	if (QueryCancelPending)
 	{
-		elog(LOG,"Process interrupt for 'query cancel pending'.");
+		elog(LOG,"Process interrupt for 'query cancel pending' (%s:%d)", filename, lineno);
 
 		QueryCancelPending = false;
 
