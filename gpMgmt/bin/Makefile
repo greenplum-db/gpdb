@@ -245,9 +245,9 @@ check-regress:
 
 check: $(MOCK_BIN) unittest2
 	@echo "Running pure unit and also "unit" tests that require cluster to be up..."
-	@PYTHONPATH=$(SERVER_SRC):$(SERVER_SBIN):$(SRC)/ext:$(PYTHONPATH):$(PYTHONSRC_INSTALL_PYTHON_PATH):$(SBIN_DIR):$(LIB_DIR):$(PYLIB_DIR)/mock-1.0.1 \
+	@TMPDIR=/tmp PYTHONPATH=$(SERVER_SRC):$(SERVER_SBIN):$(PYTHONPATH):$(PYTHONSRC_INSTALL_PYTHON_PATH):$(SRC)/ext:$(SBIN_DIR):$(LIB_DIR):$(PYLIB_DIR)/mock-1.0.1 \
 	gppylib/gpunit discover --verbose -s $(SRC)/gppylib -p "test_unit*.py" 2> $(SRC)/../gpMgmt_testunit_results.log 1> $(SRC)/../gpMgmt_testunit_output.log
-	@PYTHONPATH=$(SERVER_SRC):$(SERVER_SBIN):$(SRC)/ext:$(PYTHONPATH):$(PYTHONSRC_INSTALL_PYTHON_PATH):$(SBIN_DIR):$(LIB_DIR):$(PYLIB_DIR)/mock-1.0.1 \
+	@TMPDIR=/tmp PYTHONPATH=$(SERVER_SRC):$(SERVER_SBIN):$(PYTHONPATH):$(PYTHONSRC_INSTALL_PYTHON_PATH):$(SRC)/ext:$(SBIN_DIR):$(LIB_DIR):$(PYLIB_DIR)/mock-1.0.1 \
 	gppylib/gpunit discover --verbose -s $(SRC)/gppylib -p "test_cluster*.py" 2>> $(SRC)/../gpMgmt_testunit_results.log 1>> $(SRC)/../gpMgmt_testunit_output.log
 
 unitdevel:
