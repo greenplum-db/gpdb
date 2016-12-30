@@ -30,22 +30,26 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Join aoseg table and PT to verify eof values are equal.
+CREATE TYPE aoseg_pt_rec as (segno integer, tupcount bigint,
+ eofuncompressed bigint, mirror_appendonly_new_eof bigint);
 CREATE OR REPLACE FUNCTION gp_aotable_eof_dist_random(
-  IN relation_name text) RETURNS setof record AS $$
+  IN relation_name text) RETURNS setof aoseg_pt_rec AS $$
 DECLARE
-  relid oid;
+  aorelfilenode oid;
   result record;
 BEGIN
-  select into relid oid from pg_class where relname=quote_ident(relation_name);
+  select into aorelfilenode relfilenode from pg_class where relname=quote_ident(relation_name);
   for result in
-      EXECUTE 'select a.segno, a.tupcount, a.eofuncompressed, b.mirror_append_only_new_eof
-              from gp_dist_random(''pg_aoseg.pg_aoseg_' || relid ||''') a,
-              gp_dist_random(''gp_persistent_relation_node'') b
-              where a.segno = b.segment_file_num and b.relfilenode_oid = ' || relid || ' and
-              b.mirror_append_only_new_eof = a.eofuncompressed and
-              a.eofuncompressed != 0;'
+    EXECUTE 'select aoseg.segno, aoseg.tupcount, aoseg.eofuncompressed,
+             pt.mirror_append_only_new_eof from pg_aoseg.pg_aoseg_' ||
+             aorelfilenode || ' aoseg inner join
+             gp_persistent_relation_node pt on aoseg.segno =
+             pt.segment_file_num and pt.relfilenode_oid = ' ||
+             aorelfilenode || ' and pt.mirror_append_only_new_eof =
+             aoseg.eofuncompressed and aoseg.eofuncompressed != 0;'
   loop
-      return next result;
+    return next result;
   end loop;
   return;
 END;
@@ -150,17 +154,23 @@ select gp_toolkit.__gp_aovisimap_hidden_info('uao_table_check_hidden_tup_count_a
 -- Verify the eof in pg_aoseg and gp_persistent_relation_node are the same for uao relation after delete
 create table uao_table_check_eof_after_delete(i int, j varchar(20), k int ) with (appendonly=true) DISTRIBUTED BY (i);
 insert into uao_table_check_eof_after_delete select i,'aa'||i,i+10 from generate_series(1,20) as i;
-select * from gp_aotable_eof_dist_random('uao_table_check_eof_after_delete') as (segno integer, tupcount bigint, eofuncompressed bigint, mirror_appendonly_new_eof bigint);
+select gp_aotable_eof_dist_random('uao_table_check_eof_after_delete') from gp_dist_random('gp_id')
+ as (segno integer, tupcount bigint, eofuncompressed bigint, mirror_appendonly_new_eof bigint);
 delete from uao_table_check_eof_after_delete where i in (1,5,13);
-select * from gp_aotable_eof_dist_random('uao_table_check_eof_after_delete') as (segno integer, tupcount bigint, eofuncompressed bigint, mirror_appendonly_new_eof bigint);
+select gp_aotable_eof_dist_random('uao_table_check_eof_after_delete') from gp_dist_random('gp_id')
+ as (segno integer, tupcount bigint, eofuncompressed bigint, mirror_appendonly_new_eof bigint);
 vacuum full uao_table_check_eof_after_delete;
-select * from gp_aotable_eof_dist_random('uao_table_check_eof_after_delete') as (segno integer, tupcount bigint, eofuncompressed bigint, mirror_appendonly_new_eof bigint);
+select gp_aotable_eof_dist_random('uao_table_check_eof_after_delete') from gp_dist_random('gp_id')
+ as (segno integer, tupcount bigint, eofuncompressed bigint, mirror_appendonly_new_eof bigint);
 
 -- Verify the eof in pg_aoseg and gp_persistent_relation_node are the same for uao relation after update
 create table uao_table_check_eof_after_update(i int, j varchar(20), k int ) with (appendonly=true) DISTRIBUTED BY (i);
 insert into uao_table_check_eof_after_update select i,'aa'||i,i+10 from generate_series(1,20) as i;
-select * from gp_aotable_eof_dist_random('uao_table_check_eof_after_update') as (segno integer, tupcount bigint, eofuncompressed bigint, mirror_appendonly_new_eof bigint);
+select gp_aotable_eof_dist_random('uao_table_check_eof_after_update') from gp_dist_random('gp_id')
+ as (segno integer, tupcount bigint, eofuncompressed bigint, mirror_appendonly_new_eof bigint);
 update uao_table_check_eof_after_update set k = k + 100 where i in (1,5,13);
-select * from gp_aotable_eof_dist_random('uao_table_check_eof_after_update') as (segno integer, tupcount bigint, eofuncompressed bigint, mirror_appendonly_new_eof bigint);
+select gp_aotable_eof_dist_random('uao_table_check_eof_after_update') from gp_dist_random('gp_id')
+ as (segno integer, tupcount bigint, eofuncompressed bigint, mirror_appendonly_new_eof bigint);
 vacuum full uao_table_check_eof_after_update;
-select * from gp_aotable_eof_dist_random('uao_table_check_eof_after_update') as (segno integer, tupcount bigint, eofuncompressed bigint, mirror_appendonly_new_eof bigint);
+select gp_aotable_eof_dist_random('uao_table_check_eof_after_update') from gp_dist_random('gp_id')
+ as (segno integer, tupcount bigint, eofuncompressed bigint, mirror_appendonly_new_eof bigint);
