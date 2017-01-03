@@ -2335,11 +2335,13 @@ MotionState *getMotionState(struct PlanState *ps, int sliceIndex)
 	return ctx.motionState;
 }
 
-Motion *getLocalMotion(Plan *planTree, int sliceIndex)
+Motion *getLocalMotion(PlannedStmt *plannedstmt, int sliceIndex)
 {
 	Assert(sliceIndex > -1);
 
+	Plan *planTree = plannedstmt->planTree;
 	MotionFinderContext ctx;
+	ctx.base.node = plannedstmt;
 	ctx.motionId = sliceIndex;
 	ctx.motion = NULL;
 	MotionFinderWalker(planTree, &ctx);

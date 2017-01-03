@@ -1830,7 +1830,7 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 	 */
 	if (memory_profiler_dataset_size == 9 && Gp_segment != -1 && LocallyExecutingSliceIndex(estate) != 0  /* && LocallyExecutingSliceIndex(estate) == 1 && LocallyExecutingSliceIndex(estate) != RootSliceIndex(estate) */)
 	{
-		Motion *m = getLocalMotion(plannedstmt->planTree, LocallyExecutingSliceIndex(estate));
+		Motion *m = getLocalMotion(plannedstmt, LocallyExecutingSliceIndex(estate));
 		//elog(WARNING, "After: %x\n%s", m, nodeToString(m));
 		planstate = ExecInitNode(m, estate, eflags);
 	}
