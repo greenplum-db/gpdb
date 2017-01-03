@@ -470,28 +470,6 @@ transformLocationUris(List *locs, bool isweb, bool iswritable)
 	astate = NULL;
 
 	/*
-	 * first, check for duplicate URI entries
-	 */
-	foreach(cell, locs)
-	{
-		Value	   *v1 = lfirst(cell);
-		const char *uri1 = v1->val.str;
-		ListCell   *rest;
-
-		for_each_cell(rest, lnext(cell))
-		{
-			Value	   *v2 = lfirst(rest);
-			const char *uri2 = v2->val.str;
-
-			if (strcmp(uri1, uri2) == 0)
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-						 errmsg("location uri \"%s\" appears more than once",
-								uri1)));
-		}
-	}
-
-	/*
 	 * iterate through the user supplied URI list from LOCATION clause.
 	 */
 	foreach(cell, locs)

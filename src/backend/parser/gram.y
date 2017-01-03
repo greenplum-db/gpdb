@@ -8949,7 +8949,15 @@ DeallocateStmt: DEALLOCATE name
 
 cdb_string_list:
 			cdb_string							{ $$ = list_make1($1); }  
-			| cdb_string_list ',' cdb_string	{ $$ = lappend($1, $3); }
+			| cdb_string_list ',' cdb_string
+				{
+					if (list_member($1, $3))
+						ereport(ERROR,
+								(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+								 errmsg("duplicate location uri"),
+								 scanner_errposition(@3)));
+					$$ = lappend($1, $3);
+				}
 		;
 
 
