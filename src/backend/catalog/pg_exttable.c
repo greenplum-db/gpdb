@@ -474,8 +474,11 @@ RemoveExtTableEntry(Oid relid)
 	/*
 	 * Delete the external table entry from the catalog (pg_exttable).
 	 */
-	while (HeapTupleIsValid(tuple = systable_getnext(scan)))
+	do
+	{
 		simple_heap_delete(pg_exttable_rel, &tuple->t_self);
+	}
+	while (HeapTupleIsValid(tuple = systable_getnext(scan)));
 
 	/* Finish up scan and close exttable catalog. */
 	systable_endscan(scan);

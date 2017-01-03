@@ -366,27 +366,36 @@ DROP ROLE exttab1_u6;
 drop external table check_ps;
 drop external table check_env;
 drop external table wet_pos4;
--- Tests for MPP-2513: dropping an external table must result in the deletion
--- of the relation pg_exttable row. This was done when using drop external
--- table but not drop schema cascade;
-create schema exttabletest;
-CREATE EXTERNAL TABLE exttabletest.EXT_NATION  ( N_NATIONKEY  INTEGER ,
-                            N_NAME       CHAR(25) ,
-                            N_REGIONKEY  INTEGER ,
-                            N_COMMENT    VARCHAR(152))
-location ('file://@hostname@@abs_srcdir@/data/nation.tbl' )
-FORMAT 'text' (delimiter '|');
--- Don't just return the row, as we'll get skew from OID differences between
--- runs.
-select count(*) from pg_catalog.pg_exttable where reloid in (select r.oid from pg_class r where r.relname in ('ext_nation', 'ext_whois', 'exttab1_gpfdist_status'));
+-- Dropping an external table, both via DROP EXTERNAL TABLE and as a result
+-- from a cascading deletion must result in the deletion of the relation
+-- pg_exttable row.
+CREATE EXTERNAL WEB TABLE cascadetest (x text) EXECUTE 'echo "cascadetest";' FORMAT 'text';
+SELECT count(*) FROM pg_exttable WHERE command = 'echo "cascadetest";';
  count 
 -------
      1
 (1 row)
 
-drop schema exttabletest cascade;
+DROP EXTERNAL TABLE cascadetest;
+SELECT count(*) FROM pg_exttable WHERE command = 'echo "cascadetest";';
+ count 
+-------
+     0
+(1 row)
+
+CREATE SCHEMA exttabletest;
+CREATE
+	EXTERNAL TABLE exttabletest.ext_nation (n_nationkey integer, n_name char(25), n_regionkey integer, n_comment varchar(152))
+	LOCATION ('file://@hostname@@abs_srcdir@/data/nation.tbl') FORMAT 'text' (delimiter '|');
+SELECT count(*) FROM pg_exttable WHERE location @> '{file://@hostname@@abs_srcdir@/data/nation.tbl}';
+ count 
+-------
+     1
+(1 row)
+
+DROP SCHEMA exttabletest CASCADE;
 NOTICE:  drop cascades to external table exttabletest.ext_nation
-select count(*) from pg_catalog.pg_exttable where reloid in (select r.oid from pg_class r where r.relname in ('ext_nation', 'ext_whois', 'exttab1_gpfdist_status'));
+SELECT count(*) FROM pg_exttable WHERE location @> '{file://@hostname@@abs_srcdir@/data/nation.tbl}';
  count 
 -------
      0
