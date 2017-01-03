@@ -369,6 +369,36 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	if (encoding < 0)
 		encoding = pg_get_client_encoding();
 
+	/*
+	 * If the number of locations (file or http URIs) exceed the number of
+	 * segments in the cluster, then all queries against the table will fail
+	 * since locations must be mapped at most one per segment. Allow the
+	 * creation since this is old pre-existing behavior but throw a WARNING
+	 * that the user must expand the cluster in order to use it (or alter
+	 * the table).
+	 */
+	if (exttypeDesc->exttabletype == EXTTBL_TYPE_LOCATION)
+	{
+		if (Gp_role == GP_ROLE_DISPATCH)
+		{
+			Value	*loc = lfirst(list_head(exttypeDesc->location_list));
+			Uri 	*uri = ParseExternalTableUri(loc->val.str);
+
+			if (uri->protocol == URI_FILE || uri->protocol == URI_HTTP)
+			{
+				if (getgpsegmentCount() < list_length(exttypeDesc->location_list))
+					ereport(WARNING,
+							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+							 errmsg("number of locations (%) exceeds the number "
+									"of segments (%d)",
+									list_length(exttypeDesc->location_list),
+									getgpsegmentCount()),
+							 errhint("The table cannot be queried until cluster "
+									 "is expanded so that there are at least as "
+									 "many segments as locations.")));
+			}
+		}
+	}
 
 	/*
 	 * First, create the pg_class and other regular relation catalog entries.
