@@ -227,9 +227,11 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 
 %type <list>	createdb_opt_list alterdb_opt_list copy_opt_list
 				ext_on_clause_list format_opt format_opt_list format_def_list transaction_mode_list
+				ext_options ext_options_opt ext_options_list
 				ext_opt_encoding_list create_extension_opt_list alter_extension_opt_list
 %type <defelt>	createdb_opt_item alterdb_opt_item copy_opt_item
 				ext_on_clause_item format_opt_item format_def_item transaction_mode_item
+				ext_options_item
 				ext_opt_encoding_item create_extension_opt_item alter_extension_opt_item
 
 %type <ival>	opt_lock lock_type cast_context
@@ -528,7 +530,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 	NOCREATEROLE NOCREATEUSER NOINHERIT NOLOGIN_P NONE NOSUPERUSER
 	NOT NOTHING NOTIFY NOTNULL NOWAIT NULL_P NULLIF NULLS_P NUMERIC
 
-	OBJECT_P OF OFF OFFSET OIDS OLD ON ONLY OPERATOR OPTION OR
+	OBJECT_P OF OFF OFFSET OIDS OLD ON ONLY OPERATOR OPTION OPTIONS OR
 	ORDER OUT_P OUTER_P OVERLAPS OVERLAY OWNED OWNER
 
 	PARSER PARTIAL PASSWORD PLACING PLANS POSITION
@@ -809,6 +811,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 			%nonassoc OF
 			%nonassoc OIDS
 			%nonassoc OPTION
+			%nonassoc OPTIONS
 			%nonassoc OTHERS
 			%nonassoc OVER
 			%nonassoc OVERCOMMIT
@@ -4604,7 +4607,7 @@ opt_with_data:
  *****************************************************************************/
 	
 CreateExternalStmt:	CREATE OptWritable EXTERNAL OptWeb OptTemp TABLE qualified_name '(' OptExtTableElementList ')' 
-					ExtTypedesc FORMAT Sconst format_opt ext_opt_encoding_list OptSingleRowErrorHandling OptDistributedBy
+					ExtTypedesc FORMAT Sconst format_opt ext_options_opt ext_opt_encoding_list OptSingleRowErrorHandling OptDistributedBy
 						{
 							CreateExternalStmt *n = makeNode(CreateExternalStmt);
 							n->iswritable = $2;
@@ -4615,9 +4618,10 @@ CreateExternalStmt:	CREATE OptWritable EXTERNAL OptWeb OptTemp TABLE qualified_n
 							n->exttypedesc = (ExtTableTypeDesc *) $11;
 							n->format = $13;
 							n->formatOpts = $14;
-							n->encoding = $15;
-							n->sreh = $16;
-							n->distributedBy = $17;
+							n->extOptions = $15;
+							n->encoding = $16;
+							n->sreh = $17;
+							n->distributedBy = $18;
 							n->policy = 0;
 							
 							/* various syntax checks for EXECUTE external table */
@@ -4797,6 +4801,34 @@ format_opt_item:
 			| NEWLINE opt_as Sconst
 			{
 				$$ = makeDefElem("newline", (Node *)makeString($3));
+			}
+			;
+
+ext_options_opt:
+			OPTIONS ext_options					{ $$ = $2; }
+			| /*EMPTY*/                         { $$ = NIL; }
+			;
+
+ext_options:
+			'(' ext_options_list ')'           { $$ = $2; }
+			| '(' ')'                           { $$ = NIL; }
+			;
+
+ext_options_list:
+			ext_options_item
+			{
+				$$ = list_make1($1);
+			}
+			| ext_options_list ',' ext_options_item
+			{
+				$$ = lappend($1, $3);
+			}
+			;
+
+ext_options_item:
+			ColLabel Sconst
+			{
+				$$ = makeDefElem($1, (Node *)makeString($2));
 			}
 			;
 
@@ -13031,6 +13063,7 @@ unreserved_keyword:
 			| OIDS
 			| OPERATOR
 			| OPTION
+			| OPTIONS
 			| ORDERED
 			| OTHERS
 			| OVER
@@ -13318,6 +13351,7 @@ PartitionIdentKeyword: ABORT_P
 			| OIDS
 			| OPERATOR
 			| OPTION
+			| OPTIONS
 			| OTHERS
 			| OVERCOMMIT
 			| OWNED

@@ -810,6 +810,7 @@ Type: readable
 Encoding: UTF8
 Format type: text
 Format options: delimiter '	' null '\N' escape '\'
+External options: {}
 External location: file:///tmp/test.txt
 
 create external table ext_t2 (a int, b int)
@@ -825,6 +826,7 @@ Type: readable
 Encoding: UTF8
 Format type: text
 Format options: delimiter '	' null '\N' escape '\'
+External options: {}
 External location: file:///tmp/test.txt
 Segment reject limit: 100 rows
 Error Log in File

@@ -10084,6 +10084,8 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 		char	   *customfmt = NULL;
 		bool		isweb = false;
 		bool		iswritable = false;
+		char	   *options;
+		bool		gpdb5 = isGPDB5000OrLater();
 
 		/*
 		 * DROP must be fully qualified in case same name appears in
@@ -10095,7 +10097,27 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 						  fmtId(tbinfo->dobj.name));
 
 		/* Now get required information from pg_exttable */
-		if (g_fout->remoteVersion >= 80214)
+		if (gpdb5)
+		{
+			appendPQExpBuffer(query,
+						  "SELECT x.location, x.fmttype, x.fmtopts, x.command, "
+								  "x.rejectlimit, x.rejectlimittype, "
+						      "(SELECT relname "
+						          "FROM pg_catalog.pg_class "
+								  "WHERE Oid=x.fmterrtbl) AS errtblname, "
+								  "x.fmterrtbl = x.reloid AS errortofile , "
+								  "pg_catalog.pg_encoding_to_char(x.encoding), "
+								  "x.writable, "
+								  "array_to_string(ARRAY( "
+								  "SELECT pg_catalog.quote_ident(option_name) || ' ' || "
+								  "pg_catalog.quote_literal(option_value) "
+								  "FROM pg_options_to_table(x.options) "
+								  "ORDER BY option_name"
+								  "), E',\n    ') AS options "
+						  "FROM pg_catalog.pg_exttable x, pg_catalog.pg_class c "
+						  "WHERE x.reloid = c.oid AND c.oid = '%u'::oid ", tbinfo->dobj.catId.oid);
+		}
+		else if (g_fout->remoteVersion >= 80214)
 		{
 			appendPQExpBuffer(query,
 					   "SELECT x.location, x.fmttype, x.fmtopts, x.command, "
@@ -10164,6 +10186,11 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 		errtblname = PQgetvalue(res, 0, 7);
 		extencoding = PQgetvalue(res, 0, 8);
 		writable = PQgetvalue(res, 0, 9);
+
+		if (gpdb5)
+		{
+			options = PQgetvalue(res, 0, 10);
+		}
 
 		if ((command && strlen(command) > 0) ||
 			(strncmp(locations + 1, "http", strlen("http")) == 0))
@@ -10290,6 +10317,11 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 		{
 			free(customfmt);
 			customfmt = NULL;
+		}
+
+		if (gpdb5)
+		{
+			appendPQExpBuffer(q, "OPTIONS (\n %s\n )\n", options);
 		}
 
 		if (g_fout->remoteVersion >= 80205)

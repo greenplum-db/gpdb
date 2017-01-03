@@ -17,6 +17,7 @@
 #include "catalog/pg_proc.h"
 #include "access/genam.h"
 #include "access/heapam.h"
+#include "access/reloptions.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
 #include "mb/pg_wchar.h"
@@ -25,8 +26,12 @@
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
 #include "utils/fmgroids.h"
+#include "utils/memutils.h"
 #include "utils/uri.h"
+#include "miscadmin.h"
 
+/* backport from FDW to support options */
+extern Datum pg_options_to_table(PG_FUNCTION_ARGS);
 
 /*
  * InsertExtTableEntry
@@ -48,6 +53,7 @@ InsertExtTableEntry(Oid 	tbloid,
 					Oid		fmtErrTblOid,
 					int		encoding,
 					Datum	formatOptStr,
+					Datum   optionsStr,
 					Datum	locationExec,
 					Datum	locationUris)
 {
@@ -67,6 +73,7 @@ InsertExtTableEntry(Oid 	tbloid,
 	values[Anum_pg_exttable_reloid - 1] = ObjectIdGetDatum(tbloid);
 	values[Anum_pg_exttable_fmttype - 1] = CharGetDatum(formattype);
 	values[Anum_pg_exttable_fmtopts - 1] = formatOptStr;
+	values[Anum_pg_exttable_options - 1] = optionsStr;
 
 	if(commandString)
 	{
@@ -123,6 +130,84 @@ InsertExtTableEntry(Oid 	tbloid,
 }
 
 /*
+ * deflist_to_tuplestore - Helper function to convert DefElem list to
+ * tuplestore usable in SRF.
+ */
+static void
+deflist_to_tuplestore(ReturnSetInfo *rsinfo, List *options)
+{
+	ListCell   *cell;
+	TupleDesc	tupdesc;
+	Tuplestorestate *tupstore;
+	Datum		values[2];
+	bool		nulls[2];
+	MemoryContext per_query_ctx;
+	MemoryContext oldcontext;
+
+	/* check to see if caller supports us returning a tuplestore */
+	if (rsinfo == NULL || !IsA(rsinfo, ReturnSetInfo))
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("set-valued function called in context that cannot accept a set")));
+	if (!(rsinfo->allowedModes & SFRM_Materialize) ||
+		rsinfo->expectedDesc == NULL)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("materialize mode required, but it is not allowed in this context")));
+
+	per_query_ctx = rsinfo->econtext->ecxt_per_query_memory;
+	oldcontext = MemoryContextSwitchTo(per_query_ctx);
+
+	/*
+	 * Now prepare the result set.
+	 */
+	tupdesc = CreateTupleDescCopy(rsinfo->expectedDesc);
+	tupstore = tuplestore_begin_heap(true, false, work_mem);
+	rsinfo->returnMode = SFRM_Materialize;
+	rsinfo->setResult = tupstore;
+	rsinfo->setDesc = tupdesc;
+
+	foreach(cell, options)
+	{
+		DefElem    *def = lfirst(cell);
+
+		values[0] = CStringGetTextDatum(def->defname);
+		nulls[0] = false;
+		if (def->arg)
+		{
+			values[1] = CStringGetTextDatum(((Value *) (def->arg))->val.str);
+			nulls[1] = false;
+		}
+		else
+		{
+			values[1] = (Datum) 0;
+			nulls[1] = true;
+		}
+	tuplestore_putvalues(tupstore, tupdesc, values, nulls);
+	}
+
+	/* clean up and return the tuplestore */
+	tuplestore_donestoring(tupstore);
+
+	MemoryContextSwitchTo(oldcontext);
+}
+
+/*
+ * Convert options array to name/value table.  Useful for information
+ * schema and pg_dump.
+ */
+Datum
+pg_options_to_table(PG_FUNCTION_ARGS)
+{
+	Datum		array = PG_GETARG_DATUM(0);
+
+	deflist_to_tuplestore((ReturnSetInfo *) fcinfo->resultinfo,
+						  untransformRelOptions(array));
+
+	return (Datum) 0;
+}
+
+/*
  * Get the catalog entry for an exttable relation (from pg_exttable)
  */
 ExtTableEntry*
@@ -154,6 +239,7 @@ GetExtTableEntryIfExists(Oid relid)
 	Datum		locations,
 				fmtcode, 
 				fmtopts, 
+				options,
 				command, 
 				rejectlimit, 
 				rejectlimittype, 
@@ -261,7 +347,36 @@ GetExtTableEntryIfExists(Oid relid)
 	Insist(!isNull);
 	extentry->fmtopts = DatumGetCString(DirectFunctionCall1(textout, fmtopts));
 	
+    /* get the external table options string */
+    options = heap_getattr(tuple,
+                           Anum_pg_exttable_options,
+                           RelationGetDescr(pg_exttable_rel),
+                           &isNull);
 
+	if (isNull)
+	{
+		/* options list is always populated (url or ON X) */
+		elog(ERROR, "could not find options for external protocol");
+	}
+	else
+	{
+		Datum	   *elems;
+		int			nelems;
+		int			i;
+		char*		option_str = NULL;
+
+		deconstruct_array(DatumGetArrayTypeP(options),
+						  TEXTOID, -1, false, 'i',
+						  &elems, NULL, &nelems);
+
+		for (i = 0; i < nelems; i++)
+		{
+			option_str = DatumGetCString(DirectFunctionCall1(textout, elems[i]));
+
+			/* append to a list of Value nodes, size nelems */
+			extentry->options = lappend(extentry->options, makeString(pstrdup(option_str)));
+		}
+	}
 
 	/* get the reject limit */
 	rejectlimit = heap_getattr(tuple, 

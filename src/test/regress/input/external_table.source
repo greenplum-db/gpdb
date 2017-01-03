@@ -1358,6 +1358,27 @@ SELECT COUNT(*) FROM gp_read_error_log('exttab_heap_join_1');
 
 \! rm @abs_srcdir@/data/tableless.csv
 
+-- Create external table with 'OPTIONS'
+CREATE EXTERNAL TABLE exttab_with_option_empty( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
+OPTIONS ();
+
+CREATE EXTERNAL TABLE exttab_with_option_1( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
+OPTIONS (hello 'world');
+
+CREATE EXTERNAL TABLE exttab_with_options( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
+OPTIONS (hello 'world', bonjour 'again', nihao 'again and again' );
+
+\d exttab_with_options
+
+\d exttab_with_option_empty
+
+DROP EXTERNAL TABLE IF EXISTS exttab_with_option_empty;
+DROP EXTERNAL TABLE IF EXISTS exttab_with_option_1;
+DROP EXTERNAL TABLE IF EXISTS exttab_with_options;
+
 -- start_ignore
 -- drop temp external protocols
 DROP PROTOCOL if exists demoprot;

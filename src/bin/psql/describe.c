@@ -1805,6 +1805,8 @@ describeOneTableDetails(const char *schemaname,
 	{
 		/* Footer information about an external table */
 		PGresult   *result;
+        bool	    gpdb5 = isGPDB5000OrLater();
+		char	   *optionsName = gpdb5 ? ", x.options " : "";
 
 		printfPQExpBuffer(&buf,
 						  "SELECT x.location, x.fmttype, x.fmtopts, x.command, "
@@ -1814,8 +1816,9 @@ describeOneTableDetails(const char *schemaname,
 								  "WHERE Oid=x.fmterrtbl) AS errtblname, "
 								  "pg_catalog.pg_encoding_to_char(x.encoding), "
 								  "x.fmterrtbl = x.reloid AS errortofile "
+								  "%s"
 						  "FROM pg_catalog.pg_exttable x, pg_catalog.pg_class c "
-						  "WHERE x.reloid = c.oid AND c.oid = '%s'\n", oid);
+						  "WHERE x.reloid = c.oid AND c.oid = '%s'\n", optionsName, oid);
 
 		result = PSQLexec(buf.data, false);
 		if (!result)
@@ -1838,6 +1841,11 @@ describeOneTableDetails(const char *schemaname,
 			char	   *extencoding = PQgetvalue(result, 0, 8);
 			char	   *errortofile = PQgetvalue(result, 0, 9);
 			char       *format;
+			char	   *options;
+			if (gpdb5)
+			{
+				options = PQgetvalue(result, 0, 10);
+			}
 
 			/* Writable/Readable */
 			printfPQExpBuffer(&tmpbuf, _("Type: %s"), writable[0] == 't' ? "writable" : "readable");
@@ -1888,6 +1896,13 @@ describeOneTableDetails(const char *schemaname,
 			/* format options */
 			printfPQExpBuffer(&tmpbuf, _("Format options: %s"), fmtopts);
 			printTableAddFooter(&cont, tmpbuf.data);
+
+		    if (gpdb5)
+			{
+				/* external table options */
+				printfPQExpBuffer(&tmpbuf, _("External options: %s"), options);
+				printTableAddFooter(&cont, tmpbuf.data);
+			}
 
 			if(command && strlen(command) > 0)
 			{

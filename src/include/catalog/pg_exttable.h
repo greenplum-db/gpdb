@@ -31,6 +31,7 @@ CATALOG(pg_exttable,6040) BKI_WITHOUT_OIDS
 	text	location[1];		/* array of URI strings */
 	char	fmttype;			/* 't' (text) or 'c' (csv) */
 	text	fmtopts;			/* the data format options */
+	text	options[1];			/* the array of external table options */
 	text	command;			/* the command string to EXECUTE */
 	int4	rejectlimit;		/* error count reject limit per segment */
 	char	rejectlimittype;	/* 'r' (rows) or 'p' (percent) */
@@ -55,17 +56,18 @@ typedef FormData_pg_exttable *Form_pg_exttable;
  *		compiler constants for pg_exttable
  * ----------------
  */
-#define Natts_pg_exttable					10
+#define Natts_pg_exttable					11
 #define Anum_pg_exttable_reloid				1
 #define Anum_pg_exttable_location			2
 #define Anum_pg_exttable_fmttype			3
 #define Anum_pg_exttable_fmtopts			4
-#define Anum_pg_exttable_command			5
-#define Anum_pg_exttable_rejectlimit		6
-#define Anum_pg_exttable_rejectlimittype	7
-#define Anum_pg_exttable_fmterrtbl			8
-#define Anum_pg_exttable_encoding			9
-#define Anum_pg_exttable_writable			10
+#define Anum_pg_exttable_options			5
+#define Anum_pg_exttable_command			6
+#define Anum_pg_exttable_rejectlimit		7
+#define Anum_pg_exttable_rejectlimittype	8
+#define Anum_pg_exttable_fmterrtbl			9
+#define Anum_pg_exttable_encoding			10
+#define Anum_pg_exttable_writable			11
 
 
 /*
@@ -77,6 +79,7 @@ typedef struct ExtTableEntry
 	List*	locations;
 	char	fmtcode;
 	char*	fmtopts;
+	List*	options;
 	char*	command;
 	int		rejectlimit;
 	char	rejectlimittype;
@@ -99,6 +102,7 @@ extern void InsertExtTableEntry(Oid 	tbloid,
 					Oid		fmtErrTblOid,
 					int		encoding,
 					Datum	formatOptStr,
+					Datum	optionsStr,
 					Datum	locationExec,
 					Datum	locationUris);
 

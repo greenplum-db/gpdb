@@ -40,6 +40,7 @@ static Datum transformExecOnClause(List *on_clause);
 static char transformFormatType(char *formatname);
 static Datum transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswritable);
 static void InvokeProtocolValidation(Oid procOid, char *procName, bool iswritable, List *locs);
+static Datum optionsListToArray(List *options);
 
 /* ----------------------------------------------------------------
 *		DefineExternalRelation
@@ -67,6 +68,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	Oid			reloid = 0;
 	Oid			fmtErrTblOid = InvalidOid;
 	Datum		formatOptStr;
+	Datum		optionsStr;
 	Datum		locationUris = 0;
 	Datum		locationExec = 0;
 	char	   *commandString = NULL;
@@ -293,6 +295,14 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 									   iswritable);
 
 	/*
+	 * Parse and validate OPTION clause.
+	 */
+	optionsStr = optionsListToArray(createExtStmt->extOptions);
+	if (DatumGetPointer(optionsStr) == NULL)
+	{
+		optionsStr = PointerGetDatum(construct_empty_array(TEXTOID));
+	}
+	/*
 	 * Parse single row error handling info if available
 	 */
 	singlerowerrorDesc = (SingleRowErrorDesc *) createExtStmt->sreh;
@@ -401,6 +411,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 						fmtErrTblOid,
 						encoding,
 						formatOptStr,
+						optionsStr,
 						locationExec,
 						locationUris);
 
@@ -761,6 +772,41 @@ transformFormatType(char *formatname)
 	return result;
 }
 
+/*
+ * Transform the external table options into a text array format.
+ *
+ * The result is an array that includes the format string.
+ *
+ * This method is a backported FDW's function from upper stream .
+ */
+static Datum
+optionsListToArray(List *options)
+{
+	ArrayBuildState *astate = NULL;
+	ListCell   *option;
+
+	foreach(option, options)
+	{
+		DefElem    *defel = (DefElem *) lfirst(option);
+		char       *key = defel->defname;
+		char       *val = defGetString(defel);
+		text       *t;
+		Size       len;
+
+        // first 1 for '=', last 1 for '\0'
+		len = VARHDRSZ + strlen(key) + 1 + strlen(val) + 1;
+		t = palloc(len);
+		SET_VARSIZE(t, len);
+		sprintf(VARDATA(t), "%s=%s", key, val);
+		astate = accumArrayResult(astate, PointerGetDatum(t), false,
+				                  TEXTOID, CurrentMemoryContext);
+	}
+
+	if (astate)
+		return makeArrayResult(astate, CurrentMemoryContext);
+
+	return PointerGetDatum(NULL);
+}
 
 /*
  * Transform the FORMAT options into a text field. Parse the
