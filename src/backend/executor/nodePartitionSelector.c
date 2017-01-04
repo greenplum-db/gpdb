@@ -61,7 +61,7 @@ ExecInitPartitionSelector(PartitionSelector *node, EState *estate, int eflags)
 	/* check for unsupported flags */
 	Assert (!(eflags & (EXEC_FLAG_MARK | EXEC_FLAG_BACKWARD)));
 
-	PartitionSelectorState *psstate = initPartitionSelection(true /*isRunTime*/, node, estate);
+	PartitionSelectorState *psstate = initPartitionSelection(node, estate);
 
 	/* tuple table initialization */
 	ExecInitResultTupleSlot(estate, &psstate->ps);

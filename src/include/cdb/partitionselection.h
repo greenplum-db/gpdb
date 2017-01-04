@@ -44,7 +44,7 @@ typedef struct SelectedParts
 	List *scanIds;
 } SelectedParts;
 
-extern PartitionSelectorState *initPartitionSelection(bool isRunTime, PartitionSelector *node, EState *estate);
+extern PartitionSelectorState *initPartitionSelection(PartitionSelector *node, EState *estate);
 extern void getPartitionNodeAndAccessMethod(Oid rootOid, List *partsMetadata, MemoryContext memoryContext,
 											PartitionNode **partsAndRules, PartitionAccessMethods **accessMethods);
 extern SelectedParts *processLevel(PartitionSelectorState *node, int level, TupleTableSlot *inputTuple);

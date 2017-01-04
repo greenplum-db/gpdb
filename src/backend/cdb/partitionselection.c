@@ -601,54 +601,21 @@ processLevel(PartitionSelectorState *node, int level, TupleTableSlot *inputTuple
  * ----------------------------------------------------------------
  */
 PartitionSelectorState *
-initPartitionSelection(bool isRunTime, PartitionSelector *node, EState *estate)
+initPartitionSelection(PartitionSelector *node, EState *estate)
 {
-	AssertImply (isRunTime, NULL != estate);
-
 	/* create and initialize PartitionSelectorState structure */
-	PartitionSelectorState *psstate = makeNode(PartitionSelectorState);
+	PartitionSelectorState *psstate;
+	ListCell *lc;
+
+	psstate = makeNode(PartitionSelectorState);
 	psstate->ps.plan = (Plan *) node;
 	psstate->ps.state = estate;
 	psstate->levelPartConstraints = (PartitionConstraints**) palloc0(node->nLevels * sizeof(PartitionConstraints*));
 
-	if (isRunTime)
-	{
-		/* ExprContext initialization */
-		ExecAssignExprContext(estate, &psstate->ps);
-	}
-	else
-	{
-		ExprContext *econtext = makeNode(ExprContext);
-
-		econtext->ecxt_scantuple = NULL;
-		econtext->ecxt_innertuple = NULL;
-		econtext->ecxt_outertuple = NULL;
-		econtext->ecxt_per_query_memory = 0;
-		econtext->ecxt_per_tuple_memory = AllocSetContextCreate
-											(
-											NULL /*parent */,
-											"ExprContext",
-											ALLOCSET_DEFAULT_MINSIZE,
-											ALLOCSET_DEFAULT_INITSIZE,
-											ALLOCSET_DEFAULT_MAXSIZE
-											);
-
-		econtext->ecxt_param_exec_vals = NULL;
-		econtext->ecxt_param_list_info = NULL;
-		econtext->ecxt_aggvalues = NULL;
-		econtext->ecxt_aggnulls = NULL;
-		econtext->caseValue_datum = (Datum) 0;
-		econtext->caseValue_isNull = true;
-		econtext->domainValue_datum = (Datum) 0;
-		econtext->domainValue_isNull = true;
-		econtext->ecxt_estate = NULL;
-		econtext->ecxt_callbacks = NULL;
-
-		psstate->ps.ps_ExprContext = econtext;
-	}
+	/* ExprContext initialization */
+	ExecAssignExprContext(estate, &psstate->ps);
 
 	/* initialize ExprState for evaluating expressions */
-	ListCell *lc = NULL;
 	foreach (lc, node->levelEqExpressions)
 	{
 		Expr *eqExpr = (Expr *) lfirst(lc);
@@ -704,24 +671,34 @@ getPartitionNodeAndAccessMethod(Oid rootOid, List *partsMetadata, MemoryContext 
 SelectedParts *
 static_part_selection(PartitionSelector *ps)
 {
-	List *partsMetadata = InitializePartsMetadata(ps->relid);
-	PartitionSelectorState *psstate = initPartitionSelection(false /*isRunTime*/, ps, NULL /*estate*/);
+	List	   *partsMetadata;
+	PartitionSelectorState *psstate;
+	EState	   *estate;
+	MemoryContext oldcxt;
+	SelectedParts *selparts;
+
+	estate = CreateExecutorState();
+
+	oldcxt = MemoryContextSwitchTo(estate->es_query_cxt);
+
+	partsMetadata = InitializePartsMetadata(ps->relid);
+	psstate = initPartitionSelection(ps, estate);
 
 	getPartitionNodeAndAccessMethod
 								(
 								ps->relid,
 								partsMetadata,
-								NULL, /*memoryContext*/
+								estate->es_query_cxt,
 								&psstate->rootPartitionNode,
 								&psstate->accessMethods
 								);
 
-	SelectedParts *selparts = processLevel(psstate, 0 /* level */, NULL /*inputSlot*/);
+	MemoryContextSwitchTo(oldcxt);
+
+	selparts = processLevel(psstate, 0 /* level */, NULL /*inputSlot*/);
 
 	/* cleanup */
-	pfree(psstate->ps.ps_ExprContext);
-	pfree(psstate);
-	list_free_deep(partsMetadata);
+	FreeExecutorState(estate);
 
 	return selparts;
 }
