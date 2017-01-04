@@ -27,8 +27,9 @@
  *   (2) newMaxPartIndex + 1.
  */
 static void
-increaseScanArraySize(int newMaxPartIndex)
+increaseScanArraySize(EState *estate, int newMaxPartIndex)
 {
+	DynamicTableScanInfo *dynamicTableScanInfo = estate->dynamicTableScanInfo;
 	int oldNumScans = dynamicTableScanInfo->numScans;
 	int newNumScans = oldNumScans + NUM_PID_INDEXES_ADDED;
 	if (newNumScans < newMaxPartIndex)
@@ -68,16 +69,16 @@ increaseScanArraySize(int newMaxPartIndex)
  *   Create the pid index for a given dynamic table scan.
  */
 static HTAB *
-createPidIndex(int index)
+createPidIndex(EState *estate, int index)
 {
-	Assert((dynamicTableScanInfo->pidIndexes)[index - 1] == NULL);
+	Assert((estate->dynamicTableScanInfo->pidIndexes)[index - 1] == NULL);
 
 	HASHCTL hashCtl;
 	MemSet(&hashCtl, 0, sizeof(HASHCTL));
 	hashCtl.keysize = sizeof(Oid);
 	hashCtl.entrysize = sizeof(PartOidEntry);
 	hashCtl.hash = oid_hash;
-	hashCtl.hcxt = dynamicTableScanInfo->memoryContext;
+	hashCtl.hcxt = estate->dynamicTableScanInfo->memoryContext;
 
 	return hash_create("Dynamic Table Scan Pid Index",
 					   INITIAL_NUM_PIDS,
@@ -93,8 +94,10 @@ createPidIndex(int index)
  * 		exists at the index position in dynamicTableScanInfo.
  */
 void
-InsertPidIntoDynamicTableScanInfo(int32 index, Oid partOid, int32 selectorId)
+InsertPidIntoDynamicTableScanInfo(EState *estate, int32 index, Oid partOid, int32 selectorId)
 {
+	DynamicTableScanInfo *dynamicTableScanInfo = estate->dynamicTableScanInfo;
+
 	Assert(dynamicTableScanInfo != NULL &&
 		   dynamicTableScanInfo->memoryContext != NULL);
 
@@ -105,13 +108,13 @@ InsertPidIntoDynamicTableScanInfo(int32 index, Oid partOid, int32 selectorId)
 
 	if (index > dynamicTableScanInfo->numScans)
 	{
-		increaseScanArraySize(index);
+		increaseScanArraySize(estate, index);
 	}
 	
 	Assert(index <= dynamicTableScanInfo->numScans);
 	if ((dynamicTableScanInfo->pidIndexes)[index - 1] == NULL)
 	{
-		dynamicTableScanInfo->pidIndexes[index - 1] = createPidIndex(index);
+		dynamicTableScanInfo->pidIndexes[index - 1] = createPidIndex(estate, index);
 	}
 
 	Assert(dynamicTableScanInfo->pidIndexes[index - 1] != NULL);
@@ -144,8 +147,10 @@ InsertPidIntoDynamicTableScanInfo(int32 index, Oid partOid, int32 selectorId)
  *   Write out pids for a given dynamic table scan.
  */
 void
-dumpDynamicTableScanPidIndex(int index)
+dumpDynamicTableScanPidIndex(EState *estate, int index)
 {
+	DynamicTableScanInfo *dynamicTableScanInfo = estate->dynamicTableScanInfo;
+
 	if (index < 0 ||
 		dynamicTableScanInfo == NULL ||
 		index > dynamicTableScanInfo->numScans ||

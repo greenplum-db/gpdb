@@ -1229,7 +1229,7 @@ extern Datum percentile_disc_trans(PG_FUNCTION_ARGS);
 /* utils/workfile_manager/workfile_mgr_test.c */
 extern Datum gp_workfile_mgr_test_harness(PG_FUNCTION_ARGS);
 /* gp_partition_funtions.c */
-extern void dumpDynamicTableScanPidIndex(int index);
+extern void dumpDynamicTableScanPidIndex(EState *estate, int index);
 
 /* XForms */
 extern Datum disable_xform(PG_FUNCTION_ARGS);

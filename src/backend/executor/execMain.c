@@ -800,21 +800,6 @@ ExecutorRun(QueryDesc *queryDesc,
 	START_MEMORY_ACCOUNT(queryDesc->plannedstmt->memoryAccountId);
 
 	/*
-	 * Set dynamicTableScanInfo to the one in estate, and reset its value at
-	 * the end of ExecutorRun(). This is to support two cases:
-	 *
-	 * (1) For PLPgsql/SQL functions. There might be multiple DynamicTableScanInfos
-	 * involved, one for each statement in the function. We set the global variable
-	 * dynamicTableScanInfo to the value for the running statement here, and reset
-	 * its value at the end of ExecutorRun().
-	 *
-	 * (2) For cursor queries. Each cursor query has its own set of DynamicTableScanInfos,
-	 * and they could be called in different orders.
-	 */
-	DynamicTableScanInfo *origDynamicTableScanInfo = dynamicTableScanInfo;
-	dynamicTableScanInfo = estate->dynamicTableScanInfo;
-
-	/*
 	 * Switch into per-query memory context
 	 */
 	oldcontext = MemoryContextSwitchTo(estate->es_query_cxt);
@@ -932,13 +917,9 @@ ExecutorRun(QueryDesc *queryDesc,
 		 */
 		if(result == NULL)
 			estate->es_got_eos = true;
-
-		dynamicTableScanInfo = origDynamicTableScanInfo;
     }
 	PG_CATCH();
 	{
-		dynamicTableScanInfo = origDynamicTableScanInfo;
-
         /* If EXPLAIN ANALYZE, let qExec try to return stats to qDisp. */
         if (estate->es_sliceTable &&
             estate->es_sliceTable->doInstrument &&
@@ -1017,7 +998,7 @@ ExecutorEnd(QueryDesc *queryDesc)
 	{
 		for (int scanNo = 0; scanNo < estate->dynamicTableScanInfo->numScans; scanNo++)
 		{
-			dumpDynamicTableScanPidIndex(scanNo);
+			dumpDynamicTableScanPidIndex(estate, scanNo);
 		}
 	}
 

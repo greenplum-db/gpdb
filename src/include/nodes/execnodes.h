@@ -511,12 +511,6 @@ typedef struct DynamicTableScanInfo
  */
 #define NUM_PID_INDEXES_ADDED 10
 
-/*
- * The global variable for the information relevant to dynamic table scans.
- * During execution, this will point to the value initialized in EState.
- */
-extern DynamicTableScanInfo *dynamicTableScanInfo;
-
 /* ----------------
  *	  EState information
  *
