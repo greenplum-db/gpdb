@@ -1559,10 +1559,9 @@ InitializeQueryPartsMetadata(PlannedStmt *plannedstmt, EState *estate)
 	}
 	
 	/* Populate the partitioning metadata to EState */
-	Assert(estate->dynamicTableScanInfo != NULL &&
-		   estate->dynamicTableScanInfo->memoryContext != NULL);
+	Assert(estate->dynamicTableScanInfo != NULL);
 	
-	MemoryContext oldContext = MemoryContextSwitchTo(estate->dynamicTableScanInfo->memoryContext);
+	MemoryContext oldContext = MemoryContextSwitchTo(estate->es_query_cxt);
 	
 	ListCell *lc = NULL;
 	foreach(lc, plannedstmt->queryPartsMetadata)

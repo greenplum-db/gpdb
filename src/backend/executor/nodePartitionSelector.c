@@ -136,7 +136,7 @@ ExecPartitionSelector(PartitionSelectorState *node)
 									(
 									ps->relid,
 									estate->dynamicTableScanInfo->partsMetadata,
-									estate->dynamicTableScanInfo->memoryContext,
+									estate->es_query_cxt,
 									&node->rootPartitionNode,
 									&node->accessMethods
 									);

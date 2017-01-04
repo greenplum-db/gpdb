@@ -492,11 +492,6 @@ typedef struct DynamicTableScanInfo
 	 * Partitioning metadata for all relevant partition tables.
 	 */
 	List	   *partsMetadata;
-
-	/*
-	 * The memory context in which pidIndexes are allocated.
-	 */
-	MemoryContext memoryContext;
 } DynamicTableScanInfo;
 
 /*

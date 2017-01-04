@@ -196,7 +196,6 @@ CreateExecutorState(void)
 	 * Initialize dynamicTableScanInfo.
 	 */
 	estate->dynamicTableScanInfo = palloc0(sizeof(DynamicTableScanInfo));
-	estate->dynamicTableScanInfo->memoryContext = qcontext;
 
 	/*
 	 * Initialize all fields of the Executor State structure

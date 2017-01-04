@@ -78,7 +78,7 @@ createPidIndex(EState *estate, int index)
 	hashCtl.keysize = sizeof(Oid);
 	hashCtl.entrysize = sizeof(PartOidEntry);
 	hashCtl.hash = oid_hash;
-	hashCtl.hcxt = estate->dynamicTableScanInfo->memoryContext;
+	hashCtl.hcxt = estate->es_query_cxt;
 
 	return hash_create("Dynamic Table Scan Pid Index",
 					   INITIAL_NUM_PIDS,
@@ -98,13 +98,12 @@ InsertPidIntoDynamicTableScanInfo(EState *estate, int32 index, Oid partOid, int3
 {
 	DynamicTableScanInfo *dynamicTableScanInfo = estate->dynamicTableScanInfo;
 
-	Assert(dynamicTableScanInfo != NULL &&
-		   dynamicTableScanInfo->memoryContext != NULL);
+	Assert(dynamicTableScanInfo != NULL);
 
 	/* It's 1 based indexing */
 	Assert(index > 0);
 
-	MemoryContext oldCxt = MemoryContextSwitchTo(dynamicTableScanInfo->memoryContext);
+	MemoryContext oldCxt = MemoryContextSwitchTo(estate->es_query_cxt);
 
 	if (index > dynamicTableScanInfo->numScans)
 	{
