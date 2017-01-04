@@ -120,6 +120,8 @@ jobs:
   - aggregate:
     - get: gpdb_src
       trigger: true
+    - get: gpaddon_src 
+      tags: ["worker-one"]
     - get: centos-gpdb-dev-6
   - task: compile_gpdb
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
@@ -158,6 +160,8 @@ jobs:
   - aggregate:
     - get: gpdb_src
       trigger: true
+    - get: gpaddon_src 
+      tags: ["worker-three"]
     - get: centos-gpdb-dev-7
   - task: compile_gpdb
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
