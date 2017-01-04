@@ -1029,11 +1029,30 @@ ProcessUtility(Node *parsetree,
 
 		case T_CreateExternalStmt:
 			{
+				List *stmts;
+				ListCell   *l;
 				CreateExternalStmt *stmt = (CreateExternalStmt *) parsetree;
 
+				stmts = transformCreateExternalStmt(stmt, queryString);
+
 				/* Run parse analysis ... */
-				stmt = transformCreateExternalStmt(stmt, queryString);
-				DefineExternalRelation(stmt);
+				foreach(l, stmts)
+				{
+					Node	   *stmt = (Node *) lfirst(l);
+
+					if (IsA(stmt, CreateExternalStmt))
+						DefineExternalRelation(stmt);
+					else
+					{
+						/* Recurse for anything else */
+						ProcessUtility(stmt,
+									   queryString,
+									   params,
+									   false,
+									   None_Receiver,
+									   NULL);
+					}
+				}
 			}
 			break;
 

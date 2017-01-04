@@ -1159,11 +1159,12 @@ get_opclass(Oid opclass, Oid actual_datatype)
 	return result;
 }
 
-CreateExternalStmt *
+List *
 transformCreateExternalStmt(CreateExternalStmt *stmt, const char *queryString)
 {
 	ParseState *pstate;
 	CreateStmtContext cxt;
+	List	   *result;
 	ListCell   *elements;
 	List  	   *likeDistributedBy = NIL;
 	bool	    bQuiet = false;	/* shut up transformDistributedBy messages */
@@ -1184,6 +1185,7 @@ transformCreateExternalStmt(CreateExternalStmt *stmt, const char *queryString)
 	cxt.fkconstraints = NIL;
 	cxt.ixconstraints = NIL;
 	cxt.pkey = NULL;
+	cxt.rel = NULL;
 
 	cxt.blist = NIL;
 	cxt.alist = NIL;
@@ -1303,7 +1305,11 @@ transformCreateExternalStmt(CreateExternalStmt *stmt, const char *queryString)
 	 * Output results.
 	 */
 	stmt->tableElts = cxt.columns;
-	return stmt;
+
+	result = lappend(cxt.blist, stmt);
+	result = list_concat(result, cxt.alist);
+
+	return result;
 }
 
 
