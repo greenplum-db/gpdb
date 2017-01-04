@@ -4714,8 +4714,21 @@ OpenIntoRel(QueryDesc *queryDesc)
 	/*
 	 * Select tablespace to use.  If not specified, use default tablespace
 	 * (which may in turn default to database's default).
+	 *
+	 * In PostgreSQL, we resolve default tablespace here. In GPDB, that's
+	 * done earlier, because we need to dispatch the final tablespace name,
+	 * after resolving any defaults, to the segments. So usually, we already
+	 * have the fully-resolved tablespace name stashed in queryDesc->ddesc->
+	 * intoTableSpaceName. In the dispatcher, we filled it in earlier, and
+	 * in executor nodes, we received it from the dispatcher along with the
+	 * query. In utility mode, however, queryDesc->ddesc is not set at all,
+	 * and we follow the PostgreSQL codepath, resolving the defaults here.
 	 */
-	intoTableSpaceName = queryDesc->ddesc->intoTableSpaceName;
+	if (queryDesc->ddesc)
+		intoTableSpaceName = queryDesc->ddesc->intoTableSpaceName;
+	else
+		intoTableSpaceName = into->tableSpaceName;
+
 	if (intoTableSpaceName)
 	{
 		tablespaceId = get_tablespace_oid(intoTableSpaceName, false);
@@ -4723,13 +4736,7 @@ OpenIntoRel(QueryDesc *queryDesc)
 	else
 	{
 		tablespaceId = GetDefaultTablespace(into->rel->istemp);
-
-		/* Need the real tablespace id for dispatch */
-		if (!OidIsValid(tablespaceId)) 
-			tablespaceId = MyDatabaseTableSpace;
-
-		/* MPP-10329 - must dispatch tablespace */
-		into->tableSpaceName = get_tablespace_name(tablespaceId);
+		/* note InvalidOid is OK in this case */
 	}
 
 	/* Check permissions except when using the database's default space */
