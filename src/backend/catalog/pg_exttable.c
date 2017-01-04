@@ -63,13 +63,6 @@ InsertExtTableEntry(Oid 	tbloid,
 	bool		nulls[Natts_pg_exttable];
 	Datum		values[Natts_pg_exttable];
 
-	ObjectAddress	myself, referenced;
-	char*		location;
-	char*		protocol;
-	Size		position;
-	Datum		*elems;
-	int			nelems;
-
 	MemSet(values, 0, sizeof(values));
 	MemSet(nulls, false, sizeof(nulls));
 
@@ -142,30 +135,40 @@ InsertExtTableEntry(Oid 	tbloid,
 
 	if (locationUris != 0)
 	{
+		Datum	   *elems;
+		int			nelems;
+
 		deconstruct_array(DatumGetArrayTypeP(locationUris),
 						  TEXTOID, -1, false, 'i',
 						  &elems, NULL, &nelems);
 
-		/*
-		 * s3 external table only reads the first location and does not support
-		 * multiple locations
-		 */
-		location = DatumGetCString(DirectFunctionCall1(textout, elems[0]));
-		position = strchr(location, ':') - location;
-		protocol = pnstrdup(location, position);
 
-		if (strcmp("s3", protocol) == 0)
+		for (int i = 0; i < nelems; i++)
 		{
+			ObjectAddress	myself, referenced;
+			char	   *location;
+			char	   *protocol;
+			Size		position;
+
+			/*
+			* s3 external table only reads the first location and does not support
+			* multiple locations
+			*/
+			location = DatumGetCString(DirectFunctionCall1(textout, elems[i]));
+			position = strchr(location, ':') - location;
+			protocol = pnstrdup(location, position);
+
 			myself.classId = RelationRelationId;
 			myself.objectId = tbloid;
 			myself.objectSubId = 0;
 
 			referenced.classId = ExtprotocolRelationId;
-			referenced.objectId = LookupExtProtocolOid(protocol, false);
+			referenced.objectId = LookupExtProtocolOid(protocol, true);
 			referenced.objectSubId = 0;
 
 			recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
 		}
+
 	}
 }
 

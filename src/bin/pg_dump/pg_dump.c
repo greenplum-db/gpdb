@@ -10268,16 +10268,13 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 		else
 		{
 			/* add LOCATION clause, remove '{"' and '"}' */
-			char	*usingProtocol;
-			Size	position;
 
 			locations[strlen(locations) - 1] = '\0';
 			locations++;
 
-			position = strchr(locations, ':') - locations;
-			usingProtocol = strndup(locations + 1, position - 1);
+			/* the URI of custom protocol will contains \"\" and need to be removed */
 
-			if (strcmp("s3", usingProtocol) == 0)
+			if (locations[0] == '\"')
 			{
 				locations++;
 				locations[strlen(locations) - 1] = '\0';
