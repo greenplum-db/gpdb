@@ -6,7 +6,6 @@ image_resource:
     tag: centos6
 inputs:
   - name: bin_orca
-  - name: bin_gpos
   - name: bin_xerces
   - name: gpdb_src
 outputs:
@@ -17,5 +16,4 @@ run:
     - --mode=orca
     - --output_dir=bin_gpdb/install
     - bin_orca
-    - bin_gpos
     - bin_xerces

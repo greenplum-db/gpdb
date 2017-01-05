@@ -3,7 +3,6 @@ image: docker:///yolo/gpdbdev#centos6
 inputs:
   - name: gpdb_src
   - name: bin_orca
-  - name: bin_gpos
   - name: bin_xerces
   - name: bin_gpdb
 outputs:
@@ -14,7 +13,6 @@ run:
     - --mode=orca
     - --gpdb_name=bin_gpdb
     - bin_orca
-    - bin_gpos
     - bin_xerces
 params:
   BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"

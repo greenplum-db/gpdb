@@ -26,7 +26,6 @@ extern "C" {
 #include "gpos/_api.h"
 #include "gpopt/gpdbwrappers.h"
 
-#include "gpos/version.h"
 #include "gpopt/version.h"
 #include "xercesc/util/XercesVersion.hpp"
 
@@ -102,7 +101,7 @@ EnableXform(PG_FUNCTION_ARGS)
 //		LibraryVersion
 //
 //	@doc:
-//		Returns the optimizer and gpos library versions as a message
+//		Returns the optimizer and xerces library versions as a message
 //
 //---------------------------------------------------------------------------
 extern "C" {
@@ -111,8 +110,7 @@ LibraryVersion()
 {
 	StringInfoData str;
 	initStringInfo(&str);
-	appendStringInfo(&str, "GPOPT version: %d.%d", GPORCA_VERSION_MAJOR, GPORCA_VERSION_MINOR);
-	appendStringInfo(&str, ", GPOS version: %d.%d", GPOS_VERSION_MAJOR, GPOS_VERSION_MINOR);
+	appendStringInfo(&str, "GPOPT version: %s", GPORCA_VERSION_STRING);
 	appendStringInfo(&str, ", Xerces version: %s", XERCES_FULLVERSIONDOT);
 	text *result = cstring_to_text(str.data);
 
@@ -125,7 +123,7 @@ StringInfo
 OptVersion()
 {
 	StringInfo str = gpdb::SiMakeStringInfo();
-	appendStringInfo(str, "%d.%d", GPORCA_VERSION_MAJOR, GPORCA_VERSION_MINOR);
+	appendStringInfo(str, "%s", GPORCA_VERSION_STRING);
 
 	return str;
 }

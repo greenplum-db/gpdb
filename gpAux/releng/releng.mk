@@ -175,8 +175,7 @@ sync_tools: opt_write_test /opt/releng/apache-ant
 	-Divyrepo.user=$(IVYREPO_USER) -Divyrepo.passwd=$(IVYREPO_PASSWD) resolve);
 	@echo "Resolve finished";
 
-	wget -O - https://github.com/greenplum-db/gpos/releases/download/v1.146/bin_gpos_centos5_release.tar.gz | tar zxf - -C $(BLD_TOP)/ext/$(BLD_ARCH)
-	wget -O - https://github.com/greenplum-db/gporca/releases/download/v1.696/bin_orca_centos5_release.tar.gz | tar zxf - -C $(BLD_TOP)/ext/$(BLD_ARCH)
+	wget -O - https://github.com/greenplum-db/gporca/releases/download/v2.1/bin_orca_centos5_release.tar.gz | tar zxf - -C $(BLD_TOP)/ext/$(BLD_ARCH)
 
 clean_tools: opt_write_test
 	@cd releng/make/dependencies; \
