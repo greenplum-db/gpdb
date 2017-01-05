@@ -130,10 +130,10 @@ InsertExtTableEntry(Oid 	tbloid,
     heap_close(pg_exttable_rel, NoLock);
 
 	/*
-	 * Add the dependency of s3 external table
+	 * Add the dependency of custom external table
 	 */
 
-	if (locationUris != 0)
+	if (locationUris != (Datum) 0)
 	{
 		Datum	   *elems;
 		int			nelems;
@@ -150,10 +150,6 @@ InsertExtTableEntry(Oid 	tbloid,
 			char	   *protocol;
 			Size		position;
 
-			/*
-			* s3 external table only reads the first location and does not support
-			* multiple locations
-			*/
 			location = DatumGetCString(DirectFunctionCall1(textout, elems[i]));
 			position = strchr(location, ':') - location;
 			protocol = pnstrdup(location, position);
