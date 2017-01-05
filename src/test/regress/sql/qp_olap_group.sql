@@ -157,4 +157,8 @@ FROM sale,product
 WHERE sale.pn=product.pn
 GROUP BY ROLLUP((sale.prc),(sale.prc,sale.vn),(sale.qty,sale.qty),(sale.vn)),GROUPING SETS((),ROLLUP((sale.prc,sale.cn,sale.prc),(sale.cn,sale.cn),(sale.vn),(sale.vn,sale.cn))),GROUPING SETS(CUBE((sale.cn),(sale.pn,sale.qty,sale.qty)),ROLLUP((sale.prc,sale.cn,sale.prc),(sale.qty)));
 
-
+-- ###### Rollup with DQA and constants in target list expressions and qualifications with same value as that of constant grouping column ###### --
+SELECT COUNT(DISTINCT cn) as cn_r, f, g FROM (SELECT cn, CASE WHEN (vn = 0) THEN 1 END AS f, 1 AS g FROM sale) sale_view GROUP BY ROLLUP(f,g);
+SELECT COUNT(DISTINCT cn) as cn_r, f, g FROM (SELECT cn, vn + 1 AS f, 1 AS g FROM sale) sale_view GROUP BY ROLLUP(f,g) HAVING (f > 1);
+PREPARE p AS SELECT COUNT(DISTINCT cn) as cn_r, f, g FROM (SELECT cn, vn + $1 AS f, $1 AS g FROM sale) sale_view GROUP BY ROLLUP(f,g) HAVING (g > 1);
+EXECUTE p(2);

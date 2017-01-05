@@ -1423,7 +1423,7 @@ SELECT DISTINCT sale.vn,sale.vn,GROUPING(sale.vn),GROUP_ID(), TO_CHAR(COALESCE(S
 FROM sale,vendor
 WHERE sale.vn=vendor.vn
 GROUP BY CUBE((sale.cn,sale.prc),(sale.vn),(sale.prc),(sale.cn)),CUBE((sale.cn,sale.cn,sale.qty),(sale.pn),(sale.pn,sale.dt,sale.cn)),ROLLUP((sale.pn),(sale.qty,sale.pn));
-ERROR:  division by zero  (seg0 slice12 127.0.0.1:25432 pid=86018)
+ERROR:  division by zero  (seg0 slice12 127.0.0.1:25432 pid=85362)
 -- ###### Queries involving STDDEV_SAMP() function ###### --
 SELECT DISTINCT sale.vn,sale.dt,sale.prc, TO_CHAR(COALESCE(STDDEV_SAMP(floor(sale.pn+sale.vn)),0),'99999999.9999999') 
 FROM sale,vendor
@@ -6016,26 +6016,25 @@ SELECT COUNT(DISTINCT cn) as cn_r, f, g FROM (SELECT cn, vn + 1 AS f, 1 AS g FRO
  cn_r | f  | g 
 ------+----+---
     1 | 11 | 1
+    2 | 31 |  
+    2 | 51 |  
+    2 | 51 | 1
+    1 | 21 |  
+    3 | 41 |  
     1 | 21 | 1
     2 | 31 | 1
     3 | 41 | 1
-    2 | 51 | 1
-(5 rows)
+    1 | 11 |  
+(10 rows)
 
 PREPARE p AS SELECT COUNT(DISTINCT cn) as cn_r, f, g FROM (SELECT cn, vn + $1 AS f, $1 AS g FROM sale) sale_view GROUP BY ROLLUP(f,g) HAVING (g > 1);
 EXECUTE p(2);
  cn_r | f  | g 
 ------+----+---
-    1 | 12 | 2
     1 | 22 | 2
     2 | 32 | 2
+    1 | 12 | 2
     3 | 42 | 2
     2 | 52 | 2
-    1 | 12 |  
-    1 | 22 |  
-    2 | 32 |  
-    3 | 42 |  
-    2 | 52 |  
-    4 |    |  
-(11 rows)
+(5 rows)
 
