@@ -29,7 +29,7 @@ Please do not create any more exceptions, and remove these as the occasion arise
 * `test_with_orca.yml` is being used by [a gporca pipeline ](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline.yml)
 * `build_with_orca.yml` is being used by [a gporca pipeline ](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline.yml)
 * `gpcheckcloud_tests_gpcloud.yml` is being used by [a gpcloud pipeline ](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline_gpcloud.yml)
-* `regression_tests_gpcloud.yml` is being used by [a gpcloud pipeline ](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline_gpcloud.yml)
+* `regression_tests_gpcloud.yml` is being used by the main pipeline and [a gpcloud pipeline ](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline_gpcloud.yml)
 * `unit_tests_gpcloud.yml` is being used by [a gpcloud pipeline ](https://github.com/greenplum-db/gporca/blob/master/concourse/pipeline_gpcloud.yml)
 
 ##### Scripts Directory

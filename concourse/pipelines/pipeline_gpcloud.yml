@@ -9,10 +9,11 @@ resources:
     branch: {{gpcloud-git-branch}}
     private_key: {{gpdb-git-key}}
     uri: {{gpcloud-git-remote}}
-- name: centos67-gpdb-gcc6-llvm-image
+- name: centos-gpdb-dev-6
   type: docker-image
   source:
-    repository: pivotaldata/centos67-gpdb-gcc6-llvm-image
+    repository: pivotaldata/centos-gpdb-dev
+    tag: '6-gcc6.2-llvm3.7'
     username: {{docker_username}}
     password: {{docker_password}}
 - name: bin_gpdb_centos
@@ -38,10 +39,10 @@ jobs:
   - aggregate:
     - get: gpdb_src
       trigger: true
-    - get: centos67-gpdb-gcc6-llvm-image
+    - get: centos-gpdb-dev-6
   - task: unit_tests_gpcloud
     file: gpdb_src/concourse/tasks/unit_tests_gpcloud.yml
-    image: centos67-gpdb-gcc6-llvm-image
+    image: centos-gpdb-dev-6
     params:
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
@@ -56,10 +57,10 @@ jobs:
       resource: sync_tools_gpdb_centos
     - get: bin_gpdb
       resource: bin_gpdb_centos
-    - get: centos67-gpdb-gcc6-llvm-image
+    - get: centos-gpdb-dev-6
   - task: regression_tests_gpcloud
     file: gpdb_src/concourse/tasks/regression_tests_gpcloud.yml
-    image: centos67-gpdb-gcc6-llvm-image
+    image: centos-gpdb-dev-6
     params:
       s3conf: {{s3_configuration_file}}
       TARGET_OS: centos
@@ -75,10 +76,10 @@ jobs:
       resource: sync_tools_gpdb_centos
     - get: bin_gpdb
       resource: bin_gpdb_centos
-    - get: centos67-gpdb-gcc6-llvm-image
+    - get: centos-gpdb-dev-6
   - task: gpcheckcloud_tests_gpcloud
     file: gpdb_src/concourse/tasks/gpcheckcloud_tests_gpcloud.yml
-    image: centos67-gpdb-gcc6-llvm-image
+    image: centos-gpdb-dev-6
     params:
       s3conf: {{s3_configuration_file}}
       TARGET_OS: centos
