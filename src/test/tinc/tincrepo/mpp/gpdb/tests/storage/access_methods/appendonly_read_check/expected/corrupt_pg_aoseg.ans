@@ -3,7 +3,7 @@ SET
 --pgaoseg has more entries than gp_relation_node
 begin;
 BEGIN
-    insert into pg_aoseg.pg_aoseg_17638 values(5, 6, 7, 8, 9, 10, 11);
+    insert into pg_aoseg.pg_aoseg_16545 values(5, 6, 7, 8, 9, 10, 11, 12);
 INSERT 0 1
     select * from ao1;
 psql:/path/sql_file:1: ERROR:  Missing pg_aoseg entry 5 in gp_relation_node for ao1 (aosegfiles.c:2269)
