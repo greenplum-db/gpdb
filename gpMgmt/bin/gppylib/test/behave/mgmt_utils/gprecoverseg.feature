@@ -1,5 +1,12 @@
+# NOTE: this behave suite depends on the cluster under test having at least 2 distinct hosts. See @multinode tags
+
 @gprecoverseg
 Feature: gprecoverseg tests
+    @multinode
+    Scenario: gprecoverseg behave test requires a cluster with at least 2 hosts
+        Given the database is running
+        And the information of a "mirror" segment on a remote host is saved
+
     Scenario: gprecoverseg should not output bootstrap error on success
         Given the database is running
         And user kills a primary postmaster process
@@ -14,9 +21,9 @@ Feature: gprecoverseg tests
 
     Scenario: Pid corresponds to a non postgres process
         Given the database is running
-        and all the segments are running
+        And all the segments are running
         And the segments are synchronized
-        and the "primary" segment information is saved
+        And the "primary" segment information is saved
         When the postmaster.pid file on "primary" segment is saved
         And user kills a primary postmaster process
         When user can start transactions
@@ -40,7 +47,7 @@ Feature: gprecoverseg tests
         Given the database is running
         And all the segments are running
         And the segments are synchronized
-        and the "primary" segment information is saved
+        And the "primary" segment information is saved
         When the postmaster.pid file on "primary" segment is saved
         And user kills a primary postmaster process
         When user can start transactions
@@ -56,6 +63,7 @@ Feature: gprecoverseg tests
         And the segments are synchronized
         And the backup pid file is deleted on "primary" segment
 
+    @multinode
     Scenario: gprecoverseg full recovery testing, with gpfaultinjector putting cluster into change tracking
         Given the database is running
         And the database "gptest1" does not exist
@@ -71,6 +79,7 @@ Feature: gprecoverseg tests
         Then gprecoverseg should return a return code of 0
         And all the segments are running
 
+    @multinode
     Scenario: gprecoverseg with -i and -o option
         Given the database is running
         And all the segments are running
@@ -87,6 +96,7 @@ Feature: gprecoverseg tests
         Then gprecoverseg should return a return code of 0
         Then gprecoverseg should print 1 segment\(s\) to recover to stdout
 
+    @multinode
     Scenario: gprecoverseg fails on corrupted change tracking logs, must run full recovery
         Given the database is running
         And the database "gptest1" does not exist
@@ -112,6 +122,7 @@ Feature: gprecoverseg tests
         And the segments are synchronized
         And user runs the command "gpfaultinjector -y reset -f change_tracking_disable" with the saved "primary" segment option
 
+    @multinode
     Scenario: gprecoverseg should not throw exception for empty input file
         Given the database is running
         And all the segments are running
