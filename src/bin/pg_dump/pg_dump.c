@@ -6303,18 +6303,47 @@ getOwnedSeqs(Archive *fout, TableInfo tblinfo[], int numTables)
 		owning_tab = findTableByOid(seqinfo->owning_tab);
 
 		/*
-		 * We need to dump the components that are being dumped for the table
-		 * and any components which the sequence is explicitly marked with.
+		 * GPDB_96_MERGE_FIXME: Currently, ALTER TABLE EXCHANGE can produce
+		 * a situation that isn't handled well:
 		 *
-		 * We can't simply use the set of components which are being dumped for
-		 * the table as the table might be in an extension (and only the
+		 * create table parttab (i int4, p serial) partition by range (i) (start (1) end (2));
+		 * create table ex (i int4, p serial) ;
+		 * Alter table parttab exchange partition for (rank(1)) with table ex;
+		 *
+		 * After these commands, the sequence implictly created for ex.p
+		 * column, 'ex_p_seq', is still Owned By the original 'ex' table,
+		 * which is now partition of 'parttab'. But because partitions are not
+		 * put into the list of tables, findTableByOid() will return NULL.
+		 *
+		 * Upstream commit f9e439b1ca introduces a sanity check here, which
+		 * will throw an error if findTableByOid() returns NULL, which is
+		 * better than segfaulting. But we really need to fix ALTER TABLE
+		 * EXCHANGE PARTITION so that it doesn't create this situation in
+		 * the first place. For now though, just skip over, like we used to
+		 * before the 9.6 merge.
+		 */
+		if (owning_tab == NULL)
+			continue;
+
+		if (owning_tab == NULL)
+			exit_horribly(NULL,"failed sanity check, parent table with OID %u of sequence with OID %u not found\n",
+				  seqinfo->owning_tab, seqinfo->dobj.catId.oid);
+
+		/*
+		 * Otherwise we need to dump the components that are being dumped for
+		 * the table and any components which the sequence is explicitly
+		 * marked with.
+		 *
+		 * We can't simply use the set of components which are being dumped
+		 * for the table as the table might be in an extension (and only the
 		 * non-extension components, eg: ACLs if changed, security labels, and
-		 * policies, are being dumped) while the sequence is not (and therefore
-		 * the definition and other components should also be dumped).
+		 * policies, are being dumped) while the sequence is not (and
+		 * therefore the definition and other components should also be
+		 * dumped).
 		 *
 		 * If the sequence is part of the extension then it should be properly
-		 * marked by checkExtensionMembership() and this will be a no-op as the
-		 * table will be equivalently marked.
+		 * marked by checkExtensionMembership() and this will be a no-op as
+		 * the table will be equivalently marked.
 		 */
 		seqinfo->dobj.dump = seqinfo->dobj.dump | owning_tab->dobj.dump;
 
@@ -16848,7 +16877,11 @@ dumpSequence(Archive *fout, TableInfo *tbinfo)
 	{
 		TableInfo  *owning_tab = findTableByOid(tbinfo->owning_tab);
 
-		if (owning_tab && owning_tab->dobj.dump & DUMP_COMPONENT_DEFINITION)
+		if (owning_tab == NULL)
+			exit_horribly(NULL, "failed sanity check, parent table OID %u of sequence OID %u not found\n",
+						  tbinfo->owning_tab, tbinfo->dobj.catId.oid);
+
+		if (owning_tab->dobj.dump & DUMP_COMPONENT_DEFINITION)
 		{
 			resetPQExpBuffer(query);
 			appendPQExpBuffer(query, "ALTER SEQUENCE %s",
