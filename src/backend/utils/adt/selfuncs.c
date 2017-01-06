@@ -95,6 +95,7 @@
 #include "parser/parse_expr.h"
 #include "parser/parsetree.h"
 #include "utils/builtins.h"
+#include "utils/bytea.h"
 #include "utils/date.h"
 #include "utils/datum.h"
 #include "utils/fmgroids.h"

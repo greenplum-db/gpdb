@@ -116,6 +116,12 @@ extern Datum char_text(PG_FUNCTION_ARGS);
 extern Datum domain_in(PG_FUNCTION_ARGS);
 extern Datum domain_recv(PG_FUNCTION_ARGS);
 
+/* encode.c */
+extern Datum binary_encode(PG_FUNCTION_ARGS);
+extern Datum binary_decode(PG_FUNCTION_ARGS);
+extern unsigned hex_encode(const char *src, unsigned len, char *dst);
+extern unsigned hex_decode(const char *src, unsigned len, char *dst);
+
 /* enum.c */
 extern Datum enum_in(PG_FUNCTION_ARGS);
 extern Datum enum_out(PG_FUNCTION_ARGS);
@@ -751,28 +757,6 @@ extern Datum unknownout(PG_FUNCTION_ARGS);
 extern Datum unknownrecv(PG_FUNCTION_ARGS);
 extern Datum unknownsend(PG_FUNCTION_ARGS);
 
-extern Datum byteain(PG_FUNCTION_ARGS);
-extern Datum byteaout(PG_FUNCTION_ARGS);
-extern Datum bytearecv(PG_FUNCTION_ARGS);
-extern Datum byteasend(PG_FUNCTION_ARGS);
-extern Datum byteaoctetlen(PG_FUNCTION_ARGS);
-extern Datum byteaGetByte(PG_FUNCTION_ARGS);
-extern Datum byteaGetBit(PG_FUNCTION_ARGS);
-extern Datum byteaSetByte(PG_FUNCTION_ARGS);
-extern Datum byteaSetBit(PG_FUNCTION_ARGS);
-extern Datum binary_encode(PG_FUNCTION_ARGS);
-extern Datum binary_decode(PG_FUNCTION_ARGS);
-extern Datum byteaeq(PG_FUNCTION_ARGS);
-extern Datum byteane(PG_FUNCTION_ARGS);
-extern Datum bytealt(PG_FUNCTION_ARGS);
-extern Datum byteale(PG_FUNCTION_ARGS);
-extern Datum byteagt(PG_FUNCTION_ARGS);
-extern Datum byteage(PG_FUNCTION_ARGS);
-extern Datum byteacmp(PG_FUNCTION_ARGS);
-extern Datum byteacat(PG_FUNCTION_ARGS);
-extern Datum byteapos(PG_FUNCTION_ARGS);
-extern Datum bytea_substr(PG_FUNCTION_ARGS);
-extern Datum bytea_substr_no_len(PG_FUNCTION_ARGS);
 extern Datum pg_column_size(PG_FUNCTION_ARGS);
 
 extern Datum string_agg_transfn(PG_FUNCTION_ARGS);

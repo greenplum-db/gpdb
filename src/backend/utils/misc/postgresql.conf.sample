@@ -438,7 +438,7 @@ log_autostats=off	# print additional autostats information
 #statement_timeout = 0			# 0 is disabled
 #idle_session_gang_timeout = 18s 	# in milliseconds, 0 is disabled
 #vacuum_freeze_min_age = 100000000
-
+#bytea_output='escape'
 # - Locale and Formatting -
 
 #datestyle = 'iso, mdy'

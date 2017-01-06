@@ -36,6 +36,7 @@
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
+#include "utils/bytea.h"
 #include "nodes/makefuncs.h"
 
 static int  GetNextSegid(CdbSreh *cdbsreh);

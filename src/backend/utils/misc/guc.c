@@ -61,6 +61,7 @@
 #include "tcop/tcopprot.h"
 #include "tsearch/ts_cache.h"
 #include "utils/builtins.h"
+#include "utils/bytea.h"
 #include "utils/guc_tables.h"
 #include "utils/memutils.h"
 #include "utils/pg_locale.h"
@@ -186,6 +187,10 @@ static bool assign_autovacuum_max_workers(int newval, bool doit, GucSource sourc
 static bool assign_maxconnections(int newval, bool doit, GucSource source);
 
 static const char *assign_application_name(const char *newval, bool doit, GucSource source);
+static const char *assign_bytea(const char *newval, bool doit, GucSource source);
+
+/* hack until enum configs */
+static char *bytea_output_temp="escape";
 
 static int	defunct_int = 0;
 static bool	defunct_bool = false;
@@ -2644,7 +2649,15 @@ static struct config_string ConfigureNamesString[] =
 		&external_pid_file,
 		NULL, assign_canonical_path, NULL
 	},
-
+	/* placed here as a temporary hack until we get guc enums */
+		{
+			{"bytea_output", PGC_USERSET, CLIENT_CONN_STATEMENT,
+				gettext_noop("Sets the output format for bytea."),
+				gettext_noop("Valid values are HEX and ESCAPE.")
+			},
+			&bytea_output_temp,
+			"escape", assign_bytea, NULL, NULL
+		},
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, NULL, NULL, NULL
@@ -7608,6 +7621,31 @@ assign_transaction_read_only(bool newval, bool doit, GucSource source)
 			return false;
 	}
 	return true;
+}
+
+/*
+ * until we get enum config this is a hack
+ * to set an int value through a string
+ *
+ */
+
+static const char *
+assign_bytea( const char * newval, bool doit, GucSource source )
+{
+	int bo;
+
+	if (pg_strcasecmp(newval, "hex") == 0)
+		bo = BYTEA_OUTPUT_HEX;
+	else if (pg_strcasecmp(newval, "escape") == 0)
+		bo = BYTEA_OUTPUT_ESCAPE;
+	else
+		return NULL;
+
+	if (doit)
+	{
+		bytea_output = bo;
+	}
+	return newval;
 }
 
 static const char *
