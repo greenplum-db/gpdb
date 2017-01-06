@@ -113,18 +113,6 @@ extern bool ParseConfigFile(const char *config_file, const char *calling_file,
 							struct name_value_pair **tail_p);
 extern void free_name_value_list(struct name_value_pair * list);
 
-/*
- * The possible values of an enum variable are specified by an array of
- * name-value pairs.  The "hidden" flag means the value is accepted but
- * won't be displayed when guc.c is asked for a list of acceptable values.
- */
-struct config_enum_entry
-{
-	const char *name;
-	int			val;
-	bool		hidden;
-};
-
 typedef const char *(*GucStringAssignHook) (const char *newval, bool doit, GucSource source);
 typedef bool (*GucBoolAssignHook) (bool newval, bool doit, GucSource source);
 typedef bool (*GucIntAssignHook) (int newval, bool doit, GucSource source);
