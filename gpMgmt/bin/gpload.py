@@ -2715,6 +2715,9 @@ class gpload:
             for t in self.threads:
                 t.join()
 
+            if self.db != None:
+                self.db.close()
+
             self.log(self.INFO, 'rows Inserted          = ' + str(self.rowsInserted))
             self.log(self.INFO, 'rows Updated           = ' + str(self.rowsUpdated))
             self.log(self.INFO, 'data formatting errors = ' + str(NUM_WARN_ROWS))
