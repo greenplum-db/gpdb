@@ -50,7 +50,7 @@ OBJS= $(PGDUMP_DIR)/pg_backup_db.o $(PGDUMP_DIR)/pg_backup_custom.o \
 
 KEYWRDOBJS = ../keywords.o ../kwlookup.o
 
-all: submake-libpq submake-libpgport cdb_dump cdb_dump_agent cdb_restore cdb_restore_agent gpddboost libgpbsa.so libgpbsa76.so libgpbsa75.so libgpbsa71.so cdb_bsa_dump_agent cdb_bsa_restore_agent cdb_bsa_query_agent cdb_bsa_delete_agent
+all: submake-libpq submake-libpgport cdb_dump cdb_dump_agent cdb_restore cdb_restore_agent gpddboost cdb_bsa_dump_agent cdb_bsa_restore_agent cdb_bsa_query_agent cdb_bsa_delete_agent libgpbsa.so libgpbsa76.so libgpbsa75.so libgpbsa71.so
 
 cdb_dump: cdb_dump.o cdb_backup_status.o cdb_seginst.o cdb_backup_state.o cdb_table.o cdb_backup_archiver.o cdb_dump_util.o cdb_dump_include.o cdb_lockbox.o $(PGDUMP_DIR)/common.o $(OBJS) $(KEYWRDOBJS) $(libpq_builddir)/libpq.a $(EXTRA_OBJS)
 	$(CC) $(CFLAGS) cdb_dump.o cdb_backup_status.o cdb_seginst.o cdb_backup_state.o cdb_table.o cdb_backup_archiver.o cdb_dump_util.o cdb_dump_include.o cdb_lockbox.o $(PGDUMP_DIR)/common.o $(OBJS) $(KEYWRDOBJS)  $(libpq) $(LDFLAGS) $(DDBOOSTLIB) $(LIBS) -o $@
