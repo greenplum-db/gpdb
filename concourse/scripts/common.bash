@@ -19,6 +19,8 @@ function install_gpdb() {
 }
 
 function install_sync_tools() {
+    [ -s sync_tools_gpdb/sync_tools_gpdb.tar.gz ] && \
+    tar -xzf sync_tools_gpdb/sync_tools_gpdb.tar.gz -C gpdb_src/gpAux || \
     tar -xzf sync_tools_gpdb_centos/sync_tools_gpdb.tar.gz -C gpdb_src/gpAux
 }
 
