@@ -1403,3 +1403,11 @@ select distinct ptcname from (
 -- drop temp external protocols
 DROP PROTOCOL if exists demoprot;
 DROP PROTOCOL if exists demoprot2;
+
+-- create external protocol with a serial type column
+CREATE EXTERNAL TABLE SERIAL (a serial, x text)
+LOCATION ('file://@hostname@@abs_srcdir@/data/no/such/place/serial.tbl')
+FORMAT 'csv';
+
+-- drop temp external table
+DROP EXTERNAL TABLE IF EXISTS serial;
