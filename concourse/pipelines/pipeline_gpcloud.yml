@@ -53,7 +53,7 @@ jobs:
     - get: gpdb_src
       passed: [unit_tests_gpcloud_centos]
       trigger: true
-    - get: sync_tools_gpdb_centos
+    - get: sync_tools_gpdb
       resource: sync_tools_gpdb_centos
     - get: bin_gpdb
       resource: bin_gpdb_centos
@@ -72,7 +72,7 @@ jobs:
     - get: gpdb_src
       passed: [unit_tests_gpcloud_centos]
       trigger: true
-    - get: sync_tools_gpdb_centos
+    - get: sync_tools_gpdb
       resource: sync_tools_gpdb_centos
     - get: bin_gpdb
       resource: bin_gpdb_centos
