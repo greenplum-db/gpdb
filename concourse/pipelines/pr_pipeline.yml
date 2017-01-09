@@ -138,7 +138,7 @@ jobs:
     - aggregate:
       - get: gpdb_pr
         passed: [compile_gpdb_centos6]
-      - get: sync_tools_gpdb_centos
+      - get: sync_tools_gpdb
         resource: sync_tools_gpdb_centos
         passed: [compile_gpdb_centos6]
       - get: bin_gpdb
