@@ -119,39 +119,39 @@ TEST(Utils, UriCoding) {
         "20j%20k%20l%20m%20n%20o%20p%20q%20r%20s%20t%20u%20v%20w%20x%20y%20z%"
         "200%201%202%203%204%205%206%207%208%209%20-%20_%20.%20~";
 
-    EXPECT_EQ(dst1, uri_encode(src1));
-    EXPECT_EQ(dst2, uri_encode(src2));
-    EXPECT_EQ(dst3, uri_encode(src3));
-    EXPECT_EQ(dst4, uri_encode(src4));
+    EXPECT_EQ(dst1, UriEncode(src1));
+    EXPECT_EQ(dst2, UriEncode(src2));
+    EXPECT_EQ(dst3, UriEncode(src3));
+    EXPECT_EQ(dst4, UriEncode(src4));
 
-    EXPECT_EQ(src1, uri_decode(dst1));
-    EXPECT_EQ(src2, uri_decode(dst2));
-    EXPECT_EQ(src3, uri_decode(dst3));
-    EXPECT_EQ(src4, uri_decode(dst4));
+    EXPECT_EQ(src1, UriDecode(dst1));
+    EXPECT_EQ(src2, UriDecode(dst2));
+    EXPECT_EQ(src3, UriDecode(dst3));
+    EXPECT_EQ(src4, UriDecode(dst4));
 }
 
-TEST(Utils, find_replace) {
+TEST(Utils, FindAndReplace) {
     string str1 = "This is a simple & short test.";
 
-    find_replace(str1, "simple", "");
+    FindAndReplace(str1, "simple", "");
     EXPECT_EQ("This is a  & short test.", str1);
 
-    find_replace(str1, "short ", "");
+    FindAndReplace(str1, "short ", "");
     EXPECT_EQ("This is a  & test.", str1);
 
-    find_replace(str1, "test.", "");
+    FindAndReplace(str1, "test.", "");
     EXPECT_EQ("This is a  & ", str1);
 
-    find_replace(str1, "This", "");
+    FindAndReplace(str1, "This", "");
     EXPECT_EQ(" is a  & ", str1);
 
-    find_replace(str1, "is a", "abcdefghijklmn");
+    FindAndReplace(str1, "is a", "abcdefghijklmn");
     EXPECT_EQ(" abcdefghijklmn  & ", str1);
 
-    find_replace(str1, " a", "a");
+    FindAndReplace(str1, " a", "a");
     EXPECT_EQ("abcdefghijklmn  & ", str1);
 
-    find_replace(str1, "abc", "abcabc");
+    FindAndReplace(str1, "abc", "abcabc");
     EXPECT_EQ("abcabcdefghijklmn  & ", str1);
 }
 
@@ -181,73 +181,73 @@ TEST(Common, SignRequestV4) {
 
 TEST(Common, UrlOptions) {
     EXPECT_EQ("secret_test",
-              getOptS3(string("s3://neverland.amazonaws.com secret=secret_test"), "secret"));
+              GetOptS3(string("s3://neverland.amazonaws.com secret=secret_test"), "secret"));
 
     EXPECT_EQ("\".\\!@#$%^&*()DFGHJK\"",
-              getOptS3(string("s3://neverland.amazonaws.com accessid=\".\\!@#$%^&*()DFGHJK\""),
+              GetOptS3(string("s3://neverland.amazonaws.com accessid=\".\\!@#$%^&*()DFGHJK\""),
                        "accessid"));
 
     EXPECT_EQ("3456789",
-              getOptS3(string("s3://neverland.amazonaws.com chunksize=3456789"), "chunksize"));
+              GetOptS3(string("s3://neverland.amazonaws.com chunksize=3456789"), "chunksize"));
 
-    EXPECT_EQ("secret_test", getOptS3(string("s3://neverland.amazonaws.com secret=secret_test "
+    EXPECT_EQ("secret_test", GetOptS3(string("s3://neverland.amazonaws.com secret=secret_test "
                                              "accessid=\".\\!@#$%^&*()DFGHJK\" chunksize=3456789"),
                                       "secret"));
 
     EXPECT_EQ("\".\\!@#$%^&*()DFGHJK\"",
-              getOptS3(string("s3://neverland.amazonaws.com secret=secret_test "
+              GetOptS3(string("s3://neverland.amazonaws.com secret=secret_test "
                               "accessid=\".\\!@#$%^&*()DFGHJK\" chunksize=3456789"),
                        "accessid"));
 
-    EXPECT_EQ("3456789", getOptS3(string("s3://neverland.amazonaws.com secret=secret_test "
+    EXPECT_EQ("3456789", GetOptS3(string("s3://neverland.amazonaws.com secret=secret_test "
                                          "accessid=\".\\!@#$%^&*()DFGHJK\" chunksize=3456789"),
                                   "chunksize"));
 
-    EXPECT_EQ("secret_test", getOptS3(string("s3://neverland.amazonaws.com secret=secret_test "
+    EXPECT_EQ("secret_test", GetOptS3(string("s3://neverland.amazonaws.com secret=secret_test "
                                              "blah=whatever accessid=\".\\!@#$%^&*()DFGHJK\" "
                                              "chunksize=3456789 testKey=testValue"),
                                       "secret"));
 
-    EXPECT_EQ("secret_test", getOptS3(string("s3://neverland.amazonaws.com secret=secret_test "
+    EXPECT_EQ("secret_test", GetOptS3(string("s3://neverland.amazonaws.com secret=secret_test "
                                              "blah= accessid=\".\\!@#$%^&*()DFGHJK\" "
                                              "chunksize=3456789 testKey=testValue"),
                                       "secret"));
 
-    EXPECT_EQ("3456789", getOptS3(string("s3://neverland.amazonaws.com secret=secret_test "
+    EXPECT_EQ("3456789", GetOptS3(string("s3://neverland.amazonaws.com secret=secret_test "
                                          "chunksize=3456789 testKey=testValue "),
                                   "chunksize"));
 
-    EXPECT_EQ("3456789", getOptS3(string("s3://neverland.amazonaws.com   secret=secret_test "
+    EXPECT_EQ("3456789", GetOptS3(string("s3://neverland.amazonaws.com   secret=secret_test "
                                          "chunksize=3456789  testKey=testValue "),
                                   "chunksize"));
 
-    EXPECT_EQ("=testValue", getOptS3(string("s3://neverland.amazonaws.com secret=secret_test "
+    EXPECT_EQ("=testValue", GetOptS3(string("s3://neverland.amazonaws.com secret=secret_test "
                                             "chunksize=3456789 testKey==testValue "),
                                      "testKey"));
 
-    EXPECT_EQ("secret=secret", getOptS3(string("s3://neverland.amazonaws.com secret=secret=secret "
+    EXPECT_EQ("secret=secret", GetOptS3(string("s3://neverland.amazonaws.com secret=secret=secret "
                                                "chunksize=3456789 testKey==testValue "),
                                         "secret"));
 
-    EXPECT_TRUE(getOptS3(string(""), "accessid").empty());
+    EXPECT_TRUE(GetOptS3(string(""), "accessid").empty());
 
-    EXPECT_TRUE(getOptS3(string("s3://neverland.amazonaws.com secret=secret_test "
+    EXPECT_TRUE(GetOptS3(string("s3://neverland.amazonaws.com secret=secret_test "
                                 "accessid=\".\\!@#$%^&*()DFGHJK\" chunksize=3456789"),
                          "secret1")
                     .empty());
-    EXPECT_TRUE(getOptS3(string("s3://neverland.amazonaws.com"), "secret").empty());
+    EXPECT_TRUE(GetOptS3(string("s3://neverland.amazonaws.com"), "secret").empty());
 
-    EXPECT_TRUE(getOptS3(string("s3://neverland.amazonaws.com secret=secret_test blah=whatever "
+    EXPECT_TRUE(GetOptS3(string("s3://neverland.amazonaws.com secret=secret_test blah=whatever "
                                 "accessid= chunksize=3456789 testKey=testValue"),
                          "accessid")
                     .empty());
 
-    EXPECT_TRUE(getOptS3(string("s3://neverland.amazonaws.com secret=secret_test blah=whatever "
+    EXPECT_TRUE(GetOptS3(string("s3://neverland.amazonaws.com secret=secret_test blah=whatever "
                                 "chunksize=3456789 testKey=testValue"),
                          "")
                     .empty());
 
-    EXPECT_TRUE(getOptS3(string("s3://neverland.amazonaws.com secret=secret_test "
+    EXPECT_TRUE(GetOptS3(string("s3://neverland.amazonaws.com secret=secret_test "
                                 "chunksize=3456789 testKey=testValue "),
                          "chunk size")
                     .empty());
@@ -255,18 +255,18 @@ TEST(Common, UrlOptions) {
 
 TEST(Common, TruncateOptions) {
     EXPECT_EQ("s3://neverland.amazonaws.com",
-              truncateOptions(string("s3://neverland.amazonaws.com secret=secret_test")));
+              TruncateOptions(string("s3://neverland.amazonaws.com secret=secret_test")));
 
     EXPECT_EQ(
         "s3://neverland.amazonaws.com",
-        truncateOptions(string("s3://neverland.amazonaws.com accessid=\".\\!@#$%^&*()DFGHJK\"")));
+        TruncateOptions(string("s3://neverland.amazonaws.com accessid=\".\\!@#$%^&*()DFGHJK\"")));
 
     EXPECT_EQ("s3://neverland.amazonaws.com",
-              truncateOptions(string("s3://neverland.amazonaws.com secret=secret_test "
+              TruncateOptions(string("s3://neverland.amazonaws.com secret=secret_test "
                                      "accessid=\".\\!@#$%^&*()DFGHJK\" chunksize=3456789")));
 
     EXPECT_EQ("s3://neverland.amazonaws.com",
-              truncateOptions(string("s3://neverland.amazonaws.com secret=secret_test "
+              TruncateOptions(string("s3://neverland.amazonaws.com secret=secret_test "
                                      "blah= accessid=\".\\!@#$%^&*()DFGHJK\" "
                                      "chunksize=3456789 testKey=testValue")));
 }

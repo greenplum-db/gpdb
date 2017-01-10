@@ -20,7 +20,7 @@ all: test
 
 # Google TEST
 TEST_SRC = $(TEST_OBJS:.o=.cpp)
-TEST_APP = s3test
+TEST_APP = gpcloud_test
 gtest_filter ?= *
 
 DEP_FILES := $(patsubst %.o,%.d,$(TEST_OBJS))

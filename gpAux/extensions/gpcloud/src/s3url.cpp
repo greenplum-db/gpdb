@@ -1,98 +1,141 @@
 #include "s3url.h"
 
-UrlParser::UrlParser(const string &url) {
-    S3_CHECK_OR_DIE(!url.empty(), S3RuntimeError, "url is null");
+S3Url::S3Url(const string &sourceUrl, bool useHttps, const string &version, const string &region)
+    : version(version), sourceUrl(sourceUrl), region(region) {
+    string schemaStr = useHttps ? "https" : "http";
+    FindAndReplace(this->sourceUrl, "s3://", schemaStr + "://");
 
-    this->fullurl = url;
+    // else it was initialized with urlRegion
+    if (this->version == "1") {
+        extractRegionFromUrl();
+    } else if (this->version.empty()) {
+        if (extractRegionFromUrl()) {
+            this->version = "1";
+        } else {
+            this->version = "2";
+        }
+    }
 
-    struct http_parser_url url_parser;
+    http_parser_url urlParser;
     int result =
-        http_parser_parse_url(this->fullurl.c_str(), this->fullurl.length(), false, &url_parser);
-    S3_CHECK_OR_DIE(result == 0, S3RuntimeError, "Failed to parse URL " + this->fullurl +
-                                                     " at field " +
+        http_parser_parse_url(this->sourceUrl.c_str(), this->sourceUrl.length(), false, &urlParser);
+
+    S3_CHECK_OR_DIE(result == 0, S3RuntimeError, "Failed to parse URL " + sourceUrl + " at field " +
                                                      std::to_string((unsigned long long)result));
 
-    this->schema = extractField(&url_parser, UF_SCHEMA);
-    this->host = extractField(&url_parser, UF_HOST);
-    this->path = extractField(&url_parser, UF_PATH);
-    this->query = extractField(&url_parser, UF_QUERY);
-}
+    this->schema = schemaStr;
+    this->host = extractField(&urlParser, UF_HOST);
+    this->port = extractField(&urlParser, UF_PORT);
 
-string UrlParser::extractField(const struct http_parser_url *url_parser, http_parser_url_fields i) {
-    if ((url_parser->field_set & (1 << i)) == 0) {
-        return "";
+    if (this->port != "443" && !this->port.empty() && useHttps) {
+        S3WARN("You are using https on port '%s'", this->port.c_str());
     }
 
-    return this->fullurl.substr(url_parser->field_data[i].off, url_parser->field_data[i].len);
+    extractBucket();
+    extractEncodedPrefix();
 }
 
-string S3UrlUtility::replaceSchemaFromURL(const string &url, bool useHttps) {
-    size_t iend = url.find("://");
-    if (iend == string::npos) {
-        return url;
-    }
+string S3Url::getFullUrlForCurl() const {
+    stringstream fullUrl;
 
-    return getDefaultSchema(useHttps) + url.substr(iend);
+    fullUrl << this->getSchema() << "://" << this->getHostForCurl() << "/" << this->getBucket()
+            << "/" << this->getPrefix();
+
+    return fullUrl.str();
 }
 
-string S3UrlUtility::getDefaultSchema(bool useHttps) {
-    return useHttps ? "https" : "http";
-}
-
-// Set AWS region, use 'external-1' if it is 'us-east-1' or not present
-// http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
-string S3UrlUtility::getRegionFromURL(const string &url) {
-    size_t ibegin =
-        url.find("://s3") + strlen("://s3");  // index of character('.' or '-') after "3"
-    size_t iend = url.find(".amazonaws.com");
-
-    string region;
-    if (iend == string::npos) {
-        return region;
-    } else if (ibegin == iend) {  // "s3.amazonaws.com"
-        return "external-1";
+string S3Url::getHostForCurl() const {
+    if (version != "1") {
+        if (port.empty()) {
+            return host;
+        } else {
+            return host + ":" + port;
+        }
     } else {
-        // ibegin + 1 is the character after "s3." or "s3-"
-        // for instance: s3-us-west-2.amazonaws.com
-        region = url.substr(ibegin + 1, iend - (ibegin + 1));
+        return "s3-" + region + ".amazonaws.com";
     }
-
-    if (region.compare("us-east-1") == 0) {
-        region = "external-1";
-    }
-    return region;
 }
 
-string S3UrlUtility::getBucketFromURL(const string &url) {
-    size_t ibegin = find_Nth(url, 3, "/");
-    size_t iend = find_Nth(url, 4, "/");
-    if (ibegin == string::npos) {
-        return string();
-    }
-    // s3://s3-region.amazonaws.com/bucket
-    if (iend == string::npos) {
-        return url.substr(ibegin + 1, url.length() - ibegin - 1);
+string S3Url::getPathForCurl() const {
+    stringstream pathSs;
+
+    if (!this->getBucket().empty()) {
+        pathSs << "/" << this->getBucket();
     }
 
-    return url.substr(ibegin + 1, iend - ibegin - 1);
+    pathSs << "/" << this->getPrefix();
+
+    return pathSs.str();
 }
 
-string S3UrlUtility::getPrefixFromURL(const string &url) {
-    size_t ibegin = find_Nth(url, 3, "/");
-    size_t iend = find_Nth(url, 4, "/");
+void S3Url::extractEncodedPrefix() {
+    size_t ibegin = find_Nth(this->sourceUrl, 3, "/");
+    size_t iend = find_Nth(this->sourceUrl, 4, "/");
 
     // s3://s3-region.amazonaws.com/bucket
     if (ibegin == string::npos || iend == string::npos) {
-        return string();
+        return;
     }
 
     // s3://s3-region.amazonaws.com/bucket/
-    if (iend == url.length() - 1) {
-        return string();
+    if (iend == this->sourceUrl.length() - 1) {
+        return;
     }
 
-    ibegin = find_Nth(url, 4, "/");
+    ibegin = find_Nth(this->sourceUrl, 4, "/");
     // s3://s3-region.amazonaws.com/bucket/prefix
     // s3://s3-region.amazonaws.com/bucket/prefix/whatever
-    return url.substr(ibegin + 1, url.length() - ibegin - 1);
+    this->prefix = this->sourceUrl.substr(ibegin + 1, this->sourceUrl.length() - ibegin - 1);
+
+    this->prefix = UriEncode(this->prefix);
+    FindAndReplace(this->prefix, "%2F", "/");
+}
+
+void S3Url::extractBucket() {
+    size_t ibegin = find_Nth(this->sourceUrl, 3, "/");
+    size_t iend = find_Nth(this->sourceUrl, 4, "/");
+    if (ibegin == string::npos) {
+        return;
+    }
+    // s3://s3-region.amazonaws.com/bucket
+    if (iend == string::npos) {
+        this->bucket = this->sourceUrl.substr(ibegin + 1, this->sourceUrl.length() - ibegin - 1);
+        return;
+    }
+
+    this->bucket = this->sourceUrl.substr(ibegin + 1, iend - ibegin - 1);
+}
+
+bool S3Url::extractRegionFromUrl() {
+    size_t ibegin = this->sourceUrl.find("://s3") +
+                    strlen("://s3");  // index of character('.' or '-') after "3"
+    size_t iend = this->sourceUrl.find(".amazonaws.com");
+
+    if (iend == string::npos) {
+        return false;
+    } else if (ibegin == iend) {  // "s3.amazonaws.com"
+        this->region = "external-1";
+    } else {
+        // ibegin + 1 is the character after "s3." or "s3-"
+        // for instance: s3-us-west-2.amazonaws.com
+        this->region = this->sourceUrl.substr(ibegin + 1, iend - (ibegin + 1));
+    }
+
+    if (this->region.compare("us-east-1") == 0) {
+        this->region = "external-1";
+    }
+
+    return true;
+}
+
+bool S3Url::isValidUrl() const {
+    return !this->getBucket().empty();
+}
+
+string S3Url::extractField(const struct http_parser_url *urlParser, http_parser_url_fields i) {
+    if ((urlParser->field_set & (1 << i)) == 0) {
+        return "";
+    }
+
+    return this->sourceUrl.substr(urlParser->field_data[i].off, urlParser->field_data[i].len);
 }

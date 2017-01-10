@@ -189,13 +189,36 @@ string Config::Get(const string &sec, const string &key, const string &defaultva
     return ret;
 }
 
+bool Config::GetBool(const string &sec, const string &key, const string &defaultvalue) {
+    return ToBool(Get(sec, key, defaultvalue));
+}
+
 bool Config::Scan(const string &sec, const string &key, const char *scanfmt, void *dst) {
     if ((key == "") || (sec == "") || (this->_conf == NULL)) return false;
 
     return ini_sget(this->_conf, sec.c_str(), key.c_str(), scanfmt, dst);
 }
 
-bool to_bool(string str) {
+int64_t Config::SafeScan(const string &varName, const string &section, int64_t defaultValue,
+                         int64_t minValue, int64_t maxValue) {
+    int64_t scannedValue = 0;
+
+    // Here we use %12lld to truncate long number string, because configure value
+    // has type of int32_t, who has the range [-2^31, 2^31-1] (10-digit number)
+    bool isSuccess = Scan(section, varName, "%12lld", &scannedValue);
+
+    if (!isSuccess) {
+        scannedValue = defaultValue;
+    } else if (scannedValue > maxValue) {
+        scannedValue = maxValue;
+    } else if (scannedValue < minValue) {
+        scannedValue = minValue;
+    }
+
+    return scannedValue;
+}
+
+bool ToBool(string str) {
     std::transform(str.begin(), str.end(), str.begin(), ::tolower);
     if ((str == "yes") || (str == "true") || (str == "y") || (str == "t") || (str == "1")) {
         return true;
@@ -204,7 +227,7 @@ bool to_bool(string str) {
     }
 }
 
-const char uri_mapping[256] = {
+const char UriMapping[256] = {
     /*       0   1   2   3   4   5   6   7
      *       8   9   A   B   C   D   E   F */
     /* 0 */ -1, -1, -1, -1, -1, -1, -1, -1,
@@ -244,7 +267,7 @@ const char uri_mapping[256] = {
     /*   */ -1, -1, -1, -1, -1, -1, -1, -1};
 
 // alpha, numbers and - _ . ~ are reserved(RFC 3986).
-const char uri_reserved[256] = {
+const char UriReserved[256] = {
     /*      0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F */
     /* 0 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     /* 1 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -266,68 +289,61 @@ const char uri_reserved[256] = {
     /* E */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     /* F */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-string uri_encode(const string &src) {
-    const unsigned char *src_str = (const unsigned char *)src.c_str();
-    const int src_len = src.length();
+string UriEncode(const string &src) {
+    auto srcStr = src.begin();
 
-    unsigned char *const sub_start = new unsigned char[src_len * 3];
-    unsigned char *sub_end = sub_start;
-    const unsigned char *const src_end = src_str + src_len;
+    string retStr;
 
-    const char uri_rmapping[16 + 1] = "0123456789ABCDEF";
+    const char uriRmapping[16 + 1] = "0123456789ABCDEF";
 
-    while (src_str < src_end) {
-        if (uri_reserved[*src_str]) {
-            *sub_end++ = *src_str;
+    while (srcStr != src.end()) {
+        char c = *srcStr;
+        if (UriReserved[(int)c]) {
+            retStr.push_back(c);
         } else {
-            *sub_end++ = '%';
-            *sub_end++ = uri_rmapping[*src_str >> 4];
-            *sub_end++ = uri_rmapping[*src_str & 0x0F];
+            retStr.push_back('%');
+            retStr.push_back(uriRmapping[c >> 4]);
+            retStr.push_back(uriRmapping[c & 0x0F]);
         }
 
-        src_str++;
+        srcStr++;
     }
 
-    string ret_str((char *)sub_start, (char *)sub_end);
-    delete[] sub_start;
-    return ret_str;
+    return retStr;
 }
 
-string uri_decode(const string &src) {
-    const unsigned char *src_str = (const unsigned char *)src.c_str();
-    const int src_len = src.length();
-
-    const unsigned char *const src_end = src_str + src_len;
-    const unsigned char *const src_last_dec = src_end - 2;
-
-    char *const sub_start = new char[src_len];
-    char *sub_end = sub_start;
-
+string UriDecode(const string &src) {
     char dec1, dec2;
 
-    while (src_str < src_last_dec) {
-        if (*src_str == '%') {
-            dec1 = uri_mapping[*(src_str + 1)];
-            dec2 = uri_mapping[*(src_str + 2)];
+    auto srcStr = src.begin();
+    auto srcEnd = src.end() - 2;
+
+    string retStr;
+    while (srcStr < srcEnd) {
+        if (*srcStr == '%') {
+            dec1 = UriMapping[(int)*(srcStr + 1)];
+            dec2 = UriMapping[(int)*(srcStr + 2)];
 
             if ((dec1 != -1) && (dec2 != -1)) {
-                *sub_end++ = (dec1 << 4) + dec2;
-                src_str += 3;
+                retStr.push_back((dec1 << 4) + dec2);
+                srcStr += 3;
                 continue;
             }
         }
 
-        *sub_end++ = *src_str++;
+        retStr.push_back(*srcStr);
+        srcStr++;
     }
 
-    while (src_str < src_end) *sub_end++ = *src_str++;
+    while (srcStr < src.end()) {
+        retStr.push_back(*srcStr);
+        srcStr++;
+    }
 
-    string ret_str(sub_start, sub_end);
-    delete[] sub_start;
-    return ret_str;
+    return retStr;
 }
 
-void find_replace(string &str, const string &find, const string &replace) {
+void FindAndReplace(string &str, const string &find, const string &replace) {
     if (find.empty()) return;
 
     size_t pos = 0;
@@ -341,7 +357,7 @@ void find_replace(string &str, const string &find, const string &replace) {
 // Note: better to sort queries automatically
 // for more information refer to Amazon S3 document:
 // http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html
-void SignRequestV4(const string &method, HTTPHeaders *h, const string &orig_region,
+void SignRequestV4(const string &method, HTTPHeaders *headers, const string &origRegion,
                    const string &path, const string &query, const S3Credential &cred) {
     struct tm tm_info;
     char date_str[DATE_STR_LEN] = {0};
@@ -361,31 +377,31 @@ void SignRequestV4(const string &method, HTTPHeaders *h, const string &orig_regi
     strftime(timestamp_str, TIME_STAMP_STR_LEN, "%Y%m%dT%H%M%SZ", &tm_info);
 
     // for unit tests' convenience
-    if (!h->Get(X_AMZ_DATE)) {
-        h->Add(X_AMZ_DATE, timestamp_str);
+    if (!headers->Get(X_AMZ_DATE)) {
+        headers->Add(X_AMZ_DATE, timestamp_str);
     }
-    memcpy(date_str, h->Get(X_AMZ_DATE), DATE_STR_LEN - 1);
+    memcpy(date_str, headers->Get(X_AMZ_DATE), DATE_STR_LEN - 1);
 
     stringstream canonical_str;
 
     canonical_str << method << "\n"
                   << path << "\n"
-                  << query << "\nhost:" << h->Get(HOST)
-                  << "\nx-amz-content-sha256:" << h->Get(X_AMZ_CONTENT_SHA256)
-                  << "\nx-amz-date:" << h->Get(X_AMZ_DATE) << "\n\n"
+                  << query << "\nhost:" << headers->Get(HOST)
+                  << "\nx-amz-content-sha256:" << headers->Get(X_AMZ_CONTENT_SHA256)
+                  << "\nx-amz-date:" << headers->Get(X_AMZ_DATE) << "\n\n"
                   << "host;x-amz-content-sha256;x-amz-date\n"
-                  << h->Get(X_AMZ_CONTENT_SHA256);
+                  << headers->Get(X_AMZ_CONTENT_SHA256);
     string signed_headers = "host;x-amz-content-sha256;x-amz-date";
 
     sha256_hex(canonical_str.str().c_str(), canonical_hex);
 
     // http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
-    string region = orig_region;
-    find_replace(region, "external-1", "us-east-1");
+    string region = origRegion;
+    FindAndReplace(region, "external-1", "us-east-1");
 
     stringstream string2sign_str;
     string2sign_str << "AWS4-HMAC-SHA256\n"
-                    << h->Get(X_AMZ_DATE) << "\n"
+                    << headers->Get(X_AMZ_DATE) << "\n"
                     << date_str << "/" << region << "/s3/aws4_request\n"
                     << canonical_hex;
 
@@ -406,12 +422,12 @@ void SignRequestV4(const string &method, HTTPHeaders *h, const string &orig_regi
                      << "/aws4_request,SignedHeaders=" << signed_headers
                      << ",Signature=" << signature_hex;
 
-    h->Add(AUTHORIZATION, signature_header.str());
+    headers->Add(AUTHORIZATION, signature_header.str());
 }
 
-// getOptS3 returns first value according to given key.
+// GetOptS3 returns first value according to given key.
 // key=value pair are separated by whitespace.
-string getOptS3(const string &urlWithOptions, const string &key) {
+string GetOptS3(const string &urlWithOptions, const string &key) {
     string keyStr = " ";
     keyStr += key;
     keyStr += "=";
@@ -431,8 +447,8 @@ string getOptS3(const string &urlWithOptions, const string &key) {
     }
 }
 
-// truncateOptions truncates substring after first whitespace.
-string truncateOptions(const string &urlWithOptions) {
+// TruncateOptions truncates substring after first whitespace.
+string TruncateOptions(const string &urlWithOptions) {
     size_t firstSpace = urlWithOptions.find(" ");
     if (firstSpace == urlWithOptions.npos) {
         return urlWithOptions;

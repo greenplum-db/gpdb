@@ -54,20 +54,9 @@ int thread_cleanup(void) {
     return 1;
 }
 
-GPReader::GPReader(const S3Params& params, const string& url)
+GPReader::GPReader(const S3Params& params)
     : params(params), restfulService(this->params), s3InterfaceService(this->params) {
-    // construct a canonical URL string
-    // schema://domain/uri_encoded_path/
-    string encodedURL = uri_encode(url);
-    find_replace(encodedURL, "%3A%2F%2F", "://");
-    find_replace(encodedURL, "%2F", "/");
-
-    constructS3Params(encodedURL);
     restfulServicePtr = &restfulService;
-}
-
-void GPReader::constructS3Params(const string& url) {
-    this->params.setBaseUrl(url);
 }
 
 void GPReader::open(const S3Params& params) {
@@ -100,25 +89,15 @@ GPReader* reader_init(const char* url_with_options) {
         }
 
         string urlWithOptions(url_with_options);
-        string url = truncateOptions(urlWithOptions);
 
-        if (url.empty()) {
-            return NULL;
-        }
-
-        S3Params params;
-        if (!InitConfig(params, urlWithOptions)) {
-            return NULL;
-        }
-
-        CheckEssentialConfig(params);
+        S3Params params = InitConfig(urlWithOptions);
 
         InitRemoteLog();
 
         // Prepare memory to be used for thread chunk buffer.
         PrepareS3MemContext(params);
 
-        reader = new GPReader(params, url);
+        reader = new GPReader(params);
         if (reader == NULL) {
             return NULL;
         }

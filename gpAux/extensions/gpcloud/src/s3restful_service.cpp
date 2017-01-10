@@ -1,5 +1,13 @@
 #include "s3restful_service.h"
 
+S3RESTfulService::S3RESTfulService()
+    : lowSpeedLimit(0),
+      lowSpeedTime(0),
+      debugCurl(false),
+      verifyCert(true),
+      chunkBufferSize(64 * 1024) {
+}
+
 S3RESTfulService::S3RESTfulService(const S3Params &params)
     : s3MemContext(const_cast<S3MemoryContext &>(params.getMemoryContext())) {
     // This function is not thread safe, must NOT call it when any other
@@ -10,6 +18,7 @@ S3RESTfulService::S3RESTfulService(const S3Params &params)
     this->lowSpeedTime = params.getLowSpeedTime();
     this->debugCurl = params.isDebugCurl();
     this->chunkBufferSize = params.getChunkSize();
+    this->verifyCert = params.isVerifyCert();
 }
 
 S3RESTfulService::~S3RESTfulService() {
@@ -110,6 +119,7 @@ Response S3RESTfulService::get(const string &url, HTTPHeaders &headers) {
 
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, RESTfulServiceWriteFuncCallback);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, this->verifyCert);
 
     CURLcode res = curl_easy_perform(curl);
     if (res != CURLE_OK) {
@@ -139,8 +149,8 @@ Response S3RESTfulService::put(const string &url, HTTPHeaders &headers, const S3
 
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, RESTfulServiceWriteFuncCallback);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, this->verifyCert);
 
-    /* options for uploading */
     UploadData uploadData(data);
     curl_easy_setopt(curl, CURLOPT_READDATA, (void *)&uploadData);
     curl_easy_setopt(curl, CURLOPT_READFUNCTION, RESTfulServiceReadFuncCallback);
@@ -151,7 +161,6 @@ Response S3RESTfulService::put(const string &url, HTTPHeaders &headers, const S3
     curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, RESTfulServiceHeadersWriteFuncCallback);
 
     CURLcode res = curl_easy_perform(curl);
-
     if (res != CURLE_OK) {
         S3_DIE(S3ConnectionError, curl_easy_strerror(res));
     } else {
@@ -176,8 +185,9 @@ Response S3RESTfulService::post(const string &url, HTTPHeaders &headers,
 
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, RESTfulServiceWriteFuncCallback);
-
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, this->verifyCert);
     curl_easy_setopt(curl, CURLOPT_POST, 1L);
+
     S3VectorUInt8 s3data(data);
     UploadData uploadData(s3data);
     curl_easy_setopt(curl, CURLOPT_READDATA, (void *)&uploadData);
@@ -185,7 +195,6 @@ Response S3RESTfulService::post(const string &url, HTTPHeaders &headers,
     curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)data.size());
 
     CURLcode res = curl_easy_perform(curl);
-
     if (res != CURLE_OK) {
         S3_DIE(S3ConnectionError, curl_easy_strerror(res));
     } else {
@@ -214,9 +223,9 @@ ResponseCode S3RESTfulService::head(const string &url, HTTPHeaders &headers) {
 
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "HEAD");
     curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, this->verifyCert);
 
     CURLcode res = curl_easy_perform(curl);
-
     if (res != CURLE_OK) {
         if (res == CURLE_COULDNT_RESOLVE_HOST) {
             S3_DIE(S3ResolveError, curl_easy_strerror(res));
@@ -241,7 +250,7 @@ Response S3RESTfulService::deleteRequest(const string &url, HTTPHeaders &headers
 
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, RESTfulServiceAbortFuncCallback);
-
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, this->verifyCert);
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
 
     S3VectorUInt8 data;
@@ -251,7 +260,6 @@ Response S3RESTfulService::deleteRequest(const string &url, HTTPHeaders &headers
     curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)data.size());
 
     CURLcode res = curl_easy_perform(curl);
-
     if (res != CURLE_OK) {
         S3_DIE(S3ConnectionError, curl_easy_strerror(res));
     } else {

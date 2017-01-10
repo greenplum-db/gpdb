@@ -12,7 +12,7 @@
 
 class GPReader : public Reader {
    public:
-    GPReader(const S3Params &params, const string &url);
+    GPReader(const S3Params &params);
     virtual ~GPReader() {
         this->close();
     }
@@ -29,9 +29,6 @@ class GPReader : public Reader {
     const ListBucketResult &getKeyList() {
         return bucketReader.getKeyList();
     }
-
-   private:
-    void constructS3Params(const string &url);
 
    protected:
     S3Params params;

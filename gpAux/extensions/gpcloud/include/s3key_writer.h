@@ -58,7 +58,7 @@ class S3KeyWriter : public Writer {
     uint64_t partNumber;
     uint64_t activeThreads;
 
-    S3Params params;
+    std::unique_ptr<S3Params> params;
 };
 
 #endif /* INCLUDE_S3KEY_WRITER_H_ */

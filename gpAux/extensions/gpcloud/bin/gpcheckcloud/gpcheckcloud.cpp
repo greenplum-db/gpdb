@@ -40,11 +40,14 @@ void registerSignalHandler() {
 void printUsage(FILE *stream) {
     fprintf(stream,
             "Usage: gpcheckcloud -c \"s3://endpoint/bucket/prefix "
-            "config=path_to_config_file\", to check the configuration.\n"
+            "config=path_to_config_file [section=section_name region=region_name]\", to check the "
+            "configuration.\n"
             "       gpcheckcloud -d \"s3://endpoint/bucket/prefix "
-            "config=path_to_config_file\", to download and output to stdout.\n"
+            "config=path_to_config_file [section=section_name region=region_name]\", to download "
+            "and output to stdout.\n"
             "       gpcheckcloud -u \"/path/to/file\" \"s3://endpoint/bucket/prefix "
-            "config=path_to_config_file\", to upload a file to S3.\n"
+            "config=path_to_config_file [section=section_name region=region_name]\", to upload a "
+            "file.\n"
             "       gpcheckcloud -t, to show the config template.\n"
             "       gpcheckcloud -h, to show this help.\n");
 }

@@ -24,37 +24,12 @@ class S3BucketReader : public Reader {
         this->upstreamReader = reader;
     }
 
-    void parseURL();
-    void parseURL(const string &url) {
-        this->params.setBaseUrl(url);
-        parseURL();
-    };
-
     const ListBucketResult &getKeyList() {
         return keyList;
     }
 
-    const string &getRegion() {
-        return region;
-    }
-    const string &getBucket() {
-        return bucket;
-    }
-    const string &getPrefix() {
-        return prefix;
-    }
-
-   protected:
-    // Get URL for a S3 object/file.
-    string getKeyURL(const string &key);
-
    private:
-    S3Params params;
-
-    string schema;
-    string region;
-    string bucket;
-    string prefix;
+    std::unique_ptr<S3Params> params;
 
     S3Interface *s3Interface;
 

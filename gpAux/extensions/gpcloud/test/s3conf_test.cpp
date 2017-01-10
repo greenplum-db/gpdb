@@ -2,14 +2,11 @@
 #include "gtest/gtest.h"
 
 TEST(Config, NonExistFile) {
-    S3Params params;
-
-    EXPECT_THROW(InitConfig(params, "notexist/path/s3test.conf", "default"), S3RuntimeError);
+    EXPECT_THROW(InitConfig("s3://abc/a config=notexist/path/s3test.conf"), S3RuntimeError);
 }
 
 TEST(Config, Basic) {
-    S3Params params;
-    InitConfig(params, "data/s3test.conf", "default");
+    S3Params params = InitConfig("s3://abc/a config=data/s3test.conf section=default");
 
     EXPECT_EQ("secret_test", params.getCred().secret);
     EXPECT_EQ("accessid_test", params.getCred().accessID);
@@ -32,13 +29,11 @@ TEST(Config, Basic) {
     EXPECT_EQ((uint64_t)1024, params.getLowSpeedLimit());
     EXPECT_EQ((uint64_t)600, params.getLowSpeedTime());
 
-    EXPECT_TRUE(params.isEncryption());
     EXPECT_FALSE(params.isDebugCurl());
 }
 
 TEST(Config, SpecialSectionValues) {
-    S3Params params;
-    InitConfig(params, "data/s3test.conf", "special_over");
+    S3Params params = InitConfig("s3://abc/a config=data/s3test.conf section=special_over");
 
     EXPECT_EQ((uint64_t)8, params.getNumOfChunks());
     EXPECT_EQ((uint64_t)(128 * 1024 * 1024), params.getChunkSize());
@@ -46,31 +41,26 @@ TEST(Config, SpecialSectionValues) {
     EXPECT_EQ((uint64_t)10240, params.getLowSpeedLimit());
     EXPECT_EQ((uint64_t)60, params.getLowSpeedTime());
 
-    EXPECT_TRUE(params.isEncryption());
     EXPECT_FALSE(params.isDebugCurl());
 }
 
 TEST(Config, SpecialSectionLowValues) {
-    S3Params params;
-    InitConfig(params, "data/s3test.conf", "special_low");
+    S3Params params = InitConfig("s3://abc/a config=data/s3test.conf section=special_low");
 
     EXPECT_EQ((uint64_t)1, params.getNumOfChunks());
     EXPECT_EQ((uint64_t)(8 * 1024 * 1024), params.getChunkSize());
 }
 
 TEST(Config, SpecialSectionWrongKeyName) {
-    S3Params params;
-    InitConfig(params, "data/s3test.conf", "special_wrongkeyname");
+    S3Params params = InitConfig("s3://abc/a config=data/s3test.conf section=special_wrongkeyname");
 
     EXPECT_EQ((uint64_t)4, params.getNumOfChunks());
     EXPECT_EQ((uint64_t)(64 * 1024 * 1024), params.getChunkSize());
 }
 
 TEST(Config, SpecialSwitches) {
-    S3Params params;
-    InitConfig(params, "data/s3test.conf", "special_switches");
+    S3Params params = InitConfig("s3://abc/a config=data/s3test.conf section=special_switches");
 
-    EXPECT_FALSE(params.isEncryption());
     EXPECT_TRUE(params.isDebugCurl());
 }
 
@@ -85,8 +75,7 @@ TEST(Config, SectionNotExist) {
 }
 
 TEST(Common, CheckEssentialConfig) {
-    S3Params params;
-    EXPECT_THROW(CheckEssentialConfig(params), S3ConfigError);
+    S3Params params = InitConfig("s3://abc/a config=data/s3test.conf");
 
     S3Credential cred1 = {"keyid/foo", "", ""};
     params.setCred(cred1);
@@ -98,4 +87,9 @@ TEST(Common, CheckEssentialConfig) {
     EXPECT_THROW(CheckEssentialConfig(params), S3ConfigError);
 
     s3ext_segnum = 1;
+}
+
+TEST(Config, SkipVerify) {
+    S3Params params = InitConfig("s3://abc/a config=data/s3test.conf section=skip_verify");
+    EXPECT_FALSE(params.isVerifyCert());
 }

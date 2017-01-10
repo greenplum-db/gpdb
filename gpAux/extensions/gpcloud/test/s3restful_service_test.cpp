@@ -3,8 +3,7 @@
 
 TEST(S3RESTfulService, GetWithWrongHeader) {
     HTTPHeaders headers;
-    S3Params params;
-    S3RESTfulService service(params);
+    S3RESTfulService service;
 
     string url = "https://www.bing.com/";
     headers.Add(HOST, url);
@@ -17,9 +16,8 @@ TEST(S3RESTfulService, GetWithWrongHeader) {
 
 TEST(S3RESTfulService, GetWithEmptyHeader) {
     HTTPHeaders headers;
-    S3Params params;
     string url;
-    S3RESTfulService service(params);
+    S3RESTfulService service;
 
     url = "https://www.bing.com/";
 
@@ -32,18 +30,16 @@ TEST(S3RESTfulService, GetWithEmptyHeader) {
 
 TEST(S3RESTfulService, GetWithoutURL) {
     HTTPHeaders headers;
-    S3Params params;
     string url;
-    S3RESTfulService service(params);
+    S3RESTfulService service;
 
     EXPECT_THROW(service.get(url, headers), S3ConnectionError);
 }
 
 TEST(S3RESTfulService, GetWithWrongURL) {
     HTTPHeaders headers;
-    S3Params params;
     string url;
-    S3RESTfulService service(params);
+    S3RESTfulService service;
 
     url = "https://www.bing.com/pivotal.html";
 
@@ -54,20 +50,17 @@ TEST(S3RESTfulService, GetWithWrongURL) {
 
 TEST(S3RESTfulService, GetWithoutURLWithDebugParam) {
     HTTPHeaders headers;
-    S3Params params;
-    params.setDebugCurl(true);
 
     string url;
-    S3RESTfulService service(params);
+    S3RESTfulService service;
 
     EXPECT_THROW(service.get(url, headers), S3ConnectionError);
 }
 
 TEST(S3RESTfulService, PutWithoutURL) {
     HTTPHeaders headers;
-    S3Params params;
     string url;
-    S3RESTfulService service(params);
+    S3RESTfulService service;
     S3VectorUInt8 data;
 
     EXPECT_THROW(service.put(url, headers, data), S3ConnectionError);
@@ -75,9 +68,8 @@ TEST(S3RESTfulService, PutWithoutURL) {
 
 TEST(S3RESTfulService, PutToServerWithBlindPutService) {
     HTTPHeaders headers;
-    S3Params params;
     string url;
-    S3RESTfulService service(params);
+    S3RESTfulService service;
 
     /* data = "abcdefghij", len = 11 (including '\0') */
     S3VectorUInt8 data;
@@ -93,9 +85,8 @@ TEST(S3RESTfulService, PutToServerWithBlindPutService) {
 
 TEST(S3RESTfulService, PutToServerWith404Page) {
     HTTPHeaders headers;
-    S3Params params;
     string url;
-    S3RESTfulService service(params);
+    S3RESTfulService service;
 
     /* data = "abcdefghij", len = 11 (including '\0') */
     S3VectorUInt8 data;
@@ -112,11 +103,9 @@ TEST(S3RESTfulService, PutToServerWith404Page) {
 
 TEST(S3RESTfulService, PutWithoutURLWithDebugParam) {
     HTTPHeaders headers;
-    S3Params params;
-    params.setDebugCurl(true);
 
     string url;
-    S3RESTfulService service(params);
+    S3RESTfulService service;
     S3VectorUInt8 data;
 
     EXPECT_THROW(service.put(url, headers, data), S3ConnectionError);
@@ -140,9 +129,9 @@ bool compareVector(const vector<T, A>& a, const vector<T, B>& b) {
 /* Run './bin/dummyHTTPServer.py' before enabling this test */
 TEST(S3RESTfulService, DISABLED_PutToDummyServer) {
     HTTPHeaders headers;
-    S3Params params;
+
     string url;
-    S3RESTfulService service(params);
+    S3RESTfulService service;
 
     /* data = "abcdefghij", length = 11 (including '\0') */
     S3VectorUInt8 data;
@@ -161,20 +150,18 @@ TEST(S3RESTfulService, DISABLED_PutToDummyServer) {
 
 TEST(S3RESTfulService, HeadWithoutURL) {
     HTTPHeaders headers;
-    S3Params params;
+
     string url;
-    S3RESTfulService service(params);
+    S3RESTfulService service;
 
     EXPECT_THROW(service.head(url, headers), S3ConnectionError);
 }
 
 TEST(S3RESTfulService, HeadWithCorrectURLAndDebugParam) {
     HTTPHeaders headers;
-    S3Params params;
-    params.setDebugCurl(true);
 
     string url;
-    S3RESTfulService service(params);
+    S3RESTfulService service;
 
     url = "https://www.bing.com/";
 
@@ -185,9 +172,9 @@ TEST(S3RESTfulService, HeadWithCorrectURLAndDebugParam) {
 
 TEST(S3RESTfulService, HeadWithWrongURL) {
     HTTPHeaders headers;
-    S3Params params;
+
     string url;
-    S3RESTfulService service(params);
+    S3RESTfulService service;
 
     url = "https://www.bing.com/pivotal.html";
 
@@ -198,9 +185,9 @@ TEST(S3RESTfulService, HeadWithWrongURL) {
 
 TEST(S3RESTfulService, HeadWithCorrectURL) {
     HTTPHeaders headers;
-    S3Params params;
+
     string url;
-    S3RESTfulService service(params);
+    S3RESTfulService service;
 
     url = "https://www.bing.com/";
 
@@ -211,20 +198,18 @@ TEST(S3RESTfulService, HeadWithCorrectURL) {
 
 TEST(S3RESTfulService, PostWithoutURL) {
     HTTPHeaders headers;
-    S3Params params;
+
     string url;
-    S3RESTfulService service(params);
+    S3RESTfulService service;
 
     EXPECT_THROW(service.post(url, headers, vector<uint8_t>()), S3ConnectionError);
 }
 
 TEST(S3RESTfulService, PostToServerWithBlindPutServiceAndDebugParam) {
     HTTPHeaders headers;
-    S3Params params;
-    params.setDebugCurl(true);
 
     string url;
-    S3RESTfulService service(params);
+    S3RESTfulService service;
 
     headers.Add(CONTENTLENGTH, "3");
     url = "https://www.bing.com/?abcdefghij";
@@ -236,9 +221,9 @@ TEST(S3RESTfulService, PostToServerWithBlindPutServiceAndDebugParam) {
 
 TEST(S3RESTfulService, PostToServerWithBlindPutService) {
     HTTPHeaders headers;
-    S3Params params;
+
     string url;
-    S3RESTfulService service(params);
+    S3RESTfulService service;
 
     url = "https://www.bing.com/?abcdefghij";
 
@@ -250,9 +235,9 @@ TEST(S3RESTfulService, PostToServerWithBlindPutService) {
 
 TEST(S3RESTfulService, PostToServerWith404Page) {
     HTTPHeaders headers;
-    S3Params params;
+
     string url;
-    S3RESTfulService service(params);
+    S3RESTfulService service;
 
     url = "https://www.bing.com/pivotal.html/?abcdefghij";
 
@@ -265,9 +250,9 @@ TEST(S3RESTfulService, PostToServerWith404Page) {
 
 TEST(S3RESTfulService, PostToServerWithData) {
     HTTPHeaders headers;
-    S3Params params;
+
     string url;
-    S3RESTfulService service(params);
+    S3RESTfulService service;
 
     url = "https://www.bing.com";
 
@@ -287,9 +272,9 @@ TEST(S3RESTfulService, PostToServerWithData) {
 /* Run './bin/dummyHTTPServer.py' before enabling this test */
 TEST(S3RESTfulService, DISABLED_PostToDummyServer) {
     HTTPHeaders headers;
-    S3Params params;
+
     string url;
-    S3RESTfulService service(params);
+    S3RESTfulService service;
 
     url = "http://localhost:8553/?abcdefghij";
 
@@ -301,9 +286,9 @@ TEST(S3RESTfulService, DISABLED_PostToDummyServer) {
 /* Run './bin/dummyHTTPServer.py' before enabling this test */
 TEST(S3RESTfulService, DISABLED_PostToDummyServerWithData) {
     HTTPHeaders headers;
-    S3Params params;
+
     string url;
-    S3RESTfulService service(params);
+    S3RESTfulService service;
 
     /* data = "abcdefghij", length = 11 (including '\0') */
     vector<uint8_t> data;
@@ -323,9 +308,9 @@ TEST(S3RESTfulService, DISABLED_PostToDummyServerWithData) {
 /* Run './bin/dummyHTTPServer.py' before enabling this test */
 TEST(S3RESTfulService, DISABLED_DeleteToDummyServerWithData) {
     HTTPHeaders headers;
-    S3Params params;
+
     string url;
-    S3RESTfulService service(params);
+    S3RESTfulService service;
 
     headers.Add(CONTENTTYPE, "text/plain");
     headers.Add(CONTENTLENGTH, "0");

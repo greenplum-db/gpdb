@@ -61,7 +61,7 @@ class DecompressReaderTest : public testing::Test {
         // need to setup upstreamReader before open.
         this->bufReader.setChunkSize(1024 * 1024 * 64);
         decompressReader.setReader(&bufReader);
-        decompressReader.open(params);
+        decompressReader.open(S3Params("s3://abc/def"));
     }
 
     // TearDown() is invoked immediately after a test finishes.
@@ -84,16 +84,13 @@ class DecompressReaderTest : public testing::Test {
     }
 
     DecompressReader decompressReader;
-    S3Params params;
     MockBufferReader bufReader;
     Byte compressionBuff[10000];
 };
 
 TEST_F(DecompressReaderTest, AbleToDecompressEmptyData) {
     unsigned char input[10] = {0};
-    MockBufferReader bufReader;
     bufReader.setData(input, 0);
-    decompressReader.setReader(&bufReader);
 
     char buf[10000];
     uint64_t count = decompressReader.read(buf, sizeof(buf));

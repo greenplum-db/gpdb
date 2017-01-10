@@ -3,8 +3,7 @@
 void S3CommonReader::open(const S3Params &params) {
     this->keyReader.setS3InterfaceService(s3InterfaceService);
 
-    S3CompressionType compressionType =
-        s3InterfaceService->checkCompressionType(params.getKeyUrl(), params.getRegion());
+    S3CompressionType compressionType = s3InterfaceService->checkCompressionType(params.getS3Url());
 
     switch (compressionType) {
         case S3_COMPRESSION_GZIP:

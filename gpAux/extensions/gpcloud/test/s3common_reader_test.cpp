@@ -14,8 +14,7 @@ class MockS3InterfaceForCompressionRead : public MockS3Interface {
     void setData(Byte *rawData, uLong len) {
         data.insert(data.begin(), rawData, rawData + len);
     }
-    uint64_t mockFetchData(uint64_t offset, S3VectorUInt8 &data, uint64_t len,
-                           const string &sourceUrl, const string &region) {
+    uint64_t mockFetchData(uint64_t offset, S3VectorUInt8 &data, uint64_t len, const S3Url &s3Url) {
         data = std::move(this->data);
         return data.size();
     }
@@ -40,8 +39,8 @@ class S3CommonReaderTest : public ::testing::Test, public S3CommonReader {
 
 TEST_F(S3CommonReaderTest, OpenGZip) {
     // test case for: the file format is gzip, then decompressReader should be called
-    EXPECT_CALL(mockS3Interface, checkCompressionType(_, _)).WillOnce(Return(S3_COMPRESSION_GZIP));
-    S3Params params;
+    EXPECT_CALL(mockS3Interface, checkCompressionType(_)).WillOnce(Return(S3_COMPRESSION_GZIP));
+    S3Params params("s3://abc/def");
     params.setNumOfChunks(1);
     params.setChunkSize(1024 * 1024 * 2);
     this->open(params);
@@ -52,8 +51,8 @@ TEST_F(S3CommonReaderTest, OpenGZip) {
 
 TEST_F(S3CommonReaderTest, OpenPlain) {
     // test case for: the file format is gzip, then S3keyReader should be called
-    EXPECT_CALL(mockS3Interface, checkCompressionType(_, _)).WillOnce(Return(S3_COMPRESSION_PLAIN));
-    S3Params params;
+    EXPECT_CALL(mockS3Interface, checkCompressionType(_)).WillOnce(Return(S3_COMPRESSION_PLAIN));
+    S3Params params("s3://abc/def");
     params.setNumOfChunks(1);
     params.setChunkSize(1024 * 1024 * 2);
     this->open(params);
@@ -71,13 +70,13 @@ TEST_F(S3CommonReaderTest, ReadGZip) {
 
     mockS3Interface.setData(compressionBuff, compressedLen);
 
-    EXPECT_CALL(mockS3Interface, checkCompressionType(_, _)).WillOnce(Return(S3_COMPRESSION_GZIP));
+    EXPECT_CALL(mockS3Interface, checkCompressionType(_)).WillOnce(Return(S3_COMPRESSION_GZIP));
 
-    EXPECT_CALL(mockS3Interface, fetchData(_, _, _, _, _))
+    EXPECT_CALL(mockS3Interface, fetchData(_, _, _, _))
         .WillOnce(Invoke(&mockS3Interface, &MockS3InterfaceForCompressionRead::mockFetchData));
 
     char result[0x100];
-    S3Params params;
+    S3Params params("s3://abc/def");
     params.setNumOfChunks(1);
     params.setChunkSize(1024 * 1024 * 2);
     params.setKeySize(compressedLen);
