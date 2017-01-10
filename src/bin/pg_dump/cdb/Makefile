@@ -84,16 +84,18 @@ libgpbsa71.so: cdb_bsa_util.o $(libpq_builddir)/libpq.a
 libgpbsa.so: libgpbsa76.so
 	cp libgpbsa76.so libgpbsa.so
 
-cdb_bsa_dump_agent: cdb_bsa_dump_agent.o cdb_dump_util.o cdb_lockbox.o $(libpq_builddir)/libpq.a
+cdb_bsa_dump_agent cdb_bsa_restore_agent cdb_bsa_query_agent cdb_bsa_delete_agent: cdb_dump_util.o cdb_lockbox.o $(libpq_builddir)/libpq.a
+
+cdb_bsa_dump_agent: cdb_bsa_dump_agent.o
 	$(CC) $(CFLAGS) cdb_bsa_dump_agent.o cdb_dump_util.o cdb_lockbox.o $(PGDUMP_DIR)/dumputils.o $(KEYWRDOBJS) $(libpq) $(LDFLAGS) $(DDBOOSTLIB) $(GPBSALIB) $(LIBS) -o $@
 
-cdb_bsa_restore_agent: cdb_bsa_restore_agent.o cdb_dump_util.o cdb_lockbox.o $(libpq_builddir)/libpq.a
+cdb_bsa_restore_agent: cdb_bsa_restore_agent.o
 	$(CC) $(CFLAGS) cdb_bsa_restore_agent.o cdb_dump_util.o cdb_lockbox.o $(PGDUMP_DIR)/dumputils.o $(KEYWRDOBJS) $(libpq) $(LDFLAGS) $(DDBOOSTLIB) $(GPBSALIB) $(LIBS) -o $@
 
-cdb_bsa_query_agent: cdb_bsa_query_agent.o cdb_dump_util.o cdb_lockbox.o $(libpq_builddir)/libpq.a
+cdb_bsa_query_agent: cdb_bsa_query_agent.o
 	$(CC) $(CFLAGS) cdb_bsa_query_agent.o cdb_dump_util.o cdb_lockbox.o $(PGDUMP_DIR)/dumputils.o $(KEYWRDOBJS) $(libpq) $(LDFLAGS) $(DDBOOSTLIB) $(GPBSALIB) $(LIBS) -o $@
 
-cdb_bsa_delete_agent: cdb_bsa_delete_agent.o cdb_dump_util.o cdb_lockbox.o $(libpq_builddir)/libpq.a
+cdb_bsa_delete_agent: cdb_bsa_delete_agent.o
 	$(CC) $(CFLAGS) cdb_bsa_delete_agent.o cdb_dump_util.o cdb_lockbox.o $(PGDUMP_DIR)/dumputils.o $(KEYWRDOBJS) $(libpq) $(LDFLAGS) $(DDBOOSTLIB) $(GPBSALIB) $(LIBS) -o $@
 
 .PHONY: submake-backend
