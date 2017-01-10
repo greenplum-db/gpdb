@@ -18,7 +18,7 @@ select sec_definer_create_test() ;
 psql:/path/sql_file:1: NOTICE:  Creating table
 psql:/path/sql_file:1: NOTICE:  Table created
  sec_definer_create_test 
--------------
+-------------------------
  
 (1 row)
 
