@@ -578,14 +578,14 @@ namespace gpdb {
 	// check permissions on range table 
 	void CheckRTPermissions(List *plRangeTable);
 	
-	// get index operator properties
-	void IndexOpProperties(Oid opno, Oid opclass, int *strategy, Oid *subtype, bool *recheck);
+	// get index operator family properties
+	void IndexOpProperties(Oid opno, Oid opfamily, int *strategy, Oid *subtype, bool *recheck);
 	
-	// get oids of classes this operator belongs to
-	List *PlScOpOpClasses(Oid opno);
+	// get oids of families this operator belongs to
+	List *PlScOpOpFamilies(Oid opno);
 	
 	// get oids of op classes for the index keys
-	List *PlIndexOpClasses(Oid oidIndex);
+	List *PlIndexOpFamilies(Oid oidIndex);
 
 	// returns the result of evaluating 'pexpr' as an Expr. Caller keeps ownership of 'pexpr'
 	// and takes ownership of the result 

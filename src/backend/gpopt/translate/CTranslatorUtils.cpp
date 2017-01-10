@@ -981,18 +981,14 @@ CTranslatorUtils::OidCmpOperator
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CTranslatorUtils::OidCmpOperator
+//		CTranslatorUtils::OidIndexQualOpFamily
 //
 //	@doc:
-//		Extract comparison operator from an OpExpr, ScalarArrayOpExpr or RowCompareExpr
-//
-//	FIXME: This function comment is completely bogus.
-//	FIXME: This actually returns the operator family, not operator
-//	class!
+//		Extract comparison operator family for the given index column
 //
 //---------------------------------------------------------------------------
 OID
-CTranslatorUtils::OidIndexQualOpclass
+CTranslatorUtils::OidIndexQualOpFamily
 	(
 	INT iAttno,
 	OID oidIndex

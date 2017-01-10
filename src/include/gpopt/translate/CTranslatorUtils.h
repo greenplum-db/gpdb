@@ -118,9 +118,9 @@ namespace gpdxl
 			static
 			OID OidCmpOperator(Expr* pexpr);
 
-			// get the opclass for index key
+			// get the opfamily for index key
 			static
-			OID OidIndexQualOpclass(INT iAttno, OID oidIndex);
+			OID OidIndexQualOpFamily(INT iAttno, OID oidIndex);
 			
 			// return the type for the system column with the given number
 			static

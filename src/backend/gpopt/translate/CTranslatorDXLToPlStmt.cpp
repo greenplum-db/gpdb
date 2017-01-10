@@ -1527,9 +1527,9 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions
 		
 		OID oidCmpOperator = CTranslatorUtils::OidCmpOperator(pexprIndexCond);
 		GPOS_ASSERT(InvalidOid != oidCmpOperator);
-		OID oidOpclass = CTranslatorUtils::OidIndexQualOpclass(iAttno, CMDIdGPDB::PmdidConvert(pmdindex->Pmdid())->OidObjectId());
-		GPOS_ASSERT(InvalidOid != oidOpclass);
-		gpdb::IndexOpProperties(oidCmpOperator, oidOpclass, &iSN, &oidIndexSubtype, &fRecheck);
+		OID oidOpFamily = CTranslatorUtils::OidIndexQualOpFamily(iAttno, CMDIdGPDB::PmdidConvert(pmdindex->Pmdid())->OidObjectId());
+		GPOS_ASSERT(InvalidOid != oidOpFamily);
+		gpdb::IndexOpProperties(oidCmpOperator, oidOpFamily, &iSN, &oidIndexSubtype, &fRecheck);
 		GPOS_ASSERT(!fRecheck);
 		
 		// create index qual
