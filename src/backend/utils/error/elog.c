@@ -3073,7 +3073,7 @@ append_stacktrace(PipeProtoChunk *buffer, StringInfo append, void *const *stacka
 			}
 
 			// check if lineInfo was retrieved
-			// if lineinfo does not contains symbol ':' then the output of cmd contains the input address
+			// if lineinfo does not contain symbol ':' then the output of cmd contains the input address
 			// if lineinfo contains symbol '?' then the filename and line number cannot be determined (the output is ??:0)
 			if (strchr(lineInfo, ':') == NULL ||
 			    strchr(lineInfo, '?') != NULL)
