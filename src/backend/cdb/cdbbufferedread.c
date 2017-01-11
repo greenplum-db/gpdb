@@ -408,10 +408,10 @@ void BufferedReadSetTemporaryRange(
 
 		/* 
 		 * Seek to the requested beginning position. 
-		 * MPP-17061: allow seeking backward(negative offset) in file,
-		 * this could happen during index scan, if we do look up for a
+		 * MPP-17061: allow seeking backward (negative offset) in file,
+		 * this could happen during index scan, if we do lookup for a
 		 * block directory entry at the end of the segment file, followed
-		 * by a look up for a block directory entry at the beginning of file.
+		 * by a lookup for a block directory entry at the beginning of file.
 		 */
 		int64 seekOffset = beginFileOffset - largeReadAfterPos;
 		int64 seekPos = FileSeek(bufferedRead->file, seekOffset, SEEK_CUR);
@@ -663,9 +663,8 @@ int64 BufferedReadCurrentPosition(
 }
 
 /*
- * Flushes the current file for append.  Caller is resposible for closing
+ * Flushes the current file for append.  Caller is responsible for closing
  * the file afterwards.
- *
  */
 void BufferedReadCompleteFile(
     BufferedRead       *bufferedRead)

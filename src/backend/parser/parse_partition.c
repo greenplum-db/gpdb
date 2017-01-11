@@ -3548,7 +3548,7 @@ partition_range_every(ParseState *pstate, PartitionBy *pBy, List *coltypes,
 						 ((IsA(pBSpec, PartitionValuesSpec)) ?
 						  parser_errposition(pstate,
 								((PartitionValuesSpec *) pBSpec)->location) :
-				/* else use invalid parsestate/postition */
+				/* else use invalid parsestate/position */
 						  parser_errposition(NULL, 0)
 						  )
 						 ));
