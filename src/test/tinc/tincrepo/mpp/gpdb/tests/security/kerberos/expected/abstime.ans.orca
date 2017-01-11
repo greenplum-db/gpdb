@@ -58,7 +58,6 @@ INSERT INTO ABSTIME_TBL (f1) VALUES ('bad date format');
 psql:/data/gpadmin/pulse2-agent/agents/agent1/work/GPDB-43_STABLE-TINC-kerberos_smoke/rhel6_kerberos_smoke/cdbunit/tinc/tincrepo/mpp/gpdb/tests/security/kerberos/output/abstime_orca.sql:42: ERROR:  invalid input syntax for type abstime: "bad date format"
 INSERT INTO ABSTIME_TBL (f1) VALUES ('Jun 10, 1843');
 psql:/data/gpadmin/pulse2-agent/agents/agent1/work/GPDB-43_STABLE-TINC-kerberos_smoke/rhel6_kerberos_smoke/cdbunit/tinc/tincrepo/mpp/gpdb/tests/security/kerberos/output/abstime_orca.sql:43: ERROR:  cannot convert abstime "invalid" to timestamp
-ERROR:  GPDB exception. Aborting PQO plan generation. (CGPOptimizer.cpp:73)
 -- test abstime operators
 SELECT '' AS eight, * FROM ABSTIME_TBL ORDER BY 2;
  eight |           f1           
