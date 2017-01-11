@@ -168,10 +168,9 @@ static void BufferedReadIo(
 		currentReadPosition = FileNonVirtualCurSeek(bufferedRead->file);
 		if (currentReadPosition < 0)
 			ereport(ERROR, (errcode_for_file_access(),
-							errmsg("unable to get current position for table \"%s\" in file \"%s\" (errcode %d)",
+							errmsg("unable to get current position for table \"%s\" in file \"%s\": %m",
 								   bufferedRead->relationName,
-							       bufferedRead->filePathName,
-								   errno)));
+							       bufferedRead->filePathName)));
 			
 		if (currentReadPosition != bufferedRead->largeReadPosition)
 		{
@@ -195,8 +194,8 @@ static void BufferedReadIo(
 
 		if (actualLen == 0) 
 			ereport(ERROR, (errcode_for_file_access(),
-							errmsg("read beyond eof in table \"%s\" in file \"%s\","
-								"read postition " INT64_FORMAT " (small offset %d),"
+							errmsg("read beyond eof in table \"%s\" file \"%s\", "
+								"read position " INT64_FORMAT " (small offset %d), "
 								"actual read length %d (large read length %d)",
 								bufferedRead->relationName,
 								bufferedRead->filePathName,
@@ -206,19 +205,18 @@ static void BufferedReadIo(
 								bufferedRead->largeReadLen)));
 		else if (actualLen < 0)
 			ereport(ERROR, (errcode_for_file_access(),
-							errmsg("unable to read table \"%s\" file \"%s\" (errcode %d)"
-								"read postition " INT64_FORMAT " (small offset %d),"
-								"actual read length %d (large read length %d)",
+							errmsg("unable to read table \"%s\" file \"%s\", "
+								"read position " INT64_FORMAT " (small offset %d), "
+								"actual read length %d (large read length %d): %m",
 								bufferedRead->relationName,
 								bufferedRead->filePathName,
-								errno,
 								bufferedRead->largeReadPosition,
 								offset,
 								actualLen,
 								bufferedRead->largeReadLen)));
 		
 		elogif(Debug_appendonly_print_read_block, LOG,
-				 "Append-Only storage read: table '%s', segment file '%s', read postition " INT64_FORMAT " (small offset %d), "
+				 "Append-Only storage read: table \"%s\", segment file \"%s\", read position " INT64_FORMAT " (small offset %d), "
 				 "actual read length %d (equals large read length %d is %s)",
 				 bufferedRead->relationName,
 				 bufferedRead->filePathName,
@@ -419,10 +417,9 @@ void BufferedReadSetTemporaryRange(
 		int64 seekPos = FileSeek(bufferedRead->file, seekOffset, SEEK_CUR);
 		if (seekPos != beginFileOffset)
 			ereport(ERROR, (errcode_for_file_access(),
-							errmsg("unable to seek to position for table \"%s\" in file \"%s\" (errcode %d):%m",
+							errmsg("unable to seek to position for table \"%s\" in file \"%s\": %m",
 								   bufferedRead->relationName,
-								   bufferedRead->filePathName,
-								   errno)));
+								   bufferedRead->filePathName)));
 
 		bufferedRead->bufferOffset = 0;
 
