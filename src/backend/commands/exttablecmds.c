@@ -826,7 +826,7 @@ transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswrita
 {
 	ListCell   *option;
 	Datum		result;
-	char	   *format_str = NULL;
+	char	   *format_str;
 	char	   *delim = NULL;
 	char	   *null_print = NULL;
 	char	   *quote = NULL;
@@ -1088,15 +1088,7 @@ transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswrita
 		const int	maxlen = 32;
 
 		format_str = (char *) palloc0(maxlen + 1);
-		if (format_str)
-		{
-			sprintf((char *) format_str, "%s '%s' ", "formatter", val);
-		}
-		else
-		{
-			ereport(ERROR, (errcode(ERRCODE_GP_INTERNAL_ERROR),
-							errmsg("palloc return null")));
-		}
+		sprintf(format_str, "%s '%s' ", "formatter", val);
 	}
 	else
 	{
@@ -1148,8 +1140,7 @@ transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswrita
 	result = DirectFunctionCall1(textin, CStringGetDatum(format_str));
 
 	/* clean up */
-	if (format_str)
-		pfree(format_str);
+	pfree(format_str);
 	if (force_notnull)
 		pfree(fnn.data);
 	if (force_quote)
