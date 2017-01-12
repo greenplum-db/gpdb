@@ -1674,28 +1674,30 @@ class GpTransferCommand(Command):
                     logger.info('Remaining %s of %s tables', remaining_tables, self._table_transfer_set_total)
 
     def _get_distributed_by(self):
-        sql = '''SELECT STRING_AGG(attname, ', ' ORDER BY colorder)
+        sql = '''SELECT attname
 FROM (
-  SELECT localoid, UNNEST(attrnums) AS colnum, GENERATE_SERIES(1, ARRAY_UPPER(attrnums, 1)) AS colorder
-  FROM gp_distribution_policy
-) d
-JOIN pg_attribute a ON (d.localoid = a.attrelid AND d.colnum = a.attnum)
-JOIN pg_class c ON (d.localoid = c.oid)
-JOIN pg_namespace n ON (c.relnamespace = n.oid)
-WHERE nspname = '%s'
-AND relname = '%s'
-GROUP BY nspname, relname;''' % (self._table_pair.source.schema,
-                                 self._table_pair.source.table)
+      SELECT localoid, UNNEST(attrnums) AS colnum, GENERATE_SERIES(1, ARRAY_UPPER(attrnums, 1)) AS colorder
+      FROM gp_distribution_policy
+ ) d
+ JOIN pg_attribute a ON (d.localoid = a.attrelid AND d.colnum = a.attnum)
+ JOIN pg_class c ON (d.localoid = c.oid)
+ JOIN pg_namespace n ON (c.relnamespace = n.oid)
+ WHERE nspname = '%s'
+ AND relname = '%s'
+ ORDER BY colorder;''' % (self._table_pair.source.schema,
+                           self._table_pair.source.table)
         try:
-            row = execSQLForSingletonRow(self._src_conn, sql)
+            cur = execSQL(self._src_conn, sql)
+            attnames = cur.fetchall()
+            cur.close()
+            if len(attnames) == 0:
+                return 'DISTRIBUTED RANDOMLY'
+
             # NOTE: ideally, we can use pg.escape_identifier for this part, but
-            # that is introducted in pygresql 4.1 and we are in 4.0
-            quoted_column_name = escapeDoubleQuoteInSQLString(row[0])
-            return '''DISTRIBUTED BY (%s)''' % quoted_column_name
-        # NOTE: execSQLForSingletonRow will raise if it doesn't find at least 1
-        # row. This is expected to happen if the table is DISTRIBUTED RANDOMLY
-        except UnexpectedRowsError:
-            return 'DISTRIBUTED RANDOMLY'
+            # that is introduced in pygresql 4.1 and we are in 4.0
+            escaped_attnames = [escapeDoubleQuoteInSQLString(attname) for attname in attnames]
+            distributed_by = ", ".join(escaped_attnames)
+            return '''DISTRIBUTED BY (%s)''' % distributed_by
         except Exception as e:
             logger.warn('Unable to determine distribution policy for "%s". Using '
                         'distributed randomly instead.\nmessage: %s' % (self._table_pair.dest, str(e)))
