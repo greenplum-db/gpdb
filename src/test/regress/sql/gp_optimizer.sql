@@ -1375,6 +1375,15 @@ set client_min_messages='log';
 select count(*) from foo group by cube(a,b);
 reset client_min_messages;
 
+-- ANYENUM test
+CREATE TYPE rainbow AS ENUM ('red', 'orange', 'yellow', 'green', 'blue', 'purple');
+CREATE FUNCTION echo_me(anyenum) RETURNS text AS $$
+BEGIN
+RETURN $1::text || 'omg';
+END
+$$ LANGUAGE plpgsql STABLE;
+EXPLAIN SELECT echo_me('red'::rainbow);
+
 -- start_ignore
 drop table foo;
 -- end_ignore
