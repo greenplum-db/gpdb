@@ -4717,7 +4717,10 @@ OpenIntoRel(QueryDesc *queryDesc)
 	 *
 	 * In PostgreSQL, we resolve default tablespace here. In GPDB, that's
 	 * done earlier, because we need to dispatch the final tablespace name,
-	 * after resolving any defaults, to the segments. So usually, we already
+	 * after resolving any defaults, to the segments. (Otherwise, we would
+	 * rely on the assumption that default_tablespace GUC is kept in sync
+	 * in all segment connections. That actually seems to be the case, as of
+	 * this writing, but better to not rely on it.) So usually, we already
 	 * have the fully-resolved tablespace name stashed in queryDesc->ddesc->
 	 * intoTableSpaceName. In the dispatcher, we filled it in earlier, and
 	 * in executor nodes, we received it from the dispatcher along with the

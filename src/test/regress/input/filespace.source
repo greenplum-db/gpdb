@@ -1186,6 +1186,23 @@ SELECT count(*) FROM fsts_busted_heap1;
 SELECT count(*) FROM fsts_busted_heap2;
 
 --
+-- Test that default_tablespace correctly affects both the master and
+-- segments, in CREATE TABLE AS. (Used to have a bug where the master
+-- and segments chose different tablespace.)
+--
+
+set default_tablespace = 'regression_ts_b1';
+create table default_tblspc_test as select g from generate_series(1, 10) g;
+
+-- Check that the table was created in the same namespace on every node
+-- (should return 1)
+select count(*) from (
+  select relnamespace from pg_class where relname='default_tblspc_test'
+  union
+  select relnamespace from gp_dist_random('pg_class') where relname='default_tblspc_test'
+) t;
+
+--
 -- Filespace/Tablespace Transaction tests
 --
 BEGIN;
