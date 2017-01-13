@@ -2744,9 +2744,8 @@ binary_upgrade_set_pg_class_oids(Archive *fout, PQExpBuffer upgrade_buffer, Oid 
 	Oid			pg_appendonly_blkdiridxid;
 	Oid			pg_appendonly_visimaprelid;
 	Oid			pg_appendonly_visimapidxid;
-	PQExpBuffer aoseg_query;
 	PGresult   *aoseg_res;
-	Oid			aoseg_namespace;
+	Oid			aoseg_namespace = InvalidOid;
 	bool		columnstore;
 
 	appendPQExpBuffer(upgrade_query,
@@ -2803,14 +2802,14 @@ binary_upgrade_set_pg_class_oids(Archive *fout, PQExpBuffer upgrade_buffer, Oid 
 		 */
 		if (OidIsValid(pg_appendonly_segrelid))
 		{
-			aoseg_query = createPQExpBuffer();
+			int oid_col;
 
-			appendPQExpBuffer(aoseg_query, "SELECT oid from pg_namespace WHERE nspname = 'pg_aoseg';");
-			aoseg_res = PQexec(g_conn, aoseg_query->data);
-			aoseg_namespace = atooid(PQgetvalue(aoseg_res, 0, PQfnumber(aoseg_res, "oid")));
+			aoseg_res = PQexec(g_conn, "SELECT oid FROM pg_namespace WHERE nspname = 'pg_aoseg'");
+			oid_col = PQfnumber(aoseg_res, "oid");
+			if (!PQgetisnull(aoseg_res, 0, oid_col))
+				aoseg_namespace = atooid(PQgetvalue(aoseg_res, 0, oid_col));
 
 			PQclear(aoseg_res);
-			destroyPQExpBuffer(aoseg_query);
 		}
 
 		/* only tables have toast tables, not indexes */
@@ -2838,7 +2837,7 @@ binary_upgrade_set_pg_class_oids(Archive *fout, PQExpBuffer upgrade_buffer, Oid 
 																		   "'%u'::pg_catalog.oid);\n",
 							  pg_class_reltoastidxid, pg_class_oid, pg_class_reltoastnamespace);
 		}
-		if (OidIsValid(pg_appendonly_segrelid))
+		if (OidIsValid(pg_appendonly_segrelid) && OidIsValid(aoseg_namespace))
 		{
 			appendPQExpBuffer(upgrade_buffer,
 							  "SELECT binary_upgrade.preassign_relation_oid('%u'::pg_catalog.oid, "
@@ -2846,7 +2845,7 @@ binary_upgrade_set_pg_class_oids(Archive *fout, PQExpBuffer upgrade_buffer, Oid 
 																		   "'%u'::pg_catalog.oid);\n",
 							  pg_appendonly_segrelid, (columnstore ? "cs" : ""), pg_class_oid, aoseg_namespace);
 		}
-		if (OidIsValid(pg_appendonly_blkdirrelid))
+		if (OidIsValid(pg_appendonly_blkdirrelid) && OidIsValid(aoseg_namespace))
 		{
 			appendPQExpBuffer(upgrade_buffer,
 							  "SELECT binary_upgrade.preassign_relation_oid('%u'::pg_catalog.oid, "
@@ -2861,7 +2860,7 @@ binary_upgrade_set_pg_class_oids(Archive *fout, PQExpBuffer upgrade_buffer, Oid 
 																		   "'%u'::pg_catalog.oid);\n",
 							  pg_appendonly_blkdiridxid, pg_class_oid, aoseg_namespace);
 		}
-		if (OidIsValid(pg_appendonly_visimaprelid))
+		if (OidIsValid(pg_appendonly_visimaprelid) && OidIsValid(aoseg_namespace))
 		{
 			appendPQExpBuffer(upgrade_buffer,
 							  "SELECT binary_upgrade.preassign_relation_oid('%u'::pg_catalog.oid, "
