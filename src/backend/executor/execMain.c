@@ -646,6 +646,8 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 
 			build_tuple_node_list(&queryDesc->ddesc->transientTypeRecords);
 
+			queryDesc->ddesc->oidAssignments = GetAssignedOidsForDispatch();
+
 			/*
 			 * First, see whether we need to pre-execute any initPlan subplans.
 			 */
@@ -661,8 +663,6 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 																   queryDesc->params,
 																   queryDesc->estate->es_param_exec_vals);
 			}
-
-			queryDesc->ddesc->oidAssignments = GetAssignedOidsForDispatch();
 
 			/*
 			 * This call returns after launching the threads that send the
