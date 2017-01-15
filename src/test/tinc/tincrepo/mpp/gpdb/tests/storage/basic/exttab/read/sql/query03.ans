@@ -670,14 +670,6 @@ create external table badt2 (x text)
 location ('bad_protocol://@hostname@@abs_srcdir@/data/no/such/place/badt2.tbl' )
 format 'text' (delimiter '|');
 ERROR: protocol "bad_protocol" does not exist
-create external table ext_missing(a int, b int)
-location ('gpfdist://@hostname@:99/missing.csv')
-format 'csv';
-CREATE EXTERNAL TABLE
-select count(*) from ext_missing;
- ERROR:  connection with gpfdist failed for gpfdist://@hostname@:99/missing.csv. effective url: http://127.0.0.1:99/missing.csv. error code = 61 (Connection refused)  (seg0 slice1 @hostname@:25432 pid=18974)
-drop external table ext_missing;
-DROP EXTERNAL TABLE
 -- start_ignore
 drop table if exists extcpytest;
 NOTICE:  table "extcpytest" does not exist, skipping

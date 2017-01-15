@@ -34,7 +34,7 @@ SET search_path TO 'exttableext';
 -- Test 4.1: create uni-directional write protocol
 -- create WET using created protocol
 
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
     CREATE PROTOCOL demoprot (
         writefunc = write_to_file_stable
     );
@@ -52,7 +52,7 @@ SET search_path TO 'exttableext';
 -- Test 4.2: create uni-directional read protocol 
 -- create RET using created protocol
 
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
     CREATE PROTOCOL demoprot (
         readfunc = read_from_file_stable
     );
@@ -76,7 +76,7 @@ SET search_path TO 'exttableext';
 -- When importing, data file is required for each primary segment. 
 -- Otherwise "ERROR:  demoprot_import: could not open file " will be thrown.
 
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
     CREATE PROTOCOL demoprot (
         readfunc = read_from_file_stable,
         writefunc = write_to_file_stable
@@ -195,21 +195,21 @@ SET search_path TO 'exttableext';
 -- Test 11: Negative - Using invalid protocol attribute name
 -- attribute names must be readproc, write proc, and validatorproc
 
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
     CREATE PROTOCOL demoprot (
         readfunction  = read_from_file, 
         writefunction = write_to_file
     );
 -- Test 12: Negatvie - using undefined function when defining protocol
 
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
     CREATE PROTOCOL demoprot (
         readfunc  = read_from_file_badname, 
         writefunc = write_to_file_badname
     );
 -- Test 13: Negatvie - syntax error: missing '=' when defining protocol
 
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
     CREATE PROTOCOL demoprot (
         readfunc read_from_file, 
         writefunc write_to_file
@@ -218,7 +218,7 @@ SET search_path TO 'exttableext';
 -- Test 14: Negative - switching read function and write function
 -- This is user error. GPDB should display meaningful error message.
 -- Not running this test. Comment from cdbfast - Comment this out since it doesn't make much sense and it creates big output files
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
     CREATE PROTOCOL demoprot (
         writefunc = read_from_file_stable, 
         readfunc = write_to_file_stable
@@ -244,7 +244,7 @@ SET search_path TO 'exttableext';
     --SELECT * FROM exttabtest;
 -- Test 15: Negative - circular reference
 -- write to WET while selecting from RET, and WET and RET are using the same data source files
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
     CREATE PROTOCOL demoprot (
         readfunc = read_from_file_stable,
         writefunc = write_to_file_stable
@@ -449,107 +449,10 @@ SET search_path TO 'exttableext';
     WHERE proname like 'write_to_file%'
        or proname like 'read_from_file%'
     ORDER BY proname;
--- Test 32: Protocol dependency - drop protocol when it has dependent external table
--- Protocol can be dropped when external table is still referencing it
--- Entries should be removed from pg_extprotocol and pg_depend tables.
--- External table should not be accessible after dropping the protocol.
-
-    -- Check RET exttabtest_r is using protocol demoprot
-    select location from pg_exttable where reloid='exttabtest_r'::regclass;
-    -- showing {demoprot://exttabtest.txt}
-
-    -- Check pg_extprotocol table
-    select ptcname from pg_extprotocol where ptcname='demoprot';
-    -- returns one record 
-
-    -- Check pg_depend table for protocol demoprot dependency
-    select count(*) from pg_depend 
-    where objid in (
-        select oid from pg_extprotocol where ptcname='demoprot');
-    -- returns 2 records
-
-    -- truncate table exttabtest and load 100 records
-    TRUNCATE TABLE exttabtest;
-    INSERT INTO exttabtest SELECT i, 'name'||i, i*2, i*3 FROM generate_series(1,100) i;
-
-    -- Check WET is working fine before dropping the protocol demoprot
-    SELECT * FROM clean_exttabtest_files;
-    INSERT INTO exttabtest_w (SELECT * FROM exttabtest);
-
-    -- Check RET is working fine before dropping the protocol demoprot
-    select count(*) from exttabtest_r;
-    -- returns count =  100
-
-    -- DROP protocol demoprot when there is RET using it
-    drop protocol demoprot;
-    -- DROP PROTOCOL
-
-    -- Check RET exttabtest_r_1m is still referencing protocol demoprot
-    select location from pg_exttable where reloid='exttabtest_r'::regclass;
-    -- returns 1
-
-    -- Check pg_extprotocol table, the entry should be dropped
-    select ptcname from pg_extprotocol where ptcname='demoprot';
-    -- returns 0
-
-    -- Check pg_depend table for protocol demoprot dependency
-    -- no entry should be restured
-    select count(*) from pg_depend 
-    where objid in (
-        select oid from pg_extprotocol where ptcname='demoprot');    
-    -- returns 0
-
-    -- RET now should not be accessible, showing protocol does not exist
-    select count(*) from exttabtest_r;
-    -- shows ERROR:  protocol "demoprot" does not exist  (seg0 slice1 rh55-qavm57:5532 pid=11077)"
--- Test 33: Protocol dependency - restore protocol and check the dependent external table
--- Protocol is referenced by external table via protocol name.
--- There is no other dependency between protocol and external table.
-
-    -- Restore (recreate) protocol with the same protocol name demoprot
-    DROP PROTOCOL IF EXISTS demoprot;
-    CREATE PROTOCOL demoprot (
-        readfunc = read_from_file_stable,
-        writefunc = write_to_file_stable
-    );
-    -- CREATE PROTOCOL
-
-    -- Check WET is working fine after restore the dropped the protocol demoprot
-    SELECT * FROM clean_exttabtest_files;
-    INSERT INTO exttabtest_w (SELECT * FROM exttabtest);
-
-    -- Chect existing RET that using protocol demoprot
-    -- it should be accessible after restore the protocol
-    select count(*) from exttabtest_r;
-    -- returns count = 100
-
--- Test 34: Protocol dependency - drop protocol cascade
-
-    -- Drop protocol cascade works fine.
-    DROP PROTOCOL demoprot CASCADE;
-    -- DROP PROTOCOL
-
-    -- Check RET exttabtest_r_1m is still referencing protocol demoprot
-    -- not affected by drop protocol cascade
-    select location from pg_exttable where reloid='exttabtest_r'::regclass;
-
-    -- Verified other catalog tables: pg_extprotocol, pg_depend
-    -- Check pg_extprotocol for protocol demoprot, it should be dropped
-    select count(*) from pg_depend 
-    where objid in (
-        select oid from pg_extprotocol where ptcname='demoprot');
-
-    -- Check dependency: pg_depend table
-    select extprot.ptcname, proc1.proname readfunc, proc2.proname writefunc
-    from pg_extprotocol extprot, pg_proc proc1, pg_proc proc2 
-    where extprot.ptcname='demoprot' 
-        and extprot.ptcreadfn=proc1.oid 
-        and extprot.ptcwritefn=proc2.oid;
-
 -- Test 35: UDF dependency - drop function cascade
 
     -- Restore (recreate) protocol with the same protocol name demoprot
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
     CREATE PROTOCOL demoprot (
         readfunc = read_from_file_stable,
         writefunc = write_to_file_stable
@@ -573,10 +476,6 @@ SET search_path TO 'exttableext';
         select oid from pg_extprotocol where ptcname='demoprot');
 
     -- Verified other catalog tables: pg_extprotocol, pg_depend
-    -- Check RET exttabtest_r is still referencing protocol demoprot
-    select location from pg_exttable where reloid='exttabtest_r'::regclass;
-    -- Still showing  {demoprot://exttabtest.txt}
-
     -- Check pg_extprotocol table, the entry should be dropped
     select count(*) from pg_extprotocol where ptcname='demoprot';
     -- returns 0
@@ -588,12 +487,25 @@ SET search_path TO 'exttableext';
         '$libdir/gpextprotocol.so', 'demoprot_import' LANGUAGE C STABLE;
 
     -- Restore (recreate) protocol with the same protocol name demoprot
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
     CREATE PROTOCOL demoprot (
         readfunc = read_from_file_stable,
         writefunc = write_to_file_stable
     );
     -- CREATE PROTOCOL
+
+    CREATE READABLE EXTERNAL TABLE exttabtest_r(like exttabtest)
+        LOCATION('demoprot://exttabtest.txt') 
+    FORMAT 'text';
+
+    CREATE WRITABLE EXTERNAL TABLE exttabtest_w(like exttabtest)
+        LOCATION('demoprot://exttabtest.txt') 
+    FORMAT 'text'
+    DISTRIBUTED BY (id);
+
+    -- truncate table exttabtest and load 100 records
+    TRUNCATE TABLE exttabtest;
+    INSERT INTO exttabtest SELECT i, 'name'||i, i*2, i*3 FROM generate_series(1,100) i;
 
     -- Check existing WET that using protocol demoprot
     SELECT * FROM clean_exttabtest_files;
@@ -1258,7 +1170,7 @@ CREATE OR REPLACE FUNCTION url_validator() RETURNS void AS
    '$libdir/gpextprotocol.so', 'demoprot_validate_urls' LANGUAGE C STABLE;
 
 -- declare the protocol name along with in/out funcs and validator func
-DROP PROTOCOL IF EXISTS demoprot;
+DROP PROTOCOL IF EXISTS demoprot CASCADE;
 CREATE PROTOCOL demoprot (
     readfunc  = read_from_file, 
     writefunc = write_to_file,
@@ -1287,7 +1199,7 @@ CREATE OR REPLACE FUNCTION url_validator() RETURNS integer AS
    '$libdir/gpextprotocol.so', 'demoprot_validate_urls' LANGUAGE C STABLE;
 
 -- declare the protocol name along with in/out funcs and validator func
-DROP PROTOCOL IF EXISTS demoprot;
+DROP PROTOCOL IF EXISTS demoprot CASCADE;
 CREATE PROTOCOL demoprot (
 readfunc = read_from_file,
 writefunc = write_to_file,
@@ -1296,7 +1208,7 @@ validatorfunc = url_validator
 -- Test 5: Negative - invalid protocol attribute name for validator function: must be "validatorfunc"
 -- declare the protocol using invalid attribute name "validatorproc"
 
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
     CREATE PROTOCOL demoprot (
         readfunc  = read_from_file, 
         writefunc = write_to_file,
@@ -1304,49 +1216,6 @@ validatorfunc = url_validator
     );
 
 -- ERROR: protocol attribute "validatorproc" not recognized
-
--- Test 86: validation only happens at ext table create time, not execution time
-
-    -- create an external table using demoprot protocol that does NOT have validator defined
-    -- The external table can be created with potential offending issues,
-    -- e.g., using "secured_directory" in the url
-    -- declare the protocol name along with in/out funcs and WITHOUT validator
-
-    DROP PROTOCOL IF EXISTS demoprot;
-    CREATE PROTOCOL demoprot (
-        readfunc  = read_from_file, 
-        writefunc = write_to_file
-    );
-
-    -- create ext table with offending url (contains "secured_directory")
-    CREATE READABLE EXTERNAL TABLE exttabtest_offending_url_r(like exttabtest)
-        LOCATION('demoprot://secured_directory/exttabtest.txt') 
-    FORMAT 'text';
-    -- You should get "No such file or directory" error, which means validator is not enforced during execution time:
-    -- ERROR:  demoprot_import: could not open file "secured_directory/exttabtest.txt" for reading: No such file or directory 
-
-    -- Create validator function url_validator()
-    DROP FUNCTION IF EXISTS url_validator();
-    CREATE OR REPLACE FUNCTION url_validator() RETURNS void AS
-        '$libdir/gpextprotocol.so', 'demoprot_validate_urls' LANGUAGE C STABLE;
-
-    -- After successfully created ext table, replace protocol with validator
-    DROP PROTOCOL IF EXISTS demoprot;
-    CREATE PROTOCOL demoprot (
-        readfunc  = read_from_file, 
-        writefunc = write_to_file,
-        validatorfunc = url_validator
-    );
-
-    -- Verify that validator will NOT do validation to existing ext table. should see results be returned successfully
-    select count(*) from exttabtest_offending_url_r; 
-
-    -- Drop the existing ext table and recreate
-    -- Validation should take effect and cannot create the ext table
-    DROP EXTERNAL TABLE IF EXISTS exttabtest_offending_url_r;
-    CREATE READABLE EXTERNAL TABLE exttabtest_offending_url_r(like exttabtest)
-        LOCATION('demoprot://secured_directory/exttabtest.txt') 
-    FORMAT 'text';
 
 -- ERROR: using 'secured_directory' in a url isn't allowed
 -- Create multiple roles with login option so that they can be used for protocol permission tests and alter protocol tests
@@ -1369,6 +1238,16 @@ validatorfunc = url_validator
 
 
 -- Test 92: Rename existing protocol
+    DROP FUNCTION IF EXISTS url_validator();
+
+    CREATE OR REPLACE FUNCTION url_validator() RETURNS void AS
+            '$libdir/gpextprotocol.so', 'demoprot_validate_urls' LANGUAGE C STABLE;
+
+    CREATE PROTOCOL demoprot (
+        readfunc  = read_from_file, 
+        writefunc = write_to_file,
+        validatorfunc = url_validator
+    );
 
     -- Create external RET and WET
     DROP EXTERNAL TABLE IF EXISTS exttabtest_w;
@@ -1431,7 +1310,7 @@ validatorfunc = url_validator
 
     -- login as superuser huangh5
     -- create trusted protocol demoprot
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
     CREATE TRUSTED PROTOCOL demoprot (
         readfunc = read_from_file_stable,
         writefunc = write_to_file_stable
@@ -1503,17 +1382,16 @@ validatorfunc = url_validator
 
 
     -- Verified owner (non superuser) can drop the protocol
-    DROP PROTOCOL demoprot;
+    DROP PROTOCOL demoprot CASCADE;
 
 RESET ROLE;
 
 -- Test 94: Untrusted protocol - Change ownership
 -- The owner of untrusted protocol (not a superuser) can still create external table
 -- using the untrusted protocol.
-
     -- connect as superuser 
     -- create untrusted protocol demoprot
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
     CREATE PROTOCOL demoprot (
         readfunc = read_from_file_stable,
         writefunc = write_to_file_stable
@@ -1551,13 +1429,6 @@ RESET ROLE;
     FORMAT 'text'
     DISTRIBUTED BY (id);
 
-    -- Verify non-privileged user "demoprot_nopriv" can export data via existing WET exttabtest_w_new
-    SELECT * FROM clean_exttabtest_files;
-    INSERT INTO exttabtest_w_new (SELECT * FROM exttabtest);
-
-    -- Verify non-privileged user "demoprot_nopriv" can load data via existing RET exttabtest_r_new
-    select count(*) from exttabtest_r_new;
-
     -- Verified non superuser cannot drop the protocol
     DROP PROTOCOL demoprot;
 -- Test 95: Alter protocol negative tests
@@ -1578,7 +1449,7 @@ RESET ROLE;
 
     -- login as superuser huangh5
     -- create untrusted protocol demoprot
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
     CREATE PROTOCOL demoprot (
         readfunc = read_from_file_stable,
         writefunc = write_to_file_stable
@@ -1594,14 +1465,8 @@ RESET ROLE;
     -- connect as a different superuser "demoprot_super"
     SET ROLE demoprot_super;
     select user;
-
-    -- Verify superuser demoprot_super can still load data via existing RET
-    select count(*) from exttabtest_r;
-
-    -- Verify superuser demoprot_super can still export data via existing WET
+    
     SELECT * FROM clean_exttabtest_files;
-    INSERT INTO exttabtest_w (SELECT * FROM exttabtest);
-
     -- Verify superuser "demoprot_super" can create new ext table using untrusted protocol demoprot
     DROP EXTERNAL TABLE IF EXISTS exttabtest_r_new;
     CREATE READABLE EXTERNAL TABLE exttabtest_r_new(like exttabtest)
@@ -1624,6 +1489,16 @@ RESET ROLE;
 -- Test 97: Non-trusted protocol - non-priv user
 -- Non-privileged user cannot use non-trusted protocol to create external table.
 -- With granted permissions on existing external table, Non-privileged user can access existing WET and RET
+    DROP EXTERNAL TABLE IF EXISTS exttabtest_r;
+    CREATE READABLE EXTERNAL TABLE exttabtest_r(like exttabtest)
+        LOCATION('demoprot://exttabtest.txt') 
+    FORMAT 'text';
+
+    DROP EXTERNAL TABLE IF EXISTS exttabtest_w;
+    CREATE WRITABLE EXTERNAL TABLE exttabtest_w(like exttabtest)
+        LOCATION('demoprot://exttabtest.txt') 
+    FORMAT 'text'
+    DISTRIBUTED BY (id);
 
     -- As superuser, GRANT SELECT permission on RET
     -- and INSERT permission on WET to on-privileged user "demoprot_nopriv"
@@ -1700,7 +1575,7 @@ RESET ROLE;
 
     -- connect as superuser 
     -- create trusted protocol demoprot
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
     CREATE TRUSTED PROTOCOL demoprot (
         readfunc = read_from_file_stable,
         writefunc = write_to_file_stable
@@ -1746,7 +1621,7 @@ RESET ROLE;
 
     -- connect as superuser 
     -- create trusted protocol demoprot
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
     CREATE TRUSTED PROTOCOL demoprot (
         readfunc = read_from_file_stable,
         writefunc = write_to_file_stable
@@ -1764,13 +1639,6 @@ RESET ROLE;
     -- login as non-privileged user "demoprot_nopriv"
     SET ROLE demoprot_nopriv;
     select user;
-
-    -- Verify non-privileged user "demoprot_nopriv" can still export data via existing WET exttabtest_w
-    SELECT * FROM clean_exttabtest_files;
-    INSERT INTO exttabtest_w (SELECT * FROM exttabtest);
-
-    -- Verify non-privileged user "demoprot_nopriv" can still load data via existing RET exttabtest_r
-    select count(*) from exttabtest_r;
 
     -- Verify after permissions have been revoked
     -- non-privileged user "demoprot_nopriv" cannot create new ext table 
@@ -1790,11 +1658,15 @@ RESET ROLE;
 -- Non-privileged user can use trusted protocol to create readable external table.
 
     -- Create exttabtest_new.txt data file
+    CREATE WRITABLE EXTERNAL TABLE exttabtest_w (like exttabtest)
+        LOCATION('demoprot://exttabtest_new.txt') 
+    FORMAT 'text'
+    DISTRIBUTED BY (id);
     SELECT * FROM clean_exttabtest_files;
     INSERT INTO exttabtest_w (SELECT * FROM exttabtest);
 
     -- As superuser, demoport is created as a trusted readonly protocol
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
     CREATE TRUSTED PROTOCOL demoprot (
         readfunc = read_from_file_stable
     );
@@ -1836,7 +1708,7 @@ RESET ROLE;
 
     -- connect as superuser 
     -- create trusted protocol demoprot
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
     CREATE TRUSTED PROTOCOL demoprot (
         readfunc = read_from_file_stable,
         writefunc = write_to_file_stable
@@ -1867,7 +1739,7 @@ RESET ROLE;
 -- Non-privileged user can use trusted protocol to create writable external table.
 
     -- As superuser, demoport is created as a trusted readonly protocol
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
     CREATE TRUSTED PROTOCOL demoprot (
         writefunc = write_to_file_stable
     );
@@ -1909,7 +1781,7 @@ RESET ROLE;
 
     -- connect as superuser 
     -- create trusted protocol demoprot
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
     CREATE TRUSTED PROTOCOL demoprot (
         readfunc = read_from_file_stable,
         writefunc = write_to_file_stable

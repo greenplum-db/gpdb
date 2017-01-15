@@ -3,6 +3,7 @@ SET
 -- Test 3: create RET and WET using created protocol
     -- Create external RET and WET
     DROP EXTERNAL TABLE IF EXISTS exttabtest_w;
+NOTICE:  table "exttabtest_w" does not exist, skipping
 DROP EXTERNAL TABLE
     CREATE WRITABLE EXTERNAL TABLE exttabtest_w(like exttabtest)
         LOCATION('demoprot://exttabtest.txt') 
@@ -10,6 +11,7 @@ DROP EXTERNAL TABLE
     DISTRIBUTED BY (id);
 CREATE EXTERNAL TABLE
     DROP EXTERNAL TABLE IF EXISTS exttabtest_r;
+NOTICE:  table "exttabtest_r" does not exist, skipping
 DROP EXTERNAL TABLE
     CREATE READABLE EXTERNAL TABLE exttabtest_r(like exttabtest)
         LOCATION('demoprot://exttabtest.txt') 
@@ -52,7 +54,9 @@ INSERT 0 100
 
 -- Test 4.1: create uni-directional write protocol
 -- create WET using created protocol
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
+NOTICE:  drop cascades to external table exttabtest_r
+NOTICE:  drop cascades to external table exttabtest_w
 DROP PROTOCOL
     CREATE PROTOCOL demoprot (
         writefunc = write_to_file_stable
@@ -60,6 +64,7 @@ DROP PROTOCOL
 CREATE PROTOCOL
     -- Create WET with uni-directional protocol
     DROP EXTERNAL TABLE IF EXISTS exttabtest_w_uni;
+NOTICE:  table "exttabtest_w_uni" does not exist, skipping
 DROP EXTERNAL TABLE
     CREATE WRITABLE EXTERNAL TABLE exttabtest_w_uni(like exttabtest)
         LOCATION('demoprot://exttabtest_uni.txt') 
@@ -71,7 +76,8 @@ CREATE EXTERNAL TABLE
 INSERT 0 100
 -- Test 4.2: create uni-directional read protocol 
 -- create RET using created protocol
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
+NOTICE:  drop cascades to external table exttabtest_w_uni
 DROP PROTOCOL
     CREATE PROTOCOL demoprot (
         readfunc = read_from_file_stable
@@ -79,6 +85,7 @@ DROP PROTOCOL
 CREATE PROTOCOL
     -- Create RET with uni-directional protocol
     DROP EXTERNAL TABLE IF EXISTS exttabtest_r_uni;
+NOTICE:  table "exttabtest_r_uni" does not exist, skipping
 DROP EXTERNAL TABLE
     CREATE READABLE EXTERNAL TABLE exttabtest_r_uni(like exttabtest)
         LOCATION('demoprot://exttabtest_uni.txt') 
@@ -100,7 +107,8 @@ CREATE EXTERNAL TABLE
 --
 -- When importing, data file is required for each primary segment. 
 -- Otherwise "ERROR:  demoprot_import: could not open file " will be thrown.
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
+NOTICE:  drop cascades to external table exttabtest_r_uni
 DROP PROTOCOL
     CREATE PROTOCOL demoprot (
         readfunc = read_from_file_stable,
@@ -108,6 +116,7 @@ DROP PROTOCOL
     );
 CREATE PROTOCOL
     DROP EXTERNAL TABLE IF EXISTS exttabtest_w_dist;
+NOTICE:  table "exttabtest_w_dist" does not exist, skipping
 DROP EXTERNAL TABLE
     CREATE WRITABLE EXTERNAL TABLE exttabtest_w_dist(like exttabtest)
         LOCATION('demoprot://exttabtest_dist.txt') 
@@ -115,6 +124,7 @@ DROP EXTERNAL TABLE
     DISTRIBUTED BY (value2);
 CREATE EXTERNAL TABLE
     DROP EXTERNAL TABLE IF EXISTS exttabtest_r_dist;
+NOTICE:  table "exttabtest_r_dist" does not exist, skipping
 DROP EXTERNAL TABLE
     CREATE READABLE EXTERNAL TABLE exttabtest_r_dist(like exttabtest)
         LOCATION('demoprot://exttabtest_dist.txt') 
@@ -142,6 +152,7 @@ INSERT 0 100
 
 -- Test 6: using two urls and using CSV format
     DROP EXTERNAL TABLE IF EXISTS exttabtest_r_2url;
+NOTICE:  table "exttabtest_r_2url" does not exist, skipping
 DROP EXTERNAL TABLE
     CREATE READABLE EXTERNAL TABLE exttabtest_r_2url (like exttabtest)
         LOCATION('demoprot://exttabtest_2url_1.csv', 
@@ -149,6 +160,7 @@ DROP EXTERNAL TABLE
     FORMAT 'csv';
 CREATE EXTERNAL TABLE
     DROP EXTERNAL TABLE IF EXISTS exttabtest_w_2url;
+NOTICE:  table "exttabtest_w_2url" does not exist, skipping
 DROP EXTERNAL TABLE
     CREATE WRITABLE EXTERNAL TABLE exttabtest_w_2url (like exttabtest)
         LOCATION('demoprot://exttabtest_2url_1.csv', 
@@ -219,6 +231,7 @@ INSERT 0 100
     -- ! gpssh -f allsegs ls -l /data/hhuang/MAIN/main_debug/primary/gpseg*/exttabtest_2url*.txt
 -- Test 8: Negative - using 5 urls, exceeding number of primary segments (4)
     DROP EXTERNAL TABLE IF EXISTS exttabtest_w_5url;
+NOTICE:  table "exttabtest_w_5url" does not exist, skipping
 DROP EXTERNAL TABLE
     CREATE WRITABLE EXTERNAL TABLE exttabtest_w_5url (like exttabtest)
         LOCATION('demoprot://exttabtest_5url_1.txt', 
@@ -252,7 +265,12 @@ psql:/path/sql_file:1: ERROR:  protocol "demoprot" already exists
 psql:/path/sql_file:1: ERROR:  protocol "demoprot_nonexist" does not exist
 -- Test 11: Negative - Using invalid protocol attribute name
 -- attribute names must be readproc, write proc, and validatorproc
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
+NOTICE:  drop cascades to external table exttabtest_w_5url
+NOTICE:  drop cascades to external table exttabtest_w_2url
+NOTICE:  drop cascades to external table exttabtest_r_2url
+NOTICE:  drop cascades to external table exttabtest_r_dist
+NOTICE:  drop cascades to external table exttabtest_w_dist
 DROP PROTOCOL
     CREATE PROTOCOL demoprot (
         readfunction  = read_from_file, 
@@ -260,7 +278,7 @@ DROP PROTOCOL
     );
 psql:/path/sql_file:1: ERROR:  protocol attribute "readfunction" not recognized
 -- Test 12: Negatvie - using undefined function when defining protocol
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
 psql:/path/sql_file:1: NOTICE:  protocol "demoprot" does not exist, skipping
 DROP PROTOCOL
     CREATE PROTOCOL demoprot (
@@ -269,7 +287,7 @@ DROP PROTOCOL
     );
 psql:/path/sql_file:1: ERROR:  function read_from_file_badname() does not exist
 -- Test 13: Negatvie - syntax error: missing '=' when defining protocol
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
 psql:/path/sql_file:1: NOTICE:  protocol "demoprot" does not exist, skipping
 DROP PROTOCOL
     CREATE PROTOCOL demoprot (
@@ -281,7 +299,7 @@ LINE 2:         readfunc read_from_file,
                          ^
 -- Test 14: Negative - switching read function and write function
 -- This is user error. GPDB should display meaningful error message.
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
 psql:/path/sql_file:1: NOTICE:  protocol "demoprot" does not exist, skipping
 DROP PROTOCOL
     CREATE PROTOCOL demoprot (
@@ -290,6 +308,7 @@ DROP PROTOCOL
     );
 CREATE PROTOCOL
     DROP EXTERNAL TABLE IF EXISTS exttabtest_w_switched;
+NOTICE:  table "exttabtest_r_switched" does not exist, skipping
 DROP EXTERNAL TABLE
     CREATE WRITABLE EXTERNAL TABLE exttabtest_w_switched (like exttabtest)
         LOCATION('demoprot://exttabtest_switched.txt') 
@@ -297,6 +316,7 @@ DROP EXTERNAL TABLE
     DISTRIBUTED BY (id);
 CREATE EXTERNAL TABLE
     DROP EXTERNAL TABLE IF EXISTS exttabtest_r_switched;
+NOTICE:  table "exttabtest_r_switched" does not exist, skipping
 DROP EXTERNAL TABLE
     CREATE READABLE EXTERNAL TABLE exttabtest_r_switched(like exttabtest)
         LOCATION('demoprot://exttabtest_switched.txt') 
@@ -311,8 +331,9 @@ psql:/path/sql_file:1: ERROR:  demoprot_import: could not open file "exttabtest_
     --SELECT * FROM exttabtest;
 -- Test 15: Negative - circular reference
 -- write to WET while selecting from RET, and WET and RET are using the same data source files
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
 psql:/path/sql_file:1: NOTICE:  protocol "demoprot" does not exist, skipping
+NOTICE:  drop cascades to external table exttabtest_w_switched
 DROP PROTOCOL
     CREATE PROTOCOL demoprot (
         readfunc = read_from_file_stable,
@@ -320,6 +341,7 @@ DROP PROTOCOL
     );
 CREATE PROTOCOL
     DROP EXTERNAL TABLE IF EXISTS exttabtest_w_circle;
+NOTICE:  table "exttabtest_w_circle" does not exist, skipping
 DROP EXTERNAL TABLE
     CREATE WRITABLE EXTERNAL TABLE exttabtest_w_circle(like exttabtest)
         LOCATION('demoprot://exttabtest.txt') 
@@ -327,6 +349,7 @@ DROP EXTERNAL TABLE
     DISTRIBUTED BY (id);
 CREATE EXTERNAL TABLE
     DROP EXTERNAL TABLE IF EXISTS exttabtest_r_circle;
+NOTICE:  table "exttabtest_r_circle" does not exist, skipping
 DROP EXTERNAL TABLE
     CREATE READABLE EXTERNAL TABLE exttabtest_r_circle(like exttabtest)
         LOCATION('demoprot://exttabtest.txt') 
@@ -342,6 +365,7 @@ INSERT 0 100
 INSERT 0 100
 -- Test 16: Negative - invalid URL: missing path
     drop external table if exists exttabtest_w_misspath;
+NOTICE:  table "exttabtest_w_misspath" does not exist, skipping
 DROP EXTERNAL TABLE
     CREATE WRITABLE EXTERNAL TABLE exttabtest_w_misspath(like exttabtest)
         LOCATION('demoprot://') 
@@ -369,6 +393,7 @@ psql:/path/sql_file:1: ERROR:  invalid URI 'demoprot:\\exttabtest.txt' : undefin
 psql:/path/sql_file:1: ERROR:  protocol "badprotocol" does not exist
 -- Test 20: Small dataset - 4 records
     DROP EXTERNAL TABLE IF EXISTS exttabtest_w_4records;
+NOTICE:  table "exttabtest_w_4records" does not exist, skipping
 DROP EXTERNAL TABLE
     CREATE WRITABLE EXTERNAL TABLE exttabtest_w_4records (like exttabtest)
         LOCATION('demoprot://exttabtest_4records.txt') 
@@ -376,6 +401,7 @@ DROP EXTERNAL TABLE
     DISTRIBUTED BY (id);
 CREATE EXTERNAL TABLE
     DROP EXTERNAL TABLE IF EXISTS exttabtest_r_4records;
+NOTICE:  table "exttabtest_r_4records" does not exist, skipping
 DROP EXTERNAL TABLE
     CREATE READABLE EXTERNAL TABLE exttabtest_r_4records (like exttabtest)
         LOCATION('demoprot://exttabtest_4records.txt') 
@@ -564,10 +590,19 @@ DROP FUNCTION
      1
 (1 row)
 
-    -- Try to drop UDF read_from_file_stable() that has protocol demoprot depends on it
+   -- Try to drop UDF read_from_file_stable() that has protocol demoprot depends on it
     drop function read_from_file_stable();
-psql:/path/sql_file:1: NOTICE:  protocol demoprot depends on function read_from_file_stable()
-psql:/path/sql_file:1: ERROR:  cannot drop function read_from_file_stable() because other objects depend on it
+NOTICE:  protocol demoprot depends on function read_from_file_stable()
+NOTICE:  external table exttabtest_r_1m_null depends on protocol demoprot
+NOTICE:  external table exttabtest_w_1m_null depends on protocol demoprot
+NOTICE:  external table exttabtest_r_1m depends on protocol demoprot
+NOTICE:  external table exttabtest_w_1m depends on protocol demoprot
+NOTICE:  external table exttabtest_r_null depends on protocol demoprot
+NOTICE:  external table exttabtest_w_null depends on protocol demoprot
+NOTICE:  external table exttabtest_w_misspath depends on protocol demoprot
+NOTICE:  external table exttabtest_r_circle depends on protocol demoprot
+NOTICE:  external table exttabtest_w_circle depends on protocol demoprot
+ERROR:  cannot drop function read_from_file_stable() because other objects depend on it
 HINT:  Use DROP ... CASCADE to drop the dependent objects too.
     -- Check pg_proc catalog table to verify UDF is NOT dropped
     SELECT proname, prolang,proisstrict,provolatile,pronargs,prorettype,prosrc,proacl FROM pg_proc
@@ -580,158 +615,18 @@ HINT:  Use DROP ... CASCADE to drop the dependent objects too.
  write_to_file_stable  |      13 | f           | s           |        0 |         23 | demoprot_export | 
 (2 rows)
 
--- Test 32: Protocol dependency - drop protocol when it has dependent external table
--- Protocol can be dropped when external table is still referencing it
--- Entries should be removed from pg_extprotocol and pg_depend tables.
--- External table should not be accessible after dropping the protocol.
-    -- Check RET exttabtest_r is using protocol demoprot
-    select location from pg_exttable where reloid='exttabtest_r'::regclass;
-          location           
------------------------------
- {demoprot://exttabtest.txt}
-(1 row)
-
-    -- showing {demoprot://exttabtest.txt}
-    -- Check pg_extprotocol table
-    select ptcname from pg_extprotocol where ptcname='demoprot';
- ptcname  
-----------
- demoprot
-(1 row)
-
-    -- returns one record 
-    -- Check pg_depend table for protocol demoprot dependency
-    select count(*) from pg_depend 
-    where objid in (
-        select oid from pg_extprotocol where ptcname='demoprot');
- count 
--------
-     2
-(1 row)
-
-    -- returns 2 records
-    -- truncate table exttabtest and load 100 records
-    TRUNCATE TABLE exttabtest;
-TRUNCATE TABLE
-    INSERT INTO exttabtest SELECT i, 'name'||i, i*2, i*3 FROM generate_series(1,100) i;
-INSERT 0 100
-    -- Check WET is working fine before dropping the protocol demoprot
-    SELECT * FROM clean_exttabtest_files;
- stdout 
---------
-(0 rows)
-
-    INSERT INTO exttabtest_w (SELECT * FROM exttabtest);
-INSERT 0 100
-    -- Check RET is working fine before dropping the protocol demoprot
-    select count(*) from exttabtest_r;
- count 
--------
-   100
-(1 row)
-
-    -- returns count =  100
-    -- DROP protocol demoprot when there is RET using it
-    drop protocol demoprot;
-DROP PROTOCOL
-    -- DROP PROTOCOL
-    -- Check RET exttabtest_r_1m is still referencing protocol demoprot
-    select location from pg_exttable where reloid='exttabtest_r'::regclass;
-          location           
------------------------------
- {demoprot://exttabtest.txt}
-(1 row)
-
-    -- returns 1
-    -- Check pg_extprotocol table, the entry should be dropped
-    select ptcname from pg_extprotocol where ptcname='demoprot';
- ptcname 
----------
-(0 rows)
-
-    -- returns 0
-    -- Check pg_depend table for protocol demoprot dependency
-    -- no entry should be restured
-    select count(*) from pg_depend 
-    where objid in (
-        select oid from pg_extprotocol where ptcname='demoprot');    
- count 
--------
-     0
-(1 row)
-
-    -- returns 0
-    -- RET now should not be accessible, showing protocol does not exist
-    select count(*) from exttabtest_r;
-psql:/path/sql_file:1: ERROR:  protocol "demoprot" does not exist  (seg0 slice1 rh55-qavm55:7532 pid=26605)
-    -- shows ERROR:  protocol "demoprot" does not exist  (seg0 slice1 rh55-qavm57:5532 pid=11077)"
--- Test 33: Protocol dependency - restore protocol and check the dependent external table
--- Protocol is referenced by external table via protocol name.
--- There is no other dependency between protocol and external table.
-    -- Restore (recreate) protocol with the same protocol name demoprot
-    DROP PROTOCOL IF EXISTS demoprot;
-psql:/path/sql_file:1: NOTICE:  protocol "demoprot" does not exist, skipping
-DROP PROTOCOL
-    CREATE PROTOCOL demoprot (
-        readfunc = read_from_file_stable,
-        writefunc = write_to_file_stable
-    );
-CREATE PROTOCOL
-    -- CREATE PROTOCOL
-    -- Check WET is working fine after restore the dropped the protocol demoprot
-    SELECT * FROM clean_exttabtest_files;
- stdout 
---------
-(0 rows)
-
-    INSERT INTO exttabtest_w (SELECT * FROM exttabtest);
-INSERT 0 100
-    -- Chect existing RET that using protocol demoprot
-    -- it should be accessible after restore the protocol
-    select count(*) from exttabtest_r;
- count 
--------
-   100
-(1 row)
-
-    -- returns count = 100
--- Test 34: Protocol dependency - drop protocol cascade
-    -- Drop protocol cascade works fine.
-    DROP PROTOCOL demoprot CASCADE;
-DROP PROTOCOL
-    -- DROP PROTOCOL
-    -- Check RET exttabtest_r_1m is still referencing protocol demoprot
-    -- not affected by drop protocol cascade
-    select location from pg_exttable where reloid='exttabtest_r'::regclass;
-          location           
------------------------------
- {demoprot://exttabtest.txt}
-(1 row)
-
-    -- Verified other catalog tables: pg_extprotocol, pg_depend
-    -- Check pg_extprotocol for protocol demoprot, it should be dropped
-    select count(*) from pg_depend 
-    where objid in (
-        select oid from pg_extprotocol where ptcname='demoprot');
- count 
--------
-     0
-(1 row)
-
-    -- Check dependency: pg_depend table
-    select extprot.ptcname, proc1.proname readfunc, proc2.proname writefunc
-    from pg_extprotocol extprot, pg_proc proc1, pg_proc proc2 
-    where extprot.ptcname='demoprot' 
-        and extprot.ptcreadfn=proc1.oid 
-        and extprot.ptcwritefn=proc2.oid;
- ptcname | readfunc | writefunc 
----------+----------+-----------
-(0 rows)
-
 -- Test 35: UDF dependency - drop function cascade
     -- Restore (recreate) protocol with the same protocol name demoprot
-    DROP PROTOCOL IF EXISTS demoprot;
-psql:/path/sql_file:1: NOTICE:  protocol "demoprot" does not exist, skipping
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
+NOTICE:  drop cascades to external table exttabtest_r_1m_null
+NOTICE:  drop cascades to external table exttabtest_w_1m_null
+NOTICE:  drop cascades to external table exttabtest_r_1m
+NOTICE:  drop cascades to external table exttabtest_w_1m
+NOTICE:  drop cascades to external table exttabtest_r_null
+NOTICE:  drop cascades to external table exttabtest_w_null
+NOTICE:  drop cascades to external table exttabtest_w_misspath
+NOTICE:  drop cascades to external table exttabtest_r_circle
+NOTICE:  drop cascades to external table exttabtest_w_circle
 DROP PROTOCOL
     CREATE PROTOCOL demoprot (
         readfunc = read_from_file_stable,
@@ -764,14 +659,6 @@ DROP FUNCTION
 (1 row)
 
     -- Verified other catalog tables: pg_extprotocol, pg_depend
-    -- Check RET exttabtest_r is still referencing protocol demoprot
-    select location from pg_exttable where reloid='exttabtest_r'::regclass;
-          location           
------------------------------
- {demoprot://exttabtest.txt}
-(1 row)
-
-    -- Still showing  {demoprot://exttabtest.txt}
     -- Check pg_extprotocol table, the entry should be dropped
     select count(*) from pg_extprotocol where ptcname='demoprot';
  count 
@@ -786,7 +673,7 @@ DROP FUNCTION
         '$libdir/gpextprotocol.so', 'demoprot_import' LANGUAGE C STABLE;
 CREATE FUNCTION
     -- Restore (recreate) protocol with the same protocol name demoprot
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
 psql:/path/sql_file:1: NOTICE:  protocol "demoprot" does not exist, skipping
 DROP PROTOCOL
     CREATE PROTOCOL demoprot (
@@ -795,12 +682,25 @@ DROP PROTOCOL
     );
 CREATE PROTOCOL
     -- CREATE PROTOCOL
+     CREATE READABLE EXTERNAL TABLE exttabtest_r(like exttabtest)
+        LOCATION('demoprot://exttabtest.txt') 
+    FORMAT 'text';
+CREATE EXTERNAL TABLE
+    CREATE WRITABLE EXTERNAL TABLE exttabtest_w(like exttabtest)
+        LOCATION('demoprot://exttabtest.txt') 
+    FORMAT 'text'
+    DISTRIBUTED BY (id);
+CREATE EXTERNAL TABLE
+    -- truncate table exttabtest and load 100 records
+    TRUNCATE TABLE exttabtest;
+TRUNCATE TABLE
+    INSERT INTO exttabtest SELECT i, 'name'||i, i*2, i*3 FROM generate_series(1,100) i;
+INSERT 0 100
     -- Check existing WET that using protocol demoprot
     SELECT * FROM clean_exttabtest_files;
  stdout 
 --------
 (0 rows)
-
     insert into exttabtest_w (select * from exttabtest);
 INSERT 0 100
     -- Check existing RET that using protocol demoprot
@@ -851,6 +751,7 @@ Encoding: UTF8
 Format type: text
 Format options: delimiter '	' null '\N' escape '\'
 External location: demoprot://exttabtest.txt
+External options: {}
 
     select count(*) from pg_class where relname = 'exttabtest_r_newname';
  count 
@@ -1049,6 +950,7 @@ Type: writable
 Encoding: UTF8
 Format type: custom
 Format options: formatter 'formatter_export_s' 
+External options: {}
 External location: demoprot://exttabtest_test63
 
     \d format_r
@@ -1063,6 +965,7 @@ Type: readable
 Encoding: UTF8
 Format type: custom
 Format options: formatter 'formatter_import_s' 
+External options: {}
 External location: demoprot://exttabtest_test63
 
     -- Checking pg_exttable 
@@ -1752,7 +1655,17 @@ CREATE OR REPLACE FUNCTION url_validator() RETURNS void AS
    '$libdir/gpextprotocol.so', 'demoprot_validate_urls' LANGUAGE C STABLE;
 CREATE FUNCTION
 -- declare the protocol name along with in/out funcs and validator func
-DROP PROTOCOL IF EXISTS demoprot;
+DROP PROTOCOL IF EXISTS demoprot CASCADE;
+NOTICE:  drop cascades to external table format_r
+NOTICE:  drop cascades to external table format_w
+NOTICE:  drop cascades to external table format_long_r
+NOTICE:  drop cascades to external table format_long_w
+NOTICE:  drop cascades to external table format_r_s2
+NOTICE:  drop cascades to external table format_w_s2
+NOTICE:  drop cascades to external table format_r_s1
+NOTICE:  drop cascades to external table format_w_s1
+NOTICE:  drop cascades to external table exttabtest_w_invalid
+NOTICE:  drop cascades to external table exttabtest_r_invalid
 DROP PROTOCOL
 CREATE PROTOCOL demoprot (
     readfunc  = read_from_file, 
@@ -1785,7 +1698,7 @@ CREATE OR REPLACE FUNCTION url_validator() RETURNS integer AS
    '$libdir/gpextprotocol.so', 'demoprot_validate_urls' LANGUAGE C STABLE;
 CREATE FUNCTION
 -- declare the protocol name along with in/out funcs and validator func
-DROP PROTOCOL IF EXISTS demoprot;
+DROP PROTOCOL IF EXISTS demoprot CASCADE;
 DROP PROTOCOL
 CREATE PROTOCOL demoprot (
 readfunc = read_from_file,
@@ -1795,7 +1708,7 @@ validatorfunc = url_validator
 psql:/path/sql_file:1: ERROR:  validator protocol function url_validator() must return void
 -- Test 5: Negative - invalid protocol attribute name for validator function: must be "validatorfunc"
 -- declare the protocol using invalid attribute name "validatorproc"
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
 psql:/path/sql_file:1: NOTICE:  protocol "demoprot" does not exist, skipping
 DROP PROTOCOL
     CREATE PROTOCOL demoprot (
@@ -1805,53 +1718,6 @@ DROP PROTOCOL
     );
 psql:/path/sql_file:1: ERROR:  protocol attribute "validatorproc" not recognized
 -- ERROR: protocol attribute "validatorproc" not recognized
--- Test 86: validation only happens at ext table create time, not execution time
-    -- create an external table using demoprot protocol that does NOT have validator defined
-    -- The external table can be created with potential offending issues,
-    -- e.g., using "secured_directory" in the url
-    -- declare the protocol name along with in/out funcs and WITHOUT validator
-    DROP PROTOCOL IF EXISTS demoprot;
-psql:/path/sql_file:1: NOTICE:  protocol "demoprot" does not exist, skipping
-DROP PROTOCOL
-    CREATE PROTOCOL demoprot (
-        readfunc  = read_from_file, 
-        writefunc = write_to_file
-    );
-CREATE PROTOCOL
-    -- create ext table with offending url (contains "secured_directory")
-    CREATE READABLE EXTERNAL TABLE exttabtest_offending_url_r(like exttabtest)
-        LOCATION('demoprot://secured_directory/exttabtest.txt') 
-    FORMAT 'text';
-CREATE EXTERNAL TABLE
-    -- You should get "No such file or directory" error, which means validator is not enforced during execution time:
-    -- ERROR:  demoprot_import: could not open file "secured_directory/exttabtest.txt" for reading: No such file or directory 
-    -- Create validator function url_validator()
-    DROP FUNCTION IF EXISTS url_validator();
-DROP FUNCTION
-    CREATE OR REPLACE FUNCTION url_validator() RETURNS void AS
-        '$libdir/gpextprotocol.so', 'demoprot_validate_urls' LANGUAGE C STABLE;
-CREATE FUNCTION
-    -- After successfully created ext table, replace protocol with validator
-    DROP PROTOCOL IF EXISTS demoprot;
-DROP PROTOCOL
-    CREATE PROTOCOL demoprot (
-        readfunc  = read_from_file, 
-        writefunc = write_to_file,
-        validatorfunc = url_validator
-    );
-CREATE PROTOCOL
-    -- Verify that validator will NOT do validation to existing ext table. should see results be returned successfully
-    select count(*) from exttabtest_offending_url_r; 
-psql:/path/sql_file:1: ERROR:  demoprot_import: could not open file "secured_directory/exttabtest.txt" for reading: No such file or directory  (seg0 slice1 rh55-qavm55:7532 pid=27551)
-DETAIL:  External table exttabtest_offending_url_r, file demoprot://secured_directory/exttabtest.txt
-    -- Drop the existing ext table and recreate
-    -- Validation should take effect and cannot create the ext table
-    DROP EXTERNAL TABLE IF EXISTS exttabtest_offending_url_r;
-DROP EXTERNAL TABLE
-    CREATE READABLE EXTERNAL TABLE exttabtest_offending_url_r(like exttabtest)
-        LOCATION('demoprot://secured_directory/exttabtest.txt') 
-    FORMAT 'text';
-psql:/path/sql_file:1: ERROR:  using 'secured_directory' in a url isn't allowed
 -- ERROR: using 'secured_directory' in a url isn't allowed
 -- Create multiple roles with login option so that they can be used for protocol permission tests and alter protocol tests
     -- Create another suerpuer user demoprot_super
@@ -1860,13 +1726,13 @@ DROP ROLE
     create role demoprot_super with SUPERUSER LOGIN;
 CREATE ROLE
     -- Create a non-privileged user demoprot_nopriv
-    drop role if exists demoprot_nopriv;
+   drop role if exists demoprot_nopriv;
 DROP ROLE
     create role demoprot_nopriv with login ;
+NOTICE:  resource queue required -- using default resource queue "pg_default"
 CREATE ROLE
-psql:/path/sql_file:1: NOTICE:  resource queue required -- using default resource queue "pg_default"
     -- Create a gphdfs_user with CREATEEXTTABLE privilege using gphdfs protocol
-    drop role if exists gphdfs_user;
+   drop role if exists gphdfs_user;
 DROP ROLE
     create role gphdfs_user with login CREATEEXTTABLE (protocol='gphdfs');
 psql:/path/sql_file:1: WARNING:  GRANT/REVOKE on gphdfs is deprecated
@@ -1878,8 +1744,20 @@ CREATE ROLE
     -- NOTICE:  resource queue required -- using default resource queue "pg_default"
     -- CREATE ROLE
 -- Test 92: Rename existing protocol
+    DROP FUNCTION IF EXISTS url_validator();
+DROP FUNCTION
+    CREATE OR REPLACE FUNCTION url_validator() RETURNS void AS
+            '$libdir/gpextprotocol.so', 'demoprot_validate_urls' LANGUAGE C STABLE;
+CREATE FUNCTION
+    CREATE PROTOCOL demoprot (
+        readfunc  = read_from_file, 
+        writefunc = write_to_file,
+        validatorfunc = url_validator
+    );
+CREATE PROTOCOL
     -- Create external RET and WET
     DROP EXTERNAL TABLE IF EXISTS exttabtest_w;
+NOTICE:  table "exttabtest_w" does not exist, skipping
 DROP EXTERNAL TABLE
     CREATE WRITABLE EXTERNAL TABLE exttabtest_w(like exttabtest)
         LOCATION('demoprot://exttabtest.txt') 
@@ -1926,6 +1804,7 @@ Type: readable
 Encoding: UTF8
 Format type: text
 Format options: delimiter '	' null '\N' escape '\'
+External options: {}
 External location: demoprot://exttabtest.txt
 
     -- Create a new ext table using the new protocol name
@@ -1970,7 +1849,11 @@ ALTER PROTOCOL
 -- using the protocol, even without SELECT or INSERT permission granted
     -- login as superuser huangh5
     -- create trusted protocol demoprot
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
+NOTICE:  drop cascades to external table exttabtest_r_new
+NOTICE:  drop cascades to external table exttabtest_w_new
+NOTICE:  drop cascades to external table exttabtest_r
+NOTICE:  drop cascades to external table exttabtest_w
 DROP PROTOCOL
     CREATE TRUSTED PROTOCOL demoprot (
         readfunc = read_from_file_stable,
@@ -1993,8 +1876,10 @@ CREATE PROTOCOL
 ALTER PROTOCOL
     -- Drop the existing external RET and WET
     DROP EXTERNAL TABLE IF EXISTS exttabtest_r_new;
+NOTICE:  table "exttabtest_r_new" does not exist, skipping
 DROP EXTERNAL TABLE
     DROP EXTERNAL TABLE IF EXISTS exttabtest_w_new;
+NOTICE:  table "exttabtest_w_new" does not exist, skipping
 DROP EXTERNAL TABLE
     -- Check the owner of demoprot is demoprot_nopriv
     -- and no protocol permission has been granted
@@ -2067,7 +1952,9 @@ INSERT 0 100
 (1 row)
 
     -- Verified owner (non superuser) can drop the protocol
-    DROP PROTOCOL demoprot;
+    DROP PROTOCOL demoprot CASCADE;
+NOTICE:  drop cascades to external table exttabtest_w_new
+NOTICE:  drop cascades to external table exttabtest_r_new
 DROP PROTOCOL
 RESET ROLE;
 RESET
@@ -2076,8 +1963,8 @@ RESET
 -- using the untrusted protocol.
     -- connect as superuser
     -- create untrusted protocol demoprot
-    DROP PROTOCOL IF EXISTS demoprot;
-psql:/path/sql_file:1: NOTICE:  protocol "demoprot" does not exist, skipping
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
+    psql:/path/sql_file:1: NOTICE:  protocol "demoprot" does not exist, skipping
 DROP PROTOCOL
     CREATE PROTOCOL demoprot (
         readfunc = read_from_file_stable,
@@ -2122,21 +2009,6 @@ psql:/path/sql_file:1: ERROR:  permission denied for external protocol demoprot
     FORMAT 'text'
     DISTRIBUTED BY (id);
 psql:/path/sql_file:1: ERROR:  permission denied for external protocol demoprot
-    -- Verify non-privileged user "demoprot_nopriv" can export data via existing WET exttabtest_w_new
-    SELECT * FROM clean_exttabtest_files;
- stdout 
---------
-(0 rows)
-
-    INSERT INTO exttabtest_w_new (SELECT * FROM exttabtest);
-INSERT 0 100
-    -- Verify non-privileged user "demoprot_nopriv" can load data via existing RET exttabtest_r_new
-    select count(*) from exttabtest_r_new;
- count 
--------
-   100
-(1 row)
-
     -- Verified non superuser cannot drop the protocol
     DROP PROTOCOL demoprot;
 psql:/path/sql_file:1: ERROR:  must be owner of external protocol demoprot
@@ -2165,8 +2037,7 @@ RESET
 -- Non-owner superuser does not have any limitation when using non-trusted protocol.
     -- login as superuser huangh5
     -- create untrusted protocol demoprot
-    DROP PROTOCOL IF EXISTS demoprot;
-psql:/path/sql_file:1: NOTICE:  protocol "demoprot" does not exist, skipping
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
 DROP PROTOCOL
     CREATE PROTOCOL demoprot (
         readfunc = read_from_file_stable,
@@ -2193,26 +2064,22 @@ SET
  demoprot_super
 (1 row)
 
-    -- Verify superuser demoprot_super can still load data via existing RET
-    select count(*) from exttabtest_r;
-psql:/path/sql_file:1: ERROR:  demoprot_import: could not open file "exttabtest.txt" for reading: No such file or directory  (seg0 slice1 rh55-qavm55:7532 pid=23594)
-DETAIL:  External table exttabtest_r, file demoprot://exttabtest.txt
-    -- Verify superuser demoprot_super can still export data via existing WET
+    
     SELECT * FROM clean_exttabtest_files;
  stdout 
 --------
 (0 rows)
 
-    INSERT INTO exttabtest_w (SELECT * FROM exttabtest);
-INSERT 0 100
-    -- Verify superuser "demoprot_super" can create new ext table using untrusted protocol demoprot
+   -- Verify superuser "demoprot_super" can create new ext table using untrusted protocol demoprot
     DROP EXTERNAL TABLE IF EXISTS exttabtest_r_new;
+NOTICE:  table "exttabtest_r_new" does not exist, skipping
 DROP EXTERNAL TABLE
     CREATE READABLE EXTERNAL TABLE exttabtest_r_new(like exttabtest)
         LOCATION('demoprot://exttabtest_new.txt') 
     FORMAT 'text';
 CREATE EXTERNAL TABLE
     DROP EXTERNAL TABLE IF EXISTS exttabtest_w_new;
+NOTICE:  table "exttabtest_w_new" does not exist, skipping
 DROP EXTERNAL TABLE
     CREATE WRITABLE EXTERNAL TABLE exttabtest_w_new(like exttabtest)
         LOCATION('demoprot://exttabtest_new.txt') 
@@ -2235,6 +2102,21 @@ RESET
 -- Test 97: Non-trusted protocol - non-priv user
 -- Non-privileged user cannot use non-trusted protocol to create external table.
 -- With granted permissions on existing external table, Non-privileged user can access existing WET and RET
+    DROP EXTERNAL TABLE IF EXISTS exttabtest_r;
+NOTICE:  table "exttabtest_r" does not exist, skipping
+DROP EXTERNAL TABLE
+    CREATE READABLE EXTERNAL TABLE exttabtest_r(like exttabtest)
+        LOCATION('demoprot://exttabtest.txt') 
+    FORMAT 'text';
+CREATE EXTERNAL TABLE
+    DROP EXTERNAL TABLE IF EXISTS exttabtest_w;
+NOTICE:  table "exttabtest_w" does not exist, skipping
+DROP EXTERNAL TABLE
+    CREATE WRITABLE EXTERNAL TABLE exttabtest_w(like exttabtest)
+        LOCATION('demoprot://exttabtest.txt') 
+    FORMAT 'text'
+    DISTRIBUTED BY (id);
+CREATE EXTERNAL TABLE
     -- As superuser, GRANT SELECT permission on RET
     -- and INSERT permission on WET to on-privileged user "demoprot_nopriv"
     -- to non-privileged user "demoprot_nopriv"
@@ -2355,7 +2237,9 @@ RESET
 -- Non-privileged user can use trusted protocol to create external table.
     -- connect as superuser 
     -- create trusted protocol demoprot
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
+NOTICE:  drop cascades to external table exttabtest_w_new
+NOTICE:  drop cascades to external table exttabtest_r_new
 DROP PROTOCOL
     CREATE TRUSTED PROTOCOL demoprot (
         readfunc = read_from_file_stable,
@@ -2369,8 +2253,10 @@ CREATE PROTOCOL
 GRANT
     -- Drop existing WET and RET
     DROP EXTERNAL TABLE IF EXISTS exttabtest_r_new;
+NOTICE:  table "exttabtest_r_new" does not exist, skipping
 DROP EXTERNAL TABLE
     DROP EXTERNAL TABLE IF EXISTS exttabtest_w_new;
+NOTICE:  table "exttabtest_w_new" does not exist, skipping
 DROP EXTERNAL TABLE
     -- As superuser, GRANT ALL privileges on protocol to non-privileged user demoprot_nopriv
     GRANT ALL ON PROTOCOL demoprot TO demoprot_nopriv;
@@ -2416,7 +2302,9 @@ RESET
 -- Revoke all permissions ON trusted protocol from non-privileged user
     -- connect as superuser 
     -- create trusted protocol demoprot
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
+NOTICE:  drop cascades to external table exttabtest_w_new
+NOTICE:  drop cascades to external table exttabtest_r_new
 DROP PROTOCOL
     CREATE TRUSTED PROTOCOL demoprot (
         readfunc = read_from_file_stable,
@@ -2431,6 +2319,7 @@ GRANT
     -- As superuser, REVOKE ALL privileges on protocol from non-privileged user demoprot_nopriv
     -- Both SELECT and INSERT permissions are revoked
     REVOKE ALL ON PROTOCOL demoprot FROM demoprot_nopriv;
+NOTICE:  no privileges could be revoked from role demoprot_nopriv on object demoprot
 REVOKE
     -- login as non-privileged user "demoprot_nopriv"
     SET ROLE demoprot_nopriv;
@@ -2440,22 +2329,6 @@ SET
 -----------------
  demoprot_nopriv
 (1 row)
-
-    -- Verify non-privileged user "demoprot_nopriv" can still export data via existing WET exttabtest_w
-    SELECT * FROM clean_exttabtest_files;
- stdout 
---------
-(0 rows)
-
-    INSERT INTO exttabtest_w (SELECT * FROM exttabtest);
-INSERT 0 100
-    -- Verify non-privileged user "demoprot_nopriv" can still load data via existing RET exttabtest_r
-    select count(*) from exttabtest_r;
- count 
--------
-   100
-(1 row)
-
     -- Verify after permissions have been revoked
     -- non-privileged user "demoprot_nopriv" cannot create new ext table 
     -- using the trusted protocol demoprot
@@ -2474,6 +2347,12 @@ RESET
 -- Grant SELECT permission ON trusted protocol to non-privileged user
 -- Non-privileged user can use trusted protocol to create readable external table.
     -- Create exttabtest_new.txt data file
+    CREATE WRITABLE EXTERNAL TABLE exttabtest_w (like exttabtest)
+        LOCATION('demoprot://exttabtest_new.txt') 
+    FORMAT 'text'
+    DISTRIBUTED BY (id);
+CREATE EXTERNAL TABLE
+
     SELECT * FROM clean_exttabtest_files;
  stdout 
 --------
@@ -2482,7 +2361,8 @@ RESET
     INSERT INTO exttabtest_w (SELECT * FROM exttabtest);
 INSERT 0 100
     -- As superuser, demoport is created as a trusted readonly protocol
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
+NOTICE:  drop cascades to external table exttabtest_w
 DROP PROTOCOL
     CREATE TRUSTED PROTOCOL demoprot (
         readfunc = read_from_file_stable
@@ -2495,8 +2375,10 @@ CREATE PROTOCOL
 GRANT
     -- Drop existing WET and RET
     DROP EXTERNAL TABLE IF EXISTS exttabtest_r_new;
+NOTICE:  table "exttabtest_r_new" does not exist, skipping
 DROP EXTERNAL TABLE
     DROP EXTERNAL TABLE IF EXISTS exttabtest_w_new;
+NOTICE:  table "exttabtest_w_new" does not exist, skipping
 DROP EXTERNAL TABLE
     -- As superuser, GRANT SELECT permission on read protocol to non-privileged user demoprot_nopriv
     GRANT SELECT ON PROTOCOL demoprot TO demoprot_nopriv;
@@ -2524,15 +2406,19 @@ CREATE EXTERNAL TABLE
 psql:/path/sql_file:1: ERROR:  permission denied for external protocol demoprot
     -- Verify non-privileged user "demoprot_nopriv" can load data via new created RET exttabtest_r_new
     select count(*) from exttabtest_r_new;
-psql:/path/sql_file:1: ERROR:  demoprot_import: could not open file "exttabtest_new.txt" for reading: No such file or directory  (seg0 slice1 rh55-qavm55:7532 pid=12818)
-DETAIL:  External table exttabtest_r_new, file demoprot://exttabtest_new.txt
+ count 
+-------
+   100
+(1 row)
+
 RESET ROLE;
 RESET
 -- Test 102: Trusted protocol - Revoke Select
 -- Revoke SELECT permission ON trusted protocol from non-privileged user
     -- connect as superuser 
     -- create trusted protocol demoprot
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
+NOTICE:  drop cascades to external table exttabtest_r_new
 DROP PROTOCOL
     CREATE TRUSTED PROTOCOL demoprot (
         readfunc = read_from_file_stable,
@@ -2546,6 +2432,7 @@ CREATE PROTOCOL
 GRANT
     -- As superuser, REVOKE SElECT privilege on protocol from non-privileged user demoprot_nopriv
     REVOKE SELECT ON PROTOCOL demoprot FROM demoprot_nopriv;
+NOTICE:  no privileges could be revoked from role demoprot_nopriv on object demoprot
 REVOKE
     -- login as non-privileged user "demoprot_nopriv"
     SET ROLE demoprot_nopriv;
@@ -2569,7 +2456,7 @@ RESET
 -- Grant INSERT permission ON trusted protocol to non-privileged user
 -- Non-privileged user can use trusted protocol to create writable external table.
     -- As superuser, demoport is created as a trusted readonly protocol
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
 DROP PROTOCOL
     CREATE TRUSTED PROTOCOL demoprot (
         writefunc = write_to_file_stable
@@ -2624,7 +2511,8 @@ RESET
 -- Revoke INSERT permission ON trusted protocol from non-privileged user
     -- connect as superuser 
     -- create trusted protocol demoprot
-    DROP PROTOCOL IF EXISTS demoprot;
+    DROP PROTOCOL IF EXISTS demoprot CASCADE;
+NOTICE:  drop cascades to external table exttabtest_w_new
 DROP PROTOCOL
     CREATE TRUSTED PROTOCOL demoprot (
         readfunc = read_from_file_stable,

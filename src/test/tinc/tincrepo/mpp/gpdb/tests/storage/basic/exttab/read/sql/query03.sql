@@ -564,15 +564,6 @@ drop external table if exists badt2;
 create external table badt2 (x text) 
 location ('bad_protocol://@hostname@@abs_srcdir@/data/no/such/place/badt2.tbl' )
 format 'text' (delimiter '|');
---
--- get an error for missing gpfdist
---
-create external table ext_missing(a int, b int)
-location ('gpfdist://@hostname@:99/missing.csv')
-format 'csv';
-select count(*) from ext_missing;
-drop external table ext_missing;
-
 -- do the csv copy tests (adapted from copy.source)
 
 --- test copying in CSV mode with various styles
