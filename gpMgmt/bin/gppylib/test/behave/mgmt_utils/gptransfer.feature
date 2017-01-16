@@ -433,11 +433,15 @@ Feature: gptransfer tests
         And the database "gptransfer_testdb3" does not exist
         And the database "gptransfer_testdb4" does not exist
         And the database "gptransfer_testdb5" does not exist
-        And the user runs "gptransfer -d gptransfer_testdb1 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate md5"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -c "CREATE TABLE my_random_dist_table(i int) DISTRIBUTED RANDOMLY;" -d gptransfer_testdb1"
+        And the user runs "gptransfer -d gptransfer_testdb1 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate md5 -v"
         Then gptransfer should return a return code of 0
         And verify that table "t0" in "gptransfer_testdb1" has "100" rows
         And verify that table "t1" in "gptransfer_testdb1" has "200" rows
         And verify that table "t2" in "gptransfer_testdb1" has "300" rows
+        And the user runs "psql gptransfer_testdb1 -c '\d+ my_random_dist_table'"
+        Then psql should print Distributed randomly to stdout 1 times
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -c "DROP TABLE my_random_dist_table;" -d gptransfer_testdb1"
 
     @T339951
     Scenario: gptransfer single table
@@ -2242,6 +2246,19 @@ Feature: gptransfer tests
         And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/distribution_test.sql -d gptest"
         And the user runs "gptransfer -t gptest.public.caps -t gptest.public.caps_with_dquote -t gptest.public.caps_with_dquote2 -t gptest.public.caps_with_dquote3 -t gptest.public.caps_with_dquote4 -t gptest.public.caps_with_squote -t gptest.public.randomkey --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --truncate -a"
         Then gptransfer should return a return code of 0
+
+    @distribution_key
+    Scenario: gptransfer is run with multiple distribution keys
+        Given the database is running
+        And database "gptest" exists
+        And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/distribution_multiple_keys.sql -d gptest"
+        And the user runs "gptransfer -t gptest.public.table_distribution -t gptest.public.reverse_table_distribution --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --truncate -a"
+        Then gptransfer should return a return code of 0
+        And the user runs "psql gptest -c '\d+ table_distribution'"
+        Then psql should print Distributed by: (id1," , id2 crazy"') to stdout 1 times
+        And the user runs "psql gptest -c '\d+ reverse_table_distribution'"
+        Then psql should print Distributed by: (id2 crazy"', id1," ) to stdout 1 times
         
     @gptransfer_help
     Scenario: use gptransfer --help with another gptransfer process already running.

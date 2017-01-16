@@ -21,6 +21,7 @@ cursor_keys = dict(
     schema_name=re.compile(".*SELECT fsname FROM pg_catalog.pg_filespace.*"),
     create_schema=re.compile(".*CREATE SCHEMA.*"),
     ordinal_pos=re.compile(".*select ordinal_position from.*"),
+    attname=re.compile(".*SELECT attname.*"),
 )
 
 class GpTransfer(GpTestCase):
@@ -152,9 +153,7 @@ class GpTransfer(GpTestCase):
         shutil.rmtree(self.TEMP_DIR)
 
     @patch('gptransfer.TableValidatorFactory', return_value=Mock())
-    @patch('gptransfer.execSQLForSingletonRow', return_value=[['foo']])
-    def test__get_distributed_by_with_special_characters_on_column(self, mock1,
-                                                                   mock2):
+    def test__get_distributed_by_quotes_column_name(self, mock1):
         gptransfer = self.subject
         cmd_args = self.GpTransferCommand_args
 
@@ -162,18 +161,18 @@ class GpTransfer(GpTestCase):
         dest_args = ('dest', 'public', 'foo', False)
         source_table = gptransfer.GpTransferTable(*src_args)
         dest_table = gptransfer.GpTransferTable(*dest_args)
-        cmd_args['table_pair'] = gptransfer.GpTransferTablePair(source_table,
-                                                                dest_table)
-
+        cmd_args['table_pair'] = gptransfer.GpTransferTablePair(source_table, dest_table)
+        side_effect = CursorSideEffect()
+        side_effect.append_regexp_key(cursor_keys['attname'], ['foo'])
+        self.cursor.side_effect = side_effect.cursor_side_effect
         self.subject.escapeDoubleQuoteInSQLString.return_value='"escaped_string"'
         table_validator = gptransfer.GpTransferCommand(**cmd_args)
         expected_distribution = '''DISTRIBUTED BY ("escaped_string")'''
+
         self.assertEqual(expected_distribution, table_validator._get_distributed_by())
 
     @patch('gptransfer.TableValidatorFactory', return_value=Mock())
-    @patch('gptransfer.execSQLForSingletonRow',
-           side_effect=[UnexpectedRowsError(1, 0, "sql foo"), ""])
-    def test__get_distributed_randomly(self, mock1, mock2):
+    def test__get_distributed_by_quotes_multiple_column_names(self, mock1):
         gptransfer = self.subject
         cmd_args = self.GpTransferCommand_args
 
@@ -181,16 +180,37 @@ class GpTransfer(GpTestCase):
         dest_args = ('dest', 'public', 'foo', False)
         source_table = gptransfer.GpTransferTable(*src_args)
         dest_table = gptransfer.GpTransferTable(*dest_args)
-        cmd_args['table_pair'] = gptransfer.GpTransferTablePair(source_table,
-                                                                dest_table)
+        cmd_args['table_pair'] = gptransfer.GpTransferTablePair(source_table, dest_table)
+        side_effect = CursorSideEffect()
+        side_effect.append_regexp_key(cursor_keys['attname'], ['foo', 'bar'])
+        self.cursor.side_effect = side_effect.cursor_side_effect
+        self.subject.escapeDoubleQuoteInSQLString.side_effect = ['"first_escaped_value"', '"second_escaped_value"']
         table_validator = gptransfer.GpTransferCommand(**cmd_args)
+        expected_distribution = '''DISTRIBUTED BY ("first_escaped_value", "second_escaped_value")'''
 
+        self.assertEqual(expected_distribution, table_validator._get_distributed_by())
+
+    @patch('gptransfer.TableValidatorFactory', return_value=Mock())
+    def test__get_distributed_randomly_when_no_distribution_keys(self, mock1):
+        side_effect = CursorSideEffect()
+        side_effect.append_regexp_key(cursor_keys['attname'], [])
+        self.cursor.side_effect = side_effect.cursor_side_effect
+        table_validator = self._get_gptransfer_command()
         expected_distribution = '''DISTRIBUTED RANDOMLY'''
+
         result_distribution = table_validator._get_distributed_by()
+
         self.assertEqual(0, len(self.subject.logger.method_calls))
         self.assertEqual(expected_distribution, result_distribution)
 
+    @patch('gptransfer.TableValidatorFactory', return_value=Mock())
+    def test_get_distributed_randomly_handles_exception(self, mock1):
+        self.cursor.side_effect = ""
+        table_validator = self._get_gptransfer_command()
+        expected_distribution = '''DISTRIBUTED RANDOMLY'''
+
         result_distribution = table_validator._get_distributed_by()
+
         self.assertEqual(1, len(self.subject.logger.method_calls))
         self.assertEqual(expected_distribution, result_distribution)
 
@@ -770,6 +790,18 @@ class GpTransfer(GpTestCase):
     def get_warnings(self):
         return [args[0][0] for args in self.subject.logger.warning.call_args_list]
 
+    def _get_gptransfer_command(self):
+        gptransfer = self.subject
+        cmd_args = self.GpTransferCommand_args
+
+        src_args = ('src', 'public', 'foo', False)
+        dest_args = ('dest', 'public', 'foo', False)
+        source_table = gptransfer.GpTransferTable(*src_args)
+        dest_table = gptransfer.GpTransferTable(*dest_args)
+        cmd_args['table_pair'] = gptransfer.GpTransferTablePair(source_table, dest_table)
+        return gptransfer.GpTransferCommand(**cmd_args)
+
+
     def run_range_partition_value(self, additional):
         options = self.setup_partition_validation()
         self.db_singleton.side_effect = SingletonSideEffect(additional).singleton_side_effect
@@ -901,10 +933,14 @@ class CursorSideEffect:
         self.counters[key] += 1
         return self.counters[key] > 1
 
+    def append_regexp_key(self, key, value):
+        self.first_values[key] = value
+        self.second_values[key] = value
+        self.counters[key] = 0
 
 class FakeCursor:
     def __init__(self, my_list):
-        self.list = list([[""]])
+        self.list = []
         if my_list:
             self.list = my_list
         self.rowcount = len(self.list)
