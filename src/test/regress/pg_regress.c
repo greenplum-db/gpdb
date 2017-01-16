@@ -409,6 +409,124 @@ replace_string(char *string, char *replace, char *replacement)
 }
 
 /*
+ * Generate two files for each UAO test case, one for row and the
+ * other for column orientation.
+ */
+static int
+generate_uao_sourcefiles(char *src_dir, char *dest_dir, char *suffix)
+{
+	struct stat st;
+	int			ret;
+	char	  **name;
+	char	  **names;
+	int			count = 0;
+
+	/*
+	 * Return silently if src_dir is not a directory, in the same
+	 * spirit as in convert_sourcefiles_in().
+	 */
+	ret = stat(src_dir, &st);
+	if (ret != 0 || !S_ISDIR(st.st_mode))
+		return 0;
+
+	ret = stat(dest_dir, &st);
+	if (ret != 0 || !S_ISDIR(st.st_mode))
+	{
+		fprintf(stderr, _("%s: %s is not a directory: %s"),
+				progname, dest_dir, strerror(errno));
+		exit_nicely(2);
+	}
+
+	names = pgfnames(src_dir);
+	if (!names)
+		/* Error logged in pgfnames */
+		exit_nicely(2);
+
+	/* finally loop on each file and generate the files */
+	for (name = names; *name; name++)
+	{
+		char		srcfile[MAXPGPATH];
+		char		destfile_row[MAXPGPATH];
+		char		destfile_col[MAXPGPATH];
+		char		prefix[MAXPGPATH];
+		FILE	   *infile,
+				   *outfile_row,
+				   *outfile_col;
+		char		line[1024];
+		char		line_row[1024];
+
+		/* reject filenames not finishing in ".source" */
+		if (strlen(*name) < 8)
+			continue;
+		if (strcmp(*name + strlen(*name) - 7, ".source") != 0)
+			continue;
+
+		count++;
+
+		/*
+		 * Build the full actual paths to open.  Optimizer specific
+		 * answer filenames must end with "optimizer".
+		 */
+		snprintf(srcfile, MAXPGPATH, "%s/%s", src_dir, *name);
+		if (strlen(*name) > 17 &&
+			strcmp(*name + strlen(*name) - 17, "_optimizer.source") == 0)
+		{
+			snprintf(prefix, strlen(*name) - 16, "%s", *name);
+			snprintf(destfile_row, MAXPGPATH, "%s/%s_row_optimizer.%s",
+					 dest_dir, prefix, suffix);
+			snprintf(destfile_col, MAXPGPATH, "%s/%s_column_optimizer.%s",
+					 dest_dir, prefix, suffix);
+		}
+		else
+		{
+			snprintf(prefix, strlen(*name) - 6, "%s", *name);
+			snprintf(destfile_row, MAXPGPATH, "%s/%s_row.%s",
+					 dest_dir, prefix, suffix);
+			snprintf(destfile_col, MAXPGPATH, "%s/%s_column.%s",
+					 dest_dir, prefix, suffix);
+		}
+
+		infile = fopen(srcfile, "r");
+		if (!infile)
+		{
+			fprintf(stderr, _("%s: could not open file \"%s\" for reading: %s\n"),
+					progname, srcfile, strerror(errno));
+			exit_nicely(2);
+		}
+		outfile_row = fopen(destfile_row, "w");
+		if (!outfile_row)
+		{
+			fprintf(stderr, _("%s: could not open file \"%s\" for writing: %s\n"),
+					progname, destfile_row, strerror(errno));
+			exit_nicely(2);
+		}
+		outfile_col = fopen(destfile_col, "w");
+		if (!outfile_col)
+		{
+			fprintf(stderr, _("%s: could not open file \"%s\" for writing: %s\n"),
+					progname, destfile_col, strerror(errno));
+			exit_nicely(2);
+		}
+
+		while (fgets(line, sizeof(line), infile))
+		{
+			strncpy(line_row, line, sizeof(line));
+			replace_string(line, "@orientation@", "column");
+			replace_string(line_row, "@orientation@", "row");
+			fputs(line_row, outfile_row);
+			fputs(line, outfile_col);
+		}
+
+		fclose(infile);
+		fclose(outfile_row);
+		fclose(outfile_col);
+	}
+
+	pgfnames_cleanup(names);
+	return count;
+}
+
+/*
  * Convert *.source found in the "source" directory, replacing certain tokens
  * in the file contents with their intended values, and put the resulting files
  * in the "dest" directory, replacing the ".source" prefix in their names with
@@ -513,6 +631,15 @@ convert_sourcefiles_in(char *source, char * dest_dir, char *dest, char *suffix)
 				   *outfile;
 		char		line[1024];
 		bool		has_tokens = false;
+
+		if (strncmp(*name, "uao", 3) == 0 &&
+			strcmp(*name + strlen(*name) - 7, ".source") != 0)
+		{
+			snprintf(srcfile, MAXPGPATH, "%s/%s",  indir, *name);
+			snprintf(destfile, MAXPGPATH, "%s/%s/%s", dest_dir, dest, *name);
+			count =	generate_uao_sourcefiles(srcfile, destfile, suffix);
+			continue;
+		}
 
 		/* reject filenames not finishing in ".source" */
 		if (strlen(*name) < 8)

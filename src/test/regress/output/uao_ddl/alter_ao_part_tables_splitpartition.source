@@ -1,0 +1,147 @@
+create schema alter_ao_part_tables_splitpartition_@orientation@;
+set search_path="$user",alter_ao_part_tables_splitpartition_@orientation@,public;
+SET gp_default_storage_options='orientation=@orientation@';
+BEGIN;
+CREATE TABLE sto_alt_uao_part_splitpartition (
+ id int, date date, amt decimal(10,2))
+ with (appendonly=true) DISTRIBUTED BY (id) PARTITION BY RANGE (date)
+ (PARTITION sales_Jul13 START (date '2013-07-01') INCLUSIVE,
+  PARTITION sales_Aug13 START (date '2013-08-01') INCLUSIVE,
+  PARTITION sales_Sep13 START (date '2013-09-01') INCLUSIVE
+  END (date '2014-01-01') EXCLUSIVE);
+NOTICE:  CREATE TABLE will create partition "sto_alt_uao_part_splitpartition_1_prt_sales_jul13" for table "sto_alt_uao_part_splitpartition"
+NOTICE:  CREATE TABLE will create partition "sto_alt_uao_part_splitpartition_1_prt_sales_aug13" for table "sto_alt_uao_part_splitpartition"
+NOTICE:  CREATE TABLE will create partition "sto_alt_uao_part_splitpartition_1_prt_sales_sep13" for table "sto_alt_uao_part_splitpartition"
+SELECT 1 AS VisimapPresent FROM pg_appendonly WHERE visimaprelid is
+not NULL AND visimapidxid is not NULL AND relid in (SELECT c.oid FROM
+pg_class c join pg_namespace n on c.relnamespace = n.oid and
+ c.relname like 'sto_alt_uao_part_splitpartition%' and
+ n.nspname = 'alter_ao_part_tables_splitpartition_@orientation@');
+ visimappresent 
+----------------
+              1
+              1
+              1
+              1
+(4 rows)
+
+Insert into sto_alt_uao_part_splitpartition values(1,'2013-07-05',19.20);
+Insert into sto_alt_uao_part_splitpartition values(2,'2013-08-15',10.20);
+Insert into sto_alt_uao_part_splitpartition values(3,'2013-09-09',14.20);
+Update sto_alt_uao_part_splitpartition set amt = amt + 20;
+select count(*) from sto_alt_uao_part_splitpartition;
+ count 
+-------
+     3
+(1 row)
+
+-- Alter table add default partition
+Alter table sto_alt_uao_part_splitpartition
+ add default partition part_others with(appendonly=true);
+NOTICE:  CREATE TABLE will create partition "sto_alt_uao_part_splitpartition_1_prt_part_others" for table "sto_alt_uao_part_splitpartition"
+select count(*) FROM pg_appendonly WHERE visimaprelid is not NULL AND
+visimapidxid is not NULL AND relid in (SELECT c.oid FROM pg_class c
+ join pg_namespace n on c.relnamespace = n.oid and
+ c.relname like 'sto_alt_uao_part_splitpartition%' and
+ n.nspname = 'alter_ao_part_tables_splitpartition_@orientation@');
+ count 
+-------
+     5
+(1 row)
+
+insert into sto_alt_uao_part_splitpartition
+ select i, ('2013-'||i||'-11')::date, i from generate_series(1,12)i;
+delete from sto_alt_uao_part_splitpartition where date < '2013-07-10';
+Insert into sto_alt_uao_part_splitpartition values
+ (10,'2013-01-22',12.52), (11,'2013-02-22',13.53), (12,'2013-07-22',14.54);
+select * from sto_alt_uao_part_splitpartition;
+ id |    date    |  amt  
+----+------------+-------
+  7 | 07-11-2013 |  7.00
+  2 | 08-15-2013 | 30.20
+  3 | 09-09-2013 | 34.20
+ 12 | 07-22-2013 | 14.54
+  8 | 08-11-2013 |  8.00
+  9 | 09-11-2013 |  9.00
+ 11 | 11-11-2013 | 11.00
+ 10 | 10-11-2013 | 10.00
+ 12 | 12-11-2013 | 12.00
+ 11 | 02-22-2013 | 13.53
+ 10 | 01-22-2013 | 12.52
+(11 rows)
+
+-- Alter table split default partition
+Alter table sto_alt_uao_part_splitpartition split default partition
+ start(date '2013-01-01') end(date '2013-03-01')
+ into (partition p1, partition part_others);
+NOTICE:  exchanged partition "part_others" of relation "sto_alt_uao_part_splitpartition" with relation "pg_temp_117982"
+NOTICE:  dropped partition "part_others" for relation "sto_alt_uao_part_splitpartition"
+NOTICE:  CREATE TABLE will create partition "sto_alt_uao_part_splitpartition_1_prt_p1" for table "sto_alt_uao_part_splitpartition"
+NOTICE:  CREATE TABLE will create partition "sto_alt_uao_part_splitpartition_1_prt_part_others" for table "sto_alt_uao_part_splitpartition"
+select count(*) FROM pg_appendonly WHERE visimaprelid is not NULL AND
+visimapidxid is not NULL AND relid in (SELECT c.oid FROM pg_class c
+ join pg_namespace n on c.relnamespace = n.oid and
+ c.relname like 'sto_alt_uao_part_splitpartition%' and
+ n.nspname = 'alter_ao_part_tables_splitpartition_@orientation@');
+ count 
+-------
+     6
+(1 row)
+
+update sto_alt_uao_part_splitpartition set amt = amt - 5;
+select * from sto_alt_uao_part_splitpartition;
+ id |    date    |  amt  
+----+------------+-------
+  2 | 08-15-2013 | 25.20
+  7 | 07-11-2013 |  2.00
+  3 | 09-09-2013 | 29.20
+ 12 | 07-22-2013 |  9.54
+  8 | 08-11-2013 |  3.00
+  9 | 09-11-2013 |  4.00
+ 10 | 10-11-2013 |  5.00
+ 11 | 11-11-2013 |  6.00
+ 12 | 12-11-2013 |  7.00
+ 10 | 01-22-2013 |  7.52
+ 11 | 02-22-2013 |  8.53
+(11 rows)
+
+Update sto_alt_uao_part_splitpartition set amt = 20.5 where date='2013-02-22';
+set gp_select_invisible = true;
+select count(*) as all_tuples from sto_alt_uao_part_splitpartition;
+ all_tuples 
+------------
+         27
+(1 row)
+
+set gp_select_invisible = false;
+Delete from sto_alt_uao_part_splitpartition where date='2013-01-22';
+select count(*) as visible_tuples from sto_alt_uao_part_splitpartition;
+ visible_tuples 
+----------------
+             10
+(1 row)
+
+set gp_select_invisible = true;
+select count(*) as all_tuples from sto_alt_uao_part_splitpartition;
+ all_tuples 
+------------
+         27
+(1 row)
+
+set gp_select_invisible = false;
+COMMIT;
+VACUUM full sto_alt_uao_part_splitpartition;
+select count(*) AS visible_tuples from sto_alt_uao_part_splitpartition;
+ visible_tuples 
+----------------
+             10
+(1 row)
+
+set gp_select_invisible = true;
+select count(*) AS all_tuples from sto_alt_uao_part_splitpartition;
+ all_tuples 
+------------
+         10
+(1 row)
+
+set gp_select_invisible = false;

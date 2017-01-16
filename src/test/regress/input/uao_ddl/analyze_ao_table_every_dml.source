@@ -1,0 +1,62 @@
+create schema analyze_ao_table_every_dml_@orientation@;
+set search_path="$user",analyze_ao_table_every_dml_@orientation@,public;
+SET gp_default_storage_options='orientation=@orientation@';
+-- Analyze after each insert/update/delete.
+BEGIN;
+CREATE TABLE sto_uao_city_analyze_everydml (
+    id integer NOT NULL,
+    name text NOT NULL,
+    countrycode character(3) NOT NULL,
+    district text NOT NULL,
+    population integer NOT NULL
+) with (appendonly=true) distributed by(id);
+
+-- gucs set to auto update statistics after each dml
+set gp_autostats_on_change_threshold=1;
+set gp_autostats_mode=on_change;
+
+select count(*)  from sto_uao_city_analyze_everydml;
+select relname, reltuples from pg_class where oid='sto_uao_city_analyze_everydml'::regclass;
+SELECT 1 AS VisimapPresent FROM pg_appendonly WHERE visimaprelid is not NULL AND
+ visimapidxid is not NULL AND relid='sto_uao_city_analyze_everydml'::regclass;
+
+-- Copy 7 rows in table sto_uao_city_analyze_everydml
+COPY sto_uao_city_analyze_everydml (id, name, countrycode, district, population) FROM stdin;
+1	Kabul	AFG	Kabol	1780000
+2	Qandahar	AFG	Qandahar	237500
+3	Herat	AFG	Herat	186800
+4	Mazar-e-Sharif	AFG	Balkh	127800
+5	Amsterdam	NLD	Noord-Holland	731200
+6	Rotterdam	NLD	Zuid-Holland	593321
+7	Haag	NLD	Zuid-Holland	440900
+\.
+
+COMMIT;
+
+select count(*)  from sto_uao_city_analyze_everydml;
+select relname, reltuples from pg_class where oid='sto_uao_city_analyze_everydml'::regclass;
+
+select *  from sto_uao_city_analyze_everydml order by id;
+-- Should delete 3 rows
+delete from  sto_uao_city_analyze_everydml where countrycode='NLD';
+select count(*)  AS only_visi_tups from sto_uao_city_analyze_everydml;
+set gp_select_invisible = true;
+select count(*)  AS invisi_and_visi_tups from sto_uao_city_analyze_everydml;
+set gp_select_invisible = false;
+select relname, reltuples from pg_class where oid='sto_uao_city_analyze_everydml'::regclass;
+update sto_uao_city_analyze_everydml set population=population+1000 where countrycode='AFG';
+select count(*)  AS only_visi_tups from sto_uao_city_analyze_everydml;
+set gp_select_invisible = true;
+select count(*)  AS invisi_and_visi_tups from sto_uao_city_analyze_everydml;
+set gp_select_invisible = false;
+select relname, reltuples from pg_class where oid='sto_uao_city_analyze_everydml'::regclass;
+
+-- Copy 2 more rows in table sto_uao_city_analyze_everyins
+COPY sto_uao_city_analyze_everydml (id, name, countrycode, district, population) FROM stdin;
+11	Groningen	NLD	Groningen	172701
+12	Breda	NLD	Noord-Brabant	160398
+\.
+
+select count(*)  from sto_uao_city_analyze_everydml;
+select relname, reltuples from pg_class where oid='sto_uao_city_analyze_everydml'::regclass;
+
