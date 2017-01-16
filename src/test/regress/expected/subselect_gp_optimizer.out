@@ -1289,3 +1289,54 @@ select * from nested_in_tbl t1  where tc1 in
 (0 rows)
 
 drop table nested_in_tbl;
+--
+-- In some cases of a NOT EXISTS subquery, planner mistook one side of the
+-- predicate as a (derived or direct) attribute on the inner relation, and
+-- incorrectly decorrelated the subquery into a JOIN
+-- start_ignore
+drop table if exists foo;
+NOTICE:  table "foo" does not exist, skipping
+drop table if exists bar;
+NOTICE:  table "bar" does not exist, skipping
+create table foo(a, b) as (values (1, 'a'), (2, 'b'));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table bar(c, d) as (values (1, 'a'), (2, 'b'));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- end_ignore
+select * from foo where not exists (select * from bar where foo.a + bar.c = 1);
+ a | b 
+---+---
+ 1 | a
+ 2 | b
+(2 rows)
+
+select * from foo where not exists (select * from bar where foo.b || bar.d = 'hola');
+ a | b 
+---+---
+ 1 | a
+ 2 | b
+(2 rows)
+
+select * from foo where not exists (select * from bar where foo.a = foo.a + 1);
+ a | b 
+---+---
+ 1 | a
+ 2 | b
+(2 rows)
+
+select * from foo where not exists (select * from bar where foo.b = foo.b || 'a');
+ a | b 
+---+---
+ 1 | a
+ 2 | b
+(2 rows)
+
+select * from foo where foo.a = (select min(bar.c) from bar where foo.b || bar.d = 'bb');
+ a | b 
+---+---
+ 2 | b
+(1 row)
+
+drop table foo, bar;

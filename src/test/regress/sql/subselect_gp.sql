@@ -588,3 +588,25 @@ select * from nested_in_tbl t1  where tc1 in
   (select 1 from nested_in_tbl t2 where tc1 in
     (select 1 from nested_in_tbl t3 where t3.tc2 = t2.tc2));
 drop table nested_in_tbl;
+
+--
+-- In some cases of a NOT EXISTS subquery, planner mistook one side of the
+-- predicate as a (derived or direct) attribute on the inner relation, and
+-- incorrectly decorrelated the subquery into a JOIN
+
+-- start_ignore
+drop table if exists foo;
+drop table if exists bar;
+create table foo(a, b) as (values (1, 'a'), (2, 'b'));
+create table bar(c, d) as (values (1, 'a'), (2, 'b'));
+-- end_ignore
+
+select * from foo where not exists (select * from bar where foo.a + bar.c = 1);
+select * from foo where not exists (select * from bar where foo.b || bar.d = 'hola');
+
+select * from foo where not exists (select * from bar where foo.a = foo.a + 1);
+select * from foo where not exists (select * from bar where foo.b = foo.b || 'a');
+
+select * from foo where foo.a = (select min(bar.c) from bar where foo.b || bar.d = 'bb');
+
+drop table foo, bar;
