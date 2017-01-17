@@ -597,7 +597,7 @@ help(void)
 
 
 /*
- *Build the WITH clause for resource queue dump
+ * Build the WITH clause for resource queue dump
  */
 static void 
 buildWithClause(const char *resname, const char *ressetting, PQExpBuffer buf)
@@ -1106,7 +1106,7 @@ dumpFilespaces(PGconn *conn)
 	PGresult   *res;
 
 	/*
-	 * Get all filespaces execpt built-in ones (named pg_xxx)
+	 * Get all filespaces except built-in ones (named pg_xxx)
 	 */
 	if (server_version < 80214)
 	{
@@ -1143,7 +1143,7 @@ dumpFilespaces(PGconn *conn)
 		/*
 		 * Drop existing filespace if required.
 		 *
-		 * Note: this statement will fail if the an existing filespace is not
+		 * Note: this statement will fail if an existing filespace is not
 		 * empty.  But this is no different from the related code in the rest
 		 * of pg_dump.
 		 */

@@ -791,7 +791,7 @@ main(int argc, char **argv)
 			dumpPolicy = isGPbackend;
 			if (!isGPbackend)
 			{
-				write_msg(NULL, "Server is not a Greenplum Database instance; --gp_syntax option ignored.\n");
+				write_msg(NULL, "Server is not a Greenplum Database instance; --gp-syntax option ignored.\n");
 			}
 			break;
 	}
