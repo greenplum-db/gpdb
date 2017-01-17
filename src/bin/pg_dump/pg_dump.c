@@ -5420,6 +5420,9 @@ dumpBinaryUpgrade(Archive *fout, DumpableObject **dobjs, int numObjs)
 			case DO_EXTPROTOCOL:
 				dumpExternalProtocolOid(fout, (ExtProtInfo *) dobj);
 				break;
+			case DO_OPERATOR:
+				dumpOperatorOid(fout, (OprInfo *) dobj);
+				break;
 			case DO_OPCLASS:
 				dumpOpClassOid(g_conn, fout, (OpclassInfo *) dobj);
 				break;

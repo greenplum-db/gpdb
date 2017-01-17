@@ -26,6 +26,7 @@ extern void dumpTableOid(PGconn *conn, Archive *fout, Archive *AH, TableInfo *in
 extern void dumpIndexOid(PGconn *conn, Archive *AH, IndxInfo *info);
 extern void dumpAttrDefsOid(Archive *AH, AttrDefInfo *info);
 extern void dumpConversionOid(PGconn *conn, Archive *AH, ConvInfo *info);
+extern void dumpOperatorOid(Archive *AH, OprInfo *info);
 extern void dumpOpFamilyOid(PGconn *conn, Archive *AH, OpfamilyInfo *info);
 extern void dumpOpClassOid(PGconn *conn, Archive *AH, OpclassInfo *info);
 extern void dumpExternalProtocolOid(Archive *AH, ExtProtInfo *info);

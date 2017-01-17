@@ -35,6 +35,26 @@ static void preassign_attrdefs_oid(Archive *AH, Oid attrdefoid, Oid attreloid, i
 static void preassign_pg_class_oids(PGconn *conn, Archive *AH, Oid pg_class_oid);
 static void preassign_type_oids_by_rel_oid(PGconn *conn, Archive *fout, Archive *AH, Oid pg_rel_oid, char *objname);
 
+void
+dumpOperatorOid(Archive *AH, OprInfo *info)
+{
+	/* Skip if not to be dumped */
+	if (!info->dobj.dump)
+		return;
+
+	snprintf(query_buffer, sizeof(query_buffer),
+			 "SELECT binary_upgrade.preassign_operator_oid("
+			 "'%u'::pg_catalog.oid, '%u'::pg_catalog.oid, '%s'::text);\n",
+			 info->dobj.catId.oid, info->dobj.namespace->dobj.catId.oid,
+			 info->dobj.name);
+
+	ArchiveEntry(AH, nilCatalogId, createDumpId(),
+				 info->dobj.name,
+				 NULL, NULL, "",
+				 false, "BINARY UPGRADE", query_buffer, NULL, NULL,
+				 NULL, 0,
+				 NULL, NULL);
+}
 
 void
 dumpNamespaceOid(Archive *AH, NamespaceInfo *info)
