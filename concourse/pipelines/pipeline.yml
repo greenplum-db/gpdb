@@ -323,7 +323,6 @@ jobs:
       passed: [icw_planner_centos6, icw_gporca_centos6, icw_planner_codegen_centos6, icw_gporca_codegen_centos6, MU_check_centos]
       trigger: true
     - get: centos-gpdb-dev-6
-  - get: gpdb_src
   - task: separate_qautils_files_for_rc
     file: gpdb_src/concourse/tasks/separate_qautils_files_for_rc.yml
     image: centos-gpdb-dev-6
@@ -393,305 +392,7 @@ jobs:
         file: packaged_gpdb_src_behave/greenplum-db-4.3.99.0-behave.tar.gz
 # Stage 3: Trigger and monitor pulse project
 
-- name: cs-uao-regression
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      params: {submodules: none}
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
-      trigger: true
-    - get: gpdb_src_tinc_tarball
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
-    - get: installer_rhel6_gpdb_rc
-      tags: ["gpdb5-pulse-worker"]
-      resource: installer_rhel6_gpdb_rc
-      passed: [gpdb_rc_packaging_centos]
-    - get: qautils_rhel6_tarball
-      tags: ["gpdb5-pulse-worker"]
-      resource: qautils_rhel6_tarball
-      passed: [gpdb_rc_packaging_centos]
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping:
-      gpdb_src_archive: gpdb_src_tinc_tarball
-      installer_gpdb_rc: installer_rhel6_gpdb_rc
-      qautils_tarball: qautils_rhel6_tarball
-    params:
-      PULSE_URL: {{pulse_url}}
-      PULSE_PROJECT_NAME: "cs-uao-regression"
-      PULSE_USERNAME: {{pulse_username}}
-      PULSE_PASSWORD: {{pulse_password}}
-  - task: monitor_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
-    params:
-      PULSE_URL: {{pulse_url}}
-      PULSE_PROJECT_NAME: "cs-uao-regression"
-      PULSE_USERNAME: {{pulse_username}}
-      PULSE_PASSWORD: {{pulse_password}}
-
-- name: cs-sub-transaction-limit-removal
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      params: {submodules: none}
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
-      trigger: true
-    - get: gpdb_src_tinc_tarball
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
-    - get: installer_rhel6_gpdb_rc
-      tags: ["gpdb5-pulse-worker"]
-      resource: installer_rhel6_gpdb_rc
-      passed: [gpdb_rc_packaging_centos]
-    - get: qautils_rhel6_tarball
-      tags: ["gpdb5-pulse-worker"]
-      resource: qautils_rhel6_tarball
-      passed: [gpdb_rc_packaging_centos]
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping:
-      gpdb_src_archive: gpdb_src_tinc_tarball
-      installer_gpdb_rc: installer_rhel6_gpdb_rc
-      qautils_tarball: qautils_rhel6_tarball
-    params:
-      PULSE_URL: {{pulse_url}}
-      PULSE_PROJECT_NAME: "cs-sub-transaction-limit-removal"
-      PULSE_USERNAME: {{pulse_username}}
-      PULSE_PASSWORD: {{pulse_password}}
-  - task: monitor_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
-    params:
-      PULSE_URL: {{pulse_url}}
-      PULSE_PROJECT_NAME: "cs-sub-transaction-limit-removal"
-      PULSE_USERNAME: {{pulse_username}}
-      PULSE_PASSWORD: {{pulse_password}}
-
-- name: cs-pg-two-phase
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      params: {submodules: none}
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
-      trigger: true
-    - get: gpdb_src_tinc_tarball
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
-    - get: installer_rhel6_gpdb_rc
-      tags: ["gpdb5-pulse-worker"]
-      resource: installer_rhel6_gpdb_rc
-      passed: [gpdb_rc_packaging_centos]
-    - get: qautils_rhel6_tarball
-      tags: ["gpdb5-pulse-worker"]
-      resource: qautils_rhel6_tarball
-      passed: [gpdb_rc_packaging_centos]
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping:
-      gpdb_src_archive: gpdb_src_tinc_tarball
-      installer_gpdb_rc: installer_rhel6_gpdb_rc
-      qautils_tarball: qautils_rhel6_tarball
-    params:
-      PULSE_URL: {{pulse_url}}
-      PULSE_PROJECT_NAME: "cs-pg-two-phase"
-      PULSE_USERNAME: {{pulse_username}}
-      PULSE_PASSWORD: {{pulse_password}}
-  - task: monitor_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
-    params:
-      PULSE_URL: {{pulse_url}}
-      PULSE_PROJECT_NAME: "cs-pg-two-phase"
-      PULSE_USERNAME: {{pulse_username}}
-      PULSE_PASSWORD: {{pulse_password}}
-
-- name: cs-fts
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      params: {submodules: none}
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
-      trigger: true
-    - get: gpdb_src_tinc_tarball
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
-    - get: installer_rhel6_gpdb_rc
-      tags: ["gpdb5-pulse-worker"]
-      resource: installer_rhel6_gpdb_rc
-      passed: [gpdb_rc_packaging_centos]
-    - get: qautils_rhel6_tarball
-      tags: ["gpdb5-pulse-worker"]
-      resource: qautils_rhel6_tarball
-      passed: [gpdb_rc_packaging_centos]
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping:
-      gpdb_src_archive: gpdb_src_tinc_tarball
-      installer_gpdb_rc: installer_rhel6_gpdb_rc
-      qautils_tarball: qautils_rhel6_tarball
-    params:
-      PULSE_URL: {{pulse_url}}
-      PULSE_PROJECT_NAME: "cs-fts"
-      PULSE_USERNAME: {{pulse_username}}
-      PULSE_PASSWORD: {{pulse_password}}
-  - task: monitor_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
-    params:
-      PULSE_URL: {{pulse_url}}
-      PULSE_PROJECT_NAME: "cs-fts"
-      PULSE_USERNAME: {{pulse_username}}
-      PULSE_PASSWORD: {{pulse_password}}
-
-- name: mpp_interconnect
-  serial: true
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
-      trigger: true
-    - get: gpdb_src_tinc_tarball
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
-    - get: installer_rhel6_gpdb_rc
-      tags: ["gpdb5-pulse-worker"]
-      resource: installer_rhel6_gpdb_rc
-      passed: [gpdb_rc_packaging_centos]
-    - get: qautils_rhel6_tarball
-      tags: ["gpdb5-pulse-worker"]
-      resource: qautils_rhel6_tarball
-      passed: [gpdb_rc_packaging_centos]
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping:
-      gpdb_src_archive: gpdb_src_tinc_tarball
-      installer_gpdb_rc: installer_rhel6_gpdb_rc
-      qautils_tarball: qautils_rhel6_tarball
-    params:
-      PULSE_URL: {{pulse_url}}
-      PULSE_PROJECT_NAME: "mpp-interconnect"
-      PULSE_USERNAME: {{pulse_username}}
-      PULSE_PASSWORD: {{pulse_password}}
-  - task: monitor_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
-    params:
-      PULSE_URL: {{pulse_url}}
-      PULSE_PROJECT_NAME: "mpp-interconnect"
-      PULSE_USERNAME: {{pulse_username}}
-      PULSE_PASSWORD: {{pulse_password}}
-
-- name: unite_ccle_gpdb5
-  serial: true
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
-      trigger: true
-    - get: gpdb_src_tinc_tarball
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
-    - get: installer_rhel6_gpdb_rc
-      tags: ["gpdb5-pulse-worker"]
-      resource: installer_rhel6_gpdb_rc
-      passed: [gpdb_rc_packaging_centos]
-    - get: qautils_rhel6_tarball
-      tags: ["gpdb5-pulse-worker"]
-      resource: qautils_rhel6_tarball
-      passed: [gpdb_rc_packaging_centos]
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping:
-      gpdb_src_archive: gpdb_src_tinc_tarball
-      installer_gpdb_rc: installer_rhel6_gpdb_rc
-      qautils_tarball: qautils_rhel6_tarball
-    params:
-      PULSE_URL: {{pulse_url}}
-      PULSE_PROJECT_NAME: "GPDB-5-CCLE"
-      PULSE_USERNAME: {{pulse_username}}
-      PULSE_PASSWORD: {{pulse_password}}
-  - task: monitor_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
-    params:
-      PULSE_URL: {{pulse_url}}
-      PULSE_PROJECT_NAME: "GPDB-5-CCLE"
-      PULSE_USERNAME: {{pulse_username}}
-      PULSE_PASSWORD: {{pulse_password}}
-
-- name: QP_memory-accounting
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      params: {submodules: none}
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
-      trigger: true
-    - get: gpdb_src_tinc_tarball
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
-    - get: installer_rhel6_gpdb_rc
-      tags: ["gpdb5-pulse-worker"]
-      resource: installer_rhel6_gpdb_rc
-      passed: [gpdb_rc_packaging_centos]
-    - get: qautils_rhel6_tarball
-      tags: ["gpdb5-pulse-worker"]
-      resource: qautils_rhel6_tarball
-      passed: [gpdb_rc_packaging_centos]
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping:
-      gpdb_src_archive: gpdb_src_tinc_tarball
-      installer_gpdb_rc: installer_rhel6_gpdb_rc
-      qautils_tarball: qautils_rhel6_tarball
-    params:
-      PULSE_URL: {{pulse_url}}
-      PULSE_PROJECT_NAME: "QP_memory-accounting"
-      PULSE_USERNAME: {{pulse_username}}
-      PULSE_PASSWORD: {{pulse_password}}
-  - task: monitor_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
-    params:
-      PULSE_URL: {{pulse_url}}
-      PULSE_PROJECT_NAME: "QP_memory-accounting"
-      PULSE_USERNAME: {{pulse_username}}
-      PULSE_PASSWORD: {{pulse_password}}
-
-- name: regression_tests_gphdfs_centos
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [gpdb_rc_packaging_centos]
-      trigger: true
-    - get: sync_tools_gpdb
-      resource: sync_tools_gpdb_centos
-    - get: bin_gpdb
-      resource: bin_gpdb_centos
-    - get: centos-gpdb-dev-6
-  - task: regression_tests_gphdfs
-    file: gpdb_src/concourse/tasks/regression_tests_gphdfs.yml
-    image: centos-gpdb-dev-6
-    params:
-      TARGET_OS: centos
-      TARGET_OS_VERSION: 6
-
-- name: MU_backup-restore
+- name: MU_netbackup76
   plan:
   - aggregate: &pulse_trigger_resource
     - get: gpdb_src
@@ -724,7 +425,7 @@ jobs:
       gpdb_src_behave_tarball: gpdb_src_behave_tarball
     params: &pulse_properties
       PULSE_URL: {{pulse_url}}
-      PULSE_PROJECT_NAME: "GPDB-BehaveBackupRestore"
+      PULSE_PROJECT_NAME: "GPDB-BehaveNetBackup76"
       PULSE_USERNAME: {{pulse_username}}
       PULSE_PASSWORD: {{pulse_password}}
   - task: monitor_pulse
@@ -732,7 +433,7 @@ jobs:
     file: gpdb_src/ci/pulse/api/monitor_pulse.yml
     params: *pulse_properties
 
-- name: MU_gpcheckcat
+- name: cs-uao-regression
   plan:
   - aggregate: *pulse_trigger_resource
   - task: trigger_pulse
@@ -741,15 +442,15 @@ jobs:
     input_mapping: *input_mappings
     params:
       <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-BehaveGPCheckcat"
+      PULSE_PROJECT_NAME: "cs-uao-regression"
   - task: monitor_pulse
     tags: ["gpdb5-pulse-worker"]
     file: gpdb_src/ci/pulse/api/monitor_pulse.yml
     params:
       <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-BehaveGPCheckcat"
+      PULSE_PROJECT_NAME: "cs-uao-regression"
 
-- name: MU_netbackup
+- name: cs-sub-transaction-limit-removal
   plan:
   - aggregate: *pulse_trigger_resource
   - task: trigger_pulse
@@ -758,15 +459,15 @@ jobs:
     input_mapping: *input_mappings
     params:
       <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-BehaveNetBackup"
+      PULSE_PROJECT_NAME: "cs-sub-transaction-limit-removal"
   - task: monitor_pulse
     tags: ["gpdb5-pulse-worker"]
     file: gpdb_src/ci/pulse/api/monitor_pulse.yml
     params:
       <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-BehaveNetBackup"
+      PULSE_PROJECT_NAME: "cs-sub-transaction-limit-removal"
 
-- name: MU_netbackup76
+- name: cs-pg-two-phase
   plan:
   - aggregate: *pulse_trigger_resource
   - task: trigger_pulse
@@ -775,15 +476,15 @@ jobs:
     input_mapping: *input_mappings
     params:
       <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-BehaveNetBackup76"
+      PULSE_PROJECT_NAME: "cs-pg-two-phase"
   - task: monitor_pulse
     tags: ["gpdb5-pulse-worker"]
     file: gpdb_src/ci/pulse/api/monitor_pulse.yml
     params:
       <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-BehaveNetBackup76"
+      PULSE_PROJECT_NAME: "cs-pg-two-phase"
 
-- name: MU_gprecoverseg
+- name: cs-fts
   plan:
   - aggregate: *pulse_trigger_resource
   - task: trigger_pulse
@@ -792,15 +493,16 @@ jobs:
     input_mapping: *input_mappings
     params:
       <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-BehaveGPRecoverseg"
+      PULSE_PROJECT_NAME: "cs-fts"
   - task: monitor_pulse
     tags: ["gpdb5-pulse-worker"]
     file: gpdb_src/ci/pulse/api/monitor_pulse.yml
     params:
       <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-BehaveGPRecoverseg"
+      PULSE_PROJECT_NAME: "cs-fts"
 
-- name: MU_gptransfer-43x-to-5x
+- name: mpp_interconnect
+  serial: true
   plan:
   - aggregate: *pulse_trigger_resource
   - task: trigger_pulse
@@ -809,15 +511,16 @@ jobs:
     input_mapping: *input_mappings
     params:
       <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-behave_gptransfer_43x_to_5x"
+      PULSE_PROJECT_NAME: "mpp-interconnect"
   - task: monitor_pulse
     tags: ["gpdb5-pulse-worker"]
     file: gpdb_src/ci/pulse/api/monitor_pulse.yml
     params:
       <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-behave_gptransfer_43x_to_5x"
+      PULSE_PROJECT_NAME: "mpp-interconnect"
 
-- name: MU_gptransfer-5x-to-5x
+- name: unite_ccle_gpdb5
+  serial: true
   plan:
   - aggregate: *pulse_trigger_resource
   - task: trigger_pulse
@@ -826,10 +529,45 @@ jobs:
     input_mapping: *input_mappings
     params:
       <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-behave_gptransfer_5x_to_5x"
+      PULSE_PROJECT_NAME: "GPDB-5-CCLE"
   - task: monitor_pulse
     tags: ["gpdb5-pulse-worker"]
     file: gpdb_src/ci/pulse/api/monitor_pulse.yml
     params:
       <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-behave_gptransfer_5x_to_5x"
+      PULSE_PROJECT_NAME: "GPDB-5-CCLE"
+
+- name: QP_memory-accounting
+  plan:
+  - aggregate: *pulse_trigger_resource
+  - task: trigger_pulse
+    tags: ["gpdb5-pulse-worker"]
+    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
+    input_mapping: *input_mappings
+    params:
+      <<: *pulse_properties
+      PULSE_PROJECT_NAME: "QP_memory-accounting"
+  - task: monitor_pulse
+    tags: ["gpdb5-pulse-worker"]
+    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
+    params:
+      <<: *pulse_properties
+      PULSE_PROJECT_NAME: "QP_memory-accounting"
+
+- name: regression_tests_gphdfs_centos
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gpdb_rc_packaging_centos]
+      trigger: true
+    - get: sync_tools_gpdb
+      resource: sync_tools_gpdb_centos
+    - get: bin_gpdb
+      resource: bin_gpdb_centos
+    - get: centos-gpdb-dev-6
+  - task: regression_tests_gphdfs
+    file: gpdb_src/concourse/tasks/regression_tests_gphdfs.yml
+    image: centos-gpdb-dev-6
+    params:
+      TARGET_OS: centos
+      TARGET_OS_VERSION: 6
