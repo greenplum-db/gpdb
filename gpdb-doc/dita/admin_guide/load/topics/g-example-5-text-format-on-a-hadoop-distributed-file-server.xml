@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic49">
+   <title>Example 5—TEXT Format on a Hadoop Distributed File Server</title>
+   <body>
+      <p>Creates a readable external table, <i>ext_expenses,</i> using the
+                            <codeph>gphdfs</codeph> protocol. The column delimiter is a pipe ( |
+                        ).</p>
+      <p>
+         <codeblock>=# CREATE EXTERNAL TABLE ext_expenses ( name text, 
+   date date,  amount float4, category text, desc1 text ) 
+   LOCATION ('gphdfs://hdfshost-1:8081/data/filename.txt') 
+   FORMAT 'TEXT' (DELIMITER '|');
+</codeblock>
+      </p>
+      <p>gphdfs requires only one data path.</p>
+      <p>For examples of reading and writing custom formatted data on a Hadoop
+         Distributed File System, see <xref
+            href="g-reading-and-writing-custom-formatted-hdfs-data.xml#topic25"/>.</p>
+   </body>
+</topic>

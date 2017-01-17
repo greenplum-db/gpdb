@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1"><title id="az137232">ALTER TABLESPACE</title><body><p id="sql_command_desc">Changes the definition of a tablespace.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER TABLESPACE <varname>name</varname> RENAME TO <varname>newname</varname>
+
+ALTER TABLESPACE <varname>name</varname> OWNER TO <varname>newowner</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER TABLESPACE</codeph> changes the definition of a tablespace.
+</p><p>You must own the tablespace to use <codeph>ALTER TABLESPACE</codeph>.
+To alter the owner, you must also be a direct or indirect member of the
+new owning role. (Note that superusers have these privileges automatically.)</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name of an existing tablespace. </pd></plentry><plentry><pt><varname>newname</varname></pt><pd>The new name of the tablespace. The new name cannot begin with <varname>pg_</varname>
+or <varname>gp_</varname> (reserved for system tablespaces). </pd></plentry><plentry><pt><varname>newowner</varname></pt><pd>The new owner of the tablespace.</pd></plentry></parml></section><section id="section5"><title>Examples</title><p>Rename tablespace <codeph>index_space</codeph> to <codeph>fast_raid</codeph>:</p><codeblock>ALTER TABLESPACE index_space RENAME TO fast_raid;</codeblock><p>Change the owner of tablespace <codeph>index_space</codeph>:</p><codeblock>ALTER TABLESPACE index_space OWNER TO mary;</codeblock></section><section id="section6"><title>Compatibility</title><p>There is no <codeph>ALTER TABLESPACE</codeph> statement in the SQL standard.</p></section><section id="section7"><title>See Also</title><p><codeph><xref href="./CREATE_TABLESPACE.xml#topic1" type="topic" format="dita"/></codeph>,
+            <codeph><xref href="./DROP_TABLESPACE.xml#topic1" type="topic" format="dita"
+        /></codeph></p></section></body></topic>

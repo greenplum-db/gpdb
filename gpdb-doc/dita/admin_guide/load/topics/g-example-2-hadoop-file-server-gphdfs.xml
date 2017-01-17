@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic70">
+   <title>Example 2—Hadoop file server (gphdfs)</title>
+   <body>
+      <p>
+         <codeblock>=# CREATE WRITABLE EXTERNAL TABLE unload_expenses 
+   ( LIKE expenses ) 
+   LOCATION ('gphdfs://hdfslhost-1:8081/path') 
+ FORMAT 'TEXT' (DELIMITER ',')
+ DISTRIBUTED BY (exp_id);
+</codeblock>
+      </p>
+      <p>You can only specify a directory for a writable external table with the
+            <codeph>gphdfs</codeph> protocol. (You can only specify one file for a readable external
+         table with the <codeph>gphdfs</codeph> protocol)</p>
+      <note type="note">The default port number is 9000. </note>
+   </body>
+</topic>

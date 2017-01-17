@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="about_monitoring">
+  <title>About Management and Monitoring Utilities</title>
+  <shortdesc>Greenplum Database provides standard command-line utilities for performing common
+    monitoring and administration tasks. </shortdesc>
+  <body>
+    <p>Greenplum command-line utilities are located in the
+        <filepath><varname>$GPHOME</varname>/bin</filepath> directory and are executed on the master
+      host. Greenplum provides utilities for the following administration tasks:</p>
+    <ul id="ul_mtm_tsv_fp">
+      <li>Installing Greenplum Database on an array</li>
+      <li>Initializing a Greenplum Database System</li>
+      <li>Starting and stopping Greenplum Database</li>
+      <li>Adding or removing a host</li>
+      <li>Expanding the array and redistributing tables among new segments</li>
+      <li>Managing recovery for failed segment instances</li>
+      <li>Managing failover and recovery for a failed master instance</li>
+      <li>Backing up and restoring a database (in parallel)</li>
+      <li>Loading data in parallel</li>
+      <li>Transferring data between Greenplum databases</li>
+      <li>System state reporting</li>
+    </ul>
+    <p>Greenplum provides an optional system monitoring and management tool that administrators can
+      install and enable with Greenplum Database. Greenplum Command Center uses data collection
+      agents on each segment host to collect and store Greenplum system metrics in a dedicated
+      database. Segment data collection agents send their data to the Greenplum master at regular
+      intervals (typically every 15 seconds). Users can query the Command Center database to see
+      query and system metrics. Greenplum Command Center has a graphical web-based user interface
+      for viewing system metrics, which administrators can install separately from Greenplum
+      Database. For more information, see the Greenplum Command Center documentation.</p>
+    <image href="../../graphics/cc_arch_gpdb.png" id="image_mt4_ltv_fp"/>
+  </body>
+</topic>

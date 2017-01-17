@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+
+<topic id="backup-sets" xml:lang="en">
+  <title>Backing Up a Set of Tables</title>
+  <body>
+    <p>You can create a backup that includes a subset of the schema or tables in a database by using
+      the following <codeph>gpcrondump</codeph> options:<ul id="ul_tq5_lkb_br">
+        <li><codeph>-t <varname>schema.tablename</varname></codeph> – specify a table to include in
+          the backup. You can use the <codeph>-t</codeph> option multiple times.</li>
+        <li><codeph>--table-file=<varname>filename</varname></codeph> – specify a file containing a
+          list of tables to include in the backup.</li>
+        <li><codeph>-T <varname>schema.tablename</varname></codeph> – specify a table to exclude
+          from the backup. You can use the <codeph>-T</codeph> option multiple times.</li>
+        <li><codeph>--exclude-table-file=<varname>filename</varname></codeph> – specify a file
+          containing a list of tables to exclude from the backup.</li>
+        <li><codeph>-s <varname>schema_name</varname></codeph> – include all tables qualified by a
+          specified schema name in the backup. You can use the <codeph>-s</codeph> option multiple
+          times.</li>
+        <li><codeph>--schema-file=<varname>filename</varname></codeph> – specify a file containing a
+          list of schemas to include in the backup.</li>
+        <li><codeph>-S <varname>schema_name</varname></codeph> – exclude tables qualified by a
+          specified schema name from the backup. You can use the <codeph>-S</codeph> option multiple
+          times.</li>
+        <li><codeph>--exclude-schema-file=<varname>filename</varname></codeph> – specify a file
+          containing schema names to exclude from the backup. </li>
+      </ul>Only a set of tables or set of schemas can be specified. For example, the
+        <codeph>-s</codeph> option cannot be specified with the <codeph>-t</codeph> option. </p>
+    <p>Refer to <xref href="backup-incremental.xml#backup-incremental/section_djm_lbb_tt"/> for
+      additional information about using these <codeph>gpcrondump</codeph> options with incremental
+      backups. </p>
+  </body>
+</topic>

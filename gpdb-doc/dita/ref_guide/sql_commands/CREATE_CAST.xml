@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1"><title id="bn20941">CREATE CAST</title><body><p id="sql_command_desc">Defines a new cast.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE CAST (<varname>sourcetype</varname> AS <varname>targettype</varname>) 
+       WITH FUNCTION <varname>funcname</varname> (<varname>argtypes</varname>) 
+       [AS ASSIGNMENT | AS IMPLICIT]
+
+CREATE CAST (<varname>sourcetype</varname> AS <varname>targettype</varname>) WITHOUT FUNCTION 
+       [AS ASSIGNMENT | AS IMPLICIT]</codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE CAST</codeph> defines a new cast. A cast specifies how
+to perform a conversion between two data types. For example,</p><codeblock>SELECT CAST(42 AS text);</codeblock><p>converts the integer constant <codeph>42</codeph> to type <codeph>text</codeph> by invoking a
+        previously specified function, in this case <codeph>text(int4)</codeph>. If no suitable cast
+        has been defined, the conversion fails. </p><p>Two types may be binary compatible, which means that they can be converted
+into one another without invoking any function. This requires that corresponding
+values use the same internal representation. For instance, the types
+<codeph>text</codeph> and <codeph>varchar</codeph> are binary compatible.
+</p><p>By default, a cast can be invoked only by an explicit cast request, that is an explicit
+          <codeph>CAST(x AS </codeph>
+        <varname>typename</varname><codeph>)</codeph> or <codeph>x:: <varname>typename</varname></codeph> construct.</p><p>If the cast is marked <codeph>AS ASSIGNMENT</codeph> then it can be invoked implicitly when
+        assigning a value to a column of the target data type. For example, supposing that
+          <codeph>foo.f1</codeph> is a column of type <codeph>text</codeph>, then:</p><codeblock>INSERT INTO foo (f1) VALUES (42);</codeblock><p>will be allowed if the cast from type <codeph>integer</codeph> to type <codeph>text</codeph> is
+        marked <codeph>AS ASSIGNMENT</codeph>, otherwise not. The term <i>assignment cast</i> is
+        typically used to describe this kind of cast.</p><p>If the cast is marked <codeph>AS IMPLICIT</codeph> then it can be invoked implicitly in any
+        context, whether assignment or internally in an expression. The term <i>implicit cast</i> is
+        typically used to describe this kind of cast. For example, since <codeph>||</codeph> takes
+          <codeph>text</codeph> operands,</p><codeblock>SELECT 'The time is ' || now();</codeblock><p>will be allowed only if the cast from type <codeph>timestamp</codeph>
+to <codeph>text</codeph> is marked <codeph>AS IMPLICIT</codeph>. Otherwise,
+it will be necessary to write the cast explicitly, for example</p><codeblock>SELECT 'The time is ' || CAST(now() AS text);</codeblock><p>It is wise to be conservative about marking casts as implicit. An overabundance
+of implicit casting paths can cause Greenplum Database to choose surprising
+interpretations of commands, or to be unable to resolve commands at all
+because there are multiple possible interpretations. A good rule of thumb
+is to make a cast implicitly invokable only for information-preserving
+transformations between types in the same general type category. For
+example, the cast from <codeph>int2</codeph> to <codeph>int4</codeph>
+can reasonably be implicit, but the cast from <codeph>float8</codeph>
+to <codeph>int4</codeph> should probably be assignment-only. Cross-type-category
+casts, such as <codeph>text</codeph> to <codeph>int4</codeph>, are best
+made explicit-only. </p><p>To be able to create a cast, you must own the source or the target
+data type. To create a binary-compatible cast, you must be superuser.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>sourcetype</varname></pt><pd>The name of the source data type of the cast. </pd></plentry><plentry><pt><varname>targettype</varname></pt><pd>The name of the target data type of the cast. </pd></plentry><plentry><pt><varname>funcname(argtypes)</varname></pt><pd>The function used to perform the cast. The function name may be schema-qualified.
+If it is not, the function will be looked up in the schema search path.
+The function's result data type must match the target type of the cast.</pd><pd>Cast implementation functions may have one to three arguments. The first argument type must be
+            identical to the cast's source type. The second argument, if present, must be type
+              <codeph>integer</codeph>; it receives the type modifier associated with the
+            destination type, or <codeph>-1</codeph> if there is none. The third argument, if
+            present, must be type <codeph>boolean</codeph>; it receives <codeph>true</codeph> if the
+            cast is an explicit cast, <codeph>false</codeph> otherwise. The SQL specification
+            demands different behaviors for explicit and implicit casts in some cases. This argument
+            is supplied for functions that must implement such casts. It is not recommended that you
+            design your own data types this way.</pd><pd>Ordinarily a cast must have different source and target data types.
+However, it is allowed to declare a cast with identical source and target
+types if it has a cast implementation function with more than one argument.
+This is used to represent type-specific length coercion functions in
+the system catalogs. The named function is used to coerce a value of
+the type to the type modifier value given by its second argument. (Since
+the grammar presently permits only certain built-in data types to have
+type modifiers, this feature is of no use for user-defined target types.)
+</pd><pd>When a cast has different source and target types and a function
+that takes more than one argument, it represents converting from one
+type to another and applying a length coercion in a single step. When
+no such entry is available, coercion to a type that uses a type modifier
+involves two steps, one to convert between data types and a second to
+apply the modifier.</pd></plentry><plentry><pt>WITHOUT FUNCTION</pt><pd>Indicates that the source type and the target type are binary compatible,
+so no function is required to perform the cast. </pd></plentry><plentry><pt>AS ASSIGNMENT</pt><pd>Indicates that the cast may be invoked implicitly in assignment contexts.</pd></plentry><plentry><pt>AS IMPLICIT</pt><pd>Indicates that the cast may be invoked implicitly in any context.</pd></plentry></parml></section><section id="section5"><title>Notes</title><p>Note that in this release of Greenplum Database, user-defined functions
+used in a user-defined cast must be defined as <codeph>IMMUTABLE</codeph>.
+Any compiled code (shared library files) for custom functions must be
+placed in the same location on every host in your Greenplum Database
+array (master and all segments). This location must also be in the <codeph>LD_LIBRARY_PATH</codeph>
+so that the server can locate the files.</p><p>Remember that if you want to be able to convert types both ways you
+need to declare casts both ways explicitly. </p><p>It is recommended that you follow the convention of naming cast implementation functions after
+        the target data type, as the built-in cast implementation functions are named. Many users
+        are used to being able to cast data types using a function-style notation, that is
+            <codeph><varname>typename</varname>(x)</codeph>.</p></section><section id="section6"><title>Examples</title><p>To create a cast from type <codeph>text</codeph> to type <codeph>int4</codeph> using the function
+          <codeph>int4(text)</codeph> (This cast is already predefined in the system.):</p><codeblock>CREATE CAST (text AS int4) WITH FUNCTION int4(text);</codeblock></section><section id="section7"><title>Compatibility</title><p>The <codeph>CREATE CAST</codeph> command conforms to the SQL standard,
+except that SQL does not make provisions for binary-compatible types
+or extra arguments to implementation functions. <codeph>AS IMPLICIT</codeph>
+is a Greenplum Database extension, too.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="./CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/></codeph>,
+            <codeph><xref href="./CREATE_TYPE.xml#topic1" type="topic" format="dita"/></codeph>,
+            <codeph><xref href="./DROP_CAST.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>

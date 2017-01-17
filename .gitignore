@@ -46,6 +46,8 @@ Release
 pgsql.sln
 cscope.*
 build.sh
+gpdb-doc/book/final_app
+gpdb-doc/book/output
 
 # Added
 *.swp

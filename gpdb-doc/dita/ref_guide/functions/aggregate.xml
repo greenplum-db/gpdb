@@ -1,0 +1,673 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="functions-aggregate">
+  <title>Aggregate Functions</title>
+  <shortdesc><i>Aggregate functions</i> compute a single result value from a set of input
+    values.</shortdesc>
+  <body>
+    <p>The special syntax considerations for aggregate functions are explained in <cite>Greenplum
+        Database Administrator Guide</cite>. Aggregate functions used in statistics applications are
+      presented separately from the general-purpose functions.</p>
+    <ul id="ul_f5h_cgk_np">
+      <li>
+        <p><xref href="#functions-aggregate/functions-aggregate-table" type="table"/> lists
+          non-statistics aggregate functions that are included in PostgreSQL. </p>
+      </li>
+      <li>
+        <p><xref href="#functions-aggregate/fuctions-agg-stats" format="dita" type="section"
+            scope="local"/> lists the PostgreSQL built-in statistics aggregates functions and the
+          built-in Greenplum aggregates extensions. </p>
+      </li>
+    </ul>
+    <table id="functions-aggregate-table">
+      <title>General-Purpose Aggregate Functions</title>
+      <tgroup cols="4">
+        <colspec colnum="1" colname="c1" colwidth="1.5*"/>
+        <colspec colnum="2" colname="c2" colwidth="1.25*"/>
+        <colspec colnum="3" colname="c3" colwidth="2.85*"/>
+        <colspec colnum="4" colname="c4" colwidth="1.25*"/>
+        <thead>
+          <row>
+            <entry>Function</entry>
+            <entry>Argument Type</entry>
+            <entry>Return Type</entry>
+            <entry>Description</entry>
+          </row>
+        </thead>
+        <tbody>
+          <row>
+            <entry>
+              <codeph>avg(<i>expression</i>)</codeph>
+            </entry>
+            <entry>
+              <codeph>smallint</codeph>, <codeph>int</codeph>, <codeph>bigint</codeph>,
+                <codeph>real</codeph>, <codeph>double precision</codeph>, <codeph>numeric</codeph>,
+              or <codeph>interval</codeph>
+            </entry>
+            <entry>
+              <codeph>numeric</codeph> for any integer type argument, <codeph>double
+                precision</codeph> for a floating-point argument, otherwise the same as the argument
+              data type </entry>
+            <entry>the average (arithmetic mean) of all input values</entry>
+          </row>
+          <row>
+            <entry>
+              <codeph>bit_and(<i>expression</i>)</codeph>
+            </entry>
+            <entry>
+              <codeph>smallint</codeph>, <codeph>int</codeph>, <codeph>bigint</codeph>, or
+                <codeph>bit</codeph>
+            </entry>
+            <entry> same as argument data type </entry>
+            <entry>the bitwise AND of all non-null input values, or null if none</entry>
+          </row>
+          <row>
+            <entry>
+              <codeph>bit_or(<i>expression</i>)</codeph>
+            </entry>
+            <entry>
+              <codeph>smallint</codeph>, <codeph>int</codeph>, <codeph>bigint</codeph>, or
+                <codeph>bit</codeph>
+            </entry>
+            <entry> same as argument data type </entry>
+            <entry>the bitwise OR of all non-null input values, or null if none</entry>
+          </row>
+          <row>
+            <entry>
+              <codeph>bool_and(<i>expression</i>)</codeph>
+            </entry>
+            <entry>
+              <codeph>bool</codeph>
+            </entry>
+            <entry>
+              <codeph>bool</codeph>
+            </entry>
+            <entry>true if all input values are true, otherwise false</entry>
+          </row>
+          <row>
+            <entry>
+              <codeph>bool_or(<i>expression</i>)</codeph>
+            </entry>
+            <entry>
+              <codeph>bool</codeph>
+            </entry>
+            <entry>
+              <codeph>bool</codeph>
+            </entry>
+            <entry>true if at least one input value is true, otherwise false</entry>
+          </row>
+          <row>
+            <entry>
+              <codeph>count(*)</codeph>
+            </entry>
+            <entry/>
+            <entry>
+              <codeph>bigint</codeph>
+            </entry>
+            <entry>number of input rows</entry>
+          </row>
+          <row>
+            <entry>
+              <codeph>count(<i>expression</i>)</codeph>
+            </entry>
+            <entry>any</entry>
+            <entry>
+              <codeph>bigint</codeph>
+            </entry>
+            <entry> number of input rows for which the value of <i>expression</i> is not null
+            </entry>
+          </row>
+          <row>
+            <entry>
+              <codeph>every(<i>expression</i>)</codeph>
+            </entry>
+            <entry>
+              <codeph>bool</codeph>
+            </entry>
+            <entry>
+              <codeph>bool</codeph>
+            </entry>
+            <entry>equivalent to <codeph>bool_and</codeph></entry>
+          </row>
+          <row>
+            <entry>
+              <codeph>max(<i>expression</i>)</codeph>
+            </entry>
+            <entry>any array, numeric, string, or date/time type</entry>
+            <entry>same as argument type</entry>
+            <entry> maximum value of <i>expression</i> across all input values </entry>
+          </row>
+          <row>
+            <entry>
+              <codeph>min(<i>expression</i>)</codeph>
+            </entry>
+            <entry>any array, numeric, string, or date/time type</entry>
+            <entry>same as argument type</entry>
+            <entry> minimum value of <i>expression</i> across all input values </entry>
+          </row>
+          <row>
+            <entry>
+              <codeph>sum(<i>expression</i>)</codeph>
+            </entry>
+            <entry>
+              <codeph>smallint</codeph>, <codeph>int</codeph>, <codeph>bigint</codeph>,
+                <codeph>real</codeph>, <codeph>double precision</codeph>, <codeph>numeric</codeph>,
+              or <codeph>interval</codeph>
+            </entry>
+            <entry>
+              <codeph>bigint</codeph> for <codeph>smallint</codeph> or <codeph>int</codeph>
+              arguments, <codeph>numeric</codeph> for <codeph>bigint</codeph> arguments,
+                <codeph>double precision</codeph> for floating-point arguments, otherwise the same
+              as the argument data type </entry>
+            <entry>sum of <i>expression</i> across all input values</entry>
+          </row>
+        </tbody>
+      </tgroup>
+    </table>
+    <p>Except for <codeph>count</codeph>, these functions return a null value when no rows are
+      selected. In particular, the <codeph>sum</codeph> of no rows returns null, not zero as you
+      might expect. The <codeph>coalesce</codeph> function may be used to substitute zero for null
+      when necessary. </p>
+    <note>
+      <p> Boolean aggregates <codeph>bool_and</codeph> and <codeph>bool_or</codeph> correspond to
+        standard SQL aggregates <codeph>every</codeph> and <codeph>any</codeph> or
+          <codeph>some</codeph>. As for <codeph>any</codeph> and <codeph>some</codeph>, it seems
+        that there is an ambiguity built into the standard syntax:
+        <codeblock>
+SELECT b1 = ANY((SELECT b2 FROM t2 ...)) FROM t1 ...;
+</codeblock> Here
+          <codeph>ANY</codeph> can be considered both as leading to a subquery or as an aggregate if
+        the select expression returns 1 row. Thus the standard name cannot be given to these
+        aggregates. </p>
+    </note>
+    <note>
+      <p> Users accustomed to working with other SQL database management systems may be surprised by
+        the performance of the <codeph>count</codeph> aggregate when it is applied to the entire
+        table. A query like: <codeblock>
+SELECT count(*) FROM sometable;
+</codeblock> is executed by
+        Greenplum Database using a sequential scan of the entire table. </p>
+    </note>
+    <section id="fuctions-agg-stats">
+      <title>Aggregate Functions for Statistics</title>
+      <p>
+        <xref href="#functions-aggregate/functions-aggregate-statistics-table"/> shows PostgreSQL
+        aggregate functions typically used in statistical analysis. Where the description mentions
+          <i>N</i>, it means the number of input rows for which all the input expressions are
+        non-null. In all cases, null is returned if the computation is meaningless, for example when
+          <i>N</i> is zero. </p>
+      <table id="functions-aggregate-statistics-table">
+        <title>Aggregate Functions for Statistics</title>
+        <tgroup cols="4">
+          <colspec colname="col1" colnum="1" colwidth="3*"/>
+          <colspec colname="col2" colnum="2" colwidth="2.25*"/>
+          <colspec colname="col3" colnum="3" colwidth="2.5*"/>
+          <colspec colname="col4" colnum="4" colwidth="4.89*"/>
+          <thead>
+            <row>
+              <entry>Function</entry>
+              <entry>Argument Type</entry>
+              <entry>Return Type</entry>
+              <entry>Description</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry>
+                <codeph>corr(<i>Y</i>, <i>X</i>)</codeph>
+              </entry>
+              <entry>
+                <codeph>double precision</codeph>
+              </entry>
+              <entry>
+                <codeph>double precision</codeph>
+              </entry>
+              <entry>correlation coefficient</entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>covar_pop(<i>Y</i>, <i>X</i>)</codeph>
+              </entry>
+              <entry>
+                <codeph>double precision</codeph>
+              </entry>
+              <entry>
+                <codeph>double precision</codeph>
+              </entry>
+              <entry>population covariance</entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>covar_samp(<i>Y</i>, <i>X</i>)</codeph>
+              </entry>
+              <entry>
+                <codeph>double precision</codeph>
+              </entry>
+              <entry>
+                <codeph>double precision</codeph>
+              </entry>
+              <entry>sample covariance</entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>regr_avgx(<i>Y</i>, <i>X</i>)</codeph>
+              </entry>
+              <entry>
+                <codeph>double precision</codeph>
+              </entry>
+              <entry>
+                <codeph>double precision</codeph>
+              </entry>
+              <entry>average of the independent variable
+                (<codeph>sum(<i>X</i>)/<i>N</i></codeph>)</entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>regr_avgy(<i>Y</i>, <i>X</i>)</codeph>
+              </entry>
+              <entry>
+                <codeph>double precision</codeph>
+              </entry>
+              <entry>
+                <codeph>double precision</codeph>
+              </entry>
+              <entry>average of the dependent variable
+                (<codeph>sum(<i>Y</i>)/<i>N</i></codeph>)</entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>regr_count(<i>Y</i>, <i>X</i>)</codeph>
+              </entry>
+              <entry>
+                <codeph>double precision</codeph>
+              </entry>
+              <entry>
+                <codeph>bigint</codeph>
+              </entry>
+              <entry>number of input rows in which both expressions are nonnull</entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>regr_intercept(<i>Y</i>, <i>X</i>)</codeph>
+              </entry>
+              <entry>
+                <codeph>double precision</codeph>
+              </entry>
+              <entry>
+                <codeph>double precision</codeph>
+              </entry>
+              <entry>y-intercept of the least-squares-fit linear equation determined by the
+                  (<i>X</i>, <i>Y</i>) pairs</entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>regr_r2(<i>Y</i>, <i>X</i>)</codeph>
+              </entry>
+              <entry>
+                <codeph>double precision</codeph>
+              </entry>
+              <entry>
+                <codeph>double precision</codeph>
+              </entry>
+              <entry>square of the correlation coefficient</entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>regr_slope(<i>Y</i>, <i>X</i>)</codeph>
+              </entry>
+              <entry>
+                <codeph>double precision</codeph>
+              </entry>
+              <entry>
+                <codeph>double precision</codeph>
+              </entry>
+              <entry>slope of the least-squares-fit linear equation determined by the (<i>X</i>,
+                  <i>Y</i>) pairs</entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>regr_sxx(<i>Y</i>, <i>X</i>)</codeph>
+              </entry>
+              <entry>
+                <codeph>double precision</codeph>
+              </entry>
+              <entry>
+                <codeph>double precision</codeph>
+              </entry>
+              <entry><codeph>sum(<i>X</i>^2) - sum(<i>X</i>)^2/<i>N</i></codeph> ("sum of squares"
+                of the independent variable)</entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>regr_sxy(<i>Y</i>, <i>X</i>)</codeph>
+              </entry>
+              <entry>
+                <codeph>double precision</codeph>
+              </entry>
+              <entry>
+                <codeph>double precision</codeph>
+              </entry>
+              <entry><codeph>sum(<i>X</i>*<i>Y</i>) - sum(<i>X</i>) *
+                  sum(<i>Y</i>)/<i>N</i></codeph> ("sum of products" of independent times dependent
+                variable)</entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>regr_syy(<i>Y</i>, <i>X</i>)</codeph>
+              </entry>
+              <entry>
+                <codeph>double precision</codeph>
+              </entry>
+              <entry>
+                <codeph>double precision</codeph>
+              </entry>
+              <entry><codeph>sum(<i>Y</i>^2) - sum(<i>Y</i>)^2/<i>N</i></codeph> ("sum of squares"
+                of the dependent variable)</entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>stddev(<i>expression</i>)</codeph>
+              </entry>
+              <entry>
+                <codeph>smallint</codeph>, <codeph>int</codeph>, <codeph>bigint</codeph>,
+                  <codeph>real</codeph>, <codeph>double precision</codeph>, or
+                  <codeph>numeric</codeph>
+              </entry>
+              <entry>
+                <codeph>double precision</codeph> for floating-point arguments, otherwise
+                  <codeph>numeric</codeph>
+              </entry>
+              <entry>historical alias for <codeph>stddev_samp</codeph></entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>stddev_pop(<i>expression</i>)</codeph>
+              </entry>
+              <entry>
+                <codeph>smallint</codeph>, <codeph>int</codeph>, <codeph>bigint</codeph>,
+                  <codeph>real</codeph>, <codeph>double precision</codeph>, or
+                  <codeph>numeric</codeph>
+              </entry>
+              <entry>
+                <codeph>double precision</codeph> for floating-point arguments, otherwise
+                  <codeph>numeric</codeph>
+              </entry>
+              <entry>population standard deviation of the input values</entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>stddev_samp(<i>expression</i>)</codeph>
+              </entry>
+              <entry>
+                <codeph>smallint</codeph>, <codeph>int</codeph>, <codeph>bigint</codeph>,
+                  <codeph>real</codeph>, <codeph>double precision</codeph>, or
+                  <codeph>numeric</codeph>
+              </entry>
+              <entry>
+                <codeph>double precision</codeph> for floating-point arguments, otherwise
+                  <codeph>numeric</codeph>
+              </entry>
+              <entry>sample standard deviation of the input values</entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>variance</codeph>(<i>expression</i>) </entry>
+              <entry>
+                <codeph>smallint</codeph>, <codeph>int</codeph>, <codeph>bigint</codeph>,
+                  <codeph>real</codeph>, <codeph>double precision</codeph>, or
+                  <codeph>numeric</codeph>
+              </entry>
+              <entry>
+                <codeph>double precision</codeph> for floating-point arguments, otherwise
+                  <codeph>numeric</codeph>
+              </entry>
+              <entry>historical alias for <codeph>var_samp</codeph></entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>var_pop</codeph>(<i>expression</i>) </entry>
+              <entry>
+                <codeph>smallint</codeph>, <codeph>int</codeph>, <codeph>bigint</codeph>,
+                  <codeph>real</codeph>, <codeph>double precision</codeph>, or
+                  <codeph>numeric</codeph>
+              </entry>
+              <entry>
+                <codeph>double precision</codeph> for floating-point arguments, otherwise
+                  <codeph>numeric</codeph>
+              </entry>
+              <entry>population variance of the input values (square of the population standard
+                deviation)</entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>var_samp</codeph>(<i>expression</i>) </entry>
+              <entry>
+                <codeph>smallint</codeph>, <codeph>int</codeph>, <codeph>bigint</codeph>,
+                  <codeph>real</codeph>, <codeph>double precision</codeph>, or
+                  <codeph>numeric</codeph>
+              </entry>
+              <entry>
+                <codeph>double precision</codeph> for floating-point arguments, otherwise
+                  <codeph>numeric</codeph>
+              </entry>
+              <entry>sample variance of the input values (square of the sample standard
+                deviation)</entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+      <p>
+        <xref href="#functions-aggregate/greenplum_aggregate_analytics" format="dita"/> shows
+        statistics aggregate functions that are Greenplum extensions. </p>
+      <table id="greenplum_aggregate_analytics">
+        <title>Advanced Aggregate Functions for Analytics</title>
+        <tgroup cols="4">
+          <colspec colname="col1" colnum="1" colwidth="2.38*"/>
+          <colspec colname="col2" colnum="2" colwidth="1.98*"/>
+          <colspec colname="col3" colnum="3" colwidth="3.76*"/>
+          <colspec colname="col4" colnum="4" colwidth="2.38*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Function</entry>
+              <entry colname="col2">Return Type</entry>
+              <entry colname="col3">Full Syntax</entry>
+              <entry colname="col4">Description</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">
+                <codeph>median(<i>expr</i>)</codeph>
+              </entry>
+              <entry colname="col2">
+                <codeph>timestamp, timestampz, interval, float</codeph>
+              </entry>
+              <entry colname="col3">
+                <codeph>median(<i>expression</i>)</codeph>
+                <p>
+                  <i>Example:</i>
+                </p>
+                <codeblock>SELECT department_id, MEDIAN(salary) 
+FROM employees 
+GROUP BY department_id; </codeblock>
+              </entry>
+              <entry colname="col4">Can take a two-dimensional array as input. Treats such arrays as
+                matrices.</entry>
+            </row>
+            <row>
+              <entry colname="col1">
+                <codeph>percentile_cont (<i>expr</i>) WITHIN GROUP (ORDER BY <i>expr</i>
+                  [DESC/ASC])</codeph>
+              </entry>
+              <entry colname="col2">
+                <codeph>timestamp, timestampz, interval, float</codeph>
+              </entry>
+              <entry colname="col3">
+                <codeph>percentile_cont(<i>percentage</i>) WITHIN GROUP (ORDER BY
+                  <i>expression</i>)</codeph>
+                <p>
+                  <i>Example:</i>
+                </p>
+                <codeblock>SELECT department_id,
+percentile_cont (0.5) WITHIN GROUP (ORDER BY salary DESC)
+"Median_cont"; 
+FROM employees GROUP BY department_id;</codeblock>
+              </entry>
+              <entry colname="col4">Performs an inverse distirbution function that assumes a
+                continuous distribution model. It takes a percentile value and a sort specification
+                and returns the same datatype as the numeric datatype of the argument. This returned
+                value is a computed result after performing linear interpolation. Null are ignored
+                in this calculation.</entry>
+            </row>
+            <row>
+              <entry colname="col1"><codeph>percentile_disc (<i>expr</i>) WITHIN GROUP (ORDER BY
+                    <i>expr</i> [DESC/ASC]</codeph>)</entry>
+              <entry colname="col2">
+                <codeph>timestamp, timestampz, interval, float</codeph>
+              </entry>
+              <entry colname="col3">
+                <codeph>percentile_disc(<i>percentage</i>) WITHIN GROUP (ORDER BY
+                  <i>expression</i>)</codeph>
+                <p>
+                  <i>Example:</i>
+                </p>
+                <codeblock>SELECT department_id, 
+PERCENTILE_DISC (0.5) WITHIN GROUP (ORDER BY salary DESC)
+"Median_desc"; 
+FROM employees GROUP BY department_id;</codeblock>
+              </entry>
+              <entry colname="col4">Performs an inverse distribution function that assumes a
+                discrete distribution model. It takes a percentile value and a sort specification.
+                This returned value is an element from the set. Null are ignored in this
+                calculation.</entry>
+            </row>
+            <row>
+              <entry colname="col1">
+                <codeph>sum(array[])</codeph>
+              </entry>
+              <entry colname="col2">
+                <codeph>smallint[]int[], bigint[], float[]</codeph>
+              </entry>
+              <entry colname="col3">
+                <codeph>sum(array[[1,2],[3,4]])</codeph>
+                <p>
+                  <i>Example:</i>
+                </p>
+                <codeblock>CREATE TABLE mymatrix (myvalue int[]);
+INSERT INTO mymatrix VALUES (array[[1,2],[3,4]]);
+INSERT INTO mymatrix VALUES (array[[0,1],[1,0]]);
+SELECT sum(myvalue) FROM mymatrix;
+ sum 
+---------------
+ {{1,3},{4,4}}</codeblock>
+              </entry>
+              <entry colname="col4">Performs matrix summation. Can take as input a two-dimensional
+                array that is treated as a matrix.</entry>
+            </row>
+            <row>
+              <entry colname="col1">
+                <codeph>pivot_sum (label[], label, expr)</codeph>
+              </entry>
+              <entry colname="col2">
+                <codeph>int[], bigint[], float[]</codeph>
+              </entry>
+              <entry colname="col3">
+                <codeph>pivot_sum( array['A1','A2'], attr, value)</codeph>
+              </entry>
+              <entry colname="col4">A pivot aggregation using sum to resolve duplicate
+                entries.</entry>
+            </row>
+            <row>
+              <entry colname="col1">
+                <codeph>mregr_coef(expr, array[])</codeph>
+              </entry>
+              <entry colname="col2">
+                <codeph>float[]</codeph>
+              </entry>
+              <entry colname="col3">
+                <codeph>mregr_coef(y, array[1, x1, x2])</codeph>
+              </entry>
+              <entry colname="col4">The four <codeph>mregr_* </codeph>aggregates perform linear
+                regressions using the ordinary-least-squares method. <codeph>mregr_coef</codeph>
+                calculates the regression coefficients. The size of the return array for
+                  <codeph>mregr_coef</codeph> is the same as the size of the input array of
+                independent variables, since the return array contains the coefficient for each
+                independent variable.</entry>
+            </row>
+            <row>
+              <entry colname="col1">
+                <codeph>mregr_r2 (<i>expr</i>, array[])</codeph>
+              </entry>
+              <entry colname="col2">
+                <codeph>float</codeph>
+              </entry>
+              <entry colname="col3">
+                <codeph>mregr_r2(y, array[1, x1, x2])</codeph>
+              </entry>
+              <entry colname="col4">The four <codeph>mregr_* </codeph>aggregates perform linear
+                regressions using the ordinary-least-squares method. <codeph>mregr_r2</codeph>
+                calculates the r-squared error value for the regression.</entry>
+            </row>
+            <row>
+              <entry colname="col1">
+                <codeph>mregr_pvalues(<i>expr</i>, array[])</codeph>
+              </entry>
+              <entry colname="col2">
+                <codeph>float[]</codeph>
+              </entry>
+              <entry colname="col3">
+                <codeph>mregr_pvalues(y, array[1, x1, x2])</codeph>
+              </entry>
+              <entry colname="col4">The four <codeph>mregr_* </codeph>aggregates perform linear
+                regressions using the ordinary-least-squares method. <codeph>mregr_pvalues</codeph>
+                calculates the p-values for the regression.</entry>
+            </row>
+            <row>
+              <entry colname="col1">
+                <codeph>mregr_tstats(<i>expr</i>, array[])</codeph>
+              </entry>
+              <entry colname="col2">
+                <codeph>float[]</codeph>
+              </entry>
+              <entry colname="col3">
+                <codeph>mregr_tstats(y, array[1, x1, x2])</codeph>
+              </entry>
+              <entry colname="col4">The four <codeph>mregr_* </codeph>aggregates perform linear
+                regressions using the ordinary-least-squares method. <codeph>mregr_tstats</codeph>
+                calculates the t-statistics for the regression.</entry>
+            </row>
+            <row>
+              <entry colname="col1">
+                <codeph>nb_classify(text[], bigint, bigint[], bigint[])</codeph>
+              </entry>
+              <entry colname="col2">
+                <codeph>text</codeph>
+              </entry>
+              <entry colname="col3">
+                <codeph>nb_classify(classes, attr_count, class_count, class_total)</codeph>
+              </entry>
+              <entry colname="col4">Classify rows using a Naive Bayes Classifier. This aggregate
+                uses a baseline of training data to predict the classification of new rows and
+                returns the class with the largest likelihood of appearing in the new rows.</entry>
+            </row>
+            <row>
+              <entry colname="col1">
+                <codeph>nb_probabilities( text[], bigint, bigint[], bigint[])</codeph>
+              </entry>
+              <entry colname="col2">
+                <codeph>text</codeph>
+              </entry>
+              <entry colname="col3">
+                <codeph>nb_probabilities(classes, attr_count, class_count, class_total)</codeph>
+              </entry>
+              <entry colname="col4">Determine probability for each class using a Naive Bayes
+                Classifier. This aggregate uses a baseline of training data to predict the
+                classification of new rows and returns the probabilities that each class will appear
+                in new rows.</entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </section>
+  </body>
+</topic>

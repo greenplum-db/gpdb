@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic24">
+   <title>Database Statistics Sampling Parameters</title>
+   <body>
+      <p>These parameters adjust the amount of data sampled by an <codeph>ANALYZE</codeph>
+            operation. Adjusting these parameters affects statistics collection system-wide. You can
+            configure statistics collection on particular tables and columns by using the
+              <codeph>ALTER TABLE</codeph>
+         <codeph>SET STATISTICS</codeph> clause.</p>
+      <ul>
+         <li id="kh158362">
+            <codeph>default_statistics_target </codeph>
+         </li>
+         <li id="kh158369">
+            <codeph>gp_analyze_relative_error</codeph>
+         </li>
+      </ul>
+   </body>
+</topic>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic54">
+   <title>Read-Only Parameters</title>
+   <body>
+      <ul>
+         <li id="kh164510">
+            <codeph>gp_command_count</codeph>
+         </li>
+         <li id="kh177751">
+            <codeph>gp_content</codeph>
+         </li>
+         <li id="kh177743">
+            <codeph>gp_dbid</codeph>
+         </li>
+         <li id="kh178565">
+            <codeph>gp_num_contents_in_cluster</codeph>
+         </li>
+         <li id="kh164511">
+            <codeph>gp_role</codeph>
+         </li>
+         <li id="kh157457">
+            <codeph>gp_session_id</codeph>
+         </li>
+      </ul>
+   </body>
+</topic>

@@ -1,0 +1,794 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
+<map title="Parameter Category and List">
+    <!-- Configuration Parameter by Category -->
+    <!-- linking="sourceonly" for help -->
+    <topicref href="guc_category-list.xml#topic11" navtitle="Parameter Categories"
+        copy-to="guc_config-param-catagories.xml" chunk="to-content select-topic"
+        linking="sourceonly">
+        <topicref href="guc_category-list.xml#topic12"
+            navtitle="Connection and Authentication Parameters" copy-to="guc_config-topic12.xml"
+            chunk="to-content select-branch"/>
+        <topicref href="guc_category-list.xml#topic15"
+            navtitle="System Resource Consumption Parameters" copy-to="guc_config-topic15.xml"
+            chunk="to-content select-branch"/>
+        <topicref href="guc_category-list.xml#topic57" navtitle="Pivotal Query Optimizer Parameters"
+            copy-to="guc_config-topic57.xml" chunk="to-content select-branch"/>
+        <topicref href="guc_category-list.xml#topic21" navtitle="Query Tuning Parameters"
+            copy-to="guc_config-topic21.xml" chunk="to-content select-branch"/>
+        <topicref href="guc_category-list.xml#topic29"
+            navtitle="Error Reporting and Logging Parameters" copy-to="guc_config-topic29.xml"
+            chunk="to-content select-branch"/>
+        <topicref href="guc_category-list.xml#topic33" navtitle="System Monitoring Parameters"
+            copy-to="guc_config-topic33.xml" chunk="to-content select-branch" otherprops="gpdb"/>
+        <topicref href="guc_category-list.xml#topic37"
+            navtitle="Runtime Statistics Collection Parameters" copy-to="guc_config-topic37.xml"
+            chunk="to-content select-topic"/>
+        <topicref href="guc_category-list.xml#topic38"
+            navtitle="Automatic Statistics Collection Parameters" copy-to="guc_config-topic38.xml"
+            chunk="to-content select-topic"/>
+        <topicref href="guc_category-list.xml#topic39"
+            navtitle="Client Connection Default Parameters" copy-to="guc_config-topic39.xml"
+            chunk="to-content select-branch"/>
+        <topicref href="guc_category-list.xml#topic43" navtitle="Lock Management Parameters"
+            copy-to="guc_config-topic43.xml" chunk="to-content select-topic"/>
+        <topicref href="guc_category-list.xml#topic44" navtitle="Workload Management Parameters"
+            copy-to="guc_config-topic44.xml" chunk="to-content select-topic"/>
+        <topicref href="guc_category-list.xml#topic45" navtitle="External Table Parameters"
+            copy-to="guc_config-topic45.xml" chunk="to-content select-topic"/>
+        <topicref href="guc_category-list.xml#topic46" navtitle="Database Table Parameters"
+            copy-to="guc_config-topic46.xml" chunk="to-content select-branch"/>
+        <topicref href="guc_category-list.xml#topic47"
+            navtitle="Database and Tablespace/Filespace Parameters" copy-to="guc_config-topic47.xml"
+            chunk="to-content select-topic"/>
+        <topicref href="guc_category-list.xml#topic48"
+            navtitle="Past PostgreSQL Version Compatibility Parameters"
+            copy-to="guc_config-topic48.xml" chunk="to-content select-topic"/>
+        <topicref href="guc_category-list.xml#topic49"
+            navtitle="Greenplum Array Configuration Parameters" copy-to="guc_config-topic49.xml"
+            chunk="to-content select-branch"/>
+        <topicref href="guc_category-list.xml#topic55"
+            navtitle="Greenplum Master Mirroring Parameters" copy-to="guc_config-topic55.xml"
+            chunk="to-content select-topic" otherprops="gpdb"/>
+        <topicref href="guc_category-list.xml#topic56"
+            navtitle="Greenplum Database Extension Parameters" copy-to="guc_config-topic56.xml"
+            chunk="to-content select-topic"/>
+        <topicref href="guc_category-list.xml#topic3" navtitle="Configuration Parameters"
+            copy-to="guc_config-topic3.xml" chunk="to-content select-topic" linking="sourceonly">
+            <topicref href="guc_category-list.xml#add_missing_from" navtitle="add_missing_from"
+                copy-to="guc_config-add_missing_from.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#application_name" navtitle="application_name"
+                copy-to="guc_config-application_name.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#array_nulls" navtitle="array_nulls"
+                copy-to="guc_config-array_nulls.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#authentication_timeout"
+                navtitle="authentication_timeout" copy-to="guc_config-authentication_timeout.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#backslash_quote" navtitle="backslash_quote"
+                copy-to="guc_config-backslash_quote.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#block_size" navtitle="block_size"
+                copy-to="guc_config-block_size.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#bonjour_name" navtitle="bonjour_name"
+                copy-to="guc_config-bonjour_name.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#check_function_bodies"
+                navtitle="check_function_bodies" copy-to="guc_config-check_function_bodies.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#client_encoding" navtitle="client_encoding"
+                copy-to="guc_config-client_encoding.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#client_min_messages"
+                navtitle="client_min_messages" copy-to="guc_config-client_min_messages.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#cpu_index_tuple_cost"
+                navtitle="cpu_index_tuple_cost" copy-to="guc_config-cpu_index_tuple_cost.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#cpu_operator_cost" navtitle="cpu_operator_cost"
+                copy-to="guc_config-cpu_operator_cost.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#cpu_tuple_cost" navtitle="cpu_tuple_cost"
+                copy-to="guc_config-cpu_tuple_cost.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#cursor_tuple_fraction"
+                navtitle="cursor_tuple_fraction" copy-to="guc_config-cursor_tuple_fraction.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#custom_variable_classes"
+                navtitle="custom_variable_classes" copy-to="guc_config-custom_variable_classes.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#DateStyle" navtitle="DateStyle"
+                copy-to="guc_config-DateStyle.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#db_user_namespace" navtitle="db_user_namespace"
+                copy-to="guc_config-db_user_namespace.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#deadlock_timeout" navtitle="deadlock_timeout"
+                copy-to="guc_config-deadlock_timeout.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#debug_assertions" navtitle="debug_assertions"
+                copy-to="guc_config-debug_assertions.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#debug_pretty_print" navtitle="debug_pretty_print"
+                copy-to="guc_config-debug_pretty_print.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#debug_print_parse" navtitle="debug_print_parse"
+                copy-to="guc_config-debug_print_parse.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#debug_print_plan" navtitle="debug_print_plan"
+                copy-to="guc_config-debug_print_plan.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#debug_print_prelim_plan"
+                navtitle="debug_print_prelim_plan" copy-to="guc_config-debug_print_prelim_plan.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#debug_print_rewritten"
+                navtitle="debug_print_rewritten" copy-to="guc_config-debug_print_rewritten.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#debug_print_slice_table"
+                navtitle="debug_print_slice_table" copy-to="guc_config-debug_print_slice_table.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#default_statistics_target"
+                navtitle="default_statistics_target"
+                copy-to="guc_config-default_statistics_target.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#default_tablespace" navtitle="default_tablespace"
+                copy-to="guc_config-default_tablespace.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#default_transaction_isolation"
+                navtitle="default_transaction_isolation"
+                copy-to="guc_config-default_transaction_isolation.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#default_transaction_read_only"
+                navtitle="default_transaction_read_only"
+                copy-to="guc_config-default_transaction_read_only.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#dynamic_library_path"
+                navtitle="dynamic_library_path" copy-to="guc_config-dynamic_library_path.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#effective_cache_size"
+                navtitle="effective_cache_size" copy-to="guc_config-effective_cache_size.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#enable_bitmapscan" navtitle="enable_bitmapscan"
+                copy-to="guc_config-enable_bitmapscan.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#enable_groupagg" navtitle="enable_groupagg"
+                copy-to="guc_config-enable_groupagg.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#enable_hashagg" navtitle="enable_hashagg"
+                copy-to="guc_config-enable_hashagg.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#enable_hashjoin" navtitle="enable_hashjoin"
+                copy-to="guc_config-enable_hashjoin.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#enable_indexscan" navtitle="enable_indexscan"
+                copy-to="guc_config-enable_indexscan.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#enable_mergejoin" navtitle="enable_mergejoin"
+                copy-to="guc_config-enable_mergejoin.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#enable_nestloop" navtitle="enable_nestloop"
+                copy-to="guc_config-enable_nestloop.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#enable_seqscan" navtitle="enable_seqscan"
+                copy-to="guc_config-enable_seqscan.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#enable_sort" navtitle="enable_sort"
+                copy-to="guc_config-enable_sort.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#enable_tidscan" navtitle="enable_tidscan"
+                copy-to="guc_config-enable_tidscan.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#escape_string_warning"
+                navtitle="escape_string_warning" copy-to="guc_config-escape_string_warning.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#explain_pretty_print"
+                navtitle="explain_pretty_print" copy-to="guc_config-explain_pretty_print.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#extra_float_digits" navtitle="extra_float_digits"
+                copy-to="guc_config-extra_float_digits.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#filerep_mirrorvalidation_during_resync"
+                navtitle="filerep_mirrorvalidation_during_resync"
+                copy-to="guc_filerep_mirrorvalidation_during_resync.xml"
+                chunk="to-content select-topic" otherprops="gpdb"/>
+            <topicref href="guc_category-list.xml#from_collapse_limit"
+                navtitle="from_collapse_limit" copy-to="guc_config-from_collapse_limit.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_adjust_selectivity_for_outerjoins"
+                navtitle="gp_adjust_selectivity_for_outerjoins"
+                copy-to="guc_config-gp_adjust_selectivity_for_outerjoins.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_analyze_relative_error"
+                navtitle="gp_analyze_relative_error"
+                copy-to="guc_config-gp_analyze_relative_error.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_appendonly_compaction"
+                navtitle="gp_appendonly_compaction"
+                copy-to="guc_config-gp_appendonly_compaction.xml" chunk="to-content select-topic"
+                otherprops="gpdb"/>
+            <topicref href="guc_category-list.xml#gp_appendonly_compaction_threshold"
+                navtitle="gp_appendonly_compaction_threshhold"
+                copy-to="guc_config-gp_appendonly_compaction_threshhold.xml"
+                chunk="to-content select-topic" otherprops="gpdb"/>
+            <topicref href="guc_category-list.xml#gp_autostats_mode" navtitle="gp_autostats_mode"
+                copy-to="guc_config-gp_autostats_mode.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_autostats_mode_in_functions"
+                navtitle="gp_autostats_mode_in_functtions"
+                copy-to="guc_config-gp_autostats_mode_in_functions.xml"
+                chunk="to-content select-topic" otherprops="gpdb"/>
+            <topicref href="guc_category-list.xml#gp_autostats_on_change_threshold"
+                navtitle="gp_autostats_on_change_threshold"
+                copy-to="guc_config-gp_autostats_on_change_threshold.xml"
+                chunk="to-content select-topic" otherprops="gpdb"/>
+            <topicref href="guc_category-list.xml#gp_backup_directIO" navtitle="gp_backup_directIO"
+                copy-to="guc_config-gp_backup_directIO.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_backup_directIO_read_chunk_mb"
+                navtitle="gp_backup_directIO_read_chunk_mb"
+                copy-to="guc_config-gp_backup_directIO_read_chunk_mb.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_cached_segworkers_threshold"
+                navtitle="gp_cached_segworkers_threshold"
+                copy-to="guc_config-gp_cached_segworkers_threshold.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_command_count" navtitle="gp_command_count"
+                copy-to="guc_config-gp_command_count.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_connectemc_mode" navtitle="gp_connectemc_mode"
+                copy-to="guc_config-gp_connectemc_mode.xml" chunk="to-content select-topic"
+                otherprops="gpdb"/>
+            <topicref href="guc_category-list.xml#gp_connection_send_timeout"
+                navtitle="gp_connection_send_timeout" copy-to="gp_connection_send_timeout.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_connections_per_thread"
+                navtitle="gp_connections_per_thread"
+                copy-to="guc_config-gp_connections_per_thread.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_content" navtitle="gp_content"
+                copy-to="guc_config-gp_content.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_create_table_random_default_distribution"
+                navtitle="gp_create_table_random_default_distribution"
+                copy-to="guc_config-gp_create_table_random_default_distribution.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_dbid" navtitle="gp_dbid"
+                copy-to="guc_config-gp_dbid.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_debug_linger" navtitle="gp_debug_linger"
+                copy-to="guc_config-gp_debug_linger.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_default_storage_options"
+                navtitle="gp_default_storage_options"
+                copy-to="guc_config-gp_default_storage_options.xml" chunk="to-content select-topic"
+                otherprops="gpdb"/>
+            <topicref href="guc_category-list.xml#gp_dynamic_partition_pruning"
+                navtitle="gp_dynamic_partition_pruning"
+                copy-to="guc_config-gp_dynamic_partition_pruning.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_email_from" navtitle="gp_email_from"
+                copy-to="guc_config-gp_email_from.xml" chunk="to-content select-topic"
+                otherprops="gpdb"/>
+            <topicref href="guc_category-list.xml#gp_email_smtp_password"
+                navtitle="gp_email_smtp_password" copy-to="guc_config-gp_email_smtp_password.xml"
+                chunk="to-content select-topic" otherprops="gpdb"/>
+            <topicref href="guc_category-list.xml#gp_email_smtp_server"
+                navtitle="gp_email_smtp_server" copy-to="guc_config-gp_email_smtp_server.xml"
+                chunk="to-content select-topic" otherprops="gpdb"/>
+            <topicref href="guc_category-list.xml#gp_email_smtp_userid"
+                navtitle="gp_email_smtp_userid" copy-to="guc_config-gp_email_smtp_userid.xml"
+                chunk="to-content select-topic" otherprops="gpdb"/>
+            <topicref href="guc_category-list.xml#gp_email_to" navtitle="gp_email_to"
+                copy-to="guc_config-gp_email_to.xml" chunk="to-content select-topic"
+                otherprops="gpdb"/>
+            <topicref href="guc_category-list.xml#gp_enable_adaptive_nestloop"
+                navtitle="gp_enable_adaptive_nestloop"
+                copy-to="guc_config-gp_enable_adaptive_nestloop.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_enable_agg_distinct"
+                navtitle="gp_enable_agg_distinct" copy-to="guc_config-gp_enable_agg_distinct.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_enable_agg_distinct_pruning"
+                navtitle="gp_enable_agg_distinct_pruning"
+                copy-to="guc_config-gp_enable_agg_distinct_pruning.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_enable_direct_dispatch"
+                navtitle="gp_enable_direct_dispatch"
+                copy-to="guc_config-gp_enable_direct_dispatch.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_enable_exchange_default_partition"
+                navtitle="gp_enable_exchange_default_partition"
+                copy-to="guc_config-gp_enable_exchange_default_partition.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_enable_fallback_plan"
+                navtitle="gp_enable_fallback_plan" copy-to="guc_config-gp_enable_fallback_plan.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_enable_fast_sri" navtitle="gp_enable_fast_sri"
+                copy-to="guc_config-gp_enable_fast_sri.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_enable_gpperfmon"
+                navtitle="gp_enable_gpperfmon" copy-to="guc_config-gp_enable_gpperfmon.xml"
+                chunk="to-content select-topic" otherprops="gpdb"/>
+            <topicref href="guc_category-list.xml#gp_enable_groupext_distinct_gather"
+                navtitle="gp_enable_groupext_distinct_gather"
+                copy-to="guc_config-gp_enable_groupext_distinct_gather.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_enable_groupext_distinct_pruning"
+                navtitle="gp_enable_groupext_distinct_pruning"
+                copy-to="guc_config-gp_enable_groupext_distinct_pruning.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_enable_multiphase_agg"
+                navtitle="gp_enable_multiphase_agg"
+                copy-to="guc_config-gp_enable_multiphase_agg.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_enable_predicate_propagation"
+                navtitle="gp_enable_predicate_propagation"
+                copy-to="guc_config-gp_enable_predicate_propagation.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_enable_preunique"
+                navtitle="gp_enable_preunique" copy-to="guc_config-gp_enable_preunique.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_enable_relsize_collection"/>
+            <topicref href="guc_category-list.xml#gp_enable_sequential_window_plans"
+                navtitle="gp_enable_sequential_window_plans"
+                copy-to="guc_config-gp_enable_sequential_window_plans.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_enable_sort_distinct"
+                navtitle="gp_enable_sort_distinct" copy-to="guc_config-gp_enable_sort_distinct.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_enable_sort_limit"
+                navtitle="gp_enable_sort_limit" copy-to="guc_config-gp_enable_sort_limit.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_external_enable_exec"
+                navtitle="gp_external_enable_exec" copy-to="guc_config-gp_external_enable_exec.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_external_grant_privileges"
+                navtitle="gp_external_grant_privileges"
+                copy-to="guc_config-gp_external_grant_privileges.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_external_max_segs"
+                navtitle="gp_external_max_segs" copy-to="guc_config-gp_external_max_segs.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_filerep_tcp_keepalives_count"
+                navtitle="gp_filerep_tcp_keepalives_count"
+                copy-to="guc_config-gp_filerep_tcp_keepalives_count.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_filerep_tcp_keepalives_idle"
+                navtitle="gp_filerep_tcp_keepalives_idle"
+                copy-to="guc_config-gp_filerep_tcp_keepalives_idle.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_filerep_tcp_keepalives_interval"
+                navtitle="gp_filerep_tcp_keepalives_interval"
+                copy-to="guc_config-gp_filerep_tcp_keepalives_interval.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_fts_probe_interval"
+                navtitle="gp_fts_probe_interval" copy-to="guc_config-gp_fts_probe_interval.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_fts_probe_retries"
+                navtitle="gp_fts_probe_retries" copy-to="guc_config-gp_fts_probe_retires.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_fts_probe_threadcount"
+                navtitle="gp_fts_probe_threadcount"
+                copy-to="guc_config-gp_fts_probe_threadcount.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_fts_probe_timeout"
+                navtitle="gp_fts_probe_timeout" copy-to="guc_config-gp_fts_probe_timeout.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_log_fts" navtitle="gp_log_fts"
+                copy-to="guc_config-gp_log_fts.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_gpperfmon_send_interval"
+                navtitle="gp_gpperfmon_send_interval"
+                copy-to="guc_config-gp_gpperfmon_send_interval.xml" chunk="to-content select-topic"
+                otherprops="gpdb"/>
+            <topicref href="guc_category-list.xml#gpperfmon_log_alert_level"
+                navtitle="gpperfmon_log_alert_level"
+                copy-to="guc_config-gpperfmon_log_alert_level.xml" chunk="to-content select-topic"
+                otherprops="gpdb"/>
+            <topicref href="guc_category-list.xml#gp_hadoop_home" navtitle="gp_hadoop_home"
+                copy-to="guc_config-gp_hadoop_home.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_hadoop_target_version"
+                navtitle="gp_hadoop_target_version"
+                copy-to="guc_config-gp_hadoop_target_version.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_hashjoin_tuples_per_bucket"
+                navtitle="gp_hashjoin_tuples_per_bucket"
+                copy-to="guc_config-gp_hashjoin_tuples_per_bucket.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_idf_deduplicate" navtitle="gp_idf_deduplicate"
+                copy-to="guc_config-gp_idf_deduplicate.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#topic_lvm_ttc_3p"
+                navtitle="gp_initial_bad_row_limit" copy-to="guc_config-topic_lvm_ttc_3p.xml"
+                chunk="to-content select-topic" otherprops="gpdb"/>
+            <topicref href="guc_category-list.xml#gp_interconnect_fc_method"
+                navtitle="gp_interconnect_fc_method"
+                copy-to="guc_config-gp_interconnect_fc_method.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_interconnect_hash_multiplier"
+                navtitle="gp_interconnect_hash_multiplier"
+                copy-to="guc_config-gp_interconnect_hash_multiplier.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_interconnect_queue_depth"
+                navtitle="gp_interconnect_queue_depth"
+                copy-to="guc_config-gp_interconnect_queue_depth.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_interconnect_setup_timeout"
+                navtitle="gp_interconnect_setup_timeout"
+                copy-to="guc_config-gp_interconnect_setup_timeout.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_interconnect_snd_queue_depth"
+                navtitle="gp_interconnect_snd_queue_depth"
+                copy-to="guc_config-gp_interconnect_snd_queue_depth.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_interconnect_type"
+                navtitle="gp_interconnect_type" copy-to="guc_config-gp_interconnect_type.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_log_format" navtitle="gp_log_format"
+                copy-to="guc_config-gp_log_format.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_max_csv_line_length"
+                navtitle="gp_max_csv_line_length" copy-to="guc_config-gp_max_csv_line_length.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_max_databases" navtitle="gp_max_databases"
+                copy-to="guc_config-gp_max_databases.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_max_filespaces" navtitle="gp_max_filespaces"
+                copy-to="guc_config-gp_max_filespaces.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_max_local_distributed_cache"
+                navtitle="gp_max_local_distributed_cache"
+                copy-to="guc_config-gp_max_local_distributed_cache.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_max_packet_size" navtitle="gp_max_packet_size"
+                copy-to="guc_config-gp_max_packet_size.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_max_plan_size" navtitle="gp_max_plan_size"
+                copy-to="guc_config-gp_max_plan_size.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_max_tablespaces" navtitle="gp_max_tablespaces"
+                copy-to="guc_config-gp_max_tablespaces.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_motion_cost_per_row"
+                navtitle="gp_motion_cost_per_row" copy-to="guc_config-gp_motion_cost_per_row.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_num_contents_in_cluster"
+                navtitle="gp_num_contents_in_cluster"
+                copy-to="guc_config-gp_num_contents_in_cluster.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_reject_percent_threshold"
+                navtitle="gp_reject_percent_threshold"
+                copy-to="guc_config-gp_reject_percent_threshold.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_reraise_signal" navtitle="gp_reraise_signal"
+                copy-to="guc_config-gp_reraise_signal.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_resqueue_memory_policy"
+                navtitle="gp_resqueue_memory_policy"
+                copy-to="guc_config-gp_resqueue_memory_policy.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_resqueue_priority"
+                navtitle="gp_resqueue_priority" copy-to="guc_config-gp_resqueue_priority.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_resqueue_priority_cpucores_per_segment"
+                navtitle="gp_resqueue_priority_cpucores_per_segment"
+                copy-to="guc_config-gp_resqueue_priority_cpucores_per_segment.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_resqueue_priority_sweeper_interval"
+                navtitle="gp_resqueue_priority_sweeper_interval"
+                copy-to="guc_config-gp_resqueue_priority_sweeper_interval.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_role" navtitle="gp_role"
+                copy-to="guc_config-gp_role.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_safefswritesize" navtitle="gp_safefswritesize"
+                copy-to="guc_config-gp_safefswritesize.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_segment_connect_timeout"
+                navtitle="gp_segment_connect_timeout"
+                copy-to="guc_config-gp_segment_connect_timeout.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_segments_for_planner"
+                navtitle="gp_segments_for_planner" copy-to="guc_config-gp_segments_for_planner.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_session_id" navtitle="gp_session_id"
+                copy-to="guc_config-gp_session_id.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_set_proc_affinity"
+                navtitle="gp_set_proc_affinity" copy-to="guc_config-gp_set_proc_affinity.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_set_read_only" navtitle="gp_set_read_only"
+                copy-to="guc_config-gp_set_read_only.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_snmp_community" navtitle="gp_snmp_community"
+                copy-to="guc_config-gp_snmp_community.xml" chunk="to-content select-topic"
+                otherprops="gpdb"/>
+            <topicref href="guc_category-list.xml#gp_snmp_monitor_address"
+                navtitle="gp_snmp_monitor_address" copy-to="guc_config-gp_snmp_monitor_address.xml"
+                chunk="to-content select-topic" otherprops="gpdb"/>
+            <topicref href="guc_category-list.xml#gp_snmp_use_inform_or_trap"
+                navtitle="gp_snmp_use_inform_or_trap"
+                copy-to="guc_config-gp_snmp_use_inform_or_trap.xml" chunk="to-content select-topic"
+                otherprops="gpdb"/>
+            <topicref href="guc_category-list.xml#gp_statistics_pullup_from_child_partition"
+                navtitle="gp_statistics_pullup_from_child_partition"
+                copy-to="guc_config-gp_statistics_pullup_from_child_partition.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_statistics_use_fkeys"
+                navtitle="gp_statistics_use_fkeys" copy-to="guc_config-gp_statistics_use_fkeys.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_vmem_idle_resource_timeout"
+                navtitle="gp_vmem_idle_resource_timeout"
+                copy-to="guc_config-gp_vmem_idle_resource_timeout.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_vmem_protect_limit"
+                navtitle="gp_vmem_protect_limit" copy-to="guc_config-gp_vmem_protect_limit.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_vmem_protect_segworker_cache_limit"
+                navtitle="gp_vmem_protect_segworker_cache_limit"
+                copy-to="guc_config-gp_vmem_protect_segworker_cache_limit.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_workfile_checksumming"
+                navtitle="gp_workfile_checksumming"
+                copy-to="guc_config-gp_workfile_checksumming.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_workfile_compress_algorithm"
+                navtitle="gp_workfile_compress_algorithm"
+                copy-to="guc_config-gp_workfile_compress_algorithm.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_workfile_limit_files_per_query"
+                navtitle="gp_workfile_limit_files_per_query"
+                copy-to="guc_config-gp_workfile_limit_files_per_query.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_workfile_limit_per_query"
+                navtitle="gp_workfile_limit_per_query"
+                copy-to="guc_config-gp_workfile_limit_per_query.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gp_workfile_limit_per_segment"
+                navtitle="gp_workfile_limit_per_segment"
+                copy-to="guc_config-gp_workfile_limit_per_segment.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#gpperfmon_port" navtitle="gpperfmon_port"
+                copy-to="guc_config-gpperfmon_port.xml" chunk="to-content select-topic"
+                otherprops="gpdb"/>
+            <topicref href="guc_category-list.xml#integer_datetimes" navtitle="integer_datetimes"
+                copy-to="guc_config-integer_datetimes.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#IntervalStyle" navtitle="IntervalStyle"
+                copy-to="guc_config-IntervalStyle.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#join_collapse_limit"
+                navtitle="join_collapse_limit" copy-to="guc_config-join_collapse_limit.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#keep_wal_segments" navtitle="keep_wal_segments"
+                copy-to="guc_config-keep_wal_segments.xml" chunk="to-content select-topic"
+                otherprops="gpdb"/>
+            <topicref href="guc_category-list.xml#krb_caseins_users" navtitle="krb_caseins_users"
+                copy-to="guc_config-krb_caseins_users.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#krb_server_keyfile" navtitle="krb_server_keyfile"
+                copy-to="guc_config-krb_server_keyfile.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#krb_srvname" navtitle="krb_srvname"
+                copy-to="guc_config-krb_srvname.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#lc_collate" navtitle="lc_collate"
+                copy-to="guc_config-lc_collate.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#lc_ctype" navtitle="lc_ctype"
+                copy-to="guc_config-lc_ctype.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#lc_messages" navtitle="lc_messages"
+                copy-to="guc_config-lc_messages.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#lc_monetary" navtitle="lc_monetary"
+                copy-to="guc_config-lc_monetary.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#lc_numeric" navtitle="lc_numeric"
+                copy-to="guc_config-lc_numeric.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#lc_time" navtitle="lc_time"
+                copy-to="guc_config-lc_time.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#listen_addresses" navtitle="listen_addresses"
+                copy-to="guc_config-listen_addresses.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#local_preload_libraries"
+                navtitle="local_preload_libraries" copy-to="guc_config-local_preload_libraries.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#log_autostats" navtitle="log_autostats"
+                copy-to="guc_config-log_autostats.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#log_connections" navtitle="log_connections"
+                copy-to="guc_config-log_connections.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#log_disconnections" navtitle="log_disconnections"
+                copy-to="guc_config-log_disconnections.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#log_dispatch_stats" navtitle="log_dispatch_stats"
+                copy-to="guc_config-log_dispatch_stats.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#log_duration" navtitle="log_duration"
+                copy-to="guc_config-log_duration.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#log_error_verbosity"
+                navtitle="log_error_verbosity" copy-to="guc_config-log_error_verbosity.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#log_executor_stats" navtitle="log_executor_stats"
+                copy-to="guc_config-log_executor_stats.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#log_hostname" navtitle="log_hostname"
+                copy-to="guc_config-log_hostname.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#log_min_duration_statement"
+                navtitle="log_min_duration_statement"
+                copy-to="guc_config-log_min_duration_statement.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#log_min_error_statement"
+                navtitle="log_min_error_statement" copy-to="guc_config-log_min_error_statement.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#log_min_messages" navtitle="log_min_messages"
+                copy-to="guc_config-log_min_messages.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#log_parser_stats" navtitle="log_parser_stats"
+                copy-to="guc_config-log_parser_stats.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#log_planner_stats" navtitle="log_planner_stats"
+                copy-to="guc_config-log_planner_stats.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#log_rotation_age" navtitle="log_rotation_age"
+                copy-to="guc_config-log_rotation_age.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#log_rotation_size" navtitle="log_rotation_size"
+                copy-to="guc_config-log_rotation_size.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#log_statement" navtitle="log_statement"
+                copy-to="guc_config-log_statement.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#log_statement_stats"
+                navtitle="log_statement_stats" copy-to="guc_config-log_statement_stats.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#log_timezone" navtitle="log_timezone"
+                copy-to="guc_config-log_timezone.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#log_truncate_on_rotation"
+                navtitle="log_truncate_on_rotation"
+                copy-to="guc_config-log_truncate_on_rotation.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#max_appendonly_tables"
+                navtitle="max_appendonly_tables" copy-to="guc_config-max_appendonly_tables.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#max_connections" navtitle="max_connections"
+                copy-to="guc_config-max_connections.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#max_files_per_process"
+                navtitle="max_files_per_process" copy-to="guc_config-max_files_per_process.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#max_fsm_pages" navtitle="max_fsm_pages"
+                copy-to="guc_config-max_fsm_pages.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#max_fsm_relations" navtitle="max_fsm_relations"
+                copy-to="guc_config-max_fsm_relations.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#max_function_args" navtitle="max_function_args"
+                copy-to="guc_config-max_function_args.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#max_identifier_length"
+                navtitle="max_identifier_length" copy-to="guc_config-max_identifier_length.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#max_index_keys" navtitle="max_index_keys"
+                copy-to="guc_config-max_index_keys.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#max_locks_per_transaction"
+                navtitle="max_locks_per_transaction"
+                copy-to="guc_config-max_locks_per_transaction.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#max_prepared_transactions"
+                navtitle="max_prepared_transactions"
+                copy-to="guc_config-max_prepared_transactions.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#max_resource_portals_per_transaction"
+                navtitle="max_resource_portals_per_transaction"
+                copy-to="guc_config-max_resource_portals_per_transaction.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#max_resource_queues"
+                navtitle="max_resource_queues" copy-to="guc_config-max_resource_queues.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#max_stack_depth" navtitle="max_stack_depth"
+                copy-to="guc_config-max_stack_depth.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#max_statement_mem" navtitle="max_statement_mem"
+                copy-to="guc_config-max_statement_mem.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#optimizer" navtitle="optimizer"
+                copy-to="guc_config-optimizer.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#optimizer_array_expansion_threshold"
+                navtitle="optimizer_array_expansion_threshold"
+                copy-to="guc_config-optimizer_array_expansion_threshold.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#optimizer_analyze_root_partition"
+                navtitle="optimizer_analyze_root_partition"
+                copy-to="guc_config-optimizer_analyze_root_partition.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#optimizer_control" navtitle="optimizer_control"
+                copy-to="guc_config-optimizer_control.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#optimizer_enable_master_only_queries"
+                navtitle="optimizer_enable_master_only_queries"
+                copy-to="guc_config-optimizer_enable_master_only_queries.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#optimizer_join_order_threshold"/>
+            <topicref href="guc_category-list.xml#optimizer_minidump" navtitle="optimizer_minidump"
+                copy-to="guc_config-optimizer_minidump.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#optimizer_parallel_union"
+                navtitle="optimizer_parallel_union" copy-to="guc_optimizer_parallel_union.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#optimizer_sort_factor"
+                navtitle="optimizer_sort_factor" copy-to="guc_optimizer_sort_factor.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#password_encryption"
+                navtitle="password_encryption" copy-to="guc_config-password_hash_encryption.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#password_hash_algorithm"
+                navtitle="password_hash_algorithm" copy-to="guc_config-password_hash_algorithm.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#pgcrypto.fips" navtitle="pgcrypto.fips"
+                copy-to="guc_config-pgcrypto.fips.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#pgstat_track_activity_query_size"
+                navtitle="pgstat_track_activity_query_size"
+                copy-to="guc_config-pgstat_track_activity_query_size.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#pljava_classpath" navtitle="pljava_classpath"
+                copy-to="guc_config-pljava_classpath.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#pljava_classpath_insecure"
+                navtitle="pljava_classpath_insecure"
+                copy-to="guc_config-pljava_classpath_insecure.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#pljava_statement_cache_size"
+                navtitle="pljava_statement_cache_size"
+                copy-to="guc_config-pljava_statement_cache_size.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#pljava_release_lingering_savepoints"
+                navtitle="pljava_release_lingering_savepoints"
+                copy-to="guc_config-pljava_release_lingering_savepoints.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#pljava_vmoptions" navtitle="pljava_vmoptions"
+                copy-to="guc_config-pljava_vmoptions.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#port" navtitle="port"
+                copy-to="guc_config-port.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#random_page_cost" navtitle="random_page_cost"
+                copy-to="guc_config-random_page_cost.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#readable_external_table_timeout"
+                navtitle="readable_external_table_timeout"
+                copy-to="guc_config-readable_external_table_timeout.xml"
+                chunk="to-content select-topic" otherprops="gpdb"/>
+            <topicref href="guc_category-list.xml#repl_catchup_within_range"
+                navtitle="repl_catchup_within_range"
+                copy-to="guc_config-repl_catchup_within_range.xml" chunk="to-content select-topic"
+                otherprops="gpdb"/>
+            <topicref href="guc_category-list.xml#replication_timeout"
+                navtitle="replication_timeout" copy-to="guc_config-replication_timeout.xml"
+                chunk="to-content select-topic" otherprops="gpdb"/>
+            <topicref href="guc_category-list.xml#regex_flavor" navtitle="regex_flavor"
+                copy-to="guc_config-regex_flavor.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#resource_cleanup_gangs_on_wait"
+                navtitle="resource_cleanup_gangs_on_wait"
+                copy-to="guc_config-resource_cleanup_gangs_on_wait.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#resource_select_only"
+                navtitle="resource_select_only" copy-to="guc_config-resource_select_only.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#runaway_detector_activation_percent"
+                navtitle="runaway_detector_activation_percent"
+                copy-to="guc_config-runaway_detector_activation_percent.xml"
+                chunk="to-content select-topic" otherprops="gpdb"/>
+            <topicref href="guc_category-list.xml#search_path" navtitle="search_path"
+                copy-to="guc_config-search_path.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#seq_page_cost" navtitle="seq_page_cost"
+                copy-to="guc_config-seq_page_cost.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#server_encoding" navtitle="server_encoding"
+                copy-to="guc_config-server_encoding.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#server_version" navtitle="server_version"
+                copy-to="guc_config-server_version.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#server_version_num" navtitle="server_version_num"
+                copy-to="guc_config-server_version_num.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#shared_buffers" navtitle="shared_buffers"
+                copy-to="guc_config-shared_buffers.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#shared_preload_libraries"
+                navtitle="shared_preload_libraries"
+                copy-to="guc_config-shared_preload_libraries.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#ssl" navtitle="ssl" copy-to="guc_config-ssl.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#ssl_ciphers" navtitle="ssl_ciphers"
+                copy-to="guc_config-ssl_ciphers.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#standard_conforming_strings"
+                navtitle="standard_conforming_strings"
+                copy-to="guc_config-standard_conforming_strings.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#statement_mem" navtitle="statement_mem"
+                copy-to="guc_config-statement_mem.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#statement_timeout" navtitle="statement_timeout"
+                copy-to="guc_config-statement_timeout.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#stats_queue_level" navtitle="stats_queue_level"
+                copy-to="guc_config-stats_queue_level.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#superuser_reserved_connections"
+                navtitle="superuser_reserved_connections"
+                copy-to="guc_config-superuser_reserved_connections.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#tcp_keepalives_count"
+                navtitle="tcp_keepalives_count" copy-to="guc_config-tcp_keepalives_count.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#tcp_keepalives_idle"
+                navtitle="tcp_keepalives_idle" copy-to="guc_config-tcp_keepalives_idle.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#tcp_keepalives_interval"
+                navtitle="tcp_keepalives_interval" copy-to="guc_config-tcp_keepalives_interval.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#temp_buffers" navtitle="temp_buffers"
+                copy-to="guc_config-temp_buffers.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#TimeZone" navtitle="TimeZone"
+                copy-to="guc_config-TimeZone.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#timezone_abbreviations"
+                navtitle="timezone_abbreviations" copy-to="guc_config-timezone_abbreviations.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#track_activities" navtitle="track_activities"
+                copy-to="guc_config-track_activities.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#track_counts" navtitle="track_counts"
+                copy-to="guc_config-track_counts.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#transaction_isolation"
+                navtitle="transaction_isolation" copy-to="guc_config-transaction_isolation.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#transaction_read_only"
+                navtitle="transaction_read_only" copy-to="guc_config-transaction_read_only.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#transform_null_equals"
+                navtitle="transform_null_equals" copy-to="guc_config-transform_null_equals.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#unix_socket_directory"
+                navtitle="unix_socket_directory" copy-to="guc_config-unix_socket_directory.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#unix_socket_group" navtitle="unix_socket_group"
+                copy-to="guc_config-unix_socket_group.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#unix_socket_permissions"
+                navtitle="unix_socket_permissions" copy-to="guc_config-unix_socket_permissions.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#update_process_title"
+                navtitle="update_process_title" copy-to="guc_config-update_process_title.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#vacuum_cost_delay" navtitle="vacuum_cost_delay"
+                copy-to="guc_config-vacuum_cost_delay.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#vacuum_cost_limit" navtitle="vacuum_cost_limit"
+                copy-to="guc_config-vacuum_cost_limit.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#vacuum_cost_page_dirty"
+                navtitle="vacuum_cost_page_dirty" copy-to="guc_config-vacuum_cost_page_dirty.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#vacuum_cost_page_hit"
+                navtitle="vacuum_cost_page_hit" copy-to="guc_config-vacuum_cost_page_hit.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#vacuum_cost_page_miss"
+                navtitle="vacuum_cost_page_miss" copy-to="guc_config-vacuum_cost_page_miss.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#vacuum_freeze_min_age"
+                navtitle="vacuum_freeze_min_age" copy-to="guc_config-vacuum_freeze_min_age.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#validate_previous_free_tid"
+                navtitle="validate_previous_free_tid"
+                copy-to="guc_config-validate_previous_free_tid.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#vmem_process_interrupt"
+                navtitle="vmem_process_interrupt" copy-to="guc_config-vmem_process_interrupt.xml"
+                chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#wal_receiver_status_interval"
+                navtitle="wal_receiver_status_interval"
+                copy-to="guc_config-wal_receiver_status_interval.xml"
+                chunk="to-content select-topic" otherprops="gpdb"/>
+            <topicref href="guc_category-list.xml#writable_external_table_bufsize"
+                navtitle="writable_external_table_bufsize"
+                copy-to="guc_config-writable_external_table_bufsize.xml"
+                chunk="to-content select-topic" otherprops="gpdb"/>
+            <topicref href="guc_category-list.xml#xid_stop_limit" navtitle="xid_stop_limit"
+                copy-to="guc_config-xid_stop_limit.xml" chunk="to-content select-topic"/>
+            <topicref href="guc_category-list.xml#xid_warn_limit" navtitle="xid_warn_limit"
+                copy-to="guc_config-xid_warn_limit.xml" chunk="to-content select-topic"/>
+        </topicref>
+    </topicref>
+    <!-- Configuration Parameter Definitions -->
+    <!-- linking="sourceonly" for help -->
+</map>

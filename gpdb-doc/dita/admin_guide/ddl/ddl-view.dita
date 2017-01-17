@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic_i3c_qwy_sp">
+  <title id="im140342">Creating and Managing Views</title>
+  <body>
+    <p>Views enable you to save frequently used or complex queries, then access them in a
+        <codeph>SELECT</codeph> statement as if they were a table. A view is not physically
+      materialized on disk: the query runs as a subquery when you access the view.</p>
+    <p>If a subquery is associated with a single query, consider using the <codeph>WITH</codeph>
+      clause of the <codeph>SELECT</codeph> command instead of creating a seldom-used view.</p>
+  </body>
+  <topic id="topic101" xml:lang="en">
+    <title>Creating Views</title>
+    <body>
+      <p>The <codeph>CREATE VIEW </codeph>command defines a view of a query. For example:</p>
+      <p>
+        <codeblock>CREATE VIEW comedies AS SELECT * FROM films WHERE kind = 'comedy';
+</codeblock>
+      </p>
+      <p>Views ignore <codeph>ORDER BY</codeph> and <codeph>SORT</codeph> operations stored in the
+        view.</p>
+    </body>
+  </topic>
+  <topic id="topic102" xml:lang="en">
+    <title>Dropping Views</title>
+    <body>
+      <p>The <codeph>DROP VIEW</codeph> command removes a view. For example:</p>
+      <p>
+        <codeblock>DROP VIEW topten;
+</codeblock>
+      </p>
+    </body>
+  </topic>
+</topic>

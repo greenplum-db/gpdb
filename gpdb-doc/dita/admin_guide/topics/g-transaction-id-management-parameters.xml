@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic20">
+   <title>Transaction ID Management Parameters</title>
+   <body>
+      <ul>
+         <li id="kh183815">
+            <codeph>xid_stop_limit</codeph>
+         </li>
+         <li id="kh183844">
+            <codeph>xid_warn_limit</codeph>
+         </li>
+      </ul>
+   </body>
+</topic>

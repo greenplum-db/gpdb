@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA 1.1 Topic//EN" "http://docs.oasis-open.org/dita/v1.1/OS/dtd/topic.dtd">
+<topic id="topic1" xml:lang="en">
+        <title id="ox135496">Greenplum Database Documentation</title>
+        <!--HTML-only page-->
+        <body>
+                <p>This documentation provides an overview of Greenplum Database, configuration
+                        information, reference information, and examples.</p>
+                <ul id="ul_yns_rxn_rp">
+                        <li>
+                                <xref href="server-docs.xml#topic1">Server Documentation</xref>
+                                <p>Greenplum Database server administration and reference
+                                        information</p>
+                        </li>
+                        <li>
+                                <xref href="client-docs-unix.xml#topic1">Client Tools for
+                                        UNIX</xref>
+                                <p>UNIX-based client, load, and connectivity tools information</p>
+                        </li>
+                        <li>
+                                <xref href="client-docs-win.xml#topic1">Client Tools for
+                                        Windows</xref>
+                                <p>Windows-based client, load, and connectivity tools
+                                        information</p>
+                        </li>
+                </ul>
+        </body>
+</topic>

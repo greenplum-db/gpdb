@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1"><title id="dj20941">DROP TABLESPACE</title><body><p id="sql_command_desc">Removes a tablespace.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP TABLESPACE [IF EXISTS] <varname>tablespacename</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>DROP TABLESPACE</codeph> removes a tablespace from the system.
+</p><p>A tablespace can only be dropped by its owner or a superuser. The
+tablespace must be empty of all database objects before it can be dropped.
+It is possible that objects in other databases may still reside in the
+tablespace even if no objects in the current database are using the tablespace.
+</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt>IF EXISTS</pt><pd>Do not throw an error if the tablespace does not exist. A notice
+is issued in this case.</pd></plentry><plentry><pt><varname>tablespacename</varname></pt><pd>The name of the tablespace to remove.</pd></plentry></parml></section><section id="section5"><title>Examples</title><p>Remove the tablespace <codeph>mystuff</codeph>: </p><codeblock>DROP TABLESPACE mystuff;</codeblock></section><section id="section6"><title>Compatibility</title><p><codeph>DROP TABLESPACE</codeph> is a Greenplum Database extension.</p></section><section id="section7"><title>See Also</title><p><codeph><xref href="CREATE_TABLESPACE.xml#topic1" type="topic" format="dita"/></codeph>,
+            <codeph><xref href="ALTER_TABLESPACE.xml#topic1" type="topic" format="dita"
+        /></codeph></p></section></body></topic>

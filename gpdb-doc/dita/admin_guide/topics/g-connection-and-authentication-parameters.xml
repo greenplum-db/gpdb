@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic12">
+  <title>Connection and Authentication Parameters</title>
+  <body>
+    <p>These parameters control how clients connect and authenticate to Greenplum Database. </p>
+    <p>See <xref href="../partIII.xml#topic1" type="topic" format="dita"/> for
+      information about configuring client authentication.</p>
+  </body>
+</topic>

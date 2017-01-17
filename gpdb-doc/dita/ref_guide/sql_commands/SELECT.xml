@@ -1,0 +1,650 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1"><title id="eg20941">SELECT</title><body><p id="sql_command_desc">Retrieves rows from a table or view.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">SELECT [ALL | DISTINCT [ON (<varname>expression</varname> [, ...])]]
+  * | <varname>expression </varname>[[AS] <varname>output_name</varname>] [, ...]
+  [FROM <varname>from_item</varname> [, ...]]
+  [WHERE <varname>condition</varname>]
+  [GROUP BY <varname>grouping_element</varname> [, ...]]
+  [HAVING <varname>condition</varname> [, ...]]
+  [WINDOW <varname>window_name</varname> AS (<varname>window_specification</varname>)]
+  [{UNION | INTERSECT | EXCEPT} [ALL] <varname>select</varname>]
+  [ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [, ...]]
+  [LIMIT {<varname>count</varname> | ALL}]
+  [OFFSET <varname>start</varname>]
+  [FOR {UPDATE | SHARE} [OF <varname>table_name</varname> [, ...]] [NOWAIT] [...]]</codeblock><p>where <varname>grouping_element</varname> can be one of:</p><codeblock>  ()
+  <varname>expression</varname>
+  ROLLUP (<varname>expression</varname> [,...])
+  CUBE (<varname>expression</varname> [,...])
+  GROUPING SETS ((<varname>grouping_element</varname> [, ...]))</codeblock><p>where <varname>window_specification</varname> can be:</p><codeblock>  [<varname>window_name</varname>]
+  [PARTITION BY <varname>expression </varname>[, ...]]
+  [ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [, ...]
+     [{RANGE | ROWS} 
+          { UNBOUNDED PRECEDING
+          | <varname>expression</varname> PRECEDING
+          | CURRENT ROW
+          | BETWEEN <varname>window_frame_bound</varname> AND <varname>window_frame_bound</varname> }]]
+                    where <varname>window_frame_bound</varname> can be one of:
+                        UNBOUNDED PRECEDING
+                        <varname>expression</varname> PRECEDING
+                        CURRENT ROW
+                        <varname>expression</varname> FOLLOWING
+                        UNBOUNDED FOLLOWING</codeblock><p>where <varname>from_item</varname> can be one of:</p><codeblock>[ONLY] <varname>table_name</varname> [[AS] <varname>alias</varname> [( <varname>column_alias</varname> [, ...] )]]
+(select) [AS] <varname>alias</varname> [( <varname>column_alias</varname> [, ...] )]
+<varname>function_name</varname> ( [<varname>argument</varname> [, ...]] ) [AS] <varname>alias</varname>
+             [( <varname>column_alias</varname> [, ...] 
+                | <varname>column_definition</varname> [, ...] )]
+<varname>function_name</varname> ( [<varname>argument</varname> [, ...]] ) AS 
+              ( <varname>column_definition</varname> [, ...] )
+<varname>from_item</varname> [NATURAL] <varname>join_type</varname> <varname>from_item</varname>
+          [ON <varname>join_condition</varname> | USING ( <varname>join_column</varname> [, ...] )]</codeblock></section><section id="section3"><title>Description</title><p><codeph>SELECT</codeph> retrieves rows from zero or more tables. The
+general processing of <codeph>SELECT</codeph> is as follows: </p><ol><li id="eg138796">All elements in the <codeph>FROM</codeph> list are computed. (Each element
+in the <codeph>FROM</codeph> list is a real or virtual table.) If more
+than one element is specified in the <codeph>FROM</codeph> list, they
+are cross-joined together.</li><li id="eg138832">If the <codeph>WHERE</codeph> clause is specified, all rows that do
+not satisfy the condition are eliminated from the output.</li><li id="eg138840">If the <codeph>GROUP BY</codeph> clause is specified, the output is
+divided into groups of rows that match on one or more of the defined
+grouping elements. If the <codeph>HAVING</codeph> clause is present,
+it eliminates groups that do not satisfy the given condition.</li><li id="eg141787">If a window expression is specified (and optional <codeph>WINDOW</codeph>
+clause), the output is organized according to the positional (row) or
+value-based (range) window frame.</li><li id="eg141798"><codeph>DISTINCT</codeph> eliminates duplicate rows from the result.
+<codeph>DISTINCT ON</codeph> eliminates rows that match on all the specified
+expressions. <codeph>ALL</codeph> (the default) will return all candidate
+rows, including duplicates.</li><li id="eg138848">The actual output rows are computed using the <codeph>SELECT</codeph>
+output expressions for each selected row.</li><li id="eg138856">Using the operators <codeph>UNION</codeph>, <codeph>INTERSECT</codeph>,
+and <codeph>EXCEPT</codeph>, the output of more than one <codeph>SELECT</codeph>
+statement can be combined to form a single result set. The <codeph>UNION</codeph>
+operator returns all rows that are in one or both of the result sets.
+The <codeph>INTERSECT</codeph> operator returns all rows that are strictly
+in both result sets. The <codeph>EXCEPT</codeph> operator returns the
+rows that are in the first result set but not in the second. In all three
+cases, duplicate rows are eliminated unless <codeph>ALL</codeph> is specified.</li><li id="eg138864">If the <codeph>ORDER BY</codeph> clause is specified, the returned rows
+are sorted in the specified order. If <codeph>ORDER BY</codeph> is not
+given, the rows are returned in whatever order the system finds fastest
+to produce.</li><li id="eg138878">If the <codeph>LIMIT</codeph> or <codeph>OFFSET</codeph> clause is specified,
+the <codeph>SELECT</codeph> statement only returns a subset of the result
+rows.</li><li id="eg138885">If <codeph>FOR UPDATE</codeph> or <codeph>FOR SHARE</codeph> is specified,
+the <codeph>SELECT</codeph> statement locks the entire table against
+concurrent updates.</li></ol><p>You must have <codeph>SELECT</codeph> privilege on a table to read its
+values. The use of <codeph>FOR UPDATE</codeph> or <codeph>FOR SHARE</codeph>
+requires <codeph>UPDATE</codeph> privilege as well.</p></section><section id="section4"><title>Parameters</title><sectiondiv id="section5"><b>The SELECT List</b><p>The <codeph>SELECT</codeph> list (between the key
+          words <codeph>SELECT</codeph> and <codeph>FROM</codeph>) specifies expressions that form
+          the output rows of the <codeph>SELECT</codeph> statement. The expressions can (and usually
+          do) refer to columns computed in the <codeph>FROM</codeph> clause. </p><p>Using the clause
+            <codeph>[AS] </codeph>
+          <varname>output_name</varname>, another name can be specified for an output column. This
+          name is primarily used to label the column for display. It can also be used to refer to
+          the column's value in <codeph>ORDER BY</codeph> and <codeph>GROUP BY</codeph> clauses, but
+          not in the <codeph>WHERE</codeph> or <codeph>HAVING</codeph> clauses; there you must write
+          out the expression instead. The <codeph>AS</codeph> keyword is optional in most cases
+          (such as when declaring an alias for column names, constants, function calls, and simple
+          unary operator expressions). In cases where the declared alias is a reserved SQL keyword,
+          the <varname>output_name</varname> must be enclosed in double quotes to avoid
+          ambiguity.</p><p>An <varname>expression</varname> in the <codeph>SELECT</codeph> list can
+          be a constant value, a column reference, an operator invocation, a function call, an
+          aggregate expression, a window expression, a scalar subquery, and so on. A number of
+          constructs can be classified as an expression but do not follow any general syntax rules.
+          These generally have the semantics of a function or operator. For information about SQL
+          value expressions and function calls, see "Querying Data" in the <i>Greenplum Database
+            Administrator Guide</i>.</p><p>Instead of an expression, <codeph>*</codeph> can be
+          written in the output list as a shorthand for all the columns of the selected rows. Also,
+          you can write <codeph><varname>table_name</varname>.*</codeph> as a shorthand for the
+          columns coming from just that table.</p></sectiondiv><sectiondiv id="section6"><b>The FROM
+          Clause</b><p>The <codeph>FROM</codeph> clause specifies one or more source tables for the
+            <codeph>SELECT</codeph>. If multiple sources are specified, the result is the Cartesian
+          product (cross join) of all the sources. But usually qualification conditions are added to
+          restrict the returned rows to a small subset of the Cartesian product. The
+            <codeph>FROM</codeph> clause can contain the following elements: </p><parml>
+          <plentry>
+            <pt><varname>table_name</varname></pt>
+            <pd>The name (optionally schema-qualified) of an existing table or view. If
+                <codeph>ONLY</codeph> is specified, only that table is scanned. If
+                <codeph>ONLY</codeph> is not specified, the table and all its descendant tables (if
+              any) are scanned.</pd>
+          </plentry>
+          <plentry>
+            <pt><varname>alias</varname></pt>
+            <pd>A substitute name for the <codeph>FROM</codeph> item containing the alias. An alias
+              is used for brevity or to eliminate ambiguity for self-joins (where the same table is
+              scanned multiple times). When an alias is provided, it completely hides the actual
+              name of the table or function; for example given <codeph>FROM foo AS f</codeph>, the
+              remainder of the <codeph>SELECT</codeph> must refer to this <codeph>FROM</codeph> item
+              as <codeph>f</codeph> not <codeph>foo</codeph>. If an alias is written, a column alias
+              list can also be written to provide substitute names for one or more columns of the
+              table.</pd>
+          </plentry>
+          <plentry>
+            <pt><varname>select</varname></pt>
+            <pd>A sub-<codeph>SELECT</codeph> can appear in the <codeph>FROM</codeph> clause. This
+              acts as though its output were created as a temporary table for the duration of this
+              single <codeph>SELECT</codeph> command. Note that the sub-<codeph>SELECT</codeph> must
+              be surrounded by parentheses, and an alias must be provided for it. A
+                <codeph>VALUES</codeph> command can also be used here. See "Non-standard Clauses" in
+              the <xref href="#topic1/section19" format="dita"/> section for limitations of using
+              correlated sub-selects in Greenplum Database.</pd>
+          </plentry>
+          <plentry>
+            <pt><varname>function_name</varname></pt>
+            <pd>Function calls can appear in the <codeph>FROM</codeph> clause. (This is especially
+              useful for functions that return result sets, but any function can be used.) This acts
+              as though its output were created as a temporary table for the duration of this single
+                <codeph>SELECT</codeph> command. An alias may also be used. If an alias is written,
+              a column alias list can also be written to provide substitute names for one or more
+              attributes of the function's composite return type. If the function has been defined
+              as returning the record data type, then an alias or the key word <codeph>AS</codeph>
+              must be present, followed by a column definition list in the form <codeph>(
+                column_name data_type [, ... ] )</codeph>. The column definition list must match the
+              actual number and types of columns returned by the function.</pd>
+          </plentry>
+          <plentry>
+            <pt><varname>join_type</varname></pt>
+            <pd>One of:<ul id="ul_bwd_ft2_m4">
+                <li id="eg139018"><b>[INNER] JOIN</b></li>
+                <li id="eg139020"><b>LEFT [OUTER] JOIN</b></li>
+                <li id="eg139022"><b>RIGHT [OUTER] JOIN</b></li>
+                <li id="eg139024"><b>FULL [OUTER] JOIN</b></li>
+                <li id="eg139026"><b>CROSS JOIN</b></li>
+              </ul></pd>
+            <pd>For the <codeph>INNER</codeph> and <codeph>OUTER</codeph> join types, a join
+              condition must be specified, namely exactly one of <codeph>NATURAL</codeph>,
+                <codeph>ON <varname>join_condition</varname></codeph>, or <codeph>USING (
+                  <varname>join_column</varname> [, ...])</codeph>. See below for the meaning. For
+                <codeph>CROSS JOIN</codeph>, none of these clauses may appear.</pd>
+            <pd>A <codeph>JOIN</codeph> clause combines two <codeph>FROM</codeph> items. Use
+              parentheses if necessary to determine the order of nesting. In the absence of
+              parentheses, <codeph>JOIN</codeph>s nest left-to-right. In any case
+                <codeph>JOIN</codeph> binds more tightly than the commas separating
+                <codeph>FROM</codeph> items.</pd>
+            <pd><codeph>CROSS JOIN</codeph> and <codeph>INNER JOIN</codeph> produce a simple
+              Cartesian product, the same result as you get from listing the two items at the top
+              level of <codeph>FROM</codeph>, but restricted by the join condition (if any).
+                <codeph>CROSS JOIN</codeph> is equivalent to <codeph>INNER JOIN
+                ON</codeph><codeph>(TRUE)</codeph>, that is, no rows are removed by qualification.
+              These join types are just a notational convenience, since they do nothing you could
+              not do with plain <codeph>FROM</codeph> and <codeph>WHERE</codeph>. </pd>
+            <pd><codeph>LEFT OUTER JOIN</codeph> returns all rows in the qualified Cartesian product
+              (i.e., all combined rows that pass its join condition), plus one copy of each row in
+              the left-hand table for which there was no right-hand row that passed the join
+              condition. This left-hand row is extended to the full width of the joined table by
+              inserting null values for the right-hand columns. Note that only the
+                <codeph>JOIN</codeph> clause's own condition is considered while deciding which rows
+              have matches. Outer conditions are applied afterwards.</pd>
+            <pd>Conversely, <codeph>RIGHT OUTER JOIN</codeph> returns all the joined rows, plus one
+              row for each unmatched right-hand row (extended with nulls on the left). This is just
+              a notational convenience, since you could convert it to a <codeph>LEFT OUTER
+                JOIN</codeph> by switching the left and right inputs.</pd>
+            <pd><codeph>FULL OUTER JOIN</codeph> returns all the joined rows, plus one row for each
+              unmatched left-hand row (extended with nulls on the right), plus one row for each
+              unmatched right-hand row (extended with nulls on the left).</pd>
+          </plentry>
+        </parml><parml>
+          <plentry>
+            <pt>ON <varname>join_condition</varname></pt>
+            <pd><varname>join_condition</varname> is an expression resulting in a value of type
+                <codeph>boolean</codeph> (similar to a <codeph>WHERE</codeph> clause) that specifies
+              which rows in a join are considered to match.</pd>
+          </plentry>
+          <plentry>
+            <pt>USING (<varname>join_column</varname> [, ...])</pt>
+            <pd>A clause of the form <codeph>USING ( a, b, ... )</codeph> is shorthand for
+                <codeph>ON left_table.a = right_table.a AND left_table.b = right_table.b ...
+              </codeph>. Also, <codeph>USING</codeph> implies that only one of each pair of
+              equivalent columns will be included in the join output, not both.</pd>
+          </plentry>
+          <plentry>
+            <pt>NATURAL</pt>
+            <pd><codeph>NATURAL</codeph> is shorthand for a <codeph>USING</codeph> list that
+              mentions all columns in the two tables that have the same names.</pd>
+          </plentry>
+        </parml></sectiondiv><sectiondiv id="section7"><b>The WHERE Clause</b><p>The optional
+            <codeph>WHERE</codeph> clause has the general
+          form:</p><codeblock>WHERE <varname>condition</varname></codeblock><p>where
+            <varname>condition</varname> is any expression that evaluates to a result of type
+            <codeph>boolean</codeph>. Any row that does not satisfy this condition will be
+          eliminated from the output. A row satisfies the condition if it returns true when the
+          actual row values are substituted for any variable references.
+        </p></sectiondiv><sectiondiv id="section8"><b>The GROUP BY Clause</b><p>The optional
+            <codeph>GROUP BY</codeph> clause has the general
+          form:</p><codeblock>GROUP BY <varname>grouping_element </varname>[, ...]</codeblock><p>where
+            <varname>grouping_element</varname> can be one
+            of:</p><codeblock>()
+<varname>expression</varname>
+ROLLUP (<varname>expression</varname> [,...])
+CUBE (<varname>expression</varname> [,...])
+GROUPING SETS ((<varname>grouping_element</varname> [, ...]))</codeblock><p><codeph>GROUP
+            BY</codeph> will condense into a single row all selected rows that share the same values
+          for the grouped expressions. <varname>expression</varname> can be an input column name, or
+          the name or ordinal number of an output column (<codeph>SELECT</codeph> list item), or an
+          arbitrary expression formed from input-column values. In case of ambiguity, a
+            <codeph>GROUP BY</codeph> name will be interpreted as an input-column name rather than
+          an output column name.</p><p>Aggregate functions, if any are used, are computed across all
+          rows making up each group, producing a separate value for each group (whereas without
+            <codeph>GROUP BY</codeph>, an aggregate produces a single value computed across all the
+          selected rows). When <codeph>GROUP BY</codeph> is present, it is not valid for the
+            <codeph>SELECT</codeph> list expressions to refer to ungrouped columns except within
+          aggregate functions, since there would be more than one possible value to return for an
+          ungrouped column.</p><p>Greenplum Database has the following additional OLAP grouping
+          extensions (often referred to as <i>supergroups</i>):</p><parml>
+          <plentry>
+            <pt>ROLLUP</pt>
+            <pd>A <codeph>ROLLUP</codeph> grouping is an extension to the <codeph>GROUP BY</codeph>
+              clause that creates aggregate subtotals that roll up from the most detailed level to a
+              grand total, following a list of grouping columns (or expressions).
+                <codeph>ROLLUP</codeph> takes an ordered list of grouping columns, calculates the
+              standard aggregate values specified in the <codeph>GROUP BY</codeph> clause, then
+              creates progressively higher-level subtotals, moving from right to left through the
+              list. Finally, it creates a grand total. A <codeph>ROLLUP</codeph> grouping can be
+              thought of as a series of grouping sets. For example:</pd>
+            <pd>
+              <codeblock>GROUP BY ROLLUP (a,b,c) </codeblock>
+            </pd>
+            <pd>is equivalent to:</pd>
+            <pd>
+              <codeblock>GROUP BY GROUPING SETS( (a,b,c), (a,b), (a), () ) </codeblock>
+            </pd>
+            <pd>Notice that the <varname>n</varname> elements of a <codeph>ROLLUP</codeph> translate
+              to <varname>n</varname>+1 grouping sets. Also, the order in which the grouping
+              expressions are specified is significant in a <codeph>ROLLUP</codeph>.</pd>
+          </plentry>
+          <plentry>
+            <pt>CUBE</pt>
+            <pd>A <codeph>CUBE</codeph> grouping is an extension to the <codeph>GROUP BY</codeph>
+              clause that creates subtotals for all of the possible combinations of the given list
+              of grouping columns (or expressions). In terms of multidimensional analysis,
+                <codeph>CUBE</codeph> generates all the subtotals that could be calculated for a
+              data cube with the specified dimensions. For example:</pd>
+            <pd>
+              <codeblock>GROUP BY CUBE (a,b,c) </codeblock>
+            </pd>
+            <pd>is equivalent to:</pd>
+            <pd>
+              <codeblock>GROUP BY GROUPING SETS( (a,b,c), (a,b), (a,c), (b,c), (a), 
+(b), (c), () ) </codeblock>
+            </pd>
+            <pd>Notice that <varname>n</varname> elements of a <codeph>CUBE</codeph> translate to 2n
+              grouping sets. Consider using <codeph>CUBE</codeph> in any situation requiring
+              cross-tabular reports. <codeph>CUBE</codeph> is typically most suitable in queries
+              that use columns from multiple dimensions rather than columns representing different
+              levels of a single dimension. For instance, a commonly requested cross-tabulation
+              might need subtotals for all the combinations of month, state, and product.</pd>
+          </plentry>
+          <plentry>
+            <pt>GROUPING SETS</pt>
+            <pd>You can selectively specify the set of groups that you want to create using a
+                <codeph>GROUPING SETS</codeph> expression within a <codeph>GROUP BY</codeph> clause.
+              This allows precise specification across multiple dimensions without computing a whole
+                <codeph>ROLLUP</codeph> or <codeph>CUBE</codeph>. For example:</pd>
+            <pd>
+              <codeblock>GROUP BY GROUPING SETS( (a,c), (a,b) )</codeblock>
+            </pd>
+            <pd>If using the grouping extension clauses <codeph>ROLLUP</codeph>,
+                <codeph>CUBE</codeph>, or <codeph>GROUPING SETS</codeph>, two challenges arise.
+              First, how do you determine which result rows are subtotals, and then the exact level
+              of aggregation for a given subtotal. Or, how do you differentiate between result rows
+              that contain both stored <codeph>NULL</codeph> values and "NULL" values created by the
+                <codeph>ROLLUP</codeph> or <codeph>CUBE</codeph>. Secondly, when duplicate grouping
+              sets are specified in the <codeph>GROUP BY</codeph> clause, how do you determine which
+              result rows are duplicates? There are two additional grouping functions you can use in
+              the <codeph>SELECT</codeph> list to help with this:<ul id="ul_vx1_3ml_m4">
+                <li id="eg143759"><b>grouping(column [, ...])</b> — The <codeph>grouping</codeph>
+                  function can be applied to one or more grouping attributes to distinguish
+                  super-aggregated rows from regular grouped rows. This can be helpful in
+                  distinguishing a "NULL" representing the set of all values in a super-aggregated
+                  row from a <codeph>NULL</codeph> value in a regular row. Each argument in this
+                  function produces a bit — either <codeph>1</codeph> or <codeph>0</codeph>, where
+                    <codeph>1</codeph> means the result row is super-aggregated, and
+                    <codeph>0</codeph> means the result row is from a regular grouping. The
+                    <codeph>grouping</codeph> function returns an integer by treating these bits as
+                  a binary number and then converting it to a base-10 integer.</li>
+                <li id="eg143806"><b>group_id()</b> — For grouping extension queries that contain
+                  duplicate grouping sets, the <codeph>group_id</codeph> function is used to
+                  identify duplicate rows in the output. All <i>unique</i> grouping set output rows
+                  will have a group_id value of 0. For each duplicate grouping set detected, the
+                    <codeph>group_id</codeph> function assigns a group_id number greater than 0. All
+                  output rows in a particular duplicate grouping set are identified by the same
+                  group_id number. </li>
+              </ul></pd>
+          </plentry>
+        </parml></sectiondiv><sectiondiv id="section9"><b>The WINDOW Clause</b><p>The
+            <codeph>WINDOW</codeph> clause is used to define a window that can be used in the
+            <codeph>OVER()</codeph> expression of a window function such as <codeph>rank</codeph> or
+            <codeph>avg</codeph>. For
+          example:</p><codeblock>SELECT vendor, rank() OVER (mywindow) FROM sale
+GROUP BY vendor
+WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
+            <codeph>WINDOW</codeph> clause has this general
+          form:</p><codeblock>WINDOW <varname>window_name</varname> AS (<varname>window_specification</varname>)</codeblock><p>where
+            <varname>window_specification</varname> can be:</p><codeblock>[<varname>window_name</varname>]
+[PARTITION BY <varname>expression </varname>[, ...]]
+[ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [, ...]
+    [{RANGE | ROWS} 
+      { UNBOUNDED PRECEDING
+      | <varname>expression</varname> PRECEDING
+      | CURRENT ROW
+      | BETWEEN <varname>window_frame_bound</varname> AND <varname>window_frame_bound</varname> }]]
+             where <varname>window_frame_bound</varname> can be one of:
+               UNBOUNDED PRECEDING
+               <varname>expression</varname> PRECEDING
+               CURRENT ROW
+               <varname>expression</varname> FOLLOWING
+               UNBOUNDED FOLLOWING</codeblock><parml>
+          <plentry>
+            <pt><varname>window_name</varname></pt>
+            <pd>Gives a name to the window specification.</pd>
+          </plentry>
+          <plentry>
+            <pt>PARTITION BY</pt>
+            <pd>The <codeph>PARTITION BY</codeph> clause organizes the result set into logical
+              groups based on the unique values of the specified expression. When used with window
+              functions, the functions are applied to each partition independently. For example, if
+              you follow <codeph>PARTITION BY</codeph> with a column name, the result set is
+              partitioned by the distinct values of that column. If omitted, the entire result set
+              is considered one partition.</pd>
+          </plentry>
+          <plentry>
+            <pt>ORDER BY</pt>
+            <pd>The <codeph>ORDER BY</codeph> clause defines how to sort the rows in each partition
+              of the result set. If omitted, rows are returned in whatever order is most efficient
+              and may vary. <b>Note:</b> Columns of data types that lack a coherent ordering, such
+              as <codeph>time</codeph>, are not good candidates for use in the <codeph>ORDER
+                BY</codeph> clause of a window specification. Time, with or without time zone, lacks
+              a coherent ordering because addition and subtraction do not have the expected effects.
+              For example, the following is not generally true: <codeph>x::time &lt; x::time + '2
+                hour'::interval</codeph></pd>
+          </plentry>
+          <plentry>
+            <pt>ROWS | RANGE </pt>
+            <pd>Use either a <codeph>ROWS</codeph> or <codeph>RANGE</codeph> clause to express the
+              bounds of the window. The window bound can be one, many, or all rows of a partition.
+              You can express the bound of the window either in terms of a range of data values
+              offset from the value in the current row (<codeph>RANGE</codeph>), or in terms of the
+              number of rows offset from the current row (<codeph>ROWS</codeph>). When using the
+                <codeph>RANGE</codeph> clause, you must also use an <codeph>ORDER BY</codeph>
+              clause. This is because the calculation performed to produce the window requires that
+              the values be sorted. Additionally, the <codeph>ORDER BY</codeph> clause cannot
+              contain more than one expression, and the expression must result in either a date or a
+              numeric value. When using the <codeph>ROWS</codeph> or <codeph>RANGE</codeph> clauses,
+              if you specify only a starting row, the current row is used as the last row in the
+              window.</pd>
+            <pd><b>PRECEDING</b> — The <codeph>PRECEDING</codeph> clause defines the first row of
+              the window using the current row as a reference point. The starting row is expressed
+              in terms of the number of rows preceding the current row. For example, in the case of
+                <codeph>ROWS</codeph> framing, <codeph>5 PRECEDING</codeph> sets the window to start
+              with the fifth row preceding the current row. In the case of <codeph>RANGE</codeph>
+              framing, it sets the window to start with the first row whose ordering column value
+              precedes that of the current row by 5 in the given order. If the specified order is
+              ascending by date, this will be the first row within 5 days before the current row.
+                <codeph>UNBOUNDED PRECEDING</codeph> sets the first row in the window to be the
+              first row in the partition.</pd>
+            <pd><b>BETWEEN</b> — The <codeph>BETWEEN</codeph> clause defines the first and last row
+              of the window, using the current row as a reference point. First and last rows are
+              expressed in terms of the number of rows preceding and following the current row,
+              respectively. For example, <codeph>BETWEEN 3 PRECEDING AND 5 FOLLOWING</codeph> sets
+              the window to start with the third row preceding the current row, and end with the
+              fifth row following the current row. Use <codeph>BETWEEN UNBOUNDED PRECEDING AND
+                UNBOUNDED FOLLOWING</codeph> to set the first and last rows in the window to be the
+              first and last row in the partition, respectively. This is equivalent to the default
+              behavior if no <codeph>ROW</codeph> or <codeph>RANGE</codeph> clause is
+              specified.</pd>
+            <pd><b>FOLLOWING</b> — The <codeph>FOLLOWING</codeph> clause defines the last row of the
+              window using the current row as a reference point. The last row is expressed in terms
+              of the number of rows following the current row. For example, in the case of
+                <codeph>ROWS</codeph> framing, <codeph>5 FOLLOWING</codeph> sets the window to end
+              with the fifth row following the current row. In the case of <codeph>RANGE</codeph>
+              framing, it sets the window to end with the last row whose ordering column value
+              follows that of the current row by 5 in the given order. If the specified order is
+              ascending by date, this will be the last row within 5 days after the current row. Use
+                <codeph>UNBOUNDED FOLLOWING</codeph> to set the last row in the window to be the
+              last row in the partition.</pd>
+            <pd>If you do not specify a <codeph>ROW</codeph> or a <codeph>RANGE</codeph> clause, the
+              window bound starts with the first row in the partition (<codeph>UNBOUNDED
+                PRECEDING</codeph>) and ends with the current row (<codeph>CURRENT ROW</codeph>) if
+                <codeph>ORDER BY</codeph> is used. If an <codeph>ORDER BY</codeph> is not specified,
+              the window starts with the first row in the partition (<codeph>UNBOUNDED
+                PRECEDING</codeph>) and ends with last row in the partition (<codeph>UNBOUNDED
+                FOLLOWING</codeph>).</pd>
+          </plentry>
+        </parml></sectiondiv><sectiondiv id="section10"><b>The HAVING Clause</b><p>The optional
+            <codeph>HAVING</codeph> clause has the general
+          form:</p><codeblock>HAVING <varname>condition</varname></codeblock><p>where
+            <varname>condition</varname> is the same as specified for the <codeph>WHERE</codeph>
+          clause. <codeph>HAVING</codeph> eliminates group rows that do not satisfy the condition.
+            <codeph>HAVING</codeph> is different from <codeph>WHERE</codeph>: <codeph>WHERE</codeph>
+          filters individual rows before the application of <codeph>GROUP BY</codeph>, while
+            <codeph>HAVING</codeph> filters group rows created by <codeph>GROUP BY</codeph>. Each
+          column referenced in <varname>condition</varname> must unambiguously reference a grouping
+          column, unless the reference appears within an aggregate function.</p><p>The presence of
+            <codeph>HAVING</codeph> turns a query into a grouped query even if there is no
+            <codeph>GROUP BY</codeph> clause. This is the same as what happens when the query
+          contains aggregate functions but no <codeph>GROUP BY</codeph> clause. All the selected
+          rows are considered to form a single group, and the <codeph>SELECT</codeph> list and
+            <codeph>HAVING</codeph> clause can only reference table columns from within aggregate
+          functions. Such a query will emit a single row if the <codeph>HAVING</codeph> condition is
+          true, zero rows if it is not true. </p></sectiondiv><sectiondiv id="section11"><b>The
+          UNION Clause</b><p>The <codeph>UNION</codeph> clause has this general
+          form:</p><codeblock><varname>select_statement</varname> UNION [ALL] <varname>select_statement</varname></codeblock><p>where
+            <varname>select_statement</varname> is any <codeph>SELECT</codeph> statement without an
+            <codeph>ORDER BY</codeph>, <codeph>LIMIT</codeph>, <codeph>FOR UPDATE</codeph>, or
+            <codeph>FOR SHARE</codeph> clause. (<codeph>ORDER BY</codeph> and <codeph>LIMIT</codeph>
+          can be attached to a subquery expression if it is enclosed in parentheses. Without
+          parentheses, these clauses will be taken to apply to the result of the
+            <codeph>UNION</codeph>, not to its right-hand input expression.) </p><p>The
+            <codeph>UNION</codeph> operator computes the set union of the rows returned by the
+          involved <codeph>SELECT</codeph> statements. A row is in the set union of two result sets
+          if it appears in at least one of the result sets. The two <codeph>SELECT</codeph>
+          statements that represent the direct operands of the <codeph>UNION</codeph> must produce
+          the same number of columns, and corresponding columns must be of compatible data
+          types.</p><p>The result of <codeph>UNION</codeph> does not contain any duplicate rows
+          unless the <codeph>ALL</codeph> option is specified. <codeph>ALL</codeph> prevents
+          elimination of duplicates. (Therefore, <codeph>UNION ALL</codeph> is usually significantly
+          quicker than <codeph>UNION</codeph>; use <codeph>ALL</codeph> when you can.)
+          </p><p>Multiple <codeph>UNION</codeph> operators in the same <codeph>SELECT</codeph>
+          statement are evaluated left to right, unless otherwise indicated by parentheses.
+          </p><p>Currently, <codeph>FOR UPDATE</codeph> and <codeph>FOR SHARE</codeph> may not be
+          specified either for a <codeph>UNION</codeph> result or for any input of a
+            <codeph>UNION</codeph>. </p></sectiondiv><sectiondiv id="section12"><b>The INTERSECT
+          Clause</b><p>The <codeph>INTERSECT</codeph> clause has this general
+          form:</p><codeblock><varname>select_statement</varname> INTERSECT [ALL] <varname>select_statement</varname></codeblock><p>where
+            <varname>select_statement</varname> is any SELECT statement without an <codeph>ORDER
+            BY</codeph>, <codeph>LIMIT</codeph>, <codeph>FOR UPDATE</codeph>, or <codeph>FOR
+            SHARE</codeph> clause. </p><p>The <codeph>INTERSECT</codeph> operator computes the set
+          intersection of the rows returned by the involved <codeph>SELECT</codeph> statements. A
+          row is in the intersection of two result sets if it appears in both result sets.</p><p>The
+          result of <codeph>INTERSECT</codeph> does not contain any duplicate rows unless the
+            <codeph>ALL</codeph> option is specified. With <codeph>ALL</codeph>, a row that has
+            <varname>m</varname> duplicates in the left table and <varname>n</varname> duplicates in
+          the right table will appear min(<varname>m</varname>, <varname>n</varname>) times in the
+          result set.</p><p>Multiple <codeph>INTERSECT</codeph> operators in the same
+            <codeph>SELECT</codeph> statement are evaluated left to right, unless parentheses
+          dictate otherwise. <codeph>INTERSECT</codeph> binds more tightly than
+            <codeph>UNION</codeph>. That is, <codeph>A UNION B INTERSECT C</codeph> will be read as
+            <codeph>A UNION (B INTERSECT C)</codeph>. </p><p>Currently, <codeph>FOR UPDATE</codeph>
+          and <codeph>FOR SHARE</codeph> may not be specified either for an
+            <codeph>INTERSECT</codeph> result or for any input of an <codeph>INTERSECT</codeph>.
+        </p></sectiondiv><sectiondiv id="section13"><b>The EXCEPT Clause</b><p>The
+            <codeph>EXCEPT</codeph> clause has this general
+          form:</p><codeblock><varname>select_statement</varname> EXCEPT [ALL] <varname>select_statement</varname></codeblock><p>where
+            <varname>select_statement</varname> is any <codeph>SELECT</codeph> statement without an
+            <codeph>ORDER BY</codeph>, <codeph>LIMIT</codeph>, <codeph>FOR UPDATE</codeph>, or
+            <codeph>FOR SHARE</codeph> clause. </p><p>The <codeph>EXCEPT</codeph> operator computes
+          the set of rows that are in the result of the left <codeph>SELECT</codeph> statement but
+          not in the result of the right one. </p><p>The result of <codeph>EXCEPT</codeph> does not
+          contain any duplicate rows unless the <codeph>ALL</codeph> option is specified. With
+            <codeph>ALL</codeph>, a row that has <varname>m</varname> duplicates in the left table
+          and <varname>n</varname> duplicates in the right table will appear
+            max(<varname>m-n</varname>,0) times in the result set. </p><p>Multiple
+            <codeph>EXCEPT</codeph> operators in the same <codeph>SELECT</codeph> statement are
+          evaluated left to right, unless parentheses dictate otherwise. <codeph>EXCEPT</codeph>
+          binds at the same level as <codeph>UNION</codeph>. </p><p>Currently, <codeph>FOR
+            UPDATE</codeph> and <codeph>FOR SHARE</codeph> may not be specified either for an
+            <codeph>EXCEPT</codeph> result or for any input of an <codeph>EXCEPT</codeph>.
+        </p></sectiondiv><sectiondiv id="section14"><b>The ORDER BY Clause</b><p>The optional
+            <codeph>ORDER BY</codeph> clause has this general
+          form:</p><codeblock>ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [, ...]</codeblock><p>where
+            <varname>expression</varname> can be the name or ordinal number of an output column
+            (<codeph>SELECT</codeph> list item), or it can be an arbitrary expression formed from
+          input-column values. </p><p>The <codeph>ORDER BY</codeph> clause causes the result rows to
+          be sorted according to the specified expressions. If two rows are equal according to the
+          left-most expression, they are compared according to the next expression and so on. If
+          they are equal according to all specified expressions, they are returned in an
+          implementation-dependent order.</p><p>The ordinal number refers to the ordinal
+          (left-to-right) position of the result column. This feature makes it possible to define an
+          ordering on the basis of a column that does not have a unique name. This is never
+          absolutely necessary because it is always possible to assign a name to a result column
+          using the <codeph>AS</codeph> clause. </p><p>It is also possible to use arbitrary
+          expressions in the <codeph>ORDER BY</codeph> clause, including columns that do not appear
+          in the <codeph>SELECT</codeph> result list. Thus the following statement is
+          valid:</p><codeblock>SELECT name FROM distributors ORDER BY code;</codeblock><p>A
+          limitation of this feature is that an <codeph>ORDER BY</codeph> clause applying to the
+          result of a <codeph>UNION</codeph>, <codeph>INTERSECT</codeph>, or <codeph>EXCEPT</codeph>
+          clause may only specify an output column name or number, not an expression.</p><p>If an
+            <codeph>ORDER BY</codeph> expression is a simple name that matches both a result column
+          name and an input column name, <codeph>ORDER BY</codeph> will interpret it as the result
+          column name. This is the opposite of the choice that <codeph>GROUP BY</codeph> will make
+          in the same situation. This inconsistency is made to be compatible with the SQL standard.
+          </p><p>Optionally one may add the key word <codeph>ASC</codeph> (ascending) or
+            <codeph>DESC</codeph> (descending) after any expression in the <codeph>ORDER BY</codeph>
+          clause. If not specified, <codeph>ASC</codeph> is assumed by default. Alternatively, a
+          specific ordering operator name may be specified in the <codeph>USING</codeph> clause.
+            <codeph>ASC</codeph> is usually equivalent to <codeph>USING &lt;</codeph> and
+            <codeph>DESC</codeph> is usually equivalent to <codeph>USING &gt;</codeph>. (But the
+          creator of a user-defined data type can define exactly what the default sort ordering is,
+          and it might correspond to operators with other names.) </p><p>The null value sorts higher
+          than any other value. In other words, with ascending sort order, null values sort at the
+          end, and with descending sort order, null values sort at the
+          beginning.</p><p>Character-string data is sorted according to the locale-specific
+          collation order that was established when the Greenplum Database system was
+          initialized.</p></sectiondiv><sectiondiv id="section15"><b>The DISTINCT Clause</b><p>If
+            <codeph>DISTINCT</codeph> is specified, all duplicate rows are removed from the result
+          set (one row is kept from each group of duplicates). <codeph>ALL</codeph> specifies the
+          opposite: all rows are kept. <codeph>ALL</codeph> is the default. </p><p><codeph>DISTINCT
+            ON ( <varname>expression</varname> [, ...] )</codeph> keeps only the first row of each
+          set of rows where the given expressions evaluate to equal. The <codeph>DISTINCT
+            ON</codeph> expressions are interpreted using the same rules as for <codeph>ORDER
+            BY</codeph>. Note that the 'first row' of each set is unpredictable unless <codeph>ORDER
+            BY</codeph> is used to ensure that the desired row appears first. For
+          example:</p><codeblock>SELECT DISTINCT ON (location) location, time, report FROM 
+weather_reports ORDER BY location, time DESC;</codeblock><p>retrieves
+          the most recent weather report for each location. But if we had not used <codeph>ORDER
+            BY</codeph> to force descending order of time values for each location, we would have
+          gotten a report from an unpredictable time for each location.</p><p>The <codeph>DISTINCT
+            ON</codeph> expression(s) must match the left-most <codeph>ORDER BY</codeph>
+          expression(s). The <codeph>ORDER BY</codeph> clause will normally contain additional
+          expression(s) that determine the desired precedence of rows within each <codeph>DISTINCT
+            ON</codeph> group.</p><p>When Greenplum Database processes queries that contain the
+            <codeph>DISTINCT</codeph> clause, the queries are transformed into <codeph>GROUP
+            BY</codeph> queries. In many cases, the transformation provides significant performance
+          gains. However, when the number of distinct values is close to the total number of rows,
+          the transformation might result in the generation of a multi-level grouping plan. In this
+          case, there is an expected performance degradation because of the overhead introduced by
+          the lower aggregation level.</p></sectiondiv><sectiondiv id="section16"><b>The LIMIT Clause</b><p>The <codeph>LIMIT</codeph> clause consists of
+          two independent
+          sub-clauses:</p><codeblock>LIMIT {<varname>count</varname> | ALL}
+OFFSET <varname>start</varname></codeblock><p>where
+            <varname>count</varname> specifies the maximum number of rows to return, while
+            <varname>start</varname> specifies the number of rows to skip before starting to return
+          rows. When both are specified, start rows are skipped before starting to count the count
+          rows to be returned. </p><p>When using <codeph>LIMIT</codeph>, it is a good idea to use an
+            <codeph>ORDER BY</codeph> clause that constrains the result rows into a unique order.
+          Otherwise you will get an unpredictable subset of the query's rows — you may be asking for
+          the tenth through twentieth rows, but tenth through twentieth in what ordering? You don't
+          know what ordering unless you specify <codeph>ORDER BY</codeph>. </p><p>The query
+          optimizer takes <codeph>LIMIT</codeph> into account when generating a query plan, so you
+          are very likely to get different plans (yielding different row orders) depending on what
+          you use for <codeph>LIMIT</codeph> and <codeph>OFFSET</codeph>. Thus, using different
+            <codeph>LIMIT/OFFSET</codeph> values to select different subsets of a query result will
+          give inconsistent results unless you enforce a predictable result ordering with
+            <codeph>ORDER BY</codeph>. This is not a defect; it is an inherent consequence of the
+          fact that SQL does not promise to deliver the results of a query in any particular order
+          unless <codeph>ORDER BY</codeph> is used to constrain the order.</p></sectiondiv><sectiondiv id="section17"><b>The FOR UPDATE/FOR SHARE
+          Clause</b><p>The <codeph>FOR UPDATE</codeph> clause has this
+          form:</p><codeblock>FOR UPDATE [OF <varname>table_name</varname> [, ...]] [NOWAIT]</codeblock><p>The
+          closely related <codeph>FOR SHARE</codeph> clause has this
+            form:</p><codeblock>FOR SHARE [OF <varname>table_name</varname> [, ...]] [NOWAIT]</codeblock><p><codeph>FOR
+            UPDATE</codeph> causes the tables accessed by the <codeph>SELECT</codeph> statement to
+          be locked as though for update. This prevents the table from being modified or deleted by
+          other transactions until the current transaction ends. That is, other transactions that
+          attempt <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, or <codeph>SELECT FOR
+            UPDATE</codeph> of this table will be blocked until the current transaction ends. Also,
+          if an <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, or <codeph>SELECT FOR
+            UPDATE</codeph> from another transaction has already locked a selected table,
+            <codeph>SELECT FOR UPDATE</codeph> will wait for the other transaction to complete, and
+          will then lock and return the updated table.</p><p>To prevent the operation from waiting
+          for other transactions to commit, use the <codeph>NOWAIT</codeph> option. <codeph>SELECT
+            FOR UPDATE NOWAIT</codeph> reports an error, rather than waiting, if a selected row
+          cannot be locked immediately. Note that <codeph>NOWAIT</codeph> applies only to the
+          row-level lock(s) — the required <codeph>ROW SHARE</codeph> table-level lock is still
+          taken in the ordinary way. You can use the <codeph>NOWAIT</codeph> option of
+            <codeph>LOCK</codeph> if you need to acquire the table-level lock without waiting (see
+              <codeph><xref href="LOCK.xml#topic1" type="topic" format="dita"/></codeph>).
+            </p><p><codeph>FOR SHARE</codeph> behaves similarly, except that it acquires a shared
+          rather than exclusive lock on the table. A shared lock blocks other transactions from
+          performing <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, or <codeph>SELECT FOR
+            UPDATE</codeph> on the table, but it does not prevent them from performing
+            <codeph>SELECT FOR SHARE</codeph>.</p><p>If specific tables are named in <codeph>FOR
+            UPDATE</codeph> or <codeph>FOR SHARE</codeph>, then only those tables are locked; any
+          other tables used in the <codeph>SELECT</codeph> are simply read as usual. A <codeph>FOR
+            UPDATE</codeph> or <codeph>FOR SHARE</codeph> clause without a table list affects all
+          tables used in the command. If <codeph>FOR UPDATE</codeph> or <codeph>FOR SHARE</codeph>
+          is applied to a view or subquery, it affects all tables used in the view or
+          subquery.</p><p>Multiple <codeph>FOR UPDATE</codeph> and <codeph>FOR SHARE</codeph>
+          clauses can be written if it is necessary to specify different locking behavior for
+          different tables. If the same table is mentioned (or implicitly affected) by both
+            <codeph>FOR UPDATE</codeph> and <codeph>FOR SHARE</codeph> clauses, then it is processed
+          as <codeph>FOR UPDATE</codeph>. Similarly, a table is processed as <codeph>NOWAIT</codeph>
+          if that is specified in any of the clauses affecting it.</p></sectiondiv></section><section id="section18"><title>Examples</title><p>To join the table <codeph>films</codeph> with the table <codeph>distributors</codeph>: </p><codeblock>SELECT f.title, f.did, d.name, f.date_prod, f.kind FROM 
+distributors d, films f WHERE f.did = d.did</codeblock><p>To sum the column <codeph>length</codeph> of all films and group the results by
+          <codeph>kind</codeph>: </p><codeblock>SELECT kind, sum(length) AS total FROM films GROUP BY kind;</codeblock><p>To sum the column <codeph>length</codeph> of all films, group the results by
+          <codeph>kind</codeph> and show those group totals that are less than 5 hours: </p><codeblock>SELECT kind, sum(length) AS total FROM films GROUP BY kind 
+HAVING sum(length) &lt; interval '5 hours';</codeblock><p>Calculate the subtotals and grand totals of all sales for movie <codeph>kind</codeph> and
+          <codeph>distributor</codeph>.</p><codeblock>SELECT kind, distributor, sum(prc*qty) FROM sales
+GROUP BY ROLLUP(kind, distributor)
+ORDER BY 1,2,3;</codeblock><p>Calculate the rank of movie distributors based on total sales:</p><codeblock>SELECT distributor, sum(prc*qty), 
+       rank() OVER (ORDER BY sum(prc*qty) DESC) 
+FROM sale
+GROUP BY distributor ORDER BY 2 DESC;</codeblock><p>The following two examples are identical ways of sorting the individual results according to the
+        contents of the second column (<codeph>name</codeph>):</p><codeblock>SELECT * FROM distributors ORDER BY name;
+SELECT * FROM distributors ORDER BY 2;</codeblock><p>The next example shows how to obtain the union of the tables <codeph>distributors</codeph> and
+          <codeph>actors</codeph>, restricting the results to those that begin with the letter
+          <codeph>W</codeph> in each table. Only distinct rows are wanted, so the key word
+          <codeph>ALL</codeph> is omitted: </p><codeblock>SELECT distributors.name FROM distributors WHERE 
+distributors.name LIKE 'W%' UNION SELECT actors.name FROM 
+actors WHERE actors.name LIKE 'W%';</codeblock><p>This example shows how to use a function in the <codeph>FROM</codeph>
+clause, both with and without a column definition list: </p><codeblock>CREATE FUNCTION distributors(int) RETURNS SETOF distributors 
+AS $$ SELECT * FROM distributors WHERE did = $1; $$ LANGUAGE 
+SQL;
+SELECT * FROM distributors(111);
+
+CREATE FUNCTION distributors_2(int) RETURNS SETOF record AS 
+$$ SELECT * FROM distributors WHERE did = $1; $$ LANGUAGE 
+SQL;
+SELECT * FROM distributors_2(111) AS (dist_id int, dist_name 
+text);</codeblock></section><section id="section19"><title>Compatibility</title><p>The <codeph>SELECT</codeph> statement is compatible with the SQL standard,
+but there are some extensions and some missing features. </p><sectiondiv id="section20"><b>Omitted FROM Clauses</b><p>Greenplum Database allows one to omit the <codeph>FROM</codeph> clause.
+It has a straightforward use to compute the results of simple expressions.
+For example:</p><codeblock>SELECT 2+2;</codeblock><p>Some other SQL databases cannot do this except by introducing a dummy
+one-row table from which to do the <codeph>SELECT</codeph>. </p><p>Note that if a <codeph>FROM</codeph> clause is not specified, the
+query cannot reference any database tables. For compatibility with applications
+that rely on this behavior the <varname>add_missing_from</varname> configuration
+variable can be enabled.</p></sectiondiv><sectiondiv id="section21"><b>The AS Key Word</b><p>In the SQL standard, the optional key word <codeph>AS</codeph> is just
+noise and can be omitted without affecting the meaning. The Greenplum
+Database parser requires this key word when renaming output columns because
+the type extensibility features lead to parsing ambiguities without it.
+<codeph>AS</codeph> is optional in <codeph>FROM</codeph> items, however.
+</p></sectiondiv><sectiondiv id="section22"><b>Namespace Available to GROUP BY and ORDER BY</b><p>In the SQL-92 standard, an <codeph>ORDER BY</codeph> clause may only
+use result column names or numbers, while a <codeph>GROUP BY</codeph>
+clause may only use expressions based on input column names. Greenplum
+Database extends each of these clauses to allow the other choice as well
+(but it uses the standard's interpretation if there is ambiguity).
+Greenplum Database also allows both clauses to specify arbitrary expressions.
+Note that names appearing in an expression will always be taken as input-column
+names, not as result-column names. </p><p>SQL:1999 and later use a slightly different definition which is not
+entirely upward compatible with SQL-92. In most cases, however, Greenplum
+Database will interpret an <codeph>ORDER BY</codeph> or <codeph>GROUP
+BY</codeph> expression the same way SQL:1999 does. </p></sectiondiv><sectiondiv id="section23"><b>Nonstandard Clauses</b><p>The clauses <codeph>DISTINCT ON</codeph>, <codeph>LIMIT</codeph>, and
+<codeph>OFFSET</codeph> are not defined in the SQL standard.</p></sectiondiv><sectiondiv id="section24"><b>Limited Use of STABLE and VOLATILE Functions</b><p>To prevent data
+          from becoming out-of-sync across the segments in Greenplum Database, any function
+          classified as <codeph>STABLE</codeph> or <codeph>VOLATILE</codeph> cannot be executed at
+          the segment database level if it contains SQL or modifies the database in any way. See
+              <codeph><xref href="CREATE_FUNCTION.xml#topic1" type="topic" format="dita"/></codeph>
+          for more information.</p></sectiondiv></section><section id="section25"><title>See Also</title><p><codeph><xref href="EXPLAIN.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>

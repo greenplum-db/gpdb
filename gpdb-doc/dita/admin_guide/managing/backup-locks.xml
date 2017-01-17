@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+
+<topic id="backup-locks" xml:lang="en">
+  <title>Database Locks During Backups</title>
+  <body>
+    <p>When backing up a database, Greenplum Database locks the following tables:<ol
+        id="ol_vtk_x2n_1p">
+        <li>When a backup starts, an <codeph>EXCLUSIVE</codeph> lock is acquired on the catalog
+          table <i>pg_class</i>, which contains database relation information. The
+            <codeph>EXCLUSIVE</codeph> lock permits only concurrent read operations. Relations such
+          as tables, indexes, and views cannot be created or dropped in the database.<p>While
+              <i>pg_class</i> is locked, schema information is collected on database tables that
+            will be backed up.</p><p>The <codeph>EXCLUSIVE</codeph> lock on <i>pg_class</i> is
+            released after an <codeph>ACCESS SHARE</codeph> lock is acquired on all the tables that
+            are to be backed up. </p></li>
+        <li> The <codeph>ACCESS SHARE</codeph> lock is acquired at the segment instance level as a
+          parallel operation. After the data has been backed up for the tables in a segment, the
+          lock on the tables in that segment is released. <p>An <codeph>ACCESS SHARE</codeph> lock
+            is a lock that is acquired by queries that only read from a table. </p><p>An
+              <codeph>ACCESS SHARE</codeph> lock only conflicts with an <codeph>ACCESS
+              EXCLUSIVE</codeph> lock. The following SQL statements acquire an <codeph>ACCESS
+              EXCLUSIVE</codeph> lock: <ul id="ul_lj2_hpn_1p">
+              <li><codeph>ALTER TABLE</codeph></li>
+              <li><codeph>CLUSTER</codeph></li>
+              <li><codeph>DROP TABLE</codeph></li>
+              <li><codeph>REINDEX</codeph></li>
+              <li><codeph>TRUNCATE</codeph></li>
+              <li><codeph>VACUUM FULL</codeph></li>
+            </ul></p></li>
+      </ol></p>
+    <p>For information about the catalog table <codeph>pg_class</codeph>, see the <i>Greenplum
+        Database Reference Guide</i>. For information about Greenplum Database lock modes see <xref
+        href="../dml.xml#topic2">About Concurrency Control</xref>.</p>
+  </body>
+</topic>

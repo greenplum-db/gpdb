@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic11">
+   <title>Viewing a Graphical Query Plan</title>
+   <body>
+      <p>Using the pgAdmin III query tool, you can run a query with EXPLAIN to view the details of
+         the query plan. The output includes details about operations unique to Greenplum
+         distributed query processing such as plan slices and motions between segments. You can view
+         a graphical depiction of the plan as well as the text-based data output.</p>
+      <section id="io148973">
+         <title>To view a graphical query plan</title>
+         <ol>
+            <li id="io148977">With the correct database highlighted in the object browser in the
+               left pane, select <menucascade>
+                  <uicontrol>Tools</uicontrol>
+                  <uicontrol>Query tool</uicontrol>
+               </menucascade>. </li>
+            <li id="io148989">Enter the query by typing in the SQL Editor, dragging objects into the
+               Graphical Query Builder, or opening a file. </li>
+            <li id="io148990">Select <menucascade>
+                  <uicontrol>Query</uicontrol>
+                  <uicontrol>Explain options</uicontrol>
+               </menucascade> and verify the following options:<ul id="ul_wcf_pyp_g4">
+                  <li id="io148991">Verbose — this must be deselected if you want to view a
+                     graphical depiction of the query plan</li>
+                  <li id="io149000">Analyze — select this option if you want to run the query in
+                     addition to viewing the plan</li>
+               </ul>
+            </li>
+            <li id="io149004">Trigger the operation by clicking the Explain query option at the top
+               of the pane, or by selecting <b>Query &gt; Explain</b>. <p>The query plan displays in
+                  the Output pane at the bottom of the screen. Select the Explain tab to view the
+                  graphical output. For example:</p>
+               <fig id="io149084">
+                  <title>Graphical Query Plan in pgAdmin III</title>
+                  <image href="../../../graphics/pg3_queryplan.png" placement="break" width="499px"
+                     height="379px" id="image_e2n_pyp_g4"/>
+               </fig>
+            </li>
+         </ol>
+      </section>
+   </body>
+</topic>

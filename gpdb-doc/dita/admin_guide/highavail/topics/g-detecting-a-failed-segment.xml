@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic9">
+  <title>Detecting a Failed Segment</title>
+  <body>
+    <p>With mirroring enabled, Greenplum Database automatically fails over to a mirror
+      segment when a primary segment goes down. Provided one segment instance is online per portion
+      of data, users may not realize a segment is down. If a transaction is in progress when a fault
+      occurs, the in-progress transaction rolls back and restarts automatically on the reconfigured
+      set of segments.</p>
+    <p>If the entire Greenplum Database system becomes nonoperational due to a segment
+      failure (for example, if mirroring is not enabled or not enough segments are online to access
+      all user data), users will see errors when trying to connect to a database. The errors
+      returned to the client program may indicate the failure. For example:</p>
+    <codeblock>ERROR: All segment databases are unavailable</codeblock>
+    <section>
+      <title>How Segment Failure is Detected and Managed</title>
+      <p>On the Greenplum Database master host, the Postgres
+          <codeph>postmaster</codeph> process forks a fault probe process,
+        <codeph>ftsprobe</codeph>. This is sometimes called the FTS (Fault Tolerance Server)
+        process. The <codeph>postmaster</codeph> process restarts the FTS if it fails. </p>
+      <p dir="ltr">The FTS runs in a loop with a sleep interval between each cycle. On each loop,
+        the FTS probes each primary segment database by making a TCP socket connection to the
+        segment database using the hostname and port registered in the
+          <codeph>gp_segment_configuration</codeph> table. If the connection succeeds, the segment
+        performs a few simple checks and reports back to the FTS. The checks include executing a
+          <codeph>stat</codeph> system call on critical segment directories and checking for
+        internal faults in the segment instance. If no issues are detected, a positive reply is sent
+        to the FTS and no action is taken for that segment database. </p>
+      <p dir="ltr">If the connection cannot be made, or if a reply is not received in the timeout
+        period, then a retry is attempted for the segment database. If the configured maximum number
+        of probe attempts fail, the FTS probes the segment's mirror to ensure that it is up, and
+        then updates the <codeph>gp_segment_configuration</codeph> table, marking the primary
+        segment "down" and setting the mirror to act as the primary. The FTS updates the
+          <codeph>gp_configuration_history</codeph> table with the operations performed.</p>
+      <p dir="ltr">When there is only an active primary segment and the corresponding mirror is
+        down, the primary goes into "Change Tracking Mode." In this mode, changes to the segment are
+        recorded, so the mirror can be synchronized without performing a full copy of data from the
+        primary to the mirror.</p>
+      <p dir="ltr">The <codeph>gprecoverseg</codeph> utility is used to bring up a mirror that is
+        down. By default, <codeph>gprecoverseg</codeph> performs an incremental recovery, placing
+        the mirror into resync mode, which starts to replay the recorded changes from the primary
+        onto the mirror. If the incremental recovery cannot be completed, the recovery fails and
+          <codeph>gprecoverseg</codeph> should be run again with the <codeph>-F</codeph> option, to
+        perform full recovery. This causes the primary to copy all of the data to the mirror.</p>
+      <p dir="ltr">You can see the mode&#x2014;"change tracking", "resync", or "in-sync"&#x2014;for
+        each segment, as well as the status "up" or "down", in the
+          <codeph>gp_segment_configuration</codeph> table.</p>
+      <p dir="ltr">The <codeph>gp_segment_configuration</codeph> table also has columns
+          <codeph>role</codeph> and <codeph>preferred_role</codeph>. These can have values of either
+          <codeph>p</codeph> for primary or <codeph>m</codeph> for mirror. The <codeph>role</codeph>
+        column shows the segment database's current role and the <codeph>preferred_role</codeph>
+        shows the original role of the segment. In a balanced system the <codeph>role</codeph> and
+          <codeph>preferred_role</codeph> matches for all segments. When they do not match, there
+        may be skew resulting from the number of active primary segments on each hardware host. To
+        rebalance the cluster and bring all the segments into their preferred role, the
+          <codeph>gprecoverseg</codeph> command can be run with the <codeph>-r</codeph> option.</p>
+      <p>There is a set of server configuration parameters that affect FTS behavior:<parml>
+          <plentry>
+            <pt>gp_fts_probe_threadcount </pt>
+            <pd>The number of threads used for probing segments. Default: 16</pd>
+          </plentry>
+        </parml><parml>
+          <plentry>
+            <pt>gp_fts_probe_interval</pt>
+            <pd>How often, in seconds, to begin a new FTS loop. For example if the setting is 60 and
+              the probe loop takes 10 seconds, the FTS process sleeps 50 seconds. If the setting is
+              60 and probe loop takes 75 seconds, the process sleeps 0 seconds. The default is 60,
+              and the maximum is 3600. </pd>
+          </plentry>
+        </parml><parml>
+          <plentry>
+            <pt>gp_fts_probe_timeout</pt>
+            <pd>Probe timeout between master and segment, in seconds. The default is 20, and the
+              maximum is 3600. </pd>
+          </plentry>
+        </parml><parml>
+          <plentry>
+            <pt>gp_fts_probe_retries</pt>
+            <pd>The number of attempts to probe a segment. For example if the setting is 5 there
+              will be 4 retries after the first attempt fails. Default: 5 </pd>
+          </plentry>
+        </parml><parml>
+          <plentry>
+            <pt>gp_log_fts</pt>
+            <pd>Logging level for FTS. The value may be "off", "terse", "verbose", or "debug". The
+              "verbose" setting can be used in production to provide useful data for
+              troubleshooting. The "debug" setting should not be used in production. Default:
+              "terse"</pd>
+          </plentry>
+        </parml><parml>
+          <plentry>
+            <pt>gp_segment_connect_timeout</pt>
+            <pd>The maximum time (in seconds) allowed for a mirror to respond. Default: 180 </pd>
+          </plentry>
+        </parml></p>
+      <p>In addition to the fault checking performed by the FTS, a primary segment that is unable to
+        send data to its mirror can change the status of the mirror to down. The primary queues up
+        the data and after <codeph>gp_segment_connect_timeout</codeph> seconds passes, indicates a
+        mirror failure, causing the mirror to be marked down and the primary to go into change
+        tracking mode.</p>
+    </section>
+  </body>
+</topic>

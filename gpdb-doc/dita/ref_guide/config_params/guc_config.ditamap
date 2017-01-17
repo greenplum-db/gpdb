@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
+<map title="Server Configuration Parameters">
+    <!--  msk - added chunk attribute to fix error in Oxygen HTML transform -->
+    <topicref href="guc_config.xml" navtitle="Server Configuration Parameters" chunk="to-content select-topic">
+        <topicref href="guc_category-list.ditamap" navtitle="Parameter Categories and List"
+            format="ditamap"/>
+    </topicref>
+</map>

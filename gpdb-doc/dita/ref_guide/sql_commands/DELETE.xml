@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+    <title id="cn20941">DELETE</title>
+    <body>
+        <p id="sql_command_desc">Deletes rows from a table.</p>
+        <section id="section2">
+            <title>Synopsis</title>
+            <codeblock id="sql_command_synopsis">DELETE FROM [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
+      [USING <varname>usinglist</varname>]
+      [WHERE <varname>condition</varname> | WHERE CURRENT OF <varname>cursor_name</varname> ]</codeblock>
+        </section>
+        <section id="section3">
+            <title>Description</title>
+            <p><codeph>DELETE</codeph> deletes rows that satisfy the <codeph>WHERE</codeph> clause
+                from the specified table. If the <codeph>WHERE</codeph> clause is absent, the effect
+                is to delete all rows in the table. The result is a valid, but empty table. </p>
+            <p>By default, <codeph>DELETE</codeph> will delete rows in the specified table and all
+                its child tables. If you wish to delete only from the specific table mentioned, you
+                must use the <codeph>ONLY</codeph> clause. </p>
+            <p>There are two ways to delete rows in a table using information contained in other
+                tables in the database: using sub-selects, or specifying additional tables in the
+                    <codeph>USING</codeph> clause. Which technique is more appropriate depends on
+                the specific circumstances. </p>
+            <p>If the <codeph>WHERE CURRENT OF</codeph> clause is specified, the row that is deleted
+                is the one most recently fetched from the specified cursor. </p>
+            <p>You must have the <codeph>DELETE</codeph> privilege on the table to delete from it. </p>
+            <sectiondiv id="section4">
+                <b>Outputs</b>
+                <p>On successful completion, a <codeph>DELETE</codeph> command returns a command tag
+                    of the form</p>
+                <codeblock>DELETE <varname>count</varname></codeblock>
+                <p>The count is the number of rows deleted. If count is 0, no rows matched the
+                    condition (this is not considered an error). </p>
+            </sectiondiv>
+        </section>
+        <section id="section5">
+            <title>Parameters</title>
+            <parml>
+                <plentry>
+                    <pt>ONLY</pt>
+                    <pd>If specified, delete rows from the named table only. When not specified, any
+                        tables inheriting from the named table are also processed. </pd>
+                </plentry>
+                <plentry>
+                    <pt>
+                        <varname>table</varname>
+                    </pt>
+                    <pd>The name (optionally schema-qualified) of an existing table. </pd>
+                </plentry>
+                <plentry>
+                    <pt>
+                        <varname>alias</varname>
+                    </pt>
+                    <pd>A substitute name for the target table. When an alias is provided, it
+                        completely hides the actual name of the table. For example, given
+                            <codeph>DELETE FROM foo AS f</codeph>, the remainder of the
+                            <codeph>DELETE</codeph> statement must refer to this table as
+                            <codeph>f</codeph> not <codeph>foo</codeph>. </pd>
+                </plentry>
+                <plentry>
+                    <pt>
+                        <varname>usinglist</varname>
+                    </pt>
+                    <pd>A list of table expressions, allowing columns from other tables to appear in
+                        the <codeph>WHERE</codeph> condition. This is similar to the list of tables
+                        that can be specified in the <codeph>FROM</codeph> Clause of a <codeph><xref
+                                href="./SELECT.xml#topic1" type="topic" format="dita"/></codeph>
+                        statement; for example, an alias for the table name can be specified. Do not
+                        repeat the target table in the <codeph>usinglist</codeph>, unless you wish
+                        to set up a self-join. </pd>
+                </plentry>
+                <plentry>
+                    <pt>
+                        <varname>condition</varname>
+                    </pt>
+                    <pd>An expression returning a value of type <codeph>boolean</codeph>, which
+                        determines the rows that are to be deleted.</pd>
+                </plentry>
+                <plentry>
+                    <pt>
+                        <varname>cursor_name</varname>
+                    </pt>
+                    <pd>The name of the cursor to use in a <codeph>WHERE CURRENT OF</codeph>
+                        condition. The row to be deleted is the one most recently fetched from this
+                        cursor. The cursor must be a simple (non-join, non-aggregate) query on the
+                            <codeph>DELETE</codeph> target table. See <codeph><xref
+                                href="DECLARE.xml#topic1" type="topic" format="dita"/></codeph> for
+                        more information about creating cursors.</pd>
+                    <pd><codeph>WHERE CURRENT OF</codeph> cannot be specified together with a
+                        Boolean condition.</pd>
+                    <pd>See <codeph><xref href="DECLARE.xml#topic1" type="topic" format="dita"
+                            /></codeph> for more information about creating cursors.</pd>
+                </plentry>
+            </parml>
+        </section>
+        <section id="section6">
+            <title>Notes</title>
+            <p>Greenplum Database lets you reference columns of other tables in the
+                    <codeph>WHERE</codeph> condition by specifying the other tables in the
+                    <codeph>USING</codeph> clause. For example, to the name <codeph>Hannah</codeph>
+                from the <codeph>rank</codeph> table, one might do:</p>
+            <codeblock>DELETE FROM rank USING names WHERE names.id = rank.id AND 
+name = 'Hannah';</codeblock>
+            <p>What is essentially happening here is a join between <codeph>rank</codeph> and
+                    <codeph>names</codeph>, with all successfully joined rows being marked for
+                deletion. This syntax is not standard. However, this join style is usually easier to
+                write and faster to execute than a more standard sub-select style, such as:</p>
+            <codeblock>DELETE FROM rank WHERE id IN (SELECT id FROM names WHERE name 
+= 'Hannah');</codeblock>
+            <p>When using <codeph>DELETE</codeph> to remove all the rows of a table (for example:
+                    <codeph>DELETE * FROM <varname>table</varname>;</codeph>), Greenplum Database
+                adds an implicit <codeph>TRUNCATE</codeph> command (when user permissions allow).
+                The added <codeph>TRUNCATE</codeph> command frees the disk space occupied by the
+                deleted rows without requiring a <codeph>VACUUM</codeph> of the table. This improves
+                scan performance of subsequent queries, and benefits ELT workloads that frequently
+                insert and delete from temporary tables.</p>
+            <p>Execution of <codeph>UPDATE</codeph> and <codeph>DELETE</codeph> commands directly on
+                a specific partition (child table) of a partitioned table is not supported. Instead,
+                these commands must be executed on the root partitioned table, the table created
+                with the <codeph>CREATE TABLE</codeph> command.</p>
+        </section>
+        <section id="section7">
+            <title>Examples</title>
+            <p>Delete all films but musicals:</p>
+            <codeblock>DELETE FROM films WHERE kind &lt;&gt; 'Musical';</codeblock>
+            <p>Clear the table films:</p>
+            <codeblock>DELETE FROM films;</codeblock>
+            <p>Delete using a join:</p>
+            <codeblock>DELETE FROM rank USING names WHERE names.id = rank.id AND 
+name = 'Hannah';</codeblock>
+        </section>
+        <section id="section8">
+            <title>Compatibility</title>
+            <p>This command conforms to the SQL standard, except that the <codeph>USING</codeph>
+                clause is a Greenplum Database extension.</p>
+        </section>
+        <section id="section9">
+            <title>See Also</title>
+            <p><codeph><xref href="DECLARE.xml#topic1" type="topic" format="dita"/></codeph>,
+                        <codeph><xref href="./TRUNCATE.xml#topic1" type="topic" format="dita"
+                    /></codeph></p>
+        </section>
+    </body>
+</topic>

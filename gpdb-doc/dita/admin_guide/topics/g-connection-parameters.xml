@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic13">
+   <title>Connection Parameters</title>
+   <body>
+      <simpletable id="kh159468">
+         <strow>
+            <stentry>
+               <p><codeph>gp_connection_send_timeout</codeph></p>
+               <p>
+                  <codeph>gp_vmem_idle_resource_timeout</codeph>
+               </p>
+               <p>
+                  <codeph>listen_addresses</codeph>
+               </p>
+               <p>
+                  <codeph>max_connections</codeph>
+               </p>
+               <p>
+                  <codeph>max_prepared_transactions</codeph>
+               </p>
+               <p>
+                  <codeph>superuser_reserved_connections</codeph>
+               </p>
+            </stentry>
+            <stentry>
+               <p>
+                  <codeph>tcp_keepalives_count</codeph>
+               </p>
+               <p>
+                  <codeph>tcp_keepalives_idle</codeph>
+               </p>
+               <p>
+                  <codeph>tcp_keepalives_interval</codeph>
+               </p>
+               <p>
+                  <codeph>unix_socket_directory</codeph>
+               </p>
+               <p>
+                  <codeph>unix_socket_group</codeph>
+               </p>
+               <p>
+                  <codeph>unix_socket_permissions</codeph>
+               </p>
+            </stentry>
+         </strow>
+      </simpletable>
+   </body>
+</topic>

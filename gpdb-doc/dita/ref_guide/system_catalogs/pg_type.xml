@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1" xml:lang="en">
+  <title id="hz156255">pg_type</title>
+  <body>
+    <p>The <codeph>pg_type</codeph> system catalog table stores information about data types. Base
+      types (scalar types) are created with <codeph>CREATE TYPE</codeph>, and domains with
+        <codeph>CREATE DOMAIN</codeph>. A composite type is automatically created for each table in
+      the database, to represent the row structure of the table. It is also possible to create
+      composite types with <codeph>CREATE TYPE AS</codeph>.</p>
+    <table id="hz156260">
+      <title>pg_catalog.pg_type</title>
+      <tgroup cols="4">
+        <colspec colnum="1" colname="col1" colwidth="119.25pt"/>
+        <colspec colnum="2" colname="col2" colwidth="52pt"/>
+        <colspec colnum="3" colname="col3" colwidth="103.5pt"/>
+        <colspec colnum="4" colname="col4" colwidth="189pt"/>
+        <thead>
+          <row>
+            <entry colname="col1">column</entry>
+            <entry colname="col2">type</entry>
+            <entry colname="col3">references</entry>
+            <entry colname="col4">description</entry>
+          </row>
+        </thead>
+        <tbody>
+          <row>
+            <entry colname="col1">
+              <codeph>typname</codeph>
+            </entry>
+            <entry colname="col2">name</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Data type name.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>typnamespace</codeph>
+            </entry>
+            <entry colname="col2">oid</entry>
+            <entry colname="col3">pg_namespace.oid</entry>
+            <entry colname="col4">The OID of the namespace that contains this type.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>typowner</codeph>
+            </entry>
+            <entry colname="col2">oid</entry>
+            <entry colname="col3">pg_authid.oid</entry>
+            <entry colname="col4">Owner of the type.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>typlen</codeph>
+            </entry>
+            <entry colname="col2">int2</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">For a fixed-size type, <codeph>typlen</codeph> is the number of
+              bytes in the internal representation of the type. But for a variable-length type,
+                <codeph>typlen</codeph> is negative. <codeph>-1</codeph> indicates a 'varlena' type
+              (one that has a length word), <codeph>-2</codeph> indicates a null-terminated C
+              string.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>typbyval</codeph>
+            </entry>
+            <entry colname="col2">boolean</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Determines whether internal routines pass a value of this type by
+              value or by reference. <codeph>typbyval </codeph>had better be false if
+                <codeph>typlen</codeph> is not 1, 2, or 4 (or 8 on machines where Datum is 8 bytes).
+              Variable-length types are always passed by reference. Note that
+                <codeph>typbyval</codeph> can be false even if the length would allow pass-by-value;
+              this is currently true for type <codeph>float4</codeph>, for example.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>typtype</codeph>
+            </entry>
+            <entry colname="col2">char</entry>
+            <entry colname="col3"/>
+            <entry colname="col4"><codeph>b</codeph> for a base type, <codeph>c</codeph> for a
+              composite type, <codeph>d</codeph> for a domain, or <codeph>p</codeph> for a
+              pseudo-type.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>typisdefined</codeph>
+            </entry>
+            <entry colname="col2">boolean</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">True if the type is defined, false if this is a placeholder entry
+              for a not-yet-defined type. When false, nothing except the type name, namespace, and
+              OID can be relied on.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>typdelim</codeph>
+            </entry>
+            <entry colname="col2">char</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Character that separates two values of this type when parsing
+              array input. Note that the delimiter is associated with the array element data type,
+              not the array data type.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>typrelid</codeph>
+            </entry>
+            <entry colname="col2">oid</entry>
+            <entry colname="col3">pg_class.oid</entry>
+            <entry colname="col4">If this is a composite type, then this column points to the
+                <codeph>pg_class</codeph> entry that defines the corresponding table. (For a
+              free-standing composite type, the <codeph>pg_class</codeph> entry does not really
+              represent a table, but it is needed anyway for the type's
+                <codeph>pg_attribute</codeph> entries to link to.) Zero for non-composite
+              types.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>typelem</codeph>
+            </entry>
+            <entry colname="col2">oid</entry>
+            <entry colname="col3">pg_type.oid</entry>
+            <entry colname="col4">If not <codeph>0</codeph> then it identifies another row in
+              pg_type. The current type can then be subscripted like an array yielding values of
+              type <codeph>typelem</codeph>. A true array type is variable length
+                (<codeph>typlen</codeph> = <codeph>-1</codeph>), but some fixed-length
+                (<codeph>tylpen</codeph> &gt; <codeph>0</codeph>) types also have nonzero
+                <codeph>typelem</codeph>, for example <codeph>name</codeph> and
+                <codeph>point</codeph>. If a fixed-length type has a <codeph>typelem</codeph> then
+              its internal representation must be some number of values of the
+                <codeph>typelem</codeph> data type with no other data. Variable-length array types
+              have a header defined by the array subroutines.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>typinput</codeph>
+            </entry>
+            <entry colname="col2">regproc</entry>
+            <entry colname="col3">pg_proc.oid</entry>
+            <entry colname="col4">Input conversion function (text format).</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>typoutput</codeph>
+            </entry>
+            <entry colname="col2">regproc</entry>
+            <entry colname="col3">pg_proc.oid</entry>
+            <entry colname="col4">Output conversion function (text format).</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>typreceive</codeph>
+            </entry>
+            <entry colname="col2">regproc</entry>
+            <entry colname="col3">pg_proc.oid</entry>
+            <entry colname="col4">Input conversion function (binary format), or 0 if none.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>typsend</codeph>
+            </entry>
+            <entry colname="col2">regproc</entry>
+            <entry colname="col3">pg_proc.oid</entry>
+            <entry colname="col4">Output conversion function (binary format), or 0 if none.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>typanalyze</codeph>
+            </entry>
+            <entry colname="col2">regproc</entry>
+            <entry colname="col3">pg_proc.oid</entry>
+            <entry colname="col4">Custom <codeph>ANALYZE</codeph> function, or 0 to use the standard
+              function.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>typalign</codeph>
+            </entry>
+            <entry colname="col2">char</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">The alignment required when storing a value of this type. It
+              applies to storage on disk as well as most representations of the value inside
+                Greenplum Database. When multiple values are stored consecutively,
+              such as in the representation of a complete row on disk, padding is inserted before a
+              datum of this type so that it begins on the specified boundary. The alignment
+              reference is the beginning of the first datum in the sequence. Possible values are:
+                  <p><codeph>c</codeph> = char alignment (no alignment
+                  needed).</p><p><codeph>s</codeph> = short alignment (2 bytes on most
+                machines).</p><p><codeph>i</codeph> = int alignment (4 bytes on most
+                  machines).</p><p><codeph>d</codeph> = double alignment (8 bytes on many machines,
+                but not all).</p></entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>typstorage</codeph>
+            </entry>
+            <entry colname="col2">char</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">For varlena types (those with <codeph>typlen</codeph> = -1) tells
+              if the type is prepared for toasting and what the default strategy for attributes of
+              this type should be. Possible values are:<p><codeph>p</codeph>: Value must always be
+                stored plain.</p><p><codeph>e</codeph>: Value can be stored in a secondary relation
+                (if relation has one, see <codeph>pg_class.reltoastrelid</codeph>).
+                  </p><p><codeph>m</codeph>: Value can be stored compressed
+                  inline.</p><p><codeph>x</codeph>: Value can be stored compressed inline or stored
+                in secondary storage.</p><p>Note that <codeph>m</codeph> columns can also be moved
+                out to secondary storage, but only as a last resort (<codeph>e</codeph> and
+                  <codeph>x</codeph> columns are moved first).</p></entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>typnotnull</codeph>
+            </entry>
+            <entry colname="col2">boolean</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Represents a not-null constraint on a type. Used for domains
+              only.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>typbasetype</codeph>
+            </entry>
+            <entry colname="col2">oid</entry>
+            <entry colname="col3">pg_type.oid</entry>
+            <entry colname="col4">Identifies the type that a domain is based on. Zero if this type
+              is not a domain.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>typtypmod</codeph>
+            </entry>
+            <entry colname="col2">int4</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Domains use typtypmod to record the typmod to be applied to their
+              base type (-1 if base type does not use a typmod). -1 if this type is not a
+              domain.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>typndims</codeph>
+            </entry>
+            <entry colname="col2">int4</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">The number of array dimensions for a domain that is an array (if
+                <codeph>typbasetype</codeph> is an array type; the domain's <codeph>typelem</codeph>
+              will match the base type's <codeph>typelem</codeph>). Zero for types other than array
+              domains.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>typdefaultbin</codeph>
+            </entry>
+            <entry colname="col2">text</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">If not null, it is the <codeph>nodeToString()</codeph>
+              representation of a default expression for the type. This is only used for
+              domains.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>typdefault</codeph>
+            </entry>
+            <entry colname="col2">text</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Null if the type has no associated default value. If not null,
+              typdefault must contain a human-readable version of the default expression represented
+              by typdefaultbin. If typdefaultbin is null and typdefault is not, then typdefault is
+              the external representation of the type's default value, which may be fed to the
+              type's input converter to produce a constant.</entry>
+          </row>
+        </tbody>
+      </tgroup>
+    </table>
+  </body>
+</topic>

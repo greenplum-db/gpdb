@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1"><title id="en20941">SHOW</title><body><p id="sql_command_desc">Shows the value of a system configuration parameter.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">SHOW <varname>configuration_parameter</varname>
+
+SHOW ALL</codeblock></section><section id="section3"><title>Description</title><p><codeph>SHOW</codeph> displays the current settings of Greenplum Database
+system configuration parameters. You can set these parameters with the
+<codeph>SET</codeph> statement, or by editing the <codeph>postgresql.conf</codeph>
+configuration file of the Greenplum Database master. Note that some parameters
+viewable by <codeph>SHOW</codeph> are read-only — their values can
+be viewed but not set. See the Greenplum Database Reference Guide for
+details.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>configuration_parameter</varname></pt><pd>The name of a system configuration parameter.</pd></plentry><plentry><pt>ALL</pt><pd>Shows the current value of all configuration parameters. </pd></plentry></parml></section><section id="section5"><title>Examples</title><p>Show the current setting of the parameter <codeph>search_path</codeph>:</p><codeblock>SHOW search_path;</codeblock><p>Show the current setting of all parameters:</p><codeblock>SHOW ALL;</codeblock></section><section id="section6"><title>Compatibility</title><p><codeph>SHOW</codeph> is a Greenplum Database extension.</p></section><section id="section7"><title>See Also</title><p><codeph><xref href="SET.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
+            href="RESET.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
