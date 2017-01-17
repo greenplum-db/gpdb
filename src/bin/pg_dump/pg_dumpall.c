@@ -27,6 +27,7 @@
 int			optreset;
 #endif
 
+#include "binary_upgradeall.h"
 #include "dumputils.h"
 #include "pg_backup.h"
 
@@ -58,12 +59,6 @@ static PGconn *connectDatabase(const char *dbname, const char *pghost, const cha
 	  const char *pguser, enum trivalue prompt_password, bool fail_on_error);
 static PGresult *executeQuery(PGconn *conn, const char *query);
 static void executeCommand(PGconn *conn, const char *query);
-
-static void binary_upgrade_set_filespace_oid(PGconn *conn, char *fsname);
-static void binary_upgrade_set_tablespace_oid(PGconn *conn, char *tsname);
-static void binary_upgrade_preassign_resqueue_oid(PGconn *conn, Oid rqoid, char *rsqname);
-static void binary_upgrade_preassign_authid_oid(Oid roleoid, const char *rolename);
-static void binary_upgrade_preassign_db_oid(Oid dboid, const char *fdbname);
 
 static char pg_dump_bin[MAXPGPATH];
 static PQExpBuffer pgdumpopts;
@@ -734,7 +729,8 @@ dumpResQueues(PGconn *conn)
 				 * dispatch in the non-default case
 				 */
 				if (binary_upgrade)
-					binary_upgrade_preassign_resqueue_oid(conn, rqoid, (char *) rsqname);
+					dumpResqueueOid(OPF, conn, server_version, rqoid, (char *) rsqname);
+
 				appendPQExpBuffer(buf, "CREATE RESOURCE QUEUE %s", fmtId(rsqname));
 			}
 		}
@@ -902,7 +898,7 @@ dumpRoles(PGconn *conn)
 			appendPQExpBuffer(buf, "DROP ROLE %s;\n", fmtId(rolename));
 
 		if (binary_upgrade)
-			binary_upgrade_preassign_authid_oid(roleoid, rolename);
+			dumpRoleOid(OPF, roleoid, rolename);
 
 		/*
 		 * We dump CREATE ROLE followed by ALTER ROLE to ensure that the role
@@ -1155,7 +1151,7 @@ dumpFilespaces(PGconn *conn)
 			appendPQExpBuffer(buf, "DROP FILESPACE %s;\n", fsname);
 
 		if (binary_upgrade)
-			binary_upgrade_set_filespace_oid(conn, fsname);
+			dumpFilespaceOid(OPF, conn, fsname);
 
 		/* Begin creating the filespace definition */
 		appendPQExpBuffer(buf, "CREATE FILESPACE %s", fsname);
@@ -1263,7 +1259,7 @@ dumpTablespaces(PGconn *conn)
 			appendPQExpBuffer(buf, "DROP TABLESPACE %s;\n", spcname);
 
 		if (binary_upgrade)
-			binary_upgrade_set_tablespace_oid(conn, spcname);
+			dumpTablespaceOid(OPF, conn, spcname);
 
 		appendPQExpBuffer(buf, "CREATE TABLESPACE %s", spcname);
 		appendPQExpBuffer(buf, " OWNER %s", fmtId(spcowner));
@@ -1356,7 +1352,7 @@ dumpCreateDB(PGconn *conn)
 				appendPQExpBuffer(buf, "DROP DATABASE %s;\n", fdbname);
 
 			if (binary_upgrade)
-				binary_upgrade_preassign_db_oid(dboid, fdbname);
+				dumpDatabaseOid(OPF, dboid, fdbname);
 
 			appendPQExpBuffer(buf, "CREATE DATABASE %s", fdbname);
 
@@ -1873,180 +1869,4 @@ dumpTimestamp(char *msg)
 #endif
 				 localtime(&now)) != 0)
 		fprintf(OPF, "-- %s %s\n\n", msg, buf);
-}
-
-static void
-binary_upgrade_set_filespace_oid(PGconn *conn, char *fsname)
-{
-	PQExpBuffer	upgrade_buffer = createPQExpBuffer();
-	PQExpBuffer	catalog_query = createPQExpBuffer();
-	PGresult   *catalog_res;
-	int			ntups;
-	Oid			fs_oid;
-
-	appendPQExpBuffer(catalog_query,
-					  "SELECT oid FROM pg_filespace WHERE fsname = '%s'::text;",
-					  fsname);
-
-	catalog_res = PQexec(conn, catalog_query->data);
-	if (PQresultStatus(catalog_res) != PGRES_TUPLES_OK)
-	{
-		fprintf(stderr, "%s: query returned error: \"%s\"",
-				progname, PQresultErrorMessage(catalog_res));
-		PQfinish(conn);
-		exit(1);
-	}
-
-	ntups = PQntuples(catalog_res);
-	if (ntups != 1)
-	{
-		fprintf(stderr, "%s: query returned %d rows instead of one: %s\n",
-				progname, ntups, catalog_query->data);
-		PQfinish(conn);
-		exit(1);
-	}
-
-	fs_oid = atooid(PQgetvalue(catalog_res, 0, PQfnumber(catalog_res, "oid")));
-
-	appendPQExpBuffer(upgrade_buffer, "\n-- For binary upgrade, must preserve pg_filespace oid\n");
-	appendPQExpBuffer(upgrade_buffer,
-					  "SELECT binary_upgrade.preassign_filespace_oid('%u'::pg_filespace.oid, "
-																	"'%s'::text);\n\n",
-					  fs_oid, fsname);
-
-	/* Output the results */
-	fprintf(OPF, "%s", upgrade_buffer->data);
-
-	PQclear(catalog_res);
-	destroyPQExpBuffer(catalog_query);
-	destroyPQExpBuffer(upgrade_buffer);
-}
-
-static void
-binary_upgrade_set_tablespace_oid(PGconn *conn, char *tsname)
-{
-	PQExpBuffer	upgrade_buffer = createPQExpBuffer();
-	PQExpBuffer catalog_query = createPQExpBuffer();
-	PGresult   *catalog_res;
-	int			ntups;
-	Oid			ts_oid;
-
-	appendPQExpBuffer(catalog_query,
-					  "SELECT oid FROM pg_tablespace WHERE spcname = '%s'::text;",
-					  tsname);
-	catalog_res = PQexec(conn, catalog_query->data);
-	if (PQresultStatus(catalog_res) != PGRES_TUPLES_OK)
-	{
-		fprintf(stderr, "%s: query returned error: \"%s\"",
-				progname, PQresultErrorMessage(catalog_res));
-		PQfinish(conn);
-		exit(1);
-	}
-
-	ntups = PQntuples(catalog_res);
-	if (ntups != 1)
-	{
-		fprintf(stderr, "%s: query returned %d rows instead of one: %s\n",
-				progname, ntups, catalog_query->data);
-		PQfinish(conn);
-		exit(1);
-	}
-
-	ts_oid = atooid(PQgetvalue(catalog_res, 0, PQfnumber(catalog_res, "oid")));
-
-	appendPQExpBuffer(upgrade_buffer, "\nyy-- For binary upgrade, must preserve pg_tablespace oid\n");
-	appendPQExpBuffer(upgrade_buffer,
-					  "SELECT binary_upgrade.preassign_tablespace_oid('%u'::pg_tablespace.oid, "
-																	 "'%s'::text);\n\n",
-					  ts_oid, tsname);
-
-	fprintf(OPF, "%s", upgrade_buffer->data);
-	PQclear(catalog_res);
-	destroyPQExpBuffer(catalog_query);
-	destroyPQExpBuffer(upgrade_buffer);
-}
-
-static void
-binary_upgrade_preassign_resqueue_oid(PGconn *conn, Oid rqoid, char *rsqname)
-{
-	PQExpBuffer upgrade_buffer = createPQExpBuffer();
-	PQExpBuffer catalog_query;
-	PGresult   *catalog_res;
-	int			ntups;
-	int			i;
-
-	if (server_version >= 80214)
-	{
-		catalog_query = createPQExpBuffer();
-		appendPQExpBuffer(catalog_query, "SELECT oid, restypid "
-										 "FROM pg_resqueuecapability "
-										 "WHERE resqueueid = '%u'::pg_catalog.oid;",
-										 rqoid);
-
-		catalog_res = PQexec(conn, catalog_query->data);
-		if (PQresultStatus(catalog_res) != PGRES_TUPLES_OK)
-		{
-			fprintf(stderr, "%s: query returned error: \"%s\"",
-					progname, PQresultErrorMessage(catalog_res));
-			PQfinish(conn);
-			exit(1);
-		}
-
-		ntups = PQntuples(catalog_res);
-
-		for (i = 0; i < ntups; i++)
-		{
-			Oid rqcapoid = atooid(PQgetvalue(catalog_res, i, 0));
-			Oid restypid = atooid(PQgetvalue(catalog_res, i, 1));
-
-			appendPQExpBuffer(upgrade_buffer, "\n-- For binary upgrade, must preserve resource queue capabilities\n");
-			appendPQExpBuffer(upgrade_buffer,
-							  "SELECT binary_upgrade.preassign_resqueuecb_oid('%u'::pg_catalog.oid, "
-																			 "'%u'::pg_catalog.oid, "
-																			 "'%u'::pg_catalog.oid);\n",
-							  rqcapoid, rqoid, restypid);
-		}
-
-		destroyPQExpBuffer(catalog_query);
-		PQclear(catalog_res);
-	}
-
-	appendPQExpBuffer(upgrade_buffer, "\n-- For binary upgrade, must preserve resource queues\n");
-	appendPQExpBuffer(upgrade_buffer,
-					  "select binary_upgrade.preassign_resqueue_oid('%u'::pg_catalog.oid, "
-																   "'%s'::text);\n\n",
-					  rqoid, rsqname);
-
-	fprintf(OPF, "%s", upgrade_buffer->data);
-	destroyPQExpBuffer(upgrade_buffer);
-}
-
-static void
-binary_upgrade_preassign_authid_oid(Oid roleoid, const char *rolename)
-{
-	PQExpBuffer upgrade_buffer = createPQExpBuffer();
-
-	appendPQExpBuffer(upgrade_buffer, "\n-- For binary upgrade, must preserve pg_authid oid\n");
-	appendPQExpBuffer(upgrade_buffer,
-					  "SELECT binary_upgrade.preassign_authid_oid('%u'::pg_catalog.oid, "
-																 "'%s'::text);\n",
-					  roleoid, rolename);
-
-	fprintf(OPF, "%s", upgrade_buffer->data);
-	destroyPQExpBuffer(upgrade_buffer);
-}
-
-static void
-binary_upgrade_preassign_db_oid(Oid dboid, const char *fdbname)
-{
-	PQExpBuffer upgrade_buffer = createPQExpBuffer();
-
-	appendPQExpBuffer(upgrade_buffer, "\n-- For binary upgrade, must preserve pg_database oid\n");
-	appendPQExpBuffer(upgrade_buffer,
-					  "SELECT binary_upgrade.preassign_database_oid('%u'::pg_catalog.oid, "
-																   "'%s'::text);\n",
-					  dboid, fdbname);
-
-	fprintf(OPF, "%s", upgrade_buffer->data);
-	destroyPQExpBuffer(upgrade_buffer);
 }

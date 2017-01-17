@@ -17,6 +17,7 @@
 
 #include "postgres_fe.h"
 #include "pqexpbuffer.h"
+#include "libpq-fe.h"
 
 /*
  * WIN32 does not provide 64-bit off_t, but does provide the functions operating
@@ -542,6 +543,8 @@ extern void *pg_malloc(size_t size);
 extern void *pg_calloc(size_t nmemb, size_t size);
 extern void *pg_realloc(void *ptr, size_t size);
 
+extern void check_sql_result(PGresult *res, PGconn *conn, const char *query,
+				 ExecStatusType expected);
 extern void check_conn_and_db(void);
 extern void exit_nicely(void);
 
