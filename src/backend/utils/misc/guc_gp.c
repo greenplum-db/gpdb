@@ -3274,11 +3274,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
 		},
 		&codegen,
-#ifdef USE_CODEGEN
-		true,
-#else
 		false,
-#endif
 		assign_codegen, NULL
 	},
 
