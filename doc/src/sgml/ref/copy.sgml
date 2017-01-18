@@ -23,6 +23,7 @@ PostgreSQL documentation
 <synopsis>
 COPY table [(column [, ...])] FROM {'file' | STDIN}
      [ [WITH] 
+       [BINARY]
        [OIDS]
        [HEADER]
        [DELIMITER [ AS ] 'delimiter']
@@ -37,6 +38,7 @@ COPY table [(column [, ...])] FROM {'file' | STDIN}
 
 COPY {table [(column [, ...])] | (query)} TO {'file' | STDOUT}
       [ [WITH] 
+        [BINARY]
         [OIDS]
         [HEADER]
         [DELIMITER [ AS ] 'delimiter']
