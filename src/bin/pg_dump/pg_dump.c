@@ -2469,6 +2469,8 @@ binary_upgrade_set_type_oids_by_type_oid(Archive *fout, PQExpBuffer upgrade_buff
 																	"'%s'::text, "
 																	"'%u'::pg_catalog.oid);\n\n",
 					  type->arraytypoid, type->arraytypname, type->arraytypnsp);
+
+	destroyPQExpBuffer(upgrade_query);
 }
 
 static bool
