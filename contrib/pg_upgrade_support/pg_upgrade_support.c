@@ -25,6 +25,7 @@
 #include "catalog/pg_language.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_opclass.h"
+#include "catalog/pg_operator.h"
 #include "catalog/pg_opfamily.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_resqueue.h"
@@ -60,6 +61,7 @@ Datum		preassign_namespace_oid(PG_FUNCTION_ARGS);
 Datum		preassign_attrdef_oid(PG_FUNCTION_ARGS);
 Datum		preassign_constraint_oid(PG_FUNCTION_ARGS);
 Datum		preassign_rule_oid(PG_FUNCTION_ARGS);
+Datum		preassign_operator_oid(PG_FUNCTION_ARGS);
 
 PG_FUNCTION_INFO_V1(preassign_type_oid);
 PG_FUNCTION_INFO_V1(preassign_arraytype_oid);
@@ -81,6 +83,7 @@ PG_FUNCTION_INFO_V1(preassign_namespace_oid);
 PG_FUNCTION_INFO_V1(preassign_attrdef_oid);
 PG_FUNCTION_INFO_V1(preassign_constraint_oid);
 PG_FUNCTION_INFO_V1(preassign_rule_oid);
+PG_FUNCTION_INFO_V1(preassign_operator_oid);
 
 Datum
 preassign_type_oid(PG_FUNCTION_ARGS)
@@ -394,6 +397,22 @@ preassign_rule_oid(PG_FUNCTION_ARGS)
 	{
 		AddPreassignedOidFromBinaryUpgrade(ruleoid, RewriteRelationId, rulename,
 										   InvalidOid, tableoid, InvalidOid);
+	}
+
+	PG_RETURN_VOID();
+}
+
+Datum
+preassign_operator_oid(PG_FUNCTION_ARGS)
+{
+	Oid			opoid = PG_GETARG_OID(0);
+	Oid			nsoid = PG_GETARG_OID(1);
+	char	   *opname = GET_STR(PG_GETARG_TEXT_P(2));
+
+	if (Gp_role == GP_ROLE_UTILITY)
+	{
+		AddPreassignedOidFromBinaryUpgrade(opoid, OperatorRelationId, opname,
+										   nsoid, InvalidOid, InvalidOid);
 	}
 
 	PG_RETURN_VOID();
