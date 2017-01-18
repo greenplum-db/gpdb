@@ -511,22 +511,33 @@ vacuum(VacuumStmt *vacstmt, List *relids,
 			vacstmt->appendonly_relation_empty = false;
 		}
 
-		/*
-		 * Loop to process each selected relation which needs to be vacuumed.
-		 */
 		if (vacstmt->vacuum)
 		{
+			/*
+			 * Loop to process each selected relation which needs to be vacuumed.
+			 */
 			foreach(cur, vacuum_relations)
 			{
 				Oid			relid = lfirst_oid(cur);
 				vacuumStatement_Relation(vacstmt, relid, vacuum_relations, bstrategy, for_wraparound, isTopLevel);
 			}
 		}
-		/*
-		 * Loop to process each selected relation which needs to be analyzed.
-		 */
+
 		if (vacstmt->analyze)
 		{
+			/*
+			 * If there are no partition tables in the database and ANALYZE ROOTPARTITION ALL
+			 * is executed report a WARNING as no root partitions are there to be analyzed
+			 */
+			if (vacstmt->rootonly && NIL == analyze_relations && !vacstmt->relation)
+			{
+				ereport(NOTICE,
+						(errmsg("there are no partitioned tables in database to ANALYZE ROOTPARTITION")));
+			}
+
+			/*
+			 * Loop to process each selected relation which needs to be analyzed.
+			 */
 			foreach(cur, analyze_relations)
 			{
 				Oid			relid = lfirst_oid(cur);
@@ -1489,6 +1500,7 @@ get_rel_oids(List *relids, VacuumStmt *vacstmt, bool isVacuum)
 		HeapScanDesc scan;
 		HeapTuple	tuple;
 		ScanKeyData key;
+		Oid candidateOid;
 
 		ScanKeyInit(&key,
 					Anum_pg_class_relkind,
@@ -1526,8 +1538,15 @@ get_rel_oids(List *relids, VacuumStmt *vacstmt, bool isVacuum)
 				continue;
 
 			/* Make a relation list entry for this guy */
+			candidateOid = HeapTupleGetOid(tuple);
+
+			/* Skip non root partition tables if ANALYZE ROOTPARTITION ALL is executed */
+			if (vacstmt->rootonly && !rel_is_partitioned(candidateOid))
+			{
+				continue;
+			}
 			oldcontext = MemoryContextSwitchTo(vac_context);
-			oid_list = lappend_oid(oid_list, HeapTupleGetOid(tuple));
+			oid_list = lappend_oid(oid_list, candidateOid);
 			MemoryContextSwitchTo(oldcontext);
 		}
 
