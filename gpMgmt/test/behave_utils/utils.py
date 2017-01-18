@@ -262,7 +262,7 @@ def get_table_data_to_file(filename, tablename, dbname):
                                 where (n.nspname || '.' || c.relname = E'%s')
                                     or c.relname = E'%s'
                         ) as q;
-                """ % (pg.escape_string(tablename), pg.escape_string(tablename))
+                """ % (pg.escape_bytea(tablename), pg.escape_bytea(tablename))
     query = order_sql
     conn = dbconn.connect(dbconn.DbURL(dbname=dbname))
     try:
