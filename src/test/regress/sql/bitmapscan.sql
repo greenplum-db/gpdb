@@ -281,3 +281,22 @@ INSERT INTO card_heap_table_w_bitmap (id, v, highCardinalityHighDomain)
 SELECT COUNT(DISTINCT(highCardinalityHighDomain)) AS distinct_hchd FROM card_heap_table_w_bitmap ORDER BY distinct_hchd;
 
 drop table if exists bm_test;
+
+-- Test if StreamNodes and StreamBitmaps are freed correctly.
+create table foo (c int, d int) distributed by (c);
+create index ie_foo on foo using bitmap(d);
+insert into foo values (1, 1);
+insert into foo values (2, 2);
+
+-- Next queries will create additional StreamNodes. In particular,
+-- d in (1, 2) will be transformed into an OR with two BMS_INDEX input streams.
+select * from foo where d in (1, 2) and (d = 1 or d = 2);
+select * from foo where (d = 1 or d = 2) and d in (1, 2);
+
+-- This query will eliminate StreamNodes since there is no tuple where d =3.
+select * from foo where d = 3 and (d = 1 or d = 2);
+
+-- If a segment contains tuples with d in (1, 2), then it will create the whole StreamNode tree, 
+-- otherwise segments will eliminate nodes.
+select * from foo where d = 2 and (d = 1 or d = 2);
+
