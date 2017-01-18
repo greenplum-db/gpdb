@@ -796,7 +796,7 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 				isExplainAnalyzeCodegenOnMaster ||
 				isExplainCodegenOnMaster)
 		{
-			CodeGeneratorManagerGenerateCode(CodegenManager);
+			(void) CodeGeneratorManagerGenerateCode(CodegenManager);
 			if (isExplainAnalyzeCodegenOnMaster ||
 					isExplainCodegenOnMaster)
 			{
@@ -804,7 +804,7 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 			}
 			if (!isExplainCodegenOnMaster)
 			{
-				CodeGeneratorManagerPrepareGeneratedFunctions(CodegenManager);
+				(void) CodeGeneratorManagerPrepareGeneratedFunctions(CodegenManager);
 			}
 		}
 	}
