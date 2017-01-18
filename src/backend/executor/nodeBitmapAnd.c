@@ -203,6 +203,8 @@ MultiExecBitmapAnd(BitmapAndState *node)
 	   				StreamBitmap *s = (StreamBitmap *)subresult;
 		   			stream_add_node((StreamBitmap *)node->bitmap,
 									s->streamNode, BMS_AND);
+		   			/* node->bitmap should be the only owner of the newly created AND StreamNode */
+		   			s->streamNode = NULL;
 
 					/*
 					 * Don't free subresult here, as we are still using the StreamNode inside it.
