@@ -1,47 +1,52 @@
+-- start_ignore
+SET optimizer=off;
+SET
+-- end_ignore
 -- @author raghav
 -- @created 2014-06-27 12:00:00
--- @product_version gpdb: [4.3-],hawq: [1.2-]
+-- @product_version gpdb: [4.3-],hawq: [1.2.1.0-]
 -- @db_name analyze_db
 -- @tags analyze ORCA
 -- @optimizer_mode both
 -- @description Test 'ANALYZE ROOTPARTITION' correctness
+-- check if analyze and analyze rootpartition generates same statistics
 analyze arp_test3;
 ANALYZE
-select * from pg_stats where tablename like 'arp_test3%' order by tablename, attname;
- schemaname |     tablename     | attname | null_frac | avg_width | n_distinct | most_common_vals |         most_common_freqs          |                                                    histogram_bounds                                                     | correlation 
-------------+-------------------+---------+-----------+-----------+------------+------------------+------------------------------------+-------------------------------------------------------------------------------------------------------------------------+-------------
- public     | arp_test3         | a       |         0 |         4 |          4 | {4,3,2,1}        | {0.390625,0.265625,0.1875,0.15625} | {1,2,3,4}                                                                                                               |            
- public     | arp_test3         | b       |         0 |         4 |         -1 |                  |                                    | {1,65,129,193,257,321,385,449,513,577,641,705,769,833,897,961,1025,1089,1153,1217,1281,1345,1409,1473,1537,1600}        |            
- public     | arp_test3_1_prt_1 | a       |         0 |         4 |          3 | {3,2,1}          | {0.435897,0.307692,0.25641}        | {1,2,3}                                                                                                                 |            
- public     | arp_test3_1_prt_1 | b       |         0 |         4 |         -1 |                  |                                    | {1,53,105,157,209,261,313,365,417,469,521,573,625,677,729,781,833,885,937,989,1031,1070,1109,1148,1187,1225}            |            
- public     | arp_test3_1_prt_2 | a       |         0 |         4 |          1 | {4}              | {1}                                | {4}                                                                                                                     |            
- public     | arp_test3_1_prt_2 | b       |         0 |         4 |         -1 |                  |                                    | {3,103,203,303,403,503,603,703,803,903,1226,1251,1276,1301,1326,1351,1376,1401,1426,1451,1476,1501,1526,1551,1576,1600} |            
+select schemaname, tablename, attname, null_frac, avg_width, n_distinct, most_common_vals, most_common_freqs, histogram_bounds from pg_stats where tablename like 'arp_test3%' order by tablename, attname;
+ schemaname |     tablename     | attname | null_frac | avg_width | n_distinct | most_common_vals |         most_common_freqs          |                                                   histogram_bounds                                                    
+------------+-------------------+---------+-----------+-----------+------------+------------------+------------------------------------+-----------------------------------------------------------------------------------------------------------------------
+ public     | arp_test3         | a       |         0 |         4 |          4 | {4,3,2,1}        | {0.390625,0.265625,0.1875,0.15625} | 
+ public     | arp_test3         | b       |         0 |         4 |         -1 |                  |                                    | {1,64,128,192,256,320,384,448,512,576,640,704,768,832,896,960,1024,1088,1152,1216,1280,1344,1408,1472,1536,1600}
+ public     | arp_test3_1_prt_1 | a       |         0 |         4 |          3 | {3,2,1}          | {0.435897,0.307692,0.25641}        | 
+ public     | arp_test3_1_prt_1 | b       |         0 |         4 |         -1 |                  |                                    | {1,52,104,156,208,260,312,364,416,468,520,572,624,676,728,780,832,884,936,988,1030,1069,1108,1147,1186,1225}
+ public     | arp_test3_1_prt_2 | a       |         0 |         4 |          1 | {4}              | {1}                                | 
+ public     | arp_test3_1_prt_2 | b       |         0 |         4 |         -1 |                  |                                    | {3,99,199,299,399,499,599,699,799,899,999,1250,1275,1300,1325,1350,1375,1400,1425,1450,1475,1500,1525,1550,1575,1600}
 (6 rows)
 
 set allow_system_table_mods="DML";
 SET
 delete from pg_statistic where starelid='arp_test3'::regclass;
 DELETE 2
-select * from pg_stats where tablename like 'arp_test3%' order by tablename, attname;
- schemaname |     tablename     | attname | null_frac | avg_width | n_distinct | most_common_vals |      most_common_freqs      |                                                    histogram_bounds                                                     | correlation 
-------------+-------------------+---------+-----------+-----------+------------+------------------+-----------------------------+-------------------------------------------------------------------------------------------------------------------------+-------------
- public     | arp_test3_1_prt_1 | a       |         0 |         4 |          3 | {3,2,1}          | {0.435897,0.307692,0.25641} | {1,2,3}                                                                                                                 |            
- public     | arp_test3_1_prt_1 | b       |         0 |         4 |         -1 |                  |                             | {1,53,105,157,209,261,313,365,417,469,521,573,625,677,729,781,833,885,937,989,1031,1070,1109,1148,1187,1225}            |            
- public     | arp_test3_1_prt_2 | a       |         0 |         4 |          1 | {4}              | {1}                         | {4}                                                                                                                     |            
- public     | arp_test3_1_prt_2 | b       |         0 |         4 |         -1 |                  |                             | {3,103,203,303,403,503,603,703,803,903,1226,1251,1276,1301,1326,1351,1376,1401,1426,1451,1476,1501,1526,1551,1576,1600} |            
+select schemaname, tablename, attname, null_frac, avg_width, n_distinct, most_common_vals, most_common_freqs, histogram_bounds from pg_stats where tablename like 'arp_test3%' order by tablename, attname;
+ schemaname |     tablename     | attname | null_frac | avg_width | n_distinct | most_common_vals |      most_common_freqs      |                                                   histogram_bounds                                                    
+------------+-------------------+---------+-----------+-----------+------------+------------------+-----------------------------+-----------------------------------------------------------------------------------------------------------------------
+ public     | arp_test3_1_prt_1 | a       |         0 |         4 |          3 | {3,2,1}          | {0.435897,0.307692,0.25641} | 
+ public     | arp_test3_1_prt_1 | b       |         0 |         4 |         -1 |                  |                             | {1,52,104,156,208,260,312,364,416,468,520,572,624,676,728,780,832,884,936,988,1030,1069,1108,1147,1186,1225}
+ public     | arp_test3_1_prt_2 | a       |         0 |         4 |          1 | {4}              | {1}                         | 
+ public     | arp_test3_1_prt_2 | b       |         0 |         4 |         -1 |                  |                             | {3,99,199,299,399,499,599,699,799,899,999,1250,1275,1300,1325,1350,1375,1400,1425,1450,1475,1500,1525,1550,1575,1600}
 (4 rows)
 
 analyze rootpartition arp_test3;
 ANALYZE
-select * from pg_stats where tablename like 'arp_test3%' order by tablename, attname;
- schemaname |     tablename     | attname | null_frac | avg_width | n_distinct | most_common_vals |         most_common_freqs          |                                                    histogram_bounds                                                     | correlation 
-------------+-------------------+---------+-----------+-----------+------------+------------------+------------------------------------+-------------------------------------------------------------------------------------------------------------------------+-------------
- public     | arp_test3         | a       |         0 |         4 |          4 | {4,3,2,1}        | {0.390625,0.265625,0.1875,0.15625} | {1,2,3,4}                                                                                                               |            
- public     | arp_test3         | b       |         0 |         4 |         -1 |                  |                                    | {1,65,129,193,257,321,385,449,513,577,641,705,769,833,897,961,1025,1089,1153,1217,1281,1345,1409,1473,1537,1600}        |            
- public     | arp_test3_1_prt_1 | a       |         0 |         4 |          3 | {3,2,1}          | {0.435897,0.307692,0.25641}        | {1,2,3}                                                                                                                 |            
- public     | arp_test3_1_prt_1 | b       |         0 |         4 |         -1 |                  |                                    | {1,53,105,157,209,261,313,365,417,469,521,573,625,677,729,781,833,885,937,989,1031,1070,1109,1148,1187,1225}            |            
- public     | arp_test3_1_prt_2 | a       |         0 |         4 |          1 | {4}              | {1}                                | {4}                                                                                                                     |            
- public     | arp_test3_1_prt_2 | b       |         0 |         4 |         -1 |                  |                                    | {3,103,203,303,403,503,603,703,803,903,1226,1251,1276,1301,1326,1351,1376,1401,1426,1451,1476,1501,1526,1551,1576,1600} |            
+select schemaname, tablename, attname, null_frac, avg_width, n_distinct, most_common_vals, most_common_freqs, histogram_bounds from pg_stats where tablename like 'arp_test3%' order by tablename, attname;
+ schemaname |     tablename     | attname | null_frac | avg_width | n_distinct | most_common_vals |         most_common_freqs          |                                                   histogram_bounds                                                    
+------------+-------------------+---------+-----------+-----------+------------+------------------+------------------------------------+-----------------------------------------------------------------------------------------------------------------------
+ public     | arp_test3         | a       |         0 |         4 |          4 | {4,3,2,1}        | {0.390625,0.265625,0.1875,0.15625} | 
+ public     | arp_test3         | b       |         0 |         4 |         -1 |                  |                                    | {1,64,128,192,256,320,384,448,512,576,640,704,768,832,896,960,1024,1088,1152,1216,1280,1344,1408,1472,1536,1600}
+ public     | arp_test3_1_prt_1 | a       |         0 |         4 |          3 | {3,2,1}          | {0.435897,0.307692,0.25641}        | 
+ public     | arp_test3_1_prt_1 | b       |         0 |         4 |         -1 |                  |                                    | {1,52,104,156,208,260,312,364,416,468,520,572,624,676,728,780,832,884,936,988,1030,1069,1108,1147,1186,1225}
+ public     | arp_test3_1_prt_2 | a       |         0 |         4 |          1 | {4}              | {1}                                | 
+ public     | arp_test3_1_prt_2 | b       |         0 |         4 |         -1 |                  |                                    | {3,99,199,299,399,499,599,699,799,899,999,1250,1275,1300,1325,1350,1375,1400,1425,1450,1475,1500,1525,1550,1575,1600}
 (6 rows)
 
 drop table arp_test3;
