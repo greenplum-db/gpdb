@@ -23,14 +23,10 @@ extern "C" {
 PG_MODULE_MAGIC;
 PG_FUNCTION_INFO_V1(s3_export);
 PG_FUNCTION_INFO_V1(s3_import);
-PG_FUNCTION_INFO_V1(gphdfs2_export);
-PG_FUNCTION_INFO_V1(gphdfs2_import);
 
 extern "C" {
 Datum s3_export(PG_FUNCTION_ARGS);
 Datum s3_import(PG_FUNCTION_ARGS);
-Datum gphdfs2_export(PG_FUNCTION_ARGS);
-Datum gphdfs2_import(PG_FUNCTION_ARGS);
 }
 
 string s3extErrorMessage;
@@ -277,20 +273,4 @@ Datum s3_export(PG_FUNCTION_ARGS) {
     }
 
     PG_RETURN_INT32(data_len);
-}
-
-/*
- * Import data into GPDB.
- * invoked by GPDB, be careful with C++ exceptions.
- */
-Datum gphdfs2_import(PG_FUNCTION_ARGS) {
-    PG_RETURN_INT32(0);
-}
-
-/*
- * Export data out of GPDB.
- * invoked by GPDB, be careful with C++ exceptions.
- */
-Datum gphdfs2_export(PG_FUNCTION_ARGS) {
-    PG_RETURN_INT32(0);
 }
