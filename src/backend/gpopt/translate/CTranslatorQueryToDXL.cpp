@@ -486,7 +486,7 @@ CTranslatorQueryToDXL::PdxlnFromQueryInternal()
 	CDXLNode *pdxlnCTEAnchorTop = NULL;
 	CDXLNode *pdxlnCTEAnchorBottom = NULL;
 	ConstructCTEAnchors(m_pdrgpdxlnCTE, &pdxlnCTEAnchorTop, &pdxlnCTEAnchorBottom);
-	GPOS_ASSERT_IMP(0 < m_pdrgpdxlnCTE->UlSafeLength(),
+	GPOS_ASSERT_IMP(m_pdrgpdxlnCTE == NULL || 0 < m_pdrgpdxlnCTE->UlLength(),
 					NULL != pdxlnCTEAnchorTop && NULL != pdxlnCTEAnchorBottom);
 	
 	GPOS_ASSERT_IMP(NULL != m_pquery->setOperations, 0 == gpdb::UlListLength(m_pquery->windowClause));

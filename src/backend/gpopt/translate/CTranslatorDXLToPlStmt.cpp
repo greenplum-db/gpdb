@@ -4576,7 +4576,7 @@ CTranslatorDXLToPlStmt::PlDirectDispatchSegIds
 	
 	DrgPdrgPdxldatum *pdrgpdrgpdxldatum = pdxlddinfo->Pdrgpdrgpdxldatum();
 	
-	if (0 == pdrgpdrgpdxldatum->UlSafeLength())
+	if (pdrgpdrgpdxldatum == NULL || 0 == pdrgpdrgpdxldatum->UlLength())
 	{
 		return NIL;
 	}
@@ -5103,7 +5103,7 @@ CTranslatorDXLToPlStmt::PlTargetListFromProjList
 				// the left or right child of the operator
 
 				GPOS_ASSERT(NULL != pdrgpdxltrctx);
-				GPOS_ASSERT(0 != pdrgpdxltrctx->UlSafeLength());
+				GPOS_ASSERT(0 != pdrgpdxltrctx->UlLength());
 				ULONG ulColId = CDXLScalarIdent::PdxlopConvert(pdxlnExpr->Pdxlop())->Pdxlcr()->UlID();
 
 				const CDXLTranslateContext *pdxltrctxLeft = (*pdrgpdxltrctx)[0];
@@ -5113,7 +5113,7 @@ CTranslatorDXLToPlStmt::PlTargetListFromProjList
 				if (NULL == pteOriginal)
 				{
 					// variable not found on the left side
-					GPOS_ASSERT(2 == pdrgpdxltrctx->UlSafeLength());
+					GPOS_ASSERT(2 == pdrgpdxltrctx->UlLength());
 					const CDXLTranslateContext *pdxltrctxRight = (*pdrgpdxltrctx)[1];
 
 					GPOS_ASSERT(NULL != pdxltrctxRight);
@@ -5860,7 +5860,7 @@ CTranslatorDXLToPlStmt::PdistrpolicyFromCtas
 {
 	DrgPul *pdrgpulDistrCols = pdxlop->PdrgpulDistr();
 
-	const ULONG ulDistrCols = pdrgpulDistrCols->UlSafeLength();
+	const ULONG ulDistrCols = (pdrgpulDistrCols == NULL) ? 0 : pdrgpulDistrCols->UlLength();
 
 	ULONG ulDistrColsAlloc = 1;
 	if (0 < ulDistrCols)
