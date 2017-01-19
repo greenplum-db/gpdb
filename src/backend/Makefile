@@ -15,9 +15,6 @@ top_builddir = ../..
 include $(top_builddir)/src/Makefile.global
 
 BLD_TOP = $(top_builddir)/gpAux
-ifeq ($(enable_orca),yes)
-include $(BLD_TOP)/releng/releng.mk
-endif
 
 ifdef ADDON_DIR
 include $(BLD_TOP)/$(ADDON_DIR)/src/Makefile

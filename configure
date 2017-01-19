@@ -10542,16 +10542,16 @@ fi
 
 done
 
-  for ac_header in gpos/assert.h
+  for ac_header in gpos/config.h
 do :
-  ac_fn_c_check_header_mongrel "$LINENO" "gpos/assert.h" "ac_cv_header_gpos_assert_h" "$ac_includes_default"
-if test "x$ac_cv_header_gpos_assert_h" = xyes; then :
+  ac_fn_c_check_header_mongrel "$LINENO" "gpos/config.h" "ac_cv_header_gpos_config_h" "$ac_includes_default"
+if test "x$ac_cv_header_gpos_config_h" = xyes; then :
   cat >>confdefs.h <<_ACEOF
-#define HAVE_GPOS_ASSERT_H 1
+#define HAVE_GPOS_CONFIG_H 1
 _ACEOF
 
 else
-  as_fn_error $? "gpos/assert.h GPOS header file is required for Greenplum Query Optimizer (orca)" "$LINENO" 5
+  as_fn_error $? "gpos/config.h GPOS header file is required for Greenplum Query Optimizer (orca)" "$LINENO" 5
 fi
 
 done
