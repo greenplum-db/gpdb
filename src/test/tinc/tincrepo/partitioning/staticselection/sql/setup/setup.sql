@@ -19,7 +19,7 @@ for i in range(len(rv)):
             temp_line = rv[j]['QUERY PLAN']
         
         if temp_line.find('Partitions selected:') != -1:
-            result[0] = int(temp_line[temp_line.index('selected:  ')+10:temp_line.index(' (out')])
+            result[0] = int(temp_line[temp_line.index('selected: ')+10:temp_line.index(' (out')])
             result[1] = int(temp_line[temp_line.index('out of')+6:temp_line.index(')')])
 return result
 $$
