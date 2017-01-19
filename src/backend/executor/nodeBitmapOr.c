@@ -109,6 +109,14 @@ ExecCountSlotsBitmapOr(BitmapOr *node)
 
 /* ----------------------------------------------------------------
  *	   MultiExecBitmapOr
+ *
+ *	   BitmapOr node gets the bitmaps generated from BitmapIndexScan
+ *	   nodes and outputs a bitmap that ORs all input bitmaps.
+ *
+ *	   The first input bitmap is utilized to store the result of the
+ *	   OR and returned to the caller. In addition, the output points
+ *	   to a newly created OpStream node of type BMS_OR, where all
+ *	   StreamNodes of input bitmaps are added as input streams.
  * ----------------------------------------------------------------
  */
 Node *
