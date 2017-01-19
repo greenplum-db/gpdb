@@ -1517,7 +1517,7 @@ gpdb::PlcListTail
 	return NULL;
 }
 
-int
+uint32
 gpdb::UlListLength
 	(
 	List *l
@@ -2925,7 +2925,7 @@ register_mdcache_invalidation_callbacks(void)
 		 */
 		/* gp_segment_config */
 	};
-	int			i;
+	unsigned int i;
 
 	for (i = 0; i < lengthof(metadata_caches); i++)
 	{

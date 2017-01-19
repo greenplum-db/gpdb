@@ -996,11 +996,9 @@ CTranslatorQueryToDXL::PstrExtractOptionValue
 {
 	GPOS_ASSERT(NULL != pdefelem);
 
-	BOOL fNeedsFree = false;
 	CHAR *szValue = gpdb::SzDefGetString(pdefelem);
 
 	CWStringDynamic *pstrResult = CDXLUtils::PstrFromSz(m_pmp, szValue);
-	
 	
 	return pstrResult;
 }
@@ -1194,7 +1192,7 @@ CTranslatorQueryToDXL::PdxlnUpdate()
 HMIUl *
 CTranslatorQueryToDXL::PhmiulUpdateCols()
 {
-	GPOS_ASSERT((ULONG)gpdb::UlListLength(m_pquery->targetList) == m_pdrgpdxlnQueryOutput->UlLength());
+	GPOS_ASSERT(gpdb::UlListLength(m_pquery->targetList) == m_pdrgpdxlnQueryOutput->UlLength());
 	HMIUl *phmiulUpdateCols = GPOS_NEW(m_pmp) HMIUl(m_pmp);
 
 	ListCell *plc = NULL;
@@ -1647,8 +1645,6 @@ CTranslatorQueryToDXL::PdxlnWindow
 	{
 		TargetEntry *pte = (TargetEntry *) lfirst(plcTE);
 		INT iResno = (INT) lfirst_int(plcResno);
-
-		INT iSortGroupRef = (INT) pte->ressortgroupref;
 
 		TargetEntry *pteWindowSpec = CTranslatorUtils::PteWindowSpec( (Node*) pte->expr, plWindowClause, plTargetList);
 		if (NULL != pteWindowSpec)
@@ -3772,7 +3768,6 @@ CTranslatorQueryToDXL::PdxlnProjectGroupingFuncs
 		TargetEntry *pte = (TargetEntry *) lfirst(plcTE);
 		GPOS_ASSERT(IsA(pte, TargetEntry));
 
-		BOOL fGroupingCol = pbs->FBit(pte->ressortgroupref);
 		ULONG ulResno = pte->resno;
 
 		if (IsA(pte->expr, GroupingFunc))

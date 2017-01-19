@@ -1719,7 +1719,6 @@ CTranslatorUtils::PdxlnDummyPrElem
 	CMDIdGPDB *pmdidCopy = GPOS_NEW(pmp) CMDIdGPDB(pmdidOriginal->OidObjectId(), pmdidOriginal->UlVersionMajor(), pmdidOriginal->UlVersionMinor());
 
 	// create a column reference for the scalar identifier to be casted
-	ULONG ulColId = pdxlcdOutput->UlID();
 	CMDName *pmdname = GPOS_NEW(pmp) CMDName(pmp, pdxlcdOutput->Pmdname()->Pstr());
 	CDXLColRef *pdxlcr = GPOS_NEW(pmp) CDXLColRef(pmp, pmdname, ulColIdInput);
 	CDXLScalarIdent *pdxlopIdent = GPOS_NEW(pmp) CDXLScalarIdent(pmp, pdxlcr, pmdidCopy);
@@ -2542,9 +2541,6 @@ CTranslatorUtils::UpdateGrpColMapping
 	if (!pbsGrpCols->FBit(ulSortGrpRef))
 	{
 		ULONG ulUniqueGrpCols = pbsGrpCols->CElements();
-#ifdef GPOS_DEBUG
-		BOOL fResult = 
-#endif
 		phmululGrpColPos->FInsert(GPOS_NEW(pmp) ULONG (ulUniqueGrpCols), GPOS_NEW(pmp) ULONG(ulSortGrpRef));
 		(void) pbsGrpCols->FExchangeSet(ulSortGrpRef);
 	}

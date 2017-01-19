@@ -2319,9 +2319,9 @@ CTranslatorRelcacheToDXL::PimdobjColStats
 
 	// total MCV frequency
 	CDouble dMCFSum = 0.0;
-	for (ULONG ul = 0; ul < iNumMCVValues; ul++)
+	for (int i = 0; i < iNumMCVValues; i++)
 	{
-		dMCFSum = dMCFSum + CDouble(pdrgfMCVFrequencies[ul]);
+		dMCFSum = dMCFSum + CDouble(pdrgfMCVFrequencies[i]);
 	}
 
 	// get histogram datums from pg_statistic entry

@@ -1000,7 +1000,7 @@ COptTasks::PvOptimizeTask
 		CMDCache::Reset();
 		CMDCache::SetCacheQuota(optimizer_mdcache_size * 1024L);
 	}
-	else if (CMDCache::ULLGetCacheQuota() != optimizer_mdcache_size * 1024L)
+	else if (CMDCache::ULLGetCacheQuota() != (ULLONG) optimizer_mdcache_size * 1024L)
 	{
 		CMDCache::SetCacheQuota(optimizer_mdcache_size * 1024L);
 	}
@@ -1573,7 +1573,7 @@ COptTasks::PvEvalExprFromDXLTask
 		CMDCache::Reset();
 		CMDCache::SetCacheQuota(optimizer_mdcache_size * 1024L);
 	}
-	else if (CMDCache::ULLGetCacheQuota() != optimizer_mdcache_size * 1024L)
+	else if (CMDCache::ULLGetCacheQuota() != (ULLONG) optimizer_mdcache_size * 1024L)
 	{
 		CMDCache::SetCacheQuota(optimizer_mdcache_size * 1024L);
 	}

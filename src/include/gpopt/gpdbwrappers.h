@@ -349,7 +349,7 @@ namespace gpdb {
 	ListCell *PlcListTail(List *l);
 
 	// number of items in a list
-	int UlListLength(List *l);
+	uint32 UlListLength(List *l);
 
 	// return the nth element in a list of pointers
 	void *PvListNth(List *list, int n);
