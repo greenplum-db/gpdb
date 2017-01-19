@@ -1,11 +1,9 @@
 DROP DATABASE gptransfer_testdb1;
-DROP DATABASE gptransfer_testdb2;
 DROP DATABASE gptransfer_testdb3;
 DROP DATABASE gptransfer_testdb4;
 DROP DATABASE gptransfer_testdb5;
 
 CREATE DATABASE gptransfer_testdb1;
-CREATE DATABASE gptransfer_testdb2;
 CREATE DATABASE gptransfer_testdb3;
 CREATE DATABASE gptransfer_testdb4;
 CREATE DATABASE gptransfer_testdb5;
@@ -17,14 +15,6 @@ CREATE TABLE t1(a int, b text) DISTRIBUTED BY (a);
 INSERT INTO t1 SELECT generate_series, 'More test data' FROM generate_series(101, 300);
 CREATE TABLE t2(a int, b text) DISTRIBUTED BY (a);
 INSERT INTO t2 SELECT generate_series, 'And some more test data' FROM generate_series(301, 600);
-
-\c gptransfer_testdb2
-CREATE TABLE t3(a int, b text) DISTRIBUTED BY (a);
-INSERT INTO t3 SELECT generate_series, 'Test data' FROM generate_series(601, 1000);
-CREATE TABLE t4(a int, b text) DISTRIBUTED BY (a);
-INSERT INTO t4 SELECT generate_series, 'More test data' FROM generate_series(1001, 1500);
-CREATE TABLE t5(a int, b text) DISTRIBUTED BY (a);
-INSERT INTO t5 SELECT generate_series, 'And some more test data' FROM generate_series(1501, 2100);
 
 \c gptransfer_testdb3
 CREATE TABLE t0(a int, b text) DISTRIBUTED BY (a);
