@@ -485,13 +485,6 @@ gingetmulti(PG_FUNCTION_ARGS)
  		else
  			break;
 	}	
- 
-	if(n && IsA(n, StreamBitmap))
-	{
-		stream_add_node((StreamBitmap *)n,
-			tbm_create_stream_node(hashBitmap), BMS_OR);
-		PG_RETURN_POINTER(n);
-	}
 
 	PG_RETURN_POINTER(hashBitmap);
 }

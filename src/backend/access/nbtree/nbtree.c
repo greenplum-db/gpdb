@@ -627,13 +627,6 @@ btgetmulti(PG_FUNCTION_ARGS)
 					   1);
 	}
 
-	if(n && IsA(n, StreamBitmap))
-	{
-		stream_add_node((StreamBitmap *)n,
-			tbm_create_stream_node(hashBitmap), BMS_OR);
-		PG_RETURN_POINTER(n);
-	}
-
 	MIRROREDLOCK_BUFMGR_VERIFY_NO_LOCK_LEAK_EXIT;
 
 	PG_RETURN_POINTER(hashBitmap);
