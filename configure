@@ -4990,8 +4990,8 @@ ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
 $as_echo_n "checking if $CXX supports -fno-aggressive-loop-optimizations... " >&6; }
 pgac_save_CXXFLAGS=$CXXFLAGS
 CXXFLAGS="$pgac_save_CXXFLAGS -fno-aggressive-loop-optimizations"
-ac_save_c_werror_flag=$ac_c_werror_flag
-ac_c_werror_flag=yes
+ac_save_cxx_werror_flag=$ac_cxx_werror_flag
+ac_cxx_werror_flag=yes
 ac_ext=cpp
 ac_cpp='$CXXCPP $CPPFLAGS'
 ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
@@ -5024,7 +5024,7 @@ ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
-ac_c_werror_flag=$ac_save_c_werror_flag
+ac_cxx_werror_flag=$ac_save_cxx_werror_flag
 
 
   # Silence compiler warnings that you get with modern versions of GCC.
