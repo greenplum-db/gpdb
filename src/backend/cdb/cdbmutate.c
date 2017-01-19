@@ -3111,7 +3111,7 @@ void remove_unused_initplans(Plan *plan, PlannerInfo *root)
 	 * RTEs may have params as well, so we need to get param IDs from them
 	 * before walking the plan to remove unused initplans
 	 */
-	Bitmapset *rte_params = params_in_rtable(plan, root->parse->rtable);
+	Bitmapset *rte_params = params_in_rtable(plan, root->glob->finalrtable);
 
 	/* now do the actual cleanup */
 	Bitmapset *params = NULL;
