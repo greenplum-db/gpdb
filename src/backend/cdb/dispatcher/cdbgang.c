@@ -93,6 +93,7 @@ static CdbComponentDatabaseInfo *findDatabaseInfoBySegIndex(
 		CdbComponentDatabases *cdbs, int segIndex);
 static void addGangToAllocated(Gang *gp);
 static Gang *getAvailableGang(GangType type, int size, int content);
+static bool readerGangsExist(void);
 
 /*
  * Create a reader gang.
@@ -1031,6 +1032,8 @@ DisconnectAndDestroyGang(Gang *gp)
 	if (gp == NULL)
 		return;
 
+	AssertImply(gp->type == GANGTYPE_PRIMARY_WRITER, !readerGangsExist());
+
 	ELOG_DISPATCHER_DEBUG("DisconnectAndDestroyGang entered: id = %d", gp->gang_id);
 
 	if (gp->allocated)
@@ -1690,6 +1693,14 @@ bool GangsExist(void)
 			availableReaderGangs1 != NIL);
 }
 
+static bool
+readerGangsExist(void)
+{
+	return (allocatedReaderGangsN != NIL ||
+			availableReaderGangsN != NIL ||
+			allocatedReaderGangs1 != NIL ||
+			availableReaderGangs1 != NIL);
+}
 
 int largestGangsize(void)
 {
