@@ -153,3 +153,15 @@ select count(*)  AS invisi_and_visi_tups from sto_alt_uao2_constraint;
 (1 row)
 
 set gp_select_invisible = false;
+-- Some negative testing.
+alter table sto_alt_uao2_constraint ADD COLUMN added_col10 character varying(35)
+default NULL constraint added_col10 NOT NULL;
+ERROR:  column "added_col10" contains null values  (seg0 127.0.0.1:25432 pid=30602)
+alter table sto_alt_uao2_constraint ADD COLUMN added_col12 character varying(35)
+-- Mask out "by some row" printed by row-oriented AO tables
+-- start_matchsubs
+-- m/^ERROR:  check constraint.*is violated/
+-- s/^ERROR:  check constraint.*is violated.*/ERROR:  check constraint is violated/
+-- end_matchsubs
+default 'abc'  CHECK (added_col12 is NULL);
+ERROR:  check constraint is violated
