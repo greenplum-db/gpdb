@@ -3601,6 +3601,76 @@ Feature: Validate command line arguments
         And verify that "appendonly=true" appears in the datconfig for database "bkdb"
         And verify that "blocksize=65536" appears in the datconfig for database "bkdb"
 
+    Scenario: Backup with all GUC (system settings) set to defaults will succeed
+        Given the test is initialized
+        # set guc defaults
+        And the user runs "psql bkdb -c "Alter database bkdb set gp_default_storage_options='appendonly=true, orientation=row, blocksize=65536, checksum=false, compresslevel=4, compresstype=none'""
+        Then psql should return a return code of 0
+        And there is a "heap" table "public.default_guc" in "bkdb" with data
+
+        # create a role that has different gucs
+        And a role "dsp_role" is created
+        And the user runs "psql bkdb -c "Alter role dsp_role set gp_default_storage_options='appendonly=true, orientation=column, compresstype=zlib'""
+        Then psql should return a return code of 0
+        # connect as different role create a table with the role's gucs
+        And the user runs command "export PGPASSWORD=dsprolepwd && psql bkdb -f test/behave/mgmt_utils/steps/data/gpcrondump/guc_role_create_table.sql"
+        Then export should return a return code of 0
+
+        # change guc to non-default for just current session and create session_guc_table
+        And the user runs "psql bkdb -f test/behave/mgmt_utils/steps/data/gpcrondump/guc_session_only.sql"
+
+        # backup and restore
+        When the user runs command "gpcrondump -a -x bkdb"
+        Then gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored
+        When the user runs gpdbrestore with the stored timestamp
+        Then gpdbrestore should return a return code of 0
+
+        # verify that gucs are set to previous defaults
+        And verify that "appendonly=true" appears in the datconfig for database "bkdb"
+        And verify that "orientation=row" appears in the datconfig for database "bkdb"
+        And verify that "blocksize=65536" appears in the datconfig for database "bkdb"
+        And verify that "checksum=false" appears in the datconfig for database "bkdb"
+        And verify that "compresslevel=4" appears in the datconfig for database "bkdb"
+        And verify that "compresstype=none" appears in the datconfig for database "bkdb"
+
+        # verify that my_default table has default gucs
+        When execute following sql in db "bkdb" and store result in the context
+            """
+            select relstorage,
+            reloptions,compresstype,columnstore,compresslevel,checksum from
+            pg_class c , pg_appendonly a where c.relfilenode=a.relid and
+            c.relname='default_guc'
+            """
+        Then validate that following rows are in the stored rows
+          | relstorage | reloptions                                       | compresstype | columnstore | compresslevel | checksum |
+          | a          | {appendonly=true,blocksize=65536,checksum=false} |              | f           | 0             | f        |
+
+        # verify that my_role_table has gucs from role
+        When execute following sql in db "bkdb" and store result in the context
+            """
+            select relstorage,
+            reloptions,compresstype,columnstore,compresslevel,checksum from
+            pg_class c , pg_appendonly a where c.relfilenode=a.relid and
+            c.relname='role_guc_table'
+            """
+        Then validate that following rows are in the stored rows
+          | relstorage | reloptions                                             | compresstype | columnstore | compresslevel | checksum |
+          | c          | {appendonly=true,compresstype=zlib,orientation=column} | zlib         | t           | 1             | t        |
+
+        # verify that session_gucs has gucs from session
+        When execute following sql in db "bkdb" and store result in the context
+            """
+            select relstorage,
+            reloptions,compresstype,columnstore,compresslevel,checksum from
+            pg_class c , pg_appendonly a where c.relfilenode=a.relid and
+            c.relname='session_guc_table'
+            """
+        Then validate that following rows are in the stored rows
+          | relstorage | reloptions                           | compresstype | columnstore | compresslevel | checksum |
+          | c          | {appendonly=true,orientation=column} |              | t           | 0             | t        |
+
+
     # THIS SHOULD BE THE LAST TEST
     @backupfire
     Scenario: cleanup for backup feature

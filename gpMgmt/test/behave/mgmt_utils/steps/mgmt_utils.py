@@ -22,6 +22,7 @@ from gppylib.operations.startSegments import MIRROR_MODE_MIRRORLESS
 from gppylib.operations.unix import ListRemoteFilesByPattern, CheckRemoteFile
 from test.behave_utils.gpfdist_utils.gpfdist_mgmt import Gpfdist
 from test.behave_utils.utils import *
+from test.behave_utils.PgHba import PgHba, Entry
 
 master_data_dir = os.environ.get('MASTER_DATA_DIRECTORY')
 if master_data_dir is None:
@@ -2098,8 +2099,14 @@ def impl(context):
 
         for stored_row in context.stored_rows:
             match_this_row = True
+
             for i in range(len(stored_row)):
-                if row[i] != str(stored_row[i]):
+                value = row[i]
+
+                if isinstance(stored_row[i], bool):
+                    value = str(True if row[i] == 't' else False)
+
+                if value != str(stored_row[i]):
                     match_this_row = False
                     break
 
@@ -4020,3 +4027,22 @@ def impl(context, segc_id, mirror_existence_state):
         cluster_state = dbconn.execSQL(conn, sql).fetchone()
         if cluster_state[0] != int(mirror_existence_state):
             raise Exception("mirror_existence_state of segment %s is %s. Expected %s." % (segc_id, cluster_state[0], mirror_existence_state))
+
+@given('a role "{role_name}" is created')
+@when('a role "{role_name}" is created')
+@then('a role "{role_name}" is created')
+def impl(context, role_name):
+    with dbconn.connect(dbconn.DbURL(dbname='template1')) as conn:
+        pghba = PgHba()
+        new_entry = Entry(entry_type='local',
+                          database='all',
+                          user=role_name,
+                          authmethod="password")
+        pghba.add_entry(new_entry)
+        pghba.write()
+
+        dbconn.execSQL(conn, "Drop role if exists dsp_role")
+
+        dbconn.execSQL(conn, "Create role %s with login password 'dsprolepwd'" % role_name)
+        dbconn.execSQL(conn, "select pg_reload_conf()")
+        conn.commit()
