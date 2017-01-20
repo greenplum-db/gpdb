@@ -50,7 +50,7 @@
 
 #ifdef USE_ORCA
 extern char *SzDXLPlan(Query *parse);
-extern StringInfo OptVersion();
+extern const char *OptVersion();
 #endif
 
 
@@ -680,10 +680,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
     	}
     	else /* PLANGEN_OPTIMIZER */
     	{
-    		StringInfo str = OptVersion();
-			appendStringInfo(&buf, "PQO version %s\n", str->data);
-			pfree(str->data);
-			pfree(str);
+			appendStringInfo(&buf, "PQO version %s\n", OptVersion());
     	}
     }
 #endif
