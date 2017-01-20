@@ -2718,7 +2718,56 @@ CreateCommandTag(Node *parsetree)
 					tag = "DEALLOCATE";
 			}
 			break;
-		
+
+			/* already-planned queries */
+		case T_PlannedStmt:
+			{
+				PlannedStmt *stmt = (PlannedStmt *) parsetree;
+
+				switch (stmt->commandType)
+				{
+					case CMD_SELECT:
+
+						/*
+						 * We take a little extra care here so that the result
+						 * will be useful for complaints about read-only
+						 * statements
+						 */
+						if (stmt->utilityStmt != NULL)
+						{
+							Assert(IsA(stmt->utilityStmt, DeclareCursorStmt));
+							tag = "DECLARE CURSOR";
+						}
+						else if (stmt->intoClause != NULL)
+							tag = "SELECT INTO";
+						else if (stmt->rowMarks != NIL)
+						{
+							if (((RowMarkClause *) linitial(stmt->rowMarks))->forUpdate)
+								tag = "SELECT FOR UPDATE";
+							else
+								tag = "SELECT FOR SHARE";
+						}
+						else
+							tag = "SELECT";
+						break;
+					case CMD_UPDATE:
+						tag = "UPDATE";
+						break;
+					case CMD_INSERT:
+						tag = "INSERT";
+						break;
+					case CMD_DELETE:
+						tag = "DELETE";
+						break;
+					default:
+						elog(WARNING, "unrecognized commandType: %d",
+							 (int) stmt->commandType);
+						tag = "???";
+						break;
+				}
+			}
+			break;
+
 		case T_Query: /* used to be function CreateQueryTag */
 			{
 				Query *query = (Query*)parsetree;
