@@ -54,17 +54,17 @@ begin
 	select relname from pg_class into v_name where oid=$1;
 	return v_name;
 end;
-$$ language plpgsql;
+$$ language plpgsql READS SQL DATA;
 select proname, proargnames, prodataaccess from pg_proc where proname = 'func1';
  proname | proargnames | prodataaccess 
 ---------+-------------+---------------
- func1   |             | n
+ func1   |             | r
 (1 row)
 
 create function func4(int, int) returns int as
 $$
   select $1 + $2;
-$$ language sql;
+$$ language sql CONTAINS SQL;
 -- check prodataaccess column
 select proname, proargnames, prodataaccess from pg_proc where proname = 'func4';
  proname | proargnames | prodataaccess 
@@ -155,7 +155,20 @@ $$
 $$ language sql immutable reads sql data;
 ERROR:  conflicting options
 HINT:  IMMUTABLE conflicts with READS SQL DATA.
+-- stable function with modifies data_access
+create table bar (c int, d int);
+create function func1_mod_int_stb(x int) returns int as $$
+begin
+	update bar set d = d+1 where c = $1;
+	return $1 + 1;
+end
+$$ language plpgsql stable modifies sql data;
+select * from func1_mod_int_stb(5) order by 1;
+ERROR:  UPDATE is not allowed in a non-volatile function
+CONTEXT:  SQL statement "UPDATE bar SET d = d+1 WHERE c =  $1 "
+PL/pgSQL function "func1_mod_int_stb" line 2 at SQL statement
 drop function func2(anyelement, anyelement, bool);
 drop function func3();
 drop function func4(int, int);
 drop function func5(int);
+drop function func1_mod_int_stb(int);

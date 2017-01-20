@@ -15,7 +15,7 @@
 #   hitting max_connections limit on segments.
 #
 
-test: variadic_parameters default_parameters
+test: variadic_parameters default_parameters function_extensions
 
 # test workfiles compressed using zlib
 # 'zlib' utilizes fault injectors so it needs to be in a group by itself

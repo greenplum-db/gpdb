@@ -117,7 +117,18 @@ $$
   select $1 + $2;
 $$ language sql immutable reads sql data;
 
+-- stable function with modifies data_access
+create table bar (c int, d int);
+create function func1_mod_int_stb(x int) returns int as $$
+begin
+	update bar set d = d+1 where c = $1;
+	return $1 + 1;
+end
+$$ language plpgsql stable modifies sql data;
+select * from func1_mod_int_stb(5) order by 1;
+
 drop function func2(anyelement, anyelement, bool);
 drop function func3();
 drop function func4(int, int);
 drop function func5(int);
+drop function func1_mod_int_stb(int);
