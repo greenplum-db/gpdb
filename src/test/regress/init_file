@@ -82,4 +82,7 @@ s/overlaps existing partition "r\d+"/partition "r##########"/
 m/Table "pg_temp_\d+.temp/
 s/Table "pg_temp_\d+.temp/Table "pg_temp_#####/
 
+# Mask out timestamp and whoami message for gpfaultinjector
+m/^\d+.*gpfaultinjector.*-\[INFO\]:-/
+s/^\d+.*gpfaultinjector.*-\[INFO\]:-//
 -- end_matchsubs

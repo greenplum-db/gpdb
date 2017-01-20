@@ -7,15 +7,14 @@ set statement_mem="2MB";
 set gp_enable_mk_sort=on;
 set gp_cte_sharing=on;
 
-
---start_ignore
 \! gpfaultinjector -f execsort_mksort_mergeruns -y reset --seg_dbid 2
 -- set QueryFinishPending=true in sort mergeruns. This will stop sort and set result_tape to NULL
 \! gpfaultinjector -f execsort_mksort_mergeruns -y finish_pending --seg_dbid 2
---end_ignore
 
 -- return results although sort will be interrupted in one of the segments 
 select DISTINCT S from (select row_number() over(partition by i1 order by i2) AS T, count(*) over (partition by i1) AS S from _tmp_table) AS TMP;
+
+\! gpfaultinjector -f execsort_mksort_mergeruns -y status --seg_dbid 2
 
 -- test if shared input scan deletes memory correctly when QueryFinishPending and its child has been eagerly freed,
 -- where the child is a Sort node
@@ -29,37 +28,34 @@ set gp_resqueue_print_operator_memory_limits=on;
 set statement_mem='2MB';
 set gp_enable_mk_sort=off;
 
---start_ignore
 \! gpfaultinjector -f execshare_input_next -y reset --seg_dbid 2
 -- Set QueryFinishPending to true after SharedInputScan has retrieved the first tuple. 
 -- This will eagerly free the memory context of shared input scan's child node.  
 \! gpfaultinjector -f execshare_input_next -y finish_pending --seg_dbid 2
---end_ignore
 
 select COUNT(i2) over(partition by i1)
 from testsisc
 LIMIT 2;
 
+\! gpfaultinjector -f execshare_input_next -y status --seg_dbid 2
 
 -- test if shared input scan deletes memory correctly when QueryFinishPending and its child has been eagerly freed,
 -- where the child is a Sort node and sort_mk algorithm is used
 
 set gp_enable_mk_sort=on;
 
---start_ignore
 \! gpfaultinjector -f execshare_input_next -y reset --seg_dbid 2
 -- Set QueryFinishPending to true after SharedInputScan has retrieved the first tuple. 
 -- This will eagerly free the memory context of shared input scan's child node.  
 \! gpfaultinjector -f execshare_input_next -y finish_pending --seg_dbid 2
---end_ignore
 
 select COUNT(i2) over(partition by i1)
 from testsisc
 LIMIT 2;
 
+\! gpfaultinjector -f execshare_input_next -y status --seg_dbid 2
+
 reset gp_enable_mk_sort;
 -- Disable faultinjectors
---start_ignore
 \! gpfaultinjector -f execsort_mksort_mergeruns -y reset --seg_dbid 2
 \! gpfaultinjector -f execshare_input_next -y reset --seg_dbid 2
---end_ignore
