@@ -7,6 +7,29 @@ Feature: Validate command line arguments
         Then gpcrondump should print no such option: -X error message
         And gpcrondump should return a return code of 2
 
+    # This test deletes the gpAdminLogs/gpcrondump_*.log files, so it should stay at the top of this file
+    @wip
+    Scenario: Full Backup with -B and -l option
+        Given the test is initialized
+        And the user runs command "rm ~/gpAdminLogs/gpcrondump_*.log"
+        And the user runs command "ls ~/gpAdminLogs/gpcrondump_*.log"
+        Then ls should return a return code of 1
+        And there is a "heap" table "public.heap_table" in "bkdb" with data
+        When the user runs "gpcrondump -a -x bkdb -B 100 -l /tmp/"
+        Then gpcrondump should return a return code of 0
+        Then verify that a log was created by gpcrondump in the "/tmp" directory
+        And the user runs command "ls ~/gpAdminLogs/gpcrondump_*.log"
+        Then ls should return a return code of 1
+        When the user runs "gpcrondump -a -x bkdb -B 20 -l /tmp/foo"
+        Then gpcrondump should return a return code of 0
+        Then verify that a log was created by gpcrondump in the "/tmp/foo" directory
+        And the user runs command "ls ~/gpAdminLogs/gpcrondump_*.log"
+        Then ls should return a return code of 1
+        When the user runs "gpcrondump -a -x bkdb -B 1"
+        Then gpcrondump should return a return code of 0
+        And the user runs command "ls ~/gpAdminLogs/gpcrondump_*.log"
+        And ls should print gpcrondump_*.log to stdout
+
     @backupfire
     Scenario: Valid option combinations for incremental backup
         Given the test is initialized
@@ -3670,6 +3693,26 @@ Feature: Validate command line arguments
           | relstorage | reloptions                           | compresstype | columnstore | compresslevel | checksum |
           | c          | {appendonly=true,orientation=column} |              | t           | 0             | t        |
 
+
+    Scenario: Incremental backup with no-privileges
+        Given the test is initialized
+        And there is a "heap" table "public.heap_table" in "bkdb" with data
+        And the user runs "psql -c 'CREATE ROLE temprole; GRANT ALL ON public.heap_table TO temprole;' bkdb"
+        Then psql should return a return code of 0
+        When the user runs "gpcrondump -a -x bkdb --no-privileges"
+        Then gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored
+        Then verify the metadata dump file does not contain "GRANT"
+        Then verify the metadata dump file does not contain "REVOKE"
+
+    Scenario: Incremental backup with use-set-session-authorization
+        Given the test is initialized
+        And there is a "heap" table "public.heap_table" in "bkdb" with data
+        When the user runs "gpcrondump -a -x bkdb --use-set-session-authorization"
+        Then gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored
+        Then verify the metadata dump file does contain "SESSION AUTHORIZATION"
+        Then verify the metadata dump file does not contain "ALTER TABLE * OWNER TO"
 
     # THIS SHOULD BE THE LAST TEST
     @backupfire
