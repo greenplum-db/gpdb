@@ -4,18 +4,25 @@ include ../../include/makefile.inc
 # Options
 DEBUG_S3_SYMBOL = y
 
-# Flags
-PG_LIBS += $(COMMON_LINK_OPTIONS)
-PG_CPPFLAGS += $(COMMON_CPP_FLAGS) -I../../include -I../../lib -I$(libpq_srcdir) -I$(libpq_srcdir)/postgresql/server/utils -DS3_STANDALONE -DS3_STANDALONE_CHECKCLOUD
+CPPFLAGS = $(COMMON_CPP_FLAGS) -I../../include -I../../lib -DS3_STANDALONE -DS3_STANDALONE_CHECKCLOUD
+LDFLAGS = $(COMMON_LINK_OPTIONS)
 
 ifeq ($(DEBUG_S3_SYMBOL),y)
-	PG_CPPFLAGS += -g
+       CPPFLAGS += -g
 endif
 
 # Targets
 PROGRAM = gpcheckcloud
-OBJS = gpcheckcloud.o ../../lib/http_parser.o ../../lib/ini.o $(addprefix ../../src/,$(COMMON_OBJS))
 
-# Launch
-PGXS := $(shell pg_config --pgxs)
-include $(PGXS)
+%.o: ../../src/%.cpp
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
+
+http_parser.o: ../../lib/http_parser.cpp
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
+
+ini.o: ../../lib/ini.cpp
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
+
+gpcheckcloud: gpcheckcloud.o http_parser.o ini.o $(COMMON_OBJS)
+
+install:
