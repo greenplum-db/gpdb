@@ -21,7 +21,7 @@ PGXS := $(shell pg_config --pgxs)
 include $(PGXS)
 
 gpcheckcloud:
-	@$(MAKE) -C bin/gpcheckcloud
+	@$(MAKE) -C bin/gpcheckcloud gpcheckcloud
 
 test: format
 	@$(MAKE) -C test test
