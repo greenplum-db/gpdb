@@ -290,7 +290,7 @@ CTranslatorUtils::Pdxltvf
 		pdrgpmdidOutArgTypes->AddRef();
 		if (FContainsPolymorphicTypes(pdrgpmdidOutArgTypes))
 		{
-			// resolve polymorphic types (anyelement/anyarray) using the
+			// resolve polymorphic types (anyelement/anyarray/anyenum) using the
 			// argument types from the query
 			List *plArgTypes = gpdb::PlFuncArgTypes(pfuncexpr->funcid);
 			DrgPmdid *pdrgpmdidResolved = PdrgpmdidResolvePolymorphicTypes
@@ -341,6 +341,7 @@ CTranslatorUtils::PdrgpmdidResolvePolymorphicTypes
 {
 	OID oidAnyElement = InvalidOid;
 	OID oidAnyArray = InvalidOid;
+	OID oidAnyEnum = InvalidOid;
 	const ULONG ulArgTypes = gpdb::UlListLength(plArgTypes);
 	const ULONG ulArgsFromQuery = gpdb::UlListLength(plArgsFromQuery);
 	for (ULONG ul = 0; ul < ulArgTypes && ul < ulArgsFromQuery; ul++)
@@ -357,19 +358,34 @@ CTranslatorUtils::PdrgpmdidResolvePolymorphicTypes
 		{
 			oidAnyArray = oidArgTypeFromQuery;
 		}
+
+		if (ANYENUMOID == oidArgType && InvalidOid == oidAnyEnum)
+		{
+			oidAnyEnum = oidArgTypeFromQuery;
+		}
+
 	}
 
-	GPOS_ASSERT(InvalidOid != oidAnyElement || InvalidOid != oidAnyArray);
+	GPOS_ASSERT(InvalidOid != oidAnyElement || InvalidOid != oidAnyArray || InvalidOid != oidAnyEnum);
 
 	// use the resolved type to deduce the other if necessary
 	if (InvalidOid == oidAnyElement)
 	{
 		oidAnyElement = gpdb::OidResolveGenericType(ANYELEMENTOID, oidAnyArray, ANYARRAYOID);
+		if (InvalidOid == oidAnyElement)
+		{
+			oidAnyElement = gpdb::OidResolveGenericType(ANYELEMENTOID, oidAnyEnum, ANYENUMOID);
+		}
 	}
 
 	if (InvalidOid == oidAnyArray)
 	{
 		oidAnyArray = gpdb::OidResolveGenericType(ANYARRAYOID, oidAnyElement, ANYELEMENTOID);
+	}
+
+	if (InvalidOid == oidAnyEnum)
+	{
+		oidAnyEnum = gpdb::OidResolveGenericType(ANYENUMOID, oidAnyElement, ANYELEMENTOID);
 	}
 
 	// generate a new array of mdids based on the resolved types
@@ -387,6 +403,10 @@ CTranslatorUtils::PdrgpmdidResolvePolymorphicTypes
 		else if (FAnyArray(pmdid))
 		{
 			pmdidResolved = GPOS_NEW(pmp) CMDIdGPDB(oidAnyArray);
+		}
+		else if (FAnyEnum(pmdid))
+		{
+			pmdidResolved = GPOS_NEW(pmp) CMDIdGPDB(oidAnyEnum);
 		}
 		else
 		{
@@ -406,9 +426,7 @@ CTranslatorUtils::PdrgpmdidResolvePolymorphicTypes
 //
 //	@doc:
 //		Check if the given mdid array contains any of the polymorphic
-//		types (ANYELEMENT, ANYARRAY)
-//
-// GPDB_83_MERGE_FIXME: What about ANYENUM?
+//		types (ANYELEMENT, ANYARRAY, ANYENUM)
 //
 //---------------------------------------------------------------------------
 BOOL
@@ -422,7 +440,7 @@ CTranslatorUtils::FContainsPolymorphicTypes
 	for (ULONG ul = 0; ul < ulLen; ul++)
 	{
 		IMDId *pmdid = (*pdrgpmdidTypes)[ul];
-		if (FAnyElement(pmdid) || FAnyArray(pmdid))
+		if (FAnyElement(pmdid) || FAnyArray(pmdid) || FAnyEnum(pmdid))
 		{
 			return true;
 		}
@@ -465,6 +483,24 @@ CTranslatorUtils::FAnyArray
 {
 	Oid oid = CMDIdGPDB::PmdidConvert(pmdidType)->OidObjectId();
 	return (ANYARRAYOID == oid);
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorUtils::FAnyEnum
+//
+//	@doc:
+//		Check if the given type mdid is the "ANYENUM" type
+//
+//---------------------------------------------------------------------------
+BOOL
+CTranslatorUtils::FAnyEnum
+	(
+	IMDId *pmdidType
+	)
+{
+	Oid oid = CMDIdGPDB::PmdidConvert(pmdidType)->OidObjectId();
+	return (ANYENUMOID == oid);
 }
 
 //---------------------------------------------------------------------------

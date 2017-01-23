@@ -10158,6 +10158,22 @@ LOG:  Planner produced plan :0
 
 reset client_min_messages;
 LOG:  statement: reset client_min_messages;
+-- ANYENUM test
+CREATE TYPE rainbow AS ENUM ('red', 'orange', 'yellow', 'green', 'blue', 'purple');
+CREATE FUNCTION echo_me(anyenum) RETURNS text AS $$
+BEGIN
+RETURN $1::text || 'omg';
+END
+$$ LANGUAGE plpgsql STABLE;
+EXPLAIN SELECT echo_me('red'::rainbow);
+                       QUERY PLAN
+--------------------------------------------------------
+ Result  (cost=0.00..0.00 rows=1 width=8)
+   ->  Result  (cost=0.00..0.00 rows=1 width=1)
+ Settings:  optimizer=on; optimizer_metadata_caching=on
+ Optimizer status: PQO version 2.1
+(4 rows)
+
 -- start_ignore
 drop table foo;
 -- end_ignore

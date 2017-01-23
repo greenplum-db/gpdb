@@ -74,7 +74,7 @@ namespace gpdxl
 			DrgPbs *PdrgpbsRollup(IMemoryPool *pmp, GroupingClause *pgrcl, ULONG ulCols, HMUlUl *phmululGrpColPos, CBitSet *pbsGrpCols);
 
 			// check if the given mdid array contains any of the polymorphic
-			// types (ANYELEMENT, ANYARRAY)
+			// types (ANYELEMENT, ANYARRAY, ANYENUM)
 			static
 			BOOL FContainsPolymorphicTypes(DrgPmdid *pdrgpmdidTypes);
 
@@ -85,6 +85,10 @@ namespace gpdxl
 			// check if the given type mdid is the "ANYARRAY" type
 			static
 			BOOL FAnyArray(IMDId *pmdidType);
+
+			// check if the given type mdid is the "ANYENUM" type
+			static
+			BOOL FAnyEnum(IMDId *pmdidType);
 
 			// resolve polymorphic types in the given array of type ids, replacing
 			// them with the actual types obtained from the query
