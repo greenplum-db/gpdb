@@ -53,163 +53,6 @@ eval_propagation_expression(PartitionSelectorState *node, Oid part_oid)
 }
 
 /* ----------------------------------------------------------------
- *		construct_partition_constraints_range
- *
- *		construct a PartitionConstraints node given a PartitionRule for
- *		partition by range
- *
- *		caller is responsible for free the PartitionConstraints generated
- *
- * ----------------------------------------------------------------
- */
-static PartitionConstraints *
-construct_part_constraints_range(PartitionRule *rule)
-{
-	Assert (NULL != rule);
-	PartitionConstraints *constraint = makeNode(PartitionConstraints);
-	Assert (NULL != constraint);
-	constraint->pRule = rule;
-	constraint->defaultPart = rule->parisdefault;
-	if (constraint->defaultPart)
-	{
-		return constraint;
-	}
-
-	/* retrieve boundary information */
-	if (NULL == rule->parrangestart && NULL == rule->parrangeend)
-	{
-		/* partition with only the NULL value */
-		constraint->lowerBound = NULL;
-		constraint->lbInclusive = true;
-		constraint->lbOpen = false;
-		constraint->upperBound = NULL;
-		constraint->upInclusive = true;
-		constraint->upOpen = false;
-
-		return constraint;
-	}
-
-	if (NULL == rule->parrangestart)
-	{
-		/* open lower bound */
-		constraint->lbOpen = true;
-		constraint->lowerBound = NULL;
-		constraint->lbInclusive = false;
-	}
-	else
-	{
-		List *parrangeStart = (List *) rule->parrangestart;
-		Assert (1 == list_length(parrangeStart));
-		Node *lowerBound = (Node *) linitial(parrangeStart);
-		Assert (IsA(lowerBound, Const));
-		constraint->lowerBound = (Const *) lowerBound;
-		constraint->lbInclusive = rule->parrangestartincl;
-		constraint->lbOpen = false;
-	}
-
-	if (NULL == rule->parrangeend)
-	{
-		/* open upper bound */
-		constraint->upOpen = true;
-		constraint->upperBound = NULL;
-		constraint->upInclusive = false;
-	}
-	else
-	{
-		List *parrangeEnd = (List *) rule->parrangeend;
-		Assert (1 == list_length(parrangeEnd));
-		Node *upperBound = (Node *) linitial(parrangeEnd);
-		Assert (IsA(upperBound, Const));
-		constraint->upperBound = (Const *) upperBound;
-		constraint->upInclusive = rule->parrangeendincl;
-		constraint->upOpen = false;
-	}
-
-	Assert (!constraint->upOpen || !constraint->lbOpen);
-	return constraint;
-}
-
-/* ----------------------------------------------------------------
- *		construct_partition_constraints_list
- *
- *		construct a list of PartitionConstraints node given a PartitionRule
- *		for partition by list
- *
- *		caller is responsible for free the PartitionConstraintss generated
- *
- * ----------------------------------------------------------------
- */
-static List *
-construct_part_constraints_list(PartitionRule *rule)
-{
-	List *result = NIL;
-
-	/* default part */
-	if (NULL == rule->parlistvalues || rule->parisdefault)
-	{
-		PartitionConstraints *constraint = makeNode(PartitionConstraints);
-		Assert (NULL != constraint);
-		constraint->pRule = rule;
-		constraint->defaultPart = true;
-		result = lappend(result, constraint);
-		return result;
-	}
-
-	ListCell *lc = NULL;
-	foreach (lc, rule->parlistvalues)
-	{
-		List *values = (List *) lfirst(lc);
-		/* make sure it is single-column partition */
-		Assert (1 == list_length(values));
-		Node *value = (Node *) lfirst(list_nth_cell(values, 0));
-		Assert (IsA(value, Const));
-
-		PartitionConstraints *constraint = makeNode(PartitionConstraints);
-		Assert (NULL != constraint);
-		constraint->pRule = rule;
-		constraint->defaultPart = false;
-		constraint->lowerBound = (Const *) value;
-		constraint->lbInclusive = true;
-		constraint->lbOpen = false;
-		constraint->upperBound = (Const *) value;
-		constraint->upInclusive = true;
-		constraint->upOpen = false;
-
-		result = lappend(result, constraint);
-	}
-	return result;
-}
-
-/* ----------------------------------------------------------------
- *		construct_partition_constraints
- *
- *		construct a list of PartitionConstraints node given a PartitionRule
- *		and its partition type
- *
- *		caller is responsible for free the PartitionConstraintss generated
- *
- * ----------------------------------------------------------------
- */
-static List *
-construct_part_constraints(PartitionRule *rule, char parkind)
-{
-	List *result = NIL;
-	switch(parkind)
-	{
-		case 'r':
-			result = lappend(result, construct_part_constraints_range(rule));
-			break;
-		case 'l':
-			result = construct_part_constraints_list(rule);
-			break;
-		default:
-			elog(ERROR,"unrecognized partitioning kind '%c'", parkind);
-			break;
-	}
-	return result;
-}
-
-/* ----------------------------------------------------------------
  *		eval_part_qual
  *
  *		Evaluate a qualification expression that consists of
@@ -281,141 +124,64 @@ partition_selection(PartitionNode *pn, PartitionAccessMethods *accessMethods, Oi
 }
 
 /* ----------------------------------------------------------------
- *		partition_constraints_range
+ *		partition_rules_for_general_predicate
  *
- *		Returns a list of PartitionConstraints of all children PartitionRules
- *		with their constraints for a given partition-by-range
- *		PartitionNode
- *
- * ----------------------------------------------------------------
- */
-static List *
-partition_constraints_range(PartitionNode *pn)
-{
-	Assert (NULL != pn && 'r' == pn->part->parkind);
-	List *result = NIL;
-	ListCell *lc;
-	foreach (lc, pn->rules)
-	{
-		PartitionRule *rule = (PartitionRule *) lfirst(lc);
-		PartitionConstraints *constraint = construct_part_constraints_range(rule);
-		result = lappend(result, constraint);
-	}
-	return result;
-}
-
-/* ----------------------------------------------------------------
- *		partition_constraints_list
- *
- *		Returns a list of PartitionConstraints of all children PartitionRules
- *		with their constraints for a given partition-by-list
- *		PartitionNode
- *
- *		It generates one PartitionConstraints for each partition value in one
- *		PartitionRule
- *
- * ----------------------------------------------------------------
- */
-static List *
-partition_constraints_list(PartitionNode *pn)
-{
-	Assert (NULL != pn && 'l' == pn->part->parkind);
-	List *result = NIL;
-	ListCell *lc = NULL;
-	foreach (lc, pn->rules)
-	{
-		PartitionRule *rule = (PartitionRule *) lfirst(lc);
-		result = list_concat(result, construct_part_constraints_list(rule));
-	}
-	return result;
-}
-
-/* ----------------------------------------------------------------
- *		partition_constraints
- *
- *		Returns a list of PartitionConstraints of all children PartitionRules
- *		with their constraints for a given parent PartitionNode
- *
- * ----------------------------------------------------------------
- */
-static List *
-partition_constraints(PartitionNode *pn)
-{
-	Assert (NULL != pn);
-	Partition *part = pn->part;
-	List *result = NIL;
-	switch(part->parkind)
-	{
-		case 'r':
-			result = partition_constraints_range(pn);
-			break;
-		case 'l':
-			result = partition_constraints_list(pn);
-			break;
-		default:
-			elog(ERROR,"unrecognized partitioning kind '%c'",
-				part->parkind);
-			break;
-	}
-
-	/* add default part if exists */
-	if (NULL != pn->default_part)
-	{
-		PartitionConstraints *constraint = makeNode(PartitionConstraints);
-		constraint->pRule = pn->default_part;
-		constraint->defaultPart = true;
-		result = lappend(result, constraint);
-	}
-	return result;
-}
-
-/* ----------------------------------------------------------------
- *		partition_constraints_for_general_predicate
- *
- *		Return list of PartitionConstraints for the general predicate
+ *		Return list of PartitionRule for the general predicate
  *		of current partition level
  *
  * ----------------------------------------------------------------
  */
 static List *
-partition_constraints_for_general_predicate(PartitionSelectorState *node, int level,
+partition_rules_for_general_predicate(PartitionSelectorState *node, int level,
 						TupleTableSlot *inputTuple, PartitionNode *parentNode)
 {
 	Assert (NULL != node);
 	Assert (NULL != parentNode);
 
-	List *partConstraints = partition_constraints(parentNode);
 	List *result = NIL;
 	ListCell *lc = NULL;
-	foreach (lc, partConstraints)
+	foreach (lc, parentNode->rules)
 	{
-		PartitionConstraints *constraints = (PartitionConstraints *) lfirst(lc);
+		PartitionRule *rule = (PartitionRule *) lfirst(lc);
 		/* We need to register it to allLevelParts to evaluate the current predicate */
-		node->levelPartConstraints[level] = constraints;
+		node->levelPartRules[level] = rule;
 
 		/* evaluate generalPredicate */
 		ExprState *exprstate = (ExprState *) lfirst(list_nth_cell(node->levelExprStates, level));
 		if (eval_part_qual(exprstate, node, inputTuple))
 		{
-			result = lappend(result, constraints);
+			result = lappend(result, rule);
+		}
+	}
+
+	if (parentNode->default_part)
+	{
+		/* We need to register it to allLevelParts to evaluate the current predicate */
+		node->levelPartRules[level] = parentNode->default_part;
+
+		/* evaluate generalPredicate */
+		ExprState *exprstate = (ExprState *) lfirst(list_nth_cell(node->levelExprStates, level));
+		if (eval_part_qual(exprstate, node, inputTuple))
+		{
+			result = lappend(result, parentNode->default_part);
 		}
 	}
 	/* reset allLevelPartConstraints */
-	node->levelPartConstraints[level] = NULL;
+	node->levelPartRules[level] = NULL;
 
 	return result;
 }
 
 /* ----------------------------------------------------------------
- *		partition_constraints_for_equality_predicate
+ *		partition_rules_for_equality_predicate
  *
- *		Return list of PartitionConstraints for the equality predicate
+ *		Return the PartitionRule for the equality predicate
  *		of current partition level
  *
  * ----------------------------------------------------------------
  */
-static List *
-partition_constraints_for_equality_predicate(PartitionSelectorState *node, int level,
+static PartitionRule *
+partition_rules_for_equality_predicate(PartitionSelectorState *node, int level,
 						TupleTableSlot *inputTuple, PartitionNode *parentNode)
 {
 	Assert (NULL != node);
@@ -442,12 +208,7 @@ partition_constraints_for_equality_predicate(PartitionSelectorState *node, int l
 	 * to choose the correct comparator.
 	 */
 	Oid exprTypid = exprType((Node *) exprState->expr);
-	PartitionRule *partRule = partition_selection(parentNode, node->accessMethods, ps->relid, value, exprTypid, isNull);
-	if (NULL != partRule)
-	{
-		return construct_part_constraints(partRule, parentNode->part->parkind);
-	}
-	return NIL;
+	return partition_selection(parentNode, node->accessMethods, ps->relid, value, exprTypid, isNull);
 }
 
 /* ----------------------------------------------------------------
@@ -492,46 +253,46 @@ processLevel(PartitionSelectorState *node, int level, TupleTableSlot *inputTuple
 	PartitionNode *parentNode = node->rootPartitionNode;
 	if (0 != level)
 	{
-		Assert (NULL != node->levelPartConstraints[level - 1]);
-		parentNode = node->levelPartConstraints[level - 1]->pRule->children;
+		Assert (NULL != node->levelPartRules[level - 1]);
+		parentNode = node->levelPartRules[level - 1]->children;
 	}
 
-	/* list of PartitionConstraints that satisfied the predicates */
-	List *satisfiedPartConstraints = NULL;
+	/* list of PartitionRule that satisfied the predicates */
+	List *satisfiedRules = NULL;
 
 	/* If equalityPredicate exists */
 	if (NULL != equalityPredicate)
 	{
 		Assert (NULL == generalPredicate);
 
-		List *partConstraints = partition_constraints_for_equality_predicate(node, level, inputTuple, parentNode);
-		satisfiedPartConstraints = list_concat(satisfiedPartConstraints, partConstraints);
+		PartitionRule *chosenRule = partition_rules_for_equality_predicate(node, level, inputTuple, parentNode);
+		satisfiedRules = lappend(satisfiedRules, chosenRule);
 	}
 	/* If generalPredicate exists */
 	else if (NULL != generalPredicate)
 	{
-		List *partConstraints = partition_constraints_for_general_predicate(node, level, inputTuple, parentNode);
-		satisfiedPartConstraints = list_concat(satisfiedPartConstraints, partConstraints);
+		List *chosenRules = partition_rules_for_general_predicate(node, level, inputTuple, parentNode);
+		satisfiedRules = list_concat(satisfiedRules, chosenRules);
 	}
 	/* None of the predicate exists */
 	else
 	{
 		/*
 		 * Neither equality predicate nor general predicate
-		 * exists. Return all the next level PartitionConstraintss.
+		 * exists. Return all the next level PartitionRule.
 		 */
-		satisfiedPartConstraints = partition_constraints(parentNode);
+		satisfiedRules = list_concat(satisfiedRules, parentNode->rules);
+		satisfiedRules = lappend(satisfiedRules, parentNode->default_part);
 	}
 
 	/* Based on the satisfied PartitionRules, go to next
 	 * level or propagate PartOids if we are in the leaf level
 	 */
 	ListCell* lc = NULL;
-	foreach (lc, satisfiedPartConstraints)
+	foreach (lc, satisfiedRules)
 	{
-		PartitionConstraints *partConstraint = (PartitionConstraints *) lfirst(lc);
-		node->levelPartConstraints[level] = partConstraint;
-		bool freeConstraint = true;
+		PartitionRule *rule = (PartitionRule *) lfirst(lc);
+		node->levelPartRules[level] = rule;
 
 		/* If we already in the leaf level */
 		if (level == ps->nLevels - 1)
@@ -550,23 +311,20 @@ processLevel(PartitionSelectorState *node, int level, TupleTableSlot *inputTuple
 			{
 				if (NULL != ps->propagationExpression)
 				{
-					if (!list_member_oid(selparts->partOids, partConstraint->pRule->parchildrelid))
+					if (!list_member_oid(selparts->partOids, rule->parchildrelid))
 					{
-						selparts->partOids = lappend_oid(selparts->partOids, partConstraint->pRule->parchildrelid);
-						int scanId = eval_propagation_expression(node, partConstraint->pRule->parchildrelid);
+						selparts->partOids = lappend_oid(selparts->partOids, rule->parchildrelid);
+						int scanId = eval_propagation_expression(node, rule->parchildrelid);
 						selparts->scanIds = lappend_int(selparts->scanIds, scanId);
 					}
 				}
 				else
 				{
 					/*
-					 * We'll need this partConstraint to evaluate the PartOidExpr of the
-					 * PartitionSelector operator's target list. Save it in node->acceptedLeafPart.
-					 * PartOidExprState.acceptedLeafPart also points to this partConstraint,
-					 * so we must save it here (GPSQL-2956).
+					 * We'll need the oid of this rule to evaluate the PartOidExpr of the
+					 * PartitionSelector operator's target list. Save it in node->acceptedLeafOid.
 					 */
-					*node->acceptedLeafPart = partConstraint;
-					freeConstraint = false;
+					node->acceptedLeafOid = rule->parchildrelid;
 				}
 			}
 		}
@@ -579,16 +337,13 @@ processLevel(PartitionSelectorState *node, int level, TupleTableSlot *inputTuple
 			pfree(selpartsChild);
 		}
 
-		if (freeConstraint)
-		{
-			pfree(partConstraint);
-		}
+		pfree(rule);
 	}
 
-	list_free(satisfiedPartConstraints);
+	list_free(satisfiedRules);
 
-	/* After finish iteration, reset this level's PartitionConstraints */
-	node->levelPartConstraints[level] = NULL;
+	/* After finish iteration, reset this level's PartitionRule */
+	node->levelPartRules[level] = NULL;
 
 	return selparts;
 }
@@ -610,7 +365,7 @@ initPartitionSelection(PartitionSelector *node, EState *estate)
 	psstate = makeNode(PartitionSelectorState);
 	psstate->ps.plan = (Plan *) node;
 	psstate->ps.state = estate;
-	psstate->levelPartConstraints = (PartitionConstraints**) palloc0(node->nLevels * sizeof(PartitionConstraints*));
+	psstate->levelPartRules = (PartitionRule**) palloc0(node->nLevels * sizeof(PartitionRule*));
 
 	/* ExprContext initialization */
 	ExecAssignExprContext(estate, &psstate->ps);
@@ -629,8 +384,6 @@ initPartitionSelection(PartitionSelector *node, EState *estate)
 		psstate->levelExprStates = lappend(psstate->levelExprStates,
 								ExecInitExpr(generalExpr, (PlanState *) psstate));
 	}
-
-	psstate->acceptedLeafPart = (PartitionConstraints **) palloc0(sizeof(void *));
 
 	psstate->residualPredicateExprState = ExecInitExpr((Expr *) node->residualPredicate,
 									(PlanState *) psstate);

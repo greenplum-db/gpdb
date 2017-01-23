@@ -1543,4 +1543,15 @@ typedef struct PartBoundOpenExpr
 	bool		isLowerBound;	/* lower (min) or upper (max) bound */
 } PartBoundOpenExpr;
 
+/*
+ * PartListRuleExpr
+ * Represents the expression that converts the current rule for
+ * level "level" to a list of constants
+ */
+typedef struct PartListRuleExpr
+{
+	Expr xpr;
+	int level;
+} PartListRuleExpr;
+
 #endif   /* PRIMNODES_H */

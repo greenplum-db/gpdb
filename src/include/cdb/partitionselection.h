@@ -15,24 +15,6 @@
 #include "nodes/execnodes.h"
 
 /* ----------------
- * PartitionConstraints node
- * used during PartitionSelector
- * ----------------
- */
-typedef struct PartitionConstraints
-{
-	NodeTag type;
-	PartitionRule * pRule;
-	bool defaultPart;
-	Const *lowerBound;
-	Const *upperBound;
-	bool lbInclusive;
-	bool upInclusive;
-	bool lbOpen;
-	bool upOpen;
-} PartitionConstraints;
-
-/* ----------------
  * SelectedParts node
  * This is the result of partition selection. It has a list of leaf part oids
  * and the corresponding ScanIds to which they should be propagated

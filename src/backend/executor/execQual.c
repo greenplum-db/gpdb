@@ -209,6 +209,10 @@ static Datum ExecEvalPartBoundInclusionExpr(PartBoundInclusionExprState *exprsta
 static Datum ExecEvalPartBoundOpenExpr(PartBoundOpenExprState *exprstate,
 								ExprContext *econtext,
 								bool *isNull, ExprDoneCond *isDone);
+static Datum ExecEvalPartListRuleExpr(PartListRuleExprState *exprstate,
+								ExprContext *econtext,
+								bool *isNull, ExprDoneCond *isDone);
+
 static bool ExecIsExprUnsafeToConst_walker(Node *node, void *context);
 static bool ExecIsExprUnsafeToConst(Node *node);
 
@@ -4653,11 +4657,10 @@ static Datum ExecEvalPartOidExpr(PartOidExprState *exprstate,
 		*isDone = ExprSingleResult;
 	}
 
-	PartitionConstraints *constraint = *exprstate->acceptedLeafPart;
-	if (NULL != constraint)
+	if (InvalidOid != *exprstate->acceptedLeafOid)
 	{
 		*isNull = false;
-		return UInt32GetDatum(constraint->pRule->parchildrelid);
+		return UInt32GetDatum(*exprstate->acceptedLeafOid);
 	}
 
 	*isNull = true;
@@ -4678,8 +4681,8 @@ static Datum ExecEvalPartDefaultExpr(PartDefaultExprState *exprstate,
 	Assert(NULL != isNull);
 
 	PartDefaultExpr *expr = (PartDefaultExpr *) exprstate->xprstate.expr;
-	PartitionConstraints *constraint = (PartitionConstraints *) exprstate->levelPartConstraints[expr->level];
-	Assert (NULL != constraint);
+	PartitionRule *rule = exprstate->selector->levelPartRules[expr->level];
+	Assert (NULL != rule);
 
 	if (isDone)
 	{
@@ -4687,7 +4690,7 @@ static Datum ExecEvalPartDefaultExpr(PartDefaultExprState *exprstate,
 	}
 	*isNull = false;
 
-	return BoolGetDatum(constraint->defaultPart);
+	return BoolGetDatum(rule->parisdefault);
 }
 
 /* ----------------------------------------------------------------
@@ -4704,12 +4707,26 @@ static Datum ExecEvalPartBoundExpr(PartBoundExprState *exprstate,
 	Assert(NULL != isNull);
 
 	PartBoundExpr *expr = (PartBoundExpr *) exprstate->xprstate.expr;
-	PartitionConstraints *constraint = (PartitionConstraints *) exprstate->levelPartConstraints[expr->level];
-	Assert (NULL != constraint);
-	Const *con = constraint->upperBound;
-	if (expr->isLowerBound)
+	PartitionSelectorState *selector = exprstate->selector;
+	PartitionRule *rule = selector->levelPartRules[expr->level];
+	Assert (NULL != rule);
+	AssertImply(0 == expr->level, selector->rootPartitionNode->part->parkind == 'r');
+	AssertImply(0 < expr->level, selector->levelPartRules[expr->level - 1] != NULL &&
+			selector->levelPartRules[expr->level - 1]->children->part->parkind == 'r');
+
+	List *parBoundary = NULL;
+
+	parBoundary = expr->isLowerBound ? (List *) rule->parrangestart : (List *) rule->parrangeend;
+
+	/* The constant boundary to return */
+	Const *con = NULL;
+
+	if (parBoundary != NULL)
 	{
-		con = constraint->lowerBound;
+		Assert (1 == list_length(parBoundary));
+		Node *bound = (Node *) linitial(parBoundary);
+		Assert (IsA(bound, Const));
+		con = (Const *) bound;
 	}
 
 	if (isDone)
@@ -4742,18 +4759,26 @@ static Datum ExecEvalPartBoundInclusionExpr(PartBoundInclusionExprState *exprsta
 	Assert(NULL != isNull);
 
 	PartBoundInclusionExpr *expr = (PartBoundInclusionExpr *) exprstate->xprstate.expr;
-	PartitionConstraints *constraint = (PartitionConstraints *) exprstate->levelPartConstraints[expr->level];
-	Assert (NULL != constraint);
+	PartitionSelectorState *selector = exprstate->selector;
+	PartitionRule *rule = selector->levelPartRules[expr->level];
+	Assert (NULL != rule);
+	AssertImply(0 == expr->level, selector->rootPartitionNode->part->parkind == 'r');
+	AssertImply(0 < expr->level, selector->levelPartRules[expr->level - 1] != NULL &&
+			selector->levelPartRules[expr->level - 1]->children->part->parkind == 'r');
+
+	bool isIncluded = rule->parrangeendincl;
+
+	if (expr->isLowerBound)
+	{
+		isIncluded = rule->parrangestartincl;
+	}
+
 	if (isDone)
 	{
 		*isDone = ExprSingleResult;
 	}
 	*isNull = false;
-	if (expr->isLowerBound)
-	{
-		return BoolGetDatum(constraint->lbInclusive);
-	}
-	return BoolGetDatum(constraint->upInclusive);
+	return BoolGetDatum(isIncluded);
 }
 
 /* ----------------------------------------------------------------
@@ -4770,18 +4795,104 @@ static Datum ExecEvalPartBoundOpenExpr(PartBoundOpenExprState *exprstate,
 	Assert(NULL != isNull);
 
 	PartBoundOpenExpr *expr = (PartBoundOpenExpr *) exprstate->xprstate.expr;
-	PartitionConstraints *constraint = (PartitionConstraints *) exprstate->levelPartConstraints[expr->level];
-	Assert (NULL != constraint);
+
+	PartitionSelectorState *selector = exprstate->selector;
+	PartitionRule *rule = selector->levelPartRules[expr->level];
+	Assert (NULL != rule);
+	AssertImply(0 == expr->level, selector->rootPartitionNode->part->parkind == 'r');
+	AssertImply(0 < expr->level, selector->levelPartRules[expr->level - 1] != NULL &&
+			selector->levelPartRules[expr->level - 1]->children->part->parkind == 'r');
+
+	bool isOpen = (rule->parrangeend == NULL);
+
+	if (expr->isLowerBound)
+	{
+		isOpen = (rule->parrangestart == NULL);
+	}
+
 	if (isDone)
 	{
 		*isDone = ExprSingleResult;
 	}
 	*isNull = false;
-	if (expr->isLowerBound)
+	return BoolGetDatum(isOpen);
+}
+
+/* ----------------------------------------------------------------
+ *		ExecEvalPartListRuleExpr
+ *
+ *		Evaluate a PartListRuleExpr
+ * ----------------------------------------------------------------
+ */
+static Datum ExecEvalPartListRuleExpr(PartListRuleExprState *exprstate,
+							ExprContext *econtext,
+							bool *isNull, ExprDoneCond *isDone)
+{
+	Assert(NULL != exprstate);
+	Assert(NULL != isNull);
+
+	PartListRuleExpr *expr = (PartListRuleExpr *) exprstate->xprstate.expr;
+
+	PartitionSelectorState *selector = exprstate->selector;
+	PartitionRule *rule = selector->levelPartRules[expr->level];
+	Assert (NULL != rule);
+	AssertImply(0 == expr->level, selector->rootPartitionNode->part->parkind == 'l');
+	AssertImply(0 < expr->level, selector->levelPartRules[expr->level - 1] != NULL &&
+			selector->levelPartRules[expr->level - 1]->children->part->parkind == 'l');
+
+	ListCell *lc = NULL;
+	size_t numVal = rule->parlistvalues->length;
+	Datum *array_values = NULL;
+
+	Oid	consttype = InvalidOid;
+	int16	typlen = 0;
+	bool typbyval = false;
+	char typalign = 'i';
+
+	// TODO: Can we ever have 0 list values? Currently it gives parser error.
+	// But a default part might be interesting.
+	if (numVal > 0)
 	{
-		return BoolGetDatum(constraint->lbOpen);
+		List *headOfValues = lfirst(rule->parlistvalues->head);
+		Const *firstValue = (Const *) lfirst(list_nth_cell(headOfValues, 0));
+		consttype = firstValue->consttype;
+		get_typlenbyvalalign(consttype, &typlen, &typbyval,
+				 &typalign);
+
+		array_values = palloc0(numVal * sizeof(Datum));
+		int datumIdx = 0;
+
+		Const *con = NULL;
+
+		foreach (lc, rule->parlistvalues)
+		{
+			List *values = (List *) lfirst(lc);
+			/* make sure it is single-column partition */
+			Assert (1 == list_length(values));
+			Node *value = (Node *) lfirst(list_nth_cell(values, 0));
+			Assert (IsA(value, Const));
+
+			con = (Const *) value;
+			array_values[datumIdx++] = con->constvalue;
+		}
 	}
-	return BoolGetDatum(constraint->upOpen);
+
+	/*
+	 * If we have an empty list of values in the rule (for default part, or for whatever other reason),
+	 * we will just create an empty array. Returning null might return NULL from parent operator, such
+	 * as ExecEvalScalarArrayOp
+	 */
+	ArrayType *array = construct_array(array_values, numVal, consttype, typlen, typbyval, typalign);
+	Assert(NULL != array);
+
+	pfree(array_values);
+
+	if (isDone)
+	{
+		*isDone = ExprSingleResult;
+	}
+	*isNull = false;
+	return PointerGetDatum(array);
 }
 
 /* ----------------------------------------------------------------
@@ -5746,11 +5857,10 @@ ExecInitExpr(Expr *node, PlanState *parent)
 				exprstate->xprstate.evalfunc = (ExprStateEvalFunc) ExecEvalPartOidExpr;
 				/*
 				 * exprstate->acceptedLeafPart is a double pointer, pointing
-				 * to the field in the PartitionSelector state that will
-				 * be holding the actual PartitionConstraints value (GPSQL-2956)
-				 * computed for each tuple.
+				 * to the field in the PartitionSelectorState that will
+				 * be holding the actual acceptedLeafOid.
 				 */
-				exprstate->acceptedLeafPart = psstate->acceptedLeafPart;
+				exprstate->acceptedLeafOid = &(psstate->acceptedLeafOid);
 
 				state = (ExprState *) exprstate;
 			}
@@ -5761,7 +5871,7 @@ ExecInitExpr(Expr *node, PlanState *parent)
 				PartitionSelectorState *psstate = (PartitionSelectorState *) parent;
 				PartDefaultExprState *exprstate = makeNode(PartDefaultExprState);
 				exprstate->xprstate.evalfunc = (ExprStateEvalFunc) ExecEvalPartDefaultExpr;
-				exprstate->levelPartConstraints = psstate->levelPartConstraints;
+				exprstate->selector = psstate;
 
 				state = (ExprState *) exprstate;
 			}
@@ -5772,7 +5882,7 @@ ExecInitExpr(Expr *node, PlanState *parent)
 				PartitionSelectorState *psstate = (PartitionSelectorState *) parent;
 				PartBoundExprState *exprstate = makeNode(PartBoundExprState);
 				exprstate->xprstate.evalfunc = (ExprStateEvalFunc) ExecEvalPartBoundExpr;
-				exprstate->levelPartConstraints = psstate->levelPartConstraints;
+				exprstate->selector = psstate;
 
 				state = (ExprState *) exprstate;
 			}
@@ -5783,7 +5893,7 @@ ExecInitExpr(Expr *node, PlanState *parent)
 				PartitionSelectorState *psstate = (PartitionSelectorState *) parent;
 				PartBoundInclusionExprState *exprstate = makeNode(PartBoundInclusionExprState);
 				exprstate->xprstate.evalfunc = (ExprStateEvalFunc) ExecEvalPartBoundInclusionExpr;
-				exprstate->levelPartConstraints = psstate->levelPartConstraints;
+				exprstate->selector = psstate;
 
 				state = (ExprState *) exprstate;
 			}
@@ -5794,7 +5904,18 @@ ExecInitExpr(Expr *node, PlanState *parent)
 				PartitionSelectorState *psstate = (PartitionSelectorState *) parent;
 				PartBoundOpenExprState *exprstate = makeNode(PartBoundOpenExprState);
 				exprstate->xprstate.evalfunc = (ExprStateEvalFunc) ExecEvalPartBoundOpenExpr;
-				exprstate->levelPartConstraints = psstate->levelPartConstraints;
+				exprstate->selector = psstate;
+
+				state = (ExprState *) exprstate;
+			}
+			break;
+		case T_PartListRuleExpr:
+			{
+				Insist(parent && IsA(parent, PartitionSelectorState));
+				PartitionSelectorState *psstate = (PartitionSelectorState *) parent;
+				PartListRuleExprState *exprstate = makeNode(PartListRuleExprState);
+				exprstate->xprstate.evalfunc = (ExprStateEvalFunc) ExecEvalPartListRuleExpr;
+				exprstate->selector = psstate;
 
 				state = (ExprState *) exprstate;
 			}
