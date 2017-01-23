@@ -16,13 +16,6 @@ else
     echo "${PLATFORM_DEFS} does not appear to exist."
 fi
 
-PERFORCE_DEFS=${BLD_ROOT}/releng/lib/perforce_defines.sh
-if [ -r ${PERFORCE_DEFS} ] ; then
-    . ${PERFORCE_DEFS}
-else
-    echo "${PERFORCE_DEFS} does not appear to exist."
-fi
-
 if [ "$1" = "debug" ] || [ "$1" = "dbg" ] || [ "$1" = "dbg32" ]; then
     BUILD_TYPE="debug"
     DEBUG="true"
