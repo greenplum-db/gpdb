@@ -20,6 +20,7 @@
 #include "nodes/parsenodes.h"
 #include "access/sysattr.h"
 #include "catalog/pg_type.h"
+#include "catalog/pg_proc.h"
 #include "catalog/pg_trigger.h"
 #include "optimizer/walkers.h"
 #include "utils/rel.h"
@@ -298,7 +299,7 @@ CTranslatorUtils::Pdxltvf
 												pmp,
 												pdrgpmdidOutArgTypes,
 												plArgTypes,
-												pfuncexpr->args
+												pfuncexpr
 												);
 			pdrgpmdidOutArgTypes->Release();
 			pdrgpmdidOutArgTypes = pdrgpmdidResolved;
@@ -336,64 +337,54 @@ CTranslatorUtils::PdrgpmdidResolvePolymorphicTypes
 	IMemoryPool *pmp,
 	DrgPmdid *pdrgpmdidTypes,
 	List *plArgTypes,
-	List *plArgsFromQuery
+	FuncExpr *pfuncexpr
 	)
 {
-	OID oidAnyElement = InvalidOid;
-	OID oidAnyArray = InvalidOid;
+	ULONG ulArgIndex = 0;
+
 	const ULONG ulArgTypes = gpdb::UlListLength(plArgTypes);
-	const ULONG ulArgsFromQuery = gpdb::UlListLength(plArgsFromQuery);
-	for (ULONG ul = 0; ul < ulArgTypes && ul < ulArgsFromQuery; ul++)
+	const ULONG ulArgsFromQuery = gpdb::UlListLength(pfuncexpr->args);
+	const ULONG ulNumReturnArgs = pdrgpmdidTypes->UlLength();
+	const ULONG ulNumArgs = ulArgTypes < ulArgsFromQuery ? ulArgTypes : ulArgsFromQuery;
+	const ULONG ulTotalArgs = ulNumArgs + ulNumReturnArgs;
+
+	OID argTypes[ulNumArgs];
+	char argModes[ulTotalArgs];
+
+	// copy function argument types
+	for (ULONG ul = 0; ul < ulNumArgs; ul++)
 	{
-		OID oidArgType = gpdb::OidListNth(plArgTypes, ul);
-		OID oidArgTypeFromQuery = gpdb::OidExprType((Node *) gpdb::PvListNth(plArgsFromQuery, ul));
-
-		if (ANYELEMENTOID == oidArgType && InvalidOid == oidAnyElement)
-		{
-			oidAnyElement = oidArgTypeFromQuery;
-		}
-
-		if (ANYARRAYOID == oidArgType && InvalidOid == oidAnyArray)
-		{
-			oidAnyArray = oidArgTypeFromQuery;
-		}
+		argTypes[ulArgIndex] = gpdb::OidListNth(plArgTypes, ul);
+		argModes[ulArgIndex++] = PROARGMODE_IN;
 	}
 
-	GPOS_ASSERT(InvalidOid != oidAnyElement || InvalidOid != oidAnyArray);
-
-	// use the resolved type to deduce the other if necessary
-	if (InvalidOid == oidAnyElement)
+	// copy function return types
+	for (ULONG ul = 0; ul < ulNumReturnArgs; ul++)
 	{
-		oidAnyElement = gpdb::OidResolveGenericType(ANYELEMENTOID, oidAnyArray, ANYARRAYOID);
+		IMDId *pmdid = (*pdrgpmdidTypes)[ul];
+		argTypes[ulArgIndex] = CMDIdGPDB::PmdidConvert(pmdid)->OidObjectId();
+		argModes[ulArgIndex++] = PROARGMODE_TABLE;
 	}
 
-	if (InvalidOid == oidAnyArray)
+	if(!gpdb::FResolvePolymorphicType(ulTotalArgs, argTypes, argModes, pfuncexpr))
 	{
-		oidAnyArray = gpdb::OidResolveGenericType(ANYARRAYOID, oidAnyElement, ANYELEMENTOID);
+		GPOS_RAISE
+				(
+				gpdxl::ExmaDXL,
+				gpdxl::ExmiDXLUnrecognizedType,
+				GPOS_WSZ_LIT("could not determine actual argument/return type for polymorphic function")
+				);
 	}
 
 	// generate a new array of mdids based on the resolved types
 	DrgPmdid *pdrgpmdidResolved = GPOS_NEW(pmp) DrgPmdid(pmp);
 
-	const ULONG ulLen = pdrgpmdidTypes->UlLength();
-	for (ULONG ul = 0; ul < ulLen; ul++)
+	// get the resolved return types
+	for (ULONG ul = ulNumArgs; ul < ulTotalArgs ; ul++)
 	{
-		IMDId *pmdid = (*pdrgpmdidTypes)[ul];
-		IMDId *pmdidResolved = NULL;
-		if (FAnyElement(pmdid))
-		{
-			pmdidResolved = GPOS_NEW(pmp) CMDIdGPDB(oidAnyElement);
-		}
-		else if (FAnyArray(pmdid))
-		{
-			pmdidResolved = GPOS_NEW(pmp) CMDIdGPDB(oidAnyArray);
-		}
-		else
-		{
-			pmdid->AddRef();
-			pmdidResolved = pmdid;
-		}
 
+		IMDId *pmdidResolved = NULL;
+		pmdidResolved = GPOS_NEW(pmp) CMDIdGPDB(argTypes[ul]);
 		pdrgpmdidResolved->Append(pmdidResolved);
 	}
 
@@ -406,9 +397,7 @@ CTranslatorUtils::PdrgpmdidResolvePolymorphicTypes
 //
 //	@doc:
 //		Check if the given mdid array contains any of the polymorphic
-//		types (ANYELEMENT, ANYARRAY)
-//
-// GPDB_83_MERGE_FIXME: What about ANYENUM?
+//		types (ANYELEMENT, ANYARRAY, ANYENUM, ANYNONARRAY)
 //
 //---------------------------------------------------------------------------
 BOOL
@@ -421,50 +410,14 @@ CTranslatorUtils::FContainsPolymorphicTypes
 	const ULONG ulLen = pdrgpmdidTypes->UlLength();
 	for (ULONG ul = 0; ul < ulLen; ul++)
 	{
-		IMDId *pmdid = (*pdrgpmdidTypes)[ul];
-		if (FAnyElement(pmdid) || FAnyArray(pmdid))
+		IMDId *pmdidType = (*pdrgpmdidTypes)[ul];
+		if (IsPolymorphicType(CMDIdGPDB::PmdidConvert(pmdidType)->OidObjectId()))
 		{
 			return true;
 		}
 	}
 
 	return false;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorUtils::FAnyElement
-//
-//	@doc:
-//		Check if the given type mdid is the "ANYELEMENT" type
-//
-//---------------------------------------------------------------------------
-BOOL
-CTranslatorUtils::FAnyElement
-	(
-	IMDId *pmdidType
-	)
-{
-	Oid oid = CMDIdGPDB::PmdidConvert(pmdidType)->OidObjectId();
-	return (ANYELEMENTOID == oid);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorUtils::FAnyArray
-//
-//	@doc:
-//		Check if the given type mdid is the "ANYARRAY" type
-//
-//---------------------------------------------------------------------------
-BOOL
-CTranslatorUtils::FAnyArray
-	(
-	IMDId *pmdidType
-	)
-{
-	Oid oid = CMDIdGPDB::PmdidConvert(pmdidType)->OidObjectId();
-	return (ANYARRAYOID == oid);
 }
 
 //---------------------------------------------------------------------------
