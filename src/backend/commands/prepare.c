@@ -665,9 +665,8 @@ DropAllPreparedStatements(void)
  * Implements the 'EXPLAIN EXECUTE' utility statement.
  */
 void
-ExplainExecuteQuery(ExecuteStmt *execstmt, ExplainStmt *stmt,
-					const char *queryString,
-					ParamListInfo params, TupOutputState *tstate)
+ExplainExecuteQuery(ExecuteStmt *execstmt, ExplainState *es,
+					const char *queryString, ParamListInfo params)
 {
 	PreparedStatement *entry;
 	CachedPlan *cplan;
@@ -729,19 +728,18 @@ ExplainExecuteQuery(ExecuteStmt *execstmt, ExplainStmt *stmt,
 				pstmt->intoClause = execstmt->into;
 			}
 
-			ExplainOnePlan(pstmt, paramLI, stmt, queryString, tstate);
+			ExplainOnePlan(pstmt, es, queryString, paramLI);
 		}
 		else
 		{
-			ExplainOneUtility((Node *) pstmt, stmt, queryString,
-							  params, tstate);
+			ExplainOneUtility((Node *) pstmt, es, queryString, paramLI);
 		}
 
 		/* No need for CommandCounterIncrement, as ExplainOnePlan did it */
 
 		/* put a blank line between plans */
 		if (!is_last_query)
-			do_text_output_oneline(tstate, "");
+			appendStringInfoChar(es->str, '\n');
 	}
 
 	if (estate)

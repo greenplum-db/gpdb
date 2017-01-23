@@ -203,6 +203,27 @@ appendStringInfoChar(StringInfo str, char ch)
 }
 
 /*
+ * appendStringInfoSpaces
+ *
+ * Append the specified number of spaces to a buffer.
+ */
+void
+appendStringInfoSpaces(StringInfo str, int count)
+{
+	if (count > 0)
+	{
+		/* Make more room if needed */
+		enlargeStringInfo(str, count);
+
+		/* OK, append the spaces */
+		while (--count >= 0)
+			str->data[str->len++] = ' ';
+		str->data[str->len] = '\0';
+	}
+}
+
+
+/*
  * appendStringInfoFill
  *
  * Append a single byte, repeated 0 or more times, to str.

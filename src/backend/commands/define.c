@@ -133,7 +133,7 @@ defGetBoolean(DefElem *def)
 		return true;
 
 	/*
-	 * Allow 0, 1, "true", "false"
+	 * Allow 0, 1, "true", "false", "on", "off"
 	 */
 	switch (nodeTag(def->arg))
 	{
@@ -152,10 +152,17 @@ defGetBoolean(DefElem *def)
 		default:
 			{
 				char	   *sval = defGetString(def);
-
+				/*
+				 * The set of strings accepted here should match up with
+				 * the grammar's opt_boolean production
+				 */
 				if (pg_strcasecmp(sval, "true") == 0)
 					return true;
 				if (pg_strcasecmp(sval, "false") == 0)
+					return false;
+				if (pg_strcasecmp(sval, "on") == 0)
+					return true;
+				if (pg_strcasecmp(sval, "off") == 0)
 					return false;
 
 			}

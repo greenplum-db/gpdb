@@ -17,6 +17,7 @@
 #include "access/xact.h"
 #include "catalog/pg_constraint.h"
 #include "catalog/pg_type.h"
+#include	 "commands/defrem.h"
 #include "commands/explain.h"
 #include "commands/prepare.h"
 #include "commands/trigger.h"
@@ -61,25 +62,11 @@ ExplainOneQuery_hook_type ExplainOneQuery_hook = NULL;
 explain_get_index_name_hook_type explain_get_index_name_hook = NULL;
 
 
-typedef struct ExplainState
-{
-	/* options */
-	bool		printAnalyze;	/* print actual times */
-	/* other states */
-	PlannedStmt *pstmt;			/* top of plan */
-	List	   *rtable;			/* range table */
-
-    /* CDB */
-    struct CdbExplain_ShowStatCtx  *showstatctx;    /* EXPLAIN ANALYZE info */
-    Slice          *currentSlice;   /* slice whose nodes we are visiting */
-    ErrorData      *deferredError;  /* caught error to be re-thrown */
-} ExplainState;
 
 extern bool Test_print_direct_dispatch_info;
 
-static void ExplainOneQuery(Query *query, ExplainStmt *stmt,
-				const char *queryString,
-				ParamListInfo params, TupOutputState *tstate);
+static void ExplainOneQuery(Query *query, ExplainState *es,
+				const char *queryString, ParamListInfo params);
 static void report_triggers(ResultRelInfo *rInfo, bool show_relname,
 				StringInfo buf);
 
@@ -92,37 +79,45 @@ static void ExplainDXL(Query *query, ExplainStmt *stmt,
 static void ExplainCodegen(PlanState *planstate, TupOutputState *tstate);
 #endif
 static double elapsed_time(instr_time *starttime);
+static void ExplainNode(Plan *plan, PlanState *planstate,
+				Plan *outer_plan, int indent, ExplainState *es);
 static ErrorData *explain_defer_error(ExplainState *es);
 static void explain_outNode(StringInfo str,
 				Plan *plan, PlanState *planstate,
 				Plan *outer_plan, Plan *parentPlan,
 				int indent, ExplainState *es);
+static void show_plan_tlist(Plan *plan, int indent, ExplainState *es);
+static void show_qual(List *qual, const char *qlabel, Plan *plan,
+		  Plan *outer_plan, int indent, bool useprefix, ExplainState *es);
 static void show_scan_qual(List *qual, const char *qlabel,
-			   int scanrelid, Plan *outer_plan, Plan *inner_plan,
-			   StringInfo str, int indent, ExplainState *es);
+			   Plan *scan_plan, Plan *outer_plan,
+			   int indent, ExplainState *es);
 static void show_upper_qual(List *qual, const char *qlabel, Plan *plan,
-				StringInfo str, int indent, ExplainState *es);
-static void show_sort_keys(Plan *sortplan, int nkeys, AttrNumber *keycols,
-			   const char *qlabel,
-			   StringInfo str, int indent, ExplainState *es);
-static void show_sort_info(SortState *sortstate,
-			   StringInfo str, int indent, ExplainState *es);
+				int indent, ExplainState *es);
+static void show_sort_keys(SortState *sortstate, int indent, ExplainState *es);
+static void show_sort_info(SortState *sortstate, int indent, ExplainState *es);
 static const char *explain_get_index_name(Oid indexId);
+static void ExplainScanTarget(Scan *plan, ExplainState *es);
+
+static void ExplainMemberNodes(List *plans, PlanState **planstate,
+				   Plan *outer_plan, int indent, ExplainState *es);
+static void ExplainSubPlans(List *plans, int indent, ExplainState *es);
+
 
 static void
 show_grouping_keys(Plan        *plan,
                    int          numCols,
                    AttrNumber  *subplanColIdx,
                    const char  *qlabel,
-			       StringInfo str, int indent, ExplainState *es);
+			       int indent, ExplainState *es);
 static void
 show_motion_keys(Plan *plan, List *hashExpr, int nkeys, AttrNumber *keycols,
 			     const char *qlabel,
-                 StringInfo str, int indent, ExplainState *es);
+                  int indent, ExplainState *es);
 
 static void
 explain_partition_selector(PartitionSelector *ps, Plan *parent,
-						   StringInfo str, int indent, ExplainState *es);
+						   int indent, ExplainState *es);
 
 /*
  * ExplainQuery -
@@ -132,12 +127,33 @@ void
 ExplainQuery(ExplainStmt *stmt, const char *queryString,
 			 ParamListInfo params, DestReceiver *dest)
 {
+	ExplainState es;
 	Oid		   *param_types;
 	int			num_params;
 	TupOutputState *tstate;
 	List	   *rewritten;
-	ListCell   *l;
+	ListCell   *lc;
 
+	/* Initialize ExplainState. */
+		ExplainInitState(&es);
+
+		/* Parse options list. */
+		foreach(lc, stmt->options)
+		{
+			DefElem *opt = (DefElem *) lfirst(lc);
+
+			if (strcmp(opt->defname, "analyze") == 0)
+				es.analyze = defGetBoolean(opt);
+			else if (strcmp(opt->defname, "verbose") == 0)
+				es.verbose = defGetBoolean(opt);
+			else if (strcmp(opt->defname, "costs") == 0)
+				es.costs = defGetBoolean(opt);
+			else
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("unrecognized EXPLAIN option \"%s\"",
+								opt->defname)));
+		}
 	/* Convert parameter type data to the form parser wants */
 	getParamListTypes(params, &param_types, &num_params);
 
@@ -154,28 +170,40 @@ ExplainQuery(ExplainStmt *stmt, const char *queryString,
 	rewritten = pg_analyze_and_rewrite((Node *) copyObject(stmt->query),
 									   queryString, param_types, num_params);
 
-	/* prepare for projection of tuples */
-	tstate = begin_tup_output_tupdesc(dest, ExplainResultDesc(stmt));
-
 	if (rewritten == NIL)
 	{
 		/* In the case of an INSTEAD NOTHING, tell at least that */
-		do_text_output_oneline(tstate, "Query rewrites to nothing");
+		appendStringInfoString(es.str, "Query rewrites to nothing");
 	}
 	else
 	{
+		ListCell *l;
+
 		/* Explain every plan */
 		foreach(l, rewritten)
 		{
-			ExplainOneQuery((Query *) lfirst(l), stmt,
-							queryString, params, tstate);
+			ExplainOneQuery((Query *) lfirst(l), &es, queryString, params);
 			/* put a blank line between plans */
 			if (lnext(l) != NULL)
-				do_text_output_oneline(tstate, "");
+				appendStringInfoChar(es.str, '\n');
 		}
 	}
-
+	/* output tuples */
+	tstate = begin_tup_output_tupdesc(dest, ExplainResultDesc(stmt));
+	do_text_output_multiline(tstate, es.str->data);
 	end_tup_output(tstate);
+
+	pfree(es.str->data);
+}
+
+void
+ExplainInitState(ExplainState *es)
+{
+	/* set default options */
+	memset(es, 0, sizeof(ExplainState));
+	es->costs = true;
+	/* Prepare output buffer */
+	es->str = makeStringInfo();
 }
 
 /*
@@ -261,8 +289,8 @@ ExplainDXL(Query *query, ExplainStmt *stmt, const char *queryString,
  *	  print out the execution plan for one Query
  */
 static void
-ExplainOneQuery(Query *query, ExplainStmt *stmt, const char *queryString,
-				ParamListInfo params, TupOutputState *tstate)
+ExplainOneQuery(Query *query, ExplainState *es,
+			const char *queryString, ParamListInfo params)
 {
 #ifdef USE_ORCA
     if (stmt->dxl)
@@ -275,14 +303,13 @@ ExplainOneQuery(Query *query, ExplainStmt *stmt, const char *queryString,
 	/* planner will not cope with utility statements */
 	if (query->commandType == CMD_UTILITY)
 	{
-		ExplainOneUtility(query->utilityStmt, stmt,
-						  queryString, params, tstate);
+		ExplainOneUtility(query->utilityStmt, es, queryString, params);
 		return;
 	}
 
 	/* if an advisor plugin is present, let it manage things */
 	if (ExplainOneQuery_hook)
-		(*ExplainOneQuery_hook) (query, stmt, queryString, params, tstate);
+		(*ExplainOneQuery_hook) (query, es, queryString, params);
 	else
 	{
 		PlannedStmt *plan;
@@ -291,7 +318,7 @@ ExplainOneQuery(Query *query, ExplainStmt *stmt, const char *queryString,
 		plan = planner(query, 0, params);
 
 		/* run it (if needed) and produce output */
-		ExplainOnePlan(plan, params, stmt, queryString, tstate);
+		ExplainOnePlan(plan, es, queryString, params);
 	}
 }
 
@@ -305,20 +332,19 @@ ExplainOneQuery(Query *query, ExplainStmt *stmt, const char *queryString,
  * EXPLAIN EXECUTE case
  */
 void
-ExplainOneUtility(Node *utilityStmt, ExplainStmt *stmt,
-				  const char *queryString, ParamListInfo params,
-				  TupOutputState *tstate)
+ExplainOneUtility(Node *utilityStmt, ExplainState *es,
+				  const char *queryString, ParamListInfo params)
 {
 	if (utilityStmt == NULL)
 		return;
 
 	if (IsA(utilityStmt, ExecuteStmt))
-		ExplainExecuteQuery((ExecuteStmt *) utilityStmt, stmt,
-							queryString, params, tstate);
+		ExplainExecuteQuery((ExecuteStmt *) utilityStmt, es,
+							queryString, params);
 	else if (IsA(utilityStmt, NotifyStmt))
-		do_text_output_oneline(tstate, "NOTIFY");
+		appendStringInfoString(es->str, "NOTIFY\n");
 	else
-		do_text_output_oneline(tstate,
+		appendStringInfoString(es->str,
 							   "Utility statements have no plan structure");
 }
 
@@ -363,14 +389,12 @@ ExplainCodegen(PlanState *planstate, TupOutputState *tstate) {
  * to call it.
  */
 void
-ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
-			   ExplainStmt *stmt, const char *queryString, TupOutputState *tstate)
+ExplainOnePlan(PlannedStmt *plannedstmt, ExplainState *es,
+		const char *queryString, ParamListInfo params)
 {
 	QueryDesc  *queryDesc;
 	instr_time	starttime;
 	double		totaltime = 0;
-	ExplainState *es;
-	StringInfoData buf;
 	EState     *estate = NULL;
 	int			eflags;
 	int         nb;
@@ -385,12 +409,11 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 	 */
 	ActiveSnapshot->curcid = GetCurrentCommandId(false);
 
-	/* Create a QueryDesc requesting no output */
-	queryDesc = CreateQueryDesc(plannedstmt,
+	/* Create a QueryDesc requesting no	*/
+	 queryDesc = CreateQueryDesc(plannedstmt,
 								queryString,
 								ActiveSnapshot, InvalidSnapshot,
-								None_Receiver, params,
-								stmt->analyze);
+								None_Receiver, params, es->analyze);
 
 	if (gp_enable_gpperfmon && Gp_role == GP_ROLE_DISPATCH)
 	{
@@ -403,21 +426,17 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 				GetResqueuePriority(GetResQueueId()));
 	}
 
-	/* Initialize ExplainState structure. */
-	es = (ExplainState *) palloc0(sizeof(ExplainState));
-	es->pstmt = queryDesc->plannedstmt;
-
     /*
      * Start timing.
      */
     INSTR_TIME_SET_CURRENT(starttime);
 
 	/* If analyzing, we need to cope with queued triggers */
-	if (stmt->analyze)
+	if (es->analyze)
 		AfterTriggerBeginQuery();
 
     /* Allocate workarea for summary stats. */
-    if (stmt->analyze)
+    if (es->analyze)
     {
         es->showstatctx = cdbexplain_showExecStatsBegin(queryDesc,
                                                         starttime);
@@ -427,7 +446,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
     }
 
 	/* Select execution options */
-	if (stmt->analyze)
+	if (es->analyze)
 		eflags = 0;				/* default run-to-completion flags */
 	else
 		eflags = EXEC_FLAG_EXPLAIN_ONLY;
@@ -467,7 +486,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 	/* Execute the plan for statistics if asked for */
 	/* In GPDB, we attempt to proceed with our report even if there is an error.
      */
-	if (stmt->analyze)
+	if (es->analyze)
 	{
 		/* run the plan */
         PG_TRY();
@@ -513,14 +532,11 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
                                      es->showstatctx);
 	}
 
-	es->printAnalyze = stmt->analyze;
 	es->pstmt = queryDesc->plannedstmt;
 	es->rtable = queryDesc->plannedstmt->rtable;
 
-    if (stmt->verbose)
+    if (es->verbose)
 	{
-		char	   *s;
-		char	   *f;
 
 		if (queryDesc->plannedstmt->planTree && estate->es_sliceTable)
 		{
@@ -529,29 +545,15 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 			/* Little two-step to get EXPLAIN VERBOSE to show slice table. */
 			saved_es_sliceTable = queryDesc->plannedstmt->planTree->sliceTable;		/* probably NULL */
 			queryDesc->plannedstmt->planTree->sliceTable = (Node *) queryDesc->estate->es_sliceTable;
-			s = nodeToString(queryDesc->plannedstmt);
+			ExplainPrintPlan(es, queryDesc);
 			queryDesc->plannedstmt->planTree->sliceTable = saved_es_sliceTable;
 		}
 		else
 		{
-			s = nodeToString(queryDesc->plannedstmt);
+			ExplainPrintPlan(es, queryDesc);
 		}
 
-		if (s)
-		{
-			if (Explain_pretty_print)
-				f = pretty_format_node_dump(s);
-			else
-				f = format_node_dump(s);
-			pfree(s);
-			do_text_output_multiline(tstate, f);
-			pfree(f);
-			do_text_output_oneline(tstate, ""); /* separator line */
-		}
 	}
-
-	initStringInfo(&buf);
-
     /*
      * Produce the EXPLAIN report into buf.  (Sometimes we get internal errors
      * while doing this; try to proceed with a partial report anyway.)
@@ -586,7 +588,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 					Assert(!"Unexpected statement type");
 					break;
 			}
-			appendStringInfo(&buf, "%s", cmdName);
+			appendStringInfo(es->str, "%s", cmdName);
 
 			if (IsA(childPlan, Motion))
 			{
@@ -601,12 +603,12 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 			{
 				numSegments = 1;
 			}
-			appendStringInfo(&buf, " (slice%d; segments: %d)", sliceNum, numSegments);
-			appendStringInfo(&buf, "  (rows=%.0f width=%d)\n", ceil(childPlan->plan_rows / numSegments), childPlan->plan_width);
-			appendStringInfo(&buf, "  ->  ");
+			appendStringInfo(es->str, " (slice%d; segments: %d)", sliceNum, numSegments);
+			appendStringInfo(es->str, "  (rows=%.0f width=%d)\n", ceil(childPlan->plan_rows / numSegments), childPlan->plan_width);
+			appendStringInfo(es->str, "  ->  ");
 			indent = 3;
 		}
-	    explain_outNode(&buf, childPlan, queryDesc->planstate,
+	    explain_outNode(es->str, childPlan, queryDesc->planstate,
 					    NULL, NULL, indent, es);
     }
     PG_CATCH();
@@ -615,7 +617,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
         es->deferredError = explain_defer_error(es);
 
         /* Keep a NUL at the end of the output buffer. */
-        buf.data[Min(buf.len, buf.maxlen-1)] = '\0';
+        appendStringInfoChar(es->str, '\0');
     }
     PG_END_TRY();
 
@@ -625,7 +627,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 	 * transaction, we can't measure them.)  Include into total runtime.
      * Skip triggers if there has been an error.
 	 */
-	if (es->printAnalyze &&
+	if (es->analyze &&
         !es->deferredError)
 	{
 		ResultRelInfo *rInfo;
@@ -643,30 +645,30 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 		show_relname = (numrels > 1 || targrels != NIL);
 		rInfo = queryDesc->estate->es_result_relations;
 		for (nr = 0; nr < numrels; rInfo++, nr++)
-			report_triggers(rInfo, show_relname, &buf);
+			report_triggers(rInfo, show_relname, es->str);
 
 		foreach(l, targrels)
 		{
 			rInfo = (ResultRelInfo *) lfirst(l);
-			report_triggers(rInfo, show_relname, &buf);
+			report_triggers(rInfo, show_relname, es->str);
 		}
 	}
 
     /*
      * Display per-slice and whole-query statistics.
      */
-    if (stmt->analyze)
-        cdbexplain_showExecStatsEnd(queryDesc->plannedstmt, es->showstatctx, &buf, estate);
+    if (es->analyze)
+        cdbexplain_showExecStatsEnd(queryDesc->plannedstmt, es->showstatctx, es->str, estate);
 
     /*
      * Show non-default GUC settings that might have affected the plan.
      */
-    nb = gp_guc_list_show(&buf, "Settings:  ", "%s=%s; ", PGC_S_DEFAULT,
+    nb = gp_guc_list_show(es->str, "Settings:  ", "%s=%s; ", PGC_S_DEFAULT,
                            gp_guc_list_for_explain);
     if (nb > 0)
     {
-        truncateStringInfo(&buf, buf.len - 2);  /* drop final "; " */
-        appendStringInfoChar(&buf, '\n');
+        truncateStringInfo(es->str, es->str->len - 2);  /* drop final "; " */
+        appendStringInfoChar(es->str, '\n');
     }
 
 #ifdef USE_ORCA
@@ -691,18 +693,11 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
     /*
      * Display final elapsed time.
      */
-	if (stmt->analyze)
-		appendStringInfo(&buf, "Total runtime: %.3f ms\n",
+	if (es->analyze)
+		appendStringInfo(es->str, "Total runtime: %.3f ms\n",
 						 1000.0 * totaltime);
 
-    /*
-     * Send EXPLAIN report to client.  Some might have been sent already
-     * by explain_outNode().
-     */
-    if (buf.len > 0)
-        do_text_output_multiline(tstate, buf.data);
-
-    /*
+     /*
 	 * Close down the query and free resources.
      *
      * For EXPLAIN ANALYZE, if a qExec failed or gave an error, ExecutorEnd()
@@ -735,7 +730,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
         ErrorData  *edata = es->deferredError;
 
         /* Tell client the command ended successfully. */
-        EndCommand("EXPLAIN", tstate->dest->mydest);
+        //EndCommand("EXPLAIN", tstate->dest->mydest);
 
         /* Resume handling the error.  Clean up and send the NOTICE message. */
         es->deferredError = NULL;
@@ -745,9 +740,30 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
     FreeQueryDesc(queryDesc);
 
 	/* We need a CCI just in case query expanded to multiple plans */
-	if (stmt->analyze)
+	if (es->analyze)
 		CommandCounterIncrement();
-}                               /* ExplainOnePlan_internal */
+}          /* ExplainOnePlan_internal */
+
+
+/*
+ * ExplainPrintPlan -
+ *	  convert a QueryDesc's plan tree to text and append it to es->str
+ *
+ * The caller should have set up the options fields of *es, as well as
+ * initializing the output buffer es->str.  Other fields in *es are
+ * initialized here.
+ *
+ * NB: will not work on utility statements
+ */
+void
+ExplainPrintPlan(ExplainState *es, QueryDesc *queryDesc)
+{
+	Assert(queryDesc->plannedstmt != NULL);
+	es->pstmt = queryDesc->plannedstmt;
+	es->rtable = queryDesc->plannedstmt->rtable;
+	ExplainNode(queryDesc->plannedstmt->planTree, queryDesc->planstate,
+				NULL, 0, es);
+}
 
 /*
  * report_triggers -
@@ -805,6 +821,422 @@ elapsed_time(instr_time *starttime)
 	return INSTR_TIME_GET_DOUBLE(endtime);
 }
 
+/*
+ * ExplainNode -
+ *	  converts a Plan node into ascii string and appends it to es->str
+ *
+ * planstate points to the executor state node corresponding to the plan node.
+ * We need this to get at the instrumentation data (if any) as well as the
+ * list of subplans.
+ *
+ * outer_plan, if not null, references another plan node that is the outer
+ * side of a join with the current node.  This is only interesting for
+ * deciphering runtime keys of an inner indexscan.
+ *
+ * If indent is positive, we indent the plan output accordingly and put "->"
+ * in front of it.  This should only happen for child plan nodes.
+ */
+static void
+ExplainNode(Plan *plan, PlanState *planstate,
+			Plan *outer_plan,
+			int indent, ExplainState *es)
+{
+	const char *pname;
+
+	if (indent)
+	{
+		Assert(indent >= 2);
+		appendStringInfoSpaces(es->str, 2 * indent - 4);
+		appendStringInfoString(es->str, "->  ");
+	}
+
+	if (plan == NULL)
+	{
+		appendStringInfoChar(es->str, '\n');
+		return;
+	}
+
+	switch (nodeTag(plan))
+	{
+		case T_Result:
+			pname = "Result";
+			break;
+		case T_Append:
+			pname = "Append";
+			break;
+		case T_BitmapAnd:
+			pname = "BitmapAnd";
+			break;
+		case T_BitmapOr:
+			pname = "BitmapOr";
+			break;
+		case T_NestLoop:
+			switch (((NestLoop *) plan)->join.jointype)
+			{
+				case JOIN_INNER:
+					pname = "Nested Loop";
+					break;
+				case JOIN_LEFT:
+					pname = "Nested Loop Left Join";
+					break;
+				case JOIN_FULL:
+					pname = "Nested Loop Full Join";
+					break;
+				case JOIN_RIGHT:
+					pname = "Nested Loop Right Join";
+					break;
+				default:
+					pname = "Nested Loop ??? Join";
+					break;
+			}
+			break;
+		case T_MergeJoin:
+			switch (((MergeJoin *) plan)->join.jointype)
+			{
+				case JOIN_INNER:
+					pname = "Merge Join";
+					break;
+				case JOIN_LEFT:
+					pname = "Merge Left Join";
+					break;
+				case JOIN_FULL:
+					pname = "Merge Full Join";
+					break;
+				case JOIN_RIGHT:
+					pname = "Merge Right Join";
+					break;
+				default:
+					pname = "Merge ??? Join";
+					break;
+			}
+			break;
+		case T_HashJoin:
+			switch (((HashJoin *) plan)->join.jointype)
+			{
+				case JOIN_INNER:
+					pname = "Hash Join";
+					break;
+				case JOIN_LEFT:
+					pname = "Hash Left Join";
+					break;
+				case JOIN_FULL:
+					pname = "Hash Full Join";
+					break;
+				case JOIN_RIGHT:
+					pname = "Hash Right Join";
+					break;
+				default:
+					pname = "Hash ??? Join";
+					break;
+			}
+			break;
+		case T_SeqScan:
+			pname = "Seq Scan";
+			break;
+		case T_IndexScan:
+			pname = "Index Scan";
+			break;
+		case T_BitmapIndexScan:
+			pname = "Bitmap Index Scan";
+			break;
+		case T_BitmapHeapScan:
+			pname = "Bitmap Heap Scan";
+			break;
+		case T_TidScan:
+			pname = "Tid Scan";
+			break;
+		case T_SubqueryScan:
+			pname = "Subquery Scan";
+			break;
+		case T_FunctionScan:
+			pname = "Function Scan";
+			break;
+		case T_ValuesScan:
+			pname = "Values Scan";
+			break;
+		case T_CteScan:
+			pname = "CTE Scan";
+			break;
+		case T_Material:
+			pname = "Materialize";
+			break;
+		case T_Sort:
+			pname = "Sort";
+			break;
+		case T_Agg:
+			switch (((Agg *) plan)->aggstrategy)
+			{
+				case AGG_PLAIN:
+					pname = "Aggregate";
+					break;
+				case AGG_SORTED:
+					pname = "GroupAggregate";
+					break;
+				case AGG_HASHED:
+					pname = "HashAggregate";
+					break;
+				default:
+					pname = "Aggregate ???";
+					break;
+			}
+			break;
+		case T_Unique:
+			pname = "Unique";
+			break;
+		case T_SetOp:
+#if FALSE
+			switch (((SetOp *) plan)->strategy)
+			{
+				case SETOP_SORTED:
+					switch (((SetOp *) plan)->cmd)
+					{
+						case SETOPCMD_INTERSECT:
+							pname = "SetOp Intersect";
+							break;
+						case SETOPCMD_INTERSECT_ALL:
+							pname = "SetOp Intersect All";
+							break;
+						case SETOPCMD_EXCEPT:
+							pname = "SetOp Except";
+							break;
+						case SETOPCMD_EXCEPT_ALL:
+							pname = "SetOp Except All";
+							break;
+						default:
+							pname = "SetOp ???";
+							break;
+					}
+					break;
+				case SETOP_HASHED:
+					switch (((SetOp *) plan)->cmd)
+					{
+						case SETOPCMD_INTERSECT:
+							pname = "HashSetOp Intersect";
+							break;
+						case SETOPCMD_INTERSECT_ALL:
+							pname = "HashSetOp Intersect All";
+							break;
+						case SETOPCMD_EXCEPT:
+							pname = "HashSetOp Except";
+							break;
+						case SETOPCMD_EXCEPT_ALL:
+							pname = "HashSetOp Except All";
+							break;
+						default:
+							pname = "HashSetOp ???";
+							break;
+					}
+					break;
+				default:
+					pname = "SetOp ???";
+					break;
+			}
+#endif
+			pname = "SetOp ???";
+			break;
+		case T_Limit:
+			pname = "Limit";
+			break;
+		case T_Hash:
+			pname = "Hash";
+			break;
+		default:
+			pname = "???";
+			break;
+	}
+
+	appendStringInfoString(es->str, pname);
+	switch (nodeTag(plan))
+	{
+		case T_IndexScan:
+			if (ScanDirectionIsBackward(((IndexScan *) plan)->indexorderdir))
+				appendStringInfoString(es->str, " Backward");
+			appendStringInfo(es->str, " using %s",
+					  explain_get_index_name(((IndexScan *) plan)->indexid));
+			/* FALL THRU */
+		case T_SeqScan:
+		case T_BitmapHeapScan:
+		case T_TidScan:
+		case T_SubqueryScan:
+		case T_FunctionScan:
+		case T_ValuesScan:
+		case T_CteScan:
+			ExplainScanTarget((Scan *) plan, es);
+			break;
+		case T_BitmapIndexScan:
+			appendStringInfo(es->str, " on %s",
+				explain_get_index_name(((BitmapIndexScan *) plan)->indexid));
+			break;
+		default:
+			break;
+	}
+
+	if (es->costs)
+		appendStringInfo(es->str, "  (cost=%.2f..%.2f rows=%.0f width=%d)",
+						 plan->startup_cost, plan->total_cost,
+						 plan->plan_rows, plan->plan_width);
+
+	/*
+	 * We have to forcibly clean up the instrumentation state because we
+	 * haven't done ExecutorEnd yet.  This is pretty grotty ...
+	 */
+	if (planstate->instrument)
+		InstrEndLoop(planstate->instrument);
+
+	if (planstate->instrument && planstate->instrument->nloops > 0)
+	{
+		double		nloops = planstate->instrument->nloops;
+
+		appendStringInfo(es->str,
+						 " (actual time=%.3f..%.3f rows=%.0f loops=%.0f)",
+						 1000.0 * planstate->instrument->startup / nloops,
+						 1000.0 * planstate->instrument->total / nloops,
+						 planstate->instrument->ntuples / nloops,
+						 planstate->instrument->nloops);
+	}
+	else if (es->analyze)
+		appendStringInfoString(es->str, " (never executed)");
+	appendStringInfoChar(es->str, '\n');
+
+	/* target list */
+	if (es->verbose)
+		show_plan_tlist(plan, indent, es);
+
+	/* quals, sort keys, etc */
+	switch (nodeTag(plan))
+	{
+		case T_IndexScan:
+			show_scan_qual(((IndexScan *) plan)->indexqualorig,
+						   "Index Cond", plan, outer_plan, indent, es);
+			show_scan_qual(plan->qual,
+						   "Filter", plan, outer_plan, indent, es);
+			break;
+		case T_BitmapIndexScan:
+			show_scan_qual(((BitmapIndexScan *) plan)->indexqualorig,
+						   "Index Cond", plan, outer_plan, indent, es);
+			break;
+		case T_BitmapHeapScan:
+			show_scan_qual(((BitmapHeapScan *) plan)->bitmapqualorig,
+						   "Recheck Cond", plan, outer_plan, indent, es);
+			/* FALL THRU */
+		case T_SeqScan:
+		case T_FunctionScan:
+		case T_ValuesScan:
+		case T_CteScan:
+		case T_SubqueryScan:
+			show_scan_qual(plan->qual,
+						   "Filter", plan, outer_plan, indent, es);
+			break;
+		case T_TidScan:
+			{
+				/*
+				 * The tidquals list has OR semantics, so be sure to show it
+				 * as an OR condition.
+				 */
+				List	   *tidquals = ((TidScan *) plan)->tidquals;
+
+				if (list_length(tidquals) > 1)
+					tidquals = list_make1(make_orclause(tidquals));
+				show_scan_qual(tidquals,
+							   "TID Cond", plan, outer_plan, indent, es);
+				show_scan_qual(plan->qual,
+							   "Filter", plan, outer_plan, indent, es);
+			}
+			break;
+		case T_NestLoop:
+			show_upper_qual(((NestLoop *) plan)->join.joinqual,
+							"Join Filter", plan, indent, es);
+			show_upper_qual(plan->qual, "Filter", plan, indent, es);
+			break;
+		case T_MergeJoin:
+			show_upper_qual(((MergeJoin *) plan)->mergeclauses,
+							"Merge Cond", plan, indent, es);
+			show_upper_qual(((MergeJoin *) plan)->join.joinqual,
+							"Join Filter", plan, indent, es);
+			show_upper_qual(plan->qual, "Filter", plan, indent, es);
+			break;
+		case T_HashJoin:
+			show_upper_qual(((HashJoin *) plan)->hashclauses,
+							"Hash Cond", plan, indent, es);
+			show_upper_qual(((HashJoin *) plan)->join.joinqual,
+							"Join Filter", plan, indent, es);
+			show_upper_qual(plan->qual, "Filter", plan, indent, es);
+			break;
+		case T_Agg:
+			show_upper_qual(plan->qual, "Filter", plan, indent, es);
+			break;
+		case T_Sort:
+			show_sort_keys((SortState*)planstate ,  indent, es);
+			show_sort_info((SortState *) planstate, indent, es);
+			break;
+		case T_Result:
+			show_upper_qual((List *) ((Result *) plan)->resconstantqual,
+							"One-Time Filter", plan, indent, es);
+			show_upper_qual(plan->qual, "Filter", plan, indent, es);
+			break;
+		default:
+			break;
+	}
+
+	/* initPlan-s */
+	if (plan->initPlan)
+		ExplainSubPlans(planstate->initPlan, indent, es);
+
+	/* lefttree */
+	if (outerPlan(plan))
+	{
+		/*
+		 * Ordinarily we don't pass down our own outer_plan value to our child
+		 * nodes, but in bitmap scan trees we must, since the bottom
+		 * BitmapIndexScan nodes may have outer references.
+		 */
+		ExplainNode(outerPlan(plan), outerPlanState(planstate),
+					IsA(plan, BitmapHeapScan) ? outer_plan : NULL,
+					indent + 3, es);
+	}
+
+	/* righttree */
+	if (innerPlan(plan))
+	{
+		ExplainNode(innerPlan(plan), innerPlanState(planstate),
+					outerPlan(plan), indent + 3, es);
+	}
+
+	/* special child plans */
+	switch (nodeTag(plan))
+	{
+		case T_Append:
+			ExplainMemberNodes(((Append *) plan)->appendplans,
+							   ((AppendState *) planstate)->appendplans,
+							   outer_plan, indent, es);
+			break;
+		case T_BitmapAnd:
+			ExplainMemberNodes(((BitmapAnd *) plan)->bitmapplans,
+							   ((BitmapAndState *) planstate)->bitmapplans,
+							   outer_plan, indent, es);
+			break;
+		case T_BitmapOr:
+			ExplainMemberNodes(((BitmapOr *) plan)->bitmapplans,
+							   ((BitmapOrState *) planstate)->bitmapplans,
+							   outer_plan, indent, es);
+			break;
+		case T_SubqueryScan:
+			{
+				SubqueryScan *subqueryscan = (SubqueryScan *) plan;
+				SubqueryScanState *subquerystate = (SubqueryScanState *) planstate;
+
+				ExplainNode(subqueryscan->subplan, subquerystate->subplan,
+							NULL, indent + 3, es);
+			}
+			break;
+		default:
+			break;
+	}
+
+	/* subPlan-s */
+	if (planstate->subPlan)
+		ExplainSubPlans(planstate->subPlan, indent, es);
+}
 
 /*
  * explain_defer_error
@@ -1429,22 +1861,16 @@ explain_outNode(StringInfo str,
 		case T_IndexScan:
 		case T_DynamicIndexScan:
 			show_scan_qual(((IndexScan *) plan)->indexqualorig,
-						   "Index Cond",
-						   ((Scan *) plan)->scanrelid,
-						   outer_plan, NULL,
-						   str, indent, es);
+						   "Index Cond",plan,
+						   outer_plan, indent, es);
 			show_scan_qual(plan->qual,
-						   "Filter",
-						   ((Scan *) plan)->scanrelid,
-						   outer_plan, NULL,
-						   str, indent, es);
+						   "Filter", plan,
+						   outer_plan, indent, es);
 			break;
 		case T_BitmapIndexScan:
 			show_scan_qual(((BitmapIndexScan *) plan)->indexqualorig,
-						   "Index Cond",
-						   ((Scan *) plan)->scanrelid,
-						   outer_plan, NULL,
-						   str, indent, es);
+						   "Index Cond", plan,
+						   outer_plan, indent, es);
 			break;
 		case T_BitmapHeapScan:
 		case T_BitmapAppendOnlyScan:
@@ -1453,26 +1879,20 @@ explain_outNode(StringInfo str,
 			if (nodeTag(plan) == T_BitmapHeapScan)
 			{
 				show_scan_qual(((BitmapHeapScan *) plan)->bitmapqualorig,
-							   "Recheck Cond",
-							   ((Scan *) plan)->scanrelid,
-							   outer_plan, NULL,
-							   str, indent, es);
+							   "Recheck Cond", plan,
+							   outer_plan, indent, es);
 			}
 			else if (nodeTag(plan) == T_BitmapAppendOnlyScan)
 			{
 				show_scan_qual(((BitmapAppendOnlyScan *) plan)->bitmapqualorig,
-							   "Recheck Cond",
-							   ((Scan *) plan)->scanrelid,
-							   outer_plan, NULL,
-							   str, indent, es);
+							   "Recheck Cond", plan,
+							   outer_plan, indent, es);
 			}
 			else if (nodeTag(plan) == T_BitmapTableScan)
 			{
 				show_scan_qual(((BitmapTableScan *) plan)->bitmapqualorig,
-							   "Recheck Cond",
-							   ((Scan *) plan)->scanrelid,
-							   outer_plan, NULL,
-							   str, indent, es);
+							   "Recheck Cond",  plan,
+							   outer_plan, indent, es);
 			}
 			/* FALL THRU */
 		case T_SeqScan:
@@ -1484,18 +1904,13 @@ explain_outNode(StringInfo str,
 		case T_FunctionScan:
 		case T_ValuesScan:
 			show_scan_qual(plan->qual,
-						   "Filter",
-						   ((Scan *) plan)->scanrelid,
-						   outer_plan, NULL,
-						   str, indent, es);
+						   "Filter", plan,
+						   outer_plan, indent, es);
 			break;
 		case T_SubqueryScan:
 			show_scan_qual(plan->qual,
-						   "Filter",
-						   ((Scan *) plan)->scanrelid,
-						   outer_plan,
-						   ((SubqueryScan *) plan)->subplan,
-						   str, indent, es);
+						   "Filter", plan,
+						   outer_plan, indent, es);
 			break;
 		case T_TidScan:
 			{
@@ -1508,35 +1923,31 @@ explain_outNode(StringInfo str,
 				if (list_length(tidquals) > 1)
 					tidquals = list_make1(make_orclause(tidquals));
 				show_scan_qual(tidquals,
-							   "TID Cond",
-							   ((Scan *) plan)->scanrelid,
-							   outer_plan, NULL,
-							   str, indent, es);
+							   "TID Cond", plan,
+							   outer_plan, indent, es);
 				show_scan_qual(plan->qual,
-							   "Filter",
-							   ((Scan *) plan)->scanrelid,
-							   outer_plan, NULL,
-							   str, indent, es);
+							   "Filter", plan,
+							   outer_plan,indent, es);
 			}
 			break;
 		case T_NestLoop:
 			show_upper_qual(((NestLoop *) plan)->join.joinqual,
 							"Join Filter", plan,
-							str, indent, es);
+							indent, es);
 			show_upper_qual(plan->qual,
 							"Filter", plan,
-							str, indent, es);
+							indent, es);
 			break;
 		case T_MergeJoin:
 			show_upper_qual(((MergeJoin *) plan)->mergeclauses,
 							"Merge Cond", plan,
-							str, indent, es);
+							indent, es);
 			show_upper_qual(((MergeJoin *) plan)->join.joinqual,
 							"Join Filter", plan,
-							str, indent, es);
+							indent, es);
 			show_upper_qual(plan->qual,
 							"Filter", plan,
-							str, indent, es);
+							indent, es);
 			break;
 		case T_HashJoin: {
 			HashJoin *hash_join = (HashJoin *) plan;
@@ -1550,24 +1961,24 @@ explain_outNode(StringInfo str,
 			}
 			show_upper_qual(cond_to_show,
 							"Hash Cond", plan,
-							str, indent, es);
+							indent, es);
 			show_upper_qual(((HashJoin *) plan)->join.joinqual,
 							"Join Filter", plan,
-							str, indent, es);
+							indent, es);
 			show_upper_qual(plan->qual,
 							"Filter", plan,
-							str, indent, es);
+							indent, es);
 			break;
 		}
 		case T_Agg:
 			show_upper_qual(plan->qual,
 							"Filter", plan,
-							str, indent, es);
+							indent, es);
 			show_grouping_keys(plan,
 						       ((Agg *) plan)->numCols,
 						       ((Agg *) plan)->grpColIdx,
 						       "Group By",
-						       str, indent, es);
+						       indent, es);
 			break;
 		case T_Window:
 			{
@@ -1582,7 +1993,7 @@ explain_outNode(StringInfo str,
 									   window->numPartCols,
 									   window->partColIdx,
 									   "Partition By",
-									   str, indent, es);
+									   indent, es);
 				}
 
 				if (list_length(window->windowKeys) > 1)
@@ -1592,8 +2003,6 @@ explain_outNode(StringInfo str,
 
 				foreach(cell, window->windowKeys)
 				{
-					WindowKey *key = (WindowKey *) lfirst(cell);
-
 					if ( i < 0 )
 						sprintf(orderKeyStr, "Order By");
 					else
@@ -1601,11 +2010,7 @@ explain_outNode(StringInfo str,
 						sprintf(orderKeyStr, "Order By (level %d)", ++i);
 					}
 
-					show_sort_keys(outerPlan(plan),
-								   key->numSortCols,
-								   key->sortColIdx,
-								   orderKeyStr,
-								   str, indent, es);
+					show_sort_keys((SortState *)planstate,indent, es);
 				}
 				/* XXX don't show framing for now */
 			}
@@ -1614,9 +2019,9 @@ explain_outNode(StringInfo str,
 		{
 			show_scan_qual(plan->qual,
 						   "Filter",
-						   ((Scan *) plan)->scanrelid,
-						   plan, outer_plan,
-						   str, indent, es);
+						   plan,
+						   outer_plan,
+						   indent, es);
 
 			/* Partitioning and ordering information */
 			
@@ -1629,7 +2034,7 @@ explain_outNode(StringInfo str,
 						     ((Unique *) plan)->numCols,
 						     ((Unique *) plan)->uniqColIdx,
 						     "Group By",
-						     str, indent, es);
+						     indent, es);
 			break;
 		case T_Sort:
 		{
@@ -1647,27 +2052,23 @@ explain_outNode(StringInfo str,
 			else if (bNoDup)
 				SortKeystr = "Sort Key (Distinct)";
 
-			show_sort_keys(plan,
-						   ((Sort *) plan)->numCols,
-						   ((Sort *) plan)->sortColIdx,
-						   SortKeystr,
-						   str, indent, es);
+			show_sort_keys((SortState *)planstate, indent, es);
 			show_sort_info((SortState *) planstate,
-						   str, indent, es);
+						   indent, es);
 		}
 			break;
 		case T_Result:
 			show_upper_qual((List *) ((Result *) plan)->resconstantqual,
 							"One-Time Filter", plan,
-							str, indent, es);
+							indent, es);
 			show_upper_qual(plan->qual,
 							"Filter", plan,
-							str, indent, es);
+							indent, es);
 			break;
 		case T_Repeat:
 			show_upper_qual(plan->qual,
 							"Filter", plan,
-							str, indent, es);
+							indent, es);
 			break;
 		case T_Motion:
 			{
@@ -1680,7 +2081,7 @@ explain_outNode(StringInfo str,
 							pMotion->numSortCols,
 							pMotion->sortColIdx,
 							"Merge Key",
-							str, indent, es);
+							indent, es);
 
                 /* Descending into a new slice. */
                 if (sliceTable)
@@ -1692,13 +2093,13 @@ explain_outNode(StringInfo str,
 			{
 				show_upper_qual(plan->qual,
 								"Assert Cond", plan,
-								str, indent, es);
+								indent, es);
 			}
 			break;
 		case T_PartitionSelector:
 			{
 				explain_partition_selector((PartitionSelector *) plan, parentPlan,
-						str, indent, es);
+						indent, es);
 			}
 			break;
 		default:
@@ -1951,6 +2352,7 @@ explain_outNode(StringInfo str,
     es->currentSlice = currentSlice;    /* restore */
 }                               /* explain_outNode */
 
+#ifdef XXX
 /*
  * Show a qualifier expression for a scan plan node
  *
@@ -1960,8 +2362,8 @@ explain_outNode(StringInfo str,
  */
 static void
 show_scan_qual(List *qual, const char *qlabel,
-			   int scanrelid, Plan *outer_plan, Plan *inner_plan,
-			   StringInfo str, int indent, ExplainState *es)
+			   Plan *outer_plan, Plan *inner_plan,
+			    int indent, ExplainState *es)
 {
 	List	   *context;
 	bool		useprefix;
@@ -1987,16 +2389,15 @@ show_scan_qual(List *qual, const char *qlabel,
 
 	/* And add to str */
 	for (i = 0; i < indent; i++)
-		appendStringInfo(str, "  ");
-	appendStringInfo(str, "  %s: %s\n", qlabel, exprstr);
+		appendStringInfo(es->str, "  ");
+	appendStringInfo(es->str, "  %s: %s\n", qlabel, exprstr);
 }
-
 /*
  * Show a qualifier expression for an upper-level plan node
  */
 static void
 show_upper_qual(List *qual, const char *qlabel, Plan *plan,
-				StringInfo str, int indent, ExplainState *es)
+				 int indent, ExplainState *es)
 {
 	List	   *context;
 	bool		useprefix;
@@ -2020,9 +2421,10 @@ show_upper_qual(List *qual, const char *qlabel, Plan *plan,
 
 	/* And add to str */
 	for (i = 0; i < indent; i++)
-		appendStringInfo(str, "  ");
-	appendStringInfo(str, "  %s: %s\n", qlabel, exprstr);
+		appendStringInfo(es->str, "  ");
+	appendStringInfo(es->str, "  %s: %s\n", qlabel, exprstr);
 }
+#endif
 
 /*
  * CDB: Show GROUP BY keys for an Agg or Group node.
@@ -2032,7 +2434,7 @@ show_grouping_keys(Plan        *plan,
                    int          numCols,
                    AttrNumber  *subplanColIdx,
                    const char  *qlabel,
-			       StringInfo str, int indent, ExplainState *es)
+			       int indent, ExplainState *es)
 {
     Plan       *subplan = plan->lefttree;
     List	   *context;
@@ -2047,8 +2449,8 @@ show_grouping_keys(Plan        *plan,
         return;
 
     for (i = 0; i < indent; i++)
-        appendStringInfoString(str, "  ");
-    appendStringInfo(str, "  %s: ", qlabel);
+        appendStringInfoString(es->str, "  ");
+    appendStringInfo(es->str, "  %s: ", qlabel);
 
     Node *outerPlan = (Node *) outerPlan(subplan);
     Node *innerPlan = (Node *) innerPlan(subplan);
@@ -2118,30 +2520,35 @@ show_grouping_keys(Plan        *plan,
 
 		/* And add to str */
 		if (keyno > 0)
-			appendStringInfoString(str, ", ");
-		appendStringInfoString(str, exprstr);
+			appendStringInfoString(es->str, ", ");
+		appendStringInfoString(es->str, exprstr);
     }
 
 	if (rollup_gs_times > 1)
-		appendStringInfo(str, " (%d times)", rollup_gs_times);
+		appendStringInfo(es->str, " (%d times)", rollup_gs_times);
 
-    appendStringInfoChar(str, '\n');
+    appendStringInfoChar(es->str, '\n');
 }                               /* show_grouping_keys */
-
 
 /*
  * Show the sort keys for a Sort node.
  */
 static void
-show_sort_keys(Plan *sortplan, int nkeys, AttrNumber *keycols,
-			   const char *qlabel,
-			   StringInfo str, int indent, ExplainState *es)
+show_sort_keys(SortState *sortstate, int indent, ExplainState *es)
 {
 	List	   *context;
 	bool		useprefix;
-	int			keyno;
+	int		nkeys;
+	int		keyno;
 	char	   *exprstr;
 	int			i;
+	AttrNumber *keycols;
+
+	Sort * plan = (Sort *) sortstate->ss.ps.plan;
+
+
+	keycols = plan->sortColIdx;
+	nkeys = plan->numCols;
 
 	if (nkeys <= 0)
 		return;
@@ -2149,11 +2556,11 @@ show_sort_keys(Plan *sortplan, int nkeys, AttrNumber *keycols,
 	useprefix = list_length(es->rtable) > 1;    /*CDB*/
 
 	for (i = 0; i < indent; i++)
-		appendStringInfo(str, "  ");
-	appendStringInfo(str, "  %s: ", qlabel);
+		appendStringInfo(es->str, "  ");
+	appendStringInfo(es->str, "  %s: ", "Sort Key");
 
 	/* Set up deparsing context */
-	context = deparse_context_for_plan((Node *) outerPlan(sortplan),
+	context = deparse_context_for_plan((Node *) outerPlan(plan),
 									   NULL,	/* Sort has no innerPlan */
 									   es->rtable);
 	useprefix = list_length(es->rtable) > 1;
@@ -2162,7 +2569,7 @@ show_sort_keys(Plan *sortplan, int nkeys, AttrNumber *keycols,
 	{
 		/* find key expression in tlist */
 		AttrNumber	keyresno = keycols[keyno];
-		TargetEntry *target = get_tle_by_resno(sortplan->targetlist, keyresno);
+		TargetEntry *target = get_tle_by_resno(((Plan *)plan)->targetlist, keyresno);
 
 		if (!target)
 			elog(ERROR, "no tlist entry for key %d", keyresno);
@@ -2171,21 +2578,19 @@ show_sort_keys(Plan *sortplan, int nkeys, AttrNumber *keycols,
 									 useprefix, true);
 		/* And add to str */
 		if (keyno > 0)
-			appendStringInfo(str, ", ");
-		appendStringInfoString(str, exprstr);
+			appendStringInfo(es->str, ", ");
+		appendStringInfoString(es->str, exprstr);
 	}
 
-	appendStringInfo(str, "\n");
+	appendStringInfo(es->str, "\n");
 }
-
 
 /*
  * CDB: Show the hash and merge keys for a Motion node.
  */
 void
 show_motion_keys(Plan *plan, List *hashExpr, int nkeys, AttrNumber *keycols,
-			     const char *qlabel,
-                 StringInfo str, int indent, ExplainState *es)
+			     const char *qlabel, int indent, ExplainState *es)
 {
 	List	   *context;
 	char	   *exprstr;
@@ -2205,8 +2610,8 @@ show_motion_keys(Plan *plan, List *hashExpr, int nkeys, AttrNumber *keycols,
     if (nkeys > 0)
     {
         for (i = 0; i < indent; i++)
-            appendStringInfoString(str, "  ");
-        appendStringInfo(str, "  %s: ", qlabel);
+            appendStringInfoString(es->str, "  ");
+        appendStringInfo(es->str, "  %s: ", qlabel);
 
 	    for (keyno = 0; keyno < nkeys; keyno++)
 	    {
@@ -2227,11 +2632,11 @@ show_motion_keys(Plan *plan, List *hashExpr, int nkeys, AttrNumber *keycols,
 
 		    /* And add to str */
 		    if (keyno > 0)
-			    appendStringInfoString(str, ", ");
-		    appendStringInfoString(str, exprstr);
+			    appendStringInfoString(es->str, ", ");
+		    appendStringInfoString(es->str, exprstr);
 	    }
 
-	    appendStringInfoChar(str, '\n');
+	    appendStringInfoChar(es->str, '\n');
     }
 
     /* Hashed repartitioning key */
@@ -2242,8 +2647,8 @@ show_motion_keys(Plan *plan, List *hashExpr, int nkeys, AttrNumber *keycols,
 
 	    /* And add to str */
 	    for (i = 0; i < indent; i++)
-		    appendStringInfoString(str, "  ");
-	    appendStringInfo(str, "  %s: %s\n", "Hash Key", exprstr);
+		    appendStringInfoString(es->str, "  ");
+	    appendStringInfo(es->str, "  %s: %s\n", "Hash Key", exprstr);
     }
 }                               /* show_motion_keys */
 
@@ -2253,7 +2658,7 @@ show_motion_keys(Plan *plan, List *hashExpr, int nkeys, AttrNumber *keycols,
  */
 static void
 explain_partition_selector(PartitionSelector *ps, Plan *parent,
-						   StringInfo str, int indent, ExplainState *es)
+						   int indent, ExplainState *es)
 {
 	if (ps->printablePredicate)
 	{
@@ -2273,8 +2678,8 @@ explain_partition_selector(PartitionSelector *ps, Plan *parent,
 
 		/* And add to str */
 		for (i = 0; i < indent; i++)
-			appendStringInfo(str, "  ");
-		appendStringInfo(str, "  %s: %s\n", "Filter", exprstr);
+			appendStringInfo(es->str, "  ");
+		appendStringInfo(es->str, "  %s: %s\n", "Filter", exprstr);
 	}
 
 	if (ps->staticSelection)
@@ -2283,22 +2688,175 @@ explain_partition_selector(PartitionSelector *ps, Plan *parent,
 		int nPartsTotal = countLeafPartTables(ps->relid);
 		for (int i = 0; i < indent; i++)
 		{
-			appendStringInfoString(str, "  ");
+			appendStringInfoString(es->str, "  ");
 		}
 
-		appendStringInfo(str, "  Partitions selected: %d (out of %d)\n", nPartsSelected, nPartsTotal);
+		appendStringInfo(es->str, "  Partitions selected: %d (out of %d)\n", nPartsSelected, nPartsTotal);
 	}
 }
+/*
+ * Show the targetlist of a plan node
+ */
+static void
+show_plan_tlist(Plan *plan, int indent, ExplainState *es)
+{
+	List	   *context;
+	bool		useprefix;
+	ListCell   *lc;
+	int			i;
 
+	/* No work if empty tlist (this occurs eg in bitmap indexscans) */
+	if (plan->targetlist == NIL)
+		return;
+	/* The tlist of an Append isn't real helpful, so suppress it */
+	if (IsA(plan, Append))
+		return;
+
+	/* Set up deparsing context */
+	context = deparse_context_for_plan((Node *) plan,
+									   NULL, es->rtable);
+	useprefix = list_length(es->rtable) > 1;
+
+	/* Emit line prefix */
+	appendStringInfoSpaces(es->str, indent * 2);
+	appendStringInfoString(es->str, "  Output: ");
+
+	/* Deparse each non-junk result column */
+	i = 0;
+	foreach(lc, plan->targetlist)
+	{
+		TargetEntry *tle = (TargetEntry *) lfirst(lc);
+
+		if (tle->resjunk)
+			continue;
+		if (i++ > 0)
+			appendStringInfoString(es->str, ", ");
+		appendStringInfoString(es->str,
+							   deparse_expression((Node *) tle->expr, context,
+												  useprefix, false));
+	}
+
+	appendStringInfoChar(es->str, '\n');
+}
+
+
+/*
+ * Show a qualifier expression
+ *
+ * Note: outer_plan is the referent for any OUTER vars in the scan qual;
+ * this would be the outer side of a nestloop plan.  Pass NULL if none.
+ */
+static void
+show_qual(List *qual, const char *qlabel, Plan *plan, Plan *outer_plan,
+		  int indent, bool useprefix, ExplainState *es)
+{
+	List	   *context;
+	Node	   *node;
+	char	   *exprstr;
+
+	/* No work if empty qual */
+	if (qual == NIL)
+		return;
+
+	/* Convert AND list to explicit AND */
+	node = (Node *) make_ands_explicit(qual);
+
+	/* Set up deparsing context */
+	context = deparse_context_for_plan((Node *) plan,
+									   (Node *) outer_plan,
+									   es->rtable);
+
+	/* Deparse the expression */
+	exprstr = deparse_expression(node, context, useprefix, false);
+
+	/* And add to es->str */
+	appendStringInfoSpaces(es->str, indent * 2);
+	appendStringInfo(es->str, "  %s: %s\n", qlabel, exprstr);
+}
+
+/*
+ * Show a qualifier expression for a scan plan node
+ */
+static void
+show_scan_qual(List *qual, const char *qlabel,
+			   Plan *scan_plan, Plan *outer_plan,
+			   int indent, ExplainState *es)
+{
+	bool		useprefix;
+
+	useprefix = (outer_plan != NULL || IsA(scan_plan, SubqueryScan));
+	show_qual(qual, qlabel, scan_plan, outer_plan, indent, useprefix, es);
+}
+
+/*
+ * Show a qualifier expression for an upper-level plan node
+ */
+static void
+show_upper_qual(List *qual, const char *qlabel, Plan *plan,
+				int indent, ExplainState *es)
+{
+	bool		useprefix;
+
+	useprefix = (list_length(es->rtable) > 1);
+	show_qual(qual, qlabel, plan, NULL, indent, useprefix, es);
+}
+
+#ifdef XXX
+/*
+ * Show the sort keys for a Sort node.
+ */
+static void
+show_sort_keys(Plan *sortplan, int indent, ExplainState *es)
+{
+	int			nkeys = ((Sort *) sortplan)->numCols;
+	AttrNumber *keycols = ((Sort *) sortplan)->sortColIdx;
+	List	   *context;
+	bool		useprefix;
+	int			keyno;
+	char	   *exprstr;
+
+	if (nkeys <= 0)
+		return;
+
+	appendStringInfoSpaces(es->str, indent * 2);
+	appendStringInfoString(es->str, "  Sort Key: ");
+
+	/* Set up deparsing context */
+	context = deparse_context_for_plan((Node *) sortplan,
+									   NULL,
+									   es->rtable,
+									   es->pstmt->subplans);
+	useprefix = list_length(es->rtable) > 1;
+
+	for (keyno = 0; keyno < nkeys; keyno++)
+	{
+		/* find key expression in tlist */
+		AttrNumber	keyresno = keycols[keyno];
+		TargetEntry *target = get_tle_by_resno(sortplan->targetlist, keyresno);
+
+		if (!target)
+			elog(ERROR, "no tlist entry for key %d", keyresno);
+		/* Deparse the expression, showing any top-level cast */
+		exprstr = deparse_expression((Node *) target->expr, context,
+									 useprefix, true);
+		/* And add to es->str */
+		if (keyno > 0)
+			appendStringInfoString(es->str, ", ");
+		appendStringInfoString(es->str, exprstr);
+	}
+
+	appendStringInfoChar(es->str, '\n');
+}
+
+#endif
 /*
  * If it's EXPLAIN ANALYZE, show tuplesort explain info for a sort node
  */
 static void
-show_sort_info(SortState *sortstate,
-			   StringInfo str, int indent, ExplainState *es)
+show_sort_info(SortState *sortstate, int indent, ExplainState *es)
 {
 	Assert(IsA(sortstate, SortState));
-	if (es->printAnalyze && sortstate->sort_Done &&
+	if (es->analyze && sortstate->sort_Done &&
 		sortstate->tuplesortstate != NULL &&
 		(gp_enable_mk_sort ?
 		 (void *) sortstate->tuplesortstate->sortstore_mk : (void *) sortstate->tuplesortstate->sortstore) != NULL)
@@ -2311,8 +2869,8 @@ show_sort_info(SortState *sortstate,
 		else
 			sortinfo = tuplesort_explain(sortstate->tuplesortstate->sortstore);
 		for (i = 0; i < indent; i++)
-			appendStringInfo(str, "  ");
-		appendStringInfo(str, "  %s\n", sortinfo);
+			appendStringInfo(es->str, "  ");
+		appendStringInfo(es->str, "  %s\n", sortinfo);
 		pfree(sortinfo);
 	}
 }
@@ -2341,4 +2899,123 @@ explain_get_index_name(Oid indexId)
 		result = quote_identifier(result);
 	}
 	return result;
+}
+
+/*
+ * Show the target of a Scan node
+ */
+static void
+ExplainScanTarget(Scan *plan, ExplainState *es)
+{
+	char	   *objectname = NULL;
+	RangeTblEntry *rte;
+
+	if (plan->scanrelid <= 0)	/* Is this still possible? */
+		return;
+	rte = rt_fetch(plan->scanrelid, es->rtable);
+
+	switch (nodeTag(plan))
+	{
+		case T_SeqScan:
+		case T_IndexScan:
+		case T_BitmapHeapScan:
+		case T_TidScan:
+			/* Assert it's on a real relation */
+			Assert(rte->rtekind == RTE_RELATION);
+			objectname = get_rel_name(rte->relid);
+			break;
+		case T_FunctionScan:
+			{
+				Node	   *funcexpr;
+
+				/* Assert it's on a RangeFunction */
+				Assert(rte->rtekind == RTE_FUNCTION);
+
+				/*
+				 * If the expression is still a function call, we can get the
+				 * real name of the function.  Otherwise, punt (this can
+				 * happen if the optimizer simplified away the function call,
+				 * for example).
+				 */
+				funcexpr = ((FunctionScan *) plan)->funcexpr;
+				if (funcexpr && IsA(funcexpr, FuncExpr))
+				{
+					Oid			funcid = ((FuncExpr *) funcexpr)->funcid;
+
+					objectname = get_func_name(funcid);
+				}
+			}
+			break;
+		case T_ValuesScan:
+			Assert(rte->rtekind == RTE_VALUES);
+			break;
+		case T_CteScan:
+			/* Assert it's on a non-self-reference CTE */
+			Assert(rte->rtekind == RTE_CTE);
+			Assert(!rte->self_reference);
+			objectname = rte->ctename;
+			break;
+#ifdef T_WorkTableScan
+		case T_WorkTableScan:
+			/* Assert it's on a self-reference CTE */
+			Assert(rte->rtekind == RTE_CTE);
+			Assert(rte->self_reference);
+			objectname = rte->ctename;
+			break;
+#endif
+		default:
+			break;
+	}
+
+	appendStringInfoString(es->str, " on");
+	if (objectname != NULL)
+		appendStringInfo(es->str, " %s", quote_identifier(objectname));
+	if (objectname == NULL || strcmp(rte->eref->aliasname, objectname) != 0)
+		appendStringInfo(es->str, " %s",
+						 quote_identifier(rte->eref->aliasname));
+}
+
+/*
+ * Explain the constituent plans of an Append, BitmapAnd, or BitmapOr node.
+ *
+ * Ordinarily we don't pass down outer_plan to our child nodes, but in these
+ * cases we must, since the node could be an "inner indexscan" in which case
+ * outer references can appear in the child nodes.
+ */
+static void
+ExplainMemberNodes(List *plans, PlanState **planstate, Plan *outer_plan,
+		           int indent, ExplainState *es)
+{
+	ListCell   *lst;
+	int			j = 0;
+
+	foreach(lst, plans)
+	{
+		Plan	   *subnode = (Plan *) lfirst(lst);
+
+		ExplainNode(subnode, planstate[j],
+					outer_plan, indent + 3, es);
+		j++;
+	}
+}
+
+
+/*
+ * Explain a list of SubPlans (or initPlans, which also use SubPlan nodes).
+ */
+static void
+ExplainSubPlans(List *plans, int indent, ExplainState *es)
+{
+	ListCell   *lst;
+
+	foreach(lst, plans)
+	{
+		SubPlanState *sps = (SubPlanState *) lfirst(lst);
+		SubPlan    *sp = (SubPlan *) sps->xprstate.expr;
+
+		appendStringInfoSpaces(es->str, indent * 2);
+		appendStringInfo(es->str, "  %s\n", sp->plan_name);
+		ExplainNode(exec_subplan_get_plan(es->pstmt, sp),
+					sps->planstate, NULL, indent + 4, es);
+	}
 }
