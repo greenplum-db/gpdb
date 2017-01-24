@@ -213,6 +213,7 @@ make_room(migratorContext *ctx, char *page)
 			oldhdr->pd_lower -= sizeof(ItemIdData);
 
 			/* Did we make enough room? */
+			space = (int) oldhdr->pd_upper - (int) oldhdr->pd_lower;
 			if (space >= SizeOfPageHeaderData - VERSION4_SizeOfPageHeaderData)
 				return;
 		}
