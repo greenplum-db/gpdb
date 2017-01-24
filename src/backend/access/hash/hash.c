@@ -261,8 +261,10 @@ hashgetmulti(PG_FUNCTION_ARGS)
 	HashScanOpaque	so = (HashScanOpaque) scan->opaque;
 	Relation		rel = scan->indexRelation;
 
-	if (n == NULL || IsA(n, StreamBitmap))
+	if (n == NULL)
 		hashBitmap = tbm_create(work_mem * 1024L);
+	else if (!IsA(n, HashBitmap))
+		elog(ERROR, "non hash bitmap");
 	else
 		hashBitmap = (HashBitmap *)n;
 

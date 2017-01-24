@@ -465,10 +465,12 @@ gingetmulti(PG_FUNCTION_ARGS)
 	IndexScanDesc scan = (IndexScanDesc) PG_GETARG_POINTER(0);
 	Node 		   *n = (Node *) PG_GETARG_POINTER(1);
 	HashBitmap	   *hashBitmap;
- 
-	if (n == NULL || IsA(n, StreamBitmap))
+
+	if (n == NULL)
 		/* XXX should we use less than work_mem for this? */
 		hashBitmap = tbm_create(work_mem * 1024L);
+	else if (!IsA(n, HashBitmap))
+		elog(ERROR, "non hash bitmap");
 	else
 		hashBitmap = (HashBitmap *)n;
  

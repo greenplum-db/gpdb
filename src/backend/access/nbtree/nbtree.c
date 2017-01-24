@@ -587,10 +587,14 @@ btgetmulti(PG_FUNCTION_ARGS)
 
 	MIRROREDLOCK_BUFMGR_VERIFY_NO_LOCK_LEAK_ENTER;
 
-	if (n == NULL || IsA(n, StreamBitmap))
+	if (n == NULL)
 	{
 		/* XXX should we use less than work_mem for this? */
 		hashBitmap = tbm_create(work_mem * 1024L);
+	}
+	else if (!IsA(n, HashBitmap))
+	{
+		elog(ERROR, "non hash bitmap");
 	}
 	else
 	{
