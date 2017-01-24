@@ -10,7 +10,7 @@ Feature: gptransfer tests
         And the database "gptransfer_testdb3" does not exist
         And the database "gptransfer_testdb4" does not exist
         And the database "gptransfer_testdb5" does not exist
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer_setup.sql -d template1"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer_setup.sql -d template1"
         Then psql should return a return code of 0
 
     @T339833
@@ -132,7 +132,7 @@ Feature: gptransfer tests
         And the database "gptransfer_testdb3" does not exist
         And the database "gptransfer_testdb4" does not exist
         And the database "gptransfer_testdb5" does not exist
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer_setup.sql -d template1"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer_setup.sql -d template1"
         And the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --drop --batch-size=10"
         Then gptransfer should return a return code of 2
 
@@ -145,7 +145,7 @@ Feature: gptransfer tests
         And the database "gptransfer_testdb3" does not exist
         And the database "gptransfer_testdb4" does not exist
         And the database "gptransfer_testdb5" does not exist
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer_setup.sql -d template1"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer_setup.sql -d template1"
         And the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --skip-existing --batch-size=10"
         Then gptransfer should return a return code of 2
 
@@ -158,7 +158,7 @@ Feature: gptransfer tests
         And the database "gptransfer_testdb3" does not exist
         And the database "gptransfer_testdb4" does not exist
         And the database "gptransfer_testdb5" does not exist
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer_setup.sql -d template1"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer_setup.sql -d template1"
         And the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --truncate --batch-size=10"
         Then gptransfer should return a return code of 2
 
@@ -170,7 +170,7 @@ Feature: gptransfer tests
         And the database "gptransfer_testdb3" does not exist
         And the database "gptransfer_testdb4" does not exist
         And the database "gptransfer_testdb5" does not exist
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer_setup.sql -d template1"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer_setup.sql -d template1"
         And the user runs "gptransfer -t gptransfer_testdb1.public.t0 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --drop -a --batch-size=10"
         Then gptransfer should return a return code of 0
         And verify that table "t0" in "gptransfer_testdb1" has "100" rows
@@ -183,7 +183,7 @@ Feature: gptransfer tests
         And the database "gptransfer_testdb3" does not exist
         And the database "gptransfer_testdb4" does not exist
         And the database "gptransfer_testdb5" does not exist
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer_setup.sql -d template1"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer_setup.sql -d template1"
         And the user runs "gptransfer --delimiter '\010' --format text -t gptransfer_testdb1.public.t0 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --drop -a --batch-size=10"
         Then gptransfer should return a return code of 0
         And verify that table "t0" in "gptransfer_testdb1" has "100" rows
@@ -210,7 +210,7 @@ Feature: gptransfer tests
         And the database "gptransfer_testdb3" does not exist
         And the database "gptransfer_testdb4" does not exist
         And the database "gptransfer_testdb5" does not exist
-        And the user runs "gptransfer --full -F gppylib/test/behave/mgmt_utils/steps/data/gptransfer_wildcard_infile --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -a --batch-size=10"
+        And the user runs "gptransfer --full -F test/behave/mgmt_utils/steps/data/gptransfer_wildcard_infile --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -a --batch-size=10"
         Then gptransfer should return a return code of 2
         And gptransfer should print Cannot specify -F and --full options together to stdout
 
@@ -337,7 +337,7 @@ Feature: gptransfer tests
         And the database "gptransfer_testdb3" does not exist
         And the database "gptransfer_testdb4" does not exist
         And the database "gptransfer_testdb5" does not exist
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer_setup.sql -d template1"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer_setup.sql -d template1"
         And the user runs "gptransfer -t gptransfer_testdb1.public.t0 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --skip-existing --batch-size=10"
         Then gptransfer should return a return code of 0
         And gptransfer should print Found no tables to transfer to stdout
@@ -350,7 +350,7 @@ Feature: gptransfer tests
         And the database "gptransfer_testdb3" does not exist
         And the database "gptransfer_testdb4" does not exist
         And the database "gptransfer_testdb5" does not exist
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer_setup.sql -d template1"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer_setup.sql -d template1"
         And the user runs "gptransfer -t gptransfer_testdb1.public.t0 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --truncate -a --batch-size=10"
         Then gptransfer should return a return code of 0
         And verify that table "t0" in "gptransfer_testdb1" has "100" rows
@@ -394,9 +394,9 @@ Feature: gptransfer tests
         And the database "gptransfer_testdb3" does not exist
         And the database "gptransfer_testdb4" does not exist
         And the database "gptransfer_testdb5" does not exist
-        And the user runs "gptransfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate md5 -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer_infile --batch-size=1"
+        And the user runs "gptransfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate md5 -f test/behave/mgmt_utils/steps/data/gptransfer_infile --batch-size=1"
         Then gptransfer should return a return code of 0
-        And verify that gptransfer is in order of "gppylib/test/behave/mgmt_utils/steps/data/gptransfer_infile" when partition transfer is "None"
+        And verify that gptransfer is in order of "test/behave/mgmt_utils/steps/data/gptransfer_infile" when partition transfer is "None"
         And verify that table "t0" in "gptransfer_testdb1" has "100" rows
         And verify that table "t0" in "gptransfer_testdb3" has "700" rows
 
@@ -408,7 +408,7 @@ Feature: gptransfer tests
         And the database "gptransfer_testdb3" does not exist
         And the database "gptransfer_testdb4" does not exist
         And the database "gptransfer_testdb5" does not exist
-        And the user runs "gptransfer -d gptransfer_testdb1 -d gptransfer_testdb3 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate md5 -F gppylib/test/behave/mgmt_utils/steps/data/gptransfer_wildcard_infile --batch-size=10"
+        And the user runs "gptransfer -d gptransfer_testdb1 -d gptransfer_testdb3 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate md5 -F test/behave/mgmt_utils/steps/data/gptransfer_wildcard_infile --batch-size=10"
         Then gptransfer should return a return code of 0
         And verify that database "gptransfer_testdb1" does not exist
         And verify that database "gptransfer_testdb3" does not exist
@@ -421,7 +421,7 @@ Feature: gptransfer tests
         And the database "gptransfer_testdb3" does not exist
         And the database "gptransfer_testdb4" does not exist
         And the database "gptransfer_testdb5" does not exist
-        And the user runs "gptransfer --dest-database gptransfer_destdb --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate md5 -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer_infile --batch-size=10"
+        And the user runs "gptransfer --dest-database gptransfer_destdb --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate md5 -f test/behave/mgmt_utils/steps/data/gptransfer_infile --batch-size=10"
         Then gptransfer should return a return code of 2
         And gptransfer should print Multiple tables map to gptransfer_destdb.public.t0.  Remove one of the tables from the list or do not use the --dest-database option. to stdout
 
@@ -528,7 +528,7 @@ Feature: gptransfer tests
         And the database "gptransfer_testdb3" does not exist
         And the database "gptransfer_testdb4" does not exist
         And the database "gptransfer_testdb5" does not exist
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer_setup.sql -d template1"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer_setup.sql -d template1"
         And the user runs "gptransfer -t gptransfer_testdb1.public.t0 --dest-database gptransfer_destdb --source-port $GPTRANSFER_DEST_PORT --source-host $GPTRANSFER_DEST_HOST --source-user $GPTRANSFER_DEST_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --batch-size=10"
         Then gptransfer should return a return code of 0
         And verify that table "t0" in "gptransfer_destdb" has "100" rows
@@ -597,7 +597,7 @@ Feature: gptransfer tests
         And the database "gptransfer_testdb3" does not exist
         And the database "gptransfer_testdb4" does not exist
         And the database "gptransfer_testdb5" does not exist
-        And the user runs "gptransfer -t gptransfer_testdb1.public.t0 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file gppylib/test/behave/mgmt_utils/steps/data/gptransfer_bad_map_file --batch-size=10"
+        And the user runs "gptransfer -t gptransfer_testdb1.public.t0 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file test/behave/mgmt_utils/steps/data/gptransfer_bad_map_file --batch-size=10"
         Then gptransfer should return a return code of 2
         And gptransfer should print missing from map file to stdout
 
@@ -727,16 +727,16 @@ Feature: gptransfer tests
         And the user runs "gptransfer -d gptransfer_testdb1 -t gptransfer_testdb1.public.temp_table --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate=md5 --batch-size=10"
         Then gptransfer should return a return code of 2
         And gptransfer should print Only one of --full, -f, -t, or -d can be specified to stdout
-        And the user runs "gptransfer -d gptransfer_testdb1 -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer_infile --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate=md5 --batch-size=10"
+        And the user runs "gptransfer -d gptransfer_testdb1 -f test/behave/mgmt_utils/steps/data/gptransfer_infile --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate=md5 --batch-size=10"
         Then gptransfer should return a return code of 2
         And gptransfer should print Only one of --full, -f, -t, or -d can be specified to stdout
-        And the user runs "gptransfer -t gptransfer_testdb1.public.temp_table -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer_infile --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate=md5 --batch-size=10"
+        And the user runs "gptransfer -t gptransfer_testdb1.public.temp_table -f test/behave/mgmt_utils/steps/data/gptransfer_infile --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate=md5 --batch-size=10"
         Then gptransfer should return a return code of 2
         And gptransfer should print Only one of --full, -f, -t, or -d can be specified to stdout
         And the user runs "gptransfer --full -d gptransfer_testdb1 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate=md5 --batch-size=10"
         Then gptransfer should return a return code of 2
         And gptransfer should print Only one of --full, -f, -t, or -d can be specified to stdout
-        And the user runs "gptransfer --full -d gptransfer_testdb1 -t gptransfer_testdb1.public.temp_table -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer_infile --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate=md5 --batch-size=10"
+        And the user runs "gptransfer --full -d gptransfer_testdb1 -t gptransfer_testdb1.public.temp_table -f test/behave/mgmt_utils/steps/data/gptransfer_infile --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate=md5 --batch-size=10"
         Then gptransfer should return a return code of 2
         And gptransfer should print Only one of --full, -f, -t, or -d can be specified to stdout
 
@@ -776,7 +776,7 @@ Feature: gptransfer tests
         And the database "gptransfer_testdb5" does not exist
         And the user runs "createdb -U $GPTRANSFER_DEST_USER -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST gptransfer_testdb1"
         And the user runs "psql -U $GPTRANSFER_DEST_USER -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -c 'create table t0(i int)' gptransfer_testdb1"
-        And the user runs "gptransfer -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer_infile --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
+        And the user runs "gptransfer -f test/behave/mgmt_utils/steps/data/gptransfer_infile --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 2
         And gptransfer should print Table gptransfer_testdb1.public.t0 exists in database gptransfer_testdb1 to stdout
 
@@ -841,7 +841,7 @@ Feature: gptransfer tests
         And the database "gptransfer_testdb3" does not exist
         And the database "gptransfer_testdb4" does not exist
         And the database "gptransfer_testdb5" does not exist
-        When the user runs the command "gppylib/test/behave/mgmt_utils/steps/scripts/test_gptransfer_batch_size.sh /tmp/batch_size" in the background
+        When the user runs the command "test/behave/mgmt_utils/steps/scripts/test_gptransfer_batch_size.sh /tmp/batch_size" in the background
         And the user runs "gptransfer -t gptransfer_testdb1.public.t0 -t gptransfer_testdb1.public.t1 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --base-port=$PGPORT"
         Then gptransfer should return a return code of 0
         And verify that the file "/tmp/batch_size" contains the string "3"
@@ -871,7 +871,7 @@ Feature: gptransfer tests
         And the database "gptransfer_testdb3" does not exist
         And the database "gptransfer_testdb4" does not exist
         And the database "gptransfer_testdb5" does not exist
-        And the user runs "gptransfer -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer_bad_infile --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
+        And the user runs "gptransfer -f test/behave/mgmt_utils/steps/data/gptransfer_bad_infile --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 0
         And gptransfer should print Found no tables to transfer to stdout
 
@@ -1259,21 +1259,21 @@ Feature: gptransfer tests
         And the database "gptransfer_testdb4" does not exist
         And the database "gptransfer_testdb5" does not exist
         And the database "gptest" does not exist
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/setup.sql -d template1"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/setup.sql -d template1"
         And the user "GPTRANSFER_SOURCE_USER" creates filespace_config file for "fs" on host "GPTRANSFER_SOURCE_HOST" with gpdb port "GPTRANSFER_SOURCE_PORT" and config "gpfilespace_config_src" in "HOME" directory
         And the user "GPTRANSFER_DEST_USER" creates filespace_config file for "fs" on host "GPTRANSFER_DEST_HOST" with gpdb port "GPTRANSFER_DEST_PORT" and config "gpfilespace_config_dest" in "HOME" directory
-        And the user modifies the external_table.sql file "gppylib/test/behave/mgmt_utils/steps/data/gptransfer_setup/external_table.sql" with host "GPTRANSFER_SOURCE_HOST" and port "2345"
+        And the user modifies the external_table.sql file "test/behave/mgmt_utils/steps/data/gptransfer_setup/external_table.sql" with host "GPTRANSFER_SOURCE_HOST" and port "2345"
         And the user starts the gpfdist on host "GPTRANSFER_SOURCE_HOST" and port "2345" in work directory "HOME" from remote "2"
         And the user "GPTRANSFER_SOURCE_USER" creates filespace on host "GPTRANSFER_SOURCE_HOST" with gpdb port "GPTRANSFER_SOURCE_PORT" and config "gpfilespace_config_src" in "HOME" directory
         And the user "GPTRANSFER_DEST_USER" creates filespace on host "GPTRANSFER_DEST_HOST" with gpdb port "GPTRANSFER_DEST_PORT" and config "gpfilespace_config_dest" in "HOME" directory
-        And the user runs workload under "gppylib/test/behave/mgmt_utils/steps/data/gptransfer_setup" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d gptest"
+        And the user runs workload under "test/behave/mgmt_utils/steps/data/gptransfer_setup" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d gptest"
         And the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 0
         And psql should return a return code of 0
-        Then Verify data integrity of database "gptest" between source and destination system, work-dir "gppylib/test/behave/mgmt_utils/steps/data/gptransfer_verify"
+        Then Verify data integrity of database "gptest" between source and destination system, work-dir "test/behave/mgmt_utils/steps/data/gptransfer_verify"
         And the user stops the gpfdist on host "GPTRANSFER_SOURCE_HOST" and port "2345" in work directory "HOME" from remote "2"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
 
     @T339824
     Scenario: gptransfer full with all ddl, dml and filespace
@@ -1285,23 +1285,22 @@ Feature: gptransfer tests
         And the database "gptransfer_testdb4" does not exist
         And the database "gptransfer_testdb5" does not exist
         And the database "gptest" does not exist
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/setup.sql -d template1"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/setup.sql -d template1"
         And the user "GPTRANSFER_SOURCE_USER" creates filespace_config file for "fs" on host "GPTRANSFER_SOURCE_HOST" with gpdb port "GPTRANSFER_SOURCE_PORT" and config "gpfilespace_config_src" in "HOME" directory
         And the user "GPTRANSFER_DEST_USER" creates filespace_config file for "fs" on host "GPTRANSFER_DEST_HOST" with gpdb port "GPTRANSFER_DEST_PORT" and config "gpfilespace_config_dest" in "HOME" directory
         And the user "GPTRANSFER_SOURCE_USER" creates filespace on host "GPTRANSFER_SOURCE_HOST" with gpdb port "GPTRANSFER_SOURCE_PORT" and config "gpfilespace_config_src" in "HOME" directory
         And the user "GPTRANSFER_DEST_USER" creates filespace on host "GPTRANSFER_DEST_HOST" with gpdb port "GPTRANSFER_DEST_PORT" and config "gpfilespace_config_dest" in "HOME" directory
-        And the user runs workload under "gppylib/test/behave/mgmt_utils/steps/data/gptransfer/pre/ddl" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d template1"
-        And the user runs workload under "gppylib/test/behave/mgmt_utils/steps/data/gptransfer/pre/dml" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d template1"
-        And the user runs workload under "gppylib/test/behave/mgmt_utils/steps/data/gptransfer/pre/filespace" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d template1"
+        And the user runs workload under "test/behave/mgmt_utils/steps/data/gptransfer/pre/ddl" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d template1"
+        And the user runs workload under "test/behave/mgmt_utils/steps/data/gptransfer/pre/dml" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d template1"
+        And the user runs workload under "test/behave/mgmt_utils/steps/data/gptransfer/pre/filespace" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d template1"
         When the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 0
-        And run post verifying workload under "gppylib/test/behave/mgmt_utils/steps/data/gptransfer/post/ddl"
-        And run post verifying workload under "gppylib/test/behave/mgmt_utils/steps/data/gptransfer/post/ddl_43to43"
-        And run post verifying workload under "gppylib/test/behave/mgmt_utils/steps/data/gptransfer/post/dml"
-        And the user runs "psql -d template1 -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/pull_pg_stats.sql > gppylib/test/behave/mgmt_utils/steps/data/gptransfer/pull_pg_stats.out"
-        And run post verifying workload under "gppylib/test/behave/mgmt_utils/steps/data/gptransfer/post/filespace"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
+        And run post verifying workload under "test/behave/mgmt_utils/steps/data/gptransfer/post/ddl"
+        And run post verifying workload under "test/behave/mgmt_utils/steps/data/gptransfer/post/dml"
+        And the user runs "psql -d template1 -f test/behave/mgmt_utils/steps/data/gptransfer/pull_pg_stats.sql > test/behave/mgmt_utils/steps/data/gptransfer/pull_pg_stats.out"
+        And run post verifying workload under "test/behave/mgmt_utils/steps/data/gptransfer/post/filespace"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
 
     @T339821
     Scenario: gptransfer full in change tracking
@@ -1313,23 +1312,23 @@ Feature: gptransfer tests
         And the database "gptransfer_testdb4" does not exist
         And the database "gptransfer_testdb5" does not exist
         And the database "gptest" does not exist
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/setup.sql -d template1"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/setup.sql -d template1"
         And the user "GPTRANSFER_SOURCE_USER" creates filespace_config file for "fs" on host "GPTRANSFER_SOURCE_HOST" with gpdb port "GPTRANSFER_SOURCE_PORT" and config "gpfilespace_config_src" in "HOME" directory
         And the user "GPTRANSFER_DEST_USER" creates filespace_config file for "fs" on host "GPTRANSFER_DEST_HOST" with gpdb port "GPTRANSFER_DEST_PORT" and config "gpfilespace_config_dest" in "HOME" directory
         And the user "GPTRANSFER_SOURCE_USER" creates filespace on host "GPTRANSFER_SOURCE_HOST" with gpdb port "GPTRANSFER_SOURCE_PORT" and config "gpfilespace_config_src" in "HOME" directory
         And the user "GPTRANSFER_DEST_USER" creates filespace on host "GPTRANSFER_DEST_HOST" with gpdb port "GPTRANSFER_DEST_PORT" and config "gpfilespace_config_dest" in "HOME" directory
-        And the user runs workload under "gppylib/test/behave/mgmt_utils/steps/data/gptransfer/pre/ddl" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d template1"
-        And the user runs workload under "gppylib/test/behave/mgmt_utils/steps/data/gptransfer/pre/dml" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d template1"
-        And the user runs workload under "gppylib/test/behave/mgmt_utils/steps/data/gptransfer/pre/filespace" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d template1"
+        And the user runs workload under "test/behave/mgmt_utils/steps/data/gptransfer/pre/ddl" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d template1"
+        And the user runs workload under "test/behave/mgmt_utils/steps/data/gptransfer/pre/dml" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d template1"
+        And the user runs workload under "test/behave/mgmt_utils/steps/data/gptransfer/pre/filespace" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d template1"
         And the user puts cluster on "GPTRANSFER_SOURCE_HOST" "GPTRANSFER_SOURCE_PORT" "GPTRANSFER_SOURCE_USER" in "ct"
         When the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 0
-        And run post verifying workload under "gppylib/test/behave/mgmt_utils/steps/data/gptransfer/post/ddl"
-        And run post verifying workload under "gppylib/test/behave/mgmt_utils/steps/data/gptransfer/post/dml"
-        And run post verifying workload under "gppylib/test/behave/mgmt_utils/steps/data/gptransfer/post/filespace"
+        And run post verifying workload under "test/behave/mgmt_utils/steps/data/gptransfer/post/ddl"
+        And run post verifying workload under "test/behave/mgmt_utils/steps/data/gptransfer/post/dml"
+        And run post verifying workload under "test/behave/mgmt_utils/steps/data/gptransfer/post/filespace"
         And the user puts cluster on "GPTRANSFER_SOURCE_HOST" "GPTRANSFER_SOURCE_PORT" "GPTRANSFER_SOURCE_USER" in "sync"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
 
     @T339821
     Scenario: gptransfer in resync
@@ -1341,23 +1340,23 @@ Feature: gptransfer tests
         And the database "gptransfer_testdb4" does not exist
         And the database "gptransfer_testdb5" does not exist
         And the database "gptest" does not exist
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/setup.sql -d template1"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/setup.sql -d template1"
         And the user "GPTRANSFER_SOURCE_USER" creates filespace_config file for "fs" on host "GPTRANSFER_SOURCE_HOST" with gpdb port "GPTRANSFER_SOURCE_PORT" and config "gpfilespace_config_src" in "HOME" directory
         And the user "GPTRANSFER_DEST_USER" creates filespace_config file for "fs" on host "GPTRANSFER_DEST_HOST" with gpdb port "GPTRANSFER_DEST_PORT" and config "gpfilespace_config_dest" in "HOME" directory
         And the user "GPTRANSFER_SOURCE_USER" creates filespace on host "GPTRANSFER_SOURCE_HOST" with gpdb port "GPTRANSFER_SOURCE_PORT" and config "gpfilespace_config_src" in "HOME" directory
         And the user "GPTRANSFER_DEST_USER" creates filespace on host "GPTRANSFER_DEST_HOST" with gpdb port "GPTRANSFER_DEST_PORT" and config "gpfilespace_config_dest" in "HOME" directory
-        And the user runs workload under "gppylib/test/behave/mgmt_utils/steps/data/gptransfer/pre/ddl" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d template1"
-        And the user runs workload under "gppylib/test/behave/mgmt_utils/steps/data/gptransfer/pre/dml" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d template1"
-        And the user runs workload under "gppylib/test/behave/mgmt_utils/steps/data/gptransfer/pre/filespace" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d template1"
+        And the user runs workload under "test/behave/mgmt_utils/steps/data/gptransfer/pre/ddl" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d template1"
+        And the user runs workload under "test/behave/mgmt_utils/steps/data/gptransfer/pre/dml" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d template1"
+        And the user runs workload under "test/behave/mgmt_utils/steps/data/gptransfer/pre/filespace" with connection "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d template1"
         And the user puts cluster on "GPTRANSFER_SOURCE_HOST" "GPTRANSFER_SOURCE_PORT" "GPTRANSFER_SOURCE_USER" in "resync"
         When the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 0
-        And run post verifying workload under "gppylib/test/behave/mgmt_utils/steps/data/gptransfer/post/ddl"
-        And run post verifying workload under "gppylib/test/behave/mgmt_utils/steps/data/gptransfer/post/dml"
-        And run post verifying workload under "gppylib/test/behave/mgmt_utils/steps/data/gptransfer/post/filespace"
+        And run post verifying workload under "test/behave/mgmt_utils/steps/data/gptransfer/post/ddl"
+        And run post verifying workload under "test/behave/mgmt_utils/steps/data/gptransfer/post/dml"
+        And run post verifying workload under "test/behave/mgmt_utils/steps/data/gptransfer/post/filespace"
         And the user puts cluster on "GPTRANSFER_SOURCE_HOST" "GPTRANSFER_SOURCE_PORT" "GPTRANSFER_SOURCE_USER" in "sync"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/teardown.sql -d template1"
 
     @T439821
    Scenario: gptransfer filespace exists test with --full -t and -d options
@@ -1370,7 +1369,7 @@ Feature: gptransfer tests
         And the database "gptest" does not exist
         And the user "GPTRANSFER_SOURCE_USER" creates filespace_config file for "fs" on host "GPTRANSFER_SOURCE_HOST" with gpdb port "GPTRANSFER_SOURCE_PORT" and config "gpfilespace_config_src" in "HOME" directory
         And the user "GPTRANSFER_SOURCE_USER" creates filespace on host "GPTRANSFER_SOURCE_HOST" with gpdb port "GPTRANSFER_SOURCE_PORT" and config "gpfilespace_config_src" in "HOME" directory
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/filespace_exists_test.sql -d template1"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/filespace_exists_test.sql -d template1"
         And psql should return a return code of 0
         And the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE > /tmp/gptransfer_stdout.txt --batch-size=10"
         Then gptransfer should return a return code of 2
@@ -1381,7 +1380,7 @@ Feature: gptransfer tests
         And the user runs "gptransfer -t gptransfer_filespace_test.public.t2 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE > /tmp/gptransfer_stdout.txt --batch-size=10"
         Then gptransfer should return a return code of 2
         And verify that the file "/tmp/gptransfer_stdout.txt" contains "Filespace 'fs' does not exist on destination. Please create the filespace to run gptransfer"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/filespace_exists_test_teardown.sql -d template1"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/filespace_exists_test_teardown.sql -d template1"
         And psql should return a return code of 0
 
     @T339870
@@ -1457,7 +1456,7 @@ Feature: gptransfer tests
     Scenario: test for new line character, double quote, single quote, comma, etc. for gptransfer in CSV format
         Given the database is running
         And the database "gptransfer_test_db" does not exist
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/gptransfer_test_db_data.sql -d template1"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/gptransfer_test_db_data.sql -d template1"
         Then psql should return a return code of 0
         And the user runs "gptransfer -t 'gptransfer_test_db.public.t1' --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -a --batch-size=10"
         Then gptransfer should return a return code of 0
@@ -1466,7 +1465,7 @@ Feature: gptransfer tests
     Scenario: Empty spaces in NOT NULL columns and NULL values are getting transferred correctly in CSV format
         Given the database is running
         And the database "gptransfer_test_db_one" does not exist
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/gptransfer_test_db_one_data.sql -d template1"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/gptransfer_test_db_one_data.sql -d template1"
         Then psql should return a return code of 0
         And the user runs "gptransfer -t 'gptransfer_test_db_one.public.table1' --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -a --batch-size=10"
         Then gptransfer should return a return code of 0
@@ -1477,7 +1476,7 @@ Feature: gptransfer tests
     Scenario: Empty spaces and NULL values are getting transferred correctly in TEXT format
         Given the database is running
         And the database "gptransfer_test_db_one" does not exist
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/gptransfer_test_db_one_data.sql -d template1"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/gptransfer_test_db_one_data.sql -d template1"
         Then psql should return a return code of 0
         And the user runs "gptransfer -t 'gptransfer_test_db_one.public.table1' --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -a --delimiter '\001' --format=text --batch-size=10"
         Then gptransfer should return a return code of 0
@@ -1489,9 +1488,9 @@ Feature: gptransfer tests
        Given the database is running
        And the database "gptransfer_testdb_table_count_one" does not exist
        And the database "gptransfer_testdb_table_count_two" does not exist
-       And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/gptransfer_test_table_count_data.sql -d template1"
+       And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/gptransfer_test_table_count_data.sql -d template1"
        Then psql should return a return code of 0
-       And the user runs "gptransfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/tablefiles.txt> /tmp/table_count_stdout.txt --batch-size=10"
+       And the user runs "gptransfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -f test/behave/mgmt_utils/steps/data/gptransfer/tablefiles.txt> /tmp/table_count_stdout.txt --batch-size=10"
        Then gptransfer should return a return code of 0
        And verify that the file "/tmp/table_count_stdout.txt" contains "Number of tables to transfer: 3"
        And verify that the file "/tmp/table_count_stdout.txt" contains "remaining 2 of 3 tables"
@@ -1501,9 +1500,9 @@ Feature: gptransfer tests
     Scenario: Gptransfer should not fail when schema already exists due to a failed run
        Given the database is running
        And the database "gptransfer_test_db_failed_schema" does not exist
-       And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/gptransfer_test_failed_schema.sql -d template1"
+       And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/gptransfer_test_failed_schema.sql -d template1"
        Then psql should return a return code of 0
-       And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/gptransfer_test_failed_schema_dest.sql -d template1"
+       And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/gptransfer_test_failed_schema_dest.sql -d template1"
        Then psql should return a return code of 0
        And the user runs "gptransfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -t gptransfer_test_db_failed_schema.public.t1> /tmp/gptransfer_stdout.txt --batch-size=10"
        Then gptransfer should return a return code of 0
@@ -1516,9 +1515,9 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/insert_into_employee.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/insert_into_employee.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.employee_1_prt_1, gptest.public.employee_1_prt_1"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 0
@@ -1530,8 +1529,8 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.employee_1_prt_other, gptest.public.employee"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 2
@@ -1543,8 +1542,8 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_prt_2.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_prt_2.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_prt_2.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_prt_2.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.sales_1_prt_2_2_prt_2, gptest.public.sales_1_prt_2"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 2
@@ -1556,8 +1555,8 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_prt_2.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_prt_2.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_prt_2.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_prt_2.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.sales_1_prt_2, gptest.public.sales_1_prt_2"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 2
@@ -1569,8 +1568,8 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.employee, gptest.public.employee_1_prt_boys"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 2
@@ -1582,8 +1581,8 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_prt_2.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_prt_2.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_prt_2.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_prt_2.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.sales_1_prt_2, gptest.public.sales_1_prt_2_2_prt_2"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 2
@@ -1595,7 +1594,7 @@ Feature: gptransfer tests
         Given the database is running
         And the database "gptest" does not exist
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_prt_2.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_prt_2.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.sales_1_prt_2_2_prt_2, gptest.public.sales_1_prt_p1_2_prt_1"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 2
@@ -1607,7 +1606,7 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_prt_2.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_prt_2.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.sales_1_prt_2_2_prt_2, gptest.nonexist_schema.sales_1_prt_p1_2_prt_1"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 2
@@ -1619,7 +1618,7 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_prt_2.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_prt_2.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.sales_1_prt_2_2_prt_2, gptest.public.nonexist_table"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 2
@@ -1631,7 +1630,7 @@ Feature: gptransfer tests
         Given the database is running
         And the database "nongptest" does not exist on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
         And database "gptest" exists
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
         And there is a file "input_file" with tables "nongptest.public.sales_1_prt_p1_2_prt_1, gptest.public.employee_1_prt_other"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 2
@@ -1643,7 +1642,7 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
         And there is a file "input_file" with tables "gptest.nonexist_schema.sales_1_prt_p1_2_prt_1, gptest.public.employee_1_prt_other"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 0
@@ -1655,7 +1654,7 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.nonexist_table, gptest.public.employee_1_prt_other"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 0
@@ -1667,8 +1666,8 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_range_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_range_prt_1.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.employee_1_prt_boys, gptest.public.employee_1_prt_1"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 2
@@ -1680,8 +1679,8 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_prt_2.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_range_prt_2.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_prt_2.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_range_prt_2.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.sales_1_prt_2_2_prt_2, gptest.public.sales_1_prt_2"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 2
@@ -1693,8 +1692,8 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_3.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_3.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.employee_1_prt_boys, gptest.public.employee_1_prt_boys"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 2
@@ -1706,8 +1705,8 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_2.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_4.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_2.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_4.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.employee_1_prt_main, gptest.public.employee_1_prt_main"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 2
@@ -1719,8 +1718,8 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_list_prt_1.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_list_prt_6.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_list_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_list_prt_6.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.sales_1_prt_2_2_prt_asia, gptest.public.sales_1_prt_2_2_prt_asia"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 2
@@ -1732,8 +1731,8 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_5.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_5.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.employee_1_prt_girls, gptest.public.employee_1_prt_girls"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 2
@@ -1745,8 +1744,8 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_list_prt_1.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_list_prt_6.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_list_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_list_prt_6.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.sales_1_prt_2_2_prt_asia, gptest.public.sales_1_prt_2_2_prt_asia"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 2
@@ -1758,10 +1757,10 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/create_one_level_range_prt_3.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/insert_into_employee.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/insert_into_e_employee.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/create_one_level_range_prt_3.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/create_one_level_range_prt_3.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/insert_into_employee.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/insert_into_e_employee.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/create_one_level_range_prt_3.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.employee_1_prt_1, gptest.public.e_employee_1_prt_1 | gptest.public.e_employee_1_prt_1, gptest.public.employee_1_prt_1"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 0
@@ -1774,8 +1773,8 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/create_heap_table.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/create_heap_table.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.heap_employee, gptest.public.employee_1_prt_boys"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 2
@@ -1787,9 +1786,9 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/create_one_level_row_oriented.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/insert_into_employee.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/create_one_level_column_oriented.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/create_one_level_row_oriented.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/insert_into_employee.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/create_one_level_column_oriented.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.employee_1_prt_other, gptest.public.employee_1_prt_other"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 0
@@ -1801,10 +1800,10 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/insert_into_employee.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/insert_into_employee.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/insert_into_employee.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/insert_into_employee.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.employee_1_prt_boys, gptest.public.employee_1_prt_boys"
         When the user runs "gptransfer -f input_file --partition-transfer --truncate --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -a --batch-size=10"
         Then gptransfer should return a return code of 0
@@ -1816,9 +1815,9 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/insert_into_employee.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/insert_into_employee.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.employee_1_prt_boys, gptest.public.employee_1_prt_boys"
         When the user runs "gptransfer -f input_file --partition-transfer --skip-existing --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -a --batch-size=10"
         Then gptransfer should return a return code of 0
@@ -1830,8 +1829,8 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/create_multi_column_partition_1.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/create_multi_column_partition_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.employee_1_prt_boys, gptest.public.employee_1_prt_boys"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -a --batch-size=10"
         Then gptransfer should return a return code of 2
@@ -1843,8 +1842,8 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/create_multi_column_partition_1.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/create_multi_column_partition_2.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/create_multi_column_partition_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/create_multi_column_partition_2.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.employee_1_prt_boys, gptest.public.employee_1_prt_boys"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -a --batch-size=10"
         Then gptransfer should return a return code of 0
@@ -1918,9 +1917,9 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/insert_into_employee.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1_with_namespace.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/insert_into_employee.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1_with_namespace.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.employee_1_prt_boys, gptest.schema1.employee_1_prt_boys"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -a --batch-size=10"
         Then gptransfer should return a return code of 0
@@ -1932,9 +1931,9 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1_with_namespace.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/insert_into_employee_with_namespace.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1_with_namespace.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/insert_into_employee_with_namespace.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
         And there is a file "input_file" with tables "gptest.schema1.employee_1_prt_boys, gptest.public.employee_1_prt_boys"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -a --batch-size=10"
         Then gptransfer should return a return code of 0
@@ -1946,9 +1945,9 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1_with_namespace.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/insert_into_employee_with_namespace.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1_with_namespace.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/insert_into_employee_with_namespace.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
         And there is a file "input_file" with tables "gptest.schema1.employee_1_prt_boys, gptest.public.employee_1_prt_boys|gptest.schema1.employee_1_prt_boys, gptest.public.employee_1_prt_boys"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -a --batch-size=10"
         Then gptransfer should return a return code of 0
@@ -1960,7 +1959,7 @@ Feature: gptransfer tests
     Scenario: gptransfer won't allow transferring between same partition table
         Given the database is running
         And database "gptest" exists
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_list_prt_1.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.employee_1_prt_boys, gptest.public.employee_1_prt_boys"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_DEST_PORT --source-host $GPTRANSFER_DEST_HOST --source-user $GPTRANSFER_DEST_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -a --batch-size=10"
         Then gptransfer should return a return code of 2
@@ -1972,9 +1971,9 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_list_prt_3.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/insert_into_sales.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_list_prt_7.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_list_prt_3.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/insert_into_sales.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_list_prt_7.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.sales_1_prt_asia_2_prt_2, gptest.public.sales_1_prt_asia_2_prt_2"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -a --batch-size=10"
         Then gptransfer should return a return code of 0
@@ -2049,8 +2048,8 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_list_prt_1.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_list_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_list_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_list_prt_1.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.sales_1_prt_2_2_prt_asia, gptest.public.sales_1_prt_2_2_prt_asia|gptest.public.sales_1_prt_3_2_prt_asia, gptest.public.sales_1_prt_3_2_prt_asia|gptest.public.sales_1_prt_2_2_prt_other_regions, gptest.public.sales_1_prt_2_2_prt_other_regions"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=1"
         Then gptransfer should return a return code of 0
@@ -2062,12 +2061,12 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_list_prt_1.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/drop_and_readd_column.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/two_level_range_list_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/drop_and_readd_column.sql -d gptest"
 		And the user runs "pg_dump -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -t public.sales -s gptest  > /tmp/mytab.sql"
         And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -c "DROP TABLE IF EXISTS sales" -d gptest"
         And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f /tmp/mytab.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/insert_into_sales_columns_reordered.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/insert_into_sales_columns_reordered.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.sales_1_prt_2_2_prt_asia, gptest.public.sales_1_prt_2_2_prt_asia"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 0
@@ -2079,14 +2078,14 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_range_prt_1.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_range_prt_1_different_col_order.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/insert_into_employee.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_range_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_range_prt_1_different_col_order.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/insert_into_employee.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.employee_1_prt_1, gptest.public.employee_1_prt_1"
         When the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 2
         And gptransfer should print Source partition table gptest.public.employee_1_prt_1 has different column layout or types from destination table gptest.public.employee_1_prt_1 to stdout
-        Then the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_range_prt_1_different_prt_column.sql -d gptest"
+        Then the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_range_prt_1_different_prt_column.sql -d gptest"
         And the user runs "gptransfer -f input_file --partition-transfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 2
         And gptransfer should print Partition column attributes are different at level to stdout
@@ -2096,7 +2095,7 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/distribution_test.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/distribution_test.sql -d gptest"
         And the user runs "gptransfer -t gptest.public.caps -t gptest.public.caps_with_dquote -t gptest.public.caps_with_dquote2 -t gptest.public.caps_with_dquote3 -t gptest.public.caps_with_dquote4 -t gptest.public.caps_with_squote -t gptest.public.randomkey --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --truncate -a --batch-size=10"
         Then gptransfer should return a return code of 0
 
@@ -2105,7 +2104,7 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/distribution_multiple_keys.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/distribution_multiple_keys.sql -d gptest"
         And the user runs "gptransfer -t gptest.public.table_distribution -t gptest.public.reverse_table_distribution --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --truncate -a --batch-size=10"
         Then gptransfer should return a return code of 0
         And the user runs "psql gptest -c '\d+ table_distribution'"
@@ -2135,9 +2134,9 @@ Feature: gptransfer tests
         Given the database is running
         And database "gptest" exists
         And database "gptest" is created if not exists on host "GPTRANSFER_SOURCE_HOST" with port "GPTRANSFER_SOURCE_PORT" with user "GPTRANSFER_SOURCE_USER"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/one_level_range_prt_1.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/insert_into_employee.sql -d gptest"
-        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer/create_heap_table.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/one_level_range_prt_1.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer/insert_into_employee.sql -d gptest"
+        And the user runs "psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -f test/behave/mgmt_utils/steps/data/gptransfer/create_heap_table.sql -d gptest"
         And there is a file "input_file" with tables "gptest.public.employee_1_prt_1, gptest.public.heap_employee | gptest.public.employee_1_prt_2, gptest.public.heap_employee"
         When the user runs "gptransfer -f input_file --partition-transfer-non-partition-target --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 0
@@ -2149,5 +2148,5 @@ Feature: gptransfer tests
 
     Scenario: gptransfer cleanup
         Given the database is running
-        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f gppylib/test/behave/mgmt_utils/steps/data/gptransfer_cleanup.sql -d template1"
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -f test/behave/mgmt_utils/steps/data/gptransfer_cleanup.sql -d template1"
         Then psql should return a return code of 0
