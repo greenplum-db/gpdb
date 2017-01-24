@@ -224,10 +224,21 @@ get_loadable_libraries(migratorContext *ctx)
 	PGresult  **ress;
 	int			totaltups;
 	int			dbnum;
+	char	   *pg83_str;
 
 	ress = (PGresult **)
 		pg_malloc(ctx, active_cluster->dbarr.ndbs * sizeof(PGresult *));
 	totaltups = 0;
+
+	/*
+	 * gpoptutils was removed during the 5.0 development cycle and the
+	 * functionality is now in backend, skip when checking for loadable
+	 * libraries in 4.3->5.0 upgrades.
+	 */
+	if (GET_MAJOR_VERSION(ctx->old.major_version) <= 802)
+		pg83_str = "probin NOT IN ('$libdir/gpoptutils') AND ";
+	else
+		pg83_str = "";
 
 	/* Fetch all library names, removing duplicates within each DB */
 	for (dbnum = 0; dbnum < active_cluster->dbarr.ndbs; dbnum++)
@@ -240,8 +251,10 @@ get_loadable_libraries(migratorContext *ctx)
 										"SELECT DISTINCT probin "
 										"FROM	pg_catalog.pg_proc "
 										"WHERE	prolang = 13 /* C */ AND "
-									 "		probin IS NOT NULL AND "
+										"		probin IS NOT NULL AND "
+										"		%s "
 										"		oid >= %u;",
+										pg83_str,
 										FirstNormalObjectId);
 		totaltups += PQntuples(ress[dbnum]);
 
