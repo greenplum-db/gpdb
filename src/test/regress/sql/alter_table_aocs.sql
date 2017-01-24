@@ -393,4 +393,5 @@ alter table aocs_multi_level_part_table split partition part3 at (date '2011-01-
 
 -- cleanup so as not to affect other installcheck tests
 -- (e.g. column_compression).
+set client_min_messages='WARNING';
 drop schema aocs_addcol cascade;
