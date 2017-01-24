@@ -248,6 +248,10 @@ make_room(migratorContext *ctx, char *page)
 		}
 	}
 
+	/* Ensure that we have a victim tuple here before assuming so */
+	if (victim_lp_len == -1)
+		pg_log(ctx, PG_FATAL, "victum tuple for moving wasn't found\n");
+
 	/* Cross-check */
 	if (oldhdr->pd_upper != victim_lp_off)
 		pg_log(ctx, PG_FATAL, "mismatch between lp_off in line pointers and pd_upper\n");
