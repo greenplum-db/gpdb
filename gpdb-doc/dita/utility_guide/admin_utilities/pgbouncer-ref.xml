@@ -539,7 +539,7 @@ db = ...
                     empty, as clients should not use any session features. If clients do use session
                     features, they will be broken because transaction pooling does not guarantee
                     that the next query will run on the same connection.</p><p>Default:
-                    <codeph>RESET ALL; SET SESSION AUTHORIZATION DEFAULT;</codeph></p></pd>
+                      <codeph>RESET ALL; SET SESSION AUTHORIZATION DEFAULT;</codeph></p></pd>
               </plentry>
               <plentry>
                 <pt>server_reset_query_always</pt>

@@ -4,8 +4,8 @@
 <topic id="topic1">
    <title id="ky142714">gpmfr</title>
    <body>
-      <p>Manages Pivotal Greenplum Database backup images that are stored on a local Data Domain
-         system and a remote Data Domain system that is used for disaster recovery. Managed file
+      <p>Manages the Greenplum Database backup images that are stored on a local Data Domain system
+         and a remote Data Domain system that is used for disaster recovery. Managed file
          replication is used for disaster recovery by the Data Domain Boost software option to
          transfer a backup image from one Data Domain system to another.</p>
       <section id="section2">
@@ -63,7 +63,7 @@
                Domain system.</li>
          </ul>
          <p>The Greenplum Database backup sets are identified by timestamps
-               (<codeph>yyyymmddhhmmss</codeph>).</p>
+               (<varname>yyyymmddhhmmss</varname>).</p>
          <p><codeph>gpmfr</codeph> attempts to schedule the replication task for the files in backup
             data set. It ensures that the limit on the maximum number of I/O streams used for
             replication is never exceeded. The I/O streams limit is set with the
@@ -93,7 +93,7 @@
                </pd>
             </plentry>
             <plentry>
-             <pt>--delete {LATEST | OLDEST | <varname>timestamp</varname>}</pt>
+               <pt>--delete {LATEST | OLDEST | <varname>timestamp</varname>}</pt>
                <pd>Deletes a Greenplum Database backup set from the local Data Domain system.
                   Specify the option <codeph>--remote</codeph> to delete the backup set from the
                   remote Data Domain system.</pd>

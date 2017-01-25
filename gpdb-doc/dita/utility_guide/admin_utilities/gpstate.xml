@@ -7,8 +7,8 @@
     <p>Shows the status of a running Greenplum Database system.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gpstate</b> [<b>-d</b> <varname>master_data_directory</varname>] [<b>-B</b> <varname>parallel_processes</varname>]
-          [<b>-s</b> | <b>-b</b> | <b>-Q</b><ph otherprops="gpdb"> | <b>-e</b>] [<b>-m</b> | <b>-c</b></ph>] [<b>-p</b>] [<b>-i</b>] [<b>-f</b>] [<b>-v</b> | <b>-q</b>]
+      <codeblock><b>gpstate</b> [<b>-d</b> <varname>master_data_directory</varname>] [<b>-B</b> <varname>parallel_processes</varname>] 
+          [<b>-s</b> | <b>-b</b> | <b>-Q</b><ph> | <b>-e</b>] [<b>-m</b> | <b>-c</b></ph>] [<b>-p</b>] [<b>-i</b>] [<b>-f</b>] [<b>-v</b> | <b>-q</b>] 
           [<b>-l</b> <varname>log_directory</varname>]
 
 <b>gpstate</b> <b>-?</b> | <b>-h</b> | <b>--help</b></codeblock>
@@ -51,7 +51,7 @@
           <pd>Optional. The master data directory. If not specified, the value set for
               <codeph>$MASTER_DATA_DIRECTORY</codeph> will be used.</pd>
         </plentry>
-        <plentry otherprops="gpdb">
+        <plentry>
           <pt>-e (show segments with mirror status issues)</pt>
           <pd>Show details on primary/mirror segment pairs that have potential issues such as 1) the
             active segment is running in change tracking mode, meaning a segment is down 2) the
@@ -73,7 +73,7 @@
           <pt>-l <varname>logfile_directory</varname></pt>
           <pd>The directory to write the log file. Defaults to <codeph>~/gpAdminLogs</codeph>.</pd>
         </plentry>
-        <plentry otherprops="gpdb">
+        <plentry>
           <pt>-m (list mirrors)</pt>
           <pd>Optional. List the mirror segment instances in the system, their current role, and
             synchronization status.</pd>
@@ -223,7 +223,7 @@
               <entry colname="col2">role at system initialization time: <varname>Mirror</varname> or
                   <varname>Primary</varname></entry>
             </row>
-            <row otherprops="gpdb">
+            <row>
               <entry colname="col1">Mirror Status</entry>
               <entry colname="col2">status of a primary/mirror segment
                     pair:<p><varname>Synchronized</varname> = data is up to date on both
@@ -231,27 +231,27 @@
                   from one to the other</p><p><varname>Change Tracking</varname> = segment down and
                   active segment is logging changes</p></entry>
             </row>
-            <row otherprops="gpdb">
+            <row>
               <entry colname="col1">Change tracking data size</entry>
               <entry colname="col2">when in <varname>Change Tracking</varname> mode, the size of the
                 change log file (may grow and shrink as compression is applied)</entry>
             </row>
-            <row otherprops="gpdb">
+            <row>
               <entry colname="col1">Estimated total data to synchronize</entry>
               <entry colname="col2">when in <varname>Resynchronization</varname> mode, the estimated
                 size of data left to syncronize</entry>
             </row>
-            <row otherprops="gpdb">
+            <row>
               <entry colname="col1">Data synchronized</entry>
               <entry colname="col2">when in <varname>Resynchronization</varname> mode, the estimated
                 size of data that has already been syncronized</entry>
             </row>
-            <row otherprops="gpdb">
+            <row>
               <entry colname="col1">Estimated resync progress with mirror</entry>
               <entry colname="col2">When in <varname>Resynchronization</varname> mode, the estimated
                 percentage of completion</entry>
             </row>
-            <row otherprops="gpdb">
+            <row>
               <entry colname="col1">Estimated resync end time</entry>
               <entry colname="col2">when in <varname>Resynchronization</varname> mode, the estimated
                 time to complete</entry>
@@ -362,7 +362,7 @@
       <codeblock>gpstate -s</codeblock>
       <p>Do a quick check for down segments in the master host system catalog:</p>
       <codeblock>gpstate -Q</codeblock>
-      <p otherprops="gpdb">Show information about mirror segment
+      <p>Show information about mirror segment
         instances:<codeblock>gpstate -m</codeblock></p>
       <p>Show information about the standby master configuration:</p>
       <codeblock>gpstate -f</codeblock>

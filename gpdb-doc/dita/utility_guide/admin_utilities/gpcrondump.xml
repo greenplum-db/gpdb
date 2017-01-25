@@ -58,6 +58,11 @@
       <p>By default, dump files are created in their respective master and segment data directories
         in a directory named <codeph>db_dumps/<varname>YYYYMMDD</varname></codeph>. The data dump
         files are compressed by default using <codeph>gzip</codeph>.</p>
+      <p>The utility backs up the database-level settings for the server configuration parameters
+          <codeph>gp_default_storage_options</codeph>, <codeph>optimizer</codeph>, and
+          <codeph>search_path</codeph>. The settings are restored when you restore the database with
+        the <codeph>gpdbrestore</codeph> utility and specify the <codeph>-e</codeph> option to
+        create an empty target database before performing a restore operation.</p>
       <p>After a backup operation completes, the utility checks the <codeph>gpcrondump</codeph>
         status file for SQL execution errors and displays a warning if an error is found. The
         default location of the backup status files are in the
@@ -130,9 +135,12 @@
     <section><b>Using NetBackup</b>
       <p>Veritas NetBackup integration is included with Pivotal Greenplum Database. Greenplum
         Database must be configured to communicate with the Veritas NetBackup master server that is
-        used to backup the database. See the <cite>Greenplum Database Administrator Guide</cite> for
-        information on configuring Greenplum Database and NetBackup and backing up and restoring
-        with NetBackup. </p></section>
+        used to backup the database. </p><p>When backing up a large amount of data, set the
+        NetBackup <codeph>CLIENT_READ_TIMEOUT</codeph> option to a value that is at least twice the
+        expected duration of the operation (in seconds). The <codeph>CLIENT_READ_TIMEOUT</codeph>
+        default value is <codeph>300</codeph> seconds (5 minutes).</p><p>See the <cite>Greenplum
+          Database Administrator Guide</cite> for information on configuring Greenplum Database and
+        NetBackup and backing up and restoring with NetBackup. </p></section>
     <section><b>About Return Codes</b>
       <p>The following is a list of the codes that <codeph>gpcrondump</codeph> returns.<ul
           id="ul_hhb_sqp_n4">
@@ -156,9 +164,9 @@
         </p><note>The UNIX mail utility must be running on Greenplum Database host and must be
         configured to allow the Greenplum superuser (<codeph>gpadmin</codeph>) to send
       email.</note></section>
-    <section><b>Limitations</b><p>EMC DD Boost is integrated with Pivotal Greenplum Database and
+    <section><b>Limitations</b><p>Dell EMC DD Boost is integrated with Pivotal Greenplum Database and
         requires a DD Boost license. Open source Greenplum Database cannot use the DD Boost
-        software, but can back up to an EMC Data Domain system mounted as an NFS share on the
+        software, but can back up to a Dell EMC Data Domain system mounted as an NFS share on the
         Greenplum master and segment hosts.</p><p>NetBackup is not compatible with DD Boost. Both
         NetBackup and DD Boost cannot be used in a single back up operation.</p><p>For incremental
         back up sets, a full backup and associated incremental backups, the backup set must be on a
@@ -327,7 +335,7 @@
             limits on the host and user names and prompts for the Data Domain Boost password. Enter
             the password when prompted; the password is not echoed on the screen. There is a
             40-character limit on the password that can include lowercase letters (a-z), uppercase
-, etc.).</pd>
+            letters (A-Z), numbers (0-9), and special characters ($, %, #, +, etc.).</pd>
           <pd>The system verifies the password. After the password is verified, the system creates
             encrypted <codeph>DDBOOST_CONFIG</codeph> files in the user's home directory.</pd>
           <pd>In the example, the <codeph>--ddboost-backupdir </codeph>option specifies the backup
@@ -374,7 +382,7 @@
             Domain systems. </pd>
         </plentry>
         <plentry>
-        <pt>--dump-stats</pt>
+          <pt>--dump-stats</pt>
           <pd>Specify this option to back up database statistics. The data is written to an SQL file
             and can be restored manually or with <codeph>gpdbrestore</codeph> utility. </pd>
           <pd>The statistics are written in the master data directory to
@@ -506,13 +514,13 @@ DROP and then re-create the table</pre><p>For
             if the <codeph>timestamp</codeph> does not specify a date and time that is more recent
             than all other backups in the set. </pd>
           <pd><codeph>--list-backup-files</codeph> is optional. When you specify both this option
-            and the <codeph>-K </codeph><codeph>timestamp</codeph> option,
+            and the <codeph>-K </codeph><codeph>timestamp</codeph> option,
               <codeph>gpcrondump</codeph> does not perform a backup. <codeph>gpcrondump</codeph>
             creates two text files that contain the names of the files that will be created when
               <codeph>gpcrondump</codeph> backs up a Greenplum database. The text files are created
             in the same location as the backup files. </pd>
           <pd>The file names use the <codeph>timestamp</codeph> specified by the
-              <codeph>-K </codeph><codeph>timestamp</codeph> option and have the suffix
+              <codeph>-K </codeph><codeph>timestamp</codeph> option and have the suffix
               <codeph>_pipes</codeph> and <codeph>_regular_files</codeph>. For example: </pd>
           <pd>
             <codeblock>gp_dump_20130514093000_pipes
@@ -550,7 +558,7 @@ gp_dump_20130514093000_regular_files</codeblock>
           <pd>Specify a <varname>keyword</varname> for the backup that is transferred to the Veritas
             NetBackup server. NetBackup adds the keyword property and the specified keyword value to
             the NetBackup .img files that are created for the backup.</pd>
-          <pd>The minimum length is 1 character, and the maximum length is 127 characters.</pd>
+          <pd>The maximum length of this parameter is 127 characters.</pd>
           <pd>NetBackup options are not supported if DDBoost backup options are specified.</pd>
         </plentry>
         <plentry>
@@ -558,7 +566,7 @@ gp_dump_20130514093000_regular_files</codeblock>
           <pd>The name of the NetBackup policy created for backing up Greenplum Database.</pd>
           <pd>NetBackup options are not supported if DDBoost backup options are specified.</pd>
           <pd>The maximum length of this parameter is 127 characters.</pd>
-      </plentry>
+        </plentry>
         <plentry>
           <pt>--netbackup-service-host <varname>netbackup_server</varname></pt>
           <pd>The NetBackup master server that Greenplum Database connects to when backing up to
@@ -760,7 +768,7 @@ gp_dump_20130514093000_regular_files</codeblock>
           <pt>-z (no compression)</pt>
           <pd>Do not use compression. Default is to compress the dump files using
               <codeph>gzip</codeph>.</pd>
-          <pd>Pivotal recommends this option (<codeph>-z</codeph>) be used for NFS and Data Domain
+          <pd>Use this option (<codeph>-z</codeph>) for NFS and Data Domain
             Boost backups.</pd>
         </plentry>
         <plentry>
@@ -825,7 +833,7 @@ EMAIL_DETAILS:
         of files listed in the file <codeph>user-tables</codeph>. The prefix
           <codeph>user_backup</codeph> identifies the backup set. </p>
       <codeblock>gpcrondump -x mydatabase --table-file=user-tables
-  --prefix user_backup</codeblock>
+  --prefix user_backup</codeblock>
       <p>To create an incremental backup for the full backup created in the previous example,
         specify the <codeph>--incremental</codeph> option and the option <codeph>--prefix
           user_backup</codeph> to identify backup set. This example creates an incremental

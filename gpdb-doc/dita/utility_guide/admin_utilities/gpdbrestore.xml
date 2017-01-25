@@ -11,16 +11,16 @@
       <codeblock><b>gpdbrestore</b> { <b>-t</b> <varname>timestamp_key</varname> { [<b>-L</b>] |
    [<b>--netbackup-service-host</b> <varname>netbackup_server</varname> 
    [<b>--netbackup-block-size</b> <varname>size</varname>] ] }
-   <b>-b</b> <varname>YYYYMMDD</varname> | <b>-R</b> <varname>hostname</varname>:<varname>path_to_dumpset</varname> | <b>-s</b> <varname>database_name</varname> } 
+   <b>-b</b> <varname>YYYYMMDD</varname> | <b>-R</b> <varname>hostname</varname>:<varname>path_to_dumpset</varname> | <b>-s</b> <varname>database_name</varname> } 
    [<b>--noplan</b>] [<b>--noanalyze</b>] [<b>-u</b> backup_directory] [<b>--list-backup</b>]
    [<b>--prefix prefix_string</b>] [<b>--report-status-dir</b> <varname>report_directory</varname>]
-   [<b>-S</b> <varname>schema_name </varname>]
-   [<b>-T</b> <varname>schema.table </varname>] [<b>--table-file</b> <varname>file_name</varname>] [<b>--truncate</b>] [<b>-e</b>]
+   [<b>-S</b> <varname>schema_name </varname>]
+   [<b>-T</b> <varname>schema.table </varname>] [<b>--table-file</b> <varname>file_name</varname>] [<b>--truncate</b>] [<b>-e</b>]
    [<b>-m</b>]
    [<b>-restore-stats</b> [<b>include</b> | <b>only</b>]]
    [<b>-G</b> [<b>include</b> | <b>only</b>]] [<b>--change-schema</b> <varname>schema_name</varname>] 
-   [<b>-B </b> <varname>parallel_processes</varname>] [<b>-d</b> <varname>master_data_directory</varname>] [<b>-a</b>] [<b>-q</b>] 
-   [<b>-l</b> <varname>logfile_directory</varname>] [<b>-v</b>]
+   [<b>-B </b> <varname>parallel_processes</varname>] [<b>-d</b> <varname>master_data_directory</varname>] [<b>-a</b>] [<b>-q</b>] 
+   [<b>-l</b> <varname>logfile_directory</varname>] [<b>-v</b>]
    [<b>--ddboost</b> [<b>--ddboost-storage-unit</b>=<varname>unit-ID</varname>] ]
    [<b>--redirect</b> <varname>database_name</varname> ]
 
@@ -70,6 +70,12 @@
         <li id="kr142590">Allows you to drop the target database before a restore in a single
           operation.</li>
       </ul>
+      <p>If the backups were created with Greenplum Database 4.3.11.2 or later, the backups contain
+        the database-level settings for the server configuration parameters
+          <codeph>gp_default_storage_options</codeph>, <codeph>optimizer</codeph>, and
+          <codeph>search_path</codeph>, the settings are restored when you perform a restore
+        operation and specify the <codeph>-e</codeph> option to create an empty target database
+        before performing a restore operation.</p>
       <note type="important">When restoring table data to an existing table, the utility assumes
         that the database table definition is the same as the table that was backed up. The utility
         does not check the table definitions.</note>
@@ -105,8 +111,12 @@
         server that is used to restore database data. See the <cite>Greenplum Database System
           Administrator Guide</cite> for information about configuring Greenplum Database and
         NetBackup.</p><p>When restoring from NetBackup server, you must specify the timestamp of the
-        backup with the <codeph>-t</codeph> option.</p><p>NetBackup is not compatible with DD Boost.
-        Both NetBackup and DD Boost cannot be used in a single back up operation.</p></section>
+        backup with the <codeph>-t</codeph> option.</p><p>When restoring a large amount of data, set
+        the NetBackup <codeph>CLIENT_READ_TIMEOUT</codeph> option to a value that is at least twice
+        the expected duration of the operation (in seconds). The
+          <codeph>CLIENT_READ_TIMEOUT</codeph> default value is <codeph>300</codeph> seconds (5
+        minutes).</p><p>NetBackup is not compatible with DD Boost. Both NetBackup and DD Boost
+        cannot be used in a single back up operation.</p></section>
     <section><b>Restoring a Database with Named Pipes</b>
       <p>If you used named pipes when you backed up a database with <codeph>gpcrondump</codeph>,
         named pipes with the backup data must be available when restoring the database from the
@@ -183,6 +193,10 @@
           <pd>Creates the target database and then performs a restore operation. If the target
             database exists, drops the existing database before creating the database and performing
             a restore operation. </pd>
+          <pd>If the backup is created with Greenplum Database 4.3.11.2 or later, the utility
+            restores database-level settings for the server configuration parameters
+              <codeph>gp_default_storage_options</codeph>, <codeph>optimizer</codeph>, and
+              <codeph>search_path</codeph>.</pd>
         </plentry>
         <plentry>
           <pt>-G [include | only] (restore global objects) </pt>

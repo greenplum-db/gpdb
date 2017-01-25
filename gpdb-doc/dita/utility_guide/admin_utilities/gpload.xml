@@ -7,11 +7,11 @@
         <p>Runs a load job as defined in a YAML formatted control file.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpload</b> <b>-f</b> <varname>control_file</varname> [<b>-l</b> <varname>log_file</varname>] [<b>-h</b> <varname>hostname</varname>] [<b>-p</b> <varname>port</varname>]
-   [<b>-U</b> <varname>username</varname>] [<b>-d</b> <varname>database</varname>] [<b>-W</b>] [<b>--gpfdist_timeout</b> <varname>seconds</varname>]
+            <codeblock><b>gpload</b> <b>-f</b> <varname>control_file</varname> [<b>-l</b> <varname>log_file</varname>] [<b>-h</b> <varname>hostname</varname>] [<b>-p</b> <varname>port</varname>] 
+   [<b>-U</b> <varname>username</varname>] [<b>-d</b> <varname>database</varname>] [<b>-W</b>] [<b>--gpfdist_timeout</b> <varname>seconds</varname>] 
    [<b>--no_auto_trans</b>] [[<b>-v</b> | <b>-V</b>] [<b>-q</b>]] [<b>-D</b>]
 
-<b>gpload</b> <b>-?</b>
+<b>gpload</b> <b>-?</b> 
 
 <b>gpload</b> <b>--version</b></codeblock>
         </section>
@@ -45,7 +45,7 @@
                 Greenplum Database external table parallel loading feature. Using a load
                 specification defined in a YAML formatted control file, <codeph>gpload</codeph>
                 executes a load by invoking the Greenplum Database parallel file server
-                        (<codeph><xref href="gpfdist.xml#topic1" type="topic" format="dita"
+                        (<codeph><xref href="gpfdist.xml" type="topic" format="dita"
                     /></codeph>), creating an external table definition based on the source data
                 defined, and executing an <codeph>INSERT</codeph>, <codeph>UPDATE</codeph> or
                     <codeph>MERGE</codeph> operation to load the source data into the target table
@@ -181,7 +181,7 @@
            - <varname>hostname_or_ip</varname>
          <xref href="#topic1/cfsourceport" format="dita">PORT</xref>: <varname>http_port</varname>
        | <xref href="#topic1/cfversion" format="dita">PORT_RANGE</xref>: [<varname>start_port_range</varname>, <varname>end_port_range</varname>]
-         <xref href="#topic1/cfsourcefile" format="dita">FILE</xref>:
+         <xref href="#topic1/cfsourcefile" format="dita">FILE</xref>: 
            - <varname>/path/to/input_file</varname>
          <xref href="#topic1/cfsourcessl" format="dita">SSL</xref>: true | false
          <xref href="#topic1/cfsourcecertificatespath" format="dita">CERTIFICATES_PATH</xref>: <varname>/path/to/certificates</varname>
@@ -189,8 +189,8 @@
     - <xref href="#topic1/cfcolumns" format="dita">COLUMNS</xref>:
            - <varname>field_name</varname>: <varname>data_type</varname>
     - <xref href="#topic1/cftransform" format="dita">TRANSFORM</xref>: '<varname>transformation</varname>'
-    - <xref href="#topic1/cftransformconfig" format="dita">TRANSFORM_CONFIG</xref>: '<varname>configuration-file-path</varname>'
-    - <xref href="#topic1/cfmaxlinelength" format="dita">MAX_LINE_LENGTH</xref>: <varname>integer</varname>
+    - <xref href="#topic1/cftransformconfig" format="dita">TRANSFORM_CONFIG</xref>: '<varname>configuration-file-path</varname>' 
+    - <xref href="#topic1/cfmaxlinelength" format="dita">MAX_LINE_LENGTH</xref>: <varname>integer</varname> 
     - <xref href="#topic1/cfformat" format="dita">FORMAT</xref>: text | csv
     - <xref href="#topic1/cfdelimiter" format="dita">DELIMITER</xref>: '<varname>delimiter_character</varname>'
     - <xref href="#topic1/cfescape" format="dita">ESCAPE</xref>: '<varname>escape_character</varname>' | 'OFF'
@@ -582,7 +582,7 @@
                                                   <codeph>gpload</codeph> generates a warning
                                                 message with the name of the table that contains the
                                                 error information similar to this message.
-                                                <codeblock><varname>timestamp</varname>|WARN|1 bad row, please use GPDB built-in function gp_read_error_log('<parmname>table-name</parmname>')
+                                                <codeblock><varname>timestamp</varname>|WARN|1 bad row, please use GPDB built-in function gp_read_error_log('<parmname>table-name</parmname>') 
    to access the detailed error row</codeblock></pd>
                                             <pd>If <codeph>LOG_ERRORS: true</codeph> is specified,
                                                   <codeph>REUSE TABLES: true</codeph> must be
@@ -621,8 +621,8 @@
                                             <pd>Only <codeph>LOG_ERRORS</codeph> or
                                                   <codeph>ERROR_TABLE</codeph> can be specified. If
                                                 both are specified, an error message is returned.
-                                                Using <codeph>LOG_ERRORS</codeph>
-                                                to capture formatting errors is recommended. </pd>
+                                                Use <codeph>LOG_ERRORS</codeph>
+                                                to capture formatting errors. </pd>
                                             <pd>For more information about handling load errors, see
                                                 "Loading and Unloading Data" in the <cite>Greenplum
                                                   Database Administrator Guide</cite>.</pd>
@@ -632,7 +632,7 @@
                                             <pd>Optional. Defines the schema of the external table
                                                 database objects created by <codeph>gpload</codeph>. </pd>
                                             <pd>The default is to use the Greenplum Database
-                                                <codeph>search_path</codeph>. </pd>
+                                                  <codeph>search_path</codeph>. </pd>
                                             <pd>
                                                 <parml>
                                                   <plentry>
@@ -844,7 +844,7 @@ GPLOAD:
            - etl1-3
            - etl1-4
          PORT: 8081
-         FILE:
+         FILE: 
            - /var/load/data/*
     - COLUMNS:
            - name: text
@@ -860,9 +860,9 @@ GPLOAD:
     - TABLE: payables.expenses
     - MODE: INSERT
    SQL:
-   - BEFORE: "INSERT INTO audit VALUES('start',
+   - BEFORE: "INSERT INTO audit VALUES('start', 
 current_timestamp)"
-   - AFTER: "INSERT INTO audit VALUES('end',
+   - AFTER: "INSERT INTO audit VALUES('end', 
 current_timestamp)"</codeblock>
         </section>
         <section id="section11">

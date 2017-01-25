@@ -567,7 +567,7 @@ testdb=#</codeblock>
           <pd>Stores the file into a large object. Optionally, it associates the given comment with
             the object. Example:</pd>
           <pd>
-            <codeblock>mydb=&gt; \lo_import '/home/gpadmin/pictures/photo.xcf' 'a
+            <codeblock>mydb=&gt; \lo_import '/home/gpadmin/pictures/photo.xcf' 'a 
 picture of me'
 lo_import 152801</codeblock>
           </pd>
@@ -913,7 +913,7 @@ bar</codeblock>
           <plentry>
             <pt>ECHO_HIDDEN</pt>
             <pd>When this variable is set and a backslash command queries the database, the query is
-              first shown. This way you can study the Greenplum DatabaseGreenplum Database internals and
+              first shown. This way you can study the Greenplum Database internals and
               provide similar functionality in your own programs. (To select this behavior on
               program start-up, use the switch <codeph>-E</codeph>.) If you set the variable to the
               value <codeph>noexec</codeph>, the queries are just shown but are not actually sent to
@@ -1057,11 +1057,11 @@ testdb=&gt; INSERT INTO my_table VALUES (:content);</codeblock>
         <p>One problem with this approach is that <codeph>my_file.txt</codeph> might contain single
           quotes. These need to be escaped so that they don't cause a syntax error when the second
           line is processed. This could be done with the program <codeph>sed</codeph>:</p>
-        <codeblock>testdb=&gt; \set content '''' `sed -e "s/'/''/g" &lt; my_file.txt`
+        <codeblock>testdb=&gt; \set content '''' `sed -e "s/'/''/g" &lt; my_file.txt` 
 ''''</codeblock>
         <p>If you are using non-standard-conforming strings then you'll also need to double
           backslashes. This is a bit tricky:</p>
-        <codeblock>testdb=&gt; \set content '''' `sed -e "s/'/''/g" -e
+        <codeblock>testdb=&gt; \set content '''' `sed -e "s/'/''/g" -e 
 's/\\/\\\\/g' &lt; my_file.txt` ''''</codeblock>
         <p>Note the use of different shell quoting conventions so that neither the single quote
           marks nor the backslashes are special to the shell. Backslashes are still special to

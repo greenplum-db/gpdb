@@ -3,7 +3,7 @@
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1"><title id="pe137116">dropuser</title><body><p id="client_util_desc">Removes a database role.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>dropuser</b> [<varname>connection_option</varname> ...] [<b>-e</b>] [<b>-i</b>] <varname>role_name</varname>
 
-<b>dropuser</b> <b>--help</b>
+<b>dropuser</b> <b>--help</b> 
 
 <b>dropuser</b> <b>--version</b></codeblock></section><section id="section3"><title>Description</title><p><codeph>dropuser</codeph> removes an existing role from Greenplum Database. Only
         superusers and users with the <codeph>CREATEROLE</codeph> privilege can remove roles. To
@@ -25,7 +25,7 @@ and a peek at the underlying command:</p><codeblock><b>dropuser -p 54321 -h mast
 Role "joe" will be permanently removed.
 Are you sure? (y/n) <b>y</b>
 DROP ROLE "joe"
-DROP ROLE</codeblock></section><section id="section7" otherprops="gpdb">
+DROP ROLE</codeblock></section><section id="section7">
       <title>See Also</title>
       <p><ph otherprops="op-print"><codeph>DROP ROLE</codeph> in the <i>Greenplum Database Reference
             Guide</i></ph><ph otherprops="op-help"><codeph><xref

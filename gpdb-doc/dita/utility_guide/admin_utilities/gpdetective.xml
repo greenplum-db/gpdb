@@ -9,17 +9,17 @@
       release.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gpdetective</b> [<b>-h</b> <varname>hostname</varname>] [<b>-p</b> <varname>port</varname>] [<b>-U</b> <varname>username</varname>] [<b>-P</b> <varname>password</varname>]
-     [<b>--start_date</b> <varname>number_of_days</varname> | <varname>YYYY-MM-DD</varname>]
+      <codeblock><b>gpdetective</b> [<b>-h</b> <varname>hostname</varname>] [<b>-p</b> <varname>port</varname>] [<b>-U</b> <varname>username</varname>] [<b>-P</b> <varname>password</varname>] 
+     [<b>--start_date</b> <varname>number_of_days</varname> | <varname>YYYY-MM-DD</varname>] 
      [<b>--end_date</b> <varname>YYYY-MM-DD</varname>]
-     [<b>--diagnostics</b> a|n|s|o|c]
-     [<b>--logs</b> a|n|<varname>dbid</varname> [,<varname>dbid</varname>,... | -<varname>dbid</varname>]]
+     [<b>--diagnostics</b> a|n|s|o|c] 
+     [<b>--logs</b> a|n|<varname>dbid</varname> [,<varname>dbid</varname>,... | -<varname>dbid</varname>]] 
      [<b>--cores</b> t|f]
-     [<b>--pg_dumpall</b> t|f] [<b>--pg_dump_options</b> <varname>option</varname>[,...]]
-     [<b>--tempdir</b> <varname>temp_dir</varname>]
+     [<b>--pg_dumpall</b> t|f] [<b>--pg_dump_options</b> <varname>option</varname>[,...]] 
+     [<b>--tempdir</b> <varname>temp_dir</varname>] 
      [<b>--connect</b> t|f]
 
-<b>gpdetective</b> <b>-v</b>
+<b>gpdetective</b> <b>-v</b> 
 
 <b>gpdetective</b> <b>-?</b></codeblock>
     </section>
@@ -27,7 +27,7 @@
       <title>Description</title>
       <p>The <codeph>gpdetective</codeph> utility collects information from a running Greenplum
         Database system and creates a bzip2-compressed tar output file. This output file can then be
-        sent to Pivotal Support to help with the diagnosis of Greenplum Database errors
+        sent to Greenplum Customer Support to help with the diagnosis of Greenplum Database errors
         or system failures. The <codeph>gpdetective</codeph> utility runs the following diagnostic
         tests:</p>
       <ul>

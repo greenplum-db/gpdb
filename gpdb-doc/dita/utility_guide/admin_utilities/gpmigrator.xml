@@ -12,11 +12,11 @@
     <section id="section2">
       <title>Synopsis</title>
       <codeblock><b>gpmigrator</b> <varname>old_GPHOME_path</varname> <varname>new_GPHOME_path</varname>
-           [<b>-d</b> <varname>master_data_directory</varname>]
-           [<b>-l</b> <varname>logfile_directory</varname>] [<b>-q</b>] [<b>--debug</b>]
+           [<b>-d</b> <varname>master_data_directory</varname>] 
+           [<b>-l</b> <varname>logfile_directory</varname>] [<b>-q</b>] [<b>--debug</b>] 
            [<b>--check-only</b>] [<b>--skip-check</b>] [<b>-R</b>]
 
-<b>gpmigrator</b> <b>--version</b> | <b>-v</b>
+<b>gpmigrator</b> <b>--version</b> | <b>-v</b> 
 
 <b>gpmigrator</b> <b>--help</b> | <b>-h</b></codeblock>
     </section>

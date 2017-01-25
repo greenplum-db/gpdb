@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="pg137116">reindexdb</title><body><p id="client_util_desc">Rebuilds indexes in a database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>reindexdb</b> [<varname>connection-option</varname> ...] [<b>--table</b> | <b>-t</b> <varname>table</varname> ]
+<topic id="topic1"><title id="pg137116">reindexdb</title><body><p id="client_util_desc">Rebuilds indexes in a database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>reindexdb</b> [<varname>connection-option</varname> ...] [<b>--table</b> | <b>-t</b> <varname>table</varname> ] 
         [<b>--index</b> | <b>-i</b> <varname>index</varname> ] [<varname>dbname</varname>]
 
 <b>reindexdb</b> [<varname>connection-option</varname> ...] [<b>--all</b> | <b>-a</b>]
 
 <b>reindexdb</b> [<varname>connection-option</varname> ...] [<b>--system</b> | <b>-s</b>] [<varname>dbname</varname>]
 
-<b>reindexdb</b> <b>--help</b>
+<b>reindexdb</b> <b>--help</b> 
 
 <b>reindexdb</b> <b>--version</b></codeblock></section><section id="section3"><title>Description</title><p><codeph>reindexdb</codeph> is a utility for rebuilding indexes in Greenplum Database, and is a wrapper around the SQL command <codeph>REINDEX</codeph>. </p></section><section id="section4"><title>Options</title><parml><plentry><pt>-a | --all</pt><pd>Reindex all databases.</pd></plentry><plentry><pt>[-d] <varname>dbname</varname> | [--dbname] <varname>dbname</varname></pt><pd>Specifies the name of the database to be reindexed. If this is not specified and
               <codeph>-all</codeph> is not used, the database name is read from the environment
@@ -26,7 +26,7 @@ file, the connection attempt will fail. This option can be useful in
 batch jobs and scripts where no user is present to enter a password.</pd></plentry><plentry><pt>-W | --password</pt><pd>Force a password prompt.</pd></plentry></parml></sectiondiv></section><section id="section6"><title>Notes</title><p><codeph>reindexdb</codeph> might need to connect several times to the
 master server, asking for a password each time. It is convenient to have
 a <codeph>~/.pgpass</codeph> file in such cases. </p></section><section id="section7"><title>Examples</title><p>To reindex the database <codeph>mydb</codeph>:</p><codeblock>reindexdb mydb</codeblock><p>To reindex the table <codeph>foo</codeph> and the index <codeph>bar</codeph> in a database named
-          <codeph>abcd</codeph>:</p><codeblock>reindexdb --table foo --index bar abcd</codeblock></section><section id="section8" otherprops="gpdb">
+          <codeph>abcd</codeph>:</p><codeblock>reindexdb --table foo --index bar abcd</codeblock></section><section id="section8">
       <title>See Also</title>
       <p><ph otherprops="op-print"><codeph>REINDEX</codeph> in the <i>Greenplum Database Reference
             Guide</i></ph><ph otherprops="op-help"><codeph><xref

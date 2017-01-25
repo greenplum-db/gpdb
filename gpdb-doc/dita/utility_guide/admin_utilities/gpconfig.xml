@@ -37,15 +37,15 @@
         add it back (set a new value), there will be two instances of the parameter; one that is
         commented out, and one that is enabled and inserted at the bottom of the
           <codeph>postgresql.conf</codeph> file.</p>
-      <p>After setting a parameter, you must restart your  system or
+      <p>After setting a parameter, you must restart your Greenplum Database system or
         reload the <codeph>postgresql.conf</codeph> files in order for the change to take effect.
         Whether you require a restart or a reload depends on the parameter. </p>
-      <p otherprops="gpdb">For more information about the server configuration parameters, see the
+      <p>For more information about the server configuration parameters, see the
           <i>Greenplum Database Reference Guide</i>.</p>
       <p>To show the currently set values for a parameter across the system, use the
           <codeph>-s</codeph> option.</p>
       <p><codeph>gpconfig</codeph> uses the following environment variables to connect to the
-        Greenplum Database master instance and obtain system configuration
+          Greenplum Database master instance and obtain system configuration
         information: </p>
       <ul>
         <li id="kq141888">
@@ -139,18 +139,18 @@
     </section>
     <section id="section5">
       <title>Examples</title>
-      <p otherprops="gpdb">Set the <codeph>gp_snmp_community</codeph> parameter to
+      <p>Set the <codeph>gp_snmp_community</codeph> parameter to
           <codeph>testenv</codeph> in the master host file
         only:<codeblock>gpconfig -c gp_snmp_community -v testenv --masteronly</codeblock></p>
       <p>Set the <codeph>max_connections</codeph> setting to 100 on all segments and 10 on the
         master:</p>
       <codeblock>gpconfig -c max_connections -v 100 -m 10</codeblock>
-      <p otherprops="gpdb">Set the server configuration parameters <codeph>gp_email_to</codeph> and
+      <p>Set the server configuration parameters <codeph>gp_email_to</codeph> and
           <codeph>gp_email_from</codeph>. These parameters require single quotes around the values.
         When you specify the values for the parameters, enclose the values with double quotes
           (<codeph>"</codeph>).<codeblock>$ gpconfig -c gp_email_from -v "'gpdb-server@example.com'"
 $ gpconfig -c gp_email_to -v "'gpdb-admin@example.com'"</codeblock></p>
-      <p otherprops="gpdb">In the <codeph>postgresql.conf</codeph> file, the parameters are set
+      <p>In the <codeph>postgresql.conf</codeph> file, the parameters are set
         correctly, with single quotes around the
         values:<codeblock>gp_email_from='gpdb-server@example.com'
 gp_email_to='gpdb-admin@example.com'</codeblock></p>

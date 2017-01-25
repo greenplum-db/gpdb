@@ -8,9 +8,9 @@
     <section id="section2">
       <title>Synopsis</title>
       <codeblock><b>gpexpand</b> [{<b>-f</b>|<b>--hosts-file</b>} <varname>hosts_file</varname>]
-        | {<b>-i</b>|<b>--input</b>} <varname>input_file</varname> [<b>-B</b> <varname>batch_size</varname>] [<b>-V</b>|<b>--novacuum</b>]
-        | {{<b>-d</b> | <b>--duration</b>} <varname>hh:mm:ss</varname> | {<b>-e</b>|<b>--end</b>} '<varname>YYYY-MM-DD hh:mm:ss</varname>'}
-          [<b>-a</b>|<b>-analyze</b>]
+        | {<b>-i</b>|<b>--input</b>} <varname>input_file</varname> [<b>-B</b> <varname>batch_size</varname>] [<b>-V</b>|<b>--novacuum</b>] 
+        | {{<b>-d</b> | <b>--duration</b>} <varname>hh:mm:ss</varname> | {<b>-e</b>|<b>--end</b>} '<varname>YYYY-MM-DD hh:mm:ss</varname>'} 
+          [<b>-a</b>|<b>-analyze</b>] 
           [<b>-n </b> <varname>parallel_processes</varname>]
         | {<b>-r</b>|<b>--rollback</b>}
         | {<b>-c</b>|<b>--clean</b>}
@@ -18,7 +18,7 @@
         [{<b>-t</b>|<b>--tardir</b>} <varname>directory </varname>]
         [<b>-S</b>|<b>--simple-progress </b>]
 
-<b>gpexpand -?</b> | <b>-h</b> | <b>--help</b>
+<b>gpexpand -?</b> | <b>-h</b> | <b>--help</b> 
 
 <b>gpexpand --version</b></codeblock>
     </section>
@@ -119,7 +119,7 @@
           <pd>This file can contain hostnames with or without network interfaces specified. The
               <codeph>gpexpand</codeph> utility handles either case, adding interface numbers to end
             of the hostname if the original nodes are configured with multiple network
-              interfaces.<note otherprops="gpdb">The Greenplum Database segment host naming
+              interfaces.<note>The Greenplum Database segment host naming
               convention is <codeph>sdwN</codeph> where <codeph>sdw</codeph> is a prefix and
                 <codeph>N</codeph> is an integer. For example, on a Greenplum Database DCA system,
               segment host names would be <codeph>sdw1</codeph>, <codeph>sdw2</codeph> and so on.

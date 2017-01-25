@@ -3,12 +3,12 @@
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1"><title id="pc137116">dropdb</title><body><p id="client_util_desc">Removes a database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>dropdb</b> [<varname>connection_option</varname> ...] [<b>-e</b>] [<b>-i</b>] <varname>dbname</varname>
 
-<b>dropdb</b> <b>--help</b>
+<b>dropdb</b> <b>--help</b> 
 
 <b>dropdb</b> <b>--version</b></codeblock></section><section id="section3"><title>Description</title><p><codeph>dropdb</codeph> destroys an existing database. The user who
 executes this command must be a superuser or the owner of the database
 being dropped. </p><p><codeph>dropdb</codeph> is a wrapper around the SQL command <codeph>DROP DATABASE</codeph>. <ph
-                                        otherprops="gpdb">See the <i>Greenplum Database Reference
+                                       >See the <i>Greenplum Database Reference
                                                 Guide</i> for information about <codeph>DROP
                                                 DATABASE.</codeph></ph></p></section><section id="section4"><title>Options</title><parml><plentry><pt><varname>dbname</varname></pt><pd>The name of the database to be removed.</pd></plentry><plentry><pt>-e | --echo</pt><pd>Echo the commands that <codeph>dropdb</codeph> generates and sends
 to the server. </pd></plentry><plentry><pt>-i | --interactive</pt><pd>Issues a verification prompt before doing anything destructive. </pd></plentry></parml><sectiondiv id="section5"><b>Connection Options</b><parml><plentry><pt>-h <varname>host</varname> | --host <varname>host</varname></pt><pd>The host name of the machine on which the Greenplum master database
@@ -27,7 +27,7 @@ batch jobs and scripts where no user is present to enter a password.</pd></plent
 Database "demo" will be permanently deleted.
 Are you sure? (y/n) <b>y</b>
 DROP DATABASE "demo"
-DROP DATABASE</codeblock></section><section id="section7" otherprops="gpdb">
+DROP DATABASE</codeblock></section><section id="section7">
                         <title>See Also</title>
                         <p><ph otherprops="op-print"><codeph>DROP DATABASE</codeph> in the
                                                 <i>Greenplum Database Reference Guide</i></ph><ph

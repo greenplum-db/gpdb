@@ -4,8 +4,8 @@
 <topic id="topic1">
     <title id="or137116">pg_dumpall</title>
     <body>
-        <p id="client_util_desc">Extracts all databases in a Greenplum Database system to a single
-            script file or other archive file.</p>
+        <p id="client_util_desc">Extracts all databases in a Greenplum Database system
+            to a single script file or other archive file.</p>
         <section id="section2">
             <title>Synopsis</title>
             <codeblock id="client_util_synopsis"><b>pg_dumpall</b> [<varname>connection_option</varname> ...] [<varname>dump_option</varname> ...]</codeblock>
@@ -13,12 +13,12 @@
         <section id="section3">
             <title>Description</title>
             <p><codeph>pg_dumpall</codeph> is a standard PostgreSQL utility for backing up all
-                databases in a Greenplum Database (or PostgreSQL) instance, and is also supported in
-                Greenplum Database. It creates a single (non-parallel) dump file. <ph
-                    otherprops="gpdb">For routine backups of Greenplum Database it is better to use
-                    the Greenplum Database backup utility, <codeph><xref
-                            href="../admin_utilities/gpcrondump.xml#topic1"/></codeph>, for the best
-                    performance.</ph></p>
+                databases in a Greenplum Database (or PostgreSQL) instance, and is
+                also supported in Greenplum Database. It creates a single
+                (non-parallel) dump file. <ph>For routine backups of Greenplum
+                    Database it is better to use the Greenplum Database backup utility,
+                            <codeph><xref href="../admin_utilities/gpcrondump.xml#topic1"
+                    /></codeph>, for the best performance.</ph></p>
             <p><codeph>pg_dumpall</codeph> creates a single script file that contains SQL commands
                 that can be used as input to <codeph><xref href="psql.xml#topic1" type="topic"
                         format="dita"/></codeph> to restore the databases. It does this by calling
@@ -33,10 +33,9 @@
                 allowed to add users and groups, and to create databases.</p>
             <p>The SQL script will be written to the standard output. Shell operators should be used
                 to redirect it into a file.</p>
-            <p><codeph>pg_dumpall</codeph> needs to connect several times to the Greenplum Database
-                master server (once per database). If you use password authentication it is likely
-                to ask for a password each time. It is convenient to have a
-                    <codeph>~/.pgpass</codeph> file in such cases.</p>
+            <p><codeph>pg_dumpall</codeph> needs to connect several times to the Greenplum Database master server (once per database). If you use password
+                authentication it is likely to ask for a password each time. It is convenient to
+                have a <codeph>~/.pgpass</codeph> file in such cases.</p>
             <note>The <codeph>--ignore-version</codeph> option is deprecated and will be removed in
                 a future release.</note>
         </section>
@@ -102,9 +101,9 @@
                                 release.</note>Ignore version mismatch between <codeph><xref
                                     href="pg_dump.xml#topic1" type="topic" format="dita"/></codeph>
                             and the database server. <codeph>pg_dump</codeph> can dump from servers
-                            running previous releases of Greenplum Database (or PostgreSQL), but
-                            very old versions may not be supported anymore. Use this option if you
-                            need to override the version check.</pd>
+                            running previous releases of Greenplum Database (or
+                            PostgreSQL), but very old versions may not be supported anymore. Use
+                            this option if you need to override the version check.</pd>
                     </plentry>
                     <plentry>
                         <pt>-o | --oids</pt>
@@ -142,8 +141,8 @@
                         <pd>Specify the superuser user name to use when disabling triggers. This is
                             only relevant if <codeph>--disable-triggers</codeph> is used. It is
                             better to leave this out, and instead start the resulting script as a
-                                superuser.<note>Greenplum Database does not support user-defined
-                                triggers.</note></pd>
+                                    superuser.<note>Greenplum Database does not
+                                support user-defined triggers.</note></pd>
                     </plentry>
                     <plentry>
                         <pt>-v | --verbose</pt>
@@ -172,7 +171,8 @@
                                 <codeph>--disable-triggers</codeph> must be done as superuser. So,
                             you should also specify a superuser name with <codeph>-S</codeph>, or
                             preferably be careful to start the resulting script as a
-                                superuser.<note> does not support user-defined triggers.</note></pd>
+                                    superuser.<note>Greenplum Database does not
+                                support user-defined triggers.</note></pd>
                     </plentry>
                     <plentry>
                         <pt>--use-set-session-authorization</pt>
@@ -186,11 +186,11 @@
                     </plentry>
                     <plentry>
                         <pt>--gp-syntax</pt>
-                        <pd>Output Greenplum Database syntax in the <codeph>CREATE TABLE</codeph>
-                            statements. This allows the distribution policy (<codeph>DISTRIBUTED
-                                BY</codeph> or <codeph>DISTRIBUTED RANDOMLY</codeph> clauses) of a
-                            Greenplum Database table to be dumped, which is useful for restoring
-                            into other Greenplum Database systems.</pd>
+                        <pd>Output Greenplum Database syntax in the <codeph>CREATE
+                                TABLE</codeph> statements. This allows the distribution policy
+                                (<codeph>DISTRIBUTED BY</codeph> or <codeph>DISTRIBUTED
+                                RANDOMLY</codeph> clauses) of a Greenplum Database
+                            table to be dumped, which is useful for restoring into other Greenplum Database systems.</pd>
                     </plentry>
                 </parml>
             </sectiondiv>
@@ -199,16 +199,17 @@
                 <parml>
                     <plentry>
                         <pt>-h <varname>host</varname> | --host <varname>host</varname></pt>
-                        <pd>The host name of the machine on which the Greenplum Database master
-                            database server is running. If not specified, reads from the environment
-                            variable <codeph>PGHOST</codeph> or defaults to
-                                <codeph>localhost</codeph>.</pd>
+                        <pd>The host name of the machine on which the Greenplum master database server is running. If
+                            not specified, reads from the environment variable
+                                <codeph>PGHOST</codeph> or defaults to
+                            <codeph>localhost</codeph>.</pd>
                     </plentry>
                     <plentry>
                         <pt>-p <varname>port</varname> | --port <varname>port</varname></pt>
-                        <pd>The TCP port on which the Greenplum master database server is listening
-                            for connections. If not specified, reads from the environment variable
-                                <codeph>PGPORT</codeph> or defaults to 5432.</pd>
+                        <pd>The TCP port on which the Greenplum master
+                            database server is listening for connections. If not specified, reads
+                            from the environment variable <codeph>PGPORT</codeph> or defaults to
+                            5432.</pd>
                     </plentry>
                     <plentry>
                         <pt>-U <varname>username</varname> | --username

@@ -4,7 +4,11 @@
 <topic xml:lang="en-us" id="about">
    <title>Copyright</title>
    <body outputclass="db.chapter">
-      <p>Copyright © 2016 Pivotal Software, Inc. All rights reserved.</p>
+      <p>
+         <xref href="http://pivotal.io/privacy-policy" format="html" scope="external">Privacy
+            Policy</xref> | <xref href="http://pivotal.io/terms-of-use" format="html"
+            scope="external">Terms of Use</xref></p>
+      <p>Copyright © 2017 Pivotal Software, Inc. All rights reserved.</p>
       <p>Pivotal Software, Inc. believes the information in this publication is accurate as of its
          publication date. The information is subject to change without notice. THE INFORMATION IN
          THIS PUBLICATION IS PROVIDED "AS IS." PIVOTAL SOFTWARE, INC. ("Pivotal") MAKES NO
@@ -15,6 +19,6 @@
          requires an applicable software license.</p>
       <p>All trademarks used herein are the property of Pivotal or their respective owners.</p>
       <p> </p>
-      <p>Revised October 2016 (4.3.10.0)</p>
+      <p>Revised January 2017 (4.3.11.2)</p>
    </body>
 </topic>

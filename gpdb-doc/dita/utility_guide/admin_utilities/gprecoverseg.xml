@@ -71,7 +71,7 @@
    replication_port, fselocation as datadir 
    FROM gp_segment_configuration, pg_filespace_entry 
    WHERE dbid=fsedbid 
-   ORDER BY dbid;</codeblock>
+   ORDER BY dbid;</codeblock>
       <p>The new recovery segment host must be pre-installed with the Greenplum Database software
         and configured exactly the same as the existing segment hosts. A spare data directory
         location must exist on all currently configured segment hosts and have enough disk space to

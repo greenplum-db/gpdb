@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="kw142714">gplogfilter</title><body><p>Searches through Greenplum Database log files for specified entries.</p><section id="section2"><title>Synopsis</title><codeblock><b>gplogfilter</b> [<varname>timestamp_options</varname>] [<varname>pattern_options</varname>]
-     [<varname>output_options</varname>] [<varname>input_options</varname>] [<varname>input_file</varname>]
+<topic id="topic1"><title id="kw142714">gplogfilter</title><body><p>Searches through Greenplum Database log files for specified entries.</p><section id="section2"><title>Synopsis</title><codeblock><b>gplogfilter</b> [<varname>timestamp_options</varname>] [<varname>pattern_options</varname>] 
+     [<varname>output_options</varname>] [<varname>input_options</varname>] [<varname>input_file</varname>] 
 
-<b>gplogfilter</b> <b>--help</b>
+<b>gplogfilter</b> <b>--help</b> 
 
-<b>gplogfilter</b> <b>--version</b></codeblock></section><section id="section3"><title>Description</title><p>The Greenplum Database log file for entries matching the specified criteria. If an input
+<b>gplogfilter</b> <b>--version</b></codeblock></section><section id="section3"><title>Description</title><p>The <codeph>gplogfilter</codeph> utility can be used to search through a Greenplum Database log file for entries matching the specified criteria. If an input
         file is not supplied, then <codeph>gplogfilter</codeph> will use the
-          <codeph>$MASTER_DATA_DIRECTORY</codeph> environment variable to locate the Greenplum Database master log file in the standard logging location. To read
+          <codeph>$MASTER_DATA_DIRECTORY</codeph> environment variable to locate the Greenplum master log file in the standard logging location. To read
         from standard input, use a dash (<codeph>-</codeph>) as the input file name. Input files may
         be compressed using <codeph>gzip</codeph>. In an input file, a log entry is identified by
         its timestamp in <codeph>YYYY-MM-DD [hh:mm[:ss]]</codeph> format.</p><p>You can also use <codeph>gplogfilter</codeph> to search through all segment log files at once by
@@ -31,7 +31,7 @@ of <codeph>[hh][:mm[:ss]]</codeph>. If used without either the <codeph>-b</codep
 or <codeph>-e</codeph> option, will use the current time as a basis.</pd></plentry></parml></sectiondiv><sectiondiv id="section6"><b>Pattern Matching Options</b><parml><plentry><pt>-c i [gnore] | r [espect] | --case=i [gnore] | r [espect]</pt><pd>Matching of alphabetic characters is case sensitive by default unless
 proceeded by the <codeph>--case=ignore</codeph> option.</pd></plentry><plentry><pt>-C '<varname>string</varname>' | --columns='<varname>string</varname>'</pt><pd>Selects specific columns from the log file. Specify the desired columns as a comma-delimited
               string of column numbers beginning with 1, where the second column from left is 2, the
-              third is 3, and so on. <ph otherprops="gpdb">See "Viewing the Database Server Log
+              third is 3, and so on. <ph>See "Viewing the Database Server Log
                 Files" in the <i>Greenplum Database Administrator Guide</i> for details about the
                 log file format and for a list of the available columns and their associated
                 number.</ph></pd></plentry><plentry><pt>-f '<varname>string</varname>' | --find='<varname>string</varname>'</pt><pd>Finds the log entries containing the specified string.</pd></plentry><plentry><pt>-F '<varname>string</varname>' | --nofind='<varname>string</varname>'</pt><pd>Rejects the log entries containing the specified string.</pd></plentry><plentry><pt>-m <varname>regex</varname> | --match=<varname>regex</varname></pt><pd>Finds log entries that match the specified Python regular expression.
@@ -59,6 +59,6 @@ file name ends in <codeph>.gz</codeph>, it will be uncompressed by default.</pd>
 10 minutes:</p><codeblock>gplogfilter -d :10</codeblock><p>Display log messages in the master log file containing the string <codeph>|con6
 cmd11|</codeph>:</p><codeblock>gplogfilter -f '|con6 cmd11|'</codeblock><p>Using <codeph><xref href="./gpssh.xml#topic1" type="topic" format="dita"/></codeph>, run
           <codeph>gplogfilter</codeph> on the segment hosts and search for log messages in the
-        segment log files containing the string <codeph>con6</codeph> and save output to a file.</p><codeblock>gpssh -f seg_hosts_file -e 'source
-/usr/local/greenplum-db/greenplum_path.sh ; gplogfilter -f
+        segment log files containing the string <codeph>con6</codeph> and save output to a file.</p><codeblock>gpssh -f seg_hosts_file -e 'source 
+/usr/local/greenplum-db/greenplum_path.sh ; gplogfilter -f 
 con6 /gpdata/*/pg_log/gpdb*.csv' &gt; seglog.out</codeblock></section><section id="section10"><title>See Also</title><p><codeph><xref href="./gpssh.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref href="./gpscp.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>

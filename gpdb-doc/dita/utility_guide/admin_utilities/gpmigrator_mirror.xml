@@ -12,11 +12,11 @@
     <section id="section2">
       <title>Synopsis</title>
       <codeblock><b>gpmigrator_mirror</b> <varname>old_GPHOME_path</varname> <varname>new_GPHOME_path</varname>
-                  [<b>-d</b> <varname>master_data_directory</varname>]
+                  [<b>-d</b> <varname>master_data_directory</varname>] 
                   [<b>-l</b> <varname>logfile_directory</varname>] [<b>-q</b>] [<b>--debug</b>]
                   [<b>--check-only</b>] [<b>--skip-check</b>] [-<b>-debug</b>]
 
-<b>gpmigrator_mirror</b> <b>--version</b> | <b>-v</b>
+<b>gpmigrator_mirror</b> <b>--version</b> | <b>-v</b> 
 
 <b>gpmigrator_mirror</b> <b>--help</b> | <b>-h</b></codeblock>
     </section>
@@ -99,8 +99,8 @@
         <plentry>
           <pt>--skip-check</pt>
           <pd>Skip the catalog check during the normal upgrade process. This can save some time, if
-            a catalog check was performed separately during the upgrade process. <note
-              type="important">You should use this option only after you have
+            a catalog check was performed separately during the upgrade process.<note
+              type="important">Use this option only after you have
               checked for catalog issues with the <cmdname>--check-only</cmdname> option and have
               resolved any catalog issues.</note></pd>
         </plentry>

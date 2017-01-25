@@ -3,7 +3,7 @@
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1"><title id="pb141029">createuser</title><body><p id="client_util_desc">Creates a new database role.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>createuser</b> [<varname>connection_option</varname> ...] [<varname>role_attribute</varname> ...] [<b>-e</b>] <varname>role_name</varname>
 
-<b>createuser</b> <b>--help</b>
+<b>createuser</b> <b>--help</b> 
 
 <b>createuser</b> <b>--version</b></codeblock></section><section id="section3"><title>Description</title><p><codeph>createuser</codeph> creates a new Greenplum Database role. You must be a
                                 superuser or have the <codeph>CREATEROLE</codeph> privilege to
@@ -39,17 +39,17 @@ Shall the new role be allowed to create databases? (y/n) <b>n</b>
 Shall the new role be allowed to create more new roles? (y/n) <b>n</b>
 CREATE ROLE</codeblock><p>To create the same role <codeph>joe</codeph> using connection options and avoiding the prompts
         and taking a look at the underlying command:</p><codeblock><b>createuser -h masterhost -p 54321 -S -D -R -e joe</b>
-CREATE ROLE joe NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT
+CREATE ROLE joe NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT 
 LOGIN;
 CREATE ROLE</codeblock><p>To create the role <codeph>joe</codeph> as a superuser, and assign password
           <codeph>admin123</codeph> immediately:</p><codeblock><b>createuser -P -s -e joe</b>
 Enter password for new role: <b>admin123</b>
 Enter it again: <b>admin123</b>
-CREATE ROLE joe PASSWORD 'admin123' SUPERUSER CREATEDB
+CREATE ROLE joe PASSWORD 'admin123' SUPERUSER CREATEDB 
 CREATEROLE INHERIT LOGIN;
 CREATE ROLE</codeblock><p>In the above example, the new password is not actually echoed when typed, but we show what was
         typed for clarity. However the password will appear in the echoed command, as illustrated if
-        the <codeph>-e</codeph> option is used.</p></section><section id="section7" otherprops="gpdb">
+        the <codeph>-e</codeph> option is used.</p></section><section id="section7">
                         <title>See Also</title>
                         <p><ph otherprops="op-print"><codeph>CREATE ROLE</codeph> in the
                                                 <i>Greenplum Database Reference Guide</i></ph><ph

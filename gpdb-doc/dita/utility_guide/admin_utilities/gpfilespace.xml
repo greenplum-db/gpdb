@@ -3,24 +3,23 @@
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1"><title id="kv137980">gpfilespace</title><body><p>Creates a filespace using a configuration file that defines per-segment
 file system locations. Filespaces describe the physical file system resources
-to be used by a tablespace.</p><section id="section2"><title>Synopsis</title><codeblock><b>gpfilespace</b> [<varname>connection_option</varname> ...] [<b>-l</b> <varname>logfile_directory</varname>]
+to be used by a tablespace.</p><section id="section2"><title>Synopsis</title><codeblock><b>gpfilespace</b> [<varname>connection_option</varname> ...] [<b>-l</b> <varname>logfile_directory</varname>] 
               [<b>-o</b> <varname>output_file_name</varname>]
 
-<b>gpfilespace</b> [<varname>connection_option</varname> ...] [<b>-l</b> <varname>logfile_directory</varname>]
+<b>gpfilespace</b> [<varname>connection_option</varname> ...] [<b>-l</b> <varname>logfile_directory</varname>] 
               [<b>-c</b> <varname>fs_config_file</varname>]
 
-<ph otherprops="gpdb"><b>gpfilespace</b> <b>--movetempfilespace</b> {<varname>filespace_name</varname> | default}
+<ph><b>gpfilespace</b> <b>--movetempfilespace</b> {<varname>filespace_name</varname> | default}
 
 <b>gpfilespace</b> <b>--movetransfilespace</b> {<varname>filespace_name</varname> | default}
 
-<b>gpfilespace</b> <b>--showtempfilespace</b>
+<b>gpfilespace</b> <b>--showtempfilespace</b> 
 
-<b>gpfilespace</b> <b>--showtransfilespace</b></ph>
+<b>gpfilespace</b> <b>--showtransfilespace</b></ph> 
 
-<b>gpfilespace -v</b>
+<b>gpfilespace -v</b> 
 
-<b>gpfilespace -?</b></codeblock></section><section id="section3"><title>Description</title><p>A tablespace requires a file system location to store its database files.
-In Greenplum Database, the master and each segment (primary and mirror) needs its own
+<b>gpfilespace -?</b></codeblock></section><section id="section3"><title>Description</title><p>A tablespace requires a file system location to store its database files. In Greenplum Database, the master and each segment (primary and mirror) needs its own
         distinct storage location. This collection of file system locations for all components in a
           Greenplum system is referred to as a
           <varname>filespace</varname>. Once a filespace is defined, it can be used by one or more
@@ -30,9 +29,9 @@ In Greenplum Database, the master and each segment (primary and mirror) needs it
         then outputs a configuration file that can be used to create a filespace. If a file name is
         not specified, a <codeph>gpfilespace_config_</codeph><varname>#</varname> file will be
         created in the current directory by default. </p><p>Once you have a configuration file, you can run <codeph>gpfilespace</codeph> with the
-          <codeph>-c</codeph> option to create the filespace in Greenplum Database.</p><p outputclass="" otherprops="gpdb">You will need to create a filespace before you can use the
+          <codeph>-c</codeph> option to create the filespace in Greenplum Database.</p><p outputclass="">You will need to create a filespace before you can use the
           <codeph>gpfilespace --movetempfilespace</codeph> or <codeph>--movetransfilespace</codeph>
-        option to move your temporary or transaction files to the new location.</p><p otherprops="gpdb">Use either <codeph>gpfilespace --showtempfilespace</codeph> or
+        option to move your temporary or transaction files to the new location.</p><p>Use either <codeph>gpfilespace --showtempfilespace</codeph> or
           <codeph>--showtransfilespace</codeph> options to show the name of the filespace currently
         associated with temporary or transaction files. </p><note type="note">If segments are down due to a power or nic failure, you may see inconsistencies
         during filespace creation. You may not be able to bring up the Greenplum Database.</note></section><section id="section4"><title>Options</title><parml><plentry><pt>-c | --config <varname>fs_config_file</varname></pt><pd>A configuration file containing:<ul id="ul_xrn_qr2_44"><li id="kv139272">An initial line denoting the new filespace name. For
@@ -50,23 +49,23 @@ In Greenplum Database, the master and each segment (primary and mirror) needs it
             location(s) you specify, so it is possible to use the same location for multiple
             segments. However, primaries and mirrors cannot use the same location. After the utility
             creates the configuration file, you can manually edit the file to make any required
-            changes to the filespace layout before creating the filespace in Greenplum Database.</pd></plentry><plentry otherprops="gpdb">
+            changes to the filespace layout before creating the filespace in Greenplum Database.</pd></plentry><plentry>
           <pt>--movetempfilespace {<varname>filespace_name</varname> | default}</pt>
           <pd>Moves temporary files to a new filespace or to the default location.</pd>
-        </plentry><plentry otherprops="gpdb">
+        </plentry><plentry>
           <pt>--movetransfilespace {<varname>filespace_name</varname> | default}</pt>
           <pd>Moves transaction files to a new filespace or to the default location.</pd>
-        </plentry><plentry otherprops="gpdb">
+        </plentry><plentry>
           <pt>--showtempfilespace</pt>
           <pd>Show the name of the filespace currently associated with temporary files. This option
             checks that all primary and mirror segments, master and master standby are using the
             same filespace or temporary files.You will receive a warning message and an email if any
             inconsistencies exist.</pd>
-        </plentry><plentry otherprops="gpdb">
+        </plentry><plentry>
           <pt>--showtransfilespace</pt>
           <pd>Show the name of the filespace currently associated with transaction files. This
             option checks that all primary and mirror segments, master and master standby are using
-            the same filespace or transaction files. You will receive a warning message and an email
+            the same filespace or transaction files.You will receive a warning message and an email
             if any inconsistencies exist.</pd>
         </plentry><plentry><pt>-v | --version (show utility version)</pt><pd>Displays the version of this utility.</pd></plentry><plentry><pt>-? | --help (help)</pt><pd>Displays the utility usage and syntax.</pd></plentry></parml><sectiondiv id="section5"><b>Connection Options</b><parml><plentry><pt>-h host | --host <varname>host</varname></pt><pd>The host name of the machine on which the Greenplum master database
               server is running. If not specified, reads from the environment variable
@@ -87,7 +86,7 @@ system prior to running the <codeph>gpfilespace</codeph> utility:</p><codeblock>
 
 Checking your configuration:
 
-Your system has 2 hosts with 2 primary and 2 mirror segments
+Your system has 2 hosts with 2 primary and 2 mirror segments 
 per host.
 
 Configuring hosts: [sdw1, sdw2]
@@ -106,5 +105,5 @@ mdw:1:/gp_master_filespc/gp-1
 sdw1:2:/gp_pri_filespc/gp0
 sdw1:3:/gp_mir_filespc/gp1
 sdw2:4:/gp_mir_filespc/gp0
-sdw2:5:/gp_pri_filespc/gp1</codeblock><p>Execute the configuration file to create the filespace in Greenplum Database:</p><codeblock>$ gpfilespace -c gpfilespace_config_1</codeblock></section><section id="section7"><title>See Also</title><p><codeph>CREATE TABLESPACE</codeph><ph otherprops="gpdb"> in the <i>Greenplum Database Reference
+sdw2:5:/gp_pri_filespc/gp1</codeblock><p>Execute the configuration file to create the filespace in Greenplum Database:</p><codeblock>$ gpfilespace -c gpfilespace_config_1</codeblock></section><section id="section7"><title>See Also</title><p><codeph>CREATE TABLESPACE</codeph><ph> in the <i>Greenplum Database Reference
             Guide</i></ph></p></section></body></topic>

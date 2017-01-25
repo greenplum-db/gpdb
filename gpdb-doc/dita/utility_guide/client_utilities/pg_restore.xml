@@ -145,7 +145,7 @@
           </plentry>
           <plentry>
             <pt>-T <varname>trigger</varname> | --trigger=<varname>trigger</varname></pt>
-            <pd>Restore named trigger only.<note>Greenplum does not support
+            <pd>Restore named trigger only.<note>Greenplum Database does not support
                 user-defined triggers.</note></pd>
           </plentry>
           <plentry>
@@ -165,7 +165,7 @@
               tables that you do not want to invoke during data reload. The commands emitted for
                 <codeph>--disable-triggers</codeph> must be done as superuser. So, you should also
               specify a superuser name with <codeph>-S</codeph>, or preferably run
-                <codeph>pg_restore</codeph> as a superuser. <note>
+                <codeph>pg_restore</codeph> as a superuser. <note>Greenplum Database
                 does not support user-defined triggers.</note></pd>
           </plentry>
           <plentry>

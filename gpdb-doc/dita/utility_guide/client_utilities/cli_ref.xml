@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ox135496">Client Utility Reference</title><body><p id="client_util_desc">This reference describes the command-line client utilities provided
-with Greenplum Database. Greenplum Database uses the standard PostgreSQL
-client programs and provides additional client utilities for administering
-a distributed Greenplum Database DBMS. Greenplum Database client utilities
-reside in <codeph>$GPHOME/bin.</codeph></p></body></topic>
+<topic id="topic1">
+    <title id="ox135496">Client Utility Reference</title>
+    <body>
+        <section conref="../cli_ref.xml#topic1/cli-utils-intro"/>
+    </body>
+</topic>

@@ -445,19 +445,16 @@
 
   <title id="ac164426">Getting Support</title>
   <body>
-   <p>Pivotal support, product, and licensing information can be obtained as follows.</p>
+   <p>Pivotal/Greenplum support, product, and licensing information can be obtained as follows.</p>
   </body>
 
   <topic id="topic8" xml:lang="en">
 
-   <title>Product Information and Technical Support</title>
+   <title>Product information and Technical Support</title>
    <body>
-     <note>Pivotal Global Support Services (GSS) does not provide support for open
-       source versions of Greenplum Database. Only Pivotal Greenplum Database is supported by Pivotal GSS.</note>
     <p>For technical support, documentation, release notes, software updates, or for information
-     about Pivotal products, licensing, and services, go to <xref href="http://www.pivotal.io/"
-      scope="external" format="html">www.pivotal.io</xref>.</p>
-
+     about Pivotal products, licensing, and services, go to <xref href="http://pivotal.io/"
+      scope="external" format="html">pivotal.io</xref>.</p>
    </body>
   </topic>
  </topic>

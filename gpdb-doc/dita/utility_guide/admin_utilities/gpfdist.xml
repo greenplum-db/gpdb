@@ -2,15 +2,15 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1">
-  <title id="ku137116">gpfdist</title>
-  <body>
-    <p>Serves data files to or writes data files out from Greenplum Database segments.</p>
-    <section id="section2">
-      <title>Synopsis</title>
-      <codeblock><b>gpfdist</b> [<b>-d</b> <varname>directory</varname>] [<b>-p</b> <varname>http_port</varname>] [<b>-l</b> <varname>log_file</varname>] [<b>-t</b> <varname>timeout</varname>]
+    <title id="ku137116">gpfdist</title>
+    <body>
+        <p>Serves data files to or writes data files out from Greenplum Database segments.</p>
+        <section id="section2">
+            <title>Synopsis</title>
+            <codeblock><b>gpfdist</b> [<b>-d</b> <varname>directory</varname>] [<b>-p</b> <varname>http_port</varname>] [<b>-l</b> <varname>log_file</varname>] [<b>-t</b> <varname>timeout</varname>] 
    [<b>-S</b>] [<b>-w</b> <varname>time</varname>] [<b>-v</b> | <b>-V</b>] [<b>-s</b>] [<b>-m</b> <varname>max_length</varname>] [<b>--ssl</b> <varname>certificate_path</varname>]
 
-<b>gpfdist -?</b> | <b>--help</b>
+<b>gpfdist -?</b> | <b>--help</b> 
 
 <b>gpfdist --version</b></codeblock>
     </section>
@@ -121,7 +121,7 @@
           <pd>Adds SSL encryption to data transferred with <codeph>gpfdist</codeph>. After executing
               <codeph>gpfdist</codeph> with the <codeph>--ssl
               <varname>certificate_path</varname></codeph> option, the only way to load data from
-            this file server is with the <codeph>gpfdist://</codeph> protocol. <ph otherprops="gpdb"
+            this file server is with the <codeph>gpfdist://</codeph> protocol. <ph
               >For information on the <codeph>gpfdist://</codeph> protocol, see "Loading and
               Unloading Data" in the <i>Greenplum Database Administrator Guide</i>.</ph></pd>
           <pd>The location specified in <varname>certificate_path</varname> must contain the
@@ -157,7 +157,7 @@
         as a service: </p>
       <ol>
         <li id="ku139499">Update your Greenplum Database Loader package to the latest version. This
-          package is available from <xref href="https://network.gopivotal.com/products"
+          package is available from <xref href="https://network.pivotal.io"
             scope="external" format="html">Pivotal Network</xref>. </li>
         <li id="ku139444">Register <codeph>gpfdist</codeph> as a Windows service:<ol>
             <li id="ku139445">Open a Windows command window</li>
@@ -200,7 +200,7 @@
     <section id="section7">
       <title>See Also</title>
       <p><codeph><xref href="./gpload.xml#topic1" type="topic" format="dita"/></codeph>,
-          <codeph>CREATE EXTERNAL TABLE</codeph><ph otherprops="gpdb"> in the <i>Greenplum Database
+          <codeph>CREATE EXTERNAL TABLE</codeph><ph> in the <i>Greenplum Database
             Reference Guide</i></ph></p>
     </section>
   </body>
