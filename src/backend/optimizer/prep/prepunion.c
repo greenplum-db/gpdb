@@ -1319,13 +1319,27 @@ adjust_appendrel_attrs_mutator(Node *node, AppendRelInfoContext *ctx)
 		return (Node *) newinfo;
 	}
 
-	/**
-	 * We may have to create a copy of the subplan
+	/*
+	 * NOTE: we do not need to recurse into sublinks, because they should
+	 * already have been converted to subplans before we see them.
+	 */
+	Assert(!IsA(node, SubLink));
+	Assert(!IsA(node, Query));
+
+	node = expression_tree_mutator(node, adjust_appendrel_attrs_mutator,
+								   (void *) ctx);
+
+	/*
+	 * In GPDB, if you have two SubPlans referring to the same initplan, we
+	 * require two separate copies of the subplan, one for each SubPlan
+	 * reference. That's because even if a plan is otherwise the same, we
+	 * may want to later apply different flow to different SubPlans
+	 * referring it.
 	 */
 	if (IsA(node, SubPlan))
 	{
 		SubPlan *sp = (SubPlan *) node;
-		SubPlan *newsp = copyObject(sp);
+
 		if (!sp->is_initplan)
 		{
 			PlannerInfo *root = (PlannerInfo *) ctx->base.node;
@@ -1337,20 +1351,16 @@ adjust_appendrel_attrs_mutator(Node *node, AppendRelInfoContext *ctx)
 			 */
 			root->glob->subplans = lappend(root->glob->subplans, newsubplan);
 			root->glob->subrtables = lappend(root->glob->subrtables, newrtable);
-			newsp->plan_id = list_length(root->glob->subplans);
+
+			/*
+			 * expression_tree_mutator made a copy of the SubPlan already, so
+			 * we can modify it directly.
+			 */
+			sp->plan_id = list_length(root->glob->subplans);
 		}
-		return (Node *) newsp;
 	}
 
-	/*
-	 * NOTE: we do not need to recurse into sublinks, because they should
-	 * already have been converted to subplans before we see them.
-	 */
-	Assert(!IsA(node, SubLink));
-	Assert(!IsA(node, Query));
-
-	return expression_tree_mutator(node, adjust_appendrel_attrs_mutator,
-								   (void *) ctx);
+	return node;
 }
 
 /*
