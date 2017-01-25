@@ -9,8 +9,8 @@
     </booklibrary>
     <mainbooktitle id="pdf_version">Version 4.3</mainbooktitle>
     <booktitlealt id="pdf_title">Administrator Guide</booktitlealt>
-    <booktitlealt id="pdf_revision_number">Rev: A20</booktitlealt>
-    <booktitlealt id="copyright_date">&#169; 2016 Pivotal Software, Inc.</booktitlealt>
+    <booktitlealt id="pdf_revision_number">Rev: A23</booktitlealt>
+    <booktitlealt id="copyright_date">&#169; 2017 Pivotal Software, Inc.</booktitlealt>
   </booktitle>
   <bookmeta>
     <author/>
@@ -71,7 +71,9 @@
   <part href="admin_guide/intro/partI.xml" id="partI" format="dita">
     <chapter href="admin_guide/intro/arch_overview.xml" id="arch_overview"/>
     <chapter href="admin_guide/intro/about_utilities.xml" id="about_utilities"/>
-    <chapter href="admin_guide/intro/about_mvcc.xml" id="about_mvcc"/>
+    <chapter href="admin_guide/intro/about_mvcc.xml">
+      <topicref href="admin_guide/intro/mvcc_example.xml" id="mvcc_example"/>
+    </chapter>
     <chapter href="admin_guide/intro/about_loading.xml" id="about_loading"/>
     <chapter href="admin_guide/intro/about_ha.xml" id="about_ha"/>
     <chapter href="admin_guide/intro/about_statistics.xml" id="about_statistics.xml"/>
@@ -103,7 +105,7 @@
   </part>
   <part href="admin_guide/partIV.xml" navtitle="Working with Databases" id="partIV">
     <chapter href="admin_guide/ddl/ddl.ditamap" format="ditamap"/>
-    <chapter href="admin_guide/dml.xml" navtitle="Managing Data" id="dml"> </chapter>
+    <chapter href="admin_guide/dml.xml" navtitle="Managing Data" id="dml"/>
     <chapter href="admin_guide/load/load.ditamap" format="ditamap"/>
     <chapter href="admin_guide/query/query.ditamap" format="ditamap"/>
   </part>
