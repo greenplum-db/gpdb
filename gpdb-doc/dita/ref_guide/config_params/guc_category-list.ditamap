@@ -12,7 +12,7 @@
         <topicref href="guc_category-list.xml#topic15"
             navtitle="System Resource Consumption Parameters" copy-to="guc_config-topic15.xml"
             chunk="to-content select-branch"/>
-        <topicref href="guc_category-list.xml#topic57" navtitle="Pivotal Query Optimizer Parameters"
+        <topicref href="guc_category-list.xml#topic57" navtitle="GPORCA Parameters"
             copy-to="guc_config-topic57.xml" chunk="to-content select-branch"/>
         <topicref href="guc_category-list.xml#topic21" navtitle="Query Tuning Parameters"
             copy-to="guc_config-topic21.xml" chunk="to-content select-branch"/>
@@ -20,7 +20,7 @@
             navtitle="Error Reporting and Logging Parameters" copy-to="guc_config-topic29.xml"
             chunk="to-content select-branch"/>
         <topicref href="guc_category-list.xml#topic33" navtitle="System Monitoring Parameters"
-            copy-to="guc_config-topic33.xml" chunk="to-content select-branch" otherprops="gpdb"/>
+            copy-to="guc_config-topic33.xml" chunk="to-content select-branch"/>
         <topicref href="guc_category-list.xml#topic37"
             navtitle="Runtime Statistics Collection Parameters" copy-to="guc_config-topic37.xml"
             chunk="to-content select-topic"/>
@@ -49,7 +49,7 @@
             chunk="to-content select-branch"/>
         <topicref href="guc_category-list.xml#topic55"
             navtitle="Greenplum Master Mirroring Parameters" copy-to="guc_config-topic55.xml"
-            chunk="to-content select-topic" otherprops="gpdb"/>
+            chunk="to-content select-topic"/>
         <topicref href="guc_category-list.xml#topic56"
             navtitle="Greenplum Database Extension Parameters" copy-to="guc_config-topic56.xml"
             chunk="to-content select-topic"/>
@@ -164,7 +164,7 @@
             <topicref href="guc_category-list.xml#filerep_mirrorvalidation_during_resync"
                 navtitle="filerep_mirrorvalidation_during_resync"
                 copy-to="guc_filerep_mirrorvalidation_during_resync.xml"
-                chunk="to-content select-topic" otherprops="gpdb"/>
+                chunk="to-content select-topic"/>
             <topicref href="guc_category-list.xml#from_collapse_limit"
                 navtitle="from_collapse_limit" copy-to="guc_config-from_collapse_limit.xml"
                 chunk="to-content select-topic"/>
@@ -178,21 +178,21 @@
             <topicref href="guc_category-list.xml#gp_appendonly_compaction"
                 navtitle="gp_appendonly_compaction"
                 copy-to="guc_config-gp_appendonly_compaction.xml" chunk="to-content select-topic"
-                otherprops="gpdb"/>
+               />
             <topicref href="guc_category-list.xml#gp_appendonly_compaction_threshold"
                 navtitle="gp_appendonly_compaction_threshhold"
                 copy-to="guc_config-gp_appendonly_compaction_threshhold.xml"
-                chunk="to-content select-topic" otherprops="gpdb"/>
+                chunk="to-content select-topic"/>
             <topicref href="guc_category-list.xml#gp_autostats_mode" navtitle="gp_autostats_mode"
                 copy-to="guc_config-gp_autostats_mode.xml" chunk="to-content select-topic"/>
             <topicref href="guc_category-list.xml#gp_autostats_mode_in_functions"
                 navtitle="gp_autostats_mode_in_functtions"
                 copy-to="guc_config-gp_autostats_mode_in_functions.xml"
-                chunk="to-content select-topic" otherprops="gpdb"/>
+                chunk="to-content select-topic"/>
             <topicref href="guc_category-list.xml#gp_autostats_on_change_threshold"
                 navtitle="gp_autostats_on_change_threshold"
                 copy-to="guc_config-gp_autostats_on_change_threshold.xml"
-                chunk="to-content select-topic" otherprops="gpdb"/>
+                chunk="to-content select-topic"/>
             <topicref href="guc_category-list.xml#gp_backup_directIO" navtitle="gp_backup_directIO"
                 copy-to="guc_config-gp_backup_directIO.xml" chunk="to-content select-topic"/>
             <topicref href="guc_category-list.xml#gp_backup_directIO_read_chunk_mb"
@@ -207,7 +207,7 @@
                 copy-to="guc_config-gp_command_count.xml" chunk="to-content select-topic"/>
             <topicref href="guc_category-list.xml#gp_connectemc_mode" navtitle="gp_connectemc_mode"
                 copy-to="guc_config-gp_connectemc_mode.xml" chunk="to-content select-topic"
-                otherprops="gpdb"/>
+               />
             <topicref href="guc_category-list.xml#gp_connection_send_timeout"
                 navtitle="gp_connection_send_timeout" copy-to="gp_connection_send_timeout.xml"
                 chunk="to-content select-topic"/>
@@ -227,26 +227,26 @@
             <topicref href="guc_category-list.xml#gp_default_storage_options"
                 navtitle="gp_default_storage_options"
                 copy-to="guc_config-gp_default_storage_options.xml" chunk="to-content select-topic"
-                otherprops="gpdb"/>
+               />
             <topicref href="guc_category-list.xml#gp_dynamic_partition_pruning"
                 navtitle="gp_dynamic_partition_pruning"
                 copy-to="guc_config-gp_dynamic_partition_pruning.xml"
                 chunk="to-content select-topic"/>
             <topicref href="guc_category-list.xml#gp_email_from" navtitle="gp_email_from"
                 copy-to="guc_config-gp_email_from.xml" chunk="to-content select-topic"
-                otherprops="gpdb"/>
+               />
             <topicref href="guc_category-list.xml#gp_email_smtp_password"
                 navtitle="gp_email_smtp_password" copy-to="guc_config-gp_email_smtp_password.xml"
-                chunk="to-content select-topic" otherprops="gpdb"/>
+                chunk="to-content select-topic"/>
             <topicref href="guc_category-list.xml#gp_email_smtp_server"
                 navtitle="gp_email_smtp_server" copy-to="guc_config-gp_email_smtp_server.xml"
-                chunk="to-content select-topic" otherprops="gpdb"/>
+                chunk="to-content select-topic"/>
             <topicref href="guc_category-list.xml#gp_email_smtp_userid"
                 navtitle="gp_email_smtp_userid" copy-to="guc_config-gp_email_smtp_userid.xml"
-                chunk="to-content select-topic" otherprops="gpdb"/>
+                chunk="to-content select-topic"/>
             <topicref href="guc_category-list.xml#gp_email_to" navtitle="gp_email_to"
                 copy-to="guc_config-gp_email_to.xml" chunk="to-content select-topic"
-                otherprops="gpdb"/>
+               />
             <topicref href="guc_category-list.xml#gp_enable_adaptive_nestloop"
                 navtitle="gp_enable_adaptive_nestloop"
                 copy-to="guc_config-gp_enable_adaptive_nestloop.xml" chunk="to-content select-topic"/>
@@ -271,7 +271,7 @@
                 copy-to="guc_config-gp_enable_fast_sri.xml" chunk="to-content select-topic"/>
             <topicref href="guc_category-list.xml#gp_enable_gpperfmon"
                 navtitle="gp_enable_gpperfmon" copy-to="guc_config-gp_enable_gpperfmon.xml"
-                chunk="to-content select-topic" otherprops="gpdb"/>
+                chunk="to-content select-topic"/>
             <topicref href="guc_category-list.xml#gp_enable_groupext_distinct_gather"
                 navtitle="gp_enable_groupext_distinct_gather"
                 copy-to="guc_config-gp_enable_groupext_distinct_gather.xml"
@@ -340,11 +340,11 @@
             <topicref href="guc_category-list.xml#gp_gpperfmon_send_interval"
                 navtitle="gp_gpperfmon_send_interval"
                 copy-to="guc_config-gp_gpperfmon_send_interval.xml" chunk="to-content select-topic"
-                otherprops="gpdb"/>
+               />
             <topicref href="guc_category-list.xml#gpperfmon_log_alert_level"
                 navtitle="gpperfmon_log_alert_level"
                 copy-to="guc_config-gpperfmon_log_alert_level.xml" chunk="to-content select-topic"
-                otherprops="gpdb"/>
+               />
             <topicref href="guc_category-list.xml#gp_hadoop_home" navtitle="gp_hadoop_home"
                 copy-to="guc_config-gp_hadoop_home.xml" chunk="to-content select-topic"/>
             <topicref href="guc_category-list.xml#gp_hadoop_target_version"
@@ -358,7 +358,7 @@
                 copy-to="guc_config-gp_idf_deduplicate.xml" chunk="to-content select-topic"/>
             <topicref href="guc_category-list.xml#topic_lvm_ttc_3p"
                 navtitle="gp_initial_bad_row_limit" copy-to="guc_config-topic_lvm_ttc_3p.xml"
-                chunk="to-content select-topic" otherprops="gpdb"/>
+                chunk="to-content select-topic"/>
             <topicref href="guc_category-list.xml#gp_interconnect_fc_method"
                 navtitle="gp_interconnect_fc_method"
                 copy-to="guc_config-gp_interconnect_fc_method.xml" chunk="to-content select-topic"/>
@@ -443,14 +443,14 @@
                 copy-to="guc_config-gp_set_read_only.xml" chunk="to-content select-topic"/>
             <topicref href="guc_category-list.xml#gp_snmp_community" navtitle="gp_snmp_community"
                 copy-to="guc_config-gp_snmp_community.xml" chunk="to-content select-topic"
-                otherprops="gpdb"/>
+               />
             <topicref href="guc_category-list.xml#gp_snmp_monitor_address"
                 navtitle="gp_snmp_monitor_address" copy-to="guc_config-gp_snmp_monitor_address.xml"
-                chunk="to-content select-topic" otherprops="gpdb"/>
+                chunk="to-content select-topic"/>
             <topicref href="guc_category-list.xml#gp_snmp_use_inform_or_trap"
                 navtitle="gp_snmp_use_inform_or_trap"
                 copy-to="guc_config-gp_snmp_use_inform_or_trap.xml" chunk="to-content select-topic"
-                otherprops="gpdb"/>
+               />
             <topicref href="guc_category-list.xml#gp_statistics_pullup_from_child_partition"
                 navtitle="gp_statistics_pullup_from_child_partition"
                 copy-to="guc_config-gp_statistics_pullup_from_child_partition.xml"
@@ -489,7 +489,7 @@
                 chunk="to-content select-topic"/>
             <topicref href="guc_category-list.xml#gpperfmon_port" navtitle="gpperfmon_port"
                 copy-to="guc_config-gpperfmon_port.xml" chunk="to-content select-topic"
-                otherprops="gpdb"/>
+               />
             <topicref href="guc_category-list.xml#integer_datetimes" navtitle="integer_datetimes"
                 copy-to="guc_config-integer_datetimes.xml" chunk="to-content select-topic"/>
             <topicref href="guc_category-list.xml#IntervalStyle" navtitle="IntervalStyle"
@@ -499,7 +499,7 @@
                 chunk="to-content select-topic"/>
             <topicref href="guc_category-list.xml#keep_wal_segments" navtitle="keep_wal_segments"
                 copy-to="guc_config-keep_wal_segments.xml" chunk="to-content select-topic"
-                otherprops="gpdb"/>
+               />
             <topicref href="guc_category-list.xml#krb_caseins_users" navtitle="krb_caseins_users"
                 copy-to="guc_config-krb_caseins_users.xml" chunk="to-content select-topic"/>
             <topicref href="guc_category-list.xml#krb_server_keyfile" navtitle="krb_server_keyfile"
@@ -660,14 +660,14 @@
             <topicref href="guc_category-list.xml#readable_external_table_timeout"
                 navtitle="readable_external_table_timeout"
                 copy-to="guc_config-readable_external_table_timeout.xml"
-                chunk="to-content select-topic" otherprops="gpdb"/>
+                chunk="to-content select-topic"/>
             <topicref href="guc_category-list.xml#repl_catchup_within_range"
                 navtitle="repl_catchup_within_range"
                 copy-to="guc_config-repl_catchup_within_range.xml" chunk="to-content select-topic"
-                otherprops="gpdb"/>
+               />
             <topicref href="guc_category-list.xml#replication_timeout"
                 navtitle="replication_timeout" copy-to="guc_config-replication_timeout.xml"
-                chunk="to-content select-topic" otherprops="gpdb"/>
+                chunk="to-content select-topic"/>
             <topicref href="guc_category-list.xml#regex_flavor" navtitle="regex_flavor"
                 copy-to="guc_config-regex_flavor.xml" chunk="to-content select-topic"/>
             <topicref href="guc_category-list.xml#resource_cleanup_gangs_on_wait"
@@ -680,7 +680,7 @@
             <topicref href="guc_category-list.xml#runaway_detector_activation_percent"
                 navtitle="runaway_detector_activation_percent"
                 copy-to="guc_config-runaway_detector_activation_percent.xml"
-                chunk="to-content select-topic" otherprops="gpdb"/>
+                chunk="to-content select-topic"/>
             <topicref href="guc_category-list.xml#search_path" navtitle="search_path"
                 copy-to="guc_config-search_path.xml" chunk="to-content select-topic"/>
             <topicref href="guc_category-list.xml#seq_page_cost" navtitle="seq_page_cost"
@@ -778,11 +778,11 @@
             <topicref href="guc_category-list.xml#wal_receiver_status_interval"
                 navtitle="wal_receiver_status_interval"
                 copy-to="guc_config-wal_receiver_status_interval.xml"
-                chunk="to-content select-topic" otherprops="gpdb"/>
+                chunk="to-content select-topic"/>
             <topicref href="guc_category-list.xml#writable_external_table_bufsize"
                 navtitle="writable_external_table_bufsize"
                 copy-to="guc_config-writable_external_table_bufsize.xml"
-                chunk="to-content select-topic" otherprops="gpdb"/>
+                chunk="to-content select-topic"/>
             <topicref href="guc_category-list.xml#xid_stop_limit" navtitle="xid_stop_limit"
                 copy-to="guc_config-xid_stop_limit.xml" chunk="to-content select-topic"/>
             <topicref href="guc_category-list.xml#xid_warn_limit" navtitle="xid_warn_limit"

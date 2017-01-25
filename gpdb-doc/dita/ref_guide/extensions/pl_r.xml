@@ -38,22 +38,22 @@
       <p>PL/R is a procedural language. With the Greenplum Database PL/R extension you can write
         database functions in the R programming language and use R packages that contain R functions
         and data sets. </p>
-      <note type="important">Extension packages for Pivotal Greenplum Database 4.3.4.x and earlier are not
-        compatible with Pivotal Greenplum Database 4.3.5.0 due to the introduction of GPORCA. Also, 
-        extension packages for Pivotal Greenplum Database 4.3.5.0 and later are not
-        compatible with Pivotal Greenplum Database 4.3.4.x and earlier. <p>To use extension packages with
-          Pivotal Greenplum Database 4.3.5.0 and later, you must install and use Pivotal Greenplum Database
-          extension packages (gppkg files and contrib modules) that are built for Pivotal Greenplum Database
-          4.3.5.0 and later. For custom modules that were used with Pivotal Greenplum Database 4.3.4.x and
-          earlier, you must rebuild the modules for use with Pivotal Greenplum Database 4.3.5.0 and
+      <note type="important">Extension packages for Greenplum Database 4.3.4.x and earlier are not
+        compatible with Greenplum Database 4.3.5.0 due to the introduction of Pivotal Query
+        Optimizer. Also, extension packages for Greenplum Database 4.3.5.0 and later are not
+        compatible with Greenplum Database 4.3.4.x and earlier. <p>To use extension packages with
+          Greenplum Database 4.3.5.0 and later, you must install and use Greenplum Database
+          extension packages (gppkg files and contrib modules) that are built for Greenplum Database
+          4.3.5.0 and later. For custom modules that were used with Greenplum Database 4.3.4.x and
+          earlier, you must rebuild the modules for use with Greenplum Database 4.3.5.0 and
           later.</p></note>
-      <p>For information about supported PL/R versions, see the <cite>Pivotal Greenplum Database Release
+      <p>For information about supported PL/R versions, see the <cite>Greenplum Database Release
           Notes</cite>. </p>
     </body>
     <topic id="topic3" xml:lang="en">
       <title id="py217167">Installing PL/R</title>
       <body>
-        <p>For Pivotal Greenplum Database version 4.3 and later, the PL/R extension is available as a
+        <p>For Greenplum Database version 4.3 and later, the PL/R extension is available as a
           package. Download the package from <xref
             href="https://network.pivotal.io/products/pivotal-gpdb" format="html" scope="external"
             >Pivotal Network</xref> and install it with the Greenplum Package Manager
@@ -92,7 +92,7 @@
               all Greenplum Database master and segment hosts and set environment variable
                 <codeph>LD_LIBRARY_PATH </codeph>to specify the location that is installed with the
               PL/R extension.
-            </p><codeblock>export <i>LD_LIBRARY_PATH=
+            </p><codeblock>export <i>LD_LIBRARY_PATH= 
    $GPHOME/ext/R-2.12.0/lib64/R/lib:$LD_LIBRARY_PATH</i></codeblock></note>
         </body>
       </topic>
@@ -151,7 +151,7 @@
         <p>The PL/R extension package for Greenplum Database 4.3.9.0 and later supports R language
           version 3.3.1. </p>
         <p>To migrate the Greenplum Database PL/R extension to the PL/R extension that supports R
-          3.3.1, Pivotal recommends uninstalling the old PL/R extension package and installing the
+          3.3.1, uninstall the old PL/R extension package and install the
           extension package that supports R 3.3.1. </p>
         <p>See <xref href="#topic8" format="dita"/> and <xref href="#topic4" format="dita"/> for
           information about uninstalling and installing the PL/R extension package.</p>
@@ -177,7 +177,7 @@
         <body>
           <p>This function generates an array of numbers with a normal distribution using the R
             function <codeph>rnorm()</codeph>. </p>
-          <codeblock>CREATE OR REPLACE FUNCTION r_norm(n integer, mean float8,
+          <codeblock>CREATE OR REPLACE FUNCTION r_norm(n integer, mean float8, 
   std_dev float8) RETURNS float8[ ] AS
 $$
   x&lt;-rnorm(n,mean,std_dev)
@@ -216,8 +216,8 @@ LANGUAGE 'plr';</codeblock>
           <codeblock>--Create TYPE to store model results
 DROP TYPE IF EXISTS wj_model_results CASCADE;
 CREATE TYPE wj_model_results AS (
-  cs text, coefext float, ci_95_lower float, ci_95_upper float,
-  ci_90_lower, float, ci_90_upper float, ci_80_lower,
+  cs text, coefext float, ci_95_lower float, ci_95_upper float, 
+  ci_90_lower, float, ci_90_upper float, ci_80_lower, 
   float, ci_80_upper float);
 
 --Create PL/R function to run model in R
@@ -243,11 +243,11 @@ $$
 $$
 LANGUAGE 'plr';
 
---Run modeling plr function and store model results in a
+--Run modeling plr function and store model results in a 
 --table
 DROP TABLE IF EXISTS wj_model_results_roi;
-CREATE TABLE wj_model_results_roi AS SELECT *
-  FROM wj.plr_RE((SELECT wj.droi2_array),
+CREATE TABLE wj_model_results_roi AS SELECT * 
+  FROM wj.plr_RE((SELECT wj.droi2_array), 
   (SELECT cs FROM wj.droi2_array));</codeblock>
         </body>
       </topic>
@@ -326,7 +326,7 @@ LANGUAGE 'plr';</codeblock><p>This
         <p>Any package that does not appear in the installed packages matrix must be installed and
           loaded before its functions can be used. </p>
         <p>An R package can be installed with <codeph>install.packages()</codeph>:</p>
-        <codeblock>&gt; install.packages("<varname>package_name</varname>")
+        <codeblock>&gt; install.packages("<varname>package_name</varname>") 
 &gt; install.packages("mypkg", dependencies = TRUE, type="source")</codeblock>
         <p>Load a package from the R command
           line.<codeblock>&gt; library(" <varname>package_name</varname> ") </codeblock></p>

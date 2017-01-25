@@ -2,7 +2,7 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" xml:lang="en"><title id="ho143896">pg_shdepend</title><body><p>The <codeph>pg_shdepend</codeph> system catalog table records the dependency relationships
-  between database objects and shared objects, such as roles. This information allows Greenplum Database to ensure that those objects are unreferenced before attempting to
+      between database objects and shared objects, such as roles. This information allows Greenplum Database to ensure that those objects are unreferenced before attempting to
       delete them. See also <xref href="pg_depend.xml#topic1">pg_depend</xref>, which performs a
       similar function for dependencies involving objects within a single database. Unlike most
       system catalogs, <codeph>pg_shdepend</codeph> is shared across all databases of Greenplum system: there is only one copy of <codeph>pg_shdepend</codeph>

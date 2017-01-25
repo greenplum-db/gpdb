@@ -36,11 +36,11 @@ CREATE [TRUSTED] [PROCEDURAL] LANGUAGE <varname>name</varname>
                 more information on developing functions using these procedural languages.</p>
             <p>The PL/Perl, PL/Java, and PL/R libraries require the correct versions of Perl, Java,
                 and R to be installed, respectively. </p>
-            <p>On RHEL and SUSE platforms, Pivotal Greenplum Database users can download the appropriate extensions from <xref
-                    href="https://network.pivotal.io/products" scope="external" format="html"
+            <p>On RHEL and SUSE platforms, download the appropriate extensions from <xref
+                    href="https://network.pivotal.io" scope="external" format="html"
                     >Pivotal Network</xref>, then install the extensions using the Greenplum Package
                 Manager (<codeph>gppkg</codeph>) utility to ensure that all dependencies are
-                installed as well as the extensions. See the <cite>Greenplum Database Utility Guide</cite> for
+                installed as well as the extensions. See the Greenplum Database Utility Guide for
                 details about <codeph>gppkg</codeph>. </p>
             <p>There are two forms of the <codeph>CREATE LANGUAGE</codeph> command. In the first
                 form, the user specifies the name of the desired language and the Greenplum Database
@@ -78,7 +78,7 @@ CREATE [TRUSTED] [PROCEDURAL] LANGUAGE <varname>name</varname>
                         Built-in support is included for <codeph>plpgsql</codeph>,
                             <codeph>plperl</codeph>, <codeph>plpython</codeph>,
                             <codeph>plpythonu</codeph>, and <codeph>plr</codeph>. The languages
-                             <codeph>plpgsql</codeph> (PL/pgSQL) and <codeph>plpythonu</codeph>
+                            <codeph>plpgsql</codeph> (PL/pgSQL) and <codeph>plpythonu</codeph>
                         (PL/Python) are installed by default in Greenplum Database.</pd>
                 </plentry>
                 <plentry>
@@ -121,7 +121,8 @@ CREATE [TRUSTED] [PROCEDURAL] LANGUAGE <varname>name</varname>
                     <codeph>USAGE</codeph> privilege for the language. By default,
                     <codeph>USAGE</codeph> is granted to <codeph>PUBLIC</codeph> (everyone) for
                 trusted languages. This may be revoked if desired. </p>
-            <p>Procedural languages are local to individual databases. You create and drop languages for individual databases.</p>
+            <p>Procedural languages are local to individual databases. You create and drop languages
+                for individual databases.</p>
             <p>The call handler function and the validator function (if any) must already exist if
                 the server does not have an entry for the language in
                 <codeph>pg_pltemplate</codeph>. But when there is an entry, the functions need not
@@ -136,7 +137,7 @@ CREATE [TRUSTED] [PROCEDURAL] LANGUAGE <varname>name</varname>
             <codeblock>CREATE LANGUAGE plpgsql;
 CREATE LANGUAGE plr;</codeblock>
             <p>For a language not known in the <codeph>pg_pltemplate</codeph> catalog:</p>
-            <codeblock>CREATE FUNCTION plsample_call_handler() RETURNS
+            <codeblock>CREATE FUNCTION plsample_call_handler() RETURNS 
 language_handler
     AS '$libdir/plsample'
     LANGUAGE C;

@@ -139,8 +139,8 @@
         <xref href="./CREATE_OPERATOR_CLASS.xml#topic1" type="topic" format="dita"/>
       </li>
       <li>
-                <xref href="./CREATE_PROTOCOL.xml#topic1" type="topic" format="dita"/>
-              </li>
+        <xref href="./CREATE_PROTOCOL.xml#topic1" type="topic" format="dita"/>
+      </li>
       <li id="ad140571">
         <xref href="./CREATE_RESOURCE_QUEUE.xml#topic1" type="topic" format="dita"/>
       </li>
@@ -230,8 +230,8 @@
         <xref href="./DROP_OWNED.xml#topic1" type="topic" format="dita"/>
       </li>
       <li>
-                <xref href="./DROP_PROTOCOL.xml#topic1" type="topic" format="dita"/>
-              </li>
+        <xref href="./DROP_PROTOCOL.xml#topic1" type="topic" format="dita"/>
+      </li>
       <li id="ad140712">
         <xref href="./DROP_RESOURCE_QUEUE.xml#topic1" type="topic" format="dita"/>
       </li>

@@ -406,13 +406,14 @@ COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} 
             <codeph>FORCE QUOTE</codeph> to force quotes when outputting non-<codeph>NULL</codeph>
           values in specific columns. </p>
         <p>The CSV format has no standard way to distinguish a <codeph>NULL</codeph> value from an
-          empty string. Greenplum Database <codeph>COPY</codeph> handles this by quoting. A
-            <codeph>NULL</codeph> is output as the <codeph>NULL</codeph> string and is not quoted,
-          while a data value matching the <codeph>NULL</codeph> string is quoted. Therefore, using
-          the default settings, a <codeph>NULL</codeph> is written as an unquoted empty string,
-          while an empty string is written with double quotes (""). Reading values follows similar
-          rules. You can use <codeph>FORCE NOT NULL</codeph> to prevent <codeph>NULL</codeph> input
-          comparisons for specific columns.</p>
+          empty string. Greenplum Database
+          <codeph>COPY</codeph> handles this by quoting. A <codeph>NULL</codeph> is output as the
+            <codeph>NULL</codeph> string and is not quoted, while a data value matching the
+            <codeph>NULL</codeph> string is quoted. Therefore, using the default settings, a
+            <codeph>NULL</codeph> is written as an unquoted empty string, while an empty string is
+          written with double quotes (""). Reading values follows similar rules. You can use
+            <codeph>FORCE NOT NULL</codeph> to prevent <codeph>NULL</codeph> input comparisons for
+          specific columns.</p>
         <p>Because backslash is not a special character in the <codeph>CSV</codeph> format,
             <codeph>\.</codeph>, the end-of-data marker, could also appear as a data value. To avoid
           any misinterpretation, a <codeph>\.</codeph> data value appearing as a lone entry on a

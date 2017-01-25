@@ -13,16 +13,16 @@ ALTER TABLE <varname>name</varname> RENAME TO <varname>new_name</varname>
 
 ALTER TABLE <varname>name</varname> SET SCHEMA <varname>new_schema</varname>
 
-ALTER TABLE [ONLY] <varname>name</varname> SET
-     DISTRIBUTED BY (<varname>column</varname>, [ ... ] )
-   | DISTRIBUTED RANDOMLY
+ALTER TABLE [ONLY] <varname>name</varname> SET 
+     DISTRIBUTED BY (<varname>column</varname>, [ ... ] ) 
+   | DISTRIBUTED RANDOMLY 
    | WITH (REORGANIZE=true|false)
-
+ 
 ALTER TABLE [ONLY] <varname>name</varname> <varname>action</varname> [, ... ]
 
 ALTER TABLE <varname>name</varname>
-   [ ALTER PARTITION { <varname>partition_name</varname> | FOR (RANK(<varname>number</varname>))
-   | FOR (<varname>value</varname>) } <varname>partition_action</varname> [...] ]
+   [ ALTER PARTITION { <varname>partition_name</varname> | FOR (RANK(<varname>number</varname>)) 
+   | FOR (<varname>value</varname>) } <varname>partition_action</varname> [...] ] 
    <varname>partition_action</varname></codeblock>
                         <p>where <varname>action</varname> is one of:</p>
                         <codeblock>  ADD [COLUMN] <varname>column_name type</varname>
@@ -49,18 +49,18 @@ ALTER TABLE <varname>name</varname>
                         <p>where <varname>partition_action</varname> is one of:</p>
                         <codeblock>  ALTER DEFAULT PARTITION
   DROP DEFAULT PARTITION [IF EXISTS]
-  DROP PARTITION [IF EXISTS] { <varname>partition_name</varname> |
+  DROP PARTITION [IF EXISTS] { <varname>partition_name</varname> | 
       FOR (RANK(<varname>number</varname>)) | FOR (<varname>value</varname>) } [CASCADE]
   TRUNCATE DEFAULT PARTITION
-  TRUNCATE PARTITION { <varname>partition_name</varname> | FOR (RANK(<varname>number</varname>)) |
+  TRUNCATE PARTITION { <varname>partition_name</varname> | FOR (RANK(<varname>number</varname>)) | 
       FOR (<varname>value</varname>) }
   RENAME DEFAULT PARTITION TO <varname>new_partition_name</varname>
-  RENAME PARTITION { <varname>partition_name</varname> | FOR (RANK(<varname>number</varname>)) |
+  RENAME PARTITION { <varname>partition_name</varname> | FOR (RANK(<varname>number</varname>)) | 
       FOR (<varname>value</varname>) } TO <varname>new_partition_name</varname>
   ADD DEFAULT PARTITION <varname>name</varname> [ ( <varname>subpartition_spec</varname> ) ]
   ADD PARTITION [<varname>partition_name</varname>] <varname>partition_element</varname>
      [ ( <varname>subpartition_spec</varname> ) ]
-  EXCHANGE PARTITION { <varname>partition_name</varname> | FOR (RANK(<varname>number</varname>)) |
+  EXCHANGE PARTITION { <varname>partition_name</varname> | FOR (RANK(<varname>number</varname>)) | 
        FOR (<varname>value</varname>) } WITH TABLE <varname>table_name</varname>
         [ WITH | WITHOUT VALIDATION ]
   EXCHANGE DEFAULT PARTITION WITH TABLE <varname>table_name</varname>
@@ -68,12 +68,12 @@ ALTER TABLE <varname>name</varname>
   SET SUBPARTITION TEMPLATE (<varname>subpartition_spec</varname>)
   SPLIT DEFAULT PARTITION
     {  AT (<varname>list_value</varname>)
-     | START([<varname>datatype</varname>] <varname>range_value</varname>) [INCLUSIVE | EXCLUSIVE]
+     | START([<varname>datatype</varname>] <varname>range_value</varname>) [INCLUSIVE | EXCLUSIVE] 
         END([<varname>datatype</varname>] <varname>range_value</varname>) [INCLUSIVE | EXCLUSIVE] }
-    [ INTO ( PARTITION <varname>new_partition_name</varname>,
+    [ INTO ( PARTITION <varname>new_partition_name</varname>, 
              PARTITION <varname>default_partition_name</varname> ) ]
-  SPLIT PARTITION { <varname>partition_name</varname> | FOR (RANK(<varname>number</varname>)) |
-     FOR (<varname>value</varname>) } AT (<varname>value</varname>)
+  SPLIT PARTITION { <varname>partition_name</varname> | FOR (RANK(<varname>number</varname>)) | 
+     FOR (<varname>value</varname>) } AT (<varname>value</varname>) 
     [ INTO (PARTITION <varname>partition_name</varname>, PARTITION <varname>partition_name</varname>)]  </codeblock>
                         <p>where <varname>partition_element</varname> is:</p>
                         <codeblock>    VALUES (<varname>list_value</varname> [,...] )
@@ -87,11 +87,11 @@ ALTER TABLE <varname>name</varname>
                         <p>and <varname>subpartition_element</varname> is:</p>
                         <codeblock>   DEFAULT SUBPARTITION <varname>subpartition_name</varname>
   | [SUBPARTITION <varname>subpartition_name</varname>] VALUES (<varname>list_value</varname> [,...] )
-  | [SUBPARTITION <varname>subpartition_name</varname>]
+  | [SUBPARTITION <varname>subpartition_name</varname>] 
      START ([<varname>datatype</varname>] '<varname>start_value</varname>') [INCLUSIVE | EXCLUSIVE]
      [ END ([<varname>datatype</varname>] '<varname>end_value</varname>') [INCLUSIVE | EXCLUSIVE] ]
      [ EVERY ( [<varname>number | datatype</varname>] '<varname>interval_value</varname>') ]
-  | [SUBPARTITION <varname>subpartition_name</varname>]
+  | [SUBPARTITION <varname>subpartition_name</varname>] 
      END ([<varname>datatype</varname>] '<varname>end_value</varname>') [INCLUSIVE | EXCLUSIVE]
      [ EVERY ( [<varname>number | datatype</varname>] '<varname>interval_value</varname>') ]
 [ WITH ( <varname>partition_storage_parameter</varname>=<varname>value</varname> [, ... ] ) ]
@@ -113,8 +113,8 @@ ALTER TABLE <varname>name</varname>
                                 <li id="ay136723"><b>ADD COLUMN</b> — Adds a new column to the
                                         table, using the same syntax as <codeph>CREATE
                                                 TABLE</codeph>. When adding a column to an
-                                                                                append-optimized table a <codeph>DEFAULT</codeph> clause is
-                                                                                required.</li>
+                                        append-optimized table a <codeph>DEFAULT</codeph> clause is
+                                        required. </li>
                                 <li><b>DROP COLUMN</b> — Drops a column from a table. Note that if
                                         you drop table columns that are being used as the Greenplum
                                         Database distribution key, the distribution policy for the
@@ -593,25 +593,25 @@ ALTER TABLE <varname>name</varname>
                                                 is not supported in these cases:<ul
                                                   id="ul_xfz_ckw_yt">
                                                   <li>The partitioned table is created with the
-                                                  <codeph>SUBPARTITION</codeph> clause or if a
+                                                  <codeph>SUBPARITION</codeph> clause or if a
                                                   partition has a subpartition.</li>
                                                   <li>The partitioned table contains a column with a
                                                   check constraint or a <codeph>NOT NULL</codeph>
                                                   constraint.</li>
                                                 </ul></pd>
-                                                <pd><b>WITH</b> | <b>WITHOUT VALIDATION</b> - Validates that
-                                                        the data in the table matches the
-                                                          <codeph>CHECK</codeph> constraint of the partition
-                                                        you are exchanging. The default is to validate the
-                                                        data against the <codeph>CHECK</codeph> constraint.
-                                                          <note type="warning">If you specify the
-                                                          <codeph>WITHOUT VALIDATION</codeph> clause, you
-                                                          must ensure that the data in table that you are
-                                                          exchanging for an existing child leaf partition is
-                                                          valid against the <codeph>CHECK</codeph>
-                                                          constraints on the partition. Otherwise, queries
-                                                          against the partitioned table might return
-                                                          incorrect results.</note></pd>
+                                        <pd><b>WITH</b> | <b>WITHOUT VALIDATION</b> - Validates that
+                                                the data in the table matches the
+                                                  <codeph>CHECK</codeph> constraint of the partition
+                                                you are exchanging. The default is to validate the
+                                                data against the <codeph>CHECK</codeph> constraint.
+                                                  <note type="warning">If you specify the
+                                                  <codeph>WITHOUT VALIDATION</codeph> clause, you
+                                                  must ensure that the data in table that you are
+                                                  exchanging for an existing child leaf partition is
+                                                  valid against the <codeph>CHECK</codeph>
+                                                  constraints on the partition. Otherwise, queries
+                                                  against the partitioned table might return
+                                                  incorrect results.</note></pd>
                                 </plentry>
                                 <plentry>
                                         <pt>SET SUBPARTITION TEMPLATE</pt>
@@ -790,30 +790,30 @@ ALTER TABLE <varname>name</varname>
                         <p>Add a not-null constraint to a column:</p>
                         <codeblock>ALTER TABLE distributors ALTER COLUMN street SET NOT NULL;</codeblock>
                         <p>Add a check constraint to a table:</p>
-                        <codeblock>ALTER TABLE distributors ADD CONSTRAINT zipchk CHECK
+                        <codeblock>ALTER TABLE distributors ADD CONSTRAINT zipchk CHECK 
 (char_length(zipcode) = 5);</codeblock>
                         <p>Move a table to a different schema:</p>
                         <codeblock>ALTER TABLE myschema.distributors SET SCHEMA yourschema;</codeblock>
                         <p>Add a new partition to a partitioned table:</p>
-                        <codeblock>ALTER TABLE sales ADD PARTITION
-            START (date '2009-02-01') INCLUSIVE
+                        <codeblock>ALTER TABLE sales ADD PARTITION 
+            START (date '2009-02-01') INCLUSIVE 
             END (date '2009-03-01') EXCLUSIVE;</codeblock>
                         <p>Add a default partition to an existing partition design:</p>
                         <codeblock>ALTER TABLE sales ADD DEFAULT PARTITION other;</codeblock>
                         <p>Rename a partition:</p>
-                        <codeblock>ALTER TABLE sales RENAME PARTITION FOR ('2008-01-01') TO
+                        <codeblock>ALTER TABLE sales RENAME PARTITION FOR ('2008-01-01') TO 
 jan08;</codeblock>
                         <p>Drop the first (oldest) partition in a range sequence:</p>
                         <codeblock>ALTER TABLE sales DROP PARTITION FOR (RANK(1));</codeblock>
                         <p>Exchange a table into your partition design:</p>
-                        <codeblock>ALTER TABLE sales EXCHANGE PARTITION FOR ('2008-01-01') WITH
+                        <codeblock>ALTER TABLE sales EXCHANGE PARTITION FOR ('2008-01-01') WITH 
 TABLE jan08;</codeblock>
                         <p>Split the default partition (where the existing default partition's name
                                 is <codeph>other</codeph>) to add a new monthly partition for
                                 January 2009:</p>
-                        <codeblock>ALTER TABLE sales SPLIT DEFAULT PARTITION
-START ('2009-01-01') INCLUSIVE
-END ('2009-02-01') EXCLUSIVE
+                        <codeblock>ALTER TABLE sales SPLIT DEFAULT PARTITION 
+START ('2009-01-01') INCLUSIVE 
+END ('2009-02-01') EXCLUSIVE 
 INTO (PARTITION jan09, PARTITION other);</codeblock>
                         <p>Split a monthly partition into two with the first partition containing
                                 dates January 1-15 and the second partition containing dates January

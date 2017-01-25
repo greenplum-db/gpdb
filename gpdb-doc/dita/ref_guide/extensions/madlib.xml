@@ -43,7 +43,7 @@
       <p>The <codeph>gppkg</codeph> utility installs Greenplum Database extensions, along with any
         dependencies, on all hosts across a cluster. It also automatically installs extensions on
         new hosts in the case of system expansion segment recovery. </p>
-      <note>Pivotal recommends that you upgrade to MADlib 1.9.1 on Greenplum Database <ph
+      <note>You should upgrade to MADlib 1.9.1 on Greenplum Database <ph
           otherprops="0_or_x">4.3.10.0</ph> or later. If you do not upgrade MADlib, the MADlib
           <codeph>madpack</codeph> utility will not function on Greenplum Database 4.3.10.0 or
         later. The MADlib analytics functionality will continue to work. <p>If you install or

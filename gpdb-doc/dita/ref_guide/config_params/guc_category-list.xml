@@ -25,7 +25,7 @@
         <li id="kh158533">
           <xref href="#topic29" type="topic" format="dita"/>
         </li>
-        <li id="kh171207" otherprops="gpdb">
+        <li id="kh171207">
           <xref href="#topic33" type="topic" format="dita"/>
         </li>
         <li id="kh158545">
@@ -58,7 +58,7 @@
         <li id="kh158608">
           <xref href="#topic49" type="topic" format="dita"/>
         </li>
-        <li id="kh184388" otherprops="gpdb">
+        <li id="kh184388">
           <xref href="#topic55" type="topic" format="dita"/>
         </li>
         <li>
@@ -317,10 +317,10 @@
       </topic>
     </topic>
     <topic id="topic57">
-      <title>Pivotal Query Optimizer Parameters</title>
+      <title>GPORCA Parameters</title>
       <body>
-        <p>These parameters control the usage of the Pivotal Query Optimizer by Greenplum Database.
-          For information about the Pivotal Query Optimizer, see "Querying Data" in the
+        <p>These parameters control the usage of GPORCA by Greenplum Database.
+          For information about GPORCA, see "Querying Data" in the
             <cite>Greenplum Database Administrator Guide</cite>. </p>
         <simpletable frame="none" id="simpletable_nq5_z2c_kr">
           <strow>
@@ -460,7 +460,7 @@
       <topic id="topic23" xml:lang="en">
         <title>Legacy Query Optimizer Costing Parameters</title>
         <body>
-          <note type="warning">Pivotal recommends that you do not adjust these query costing
+          <note type="warning">Do not adjust these query costing
             parameters. They are tuned to reflect Greenplum Database hardware configurations and
             typical workloads. All of these parameters are related. Changing one without changing
             the others can have adverse affects on performance.</note>
@@ -784,7 +784,7 @@
         </body>
       </topic>
     </topic>
-    <topic id="topic33" xml:lang="en" otherprops="gpdb">
+    <topic id="topic33" xml:lang="en">
       <title id="kh171299">System Monitoring Parameters</title>
       <abstract>These configuration parameters control Greenplum Database data collection and
         notifications related to database monitoring.</abstract>
@@ -918,11 +918,11 @@
               <p>
                 <xref href="#gp_autostats_mode" type="section">gp_autostats_mode</xref>
               </p>
-              <p otherprops="gpdb">
+              <p>
                 <xref href="#gp_autostats_mode_in_functions" type="section"
                   >gp_autostats_mode_in_functions</xref>
               </p>
-              <p otherprops="gpdb">
+              <p>
                 <xref href="#gp_autostats_on_change_threshold" type="section"
                   >gp_autostats_on_change_threshold</xref>
               </p>
@@ -1115,7 +1115,7 @@
               <p>
                 <xref href="#resource_select_only" type="section">resource_select_only</xref>
               </p>
-              <p otherprops="gpdb">
+              <p>
                 <xref href="#runaway_detector_activation_percent" type="section"
                   >runaway_detector_activation_percent</xref>
               </p>
@@ -1148,14 +1148,14 @@
               </p>
             </stentry>
             <stentry>
-              <p otherprops="gpdb">
+              <p>
                 <xref href="#topic_lvm_ttc_3p" type="section">gp_initial_bad_row_limit</xref>
               </p>
               <p>
                 <xref href="#gp_reject_percent_threshold" type="section"
                   >gp_reject_percent_threshold</xref>
               </p>
-              <p otherprops="gpdb">
+              <p>
                 <xref href="#readable_external_table_timeout" type="section"
                   >readable_external_table_timeout</xref>
               </p>
@@ -1179,7 +1179,7 @@
                 <xref href="#gp_create_table_random_default_distribution"
                   >gp_create_table_random_default_distribution</xref>
               </p>
-              <p otherprops="gpdb">
+              <p>
                 <xref href="#gp_default_storage_options">gp_default_storage_options</xref>
               </p>
               <p>
@@ -1194,21 +1194,20 @@
       <topic id="topic_hfd_1tl_zp">
         <title>Append-Optimized Table Parameters</title>
         <body>
-          <p>The following parameters configure the <ph otherprops="gpdb">append-optimized</ph><ph
-              otherprops="hawq">append-only</ph> tables feature of Greenplum Database.</p>
+          <p>The following parameters configure the <ph>append-optimized</ph> tables feature of Greenplum Database.</p>
           <simpletable frame="none" id="simpletable_awg_1tl_zp">
             <strow>
               <stentry>
                 <p>
                   <xref href="#max_appendonly_tables" type="section">max_appendonly_tables</xref>
                 </p>
-                <p otherprops="gpdb">
+                <p>
                   <xref href="#gp_appendonly_compaction" type="section"
                     >gp_appendonly_compaction</xref>
                 </p>
-                <p otherprops="gpdb">
+                <p>
                   <xref href="#gp_appendonly_compaction_threshold"/></p>
-                <p otherprops="gpdb"><xref href="#validate_previous_free_tid"/>
+                <p><xref href="#validate_previous_free_tid"/>
                 </p>
               </stentry>
               <stentry/>
@@ -1439,7 +1438,7 @@
         </body>
       </topic>
     </topic>
-    <topic id="topic55" xml:lang="en" otherprops="gpdb">
+    <topic id="topic55" xml:lang="en">
       <title id="kh184289">Greenplum Mirroring Parameters for Master and Segments</title>
       <body>
         <p>These parameters control the configuration of the replication between Greenplum Database
@@ -1652,7 +1651,7 @@
                 <xref href="#extra_float_digits"/>
               </li>
               <li>
-                <xref href="#filerep_mirrorvalidation_during_resync" otherprops="gpdb"/>
+                <xref href="#filerep_mirrorvalidation_during_resync"/>
               </li>
               <li>
                 <xref href="#from_collapse_limit"/>
@@ -1663,20 +1662,20 @@
               <li>
                 <xref href="#gp_analyze_relative_error"/>
               </li>
-              <li otherprops="gpdb">
+              <li>
                 <xref href="#gp_appendonly_compaction"/>
               </li>
-              <li otherprops="gpdb">
+              <li>
                 <xref href="#gp_appendonly_compaction_threshold"/>
               </li>
               <li>
                 <xref href="#gp_autostats_mode"/>
               </li>
-              <li otherprops="gpdb">
+              <li>
                 <xref href="#gp_autostats_mode_in_functions" type="section"
                   >gp_autostats_mode_in_functions</xref>
               </li>
-              <li otherprops="gpdb">
+              <li>
                 <xref href="#gp_autostats_on_change_threshold"/>
               </li>
               <li>
@@ -1691,7 +1690,7 @@
               <li>
                 <xref href="#gp_command_count"/>
               </li>
-              <li otherprops="gpdb">
+              <li>
                 <xref href="#gp_connectemc_mode"/>
               </li>
               <li>
@@ -1712,25 +1711,25 @@
               <li>
                 <xref href="#gp_debug_linger"/>
               </li>
-              <li otherprops="gpdb">
+              <li>
                 <xref href="#gp_default_storage_options"/>
               </li>
               <li>
                 <xref href="#gp_dynamic_partition_pruning"/>
               </li>
-              <li otherprops="gpdb">
+              <li>
                 <xref href="#gp_email_from"/>
               </li>
-              <li otherprops="gpdb">
+              <li>
                 <xref href="#gp_email_smtp_password"/>
               </li>
-              <li otherprops="gpdb">
+              <li>
                 <xref href="#gp_email_smtp_server"/>
               </li>
-              <li otherprops="gpdb">
+              <li>
                 <xref href="#gp_email_smtp_userid"/>
               </li>
-              <li otherprops="gpdb">
+              <li>
                 <xref href="#gp_email_to"/>
               </li>
               <li>
@@ -1755,7 +1754,7 @@
               <li>
                 <xref href="#gp_enable_fast_sri"/>
               </li>
-              <li otherprops="gpdb">
+              <li>
                 <xref href="#gp_enable_gpperfmon"/>
               </li>
               <li>
@@ -1818,10 +1817,10 @@
               <li>
                 <xref href="#gp_fts_probe_timeout"/>
               </li>
-              <li otherprops="gpdb">
+              <li>
                 <xref href="#gp_gpperfmon_send_interval"/>
               </li>
-              <li otherprops="gpdb">
+              <li>
                 <xref href="#gpperfmon_log_alert_level"/>
               </li>
               <li>
@@ -1836,7 +1835,7 @@
               <li>
                 <xref href="#gp_idf_deduplicate"/>
               </li>
-              <li otherprops="gpdb">
+              <li>
                 <xref href="#topic_lvm_ttc_3p"/>
               </li>
               <li>
@@ -1929,13 +1928,13 @@
               <li>
                 <xref href="#gp_set_read_only"/>
               </li>
-              <li otherprops="gpdb">
+              <li>
                 <xref href="#gp_snmp_community"/>
               </li>
-              <li otherprops="gpdb">
+              <li>
                 <xref href="#gp_snmp_monitor_address"/>
               </li>
-              <li otherprops="gpdb">
+              <li>
                 <xref href="#gp_snmp_use_inform_or_trap"/>
               </li>
               <li>
@@ -1968,7 +1967,7 @@
               <li>
                 <xref href="#gp_workfile_limit_per_segment"/>
               </li>
-              <li otherprops="gpdb">
+              <li>
                 <xref href="#gpperfmon_port"/>
               </li>
               <li>
@@ -1980,7 +1979,7 @@
               <li>
                 <xref href="#join_collapse_limit"/>
               </li>
-              <li otherprops="gpdb">
+              <li>
                 <xref href="#keep_wal_segments"/>
               </li>
               <li>
@@ -2180,13 +2179,13 @@
               <li>
                 <xref href="#random_page_cost"/>
               </li>
-              <li otherprops="gpdb">
+              <li>
                 <xref href="#readable_external_table_timeout"/>
               </li>
-              <li otherprops="gpdb">
+              <li>
                 <xref href="#repl_catchup_within_range"/>
               </li>
-              <li otherprops="gpdb">
+              <li>
                 <xref href="#replication_timeout"/>
               </li>
               <li>
@@ -2198,7 +2197,7 @@
               <li>
                 <xref href="#resource_select_only"/>
               </li>
-              <li otherprops="gpdb">
+              <li>
                 <xref href="#runaway_detector_activation_percent"/>
               </li>
               <li>
@@ -2311,7 +2310,7 @@
               </li>
               <li><xref href="#vmem_process_interrupt" type="section"
                 >vmem_process_interrupt</xref></li>
-              <li otherprops="gpdb">
+              <li>
                 <xref href="#wal_receiver_status_interval"/>
               </li>
               <li><xref href="#writable_external_table_bufsize" type="section"
@@ -2389,7 +2388,7 @@
       <body>
         <p>This controls whether the array input parser recognizes unquoted NULL as specifying a
           null array element. By default, this is on, allowing array values containing null values
-          to be entered. <ph otherprops="gpdb">Greenplum Database versions before 3.0 did not
+          to be entered. <ph>Greenplum Database versions before 3.0 did not
             support null values in arrays, and therefore would treat NULL as specifying a normal
             array element with the string value 'NULL'.</ph></p>
         <table id="array_nulls_table">
@@ -2943,8 +2942,9 @@
     <topic id="debug_print_plan">
       <title>debug_print_plan</title>
       <body>
-        <p>For each executed query, prints the Greenplum Database parallel query execution plan.
-            <i>client_min_messages</i> or <i>log_min_messages</i> must be DEBUG1 or lower.</p>
+        <p>For each executed query, prints the Greenplum parallel query
+          execution plan. <i>client_min_messages</i> or <i>log_min_messages</i> must be DEBUG1 or
+          lower.</p>
         <table id="debug_print_plan_table">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -3027,8 +3027,8 @@
     <topic id="debug_print_slice_table">
       <title>debug_print_slice_table</title>
       <body>
-        <p>For each executed query, prints the Greenplum Database query slice plan.
-            <i>client_min_messages</i> or <i>log_min_messages</i> must be DEBUG1 or lower.</p>
+        <p>For each executed query, prints the Greenplum query slice
+          plan. <i>client_min_messages</i> or <i>log_min_messages</i> must be DEBUG1 or lower.</p>
         <table id="debug_print_slice_table_table">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -3205,8 +3205,9 @@
           single query for the legacy query optimizer (planner). This is factored into estimates of
           the cost of using an index; a higher value makes it more likely index scans will be used,
           a lower value makes it more likely sequential scans will be used. This parameter has no
-          effect on the size of shared memory allocated by a Greenplum Database server instance, nor
-          does it reserve kernel disk cache; it is used only for estimation purposes.</p>
+          effect on the size of shared memory allocated by a Greenplum
+          server instance, nor does it reserve kernel disk cache; it is used only for estimation
+          purposes.</p>
         <table id="effective_cache_size_table">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -3613,7 +3614,7 @@
         </table>
       </body>
     </topic>
-    <topic id="filerep_mirrorvalidation_during_resync" otherprops="gpdb">
+    <topic id="filerep_mirrorvalidation_during_resync">
       <title>filerep_mirrorvalidation_during_resync</title>
       <body>
         <p>The default setting <codeph>false</codeph> improves Greenplum Database performance during
@@ -3732,7 +3733,7 @@
         </table>
       </body>
     </topic>
-    <topic id="gp_appendonly_compaction" otherprops="gpdb">
+    <topic id="gp_appendonly_compaction">
       <title>gp_appendonly_compaction</title>
       <body>
         <p>Enables compacting segment files during <codeph>VACUUM</codeph> commands. When disabled,
@@ -3762,7 +3763,7 @@
         </table>
       </body>
     </topic>
-    <topic id="gp_appendonly_compaction_threshold" otherprops="gpdb">
+    <topic id="gp_appendonly_compaction_threshold">
       <title>gp_appendonly_compaction_threshold</title>
       <body>
         <p>Specifies the threshold ratio (as a percentage) of hidden rows to total rows that
@@ -3848,7 +3849,7 @@
         </table>
       </body>
     </topic>
-    <topic otherprops="gpdb" id="gp_autostats_mode_in_functions">
+    <topic id="gp_autostats_mode_in_functions">
       <title>gp_autostats_mode_in_functions</title>
       <body>
         <p>Specifies the mode for triggering automatic statistics collection with
@@ -3899,7 +3900,7 @@
         </table>
       </body>
     </topic>
-    <topic id="gp_autostats_on_change_threshold" otherprops="gpdb">
+    <topic id="gp_autostats_on_change_threshold">
       <title>gp_autostats_on_change_threshold</title>
       <body>
         <p>Specifies the threshold for automatic statistics collection when
@@ -3932,9 +3933,10 @@
     <topic id="gp_backup_directIO">
       <title>gp_backup_directIO</title>
       <body>
-        <p>Direct I/O allows Greenplum Database to bypass the buffering of memory within the file
-          system cache for backup. When Direct I/O is used for a file, data is transferred directly
-          from the disk to the application buffer, without the use of the file buffer cache.</p>
+        <p>Direct I/O allows Greenplum Database to bypass the buffering of memory
+          within the file system cache for backup. When Direct I/O is used for a file, data is
+          transferred directly from the disk to the application buffer, without the use of the file
+          buffer cache.</p>
         <p>Direct I/O is supported only on Red Hat Enterprise Linux, CentOS, and SUSE. </p>
         <table id="gp_backup_directIO_table">
           <tgroup cols="3">
@@ -3992,12 +3994,12 @@
     <topic id="gp_cached_segworkers_threshold">
       <title>gp_cached_segworkers_threshold</title>
       <body>
-        <p>When a user starts a session with Greenplum Database and issues a query, the system
-          creates groups or 'gangs' of worker processes on each segment to do the work. After the
-          work is done, the segment worker processes are destroyed except for a cached number which
-          is set by this parameter. A lower setting conserves system resources on the segment hosts,
-          but a higher setting may improve performance for power-users that want to issue many
-          complex queries in a row.</p>
+        <p>When a user starts a session with Greenplum Database and issues a query,
+          the system creates groups or 'gangs' of worker processes on each segment to do the work.
+          After the work is done, the segment worker processes are destroyed except for a cached
+          number which is set by this parameter. A lower setting conserves system resources on the
+          segment hosts, but a higher setting may improve performance for power-users that want to
+          issue many complex queries in a row.</p>
         <table id="gp_cached_segworkers_threshold_table">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -4051,14 +4053,14 @@
         </table>
       </body>
     </topic>
-    <topic id="gp_connectemc_mode" otherprops="gpdb">
+    <topic id="gp_connectemc_mode">
       <title>gp_connectemc_mode</title>
       <body>
         <p>Controls the ConnectEMC event logging and dial-home capabilities of Greenplum Command
           Center on the EMC Greenplum Data Computing Appliance (DCA). ConnectEMC must be installed
           in order to generate events. Allowed values are:</p>
         <p><codeph>on</codeph> (the default) - log events to the <codeph>gpperfmon</codeph> database
-          and send dial-home notifications to EMC Support</p>
+          and send dial-home notifications to Dell EMC Support</p>
         <p><codeph>off</codeph> - turns off ConnectEMC event logging and dial-home capabilities</p>
         <p><codeph>local</codeph> - log events to the <codeph>gpperfmon</codeph> database only</p>
         <p><codeph>remote</codeph> - sends dial-home notifications to Pivotal Support (does not log
@@ -4089,9 +4091,9 @@
     <topic id="gp_connection_send_timeout">
       <title>gp_connection_send_timeout</title>
       <body>
-        <p>Timeout for sending data to unresponsive Greenplum Database user clients during query
-          processing. A value of 0 disables the timeout, Greenplum Database waits indefinitely for a
-          client. When the timeout is reached, the query is cancelled with this
+        <p>Timeout for sending data to unresponsive Greenplum Database user clients
+          during query processing. A value of 0 disables the timeout, Greenplum Database waits indefinitely for a client. When the timeout is reached, the query is cancelled
+          with this
           message:<codeblock>Could not send data to client: Connection timed out.</codeblock></p>
         <table id="gp_connection_send_timeout_table">
           <tgroup cols="3">
@@ -4178,18 +4180,17 @@
     <topic id="gp_create_table_random_default_distribution">
       <title>gp_create_table_random_default_distribution</title>
       <body>
-        <p>Controls table creation when a Greenplum Database table is created with a <cmdname>CREATE
-            TABLE</cmdname> or <cmdname>CREATE TABLE AS</cmdname> command that does not contain a
-            <cmdname>DISTRIBUTED BY</cmdname> clause.</p>
+        <p>Controls table creation when a Greenplum Database table is created with a
+            <cmdname>CREATE TABLE</cmdname> or <cmdname>CREATE TABLE AS</cmdname> command that does
+          not contain a <cmdname>DISTRIBUTED BY</cmdname> clause.</p>
         <p>For <cmdname>CREATE TABLE</cmdname>, if the value of the parameter is
             <codeph>off</codeph> (the default), and the table creation command does not contain a
-            <cmdname>DISTRIBUTED BY</cmdname> clause, Greenplum Database chooses the table
-          distribution key based on the command. If the <cmdname>LIKE</cmdname> or
+            <cmdname>DISTRIBUTED BY</cmdname> clause, Greenplum Database chooses the
+          table distribution key based on the command. If the <cmdname>LIKE</cmdname> or
             <cmdname>INHERITS</cmdname> clause is specified in table creation command, the created
           table uses the same distribution key as the source or parent table. </p>
-        <p>If the value of the parameter is set to <codeph>on</codeph>, Greenplum Database follows
-          these rules to create a table when the <cmdname>DISTRIBUTED BY</cmdname> clause is not
-            specified:<ul id="ul_tbr_5kq_kq">
+        <p>If the value of the parameter is set to <codeph>on</codeph>, Greenplum Database follows these rules to create a table when the
+            <cmdname>DISTRIBUTED BY</cmdname> clause is not specified:<ul id="ul_tbr_5kq_kq">
             <li>If <cmdname>PRIMARY KEY</cmdname> or <cmdname>UNIQUE</cmdname> columns are not
               specified, the distribution of the table is random (<cmdname>DISTRIBUTED
                 RANDOMLY</cmdname>). Table distribution is random even if the table creation command
@@ -4206,10 +4207,10 @@
               command.</li>
             <li>If the legacy query optimizer creates the table, and the value of the parameter is
                 <codeph>on</codeph>, the table distribution policy is random.</li>
-            <li>If the Pivotal Query Optimizer creates the table, the table distribution policy is
+            <li>If GPORCA creates the table, the table distribution policy is
               random. The parameter value has no affect. </li>
           </ul></p>
-        <p>For information about the legacy query optimizer and the Pivotal Query Optimizer, see
+        <p>For information about the legacy query optimizer and GPORCA, see
           "Querying Data" in the <cite>Greenplum Database Administrator Guide</cite>. </p>
         <table id="table_hh5_kgp_kq">
           <tgroup cols="3">
@@ -4264,8 +4265,8 @@
     <topic id="gp_debug_linger">
       <title>gp_debug_linger</title>
       <body>
-        <p>Number of seconds for a Greenplum Database process to linger after a fatal internal
-          error.</p>
+        <p>Number of seconds for a Greenplum process to linger after a
+          fatal internal error.</p>
         <table id="gp_debug_linger_table">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -4289,7 +4290,7 @@
         </table>
       </body>
     </topic>
-    <topic id="gp_default_storage_options" otherprops="gpdb">
+    <topic id="gp_default_storage_options">
       <title>gp_default_storage_options</title>
       <body>
         <p>Set the default values for the following table storage options when a table is created
@@ -4324,8 +4325,7 @@
             the <cmdname>ALTER ROLE...SET</cmdname> command</li>
           <li>The value of <codeph>gp_default_storage_options</codeph> that is set for the database
             with the <cmdname>ALTER DATABASE...SET</cmdname> command</li>
-          <li>The value of <codeph>gp_default_storage_options</codeph> that is set for the Greenplum
-            Database system with the <cmdname>gpconfig</cmdname> utility</li>
+          <li>The value of <codeph>gp_default_storage_options</codeph> that is set for the Greenplum Database system with the <cmdname>gpconfig</cmdname> utility</li>
         </ol>
         <p>The parameter value is not cumulative. For example, if the parameter specifies the
             <cmdname>APPENDONLY</cmdname> and <cmdname>COMPRESSTYPE</cmdname> options for a database
@@ -4340,12 +4340,12 @@
           column-oriented table and RLE compression. The user needs to specify only
             <codeph>APPENDONLY=TRUE</codeph> in the <cmdname>WITH</cmdname> clause.</p>
         <p>This example <cmdname>gpconfig</cmdname> utility command sets the default storage option
-          for a Greenplum Database system. If you set the defaults for multiple table storage
-          options, the value must be enclosed in single quotes and then in double
+          for a Greenplum Database system. If you set the defaults for multiple table
+          storage options, the value must be enclosed in single quotes and then in double
           quotes.<codeblock>gpconfig -c 'gp_default_storage_options' -v "'appendonly=true, orientation=column'"</codeblock></p>
         <p>This example <cmdname>gpconfig</cmdname> utility command shows the value of the
-          parameter. The parameter value must be consistent across the Greenplum Database master and
-          all segments.<codeblock>gpconfig -s 'gp_default_storage_options'</codeblock></p>
+          parameter. The parameter value must be consistent across the Greenplum Database master and all
+          segments.<codeblock>gpconfig -s 'gp_default_storage_options'</codeblock></p>
         <table id="gp_default_storage_option_table">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -4414,7 +4414,7 @@
         </table>
       </body>
     </topic>
-    <topic id="gp_email_from" otherprops="gpdb">
+    <topic id="gp_email_from">
       <title>gp_email_from</title>
       <body>
         <p>The email address used to send email alerts, in the format of:</p>
@@ -4448,7 +4448,7 @@
         </table>
       </body>
     </topic>
-    <topic id="gp_email_smtp_password" otherprops="gpdb">
+    <topic id="gp_email_smtp_password">
       <title>gp_email_smtp_password</title>
       <body>
         <p>The password/passphrase used to authenticate with the SMTP server.</p>
@@ -4475,7 +4475,7 @@
         </table>
       </body>
     </topic>
-    <topic id="gp_email_smtp_server" otherprops="gpdb">
+    <topic id="gp_email_smtp_server">
       <title>gp_email_smtp_server</title>
       <body>
         <p>The fully qualified domain name or IP address and port of the SMTP server to use to send
@@ -4506,7 +4506,7 @@
         </table>
       </body>
     </topic>
-    <topic id="gp_email_smtp_userid" otherprops="gpdb">
+    <topic id="gp_email_smtp_userid">
       <title>gp_email_smtp_userid</title>
       <body>
         <p>The user id used to authenticate with the SMTP server.</p>
@@ -4533,7 +4533,7 @@
         </table>
       </body>
     </topic>
-    <topic id="gp_email_to" otherprops="gpdb">
+    <topic id="gp_email_to">
       <title>gp_email_to</title>
       <body>
         <p>A semi-colon (<codeph>;</codeph>) separated list of email addresses to receive email
@@ -4691,18 +4691,18 @@
       <body>
         <p>Controls availability of the <codeph>EXCHANGE DEFAULT PARTITION</codeph> clause for
             <codeph>ALTER TABLE</codeph>. The default value for the parameter is
-            <codeph>off</codeph>. The clause is not available and Greenplum Database returns an
-          error if the clause is specified in an <codeph>ALTER TABLE</codeph> command. </p>
-        <p>If the value is <codeph>on</codeph>, Greenplum Database returns a warning stating that
-          exchanging the default partition might result in incorrect results due to invalid data in
-          the default partition.</p>
+            <codeph>off</codeph>. The clause is not available and Greenplum Database
+          returns an error if the clause is specified in an <codeph>ALTER TABLE</codeph> command. </p>
+        <p>If the value is <codeph>on</codeph>, Greenplum Database returns a warning
+          stating that exchanging the default partition might result in incorrect results due to
+          invalid data in the default partition.</p>
         <p>
           <note type="warning">Before you exchange the default partition, you must ensure the data
             in the table to be exchanged, the new default partition, is valid for the default
             partition. For example, the data in the new default partition must not contain data that
             would be valid in other leaf child partitions of the partitioned table. Otherwise,
             queries against the partitioned table with the exchanged default partition that are
-            executed by the Pivotal Query Optimizer might return incorrect results.</note>
+            executed by GPORCA might return incorrect results.</note>
         </p>
         <table id="gp_enable_exchange_default_partition_table">
           <tgroup cols="3">
@@ -4784,7 +4784,7 @@
         </table>
       </body>
     </topic>
-    <topic id="gp_enable_gpperfmon" otherprops="gpdb">
+    <topic id="gp_enable_gpperfmon">
       <title>gp_enable_gpperfmon</title>
       <body>
         <p>Enables or disables the data collection agents of Greenplum Command Center.</p>
@@ -5082,7 +5082,7 @@
       <body>
         <p>Enables or disables the use of external tables that execute OS commands or scripts on the
           segment hosts (<codeph>CREATE EXTERNAL TABLE EXECUTE</codeph> syntax). <ph
-            otherprops="gpdb">Must be enabled if using the Command Center or MapReduce
+           >Must be enabled if using the Command Center or MapReduce
             features.</ph></p>
         <table id="gp_external_enable_exec_table">
           <tgroup cols="3">
@@ -5115,6 +5115,8 @@
           clause specifies <codeph>http</codeph> or <codeph>gpfdist</codeph>. In releases after 4.0,
           the ability to create an external table can be granted to a role using <codeph>CREATE
             ROLE</codeph> or <codeph>ALTER ROLE</codeph>.</p>
+        <note>This server configuration parameter is deprecated and will be removed in a future
+          release. </note>
         <table id="gp_external_grant_privileges_table">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -5403,13 +5405,13 @@
         </table>
       </body>
     </topic>
-    <topic id="gp_gpperfmon_send_interval" otherprops="gpdb">
+    <topic id="gp_gpperfmon_send_interval">
       <title>gp_gpperfmon_send_interval</title>
       <body>
-        <p>Sets the frequency that the Greenplum Database server processes send query execution
-          updates to the data collection agent processes used by Command Center. Query operations
-          (iterators) executed during this interval are sent through UDP to the segment monitor
-          agents. If you find that an excessive number of UDP packets are dropped during
+        <p>Sets the frequency that the Greenplum Database server processes send query
+          execution updates to the data collection agent processes used by Command Center. Query
+          operations (iterators) executed during this interval are sent through UDP to the segment
+          monitor agents. If you find that an excessive number of UDP packets are dropped during
           long-running, complex queries, you may consider increasing this value.</p>
         <table id="gp_gpperfmon_send_interval_table">
           <tgroup cols="3">
@@ -5434,7 +5436,7 @@
         </table>
       </body>
     </topic>
-    <topic id="gpperfmon_log_alert_level" otherprops="gpdb">
+    <topic id="gpperfmon_log_alert_level">
       <title>gpperfmon_log_alert_level</title>
       <body>
         <p>Controls which message levels are written to the gpperfmon log. Each level includes all
@@ -5470,7 +5472,7 @@
       <body>
         <p>When using Pivotal HD, specify the installation directory for Hadoop. For example, the
           default installation directory is <codeph>/usr/lib/gphd</codeph>.</p>
-        <p otherprops="gpdb">When using Greenplum HD 1.2 or earlier, specify the same value as the
+        <p>When using Greenplum HD 1.2 or earlier, specify the same value as the
           HADOOP_HOME environment variable.</p>
         <table id="gp_hadoop_home_table">
           <tgroup cols="3">
@@ -5498,7 +5500,7 @@
     <topic id="gp_hadoop_target_version">
       <title>gp_hadoop_target_version</title>
       <body>
-        <p>The installed version of Greenplum Database Hadoop target.</p>
+        <p>The installed version of Greenplum Hadoop target.</p>
         <table id="gp_hadoop_target_version_table">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -5578,13 +5580,14 @@
         </table>
       </body>
     </topic>
-    <topic id="topic_lvm_ttc_3p" otherprops="gpdb">
+    <topic id="topic_lvm_ttc_3p">
       <title>gp_initial_bad_row_limit</title>
       <body>
-        <p>For the parameter value <i>n</i>, Greenplum Database stops processing input rows when you
-          import data with the <codeph>COPY</codeph> command or from an external table if the first
-            <i>n</i> rows processed contain formatting errors. If a valid row is processed within
-          the first <i>n</i> rows, Greenplum Database continues processing input rows.</p>
+        <p>For the parameter value <i>n</i>, Greenplum Database stops processing input
+          rows when you import data with the <codeph>COPY</codeph> command or from an external table
+          if the first <i>n</i> rows processed contain formatting errors. If a valid row is
+          processed within the first <i>n</i> rows, Greenplum Database continues
+          processing input rows.</p>
         <p>Setting the value to 0 disables this limit. </p>
         <p>The <codeph>SEGMENT REJECT LIMIT</codeph> clause can also be specified for the
             <codeph>COPY</codeph> command or the external table definition to limit the number of
@@ -5899,7 +5902,8 @@
     <topic id="gp_max_filespaces">
       <title>gp_max_filespaces</title>
       <body>
-        <p>The maximum number of filespaces allowed in a Greenplum Database system.</p>
+        <p>The maximum number of filespaces allowed in a Greenplum Database
+          system.</p>
         <table id="gp_max_filespaces_table">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -5926,8 +5930,14 @@
     <topic id="gp_max_local_distributed_cache">
       <title>gp_max_local_distributed_cache</title>
       <body>
-        <p>Sets the number of local to distributed transactions to cache. Higher settings may
-          improve performance.</p>
+        <p>Sets the maximum number of distributed transaction log entries to cache in the backend
+          process memory of a segment instance. </p>
+        <p>The log entries contain information about the state of rows that are being accessed by an
+          SQL statement. The information is used to determine which rows are visible to an SQL
+          transaction when executing multiple simultaneous SQL statements in an MVCC environment.
+          Caching distributed transaction log entries locally improves transaction processing speed
+          by improving performance of the row visibility determination process.</p>
+        <p>The default value is optimal for a wide variety of SQL processing environments. </p>
         <table id="gp_max_local_distributed_cache_table">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -6021,7 +6031,8 @@
     <topic id="gp_max_tablespaces">
       <title>gp_max_tablespaces</title>
       <body>
-        <p>The maximum number of tablespaces allowed in a Greenplum Database system.</p>
+        <p>The maximum number of tablespaces allowed in a Greenplum Database
+          system.</p>
         <table id="gp_max_tablespaces_table">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -6159,13 +6170,12 @@
     <topic id="gp_resqueue_memory_policy">
       <title>gp_resqueue_memory_policy</title>
       <body>
-        <p>Enables Greenplum Database memory management features. The distribution algorithm
-            <codeph>eager_free</codeph> takes advantage of the fact that not all operators execute
-          at the same time<ph otherprops="gpdb"> (in Greenplum Database 4.2 and later)</ph>. The
-          query plan is divided into stages and Greenplum Database eagerly frees memory allocated to
-          a previous stage at the end of that stage's execution, then allocates the eagerly freed
-          memory to the new stage. </p>
-        <p otherprops="gpdb">When set to <codeph>none</codeph>, memory management is the same as in
+        <p>Enables Greenplum memory management features. The
+          distribution algorithm <codeph>eager_free</codeph> takes advantage of the fact that not
+          all operators execute at the same time<ph> (in Greenplum Database 4.2
+            and later)</ph>. The query plan is divided into stages and Greenplum Database eagerly frees memory allocated to a previous stage at the end of
+          that stage's execution, then allocates the eagerly freed memory to the new stage. </p>
+        <p>When set to <codeph>none</codeph>, memory management is the same as in
           Greenplum Database releases prior to 4.1. </p>
         <p>When set to <codeph>auto</codeph>, query memory usage is controlled by <xref
             href="#statement_mem" format="dita"/> and resource queue memory limits. </p>
@@ -6224,10 +6234,11 @@
       <title>gp_resqueue_priority_cpucores_per_segment</title>
       <body>
         <p>Specifies the number of CPU units allocated per segment instance. For example, if a
-          Greenplum Database cluster has 10-core segment hosts that are configured with four
-          segments, set the value for the segment instances to 2.5. For the master instance, the
-          value would be 10. A master host typically has only the master instance running on it, so
-          the value for the master should reflect the usage of all available CPU cores. </p>
+            Greenplum Database cluster has 10-core segment hosts that are configured
+          with four segments, set the value for the segment instances to 2.5. For the master
+          instance, the value would be 10. A master host typically has only the master instance
+          running on it, so the value for the master should reflect the usage of all available CPU
+          cores. </p>
         <p>Incorrect settings can result in CPU under-utilization or query prioritization not
           working as designed. </p>
         <p>The default values for the Greenplum Data Computing Appliance V2 are 4 for segments and
@@ -6319,9 +6330,9 @@
           non-mature file system. When a number of bytes greater than zero is specified, the
           append-optimized writer adds padding data up to that number in order to prevent data
           corruption due to file system errors. Each non-mature file system has a known safe write
-          size that must be specified here when using Greenplum Database with that type of file
-          system. This is commonly set to a multiple of the extent size of the file system; for
-          example, Linux ext3 is 4096 bytes, so a value of 32768 is commonly used.</p>
+          size that must be specified here when using Greenplum Database with that
+          type of file system. This is commonly set to a multiple of the extent size of the file
+          system; for example, Linux ext3 is 4096 bytes, so a value of 32768 is commonly used.</p>
         <table id="gp_safefswritesize_table">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -6348,9 +6359,10 @@
     <topic id="gp_segment_connect_timeout">
       <title>gp_segment_connect_timeout</title>
       <body>
-        <p>Time that the Greenplum Database interconnect will try to connect to a segment instance
-          over the network before timing out. Controls the network connection timeout between master
-          and primary segments, and primary to mirror segment replication processes.</p>
+        <p>Time that the Greenplum interconnect will try to connect to
+          a segment instance over the network before timing out. Controls the network connection
+          timeout between master and primary segments, and primary to mirror segment replication
+          processes.</p>
         <table id="gp_segment_connect_timeout_table">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -6435,8 +6447,8 @@
     <topic id="gp_set_proc_affinity">
       <title>gp_set_proc_affinity</title>
       <body>
-        <p>If enabled, when a Greenplum Database server process (postmaster) is started it will bind
-          to a CPU.</p>
+        <p>If enabled, when a Greenplum server process (postmaster) is
+          started it will bind to a CPU.</p>
         <table id="gp_set_proc_affinity_table">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -6488,7 +6500,7 @@
         </table>
       </body>
     </topic>
-    <topic id="gp_snmp_community" otherprops="gpdb">
+    <topic id="gp_snmp_community">
       <title>gp_snmp_community</title>
       <body>
         <p>Set to the community name you specified for your environment.</p>
@@ -6515,7 +6527,7 @@
         </table>
       </body>
     </topic>
-    <topic id="gp_snmp_monitor_address" otherprops="gpdb">
+    <topic id="gp_snmp_monitor_address">
       <title>gp_snmp_monitor_address</title>
       <body>
         <p>The <ph>hostname:port</ph> of your network monitor application. Typically, the port
@@ -6543,12 +6555,13 @@
         </table>
       </body>
     </topic>
-    <topic id="gp_snmp_use_inform_or_trap" otherprops="gpdb">
+    <topic id="gp_snmp_use_inform_or_trap">
       <title>gp_snmp_use_inform_or_trap</title>
       <body>
         <p>Trap notifications are SNMP messages sent from one application to another (for example,
-          between Greenplum Database and a network monitoring application). These messages are
-          unacknowledged by the monitoring application, but generate less network overhead.</p>
+          between Greenplum Database and a network monitoring application). These
+          messages are unacknowledged by the monitoring application, but generate less network
+          overhead.</p>
         <p>Inform notifications are the same as trap messages, except that the application sends an
           acknowledgement to the application that generated the alert. </p>
         <table id="gp_snmp_use_inform_or_trap_table">
@@ -6789,9 +6802,9 @@
         <p>When a hash aggregation or hash join operation spills to disk during query processing,
           specifies the compression algorithm to use on the spill files. If using zlib, it must be
           in your $PATH on all segments.</p>
-        <p>If your Greenplum Database database installation uses serial ATA (SATA) disk drives,
-          setting the value of this parameter to <codeph>zlib</codeph> might help to avoid
-          overloading the disk subsystem with IO operations.</p>
+        <p>If your Greenplum database installation uses serial ATA
+          (SATA) disk drives, setting the value of this parameter to <codeph>zlib</codeph> might
+          help to avoid overloading the disk subsystem with IO operations.</p>
         <table id="gp_workfile_compress_algorithm_table">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -6903,7 +6916,7 @@
         </table>
       </body>
     </topic>
-    <topic id="gpperfmon_port" otherprops="gpdb">
+    <topic id="gpperfmon_port">
       <title>gpperfmon_port</title>
       <body>
         <p>Sets the port on which all data collection agents (for Command Center) communicate with
@@ -6965,7 +6978,7 @@
           output matching SQL standard interval literals. The value <i>postgres</i> produces output
           matching PostgreSQL releases prior to 8.4 when the <xref href="#DateStyle" format="dita"/>
           parameter was set to ISO. </p>
-        <p otherprops="gpdb">The value <i>postgres_verbose</i> produces output matching Greenplum
+        <p>The value <i>postgres_verbose</i> produces output matching Greenplum
           releases prior to 3.3 when the <xref href="#DateStyle" format="dita"/> parameter was set
           to non-ISO output. </p>
         <p>The value <i>iso_8601</i> will produce output matching the time interval <i>format with
@@ -7029,7 +7042,7 @@
         </table>
       </body>
     </topic>
-    <topic id="keep_wal_segments" otherprops="gpdb">
+    <topic id="keep_wal_segments">
       <title>keep_wal_segments</title>
       <body>
         <p>For Greenplum Database master mirroring, sets the maximum number of processed WAL segment
@@ -7379,7 +7392,7 @@
       <title>log_autostats</title>
       <body>
         <p>Logs information about automatic <codeph>ANALYZE</codeph> operations related to <xref
-            href="#gp_autostats_mode" format="dita"/><ph otherprops="gpdb"> and <xref
+            href="#gp_autostats_mode" format="dita"/><ph> and <xref
               href="#gp_autostats_on_change_threshold" format="dita"/></ph>.</p>
         <table id="log_autostats_table">
           <tgroup cols="3">
@@ -7578,9 +7591,8 @@
       <title>log_hostname</title>
       <body>
         <p>By default, connection log messages only show the IP address of the connecting host.
-          Turning on this option causes logging of the IP address and host name of the Greenplum
-          Database master. Note that depending on your host name resolution setup this might impose
-          a non-negligible performance penalty. </p>
+          Turning on this option causes logging of the IP address and host name of the Greenplum Database master. Note that depending on your host name resolution setup
+          this might impose a non-negligible performance penalty. </p>
         <table id="log_hostname_table">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -7967,17 +7979,16 @@
     <topic id="max_connections">
       <title>max_connections</title>
       <body>
-        <p>The maximum number of concurrent connections to the database server. In a Greenplum
-          Database system, user client connections go through the Greenplum Database master instance
-          only. Segment instances should allow 5-10 times the amount as the master. When you
-          increase this parameter, <xref href="#max_prepared_transactions" format="dita"/> must be
-          increased as well. For more information about limiting concurrent connections, see
-          "Configuring Client Authentication" in the <i>Greenplum Database Administrator
-          Guide</i>.</p>
-        <p>Increasing this parameter may cause Greenplum Database to request more shared
-          memory.Increasing this parameter might cause Greenplum Database to request more shared
-          memory. See <xref href="#shared_buffers" format="dita"/> for information about Greenplum
-          Database server instance shared memory buffers.</p>
+        <p>The maximum number of concurrent connections to the database server. In a Greenplum Database system, user client connections go through the Greenplum master instance only. Segment instances should allow 5-10
+          times the amount as the master. When you increase this parameter, <xref
+            href="#max_prepared_transactions" format="dita"/> must be increased as well. For more
+          information about limiting concurrent connections, see "Configuring Client Authentication"
+          in the <i>Greenplum Database Administrator Guide</i>.</p>
+        <p>Increasing this parameter may cause Greenplum Database to request more
+          shared memory.Increasing this parameter might cause Greenplum Database to
+          request more shared memory. See <xref href="#shared_buffers" format="dita"/> for
+          information about Greenplum server instance shared memory
+          buffers.</p>
         <table id="max_connections_table">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -8207,10 +8218,10 @@
       <title>max_prepared_transactions</title>
       <body>
         <p>Sets the maximum number of transactions that can be in the prepared state simultaneously.
-          Greenplum Database uses prepared transactions internally to ensure data integrity across
-          the segments. This value must be at least as large as the value of <xref
-            href="#max_connections" format="dita"/> on the master. Segment instances should be set
-          to the same value as the master. </p>
+            Greenplum uses prepared transactions internally to ensure
+          data integrity across the segments. This value must be at least as large as the value of
+            <xref href="#max_connections" format="dita"/> on the master. Segment instances should be
+          set to the same value as the master. </p>
         <table id="max_prepared_transactions_table">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -8266,9 +8277,8 @@
     <topic id="max_resource_queues">
       <title>max_resource_queues</title>
       <body>
-        <p>Sets the maximum number of resource queues that can be created in a Greenplum Database
-          system. Note that resource queues are system-wide (as are roles) so they apply to all
-          databases in the system.</p>
+        <p>Sets the maximum number of resource queues that can be created in a Greenplum Database system. Note that resource queues are system-wide (as are roles)
+          so they apply to all databases in the system.</p>
         <table id="max_resource_queues_table">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -8361,15 +8371,15 @@
     <topic id="optimizer">
       <title>optimizer</title>
       <body>
-        <p>Enables the Pivotal Query Optimizer when running SQL queries. The default is
+        <p>Enables GPORCA when running SQL queries. The default is
             <codeph>off</codeph>, Greenplum Database uses only the legacy query optimizer. </p>
-        <p>The Pivotal Query Optimizer co-exists with the legacy query optimizer. When the Pivotal
-          Query Optimizer is enabled, Greenplum Database uses the Pivotal Query Optimizer to
-          generate an execution plan for a query when possible. If the Pivotal Query Optimizer
+        <p>GPORCA co-exists with the legacy query optimizer. When the Pivotal
+          Query Optimizer is enabled, Greenplum Database uses GPORCA to
+          generate an execution plan for a query when possible. If GPORCA
           cannot be used, the legacy query optimizer is used. </p>
         <p>The <cmdname>optimizer</cmdname> parameter can be set for a database system, an
           individual database, or a session or query.</p>
-        <p>For information about the legacy query optimizer and the Pivotal Query Optimizer, see
+        <p>For information about the legacy query optimizer and GPORCA, see
           "Querying Data" in the <cite>Greenplum Database Administrator Guide</cite>.</p>
         <table id="optimizer_guc_table">
           <tgroup cols="3">
@@ -8398,14 +8408,14 @@
       <title>optimizer_analyze_root_partition</title>
       <body>
         <p>For a partitioned table, collects statistics for the root partition when the
-            <cmdname>ANALYZE</cmdname> command is run on the table. The Pivotal Query Optimizer uses
+            <cmdname>ANALYZE</cmdname> command is run on the table. GPORCA uses
           the root partition statistics when generating a query plan. The legacy query optimizer
           does not use these statistics. If you set the value of the server configuration parameter
               <codeph><xref href="#optimizer" format="dita"/></codeph> to on, set the value of this
           parameter to on and run the command <cmdname>ANALYZE</cmdname> or <cmdname>ANALYZE
             ROOTPARTITION</cmdname> on partitioned tables to ensure the proper statistics have been
           collected. </p>
-        <p>For information about the legacy query optimizer and the Pivotal Query Optimizer, see
+        <p>For information about the legacy query optimizer and GPORCA, see
           "Querying Data" in the <cite>Greenplum Database Administrator Guide</cite>.</p>
         <table id="table_gj5_k5l_vp">
           <tgroup cols="3">
@@ -8433,16 +8443,16 @@
     <topic id="optimizer_array_expansion_threshold">
       <title>optimizer_array_expansion_threshold</title>
       <body>
-        <p>When the Pivotal Query Optimizer (PQO) is enabled and is processing a query that contains
+        <p>When GPORCA is enabled and is processing a query that contains
           a predicate with a constant array, the
             <codeph>optimizer_array_expansion_threshold</codeph> parameter limits the optimization
           process based on the number of constants in the array. If the array in the query predicate
-          contains more than the number elements specified by parameter, PQO disables the
+          contains more than the number elements specified by parameter, GPORCA disables the
           transformation of the predicate into its disjunctive normal form during query
           optimization. </p>
         <p>The default value is 25. </p>
-        <p>For example, when PQO is executing a query that contains an <codeph>IN</codeph> clause
-          with more than 25 elements, PQO does not transform the predicate into its disjunctive
+        <p>For example, when GPORCA is executing a query that contains an <codeph>IN</codeph> clause
+          with more than 25 elements, GPORCA does not transform the predicate into its disjunctive
           normal form during query optimization to reduce optimization time consume less memory. The
           difference in query processing can be seen in the filter condition for the
             <codeph>IN</codeph> clause of the query <codeph>EXPLAIN</codeph> plan.</p>
@@ -8510,7 +8520,7 @@
     <topic id="optimizer_enable_master_only_queries">
       <title>optimizer_enable_master_only_queries</title>
       <body>
-        <p dir="ltr">When the Pivotal Query Optimizer is enabled (the server configuration parameter
+        <p dir="ltr">When GPORCA is enabled (the server configuration parameter
             <codeph>optimizer</codeph> is <codeph>on</codeph>), this parameter allows the Pivotal
           Query Optimizer to execute catalog queries that run only on the Greenplum Database master.
           For the default value <codeph>off</codeph>, only the legacy query optimizer can execute
@@ -8519,7 +8529,7 @@
           query.</p>
         <note>Enabling this parameter decreases performance of short running catalog queries. To
           avoid this issue, set this parameter only for a session or a query. </note>
-        <p>For information about the Pivotal Query Optimizer, see the <cite>Greenplum Database
+        <p>For information about GPORCA, see the <cite>Greenplum Database
             Administrator Guide</cite>.</p>
         <table id="table_ykk_rg5_gv">
           <tgroup cols="3">
@@ -8547,7 +8557,7 @@
     <topic id="optimizer_join_order_threshold">
       <title>optimizer_join_order_threshold</title>
       <body>
-        <p>Sets the maximum number of join children for which the Pivotal Query Optimizer will use
+        <p>Sets the maximum number of join children for which GPORCA will use
           the dynamic programming-based join ordering algorithm. You can set this value for a single
           query or for an entire session.</p>
         <table id="table_z1c_bqp_jx">
@@ -8576,7 +8586,7 @@
     <topic id="optimizer_minidump">
       <title>optimizer_minidump</title>
       <body>
-        <p>The Pivotal Query Optimizer generates minidump files to describe the optimization context
+        <p>GPORCA generates minidump files to describe the optimization context
           for a given query. The minidump files are used by Pivotal support to analyze Greenplum
           Database issues. The information in the file is not in a format that can be easily used by
           customers for debugging or troubleshooting. The minidump file is located under the master
@@ -8586,19 +8596,18 @@
         </p>
         <p>The minidump file contains this query related information:<ul id="ul_r2x_qbg_jr">
             <li>Catalog objects including data types, tables, operators, and statistics required by
-              the Pivotal Query Optimizer</li>
+              GPORCA</li>
             <li>An internal representation (DXL) of the query</li>
             <li>An internal representation (DXL) of the plan produced by the Pivotal Query
               Optimizer</li>
-            <li>System configuration information passed to the Pivotal Query Optimizer such as
+            <li>System configuration information passed to GPORCA such as
               server configuration parameters, cost and statistics configuration, and number of
               segments</li>
             <li>A stack trace of errors generated while optimizing the query</li>
           </ul></p>
         <p>Setting this parameter to <codeph>ALWAYS</codeph> generates a minidump for all queries.
-          Pivotal recommends that you set this parameter to <codeph>ONERROR</codeph> in production
-          environments to minimize total optimization time. </p>
-        <p>For information about the Pivotal Query Optimizer, see "Querying Data" in the
+          Set this parameter to <codeph>ONERROR</codeph> to minimize total optimization time. </p>
+        <p>For information about GPORCA, see "Querying Data" in the
             <cite>Greenplum Database Administrator Guide</cite>.</p>
         <table id="optimizer_minidump">
           <tgroup cols="3">
@@ -8626,13 +8635,13 @@
     <topic id="optimizer_parallel_union">
       <title>optimizer_parallel_union</title>
       <body>
-        <p>When Pivotal Query Optimizer (PQO) is enabled, <codeph>optimizer_parallel_union</codeph>
+        <p>When GPORCA is enabled, <codeph>optimizer_parallel_union</codeph>
           controls the amount of parallelization that occurs for queries that contain a
             <codeph>UNION</codeph> or <codeph>UNION ALL</codeph> clause. </p>
-        <p>When the value is <codeph>off</codeph>, the default, PQO generates a query plan where
+        <p>When the value is <codeph>off</codeph>, the default, GPORCA generates a query plan where
           each child of an APPEND(UNION) operator is in the same slice as the APPEND operator.
           During query execution, the children are executed in a sequential manner. </p>
-        <p>When the value is <codeph>on</codeph>, PQO generates a query plan where a redistribution
+        <p>When the value is <codeph>on</codeph>, GPORCA generates a query plan where a redistribution
           motion node is under an APPEND(UNION) operator. During query execution, the children and
           the parent APPEND operator are on different slices, allowing the children of the
           APPEND(UNION) operator to execute in parallel on segment instances.</p>
@@ -8664,7 +8673,7 @@
     <topic id="optimizer_sort_factor">
       <title>optimizer_sort_factor</title>
       <body>
-        <p>When Pivotal Query Optimizer (PQO) is enabled, <codeph>optimizer_sort_factor</codeph>
+        <p>When GPORCA is enabled, <codeph>optimizer_sort_factor</codeph>
           controls the cost factor to apply to sorting operations during query optimization. The
           default value <codeph>1</codeph> specifies the default sort cost factor. The value is a
           ratio of increase or decrease from the default factor. For example, a value of
@@ -8729,10 +8738,9 @@
       <title>password_hash_algorithm</title>
       <body>
         <p>Specifies the cryptographic hash algorithm that is used when storing an encrypted
-          Greenplum Database user password. The default algorithm is MD5.</p>
+            Greenplum Database user password. The default algorithm is MD5.</p>
         <p>For information about setting the password hash algorithm to protect user passwords, see
-          "Protecting Passwords in Greenplum Database" in the <cite>Greenplum Database Administrator
-            Guide</cite>.</p>
+          "Protecting Passwords in Greenplum Database" in the <cite>Greenplum Database Administrator Guide</cite>.</p>
         <table id="password_encryption_table">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -8762,9 +8770,10 @@
         <p>Enables support for <cite>Federal Information Processing Standard</cite> (FIPS) 140-2.
           For information about FIPS, see <xref href="http://www.nist.gov/itl/fips.cfm"
             format="html" scope="external">http://www.nist.gov/itl/fips.cfm</xref></p>
-        <p>To enable FIPS 140-2 support for Greenplum Database, the following are required.<ul
-            id="ul_flj_nyl_zp">
-            <li>The Greenplum Database pgcrypto package version 1.2 or later must be installed.</li>
+        <p>To enable FIPS 140-2 support for Greenplum Database, the following are
+            required.<ul id="ul_flj_nyl_zp">
+            <li>The Greenplum Database pgcrypto package version 1.2 or later must be
+              installed.</li>
             <li>If the value of <codeph>pgcrypto.fips</codeph> is set to <codeph>on</codeph>, the
               value of the parameter <codeph>custom_variable_classes</codeph> must contain
                 <codeph>pgcrypto</codeph>.</li>
@@ -9015,10 +9024,9 @@ $ gpconfig -c pgcrypto.fips -v on --masteronly</codeblock></p>
     <topic id="port">
       <title>port</title>
       <body>
-        <p>The database listener port for a Greenplum Database instance. The master and each segment
-          has its own port. Port numbers for the Greenplum Database system must also be changed in
-          the <codeph>gp_segment_configuration</codeph> catalog. You must shut down your Greenplum
-          Database system before changing port numbers.</p>
+        <p>The database listener port for a Greenplum instance. The
+          master and each segment has its own port. Port numbers for the Greenplum system must also be changed in the
+            <codeph>gp_segment_configuration</codeph> catalog. You must shut down your Greenplum Database system before changing port numbers.</p>
         <table id="port_table">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -9072,14 +9080,14 @@ $ gpconfig -c pgcrypto.fips -v on --masteronly</codeblock></p>
         </table>
       </body>
     </topic>
-    <topic id="readable_external_table_timeout" otherprops="gpdb">
+    <topic id="readable_external_table_timeout">
       <title>readable_external_table_timeout</title>
       <body>
         <p>When an SQL query reads from an external table, the parameter value specifies the amount
           of time in seconds that Greenplum Database waits before cancelling the query when data
           stops being returned from the external table. </p>
-        <p>The default value of 0, specifies no time out. Greenplum Database does not cancel the
-          query. </p>
+        <p>The default value of 0, specifies no time out. Greenplum Database does not
+          cancel the query. </p>
         <p>If queries that use gpfdist run a long time and then return the error "intermittent
           network connectivity issues", you can specify a value for readable_external_table_timeout.
           If no data is returned by gpfdist for the specified length of time, Greenplum Database
@@ -9107,15 +9115,15 @@ $ gpconfig -c pgcrypto.fips -v on --masteronly</codeblock></p>
         </table>
       </body>
     </topic>
-    <topic id="repl_catchup_within_range" otherprops="gpdb">
+    <topic id="repl_catchup_within_range">
       <title>repl_catchup_within_range</title>
       <body>
-        <p>For Greenplum Database master mirroring, controls updates to the active master. If the
-          number of WAL segment files that have not been processed by the <codeph>walsender</codeph>
-          exceeds this value, Greenplum Database updates the active master. </p>
-        <p>If the number of segment files does not exceed the value, Greenplum Database blocks
-          updates to the to allow the <codeph>walsender</codeph> process the files. If all WAL
-          segments have been processed, the active master is updated. </p>
+        <p>For Greenplum Database master mirroring, controls updates to the active
+          master. If the number of WAL segment files that have not been processed by the
+            <codeph>walsender</codeph> exceeds this value, Greenplum Database updates
+          the active master. </p>
+        <p>If the number of segment files does not exceed the value, Greenplum Database blocks updates to the to allow the <codeph>walsender</codeph> process the files. If all
+          WAL segments have been processed, the active master is updated. </p>
         <table id="repl_catchup_within_range_table">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -9139,13 +9147,13 @@ $ gpconfig -c pgcrypto.fips -v on --masteronly</codeblock></p>
         </table>
       </body>
     </topic>
-    <topic id="replication_timeout" otherprops="gpdb">
+    <topic id="replication_timeout">
       <title>replication_timeout</title>
       <body>
-        <p>For Greenplum Database master mirroring, sets the maximum time in milliseconds that the
-            <codeph>walsender</codeph> process on the active master waits for a status message from
-          the <codeph>walreceiver</codeph> process on the standby master. If a message is not
-          received, the <codeph>walsender</codeph> logs an error message.</p>
+        <p>For Greenplum Database master mirroring, sets the maximum time in
+          milliseconds that the <codeph>walsender</codeph> process on the active master waits for a
+          status message from the <codeph>walreceiver</codeph> process on the standby master. If a
+          message is not received, the <codeph>walsender</codeph> logs an error message.</p>
         <p>The <xref href="#wal_receiver_status_interval" format="dita"/> controls the interval
           between <codeph>walreceiver</codeph> status messages. </p>
         <table id="replication_timeout_table">
@@ -9258,7 +9266,7 @@ $ gpconfig -c pgcrypto.fips -v on --masteronly</codeblock></p>
         </table>
       </body>
     </topic>
-    <topic id="runaway_detector_activation_percent" otherprops="gpdb">
+    <topic id="runaway_detector_activation_percent">
       <title>runaway_detector_activation_percent</title>
       <body>
         <p>Sets the percentage of Greenplum Database vmem memory that triggers the termination of
@@ -9362,9 +9370,8 @@ $ gpconfig -c pgcrypto.fips -v on --masteronly</codeblock></p>
     <topic id="server_encoding">
       <title>server_encoding</title>
       <body>
-        <p>Reports the database encoding (character set). It is determined when the Greenplum
-          Database array is initialized. Ordinarily, clients need only be concerned with the value
-          of <i>client_encoding</i>. </p>
+        <p>Reports the database encoding (character set). It is determined when the Greenplum Database array is initialized. Ordinarily, clients need only be concerned
+          with the value of <i>client_encoding</i>. </p>
         <table id="server_encoding_table">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -9391,7 +9398,8 @@ $ gpconfig -c pgcrypto.fips -v on --masteronly</codeblock></p>
     <topic id="server_version">
       <title>server_version</title>
       <body>
-        <p>Reports the version of PostgreSQL that this release of Greenplum Database is based on. </p>
+        <p>Reports the version of PostgreSQL that this release of Greenplum Database
+          is based on. </p>
         <table id="server_version_table">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -9418,8 +9426,8 @@ $ gpconfig -c pgcrypto.fips -v on --masteronly</codeblock></p>
     <topic id="server_version_num">
       <title>server_version_num</title>
       <body>
-        <p>Reports the version of PostgreSQL that this release of Greenplum Database is based on as
-          an integer.</p>
+        <p>Reports the version of PostgreSQL that this release of Greenplum Database
+          is based on as an integer.</p>
         <table id="server_version_num_table">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -9446,11 +9454,11 @@ $ gpconfig -c pgcrypto.fips -v on --masteronly</codeblock></p>
     <topic id="shared_buffers">
       <title>shared_buffers</title>
       <body>
-        <p>Sets the amount of memory a Greenplum Database segment instance uses for shared memory
-          buffers. This setting must be at least 128KB and at least 16KB times <codeph><xref
-              href="#max_connections" type="section">max_connections</xref></codeph>. </p>
-        <p>Each Greenplum Database segment instance calculates and attempts to allocate certain
-          amount of shared memory based on the segment configuration. The value of
+        <p>Sets the amount of memory a Greenplum Database segment instance uses for
+          shared memory buffers. This setting must be at least 128KB and at least 16KB times
+              <codeph><xref href="#max_connections" type="section">max_connections</xref></codeph>. </p>
+        <p>Each Greenplum Database segment instance calculates and attempts to
+          allocate certain amount of shared memory based on the segment configuration. The value of
             <codeph>shared_buffers</codeph> is significant portion of this shared memory
           calculation, but is not all it. When setting <codeph>shared_buffers</codeph>, the values
           for the operating system parameters <codeph>SHMMAX</codeph> or <codeph>SHMALL</codeph>
@@ -9458,12 +9466,11 @@ $ gpconfig -c pgcrypto.fips -v on --masteronly</codeblock></p>
         <p>The operating system parameter <codeph>SHMMAX</codeph> specifies maximum size of a single
           shared memory allocation. The value of <codeph>SHMMAX</codeph> must be greater than this
           value:<codeblock> <codeph>shared_buffers</codeph> + <varname>other_seg_shmem</varname></codeblock>The
-          value of <varname>other_seg_shmem</varname> is the portion the Greenplum Database shared
-          memory calculation that is not accounted for by the <codeph>shared_buffers</codeph> value.
-          The <varname>other_seg_shmem</varname> value will vary based on the segment configuration. </p>
+          value of <varname>other_seg_shmem</varname> is the portion the Greenplum Database shared memory calculation that is not accounted for by the
+            <codeph>shared_buffers</codeph> value. The <varname>other_seg_shmem</varname> value will
+          vary based on the segment configuration. </p>
         <p>With the default Greenplum Database parameter values, the value for
-            <varname>other_seg_shmem</varname> is approximately 111MB for Greenplum Database
-          segments and approximately 79MB for the Greenplum Database master. </p>
+            <varname>other_seg_shmem</varname> is approximately 111MB for Greenplum Database segments and approximately 79MB for the Greenplum Database master. </p>
         <p>The operating system parameter <codeph>SHMALL</codeph> specifies the maximum amount of
           shared memory on the host. The value of <codeph>SHMALL</codeph> must be greater than this
           value:<codeblock> (<varname>num_instances_per_host</varname> * ( <codeph>shared_buffers</codeph> + <varname>other_seg_shmem</varname> )) + <varname>other_app_shared_mem</varname> </codeblock>The
@@ -9472,9 +9479,9 @@ $ gpconfig -c pgcrypto.fips -v on --masteronly</codeblock></p>
         <p>When shared memory allocation errors occur, possible ways to resolve shared memory
           allocation issues are to increase <codeph>SHMMAX</codeph> or <codeph>SHMALL</codeph>, or
           decrease <codeph>shared_buffers</codeph> or <codeph>max_connections</codeph>.</p>
-        <p>See the <cite>Greenplum Database Installation Guide</cite> for information about the
-          Greenplum Database values for the parameters <codeph>SHMMAX</codeph> and
-            <codeph>SHMALL</codeph>. </p>
+        <p>See the <cite>Greenplum Database Installation Guide</cite> for information
+          about the Greenplum Database values for the parameters
+            <codeph>SHMMAX</codeph> and <codeph>SHMALL</codeph>. </p>
         <table id="shared_buffers_table">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -9716,8 +9723,7 @@ $ gpconfig -c pgcrypto.fips -v on --masteronly</codeblock></p>
     <topic id="superuser_reserved_connections">
       <title>superuser_reserved_connections</title>
       <body>
-        <p>Determines the number of connection slots that are reserved for Greenplum Database
-          superusers.</p>
+        <p>Determines the number of connection slots that are reserved for Greenplum Database superusers.</p>
         <table id="superuser_reserved_connections_table">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -9905,21 +9911,19 @@ $ gpconfig -c pgcrypto.fips -v on --masteronly</codeblock></p>
           in most of the world. <codeph>Australia</codeph> and <codeph>India</codeph>, and other
           collections can be defined for a particular installation. Possible values are names of
           configuration files stored in <codeph>$GPHOME/share/postgresql/timezonesets/</codeph>. </p>
-        <p>To configure Greenplum Database to use a custom collection of timezones, copy the file
-          that contains the timezone definitions to the directory
-            <codeph>$GPHOME/share/postgresql/timezonesets/</codeph> on the Greenplum Database master
-          and segment hosts. Then set value of the server configuration parameter
-            <codeph>timezone_abbreviations</codeph> to the file. For example, to use a file
-            <codeph>custom</codeph> that contains the default timezones and the WIB (Waktu Indonesia
-          Barat) timezone. </p>
+        <p>To configure Greenplum Database to use a custom collection of timezones,
+          copy the file that contains the timezone definitions to the directory
+            <codeph>$GPHOME/share/postgresql/timezonesets/</codeph> on the Greenplum Database master and segment hosts. Then set value of the server
+          configuration parameter <codeph>timezone_abbreviations</codeph> to the file. For example,
+          to use a file <codeph>custom</codeph> that contains the default timezones and the WIB
+          (Waktu Indonesia Barat) timezone. </p>
         <ol id="ol_u51_pdb_rr">
           <li>Copy the file <codeph>Default</codeph> from the directory
               <codeph>$GPHOME/share/postgresql/timezonesets/</codeph> the file
               <codeph>custom</codeph>. Add the WIB timezone information from the file
               <codeph>Asia.txt</codeph> to the <codeph>custom</codeph>. </li>
           <li>Copy the file <codeph>custom</codeph> to the directory
-              <codeph>$GPHOME/share/postgresql/timezonesets/</codeph> on the Greenplum Database
-            master and segment hosts.</li>
+              <codeph>$GPHOME/share/postgresql/timezonesets/</codeph> on the Greenplum Database master and segment hosts.</li>
           <li>Set value of the server configuration parameter
               <codeph>timezone_abbreviations</codeph> to <codeph>custom</codeph>.</li>
           <li>Reload the server configuration file (<codeph>gpstop -u</codeph>).</li>
@@ -10352,7 +10356,8 @@ $ gpconfig -c pgcrypto.fips -v on --masteronly</codeblock></p>
           decide whether to replace transaction IDs with <i>FrozenXID</i> while scanning a
           table.</p>
         <p>For information about <codeph>VACUUM</codeph> and transaction ID management, see
-          "Managing Data" in the <cite>Greenplum Database Administrator Guide</cite> and the <xref
+          "Managing Data" in the <cite>Greenplum Database Administrator Guide</cite>
+          and the <xref
             href="http://www.postgresql.org/docs/8.2/static/routine-vacuuming.html#VACUUM-FOR-WRAPAROUND"
             scope="external" format="html">PostgreSQL documentation</xref>.</p>
         <table id="vacuum_freeze_min_age_table">
@@ -10443,12 +10448,12 @@ $ gpconfig -c pgcrypto.fips -v on --masteronly</codeblock></p>
         </table>
       </body>
     </topic>
-    <topic id="wal_receiver_status_interval" otherprops="gpdb">
+    <topic id="wal_receiver_status_interval">
       <title>wal_receiver_status_interval</title>
       <body>
-        <p>For Greenplum Database master mirroring, sets the interval in seconds between
-            <codeph>walreceiver</codeph> process status messages that are sent to the active master.
-          Under heavy loads, the time might be longer. </p>
+        <p>For Greenplum Database master mirroring, sets the interval in seconds
+          between <codeph>walreceiver</codeph> process status messages that are sent to the active
+          master. Under heavy loads, the time might be longer. </p>
         <p>The value of <xref href="#replication_timeout" format="dita"/> controls the time that the
             <codeph>walsender</codeph> process waits for a <codeph>walreceiver</codeph> message.</p>
         <table id="wal_receiver_status_interval_table">
@@ -10478,9 +10483,9 @@ $ gpconfig -c pgcrypto.fips -v on --masteronly</codeblock></p>
       <title>writable_external_table_bufsize</title>
       <body>
         <p>Size of the buffer (in KB) that Greenplum Database uses for network communication, such
-          as the <codeph>gpfdist</codeph> utility and web external tables (that use http). Greenplum
-          Database stores data in the buffer before writing the data out. For information about
-            <codeph>gpfdist</codeph>, see the <cite>Greenplum Database Utility Guide</cite>.</p>
+          as the <codeph>gpfdist</codeph> utility and web external tables (that use http). Greenplum Database stores data in the buffer before writing the data out. For
+          information about <codeph>gpfdist</codeph>, see the <cite>Greenplum Database Utility
+            Guide</cite>.</p>
         <table id="table_writable_external_table_bufsize">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -10508,8 +10513,8 @@ $ gpconfig -c pgcrypto.fips -v on --masteronly</codeblock></p>
       <title>xid_stop_limit</title>
       <body>
         <p>The number of transaction IDs prior to the ID where transaction ID wraparound occurs.
-          When this limit is reached, Greenplum Database stops creating new transactions to avoid
-          data loss due to transaction ID wraparound. </p>
+          When this limit is reached, Greenplum Database stops creating new
+          transactions to avoid data loss due to transaction ID wraparound. </p>
         <table id="xid_stop_limit_table">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -10537,9 +10542,9 @@ $ gpconfig -c pgcrypto.fips -v on --masteronly</codeblock></p>
       <title>xid_warn_limit</title>
       <body>
         <p>The number of transaction IDs prior to the limit specified by <xref
-            href="#xid_stop_limit" format="dita"/>. When Greenplum Database reaches this limit, it
-          issues a warning to perform a VACUUM operation to avoid data loss due to transaction ID
-          wraparound. </p>
+            href="#xid_stop_limit" format="dita"/>. When Greenplum Database reaches
+          this limit, it issues a warning to perform a VACUUM operation to avoid data loss due to
+          transaction ID wraparound. </p>
         <table id="xid_warn_limit_table">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>

@@ -137,7 +137,7 @@ date: 1865
 <i>       - name</i><i>type</i>
      <xref href="#topic3/OPTIMIZE" format="dita">OPTIMIZE</xref>: STRICT IMMUTABLE
      <xref href="#topic3/MODE" format="dita">MODE</xref>: SINGLE | MULTI</codeblock>
-      <codeblock>  - <xref href="#topic3/TRANSITION" format="dita">TRANSITION | CONSOLIDATE | FINALIZE</xref>:
+      <codeblock>  - <xref href="#/topic3/TRANSITION" format="dita">TRANSITION | CONSOLIDATE | FINALIZE</xref>:
      <xref href="#topic3/TCFNAME" format="dita">NAME</xref>: <i>function_name</i>
      <xref href="#topic3/FUNCTION" format="dita">FUNCTION</xref>: <i>function_definition</i>
      <xref href="#topic3/LANGUAGE" format="dita">LANGUAGE</xref>: perl | python | c
@@ -150,8 +150,8 @@ date: 1865
      <xref href="#topic3/TCFMODE" format="dita">MODE</xref>: SINGLE | MULTI</codeblock>
       <codeblock>  - <xref href="#topic3/REDUCE" format="dita">REDUCE</xref>:
      <xref href="#topic3/REDUCENAME" format="dita">NAME</xref>: <i>reduce_job_name</i>
- <xref href="#topic3/CONSOLIDATE" format="dita">CONSOLIDATE</xref>    <xref href="#topic3/TRANSITION" format="dita">TRANSITION</xref>: <i>transition_function_name</i>
-     : <i>consolidate_function_name</i>
+     <xref href="#topic3/TRANSITION" format="dita">TRANSITION</xref>: <i>transition_function_name</i>
+     <xref href="#topic3/CONSOLIDATE" format="dita">CONSOLIDATE</xref>: <i>consolidate_function_name</i>
      <xref href="#topic3/FINALIZE" format="dita">FINALIZE</xref>: <i>finalize_function_name</i>
      <xref href="#topic3/INITIALIZE" format="dita">INITIALIZE</xref>: <i>value</i>
      <xref href="#topic3/REDUCEKEYS" format="dita">KEYS</xref>:

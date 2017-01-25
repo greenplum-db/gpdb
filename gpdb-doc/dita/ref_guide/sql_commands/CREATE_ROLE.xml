@@ -12,7 +12,7 @@
             <codeblock>      SUPERUSER | NOSUPERUSER
     | CREATEDB | NOCREATEDB
     | CREATEROLE | NOCREATEROLE
-    | CREATEEXTTABLE | NOCREATEEXTTABLE
+    | CREATEEXTTABLE | NOCREATEEXTTABLE 
       [ ( <varname>attribute</varname>='<varname>value</varname>'[, ...] ) ]
            where <varname>attributes</varname> and <varname>value</varname> are:
            type='readable'|'writable'
@@ -21,7 +21,7 @@
     | LOGIN | NOLOGIN
     | CONNECTION LIMIT <varname>connlimit</varname>
     | [ ENCRYPTED | UNENCRYPTED ] PASSWORD '<varname>password</varname>'
-    | VALID UNTIL '<varname>timestamp</varname>'
+    | VALID UNTIL '<varname>timestamp</varname>' 
     | IN ROLE <varname>rolename</varname> [, ...]
     | ROLE <varname>rolename</varname> [, ...]
     | ADMIN <varname>rolename</varname> [, ...]
@@ -162,9 +162,9 @@
                         to a resource queue. The special keyword <codeph>NONE</codeph> means that
                         the role is assigned to the default resource queue. A role can only belong
                         to one resource queue. </pd>
-                                        <pd>Roles with the <codeph>SUPERUSER</codeph> attribute are exempt from resource
-                                                queue limits. For a superuser role, queries always run immediately
-                                                regardless of limits imposed by an assigned resource queue.</pd>
+                    <pd>Roles with the <codeph>SUPERUSER</codeph> attribute are exempt from resource
+                        queue limits. For a superuser role, queries always run immediately
+                        regardless of limits imposed by an assigned resource queue.</pd>
                 </plentry>
                 <plentry>
                     <pt>DENY <varname>deny_point</varname></pt>
@@ -182,7 +182,7 @@
                         formats:</pd>
                     <pd>
                         <p>For <codeph>day</codeph>:</p>
-                        <codeblock>{'Sunday' | 'Monday' | 'Tuesday' |'Wednesday' | 'Thursday' | 'Friday' |
+                        <codeblock>{'Sunday' | 'Monday' | 'Tuesday' |'Wednesday' | 'Thursday' | 'Friday' | 
 'Saturday' | 0-6 }</codeblock>
                         <p>For <codeph>time</codeph>:</p>
                         <codeblock>{ 00-23 : 00-59 | 01-12 : 00-59 { AM | PM }}</codeblock>

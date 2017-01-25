@@ -80,7 +80,7 @@
             class="+ topic/ph pr-d/codeph ">VACUUM FULL</codeph> in order to reclaim disk space
           occupied by deleted or obsolete rows. This view is accessible to all users, however
           non-superusers will only be able to see the tables that they have permission to
-          access.<note> For diagnostic functions that return append-optimized table information,
+            access.<note> For diagnostic functions that return append-optimized table information,
             see <xref href="#topic8" format="dita"/>.</note></p>
         <table id="ie184997" class="- topic/table ">
           <title class="- topic/title ">gp_bloat_diag view</title>
@@ -2317,9 +2317,9 @@
         size of a table or index by name, you must look up the relation name (<codeph
           class="+ topic/ph pr-d/codeph ">relname</codeph>) in the <codeph
           class="+ topic/ph pr-d/codeph ">pg_class</codeph> table. For example:</p>
-      <codeblock>SELECT relname as name, sotdsize as size, sotdtoastsize as
-toast, sotdadditionalsize as other
-FROM gp_size_of_table_disk as sotd, pg_class
+      <codeblock>SELECT relname as name, sotdsize as size, sotdtoastsize as 
+toast, sotdadditionalsize as other 
+FROM gp_size_of_table_disk as sotd, pg_class 
 WHERE sotd.sotdoid=pg_class.oid ORDER BY relname;</codeblock>
     </body>
     <topic id="topic39" xml:lang="en" ditaarch:DITAArchVersion="1.1"

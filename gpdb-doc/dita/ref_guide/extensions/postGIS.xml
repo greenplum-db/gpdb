@@ -45,18 +45,18 @@
       <title id="ij168742">Greenplum PostGIS Extension</title>
       <body>
         <p>The Greenplum Database PostGIS extension is available from <xref
-            href="https://network.pivotal.io/products" scope="external" format="html"><ph>Pivotal
+            href="https://network.pivotal.io" scope="external" format="html"><ph>Pivotal
               Network</ph></xref>. You can install it using the Greenplum Package Manager
             (<codeph>gppkg</codeph>). For details, see <codeph>gppkg</codeph> in the <cite>Greenplum
             Database Utility Guide</cite>.</p>
         <ul id="ul_h32_p42_4p">
-          <li id="ij169271">Pivotal Greenplum Database 4.3 supports PostGIS extension package version 2.0
+          <li id="ij169271">Greenplum Database 4.3 supports PostGIS extension package version 2.0
             (PostGIS 2.0.3).</li>
-          <li id="ij173964">Pivotal Greenplum Database 4.2.6 and later supports PostGIS extension package
+          <li id="ij173964">Greenplum Database 4.2.6 and later supports PostGIS extension package
             version 1.0 and 2.0 (PostGIS 1.4 and 2.0.3) <p>Only one version of the PostGIS extension
               package, either 1.0 or 2.0, can be installed on an installation of Greenplum Database.
             </p></li>
-          <li id="ij169291">Pivotal Greenplum Database prior to 4.2.6 supports PostGIS extension package
+          <li id="ij169291">Greenplum Database prior to 4.2.6 supports PostGIS extension package
             version 1.0 (PostGIS 1.4).<table id="ij170583">
               <title>PostGIS Component Version</title>
               <tgroup cols="4">
@@ -90,15 +90,15 @@
             </table></li>
         </ul>
         <p>For the information about supported extension packages and software versions see the
-            <cite>Pivotal Greenplum Database Release Notes</cite>.</p>
-        <note type="important">Extension packages for Pivotal Greenplum Database 4.3.4.x and earlier are not
-          compatible with Pivotal Greenplum Database 4.3.5.0 and later due to the introduction of
-          GPORCA. Also, extension packages for Pivotal Greenplum Database 4.3.5.0 and later are not
-          compatible with Pivotal Greenplum Database 4.3.4.x and earlier. <p>To use extension packages with
-            Pivotal Greenplum Database 4.3.5.0 and later, you must install and use Pivotal Greenplum Database
-            extension packages (gppkg files and contrib modules) that are built for Pivotal Greenplum
-            Database 4.3.5.0 and later. For custom modules that were used with Pivotal Greenplum Database
-            4.3.4.x and earlier, you must rebuild the modules for use with Pivotal Greenplum Database
+            <cite>Greenplum Database Release Notes</cite>.</p>
+        <note type="important">Extension packages for Greenplum Database 4.3.4.x and earlier are not
+          compatible with Greenplum Database 4.3.5.0 and later due to the introduction of Pivotal
+          Query Optimizer. Also, extension packages for Greenplum Database 4.3.5.0 and later are not
+          compatible with Greenplum Database 4.3.4.x and earlier. <p>To use extension packages with
+            Greenplum Database 4.3.5.0 and later, you must install and use Greenplum Database
+            extension packages (gppkg files and contrib modules) that are built for Greenplum
+            Database 4.3.5.0 and later. For custom modules that were used with Greenplum Database
+            4.3.4.x and earlier, you must rebuild the modules for use with Greenplum Database
             4.3.5.0 and later.</p></note>
         <p>Major enhancements and changes in 2.0.3 from 1.4.2 include:</p>
         <ul id="ul_mk2_p42_4p">
@@ -155,9 +155,9 @@
       <p>For PostGIS 2.0.3, you run two SQL scripts <codeph>postgis.sql</codeph> and
           <codeph>spatial_ref_sys.sql</codeph> in your target database.</p>
       <p>For example:</p>
-      <codeblock>psql -d mydatabase -f
+      <codeblock>psql -d mydatabase -f 
   $GPHOME/share/postgresql/contrib/postgis-2.0/postgis.sql
-psql -d mydatabase -f
+psql -d mydatabase -f 
   $GPHOME/share/postgresql/contrib/postgis-2.0/spatial_ref_sys.sql</codeblock>
       <note type="note"><codeph>spatial_ref_sys.sql</codeph> populates the
           <codeph>spatial_ref_sys</codeph> table with EPSG coordinate system definition identifiers.
@@ -195,11 +195,11 @@ psql -d mydatabase -f $GPHOME/share/postgresql/contrib/postgis-2.0/postgis_upgra
       <p>
         <ph>The following example SQL statements create non-OpenGIS tables and geometries.</ph>
       </p>
-      <codeblock>CREATE TABLE geom_test ( gid int4, geom geometry,
+      <codeblock>CREATE TABLE geom_test ( gid int4, geom geometry, 
   name varchar(25) );
 INSERT INTO geom_test ( gid, geom, name )
   VALUES ( 1, 'POLYGON((0 0 0,0 5 0,5 5 0,5 0 0,0 0 0))', '3D Square');
-INSERT INTO geom_test ( gid, geom, name )
+INSERT INTO geom_test ( gid, geom, name ) 
   VALUES ( 2, 'LINESTRING(1 1 1,5 5 5,7 7 5)', '3D Line' );
 INSERT INTO geom_test ( gid, geom, name )
   VALUES ( 3, 'MULTIPOINT(3 4,8 9)', '2D Aggregate Point' );

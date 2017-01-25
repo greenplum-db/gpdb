@@ -92,7 +92,7 @@
           <pd>FILLFACTOR — See <codeph><xref href="CREATE_INDEX.xml#topic1" type="topic"
                 format="dita"/></codeph> for more information about this index storage parameter. </pd>
           <pd>OIDS — Set to <codeph>OIDS=FALSE</codeph> (the default) so that rows do not have
-            object identifiers assigned to them. You should not
+            object identifiers assigned to them. Greenplum strongly recommends that you do not
             enable OIDS when creating a table. On large tables, such as those in a typical Greenplum
             Database system, using OIDs for table rows can cause wrap-around of the 32-bit OID
             counter. Once the counter wraps around, OIDs can no longer be assumed to be unique,

@@ -205,7 +205,7 @@
             <varname>data_type</varname>
           </pt>
           <pd>The data type of the column. This may include array specifiers.</pd>
-          <pd>For table columns that contain textual data, specify the data
+          <pd>For table columns that contain textual data, Specify the data
             type <codeph>VARCHAR</codeph> or <codeph>TEXT</codeph>. Specifying the data type
               <codeph>CHAR</codeph> is not recommended. In Greenplum Database, the data types
               <codeph>VARCHAR</codeph> or <codeph>TEXT</codeph> handles padding added to the data
@@ -645,7 +645,7 @@
       </ul>
       <note type="important">The current Greenplum Database legacy optimizer allows list partitions
         with multi-column (composite) partition keys. GPORCA does not support
-        composite keys, so avoid using composite partition keys.</note>
+        composite keys, so Pivotal does not recommend using composite partition keys.</note>
     </section>
     <section id="section6">
       <title>Examples</title>

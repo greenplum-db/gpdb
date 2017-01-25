@@ -48,7 +48,7 @@
             <entry colname="col2">char</entry>
             <entry colname="col3"/>
             <entry colname="col4">The type of shared storage in use. <codeph>n</codeph> indidcates
-              NFS, and <codeph>e</codeph> indicates EMC SAN. </entry>
+              NFS, and <codeph>e</codeph> indicates Dell EMC SAN. </entry>
           </row>
           <row>
             <entry colname="col1">
@@ -74,7 +74,7 @@
             <entry colname="col3"/>
             <entry colname="col4">A string specifying the device to mount on the primary
                 mountpoint.<p>For NFS, this string is similar to:
-                  <codeph>nfs-server:/exported/fs</codeph>.</p><p>For EMC this is a larger string
+                  <codeph>nfs-server:/exported/fs</codeph>.</p><p>For Dell EMC this is a larger string
                 that includes the WWN for the storage processor, the storage-processor IP, and the
                 storage-group name.</p><p>The <codeph>primary_device</codeph> field is identical to
                 the <codeph>mirror_device</codeph> field.</p></entry>
@@ -103,7 +103,7 @@
             <entry colname="col3"/>
             <entry colname="col4">A string specifying the device to mount on the mirror
                 mountpoint.<p>For NFS, this string is similar to:
-                  <codeph>nfs-server:/exported/fs</codeph>.</p><p>For EMC this is a larger string
+                  <codeph>nfs-server:/exported/fs</codeph>.</p><p>For Dell EMC this is a larger string
                 that includes the WWN for the storage processor, the storage-processor IP, and the
                 storage-group name.</p><p>The <codeph>mirror_device</codeph> field is identical to
                 the <codeph>primary_device</codeph> field.</p></entry>

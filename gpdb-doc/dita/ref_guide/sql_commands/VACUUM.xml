@@ -41,9 +41,9 @@ VACUUM [FULL] [FREEZE] [VERBOSE] ANALYZE
         current segment file and activate the new segment file.</p>
       <p><codeph>VACUUM FULL</codeph> does more extensive processing, including moving of tuples
         across blocks to try to compact the table to the minimum number of disk blocks. This form is
-                much slower and requires an Access Exclusive lock on each table while it is being processed.
-                The Access Exclusive lock guarantees that the holder is the only transaction accessing the
-                table in any way.</p>
+        much slower and requires an Access Exclusive lock on each table while it is being processed.
+        The Access Exclusive lock guarantees that the holder is the only transaction accessing the
+        table in any way.</p>
       <note type="important">For information on the use of <codeph>VACUUM</codeph>, <codeph>VACUUM
           FULL</codeph>, and <codeph>VACUUM ANALYZE</codeph>, see <xref href="#topic1/section6"
           type="section" format="dita"/>
@@ -97,7 +97,7 @@ VACUUM [FULL] [FREEZE] [VERBOSE] ANALYZE
     <section id="section6">
       <title id="er144900">Notes</title>
       <p><codeph>VACUUM</codeph> cannot be executed inside a transaction block.</p>
-      <p>Active production databases should be vacuumed frequently (at least
+      <p>Vacuum active databases frequently (at least
         nightly), in order to remove expired rows. After adding or deleting a large number of rows,
         running the <codeph>VACUUM ANALYZE</codeph> command for the affected table might be useful.
         This updates the system catalogs with the results of all recent changes, and allows the
@@ -116,8 +116,7 @@ VACUUM [FULL] [FREEZE] [VERBOSE] ANALYZE
       <p><codeph>VACUUM</codeph> commands skip external tables.</p>
       <p><codeph>VACUUM FULL</codeph> reclaims all expired row space, however it requires an
         exclusive lock on each table being processed, is a very expensive operation, and might take
-        a long time to complete on large, distributed Greenplum Database tables. Perform <codeph>VACUUM FULL</codeph> 
-        operations during database maintenance periods. </p>
+        a long time to complete on large, distributed Greenplum Database tables. Perform <codeph>VACUUM FULL</codeph> operations during database maintenance periods. </p>
       <p>As an alternative to <codeph>VACUUM FULL</codeph>, you can re-create the table with a
           <codeph>CREATE TABLE AS</codeph> statement and drop the old table. </p>
       <p>Size the free space map appropriately. You configure the free space map using the following
