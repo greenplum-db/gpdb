@@ -154,7 +154,7 @@
           <codeph>gpfdist.exe</codeph> as a service: </p>
       <ol id="ol_pps_jsr_dp">
         <li id="ku139499">Update your Greenplum Loader package to the latest version. This package
-          is available from <xref href="https://network.pivotal.io/products" scope="external"
+          is available from <xref href="https://network.pivotal.io" scope="external"
             format="html">Pivotal Network</xref>. </li>
         <li id="ku139444">Register <codeph>gpfdist</codeph> as a Windows service:<ol
             id="ol_uws_jsr_dp">

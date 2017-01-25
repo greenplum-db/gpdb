@@ -9,6 +9,6 @@
          <topicref href="client/unix/gpmapreduce.xml" navtitle="gpmapreduce"/>
          <topicref href="client/unix/psql.xml" navtitle="psql"/>
       </topicref>
-      <topicref href="client/unix/client_sql_ref.xml" navtitle="SQL Command Reference"/>
+      <topicref href="common/client_sql_ref.xml" navtitle="SQL Command Reference"/>
    </topicref>
 </map>

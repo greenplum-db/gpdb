@@ -6,8 +6,8 @@
   <shortdesc otherprops="op-help">Information for installing the Greenplum Database drivers and C
     API software on a client system. </shortdesc>
   <body>
-    <p otherprops="op-print">Rev: A06</p>
-    <p otherprops="op-print">Updated: December, 2016</p>
+    <p otherprops="op-print">Rev: A07</p>
+    <p otherprops="op-print">Updated: June, 2016</p>
     <!--short description and rev information are tagged for help/pdf output.
 For PDF, the connectivity tools ditamap requires the pdf-note transform -->
   </body>
@@ -21,10 +21,10 @@ For PDF, the connectivity tools ditamap requires the pdf-note transform -->
         <li>PostgreSQL JDBC Interface</li>
         <li>libpq</li>
       </ul>
-      <p>The supported platforms include Red Hat Enterprise Linux, Solaris, and SUSE Linux
-        Enterprise Server. See the <i>Greenplum Database Release Notes</i> for the list of currently
-        supported platforms for the Connectivity Tools.</p>
-      <note type="note">If your Java application on Red Hat Enterprise Linux connects to Greenplum
+      <p>The supported platforms include RedHat Enterprise Linux, Solaris, and SUSE Linux Enterprise
+        Server. See the <i>Greenplum Database Release Notes</i> for the list of currently supported
+        platforms for the Connectivity Tools.</p>
+      <note type="note">If your Java application on RedHat Enterprise Linux connect to Greenplum
         Database with Kerberos authentication, see "<xref href="#topic12" type="topic" format="dita"
         />."</note>
     </body>
@@ -50,7 +50,7 @@ For PDF, the connectivity tools ditamap requires the pdf-note transform -->
           <li id="kd157618">Download the appropriate
                 <codeph>greenplum-connectivity-4.3.x.x-<varname>PLATFORM</varname>.bin.zip</codeph>
             installer package for your platform from <xref
-              href="https://network.pivotal.io/products" scope="external" format="html">Pivotal
+              href="https://network.pivotal.io" scope="external" format="html">Pivotal
               Network</xref>.</li>
           <li id="kd157623">Unzip the installer
             package:<codeblock>unzip greenplum-connectivity-4.3.x.x-<varname>PLATFORM</varname>.bin.zip</codeblock></li>
@@ -126,7 +126,7 @@ GP_ODBC_DRIVER_MANAGER = datadirect-52_64</codeblock></li>
                 <codeph>.odbc.ini</codeph>
               file:<codeblock>[Greenplum]
 Description = PostgreSQL driver for Greenplum
-Driver =
+Driver = 
 greenplum-connectivity-4.3.x.x/drivers/odbc/psqlodbc-02.08.0500/unixodbc-2.2.14/psqlodbcw.so
 Trace = 1
 Debug=1
@@ -191,11 +191,11 @@ drivers/odbc/psqlodbc-08.02.0500/unixodbc-2.2.14/ext/lib:</b>${LD_LIBRARY_PATH}<
         <note>To use a JDBC 4 driver, you use the JAR file based on the Java version being used: <ul
             id="ul_hfn_mrf_ct">
             <li>For Java 1.6, use the JDBC4 driver
-              <codeph>postgresql-9.4-1207.jdbc4.jar</codeph>.</li>
+              <codeph>postgresql-9.4-1208.jdbc4.jar</codeph>.</li>
             <li>For Java 1.7, use the JDBC41 driver
-              <codeph>postgresql-9.4-1207.jdbc41.jar</codeph>.</li>
+              <codeph>postgresql-9.4-1208.jdbc41.jar</codeph>.</li>
             <li>For Java 1.8, use the JDBC42 driver
-              <codeph>postgresql-9.4-1207.jdbc41.jar</codeph>.</li>
+              <codeph>postgresql-9.4-1208.jdbc42.jar</codeph>.</li>
           </ul></note>
         <section id="kd156744">
           <title>To configure the PostgreSQL JDBC Driver</title>
@@ -203,10 +203,10 @@ drivers/odbc/psqlodbc-08.02.0500/unixodbc-2.2.14/ext/lib:</b>${LD_LIBRARY_PATH}<
             <li id="kd156779">In the directory <codeph>$GPHOME_CONNECTIVITY/drivers/jdbc</codeph>,
               locate the correct JAR file. For example, if your application requires a JDBC
               4.0-compliant driver and is using Java 1.6, use the following JAR
-              file:<codeblock>$GPHOME_CONNECTIVITY/drivers/jdbc/(postgresql-9.4-1201.jdbc4.jar.jar</codeblock></li>
+              file:<codeblock>$GPHOME_CONNECTIVITY/drivers/jdbc/postgresql-9.4-1208.jdbc4.jar</codeblock></li>
             <li id="kd156781">Edit <codeph>greenplum_connectivity_path.sh</codeph> and set
                 <codeph>GP_JDBC_DRIVER</codeph> to the correct JAR file
-              name:<codeblock><b>GP_JDBC_JARFILE</b>=(postgresql-9.4-1201.jdbc4.jar</codeblock></li>
+              name:<codeblock><b>GP_JDBC_JARFILE</b>=postgresql-9.4-1208.jdbc4.jar</codeblock></li>
             <li id="kd156751">After editing <codeph>greenplum_connectivity_path.sh</codeph>, source
               it as the correct user to make the changes active. For
               example:<codeblock>source greenplum_connectivity_path.sh</codeblock></li>
@@ -247,7 +247,7 @@ drivers/odbc/psqlodbc-08.02.0500/unixodbc-2.2.14/ext/lib:</b>${LD_LIBRARY_PATH}<
   <topic id="topic12" xml:lang="en">
     <title id="kd157699">Configuring a Client System for Kerberos Authentication</title>
     <body>
-      <p>If your JDBC application on Red Hat Enterprise Linux uses Kerberos authentication when it
+      <p>If your JDBC application on RedHat Enterprise Linux uses Kerberos authentication when it
         connects to your Greenplum Database, your client system must be configured to use Kerberos
         authentication. If you are not using Kerberos authentication to connect to a Greenplum
         Database, Kerberos is not needed on your client system.</p>
@@ -292,7 +292,7 @@ drivers/odbc/psqlodbc-08.02.0500/unixodbc-2.2.14/ext/lib:</b>${LD_LIBRARY_PATH}<
                 remote user can connect to Greenplum Database with Kerberos authentication.
                 Authorization to access Greenplum Database is controlled by the
                   <codeph>pg_hba.conf</codeph> file. For details, see "Editing the pg_hba.conf File"
-                in the <i>Greenplum Database Administrator Guide</i>, and also see the <i>Greenplum
+                in the <i>Greenplum Database Administration Guide</i>, and also see the <i>Greenplum
                   Database Security Configuration Guide</i>.</note></li>
             <li id="kd158429">The client system requires the Kerberos configuration file
                 <codeph>krb5.conf</codeph> from the Greenplum Database master. </li>
@@ -361,7 +361,7 @@ drivers/odbc/psqlodbc-08.02.0500/unixodbc-2.2.14/ext/lib:</b>${LD_LIBRARY_PATH}<
             on the client machine. For this example, the keytab file
               <codeph>gpdb-kerberos.keytab</codeph> is in the the current directory. The ticket
             cache file is in the <codeph>gpadmin</codeph> user home directory.
-            <codeblock>&gt; kinit -k -t gpdb-kerberos.keytab -c /home/gpadmin/cache.txt
+            <codeblock>&gt; kinit -k -t gpdb-kerberos.keytab -c /home/gpadmin/cache.txt 
    gpadmin/kerberos-gpdb@KRB.EXAMPLE.COM</codeblock></li>
         </ol>
       </body>
@@ -388,8 +388,8 @@ drivers/odbc/psqlodbc-08.02.0500/unixodbc-2.2.14/ext/lib:</b>${LD_LIBRARY_PATH}<
         </ol>
         <p>This example database connection URL uses a PostgreSQL JDBC driver and specifies
           parameters for Kerberos authentication.</p>
-        <codeblock>jdbc:postgresql://kerberos-gpdb:5432/mytest?
-  kerberosServerName=postgres&amp;jaasApplicationName=pgjdbc&amp;
+        <codeblock>jdbc:postgresql://kerberos-gpdb:5432/mytest? 
+  kerberosServerName=postgres&amp;jaasApplicationName=pgjdbc&amp; 
   user=gpadmin/kerberos-gpdb</codeblock>
         <p>The parameter names and values specified depend on how the Java application performs
           Kerberos authentication.</p>

@@ -6,8 +6,8 @@
   <shortdesc otherprops="op-help">Information for installing the Greenplum Database drivers and C
     API software on a client system. </shortdesc>
   <body>
-    <p otherprops="op-print">Rev: A05</p>
-    <p otherprops="op-print">Updated: December, 2016</p>
+    <p otherprops="op-print">Rev: A06</p>
+    <p otherprops="op-print">Updated: June, 2016</p>
     <!--short description and rev information are tagged for help/pdf output.
 For PDF, the connectivity tools ditamap requires the pdf-note transform -->
   </body>
@@ -46,7 +46,7 @@ For PDF, the connectivity tools ditamap requires the pdf-note transform -->
         <ol>
           <li id="ok156194">Download the
               <codeph>greenplum-connectivity-4.3.x.x-WinXP-x86_32.msi</codeph> package from <xref
-              href="https://network.pivotal.io/products" scope="external" format="html">Pivotal
+              href="https://network.pivotal.io" scope="external" format="html">Pivotal
               Network</xref>.</li>
           <li id="ok157846">Double-click on the
               <codeph>greenplum-connectivity-4.3.x.x-WinXP-x86_32.msi</codeph> package to launch the
@@ -102,7 +102,7 @@ For PDF, the connectivity tools ditamap requires the pdf-note transform -->
           <li id="ok156260">Select <b>PostgreSQL Unicode</b> and click <b>Add</b> to add a new data
               source.<image href="images/win_0004.png" placement="break" width="406px"
               height="306px"/></li>
-          <li id="ok156261">For the driver, <b>PostgreSQL Unicode</b> is recommended.
+          <li id="ok156261">For the driver, <b>PostgreSQL Unicode</b> is the recommended choice.
             Unicode (UTF-8) is the default database encoding for Greenplum Database. There is also a
               <b>PostgeSQL ANSI</b> driver which can handle some multi-byte character sets and LATIN
             character sets.<image href="images/win_0005.png" placement="break" width="414px"
@@ -143,6 +143,15 @@ For PDF, the connectivity tools ditamap requires the pdf-note transform -->
             example:<codeblock>C:\Program Files\Java\jdk1.5.0_02\bin<b>;</b>greenplum-drivers-4.3.x.x\<b>drivers\jdbc\*</b></codeblock></li>
           <li id="ok156299">Click <b>OK</b>.</li>
         </ol>
+        <note>To use a JDBC 4 driver, you use the jar file based on the Java version being used: <ul
+            id="ul_hfn_mrf_ct">
+            <li>For Java 1.6, use the JDBC4 driver
+              <codeph>postgresql-9.4-1208.jdbc4.jar</codeph>.</li>
+            <li>For Java 1.7, use the JDBC41 driver
+              <codeph>postgresql-9.4-1208.jdbc41.jar</codeph>.</li>
+            <li>For Java 1.8, use the JDBC42 driver
+              <codeph>postgresql-9.4-1208.jdbc42.jar</codeph>.</li>
+          </ul></note>
       </section>
     </body>
   </topic>
@@ -209,7 +218,7 @@ For PDF, the connectivity tools ditamap requires the pdf-note transform -->
               master host. Greenplum Database must be configured so that a remote user can connect
               to Greenplum Database with Kerberos authentication. Authorization to access Greenplum
               Database is controlled by the <codeph>pg_hba.conf</codeph> file. For details, see
-              "Editing the pg_hba.conf File" in the <i>Greenplum Database Administrator Guide</i>,
+              "Editing the pg_hba.conf File" in the <i>Greenplum Database Administration Guide</i>,
               and also see the <i>Greenplum Database Security Configuration Guide</i>.</li>
             <li id="ok158461">The client system requires the Kerberos configuration file
                 <codeph>krb5.conf</codeph> from the Greenplum Database master. </li>
@@ -280,7 +289,7 @@ For PDF, the connectivity tools ditamap requires the pdf-note transform -->
               <codeph>gpdb-kerberos.keytab</codeph> is in the same directory as
               <codeph>kinit.exe</codeph>. The ticket cache file is in the Windows
               <codeph>gpadmin</codeph> user home directory.
-            <codeblock>&gt; kinit -k -t gpdb-kerberos.keytab -c C:\Users\gpadmin\cache.txt
+            <codeblock>&gt; kinit -k -t gpdb-kerberos.keytab -c C:\Users\gpadmin\cache.txt 
    gpadmin/kerberos-gpdb@KRB.EXAMPLE.COM</codeblock></li>
         </ol>
       </body>
@@ -307,8 +316,8 @@ For PDF, the connectivity tools ditamap requires the pdf-note transform -->
         </ol>
         <p>This example database connection URL uses a PostgreSQL JDBC driver and specifies
           parameters for Kerberos authentication.</p>
-        <codeblock>jdbc:postgresql://kerberos-gpdb:5432/mytest?
-  kerberosServerName=postgres&amp;jaasApplicationName=pgjdbc&amp;
+        <codeblock>jdbc:postgresql://kerberos-gpdb:5432/mytest? 
+  kerberosServerName=postgres&amp;jaasApplicationName=pgjdbc&amp; 
   user=gpadmin/kerberos-gpdb</codeblock>
         <p>The parameter names and values specified depend on how the Java application performs
           Kerberos authentication.</p>

@@ -7,11 +7,11 @@
     <p>Runs a load job as defined in a YAML formatted control file.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock><b>gpload.py</b> <b>-f</b> <varname>control_file</varname> [<b>-l</b> <varname>log_file</varname>] [<b>-h</b> <varname>hostname</varname>] [<b>-p</b> <varname>port</varname>]
-   [<b>-U</b> <varname>username</varname>] [<b>-d</b> <varname>database</varname>] [<b>-W</b>] [<b>--gpfdist_timeout</b> <varname>seconds</varname>]
+      <codeblock><b>gpload.py</b> <b>-f</b> <varname>control_file</varname> [<b>-l</b> <varname>log_file</varname>] [<b>-h</b> <varname>hostname</varname>] [<b>-p</b> <varname>port</varname>] 
+   [<b>-U</b> <varname>username</varname>] [<b>-d</b> <varname>database</varname>] [<b>-W</b>] [<b>--gpfdist_timeout</b> <varname>seconds</varname>] 
    [<b>--no_auto_trans</b>] [[<b>-v</b> | <b>-V</b>] [<b>-q</b>]] [<b>-D</b>]
 
-<b>gpload.py</b> <b>-?</b>
+<b>gpload.py</b> <b>-?</b> 
 
 <b>gpload.py</b> <b>--version</b></codeblock>
     </section>
@@ -113,16 +113,16 @@
           </plentry>
           <plentry>
             <pt>-h <varname>hostname</varname></pt>
-            <pd>Specifies the host name of the machine on which the Greenplum
-              master database server is running. If not specified,
-              reads from the load control file, the environment variable <codeph>$PGHOST</codeph> or
-              defaults to <codeph>localhost</codeph>.</pd>
+            <pd>Specifies the host name of the machine on which the Greenplum Database master
+              database server is running. If not specified, reads from the load control file, the
+              environment variable <codeph>$PGHOST</codeph> or defaults to
+                <codeph>localhost</codeph>.</pd>
           </plentry>
           <plentry>
             <pt>-p <varname>port</varname></pt>
-            <pd>Specifies the TCP port on which the Greenplum master database server is listening
-              for connections. If not specified, reads from the load control file, the environment
-              variable <codeph>$PGPORT</codeph> or defaults to 5432.</pd>
+            <pd>Specifies the TCP port on which the Greenplum Database master database server is
+              listening for connections. If not specified, reads from the load control file, the
+              environment variable <codeph>$PGPORT</codeph> or defaults to 5432.</pd>
           </plentry>
           <plentry>
             <pt>-U <varname>username</varname></pt>
@@ -145,8 +145,8 @@
       <title id="ke142495">Control File Format</title>
       <p>The <codeph>gpload.py</codeph> control file uses the <xref href="http://yaml.org/spec/1.1/"
           scope="external" format="html">YAML 1.1</xref> document format and then implements its own
-        schema for defining the various steps of a  load operation.
-        The control file must be a valid YAML document.</p>
+        schema for defining the various steps of a Greenplum Database load operation. The control
+        file must be a valid YAML document.</p>
       <p>The <codeph>gpload.py</codeph> program processes the control file document in order and
         uses indentation (spaces) to determine the document hierarchy and the relationships of the
         sections to one another. The use of white space is significant. White space should not be
@@ -165,7 +165,7 @@
            - <varname>hostname_or_ip</varname>
          <xref href="#topic1/cfsourceport" format="dita">PORT</xref>: <varname>http_port</varname>
        | <xref href="#topic1/cfversion" format="dita">PORT_RANGE</xref>: [<varname>start_port_range</varname>, <varname>end_port_range</varname>]
-         <xref href="#topic1/cfsourcefile" format="dita">FILE</xref>:
+         <xref href="#topic1/cfsourcefile" format="dita">FILE</xref>: 
            - <varname>/path/to/input_file</varname>
          <xref href="#topic1/cfsourcessl" format="dita">SSL</xref>: true | false
          <xref href="#topic1/cfsourcecertificatespath" format="dita">CERTIFICATES_PATH</xref>: <varname>/path/to/certificates</varname>
@@ -173,8 +173,8 @@
     - <xref href="#topic1/cfcolumns" format="dita">COLUMNS</xref>:
            - <varname>field_name</varname>:<varname> data_type</varname>
     - <xref href="#topic1/cftransform" format="dita">TRANSFORM</xref>: '<varname>transformation</varname>'
-    - <xref href="#topic1/cftransformconfig" format="dita">TRANSFORM_CONFIG</xref>: '<varname>configuration-file-path</varname>'
-    - <xref href="#topic1/cfmaxlinelength" format="dita">MAX_LINE_LENGTH</xref>: <varname>integer</varname>
+    - <xref href="#topic1/cftransformconfig" format="dita">TRANSFORM_CONFIG</xref>: '<varname>configuration-file-path</varname>' 
+    - <xref href="#topic1/cfmaxlinelength" format="dita">MAX_LINE_LENGTH</xref>: <varname>integer</varname> 
     - <xref href="#topic1/cfformat" format="dita">FORMAT</xref>: text | csv
     - <xref href="#topic1/cfdelimiter" format="dita">DELIMITER</xref>: '<varname>delimiter_character</varname>'
     - <xref href="#topic1/cfescape" format="dita">ESCAPE</xref>: '<varname>escape_character</varname>' | 'OFF'
@@ -224,9 +224,8 @@
             database role on the command line using the <codeph>-U</codeph> option. </pd>
           <pd>If the user running <codeph>gpload.py</codeph> is not a Greenplum Database superuser,
             then the server configuration parameter <codeph>gp_external_grant_privileges</codeph>
-            must be set to <codeph>on</codeph> in order for the load to be processed.<ph
-              otherprops="gpdb"> See the <i>Greenplum Database Reference Guide</i> for more
-              information.</ph></pd>
+            must be set to <codeph>on</codeph> in order for the load to be processed. See the
+              <i>Greenplum Database Reference Guide</i> for more information.</pd>
         </plentry>
         <plentry>
           <pt id="cfhost">HOST</pt>
@@ -264,10 +263,10 @@
                             href="./gpfdistexe.xml#topic1" type="topic" format="dita"/></codeph>
                         file distribution program that will be started on the local machine. Each
                           <codeph>SOURCE</codeph> block defined must have a <codeph>FILE</codeph>
-                        specification. <p otherprops="gpdb">For more information about using the
-                            <codeph>gpfdist</codeph> parallel file server and single and multiple
-                            <codeph>gpfdist</codeph> instances, see "Loading and Unloading Data" in
-                          the <i>Greenplum Database Administrator Guide</i>.</p><parml>
+                        specification. For more information about using the <codeph>gpfdist</codeph>
+                        parallel file server and single and multiple <codeph>gpfdist</codeph>
+                        instances, see "Loading and Unloading Data" in the <i>Greenplum Database
+                          Administrator Guide</i>.<parml>
                           <plentry>
                             <pt id="cfsourcelocalname">LOCAL_HOSTNAME</pt>
                             <pd>Optional. Specifies the host name or IP address of the local machine
@@ -343,16 +342,16 @@
                         </parml></pd>
                     </plentry>
                     <plentry>
-                                            <pt id="fqdn">FULLY_QUALIFIED_DOMAIN_NAME</pt>
-                                            <pd>Optional. Specifies whether <codeph>gpload</codeph>
-                        resolves hostnames to the fully qualified domain name (FQDN) or the local
-                        hostname. If the value is set to <codeph>true</codeph>, names are resolved
-                        to the FQDN. If the value is set to <codeph>false</codeph>, resolution is to
-                        the local hostname. The default is <codeph>false</codeph>.<p>A fully
-                          qualified domain name might be required in some situations. For example,
-                          if the Greenplum Database system is in a different domain than an ETL
-                          application that is being accessed by <codeph>gpload</codeph>.</p></pd>
-                                          </plentry>
+                      <pt id="fqdn">FULLY_QUALIFIED_DOMAIN_NAME</pt>
+                      <pd>Optional. Specifies whether <codeph>gpload</codeph> resolve hostnames to
+                        the fully qualified domain name (FQDN) or the local hostname. If the value
+                        is set to <codeph>true</codeph>, names are resolved to the FQDN. If the
+                        value is set to <codeph>false</codeph>, resolution is to the local hostname.
+                        The default is <codeph>false</codeph>.<p>A fully qualified domain name might
+                          be required in some situations. For example, if the Greenplum Database
+                          system is in a different domain than an ETL application that is being
+                          accessed by <codeph>gpload</codeph>.</p></pd>
+                    </plentry>
                     <plentry>
                       <pt id="cfcolumns">COLUMNS</pt>
                       <pd>Optional. Specifies the schema of the source data file(s) in the format of
@@ -371,9 +370,9 @@
                     <plentry>
                       <pt id="cftransform">TRANSFORM</pt>
                       <pd>Optional. Specifies the name of the input XML transformation passed to
-                          <codeph>gploadl.py</codeph>. <ph otherprops="gpdb">For more information
-                          about XML transformations, see "Loading and Unloading Data" in the
-                            <i>Greenplum Database Administrator Guide</i>.</ph></pd>
+                          <codeph>gploadl.py</codeph>. For more information about XML
+                        transformations, see "Loading and Unloading Data" in the <i>Greenplum
+                          Database Administrator Guide</i>.</pd>
                     </plentry>
                     <plentry>
                       <pt id="cftransformconfig">TRANSFORM_CONFIG</pt>
@@ -391,9 +390,9 @@
                       <pd>Optional. Specifies the format of the source data file(s) - either plain
                         text (<codeph>TEXT</codeph>) or comma separated values
                         (<codeph>CSV</codeph>) format. Defaults to <codeph>TEXT</codeph> if not
-                          specified.<ph otherprops="gpdb"> For more information about the format of
-                          the source data, see "Loading and Unloading Data" in the <i>Greenplum
-                            Database Administrator Guide</i>.</ph></pd>
+                        specified. For more information about the format of the source data, see
+                        "Loading and Unloading Data" in the <i>Greenplum Database Administrator
+                          Guide</i>.</pd>
                     </plentry>
                     <plentry>
                       <pt id="cfdelimiter">DELIMITER</pt>
@@ -489,7 +488,7 @@
                         formatting errors are detected when loading data, <codeph>gpload.py</codeph>
                         generates a warning message with the name of the table that contains the
                         error information similar to this message.
-                        <codeblock><varname>timestamp</varname>|WARN|1 bad row, please use GPDB built-in function gp_read_error_log('<parmname>table-name</parmname>')
+                        <codeblock><varname>timestamp</varname>|WARN|1 bad row, please use GPDB built-in function gp_read_error_log('<parmname>table-name</parmname>') 
    to access the detailed error row</codeblock></pd>
                       <pd>If <codeph>LOG_ERRORS: true</codeph> is specified, <codeph>REUSE TABLES:
                           true</codeph> must be specified to retain the formatting errors in
@@ -500,12 +499,11 @@
                           <codeph>gp_truncate_error_log()</codeph>.</pd>
                       <pd>Only <codeph>LOG_ERRORS</codeph> or <codeph>ERROR_TABLE</codeph> can be
                         specified. If both are specified, an error message is returned.</pd>
-                      <pd otherprops="gpdb">For more information about handling load errors, see
-                        "Loading and Unloading Data" in the <cite>Greenplum Database Administrator
-                          Guide</cite>. For information about the
-                          <codeph>gp_read_error_log()</codeph> function, see the <codeph>CREATE
-                          EXTERNAL TABLE</codeph> command in the <cite>Greenplum Database Reference
-                          Guide</cite></pd>
+                      <pd>For more information about handling load errors, see "Loading and
+                        Unloading Data" in the <cite>Greenplum Database Administrator Guide</cite>.
+                        For information about the <codeph>gp_read_error_log()</codeph> function, see
+                        the <codeph>CREATE EXTERNAL TABLE</codeph> command in the <cite>Greenplum
+                          Database Reference Guide</cite></pd>
                     </plentry>
                     <plentry>
                       <pt id="cferrortable">ERROR_TABLE</pt>
@@ -516,11 +514,10 @@
                           <codeph>ERROR_TABLE</codeph> specified already exists, it will be used. If
                         it does not exist, it will be automatically generated.</pd>
                       <pd>Only <codeph>LOG_ERRORS</codeph> or <codeph>ERROR_TABLE</codeph> can be
-                        specified. If both are specified, an error message is returned. Using
-                          <codeph>LOG_ERRORS</codeph> to capture formatting errors is recommended. </pd>
-                      <pd otherprops="gpdb">For more information about handling load errors, see
-                        "Loading and Unloading Data" in the <cite>Greenplum Database Administrator
-                          Guide</cite>.</pd>
+                        specified. If both are specified, an error message is returned. Use <codeph>LOG_ERRORS</codeph> to capture formatting errors. </pd>
+                      <pd>For more information about handling load errors, see "Loading and
+                        Unloading Data" in the <cite>Greenplum Database Administrator
+                        Guide</cite>.</pd>
                     </plentry>
                     <plentry>
                       <pt id="cfexternal">EXTERNAL</pt>
@@ -573,8 +570,9 @@
                         inserted, not only the <codeph>MATCH</codeph> and <codeph>UPDATE</codeph>
                         columns. If there are multiple new <codeph>MATCH_COLUMNS</codeph> values
                         that are the same, only one new row for that value will be inserted. Use
-                          <codeph>UPDATE_CONDITION</codeph> to filter out the rows to
-                      discard.</pd></plentry><plentry>
+                          <codeph>UPDATE_CONDITION</codeph> to filter out the rows to discard.</pd>
+                    </plentry>
+                    <plentry>
                       <pt id="cfmatchcolumns">MATCH_COLUMNS</pt>
                       <pd>Required if <codeph>MODE</codeph> is <codeph>UPDATE </codeph>or
                           <codeph>MERGE</codeph>. Specifies the column(s) to use as the join
@@ -602,9 +600,10 @@
                         source-to-target column mapping. The default source-to-target mapping is
                         based on a match of column names as defined in the source
                           <codeph>COLUMNS</codeph> section and the column names of the target
-                          <codeph>TABLE</codeph>. A mapping is specified as
-                            either:</pd><pd><codeph><varname>target_column_name</varname>:
-                            <varname>source_column_name</varname></codeph></pd><pd>or</pd>
+                          <codeph>TABLE</codeph>. A mapping is specified as either:</pd>
+                      <pd><codeph><varname>target_column_name</varname>:
+                            <varname>source_column_name</varname></codeph></pd>
+                      <pd>or</pd>
                       <pd><codeph><varname>target_column_name</varname>:
                             '<varname>expression</varname>'</codeph></pd>
                       <pd>Where <varname>expression</varname> is any expression that you would
@@ -711,7 +710,7 @@ GPLOAD:
            - etl1-3
            - etl1-4
          PORT: 8081
-         FILE:
+         FILE: 
            - /var/load/data/*
     - COLUMNS:
            - name: text
@@ -727,9 +726,9 @@ GPLOAD:
     - TABLE: payables.expenses
     - MODE: INSERT
    SQL:
-   - BEFORE: "INSERT INTO audit VALUES('start',
+   - BEFORE: "INSERT INTO audit VALUES('start', 
 current_timestamp)"
-   - AFTER: "INSERT INTO audit VALUES('end',
+   - AFTER: "INSERT INTO audit VALUES('end', 
 current_timestamp)"</codeblock>
     </section>
     <section id="section11">

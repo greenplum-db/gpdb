@@ -5,7 +5,7 @@
    <title>Copyright</title>
    <body outputclass="db.chapter">
       <p>
-          <xref href="http://pivotal.io/privacy-policy" format="html" scope="external">Privacy
+         <xref href="http://pivotal.io/privacy-policy" format="html" scope="external">Privacy
             Policy</xref> | <xref href="http://pivotal.io/terms-of-use" format="html"
             scope="external">Terms of Use</xref></p>
       <p>Copyright © 2016 Pivotal Software, Inc. All rights reserved.</p>
@@ -19,6 +19,6 @@
          requires an applicable software license.</p>
       <p>All trademarks used herein are the property of Pivotal or their respective owners.</p>
       <p> </p>
-      <p>Revised December 2016</p>
+      <p>Revised October 2016 (4.3.10.0)</p>
    </body>
 </topic>

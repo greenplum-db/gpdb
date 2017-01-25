@@ -65,7 +65,7 @@
         <ol>
           <li id="nw145432">Download the
               <codeph>greenplum-clients-4.3.<varname>x.x</varname>-WinXP-x86_32.msi</codeph> package
-            from <xref href="https://network.pivotal.io/products" scope="external" format="html"
+            from <xref href="https://network.pivotal.io" scope="external" format="html"
               >Pivotal Network</xref>.</li>
           <li id="nw150063">Double-click on the
               <codeph>greenplum-clients-4.3.<varname>x.x</varname>-WinXP-x86_32.msi</codeph> package
@@ -158,7 +158,7 @@ dir</codeblock></li>
           <li id="nw150174">Make sure that the <codeph>pg_hba.conf</codeph> file of the Greenplum
             Database master is correctly configured to allow connections from the users to the
             database(s) using the authentication method you want. For details, see "Editing the
-            pg_hba.conf File" in the <i>Greenplum Database Administrator Guide</i>, and also see
+            pg_hba.conf File" in the <i>Greenplum Database Administration Guide</i>, and also see
             the <i>Greenplum Database Security Configuration Guide</i>.<p>Make sure the
               authentication method you choose is supported by the client tool you are
             using.</p></li>

@@ -10,6 +10,6 @@
          linking="targetonly">
          <topicref href="client/windows/psqlexe.xml" navtitle="psql.exe"/>
       </topicref>
-      <topicref href="client/windows/client_sql_ref.xml" navtitle="SQL Command Reference"/>
+      <topicref href="common/client_sql_ref.xml" navtitle="SQL Command Reference"/>
    </topicref>
 </map>
