@@ -9,8 +9,8 @@
 		</booklibrary>
 		<mainbooktitle id="pdf_version">Version 4.3</mainbooktitle>
 		<booktitlealt id="pdf_title">Reference Guide</booktitlealt>
-		<booktitlealt id="pdf_revision_number">Rev: A24</booktitlealt>
-		<booktitlealt id="copyright_date">© 2017 Pivotal Software, Inc.</booktitlealt>
+		<booktitlealt id="pdf_revision_number">Rev: A19</booktitlealt>
+		<booktitlealt id="copyright_date">© 2016 Pivotal Software, Inc.</booktitlealt>
 	</booktitle>
 	<bookmeta>
 		<author/>
@@ -113,7 +113,6 @@
 		<topicref href="ref_guide/sql_commands/CREATE_LANGUAGE.xml"/>
 		<topicref href="ref_guide/sql_commands/CREATE_OPERATOR.xml"/>
 		<topicref href="ref_guide/sql_commands/CREATE_OPERATOR_CLASS.xml"/>
-		<topicref href="ref_guide/sql_commands/CREATE_PROTOCOL.xml"/>
 		<topicref href="ref_guide/sql_commands/CREATE_RESOURCE_QUEUE.xml"/>
 		<topicref href="ref_guide/sql_commands/CREATE_ROLE.xml"/>
 		<topicref href="ref_guide/sql_commands/CREATE_RULE.xml"/>
@@ -143,7 +142,6 @@
 		<topicref href="ref_guide/sql_commands/DROP_OPERATOR.xml"/>
 		<topicref href="ref_guide/sql_commands/DROP_OPERATOR_CLASS.xml"/>
 		<topicref href="ref_guide/sql_commands/DROP_OWNED.xml"/>
-		<topicref href="ref_guide/sql_commands/DROP_PROTOCOL.xml"/>
 		<topicref href="ref_guide/sql_commands/DROP_RESOURCE_QUEUE.xml"/>
 		<topicref href="ref_guide/sql_commands/DROP_ROLE.xml"/>
 		<topicref href="ref_guide/sql_commands/DROP_RULE.xml"/>
@@ -304,9 +302,9 @@
 	<chapter href="ref_guide/extensions/pl_python.xml"
 		navtitle="Greenplum PL/Python Language Extension" id="pl_python"/>
 	<chapter href="ref_guide/extensions/pl_java.xml" navtitle="Greenplum PL/Java Language Extension"
-		id="pl_java"/>
-	<chapter href="ref_guide/extensions/madlib.xml"
-		navtitle="Greenplum MADlib Extension for Analytics" id="madlib"/>
+		 id="pl_java"/>
+	<chapter href="ref_guide/extensions/madlib.xml" navtitle="Greenplum MADlib Extension for Analytics"
+		 id="madlib"/>
 	<chapter href="ref_guide/extensions/fuzzystrmatch.xml"
 		navtitle="Greenplum Fuzzy String Match Extension" id="fuzzystrmatch"/>
 	<chapter href="ref_guide/feature_summary.xml" navtitle="Summary of Greenplum Features"

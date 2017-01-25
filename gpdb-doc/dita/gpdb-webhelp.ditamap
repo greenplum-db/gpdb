@@ -3,74 +3,16 @@
 <bookmap xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="book"
 	ditaarch:DITAArchVersion="1.1">
 	<booktitle>
-		<mainbooktitle>Pivotal Greenplum Database</mainbooktitle>
+		<mainbooktitle>Greenplum Database</mainbooktitle>
 	</booktitle>
 	<frontmatter>
-		<keydef keys="product_name">
-			<topicmeta>
-				<keywords>
-					<keyword>Greenplum Database</keyword>
-				</keywords>
-			</topicmeta>
-		</keydef>
-		<keydef keys="product_name_short">
-			<topicmeta>
-				<keywords>
-					<keyword>Greenplum</keyword>
-				</keywords>
-			</topicmeta>
-		</keydef>
-		<keydef keys="toolkit_prefix">
-			<topicmeta>
-				<keywords>
-					<keyword>gp_</keyword>
-				</keywords>
-			</topicmeta>
-		</keydef>
 	</frontmatter>
 	<chapter href="common/welcome.xml" navtitle="Welcome"/>
-	<chapter href="common/rel-notes.xml" navtitle="Release Notes" linking="none">
-		<topicref href="relnotes/GPDB_43113_README.xml"/>
-		<topicref href="relnotes/GPDB_43112_README.xml"/>
-		<topicref href="relnotes/GPDB_43111_README.xml"/>
-		<!--   Removed from GA products - stop ship issues found
-			<topicref href="relnotes/GPDB_43110_README.xml"/> -->
-		<topicref href="relnotes/GPDB_43100_README.xml"/>
-		<topicref href="relnotes/GPDB_4391_README.xml"/>
-		<topicref href="relnotes/GPDB_4390_README.xml"/>
-		<!--   Removed from GA products - stop ship issues found
-		<topicref href="relnotes/GPDB_4382_README.xml"/> -->
-		<topicref href="relnotes/GPDB_4381_README.xml"/>
-		<topicref href="relnotes/GPDB_4380_README.xml"/>
-		<topicref href="relnotes/GPDB_4373_README.xml"/>
-		<topicref href="relnotes/GPDB_4372_README.xml"/>
-		<topicref href="relnotes/GPDB_4371_README.xml"/>
-		<topicref href="relnotes/GPDB_4370_README.xml"/>
-		<topicref href="relnotes/GPDB_4362_README.xml"/>
-		<topicref href="relnotes/GPDB_4361_README.xml"/>
-		<!--   Removed from GA products - stop ship issues found
-	    <topicref href="relnotes/GPDB_4360_README.xml"/>-->
-		<topicref href="relnotes/GPDB_4354_README.xml"/>
-		<topicref href="relnotes/GPDB_4353_README.xml"/>
-		<topicref href="relnotes/GPDB_4352_README.xml"/>
-		<topicref href="relnotes/GPDB_4351_README.xml"/>
-		<topicref href="relnotes/GPDB_4350_README.xml"/>
-		<topicref href="relnotes/GPDB_4342_README.xml"/>
-		<topicref href="relnotes/GPDB_4341_README.xml"/>
-		<topicref href="relnotes/GPDB_4340_README.xml"/>
-		<topicref href="relnotes/GPDB_4331_README.xml"/>
-		<topicref href="relnotes/GPDB_4330_README.xml"/>
-		<topicref href="relnotes/GPDB_4321_README.xml"/>
-		<topicref href="relnotes/GPDB_4320_README.xml"/>
-		<topicref href="relnotes/GPDB_4310_README.xml"/>
-		<topicref href="relnotes/GPDB_4300_README.xml"/>
-		<topicref href="relnotes/GPDB_43x_resolved.xml"/>
-	</chapter>
+	<chapter href="common/pivotal-gpdb-features.xml"/>
 	<chapter href="common/server-docs.xml">
-		<topicref href="install_guide/install_guide.ditamap" format="ditamap"/>
-		<topicref href="admin_guide/admin_guide.ditamap" format="ditamap"/>
-		<topicref href="ref_guide/ref_guide.ditamap" format="ditamap"/>
-		<topicref href="utility_guide/utility_guide.ditamap" format="ditamap"/>
+	  <topicref href="admin_guide/admin_guide.ditamap" format="ditamap"/>
+	  <topicref href="ref_guide/ref_guide.ditamap" format="ditamap"/>
+	  <topicref href="utility_guide/utility_guide.ditamap" format="ditamap"/>
 	</chapter>
 	<chapter href="common/client-docs-unix.xml">
 		<topicref href="client_tool_guides/client_tools_unix.ditamap" format="ditamap"/>

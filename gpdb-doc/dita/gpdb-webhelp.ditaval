@@ -4,6 +4,5 @@
 	<prop att="otherprops" val="op-help" action="include"/>
 	<prop att="otherprops" val="op-hidden" action="exclude"/>
 	<prop att="otherprops" val="op-print" action="exclude"/>
-	<prop att="otherprops" val="hawq" action="exclude"/>
 	<prop att="otherprops" val="gpdb" action="include"/>
 </val>
