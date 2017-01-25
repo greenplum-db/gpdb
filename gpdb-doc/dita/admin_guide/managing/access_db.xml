@@ -373,7 +373,7 @@
                 <entry colname="col1">ODBC</entry>
                 <entry colname="col2">pgodbc</entry>
                 <entry colname="col3">Available in the Greenplum Database Connectivity package,
-                  which can be downloaded from <xref href="https://network.pivotal.io /products"
+                  which can be downloaded from <xref href="https://network.pivotal.io/products"
                     scope="external" format="html"><ph>Pivotal Network</ph></xref>.</entry>
               </row>
               <row>
@@ -418,7 +418,7 @@
           supported database drivers for Greenplum Database. Download the client tools packagefrom
             <xref href="https://network.pivotal.io/products" scope="external" format="html"
               ><ph>Pivotal Network </ph></xref>and documentation from <xref
-            href="http://docs.pivotal.io/gpdb/" scope="external" format="html"><ph>Pivotal
+            href="http://gpdb.docs.pivotal.io" scope="external" format="html"><ph>Pivotal
               Documentation</ph></xref>. </p>
       </body>
     </topic>

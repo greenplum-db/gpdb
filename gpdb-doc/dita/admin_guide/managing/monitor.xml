@@ -3,10 +3,9 @@
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" xml:lang="en">
   <title id="kj138244">Monitoring a Greenplum System</title>
-  <shortdesc>You can monitor a Greenplum system using a variety of tools included with the system or
-    available as add-ons. <ph>SNMP support allows Greenplum to be integrated with popular system
-      management frameworks.</ph>
-  </shortdesc>
+  <shortdesc>You can monitor a Greenplum Database system using a variety of tools included with the
+    system or available as add-ons. SNMP support allows Greenplum to be integrated with popular
+    system management frameworks. </shortdesc>
   <body>
     <p>Observing the Greenplum Database system day-to-day performance helps administrators
       understand the system behavior, plan workflow, and troubleshoot problems. This chapter
@@ -19,15 +18,17 @@
     <body>
       <p>Pivotal provides an optional system monitoring and management tool, Greenplum Command
         Center, that administrators can enable within Greenplum Database 4.3.</p>
-      <p>Setting up Greenplum Command Center is a two-part process. First, enable the Greenplum
-        Database server to collect and store system metrics. This step installs an agent on each
-        host in the Greenplum cluster and creates a dedicated database to store collected system
-        metrics. Next, download and install the Greenplum Command Center Console, a web application
-        used to view the metrics and perform Greenplum Database management tasks. </p>
+      <p>Enabling Greenplum Command Center is a two-part process. First, enable the Greenplum
+        Database server to collect and store system metrics. Next, install and configure the
+        Greenplum Command Center Console, an online application used to view the system metrics
+        collected and store them in the Command Center's dedicated Greenplum database. </p>
       <p>The Greenplum Command Center Console ships separately from your Greenplum Database 4.3
-        installation. See the <xref href="http://gpcc.docs.pivotal.io" format="html"
-          scope="external">Greenplum Command Center documentation site</xref> for instructions to
-        obtain and install Greenplum Command Center. </p>
+        installation. Download the Greenplum Command Center Console package from <xref
+          href="https://network.pivotal.io/products" scope="external" format="html">Pivotal
+          Network </xref>and documentation from <xref href="http://docs.pivotal.io/gpdb/"
+          scope="external" format="html">Pivotal Documentation</xref>. See the <cite>Greenplum
+          Database Command Center Administrator Guide</cite> for more information on installing and
+        using the Greenplum Command Center Console.</p>
     </body>
   </topic>
   <topic id="topic3" xml:lang="en">
@@ -64,9 +65,9 @@
     <topic id="topic4" xml:lang="en">
       <title id="kj184004">Enabling System Alerts and Notifications</title>
       <body>
-        <p>You can configure a Greenplum Database system to trigger SNMP (Simple Network Management
-          Protocol) alerts or send email notifications to system administrators if certain database
-          events occur. These events include:</p>
+        <p>You can configure a Greenplum Database system to trigger SNMP (Simple
+          Network Management Protocol) alerts or send email notifications to system administrators
+          if certain database events occur. These events include:</p>
         <ul>
           <li id="kj180639">All <codeph>PANIC</codeph>-level error conditions</li>
           <li id="kj180640">All <codeph>FATAL</codeph>-level error conditions</li>
@@ -86,9 +87,10 @@
               <xref href="#topic10" type="topic" format="dita"/>
             </li>
           </ul></p>
-        <p>Note that SNMP alerts and email notifications report the same event information. There is
-          no difference in the event information that either tool reports. For information about the
-          SNMP event information, see <xref href="#topic_jx2_rqg_kp" format="dita"/>.</p>
+        <p>Note that SNMP alerts and email notifications report the same event
+          information. There is no difference in the event information that either tool reports. For
+          information about the SNMP event information, see <xref href="#topic_jx2_rqg_kp"
+            format="dita"/>.</p>
       </body>
       <topic id="topic5" xml:lang="en">
         <title id="kj168804">Using SNMP with a Greenplum Database System</title>
@@ -130,14 +132,14 @@
                     <entry colname="col2">net-snmp</entry>
                   </row>
                   <row>
-                    <entry colname="col1">SUSE, OSX</entry>
+                    <entry colname="col1">SUSE</entry>
                     <entry colname="col2">N/A</entry>
                   </row>
                 </tbody>
               </tgroup>
             </table>
             <ol id="ol_hn4_3qb_kp">
-              <li>SNMP is installed by default on SUSE and OSX platforms.</li>
+              <li>SNMP is installed by default on SUSE platforms.</li>
             </ol>
             <p>The <codeph>snmp.conf</codeph> configuration file is located in
                 <codeph>/etc/snmp/</codeph>. </p>
@@ -148,15 +150,16 @@
           <body>
             <p>After you establish that SNMP is on the master host, log in as <codeph>root</codeph>,
               open a text editor, and edit the
-                <i><codeph>path_to</codeph></i><codeph>/snmp/snmpd.conf</codeph> file. To use SNMP
-              with Greenplum Database, the minimum configuration change required to the
+                <codeph><varname>path_to</varname>/snmp/snmpd.conf</codeph> file. To use SNMP with
+              Greenplum Database, the minimum configuration change required to the
                 <codeph>snmpd.conf</codeph> file is specifying a community name. For example:</p>
             <p>
               <codeblock>rocommunity public</codeblock>
             </p>
             <note type="note">Replace <codeph>public</codeph> with the name of your SNMP community.
-              Also, configure <codeph>syslocation</codeph> and <codeph>syscontact</codeph>.
-              Configure other SNMP settings as required for your environment and save the file. </note>
+              You should also configure <codeph>syslocation</codeph> and
+              <codeph>syscontact</codeph>. Configure other SNMP settings as required for your
+              environment and save the file. </note>
             <p>For more information about the <codeph>snmpd.conf</codeph> file, enter: </p>
             <codeblock>man snmpd.conf</codeblock>
             <note type="note">On SUSE Linux platforms, make sure to review and configure security
@@ -172,7 +175,7 @@
             <p>If this command returns "<codeph>Timeout: No Response from localhost</codeph>", then
               the system <codeph>snmpd</codeph> daemon is not running. If the daemon is running,
               output similar to the following displays:</p>
-            <screen>SNMPv2-MIB::sysDescr.0 = STRING: Linux <i>hostname</i>
+            <screen>SNMPv2-MIB::sysDescr.0 = STRING: Linux <i>hostname</i> 
 2.6.18-92.el5 #1 SMP Tue Jun 10 18:51:06 EDT 2010 x86_64</screen>
           </body>
         </topic>
@@ -201,8 +204,8 @@
                       create more overhead, they inform Greenplum Database the monitoring
                       application has received the traps.</p><p>The following example commands set
                       the server configuration parameters with the Greenplum Database gpconfig
-                      utility:<codeblock>$ gpconfig -c gp_snmp_community -v public --masteronly
-$ gpconfig -c gp_snmp_monitor_address -v mdw:162 --masteronly
+                      utility:<codeblock>$ gpconfig -c gp_snmp_community -v public --masteronly 
+$ gpconfig -c gp_snmp_monitor_address -v mdw:162 --masteronly 
 $ gpconfig -c gp_snmp_use_inform_or_trap -v trap --masteronly </codeblock></p></li>
                 </ul></li>
               <li id="kj170864">To test SNMP notifications, you can use the
@@ -227,7 +230,7 @@ $ gpconfig -c gp_snmp_use_inform_or_trap -v trap --masteronly </codeblock></p></
               editor.</li>
             <li id="kj168963">In the <codeph>EMAIL ALERTS</codeph> section, uncomment the following
               parameters and enter the appropriate values for your email server and domain. For example:<p>
-                <codeblock>gp_email_smtp_server='smtp.example.com:25'
+                <codeblock>gp_email_smtp_server='smtp.company.com:25'
 gp_email_smtp_userid='gpadmin@example.com'
 gp_email_smtp_password='mypassword'
 gp_email_from='Greenplum Database &lt;gpadmin@example.com&gt;'
@@ -305,7 +308,7 @@ gp_email_to='test_account@example.com'
             <codeblock>$ gpstate
 </codeblock>
           </p>
-          <p>To see more detailed information about your Greenplum array configuration, use
+          <p>To see more detailed information about your Greenplum Database array configuration, use
               <codeph>gpstate</codeph> with the <codeph>-s</codeph> option:</p>
           <p>
             <codeblock>$ gpstate -s
@@ -320,7 +323,7 @@ gp_email_to='test_account@example.com'
             segment instances in the system, their current synchronization status, and the mirror to
             primary mapping. For example, to see the mirror segments in the system and their status: </p>
           <p>
-            <codeblock>$ gpstate -m
+            <codeblock>$ gpstate -m 
 </codeblock>
           </p>
           <p>To see the primary to mirror segment mappings: </p>
@@ -348,7 +351,7 @@ gp_email_to='test_account@example.com'
             <codeph>gp_toolkit</codeph> administrative schema to check for remaining free space (in
           kilobytes) on the segment host file systems. For example:</p>
         <p>
-          <codeblock>=# SELECT * FROM gp_toolkit.gp_disk_free
+          <codeblock>=# SELECT * FROM gp_toolkit.gp_disk_free 
    ORDER BY dfsegment;
 </codeblock>
         </p>
@@ -356,18 +359,19 @@ gp_email_to='test_account@example.com'
       <topic id="topic16" xml:lang="en">
         <title>Checking Sizing of Distributed Databases and Tables</title>
         <body>
-          <p>The <codeph>gp_toolkit</codeph> administrative schema
-            contains several views that you can use to determine the disk space usage for a
-            distributed Greenplum database, schema, table, or index. </p>
-          <p>For a list of the available sizing views for checking database object sizes and disk
-            space, see the <i>Greenplum Database Reference Guide</i>.</p>
+          <p>The <codeph>gp_toolkit</codeph> administrative schema contains several views that you
+            can use to determine the disk space usage for a distributed Greenplum Database database,
+            schema, table, or index. </p>
+          <p>For a list of the available sizing views for checking database object
+            sizes and disk space, see the <i>Greenplum Database Reference Guide</i>.</p>
         </body>
         <topic id="topic17" xml:lang="en">
           <title id="kj155338">Viewing Disk Space Usage for a Database </title>
           <body>
-            <p>To see the total size of a database (in bytes), use the <i>gp_size_of_database</i> view in the <i>gp_toolkit</i> administrative schema. For example: </p>
+            <p>To see the total size of a database (in bytes), use the <i>gp_size_of_database</i>
+              view in the <i>gp_toolkit</i> administrative schema. For example: </p>
             <p>
-              <codeblock>=&gt; SELECT * FROM gp_toolkit.gp_size_of_database
+              <codeblock>=&gt; SELECT * FROM gp_toolkit.gp_size_of_database 
    ORDER BY soddatname;
 </codeblock>
             </p>
@@ -376,36 +380,35 @@ gp_email_to='test_account@example.com'
         <topic id="topic18" xml:lang="en">
           <title id="kj155347">Viewing Disk Space Usage for a Table </title>
           <body>
-            <p>The <i>gp_toolkit</i> administrative schema contains
-              several views for checking the size of a table. The table sizing views list the table
-              by object ID (not by name). To check the size of a table by name, you must look up the
-              relation name (<codeph>relname</codeph>) in the <i>pg_class</i> table. For
-              example:</p>
+            <p>The <i>gp_toolkit</i> administrative schema contains several views for checking the
+              size of a table. The table sizing views list the table by object ID (not by name). To
+              check the size of a table by name, you must look up the relation name
+                (<codeph>relname</codeph>) in the <i>pg_class</i> table. For example:</p>
             <p>
-              <codeblock>=&gt; SELECT relname AS name, sotdsize AS size, sotdtoastsize
-   AS toast, sotdadditionalsize AS other
-   FROM gp_size_of_table_disk as sotd, pg_class
+              <codeblock>=&gt; SELECT relname AS name, sotdsize AS size, sotdtoastsize 
+   AS toast, sotdadditionalsize AS other 
+   FROM gp_size_of_table_disk as sotd, pg_class 
    WHERE sotd.sotdoid=pg_class.oid ORDER BY relname;
 </codeblock>
             </p>
-            <p>For a list of the available table sizing views, see the <i>Greenplum Database
-                Reference Guide</i>.</p>
+            <p>For a list of the available table sizing views, see the
+                <i>Greenplum Database Reference Guide</i>.</p>
           </body>
         </topic>
         <topic id="topic19" xml:lang="en">
           <title id="kj176079">Viewing Disk Space Usage for Indexes </title>
           <body>
-            <p>The <i>gp_toolkit</i> administrative schema contains a
-              number of views for checking index sizes. To see the total size of all index(es) on a
-              table, use the <i>gp_ize_of_all_table_indexes</i>
-              view. To see the size of a particular index, use the <i>gp_size_of_index</i> view. The index sizing views list
-              tables and indexes by object ID (not by name). To check the size of an index by name,
-              you must look up the relation name (<codeph>relname</codeph>) in the <i>pg_class</i>
-              table. For example:</p>
+            <p>The <i>gp_toolkit</i> administrative schema contains a number of views for checking
+              index sizes. To see the total size of all index(es) on a table, use the
+                <i>gp_size_of_all_table_indexes</i> view. To see the size of a particular index, use
+              the <i>gp_size_of_index</i> view. The index sizing views list tables and indexes by
+              object ID (not by name). To check the size of an index by name, you must look up the
+              relation name (<codeph>relname</codeph>) in the <i>pg_class</i> table. For
+              example:</p>
             <p>
               <codeblock>=&gt; SELECT soisize, relname as indexname
    FROM pg_class, gp_size_of_index
-   WHERE pg_class.oid=gp_size_of_index.soioid
+   WHERE pg_class.oid=gp_size_of_index.soioid 
    AND pg_class.relkind='i';
 </codeblock>
             </p>
@@ -462,7 +465,7 @@ Distributed by: (sale_id)
           <p>To see the data distribution of a table's rows (the number of rows on each segment),
             you can run a query such as:</p>
           <p>
-            <codeblock>=# SELECT gp_segment_id, count(*)
+            <codeblock>=# SELECT gp_segment_id, count(*) 
    FROM <i>table_name</i> GROUP BY gp_segment_id;
 </codeblock>
           </p>
@@ -536,10 +539,10 @@ Distributed by: (sale_id)
             a table. For example, to see the actions performed on a table, such as when it was
             created and when it was last vacuumed and analyzed:</p>
           <p>
-            <codeblock>=&gt; SELECT schemaname as schema, objname as table,
-   usename as role, actionname as action,
-   subtype as type, statime as time
-   FROM pg_stat_operations
+            <codeblock>=&gt; SELECT schemaname as schema, objname as table, 
+   usename as role, actionname as action, 
+   subtype as type, statime as time 
+   FROM pg_stat_operations 
    WHERE objname='cust';
  schema | table | role | action  | type  | time
 --------+-------+------+---------+-------+--------------------------
@@ -602,8 +605,8 @@ Distributed by: (sale_id)
             Database considers the session a runaway. The Greenplum Database server configuration
             parameter <codeph>runaway_detector_activation_percent</codeph> controlling when
             Greenplum Database considers a session a runaway session. </p>
-          <p>For information about the parameter, see "Server Configuration Parameters" in the
-              <cite>Greenplum Database Reference Guide</cite>. </p>
+          <p>For information about the parameter, see "Server Configuration
+            Parameters" in the <cite>Greenplum Database Reference Guide</cite>. </p>
           <table id="session_level_memory_consumption_table">
             <title>session_level_memory_consumption</title>
             <tgroup cols="4">
@@ -730,25 +733,25 @@ Distributed by: (sale_id)
     <topic id="topic27" xml:lang="en">
       <title id="kj185498">Viewing Query Workfile Usage Information</title>
       <body>
-        <p>The Greenplum Database administrative schema <i>gp_toolkit</i> contains views that display information about Greenplum Database
-          workfiles. Greenplum Database creates workfiles on disk if it does not have sufficient
-          memory to execute the query in memory. This information can be used for troubleshooting
-          and tuning queries. The information in the views can also be used to specify the values
-          for the Greenplum Database configuration parameters <codeph>gp_workfile_limit_per_query</codeph> and <codeph>gp_workfile_limit_per_segment</codeph>. </p>
+        <p>The Greenplum Database administrative schema <i>gp_toolkit</i> contains views that
+          display information about Greenplum Database workfiles. Greenplum Database creates
+          workfiles on disk if it does not have sufficient memory to execute the query in memory.
+          This information can be used for troubleshooting and tuning queries. The information in
+          the views can also be used to specify the values for the Greenplum Database configuration
+          parameters <codeph>gp_workfile_limit_per_query</codeph> and
+            <codeph>gp_workfile_limit_per_segment</codeph>. </p>
         <p>These are the views in the schema <i>gp_toolkit</i>:</p>
         <ul>
-          <li id="kj191083">The gp_workfile_entries view contains one
-            row for each operator using disk space for workfiles on a segment at the current
-            time.</li>
-          <li id="kj191084">The gp_workfile_usage_per_query view
-            contains one row for each query using disk space for workfiles on a segment at the
-            current time. </li>
-          <li id="kj191085">The gp_workfile_usage_per_segment view
-            contains one row for each segment. Each row displays the total amount of disk space used
-            for workfiles on the segment at the current time.</li>
+          <li id="kj191083">The gp_workfile_entries view contains one row for each operator using
+            disk space for workfiles on a segment at the current time.</li>
+          <li id="kj191084">The gp_workfile_usage_per_query view contains one row for each query
+            using disk space for workfiles on a segment at the current time. </li>
+          <li id="kj191085">The gp_workfile_usage_per_segment view contains one row for each
+            segment. Each row displays the total amount of disk space used for workfiles on the
+            segment at the current time.</li>
         </ul>
-        <p>For information about using <i>gp_toolkit</i>, see <xref
-            href="#topic31" format="dita"/>.</p>
+        <p>For information about using <i>gp_toolkit</i>, see <xref href="#topic31" format="dita"
+          />.</p>
       </body>
     </topic>
   </topic>
@@ -981,12 +984,13 @@ Distributed by: (sale_id)
       </body>
     </topic>
     <topic id="topic30" xml:lang="en">
-      <title>Searching the Greenplum Database Server Log Files</title>
+      <title>Searching the Greenplum Server Log Files</title>
       <body>
-        <p>Greenplum provides a utility called <codeph>gplogfilter</codeph> can search through a
-          Greenplum Database log file for entries matching the specified criteria. By default, this
-          utility searches through the Greenplum master log file in the default logging location.
-          For example, to display the last three lines of the master log file:</p>
+        <p>Greenplum Database provides a utility called <codeph>gplogfilter</codeph> can search
+          through a Greenplum Database log file for entries matching the specified criteria. By
+          default, this utility searches through the Greenplum Database master log file in the
+          default logging location. For example, to display the last three lines of the master log
+          file:</p>
         <p>
           <codeblock>$ gplogfilter -n 3
 </codeblock>
@@ -1006,22 +1010,23 @@ Distributed by: (sale_id)
   <topic id="topic31" xml:lang="en">
     <title id="kj168900">Using gp_toolkit</title>
     <body>
-      <p>Use Greenplum's administrative schema <i>gp_toolkit</i> to
-        query the system catalogs, log files, and operating environment for system status
-        information. The <codeph>gp_toolkit</codeph> schema contains
-        several views you can access using SQL commands. The <i>gp_toolkit</i> schema is accessible to all database users. Some objects require superuser
-        permissions. Use a command similar to the following to add the <i>gp_toolkit</i> schema to your schema search path:</p>
+      <p>Use the Greenplum Database administrative schema <i>gp_toolkit</i> to query the system
+        catalogs, log files, and operating environment for system status information. The
+          <codeph>gp_toolkit</codeph> schema contains several views you can access using SQL
+        commands. The <i>gp_toolkit</i> schema is accessible to all database users. Some objects
+        require superuser permissions. Use a command similar to the following to add the
+          <i>gp_toolkit</i> schema to your schema search path:</p>
       <codeblock>=&gt; ALTER ROLE myrole SET search_path TO myschema,gp_toolkit;</codeblock>
-      <p>For a description of the available administrative schema views and their usages, see the
-          <cite>Greenplum Database Reference Guide</cite>.</p>
+      <p>For a description of the available administrative schema views and their
+        usages, see the <cite>Greenplum Database Reference Guide</cite>.</p>
     </body>
   </topic>
   <topic id="topic_jx2_rqg_kp">
-    <title>Greenplum Database<ph> SNMP OIDs and</ph> Error Codes</title>
+    <title>Greenplum Database SNMP OIDs and Error Codes</title>
     <body>
-      <p>When a Greenplum Database system is configured to<ph> trigger SNMP alerts or</ph> send
-        email notifications to system administrators if certain database events occur, the alerts
-        and notifications contain<ph> Object IDs (OIDs) and</ph> SQL error codes.</p>
+      <p>When a Greenplum Database system is configured to trigger SNMP alerts or send email
+        notifications to system administrators if certain database events occur, the alerts and
+        notifications contain<ph> Object IDs (OIDs) and</ph> SQL error codes.</p>
       <p>
         <ul id="ul_qxx_xrg_kp">
           <li>
@@ -1032,8 +1037,8 @@ Distributed by: (sale_id)
           </li>
         </ul>
       </p>
-      <p>For information about enabling Greenplum Database to use SNMP, see <xref href="#topic4"
-          format="dita"/></p>
+      <p>For information about enabling Greenplum Database to use SNMP, see <xref
+          href="#topic4" format="dita"/></p>
     </body>
     <topic id="topic_xk1_grg_kp">
       <title>Greenplum Database SNMP OIDs</title>

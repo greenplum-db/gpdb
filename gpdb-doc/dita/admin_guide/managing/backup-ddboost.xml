@@ -4,9 +4,9 @@
 <topic id="topic17" xml:lang="en">
   <title id="kk171433">Backing Up Databases with Data Domain Boost</title>
   <body>
-    <p>EMC Data Domain Boost (DD Boost) is EMC software that can be used with the
+    <p>Dell EMC Data Domain Boost (DD Boost) is Dell EMC software that can be used with the
         <codeph>gpcrondump</codeph> and <codeph>gpdbrestore</codeph> utilities to perform faster
-      backups to the EMC Data Domain storage appliance. Data Domain performs deduplication on the
+      backups to the Dell EMC Data Domain storage appliance. Data Domain performs deduplication on the
       data it stores, so after the initial backup operation, the appliance stores only pointers to
       data that is unchanged. This reduces the size of backups on disk. When DD Boost is used with
         <codeph>gpcrondump</codeph>, Greenplum Database participates in the deduplication process,
@@ -44,13 +44,13 @@
       <p>Using Data Domain Boost requires the following.</p>
       <ul>
         <li>Data Domain Boost in included only with Pivotal Greenplum Database. </li>
-        <li id="kk169399">Purchase and install EMC Data Domain Boost and Replicator licenses on the
+        <li id="kk169399">Purchase and install Dell EMC Data Domain Boost and Replicator licenses on the
           Data Domain systems.</li>
         <li id="kk169390">Obtain sizing recommendations for Data Domain Boost. Make sure the Data
           Domain system supports sufficient write and read streams for the number of segment hosts
           in your Greenplum cluster.</li>
       </ul>
-      <p>Contact your EMC Data Domain account representative for assistance.</p>
+      <p>Contact your Dell EMC Data Domain account representative for assistance.</p>
     </body>
   </topic>
   <topic id="topic19" xml:lang="en">
@@ -62,8 +62,8 @@
         capabilities for disaster recovery purposes, you must set up credentials for both the local
         and remote Data Domain systems. </p>
       <p>To set up credentials, run <codeph>gpcrondump</codeph> with the following options:</p>
-      <codeblock>--ddboost-host <varname>ddboost_hostname</varname> --ddboost-user <varname>ddboost_user</varname> 
---ddboost-backupdir <varname>backup_directory</varname> --ddboost-storage-unit <varname>storage_unit_ID</varname></codeblock>
+      <codeblock>--ddboost-host <varname>ddboost_hostname</varname> --ddboost-user <varname>ddboost_user</varname>
+--ddboost-backupdir <varname>backup_directory</varname> --ddboost-storage-unit <varname>storage_unit_ID</varname></codeblock>
       <p>The <codeph>--ddboost-storage-unit</codeph> is optional. If not specified, the storage unit
         ID is <codeph>GPDB</codeph>.</p>
       <p>To remove credentials, run <codeph>gpcrondump</codeph> with the
@@ -82,8 +82,8 @@
           <codeph>gpcrondump</codeph> to set up the login credentials for the Data Domain hostnames
         associated with the network interfaces. To perform this setup for two network connections,
         run <codeph>gpcrondump</codeph> with the following options:</p>
-      <codeblock>--ddboost-host <varname>ddboost_hostname1</varname> 
---ddboost-host <varname>ddboost_hostname2</varname> --ddboost-user <varname>ddboost_user</varname> 
+      <codeblock>--ddboost-host <varname>ddboost_hostname1</varname>
+--ddboost-host <varname>ddboost_hostname2</varname> --ddboost-user <varname>ddboost_user</varname>
 --ddboost-backupdir <varname>backup_directory</varname></codeblock>
     </body>
     <topic id="topic_tsc_41c_yv">

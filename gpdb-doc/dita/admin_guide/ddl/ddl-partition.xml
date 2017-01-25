@@ -63,12 +63,8 @@
       <p>To insert data into a partitioned table, you specify the root partitioned table, the table
         created with the <codeph>CREATE TABLE</codeph> command. You also can specify a leaf child
         table of the partitioned table in an <codeph>INSERT</codeph> command. An error is returned
-        if the data is not valid for the specified leaf child table. Specifying a child table that
-        is not a leaf child table in the <codeph>INSERT</codeph> command is not supported. Execution
-        of other DML commands such as <codeph>UPDATE</codeph> and <codeph>DELETE</codeph> on any
-        child table of a partitioned table is not supported. These commands must be executed on the
-        root partitioned table, the table created with the <codeph>CREATE TABLE</codeph>
-        command.</p>
+        if the data is not valid for the specified leaf child table. Specifying a non-leaf or a
+        non-root partition table in the DML command is not supported. </p>
     </body>
   </topic>
   <topic id="topic65" xml:lang="en">
@@ -189,7 +185,7 @@ PARTITION BY RANGE (date)
           <codeblock>CREATE TABLE sales (id int, date date, amt decimal(10,2))
 DISTRIBUTED BY (id)
 PARTITION BY RANGE (date)
-( PARTITION Jan08 START (date '2008-01-01') INCLUSIVE ,
+( PARTITION Jan08 START (date '2008-01-01') INCLUSIVE , 
   PARTITION Feb08 START (date '2008-02-01') INCLUSIVE ,
   PARTITION Mar08 START (date '2008-03-01') INCLUSIVE ,
   PARTITION Apr08 START (date '2008-04-01') INCLUSIVE ,
@@ -200,7 +196,7 @@ PARTITION BY RANGE (date)
   PARTITION Sep08 START (date '2008-09-01') INCLUSIVE ,
   PARTITION Oct08 START (date '2008-10-01') INCLUSIVE ,
   PARTITION Nov08 START (date '2008-11-01') INCLUSIVE ,
-  PARTITION Dec08 START (date '2008-12-01') INCLUSIVE
+  PARTITION Dec08 START (date '2008-12-01') INCLUSIVE 
                   END (date '2009-01-01') EXCLUSIVE );
 </codeblock>
         </p>
@@ -215,12 +211,12 @@ PARTITION BY RANGE (date)
         <p>A numeric range partitioned table uses a single numeric data type column as the partition
           key column. For example:</p>
         <p>
-          <codeblock>CREATE TABLE rank (id int, rank int, year int, gender
+          <codeblock>CREATE TABLE rank (id int, rank int, year int, gender 
 char(1), count int)
 DISTRIBUTED BY (id)
 PARTITION BY RANGE (year)
-( START (2001) END (2008) EVERY (1),
-  DEFAULT PARTITION extra );
+( START (2001) END (2008) EVERY (1), 
+  DEFAULT PARTITION extra ); 
 </codeblock>
         </p>
         <p>For more information about default partitions, see <xref href="#topic80" type="topic"
@@ -236,19 +232,19 @@ PARTITION BY RANGE (year)
           For list partitions, you must declare a partition specification for every partition (list
           value) you want to create. For example:</p>
         <p>
-          <codeblock>CREATE TABLE rank (id int, rank int, year int, gender
-char(1), count int )
+          <codeblock>CREATE TABLE rank (id int, rank int, year int, gender 
+char(1), count int ) 
 DISTRIBUTED BY (id)
 PARTITION BY LIST (gender)
-( PARTITION girls VALUES ('F'),
-  PARTITION boys VALUES ('M'),
+( PARTITION girls VALUES ('F'), 
+  PARTITION boys VALUES ('M'), 
   DEFAULT PARTITION other );
 </codeblock>
         </p>
         <note>The current Greenplum Database legacy optimizer allows list partitions
           with multi-column (composite) partition keys. A range partition only allows a single
-          column as the partition key. GPORCA does not support composite keys,
-          so using composite partition keys is not recommended.</note>
+          column as the partition key. The Greenplum Query Optimizer does not support composite keys,
+          so you should not use composite partition keys.</note>
         <p>For more information about default partitions, see <xref href="#topic80" type="topic"
             format="dita"/>.</p>
       </body>
@@ -262,19 +258,19 @@ PARTITION BY LIST (gender)
           the two-level partition design shown in <xref href="#topic_tvx_nsz_bt/im207241"
             format="dita"/>:</p>
         <p>
-          <codeblock>CREATE TABLE sales (trans_id int, date date, amount
-decimal(9,2), region text)
+          <codeblock>CREATE TABLE sales (trans_id int, date date, amount 
+decimal(9,2), region text) 
 DISTRIBUTED BY (trans_id)
 PARTITION BY RANGE (date)
 SUBPARTITION BY LIST (region)
 SUBPARTITION TEMPLATE
-( SUBPARTITION usa VALUES ('usa'),
-  SUBPARTITION asia VALUES ('asia'),
-  SUBPARTITION europe VALUES ('europe'),
+( SUBPARTITION usa VALUES ('usa'), 
+  SUBPARTITION asia VALUES ('asia'), 
+  SUBPARTITION europe VALUES ('europe'), 
   DEFAULT SUBPARTITION other_regions)
   (START (date '2011-01-01') INCLUSIVE
    END (date '2012-01-01') EXCLUSIVE
-   EVERY (INTERVAL '1 month'),
+   EVERY (INTERVAL '1 month'), 
    DEFAULT PARTITION outlying_dates );
 </codeblock>
         </p>
@@ -285,13 +281,13 @@ SUBPARTITION TEMPLATE
           structure. The example declares a <codeph>DEFAULT</codeph> partition at each level of the
           hierarchy.</p>
         <p>
-          <codeblock>CREATE TABLE p3_sales (id int, year int, month int, day int,
+          <codeblock>CREATE TABLE p3_sales (id int, year int, month int, day int, 
 region text)
 DISTRIBUTED BY (id)
 PARTITION BY RANGE (year)
     SUBPARTITION BY RANGE (month)
        SUBPARTITION TEMPLATE (
-        START (1) END (13) EVERY (1),
+        START (1) END (13) EVERY (1), 
         DEFAULT SUBPARTITION other_months )
            SUBPARTITION BY LIST (region)
              SUBPARTITION TEMPLATE (
@@ -299,7 +295,7 @@ PARTITION BY RANGE (year)
                SUBPARTITION europe VALUES ('europe'),
                SUBPARTITION asia VALUES ('asia'),
                DEFAULT SUBPARTITION other_regions )
-( START (2002) END (2012) EVERY (1),
+( START (2002) END (2012) EVERY (1), 
   DEFAULT PARTITION outlying_years );
 </codeblock>
         </p>
@@ -318,7 +314,7 @@ PARTITION BY RANGE (year)
           the new table, drop the original table, and rename the partitioned table with the original
           table's name. You must also re-grant any table permissions. For example:</p>
         <p>
-          <codeblock>CREATE TABLE sales2 (LIKE sales)
+          <codeblock>CREATE TABLE sales2 (LIKE sales) 
 PARTITION BY RANGE (date)
 ( START (date '2008-01-01') INCLUSIVE
    END (date '2009-01-01') EXCLUSIVE
@@ -340,11 +336,11 @@ GRANT SELECT ON sales TO guest;
           partitioning columns. A unique index can omit the partitioning columns; however, it is
           enforced only on the parts of the partitioned table, not on the partitioned table as a
           whole.</p>
-        <p>GPORCA supports uniform multi-level partitioned tables. If GPORCA is enabled and the multi-level partitioned table is not uniform, Greenplum Database executes queries against the table with the legacy query
+        <p>GPORCA, the Greenplum next generation query optimizer, supports uniform multi-level partitioned tables. If GPORCA is enabled and the multi-level partitioned table is not uniform, Greenplum Database executes queries against the table with the legacy query
           optimizer. For information about uniform multi-level partitioned tables, see <xref
             href="../query/topics/query-piv-uniform-part-tbl.xml#topic1"/>.</p>
         <p>Exchanging a leaf child partition with an external table is not supported if the
-          partitioned table is created with the <codeph>SUBPARTITION</codeph> clause or if a
+          partitioned table is created with the <codeph>SUBPARITION</codeph> clause or if a
           partition has a subpartition. For information about exchanging a leaf child partition with
           an external table, see <xref href="#topic_yhz_gpn_qs" format="dita"/>.</p>
         <p>These are limitations for partitioned tables when a leaf child partition of the table is
@@ -433,7 +429,7 @@ GRANT SELECT ON sales TO guest;
         subpartitioned by region as shown in <xref href="#topic_tvx_nsz_bt/im207241" format="dita"
         />. For the following query:</p>
       <p>
-        <codeblock>EXPLAIN SELECT * FROM sales WHERE date='01-07-12' AND
+        <codeblock>EXPLAIN SELECT * FROM sales WHERE date='01-07-12' AND 
 region='usa';
 </codeblock>
       </p>
@@ -447,11 +443,11 @@ region='usa';
       </ul>
       <p>The following example shows the relevant portion of the query plan.</p>
       <p>
-        <codeblock>-&gt;  <codeph>Seq Scan on</codeph><codeph>sales_1_prt_1</codeph> sales (cost=0.00..0.00 <codeph>rows=0</codeph>
+        <codeblock>-&gt;  <codeph>Seq Scan on</codeph><codeph>sales_1_prt_1</codeph> sales (cost=0.00..0.00 <codeph>rows=0</codeph> 
      width=0)
 Filter: "date"=01-07-08::date AND region='USA'::text
--&gt;  <codeph>Seq Scan on</codeph><codeph>sales_1_2_prt_usa</codeph> sales (cost=0.00..9.87
-<codeph>rows=20</codeph>
+-&gt;  <codeph>Seq Scan on</codeph><codeph>sales_1_2_prt_usa</codeph> sales (cost=0.00..9.87 
+<codeph>rows=20</codeph> 
       width=40)
 </codeblock>
       </p>
@@ -483,9 +479,9 @@ Filter: "date"=01-07-08::date AND region='USA'::text
       <p>You can look up information about your partition design using the <i>pg_partitions</i>
         view. For example, to see the partition design of the <i>sales</i> table:</p>
       <p>
-        <codeblock>SELECT partitionboundary, partitiontablename, partitionname,
-partitionlevel, partitionrank
-FROM pg_partitions
+        <codeblock>SELECT partitionboundary, partitiontablename, partitionname, 
+partitionlevel, partitionrank 
+FROM pg_partitions 
 WHERE tablename='sales';
 </codeblock>
       </p>
@@ -556,19 +552,19 @@ WHERE tablename='sales';
             <i>subpartition template</i>, the newly added partition is subpartitioned according to
           that template. For example:</p>
         <p>
-          <codeblock>ALTER TABLE sales ADD PARTITION
-            START (date '2009-02-01') INCLUSIVE
+          <codeblock>ALTER TABLE sales ADD PARTITION 
+            START (date '2009-02-01') INCLUSIVE 
             END (date '2009-03-01') EXCLUSIVE;
 </codeblock>
         </p>
         <p>If you did not use a subpartition template when you created the table, you define
           subpartitions when adding a partition:</p>
         <p>
-          <codeblock>ALTER TABLE sales ADD PARTITION
-            START (date '2009-02-01') INCLUSIVE
+          <codeblock>ALTER TABLE sales ADD PARTITION 
+            START (date '2009-02-01') INCLUSIVE 
             END (date '2009-03-01') EXCLUSIVE
-      ( SUBPARTITION usa VALUES ('usa'),
-        SUBPARTITION asia VALUES ('asia'),
+      ( SUBPARTITION usa VALUES ('usa'), 
+        SUBPARTITION asia VALUES ('asia'), 
         SUBPARTITION europe VALUES ('europe') );
 </codeblock>
         </p>
@@ -641,13 +637,13 @@ WHERE tablename='sales';
         <p>If your partition design is multi-level, each level in the hierarchy
           must have a default partition. For example:</p>
         <p>
-          <codeblock>ALTER TABLE sales ALTER PARTITION FOR (RANK(1)) ADD DEFAULT
+          <codeblock>ALTER TABLE sales ALTER PARTITION FOR (RANK(1)) ADD DEFAULT 
 PARTITION other;
 
-ALTER TABLE sales ALTER PARTITION FOR (RANK(2)) ADD DEFAULT
+ALTER TABLE sales ALTER PARTITION FOR (RANK(2)) ADD DEFAULT 
 PARTITION other;
 
-ALTER TABLE sales ALTER PARTITION FOR (RANK(3)) ADD DEFAULT
+ALTER TABLE sales ALTER PARTITION FOR (RANK(3)) ADD DEFAULT 
 PARTITION other;
 </codeblock>
         </p>
@@ -695,7 +691,7 @@ PARTITION other;
         <p>
           <codeblock>CREATE TABLE jan12 (LIKE sales) WITH (appendonly=true);
 INSERT INTO jan12 SELECT * FROM sales_1_prt_1 ;
-ALTER TABLE sales EXCHANGE PARTITION FOR (DATE '2012-01-01')
+ALTER TABLE sales EXCHANGE PARTITION FOR (DATE '2012-01-01') 
 WITH TABLE jan12;
 </codeblock>
         </p>
@@ -718,8 +714,8 @@ WITH TABLE jan12;
             exchanged, the new default partition, is valid for the default partition. For example,
             the data in the new default partition must not contain data that would be valid in other
             leaf child partitions of the partitioned table. Otherwise, queries against the
-            partitioned table with the exchanged default partition that are executed by GPORCA might 
-            return incorrect results.</note></p>
+            partitioned table with the exchanged default partition that are executed by the Pivotal
+            Query Optimizer might return incorrect results.</note></p>
       </body>
     </topic>
     <topic id="topic84" xml:lang="en">
@@ -743,9 +739,9 @@ INTO (PARTITION jan081to15, PARTITION jan0816to31);
           second partition name. For example, to split a default range partition to add a new
           monthly partition for January 2009:</p>
         <p>
-          <codeblock>ALTER TABLE sales SPLIT DEFAULT PARTITION
-START ('2009-01-01') INCLUSIVE
-END ('2009-02-01') EXCLUSIVE
+          <codeblock>ALTER TABLE sales SPLIT DEFAULT PARTITION 
+START ('2009-01-01') INCLUSIVE 
+END ('2009-02-01') EXCLUSIVE 
 INTO (PARTITION jan09, default partition);
 </codeblock>
         </p>
@@ -773,10 +769,10 @@ INTO (PARTITION jan09, default partition);
         <p>This <codeph>ALTER TABLE</codeph> command, modifies the subpartition template.</p>
         <p>
           <codeblock>ALTER TABLE sales SET SUBPARTITION TEMPLATE
-( SUBPARTITION usa VALUES ('usa'),
-  SUBPARTITION asia VALUES ('asia'),
+( SUBPARTITION usa VALUES ('usa'), 
+  SUBPARTITION asia VALUES ('asia'), 
   SUBPARTITION europe VALUES ('europe'),
-  SUBPARTITION africa VALUES ('africa'),
+  SUBPARTITION africa VALUES ('africa'), 
   DEFAULT SUBPARTITION regions );</codeblock>
         </p>
         <p>When you add a date-range partition of the table sales, it includes the new regional list
@@ -785,7 +781,7 @@ INTO (PARTITION jan09, default partition);
             <codeph>africa</codeph>, and a default partition named <codeph>other</codeph>:</p>
         <p>
           <codeblock>ALTER TABLE sales ADD PARTITION "4"
-  START ('2014-04-01') INCLUSIVE
+  START ('2014-04-01') INCLUSIVE 
   END ('2014-05-01') EXCLUSIVE ;</codeblock>
         </p>
         <p>To view the tables created for the partitioned table <codeph>sales</codeph>, you can use
@@ -829,8 +825,8 @@ INTO (PARTITION jan09, default partition);
             table for an external table. The partitioned table contains data for the years 2000
             through 2003.</p>
           <codeblock>CREATE TABLE sales (id int, year int, qtr int, day int, region text)
-  DISTRIBUTED BY (id)
-  PARTITION BY RANGE (year)
+  DISTRIBUTED BY (id) 
+  PARTITION BY RANGE (year) 
   ( PARTITION yr START (2000) END (2004) EVERY (1) ) ;</codeblock>
           <p>There are four leaf child partitions for the partitioned table. Each leaf child
             partition contains the data for a single year. The leaf child partition table
@@ -847,13 +843,13 @@ INTO (PARTITION jan09, default partition);
                 the partitioned
               table.</p><codeblock>CREATE WRITABLE EXTERNAL TABLE my_sales_ext ( LIKE sales_1_prt_yr_1 )
   LOCATION ( 'gpfdist://gpdb_test/sales_2000' )
-  FORMAT 'csv'
+  FORMAT 'csv' 
   DISTRIBUTED BY (id) ;</codeblock></li>
             <li>Create a readable external table that reads the data from that destination of the
               writable external table created in the previous step.<p>This <codeph>CREATE EXTENAL
                   TABLE</codeph> create a readable external that uses the same external data as the
                 writable external
-              data.</p><codeblock>CREATE EXTERNAL TABLE sales_2000_ext ( LIKE sales_1_prt_yr_1)
+              data.</p><codeblock>CREATE EXTERNAL TABLE sales_2000_ext ( LIKE sales_1_prt_yr_1) 
   LOCATION ( 'gpfdist://gpdb_test/sales_2000' )
   FORMAT 'csv' ;</codeblock></li>
             <li>Copy the data from the leaf child partition into the writable external table.<p>This
@@ -864,9 +860,9 @@ INTO (PARTITION jan09, default partition);
                   <codeph>ALTER TABLE</codeph> command specifies the <codeph>EXCHANGE
                   PARTITION</codeph> clause to switch the readable external table and the leaf child
                 partition.
-                </p><codeblock>ALTER TABLE sales ALTER PARTITION yr_1
-   EXCHANGE PARTITION yr_1
-   WITH EXTERNAL TABLE sales_2000_ext WITHOUT VALIDATION;</codeblock><p>The
+                </p><codeblock>ALTER TABLE sales ALTER PARTITION yr_1 
+   EXCHANGE PARTITION yr_1 
+   WITH TABLE sales_2000_ext WITHOUT VALIDATION;</codeblock><p>The
                 external table becomes the leaf child partition with the table name
                   <codeph>sales_1_prt_yr_1</codeph> and the old leaf child partition becomes the
                 table <codeph>sales_2000_ext</codeph>. </p><note type="warning">In order to ensure

@@ -26,6 +26,7 @@
          </ul></p>
       <section id="s3_prereq">
          <title>Configuring and Using S3 External Tables</title>
+         <!--conref in CREATE EXTERNAL TABLE-->
          <p>Follow these basic steps to configure the S3 protocol and use S3 external tables, using
             the available links for more information. See also <xref
                href="#amazon-emr/section_tsq_n3t_3x" format="dita"/> to better understand the
@@ -41,7 +42,7 @@
                      <li> In each database that will access an S3 bucket, declare the
                            <codeph>s3</codeph> protocol and specify the read and write functions you
                         created in the previous
-                           step:<codeblock>CREATE PROTOCOL s3 (writefunc  = write_to_s3, readfunc = read_from_s3);</codeblock><note>The
+                           step:<codeblock>CREATE PROTOCOL s3 (writefunc = write_to_s3, readfunc = read_from_s3);</codeblock><note>The
                            protocol name <codeph>s3</codeph> must be the same as the protocol of the
                            URL specified for the external table you create to access an S3 resource.
                               <p>The corresponding function is called by every Greenplum Database
@@ -90,9 +91,9 @@
    location('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal/
       config=/home/gpadmin/aws_s3/s3.conf')
    FORMAT 'csv';</codeblock><p>For
-                     writable S3 tables, the protocol URL defines the S3 location in which
-                     Greenplum database stores data files for the table, as well as a prefix to use
-                     when creating files for table <codeph>INSERT</codeph> operations. For
+                     writable S3 tables, the protocol URL defines the S3 location in which Greenplum
+                     database stores data files for the table, as well as a prefix to use when
+                     creating files for table <codeph>INSERT</codeph> operations. For
                      example:<codeblock>CREATE WRITABLE EXTERNAL TABLE S3WRIT (LIKE S3TBL)
    location('s3://s3-us-west-2.amazonaws.com/s3test.pivotal.io/dataset1/normal/
       config=/home/gpadmin/aws_s3/s3.conf')
@@ -111,11 +112,12 @@
             Greenplum Database segment instance must have access to the S3 location. The optional
                <varname>S3_prefix</varname> value is used to select files for read-only S3 tables,
             or as a filename prefix to use when uploading files for S3 writable tables.</p>
+         <!--conref in CREATE EXTERNAL TABLE-->
          <note id="s3-prefix-note">Although the <varname>S3_prefix</varname> is an optional part of
             the syntax, you should always include an S3 prefix for both writable and read-only S3
-            tables to separate datasets as part of the <xref
-               href="../../../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.xml#topic1"/>
-            syntax.</note>
+            tables to separate datasets as part of the <codeph><xref
+                  href="../../../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.xml#topic1">CREATE
+                  EXTERNAL TABLE</xref></codeph> syntax.</note>
          <p>For writable S3 tables, the <codeph>s3</codeph> protocol URL specifies the endpoint and
             bucket name where Greenplum Database uploads data files for the table. The S3 bucket
             permissions must be <codeph>Upload/Delete</codeph> for the S3 user ID that uploads the
@@ -191,16 +193,19 @@ s3://domain/test1/abcdefff</codeblock>
                <li><filepath>.gz</filepath> is appended to the filename if compression is enabled
                   for S3 writable tables (the default).</li>
             </ul></p>
-         <p>For writable S3 tables, you can configure the buffer size and the number of threads
-            that segments use for uploading files. See <xref href="#amazon-emr/s3_config_file"
+         <p>For writable S3 tables, you can configure the buffer size and the number of threads that
+            segments use for uploading files. See <xref href="#amazon-emr/s3_config_file"
                format="dita"/>.</p>
          <p>For read-only S3 tables, all of the files specified by the S3 file location
                (<varname>S3_endpoint</varname>/<varname>bucket_name</varname>/<varname>S3_prefix</varname>)
             are used as the source for the external table and must have the same format. Each file
-            must also contain complete data rows. A data row cannot be split between files. Only the
-               <codeph>TEXT</codeph> and <codeph>CSV</codeph> formats are supported. The files can
-            be in gzip compressed format. The <codeph>s3</codeph> protocol recognizes the gzip
-            format and uncompress the files. Only the gzip compression format is supported. </p>
+            must also contain complete data rows. If the files contain an optional header row, the
+            column names in the header row cannot contain a newline character (<codeph>\n</codeph>)
+            or a carriage return (<codeph>\r</codeph>). Also, the column delimiter cannot be a
+            newline character (<codeph>\n</codeph>) or a carriage return character
+               (<codeph>\r</codeph>). </p>
+         <p>The <codeph>s3</codeph> protocol recognizes the gzip format and uncompress the files.
+            Only the gzip compression format is supported. </p>
          <p>The S3 file permissions must be <codeph>Open/Download</codeph> and <codeph>View</codeph>
             for the S3 user ID that is accessing the files. Writable S3 tables require the S3 user
             ID to have <codeph>Upload/Delete</codeph> permissions.</p>
@@ -215,6 +220,7 @@ s3://domain/test1/abcdefff</codeblock>
       </section>
       <section id="s3_config_param">
          <title>About the S3 Protocol config Parameter</title>
+         <!--conref in CREATE EXTERNAL TABLE-->
          <p>The optional <codeph>config</codeph> parameter specifies the location of the required
                <codeph>s3</codeph> protocol configuration file. The file contains AWS connection
             credentials and communication parameters. For information about the file, see <xref
@@ -237,6 +243,7 @@ s3://domain/test1/abcdefff</codeblock>
       </section>
       <section id="s3_config_file">
          <title>s3 Protocol Configuration File</title>
+         <!--conref in CREATE EXTERNAL TABLE-->
          <p>When using the <codeph>s3</codeph> protocol, an <codeph>s3</codeph> protocol
             configuration file is required on all Greenplum Database segments. The default location
             is:<codeblock><varname>gpseg_data_dir</varname>/<varname>gpseg-prefix</varname><varname>N</varname>/s3/s3.conf</codeblock></p>
@@ -334,6 +341,7 @@ chunksize = 67108864</codeblock></p>
                      of 0 specifies no time limit.</pd>
                </plentry>
             </parml>
+            <!--conref in 43100 RelNotes-->
             <note><ph id="memory-phrase">Greenplum Database can require up to <codeph>threadnum *
                      chunksize</codeph> memory on each segment host when uploading or downloading S3
                   files. Consider this <codeph>s3</codeph> protocol memory requirement when you
@@ -345,6 +353,7 @@ chunksize = 67108864</codeblock></p>
       </section>
       <section id="section_tsq_n3t_3x">
          <title>s3 Protocol Limitations</title>
+         <!--conref in CREATE EXTERNAL TABLE-->
          <p>These are <codeph>s3</codeph> protocol limitations: <ul id="ul_qqg_qcz_55">
                <li>Only the S3 path-style URL is
                   supported.<codeblock>s3://<varname>S3_endpoint</varname>/<varname>bucketname</varname>/[<varname>S3_prefix</varname>]</codeblock></li>
@@ -355,8 +364,15 @@ chunksize = 67108864</codeblock></p>
                         href="http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region"
                         format="html" scope="external"
                         >http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region</xref>.</p></li>
+               <li>Only a single URL and optional configuration file is supported in the
+                     <codeph>LOCATION</codeph> clause of the <codeph>CREATE EXTERNAL TABLE</codeph>
+                  command.</li>
                <li>S3 encryption is not supported. The S3 file property <uicontrol>Server Side
                      Encryption</uicontrol> must be <codeph>None</codeph>.</li>
+               <li>If the <codeph>NEWLINE</codeph> parameter is not specified in the <codeph>CREATE
+                     EXTERNAL TABLE</codeph> command, the newline character must be identical in all
+                  data files for specific prefix. If the newline character is different in some data
+                  files with the same prefix, read operations on the files might fail.</li>
                <li>For writable S3 external tables, only the <codeph>INSERT</codeph> operation is
                   supported. <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, and
                      <codeph>TRUNCATE</codeph> operations are not supported.</li>

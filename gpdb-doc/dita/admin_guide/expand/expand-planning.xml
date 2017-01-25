@@ -295,7 +295,7 @@
       <p>Table redistribution is performed while the system is online. For many Greenplum systems,
         table redistribution completes in a single <codeph>gpexpand</codeph> session scheduled
         during a low-use period. Larger systems may require multiple sessions and setting the order
-        of table redistribution to minimize performance impact. Pivotal recommends completing the
+        of table redistribution to minimize performance impact. Complete the
         table redistribution in one session if possible.</p>
       <note type="important">To perform table redistribution, your segment hosts must have enough
         disk space to temporarily hold a copy of your largest table. All tables are unavailable for

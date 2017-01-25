@@ -44,9 +44,9 @@
           processes executing on the computer, including the operating system, Greenplum Database
           segment instances, and other application processes. Administrators must determine what
           Greenplum Database and non-Greenplum Database processes share the hosts' memory and
-          configure the system to use the memory efficiently. It is equally important to monitor 
-          memory usage regularly to detect any changes in the way host memory is consumed by 
-          Greenplum or other processes.</p>
+          configure the system to use the memory efficiently. It is equally important to monitor
+          memory usage regularly to detect any changes in the way host memory is consumed by
+          Greenplum Database or other processes.</p>
         <p>The following figure illustrates how memory is consumed on a Greenplum Database segment
             host.<fig id="fig_py5_1sl_zp">
             <title>Greenplum Database Segment Host Memory</title>
@@ -94,8 +94,8 @@
               large memory allocation requests.</li>
           </ul></p>
         <p>The physical RAM and OS configuration are usually managed by the platform team and system
-          administrators. See the <cite>Greenplum Database Installation Guide</cite> for the
-          recommended kernel parameter settings.
+          administrators. <ph>See the <cite>Greenplum Database Installation
+              Guide</cite> for the recommended kernel parameter settings.</ph>
         </p>
         <p>The amount of memory to reserve for the operating system and other processes is workload
           dependent. The minimum recommendation for operating system memory is 32GB, but if there is
@@ -159,9 +159,8 @@
             <varname>statement_mem</varname>. This parameter sets the maximum amount of memory to
           allocate to execute a query. To determine a value for this parameter, divide the amount of
           memory per segment (<varname>gp_vmem_protect_limit</varname>), less a 10% safety margin,
-          by the maximum number of queries you expect to execute concurrently. The default Greenplum
-          Database resource queue allows a maximum of 20 concurrent queries. Here is a formula to
-          calculate
+          by the maximum number of queries you expect to execute concurrently. The default Greenplum Database resource queue allows a maximum of 20 concurrent queries. Here
+          is a formula to calculate
           <varname>statement_mem</varname>:<codeblock>(<varname>gp_vmem_protect_limit</varname> * .9 ) / <varname>max_expected_concurrent_queries</varname></codeblock></p>
         <p>Resource queues allow greater control of the amount of memory allocated for queries. See
             <xref href="#topic9" format="dita"/> for details.</p>
@@ -177,7 +176,7 @@
         number of active queries that may execute concurrently, the amount of memory each type of
         query is allocated, and the relative priority of queries. Resource queues can also guard
         against queries that would consume too many resources and degrade overall system
-         performance.</p>
+        performance.</p>
       <p>Each database role is associated with a single resource queue; multiple roles can share the
         same resource queue. Roles are assigned to resource queues using the <codeph>RESOURCE
           QUEUE</codeph> phrase of the <codeph>CREATE ROLE</codeph> or <codeph>ALTER ROLE</codeph>
@@ -199,8 +198,7 @@
         <image href="../graphics/resource_queues.jpg" placement="break" width="443px" height="173px"
           id="image_u4c_qxw_wq"/>
       </fig>
-      <p>Resource queues define classes of queries with similar resource requirements. Pivotal
-        recommends that administratrors create resource queues for the various types of workloads in
+      <p>Resource queues define classes of queries with similar resource requirements. Administratrors should create resource queues for the various types of workloads in
         their organization. For example, you could create resource queues for the following classes
         of queries, corresponding to different service level agreements: <ul id="ul_h3q_5qz_zp">
           <li>ETL queries</li>
@@ -240,7 +238,7 @@
               exceeds the <codeph>MAX_COST</codeph> value set for the resource queue, the query is
               rejected as too expensive.</pd>
             <pd>
-              <note> Pivotal recommends that you use <codeph>MEMORY_LIMIT</codeph> and
+              <note>Use <codeph>MEMORY_LIMIT</codeph> and
                   <codeph>ACTIVE_STATEMENTS</codeph> to set limits for resource queues rather than
                   <codeph>MAX_COST</codeph>. </note>
             </pd>
@@ -275,8 +273,9 @@
         limits. By default only <codeph>SELECT</codeph>, <codeph>SELECT INTO</codeph>,
           <codeph>CREATE TABLE AS SELECT</codeph>, and <codeph>DECLARE CURSOR</codeph> statements
         are evaluated. If the server configuration parameter <codeph>resource_select_only</codeph>
-        is set to <i>off</i>, then <codeph>INSERT</codeph><ph>, <codeph>UPDATE</codeph>, and
-            <codeph>DELETE</codeph></ph> statements will be evaluated as well.</p>
+        is set to <i>off</i>, then <codeph>INSERT</codeph><ph>,
+            <codeph>UPDATE</codeph>, and <codeph>DELETE</codeph></ph> statements will be evaluated
+        as well.</p>
       <p>Also, an SQL statement that is run during the execution of an <codeph>EXPLAIN
           ANALYZE</codeph> command is excluded from resource queues.</p>
       <section>
@@ -335,16 +334,16 @@
           defined by the <codeph>gp_vmem_protect_limit</codeph> server configuration parameter.
           Allowing a safety margin of 20% accommodates some operators and queries that are known to
           use more memory than they are allocated by the resource queue. </p>
-        <p>See the <codeph>CREATE RESOURCE QUEUE</codeph> and <codeph>CREATE/ALTER ROLE</codeph>
-          statements in the <cite>Greenplum Database Reference Guide</cite> for help with command
-          syntax and detailed reference information.</p>
+        <p>See the <codeph>CREATE RESOURCE QUEUE</codeph> and <codeph>CREATE/ALTER
+            ROLE</codeph> statements in the <cite>Greenplum Database Reference Guide</cite> for help
+          with command syntax and detailed reference information.</p>
       </section>
       <section>
         <title>How Memory Limits Work</title>
-          <p>Setting MEMORY_LIMIT on a resource queue sets the maximum amount of memory 
-          that all active queries submitted through the queue can consume for a segment
+        <p>Setting <codeph>MEMORY_LIMIT</codeph> on a resource queue sets the maximum amount of
+          memory that all active queries submitted through the queue can consume for a segment
           instance. The amount of memory allotted to a query is the queue memory limit divided by
-          the active statement limit. (Pivotal recommends that memory limits be used in conjunction
+          the active statement limit. (Use the memory limits in conjunction
           with statement-based queues rather than cost-based queues.) For example, if a queue has a
           memory limit of 2000MB and an active statement limit of 10, each query submitted through
           the queue is allotted 200MB of memory by default. The default memory allotment can be
@@ -471,8 +470,7 @@
     <body>
       <p>Resource scheduling is enabled by default when you install Greenplum Database, and is
         required for all roles. The default resource queue, <codeph>pg_default</codeph>, has an
-        active statement limit of 20, no memory limit, and a medium priority setting. Pivotal
-        recommends that you create resource queues for the various types of workloads.</p>
+        active statement limit of 20, no memory limit, and a medium priority setting. Create resource queues for the various types of workloads.</p>
       <section id="iz169600">
         <title>To configure workload management</title>
         <ol>
@@ -498,14 +496,16 @@
           <li id="iz169478">The following parameters are related to memory utilization:<ul
               id="ul_ehc_w3c_34">
               <li id="iz172344"><codeph>gp_resqueue_memory_policy</codeph> - Enables Greenplum
-                Database memory management features. <p>In Greenplum Database<ph otherprops="gpdb">
+                Database memory management features. <p>In Greenplum Database<ph>
                     4.2 and later</ph>, the distribution algorithm <codeph>eager_free</codeph> takes
                   advantage of the fact that not all operators execute at the same time. The query
                   plan is divided into stages and Greenplum Database eagerly frees memory allocated
                   to a previous stage at the end of that stage's execution, then allocates the
-                  eagerly freed memory to the new stage.</p><p>When set to
-                    <codeph>auto</codeph>, query memory usage is controlled by
-                    <codeph>statement_mem</codeph> and resource queue memory limits. </p></li>
+                  eagerly freed memory to the new stage.</p><p><ph>When set to
+                      <codeph>none</codeph>, memory management is the same as in Greenplum Database
+                    releases prior to 4.1. </ph>When set to <codeph>auto</codeph>, query memory
+                  usage is controlled by <codeph>statement_mem</codeph> and resource queue memory
+                  limits. </p></li>
               <li id="iz172366"><codeph>statement_mem</codeph> and
                   <codeph>max_statement_mem</codeph> - Used to allocate memory to a particular query
                 at runtime (override the default allocation assigned by the resource queue).
@@ -600,10 +600,10 @@
     <topic id="topic12" xml:lang="en">
       <title id="iz162725">Creating Queues with Memory Limits</title>
       <body>
-        <p>Resource queues with a <codeph>MEMORY_LIMIT</codeph> setting control the amount of
+        <p>Resource queues with a <codeph>MEMORY_LIMIT</codeph><ph> setting control the amount of
             memory for all the queries submitted through the queue. The total memory should not
-            exceed the physical memory available per-segment. You can set
-            <codeph>MEMORY_LIMIT</codeph> to 90% of memory available on a per-segment basis.
+            exceed the physical memory available per-segment. Set
+            </ph><codeph>MEMORY_LIMIT</codeph> to 90% of memory available on a per-segment basis.
           For example, if a host has 48 GB of physical memory and 6 segment instances, then the
           memory available per segment instance is 8 GB. You can calculate the recommended
             <codeph>MEMORY_LIMIT</codeph> for a single queue as 0.90*8=7.2 GB. If there are multiple
@@ -612,8 +612,7 @@
           memory allotted per query is: <codeph>MEMORY_LIMIT</codeph><codeph> /
             </codeph><codeph>ACTIVE_STATEMENTS</codeph>. When used in conjunction with
             <codeph>MAX_COST</codeph>, the default amount of memory allotted per query is:
-            <codeph>MEMORY_LIMIT * (query_cost <codeph>/ </codeph>MAX_COST)</codeph>. You should use
-          <codeph>MEMORY_LIMIT</codeph> in conjunction with
+            <codeph>MEMORY_LIMIT * (query_cost <codeph>/ </codeph>MAX_COST)</codeph>. Use <codeph>MEMORY_LIMIT</codeph> in conjunction with
             <codeph>ACTIVE_STATEMENTS</codeph> rather than with <codeph>MAX_COST</codeph>.</p>
         <p>For example, to create a resource queue with an active query limit of 10 and a total
           memory limit of 2000MB (each query will be allocated 200MB of segment host memory at
@@ -910,7 +909,7 @@ MEMORY_LIMIT='2000MB');
           and provides the priority, session ID, and other information.</p>
         <p>This view is only available through the <codeph>gp_toolkit</codeph> administrative
           schema. <ph>See the <i>Greenplum Database Reference Guide</i> for more
-          information.</ph></p>
+            information.</ph></p>
       </body>
     </topic>
     <topic id="topic29" xml:lang="en">

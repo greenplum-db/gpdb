@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_gptransfer">
-  <title>Migrating Data with Gptransfer</title>
+  <title>Migrating Data with gptransfer</title>
   <shortdesc>This topic describes how to use the <codeph>gptransfer</codeph> utility to transfer
     data between databases.</shortdesc>
   <body>
@@ -27,7 +27,7 @@
       <title>Prerequisites</title>
       <ul id="ul_wkb_xqd_cp">
         <li>The <codeph>gptransfer</codeph> utility can only be used with Greenplum Database,
-          including the EMC DCA appliance. Pivotal HAWQ is not supported as a source or destination. </li>
+          including the Dell EMC DCA appliance. Pivotal HAWQ is not supported as a source or destination. </li>
         <li>The source and destination Greenplum clusters must both be version 4.2 or higher.</li>
         <li>At least one Greenplum instance must include the <codeph>gptransfer</codeph> utility in
           its distribution. The utility is included with Greenplum Database version 4.2.8.1 and
@@ -164,12 +164,12 @@ host2_name,host2_ipaddr
     <section>
       <title>Full Mode and Table Mode</title>
       <p>When run with the <codeph>--full</codeph> option, <codeph>gptransfer</codeph> copies all
-      user-created databases, tables, views, indexes, roles, user-defined functions, and resource
-      queues in the source cluster to the destination cluster. The destination system cannot
-      contain any user-defined databases, only the default databases postgres, template0, and
-      template1. If <codeph>gptransfer</codeph> finds a database on the destination it fails with
-      a message like the
-      following:<codeblock>[ERROR]:- gptransfer: error: --full option specified but tables exist on destination system</codeblock></p>
+        user-created databases, tables, views, indexes, roles, user-defined functions, and resource
+        queues in the source cluster to the destination cluster. The destination system cannot
+        contain any user-defined databases, only the default databases postgres, template0, and
+        template1. If <codeph>gptransfer</codeph> finds a database on the destination it fails with
+        a message like the
+        following:<codeblock>[ERROR]:- gptransfer: error: --full option specified but tables exist on destination system</codeblock></p>
       <p><note>The <codeph>--full</codeph> option cannot be specified with the <codeph>-t</codeph>,
             <codeph>-d</codeph>, <codeph>-f</codeph>, or <codeph>--partition-transfer</codeph>
           options.</note>To copy tables individually, specify the tables using either the
@@ -246,13 +246,13 @@ host2_name,host2_ipaddr
         </tgroup>
       </table>
       <p>The <codeph>--full</codeph> option and the <codeph>--schema-only</codeph> option can be
-      used together if you want to copy databases in phases, for example, during scheduled periods
-      of downtime or low activity. Run <codeph>gptransfer --full --schema-only ...</codeph> to
-      create the databases on the destination cluster, but with no data. Then you can transfer the
-      tables in stages during scheduled down times or periods of low activity. Be sure to include
-      the <codeph>--truncate</codeph> or <codeph>--drop</codeph> option when you later transfer
-      tables to prevent the transfer from failing because the table already exists at the
-      destination.</p>
+        used together if you want to copy databases in phases, for example, during scheduled periods
+        of downtime or low activity. Run <codeph>gptransfer --full --schema-only ...</codeph> to
+        create the databases on the destination cluster, but with no data. Then you can transfer the
+        tables in stages during scheduled down times or periods of low activity. Be sure to include
+        the <codeph>--truncate</codeph> or <codeph>--drop</codeph> option when you later transfer
+        tables to prevent the transfer from failing because the table already exists at the
+        destination.</p>
     </section>
     <section>
       <title>Locking</title>
@@ -294,10 +294,10 @@ host2_name,host2_ipaddr
         Too many sub-processes can exhaust memory, causing a Python Out of Memory error. Start with
         a smaller batch size and sub-batch size, and increase based on your experiences. </p>
       <p>Transfer a database in stages. First, run <codeph>gptransfer</codeph> with the
-      <codeph>--schema-only</codeph> and <codeph>-d <varname>database</varname></codeph>
-    options, then transfer the tables in phases. After running <codeph>gptransfer</codeph> with
-    the <codeph>--schema-only</codeph> option, be sure to add the <codeph>--truncate</codeph> or
-      <codeph>--drop</codeph> option to prevent a failure because a table already exists.</p>
+          <codeph>--schema-only</codeph> and <codeph>-d <varname>database</varname></codeph>
+        options, then transfer the tables in phases. After running <codeph>gptransfer</codeph> with
+        the <codeph>--schema-only</codeph> option, be sure to add the <codeph>--truncate</codeph> or
+          <codeph>--drop</codeph> option to prevent a failure because a table already exists.</p>
       <p>Be careful choosing <codeph>gpfdist</codeph> and external table parameters such as the
         delimiter for external table data and the maximum line length. For example, don't choose a
         delimiter that can appear within table data.</p>

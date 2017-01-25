@@ -19,10 +19,10 @@
       queries that write rows cannot be blocked by transactions that read rows. This allows much
       greater concurrency than traditional database systems that employ locks to coordinate access
       between transactions that read and write data.</p>
-      <note>Append-optimized tables are managed with a concurrency control model different than the
-        MVCC model discussed in this topic. They are intended for  "write-once, read-many"
-        applications that never, or only very rarely, perform row-level updates. </note>
-      <section>
+    <note>Append-optimized tables are managed with a different concurrency control model than the
+      MVCC model discussed in this topic. They are intended for "write-once, read-many" applications
+      that never, or only very rarely, perform row-level updates.</note>
+    <section>
       <title>Snapshots</title>
       <p>The MVCC model depends on the system's ability to manage multiple versions of data rows. A
         query operates on a snapshot of the database at the start of the query. A snapshot is the
@@ -88,8 +88,9 @@
           <codeph>VACUUM</codeph> operation is not performed, Greenplum Database stops creating
         transactions to avoid possible data loss when it reaches a limit prior to when transaction
         ID wraparound occurs and issues this error:</p>
-      <codeblock>FATAL: database is not accepting commands to avoid wraparound data loss in database "<varname>database_name</varname>"
-</codeblock>
+      <codeblock>FATAL: database is not accepting commands to avoid wraparound data loss in database "<varname>database_name</varname>"</codeblock>
+      <p>See <xref href="../managing/maintain.xml#topic3/np160654"/> for the procedure to recover
+        from this error.</p>
       <p>The server configuration parameters <codeph>xid_warn_limit</codeph> and
           <codeph>xid_stop_limit</codeph> control when the warning and error are displayed. The
           <codeph>xid_warn_limit</codeph> parameter specifies the number of transaction IDs before
@@ -153,11 +154,11 @@
           </tbody>
         </tgroup>
       </table>
-      <p>The Greenplum Database SQL commands allow you to request any of the four isolation modes.
-        However, only <codeph>READ COMMITTED</codeph> and <codeph>SERIALIZABLE</codeph> are
-        supported. Greenplum Database treats <codeph>READ UNCOMMITTED</codeph> the same as
-          <codeph>READ COMMITTED</codeph> and <codeph>REPEATABLE READ</codeph> the same as
-          <codeph>SERIALIZABLE</codeph>. The default isolation mode is <codeph>READ
+      <p>The Greenplum Database SQL commands allow you to request <codeph>READ UNCOMMITTED</codeph>,
+          <codeph>READ COMITTED</codeph>, or <codeph>SERIALIZABLE</codeph>. Greenplum Database
+        treats <codeph>READ UNCOMMITTED</codeph> the same as <codeph>READ COMMITTED</codeph>.
+        Requesting <codeph>REPEATABLE READ</codeph> produces an error; use
+          <codeph>SERIALIZABLE</codeph> instead. The default isolation mode is <codeph>READ
           COMMITTED</codeph>. </p>
       <p>The difference between <codeph>READ COMMITTED</codeph> and <codeph>SERIALIZABLE</codeph> is
         that in <codeph>READ COMMITTED</codeph> mode, each statement in a transaction sees only rows
@@ -202,7 +203,7 @@ COMMIT;
       <p>The isolation mode can also be specified as part of the <codeph>BEGIN</codeph>
         statement:<codeblock>BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;</codeblock></p>
       <p>The default transaction isolation mode can be changed for a session by setting the
-          <varname>default_transation_isolation</varname> configuration property.</p>
+          <varname>default_transaction_isolation</varname> configuration property.</p>
     </section>
     <section>
       <title>Removing Dead Rows from Tables</title>

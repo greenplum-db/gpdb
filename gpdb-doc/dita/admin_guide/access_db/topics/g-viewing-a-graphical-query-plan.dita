@@ -5,7 +5,7 @@
     <taskbody>
         <context>Using the pgAdmin III query tool, you can run a query with EXPLAIN to view the
             details of the query plan. The output includes details about operations unique to
-                <keyword keyref="product_name_short"/> distributed query processing such as plan
+                Greenplum distributed query processing such as plan
             slices and motions between segments. You can view a graphical depiction of the plan as
             well as the text-based data output.</context>
         <steps id="steps_q1h_kdn_vp">

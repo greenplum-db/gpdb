@@ -137,13 +137,13 @@ md53ce96652dedd8226c498e09ae2d26220</codeblock></p><p>And
                 href="#topic_m2h_5dj_5s" format="dita"/> for the steps to configure PgBouncer to
               authenticate users with an LDAP server. </p><p>For details about the authentication
               file, see the "Authentication File Format" section of the PgBouncer reference in the
-              <i>Greenplum Database Utility Guide</i>. </p></li>
+                <i>Greenplum Database Utility Guide</i>. </p></li>
           <li>Launch
               <codeph>pgbouncer</codeph>:<codeblock>$ $GPHOME/bin/pgbouncer -d pgbouncer.ini</codeblock><p>The
                 <codeph>-d</codeph> or <codeph>--daemon</codeph> option runs PgBouncer as a
-                background process. See the PgBouncer reference in the <i>Greenplum Database Utility
-                  Guide</i> for the <codeph>pgbouncer</codeph> command syntax and its
-              options.</p></li>
+              background process. See the PgBouncer reference in the <i>Greenplum Database Utility
+                Guide</i> for the <codeph>pgbouncer</codeph> command syntax and its
+            options.</p></li>
           <li>Update client applications to connect to <codeph>pgbouncer</codeph> instead of
             directly to Greenplum Database server. To start <codeph>psql</codeph>, for
             example:<codeblock>$ psql -p 6543 -U <varname>someuser</varname> template1</codeblock></li>
@@ -219,7 +219,7 @@ DETAIL:
         </section>
         <p>For complete documentation for all of the administration console commands, see the
           "PgBouncer Administration Console Commands" section of the PgBouncer reference in the
-          <i>Greenplum Database Utility Guide</i>.</p>
+            <i>Greenplum Database Utility Guide</i>.</p>
       </body>
     </topic>
     <topic id="id_mpv_d2q_bt">

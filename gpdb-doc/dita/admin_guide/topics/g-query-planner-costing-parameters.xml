@@ -4,10 +4,10 @@
 <topic id="topic23">
    <title>Legacy Query Optimizer Costing Parameters</title>
    <body>
-      <note type="warning">You should not adjust these query costing parameters.
-         They are tuned to reflect Greenplum Database hardware configurations
-         and typical workloads. All of these parameters are related. Changing one without changing
-         the others can have adverse effects on performance. </note>
+      <note type="warning">Do not adjust these query costing parameters. They are tuned to reflect
+         Greenplum Database hardware configurations and typical workloads. All of these parameters
+         are related. Changing one without changing the others can have adverse effects on
+         performance. </note>
       <simpletable id="kh181234">
          <strow>
             <stentry>

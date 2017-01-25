@@ -3,7 +3,7 @@
 <topic id="topic1">
   <title>Considerations when Using GPORCA</title>
   <abstract>
-    <shortdesc>To execute queries optimally with GPORCA, query criteria to
+    <shortdesc> To execute queries optimally with GPORCA, query criteria to
       consider. </shortdesc>
   </abstract>
   <body>
@@ -21,10 +21,22 @@
       </ul></p>
     <p>If the partitioned table contains more than 20,000 partitions, consider a redesign of the
       table schema. </p>
-    <p>The server configuration parameter <codeph>optimizer_join_order_threshold</codeph> specifies
-      the maximum number of join children for which the Pivotal Query Optimizer uses the dynamic
-      programming-based join ordering algorithm. For information about the parameter, see the
-        <cite>Greenplum Database Reference Guide</cite>.</p>
+    <p>These server configuration parameters affect GPORCA query processing.</p>
+    <ul id="ul_jt3_nnq_1y">
+      <li>The parameter <codeph>optimizer_join_order_threshold</codeph> specifies the maximum number
+        of join children for which GPORCA uses the dynamic programming-based
+        join ordering algorithm.</li>
+      <li>The parameter <codeph>optimizer_parallel_union</codeph> controls the amount of
+        parallelization that occurs for queries that contain a <codeph>UNION</codeph> or
+          <codeph>UNION ALL</codeph> clause. When the value is <codeph>on</codeph>, Pivotal Query
+        Optimizer can generate a query plan the child operations of a <codeph>UNION</codeph> or
+          <codeph>UNION ALL</codeph> operation execute in parallel on segment instances. </li>
+      <li>The parameter <codeph>optimizer_sort_factor</codeph> controls the cost factor that Pivotal
+        Query Optimizer applies to sorting operations during query optimization. The cost factor can
+        be adjusted for queries when data skew is present. </li>
+    </ul>
+    <p> For information about the parameter, see the <cite>Greenplum Database Reference
+      Guide</cite>.</p>
     <p>GPORCA generates minidumps to describe the optimization context for a
       given query. The minidump files are used by Pivotal support to analyze Greenplum Database
       issues. The information in the file is not in a format that can be easily used by customers

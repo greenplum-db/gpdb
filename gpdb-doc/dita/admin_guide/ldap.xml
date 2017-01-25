@@ -25,9 +25,10 @@
         href="access_db/topics/pgbouncer.xml#topic_m2h_5dj_5s"/> for instructions. </note>
     <section>
       <title>Enabing LDAP Authentication with STARTTLS and TLS</title>
-      <p>To enable STARTTLS with the TLS protocol, specify the <codeph>ldaptls</codeph> parameter
-        with the value 1. The default port is 389. In this example, the authentication method
-        parameters include the <codeph>ldaptls</codeph> parameter.
+      <p>To enable STARTTLS with the TLS protocol, in the pg_hba.conf file, add an
+          <codeph>ldap</codeph> line and specify the <codeph>ldaptls</codeph> parameter with the
+        value 1. The default port is 389. In this example, the authentication method parameters
+        include the <codeph>ldaptls</codeph> parameter.
         <codeblock>ldap ldapserver=myldap.com ldaptls=1 ldapprefix="uid=" ldapsuffix=",ou=People,dc=pivotal,dc=com"</codeblock></p>
       <p>Specify a non-default port with the <codeph>ldapport</codeph> parameter. In this example,
         the authentication method includes the <codeph>ldaptls</codeph> parameter and the
@@ -36,15 +37,16 @@
     </section>
     <section>
       <title>Enabing LDAP Authentication with a Secure Connection and TLS/SSL </title>
-      <p>To enable STARTTLS with the TLS protocol, in the pg_hba.conf file, add an
-          <codeph>ldap</codeph> line and specify the <codeph>ldaptls</codeph> parameter with the
-        value 1. The default port is 389. In this example, the authentication method parameters
-        include the <codeph>ldaptls</codeph> parameter.
-        <codeblock>ldap ldapserver=myldap.com ldaptls=1 ldapprefix="uid=" ldapsuffix=",ou=People,dc=pivotal,dc=com"</codeblock></p>
-      <p>Specify a non-default port with the <codeph>ldapport</codeph> parameter. In this example,
-        the authentication method includes the <codeph>ldaptls</codeph> parameter and the
-        <codeph>ldapport</codeph> parameter to specify the port
-        550.<codeblock>ldap ldapserver=myldap.com ldaptls=1 ldapport=500 ldapprefix="uid=" ldapsuffix=",ou=People,dc=pivotal,dc=com"</codeblock></p>
+      <p>To enable a secure connection with TLS/SSL, add <codeph>ldaps://</codeph> as the prefix to
+        the LDAP server name specified in the <codeph>ldapserver</codeph> parameter. The default
+        port is 636.</p>
+      <p>This example <codeph>ldapserver</codeph> parameter specifies a secure connection and the
+        TLS/SSL protocol for the LDAP server <codeph>myldap.com</codeph>.</p>
+      <codeblock>ldapserver=ldaps://myldap.com</codeblock>
+      <p>To specify a non-default port, add a colon (:) and the port number after the LDAP server
+        name. This example <codeph>ldapserver</codeph> parameter includes the
+          <codeph>ldaps://</codeph> prefix and the non-default port 550.</p>
+      <codeblock>ldapserver=ldaps://myldap.com:550</codeblock>
     </section>
     <section>
       <title>Configuring Authentication with a System-wide OpenLDAP System</title>

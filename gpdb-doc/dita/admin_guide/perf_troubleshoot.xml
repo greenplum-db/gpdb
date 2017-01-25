@@ -70,11 +70,11 @@
                         <codeph>pg_stat_activity.procpid</codeph> to see more information about the
                     session holding or waiting to hold a lock. For example:</p>
                 <p>
-                    <codeblock>SELECT locktype, database, c.relname, l.relation,
-l.transactionid, l.transaction, l.pid, l.mode, l.granted,
-a.current_query
-        FROM pg_locks l, pg_class c, pg_stat_activity a
-        WHERE l.relation=c.oid AND l.pid=a.procpid
+                    <codeblock>SELECT locktype, database, c.relname, l.relation, 
+l.transactionid, l.transaction, l.pid, l.mode, l.granted, 
+a.current_query 
+        FROM pg_locks l, pg_class c, pg_stat_activity a 
+        WHERE l.relation=c.oid AND l.pid=a.procpid 
         ORDER BY c.relname;
 </codeblock>
                 </p>
@@ -103,9 +103,8 @@ a.current_query
                     management tool <codeph>gpssh</codeph> allows you to run these system monitoring
                     commands on several hosts simultaneously.</p>
                 <p>You can create and use the Greenplum Database
-                        <i>session_level_memory_consumption</i> view that provides information about
-                    the current memory utilization for sessions that are running queries on
-                    Greenplum Database. For information about the view, see <xref
+                    <i>session_level_memory_consumption</i> view that provides information about the
+                    current memory utilization for sessions that are running queries on Greenplum Database. For information about the view, see <xref
                         href="managing/monitor.xml#topic_slt_ddv_1q"/>.</p>
                 <p>The Greenplum Command Center collects query and system
                     utilization metrics. See the <i>Greenplum Command Center Administrator Guide</i>
@@ -120,10 +119,9 @@ a.current_query
                     <codeph>EXPLAIN</codeph> command shows the query plan for a given query. See
                     <xref href="query/topics/query-profiling.xml#topic39"/> for more information
                 about reading query plans and identifying problems.</p>
-            <p>When an out of memory event occurs during query execution, the Greenplum Database
-                memory accounting framework reports detailed memory consumption of every query
-                running at the time of the event. The information is written to the Greenplum
-                Database segment logs. </p>
+            <p>When an out of memory event occurs during query execution, the Greenplum Database memory accounting framework reports detailed memory
+                consumption of every query running at the time of the event. The information is
+                written to the Greenplum Database segment logs. </p>
         </body>
     </topic>
     <topic id="topic8" xml:lang="en">
@@ -140,7 +138,7 @@ a.current_query
 </codeblock>
             </p>
             <p>Log lines have the format of:</p>
-            <codeblock><i>timestamp</i> | <i>user</i> | <i>database</i> | <i>statement_id</i> | <i>con#</i><i>cmd#</i>
+            <codeblock><i>timestamp</i> | <i>user</i> | <i>database</i> | <i>statement_id</i> | <i>con#</i><i>cmd#</i> 
 |:-<i>LOG_LEVEL</i>: <i>log_message
 </i></codeblock>
             <p>You may want to focus your search for <codeph>WARNING</codeph>,
@@ -161,31 +159,27 @@ a.current_query
                 to search for log messages in the segment log files containing the string
                     <codeph>con6</codeph> and save output to a file:</p>
             <p>
-                <codeblock>gpssh -f seg_hosts_file -e 'source
-/usr/local/greenplum-db/greenplum_path.sh ; gplogfilter -f
+                <codeblock>gpssh -f seg_hosts_file -e 'source 
+/usr/local/greenplum-db/greenplum_path.sh ; gplogfilter -f 
 con6 /gpdata/*/pg_log/gpdb*.csv' &gt; seglog.out
 </codeblock>
             </p>
         </body>
         <topic id="topic9" xml:lang="en">
-            <title id="jc155267">Gathering Information for Pivotal Global Support Services</title>
+            <title id="jc155267">Gathering Information for Pivotal Support</title>
             <body>
-                <note>Pivotal Global Support Services (GSS) does not provide support for open
-                  source versions of Greenplum Database. Only Pivotal Greenplum Database is supported by Pivotal GSS.</note>
-                <p>The Pivotal Greenplum Database 
-                    <codeph>gpsupport</codeph> utility can collect information
-                    from a Pivotal Greenplum Database system. You can then send the information file to
-                    Pivotal GSS to aid the diagnosis of Pivotal Greenplum Database errors or system
-                    failures. For example, this <cmdname>gpsupport</cmdname> command collects all
-                    logs from the listed segment hosts in a Greenplum Database cluster:</p>
+                <p>The Greenplum Database
+                    <codeph>gpsupport</codeph> utility can collect information from a Greenplum Database system. You can then send the information file to
+                    Pivotal Customer Support to aid the diagnosis of Greenplum Database errors or system failures. For example, this <cmdname>gpsupport</cmdname>
+                    command collects all logs from the listed segment hosts in a Greenplum Database cluster:</p>
                 <p>
                     <codeblock>$ gpsupport collect logs segs sdw1,sdw2,sdw3-1</codeblock>
                 </p>
                 <p>The <codeph>gpsupport</codeph> utility can also collect other information such as
                     core files, previously run queries, and database schema information. The utility
-                    can perform some diagnostics tests on the database catalog and the database network. </p>
-                <p>The <codeph>gpsupport</codeph> utility is available from the <xref
-                    href="https://network.pivotal.io/products/pivotal-gpdb" scope="external" format="html"
+                    can perform some diagnostics tests on the database catalog the database network. </p>
+                <p>The <codeph>gpsupport</codeph> utility is available from <xref
+                        href="https://network.pivotal.io/products" scope="external" format="html"
                         class="- topic/xref ">Pivotal Network</xref> and the documentation is
                     available from the <xref href="http://gpdb.docs.pivotal.io/" scope="external"
                         format="html" class="- topic/xref ">Pivotal Documentation</xref> site.</p>

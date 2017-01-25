@@ -34,7 +34,7 @@
   <topic id="topic29" xml:lang="en">
     <title id="no161370">Ranking Tables for Redistribution</title>
     <body>
-      <p>For large systems, you should control table redistribution order. Adjust
+      <p>For large systems, control the table redistribution order. Adjust
         tables' <codeph>rank</codeph> values in the expansion schema to prioritize heavily-used
         tables and minimize performance impact. Available free disk space can affect table ranking;
         see <xref href="expand-planning.xml#topic11" type="topic" format="dita"/>.</p>

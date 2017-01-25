@@ -17,7 +17,8 @@
                <codeblock>$ gpstop -u</codeblock>
             </p>
          </li>
-         <li id="kh160789">For parameter changes that require a server restart, restart Greenplum Database as follows:<p>
+         <li id="kh160789">For parameter changes that require a server restart, restart Greenplum
+            Database as follows:<p>
                <codeblock>$ gpstop -r</codeblock>
             </p>
          </li>

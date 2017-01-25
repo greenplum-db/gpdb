@@ -4,19 +4,19 @@
 <topic id="topic3">
     <title>Overview of Segment Mirroring</title>
     <body>
-        <p>When Greenplum Database High Availability is enabled, there are
-            two types of segments: <i>primary</i> and <i>mirror</i>. Each primary segment has one
-            corresponding mirror segment. A primary segment receives requests from the master to
-            make changes to the segment's database and then replicates those changes to the
-            corresponding mirror. If a primary segment becomes unavailable, database queries fail
-            over to the mirror segment.</p>
+        <p>When Greenplum Database High Availability is enabled, there are two types of segments:
+                <i>primary</i> and <i>mirror</i>. Each primary segment has one corresponding mirror
+            segment. A primary segment receives requests from the master to make changes to the
+            segment's database and then replicates those changes to the corresponding mirror. If a
+            primary segment becomes unavailable, database queries fail over to the mirror
+            segment.</p>
         <p>Segment mirroring employs a physical file replication scheme—data file I/O at the primary
             is replicated to the secondary so that the mirror's files are identical to the primary's
-            files. Data in Greenplum Database are represented with
-                <i>tuples</i>, which are packed into <i>blocks</i>. Database tables are stored in
-            disk files consisting of one or more blocks. A change to a tuple changes the block it is
-            saved in, which is then written to disk on the primary and copied over the network to
-            the mirror. The mirror updates the corresponding block in its copy of the file.</p>
+            files. Data in Greenplum Database are represented with <i>tuples</i>, which are packed
+            into <i>blocks</i>. Database tables are stored in disk files consisting of one or more
+            blocks. A change to a tuple changes the block it is saved in, which is then written to
+            disk on the primary and copied over the network to the mirror. The mirror updates the
+            corresponding block in its copy of the file.</p>
         <p>For heap tables, blocks are saved in an in-memory cache until they are evicted to make
             room for newly changed blocks. This allows the system to read or update a block in
             memory multiple times without performing expensive disk I/O. When the block is evicted
@@ -54,7 +54,7 @@
             configuration.  </p>
         <!--<fig id="ki169754"><image href="../../../graphics/mirrorsegs.png" placement="break" width="485px" height="135px"/></fig>-->
         <fig id="fig_rrr_nt2_xt">
-            <title>Group Segment Mirroring in Greenplum Database </title>
+            <title>Group Segment Mirroring in Greenplum Database</title>
             <image href="../../../graphics/group-mirroring.png" id="image_crm_pt2_xt"/>
         </fig>
         <p><i>Spread mirroring</i> spreads each host's mirrors over multiple hosts so that if any
@@ -66,8 +66,8 @@
             <title>Spread Segment Mirroring in Greenplum Database</title>
             <image href="../../../graphics/spread-mirroring.png" id="image_zjm_wgg_xt"/>
         </fig>
-        <p>The Greenplum Database utilities that create mirror segments
-            support group and spread segment configurations. Custom mirroring configurations can be
-            described in a configuration file and passed on the command line.  </p>
+        <p>The Greenplum Database utilities that create mirror segments support group and spread
+            segment configurations. Custom mirroring configurations can be described in a
+            configuration file and passed on the command line. </p>
     </body>
 </topic>

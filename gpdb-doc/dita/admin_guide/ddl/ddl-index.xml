@@ -10,7 +10,7 @@
       smaller portion of the overall data to get the result. With table partitioning, the total data
       to scan may be even smaller. Because business intelligence (BI) query workloads generally
       return very large data sets, using indexes is not efficient.</p>
-    <p>Try your query workload without adding indexes. Indexes are more
+    <p>First try your query workload without adding indexes. Indexes are more
       likely to improve performance for OLTP workloads, where the query is returning a single record
       or a small subset of data. Indexes can also improve performance on compressed append-optimized
       tables for queries that return a targeted set of rows, as the optimizer can use an index

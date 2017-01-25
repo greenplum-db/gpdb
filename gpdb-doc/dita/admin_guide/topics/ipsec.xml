@@ -320,7 +320,7 @@ Checking 'iptables' command                              [OK]
 	leftrsasigkey=0sAQOW+RwpLg7CGoyywCnv+vnasGJI7...
 # ipsec showhostkey --right
 	# rsakey AQOW+RwpL
-	rightrsasigkey=0sAQOW+RwpLg7CGoyywCnv+vnasGJI7...
+	rightrsasigkey=0sAQOW+RwpLg7CGoyywCnv+vnasGJI7... 
 </codeblock></p>
         <p>You will need to use this command as you configure the tunnel between each host pair.</p>
       </section>
@@ -338,16 +338,16 @@ Checking 'iptables' command                              [OK]
               extension. The following configuration file, named <codeph>mdw-sdw1.conf</codeph>,
               configures the connection between the hosts mdw and
                 sdw1:<codeblock>conn mdw-sdw1
-    leftid=mdw
+    leftid=mdw 
     left=192.0.2.214
     leftrsasigkey=0sAQOW+RwpLg7CGoyywCnv+vnasGJI7... # shortened for readability
-    rightid=sdw1
+    rightid=sdw1 
     right=192.0.2.215
     rightrsasigkey=0sAQNfdDCoDte5bGaGLGkHTKa5GMRl... # shortened for readability
     type=tunnel
-    authby=rsasig
+    authby=rsasig   
     ike=aes192-sha2;dh20
-    phase2alg=aes_gcm_c-160-null
+    phase2alg=aes_gcm_c-160-null    
     auto=start
 </codeblock><p>See
                 the <xref href="http://linux.die.net/man/5/ipsec.conf" format="html"

@@ -53,9 +53,9 @@
     <topic id="topic3" xml:lang="en">
       <title>Transaction ID Management</title>
       <body>
-        <p>The Greenplum Database MVCC transaction semantics depend on comparing
+        <p>Greenplum's MVCC transaction semantics depend on comparing
           transaction ID (XID) numbers to determine visibility to other transactions. Transaction ID
-          numbers are compared using modulo 2<sup>32</sup> arithmetic, so a Greenplum Database system that runs more than about two billion transactions
+          numbers are compared using modulo 2<sup>32</sup> arithmetic, so a Greenplum system that runs more than about two billion transactions
           can experience transaction ID wraparound, where past transactions appear to be in the
           future. This means past transactions' outputs become invisible. Therefore, it is necessary
           to <codeph>VACUUM</codeph> every table in every database at least once per two billion
@@ -116,7 +116,7 @@ wraparound data loss in database "database_name"
           excessive data scanning during metadata operations on catalog tables. The performance loss
           occurs between thousands to tens of thousands of <codeph>DROP TABLE</codeph> statements,
           depending on the system.</p>
-        <p>Regularly run a system catalog maintenance procedure to reclaim
+        <p>You should run a system catalog maintenance procedure regularly to reclaim
           the space occupied by deleted objects. If a regular procedure has not been run for a long
           time, you may need to run a more intensive procedure to clear the system catalog. This
           topic describes both procedures.</p>
@@ -195,8 +195,7 @@ analyzedb -s pg_catalog -d $DBNAME
           This example runs <cmdname>ANALYZE</cmdname> and then <cmdname>VACUUM</cmdname> on the
             <i>cust_info</i> table.<codeblock>ANALYZE cust_info;
 VACUUM cust_info;</codeblock></p>
-        <note type="important">If you intend to execute queries on partitioned tables with GPORCA
-          enabled, you must collect statistics on the partitioned table root
+        <note type="important">If you intend to execute queries on partitioned tables with GPORCA enabled, you must collect statistics on the partitioned table root
           partition with the <cmdname>ANALYZE ROOTPARTITION</cmdname> command. For information about
           GPORCA, see <xref href="../query/topics/query-piv-opt-overview.xml"
           />. </note>

@@ -46,6 +46,7 @@
                <p>
                   <codeph>stats_queue_level</codeph>
                </p>
+               <p><codeph>vmem_process_interrupt</codeph></p>
             </stentry>
          </strow>
       </simpletable>

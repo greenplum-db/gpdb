@@ -19,16 +19,22 @@
       specifies the database to
       dump:<codeblock>gpcrondump -x <varname>mydb</varname></codeblock>This performs a full backup
       of the specified database to the default locations.</p>
+    <note>By default, the utility creates the <codeph>public.gpcrondump_history</codeph> table that
+      contains details of the database dump. If the <codeph>public</codeph> schema has been deleted
+      from the database, you must specify the <codeph>-H</codeph> option to prevent
+        <codeph>gpcrondump</codeph> from returning an error when it attempts to create the
+      table.</note>
     <p>By default, <codeph>gpcrondump</codeph> creates the backup files in the data directory on the
       master and each segment instance in the
         <codeph><varname>data_directory</varname>/db_dumps</codeph> directory. You can specify a
       different backup location using the <codeph>-u</codeph> flag. For example, the following
-      command will save backup files to the <codeph>/backups</codeph> directory:<codeblock>gpcrondump <varname>mydb</varname> -u <varname>/backups</varname></codeblock>
-      <codeph>gpcrondump</codeph> creates the <codeph>db_dumps</codeph> subdirectory in the
-      specified directory. If there is more than one primary segment per host, all of the segments
-      on the host write their backup files to the same directory. This differs from the default,
-      where each segment writes backups to its own data directory. This can be used to consolidate
-      backups to a single directory or mounted storage device. </p>
+      command will save backup files to the <codeph>/backups</codeph>
+      directory:<codeblock>gpcrondump <varname>mydb</varname> -u <varname>/backups</varname></codeblock>
+      The <codeph>gpcrondump</codeph> utility creates the <codeph>db_dumps</codeph> subdirectory in
+      the specified directory. If there is more than one primary segment per host, all of the
+      segments on the host write their backup files to the same directory. This differs from the
+      default, where each segment writes backups to its own data directory. This can be used to
+      consolidate backups to a single directory or mounted storage device. </p>
     <p>In the <codeph>db_dumps</codeph> directory, backups are saved to a directory in the format
         <i>YYYYMMDD</i>, for example
         <codeph><varname>data_directory</varname>/db_dumps/20151012</codeph> for a backup created on

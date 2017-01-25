@@ -279,9 +279,9 @@
           <stepxmp>
             <screen># klist
 Ticket cache: FILE:/tmp/krb5cc_108061
-+Default principal: gpadmin/kerberos-gpdb@KRB.EXAMPLE.COM
+Default principal: gpadmin/kerberos-gpdb@KRB.EXAMPLE.COM
 Valid starting     Expires            Service principal
-+03/28/13 14:50:26  03/29/13 14:50:26  krbtgt/KRB.GREENPLUM.COM     @KRB.EXAMPLE.COM
+03/28/13 14:50:26  03/29/13 14:50:26  krbtgt/KRB.GREENPLUM.COM     @KRB.EXAMPLE.COM
     renew until 03/28/13 14:50:26</screen>
           </stepxmp>
         </step>

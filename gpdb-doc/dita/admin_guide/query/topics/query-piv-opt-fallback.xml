@@ -4,15 +4,15 @@
 <topic id="topic1">
   <title>Determining the Query Optimizer that is Used</title>
   <abstract>
-    <shortdesc> When GPORCA is enabled, you can determine if Greenplum Database
-      is using GPORCA or is falling back to the legacy query optimizer. </shortdesc>
+    <shortdesc> When GPORCA is enabled, you can determine if Greenplum Database is using GPORCA or is falling back to the
+      legacy query optimizer. </shortdesc>
   </abstract>
   <body>
     <p>You can examine the <codeph>EXPLAIN</codeph> query plan for the query determine which query
       optimizer was used by Greenplum Database to execute the query:<ul
         id="ul_vc2_xbh_1t">
         <li>When GPORCA generates the query plan, the setting
-            <codeph>optimizer=on</codeph> and the GPORCA version are displayed at
+            <codeph>optimizer=on</codeph> and GPORCA version are displayed at
           the end of the query plan. For
             example.<codeblock> Settings:  <b>optimizer=on</b>
  Optimizer status: <b>PQO version 1.584</b></codeblock><p>When
@@ -84,7 +84,7 @@
         optimizer.<codeblock>explain select * from pg_class;</codeblock></p>
       <p>A message is added to the log file. The message contains this <codeph>NOTICE</codeph>
         information that indicates the reason GPORCA did not execute the
-        query:<codeblock>NOTICE,""Feature not supported by the Pivotal Optimizer: Queries on master-only tables"</codeblock></p>
+        query:<codeblock>NOTICE,""Feature not supported by the Pivotal Query Optimizer: Queries on master-only tables"</codeblock></p>
     </body>
   </topic>
 </topic>

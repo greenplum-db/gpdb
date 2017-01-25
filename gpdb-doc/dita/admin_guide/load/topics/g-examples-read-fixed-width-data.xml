@@ -44,7 +44,7 @@ FORMAT 'CUSTOM' (formatter=fixedwidth_in,
          <p>
             <codeblock>CREATE WRITABLE EXTERNAL TABLE students_out (
 name varchar(20), address varchar(30), age int)
-+LOCATION ('gpfdist://&lt;host&gt;:&lt;portNum&gt;/file/path/students_out.txt')     
+LOCATION ('gpfdist://&lt;host&gt;:&lt;portNum&gt;/file/path/students_out.txt')     
 FORMAT 'CUSTOM' (formatter=fixedwidth_out, 
         name=20, address=30, age=4, line_delim=E'\r\n');
 </codeblock>

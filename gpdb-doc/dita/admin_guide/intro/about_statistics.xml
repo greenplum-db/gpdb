@@ -44,16 +44,13 @@
           accurate count of disk pages is always available from the operating system, so as long as
           the ratio of <codeph>reltuples</codeph> to <codeph>relpages</codeph> does not change
           significantly, the optimizer can produce an estimate of the number of rows that is
-          sufficiently accurate to choose the correct query execution plan. </p><p>In
-          append-optimized tables, the number of tuples is kept up-to-date in the system catalogs,
-          so the <codeph>reltuples</codeph> statistic is not an estimate. Non-visible tuples in the
-          table are subtracted from the total. The <codeph>relpages</codeph> value is estimated from
-          the append-optimized block sizes. </p>When the <codeph>reltuples</codeph> column differs
-        significantly from the row count returned by <codeph>SELECT COUNT(*)</codeph>, an analyze
-        should be performed to update the statistics. <p>When a <codeph>REINDEX</codeph> command
-          finishes recreating an index, the <codeph>relpages</codeph> and <codeph>reltuples</codeph>
-          columns are set to zero. The <codeph>ANALYZE</codeph> command should be run on the base
-          table to update these columns.</p></section>
+          sufficiently accurate to choose the correct query execution plan. </p>When the
+          <codeph>reltuples</codeph> column differs significantly from the row count returned by
+          <codeph>SELECT COUNT(*)</codeph>, an analyze should be performed to update the statistics.
+          <p>When a <codeph>REINDEX</codeph> command finishes recreating an index, the
+            <codeph>relpages</codeph> and <codeph>reltuples</codeph> columns are set to zero. The
+            <codeph>ANALYZE</codeph> command should be run on the base table to update these
+          columns.</p></section>
       <section>
         <title>The pg_statistic System Table and pg_stats View</title>
         <p>The <codeph>pg_statistic</codeph> system table holds the results of the last
@@ -299,8 +296,8 @@
           each table with the saved state and skips analyzing a table or partition if it is
           unchanged. Heap tables are always analyzed. </p>
         <p>If GPORCA is enabled, you also need to run <codeph>ANALYZE
-            ROOTPARTITION</codeph> to refresh the root partition statistics. GPORCA requires 
-          statistics at the root level for partitioned tables. The legacy
+            ROOTPARTITION</codeph> to refresh the root partition statistics. The Pivotal Query
+          Optimizer requires statistics at the root level for partitioned tables. The legacy
           optimizer does not use these statistics. Enable GPORCA by setting
           both the <codeph>optimizer</codeph> and <codeph>optimizer_analyze_root_partition</codeph>
           system configuration parameters to on. The root level statistics are then updated when you

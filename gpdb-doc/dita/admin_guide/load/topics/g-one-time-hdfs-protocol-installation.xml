@@ -52,7 +52,7 @@
                            </row>
                            <row>
                               <entry morerows="2">Cloudera</entry>
-                              <entry>CDH 5.2, 5.3, 5.4.x, 5.5.x</entry>
+                              <entry>CDH 5.2, 5.3, 5.4.x - 5.8.x</entry>
                               <entry>
                                  <codeph>cdh5</codeph>
                               </entry>
@@ -77,7 +77,7 @@
                            <row>
                               <entry morerows="1">MapR<sup>3</sup>
                               </entry>
-                              <entry>MapR 4.x</entry>
+                              <entry>MapR 4.x, MapR 5.x</entry>
                               <entry>
                                  <codeph>gpmr-1.2</codeph>
                               </entry>
@@ -99,9 +99,9 @@
                      </tgroup>
                   </table><note><p> 1. Pivotal HD 1.0 is a distribution of Hadoop 2.0.</p> 2. For
                      CDH 4.1, only CDH4 with MRv1 is supported.<p> 3. MapR requires the MapR client
-                        software.</p></note>For the latest information regarding Pivotal-supported Hadoop
+                        software.</p></note>For the latest information regarding supported Hadoop
                   distributions, see the <i>Greenplum Database Release Notes</i> for your
-                  Pivotal software release.</p>
+                  release.</p>
             </li>
             <li id="du191308">After installation, ensure that the Greenplum system user
                   (<codeph>gpadmin</codeph>) has read and execute access to the Hadoop libraries or

@@ -9,12 +9,13 @@
   <topic id="topic2" xml:lang="en">
     <title id="jb150555">Identifying Hardware and Segment Failures</title>
     <body>
-      <p>The performance of Greenplum Database depends on the hardware and IT infrastructure on
-        which it runs. Greenplum Database is comprised of several servers (hosts) acting together as
-        one cohesive system (array); as a first step in diagnosing performance problems, ensure that
-        all Greenplum Database segments are online. Greenplum Database's performance will be as fast
-        as the slowest host in the array. Problems with CPU utilization, memory management, I/O
-        processing, or network load affect performance. Common hardware-related issues are:</p>
+      <p>The performance of Greenplum Database depends on the hardware and IT
+        infrastructure on which it runs. Greenplum Database is comprised of several
+        servers (hosts) acting together as one cohesive system (array); as a first step in
+        diagnosing performance problems, ensure that all Greenplum Database segments
+        are online. Greenplum Database's performance will be as fast as the slowest
+        host in the array. Problems with CPU utilization, memory management, I/O processing, or
+        network load affect performance. Common hardware-related issues are:</p>
       <ul>
         <li id="jb155623"><b>Disk Failure</b> – Although a single disk failure should not
           dramatically affect database performance if you are using RAID, disk resynchronization
@@ -27,16 +28,16 @@
           failed segments. The <codeph>gpstate</codeph> utility helps identify failed segments.</li>
         <li id="jb155741"><b>Network Failure</b> – Failure of a network interface card, a switch, or
           DNS server can bring down segments. If host names or IP addresses cannot be resolved
-          within your Greenplum array, these manifest themselves as interconnect errors in Greenplum
-          Database. The <codeph>gpcheckperf</codeph> utility helps identify segment hosts that have
-          network issues.</li>
+          within your Greenplum array, these manifest themselves as
+          interconnect errors in Greenplum Database. The <codeph>gpcheckperf</codeph>
+          utility helps identify segment hosts that have network issues.</li>
         <li id="jb155762"><b>Disk Capacity</b> – Disk capacity on your segment hosts should never
-          exceed 70 percent full. Greenplum Database needs some free space for runtime processing.
-            <ph>To reclaim disk space that deleted rows occupy, run <codeph>VACUUM</codeph> after
-            loads or updates. </ph>The <i>gp_toolkit</i> administrative schema has many views for
-          checking the size of distributed database objects. <p>See the <i>Greenplum Database
-              Reference Guide</i> for information about checking database object sizes and disk
-            space.</p></li>
+          exceed 70 percent full. Greenplum Database needs some free space for runtime
+          processing. <ph>To reclaim disk space that deleted rows occupy, run
+              <codeph>VACUUM</codeph> after loads or updates. </ph>The <i>gp_toolkit</i>
+          administrative schema has many views for checking the size of distributed database
+          objects. <p>See the <i>Greenplum Database Reference Guide</i> for
+            information about checking database object sizes and disk space.</p></li>
       </ul>
     </body>
   </topic>
@@ -46,16 +47,17 @@
       <p>A database system has a limited CPU capacity, memory, and disk I/O resources. When multiple
         workloads compete for access to these resources, database performance suffers. Workload
         management maximizes system throughput while meeting varied business requirements. With
-        role-based resource queues, Greenplum Database workload management limits active queries and
-        conserves system resources.</p>
+        role-based resource queues, Greenplum Database workload management limits
+        active queries and conserves system resources.</p>
       <p>A resource queue limits the size and/or total number of queries that users or roles can
-        execute in the particular queue. By assigning database roles to the appropriate
-        resource queue, administrators can control concurrent user queries and prevent system
-        overload. See <xref href="./workload_mgmt.xml#topic1" type="topic" format="dita"/> for more
-        information about setting up resource queues.</p>
-      <p>Greenplum Database administrators should run maintenance workloads such as data loads and
-          <codeph>VACUUM ANALYZE</codeph> operations after business hours. Do not compete with
-        database users for system resources; perform administrative tasks at low-usage times.</p>
+        execute in the particular queue. By assigning database roles to the appropriate resource
+        queues, administrators can control concurrent user queries and prevent system overload. See
+          <xref href="./workload_mgmt.xml#topic1" type="topic" format="dita"/> for more information
+        about setting up resource queues.</p>
+      <p>Greenplum Database administrators should run maintenance workloads such as
+        data loads and <codeph>VACUUM ANALYZE</codeph> operations after business hours. Do not
+        compete with database users for system resources; perform administrative tasks at low-usage
+        times.</p>
     </body>
   </topic>
   <topic id="topic4" xml:lang="en">
@@ -71,20 +73,18 @@
   <topic id="topic5" xml:lang="en">
     <title id="jb155292">Maintaining Database Statistics</title>
     <body>
-      <p>Greenplum Database uses a cost-based query optimizer that relies on database statistics.
-        Accurate statistics allow the query optimizer to better estimate the number of rows
-        retrieved by a query to choose the most efficient query plan. Without database statistics,
-        the query optimizer cannot estimate how many records will be returned. The optimizer does
-        not assume it has sufficient memory to perform certain operations such as aggregations, so
-        it takes the most conservative action and does these operations by reading and writing from
-        disk. This is significantly slower than doing them in memory. <cmdname>ANALYZE</cmdname>
-        collects statistics about the database that the query optimizer needs.<note>When executing
-          an SQL command with GPORCA, Greenplum Database issues a warning if
-          the command performance could be improved by collecting statistics on a column or set of
-          columns referenced by the command. The warning is issued on the command line and
-          information is added to the Greenplum Database log file. For information about collecting
-          statistics on table columns, see the <cmdname>ANALYZE</cmdname> command in the
-            <cite>Greenplum Database Reference Guide</cite></note></p>
+      <p>Greenplum Database uses a cost-based query optimizer that relies on database
+        statistics. Accurate statistics allow the query optimizer to better estimate the number of
+        rows retrieved by a query to choose the most efficient query plan. Without database
+        statistics, the query optimizer cannot estimate how many records will be returned. The
+        optimizer does not assume it has sufficient memory to perform certain operations such as
+        aggregations, so it takes the most conservative action and does these operations by reading
+        and writing from disk. This is significantly slower than doing them in memory.
+          <cmdname>ANALYZE</cmdname> collects statistics about the database that the query optimizer
+        needs.<note>When executing an SQL command with GPORCA, Greenplum Database issues a warning if the command performance could be improved by
+          collecting statistics on a column or set of columns referenced by the command. The warning
+          is issued on the command line and information is added to the Greenplum Database log file. For information about collecting statistics on table
+          columns, see the <cmdname>ANALYZE</cmdname> command in the <cite>Greenplum Database Reference Guide</cite></note></p>
     </body>
     <topic id="topic6" xml:lang="en">
       <title>Identifying Statistics Problems in Query Plans</title>
@@ -142,11 +142,11 @@
   <topic id="topic8" xml:lang="en">
     <title id="jb155293">Optimizing Data Distribution</title>
     <body>
-      <p>When you create a table in Greenplum Database, you must declare a distribution key that
-        allows for even data distribution across all segments in the system. Because the segments
-        work on a query in parallel, Greenplum Database will always be as fast as the slowest
-        segment. If the data is unbalanced, the segments that have more data will return their
-        results slower and therefore slow down the entire system.</p>
+      <p>When you create a table in Greenplum Database, you must declare a
+        distribution key that allows for even data distribution across all segments in the system.
+        Because the segments work on a query in parallel, Greenplum Database will
+        always be as fast as the slowest segment. If the data is unbalanced, the segments that have
+        more data will return their results slower and therefore slow down the entire system.</p>
     </body>
   </topic>
   <topic id="topic9" xml:lang="en">
@@ -165,8 +165,7 @@
     <topic id="topic10" xml:lang="en">
       <title>Greenplum Database Maximum Limits</title>
       <body>
-        <p>To help optimize database design, review the maximum limits that Greenplum Database
-          supports:</p>
+        <p>To help optimize database design, review the maximum limits that Greenplum Database supports:</p>
         <table id="jb163544">
           <title>Maximum Limits of Greenplum Database</title>
           <tgroup cols="2">
@@ -222,12 +221,12 @@
             </tbody>
           </tgroup>
         </table>
-        <p>Dimensions listed as unlimited are not intrinsically limited by Greenplum Database.
-          However, they are limited in practice to available disk space and memory/swap space.
-          Performance may suffer when these values are unusually large.</p>
+        <p>Dimensions listed as unlimited are not intrinsically limited by Greenplum Database. However, they are limited in practice to available disk space
+          and memory/swap space. Performance may suffer when these values are unusually large.</p>
         <note type="note">
-          <p>There is a maximum limit on the number of objects (tables<ph>, indexes,</ph> and views,
-            but not rows) that may exist at one time. This limit is 4294967296 (2^32).</p>
+          <p>There is a maximum limit on the number of objects (tables<ph>,
+              indexes,</ph> and views, but not rows) that may exist at one time. This limit is
+            4294967296 (2^32).</p>
         </note>
       </body>
     </topic>

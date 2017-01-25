@@ -20,6 +20,8 @@
          <li>
             <codeph>optimizer_enable_master_only_queries</codeph>
          </li>
+         <li><codeph>optimizer_parallel_union</codeph></li>
+         <li><codeph>optimizer_sort_factor</codeph></li>
       </ul>
    </body>
 </topic>

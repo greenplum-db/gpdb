@@ -5,7 +5,7 @@
 <topic id="topic1">
   <title>GPORCA Features and Enhancements</title>
   <abstract>
-    <shortdesc>GPORCA includes enhancements for specific types of queries and
+    <shortdesc>GPORCA, the Greenplum next generation query optimizer, includes enhancements for specific types of queries and
       operations:</shortdesc>
     <ul id="ul_ywz_j5d_gr">
       <li>

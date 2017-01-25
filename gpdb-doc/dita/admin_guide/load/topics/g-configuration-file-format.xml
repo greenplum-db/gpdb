@@ -63,7 +63,7 @@ COMMAND:   command
                <p>For input transformations, <cmdname>gpfdist</cmdname> invokes the command
                   specified in the <codeph>CONTENT</codeph> setting. The command is expected to open
                   the underlying file(s) as appropriate and produce one line of
-                  <codeph>TEXT</codeph> for each row to load into Greenplum Database. The input transform determines whether the entire content should be converted
+                     <codeph>TEXT</codeph> for each row to load into Greenplum Database. The input transform determines whether the entire content should be converted
                   to one row or to multiple rows.</p>
                <p>For output transformations, <cmdname>gpfdist</cmdname> invokes
                                     this command as specified in the <codeph>CONTENT</codeph>

@@ -1,0 +1,497 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dita PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<dita>
+  <topic id="topic_kmz_lbg_rp">
+    <title>Greenplum System Monitoring and Maintenance Recommendations</title>
+    <shortdesc>This section lists monitoring activities that are recommended to ensure high
+      availability and consistent performance of your Greenplum Database cluster.</shortdesc>
+    <topic id="drr_5bg_rp">
+      <title>Database State Monitoring Activities</title>
+      <body>
+        <section>
+          <title>Find segments that are down</title>
+<parml>
+              <p>List segments that are currently down. If any rows are returned, this should
+                generate a warning or alert.</p>
+              <p>Recommended frequency: run every 5 to 10
+                  minutes</p>
+                  <pt>Severity</pt>
+<pd>IMPORTANT</pd>
+                  <pt>Procedure</pt>
+<pd>Run the following query in the <codeph>postgres</codeph>
+                  database:<codeblock>SELECT * FROM gp_segment_configuration 
+WHERE status &lt;&gt; 'u';</codeblock></pd>
+              <pt>Corrective Actions</pt>
+<pd>If the query returns any rows, follow these steps to correct the problem:<ol
+                  id="ol_okh_2cg_rp">
+                  <li>Verify that the hosts with down segments are responsive. </li>
+                  <li>If hosts are OK, check the <filepath>pg_log</filepath> files for the primaries
+                    and mirrors of the down segments to discover the root cause of the segments
+                    going down. </li>
+                  <li>If no unexpected errors are found, run the <codeph>gprecoverseg</codeph>
+                    utility to bring the segments back online.</li>
+                </ol></pd>
+
+</parml>
+          <section>
+            <title>Check for segments in change tracking mode</title>
+<parml>
+              <p>Check for segments that are currently in change tracking mode. If any rows are
+                returned, this should generate a warning or alert.</p>
+                <p>Recommended frequency: run
+                  every 5 to 10 minutes</p>
+                  <pt>Severity</pt>
+<pd>IMPORTANT</pd>
+                <p>Execute the following query in the <codeph>postgres</codeph>
+                  database:<codeblock>SELECT * FROM gp_segment_configuration 
+WHERE mode = 'c';</codeblock></p>
+              <pt>Corrective Actions</pt>
+<pd>If the query returns any rows, follow these steps to correct the problem:<ol
+                    id="ol_ezt_kcg_rp">
+                    <li>Verify that hosts with down segments are responsive. </li>
+                    <li>If hosts are OK, check the <filepath>pg_log</filepath> files for the
+                      primaries and mirrors of the down segments to determine the root cause of the
+                      segments going down. </li>
+                    <li>If no unexpected errors are found, run the <codeph>gprecoverseg</codeph>
+                      utility to bring the segments back online.</li>
+                  </ol></pd>
+            </section>
+</parml>
+            <section><title>Check for segments that are currently re-syncing</title>
+<parml>
+              <entry>If rows are returned, this
+                  should generate a warning or alert.<p>Recommended frequency: run every 5 to 10
+                    minutes</p><pt>Severity</pt>
+<pd>IMPORTANT</pd></entry>
+              <entry>
+                <p>Execute the following query in the <codeph>postgres</codeph>
+                  database:<codeblock>SELECT * FROM gp_segment_configuration
+WHERE mode = 'r';</codeblock></p>
+              </entry>
+              <entry>
+                <p>When this query returns rows, it implies that the segments are in the process of
+                    being re-synched. If the state does not change from 'r' to 's', then check the
+                      <filepath>pg_log</filepath> files from the primaries and mirrors of the
+                    affected segments for errors.</p>
+              </entry>
+            </section>
+</parml>
+            <section><title>Check for segments that are not operating in their optimal role</title>
+<parml>
+              <entry>If any segments are found, the cluster may not be balanced. If any rows are returned this should generate a warning or alert. <p>Recommended frequency: run every 5 to 10
+                  minutes</p><pt>Severity</pt>
+<pd>IMPORTANT</pd></entry>
+              <entry>
+                <p>Execute the following query in the <codeph>postgres</codeph> database:
+                  <codeblock>SELECT * FROM gp_segment_configuration 
+WHERE preferred_role &lt;&gt; role;</codeblock></p>
+              </entry>
+              <entry>
+                <p>When the segments are not running in their preferred role, hosts have uneven
+                  numbers of primary segments on each host, implying that processing is skewed. Wait
+                  for a potential window and restart the database to bring the segments into their
+                  preferred roles.</p>
+              </entry>
+            </section>
+</parml>
+            <section><title>Test a distributed query on all segments</title>
+<parml>
+              <entry>One row should be
+                returned for each primary segment. <p>Recommended frequency: run every 5 to 10
+                  minutes</p><pt>Severity</pt>
+<pd>CRITICAL</pd></entry>
+              <entry>
+                <p>Execute the following query in the <codeph>postgres</codeph>
+                  database:<codeblock>SELECT gp_segment_id, count(*) 
+FROM gp_dist_random('pg_class') 
+GROUP BY 1;</codeblock></p>
+              </entry>
+              <entry>
+                <p>If this query fails,  there is an issue dispatching to some segments in the
+                  cluster. This is a rare event. Check the hosts that are not able to be dispatched
+                  to ensure there is no hardware or networking issue.</p>
+              </entry>
+            </section>
+</parml>
+            <section><title>Check master mirroring on a Greenplum Database 4.2
+                cluster </title>
+<parml>
+              <entry>If the value is "Not Synchronized", raise an alert or
+                  warning.<p>Recommended frequency: run every 5 to 10 minutes</p><p>Severity:
+                  IMPORTANT</p></entry>
+              <entry>
+                <p>Execute the following query in the <codeph>postgres</codeph> database:
+                  <codeblock>SELECT summary_state 
+FROM gp_master_mirroring;</codeblock></p>
+              </entry>
+              <entry>
+                <p>Check the <filepath>pg_log</filepath> from the master and standby master for
+                    errors. If there are no unexpected errors and the machines are up, run the
+                      <codeph>gpinitstandby</codeph> utility to bring the standby online. This
+                    requires a database restart on GPDB 4.2 and earlier.</p>
+              </entry>
+            </section>
+</parml>
+            <section><title>Check master mirroring on a Greenplum 4.3 cluster</title>
+<parml>
+              <entry>If the
+                value is "STREAMING", raise an alert or warning.<p>Recommended frequency: run every
+                  5 to 10 minutes</p><pt>Severity</pt>
+<pd>IMPORTANT</pd></entry>
+              <entry>
+                <p>Run the following <codeph>psql</codeph>
+                  command:<codeblock>psql <i>dbname</i> -c 'SELECT procpid, state FROM pg_stat_replication;'</codeblock></p>
+              </entry>
+              <entry>
+                <p>Check the <filepath>pg_log</filepath> file from the master and standby master for
+                  errors. If there are no unexpected errors and the machines are up, run the
+                    <codeph>gpinitstandby</codeph> utility to bring the standby online. </p>
+              </entry>
+            </section>
+</parml>
+            <section><title>Check that master is functional</title>
+<parml>
+              <entry><p>Recommended
+                  frequency: run every 5 to 10 minutes</p><pt>Severity</pt>
+<pd>CRITICAL</pd></entry>
+              <entry>
+                <p>Run the following query in the <codeph>postgres</codeph> database:
+                  <codeblock>SELECT count(*) FROM gp_segment_configuration;</codeblock></p>
+              </entry>
+              <entry>
+                <p>If this query fails the active master may be down. Try again several times and
+                  then inspect the active master manually. If the active master is down, reboot or
+                  power cycle the active master to ensure no processes remain on the active master
+                  and then trigger the activation of the standby master.</p>
+              </entry>
+            </section>
+</parml>
+      </body>
+  </topic>
+  <topic id="topic_atb_b2g_rp">
+    <title>Database Alert Log Monitoring </title>
+    <body>
+
+            <section><title>Check for FATAL and ERROR log messages</title>
+<parml>
+              <entry><p>Recommended
+                  frequency: run every 15 minutes</p><pt>Severity</pt>
+<pd>WARNING</pd><p><i>This activity and
+                    the next  are two methods for monitoring messages in the log_alert_history
+                    table. It is only necessary to set up one or the other.</i></p></entry>
+              <entry>
+                <p>Run the following query in the <codeph>gpperfmon</codeph>
+                  database:<codeblock>SELECT * FROM log_alert_history 
+WHERE logseverity in ('FATAL', 'ERROR') 
+   AND logtime &gt; (now() - interval '15 minutes');</codeblock></p>
+              </entry>
+              <entry>Send an alert to the DBA to analyze the alert. You may want to add additional
+                filters to the query to ignore certain messages of low interest.</entry>
+            </section>
+</parml>
+            <section><title>Set up SNMP or email
+                  alerts</title>
+<parml>
+              <entry><p>Recommended frequency: N/A. Alerts are generated by the
+                  system.</p><pt>Severity</pt>
+<pd>WARNING</pd><p><i>This activity and the previous are two
+                    methods for monitoring messages in the log_alert_history table. It is only
+                    necessary to set up one or the other.</i></p></entry>
+              <entry>
+                <p>Enable server configuration parameters to send alerts via SNMP or email: <ul
+                    id="ul_hnc_1fg_rp">
+                    <li><codeph>gp_email_smtp_server </codeph></li>
+                    <li><codeph>gp_email_smtp_userid</codeph>
+                    </li>
+                    <li><codeph>gp_email_smtp_password</codeph> or
+                        <codeph>gp_snmp_monitor_address</codeph>
+                    </li>
+                    <li><codeph>gp_snmp_community</codeph>
+                    </li>
+                    <li><codeph>gp_snmp_use_inform_or_trap</codeph></li>
+                  </ul></p>
+              </entry>
+              <entry>
+                <p>DBA takes action based on the nature of the alert.</p>
+              </entry>
+            </section>
+</parml>
+    </body>
+  </topic>
+  <topic id="topic_y4c_4gg_rp">
+    <title>Hardware and Operating System Monitoring</title>
+    <body>
+            <section><title>Check underlying platform</title>
+<parml>
+              <entry>Check for maintenance required or system down of the
+                    hardware.<p>Recommended frequency: real-time, if possible, or every 15
+                    minutes</p><pt>Severity</pt>
+<pd>CRITICAL</pd></entry>
+              <entry>Set up SNMP or other system check for hardware and OS errors.</entry>
+              <entry>If required, remove a machine from the Greenplum cluster to resolve hardware
+                and OS issues, then, after add it back to the cluster and run
+                  <codeph>gprecoverseg</codeph>.</entry>
+            </section>
+</parml>
+            <section><title>Check disk available</title>
+<parml>
+              <entry>Check disk space usage on volumes used for Greenplum Database data storage and
+                the OS. <p>Recommended frequency: every 5 to 30 minutes</p><p>Severity:
+                CRITICAL</p></entry>
+              <entry>
+                <p>Set up a disk space check.<ul id="ul_rs1_whg_rp">
+                    <li>Set a threshold to raise an alert when a disk reaches a percentage of
+                      capacity. The recommended threshold is 75% full.</li>
+                    <li>It is not recommended to run the system with capacities approaching
+                      100%.</li>
+                  </ul></p>
+              </entry>
+              <entry>Free space on the system by removing some data or files.</entry>
+            </section>
+</parml>
+            <section><title>Check network health</title>
+<parml>
+              <entry>Check for errors or dropped packets on the network interfaces.<p>Recommended
+                  frequency: hourly</p><pt>Severity</pt>
+<pd>IMPORTANT</pd></entry>
+              <entry>Set up a network interface checks. </entry>
+              <entry>
+                <p>Work with network and OS teams to resolve errors.</p>
+              </entry>
+            </section>
+</parml>
+            <section><title>Check RAID system</title>
+<parml>
+              <entry>Check for RAID errors or degraded RAID performance. <p>Recommended frequency:
+                  every 5 minutes</p><pt>Severity</pt>
+<pd>CRITICAL</pd></entry>
+              <entry>Set up a RAID check.</entry>
+              <entry>
+                <ul id="ul_f4b_fjg_rp">
+                  <li>Replace failed disks as soon as possible. </li>
+                  <li>Work with system administration team to resolve other RAID or controller
+                    errors as soon as possible.</li>
+                </ul>
+              </entry>
+            </section>
+</parml>
+            <section><title>Check cluster configuration</title>
+<parml>
+              <entry>Run the Greenplum <codeph>gpcheck</codeph> utility to test that the
+                configuration of the cluster complies with Pivotal recommendations.<p>Recommended
+                  frequency: when creating a cluster or adding new machines to the cluster
+                  </p><pt>Severity</pt>
+<pd>IMPORTANT</pd></entry>
+              <entry>Run <codeph>gpcheck</codeph>.</entry>
+              <entry>
+                <p>Work with system administration team to update configuration according to the
+                  recommendations made by the <codeph>gpcheck</codeph> utility.</p>
+              </entry>
+            </section>
+</parml>
+            <section><title>Check I/O bandwidth and skew</title>
+<parml>
+              <entry>Check for adequate I/O bandwidth and I/O skew.<p>Recommended frequency: when
+                  create a cluster or when hardware issues are suspected.</p></entry>
+              <entry>Run the Greenplum <codeph>gpcheckperf</codeph> utility. </entry>
+              <entry>
+                <p>The cluster may be under-specified if data transfer rates are not similar to the
+                  following: <ul id="ul_elm_dkg_rp">
+                    <li>2GB per second disk read</li>
+                    <li>1 GB per second disk write</li>
+                    <li>10 Gigabit per second network read and write </li>
+                  </ul>If transfer rates are lower than expected, consult with your data architect
+                  regarding performance expectations.</p>
+                <p>If the machines on the cluster display an uneven performance profile, work with
+                    the system administration team to fix faulty machines.</p>
+              </entry>
+            </section>
+</parml>
+    </body>
+  </topic>
+    <topic id="topic_gbp_jng_rp">
+      <title>Catalog Monitoring</title>
+      <body>
+
+              <section><title>Check the system catalog</title>
+<parml>
+                <entry>Run catalog consistency checks to ensure the catalog on each host in the
+                  cluster is consistent and in a good state.<p>Recommended frequency:
+                    weekly</p><pt>Severity</pt>
+<pd>IMPORTANT</pd></entry>
+                <entry>Run the Greenplum <codeph>gpcheckcat</codeph> utility in each
+                  database:<codeblock>gpcheckcat -O</codeblock></entry>
+                <entry>Run repair scripts for any issues detected.</entry>
+              </section>
+</parml>
+              <section><title>Check persistent table catalog</title>
+<parml>
+                <entry>Run a persistent table catalog check.<p>Recommended frequency:
+                    monthly</p><pt>Severity</pt>
+<pd>CRITICAL</pd></entry>
+                <entry>During a downtime, with no users on the system, run the Greenplum
+                    <codeph>gpcheckcat</codeph> utility in each
+                  database:<codeblock>gpcheckcat -R persistent</codeblock></entry>
+                <entry>If any problems are identified, contact Pivotal support for
+                  assistance.</entry>
+              </section>
+</parml>
+              <section><title></title>
+<parml>
+                <entry>Check for <codeph>pg_class</codeph> entries that have no corresponding
+                    <codeph>pg_attribute</codeph> entry.<p>Recommended frequency:
+                    monthly</p><pt>Severity</pt>
+<pd>IMPORTANT</pd></entry>
+                <entry>During a downtime, with no users on the system, run the Greenplum
+                    <codeph>gpcheckcat</codeph> utility in each
+                  database:<codeblock>gpcheckcat -R pgclass</codeblock></entry>
+                <entry>Run the repair scripts for any issues identified.</entry>
+              </section>
+</parml>
+              <section><title>Check for leaked temporary schema and missing schema
+                    definition</title>
+<parml>
+                <entry><p>Recommended frequency: monthly</p><p>Severity:
+                  IMPORTANT</p></entry>
+                <entry>During a downtime, with no users on the system, run the Greenplum
+                    <codeph>gpcheckcat</codeph> utility in each
+                  database:<codeblock>gpcheckcat -R namespace</codeblock></entry>
+                <entry>Run the repair scripts for any issues identified.</entry>
+              </section>
+</parml>
+              <section><title>Check constraints on randomly distributed tables</title>
+<parml>
+                <entry><p>Recommended frequency:
+                    monthly</p><pt>Severity</pt>
+<pd>IMPORTANT</pd></entry>
+                <entry>During a downtime, with no users on the system, run the Greenplum
+                    <codeph>gpcheckcat</codeph> utility in each
+                  database:<codeblock>gpcheckcat -R distribution_policy</codeblock></entry>
+                <entry>Run the repair scripts for any issues identified.</entry>
+              </section>
+</parml>
+              <section><title>Check for dependencies on non-existent objects</title>
+<parml>
+                <entry><p>Recommended frequency:
+                    monthly</p><pt>Severity</pt>
+<pd>IMPORTANT</pd></entry>
+                <entry>During a downtime, with no users on the system, run the Greenplum
+                    <codeph>gpcheckcat</codeph> utility in each
+                  database:<codeblock>gpcheckcat -R dependency</codeblock></entry>
+                <entry>Run the repair scripts for any issues identified.</entry>
+              </section>
+</parml>
+     
+      </body>
+    </topic>
+    <topic id="maintentenance_check_scripts">
+      <title>Data Maintenance</title>
+      <body>
+
+              <section><title>Check for missing statistics on tables. </title>
+<parml>
+                <entry>Check for missing statistics on tables. </entry>
+                <entry>Check the <codeph>gp_stats_missing</codeph> view in each
+                  database:<codeblock>SELECT * FROM gp_toolkit.gp_stats_missing;</codeblock></entry>
+                <entry>Run <codeph>ANALYZE</codeph> on tables that are missing statistics.</entry>
+              </section>
+</parml>
+              <section><title>Check for bloat</title>
+<parml>
+                <entry>Check for tables that have bloat (dead space) in data files that cannot be
+                  recovered by a regular <codeph>VACUUM</codeph> command.  <p>Recommended frequency:
+                    weekly or monthly</p><pt>Severity</pt>
+<pd>WARNING</pd></entry>
+                <entry>Check the <codeph>gp_bloat_diag</codeph> view in each database:
+                  <codeblock>SELECT * FROM gp_toolkit.gp_bloat_diag;</codeblock></entry>
+                <entry>Execute a <codeph>VACUUM FULL</codeph> statement at a time when users are not
+                  accessing the table to remove bloat and compact the data.</entry>
+              </section>
+</parml>
+            </tbody>
+          </tgroup>
+        </table>
+      </body>
+    </topic>
+    <topic id="topic_dld_23h_rp">
+      <title>Database Maintenance</title>
+      <body>
+                <section><title>Vacuum tables</title>
+<parml>
+                  <entry>Mark deleted rows in heap tables so that they space they occupy can be
+                      reused.<p>Recommended frequency: daily</p><pt>Severity</pt>
+<pd>CRITICAL</pd></entry>
+                  <entry>Vacuum user tables:<codeblock>VACUUM <i>&lt;table></i>;</codeblock></entry>
+                  <entry>Vacuum updated tables regularly to prevent bloating. </entry>
+                </section>
+</parml>
+                <section><title>Update statistics</title>
+<parml>
+                  <entry>Run <codeph>ANALYZE</codeph> to update table statistics. <p>Recommended frequency: after loading data and
+                      before executing queries</p><pt>Severity</pt>
+<pd>CRITICAL</pd></entry>
+                  <entry>Analyze user
+                    tables:<codeblock>ANALYZE <i>&lt;table></i>;</codeblock></entry>
+                  <entry>Analyze updated tables regularly so that the optimizer can produce
+                    efficient query execution plans.</entry>
+                </section>
+</parml>
+                <section><title>Backup the database</title>
+<parml>
+                  <entry>Backup the database data.<p>Recommended frequency: daily, or as required by
+                      your backup plan</p><pt>Severity</pt>
+<pd>CRITICAL</pd></entry>
+                  <entry>Run the <codeph>gpcrondump</codeph> utility to create a backup of the
+                    master and segment databases in parallel. </entry>
+                  <entry>Best practice is to have a current backup ready in case the database must
+                    be restored. </entry>
+                </section>
+</parml>
+                <section><title>Vaccuum and reindex system tables</title>
+<parml>
+                  <entry>Vacuum and reindex system tables to maintain an efficient
+                      catalog.<p>Recommended frequency: weekly, or more often if database objects
+                      are created and dropped frequently</p></entry>
+                  <entry>
+                    <ol id="ol_frs_nlh_rp">
+                      <li><codeph>VACUUM</codeph> the system tables in each database.</li>
+                      <li>Run <codeph>REINDEX SYSTEM</codeph> in each database.</li>
+                    </ol>
+                  </entry>
+                  <entry>The optimizer retrieves information from the system tables to create query
+                    plans. If system tables and indexes are allowed to become bloated over time,
+                    scanning the system tables increases query execution time. </entry>
+                </section>
+</parml>
+      </body>
+    </topic>
+    <topic id="topic_idx_smh_rp">
+      <title>Patching and Upgrading</title>
+      <body>
+
+              <section><title>Update Linux kernel</title>
+<parml>
+                <entry>Ensure any bug fixes or enhancements are applied to the kernel.<p>Recommended
+                    frequency: at least every 6 months</p><pt>Severity</pt>
+<pd>IMPORTANT</pd></entry>
+                <entry>Follow the vendor's instructions to update the Linux kernel.</entry>
+                <entry>Keep the kernel current to include bug fixes and security fixes, and to avoid
+                  difficult future upgrades. </entry>
+              </section>
+</parml>
+              <section><title>Upgrade Greenplum Datab ase</title>
+<parml>
+                <entry>Install Greenplum Database minor releases, for example
+                    4.3.<i>x.y</i>.<p>Recommended frequency: quarterly</p><p>Severity:
+                  IMPORTANT</p></entry>
+                <entry>Follow upgrade instructions in the Greenplum Database <i>Release Notes</i>.
+                  Always upgrade to the latest in the series.</entry>
+                <entry>Keep the Greenplum Database software current to incorporate bug fixes,
+                  performance enhancements, and feature enhancements into your Greenplum cluster.  </entry>
+              </section>
+</parml>
+
+      </body>
+    </topic>
+</topic>
+</dita>

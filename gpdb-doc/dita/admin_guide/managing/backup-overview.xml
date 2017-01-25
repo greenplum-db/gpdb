@@ -82,8 +82,8 @@
           location, the <codeph>db_dumps</codeph> subdirectory of the master and each segment, or
           saved to a different directory specified with the <codeph>gpcrondump -u</codeph>
           option.</li>
-        <li>The Pivotal Greenplum Database <codeph>gpcrondump</codeph> and <codeph>gpdbrestore</codeph> utilities have
-          integrated support for EMC Data Domain Boost and Veritas NetBackup systems.</li>
+        <li>Both the <codeph>gpcrondump</codeph> and <codeph>gpdbrestore</codeph> utilities have
+          integrated support for Dell EMC Data Domain Boost and Veritas NetBackup systems.</li>
         <li>Backup files can be saved through named pipes to any network accessible location.</li>
         <li>Backup files saved to the default location may be moved to an archive server on the
           network. This allows performing the backup at the highest transfer rates (when segments

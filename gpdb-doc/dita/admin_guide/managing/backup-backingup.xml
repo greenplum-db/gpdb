@@ -9,10 +9,8 @@
       of the backup. Every production database should have in place a backup strategy to ensure that
       the database can be restored in case of disaster. Routine backups should use a method that
       takes advantage of Greenplum parallelism, for example the <codeph>gpcrondump</codeph> utility. </p>
-    <p>You can also use a third-party backup solution, such as EMC Data Domain Boost or Veritas
-      NetBackup with <codeph>gpcrondump</codeph> to backup and restore
-      Pivotal Greenplum Database database. Open source Greenplum Database does not
-      include DDBoost or NetBackup support.</p>     
+    <p>You can also use a third-party backup solution, such as Dell EMC Data Domain Boost or Veritas
+      NetBackup with <codeph>gpcrondump</codeph> to backup and restore Greenplum Database. </p>
     <p>Backups can be used for purposes other than disaster recovery, such as migrating data from
       one Greenplum database to another Greenplum database, or migrating a database to or from a
       different database system. These may be one-time tasks or part of your regular business

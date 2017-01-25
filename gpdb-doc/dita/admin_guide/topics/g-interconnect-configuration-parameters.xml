@@ -24,9 +24,6 @@
                <p>
                   <codeph>gp_interconnect_snd_ queue_depth</codeph></p>
                <p>
-                  <codeph>gp_interconnect_setup_ timeout</codeph>
-               </p>
-               <p>
                   <codeph>gp_interconnect_type</codeph>
                </p>
                <p>

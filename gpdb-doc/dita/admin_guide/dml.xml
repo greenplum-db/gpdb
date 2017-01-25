@@ -57,7 +57,8 @@
             <row>
               <entry colname="col1">ROW SHARE</entry>
               <entry colname="col2">
-                <codeph>SELECT FOR SHARE</codeph></entry>
+                <codeph>SELECT FOR SHARE</codeph>
+              </entry>
               <entry colname="col3">EXCLUSIVE, ACCESS EXCLUSIVE</entry>
             </row>
             <row>
@@ -128,7 +129,7 @@
       <p>Usually, the data values are literals (constants), but you can also use scalar expressions.
         For example:</p>
       <p>
-        <codeblock>INSERT INTO films SELECT * FROM tmp_films WHERE date_prod &lt;
+        <codeblock>INSERT INTO films SELECT * FROM tmp_films WHERE date_prod &lt; 
 '2004-05-07';
 </codeblock>
       </p>
@@ -149,7 +150,8 @@
         These load mechanisms are more efficient than <codeph>INSERT</codeph> for inserting large
         quantities of rows. See <xref href="load/topics/g-loading-and-unloading-data.xml#topic1"/>
         for more information about bulk data loading.</p>
-      <p>The storage model of append-optimized tables is optimized for bulk data loading. Avoid single row <codeph>INSERT</codeph> statements for append-optimized
+      <p>The storage model of append-optimized tables is optimized for bulk data loading. Greenplum
+        does not recommend single row <codeph>INSERT</codeph> statements for append-optimized
         tables. For append-optimized tables, Greenplum Database supports a maximum of 127 concurrent
           <codeph>INSERT</codeph> transactions into a single append-optimized table.</p>
     </body>
@@ -197,7 +199,7 @@
       </p>
       <p>To delete all rows from a table:</p>
       <p>
-        <codeblock>DELETE FROM products;
+        <codeblock>DELETE FROM products; 
 </codeblock>
       </p>
       <p>Using <codeph>DELETE</codeph> in Greenplum Database has similar restrictions to using
@@ -254,10 +256,10 @@
         <ul>
           <li id="ix153961"><i>read uncommitted</i> and <i>read committed </i> behave like the
             standard <i>read committed</i></li>
-            <li><i>repeatable read</i> is disallowed. If the behavior of <i>repeatable read</i> is
-              required, use <i>serializable</i>.</li>
-            <li id="ix153971"><i>serializable</i> behaves in a manner similar to SQL standard
-                <i>serializable</i></li>
+          <li><i>repeatable read</i> is disallowed. If the behavior of <i>repeatable read</i> is
+            required, use <i>serializable</i>.</li>
+          <li id="ix153971"><i>serializable</i> behaves in a manner similar to SQL standard
+              <i>serializable</i></li>
         </ul>
         <p>The following information describes the behavior of the Greenplum transaction levels:</p>
         <ul>
@@ -352,8 +354,7 @@
         <p><codeph>VACUUM FULL</codeph> reclaims all expired row space, but it is an expensive
           operation and can take an unacceptably long time to finish on large, distributed Greenplum
           Database tables. If the free space map overflows, you can recreate the table with a
-            <codeph>CREATE TABLE AS </codeph>statement and drop the old table. Using <codeph>VACUUM FULL</codeph>
-          is not recommended with Greenplum Database.</p>
+            <codeph>CREATE TABLE AS </codeph>statement and drop the old table. Using <codeph>VACUUM FULL</codeph> is discouraged.</p>
         <p>Size the free space map with the following server configuration parameters:<ul
             id="ul_cj2_xc5_h4">
             <li><codeph>max_fsm_pages</codeph></li>

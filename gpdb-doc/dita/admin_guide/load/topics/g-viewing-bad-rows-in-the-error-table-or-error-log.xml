@@ -9,7 +9,7 @@
             href="g-define-an-external-table-with-single-row-error-isolation.xml#topic56"/> or <xref
             href="g-running-copy-in-single-row-error-isolation-mode.xml#topic65"/>), any rows with
          formatting errors are either logged internally or logged into an error table. </p>
-      <note>Storing row formatting in an error table is deprecated in Greenplum Database and will not be supported in the next major release. Only internal error logs will be
+      <note>Storing row formatting in a error table is deprecated in Greenplum Database and will not be supported in a the next major release. Only internal error logs will be
          supported.</note>
       <p>Greenplum Database captures the following error information in a table
          format:</p>

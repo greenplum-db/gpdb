@@ -6,8 +6,7 @@
        <topicref href="ddl-database.xml"/>
       <topicref href="ddl-tablespace.xml"/>
       <topicref href="ddl-schema.xml"/>
-      <topicref href="ddl-table.xml" linking="targetonly">
-    </topicref>
+      <topicref href="ddl-table.xml" linking="targetonly"/>
       <topicref href="ddl-storage.xml"/>
       <topicref href="ddl-partition.xml"/>
       <topicref href="ddl-sequence.xml"/>

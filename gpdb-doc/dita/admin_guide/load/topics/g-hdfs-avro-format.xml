@@ -20,10 +20,10 @@
             <li>favorite_number</li>
             <li>favorite_color</li>
           </ul></p>
-        <codeblock>{"namespace": "example.avro",
+        <codeblock>{"namespace": "example.avro", 
 "type": "record", "name": "User",
   "fields": [
-    {"name": "name", "type": "string"},
+    {"name": "name", "type": "string"},     
     {"name": "favorite_number", "type": ["int", "null"]},
     {"name": "favorite_color", "type": ["string", "null"]}
   ]
@@ -129,8 +129,8 @@ done</codeblock></p>
                   </entry>
                   <entry>Read and Write</entry>
                   <entry colname="col3">None.<p>For a readable external table<ul id="ul_el5_2yv_vs">
-                        <li>The specified schema overrides the schema in the Avro file. See "Avro
-                          Schema Overrides"</li>
+                        <li>The specified schema overrides the schema in the Avro file. See <xref
+                            href="#topic_zrv_2yv_vs" format="dita">Avro Schema Overrides</xref></li>
                         <li>If not specified, Greenplum Database uses the Avro file schema.</li>
                       </ul></p><p>For a writable external table<ul id="ul_kl5_2yv_vs">
                         <li>Uses the specified schema when creating the Avro file.</li>
@@ -262,7 +262,7 @@ done</codeblock></p>
               </tbody>
             </tgroup>
           </table>
-          <note>When reading  the Avro <codeph>int</codeph> data type as Greenplum Database
+          <note>When reading the Avro <codeph>int</codeph> data type as Greenplum Database
               <codeph>smallint</codeph> data type, you must ensure that the Avro
               <codeph>int</codeph> values do not exceed the Greenplum Database maximum
               <codeph>smallint</codeph> value. If the Avro value is too large, the Greenplum
@@ -453,7 +453,7 @@ done</codeblock></p>
               <codeph>tmp/cust*.avro</codeph>. Each file uses one of the schemas listed previously.
             The file <codeph>avro/cust.avsc</codeph> is a text file that contains the Avro schema
             used to override the schemas in the customer
-            files.<codeblock>CREATE WRITABLE EXTERNAL TABLE cust_avro(id int, name text, birth date)
+            files.<codeblock>CREATE WRITABLE EXTERNAL TABLE cust_avro(id int, name text, birth date) 
    LOCATION ('gphdfs://my_hdfs:8020/tmp/cust*.avro
       ?schema=hdfs://my_hdfs:8020/avro/cust.avsc')
    FORMAT 'avro';</codeblock></p>
@@ -566,10 +566,13 @@ done</codeblock></p>
         </body>
       </topic>
       <topic id="topic_ljx_2yv_vs">
-        <title>Limitations</title>
+        <title>gphdfs Limitations for Avro Files</title>
         <body>
           <p>For a Greenplum Database writable external table definition, columns cannot specify
             the <codeph>NOT NULL</codeph> clause.</p>
+          <p>Greenplum Database supports only a single top-level schema in Avro files or specified
+            with the <codeph>schema</codeph> parameter in the <codeph>CREATE EXTERNAL TABLE</codeph>
+            command. An error is returned if Greenplum Database detects multiple top-level schemas. </p>
           <p>Greenplum Database does not support the Avro <codeph>map</codeph> data type and returns
             an error when encountered.</p>
           <p>When Greenplum Database reads an array from an Avro file, the array is converted to the
@@ -584,20 +587,20 @@ done</codeblock></p>
         <body>
           <p>Simple <codeph>CREATE EXTERNAL TABLE</codeph> command that reads data from the two Avro
             fields <codeph>id</codeph> and
-              <codeph>ba</codeph>.<codeblock> CREATE EXTERNAL TABLE avro1 (id int, ba bytea[])
-   LOCATION ('gphdfs://my_hdfs:8020/avro/singleAvro/array2.avro')
+              <codeph>ba</codeph>.<codeblock> CREATE EXTERNAL TABLE avro1 (id int, ba bytea[]) 
+   LOCATION ('gphdfs://my_hdfs:8020/avro/singleAvro/array2.avro') 
    FORMAT 'avro';</codeblock><codeph>CREATE
               WRITABLE EXTERNAL TABLE</codeph> command specifies the Avro schema that is the
               <codeph>gphdfs</codeph> protocol uses to create the Avro file.</p>
-          <codeblock>CREATE WRITABLE EXTERNAL TABLE at1w(id int, names text[], nums int[])
+          <codeblock>CREATE WRITABLE EXTERNAL TABLE at1w(id int, names text[], nums int[]) 
    LOCATION ('gphdfs://my_hdfs:8020/tmp/at1
       ?schema=hdfs://my_hdfs:8020/avro/array_simple.avsc')
    FORMAT 'avro';</codeblock>
           <p><codeph>CREATE WRITABLE EXTERNAL TABLE</codeph> command that writes to an Avro file
             and specifies a namespace for the Avro schema.</p>
-          <codeblock>CREATE WRITABLE EXTERNAL TABLE atudt1 (id int, info myt, birth date, salary numeric )
+          <codeblock>CREATE WRITABLE EXTERNAL TABLE atudt1 (id int, info myt, birth date, salary numeric ) 
    LOCATION ('gphdfs://my_hdfs:8020/tmp/emp01.avro
-      ?namespace=public.pivotal.avro')
+      ?namespace=public.pivotal.avro') 
    FORMAT 'avro';</codeblock>
         </body>
       </topic>

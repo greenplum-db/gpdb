@@ -108,7 +108,6 @@
               <entry colname="col2">These fields can be used as an alternative to the CIDR-address
                 notation. Instead of specifying the mask length, the actual mask is specified in a
                 separate column. For example, 255.255.255.255 represents a CIDR mask length of 32. These fields only apply to
-                and 255.255.255.255 represents a CIDR mask length of 32. These fields only apply to
                 host, hostssl, and hostnossl records. </entry>
             </row>
             <row>
@@ -144,22 +143,22 @@
               earlier records will have tight connection match parameters and weaker authentication
               methods, while later records will have looser match parameters and stronger
               authentication methods. For
-              example:<codeblock># allow the gpadmin user local access to all databases
+              example:<codeblock># allow the gpadmin user local access to all databases 
 # using ident authentication
 local   all   gpadmin   ident         sameuser
 host    all   gpadmin   127.0.0.1/32  ident
 host    all   gpadmin   ::1/128       ident
-# allow the 'dba' role access to any database from any
-# host with IP address 192.168.x.x and use md5 encrypted
+# allow the 'dba' role access to any database from any 
+# host with IP address 192.168.x.x and use md5 encrypted 
 # passwords to authenticate the user
-# Note that to use SHA-256 encryption, replace <i>md5</i> with
+# Note that to use SHA-256 encryption, replace <i>md5</i> with 
 # password in the line below
 host    all   dba   192.168.0.0/32  md5
-# allow all roles access to any database from any
-# host and use ldap to authenticate the user. Greenplum role
+# allow all roles access to any database from any 
+# host and use ldap to authenticate the user. Greenplum role 
 # names must match the LDAP common name.
-host    all   all   192.168.0.0/32  ldap ldapserver=usldap1
-ldapport=1389 ldapprefix="cn="
+host    all   all   192.168.0.0/32  ldap ldapserver=usldap1 
+ldapport=1389 ldapprefix="cn=" 
 ldapsuffix=",ou=People,dc=company,dc=com"</codeblock></li>
             <li id="ip141945">Save and close the file.</li>
             <li id="ip142080">Reload the <filepath>pg_hba.conf</filepath> configuration file for
@@ -184,8 +183,8 @@ ldapsuffix=",ou=People,dc=company,dc=com"</codeblock></li>
         can configure the <codeph>max_connections</codeph> server configuration parameter. This is a
           <i>local</i> parameter, meaning that you must set it in the
           <codeph>postgresql.conf</codeph> file of the master, the standby master, and each segment
-        instance (primary and mirror). The recommended value of
-          <codeph>max_connections</codeph> on segments is 5-10 times the value on the master.</p>
+        instance (primary and mirror). The value of
+          <codeph>max_connections</codeph> on segments should be 5-10 times the value on the master.</p>
       <p>When you set <codeph>max_connections</codeph>, you must also set the dependent parameter
           <codeph>max_prepared_transactions</codeph>. This value must be at least as large as the
         value of <codeph>max_connections</codeph> on the master, and segment instances should be set
@@ -225,12 +224,12 @@ max_prepared_transactions=100
             on the master to 200.<p>
               <codeblock>$ gpconfig -c max_connections -v 1000 -m 200
 </codeblock>
-            </p><p>The value on the segments must be greater than the value on the master. The recommended value of <codeph>max_connections</codeph> on segments is 5-10
+            </p><p>The value on the segments must be greater than the value on the master. The value of <codeph>max_connections</codeph> on segments should be 5-10
               times the value on the master. </p></li>
           <li id="ip146502">Set the value of the <codeph>max_prepared_transactions</codeph>
             parameter. This <codeph>gpconfig</codeph> command sets the value to 200 on the master
             and all segments.<p>
-              <codeblock>$ gpconfig -c max_prepared_transactions -v 200
+              <codeblock>$ gpconfig -c max_prepared_transactions -v 200 
 </codeblock>
             </p><p>The value of <codeph>max_prepared_transactions</codeph> must be greater than or
               equal to <codeph>max_connections</codeph> on the master.</p></li>
@@ -242,7 +241,7 @@ max_prepared_transactions=100
             the <codeph>gpconfig</codeph>
             <codeph>-s</codeph> option. This <codeph>gpconfig</codeph> command displays the values
             of the <codeph>max_connections</codeph> parameter. <p>
-              <codeblock>$ gpconfig -s max_connections
+              <codeblock>$ gpconfig -s max_connections 
 </codeblock>
             </p></li>
         </ol>

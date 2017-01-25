@@ -7,20 +7,20 @@
   <body>
     <p>To prepare new system nodes for expansion, install the Greenplum Database software binaries,
       exchange the required SSH keys, and run performance tests. </p>
-    <p>Run performance tests first on the new nodes and then all nodes. Run the tests on all nodes
-      with the system offline so user activity does not distort results.</p>
-    <p>It is a good idea to run performance tests when an administrator modifies node networking or
-      other special conditions in the system. For example, if you will run the expanded system on
-      two network clusters, run tests on each cluster.</p>
+    <p>Run performance tests first on the new nodes and then all nodes. Run
+      the tests on all nodes with the system offline so user activity does not distort results.</p>
+    <p>Generally, you should run performance tests when an administrator modifies node
+      networking or other special conditions in the system. For example, if you will run the
+      expanded system on two network clusters, run tests on each cluster.</p>
   </body>
   <topic id="topic18" xml:lang="en">
     <title id="no159311">Adding New Nodes to the Trusted Host Environment</title>
     <body>
       <p>New nodes must exchange SSH keys with the existing nodes to enable Greenplum administrative
-        utilities to connect to all segments without a password prompt. </p>
-      <p>Perform the key exchange process twice. First perform the process as <codeph>root</codeph>,
-        for administration convenience, and then as the user <codeph>gpadmin</codeph>, for
-        management utilities. Perform the following tasks in order:</p>
+        utilities to connect to all segments without a password prompt. Perform the key exchange process twice.</p>
+      <p>First perform the process as <codeph>root</codeph>, for administration convenience, and
+        then as the user <codeph>gpadmin</codeph>, for management utilities. Perform the following
+        tasks in order:</p>
       <ol>
         <li id="no160532">
           <xref href="#topic18/no160715" type="section" format="dita"/>

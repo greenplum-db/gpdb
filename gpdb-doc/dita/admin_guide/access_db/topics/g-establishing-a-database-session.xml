@@ -4,11 +4,13 @@
 <topic id="topic2">
    <title>Establishing a Database Session</title>
    <body>
-      <p>Users can connect to Greenplum Database using a PostgreSQL-compatible client program, such
-         as <codeph>psql</codeph>. Users and administrators <i>always</i> connect to Greenplum
-         Database through the <i>master</i>; the segments cannot accept client connections.</p>
-      <p>In order to establish a connection to the Greenplum Database master, you will need to know
-         the following connection information and configure your client program accordingly.</p>
+      <p>Users can connect to Greenplum Database using a PostgreSQL-compatible client
+         program, such as <codeph>psql</codeph>. Users and administrators <i>always</i> connect to
+            Greenplum Database through the <i>master</i>; the segments cannot accept
+         client connections.</p>
+      <p>In order to establish a connection to the Greenplum Database master, you will
+         need to know the following connection information and configure your client program
+         accordingly.</p>
       <table id="io140729">
          <title>Connection Parameters</title>
          <tgroup cols="3">
@@ -43,16 +45,16 @@
                </row>
                <row>
                   <entry colname="col1">Host name</entry>
-                  <entry colname="col2">The host name of the Greenplum Database master. The default
-                     host is the local host. </entry>
+                  <entry colname="col2">The host name of the Greenplum Database
+                     master. The default host is the local host. </entry>
                   <entry colname="col3">
                      <codeph>$PGHOST</codeph>
                   </entry>
                </row>
                <row>
                   <entry colname="col1">Port</entry>
-                  <entry colname="col2">The port number that the Greenplum Database master instance
-                     is running on. The default is 5432.</entry>
+                  <entry colname="col2">The port number that the Greenplum Database
+                     master instance is running on. The default is 5432.</entry>
                   <entry colname="col3">
                      <codeph>$PGPORT</codeph>
                   </entry>
@@ -61,10 +63,11 @@
                   <entry colname="col1">User name</entry>
                   <entry colname="col2">The database user (role) name to connect as. This is not
                      necessarily the same as your OS user name. Check with your Greenplum administrator if you are not sure what you
-                     database user name is. Note that every Greenplum Database system has one
-                     superuser account that is created automatically at initialization time. This
-                     account has the same name as the OS name of the user who initialized the
-                     Greenplum system (typically <codeph>gpadmin</codeph>).</entry>
+                     database user name is. Note that every Greenplum Database system
+                     has one superuser account that is created automatically at initialization time.
+                     This account has the same name as the OS name of the user who initialized the
+                        Greenplum system (typically
+                        <codeph>gpadmin</codeph>).</entry>
                   <entry colname="col3">
                      <codeph>$PGUSER</codeph>
                   </entry>

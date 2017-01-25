@@ -209,7 +209,7 @@
           compression.</note></li>
       </ul>
       <p>Performance with compressed append-optimized tables depends on hardware, query tuning
-        settings, and other factors. Perform comparison testing to determine
+        settings, and other factors. You should perform comparison testing to determine
         the actual performance in your environment.</p>
       <note type="note">QuickLZ compression level can only be set to level 1; no other options are
         available. Compression level with zlib can be set at values from 1 - 9. Compression level
