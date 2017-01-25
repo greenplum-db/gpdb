@@ -113,10 +113,10 @@ class GpInjectFaultProgram:
         #
         masterPort = self.options.masterPort
         if masterPort is None:
-            gpEnv = GpMasterEnvironment(self.options.masterDataDirectory, False)
+            gpEnv = GpMasterEnvironment(self.options.masterDataDirectory, False, verbose=False)
             masterPort = gpEnv.getMasterPort()
         conf = configurationInterface.getConfigurationProvider().initializeProvider(masterPort)
-        gpArray = conf.loadSystemConfig(useUtilityMode=True)
+        gpArray = conf.loadSystemConfig(useUtilityMode=True, verbose=False)
         segments = gpArray.getDbList()
         
         #
@@ -165,12 +165,15 @@ class GpInjectFaultProgram:
     def injectFaults(self, segments, messageText):
 
         inputFile = self.writeToTempFile(messageText)
-        logger.info("Injecting fault on %d segment(s)", len(segments))
         testOutput("Injecting fault on %d segment(s)" % len(segments))
 
         # run the command in serial to each target
         for segment in segments :
-            logger.info("Injecting fault on %s", segment)
+            logger.info("Injecting fault on content=%d:dbid=%d:mode=%s:status=%s", 
+                segment.getSegmentContentId(), 
+                segment.getSegmentDbId(), 
+                segment.getSegmentMode(), 
+                segment.getSegmentStatus())
             # if there is an error then an exception is raised by command execution
             cmd = gp.SendFilerepTransitionMessage("Fault Injector", inputFile.name, \
                                         segment.getSegmentPort(), base.LOCAL, segment.getSegmentHostName())
@@ -185,6 +188,7 @@ class GpInjectFaultProgram:
                 str = cmd.results.stderr
                 if str.startswith("Success: "):
                     str = str.replace("Success: ", "", 1)
+                str = str.replace("\n", "")
                 logger.info("%s", str)
         inputFile.close()
 

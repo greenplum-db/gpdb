@@ -20,7 +20,7 @@ class GpMasterEnvironment:
 
     """
 
-    def __init__(self, masterDataDir, readFromMasterCatalog, timeout=None, retries=None):
+    def __init__(self, masterDataDir, readFromMasterCatalog, timeout=None, retries=None, verbose=True):
         """
         masterDataDir: if None then we try to find it from the system environment
         readFromMasterCatalog: if True then we will connect to the master in utility mode and fetch some more
@@ -40,7 +40,9 @@ class GpMasterEnvironment:
 
         self.__gpHome = gp.get_gphome()
         self.__gpVersion = gp.GpVersion.local('local GP software version check',self.__gpHome)
-        logger.info("local Greenplum Version: '%s'" % self.__gpVersion)
+        
+        if verbose:
+            logger.info("local Greenplum Version: '%s'" % self.__gpVersion)
 
         # read collation settings from master
         if readFromMasterCatalog:

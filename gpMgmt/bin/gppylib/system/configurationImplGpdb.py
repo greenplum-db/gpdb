@@ -51,7 +51,7 @@ class GpConfigurationProviderUsingGpdbCatalog(GpConfigurationProvider) :
         return self
 
 
-    def loadSystemConfig( self, useUtilityMode ) :
+    def loadSystemConfig( self, useUtilityMode, verbose=True ) :
         """
         Load all segment information from the configuration source.
 
@@ -61,7 +61,8 @@ class GpConfigurationProviderUsingGpdbCatalog(GpConfigurationProvider) :
         # ensure initializeProvider() was called
         checkNotNone("masterDbUrl", self.__masterDbUrl) 
 
-        logger.info("Obtaining Segment details from master...")
+        if verbose :
+            logger.info("Obtaining Segment details from master...")
 
         array = GpArray.initFromCatalog(self.__masterDbUrl, useUtilityMode)
         
