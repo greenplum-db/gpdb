@@ -150,7 +150,7 @@ test: uao_ddl/alter_ao_part_exch_column uao_ddl/alter_ao_part_tables_row uao_ddl
 
 test: uao_ddl/alter_drop_allcol_row uao_ddl/alter_drop_allcol_column uao_ddl/alter_rollback_row uao_ddl/alter_rollback_column uao_ddl/uao_allalter_row uao_ddl/uao_allalter_column
 
-test: uao_col/alter_ao_table_oid_column uao_col/bulk_dense_content_rle_compress uao_col/small_content_rle_compress_hdr
+test: uao_col/alter_ao_table_oid_column
 
 test: uao_row/alter_ao_table_oid_row
 

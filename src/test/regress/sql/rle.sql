@@ -2292,3 +2292,27 @@ COPY rle_co_block_boundary (distcol, col1) FROM stdin NULL AS 'NULL';
 1	510226581578439
 1	510226576578439
 \.
+--
+-- Bulk dense content header with RLE compression
+begin;
+create table bulk_rle_tab (a int) with (appendonly=true, orientation=column, compresstype='rle_type', compresslevel=3, checksum=true);
+insert into bulk_rle_tab select i/50 from generate_series(1, 1000000)i;
+insert into bulk_rle_tab values (1),(1),(1),(1),(1),(1),(2),(2),(2),(2),(2),(2),(2),(33),(3),(3),(3),(1),(8),(19),
+    (20),(31),(32),(33),(34),(5),(5),(5),(5),(5),(6),(6),(6),(6),(6),(6),(7),(7),(7),(7),(7),(7),(7),(7),
+    (null),(7),(7),(7),(null),(8),(8),(8),(8),(8),(8),(4),(4),(null),(4),(17),(17),(17),(null),(null),(null);
+alter table bulk_rle_tab add column b varchar default 'abc' encoding(blocksize=8192);
+insert into bulk_rle_tab values (-1, 'xyz');
+update bulk_rle_tab set b = 'green' where a = -1;
+commit;
+--
+-- Small content header with RLE header inside 
+begin;
+create table sml_rle_hdr (a int) with (appendonly=true, orientation=column, compresstype='rle_type');
+insert into sml_rle_hdr values (1),(1),(1),(1),(1),(1),(2),(2),(2),(2),(2),(2),(2),(33),(3),(3),(3),(1),(8),(19),
+    (20),(31),(32),(33),(34),(5),(5),(5),(5),(5),(6),(6),(6),(6),(6),(6),(7),(7),(7),(7),(7),(7),(7),(7),
+    (null),(7),(7),(7),(null),(8),(8),(8),(8),(8),(8),(4),(4),(null),(4),(17),(17),(17),(null),(null),(null);
+alter table sml_rle_hdr add column b float default random();
+-- update / insert / select after this operation
+insert into sml_rle_hdr values (-1,-1.1);
+update sml_rle_hdr set b = b + 10 where a = -1;
+commit;
