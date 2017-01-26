@@ -2633,21 +2633,22 @@ tuplesort_restorepos_mk(Tuplesortstate_mk *state)
 
 
 /*
- * tuplesort_explain - produce a line of information for EXPLAIN ANALYZE
+ * tuplesort_explain_mk - produce a line of information for EXPLAIN ANALYZE
  *
  * This can be called after tuplesort_performsort() finishes to obtain
  * printable summary information about how the sort was performed.
  *
  * The result is a palloc'd string.
  */
-char *
-tuplesort_explain_mk(Tuplesortstate_mk *state)
+void
+tuplesort_get_stats_mk(Tuplesortstate_mk *state,
+					const char **sortMethod,
+					const char **spaceType,
+					long *spaceUsed)
 {
-	char	   *result = (char *) palloc(100);
-	long		spaceUsed;
 
 	/*
-	 * Note: it might seem we should print both memory and disk usage for a
+	 * Note: it might seem we should provide both memory and disk usage for a
 	 * disk-based sort.  However, the current code doesn't track memory space
 	 * accurately once we have begun to return tuples to the caller (since we
 	 * don't account for pfree's the caller is expected to do), so we cannot
@@ -2655,34 +2656,32 @@ tuplesort_explain_mk(Tuplesortstate_mk *state)
 	 * to fix.	Is it worth creating an API for the memory context code to
 	 * tell us how much is actually used in sortcontext?
 	 */
+
 	if (state->tapeset)
-		spaceUsed = LogicalTapeSetBlocks(state->tapeset);
-	else
-		spaceUsed = (MemoryContextGetCurrentSpace(state->sortcontext) + 1024) / 1024;
-
-	switch (state->status)
-	{
-		case TSS_SORTEDINMEM:
-			snprintf(result, 100,
-					 "Sort Method:  quicksort  Memory: %ldkB",
-					 spaceUsed);
-			break;
-		case TSS_SORTEDONTAPE:
-			snprintf(result, 100,
-					 "Sort Method:  external sort  Disk: %ldkB",
-					 spaceUsed);
-			break;
-		case TSS_FINALMERGE:
-			snprintf(result, 100,
-					 "Sort Method:  external merge  Disk: %ldkB",
-					 spaceUsed);
-			break;
-		default:
-			snprintf(result, 100, "sort still in progress");
-			break;
-	}
-
-	return result;
+		{
+			*spaceType = "Disk";
+			spaceUsed = LogicalTapeSetBlocks(state->tapeset);
+		}
+		else
+		{
+			*spaceType = "Memory";
+			spaceUsed = (MemoryContextGetCurrentSpace(state->sortcontext) + 1024) / 1024;
+		}
+		switch (state->status)
+		{
+			case TSS_SORTEDINMEM:
+				*sortMethod = "quicksort";
+				break;
+			case TSS_SORTEDONTAPE:
+				*sortMethod = "external sort";
+				break;
+			case TSS_FINALMERGE:
+				*sortMethod = "external merge";
+				break;
+			default:
+				*sortMethod = "still in progress";
+				break;
+		}
 }
 
 /*

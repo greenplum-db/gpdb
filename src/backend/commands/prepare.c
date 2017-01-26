@@ -708,9 +708,6 @@ ExplainExecuteQuery(ExecuteStmt *execstmt, ExplainState *es,
 	foreach(p, plan_list)
 	{
 		PlannedStmt *pstmt = (PlannedStmt *) lfirst(p);
-		bool		is_last_query;
-
-		is_last_query = (lnext(p) == NULL);
 
 		if (IsA(pstmt, PlannedStmt))
 		{
@@ -737,9 +734,9 @@ ExplainExecuteQuery(ExecuteStmt *execstmt, ExplainState *es,
 
 		/* No need for CommandCounterIncrement, as ExplainOnePlan did it */
 
-		/* put a blank line between plans */
-		if (!is_last_query)
-			appendStringInfoChar(es->str, '\n');
+		/* Separate plans with an appropriate separator */
+		if (lnext(p) != NULL)
+			ExplainSeparatePlans(es);
 	}
 
 	if (estate)

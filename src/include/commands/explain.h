@@ -15,6 +15,13 @@
 
 #include "executor/executor.h"
 
+typedef enum ExplainFormat
+{
+		EXPLAIN_FORMAT_TEXT,
+		EXPLAIN_FORMAT_XML,
+		EXPLAIN_FORMAT_JSON
+} ExplainFormat;
+
 typedef struct ExplainState
 {
 	StringInfo str;				/* output buffer */
@@ -22,9 +29,12 @@ typedef struct ExplainState
 	bool		verbose;			/* print plan targetlists */
 	bool		analyze;			/* print actual times */
 	bool		costs;				/* print costs */
+	ExplainFormat format;	/*output format */
 	/* other states */
-	PlannedStmt *pstmt;			/* top of plan */
-	List	   *rtable;			/* range table */
+	PlannedStmt *pstmt;	/* top of plan */
+	List	   *rtable;				/* range table */
+	int		indent;				/* current indentation level */
+	List		*grouping_stack;	/* format-specific grouping state */
 
     /* CDB */
     struct CdbExplain_ShowStatCtx  *showstatctx;    /* EXPLAIN ANALYZE info */
@@ -58,5 +68,7 @@ extern void ExplainOnePlan(PlannedStmt *plannedstmt, ExplainState *es,
 				const char *queryString,  ParamListInfo params);
 
 extern void ExplainPrintPlan(ExplainState *es, QueryDesc *queryDesc);
+
+extern void ExplainSeparatePlans(ExplainState *es);
 
 #endif   /* EXPLAIN_H */
