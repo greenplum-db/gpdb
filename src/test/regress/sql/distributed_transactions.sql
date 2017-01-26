@@ -49,6 +49,13 @@ RESET debug_abort_after_distributed_prepared;
 
 SELECT * FROM distxact1_1;
 
+-- Reindex on pg_class or reindex database hung if encountered ERROR, due to a
+-- bug. Lets have coverage to validate doesn't happen now.
+\c postgres
+SET debug_abort_after_distributed_prepared = true;
+reindex table pg_class;
+SET debug_abort_after_distributed_prepared = false;
+\c regression
 --
 -- We want to have an error during the prepare which will cause a Abort-Some-Prepared broadcast 
 -- to cleanup.

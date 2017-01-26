@@ -19,7 +19,6 @@
 #include "catalog/pg_tablespace.h"
 #include "catalog/pg_database.h"
 #include "catalog/gp_persistent.h"
-#include "catalog/gp_fastsequence.h"
 #include "cdb/cdbsharedoidsearch.h"
 #include "access/persistentfilesysobjname.h"
 #include "cdb/cdbdirectopen.h"
@@ -38,9 +37,6 @@
 #include "storage/ipc.h"
 #include "utils/builtins.h"
 #include "utils/faultinjector.h"
-#include "utils/fmgroids.h"
-#include "utils/lsyscache.h"
-
 
 /*
  * This module is for generic relation file create and drop.
@@ -872,52 +868,6 @@ PersistentFileSysObjStateChangeResult PersistentRelation_MarkAbortingCreate(
 
 		return false;	// The initdb process will load the persistent table once we out of bootstrap mode.
 	}
-
-	/* MPP-16543: When inserting tuples into AO table, row numbers will be
-	 * generated from gp_fastsequence catalog table, as part of the design,
-	 * these sequence numbers are not reusable, even if the AO insert 
-	 * transaction is aborted. The entry in gp_fastsequence was inserted
-	 * using frozen_heap_insert, which means it's always visible. 
-
-	 * Aborted AO insert transaction will cause inconsistency between 
-	 * gp_fastsequence and pg_class, the solution is to introduce "frozen 
-	 * delete" - inplace update tuple's MVCC header to make it invisible.
-	 */
-
-	Relation gp_fastsequence_rel = heap_open(FastSequenceRelationId, RowExclusiveLock);
-	HeapTuple   tup;
-	SysScanDesc scan;
-	ScanKeyData skey; 
-	ScanKeyInit(&skey,
-				Anum_gp_fastsequence_objid,
-				BTEqualStrategyNumber,
-				F_OIDEQ,
-				relFileNode->relNode);
-
-	scan = systable_beginscan(gp_fastsequence_rel,
-							  InvalidOid,
-							  false,
-							  SnapshotNow,
-							  1,
-							  &skey);
-	while (HeapTupleIsValid(tup = systable_getnext(scan)))
-	{
-		Form_gp_fastsequence found = (Form_gp_fastsequence) GETSTRUCT(tup);
-		if (found->objid == relFileNode->relNode) 
-		{	
-			if (Debug_persistent_print)
-			{
-			elog(LOG, "frozen deleting gp_fastsequence entry for aborted AO insert transaction on relation %s", relpath(*relFileNode));
-			}
-
-			frozen_heap_inplace_delete(gp_fastsequence_rel, tup);
-		}
-	}						
-	systable_endscan(scan);
-	heap_close(gp_fastsequence_rel, RowExclusiveLock);
-	
-
-	
 
 	PersistentRelation_VerifyInitScan();
 

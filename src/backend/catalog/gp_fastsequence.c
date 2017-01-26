@@ -16,8 +16,9 @@
 #include "access/genam.h"
 #include "access/htup.h"
 #include "access/heapam.h"
+#include "utils/syscache.h"
 
-static void update_fastsequence(
+static void insert_or_update_fastsequence(
 	Relation gp_fastsequence_rel,
 	HeapTuple oldTuple,
 	TupleDesc tupleDesc,
@@ -63,32 +64,12 @@ InsertFastSequenceEntry(Oid objid, int64 objmod, int64 lastSequence)
 							  SnapshotNow, 2, scankey);
 
 	tuple = systable_getnext(scan);
-	if (!HeapTupleIsValid(tuple))
-	{
-		natts = tupleDesc->natts;
-		values = palloc0(sizeof(Datum) * natts);
-		nulls = palloc0(sizeof(bool) * natts);
-	
-		values[Anum_gp_fastsequence_objid - 1] = ObjectIdGetDatum(objid);
-		values[Anum_gp_fastsequence_objmod - 1] = Int64GetDatum(objmod);
-		values[Anum_gp_fastsequence_last_sequence - 1] = Int64GetDatum(lastSequence);
-	
-		tuple = heaptuple_form_to(tupleDesc, values, nulls, NULL, NULL);
-		frozen_heap_insert(gp_fastsequence_rel, tuple);
-		CatalogUpdateIndexes(gp_fastsequence_rel, tuple);
-
-		pfree(values);
-		pfree(nulls);
-	}
-	else
-	{
-		update_fastsequence(gp_fastsequence_rel,
-							tuple,
-							tupleDesc,
-							objid,
-							objmod,
-							lastSequence);
-	}
+	insert_or_update_fastsequence(gp_fastsequence_rel,
+						tuple,
+						tupleDesc,
+						objid,
+						objmod,
+						lastSequence);
 	systable_endscan(scan);
 
 	/*
@@ -106,14 +87,14 @@ InsertFastSequenceEntry(Oid objid, int64 objmod, int64 lastSequence)
 }
 
 /*
- * update_fastsequnece -- update the fast sequence number for (objid, objmod).
+ * insert or update the existing fast sequence number for (objid, objmod).
  *
  * If such an entry exists in the table, it is provided in oldTuple. This tuple
  * is updated with the new value. Otherwise, a new tuple is inserted into the
  * table.
  */
 static void
-update_fastsequence(Relation gp_fastsequence_rel,
+insert_or_update_fastsequence(Relation gp_fastsequence_rel,
 					HeapTuple oldTuple,
 					TupleDesc tupleDesc,
 					Oid objid,
@@ -130,15 +111,73 @@ update_fastsequence(Relation gp_fastsequence_rel,
 	/*
 	 * If such a tuple does not exist, insert a new one.
 	 */
-	if (oldTuple == NULL)
+	if (!HeapTupleIsValid(oldTuple))
 	{
+		Relation pg_class;
+		HeapTuple tuple;
+		TransactionId pg_class_tuple_xmin;
+
+		/* 
+		 * Fetch pg_class tuple corresponding to objid to perform same
+		 * transaction check below.
+		 */
+		pg_class = heap_open(RelationRelationId, AccessShareLock);
+		tuple = SearchSysCache(RELOID,
+							   ObjectIdGetDatum(objid),
+							   0, 0, 0);
+		if (!HeapTupleIsValid(tuple))
+			elog(ERROR, "cache lookup failed for relation %u", objid);
+
+		pg_class_tuple_xmin = HeapTupleHeaderGetXmin(tuple->t_data);
+		ReleaseSysCache(tuple);
+		heap_close(pg_class, AccessShareLock);
+
 		values[Anum_gp_fastsequence_objid - 1] = ObjectIdGetDatum(objid);
 		values[Anum_gp_fastsequence_objmod - 1] = Int64GetDatum(objmod);
 		values[Anum_gp_fastsequence_last_sequence - 1] = Int64GetDatum(newLastSequence);
 
 		newTuple = heaptuple_form_to(tupleDesc, values, nulls, NULL, NULL);
-		frozen_heap_insert(gp_fastsequence_rel, newTuple);
+
+		/*
+		 * gp_fastsequence is used to generate and keep track of row numbers
+		 * for AO and CO tables. Row numbers for AO/CO tables act as a
+		 * component to form TID, stored in index tuples and used during index
+		 * scans to lookup intended tuple. Hence this number must be
+		 * monotonically incrementing value. Also should not rollback
+		 * irrespective of insert/update transaction aborting for AO/CO table,
+		 * as reusing row numbers even across aborted transactions would yield
+		 * wrong results for index scans. Also, entries in gp_fastsequence only
+		 * must exist for lifespan of the corresponding table.
+		 *
+		 * Given those special needs inserts to gp_fastsequence are performed
+		 * either using frozen xids or normal xids. Frozen xids are used in
+		 * majority of scenarios. Only for CTAS or same transaction create and
+		 * insert, mormal xid of transaction which created the table is used
+		 * to leverage MVCC mechanism to clean out gp_fastsequence tuple in
+		 * case of failures / aborts. Important to note for this to work
+		 * correctly with subtransactions, gp_fastsequence insert must use xid
+		 * of the transaction which created the table which maybe
+		 * subtransaction.
+		 *
+		 * Xmin of pg_class tuple for pg_aoseg/pg_aocsseg table is used to
+		 * check if insert to gp_fastseqeunce is part of same transaction
+		 * which created the table or not.
+		 */
+		if (TransactionIdIsCurrentTransactionId(pg_class_tuple_xmin))
+		{
+			heap_insert(gp_fastsequence_rel, newTuple,
+						GetCurrentCommandId(true), true,
+						true, pg_class_tuple_xmin);
+		}
+		else
+		{
+			frozen_heap_insert(gp_fastsequence_rel, newTuple);
+		}
+
 		CatalogUpdateIndexes(gp_fastsequence_rel, newTuple);
+
+		/* Make this change visible for subsequent lookups within same transaction */
+		CommandCounterIncrement();
 
 		heap_freetuple(newTuple);
 	}
@@ -240,7 +279,7 @@ int64 GetFastSequences(Oid objid, int64 objmod,
 		newLastSequence = firstSequence + numSequences - 1;
 	}
 
-	update_fastsequence(gp_fastsequence_rel, tuple, tupleDesc,
+	insert_or_update_fastsequence(gp_fastsequence_rel, tuple, tupleDesc,
 						objid, objmod, newLastSequence);
 
 	systable_endscan(scan);

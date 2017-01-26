@@ -269,7 +269,6 @@ extern HTSU_Result heap_lock_tuple(Relation relation, HeapTuple tuple,
 				LockTupleMode mode, LockTupleWaitType waittype);
 extern void heap_inplace_update(Relation relation, HeapTuple tuple);
 extern void frozen_heap_inplace_update(Relation relation, HeapTuple tuple);
-extern void frozen_heap_inplace_delete(Relation relation, HeapTuple tuple);
 extern bool heap_freeze_tuple(HeapTupleHeader tuple, TransactionId cutoff_xid,
 				  Buffer buf);
 

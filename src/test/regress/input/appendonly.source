@@ -133,7 +133,10 @@ SELECT aototal('tenk_ao1'), aototal('tenk_ao2'), aototal('tenk_ao3'), aototal('t
 -------------------- 
 -- transactionality
 --------------------
-
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='tenk_ao1'));
 -- rollback
 BEGIN;
 INSERT INTO tenk_ao1 SELECT * FROM tenk_heap;
@@ -141,6 +144,12 @@ SELECT count(*) FROM tenk_ao1; -- should show new count
 ROLLBACK;
 SELECT count(*) FROM tenk_ao1; -- should show previous count
 SELECT aototal('tenk_ao1');
+-- gp_fastsequence should reflect bump in lastsequence, even if above
+-- transaction aborted as its tuples is in place updated.
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='tenk_ao1'));
 
 -- commit
 BEGIN;
@@ -207,6 +216,12 @@ DROP TABLE tenk_ao4;
 
 -- CTAS
 CREATE TABLE tenk_ao1 with(appendonly=true, checksum=true) AS SELECT * FROM tenk_heap;
+-- Incase of CTAS, gp_fastsequence must use create table's transaction id to
+-- insert into gp_fastsequence which is NormalXid and not FrozenXid.
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='tenk_ao1'));
 CREATE TABLE tenk_ao2 with(appendonly=true, compresslevel=0, blocksize=262144) AS SELECT * FROM tenk_heap;
 CREATE TABLE tenk_ao3 with(appendonly=true, compresslevel=6, blocksize=1048576, checksum=true) AS SELECT * FROM tenk_heap;
 CREATE TABLE tenk_ao4 with(appendonly=true, compresslevel=1, compresstype=zlib) AS SELECT * FROM tenk_heap;
@@ -216,6 +231,22 @@ SELECT count(*) FROM tenk_ao1;
 SELECT count(*) FROM tenk_ao2;
 SELECT count(*) FROM tenk_ao3;
 SELECT count(*) FROM tenk_ao4;
+
+-- Perform same transaction CREATE, followed by INSERT to validate
+-- gp_fastseqeunce is using normal xid and not frozen transaction id.
+BEGIN;
+CREATE TABLE appendonly_sametxn_create_insert(a int, b int) with (appendonly=true);
+INSERT INTO appendonly_sametxn_create_insert select * from generate_series(1, 10);
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='appendonly_sametxn_create_insert'));
+INSERT INTO appendonly_sametxn_create_insert select * from generate_series(1, 10);
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='appendonly_sametxn_create_insert'));
+ABORT;
 
 -- test get_ao_compression_ratio. use uncompressed table, so result is always 1.
 SELECT get_ao_compression_ratio('tenk_ao2');
@@ -255,8 +286,22 @@ SELECT count(*) FROM tenk_ao1 t1 LEFT OUTER JOIN empty_ao_table_for_join t2 ON (
 SELECT unique1 FROM tenk_ao1 EXCEPT SELECT unique1 FROM tenk_ao1;
 SELECT unique1 FROM tenk_heap EXCEPT SELECT unique1 FROM tenk_ao3;
 
+-- Get gp_fastsequence details before truncate
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='tenk_ao2'));
+
 -- TRUNCATE
 TRUNCATE tenk_ao2;
+
+-- Truncate changes relfilnode, as a result old pg_aoseg table is dropped and
+-- frehsly created. Hence validate post truncate gp_fastsequence entries are
+-- cleaned-up.
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='tenk_ao2;'));
 
 -- OIDS
 CREATE TABLE aowithoids(a int, b int) WITH (appendonly=true,oids=true);
@@ -398,12 +443,14 @@ UPDATE tenk_ao1 SET two = 2;
 select count(*) from gp_toolkit.__gp_aoseg_name('tenk_ao1') where modcount > 1;
 select count(*) from tenk_ao1 where unique2 < 0;
 
--------------------- 
--- unsupported sql 
---------------------
 -- ALTER
 ALTER TABLE tenk_ao1 RENAME TO tenk_renamed;
 ALTER TABLE tenk_renamed ADD COLUMN newcol int default 10;
+-- Validate post alter gp_fastsequence reflects correctly
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='tenk_renamed'));
 ALTER TABLE tenk_renamed ALTER COLUMN twothousand SET NOT NULL;
 ALTER TABLE tenk_renamed ADD COLUMN sercol serial; -- MPP-10015
 ALTER TABLE tenk_renamed ADD COLUMN newcol2 int NOT NULL; -- should fail
@@ -442,9 +489,17 @@ DROP TABLE aosizetest_2;
 DROP TABLE IF EXISTS ao_selection;
 CREATE TABLE ao_selection (a INT, b INT) WITH (appendonly=true);
 INSERT INTO ao_selection VALUES (generate_series(1,100000), generate_series(1,10000));
-SELECT count(*) from gp_fastsequence WHERE objid IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class WHERE relname='ao_selection'));
+-- Validates insert is using single segfile and FrozenXid is used to perform the
+-- insert to gp_fastsequence.
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='ao_selection'));
 INSERT INTO ao_selection values (generate_series(1,100000), generate_series(1,10000));
-SELECT count(*) FROM gp_fastsequence WHERE objid IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class WHERE relname='ao_selection'));
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='ao_selection'));
 
 -- Check compression and distribution
 create table ao_compress_table (id int, v varchar)
@@ -477,3 +532,85 @@ DROP TABLE tenk_ao4;
 DROP TABLE tenk_ao5;
 DROP TABLE aowithoids;
 DROP TABLE ao_selection;
+
+---------------------------------------------------------------
+-- Sub-transaction tests to validate working of gp_fastsequence
+---------------------------------------------------------------
+-- create table in sub-transaction aborts but top transaction commits
+BEGIN;
+SAVEPOINT sp1;
+CREATE TABLE appendonly_subxans_test(a int, b int) WITH (appendonly=true);
+INSERT INTO appendonly_subxans_test SELECT * FROM generate_series(1, 10);
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='appendonly_subxans_test'));
+ROLLBACK TO SAVEPOINT sp1;
+COMMIT;
+
+-- create table and insert in nested subtransaction, to validate insert to
+-- gp_fastsequence is using NormalXid and not FrozenXid.
+BEGIN;
+SAVEPOINT sp1;
+CREATE TABLE appendonly_subxans_test(a int, b int) WITH (appendonly=true);
+SAVEPOINT sp2;
+INSERT INTO appendonly_subxans_test SELECT * FROM generate_series(1, 10);
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='appendonly_subxans_test'));
+ROLLBACK TO SAVEPOINT sp1;
+COMMIT;
+
+-- create table and insert in independent subtransactions, validate insert to
+-- gp_fastsequence is using NormalXid and not FrozenXid and stays despite
+-- inserting subtransaction aborting.
+BEGIN;
+SAVEPOINT sp1;
+CREATE TABLE appendonly_subxans_test1(a int, b int) WITH (appendonly=true);
+RELEASE SAVEPOINT sp1;
+SAVEPOINT sp2;
+INSERT INTO appendonly_subxans_test1 SELECT * FROM generate_series(1, 10);
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='appendonly_subxans_test1'));
+ROLLBACK TO SAVEPOINT sp2;
+COMMIT;
+SELECT * FROM appendonly_subxans_test1;
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='appendonly_subxans_test1'));
+
+-- create table in top transaction but first insert in sub-transaction
+BEGIN;
+CREATE TABLE appendonly_subxans_test(a int, b int) WITH (appendonly=true);
+create index appendonly_subxans_test_idx on appendonly_subxans_test using btree(a);
+SAVEPOINT sp1;
+insert into appendonly_subxans_test select * from generate_series(1, 10);
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='appendonly_subxans_test'));
+ROLLBACK TO SAVEPOINT sp1;
+insert into appendonly_subxans_test select * from generate_series(11, 20);
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='appendonly_subxans_test'));
+COMMIT;
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='appendonly_subxans_test'));
+-- Validation to make sure gp_fastsequence is not broken. If gp_fastsequence is
+-- malfunctioning then this will return wrong result.
+SELECT * FROM appendonly_subxans_test WHERE a < 10;
+
+--------------------------------------------------------------------------------
+-- Finally check to detect if any dangling gp_fastsequence entries are left
+-- behind by this SQL file
+--------------------------------------------------------------------------------
+SELECT objid FROM gp_fastsequence AS gfs LEFT OUTER JOIN (SELECT oid FROM
+pg_class) AS pgc ON (gfs.objid = pgc.oid) WHERE pgc.oid IS NULL;

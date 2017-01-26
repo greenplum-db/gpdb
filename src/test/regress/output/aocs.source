@@ -228,6 +228,17 @@ SELECT aototal('tenk_aocs1'), aototal('tenk_aocs2'), aototal('tenk_aocs3'), aoto
 -------------------- 
 -- transactionality
 --------------------
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='tenk_aocs1'));
+   case    | objmod | last_sequence | gp_segment_id 
+-----------+--------+---------------+---------------
+ FrozenXid |      1 |         13500 |             1
+ FrozenXid |      1 |         13500 |             0
+ FrozenXid |      1 |         13600 |             2
+(3 rows)
+
 -- rollback
 BEGIN;
 INSERT INTO tenk_aocs1 SELECT * FROM tenk_heap_for_aocs;
@@ -249,6 +260,19 @@ SELECT aototal('tenk_aocs1');
 ---------
    40000
 (1 row)
+
+-- gp_fastsequence should reflect bump in lastsequence, even if above
+-- transaction aborted as its tuples is in place updated.
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='tenk_aocs1'));
+   case    | objmod | last_sequence | gp_segment_id 
+-----------+--------+---------------+---------------
+ FrozenXid |      1 |         16900 |             1
+ FrozenXid |      1 |         16900 |             0
+ FrozenXid |      1 |         17000 |             2
+(3 rows)
 
 -- commit
 BEGIN;
@@ -381,6 +405,19 @@ DROP TABLE tenk_aocs3;
 DROP TABLE tenk_aocs4;
 -- CTAS
 CREATE TABLE tenk_aocs1 with(appendonly=true, orientation=column, checksum=true) AS SELECT * FROM tenk_heap_for_aocs;
+-- Incase of CTAS, gp_fastsequence must use create table's transaction id to
+-- insert into gp_fastsequence which is NormalXid and not FrozenXid.
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='tenk_aocs1'));
+   case    | objmod | last_sequence | gp_segment_id 
+-----------+--------+---------------+---------------
+ NormalXid |      0 |          3400 |             0
+ NormalXid |      0 |          3400 |             1
+ NormalXid |      0 |          3400 |             2
+(3 rows)
+
 CREATE TABLE tenk_aocs2 with(appendonly=true, orientation=column, compresslevel=0, blocksize=262144) AS SELECT * FROM tenk_heap_for_aocs;
 CREATE TABLE tenk_aocs3 with(appendonly=true, orientation=column, compresslevel=6, blocksize=1048576, checksum=true) AS SELECT * FROM tenk_heap_for_aocs;
 CREATE TABLE tenk_aocs4 with(appendonly=true, orientation=column, compresslevel=1, compresstype=zlib) AS SELECT * FROM tenk_heap_for_aocs;
@@ -578,6 +615,21 @@ SELECT unique1 FROM tenk_heap_for_aocs EXCEPT SELECT unique1 FROM tenk_aocs3;
 ---------
 (0 rows)
 
+-- Get gp_fastsequence details before truncate
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='tenk_aocs2'));
+   case    | objmod | last_sequence | gp_segment_id 
+-----------+--------+---------------+---------------
+ NormalXid |      0 |          3400 |             2
+ FrozenXid |      1 |           100 |             2
+ NormalXid |      0 |          3400 |             0
+ FrozenXid |      1 |           100 |             0
+ NormalXid |      0 |          3400 |             1
+ FrozenXid |      1 |           100 |             1
+(6 rows)
+
 -- TRUNCATE
 TRUNCATE tenk_aocs2;
 SELECT count(*) FROM tenk_aocs2;
@@ -585,6 +637,17 @@ SELECT count(*) FROM tenk_aocs2;
 -------
      0
 (1 row)
+
+-- Truncate changes relfilnode, as a result old pg_aocsseg table is dropped and
+-- frehsly created. Hence validate post truncate gp_fastsequence entries are
+-- cleaned-up.
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='tenk_ao2;'));
+ case | objmod | last_sequence | gp_segment_id 
+------+--------+---------------+---------------
+(0 rows)
 
 -- OID with aocs NYI
 -- OIDS
