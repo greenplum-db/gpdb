@@ -2307,7 +2307,7 @@ def impl(context):
 @when('user can start transactions')
 @then('user can start transactions')
 def impl(context):
-    num_retries = 50
+    num_retries = 150
     attempt = 0
     while attempt < num_retries:
         try:
