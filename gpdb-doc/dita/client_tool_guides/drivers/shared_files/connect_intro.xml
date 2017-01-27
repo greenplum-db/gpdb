@@ -39,7 +39,7 @@ is a set of library functions that allow client programs to pass queries
 to the PostgreSQL backend server and to receive the results of these
 queries. </p>
 <p>For more information on using <codeph>libpq</codeph>, see <xref
-          href="http://www.postgresql.org/docs/8.2/static/libpq.html" scope="external" format="html"
+          href="https://www.postgresql.org/docs/8.3/static/libpq.html" scope="external" format="html"
           >libpq - C Library</xref> in the PostgreSQL documentation.</p>
 
 </body>

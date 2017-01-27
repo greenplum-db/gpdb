@@ -834,7 +834,7 @@ lo_import 152801</codeblock>
         quotes loses its special meaning and is matched literally.</p>
       <p>Advanced users can use regular-expression notations. All regular expression special
         characters work as specified in the <xref
-          href="http://www.postgresql.org/docs/8.2/static/functions-matching.html#FUNCTIONS-POSIX-REGEXP"
+          href="https://www.postgresql.org/docs/8.3/static/functions-matching.html#FUNCTIONS-POSIX-REGEXP"
           scope="external" format="html">PostgreSQL documentation on regular expressions</xref>,
         except for <codeph>.</codeph> which is taken as a separator as mentioned above,
           <codeph>*</codeph> which is translated to the regular-expression notation

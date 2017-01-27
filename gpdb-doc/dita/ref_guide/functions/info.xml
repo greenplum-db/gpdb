@@ -205,7 +205,7 @@ SET search_path TO <i>schema</i> [, <i>schema</i>, ...]
     <p>
       <xref href="#functions-info/functions-info-access-table" format="dita"/> lists functions that
       allow the user to query object access privileges programmatically. See <xref scope="external"
-        href="http://www.postgresql.org/docs/8.2/static/ddl-priv.html" format="html"
+        href="https://www.postgresql.org/docs/8.3/static/ddl-priv.html" format="html"
         >Privileges</xref> for more information about privileges. </p>
     <p>All access privilege inquiry functions are classified STABLE. They should not be used in
       statements that run on segments.</p>

@@ -87,7 +87,7 @@
     </simpletable>
     <p>The operators <codeph>AND</codeph> and <codeph>OR</codeph> are commutative, that is, you can
       switch the left and right operand without affecting the result. But see <xref
-        href="http://www.postgresql.org/docs/8.2/static/sql-expressions.html#SYNTAX-EXPRESS-EVAL"
+        href="https://www.postgresql.org/docs/8.3/static/sql-expressions.html#SYNTAX-EXPRESS-EVAL"
         scope="external" format="html">Expression Evaluation Rules</xref> in the PostgreSQL
       documentation for more information about the order of evaluation of subexpressions.</p>
   </body>

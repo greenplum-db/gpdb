@@ -31,7 +31,7 @@
       <p>The <codeph>PL/pgSQL</codeph> language is registered in all databases by default.</p>
       <p>Greenplum Database has a language handler for <codeph>PL/R</codeph>, but the
           <codeph>PL/R</codeph> language package is not pre-installed with Greenplum Database. A package is available for <codeph>PL/Tcl</codeph> that you can
-        enable. See the <xref href="http://www.postgresql.org/docs/8.2/static/xplang.html"
+        enable. See the <xref href="https://www.postgresql.org/docs/8.3/static/xplang.html"
           scope="external" format="html">Procedural Languages</xref> section in the PostgreSQL
         documentation for more information.</p>
     </section>

@@ -29,8 +29,8 @@
         Database SQL. </p>
       <p>The PL/pgSQL language is a subset of Oracle PL/SQL. Greenplum Database PL/pgSQL is based on
         Postgres PL/pgSQL. The Postgres PL/pgSQL documentation is at <xref
-          href="http://www.postgresql.org/docs/8.2/static/plpgsql.html" scope="external"
-          format="html">http://www.postgresql.org/docs/8.2/static/plpgsql.html</xref></p>
+          href="https://www.postgresql.org/docs/8.3/static/plpgsql.html" scope="external"
+          format="html">https://www.postgresql.org/docs/8.3/static/plpgsql.html</xref></p>
       <p>When using PL/pgSQL functions, function attributes affect how Greenplum Database creates
         query plans. You can specify the attribute <codeph>IMMUTABLE</codeph>,
           <codeph>STABLE</codeph>, or <codeph>VOLATILE</codeph> as part of the
@@ -77,9 +77,9 @@ END [ label ];</codeblock>
           clause effectively forms a subtransaction that can be rolled back without affecting the
           outer transaction. For more about the <codeph>EXCEPTION</codeph> clause, see the post the
           Postgres documentation on error trapping at <xref
-            href="http://www.postgresql.org/docs/8.2/static/plpgsql-control-structures.html#PLPGSQL-ERROR-TRAPPING"
+            href="https://www.postgresql.org/docs/8.3/static/plpgsql-control-structures.html#PLPGSQL-ERROR-TRAPPING"
             scope="external" format="html"
-            >http://www.postgresql.org/docs/8.2/static/plpgsql-control-structures.html#PLPGSQL-ERROR-TRAPPING</xref>. </note>
+            >https://www.postgresql.org/docs/8.3/static/plpgsql-control-structures.html#PLPGSQL-ERROR-TRAPPING</xref>. </note>
         <p>All key words and identifiers can be written in mixed upper and lower case. Identifiers
           are implicitly converted to lowercase unless enclosed in double-quotes ( " ).</p>
         <p>You can add comments in PL/pgSQL in the following ways:</p>
@@ -123,9 +123,9 @@ $$ LANGUAGE plpgsql;</codeblock>
           <p>You can execute SQL commands with PL/gpSQL statements such as <codeph>EXECUTE</codeph>,
               <codeph>PERFORM</codeph>, and <codeph>SELECT ... INTO</codeph>. For information about
             the PL/gpSQL statements, see <xref
-              href="http://www.postgresql.org/docs/8.2/static/plpgsql-statements.html"
+              href="https://www.postgresql.org/docs/8.3/static/plpgsql-statements.html"
               scope="external" format="html"
-              >http://www.postgresql.org/docs/8.2/static/plpgsql-statements.html</xref>. </p>
+              >https://www.postgresql.org/docs/8.3/static/plpgsql-statements.html</xref>. </p>
           <note type="note">The PL/gpSQL statement <codeph>SELECT INTO</codeph> is not supported in
             the <codeph>EXECUTE</codeph> statement. </note>
         </body>
@@ -237,8 +237,8 @@ $$ LANGUAGE plpgsql VOLATILE;</codeblock>
     <title id="pt214450">References</title>
     <body>
       <p>The Postgres documentation about PL/pgSQL is at <xref
-          href="http://www.postgresql.org/docs/8.2/static/plpgsql.html" scope="external"
-          format="html">http://www.postgresql.org/docs/8.2/static/plpgsql.html</xref></p>
+          href="https://www.postgresql.org/docs/8.3/static/plpgsql.html" scope="external"
+          format="html">https://www.postgresql.org/docs/8.3/static/plpgsql.html</xref></p>
       <p>Also, see the <codeph><xref href="../sql_commands/CREATE_FUNCTION.xml#topic1"/></codeph>
         command in the <cite>Greenplum Database Reference Guide</cite>.</p>
       <p>For a summary of built-in Greenplum Database functions, see <xref
@@ -246,8 +246,8 @@ $$ LANGUAGE plpgsql VOLATILE;</codeblock>
           Guide</cite>. For information about using Greenplum Database functions see "Querying Data"
         in the <cite>Greenplum Database Administrator Guide</cite></p>
       <p>For information about porting Oracle functions, see <xref
-          href="http://www.postgresql.org/docs/8.2/static/plpgsql-porting.html" scope="external"
-          format="html">http://www.postgresql.org/docs/8.2/static/plpgsql-porting.html</xref>. For
+          href="https://www.postgresql.org/docs/8.3/static/plpgsql-porting.html" scope="external"
+          format="html">https://www.postgresql.org/docs/8.3/static/plpgsql-porting.html</xref>. For
         information about installing and using the Oracle compatibility functions with Greenplum
         Database, see "Oracle Compatibility Functions" in the <cite>Greenplum Database Utility
           Guide</cite>.</p>

@@ -993,7 +993,7 @@ SELECT date_trunc('year', TIMESTAMP '2001-02-16 20:38:40');
         string (e.g., <codeph>'PST'</codeph>) or as an interval (e.g., <codeph>INTERVAL
           '-08:00'</codeph>). In the text case, a time zone name may be specified in any of the ways
         described in <xref scope="external"
-          href="http://www.postgresql.org/docs/8.2/static/datatype-datetime.html#DATATYPE-TIMEZONES"
+          href="https://www.postgresql.org/docs/8.3/static/datatype-datetime.html#DATATYPE-TIMEZONES"
           format="html">Time Zones</xref>. </p>
       <p> Examples (supposing that the local time zone is <codeph>PST8PDT</codeph>):
         <screen>

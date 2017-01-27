@@ -9878,7 +9878,7 @@ $ gpconfig -c pgcrypto.fips -v on --masteronly</codeblock></p>
       <body>
         <p>Sets the time zone for displaying and interpreting time stamps. The default is to use
           whatever the system environment specifies as the time zone. See <xref
-            href="http://www.postgresql.org/docs/8.2/static/datetime-keywords.html" scope="external"
+            href="https://www.postgresql.org/docs/8.3/static/datetime-keywords.html" scope="external"
             format="html"><ph>Date/Time Keywords</ph></xref> in the PostgreSQL documentation.</p>
         <table id="TimeZone_table">
           <tgroup cols="3">
@@ -10358,7 +10358,7 @@ $ gpconfig -c pgcrypto.fips -v on --masteronly</codeblock></p>
         <p>For information about <codeph>VACUUM</codeph> and transaction ID management, see
           "Managing Data" in the <cite>Greenplum Database Administrator Guide</cite>
           and the <xref
-            href="http://www.postgresql.org/docs/8.2/static/routine-vacuuming.html#VACUUM-FOR-WRAPAROUND"
+            href="https://www.postgresql.org/docs/8.3/static/routine-vacuuming.html#VACUUM-FOR-WRAPAROUND"
             scope="external" format="html">PostgreSQL documentation</xref>.</p>
         <table id="vacuum_freeze_min_age_table">
           <tgroup cols="3">
