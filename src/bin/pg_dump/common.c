@@ -135,7 +135,7 @@ getSchemaData(int *numTablesPtr, int g_role)
 	 * However, we have to do getNamespaces first because the tables get
 	 * linked to their containing namespaces during getTables.
 	 */
-	if (g_verbose)
+	if (is_gpdump || g_verbose)
 		write_msg(NULL, "reading user-defined tables\n");
 	tblinfo = getTables(&numTables);
 	tblinfoindex = buildIndexArray(tblinfo, numTables, sizeof(TableInfo));
