@@ -1,4 +1,4 @@
--- @product_version gpdb: [4.3-4.3.98]
+-- @product_version gpdb: [4.3.99-]
 --@db_name heap_tables_db
 -- heap table distributed by a single column
 DROP TABLE IF EXISTS heap_table_1;
@@ -346,11 +346,10 @@ alter table unalterable_table set with(reorganize = true) distributed randomly;
 
 -- MPP-24478: External table with error table configured
 DROP EXTERNAL TABLE IF EXISTS exttab_with_error_table;
-DROP TABLE IF EXISTS error_tbl;
 
 CREATE EXTERNAL WEB TABLE exttab_with_error_table (i int, j text) 
 EXECUTE 'python $GPHOME/bin/datagen.py 100 2' on all format 'text' (delimiter '|')
-LOG ERRORS INTO error_tbl SEGMENT REJECT LIMIT 1000;
+LOG ERRORS SEGMENT REJECT LIMIT 1000;
 
 -- Might return different number of rows in different configurations
 SELECT COUNT(*) > 0 FROM exttab_with_error_table;

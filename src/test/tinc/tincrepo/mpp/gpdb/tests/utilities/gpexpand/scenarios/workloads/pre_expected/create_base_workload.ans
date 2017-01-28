@@ -470,11 +470,9 @@ ALTER TABLE
 -- MPP-24478: External table with error table configured
 DROP EXTERNAL TABLE IF EXISTS exttab_with_error_table;
 DROP EXTERNAL TABLE
-DROP TABLE IF EXISTS error_tbl;
-DROP TABLE
 CREATE EXTERNAL WEB TABLE exttab_with_error_table (i int, j text) 
 EXECUTE 'python $GPHOME/bin/datagen.py 100 2' on all format 'text' (delimiter '|')
-LOG ERRORS INTO error_tbl SEGMENT REJECT LIMIT 1000;
+LOG ERRORS SEGMENT REJECT LIMIT 1000;
 CREATE EXTERNAL TABLE
 -- Might return different number of rows in different configurations
 SELECT COUNT(*) > 0 FROM exttab_with_error_table;
