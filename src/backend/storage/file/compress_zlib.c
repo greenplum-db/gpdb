@@ -1,29 +1,124 @@
 /* compress_zlib.c */
 #include "postgres.h"
-
-#include <zlib.h>
-
+#include "fstream/gfile.h"
 #include "storage/bfz.h"
-#include "utils/memutils.h"
-
-#define COMPRESSION_BUFFER_SIZE		(1<<14)
+#include <zlib.h>
 
 struct bfz_zlib_freeable_stuff
 {
 	struct bfz_freeable_stuff super;
 
-	/* true if compressing, false if decompressing */
-	bool		compressing;
-
-	bool		eof_in;
-	bool		eof_out;
-
 	/* handle for the compressed file */
-	z_stream	s;
-	Byte		buf[COMPRESSION_BUFFER_SIZE];
+	gfile_t *gfile;
 };
 
-/* This file implements bfz compression algorithm "zlib". */
+typedef struct FileObject {
+	FileAccessInterface file_access;
+	File file;
+} FileObject;
+
+static ssize_t
+read_file(FileAccessInterface *file_access, void *ptr, size_t size)
+{
+	Assert(file_access);
+	Assert(PostgresFileObject == file_access->ftype);
+	FileObject* fobj = (FileObject*)file_access;
+	return FileRead(fobj->file, ptr, size);
+}
+
+static ssize_t
+write_file(FileAccessInterface *file_access, void *ptr, size_t size)
+{
+	Assert(file_access);
+	Assert(PostgresFileObject == file_access->ftype);
+	FileObject* fobj = (FileObject*)file_access;
+	return FileWrite(fobj->file, ptr, size);
+}
+
+static int
+close_file(FileAccessInterface *file_access)
+{
+	/* don't call the `FileClose`. BFZ owns File and it knows when to close it.*/
+	return 0;
+}
+
+static FileAccessInterface*
+gfile_create_fileobj_access(File file, GFileAlloca gfile_alloca)
+{
+	FileObject *fobj = gfile_alloca(sizeof(FileObject));
+	fobj->file_access.ftype = PostgresFileObj;
+	fobj->file_access.read_file = read_file;
+	fobj->file_access.write_file = write_file;
+	fobj->file_access.close_file = close_file;
+	fobj->file = file;
+	return &fobj->file_access;
+}
+
+static void
+gfile_report_error(gfile_t *gf)
+{
+	Assert(gf);
+	GFileErrorCode error_code = gfile_error_code(gf);
+	char* msg_detail = gfile_error_detail(gf);
+	gfile_reset_error(gf);
+	switch(error_code)
+	{
+		case GF_NoError:
+			return;
+		case GF_AccessError:
+			ereport(ERROR,
+					(errcode_for_file_access(),
+							errmsg("could not write to temporary file: %m")));
+			break;
+		case GF_BZDecompressInitError:
+			ereport(ERROR,
+					(errmsg("bzlib decompression init failed")));
+			break;
+		case GF_BZDecompressError:
+			ereport(ERROR,
+					(errmsg("bzlib decompression failed")));
+			break;
+		case GF_InflateInit2Error:
+			ereport(ERROR,
+					(errmsg("zlib inflateInit2 failed"),
+							msg_detail ? errdetail("%s", msg_detail) : 0));
+			break;
+		case GF_InflateError:
+			ereport(ERROR,
+					(errmsg("zlib inflate failed"),
+							msg_detail ? errdetail("%s", msg_detail) : 0));
+			break;
+		case GF_DeflateInit2Error:
+			ereport(ERROR,
+					(errmsg("zlib deflateInit2 failed"),
+							msg_detail ? errdetail("%s", msg_detail) : 0));
+			break;
+		case GF_DeflateError:
+			ereport(ERROR,
+					(errmsg("zlib deflate failed"),
+							msg_detail ? errdetail("%s", msg_detail) : 0));
+			break;
+		case GF_OutOfMemory:
+			ereport(ERROR,
+					(errmsg("Out of memory")));
+			break;
+		default:
+			ereport(ERROR,
+					(errmsg("Unexpected error from gfile")));
+	}
+}
+
+void*
+bfz_gfile_palloc(size_t size)
+{
+	return palloc(size);
+}
+
+void
+bfz_gfile_pfree(void*a)
+{
+	pfree(a);
+}
 
 /*
  * bfz_zlib_close_ex
@@ -36,55 +131,15 @@ bfz_zlib_close_ex(bfz_t *thiz)
 
 	if (NULL != fs)
 	{
-		if (fs->compressing)
+		Assert(NULL != fs->gfile);
+
+		gfile_close(fs->gfile);
+		if (gfile_has_error(fs->gfile))
 		{
-			int			ret1;
-
-			do
-			{
-				int			have;
-				int			written;
-
-				/* Flush all remaining output to the underlying file */
-				fs->s.avail_in = 0;
-				fs->s.avail_out = COMPRESSION_BUFFER_SIZE;
-				fs->s.next_out = fs->buf;
-
-				ret1 = deflate(&fs->s, Z_FINISH);
-				if (ret1 < 0)
-					ereport(ERROR,
-							(errmsg("zlib deflate failed"),
-							 fs->s.msg ? errdetail("%s", fs->s.msg) : 0));
-
-				/* Write until the output buffer is empty */
-				have = COMPRESSION_BUFFER_SIZE - fs->s.avail_out;
-
-				written = 0;
-				while (have > 0)
-				{
-					int			n = FileWrite(thiz->file, (char *) fs->buf + written, have);
-
-					if (n < 0)
-						ereport(ERROR,
-								(errcode_for_file_access(),
-						   errmsg("could not write to temporary file: %m")));
-					written += n;
-					have -= n;
-				}
-			} while (ret1 != Z_STREAM_END);
-
-			if (deflateEnd(&fs->s) != Z_OK)
-				ereport(ERROR,
-						(errmsg("zlib deflateEnd failed"),
-						 fs->s.msg ? errdetail("%s", fs->s.msg) : 0));
+			gfile_report_error(fs->gfile);
 		}
-		else
-		{
-			if (inflateEnd(&fs->s) != Z_OK)
-				ereport(ERROR,
-						(errmsg("zlib inflateEnd failed"),
-						 fs->s.msg ? errdetail("%s", fs->s.msg) : 0));
-		}
+		gfile_destroy(fs->gfile);
+		fs->gfile = NULL;
 
 		pfree(fs);
 		thiz->freeable_stuff = NULL;
@@ -100,42 +155,16 @@ static void
 bfz_zlib_write_ex(bfz_t *thiz, const char *buffer, int size)
 {
 	struct bfz_zlib_freeable_stuff *fs = (void *) thiz->freeable_stuff;
-	int			ret1;
 
-	/* Feed the new data to deflate() */
-	fs->s.avail_in = size;
-	fs->s.next_in = (Byte *) buffer;
-
-	/* Deflate until the input buffer is empty */
-	while (fs->s.avail_in)
+	gfile_write(fs->gfile, (void *)buffer, size);
+	if (gfile_has_error(fs->gfile))
 	{
-		int			have;
-		int			written;
-
-		fs->s.avail_out = COMPRESSION_BUFFER_SIZE;
-		fs->s.next_out = fs->buf;
-
-		ret1 = deflate(&fs->s, Z_NO_FLUSH);
-		if (ret1 == Z_STREAM_ERROR)
-			ereport(ERROR,
-					(errmsg("zlib deflate failed"),
-					 fs->s.msg ? errdetail("%s", fs->s.msg) : 0));
-
-		/* Write until the output buffer is empty */
-		have = COMPRESSION_BUFFER_SIZE - fs->s.avail_out;
-
-		written = 0;
-		while (have > 0)
-		{
-			int			n = FileWrite(thiz->file, (char *) fs->buf + written, have);
-
-			if (n < 0)
-				ereport(ERROR,
-						(errcode_for_file_access(),
-						 errmsg("could not write to temporary file: %m")));
-			written += n;
-			have -= n;
-		}
+		Assert(read < 0);
+		gfile_report_error(fs->gfile);
+	}
+	else
+	{
+		Assert(read >= 0);
 	}
 }
 
@@ -153,96 +182,17 @@ bfz_zlib_read_ex(bfz_t *thiz, char *buffer, int size)
 {
 	struct bfz_zlib_freeable_stuff *fs = (void *) thiz->freeable_stuff;
 
-	fs->s.next_out = (Byte *) buffer;
-	fs->s.avail_out = size;
-
-	while (fs->s.avail_out > 0)
+	ssize_t read = gfile_read(fs->gfile, buffer, size);
+	if (gfile_has_error(fs->gfile))
 	{
-		int			e;
-
-		/*
-		 * Fill up our input buffer from the input file.
-		 */
-		if (fs->s.avail_in == 0 && !fs->eof_in)
-		{
-			int			s = FileRead(thiz->file, (char *) fs->buf, COMPRESSION_BUFFER_SIZE);
-
-			if (s == 0)
-			{
-				/* no more data to read */
-				fs->eof_in = true;
-			}
-			if (s < 0)
-				ereport(ERROR,
-						(errcode_for_file_access(),
-						 errmsg("could not read from temporary file: %m")));
-
-			fs->s.next_in = fs->buf;
-			fs->s.avail_in = s;
-		}
-
-		if (fs->eof_in && fs->s.avail_in == 0)
-		{
-			if (!fs->eof_out)
-			{
-				/* No more input, but zlib thinks there should be more */
-				ereport(ERROR,
-						(errcode_for_file_access(),
-						 errmsg("unexpected end of temporary file")));
-			}
-
-			/*
-			 * end of input file, and buffers are empty, and zlib agrees that
-			 * we're at end of a stream.
-			 */
-			break;
-		}
-
-		/* decompress */
-		e = inflate(&fs->s, Z_SYNC_FLUSH);
-
-		fs->eof_out = false;
-		if (e == Z_STREAM_END)
-		{
-			fs->eof_out = true;
-
-			/*
-			 * we're done decompressing a chunk, but there might be more
-			 * input. we need to reset state. see MPP-8012 for info
-			 */
-			if (inflateReset(&fs->s) != Z_OK)
-				ereport(ERROR,
-						(errmsg("inflateReset error"),
-						 fs->s.msg ? errdetail("%s", fs->s.msg) : 0));
-		}
-		else if (e != Z_OK)
-		{
-			ereport(ERROR,
-					(errmsg("could not uncompress data from temporary file"),
-					 fs->s.msg ? errdetail("%s", fs->s.msg) : 0));
-		}
+		Assert(read < 0);
+		gfile_report_error(fs->gfile);
 	}
-
-	return (char *) fs->s.next_out - buffer;
-}
-
-static voidpf
-z_alloc(voidpf a, uInt b, uInt c)
-{
-	/*
-	 * zlib shouldn't allocate anything large, but better safe than sorry.
-	 */
-	if (b > MaxAllocSize || c > MaxAllocSize ||
-		(uint64) b * (uint64) c > MaxAllocSize)
-		return NULL;
-
-	return palloc(b * c);
-}
-
-static void
-z_free(voidpf a, voidpf b)
-{
-	pfree(b);
+	else
+	{
+		Assert(read >= 0);
+	}
+	return read;
 }
 
 /*
@@ -253,38 +203,17 @@ z_free(voidpf a, voidpf b)
  *	and valid. Memory is allocated in the current memory context.
  */
 void
-bfz_zlib_init(bfz_t *thiz)
+bfz_zlib_init(bfz_t * thiz)
 {
 	struct bfz_zlib_freeable_stuff *fs = palloc(sizeof *fs);
+	bool is_write = thiz->mode == BFZ_MODE_APPEND;
+	fs->gfile = gfile_create(GZ_COMPRESSION, is_write, bfz_gfile_palloc, bfz_gfile_pfree);
+	FileAccessInterface* file_access = gfile_create_fileobj_access(thiz->file, bfz_gfile_palloc);
+	gz_file_open(fs->gfile, file_access);
 
-	memset(&fs->s, 0, sizeof(fs->s));
-	fs->s.zalloc = z_alloc;
-	fs->s.zfree = z_free;
-	fs->s.opaque = Z_NULL;
-
-	fs->eof_in = false;
-	fs->eof_out = false;
-	fs->compressing = (thiz->mode == BFZ_MODE_APPEND);
-
-	if (fs->compressing)
+	if (gfile_has_error(fs->gfile))
 	{
-		/*
-		 * writing a compressed file
-		 */
-		if (deflateInit2(&fs->s, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 31, 8, Z_DEFAULT_STRATEGY) != Z_OK)
-			ereport(ERROR,
-					(errmsg("zlib deflateInit2 failed"),
-					 fs->s.msg ? errdetail("%s", fs->s.msg) : 0));
-	}
-	else
-	{
-		/*
-		 * reading a compressed file
-		 */
-		if (inflateInit2(&fs->s, 31))
-			ereport(ERROR,
-					(errmsg("zlib inflateInit2 failed"),
-					 fs->s.msg ? errdetail("%s", fs->s.msg) : 0));
+		gfile_report_error(fs->gfile);
 	}
 
 	thiz->freeable_stuff = &fs->super;

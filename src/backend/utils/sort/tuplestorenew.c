@@ -604,6 +604,17 @@ static void ntuplestore_cleanup(NTupleStore *ts, bool fNormal)
 			acc->store = NULL;
 			acc->page = NULL;
 		}
+
+		if(ts->pfile)
+		{
+			workfile_mgr_close_file(ts->work_set, ts->pfile);
+			ts->pfile = NULL;
+		}
+		if(ts->plobfile)
+		{
+			workfile_mgr_close_file(ts->work_set, ts->plobfile);
+			ts->plobfile = NULL;
+		}
 	}
 
 	while(p)
@@ -619,17 +630,6 @@ static void ntuplestore_cleanup(NTupleStore *ts, bool fNormal)
 		NTupleStorePage *pnext = nts_page_next(p); 
 		gp_free(p);
 		p = pnext;
-	}
-
-	if(ts->pfile)
-	{
-		workfile_mgr_close_file(ts->work_set, ts->pfile);
-		ts->pfile = NULL;
-	}
-	if(ts->plobfile)
-	{
-		workfile_mgr_close_file(ts->work_set, ts->plobfile);
-		ts->plobfile = NULL;
 	}
 
 	if (ts->work_set != NULL)
@@ -1460,14 +1460,8 @@ static void
 ntuplestore_create_spill_files(NTupleStore *nts)
 {
 	Assert(nts->work_set != NULL);
-
-	MemoryContext   oldcxt;
-	oldcxt = MemoryContextSwitchTo(TopMemoryContext);
-
 	nts->pfile = workfile_mgr_create_fileno(nts->work_set, WORKFILE_NUM_TUPLESTORE_DATA);
 	nts->plobfile = workfile_mgr_create_fileno(nts->work_set, WORKFILE_NUM_TUPLESTORE_LOB);
-
-	MemoryContextSwitchTo(oldcxt);
 }
 
 /* EOF */

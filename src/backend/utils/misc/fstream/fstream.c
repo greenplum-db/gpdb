@@ -34,7 +34,7 @@ typedef struct
 struct fstream_t
 {
 	glob_and_copy_t glob;
-	gfile_t 		fd;
+	gfile_t* 		fd;
 	int 			fidx; /* current index in ffd[] */
 	int64_t 		foff; /* current offset in ffd[fidx] */
 	int64_t 		line_number;
@@ -46,6 +46,12 @@ struct fstream_t
 	const char*		ferror; 		 /* error string */
 	struct fstream_options options;
 };
+
+/*
+ * Defined in fileam.c
+ */
+extern void* gfile_malloc(size_t size);
+extern void gfile_free(void*a);
 
 /*
  * Returns a pointer to the end of the last delimiter occurrence,
@@ -241,7 +247,8 @@ void fstream_close(fstream_t* fs)
 		gfile_free(fs->buffer);
 
 	glob_and_copyfree(&fs->glob);
-	gfile_close(&fs->fd);
+	gfile_close(fs->fd);
+	gfile_destroy(fs->fd);
 	gfile_free(fs);
 }
 
@@ -404,6 +411,7 @@ fstream_open(const char *path, const struct fstream_options *options,
 	}
 
 	memset(fs, 0, sizeof *fs);
+	fs->fd = gfile_create(NO_COMPRESSION, FALSE, gfile_malloc, gfile_free);
 	fs->options = *options;
 	fs->buffer = gfile_malloc(options->bufsize);
 	
@@ -540,9 +548,9 @@ fstream_open(const char *path, const struct fstream_options *options,
 		 */
 		struct gpfxdist_t* transform = (i == 0) ? options->transform : NULL;
 
-		gfile_close(&fs->fd);
+		gfile_close(fs->fd);
 
-		if (gfile_open(&fs->fd, fs->glob.gl_pathv[i], gfile_open_flags(options->forwrite, options->usesync),
+		if (gfile_open(fs->fd, fs->glob.gl_pathv[i], gfile_open_flags(options->forwrite, options->usesync),
 					   response_code, response_string, transform))
 		{
 			gfile_printf_then_putc_newline("fstream unable to open file %s",
@@ -551,7 +559,7 @@ fstream_open(const char *path, const struct fstream_options *options,
 			return 0;
 		}
 
-		fs->compressed_size += gfile_get_compressed_size(&fs->fd);
+		fs->compressed_size += gfile_get_compressed_size(fs->fd);
 	}
 
 	fs->line_number = 1;
@@ -590,8 +598,8 @@ static int nextFile(fstream_t*fs)
 	const char	*response_string;
 	struct gpfxdist_t* transform = fs->options.transform;
 
-	fs->compressed_position += gfile_get_compressed_size(&fs->fd);
-	gfile_close(&fs->fd);
+	fs->compressed_position += gfile_get_compressed_size(fs->fd);
+	gfile_close(fs->fd);
 	fs->foff = 0;
 	fs->line_number = 1;
 	fs->fidx++;
@@ -600,7 +608,7 @@ static int nextFile(fstream_t*fs)
 	{
 		fs->skip_header_line = fs->options.header;
 
-		if (gfile_open(&fs->fd, fs->glob.gl_pathv[fs->fidx], GFILE_OPEN_FOR_READ, 
+		if (gfile_open(fs->fd, fs->glob.gl_pathv[fs->fidx], GFILE_OPEN_FOR_READ,
 					   &response_code, &response_string, transform))
 		{
 			gfile_printf_then_putc_newline("fstream unable to open file %s",
@@ -690,7 +698,7 @@ int fstream_read(fstream_t *fs,
 			 * read data from the source file and fill up the file stream buffer
 			 */
 			len = buffer_capacity - fs->buffer_cur_size;
-			bytesread = gfile_read(&fs->fd, q, len);
+			bytesread = gfile_read(fs->fd, q, len);
 
 			if (bytesread < 0)
 			{
@@ -776,7 +784,7 @@ int fstream_read(fstream_t *fs,
 			}
 
 			/* read more data from source file into destination buffer */
-			bytesread2 = gfile_read(&fs->fd, (char*) dest + total_bytes, size - total_bytes);
+			bytesread2 = gfile_read(fs->fd, (char*) dest + total_bytes, size - total_bytes);
 
 			if (bytesread2 < 0)
 			{
@@ -894,7 +902,7 @@ int fstream_read(fstream_t *fs,
 			return total_bytes;
 		}
 
-		bytesread = gfile_read(&fs->fd, dest, size);
+		bytesread = gfile_read(fs->fd, dest, size);
 
 		if (bytesread < 0)
 		{
@@ -967,7 +975,7 @@ int fstream_write(fstream_t *fs,
         }
 
 	/* write data to destination file */
-	byteswritten = (int)gfile_write(&fs->fd, (char*) buf, size);
+	byteswritten = (int)gfile_write(fs->fd, (char*) buf, size);
 
 	if (byteswritten < 0)
 	{
@@ -994,12 +1002,12 @@ int64_t fstream_get_compressed_position(fstream_t *fs)
 {
 	int64_t p = fs->compressed_position;
 	if (fs->fidx != fs->glob.gl_pathc)
-		p += gfile_get_compressed_position(&fs->fd);
+		p += gfile_get_compressed_position(fs->fd);
 	return p;
 }
 
 bool_t fstream_is_win_pipe(fstream_t *fs)
 {
-	return fs->fd.is_win_pipe;
+	return gfile_is_win_pipe(fs->fd);
 }
 

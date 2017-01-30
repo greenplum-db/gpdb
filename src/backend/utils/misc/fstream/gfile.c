@@ -41,39 +41,127 @@
 
 #define COMPRESSION_BUFFER_SIZE		(1<<14)
 
+/* The struct gfile_t is private.  Please do not use any of its fields. */
+struct gfile_t
+{
+	ssize_t(*read)(struct gfile_t*,void*,size_t);
+	ssize_t(*write)(struct gfile_t*,void*,size_t);
+	int(*close)(struct gfile_t*);
+	off_t compressed_size,compressed_position;
+	bool_t is_win_pipe;
+	GFileErrorCode error_code;
+	union
+	{
+		FileAccessInterface *file_access;
+#ifdef WIN32
+		HANDLE pipefd;
+#endif
+	} fd;
+
+	union
+	{
+		int txt;
+#ifndef WIN32
+		struct zlib_stuff*z;
+		struct bzlib_stuff*bz;
+#endif
+	}u;
+	bool_t is_write;
+	compression_type compression;
+
+	struct gpfxdist_t* transform;
+	GFileAlloca gfile_alloca;
+	GFileFree gfile_free;
+};
+
+typedef struct FileDescriptorObject
+{
+	FileAccessInterface file_access;
+	int file_descriptor;
+} FileDescriptorObject;
+
+static ssize_t
+read_with_fd(FileAccessInterface *file_access, void *ptr, size_t size)
+{
+	assert(file_access);
+	assert(CFileObj == file_access->ftype);
+	ssize_t i = 0;
+	FileDescriptorObject* fobj = (FileDescriptorObject*)file_access;
+	do
+		i = read(fobj->file_descriptor, ptr, size);
+	while (i<0 && errno==EINTR);
+	return i;
+}
+
+static ssize_t
+write_with_fd(FileAccessInterface *file_access, void *ptr, size_t size)
+{
+	assert(file_access);
+	assert(CFileObj == file_access->ftype);
+	ssize_t i = 0;
+	FileDescriptorObject* fobj = (FileDescriptorObject*)file_access;
+	do
+		i = write(fobj->file_descriptor, ptr, size);
+	while (i<0 && errno==EINTR);
+
+	return i;
+}
 
 static int
-nothing_close(gfile_t *fd)
+close_with_fd(FileAccessInterface *file_access)
 {
-	return 0;
+	assert(file_access);
+	assert(CFileObj == file_access->ftype);
+	FileDescriptorObject* fobj = (FileDescriptorObject*)file_access;
+	int ret = 0;
+	do
+	{
+		//fsync(fobj->file_descriptor);
+		ret = close(fobj->file_descriptor);
+	}
+	while (ret < 0 && errno == EINTR);
+	return ret;
 }
+
+static FileAccessInterface*
+gfile_create_CFileObj_descriptor_access(int file_descriptor, GFileAlloca gfile_alloca)
+{
+	FileDescriptorObject *fobj = gfile_alloca(sizeof(FileDescriptorObject));
+	fobj->file_access.ftype = CFileObj;
+	fobj->file_access.read_file = read_with_fd;
+	fobj->file_access.write_file = write_with_fd;
+	fobj->file_access.close_file = close_with_fd;
+	fobj->file_descriptor = file_descriptor;
+	return &fobj->file_access;
+}
+
 
 static ssize_t
 read_and_retry(gfile_t *fd, void *ptr, size_t size)
 {
-	ssize_t i = 0;
-
-	do
-		i = read(fd->fd.filefd, ptr, size);
-	while (i<0 && errno==EINTR);
-
+	ssize_t i = fd->fd.file_access->read_file(fd->fd.file_access, ptr, size);
 	if (i > 0)
 		fd->compressed_position += i;
+	if (i < 0)
+		fd->error_code = GF_AccessError;
 	return i;
 }
 
 static ssize_t
 write_and_retry(gfile_t *fd, void *ptr, size_t size)
 {
-	ssize_t i = 0;
-
-	do
-		i = write(fd->fd.filefd, ptr, size);
-	while (i<0 && errno==EINTR);
-
+	ssize_t i = fd->fd.file_access->write_file(fd->fd.file_access, ptr, size);
 	if (i > 0)
 		fd->compressed_position += i;
+	if (i < 0)
+		fd->error_code = GF_AccessError;
 	return i;
+}
+
+static int
+nothing_close(gfile_t *fd)
+{
+	return 0;
 }
 
 static int
@@ -100,7 +188,8 @@ readwinpipe(gfile_t* fd, void* ptr, size_t size)
 
 	if (i > 0)
 		fd->compressed_position += i;
-
+	if (i < 0)
+		fd->error_code = GF_AccessError;
 	return i;
 }
 
@@ -117,7 +206,8 @@ writewinpipe(gfile_t* fd, void* ptr, size_t size)
 #endif
 	if (i > 0)
 		fd->compressed_position += i;
-
+	if (i < 0)
+		fd->error_code = GF_AccessError;
 	return i;
 }
 
@@ -125,13 +215,15 @@ writewinpipe(gfile_t* fd, void* ptr, size_t size)
 static void *
 bz_alloc(void *a, int b, int c)
 {
-	return gfile_malloc(b * c);
+	gfile_t* fd = (gfile_t*)a;
+	return fd->gfile_alloca(b * c);
 }
 
 static void
 bz_free(void *a,void *b)
 {
-	gfile_free(b);
+	gfile_t* fd = (gfile_t*)a;
+	fd->gfile_free(b);
 }
 
 struct bzlib_stuff
@@ -172,7 +264,10 @@ bz_file_read(gfile_t *fd, void *ptr, size_t len)
 			if (s == 0)
 				break;
 			if (s < 0)
+			{
+				fd->error_code = GF_AccessError;
 				return -1;
+			}
 			z->in_size += s;
 		}
 		
@@ -183,10 +278,16 @@ bz_file_read(gfile_t *fd, void *ptr, size_t len)
 		if (e == BZ_STREAM_END)
 			z->eof = 1;
 		else if (e)
+		{
+			fd->error_code = GF_BZDecompressError;
 			return -1;
+		}
 		
 		if (z->s.avail_out == sizeof z->out && z->s.avail_in == s)
+		{
+			fd->error_code = GF_BZDecompressError;
 			return -1;
+		}
 		
 		if (z->s.next_in == z->in + z->in_size)
 		{
@@ -200,16 +301,21 @@ static int
 bz_file_close(gfile_t *fd)
 {
 	int e = BZ2_bzDecompressEnd(&fd->u.bz->s);
+	if (e != BZ_OK)
+	{
+		fd->error_code = GF_BZDecompressError;
+	}
 	
-	gfile_free(fd->u.bz);
+	fd->gfile_free(fd->u.bz);
 	
 	return e;
 }
 
-static int bz_file_open(gfile_t *fd)
+static int bz_file_open(gfile_t *fd, FileAccessInterface* file_access)
 {
-	if (!(fd->u.bz = gfile_malloc(sizeof *fd->u.bz)))
+	if (!(fd->u.bz = fd->gfile_alloca(sizeof *fd->u.bz)))
 	{
+		fd->error_code = GF_OutOfMemory;
 		gfile_printf_then_putc_newline("Out of memory");
 		return 1;
 	}
@@ -217,9 +323,11 @@ static int bz_file_open(gfile_t *fd)
 	memset(fd->u.bz, 0, sizeof *fd->u.bz);
 	fd->u.bz->s.bzalloc = bz_alloc;
 	fd->u.bz->s.bzfree = bz_free;
+	fd->u.bz->s.opaque = (void*)fd;
 	
 	if (BZ2_bzDecompressInit(&fd->u.bz->s, 0, 0))
 	{
+		fd->error_code = GF_BZDecompressInitError;
 		gfile_printf_then_putc_newline("BZ2_bzDecompressInit failed");
 		return 1;
 	}
@@ -228,6 +336,7 @@ static int bz_file_open(gfile_t *fd)
 	fd->u.bz->s.next_in = fd->u.bz->in;
 	fd->read = bz_file_read;
 	fd->close = bz_file_close;
+	fd->fd.file_access = file_access;
 	
 	return 0;
 }
@@ -294,6 +403,7 @@ gz_file_read(gfile_t* fd, void* ptr, size_t len)
 			if (s < 0)
 			{
 				/* read error */
+				fd->error_code = GF_AccessError;
 				return -1;
 			}
 				
@@ -321,10 +431,14 @@ gz_file_read(gfile_t* fd, void* ptr, size_t len)
 			 * input. we need to reset state. see MPP-8012 for info 
 			 */
 			if(inflateReset(&z->s))
+			{
+				fd->error_code = GF_InflateError;
 				return -1;
+			}
 		}
 		else if (e)
 		{
+			fd->error_code = GF_InflateError;
 			return -1;			
 		}
 		
@@ -356,7 +470,7 @@ gz_file_write_one_chunk(gfile_t *fd, int do_flush)
 		assert(ret1 != Z_STREAM_ERROR);  /* state not clobbered */
 		have = COMPRESSION_BUFFER_SIZE - z->s.avail_out;
 		
-		if ( write_and_retry(fd, z->out, have) != have ) 
+		if ( write_and_retry(fd, z->out, have) != have )
 		{
 			/*
 			 * presently gfile_close calls gz_file_close only for the on_write case so we don't need
@@ -423,32 +537,43 @@ gz_file_close(gfile_t *fd)
 		}
 
 		e = deflateEnd(&fd->u.z->s);
+		if (e != Z_OK)
+		{
+			fd->error_code = GF_DeflateError;
+		}
 	}
 	else /* reading, that is inflating */
 	{
 		e = inflateEnd(&fd->u.z->s);
+		if (e != Z_OK)
+		{
+			fd->error_code = GF_InflateError;
+		}
 	}
 	
-	gfile_free(fd->u.z);
+	fd->gfile_free(fd->u.z);
 	return e;
 }
 
 static voidpf
 z_alloc(voidpf a, uInt b, uInt c)
 {
-	return gfile_malloc(b * c);
+	gfile_t* fd = (gfile_t*)a;
+	return fd->gfile_alloca(b * c);
 }
 
 static void z_free(voidpf a, voidpf b)
 {
-	gfile_free(b);
+	gfile_t* fd = (gfile_t*)a;
+	fd->gfile_free(b);
 }
 
-static int
-gz_file_open(gfile_t *fd)
+int gz_file_open(gfile_t *fd, FileAccessInterface* file_access)
 {
-	if (!(fd->u.z = gfile_malloc(sizeof *fd->u.z)))
+	gfile_reset_error(fd);
+	if (!(fd->u.z = fd->gfile_alloca(sizeof *fd->u.z)))
 	{
+		fd->error_code = GF_OutOfMemory;
 		gfile_printf_then_putc_newline("Out of memory");
 		return 1;
 	}
@@ -456,13 +581,14 @@ gz_file_open(gfile_t *fd)
 	memset(fd->u.z, 0, sizeof *fd->u.z);
 	fd->u.z->s.zalloc = z_alloc;
 	fd->u.z->s.zfree = z_free;
-	fd->u.z->s.opaque = Z_NULL;
+	fd->u.z->s.opaque = (void*)fd;
 
 	fd->u.z->s.next_out = fd->u.z->out;
 	fd->u.z->s.next_in = fd->u.z->in;
 	fd->read = gz_file_read;
 	fd->write = gz_file_write;
 	fd->close = gz_file_close;
+	fd->fd.file_access = file_access;
 	
 	if ( fd->is_write == FALSE )/* for read */  
 	{
@@ -471,6 +597,7 @@ gz_file_open(gfile_t *fd)
 		 */		
 		if (inflateInit2(&fd->u.z->s,31))
 		{
+			fd->error_code = GF_InflateInit2Error;
 			gfile_printf_then_putc_newline("inflateInit2 failed");
 			return 1;
 		}
@@ -483,6 +610,7 @@ gz_file_open(gfile_t *fd)
 		if ( Z_OK !=
 			 deflateInit2(&fd->u.z->s, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 31, 8, Z_DEFAULT_STRATEGY) )
 		{
+			fd->error_code = GF_DeflateInit2Error;
 			gfile_printf_then_putc_newline("deflateInit2 failed");
 			return 1;			
 		}
@@ -672,17 +800,44 @@ gfile_open_flags(int writing, int usesync)
 	return GFILE_OPEN_FOR_READ;
 }
 
+static void
+gfile_init(gfile_t *gf, GFileAlloca gfile_alloca, GFileFree gfile_free)
+{
+	assert(gf);
+	memset(gf, 0, sizeof*gf);
+	gf->gfile_alloca = gfile_alloca;
+	gf->gfile_free = gfile_free;
+}
+
+gfile_t* gfile_create(compression_type compression, bool_t is_write, GFileAlloca gfile_alloca, GFileFree gfile_free)
+{
+	assert(gfile_alloca);
+	assert(gfile_free);
+	gfile_t* gf = gfile_alloca(sizeof(gfile_t));
+	gfile_init(gf, gfile_alloca, gfile_free);
+	gf->compression = compression;
+	gf->is_write = is_write;
+	return gf;
+}
+
+void gfile_destroy(gfile_t* fd)
+{
+	GFileFree gfile_free = fd->gfile_free;
+	gfile_free(fd);
+}
 
 int gfile_open(gfile_t* fd, const char* fpath, int flags, int* response_code, const char** response_string, struct gpfxdist_t* transform)
 {
+	gfile_reset_error(fd);
 	const char* s = strrchr(fpath, '.');
 	bool_t is_win_pipe = FALSE;
+	int filefd;
 #ifndef WIN32
 	struct 		stat sta;
 #endif
 	off_t ssize = 0;
 
-	memset(fd,0,sizeof*fd);
+	gfile_init(fd, fd->gfile_alloca, fd->gfile_free);
 
 #ifdef WIN32
 #if !defined(S_ISDIR)
@@ -843,14 +998,14 @@ int gfile_open(gfile_t* fd, const char* fpath, int flags, int* response_code, co
 			}
 #endif
 			if (flags != GFILE_OPEN_FOR_READ)
-				fd->fd.filefd = open(fpath, O_WRONLY | O_CREAT | O_BINARY | O_APPEND | syncFlag, S_IRUSR | S_IWUSR);
+				filefd = open(fpath, O_WRONLY | O_CREAT | O_BINARY | O_APPEND | syncFlag, S_IRUSR | S_IWUSR);
 			else
-				fd->fd.filefd = open(fpath, O_RDONLY | O_BINARY);
+				filefd = open(fpath, O_RDONLY | O_BINARY);
 		}
-		while (fd->fd.filefd < 0 && errno == EINTR);
+		while (filefd < 0 && errno == EINTR);
 	}
 
-	if (!fd->is_win_pipe && -1 == fd->fd.filefd) 
+	if (!fd->is_win_pipe && -1 == filefd)
 	{
 		static char buf[256];
 		gfile_printf_then_putc_newline("gfile open (for %s) failed %s: %s",
@@ -890,6 +1045,10 @@ int gfile_open(gfile_t* fd, const char* fpath, int flags, int* response_code, co
 		fd->close = nothing_close;
 	}
 
+	/*
+	 * create fileaccess based on file descriptor.
+	 */
+	fd->fd.file_access = gfile_create_CFileObj_descriptor_access(filefd, fd->gfile_alloca);
 	
 	/*
 	 * delegate remaining setup work to an appropriate open routine
@@ -918,7 +1077,7 @@ int gfile_open(gfile_t* fd, const char* fpath, int flags, int* response_code, co
 			fd->is_write = TRUE;
 		}
 
-		return gz_file_open(fd);
+		return gz_file_open(fd, fd->fd.file_access);
 #endif
 	}
 	else if (s && strcasecmp(s,".bz2")==0)
@@ -930,7 +1089,7 @@ int gfile_open(gfile_t* fd, const char* fpath, int flags, int* response_code, co
 		if (flags != GFILE_OPEN_FOR_READ)
 			gfile_printf_then_putc_newline(".bz2 not yet supported for writable tables");
 
-		return bz_file_open(fd);
+		return bz_file_open(fd, fd->fd.file_access);
 #endif
 	}
 	else if (s && strcasecmp(s,".z") == 0)
@@ -946,11 +1105,10 @@ int gfile_open(gfile_t* fd, const char* fpath, int flags, int* response_code, co
 	return 1;
 }
 
-int
+void
 gfile_close(gfile_t*fd)
 {
-	int ret = 1;
-
+	gfile_reset_error(fd);
 	if (fd->close)
 	{
 #ifdef GPFXDIST
@@ -977,15 +1135,7 @@ gfile_close(gfile_t*fd)
 		}
 		else
 		{
-			do
-			{
-				//fsync(fd->fd.filefd);
-				ret = close(fd->fd.filefd);
-			}
-			while (ret < 0 && errno == EINTR);
-
-			if (ret == -1)
-				ret = 1;
+			fd->fd.file_access->close_file(fd->fd.file_access);
 		}
 
 #ifdef GPFXDIST
@@ -994,18 +1144,22 @@ gfile_close(gfile_t*fd)
 
 		fd->read = 0;
 		fd->close = 0;
+		fd->gfile_free((void*)fd->fd.file_access);
+		fd->fd.file_access = 0;
 	}
-	return ret;
+	return;
 }
 
 ssize_t 
 gfile_read(gfile_t *fd, void *ptr, size_t len)
 {
 	size_t olen = len;
-	
+	gfile_reset_error(fd);
 	while (len)
 	{
 		ssize_t i = fd->read(fd, ptr, len);
+		assert((i >= 0 && fd->error_code == GF_NoError) ||
+				(i < 0 && fd->error_code != GF_NoError));
 		if (i < 0)
 			return i;
 		if (i == 0)
@@ -1021,11 +1175,11 @@ ssize_t
 gfile_write(gfile_t *fd, void *ptr, size_t len)
 {
 	size_t olen = len;
-	
+	gfile_reset_error(fd);
 	while (len)
 	{
 		ssize_t i = fd->write(fd, ptr, len);
-				
+		assert(i >= 0 && fd->error_code == GF_NoError);
 		if (i < 0)
 			return i;
 		if (i == 0)
@@ -1046,4 +1200,41 @@ off_t gfile_get_compressed_size(gfile_t *fd)
 off_t gfile_get_compressed_position(gfile_t *fd)
 {
 	return fd->compressed_position;
+}
+
+bool_t gfile_is_win_pipe(gfile_t* fd)
+{
+	return fd->is_win_pipe;
+}
+
+GFileErrorCode
+gfile_error_code(gfile_t *fd)
+{
+	assert(fd);
+	return fd->error_code;
+}
+
+void
+gfile_reset_error(gfile_t *fd)
+{
+	assert(fd);
+	fd->error_code = GF_NoError;
+}
+
+bool_t
+gfile_has_error(gfile_t *fd)
+{
+	return fd->error_code != GF_NoError;
+}
+
+char*
+gfile_error_detail(gfile_t *fd)
+{
+	assert(fd);
+	if (fd->error_code == GF_NoError ||
+		fd->compression != GZ_COMPRESSION)
+	{
+		return NULL;
+	}
+	return fd->u.z->s.msg;
 }

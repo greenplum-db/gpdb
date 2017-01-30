@@ -354,14 +354,14 @@ bfz_close(bfz_t *thiz)
 	{
 		thiz->freeable_stuff->close_ex(thiz);
 	}
+	/* If del_on_close was used, FileClose() / close_ex unlinks the file */
 	if (thiz->file > 0)
 	{
 		FileClose(thiz->file);
 		thiz->file = -1;
 	}
 
-	/* If del_on_close was used, FileClose() unlinked the file */
-
+	pfree(thiz->filename);
 	thiz->mode = BFZ_MODE_CLOSED;
 	pfree(thiz);
 }
@@ -403,7 +403,7 @@ bfz_append_end(bfz_t * thiz)
 
 	if ((tot_compressed = FileSeek(thiz->file, 0, SEEK_END)) == -1)
 		ereport(ERROR,
-				(errcode(ERRCODE_IO_ERROR),
+				(errcode_for_file_access(),
 				errmsg("could not seek in temporary file: %m")));
 
 	elog(DEBUG1, "bfz file size uncompressed %lld, compressed %lld, savings %d%%",
@@ -422,24 +422,16 @@ bfz_scan_begin(bfz_t * thiz)
 
 	if (FileSeek(thiz->file, 0, SEEK_SET) == -1)
 		ereport(ERROR,
-				(errcode(ERRCODE_IO_ERROR),
+				(errcode_for_file_access(),
 				errmsg("could not seek in temporary file: %m")));
 
 	thiz->mode = BFZ_MODE_SCAN;
-
-	/*
-	 * Allocating in the TopMemoryContext since this memory context
-	 * is still available when calling the transaction callback at the
-	 * time when the transaction aborts.
-	 */
-	MemoryContext oldcxt = MemoryContextSwitchTo(TopMemoryContext);
 
 	compression_algorithms[thiz->compression_index].init(thiz);
 	fs = thiz->freeable_stuff;
 	fs->buffer_pointer = fs->buffer_end = fs->buffer;
 	fs->tot_bytes = 0L;
 
-	MemoryContextSwitchTo(oldcxt);
 
 	if (gp_workfile_faultinject)
 	{

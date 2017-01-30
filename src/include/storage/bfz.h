@@ -1,6 +1,7 @@
 #ifndef BFZ_H
 #define BFZ_H
 
+#include <postgres.h>
 #include "storage/fd.h"
 
 #define BFZ_MODE_CLOSED		0
