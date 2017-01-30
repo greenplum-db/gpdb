@@ -3065,7 +3065,7 @@ explain_outNode(Plan *plan, PlanState *planstate,
 
     es->currentSlice = currentSlice;    /* restore */
 }                               /* explain_outNode */
-
+#endif
 #ifdef XXX
 /*
  * Show a qualifier expression for a scan plan node
@@ -3107,6 +3107,7 @@ show_scan_qual(List *qual, const char *qlabel,
 	appendStringInfo(es->str, "  %s: %s\n", qlabel, exprstr);
 }
 #endif  /* XXX */
+#ifdef XXX
 /*
  * Show a qualifier expression for an upper-level plan node
  */
