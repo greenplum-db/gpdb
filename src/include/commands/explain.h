@@ -42,6 +42,7 @@ typedef struct ExplainState
     ErrorData      *deferredError;  /* caught error to be re-thrown */
 } ExplainState;
 
+
 /* Hook for plugins to get control in ExplainOneQuery() */
 typedef void (*ExplainOneQuery_hook_type) (Query *query,
 													   ExplainState *es,

@@ -2941,16 +2941,16 @@ gp_guc_list_init(void)
  *
  * Returns the length of the string appended to the buffer.
  */
-int
-gp_guc_list_show(struct StringInfoData    *buf,
-                  const char               *pfx,
-                  const char               *fmt,
-                  GucSource                 excluding,
-                  List                     *guclist)
+
+
+List *
+gp_guc_list_show(GucSource                 excluding,
+                  	  	  List                     *guclist)
 {
-    int         oldlen = buf->len;
+	List *gucs_to_show = NIL;
+	NameValue *name_value;
+
     ListCell   *cell;
-    char       *value;
     struct config_generic  *gconf;
 
 	foreach(cell, guclist)
@@ -2958,17 +2958,16 @@ gp_guc_list_show(struct StringInfoData    *buf,
 		gconf = (struct config_generic *)lfirst(cell);
 		if (gconf->source > excluding)
         {
-            if (pfx)
-            {
-                appendStringInfoString(buf, pfx);
-                pfx = NULL;
-            }
-            value = _ShowOption(gconf, true);
-            appendStringInfo(buf, fmt, gconf->name, value);
-            pfree(value);
+
+			name_value = palloc(sizeof(NameValue));
+			name_value->name = gconf->name;
+			name_value->value =_ShowOption(gconf, true);
+
+            gucs_to_show = lappend(gucs_to_show,name_value);
+
         }
 	}
-    return buf->len - oldlen;
+    return gucs_to_show;
 }                               /* gp_guc_list_show */
 
 

@@ -132,7 +132,7 @@ static void ExplainXMLTag(const char *tagname, int flags, ExplainState *es);
 static void ExplainJSONLineEnding(ExplainState *es);
 static void appendGangAndDirectDispatchInfo( PlanState *planstate, int sliceId, ExplainState *es);
 
-#ifdef XXX
+
 static void
 show_grouping_keys(Plan  *plan,
                    int          numCols,
@@ -144,7 +144,7 @@ show_motion_keys(Plan *plan, List *hashExpr, int nkeys, AttrNumber *keycols,
 
 static void
 explain_partition_selector(PartitionSelector *ps, Plan *parent, ExplainState *es);
-#endif
+
 
 /*
  * ExplainQuery -
@@ -632,12 +632,6 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ExplainState *es,
 		//explain_outNode(es, queryDesc);
 		queryDesc->plannedstmt->planTree->sliceTable = saved_es_sliceTable;
 	}
-#ifdef XXX
-	else
-	{
-		explain_outNode(es, queryDesc);
-	}
-#endif
 	/*
      * Produce the EXPLAIN report into buf.  (Sometimes we get internal errors
      * while doing this; try to proceed with a partial report anyway.)
@@ -692,10 +686,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ExplainState *es,
 
 		}
     	ExplainPrintPlan(es, queryDesc);
-    	/*
-	    explain_outNode(childPlan, queryDesc->planstate,
-					    NULL, NULL, NULL, es);
-					    */
+
     }
     PG_CATCH();
     {
@@ -753,13 +744,32 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ExplainState *es,
     /*
      * Show non-default GUC settings that might have affected the plan.
      */
-    nb = gp_guc_list_show(es->str, "Settings:  ", "%s=%s; ", PGC_S_DEFAULT,
-                           gp_guc_list_for_explain);
-    if (nb > 0)
-    {
-        truncateStringInfo(es->str, es->str->len - 2);  /* drop final "; " */
-        appendStringInfoChar(es->str, '\n');
-    }
+    List *gucs_to_show = gp_guc_list_show( PGC_S_DEFAULT, gp_guc_list_for_explain);
+
+	if (length(gucs_to_show) )
+	{
+		ListCell *cell;
+		if ( es->format == EXPLAIN_FORMAT_TEXT)
+			{
+				appendStringInfo(es->str, "Settings:  ");
+				foreach(cell, gucs_to_show)
+				{
+					appendStringInfo(es->str, "%s=%s; ", ((NameValue *)(cell->data.ptr_value))->name, ((NameValue *)(cell->data.ptr_value))->value);
+				}
+				truncateStringInfo(es->str, es->str->len - 2);  /* drop final "; " */
+				appendStringInfoChar(es->str, '\n');
+			}
+		else
+		{
+			ExplainOpenGroup("Settings", "Settings", false, es);
+			foreach(cell, gucs_to_show)
+			{
+				ExplainPropertyText( ((NameValue *)(cell->data.ptr_value))->name, ((NameValue *)(cell->data.ptr_value))->value, es);
+			}
+			ExplainCloseGroup("Settings", "Settings", false, es);
+		}
+		list_free(gucs_to_show);
+	}
 
 #ifdef USE_ORCA
     /* Display optimizer status: either 'legacy query optimizer' or Orca version number */
@@ -978,6 +988,9 @@ ExplainNode(Plan *plan, PlanState *planstate,
 	int 			save_indent = es->indent;
 	bool 			haschildren;
 	Slice 		*currentSlice = es->currentSlice;
+	int         nSenders = 0;
+	int         nReceivers = 0;
+	int		  sliceId = 0;
 
 	float	scaleFactor = 1.0;
 
@@ -1169,8 +1182,8 @@ ExplainNode(Plan *plan, PlanState *planstate,
 				SliceTable *sliceTable = planstate->state->es_sliceTable;
 				Slice *slice = (Slice *)list_nth(sliceTable->slices, pMotion->motionID);
 
-				int         nSenders = slice->numGangMembersToBeActive;
-				int         nReceivers = 0;
+				nSenders = slice->numGangMembersToBeActive;
+				nReceivers = 0;
 
 				/* scale the number of rows by the number of segments sending data */
 				scaleFactor = nSenders;
@@ -1207,18 +1220,12 @@ ExplainNode(Plan *plan, PlanState *planstate,
 				{
 					appendStringInfo(es->str, "%s %d:%d", pname,
 						nSenders, nReceivers);
+					appendGangAndDirectDispatchInfo(planstate, pMotion->motionID, es);
 				}
 				else
 				{
-					ExplainPropertyText("Node Type", sname, es);
-					if (strategy)
-						ExplainPropertyText("Strategy", strategy, es);
-					if (operation)
-						ExplainPropertyText("Operation", operation, es);
-
+					sliceId = pMotion->motionID;
 				}
-				/* FIXME */
-				appendGangAndDirectDispatchInfo(planstate, pMotion->motionID, es);
 				pname = "";
 
 			}
@@ -1284,12 +1291,18 @@ ExplainNode(Plan *plan, PlanState *planstate,
 	else
 	{
 		ExplainPropertyText("Node Type", sname, es);
+		ExplainPropertyInteger("Senders", nSenders, es);
+		ExplainPropertyInteger("Receivers", nReceivers, es);
+
 		if (strategy)
 			ExplainPropertyText("Strategy", strategy, es);
 		if (relationship)
 			ExplainPropertyText("Parent Relationship", relationship, es);
 		if (plan_name)
 			ExplainPropertyText("Subplan Name", plan_name, es);
+
+		appendGangAndDirectDispatchInfo(planstate, sliceId, es);
+
 	}
 
 	switch (nodeTag(plan))
@@ -1362,6 +1375,19 @@ ExplainNode(Plan *plan, PlanState *planstate,
 					ExplainPropertyText("Index Name", indexname, es);
 			}
 			break;
+		case T_ShareInputScan:
+			{
+				ShareInputScan *sisc = (ShareInputScan *) plan;
+				if (es->format == EXPLAIN_FORMAT_TEXT)
+					appendStringInfo(es->str, "Shared Scan (share slice:id %d:%d)",
+									currentSlice ? currentSlice->sliceIndex : -1, sisc->share_id);
+				else
+				{
+					ExplainPropertyInteger("Slice", currentSlice ? currentSlice->sliceIndex : -1, es);
+					ExplainPropertyInteger("Share", sisc->share_id, es);
+				}
+			}
+			break;
 		case T_PartitionSelector:
 			{
 				PartitionSelector *ps = (PartitionSelector *)plan;
@@ -1403,6 +1429,15 @@ ExplainNode(Plan *plan, PlanState *planstate,
 						break;
 					case JOIN_RIGHT:
 						jointype = "Right";
+						break;
+					case JOIN_IN:
+						jointype = "EXISTS";
+						break;
+					case JOIN_LASJ:
+						jointype = "Left Anti Semi";
+						break;
+					case JOIN_LASJ_NOTIN:
+						jointype = "Left Anti Semi (Not-in)";
 						break;
 					default:
 						jointype = "???";
@@ -1451,9 +1486,18 @@ ExplainNode(Plan *plan, PlanState *planstate,
 					ExplainPropertyText("Command", setopcmd, es);
 			}
 			break;
+		case T_Material:
+			pname = sname =  "Materialize";
+			break;
+		case T_Sort:
+			pname = sname =  "Sort";
+			break;
+
 		default:
 			break;
 	}
+
+	Assert(scaleFactor > 0.0)
 
 	if (es->costs)
 	{
@@ -1512,19 +1556,31 @@ ExplainNode(Plan *plan, PlanState *planstate,
 			ExplainPropertyFloat("Actual Loops", 0.0, 0, es);
 		}
 	}
+	if (gp_resqueue_print_operator_memory_limits)
+	{
+		if (es->format == EXPLAIN_FORMAT_TEXT)
+		{
+			appendStringInfo(es->str, " (operatorMem=" UINT64_FORMAT "KB)",
+						 PlanStateOperatorMemKB(planstate));
+		}
+		else
+		{
+			ExplainPropertyInteger("operatorMem", PlanStateOperatorMemKB(planstate), es);
+		}
+	}
 
-	/* in text format, first line ends here */
 	if (es->format == EXPLAIN_FORMAT_TEXT)
 		appendStringInfoChar(es->str, '\n');
 
-	/* target list */
-	if (es->verbose)
-		show_plan_tlist(plan, es);
+#ifdef DEBUG_EXPLAIN
+	appendStringInfo(es->str, "plan->targetlist=%s\n", nodeToString(plan->targetlist));
+#endif
 
 	/* quals, sort keys, etc */
 	switch (nodeTag(plan))
 	{
 		case T_IndexScan:
+		case T_DynamicIndexScan:
 			show_scan_qual(((IndexScan *) plan)->indexqualorig,
 						   "Index Cond", plan, outer_plan, es);
 			show_scan_qual(plan->qual, "Filter", plan, outer_plan, es);
@@ -1534,15 +1590,41 @@ ExplainNode(Plan *plan, PlanState *planstate,
 						   "Index Cond", plan, outer_plan, es);
 			break;
 		case T_BitmapHeapScan:
-			show_scan_qual(((BitmapHeapScan *) plan)->bitmapqualorig,
-						   "Recheck Cond", plan, outer_plan, es);
+		case T_BitmapAppendOnlyScan:
+		case T_BitmapTableScan:
+			/* XXX do we want to show this in production? */
+			if (nodeTag(plan) == T_BitmapHeapScan)
+			{
+				show_scan_qual(((BitmapHeapScan *) plan)->bitmapqualorig,
+							   "Recheck Cond", plan,
+							   outer_plan, es);
+			}
+			else if (nodeTag(plan) == T_BitmapAppendOnlyScan)
+			{
+				show_scan_qual(((BitmapAppendOnlyScan *) plan)->bitmapqualorig,
+							   "Recheck Cond", plan,
+							   outer_plan, es);
+			}
+			else if (nodeTag(plan) == T_BitmapTableScan)
+			{
+				show_scan_qual(((BitmapTableScan *) plan)->bitmapqualorig,
+							   "Recheck Cond",  plan,
+							   outer_plan, es);
+			}
 			/* FALL THRU */
 		case T_SeqScan:
+		case T_ExternalScan:
+		case T_AppendOnlyScan:
+		case T_AOCSScan:
+		case T_TableScan:
+		case T_DynamicTableScan:
 		case T_FunctionScan:
 		case T_ValuesScan:
 		case T_CteScan:
 		case T_SubqueryScan:
-			show_scan_qual(plan->qual, "Filter", plan, outer_plan, es);
+			show_scan_qual(plan->qual,
+					"Filter", plan,
+					outer_plan, es);
 			break;
 		case T_TidScan:
 			{
@@ -1554,14 +1636,20 @@ ExplainNode(Plan *plan, PlanState *planstate,
 
 				if (list_length(tidquals) > 1)
 					tidquals = list_make1(make_orclause(tidquals));
-				show_scan_qual(tidquals,  "TID Cond", plan, outer_plan, es);
-				show_scan_qual(plan->qual, "Filter", plan, outer_plan, es);
+
+				show_scan_qual(tidquals,
+						"TID Cond", plan,
+						outer_plan, es);
+				show_scan_qual(plan->qual,
+						"Filter", plan,
+						outer_plan, es);
 			}
 			break;
 		case T_NestLoop:
 			show_upper_qual(((NestLoop *) plan)->join.joinqual,
 					"Join Filter", plan,  es);
-			show_upper_qual(plan->qual, "Filter", plan,  es);
+			show_upper_qual(plan->qual,
+					"Filter", plan,  es);
 			break;
 		case T_MergeJoin:
 			show_upper_qual(((MergeJoin *) plan)->mergeclauses,
@@ -1571,24 +1659,145 @@ ExplainNode(Plan *plan, PlanState *planstate,
 			show_upper_qual(plan->qual, "Filter", plan, es);
 			break;
 		case T_HashJoin:
-			show_upper_qual(((HashJoin *) plan)->hashclauses,
-							"Hash Cond", plan, es);
-			show_upper_qual(((HashJoin *) plan)->join.joinqual,
-							"Join Filter", plan, es);
-			show_upper_qual(plan->qual, "Filter", plan, es);
+			{
+				HashJoin *hash_join = (HashJoin *) plan;
+				/*
+				 * In the case of an "IS NOT DISTINCT" condition, we display
+				 * hashqualclauses instead of hashclauses.
+				 */
+				List *cond_to_show = hash_join->hashclauses;
+				if (list_length(hash_join->hashqualclauses) > 0) {
+					cond_to_show = hash_join->hashqualclauses;
+				}
+				show_upper_qual(cond_to_show,
+								"Hash Cond", plan, es);
+				show_upper_qual(((HashJoin *) plan)->join.joinqual,
+								"Join Filter", plan, es);
+				show_upper_qual(plan->qual,
+								"Filter", plan, es);
+			}
 			break;
 		case T_Agg:
-			show_upper_qual(plan->qual, "Filter", plan, es);
+			show_upper_qual(plan->qual,
+							"Filter", plan, es);
+			show_grouping_keys(plan,
+						       ((Agg *) plan)->numCols,
+						       ((Agg *) plan)->grpColIdx,
+						       "Group By", es);
+			break;
+		case T_Window:
+			{
+				Window *window = (Window *)plan;
+				ListCell *cell;
+				char orderKeyStr[32]; /* XXX big enough */
+				int i;
+
+				if ( window->numPartCols > 0 )
+				{
+					show_grouping_keys(plan,
+									   window->numPartCols,
+									   window->partColIdx,
+									   "Partition By", es);
+				}
+
+				if (list_length(window->windowKeys) > 1)
+					i = 0;
+				else
+					i = -1;
+
+				foreach(cell, window->windowKeys)
+				{
+					if ( i < 0 )
+						sprintf(orderKeyStr, "Order By");
+					else
+					{
+						sprintf(orderKeyStr, "Order By (level %d)", ++i);
+					}
+
+					show_sort_keys((SortState *)planstate, es);
+				}
+				/* XXX don't show framing for now */
+			}
+			break;
+		case T_TableFunctionScan:
+			{
+				show_scan_qual(plan->qual,
+							   "Filter",
+							   plan,
+							   outer_plan, es);
+
+				/* Partitioning and ordering information */
+
+			}
+			break;
+
+		case T_Unique:
+			show_motion_keys(plan,
+								 NIL,
+								 ((Unique *) plan)->numCols,
+								 ((Unique *) plan)->uniqColIdx,
+								 "Group By", es);
 			break;
 		case T_Sort:
-			show_sort_keys((SortState*)planstate, es);
-			show_sort_info((SortState *) planstate, es);
+			{
+				bool bLimit = (((Sort *) plan)->limitCount
+							   || ((Sort *) plan)->limitOffset);
+
+				bool bNoDup = ((Sort *) plan)->noduplicates;
+
+				char *SortKeystr = "Sort Key";
+
+				if ((bLimit && bNoDup))
+					SortKeystr = "Sort Key (Limit Distinct)";
+				else if (bLimit)
+					SortKeystr = "Sort Key (Limit)";
+				else if (bNoDup)
+					SortKeystr = "Sort Key (Distinct)";
+				show_sort_keys((SortState*)planstate, es);
+				show_sort_info((SortState *) planstate, es);
+			}
 			break;
 		case T_Result:
 			show_upper_qual((List *) ((Result *) plan)->resconstantqual,
 							"One-Time Filter", plan, es);
 			show_upper_qual(plan->qual, "Filter", plan, es);
 			break;
+		case T_Motion:
+			{
+				Motion	   *pMotion = (Motion *) plan;
+                SliceTable *sliceTable = planstate->state->es_sliceTable;
+
+				if (pMotion->sendSorted || pMotion->motionType == MOTIONTYPE_HASH)
+					show_motion_keys(plan,
+							pMotion->hashExpr,
+							pMotion->numSortCols,
+							pMotion->sortColIdx,
+							"Merge Key", es);
+
+                /* Descending into a new slice. */
+                if (sliceTable)
+                    es->currentSlice = (Slice *)list_nth(sliceTable->slices,
+                                                         pMotion->motionID);
+			}
+			break;
+		case T_AssertOp:
+			{
+				show_upper_qual(plan->qual,
+								"Assert Cond", plan, es);
+			}
+			break;
+		case T_PartitionSelector:
+			{
+				/*
+				 *  FIXME this is probably wrong
+				 *  our code calls explain_outNode recursively
+				 *  with the correct parentPlan
+				 */
+
+				explain_partition_selector((PartitionSelector *) plan, innerPlan(plan)?outerPlan(plan):NULL, es);
+			}
+			break;
+
 		default:
 			break;
 	}
@@ -2931,7 +3140,7 @@ show_upper_qual(List *qual, const char *qlabel, Plan *plan,
 	appendStringInfo(es->str, "  %s: %s\n", qlabel, exprstr);
 }
 #endif
-#ifdef XXX
+
 /*
  * CDB: Show GROUP BY keys for an Agg or Group node.
  */
@@ -3134,7 +3343,7 @@ explain_partition_selector(PartitionSelector *ps, Plan *parent, ExplainState *es
 		appendStringInfo(es->str, "  Partitions selected: %d (out of %d)\n", nPartsSelected, nPartsTotal);
 	}
 }
-#endif /* XXX */
+
 /*
  * Show the targetlist of a plan node
  */
@@ -3368,7 +3577,10 @@ ExplainScanTarget(Scan *plan, ExplainState *es)
 		return;
 	rte = rt_fetch(plan->scanrelid, es->rtable);
 
-
+/*
+ * FIXME may need to change this to align with line 1959 of old code
+ *
+ */
 	switch (nodeTag(plan))
 	{
 		case T_SeqScan:
