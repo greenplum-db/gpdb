@@ -119,7 +119,7 @@ PARTITION BY RANGE (year)
   DEFAULT PARTITION outlying_years );
 insert into p3_sales values (1, 2002, 1, 20, 'usa');
 insert into p3_sales values (1, 2002, 1, 20, 'usa');
-vacuum analyze;
+analyze;
 select relname, reltuples, relpages from pg_class where relname like 'p3_sales%' order by relname;
 select * from pg_stats where tablename like 'p3_sales%' order by tablename, attname;
 select count(*) from pg_stat_last_operation pgl, pg_class pgc where pgl.objid=pgc.oid and pgc.relname like 'p3_sales%';

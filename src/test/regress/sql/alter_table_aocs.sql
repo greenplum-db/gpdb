@@ -245,7 +245,7 @@ insert into addcol7 values
 select * from addcol7 where tag2 like 'p%' order by user_id;
 update addcol7 set new1 = 0, tag1 = -1 where tag2 like 'p%';
 delete from addcol7 where new2 is null;
-vacuum addcol7;
+analyze addcol7;
 select * from addcol7 where tag2 like 'p%' order by user_id;
 
 create table addcol8 (a int, b varchar(10), c int, d int)
