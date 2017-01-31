@@ -521,7 +521,7 @@ delete from s where b = (select min(a) from r where b = s.b);
 
 update p set c = c + 1;
 
-update p set c = c + 1 where b in (select b from s);
+update p set c = c + 1 where b in (select b from s) and c = 0;
 -- ----------------------------------------------------------------------
 -- Test: unsupported_cases1.sql
 -- ----------------------------------------------------------------------
