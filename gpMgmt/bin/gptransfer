@@ -32,6 +32,8 @@ from threading import Thread, Event, Lock
 import thread
 from optparse import OptionGroup, SUPPRESS_HELP
 
+from gpversion import GpVersion
+
 try:
     from gppylib.mainUtils import simple_main, addStandardLoggingAndHelpOptions, \
         ProgramArgumentValidationException
@@ -110,6 +112,7 @@ DEFAULT_GPFDIST_LAST_PORT = -1
 MIN_GPFDIST_TIMEOUT = 2
 MAX_GPFDIST_TIMEOUT = 600
 GPFDIST_PORT_REGEX = r"Serving HTTP on port (\d+)"
+VERSION_REGEX_PATTERN = re.compile(".*Greenplum Database (\d).*")
 
 # --------------------------------------------------------------------------
 # Logging
@@ -4050,13 +4053,12 @@ class GpTransfer(object):
             raise Exception('Unknown partitioning type %s found, %s' % (part_type, part_transfer_pair_msg))
 
     def _has_same_range_partition_value(self, source_partition_info, dest_partition_info, part_transfer_pair_msg):
-        if (source_partition_info['parrangestartincl'] != dest_partition_info['parrangestartincl'] or
-                    source_partition_info['parrangestart'] != dest_partition_info['parrangestart'] or
-                    source_partition_info['parrangeend'] != dest_partition_info['parrangeend'] or
-                    source_partition_info['parrangeevery'] != dest_partition_info['parrangeevery']):
+        comparator = PartitionComparatorFactory().get(source_partition_info, dest_partition_info)
+        result = comparator.isSame(source_partition_info, dest_partition_info)
+        if not result:
             logger.error('Range partition value is different between %s' % part_transfer_pair_msg)
-            return False
-        return True
+
+        return result
 
     def _has_same_list_partition_value(self, source_partition_info, dest_partition_info, part_transfer_pair_msg):
         source_partition_values = self._process_list_partition_value(source_partition_info['parlistvalues'])
@@ -4118,6 +4120,10 @@ class GpTransfer(object):
             partition_info['parrangeend'] = row[5]
             partition_info['parrangeevery'] = row[6]
             partition_info['parlistvalues'] = row[7]
+
+            row = execSQLForSingletonRow(conn, 'SELECT version()')
+            version = GpVersion(row[0])
+            partition_info['version'] = version.getVersionRelease()
         return partition_info
 
     def _check_leaf_partition_set(self, table_pair):
@@ -4208,6 +4214,23 @@ class GpTransfer(object):
                 raise Exception('Hostname %s missing from map file' % seg_host)
             if len(self._host_map[seg_host]) == 0:
                 raise Exception('No addresses for hostname %s' % seg_host)
+
+class SameVersionPartitionComparator:
+    def isSame(self, source_partition_info, dest_partition_info):
+
+        return source_partition_info['version'] == dest_partition_info['version'] and \
+               source_partition_info['parrangestartincl'] == dest_partition_info['parrangestartincl'] and \
+               source_partition_info['parrangestart'] == dest_partition_info['parrangestart'] and \
+               source_partition_info['parrangeend'] == dest_partition_info['parrangeend'] and \
+               source_partition_info['parrangeevery'] == dest_partition_info['parrangeevery']
+
+class PartitionComparatorFactory:
+    def get(self, source, dest):
+        if source['version'] == dest['version']:
+            return SameVersionPartitionComparator()
+
+        raise Exception("cannot determine comparator for unmatched source and dest versions within: %s \n\n %s" %
+                        (source, dest))
 
 
 # --------------------------------------------------------------------------

@@ -964,7 +964,8 @@ class SingletonSideEffect:
             "select c.oid": ["oid1", "oid1"],
             "select parisdefault, parruleord, parrangestartincl,": ["f", "1", "t", "t", 100, 10, "", ""],
             "select n.nspname, c.relname": ["public", "my_table_partition1"],
-            "SELECT count(*) FROM": [20]
+            "SELECT count(*) FROM": [20],
+            "SELECT version()": ["PostgreSQL 8.3.23 (Greenplum Database 5.0.0 build fdafasdf"],
         }
 
         self.counters = dict((key, 0) for key in self.values.keys())
