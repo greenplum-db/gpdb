@@ -34,8 +34,8 @@ CREATE TABLE
  col015 | bytea                       |                                              | extended | 
  col016 | timestamp with time zone    |                                              | plain    | 
  col017 | interval                    |                                              | plain    | 
- col018 | cidr                        |                                              | plain    | 
- col019 | inet                        |                                              | plain    | 
+ col018 | cidr                        |                                              | main     | 
+ col019 | inet                        |                                              | main     | 
  col020 | macaddr                     |                                              | plain    | 
  col022 | money                       |                                              | plain    | 
  col024 | time with time zone         |                                              | plain    | 
@@ -96,8 +96,8 @@ CREATE TABLE
  col015 | bytea                       |                                              | extended | 
  col016 | timestamp with time zone    |                                              | plain    | 
  col017 | interval                    |                                              | plain    | 
- col018 | cidr                        |                                              | plain    | 
- col019 | inet                        |                                              | plain    | 
+ col018 | cidr                        |                                              | main     | 
+ col019 | inet                        |                                              | main     | 
  col020 | macaddr                     |                                              | plain    | 
  col022 | money                       |                                              | plain    | 
  col024 | time with time zone         |                                              | plain    | 
@@ -161,8 +161,8 @@ ALTER TABLE
  col015 | bytea                       |                                              | extended | 
  col016 | timestamp with time zone    |                                              | plain    | 
  col017 | interval                    |                                              | plain    | 
- col018 | cidr                        |                                              | plain    | 
- col019 | inet                        |                                              | plain    | 
+ col018 | cidr                        |                                              | main     | 
+ col019 | inet                        |                                              | main     | 
  col020 | macaddr                     |                                              | plain    | 
  col022 | money                       |                                              | plain    | 
  col024 | time with time zone         |                                              | plain    | 
@@ -233,8 +233,8 @@ ALTER TABLE
  col015 | bytea                       |                                              | extended | 
  col016 | timestamp with time zone    |                                              | plain    | 
  col017 | interval                    |                                              | plain    | 
- col018 | cidr                        |                                              | plain    | 
- col019 | inet                        |                                              | plain    | 
+ col018 | cidr                        |                                              | main     | 
+ col019 | inet                        |                                              | main     | 
  col020 | macaddr                     |                                              | plain    | 
  col022 | money                       |                                              | plain    | 
  col024 | time with time zone         |                                              | plain    | 
@@ -304,8 +304,8 @@ ALTER TABLE
  col015 | bytea                       |                                              | extended | 
  col016 | timestamp with time zone    |                                              | plain    | 
  col017 | interval                    |                                              | plain    | 
- col018 | cidr                        |                                              | plain    | 
- col019 | inet                        |                                              | plain    | 
+ col018 | cidr                        |                                              | main     | 
+ col019 | inet                        |                                              | main     | 
  col020 | macaddr                     |                                              | plain    | 
  col022 | money                       |                                              | plain    | 
  col024 | time with time zone         |                                              | plain    | 
@@ -374,8 +374,8 @@ ALTER TABLE
  col015 | bytea                       |                                              | extended | 
  col016 | timestamp with time zone    |                                              | plain    | 
  col017 | interval                    |                                              | plain    | 
- col018 | cidr                        |                                              | plain    | 
- col019 | inet                        |                                              | plain    | 
+ col018 | cidr                        |                                              | main     | 
+ col019 | inet                        |                                              | main     | 
  col020 | macaddr                     |                                              | plain    | 
  col022 | money                       |                                              | plain    | 
  col024 | time with time zone         |                                              | plain    | 
@@ -443,8 +443,8 @@ ALTER TABLE
  col015 | bytea                       |                                              | extended | 
  col016 | timestamp with time zone    |                                              | plain    | 
  col017 | interval                    |                                              | plain    | 
- col018 | cidr                        |                                              | plain    | 
- col019 | inet                        |                                              | plain    | 
+ col018 | cidr                        |                                              | main     | 
+ col019 | inet                        |                                              | main     | 
  col020 | macaddr                     |                                              | plain    | 
  col022 | money                       |                                              | plain    | 
  col024 | time with time zone         |                                              | plain    | 
@@ -511,8 +511,8 @@ ALTER TABLE
  col015 | bytea                       |                                              | extended | 
  col016 | timestamp with time zone    |                                              | plain    | 
  col017 | interval                    |                                              | plain    | 
- col018 | cidr                        |                                              | plain    | 
- col019 | inet                        |                                              | plain    | 
+ col018 | cidr                        |                                              | main     | 
+ col019 | inet                        |                                              | main     | 
  col020 | macaddr                     |                                              | plain    | 
  col022 | money                       |                                              | plain    | 
  col024 | time with time zone         |                                              | plain    | 
@@ -578,8 +578,8 @@ ALTER TABLE
  col015 | bytea                       |                                              | extended | 
  col016 | timestamp with time zone    |                                              | plain    | 
  col017 | interval                    |                                              | plain    | 
- col018 | cidr                        |                                              | plain    | 
- col019 | inet                        |                                              | plain    | 
+ col018 | cidr                        |                                              | main     | 
+ col019 | inet                        |                                              | main     | 
  col020 | macaddr                     |                                              | plain    | 
  col022 | money                       |                                              | plain    | 
  col024 | time with time zone         |                                              | plain    | 
@@ -644,8 +644,8 @@ ALTER TABLE
  col015 | bytea                       |           | extended | 
  col016 | timestamp with time zone    |           | plain    | 
  col017 | interval                    |           | plain    | 
- col018 | cidr                        |           | plain    | 
- col019 | inet                        |           | plain    | 
+ col018 | cidr                        |           | main     | 
+ col019 | inet                        |           | main     | 
  col020 | macaddr                     |           | plain    | 
  col022 | money                       |           | plain    | 
  col024 | time with time zone         |           | plain    | 
@@ -709,8 +709,8 @@ ALTER TABLE
  col015 | bytea                       |           | extended | 
  col016 | timestamp with time zone    |           | plain    | 
  col017 | interval                    |           | plain    | 
- col018 | cidr                        |           | plain    | 
- col019 | inet                        |           | plain    | 
+ col018 | cidr                        |           | main     | 
+ col019 | inet                        |           | main     | 
  col020 | macaddr                     |           | plain    | 
  col022 | money                       |           | plain    | 
  col024 | time with time zone         |           | plain    | 
@@ -773,8 +773,8 @@ ALTER TABLE
  col015 | bytea                       |           | extended | 
  col016 | timestamp with time zone    |           | plain    | 
  col017 | interval                    |           | plain    | 
- col018 | cidr                        |           | plain    | 
- col019 | inet                        |           | plain    | 
+ col018 | cidr                        |           | main     | 
+ col019 | inet                        |           | main     | 
  col020 | macaddr                     |           | plain    | 
  col022 | money                       |           | plain    | 
  col024 | time with time zone         |           | plain    | 
@@ -836,8 +836,8 @@ ALTER TABLE
  col015 | bytea                       |           | extended | 
  col016 | timestamp with time zone    |           | plain    | 
  col017 | interval                    |           | plain    | 
- col018 | cidr                        |           | plain    | 
- col019 | inet                        |           | plain    | 
+ col018 | cidr                        |           | main     | 
+ col019 | inet                        |           | main     | 
  col020 | macaddr                     |           | plain    | 
  col022 | money                       |           | plain    | 
  col024 | time with time zone         |           | plain    | 
@@ -898,8 +898,8 @@ ALTER TABLE
  col015 | bytea                       |           | extended | 
  col016 | timestamp with time zone    |           | plain    | 
  col017 | interval                    |           | plain    | 
- col018 | cidr                        |           | plain    | 
- col019 | inet                        |           | plain    | 
+ col018 | cidr                        |           | main     | 
+ col019 | inet                        |           | main     | 
  col020 | macaddr                     |           | plain    | 
  col022 | money                       |           | plain    | 
  col024 | time with time zone         |           | plain    | 
@@ -959,8 +959,8 @@ ALTER TABLE
  col015 | bytea                       |           | extended | 
  col016 | timestamp with time zone    |           | plain    | 
  col017 | interval                    |           | plain    | 
- col018 | cidr                        |           | plain    | 
- col019 | inet                        |           | plain    | 
+ col018 | cidr                        |           | main     | 
+ col019 | inet                        |           | main     | 
  col020 | macaddr                     |           | plain    | 
  col022 | money                       |           | plain    | 
  col024 | time with time zone         |           | plain    | 
@@ -1019,8 +1019,8 @@ ALTER TABLE
  col015 | bytea                       |           | extended | 
  col016 | timestamp with time zone    |           | plain    | 
  col017 | interval                    |           | plain    | 
- col018 | cidr                        |           | plain    | 
- col019 | inet                        |           | plain    | 
+ col018 | cidr                        |           | main     | 
+ col019 | inet                        |           | main     | 
  col020 | macaddr                     |           | plain    | 
  col022 | money                       |           | plain    | 
  col024 | time with time zone         |           | plain    | 
@@ -1078,8 +1078,8 @@ ALTER TABLE
  a      | integer                     |           | plain    | 
  col016 | timestamp with time zone    |           | plain    | 
  col017 | interval                    |           | plain    | 
- col018 | cidr                        |           | plain    | 
- col019 | inet                        |           | plain    | 
+ col018 | cidr                        |           | main     | 
+ col019 | inet                        |           | main     | 
  col020 | macaddr                     |           | plain    | 
  col022 | money                       |           | plain    | 
  col024 | time with time zone         |           | plain    | 
@@ -1136,8 +1136,8 @@ ALTER TABLE
 --------+-----------------------------+-----------+----------+-------------
  a      | integer                     |           | plain    | 
  col017 | interval                    |           | plain    | 
- col018 | cidr                        |           | plain    | 
- col019 | inet                        |           | plain    | 
+ col018 | cidr                        |           | main     | 
+ col019 | inet                        |           | main     | 
  col020 | macaddr                     |           | plain    | 
  col022 | money                       |           | plain    | 
  col024 | time with time zone         |           | plain    | 
@@ -1193,8 +1193,8 @@ ALTER TABLE
  Column |            Type             | Modifiers | Storage  | Description 
 --------+-----------------------------+-----------+----------+-------------
  a      | integer                     |           | plain    | 
- col018 | cidr                        |           | plain    | 
- col019 | inet                        |           | plain    | 
+ col018 | cidr                        |           | main     | 
+ col019 | inet                        |           | main     | 
  col020 | macaddr                     |           | plain    | 
  col022 | money                       |           | plain    | 
  col024 | time with time zone         |           | plain    | 
@@ -1250,7 +1250,7 @@ ALTER TABLE
  Column |            Type             | Modifiers | Storage  | Description 
 --------+-----------------------------+-----------+----------+-------------
  a      | integer                     |           | plain    | 
- col019 | inet                        |           | plain    | 
+ col019 | inet                        |           | main     | 
  col020 | macaddr                     |           | plain    | 
  col022 | money                       |           | plain    | 
  col024 | time with time zone         |           | plain    | 
