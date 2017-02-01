@@ -520,6 +520,8 @@ use_physical_tlist(PlannerInfo *root, RelOptInfo *rel)
 static void
 disuse_physical_tlist(Plan *plan, Path *path)
 {
+	List	*tlist;
+	int		i;
 	/* Only need to undo it for path types handled by create_scan_plan() */
 	switch (path->pathtype)
 	{
@@ -535,15 +537,40 @@ disuse_physical_tlist(Plan *plan, Path *path)
 		case T_SubqueryScan:
 		case T_FunctionScan:
 		case T_ValuesScan:
-			plan->targetlist = build_relation_tlist(path->parent);
+			tlist = build_relation_tlist(path->parent);
 			/**
 			 * If plan has a flow node, ensure all entries of hashExpr
 			 * are in the targetlist.
 			 */
 			if (plan->flow && plan->flow->hashExpr)
 			{
-				plan->targetlist = add_to_flat_tlist(plan->targetlist, plan->flow->hashExpr, true /* resjunk */);
+				tlist = add_to_flat_tlist(tlist, plan->flow->hashExpr, true /* resjunk */);
 			}
+			/**
+			 * If plan flow has sort columns, ensure all the sort column
+			 * indices of flow node have updated resno refering to the
+			 * new target list.
+			 */
+			if (plan->flow && plan->flow->numSortCols > 0)
+			{
+				for (i = 0; i < plan->flow->numSortCols; i++)
+				{
+					Index   kidTargetIdx;
+					TargetEntry *tle;
+					TargetEntry *newtle;
+					
+					kidTargetIdx = plan->flow->sortColIdx[i];
+					tle = get_tle_by_resno(plan->targetlist, kidTargetIdx);
+					Assert(tle);
+					
+					newtle = tlist_member(tle->expr, tlist);
+					Assert(newtle);
+					
+					plan->flow->sortColIdx[i] = newtle->resno;
+				}
+			}
+
+			plan->targetlist = tlist;
 			break;
 		default:
 			break;
