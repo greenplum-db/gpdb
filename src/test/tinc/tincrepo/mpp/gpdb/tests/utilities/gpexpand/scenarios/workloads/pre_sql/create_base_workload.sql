@@ -274,45 +274,30 @@ FROM generate_series(1, 1000)i;
 
 
 
-DROP TABLE IF EXISTS users_rank_1;
-CREATE TABLE users_rank_1 (
+DROP TABLE IF EXISTS users_rank_third_to_last;
+CREATE TABLE users_rank_third_to_last (
     id    INT4,
     name  TEXT,
     age   INT4
 );
-INSERT INTO users_rank_1 select i, 'name'||i, i%50+1 from generate_series(1,1000) i;
+INSERT INTO users_rank_third_to_last select i, 'name'||i, i%50+1 from generate_series(1,1000) i;
 
 
-DROP TABLE IF EXISTS users_rank_3;
-CREATE TABLE users_rank_3 (
+DROP TABLE IF EXISTS users_rank_second_to_last;
+CREATE TABLE users_rank_second_to_last (
     id    SERIAL,
     name  TEXT,
     age   INT4
 ) DISTRIBUTED BY (age);
-INSERT INTO users_rank_3 select i, 'name'||i, i%50+1 from generate_series(1,1000) i;
+INSERT INTO users_rank_second_to_last select i, 'name'||i, i%50+1 from generate_series(1,1000) i;
 
-DROP TABLE IF EXISTS users_rank_2;
-CREATE TABLE users_rank_2 (
+DROP TABLE IF EXISTS users_rank_very_last;
+CREATE TABLE users_rank_very_last (
     id    SERIAL,
     name  TEXT,
     age   INT4
 ) DISTRIBUTED RANDOMLY;
-INSERT INTO users_rank_2 select i, 'name'||i, i%50+1 from generate_series(1,1000) i;
-
-
-DROP TABLE IF EXISTS users_rank_10;
-CREATE TABLE users_rank_10(
-    a text,
-    b int,
-    c text,
-    d timestamp
-)
-distributed by (a)
-PARTITION BY RANGE(b) (START (0) END (100) INCLUSIVE EVERY(20));
-
-INSERT INTO users_rank_10
-SELECT i, (i * 10) % 100, i::text, '2013-09-01 03:04:05'
-FROM generate_series(1, 1000)i;
+INSERT INTO users_rank_very_last select i, 'name'||i, i%50+1 from generate_series(1,1000) i;
 
 DROP TABLE IF EXISTS users_with_primary_key;
 CREATE TABLE users_with_primary_key (
