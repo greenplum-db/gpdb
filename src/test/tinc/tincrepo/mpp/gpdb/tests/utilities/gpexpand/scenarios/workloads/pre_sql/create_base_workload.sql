@@ -1,4 +1,3 @@
--- @product_version gpdb: [4.3.99-]
 --@db_name heap_tables_db
 -- heap table distributed by a single column
 DROP TABLE IF EXISTS heap_table_1;
