@@ -2610,8 +2610,7 @@ class PrepFileSpaces(Command):
             entry = [filespaceNames[i] , filespaceLocations[i]]
             self.filespaces.append(entry)
         cmdStr  = """echo "select * from gp_prep_new_segment( array %s )" """ % (str(self.filespaces))
-        ###cmdStr += """ | $GPHOME/bin/postgres --single -z 1 -O -c gp_session_role=utility -c gp_debug_linger=0 -c gp_before_filespace_setup=true -c gp_before_persistence_work=true -E -D %s -b %s -C %s template1""" % (self.sysDataDirectory, str(self.dbid), str(self.contentId))
-        cmdStr += """ | $GPHOME/bin/postgres --single -z 1 -O -c gp_session_role=utility -c gp_debug_linger=0 -c gp_before_filespace_setup=true  -E -D %s -b %s -C %s template1""" % (self.sysDataDirectory, str(self.dbid), str(self.contentId))
+        cmdStr += """ | $GPHOME/bin/postgres --single --gp_num_contents_in_cluster=1 -O -c gp_session_role=utility -c gp_debug_linger=0 -c gp_before_filespace_setup=true  -E -D %s --gp_dbid=%s --gp_contentid=%s template1""" % (self.sysDataDirectory, str(self.dbid), str(self.contentId))
         Command.__init__(self,name,cmdStr,ctxt,remoteHost)
 
 
@@ -2989,183 +2988,186 @@ def sig_handler(sig, arg):
     os.kill(os.getpid(), sig)
 
 
-#------------------------------- Mainline --------------------------------
-gp_expand=None
-remove_pid=True
-table_expand_error=False
+# --------------------------------------------------------------------------
+# Main
+# --------------------------------------------------------------------------
+if __name__ == '__main__':
+    gp_expand=None
+    remove_pid=True
+    table_expand_error=False
 
-coverage = GpCoverage()
-coverage.start()
+    coverage = GpCoverage()
+    coverage.start()
 
-try:
-
-    # setup signal handlers so we can clean up correctly
-    signal.signal(signal.SIGTERM, sig_handler)
-    signal.signal(signal.SIGHUP, sig_handler)
-
-    logger = get_default_logger()
-    setup_tool_logging(EXECNAME,getLocalHostname(),getUserName())
-
-    options, args = parseargs()
-
-    if options.verbose:
-        enable_verbose_logging()
-
-    if is_gpexpand_running(options.master_data_directory):
-        logger.error('gpexpand is already running.  Only one instance')
-        logger.error('of gpexpand is allowed at a time.')
-        remove_pid = False
-        sys.exit(1)
-    else:
-        create_pid_file(options.master_data_directory)
-
-    # prepare provider for updateSystemConfig
-    gpEnv = GpMasterEnvironment(options.master_data_directory, True)
-    configurationInterface.registerConfigurationProvider( configurationImplGpdb.GpConfigurationProviderUsingGpdbCatalog() )
-    configurationInterface.getConfigurationProvider().initializeProvider(gpEnv.getMasterPort())
-
-    dburl = dbconn.DbURL()
-    if options.database:
-        dburl.pgdb = options.database
-
-    gpexpand_db_status = gpexpand.prepare_gpdb_state(logger, dburl)
-
-    # Get array configuration
     try:
-        gparray = GpArray.initFromCatalog(dburl,utility=True)
-    except DatabaseError, ex:
-        logger.error('Failed to connect to database.  Make sure the')
-        logger.error('Greenplum instance you wish to expand is running')
-        logger.error('and that your environment is correct, then rerun')
-        logger.error('gexpand ' + ' '.join(sys.argv[1:]))
-        gpexpand.get_gpdb_in_state(GPDB_STARTED)
-        sys.exit(1)
 
-    gp_expand = gpexpand(logger,gparray,dburl,parallel=options.parallel)
+        # setup signal handlers so we can clean up correctly
+        signal.signal(signal.SIGTERM, sig_handler)
+        signal.signal(signal.SIGHUP, sig_handler)
 
-    gpexpand_file_status = None
-    if not gpexpand_db_status:
-        gpexpand_file_status = gp_expand.get_state()
+        logger = get_default_logger()
+        setup_tool_logging(EXECNAME,getLocalHostname(),getUserName())
 
-    if options.clean and gpexpand_db_status is not None:
-        gp_expand.cleanup_schema(gpexpand_db_status)
-        logger.info('Cleanup Finished.  exiting...')
-        sys.exit(0)
+        options, args = parseargs()
 
-    if options.rollback:
+        if options.verbose:
+            enable_verbose_logging()
+
+        if is_gpexpand_running(options.master_data_directory):
+            logger.error('gpexpand is already running.  Only one instance')
+            logger.error('of gpexpand is allowed at a time.')
+            remove_pid = False
+            sys.exit(1)
+        else:
+            create_pid_file(options.master_data_directory)
+
+        # prepare provider for updateSystemConfig
+        gpEnv = GpMasterEnvironment(options.master_data_directory, True)
+        configurationInterface.registerConfigurationProvider( configurationImplGpdb.GpConfigurationProviderUsingGpdbCatalog() )
+        configurationInterface.getConfigurationProvider().initializeProvider(gpEnv.getMasterPort())
+
+        dburl = dbconn.DbURL()
+        if options.database:
+            dburl.pgdb = options.database
+
+        gpexpand_db_status = gpexpand.prepare_gpdb_state(logger, dburl)
+
+        # Get array configuration
         try:
-            if gpexpand_db_status:
-                logger.error('A previous expansion is either in progress or has')
-                logger.error('completed.  Since the setup portion of the expansion')
-                logger.error('has finished successfully there is nothing to rollback.')
-                sys.exit(1)
-            if gpexpand_file_status is None:
-                logger.error('There is no partially completed setup to rollback.')
-                sys.exit(1)
-            gp_expand.rollback()
-            logger.info('Rollback complete.  Greenplum Database can now be started')
-            sys.exit(0)
-        except ExpansionError,e:
-            logger.error(e)
+            gparray = GpArray.initFromCatalog(dburl,utility=True)
+        except DatabaseError, ex:
+            logger.error('Failed to connect to database.  Make sure the')
+            logger.error('Greenplum instance you wish to expand is running')
+            logger.error('and that your environment is correct, then rerun')
+            logger.error('gexpand ' + ' '.join(sys.argv[1:]))
+            gpexpand.get_gpdb_in_state(GPDB_STARTED)
             sys.exit(1)
 
-    if gpexpand_db_status == 'SETUP DONE' or gpexpand_db_status == 'EXPANSION STOPPED':
-        if not gp_expand.validate_max_connections():
-            raise ValidationError()
-        gp_expand.perform_expansion()
-    elif gpexpand_db_status == 'EXPANSION STARTED':
-        logger.info('It appears the last run of gpexpand did not exit cleanly.')
-        logger.info('Resuming the expansion process...')
-        if not gp_expand.validate_max_connections():
-            raise ValidationError()
-        gp_expand.perform_expansion()
-    elif gpexpand_db_status == 'EXPANSION COMPLETE':
-        logger.info('Expansion has already completed.')
-        logger.info('If you want to expand again, run gpexpand -c to remove')
-        logger.info('the gpexpand schema and begin a new expansion')
-    elif gpexpand_db_status == None and gpexpand_file_status == None and options.filename:
-        if not gp_expand.validate_unalterable_tables():
-            raise ValidationError()
-        if gp_expand.check_unique_indexes():
-            logger.info("Tables with unique indexes exist.  Until these tables are successfully")
-            logger.info("redistributed, unique constraints may be violated.  For more information")
-            logger.info("on this issue, see the Greenplum Database Administrator Guide")
-            if not options.silent:
-                if not ask_yesno(None,"Would you like to continue with System Expansion",'N'):
-                    raise ValidationError()
-        newSegList = gp_expand.read_input_files()
-        gp_expand.addNewSegments(newSegList)
-        gp_expand.sync_packages()
-        gp_expand.start_prepare()
-        gp_expand.add_segments()
-        gp_expand.update_original_segments()
-        gp_expand.update_catalog()
-        gp_expand.move_filespaces()
-        gp_expand.configure_new_segment_filespaces()
-        gp_expand.cleanup_new_segments()
-        gp_expand.setup_schema()
-        gp_expand.prepare_schema()
-        logger.info('Starting Greenplum Database')
-        GpStart.local('gpexpand expansion prepare final start')
-        gp_expand.sync_new_mirrors()
-        logger.info('************************************************')
-        logger.info('Initialization of the system expansion complete.')
-        logger.info('To begin table expansion onto the new segments')
-        logger.info('rerun gpexpand')
-        logger.info('************************************************')
-    elif options.filename is None and gpexpand_file_status == None:
-        interview_setup(gparray)
-    else:
-        logger.error('The last gpexpand setup did not complete successfully.')
-        logger.error('Please run gpexpand -r to rollback to the original state.')
+        gp_expand = gpexpand(logger,gparray,dburl,parallel=options.parallel)
 
-    logger.info("Exiting...")
-    sys.exit(0)
+        gpexpand_file_status = None
+        if not gpexpand_db_status:
+            gpexpand_file_status = gp_expand.get_state()
 
-except ValidationError:
-    logger.info('Bringing Greenplum Database back online...')
-    if gp_expand is not None:
-        gp_expand.shutdown()
-    gpexpand.get_gpdb_in_state(GPDB_STARTED)
-    sys.exit()
-except Exception,e:
-    if options.verbose:
-        logger.exception("gpexpand failed. exiting...")
-    else:
-        logger.error("gpexpand failed: %s \n\nExiting..." % e )
-    if gp_expand is not None and gp_expand.pastThePointOfNoReturn == True:
-       logger.error('gpexpand is past the point of rollback. Any remaining issues must be addressed outside of gpexpand.')
-    if gp_expand is not None:
-        if gpexpand_db_status is None and gp_expand.get_state() is None:
-            logger.info('Bringing Greenplum Database back online...')
-            gpexpand.get_gpdb_in_state(GPDB_STARTED)
+        if options.clean and gpexpand_db_status is not None:
+            gp_expand.cleanup_schema(gpexpand_db_status)
+            logger.info('Cleanup Finished.  exiting...')
+            sys.exit(0)
+
+        if options.rollback:
+            try:
+                if gpexpand_db_status:
+                    logger.error('A previous expansion is either in progress or has')
+                    logger.error('completed.  Since the setup portion of the expansion')
+                    logger.error('has finished successfully there is nothing to rollback.')
+                    sys.exit(1)
+                if gpexpand_file_status is None:
+                    logger.error('There is no partially completed setup to rollback.')
+                    sys.exit(1)
+                gp_expand.rollback()
+                logger.info('Rollback complete.  Greenplum Database can now be started')
+                sys.exit(0)
+            except ExpansionError,e:
+                logger.error(e)
+                sys.exit(1)
+
+        if gpexpand_db_status == 'SETUP DONE' or gpexpand_db_status == 'EXPANSION STOPPED':
+            if not gp_expand.validate_max_connections():
+                raise ValidationError()
+            gp_expand.perform_expansion()
+        elif gpexpand_db_status == 'EXPANSION STARTED':
+            logger.info('It appears the last run of gpexpand did not exit cleanly.')
+            logger.info('Resuming the expansion process...')
+            if not gp_expand.validate_max_connections():
+                raise ValidationError()
+            gp_expand.perform_expansion()
+        elif gpexpand_db_status == 'EXPANSION COMPLETE':
+            logger.info('Expansion has already completed.')
+            logger.info('If you want to expand again, run gpexpand -c to remove')
+            logger.info('the gpexpand schema and begin a new expansion')
+        elif gpexpand_db_status == None and gpexpand_file_status == None and options.filename:
+            if not gp_expand.validate_unalterable_tables():
+                raise ValidationError()
+            if gp_expand.check_unique_indexes():
+                logger.info("Tables with unique indexes exist.  Until these tables are successfully")
+                logger.info("redistributed, unique constraints may be violated.  For more information")
+                logger.info("on this issue, see the Greenplum Database Administrator Guide")
+                if not options.silent:
+                    if not ask_yesno(None,"Would you like to continue with System Expansion",'N'):
+                        raise ValidationError()
+            newSegList = gp_expand.read_input_files()
+            gp_expand.addNewSegments(newSegList)
+            gp_expand.sync_packages()
+            gp_expand.start_prepare()
+            gp_expand.add_segments()
+            gp_expand.update_original_segments()
+            gp_expand.update_catalog()
+            gp_expand.move_filespaces()
+            gp_expand.configure_new_segment_filespaces()
+            gp_expand.cleanup_new_segments()
+            gp_expand.setup_schema()
+            gp_expand.prepare_schema()
+            logger.info('Starting Greenplum Database')
+            GpStart.local('gpexpand expansion prepare final start')
+            gp_expand.sync_new_mirrors()
+            logger.info('************************************************')
+            logger.info('Initialization of the system expansion complete.')
+            logger.info('To begin table expansion onto the new segments')
+            logger.info('rerun gpexpand')
+            logger.info('************************************************')
+        elif options.filename is None and gpexpand_file_status == None:
+            interview_setup(gparray)
         else:
-            if gp_expand.pastThePointOfNoReturn == False:
-               logger.error('Please run \'gpexpand -r%s\' to rollback to the original state.' % ('' if not options.database else ' -D %s' % options.database))
-        gp_expand.shutdown()
-    sys.exit(3)
-except KeyboardInterrupt:
-    # Disable SIGINT while we shutdown.
-    signal.signal(signal.SIGINT,signal.SIG_IGN)
+            logger.error('The last gpexpand setup did not complete successfully.')
+            logger.error('Please run gpexpand -r to rollback to the original state.')
 
-    if gp_expand is not None:
-        gp_expand.shutdown()
+        logger.info("Exiting...")
+        sys.exit(0)
 
-    # Re-enabled SIGINT
-    signal.signal(signal.SIGINT,signal.default_int_handler)
+    except ValidationError:
+        logger.info('Bringing Greenplum Database back online...')
+        if gp_expand is not None:
+            gp_expand.shutdown()
+        gpexpand.get_gpdb_in_state(GPDB_STARTED)
+        sys.exit()
+    except Exception,e:
+        if options.verbose:
+            logger.exception("gpexpand failed. exiting...")
+        else:
+            logger.error("gpexpand failed: %s \n\nExiting..." % e )
+        if gp_expand is not None and gp_expand.pastThePointOfNoReturn == True:
+           logger.error('gpexpand is past the point of rollback. Any remaining issues must be addressed outside of gpexpand.')
+        if gp_expand is not None:
+            if gpexpand_db_status is None and gp_expand.get_state() is None:
+                logger.info('Bringing Greenplum Database back online...')
+                gpexpand.get_gpdb_in_state(GPDB_STARTED)
+            else:
+                if gp_expand.pastThePointOfNoReturn == False:
+                   logger.error('Please run \'gpexpand -r%s\' to rollback to the original state.' % ('' if not options.database else ' -D %s' % options.database))
+            gp_expand.shutdown()
+        sys.exit(3)
+    except KeyboardInterrupt:
+        # Disable SIGINT while we shutdown.
+        signal.signal(signal.SIGINT,signal.SIG_IGN)
 
-    sys.exit('\nUser Interrupted')
+        if gp_expand is not None:
+            gp_expand.shutdown()
+
+        # Re-enabled SIGINT
+        signal.signal(signal.SIGINT,signal.default_int_handler)
+
+        sys.exit('\nUser Interrupted')
 
 
-finally:
-    try:
-        if remove_pid:
-            remove_pid_file(options.master_data_directory)
-    except NameError:
-        pass
+    finally:
+        try:
+            if remove_pid:
+                remove_pid_file(options.master_data_directory)
+        except NameError:
+            pass
 
-    if gp_expand is not None:
-        gp_expand.halt_work()
+        if gp_expand is not None:
+            gp_expand.halt_work()
 
-    coverage.stop()
-    coverage.generate_report()
+        coverage.stop()
+        coverage.generate_report()
