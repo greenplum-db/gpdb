@@ -37,6 +37,7 @@
 #include "commands/tablecmds.h"
 #include "nodes/makefuncs.h"
 #include "optimizer/clauses.h"
+#include "optimizer/paths.h"
 #include "optimizer/plancat.h"
 #include "optimizer/planmain.h"
 #include "optimizer/planner.h"
@@ -252,7 +253,7 @@ recurse_set_operations(Node *setOp, PlannerInfo *root,
 												 refnames_tlist),
 							NULL,
 							plan);
-            plan->flow = pull_up_Flow(plan, plan->lefttree, false);
+            plan->flow = pull_up_Flow(plan, plan->lefttree);
 		}
 		return plan;
 	}
@@ -309,7 +310,7 @@ generate_union_plan(SetOperationStmt *op, PlannerInfo *root,
 	if ( Gp_role == GP_ROLE_DISPATCH )
 	{
 		optype = choose_setop_type(planlist);
-		adjust_setop_arguments(planlist, optype);
+		adjust_setop_arguments(root, planlist, optype);
 	}
 	else if (Gp_role == GP_ROLE_UTILITY ||
 			 Gp_role == GP_ROLE_EXECUTE) /* MPP-2928 */
@@ -352,7 +353,7 @@ generate_union_plan(SetOperationStmt *op, PlannerInfo *root,
 			plan = (Plan *) make_sort_from_sortclauses(root, sortList, plan);
 			mark_sort_locus(plan); /* CDB */
 			plan = (Plan *) make_unique(plan, sortList);
-            plan->flow = pull_up_Flow(plan, plan->lefttree, true);
+            plan->flow = pull_up_Flow(plan, plan->lefttree);
 		}
 		*sortClauses = sortList;
 	}
@@ -397,7 +398,7 @@ generate_nonunion_plan(SetOperationStmt *op, PlannerInfo *root,
 	if ( Gp_role == GP_ROLE_DISPATCH )
 	{
 		optype = choose_setop_type(planlist);
-		adjust_setop_arguments(planlist, optype);
+		adjust_setop_arguments(root, planlist, optype);
 	}
 	else if ( Gp_role == GP_ROLE_UTILITY 
 			|| Gp_role == GP_ROLE_EXECUTE ) /* MPP-2928 */
@@ -459,7 +460,7 @@ generate_nonunion_plan(SetOperationStmt *op, PlannerInfo *root,
 			break;
 	}
 	plan = (Plan *) make_setop(cmd, plan, sortList, list_length(op->colTypes) + 1);
-    plan->flow = pull_up_Flow(plan, plan->lefttree, true);
+    plan->flow = pull_up_Flow(plan, plan->lefttree);
 
 	*sortClauses = sortList;
 

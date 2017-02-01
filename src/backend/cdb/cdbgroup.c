@@ -1045,14 +1045,14 @@ make_one_stage_agg_plan(PlannerInfo *root,
 			break;
 			
 	case MPP_GRP_PREP_FOCUS_QE:
-			result_plan = (Plan*)make_motion_gather_to_QE(result_plan, (current_pathkeys != NIL));
+			result_plan = (Plan*)make_motion_gather_to_QE(root, result_plan, current_pathkeys);
 			result_plan->total_cost += 
 				incremental_motion_cost(result_plan->plan_rows, 
 										result_plan->plan_rows * root->config->cdbpath_segments);
 			break;
 			
 	case MPP_GRP_PREP_FOCUS_QD:
-			result_plan = (Plan*)make_motion_gather_to_QD(result_plan, (current_pathkeys != NIL));	
+			result_plan = (Plan*)make_motion_gather_to_QD(root, result_plan, current_pathkeys);
 			result_plan->total_cost += 
 				incremental_motion_cost(result_plan->plan_rows, 
 										result_plan->plan_rows * root->config->cdbpath_segments);
@@ -1184,8 +1184,7 @@ make_one_stage_agg_plan(PlannerInfo *root,
 	{
 		Assert(!IsA(result_plan, Motion));
 		result_plan->flow = pull_up_Flow(result_plan,
-										 result_plan->lefttree,
-										 (current_pathkeys != NIL));
+										 result_plan->lefttree);
 	}
 
 	/* Marshal implicit results. Return explicit result. */
@@ -1471,7 +1470,7 @@ make_two_stage_agg_plan(PlannerInfo *root,
 		break;
 			
 	case MPP_GRP_TYPE_PLAIN_2STAGE:
-		result_plan = (Plan*)make_motion_gather_to_QE(result_plan, false);
+		result_plan = (Plan*)make_motion_gather_to_QE(root, result_plan, false);
 		result_plan->total_cost += 
 			incremental_motion_cost(result_plan->plan_rows,
 									result_plan->plan_rows * root->config->cdbpath_segments);
@@ -1759,9 +1758,7 @@ make_three_stage_agg_plan(PlannerInfo *root, MppGroupContext *ctx)
 		 * Reconstruct the flow since the targetlist for the result_plan may have
 		 * changed.
 		 */
-		result_plan->flow = pull_up_Flow(result_plan,
-										 result_plan->lefttree,
-										 true);
+		result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
 		
 		/* Need to adjust root.  Is this enuf?  I think so. */
 		root->parse->rtable = rtable;
@@ -2061,7 +2058,7 @@ make_plan_for_one_dqa(PlannerInfo *root, MppGroupContext *ctx, int dqa_index,
 	
 	dqaduphazard = (aggstrategy == AGG_HASHED && stream_bottom_agg);
 
-	result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree, (aggstrategy == AGG_SORTED));
+	result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
 	
 	current_pathkeys = NIL;
 	
@@ -2240,7 +2237,7 @@ make_plan_for_one_dqa(PlannerInfo *root, MppGroupContext *ctx, int dqa_index,
 		Assert(ctx->numGroupCols == 0); /* No grouping columns */
 		Assert(n == 1);
 
-		result_plan = (Plan*)make_motion_gather_to_QE(result_plan, false);
+		result_plan = (Plan*)make_motion_gather_to_QE(root, result_plan, false);
 		result_plan->total_cost += 
 				incremental_motion_cost(result_plan->plan_rows,
 						result_plan->plan_rows * root->config->cdbpath_segments);
@@ -2485,7 +2482,7 @@ join_dqa_coplan(PlannerInfo *root, MppGroupContext *ctx, Plan *outer, int dqa_in
 	join_plan->total_cost = outer->total_cost + inner->total_cost;
 	join_plan->total_cost += cpu_tuple_cost * join_plan->plan_rows;
 	
-	join_plan->flow = pull_up_Flow(join_plan, join_plan->lefttree, true);
+	join_plan->flow = pull_up_Flow(join_plan, join_plan->lefttree);
 	
 	return join_plan;
 }
@@ -4060,10 +4057,7 @@ add_second_stage_agg(PlannerInfo *root,
 	/*
 	 * Agg will not change the sort order unless it is hashed.
 	 */
-	agg_node->flow = pull_up_Flow(agg_node, 
-								  agg_node->lefttree, 
-								  (*p_current_pathkeys != NIL)
-								   && aggstrategy != AGG_HASHED );
+	agg_node->flow = pull_up_Flow(agg_node, agg_node->lefttree);
 
 	/* 
 	 * Since the rtable has changed, we had better recreate a RelOptInfo entry
@@ -5852,7 +5846,7 @@ within_agg_add_outer_sort(PlannerInfo *root,
 		}
 		if (outer_plan->flow->flotype != FLOW_SINGLETON)
 		{
-			outer_plan = (Plan *) make_motion_gather_to_QE(outer_plan, true);
+			outer_plan = (Plan *) make_motion_gather_to_QE(root, outer_plan, wag_context->current_pathkeys);
 			outer_plan->total_cost +=
 				incremental_motion_cost(outer_plan->plan_rows,
 							outer_plan->plan_rows * root->config->cdbpath_segments);
@@ -6956,9 +6950,7 @@ within_agg_planner(PlannerInfo *root,
 		 * Reconstruct the flow since the targetlist for the result_plan may have
 		 * changed.
 		 */
-		result_plan->flow = pull_up_Flow(result_plan,
-										 result_plan->lefttree,
-										 true);
+		result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
 		/* Need to adjust root->parse for upper plan. */
 		root->parse->rtable = rtable;
 		root->parse->targetList = copyObject(result_plan->targetlist);

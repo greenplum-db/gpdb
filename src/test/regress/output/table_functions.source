@@ -1632,15 +1632,17 @@ explain SELECT * FROM multiset_5( TABLE (SELECT * FROM example SCATTER RANDOMLY)
 (5 rows)
 
 explain SELECT * FROM multiset_5( TABLE (SELECT * FROM example ORDER BY a, b) );
-                                 QUERY PLAN                                  
------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=2.27..2.42 rows=5 width=36)
-   ->  Table Function Scan on multiset_5  (cost=2.27..2.42 rows=5 width=36)
-         ->  Sort  (cost=2.27..2.29 rows=5 width=16)
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Table Function Scan on multiset_5  (cost=2.27..2.42 rows=10 width=36)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=2.27..2.29 rows=10 width=16)
+         Merge Key: example.a, example.b
+         ->  Sort  (cost=2.27..2.29 rows=4 width=16)
                Sort Key: example.a, example.b
-               ->  Seq Scan on example  (cost=0.00..2.10 rows=5 width=16)
+               ->  Seq Scan on example  (cost=0.00..2.10 rows=4 width=16)
  Settings:  gp_segments_for_planner=8
-(6 rows)
+ Optimizer status: legacy query optimizer
+(8 rows)
 
 explain SELECT * FROM multiset_5( TABLE (SELECT * FROM example ORDER BY a, b SCATTER BY a) );
                                  QUERY PLAN                                  
@@ -1654,28 +1656,27 @@ explain SELECT * FROM multiset_5( TABLE (SELECT * FROM example ORDER BY a, b SCA
 (6 rows)
 
 explain SELECT * FROM multiset_5( TABLE (SELECT * FROM example ORDER BY b, a SCATTER BY b) );
-                                             QUERY PLAN                                              
------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice2; segments: 2)  (cost=2.27..2.42 rows=5 width=36)
-   ->  Table Function Scan on multiset_5  (cost=2.27..2.42 rows=5 width=36)
-         ->  Sort  (cost=2.27..2.29 rows=5 width=16)
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=2.27..2.42 rows=10 width=36)
+   ->  Table Function Scan on multiset_5  (cost=2.27..2.42 rows=4 width=36)
+         ->  Sort  (cost=2.27..2.29 rows=4 width=16)
                Sort Key: example.b, example.a
-               ->  Redistribute Motion 2:2  (slice1; segments: 2)  (cost=0.00..2.10 rows=5 width=16)
-                     Hash Key: example.b
-                     ->  Seq Scan on example  (cost=0.00..2.10 rows=5 width=16)
+               ->  Seq Scan on example  (cost=0.00..2.10 rows=4 width=16)
  Settings:  gp_segments_for_planner=8
-(8 rows)
+ Optimizer status: legacy query optimizer
+(7 rows)
 
 explain SELECT * FROM multiset_5( TABLE (SELECT * FROM example ORDER BY b, a SCATTER RANDOMLY) );
-                                             QUERY PLAN                                              
------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice2; segments: 2)  (cost=2.27..2.42 rows=5 width=36)
-   ->  Table Function Scan on multiset_5  (cost=2.27..2.42 rows=5 width=36)
-         ->  Sort  (cost=2.27..2.29 rows=5 width=16)
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=2.27..2.42 rows=10 width=36)
+   ->  Table Function Scan on multiset_5  (cost=2.27..2.42 rows=4 width=36)
+         ->  Sort  (cost=2.27..2.29 rows=4 width=16)
                Sort Key: example.b, example.a
-               ->  Redistribute Motion 2:2  (slice1; segments: 2)  (cost=0.00..2.10 rows=5 width=16)
-                     ->  Seq Scan on example  (cost=0.00..2.10 rows=5 width=16)
+               ->  Seq Scan on example  (cost=0.00..2.10 rows=4 width=16)
  Settings:  gp_segments_for_planner=8
+ Optimizer status: legacy query optimizer
 (7 rows)
 
 explain SELECT * FROM multiset_5( TABLE (SELECT * FROM example ORDER BY a, b LIMIT 10 SCATTER BY a) );
@@ -1743,17 +1744,19 @@ explain SELECT ARRAY(SELECT a FROM multiset_5( TABLE ( SELECT a, b from example)
 (9 rows)
 
 explain SELECT ARRAY(SELECT a FROM multiset_5( TABLE ( SELECT a, b from example order by a)));
-                                     QUERY PLAN                                     
-------------------------------------------------------------------------------------
- Result  (cost=2.42..2.43 rows=1 width=0)
+                                         QUERY PLAN                                         
+--------------------------------------------------------------------------------------------
+ Result  (cost=4.83..4.84 rows=1 width=0)
    InitPlan  (slice2)
-     ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=2.27..2.42 rows=5 width=4)
-           ->  Table Function Scan on multiset_5  (cost=2.27..2.42 rows=5 width=4)
-                 ->  Sort  (cost=2.27..2.29 rows=5 width=16)
+     ->  Table Function Scan on multiset_5  (cost=2.27..2.42 rows=10 width=4)
+           ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=2.27..2.29 rows=10 width=16)
+                 Merge Key: example.a
+                 ->  Sort  (cost=2.27..2.29 rows=4 width=16)
                        Sort Key: example.a
-                       ->  Seq Scan on example  (cost=0.00..2.10 rows=5 width=16)
+                       ->  Seq Scan on example  (cost=0.00..2.10 rows=4 width=16)
  Settings:  gp_segments_for_planner=8
-(8 rows)
+ Optimizer status: legacy query optimizer
+(10 rows)
 
 explain SELECT * FROM example where (a,b) in (select * from multiset_5( TABLE(SELECT a, b from example) ));
                                                QUERY PLAN                                               

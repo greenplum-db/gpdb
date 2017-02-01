@@ -545,9 +545,9 @@ group by f1,f2,fs;
 -- but PostgreSQL executor defers typmod assignment to ExecEvalWholeRowVar()
 -- which is too late for Greenplum since the plan has already been dispatched.
 -- This should be fixed but requires new infrastructure.
+-- TODO: Add this test back once issue #618 is fixed.
 --
-select q from (select max(f1) from int4_tbl group by f1 order by f1) q;
-ERROR:  record type has not been registered
+-- select q from (select max(f1) from int4_tbl group by f1 order by f1) q;
 --
 -- Test case for sublinks pushed down into subselects via join alias expansion
 --

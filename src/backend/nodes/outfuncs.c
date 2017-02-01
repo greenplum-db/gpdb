@@ -1658,12 +1658,9 @@ _outFromExpr(StringInfo str, FromExpr *node)
 	WRITE_NODE_FIELD(quals);
 }
 
-#ifndef COMPILING_BINARY_FUNCS
 static void
 _outFlow(StringInfo str, Flow *node)
 {
-	int i;
-
 	WRITE_NODE_TYPE("FLOW");
 
 	WRITE_ENUM_FIELD(flotype, FlowType);
@@ -1671,33 +1668,10 @@ _outFlow(StringInfo str, Flow *node)
 	WRITE_ENUM_FIELD(locustype, CdbLocusType);
 	WRITE_INT_FIELD(segindex);
 
-	/* This array format as in Group and Sort nodes. */
-	WRITE_INT_FIELD(numSortCols);
-	if(node->numSortCols > 0)
-	{
-		appendStringInfoLiteral(str, " :sortColIdx");
-		if(node->sortColIdx == NULL)
-			appendStringInfoString(str, " <>");
-		else {
-			for ( i = 0; i < node->numSortCols; i++ )
-				appendStringInfo(str, " %d", node->sortColIdx[i]);
-		}
-
-		appendStringInfoLiteral(str, " :sortOperators");
-		if(node->sortOperators == NULL)
-			appendStringInfoString(str, " <>");
-		else {
-			for ( i = 0; i < node->numSortCols; i++ )
-				appendStringInfo(str, " %u", node->sortOperators[i]);
-		}
-	}
-	WRITE_INT_FIELD(numOrderbyCols);
-
 	WRITE_NODE_FIELD(hashExpr);
 
 	WRITE_NODE_FIELD(flow_before_req_move);
 }
-#endif /* COMPILING_BINARY_FUNCS */
 
 /*****************************************************************************
  *
