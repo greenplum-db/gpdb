@@ -141,6 +141,10 @@ SELECT aototal('tenk_aocs1'), aototal('tenk_aocs2'), aototal('tenk_aocs3'), aoto
 -------------------- 
 -- transactionality
 --------------------
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='tenk_aocs1'));
 
 -- rollback
 BEGIN;
@@ -149,6 +153,13 @@ SELECT count(*) FROM tenk_aocs1; -- should show new count
 ROLLBACK;
 SELECT count(*) FROM tenk_aocs1; -- should show previous count
 SELECT aototal('tenk_aocs1');
+
+-- gp_fastsequence should reflect bump in lastsequence, even if above
+-- transaction aborted as its tuples is in place updated.
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='tenk_aocs1'));
 
 -- commit
 BEGIN;
@@ -215,6 +226,12 @@ DROP TABLE tenk_aocs4;
 
 -- CTAS
 CREATE TABLE tenk_aocs1 with(appendonly=true, orientation=column, checksum=true) AS SELECT * FROM tenk_heap_for_aocs;
+-- Incase of CTAS, gp_fastsequence must use create table's transaction id to
+-- insert into gp_fastsequence which is NormalXid and not FrozenXid.
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='tenk_aocs1'));
 CREATE TABLE tenk_aocs2 with(appendonly=true, orientation=column, compresslevel=0, blocksize=262144) AS SELECT * FROM tenk_heap_for_aocs;
 CREATE TABLE tenk_aocs3 with(appendonly=true, orientation=column, compresslevel=6, blocksize=1048576, checksum=true) AS SELECT * FROM tenk_heap_for_aocs;
 CREATE TABLE tenk_aocs4 with(appendonly=true, orientation=column, compresslevel=1, compresstype=zlib) AS SELECT * FROM tenk_heap_for_aocs;
@@ -291,9 +308,23 @@ SELECT count(*) FROM tenk_aocs1 t1 LEFT OUTER JOIN empty_aocs_table_for_join t2 
 SELECT unique1 FROM tenk_aocs1 EXCEPT SELECT unique1 FROM tenk_aocs1;
 SELECT unique1 FROM tenk_heap_for_aocs EXCEPT SELECT unique1 FROM tenk_aocs3;
 
+-- Get gp_fastsequence details before truncate
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='tenk_aocs2'));
+
 -- TRUNCATE
 TRUNCATE tenk_aocs2;
 SELECT count(*) FROM tenk_aocs2;
+
+-- Truncate changes relfilnode, as a result old pg_aocsseg table is dropped and
+-- frehsly created. Hence validate post truncate gp_fastsequence entries are
+-- cleaned-up.
+SELECT CASE WHEN xmin = 2 THEN 'FrozenXid' ELSE 'NormalXid' END, objmod,
+last_sequence, gp_segment_id from gp_dist_random('gp_fastsequence') WHERE objid
+IN (SELECT segrelid FROM pg_appendonly WHERE relid IN (SELECT oid FROM pg_class
+WHERE relname='tenk_ao2;'));
 
 -- OID with aocs NYI
 -- OIDS

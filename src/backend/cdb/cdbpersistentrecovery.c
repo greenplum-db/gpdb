@@ -84,94 +84,6 @@ typedef XactEntryData *XactEntry;
  */
 static HTAB *xactHashTable = NULL;
 
-Pass2RecoveryHashShmem_s *pass2RecoveryHashShmem = NULL;
-
-Size
-Pass2Recovery_ShmemSize(void)
-{
-	Size    size;
-
-	size = hash_estimate_size(
-				(Size)GP_MAX_PASS2RECOVERY_ABORTINGCREATE,
-				sizeof(Pass2RecoveryHashEntry_s));
-
-	size = add_size(size, sizeof(Pass2RecoveryHashShmem_s));
-	
-	return size;	
-}
-
-/* Initialize hash table of AbortingCreate entries in shared memory */
-void
-Pass2Recovery_ShmemInit(void)
-{
-	HASHCTL         info;
-	int             hash_flags;
-	bool    foundPtr;
-
-	pass2RecoveryHashShmem = 
-			(Pass2RecoveryHashShmem_s *)
-			ShmemInitStruct("pass2 recovery abortingcreate hash",
-							sizeof(Pass2RecoveryHashShmem_s),
-							&foundPtr);
-	if (pass2RecoveryHashShmem == NULL) {
-		ereport(ERROR,
-				(errcode(ERRCODE_OUT_OF_MEMORY),
-				(errmsg("not enough shared memory for pass2 recovery"))));
-	}
-
-	if (!foundPtr) {
-		MemSet(pass2RecoveryHashShmem,
-			   0,
-			   sizeof(Pass2RecoveryHashShmem_s));
-	}
-
-	MemSet(&info, 0, sizeof(info));
-	info.keysize = sizeof(Oid);
-	info.entrysize = sizeof(Pass2RecoveryHashEntry_s);
-	info.hash = tag_hash;
-	hash_flags = (HASH_ELEM | HASH_FUNCTION);
-	
-	pass2RecoveryHashShmem->hash = 
-			ShmemInitHash("pass2 recovery hash",
-						  GP_MAX_PASS2RECOVERY_ABORTINGCREATE,
-						  GP_MAX_PASS2RECOVERY_ABORTINGCREATE,
-						  &info,
-						  hash_flags);				  
-
-	if (pass2RecoveryHashShmem->hash == NULL) {
-		ereport(ERROR,
-				(errcode(ERRCODE_OUT_OF_MEMORY),
-				(errmsg("not enough shared memory for pass2 recovery"))));
-	}
-}
-
-static Pass2RecoveryHashEntry_s*
-Pass2Recovery_InsertHashEntry(
-							Oid		objid,
-							bool 	*exists)
-{
-	bool	foundPtr;
-	Pass2RecoveryHashEntry_s *entry;
-	Assert(pass2RecoveryHashShmem->hash != NULL);
-	entry = (Pass2RecoveryHashEntry_s *) hash_search(
-										pass2RecoveryHashShmem->hash,
-										(void *) &objid,
-										HASH_ENTER_NULL,
-										&foundPtr);
-	if (entry == NULL) {
-		*exists = FALSE;
-		return entry;
-	}
-	
-	if (foundPtr) {
-		*exists = TRUE;
-	} else {
-		*exists = FALSE;
-	}
-
-	return entry;	
-}				
-
 static void
 PersistentRecovery_XactHashTableInit(void)
 {
@@ -841,28 +753,6 @@ PersistentRecovery_HandlePass2XLogRec(
 						newState = PersistentFileSysState_Free;		// Not reached.
 				}
 
-				/* MPP-16881: adding AbortingCreate objid to shared memory
- 				 * hash table, which will be used in Pass3 recovery to 
-				 * clean up gp_fastsequence.
-				 */
-				if (fileSysActionInfo->fsObjName.type == PersistentFsObjType_RelationFile)
-				{
-					bool exists;
-					Pass2RecoveryHashEntry_s *entry;
-					RelFileNode *relFileNode = PersistentFileSysObjName_GetRelFileNodePtr(&fileSysActionInfo->fsObjName);
-					entry = Pass2Recovery_InsertHashEntry(
-													relFileNode->relNode,
-													&exists);
-					if (entry == NULL)
-						elog(WARNING, 
-							 "Pass2Recovery_InsertHashEntry"
-							 " failed to insert AbortingCreate entry into"
-							 " shared memory hash table, there might be"
-							 " entries in gp_fastsequence left uncleaned,"
-							 " it could cause inconsistency between"
-							 " pg_class and gp_fastsequence.");
-				}
-			
 				PersistentRecovery_AddEndXactFsObj(
 												xid,
 												XACT_INFOKIND_ABORT,
@@ -1830,25 +1720,6 @@ PersistentRecovery_CrashAbort(void)
 				{
 					fsObjEntry->updateNeeded = true;
 					fsObjEntry->state = PersistentFileSysState_AbortingCreate;
-					if (fsObjEntry->fsObjName.type == PersistentFsObjType_RelationFile)
-					{
-						bool exists;
-						Pass2RecoveryHashEntry_s *entry;
-						RelFileNode *relFileNode = 
-										PersistentFileSysObjName_GetRelFileNodePtr(
-												 			&fsObjEntry->fsObjName);
-						entry = Pass2Recovery_InsertHashEntry(
-													relFileNode->relNode,
-													&exists);
-						if (entry == NULL)
-							elog(WARNING, 
-							 	 "Pass2Recovery_InsertHashEntry"
-								 " failed to insert AbortingCreate entry into"
-								 " shared memory hash table, there might be"
-								 " entries in gp_fastsequence left uncleaned,"
-								 " it could cause inconsistency between"
-								 " pg_class and gp_fastsequence.");
-					}
 				}
 				else
 				{
