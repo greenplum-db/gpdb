@@ -169,7 +169,11 @@ ExplainQuery(ExplainStmt *stmt, const char *queryString,
 		{
 			DefElem *opt = (DefElem *) lfirst(lc);
 
-			if (strcmp(opt->defname, "analyze") == 0)
+			if (strcmp(opt->defname, "timing") == 0)
+				es.timing=defGetBoolean(opt);
+			else if (strcmp(opt->defname, "buffers") == 0)
+				es.buffers=defGetBoolean(opt);
+			else if (strcmp(opt->defname, "analyze") == 0)
 				es.analyze = defGetBoolean(opt);
 			else if (strcmp(opt->defname, "verbose") == 0)
 				es.verbose = defGetBoolean(opt);
@@ -1927,6 +1931,10 @@ static void
 appendGangAndDirectDispatchInfo( PlanState *planstate, int sliceId, ExplainState *es)
 {
 	SliceTable *sliceTable = planstate->state->es_sliceTable;
+
+	if (sliceTable == NULL)
+		return;
+
 	Slice *slice = (Slice *)list_nth(sliceTable->slices, sliceId);
 
 	switch (slice->gangType)

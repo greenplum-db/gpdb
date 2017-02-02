@@ -29,6 +29,8 @@ typedef struct ExplainState
 	bool		verbose;			/* print plan targetlists */
 	bool		analyze;			/* print actual times */
 	bool		costs;				/* print costs */
+	bool		buffers;
+	bool		timing;
 	ExplainFormat format;	/*output format */
 	/* other states */
 	PlannedStmt *pstmt;	/* top of plan */
