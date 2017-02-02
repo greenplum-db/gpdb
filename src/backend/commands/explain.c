@@ -257,6 +257,8 @@ ExplainQuery(ExplainStmt *stmt, const char *queryString,
 	/* output tuples */
 	if (es.format == EXPLAIN_FORMAT_TEXT)
 		do_text_output_multiline(tstate, es.str->data);
+	else
+		do_text_output_oneline(tstate, es.str->data);
 
 	end_tup_output(tstate);
 
@@ -371,7 +373,7 @@ ExplainOneQuery(Query *query, ExplainState *es,
 {
 #ifdef USE_ORCA
 
-	if (es->dxl)
+	if (es->format == EXPLAIN_FORMAT_TEXT && es->dxl)
     {
     	ExplainDXL(query, queryString, params, tstate, es);
     	return;
