@@ -375,7 +375,10 @@ namespace gpdb {
 
 	// is this a Gather motion
 	bool FMotionGather(const Motion *pmotion);
-	
+
+	// does a partition table have an appendonly child
+	bool FAppendOnlyPartitionTable(Oid rootOid);
+
 	// does a multi-level partitioned table have uniform partitioning hierarchy
 	bool FMultilevelPartitionUniform(Oid rootOid);
 

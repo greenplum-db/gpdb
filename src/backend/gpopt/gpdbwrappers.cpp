@@ -1634,6 +1634,20 @@ gpdb::FMotionGather
 }
 
 bool
+gpdb::FAppendOnlyPartitionTable
+	(
+	Oid rootOid
+	)
+{
+	GP_WRAP_START;
+	{
+		return rel_has_appendonly_partition(rootOid);
+	}
+	GP_WRAP_END;
+	return false;
+}
+
+bool
 gpdb::FMultilevelPartitionUniform
 	(
 	Oid rootOid
