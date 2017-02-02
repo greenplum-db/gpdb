@@ -15,7 +15,7 @@ from gppylib.commands.base import Command, ExecutionError, REMOTE
 from gppylib.commands.gp import chk_local_db_running
 from gppylib.db import dbconn
 from gppylib.gparray import GpArray, MODE_SYNCHRONIZED, MODE_RESYNCHRONIZATION
-from gppylib.operations.backup_utils import pg, escapeDoubleQuoteInSQLString
+from gppylib.operations.backup_utils import pg, escapeDoubleQuoteInSQLString, escape_string
 
 PARTITION_START_DATE = '2010-01-01'
 PARTITION_END_DATE = '2013-01-01'
@@ -252,20 +252,19 @@ def clear_all_saved_data_verify_files(context):
 def get_table_data_to_file(filename, tablename, dbname):
     current_dir = os.getcwd()
     filename = os.path.join(current_dir, './test/data', filename)
-    order_sql = """
+    conn = dbconn.connect(dbconn.DbURL(dbname=dbname))
+    try:
+        query= """
                     select string_agg(a::text, ',')
                         from (
                             select generate_series(1,c.relnatts+1) as a
                                 from pg_class as c
                                     inner join pg_namespace as n
                                     on c.relnamespace = n.oid
-                                where (n.nspname || '.' || c.relname = E'%s')
-                                    or c.relname = E'%s'
+                                where (n.nspname || '.' || c.relname = '%s')
+                                    or c.relname = '%s'
                         ) as q;
-                """ % (pg.escape_string(tablename), pg.escape_string(tablename))
-    query = order_sql
-    conn = dbconn.connect(dbconn.DbURL(dbname=dbname))
-    try:
+                """ % (escape_string(tablename, conn=conn), escape_string(tablename, conn=conn))
         res = dbconn.execSQLForSingleton(conn, query)
         # check if tablename is fully qualified <schema_name>.<table_name>
         if '.' in tablename:
@@ -343,30 +342,30 @@ def check_partition_table_exists(context, dbname, schemaname, table_name, table_
     return check_table_exists(context, dbname, partitions[0][0].strip(), table_type)
 
 def check_table_exists(context, dbname, table_name, table_type=None, host=None, port=0, user=None):
-    if '.' in table_name:
-        schemaname, tablename = table_name.split('.')
-        SQL = """
-              select c.oid, c.relkind, c.relstorage, c.reloptions
-              from pg_class c, pg_namespace n
-              where c.relname = '%s' and n.nspname = '%s' and c.relnamespace = n.oid;
-              """ % (pg.escape_string(tablename), pg.escape_string(schemaname))
-    else:
-        SQL = """
-              select oid, relkind, relstorage, reloptions \
-              from pg_class \
-              where relname = E'%s'; \
-              """ % pg.escape_string(table_name)
-
-    table_row = None
     with dbconn.connect(dbconn.DbURL(hostname=host, port=port, username=user, dbname=dbname)) as conn:
+        if '.' in table_name:
+            schemaname, tablename = table_name.split('.')
+            SQL = """
+                  select c.oid, c.relkind, c.relstorage, c.reloptions
+                  from pg_class c, pg_namespace n
+                  where c.relname = '%s' and n.nspname = '%s' and c.relnamespace = n.oid;
+                  """ % (escape_string(tablename, conn=conn), escape_string(schemaname, conn=conn))
+        else:
+            SQL = """
+                  select oid, relkind, relstorage, reloptions \
+                  from pg_class \
+                  where relname = E'%s'; \
+                  """ % escape_string(table_name, conn=conn)
+
+        table_row = None
         try:
             table_row = dbconn.execSQLForSingletonRow(conn, SQL)
         except Exception as e:
             context.exception = e
             return False
 
-    if table_type is None:
-        return True
+        if table_type is None:
+            return True
 
     if table_row[2] == 'a':
         original_table_type = 'ao'
@@ -1367,11 +1366,11 @@ def verify_restored_table_is_analyzed(context, table_name, dbname):
         schema_name,table_name = table_name.split(".")
     else:
         schema_name = 'public'
-    schema_name = pg.escape_string(schema_name)
-    table_name = pg.escape_string(table_name)
-    ROW_COUNT_PG_CLASS_SQL = """SELECT reltuples FROM pg_class WHERE relname = '%s'
-                                AND relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = '%s')""" % (table_name, schema_name)
     with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+        schema_name = escape_string(schema_name, conn=conn)
+        table_name = escape_string(table_name, conn=conn) 
+        ROW_COUNT_PG_CLASS_SQL = """SELECT reltuples FROM pg_class WHERE relname = '%s'
+                                    AND relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = '%s')""" % (table_name, schema_name)
         curs = dbconn.execSQL(conn, ROW_COUNT_SQL)
         rows = curs.fetchall()
         curs = dbconn.execSQL(conn, ROW_COUNT_PG_CLASS_SQL)

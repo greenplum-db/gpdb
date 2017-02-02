@@ -1558,7 +1558,7 @@ def impl(context, table, dbname, ao_table):
     try:
         backup_utils = Context()
         backup_utils.master_port = os.environ.get('PGPORT')
-        backup_utils.dump_database = dbname
+        backup_utils.target_db = dbname
         context.exception = None
         context.partition_list_res = None
         context.partition_list_res = get_partition_state(backup_utils, sch, part_info)

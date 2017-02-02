@@ -206,9 +206,9 @@ class GpdbRestore(Operation):
 
         if self.context.change_schema:
             check_funny_chars_in_names(self.context.change_schema, is_full_qualified_name = False)
-            if not self.context.redirected_restore_db and not check_schema_exists(self.context.change_schema, self.context.restore_db):
+            if not self.context.redirected_restore_db and not check_change_schema_exists(self.context, False):
                 raise Exception('Cannot restore tables to schema %s: schema does not exist' % self.context.change_schema)
-            elif self.context.redirected_restore_db and not check_schema_exists(self.context.change_schema, self.context.redirected_restore_db):
+            elif self.context.redirected_restore_db and not check_change_schema_exists(self.context, True):
                 raise Exception('Cannot restore tables to the database %s: schema %s does not exist' % (self.context.redirected_restore_db, self.context.change_schema))
 
         self._output_info(info, restore_type)
@@ -257,7 +257,7 @@ class GpdbRestore(Operation):
         logger.info("Restore type               = %s" % restore_type)
 
         if len(self.context.restore_tables) > 0:
-            logger.info("Database name              = %s" % self.context.restore_db)
+            logger.info("Database name              = %s" % self.context.target_db)
             logger.info("------------------------------------------")
             logger.info("Table restore list")
             logger.info("------------------------------------------")
@@ -271,7 +271,7 @@ class GpdbRestore(Operation):
                     logger.warn("Table:Row count            = %s:%s" % (table, count))
                 logger.info("------------------------------------------")
         else:
-            logger.info("Database to be restored    = %s" % self.context.restore_db)
+            logger.info("Database to be restored    = %s" % self.context.target_db)
             if self.context.drop_db:
                 logger.info("Drop and re-create db      = On")
             else:
@@ -356,7 +356,7 @@ class GpdbRestore(Operation):
         if self.context.timestamp:
             (restore_timestamp, restore_db, compress) = ValidateTimestamp(self.context).run()
             self.context.timestamp = restore_timestamp
-            self.context.restore_db = restore_db
+            self.context.target_db = restore_db
             self.context.compress = compress
         elif self.context.db_date_dir:
             self._validate_db_date_dir()
@@ -368,10 +368,10 @@ class GpdbRestore(Operation):
         if not self.context.drop_db and not self.context.redirected_restore_db:
             dburl = dbconn.DbURL(port=self.context.master_port)
             conn = dbconn.connect(dburl)
-            count = dbconn.execSQLForSingleton(conn, "select count(*) from pg_database where datname='%s';" % pg.escape_string(self.context.restore_db))
+            count = dbconn.execSQLForSingleton(conn, "select count(*) from pg_database where datname='%s';" % escape_string(self.context.target_db, conn))
             # TODO: -e is needed even if the database doesn't exist yet?
             if count == 0:
-                raise ExceptionNoStackTraceNeeded("Database %s does not exist and -e option not supplied" % self.context.restore_db)
+                raise ExceptionNoStackTraceNeeded("Database %s does not exist and -e option not supplied" % self.context.target_db)
 
         table_counts = []
 
@@ -424,7 +424,7 @@ class GpdbRestore(Operation):
             match = matching[0]
             temp = match[len(prefix):]
             self.context.timestamp = temp[0:14]
-        self.context.restore_db = GetDbName(self.context.generate_filename("cdatabase")).run()
+        self.context.target_db = GetDbName(self.context.generate_filename("cdatabase")).run()
         compressed_file = self.context.generate_filename("postdata")
         self.context.compress = CheckFile(compressed_file).run()
 
@@ -460,7 +460,7 @@ class GpdbRestore(Operation):
         handle, filename = mkstemp()
         srcFile = self.context.generate_filename("cdatabase", directory=path)
         Scp('Copying cdatabase file', srcHost=host, srcFile=srcFile, dstFile=filename).run(validateAfter=True)
-        self.context.restore_db = GetDbName(filename).run()
+        self.context.target_db = GetDbName(filename).run()
         os.remove(filename)
 
         self.context.compress = CheckRemoteFile(srcFile, host).run()
@@ -487,7 +487,7 @@ class GpdbRestore(Operation):
             raise ExceptionNoStackTraceNeeded("No %s* files located with database %s" % (prefix, self.search_for_dbname))
         self.context.timestamp = str(max(timestamps))
         logger.info("Identified latest dump timestamp for %s as %s" %  (self.search_for_dbname, self.context.timestamp))
-        self.context.restore_db = self.search_for_dbname
+        self.context.target_db = self.search_for_dbname
         compressed_file = self.context.generate_filename("postdata")
         self.context.compress = CheckFile(compressed_file).run()
 

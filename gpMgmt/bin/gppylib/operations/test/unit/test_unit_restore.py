@@ -18,7 +18,7 @@ class RestoreTestCase(unittest.TestCase):
 
     def setUp(self):
         context = Context()
-        context.restore_db='testdb'
+        context.target_db='testdb'
         context.include_dump_tables_file='/tmp/table_list.txt'
         context.master_datadir='/data/master/p1'
         context.batch_default=None
@@ -551,9 +551,10 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
 
     @patch('gppylib.operations.restore.dbconn.DbURL')
     @patch('gppylib.operations.restore.dbconn.connect')
+    @patch('gppylib.operations.restore.escape_string', side_effect=['public', 'ao1', 'testschema', 'heap1'])
     @patch('gppylib.operations.restore.execSQL')
     @patch('gppylib.operations.restore.execSQLForSingleton', return_value='t')
-    def test_truncate_restore_tables_restore_tables(self, mock1, mock2, mock3, mock4):
+    def test_truncate_restore_tables_restore_tables(self, mock1, mock2, mock3, mock4, mock5):
         self.context.restore_tables = ['public.ao1', 'testschema.heap1']
         self.restore.truncate_restore_tables()
         calls = [call(ANY,'Truncate "public"."ao1"'), call(ANY,'Truncate "testschema"."heap1"')]
@@ -882,57 +883,62 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
     def test_restore_global_default(self, mock1, mock2):
         self.restore._restore_global(self.context) # should not error out
 
+    @patch('gppylib.operations.restore.escape_string', return_value='schema.table')
     @patch('gppylib.operations.restore.execSQLForSingleton')
     @patch('pygresql.pgdb.pgdbCnx.commit')
-    def test_update_ao_stat_func_default(self, m1, m2):
+    def test_update_ao_stat_func_default(self, m1, m2, m3):
         conn = None
         ao_schema = 'schema'
         ao_table = 'table'
         counter = 1
         batch_size = 1000
-        update_ao_stat_func(conn, ao_schema, ao_table, counter, batch_size)
+        update_ao_stat_func(self.context, conn, ao_schema, ao_table, counter, batch_size)
 
-    @patch('pygresql.pgdb.pgdbCnx.commit')
+    @patch('gppylib.operations.restore.escape_string', return_value='schema.table')
     @patch('gppylib.operations.restore.execSQLForSingleton')
-    def test_update_ao_stat_func_near_batch_size(self, m1, m2):
+    @patch('pygresql.pgdb.pgdbCnx.commit')
+    def test_update_ao_stat_func_near_batch_size(self, m1, m2, m3):
         conn = None
         ao_table = 'table'
         ao_schema = 'schema'
         counter = 999
         batch_size = 1000
-        update_ao_stat_func(conn, ao_schema, ao_table, counter, batch_size)
+        update_ao_stat_func(self.context, conn, ao_schema, ao_table, counter, batch_size)
 
+    @patch('gppylib.operations.restore.escape_string', return_value='schema.table')
     @patch('gppylib.operations.restore.execSQLForSingleton')
     @patch('pygresql.pgdb.pgdbCnx.commit')
-    def test_update_ao_stat_func_equal_batch_size(self, m1, m2):
+    def test_update_ao_stat_func_equal_batch_size(self, m1, m2, m3):
         conn = None
         ao_table = 'table'
         ao_schema = 'schema'
         counter = 1000
         batch_size = 1000
         with self.assertRaisesRegexp(AttributeError, "'NoneType' object has no attribute 'commit'"):
-            update_ao_stat_func(conn, ao_schema, ao_table, counter, batch_size)
+            update_ao_stat_func(self.context, conn, ao_schema, ao_table, counter, batch_size)
 
+    @patch('gppylib.operations.restore.escape_string', return_value='schema.table')
     @patch('gppylib.operations.restore.execSQLForSingleton')
     @patch('pygresql.pgdb.pgdbCnx.commit')
-    def test_update_ao_stat_func_over_batch_size(self, m1, m2):
+    def test_update_ao_stat_func_over_batch_size(self, m1, m2, m3):
         conn = None
         ao_table = 'table'
         ao_schema = 'schema'
         counter = 1001
         batch_size = 1000
-        update_ao_stat_func(conn, ao_schema, ao_table, counter, batch_size)
+        update_ao_stat_func(self.context, conn, ao_schema, ao_table, counter, batch_size)
 
+    @patch('gppylib.operations.restore.escape_string', return_value='schema.table')
     @patch('gppylib.operations.restore.execSQLForSingleton')
     @patch('pygresql.pgdb.pgdbCnx.commit')
-    def test_update_ao_stat_func_double_batch_size(self, m1, m2):
+    def test_update_ao_stat_func_double_batch_size(self, m1, m2, m3):
         conn = None
         ao_table = 'table'
         ao_schema = 'schema'
         counter = 2000
         batch_size = 1000
         with self.assertRaisesRegexp(AttributeError, "'NoneType' object has no attribute 'commit'"):
-            update_ao_stat_func(conn, ao_schema, ao_table, counter, batch_size)
+            update_ao_stat_func(self.context, conn, ao_schema, ao_table, counter, batch_size)
 
     @patch('gppylib.operations.restore.execute_sql', return_value=[['t1', 'public']])
     @patch('gppylib.operations.restore.dbconn.connect')
@@ -1021,7 +1027,7 @@ CREATE DATABASE monkey WITH TEMPLATE = template0 ENCODING = 'UTF8' OWNER = thisg
     @patch('gppylib.operations.backup_utils.dbconn.DbURL')
     @patch('gppylib.operations.backup_utils.dbconn.connect')
     def test_analyze_restore_tables_execSQL_failed(self, mock1, mock2, mock3):
-        self.context.restore_db = 'db1'
+        self.context.target_db = 'db1'
         self.context.restore_tables = ['public.t1', 'public.t2']
         self.assertRaisesRegexp(Exception, 'Issue with \'ANALYZE\' of restored table \'"public"."t1"\' in \'db1\' database', self.restore._analyze_restore_tables)
 
