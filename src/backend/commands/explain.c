@@ -780,18 +780,41 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ExplainState *es,
     /* Display optimizer status: either 'legacy query optimizer' or Orca version number */
     if (optimizer_explain_show_status)
     {
-		appendStringInfo(es->str, "Optimizer status: ");
-    	if (queryDesc->plannedstmt->planGen == PLANGEN_PLANNER)
+    	if ( es->format == EXPLAIN_FORMAT_TEXT)
     	{
-			appendStringInfo(es->str, "legacy query optimizer\n");
+			appendStringInfo(es->str, "Optimizer status: ");
+			if (queryDesc->plannedstmt->planGen == PLANGEN_PLANNER)
+			{
+				appendStringInfo(es->str, "legacy query optimizer\n");
+			}
+			else /* PLANGEN_OPTIMIZER */
+			{
+				StringInfo str = OptVersion();
+				appendStringInfo(es->str, "PQO version %s\n", str->data);
+				pfree(str->data);
+				pfree(str);
+			}
     	}
-    	else /* PLANGEN_OPTIMIZER */
-    	{
-    		StringInfo str = OptVersion();
-			appendStringInfo(es->str, "PQO version %s\n", str->data);
-			pfree(str->data);
-			pfree(str);
-    	}
+		else
+		{
+			if (queryDesc->plannedstmt->planGen == PLANGEN_PLANNER)
+			{
+				ExplainPropertyText("Optimizer", "legacy query optimizer", es);
+			}
+			else
+			{
+				StringInfo buf = makeStringInfo();
+				StringInfo str = OptVersion();
+
+				appendStringInfo(buf, "PQO version %s", str->data);
+				ExplainPropertyText("Optimizer", buf->data, es);
+				pfree(buf->data);
+				pfree(buf);
+				pfree(str->data);
+				pfree(str);
+
+			}
+		}
     }
 #endif
 
