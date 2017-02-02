@@ -71,14 +71,15 @@ explain_get_index_name_hook_type explain_get_index_name_hook = NULL;
 extern bool Test_print_direct_dispatch_info;
 
 static void ExplainOneQuery(Query *query, ExplainState *es,
-				const char *queryString, ParamListInfo params);
+				const char *queryString, ParamListInfo params,
+				TupOutputState *tstate);
 static void report_triggers(ResultRelInfo *rInfo, bool show_relname,
 				ExplainState *es);
 
 #ifdef USE_ORCA
-static void ExplainDXL(Query *query, ExplainStmt *stmt,
-							const char *queryString,
-							ParamListInfo params, TupOutputState *tstate);
+static void ExplainDXL(Query *query, const char *queryString,
+							ParamListInfo params, TupOutputState *tstate,
+							ExplainState *es);
 #endif
 #ifdef USE_CODEGEN
 static void ExplainCodegen(PlanState *planstate, TupOutputState *tstate);
@@ -218,6 +219,9 @@ ExplainQuery(ExplainStmt *stmt, const char *queryString,
 	rewritten = pg_analyze_and_rewrite((Node *) copyObject(stmt->query),
 									   queryString, param_types, num_params);
 
+
+	tstate = begin_tup_output_tupdesc(dest, ExplainResultDesc(stmt));
+
 	/* emit opening boilerplate */
 	ExplainBeginOutput(&es);
 
@@ -234,10 +238,12 @@ ExplainQuery(ExplainStmt *stmt, const char *queryString,
 	{
 		ListCell *l;
 
+		es.dxl = stmt->dxl;
+
 		/* Explain every plan */
 		foreach(l, rewritten)
 		{
-			ExplainOneQuery((Query *) lfirst(l), &es, queryString, params);
+			ExplainOneQuery((Query *) lfirst(l), &es, queryString, params, tstate);
 
 			/* Separate plans with an appropriate separator */
 			if (lnext(l) != NULL)
@@ -249,11 +255,9 @@ ExplainQuery(ExplainStmt *stmt, const char *queryString,
 	Assert(es.indent == 0);
 
 	/* output tuples */
-	tstate = begin_tup_output_tupdesc(dest, ExplainResultDesc(stmt));
 	if (es.format == EXPLAIN_FORMAT_TEXT)
 		do_text_output_multiline(tstate, es.str->data);
-	else
-		do_text_output_oneline(tstate, es.str->data);
+
 	end_tup_output(tstate);
 
 	pfree(es.str->data);
@@ -307,22 +311,16 @@ ExplainResultDesc(ExplainStmt *stmt)
  *	  this function implicitly uses optimizer
  */
 static void
-ExplainDXL(Query *query, ExplainStmt *stmt, const char *queryString,
-				ParamListInfo params, TupOutputState *tstate)
+ExplainDXL(Query *query,  const char *queryString,
+				ParamListInfo params, TupOutputState *tstate, ExplainState *es)
 {
 	MemoryContext oldcxt = CurrentMemoryContext;
-	ExplainState explainState;
-	ExplainState *es = &explainState;
-	StringInfoData buf;
 	bool		save_enumerate;
 
-	/* Initialize ExplainState structure. */
-	memset(es, 0, sizeof(*es));
 	es->showstatctx = NULL;
 	es->deferredError = NULL;
 	es->pstmt = NULL;
 
-	initStringInfo(&buf);
 
 	save_enumerate = optimizer_enumerate_plans;
 
@@ -368,12 +366,14 @@ ExplainDXL(Query *query, ExplainStmt *stmt, const char *queryString,
  */
 static void
 ExplainOneQuery(Query *query, ExplainState *es,
-			const char *queryString, ParamListInfo params)
+			const char *queryString, ParamListInfo params,
+			TupOutputState *tstate)
 {
 #ifdef USE_ORCA
-    if (stmt->dxl)
+
+	if (es->dxl)
     {
-    	ExplainDXL(query, stmt, queryString, params, tstate);
+    	ExplainDXL(query, queryString, params, tstate, es);
     	return;
     }
 #endif
@@ -485,7 +485,6 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ExplainState *es,
 	double		totaltime = 0;
 	EState     *estate = NULL;
 	int			eflags;
-	int         nb;
 	MemoryContext explaincxt = CurrentMemoryContext;
 
 
@@ -750,7 +749,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ExplainState *es,
      */
     List *gucs_to_show = gp_guc_list_show( PGC_S_DEFAULT, gp_guc_list_for_explain);
 
-	if (length(gucs_to_show) )
+	if (list_length(gucs_to_show) )
 	{
 		ListCell *cell;
 		if ( es->format == EXPLAIN_FORMAT_TEXT)
@@ -779,15 +778,15 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ExplainState *es,
     /* Display optimizer status: either 'legacy query optimizer' or Orca version number */
     if (optimizer_explain_show_status)
     {
-		appendStringInfo(&buf, "Optimizer status: ");
+		appendStringInfo(es->str, "Optimizer status: ");
     	if (queryDesc->plannedstmt->planGen == PLANGEN_PLANNER)
     	{
-			appendStringInfo(&buf, "legacy query optimizer\n");
+			appendStringInfo(es->str, "legacy query optimizer\n");
     	}
     	else /* PLANGEN_OPTIMIZER */
     	{
     		StringInfo str = OptVersion();
-			appendStringInfo(&buf, "PQO version %s\n", str->data);
+			appendStringInfo(es->str, "PQO version %s\n", str->data);
 			pfree(str->data);
 			pfree(str);
     	}

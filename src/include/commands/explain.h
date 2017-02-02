@@ -38,6 +38,7 @@ typedef struct ExplainState
 	int		indent;				/* current indentation level */
 	List		*grouping_stack;	/* format-specific grouping state */
 
+	bool    dxl;						/* explain in DXL format */
     /* CDB */
     struct CdbExplain_ShowStatCtx  *showstatctx;    /* EXPLAIN ANALYZE info */
     Slice          *currentSlice;   /* slice whose nodes we are visiting */
