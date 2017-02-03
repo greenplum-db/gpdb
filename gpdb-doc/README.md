@@ -28,7 +28,7 @@ For Greenplum Database, a preconfigured **book** is provided in the `/gpdb-doc/b
 * Ruby [bundler](http://bundler.io/) installed for gem package management.
 * Java 1.7 or higher
 * Ant
-* [DITA Open Toolkit (DITA-OT) 1.7.5](http://sourceforge.net/projects/dita-ot/files/DITA-OT%20Stable%20Release/DITA%20Open%20Toolkit%201.7/) Install the DITA-OT to a local directory.
+* DITA Open Toolkit (DITA-OT) 1.7.5 Full-easy-install package ([.zip](https://sourceforge.net/projects/dita-ot/files/DITA-OT%20Stable%20Release/DITA%20Open%20Toolkit%201.7/DITA-OT1.7.5_full_easy_install_bin.zip/download) or [.tar.gz](https://sourceforge.net/projects/dita-ot/files/DITA-OT%20Stable%20Release/DITA%20Open%20Toolkit%201.7/DITA-OT1.7.5_full_easy_install_bin.tar.gz/download)). Uncompress the DITA-OT to a local directory.
 * An environment variable, `PATH_TO_DITA_OT_LIBRARY`, that points to your local DITA-OT installation. For example, if you installed the DITA_OT to `/Users/gpdb-user/DITA-OT1.7.5`:
 
     ``` bash
