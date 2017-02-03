@@ -284,25 +284,32 @@ ExplainResultDesc(ExplainStmt *stmt)
 {
 	TupleDesc	tupdesc;
 	ListCell   *lc;
-	bool		xml = false;
+	Oid			result_type = TEXTOID;
 
 	/* Check for XML format option */
 	foreach(lc, stmt->options)
 	{
-		DefElem *opt = (DefElem *) lfirst(lc);
+		DefElem    *opt = (DefElem *) lfirst(lc);
 
 		if (strcmp(opt->defname, "format") == 0)
 		{
-			char   *p = defGetString(opt);
+			char	   *p = defGetString(opt);
 
-			xml = (strcmp(p, "xml") == 0);
+			if (strcmp(p, "xml") == 0)
+				result_type = XMLOID;
+			else if (strcmp(p, "json") == 0)
+				result_type = JSONOID;
+			else
+				result_type = TEXTOID;
+			/* don't "break", as ExplainQuery will use the last value */
 		}
 	}
+
 
 	/* Need a tuple descriptor representing a single TEXT or XML column */
 	tupdesc = CreateTemplateTupleDesc(1, false);
 	TupleDescInitEntry(tupdesc, (AttrNumber) 1, "QUERY PLAN",
-					   xml ? XMLOID : TEXTOID, -1, 0);
+					   result_type, -1, 0);
 	return tupdesc;
 }
 
