@@ -45,7 +45,6 @@
         <booklists>
             <toc/>
         </booklists>
-        <notices href="best_practices/common/pivotal-copyright.xml"/>
     </frontmatter>
     <chapter href="best_practices/intro.xml">
         <topicref href="best_practices/summary.xml"/>
