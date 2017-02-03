@@ -17,10 +17,6 @@
 
 test: variadic_parameters default_parameters function_extensions
 
-# test workfiles compressed using zlib
-# 'zlib' utilizes fault injectors so it needs to be in a group by itself
-test: zlib
-
 test: leastsquares
 test: opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile naivebayes join_gp union_gp gpcopy gp_create_table
 test: filter gpctas gpdist matrix toast sublink table_functions olap_setup complex opclass_ddl information_schema guc_env_var
@@ -31,6 +27,12 @@ test: dispatch
 
 # deadlock tests run separately - because we don't know which one gets stuck.
 test: deadlock
+
+# test workfiles
+test: workfile/hashagg_spill workfile/hashjoin_spill workfile/materialize_spill workfile/sisc_mat_sort workfile/sisc_sort_spill workfile/sort_spill
+# test workfiles compressed using zlib
+# 'zlib' utilizes fault injectors so it needs to be in a group by itself
+test: zlib
 
 # This test will change the gp_workfile_limit_per_segment and will need to restart the DB.
 # It will also use faultinjector - so it needs to be in a group by itself.

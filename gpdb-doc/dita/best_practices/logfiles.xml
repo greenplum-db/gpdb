@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic_crh_2fc_3r">
+  <title>Monitoring Greenplum Database Log Files</title>
+  <body>
+    <p>Know the location and content of system log files and monitor them on a regular basis and not
+      just when problems arise.</p>
+    <p>The following table shows the locations of the various Greenplum Database log files. In file
+      paths, <codeph><varname>date</varname></codeph> is a date in the format
+        <codeph>YYYYMMDD</codeph>, <codeph><varname>instance</varname></codeph> is the current
+      instance name, and <codeph><varname>n</varname></codeph> is the segment number.</p>
+    <table id="table_mkp_cgc_3r">
+      <tgroup cols="2">
+        <colspec colnum="1" colname="col1"/>
+        <colspec colnum="2" colname="col2"/>
+        <thead>
+          <row>
+            <entry>Path</entry>
+            <entry>Description</entry>
+          </row>
+        </thead>
+        <tbody>
+          <row>
+            <entry>
+              <codeph>/var/gpadmin/gpadminlogs/*</codeph>
+            </entry>
+            <entry>Many different types of log files, directory on each server</entry>
+          </row>
+          <row>
+            <entry>
+              <codeph>/var/gpadmin/gpadminlogs/gpstart_<varname>date</varname>.log</codeph>
+            </entry>
+            <entry>start log</entry>
+          </row>
+          <row>
+            <entry>
+              <codeph>/var/gpadmin/gpadminlogs/gpstop_<varname>date</varname>.log</codeph>
+            </entry>
+            <entry>stop log</entry>
+          </row>
+          <row>
+            <entry>
+              <codeph>/var/gpadmin/gpadminlogs/gpsegstart.py_idb*gpadmin_<varname>date</varname>.log</codeph>
+            </entry>
+            <entry>segment start log</entry>
+          </row>
+          <row>
+            <entry>
+              <codeph>/var/gpadmin/gpadminlogs/gpsegstop.py_idb*gpadmin_<varname>date</varname>.log</codeph>
+            </entry>
+            <entry>segment stop log</entry>
+          </row>
+          <row>
+            <entry>
+              <codeph>/var/gpdb/<varname>instance</varname>/datamaster/gpseg-1/pg_log/startup.log</codeph>
+            </entry>
+            <entry>instance start log</entry>
+          </row>
+          <row>
+            <entry>
+              <codeph>/var/gpdb/<varname>instance</varname>/datamaster/gpseg-1/gpperfmon/logs/gpmon.*.log</codeph>
+            </entry>
+            <entry>gpperfmon logs</entry>
+          </row>
+          <row>
+            <entry>
+              <codeph>/var/gpdb/<varname>instance</varname>/datamirror/gpseg<varname>n</varname>/pg_log/*.csv</codeph>
+            </entry>
+            <entry>mirror segment logs</entry>
+          </row>
+          <row>
+            <entry>
+              <codeph>/var/gpdb/<varname>instance</varname>/dataprimary/gpseg<varname>n</varname>/pg_log/*.csv</codeph>
+            </entry>
+            <entry>primary segment logs</entry>
+          </row>
+          <row>
+            <entry>
+              <codeph>/var/log/messages</codeph>
+            </entry>
+            <entry>Global Linux system messages</entry>
+          </row>
+        </tbody>
+      </tgroup>
+    </table>
+    <p>Use <codeph>gplogfilter -t</codeph> (<codeph>--trouble</codeph>) first to search the master
+      log for messages beginning with <codeph>ERROR:</codeph>, <codeph>FATAL:</codeph>, or
+        <codeph>PANIC:</codeph>. Messages beginning with <codeph>WARNING</codeph> may also provide
+      useful information.</p>
+    <p>To search log files on the segment hosts, use the Greenplum <codeph>gplogfilter</codeph>
+      utility with <codeph>gpssh</codeph> to connect to segment hosts from the master host. You can
+      identify corresponding log entries in segment logs by the <codeph>statement_id</codeph>. </p>
+    <p>The <codeph>log_rotation_age</codeph> configuration parameter specifies when a new log file
+      is automatically created while a database instance is running. By default, a new log file is
+      created every day. </p>
+
+  </body>
+</topic>

@@ -21,6 +21,10 @@ insert into W(segid, a) select gp_segment_id, a*91 from T;
 
 select * from T full join W on T.a = W.a/91 where T.gp_segment_id <> W.segid; -- should return 0 rows 
 
+drop table T;
+drop table U;
+drop table W;
+
 drop table if exists customer_off;
 drop table if exists customer_on;
 CREATE TABLE customer_off (

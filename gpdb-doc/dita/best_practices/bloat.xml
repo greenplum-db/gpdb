@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic_gft_h11_bp">
+  <title>Managing Bloat in the Database</title>
+  <body>
+    <p>Greenplum Database heap tables use the PostgreSQL Multiversion Concurrency Control (MVCC)
+      storage implementation. A deleted or updated row is logically deleted from the database, but a
+      non-visible image of the row remains in the table. These deleted rows, also called expired
+      rows, are tracked in a free space map. Running <codeph>VACUUM</codeph> marks the expired rows
+      as free space that is available for reuse by subsequent inserts. </p>
+    <p>If the free space map is not large enough to accommodate all of the expired rows, the
+        <codeph>VACUUM</codeph> command is unable to reclaim space for expired rows that overflowed
+      the free space map. The disk space may only be recovered by running <codeph>VACUUM
+        FULL</codeph>, which locks the table, copies rows one-by-one to the beginning of the file,
+      and truncates the file. This is an expensive operation that can take an exceptional amount of
+      time to complete with a large table. It should be used only on smaller tables. If you attempt
+      to kill a <codeph>VACUUM FULL</codeph> operation, the system can be disrupted. </p>
+    <note type="important">
+      <p>It is very important to run <codeph>VACUUM</codeph> after large <codeph>UPDATE</codeph> and
+          <codeph>DELETE</codeph> operations to avoid the necessity of ever running <codeph>VACUUM
+          FULL</codeph>.</p>
+    </note>
+    <p>If the free space map overflows and it is necessary to recover the space it is recommended to
+      use the <codeph>CREATE TABLE...AS SELECT</codeph> command to copy the table to a new table,
+      which will create a new compact table. Then drop the original table and rename the copied
+      table. </p>
+    <p>It is normal for tables that have frequent updates to have a small or moderate amount of
+      expired rows and free space that will be reused as new data is added. But when the table is
+      allowed to grow so large that active data occupies just a small fraction of the space, the
+      table has become significantly "bloated." Bloated tables require more disk storage and
+      additional I/O that can slow down query execution.</p>
+    <p>Bloat affects heap tables, system catalogs, and indexes. </p>
+    <p>Running the <codeph>VACUUM</codeph> statement on tables regularly prevents them from growing
+      too large. If the table does become significantly bloated, the <codeph>VACUUM FULL</codeph>
+      statement (or an alternative procedure) must be used to compact the file. If a large table
+      becomes significantly bloated, it is better to use one of the alternative methods described in
+        <xref href="#topic_gft_h11_bp/remove_bloat" format="dita" type="section"/> to remove the
+      bloat.</p>
+    <note type="caution"><b>Never</b> run <codeph>VACUUM FULL &lt;database_name></codeph> and do not
+      run <codeph>VACUUM FULL</codeph> on large tables in a Greenplum Database.</note>
+    <section>
+      <title>Sizing the Free Space Map</title>
+
+      <p>Expired rows in heap tables are added to a shared free space map when you run
+          <codeph>VACUUM</codeph>. The free space map must be adequately sized to accommodate these
+        rows. If the free space map is not large enough, any space occupied by rows that overflow
+        the free space map cannot be reclaimed by a regular <codeph>VACUUM</codeph> statement. You
+        will have to use <codeph>VACUUM FULL</codeph> or an alternative method to recover the
+        space.</p>
+      <p>You can avoid overflowing the free space map by running the <codeph>VACUUM</codeph>
+        statement regularly. The more bloated a table becomes, the more rows that must be tracked in
+        the free space map. For very large databases with many objects, you may need to increase the
+        size of the free space map to prevent overflow. </p>
+
+      <p>The <codeph>max_fsm_pages</codeph> configuration parameter sets the maximum number of disk
+        pages for which free space will be tracked in the shared free-space map. Each page slot
+        consumes six bytes of shared memory. The default value for <codeph>max_fsm_pages</codeph> is
+        200,000.</p>
+      <p>The <codeph>max_fsm_relations</codeph> configuration parameter sets the maximum number of
+        relations for which free space will be tracked in the shared memory free-space map. It
+        should be set to a value larger than the total number of tables, indexes, and system tables
+        in the database. It costs about 60 bytes of memory for each relation per segment instance.
+        The default value is 1000.</p>
+      <p>See the <i>Greenplum Database Reference Guide</i> for detailed information about these
+        configuration parameters.</p>
+    </section>
+    <section>
+      <title>Detecting Bloat</title>
+      <p>The statistics collected by the <codeph>ANALYZE</codeph> statement can be used to calculate
+        the expected number of disk pages required to store a table. The difference between the
+        expected number of pages and the actual number of pages is a measure of bloat. The
+          <codeph>gp_toolkit</codeph> schema provides a <codeph>gp_bloat_diag</codeph> view that
+        identifies table bloat by comparing the ratio of expected to actual pages. To use it, make
+        sure statistics are up to date for all of the tables in the database, then run the following
+        SQL:<codeblock>gpadmin=# SELECT * FROM gp_toolkit.gp_bloat_diag;
+ bdirelid | bdinspname | bdirelname | bdirelpages | bdiexppages |                bdidiag                
+----------+------------+------------+-------------+-------------+---------------------------------------
+    21488 | public     | t1         |          97 |           1 | significant amount of bloat suspected
+(1 row)</codeblock></p>
+      <p>The results include only tables with moderate or significant bloat. Moderate bloat is
+        reported when the ratio of actual to expected pages is greater than four and less than ten.
+        Significant bloat is reported when the ratio is greater than ten.</p>
+      <p>The <codeph>gp_toolkit.gp_bloat_expected_pages</codeph> view lists the actual number of
+        used pages and expected number of used pages for each database object.
+        <codeblock>gpadmin=# SELECT * FROM gp_toolkit.gp_bloat_expected_pages LIMIT 5;
+ btdrelid | btdrelpages | btdexppages 
+----------+-------------+-------------
+    10789 |           1 |           1
+    10794 |           1 |           1
+    10799 |           1 |           1
+     5004 |           1 |           1
+     7175 |           1 |           1
+(5 rows)</codeblock></p>
+      <p>The <codeph>btdrelid</codeph> is the object ID of the table. The
+          <codeph>btdrelpages</codeph> column reports the number of pages the table uses; the
+          <codeph>btdexppages</codeph> column is the number of pages expected. Again, the numbers
+        reported are based on the table statistics, so be sure to run <codeph>ANALYZE</codeph> on
+        tables that have changed.</p>
+    </section>
+    <section id="remove_bloat">
+      <title>Removing Bloat from Database Tables</title>
+      <p>The <codeph>VACUUM</codeph> command adds expired rows to the shared free space map so that
+        the space can be reused. When <codeph>VACUUM</codeph> is run regularly on a table that is
+        frequently updated, the space occupied by the expired rows can be promptly reused,
+        preventing the table file from growing larger. It is also important to run
+          <codeph>VACUUM</codeph> before the free space map is filled. For heavily updated tables,
+        you may need to run <codeph>VACUUM</codeph> at least once a day to prevent the table from
+        becoming bloated.</p>
+      <note type="warning">When a table is significantly bloated, it is better to run
+          <codeph>ANALYZE</codeph>
+        <i>before</i> running <codeph>VACUUM</codeph>. Because <codeph>ANALYZE</codeph> uses
+        block-level sampling, a table with a high ratio of blocks containing no valid rows can cause
+          <codeph>ANALYZE</codeph> to set the <codeph>reltuples</codeph> column of the
+          <codeph>pg_class</codeph> system catalog to an inaccurate value or 0, which can lead to
+        poorly optimized queries. The <codeph>VACUUM</codeph> command produces a more accurate count
+        and when run after <codeph>ANALYZE</codeph> will correct an inaccurate row count
+        estimate.</note>
+      <p>When a table accumulates significant bloat, running the <codeph>VACUUM</codeph> command is
+        insufficient. For small tables, running <codeph>VACUUM FULL &lt;table_name></codeph> can
+        reclaim space used by rows that overflowed the free space map and reduce the size of the
+        table file. However, a <codeph>VACUUM FULL</codeph> statement is an expensive operation that
+        requires an <codeph>ACCESS EXCLUSIVE</codeph> lock and may take an exceptionally long and
+        unpredictable amount of time to finish. Rather than run <codeph>VACUUM FULL</codeph> on a
+        large table, an alternative method is required to remove bloat from a large file. Note that
+        every method for removing bloat from large tables is resource intensive and should be done
+        only under extreme circumstances. </p>
+      <p>The first method to remove bloat from a large table is to create a copy of the table
+        excluding the expired rows, drop the original table, and rename the copy. This method uses
+        the <codeph>CREATE TABLE &lt;table_name> AS SELECT</codeph> statement to create the new
+        table, for
+        example:<codeblock>gpadmin=# CREATE TABLE mytable_tmp AS SELECT * FROM mytable;
+gpadmin=# DROP TABLE mytable;
+gpadmin=# ALTER TABLE mytabe_tmp RENAME TO mytable;</codeblock></p>
+      <p>A second way to remove bloat from a table is to redistribute the table, which rebuilds the
+        table without the expired rows. Follow these steps:<ol id="ol_bqc_xhq_bp">
+          <li>Make a note of the table's distribution columns.</li>
+          <li>Change the table's distribution policy to
+              random:<codeblock>ALTER TABLE mytable SET WITH (REORGANIZE=false) 
+DISTRIBUTED randomly;</codeblock><p>This
+              changes the distribution policy for the table, but does not move any data. The command
+              should complete instantly. </p></li>
+          <li>Change the distribution policy back to its initial
+              setting:<codeblock>ALTER TABLE mytable SET WITH (REORGANIZE=true) 
+DISTRIBUTED BY (<i>&lt;original distribution columns&gt;</i>);</codeblock><p>This
+              step redistributes the data. Since the table was previously distributed with the same
+              distribution key, the rows are simply rewritten on the same segment, excluding expired
+              rows. </p></li>
+        </ol></p>
+    </section>
+    <section>
+      <title>Removing Bloat from Indexes</title>
+      <p>The <codeph>VACUUM</codeph> command only recovers space from tables. To recover the space
+        from indexes, recreate them using the <codeph>REINDEX</codeph> command.</p>
+      <p>To rebuild all indexes on a table run <codeph>REINDEX <i>table_name</i>;</codeph>. To
+        rebuild a particular index, run <codeph>REINDEX <i>index_name</i>;</codeph>.
+          <codeph>REINDEX</codeph> does not update the <codeph>reltuples</codeph> and
+          <codeph>relpages</codeph> statistics for the index, so it is important to
+          <codeph>ANALYZE</codeph> the table to update these statistics after reindexing. </p>
+    </section>
+    <section>
+      <title>Removing Bloat from System Catalogs</title>
+      <p>Greenplum Database system catalogs are also heap tables and can become bloated over time.
+        As database objects are created, altered, or dropped, expired rows are left in the system
+        catalogs. Using <codeph>gpload</codeph> to load data contributes to the bloat since
+          <codeph>gpload</codeph> creates and drops external tables. (Rather than use
+          <codeph>gpload</codeph>, it is recommended to use <codeph>gpfdist</codeph> to load data.) </p>
+      <p>Bloat in the system catalogs increases the time require to scan the tables, for example,
+        when creating explain plans. System catalogs are scanned frequently and if they become
+        bloated, overall system performance is degraded. </p>
+      <p>It is recommended to run <codeph>VACUUM</codeph> on the system catalog nightly and at least
+        weekly. At the same time, running <codeph>REINDEX SYSTEM</codeph> removes bloat from the
+        indexes. Alternatively, you can reindex system tables using the <codeph>reindexdb</codeph>
+        utility with the <codeph>-s</codeph> (<codeph>--system</codeph>) option. After reindexing,
+        it is also important to run <codeph>ANALYZE</codeph>, because the <codeph>REINDEX</codeph>
+        command rebuilds indexes with empty statistics. </p>
+      <p>The following script runs <codeph>VACUUM</codeph>, <codeph>REINDEX</codeph>, and
+          <codeph>ANALYZE</codeph> on the system
+        catalogs.<pre>#!/bin/bash
+DBNAME="&lt;database_name>"
+SYSTABLES="' pg_catalog.' || relname || ';' from pg_class a, pg_namespace b \
+where a.relnamespace=b.oid and b.nspname='pg_catalog' and a.relkind='r'"
+psql -tc "SELECT 'VACUUM' || $SYSTABLES" $DBNAME | psql -a $DBNAME
+reindexdb -s -d $DBNAME
+analyzedb -s pg_catalog -d $DBNAME</pre></p>
+      <p>If the system catalogs become significantly bloated, you must perform an intensive system
+        catalog maintenance procedure. The <codeph>CREATE TABLE AS SELECT</codeph> and
+        redistribution key methods for removing bloat cannot be used with system catalogs. You must
+        instead run <codeph>VACUUM FULL</codeph> during a scheduled downtime period. During this
+        period, stop all catalog activity on the system; <codeph>VACUUM FULL</codeph> takes
+        exclusive locks against the system catalog. Running <codeph>VACUUM</codeph> regularly can
+        prevent the need for this more costly procedure.</p>
+    </section>
+    <section>
+      <title>Removing Bloat from Append-Optimized Tables</title>
+      <p>Append-optimized tables are handled much differently than heap tables. Although
+        append-optimized tables allow updates, inserts, and deletes, they are not optimized for
+        these operations and it is recommended to not use them with append-optimized tables. If you
+        heed this advice and use append-optimized for <i>load-once/read-many</i> workloads,
+          <codeph>VACUUM</codeph> on an append-optimized table runs almost instantaneously. </p>
+      <p>If you do run <codeph>UPDATE</codeph> or <codeph>DELETE</codeph> commands on an
+        append-optimized table, expired rows are tracked in an auxiliary bitmap instead of the free
+        space map. <codeph>VACUUM</codeph> is the only way to recover the space. Running
+          <codeph>VACUUM</codeph> on an append-optimized table with expired rows compacts a table by
+        rewriting the entire table without the expired rows. However, no action is performed if the
+        percentage of expired rows in the table exceeds the value of the
+          <codeph>gp_appendonly_compaction_threshold</codeph> configuration parameter, which is 10
+        (10%) by default. The threshold is checked on each segment, so it is possible that a
+          <codeph>VACUUM</codeph> statement will compact an append-only table on some segments and
+        not others. Compacting append-only tables can be disabled by setting the
+          <codeph>gp_appendonly_compaction</codeph> parameter to <codeph>no</codeph>.</p>
+    </section>
+  </body>
+</topic>

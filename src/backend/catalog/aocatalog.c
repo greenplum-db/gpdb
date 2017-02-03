@@ -21,6 +21,7 @@
 #include "catalog/pg_type.h"
 #include "miscadmin.h"
 #include "utils/builtins.h"
+#include "catalog/gp_fastsequence.h"
 
 /*
  * Create append-only auxiliary relations for target relation rel.
