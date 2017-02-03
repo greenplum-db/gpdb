@@ -6,57 +6,7 @@
    <body>
       <p>Configuration parameters affect categories of server behaviors, such as resource
          consumption, query tuning, and authentication. The following topics describe Greenplum Database configuration parameter categories. </p>
-      <p>For details about configuration parameter categories, see the
-            <cite>Greenplum Database Reference Guide</cite>.<ul id="ul_ltl_mnb_kr">
-            <li id="kh158485">
-               <xref href="#topic11" format="dita"/>
-            </li>
-            <li id="kh158498">
-               <xref href="g-system-resource-consumption-parameters.xml#topic15"/>
-            </li>
-            <li id="kh158520">
-               <xref href="g-query-tuning-parameters.xml#topic21"/>
-            </li>
-            <li id="kh158533">
-               <xref href="g-error-reporting-and-logging-parameters.xml#topic29"/>
-            </li>
-            <li id="kh171207">
-               <xref href="g-system-monitoring-parameters.xml#topic33"/>
-            </li>
-            <li id="kh158545">
-               <xref href="g-runtime-statistics-collection-parameters.xml#topic37"/>
-            </li>
-            <li id="kh166320">
-               <xref href="g-automatic-statistics-collection-parameters.xml#topic38"/>
-            </li>
-            <li id="kh158554">
-               <xref href="g-client-connection-default-parameters.xml#topic39"/>
-            </li>
-            <li id="kh158572">
-               <xref href="g-lock-management-parameters.xml#topic43"/>
-            </li>
-            <li id="kh158581">
-               <xref href="g-workload-management-parameters.xml#topic44"/>
-            </li>
-            <li id="kh158590">
-               <xref href="g-external-table-parameters.xml#topic45"/>
-            </li>
-            <li id="kh158599">
-               <xref href="g-append-optimized-table-parameters.xml#topic46"/>
-            </li>
-            <li id="kh158608">
-               <xref href="g-database-and-tablespace-filespace-parameters.xml#topic47"/>
-            </li>
-            <li id="kh184388">
-               <xref href="g-past-postgresql-version-compatibility-parameters.xml#topic48"/>
-            </li>
-            <li>
-               <xref href="g-greenplum-array-configuration-parameters.xml#topic49"/>
-            </li>
-            <li>
-               <xref href="g-greenplum-master-mirroring-parameters.xml#topic55mirror"/>
-            </li>
-            <li><xref href="g-greenplum-extension-parameters.xml#topic56ep"/></li>
-         </ul></p>
+      <p>For details about configuration parameter categories, see the <cite>Greenplum Database
+            Reference Guide</cite>.</p>
    </body>
 </topic>
