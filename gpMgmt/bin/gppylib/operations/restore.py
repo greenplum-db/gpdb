@@ -858,6 +858,7 @@ class RestoreDatabase(Operation):
         Truncate either specific table or all tables under a schema
         """
 
+        conn = None
         try:
             dburl = dbconn.DbURL(port=self.context.master_port, dbname=self.context.target_db)
             conn = dbconn.connect(dburl)

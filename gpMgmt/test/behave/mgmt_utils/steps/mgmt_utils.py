@@ -1625,29 +1625,30 @@ def impl(context):
     if not os.path.exists(dump_dir):
         raise Exception('Expected directory does not exist %s' % dump_dir)
 
-def validate_master_config_backup_files(context):
+def validate_master_config_backup_files(context, dir=master_data_dir):
     if not hasattr(context, "dump_prefix"):
         context.dump_prefix = ''
-    master_dump_dir = os.path.join(master_data_dir, 'db_dumps', context.backup_timestamp[0:8])
+    master_dump_dir = os.path.join(dir, 'db_dumps', context.backup_timestamp[0:8])
     dump_files = os.listdir(master_dump_dir)
     for df in dump_files:
         if df.startswith('%sgp_master_config_files' % context.dump_prefix) and df.endswith('.tar'):
             return
     raise Exception('Config files not backed up on master "%s"' % master_config_file)
 
-def validate_segment_config_backup_files(context):
+def validate_segment_config_backup_files(context, dir=None):
     if not hasattr(context, "dump_prefix"):
         context.dump_prefix = ''
     gparray = GpArray.initFromCatalog(dbconn.DbURL())
     primary_segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary()]
 
     for ps in primary_segs:
-        dump_dir = os.path.join(ps.getSegmentDataDirectory(), 'db_dumps', context.backup_timestamp[0:8])
+        seg_data_dir = dir if dir is not None else ps.getSegmentDataDirectory()
+        dump_dir = os.path.join(seg_data_dir, 'db_dumps', context.backup_timestamp[0:8])
         dump_files = ListRemoteFilesByPattern(dump_dir,
-                                              '%sgp_segment_config_files_*.tar' % context.dump_prefix,
+                                              '%sgp_segment_config_files_*_%d_*.tar' % (context.dump_prefix, ps.getSegmentDbId()),
                                               ps.getSegmentHostName()).run()
         if len(dump_files) != 1:
-            raise Exception('Error in finding config files "%s" for segment %s' % (dump_files, ps.getSegmentDataDirectory()))
+            raise Exception('Error in finding config files "%s" for segment %s' % (dump_files, seg_data_dir))
 
 @then('config files should be backed up on all segments')
 def impl(context):
@@ -1656,6 +1657,14 @@ def impl(context):
 
     validate_master_config_backup_files(context)
     validate_segment_config_backup_files(context)
+
+@then('config files should be backed up on all segments in directory "{dir}"')
+def impl(context, dir):
+    if not hasattr(context, 'backup_timestamp'):
+        raise Exception('Backup timestamp needs to be stored')
+
+    validate_master_config_backup_files(context, dir=dir)
+    validate_segment_config_backup_files(context, dir=dir)
 
 @then('verify that the table "{table_name}" in "{dbname}" has dump info for the stored timestamp')
 def impl(context, table_name, dbname):
