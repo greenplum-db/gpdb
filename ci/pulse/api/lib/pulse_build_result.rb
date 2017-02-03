@@ -2,6 +2,7 @@ require "net/http"
 require "uri"
 
 class PulseBuildResult
+  MAX_RETRY_ATTEMPTS = 3
 
   def initialize(pulse_options, build_result, build_messages, build_artifacts)
     @pulse_options = pulse_options
@@ -36,7 +37,7 @@ class PulseBuildResult
     puts "\n=== Artifacts ===\n"
     @build_artifacts.each do |artifact|
       artifact_name = artifact["name"]
-      next unless (artifact_name =~ /\.log/ || artifact_name =~ /\.out/)
+      next unless (artifact_name =~ /\.log/ || artifact_name =~ /\.out/ || artifact_name =~ /output\.txt/)
 
       # convert "Test Results (results.log) into 'results.log'"
       artifact_name.gsub!(/.*\((.*)\)/) { |match| "#{$1}" }
@@ -51,12 +52,25 @@ class PulseBuildResult
 
   def fetch_uri(uri_string, limit = 10)
     raise ArgumentError, 'HTTP redirect too deep' if limit == 0
-    response = Net::HTTP.get_response(URI.parse(uri_string))
+    response = retry_call { Net::HTTP.get_response(URI.parse(uri_string)) }
     case response
     when Net::HTTPSuccess     then response
     when Net::HTTPRedirection then fetch_uri(response['location'], limit - 1)
     else
       response.error!
+    end
+  end
+
+  def retry_call(&block)
+    attempts = 0
+    begin
+      yield
+    rescue Net::HTTPFatalError => error
+      raise error if attempts > MAX_RETRY_ATTEMPTS
+      puts "Got error: #{error} - retry ##{attempts} of #{MAX_RETRY_ATTEMPTS}"
+      attempts += 1
+      sleep (10 * attempts)
+      retry
     end
   end
 
