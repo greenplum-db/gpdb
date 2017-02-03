@@ -329,8 +329,7 @@ TwoPhaseFindRecoverPostCheckpointPreparedTransactionsMapEntry(TransactionId xid,
          caller);
 
   return true;
-}  /* end add_recover_post_checkpoint_prepared_transactions_map_entry */
-
+}
 
 /*
  * Remove a mapping from the recover post checkpoint prepared transactions hash table.

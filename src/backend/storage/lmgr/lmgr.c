@@ -21,10 +21,12 @@
 #include "access/xact.h"
 #include "catalog/catalog.h"
 #include "catalog/gp_policy.h"     /* CDB: POLICYTYPE_PARTiITIONED */
+#include "catalog/namespace.h"
 #include "miscadmin.h"
 #include "storage/lmgr.h"
 #include "storage/procarray.h"
 #include "utils/inval.h"
+#include "utils/lsyscache.h"        /* CDB: get_rel_name() */
 #include "cdb/cdbvars.h"
 
 
@@ -873,4 +875,50 @@ DescribeLockTag(StringInfo buf, const LOCKTAG *tag)
 							 (int) tag->locktag_type);
 			break;
 	}
+}
+
+/*
+ * LockTagIsTemp
+ *		Determine whether a locktag is for a lock on a temporary object
+ *
+ * In PostgreSQL, 2PC cannot deal with temporary objects. Commit
+ * f3032cbe377ecc570989e1bd2fe1aea455c12cc3 replace this method with global
+ * variable MyXactAccessedTempRel, so it's no longer needed.
+ *
+ * However, GPDB supports 2PC with temporary objects. Hence, it still relies
+ * on this method to check certain LOCKTAG is on temporary object or not, so
+ * that GPDB can skip the lock information in `TwoPhaseRecordOnDisk` for the
+ * temporary objects. That's to prevent replay redundant lock acquiring and
+ * releasing during `xact_redo()` on non-existent temporary objects.
+ */
+bool
+LockTagIsTemp(const LOCKTAG *tag)
+{
+	switch (tag->locktag_type)
+	{
+		case LOCKTAG_RELATION:
+		case LOCKTAG_RELATION_EXTEND:
+		case LOCKTAG_PAGE:
+		case LOCKTAG_TUPLE:
+		case LOCKTAG_RELATION_RESYNCHRONIZE:
+		case LOCKTAG_RELATION_APPENDONLY_SEGMENT_FILE:
+			/* check for lock on a temp relation */
+			/* field1 is dboid, field2 is reloid for all of these */
+			if ((Oid) tag->locktag_field1 == InvalidOid)
+				return false;	/* shared, so not temp */
+			if (isTempNamespace(get_rel_namespace((Oid) tag->locktag_field2)))
+				return true;
+			break;
+		case LOCKTAG_TRANSACTION:
+			/* there are no temp transactions */
+			break;
+		case LOCKTAG_OBJECT:
+			/* there are currently no non-table temp objects */
+			break;
+		case LOCKTAG_USERLOCK:
+		case LOCKTAG_ADVISORY:
+			/* assume these aren't temp */
+			break;
+	}
+	return false;				/* default case */
 }
