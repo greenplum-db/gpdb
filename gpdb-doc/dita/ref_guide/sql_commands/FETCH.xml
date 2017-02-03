@@ -47,8 +47,7 @@ row, if any. Only allowed if <varname>count</varname> moves the cursor position 
 re-fetches the current row. </pd></plentry><plentry><pt>FORWARD ALL</pt><pd>Fetch all remaining rows. </pd></plentry><plentry><pt><varname>cursorname</varname></pt><pd>The name of an open cursor. </pd></plentry></parml></section><section id="section6"><title>Notes</title><p>Greenplum Database does not support scrollable cursors, so you can only
 use <codeph>FETCH</codeph> to move the cursor position forward.</p><p><codeph>ABSOLUTE</codeph> fetches are not any faster than navigating
 to the desired row with a relative move: the underlying implementation
-must traverse all the intermediate rows anyway.</p><p>Updating data via a cursor is currently not supported by Greenplum
-Database. </p><p><codeph>DECLARE</codeph> is used to define a cursor. Use <codeph>MOVE</codeph>
+must traverse all the intermediate rows anyway.</p><p><codeph>DECLARE</codeph> is used to define a cursor. Use <codeph>MOVE</codeph>
 to change cursor position without retrieving data.</p></section><section id="section7"><title>Examples</title><p>-- Start the transaction:</p><codeblock>BEGIN;</codeblock><p>-- Set up a cursor:</p><codeblock>DECLARE mycursor CURSOR FOR SELECT * FROM films;</codeblock><p>-- Fetch the first 5 rows in the cursor <codeph>mycursor</codeph>:</p><codeblock>FETCH FORWARD 5 FROM mycursor;
  code  |          title          | did | date_prod  |   kind   |  len
 -------+-------------------------+-----+------------+----------+-------
@@ -57,7 +56,9 @@ to change cursor position without retrieving data.</p></section><section id="sec
  JL201 | Une Femme est une Femme | 102 | 1961-03-12 | Romantic | 01:25
  P_301 | Vertigo                 | 103 | 1958-11-14 | Action   | 02:08
  P_302 | Becket                  | 103 | 1964-02-03 | Drama    | 02:28</codeblock><p>-- Close the cursor and end the transaction:</p><codeblock>CLOSE mycursor;
-COMMIT;</codeblock></section><section id="section8"><title>Compatibility</title><p>SQL standard allows cursors only in embedded SQL and in modules. Greenplum
+COMMIT;</codeblock><p>Change the <codeph>kind</codeph> column of the table <codeph>films</codeph> in the row at the <codeph>c_films</codeph> cursor's current position:</p>
+<codeblock>UPDATE films SET kind = 'Dramatic' WHERE CURRENT OF c_films;</codeblock>
+</section><section id="section8"><title>Compatibility</title><p>SQL standard allows cursors only in embedded SQL and in modules. Greenplum
 Database permits cursors to be used interactively. </p><p>The variant of <codeph>FETCH</codeph> described here returns the data
 as if it were a <codeph>SELECT</codeph> result rather than placing it
 in host variables. Other than this point, <codeph>FETCH</codeph> is fully

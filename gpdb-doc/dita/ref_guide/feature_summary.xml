@@ -39,8 +39,8 @@ execute on the segments, and so are generally limited to being passed
 literal values as the arguments to their parameters.</li><li id="ik264601">Triggers are not supported since they typically rely on the use of <codeph>VOLATILE</codeph>
 functions.</li><li id="ik264621">Referential integrity constraints (foreign keys) are not enforced in
 Greenplum Database. Users can declare foreign keys and this information
-is kept in the system catalog, however.</li><li id="ik264690">Sequence manipulation functions <codeph>CURRVAL</codeph> and <codeph>LASTVAL</codeph>.</li><li id="ik264732"><codeph>DELETE WHERE CURRENT OF</codeph> and <codeph>UPDATE WHERE CURRENT
-OF</codeph> (positioned delete and positioned update operations).</li></ol></body></topic><topic id="topic4" xml:lang="en"><title>SQL 1992 Conformance</title><body><p>The following features of SQL 1992 are not supported in Greenplum Database:</p><ol><li id="ik264838"><codeph>NATIONAL CHARACTER</codeph> (<codeph>NCHAR</codeph>) and <codeph>NATIONAL
+is kept in the system catalog, however.</li><li id="ik264690">Sequence manipulation functions <codeph>CURRVAL</codeph> and <codeph>LASTVAL</codeph>.</li>
+</ol></body></topic><topic id="topic4" xml:lang="en"><title>SQL 1992 Conformance</title><body><p>The following features of SQL 1992 are not supported in Greenplum Database:</p><ol><li id="ik264838"><codeph>NATIONAL CHARACTER</codeph> (<codeph>NCHAR</codeph>) and <codeph>NATIONAL
 CHARACTER VARYING</codeph> (<codeph>NVARCHAR</codeph>). Users can declare
 the <codeph>NCHAR</codeph> and <codeph>NVARCHAR</codeph> types, however
 they are just synonyms for <codeph>CHAR</codeph> and <codeph>VARCHAR</codeph>
