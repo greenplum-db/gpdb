@@ -39,6 +39,19 @@ transfer_ownership() {
   chown -R gpadmin:gpadmin /home/gpadmin
 }
 
+set_limits() {
+  # Currently same as what's recommended in install guide
+  if [ -d /etc/security/limits.d ]; then
+    cat > /etc/security/limits.d/gpadmin-limits.conf <<-EOF
+		gpadmin soft core unlimited
+		gpadmin soft nproc 131072
+		gpadmin soft nofile 65536
+	EOF
+  fi
+  # Print now effective limits for gpadmin
+  su gpadmin -c 'ulimit -a'
+}
+
 setup_gpadmin_user() {
   /usr/sbin/useradd gpadmin
   echo -e "password\npassword" | passwd gpadmin
@@ -47,6 +60,7 @@ setup_gpadmin_user() {
   usermod -a -G tty gpadmin
   setup_ssh_for_user gpadmin
   transfer_ownership
+  set_limits
 }
 
 setup_sshd() {
