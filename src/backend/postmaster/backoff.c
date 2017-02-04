@@ -127,8 +127,8 @@ typedef struct BackoffBackendSharedEntry
 										 * backends. */
 
 	/* These fields are written to by sweeper and read by backend */
-	bool		noBackoff;		/* If set, then no backoff to be performed by
-								 * this backend */
+	bool		backoff;		/* If set to false, then no backoff to be
+								 * performed by this backend */
 	double		targetUsage;	/* Current target CPU usage as calculated by
 								 * sweeper */
 	bool		earlyBackoffExit;		/* Sweeper asking backend to stop
@@ -434,7 +434,7 @@ BackoffBackendEntryInit(int sessionid, int commandcount, int weight)
 	mySharedEntry->targetUsage = 1.0 / numProcsPerSegment();	/* Initially, do not
 																 * perform any backoffs */
 	mySharedEntry->isActive = false;
-	mySharedEntry->noBackoff = false;
+	mySharedEntry->backoff = true;
 	mySharedEntry->earlyBackoffExit = false;
 
 	if (gettimeofday(&mySharedEntry->lastCheckTime, NULL) < 0)
@@ -521,7 +521,7 @@ BackoffBackend()
 		elog(ERROR, "Unable to execute getrusage(). Please disable query prioritization.");
 	}
 
-	if (!se->noBackoff)
+	if (se->backoff)
 	{
 		/*
 		 * How much did the cpu work on behalf of this process - incl user and
@@ -712,7 +712,7 @@ BackoffSweeper()
 
 		se->isActive = false;
 		se->numFollowersActive = 0;
-		se->noBackoff = false;
+		se->backoff = true;
 	}
 
 	/*
@@ -776,7 +776,7 @@ BackoffSweeper()
 		{
 			BackoffBackendSharedEntry *se = getBackoffEntryRW(i);
 
-			se->noBackoff = true;
+			se->backoff = false;
 			se->earlyBackoffExit = true;
 			se->targetUsage = 1.0;
 		}
@@ -811,7 +811,7 @@ BackoffSweeper()
 				BackoffBackendSharedEntry *se = getBackoffEntryRW(i);
 
 				if (se->isActive
-					&& !se->noBackoff)
+					&& se->backoff)
 				{
 					double		targetCPU = 0.0;
 					const BackoffBackendSharedEntry *gl = getBackoffEntryRO(se->groupLeaderIndex);
@@ -831,7 +831,7 @@ BackoffSweeper()
 																 * when there is more
 																 * than one proc */
 						se->targetUsage = maxCPU;
-						se->noBackoff = true;
+						se->backoff = false;
 						activeWeight -= (se->weight / gl->numFollowersActive);
 
 						/*
@@ -869,7 +869,7 @@ BackoffSweeper()
 			BackoffBackendSharedEntry *se = getBackoffEntryRW(i);
 
 			if (se->isActive
-				&& !se->noBackoff)
+				&& se->backoff)
 			{
 				const BackoffBackendSharedEntry *gl = getBackoffEntryRO(se->groupLeaderIndex);
 
