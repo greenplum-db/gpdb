@@ -142,7 +142,8 @@ typedef struct BackoffBackendSharedEntry
 										 * are active */
 
 	/* These fields are wrtten by backend during init and by manual adjustment */
-	int			weight;			/* Weight of this statement */
+	int			weight;			/* Weight of the statement that this backend
+								 * belongs to */
 
 }	BackoffBackendSharedEntry;
 
@@ -257,7 +258,7 @@ equalStatementId(const StatementId * s1, const StatementId * s2)
 }
 
 /**
- * Is a statement id valid?
+ * Is a StatementId valid?
  */
 static inline bool
 isValid(const StatementId * s)
@@ -415,6 +416,8 @@ getBackoffEntryRW(int index)
 /**
  * This method is called by the backend when it begins working on a new statement.
  * This initializes the backend entry corresponding to this backend.
+ * After initialization, the backend entry immediately finds its group leader, which
+ * is the first backend entry that has the same statement id with itself.
  */
 void
 BackoffBackendEntryInit(int sessionid, int commandcount, int weight)
@@ -521,6 +524,7 @@ BackoffBackend()
 		elog(ERROR, "Unable to execute getrusage(). Please disable query prioritization.");
 	}
 
+	/* If backoff can be performed by this process */
 	if (se->backoff)
 	{
 		/*
@@ -678,22 +682,52 @@ BackoffBackendTick()
 }
 
 /**
- * This looks at all the backend structures to determine if any backends are not
- * making progress. This is done by inspecting the lastchecked time. It calculates
- * the total weight of all 'active' backends to re-calculate the target CPU usage
- * per backend process.
+ * BackoffSweeper() looks at all the backend structures to determine if any
+ * backends are not making progress. This is done by inspecting the lastchecked
+ * time.  It also calculates the total weight of all 'active' backends to
+ * re-calculate the target CPU usage per backend process. If it finds that a
+ * backend is trying to request more CPU resources than the maximum CPU that it
+ * can get (such a backend is called a 'pegger'), it assigns maxCPU to it.
+ *
+ * For example:
+ * Let Qi be the ith query statement, Ri be the target CPU usage for Qi,
+ * Wi be the statement weight for Qi, W be the total statements weight.
+ * For simplicity, let's assume every statement only has 1 backend per segment.
+ *
+ * Let there be 4 active queries with weights {1,100,10,1000} with K=3 CPUs
+ * available per segment to share. The maximum CPU that a backend can get is
+ * maxCPU = 1.0. The total active statements weight is
+ * W (activeWeight) = 1 + 100 + 10 + 1000 = 1111.
+ * The following algorithm determines that Q4 is pegger, because
+ * K * W4 / W > maxCPU, which is 3000/1111 > 1.0, so we assign R4 = 1.0.
+ * Now K becomes 2.0, W becomes 111.
+ * It restarts from the beginning and determines that Q2 is now a pegger as
+ * well, because K * W2 / W > maxCPU, which is 200/111 > 1.0, we assign
+ * R2 = 1.0. Now there is only 1 CPU left and no peggers left. We continue
+ * to distribute the left 1 CPU to other backends according to their weight,
+ * so we assign the target CPU ratio of R1=1/11 and R3=10/11. The final
+ * target CPU assignments are {0.09,1.0,0.91,1.0}.
+ *
+ * If there are multiple backends within a segment running for the query Qi,
+ * the target CPU ratio Ri for query Qi is divided equally among all the
+ * active backends belonging to the query.
  */
 void
 BackoffSweeper()
 {
-	volatile double activeWeight = 0.0;
 	int			i = 0;
-	int			numValidBackends = 0;
+
+	/* The overall weight of active statements */
+	volatile double activeWeight = 0.0;
 	int			numActiveBackends = 0;
 	int			numActiveStatements = 0;
+
+	/* The overall weight of active and inactive statements */
 	int			totalStatementWeight = 0;
-	struct timeval currentTime;
+	int			numValidBackends = 0;
 	int			numStatements = 0;
+
+	struct timeval currentTime;
 
 	if (gettimeofday(&currentTime, NULL) < 0)
 	{
@@ -706,6 +740,7 @@ BackoffSweeper()
 
 	PG_TRACE(backoff__globalcheck);
 
+	/* Reset status for all the backend entries */
 	for (i = 0; i < backoffSingleton->numEntries; i++)
 	{
 		BackoffBackendSharedEntry *se = getBackoffEntryRW(i);
@@ -785,6 +820,11 @@ BackoffSweeper()
 	{
 		/**
 		 * There are multiple statements with active backends.
+		 *
+		 * Let 'found' be true if we find a backend is trying to
+		 * request more CPU resources than the maximum CPU that it can
+		 * get. No matter how high the priority of a query process, it
+		 * can utilize at most a single CPU at a time.
 		 */
 		bool		found = true;
 		int			numIterations = 0;
