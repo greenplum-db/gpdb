@@ -30,22 +30,22 @@
         <li>Transparency of process. The expansion process employs standard Greenplum Database
           mechanisms, so administrators can diagnose and troubleshoot any problems.</li>
         <li>Configurable process. Expansion can be a long running process, but it can be fit into a
-          schedule of ongoing operations. Expansion control tables allow adminstrators to prioritize
-          the order in which tables are redistributed and the expansion activity can be paused and
-          resumed.</li>
+          schedule of ongoing operations. The expansion schema's tables allow adminstrators to
+          prioritize the order in which tables are redistributed, and the expansion activity can be
+          paused and resumed.</li>
       </ul></p>
     <p>The planning and physical aspects of an expansion project are a greater share of the work
       than expanding the database itself. It will take a multi-discipline team to plan and execute
-      the project. Space must be acquired and prepared for the new servers. The servers must be
-      specified, acquired, installed, cabled, configured, and tested. Consulting Greenplum Database
-      platform engineers in the planning stages will help to ensure a successful expansion project.
-        <xref href="expand-planning.xml#topic5" type="topic" format="dita"/> describes general
+      the project. For on-premise installations, space must be acquired and prepared for the new
+      servers. The servers must be specified, acquired, installed, cabled, configured, and tested.
+      For cloud deployments, similar plans should also be made. <xref
+        href="expand-planning.xml#topic5" type="topic" format="dita"/> describes general
       considerations for deploying new hardware. </p>
     <p>After you provision the new hardware platforms and set up their networks, configure the
-      operating systems and run performance tests using Greenplum utilities.The Greenplum Database
+      operating systems and run performance tests using Greenplum utilities. The Greenplum Database
       software distribution includes utilities that are helpful to test and burn-in the new servers
       before beginning the software phase of the expansion. See <xref href="expand-nodes.xml#topic1"
-      /> for steps to ready the new hosts for Greenplum Database.</p>
+      /> for steps to prepare the new hosts for Greenplum Database.</p>
     <p>Once the new servers are installed and tested, the software phase of the Greenplum Database
       expansion process begins. The software phase is designed to be minimally disruptive,
       transactionally consistent, reliable, and flexible. <ul id="ul_zwt_png_tt">
