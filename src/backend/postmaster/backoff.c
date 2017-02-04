@@ -175,7 +175,7 @@ BackoffState *backoffSingleton = NULL;
 
 static inline void init(StatementId * s, int sessionId, int commandCount);
 static inline void setInvalid(StatementId * s);
-static inline bool isInvalid(const StatementId * s);
+static inline bool isValid(const StatementId * s);
 static inline bool equalStatementId(const StatementId * s1, const StatementId * s2);
 
 /* Main accessor methods for backoff entries */
@@ -257,12 +257,12 @@ equalStatementId(const StatementId * s1, const StatementId * s2)
 }
 
 /**
- * Is a statemend invalid?
+ * Is a statement id valid?
  */
 static inline bool
-isInvalid(const StatementId * s)
+isValid(const StatementId * s)
 {
-	return equalStatementId(s, &InvalidStatementId);
+	return !equalStatementId(s, &InvalidStatementId);
 }
 
 /**
@@ -449,7 +449,7 @@ BackoffBackendEntryInit(int sessionid, int commandcount, int weight)
 
 	/* this should happen last or the sweeper may pick up a non-complete entry */
 	init(&mySharedEntry->statementId, sessionid, commandcount);
-	Assert(!isInvalid(&mySharedEntry->statementId));
+	Assert(isValid(&mySharedEntry->statementId));
 
 	/* Local information */
 	myLocalEntry = myBackoffLocalEntry();
@@ -723,7 +723,7 @@ BackoffSweeper()
 	{
 		BackoffBackendSharedEntry *se = getBackoffEntryRW(i);
 
-		if (!isInvalid(&se->statementId))
+		if (isValid(&se->statementId))
 		{
 			Assert(se->weight > 0);
 			if (TIMEVAL_DIFF_USEC(currentTime, se->lastCheckTime)
@@ -1369,7 +1369,7 @@ gp_list_backend_priorities(PG_FUNCTION_ARGS)
 
 		Assert(se);
 
-		if (isInvalid(&se->statementId))
+		if (!isValid(&se->statementId))
 		{
 			context->currentIndex++;
 			continue;
