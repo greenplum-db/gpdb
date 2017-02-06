@@ -4133,13 +4133,13 @@ DATA(insert OID = 2932 (  xpath		 PGNSP PGUID 14 1 0 f f t f i 2 143 "25 142" _n
 DESCR("evaluate XPath expression");
 
 /* json */
-DATA(insert OID = 321 (  json_in		   PGNSP PGUID 12 1 0 f f t f s 1 3114 "2275" _null_ _null_ _null_ json_in - _null_ _null_ ));
+DATA(insert OID = 321 (  json_in		   PGNSP PGUID 12 1 0 f f t f s 1 114 "2275" _null_ _null_ _null_ json_in - _null_ _null_ ));
 DESCR("I/O");
-DATA(insert OID = 322 (  json_out		   PGNSP PGUID 12 1 0 f f t f i 1 2275 "3114" _null_ _null_ _null_ json_out - _null_ _null_ ));
+DATA(insert OID = 322 (  json_out		   PGNSP PGUID 12 1 0 f f t f i 1 2275 "114" _null_ _null_ _null_ json_out - _null_ _null_ ));
 DESCR("I/O");
-DATA(insert OID = 323 (  json_recv		   PGNSP PGUID 12 1 0 f f t f s 1 3114 "2281" _null_ _null_ _null_	json_recv - _null_ _null_ ));
+DATA(insert OID = 323 (  json_recv		   PGNSP PGUID 12 1 0 f f t f s 1 114 "2281" _null_ _null_ _null_	json_recv - _null_ _null_ ));
 DESCR("I/O");
-DATA(insert OID = 324 (  json_send		   PGNSP PGUID 12 1 0 f f t f s 1 17 "3114" _null_ _null_ _null_ json_send - _null_ _null_ ));
+DATA(insert OID = 324 (  json_send		   PGNSP PGUID 12 1 0 f f t f s 1 17 "114" _null_ _null_ _null_ json_send - _null_ _null_ ));
 DESCR("I/O");
 DATA(insert OID = 3153 (  array_to_json	   PGNSP PGUID 12 1 0 f f t f s 1 3114 "2277" _null_ _null_ _null_ array_to_json - _null_ _null_ ));
 DESCR("map array to json");
