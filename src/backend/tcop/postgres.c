@@ -4297,6 +4297,8 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
 				errs++;
 				break;
 		}
+		if (errs)
+			break;
 	}
 
 
