@@ -3236,6 +3236,14 @@ getTableAttrs(TableInfo *tblinfo, int numTables)
 				tbinfo->attencoding[j] = strdup(PQgetvalue(res, j, i_attencoding));
 			else
 				tbinfo->attencoding[j] = NULL;
+
+			/*
+			 * External table doesn't support inheritance so ensure that all
+			 * attributes are marked as local.  Applicable to partitioned
+			 * tables where a partition is exhanged for an external table.
+			 */
+			if (tbinfo->relstorage == RELSTORAGE_EXTERNAL && tbinfo->attislocal[j])
+				tbinfo->attislocal[j] = false;
 		}
 
 		PQclear(res);

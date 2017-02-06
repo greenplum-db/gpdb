@@ -4556,6 +4556,14 @@ getTableAttrs(TableInfo *tblinfo, int numTables)
 				tbinfo->attencoding[j] = strdup(PQgetvalue(res, j, i_attencoding));
 			else
 				tbinfo->attencoding[j] = NULL;
+
+			/*
+			 * External table doesn't support inheritance so ensure that all
+			 * attributes are marked as local.  Applicable to partitioned
+			 * tables where a partition is exhanged for an external table.
+			 */
+			if (tbinfo->relstorage == RELSTORAGE_EXTERNAL && tbinfo->attislocal[j])
+				tbinfo->attislocal[j] = false;
 		}
 
 		PQclear(res);
@@ -4764,7 +4772,7 @@ getTableAttrs(TableInfo *tblinfo, int numTables)
 bool
 shouldPrintColumn(TableInfo *tbinfo, int colno)
 {
-	return (tbinfo->attislocal[colno] &&
+	return ((tbinfo->attislocal[colno] || tbinfo->relstorage == RELSTORAGE_EXTERNAL) &&
 			(!tbinfo->attisdropped[colno] || binary_upgrade));
 }
 
@@ -9505,8 +9513,8 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 		int j;
 		for (j = 0; j < tbinfo->numatts; j++)
 		{
-			/* Is this one of the table's own attrs, and not dropped ? */
-			if (tbinfo->attislocal[j] && !tbinfo->attisdropped[j])
+			/* Is the attribute not dropped? */
+			if (shouldPrintColumn(tbinfo, j))
 			{
 				/* Format properly if not first attr */
 				if (actual_atts > 0)
