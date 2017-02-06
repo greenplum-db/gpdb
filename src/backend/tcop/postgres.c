@@ -4117,7 +4117,8 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
 
 			case 'b':
 				/* Undocumented flag used for binary upgrades */
-				IsBinaryUpgrade = true;
+				if (secure)
+					IsBinaryUpgrade = true;
 				break;
 
 			case 'D':
@@ -4130,7 +4131,8 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
 				break;
 
 			case 'E':
-				EchoQuery = true;
+				if (secure)
+					EchoQuery = true;
 				break;
 
 			case 'e':
@@ -4155,7 +4157,8 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
 				break;
 
 			case 'j':
-				UseNewLine = 0;
+				if (secure)
+					UseNewLine = 0;
 				break;
 
 			case 'k':
