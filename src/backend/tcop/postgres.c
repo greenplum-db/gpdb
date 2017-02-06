@@ -1892,8 +1892,8 @@ exec_simple_query(const char *query_string, const char *seqServerHost, int seqSe
 			ereport(LOG,
 					(errmsg("duration: %s ms  statement: %s",
 							msec_str, query_string),
-					 errdetail_execute(parsetree_list),
-					 errhidestmt(true)));
+					 errhidestmt(true),
+					 errdetail_execute(parsetree_list)));
 			break;
 	}
 
@@ -2115,7 +2115,6 @@ exec_parse_message(const char *query_string,	/* string to execute */
 	 */
 	if (is_named)
 	{
-
 		StorePreparedStatement(stmt_name,
 							   raw_parse_tree,
 							   query_string,
@@ -2188,7 +2187,7 @@ exec_parse_message(const char *query_string,	/* string to execute */
 							msec_str,
 							*stmt_name ? stmt_name : "<unnamed>",
 							query_string),
-							errhidestmt(true)));
+					 errhidestmt(true)));
 			break;
 	}
 
@@ -2634,12 +2633,12 @@ exec_execute_message(const char *portal_name, int64 max_rows)
 	Portal		portal;
 	bool		completed;
 	char		completionTag[COMPLETION_TAG_BUFSIZE];
-	const char *sourceText = NULL;
+	const char *sourceText;
 	const char *prepStmtName;
 	ParamListInfo portalParams;
 	bool		save_log_statement_stats = log_statement_stats;
 	bool		is_xact_command;
-	bool		execute_is_fetch = false;
+	bool		execute_is_fetch;
 	bool		was_logged = false;
 	char		msec_str[32];
 
@@ -4076,12 +4075,12 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
 	{
 		gucsource = PGC_S_ARGV; /* switches came from command line */
 
-	/* Ignore the initial --single argument, if present */
-	if (argc > 1 && strcmp(argv[1], "--single") == 0)
-	{
-		argv++;
-		argc--;
-	}
+		/* Ignore the initial --single argument, if present */
+		if (argc > 1 && strcmp(argv[1], "--single") == 0)
+		{
+			argv++;
+			argc--;
+		}
 	}
 	else
 	{
@@ -4309,8 +4308,7 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
 		}
 	}
 
-
-	/* 
+	/*
 	 * Optional database name should be there only if *dbname is NULL.
 	 */
 	if (!errs && dbname && *dbname == NULL && argc - optind >= 1)
@@ -4344,6 +4342,8 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
 	optreset = 1;				/* some systems need this too */
 #endif
 }
+
+
 /* ----------------------------------------------------------------
  * PostgresMain
  *	   postgres main loop -- all backends, interactive or otherwise start here
@@ -4356,12 +4356,13 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
  */
 int
 PostgresMain(int argc, char *argv[],
-			 const char *dbname, const char *username)
+			 const char *dbname,
+			 const char *username)
 {
-	int firstchar;
-	char stack_base;
+	int			firstchar;
+	char		stack_base;
 	StringInfoData input_message;
-	sigjmp_buf local_sigjmp_buf;
+	sigjmp_buf	local_sigjmp_buf;
 	volatile bool send_ready_for_query = true;
 
 	MemoryAccountIdType postgresMainMemoryAccountId = MEMORY_OWNER_TYPE_Undefined;
@@ -4536,7 +4537,7 @@ PostgresMain(int argc, char *argv[],
 #endif
 	}
 
-	PG_SETMASK(&BlockSig); /* block everything except SIGQUIT */
+	PG_SETMASK(&BlockSig);		/* block everything except SIGQUIT */
 
 	if (IsUnderPostmaster)
 		BaseInit();
@@ -4723,7 +4724,7 @@ PostgresMain(int argc, char *argv[],
 		 */
 		QueryCancelPending = false;
 		disable_sig_alarm(true);
-		QueryCancelPending = false; /* again in case timeout occurred */
+		QueryCancelPending = false;		/* again in case timeout occurred */
 		QueryFinishPending = false;
 
 		/*
@@ -4796,7 +4797,7 @@ PostgresMain(int argc, char *argv[],
 	PG_exception_stack = &local_sigjmp_buf;
 
 	if (!ignore_till_sync)
-		send_ready_for_query = true; /* initially, or after error */
+		send_ready_for_query = true;	/* initially, or after error */
 
 	/*
 	 * Non-error queries loop here.
@@ -4882,7 +4883,7 @@ PostgresMain(int argc, char *argv[],
 		 * conditional since we don't want, say, reads on behalf of COPY FROM
 		 * STDIN doing the same thing.)
 		 */
-		QueryCancelPending = false; /* forget any earlier CANCEL signal */
+		QueryCancelPending = false;		/* forget any earlier CANCEL signal */
 		DoingCommandRead = true;
 
 #ifdef USE_TEST_UTILS
@@ -4948,20 +4949,19 @@ PostgresMain(int argc, char *argv[],
 		 */
 		if (ignore_till_sync && firstchar != EOF)
 			continue;
-		
+
 		elog((Debug_print_full_dtm ? LOG : DEBUG5), "First char: '%c'; gp_role = '%s'.",firstchar,role_to_string(Gp_role));
 		
 		switch (firstchar)
 		{
-			case 'Q': /* simple query */
+			case 'Q':			/* simple query */
 				{
-					const char *query_string = NULL;                    
- 
+					const char *query_string;
+
                     elog(DEBUG1, "Message type %c received by from libpq, len = %d", firstchar, input_message.len); /* TODO: Remove this */
 
 					/* Set statement_timestamp() */
- 					SetCurrentStatementStartTimestamp();
- 					
+					SetCurrentStatementStartTimestamp();
                     query_string = pq_getmsgstring(&input_message);
 					pq_getmsgend(&input_message);
 
@@ -5212,12 +5212,12 @@ PostgresMain(int argc, char *argv[],
             	}
 				break;
 
-			case 'P': /* parse */
+			case 'P':			/* parse */
 				{
 					const char *stmt_name;
 					const char *query_string;
-					int numParams;
-					Oid *paramTypes = NULL;
+					int			numParams;
+					Oid		   *paramTypes = NULL;
 
 					forbidden_in_wal_sender(firstchar);
 
@@ -5229,7 +5229,7 @@ PostgresMain(int argc, char *argv[],
 					numParams = pq_getmsgint(&input_message, 2);
 					if (numParams > 0)
 					{
-						int i;
+						int			i;
 
 						paramTypes = (Oid *) palloc(numParams * sizeof(Oid));
 						for (i = 0; i < numParams; i++)
@@ -5246,7 +5246,7 @@ PostgresMain(int argc, char *argv[],
 				}
 				break;
 
-			case 'B': /* bind */
+			case 'B':			/* bind */
 				forbidden_in_wal_sender(firstchar);
 
 				/* Set statement_timestamp() */
@@ -5261,10 +5261,10 @@ PostgresMain(int argc, char *argv[],
 				exec_bind_message(&input_message);
 				break;
 
-			case 'E': /* execute */
+			case 'E':			/* execute */
 				{
 					const char *portal_name;
-					int64 max_rows;
+					int64		max_rows;
 
 					forbidden_in_wal_sender(firstchar);
 
@@ -5285,12 +5285,12 @@ PostgresMain(int argc, char *argv[],
 				}
 				break;
 
-			case 'F': /* fastpath function call */
+			case 'F':			/* fastpath function call */
 
 				forbidden_in_wal_sender(firstchar);
 
-                /* Set statement_timestamp() */
- 				SetCurrentStatementStartTimestamp();
+				/* Set statement_timestamp() */
+				SetCurrentStatementStartTimestamp();
 
 				/* Tell the collector what we're doing */
 				pgstat_report_activity("<FASTPATH> function call");
@@ -5334,9 +5334,9 @@ PostgresMain(int argc, char *argv[],
 				send_ready_for_query = true;
 				break;
 
-			case 'C': /* close */
+			case 'C':			/* close */
 				{
-					int close_type;
+					int			close_type;
 					const char *close_target;
 
 					forbidden_in_wal_sender(firstchar);
@@ -5358,7 +5358,7 @@ PostgresMain(int argc, char *argv[],
 							break;
 						case 'P':
 							{
-								Portal portal;
+								Portal		portal;
 
 								portal = GetPortalByName(close_target);
 								if (PortalIsValid(portal))
@@ -5374,13 +5374,13 @@ PostgresMain(int argc, char *argv[],
 					}
 
 					if (whereToSendOutput == DestRemote)
-						pq_putemptymessage('3'); /* CloseComplete */
+						pq_putemptymessage('3');		/* CloseComplete */
 				}
 				break;
 
-			case 'D': /* describe */
+			case 'D':			/* describe */
 				{
-					int describe_type;
+					int			describe_type;
 					const char *describe_target;
 
 					forbidden_in_wal_sender(firstchar);
@@ -5414,13 +5414,13 @@ PostgresMain(int argc, char *argv[],
 				}
 				break;
 
-			case 'H': /* flush */
+			case 'H':			/* flush */
 				pq_getmsgend(&input_message);
 				if (whereToSendOutput == DestRemote)
 					pq_flush();
 				break;
 
-			case 'S': /* sync */
+			case 'S':			/* sync */
 				pq_getmsgend(&input_message);
 				finish_xact_command();
 				send_ready_for_query = true;
@@ -5450,9 +5450,9 @@ PostgresMain(int argc, char *argv[],
 				 */
 				proc_exit(0);
 
-			case 'd': /* copy data */
-			case 'c': /* copy done */
-			case 'f': /* copy fail */
+			case 'd':			/* copy data */
+			case 'c':			/* copy done */
+			case 'f':			/* copy fail */
 
 				/*
 				 * Accept but ignore these messages, per protocol spec; we
@@ -5464,15 +5464,15 @@ PostgresMain(int argc, char *argv[],
 			default:
 				ereport(FATAL,
 						(errcode(ERRCODE_PROTOCOL_VIOLATION),
-						 errmsg("invalid frontend message type %d ('%c')",
-								firstchar,firstchar)));
+						 errmsg("invalid frontend message type %d",
+								firstchar)));
 		}
 	}							/* end of input-reading loop */
 
 	/* can't get here because the above loop never exits */
 	Assert(false);
 
-	return 1; /* keep compiler quiet */
+	return 1;					/* keep compiler quiet */
 }
 
 /*
@@ -5710,5 +5710,5 @@ log_disconnections(int code, Datum arg __attribute__((unused)))
 					"user=%s database=%s host=%s%s%s",
 					hours, minutes, seconds, msecs,
 					port->user_name, port->database_name, port->remote_host,
-					port->remote_port[0] ? " port=" : "", port->remote_port)));
+				  port->remote_port[0] ? " port=" : "", port->remote_port)));
 }

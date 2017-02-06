@@ -35,11 +35,11 @@
 #include "access/subtrans.h"
 #include "access/transam.h"
 #include "access/xact.h"
-#include "utils/tqual.h"
 #include "access/twophase.h"
 #include "miscadmin.h"
 #include "storage/procarray.h"
 #include "utils/combocid.h"
+#include "utils/tqual.h"
 #include "cdb/cdbtm.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
@@ -86,7 +86,6 @@ static long xc_slow_answer = 0;
 #define xc_slow_answer_inc()		(xc_slow_answer++)
 
 static void DisplayXidCache(void);
-
 #else							/* !XIDCACHE_DEBUG */
 
 #define xc_by_recent_xmin_inc()		((void) 0)
@@ -97,6 +96,7 @@ static void DisplayXidCache(void);
 #define xc_no_overflow_inc()		((void) 0)
 #define xc_slow_answer_inc()		((void) 0)
 #endif   /* XIDCACHE_DEBUG */
+
 
 /*
  * Report shared-memory space needed by CreateSharedProcArray.
@@ -1102,11 +1102,12 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 		/*
 		 * First call for this snapshot
 		 */
-		snapshot->xip = (TransactionId *)malloc(arrayP->maxProcs * sizeof(TransactionId));
+		snapshot->xip = (TransactionId *)
+			malloc(arrayP->maxProcs * sizeof(TransactionId));
 		if (snapshot->xip == NULL)
-		{
-			ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory")));
-		}
+			ereport(ERROR,
+					(errcode(ERRCODE_OUT_OF_MEMORY),
+					 errmsg("out of memory")));
 
 		Assert(snapshot->subxip == NULL);
 	}
@@ -1116,9 +1117,9 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 		snapshot->subxip = (TransactionId *)
 			malloc(arrayP->maxProcs * PGPROC_MAX_CACHED_SUBXIDS * sizeof(TransactionId));
 		if (snapshot->subxip == NULL)
-		{
-			ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory")));
-		}
+			ereport(ERROR,
+					(errcode(ERRCODE_OUT_OF_MEMORY),
+					 errmsg("out of memory")));
 	}
 
 	/*
@@ -1424,7 +1425,7 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 #endif
 
 		/* Update globalxmin to be the smallest valid xmin */
-		xid = proc->xmin;               /* fetch just once */
+		xid = proc->xmin;		/* fetch just once */
 		if (TransactionIdIsNormal(xid) &&
 			TransactionIdPrecedes(xid, globalxmin))
 			globalxmin = xid;
