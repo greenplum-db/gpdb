@@ -5016,6 +5016,11 @@ PostgresMain(int argc, char *argv[],
 
 					int unusedFlags;
 
+					if (Gp_role != GP_ROLE_EXECUTE)
+						ereport(ERROR,
+								(errcode(ERRCODE_PROTOCOL_VIOLATION),
+								 errmsg("MPP protocol messages are only supported in QD - QE connections")));
+
 					/* Set statement_timestamp() */
  					SetCurrentStatementStartTimestamp();
 
@@ -5170,6 +5175,11 @@ PostgresMain(int argc, char *argv[],
 
 					int serializedDtxContextInfolen;
 					const char *serializedDtxContextInfo;
+
+					if (Gp_role != GP_ROLE_EXECUTE)
+						ereport(ERROR,
+								(errcode(ERRCODE_PROTOCOL_VIOLATION),
+								 errmsg("MPP protocol messages are only supported in QD - QE connections")));
 
 					elog(DEBUG1, "Message type %c received by from libpq, len = %d", firstchar, input_message.len); /* TODO: Remove this */
 					
