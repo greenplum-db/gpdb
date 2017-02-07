@@ -169,7 +169,6 @@ jobs:
 
   # Stage 3: Packaging
   - name: gpdb_rc_packaging_centos
-    serial: true
     plan:
     - aggregate:
       - get: gpdb_pr
