@@ -73,16 +73,19 @@ analyze t1;
 explain select * from t, pt where tid = ptid;
                                                QUERY PLAN                                               
 --------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..7.17 rows=9 width=50)
-   ->  Hash Join  (cost=0.00..5.73 rows=9 width=50)
-         Hash Cond: pt.ptid = t.tid
-         ->  Dynamic Table Scan on pt (partIndex: 0)  (cost=0.00..0.82 rows=27 width=31)
-         ->  Hash  (cost=100.00..100.00 rows=50 width=4)
-               ->  Result  (cost=10.00..100.00 rows=50 width=4)
-                     ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..1.06 rows=2 width=19)
-                           ->  Table Scan on t  (cost=0.00..0.02 rows=1 width=19)
- Settings:  gp_segments_for_planner=2; optimizer=on
-(9 rows)
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..485.01 rows=18 width=50)
+   ->  Nested Loop  (cost=0.00..485.01 rows=6 width=50)
+         Join Filter: true
+         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=2 width=19)
+               ->  Table Scan on t  (cost=0.00..431.00 rows=1 width=19)
+         ->  Sequence  (cost=0.00..54.00 rows=3 width=31)
+               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                     Partitions selected: 6 (out of 6)
+               ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..54.00 rows=3 width=31)
+                     Index Cond: pt.ptid = t.tid
+ Settings:  gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
+ Optimizer status: PQO version 2.5.0
+(12 rows)
 
 select * from t, pt where tid = ptid;
  dist | tid |   t1   | t2  | dist |   pt1   |  pt2  |    pt3    | ptid 
@@ -110,16 +113,19 @@ select * from t, pt where tid = ptid;
 explain select * from t, pt where tid + 1 = ptid;
                                                QUERY PLAN                                               
 --------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..9.37 rows=54 width=50)
-   ->  Hash Join  (cost=0.00..5.73 rows=54 width=50)
-         Hash Cond: pt.ptid = (t.tid + 1)
-         ->  Dynamic Table Scan on pt (partIndex: 0)  (cost=0.00..0.82 rows=27 width=31)
-         ->  Hash  (cost=100.00..100.00 rows=50 width=4)
-               ->  Result  (cost=10.00..100.00 rows=50 width=4)
-                     ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..1.06 rows=2 width=19)
-                           ->  Table Scan on t  (cost=0.00..0.02 rows=1 width=19)
- Settings:  gp_segments_for_planner=2; optimizer=on
-(9 rows)
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..560.62 rows=44 width=50)
+   ->  Nested Loop  (cost=0.00..560.62 rows=15 width=50)
+         Join Filter: true
+         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=2 width=19)
+               ->  Table Scan on t  (cost=0.00..431.00 rows=1 width=19)
+         ->  Sequence  (cost=0.00..129.61 rows=8 width=31)
+               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                     Partitions selected: 6 (out of 6)
+               ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..129.61 rows=8 width=31)
+                     Index Cond: pt.ptid = (t.tid + 1)
+ Settings:  gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
+ Optimizer status: PQO version 2.5.0
+(12 rows)
 
 select * from t, pt where tid + 1 = ptid;
  dist | tid |   t1   | t2  | dist |   pt1   |  pt2  |    pt3    | ptid 
@@ -147,17 +153,20 @@ select * from t, pt where tid + 1 = ptid;
 explain select * from t, pt where tid = ptid and t1 = 'hello' || tid;
                                                QUERY PLAN                                               
 --------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..7.77 rows=4 width=50)
-   ->  Hash Join  (cost=0.00..6.59 rows=4 width=50)
-         Hash Cond: pt.ptid = t.tid
-         ->  Dynamic Table Scan on pt (partIndex: 0)  (cost=0.00..0.82 rows=27 width=31)
-         ->  Hash  (cost=100.00..100.00 rows=50 width=4)
-               ->  Result  (cost=10.00..100.00 rows=50 width=4)
-                     ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..2.05 rows=1 width=19)
-                           ->  Table Scan on t  (cost=0.00..1.03 rows=1 width=19)
-                                 Filter: t1 = ('hello'::text || text(tid))
- Settings:  gp_segments_for_planner=2; optimizer=on
-(10 rows)
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..458.01 rows=9 width=50)
+   ->  Nested Loop  (cost=0.00..458.00 rows=3 width=50)
+         Join Filter: true
+         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=19)
+               ->  Table Scan on t  (cost=0.00..431.00 rows=1 width=19)
+                     Filter: t1 = ('hello'::text || tid::text)
+         ->  Sequence  (cost=0.00..27.00 rows=3 width=31)
+               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                     Partitions selected: 6 (out of 6)
+               ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..27.00 rows=3 width=31)
+                     Index Cond: pt.ptid = t.tid
+ Settings:  gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
+ Optimizer status: PQO version 2.5.0
+(13 rows)
 
 select * from t, pt where tid = ptid and t1 = 'hello' || tid;
  dist | tid |   t1   | t2  | dist |   pt1   |  pt2  |    pt3    | ptid 
@@ -185,16 +194,20 @@ select * from t, pt where tid = ptid and t1 = 'hello' || tid;
 explain select * from t, pt where t1 = pt1 and ptid = tid;
                                                QUERY PLAN                                               
 --------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..6.78 rows=1 width=50)
-   ->  Hash Join  (cost=0.00..5.73 rows=1 width=50)
-         Hash Cond: pt.pt1 = t.t1 AND pt.ptid = t.tid
-         ->  Dynamic Table Scan on pt (partIndex: 0)  (cost=0.00..0.82 rows=27 width=31)
-         ->  Hash  (cost=100.00..100.00 rows=50 width=4)
-               ->  Result  (cost=10.00..100.00 rows=50 width=4)
-                     ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..1.06 rows=2 width=19)
-                           ->  Table Scan on t  (cost=0.00..0.02 rows=1 width=19)
- Settings:  gp_segments_for_planner=2; optimizer=on
-(9 rows)
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..437.00 rows=2 width=50)
+   ->  Nested Loop  (cost=0.00..437.00 rows=1 width=50)
+         Join Filter: true
+         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=2 width=19)
+               ->  Table Scan on t  (cost=0.00..431.00 rows=1 width=19)
+         ->  Sequence  (cost=0.00..6.00 rows=1 width=31)
+               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                     Partitions selected: 6 (out of 6)
+               ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=31)
+                     Index Cond: pt.pt1 = t.t1
+                     Filter: t.tid = pt.ptid
+ Settings:  gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
+ Optimizer status: PQO version 2.5.0
+(13 rows)
 
 select * from t, pt where t1 = pt1 and ptid = tid;
  dist | tid |   t1   | t2  | dist |  pt1   |  pt2  |    pt3    | ptid 
@@ -207,19 +220,21 @@ select * from t, pt where t1 = pt1 and ptid = tid;
 -- in and exists clauses
 --
 explain select * from pt where ptid in (select tid from t where t1 = 'hello' || tid);
-                                              QUERY PLAN                                               
--------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..7.60 rows=4 width=31)
-   ->  Hash EXISTS Join  (cost=0.00..6.49 rows=4 width=31)
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.01 rows=9 width=31)
+   ->  Hash EXISTS Join  (cost=0.00..862.01 rows=3 width=31)
          Hash Cond: pt.ptid = t.tid
-         ->  Dynamic Table Scan on pt (partIndex: 0)  (cost=0.00..0.82 rows=27 width=31)
-         ->  Hash  (cost=100.00..100.00 rows=50 width=4)
-               ->  Result  (cost=10.00..100.00 rows=50 width=4)
-                     ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..2.02 rows=1 width=4)
-                           ->  Table Scan on t  (cost=0.00..1.01 rows=1 width=4)
-                                 Filter: t1 = ('hello'::text || text(tid))
- Settings:  gp_segments_for_planner=2; optimizer=on
-(10 rows)
+         ->  Dynamic Table Scan on pt (dynamic scan id: 1)  (cost=0.00..431.00 rows=18 width=31)
+         ->  Hash  (cost=100.00..100.00 rows=34 width=4)
+               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                     Filter: pt.ptid = t.tid
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                           ->  Table Scan on t  (cost=0.00..431.00 rows=1 width=4)
+                                 Filter: t1 = ('hello'::text || tid::text)
+ Settings:  gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
+ Optimizer status: PQO version 2.5.0
+(12 rows)
 
 select * from pt where ptid in (select tid from t where t1 = 'hello' || tid);
  dist |   pt1   |  pt2  |    pt3    | ptid 
@@ -245,28 +260,23 @@ select * from pt where ptid in (select tid from t where t1 = 'hello' || tid);
 (18 rows)
 
 explain select * from pt where exists (select 1 from t where tid = ptid and t1 = 'hello' || tid);
-                                                    QUERY PLAN                                                     
--------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice3; segments: 2)  (cost=0.00..14.68 rows=4 width=31)
-   ->  Hash Join  (cost=0.00..13.57 rows=4 width=31)
-         Hash Cond: t.tid = pt.ptid
-         ->  HashAggregate  (cost=0.00..4.03 rows=1 width=4)
-               Group By: t.tid
-               ->  Redistribute Motion 2:2  (slice1; segments: 2)  (cost=0.00..3.02 rows=1 width=4)
-                     Hash Key: t.tid
-                     ->  Result  (cost=0.00..2.02 rows=1 width=4)
-                           ->  Result  (cost=0.00..2.02 rows=1 width=4)
-                                 ->  Table Scan on t  (cost=0.00..1.01 rows=1 width=4)
-                                       Filter: t1 = ('hello'::text || text(tid))
-         ->  Hash  (cost=5.27..5.27 rows=27 width=31)
-               ->  Redistribute Motion 2:2  (slice2; segments: 2)  (cost=0.00..5.27 rows=27 width=31)
-                     Hash Key: pt.ptid
-                     ->  Sequence  (cost=0.00..3.45 rows=27 width=31)
-                           ->  Result  (cost=10.00..100.00 rows=50 width=4)
-                                 ->  Function Scan on gp_partition_expansion  (cost=10.00..100.00 rows=50 width=4)
-                           ->  Dynamic Table Scan on pt (partIndex: 0)  (cost=0.00..0.82 rows=27 width=31)
- Settings:  gp_segments_for_planner=2; optimizer=on
-(19 rows)
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.01 rows=9 width=31)
+   ->  Hash EXISTS Join  (cost=0.00..862.01 rows=3 width=31)
+         Hash Cond: pt.ptid = t.tid
+         ->  Dynamic Table Scan on pt (dynamic scan id: 1)  (cost=0.00..431.00 rows=18 width=31)
+         ->  Hash  (cost=100.00..100.00 rows=34 width=4)
+               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                     Filter: pt.ptid = t.tid
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                           ->  Result  (cost=0.00..431.00 rows=1 width=4)
+                                 ->  Result  (cost=0.00..431.00 rows=1 width=4)
+                                       ->  Table Scan on t  (cost=0.00..431.00 rows=1 width=4)
+                                             Filter: t1 = ('hello'::text || tid::text)
+ Settings:  gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
+ Optimizer status: PQO version 2.5.0
+(14 rows)
 
 select * from pt where exists (select 1 from t where tid = ptid and t1 = 'hello' || tid);
  dist |   pt1   |  pt2  |    pt3    | ptid 
@@ -295,19 +305,23 @@ select * from pt where exists (select 1 from t where tid = ptid and t1 = 'hello'
 -- group-by on top
 --
 explain select count(*) from t, pt where tid = ptid;
-                                                 QUERY PLAN                                                  
--------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=0.00..5.43 rows=1 width=8)
-   ->  Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..4.38 rows=9 width=1)
-         ->  Hash Join  (cost=0.00..3.38 rows=9 width=1)
-               Hash Cond: pt.ptid = t.tid
-               ->  Dynamic Table Scan on pt (partIndex: 0)  (cost=0.00..0.11 rows=27 width=4)
-               ->  Hash  (cost=100.00..100.00 rows=50 width=4)
-                     ->  Result  (cost=10.00..100.00 rows=50 width=4)
-                           ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..1.01 rows=2 width=4)
-                                 ->  Table Scan on t  (cost=0.00..0.00 rows=1 width=4)
- Settings:  gp_segments_for_planner=2; optimizer=on
-(10 rows)
+                                                     QUERY PLAN                                                     
+--------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..485.00 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..485.00 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..485.00 rows=1 width=8)
+               ->  Nested Loop  (cost=0.00..485.00 rows=6 width=1)
+                     Join Filter: true
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=2 width=4)
+                           ->  Table Scan on t  (cost=0.00..431.00 rows=1 width=4)
+                     ->  Sequence  (cost=0.00..54.00 rows=3 width=1)
+                           ->  Partition Selector for pt (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Partitions selected: 6 (out of 6)
+                           ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..54.00 rows=3 width=1)
+                                 Index Cond: pt.ptid = t.tid
+ Settings:  gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
+ Optimizer status: PQO version 2.5.0
+(14 rows)
 
 select count(*) from t, pt where tid = ptid;
  count 
@@ -321,21 +335,24 @@ select count(*) from t, pt where tid = ptid;
 explain select *, rank() over (order by ptid,pt1) from t, pt where tid = ptid;
                                                      QUERY PLAN                                                     
 --------------------------------------------------------------------------------------------------------------------
- Window  (cost=0.00..151.99 rows=9 width=80)
+ Window  (cost=0.00..485.02 rows=6 width=64)
    Order By: pt.ptid, pt.pt1
-   ->  Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..147.47 rows=9 width=50)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..485.02 rows=18 width=50)
          Merge Key: pt.ptid, pt.pt1
-         ->  Sort  (cost=0.00..146.03 rows=9 width=50)
+         ->  Sort  (cost=0.00..485.02 rows=6 width=50)
                Sort Key: pt.ptid, pt.pt1
-               ->  Hash Join  (cost=0.00..5.73 rows=9 width=50)
-                     Hash Cond: pt.ptid = t.tid
-                     ->  Dynamic Table Scan on pt (partIndex: 0)  (cost=0.00..0.82 rows=27 width=31)
-                     ->  Hash  (cost=100.00..100.00 rows=50 width=4)
-                           ->  Result  (cost=10.00..100.00 rows=50 width=4)
-                                 ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..1.06 rows=2 width=19)
-                                       ->  Table Scan on t  (cost=0.00..0.02 rows=1 width=19)
- Settings:  gp_segments_for_planner=2; optimizer=on
-(14 rows)
+               ->  Nested Loop  (cost=0.00..485.01 rows=6 width=50)
+                     Join Filter: true
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=2 width=19)
+                           ->  Table Scan on t  (cost=0.00..431.00 rows=1 width=19)
+                     ->  Sequence  (cost=0.00..54.00 rows=3 width=31)
+                           ->  Partition Selector for pt (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Partitions selected: 6 (out of 6)
+                           ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..54.00 rows=3 width=31)
+                                 Index Cond: pt.ptid = t.tid
+ Settings:  gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
+ Optimizer status: PQO version 2.5.0
+(17 rows)
 
 select *, rank() over (order by ptid,pt1) from t, pt where tid = ptid;
  dist | tid |   t1   | t2  | dist |   pt1   |  pt2  |    pt3    | ptid | rank 
@@ -368,24 +385,29 @@ explain select * from t, pt where tid = ptid
 	  select * from t, pt where tid + 2 = ptid;
                                                   QUERY PLAN                                                  
 --------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice3; segments: 2)  (cost=0.00..22.69 rows=63 width=50)
-   ->  Append  (cost=0.00..18.61 rows=63 width=50)
-         ->  Hash Join  (cost=0.00..5.73 rows=9 width=50)
-               Hash Cond: dpe_single.pt.ptid = dpe_single.t.tid
-               ->  Dynamic Table Scan on pt (partIndex: 0)  (cost=0.00..0.82 rows=27 width=31)
-               ->  Hash  (cost=100.00..100.00 rows=50 width=4)
-                     ->  Result  (cost=10.00..100.00 rows=50 width=4)
-                           ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..1.06 rows=2 width=19)
-                                 ->  Table Scan on t  (cost=0.00..0.02 rows=1 width=19)
-         ->  Hash Join  (cost=0.00..5.73 rows=54 width=50)
-               Hash Cond: dpe_single.pt.ptid = (dpe_single.t.tid + 2)
-               ->  Dynamic Table Scan on pt (partIndex: 1)  (cost=0.00..0.82 rows=27 width=31)
-               ->  Hash  (cost=100.00..100.00 rows=50 width=4)
-                     ->  Result  (cost=10.00..100.00 rows=50 width=4)
-                           ->  Broadcast Motion 2:2  (slice2; segments: 2)  (cost=0.00..1.06 rows=2 width=19)
-                                 ->  Table Scan on t  (cost=0.00..0.02 rows=1 width=19)
- Settings:  gp_segments_for_planner=2; optimizer=on
-(17 rows)
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1045.64 rows=62 width=50)
+   ->  Append  (cost=0.00..1045.62 rows=21 width=50)
+         ->  Nested Loop  (cost=0.00..485.01 rows=6 width=50)
+               Join Filter: true
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=2 width=19)
+                     ->  Table Scan on t  (cost=0.00..431.00 rows=1 width=19)
+               ->  Sequence  (cost=0.00..54.00 rows=3 width=31)
+                     ->  Partition Selector for pt (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                           Partitions selected: 6 (out of 6)
+                     ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..54.00 rows=3 width=31)
+                           Index Cond: dpe_single.pt.ptid = dpe_single.t.tid
+         ->  Nested Loop  (cost=0.00..560.62 rows=15 width=50)
+               Join Filter: true
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=2 width=19)
+                     ->  Table Scan on t  (cost=0.00..431.00 rows=1 width=19)
+               ->  Sequence  (cost=0.00..129.61 rows=8 width=31)
+                     ->  Partition Selector for pt (dynamic scan id: 2)  (cost=10.00..100.00 rows=34 width=4)
+                           Partitions selected: 6 (out of 6)
+                     ->  Dynamic Index Scan on pt (dynamic scan id: 2)  (cost=0.00..129.61 rows=8 width=31)
+                           Index Cond: dpe_single.pt.ptid = (dpe_single.t.tid + 2)
+ Settings:  gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
+ Optimizer status: PQO version 2.5.0
+(22 rows)
 
 select * from t, pt where tid = ptid
 	  union all
@@ -440,26 +462,31 @@ explain select count(*) from
 	  ) foo;
                                                         QUERY PLAN                                                        
 --------------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=0.00..14.91 rows=1 width=8)
-   ->  Gather Motion 2:1  (slice3; segments: 2)  (cost=0.00..13.65 rows=63 width=1)
-         ->  Result  (cost=0.00..12.58 rows=63 width=1)
-               ->  Append  (cost=0.00..12.58 rows=63 width=1)
-                     ->  Hash Join  (cost=0.00..5.73 rows=9 width=50)
-                           Hash Cond: dpe_single.pt.ptid = dpe_single.t.tid
-                           ->  Dynamic Table Scan on pt (partIndex: 0)  (cost=0.00..0.82 rows=27 width=31)
-                           ->  Hash  (cost=100.00..100.00 rows=50 width=4)
-                                 ->  Result  (cost=10.00..100.00 rows=50 width=4)
-                                       ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..1.06 rows=2 width=19)
-                                             ->  Table Scan on t  (cost=0.00..0.02 rows=1 width=19)
-                     ->  Hash Join  (cost=0.00..5.73 rows=54 width=50)
-                           Hash Cond: dpe_single.pt.ptid = (dpe_single.t.tid + 2)
-                           ->  Dynamic Table Scan on pt (partIndex: 1)  (cost=0.00..0.82 rows=27 width=31)
-                           ->  Hash  (cost=100.00..100.00 rows=50 width=4)
-                                 ->  Result  (cost=10.00..100.00 rows=50 width=4)
-                                       ->  Broadcast Motion 2:2  (slice2; segments: 2)  (cost=0.00..1.06 rows=2 width=19)
-                                             ->  Table Scan on t  (cost=0.00..0.02 rows=1 width=19)
- Settings:  gp_segments_for_planner=2; optimizer=on
-(19 rows)
+ Aggregate  (cost=0.00..1045.62 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1045.62 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..1045.62 rows=1 width=8)
+               ->  Append  (cost=0.00..1045.62 rows=21 width=1)
+                     ->  Nested Loop  (cost=0.00..485.01 rows=6 width=50)
+                           Join Filter: true
+                           ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=2 width=19)
+                                 ->  Table Scan on t  (cost=0.00..431.00 rows=1 width=19)
+                           ->  Sequence  (cost=0.00..54.00 rows=3 width=31)
+                                 ->  Partition Selector for pt (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                       Partitions selected: 6 (out of 6)
+                                 ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..54.00 rows=3 width=31)
+                                       Index Cond: dpe_single.pt.ptid = dpe_single.t.tid
+                     ->  Nested Loop  (cost=0.00..560.62 rows=15 width=50)
+                           Join Filter: true
+                           ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=2 width=19)
+                                 ->  Table Scan on t  (cost=0.00..431.00 rows=1 width=19)
+                           ->  Sequence  (cost=0.00..129.61 rows=8 width=31)
+                                 ->  Partition Selector for pt (dynamic scan id: 2)  (cost=10.00..100.00 rows=34 width=4)
+                                       Partitions selected: 6 (out of 6)
+                                 ->  Dynamic Index Scan on pt (dynamic scan id: 2)  (cost=0.00..129.61 rows=8 width=31)
+                                       Index Cond: dpe_single.pt.ptid = (dpe_single.t.tid + 2)
+ Settings:  gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
+ Optimizer status: PQO version 2.5.0
+(24 rows)
 
 select count(*) from
 	( select * from t, pt where tid = ptid
@@ -478,18 +505,21 @@ set enable_hashjoin=off;
 set enable_nestloop=on;
 set enable_mergejoin=off;
 explain select * from t, pt where tid = ptid;
-                                                    QUERY PLAN                                                     
--------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..7.17 rows=9 width=50)
-   ->  Hash Join  (cost=0.00..5.73 rows=9 width=50)
-         Hash Cond: pt.ptid = t.tid
-         ->  Dynamic Table Scan on pt (partIndex: 0)  (cost=0.00..0.82 rows=27 width=31)
-         ->  Hash  (cost=100.00..100.00 rows=50 width=4)
-               ->  Result  (cost=10.00..100.00 rows=50 width=4)
-                     ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..1.06 rows=2 width=19)
-                           ->  Table Scan on t  (cost=0.00..0.02 rows=1 width=19)
- Settings:  enable_hashjoin=off; enable_mergejoin=off; enable_nestloop=on; gp_segments_for_planner=2; optimizer=on
-(9 rows)
+                                                               QUERY PLAN                                                                
+-----------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..485.01 rows=18 width=50)
+   ->  Nested Loop  (cost=0.00..485.01 rows=6 width=50)
+         Join Filter: true
+         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=2 width=19)
+               ->  Table Scan on t  (cost=0.00..431.00 rows=1 width=19)
+         ->  Sequence  (cost=0.00..54.00 rows=3 width=31)
+               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                     Partitions selected: 6 (out of 6)
+               ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..54.00 rows=3 width=31)
+                     Index Cond: pt.ptid = t.tid
+ Settings:  enable_hashjoin=off; enable_mergejoin=off; enable_nestloop=on; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
+ Optimizer status: PQO version 2.5.0
+(12 rows)
 
 select * from t, pt where tid = ptid;
  dist | tid |   t1   | t2  | dist |   pt1   |  pt2  |    pt3    | ptid 
@@ -525,21 +555,22 @@ set enable_indexscan=on;
 set enable_bitmapscan=off;
 set enable_hashjoin=off;
 explain select * from t, pt where tid = ptid and pt1 = 'hello0';
-                                                                                     QUERY PLAN                                                                                     
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..5.81 rows=1 width=50)
-   ->  Hash Join  (cost=0.00..4.78 rows=1 width=50)
-         Hash Cond: t.tid = pt.ptid
-         ->  Table Scan on t  (cost=0.00..0.02 rows=1 width=19)
-         ->  Hash  (cost=3.61..3.61 rows=1 width=31)
-               ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..3.61 rows=1 width=31)
-                     ->  Sequence  (cost=0.00..1.55 rows=1 width=31)
-                           ->  Result  (cost=10.00..100.00 rows=50 width=4)
-                                 ->  Function Scan on gp_partition_expansion  (cost=10.00..100.00 rows=50 width=4)
-                           ->  Dynamic Index Scan on pt  (cost=0.00..0.52 rows=1 width=31)
-                                 Index Cond: tid = 'hello0'::text
- Settings:  enable_bitmapscan=off; enable_hashjoin=off; enable_indexscan=on; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=off; gp_segments_for_planner=2; optimizer=on
-(12 rows)
+                                                                                                QUERY PLAN                                                                                                
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..434.00 rows=1 width=50)
+   ->  Nested Loop  (cost=0.00..434.00 rows=1 width=50)
+         Join Filter: true
+         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=2 width=19)
+               ->  Table Scan on t  (cost=0.00..431.00 rows=1 width=19)
+         ->  Sequence  (cost=0.00..3.00 rows=1 width=31)
+               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                     Partitions selected: 6 (out of 6)
+               ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..3.00 rows=1 width=31)
+                     Index Cond: pt.pt1 = 'hello0'::text
+                     Filter: t.tid = pt.ptid
+ Settings:  enable_bitmapscan=off; enable_hashjoin=off; enable_indexscan=on; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=off; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
+ Optimizer status: PQO version 2.5.0
+(13 rows)
 
 select * from t, pt where tid = ptid and pt1 = 'hello0';
  dist | tid |   t1   | t2  | dist |  pt1   |  pt2  |    pt3    | ptid 
@@ -555,18 +586,21 @@ set enable_indexscan=on;
 set enable_seqscan=off;
 set enable_hashjoin=off;
 explain select * from t, pt where tid = ptid;
-                                                                                    QUERY PLAN                                                                                     
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..7.17 rows=9 width=50)
-   ->  Hash Join  (cost=0.00..5.73 rows=9 width=50)
-         Hash Cond: pt.ptid = t.tid
-         ->  Dynamic Table Scan on pt (partIndex: 0)  (cost=0.00..0.82 rows=27 width=31)
-         ->  Hash  (cost=100.00..100.00 rows=50 width=4)
-               ->  Result  (cost=10.00..100.00 rows=50 width=4)
-                     ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..1.06 rows=2 width=19)
-                           ->  Table Scan on t  (cost=0.00..0.02 rows=1 width=19)
- Settings:  enable_bitmapscan=off; enable_hashjoin=off; enable_indexscan=on; enable_mergejoin=off; enable_nestloop=on; enable_seqscan=off; gp_segments_for_planner=2; optimizer=on
-(9 rows)
+                                                                                               QUERY PLAN                                                                                                
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..485.01 rows=18 width=50)
+   ->  Nested Loop  (cost=0.00..485.01 rows=6 width=50)
+         Join Filter: true
+         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=2 width=19)
+               ->  Table Scan on t  (cost=0.00..431.00 rows=1 width=19)
+         ->  Sequence  (cost=0.00..54.00 rows=3 width=31)
+               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                     Partitions selected: 6 (out of 6)
+               ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..54.00 rows=3 width=31)
+                     Index Cond: pt.ptid = t.tid
+ Settings:  enable_bitmapscan=off; enable_hashjoin=off; enable_indexscan=on; enable_mergejoin=off; enable_nestloop=on; enable_seqscan=off; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
+ Optimizer status: PQO version 2.5.0
+(12 rows)
 
 select * from t, pt where tid = ptid;
  dist | tid |   t1   | t2  | dist |   pt1   |  pt2  |    pt3    | ptid 
@@ -599,20 +633,21 @@ set enable_seqscan=on;
 set enable_hashjoin=on;
 set enable_nestloop=off;
 explain select * from t, pt where t1 = pt1;
-                                                                                    QUERY PLAN                                                                                     
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..8.34 rows=1 width=50)
-   ->  Hash Join  (cost=0.00..7.29 rows=1 width=50)
-         Hash Cond: pt.pt1 = t.t1
-         ->  Sequence  (cost=0.00..3.45 rows=27 width=31)
-               ->  Result  (cost=10.00..100.00 rows=50 width=4)
-                     ->  Function Scan on gp_partition_expansion  (cost=10.00..100.00 rows=50 width=4)
-               ->  Dynamic Table Scan on pt (partIndex: 0)  (cost=0.00..0.82 rows=27 width=31)
-         ->  Hash  (cost=1.06..1.06 rows=2 width=19)
-               ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..1.06 rows=2 width=19)
-                     ->  Table Scan on t  (cost=0.00..0.02 rows=1 width=19)
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_segments_for_planner=2; optimizer=on
-(11 rows)
+                                                                                               QUERY PLAN                                                                                                
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..437.00 rows=2 width=50)
+   ->  Nested Loop  (cost=0.00..437.00 rows=1 width=50)
+         Join Filter: true
+         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=2 width=19)
+               ->  Table Scan on t  (cost=0.00..431.00 rows=1 width=19)
+         ->  Sequence  (cost=0.00..6.00 rows=1 width=31)
+               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                     Partitions selected: 6 (out of 6)
+               ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..6.00 rows=1 width=31)
+                     Index Cond: pt.pt1 = t.t1
+ Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
+ Optimizer status: PQO version 2.5.0
+(12 rows)
 
 select * from t, pt where t1 = pt1;
  dist | tid |   t1   | t2  | dist |  pt1   |  pt2  |    pt3    | ptid 
@@ -622,20 +657,21 @@ select * from t, pt where t1 = pt1;
 (2 rows)
 
 explain select * from t, pt where tid < ptid;
-                                                                                    QUERY PLAN                                                                                     
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..63622.22 rows=54 width=50)
-   ->  Nested Loop  (cost=0.00..63618.58 rows=54 width=50)
-         Join Filter: t.tid < pt.ptid
-         ->  Sequence  (cost=0.00..3.45 rows=27 width=31)
-               ->  Result  (cost=10.00..100.00 rows=50 width=4)
-                     ->  Function Scan on gp_partition_expansion  (cost=10.00..100.00 rows=50 width=4)
-               ->  Dynamic Table Scan on pt (partIndex: 0)  (cost=0.00..0.82 rows=27 width=31)
-         ->  Materialize  (cost=0.00..2.13 rows=2 width=19)
-               ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..1.06 rows=2 width=19)
-                     ->  Table Scan on t  (cost=0.00..0.02 rows=1 width=19)
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_segments_for_planner=2; optimizer=on
-(11 rows)
+                                                                                               QUERY PLAN                                                                                                
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..539.02 rows=36 width=50)
+   ->  Nested Loop  (cost=0.00..539.01 rows=12 width=50)
+         Join Filter: true
+         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=2 width=19)
+               ->  Table Scan on t  (cost=0.00..431.00 rows=1 width=19)
+         ->  Sequence  (cost=0.00..108.01 rows=6 width=31)
+               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                     Partitions selected: 6 (out of 6)
+               ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..108.01 rows=6 width=31)
+                     Index Cond: pt.ptid > t.tid
+ Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
+ Optimizer status: PQO version 2.5.0
+(12 rows)
 
 select * from t, pt where tid < ptid;
  dist | tid |   t1   | t2  | dist |   pt1   |  pt2  |    pt3    | ptid 
@@ -727,23 +763,26 @@ select * from t, pt where tid < ptid;
 -- cascading joins
 --
 explain select * from t, t1, pt where t1.t2 = t.t2 and t1.tid = ptid;
-                                                                                    QUERY PLAN                                                                                     
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice3; segments: 2)  (cost=0.00..10.96 rows=18 width=69)
-   ->  Hash Join  (cost=0.00..8.75 rows=18 width=69)
-         Hash Cond: pt.ptid = t1.tid
-         ->  Dynamic Table Scan on pt (partIndex: 0)  (cost=0.00..0.82 rows=27 width=31)
-         ->  Hash  (cost=100.00..100.00 rows=50 width=4)
-               ->  Result  (cost=10.00..100.00 rows=50 width=4)
-                     ->  Broadcast Motion 2:2  (slice2; segments: 2)  (cost=0.00..3.41 rows=4 width=38)
-                           ->  Hash Join  (cost=0.00..2.26 rows=2 width=38)
-                                 Hash Cond: t1.t2 = t.t2
-                                 ->  Table Scan on t1  (cost=0.00..0.02 rows=1 width=19)
-                                 ->  Hash  (cost=1.06..1.06 rows=2 width=19)
-                                       ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..1.06 rows=2 width=19)
-                                             ->  Table Scan on t  (cost=0.00..0.02 rows=1 width=19)
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_segments_for_planner=2; optimizer=on
-(14 rows)
+                                                                                               QUERY PLAN                                                                                                
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Hash Join  (cost=0.00..916.02 rows=12 width=69)
+   Hash Cond: t1.t2 = t.t2
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..485.01 rows=18 width=50)
+         ->  Nested Loop  (cost=0.00..485.01 rows=6 width=50)
+               Join Filter: true
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=2 width=19)
+                     ->  Table Scan on t1  (cost=0.00..431.00 rows=1 width=19)
+               ->  Sequence  (cost=0.00..54.00 rows=3 width=31)
+                     ->  Partition Selector for pt (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                           Partitions selected: 6 (out of 6)
+                     ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..54.00 rows=3 width=31)
+                           Index Cond: pt.ptid = t1.tid
+   ->  Hash  (cost=431.00..431.00 rows=1 width=19)
+         ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=2 width=19)
+               ->  Table Scan on t  (cost=0.00..431.00 rows=1 width=19)
+ Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
+ Optimizer status: PQO version 2.5.0
+(17 rows)
 
 select * from t, t1, pt where t1.t2 = t.t2 and t1.tid = ptid;
  dist | tid |   t1   | t2  | dist | tid |   t1   | t2  | dist |   pt1   |  pt2  |    pt3    | ptid 
@@ -790,60 +829,63 @@ select * from t, t1, pt where t1.t2 = t.t2 and t1.tid = ptid;
 -- explain analyze
 --
 explain analyze select * from t, pt where tid = ptid;
-                                                                                    QUERY PLAN                                                                                     
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..7.17 rows=9 width=50)
-   Rows out:  18 rows at destination with 6.844 ms to first row, 6.870 ms to end, start offset by 0.889 ms.
-   ->  Hash Join  (cost=0.00..5.73 rows=9 width=50)
-         Hash Cond: pt.ptid = t.tid
-         Rows out:  Avg 9.0 rows x 2 workers.  Max 9 rows (seg0) with 3.129 ms to first row, 5.949 ms to end, start offset by 1.629 ms.
-         Executor memory:  1K bytes avg, 1K bytes max (seg0).
-         Work_mem used:  1K bytes avg, 1K bytes max (seg0). Workfile: (0 spilling, 0 reused)
-         (seg0)   Hash chain length 1.0 avg, 1 max, using 2 of 524341 buckets.
-         ->  Dynamic Table Scan on pt (partIndex: 0)  (cost=0.00..0.82 rows=27 width=31)
-               Rows out:  Avg 9.0 rows x 2 workers.  Max 9 rows (seg0) with 0.075 ms to first row, 0.080 ms to end, start offset by 4.678 ms.
-         ->  Hash  (cost=100.00..100.00 rows=50 width=4)
-               Rows in:  Avg 2.0 rows x 2 workers.  Max 2 rows (seg0) with 0.119 ms to end, start offset by 4.559 ms.
-               ->  Result  (cost=10.00..100.00 rows=50 width=4)
-                     Rows out:  Avg 2.0 rows x 2 workers.  Max 2 rows (seg0) with 0.096 ms to first row, 0.106 ms to end, start offset by 4.560 ms.
-                     ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..1.06 rows=2 width=19)
-                           Rows out:  Avg 2.0 rows x 2 workers at destination.  Max 2 rows (seg0) with 0.031 ms to first row, 0.037 ms to end, start offset by 4.561 ms.
-                           ->  Table Scan on t  (cost=0.00..0.02 rows=1 width=19)
-                                 Rows out:  Avg 1.0 rows x 2 workers.  Max 1 rows (seg0) with 0.052 ms to first row, 0.057 ms to end, start offset by 3.015 ms.
+                                                                                               QUERY PLAN                                                                                                
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..485.01 rows=18 width=50)
+   Rows out:  18 rows at destination with 2.244 ms to first row, 2.260 ms to end, start offset by 0.607 ms.
+   ->  Nested Loop  (cost=0.00..485.01 rows=6 width=50)
+         Join Filter: true
+         Rows out:  Avg 6.0 rows x 3 workers.  Max 9 rows (seg0) with 0.604 ms to first row, 1.744 ms to end, start offset by 1.011 ms.
+         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=2 width=19)
+               Rows out:  Avg 2.0 rows x 3 workers at destination.  Max 2 rows (seg0) with 0.338 ms to first row, 1.292 ms to end, start offset by 1.011 ms.
+               ->  Table Scan on t  (cost=0.00..431.00 rows=1 width=19)
+                     Rows out:  2 rows (seg0) with 0.038 ms to first row, 0.041 ms to end, start offset by 1.206 ms.
+         ->  Sequence  (cost=0.00..54.00 rows=3 width=31)
+               Rows out:  Avg 6.0 rows x 3 workers.  Max 9 rows (seg0) with 0.260 ms to first row, 0.428 ms to end of 2 scans, start offset by 1.642 ms.
+               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                     Partitions selected: 6 (out of 6)
+                     Rows out:  0 rows (seg0) with 0.022 ms to end, start offset by 1.630 ms.
+               ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..54.00 rows=3 width=31)
+                     Index Cond: pt.ptid = t.tid
+                     Rows out:  Avg 6.0 rows x 3 workers.  Max 9 rows (seg0) with 0.247 ms to first row, 0.409 ms to end of 2 scans, start offset by 1.645 ms.
+                     Partitions scanned:  Avg 6.0 (out of 6) x 3 workers of 2 scans.  Max 6 parts (seg0).
  Slice statistics:
-   (slice0)    Executor memory: 227K bytes.
-   (slice1)    Executor memory: 191K bytes avg x 2 workers, 191K bytes max (seg0).
-   (slice2)    Executor memory: 6363K bytes avg x 2 workers, 6363K bytes max (seg0).  Work_mem: 1K bytes max.
+   (slice0)    Executor memory: 394K bytes.
+   (slice1)    Executor memory: 261K bytes avg x 3 workers, 271K bytes max (seg0).
+   (slice2)    Executor memory: 301K bytes avg x 3 workers, 301K bytes max (seg0).
  Statement statistics:
    Memory used: 128000K bytes
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_segments_for_planner=2; optimizer=on
- Total runtime: 8.299 ms
-(26 rows)
+ Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
+ Optimizer status: PQO version 2.5.0
+ Total runtime: 3.447 ms
+(27 rows)
 
 --
 -- Partitioned table on both sides of the join. This will create a result node as Append node is
 -- not projection capable.
 --
 explain select * from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hello0' order by pt1.dist;
-                                                                                    QUERY PLAN                                                                                     
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..83.82 rows=5 width=62)
+                                                                                               QUERY PLAN                                                                                                
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..434.02 rows=9 width=62)
    Merge Key: pt1.dist
-   ->  Sort  (cost=0.00..82.55 rows=5 width=62)
+   ->  Sort  (cost=0.00..434.01 rows=3 width=62)
          Sort Key: pt1.dist
-         ->  Hash Join  (cost=0.00..8.24 rows=5 width=62)
+         ->  Hash Join  (cost=0.00..434.01 rows=3 width=62)
                Hash Cond: pt1.ptid = pt.ptid
-               ->  Dynamic Table Scan on pt1 (partIndex: 1)  (cost=0.00..0.82 rows=27 width=31)
-               ->  Hash  (cost=100.00..100.00 rows=50 width=4)
-                     ->  Result  (cost=10.00..100.00 rows=50 width=4)
-                           ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..3.61 rows=1 width=31)
-                                 ->  Sequence  (cost=0.00..1.55 rows=1 width=31)
-                                       ->  Result  (cost=10.00..100.00 rows=50 width=4)
-                                             ->  Function Scan on gp_partition_expansion  (cost=10.00..100.00 rows=50 width=4)
-                                       ->  Dynamic Index Scan on pt  (cost=0.00..0.52 rows=1 width=31)
+               ->  Dynamic Table Scan on pt1 (dynamic scan id: 2)  (cost=0.00..431.00 rows=18 width=31)
+               ->  Hash  (cost=100.00..100.00 rows=34 width=4)
+                     ->  Partition Selector for pt1 (dynamic scan id: 2)  (cost=10.00..100.00 rows=34 width=4)
+                           Filter: pt1.ptid = pt.ptid
+                           ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.00 rows=1 width=31)
+                                 ->  Sequence  (cost=0.00..3.00 rows=1 width=31)
+                                       ->  Partition Selector for pt (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                             Partitions selected: 6 (out of 6)
+                                       ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..3.00 rows=1 width=31)
                                              Index Cond: pt1 = 'hello0'::text
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_segments_for_planner=2; optimizer=on
-(16 rows)
+ Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
+ Optimizer status: PQO version 2.5.0
+(18 rows)
 
 select * from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hello0' order by pt1.dist;
  dist |  pt1   |  pt2  |    pt3    | ptid | dist |   pt1   |  pt2  |    pt3    | ptid 
@@ -860,24 +902,27 @@ select * from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hello0' order by pt
 (9 rows)
 
 explain select count(*) from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hello0';
-                                                                                    QUERY PLAN                                                                                     
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=0.00..7.57 rows=1 width=8)
-   ->  Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..6.54 rows=5 width=1)
-         ->  Hash Join  (cost=0.00..5.53 rows=5 width=1)
-               Hash Cond: pt1.ptid = pt.ptid
-               ->  Dynamic Table Scan on pt1 (partIndex: 1)  (cost=0.00..0.11 rows=27 width=4)
-               ->  Hash  (cost=100.00..100.00 rows=50 width=4)
-                     ->  Result  (cost=10.00..100.00 rows=50 width=4)
-                           ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..3.20 rows=1 width=4)
-                                 ->  Sequence  (cost=0.00..2.19 rows=1 width=4)
-                                       ->  Result  (cost=10.00..100.00 rows=50 width=4)
-                                             ->  Function Scan on gp_partition_expansion  (cost=10.00..100.00 rows=50 width=4)
-                                       ->  Result  (cost=0.00..1.19 rows=1 width=4)
-                                             ->  Dynamic Index Scan on pt  (cost=0.00..0.18 rows=1 width=11)
-                                                   Index Cond: pt1 = 'hello0'::text
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_segments_for_planner=2; optimizer=on
-(15 rows)
+                                                                                               QUERY PLAN                                                                                                
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..434.01 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..434.01 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..434.01 rows=1 width=8)
+               ->  Hash Join  (cost=0.00..434.01 rows=3 width=1)
+                     Hash Cond: pt1.ptid = pt.ptid
+                     ->  Dynamic Table Scan on pt1 (dynamic scan id: 2)  (cost=0.00..431.00 rows=18 width=4)
+                     ->  Hash  (cost=100.00..100.00 rows=34 width=4)
+                           ->  Partition Selector for pt1 (dynamic scan id: 2)  (cost=10.00..100.00 rows=34 width=4)
+                                 Filter: pt1.dist = pt.ptid
+                                 ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.00 rows=1 width=4)
+                                       ->  Result  (cost=0.00..3.00 rows=1 width=4)
+                                             ->  Sequence  (cost=0.00..3.00 rows=1 width=11)
+                                                   ->  Partition Selector for pt (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                                         Partitions selected: 6 (out of 6)
+                                                   ->  Dynamic Index Scan on pt (dynamic scan id: 1)  (cost=0.00..3.00 rows=1 width=11)
+                                                         Index Cond: pt1 = 'hello0'::text
+ Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
+ Optimizer status: PQO version 2.5.0
+(18 rows)
 
 select count(*) from pt, pt1 where pt.ptid = pt1.ptid and pt.pt1 = 'hello0';
  count 
@@ -939,32 +984,23 @@ insert into fact1 select 1, i % 4 , 'CA', i + 10000 from generate_series (1,100)
 --
 set gp_dynamic_partition_pruning=off;
 explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid and dim1.code=fact1.code) order by fact1.u;
-                                                                                                     QUERY PLAN                                                                                                      
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice2; segments: 2)  (cost=62.46..62.49 rows=6 width=62)
-   Merge Key: "?column9?"
-   ->  Sort  (cost=62.46..62.49 rows=6 width=62)
-         Sort Key: dpe_multi.fact1.u
-         ->  Hash Join  (cost=1.07..62.25 rows=6 width=62)
-               Hash Cond: dpe_multi.fact1.pid = dim1.pid AND dpe_multi.fact1.code = dim1.code
-               ->  Append  (cost=0.00..43.36 rows=1770 width=44)
-                     ->  Seq Scan on fact1_1_prt_2_2_prt_oh fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Seq Scan on fact1_1_prt_2_2_prt_wa fact1  (cost=0.00..0.00 rows=1 width=44)
-                     ->  Seq Scan on fact1_1_prt_2_2_prt_ca fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Seq Scan on fact1_1_prt_1_2_prt_ca fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Seq Scan on fact1_1_prt_1_2_prt_oh fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Seq Scan on fact1_1_prt_1_2_prt_wa fact1  (cost=0.00..0.00 rows=1 width=44)
-                     ->  Seq Scan on fact1_1_prt_3_2_prt_oh fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Seq Scan on fact1_1_prt_3_2_prt_wa fact1  (cost=0.00..0.00 rows=1 width=44)
-                     ->  Seq Scan on fact1_1_prt_3_2_prt_ca fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Seq Scan on fact1_1_prt_4_2_prt_ca fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Seq Scan on fact1_1_prt_4_2_prt_oh fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Seq Scan on fact1_1_prt_4_2_prt_wa fact1  (cost=0.00..0.00 rows=1 width=44)
-               ->  Hash  (cost=1.04..1.04 rows=1 width=18)
-                     ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..1.04 rows=1 width=18)
-                           ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=18)
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=off; gp_segments_for_planner=2; optimizer=on
-(23 rows)
+                                                                                                                QUERY PLAN                                                                                                                 
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=0.00..862.00 rows=1 width=38)
+   Sort Key: fact1.u
+   ->  Hash Join  (cost=0.00..862.00 rows=1 width=38)
+         Hash Cond: dim1.pid = fact1.pid AND dim1.code = fact1.code
+         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=18)
+               ->  Table Scan on dim1  (cost=0.00..431.00 rows=1 width=18)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=20)
+               ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=20)
+                     ->  Sequence  (cost=0.00..431.00 rows=1 width=20)
+                           ->  Partition Selector for fact1 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Partitions selected: 12 (out of 12)
+                           ->  Dynamic Table Scan on fact1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=20)
+ Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=off; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
+ Optimizer status: PQO version 2.5.0
+(14 rows)
 
 select * from dim1 inner join fact1 on (dim1.pid=fact1.pid and dim1.code=fact1.code) order by fact1.u;
  dist | pid | code |   t1   | dist | pid | code |  u  
@@ -1023,60 +1059,23 @@ select * from dim1 inner join fact1 on (dim1.pid=fact1.pid and dim1.code=fact1.c
 
 set gp_dynamic_partition_pruning=on;
 explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid and dim1.code=fact1.code) order by fact1.u;
-                                                                                                     QUERY PLAN                                                                                                     
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice3; segments: 2)  (cost=63.49..63.52 rows=6 width=62)
-   Merge Key: "?column9?"
-   ->  Sort  (cost=63.49..63.52 rows=6 width=62)
-         Sort Key: dpe_multi.fact1.u
-         InitPlan  (slice4)
-           ->  Aggregate  (cost=1.01..1.02 rows=1 width=32)
-                 ->  Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..1.01 rows=1 width=18)
-                       ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=18)
-         ->  Hash Join  (cost=1.07..62.25 rows=6 width=62)
-               Hash Cond: dpe_multi.fact1.pid = dpe_multi.dim1.pid AND dpe_multi.fact1.code = dpe_multi.dim1.code
-               ->  Append  (cost=0.00..43.36 rows=1770 width=44)
-                     ->  Result  (cost=0.00..5.42 rows=221 width=44)
-                           One-Time Filter: 446016::oid = ANY ($0)
-                           ->  Seq Scan on fact1_1_prt_2_2_prt_oh fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Result  (cost=0.00..0.00 rows=1 width=44)
-                           One-Time Filter: 446043::oid = ANY ($0)
-                           ->  Seq Scan on fact1_1_prt_2_2_prt_wa fact1  (cost=0.00..0.00 rows=1 width=44)
-                     ->  Result  (cost=0.00..5.42 rows=221 width=44)
-                           One-Time Filter: 445989::oid = ANY ($0)
-                           ->  Seq Scan on fact1_1_prt_2_2_prt_ca fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Result  (cost=0.00..5.42 rows=221 width=44)
-                           One-Time Filter: 445882::oid = ANY ($0)
-                           ->  Seq Scan on fact1_1_prt_1_2_prt_ca fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Result  (cost=0.00..5.42 rows=221 width=44)
-                           One-Time Filter: 445909::oid = ANY ($0)
-                           ->  Seq Scan on fact1_1_prt_1_2_prt_oh fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Result  (cost=0.00..0.00 rows=1 width=44)
-                           One-Time Filter: 445936::oid = ANY ($0)
-                           ->  Seq Scan on fact1_1_prt_1_2_prt_wa fact1  (cost=0.00..0.00 rows=1 width=44)
-                     ->  Result  (cost=0.00..5.42 rows=221 width=44)
-                           One-Time Filter: 446123::oid = ANY ($0)
-                           ->  Seq Scan on fact1_1_prt_3_2_prt_oh fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Result  (cost=0.00..0.00 rows=1 width=44)
-                           One-Time Filter: 446150::oid = ANY ($0)
-                           ->  Seq Scan on fact1_1_prt_3_2_prt_wa fact1  (cost=0.00..0.00 rows=1 width=44)
-                     ->  Result  (cost=0.00..5.42 rows=221 width=44)
-                           One-Time Filter: 446096::oid = ANY ($0)
-                           ->  Seq Scan on fact1_1_prt_3_2_prt_ca fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Result  (cost=0.00..5.42 rows=221 width=44)
-                           One-Time Filter: 446203::oid = ANY ($0)
-                           ->  Seq Scan on fact1_1_prt_4_2_prt_ca fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Result  (cost=0.00..5.42 rows=221 width=44)
-                           One-Time Filter: 446230::oid = ANY ($0)
-                           ->  Seq Scan on fact1_1_prt_4_2_prt_oh fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Result  (cost=0.00..0.00 rows=1 width=44)
-                           One-Time Filter: 446257::oid = ANY ($0)
-                           ->  Seq Scan on fact1_1_prt_4_2_prt_wa fact1  (cost=0.00..0.00 rows=1 width=44)
-               ->  Hash  (cost=1.04..1.04 rows=1 width=18)
-                     ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..1.04 rows=1 width=18)
-                           ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=18)
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=on; gp_segments_for_planner=2; optimizer=on
-(51 rows)
+                                                                                                                QUERY PLAN                                                                                                                
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=0.00..862.00 rows=1 width=38)
+   Sort Key: fact1.u
+   ->  Hash Join  (cost=0.00..862.00 rows=1 width=38)
+         Hash Cond: dim1.pid = fact1.pid AND dim1.code = fact1.code
+         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=18)
+               ->  Table Scan on dim1  (cost=0.00..431.00 rows=1 width=18)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=20)
+               ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=20)
+                     ->  Sequence  (cost=0.00..431.00 rows=1 width=20)
+                           ->  Partition Selector for fact1 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Partitions selected: 12 (out of 12)
+                           ->  Dynamic Table Scan on fact1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=20)
+ Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=on; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
+ Optimizer status: PQO version 2.5.0
+(14 rows)
 
 select * from dim1 inner join fact1 on (dim1.pid=fact1.pid and dim1.code=fact1.code) order by fact1.u;
  dist | pid | code |   t1   | dist | pid | code |  u  
@@ -1138,32 +1137,23 @@ select * from dim1 inner join fact1 on (dim1.pid=fact1.pid and dim1.code=fact1.c
 --
 set gp_dynamic_partition_pruning=off;
 explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) order by fact1.u;
-                                                                                                     QUERY PLAN                                                                                                      
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice2; segments: 2)  (cost=53.62..53.65 rows=6 width=62)
-   Merge Key: "?column9?"
-   ->  Sort  (cost=53.62..53.65 rows=6 width=62)
-         Sort Key: dpe_multi.fact1.u
-         ->  Hash Join  (cost=1.06..53.41 rows=6 width=62)
-               Hash Cond: dpe_multi.fact1.pid = dim1.pid
-               ->  Append  (cost=0.00..43.36 rows=1770 width=44)
-                     ->  Seq Scan on fact1_1_prt_2_2_prt_oh fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Seq Scan on fact1_1_prt_2_2_prt_wa fact1  (cost=0.00..0.00 rows=1 width=44)
-                     ->  Seq Scan on fact1_1_prt_2_2_prt_ca fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Seq Scan on fact1_1_prt_1_2_prt_ca fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Seq Scan on fact1_1_prt_1_2_prt_oh fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Seq Scan on fact1_1_prt_1_2_prt_wa fact1  (cost=0.00..0.00 rows=1 width=44)
-                     ->  Seq Scan on fact1_1_prt_3_2_prt_oh fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Seq Scan on fact1_1_prt_3_2_prt_wa fact1  (cost=0.00..0.00 rows=1 width=44)
-                     ->  Seq Scan on fact1_1_prt_3_2_prt_ca fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Seq Scan on fact1_1_prt_4_2_prt_ca fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Seq Scan on fact1_1_prt_4_2_prt_oh fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Seq Scan on fact1_1_prt_4_2_prt_wa fact1  (cost=0.00..0.00 rows=1 width=44)
-               ->  Hash  (cost=1.04..1.04 rows=1 width=18)
-                     ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..1.04 rows=1 width=18)
-                           ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=18)
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=off; gp_segments_for_planner=2; optimizer=on
-(23 rows)
+                                                                                                                QUERY PLAN                                                                                                                 
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=0.00..862.00 rows=1 width=38)
+   Sort Key: fact1.u
+   ->  Hash Join  (cost=0.00..862.00 rows=1 width=38)
+         Hash Cond: dim1.pid = fact1.pid
+         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=18)
+               ->  Table Scan on dim1  (cost=0.00..431.00 rows=1 width=18)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=20)
+               ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=20)
+                     ->  Sequence  (cost=0.00..431.00 rows=1 width=20)
+                           ->  Partition Selector for fact1 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Partitions selected: 12 (out of 12)
+                           ->  Dynamic Table Scan on fact1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=20)
+ Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=off; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
+ Optimizer status: PQO version 2.5.0
+(14 rows)
 
 select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) order by fact1.u;
  dist | pid | code |   t1   | dist | pid | code |   u   
@@ -1272,60 +1262,23 @@ select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) order by fact1.u;
 
 set gp_dynamic_partition_pruning=on;
 explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) order by fact1.u;
-                                                                                                     QUERY PLAN                                                                                                     
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice3; segments: 2)  (cost=54.65..54.67 rows=6 width=62)
-   Merge Key: "?column9?"
-   ->  Sort  (cost=54.65..54.67 rows=6 width=62)
-         Sort Key: dpe_multi.fact1.u
-         InitPlan  (slice4)
-           ->  Aggregate  (cost=1.01..1.02 rows=1 width=32)
-                 ->  Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..1.01 rows=1 width=18)
-                       ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=18)
-         ->  Hash Join  (cost=1.06..53.41 rows=6 width=62)
-               Hash Cond: dpe_multi.fact1.pid = dpe_multi.dim1.pid
-               ->  Append  (cost=0.00..43.36 rows=1770 width=44)
-                     ->  Result  (cost=0.00..5.42 rows=221 width=44)
-                           One-Time Filter: 446016::oid = ANY ($0)
-                           ->  Seq Scan on fact1_1_prt_2_2_prt_oh fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Result  (cost=0.00..0.00 rows=1 width=44)
-                           One-Time Filter: 446043::oid = ANY ($0)
-                           ->  Seq Scan on fact1_1_prt_2_2_prt_wa fact1  (cost=0.00..0.00 rows=1 width=44)
-                     ->  Result  (cost=0.00..5.42 rows=221 width=44)
-                           One-Time Filter: 445989::oid = ANY ($0)
-                           ->  Seq Scan on fact1_1_prt_2_2_prt_ca fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Result  (cost=0.00..5.42 rows=221 width=44)
-                           One-Time Filter: 445882::oid = ANY ($0)
-                           ->  Seq Scan on fact1_1_prt_1_2_prt_ca fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Result  (cost=0.00..5.42 rows=221 width=44)
-                           One-Time Filter: 445909::oid = ANY ($0)
-                           ->  Seq Scan on fact1_1_prt_1_2_prt_oh fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Result  (cost=0.00..0.00 rows=1 width=44)
-                           One-Time Filter: 445936::oid = ANY ($0)
-                           ->  Seq Scan on fact1_1_prt_1_2_prt_wa fact1  (cost=0.00..0.00 rows=1 width=44)
-                     ->  Result  (cost=0.00..5.42 rows=221 width=44)
-                           One-Time Filter: 446123::oid = ANY ($0)
-                           ->  Seq Scan on fact1_1_prt_3_2_prt_oh fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Result  (cost=0.00..0.00 rows=1 width=44)
-                           One-Time Filter: 446150::oid = ANY ($0)
-                           ->  Seq Scan on fact1_1_prt_3_2_prt_wa fact1  (cost=0.00..0.00 rows=1 width=44)
-                     ->  Result  (cost=0.00..5.42 rows=221 width=44)
-                           One-Time Filter: 446096::oid = ANY ($0)
-                           ->  Seq Scan on fact1_1_prt_3_2_prt_ca fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Result  (cost=0.00..5.42 rows=221 width=44)
-                           One-Time Filter: 446203::oid = ANY ($0)
-                           ->  Seq Scan on fact1_1_prt_4_2_prt_ca fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Result  (cost=0.00..5.42 rows=221 width=44)
-                           One-Time Filter: 446230::oid = ANY ($0)
-                           ->  Seq Scan on fact1_1_prt_4_2_prt_oh fact1  (cost=0.00..5.42 rows=221 width=44)
-                     ->  Result  (cost=0.00..0.00 rows=1 width=44)
-                           One-Time Filter: 446257::oid = ANY ($0)
-                           ->  Seq Scan on fact1_1_prt_4_2_prt_wa fact1  (cost=0.00..0.00 rows=1 width=44)
-               ->  Hash  (cost=1.04..1.04 rows=1 width=18)
-                     ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..1.04 rows=1 width=18)
-                           ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=18)
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=on; gp_segments_for_planner=2; optimizer=on
-(51 rows)
+                                                                                                                QUERY PLAN                                                                                                                
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=0.00..862.00 rows=1 width=38)
+   Sort Key: fact1.u
+   ->  Hash Join  (cost=0.00..862.00 rows=1 width=38)
+         Hash Cond: dim1.pid = fact1.pid
+         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=18)
+               ->  Table Scan on dim1  (cost=0.00..431.00 rows=1 width=18)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=20)
+               ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=20)
+                     ->  Sequence  (cost=0.00..431.00 rows=1 width=20)
+                           ->  Partition Selector for fact1 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Partitions selected: 12 (out of 12)
+                           ->  Dynamic Table Scan on fact1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=20)
+ Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=on; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
+ Optimizer status: PQO version 2.5.0
+(14 rows)
 
 select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) order by fact1.u;
  dist | pid | code |   t1   | dist | pid | code |   u   
@@ -1437,28 +1390,25 @@ select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) order by fact1.u;
 --
 set gp_dynamic_partition_pruning=off;
 explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) and fact1.code = 'OH' order by fact1.u;
-                                                                                                     QUERY PLAN                                                                                                      
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice2; segments: 2)  (cost=27.24..27.25 rows=2 width=62)
-   Merge Key: "?column9?"
-   ->  Sort  (cost=27.24..27.25 rows=2 width=62)
-         Sort Key: dpe_multi.fact1.u
-         ->  Hash Join  (cost=1.06..27.21 rows=2 width=62)
-               Hash Cond: dpe_multi.fact1.pid = dim1.pid
-               ->  Append  (cost=0.00..26.10 rows=2 width=44)
-                     ->  Seq Scan on fact1_1_prt_2_2_prt_oh fact1  (cost=0.00..6.53 rows=1 width=44)
-                           Filter: code = 'OH'::text
-                     ->  Seq Scan on fact1_1_prt_1_2_prt_oh fact1  (cost=0.00..6.53 rows=1 width=44)
-                           Filter: code = 'OH'::text
-                     ->  Seq Scan on fact1_1_prt_3_2_prt_oh fact1  (cost=0.00..6.53 rows=1 width=44)
-                           Filter: code = 'OH'::text
-                     ->  Seq Scan on fact1_1_prt_4_2_prt_oh fact1  (cost=0.00..6.53 rows=1 width=44)
-                           Filter: code = 'OH'::text
-               ->  Hash  (cost=1.04..1.04 rows=1 width=18)
-                     ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..1.04 rows=1 width=18)
-                           ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=18)
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=off; gp_segments_for_planner=2; optimizer=on
-(19 rows)
+                                                                                                                QUERY PLAN                                                                                                                 
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=0.00..862.00 rows=1 width=38)
+   Sort Key: fact1.u
+   ->  Hash Join  (cost=0.00..862.00 rows=1 width=38)
+         Hash Cond: dim1.pid = fact1.pid
+         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=18)
+               ->  Table Scan on dim1  (cost=0.00..431.00 rows=1 width=18)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=20)
+               ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=20)
+                     ->  Sequence  (cost=0.00..431.00 rows=1 width=20)
+                           ->  Partition Selector for fact1 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Filter: fact1.code = 'OH'::text
+                                 Partitions selected: 4 (out of 12)
+                           ->  Dynamic Table Scan on fact1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=20)
+                                 Filter: code = 'OH'::text
+ Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=off; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
+ Optimizer status: PQO version 2.5.0
+(16 rows)
 
 select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) and fact1.code = 'OH' order by fact1.u;
  dist | pid | code |   t1   | dist | pid | code |  u  
@@ -1517,40 +1467,25 @@ select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) and fact1.code = 'OH
 
 set gp_dynamic_partition_pruning=on;
 explain select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) and fact1.code = 'OH' order by fact1.u;
-                                                                                                     QUERY PLAN                                                                                                     
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice3; segments: 2)  (cost=28.26..28.27 rows=2 width=62)
-   Merge Key: "?column9?"
-   ->  Sort  (cost=28.26..28.27 rows=2 width=62)
-         Sort Key: dpe_multi.fact1.u
-         InitPlan  (slice4)
-           ->  Aggregate  (cost=1.01..1.02 rows=1 width=32)
-                 ->  Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..1.01 rows=1 width=18)
-                       ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=18)
-         ->  Hash Join  (cost=1.06..27.21 rows=2 width=62)
-               Hash Cond: dpe_multi.fact1.pid = dpe_multi.dim1.pid
-               ->  Append  (cost=0.00..26.10 rows=2 width=44)
-                     ->  Result  (cost=0.00..6.53 rows=1 width=44)
-                           One-Time Filter: 446016::oid = ANY ($0)
-                           ->  Seq Scan on fact1_1_prt_2_2_prt_oh fact1  (cost=0.00..6.53 rows=1 width=44)
+                                                                                                                QUERY PLAN                                                                                                                
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=0.00..862.00 rows=1 width=38)
+   Sort Key: fact1.u
+   ->  Hash Join  (cost=0.00..862.00 rows=1 width=38)
+         Hash Cond: dim1.pid = fact1.pid
+         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=18)
+               ->  Table Scan on dim1  (cost=0.00..431.00 rows=1 width=18)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=20)
+               ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=20)
+                     ->  Sequence  (cost=0.00..431.00 rows=1 width=20)
+                           ->  Partition Selector for fact1 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Filter: fact1.code = 'OH'::text
+                                 Partitions selected: 4 (out of 12)
+                           ->  Dynamic Table Scan on fact1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=20)
                                  Filter: code = 'OH'::text
-                     ->  Result  (cost=0.00..6.53 rows=1 width=44)
-                           One-Time Filter: 445909::oid = ANY ($0)
-                           ->  Seq Scan on fact1_1_prt_1_2_prt_oh fact1  (cost=0.00..6.53 rows=1 width=44)
-                                 Filter: code = 'OH'::text
-                     ->  Result  (cost=0.00..6.53 rows=1 width=44)
-                           One-Time Filter: 446123::oid = ANY ($0)
-                           ->  Seq Scan on fact1_1_prt_3_2_prt_oh fact1  (cost=0.00..6.53 rows=1 width=44)
-                                 Filter: code = 'OH'::text
-                     ->  Result  (cost=0.00..6.53 rows=1 width=44)
-                           One-Time Filter: 446230::oid = ANY ($0)
-                           ->  Seq Scan on fact1_1_prt_4_2_prt_oh fact1  (cost=0.00..6.53 rows=1 width=44)
-                                 Filter: code = 'OH'::text
-               ->  Hash  (cost=1.04..1.04 rows=1 width=18)
-                     ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..1.04 rows=1 width=18)
-                           ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=18)
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=on; gp_segments_for_planner=2; optimizer=on
-(31 rows)
+ Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=on; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
+ Optimizer status: PQO version 2.5.0
+(16 rows)
 
 select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) and fact1.code = 'OH' order by fact1.u;
  dist | pid | code |   t1   | dist | pid | code |  u  
@@ -1612,40 +1547,32 @@ select * from dim1 inner join fact1 on (dim1.pid=fact1.pid) and fact1.code = 'OH
 --
 set gp_dynamic_partition_pruning=off;
 explain select fact1.code, count(*) from dim1 inner join fact1 on (dim1.pid=fact1.pid) group by 1 order by 1;
-                                                                                                     QUERY PLAN                                                                                                      
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice3; segments: 2)  (cost=54.26..54.59 rows=6 width=40)
-   Merge Key: code
-   ->  GroupAggregate  (cost=54.26..54.59 rows=6 width=40)
-         Group By: dpe_multi.fact1.code
-         ->  Sort  (cost=54.26..54.28 rows=6 width=40)
-               Sort Key: dpe_multi.fact1.code
-               ->  Redistribute Motion 2:2  (slice2; segments: 2)  (cost=53.62..54.07 rows=6 width=40)
-                     Hash Key: dpe_multi.fact1.code
-                     ->  GroupAggregate  (cost=53.62..53.85 rows=6 width=40)
-                           Group By: dpe_multi.fact1.code
-                           ->  Sort  (cost=53.62..53.65 rows=6 width=32)
-                                 Sort Key: dpe_multi.fact1.code
-                                 ->  Hash Join  (cost=1.06..53.41 rows=6 width=32)
-                                       Hash Cond: dpe_multi.fact1.pid = dim1.pid
-                                       ->  Append  (cost=0.00..43.36 rows=1770 width=36)
-                                             ->  Seq Scan on fact1_1_prt_2_2_prt_oh fact1  (cost=0.00..5.42 rows=221 width=36)
-                                             ->  Seq Scan on fact1_1_prt_2_2_prt_wa fact1  (cost=0.00..0.00 rows=1 width=36)
-                                             ->  Seq Scan on fact1_1_prt_2_2_prt_ca fact1  (cost=0.00..5.42 rows=221 width=36)
-                                             ->  Seq Scan on fact1_1_prt_1_2_prt_ca fact1  (cost=0.00..5.42 rows=221 width=36)
-                                             ->  Seq Scan on fact1_1_prt_1_2_prt_oh fact1  (cost=0.00..5.42 rows=221 width=36)
-                                             ->  Seq Scan on fact1_1_prt_1_2_prt_wa fact1  (cost=0.00..0.00 rows=1 width=36)
-                                             ->  Seq Scan on fact1_1_prt_3_2_prt_oh fact1  (cost=0.00..5.42 rows=221 width=36)
-                                             ->  Seq Scan on fact1_1_prt_3_2_prt_wa fact1  (cost=0.00..0.00 rows=1 width=36)
-                                             ->  Seq Scan on fact1_1_prt_3_2_prt_ca fact1  (cost=0.00..5.42 rows=221 width=36)
-                                             ->  Seq Scan on fact1_1_prt_4_2_prt_ca fact1  (cost=0.00..5.42 rows=221 width=36)
-                                             ->  Seq Scan on fact1_1_prt_4_2_prt_oh fact1  (cost=0.00..5.42 rows=221 width=36)
-                                             ->  Seq Scan on fact1_1_prt_4_2_prt_wa fact1  (cost=0.00..0.00 rows=1 width=36)
-                                       ->  Hash  (cost=1.04..1.04 rows=1 width=4)
-                                             ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..1.04 rows=1 width=4)
-                                                   ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=4)
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=off; gp_segments_for_planner=2; optimizer=on
-(31 rows)
+                                                                                                                QUERY PLAN                                                                                                                 
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..862.00 rows=1 width=16)
+   Merge Key: fact1.code
+   ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=16)
+         Group By: fact1.code
+         ->  Sort  (cost=0.00..862.00 rows=1 width=16)
+               Sort Key: fact1.code
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=16)
+                     Hash Key: fact1.code
+                     ->  Result  (cost=0.00..862.00 rows=1 width=16)
+                           ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=16)
+                                 Group By: fact1.code
+                                 ->  Sort  (cost=0.00..862.00 rows=1 width=8)
+                                       Sort Key: fact1.code
+                                       ->  Hash Join  (cost=0.00..862.00 rows=1 width=8)
+                                             Hash Cond: fact1.pid = dim1.pid
+                                             ->  Dynamic Table Scan on fact1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=12)
+                                             ->  Hash  (cost=100.00..100.00 rows=34 width=4)
+                                                   ->  Partition Selector for fact1 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                                         Filter: fact1.dist = dim1.pid
+                                                         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                                               ->  Table Scan on dim1  (cost=0.00..431.00 rows=1 width=4)
+ Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=off; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
+ Optimizer status: PQO version 2.5.0
+(23 rows)
 
 select fact1.code, count(*) from dim1 inner join fact1 on (dim1.pid=fact1.pid) group by 1 order by 1;
  code | count 
@@ -1656,68 +1583,32 @@ select fact1.code, count(*) from dim1 inner join fact1 on (dim1.pid=fact1.pid) g
 
 set gp_dynamic_partition_pruning=on;
 explain select fact1.code, count(*) from dim1 inner join fact1 on (dim1.pid=fact1.pid) group by 1 order by 1;
-                                                                                                     QUERY PLAN                                                                                                     
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice4; segments: 2)  (cost=55.28..55.61 rows=6 width=40)
-   Merge Key: code
-   ->  GroupAggregate  (cost=55.28..55.61 rows=6 width=40)
-         Group By: dpe_multi.fact1.code
-         InitPlan  (slice5)
-           ->  Aggregate  (cost=1.01..1.02 rows=1 width=32)
-                 ->  Gather Motion 2:1  (slice3; segments: 2)  (cost=0.00..1.01 rows=1 width=4)
-                       ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=4)
-         ->  Sort  (cost=54.26..54.28 rows=6 width=40)
-               Sort Key: dpe_multi.fact1.code
-               ->  Redistribute Motion 2:2  (slice2; segments: 2)  (cost=53.62..54.07 rows=6 width=40)
-                     Hash Key: dpe_multi.fact1.code
-                     ->  GroupAggregate  (cost=53.62..53.85 rows=6 width=40)
-                           Group By: dpe_multi.fact1.code
-                           ->  Sort  (cost=53.62..53.65 rows=6 width=32)
-                                 Sort Key: dpe_multi.fact1.code
-                                 ->  Hash Join  (cost=1.06..53.41 rows=6 width=32)
-                                       Hash Cond: dpe_multi.fact1.pid = dpe_multi.dim1.pid
-                                       ->  Append  (cost=0.00..43.36 rows=1770 width=36)
-                                             ->  Result  (cost=0.00..5.42 rows=221 width=36)
-                                                   One-Time Filter: 446016::oid = ANY ($0)
-                                                   ->  Seq Scan on fact1_1_prt_2_2_prt_oh fact1  (cost=0.00..5.42 rows=221 width=36)
-                                             ->  Result  (cost=0.00..0.00 rows=1 width=36)
-                                                   One-Time Filter: 446043::oid = ANY ($0)
-                                                   ->  Seq Scan on fact1_1_prt_2_2_prt_wa fact1  (cost=0.00..0.00 rows=1 width=36)
-                                             ->  Result  (cost=0.00..5.42 rows=221 width=36)
-                                                   One-Time Filter: 445989::oid = ANY ($0)
-                                                   ->  Seq Scan on fact1_1_prt_2_2_prt_ca fact1  (cost=0.00..5.42 rows=221 width=36)
-                                             ->  Result  (cost=0.00..5.42 rows=221 width=36)
-                                                   One-Time Filter: 445882::oid = ANY ($0)
-                                                   ->  Seq Scan on fact1_1_prt_1_2_prt_ca fact1  (cost=0.00..5.42 rows=221 width=36)
-                                             ->  Result  (cost=0.00..5.42 rows=221 width=36)
-                                                   One-Time Filter: 445909::oid = ANY ($0)
-                                                   ->  Seq Scan on fact1_1_prt_1_2_prt_oh fact1  (cost=0.00..5.42 rows=221 width=36)
-                                             ->  Result  (cost=0.00..0.00 rows=1 width=36)
-                                                   One-Time Filter: 445936::oid = ANY ($0)
-                                                   ->  Seq Scan on fact1_1_prt_1_2_prt_wa fact1  (cost=0.00..0.00 rows=1 width=36)
-                                             ->  Result  (cost=0.00..5.42 rows=221 width=36)
-                                                   One-Time Filter: 446123::oid = ANY ($0)
-                                                   ->  Seq Scan on fact1_1_prt_3_2_prt_oh fact1  (cost=0.00..5.42 rows=221 width=36)
-                                             ->  Result  (cost=0.00..0.00 rows=1 width=36)
-                                                   One-Time Filter: 446150::oid = ANY ($0)
-                                                   ->  Seq Scan on fact1_1_prt_3_2_prt_wa fact1  (cost=0.00..0.00 rows=1 width=36)
-                                             ->  Result  (cost=0.00..5.42 rows=221 width=36)
-                                                   One-Time Filter: 446096::oid = ANY ($0)
-                                                   ->  Seq Scan on fact1_1_prt_3_2_prt_ca fact1  (cost=0.00..5.42 rows=221 width=36)
-                                             ->  Result  (cost=0.00..5.42 rows=221 width=36)
-                                                   One-Time Filter: 446203::oid = ANY ($0)
-                                                   ->  Seq Scan on fact1_1_prt_4_2_prt_ca fact1  (cost=0.00..5.42 rows=221 width=36)
-                                             ->  Result  (cost=0.00..5.42 rows=221 width=36)
-                                                   One-Time Filter: 446230::oid = ANY ($0)
-                                                   ->  Seq Scan on fact1_1_prt_4_2_prt_oh fact1  (cost=0.00..5.42 rows=221 width=36)
-                                             ->  Result  (cost=0.00..0.00 rows=1 width=36)
-                                                   One-Time Filter: 446257::oid = ANY ($0)
-                                                   ->  Seq Scan on fact1_1_prt_4_2_prt_wa fact1  (cost=0.00..0.00 rows=1 width=36)
-                                       ->  Hash  (cost=1.04..1.04 rows=1 width=4)
-                                             ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..1.04 rows=1 width=4)
-                                                   ->  Seq Scan on dim1  (cost=0.00..1.01 rows=1 width=4)
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=on; gp_segments_for_planner=2; optimizer=on
-(59 rows)
+                                                                                                                QUERY PLAN                                                                                                                
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..862.00 rows=1 width=16)
+   Merge Key: fact1.code
+   ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=16)
+         Group By: fact1.code
+         ->  Sort  (cost=0.00..862.00 rows=1 width=16)
+               Sort Key: fact1.code
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=16)
+                     Hash Key: fact1.code
+                     ->  Result  (cost=0.00..862.00 rows=1 width=16)
+                           ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=16)
+                                 Group By: fact1.code
+                                 ->  Sort  (cost=0.00..862.00 rows=1 width=8)
+                                       Sort Key: fact1.code
+                                       ->  Hash Join  (cost=0.00..862.00 rows=1 width=8)
+                                             Hash Cond: fact1.pid = dim1.pid
+                                             ->  Dynamic Table Scan on fact1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=12)
+                                             ->  Hash  (cost=100.00..100.00 rows=34 width=4)
+                                                   ->  Partition Selector for fact1 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                                         Filter: fact1.dist = dim1.pid
+                                                         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                                               ->  Table Scan on dim1  (cost=0.00..431.00 rows=1 width=4)
+ Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=on; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
+ Optimizer status: PQO version 2.5.0
+(23 rows)
 
 select fact1.code, count(*) from dim1 inner join fact1 on (dim1.pid=fact1.pid) group by 1 order by 1;
  code | count 
@@ -1834,24 +1725,26 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into jpat values(1, '2010-01-02');
 explain select * from (select count(*) over (order by a rows between 1 preceding and 1 following), a, b from jpat)jpat inner join pat using(b);
-                                                                                                     QUERY PLAN                                                                                                     
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Hash Join  (cost=0.00..6.16 rows=1 width=28)
+                                                                                                                QUERY PLAN                                                                                                                
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Hash Join  (cost=0.00..862.00 rows=1 width=20)
    Hash Cond: jpat.b = pat.b
-   ->  Window  (cost=0.00..3.02 rows=1 width=20)
+   ->  Window  (cost=0.00..431.00 rows=1 width=16)
          Order By: jpat.a
-         ->  Sort  (cost=0.00..2.01 rows=1 width=8)
-               Sort Key: jpat.a
-               ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..1.01 rows=1 width=8)
-                     ->  Table Scan on jpat  (cost=0.00..0.00 rows=1 width=8)
-   ->  Hash  (cost=2.03..2.03 rows=1 width=16)
-         ->  Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..2.03 rows=1 width=16)
-               ->  Sequence  (cost=0.00..1.02 rows=1 width=16)
-                     ->  Result  (cost=10.00..100.00 rows=50 width=4)
-                           ->  Function Scan on gp_partition_expansion  (cost=10.00..100.00 rows=50 width=4)
-                     ->  Dynamic Table Scan on pat (partIndex: 0)  (cost=0.00..0.01 rows=1 width=16)
- Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=on; gp_segments_for_planner=2; optimizer=on
-(15 rows)
+         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+               Merge Key: jpat.a
+               ->  Sort  (cost=0.00..431.00 rows=1 width=8)
+                     Sort Key: jpat.a
+                     ->  Table Scan on jpat  (cost=0.00..431.00 rows=1 width=8)
+   ->  Hash  (cost=431.00..431.00 rows=1 width=8)
+         ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+               ->  Sequence  (cost=0.00..431.00 rows=1 width=8)
+                     ->  Partition Selector for pat (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                           Partitions selected: 5 (out of 5)
+                     ->  Dynamic Table Scan on pat (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=8)
+ Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=on; gp_segments_for_planner=2; optimizer=on; optimizer_segments=2
+ Optimizer status: PQO version 2.5.0
+(17 rows)
 
 select * from (select count(*) over (order by a rows between 1 preceding and 1 following), a, b from jpat)jpat inner join pat using(b);
      b      | count | a | a 

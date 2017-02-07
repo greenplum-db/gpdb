@@ -66,7 +66,6 @@ test: vacuum_gp
 # Disabled tests. XXX: Why are these disabled?
 #test: olap_window
 #test: tpch500GB
-#ignore: dpe
 
 # FIXME: These tests no longer work, because they try to set
 # gp_interconnect_type, which doesn't work:
@@ -114,7 +113,7 @@ test: qp_olap_mdqa qp_misc
 test: qp_misc_jiras qp_with_clause qp_executor qp_olap_windowerr qp_olap_window qp_derived_table qp_bitmapscan
 test: qp_functions qp_misc_rio_join_small qp_misc_rio qp_correlated_query qp_targeted_dispatch qp_gist_indexes2 qp_gist_indexes3 qp_gist_indexes4 qp_query_execution
 
-test: qp_dpe qp_subquery qp_functions_idf qp_regexp qp_resource_queue
+test: dpe qp_dpe qp_subquery qp_functions_idf qp_regexp qp_resource_queue
 
 test: olap_setup
 test: qp_olap_group
