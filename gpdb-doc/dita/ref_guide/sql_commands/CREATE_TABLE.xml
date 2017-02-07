@@ -385,12 +385,15 @@
             disable checksum validation, checking the table data for on-disk corruption will not be
             performed.</pd>
           <pd><b>COMPRESSTYPE</b> — Set to <codeph>ZLIB</codeph> (the default),
-              <codeph>RLE-TYPE</codeph>, or <codeph>QUICKLZ</codeph> to specify the type of
-            compression used. The value <codeph>NONE</codeph>disables compression. QuickLZ uses less
-            CPU power and compresses data faster at a lower compression ratio than zlib. Conversely,
-            zlib provides more compact compression ratios at lower speeds. This option is only valid
-            if <codeph>APPENDONLY=TRUE</codeph>.<p>The value <codeph>RLE_TYPE</codeph> is supported
-              only if <codeph>ORIENTATION</codeph> =<codeph>column</codeph> is specified, Greenplum
+              <codeph>RLE-TYPE</codeph>, or <codeph>QUICKLZ</codeph><sup>1</sup> to specify the type
+            of compression used. The value <codeph>NONE</codeph>disables compression. QuickLZ uses
+            less CPU power and compresses data faster at a lower compression ratio than zlib.
+            Conversely, zlib provides more compact compression ratios at lower speeds. This option
+            is only valid if <codeph>APPENDONLY=TRUE</codeph>.<p>
+              <note type="note"><sup>1</sup>QuickLZ compression is available only in the commercial
+                release of Pivotal Greenplum Database.</note>
+            </p><p>The value <codeph>RLE_TYPE</codeph> is supported only if
+                <codeph>ORIENTATION</codeph> =<codeph>column</codeph> is specified, Greenplum
               Database uses the run-length encoding (RLE) compression algorithm. RLE compresses data
               better than the zlib or QuickLZ compression algorithm when the same data value occurs
               in many consecutive rows.</p><p>For columns of type <codeph>BIGINT</codeph>,

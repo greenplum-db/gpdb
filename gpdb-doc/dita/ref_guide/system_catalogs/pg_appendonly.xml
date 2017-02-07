@@ -57,8 +57,8 @@
             <entry colname="col2">smallint</entry>
             <entry colname="col3"/>
             <entry colname="col4">The compression level, with compression ratio increasing from 1 to
-              9. When <codeph>quicklz</codeph> is specified for compresstype, valid values are 1 or
-              3. With <codeph>zlib</codeph> specified, valid values are 1-9. </entry>
+              9. When <codeph>quicklz</codeph><sup>1</sup> is specified for compresstype, valid
+              values are 1 or 3. With <codeph>zlib</codeph> specified, valid values are 1-9. </entry>
           </row>
           <row>
             <entry colname="col1">
@@ -93,7 +93,7 @@
             <entry colname="col3"/>
             <entry colname="col4">Type of compression used to compress append-optimized tables.
               Valid values are <codeph>zlib</codeph> (gzip compression) and
-              <codeph>quicklz</codeph>.</entry>
+                <codeph>quicklz</codeph><sup>1</sup>. </entry>
           </row>
           <row>
             <entry colname="col1">
@@ -155,5 +155,7 @@
         </tbody>
       </tgroup>
     </table>
+    <note type="note"><sup>1</sup>QuickLZ compression is available only in the commercial release of
+      Pivotal Greenplum Database.</note>
   </body>
 </topic>
