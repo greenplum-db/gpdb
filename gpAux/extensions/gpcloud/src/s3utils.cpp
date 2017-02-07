@@ -1,4 +1,5 @@
 #include "s3utils.h"
+
 #include <iomanip>
 #ifndef S3_STANDALONE
 extern "C" {
@@ -11,15 +12,8 @@ bool sha1hmac(const char *str, unsigned char out_hash[SHA_DIGEST_LENGTH], const 
               int secret_len) {
     if (!str) return false;
 
-    unsigned int len = SHA_DIGEST_LENGTH;  // 20
-
-    HMAC_CTX hmac;
-    HMAC_CTX_init(&hmac);
-    HMAC_Init_ex(&hmac, secret, secret_len, EVP_sha1(), NULL);
-    HMAC_Update(&hmac, (unsigned char *)str, strlen(str));
-    HMAC_Final(&hmac, out_hash, &len);
-
-    HMAC_CTX_cleanup(&hmac);
+    // SHA_DIGEST_LENGTH is 20
+    HMAC(EVP_sha1(), secret, secret_len, (unsigned char *)str, strlen(str), out_hash, NULL);
 
     return true;
 }
@@ -40,23 +34,12 @@ bool sha1hmac_hex(const char *str, char out_hash_hex[SHA_DIGEST_STRING_LENGTH], 
     return true;
 }
 
-bool sha256(const char *string, unsigned char out_hash[SHA256_DIGEST_LENGTH]) {
-    if (!string) return false;
-
-    SHA256_CTX sha256;
-    SHA256_Init(&sha256);
-    SHA256_Update(&sha256, string, strlen(string));
-    SHA256_Final(out_hash, &sha256);
-
-    return true;
-}
-
 bool sha256_hex(const char *string, char out_hash_hex[SHA256_DIGEST_STRING_LENGTH]) {
     if (!string) return false;
 
     unsigned char hash[SHA256_DIGEST_LENGTH];  // 32
 
-    sha256(string, hash);
+    SHA256((unsigned char *)string, strlen(string), hash);
 
     for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
         sprintf(out_hash_hex + (i * 2), "%02x", hash[i]);
@@ -69,16 +52,8 @@ bool sha256_hex(const char *string, char out_hash_hex[SHA256_DIGEST_STRING_LENGT
 bool sha256hmac(const char *str, unsigned char out_hash[32], const char *secret, int secret_len) {
     if (!str) return false;
 
-    unsigned int len = SHA256_DIGEST_LENGTH;  // 32
-
-    HMAC_CTX hmac;
-    HMAC_CTX_init(&hmac);
-    HMAC_Init_ex(&hmac, secret, secret_len, EVP_sha256(), NULL);
-    HMAC_Update(&hmac, (unsigned char *)str, strlen(str));
-    HMAC_Final(&hmac, out_hash, &len);
-
-    HMAC_CTX_cleanup(&hmac);
-
+    // SHA256_DIGEST_LENGTH is 32
+    HMAC(EVP_sha256(), secret, secret_len, (unsigned char *)str, strlen(str), out_hash, NULL);
     return true;
 }
 

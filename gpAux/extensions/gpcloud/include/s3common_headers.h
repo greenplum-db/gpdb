@@ -9,9 +9,10 @@
 #include <openssl/md5.h>
 #include <openssl/ssl.h>
 #include <pthread.h>
-#include <signal.h>
 #include <zlib.h>
 #include <algorithm>
+#include <csignal>
+#include <cstring>
 #include <map>
 #include <memory>
 #include <set>
