@@ -4141,13 +4141,13 @@ DATA(insert OID = 323 (  json_recv		   PGNSP PGUID 12 1 0 f f t f s 1 114 "2281"
 DESCR("I/O");
 DATA(insert OID = 324 (  json_send		   PGNSP PGUID 12 1 0 f f t f s 1 17 "114" _null_ _null_ _null_ json_send - _null_ _null_ ));
 DESCR("I/O");
-DATA(insert OID = 3153 (  array_to_json	   PGNSP PGUID 12 1 0 f f t f s 1 3114 "2277" _null_ _null_ _null_ array_to_json - _null_ _null_ ));
+DATA(insert OID = 3153 (  array_to_json	   PGNSP PGUID 12 1 0 f f t f s 1 114 "2277" _null_ _null_ _null_ array_to_json - _null_ _null_ ));
 DESCR("map array to json");
-DATA(insert OID = 3154 (  array_to_json	   PGNSP PGUID 12 1 0 f f t f s 2 3114 "2277 16" _null_ _null_ _null_ array_to_json_pretty - _null_ _null_ ));
+DATA(insert OID = 3154 (  array_to_json	   PGNSP PGUID 12 1 0 f f t f s 2 114 "2277 16" _null_ _null_ _null_ array_to_json_pretty - _null_ _null_ ));
 DESCR("map array to json with optional pretty printing");
-DATA(insert OID = 3155 (  row_to_json	   PGNSP PGUID 12 1 0 f f t f s 1 3114 "2249" _null_ _null_ _null_ row_to_json - _null_ _null_ ));
+DATA(insert OID = 3155 (  row_to_json	   PGNSP PGUID 12 1 0 f f t f s 1 114 "2249" _null_ _null_ _null_ row_to_json - _null_ _null_ ));
 DESCR("map row to json");
-DATA(insert OID = 3156 (  row_to_json	   PGNSP PGUID 12 1 0 f f t f s 2 3114 "2249 16" _null_ _null_ _null_ row_to_json_pretty - _null_ _null_ ));
+DATA(insert OID = 3156 (  row_to_json	   PGNSP PGUID 12 1 0 f f t f s 2 114 "2249 16" _null_ _null_ _null_ row_to_json_pretty - _null_ _null_ ));
 DESCR("map row to json with optional pretty printing");
 
 /* uuid */
