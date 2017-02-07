@@ -30,11 +30,10 @@
 #include "miscadmin.h"
 #include "libpq/libpq-be.h"
 #include "libpq/ip.h"
-#include "utils/gp_atomic.h"
 #include "utils/builtins.h"
 #include "utils/debugbreak.h"
 #include "utils/faultinjector.h"
-#include "utils/pg_crc.h"
+#include "port/atomics.h"
 #include "port/pg_crc32c.h"
 
 #include "cdb/cdbselect.h"

@@ -11,7 +11,7 @@
 
 #include "postgres.h"
 #include "utils/syncrefhashtable.h"
-#include "utils/gp_atomic.h"
+#include "port/atomics.h"
 #include "storage/shmem.h"
 
 /*

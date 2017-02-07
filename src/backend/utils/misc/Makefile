@@ -18,7 +18,7 @@ SUBDIRS     := fstream
 override CPPFLAGS := -I$(srcdir) $(CPPFLAGS)
 
 OBJS = guc.o help_config.o pg_rusage.o ps_status.o superuser.o tzparser.o uriparser.o \
-       faultinjector.o netcheck.o simex.o simexsys.o syncbitvector.o testutils.o gp_atomic.o \
+       faultinjector.o netcheck.o simex.o simexsys.o syncbitvector.o testutils.o \
 	   bitstream.o bitmap_compression.o size.o guc_gp.o zlib_wrapper.o
 
 # This location might depend on the installation directories. Therefore

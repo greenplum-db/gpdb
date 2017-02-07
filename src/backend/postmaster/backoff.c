@@ -60,7 +60,7 @@
 #include "funcapi.h"
 #include "catalog/pg_type.h"
 #include "access/tuptoaster.h"
-#include "utils/gp_atomic.h"
+#include "port/atomics.h"
 
 extern bool gp_debug_resqueue_priority;
 

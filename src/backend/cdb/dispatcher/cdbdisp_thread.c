@@ -30,7 +30,7 @@
 #include "cdb/cdbgang.h"
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"
-#include "utils/gp_atomic.h"
+#include "port/atomics.h"
 
 #ifndef _WIN32
 #define mythread() ((unsigned long) pthread_self())
