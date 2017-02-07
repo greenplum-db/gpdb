@@ -507,7 +507,7 @@ cdbdisp_dispatchCommandInternal(const char *strCommand,
 	ds.dispatchParams = NULL;
 	queryText = buildGpQueryString(&ds, pQueryParms, &queryTextLength);
 	cdbdisp_destroyQueryParms(pQueryParms);
-	cdbdisp_makeDispatcherState(&ds, /*slice count*/1, cancelOnError, queryText, queryTextLength);
+	cdbdisp_makeDispatcherState(&ds, /*slice count*/1, 0, cancelOnError, queryText, queryTextLength);
 	ds.primaryResults->writer_gang = primaryGang;
 
 	initStringInfo(&qeErrorMsg);
@@ -1233,7 +1233,7 @@ cdbdisp_dispatchX(DispatchCommandQueryParms *pQueryParms,
 	ds->primaryResults = NULL;
 	ds->dispatchParams = NULL;
 	queryText = buildGpQueryString(ds, pQueryParms, &queryTextLength);
-	cdbdisp_makeDispatcherState(ds, nSlices, cancelOnError, queryText, queryTextLength);
+	cdbdisp_makeDispatcherState(ds, nSlices, nTotalSlices, cancelOnError, queryText, queryTextLength);
 
 	cdb_total_plans++;
 	cdb_total_slices += nSlices;
@@ -1445,7 +1445,7 @@ cdbdisp_dispatchSetCommandToAllGangs(const char *strCommand,
 	ds->dispatchParams = NULL;
 	queryText = buildGpQueryString(ds, pQueryParms, &queryTextLength);
 	cdbdisp_destroyQueryParms(pQueryParms);
-	cdbdisp_makeDispatcherState(ds, gangCount, cancelOnError, queryText, queryTextLength);
+	cdbdisp_makeDispatcherState(ds, gangCount, 0, cancelOnError, queryText, queryTextLength);
 	ds->primaryResults->writer_gang = primaryGang;
 
 	cdbdisp_dispatchToGang(ds, primaryGang, -1, DEFAULT_DISP_DIRECT);

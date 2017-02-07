@@ -126,7 +126,7 @@ CdbDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 	 */
 
 	queryText = buildGpDtxProtocolCommand(&ds, &dtxProtocolParms, &queryTextLen);
-	cdbdisp_makeDispatcherState(&ds, /* slice count */ 1, /* cancelOnError */ false,
+	cdbdisp_makeDispatcherState(&ds, /* slice count */ 1, 0, /* cancelOnError */ false,
 								queryText, queryTextLen);
 	ds.primaryResults->writer_gang = primaryGang;
 

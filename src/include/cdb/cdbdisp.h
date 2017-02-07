@@ -168,7 +168,8 @@ cdbdisp_cancelDispatch(CdbDispatcherState *ds);
  */
 void
 cdbdisp_makeDispatcherState(CdbDispatcherState *ds,
-							int maxSlices,
+							int nSlices,
+							int nTotalSlices,
 							bool cancelOnError,
 							char *queryText,
 							int queryTextLen);

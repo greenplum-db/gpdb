@@ -781,10 +781,11 @@ cdbdisp_resultBegin(CdbDispatchResults *results, int sliceIndex)
 	if (sliceIndex < 0)
 		return &results->resultArray[0];
 
+	Assert(sliceIndex < results->sliceCapacity);
+
 	si = &results->sliceMap[sliceIndex];
 
-	Assert(sliceIndex < results->sliceCapacity &&
-		   si->resultBegin >= 0 &&
+	Assert(si->resultBegin >= 0 &&
 		   si->resultBegin <= si->resultEnd &&
 		   si->resultEnd <= results->resultCount);
 
@@ -886,11 +887,12 @@ cdbdisp_checkResultsErrcode(struct CdbDispatchResults *meleeResults)
  * memory context.
  */
 CdbDispatchResults *
-cdbdisp_makeDispatchResults(int sliceCapacity,
+cdbdisp_makeDispatchResults(int nSlices,
+							int nTotalSlices,
                             bool cancelOnError)
 {
     CdbDispatchResults *results = palloc0(sizeof(*results));
-    int resultCapacity = largestGangsize() * sliceCapacity;
+    int resultCapacity = largestGangsize() * nSlices;
     int nbytes = resultCapacity * sizeof(results->resultArray[0]);
 
     results->resultArray = palloc0(nbytes);
@@ -901,10 +903,10 @@ cdbdisp_makeDispatchResults(int sliceCapacity,
     results->cancelOnError = cancelOnError;
 
     results->sliceMap = NULL;
-    results->sliceCapacity = sliceCapacity;
-    if (sliceCapacity > 0)
+    results->sliceCapacity = nTotalSlices;
+    if (results->sliceCapacity > 0)
     {
-        nbytes = sliceCapacity * sizeof(results->sliceMap[0]);
+        nbytes = results->sliceCapacity * sizeof(results->sliceMap[0]);
         results->sliceMap = palloc0(nbytes);
     }
 
