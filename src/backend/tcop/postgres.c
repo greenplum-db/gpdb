@@ -4117,7 +4117,8 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
 
 			case 'b':
 				/* Undocumented flag used for binary upgrades */
-				IsBinaryUpgrade = true;
+				if (secure)
+					IsBinaryUpgrade = true;
 				break;
 
 			case 'D':
@@ -4130,7 +4131,8 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
 				break;
 
 			case 'E':
-				EchoQuery = true;
+				if (secure)
+					EchoQuery = true;
 				break;
 
 			case 'e':
@@ -4155,7 +4157,8 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
 				break;
 
 			case 'j':
-				UseNewLine = 0;
+				if (secure)
+					UseNewLine = 0;
 				break;
 
 			case 'k':
@@ -4307,6 +4310,8 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
 				errs++;
 				break;
 		}
+		if (errs)
+			break;
 	}
 
 
@@ -4984,7 +4989,7 @@ PostgresMain(int argc, char *argv[],
 					 * set the snapshot information right away.
 					 *
 					 * Since PortalDefineQuery() does not take NULL query string,
-					 * we initialize it with a contant empty string.
+					 * we initialize it with a constant empty string.
 					 */
 					const char *query_string = pstrdup("");
 					
@@ -5015,6 +5020,11 @@ PostgresMain(int argc, char *argv[],
 					bool ouid_is_super = false;
 
 					int unusedFlags;
+
+					if (Gp_role != GP_ROLE_EXECUTE)
+						ereport(ERROR,
+								(errcode(ERRCODE_PROTOCOL_VIOLATION),
+								 errmsg("MPP protocol messages are only supported in QD - QE connections")));
 
 					/* Set statement_timestamp() */
  					SetCurrentStatementStartTimestamp();
@@ -5170,6 +5180,11 @@ PostgresMain(int argc, char *argv[],
 
 					int serializedDtxContextInfolen;
 					const char *serializedDtxContextInfo;
+
+					if (Gp_role != GP_ROLE_EXECUTE)
+						ereport(ERROR,
+								(errcode(ERRCODE_PROTOCOL_VIOLATION),
+								 errmsg("MPP protocol messages are only supported in QD - QE connections")));
 
 					elog(DEBUG1, "Message type %c received by from libpq, len = %d", firstchar, input_message.len); /* TODO: Remove this */
 					

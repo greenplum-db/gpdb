@@ -45,7 +45,7 @@
 #endif
 
 /*
- * These contants are copied from guc.c. They should not bitrot when we
+ * These constants are copied from guc.c. They should not bitrot when we
  * merge guc.c with upstream, as these are natural constants that never
  * change. guc.c might acquire more of these, though. In that case, we'll
  * just copy the new ones too, as needed.
@@ -581,6 +581,9 @@ int		codegen_varlen_tolerance;
 int		codegen_optimization_level;
 static char 	*codegen_optimization_level_str = NULL;
 
+/* System Information */
+static int	gp_server_version_num;
+static char *gp_server_version_string;
 
 /* Security */
 bool		gp_reject_internal_tcp_conn = true;
@@ -4759,6 +4762,17 @@ struct config_int ConfigureNamesInt_gp[] =
 		2, 0, 10, NULL, NULL
 	},
 
+	{
+		/* Can't be set in postgresql.conf */
+		{"gp_server_version_num", PGC_INTERNAL, PRESET_OPTIONS,
+			gettext_noop("Shows the Greenplum server version as an integer."),
+			NULL,
+			GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE
+		},
+		&gp_server_version_num,
+		GP_VERSION_NUM, GP_VERSION_NUM, GP_VERSION_NUM, NULL, NULL
+	},
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, 0, 0, 0, NULL, NULL
@@ -5537,6 +5551,17 @@ struct config_string ConfigureNamesString_gp[] =
 		"",
 #endif
 		assign_codegen_optimization_level, NULL
+	},
+
+	{
+		/* Can't be set in postgresql.conf */
+		{"gp_server_version", PGC_INTERNAL, PRESET_OPTIONS,
+			gettext_noop("Shows the Greenplum server version."),
+			NULL,
+			GUC_REPORT | GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE
+		},
+		&gp_server_version_string,
+		GP_VERSION, NULL, NULL
 	},
 
 	/* End-of-list marker */

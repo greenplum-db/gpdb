@@ -1004,6 +1004,22 @@ gpdb::PnodePartConstraintRel
 }
 
 bool
+gpdb::FHasExternalPartition
+	(
+	Oid oid
+	)
+{
+	GP_WRAP_START;
+	{
+		/* catalog tables: pg_partition, pg_partition_rule */
+		return rel_has_external_partition(oid);
+	}
+	GP_WRAP_END;
+	return false;
+}
+
+
+bool
 gpdb::FLeafPartition
 	(
 	Oid oid
@@ -1628,6 +1644,20 @@ gpdb::FMotionGather
 	GP_WRAP_START;
 	{
 		return isMotionGather(pmotion);
+	}
+	GP_WRAP_END;
+	return false;
+}
+
+bool
+gpdb::FAppendOnlyPartitionTable
+	(
+	Oid rootOid
+	)
+{
+	GP_WRAP_START;
+	{
+		return rel_has_appendonly_partition(rootOid);
 	}
 	GP_WRAP_END;
 	return false;

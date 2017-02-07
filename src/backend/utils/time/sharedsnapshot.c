@@ -45,7 +45,7 @@
  * Entry DB Singleton. So, the SegMate module also works on the master.]
  *
  * Each shared snapshot is local only to the segment database. High level
- * Writer gang member establishes a local transaction, aquires the slot in
+ * Writer gang member establishes a local transaction, acquires the slot in
  * shared snapshot shmem space and copies the snapshot information into shared
  * memory where the other qExecs that are segmates can find it. Following
  * section convers details on how shared memory initialization happens, who

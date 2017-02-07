@@ -402,7 +402,7 @@ AORelGetHashEntry(Oid relid)
  * Gets or creates the AORelHashEntry.
  * 
  * Assumes that the AOSegFileLock is acquired.
- * The AOSegFileLock will still be aquired when this function returns, expect
+ * The AOSegFileLock will still be acquired when this function returns, expect
  * if it errors out.
  */
 static AORelHashEntryData * 

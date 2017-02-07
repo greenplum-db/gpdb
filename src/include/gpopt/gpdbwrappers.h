@@ -284,7 +284,10 @@ namespace gpdb {
 
 	// parts of a partitioned table
 	bool FLeafPartition(Oid oid);
-	
+
+	// partition table has an external parition
+	bool FHasExternalPartition(Oid oid);
+
 	// find the oid of the root partition given partition oid belongs to
 	Oid OidRootPartition(Oid oid);
 	
@@ -375,7 +378,10 @@ namespace gpdb {
 
 	// is this a Gather motion
 	bool FMotionGather(const Motion *pmotion);
-	
+
+	// does a partition table have an appendonly child
+	bool FAppendOnlyPartitionTable(Oid rootOid);
+
 	// does a multi-level partitioned table have uniform partitioning hierarchy
 	bool FMultilevelPartitionUniform(Oid rootOid);
 

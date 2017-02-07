@@ -1425,14 +1425,21 @@
                   <xref href="#gp_num_contents_in_cluster" type="section"
                     >gp_num_contents_in_cluster</xref>
                 </p>
+              </stentry>
+              <stentry>
                 <p>
                   <xref href="#gp_role" type="section">gp_role</xref>
                 </p>
                 <p>
                   <xref href="#gp_session_id" type="section">gp_session_id</xref>
                 </p>
+                <p>
+                  <xref href="#gp_server_version" type="section">gp_server_version</xref>
+                </p>
+                <p>
+                  <xref href="#gp_server_version_num" type="section">gp_server_version_num</xref>
+                </p>
               </stentry>
-              <stentry/>
             </strow>
           </simpletable>
         </body>
@@ -1918,6 +1925,12 @@
               </li>
               <li>
                 <xref href="#gp_segments_for_planner"/>
+              </li>
+              <li>
+                <xref href="#gp_server_version"/>
+              </li>
+              <li>
+                <xref href="#gp_server_version_num"/>
               </li>
               <li>
                 <xref href="#gp_session_id"/>
@@ -6410,6 +6423,69 @@
                 <entry colname="col1">0-<i>n</i></entry>
                 <entry colname="col2">0</entry>
                 <entry colname="col3">master<p>session</p><p>reload</p></entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </table>
+      </body>
+    </topic>
+    <topic id="gp_server_version">
+      <title>gp_server_version</title>
+      <body>
+        <p>Reports the version number of the server as a string. A version
+          modifier argument might be appended to the numeric portion of the
+          version string, example: <i>5.0.0 beta</i></p>.
+        <table id="gp_server_version_table">
+          <tgroup cols="3">
+            <colspec colnum="1" colname="col1" colwidth="1*"/>
+            <colspec colnum="2" colname="col2" colwidth="1*"/>
+            <colspec colnum="3" colname="col3" colwidth="1*"/>
+            <thead>
+              <row>
+                <entry colname="col1">Value Range</entry>
+                <entry colname="col2">Default</entry>
+                <entry colname="col3">Set Classifications</entry>
+              </row>
+            </thead>
+            <tbody>
+              <row>
+                <entry colname="col1">String. Examples: <i>5.0.0</i></entry>
+                <entry colname="col2">n/a</entry>
+                <entry colname="col3">read only</entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </table>
+      </body>
+    </topic>
+    <topic id="gp_server_version_num">
+      <title>gp_server_version_num</title>
+      <body>
+        <p>Reports the version number of the server as an integer. The number
+          is guaranteed to always be increasing for each version and can be
+          used for numeric comparisons. The major version is represented as
+          is, the minor and patch versions are zero-padded to always be
+          double digit wide.</p>
+        <table id="gp_server_version_num_table">
+          <tgroup cols="3">
+            <colspec colnum="1" colname="col1" colwidth="1*"/>
+            <colspec colnum="2" colname="col2" colwidth="1*"/>
+            <colspec colnum="3" colname="col3" colwidth="1*"/>
+            <thead>
+              <row>
+                <entry colname="col1">Value Range</entry>
+                <entry colname="col2">Default</entry>
+                <entry colname="col3">Set Classifications</entry>
+              </row>
+            </thead>
+            <tbody>
+              <row>
+                <entry colname="col1"><i>Mmmpp</i> where <i>M</i> is the major
+                  version, <i>mm</i> is the minor version zero-padded and
+                  <i>pp</i> is the patch version zero-padded. Example: 50000
+                  </entry>
+                <entry colname="col2">n/a</entry>
+                <entry colname="col3">read only</entry>
               </row>
             </tbody>
           </tgroup>

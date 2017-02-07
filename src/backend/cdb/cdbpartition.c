@@ -435,8 +435,9 @@ rel_partition_keys_ordered(Oid relid)
 
 	return pkeys;
 }
+
  /*
- * Dose relation have a external partition?
+ * Does relation have a external partition?
  * Returns true only when the input is the root partition
  * of a partitioned table and it has external partitions.
  */
@@ -506,6 +507,38 @@ query_has_external_partition(Query *query)
 			return true;
 		}
 	}
+	return false;
+}
+
+/*
+ * Does relation have an appendonly partition?
+ * Returns true only when the input is the root partition
+ * of a partitioned table and it has appendonly partitions.
+ */
+bool
+rel_has_appendonly_partition(Oid relid)
+{
+	ListCell *lc = NULL;
+	List	   *leaf_oid_list = NIL;
+	PartitionNode *n = get_parts(relid, 0 /*level*/ ,
+								 0 /*parent*/, false /* inctemplate */, true /*includesubparts*/);
+
+	if (n == NULL || n->rules == NULL)
+		return false;
+
+	leaf_oid_list = all_leaf_partition_relids(n); /* all leaves */
+
+	foreach(lc, leaf_oid_list)
+	{
+		Relation rel = heap_open(lfirst_oid(lc), NoLock);
+		heap_close(rel, NoLock);
+
+		if (RelationIsAoRows(rel) || RelationIsAoCols(rel))
+		{
+			return true;
+		}
+	}
+
 	return false;
 }
 

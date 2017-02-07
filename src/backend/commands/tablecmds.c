@@ -10998,7 +10998,6 @@ reloptions_list(Oid relid)
 static void
 change_dropped_col_datatypes(Relation rel)
 {
-	int			natts = RelationGetNumberOfAttributes(rel);
 	Relation	catalogRelation;
 	SysScanDesc scan;
 	ScanKeyData key;
@@ -11021,7 +11020,7 @@ change_dropped_col_datatypes(Relation rel)
 
 		if (att->attisdropped)
 		{
-			Assert(att->attnum > 0 && att->attnum <= natts);
+			Assert(att->attnum > 0 && att->attnum <= RelationGetNumberOfAttributes(rel));
 
 			copyTuple = heap_copytuple(tuple);
 			att = (Form_pg_attribute) GETSTRUCT(copyTuple);
@@ -12970,7 +12969,12 @@ exchange_part_inheritance(Oid oldrelid, Oid newrelid)
 					     RelationGetRelationName(parent), -1),
 			true);
 
-	inherit_parent(parent, newrel, true /* it's a partition */, NIL);
+	/*
+	 * External relations doesn't support inheritance so keep the attributes
+	 * local even when used in a partition hierarchy.
+	 */
+	if (!RelationIsExternal(newrel))
+		inherit_parent(parent, newrel, true /* it's a partition */, NIL);
 	heap_close(parent, NoLock);
 	heap_close(oldrel, NoLock);
 	heap_close(newrel, NoLock);
