@@ -12969,12 +12969,7 @@ exchange_part_inheritance(Oid oldrelid, Oid newrelid)
 					     RelationGetRelationName(parent), -1),
 			true);
 
-	/*
-	 * External relations doesn't support inheritance so keep the attributes
-	 * local even when used in a partition hierarchy.
-	 */
-	if (!RelationIsExternal(newrel))
-		inherit_parent(parent, newrel, true /* it's a partition */, NIL);
+	inherit_parent(parent, newrel, true /* it's a partition */, NIL);
 	heap_close(parent, NoLock);
 	heap_close(oldrel, NoLock);
 	heap_close(newrel, NoLock);
