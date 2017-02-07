@@ -745,7 +745,7 @@ createChunkTransportState(ChunkTransportState *transportStates,
 	{
 		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 						errmsg("Interconnect Error: A HTAB entry for motion node %d already exists.", motNodeID),
-						errdetail("conns %p numConns %d first sock %d highreadsock %d", pEntry->conns, pEntry->numConns, pEntry->conns[0].sockfd, pEntry->highReadSock)));
+						errdetail("conns %p numConns %d first sock %d", pEntry->conns, pEntry->numConns, pEntry->conns[0].sockfd)));
 	}
 
 	pEntry->valid = true;
@@ -753,11 +753,9 @@ createChunkTransportState(ChunkTransportState *transportStates,
 	pEntry->motNodeId = motNodeID;
     pEntry->numConns = numPrimaryConns;
 	pEntry->numPrimaryConns = numPrimaryConns;
-	pEntry->highReadSock = 0;
     pEntry->scanStart = 0;
     pEntry->sendSlice = sendSlice;
     pEntry->recvSlice = recvSlice;
-    pEntry->outgoingPortRetryCount = 0;
 
 	pEntry->conns = palloc0(pEntry->numConns * sizeof(pEntry->conns[0]));
 
@@ -772,11 +770,8 @@ createChunkTransportState(ChunkTransportState *transportStates,
         conn->tupleCount = 0;
         conn->stillActive = false;
         conn->stopRequested = false;
-        conn->wakeup_ms = 0;
         conn->cdbProc = NULL;
     }
-
-	MPP_FD_ZERO(&pEntry->readSet);
 
 	return pEntry;
 }
