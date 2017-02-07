@@ -4,7 +4,6 @@ image_resource:
 inputs:
   - name: gpdb_src
   - name: bin_gpdb
-  - name: sync_tools_gpdb
 outputs:
 params:
   TEST_OS: ""

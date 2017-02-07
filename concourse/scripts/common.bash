@@ -18,10 +18,6 @@ function install_gpdb() {
     tar -xzf bin_gpdb/bin_gpdb.tar.gz -C /usr/local/greenplum-db-devel
 }
 
-function install_sync_tools() {
-    tar -xzf sync_tools_gpdb/sync_tools_gpdb.tar.gz -C gpdb_src/gpAux
-}
-
 function configure() {
   source /opt/gcc_env.sh
   pushd gpdb_src

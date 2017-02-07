@@ -66,8 +66,6 @@ function make_sync_tools() {
     # the zlib downloaded from artifacts.  Therefore, remove the zlib
     # downloaded from artifacts in order to use the native zlib.
     find ext -name 'libz.*' -exec rm -f {} \;
-    tar -czf ../../sync_tools_gpdb/sync_tools_gpdb.tar.gz ext
-
   popd
 }
 

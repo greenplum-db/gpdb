@@ -47,7 +47,6 @@ function setup_gpadmin_user() {
 
 function _main() {
 
-    install_sync_tools
     configure
     install_gpdb
     setup_gpadmin_user
