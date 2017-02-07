@@ -93,11 +93,7 @@ typedef struct icpkthdr
 typedef enum MotionConnState
 {
     mcsNull,
-    mcsAccepted,
     mcsSetupOutgoingConnection,
-    mcsConnecting,
-    mcsRecvRegMsg,
-    mcsSendRegMsg,
     mcsStarted,
 	mcsEosSent
 } MotionConnState;
