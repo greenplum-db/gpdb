@@ -1609,13 +1609,8 @@ int gp_pthread_create(pthread_t * thread, void *(*start_routine)(void *),
 		return pthread_err;
 	}
 
-#ifdef pg_on_solaris
-	/* Solaris doesn't have PTHREAD_STACK_MIN ? */
-	pthread_err = pthread_attr_setstacksize(&t_atts, (256 * 1024));
-#else
 	pthread_err = pthread_attr_setstacksize(&t_atts,
 			Max(PTHREAD_STACK_MIN, (256 * 1024)));
-#endif
 	if (pthread_err != 0)
 	{
 		elog(LOG, "%s: pthread_attr_setstacksize failed.  Error %d", caller, pthread_err);

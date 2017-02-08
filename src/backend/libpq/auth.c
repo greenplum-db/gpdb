@@ -2201,7 +2201,7 @@ authident(hbaPort *port)
  */
 
 
-#if defined(pg_on_solaris) || defined(_AIX)
+#if defined(_AIX)
 static int
 pam_passwd_conv_proc(int num_msg, struct pam_message **msg,
 					struct pam_response **resp, void *appdata_ptr)

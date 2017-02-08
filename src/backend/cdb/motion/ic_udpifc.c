@@ -1400,12 +1400,7 @@ InitMotionUDPIFC(int *listenerSocketFd, uint16 *listenerPort)
 	 * size are large (1M+) */
 	pthread_attr_init(&t_atts);
 
-#ifdef pg_on_solaris
-	/* Solaris doesn't have PTHREAD_STACK_MIN ? */
-	pthread_attr_setstacksize(&t_atts, (128*1024));
-#else
 	pthread_attr_setstacksize(&t_atts, Max(PTHREAD_STACK_MIN, (128*1024)));
-#endif
 	pthread_err = pthread_create(&ic_control_info.threadHandle, &t_atts, rxThreadFunc, NULL);
 
 	pthread_attr_destroy(&t_atts);

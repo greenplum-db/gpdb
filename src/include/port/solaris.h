@@ -36,25 +36,3 @@
  * still use our own fix for the buggy version.
  */
 #define HAVE_BUGGY_SOLARIS_STRTOD
-
-
-/*
- * Make sure that we have an easy way to check that we're actually on
- * Solaris in the olden days this was built into gcc -- but it appears
- * that it isn't there any longer.
- */
-#ifndef pg_on_solaris
-#if defined(__sun__) && defined(__unix__) && defined(__svr4__)
-#define pg_on_solaris 1
-#endif
-#endif
-
-/* this is defined by pg_config.h, which is included by the time we get here. */
-#ifdef ENABLE_THREAD_SAFETY
-/*
- * MPP-2105: Make sure that multithreaded code can get the right errno.
- * (any such code also needs to explicitly include /usr/include/errno.h)
- */
-#define _REENTRANT 1
-#include <errno.h>
-#endif

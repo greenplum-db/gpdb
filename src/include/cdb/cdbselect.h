@@ -13,8 +13,7 @@
 #ifndef CDBSELECT_H
 #define CDBSELECT_H
 
-#if !defined(_WIN32) && \
-	!(defined(pg_on_solaris) && defined(__sparc) && defined(_LP64))
+#if !defined(_WIN32)
 
 /* 8-bit bytes 32 or 64-bit ints */
 

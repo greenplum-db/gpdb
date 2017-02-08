@@ -145,15 +145,6 @@ pqcomm_accept_mock(int accept_sock, struct sockaddr *restrict address,
 	return test_accept_socket;
 }
 
-
-/*
- * Solaris doesn't support setting the SO_SNDTIMEO Socket option. Disable all
- * the corresponding unit tests on Solaris
- */
-
-#if !defined(pg_on_solaris)
-
-
 /*
  * Test for StreamConnection that verifies that the socket has the SO_SNDTIMEO
  * timeout set for it when the connection is through a TCP/IP socket (AF_INET)
@@ -241,8 +232,6 @@ test__StreamConnection_set_SNDTIMEO_segment(void **state)
 	close(test_accept_socket);
 }
 
-#endif /* #if !defined(pg_on_solaris) */
-
 /* ==================== main ==================== */
 int
 main(int argc, char* argv[])
@@ -253,11 +242,9 @@ main(int argc, char* argv[])
 		unit_test(test__internal_flush_succesfulSend),
 		unit_test(test__internal_flush_failedSendEINTR),
 		unit_test(test__internal_flush_failedSendEPIPE),
-#if !defined(pg_on_solaris)
 		unit_test(test__StreamConnection_set_SNDTIMEO_AF_INET),
 		unit_test(test__StreamConnection_set_SNDTIMEO_AF_UNIX),
 		unit_test(test__StreamConnection_set_SNDTIMEO_segment)
-#endif
 	};
 
 	return run_tests(tests);

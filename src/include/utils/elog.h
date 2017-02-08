@@ -559,11 +559,6 @@ write_stderr(const char *fmt,...)
    the supplied arguments. */
 __attribute__((format(printf, 1, 2)));
 
-#if defined(pg_on_solaris)
-extern size_t backtrace(void **buffer, int size);
-extern char **backtrace_symbols(void *const *buffer, int size);
-#endif
-
 extern void write_message_to_server_log(int elevel,
 										int sqlerrcode,
 										const char *message,
