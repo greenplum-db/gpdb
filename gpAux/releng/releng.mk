@@ -39,10 +39,6 @@ endif
 ## NOTE: Dependent project module version is kept in $(BLD_TOP)/releng/make/dependencies/ivy.xml
 ##-------------------------------------------------------------------------------------
 
-# by default use optimized build libraries of GP Optimizer
-# use 'make BLD_TYPE=debug' to work with debug build libraries of GP Optimizer
-BLD_TYPE?=opt
-
 GREP_SED_VAR = $(BLD_TOP)/releng/make/dependencies/ivy.xml | sed -e 's|\(.*\)rev="\(.*\)"[ \t]*conf\(.*\)|\2|'
 
 ## ---------------------------------------

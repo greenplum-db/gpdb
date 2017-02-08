@@ -87,20 +87,6 @@ class AOCOAlterColumn(MPPTestCase):
         outfile = local_path("gpcheckcat_"+datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d%H%M%S')+".out")
         self.dbstate.check_catalog(outputFile=outfile)
 
-    def check_catalog(self):
-        iteration = 0 
-        errorCode = 1 
-        while(errorCode > 0 and iteration < 5):
-            (errorCode, hasError, gpcheckcat_output, repairScript) =  self.dbstate.gpcheckcat(alldb = False)
-            tinctest.logger.info(" %s Gpcheckcat iteration . ErrorCode: %s " % (iteration,errorCode))
-            if (errorCode > 0):
-                self.dbstate.run_repairScript(repairScript)
-                iteration = iteration + 1 
-        if not (errorCode == 0 and iteration < 5):
-            raise Exception('GpCheckcat failed')
-
-         
-        
     def run_test_ChangeTracking(self,filename):
         # Log the segment state before starting the test
         # Expectation is a SYNC state
