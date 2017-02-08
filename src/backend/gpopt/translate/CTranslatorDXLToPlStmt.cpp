@@ -492,7 +492,7 @@ CTranslatorDXLToPlStmt::MapLocationsFile
 	ExtTableEntry *extentry = gpdb::Pexttable(oidRel);
 
 	ListCell *plcLocation = NULL;
-	ForEach (plcLocation, extentry->locations)
+	ForEach (plcLocation, extentry->urilocations)
 	{
 		Value* pvLocation = (Value *)lfirst(plcLocation);
 		CHAR *szUri = pvLocation->val.str;
@@ -560,7 +560,7 @@ CTranslatorDXLToPlStmt::MapLocationsFdist
 	
 	ExtTableEntry *extentry = gpdb::Pexttable(oidRel);
 
-	const ULONG ulLocations = gpdb::UlListLength(extentry->locations);
+	const ULONG ulLocations = gpdb::UlListLength(extentry->urilocations);
 	if (URI_GPFDIST == pUri->protocol || URI_GPFDISTS == pUri->protocol)
 	{
 		ulMaxParticipants = ulLocations * gp_external_max_segs;
@@ -587,7 +587,7 @@ CTranslatorDXLToPlStmt::MapLocationsFdist
 	while (!fDone)
 	{
 		ListCell *plcLocation = NULL;
-		ForEach (plcLocation, extentry->locations)
+		ForEach (plcLocation, extentry->urilocations)
 		{
 			Value* pvLocation = (Value *)lfirst(plcLocation);
 			CHAR *szUri = pvLocation->val.str;
@@ -691,7 +691,7 @@ CTranslatorDXLToPlStmt::MapLocationsExecute
 	si = NULL;
 
 	// get the ON clause (execute location) information
-	Value *pvOnClause = (Value *) gpdb::PvListNth(extentry->locations, 0);
+	Value *pvOnClause = (Value *) gpdb::PvListNth(extentry->execlocations, 0);
 	CHAR *szOnClause = pvOnClause->val.str;
 	
 	if (0 == gpos::clib::IStrCmp(szOnClause, "ALL_SEGMENTS"))
@@ -1007,13 +1007,13 @@ CTranslatorDXLToPlStmt::PlExternalScanUriList
 		fUsingLocation = true;
 	}
 
-	GPOS_ASSERT(0 < gpdb::UlListLength(extentry->locations));
+	GPOS_ASSERT(0 < gpdb::UlListLength(extentry->urilocations));
 	
 	CHAR *szFirstUri = NULL;
 	Uri *pUri = NULL;
 	if (!fUsingExecute)
 	{
-		szFirstUri = ((Value *) gpdb::PvListNth(extentry->locations, 0))->val.str;
+		szFirstUri = ((Value *) gpdb::PvListNth(extentry->urilocations, 0))->val.str;
 		pUri = gpdb::PuriParseExternalTable(szFirstUri);
 	}
 

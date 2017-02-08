@@ -82,14 +82,17 @@ InsertExtTableEntry(Oid 	tbloid,
 
 		values[Anum_pg_exttable_command - 1] =
 		DirectFunctionCall1(textin, CStringGetDatum(commandString));
-		values[Anum_pg_exttable_location - 1] = locationExec;
-
+		values[Anum_pg_exttable_execlocation - 1] = locationExec;
+		nulls[Anum_pg_exttable_urilocation - 1] = true;
 	}
 	else
 	{
 		/* LOCATION type table - store uri locations. command is NULL */
 
-		values[Anum_pg_exttable_location - 1] = locationUris;
+		values[Anum_pg_exttable_execlocation - 1] = locationExec;
+		if (!locationExec)
+			nulls[Anum_pg_exttable_execlocation - 1] = true;
+		values[Anum_pg_exttable_urilocation - 1] = locationUris;
 		values[Anum_pg_exttable_command - 1] = 0;
 		nulls[Anum_pg_exttable_command - 1] = true;
 	}
@@ -280,7 +283,8 @@ GetExtTableEntryIfExists(Oid relid)
 	SysScanDesc scan;
 	HeapTuple	tuple;
 	ExtTableEntry *extentry;
-	Datum		locations,
+	Datum		urilocations,
+				execlocations,
 				fmtcode, 
 				fmtopts, 
 				options,
@@ -314,10 +318,20 @@ GetExtTableEntryIfExists(Oid relid)
 	extentry = (ExtTableEntry *) palloc0(sizeof(ExtTableEntry));
 
 	/* get the location list */
-	locations = heap_getattr(tuple, 
-							 Anum_pg_exttable_location, 
-							 RelationGetDescr(pg_exttable_rel), 
+	urilocations = heap_getattr(tuple,
+							 Anum_pg_exttable_urilocation,
+							 RelationGetDescr(pg_exttable_rel),
 							 &isNull);
+	if (DatumGetPointer(urilocations) == 0)
+		urilocations = PointerGetDatum(construct_empty_array(TEXTOID));
+
+	execlocations = heap_getattr(tuple,
+							 Anum_pg_exttable_execlocation,
+							 RelationGetDescr(pg_exttable_rel),
+							 &isNull);
+
+	if (DatumGetPointer(execlocations) == 0)
+		execlocations = PointerGetDatum(construct_empty_array(TEXTOID));
 
 	if (isNull)
 	{
@@ -330,7 +344,7 @@ GetExtTableEntryIfExists(Oid relid)
 		int			i;
 		char*		loc_str = NULL;
 		
-		deconstruct_array(DatumGetArrayTypeP(locations),
+		deconstruct_array(DatumGetArrayTypeP(urilocations),
 						  TEXTOID, -1, false, 'i',
 						  &elems, NULL, &nelems);
 
@@ -339,13 +353,25 @@ GetExtTableEntryIfExists(Oid relid)
 			loc_str = DatumGetCString(DirectFunctionCall1(textout, elems[i]));
 
 			/* append to a list of Value nodes, size nelems */
-			extentry->locations = lappend(extentry->locations, makeString(pstrdup(loc_str)));
+			extentry->urilocations = lappend(extentry->urilocations, makeString(pstrdup(loc_str)));
 		}
 		
 		if(loc_str && (IS_FILE_URI(loc_str) || IS_GPFDIST_URI(loc_str) || IS_GPFDISTS_URI(loc_str)))
 			extentry->isweb = false;
 		else
 			extentry->isweb = true;
+
+		deconstruct_array(DatumGetArrayTypeP(execlocations),
+						  TEXTOID, -1, false, 'i',
+						  &elems, NULL, &nelems);
+
+		for (i = 0; i < nelems; i++)
+		{
+			loc_str = DatumGetCString(DirectFunctionCall1(textout, elems[i]));
+
+			/* append to a list of Value nodes, size nelems */
+			extentry->execlocations = lappend(extentry->execlocations, makeString(pstrdup(loc_str)));
+		}
 
 	}
 		

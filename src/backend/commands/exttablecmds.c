@@ -101,6 +101,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 		case EXTTBL_TYPE_LOCATION:
 
 			/* Parse and validate URI strings (LOCATION clause) */
+			locationExec = transformExecOnClause(exttypeDesc->on_clause);
 			locationUris = transformLocationUris(exttypeDesc->location_list,
 												 isweb, iswritable);
 			break;
@@ -668,6 +669,9 @@ transformExecOnClause(List *on_clause)
 	Size		len;
 	text	   *t;
 
+	if (on_clause == NIL)
+		exec_location_str = "ALL_SEGMENTS";
+	else {
 	/*
 	 * Extract options from the statement node tree NOTE: as of now we only
 	 * support one option in the ON clause and therefore more than one is an
@@ -728,6 +732,7 @@ transformExecOnClause(List *on_clause)
 					(errcode(ERRCODE_GP_INTERNAL_ERROR),
 				 errmsg("Unknown location code for EXECUTE in tablecmds.")));
 		}
+	}
 	}
 
 	/* convert to text[] */

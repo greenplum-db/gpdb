@@ -408,7 +408,7 @@ CREATE SCHEMA exttabletest;
 CREATE
 	EXTERNAL TABLE exttabletest.ext_nation (n_nationkey integer, n_name char(25), n_regionkey integer, n_comment varchar(152))
 	LOCATION ('file://@hostname@@abs_srcdir@/data/nation.tbl') FORMAT 'text' (delimiter '|');
-SELECT count(*) FROM pg_exttable WHERE location @> '{file://@hostname@@abs_srcdir@/data/nation.tbl}';
+SELECT count(*) FROM pg_exttable WHERE urilocation @> '{file://@hostname@@abs_srcdir@/data/nation.tbl}';
  count 
 -------
      1
@@ -416,7 +416,7 @@ SELECT count(*) FROM pg_exttable WHERE location @> '{file://@hostname@@abs_srcdi
 
 DROP SCHEMA exttabletest CASCADE;
 NOTICE:  drop cascades to external table exttabletest.ext_nation
-SELECT count(*) FROM pg_exttable WHERE location @> '{file://@hostname@@abs_srcdir@/data/nation.tbl}';
+SELECT count(*) FROM pg_exttable WHERE urilocation @> '{file://@hostname@@abs_srcdir@/data/nation.tbl}';
  count 
 -------
      0
@@ -2813,6 +2813,24 @@ SELECT COUNT(*) FROM gp_read_error_log('exttab_heap_join_1');
 (1 row)
 
 \! rm @abs_srcdir@/data/tableless.csv
+-- Create external table with on clause
+CREATE EXTERNAL TABLE exttab_with_on_master( i int, j text )
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') ON MASTER FORMAT 'TEXT' (DELIMITER '|');
+\d exttab_with_on_master
+External table "public.exttab_with_on_master"
+ Column |  Type   | Modifiers 
+--------+---------+-----------
+ i      | integer | 
+ j      | text    | 
+Type: readable
+Encoding: UTF8
+Format type: text
+Format options: delimiter '|' null '\N' escape '\'
+External options: {}
+External location: file://@hostname@@abs_srcdir@/data/exttab_few_errors.data
+Execute on: master segment
+
+DROP EXTERNAL TABLE IF EXISTS exttab_with_on_master;
 -- Create external table with 'OPTIONS'
 CREATE EXTERNAL TABLE exttab_with_option_empty( i int, j text )
 LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
@@ -2834,7 +2852,8 @@ Encoding: UTF8
 Format type: text
 Format options: delimiter '|' null '\N' escape '\'
 External options: {hello=world,bonjour=again,"nihao=again and again"} 
-External location: file://@hostname@@abs_srcdir@/data/exttab_few_errors.data 
+External location: file://@hostname@@abs_srcdir@/data/exttab_few_errors.data
+Execute on: all segments
 
 \d exttab_with_option_empty 
 External table "public.exttab_with_option_empty"
@@ -2848,6 +2867,7 @@ Format type: text
 Format options: delimiter '|' null '\N' escape '\'
 External options: {} 
 External location: file://@hostname@@abs_srcdir@/data/exttab_few_errors.data
+Execute on: all segments
 
 DROP EXTERNAL TABLE IF EXISTS exttab_with_option_empty;
 DROP EXTERNAL TABLE IF EXISTS exttab_with_option_1;

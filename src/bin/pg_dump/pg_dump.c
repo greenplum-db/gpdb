@@ -9373,7 +9373,8 @@ static void
 dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer delq)
 {
 		PGresult   *res;
-		char	   *locations;
+		char	   *urilocations;
+		char	   *execlocations;
 		char	   *location;
 		char	   *fmttype;
 		char	   *fmtopts;
@@ -9405,7 +9406,7 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 		if (gpdb5)
 		{
 			appendPQExpBuffer(query,
-						  "SELECT x.location, x.fmttype, x.fmtopts, x.command, "
+						  "SELECT x.urilocation, x.execlocation, x.fmttype, x.fmtopts, x.command, "
 								  "x.rejectlimit, x.rejectlimittype, "
 						      "(SELECT relname "
 						          "FROM pg_catalog.pg_class "
@@ -9481,24 +9482,36 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 
 		}
 
-		locations = PQgetvalue(res, 0, 0);
-		fmttype = PQgetvalue(res, 0, 1);
-		fmtopts = PQgetvalue(res, 0, 2);
-		command = PQgetvalue(res, 0, 3);
-		rejlim = PQgetvalue(res, 0, 4);
-		rejlimtype = PQgetvalue(res, 0, 5);
-		errnspname = PQgetvalue(res, 0, 6);
-		errtblname = PQgetvalue(res, 0, 7);
-		extencoding = PQgetvalue(res, 0, 8);
-		writable = PQgetvalue(res, 0, 9);
 
 		if (gpdb5)
 		{
-			options = PQgetvalue(res, 0, 10);
+			urilocations = PQgetvalue(res, 0, 0);
+			execlocations = PQgetvalue(res, 0, 1);
+			fmttype = PQgetvalue(res, 0, 2);
+			fmtopts = PQgetvalue(res, 0, 3);
+			command = PQgetvalue(res, 0, 4);
+			rejlim = PQgetvalue(res, 0, 5);
+			rejlimtype = PQgetvalue(res, 0, 6);
+			errnspname = PQgetvalue(res, 0, 7);
+			errtblname = PQgetvalue(res, 0, 8);
+			extencoding = PQgetvalue(res, 0, 9);
+			writable = PQgetvalue(res, 0, 10);
+			options = PQgetvalue(res, 0, 11);
+		} else {
+			urilocations = PQgetvalue(res, 0, 0);
+			fmttype = PQgetvalue(res, 0, 1);
+			fmtopts = PQgetvalue(res, 0, 2);
+			command = PQgetvalue(res, 0, 3);
+			rejlim = PQgetvalue(res, 0, 4);
+			rejlimtype = PQgetvalue(res, 0, 5);
+			errnspname = PQgetvalue(res, 0, 6);
+			errtblname = PQgetvalue(res, 0, 7);
+			extencoding = PQgetvalue(res, 0, 8);
+			writable = PQgetvalue(res, 0, 9);
 		}
 
 		if ((command && strlen(command) > 0) ||
-			(strncmp(locations + 1, "http", strlen("http")) == 0))
+			(strncmp(urilocations + 1, "http", strlen("http")) == 0))
 			isweb = true;
 
 		if (writable && writable[0] == 't')
@@ -9535,14 +9548,33 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 
 		appendPQExpBuffer(q, "\n)");
 
+		PQExpBufferData tmpbuf;
+		initPQExpBuffer(&tmpbuf);
+
+		char	   *on_clause = execlocations;
+
+		/* remove curly braces */
+		on_clause[strlen(on_clause) - 1] = '\0';
+		on_clause++;
+
+		if (strncmp(on_clause, "HOST:", strlen("HOST:")) == 0)
+			appendPQExpBuffer(&tmpbuf, "ON HOST '%s' ", on_clause + strlen("HOST:"));
+		else if (strncmp(on_clause, "PER_HOST", strlen("PER_HOST")) == 0)
+			appendPQExpBuffer(&tmpbuf, "ON HOST ");
+		else if (strncmp(on_clause, "MASTER_ONLY", strlen("MASTER_ONLY")) == 0)
+			appendPQExpBuffer(&tmpbuf, "ON MASTER ");
+		else if (strncmp(on_clause, "SEGMENT_ID:", strlen("SEGMENT_ID:")) == 0)
+			appendPQExpBuffer(&tmpbuf, "ON SEGMENT %s ", on_clause + strlen("SEGMENT_ID:"));
+		else if (strncmp(on_clause, "TOTAL_SEGS:", strlen("TOTAL_SEGS:")) == 0)
+			appendPQExpBuffer(&tmpbuf, "ON %s ", on_clause + strlen("TOTAL_SEGS:"));
+		else if (strncmp(on_clause, "ALL_SEGMENTS", strlen("ALL_SEGMENTS")) == 0)
+			appendPQExpBuffer(&tmpbuf, "ON ALL ");
+		else
+			write_msg(NULL, "illegal ON clause catalog information \"%s\""
+					  "for command '%s'\n", on_clause, command);
+
 		if (command && strlen(command) > 0)
 		{
-			char	   *on_clause = locations;
-
-			/* remove curly braces */
-			on_clause[strlen(on_clause) - 1] = '\0';
-			on_clause++;
-
 			/* add EXECUTE clause */
 			tmpstring = escape_backslashes(command, true);
 			appendPQExpBuffer(q, " EXECUTE E'%s' ", tmpstring);
@@ -9552,21 +9584,7 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 			/* add ON clause (unless WRITABLE table, which doesn't allow ON) */
 			if (!iswritable)
 			{
-				if (strncmp(on_clause, "HOST:", strlen("HOST:")) == 0)
-					appendPQExpBuffer(q, "ON HOST '%s' ", on_clause + strlen("HOST:"));
-				else if (strncmp(on_clause, "PER_HOST", strlen("PER_HOST")) == 0)
-					appendPQExpBuffer(q, "ON HOST ");
-				else if (strncmp(on_clause, "MASTER_ONLY", strlen("MASTER_ONLY")) == 0)
-					appendPQExpBuffer(q, "ON MASTER ");
-				else if (strncmp(on_clause, "SEGMENT_ID:", strlen("SEGMENT_ID:")) == 0)
-					appendPQExpBuffer(q, "ON SEGMENT %s ", on_clause + strlen("SEGMENT_ID:"));
-				else if (strncmp(on_clause, "TOTAL_SEGS:", strlen("TOTAL_SEGS:")) == 0)
-					appendPQExpBuffer(q, "ON %s ", on_clause + strlen("TOTAL_SEGS:"));
-				else if (strncmp(on_clause, "ALL_SEGMENTS", strlen("ALL_SEGMENTS")) == 0)
-					appendPQExpBuffer(q, "ON ALL ");
-				else
-					write_msg(NULL, "illegal ON clause catalog information \"%s\""
-							  "for command '%s'\n", on_clause, command);
+				appendBinaryPQExpBuffer(q, tmpbuf.data, tmpbuf.len);
 			}
 			appendPQExpBuffer(q, "\n ");
 		}
@@ -9574,12 +9592,12 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 		{
 			/* add LOCATION clause, remove '{"' and '"}' */
 
-			locations[strlen(locations) - 1] = '\0';
-			locations++;
+			urilocations[strlen(urilocations) - 1] = '\0';
+			urilocations++;
 
 			/* the URI of custom protocol will contains \"\" and need to be removed */
 
-			location = nextToken(&locations, ",");
+			location = nextToken(&urilocations, ",");
 
 			if (location[0] == '\"')
 			{
@@ -9587,7 +9605,7 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 				location[strlen(location) - 1] = '\0';
 			}
 			appendPQExpBuffer(q, " LOCATION (\n    '%s'", location);
-			for (; (location = nextToken(&locations, ",")) != NULL;)
+			for (; (location = nextToken(&urilocations, ",")) != NULL;)
 			{
 				if (location[0] == '\"')
 				{
@@ -9597,6 +9615,8 @@ dumpExternal(TableInfo *tbinfo, PQExpBuffer query, PQExpBuffer q, PQExpBuffer de
 				appendPQExpBuffer(q, ",\n    '%s'", location);
 			}
 			appendPQExpBuffer(q, "\n) ");
+
+			appendBinaryPQExpBuffer(q, tmpbuf.data, tmpbuf.len);
 		}
 
 		/* add FORMAT clause */

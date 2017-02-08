@@ -2016,7 +2016,8 @@ _outRelOptInfo(StringInfo str, RelOptInfo *node)
 	WRITE_UINT_FIELD(pages);
 	WRITE_FLOAT_FIELD(tuples, "%.0f");
 	WRITE_NODE_FIELD(subplan);
-	WRITE_NODE_FIELD(locationlist);
+	WRITE_NODE_FIELD(urilocationlist);
+	WRITE_NODE_FIELD(execlocationlist);
 	WRITE_STRING_FIELD(execcommand);
 	WRITE_CHAR_FIELD(fmttype);
 	WRITE_STRING_FIELD(fmtopts);

@@ -541,7 +541,7 @@ external_insert_init(Relation rel)
 		char	   *uri_str;
 		int			segindex = GpIdentity.segindex;
 		int			num_segs = GpIdentity.numsegments;
-		int			num_urls = list_length(extentry->locations);
+		int			num_urls = list_length(extentry->urilocations);
 		int			my_url = segindex % num_urls;
 
 		if (num_urls > num_segs)
@@ -551,7 +551,7 @@ external_insert_init(Relation rel)
 					   "segments that can write into them")));
 
 		/* get a url to use. we use seg number modulo total num of urls */
-		v = list_nth(extentry->locations, my_url);
+		v = list_nth(extentry->urilocations, my_url);
 		uri_str = pstrdup(v->val.str);
 		extInsertDesc->ext_uri = uri_str;
 

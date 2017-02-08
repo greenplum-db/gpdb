@@ -91,7 +91,8 @@ build_simple_rel(PlannerInfo *root, int relid, RelOptKind reloptkind)
 	rel->tuples = 0;
 	rel->subplan = NULL;
 	rel->subrtable = NIL;
-	rel->locationlist = NIL;
+	rel->urilocationlist = NIL;
+	rel->execlocationlist = NIL;
 	rel->execcommand = NULL;
 	rel->fmttype = '\0';
 	rel->fmtopts = NULL;
