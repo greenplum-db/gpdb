@@ -30,6 +30,11 @@ S3Params InitConfig(const string& urlWithOptions) {
     s3ext_segnum = GpIdentity.numsegments;
 #endif
 
+    if (s3ext_segid == -1 && s3ext_segnum > 0) {
+        s3ext_segid = 0;
+        s3ext_segnum = 1;
+    }
+
     string sourceUrl = TruncateOptions(urlWithOptions);
     S3_CHECK_OR_DIE(!sourceUrl.empty(), S3RuntimeError, "URL not found from location string");
 
