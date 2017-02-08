@@ -266,6 +266,19 @@ select count(distinct(foo.oid)) from (
        (select oid from gp_dist_random('pg_constraint')
         where conname ~ 'cons_check')) foo;
 
+create table contest (
+	a int constraint contest_primary primary key,
+	name varchar(40) constraint contest_check check (a > 99 AND name <> '')
+) distributed by (a);
+
+select verify('contest');
+
+create table contest_like (like contest including constraints) distributed randomly;
+select verify('contest_like');
+
+create table contest_inherit() inherits (contest) distributed randomly;
+select verify('contest_inherit');
+
 --
 -- pg_index
 --
@@ -387,3 +400,30 @@ CREATE table oid_consistency_tt2 (a int) distributed by (a);
 CREATE rule "_RETURN" as on select to oid_consistency_tt1
         do instead select * from oid_consistency_tt2;
 select verify('oid_consistency_tt1');
+
+--
+-- pg_trigger
+--
+create or replace function verify(varchar) returns bigint as
+$$
+select count(foo.*) from(
+                    select oid, tgname, tgfoid::regclass
+                    from pg_trigger
+                    where tgrelid=$1::regclass
+                    union
+                    select oid, tgname, tgfoid::regclass
+                    from gp_dist_random('pg_trigger')
+                    where tgrelid=$1::regclass
+                    ) foo;
+$$ language sql;
+
+create table trigger_oid(a int, b int) distributed by (a);
+create or replace function trig_func() returns trigger as
+$$
+  begin
+    return new;
+  end
+$$ language plpgsql no sql;
+create trigger troid_trigger after insert on trigger_oid for each row execute procedure trig_func();
+
+select verify('trigger_oid');

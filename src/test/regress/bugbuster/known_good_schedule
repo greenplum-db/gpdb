@@ -11,7 +11,6 @@ test: load_mpph view xpath
 test: mpph_query mpph_aopart hashagg gpsort
 test: mpp-11333
 ignore: failover
-test: launch_oid_inconsistency
 #mpp23872: Disabling gpcheckmirrorseg as it is erroring out bugbuster on some platforms.
 ignore: gpcheckmirrorseg
 test: AOCO_Compression2 schema_topology table_statistics
