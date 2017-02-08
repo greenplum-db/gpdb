@@ -1,37 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map title="The gp_toolkit Administrative Schema">
-        <topicref href="gp_toolkit.xml#topic1" navtitle="The gp_toolkit Administrative Schema"
-                copy-to="gp_toolkit-topic1.xml" chunk="to-content select-topic">
+        <topicref href="gp_toolkit.xml" navtitle="The gp_toolkit Administrative Schema">
                 <topicref href="gp_toolkit.xml#topic2"
-                        navtitle="Checking for Tables that Need Routine Maintenance"
-                        copy-to="gp_toolkit-topic2.xml" chunk="to-content select-branch"/>
-                <topicref href="gp_toolkit.xml#topic5" navtitle="Checking for Locks"
-                        copy-to="gp_toolkit-topic5.xml" chunk="to-content select-branch"/>
-                <topicref href="gp_toolkit.xml#topic8" navtitle="Checking Append-Optimized Tables"
-                        copy-to="gp_toolkit-topic8.xml" chunk="to-content select-branch"/>
+                        navtitle="Checking for Tables that Need Routine Maintenance"/>
+                <topicref href="gp_toolkit.xml#topic5" navtitle="Checking for Locks"/>
+                <topicref href="gp_toolkit.xml#topic8" navtitle="Checking Append-Optimized Tables"/>
                 <topicref href="gp_toolkit.xml#topic16"
-                        navtitle="Viewing Greenplum Database Server Log Files"
-                        copy-to="gp_toolkit-topic16.xml" chunk="to-content select-branch"/>
+                        navtitle="Viewing Greenplum Database Server Log Files"/>
                 <topicref href="gp_toolkit.xml#topic21"
-                        navtitle="Checking Server Configuration Files"
-                        copy-to="gp_toolkit-topic21.xml" chunk="to-content select-branch"/>
-                <topicref href="gp_toolkit.xml#topic24" navtitle="Checking for Failed Segments"
-                        copy-to="gp_toolkit-topic24.xml" chunk="to-content select-branch"/>
+                        navtitle="Checking Server Configuration Files"/>
+                <topicref href="gp_toolkit.xml#topic24" navtitle="Checking for Failed Segments"/>
                 <topicref href="gp_toolkit.xml#topic26"
-                        navtitle="Checking Resource Queue Activity and Status"
-                        copy-to="gp_toolkit-topic26.xml" chunk="to-content select-branch"/>
+                        navtitle="Checking Resource Queue Activity and Status"/>
                 <topicref href="gp_toolkit.xml#topic32"
-                        navtitle="Checking Query Disk Spill Space Usage"
-                        copy-to="gp_toolkit-topic32.xml" chunk="to-content select-branch"/>
-                <topicref href="gp_toolkit.xml#topic36" navtitle="Viewing Users and Groups (Roles)"
-                        copy-to="gp_toolkit-topic36.xml" chunk="to-content select-branch"/>
+                        navtitle="Checking Query Disk Spill Space Usage"/>
+                <topicref href="gp_toolkit.xml#topic36" navtitle="Viewing Users and Groups (Roles)"/>
                 <topicref href="gp_toolkit.xml#topic38"
-                        navtitle="Checking Database Object Sizes and Disk Space"
-                        copy-to="gp_toolkit-topic38.xml" chunk="to-content select-branch"/>
+                        navtitle="Checking Database Object Sizes and Disk Space"/>
                 <topicref href="gp_toolkit.xml#topic49"
-                        navtitle="Checking for Uneven Data Distribution"
-                        copy-to="gp_toolkit-topic49.xml" chunk="to-content select-branch"/>
+                        navtitle="Checking for Uneven Data Distribution"/>
         </topicref>
         
 
