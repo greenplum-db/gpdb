@@ -2126,8 +2126,7 @@ class gpload:
         elif len(delimiterValue) != 1:
             # is a escape sequence character like '\x1B' or '\u001B'?
             if len(delimiterValue.decode('unicode-escape')) == 1:
-                formatOpts += "delimiter '%s' " % \
-                    self.getconfig('gpload:input:delimiter', unicode)
+                formatOpts += "delimiter '%s' " % delimiterValue.decode('unicode-escape')
             # is a escape string syntax support by gpdb like E'\x1B' or E'\x\u001B'
             elif len(delimiterValue.lstrip("E'").rstrip("'").decode('unicode-escape')) ==1:
                 formatOpts += "delimiter '%s' " % delimiterValue.lstrip("E'").rstrip("'").decode('unicode-escape')
