@@ -17,8 +17,7 @@
 
 test: variadic_parameters default_parameters function_extensions
 
-test: leastsquares
-test: opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile naivebayes join_gp union_gp gpcopy gp_create_table
+test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile naivebayes join_gp union_gp gpcopy gp_create_table
 test: filter gpctas gpdist matrix toast sublink table_functions olap_setup complex opclass_ddl information_schema guc_env_var
 test: bitmap_index gp_dump_query_oids analyze
 test: indexjoin as_alias regex_gp gpparams with_clause transient_types gp_rules
@@ -74,11 +73,10 @@ test: vacuum_gp
 # ERROR:  parameter "gp_interconnect_type" cannot be set after connection start
 
 ignore: gp_portal_error
-test: external_table column_compression eagerfree mapred gpdtm_plpgsql alter_table_aocs alter_distribution_policy ic aoco_privileges
+test: external_table column_compression eagerfree mapred gpdtm_plpgsql alter_table_aocs alter_distribution_policy ic aoco_privileges aocs
 test: partition_indexing 
 test: alter_table_ao ao_create_alter_valid_table subtransaction_limit oid_consistency udf_exception_blocks
 ignore: icudp_full
-test: aocs
 
 test: resource_queue
 # gp_toolkit performs a vacuum and checks that it truncated the relation. That
@@ -153,11 +151,7 @@ test: uao_ddl/alter_ao_table_owner_row uao_ddl/alter_ao_table_setstorage_row uao
 test: uao_catalog_tables uaocs_catalog_tables uao_ddl/alter_ao_table_setstorage_column uao_ddl/alter_ao_table_col_ddl_row uao_ddl/compresstype_row uao_ddl/alter_ao_table_col_ddl_column uao_ddl/alter_ao_part_tables_splitpartition_row uao_ddl/alter_ao_part_tables_splitpartition_column uao_ddl/create_ao_tables_row uao_ddl/create_ao_table_500cols_row uao_ddl/create_ao_tables_column uao_ddl/alter_ao_part_exch_row
 test: uao_ddl/alter_ao_part_exch_column uao_ddl/alter_ao_part_tables_row uao_ddl/create_ao_table_500cols_column uao_ddl/alter_ao_part_tables_column
 
-test: uao_ddl/alter_drop_allcol_row uao_ddl/alter_drop_allcol_column uao_ddl/alter_rollback_row uao_ddl/alter_rollback_column uao_ddl/uao_allalter_row uao_ddl/uao_allalter_column
-
-test: uao_col/alter_ao_table_oid_column
-
-test: uao_row/alter_ao_table_oid_row
+test: uao_ddl/alter_drop_allcol_row uao_ddl/alter_drop_allcol_column uao_ddl/alter_rollback_row uao_ddl/alter_rollback_column uao_ddl/uao_allalter_row uao_ddl/uao_allalter_column uao_col/alter_ao_table_oid_column uao_row/alter_ao_table_oid_row
 
 # Test psql \du output
 test: psql_gpdb_du

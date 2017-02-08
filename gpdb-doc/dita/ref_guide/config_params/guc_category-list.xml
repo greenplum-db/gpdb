@@ -6434,7 +6434,7 @@
       <body>
         <p>Reports the version number of the server as a string. A version
           modifier argument might be appended to the numeric portion of the
-          version string, example: <i>5.0.0 beta</i></p>.
+          version string, example: <i>5.0.0 beta</i>.</p>
         <table id="gp_server_version_table">
           <tgroup cols="3">
             <colspec colnum="1" colname="col1" colwidth="1*"/>

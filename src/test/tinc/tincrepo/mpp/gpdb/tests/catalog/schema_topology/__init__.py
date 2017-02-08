@@ -19,13 +19,3 @@ import os
 import shutil
 from tinctest.lib import local_path
 
-class ST_Etablefunc_util(object):
-
-    def pre_process(self, product_version):
-        """
-        Just process all the sql and ans files to replace the path with new environment
-        """
-        ans_path = local_path('sqls/ddls/enhanced_tables')
-        for ans_file in os.listdir(ans_path):
-            if ans_file.endswith('4.3.99') and product_version.startswith('4.3.99'):
-                shutil.move(os.path.join(ans_path, ans_file), os.path.join(ans_path, ans_file.split('.4.3.99')[0]))

@@ -43,8 +43,7 @@ class DbStateClass(MPPTestCase):
         cmd ="select count(*) from gp_segment_configuration where content<> -1 and mode = 's' and status = 'u';"
         count_up_and_sync = PSQL.run_sql_command(cmd, flags ='-q -t', dbname='postgres')
         if count_all.strip() != count_up_and_sync.strip() :
-            tinctest.logger.info('Exiting the test. The cluster is not in up/sync ............')
-            os._exit(1)
+            raise Exception('The cluster is not in up/sync ............')
         else:
             tinctest.logger.info("\n Starting New Test: System is up and in sync .........")
 

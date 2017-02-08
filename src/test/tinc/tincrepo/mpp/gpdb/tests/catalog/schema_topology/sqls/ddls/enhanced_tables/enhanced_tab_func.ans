@@ -98,11 +98,6 @@ RETURNS TABLE(id integer, "time" timestamp, sessionnum integer)
 AS '$libdir/tabfunc_demo', 'sessionize' 
 LANGUAGE C;
 CREATE FUNCTION
-select * from pg_proc where proname = 'sessionize';
-  proname   | pronamespace | proowner | prolang | proisagg | prosecdef | proisstrict | proretset | provolatile | pronargs | prorettype | proiswin | proargtypes |     proallargtypes     | proargmodes |        proargnames         |   prosrc   |        probin        | proacl | prodataaccess 
-------------+--------------+----------+---------+----------+-----------+-------------+-----------+-------------+----------+------------+----------+-------------+------------------------+-------------+----------------------------+------------+----------------------+--------+---------------
- sessionize |         2200 |       10 |      13 | f        | f         | f           | t         | v           |        2 |       2249 | f        | 3053 1186   | {3053,1186,23,1114,23} | {i,i,t,t,t} | {"","",id,time,sessionnum} | sessionize | $libdir/tabfunc_demo |        | n
-(1 row)
 
 SELECT *
 FROM sessionize( TABLE( SELECT id, time
@@ -236,34 +231,4 @@ CREATE FUNCTION
  2011-08-19 19:08:18
  2011-08-19 19:09:07
 (5 rows)
-
------------------------------------------
--- Check catalog table pg_type for new type anytable
-    \x
-Expanded display is on.
-    select * from pg_type where typname='anytable';
--[ RECORD 1 ]-+-------------
-typname       | anytable
-typnamespace  | 11
-typowner      | 10
-typlen        | -1
-typbyval      | f
-typtype       | p
-typisdefined  | t
-typdelim      | ,
-typrelid      | 0
-typelem       | 0
-typinput      | anytable_in
-typoutput     | anytable_out
-typreceive    | -
-typsend       | -
-typanalyze    | -
-typalign      | d
-typstorage    | x
-typnotnull    | f
-typbasetype   | 0
-typtypmod     | -1
-typndims      | 0
-typdefaultbin | 
-typdefault    | 
 

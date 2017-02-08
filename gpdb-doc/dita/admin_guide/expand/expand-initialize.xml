@@ -179,7 +179,7 @@ sdw5:sdw5-1:60012:/gpdata/mirror/gp10:14:10:m:63011</codeblock>
                   <codeph>p | m</codeph>
                 </entry>
                 <entry colname="col3">Determines whether this segment is a primary or mirror.
-                  Specify <codeph>p</codeph>for primary and <codeph>m</codeph>for mirror.</entry>
+                  Specify <codeph>p</codeph> for primary and <codeph>m</codeph> for mirror.</entry>
               </row>
               <row>
                 <entry colname="col1">replication_port</entry>

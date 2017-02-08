@@ -3,12 +3,6 @@
 -- interesting issues). 
 --
 -- Create some tables with some data
-drop table if exists tabcd;
-drop table if exists tabcd_orig;
-drop table if exists t1234;
-drop table if exists t1234_orig;
-drop table if exists t3456;
-
 create table tabcd (c1 text) distributed randomly;
 insert into tabcd values ('a'), ('b'), ('c'), ('d');
 
@@ -141,11 +135,6 @@ select a.c1 from t1234 a, t3456 b where a.c1 = b.c1 order by b.c1; -- should ret
 ABORT;
 
 select a.c1 from t1234 a, t3456 b where a.c1 = b.c1 order by b.c1;
-
-
-drop table if exists dtm_plpg_foo;
-drop table if exists dtm_plpg_bar;
-drop table if exists dtm_plpg_baz;
 
 CREATE OR REPLACE FUNCTION foo_func() RETURNS void AS '
 BEGIN
@@ -339,7 +328,6 @@ END;
 $$
 LANGUAGE plpgsql SECURITY DEFINER;
 
-drop table if exists source_table;
 CREATE TABLE source_table
 (
 id int,
@@ -352,7 +340,6 @@ insert into source_table select generate_series(12,21), '2015-01-06'::date;
 
 CREATE SEQUENCE test_seq START 1;
 
-drop table if exists dest_table;
 CREATE TABLE dest_table
 (
 id int,
@@ -362,7 +349,3 @@ created timestamp with time zone
 insert into dest_table select nextval('test_seq'::regclass), date_converter(created) from source_table;
 select count(1) from dest_table;
 
-drop table dest_table;
-drop sequence test_seq;
-drop table source_table;
-drop FUNCTION date_converter(input_date character varying);

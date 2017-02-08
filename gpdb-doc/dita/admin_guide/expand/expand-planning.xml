@@ -41,7 +41,7 @@
                     id="image_gr2_s1m_2r"/>
                 </entry>
                 <entry>Devise and execute a plan for ordering, building, and networking new hardware
-                  platforms. </entry>
+                  platforms, or provisioning cloud resources. </entry>
               </row>
               <row>
                 <entry>
@@ -49,7 +49,7 @@
                     id="image_ryl_s1m_2r"/>
                 </entry>
                 <entry>Devise a database expansion plan. Map the number of segments per host,
-                  schedule the offline period for testing performance and creating the expansion
+                  schedule the downtime period for testing performance and creating the expansion
                   schema, and schedule the intervals for table redistribution.</entry>
               </row>
               <row>
@@ -78,16 +78,16 @@
                   <image href="../../graphics/green-checkbox.jpg" width="29px" height="28px"
                     id="image_zrz_s1m_2r"/>
                 </entry>
-                <entry>Validate the operating system environment of the new hardware
-                    (<codeph>gpcheck</codeph>).</entry>
+                <entry>Validate the operating system environment of the new hardware or cloud
+                  resources (<codeph>gpcheck</codeph>).</entry>
               </row>
               <row>
                 <entry>
                   <image href="../../graphics/green-checkbox.jpg" width="29px" height="28px"
                     id="image_qkb_t1m_2r"/>
                 </entry>
-                <entry>Validate disk I/O and memory bandwidth of the new hardware
-                    (<codeph>gpcheckperf</codeph>).</entry>
+                <entry>Validate disk I/O and memory bandwidth of the new hardware or cloud resources
+                  (<codeph>gpcheckperf</codeph>).</entry>
               </row>
               <row>
                 <entry>
@@ -125,7 +125,7 @@
                     id="image_hgm_t1m_2r"/>
                 </entry>
                 <entry>Validate the operating system environment of the combined existing and new
-                  hardware (<codeph>gpcheck</codeph>). </entry>
+                  hardware or cloud resources (<codeph>gpcheck</codeph>). </entry>
               </row>
               <row>
                 <entry>
@@ -133,7 +133,7 @@
                     id="image_q3q_t1m_2r"/>
                 </entry>
                 <entry>Validate disk I/O and memory bandwidth of the combined existing and new
-                  hardware (<codeph>gpcheckperf</codeph>). </entry>
+                  hardware or cloud resources (<codeph>gpcheckperf</codeph>). </entry>
               </row>
               <row>
                 <entry>
@@ -217,7 +217,7 @@
   <topic id="topic6" xml:lang="en">
     <title>Planning New Segment Initialization</title>
     <body>
-      <p>Expanding Greenplum Database requires a limited period of system down time. During this
+      <p>Expanding Greenplum Database requires a limited period of system downtime. During this
         period, run <codeph>gpexpand</codeph> to initialize new segments into the array and create
         an expansion schema.</p>
       <p>The time required depends on the number of schema objects in the Greenplum system and other
@@ -255,10 +255,10 @@
         <p>For example, if existing hosts currently have two segments per host, you can use
             <codeph>gpexpand</codeph> to initialize two additional segments on existing hosts for a
           total of four segments and four new segments on new hosts. </p>
-        <p>The interactive process for creating an expansion input file prompts for this option; the
-          input file format allows you to specify new segment directories manually, also. For more
-          information, see <xref href="expand-initialize.xml#topic23" type="topic" format="dita"
-          />.</p>
+        <p>The interactive process for creating an expansion input file prompts for this option; you
+          can also specify new segment directories manually in the input configuration file. For
+          more information, see <xref href="expand-initialize.xml#topic23" type="topic"
+            format="dita" />.</p>
       </body>
     </topic>
     <topic id="topic9" xml:lang="en">
@@ -295,17 +295,17 @@
       <p>Table redistribution is performed while the system is online. For many Greenplum systems,
         table redistribution completes in a single <codeph>gpexpand</codeph> session scheduled
         during a low-use period. Larger systems may require multiple sessions and setting the order
-        of table redistribution to minimize performance impact. Complete the
-        table redistribution in one session if possible.</p>
+        of table redistribution to minimize performance impact. Complete the table redistribution in
+        one session if possible.</p>
       <note type="important">To perform table redistribution, your segment hosts must have enough
         disk space to temporarily hold a copy of your largest table. All tables are unavailable for
         read and write operations during redistribution. </note>
       <p>The performance impact of table redistribution depends on the size, storage type, and
-        partitioning design of a table. Per table, redistributing a table with
-          <codeph>gpexpand</codeph> takes as much time as a <codeph>CREATE TABLE AS SELECT</codeph>
-        operation does. When redistributing a terabyte-scale fact table, the expansion utility can
-        use much of the available system resources, with resulting impact on query performance or
-        other database workloads.</p>
+        partitioning design of a table. For any given table, redistributing it with
+        <codeph>gpexpand</codeph> takes as much time as a <codeph>CREATE TABLE AS SELECT</codeph>
+        operation would. When redistributing a terabyte-scale fact table, the expansion utility can
+        use much of the available system resources, which could affect query performance or other
+        database workloads.</p>
     </body>
     <topic id="topic11" xml:lang="en">
       <title id="no167000">Managing Redistribution in Large-Scale Greenplum Systems</title>
@@ -313,10 +313,11 @@
         <p>You can manage the order in which tables are redistributed by adjusting their ranking.
           See <xref href="expand-redistribute.xml#topic29" type="topic" format="dita"/>.
           Manipulating the redistribution order can help adjust for limited disk space and restore
-          optimal query performance. </p>
+          optimal query performance for high-priority queries sooner. </p>
         <p>When planning the redistribution phase, consider the impact of the exclusive lock taken
           on each table during redistribution. User activity on a table can delay its
-          redistribution. Tables are unavailable during redistribution. </p>
+          redistribution, but also tables are unavailable for user activity during redistribution.
+        </p>
         <section>
           <title>Systems with Abundant Free Disk Space</title>
           <p>In systems with abundant free disk space (required to store a copy of the largest

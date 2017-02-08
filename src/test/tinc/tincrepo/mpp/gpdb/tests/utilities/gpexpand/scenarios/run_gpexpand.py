@@ -364,22 +364,6 @@ class GpExpandTests(MPPTestCase):
             raise Exception("Failed to create directories on segments")
 
 
-    def check_help_file(self):
-        # since gpexpand --help output differs for 4.2.x & 4.3.x we have to use different ans files
-        # we invoke the MPPDUT object to get product & version information
-        dut = MPPDUT()
-        dut._get_product_version()
-        ans_file_ver = ''
-        if dut.product == 'gpdb' and dut.version_string.find("4.2") > -1:
-            ans_file_ver = '_4.2'
-        ans_file=local_path("helptext_expected%s" %ans_file_ver)
-        out_file=local_path("helptext_output_"+datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d%H%M%S')+".out")
-        res = {'rc':0, 'stderr':'', 'stdout':''}
-        run_shell_command('gpexpand --help > %s 2>&1' %out_file, 'gpexpand help', res)
-        diff_res = Gpdiff.are_files_equal(out_file,ans_file)
-        if not diff_res:
-           self.fail("differences encountered in help files : %s %s" %(ans_file, out_file))
-
     def mirror_and_catalog_validation(self):
         '''
         @summary :gpcheckcat and gpcheckmirrorintegrity

@@ -62,7 +62,6 @@ class GPDBStorageBaseTestCase():
         self.filereputil.inject_fault(f=fault_name, y='reset', r=role, p=port , o=occurence, sleeptime=sleeptime, seg_id=seg_id)
         self.filereputil.inject_fault(f=fault_name, y=type, r=role, p=port , o=occurence, sleeptime=sleeptime, seg_id=seg_id)
         tinctest.logger.info('Successfully injected fault_name : %s fault_type : %s  occurence : %s ' % (fault_name, type, occurence))
-        sleep(30)
 
     def start_db(self):
         '''Gpstart '''

@@ -22,41 +22,33 @@ import os
 from mpp.models import SQLTestCase
 from tinctest.lib import run_shell_command, local_path, Gpdiff
 from mpp.lib.PSQL import PSQL
-from mpp.gpdb.tests.catalog.schema_topology import ST_Etablefunc_util
 
 MYD = os.path.abspath(os.path.dirname(__file__))
 GPHOME = os.environ['GPHOME']
 
 class EnhancedTableFunctionTest(SQLTestCase):
     """
-    
+
     @description This contains several test cases for possible ways of manipulating objects. This test case specifically deals with enhanced table functionality. For more details refer QA task - QA-143
     @created 2009-01-27 14:00:00
     @modified 2013-10-17 17:10:15
-    @tags ddl schema_topology    
+    @tags ddl schema_topology
     """
 
 
     sql_dir = 'sqls/ddls/enhanced_tables'
     ans_dir = 'sqls/ddls/enhanced_tables'
     out_dir = 'sqls/ddls/enhanced_tables'
-    
+
     @classmethod
     def setUpClass(cls):
         super(EnhancedTableFunctionTest, cls).setUpClass()
-
-        cmd = 'gpstart --version'
-        res = {'rc':0, 'stderr':'', 'stdout':''}
-        run_shell_command(cmd, 'check product version', res)
-        product_version = res['stdout'].split('gpstart version ')[1].split(' build ')[0]
-        ST_util = ST_Etablefunc_util()
-        ST_util.pre_process(product_version)
 
         tinctest.logger.info("*** Running the pre-requisite sql files drop.sql and setup.sql")
         PSQL.run_sql_file(local_path('sqls/setup/drop.sql'))
         PSQL.run_sql_file(local_path('sqls/setup/create.sql'))
         tinctest.logger.info("*** Starting the Enhaced table test")
-    
+
     def getMultinodeHosts(self):
         """
         Returns distinct no. of nodes for a mult-node cluster environment, else returns None

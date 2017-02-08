@@ -7,14 +7,14 @@
   <shortdesc>Redistribute tables to balance existing data over the newly expanded cluster. </shortdesc>
   <body>
     <p>After creating an expansion schema, you can bring Greenplum Database back online and
-      redistribute tables across the entire array with <codeph>gpexpand</codeph>. Target low-use
-      hours when the utility's CPU usage and table locks have minimal impact on operations. Rank
-      tables to redistribute the largest or most critical tables in preferential order.</p>
+      redistribute tables across the entire array with <codeph>gpexpand</codeph>. Aim to run this
+      during low-use hours when the utility's CPU usage and table locks have minimal impact on
+      operations. Rank tables to redistribute the largest or most critical tables first.</p>
     <note>When redistributing data, Greenplum Database must be running in production mode. Greenplum
       Database cannot be restricted mode or in master mode. The <codeph>gpstart</codeph> options
         <codeph>-R</codeph> or <codeph>-m</codeph> cannot be specified to start Greenplum
       Database.</note>
-    <p>While table redistribution is underway any new tables or partitions created are distributed
+    <p>While table redistribution is underway, any new tables or partitions created are distributed
       across all segments exactly as they would be under normal operating conditions. Queries can
       access all segments, even before the relevant data is redistributed to tables on the new
       segments. The table or partition being redistributed is locked and unavailable for read or
@@ -34,14 +34,14 @@
   <topic id="topic29" xml:lang="en">
     <title id="no161370">Ranking Tables for Redistribution</title>
     <body>
-      <p>For large systems, control the table redistribution order. Adjust
+      <p>For large systems, you can control the table redistribution order. Adjust
         tables' <codeph>rank</codeph> values in the expansion schema to prioritize heavily-used
         tables and minimize performance impact. Available free disk space can affect table ranking;
         see <xref href="expand-planning.xml#topic11" type="topic" format="dita"/>.</p>
       <p>To rank tables for redistribution by updating <codeph>rank</codeph> values in
           <i>gpexpand.status_detail</i>, connect to Greenplum Database using <codeph>psql</codeph>
         or another supported client. Update <i>gpexpand.status_detail</i> with commands such as:</p>
-      <codeblock>=&gt; UPDATE gpexpand.status_detail SET rank=10; 
+      <codeblock>=&gt; UPDATE gpexpand.status_detail SET rank=10;
 
 =&gt; UPDATE gpexpand.status_detail SET rank=1 WHERE fq_name = 'public.lineitem';
 =&gt; UPDATE gpexpand.status_detail SET rank=2 WHERE fq_name = 'public.orders';</codeblock>
@@ -112,7 +112,7 @@
           Database using <codeph>psql</codeph> or another supported client and query
             <i>gpexpand.status_detail</i>:</p>
         <p>
-          <codeblock>=&gt; SELECT status, expansion_started, source_bytes FROM 
+          <codeblock>=&gt; SELECT status, expansion_started, source_bytes FROM
 gpexpand.status_detail WHERE fq_name = 'public.sales';
   status   |     expansion_started      | source_bytes
 -----------+----------------------------+--------------

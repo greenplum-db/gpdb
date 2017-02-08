@@ -115,7 +115,7 @@ class SuspendcheckpointCrashrecoveryTestCase(ScenarioTestCase):
 
         test_case_list4 = []
         test_case_list4.append('mpp.gpdb.tests.storage.crashrecovery.%s.trigger_sql.test_triggersqls.TestTriggerSQLClass' % test_dir)
-        test_case_list4.append(('mpp.gpdb.tests.storage.crashrecovery.SuspendCheckpointCrashRecovery.run_crash_and_recovery', [test_dir, cluster_state]))
+        test_case_list4.append(('mpp.gpdb.tests.storage.crashrecovery.SuspendCheckpointCrashRecovery.run_crash_and_recovery_fast', [test_dir, pass_num, cluster_state, test_type, ddl_type, aborting_create_needed]))
         self.test_case_scenario.append(test_case_list4)
 
         test_case_list5 = []
