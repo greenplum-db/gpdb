@@ -354,14 +354,11 @@ CdbDispatchHandleError(struct CdbDispatcherState *ds)
  *
  * Call cdbdisp_destroyDispatcherState to free it.
  *
- * nSlices: number of slices in the current slice tree,
- * 			eg. initplan may have a seperate slice tree
- * nTotalSlices: number of slices in the slice table.
+ *	 maxSlices: max number of slices of the query/command.
  */
 void
 cdbdisp_makeDispatcherState(CdbDispatcherState *ds,
-							int nSlices,
-							int nTotalSlices,
+							int maxSlices,
 							bool cancelOnError,
 							char *queryText,
 							int queryTextLen)
@@ -380,8 +377,8 @@ cdbdisp_makeDispatcherState(CdbDispatcherState *ds,
 														 ALLOCSET_DEFAULT_MAXSIZE);
 
 	oldContext = MemoryContextSwitchTo(ds->dispatchStateContext);
-	ds->primaryResults = cdbdisp_makeDispatchResults(nSlices, nTotalSlices, cancelOnError);
-	ds->dispatchParams = (pDispatchFuncs->makeDispatchParams)(nSlices, queryText, queryTextLen);
+	ds->primaryResults = cdbdisp_makeDispatchResults(maxSlices, cancelOnError);
+	ds->dispatchParams = (pDispatchFuncs->makeDispatchParams)(maxSlices, queryText, queryTextLen);
 
 	MemoryContextSwitchTo(oldContext);
 }

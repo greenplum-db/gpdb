@@ -328,7 +328,8 @@ cdbdisp_checkResultsErrcode(struct CdbDispatchResults *meeleResults);
  * memory context.
  */
 CdbDispatchResults *
-cdbdisp_makeDispatchResults(int nSlices, int nTotalSlices, bool cancelOnError);
+cdbdisp_makeDispatchResults(int sliceCapacity,
+							bool cancelOnError);
 
 void
 cdbdisp_clearCdbPgResults(CdbPgResults* cdb_pgresults);
