@@ -9792,28 +9792,11 @@ with cte as
         )
 select code from tbl87 t where 1= (select count(*) from cte);
 --start_ignore
-drop table if exists x;
-drop table if exists y;
 drop table if exists foo;
 drop table if exists bar;
 drop table if exists emp;
 drop table if exists manager;
 --end_ignore
-CREATE TABLE x(a int);
-insert into x values(1), (2);
-
-CREATE TABLE y (m integer NOT NULL, n smallint);
-insert into y values(10, 1);
-insert into y values(20, 1);
-
-with yy as (
-   select m
-   from y,
-        (select 1 as p) iv
-   where n = iv.p
-)
-select * from x, yy order by 1, 2;
-
 -------------------------------------------------------------------------------------------------------------------------------
 CREATE TABLE foo (key INTEGER, value INTEGER);
 INSERT INTO foo SELECT i, i % 10 from generate_series(1, 100) i;
