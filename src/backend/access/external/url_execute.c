@@ -22,6 +22,9 @@
 #include "cdb/cdbvars.h"
 #include "libpq/pqsignal.h"
 
+#define EXEC_DATA_P 0 /* index to data pipe */
+#define EXEC_ERR_P 1 /* index to error pipe  */
+
 static int popen_with_stderr(int *rwepipe, const char *exe, bool forwrite);
 static int pclose_with_stderr(int pid, int *rwepipe, StringInfo sinfo);
 static char *interpretError(int exitCode, char *buf, size_t buflen, char *err, size_t errlen);

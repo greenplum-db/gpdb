@@ -403,7 +403,9 @@ gphdfsprotocol_import(PG_FUNCTION_ARGS)
 	datlen 	= EXTPROTOCOL_GET_DATALEN(fcinfo);
 
 	if (datlen > 0 && !myData->importDone)
-		nread = piperead(myData->importFile->u.exec.pipes[EXEC_DATA_P], data, datlen);
+	{
+		nread = url_execute_fread(data, 1, datlen, myData->importFile, NULL);
+	}
 
 	/* =======================================================================
 	 *                            DO CLOSE
@@ -502,8 +504,8 @@ gphdfsprotocol_export(PG_FUNCTION_ARGS)
 			appendIntToBuffer(schema_head, schema_data->len + 2);
 			appendInt2ToBuffer(schema_head, 2);
 
-			pipewrite(myData->u.exec.pipes[EXEC_DATA_P], schema_head->data, schema_head->len);
-			pipewrite(myData->u.exec.pipes[EXEC_DATA_P], schema_data->data, schema_data->len);
+			url_execute_fwrite(schema_head->data, 1, schema_head->len, myData, NULL);
+			url_execute_fwrite(schema_data->data, 1, schema_data->len, myData, NULL);
 
 			pfree(schema_head->data);
 			pfree(schema_data->data);
@@ -518,7 +520,7 @@ gphdfsprotocol_export(PG_FUNCTION_ARGS)
 	datlen = EXTPROTOCOL_GET_DATALEN(fcinfo);
 
 	if (datlen > 0)
-		wrote = pipewrite(myData->u.exec.pipes[EXEC_DATA_P], data, datlen);
+		wrote = url_execute_fwrite(data, 1, datlen, myData, NULL);
 
 	if (url_ferror(myData, wrote, ebuf, ebuflen))
 	{

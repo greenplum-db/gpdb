@@ -64,9 +64,6 @@ typedef struct curlctl_t {
 } curlctl_t;
 #endif
 
-#define EXEC_DATA_P 0 /* index to data pipe */
-#define EXEC_ERR_P 1 /* index to error pipe  */
-
 typedef struct URL_FILE
 {
 	enum fcurl_type_e type;     /* type of handle */
