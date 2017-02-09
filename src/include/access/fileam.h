@@ -23,7 +23,7 @@
 typedef struct ExternalInsertDescData
 {
 	Relation	ext_rel;
-	FILE	   *ext_file;
+	URL_FILE   *ext_file;
 	char	   *ext_uri;		/* "command:<cmd>" or "tablespace:<path>" */
 	bool		ext_noop;		/* no op. this segdb needs to do nothing (e.g.
 								 * mirror seg) */

@@ -79,7 +79,7 @@ static int	external_getdata(URL_FILE *extfile, CopyState pstate, int maxread);
 static void external_senddata(URL_FILE *extfile, CopyState pstate);
 static void external_scan_error_callback(void *arg);
 static void readHeaderLine(CopyState pstate);
-static void close_external_source(FILE *dataSource, bool failOnError, const char *relname);
+static void close_external_source(URL_FILE *dataSource, bool failOnError, const char *relname);
 static void parseFormatString(CopyState pstate, char *fmtstr, bool iscustom);
 static void justifyDatabuf(StringInfo buf);
 
@@ -111,7 +111,7 @@ elog(DEBUG2, "external_getnext returning tuple")
  * A global reference to our data source so it could be freed
  * from the outside during an error/abort (in AbortTransaction).
  */
-static FILE *g_dataSource = NULL;
+static URL_FILE *g_dataSource = NULL;
 static MemoryContext g_dataSourceCtx = NULL;
 
 
@@ -691,7 +691,7 @@ external_insert(ExternalInsertDesc extInsertDesc, HeapTuple instup)
 	}
 
 	/* Write the data into the external source */
-	external_senddata((URL_FILE *) extInsertDesc->ext_file, pstate);
+	external_senddata(extInsertDesc->ext_file, pstate);
 
 	/* Reset our buffer to start clean next round */
 	pstate->fe_msgbuf->len = 0;
@@ -717,7 +717,7 @@ external_insert_finish(ExternalInsertDesc extInsertDesc)
 	{
 		char	   *relname = pstrdup(RelationGetRelationName(extInsertDesc->ext_rel));
 
-		url_fflush((URL_FILE *) extInsertDesc->ext_file, extInsertDesc->ext_pstate);
+		url_fflush(extInsertDesc->ext_file, extInsertDesc->ext_pstate);
 		close_external_source(extInsertDesc->ext_file, true, (const char *) relname);
 		extInsertDesc->ext_file = NULL;
 		pfree(relname);
@@ -945,7 +945,7 @@ externalgettup_defined(FileScanDesc scan)
 		/* need to fill our buffer with data? */
 		if (pstate->raw_buf_done)
 		{
-			pstate->bytesread = external_getdata((URL_FILE *) scan->fs_file, pstate, RAW_BUF_SIZE);
+			pstate->bytesread = external_getdata(scan->fs_file, pstate, RAW_BUF_SIZE);
 			pstate->begloc = pstate->raw_buf;
 			pstate->raw_buf_done = (pstate->bytesread == 0);
 			pstate->raw_buf_index = 0;
@@ -1054,7 +1054,7 @@ externalgettup_custom(FileScanDesc scan)
 		/* need to fill our buffer with data? */
 		if (pstate->raw_buf_done)
 		{
-			int			bytesread = external_getdata((URL_FILE *) scan->fs_file, pstate, RAW_BUF_SIZE);
+			int			bytesread = external_getdata(scan->fs_file, pstate, RAW_BUF_SIZE);
 
 			if (bytesread > 0)
 				appendBinaryStringInfo(&formatter->fmt_databuf, pstate->raw_buf, bytesread);
@@ -1575,13 +1575,12 @@ open_external_readable_source(FileScanDesc scan)
 							  scan->fs_pstate->custom_formatter_params);
 
 	/* actually open the external source */
-	scan->fs_file = (FILE *) url_fopen(scan->fs_uri,
-									   false /* for read */ ,
-									   &extvar,
-									   scan->fs_pstate,
-									   &response_code,
-									   &response_string);
-
+	scan->fs_file = url_fopen(scan->fs_uri,
+							  false /* for read */ ,
+							  &extvar,
+							  scan->fs_pstate,
+							  &response_code,
+							  &response_string);
 	if (!scan->fs_file)
 	{
 		ereport(ERROR,
@@ -1626,13 +1625,12 @@ open_external_writable_source(ExternalInsertDesc extInsertDesc)
 						 extInsertDesc->ext_pstate->custom_formatter_params);
 
 	/* actually open the external source */
-	extInsertDesc->ext_file = (FILE *) url_fopen(extInsertDesc->ext_uri,
-												 true /* forwrite */ ,
-												 &extvar,
-												 extInsertDesc->ext_pstate,
-												 &response_code,
-												 &response_string);
-
+	extInsertDesc->ext_file = url_fopen(extInsertDesc->ext_uri,
+										true /* forwrite */ ,
+										&extvar,
+										extInsertDesc->ext_pstate,
+										&response_code,
+										&response_string);
 	if (!extInsertDesc->ext_file)
 	{
 		ereport(ERROR,
@@ -1659,16 +1657,12 @@ open_external_writable_source(ExternalInsertDesc extInsertDesc)
  * server log.
  */
 static void
-close_external_source(FILE *dataSource, bool failOnError, const char *relname)
+close_external_source(URL_FILE *dataSource, bool failOnError, const char *relname)
 {
-	FILE	   *f = dataSource;
+	g_dataSource = NULL;
 
-	g_dataSource = dataSource = NULL;
-
-	if (f)
-	{
-		url_fclose((URL_FILE *) f, failOnError, relname);
-	}
+	if (dataSource)
+		url_fclose(dataSource, failOnError, relname);
 }
 
 /*
