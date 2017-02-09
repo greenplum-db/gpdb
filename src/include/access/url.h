@@ -13,31 +13,13 @@
 #ifndef URL_H
 #define URL_H
 
-#include <assert.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/time.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <unistd.h>
-
 #ifdef USE_CURL
 #include <curl/curl.h>
 #endif
 
-/*#include <fstream/fstream.h>*/
-
 #include "access/extprotocol.h"
 
 #include "commands/copy.h"
-
-#ifndef FALSE
-#define FALSE 0
-#endif
-
-#ifndef TRUE
-#define TRUE 1
-#endif
 
 enum fcurl_type_e 
 { 
@@ -47,14 +29,6 @@ enum fcurl_type_e
 	CFTYPE_EXEC = 3, 
 	CFTYPE_CUSTOM = 4 
 };
-
-#if BYTE_ORDER == BIG_ENDIAN
-#define local_htonll(n)  (n)
-#define local_ntohll(n)  (n)
-#else
-#define local_htonll(n)  ((((uint64) htonl(n)) << 32LL) | htonl((n) >> 32LL))
-#define local_ntohll(n)  ((((uint64) ntohl(n)) << 32LL) | (uint32) ntohl(((uint64)n) >> 32LL))
-#endif
 
 #ifdef USE_CURL
 typedef struct curlctl_t {
@@ -152,6 +126,10 @@ typedef struct extvar_t
  	char GP_LINE_DELIM_LENGTH[8];
 } extvar_t;
 
+
+/* an EXECUTE string will always be prefixed like this */
+#define EXEC_URL_PREFIX "execute:"
+
 /* exported functions */
 extern URL_FILE *url_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, int *response_code, const char **response_string);
 extern int url_fclose(URL_FILE *file, bool failOnError, const char *relname);
@@ -161,7 +139,40 @@ extern size_t url_fread(void *ptr, size_t size, size_t nmemb, URL_FILE *file, Co
 extern size_t url_fwrite(void *ptr, size_t size, size_t nmemb, URL_FILE *file, CopyState pstate);
 extern void url_fflush(URL_FILE *file, CopyState pstate);
 
-extern URL_FILE *url_execute_fopen(char* url, char *cmd, bool forwrite, extvar_t *ev);
+extern URL_FILE *url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, int *response_code, const char **response_string);
+extern int url_curl_fclose(URL_FILE *file, bool failOnError, const char *relname);
+extern bool url_curl_feof(URL_FILE *file, int bytesread);
+extern bool url_curl_ferror(URL_FILE *file, int bytesread, char *ebuf, int ebuflen);
+extern size_t url_curl_fread(void *ptr, size_t size, size_t nmemb, URL_FILE *file, CopyState pstate);
+extern size_t url_curl_fwrite(void *ptr, size_t size, size_t nmemb, URL_FILE *file, CopyState pstate);
+extern void url_curl_fflush(URL_FILE *file, CopyState pstate);
+
+
+extern URL_FILE *url_file_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, int *response_code, const char **response_string);
+extern int url_file_fclose(URL_FILE *file, bool failOnError, const char *relname);
+extern bool url_file_feof(URL_FILE *file, int bytesread);
+extern bool url_file_ferror(URL_FILE *file, int bytesread, char *ebuf, int ebuflen);
+extern size_t url_file_fread(void *ptr, size_t size, size_t nmemb, URL_FILE *file, CopyState pstate);
+
+
+extern URL_FILE *url_execute_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, int *response_code, const char **response_string);
+extern int url_execute_fclose(URL_FILE *file, bool failOnError, const char *relname);
+extern bool url_execute_feof(URL_FILE *file, int bytesread);
+extern bool url_execute_ferror(URL_FILE *file, int bytesread, char *ebuf, int ebuflen);
+extern size_t url_execute_fread(void *ptr, size_t size, size_t nmemb, URL_FILE *file, CopyState pstate);
+extern size_t url_execute_fwrite(void *ptr, size_t size, size_t nmemb, URL_FILE *file, CopyState pstate);
+
+
+extern URL_FILE *url_custom_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, int *response_code, const char **response_string);
+extern int url_custom_fclose(URL_FILE *file, bool failOnError, const char *relname);
+extern bool url_custom_feof(URL_FILE *file, int bytesread);
+extern bool url_custom_ferror(URL_FILE *file, int bytesread, char *ebuf, int ebuflen);
+extern size_t url_custom_fread(void *ptr, size_t size, size_t nmemb, URL_FILE *file, CopyState pstate);
+extern size_t url_custom_fwrite(void *ptr, size_t size, size_t nmemb, URL_FILE *file, CopyState pstate);
+
+
+extern URL_FILE *alloc_url_file(const char *url);
+
 
 extern int readable_external_table_timeout;
 #endif
