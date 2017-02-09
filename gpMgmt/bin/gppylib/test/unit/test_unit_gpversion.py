@@ -87,6 +87,17 @@ class GpVersionTestCase(unittest.TestCase):
         self.assertEqual(v_1.getVersionRelease(), "4.2")
         self.assertEqual(v_2.getVersionRelease(), "4.1")
 
+    def test_50(self):
+        v = GpVersion('5.0')
+        v_1 = v << 1
+        v_2 = v << 2
+        self.assertEqual(v_1 << 1, v_2)
+        self.assertLess(v_1, v)
+        self.assertLess(v_2, v)
+        self.assertEqual(v.getVersionRelease(), "5.0")
+        self.assertEqual(v_1.getVersionRelease(), "4.3")
+        self.assertEqual(v_2.getVersionRelease(), "4.2")
+        
     def test_lshift_negative(self):
         v = GpVersion('3.2')
         with self.assertRaisesRegexp(StandardError, 'invalid version shift'):

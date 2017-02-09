@@ -19,7 +19,7 @@ if sys.version_info < (2, 5, 0) or sys.version_info >= (3, 0, 0):
     sys.exit(1)
 
 
-MAIN_VERSION = [5,0,0,99]    # version number for main
+MAIN_VERSION = [5,0,99]    # version number for main
 
 
 #============================================================
@@ -48,7 +48,7 @@ class GpVersion:
                 '4.1',
                 '4.2',
                 '4.3',
-		'5.0'
+		        '5.0' 
               ]
 
     #------------------------------------------------------------
