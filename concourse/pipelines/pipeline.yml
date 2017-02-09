@@ -528,13 +528,13 @@ jobs:
     input_mapping: *input_mappings
     params:
       <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-gpexpand"
+      PULSE_PROJECT_NAME: "GPDB-gpexpand-parallel"
   - task: monitor_pulse
     tags: ["gpdb5-pulse-worker"]
     file: gpdb_src/ci/pulse/api/monitor_pulse.yml
     params:
       <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-gpexpand"
+      PULSE_PROJECT_NAME: "GPDB-gpexpand-parallel"
 
 - name: cs-uao-regression
   plan:
