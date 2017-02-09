@@ -146,10 +146,10 @@
         <li>
           <p>GPDB 5.0.0 does not provide QuickLZ compression, but accepts <codeph>CREATE TABLE
               [AS]</codeph> operations with table-, partition-, and/or column-level
-              <codeph>compresstype</codeph>s identifying QuickLZ. <codeph>INSERT</codeph> and
-              <codeph>SELECT</codeph> operations on such tables will fail, returning "ERROR: quicklz
-            compression not supported". To work around this issue, first <codeph>DROP</codeph> then
-            recreate the table without QuickLZ compression. </p>
+              <codeph>compresstype</codeph> values identifying QuickLZ. <codeph>INSERT</codeph> and
+              <codeph>SELECT</codeph> operations on such tables will fail, returning <codeph>ERROR:
+              quicklz compression not supported</codeph>. To work around this issue, first
+              <codeph>DROP</codeph> then recreate the table without QuickLZ compression. </p>
         </li>
       </ul>
     </body>
