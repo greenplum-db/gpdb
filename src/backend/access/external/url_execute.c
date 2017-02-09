@@ -31,82 +31,57 @@ static char *interpretError(int exitCode, char *buf, size_t buflen, char *err, s
 static const char *getSignalNameFromCode(int signo);
 static void read_err_msg(int fid, StringInfo sinfo);
 
-static int
-make_export(char *name, const char *value, char *buf)
+static void
+make_export(char *name, const char *value, StringInfo buf)
 {
-	char *p = buf;
-	int ch;
+	char		ch;
 
-	if (buf)
-		strcpy(p, name);
-	p += strlen(name);
-
-	if (buf)
-		strcpy(p, "='");
-	p += 2;
+	appendStringInfo(buf, "%s='", name);
 
 	for ( ; 0 != (ch = *value); value++)
 	{
 		if (ch == '\'' || ch == '\\')
-		{
-			if (buf)
-				*p = '\\';
-			p++;
-		}
-		if (buf)
-			*p = ch;
-		p++;
+			appendStringInfoChar(buf, '\\');
+
+		appendStringInfoChar(buf, ch);
 	}
 
-	if (buf)
-		strcpy(p, "' && export ");
-	p += strlen("' && export ");
-
-	if (buf)
-		strcpy(p, name);
-	p += strlen(name);
-
-	if (buf)
-		strcpy(p, " && ");
-	p += 4;
-
-	return p - buf;
+	appendStringInfo(buf, "' && export %s && ", name);
 }
 
 
-static int
-make_command(const char *cmd, extvar_t * ev, char *buf)
+static char *
+make_command(const char *cmd, extvar_t *ev)
 {
-	int sz = 0;
+	StringInfoData buf;
 
-	sz += make_export("GP_MASTER_HOST", ev->GP_MASTER_HOST, buf ? buf + sz : 0);
-	sz += make_export("GP_MASTER_PORT", ev->GP_MASTER_PORT, buf ? buf + sz : 0);
-	sz += make_export("GP_SEG_PG_CONF", ev->GP_SEG_PG_CONF, buf ? buf + sz : 0);
-	sz += make_export("GP_SEG_DATADIR", ev->GP_SEG_DATADIR, buf ? buf + sz : 0);
-	sz += make_export("GP_DATABASE", ev->GP_DATABASE, buf ? buf + sz : 0);
-	sz += make_export("GP_USER", ev->GP_USER, buf ? buf + sz : 0);
-	sz += make_export("GP_DATE", ev->GP_DATE, buf ? buf + sz : 0);
-	sz += make_export("GP_TIME", ev->GP_TIME, buf ? buf + sz : 0);
-	sz += make_export("GP_XID", ev->GP_XID, buf ? buf + sz : 0);
-	sz += make_export("GP_CID", ev->GP_CID, buf ? buf + sz : 0);
-	sz += make_export("GP_SN", ev->GP_SN, buf ? buf + sz : 0);
-	sz += make_export("GP_SEGMENT_ID", ev->GP_SEGMENT_ID, buf ? buf + sz : 0);
-	sz += make_export("GP_SEG_PORT", ev->GP_SEG_PORT, buf ? buf + sz : 0);
-	sz += make_export("GP_SESSION_ID", ev->GP_SESSION_ID, buf ? buf + sz : 0);
-	sz += make_export("GP_SEGMENT_COUNT", ev->GP_SEGMENT_COUNT, buf ? buf + sz : 0);
+	initStringInfo(&buf);
+
+	make_export("GP_MASTER_HOST", ev->GP_MASTER_HOST, &buf);
+	make_export("GP_MASTER_PORT", ev->GP_MASTER_PORT, &buf);
+	make_export("GP_SEG_PG_CONF", ev->GP_SEG_PG_CONF, &buf);
+	make_export("GP_SEG_DATADIR", ev->GP_SEG_DATADIR, &buf);
+	make_export("GP_DATABASE", ev->GP_DATABASE, &buf);
+	make_export("GP_USER", ev->GP_USER, &buf);
+	make_export("GP_DATE", ev->GP_DATE, &buf);
+	make_export("GP_TIME", ev->GP_TIME, &buf);
+	make_export("GP_XID", ev->GP_XID, &buf);
+	make_export("GP_CID", ev->GP_CID, &buf);
+	make_export("GP_SN", ev->GP_SN, &buf);
+	make_export("GP_SEGMENT_ID", ev->GP_SEGMENT_ID, &buf);
+	make_export("GP_SEG_PORT", ev->GP_SEG_PORT, &buf);
+	make_export("GP_SESSION_ID", ev->GP_SESSION_ID, &buf);
+	make_export("GP_SEGMENT_COUNT", ev->GP_SEGMENT_COUNT, &buf);
 
 	/* hadoop env var */
-	sz += make_export("GP_HADOOP_CONN_JARDIR", ev->GP_HADOOP_CONN_JARDIR, buf ? buf + sz : 0);
-	sz += make_export("GP_HADOOP_CONN_VERSION", ev->GP_HADOOP_CONN_VERSION, buf ? buf + sz : 0);
+	make_export("GP_HADOOP_CONN_JARDIR", ev->GP_HADOOP_CONN_JARDIR, &buf);
+	make_export("GP_HADOOP_CONN_VERSION", ev->GP_HADOOP_CONN_VERSION, &buf);
 	if (strlen(ev->GP_HADOOP_HOME) > 0)
-		sz += make_export("HADOOP_HOME",    ev->GP_HADOOP_HOME,    buf ? buf + sz : 0);
+		make_export("HADOOP_HOME",    ev->GP_HADOOP_HOME,    &buf);
 
+	appendStringInfoString(&buf, cmd);
 
-	if (buf)
-		strcpy(buf + sz, cmd);
-	sz += strlen(cmd);
-
-	return sz + 1;				/* add NUL terminator */
+	return buf.data;
 }
 
 /**
@@ -128,13 +103,8 @@ url_execute_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, int 
 	
 	URL_FILE *file = alloc_url_file(url);
 
-	/* Execute command */
-	int sz = make_command(cmd, ev, 0);
-	char *shexec = palloc(sz);
-	make_command(cmd, ev, shexec);
-
 	file->type = CFTYPE_EXEC; /* marked as a EXEC */
-	file->u.exec.shexec = shexec;
+	file->u.exec.shexec = make_command(cmd, ev);	/* Execute command */
 
 	/* Clear process interval timers */
 	resetTimers(&savetimers);
@@ -147,8 +117,9 @@ url_execute_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, int 
 	save_SIGPIPE = pqsignal(SIGPIPE, SIG_DFL);
 
 	/* execute the user command */
-	file->u.exec.pid = popen_with_stderr(file->u.exec.pipes, shexec, forwrite);
-
+	file->u.exec.pid = popen_with_stderr(file->u.exec.pipes,
+										 file->u.exec.shexec,
+										 forwrite);
 	save_errno = errno;
 
 	/* Restore the SIGPIPE handler */
