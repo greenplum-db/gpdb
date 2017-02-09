@@ -43,8 +43,12 @@
     <title>New Features</title>
     <body>
       <p>Greenplum Database 5.0.0 includes these new features:</p>
-      <ul id="ul_t5j_wbz_my">
-        <li>&lt;new features here></li>
+      <ul>
+        <li>Updatable cursors are now supported on Greenplum Server. <codeph>UPDATE/DELETE WHERE CURRENT OF...</codeph> 
+          statements are allowed when executed on the server, for example in an interactive <codeph>psql</codeph> 
+          session or a script executed with <codeph>psql</codeph>. Extensions such as PL/pgSQL and PL/Java do not 
+          support updatable cursers.
+        </li>
       </ul>
     </body>
   </topic>

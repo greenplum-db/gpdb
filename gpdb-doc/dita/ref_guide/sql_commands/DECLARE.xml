@@ -141,8 +141,7 @@
         with the <codeph>CLOSE</codeph> command.</p>
       <p>Scrollable cursors are not currently supported in Greenplum Database. You can only use
           <codeph>FETCH</codeph> to move the cursor position forward, not backwards.</p>
-      <p><codeph>DECLARE...FOR</codeph><codeph>UPDATE</codeph> is not supported with
-        append-optimized tables.</p>
+      <p><codeph>DECLARE...FOR UPDATE</codeph> is not supported with append-optimized tables.</p>
       <p>You can see all available cursors by querying the <codeph>pg_cursors</codeph> system view.
       </p>
     </section>

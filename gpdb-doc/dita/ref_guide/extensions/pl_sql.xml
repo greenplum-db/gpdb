@@ -20,24 +20,14 @@
   <topic id="topic2" xml:lang="en">
     <title id="pt218674">About Greenplum Database PL/pgSQL</title>
     <body>
-      <p>Greenplum Database PL/pgSQL is a loadable procedural language that is installed and
-        registered by default with Greenplum Database. You can create user-defined functions using
-        SQL statements, functions, and operators.</p>
-      <p>With PL/pgSQL you can group a block of computation and a series of SQL queries inside the
-        database server, thus having the power of a procedural language and the ease of use of SQL.
-        Also, with PL/pgSQL you can use all the data types, operators and functions of Greenplum
-        Database SQL. </p>
-      <p>The PL/pgSQL language is a subset of Oracle PL/SQL. Greenplum Database PL/pgSQL is based on
-        Postgres PL/pgSQL. The Postgres PL/pgSQL documentation is at <xref
+      <p>Greenplum Database PL/pgSQL is a loadable procedural language that is installed and registered by default with Greenplum Database. You can create user-defined functions using SQL statements, functions, and operators.</p>
+      <p>With PL/pgSQL you can group a block of computation and a series of SQL queries inside the database server, thus having the power of a procedural language and the ease of use of SQL. Also, with PL/pgSQL you can use all the data types, operators and functions of Greenplum Database SQL. </p>
+      <p>The PL/pgSQL language is a subset of Oracle PL/SQL. Greenplum Database PL/pgSQL is based on Postgres PL/pgSQL. The Postgres PL/pgSQL documentation is at <xref
           href="https://www.postgresql.org/docs/8.3/static/plpgsql.html" scope="external"
           format="html">https://www.postgresql.org/docs/8.3/static/plpgsql.html</xref></p>
-      <p>When using PL/pgSQL functions, function attributes affect how Greenplum Database creates
-        query plans. You can specify the attribute <codeph>IMMUTABLE</codeph>,
-          <codeph>STABLE</codeph>, or <codeph>VOLATILE</codeph> as part of the
-          <codeph>LANGUAGE</codeph> clause to classify the type of function, For information about
-        the creating functions and function attributes, see the <codeph><xref
-            href="../sql_commands/CREATE_FUNCTION.xml#topic1"/></codeph> command in the
-          <cite>Greenplum Database Reference Guide</cite>.</p>
+      <p>When using PL/pgSQL functions, function attributes affect how Greenplum Database creates query plans. You can specify the attribute <codeph>IMMUTABLE</codeph>, <codeph>STABLE</codeph>, or <codeph>VOLATILE</codeph> as part of the <codeph>LANGUAGE</codeph> clause to classify the type of function, For information about the creating functions and function attributes, see the <codeph><xref
+            href="../sql_commands/CREATE_FUNCTION.xml#topic1"
+          /></codeph> command in the <cite>Greenplum Database Reference Guide</cite>.</p>
     </body>
     <topic id="topic3" xml:lang="en">
       <title>Greenplum Database SQL Limitations</title>
@@ -48,53 +38,36 @@
           <li id="pt222490">Cursors are forward moving only (not scrollable) </li>
         </ul>
         <p>For information about Greenplum Database SQL conformance, see <xref
-            href="../feature_summary.xml#topic1"/> in the <cite>Greenplum Database Reference
-            Guide</cite>.</p>
+            href="../feature_summary.xml#topic1"
+            /> in the <cite>Greenplum Database Reference Guide</cite>.</p>
       </body>
     </topic>
     <topic id="topic4" xml:lang="en">
       <title>The PL/pgSQL Language</title>
       <body>
-        <p>PL/pgSQL is a block-structured language. The complete text of a function definition must
-          be a block. A block is defined as:</p>
+        <p>PL/pgSQL is a block-structured language. The complete text of a function definition must be a block. A block is defined as:</p>
         <codeblock>[ <varname>label</varname> ]
 [ DECLARE
    declarations ]
 BEGIN
    statements
 END [ label ];</codeblock>
-        <p>Each declaration and each statement within a block is terminated by a semicolon (;). A
-          block that appears within another block must have a semicolon after <codeph>END</codeph>,
-          as shown in the previous block. The <codeph>END</codeph> that concludes a function body
-          does not require a semicolon.</p>
-        <note type="important">Do not confuse the use of the <codeph>BEGIN</codeph> and
-            <codeph>END</codeph> keywords for grouping statements in PL/pgSQL with the database
-          commands for transaction control. The PL/pgSQL <codeph>BEGIN</codeph> and
-            <codeph>END</codeph> keywords are only for grouping; they do not start or end a
-          transaction. Functions are always executed within a transaction established by an outer
-          query — they cannot start or commit that transaction, since there would be no context for
-          them to execute in. However, a PL/pgSQL block that contains an <codeph>EXCEPTION</codeph>
-          clause effectively forms a subtransaction that can be rolled back without affecting the
-          outer transaction. For more about the <codeph>EXCEPTION</codeph> clause, see the post the
-          Postgres documentation on error trapping at <xref
+        <p>Each declaration and each statement within a block is terminated by a semicolon (;). A block that appears within another block must have a semicolon after <codeph>END</codeph>, as shown in the previous block. The <codeph>END</codeph> that concludes a function body does not require a semicolon.</p>
+        <note type="important"
+            >Do not confuse the use of the <codeph>BEGIN</codeph> and <codeph>END</codeph> keywords for grouping statements in PL/pgSQL with the database commands for transaction control. The PL/pgSQL <codeph>BEGIN</codeph> and <codeph>END</codeph> keywords are only for grouping; they do not start or end a transaction. Functions are always executed within a transaction established by an outer query — they cannot start or commit that transaction, since there would be no context for them to execute in. However, a PL/pgSQL block that contains an <codeph>EXCEPTION</codeph> clause effectively forms a subtransaction that can be rolled back without affecting the outer transaction. For more about the <codeph>EXCEPTION</codeph> clause, see the Postgres documentation on error trapping at <xref
             href="https://www.postgresql.org/docs/8.3/static/plpgsql-control-structures.html#PLPGSQL-ERROR-TRAPPING"
             scope="external" format="html"
             >https://www.postgresql.org/docs/8.3/static/plpgsql-control-structures.html#PLPGSQL-ERROR-TRAPPING</xref>. </note>
-        <p>All key words and identifiers can be written in mixed upper and lower case. Identifiers
-          are implicitly converted to lowercase unless enclosed in double-quotes ( " ).</p>
+        <p>All key words and identifiers can be written in mixed upper and lower case. Identifiers are implicitly converted to lowercase unless enclosed in double-quotes ( " ).</p>
         <p>You can add comments in PL/pgSQL in the following ways:</p>
         <ul>
-          <li id="pt219192">A double dash (--) starts a comment that extends to the end of the line. </li>
-          <li id="pt219185">A /* starts a block comment that extends to the next occurrence of */.
-              <p>Block comments cannot be nested, but double dash comments can be enclosed into a
-              block comment and a double dash can hide the block comment delimiters /* and
-            */.</p></li>
+          <li id="pt219192"
+            >A double dash (<codeph>--</codeph>) starts a comment that extends to the end of the line. </li>
+          <li id="pt219185"
+              >A <codeph>/*</codeph> starts a block comment that extends to the next occurrence of <codeph>*/</codeph>. <p>Block comments cannot be nested, but double dash comments can be enclosed into a block comment and a double dash can hide the block comment delimiters <codeph>/*</codeph> and <codeph>*/</codeph>.</p></li>
         </ul>
-        <p>Any statement in the statement section of a block can be a subblock. Subblocks can be
-          used for logical grouping or to localize variables to a small group of statements.</p>
-        <p>The variables declared in the declarations section preceding a block are initialized to
-          their default values every time the block is entered, not only once per function call. For
-          example declares the variable <codeph>quantity</codeph> several times:</p>
+        <p>Any statement in the statement section of a block can be a subblock. Subblocks can be used for logical grouping or to localize variables to a small group of statements.</p>
+        <p>The variables declared in the declarations section preceding a block are initialized to their default values every time the block is entered, not only once per function call. For example, the following function declares the variable <codeph>quantity</codeph> several times:</p>
         <codeblock>CREATE FUNCTION testfunc() RETURNS integer AS $$
 DECLARE
    quantity integer := 30;
@@ -120,14 +93,12 @@ $$ LANGUAGE plpgsql;</codeblock>
       <topic id="topic5" xml:lang="en">
         <title>Executing SQL Commands</title>
         <body>
-          <p>You can execute SQL commands with PL/gpSQL statements such as <codeph>EXECUTE</codeph>,
-              <codeph>PERFORM</codeph>, and <codeph>SELECT ... INTO</codeph>. For information about
-            the PL/gpSQL statements, see <xref
+          <p>You can execute SQL commands with PL/pgSQL statements such as <codeph>EXECUTE</codeph>, <codeph>PERFORM</codeph>, and <codeph>SELECT ... INTO</codeph>. For information about the PL/gpSQL statements, see <xref
               href="https://www.postgresql.org/docs/8.3/static/plpgsql-statements.html"
               scope="external" format="html"
               >https://www.postgresql.org/docs/8.3/static/plpgsql-statements.html</xref>. </p>
-          <note type="note">The PL/gpSQL statement <codeph>SELECT INTO</codeph> is not supported in
-            the <codeph>EXECUTE</codeph> statement. </note>
+          <note type="note"
+              >The PL/gpSQL statement <codeph>SELECT INTO</codeph> is not supported in the <codeph>EXECUTE</codeph> statement. </note>
         </body>
       </topic>
     </topic>
@@ -140,12 +111,8 @@ $$ LANGUAGE plpgsql;</codeblock>
     <topic id="topic7" xml:lang="en">
       <title>Example: Aliases for Function Parameters</title>
       <body>
-        <p>Parameters passed to functions are named with the identifiers such asa
-            <codeph>$1</codeph>, <codeph>$2</codeph>. Optionally, aliases can be declared for
-            <codeph>$n</codeph> parameter names for increased readability. Either the alias or the
-          numeric identifier can then be used to refer to the parameter value.</p>
-        <p>There are two ways to create an alias. The preferred way is to give a name to the
-          parameter in the <codeph>CREATE FUNCTION</codeph> command, for example:</p>
+        <p>Parameters passed to functions are named with identifiers such as <codeph>$1</codeph> and <codeph>$2</codeph>. Optionally, aliases can be declared for <codeph>$n</codeph> parameter names for increased readability. Either the alias or the numeric identifier can then be used to refer to the parameter value.</p>
+        <p>There are two ways to create an alias. The preferred way is to give a name to the parameter in the <codeph>CREATE FUNCTION</codeph> command, for example:</p>
         <codeblock>CREATE FUNCTION sales_tax(subtotal real) RETURNS real AS $$
 BEGIN
    RETURN subtotal * 0.06;
@@ -166,19 +133,11 @@ $$ LANGUAGE plpgsql;</codeblock>
     <topic id="topic8" xml:lang="en">
       <title>Example: Using the Data Type of a Table Column</title>
       <body>
-        <p>When declaring a variable, you can use <codeph>%TYPE</codeph> to specify the data type of
-          a variable or table column. This is the syntax for declaring a variable with the data type
-          of a table column:</p>
+        <p>When declaring a variable, you can use <codeph>%TYPE</codeph> to specify the data type of a variable or table column. This is the syntax for declaring a variable with the data type of a table column:</p>
         <codeblock>name table.column_name%TYPE;</codeblock>
-        <p>You can use this to declare variables that will hold database values. For example, if you
-          have a column named <codeph>user_id</codeph> in your <codeph>users</codeph> table. To
-          declare the variable <codeph>my_userid</codeph> with the same data type as the
-            <codeph>users.user_id</codeph> column:</p>
+        <p>You can use this to declare variables that will hold database values. For example, if you have a column named <codeph>user_id</codeph> in your <codeph>users</codeph> table. To declare the variable <codeph>my_userid</codeph> with the same data type as the <codeph>users.user_id</codeph> column:</p>
         <codeblock>my_userid users.user_id%TYPE;</codeblock>
-        <p><codeph>%TYPE</codeph> is particularly valuable in polymorphic functions, since the data
-          types needed for internal variables may change from one call to the next. Appropriate
-          variables can be created by applying <codeph>%TYPE</codeph> to the function’s arguments or
-          result placeholders.</p>
+        <p><codeph>%TYPE</codeph> is particularly valuable in polymorphic functions, since the data types needed for internal variables may change from one call to the next. Appropriate variables can be created by applying <codeph>%TYPE</codeph> to the function’s arguments or result placeholders.</p>
       </body>
     </topic>
     <topic id="topic9" xml:lang="en">
@@ -186,31 +145,20 @@ $$ LANGUAGE plpgsql;</codeblock>
       <body>
         <p>The following syntax declares a composite variable based on table row:</p>
         <codeblock>name table_name%ROWTYPE;</codeblock>
-        <p>Such a row variable can hold a whole row of a <codeph>SELECT</codeph> or
-            <codeph>FOR</codeph> query result, so long as that query column set matches the declared
-          type of the variable. The individual fields of the row value are accessed using the usual
-          dot notation, for example <codeph>rowvar.column</codeph>.</p>
-        <p>Parameters to a function can be composite types (complete table rows). In that case, the
-          corresponding identifier <codeph>$n</codeph> will be a row variable, and fields can be
-          selected from it, for <codeph>example $1.user_id</codeph>.</p>
-        <p>Only the user-defined columns of a table row are accessible in a row-type variable, not
-          the OID or other system columns. The fields of the row type inherit the table’s field size
-          or precision for data types such as <codeph>char(n)</codeph>.</p>
-        <p>The next example function uses a row variable composite type. Before creating the
-          function, create the table that is used by the function with this
-          command.<codeblock>CREATE TABLE table1 (
+        <p>Such a row variable can hold a whole row of a <codeph>SELECT</codeph> or <codeph>FOR</codeph> query result, so long as that query column set matches the declared type of the variable. The individual fields of the row value are accessed using the usual dot notation, for example <codeph>rowvar.column</codeph>.</p>
+        <p>Parameters to a function can be composite types (complete table rows). In that case, the corresponding identifier <codeph>$n</codeph> will be a row variable, and fields can be selected from it, for <codeph>example $1.user_id</codeph>.</p>
+        <p>Only the user-defined columns of a table row are accessible in a row-type variable, not the OID or other system columns. The fields of the row type inherit the table’s field size or precision for data types such as <codeph>char(n)</codeph>.</p>
+        <p>The next example function uses a row variable composite type. Before creating the function, create the table that is used by the function with this command.<codeblock>CREATE TABLE table1 (
   f1 text,
   f2 numeric,
   f3 integer
 ) distributed by (f1);</codeblock></p>
-        <p>This <codeph>INSERT</codeph> command adds data to the
-          table.<codeblock>INSERT INTO table1 values 
+        <p>This <codeph>INSERT</codeph> command adds data to the table.<codeblock>INSERT INTO table1 values 
  ('test1', 14.1, 3),
  ('test2', 52.5, 2),
  ('test3', 32.22, 6),
  ('test4', 12.1, 4) ;</codeblock></p>
-        <p>This function uses a variable and <codeph>ROWTYPE</codeph> composite variable based on
-            <codeph>table1</codeph>. </p>
+        <p>This function uses a variable and <codeph>ROWTYPE</codeph> composite variable based on <codeph>table1</codeph>. </p>
         <codeblock>CREATE OR REPLACE FUNCTION t1_calc( name text) RETURNS integer 
 AS $$ 
 DECLARE
@@ -222,14 +170,11 @@ BEGIN
     RETURN calc_int ;
 END;
 $$ LANGUAGE plpgsql VOLATILE;</codeblock>
-        <note>The previous function is classified as a <codeph>VOLATILE</codeph> function because
-          function values could change within a single table scan.</note>
+        <note>The previous function is classified as a <codeph>VOLATILE</codeph> function because function values could change within a single table scan.</note>
         <p>The following <codeph>SELECT</codeph> command uses the function.</p>
         <codeblock>select t1_calc( 'test1' );</codeblock>
-        <note type="note">The example PL/pgSQL function uses <codeph>SELECT</codeph> with the
-            <codeph>INTO</codeph> clause. It is different from the SQL command <codeph>SELECT
-            INTO</codeph>. If you want to create a table from a <codeph>SELECT</codeph> result
-          inside a PL/pgSQL function, use the SQL command <codeph>CREATE TABLE AS</codeph>.</note>
+        <note type="note"
+            >The example PL/pgSQL function uses <codeph>SELECT</codeph> with the <codeph>INTO</codeph> clause. It is different from the SQL command <codeph>SELECT INTO</codeph>. If you want to create a table from a <codeph>SELECT</codeph> result inside a PL/pgSQL function, use the SQL command <codeph>CREATE TABLE AS</codeph>.</note>
       </body>
     </topic>
   </topic>
@@ -239,18 +184,15 @@ $$ LANGUAGE plpgsql VOLATILE;</codeblock>
       <p>The Postgres documentation about PL/pgSQL is at <xref
           href="https://www.postgresql.org/docs/8.3/static/plpgsql.html" scope="external"
           format="html">https://www.postgresql.org/docs/8.3/static/plpgsql.html</xref></p>
-      <p>Also, see the <codeph><xref href="../sql_commands/CREATE_FUNCTION.xml#topic1"/></codeph>
-        command in the <cite>Greenplum Database Reference Guide</cite>.</p>
+      <p>Also, see the <codeph><xref href="../sql_commands/CREATE_FUNCTION.xml#topic1"
+          /></codeph> command in the <cite>Greenplum Database Reference Guide</cite>.</p>
       <p>For a summary of built-in Greenplum Database functions, see <xref
-          href="../function-summary.xml#topic1"/> in the <cite>Greenplum Database Reference
-          Guide</cite>. For information about using Greenplum Database functions see "Querying Data"
-        in the <cite>Greenplum Database Administrator Guide</cite></p>
+          href="../function-summary.xml#topic1"
+          /> in the <cite>Greenplum Database Reference Guide</cite>. For information about using Greenplum Database functions see "Querying Data" in the <cite>Greenplum Database Administrator Guide</cite></p>
       <p>For information about porting Oracle functions, see <xref
           href="https://www.postgresql.org/docs/8.3/static/plpgsql-porting.html" scope="external"
-          format="html">https://www.postgresql.org/docs/8.3/static/plpgsql-porting.html</xref>. For
-        information about installing and using the Oracle compatibility functions with Greenplum
-        Database, see "Oracle Compatibility Functions" in the <cite>Greenplum Database Utility
-          Guide</cite>.</p>
+          format="html"
+          >https://www.postgresql.org/docs/8.3/static/plpgsql-porting.html</xref>. For information about installing and using the Oracle compatibility functions with Greenplum Database, see "Oracle Compatibility Functions" in the <cite>Greenplum Database Utility Guide</cite>.</p>
     </body>
   </topic>
 </topic>
