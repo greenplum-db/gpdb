@@ -84,28 +84,32 @@ url_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, int *respons
  *
  * relname is passed in for being available in data messages only.
  */
-int
+void
 url_fclose(URL_FILE *file, bool failOnError, const char *relname)
 {
 	if (file == NULL)
 	{
 		elog(WARNING, "internal error: call url_fclose with bad parameter");
-		return -1;
+		return;
 	}
 
 	switch (file->type)
 	{
 		case CFTYPE_FILE:
-			return url_file_fclose(file, failOnError, relname);
+			url_file_fclose(file, failOnError, relname);
+			break;
 
 		case CFTYPE_EXEC:
-			return url_execute_fclose(file, failOnError, relname);
+			url_execute_fclose(file, failOnError, relname);
+			break;
 
 		case CFTYPE_CURL:
-			return url_curl_fclose(file, failOnError, relname);
+			url_curl_fclose(file, failOnError, relname);
+			break;
 
 		case CFTYPE_CUSTOM:
-			return url_custom_fclose(file, failOnError, relname);
+			url_custom_fclose(file, failOnError, relname);
+			break;
 			
 		default: /* unknown or unsupported type - oh dear */
 			free(file);
@@ -165,21 +169,21 @@ url_ferror(URL_FILE *file, int bytesread, char *ebuf, int ebuflen)
 }
 
 size_t
-url_fread(void *ptr, size_t size, size_t nmemb, URL_FILE *file, CopyState pstate)
+url_fread(void *ptr, size_t size, URL_FILE *file, CopyState pstate)
 {
     switch (file->type)
     {
 		case CFTYPE_FILE:
-			return url_file_fread(ptr, size, nmemb, file, pstate);
+			return url_file_fread(ptr, size, file, pstate);
 
 		case CFTYPE_EXEC:
-			return url_execute_fread(ptr, size, nmemb, file, pstate);
+			return url_execute_fread(ptr, size, file, pstate);
 
 		case CFTYPE_CURL:
-			return url_curl_fread(ptr, size, nmemb, file, pstate);
+			return url_curl_fread(ptr, size, file, pstate);
 
 		case CFTYPE_CUSTOM:
-			return url_custom_fread(ptr, size, nmemb, file, pstate);
+			return url_custom_fread(ptr, size, file, pstate);
 				
 		default: /* unknown or supported type */
 			errno = EBADF;
@@ -188,7 +192,7 @@ url_fread(void *ptr, size_t size, size_t nmemb, URL_FILE *file, CopyState pstate
 }
 
 size_t
-url_fwrite(void *ptr, size_t size, size_t nmemb, URL_FILE *file, CopyState pstate)
+url_fwrite(void *ptr, size_t size, URL_FILE *file, CopyState pstate)
 {
     switch (file->type)
     {
@@ -197,13 +201,13 @@ url_fwrite(void *ptr, size_t size, size_t nmemb, URL_FILE *file, CopyState pstat
 			return 0;		/* keep compiler quiet */
 
 		case CFTYPE_EXEC:
-			return url_execute_fwrite(ptr, size, nmemb, file, pstate);
+			return url_execute_fwrite(ptr, size, file, pstate);
 
 		case CFTYPE_CURL:
-			return url_curl_fwrite(ptr, size, nmemb, file, pstate);
+			return url_curl_fwrite(ptr, size, file, pstate);
 
 		case CFTYPE_CUSTOM:
-			return url_custom_fwrite(ptr, size, nmemb, file, pstate);
+			return url_custom_fwrite(ptr, size, file, pstate);
 			
 		default: /* unknown or unsupported type */
 			errno = EBADF;
@@ -236,4 +240,3 @@ url_fflush(URL_FILE *file, CopyState pstate)
 			break;
     }
 }
-

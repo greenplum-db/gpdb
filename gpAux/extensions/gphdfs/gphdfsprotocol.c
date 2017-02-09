@@ -379,10 +379,9 @@ gphdfsprotocol_import(PG_FUNCTION_ARGS)
 	 * ======================================================================= */
 	if (EXTPROTOCOL_IS_LAST_CALL(fcinfo))
 	{
-		int ret = 0;
 		if (myData != NULL && !myData->importDone)
-			ret = url_fclose(myData->importFile, false, "gphdfs protocol");
-		PG_RETURN_INT32(ret);
+			url_fclose(myData->importFile, false, "gphdfs protocol");
+		PG_RETURN_INT32(0);
 	}
 
 	/* =======================================================================
@@ -404,7 +403,7 @@ gphdfsprotocol_import(PG_FUNCTION_ARGS)
 
 	if (datlen > 0 && !myData->importDone)
 	{
-		nread = url_execute_fread(data, 1, datlen, myData->importFile, NULL);
+		nread = url_execute_fread(data, datlen, myData->importFile, NULL);
 	}
 
 	/* =======================================================================
@@ -445,10 +444,9 @@ gphdfsprotocol_export(PG_FUNCTION_ARGS)
 	 * ======================================================================= */
 	if (EXTPROTOCOL_IS_LAST_CALL(fcinfo))
 	{
-		int ret = 0;
 		if (myData)
-			ret = url_fclose(myData, true, "gphdfs protocol");
-		PG_RETURN_INT32(ret);
+			url_fclose(myData, true, "gphdfs protocol");
+		PG_RETURN_INT32(0);
 	}
 
 	/* =======================================================================
@@ -504,8 +502,8 @@ gphdfsprotocol_export(PG_FUNCTION_ARGS)
 			appendIntToBuffer(schema_head, schema_data->len + 2);
 			appendInt2ToBuffer(schema_head, 2);
 
-			url_execute_fwrite(schema_head->data, 1, schema_head->len, myData, NULL);
-			url_execute_fwrite(schema_data->data, 1, schema_data->len, myData, NULL);
+			url_execute_fwrite(schema_head->data, schema_head->len, myData, NULL);
+			url_execute_fwrite(schema_data->data, schema_data->len, myData, NULL);
 
 			pfree(schema_head->data);
 			pfree(schema_data->data);
@@ -520,7 +518,7 @@ gphdfsprotocol_export(PG_FUNCTION_ARGS)
 	datlen = EXTPROTOCOL_GET_DATALEN(fcinfo);
 
 	if (datlen > 0)
-		wrote = url_execute_fwrite(data, 1, datlen, myData, NULL);
+		wrote = url_execute_fwrite(data, datlen, myData, NULL);
 
 	if (url_ferror(myData, wrote, ebuf, ebuflen))
 	{

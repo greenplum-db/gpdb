@@ -1681,7 +1681,7 @@ external_getdata(URL_FILE *extfile, CopyState pstate, int maxread)
 	 */
 
 
-	bytesread = url_fread((void *) pstate->raw_buf, 1, maxread, extfile, pstate);
+	bytesread = url_fread((void *) pstate->raw_buf, maxread, extfile, pstate);
 
 	if (url_feof(extfile, bytesread))
 	{
@@ -1711,7 +1711,7 @@ external_senddata(URL_FILE *extfile, CopyState pstate)
 	size_t		nwrote = 0;
 	int			ebuflen = 512;
 
-	nwrote = url_fwrite((void *) fe_msgbuf->data, 1, fe_msgbuf->len, extfile, pstate);
+	nwrote = url_fwrite((void *) fe_msgbuf->data, fe_msgbuf->len, extfile, pstate);
 
 	if (url_ferror(extfile, nwrote, ebuf, ebuflen))
 	{

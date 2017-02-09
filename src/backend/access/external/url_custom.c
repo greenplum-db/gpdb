@@ -80,7 +80,7 @@ url_custom_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, int *
 	return file;
 }
 
-int
+void
 url_custom_fclose(URL_FILE *file, bool failOnError, const char *relname)
 {
 	/* last call. let the user close custom resources */
@@ -91,8 +91,6 @@ url_custom_fclose(URL_FILE *file, bool failOnError, const char *relname)
 	MemoryContextDelete(file->u.custom.protcxt);
 
 	free(file);
-
-	return 0;
 }
 
 bool
@@ -108,15 +106,15 @@ url_custom_ferror(URL_FILE *file, int bytesread, char *ebuf, int ebuflen)
 }
 
 size_t
-url_custom_fread(void *ptr, size_t size, size_t nmemb, URL_FILE *file, CopyState pstate)
+url_custom_fread(void *ptr, size_t size, URL_FILE *file, CopyState pstate)
 {
-	return (size_t) InvokeExtProtocol(ptr, nmemb * size, file, pstate, false);
+	return (size_t) InvokeExtProtocol(ptr, size, file, pstate, false);
 }
 
 size_t
-url_custom_fwrite(void *ptr, size_t size, size_t nmemb, URL_FILE *file, CopyState pstate)
+url_custom_fwrite(void *ptr, size_t size, URL_FILE *file, CopyState pstate)
 {
-	return (size_t) InvokeExtProtocol(ptr, nmemb * size, file, pstate, false);
+	return (size_t) InvokeExtProtocol(ptr, size, file, pstate, false);
 }
 
 

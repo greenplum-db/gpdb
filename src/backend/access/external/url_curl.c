@@ -1348,10 +1348,9 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, int *re
  *
  * relname is passed in for being available in data messages only.
  */
-int
+void
 url_curl_fclose(URL_FILE *file, bool failOnError, const char *relname)
 {
-	int 	ret = 0;/* default is good return */
 	bool    retVal = true;
 	StringInfoData sinfo;
 
@@ -1416,8 +1415,6 @@ url_curl_fclose(URL_FILE *file, bool failOnError, const char *relname)
 	free(file);
 	if (!retVal)
 		elog(ERROR, "Error when closing writable external table");
-
-    return ret;
 }
 
 bool
@@ -1861,35 +1858,21 @@ curl_fwrite(char *buf, int nbytes, URL_FILE* file, CopyState pstate)
 }
 
 size_t
-url_curl_fread(void *ptr, size_t size, size_t nmemb, URL_FILE *file, CopyState pstate)
+url_curl_fread(void *ptr, size_t size, URL_FILE *file, CopyState pstate)
 {
-    size_t 	want;
-	int 	n;
-
 	Assert(file->type == CFTYPE_CURL);
 	
 	/* get data (up to nmemb * size) from the http/gpfdist server */
-	n = curl_fread(ptr, nmemb * size, file, pstate);
-
-	/* number of items - nb correct op - checked with glibc code*/
-	want = n / size;
-
-    return want;
+	return curl_fread(ptr, size, file, pstate);
 }
 
 size_t
-url_curl_fwrite(void *ptr, size_t size, size_t nmemb, URL_FILE *file, CopyState pstate)
+url_curl_fwrite(void *ptr, size_t size, URL_FILE *file, CopyState pstate)
 {
-    size_t 	want = 0;
-
 	Assert(file->type == CFTYPE_CURL);
 
-	size_t	n;
 	/* write data to the gpfdist server via curl */
-	n = curl_fwrite(ptr, nmemb * size, file, pstate);
-	want = n / size;
-
-    return want;
+	return curl_fwrite(ptr, size, file, pstate);
 }
 
 /*
@@ -1926,7 +1909,7 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, int *re
 	curl_not_compiled_error();
 	return NULL; /* keep compiler quiet */
 }
-int
+void
 url_curl_fclose(URL_FILE *file, bool failOnError, const char *relname)
 {
 	curl_not_compiled_error();
@@ -1941,12 +1924,12 @@ bool url_curl_ferror(URL_FILE *file, int bytesread, char *ebuf, int ebuflen)
 	curl_not_compiled_error();
 	return false; /* keep compiler quiet */
 }
-size_t url_curl_fread(void *ptr, size_t size, size_t nmemb, URL_FILE *file, CopyState pstate)
+size_t url_curl_fread(void *ptr, size_t size, URL_FILE *file, CopyState pstate)
 {
 	curl_not_compiled_error();
 	return 0; /* keep compiler quiet */
 }
-size_t url_curl_fwrite(void *ptr, size_t size, size_t nmemb, URL_FILE *file, CopyState pstate)
+size_t url_curl_fwrite(void *ptr, size_t size, URL_FILE *file, CopyState pstate)
 {
 	curl_not_compiled_error();
 	return 0; /* keep compiler quiet */

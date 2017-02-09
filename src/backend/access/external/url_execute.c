@@ -142,7 +142,7 @@ url_execute_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, int 
 	return file;
 }
 
-int
+void
 url_execute_fclose(URL_FILE *file, bool failOnError, const char *relname)
 {
 	StringInfoData sinfo;
@@ -191,8 +191,6 @@ url_execute_fclose(URL_FILE *file, bool failOnError, const char *relname)
 	pfree(sinfo.data);
 
 	free(file);
-
-	return ret;
 }
 
 bool
@@ -226,15 +224,15 @@ url_execute_ferror(URL_FILE *file, int bytesread, char *ebuf, int ebuflen)
 }
 
 size_t
-url_execute_fread(void *ptr, size_t size, size_t nmemb, URL_FILE *file, CopyState pstate)
+url_execute_fread(void *ptr, size_t size, URL_FILE *file, CopyState pstate)
 {
-	return piperead(file->u.exec.pipes[EXEC_DATA_P], ptr, nmemb * size);
+	return piperead(file->u.exec.pipes[EXEC_DATA_P], ptr, size);
 }
 
 size_t
-url_execute_fwrite(void *ptr, size_t size, size_t nmemb, URL_FILE *file, CopyState pstate)
+url_execute_fwrite(void *ptr, size_t size, URL_FILE *file, CopyState pstate)
 {
-	return pipewrite(file->u.exec.pipes[EXEC_DATA_P], ptr, nmemb * size);
+	return pipewrite(file->u.exec.pipes[EXEC_DATA_P], ptr, size);
 }
 
 

@@ -64,29 +64,25 @@ url_file_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, int *re
 	return file;
 }
 
-int
+void
 url_file_fclose(URL_FILE *file, bool failOnError, const char *relname)
 {
 	fstream_close(file->u.file.fp);
+	/* fstream_close() returns no error indication. */
 
 	free(file);
-
-	/* fstream_close() returns no error indication. */
-	return 0;
 }
 
 
 size_t
-url_file_fread(void *ptr, size_t size, size_t nmemb, URL_FILE *file, CopyState pstate)
+url_file_fread(void *ptr, size_t size, URL_FILE *file, CopyState pstate)
 {
 	struct fstream_filename_and_offset fo;
 	const int whole_rows = 0; /* get as much data as possible */
 	size_t		want;
 	int			n;
 
-	Assert(size == 1);
-
-	n = fstream_read(file->u.file.fp, ptr, nmemb, &fo, whole_rows, "", -1);
+	n = fstream_read(file->u.file.fp, ptr, size, &fo, whole_rows, "", -1);
 	want = n > 0 ? n : 0;
 
 	if (n > 0 && fo.line_number)
