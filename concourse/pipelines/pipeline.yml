@@ -698,8 +698,10 @@ jobs:
       passed: [gpdb_rc_packaging_centos]
       trigger: true
     - get: sync_tools_gpdb
+      passed: [compile_gpdb_centos6]
       resource: sync_tools_gpdb_centos
     - get: bin_gpdb
+      passed: [gpdb_rc_packaging_centos]
       resource: bin_gpdb_centos
     - get: centos-gpdb-dev-6
   - task: regression_tests_gphdfs
