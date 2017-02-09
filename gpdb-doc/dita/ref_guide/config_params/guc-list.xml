@@ -2859,8 +2859,8 @@
                   2097152 </p><p><cmdname>CHECKSUM</cmdname>= <codeph>TRUE</codeph> |
                     <codeph>FALSE</codeph>
                 </p><p><cmdname>COMPRESSTYPE</cmdname>= <codeph>ZLIB</codeph> |
-                    <codeph>QUICKLZ</codeph> | <codeph>RLE</codeph>_<codeph>TYPE</codeph> |
-                    <codeph>NONE</codeph>
+                    <codeph>QUICKLZ</codeph><sup>2</sup> |
+                    <codeph>RLE</codeph>_<codeph>TYPE</codeph> | <codeph>NONE</codeph>
                 </p><p><cmdname>COMPRESSLEVEL</cmdname>= integer between 0 and
                     9</p><p><cmdname>ORIENTATION</cmdname>= <codeph>ROW</codeph> |
                     <codeph>COLUMN</codeph>
@@ -2879,6 +2879,9 @@
       <note>
         <sup>1</sup>The set classification when the parameter is set at the system level with the
           <cmdname>gpconfig</cmdname> utility.</note>
+      <note>
+        <sup>2</sup>QuickLZ compression is available only in the commercial release of Pivotal
+        Greenplum Database.</note>
     </body>
   </topic>
   <topic id="gp_dynamic_partition_pruning">

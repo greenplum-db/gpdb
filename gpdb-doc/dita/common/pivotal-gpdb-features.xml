@@ -26,7 +26,7 @@
         software must be compiled with GPORCA enabled. Refer to the build instructions in the README
         file in the Greenplum Database repository.</li>
       <li>The QuickLZ compression method is not available in Greenplum Database. QuickLZ
-          <codeph>compresstype</codeph>s are ignored when specified in a <codeph>CREATE TABLE
+          <codeph>compresstype</codeph> values are ignored when specified in a <codeph>CREATE TABLE
           [AS]</codeph> operation, but will cause an error on subsequent <codeph>INSERT</codeph> or
           <codeph>SELECT</codeph> operations on the table.</li>
       <li>The deprecated <codeph>gpcheck</codeph> management utility and its replacement
