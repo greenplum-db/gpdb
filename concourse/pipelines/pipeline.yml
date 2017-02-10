@@ -528,13 +528,13 @@ jobs:
     input_mapping: *input_mappings
     params:
       <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-gpexpand"
+      PULSE_PROJECT_NAME: "GPDB-gpexpand-parallel"
   - task: monitor_pulse
     tags: ["gpdb5-pulse-worker"]
     file: gpdb_src/ci/pulse/api/monitor_pulse.yml
     params:
       <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-gpexpand"
+      PULSE_PROJECT_NAME: "GPDB-gpexpand-parallel"
 
 - name: cs-uao-regression
   plan:
@@ -698,8 +698,10 @@ jobs:
       passed: [gpdb_rc_packaging_centos]
       trigger: true
     - get: sync_tools_gpdb
+      passed: [compile_gpdb_centos6]
       resource: sync_tools_gpdb_centos
     - get: bin_gpdb
+      passed: [gpdb_rc_packaging_centos]
       resource: bin_gpdb_centos
     - get: centos-gpdb-dev-6
   - task: regression_tests_gphdfs

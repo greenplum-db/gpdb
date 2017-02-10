@@ -58,6 +58,9 @@ DROP ROLE abc;
 ---
 --- basic time level constraints
 --- 
+CREATE USER abc WITH LOGIN DENY DAY 'Saturday';
+NOTICE:  resource queue required -- using default resource queue "pg_default"
+DROP ROLE abc;
 CREATE ROLE abc DENY DAY 2 TIME '13:15:34';
 NOTICE:  resource queue required -- using default resource queue "pg_default"
 select c.start_day, c.start_time, c.end_day, c.end_time from pg_authid a, pg_auth_time_constraint c where c.authid = a.oid and a.rolname = 'abc';
@@ -797,6 +800,14 @@ DROP ROLE abc;
 CREATE ROLE abc DENY DAY 'Monkey' TIME '12:00:00';
 ERROR:  invalid weekday name "Monkey"
 HINT:  Day of week must be one of 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'.
+CREATE ROLE abc WITH LOGIN DENY BETWEEN DAY 'Monday' TIME '00:00' AND DAY 'Monday' TIME '25:00';
+ERROR:  date/time field value out of range: "25:00"
+CREATE ROLE abc WITH LOGIN DENY BETWEEN DAY 'Monday' TIME '01:65 AM' AND DAY 'Monday' TIME '12:00 PM';
+ERROR:  date/time field value out of range: "01:65 AM"
+CREATE ROLE abc WITH LOGIN DENY BETWEEN DAY 'Monday' TIME '-01:00' AND DAY 'Monday' TIME '06:00 PM';
+ERROR:  invalid input syntax for type time: "-01:00"
+CREATE ROLE abc DENY BETWEEN DAY 'Monday' TIME '00:00' AND DAY 'Monday' TIME '25:00';
+ERROR:  date/time field value out of range: "25:00"
 ---
 --- What is '24:00:00'? Apparently, '2011-08-30 24:00:00' == '2011-08-31 00:00:00'.
 --- But interpreted as a sole time value, '24:00:00' != '00:00:00' and
@@ -936,6 +947,9 @@ RESET allow_system_table_mods;
 ---
 --- Superuser testing across CREATE ROLE, ALTER ROLE, and trigger
 ---
+create role abc with login nosuperuser nocreaterole;
+NOTICE:  resource queue required -- using default resource queue "pg_default"
+drop role abc;
 create role abc superuser deny day 1;
 ERROR:  cannot create superuser with DENY rules
 create role abc superuser;

@@ -2097,6 +2097,7 @@ logfile_getname(pg_time_t timestamp, const char *suffix, const char *log_directo
 {
 	char	   *filename;
 	int			len;
+	char	   *tmp_suffix;
 #define CSV_SUFFIX ".csv"
 #define LOG_SUFFIX ".log"
 
@@ -2128,15 +2129,15 @@ logfile_getname(pg_time_t timestamp, const char *suffix, const char *log_directo
 	 */
 	if (strlen(filename) - sizeof(CSV_SUFFIX) + 1 > 0)
 	{
-		suffix = filename + (strlen(filename) - sizeof(CSV_SUFFIX) + 1);
+		tmp_suffix = filename + (strlen(filename) - sizeof(CSV_SUFFIX) + 1);
 	}
 	else
 	{
 		/*
-		 * Point the suffix to the end of string if the length of
+		 * Point the tmp_suffix to the end of string if the length of
 		 * the filename is less than ".csv".
 		 */
-		suffix = filename + strlen(filename);
+		tmp_suffix = filename + strlen(filename);
 	}
 
 	/*
@@ -2145,14 +2146,14 @@ logfile_getname(pg_time_t timestamp, const char *suffix, const char *log_directo
 	 * This is to handle the case for open_alert_log_file(), which doesn't depends
 	 * on .log or .csv, but just use timestamp as extension.
 	 */
-	if (gp_log_format == 0 && pg_strcasecmp(suffix, CSV_SUFFIX) == 0)
+	if (gp_log_format == 0 && pg_strcasecmp(tmp_suffix, CSV_SUFFIX) == 0)
 	{
-		snprintf(suffix, sizeof(LOG_SUFFIX), LOG_SUFFIX);
+		snprintf(tmp_suffix, sizeof(LOG_SUFFIX), LOG_SUFFIX);
 	}
 	
-	if (gp_log_format == 1 && pg_strcasecmp(suffix, CSV_SUFFIX) != 0)
+	if (gp_log_format == 1 && pg_strcasecmp(tmp_suffix, CSV_SUFFIX) != 0)
 	{
-		snprintf(suffix, sizeof(CSV_SUFFIX), CSV_SUFFIX);
+		snprintf(tmp_suffix, sizeof(CSV_SUFFIX), CSV_SUFFIX);
 	}
 
 	return filename;

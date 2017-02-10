@@ -60,7 +60,7 @@
 #include "cdb/cdblocaldistribxact.h"
 #include "cdb/cdbgang.h"
 #include "cdb/cdbvars.h"  /*Gp_is_writer*/
-#include "utils/gp_atomic.h"
+#include "port/atomics.h"
 #include "utils/session_state.h"
 
 /* GUC variables */

@@ -197,6 +197,10 @@ CopyPlanFields(Plan *from, Plan *newnode)
 	COPY_SCALAR_FIELD(directDispatch.isDirectDispatch);
 	COPY_NODE_FIELD(directDispatch.contentIds);
 	COPY_SCALAR_FIELD(operatorMemKB);
+	/*
+	 * Don't copy memoryAccountId and this is an index to the account array
+	 * specific to this process only.
+	 */
 }
 
 /*

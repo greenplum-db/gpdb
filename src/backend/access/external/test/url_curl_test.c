@@ -3,7 +3,7 @@
 #include <setjmp.h>
 #include "cmockery.h"
 
-#include "../url.c"
+#include "../url_curl.c"
 
 void
 test__make_url(void **state)

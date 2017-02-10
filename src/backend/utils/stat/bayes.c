@@ -451,7 +451,7 @@ static void get_nb_state(HeapTupleHeader tuple,
 		ARR_NDIM(state->accum) != 1 ||
 		ARR_NDIM(state->total) != 1 ||
 		ARR_DIMS(state->accum)[0] != ARR_DIMS(state->classes)[0] ||
-		ARR_DIMS(state->classes)[0] != ARR_DIMS(state->classes)[0])
+		ARR_DIMS(state->classes)[0] != ARR_DIMS(state->total)[0])
 	{
 		ereport(ERROR, 
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),

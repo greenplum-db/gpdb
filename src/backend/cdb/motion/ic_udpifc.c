@@ -30,11 +30,10 @@
 #include "miscadmin.h"
 #include "libpq/libpq-be.h"
 #include "libpq/ip.h"
-#include "utils/gp_atomic.h"
 #include "utils/builtins.h"
 #include "utils/debugbreak.h"
 #include "utils/faultinjector.h"
-#include "utils/pg_crc.h"
+#include "port/atomics.h"
 #include "port/pg_crc32c.h"
 
 #include "cdb/cdbselect.h"
@@ -2742,7 +2741,6 @@ setupOutgoingUDPConnection(ChunkTransportState *transportStates, ChunkTransportS
 	Assert(conn->state == mcsSetupOutgoingConnection);
 	Assert(conn->cdbProc);
 
-	conn->wakeup_ms = 0;
 	conn->remoteContentId = cdbProc->contentid;
 	conn->stat_min_ack_time = ~((uint64)0);
 
@@ -3005,7 +3003,6 @@ SetupUDPIFCInterconnect_Internal(EState *estate)
 
 	estate->interconnect_context->teardownActive = false;
 	estate->interconnect_context->activated = false;
-	estate->interconnect_context->incompleteConns = NIL;
 	estate->interconnect_context->sliceTable = NULL;
 	estate->interconnect_context->sliceId = -1;
 

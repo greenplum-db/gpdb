@@ -14,12 +14,13 @@
  */
 
 #include "postgres.h"
-#include "utils/gp_atomic.h"
+
 #include "cdb/cdbvars.h"
-#include "utils/vmem_tracker.h"
-#include "utils/session_state.h"
-#include "utils/faultinjector.h"
 #include "miscadmin.h"
+#include "port/atomics.h"
+#include "utils/faultinjector.h"
+#include "utils/session_state.h"
+#include "utils/vmem_tracker.h"
 
 /* External dependencies within the runaway cleanup framework */
 extern bool vmemTrackerInited;

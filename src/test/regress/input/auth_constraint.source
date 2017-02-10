@@ -27,6 +27,8 @@ DROP ROLE abc;
 ---
 --- basic time level constraints
 --- 
+CREATE USER abc WITH LOGIN DENY DAY 'Saturday';
+DROP ROLE abc;
 CREATE ROLE abc DENY DAY 2 TIME '13:15:34';
 select c.start_day, c.start_time, c.end_day, c.end_time from pg_authid a, pg_auth_time_constraint c where c.authid = a.oid and a.rolname = 'abc';
 SELECT check_auth_time_constraints('abc', '2011-08-30 13:15:33');
@@ -245,6 +247,10 @@ DROP ROLE abc;
 --- English days of week (negative)
 ---
 CREATE ROLE abc DENY DAY 'Monkey' TIME '12:00:00';
+CREATE ROLE abc WITH LOGIN DENY BETWEEN DAY 'Monday' TIME '00:00' AND DAY 'Monday' TIME '25:00';
+CREATE ROLE abc WITH LOGIN DENY BETWEEN DAY 'Monday' TIME '01:65 AM' AND DAY 'Monday' TIME '12:00 PM';
+CREATE ROLE abc WITH LOGIN DENY BETWEEN DAY 'Monday' TIME '-01:00' AND DAY 'Monday' TIME '06:00 PM';
+CREATE ROLE abc DENY BETWEEN DAY 'Monday' TIME '00:00' AND DAY 'Monday' TIME '25:00';
 
 ---
 --- What is '24:00:00'? Apparently, '2011-08-30 24:00:00' == '2011-08-31 00:00:00'.
@@ -298,6 +304,10 @@ RESET allow_system_table_mods;
 ---
 --- Superuser testing across CREATE ROLE, ALTER ROLE, and trigger
 ---
+
+create role abc with login nosuperuser nocreaterole;
+drop role abc;
+
 create role abc superuser deny day 1;
 
 create role abc superuser;

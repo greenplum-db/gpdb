@@ -29,7 +29,6 @@
 #include "cdb/cdbgang.h"
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"
-#include "utils/gp_atomic.h"
 
 #define DISPATCH_WAIT_TIMEOUT_MSEC 2000
 

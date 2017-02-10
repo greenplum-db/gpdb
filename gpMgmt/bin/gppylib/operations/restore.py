@@ -31,9 +31,9 @@ logger = gplog.get_default_logger()
 WARN_MARK = '<<<<<'
 # TODO: use CLI-agnostic custom exceptions instead of ExceptionNoStackTraceNeeded
 
-def update_ao_stat_func(conn, ao_schema, ao_table, counter, batch_size):
-    qry = "SELECT * FROM gp_update_ao_master_stats('%s.%s')" % (pg.escape_string(escapeDoubleQuoteInSQLString(ao_schema)),
-                                                                pg.escape_string(escapeDoubleQuoteInSQLString(ao_table)))
+def update_ao_stat_func(context, conn, ao_schema, ao_table, counter, batch_size):
+    qry = "SELECT * FROM gp_update_ao_master_stats('%s.%s')" % (escape_string(escapeDoubleQuoteInSQLString(ao_schema), conn),
+                                                                escape_string(escapeDoubleQuoteInSQLString(ao_table), conn))
     rows = execSQLForSingleton(conn, qry)
     if counter % batch_size == 0:
         conn.commit()
@@ -63,15 +63,15 @@ def update_ao_statistics(context, restored_tables, restored_schema=[], restore_a
     counter = 1
 
     try:
-        results = execute_sql(qry, context.master_port, context.restore_db)
+        results = execute_sql(qry, context.master_port, context.target_db)
         restored_ao_tables = generate_restored_tables(results, restored_tables, restored_schema, restore_all)
         if len(restored_ao_tables) == 0:
             logger.info("No AO/CO tables restored, skipping statistics update...")
             return
 
-        with dbconn.connect(dbconn.DbURL(port=context.master_port, dbname=context.restore_db)) as conn:
+        with dbconn.connect(dbconn.DbURL(port=context.master_port, dbname=context.target_db)) as conn:
             for ao_schema, ao_table in sorted(restored_ao_tables):
-                update_ao_stat_func(conn, ao_schema, ao_table, counter, batch_size=1000)
+                update_ao_stat_func(context, conn, ao_schema, ao_table, counter, batch_size=1000)
                 counter = counter + 1
             conn.commit()
     except Exception as e:
@@ -295,7 +295,7 @@ class RestoreDatabase(Operation):
 
     def execute(self):
         if self.context.redirected_restore_db:
-            self.context.restore_db = self.context.redirected_restore_db
+            self.context.target_db = self.context.redirected_restore_db
 
         if (len(self.context.restore_tables) > 0 or len(self.context.restore_schemas) > 0) and self.context.truncate:
             self.truncate_restore_tables()
@@ -344,7 +344,7 @@ class RestoreDatabase(Operation):
             cmd.run(validateAfter=False)
             self._process_result(cmd)
             logger.info("Expanding parent partitions if any in table filter")
-            self.context.restore_tables = expand_partition_tables(self.context.restore_db, self.context.restore_tables)
+            self.context.restore_tables = expand_partition_tables(self.context, self.context.restore_tables)
 
         if begin_incremental:
             logger.info("Running data restore")
@@ -402,25 +402,25 @@ class RestoreDatabase(Operation):
 
     def _analyze(self, context):
         conn = None
-        logger.info('Commencing analyze of %s database, please wait' % context.restore_db)
+        logger.info('Commencing analyze of %s database, please wait' % context.target_db)
         try:
-            dburl = dbconn.DbURL(port=context.master_port, dbname=context.restore_db)
+            dburl = dbconn.DbURL(port=context.master_port, dbname=context.target_db)
             conn = dbconn.connect(dburl)
             execSQL(conn, 'analyze')
             conn.commit()
         except Exception, e:
-            logger.warn('Issue with analyze of %s database' % context.restore_db)
+            logger.warn('Issue with analyze of %s database' % context.target_db)
         else:
-            logger.info('Analyze of %s completed without error' % context.restore_db)
+            logger.info('Analyze of %s completed without error' % context.target_db)
         finally:
             if conn:
                 conn.close()
 
     def _analyze_restore_tables(self):
-        logger.info('Commencing analyze of restored tables in \'%s\' database, please wait' % self.context.restore_db)
+        logger.info('Commencing analyze of restored tables in \'%s\' database, please wait' % self.context.target_db)
         batch_count = 0
         try:
-            with dbconn.connect(dbconn.DbURL(port=self.context.master_port, dbname=self.context.restore_db)) as conn:
+            with dbconn.connect(dbconn.DbURL(port=self.context.master_port, dbname=self.context.target_db)) as conn:
                 num_sqls = 0
                 analyze_list = []
                 # need to find out all tables under the schema and construct the new schema.table to analyze
@@ -446,7 +446,7 @@ class RestoreDatabase(Operation):
                     try:
                         execSQL(conn, analyze_table)
                     except Exception as e:
-                        raise Exception('Issue with \'ANALYZE\' of restored table \'%s\' in \'%s\' database' % (tbl, self.context.restore_db))
+                        raise Exception('Issue with \'ANALYZE\' of restored table \'%s\' in \'%s\' database' % (tbl, self.context.target_db))
                     else:
                         num_sqls += 1
                         if num_sqls == 1000: # The choice of batch size was choosen arbitrarily
@@ -455,16 +455,16 @@ class RestoreDatabase(Operation):
                             conn.commit()
                             num_sqls = 0
         except Exception as e:
-            logger.warn('Restore of \'%s\' database succeeded but \'ANALYZE\' of restored tables failed' % self.context.restore_db)
+            logger.warn('Restore of \'%s\' database succeeded but \'ANALYZE\' of restored tables failed' % self.context.target_db)
             logger.warn('Please run ANALYZE manually on restored tables. Failure to run ANALYZE might result in poor database performance')
             raise Exception(str(e))
         else:
-            logger.info('\'Analyze\' of restored tables in \'%s\' database completed without error' % self.context.restore_db)
+            logger.info('\'Analyze\' of restored tables in \'%s\' database completed without error' % self.context.target_db)
         return batch_count
 
     def get_full_tables_in_schema(self, conn, schemaname):
         res = []
-        get_all_tables_qry = "select schemaname, tablename from pg_tables where schemaname = '%s';" % pg.escape_string(schemaname)
+        get_all_tables_qry = "select schemaname, tablename from pg_tables where schemaname = '%s';" % escape_string(schemaname, conn)
         relations = execSQL(conn, get_all_tables_qry)
         for relation in relations:
             schema, table = relation[0], relation[1]
@@ -567,7 +567,7 @@ class RestoreDatabase(Operation):
         query = """SELECT t.schemaname || '.' || t.tablename, c.oid FROM pg_class c join pg_tables t ON c.relname = t.tablename
                          WHERE t.schemaname NOT IN ('pg_toast', 'pg_bitmapindex', 'pg_temp_1', 'pg_catalog', 'information_schema', 'gp_toolkit')"""
         relids = {}
-        rows = execute_sql(query, self.context.master_port, self.context.restore_db)
+        rows = execute_sql(query, self.context.master_port, self.context.target_db)
         for row in rows:
             if len(row) != 2:
                 raise Exception("Invalid return from query: Expected 2 columns, got % columns" % (len(row)))
@@ -603,7 +603,7 @@ class RestoreDatabase(Operation):
                     if print_toggle:
                         outfile.write(line)
 
-        Psql('Invoking statistics restore', filename=stats_filename, database=self.context.restore_db).run(validateAfter=True)
+        Psql('Invoking statistics restore', filename=stats_filename, database=self.context.target_db).run(validateAfter=True)
 
     def _multitry_createdb(self):
         no_of_trys = 600
@@ -614,45 +614,47 @@ class RestoreDatabase(Operation):
                 time.sleep(1)
             else:
                 return
-        raise ExceptionNoStackTraceNeeded('Failed to drop database %s' % self.context.restore_db)
+        raise ExceptionNoStackTraceNeeded('Failed to drop database %s' % self.context.target_db)
 
     def drop_database_if_exists(self):
         conn = None
         try:
             dburl = dbconn.DbURL(port=self.context.master_port, dbname='template1')
             conn = dbconn.connect(dburl)
-            count = execSQLForSingleton(conn, "select count(*) from pg_database where datname='%s';" % pg.escape_string(self.context.restore_db))
+            count = execSQLForSingleton(conn, "select count(*) from pg_database where datname='%s';" % escape_string(self.context.target_db, conn))
 
-            logger.info("Dropping Database %s" % self.context.restore_db)
+            logger.info("Dropping Database %s" % self.context.target_db)
             if count == 1:
-                cmd = Command(name='drop database %s' % self.context.restore_db,
-                              cmdStr='dropdb %s -p %s' % (checkAndAddEnclosingDoubleQuote(shellEscape(self.context.restore_db)), self.context.master_port))
+                cmd = Command(name='drop database %s' % self.context.target_db,
+                              cmdStr='dropdb %s -p %s' % (checkAndAddEnclosingDoubleQuote(shellEscape(self.context.target_db)), self.context.master_port))
                 cmd.run(validateAfter=True)
-            logger.info("Dropped Database %s" % self.context.restore_db)
+            logger.info("Dropped Database %s" % self.context.target_db)
         except ExecutionError, e:
-            logger.exception("Could not drop database %s" % self.context.restore_db)
-            raise ExceptionNoStackTraceNeeded('Failed to drop database %s' % self.context.restore_db)
+            logger.exception("Could not drop database %s" % self.context.target_db)
+            raise ExceptionNoStackTraceNeeded('Failed to drop database %s' % self.context.target_db)
         finally:
-            conn.close()
+            if conn:
+                conn.close()
 
     def create_database_if_not_exists(self):
         conn = None
         try:
             dburl = dbconn.DbURL(port=self.context.master_port, dbname='template1')
             conn = dbconn.connect(dburl)
-            count = execSQLForSingleton(conn, "select count(*) from pg_database where datname='%s';" % pg.escape_string(self.context.restore_db))
+            count = execSQLForSingleton(conn, "select count(*) from pg_database where datname='%s';" % escape_string(self.context.target_db, conn))
 
-            logger.info("Creating Database %s" % self.context.restore_db)
+            logger.info("Creating Database %s" % self.context.target_db)
             if count == 0:
-                cmd = Command(name='create database %s' % self.context.restore_db,
-                              cmdStr='createdb %s -p %s -T template0' % (checkAndAddEnclosingDoubleQuote(shellEscape(self.context.restore_db)), self.context.master_port))
+                cmd = Command(name='create database %s' % self.context.target_db,
+                              cmdStr='createdb %s -p %s -T template0' % (checkAndAddEnclosingDoubleQuote(shellEscape(self.context.target_db)), self.context.master_port))
                 cmd.run(validateAfter=True)
-            logger.info("Created Database %s" % self.context.restore_db)
+            logger.info("Created Database %s" % self.context.target_db)
         except ExecutionError, e:
-            logger.exception("Could not create database %s" % self.context.restore_db)
-            raise ExceptionNoStackTraceNeeded('Failed to create database %s' % self.context.restore_db)
+            logger.exception("Could not create database %s" % self.context.target_db)
+            raise ExceptionNoStackTraceNeeded('Failed to create database %s' % self.context.target_db)
         finally:
-            conn.close()
+            if conn:
+                conn.close()
 
     def check_gp_toolkit(self):
         GP_TOOLKIT_QUERY = """SELECT count(*)
@@ -660,7 +662,7 @@ class RestoreDatabase(Operation):
                               WHERE pgc.relnamespace=pgn.oid AND
                                     pgn.nspname='gp_toolkit'
                            """
-        with dbconn.connect(dbconn.DbURL(dbname=self.context.restore_db, port=self.context.master_port)) as conn:
+        with dbconn.connect(dbconn.DbURL(dbname=self.context.target_db, port=self.context.master_port)) as conn:
             res = dbconn.execSQLForSingleton(conn, GP_TOOLKIT_QUERY)
             if res == 0:
                 return False
@@ -672,12 +674,12 @@ class RestoreDatabase(Operation):
                 logger.warn('Please set $GPHOME in your environment')
                 logger.warn('Skipping creation of gp_toolkit since $GPHOME/share/postgresql/gp_toolkit.sql could not be found')
             else:
-                logger.info('Creating gp_toolkit schema for database "%s"' % self.context.restore_db)
+                logger.info('Creating gp_toolkit schema for database "%s"' % self.context.target_db)
                 Psql(name='create gp_toolkit',
                      filename=os.path.join(os.environ['GPHOME'],
                                            'share', 'postgresql',
                                            'gp_toolkit.sql'),
-                     database=self.context.restore_db).run(validateAfter=True)
+                     database=self.context.target_db).run(validateAfter=True)
 
     def _process_createdb(self):
         self.drop_database_if_exists()
@@ -725,7 +727,7 @@ class RestoreDatabase(Operation):
             restore_line += " --gp-f=%s" % table_filter_file
         if self.context.compress:
             restore_line += " --gp-c"
-        restore_line += " -d %s" % checkAndAddEnclosingDoubleQuote(shellEscape(self.context.restore_db))
+        restore_line += " -d %s" % checkAndAddEnclosingDoubleQuote(shellEscape(self.context.target_db))
 
         # Restore only data if no_plan or full_restore_with_filter is True
         if self.context.no_plan or full_restore_with_filter:
@@ -777,7 +779,7 @@ class RestoreDatabase(Operation):
             restore_line += " --schema-level-file=%s" % schema_level_restore_file
         if self.context.compress:
             restore_line += " --gp-c"
-        restore_line += " -d %s" % checkAndAddEnclosingDoubleQuote(shellEscape(self.context.restore_db))
+        restore_line += " -d %s" % checkAndAddEnclosingDoubleQuote(shellEscape(self.context.target_db))
 
         if self.context.ddboost:
             restore_line += " --ddboost"
@@ -817,7 +819,7 @@ class RestoreDatabase(Operation):
             restore_line += " --gp-f=%s" % table_filter_file
         if self.context.compress:
             restore_line += " --gp-c"
-        restore_line += " -d %s" % checkAndAddEnclosingDoubleQuote(shellEscape(self.context.restore_db))
+        restore_line += " -d %s" % checkAndAddEnclosingDoubleQuote(shellEscape(self.context.target_db))
 
         if self.context.ddboost:
             restore_line += " --ddboost"
@@ -857,7 +859,7 @@ class RestoreDatabase(Operation):
         """
 
         try:
-            dburl = dbconn.DbURL(port=self.context.master_port, dbname=self.context.restore_db)
+            dburl = dbconn.DbURL(port=self.context.master_port, dbname=self.context.target_db)
             conn = dbconn.connect(dburl)
             truncate_list = []
 
@@ -871,8 +873,8 @@ class RestoreDatabase(Operation):
                                                        SELECT 1
                                                        FROM pg_catalog.pg_class c
                                                        JOIN pg_catalog.pg_namespace n on n.oid = c.relnamespace
-                                                       WHERE n.nspname = '%s' and c.relname = '%s')""" % (pg.escape_string(schemaname),
-                                                                                                          pg.escape_string(tablename))
+                                                       WHERE n.nspname = '%s' and c.relname = '%s')""" % (escape_string(schemaname, conn),
+                                                                                                          escape_string(tablename, conn))
                     exists_result = execSQLForSingleton(conn, check_table_exists_qry)
                     if exists_result:
                         schema = escapeDoubleQuoteInSQLString(schemaname)
@@ -880,18 +882,21 @@ class RestoreDatabase(Operation):
                         truncate_table = '%s.%s' % (schema, table)
                         truncate_list.append(truncate_table)
                     else:
-                        logger.warning("Skipping truncate of %s.%s because the relation does not exist." % (self.context.restore_db, restore_table))
+                        logger.warning("Skipping truncate of %s.%s because the relation does not exist." % (self.context.target_db, restore_table))
 
             for table in truncate_list:
                 try:
                     qry = 'Truncate %s' % table
                     execSQL(conn, qry)
                 except Exception as e:
-                    raise Exception("Could not truncate table %s.%s: %s" % (self.context.restore_db, table, str(e).replace('\n', '')))
+                    raise Exception("Could not truncate table %s.%s: %s" % (self.context.target_db, table, str(e).replace('\n', '')))
 
             conn.commit()
         except Exception as e:
             raise Exception("Failure from truncating tables, %s" % (str(e).replace('\n', '')))
+        finally:
+            if conn:
+                conn.close()
 
 class ValidateTimestamp(Operation):
     def __init__(self, context):

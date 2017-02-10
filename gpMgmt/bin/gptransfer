@@ -19,18 +19,21 @@ transfer will include dependent roles, UDFs, UDTs, views, resource queues,
 and possibly a subset of system configuration of specified tables.
 """
 
-import sys
+import datetime
+import hashlib
+import inspect
 import os
 import re
-import time
 import signal
-import inspect
-import hashlib
-import datetime
-from collections import defaultdict
-from threading import Thread, Event, Lock
+import sys
 import thread
+import time
+from collections import defaultdict
 from optparse import OptionGroup, SUPPRESS_HELP
+from threading import Thread, Event, Lock
+
+from gppylib.gpversion import GpVersion
+from gptransfer_modules.partition_comparators import PartitionComparatorFactory
 
 try:
     from gppylib.mainUtils import simple_main, addStandardLoggingAndHelpOptions, \
@@ -110,6 +113,7 @@ DEFAULT_GPFDIST_LAST_PORT = -1
 MIN_GPFDIST_TIMEOUT = 2
 MAX_GPFDIST_TIMEOUT = 600
 GPFDIST_PORT_REGEX = r"Serving HTTP on port (\d+)"
+VERSION_REGEX_PATTERN = re.compile(".*Greenplum Database (\d).*")
 
 # --------------------------------------------------------------------------
 # Logging
@@ -4050,27 +4054,24 @@ class GpTransfer(object):
             raise Exception('Unknown partitioning type %s found, %s' % (part_type, part_transfer_pair_msg))
 
     def _has_same_range_partition_value(self, source_partition_info, dest_partition_info, part_transfer_pair_msg):
-        if (source_partition_info['parrangestartincl'] != dest_partition_info['parrangestartincl'] or
-                    source_partition_info['parrangestart'] != dest_partition_info['parrangestart'] or
-                    source_partition_info['parrangeend'] != dest_partition_info['parrangeend'] or
-                    source_partition_info['parrangeevery'] != dest_partition_info['parrangeevery']):
+        comparator = PartitionComparatorFactory().get(source_partition_info, dest_partition_info)
+        result = comparator.is_same(source_partition_info, dest_partition_info)
+        if not result:
             logger.error('Range partition value is different between %s' % part_transfer_pair_msg)
-            return False
-        return True
+
+        return result
 
     def _has_same_list_partition_value(self, source_partition_info, dest_partition_info, part_transfer_pair_msg):
-        source_partition_values = self._process_list_partition_value(source_partition_info['parlistvalues'])
-        dest_partition_values = self._process_list_partition_value(dest_partition_info['parlistvalues'])
-
-        # Sort the partition values/constraints
-        if sorted(source_partition_values) != sorted(dest_partition_values):
+        comparator = PartitionComparatorFactory().get(source_partition_info, dest_partition_info)
+        result = comparator.is_same(source_partition_info, dest_partition_info)
+        if not result:
             logger.error('List partition value is different between %s' % part_transfer_pair_msg)
-            return False
-        return True
+
+        return result
 
     def _process_list_partition_value(self, partition_info):
         """
-        In the scenario of multiple partition colums, the partition values will
+        In the scenario of multiple partition columns, the partition values will
         be in the format: (({constraint1} {constraint2})) in pg_catalog.pg_partition_rule
         """
         partition_values = partition_info[2: len(partition_info) - 2].split('} {')
@@ -4078,7 +4079,7 @@ class GpTransfer(object):
         return partition_values
 
     def _get_oid(self, db, schema, table, host, port, user):
-        get_oid_sql = ''' select c.oid
+        get_oid_sql = '''select c.oid
                      from pg_catalog.pg_class c, pg_catalog.pg_namespace n
                      where c.relname = '%s'
                            and n.oid = c.relnamespace
@@ -4094,7 +4095,7 @@ class GpTransfer(object):
         partition_info = dict()
         oid = self._get_oid(db, schema, table, host, port, user)
 
-        get_partition_type = ''' select partitiontype
+        get_partition_type = '''select partitiontype
                                  from pg_catalog.pg_partitions
                                  where partitionschemaname = '%s'
                                        and partitiontablename = '%s';''' % (
@@ -4106,7 +4107,7 @@ class GpTransfer(object):
         get_partition_info_sql = '''select parisdefault, parruleord, parrangestartincl, parrangeendincl, parrangestart,
                                            parrangeend, parrangeevery, parlistvalues
                                     from pg_catalog.pg_partition_rule
-                                    where parchildrelid = %s;''' % oid
+                                    where parchildrelid = %s''' % oid
 
         with dbconn.connect(dbconn.DbURL(host, port, db, user)) as conn:
             row = execSQLForSingletonRow(conn, get_partition_info_sql)
@@ -4118,6 +4119,10 @@ class GpTransfer(object):
             partition_info['parrangeend'] = row[5]
             partition_info['parrangeevery'] = row[6]
             partition_info['parlistvalues'] = row[7]
+
+            row = execSQLForSingletonRow(conn, 'SELECT version()')
+            version = GpVersion(row[0])
+            partition_info['version'] = version.getVersionRelease()
         return partition_info
 
     def _check_leaf_partition_set(self, table_pair):
