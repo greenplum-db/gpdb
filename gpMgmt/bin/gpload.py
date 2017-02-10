@@ -1130,7 +1130,7 @@ class gpload:
         self.options.qv = self.INFO
         self.options.l = None
         self.lastcmdtime = ''
-        
+        self.cmdtime = '' 
         seenv = False
         seenq = False
 
@@ -2347,9 +2347,10 @@ class gpload:
 			NUM_WARN_ROWS = 0
 			return 0
 
-                self.lastcmdtime = (results[0])[0]
-                NUM_WARN_ROWS = (results[0])[1]
-                return (results[0])[1];
+                if (results[0])[0] != self.cmdtime:
+                    self.lastcmdtime = (results[0])[0]
+                    NUM_WARN_ROWS = (results[0])[1]
+                    return (results[0])[1];
         return 0
     
     def report_errors(self):
@@ -2371,6 +2372,12 @@ class gpload:
         """
         Handle the INSERT case
         """
+        if self.reuse_tables:
+            queryStr = "select cmdtime, count(*) from gp_read_error_log('%s') group by cmdtime order by cmdtime desc limit 1" % pg.escape_string(self.extTableName)
+            results = self.db.query(queryStr.encode('utf-8')).getresult()
+            if len(results) > 0:
+                self.cmdtime = (results[0])[0]
+
         self.log(self.DEBUG, "into columns " + str(self.into_columns))
         cols = filter(lambda a:a[2]!=None, self.into_columns)
         
