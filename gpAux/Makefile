@@ -320,7 +320,7 @@ BLD_GPDB_BUILDSET=$($(BLD_ARCH)_GPDB_BUILDSET)
 # set default build steps
 define BUILD_STEPS
 	@rm -rf $(INSTLOC)
-	cd $(BUILDDIR) && $(MAKE) $(parallelexec_opts) install
+	cd $(BUILDDIR) && $(MAKE) $(PARALLEL_MAKE_OPTS) install
 	#@$(MAKE) greenplum_path INSTLOC=$(INSTLOC)
 	#@$(MAKE) mgmtcopy INSTLOC=$(INSTLOC)
 	@$(MAKE) mkpgbouncer INSTLOC=$(INSTLOC) BUILDDIR=$(BUILDDIR)
