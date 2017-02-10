@@ -94,7 +94,7 @@ class GpVersionTestCase(unittest.TestCase):
         self.assertEqual(v_1 << 1, v_2)
         self.assertLess(v_1, v)
         self.assertLess(v_2, v)
-        self.assertEqual(v.getVersionRelease(), "5.0")
+        self.assertEqual(v.getVersionRelease(), "5")
         self.assertEqual(v_1.getVersionRelease(), "4.3")
         self.assertEqual(v_2.getVersionRelease(), "4.2")
        
@@ -102,7 +102,7 @@ class GpVersionTestCase(unittest.TestCase):
         vLong = GpVersion("PostgreSQL 8.3.23 (Greenplum Database 5.0.0 build dev) on x86_64-pc-linux-gnu, compiled by GCC gcc (GCC) 4.4.7 20120313 (Red Hat 4.4.7-17) compiled on Feb  9 2017 23:06:31")
         self.assertTrue(vLong.isVersionCurrentRelease() == True )
         self.assertTrue(vLong.getVersionBuild() == 'dev')
-        self.assertTrue(vLong.getVersionRelease() == "5.0")
+        self.assertTrue(vLong.getVersionRelease() == "5")
         self.assertTrue(vLong.isVersionRelease("5.0"))
         self.assertTrue(vLong.isVersionRelease("3.2") == False)
         self.assertTrue(vLong > "4.0.0")
