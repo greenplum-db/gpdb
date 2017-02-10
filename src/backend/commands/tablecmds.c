@@ -14571,6 +14571,7 @@ ATPExecPartSplit(Relation *rel,
 		ct->relKind = RELKIND_RELATION;
 		ct->ownerid = (*rel)->rd_rel->relowner;
 		ct->is_split_part = true;
+		/* No transformation happens for this stmt in parse_analyze() */
 		q = parse_analyze((Node *)ct, NULL, NULL, 0);
 		ProcessUtility((Node *)q->utilityStmt,
 					   synthetic_sql,
@@ -14613,6 +14614,7 @@ ATPExecPartSplit(Relation *rel,
 		mypc2->location = -1;
 		cmd->def = (Node *)mypc;
 		ats->cmds = list_make1(cmd);
+		/* No transformation happens for this stmt in parse_analyze() */
 		q = parse_analyze((Node *)ats, NULL, NULL, 0);
 
 		heap_close(*rel, NoLock);
@@ -14668,16 +14670,10 @@ ATPExecPartSplit(Relation *rel,
 		mypc->arg2 = (Node *)makeNode(AlterPartitionCmd);
 
 		cmd->def = (Node *)mypc;
+		/* No transformation happens for this stmt in parse_analyze() */
 		q = parse_analyze((Node *)ats, NULL, NULL, 0);
 		heap_close(*rel, NoLock);
 
-		/* GPDB_83_MERGE_FIXME: the original comment said:
-		 *
-		 * [result of parse_analyze] Might have expanded to multiple statements if, for example, the
-		 * master table has indexes on it.
-		 *
-		 * Can that really happen? How do we handle that nowadays?
-		 */
 		ProcessUtility((Node *)q->utilityStmt,
 					   synthetic_sql,
 					   NULL,
@@ -15036,6 +15032,7 @@ ATPExecPartSplit(Relation *rel,
 			}
 
 			ats->cmds = list_make1(cmd);
+			/* No transformation happens for this stmt in parse_analyze() */
 			q = parse_analyze((Node *)ats, NULL, NULL, 0);
 
 			heap_close(*rel, NoLock);
