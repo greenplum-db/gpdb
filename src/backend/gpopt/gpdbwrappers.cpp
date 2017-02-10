@@ -1252,6 +1252,21 @@ gpdb::PlPartitionAttrs
 	return NIL;
 }
 
+PartitionKeyKind
+gpdb::PartitionKeyKindAttr
+	(
+	Oid oid
+	)
+{
+	GP_WRAP_START;
+	{
+		/* catalog tables: pg_partition */
+		return rel_partition_keys_kinds_ordered(oid);
+	}
+	GP_WRAP_END;
+	return {NULL, NULL};
+}
+
 PartitionNode *
 gpdb::PpnParts
 	(

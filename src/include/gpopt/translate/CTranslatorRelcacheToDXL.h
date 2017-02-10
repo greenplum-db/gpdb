@@ -49,6 +49,12 @@ typedef struct RelationData* Relation;
 struct LogicalIndexes;
 struct LogicalIndexInfo;
 
+typedef struct PartitionKeyKindPair
+{
+	DrgPul	*drgPulKeys;
+	DrgPsz	*drgPszKinds;
+} PartitionKeyKindPair;
+
 namespace gpdxl
 {
 	using namespace gpos;
@@ -258,7 +264,7 @@ namespace gpdxl
 
 			// get partition keys for a relation
 			static
-			DrgPul *PdrgpulPartKeys(IMemoryPool *pmp, Relation rel, OID oid);
+			PartitionKeyKindPair PdrgpulPartKeys(IMemoryPool *pmp, Relation rel, OID oid);
 
 			// get keysets for relation
 			static

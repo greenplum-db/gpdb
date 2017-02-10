@@ -118,6 +118,7 @@ CTranslatorDXLToScalar::PexprFromDXLNodeScalar
 		{EdxlopScalarPartBound, &CTranslatorDXLToScalar::PexprPartBound},
 		{EdxlopScalarPartBoundInclusion, &CTranslatorDXLToScalar::PexprPartBoundInclusion},
 		{EdxlopScalarPartBoundOpen, &CTranslatorDXLToScalar::PexprPartBoundOpen},
+		{EdxlopScalarPartListValues, &CTranslatorDXLToScalar::PexprPartListValues},
 	};
 
 	const ULONG ulTranslators = GPOS_ARRAY_SIZE(rgTranslators);
@@ -1807,6 +1808,29 @@ CTranslatorDXLToScalar::PexprPartBoundOpen
 	PartBoundOpenExpr *pexpr = MakeNode(PartBoundOpenExpr);
 	pexpr->level = pdxlop->UlLevel();
 	pexpr->isLowerBound = pdxlop->FLower();
+
+	return (Expr *) pexpr;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorDXLToScalar::PexprPartListValues
+//
+//	@doc:
+//		Translates a DXL part list values into a GPDB part list values
+//
+//---------------------------------------------------------------------------
+Expr *
+CTranslatorDXLToScalar::PexprPartListValues
+	(
+	const CDXLNode *pdxlnPartListValues,
+	CMappingColIdVar * //pmapcidvar
+	)
+{
+	CDXLScalarPartListValues *pdxlop = CDXLScalarPartListValues::PdxlopConvert(pdxlnPartListValues->Pdxlop());
+
+	PartListRuleExpr *pexpr = MakeNode(PartListRuleExpr);
+	pexpr->level = pdxlop->UlLevel();
 
 	return (Expr *) pexpr;
 }

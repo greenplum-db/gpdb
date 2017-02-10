@@ -379,6 +379,13 @@ namespace gpdxl
 				CMappingColIdVar *pmapcidvar
 				);
 
+			// translate a scalar part list values into an Expr
+			Expr *PexprPartListValues
+				(
+				const CDXLNode *pdxlnPartListValues,
+				CMappingColIdVar *pmapcidvar
+				);
+
 			// translate a scalar ident into an Expr
 			Expr *PexprFromDXLNodeScId
 				(

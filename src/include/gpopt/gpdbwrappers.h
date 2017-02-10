@@ -54,6 +54,7 @@ struct Motion;
 struct Var;
 struct Const;
 struct ArrayExpr;
+struct PartitionKeyKind;
 
 namespace gpdb {
 
@@ -293,6 +294,9 @@ namespace gpdb {
 	
 	// partition attributes
 	List *PlPartitionAttrs(Oid oid);
+
+	// partition keys and kinds attributes
+	PartitionKeyKind PartitionKeyKindAttr(Oid oid);
 
 	// parts of a partitioned table
 	PartitionNode *PpnParts(Oid relid, int2 level, Oid parent, bool inctemplate, bool includesubparts);

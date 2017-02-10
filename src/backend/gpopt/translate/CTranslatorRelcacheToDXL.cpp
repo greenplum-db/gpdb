@@ -497,6 +497,7 @@ CTranslatorRelcacheToDXL::Pmdrel
 	DrgPmdid *pdrgpmdidIndexes = NULL;
 	DrgPmdid *pdrgpmdidTriggers = NULL;
 	DrgPul *pdrgpulPartKeys = NULL;
+	DrgPsz *pdrgpszPartTypes = NULL;
 	ULONG ulLeafPartitions = 0;
 	BOOL fConvertHashToRandom = false;
 	DrgPdrgPul *pdrgpdrgpulKeys = NULL;
@@ -540,7 +541,9 @@ CTranslatorRelcacheToDXL::Pmdrel
 		// get partition keys
 		if (IMDRelation::ErelstorageExternal != erelstorage)
 		{
-			 pdrgpulPartKeys = PdrgpulPartKeys(pmp, rel, oid);
+			PartitionKeyKindPair keyKindPair = PdrgpulPartKeys(pmp, rel, oid);
+			pdrgpulPartKeys = keyKindPair.drgPulKeys;
+			pdrgpszPartTypes = keyKindPair.drgPszKinds;
 		}
 		BOOL fPartitioned = (NULL != pdrgpulPartKeys && 0 < pdrgpulPartKeys->UlLength());
 
@@ -629,6 +632,7 @@ CTranslatorRelcacheToDXL::Pmdrel
 							pdrgpmdcol,
 							pdrpulDistrCols,
 							pdrgpulPartKeys,
+							pdrgpszPartTypes,
 							ulLeafPartitions,
 							fConvertHashToRandom,
 							pdrgpdrgpulKeys,
@@ -2954,7 +2958,7 @@ CTranslatorRelcacheToDXL::Erelstorage
 //		Caller responsible for closing the relation if an exception is raised
 //
 //---------------------------------------------------------------------------
-DrgPul *
+PartitionKeyKindPair
 CTranslatorRelcacheToDXL::PdrgpulPartKeys
 	(
 	IMemoryPool *pmp,
@@ -2964,15 +2968,17 @@ CTranslatorRelcacheToDXL::PdrgpulPartKeys
 {
 	GPOS_ASSERT(NULL != rel);
 
+	PartitionKeyKindPair keyKindPair = {NULL, NULL};
 	if (!gpdb::FRelPartIsRoot(oid))
 	{
 		// not a partitioned table
-		return NULL;
+		return keyKindPair;
 	}
 
 	// TODO: Feb 23, 2012; support intermediate levels
 
 	DrgPul *pdrgpulPartKeys = GPOS_NEW(pmp) DrgPul(pmp);
+	DrgPsz *pdrgpszPartKinds = GPOS_NEW(pmp) DrgPsz(pmp);
 
 	PartitionNode *pn = gpdb::PpnParts(oid, 0 /*level*/, 0 /*parent*/, false /*inctemplate*/, true /*includesubparts*/);
 	GPOS_ASSERT(NULL != pn);
@@ -2982,12 +2988,15 @@ CTranslatorRelcacheToDXL::PdrgpulPartKeys
 		GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported, GPOS_WSZ_LIT("Hash partitioning"));
 	}
 	
-	List *plPartKeys = gpdb::PlPartitionAttrs(oid);
+	PartitionKeyKind partKeyKind = gpdb::PartitionKeyKindAttr(oid);
+	List *plPartKeys = partKeyKind.partitionkeys;
+	List *plPartKinds = partKeyKind.partitionkinds;
 
-	ListCell *plc = NULL;
-	ForEach (plc, plPartKeys)
+	ListCell *plcKey = NULL;
+	ListCell *plcKind = NULL;
+	ForBoth (plcKey, plPartKeys, plcKind, plPartKinds)
 	{
-		List *plPartKey = (List *) lfirst(plc);
+		List *plPartKey = (List *) lfirst(plcKey);
 
 		if (1 < gpdb::UlListLength(plPartKey))
 		{
@@ -2995,11 +3004,18 @@ CTranslatorRelcacheToDXL::PdrgpulPartKeys
 		}
 
 		INT iAttno = linitial_int(plPartKey);
+		CHAR partKind = (CHAR) lfirst_int(plcKind);
 		GPOS_ASSERT(0 < iAttno);
 		pdrgpulPartKeys->Append(GPOS_NEW(pmp) ULONG(iAttno - 1));
+		pdrgpszPartKinds->Append(GPOS_NEW(pmp) CHAR(partKind));
 	}
 
-	return pdrgpulPartKeys;
+	gpdb::FreeList(plPartKeys);
+	gpdb::FreeList(plPartKinds);
+
+	keyKindPair.drgPulKeys = pdrgpulPartKeys;
+	keyKindPair.drgPszKinds = pdrgpszPartKinds;
+	return keyKindPair;
 }
 
 
