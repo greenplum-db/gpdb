@@ -16,8 +16,15 @@ CREATE [TRUSTED] [PROCEDURAL] LANGUAGE <varname>name</varname>
             <title>Description</title>
             <p><codeph>CREATE LANGUAGE</codeph> registers a new procedural language with a Greenplum
                 database. Subsequently, functions and trigger procedures can be defined in this new
-                language. You must be a superuser to register a new language. The PL/pgSQL language
-                is already registered in all databases by default.</p>
+                language. The PL/pgSQL language is already registered in all databases by
+                default.</p>
+            <p>Superusers can register a new language with a Greenplum database. A database owner
+                can also register within that database any language listed in the
+                    <codeph>pg_pltemplate</codeph> catalog in which the
+                    <codeph>tmpldbacreate</codeph> field is true. The default configuration allows
+                only trusted languages to be registered by database owners. The creator of a
+                language becomes its owner and can later drop it, rename it, or assign ownership to
+                a new user.</p>
             <p><codeph>CREATE LANGUAGE</codeph> effectively associates the language name with a call
                 handler that is responsible for executing functions written in that language. For a
                 function written in a procedural language (a language other than C or SQL), the
