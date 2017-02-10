@@ -1421,3 +1421,32 @@ FORMAT 'csv';
 
 -- drop temp external table
 DROP EXTERNAL TABLE IF EXISTS serial;
+
+-- External table query within plpgSQL function get error
+CREATE EXTERNAL TABLE exttab_error_context_callback(c1 int, c2 int)
+LOCATION ('file://@hostname@@abs_srcdir@/data/exttab.data') FORMAT 'TEXT';
+
+CREATE or REPLACE FUNCTION exttab_error_context_callback_func()
+RETURNS SETOF INTEGER
+AS
+$$
+DECLARE
+    ret INTEGER;
+BEGIN
+    FOR ret IN
+        SELECT c2 from exttab_error_context_callback
+    LOOP
+        RETURN NEXT ret;
+    END LOOP;
+END
+$$
+LANGUAGE plpgSQL READS SQL DATA;
+
+SET gp_log_gang TO DEBUG;
+
+SELECT * FROM exttab_error_context_callback_func();
+
+SET gp_log_gang TO DEFAULT;
+
+DROP FUNCTION exttab_error_context_callback_func();
+DROP EXTERNAL TABLE exttab_error_context_callback;

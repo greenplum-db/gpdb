@@ -280,11 +280,6 @@ external_beginscan(Relation relation, Index scanrelid, uint32 scancounter,
 		scan->fs_formatter->fmt_perrow_ctx = scan->fs_pstate->rowcontext;
 	}
 
-	/* Set up callback to identify error line number */
-	scan->errcontext.callback = external_scan_error_callback;
-	scan->errcontext.arg = (void *) scan->fs_pstate;
-	scan->errcontext.previous = error_context_stack;
-
 	//pgstat_initstats(relation);
 
 	return scan;
@@ -403,11 +398,6 @@ external_endscan(FileScanDesc scan)
 		pfree(scan->fs_pstate);
 		scan->fs_pstate = NULL;
 	}
-
-    /*
-	 * clean up error context
-	 */
-	error_context_stack = scan->errcontext.previous;
 
 	PG_TRY();
 	{
@@ -1194,10 +1184,16 @@ externalgettup(FileScanDesc scan,
 
 	CopyState	pstate = scan->fs_pstate;
 	bool		custom = pstate->custom;
+	HeapTuple	tup = NULL;
+	ErrorContextCallback externalscan_error_context;
 
 	Assert(ScanDirectionIsForward(dir));
 
-	error_context_stack = &scan->errcontext;
+	externalscan_error_context.callback = external_scan_error_callback;
+	externalscan_error_context.arg = (void *) scan->fs_pstate;
+	externalscan_error_context.previous = error_context_stack;
+
+	error_context_stack = &externalscan_error_context;
 
 	if (!scan->fs_inited)
 	{
@@ -1211,10 +1207,14 @@ externalgettup(FileScanDesc scan,
 	}
 
 	if (!custom)
-		return externalgettup_defined(scan); /* text/csv */
+		tup = externalgettup_defined(scan); /* text/csv */
 	else
-		return externalgettup_custom(scan);  /* custom   */
+		tup = externalgettup_custom(scan);  /* custom */
 
+	/* Restore the previous error callback */
+	error_context_stack = externalscan_error_context.previous;
+
+	return tup;
 }
 /*
  * setCustomFormatter
