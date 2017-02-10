@@ -74,9 +74,9 @@ function make_sync_tools() {
 function build_gpdb() {
   pushd gpdb_src/gpAux
     if [ -n "$1" ]; then
-      make "$1" GPROOT=/usr/local dist
+      make "$1" GPROOT=/usr/local PARALLEL_BUILD=1 dist
     else
-      make GPROOT=/usr/local dist
+      make GPROOT=/usr/local PARALLEL_BUILD=1 dist
     fi
   popd
 }
