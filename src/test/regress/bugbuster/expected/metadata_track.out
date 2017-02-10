@@ -268,10 +268,6 @@ NOTICE:  CREATE TABLE / UNIQUE will create implicit index "mdt_test_column1_col_
     ALTER TABLE mdt_test_column1 DROP COLUMN non_toast_col ;
 drop table mdt_test_column;
 drop table mdt_test_column1;
---
--- QA-2003
-SET gp_enable_inheritance = true;
-ERROR:  unrecognized configuration parameter "gp_enable_inheritance"
 --INHERIT & NO INHERIT mdt_parent_table
           CREATE TABLE mdt_parent_table (
           text_col text,
