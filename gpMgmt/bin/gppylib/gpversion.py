@@ -164,8 +164,10 @@ class GpVersion:
                 raise StandardError("Version too short")
             if len(v) > 4:
                 raise StandardError("Version too long")
-            if len(v) < 4:
+            if v[0] < 5 and len(v) < 4:     # versions before 5 used 4 digits
                 v.extend([99,99])
+            if v[0] > 4 and len(v) < 3:
+                v.extend([99])
 
             v = map(int, v)  # Convert to integers
             self.version = v[:4]  # If we extended beyond 4 cut it back down
