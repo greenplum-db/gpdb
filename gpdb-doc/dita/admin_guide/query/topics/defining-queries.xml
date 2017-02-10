@@ -292,7 +292,7 @@
                     is:</p>
                 <p><codeblock>[<i>window_name</i>]
 [PARTITION BY <i>expression </i>[, ...]]
-[[ORDER BY <i>expression</i> [ASC | DESC | USING <i>operator</i>] [, ...]
+[[ORDER BY <i>expression</i> [ASC | DESC | USING <i>operator</i>] [NULLS {FIRST | LAST}] [, ...]
     [{RANGE | ROWS} 
        { UNBOUNDED PRECEDING
        | <i>expression</i> PRECEDING

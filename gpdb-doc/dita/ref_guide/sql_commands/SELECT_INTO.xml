@@ -9,7 +9,7 @@
     [GROUP BY <varname>expression</varname> [, ...]]
     [HAVING <varname>condition</varname> [, ...]]
     [{UNION | INTERSECT | EXCEPT} [ALL] <varname>select</varname>]
-    [ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [, ...]]
+    [ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [NULLS {FIRST | LAST}] [, ...]]
     [LIMIT {<varname>count</varname> | ALL}]
     [OFFSET <varname>start</varname>]
     [FOR {UPDATE | SHARE} [OF <varname>table_name</varname> [, ...]] [NOWAIT] 

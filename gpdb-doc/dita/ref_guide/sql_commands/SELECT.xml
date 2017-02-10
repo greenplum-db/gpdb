@@ -9,7 +9,7 @@
   [HAVING <varname>condition</varname> [, ...]]
   [WINDOW <varname>window_name</varname> AS (<varname>window_specification</varname>)]
   [{UNION | INTERSECT | EXCEPT} [ALL] <varname>select</varname>]
-  [ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [, ...]]
+  [ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [NULLS {FIRST | LAST}] [, ...]]
   [LIMIT {<varname>count</varname> | ALL}]
   [OFFSET <varname>start</varname>]
   [FOR {UPDATE | SHARE} [OF <varname>table_name</varname> [, ...]] [NOWAIT] [...]]</codeblock><p>where <varname>grouping_element</varname> can be one of:</p><codeblock>  ()
@@ -18,7 +18,7 @@
   CUBE (<varname>expression</varname> [,...])
   GROUPING SETS ((<varname>grouping_element</varname> [, ...]))</codeblock><p>where <varname>window_specification</varname> can be:</p><codeblock>  [<varname>window_name</varname>]
   [PARTITION BY <varname>expression </varname>[, ...]]
-  [ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [, ...]
+  [ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [NULLS {FIRST | LAST}] [, ...]
      [{RANGE | ROWS} 
           { UNBOUNDED PRECEDING
           | <varname>expression</varname> PRECEDING
@@ -305,10 +305,9 @@ GROUPING SETS ((<varname>grouping_element</varname> [, ...]))</codeblock><p><cod
                   group_id number. </li>
               </ul></pd>
           </plentry>
-        </parml></sectiondiv><sectiondiv id="section9"><b>The WINDOW Clause</b><p>The
-            <codeph>WINDOW</codeph> clause is used to define a window that can be used in the
-            <codeph>OVER()</codeph> expression of a window function such as <codeph>rank</codeph> or
-            <codeph>avg</codeph>. For
+        </parml></sectiondiv><sectiondiv id="section9"><b>The WINDOW Clause</b><p>The <codeph>WINDOW</codeph> clause is used to
+          define a window that can be used in the <codeph>OVER()</codeph> expression of a window
+          function such as <codeph>rank</codeph> or <codeph>avg</codeph>. For
           example:</p><codeblock>SELECT vendor, rank() OVER (mywindow) FROM sale
 GROUP BY vendor
 WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
@@ -316,7 +315,7 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
           form:</p><codeblock>WINDOW <varname>window_name</varname> AS (<varname>window_specification</varname>)</codeblock><p>where
             <varname>window_specification</varname> can be:</p><codeblock>[<varname>window_name</varname>]
 [PARTITION BY <varname>expression </varname>[, ...]]
-[ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [, ...]
+[ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [NULLS {FIRST | LAST}] [, ...]
     [{RANGE | ROWS} 
       { UNBOUNDED PRECEDING
       | <varname>expression</varname> PRECEDING
@@ -478,9 +477,9 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
           binds at the same level as <codeph>UNION</codeph>. </p><p>Currently, <codeph>FOR
             UPDATE</codeph> and <codeph>FOR SHARE</codeph> may not be specified either for an
             <codeph>EXCEPT</codeph> result or for any input of an <codeph>EXCEPT</codeph>.
-        </p></sectiondiv><sectiondiv id="section14"><b>The ORDER BY Clause</b><p>The optional
-            <codeph>ORDER BY</codeph> clause has this general
-          form:</p><codeblock>ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [, ...]</codeblock><p>where
+        </p></sectiondiv><sectiondiv id="section14"><b>The ORDER BY Clause</b><p>The optional <codeph>ORDER BY</codeph>
+          clause has this general
+          form:</p><codeblock>ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [NULLS { FIRST | LAST}] [, ...]</codeblock><p>where
             <varname>expression</varname> can be the name or ordinal number of an output column
             (<codeph>SELECT</codeph> list item), or it can be an arbitrary expression formed from
           input-column values. </p><p>The <codeph>ORDER BY</codeph> clause causes the result rows to
@@ -509,10 +508,17 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
             <codeph>ASC</codeph> is usually equivalent to <codeph>USING &lt;</codeph> and
             <codeph>DESC</codeph> is usually equivalent to <codeph>USING &gt;</codeph>. (But the
           creator of a user-defined data type can define exactly what the default sort ordering is,
-          and it might correspond to operators with other names.) </p><p>The null value sorts higher
-          than any other value. In other words, with ascending sort order, null values sort at the
-          end, and with descending sort order, null values sort at the
-          beginning.</p><p>Character-string data is sorted according to the locale-specific
+          and it might correspond to operators with other names.) </p><p>If <codeph>NULLS
+            LAST</codeph> is specified, null values sort after all non-null values; if <codeph>NULLS
+            FIRST</codeph> is specified, null values sort before all non-null values. If neither is
+          specified, the default behavior is <codeph>NULLS LAST</codeph> when <codeph>ASC</codeph>
+          is specified or implied, and <codeph>NULLS FIRST</codeph> when <codeph>DESC</codeph> is
+          specified (thus, the default is to act as though nulls are larger than non-nulls). When
+            <codeph>USING</codeph> is specified, the default nulls ordering depends upon whether the
+          operator is a less-than or greater-than operator.</p><p>Note that ordering options apply
+          only to the expression they follow; for example <codeph>ORDER BY x, y DESC</codeph> does
+          not mean the same thing as <codeph>ORDER BY x DESC, y
+          DESC</codeph>.</p><p>Character-string data is sorted according to the locale-specific
           collation order that was established when the Greenplum Database system was
           initialized.</p></sectiondiv><sectiondiv id="section15"><b>The DISTINCT Clause</b><p>If
             <codeph>DISTINCT</codeph> is specified, all duplicate rows are removed from the result
