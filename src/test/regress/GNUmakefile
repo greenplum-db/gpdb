@@ -194,7 +194,7 @@ installcheck-bugbuster: all
 	@echo "================================"
 	@grep memory_quota ./bugbuster/known_good_schedule > /dev/null; \
 	echo $(abs_srcdir)
-	$(pg_regress_call_bb)  --psqldir=$(PSQLDIR) --schedule=./bugbuster/known_good_schedule --srcdir=$(abs_srcdir)
+	$(pg_regress_call_bb)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/bugbuster/known_good_schedule --srcdir=$(abs_srcdir)/bugbuster
 	@grep memory_quota ./bugbuster/known_good_schedule > /dev/null; \
 
 # old interfaces follow...
