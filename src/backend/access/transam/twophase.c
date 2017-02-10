@@ -1324,8 +1324,6 @@ EndPrepare(GlobalTransaction gxact)
 	/* Add the prepared record to our global list */
 	add_recover_post_checkpoint_prepared_transactions_map_entry(xid, &gxact->prepare_begin_lsn, "EndPrepare");
 
-	MyProc->inCommit = true;
-
 	XLogFlush(gxact->prepare_lsn);
 
 	/*
