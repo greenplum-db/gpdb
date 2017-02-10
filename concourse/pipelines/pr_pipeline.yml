@@ -125,7 +125,9 @@ jobs:
     plan:
     - aggregate:
       - get: gpdb_pr
-        passed: [compile_gpdb_centos6]
+        passed:
+        - compile_gpdb_centos6
+        - compile_gpdb_custom_config_centos6
       - get: bin_gpdb
         resource: bin_gpdb_centos
         passed: [compile_gpdb_centos6]
