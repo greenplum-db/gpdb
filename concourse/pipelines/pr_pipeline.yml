@@ -120,7 +120,7 @@ jobs:
           path: gpdb_pr
           status: failure
 
-  # Stage 2: Run regression tests (make installcheck-world)
+  # Stage 2: Run tests
   - name: icw_planner_centos6
     plan:
     - aggregate:
@@ -143,26 +143,63 @@ jobs:
         BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
         TEST_OS: centos
       timeout: 2h30m
-      on_success:
-        put: gpdb_pr
-        params:
-          path: gpdb_pr
-          status: success
       on_failure:
         put: gpdb_pr
         params:
           path: gpdb_pr
           status: failure
 
+  - name: MU_check_centos
+    plan:
+    - aggregate:
+      - get: gpdb_pr
+        passed:
+        - compile_gpdb_centos6
+        - compile_gpdb_custom_config_centos6
+      - get: bin_gpdb
+        resource: bin_gpdb_centos
+        passed: [compile_gpdb_centos6]
+        trigger: true
+      - get: centos-gpdb-dev-6
+    - task: MU_check_centos
+      file: gpdb_pr/concourse/tasks/gpMgmt_check_gpdb.yml
+      image: centos-gpdb-dev-6
+      input_mapping:
+        gpdb_src: gpdb_pr
+      params:
+        TEST_OS: centos
+      on_failure:
+        put: gpdb_pr
+        params:
+          path: gpdb_pr
+          status: failure
+
+  - name: report_pr_success
+    plan:
+    - aggregate:
+      - get: gpdb_pr
+        passed:
+        - icw_planner_centos6
+        - MU_check_centos
+        trigger: true
+    - put: gpdb_pr
+      params:
+        path: gpdb_pr
+        status: success
+
   # Stage 3: Packaging
   - name: gpdb_rc_packaging_centos
     plan:
     - aggregate:
       - get: gpdb_pr
-        passed: [icw_planner_centos6]
+        passed:
+        - icw_planner_centos6
+        - MU_check_centos
       - get: bin_gpdb
         resource: bin_gpdb_centos
-        passed: [icw_planner_centos6]
+        passed:
+        - icw_planner_centos6
+        - MU_check_centos
         trigger: true
       - get: centos-gpdb-dev-6
       - get: gpaddon_src
