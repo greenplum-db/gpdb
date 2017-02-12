@@ -1112,7 +1112,6 @@ sub atmsort_bigloop
     my $directive = {};
     my $big_ignore = 0;
     my $define_match_expression = undef;
-    my $error_detail_exttab_trifecta_skip = 0; # don't ask!
 
     print $atmsort_outfh "GP_IGNORE: formatted by atmsort.pm\n";
 
@@ -1123,12 +1122,6 @@ sub atmsort_bigloop
     {
       reprocess_row:
         my $ini = $_;
-
-        if ($error_detail_exttab_trifecta_skip)
-        {
-            $error_detail_exttab_trifecta_skip = 0;
-            next;
-        }
 
         # look for match/substitution or match/ignore expressions
         if (defined($define_match_expression))
@@ -1451,35 +1444,6 @@ sub atmsort_bigloop
         # if MATCH then SUBSTITUTE
         # see HERE document for definitions
         $ini = match_then_subs($ini);
-
-        if ($ini =~ m/External table .*line (?:\d)+/)
-        {
-            $ini =~ s/External table .*line (\d)+.*/External table DUMMY_EX, line DUMMY_LINE of DUMMY_LOCATION/;
-            $ini =~ s/\s+/ /;
-            # MPP-1557,AUTO-3: horrific ERROR DETAIL External Table trifecta
-            if ($glob_verbose)
-            {
-                print $atmsort_outfh 'GP_IGNORE: External Table ERROR DETAIL fixup' . "\n";
-            }
-            if ($ini !~ m/^DETAIL/)
-            {
-                # find a "blank" DETAIL tag preceding current line
-                if (scalar(@outarr) && ($outarr[-1] =~ m/^DETAIL:\s+$/))
-                {
-                    pop @outarr;
-                    $ini = "DETAIL: " . $ini;
-                    $ini =~ s/\s+/ /;
-                    # need to skip the next record
-                    $error_detail_exttab_trifecta_skip = 1;
-                }
-            }
-
-            if (scalar(@outarr) &&
-                ($outarr[-1] =~ m/^ERROR:\s+missing data for column/))
-            {
-                $outarr[-1] = 'ERROR:  missing data for column DUMMY_COL' . "\n";
-            }
-        }
 
         # if MATCH then IGNORE
         # see HERE document for definitions
