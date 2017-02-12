@@ -50,11 +50,6 @@ extern void CleanUpMotionLayerIPC(void);
  */
 extern void WaitInterconnectQuit(void);
 
-/*
-* Send a dummy packet to interconnect thread to exit poll() immediately
-*/
-extern void SendDummyPacket(void);
-
 /* Returns the fd of the socket that connects to the seqserver.  This value
  * is -1 if it has not been setup.
  */
