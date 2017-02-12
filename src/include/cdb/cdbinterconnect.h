@@ -14,8 +14,6 @@
 #include "access/htup.h"
 #include "cdb/htupfifo.h"
 
-struct directTransportBuffer;
-
 #include "cdb/cdbselect.h"
 #include "cdb/tupser.h"
 #include "cdb/tupchunk.h"
@@ -500,5 +498,5 @@ typedef struct ChunkTransportState
 extern void dumpICBufferList(ICBufferList *list, const char *fname);
 extern void dumpUnackQueueRing(const char *fname);
 extern void dumpConnections(ChunkTransportStateEntry *pEntry, const char *fname);
-#endif   /* CDBINTERCONNECT_H */
 
+#endif   /* CDBINTERCONNECT_H */

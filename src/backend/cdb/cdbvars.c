@@ -739,7 +739,7 @@ GpVars_Verbosity gp_log_interconnect;
 /*
  * gpvars_string_to_verbosity
  */
-GpVars_Verbosity
+static GpVars_Verbosity
 gpvars_string_to_verbosity(const char *s)
 {
 	GpVars_Verbosity result;
@@ -762,7 +762,7 @@ gpvars_string_to_verbosity(const char *s)
 /*
  * gpvars_verbosity_to_string
  */
-const char *
+static const char *
 gpvars_verbosity_to_string(GpVars_Verbosity verbosity)
 {
 	switch (verbosity)

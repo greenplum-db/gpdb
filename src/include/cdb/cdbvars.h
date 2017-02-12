@@ -539,11 +539,6 @@ typedef enum GpVars_Verbosity
     GPVARS_VERBOSITY_DEBUG,
 } GpVars_Verbosity;
 
-GpVars_Verbosity
-gpvars_string_to_verbosity(const char *s);
-const char *
-gpvars_verbosity_to_string(GpVars_Verbosity verbosity);
-
 /* Enable single-slice single-row inserts. */
 extern bool gp_enable_fast_sri;
 
