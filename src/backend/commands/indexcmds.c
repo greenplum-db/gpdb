@@ -84,7 +84,6 @@ static Oid GetIndexOpClass(List *opclass, Oid attrType,
 static bool relationHasPrimaryKey(Relation rel);
 static bool relationHasUniqueIndex(Relation rel);
 
-bool gp_hash_index = false; /* hash index phase out. */
 
 /*
  * DefineIndex

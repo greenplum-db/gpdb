@@ -1211,20 +1211,6 @@ gpvars_assign_gp_fts_probe_pause(bool newval, bool doit, GucSource source)
 	return true;
 }
 
-bool
-gpvars_assign_gp_hash_index(bool newval, bool doit, GucSource source)
-{
-	if (doit && newval)
-	{
-		if (Gp_role == GP_ROLE_DISPATCH)
-			ereport(WARNING,
-					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				   errmsg("gp_hash_index is deprecated and has no effect")));
-	}
-
-	return true;
-}
-
 /*
  * gpvars_assign_gp_resqueue_memory_policy
  * gpvars_show_gp_resqueue_memory_policy

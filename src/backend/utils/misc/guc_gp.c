@@ -130,8 +130,6 @@ static const char *assign_gp_default_storage_options(
 
 extern bool enable_partition_rules;
 
-extern bool gp_hash_index;
-
 /* GUC lists for gp_guc_list_show().  (List of struct config_generic) */
 List	   *gp_guc_list_for_explain;
 List	   *gp_guc_list_for_no_plan;
@@ -2147,15 +2145,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&gp_enable_resqueue_priority,
 		true, NULL, NULL
-	},
-	{
-		{"gp_hash_index", PGC_SUSET, UNGROUPED,
-			gettext_noop("Specify whether hash indexes can be used. Deprecated and has no effect."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_hash_index,
-		false, gpvars_assign_gp_hash_index, NULL
 	},
 
 	{

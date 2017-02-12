@@ -1056,9 +1056,6 @@ extern void write_log(const char *fmt,...) __attribute__((format(printf, 1, 2)))
 
 extern void verifyGpIdentityIsSet(void);
 
-/* control current usability of enabling hash index */
-extern bool gpvars_assign_gp_hash_index(bool newval, bool doit, GucSource source);
-
 extern const char *gpvars_assign_gp_resqueue_memory_policy(const char *newval, bool doit, GucSource source __attribute__((unused)) );
 
 extern const char *gpvars_show_gp_resqueue_memory_policy(void);
